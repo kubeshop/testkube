@@ -36,7 +36,8 @@ var (
 	ins         = &dummyInspector{}
 	proc        = NewFullFeatured(ins)
 	execMachine = expressionstcl.NewMachine().
-			Register("execution.id", "dummy-id")
+			Register("resource.rootId", "dummy-id").
+			Register("resource.id", "dummy-id-abc")
 )
 
 func TestProcessEmpty(t *testing.T) {
@@ -52,7 +53,7 @@ func TestProcessBasic(t *testing.T) {
 	wf := &testworkflowsv1.TestWorkflow{
 		Spec: testworkflowsv1.TestWorkflowSpec{
 			Steps: []testworkflowsv1.Step{
-				{StepBase: testworkflowsv1.StepBase{Shell: "shell-test"}},
+				{StepOperations: testworkflowsv1.StepOperations{Shell: "shell-test"}},
 			},
 		},
 	}
@@ -69,8 +70,11 @@ func TestProcessBasic(t *testing.T) {
 	want := batchv1.Job{
 		TypeMeta: metav1.TypeMeta{Kind: "Job", APIVersion: "batch/v1"},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   "dummy-id",
-			Labels: map[string]string{constants.ExecutionIdLabelName: "dummy-id"},
+			Name: "dummy-id-abc",
+			Labels: map[string]string{
+				constants.ResourceIdLabelName:     "dummy-id-abc",
+				constants.RootResourceIdLabelName: "dummy-id",
+			},
 			Annotations: map[string]string{
 				constants.SignatureAnnotationName: string(sigSerialized),
 			},
@@ -80,8 +84,8 @@ func TestProcessBasic(t *testing.T) {
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						constants.ExecutionIdLabelName:        "dummy-id",
-						constants.ExecutionIdMainPodLabelName: "dummy-id",
+						constants.ResourceIdLabelName:     "dummy-id-abc",
+						constants.RootResourceIdLabelName: "dummy-id",
 					},
 					Annotations: map[string]string(nil),
 				},
@@ -146,7 +150,7 @@ func TestProcessBasicEnvReference(t *testing.T) {
 	wf := &testworkflowsv1.TestWorkflow{
 		Spec: testworkflowsv1.TestWorkflowSpec{
 			Steps: []testworkflowsv1.Step{
-				{StepBase: testworkflowsv1.StepBase{
+				{StepDefaults: testworkflowsv1.StepDefaults{
 					Container: &testworkflowsv1.ContainerConfig{
 						Env: []corev1.EnvVar{
 							{Name: "ZERO", Value: "foo"},
@@ -156,6 +160,7 @@ func TestProcessBasicEnvReference(t *testing.T) {
 							{Name: "LAST", Value: "foo{{env.INPUT}}bar"},
 						},
 					},
+				}, StepOperations: testworkflowsv1.StepOperations{
 					Shell: "shell-test",
 				}},
 			},
@@ -228,8 +233,8 @@ func TestProcessMultipleSteps(t *testing.T) {
 	wf := &testworkflowsv1.TestWorkflow{
 		Spec: testworkflowsv1.TestWorkflowSpec{
 			Steps: []testworkflowsv1.Step{
-				{StepBase: testworkflowsv1.StepBase{Shell: "shell-test"}},
-				{StepBase: testworkflowsv1.StepBase{Shell: "shell-test-2"}},
+				{StepOperations: testworkflowsv1.StepOperations{Shell: "shell-test"}},
+				{StepOperations: testworkflowsv1.StepOperations{Shell: "shell-test-2"}},
 			},
 		},
 	}
@@ -313,15 +318,15 @@ func TestProcessNestedSteps(t *testing.T) {
 	wf := &testworkflowsv1.TestWorkflow{
 		Spec: testworkflowsv1.TestWorkflowSpec{
 			Steps: []testworkflowsv1.Step{
-				{StepBase: testworkflowsv1.StepBase{Name: "A", Shell: "shell-test"}},
+				{StepMeta: testworkflowsv1.StepMeta{Name: "A"}, StepOperations: testworkflowsv1.StepOperations{Shell: "shell-test"}},
 				{
-					StepBase: testworkflowsv1.StepBase{Name: "B"},
+					StepMeta: testworkflowsv1.StepMeta{Name: "B"},
 					Steps: []testworkflowsv1.Step{
-						{StepBase: testworkflowsv1.StepBase{Name: "C", Shell: "shell-test-2"}},
-						{StepBase: testworkflowsv1.StepBase{Name: "D", Shell: "shell-test-3"}},
+						{StepMeta: testworkflowsv1.StepMeta{Name: "C"}, StepOperations: testworkflowsv1.StepOperations{Shell: "shell-test-2"}},
+						{StepMeta: testworkflowsv1.StepMeta{Name: "D"}, StepOperations: testworkflowsv1.StepOperations{Shell: "shell-test-3"}},
 					},
 				},
-				{StepBase: testworkflowsv1.StepBase{Name: "E", Shell: "shell-test-4"}},
+				{StepMeta: testworkflowsv1.StepMeta{Name: "E"}, StepOperations: testworkflowsv1.StepOperations{Shell: "shell-test-4"}},
 			},
 		},
 	}
@@ -451,15 +456,16 @@ func TestProcessOptionalSteps(t *testing.T) {
 	wf := &testworkflowsv1.TestWorkflow{
 		Spec: testworkflowsv1.TestWorkflowSpec{
 			Steps: []testworkflowsv1.Step{
-				{StepBase: testworkflowsv1.StepBase{Name: "A", Shell: "shell-test"}},
+				{StepMeta: testworkflowsv1.StepMeta{Name: "A"}, StepOperations: testworkflowsv1.StepOperations{Shell: "shell-test"}},
 				{
-					StepBase: testworkflowsv1.StepBase{Name: "B", Optional: true},
+					StepMeta:    testworkflowsv1.StepMeta{Name: "B"},
+					StepControl: testworkflowsv1.StepControl{Optional: true},
 					Steps: []testworkflowsv1.Step{
-						{StepBase: testworkflowsv1.StepBase{Name: "C", Shell: "shell-test-2"}},
-						{StepBase: testworkflowsv1.StepBase{Name: "D", Shell: "shell-test-3"}},
+						{StepMeta: testworkflowsv1.StepMeta{Name: "C"}, StepOperations: testworkflowsv1.StepOperations{Shell: "shell-test-2"}},
+						{StepMeta: testworkflowsv1.StepMeta{Name: "D"}, StepOperations: testworkflowsv1.StepOperations{Shell: "shell-test-3"}},
 					},
 				},
-				{StepBase: testworkflowsv1.StepBase{Name: "E", Shell: "shell-test-4"}},
+				{StepMeta: testworkflowsv1.StepMeta{Name: "E"}, StepOperations: testworkflowsv1.StepOperations{Shell: "shell-test-4"}},
 			},
 		},
 	}
@@ -587,15 +593,16 @@ func TestProcessNegativeSteps(t *testing.T) {
 	wf := &testworkflowsv1.TestWorkflow{
 		Spec: testworkflowsv1.TestWorkflowSpec{
 			Steps: []testworkflowsv1.Step{
-				{StepBase: testworkflowsv1.StepBase{Name: "A", Shell: "shell-test"}},
+				{StepMeta: testworkflowsv1.StepMeta{Name: "A"}, StepOperations: testworkflowsv1.StepOperations{Shell: "shell-test"}},
 				{
-					StepBase: testworkflowsv1.StepBase{Name: "B", Negative: true},
+					StepMeta:    testworkflowsv1.StepMeta{Name: "B"},
+					StepControl: testworkflowsv1.StepControl{Negative: true},
 					Steps: []testworkflowsv1.Step{
-						{StepBase: testworkflowsv1.StepBase{Name: "C", Shell: "shell-test-2"}},
-						{StepBase: testworkflowsv1.StepBase{Name: "D", Shell: "shell-test-3"}},
+						{StepMeta: testworkflowsv1.StepMeta{Name: "C"}, StepOperations: testworkflowsv1.StepOperations{Shell: "shell-test-2"}},
+						{StepMeta: testworkflowsv1.StepMeta{Name: "D"}, StepOperations: testworkflowsv1.StepOperations{Shell: "shell-test-3"}},
 					},
 				},
-				{StepBase: testworkflowsv1.StepBase{Name: "E", Shell: "shell-test-4"}},
+				{StepMeta: testworkflowsv1.StepMeta{Name: "E"}, StepOperations: testworkflowsv1.StepOperations{Shell: "shell-test-4"}},
 			},
 		},
 	}
@@ -727,8 +734,8 @@ func TestProcessNegativeContainerStep(t *testing.T) {
 	wf := &testworkflowsv1.TestWorkflow{
 		Spec: testworkflowsv1.TestWorkflowSpec{
 			Steps: []testworkflowsv1.Step{
-				{StepBase: testworkflowsv1.StepBase{Shell: "shell-test"}},
-				{StepBase: testworkflowsv1.StepBase{Shell: "shell-test-2", Negative: true}},
+				{StepOperations: testworkflowsv1.StepOperations{Shell: "shell-test"}},
+				{StepOperations: testworkflowsv1.StepOperations{Shell: "shell-test-2"}, StepControl: testworkflowsv1.StepControl{Negative: true}},
 			},
 		},
 	}
@@ -814,8 +821,8 @@ func TestProcessOptionalContainerStep(t *testing.T) {
 	wf := &testworkflowsv1.TestWorkflow{
 		Spec: testworkflowsv1.TestWorkflowSpec{
 			Steps: []testworkflowsv1.Step{
-				{StepBase: testworkflowsv1.StepBase{Shell: "shell-test"}},
-				{StepBase: testworkflowsv1.StepBase{Shell: "shell-test-2", Optional: true}},
+				{StepOperations: testworkflowsv1.StepOperations{Shell: "shell-test"}},
+				{StepOperations: testworkflowsv1.StepOperations{Shell: "shell-test-2"}, StepControl: testworkflowsv1.StepControl{Optional: true}},
 			},
 		},
 	}
@@ -898,8 +905,9 @@ func TestProcessLocalContent(t *testing.T) {
 	wf := &testworkflowsv1.TestWorkflow{
 		Spec: testworkflowsv1.TestWorkflowSpec{
 			Steps: []testworkflowsv1.Step{
-				{StepBase: testworkflowsv1.StepBase{
+				{StepOperations: testworkflowsv1.StepOperations{
 					Shell: "shell-test",
+				}, StepSource: testworkflowsv1.StepSource{
 					Content: &testworkflowsv1.Content{
 						Files: []testworkflowsv1.ContentFile{{
 							Path:    "/some/path",
@@ -907,7 +915,7 @@ func TestProcessLocalContent(t *testing.T) {
 						}},
 					},
 				}},
-				{StepBase: testworkflowsv1.StepBase{Shell: "shell-test-2"}},
+				{StepOperations: testworkflowsv1.StepOperations{Shell: "shell-test-2"}},
 			},
 		},
 	}
@@ -1009,8 +1017,8 @@ func TestProcessGlobalContent(t *testing.T) {
 				},
 			},
 			Steps: []testworkflowsv1.Step{
-				{StepBase: testworkflowsv1.StepBase{Shell: "shell-test"}},
-				{StepBase: testworkflowsv1.StepBase{Shell: "shell-test-2"}},
+				{StepOperations: testworkflowsv1.StepOperations{Shell: "shell-test"}},
+				{StepOperations: testworkflowsv1.StepOperations{Shell: "shell-test-2"}},
 			},
 		},
 	}
@@ -1101,7 +1109,7 @@ func TestProcessRunShell(t *testing.T) {
 	wf := &testworkflowsv1.TestWorkflow{
 		Spec: testworkflowsv1.TestWorkflowSpec{
 			Steps: []testworkflowsv1.Step{
-				{StepBase: testworkflowsv1.StepBase{Run: &testworkflowsv1.StepRun{Shell: common.Ptr("shell-test")}}},
+				{StepOperations: testworkflowsv1.StepOperations{Run: &testworkflowsv1.StepRun{Shell: common.Ptr("shell-test")}}},
 			},
 		},
 	}
@@ -1118,8 +1126,11 @@ func TestProcessRunShell(t *testing.T) {
 	want := batchv1.Job{
 		TypeMeta: metav1.TypeMeta{Kind: "Job", APIVersion: "batch/v1"},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   "dummy-id",
-			Labels: map[string]string{constants.ExecutionIdLabelName: "dummy-id"},
+			Name: "dummy-id-abc",
+			Labels: map[string]string{
+				constants.RootResourceIdLabelName: "dummy-id",
+				constants.ResourceIdLabelName:     "dummy-id-abc",
+			},
 			Annotations: map[string]string{
 				constants.SignatureAnnotationName: string(sigSerialized),
 			},
@@ -1129,8 +1140,8 @@ func TestProcessRunShell(t *testing.T) {
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						constants.ExecutionIdLabelName:        "dummy-id",
-						constants.ExecutionIdMainPodLabelName: "dummy-id",
+						constants.RootResourceIdLabelName: "dummy-id",
+						constants.ResourceIdLabelName:     "dummy-id-abc",
 					},
 					Annotations: map[string]string(nil),
 				},

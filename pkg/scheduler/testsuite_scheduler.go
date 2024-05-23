@@ -121,7 +121,7 @@ func (s *Scheduler) executeTestSuite(ctx context.Context, testSuite testkube.Tes
 	testsuiteExecution = testkube.NewStartedTestSuiteExecution(testSuite, request)
 	err = s.testsuiteResults.Insert(ctx, testsuiteExecution)
 	if err != nil {
-		s.logger.Infow("Inserting test execution", "error", err)
+		s.logger.Errorw("Inserting test execution error", "error", err)
 	}
 
 	s.events.Notify(testkube.NewEventStartTestSuite(&testsuiteExecution))

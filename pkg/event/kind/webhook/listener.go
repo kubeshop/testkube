@@ -174,6 +174,7 @@ func (l *WebhookListener) processTemplate(field, body string, event testkube.Eve
 		"tostr":                            text.ToStr,
 		"executionstatustostring":          testkube.ExecutionStatusString,
 		"testsuiteexecutionstatustostring": testkube.TestSuiteExecutionStatusString,
+		"testworkflowstatustostring":       testkube.TestWorkflowStatusString,
 	}).Parse(body)
 	if err != nil {
 		log.Errorw(fmt.Sprintf("creating webhook %s error", field), "error", err)

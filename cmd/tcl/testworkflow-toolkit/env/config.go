@@ -42,19 +42,31 @@ type envCloudConfig struct {
 type envExecutionConfig struct {
 	WorkflowName   string `envconfig:"TK_WF"`
 	Id             string `envconfig:"TK_EX"`
-	GlobalTemplate string `envconfig:"TK_TMPL"`
+	ResourceId     string `envconfig:"TK_EXI"`
+	RootResourceId string `envconfig:"TK_EXR"`
+	FSPrefix       string `envconfig:"TK_FS"`
 }
 
 type envSystemConfig struct {
-	Debug     string `envconfig:"DEBUG"`
-	Ref       string `envconfig:"TK_REF"`
-	Namespace string `envconfig:"TK_NS"`
-	Ip        string `envconfig:"TK_IP"`
+	Debug                 string `envconfig:"DEBUG"`
+	Ref                   string `envconfig:"TK_REF"`
+	Namespace             string `envconfig:"TK_NS"`
+	DefaultRegistry       string `envconfig:"TK_R"`
+	DefaultServiceAccount string `envconfig:"TK_SA"`
+	Ip                    string `envconfig:"TK_IP"`
+	DashboardUrl          string `envconfig:"TK_DASH"`
+	ApiUrl                string `envconfig:"TK_API"`
 }
 
 type envImagesConfig struct {
-	Init    string `envconfig:"TK_IMG_INIT"`
-	Toolkit string `envconfig:"TK_IMG_TOOLKIT"`
+	Init                         string `envconfig:"TESTKUBE_TW_INIT_IMAGE"`
+	Toolkit                      string `envconfig:"TESTKUBE_TW_TOOLKIT_IMAGE"`
+	InspectorPersistenceEnabled  bool   `envconfig:"TK_IMG_P" default:"false"`
+	InspectorPersistenceCacheKey string `envconfig:"TK_IMG_PK"`
+}
+
+type featuresConfig struct {
+	EnableJUnitParser bool `envconfig:"TK_FF_JUNIT_REPORT" default:"false"`
 }
 
 type envConfig struct {
@@ -63,6 +75,7 @@ type envConfig struct {
 	Cloud         envCloudConfig
 	Execution     envExecutionConfig
 	Images        envImagesConfig
+	Features      featuresConfig
 }
 
 var cfg envConfig
@@ -79,6 +92,8 @@ func Config() *envConfig {
 		err = envconfig.Process("", &cfg.Execution)
 		ui.ExitOnError("configuring environment", err)
 		err = envconfig.Process("", &cfg.Images)
+		ui.ExitOnError("configuring environment", err)
+		err = envconfig.Process("", &cfg.Features)
 		ui.ExitOnError("configuring environment", err)
 	}
 	cfgLoaded = true
@@ -115,4 +130,8 @@ func WorkflowName() string {
 
 func ExecutionId() string {
 	return Config().Execution.Id
+}
+
+func JUnitParserEnabled() bool {
+	return Config().Features.EnableJUnitParser
 }

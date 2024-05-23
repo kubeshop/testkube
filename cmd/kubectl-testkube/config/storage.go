@@ -9,10 +9,18 @@ import (
 )
 
 const (
-	APIServerName string = "testkube-api-server"
-	APIServerPort int    = 8088
-	DashboardName string = "testkube-dashboard"
-	DashboardPort int    = 8080
+	APIServerName               string = "testkube-api-server"
+	APIServerPort               int    = 8088
+	DashboardName               string = "testkube-dashboard"
+	DashboardPort               int    = 8080
+	EnterpriseUiName            string = "testkube-enterprise-ui"
+	EnterpriseUiPort            int    = 8080
+	EnterpriseApiName           string = "testkube-enterprise-api"
+	EnterpriseApiPort           int    = 8088
+	EnterpriseApiForwardingPort int    = 8090
+	EnterpriseDexName           string = "testkube-enterprise-dex"
+	EnterpriseDexPort           int    = 5556
+	EnterpriseDexForwardingPort int    = 5556
 
 	configDirName = ".testkube"
 	configFile    = "config.json"

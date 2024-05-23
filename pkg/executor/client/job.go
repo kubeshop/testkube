@@ -1018,6 +1018,7 @@ func NewJobOptions(log *zap.SugaredLogger, templatesClient templatesv1.Interface
 			testkube.Features(options.Features),
 			natsURI,
 			images.LogSidecar,
+			jobOptions.RunnerCustomCASecret,
 		))
 
 		if err != nil {

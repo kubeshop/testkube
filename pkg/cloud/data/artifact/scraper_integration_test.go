@@ -67,6 +67,7 @@ func TestCloudScraper_ArchiveFilesystemExtractor_Integration(t *testing.T) {
 		ExecutionID:   "my-execution-id",
 		TestName:      "my-test",
 		TestSuiteName: "my-test-suite",
+		ContentType:   "application/gzip",
 	}
 	mockExecutor.
 		EXPECT().
@@ -77,6 +78,7 @@ func TestCloudScraper_ArchiveFilesystemExtractor_Integration(t *testing.T) {
 		ExecutionID:   "my-execution-id",
 		TestName:      "my-test",
 		TestSuiteName: "my-test-suite",
+		ContentType:   "text/plain",
 	}
 	mockExecutor.
 		EXPECT().
@@ -154,6 +156,7 @@ func TestCloudScraper_RecursiveFilesystemExtractor_Integration(t *testing.T) {
 		ExecutionID:   "my-execution-id",
 		TestName:      "my-test",
 		TestSuiteName: "my-test-suite",
+		ContentType:   "text/plain",
 	}
 	mockExecutor.
 		EXPECT().
@@ -165,6 +168,7 @@ func TestCloudScraper_RecursiveFilesystemExtractor_Integration(t *testing.T) {
 		ExecutionID:   "my-execution-id",
 		TestName:      "my-test",
 		TestSuiteName: "my-test-suite",
+		ContentType:   "text/plain",
 	}
 	mockExecutor.
 		EXPECT().
@@ -176,6 +180,7 @@ func TestCloudScraper_RecursiveFilesystemExtractor_Integration(t *testing.T) {
 		ExecutionID:   "my-execution-id",
 		TestName:      "my-test",
 		TestSuiteName: "my-test-suite",
+		ContentType:   "text/plain",
 	}
 	mockExecutor.
 		EXPECT().

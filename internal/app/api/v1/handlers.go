@@ -61,7 +61,7 @@ func (s *TestkubeAPI) InfoHandler() fiber.Handler {
 	}
 
 	var executionNamespaces []string
-	for namespace := range s.serviceAccountNames {
+	for namespace := range s.ServiceAccountNames {
 		if namespace == s.Namespace {
 			continue
 		}

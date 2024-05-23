@@ -10,17 +10,18 @@
 package testkube
 
 type TestWorkflowStepExecuteTestWorkflowRef struct {
+	Count    *BoxedString `json:"count,omitempty"`
+	MaxCount *BoxedString `json:"maxCount,omitempty"`
+	// matrix of parameters to spawn instances
+	Matrix map[string]interface{} `json:"matrix,omitempty"`
+	// parameters that should be distributed across sharded instances
+	Shards map[string]interface{} `json:"shards,omitempty"`
 	// TestWorkflow name to include
 	Name string `json:"name,omitempty"`
 	// TestWorkflow execution description to display
 	Description string `json:"description,omitempty"`
 	// TestWorkflow execution name override
-	ExecutionName string            `json:"executionName,omitempty"`
-	Config        map[string]string `json:"config,omitempty"`
-	Count         *BoxedString      `json:"count,omitempty"`
-	MaxCount      *BoxedString      `json:"maxCount,omitempty"`
-	// matrix of parameters to spawn instances
-	Matrix map[string]interface{} `json:"matrix,omitempty"`
-	// parameters that should be distributed across sharded instances
-	Shards map[string]interface{} `json:"shards,omitempty"`
+	ExecutionName string                                `json:"executionName,omitempty"`
+	Tarball       map[string]TestWorkflowTarballRequest `json:"tarball,omitempty"`
+	Config        map[string]string                     `json:"config,omitempty"`
 }

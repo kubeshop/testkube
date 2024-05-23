@@ -17,26 +17,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
-      - uses: sigstore/cosign-installer@v3.4.0
-      - uses: anchore/sbom-action/download-syft@v0.14.2
+      - uses: sigstore/cosign-installer@v3.5.0
+      - uses: anchore/sbom-action/download-syft@v0.15.11
 
       - name: Set up Docker Buildx
         id: buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v3
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
+        uses: docker/setup-qemu-action@v3
 
       - name: Set-up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: false
 
       - name: Go Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: |
             ~/go/pkg/mod
@@ -44,7 +44,7 @@ jobs:
           key: testkube-api-go-${{ hashFiles('**/go.sum') }}
 
       - name: Login to DockerHub
-        uses: docker/login-action@v1
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -61,7 +61,7 @@ jobs:
           readme_file: "./README.md"
 
       - name: Release
-        uses: goreleaser/goreleaser-action@v4
+        uses: goreleaser/goreleaser-action@v5
         with:
           distribution: goreleaser
           version: latest
@@ -84,26 +84,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
-      - uses: sigstore/cosign-installer@v3.4.0
-      - uses: anchore/sbom-action/download-syft@v0.14.2
+      - uses: sigstore/cosign-installer@v3.5.0
+      - uses: anchore/sbom-action/download-syft@v0.15.11
 
       - name: Set up Docker Buildx
         id: buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v3
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
+        uses: docker/setup-qemu-action@v3
 
       - name: Set-up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: false
 
       - name: Go Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: |
             ~/go/pkg/mod
@@ -111,13 +111,13 @@ jobs:
           key: testkube-tw-init-go-${{ hashFiles('**/go.sum') }}
 
       - name: Login to DockerHub
-        uses: docker/login-action@v1
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Release
-        uses: goreleaser/goreleaser-action@v4
+        uses: goreleaser/goreleaser-action@v5
         with:
           distribution: goreleaser
           version: latest
@@ -140,26 +140,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
-      - uses: sigstore/cosign-installer@v3.4.0
-      - uses: anchore/sbom-action/download-syft@v0.14.2
+      - uses: sigstore/cosign-installer@v3.5.0
+      - uses: anchore/sbom-action/download-syft@v0.15.11
 
       - name: Set up Docker Buildx
         id: buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v3
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
+        uses: docker/setup-qemu-action@v3
 
       - name: Set-up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: false
 
       - name: Go Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: |
             ~/go/pkg/mod
@@ -167,13 +167,13 @@ jobs:
           key: testkube-tw-toolkit-go-${{ hashFiles('**/go.sum') }}
 
       - name: Login to DockerHub
-        uses: docker/login-action@v1
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Release
-        uses: goreleaser/goreleaser-action@v4
+        uses: goreleaser/goreleaser-action@v5
         with:
           distribution: goreleaser
           version: latest
@@ -214,27 +214,34 @@ jobs:
 
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          # this might remove tools that are actually needed,
+          # if set to "true" but frees about 6 GB
+          tool-cache: false
 
-      - uses: sigstore/cosign-installer@v3.4.0
-      - uses: anchore/sbom-action/download-syft@v0.14.2
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - uses: sigstore/cosign-installer@v3.5.0
+      - uses: anchore/sbom-action/download-syft@v0.15.11
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         id: buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
 
       - name: Set-up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: false
 
       - name: Go Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: |
             ~/go/pkg/mod
@@ -244,7 +251,7 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: Login to DockerHub
-        uses: docker/login-action@v1
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -261,7 +268,7 @@ jobs:
           readme_file: "./contrib/executor/${{ matrix.executor }}/README.md"
 
       - name: Release
-        uses: goreleaser/goreleaser-action@v4
+        uses: goreleaser/goreleaser-action@v5
         with:
           distribution: goreleaser
           version: latest
@@ -278,27 +285,34 @@ jobs:
   executor_jmeter:
     runs-on: ubuntu-latest
     steps:
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          # this might remove tools that are actually needed,
+          # if set to "true" but frees about 6 GB
+          tool-cache: false
+
       - name: Checkout
         uses: actions/checkout@v4
 
-      - uses: sigstore/cosign-installer@v3.4.0
-      - uses: anchore/sbom-action/download-syft@v0.14.2
+      - uses: sigstore/cosign-installer@v3.5.0
+      - uses: anchore/sbom-action/download-syft@v0.15.11
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         id: buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v3
 
       - name: Set-up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: false
 
       - name: Go Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: |
             ~/go/pkg/mod
@@ -308,7 +322,7 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: Login to DockerHub
-        uses: docker/login-action@v1
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -325,7 +339,7 @@ jobs:
           readme_file: "./contrib/executor/jmeter/README.md"
 
       - name: Release
-        uses: goreleaser/goreleaser-action@v4
+        uses: goreleaser/goreleaser-action@v5
         with:
           distribution: goreleaser
           version: latest
@@ -339,27 +353,34 @@ jobs:
   executor_jmeterd:
     runs-on: ubuntu-latest
     steps:
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          # this might remove tools that are actually needed,
+          # if set to "true" but frees about 6 GB
+          tool-cache: false
+
       - name: Checkout
         uses: actions/checkout@v4
 
-      - uses: sigstore/cosign-installer@v3.4.0
-      - uses: anchore/sbom-action/download-syft@v0.14.2
+      - uses: sigstore/cosign-installer@v3.5.0
+      - uses: anchore/sbom-action/download-syft@v0.15.11
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         id: buildx
         uses: docker/setup-buildx-action@v3
 
       - name: Set-up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: false
 
       - name: Go Cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/go/pkg/mod
@@ -369,7 +390,7 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: Login to DockerHub
-        uses: docker/login-action@v1
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -386,7 +407,7 @@ jobs:
           readme_file: "./contrib/executor/jmeterd/README.md"
 
       - name: Release
-        uses: goreleaser/goreleaser-action@v4
+        uses: goreleaser/goreleaser-action@v5
         with:
           distribution: goreleaser
           version: latest
@@ -402,24 +423,31 @@ jobs:
   jmeterd_slave:
     runs-on: ubuntu-latest
     steps:
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          # this might remove tools that are actually needed,
+          # if set to "true" but frees about 6 GB
+          tool-cache: false
+
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         id: buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v3
 
       - name: Set-up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: false
 
       - name: Docker Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: /tmp/.buildx-cache
           key: jmeterd-buildx-${{ github.sha }}
@@ -427,7 +455,7 @@ jobs:
             ${{ runner.os }}-buildx-
 
       - name: Login to DockerHub
-        uses: docker/login-action@v1
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -450,27 +478,34 @@ jobs:
   executor_maven:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          # this might remove tools that are actually needed,
+          # if set to "true" but frees about 6 GB
+          tool-cache: false
 
-      - uses: sigstore/cosign-installer@v3.4.0
-      - uses: anchore/sbom-action/download-syft@v0.14.2
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - uses: sigstore/cosign-installer@v3.5.0
+      - uses: anchore/sbom-action/download-syft@v0.15.11
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         id: buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v3
 
       - name: Set-up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: false
 
       - name: Go Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: |
             ~/go/pkg/mod
@@ -480,7 +515,7 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: Login to DockerHub
-        uses: docker/login-action@v1
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -497,7 +532,7 @@ jobs:
           readme_file: "./contrib/executor/maven/README.md"
 
       - name: Release
-        uses: goreleaser/goreleaser-action@v4
+        uses: goreleaser/goreleaser-action@v5
         with:
           distribution: goreleaser
           version: latest
@@ -511,27 +546,34 @@ jobs:
   executor_gradle:
     runs-on: ubuntu-latest
     steps:
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          # this might remove tools that are actually needed,
+          # if set to "true" but frees about 6 GB
+          tool-cache: false
+
       - name: Checkout
         uses: actions/checkout@v4
 
-      - uses: sigstore/cosign-installer@v3.4.0
-      - uses: anchore/sbom-action/download-syft@v0.14.2
+      - uses: sigstore/cosign-installer@v3.5.0
+      - uses: anchore/sbom-action/download-syft@v0.15.11
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         id: buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v3
 
       - name: Set-up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: false
 
       - name: Go Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: |
             ~/go/pkg/mod
@@ -541,7 +583,7 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: Login to DockerHub
-        uses: docker/login-action@v1
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -558,7 +600,7 @@ jobs:
           readme_file: "./contrib/executor/gradle/README.md"
 
       - name: Release
-        uses: goreleaser/goreleaser-action@v4
+        uses: goreleaser/goreleaser-action@v5
         with:
           distribution: goreleaser
           version: latest
@@ -586,24 +628,31 @@ jobs:
 
     runs-on: ubuntu-latest
     steps:
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          # this might remove tools that are actually needed,
+          # if set to "true" but frees about 6 GB
+          tool-cache: false
+
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         id: buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v3
 
       - name: Set-up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: false
 
       - name: Go Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: |
             ~/go/pkg/mod
@@ -613,7 +662,7 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: Login to DockerHub
-        uses: docker/login-action@v1
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -636,7 +685,7 @@ jobs:
           strip_v: true
 
       - name: Release
-        uses: goreleaser/goreleaser-action@v4
+        uses: goreleaser/goreleaser-action@v5
         with:
           distribution: goreleaser
           version: latest
@@ -652,6 +701,63 @@ jobs:
         run: |
           docker push kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-amd64
           docker push kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-arm64v8
+
+  executor_postman_node21:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          # this might remove tools that are actually needed,
+          # if set to "true" but frees about 6 GB
+          tool-cache: false
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - uses: sigstore/cosign-installer@v3.5.0
+      - uses: anchore/sbom-action/download-syft@v0.15.11
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set-up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: false
+
+      - name: Go Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: postman-node-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Release
+        uses: goreleaser/goreleaser-action@v5
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release -f goreleaser_files/.goreleaser-docker-build-executor-postman-node21.yml
+        env:
+          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
+          DOCKER_BUILDX_CACHE_FROM: "type=gha"
+          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
 
   executor_cypress_manifest:
     needs: executor_cypress
@@ -671,18 +777,25 @@ jobs:
 
     runs-on: ubuntu-latest
     steps:
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          # this might remove tools that are actually needed,
+          # if set to "true" but frees about 6 GB
+          tool-cache: false
 
-      - uses: sigstore/cosign-installer@v3.4.0
-      - uses: anchore/sbom-action/download-syft@v0.14.2
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - uses: sigstore/cosign-installer@v3.5.0
+      - uses: anchore/sbom-action/download-syft@v0.15.11
 
       - name: Set up Docker Buildx
         id: buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v3
 
       - name: Login to DockerHub
-        uses: docker/login-action@v1
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -713,27 +826,34 @@ jobs:
   executor_playwright:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          # this might remove tools that are actually needed,
+          # if set to "true" but frees about 6 GB
+          tool-cache: false
 
-      - uses: sigstore/cosign-installer@v3.4.0
-      - uses: anchore/sbom-action/download-syft@v0.14.2
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - uses: sigstore/cosign-installer@v3.5.0
+      - uses: anchore/sbom-action/download-syft@v0.15.11
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         id: buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v3
 
       - name: Set-up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: false
 
       - name: Go Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: |
             ~/go/pkg/mod
@@ -743,7 +863,7 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: Login to DockerHub
-        uses: docker/login-action@v1
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -760,7 +880,7 @@ jobs:
           readme_file: "./contrib/executor/playwright/README.md"
 
       - name: Release
-        uses: goreleaser/goreleaser-action@v4
+        uses: goreleaser/goreleaser-action@v5
         with:
           distribution: goreleaser
           version: latest

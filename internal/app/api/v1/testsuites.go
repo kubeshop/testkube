@@ -815,7 +815,7 @@ func (s TestkubeAPI) AbortTestSuiteExecutionHandler() fiber.Handler {
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not sent test suite abortion event: %w", errPrefix, err))
 		}
-		s.Log.Infow("test suite execution aborted, event sent", "executionID", c.Params("executionID"))
+		s.Log.Debugw("test suite execution aborted, event sent", "executionID", c.Params("executionID"))
 
 		return c.Status(http.StatusNoContent).SendString("")
 	}
@@ -852,7 +852,13 @@ func (s TestkubeAPI) ListTestSuiteTestsHandler() fiber.Handler {
 func getExecutionsFilterFromRequest(c *fiber.Ctx) testresult.Filter {
 
 	filter := testresult.NewExecutionsFilter()
-	name := c.Query("id", "")
+	// id for /test-suites/ID/executions
+	name := c.Params("id", "")
+	if name == "" {
+		// query param for /executions?id
+		name = c.Query("id", "")
+	}
+
 	if name != "" {
 		filter = filter.WithName(name)
 	}

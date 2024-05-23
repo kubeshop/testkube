@@ -54,7 +54,7 @@ func NewGetCmd() *cobra.Command {
 	cmd.AddCommand(testworkflows.NewGetTestWorkflowExecutionsCmd())
 	cmd.AddCommand(testworkflowtemplates.NewGetTestWorkflowTemplatesCmd())
 
-	cmd.PersistentFlags().StringP("output", "o", "pretty", "output type can be one of json|yaml|pretty|go-template")
+	cmd.PersistentFlags().StringP("output", "o", "pretty", "output type can be one of json|yaml|pretty|go")
 	cmd.PersistentFlags().StringP("go-template", "", "{{.}}", "go template to render")
 
 	return cmd

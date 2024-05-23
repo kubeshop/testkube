@@ -41,7 +41,7 @@ func (r *CDEventLoader) Kind() string {
 	return "cdevent"
 }
 
-// Load returns single listener for cd eventt
+// Load returns single listener for cd event
 func (r *CDEventLoader) Load() (listeners common.Listeners, err error) {
 	return common.Listeners{NewCDEventListener("cdevent", "", r.clusterID, r.defaultNamespace, r.dashboardURI, r.events, r.client)}, nil
 }

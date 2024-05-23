@@ -48,6 +48,7 @@ It is an array of config objects and can use any config combinations:
   selector: {}
   testName: []
   testSuiteName: []
+  testWorkflowName: []
   events:
     - start-test
     - end-test-success
@@ -59,6 +60,11 @@ It is an array of config objects and can use any config combinations:
     - end-testsuite-failed
     - end-testsuite-aborted
     - end-testsuite-timeout
+    - start-testworkflow
+    - queue-testworkflow    
+    - end-testworkflow-success
+    - end-testworkflow-failed
+    - end-testworkflow-aborted
 ```
 
 To apply, pass the file to the Helm values:
@@ -86,11 +92,15 @@ For example:
   testSuiteName:
     - test-suite1
     - test-suite2
+  tesrWorkflowName:
+    - test-workflow1
+    - test-workflow2  
   events:
     - end-test-failed
     - end-test-timeout
     - end-testsuite-failed
     - end-testsuite-timeout
+    - end-testworkflow-failed
 - ChannelID: C07654342
   selector:
     label3: value4
@@ -100,6 +110,9 @@ For example:
   testSuiteName:
     - integration-test-suite1
     - integration-test-suite2
+   testWorkflowName:
+    - integration-test-workflow1
+    - integration-test-workflow2 
   events:
     - start-test
     - end-test-success
@@ -111,10 +124,14 @@ For example:
     - end-testsuite-failed
     - end-testsuite-aborted
     - end-testsuite-timeout
-
+    - start-testworkflow
+    - queue-testworkflow    
+    - end-testworkflow-success
+    - end-testworkflow-failed
+    - end-testworkflow-aborted
 ```
 
-This will send notifications to the channel with the id `C01234567` for the test and test suites with labels `label1:value1` as well as tests with the labels "sanity" and "testName2" and test suites with the labels "test-suite1" and "test-suite2", on events with the labels "end-test-failed", "end-test-timeout", "end-testsuite-failed" and "end-testsuite-timeout", and to the channel with the id `C07654342` for tests with labels `label3:value4`, tests with the labels "integration-test1" and "integration-test2" and test suites with the labels "integration-test-suite1" and "integration-test-suite2" on all events.
+This will send notifications to the channel with the id `C01234567` for the test, test suites and test workflows with labels `label1:value1` as well as tests with the names "sanity" and "testName2", test suites with the names "test-suite1" and "test-suite2" and test workflows with the names "test-workflow1" and "test-workflow2", on events with the labels "end-test-failed", "end-test-timeout", "end-testsuite-failed", "end-testsuite-timeout" and "end-testworkflow-failed", and to the channel with the id `C07654342` for tests with labels `label3:value4`, tests with the names "integration-test1" and "integration-test2", test suites with the names "integration-test-suite1" and "integration-test-suite2" and test workflows with the names "integration-test-workflow1" and "integration-test-workflow2" on all events.
 
 ### Configure the Message Template
 

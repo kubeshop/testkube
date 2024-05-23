@@ -29,6 +29,7 @@ func NewConfigCmd() *cobra.Command {
 
 	cmd.AddCommand(commands.NewConfigureNamespaceCmd())
 	cmd.AddCommand(commands.NewConfigureAPIURICmd())
+	cmd.AddCommand(commands.NewConfigureHeadersCmd())
 	cmd.AddCommand(oauth.NewConfigureOAuthCmd())
 	cmd.AddCommand(commands.NewConfigureAPIServerNameCmd())
 	cmd.AddCommand(commands.NewConfigureAPIServerPortCmd())

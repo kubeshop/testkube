@@ -151,6 +151,9 @@ func (s *Notifier) composeMessage(event *testkube.Event) (view *slack.Message, n
 	} else if event.TestSuiteExecution != nil {
 		message, err = s.composeTestsuiteMessage(event.TestSuiteExecution, event.Type())
 		name = event.TestSuiteExecution.Name
+	} else if event.TestWorkflowExecution != nil {
+		message, err = s.composeTestWorkflowMessage(event.TestWorkflowExecution, event.Type())
+		name = event.TestWorkflowExecution.Name
 	} else {
 		log.DefaultLogger.Warnw("event type is not handled by Slack notifier", "event", event)
 		return nil, "", nil
@@ -196,6 +199,66 @@ func (s *Notifier) composeTestsuiteMessage(execution *testkube.TestSuiteExecutio
 	}
 
 	log.DefaultLogger.Infow("Execution changed", "status", execution.Status)
+
+	var message bytes.Buffer
+	err = t.Execute(&message, args)
+	if err != nil {
+		log.DefaultLogger.Warnw("error while executing slack template", "error", err.Error(), "template", s.messageTemplate, "args", args)
+		return nil, err
+	}
+	return message.Bytes(), nil
+}
+
+func (s *Notifier) composeTestWorkflowMessage(execution *testkube.TestWorkflowExecution, eventType testkube.EventType) ([]byte, error) {
+	t, err := utils.NewTemplate("message").Parse(s.messageTemplate)
+	if err != nil {
+		log.DefaultLogger.Warnw("error while parsing slack template", "error", err.Error())
+		return nil, err
+	}
+
+	var name, namespace string
+	var labels map[string]string
+	if execution.Workflow != nil {
+		name = execution.Workflow.Name
+		namespace = execution.Workflow.Namespace
+		labels = execution.Workflow.Labels
+	}
+
+	var status, startTime, endTime, duration string
+	var totalSteps, failedSteps int
+	if execution.Result != nil {
+		status = string(*execution.Result.Status)
+		startTime = execution.Result.StartedAt.String()
+		endTime = execution.Result.FinishedAt.String()
+		duration = execution.Result.Duration
+		totalSteps = len(execution.Result.Steps)
+		for _, step := range execution.Result.Steps {
+			if step.Status != nil && *step.Status == testkube.FAILED_TestWorkflowStepStatus {
+				failedSteps++
+			}
+		}
+	}
+
+	args := MessageArgs{
+		ExecutionID:   execution.Id,
+		ExecutionName: execution.Name,
+		EventType:     string(eventType),
+		Namespace:     namespace,
+		Labels:        testkube.MapToString(labels),
+		TestName:      name,
+		TestType:      "Test Workflow",
+		Status:        status,
+		StartTime:     startTime,
+		EndTime:       endTime,
+		Duration:      duration,
+		TotalSteps:    totalSteps,
+		FailedSteps:   failedSteps,
+		ClusterName:   s.clusterName,
+		DashboardURI:  s.dashboardURI,
+		Envs:          s.envs,
+	}
+
+	log.DefaultLogger.Infow("Execution changed", "status", status)
 
 	var message bytes.Buffer
 	err = t.Execute(&message, args)

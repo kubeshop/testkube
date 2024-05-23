@@ -10,6 +10,7 @@
 package testkube
 
 type TestWorkflowContent struct {
-	Git   *TestWorkflowContentGit   `json:"git,omitempty"`
-	Files []TestWorkflowContentFile `json:"files,omitempty"`
+	Git     *TestWorkflowContentGit      `json:"git,omitempty"`
+	Files   []TestWorkflowContentFile    `json:"files,omitempty"`
+	Tarball []TestWorkflowContentTarball `json:"tarball,omitempty"`
 }

@@ -1,19 +1,17 @@
 // Copyright 2024 Testkube.
 //
-//Licensed as a Testkube Pro file under the Testkube Community
+// Licensed as a Testkube Pro file under the Testkube Community
 // License (the "License"); you may not use this file except in compliance with
 // the License. You may obtain a copy of the License at
 //
 //	https://github.com/kubeshop/testkube/blob/main/licenses/TCL.txt
 
-package utils
+package data
 
 import (
 	"bytes"
 	"errors"
 	"io"
-
-	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/data"
 )
 
 type outputProcessor struct {
@@ -39,12 +37,12 @@ func (o *outputProcessor) Write(p []byte) (int, error) {
 	lines := bytes.Split(append(o.lastLine, p...), []byte("\n"))
 	o.lastLine = nil
 	for i := range lines {
-		instruction, _, _ := data.DetectInstruction(lines[i])
+		instruction, _, _ := DetectInstruction(lines[i])
 		if instruction == nil && i == len(lines)-1 {
 			o.lastLine = lines[i]
 		}
 		if instruction != nil && instruction.Value != nil {
-			data.State.SetOutput(instruction.Ref, instruction.Name, instruction.Value)
+			State.SetOutput(instruction.Ref, instruction.Name, instruction.Value)
 		}
 	}
 

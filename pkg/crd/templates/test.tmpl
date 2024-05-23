@@ -205,7 +205,10 @@ spec:
       {{- end }}
       {{- if .ExecutionRequest.ArtifactRequest.UseDefaultStorageClassName }}
       useDefaultStorageClassName: {{ .ExecutionRequest.ArtifactRequest.UseDefaultStorageClassName }}
-      {{- end }}      
+      {{- end }}
+      {{- if .ExecutionRequest.ArtifactRequest.SidecarScraper }}
+      sidecarScraper: {{ .ExecutionRequest.ArtifactRequest.SidecarScraper }}
+      {{- end }}
     {{- end }}
     {{- if .ExecutionRequest.JobTemplate }}
     jobTemplate: {{ .ExecutionRequest.JobTemplate }}

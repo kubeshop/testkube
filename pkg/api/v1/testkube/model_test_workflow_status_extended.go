@@ -44,3 +44,7 @@ func ParseTestWorkflowStatusList(source, separator string) (statusList TestWorkf
 
 	return statusList, nil
 }
+
+func TestWorkflowStatusString(ptr *TestWorkflowStatus) string {
+	return string(*ptr)
+}

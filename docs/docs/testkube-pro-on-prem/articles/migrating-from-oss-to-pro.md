@@ -86,4 +86,4 @@ After running the command, navigate to the Dashboard and you will see all your t
 
 ## One-cluster Installation
 
-It is possible to deploy Testkube Pro On-Prem and connect an Agent to it in the same k8s cluster without exposing endpoints to the outside world. By simply running `bash <(curl -sSLf https://download.testkube.io)` and entering the license key (for now it works with Online licenses only), you will have a working environment in just a few minutes. The script will ask you for the namespace where your Testkube Core OSS is running and automatically connect it as an Agent, preserving all created tests. Please check out the [official documentation](https://docs.testkube.io/testkube-pro-on-prem/articles/usage-guide/#installation-of-testkube-pro-on-prem-and-an-agent-in-the-same-cluster) for more detailed info.
+It is possible to deploy Testkube Pro On-Prem and connect an Agent to it in the same k8s cluster without exposing endpoints to the outside world. You can find all the instructions at [the Testkube Quickstart](../../articles/install/quickstart-install.mdx).

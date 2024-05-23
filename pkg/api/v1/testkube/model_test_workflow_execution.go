@@ -18,6 +18,8 @@ type TestWorkflowExecution struct {
 	Id string `json:"id"`
 	// execution name
 	Name string `json:"name"`
+	// execution namespace
+	Namespace string `json:"namespace,omitempty"`
 	// sequence number for the execution
 	Number int32 `json:"number,omitempty"`
 	// when the execution has been scheduled to run
@@ -28,7 +30,9 @@ type TestWorkflowExecution struct {
 	Signature []TestWorkflowSignature `json:"signature,omitempty"`
 	Result    *TestWorkflowResult     `json:"result,omitempty"`
 	// additional information from the steps, like referenced executed tests or artifacts
-	Output           []TestWorkflowOutput `json:"output,omitempty"`
+	Output []TestWorkflowOutput `json:"output,omitempty"`
+	// generated reports from the steps, like junit
+	Reports          []TestWorkflowReport `json:"reports,omitempty"`
 	Workflow         *TestWorkflow        `json:"workflow"`
 	ResolvedWorkflow *TestWorkflow        `json:"resolvedWorkflow,omitempty"`
 }

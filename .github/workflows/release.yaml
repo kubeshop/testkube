@@ -29,26 +29,26 @@ jobs:
             path: .builds-darwin.goreleaser.yml
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Set up QEMU
         if: matrix.name == 'linux'
-        uses: docker/setup-qemu-action@v1
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         if: matrix.name == 'linux'
         id: buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v3
 
       - name: Set up Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v5
         with:
           go-version: 1.21
 
       - name: Go Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: |
             ~/go/pkg/mod
@@ -59,7 +59,7 @@ jobs:
 
       - name: Login to DockerHub
         if: matrix.name == 'linux'
-        uses: docker/login-action@v1
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -71,7 +71,7 @@ jobs:
           strip_v: true
 
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v4
+        uses: goreleaser/goreleaser-action@v5
         with:
           distribution: goreleaser-pro
           version: latest
@@ -117,11 +117,11 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: sigstore/cosign-installer@v3.4.0
-      - uses: anchore/sbom-action/download-syft@v0.14.2
+      - uses: sigstore/cosign-installer@v3.5.0
+      - uses: anchore/sbom-action/download-syft@v0.15.11
       - name: Download Artifacts for Linux
         uses: actions/download-artifact@master
         with:
@@ -142,11 +142,11 @@ jobs:
       - name: Add executable mode
         run: chmod -R +x linux/ darwin/
       - name: Set up Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v5
         with:
           go-version: 1.21
       - name: Go Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: |
             ~/go/pkg/mod
@@ -155,7 +155,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v2
+        uses: goreleaser/goreleaser-action@v5
         with:
           distribution: goreleaser-pro
           version: latest
@@ -181,7 +181,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -193,7 +193,7 @@ jobs:
 
       - name: Get MSFT Cert
         id: write_file
-        uses: timheuer/base64-to-file@v1.1
+        uses: timheuer/base64-to-file@v1.2
         with:
           fileName: "kubeshop_msft.p12"
           fileDir: "./temp/"
@@ -221,7 +221,7 @@ jobs:
 
       - name: Get release
         id: get_release
-        uses: bruceadams/get-release@v1.2.3
+        uses: bruceadams/get-release@v1.3.2
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
@@ -328,7 +328,7 @@ jobs:
           echo RELEASE_TAG=${SOURCE_TAG:1} >> $GITHUB_ENV
 
       - name: Repository Dispatch
-        uses: peter-evans/repository-dispatch@v2
+        uses: peter-evans/repository-dispatch@v3
         with:
           token: ${{ secrets.CI_BOT_TOKEN }}
           repository: kubeshop/testkube-argocd

@@ -26,6 +26,7 @@ var (
 	namespace    string
 	oauthEnabled bool
 	insecure     bool
+	headers      map[string]string
 )
 
 func init() {
@@ -194,6 +195,7 @@ func Execute() {
 	RootCmd.PersistentFlags().StringVarP(&apiURI, "api-uri", "a", apiURI, "api uri, default value read from config if set")
 	RootCmd.PersistentFlags().BoolVarP(&oauthEnabled, "oauth-enabled", "", cfg.OAuth2Data.Enabled, "enable oauth")
 	RootCmd.PersistentFlags().BoolVarP(&insecure, "insecure", "", false, "insecure connection for direct client")
+	RootCmd.PersistentFlags().StringToStringVarP(&headers, "header", "", cfg.Headers, "headers for direct client key value pair: --header name=value")
 
 	if err := RootCmd.ExecuteContext(ctx); err != nil {
 		fmt.Fprintln(os.Stderr, err)

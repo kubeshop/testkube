@@ -21,17 +21,32 @@ import (
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
 )
 
-func AnnotateControlledBy(obj metav1.Object, testWorkflowId string) {
+func AnnotateControlledBy(obj metav1.Object, rootId, id string) {
 	labels := obj.GetLabels()
 	if labels == nil {
 		labels = map[string]string{}
 	}
-	labels[constants.ExecutionIdLabelName] = testWorkflowId
+	labels[constants.RootResourceIdLabelName] = rootId
+	labels[constants.ResourceIdLabelName] = id
 	obj.SetLabels(labels)
 
 	// Annotate Pod template in the Job
 	if v, ok := obj.(*batchv1.Job); ok {
-		AnnotateControlledBy(&v.Spec.Template, testWorkflowId)
+		AnnotateControlledBy(&v.Spec.Template, rootId, id)
+	}
+}
+
+func AnnotateGroupId(obj metav1.Object, id string) {
+	labels := obj.GetLabels()
+	if labels == nil {
+		labels = map[string]string{}
+	}
+	labels[constants.GroupIdLabelName] = id
+	obj.SetLabels(labels)
+
+	// Annotate Pod template in the Job
+	if v, ok := obj.(*batchv1.Job); ok {
+		AnnotateGroupId(&v.Spec.Template, id)
 	}
 }
 
@@ -43,7 +58,10 @@ func isNotOptional(stage Stage) bool {
 	return !stage.Optional()
 }
 
-func buildKubernetesContainers(stage Stage, init *initProcess, machines ...expressionstcl.Machine) (containers []corev1.Container, err error) {
+func buildKubernetesContainers(stage Stage, init *initProcess, fsGroup *int64, machines ...expressionstcl.Machine) (containers []corev1.Container, err error) {
+	if stage.Paused() {
+		init.SetPaused(stage.Paused())
+	}
 	if stage.Timeout() != "" {
 		init.AddTimeout(stage.Timeout(), stage.Ref())
 	}
@@ -74,18 +92,18 @@ func buildKubernetesContainers(stage Stage, init *initProcess, machines ...expre
 		}
 
 		if group.Negative() {
-			init.AddResult(strings.Join(directRefResults, "&&"), ""+stage.Ref()+".v")
+			init.AddResult(strings.Join(directRefResults, "&&"), stage.Ref()+".v")
 		} else {
-			init.AddResult(strings.Join(directRefResults, "&&"), ""+stage.Ref())
+			init.AddResult(strings.Join(directRefResults, "&&"), stage.Ref())
 		}
 
 		for i, ch := range group.Children() {
 			// Condition should be executed only in the first leaf
 			if i == 1 {
-				init.ResetCondition()
+				init.ResetCondition().SetPaused(false)
 			}
 			// Pass down to another group or container
-			sub, serr := buildKubernetesContainers(ch, init.Children(ch.Ref()), machines...)
+			sub, serr := buildKubernetesContainers(ch, init.Children(ch.Ref()), fsGroup, machines...)
 			if serr != nil {
 				return nil, fmt.Errorf("%s: %s: resolving children: %s", stage.Ref(), stage.Name(), serr.Error())
 			}
@@ -116,7 +134,8 @@ func buildKubernetesContainers(stage Stage, init *initProcess, machines ...expre
 		SetNegative(c.Negative()).
 		AddRetryPolicy(c.RetryPolicy(), c.Ref()).
 		SetCommand(cr.Command...).
-		SetArgs(cr.Args...)
+		SetArgs(cr.Args...).
+		SetWorkingDir(cr.WorkingDir)
 
 	for _, env := range cr.Env {
 		if strings.Contains(env.Value, "{{") {
@@ -130,13 +149,14 @@ func buildKubernetesContainers(stage Stage, init *initProcess, machines ...expre
 
 	cr.Command = init.Command()
 	cr.Args = init.Args()
+	cr.WorkingDir = ""
 
 	// Ensure the container will have proper access to FS
 	if cr.SecurityContext == nil {
 		cr.SecurityContext = &corev1.SecurityContext{}
 	}
 	if cr.SecurityContext.RunAsGroup == nil {
-		cr.SecurityContext.RunAsGroup = common.Ptr(constants.DefaultFsGroup)
+		cr.SecurityContext.RunAsGroup = fsGroup
 	}
 
 	containers = []corev1.Container{cr}

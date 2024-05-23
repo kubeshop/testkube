@@ -1,0 +1,101 @@
+import Tabs from "@theme/Tabs";
+import TabItem from "@theme/TabItem";
+
+# Install the Testkube CLI
+
+The Testkube CLI allows you to both manage your Testkube installation and interact with your Testkube resources, such as running creating test definitions, running test executions, managing triggers, etc. [Learn more about the Testkube CLI](https://docs.testkube.io/cli/testkube).
+
+<Tabs groupId="dashboard-cli">
+<TabItem value="macos" label="MacOS" default>
+
+```sh
+brew install testkube
+```
+
+</TabItem>
+
+<TabItem value="windows" label="Windows">
+
+```sh
+choco source add --name=kubeshop_repo --source=https://chocolatey.kubeshop.io/chocolatey
+choco install testkube -y
+```
+
+</TabItem>
+
+<TabItem value="ubuntu" label="Ubuntu">
+
+To install Testkube CLI you'll need the following tools:
+
+- [Kubectl](https://kubernetes.io/docs/tasks/tools/), Kubernetes command-line tool
+- [Helm](https://helm.sh/)
+
+```sh
+wget -qO - https://repo.testkube.io/key.pub | sudo apt-key add -
+echo "deb https://repo.testkube.io/linux linux main" | sudo tee -a /etc/apt/sources.list
+sudo apt-get update
+sudo apt-get install -y testkube
+```
+
+</TabItem>
+
+<TabItem value="script" label="Script">
+
+To install Testkube CLI you'll need the following tools:
+
+- [Kubectl](https://kubernetes.io/docs/tasks/tools/), Kubernetes command-line tool
+- [Helm](https://helm.sh/)
+
+```bash
+curl -sSLf https://get.testkube.io | sh
+```
+
+</TabItem>
+
+<TabItem value="manual" label="Manual Download">
+
+To install Testkube CLI you\'ll need the following tools:
+
+- [Kubectl](https://kubernetes.io/docs/tasks/tools/), Kubernetes command-line tool
+- [Helm](https://helm.sh/)
+
+1. Download the binary for the version and platform of your choice [here](https://github.com/kubeshop/testkube/releases).
+2. Unpack it. For example, in Linux use `tar -zxvf testkube_1.5.1_Linux_x86_64.tar.gz`.
+3. Move it to a location in the PATH. For example:
+
+```sh
+mv  testkube_1.5.1_Linux_x86_64/kubectl-testkube /usr/local/bin/kubectl-testkube
+```
+
+For Windows, you will need to unpack the binary and add it to the `%PATH%` as well.
+
+:::note
+If you use a package manager that we don\'t support, please let us know here [#161](https://github.com/kubeshop/testkube/issues/161).
+:::
+
+</TabItem>
+</Tabs>
+
+## Validating the Testkube CLI
+
+You can validate the CLI and server their version as follows:
+
+```bash
+$ testkube version
+Context:  (1.17.15)   Namespace: testkube
+-----------------------------------------
+
+████████ ███████ ███████ ████████ ██   ██ ██    ██ ██████  ███████
+   ██    ██      ██         ██    ██  ██  ██    ██ ██   ██ ██
+   ██    █████   ███████    ██    █████   ██    ██ ██████  █████
+   ██    ██           ██    ██    ██  ██  ██    ██ ██   ██ ██
+   ██    ███████ ███████    ██    ██   ██  ██████  ██████  ███████
+                                           /tɛst kjub/ by Kubeshop
+
+
+Client Version 1.17.15
+Server Version 1.17.16
+Commit
+Built by Homebrew
+Build date
+```

@@ -67,7 +67,7 @@ func NewIntermediate() Intermediate {
 		RefCounter: ref,
 		Root:       NewGroupStage("", true),
 		Container:  NewContainer(),
-		Files:      NewConfigMapFiles(fmt.Sprintf("{{execution.id}}-%s", ref.NextRef()), nil)}
+		Files:      NewConfigMapFiles(fmt.Sprintf("{{resource.id}}-%s", ref.NextRef()), nil)}
 }
 
 func (s *intermediate) ContainerDefaults() Container {

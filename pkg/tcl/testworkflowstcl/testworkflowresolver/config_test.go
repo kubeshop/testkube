@@ -39,7 +39,7 @@ func TestApplyConfigTestWorkflow(t *testing.T) {
 			},
 			Steps: []testworkflowsv1.Step{
 				{
-					StepBase: testworkflowsv1.StepBase{
+					StepDefaults: testworkflowsv1.StepDefaults{
 						Container: &testworkflowsv1.ContainerConfig{
 							WorkingDir: common.Ptr("some {{unknown(300)}} value {{another(500)}}"),
 						},
@@ -62,7 +62,7 @@ func TestApplyConfigTestWorkflow(t *testing.T) {
 			},
 			Steps: []testworkflowsv1.Step{
 				{
-					StepBase: testworkflowsv1.StepBase{
+					StepDefaults: testworkflowsv1.StepDefaults{
 						Container: &testworkflowsv1.ContainerConfig{
 							WorkingDir: common.Ptr("{{config.foobar}} {{another(500)}}"),
 						},
@@ -95,7 +95,7 @@ func TestApplyMissingConfig(t *testing.T) {
 			},
 			Steps: []testworkflowsv1.Step{
 				{
-					StepBase: testworkflowsv1.StepBase{
+					StepDefaults: testworkflowsv1.StepDefaults{
 						Container: &testworkflowsv1.ContainerConfig{
 							WorkingDir: common.Ptr("{{config.foobar}} {{another(500)}}"),
 						},
@@ -132,7 +132,7 @@ func TestApplyConfigDefaults(t *testing.T) {
 			},
 			Steps: []testworkflowsv1.Step{
 				{
-					StepBase: testworkflowsv1.StepBase{
+					StepDefaults: testworkflowsv1.StepDefaults{
 						Container: &testworkflowsv1.ContainerConfig{
 							WorkingDir: common.Ptr("some {{unknown(300)}} value {{another(500)}}"),
 						},
@@ -157,7 +157,7 @@ func TestApplyConfigDefaults(t *testing.T) {
 			},
 			Steps: []testworkflowsv1.Step{
 				{
-					StepBase: testworkflowsv1.StepBase{
+					StepDefaults: testworkflowsv1.StepDefaults{
 						Container: &testworkflowsv1.ContainerConfig{
 							WorkingDir: common.Ptr("{{config.foobar}} {{another(500)}}"),
 						},
@@ -214,7 +214,7 @@ func TestApplyConfigTestWorkflowTemplate(t *testing.T) {
 			},
 			Steps: []testworkflowsv1.IndependentStep{
 				{
-					StepBase: testworkflowsv1.StepBase{
+					StepDefaults: testworkflowsv1.StepDefaults{
 						Container: &testworkflowsv1.ContainerConfig{
 							WorkingDir: common.Ptr("some {{unknown(300)}} value {{another(500)}}"),
 						},
@@ -236,7 +236,7 @@ func TestApplyConfigTestWorkflowTemplate(t *testing.T) {
 			},
 			Steps: []testworkflowsv1.IndependentStep{
 				{
-					StepBase: testworkflowsv1.StepBase{
+					StepDefaults: testworkflowsv1.StepDefaults{
 						Container: &testworkflowsv1.ContainerConfig{
 							WorkingDir: common.Ptr("{{config.foobar}} {{another(500)}}"),
 						},

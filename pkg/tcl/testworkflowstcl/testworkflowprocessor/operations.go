@@ -20,8 +20,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
+	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowresolver"
 )
 
 func ProcessDelay(_ InternalProcessor, layer Intermediate, container Container, step testworkflowsv1.Step) (Stage, error) {
@@ -112,7 +114,8 @@ func ProcessExecute(_ InternalProcessor, layer Intermediate, container Container
 		SetImage(constants.DefaultToolkitImage).
 		SetImagePullPolicy(corev1.PullIfNotPresent).
 		SetCommand("/toolkit", "execute").
-		EnableToolkit(stage.Ref())
+		EnableToolkit(stage.Ref()).
+		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, constants.DefaultTransferDirPath))
 	args := make([]string, 0)
 	for _, t := range step.Execute.Tests {
 		b, err := json.Marshal(t)
@@ -164,7 +167,7 @@ func ProcessContentFiles(_ InternalProcessor, layer Intermediate, container Cont
 			continue
 		}
 
-		volRef := "{{execution.id}}-" + layer.NextRef()
+		volRef := "{{resource.id}}-" + layer.NextRef()
 
 		if f.ContentFrom.ConfigMapKeyRef != nil {
 			layer.AddVolume(corev1.Volume{
@@ -282,6 +285,134 @@ func ProcessContentGit(_ InternalProcessor, layer Intermediate, container Contai
 	}
 
 	selfContainer.SetArgs(args...)
+
+	return stage, nil
+}
+
+func ProcessContentTarball(_ InternalProcessor, layer Intermediate, container Container, step testworkflowsv1.Step) (Stage, error) {
+	if step.Content == nil || len(step.Content.Tarball) == 0 {
+		return nil, nil
+	}
+
+	selfContainer := container.CreateChild()
+	stage := NewContainerStage(layer.NextRef(), selfContainer)
+	stage.SetRetryPolicy(step.Retry)
+	stage.SetCategory("Fetch tarball")
+
+	selfContainer.
+		SetImage(constants.DefaultToolkitImage).
+		SetImagePullPolicy(corev1.PullIfNotPresent).
+		SetCommand("/toolkit", "tarball").
+		EnableToolkit(stage.Ref())
+
+	// Build volume pair and share with all siblings
+	args := make([]string, len(step.Content.Tarball))
+	for i, t := range step.Content.Tarball {
+		args[i] = fmt.Sprintf("%s=%s", t.Path, t.Url)
+		needsMount := t.Mount != nil && *t.Mount
+		if !needsMount {
+			needsMount = selfContainer.HasVolumeAt(t.Path)
+		}
+
+		if needsMount && t.Mount != nil && !*t.Mount {
+			return nil, fmt.Errorf("content.tarball[%d]: %s: is not part of any volume: should be mounted", i, t.Path)
+		}
+
+		if (needsMount && t.Mount == nil) || (t.Mount == nil && *t.Mount) {
+			volumeMount := layer.AddEmptyDirVolume(nil, t.Path)
+			container.AppendVolumeMounts(volumeMount)
+		}
+	}
+	selfContainer.SetArgs(args...)
+
+	return stage, nil
+}
+
+func ProcessParallel(_ InternalProcessor, layer Intermediate, container Container, step testworkflowsv1.Step) (Stage, error) {
+	if step.Parallel == nil {
+		return nil, nil
+	}
+
+	stage := NewContainerStage(layer.NextRef(), container.CreateChild())
+	stage.SetCategory("Run in parallel")
+
+	// Inherit container defaults
+	inherited := common.Ptr(stage.Container().ToContainerConfig())
+	inherited.VolumeMounts = nil
+	step.Parallel.Container = testworkflowresolver.MergeContainerConfig(inherited, step.Parallel.Container)
+
+	stage.Container().
+		SetImage(constants.DefaultToolkitImage).
+		SetImagePullPolicy(corev1.PullIfNotPresent).
+		SetCommand("/toolkit", "parallel").
+		EnableToolkit(stage.Ref()).
+		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, constants.DefaultTransferDirPath))
+
+	v, err := json.Marshal(step.Parallel)
+	if err != nil {
+		return nil, errors.Wrap(err, "parallel: marshalling error")
+	}
+	stage.Container().SetArgs(expressionstcl.NewStringValue(string(v)).Template())
+
+	return stage, nil
+}
+
+func ProcessServicesStart(_ InternalProcessor, layer Intermediate, container Container, step testworkflowsv1.Step) (Stage, error) {
+	if len(step.Services) == 0 {
+		return nil, nil
+	}
+
+	// TODO: Think of better way to pass the data between steps
+	podsRef := layer.NextRef()
+	container.AppendEnv(corev1.EnvVar{Name: "TK_SVC_REF", Value: podsRef})
+
+	stage := NewContainerStage(layer.NextRef(), container.CreateChild())
+	stage.SetCategory("Start services")
+
+	stage.Container().
+		SetImage(constants.DefaultToolkitImage).
+		SetImagePullPolicy(corev1.PullIfNotPresent).
+		SetCommand("/toolkit", "services", "-g", "{{env.TK_SVC_REF}}").
+		EnableToolkit(stage.Ref()).
+		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, constants.DefaultTransferDirPath))
+
+	args := make([]string, 0, len(step.Services))
+	for name := range step.Services {
+		v, err := json.Marshal(step.Services[name])
+		if err != nil {
+			return nil, errors.Wrapf(err, "services[%s]: marshalling error", name)
+		}
+		args = append(args, fmt.Sprintf("%s=%s", name, expressionstcl.NewStringValue(string(v)).Template()))
+	}
+	stage.Container().SetArgs(args...)
+
+	return stage, nil
+}
+
+func ProcessServicesStop(_ InternalProcessor, layer Intermediate, container Container, step testworkflowsv1.Step) (Stage, error) {
+	if len(step.Services) == 0 {
+		return nil, nil
+	}
+
+	stage := NewContainerStage(layer.NextRef(), container.CreateChild())
+	stage.SetCondition("always") // TODO: actually, it's enough to do it when "Start services" is not skipped
+	stage.SetOptional(true)
+	stage.SetCategory("Stop services")
+
+	stage.Container().
+		SetImage(constants.DefaultToolkitImage).
+		SetImagePullPolicy(corev1.PullIfNotPresent).
+		SetCommand("/toolkit", "kill", "{{env.TK_SVC_REF}}").
+		EnableToolkit(stage.Ref()).
+		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, constants.DefaultTransferDirPath))
+
+	args := make([]string, 0)
+	for name, v := range step.Services {
+		if v.Logs {
+			args = append(args, "-l", name)
+		}
+	}
+	stage.Container().SetArgs(args...)
 
 	return stage, nil
 }

@@ -86,9 +86,6 @@ type LogsService struct {
 
 	// stop wait time for messages cool down
 	stopPauseInterval time.Duration
-
-	// trace incoming messages
-	traceMessages bool
 }
 
 // AddAdapter adds new adapter to logs service adapters will be configred based on given mode
@@ -152,7 +149,7 @@ func (ls *LogsService) RunGRPCServer(ctx context.Context, creds credentials.Tran
 
 	ls.grpcServer = grpc.NewServer(opts...)
 
-	logsServer := NewLogsServer(ls.logsRepositoryFactory, ls.state).WithMessageTracing(ls.traceMessages)
+	logsServer := NewLogsServer(ls.logsRepositoryFactory, ls.state)
 	pb.RegisterLogsServiceServer(ls.grpcServer, logsServer)
 
 	ls.log.Infow("starting grpc server", "address", ls.grpcAddress)
@@ -176,11 +173,6 @@ func (ls *LogsService) Shutdown(ctx context.Context) (err error) {
 
 func (ls *LogsService) WithHttpAddress(address string) *LogsService {
 	ls.httpAddress = address
-	return ls
-}
-
-func (ls *LogsService) WithMessageTracing(enabled bool) *LogsService {
-	ls.traceMessages = enabled
 	return ls
 }
 

@@ -151,6 +151,7 @@ func MapExecutionCRD(request *testkube.Execution) *testsuiteexecutionv1.Executio
 			OmitFolderPerExecution:     request.ArtifactRequest.OmitFolderPerExecution,
 			SharedBetweenPods:          request.ArtifactRequest.SharedBetweenPods,
 			UseDefaultStorageClassName: request.ArtifactRequest.UseDefaultStorageClassName,
+			SidecarScraper:             request.ArtifactRequest.SidecarScraper,
 		}
 	}
 

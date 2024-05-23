@@ -12,3 +12,7 @@ spec:
       - name: postman-workflow-smoke-without-envs
       - name: postman-workflow-smoke-preofficial-trait
       - name: postman-workflow-smoke-preofficial-trait-without-envs
+      - name: postman-workflow-smoke-cron-trigger-test
+  events:
+  - cronjob:
+      cron: "0 * * * *" # every hour

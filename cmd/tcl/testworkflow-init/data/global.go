@@ -8,11 +8,16 @@
 
 package data
 
-import "github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
+import (
+	"os"
 
-var baseTestWorkflowMachine = expressionstcl.CombinedMachines(EnvMachine, StateMachine, FileMachine)
+	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
+	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl/libs"
+)
 
 func GetBaseTestWorkflowMachine() expressionstcl.Machine {
+	var wd, _ = os.Getwd()
+	fileMachine := libs.NewFsMachine(os.DirFS("/"), wd)
 	LoadState()
-	return baseTestWorkflowMachine
+	return expressionstcl.CombinedMachines(EnvMachine, StateMachine, fileMachine)
 }

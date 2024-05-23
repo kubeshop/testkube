@@ -186,6 +186,7 @@ type SlavesConfigs struct {
 	Features              testkube.Features       `json:"features"`
 	NatsUri               string                  `json:"natsUri"`
 	LogSidecarImage       string                  `json:"logSidecarImage"`
+	RunnerCustomCASecret  string                  `json:"runnerCustomCASecret"`
 }
 
 type SlaveImages struct {
@@ -207,6 +208,7 @@ func GetSlavesConfigs(initImage string,
 	features testkube.Features,
 	natsUri string,
 	logSidecarImage string,
+	runnerCustomCASecret string,
 ) SlavesConfigs {
 	return SlavesConfigs{
 		Images: SlaveImages{
@@ -224,6 +226,7 @@ func GetSlavesConfigs(initImage string,
 		Features:              features,
 		NatsUri:               natsUri,
 		LogSidecarImage:       logSidecarImage,
+		RunnerCustomCASecret:  runnerCustomCASecret,
 	}
 }
 
@@ -552,7 +555,8 @@ func GetPodErrorMessage(ctx context.Context, client kubernetes.Interface, pod *c
 	}
 
 	if message == "" {
-		message = fmt.Sprintf("execution pod %s failed", pod.Name)
+		statusStr := pod.Status.String()
+		message = fmt.Sprintf("execution pod %s failed, status: %s", pod.Name, statusStr)
 	}
 
 	return message

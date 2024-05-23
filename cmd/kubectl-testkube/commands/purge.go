@@ -12,15 +12,18 @@ func NewPurgeCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:     "purge",
-		Short:   "Uninstall Helm chart registry from current kubectl context",
-		Long:    `Uninstall Helm chart registry from current kubectl context`,
+		Short:   "Uninstall Testkube from your current kubectl context",
+		Long:    `Uninstall Testkube from your current kubectl context`,
 		Aliases: []string{"uninstall"},
 		Run: func(cmd *cobra.Command, args []string) {
-
+			originalVerbose := ui.Verbose
 			ui.Verbose = true
 
 			_, err := process.Execute("helm", "uninstall", "--namespace", namespace, name)
 			ui.PrintOnError("uninstalling testkube", err)
+
+			ui.Verbose = originalVerbose
+
 		},
 	}
 

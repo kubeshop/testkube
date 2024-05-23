@@ -23,3 +23,6 @@ spec:
       env:
       - name: COMMAND_LINE
         value: "/data/repo/test/soapui/executor-smoke/soapui-smoke-test.xml"
+  events:
+  - cronjob:
+      cron: "40 */4 * * *"

@@ -84,6 +84,12 @@ message TestWorkflowNotificationsResponse {
 message ProContextResponse {
   string org_id = 1;
   string env_id = 2;
+  repeated Capability capabilities = 3;
+}
+
+message Capability {
+  string name = 1;
+  bool enabled = 2;
 }
 
 message HeaderValue {

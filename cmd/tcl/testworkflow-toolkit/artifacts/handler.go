@@ -11,6 +11,7 @@ package artifacts
 import (
 	"fmt"
 	"io/fs"
+	"path/filepath"
 	"sync/atomic"
 
 	"github.com/dustin/go-humanize"
@@ -19,8 +20,10 @@ import (
 )
 
 type handler struct {
-	uploader  Uploader
-	processor Processor
+	uploader      Uploader
+	processor     Processor
+	postProcessor PostProcessor
+	pathPrefix    string
 
 	success   atomic.Uint32
 	errors    atomic.Uint32
@@ -33,11 +36,29 @@ type Handler interface {
 	End() error
 }
 
-func NewHandler(uploader Uploader, processor Processor) Handler {
-	return &handler{
+type HandlerOpts func(h *handler)
+
+func WithPostProcessor(postProcessor PostProcessor) HandlerOpts {
+	return func(h *handler) {
+		h.postProcessor = postProcessor
+	}
+}
+
+func WithPathPrefix(pathPrefix string) HandlerOpts {
+	return func(h *handler) {
+		h.pathPrefix = pathPrefix
+	}
+}
+
+func NewHandler(uploader Uploader, processor Processor, opts ...HandlerOpts) Handler {
+	h := &handler{
 		uploader:  uploader,
 		processor: processor,
 	}
+	for _, opt := range opts {
+		opt(h)
+	}
+	return h
 }
 
 func (h *handler) Start() (err error) {
@@ -45,21 +66,40 @@ func (h *handler) Start() (err error) {
 	if err != nil {
 		return err
 	}
+	if h.postProcessor != nil {
+		err = h.postProcessor.Start()
+		if err != nil {
+			return err
+		}
+	}
 	return h.uploader.Start()
 }
 
 func (h *handler) Add(path string, file fs.File, stat fs.FileInfo) (err error) {
+	// Apply path prefix correctly
+	uploadPath := path
+	if h.pathPrefix != "" {
+		uploadPath = filepath.Join(h.pathPrefix, uploadPath)
+	}
+
 	size := uint64(stat.Size())
 	h.totalSize.Add(size)
 
-	fmt.Printf(ui.LightGray("%s (%s)\n"), path, humanize.Bytes(uint64(stat.Size())))
+	fmt.Printf(ui.LightGray("%s (%s)\n"), uploadPath, humanize.Bytes(uint64(stat.Size())))
 
-	err = h.processor.Add(h.uploader, path, file, stat)
+	err = h.processor.Add(h.uploader, uploadPath, file, stat)
 	if err == nil {
 		h.success.Add(1)
 	} else {
 		h.errors.Add(1)
-		fmt.Printf(ui.Red("%s: failed: %s"), path, err.Error())
+		fmt.Printf(ui.Red("%s: failed: %s"), uploadPath, err.Error())
+	}
+	if h.postProcessor != nil {
+		err = h.postProcessor.Add(path)
+		if err != nil {
+			h.errors.Add(1)
+			fmt.Printf(ui.Red("post processor error: %s: failed: %s"), path, err.Error())
+		}
 	}
 	return err
 }
@@ -75,6 +115,12 @@ func (h *handler) End() (err error) {
 	err = h.uploader.End()
 	if err != nil {
 		return err
+	}
+	if h.postProcessor != nil {
+		err = h.postProcessor.End()
+		if err != nil {
+			return err
+		}
 	}
 
 	errs := h.errors.Load()

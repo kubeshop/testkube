@@ -61,6 +61,7 @@ type PodOptions struct {
 	Features              testkube.Features
 	NatsUri               string
 	LogSidecarImage       string
+	RunnerCustomCASecret  string
 }
 
 // NewClient is a method to create new slave client
@@ -280,12 +281,13 @@ func (c *Client) newPodOptions(runnerExecutionStr []byte, podName string, execut
 				Name:          "local-port",
 			},
 		},
-		Resources:        resources,
-		ImagePullSecrets: c.slavesConfigs.ImagePullSecrets,
-		ArtifactRequest:  artifactRequest,
-		Features:         c.slavesConfigs.Features,
-		NatsUri:          c.slavesConfigs.NatsUri,
-		LogSidecarImage:  c.slavesConfigs.LogSidecarImage,
+		Resources:            resources,
+		ImagePullSecrets:     c.slavesConfigs.ImagePullSecrets,
+		ArtifactRequest:      artifactRequest,
+		Features:             c.slavesConfigs.Features,
+		NatsUri:              c.slavesConfigs.NatsUri,
+		LogSidecarImage:      c.slavesConfigs.LogSidecarImage,
+		RunnerCustomCASecret: c.slavesConfigs.RunnerCustomCASecret,
 	}
 }
 

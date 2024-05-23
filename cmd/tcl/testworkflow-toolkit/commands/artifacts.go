@@ -9,6 +9,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"io/fs"
 	"net/http"
@@ -16,6 +17,14 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"google.golang.org/protobuf/types/known/emptypb"
+
+	"github.com/kubeshop/testkube/pkg/agent"
+	"github.com/kubeshop/testkube/pkg/capabilities"
+	"github.com/kubeshop/testkube/pkg/cloud"
+
+	"github.com/kubeshop/testkube/pkg/filesystem"
 
 	"github.com/minio/minio-go/v7"
 	"github.com/spf13/cobra"
@@ -94,18 +103,37 @@ func NewArtifactsCmd() *cobra.Command {
 				}
 			}
 
+			var handlerOpts []artifacts.HandlerOpts
 			// Archive
 			if env.CloudEnabled() {
+				ctx, cancel := context.WithTimeout(cmd.Context(), 30*time.Second)
+				defer cancel()
+				ctx = agent.AddAPIKeyMeta(ctx, env.Config().Cloud.ApiKey)
+				executor, client := env.Cloud(ctx)
+				proContext, err := client.GetProContext(ctx, &emptypb.Empty{})
+				var supported []*cloud.Capability
+				if err != nil {
+					fmt.Printf("Warning: couldn't get capabilities: %s\n", err.Error())
+				}
+				if proContext != nil {
+					supported = proContext.Capabilities
+				}
+				defer executor.Close()
+
+				if env.JUnitParserEnabled() || capabilities.Enabled(supported, capabilities.CapabilityJUnitReports) {
+					junitProcessor := artifacts.NewJUnitPostProcessor(filesystem.NewOSFileSystem(), executor, walker.Root(), env.Config().Execution.FSPrefix)
+					handlerOpts = append(handlerOpts, artifacts.WithPostProcessor(junitProcessor))
+				}
 				if compress != "" {
 					processor = artifacts.NewTarCachedProcessor(compress, compressCachePath)
 					opts := []artifacts.CloudUploaderOpt{cloudAddGzipEncoding}
 					if unpack {
 						opts = append(opts, cloudUnpack)
 					}
-					uploader = artifacts.NewCloudUploader(opts...)
+					uploader = artifacts.NewCloudUploader(executor, opts...)
 				} else {
 					processor = artifacts.NewDirectProcessor()
-					uploader = artifacts.NewCloudUploader(artifacts.WithParallelismCloud(30), artifacts.CloudDetectMimetype)
+					uploader = artifacts.NewCloudUploader(executor, artifacts.WithParallelismCloud(30), artifacts.CloudDetectMimetype)
 				}
 			} else if compress != "" && unpack {
 				processor = artifacts.NewTarCachedProcessor(compress, compressCachePath)
@@ -121,31 +149,14 @@ func NewArtifactsCmd() *cobra.Command {
 				uploader = artifacts.NewDirectUploader(artifacts.WithParallelism(30), artifacts.DirectDetectMimetype)
 			}
 
-			handler := artifacts.NewHandler(uploader, processor)
+			// Isolate the files under specific prefix
+			if env.Config().Execution.FSPrefix != "" {
+				handlerOpts = append(handlerOpts, artifacts.WithPathPrefix(env.Config().Execution.FSPrefix))
+			}
 
-			err = handler.Start()
-			ui.ExitOnError("initializing uploader", err)
+			handler := artifacts.NewHandler(uploader, processor, handlerOpts...)
 
-			started := time.Now()
-			err = walker.Walk(os.DirFS("/"), func(path string, file fs.File, err error) error {
-				if err != nil {
-					fmt.Printf("Warning: '%s' has been ignored, as there was a problem reading it: %s\n", path, err.Error())
-					return nil
-				}
-
-				stat, err := file.Stat()
-				if err != nil {
-					fmt.Printf("Warning: '%s' has been ignored, as there was a problem reading it: %s\n", path, err.Error())
-					return nil
-				}
-				return handler.Add(path, file, stat)
-			})
-			ui.ExitOnError("reading the file system", err)
-			err = handler.End()
-
-			// TODO: Emit information about artifacts
-			ui.ExitOnError("finishing upload", err)
-			fmt.Printf("Took %s.\n", time.Now().Sub(started).Truncate(time.Millisecond))
+			run(handler, walker, os.DirFS("/"))
 		},
 	}
 
@@ -156,4 +167,30 @@ func NewArtifactsCmd() *cobra.Command {
 	cmd.Flags().StringVar(&compressCachePath, "compress-cache", "", "local cache path for passing compressed archive through")
 
 	return cmd
+}
+
+func run(handler artifacts.Handler, walker artifacts.Walker, dirFS fs.FS) {
+	err := handler.Start()
+	ui.ExitOnError("initializing uploader", err)
+
+	started := time.Now()
+	err = walker.Walk(dirFS, func(path string, file fs.File, _ fs.FileInfo, err error) error {
+		if err != nil {
+			fmt.Printf("Warning: '%s' has been ignored, as there was a problem reading it: %s\n", path, err.Error())
+			return nil
+		}
+
+		stat, err := file.Stat()
+		if err != nil {
+			fmt.Printf("Warning: '%s' has been ignored, as there was a problem reading it: %s\n", path, err.Error())
+			return nil
+		}
+		return handler.Add(path, file, stat)
+	})
+	ui.ExitOnError("reading the file system", err)
+	err = handler.End()
+
+	// TODO: Emit information about artifacts
+	ui.ExitOnError("finishing upload", err)
+	fmt.Printf("Took %s.\n", time.Now().Sub(started).Truncate(time.Millisecond))
 }

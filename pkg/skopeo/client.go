@@ -1,6 +1,7 @@
 package skopeo
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -8,6 +9,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/kubeshop/testkube/pkg/utils"
 
 	corev1 "k8s.io/api/core/v1"
 
@@ -85,20 +88,27 @@ func (c *client) Inspect(registry, image string) (*DockerImage, error) {
 	}
 
 	if len(c.dockerAuthConfigs) != 0 {
+		// TODO: Is it a good idea to randomly select a secret?
 		i := rand.Intn(len(c.dockerAuthConfigs))
 		args = append(args, "--creds", c.dockerAuthConfigs[i].Username+":"+c.dockerAuthConfigs[i].Password)
 	}
 
-	config := "docker://" + image
-	if registry != "" {
-		config = registry + "/" + image
+	// If registry is provided via config and the image does not start with the registry, prepend it
+	if registry != "" && registry != utils.DefaultDockerRegistry && !strings.HasPrefix(image, registry) {
+		image = registry + "/" + image
 	}
+	config := "docker://" + image
 
 	args = append(args, "--config", config)
 	result, err := process.Execute("skopeo", args...)
 	if err != nil {
 		return nil, err
 	}
+	// skopeo can return a non-json line for some os & arch combinations and it malforms the JSON.
+	// We need to trim the non-json part from the beginning of the output.
+	// Example starting line:
+	// time="2024-04-26T11:12:44+02:00" level=error msg="Couldn't get cpu architecture: getCPUInfo for OS darwin not implemented"
+	result = trimTopNonJSON(result)
 
 	var dockerImage DockerImage
 	if err = json.Unmarshal(result, &dockerImage); err != nil {
@@ -123,6 +133,17 @@ func (c *client) Inspect(registry, image string) (*DockerImage, error) {
 	return &dockerImage, nil
 }
 
+// trimNonJSON removes all bytes before the first JSON opening brace '{'.
+func trimTopNonJSON(data []byte) []byte {
+	// Find the index of the first occurrence of '{' which marks the beginning of JSON.
+	index := bytes.IndexByte(data, '{')
+	if index == -1 {
+		return nil // Return nil if no JSON opening brace is found
+	}
+	// Return the slice from the first '{' to the end of the data.
+	return data[index:]
+}
+
 // ParseSecretData parses secret data for docker auth config
 func ParseSecretData(imageSecrets []corev1.Secret, registry string) ([]DockerAuthConfig, error) {
 	var results []DockerAuthConfig
@@ -140,10 +161,6 @@ func ParseSecretData(imageSecrets []corev1.Secret, registry string) ([]DockerAut
 			return nil, fmt.Errorf("imagePullSecret %s contains neither .dockercfg nor .dockerconfigjson", imageSecret.Name)
 		}
 
-		// If registry is not provided, extract it from the image name
-		if registry == "" {
-			registry = extractRegistry(imageSecret.Name)
-		}
 		// Determine if there is a secret for the specified registry
 		if creds, ok := auths.Auths[registry]; ok {
 			username, password, err := extractRegistryCredentials(creds)
@@ -152,28 +169,10 @@ func ParseSecretData(imageSecrets []corev1.Secret, registry string) ([]DockerAut
 			}
 
 			results = append(results, DockerAuthConfig{Username: username, Password: password})
-		} else {
-			return nil, fmt.Errorf("secret %s is not defined for registry: %s", imageSecret.Name, registry)
 		}
 	}
 
 	return results, nil
-}
-
-// extractRegistry takes a container image string and returns the registry part.
-// It defaults to "docker.io" if no registry is specified.
-func extractRegistry(image string) string {
-	defaultRegistry := "https://index.docker.io/v1/"
-	parts := strings.Split(image, "/")
-	// If the image is just a name, return the default registry.
-	if len(parts) == 1 {
-		return defaultRegistry
-	}
-	// If the first part contains '.' or ':', it's likely a registry.
-	if strings.Contains(parts[0], ".") || strings.Contains(parts[0], ":") {
-		return parts[0]
-	}
-	return defaultRegistry
 }
 
 func extractRegistryCredentials(creds DockerAuthConfig) (username, password string, err error) {

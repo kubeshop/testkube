@@ -148,6 +148,7 @@ func (r *MongoRepository) GetRunning(ctx context.Context) (result []testkube.Tes
 
 	cursor, err := r.Coll.Find(ctx, bson.M{
 		"$or": bson.A{
+			bson.M{"result.status": testkube.PAUSED_TestWorkflowStatus},
 			bson.M{"result.status": testkube.RUNNING_TestWorkflowStatus},
 			bson.M{"result.status": testkube.QUEUED_TestWorkflowStatus},
 		},
@@ -267,6 +268,9 @@ func (r *MongoRepository) GetExecutionsSummary(ctx context.Context, filter Filte
 
 func (r *MongoRepository) Insert(ctx context.Context, result testkube.TestWorkflowExecution) (err error) {
 	result.EscapeDots()
+	if result.Reports == nil {
+		result.Reports = []testkube.TestWorkflowReport{}
+	}
 	_, err = r.Coll.InsertOne(ctx, result)
 	return
 }
@@ -283,6 +287,14 @@ func (r *MongoRepository) UpdateResult(ctx context.Context, id string, result *t
 		data["statusat"] = result.FinishedAt
 	}
 	_, err = r.Coll.UpdateOne(ctx, bson.M{"id": id}, bson.M{"$set": data})
+	return
+}
+
+func (r *MongoRepository) UpdateReport(ctx context.Context, id string, report *testkube.TestWorkflowReport) (err error) {
+	filter := bson.M{"id": id}
+	update := bson.M{"$push": bson.M{"reports": report}}
+
+	_, err = r.Coll.UpdateOne(ctx, filter, update)
 	return
 }
 

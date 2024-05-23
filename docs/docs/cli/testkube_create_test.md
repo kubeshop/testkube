@@ -18,6 +18,7 @@ testkube create test [flags]
       --artifact-mask stringArray                  regexp to filter scraped artifacts, single or comma separated, like report/.* or .*\.json,.*\.js$
       --artifact-omit-folder-per-execution         don't store artifacts in execution folder
       --artifact-shared-between-pods               whether to share volume between pods
+      --artifact-sidecar-scraper                   whether to run a scraper as a pod sidecar container
       --artifact-storage-bucket string             artifact storage bucket
       --artifact-storage-class-name string         artifact storage class name for container executor
       --artifact-use-default-storage-class-name    whether to use default storage class name
@@ -89,13 +90,14 @@ testkube create test [flags]
 ### Options inherited from parent commands
 
 ```
-  -a, --api-uri string     api uri, default value read from config if set (default "http://localhost:8088")
-  -c, --client string      client used for connecting to Testkube API one of proxy|direct|cluster (default "proxy")
-      --crd-only           generate only crd
-      --insecure           insecure connection for direct client
-      --namespace string   Kubernetes namespace, default value read from config if set (default "testkube")
-      --oauth-enabled      enable oauth
-      --verbose            show additional debug messages
+  -a, --api-uri string          api uri, default value read from config if set (default "http://localhost:8088")
+  -c, --client string           client used for connecting to Testkube API one of proxy|direct|cluster (default "proxy")
+      --crd-only                generate only crd
+      --header stringToString   headers for direct client key value pair: --header name=value (default [])
+      --insecure                insecure connection for direct client
+      --namespace string        Kubernetes namespace, default value read from config if set (default "testkube")
+      --oauth-enabled           enable oauth
+      --verbose                 show additional debug messages
 ```
 
 ### SEE ALSO

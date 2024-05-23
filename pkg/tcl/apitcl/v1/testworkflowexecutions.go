@@ -42,7 +42,7 @@ func (s *apiTCL) StreamTestWorkflowExecutionNotificationsHandler() fiber.Handler
 		}
 
 		// Check for the logs
-		ctrl, err := testworkflowcontroller.New(ctx, s.Clientset, s.Namespace, execution.Id, execution.ScheduledAt)
+		ctrl, err := testworkflowcontroller.New(ctx, s.Clientset, execution.GetNamespace(s.Namespace), execution.Id, execution.ScheduledAt)
 		if err != nil {
 			return s.BadRequest(c, errPrefix, "fetching job", err)
 		}
@@ -58,7 +58,7 @@ func (s *apiTCL) StreamTestWorkflowExecutionNotificationsHandler() fiber.Handler
 			_ = w.Flush()
 			enc := json.NewEncoder(w)
 
-			for n := range ctrl.Watch(ctx).Stream(ctx).Channel() {
+			for n := range ctrl.Watch(ctx) {
 				if n.Error == nil {
 					_ = enc.Encode(n.Value)
 					_, _ = fmt.Fprintf(w, "\n")
@@ -91,12 +91,12 @@ func (s *apiTCL) StreamTestWorkflowExecutionNotificationsWebSocketHandler() fibe
 		}
 
 		// Check for the logs TODO: Load from the database if possible
-		ctrl, err := testworkflowcontroller.New(ctx, s.Clientset, s.Namespace, execution.Id, execution.ScheduledAt)
+		ctrl, err := testworkflowcontroller.New(ctx, s.Clientset, execution.GetNamespace(s.Namespace), execution.Id, execution.ScheduledAt)
 		if err != nil {
 			return
 		}
 
-		for n := range ctrl.Watch(ctx).Stream(ctx).Channel() {
+		for n := range ctrl.Watch(ctx) {
 			if n.Error == nil {
 				_ = c.WriteJSON(n.Value)
 			}
@@ -233,15 +233,95 @@ func (s *apiTCL) AbortTestWorkflowExecutionHandler() fiber.Handler {
 		}
 
 		// Obtain the controller
-		ctrl, err := testworkflowcontroller.New(ctx, s.Clientset, s.Namespace, execution.Id, execution.ScheduledAt)
+		ctrl, err := testworkflowcontroller.New(ctx, s.Clientset, execution.GetNamespace(s.Namespace), execution.Id, execution.ScheduledAt)
 		if err != nil {
 			return s.BadRequest(c, errPrefix, "fetching job", err)
 		}
 
 		// Abort the execution
-		err = ctrl.Abort(context.Background())
+		err = ctrl.Abort(ctx)
 		if err != nil {
 			return s.ClientError(c, "aborting test workflow execution", err)
+		}
+
+		c.Status(http.StatusNoContent)
+
+		return nil
+	}
+}
+
+func (s *apiTCL) PauseTestWorkflowExecutionHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		ctx := c.Context()
+		name := c.Params("id")
+		executionID := c.Params("executionID")
+		errPrefix := fmt.Sprintf("failed to abort test workflow execution '%s'", executionID)
+
+		var execution testkube.TestWorkflowExecution
+		var err error
+		if name == "" {
+			execution, err = s.TestWorkflowResults.Get(ctx, executionID)
+		} else {
+			execution, err = s.TestWorkflowResults.GetByNameAndTestWorkflow(ctx, executionID, name)
+		}
+		if err != nil {
+			return s.ClientError(c, errPrefix, err)
+		}
+
+		if execution.Result != nil && execution.Result.IsFinished() {
+			return s.BadRequest(c, errPrefix, "checking execution", errors.New("execution already finished"))
+		}
+
+		// Obtain the controller
+		ctrl, err := testworkflowcontroller.New(ctx, s.Clientset, execution.GetNamespace(s.Namespace), execution.Id, execution.ScheduledAt)
+		if err != nil {
+			return s.BadRequest(c, errPrefix, "fetching job", err)
+		}
+
+		// Resuming the execution
+		err = ctrl.Pause(ctx)
+		if err != nil {
+			return s.ClientError(c, "pausing test workflow execution", err)
+		}
+
+		c.Status(http.StatusNoContent)
+
+		return nil
+	}
+}
+
+func (s *apiTCL) ResumeTestWorkflowExecutionHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		ctx := c.Context()
+		name := c.Params("id")
+		executionID := c.Params("executionID")
+		errPrefix := fmt.Sprintf("failed to abort test workflow execution '%s'", executionID)
+
+		var execution testkube.TestWorkflowExecution
+		var err error
+		if name == "" {
+			execution, err = s.TestWorkflowResults.Get(ctx, executionID)
+		} else {
+			execution, err = s.TestWorkflowResults.GetByNameAndTestWorkflow(ctx, executionID, name)
+		}
+		if err != nil {
+			return s.ClientError(c, errPrefix, err)
+		}
+
+		if execution.Result != nil && execution.Result.IsFinished() {
+			return s.BadRequest(c, errPrefix, "checking execution", errors.New("execution already finished"))
+		}
+
+		// Obtain the controller
+		ctrl, err := testworkflowcontroller.New(ctx, s.Clientset, execution.GetNamespace(s.Namespace), execution.Id, execution.ScheduledAt)
+		if err != nil {
+			return s.BadRequest(c, errPrefix, "fetching job", err)
+		}
+
+		// Resuming the execution
+		err = ctrl.Resume(ctx)
+		if err != nil {
+			return s.ClientError(c, "resuming test workflow execution", err)
 		}
 
 		c.Status(http.StatusNoContent)
@@ -269,13 +349,13 @@ func (s *apiTCL) AbortAllTestWorkflowExecutionsHandler() fiber.Handler {
 
 		for _, execution := range executions {
 			// Obtain the controller
-			ctrl, err := testworkflowcontroller.New(ctx, s.Clientset, s.Namespace, execution.Id, execution.ScheduledAt)
+			ctrl, err := testworkflowcontroller.New(ctx, s.Clientset, execution.GetNamespace(s.Namespace), execution.Id, execution.ScheduledAt)
 			if err != nil {
 				return s.BadRequest(c, errPrefix, "fetching job", err)
 			}
 
 			// Abort the execution
-			err = ctrl.Abort(context.Background())
+			err = ctrl.Abort(ctx)
 			if err != nil {
 				return s.ClientError(c, errPrefix, err)
 			}
@@ -371,7 +451,7 @@ func (s *apiTCL) GetTestWorkflowNotificationsStream(ctx context.Context, executi
 	}
 
 	// Check for the logs
-	ctrl, err := testworkflowcontroller.New(ctx, s.Clientset, s.Namespace, execution.Id, execution.ScheduledAt)
+	ctrl, err := testworkflowcontroller.New(ctx, s.Clientset, execution.GetNamespace(s.Namespace), execution.Id, execution.ScheduledAt)
 	if err != nil {
 		return nil, err
 	}
@@ -379,11 +459,12 @@ func (s *apiTCL) GetTestWorkflowNotificationsStream(ctx context.Context, executi
 	// Stream the notifications
 	ch := make(chan testkube.TestWorkflowExecutionNotification)
 	go func() {
-		for n := range ctrl.Watch(ctx).Stream(ctx).Channel() {
+		for n := range ctrl.Watch(ctx) {
 			if n.Error == nil {
 				ch <- n.Value.ToInternal()
 			}
 		}
+		ctrl.StopController()
 		close(ch)
 	}()
 	return ch, nil

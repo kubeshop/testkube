@@ -42,6 +42,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/event/kind/cdevent"
+	"github.com/kubeshop/testkube/pkg/event/kind/k8sevent"
 	"github.com/kubeshop/testkube/pkg/event/kind/slack"
 	"github.com/kubeshop/testkube/pkg/event/kind/webhook"
 	ws "github.com/kubeshop/testkube/pkg/event/kind/websocket"
@@ -98,6 +99,7 @@ func NewTestkubeAPI(
 	disableSecretCreation bool,
 	subscriptionChecker checktcl.SubscriptionChecker,
 	serviceAccountNames map[string]string,
+	enableK8sEvents bool,
 ) TestkubeAPI {
 
 	var httpConfig server.Config
@@ -148,7 +150,7 @@ func NewTestkubeAPI(
 		disableSecretCreation: disableSecretCreation,
 		SubscriptionChecker:   subscriptionChecker,
 		LabelSources:          common.Ptr(make([]LabelSource, 0)),
-		serviceAccountNames:   serviceAccountNames,
+		ServiceAccountNames:   serviceAccountNames,
 	}
 
 	// will be reused in websockets handler
@@ -165,6 +167,10 @@ func NewTestkubeAPI(
 		} else {
 			s.Log.Debug("cdevents init error", "error", err.Error())
 		}
+	}
+
+	if enableK8sEvents {
+		s.Events.Loader.Register(k8sevent.NewK8sEventLoader(clientset, namespace, testkube.AllEventTypes))
 	}
 
 	s.InitEnvs()
@@ -212,7 +218,7 @@ type TestkubeAPI struct {
 	disableSecretCreation bool
 	SubscriptionChecker   checktcl.SubscriptionChecker
 	LabelSources          *[]LabelSource
-	serviceAccountNames   map[string]string
+	ServiceAccountNames   map[string]string
 }
 
 type storageParams struct {
@@ -277,11 +283,11 @@ func (s TestkubeAPI) SendTelemetryStartEvent(ctx context.Context, ch chan struct
 // InitEnvs initializes api server settings
 func (s *TestkubeAPI) InitEnvs() {
 	if err := envconfig.Process("STORAGE", &s.storageParams); err != nil {
-		s.Log.Infow("Processing STORAGE environment config", err)
+		s.Log.Debugw("Processing STORAGE environment config", err)
 	}
 
 	if err := envconfig.Process("TESTKUBE_OAUTH", &s.oauthParams); err != nil {
-		s.Log.Infow("Processing TESTKUBE_OAUTH environment config", err)
+		s.Log.Debugw("Processing TESTKUBE_OAUTH environment config", err)
 	}
 }
 

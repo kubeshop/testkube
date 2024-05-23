@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kubeshop/testkube/pkg/logs/config"
 	"github.com/kubeshop/testkube/pkg/utils/test"
 
 	"github.com/stretchr/testify/assert"
@@ -15,13 +16,17 @@ import (
 	"github.com/kubeshop/testkube/pkg/event/kind/dummy"
 )
 
+var (
+	cfg, _ = config.Get()
+)
+
 // tests based on real NATS event bus
 
 func GetTestNATSEmitter() *Emitter {
 	os.Setenv("DEBUG", "true")
 	// configure NATS event bus
 	nc, err := bus.NewNATSEncodedConnection(bus.ConnectionConfig{
-		NatsURI: "http://localhost:4222",
+		NatsURI: cfg.NatsURI,
 	})
 
 	if err != nil {

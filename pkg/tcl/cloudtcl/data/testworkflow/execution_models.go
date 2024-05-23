@@ -136,3 +136,20 @@ type ExecutionGetWorkflowMetricsRequest struct {
 type ExecutionGetWorkflowMetricsResponse struct {
 	Metrics testkube.ExecutionsMetrics `json:"metrics"`
 }
+
+type ExecutionsInsertReportRequest struct {
+	ID     string                       `json:"id"`
+	Report *testkube.TestWorkflowReport `json:"report"`
+}
+
+type ExecutionsInsertReportResponse struct{}
+
+type ExecutionsAddReportRequest struct {
+	ID           string `json:"id"`
+	WorkflowName string `json:"workflowName"`
+	WorkflowStep string `json:"workflowStep"`
+	Filepath     string `json:"filepath"`
+	Report       []byte `json:"report"`
+}
+
+type ExecutionsAddReportResponse struct{}

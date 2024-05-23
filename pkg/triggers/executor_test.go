@@ -11,11 +11,13 @@ import (
 	v1 "github.com/kubeshop/testkube-operator/api/executor/v1"
 	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
 	testtriggersv1 "github.com/kubeshop/testkube-operator/api/testtriggers/v1"
+	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
 	testsclientv3 "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
 	testsourcesv1 "github.com/kubeshop/testkube-operator/pkg/client/testsources/v1"
 	testsuiteexecutionsv1 "github.com/kubeshop/testkube-operator/pkg/client/testsuiteexecutions/v1"
 	testsuitesv3 "github.com/kubeshop/testkube-operator/pkg/client/testsuites/v3"
+	testworkflowsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/configmap"
@@ -30,6 +32,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/scheduler"
 	"github.com/kubeshop/testkube/pkg/secret"
+	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowexecutor"
 )
 
 func TestExecute(t *testing.T) {
@@ -163,6 +166,76 @@ func TestExecute(t *testing.T) {
 			},
 			Action:            "run",
 			Execution:         "test",
+			ConcurrencyPolicy: "allow",
+			TestSelector:      testtriggersv1.TestTriggerSelector{Name: "some-test"},
+		},
+	}
+
+	s.addTrigger(&testTrigger)
+
+	key := newStatusKey(testTrigger.Namespace, testTrigger.Name)
+	assert.Contains(t, s.triggerStatus, key)
+
+	err := s.execute(ctx, &watcherEvent{}, &testTrigger)
+	assert.NoError(t, err)
+}
+
+func TestWorkflowExecute(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockTestWorkflowsClient := testworkflowsclientv1.NewMockInterface(mockCtrl)
+	mockTestWorkflowExecutor := testworkflowexecutor.NewMockTestWorkflowExecutor(mockCtrl)
+
+	mockTestWorkflow := testworkflowsv1.TestWorkflow{ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "some-test"}}
+	mockTestWorkflowsClient.EXPECT().Get("some-test").Return(&mockTestWorkflow, nil).AnyTimes()
+	mockTestWorkflowExecutionRequest := testkube.TestWorkflowExecutionRequest{
+		Config: map[string]string{
+			"WATCHER_EVENT_EVENT_TYPE": "",
+			"WATCHER_EVENT_NAME":       "",
+			"WATCHER_EVENT_NAMESPACE":  "",
+			"WATCHER_EVENT_RESOURCE":   "",
+		},
+	}
+	mockTestWorkflowExecution := testkube.TestWorkflowExecution{}
+	mockTestWorkflowExecutor.EXPECT().Execute(gomock.Any(), mockTestWorkflow, mockTestWorkflowExecutionRequest).Return(mockTestWorkflowExecution, nil)
+
+	s := &Service{
+		triggerStatus:        make(map[statusKey]*triggerStatus),
+		testWorkflowsClient:  mockTestWorkflowsClient,
+		testWorkflowExecutor: mockTestWorkflowExecutor,
+		logger:               log.DefaultLogger,
+	}
+
+	status := testtriggersv1.TRUE_TestTriggerConditionStatuses
+	testTrigger := testtriggersv1.TestTrigger{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "test-trigger-1"},
+		Spec: testtriggersv1.TestTriggerSpec{
+			Resource:         "deployment",
+			ResourceSelector: testtriggersv1.TestTriggerSelector{Name: "test-deployment"},
+			Event:            "created",
+			ConditionSpec: &testtriggersv1.TestTriggerConditionSpec{
+				Conditions: []testtriggersv1.TestTriggerCondition{{
+					Type_:  "Progressing",
+					Status: &status,
+					Reason: "NewReplicaSetAvailable",
+					Ttl:    60,
+				}},
+			},
+			ProbeSpec: &testtriggersv1.TestTriggerProbeSpec{
+				Probes: []testtriggersv1.TestTriggerProbe{{
+					Host:    "testkube-api-server",
+					Path:    "/health",
+					Port:    8088,
+					Headers: map[string]string{"X-Token": "12345"},
+				}},
+			},
+			Action:            "run",
+			Execution:         "testworkflow",
 			ConcurrencyPolicy: "allow",
 			TestSelector:      testtriggersv1.TestTriggerSelector{Name: "some-test"},
 		},

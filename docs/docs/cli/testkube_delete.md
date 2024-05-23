@@ -17,10 +17,11 @@ testkube delete <resourceName> [flags]
 ### Options inherited from parent commands
 
 ```
-  -a, --api-uri string     api uri, default value read from config if set (default "http://localhost:8088")
-      --insecure           insecure connection for direct client
-      --namespace string   Kubernetes namespace, default value read from config if set (default "testkube")
-      --oauth-enabled      enable oauth
+  -a, --api-uri string          api uri, default value read from config if set (default "http://localhost:8088")
+      --header stringToString   headers for direct client key value pair: --header name=value (default [])
+      --insecure                insecure connection for direct client
+      --namespace string        Kubernetes namespace, default value read from config if set (default "testkube")
+      --oauth-enabled           enable oauth
 ```
 
 ### SEE ALSO

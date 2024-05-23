@@ -14,6 +14,8 @@ The Testkube API Server exposes a `/metrics` endpoint that can be consumed by Pr
 * `testkube_testtriggers_bulk_updates_count` - The total number of test trigger bulk update events.
 * `testkube_testtriggers_bulk_deletes_count` - The total number of test trigger bulk delete events.
 * `testkube_test_aborts_count` - The total number of tests aborted by type events.
+* `testkube_test_executions_duration_ms`- The duration of test executions.
+* `testkube_testsuite_executions_duration_ms`- The duration of test suite executions.
 
 Note: as the metrics also include labels with the associated test name (see below), no metrics are produced unless some tests were run since last api-server restart 
 
