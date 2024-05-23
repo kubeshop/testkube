@@ -3574,6 +3574,8 @@ paths:
         - test-workflows
         - api
         - pro
+      parameters:
+        - $ref: "#/components/parameters/TestWorkflowExecutionName"
       summary: Execute test workflow
       description: Execute test workflow in the kubernetes cluster
       operationId: executeTestWorkflow
@@ -7479,6 +7481,9 @@ components:
           description: custom execution name
         config:
           $ref: "#/components/schemas/TestWorkflowConfigValue"
+        testWorkflowExecutionName:
+          type: string
+          description: test workflow execution name started the test workflow execution
 
     TestWorkflowWithExecution:
       type: object
@@ -7560,6 +7565,9 @@ components:
           $ref: "#/components/schemas/TestWorkflow"
         resolvedWorkflow:
           $ref: "#/components/schemas/TestWorkflow"
+        testWorkflowExecutionName:
+          type: string
+          description: test workflow execution name started the test workflow execution
       required:
         - id
         - name
@@ -9971,6 +9979,12 @@ components:
       schema:
         type: string
         description: test suite execution name stated the test suite execution
+    TestWorkflowExecutionName:
+      in: query
+      name: testWorkflowExecutionName
+      schema:
+        type: string
+        description: test workflow execution name stated the test workflow execution
     Namespace:
       in: query
       name: namespace

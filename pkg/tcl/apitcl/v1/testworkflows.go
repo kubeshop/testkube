@@ -281,6 +281,7 @@ func (s *apiTCL) ExecuteTestWorkflowHandler() fiber.Handler {
 		var results []testkube.TestWorkflowExecution
 		var errs []error
 
+		request.TestWorkflowExecutionName = strings.Clone(c.Query("testWorkflowExecutionName"))
 		concurrencyLevel := scheduler.DefaultConcurrencyLevel
 		workerpoolService := workerpool.New[testworkflowsv1.TestWorkflow, testkube.TestWorkflowExecutionRequest,
 			testkube.TestWorkflowExecution](concurrencyLevel)
