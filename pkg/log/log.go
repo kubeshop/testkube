@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/kubeshop/testkube/pkg/envs"
 )
@@ -19,6 +20,7 @@ func New() *zap.SugaredLogger {
 
 	zapCfg := zap.NewProductionConfig()
 	zapCfg.Level = atomicLevel
+	zapCfg.EncoderConfig.EncodeTime = zapcore.RFC3339TimeEncoder
 
 	z, err := zapCfg.Build()
 	if err != nil {
