@@ -33,7 +33,7 @@ func TestWebhookListener_Notify(t *testing.T) {
 		svr := httptest.NewServer(testHandler)
 		defer svr.Close()
 
-		l := NewWebhookListener("l1", svr.URL, "", testEventTypes, "", "", nil)
+		l := NewWebhookListener("l1", svr.URL, "", testEventTypes, "", "", nil, false)
 
 		// when
 		r := l.Notify(testkube.Event{
@@ -55,7 +55,7 @@ func TestWebhookListener_Notify(t *testing.T) {
 		svr := httptest.NewServer(testHandler)
 		defer svr.Close()
 
-		l := NewWebhookListener("l1", svr.URL, "", testEventTypes, "", "", nil)
+		l := NewWebhookListener("l1", svr.URL, "", testEventTypes, "", "", nil, false)
 
 		// when
 		r := l.Notify(testkube.Event{
@@ -72,7 +72,7 @@ func TestWebhookListener_Notify(t *testing.T) {
 		t.Parallel()
 		// given
 
-		s := NewWebhookListener("l1", "http://baduri.badbadbad", "", testEventTypes, "", "", nil)
+		s := NewWebhookListener("l1", "http://baduri.badbadbad", "", testEventTypes, "", "", nil, false)
 
 		// when
 		r := s.Notify(testkube.Event{
@@ -105,7 +105,7 @@ func TestWebhookListener_Notify(t *testing.T) {
 		svr := httptest.NewServer(testHandler)
 		defer svr.Close()
 
-		l := NewWebhookListener("l1", svr.URL, "", testEventTypes, "field", "", nil)
+		l := NewWebhookListener("l1", svr.URL, "", testEventTypes, "field", "", nil, false)
 
 		// when
 		r := l.Notify(testkube.Event{
@@ -131,7 +131,7 @@ func TestWebhookListener_Notify(t *testing.T) {
 		svr := httptest.NewServer(testHandler)
 		defer svr.Close()
 
-		l := NewWebhookListener("l1", svr.URL, "", testEventTypes, "", "{\"id\": \"{{ .Id }}\"}", map[string]string{"Content-Type": "application/json"})
+		l := NewWebhookListener("l1", svr.URL, "", testEventTypes, "", "{\"id\": \"{{ .Id }}\"}", map[string]string{"Content-Type": "application/json"}, false)
 
 		// when
 		r := l.Notify(testkube.Event{
@@ -142,6 +142,22 @@ func TestWebhookListener_Notify(t *testing.T) {
 
 		assert.Equal(t, "", r.Error())
 
+	})
+
+	t.Run("send event disabled webhook", func(t *testing.T) {
+		t.Parallel()
+		// given
+
+		s := NewWebhookListener("l1", "http://baduri.badbadbad", "", testEventTypes, "", "", nil, true)
+
+		// when
+		r := s.Notify(testkube.Event{
+			Type_:         testkube.EventStartTest,
+			TestExecution: exampleExecution(),
+		})
+
+		// then
+		assert.Equal(t, "", r.Error())
 	})
 }
 

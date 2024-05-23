@@ -6849,6 +6849,13 @@ components:
           example:
             env: "prod"
             app: "backend"
+        disabled:
+          type: boolean
+          description: whether webhook is disabled
+          default: false
+          example:
+            - true
+            - false
 
     Event:
       description: Event data
