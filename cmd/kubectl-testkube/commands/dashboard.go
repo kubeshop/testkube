@@ -86,6 +86,12 @@ func openOnPremDashboard(cmd *cobra.Command, cfg config.Data, verbose bool, lice
 	}
 	ui.PrintOnError("port forwarding dex", err)
 
+	err = k8sclient.PortForward(ctx, cfg.Namespace, config.EnterpriseMinioName, config.EnterpriseMinioPort, config.EnterpriseMinioPortFrwardingPort, verbose)
+	if err != nil {
+		errs = append(errs, err)
+	}
+	ui.PrintOnError("port forwarding minio", err)
+
 	err = open.Run(uri)
 	if err != nil {
 		errs = append(errs, err)
