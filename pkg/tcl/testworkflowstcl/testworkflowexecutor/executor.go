@@ -270,7 +270,7 @@ func (e *executor) Control(ctx context.Context, execution *testkube.TestWorkflow
 		}
 
 		if testWorkflowExecution != nil {
-			//			testWorkflowExecution.Status = testsuiteexecutionsmapper.MapAPIToCRD(execution, testWorkflowExecution.Generation)
+			testWorkflowExecution.Status = testworkflowmappers.MapTestWorkflowExecutionStatusAPIToKube(execution, testWorkflowExecution.Generation)
 			if err = e.testWorkflowExecutionsClient.UpdateStatus(testWorkflowExecution); err != nil {
 				log.DefaultLogger.Errorw("failed to update test workflow execution", "error", err)
 			}

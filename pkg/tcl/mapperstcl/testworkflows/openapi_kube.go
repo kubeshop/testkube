@@ -1282,3 +1282,109 @@ func MapTemplateListAPIToKube(v []testkube.TestWorkflowTemplate) testworkflowsv1
 		Items: items,
 	}
 }
+
+func MapTestWorkflowReportSummaryAPIToKube(v testkube.TestWorkflowReportSummary) testworkflowsv1.TestWorkflowReportSummary {
+	return testworkflowsv1.TestWorkflowReportSummary{
+		Tests:    v.Tests,
+		Passed:   v.Passed,
+		Failed:   v.Failed,
+		Skipped:  v.Skipped,
+		Errored:  v.Errored,
+		Duration: v.Duration,
+	}
+}
+
+func MapTestWorkflowReportAPIToKube(v testkube.TestWorkflowReport) testworkflowsv1.TestWorkflowReport {
+	return testworkflowsv1.TestWorkflowReport{
+		Ref:     v.Ref,
+		Kind:    v.Kind,
+		File:    v.File,
+		Summary: common.MapPtr(v.Summary, MapTestWorkflowReportSummaryAPIToKube),
+	}
+}
+
+func MapTestWorkflowStepResultAPIToKube(v testkube.TestWorkflowStepResult) testworkflowsv1.TestWorkflowStepResult {
+	return testworkflowsv1.TestWorkflowStepResult{
+		ErrorMessage: v.ErrorMessage,
+		Status: common.MapPtr(v.Status, func(status testkube.TestWorkflowStepStatus) testworkflowsv1.TestWorkflowStepStatus {
+			return (testworkflowsv1.TestWorkflowStepStatus)(status)
+		}),
+		ExitCode:   v.ExitCode,
+		QueuedAt:   v.QueuedAt,
+		StartedAt:  v.StartedAt,
+		FinishedAt: v.FinishedAt,
+	}
+}
+
+func MapTestWorkflowOutputAPIToKube(v testkube.TestWorkflowOutput) testworkflowsv1.TestWorkflowOutput {
+	return testworkflowsv1.TestWorkflowOutput{
+		Ref:   v.Ref,
+		Name:  v.Name,
+		Value: v.Value,
+	}
+}
+
+func MapTestWorkflowPauseAPIToKube(v testkube.TestWorkflowPause) testworkflowsv1.TestWorkflowPause {
+	return testworkflowsv1.TestWorkflowPause{
+		Ref:       v.Ref,
+		PausedAt:  v.PausedAt,
+		ResumedAt: v.ResumedAt,
+	}
+}
+
+func MapTestWorkflowResultAPIToKube(v testkube.TestWorkflowResult) testworkflowsv1.TestWorkflowResult {
+	return testworkflowsv1.TestWorkflowResult{
+		Status: common.MapPtr(v.Status, func(status testkube.TestWorkflowStatus) testworkflowsv1.TestWorkflowStatus {
+			return (testworkflowsv1.TestWorkflowStatus)(status)
+		}),
+		PredictedStatus: common.MapPtr(v.Status, func(status testkube.TestWorkflowStatus) testworkflowsv1.TestWorkflowStatus {
+			return (testworkflowsv1.TestWorkflowStatus)(status)
+		}),
+		QueuedAt:        v.QueuedAt,
+		StartedAt:       v.StartedAt,
+		FinishedAt:      v.FinishedAt,
+		Duration:        v.Duration,
+		TotalDuration:   v.TotalDuration,
+		DurationMs:      v.DurationMs,
+		PausedMs:        v.PausedMs,
+		TotalDurationMs: v.TotalDurationMs,
+		Pauses:          common.MapSlice(v.Pauses, MapTestWorkflowPauseAPIToKube),
+		Initialization:  common.MapPtr(v.Initialization, MapTestWorkflowStepResultAPIToKube),
+		Steps:           common.MapMap(v.Steps, MapTestWorkflowStepResultAPIToKube),
+	}
+}
+func MapTestWorkflowSignatureAPIToKube(v testkube.TestWorkflowSignature) testworkflowsv1.TestWorkflowSignature {
+	return testworkflowsv1.TestWorkflowSignature{
+		Ref:      v.Ref,
+		Name:     v.Name,
+		Category: v.Category,
+		Optional: v.Optional,
+		Negative: v.Negative,
+		Children: common.MapSlice(v.Children, MapTestWorkflowSignatureAPIToKube),
+	}
+}
+
+func MapTestWorkflowExecutionAPIToKube(v *testkube.TestWorkflowExecution) *testworkflowsv1.TestWorkflowExecutionDetails {
+	return &testworkflowsv1.TestWorkflowExecutionDetails{
+		Id:                        v.Id,
+		Name:                      v.Name,
+		Namespace:                 v.Namespace,
+		Number:                    v.Number,
+		ScheduledAt:               v.ScheduledAt,
+		StatusAt:                  v.StatusAt,
+		Signature:                 common.MapSlice(v.Signature, MapTestWorkflowSignatureAPIToKube),
+		Result:                    common.MapPtr(v.Result, MapTestWorkflowResultAPIToKube),
+		Output:                    common.MapSlice(v.Output, MapTestWorkflowOutputAPIToKube),
+		Reports:                   common.MapSlice(v.Reports, MapTestWorkflowReportAPIToKube),
+		Workflow:                  common.MapPtr(v.Workflow, MapTestWorkflowAPIToKube),
+		ResolvedWorkflow:          common.MapPtr(v.ResolvedWorkflow, MapTestWorkflowAPIToKube),
+		TestWorkflowExecutionName: v.TestWorkflowExecutionName,
+	}
+}
+
+func MapTestWorkflowExecutionStatusAPIToKube(v *testkube.TestWorkflowExecution, generation int64) *testworkflowsv1.TestWorkflowExecutionStatus {
+	return &testworkflowsv1.TestWorkflowExecutionStatus{
+		LatestExecution: MapTestWorkflowExecutionAPIToKube(v),
+		Generation:      generation,
+	}
+}
