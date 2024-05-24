@@ -46,10 +46,11 @@ The operators have the precedence defined, so the order will follow math rules, 
 
 #### Access
 
-| Operator | Description        | Example                                              |
-|----------|--------------------|------------------------------------------------------|
-| `.`      | Access inner value | `{"id": 10}.id` is `10`<br />`["a", "b"].1` is `"b"` |
-| `.*.`    | Wildcard mapping   | `[{"id": 5}, {"id": 3}].*.id` is `[5, 3]`            |
+| Operator | Description               | Example                                                                             |
+|----------|---------------------------|-------------------------------------------------------------------------------------|
+| `.`      | Access inner value        | `{"id": 10}.id` is `10`<br />`["a", "b"].1` is `"b"`                                |
+| `.*.`    | Wildcard mapping          | `[{"id": 5}, {"id": 3}].*.id` is `[5, 3]`                                           |
+| `...`    | Spread arguments operator | `shellquote(["foo", "bar baz"]...)` is equivalent of `shellquote("foo", "bar baz")` |
 
 ## Built-in Variables
 
