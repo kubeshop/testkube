@@ -64,7 +64,6 @@ func openCloudDashboard(cfg config.Data) {
 }
 
 func openOnPremDashboard(cmd *cobra.Command, cfg config.Data, verbose bool, license string) {
-	var errs []error
 	uiLocalPort, err := getDashboardLocalPort(config.EnterpriseApiForwardingPort)
 	ui.PrintOnError("getting an ui forwarding available port", err)
 	uri := fmt.Sprintf("http://localhost:%d", uiLocalPort)
@@ -72,31 +71,29 @@ func openOnPremDashboard(cmd *cobra.Command, cfg config.Data, verbose bool, lice
 	ctx, cancel := context.WithCancel(context.Background())
 	err = k8sclient.PortForward(ctx, cfg.Namespace, config.EnterpriseApiName, config.EnterpriseApiPort, config.EnterpriseApiForwardingPort, verbose)
 	if err != nil {
-		errs = append(errs, err)
+		sendErrTelemetry(cmd, cfg, "port_forward", license, "port forwarding api", err)
 	}
-	ui.PrintOnError("port forwarding api", err)
+	ui.ExitOnError("port forwarding api", err)
 	err = k8sclient.PortForward(ctx, cfg.Namespace, config.EnterpriseUiName, config.EnterpriseUiPort, uiLocalPort, verbose)
 	if err != nil {
-		errs = append(errs, err)
+		sendErrTelemetry(cmd, cfg, "port_forward", license, "port forwarding ui", err)
 	}
-	ui.PrintOnError("port forwarding ui", err)
+	ui.ExitOnError("port forwarding ui", err)
 	err = k8sclient.PortForward(ctx, cfg.Namespace, config.EnterpriseDexName, config.EnterpriseDexPort, config.EnterpriseDexForwardingPort, verbose)
 	if err != nil {
-		errs = append(errs, err)
+		sendErrTelemetry(cmd, cfg, "port_forward", license, "port forwarding dex", err)
 	}
-	ui.PrintOnError("port forwarding dex", err)
+	ui.ExitOnError("port forwarding dex", err)
 
 	err = open.Run(uri)
 	if err != nil {
-		errs = append(errs, err)
+		sendErrTelemetry(cmd, cfg, "open_dashboard", license, "opening dashboard", err)
 	}
-	if len(errs) > 0 {
-		retErr := errors.Join(errs...)
-		sendErrTelemetry(cmd, cfg, "open_dashboard", license, "opening dashboard", retErr)
-	} else {
-		sendTelemetry(cmd, cfg, license, "dashbboard opened successfully")
-	}
+
 	ui.ExitOnError("opening dashboard in browser", err)
+
+	sendTelemetry(cmd, cfg, license, "dashbboard opened successfully")
+
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 
@@ -104,7 +101,6 @@ func openOnPremDashboard(cmd *cobra.Command, cfg config.Data, verbose bool, lice
 	ui.Success("Port forwarding the necessary services, hit Ctrl+c (or Cmd+c) to stop")
 	<-c
 	cancel()
-
 }
 
 func localPortCheck(port int) error {
