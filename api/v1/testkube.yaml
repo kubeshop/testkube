@@ -7970,6 +7970,8 @@ components:
             $ref: "#/components/schemas/TestWorkflowContent"
           pod:
             $ref: "#/components/schemas/TestWorkflowPodConfig"
+          logs:
+            $ref: "#/components/schemas/BoxedString"
           restartPolicy:
             type: string
           readinessProbe:
