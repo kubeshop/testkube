@@ -83,6 +83,7 @@ func SendCmdErrorEventWithLicense(cmd *cobra.Command, version, errType, errorSta
 					ErrorStackTrace: errorStackTrace,
 					License:         license,
 					Step:            step,
+					Email:           GetEmail(license),
 				},
 			}},
 	}
