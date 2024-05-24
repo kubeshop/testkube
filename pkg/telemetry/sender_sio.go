@@ -105,6 +105,9 @@ func mapProperties(params Params) analytics.Properties {
 	if params.Step != "" {
 		properties = properties.Set("step", params.Step)
 	}
+	if params.Email != "" {
+		properties = properties.Set("email", params.Email)
+	}
 
 	if params.DataSource != "" {
 		properties = properties.Set("dataSource", params.DataSource)
