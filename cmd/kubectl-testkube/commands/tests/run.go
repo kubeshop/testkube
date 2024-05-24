@@ -13,6 +13,7 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/render"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/debugger"
 	apiv1 "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -80,6 +81,8 @@ func NewRunTestCmd() *cobra.Command {
 		slavePodTemplate                   string
 		slavePodTemplateReference          string
 		executionNamespace                 string
+		attachDebugger                     bool
+		debugFile                          string
 	)
 
 	cmd := &cobra.Command{
@@ -88,6 +91,9 @@ func NewRunTestCmd() *cobra.Command {
 		Short:   "Starts new test",
 		Long:    `Starts new test based on Test Custom Resource name, returns results to console`,
 		Run: func(cmd *cobra.Command, args []string) {
+			if attachDebugger {
+				watchEnabled = true
+			}
 			envs, err := cmd.Flags().GetStringToString("env")
 			ui.WarnOnError("getting envs", err)
 
@@ -95,7 +101,7 @@ func NewRunTestCmd() *cobra.Command {
 			ui.ExitOnError("getting client", err)
 
 			info, err := client.GetServerInfo()
-			ui.ExitOnError("getting server info", err)
+			ui.WarnOnError("getting server info", err)
 
 			variables, err := common.CreateVariables(cmd, info.DisableSecretCreation)
 			ui.WarnOnError("getting variables", err)
@@ -284,11 +290,30 @@ func NewRunTestCmd() *cobra.Command {
 					ui.Warn("Testkube will use the following file mappings:", copyFileList...)
 				}
 
+				var eventsDebugger *debugger.EventsDebugger
+				if attachDebugger {
+					writer := os.Stderr
+					if debugFile != "" {
+						writer, err = os.Create(debugFile)
+						ui.WarnOnError("creating debug file", err)
+					}
+
+					i := debugger.NewInsights().WithWriter(writer)
+					i.AddDebugger(debugger.NewJobDebugger(testName, namespace))
+					eventsDebugger = debugger.NewEventsDebugger(testName, namespace)
+					i.AddDebugger(eventsDebugger)
+					i.Run()
+				}
+
 				for i := 0; i < iterations; i++ {
 					execution, err := client.ExecuteTest(testName, name, options)
 					ui.ExitOnError("starting test execution "+namespacedName, err)
 					executions = append(executions, execution)
+					if attachDebugger {
+						eventsDebugger.AddExecutionId(execution.Id)
+					}
 				}
+
 			case len(selectors) != 0:
 				selector := strings.Join(selectors, ",")
 				executions, err = client.ExecuteTests(selector, concurrencyLevel, options)
@@ -350,6 +375,11 @@ func NewRunTestCmd() *cobra.Command {
 			}
 
 			ui.ExitOnError("executions contain failed on errors", execErrors...)
+			if attachDebugger {
+				// Wait to catch logs from attached debugger after job completed
+				time.Sleep(3 * time.Second)
+				ui.Success("Debugger stopped")
+			}
 		},
 	}
 
@@ -416,6 +446,8 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringVar(&slavePodTemplate, "slave-pod-template", "", "slave pod template file path for extensions to slave pod template")
 	cmd.Flags().StringVar(&slavePodTemplateReference, "slave-pod-template-reference", "", "reference to slave pod template to use for the test")
 	cmd.Flags().StringVar(&executionNamespace, "execution-namespace", "", "namespace for test execution (Pro edition only)")
+	cmd.Flags().StringVar(&debugFile, "debugger-file", "", "store debug info into file, stdout by default")
+	cmd.Flags().BoolVar(&attachDebugger, "attach-debugger", false, "attach simple debugger for job, need KUBECONFIG for the agent to be active")
 
 	return cmd
 }
