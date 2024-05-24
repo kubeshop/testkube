@@ -1002,6 +1002,7 @@ func MapIndependentServiceSpecKubeToAPI(v testworkflowsv1.IndependentServiceSpec
 		Timeout:         v.Timeout,
 		Transfer:        common.MapSlice(v.Transfer, MapStepParallelTransferKubeToAPI),
 		Content:         common.MapPtr(v.Content, MapContentKubeToAPI),
+		Logs:            MapStringToBoxedString(v.Logs),
 		RestartPolicy:   string(v.RestartPolicy),
 		ReadinessProbe:  common.MapPtr(v.ReadinessProbe, MapProbeKubeToAPI),
 	}
@@ -1029,6 +1030,7 @@ func MapServiceSpecKubeToAPI(v testworkflowsv1.ServiceSpec) testkube.TestWorkflo
 		Timeout:         v.Timeout,
 		Transfer:        common.MapSlice(v.Transfer, MapStepParallelTransferKubeToAPI),
 		Content:         common.MapPtr(v.Content, MapContentKubeToAPI),
+		Logs:            MapStringToBoxedString(v.Logs),
 		RestartPolicy:   string(v.RestartPolicy),
 		ReadinessProbe:  common.MapPtr(v.ReadinessProbe, MapProbeKubeToAPI),
 	}

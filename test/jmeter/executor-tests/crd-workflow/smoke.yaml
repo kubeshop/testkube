@@ -86,7 +86,7 @@ spec:
       - name: distribute/evenly
       count: 5
       timeout: 30s # initialization timeout
-      logs: true
+      logs: 'always'
       image: justb4/jmeter:5.5
       command:
       - jmeter-server
@@ -141,7 +141,7 @@ spec:
       - name: distribute/evenly
       count: 5
       timeout: 30s # initialization timeout
-      logs: true
+      logs: 'always'
       image: justb4/jmeter:5.5
       command:
       - jmeter-server
