@@ -80,7 +80,7 @@ while the others may be accessible only dynamically in the container.
 
 In some contexts, there are additional variables available.
 
-#### Retry conditions
+#### Retry Conditions
 
 When using custom `retry` condition, you can use `self.passed` and `self.failed` for determining the status based on the step status.
 
@@ -94,13 +94,13 @@ spec:
       until: 'self.failed' 
 ```
 
-#### Matrix and shards
+#### Matrix and Shard
 
 When using `services` (service pods), `parallel` (parallel workers), or `execute` (test suite) steps:
 
-* You can use `matrix.<name>` and `shard.<name>` to access parameters for each copy
-* You can access `index` and `count` that will differ for each copy
-* Also, you may use `matrixIndex`, `matrixCount`, `shardIndex` and `shardCount` to get specific indexes/numbers for combinations and shards 
+* You can use `matrix.<name>` and `shard.<name>` to access parameters for each copy.
+* You can access `index` and `count` that will differ for each copy.
+* Also, you may use `matrixIndex`, `matrixCount`, `shardIndex` and `shardCount` to get specific indexes/numbers for combinations and shards. 
 
 ```yaml
 spec:
