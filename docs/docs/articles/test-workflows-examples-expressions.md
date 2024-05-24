@@ -18,7 +18,7 @@ You can do basic math easily, like **config.workers * 5**.
 
 #### Arithmetic
 
-The operators have the precedence defined, so the order will follow math rules, as an example:
+The operators have the precedence defined so the order will follow math rules. Examples:
 
 * `1 + 2 * 3` will result in `7`
 * `(1 + 2) * 3` will result in `9`
