@@ -37,6 +37,7 @@ type TestWorkflowIndependentServiceSpec struct {
 	Transfer       []TestWorkflowStepParallelTransfer `json:"transfer,omitempty"`
 	Content        *TestWorkflowContent               `json:"content,omitempty"`
 	Pod            *TestWorkflowPodConfig             `json:"pod,omitempty"`
+	Logs           *BoxedString                       `json:"logs,omitempty"`
 	RestartPolicy  string                             `json:"restartPolicy,omitempty"`
 	ReadinessProbe *Probe                             `json:"readinessProbe,omitempty"`
 }

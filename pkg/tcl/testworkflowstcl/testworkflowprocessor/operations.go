@@ -408,8 +408,8 @@ func ProcessServicesStop(_ InternalProcessor, layer Intermediate, container Cont
 
 	args := make([]string, 0)
 	for name, v := range step.Services {
-		if v.Logs {
-			args = append(args, "-l", name)
+		if v.Logs != nil {
+			args = append(args, "-l", fmt.Sprintf("%s=%s", name, *v.Logs))
 		}
 	}
 	stage.Container().SetArgs(args...)
