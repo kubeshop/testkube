@@ -75,9 +75,14 @@ func readParams(base map[string]testworkflowsv1.DynamicList, machines ...express
 	for key, items := range base {
 		exprStr := items.Expression
 		if !items.Dynamic {
-			b, err := json.Marshal(items.Static)
+			statics := items.DeepCopy().Static
+			err := expressionstcl.FinalizeForce(&statics, machines...)
 			if err != nil {
-				return nil, fmt.Errorf("%s: could not parse list of values: %s\n", key, err)
+				return nil, fmt.Errorf("%s: error while resolving matrix: %s", key, err)
+			}
+			b, err := json.Marshal(statics)
+			if err != nil {
+				return nil, fmt.Errorf("%s: could not parse list of values: %s", key, err)
 			}
 			exprStr = string(b)
 		}

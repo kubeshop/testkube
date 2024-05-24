@@ -22,6 +22,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/data"
 	common2 "github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/common"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/env"
+	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/spawn"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/transfer"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
@@ -221,7 +222,7 @@ func registerTransfer(transferSrv transfer.Server, request map[string]testworkfl
 	for k, t := range request {
 		patterns := []string{"**/*"}
 		if t.Files != nil && !t.Files.Dynamic {
-			patterns = t.Files.Static
+			patterns = spawn.MapDynamicListToStringList(t.Files.Static)
 		} else if t.Files != nil && t.Files.Dynamic {
 			patternsExpr, err := expressionstcl.EvalExpression(t.Files.Expression, machines...)
 			if err != nil {
