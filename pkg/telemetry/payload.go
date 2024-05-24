@@ -40,6 +40,7 @@ type Params struct {
 	TestWorkflowKubeshopGitURI bool       `json:"test_workflow_kubeshop_git_uri,omitempty"`
 	License                    string     `json:"license,omitempty"`
 	Step                       string     `json:"step,omitempty"`
+	Email                      string     `json:"email,omitempty"`
 }
 
 type Event struct {
@@ -141,6 +142,7 @@ func NewCLIWithLicensePayload(context RunContext, id, name, version, category, c
 					ClusterType:     clusterType,
 					CliContext:      GetCliRunContext(),
 					License:         license,
+					Email:           GetEmail(license),
 					Step:            step,
 				},
 			}},
