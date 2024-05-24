@@ -162,10 +162,19 @@ func (r *TestWorkflowResult) RecomputeDuration() {
 			if resumedAt.IsZero() {
 				resumedAt = r.FinishedAt
 			}
-			r.PausedMs += int32(resumedAt.Sub(p.PausedAt).Milliseconds())
+			milli := int32(resumedAt.Sub(p.PausedAt).Milliseconds())
+			if milli > 0 {
+				r.PausedMs += milli
+			}
 		}
 		totalDuration := r.FinishedAt.Sub(r.QueuedAt)
 		duration := totalDuration - time.Duration(1e3*r.PausedMs)
+		if totalDuration < 0 {
+			totalDuration = time.Duration(0)
+		}
+		if duration < 0 {
+			duration = time.Duration(0)
+		}
 		r.DurationMs = int32(duration.Milliseconds())
 		r.Duration = duration.Round(time.Millisecond).String()
 		r.TotalDurationMs = int32(totalDuration.Milliseconds())
