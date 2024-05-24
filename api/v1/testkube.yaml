@@ -7657,6 +7657,9 @@ components:
       required:
         - status
         - predictedStatus
+        - durationMs
+        - totalDurationMs
+        - pausedMs
 
     TestWorkflowExecutionNotification:
       type: object
@@ -7778,6 +7781,9 @@ components:
       required:
         - status
         - predictedStatus
+        - durationMs
+        - pausedMs
+        - totalDurationMs
 
     TestWorkflowPause:
       type: object

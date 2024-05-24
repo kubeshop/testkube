@@ -81,6 +81,12 @@ func (r *TestWorkflowResult) Fatal(err error, aborted bool, ts time.Time) {
 	if aborted {
 		r.Status = common.Ptr(ABORTED_TestWorkflowStatus)
 	}
+	if r.QueuedAt.IsZero() {
+		r.QueuedAt = ts.UTC()
+	}
+	if r.StartedAt.IsZero() {
+		r.StartedAt = ts.UTC()
+	}
 	if r.FinishedAt.IsZero() {
 		r.FinishedAt = ts.UTC()
 	}
