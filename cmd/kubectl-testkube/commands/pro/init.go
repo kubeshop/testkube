@@ -13,6 +13,7 @@ import (
 
 func NewInitCmd() *cobra.Command {
 	var export bool
+	var noLogin bool // ignore ask for login
 	options := common.HelmOptions{
 		NoMinio: true,
 		NoMongo: true,
@@ -71,6 +72,14 @@ func NewInitCmd() *cobra.Command {
 
 			ui.NL()
 
+			if noLogin {
+				ui.Alert("Saving Testkube CLI Pro context, you need to authorize CLI through `testkube set context` later")
+				common.PopulateCloudConfig(cfg, "", &options)
+				ui.Info(" Happy Testing! 🚀")
+				ui.NL()
+				return
+			}
+
 			ui.H2("Saving Testkube CLI Pro context")
 			var token, refreshToken string
 			if !common.IsUserLoggedIn(cfg, options) {
@@ -91,6 +100,7 @@ func NewInitCmd() *cobra.Command {
 	common.PopulateHelmFlags(cmd, &options)
 	common.PopulateMasterFlags(cmd, &options)
 
+	cmd.Flags().BoolVarP(&noLogin, "no-login", "", false, "Ignore login prompt, set existing token later by `testkube set context`")
 	cmd.Flags().BoolVarP(&export, "export", "", false, "Export the values.yaml")
 	cmd.Flags().BoolVar(&options.MultiNamespace, "multi-namespace", false, "multi namespace mode")
 	cmd.Flags().BoolVar(&options.NoOperator, "no-operator", false, "should operator be installed (for more instances in multi namespace mode it should be set to true)")
