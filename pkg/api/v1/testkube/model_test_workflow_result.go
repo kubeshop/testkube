@@ -27,11 +27,11 @@ type TestWorkflowResult struct {
 	// Go-formatted (human-readable) total duration (incl. pause)
 	TotalDuration string `json:"totalDuration,omitempty"`
 	// Duration in milliseconds
-	DurationMs int32 `json:"durationMs,omitempty"`
+	DurationMs int32 `json:"durationMs"`
 	// Pause duration in milliseconds
-	PausedMs int32 `json:"pausedMs,omitempty"`
+	PausedMs int32 `json:"pausedMs"`
 	// Total duration in milliseconds (incl. pause)
-	TotalDurationMs int32                             `json:"totalDurationMs,omitempty"`
+	TotalDurationMs int32                             `json:"totalDurationMs"`
 	Pauses          []TestWorkflowPause               `json:"pauses,omitempty"`
 	Initialization  *TestWorkflowStepResult           `json:"initialization,omitempty"`
 	Steps           map[string]TestWorkflowStepResult `json:"steps,omitempty"`
