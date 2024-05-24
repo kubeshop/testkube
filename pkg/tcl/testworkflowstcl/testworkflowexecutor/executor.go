@@ -151,6 +151,22 @@ func (e *executor) Recover(ctx context.Context) {
 	}
 }
 
+func (e *executor) updateStatus(execution *testkube.TestWorkflowExecution) {
+	if execution.TestWorkflowExecutionName != "" {
+		testWorkflowExecution, err := e.testWorkflowExecutionsClient.Get(execution.TestWorkflowExecutionName)
+		if err != nil {
+			log.DefaultLogger.Errorw("failed to get test workflow execution", "error", err)
+		}
+
+		if testWorkflowExecution != nil {
+			testWorkflowExecution.Status = testworkflowmappers.MapTestWorkflowExecutionStatusAPIToKube(execution, testWorkflowExecution.Generation)
+			if err = e.testWorkflowExecutionsClient.UpdateStatus(testWorkflowExecution); err != nil {
+				log.DefaultLogger.Errorw("failed to update test workflow execution", "error", err)
+			}
+		}
+	}
+}
+
 func (e *executor) Control(ctx context.Context, execution *testkube.TestWorkflowExecution) error {
 	ctrl, err := testworkflowcontroller.New(ctx, e.clientSet, execution.GetNamespace(e.namespace), execution.Id, execution.ScheduledAt)
 	if err != nil {
@@ -198,6 +214,8 @@ func (e *executor) Control(ctx context.Context, execution *testkube.TestWorkflow
 					log.DefaultLogger.Error(errors.Wrap(err, "saving log output content"))
 				}
 			}
+
+			e.updateStatus(execution)
 		}
 
 		// Try to gracefully handle abort
@@ -263,20 +281,7 @@ func (e *executor) Control(ctx context.Context, execution *testkube.TestWorkflow
 
 	wg.Wait()
 
-	if execution.TestWorkflowExecutionName != "" {
-		testWorkflowExecution, err := e.testWorkflowExecutionsClient.Get(execution.TestWorkflowExecutionName)
-		if err != nil {
-			log.DefaultLogger.Errorw("failed to get test workflow execution", "error", err)
-		}
-
-		if testWorkflowExecution != nil {
-			testWorkflowExecution.Status = testworkflowmappers.MapTestWorkflowExecutionStatusAPIToKube(execution, testWorkflowExecution.Generation)
-			if err = e.testWorkflowExecutionsClient.UpdateStatus(testWorkflowExecution); err != nil {
-				log.DefaultLogger.Errorw("failed to update test workflow execution", "error", err)
-			}
-		}
-	}
-
+	e.updateStatus(execution)
 	err = testworkflowcontroller.Cleanup(ctx, e.clientSet, execution.GetNamespace(e.namespace), execution.Id)
 	if err != nil {
 		log.DefaultLogger.Errorw("failed to cleanup TestWorkflow resources", "id", execution.Id, "error", err)
