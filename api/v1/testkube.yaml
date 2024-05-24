@@ -3574,6 +3574,8 @@ paths:
         - test-workflows
         - api
         - pro
+      parameters:
+        - $ref: "#/components/parameters/ID"
       summary: Execute test workflow
       description: Execute test workflow in the kubernetes cluster
       operationId: executeTestWorkflow
@@ -3845,7 +3847,7 @@ paths:
   /test-workflow-executions/{executionID}/artifacts:
     get:
       parameters:
-        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/executionID"
       tags:
         - test-workflows
         - artifacts
@@ -3892,7 +3894,7 @@ paths:
   /test-workflow-executions/{executionID}/artifacts/{filename}:
     get:
       parameters:
-        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/executionID"
         - $ref: "#/components/parameters/Filename"
       tags:
         - test-workflows
@@ -3939,7 +3941,7 @@ paths:
   /test-workflow-executions/{executionID}/artifact-archive:
     get:
       parameters:
-        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/executionID"
         - $ref: "#/components/parameters/Mask"
       tags:
         - test-workflows

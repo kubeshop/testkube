@@ -10,16 +10,16 @@
 package testkube
 
 type TestWorkflowStepExecuteTestRef struct {
-	// test name to schedule
-	Name string `json:"name,omitempty"`
-	// test execution description to display
-	Description      string                                       `json:"description,omitempty"`
-	Count            *BoxedString                                 `json:"count,omitempty"`
-	MaxCount         *BoxedString                                 `json:"maxCount,omitempty"`
-	ExecutionRequest *TestWorkflowStepExecuteTestExecutionRequest `json:"executionRequest,omitempty"`
-	Tarball          map[string]TestWorkflowTarballRequest        `json:"tarball,omitempty"`
+	Count    *BoxedString `json:"count,omitempty"`
+	MaxCount *BoxedString `json:"maxCount,omitempty"`
 	// matrix of parameters to spawn instances
 	Matrix map[string]interface{} `json:"matrix,omitempty"`
 	// parameters that should be distributed across sharded instances
 	Shards map[string]interface{} `json:"shards,omitempty"`
+	// test name to schedule
+	Name string `json:"name,omitempty"`
+	// test execution description to display
+	Description      string                                       `json:"description,omitempty"`
+	ExecutionRequest *TestWorkflowStepExecuteTestExecutionRequest `json:"executionRequest,omitempty"`
+	Tarball          map[string]TestWorkflowTarballRequest        `json:"tarball,omitempty"`
 }
