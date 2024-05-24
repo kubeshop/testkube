@@ -27,9 +27,9 @@ type TestWorkflowResultSummary struct {
 	// Go-formatted (human-readable) duration (incl. pause)
 	TotalDuration string `json:"totalDuration,omitempty"`
 	// Duration in milliseconds
-	DurationMs int32 `json:"durationMs,omitempty"`
+	DurationMs int32 `json:"durationMs"`
 	// Duration in milliseconds (incl. pause)
-	TotalDurationMs int32 `json:"totalDurationMs,omitempty"`
+	TotalDurationMs int32 `json:"totalDurationMs"`
 	// Pause duration in milliseconds
-	PausedMs int32 `json:"pausedMs,omitempty"`
+	PausedMs int32 `json:"pausedMs"`
 }
