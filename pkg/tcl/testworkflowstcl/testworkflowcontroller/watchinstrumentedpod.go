@@ -26,6 +26,7 @@ import (
 
 const (
 	InitContainerName = "tktw-init"
+	IdleTimeout       = 100 * time.Millisecond
 )
 
 type WatchInstrumentedPodOptions struct {
@@ -147,7 +148,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 			} else {
 				select {
 				case <-state.Finished(ref):
-				case <-time.After(100 * time.Millisecond):
+				case <-time.After(IdleTimeout):
 					return
 				}
 			}
