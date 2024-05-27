@@ -234,7 +234,8 @@ func SaveLogs(ctx context.Context, clientSet kubernetes.Interface, storage artif
 		Timeout: ControllerTimeout,
 	})
 	if err == nil {
-		err = storage.SaveStream(filePath, ctrl.Logs(ctx))
+		err = storage.SaveStream(filePath, ctrl.Logs(ctx, false))
+		ctrl.StopController()
 	}
 	return filePath, err
 }

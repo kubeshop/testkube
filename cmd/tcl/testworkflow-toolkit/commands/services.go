@@ -336,6 +336,7 @@ func NewServicesCmd() *cobra.Command {
 						break
 					}
 				}
+				ctrl.StopController()
 
 				// Fail if the container has not started
 				if !started {
