@@ -11,6 +11,7 @@ package testworkflowcontroller
 import (
 	"bufio"
 	"context"
+	"errors"
 	"io"
 	"strings"
 	"time"
@@ -36,7 +37,7 @@ type ContainerLog struct {
 	Output *data.Instruction
 }
 
-func WatchContainerLogs(ctx context.Context, clientSet kubernetes.Interface, namespace, podName, containerName string, bufferSize int, follow bool) Channel[ContainerLog] {
+func WatchContainerLogs(ctx context.Context, clientSet kubernetes.Interface, namespace, podName, containerName string, bufferSize int, follow bool, pod Channel[*corev1.Pod]) Channel[ContainerLog] {
 	w := newChannel[ContainerLog](ctx, bufferSize)
 
 	go func() {
@@ -57,6 +58,10 @@ func WatchContainerLogs(ctx context.Context, clientSet kubernetes.Interface, nam
 				if !strings.Contains(err.Error(), "is waiting to start") {
 					w.Error(err)
 					return
+				}
+				p := <-pod.Peek(ctx)
+				if p != nil && IsPodDone(p) {
+					w.Error(errors.New("pod is finished and there are no logs for this container"))
 				}
 				continue
 			}

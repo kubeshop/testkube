@@ -104,8 +104,8 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 			}
 
 			// Watch the container logs
-			follow := common.ResolvePtr(opts.Follow, true)
-			for v := range WatchContainerLogs(ctx, clientSet, podObj.Namespace, podObj.Name, ref, 10, follow).Channel() {
+			follow := common.ResolvePtr(opts.Follow, true) && !state.IsFinished(ref)
+			for v := range WatchContainerLogs(ctx, clientSet, podObj.Namespace, podObj.Name, ref, 10, follow, pod).Channel() {
 				if v.Error != nil {
 					s.Error(v.Error)
 				} else if v.Value.Output != nil {
