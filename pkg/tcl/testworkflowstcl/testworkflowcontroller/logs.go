@@ -36,7 +36,7 @@ type ContainerLog struct {
 	Output *data.Instruction
 }
 
-func WatchContainerLogs(ctx context.Context, clientSet kubernetes.Interface, namespace, podName, containerName string, bufferSize int) Channel[ContainerLog] {
+func WatchContainerLogs(ctx context.Context, clientSet kubernetes.Interface, namespace, podName, containerName string, bufferSize int, follow bool) Channel[ContainerLog] {
 	w := newChannel[ContainerLog](ctx, bufferSize)
 
 	go func() {
@@ -45,7 +45,7 @@ func WatchContainerLogs(ctx context.Context, clientSet kubernetes.Interface, nam
 
 		// Create logs stream request
 		req := clientSet.CoreV1().Pods(namespace).GetLogs(podName, &corev1.PodLogOptions{
-			Follow:     true,
+			Follow:     follow,
 			Timestamps: true,
 			Container:  containerName,
 		})

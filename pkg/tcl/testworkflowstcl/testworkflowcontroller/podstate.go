@@ -62,9 +62,11 @@ func newPodState(parentCtx context.Context) *podState {
 		<-ctx.Done()
 		state.mu.Lock()
 		defer state.mu.Unlock()
-		for _, c := range state.finishedCh {
+		for name, c := range state.finishedCh {
 			if c != nil {
+				state.finished[name] = time.Time{}
 				close(c)
+				delete(state.finishedCh, name)
 			}
 		}
 	}()
