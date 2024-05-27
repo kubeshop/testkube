@@ -11,8 +11,7 @@ package commands
 import (
 	"context"
 	"fmt"
-	"os"
-	"slices"
+	"strings"
 
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,6 +21,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/common"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/spawn"
+	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowcontroller"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -37,12 +37,22 @@ func NewKillCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 
 		Run: func(cmd *cobra.Command, args []string) {
+			machine := expressionstcl.CombinedMachines(data.AliasMachine, data.GetBaseTestWorkflowMachine())
 			groupRef := args[0]
 			clientSet := env.Kubernetes()
 
-			// Fast-track
-			if len(logs) == 0 {
-				os.Exit(0)
+			conditions := make(map[string]expressionstcl.Expression)
+			for _, l := range logs {
+				name, condition, found := strings.Cut(l, "=")
+				if !found {
+					condition = "true"
+				}
+				expr, err := expressionstcl.CompileAndResolve(condition, machine)
+				if err != nil {
+					fmt.Printf("warning: service '%s': could not compile condition '%s': %s", name, condition, err.Error())
+				} else {
+					conditions[name] = expr
+				}
 			}
 
 			// Fetch the services when needed
@@ -55,8 +65,23 @@ func NewKillCmd() *cobra.Command {
 				services := make(map[string]int64)
 				ids := make([]string, 0)
 				for _, job := range jobs.Items {
-					service, _ := spawn.GetServiceByResourceId(job.Name)
-					if slices.Contains(logs, service) {
+					service, index := spawn.GetServiceByResourceId(job.Name)
+					if _, ok := conditions[service]; !ok {
+						continue
+					}
+					serviceMachine := expressionstcl.NewMachine().
+						Register("index", index).
+						RegisterAccessorExt(func(name string) (interface{}, bool, error) {
+							if name == "count" {
+								expr, err := expressionstcl.CompileAndResolve(fmt.Sprintf("len(services.%s)", service))
+								return expr, true, err
+							}
+							return nil, false, nil
+						})
+					log, err := expressionstcl.EvalExpression(conditions[service].String(), serviceMachine, machine)
+					if err != nil {
+						fmt.Printf("warning: service '%s': could not resolve condition '%s': %s", service, log.String(), err.Error())
+					} else if v, _ := log.BoolValue(); v {
 						services[service]++
 						ids = append(ids, job.Name)
 					}
@@ -92,7 +117,7 @@ func NewKillCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringArrayVarP(&logs, "logs", "l", nil, "fetch the logs for specific services")
+	cmd.Flags().StringArrayVarP(&logs, "logs", "l", nil, "fetch the logs for specific services - pair <name>=<expression>")
 
 	return cmd
 }

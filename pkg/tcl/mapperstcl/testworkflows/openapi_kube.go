@@ -1066,6 +1066,7 @@ func MapIndependentServiceSpecAPIToKube(v testkube.TestWorkflowIndependentServic
 		Timeout:        v.Timeout,
 		Transfer:       common.MapSlice(v.Transfer, MapStepParallelTransferAPIToKube),
 		Content:        common.MapPtr(v.Content, MapContentAPIToKube),
+		Logs:           MapBoxedStringToString(v.Logs),
 		RestartPolicy:  testworkflowsv1.ServiceRestartPolicy(v.RestartPolicy),
 		ReadinessProbe: common.MapPtr(v.ReadinessProbe, MapProbeAPIToKube),
 	}
@@ -1100,6 +1101,7 @@ func MapServiceSpecAPIToKube(v testkube.TestWorkflowServiceSpec) testworkflowsv1
 			Timeout:        v.Timeout,
 			Transfer:       common.MapSlice(v.Transfer, MapStepParallelTransferAPIToKube),
 			Content:        common.MapPtr(v.Content, MapContentAPIToKube),
+			Logs:           MapBoxedStringToString(v.Logs),
 			RestartPolicy:  testworkflowsv1.ServiceRestartPolicy(v.RestartPolicy),
 			ReadinessProbe: common.MapPtr(v.ReadinessProbe, MapProbeAPIToKube),
 		},
@@ -1309,7 +1311,7 @@ func MapTestWorkflowStepResultAPIToKube(v testkube.TestWorkflowStepResult) testw
 		Status: common.MapPtr(v.Status, func(status testkube.TestWorkflowStepStatus) testworkflowsv1.TestWorkflowStepStatus {
 			return (testworkflowsv1.TestWorkflowStepStatus)(status)
 		}),
-		ExitCode:   v.ExitCode,
+		ExitCode:   int64(v.ExitCode),
 		QueuedAt:   metav1.Time{Time: v.QueuedAt},
 		StartedAt:  metav1.Time{Time: v.StartedAt},
 		FinishedAt: metav1.Time{Time: v.FinishedAt},
@@ -1320,7 +1322,7 @@ func MapTestWorkflowOutputAPIToKube(v testkube.TestWorkflowOutput) testworkflows
 	return testworkflowsv1.TestWorkflowOutput{
 		Ref:   v.Ref,
 		Name:  v.Name,
-		Value: v.Value,
+		Value: MapDynamicListMapAPIToKube(v.Value),
 	}
 }
 

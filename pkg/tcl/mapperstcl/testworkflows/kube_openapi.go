@@ -777,9 +777,7 @@ func MapTarballFilePatternKubeToAPI(v testworkflowsv1.DynamicList) testkube.Test
 	if v.Expression != "" {
 		return testkube.TestWorkflowTarballFilePattern{Expression: v.Expression}
 	}
-	return testkube.TestWorkflowTarballFilePattern{Static: common.MapSlice(v.Static, func(s string) interface{} {
-		return s
-	})}
+	return testkube.TestWorkflowTarballFilePattern{Static: v.Static}
 }
 
 func MapTarballRequestKubeToAPI(v testworkflowsv1.TarballRequest) testkube.TestWorkflowTarballRequest {
@@ -1002,6 +1000,7 @@ func MapIndependentServiceSpecKubeToAPI(v testworkflowsv1.IndependentServiceSpec
 		Timeout:         v.Timeout,
 		Transfer:        common.MapSlice(v.Transfer, MapStepParallelTransferKubeToAPI),
 		Content:         common.MapPtr(v.Content, MapContentKubeToAPI),
+		Logs:            MapStringToBoxedString(v.Logs),
 		RestartPolicy:   string(v.RestartPolicy),
 		ReadinessProbe:  common.MapPtr(v.ReadinessProbe, MapProbeKubeToAPI),
 	}
@@ -1029,6 +1028,7 @@ func MapServiceSpecKubeToAPI(v testworkflowsv1.ServiceSpec) testkube.TestWorkflo
 		Timeout:         v.Timeout,
 		Transfer:        common.MapSlice(v.Transfer, MapStepParallelTransferKubeToAPI),
 		Content:         common.MapPtr(v.Content, MapContentKubeToAPI),
+		Logs:            MapStringToBoxedString(v.Logs),
 		RestartPolicy:   string(v.RestartPolicy),
 		ReadinessProbe:  common.MapPtr(v.ReadinessProbe, MapProbeKubeToAPI),
 	}

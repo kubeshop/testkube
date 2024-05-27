@@ -7,7 +7,6 @@ on:
 env:
   ALPINE_IMAGE: alpine:3.19.0
   BUSYBOX_IMAGE: busybox:1.36.1-musl
-  GO_VERSION: 1.21.5
 
 permissions:
   id-token: write # needed for keyless signing with cosign
@@ -32,7 +31,7 @@ jobs:
       - name: Set-up Go
         uses: actions/setup-go@v5
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version: stable
           cache: false
 
       - name: Go Cache
@@ -99,7 +98,7 @@ jobs:
       - name: Set-up Go
         uses: actions/setup-go@v5
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version: stable
           cache: false
 
       - name: Go Cache
@@ -155,7 +154,7 @@ jobs:
       - name: Set-up Go
         uses: actions/setup-go@v5
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version: stable
           cache: false
 
       - name: Go Cache
@@ -237,7 +236,7 @@ jobs:
       - name: Set-up Go
         uses: actions/setup-go@v5
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version: stable
           cache: false
 
       - name: Go Cache
@@ -308,7 +307,7 @@ jobs:
       - name: Set-up Go
         uses: actions/setup-go@v5
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version: stable
           cache: false
 
       - name: Go Cache
@@ -376,7 +375,7 @@ jobs:
       - name: Set-up Go
         uses: actions/setup-go@v5
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version: stable
           cache: false
 
       - name: Go Cache
@@ -443,7 +442,7 @@ jobs:
       - name: Set-up Go
         uses: actions/setup-go@v5
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version: stable
           cache: false
 
       - name: Docker Cache
@@ -501,7 +500,7 @@ jobs:
       - name: Set-up Go
         uses: actions/setup-go@v5
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version: stable
           cache: false
 
       - name: Go Cache
@@ -569,7 +568,7 @@ jobs:
       - name: Set-up Go
         uses: actions/setup-go@v5
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version: stable
           cache: false
 
       - name: Go Cache
@@ -648,7 +647,7 @@ jobs:
       - name: Set-up Go
         uses: actions/setup-go@v5
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version: stable
           cache: false
 
       - name: Go Cache
@@ -849,7 +848,7 @@ jobs:
       - name: Set-up Go
         uses: actions/setup-go@v5
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version: stable
           cache: false
 
       - name: Go Cache

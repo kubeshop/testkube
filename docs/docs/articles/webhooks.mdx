@@ -450,3 +450,82 @@ If you are just getting started and want to test your webhook configuration, you
 2. [Webhook.Site](https://webhook.site/): Webhook.Site provides an easy way to capture HTTP payloads, review the headers and body for the incoming requests, and automatically respond with a `200 OK` status code.
 
 By using these services, you can quickly set up an HTTP endpoint to receive webhook payloads during your testing/development process.
+
+## Disabling Webhooks
+
+Disabling webhooks can be helpful to make sure your team does not get spammed with notifications during development. Testkube lets you disable them via the CLI, the API or modifying the CRD directly. By default, webhooks are enabled on creation.
+
+<Tabs>
+<TabItem value="cli" label="CLI">
+
+The easiest way to operate on webhooks in Testkube is to use the official CLI.
+
+#### Set on Creation
+
+To disable:
+
+```bash
+testkube create webhook --disable --name "${WEBHOOK_NAME}" ...
+```
+
+To enable it explicitly:
+
+```bash
+testkube create webhook --enable --name "${WEBHOOK_NAME}" ...
+```
+
+#### Set on Update
+
+To disable:
+
+```bash
+testkube update webhook --disable --name "${WEBHOOK_NAME}"
+```
+
+To enable:
+
+```bash
+testkube update webhook --enable --name "${WEBHOOK_NAME}"
+```
+
+</TabItem>
+
+<TabItem value="api" label="API">
+
+When automating your operations on webhooks, you can also use the API. For more details, please consult the "Core OSS OpenAPI Definion" page, respectively the "OpenAPI Specification" for Testkube Pro and Enterprise, under the Reference tab on the left. The field specifying this on the webhooks is called `disabled` and is expecting a value of type `boolean`.
+
+Keep in mind, that enabling the webhook again from the API will require specifying `"disabled":false`, simply deleting the field from the object is interpreted as not setting any value on it.
+
+</TabItem>
+
+<TabItem value="crd" label="Custom Resource">
+
+Using the webhook from the example in creation, you can add the field `disabled` set to `"true"` to the specification:
+
+```yaml title="webhook.yaml"
+apiVersion: executor.testkube.io/v1
+kind: Webhook
+metadata:
+  name: example-webhook
+  namespace: testkube
+spec:
+  uri: <YOUR_ENDPOINT_URL>
+  events:
+    - start-test
+    - end-test-success
+    - end-test-failed
+  selector: ""
+  disabled: "true"
+```
+
+Apply with:
+
+```sh
+kubectl apply -f webhook.yaml
+```
+
+To enable a webhook again, you can either set the field `disabled` to `"false"` explicitly, or delete it altogether from the specification.
+
+</TabItem>
+
+</Tabs>

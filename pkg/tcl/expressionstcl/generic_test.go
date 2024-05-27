@@ -66,6 +66,10 @@ type testObjWithStringEnumPointers struct {
 	Dummy *testEnum
 }
 
+type testObjInterfaced struct {
+	Value map[string][]interface{} `expr:"force"`
+}
+
 var testMachine = NewMachine().
 	Register("dummy", "test").
 	Register("ten", 10)
@@ -261,6 +265,52 @@ func TestGenericSimplifyWithStringEnumPointers(t *testing.T) {
 	want := testObjWithStringEnumPointers{
 		Value: common.Ptr[testEnum]("55"),
 		Dummy: common.Ptr[testEnum]("{{ 4433 }}"),
+	}
+
+	assert.NoError(t, err)
+	assert.Equal(t, want, got)
+}
+
+func TestGenericSimplifyArrayInterface(t *testing.T) {
+	got := []interface{}{"{{ 5 + 2 }}{{ 5 }}"}
+	err := SimplifyForce(&got)
+
+	want := []interface{}{"75"}
+
+	assert.NoError(t, err)
+	assert.Equal(t, want, got)
+}
+
+func TestGenericSimplifyMapArrayInterface(t *testing.T) {
+	got := map[string][]interface{}{
+		"key":   {"{{ 4 + 2 }}{{ 5 }}"},
+		"dummy": {"{{ 10 + 2 }}{{ 5 }}"},
+	}
+	err := SimplifyForce(&got)
+
+	want := map[string][]interface{}{
+		"key":   {"65"},
+		"dummy": {"125"},
+	}
+
+	assert.NoError(t, err)
+	assert.Equal(t, want, got)
+}
+
+func TestGenericSimplifyNestedWithInterfaces(t *testing.T) {
+	got := testObjInterfaced{
+		Value: map[string][]interface{}{
+			"key":   {"{{ 3 + 2 }}{{ 5 }}"},
+			"dummy": {"{{ 10 + 2 }}{{ 5 }}"},
+		},
+	}
+	err := Simplify(&got)
+
+	want := testObjInterfaced{
+		Value: map[string][]interface{}{
+			"key":   {"55"},
+			"dummy": {"125"},
+		},
 	}
 
 	assert.NoError(t, err)

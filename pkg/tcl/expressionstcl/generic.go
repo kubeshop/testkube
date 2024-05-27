@@ -56,6 +56,16 @@ func clone(v reflect.Value) reflect.Value {
 			}
 		}
 		return r
+	} else if v.Kind() == reflect.Slice {
+		r := reflect.MakeSlice(v.Type(), v.Len(), v.Cap())
+		for i := 0; i < v.Len(); i++ {
+			r.Index(i).Set(clone(v.Index(i)))
+		}
+		return r
+	} else if v.Kind() == reflect.Interface {
+		r := reflect.New(v.Type())
+		r.Elem().Set(v)
+		return r.Elem()
 	}
 	return v
 }
@@ -73,7 +83,9 @@ func resolve(v reflect.Value, t tagData, m []Machine, force bool, finalize bool)
 		if v.IsNil() {
 			return
 		}
-		ptr = v
+		if v.CanAddr() {
+			ptr = v
+		}
 		v = v.Elem()
 	}
 
@@ -185,6 +197,8 @@ func resolve(v reflect.Value, t tagData, m []Machine, force bool, finalize bool)
 			changed = vv != str
 			if ptr.Kind() == reflect.String {
 				v.SetString(vv)
+			} else if ptr.Kind() == reflect.Interface {
+				ptr.Set(reflect.ValueOf(vv))
 			} else {
 				ptr.Set(reflect.ValueOf(&vv))
 			}
@@ -208,6 +222,8 @@ func resolve(v reflect.Value, t tagData, m []Machine, force bool, finalize bool)
 			changed = vv != str
 			if ptr.Kind() == reflect.String {
 				v.SetString(vv)
+			} else if ptr.Kind() == reflect.Interface {
+				ptr.Set(reflect.ValueOf(vv))
 			} else {
 				instance := reflect.New(v.Type())
 				instance.Elem().SetString(vv)
