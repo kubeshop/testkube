@@ -1310,9 +1310,9 @@ func MapTestWorkflowStepResultAPIToKube(v testkube.TestWorkflowStepResult) testw
 			return (testworkflowsv1.TestWorkflowStepStatus)(status)
 		}),
 		ExitCode:   v.ExitCode,
-		QueuedAt:   v.QueuedAt,
-		StartedAt:  v.StartedAt,
-		FinishedAt: v.FinishedAt,
+		QueuedAt:   metav1.Time{Time: v.QueuedAt},
+		StartedAt:  metav1.Time{Time: v.StartedAt},
+		FinishedAt: metav1.Time{Time: v.FinishedAt},
 	}
 }
 
@@ -1327,8 +1327,8 @@ func MapTestWorkflowOutputAPIToKube(v testkube.TestWorkflowOutput) testworkflows
 func MapTestWorkflowPauseAPIToKube(v testkube.TestWorkflowPause) testworkflowsv1.TestWorkflowPause {
 	return testworkflowsv1.TestWorkflowPause{
 		Ref:       v.Ref,
-		PausedAt:  v.PausedAt,
-		ResumedAt: v.ResumedAt,
+		PausedAt:  metav1.Time{Time: v.PausedAt},
+		ResumedAt: metav1.Time{Time: v.ResumedAt},
 	}
 }
 
@@ -1340,9 +1340,9 @@ func MapTestWorkflowResultAPIToKube(v testkube.TestWorkflowResult) testworkflows
 		PredictedStatus: common.MapPtr(v.Status, func(status testkube.TestWorkflowStatus) testworkflowsv1.TestWorkflowStatus {
 			return (testworkflowsv1.TestWorkflowStatus)(status)
 		}),
-		QueuedAt:        v.QueuedAt,
-		StartedAt:       v.StartedAt,
-		FinishedAt:      v.FinishedAt,
+		QueuedAt:        metav1.Time{Time: v.QueuedAt},
+		StartedAt:       metav1.Time{Time: v.StartedAt},
+		FinishedAt:      metav1.Time{Time: v.FinishedAt},
 		Duration:        v.Duration,
 		TotalDuration:   v.TotalDuration,
 		DurationMs:      v.DurationMs,
@@ -1370,8 +1370,8 @@ func MapTestWorkflowExecutionAPIToKube(v *testkube.TestWorkflowExecution) *testw
 		Name:                      v.Name,
 		Namespace:                 v.Namespace,
 		Number:                    v.Number,
-		ScheduledAt:               v.ScheduledAt,
-		StatusAt:                  v.StatusAt,
+		ScheduledAt:               metav1.Time{Time: v.ScheduledAt},
+		StatusAt:                  metav1.Time{Time: v.StatusAt},
 		Signature:                 common.MapSlice(v.Signature, MapTestWorkflowSignatureAPIToKube),
 		Result:                    common.MapPtr(v.Result, MapTestWorkflowResultAPIToKube),
 		Output:                    common.MapSlice(v.Output, MapTestWorkflowOutputAPIToKube),
