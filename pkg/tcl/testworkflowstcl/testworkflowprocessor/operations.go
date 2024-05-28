@@ -311,14 +311,14 @@ func ProcessContentTarball(_ InternalProcessor, layer Intermediate, container Co
 		args[i] = fmt.Sprintf("%s=%s", t.Path, t.Url)
 		needsMount := t.Mount != nil && *t.Mount
 		if !needsMount {
-			needsMount = selfContainer.HasVolumeAt(t.Path)
+			needsMount = !selfContainer.HasVolumeAt(t.Path)
 		}
 
 		if needsMount && t.Mount != nil && !*t.Mount {
 			return nil, fmt.Errorf("content.tarball[%d]: %s: is not part of any volume: should be mounted", i, t.Path)
 		}
 
-		if (needsMount && t.Mount == nil) || (t.Mount == nil && *t.Mount) {
+		if needsMount {
 			volumeMount := layer.AddEmptyDirVolume(nil, t.Path)
 			container.AppendVolumeMounts(volumeMount)
 		}

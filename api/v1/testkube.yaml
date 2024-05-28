@@ -7973,6 +7973,9 @@ components:
       - $ref: "#/components/schemas/TestWorkflowStepExecuteStrategy"
       - $ref: "#/components/schemas/TestWorkflowStepRun"
       - properties:
+          description:
+            type: string
+            description: "service description to display"
           timeout:
             type: string
             description: "maximum time until reaching readiness"

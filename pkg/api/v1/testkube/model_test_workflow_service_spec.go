@@ -25,6 +25,8 @@ type TestWorkflowServiceSpec struct {
 	SecurityContext *SecurityContext       `json:"securityContext,omitempty"`
 	// volumes to mount to the container
 	VolumeMounts []VolumeMount `json:"volumeMounts,omitempty"`
+	// service description to display
+	Description string `json:"description,omitempty"`
 	// maximum time until reaching readiness
 	Timeout string `json:"timeout,omitempty"`
 	// list of files to send to parallel steps
@@ -34,11 +36,11 @@ type TestWorkflowServiceSpec struct {
 	Logs           *BoxedString                       `json:"logs,omitempty"`
 	RestartPolicy  string                             `json:"restartPolicy,omitempty"`
 	ReadinessProbe *Probe                             `json:"readinessProbe,omitempty"`
+	Use            []TestWorkflowTemplateRef          `json:"use,omitempty"`
 	Count          *BoxedString                       `json:"count,omitempty"`
 	MaxCount       *BoxedString                       `json:"maxCount,omitempty"`
 	// matrix of parameters to spawn instances
 	Matrix map[string]interface{} `json:"matrix,omitempty"`
 	// parameters that should be distributed across sharded instances
-	Shards map[string]interface{}    `json:"shards,omitempty"`
-	Use    []TestWorkflowTemplateRef `json:"use,omitempty"`
+	Shards map[string]interface{} `json:"shards,omitempty"`
 }

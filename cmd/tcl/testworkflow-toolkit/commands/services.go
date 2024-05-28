@@ -46,7 +46,8 @@ type ServiceInstance struct {
 }
 
 type ServiceState struct {
-	Ip string `json:"ip"`
+	Ip          string `json:"ip"`
+	Description string `json:"description"`
 }
 
 type ServiceStatus string
@@ -164,6 +165,7 @@ func NewServicesCmd() *cobra.Command {
 					svcInstances[index] = ServiceInstance{
 						Index:          index,
 						Name:           name,
+						Description:    svcSpec.Description,
 						RestartPolicy:  corev1.RestartPolicy(svcSpec.RestartPolicy),
 						ReadinessProbe: svcSpec.ReadinessProbe,
 						Spec:           spec,
@@ -182,6 +184,9 @@ func NewServicesCmd() *cobra.Command {
 
 				// Update the state
 				state[name] = make([]ServiceState, len(svcInstances))
+				for i := range svcInstances {
+					state[name][i].Description = svcInstances[i].Description
+				}
 				data.PrintHintDetails(env.Ref(), fmt.Sprintf("services.%s", name), state)
 			}
 
@@ -336,6 +341,7 @@ func NewServicesCmd() *cobra.Command {
 						break
 					}
 				}
+				ctrl.StopController()
 
 				// Fail if the container has not started
 				if !started {

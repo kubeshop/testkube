@@ -62,9 +62,16 @@ func newPodState(parentCtx context.Context) *podState {
 		<-ctx.Done()
 		state.mu.Lock()
 		defer state.mu.Unlock()
-		for _, c := range state.finishedCh {
+		for name, c := range state.finishedCh {
 			if c != nil {
+				state.finished[name] = time.Time{}
 				close(c)
+				delete(state.finishedCh, name)
+			}
+		}
+		for _, c := range state.prestart {
+			if c != nil {
+				c.Close()
 			}
 		}
 	}()
@@ -218,6 +225,8 @@ func (p *podState) RegisterJob(job *batchv1.Job) {
 	p.setQueuedAt("", job.CreationTimestamp.Time)
 	if job.Status.CompletionTime != nil {
 		p.setFinishedAt("", job.Status.CompletionTime.Time)
+	} else if job.DeletionTimestamp != nil {
+		p.setFinishedAt("", job.DeletionTimestamp.Time)
 	}
 }
 
@@ -229,6 +238,13 @@ func (p *podState) PreStart(name string) <-chan ChannelMessage[podStateUpdate] {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	return p.preStartWatcher(name).Channel()
+}
+
+func (p *podState) IsFinished(name string) bool {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	_, ok := p.finished[name]
+	return ok && p.ctx.Err() == nil
 }
 
 func (p *podState) Finished(name string) chan struct{} {
