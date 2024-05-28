@@ -433,7 +433,7 @@ func NewTestSuiteUpdateOptionsFromFlags(cmd *cobra.Command) (options apiclientv1
 	return options, nil
 }
 
-func DownloadArtifacts(id, dir, format string, masks []string, client apiclientv1.Client) {
+func DownloadArtifacts(id, dir, format string, masks []string, client apiclientv1.Client, outputPretty bool) {
 	testSuiteExecution, err := client.GetTestSuiteExecution(id)
 	ui.ExitOnError("getting test suite execution ", err)
 
@@ -441,7 +441,7 @@ func DownloadArtifacts(id, dir, format string, masks []string, client apiclientv
 		for _, step := range execution.Execute {
 			if step.Execution != nil && step.Step != nil && step.Step.Test != "" {
 				if step.Execution.IsPassed() || step.Execution.IsFailed() {
-					tests.DownloadTestArtifacts(step.Execution.Id, filepath.Join(dir, step.Execution.TestName+"-"+step.Execution.Id), format, masks, client)
+					tests.DownloadTestArtifacts(step.Execution.Id, filepath.Join(dir, step.Execution.TestName+"-"+step.Execution.Id), format, masks, client, outputPretty)
 				}
 			}
 		}
