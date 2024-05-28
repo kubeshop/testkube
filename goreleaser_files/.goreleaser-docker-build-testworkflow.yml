@@ -14,12 +14,12 @@ env:
   - DOCKER_BUILDX_CACHE_TO={{ if index .Env "DOCKER_BUILDX_CACHE_TO"  }}{{ .Env.DOCKER_BUILDX_CACHE_TO }}{{ else }}type=inline{{ end }}
   # Build image with commit sha tag
   - IMAGE_TAG_SHA={{ if index .Env "IMAGE_TAG_SHA"  }}{{ .Env.IMAGE_TAG_SHA }}{{ else }}{{ end }}
-  - DOCKER_IMAGE_TITLE={{ if index .Env "SANDBOX_IMAGE" }}testkube-sandbox{{ else }}testkube-tw-init{{ end }}
-  - DOCKER_IMAGE_URL={{ if index .Env "SANDBOX_IMAGE" }}https://hub.docker.com/r/kubeshop/testkube-sandbox{{ else }}https://hub.docker.com/r/kubeshop/testkube-tw-init{{ end }}
+  - DOCKER_IMAGE_TITLE={{ if index .Env "SANDBOX_IMAGE" }}testkube-sandbox{{ else }}{{ .Env.REPOSITORY }}{{ end }}
+  - DOCKER_IMAGE_URL={{ if index .Env "SANDBOX_IMAGE" }}https://hub.docker.com/r/kubeshop/testkube-sandbox{{ else }}https://hub.docker.com/r/kubeshop/{{ .Env.REPOSITORY }}{{ end }}
 builds:
   - id: "linux"
-    main: ./cmd/tcl/testworkflow-init
-    binary: testworkflow-init
+    main: ./cmd/tcl/{{ .Env.SERVICE }}
+    binary: {{ .Env.SERVICE }}
     env:
       - CGO_ENABLED=0
     goos:
@@ -33,14 +33,14 @@ builds:
       -X github.com/kubeshop/testkube/pkg/version.Commit={{ .FullCommit }}
       -s -w
 dockers:
-  - dockerfile: ./build/testworkflow-init/Dockerfile
+  - dockerfile: ./build/{{ .Env.SERVICE }}/Dockerfile
     use: buildx
     goos: linux
     goarch: amd64
     image_templates:
-      - "{{ if .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-tw-init:{{ .ShortCommit }}{{ end }}"
-      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-tw-init:{{ .Version }}-amd64{{ end }}"
-      - "{{ if .Env.SANDBOX_IMAGE }}{{ .Env.DOCKER_REPO }}/testkube-sandbox:tw-init-{{ .Env.BRANCH_IDENTIFIER }}-{{ .ShortCommit }}{{ end }}"
+      - "{{ if .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/{{ .Env.REPOSITORY }}:{{ .ShortCommit }}{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/{{ .Env.REPOSITORY }}:{{ .Version }}-amd64{{ end }}"
+      - "{{ if .Env.SANDBOX_IMAGE }}{{ .Env.DOCKER_REPO }}/testkube-sandbox:{{ .Env.SERVICE }}-{{ .Env.BRANCH_IDENTIFIER }}-{{ .ShortCommit }}{{ end }}"
     build_flag_templates:
       - "--platform=linux/amd64"
       - "--label=org.opencontainers.image.title={{ .Env.DOCKER_IMAGE_TITLE }}"
@@ -54,12 +54,12 @@ dockers:
       - "--build-arg=ALPINE_IMAGE={{ .Env.ALPINE_IMAGE }}"
       - "--build-arg=BUSYBOX_IMAGE={{ .Env.BUSYBOX_IMAGE }}"
 
-  - dockerfile: ./build/testworkflow-init/Dockerfile
+  - dockerfile: ./build/{{ .Env.SERVICE }}/Dockerfile
     use: buildx
     goos: linux
     goarch: arm64
     image_templates:
-      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-tw-init:{{ .Version }}-arm64v8{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/{{ .Env.REPOSITORY }}:{{ .Version }}-arm64v8{{ end }}"
     build_flag_templates:
       - "--platform=linux/arm64/v8"
       - "--label=org.opencontainers.image.created={{ .Date }}"
@@ -73,14 +73,14 @@ dockers:
       - "--build-arg=BUSYBOX_IMAGE={{ .Env.BUSYBOX_IMAGE }}"
 
 docker_manifests:
-  - name_template: "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-tw-init:{{ .Version }}{{ end }}"
+  - name_template: "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/{{ .Env.REPOSITORY }}:{{ .Version }}{{ end }}"
     image_templates:
-      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-tw-init:{{ .Version }}-amd64{{ end }}"
-      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-tw-init:{{ .Version }}-arm64v8{{ end }}"
-  - name_template: "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-tw-init:latest{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/{{ .Env.REPOSITORY }}:{{ .Version }}-amd64{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/{{ .Env.REPOSITORY }}:{{ .Version }}-arm64v8{{ end }}"
+  - name_template: "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/{{ .Env.REPOSITORY }}:latest{{ end }}"
     image_templates:
-      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-tw-init:{{ .Version }}-amd64{{ end }}"
-      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-tw-init:{{ .Version }}-arm64v8{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/{{ .Env.REPOSITORY }}:{{ .Version }}-amd64{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/{{ .Env.REPOSITORY }}:{{ .Version }}-arm64v8{{ end }}"
 
 
 release:
