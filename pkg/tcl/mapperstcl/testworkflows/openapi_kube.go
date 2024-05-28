@@ -1047,7 +1047,8 @@ func MapIndependentServiceSpecAPIToKube(v testkube.TestWorkflowIndependentServic
 			Matrix:   MapDynamicListMapAPIToKube(v.Matrix),
 			Shards:   MapDynamicListMapAPIToKube(v.Shards),
 		},
-		Pod: common.MapPtr(v.Pod, MapPodConfigAPIToKube),
+		Description: v.Description,
+		Pod:         common.MapPtr(v.Pod, MapPodConfigAPIToKube),
 		StepRun: testworkflowsv1.StepRun{
 			ContainerConfig: testworkflowsv1.ContainerConfig{
 				WorkingDir:      MapBoxedStringToString(v.WorkingDir),
@@ -1082,7 +1083,8 @@ func MapServiceSpecAPIToKube(v testkube.TestWorkflowServiceSpec) testworkflowsv1
 				Matrix:   MapDynamicListMapAPIToKube(v.Matrix),
 				Shards:   MapDynamicListMapAPIToKube(v.Shards),
 			},
-			Pod: common.MapPtr(v.Pod, MapPodConfigAPIToKube),
+			Description: v.Description,
+			Pod:         common.MapPtr(v.Pod, MapPodConfigAPIToKube),
 			StepRun: testworkflowsv1.StepRun{
 				ContainerConfig: testworkflowsv1.ContainerConfig{
 					WorkingDir:      MapBoxedStringToString(v.WorkingDir),
