@@ -3,21 +3,28 @@
 An Istio mesh can be configured in several ways.
 
 Traffic can be routed to the proxy by either using the `istio-init` container,
-the CNI plugin, or ambient mode (currently in beta). In ambient mode, the proxy
-can run as a separate pod, but in the other modes, it runs as a sidecar
-container.
+the [CNI plugin](https://istio.io/latest/docs/setup/additional-setup/cni/), or
+[ambient mode](https://istio.io/latest/blog/2022/introducing-ambient-mesh/)
+(currently in [beta](https://istio.io/latest/blog/2024/ambient-reaches-beta/)).
+In ambient mode, the proxy can run as a separate pod, but in the other modes, it
+runs as a sidecar container.
 
-If using Kubernetes 1.28+ with the `SidecarContainers` feature gate enabled and
-Istio 1.19+, it is highly recommended that Istio be configured to use native
-sidecars. Without native sidecars, Istio has several issues which can be put in
-the following buckets:
+If using Kubernetes 1.28+ with the [`SidecarContainers` feature
+gate](https://kubernetes.io/docs/concepts/workloads/pods/sidecar-containers/)
+enabled and Istio 1.19+, it is highly recommended that Istio be configured to
+use native sidecars. Without native sidecars, Istio has several issues which can
+be put in the following buckets:
 
 -   Networking from within other init containers either bypasses the proxy by
-    default (non-CNI) or should be configured to bypass the proxy (CNI plugin).
--   Containers must wait for the proxy to be ready, otherwise, network requests
+    default (non-CNI) or [should be
+    configured](https://istio.io/latest/docs/setup/additional-setup/cni/#compatibility-with-application-init-containers)
+    to bypass the proxy (CNI plugin).
+-   Containers [must wait for the proxy to be
+    ready](https://github.com/istio/istio/issues/11130), otherwise, network requests
     may fail.
--   Containers, especially within batch jobs, must signal to the proxy that they
-    have completed, otherwise, the proxy never exits and the job never
+-   Containers, [especially within batch
+    jobs](https://github.com/istio/istio/issues/6324), must signal to the proxy
+    that they have completed, otherwise, the proxy never exits and the job never
     completes.
 
 ## Compatibility with Istio
