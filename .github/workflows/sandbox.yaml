@@ -36,9 +36,6 @@ jobs:
           OUTPUT2: ${{ needs.output.outputs.output2 }}
         run: echo "$OUTPUT1 $OUTPUT2"
 
-      - id: checkout
-        uses: actions/checkout@v4
-
       - name: Output
         run: echo "$OUTPUT1 $OUTPUT2"
 
