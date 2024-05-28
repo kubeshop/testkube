@@ -79,13 +79,3 @@ jobs:
           docker manifest create kubeshop/testkube-logs-server:${{ steps.github_sha.outputs.sha_short }} --amend kubeshop/testkube-logs-server:${{ steps.github_sha.outputs.sha_short }}-arm64v8 --amend kubeshop/testkube-logs-server:${{ steps.github_sha.outputs.sha_short }}-amd64
           docker manifest push -p kubeshop/testkube-logs-server:${{ steps.github_sha.outputs.sha_short }}
 
-      - name: Push README to Dockerhub
-        uses: christian-korneck/update-container-description-action@v1
-        env:
-          DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKER_PASS: ${{ secrets.DOCKERHUB_TOKEN }}
-        with:
-          destination_container_repo: kubeshop/testkube-logs-server
-          provider: dockerhub
-          short_description: "Testkube CLI Docker image"
-          readme_file: "./README.md"
