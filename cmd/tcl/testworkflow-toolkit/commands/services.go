@@ -165,6 +165,7 @@ func NewServicesCmd() *cobra.Command {
 					svcInstances[index] = ServiceInstance{
 						Index:          index,
 						Name:           name,
+						Description:    svcSpec.Description,
 						RestartPolicy:  corev1.RestartPolicy(svcSpec.RestartPolicy),
 						ReadinessProbe: svcSpec.ReadinessProbe,
 						Spec:           spec,
