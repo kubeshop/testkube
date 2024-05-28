@@ -14,19 +14,15 @@ jobs:
   output:
     runs-on: ubuntu-latest
     outputs:
-      output1: ${{ steps.commit.outputs.short }}
       output2: ${{ steps.branch.outputs.branch_identifier }}
     steps:
-      - id: commit
-        uses: prompt/actions-commit-hash@v3
-
       - id: branch
         run: |
           # Extract everything after the first slash
           branch_identifier=$(echo "$GITHUB_REF_NAME" | cut -d'/' -f2-)
 
           # Replace slashes with dashes using sed
-          echo branch_identifier=$(echo "$branch_identifier" | sed 's/\//-/g') >> $GITHUB_ENV
+          echo branch_identifier=$(echo "$branch_identifier" | sed 's/\//-/g') >> $GITHUB_OUTPUT
   api:
     runs-on: ubuntu-latest
     steps:
