@@ -185,9 +185,7 @@ func NewRunTestSuiteCmd() *cobra.Command {
 					if err = uiPrintExecutionStatus(client, execution); err != nil {
 						execErrors = append(execErrors, err)
 					}
-				}
 
-				if outputPretty {
 					uiShellTestSuiteGetCommandBlock(execution.Id)
 				}
 
