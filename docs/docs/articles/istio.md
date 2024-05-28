@@ -29,7 +29,7 @@ be put in the following buckets:
 
 ## Compatibility with Istio
 
-Testkube has been verified to work Istio installations utilizing native
+Testkube has been verified to work with Istio installations utilizing native
 sidecars. Compatibility with ambient mode or the CNI plugin has not been
 verified, but we are ready to support enterprise customers using these
 particular configurations.
