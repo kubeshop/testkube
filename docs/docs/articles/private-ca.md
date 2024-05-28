@@ -54,24 +54,24 @@ testkube-api:
             customCaSecretRef: <secret name>
 ```
 
-### Pulling from Git repositories
+## Pulling from Git repositories
 
 If you would like to be able to pull Git data from repositories served both by
 GitHub (or any other host) and your own Git servers which utilize private CA
 signed certificates you will need to bundle the root CA certificates for those
 hosts by concatenating them into one CA bundle.
 
-### Prebuilt executors
+## Prebuilt executors
 
 Should work out of the box with `customCaSecretRef` set.
 
-### Container executors
+## Container executors
 
 Pulling from Git repositories should work with `customCaSecretRef` set, but if
 the execution workload must trust your private CA **you will need** to bake your
 CAs into the right location inside your image.
 
-### Workflows
+## Workflows
 
 With the global template specified above you should be able to both mount and
 trust the CA bundle for pulling from Git and processing the results of the test
