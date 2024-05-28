@@ -3576,6 +3576,7 @@ paths:
         - pro
       parameters:
         - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/TestWorkflowExecutionName"        
       summary: Execute test workflow
       description: Execute test workflow in the kubernetes cluster
       operationId: executeTestWorkflow
@@ -7488,6 +7489,9 @@ components:
           description: custom execution name
         config:
           $ref: "#/components/schemas/TestWorkflowConfigValue"
+        testWorkflowExecutionName:
+          type: string
+          description: test workflow execution name started the test workflow execution
 
     TestWorkflowWithExecution:
       type: object
@@ -7569,6 +7573,9 @@ components:
           $ref: "#/components/schemas/TestWorkflow"
         resolvedWorkflow:
           $ref: "#/components/schemas/TestWorkflow"
+        testWorkflowExecutionName:
+          type: string
+          description: test workflow execution name started the test workflow execution
       required:
         - id
         - name
@@ -8914,6 +8921,32 @@ components:
           additionalProperties:
             type: string
 
+    TestWorkflowExecutionCR:
+      type: object
+      required:
+        - testWorkflow
+      properties:
+        testWorkflow:
+          $ref: "#/components/schemas/ObjectRef"
+          description: test workflow name and namespace
+        executionRequest:
+          $ref: "#/components/schemas/TestWorkflowExecutionRequest"
+          description: test workflow execution request parameters
+        status:
+          $ref: "#/components/schemas/TestWorkflowExecutionStatusCR"
+          description: test workflow execution status
+
+    TestWorkflowExecutionStatusCR:
+      type: object
+      description: test workflow execution status
+      properties:
+        latestExecution:
+          $ref: "#/components/schemas/TestWorkflowExecution"
+        generation:
+          type: integer
+          format: int64
+          description: test workflow execution generation
+
     ContentGitAuthType:
       type: string
       description: auth type for git requests
@@ -9965,6 +9998,12 @@ components:
       schema:
         type: string
         description: test suite execution name stated the test suite execution
+    TestWorkflowExecutionName:
+      in: query
+      name: testWorkflowExecutionName
+      schema:
+        type: string
+        description: test workflow execution name stated the test workflow execution
     Namespace:
       in: query
       name: namespace

@@ -63,6 +63,7 @@ type executor struct {
 	imageInspector                 imageinspector.Inspector
 	configMap                      configRepo.Repository
 	executionResults               result.Repository
+	testWorkflowExecutionsClient   testworkflowsclientv1.TestWorkflowExecutionsInterface
 	globalTemplateName             string
 	apiUrl                         string
 	namespace                      string
@@ -80,6 +81,7 @@ func New(emitter *event.Emitter,
 	imageInspector imageinspector.Inspector,
 	configMap configRepo.Repository,
 	executionResults result.Repository,
+	testWorkflowExecutionsClient testworkflowsclientv1.TestWorkflowExecutionsInterface,
 	serviceAccountNames map[string]string,
 	globalTemplateName, namespace, apiUrl, defaultRegistry string,
 	enableImageDataPersistentCache bool, imageDataPersistentCacheKey string) TestWorkflowExecutor {
@@ -96,6 +98,7 @@ func New(emitter *event.Emitter,
 		imageInspector:                 imageInspector,
 		configMap:                      configMap,
 		executionResults:               executionResults,
+		testWorkflowExecutionsClient:   testWorkflowExecutionsClient,
 		serviceAccountNames:            serviceAccountNames,
 		globalTemplateName:             globalTemplateName,
 		apiUrl:                         apiUrl,
@@ -148,6 +151,15 @@ func (e *executor) Recover(ctx context.Context) {
 	}
 }
 
+func (e *executor) updateStatus(execution *testkube.TestWorkflowExecution, testWorkflowExecution *testworkflowsv1.TestWorkflowExecution) {
+	if testWorkflowExecution != nil {
+		testWorkflowExecution.Status = testworkflowmappers.MapTestWorkflowExecutionStatusAPIToKube(execution, testWorkflowExecution.Generation)
+		if err := e.testWorkflowExecutionsClient.UpdateStatus(testWorkflowExecution); err != nil {
+			log.DefaultLogger.Errorw("failed to update test workflow execution", "error", err)
+		}
+	}
+}
+
 func (e *executor) Control(ctx context.Context, execution *testkube.TestWorkflowExecution) error {
 	ctrl, err := testworkflowcontroller.New(ctx, e.clientSet, execution.GetNamespace(e.namespace), execution.Id, execution.ScheduledAt)
 	if err != nil {
@@ -160,6 +172,14 @@ func (e *executor) Control(ctx context.Context, execution *testkube.TestWorkflow
 	r, writer := io.Pipe()
 	reader := bufio.NewReader(r)
 	ref := ""
+
+	var testWorkflowExecution *testworkflowsv1.TestWorkflowExecution
+	if execution.TestWorkflowExecutionName != "" {
+		testWorkflowExecution, err = e.testWorkflowExecutionsClient.Get(execution.TestWorkflowExecutionName)
+		if err != nil {
+			log.DefaultLogger.Errorw("failed to get test workflow execution", "error", err)
+		}
+	}
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)
@@ -195,6 +215,8 @@ func (e *executor) Control(ctx context.Context, execution *testkube.TestWorkflow
 					log.DefaultLogger.Error(errors.Wrap(err, "saving log output content"))
 				}
 			}
+
+			e.updateStatus(execution, testWorkflowExecution)
 		}
 
 		// Try to gracefully handle abort
@@ -260,6 +282,7 @@ func (e *executor) Control(ctx context.Context, execution *testkube.TestWorkflow
 
 	wg.Wait()
 
+	e.updateStatus(execution, testWorkflowExecution)
 	err = testworkflowcontroller.Cleanup(ctx, e.clientSet, execution.GetNamespace(e.namespace), execution.Id)
 	if err != nil {
 		log.DefaultLogger.Errorw("failed to cleanup TestWorkflow resources", "id", execution.Id, "error", err)
@@ -411,6 +434,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		executionName = fmt.Sprintf("%s-%d", workflow.Name, number)
 	}
 
+	testWorkflowExecutionName := request.TestWorkflowExecutionName
 	// Ensure it is unique name
 	// TODO: Consider if we shouldn't make name unique across all TestWorkflows
 	next, _ := e.repository.GetByNameAndTestWorkflow(ctx, executionName, workflow.Name)
@@ -436,9 +460,10 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 			},
 			Steps: testworkflowprocessor.MapSignatureListToStepResults(bundle.Signature),
 		},
-		Output:           []testkube.TestWorkflowOutput{},
-		Workflow:         testworkflowmappers.MapKubeToAPI(initialWorkflow),
-		ResolvedWorkflow: testworkflowmappers.MapKubeToAPI(resolvedWorkflow),
+		Output:                    []testkube.TestWorkflowOutput{},
+		Workflow:                  testworkflowmappers.MapKubeToAPI(initialWorkflow),
+		ResolvedWorkflow:          testworkflowmappers.MapKubeToAPI(resolvedWorkflow),
+		TestWorkflowExecutionName: testWorkflowExecutionName,
 	}
 	err = e.repository.Insert(ctx, execution)
 	if err != nil {
