@@ -94,6 +94,7 @@ func NewRunTestCmd() *cobra.Command {
 			if attachDebugger {
 				watchEnabled = true
 			}
+
 			outputFlag := cmd.Flag("output")
 			outputType := render.OutputPretty
 			if outputFlag != nil {

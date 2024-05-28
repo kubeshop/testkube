@@ -18,27 +18,47 @@ import (
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
-func printExecution(execution testkube.TestSuiteExecution, startTime time.Time) {
-	if execution.TestSuite != nil {
-		ui.Warn("Name          :", execution.TestSuite.Name)
+func printExecution(cmd *cobra.Command, execution testkube.TestSuiteExecution, startTime time.Time) error {
+	outputFlag := cmd.Flag("output")
+	outputType := render.OutputPretty
+	if outputFlag != nil {
+		outputType = render.OutputType(outputFlag.Value.String())
 	}
 
-	if execution.Id != "" {
-		ui.Warn("Execution ID  :", execution.Id)
-		ui.Warn("Execution name:", execution.Name)
+	switch outputType {
+	case render.OutputPretty:
+		if execution.TestSuite != nil {
+			ui.Warn("Name          :", execution.TestSuite.Name)
+		}
+
+		if execution.Id != "" {
+			ui.Warn("Execution ID  :", execution.Id)
+			ui.Warn("Execution name:", execution.Name)
+		}
+
+		if execution.Status != nil {
+			ui.Warn("Status        :", string(*execution.Status))
+		}
+
+		if execution.Id != "" {
+			ui.Warn("Duration:", execution.CalculateDuration().String()+"\n")
+			ui.Table(execution, os.Stdout)
+		}
+
+		ui.NL()
+		ui.NL()
+	case render.OutputYAML:
+		return render.RenderYaml(execution, os.Stdout)
+	case render.OutputJSON:
+		return render.RenderJSON(execution, os.Stdout)
+	case render.OutputGoTemplate:
+		tpl := cmd.Flag("go-template").Value.String()
+		return render.RenderGoTemplate(execution, os.Stdout, tpl)
+	default:
+		return render.RenderYaml(execution, os.Stdout)
 	}
 
-	if execution.Status != nil {
-		ui.Warn("Status        :", string(*execution.Status))
-	}
-
-	if execution.Id != "" {
-		ui.Warn("Duration:", execution.CalculateDuration().String()+"\n")
-		ui.Table(execution, os.Stdout)
-	}
-
-	ui.NL()
-	ui.NL()
+	return nil
 }
 
 func uiPrintExecutionStatus(client apiclientv1.Client, execution testkube.TestSuiteExecution) error {
