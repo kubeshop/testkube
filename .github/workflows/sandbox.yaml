@@ -39,7 +39,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - run: echo "$OUTPUT1 $OUTPUT2"
+      - name: Output
+        run: echo "$OUTPUT1 $OUTPUT2"
 
 #      - name: Set up Docker Buildx
 #        id: buildx
