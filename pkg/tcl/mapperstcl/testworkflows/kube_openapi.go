@@ -777,9 +777,7 @@ func MapTarballFilePatternKubeToAPI(v testworkflowsv1.DynamicList) testkube.Test
 	if v.Expression != "" {
 		return testkube.TestWorkflowTarballFilePattern{Expression: v.Expression}
 	}
-	return testkube.TestWorkflowTarballFilePattern{Static: common.MapSlice(v.Static, func(s string) interface{} {
-		return s
-	})}
+	return testkube.TestWorkflowTarballFilePattern{Static: v.Static}
 }
 
 func MapTarballRequestKubeToAPI(v testworkflowsv1.TarballRequest) testkube.TestWorkflowTarballRequest {
@@ -987,6 +985,7 @@ func MapIndependentServiceSpecKubeToAPI(v testworkflowsv1.IndependentServiceSpec
 		MaxCount:        MapIntOrStringToBoxedString(v.MaxCount),
 		Matrix:          MapDynamicListMapKubeToAPI(v.Matrix),
 		Shards:          MapDynamicListMapKubeToAPI(v.Shards),
+		Description:     v.Description,
 		Pod:             common.MapPtr(v.Pod, MapPodConfigKubeToAPI),
 		WorkingDir:      MapStringToBoxedString(v.WorkingDir),
 		Image:           v.Image,
@@ -1002,6 +1001,7 @@ func MapIndependentServiceSpecKubeToAPI(v testworkflowsv1.IndependentServiceSpec
 		Timeout:         v.Timeout,
 		Transfer:        common.MapSlice(v.Transfer, MapStepParallelTransferKubeToAPI),
 		Content:         common.MapPtr(v.Content, MapContentKubeToAPI),
+		Logs:            MapStringToBoxedString(v.Logs),
 		RestartPolicy:   string(v.RestartPolicy),
 		ReadinessProbe:  common.MapPtr(v.ReadinessProbe, MapProbeKubeToAPI),
 	}
@@ -1014,6 +1014,7 @@ func MapServiceSpecKubeToAPI(v testworkflowsv1.ServiceSpec) testkube.TestWorkflo
 		Matrix:          MapDynamicListMapKubeToAPI(v.Matrix),
 		Shards:          MapDynamicListMapKubeToAPI(v.Shards),
 		Use:             common.MapSlice(v.Use, MapTemplateRefKubeToAPI),
+		Description:     v.Description,
 		Pod:             common.MapPtr(v.Pod, MapPodConfigKubeToAPI),
 		WorkingDir:      MapStringToBoxedString(v.WorkingDir),
 		Image:           v.Image,
@@ -1029,6 +1030,7 @@ func MapServiceSpecKubeToAPI(v testworkflowsv1.ServiceSpec) testkube.TestWorkflo
 		Timeout:         v.Timeout,
 		Transfer:        common.MapSlice(v.Transfer, MapStepParallelTransferKubeToAPI),
 		Content:         common.MapPtr(v.Content, MapContentKubeToAPI),
+		Logs:            MapStringToBoxedString(v.Logs),
 		RestartPolicy:   string(v.RestartPolicy),
 		ReadinessProbe:  common.MapPtr(v.ReadinessProbe, MapProbeKubeToAPI),
 	}

@@ -19,17 +19,20 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/constants"
+	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor"
 )
 
 const (
 	InitContainerName = "tktw-init"
+	IdleTimeout       = 100 * time.Millisecond
 )
 
 type WatchInstrumentedPodOptions struct {
 	JobEvents Channel[*corev1.Event]
 	Job       Channel[*batchv1.Job]
+	Follow    *bool
 }
 
 func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interface, signature []testworkflowprocessor.Signature, scheduledAt time.Time, pod Channel[*corev1.Pod], podEvents Channel[*corev1.Event], opts WatchInstrumentedPodOptions) (Channel[Notification], error) {
@@ -101,7 +104,8 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 			}
 
 			// Watch the container logs
-			for v := range WatchContainerLogs(ctx, clientSet, podObj.Namespace, podObj.Name, ref, 10).Channel() {
+			follow := common.ResolvePtr(opts.Follow, true) && !state.IsFinished(ref)
+			for v := range WatchContainerLogs(ctx, clientSet, podObj.Namespace, podObj.Name, ref, 10, follow, pod).Channel() {
 				if v.Error != nil {
 					s.Error(v.Error)
 				} else if v.Value.Output != nil {
@@ -139,7 +143,15 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 			}
 
 			// Get the final result
-			<-state.Finished(ref)
+			if follow {
+				<-state.Finished(ref)
+			} else {
+				select {
+				case <-state.Finished(ref):
+				case <-time.After(IdleTimeout):
+					return
+				}
+			}
 			status, err := state.ContainerResult(ref)
 			if err != nil {
 				s.Error(err)

@@ -364,12 +364,18 @@ func PortForward(ctx context.Context, namespace, serviceName string, servicePort
 	}
 
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				err = errors.New("port forwarding failed:" + fmt.Sprint(r))
+				readyChan <- struct{}{}
+			}
+		}()
 		if err = forwarder.ForwardPorts(); err != nil {
 			log.Errorf(ctx, "port forwarding failed: %v", err)
 		}
 	}()
 	<-readyChan
-	return nil
+	return err
 }
 
 func IsPodOfServiceRunning(ctx context.Context, namespace, serviceName string) (bool, error) {

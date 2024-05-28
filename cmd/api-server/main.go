@@ -235,6 +235,7 @@ func main() {
 	testsuiteExecutionsClient := testsuiteexecutionsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
 	testWorkflowsClient := testworkflowsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
 	testWorkflowTemplatesClient := testworkflowsclientv1.NewTestWorkflowTemplatesClient(kubeClient, cfg.TestkubeNamespace)
+	testWorkflowExecutionsClient := testworkflowsclientv1.NewTestWorkflowExecutionsClient(kubeClient, cfg.TestkubeNamespace)
 	templatesClient := templatesclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
 
 	clientset, err := k8sclient.ConnectToK8s()
@@ -593,6 +594,7 @@ func main() {
 		inspector,
 		configMapConfig,
 		resultsRepository,
+		testWorkflowExecutionsClient,
 		serviceAccountNames,
 		cfg.GlobalWorkflowTemplateName,
 		cfg.TestkubeNamespace,

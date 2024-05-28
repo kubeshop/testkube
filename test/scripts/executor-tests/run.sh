@@ -536,6 +536,14 @@ main() {
       postman-smoke
       playwright-smoke
       soapui-smoke
+      workflow-cypress-smoke
+      workflow-gradle-smoke
+      workflow-jmeter-smoke
+      workflow-k6-smoke
+      workflow-maven-smoke
+      workflow-playwright-smoke
+      workflow-postman-smoke
+      workflow-soapui-smoke
       ;;
     smoke)
       artillery-smoke
@@ -559,6 +567,14 @@ main() {
       playwright-smoke
       postman-smoke
       soapui-smoke
+      workflow-cypress-smoke
+      workflow-gradle-smoke
+      workflow-jmeter-smoke
+      workflow-k6-smoke
+      workflow-maven-smoke
+      workflow-playwright-smoke
+      workflow-postman-smoke
+      workflow-soapui-smoke
       ;;
     special)
       special-cases-failures

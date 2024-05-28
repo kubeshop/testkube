@@ -1,10 +1,10 @@
-# Test and Test Suite Execution CRDs
+# Test, Test Suite and Test Workflow Execution CRDs
 
-Testkube allows you to automatically run tests and test suites by creating or updating Test or Test Suite Execution CRDs.
+Testkube allows you to automatically run tests, test suites and test workflows by creating or updating Test, Test Suite or Test Workflow Execution CRDs.
 
 ## What are Testkube Execution CRDs?
 
-In generic terms, an _Execution_ defines a _test_ or _testsuite_ which will be executed when CRD is created or updated. For example, we could define a _TestExecution_ which _runs_ a _Test_ when a _TestExecution_ gets _modified_.
+In generic terms, an _Execution_ defines a _test_, _testsuite_ or _testworkflow_ which will be executed when CRD is created or updated. For example, we could define a _TestExecution_ which _runs_ a _Test_ when a _TestExecution_ gets _modified_.
 
 #### Selecting Resource
 
@@ -22,6 +22,13 @@ testSuite:
   name: Testkube test suite name
 ```
 
+or 
+
+```yaml
+testWorkflow:
+  name: Testkube test workflow name
+```
+
 ### Execution Request
 
 An Execution Request defines execution parameters for each specific resource.
@@ -29,8 +36,10 @@ An Execution Request defines execution parameters for each specific resource.
 ## Example
 
 Here are examples for a **Test Execution** *testexecution-example* which runs the **Test** *test-example*
-when a **Test Execution** is created or updated and a **Test Suite Execution** *testsuiteexecution-example* 
-which runs the **Test Suite** *testsuite-example * when a **Test Suite Execution** is created or updated.
+when a **Test Execution** is created or updated, a **Test Suite Execution** *testsuiteexecution-example* 
+which runs the **Test Suite** *testsuite-example* when a **Test Suite Execution** is created or updated
+and **Test Workflow Execution** *testworkflowexecution-example* which runs the **Test Workflow** *testworkflow-example*
+when a **Test Workflow Execution** is created or updated
 
 ```yaml
 apiVersion: tests.testkube.io/v1
@@ -64,6 +73,19 @@ spec:
         type: basic
 ```
 
+```yaml
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflowExecution
+metadata:
+  name: testworkflowexecution-example
+spec:
+  testWorkflow:
+    name: testworkflow-example
+  executionRequest:
+    config:
+      browser: "chrome"
+```
+
 ## Architecture
 
-Testkube uses a Kubernetes Operator to reconcile Test and Test Suite Execution CRDs state and run the corresponding test and test suite when resource generation is changed.
+Testkube uses a Kubernetes Operator to reconcile Test, Test Suite and Test Workflow Execution CRDs state and run the corresponding test, test suite and test workflow when resource generation is changed.

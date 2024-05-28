@@ -20,6 +20,7 @@ import (
 
 	initconstants "github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/data"
+	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
@@ -56,7 +57,7 @@ type Controller interface {
 	Cleanup(ctx context.Context) error
 	Watch(ctx context.Context) <-chan ChannelMessage[Notification]
 	WatchLightweight(ctx context.Context) <-chan LightweightNotification
-	Logs(ctx context.Context) io.Reader
+	Logs(ctx context.Context, follow bool) io.Reader
 	NodeName(ctx context.Context) (string, error)
 	PodIP(ctx context.Context) (string, error)
 	StopController()
@@ -271,12 +272,20 @@ func (c *controller) WatchLightweight(parentCtx context.Context) <-chan Lightwei
 	return ch
 }
 
-func (c *controller) Logs(parentCtx context.Context) io.Reader {
+func (c *controller) Logs(parentCtx context.Context, follow bool) io.Reader {
 	reader, writer := io.Pipe()
 	go func() {
 		defer writer.Close()
 		ref := ""
-		for v := range c.Watch(parentCtx) {
+		w, err := WatchInstrumentedPod(parentCtx, c.clientSet, c.signature, c.scheduledAt, c.pod, c.podEvents, WatchInstrumentedPodOptions{
+			JobEvents: c.jobEvents,
+			Job:       c.job,
+			Follow:    common.Ptr(follow),
+		})
+		if err != nil {
+			return
+		}
+		for v := range w.Channel() {
 			if v.Error == nil && v.Value.Log != "" {
 				if ref != v.Value.Ref {
 					ref = v.Value.Ref

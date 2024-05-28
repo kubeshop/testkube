@@ -35,6 +35,19 @@ import (
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowcontroller"
 )
 
+func MapDynamicListToStringList(list []interface{}) []string {
+	result := make([]string, len(list))
+	for i := range list {
+		if v, ok := list[i].(string); ok {
+			result[i] = v
+		} else {
+			b, _ := json.Marshal(list[i])
+			result[i] = string(b)
+		}
+	}
+	return result
+}
+
 func ProcessTransfer(transferSrv transfer.Server, transfer []testworkflowsv1.StepParallelTransfer, machines ...expressionstcl.Machine) ([]testworkflowsv1.ContentTarball, error) {
 	if len(transfer) == 0 {
 		return nil, nil
@@ -59,7 +72,7 @@ func ProcessTransfer(transferSrv transfer.Server, transfer []testworkflowsv1.Ste
 		// Parse 'files' clause
 		patterns := []string{"**/*"}
 		if t.Files != nil && !t.Files.Dynamic {
-			patterns = t.Files.Static
+			patterns = MapDynamicListToStringList(t.Files.Static)
 		} else if t.Files != nil && t.Files.Dynamic {
 			patternsExpr, err := expressionstcl.EvalExpression(t.Files.Expression, machines...)
 			if err != nil {
@@ -117,7 +130,7 @@ func ProcessFetch(transferSrv transfer.Server, fetch []testworkflowsv1.StepParal
 		// Parse 'files' clause
 		patterns := []string{"**/*"}
 		if t.Files != nil && !t.Files.Dynamic {
-			patterns = t.Files.Static
+			patterns = MapDynamicListToStringList(t.Files.Static)
 		} else if t.Files != nil && t.Files.Dynamic {
 			patternsExpr, err := expressionstcl.EvalExpression(t.Files.Expression, machines...)
 			if err != nil {
@@ -221,7 +234,8 @@ func SaveLogs(ctx context.Context, clientSet kubernetes.Interface, storage artif
 		Timeout: ControllerTimeout,
 	})
 	if err == nil {
-		err = storage.SaveStream(filePath, ctrl.Logs(ctx))
+		err = storage.SaveStream(filePath, ctrl.Logs(ctx, false))
+		ctrl.StopController()
 	}
 	return filePath, err
 }
