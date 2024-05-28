@@ -44,7 +44,7 @@ All the values mentioned will be from the top of the specified chart.
 
 #### Disable Istio for test executions of prebuilt/container executors
 
-Chart `testkube`
+Chart `testkube`:
 
 ```yaml
 testkube-api:
@@ -54,7 +54,7 @@ testkube-api:
 
 #### Disable Istio for agent hooks
 
-Chart `testkube`
+Chart `testkube`:
 
 ```yaml
 preUpgradeHook:
@@ -67,7 +67,7 @@ preUpgradeHookNATS:
 
 #### Disable Istio for operator hooks
 
-Chart `testkube`
+Chart `testkube`:
 
 ```yaml
 testkube-operator:
@@ -82,7 +82,7 @@ testkube-operator:
 
 #### Define a global test workflows template
 
-Chart `testkube`
+Chart `testkube`:
 
 ```yaml
 global:
@@ -99,7 +99,7 @@ global:
 
 This should avoid the issues with the enterprise API pods failing on restart.
 
-Chart `testkube-enterprise`
+Chart `testkube-enterprise`:
 
 ```yaml
 testkube-cloud-api:
@@ -111,7 +111,7 @@ testkube-cloud-api:
 
 This should avoid the issues with the worker service pods failing on restart.
 
-Chart `testkube-enterprise`
+Chart `testkube-enterprise`:
 
 ```yaml
 testkube-worker-service:
