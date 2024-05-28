@@ -721,7 +721,6 @@ jobs:
     strategy:
       matrix:
         service: [ logs-server, logs-sidecar ]
-    name: Pre-build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

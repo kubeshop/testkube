@@ -29,7 +29,7 @@ builds:
     ldflags: -X github.com/kubeshop/testkube/pkg/version.Version={{ .Version }}
       -X github.com/kubeshop/testkube/pkg/version.Commit={{ .FullCommit }}
 dockers:
-  - dockerfile: ./build/logs/Dockerfile
+  - dockerfile: ./build/{{ .Env.SERVICE }}/Dockerfile
     use: buildx
     goos: linux
     goarch: amd64
@@ -48,7 +48,7 @@ dockers:
       - "--build-arg=ALPINE_IMAGE={{ .Env.ALPINE_IMAGE }}"
       - "--build-arg=BUSYBOX_IMAGE={{ .Env.BUSYBOX_IMAGE }}"
 
-  - dockerfile: ./build/logs/Dockerfile
+  - dockerfile: ./build/{{ .Env.SERVICE }}/Dockerfile
     use: buildx
     goos: linux
     goarch: arm64
