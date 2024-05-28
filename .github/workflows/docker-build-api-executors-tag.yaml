@@ -890,6 +890,82 @@ jobs:
           DOCKER_BUILDX_CACHE_FROM: "type=gha"
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
 
+  log_server_sidecar:
+    strategy:
+      matrix:
+        service: [ logs-server, logs-sidecar ]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          # this might remove tools that are actually needed,
+          # if set to "true" but frees about 6 GB
+          tool-cache: false
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: sigstore/cosign-installer@v3.5.0
+      - uses: anchore/sbom-action/download-syft@v0.15.11
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      - name: Go Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ matrix.service }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v5
+        with:
+          distribution: goreleaser-pro
+          version: latest
+          args: release -f ./goreleaser_files/.goreleaser-docker-build-logs-services.yml --snapshot
+        env:
+          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+          GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
+          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
+          DOCKER_BUILDX_CACHE_FROM: "type=gha"
+          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
+          ALPINE_IMAGE: ${{ env.ALPINE_IMAGE }}
+          BUSYBOX_IMAGE: ${{ env.BUSYBOX_IMAGE }}
+          SERVICE: ${{ matrix.service }}
+
+      - name: Push README to Dockerhub
+        uses: christian-korneck/update-container-description-action@v1
+        env:
+          DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKER_PASS: ${{ secrets.DOCKERHUB_TOKEN }}
+        with:
+          destination_container_repo: kubeshop/testkube-${{ matrix.service }}
+          provider: dockerhub
+          short_description: "Testkube CLI Docker image"
+          readme_file: "./README.md"
+
   update_api_helm_charts:
     needs:
       [
@@ -901,6 +977,7 @@ jobs:
         executor_cypress,
         executor_cypress_manifest,
         executor_playwright,
+        log_server_sidecar
       ]
     runs-on: ubuntu-latest
     steps:
