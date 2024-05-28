@@ -68,14 +68,16 @@ Should work out of the box with `customCaSecretRef` set.
 ## Container executors
 
 Pulling from Git repositories should work with `customCaSecretRef` set, but if
-the execution workload must trust your private CA **you will need** to bake your
-CAs into the right location inside your image.
+the container executing the test must trust your private CA you will need to
+bake your CAs certification into the right location inside your image.
 
 ## Workflows
 
 With the global template specified above you should be able to both mount and
 trust the CA bundle for pulling from Git and processing the results of the test
-executions, but if the images specified by you as part of the workflow require
-trust of your private-CA **you will need** to configure the container/pod in a
-similar way as shown in the global template to mount the CA-bundle to the right
+executions.
+
+However, if the containers specified as part of the workflow require the trust
+of your private CA then you will need to configure the container/pod in a
+similar way as shown in the global template to mount the CA bundle to the right
 location and/or if necessary specify an environment variable.
