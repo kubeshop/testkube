@@ -1,8 +1,41 @@
-# Compatibility with Istio
+# Using Istio
 
-TODO add a primer on Istio and the various possible configurations
+An Istio mesh can be configured in several ways.
 
-## Disable Istio for test executions of prebuilt/container executors
+Traffic can be routed to the proxy by either using the `istio-init` container,
+the CNI plugin, or ambient mode (currently in beta). In ambient mode, the proxy
+can run as a separate pod, but in the other modes, it runs as a sidecar
+container.
+
+If using Kubernetes 1.28+ with the `SidecarContainers` feature gate enabled and
+Istio 1.19+, it is highly recommended that Istio be configured to use native
+sidecars. Without native sidecars, Istio has several issues which can be put in
+the following buckets:
+
+-   Networking from within other init containers either bypasses the proxy by
+    default (non-CNI) or should be configured to bypass the proxy (CNI plugin).
+-   Containers must wait for the proxy to be ready, otherwise, network requests
+    may fail.
+-   Containers, especially within batch jobs, must signal to the proxy that they
+    have completed, otherwise, the proxy never exits and the job never
+    completes.
+
+## Compatibility with Istio
+
+Testkube has been verified to work Istio installations utilizing native
+sidecars. Compatibility with ambient mode or the CNI plugin has not been
+verified, but we are ready to support enterprise customers using these
+particular configurations.
+
+Installations that do not currently support native sidecars should apply the
+configurations below to utilize Testkube until they can upgrade their cluster to
+enable native sidecars:
+
+### Configurations for Istio installations without native sidecars
+
+All the values mentioned will be from the top of the specified chart.
+
+#### Disable Istio for test executions of prebuilt/container executors
 
 Chart `testkube`
 
@@ -12,7 +45,7 @@ testkube-api:
         sidecar.istio.io/inject: "false"
 ```
 
-## Disable Istio for agent hooks
+#### Disable Istio for agent hooks
 
 Chart `testkube`
 
@@ -25,7 +58,7 @@ preUpgradeHookNATS:
         sidecar.istio.io/inject: "false"
 ```
 
-## Disable Istio for operator hooks
+#### Disable Istio for operator hooks
 
 Chart `testkube`
 
@@ -40,7 +73,7 @@ testkube-operator:
                 sidecar.istio.io/inject: "false"
 ```
 
-## Define a global test workflows template
+#### Define a global test workflows template
 
 Chart `testkube`
 
@@ -55,7 +88,7 @@ global:
                         sidecar.istio.io/inject: "false"
 ```
 
-## Hold the API server till Istio's proxy is ready
+#### Hold the API server till Istio's proxy is ready
 
 This should avoid the issues with the enterprise API pods failing on restart.
 
@@ -67,7 +100,7 @@ testkube-cloud-api:
         proxy.istio.io/config: '{ "holdApplicationUntilProxyStarts": true }'
 ```
 
-## Hold worker service till Istio's proxy is ready
+#### Hold worker service till Istio's proxy is ready
 
 This should avoid the issues with the worker service pods failing on restart.
 
