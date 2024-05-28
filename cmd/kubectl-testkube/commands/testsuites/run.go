@@ -166,7 +166,8 @@ func NewRunTestSuiteCmd() *cobra.Command {
 							ui.ExitOnError("watching test suite execution", resp.Error)
 							if !silentMode {
 								execution.TruncateErrorMessages(maxErrorMessageLength)
-								printExecution(cmd, execution, startTime)
+								err = printExecution(cmd, execution, startTime)
+								ui.ExitOnError("printing test suite execution "+execution.Id, err)
 							}
 						}
 					}
@@ -175,8 +176,10 @@ func NewRunTestSuiteCmd() *cobra.Command {
 				}
 
 				execution.TruncateErrorMessages(maxErrorMessageLength)
-				printExecution(cmd, execution, startTime)
 				ui.ExitOnError("getting recent execution data id:"+execution.Id, err)
+
+				err = printExecution(cmd, execution, startTime)
+				ui.ExitOnError("printing test suite execution "+execution.Id, err)
 
 				if outputPretty {
 					if err = uiPrintExecutionStatus(client, execution); err != nil {
