@@ -133,12 +133,12 @@ func NewDownloadAllArtifactsCmd() *cobra.Command {
 
 			execution, err := client.GetExecution(executionID)
 			if err == nil && execution.Id != "" {
-				tests.DownloadTestArtifacts(executionID, downloadDir, format, masks, client)
+				tests.DownloadTestArtifacts(executionID, downloadDir, format, masks, client, true)
 				return
 			}
 			twExecution, err := client.GetTestWorkflowExecution(executionID)
 			if err == nil && twExecution.Id != "" {
-				tests.DownloadTestWorkflowArtifacts(executionID, downloadDir, format, masks, client)
+				tests.DownloadTestWorkflowArtifacts(executionID, downloadDir, format, masks, client, true)
 				return
 			}
 		},
@@ -166,7 +166,7 @@ func NewDownloadTestSuiteArtifactsCmd() *cobra.Command {
 			client, _, err := common.GetClient(cmd)
 			ui.ExitOnError("getting client", err)
 
-			testsuites.DownloadArtifacts(executionID, downloadDir, format, masks, client)
+			testsuites.DownloadArtifacts(executionID, downloadDir, format, masks, client, true)
 		},
 	}
 
