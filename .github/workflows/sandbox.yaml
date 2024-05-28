@@ -36,7 +36,7 @@ jobs:
           OUTPUT2: ${{ needs.output.outputs.output2 }}
         run: echo "$OUTPUT1 $OUTPUT2"
 
-      - name: Checkout
+      - id: checkout
         uses: actions/checkout@v4
 
       - name: Output
