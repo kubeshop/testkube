@@ -18,8 +18,8 @@ env:
   - DOCKER_IMAGE_URL={{ if index .Env "SANDBOX_IMAGE" }}https://hub.docker.com/r/kubeshop/testkube-sandbox{{ else }}https://hub.docker.com/r/kubeshop/{{ .Env.REPOSITORY }}{{ end }}
 builds:
   - id: "linux"
-    main: ./cmd/tcl/{{ .Env.SERVICE }}
-    binary: {{ .Env.SERVICE }}
+    main: "./cmd/tcl/{{ .Env.SERVICE }}"
+    binary: "{{ .Env.SERVICE }}"
     env:
       - CGO_ENABLED=0
     goos:
