@@ -60,7 +60,7 @@ testkube-api:
 If you would like to be able to pull Git data from repositories served both by
 GitHub (or any other host) and your own Git servers which utilize private CA
 signed certificates you will need to bundle the root CA certificates for those
-by hosts by concatenating them into one CA bundle.
+hosts by concatenating them into one CA bundle.
 
 ### Prebuilt executors
 
