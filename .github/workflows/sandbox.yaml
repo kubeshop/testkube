@@ -25,6 +25,7 @@ jobs:
           echo branch_identifier=$(echo "$branch_identifier" | sed 's/\//-/g') >> $GITHUB_OUTPUT
   api:
     runs-on: ubuntu-latest
+    needs: output
     steps:
       - env:
           OUTPUT1: ${{ needs.output.outputs.output1 }}
