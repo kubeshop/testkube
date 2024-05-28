@@ -13,7 +13,6 @@ env:
 jobs:
   api:
     runs-on: ubuntu-latest
-    needs: output
     steps:
       - name: Checkout
         uses: actions/checkout@v4
