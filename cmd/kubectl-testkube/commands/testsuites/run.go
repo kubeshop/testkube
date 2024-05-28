@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/render"
 	apiv1 "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -55,6 +56,13 @@ func NewRunTestSuiteCmd() *cobra.Command {
 		Short:   "Starts new test suite",
 		Long:    `Starts new test suite based on TestSuite Custom Resource name, returns results to console`,
 		Run: func(cmd *cobra.Command, args []string) {
+			outputFlag := cmd.Flag("output")
+			outputType := render.OutputPretty
+			if outputFlag != nil {
+				outputType = render.OutputType(outputFlag.Value.String())
+			}
+
+			outputPretty := outputType == render.OutputPretty
 			startTime := time.Now()
 			client, namespace, err := common.GetClient(cmd)
 			ui.ExitOnError("getting client", err)
@@ -109,7 +117,7 @@ func NewRunTestSuiteCmd() *cobra.Command {
 			ui.ExitOnError("getting server info", err)
 
 			options.ExecutionVariables, err = common.CreateVariables(cmd, info.DisableSecretCreation)
-			ui.WarnOnError("getting variables", err)
+			ui.WarnOnErrorAndOutputPretty("getting variables", outputPretty, err)
 
 			if gitBranch != "" || gitCommit != "" || gitPath != "" || gitWorkingDir != "" {
 				options.ContentRequest = &testkube.TestContentRequest{
@@ -158,7 +166,7 @@ func NewRunTestSuiteCmd() *cobra.Command {
 							ui.ExitOnError("watching test suite execution", resp.Error)
 							if !silentMode {
 								execution.TruncateErrorMessages(maxErrorMessageLength)
-								printExecution(execution, startTime)
+								printExecution(cmd, execution, startTime)
 							}
 						}
 					}
@@ -167,23 +175,30 @@ func NewRunTestSuiteCmd() *cobra.Command {
 				}
 
 				execution.TruncateErrorMessages(maxErrorMessageLength)
-				printExecution(execution, startTime)
+				printExecution(cmd, execution, startTime)
 				ui.ExitOnError("getting recent execution data id:"+execution.Id, err)
 
-				if err = uiPrintExecutionStatus(client, execution); err != nil {
-					execErrors = append(execErrors, err)
+				if outputPretty {
+					if err = uiPrintExecutionStatus(client, execution); err != nil {
+						execErrors = append(execErrors, err)
+					}
 				}
 
-				uiShellTestSuiteGetCommandBlock(execution.Id)
+				if outputPretty {
+					uiShellTestSuiteGetCommandBlock(execution.Id)
+				}
+
 				if execution.Id != "" {
 					if watchEnabled && len(args) > 0 {
 						if downloadArtifactsEnabled {
-							DownloadArtifacts(execution.Id, downloadDir, format, masks, client, true)
+							DownloadArtifacts(execution.Id, downloadDir, format, masks, client, outputPretty)
 						}
 					}
 
 					if !watchEnabled || len(args) == 0 {
-						uiShellTestSuiteWatchCommandBlock(execution.Id)
+						if outputPretty {
+							uiShellTestSuiteWatchCommandBlock(execution.Id)
+						}
 					}
 				}
 			}
