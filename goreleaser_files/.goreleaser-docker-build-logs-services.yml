@@ -16,7 +16,7 @@ env:
   - SERVICE={{ if index .Env "SERVICE"  }}{{ .Env.SERVICE }}{{ else }}{{ end }}
 builds:
   - id: "linux"
-    main: ./cmd/logs
+    main: ./cmd/{{ .Env.SERVICE }}
     binary: "testkube-{{ .Env.SERVICE }}"
     env:
       - CGO_ENABLED=0
