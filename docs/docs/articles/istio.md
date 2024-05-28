@@ -2,7 +2,7 @@
 
 An Istio mesh can be configured in several ways.
 
-Traffic can be routed to the proxy by either using the `istio-init` container,
+Traffic can be routed to the proxy by using either the `istio-init` container,
 the [CNI plugin](https://istio.io/latest/docs/setup/additional-setup/cni/), or
 [ambient mode](https://istio.io/latest/blog/2022/introducing-ambient-mesh/)
 (currently in [beta](https://istio.io/latest/blog/2024/ambient-reaches-beta/)).
