@@ -52,7 +52,7 @@ func ExitOnError(item string, errors ...error)  { ui.ExitOnError(item, errors...
 func PrintOnError(item string, errors ...error) { ui.PrintOnError(item, errors...) }
 func WarnOnError(item string, errors ...error)  { ui.WarnOnError(item, errors...) }
 func WarnOnErrorAndOutputPretty(item string, outputPretty bool, errors ...error) {
-	if outputPretty {
+	if !outputPretty {
 		return
 	}
 
