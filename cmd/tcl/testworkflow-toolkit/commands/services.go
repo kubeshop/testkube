@@ -46,7 +46,8 @@ type ServiceInstance struct {
 }
 
 type ServiceState struct {
-	Ip string `json:"ip"`
+	Ip          string `json:"ip"`
+	Description string `json:"description"`
 }
 
 type ServiceStatus string
@@ -182,6 +183,9 @@ func NewServicesCmd() *cobra.Command {
 
 				// Update the state
 				state[name] = make([]ServiceState, len(svcInstances))
+				for i := range svcInstances {
+					state[name][i].Description = svcInstances[i].Description
+				}
 				data.PrintHintDetails(env.Ref(), fmt.Sprintf("services.%s", name), state)
 			}
 
