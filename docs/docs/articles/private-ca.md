@@ -1,4 +1,4 @@
-# Using a private CA
+# Using a private certificate authority (CA)
 
 Installations which must serve Testkube endpoints or Git repositories using
 certificates signed by a private CA should use this guide to make sure Testkube
@@ -13,9 +13,8 @@ After that you will need to create a secret with the CA bundle under the
 `ca.crt` key in the namespace(s) with the Helm releases both for the agent and
 the enterprise control plane.
 
-```
-kubectl -n <namespace> create secret generic <secret name> \
-    --from-file=ca.crt=<path to the file with the ca bundle>
+```sh
+kubectl -n <namespace> create secret generic <secret name> --from-file=ca.crt=<path to the file with the ca bundle>
 ```
 
 Configure the following value in the `testkube-enterprise` chart:
