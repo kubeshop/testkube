@@ -34,6 +34,13 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 		Short:   "Starts test workflow execution",
 
 		Run: func(cmd *cobra.Command, args []string) {
+			outputFlag := cmd.Flag("output")
+			outputType := render.OutputPretty
+			if outputFlag != nil {
+				outputType = render.OutputType(outputFlag.Value.String())
+			}
+
+			outputPretty := outputType == render.OutputPretty
 			namespace := cmd.Flag("namespace").Value.String()
 			client, _, err := common.GetClient(cmd)
 			ui.ExitOnError("getting client", err)
@@ -44,19 +51,22 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 				Config: config,
 			})
 			ui.ExitOnError("execute test workflow "+name+" from namespace "+namespace, err)
-			err = render.Obj(cmd, execution, os.Stdout, renderer.TestWorkflowExecutionRenderer)
+			err = renderer.PrintTestWorkflowExecution(cmd, execution)
 			ui.ExitOnError("render test workflow execution", err)
 
-			ui.NL()
 			var exitCode = 0
-			if watchEnabled {
-				exitCode = uiWatch(execution, client)
+			if outputPretty {
 				ui.NL()
-			} else {
-				uiShellWatchExecution(execution.Id)
+				if watchEnabled {
+					exitCode = uiWatch(execution, client)
+					ui.NL()
+				} else {
+					uiShellWatchExecution(execution.Id)
+				}
+
+				uiShellGetExecution(execution.Id)
 			}
 
-			uiShellGetExecution(execution.Id)
 			os.Exit(exitCode)
 		},
 	}

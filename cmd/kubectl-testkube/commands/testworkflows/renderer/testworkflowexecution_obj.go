@@ -2,13 +2,40 @@ package renderer
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/render"
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
+
+func PrintTestWorkflowExecution(cmd *cobra.Command, execution testkube.TestWorkflowExecution) error {
+	outputFlag := cmd.Flag("output")
+	outputType := render.OutputPretty
+	if outputFlag != nil {
+		outputType = render.OutputType(outputFlag.Value.String())
+	}
+
+	switch outputType {
+	case render.OutputPretty:
+		printPrettyOutput(ui.NewUI(ui.Verbose, os.Stdout), execution)
+	case render.OutputYAML:
+		return render.RenderYaml(execution, os.Stdout)
+	case render.OutputJSON:
+		return render.RenderJSON(execution, os.Stdout)
+	case render.OutputGoTemplate:
+		tpl := cmd.Flag("go-template").Value.String()
+		return render.RenderGoTemplate(execution, os.Stdout, tpl)
+	default:
+		return render.RenderYaml(execution, os.Stdout)
+	}
+
+	return nil
+}
 
 func TestWorkflowExecutionRenderer(client client.Client, ui *ui.UI, obj interface{}) error {
 	execution, ok := obj.(testkube.TestWorkflowExecution)
@@ -16,6 +43,11 @@ func TestWorkflowExecutionRenderer(client client.Client, ui *ui.UI, obj interfac
 		return fmt.Errorf("can't use '%T' as testkube.TestWorkflowExecution in RenderObj for test workflow execution", obj)
 	}
 
+	printPrettyOutput(ui, execution)
+	return nil
+}
+
+func printPrettyOutput(ui *ui.UI, execution testkube.TestWorkflowExecution) {
 	ui.Info("Test Workflow Execution:")
 	ui.Warn("Name:                ", execution.Workflow.Name)
 	if execution.Id != "" {
@@ -45,7 +77,4 @@ func TestWorkflowExecutionRenderer(client client.Client, ui *ui.UI, obj interfac
 		ui.NL()
 		ui.Err(errors.New(execution.Result.Initialization.ErrorMessage))
 	}
-
-	return nil
-
 }
