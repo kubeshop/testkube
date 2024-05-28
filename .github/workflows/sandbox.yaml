@@ -14,12 +14,11 @@ jobs:
   output:
     runs-on: ubuntu-latest
     outputs:
-      output1: ${{ steps.commit.outputs.commit }}
+      output1: ${{ steps.commit.outputs.short }}
       output2: ${{ steps.branch.outputs.branch_identifier }}
     steps:
       - id: commit
         uses: prompt/actions-commit-hash@v3
-        run: echo "commit=${{ steps.commit.outputs.short }}" >> "$GITHUB_OUTPUT"
 
       - id: branch
         run: |
