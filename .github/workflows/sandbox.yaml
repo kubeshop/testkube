@@ -3,7 +3,7 @@ on:
   push:
     branches:
       - sandbox/**
-      - feat/template-executorsfile
+      - ci/sanbox-flow
     paths-ignore:
       - 'docs/**'
 env:
@@ -73,7 +73,7 @@ jobs:
           BUSYBOX_IMAGE: ${{ env.BUSYBOX_IMAGE }}
           BRANCH_IDENTIFIER: ${{ env.branch_identifier }}
           IMAGE_TAG_SHA: true
-          SANBOX_IMAGE: true
+          SANDBOX_IMAGE: true
 
       - name: Push Docker images
         run: |
