@@ -1,0 +1,19 @@
+name: Dispatch - update tests at dev agent
+
+on:
+  push:
+    branches:
+      - develop
+    paths:
+      - test/**
+
+jobs:
+  dispatch:
+    name: Dispatch - update tests at dev agent
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update tests at dev agent
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          repository: kubeshop/testkube-cloud-api
+          event-type: create_update_tests
