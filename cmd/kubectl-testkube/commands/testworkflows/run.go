@@ -51,7 +51,7 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 				Config: config,
 			})
 			ui.ExitOnError("execute test workflow "+name+" from namespace "+namespace, err)
-			err = renderer.PrintTestWorkflowExecution(cmd, execution)
+			err = renderer.PrintTestWorkflowExecution(cmd, os.Stdout, execution)
 			ui.ExitOnError("render test workflow execution", err)
 
 			var exitCode = 0

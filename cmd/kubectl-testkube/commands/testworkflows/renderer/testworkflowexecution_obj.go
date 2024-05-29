@@ -2,7 +2,7 @@ package renderer
 
 import (
 	"fmt"
-	"os"
+	"io"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -13,7 +13,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
-func PrintTestWorkflowExecution(cmd *cobra.Command, execution testkube.TestWorkflowExecution) error {
+func PrintTestWorkflowExecution(cmd *cobra.Command, w io.Writer, execution testkube.TestWorkflowExecution) error {
 	outputFlag := cmd.Flag("output")
 	outputType := render.OutputPretty
 	if outputFlag != nil {
@@ -22,16 +22,16 @@ func PrintTestWorkflowExecution(cmd *cobra.Command, execution testkube.TestWorkf
 
 	switch outputType {
 	case render.OutputPretty:
-		printPrettyOutput(ui.NewUI(ui.Verbose, os.Stdout), execution)
+		printPrettyOutput(ui.NewUI(ui.Verbose, w), execution)
 	case render.OutputYAML:
-		return render.RenderYaml(execution, os.Stdout)
+		return render.RenderYaml(execution, w)
 	case render.OutputJSON:
-		return render.RenderJSON(execution, os.Stdout)
+		return render.RenderJSON(execution, w)
 	case render.OutputGoTemplate:
 		tpl := cmd.Flag("go-template").Value.String()
-		return render.RenderGoTemplate(execution, os.Stdout, tpl)
+		return render.RenderGoTemplate(execution, w, tpl)
 	default:
-		return render.RenderYaml(execution, os.Stdout)
+		return render.RenderYaml(execution, w)
 	}
 
 	return nil

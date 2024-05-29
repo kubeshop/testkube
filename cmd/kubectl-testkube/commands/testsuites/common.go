@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"time"
@@ -18,7 +19,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
-func printExecution(cmd *cobra.Command, execution testkube.TestSuiteExecution, startTime time.Time) error {
+func printExecution(cmd *cobra.Command, w io.Writer, execution testkube.TestSuiteExecution, startTime time.Time) error {
 	outputFlag := cmd.Flag("output")
 	outputType := render.OutputPretty
 	if outputFlag != nil {
@@ -42,20 +43,20 @@ func printExecution(cmd *cobra.Command, execution testkube.TestSuiteExecution, s
 
 		if execution.Id != "" {
 			ui.Warn("Duration:", execution.CalculateDuration().String()+"\n")
-			ui.Table(execution, os.Stdout)
+			ui.Table(execution, w)
 		}
 
 		ui.NL()
 		ui.NL()
 	case render.OutputYAML:
-		return render.RenderYaml(execution, os.Stdout)
+		return render.RenderYaml(execution, w)
 	case render.OutputJSON:
-		return render.RenderJSON(execution, os.Stdout)
+		return render.RenderJSON(execution, w)
 	case render.OutputGoTemplate:
 		tpl := cmd.Flag("go-template").Value.String()
-		return render.RenderGoTemplate(execution, os.Stdout, tpl)
+		return render.RenderGoTemplate(execution, w, tpl)
 	default:
-		return render.RenderYaml(execution, os.Stdout)
+		return render.RenderYaml(execution, w)
 	}
 
 	return nil
