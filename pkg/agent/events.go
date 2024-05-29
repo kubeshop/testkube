@@ -18,6 +18,8 @@ import (
 
 var _ common.ListenerLoader = (*Agent)(nil)
 
+const HealthcheckInterval = 5 * time.Second
+
 func (ag *Agent) Kind() string {
 	return "agent"
 }
@@ -70,7 +72,7 @@ func (ag *Agent) runEventLoop(ctx context.Context) error {
 		return errors.Wrap(err, "failed to setup stream")
 	}
 
-	ticker := time.NewTicker(30 * time.Second)
+	ticker := time.NewTicker(HealthcheckInterval)
 	defer ticker.Stop()
 
 	for {
