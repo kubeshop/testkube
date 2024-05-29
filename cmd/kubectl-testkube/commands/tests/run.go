@@ -341,7 +341,7 @@ func NewRunTestCmd() *cobra.Command {
 
 			var execErrors []error
 			for _, execution := range executions {
-				err = printExecutionDetails(cmd, execution)
+				err = printExecutionDetails(cmd, os.Stdout, execution)
 				ui.ExitOnError("printing test execution "+execution.Id, err)
 
 				if execution.ExecutionResult != nil && execution.ExecutionResult.ErrorMessage != "" {

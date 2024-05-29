@@ -3,6 +3,7 @@ package tests
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"regexp"
@@ -30,7 +31,7 @@ const (
 	maxArgSize             = int64(131072) // maximum argument size in linux-based systems is 128 KiB
 )
 
-func printExecutionDetails(cmd *cobra.Command, execution testkube.Execution) error {
+func printExecutionDetails(cmd *cobra.Command, w io.Writer, execution testkube.Execution) error {
 	outputFlag := cmd.Flag("output")
 	outputType := render.OutputPretty
 	if outputFlag != nil {
@@ -60,14 +61,14 @@ func printExecutionDetails(cmd *cobra.Command, execution testkube.Execution) err
 		ui.NL()
 		ui.NL()
 	case render.OutputYAML:
-		return render.RenderYaml(execution, os.Stdout)
+		return render.RenderYaml(execution, w)
 	case render.OutputJSON:
-		return render.RenderJSON(execution, os.Stdout)
+		return render.RenderJSON(execution, w)
 	case render.OutputGoTemplate:
 		tpl := cmd.Flag("go-template").Value.String()
-		return render.RenderGoTemplate(execution, os.Stdout, tpl)
+		return render.RenderGoTemplate(execution, w, tpl)
 	default:
-		return render.RenderYaml(execution, os.Stdout)
+		return render.RenderYaml(execution, w)
 	}
 
 	return nil
