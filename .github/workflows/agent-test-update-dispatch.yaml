@@ -1,4 +1,4 @@
-name: Code build and checks
+name: Dispatch - update tests at dev agent
 
 on:
   push:
