@@ -86,4 +86,7 @@ type OutputRepository interface {
 	ReadLog(ctx context.Context, id, workflowName string) (io.Reader, error)
 	// HasLog checks if there is an output in Minio
 	HasLog(ctx context.Context, id, workflowName string) (bool, error)
+
+	// DeleteOutputByTestWorkflow deletes execution output by test workflow
+	DeleteOutputByTestWorkflow(ctx context.Context, testWorkflowName string) error
 }

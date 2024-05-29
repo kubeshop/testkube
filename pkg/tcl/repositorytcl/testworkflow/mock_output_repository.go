@@ -35,6 +35,20 @@ func (m *MockOutputRepository) EXPECT() *MockOutputRepositoryMockRecorder {
 	return m.recorder
 }
 
+// DeleteOutputByTestWorkflow mocks base method.
+func (m *MockOutputRepository) DeleteOutputByTestWorkflow(arg0 context.Context, arg1 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteOutputByTestWorkflow", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteOutputByTestWorkflow indicates an expected call of DeleteOutputByTestWorkflow.
+func (mr *MockOutputRepositoryMockRecorder) DeleteOutputByTestWorkflow(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteOutputByTestWorkflow", reflect.TypeOf((*MockOutputRepository)(nil).DeleteOutputByTestWorkflow), arg0, arg1)
+}
+
 // HasLog mocks base method.
 func (m *MockOutputRepository) HasLog(arg0 context.Context, arg1, arg2 string) (bool, error) {
 	m.ctrl.T.Helper()
