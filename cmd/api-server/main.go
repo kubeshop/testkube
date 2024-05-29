@@ -298,7 +298,7 @@ func main() {
 		}
 		storageClient = minioClient
 		// Pro edition only (tcl protected code)
-		testWorkflowOutputRepository = testworkflow.NewMinioOutputRepository(storageClient, cfg.LogsBucket)
+		testWorkflowOutputRepository = testworkflow.NewMinioOutputRepository(storageClient, db.Collection(testworkflow.CollectionName), cfg.LogsBucket)
 		artifactStorage = minio.NewMinIOArtifactClient(storageClient)
 		// init storage
 		isMinioStorage := cfg.LogsStorage == "minio"
