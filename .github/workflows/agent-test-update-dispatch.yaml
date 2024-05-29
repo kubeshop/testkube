@@ -15,5 +15,5 @@ jobs:
       - name: Update tests at dev agent
         uses: peter-evans/repository-dispatch@v2
         with:
-          repository: kubeshop/testkube-cloud-charts
+          repository: kubeshop/testkube-cloud-api
           event-type: create_update_tests
