@@ -178,6 +178,7 @@ const sidebars = {
         "articles/creating-first-test",
         "articles/cd-events",
         "articles/k8s-events",
+        "articles/private-ca",
         "articles/istio",
         "articles/slack-integration",
         "articles/generate-test-crds",
