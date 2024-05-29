@@ -2,7 +2,7 @@
 
 An Istio mesh can be configured in several ways.
 
-Traffic can be routed to the proxy by either using the `istio-init` container,
+Traffic can be routed to the proxy by using either the `istio-init` container,
 the [CNI plugin](https://istio.io/latest/docs/setup/additional-setup/cni/), or
 [ambient mode](https://istio.io/latest/blog/2022/introducing-ambient-mesh/)
 (currently in [beta](https://istio.io/latest/blog/2024/ambient-reaches-beta/)).
@@ -29,7 +29,7 @@ be put in the following buckets:
 
 ## Compatibility with Istio
 
-Testkube has been verified to work Istio installations utilizing native
+Testkube has been verified to work with Istio installations utilizing native
 sidecars. Compatibility with ambient mode or the CNI plugin has not been
 verified, but we are ready to support enterprise customers using these
 particular configurations.
