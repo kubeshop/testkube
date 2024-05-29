@@ -105,3 +105,9 @@ func (r *CloudOutputRepository) HasLog(ctx context.Context, id, workflowName str
 	}
 	return pass(r.executor, ctx, req, process)
 }
+
+// DeleteByTestWorkflow deletes execution results by workflow
+func (r *CloudOutputRepository) DeleteOutputByTestWorkflow(ctx context.Context, workflowName string) (err error) {
+	req := ExecutionDeleteOutputByWorkflowRequest{WorkflowName: workflowName}
+	return passNoContent(r.executor, ctx, req)
+}
