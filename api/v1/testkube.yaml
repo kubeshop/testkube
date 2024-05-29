@@ -7481,6 +7481,8 @@ components:
         readOnly:
           type: boolean
           description: if test workflow is offline and cannot be executed
+        status:
+          $ref: "#/components/schemas/TestWorkflowStatusSummary"
 
     TestWorkflowExecutionRequest:
       type: object
@@ -7670,6 +7672,13 @@ components:
         - durationMs
         - totalDurationMs
         - pausedMs
+
+    TestWorkflowStatusSummary:
+      type: object
+      description: test workflow status
+      properties:
+        latestExecution:
+          $ref: "#/components/schemas/TestWorkflowExecutionSummary"
 
     TestWorkflowExecutionNotification:
       type: object
