@@ -71,8 +71,8 @@ By default, the following services will be exposed. You can also choose to overr
 | REST API         | api.$domain        | global.restApiSubdomain        |
 | gRPC API         | agent.$domain      | global.grpcApiSubdomain        |
 | WebSockets API   | websockets.$domain | global.websocketsApiSubdomain  |
-| Status Pages API | status.$domain     | global.statusPagesApiSubdomain |
 | Storage API      | storage.$domain    | global.storageApiSubdomain     |
+| Dex              | api.$domain        | global.restApiSubdomain        |
 
 TLS can either be handled through cert-manager or a manually defined secret. While custom TLS certificates are possible, we strongly recommend using `cert-manager` for simplified certificate manager.
 
