@@ -926,7 +926,7 @@ jobs:
           git fetch origin main
           git checkout main
           cd ./scripts
-          ./chart_releaser.sh --helm-chart-folder testkube-$SERVICE true
+          ./chart_releaser.sh --helm-chart-folder testkube-$SERVICE
 
         env:
           SERVICE: api
