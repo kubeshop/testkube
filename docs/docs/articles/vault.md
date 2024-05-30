@@ -15,7 +15,7 @@ our enterprise support.
 With workflows, you can configure pod annotations both per workflow and
 globally:
 
-Chart `testkube`
+Chart `testkube`:
 
 ```yaml
 global:
@@ -32,7 +32,7 @@ global:
 
 For the other executors, you can set these annotations globally with:
 
-Chart `testkube`
+Chart `testkube`:
 
 ```yaml
 testkube-api:
