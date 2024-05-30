@@ -7,7 +7,7 @@
     "chai": "^4.3.6",
     "dotenv": "^16.0.3",
     "mocha": "^10.1.0",
-    "superagent": "8.0.0"
+    "superagent": "9.0.1"
   },
   "scripts": {
     "test": "mocha --require @babel/register tests/ --require dotenv/config --timeout 30000 --parallel"
