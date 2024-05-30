@@ -180,6 +180,7 @@ const sidebars = {
         "articles/k8s-events",
         "articles/private-ca",
         "articles/istio",
+        "articles/vault",
         "articles/slack-integration",
         "articles/generate-test-crds",
         "articles/logging",
