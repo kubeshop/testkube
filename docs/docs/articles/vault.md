@@ -4,13 +4,13 @@ Testkube has not been verified to work with the various ways Vault can be
 integrated into a Kubernetes cluster, but we are ready to support enterprise
 customers with the specifics of their environment.
 
-## Configurations for sidecar injector
-
 For integrations utilizing the [sidecar
 injector](https://developer.hashicorp.com/vault/docs/platform/k8s/injector) you
 can try to set the appropriate annotations by adapting the example
 configurations below for your needs. If you encounter issues please reach out to
 our enterprise support.
+
+## Configurations for sidecar injector
 
 With workflows, you can configure pod annotations both per workflow and
 globally:
