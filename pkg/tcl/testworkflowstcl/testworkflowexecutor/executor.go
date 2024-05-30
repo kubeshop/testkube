@@ -152,6 +152,11 @@ func (e *executor) Recover(ctx context.Context) {
 }
 
 func (e *executor) updateStatus(execution *testkube.TestWorkflowExecution, testWorkflowExecution *testworkflowsv1.TestWorkflowExecution) {
+	//	testSuite.Status = testsuitesmapper.MapExecutionToTestSuiteStatus(execution)
+	if err = e.testWorkflowsClient.UpdateStatus(testSuite); err != nil {
+		s.logger.Errorw("updating test suite error", "error", err)
+	}
+
 	if testWorkflowExecution != nil {
 		testWorkflowExecution.Status = testworkflowmappers.MapTestWorkflowExecutionStatusAPIToKube(execution, testWorkflowExecution.Generation)
 		if err := e.testWorkflowExecutionsClient.UpdateStatus(testWorkflowExecution); err != nil {
