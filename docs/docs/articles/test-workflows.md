@@ -459,3 +459,70 @@ spec:
         params: "--env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value --config '{\"screenshotsFolder\":\"/data/artifacts/screenshots\",\"videosFolder\":\"/data/artifacts/videos\"}'"
 ```
 
+## `status` - Getting status of latest test workflow execution
+
+```sh
+kubectl describe testworkflow k6-workflow -n testkube
+```
+
+```yaml
+Name:         k6-workflow
+Namespace:    testkube
+Labels:       core-tests=workflows
+Annotations:  <none>
+API Version:  testworkflows.testkube.io/v1
+Kind:         TestWorkflow
+Metadata:
+  Creation Timestamp:  2024-05-13T17:28:05Z
+  Generation:          1
+  Resource Version:    1077632
+  UID:                 ec1b58af-6226-4100-8b3c-d15f855f5a89
+Spec:
+  Container:
+    Resources:
+      Requests:
+        Cpu:      128m
+        Memory:   128Mi
+    Working Dir:  /data/repo/test/k6/executor-tests
+  Content:
+    Git:
+      Paths:
+        test/k6/executor-tests/k6-smoke-test.js
+      Revision:  main
+      Uri:       https://github.com/kubeshop/testkube
+  Steps:
+    Name:  Run test
+    Run:
+      Args:
+        run
+        k6-smoke-test.js
+        -e
+        K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value
+      Env:
+        Name:   K6_SYSTEM_ENV
+        Value:  K6_SYSTEM_ENV_value
+      Image:    grafana/k6:0.43.1
+Status:
+  Latest Execution:
+    Id:      6659fd8455d94f735273fa95
+    Name:    k6-workflow-15
+    Number:  15
+    Result:
+      Duration:           7.824s
+      Duration Ms:        7824
+      Finished At:        2024-05-31T16:40:44Z
+      Paused Ms:          0
+      Predicted Status:   passed
+      Queued At:          2024-05-31T16:40:36Z
+      Started At:         2024-05-31T16:40:36Z
+      Status:             passed
+      Total Duration:     7.824s
+      Total Duration Ms:  7824
+    Scheduled At:         2024-05-31T16:40:36Z
+    Status At:            2024-05-31T16:40:44Z
+    Workflow:
+      Labels:
+        Core - Tests:  workflows
+      Name:            k6-workflow
+      Namespace:       testkube
+```
