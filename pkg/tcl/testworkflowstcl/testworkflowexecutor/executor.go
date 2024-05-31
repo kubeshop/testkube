@@ -48,7 +48,7 @@ import (
 
 //go:generate mockgen -destination=./mock_executor.go -package=testworkflowexecutor "github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowexecutor" TestWorkflowExecutor
 type TestWorkflowExecutor interface {
-	Control(ctx context.Context, execution *testkube.TestWorkflowExecution) error
+	Control(ctx context.Context, testWorkflow *testworkflowsv1.TestWorkflow, execution *testkube.TestWorkflowExecution) error
 	Recover(ctx context.Context)
 	Execute(ctx context.Context, workflow testworkflowsv1.TestWorkflow, request testkube.TestWorkflowExecutionRequest) (
 		execution testkube.TestWorkflowExecution, err error)
@@ -64,6 +64,7 @@ type executor struct {
 	configMap                      configRepo.Repository
 	executionResults               result.Repository
 	testWorkflowExecutionsClient   testworkflowsclientv1.TestWorkflowExecutionsInterface
+	testWorkflowsClient            testworkflowsclientv1.Interface
 	globalTemplateName             string
 	apiUrl                         string
 	namespace                      string
@@ -82,6 +83,7 @@ func New(emitter *event.Emitter,
 	configMap configRepo.Repository,
 	executionResults result.Repository,
 	testWorkflowExecutionsClient testworkflowsclientv1.TestWorkflowExecutionsInterface,
+	testWorkflowsClient testworkflowsclientv1.Interface,
 	serviceAccountNames map[string]string,
 	globalTemplateName, namespace, apiUrl, defaultRegistry string,
 	enableImageDataPersistentCache bool, imageDataPersistentCacheKey string) TestWorkflowExecutor {
@@ -99,6 +101,7 @@ func New(emitter *event.Emitter,
 		configMap:                      configMap,
 		executionResults:               executionResults,
 		testWorkflowExecutionsClient:   testWorkflowExecutionsClient,
+		testWorkflowsClient:            testWorkflowsClient,
 		serviceAccountNames:            serviceAccountNames,
 		globalTemplateName:             globalTemplateName,
 		apiUrl:                         apiUrl,
@@ -143,7 +146,17 @@ func (e *executor) Recover(ctx context.Context) {
 	}
 	for i := range list {
 		go func(execution *testkube.TestWorkflowExecution) {
-			err := e.Control(context.Background(), execution)
+			var testWorkflow *testworkflowsv1.TestWorkflow
+			var err error
+			if execution.Workflow != nil {
+				testWorkflow, err = e.testWorkflowsClient.Get(execution.Workflow.Name)
+				if err != nil {
+					e.handleFatalError(execution, err, time.Time{})
+					return
+				}
+			}
+
+			err = e.Control(context.Background(), testWorkflow, execution)
 			if err != nil {
 				e.handleFatalError(execution, err, time.Time{})
 			}
@@ -151,10 +164,13 @@ func (e *executor) Recover(ctx context.Context) {
 	}
 }
 
-func (e *executor) updateStatus(execution *testkube.TestWorkflowExecution, testWorkflowExecution *testworkflowsv1.TestWorkflowExecution) {
-	//	testSuite.Status = testsuitesmapper.MapExecutionToTestSuiteStatus(execution)
-	if err = e.testWorkflowsClient.UpdateStatus(testSuite); err != nil {
-		s.logger.Errorw("updating test suite error", "error", err)
+func (e *executor) updateStatus(testWorkflow *testworkflowsv1.TestWorkflow, execution *testkube.TestWorkflowExecution,
+	testWorkflowExecution *testworkflowsv1.TestWorkflowExecution) {
+	if testWorkflow != nil {
+		//	testSuite.Status = testsuitesmapper.MapExecutionToTestSuiteStatus(execution)
+		if err := e.testWorkflowsClient.UpdateStatus(testWorkflow); err != nil {
+			log.DefaultLogger.Errorw("failed to update test workflow status", "error", err)
+		}
 	}
 
 	if testWorkflowExecution != nil {
@@ -165,7 +181,7 @@ func (e *executor) updateStatus(execution *testkube.TestWorkflowExecution, testW
 	}
 }
 
-func (e *executor) Control(ctx context.Context, execution *testkube.TestWorkflowExecution) error {
+func (e *executor) Control(ctx context.Context, testWorkflow *testworkflowsv1.TestWorkflow, execution *testkube.TestWorkflowExecution) error {
 	ctrl, err := testworkflowcontroller.New(ctx, e.clientSet, execution.GetNamespace(e.namespace), execution.Id, execution.ScheduledAt)
 	if err != nil {
 		log.DefaultLogger.Errorw("failed to control the TestWorkflow", "id", execution.Id, "error", err)
@@ -221,7 +237,7 @@ func (e *executor) Control(ctx context.Context, execution *testkube.TestWorkflow
 				}
 			}
 
-			e.updateStatus(execution, testWorkflowExecution)
+			e.updateStatus(testWorkflow, execution, testWorkflowExecution)
 		}
 
 		// Try to gracefully handle abort
@@ -287,7 +303,7 @@ func (e *executor) Control(ctx context.Context, execution *testkube.TestWorkflow
 
 	wg.Wait()
 
-	e.updateStatus(execution, testWorkflowExecution)
+	e.updateStatus(testWorkflow, execution, testWorkflowExecution)
 	err = testworkflowcontroller.Cleanup(ctx, e.clientSet, execution.GetNamespace(e.namespace), execution.Id)
 	if err != nil {
 		log.DefaultLogger.Errorw("failed to cleanup TestWorkflow resources", "id", execution.Id, "error", err)
@@ -489,7 +505,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 
 	// Start to control the results
 	go func() {
-		err = e.Control(context.Background(), &execution)
+		err = e.Control(context.Background(), initialWorkflow, &execution)
 		if err != nil {
 			e.handleFatalError(&execution, err, time.Time{})
 			return
