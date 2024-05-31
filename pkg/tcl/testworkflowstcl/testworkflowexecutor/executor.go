@@ -167,7 +167,7 @@ func (e *executor) Recover(ctx context.Context) {
 func (e *executor) updateStatus(testWorkflow *testworkflowsv1.TestWorkflow, execution *testkube.TestWorkflowExecution,
 	testWorkflowExecution *testworkflowsv1.TestWorkflowExecution) {
 	if testWorkflow != nil {
-		//	testSuite.Status = testsuitesmapper.MapExecutionToTestSuiteStatus(execution)
+		testWorkflow.Status = testworkflowmappers.MapTestWorkflowExecutionAPIToKubeTestWorkflowStatusSummary(execution)
 		if err := e.testWorkflowsClient.UpdateStatus(testWorkflow); err != nil {
 			log.DefaultLogger.Errorw("failed to update test workflow status", "error", err)
 		}
