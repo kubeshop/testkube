@@ -593,6 +593,7 @@ func main() {
 		configMapConfig,
 		resultsRepository,
 		testWorkflowExecutionsClient,
+		testWorkflowsClient,
 		serviceAccountNames,
 		cfg.GlobalWorkflowTemplateName,
 		cfg.TestkubeNamespace,
