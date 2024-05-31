@@ -37,17 +37,17 @@ func (m *MockTestWorkflowExecutor) EXPECT() *MockTestWorkflowExecutorMockRecorde
 }
 
 // Control mocks base method.
-func (m *MockTestWorkflowExecutor) Control(arg0 context.Context, arg1 *testkube.TestWorkflowExecution) error {
+func (m *MockTestWorkflowExecutor) Control(arg0 context.Context, arg1 *v1.TestWorkflow, arg2 *testkube.TestWorkflowExecution) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Control", arg0, arg1)
+	ret := m.ctrl.Call(m, "Control", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Control indicates an expected call of Control.
-func (mr *MockTestWorkflowExecutorMockRecorder) Control(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockTestWorkflowExecutorMockRecorder) Control(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Control", reflect.TypeOf((*MockTestWorkflowExecutor)(nil).Control), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Control", reflect.TypeOf((*MockTestWorkflowExecutor)(nil).Control), arg0, arg1, arg2)
 }
 
 // Execute mocks base method.
