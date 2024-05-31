@@ -1392,3 +1392,41 @@ func MapTestWorkflowExecutionStatusAPIToKube(v *testkube.TestWorkflowExecution, 
 		Generation:      generation,
 	}
 }
+
+func MapTestWorkflowExecutionAPIToKubeTestWorkflowStatusSummary(v *testkube.TestWorkflowExecution) testworkflowsv1.TestWorkflowStatusSummary {
+	return testworkflowsv1.TestWorkflowStatusSummary{
+		LatestExecution: &testworkflowsv1.TestWorkflowExecutionSummary{
+			Id:          v.Id,
+			Name:        v.Name,
+			Number:      v.Number,
+			ScheduledAt: metav1.NewTime(v.ScheduledAt),
+			StatusAt:    metav1.NewTime(v.StatusAt),
+			Result:      common.MapPtr(v.Result, MapTestWorkflowResultAPIToKubeTestWorkflowResultSummary),
+			Workflow:    common.MapPtr(v.Workflow, MapTestWorkflowAPIToKubeTestWorkflowSummary),
+		},
+	}
+}
+
+func MapTestWorkflowResultAPIToKubeTestWorkflowResultSummary(v testkube.TestWorkflowResult) testworkflowsv1.TestWorkflowResultSummary {
+	return testworkflowsv1.TestWorkflowResultSummary{
+		Status:          (*testworkflowsv1.TestWorkflowStatus)(v.Status),
+		PredictedStatus: (*testworkflowsv1.TestWorkflowStatus)(v.PredictedStatus),
+		QueuedAt:        metav1.NewTime(v.QueuedAt),
+		StartedAt:       metav1.NewTime(v.StartedAt),
+		FinishedAt:      metav1.NewTime(v.FinishedAt),
+		Duration:        v.Duration,
+		TotalDuration:   v.TotalDuration,
+		DurationMs:      v.DurationMs,
+		TotalDurationMs: v.TotalDurationMs,
+		PausedMs:        v.PausedMs,
+	}
+}
+
+func MapTestWorkflowAPIToKubeTestWorkflowSummary(v testkube.TestWorkflow) testworkflowsv1.TestWorkflowSummary {
+	return testworkflowsv1.TestWorkflowSummary{
+		Name:        v.Name,
+		Namespace:   v.Namespace,
+		Labels:      v.Labels,
+		Annotations: v.Annotations,
+	}
+}
