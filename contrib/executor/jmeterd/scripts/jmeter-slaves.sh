@@ -18,7 +18,7 @@ fi
 echo
 
 echo "********************************************************"
-echo "*            Initializing JMeter Master                *"
+echo "*            Initializing JMeter Slave                 *"
 echo "********************************************************"
 echo
 
