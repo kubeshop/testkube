@@ -63,7 +63,7 @@ dockers:
     goarch: amd64
     image_templates:
       - "{{ if .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .ShortCommit }}{{ end }}"
-      - "{{ if .Env.SANDBOX_IMAGE }}{{ .Env.DOCKER_REPO }}/testkube-cypress:gradle-{{ .Env.BRANCH_IDENTIFIER }}-{{ .ShortCommit }}{{ end }}"
+      - "{{ if .Env.SANDBOX_IMAGE }}{{ .Env.DOCKER_REPO }}/testkube-sandbox:cypress-{{ .Env.BRANCH_IDENTIFIER }}-{{ .ShortCommit }}{{ end }}"
     build_flag_templates:
       - "--platform=linux/amd64"
       - "--builder={{ .Env.DOCKER_BUILDX_BUILDER }}"
