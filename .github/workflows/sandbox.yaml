@@ -746,7 +746,7 @@ jobs:
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v5
         with:
-          distribution: goreleaser-pro
+          distribution: goreleaser
           version: latest
           args: release -f ./goreleaser_files/.goreleaser-docker-build-logs-services.yml --snapshot
         env:
@@ -765,4 +765,3 @@ jobs:
       - name: Push Docker images
         run: |
           docker push kubeshop/testkube-sandbox:${{ matrix.service }}-${{ env.branch_identifier }}-${{ steps.commit.outputs.short }}
-
