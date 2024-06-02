@@ -288,167 +288,175 @@ jobs:
       - name: Push Docker images
         run: |
           docker push kubeshop/testkube-sandbox:jmeter-${{ env.branch_identifier }}-${{ steps.commit.outputs.short }}
-  #
-#  executor_jmeterd:
-#    runs-on: ubuntu-latest
-#    steps:
-#      - name: Free Disk Space (Ubuntu)
-#        uses: jlumbroso/free-disk-space@main
-#        with:
-#          # this might remove tools that are actually needed,
-#          # if set to "true" but frees about 6 GB
-#          tool-cache: false
-#
-#      - name: Checkout
-#        uses: actions/checkout@v4
-#
-#      - name: Set up Docker Buildx
-#        id: buildx
-#        uses: docker/setup-buildx-action@v3
-#
-#      - name: Set-up Go
-#        uses: actions/setup-go@v5
-#        with:
-#          go-version:  stable
-#          cache: false
-#
-#      - name: Go Cache
-#        uses: actions/cache@v4
-#        with:
-#          path: |
-#            ~/go/pkg/mod
-#            ~/.cache/go-build
-#          key: jmeterd-go-${{ hashFiles('**/go.sum') }}
-#          restore-keys: |
-#            ${{ runner.os }}-go-
-#
-#      - name: Login to DockerHub
-#        uses: docker/login-action@v3
-#        with:
-#          username: ${{ secrets.DOCKERHUB_USERNAME }}
-#          password: ${{ secrets.DOCKERHUB_TOKEN }}
-#
-#      - id: commit
-#        uses: prompt/actions-commit-hash@v3
-#
-#      - name: Release
-#        uses: goreleaser/goreleaser-action@v5
-#        with:
-#          distribution: goreleaser
-#          version: latest
-#          args: release -f goreleaser_files/.goreleaser-docker-build-executor-jmeterd.yml --clean --snapshot
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
-#          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
-#          DOCKER_BUILDX_CACHE_FROM: "type=gha"
-#          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
-#          IMAGE_TAG_SHA: true
-#
-#      - name: Push Docker images
-#        run: |
-#          docker push kubeshop/testkube-jmeterd-executor:${{ steps.commit.outputs.short }}
-#
-#  jmeterd_slave:
-#    runs-on: ubuntu-latest
-#    steps:
-#      - name: Free Disk Space (Ubuntu)
-#        uses: jlumbroso/free-disk-space@main
-#        with:
-#          # this might remove tools that are actually needed,
-#          # if set to "true" but frees about 6 GB
-#          tool-cache: false
-#
-#      - name: Checkout
-#        uses: actions/checkout@v4
-#
-#      - name: Set up Docker Buildx
-#        id: buildx
-#        uses: docker/setup-buildx-action@v3
-#
-#      - name: Docker Cache
-#        uses: actions/cache@v4
-#        with:
-#          path: /tmp/.buildx-cache
-#          key: ${{ runner.os }}-buildx-${{ github.sha }}
-#          restore-keys: |
-#            ${{ runner.os }}-buildx-
-#
-#      - id: commit
-#        uses: prompt/actions-commit-hash@v3
-#
-#      - name: Login to DockerHub
-#        uses: docker/login-action@v3
-#        with:
-#          username: ${{ secrets.DOCKERHUB_USERNAME }}
-#          password: ${{ secrets.DOCKERHUB_TOKEN }}
-#
-#      - name: Build and push
-#        uses: docker/build-push-action@v5
-#        with:
-#          context: .
-#          file: ./contrib/executor/jmeterd/build/slaves/Dockerfile
-#          push: true
-#          tags:  kubeshop/testkube-jmeterd-slave:${{ steps.commit.outputs.short }}
-#          platforms: linux/amd64,linux/arm64
-#
-#  executor_maven:
-#    runs-on: ubuntu-latest
-#    steps:
-#      - name: Free Disk Space (Ubuntu)
-#        uses: jlumbroso/free-disk-space@main
-#        with:
-#          # this might remove tools that are actually needed,
-#          # if set to "true" but frees about 6 GB
-#          tool-cache: false
-#
-#      - name: Checkout
-#        uses: actions/checkout@v4
-#
-#      - name: Set up Docker Buildx
-#        id: buildx
-#        uses: docker/setup-buildx-action@v3
-#
-#      - name: Set-up Go
-#        uses: actions/setup-go@v5
-#        with:
-#          go-version: stable
-#          cache: false
-#
-#      - name: Go Cache
-#        uses: actions/cache@v4
-#        with:
-#          path: |
-#            ~/go/pkg/mod
-#            ~/.cache/go-build
-#          key: maven-go-${{ hashFiles('**/go.sum') }}
-#          restore-keys: |
-#            ${{ runner.os }}-go-
-#
-#      - name: Login to DockerHub
-#        uses: docker/login-action@v3
-#        with:
-#          username: ${{ secrets.DOCKERHUB_USERNAME }}
-#          password: ${{ secrets.DOCKERHUB_TOKEN }}
-#
-#      - id: commit
-#        uses: prompt/actions-commit-hash@v3
-#
-#      - name: Release
-#        uses: goreleaser/goreleaser-action@v5
-#        with:
-#          distribution: goreleaser
-#          version: latest
-#          args: release -f goreleaser_files/.goreleaser-docker-build-executor-maven.yml --snapshot
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
-#          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
-#          DOCKER_BUILDX_CACHE_FROM: "type=gha"
-#          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
-#          IMAGE_TAG_SHA: true
-#
-#      - name: Push Docker images
-#        run: |
-#          docker push kubeshop/testkube-maven-executor:${{ steps.commit.outputs.short }}
+
+  executor_jmeterd:
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set-up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version:  stable
+          cache: false
+
+      - name: Go Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: jmeterd-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - id: commit
+        uses: prompt/actions-commit-hash@v3
+
+      - name: Get branch name
+        run: |
+          # Extract everything after the first slash
+          branch_identifier=$(echo "$GITHUB_REF_NAME" | cut -d'/' -f2-)
+
+          # Replace slashes with dashes using sed
+          echo branch_identifier=$(echo "$branch_identifier" | sed 's/\//-/g') >> $GITHUB_ENV
+
+      - name: Release
+        uses: goreleaser/goreleaser-action@v5
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release -f goreleaser_files/.goreleaser-docker-build-executor-jmeterd.yml  --snapshot
+        env:
+          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
+          DOCKER_BUILDX_CACHE_FROM: "type=gha"
+          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
+          IMAGE_TAG_SHA: true
+          SANDBOX_IMAGE: true
+          BRANCH_IDENTIFIER: ${{ env.branch_identifier }}
+
+      - name: Push Docker images
+        run: |
+          docker push kubeshop/testkube-sandbox:jmeterd-${{ env.branch_identifier }}-${{ steps.commit.outputs.short }}
+
+  jmeterd_slave:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Docker Cache
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+
+      - id: commit
+        uses: prompt/actions-commit-hash@v3
+
+      - name: Get branch name
+        run: |
+          # Extract everything after the first slash
+          branch_identifier=$(echo "$GITHUB_REF_NAME" | cut -d'/' -f2-)
+
+          # Replace slashes with dashes using sed
+          echo branch_identifier=$(echo "$branch_identifier" | sed 's/\//-/g') >> $GITHUB_ENV
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./contrib/executor/jmeterd/build/slaves/Dockerfile
+          push: true
+          tags:  kubeshop/testkube-sanbox:jmeterd-slave-${{ env.branch_identifier }}-${{ steps.commit.outputs.short }}
+          platforms: linux/amd64,linux/arm64
+
+  executor_maven:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set-up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache: false
+
+      - name: Go Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: maven-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - id: commit
+        uses: prompt/actions-commit-hash@v3
+
+      - name: Get branch name
+        run: |
+          # Extract everything after the first slash
+          branch_identifier=$(echo "$GITHUB_REF_NAME" | cut -d'/' -f2-)
+
+          # Replace slashes with dashes using sed
+          echo branch_identifier=$(echo "$branch_identifier" | sed 's/\//-/g') >> $GITHUB_ENV
+
+      - name: Release
+        uses: goreleaser/goreleaser-action@v5
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release -f goreleaser_files/.goreleaser-docker-build-executor-maven.yml --snapshot
+        env:
+          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
+          DOCKER_BUILDX_CACHE_FROM: "type=gha"
+          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
+          IMAGE_TAG_SHA: true
+          SANDBOX_IMAGE: true
+          BRANCH_IDENTIFIER: ${{ env.branch_identifier }}
+
+      - name: Push Docker images
+        run: |
+          docker push kubeshop/testkube-sandbox:maven-${{ env.branch_identifier }}-${{ steps.commit.outputs.short }}
 #
 #  executor_gradle:
 #    runs-on: ubuntu-latest
@@ -705,8 +713,6 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
