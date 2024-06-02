@@ -10,8 +10,8 @@ env:
   # https://github.com/moby/buildkit#export-cache
   - DOCKER_BUILDX_CACHE_FROM={{ if index .Env "DOCKER_BUILDX_CACHE_FROM"  }}{{ .Env.DOCKER_BUILDX_CACHE_FROM }}{{ else }}type=registry{{ end }}
   - DOCKER_BUILDX_CACHE_TO={{ if index .Env "DOCKER_BUILDX_CACHE_TO"  }}{{ .Env.DOCKER_BUILDX_CACHE_TO }}{{ else }}type=inline{{ end }}
-  - DOCKER_IMAGE_TAG={{ if index .Env "DOCKER_IMAGE_TAG"  }}{{ .Env.DOCKER_IMAGE_TAG }}{{ else }}{{ end }}
   - SERVICE={{ if index .Env "SERVICE"  }}{{ .Env.SERVICE }}{{ else }}{{ end }}
+  - IMAGE_TAG_SHA={{ if index .Env "IMAGE_TAG_SHA"  }}{{ .Env.IMAGE_TAG_SHA }}{{ else }}{{ end }}
   - DOCKER_IMAGE_TITLE={{ if index .Env "SANDBOX_IMAGE" }}testkube-sandbox{{ else }}testkube-{{ .Env.SERVICE }}{{ end }}
   - DOCKER_IMAGE_URL={{ if index .Env "SANDBOX_IMAGE" }}https://hub.docker.com/r/kubeshop/testkube-sandbox{{ else }}https://hub.docker.com/r/kubeshop/testkube-{{ .Env.SERVICE }}{{ end }}
 builds:
@@ -34,8 +34,8 @@ dockers:
     goos: linux
     goarch: amd64
     image_templates:
-      - "{{ if not .Env.DOCKER_IMAGE_TAG }}{{ .Env.DOCKER_REPO }}/testkube-{{ .Env.SERVICE }}:{{ .Version }}-amd64{{ end }}"
-      - "{{ if .Env.DOCKER_IMAGE_TAG }}{{ .Env.DOCKER_REPO }}/testkube-{{ .Env.SERVICE }}:{{ .Env.DOCKER_IMAGE_TAG }}-amd64{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-{{ .Env.SERVICE }}:{{ .Version }}-amd64{{ end }}"
+      - "{{ if .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-{{ .Env.SERVICE }}:{{ .ShortCommit }}-amd64{{ end }}"
       - "{{ if .Env.SANDBOX_IMAGE }}{{ .Env.DOCKER_REPO }}/testkube-sandbox:{{ .Env.SERVICE }}-{{ .Env.BRANCH_IDENTIFIER }}-{{ .ShortCommit }}{{ end }}"
     build_flag_templates:
       - "--platform=linux/amd64"
@@ -55,8 +55,8 @@ dockers:
     goos: linux
     goarch: arm64
     image_templates:
-      - "{{ if not .Env.DOCKER_IMAGE_TAG }}{{ .Env.DOCKER_REPO }}/testkube-{{ .Env.SERVICE }}:{{ .Version }}-arm64v8{{ end }}"
-      - "{{ if .Env.DOCKER_IMAGE_TAG }}{{ .Env.DOCKER_REPO }}/testkube-{{ .Env.SERVICE }}:{{ .Env.DOCKER_IMAGE_TAG }}-arm64v8{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-{{ .Env.SERVICE }}:{{ .Version }}-arm64v8{{ end }}"
+      - "{{ if .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-{{ .Env.SERVICE }}:{{ .ShortCommit }}-arm64v8{{ end }}"
     build_flag_templates:
       - "--platform=linux/arm64/v8"
       - "--label=org.opencontainers.image.created={{ .Date }}"
@@ -70,14 +70,14 @@ dockers:
       - "--build-arg=BUSYBOX_IMAGE={{ .Env.BUSYBOX_IMAGE }}"
 
 docker_manifests:
-  - name_template: "{{ if not .Env.DOCKER_IMAGE_TAG }}{{ .Env.DOCKER_REPO }}/testkube-{{ .Env.SERVICE }}:{{ .Version }}{{ end }}"
+  - name_template: "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-{{ .Env.SERVICE }}:{{ .Version }}{{ end }}"
     image_templates:
-      - "{{ if not .Env.DOCKER_IMAGE_TAG }}{{ .Env.DOCKER_REPO }}/testkube-{{ .Env.SERVICE }}:{{ .Version }}-amd64{{ end }}"
-      - "{{ if not .Env.DOCKER_IMAGE_TAG }}{{ .Env.DOCKER_REPO }}/testkube-{{ .Env.SERVICE }}:{{ .Version }}-arm64v8{{ end }}"
-  - name_template: "{{ if not .Env.DOCKER_IMAGE_TAG }}{{ .Env.DOCKER_REPO }}/testkube-{{ .Env.SERVICE }}:latest{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-{{ .Env.SERVICE }}:{{ .Version }}-amd64{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-{{ .Env.SERVICE }}:{{ .Version }}-arm64v8{{ end }}"
+  - name_template: "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-{{ .Env.SERVICE }}:latest{{ end }}"
     image_templates:
-      - "{{ if not .Env.DOCKER_IMAGE_TAG }}{{ .Env.DOCKER_REPO }}/testkube-{{ .Env.SERVICE }}:{{ .Version }}-amd64{{ end }}"
-      - "{{ if not .Env.DOCKER_IMAGE_TAG }}{{ .Env.DOCKER_REPO }}/testkube-{{ .Env.SERVICE }}:{{ .Version }}-arm64v8{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-{{ .Env.SERVICE }}:{{ .Version }}-amd64{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-{{ .Env.SERVICE }}:{{ .Version }}-arm64v8{{ end }}"
 
 release:
   disable: true

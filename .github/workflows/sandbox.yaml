@@ -757,8 +757,8 @@ jobs:
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
           ALPINE_IMAGE: ${{ env.ALPINE_IMAGE }}
           BUSYBOX_IMAGE: ${{ env.BUSYBOX_IMAGE }}
-          DOCKER_IMAGE_TAG: ${{ steps.commit.outputs.short }}
           SERVICE: ${{ matrix.service }}
+          IMAGE_TAG_SHA: true
           SANDBOX_IMAGE: true
           BRANCH_IDENTIFIER: ${{ env.branch_identifier }}
 
