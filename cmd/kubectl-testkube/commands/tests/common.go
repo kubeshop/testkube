@@ -671,6 +671,13 @@ func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.Executi
 		return nil, err
 	}
 
+	if cmd.Flag("enable-webhooks").Changed {
+		request.DisableWebhooks = false
+	}
+	if cmd.Flag("disable-webhooks").Changed {
+		request.DisableWebhooks = true
+	}
+
 	return request, nil
 }
 
@@ -1246,6 +1253,17 @@ func newExecutionUpdateRequestFromFlags(cmd *cobra.Command) (request *testkube.E
 		nonEmpty = true
 	} else {
 		request.SlavePodRequest = &emptyPodRequest
+	}
+
+	disableWebhooks := false
+	if cmd.Flag("enable-webhooks").Changed {
+		request.DisableWebhooks = &disableWebhooks
+		nonEmpty = true
+	}
+	if cmd.Flag("disable-webhooks").Changed {
+		disableWebhooks = true
+		request.DisableWebhooks = &disableWebhooks
+		nonEmpty = true
 	}
 
 	if nonEmpty {

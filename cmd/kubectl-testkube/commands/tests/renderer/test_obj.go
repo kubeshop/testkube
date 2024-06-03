@@ -278,6 +278,8 @@ func TestRenderer(client client.Client, ui *ui.UI, obj interface{}) error {
 			ui.NL()
 			ui.Warn("  Variable secrets:       ", variableSecrets...)
 		}
+
+		ui.Warn("  Disable webhooks:       ", fmt.Sprint(test.ExecutionRequest.DisableWebhooks))
 	}
 
 	return nil

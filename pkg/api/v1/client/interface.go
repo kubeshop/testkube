@@ -247,6 +247,7 @@ type ExecuteTestOptions struct {
 	RunningContext                     *testkube.RunningContext
 	SlavePodRequest                    *testkube.PodRequest
 	ExecutionNamespace                 string
+	DisableWebhooks                    bool
 }
 
 // ExecuteTestSuiteOptions contains test suite run options
@@ -264,6 +265,7 @@ type ExecuteTestSuiteOptions struct {
 	ScraperTemplateReference string
 	PvcTemplate              string
 	PvcTemplateReference     string
+	DisableWebhooks          bool
 }
 
 // Gettable is an interface of gettable objects

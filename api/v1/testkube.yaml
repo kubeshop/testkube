@@ -4991,6 +4991,13 @@ components:
         testSuiteExecutionName:
           type: string
           description: test suite execution name started the test suite execution
+        disableWebhooks:
+          type: boolean
+          description: whether webhooks on this execution are disabled
+          default: false
+          example:
+            - true
+            - false
 
     TestSuiteExecutionCR:
       type: object
@@ -5619,6 +5626,13 @@ components:
         executionNamespace:
           type: string
           description: namespace for test execution (Pro edition only)
+        disableWebhooks:
+          type: boolean
+          description: whether webhooks on this execution are disabled
+          default: false
+          example:
+            - true
+            - false
 
     Artifact:
       type: object
@@ -6290,6 +6304,13 @@ components:
         executionNamespace:
           type: string
           description: namespace for test execution (Pro edition only)
+        disableWebhooks:
+          type: boolean
+          description: whether webhooks on this execution are disabled
+          default: false
+          example:
+            - true
+            - false
 
     TestSuiteStepExecutionRequest:
       description: test step execution request body
@@ -6371,6 +6392,13 @@ components:
         runningContext:
           $ref: "#/components/schemas/RunningContext"
           description: running context for the test execution
+        disableWebhooks:
+          type: boolean
+          description: whether webhooks on the executions of this step are disabled
+          default: false
+          example:
+            - true
+            - false
 
     ExecutionUpdateRequest:
       description: test execution request update body
@@ -6472,6 +6500,13 @@ components:
         testSuiteExecutionName:
           type: string
           description: test suite execution name started the test suite execution
+        disableWebhooks:
+          type: boolean
+          description: whether webhooks on the executions of this test suite are disabled
+          default: false
+          example:
+            - true
+            - false
 
     TestSuiteExecutionUpdateRequest:
       description: test suite execution update request body
