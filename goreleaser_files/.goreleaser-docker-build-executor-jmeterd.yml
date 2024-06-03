@@ -14,7 +14,7 @@ env:
   - IMAGE_TAG_SHA={{ if index .Env "IMAGE_TAG_SHA"  }}{{ .Env.IMAGE_TAG_SHA }}{{ else }}{{ end }}
   # Build Sandbox Image
   - SANDBOX_IMAGE={{ if index .Env "SANDBOX_IMAGE"  }}{{ .Env.SANDBOX_IMAGE }}{{ else }}{{ end }}
-  - DOCKER_IMAGE_TITLE={{ if index .Env "SANDBOX_IMAGE" }}testkube-sandbox-jmeterd{{ else }}testkube-jmeterd{{ end }}
+  - DOCKER_IMAGE_TITLE={{ if index .Env "SANDBOX_IMAGE" }}testkube-sandbox-jmeterd-executor{{ else }}testkube-jmeterd-executor{{ end }}
   - DOCKER_IMAGE_URL={{ if index .Env "SANDBOX_IMAGE" }}https://hub.docker.com/r/kubeshop/testkube-sandbox{{ else }}https://hub.docker.com/r/kubeshop/testkube-jmeterd-executor{{ end }}
 builds:
   - id: "linux"
@@ -36,7 +36,7 @@ dockers:
     image_templates:
       - "{{ if .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-jmeterd-executor:{{ .ShortCommit }}{{ end }}"
       - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-jmeterd-executor:{{ .Version }}-amd64{{ end }}"
-      - "{{ if .Env.SANDBOX_IMAGE }}{{ .Env.DOCKER_REPO }}/testkube-sandbox:jmeterd-{{ .Env.BRANCH_IDENTIFIER }}-{{ .ShortCommit }}{{ end }}"
+      - "{{ if .Env.SANDBOX_IMAGE }}{{ .Env.DOCKER_REPO }}/testkube-sandbox:jmeterd-executor-{{ .Env.BRANCH_IDENTIFIER }}-{{ .ShortCommit }}{{ end }}"
     build_flag_templates:
       - "--platform=linux/amd64"
       - "--label=org.opencontainers.image.title={{ .Env.DOCKER_IMAGE_TITLE }}"

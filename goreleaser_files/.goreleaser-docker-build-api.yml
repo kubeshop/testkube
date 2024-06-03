@@ -49,7 +49,7 @@ dockers:
     image_templates:
       - "{{ if .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-api-server:{{ .ShortCommit }}{{ end }}"
       - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-api-server:{{ .Version }}-amd64{{ end }}"
-      - "{{ if .Env.SANDBOX_IMAGE }}{{ .Env.DOCKER_REPO }}/testkube-sandbox:api-{{ .Env.BRANCH_IDENTIFIER }}-{{ .ShortCommit }}{{ end }}"
+      - "{{ if .Env.SANDBOX_IMAGE }}{{ .Env.DOCKER_REPO }}/testkube-sandbox:api-server-{{ .Env.BRANCH_IDENTIFIER }}-{{ .ShortCommit }}{{ end }}"
     build_flag_templates:
       - "--platform=linux/amd64"
       - "--label=org.opencontainers.image.title={{ .Env.DOCKER_IMAGE_TITLE }}"

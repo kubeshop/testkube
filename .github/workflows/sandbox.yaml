@@ -76,7 +76,7 @@ jobs:
 
       - name: Push Docker images
         run: |
-          docker push kubeshop/testkube-sandbox:api-${{ env.branch_identifier }}-${{ steps.commit.outputs.short }}
+          docker push kubeshop/testkube-sandbox:api-server-${{ env.branch_identifier }}-${{ steps.commit.outputs.short }}
 
   testworkflow:
     strategy:
@@ -223,7 +223,7 @@ jobs:
 
       - name: Push Docker images
         run: |
-          docker push kubeshop/testkube-sandbox:${{ matrix.executor }}-${{ env.branch_identifier }}-${{ steps.commit.outputs.short }}
+          docker push kubeshop/testkube-sandbox:${{ matrix.executor }}-executor-${{ env.branch_identifier }}-${{ steps.commit.outputs.short }}
 
   executor_jmeter:
     runs-on: ubuntu-latest
@@ -286,7 +286,7 @@ jobs:
 
       - name: Push Docker images
         run: |
-          docker push kubeshop/testkube-sandbox:jmeter-${{ env.branch_identifier }}-${{ steps.commit.outputs.short }}
+          docker push kubeshop/testkube-sandbox:jmeter-executor-${{ env.branch_identifier }}-${{ steps.commit.outputs.short }}
 
   executor_jmeterd:
     runs-on: ubuntu-latest
@@ -349,7 +349,7 @@ jobs:
 
       - name: Push Docker images
         run: |
-          docker push kubeshop/testkube-sandbox:jmeterd-${{ env.branch_identifier }}-${{ steps.commit.outputs.short }}
+          docker push kubeshop/testkube-sandbox:jmeterd-executor-${{ env.branch_identifier }}-${{ steps.commit.outputs.short }}
 
   jmeterd_slave:
     runs-on: ubuntu-latest
@@ -455,7 +455,7 @@ jobs:
 
       - name: Push Docker images
         run: |
-          docker push kubeshop/testkube-sandbox:maven-${{ env.branch_identifier }}-${{ steps.commit.outputs.short }}
+          docker push kubeshop/testkube-sandbox:maven-executor-${{ env.branch_identifier }}-${{ steps.commit.outputs.short }}
 
   executor_gradle:
     runs-on: ubuntu-latest
@@ -518,7 +518,7 @@ jobs:
 
       - name: Push Docker images
         run: |
-          docker push kubeshop/testkube-sandbox:gradle-${{ env.branch_identifier }}-${{ steps.commit.outputs.short }}
+          docker push kubeshop/testkube-sandbox:gradle-executor-${{ env.branch_identifier }}-${{ steps.commit.outputs.short }}
 
   executor_cypress:
     runs-on: ubuntu-latest
@@ -580,7 +580,7 @@ jobs:
 
       - name: Push image to the Registry
         run: |
-          docker push kubeshop/testkube-sandbox:cypress-${{ env.branch_identifier }}-${{ steps.commit.outputs.short }}
+          docker push kubeshop/testkube-sandbox:cypress-executor-${{ env.branch_identifier }}-${{ steps.commit.outputs.short }}
 
   executor_playwright:
     runs-on: ubuntu-latest
@@ -642,7 +642,7 @@ jobs:
 
       - name: Push image to the Registry
         run: |
-          docker push kubeshop/testkube-sandbox:playwright-${{ env.branch_identifier }}-${{ steps.commit.outputs.short }}
+          docker push kubeshop/testkube-sandbox:playwright-executor-${{ env.branch_identifier }}-${{ steps.commit.outputs.short }}
 
   executor_postman_node21:
     runs-on: ubuntu-latest
@@ -704,7 +704,7 @@ jobs:
 
       - name: Push image to the Registry
         run: |
-          docker push kubeshop/testkube-sandbox:postman-node21-${{ env.branch_identifier }}-${{ steps.commit.outputs.short }}
+          docker push kubeshop/testkube-sandbox:postman-node21-executor-${{ env.branch_identifier }}-${{ steps.commit.outputs.short }}
 
   log_server_sidecar:
     strategy:
