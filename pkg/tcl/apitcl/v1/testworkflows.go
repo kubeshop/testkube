@@ -86,9 +86,27 @@ func (s *apiTCL) DeleteTestWorkflowsHandler() fiber.Handler {
 	errPrefix := "failed to delete test workflows"
 	return func(c *fiber.Ctx) error {
 		selector := c.Query("selector")
-		workflows, err := s.TestWorkflowsClient.List(selector)
-		if err != nil {
-			return s.BadGateway(c, errPrefix, "client problem", err)
+
+		var (
+			workflows *testworkflowsv1.TestWorkflowList
+			err       error
+		)
+		testWorkflowNames := c.Query("testWorkflowNames")
+		if testWorkflowNames != "" {
+			names := strings.Split(testWorkflowNames, ",")
+			workflows = &testworkflowsv1.TestWorkflowList{}
+			for _, name := range names {
+				workflow, err := s.TestWorkflowsClient.Get(name)
+				if err != nil {
+					return s.ClientError(c, errPrefix, err)
+				}
+				workflows.Items = append(workflows.Items, *workflow)
+			}
+		} else {
+			workflows, err = s.TestWorkflowsClient.List(selector)
+			if err != nil {
+				return s.BadGateway(c, errPrefix, "client problem", err)
+			}
 		}
 
 		// Delete
@@ -108,6 +126,11 @@ func (s *apiTCL) DeleteTestWorkflowsHandler() fiber.Handler {
 			names := common.MapSlice(workflows.Items, func(t testworkflowsv1.TestWorkflow) string {
 				return t.Name
 			})
+
+			err = s.TestWorkflowOutput.DeleteOutputForTestWorkflows(context.Background(), names)
+			if err != nil {
+				return s.ClientError(c, "deleting executions output", err)
+			}
 			err = s.TestWorkflowResults.DeleteByTestWorkflows(context.Background(), names)
 			if err != nil {
 				return s.ClientError(c, "deleting executions", err)

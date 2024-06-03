@@ -121,6 +121,13 @@ type ExecutionDeleteOutputByWorkflowRequest struct {
 type ExecutionDeleteOutputByWorkflowResponse struct {
 }
 
+type ExecutionDeleteOutputForTestWorkflowsRequest struct {
+	WorkflowNames []string `json:"workflowNames"`
+}
+
+type ExecutionDeleteOutputForTestWorkflowsResponse struct {
+}
+
 type ExecutionDeleteAllRequest struct {
 }
 
