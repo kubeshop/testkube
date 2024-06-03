@@ -764,15 +764,15 @@ jobs:
 
       - name: Create manifests
         run: |
-          docker manifest create kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }} --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress13-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress13-arm64v8
+          docker manifest create kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }} --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress13-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress13-arm64
           docker manifest push -p kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}
           cosign sign kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }} --yes
 
-          docker manifest create kubeshop/testkube-cypress-executor:latest --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress13-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress13-arm64v8
+          docker manifest create kubeshop/testkube-cypress-executor:latest --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress13-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress13-arm64
           docker manifest push -p kubeshop/testkube-cypress-executor:latest
           cosign sign kubeshop/testkube-cypress-executor:latest --yes
 
-          docker manifest create kubeshop/testkube-cypress-executor:legacy --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-npm-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-npm-arm64v8
+          docker manifest create kubeshop/testkube-cypress-executor:legacy --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-npm-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-npm-arm64
           docker manifest push -p kubeshop/testkube-cypress-executor:legacy
           cosign sign kubeshop/testkube-cypress-executor:legacy --yes
 

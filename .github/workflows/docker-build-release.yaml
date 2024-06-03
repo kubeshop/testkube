@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - release/**
-      - ci/sanbox-flow
     paths-ignore:
       - 'docs/**'
 env:
@@ -677,21 +676,21 @@ jobs:
           docker manifest create kubeshop/testkube-postman-executor:node21-${{ steps.commit.outputs.short }} --amend kubeshop/testkube-postman-executor:node21-${{ steps.commit.outputs.short }}-arm64v8 --amend kubeshop/testkube-postman-executor:node21-${{ steps.commit.outputs.short }}-amd64
           docker manifest push -p kubeshop/testkube-postman-executor:node21-${{ steps.commit.outputs.short }}
 
-#  workflow_dispatch:
-#    needs: [ api, single_executor, executor_jmeter, executor_jmeterd, jmeterd_slave, executor_maven, executor_gradle, executor_cypress, executor_playwright ]
-#    runs-on: ubuntu-latest
-#    steps:
-#      - name: Checkout
-#        uses: actions/checkout@v4
-#
-#      - name: Get commit sha
-#        id: github_sha
-#        run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"
-#
-#      - name: Repository Dispatch
-#        uses: peter-evans/repository-dispatch@v3
-#        with:
-#          token: ${{ secrets.CI_BOT_TOKEN }}
-#          repository: kubeshop/helm-charts
-#          event-type: trigger-workflow-api-release
-#          client-payload: '{"image_tag_api": "${{ steps.github_sha.outputs.sha_short }}"}'
+  workflow_dispatch:
+    needs: [ api, single_executor, executor_jmeter, executor_jmeterd, jmeterd_slave, executor_maven, executor_gradle, executor_cypress, executor_playwright ]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get commit sha
+        id: github_sha
+        run: echo "::set-output name=sha_short::${GITHUB_SHA::7}"
+
+      - name: Repository Dispatch
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.CI_BOT_TOKEN }}
+          repository: kubeshop/helm-charts
+          event-type: trigger-workflow-api-release
+          client-payload: '{"image_tag_api": "${{ steps.github_sha.outputs.sha_short }}"}'
