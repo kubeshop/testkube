@@ -1,4 +1,4 @@
-# Test Workflows Examples - Expressions
+# Test Workflows - Expressions
 
 ## Expressions Language
 
@@ -168,4 +168,4 @@ These functions are only executed during the execution.
 | `file` | `string`   | File contents         | `file("/etc/some/path")` may be `"some\ncontent"`                                                                |
 | `glob` | `[]string` | Find files by pattern | `glob("/etc/**/*", "./x/**/*.js")` may be `["/etc/some/file", "/etc/other/file", "/some/working/dir/x/file.js"]` |
 
-![Built-in Functions](../img/built-in-functions.png) 
+![Built-in Functions](../img/built-in-functions.png)
