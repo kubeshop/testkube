@@ -138,67 +138,6 @@ jobs:
         run: |
           docker push kubeshop/${{ matrix.repository }}:${{ steps.commit.outputs.short }}
 
-  logs_sidecar:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        id: buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: stable
-
-      - name: Go Cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          key: logs-sidecar-go-${{ hashFiles('**/go.sum') }}
-
-      - name: Login to DockerHub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - id: commit
-        uses: prompt/actions-commit-hash@v3
-
-      - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v5
-        with:
-          distribution: goreleaser-pro
-          version: latest
-          args: release -f ./goreleaser_files/.goreleaser-docker-build-logs-services.yml --snapshot
-        env:
-          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
-          GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
-          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
-          DOCKER_BUILDX_CACHE_FROM: "type=gha"
-          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
-          ALPINE_IMAGE: ${{ env.ALPINE_IMAGE }}
-          BUSYBOX_IMAGE: ${{ env.BUSYBOX_IMAGE }}
-          IMAGE_TAG_SHA: true
-
-      - name: Push Docker images
-        run: |
-          docker push kubeshop/testkube-logs-sidecar:${{ steps.commit.outputs.short }}-arm64v8
-          docker push kubeshop/testkube-logs-sidecar:${{ steps.commit.outputs.short }}-amd64
-
-          docker manifest create kubeshop/testkube-logs-sidecar:${{ steps.commit.outputs.short }} --amend kubeshop/testkube-logs-sidecar:${{ steps.commit.outputs.short }}-arm64v8 --amend kubeshop/testkube-logs-sidecar:${{ steps.commit.outputs.short }}-amd64
-          docker manifest push -p kubeshop/testkube-logs-sidecar:${{ steps.commit.outputs.short }}
-
   log_server_sidecar:
     strategy:
       matrix:
@@ -267,12 +206,7 @@ jobs:
 
       - name: Push Docker images
         run: |
-          docker push kubeshop/testkube-${{ matrix.service }}:${{ steps.commit.outputs.short }}-arm64v8
-          docker push kubeshop/testkube-${{ matrix.service }}:${{ steps.commit.outputs.short }}-amd64
-
-          docker manifest create kubeshop/testkube-${{ matrix.service }}:${{ steps.commit.outputs.short }} --amend kubeshop/testkube-${{ matrix.service }}:${{ steps.commit.outputs.short }}-arm64v8 --amend kubeshop/testkube-${{ matrix.service }}:${{ steps.commit.outputs.short }}-amd64
-          docker manifest push -p kubeshop/testkube-${{ matrix.service }}:${{ steps.commit.outputs.short }}
-
+          docker push kubeshop/testkube-${{ matrix.service }}:${{ steps.commit.outputs.short }}
 
   single_executor:
     strategy:

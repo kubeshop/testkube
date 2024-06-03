@@ -37,7 +37,7 @@ dockers:
     goarch: amd64
     image_templates:
       - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-{{ .Env.SERVICE }}:{{ .Version }}-amd64{{ end }}"
-      - "{{ if .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-{{ .Env.SERVICE }}:{{ .ShortCommit }}-amd64{{ end }}"
+      - "{{ if .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-{{ .Env.SERVICE }}:{{ .ShortCommit }}{{ end }}"
       - "{{ if .Env.SANDBOX_IMAGE }}{{ .Env.DOCKER_REPO }}/testkube-sandbox:{{ .Env.SERVICE }}-{{ .Env.BRANCH_IDENTIFIER }}-{{ .ShortCommit }}{{ end }}"
     build_flag_templates:
       - "--platform=linux/amd64"

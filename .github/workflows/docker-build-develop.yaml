@@ -738,11 +738,7 @@ jobs:
 
       - name: Push Docker images
         run: |
-          docker push kubeshop/testkube-${{ matrix.service }}:${{ steps.commit.outputs.short }}-arm64v8
-          docker push kubeshop/testkube-${{ matrix.service }}:${{ steps.commit.outputs.short }}-amd64
-
-          docker manifest create kubeshop/testkube-${{ matrix.service }}:${{ steps.commit.outputs.short }} --amend kubeshop/testkube-${{ matrix.service }}:${{ steps.commit.outputs.short }}-arm64v8 --amend kubeshop/testkube-${{ matrix.service }}:${{ steps.commit.outputs.short }}-amd64
-          docker manifest push -p kubeshop/testkube-${{ matrix.service }}:${{ steps.commit.outputs.short }}
+          docker push kubeshop/testkube-${{ matrix.service }}:${{ steps.commit.outputs.short }}
 
 
 #  workflow_dispatch:
