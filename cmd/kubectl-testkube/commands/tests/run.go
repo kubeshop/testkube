@@ -94,20 +94,28 @@ func NewRunTestCmd() *cobra.Command {
 			if attachDebugger {
 				watchEnabled = true
 			}
+
+			outputFlag := cmd.Flag("output")
+			outputType := render.OutputPretty
+			if outputFlag != nil {
+				outputType = render.OutputType(outputFlag.Value.String())
+			}
+
+			outputPretty := outputType == render.OutputPretty
 			envs, err := cmd.Flags().GetStringToString("env")
-			ui.WarnOnError("getting envs", err)
+			ui.WarnOnErrorAndOutputPretty("getting envs", outputPretty, err)
 
 			client, _, err := common.GetClient(cmd)
 			ui.ExitOnError("getting client", err)
 
 			info, err := client.GetServerInfo()
-			ui.WarnOnError("getting server info", err)
+			ui.WarnOnErrorAndOutputPretty("getting server info", outputPretty, err)
 
 			variables, err := common.CreateVariables(cmd, info.DisableSecretCreation)
-			ui.WarnOnError("getting variables", err)
+			ui.WarnOnErrorAndOutputPretty("getting variables", outputPretty, err)
 
 			envConfigMaps, envSecrets, err := newEnvReferencesFromFlags(cmd)
-			ui.WarnOnError("getting env config maps and secrets", err)
+			ui.WarnOnErrorAndOutputPretty("getting env config maps and secrets", outputPretty, err)
 
 			mode := ""
 			if cmd.Flag("args-mode").Changed {
@@ -287,7 +295,9 @@ func NewRunTestCmd() *cobra.Command {
 					copyFileList, err := mergeCopyFiles(test.Uploads, copyFiles)
 					ui.ExitOnError("could not merge files", err)
 
-					ui.Warn("Testkube will use the following file mappings:", copyFileList...)
+					if outputPretty {
+						ui.Warn("Testkube will use the following file mappings:", copyFileList...)
+					}
 				}
 
 				var eventsDebugger *debugger.EventsDebugger
@@ -295,7 +305,7 @@ func NewRunTestCmd() *cobra.Command {
 					writer := os.Stderr
 					if debugFile != "" {
 						writer, err = os.Create(debugFile)
-						ui.WarnOnError("creating debug file", err)
+						ui.WarnOnErrorAndOutputPretty("creating debug file", outputPretty, err)
 					}
 
 					i := debugger.NewInsights().WithWriter(writer)
@@ -331,7 +341,8 @@ func NewRunTestCmd() *cobra.Command {
 
 			var execErrors []error
 			for _, execution := range executions {
-				printExecutionDetails(execution)
+				err = printExecutionDetails(cmd, os.Stdout, execution)
+				ui.ExitOnError("printing test execution "+execution.Id, err)
 
 				if execution.ExecutionResult != nil && execution.ExecutionResult.ErrorMessage != "" {
 					execErrors = append(execErrors, errors.New(execution.ExecutionResult.ErrorMessage))
@@ -342,13 +353,15 @@ func NewRunTestCmd() *cobra.Command {
 						info, err := client.GetServerInfo()
 						ui.ExitOnError("getting server info", err)
 
-						if info.Features != nil && info.Features.LogsV2 {
-							if err = watchLogsV2(execution.Id, silentMode, client); err != nil {
-								execErrors = append(execErrors, err)
-							}
-						} else {
-							if err = watchLogs(execution.Id, silentMode, client); err != nil {
-								execErrors = append(execErrors, err)
+						if outputPretty {
+							if info.Features != nil && info.Features.LogsV2 {
+								if err = watchLogsV2(execution.Id, silentMode, client); err != nil {
+									execErrors = append(execErrors, err)
+								}
+							} else {
+								if err = watchLogs(execution.Id, silentMode, client); err != nil {
+									execErrors = append(execErrors, err)
+								}
 							}
 						}
 					}
@@ -357,28 +370,36 @@ func NewRunTestCmd() *cobra.Command {
 					ui.ExitOnError("getting recent execution data id:"+execution.Id, err)
 				}
 
-				if err = render.RenderExecutionResult(client, &execution, false, !watchEnabled); err != nil {
-					execErrors = append(execErrors, err)
+				if outputPretty {
+					if err = render.RenderExecutionResult(client, &execution, false, !watchEnabled); err != nil {
+						execErrors = append(execErrors, err)
+					}
 				}
 
 				if execution.Id != "" {
 					if watchEnabled && len(args) > 0 {
 						if downloadArtifactsEnabled && (execution.IsPassed() || execution.IsFailed()) {
-							DownloadTestArtifacts(execution.Id, downloadDir, format, masks, client)
+							DownloadTestArtifacts(execution.Id, downloadDir, format, masks, client, outputPretty)
 						}
 					}
 
-					uiShellWatchExecution(execution.Name)
+					if outputPretty {
+						uiShellWatchExecution(execution.Name)
+					}
 				}
 
-				uiShellGetExecution(execution.Name)
+				if outputPretty {
+					uiShellGetExecution(execution.Name)
+				}
 			}
 
 			ui.ExitOnError("executions contain failed on errors", execErrors...)
 			if attachDebugger {
 				// Wait to catch logs from attached debugger after job completed
 				time.Sleep(3 * time.Second)
-				ui.Success("Debugger stopped")
+				if outputPretty {
+					ui.Success("Debugger stopped")
+				}
 			}
 		},
 	}

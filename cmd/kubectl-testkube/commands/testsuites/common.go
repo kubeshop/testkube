@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"time"
@@ -18,27 +19,47 @@ import (
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
-func printExecution(execution testkube.TestSuiteExecution, startTime time.Time) {
-	if execution.TestSuite != nil {
-		ui.Warn("Name          :", execution.TestSuite.Name)
+func printExecution(cmd *cobra.Command, w io.Writer, execution testkube.TestSuiteExecution, startTime time.Time) error {
+	outputFlag := cmd.Flag("output")
+	outputType := render.OutputPretty
+	if outputFlag != nil {
+		outputType = render.OutputType(outputFlag.Value.String())
 	}
 
-	if execution.Id != "" {
-		ui.Warn("Execution ID  :", execution.Id)
-		ui.Warn("Execution name:", execution.Name)
+	switch outputType {
+	case render.OutputPretty:
+		if execution.TestSuite != nil {
+			ui.Warn("Name          :", execution.TestSuite.Name)
+		}
+
+		if execution.Id != "" {
+			ui.Warn("Execution ID  :", execution.Id)
+			ui.Warn("Execution name:", execution.Name)
+		}
+
+		if execution.Status != nil {
+			ui.Warn("Status        :", string(*execution.Status))
+		}
+
+		if execution.Id != "" {
+			ui.Warn("Duration:", execution.CalculateDuration().String()+"\n")
+			ui.Table(execution, w)
+		}
+
+		ui.NL()
+		ui.NL()
+	case render.OutputYAML:
+		return render.RenderYaml(execution, w)
+	case render.OutputJSON:
+		return render.RenderJSON(execution, w)
+	case render.OutputGoTemplate:
+		tpl := cmd.Flag("go-template").Value.String()
+		return render.RenderGoTemplate(execution, w, tpl)
+	default:
+		return render.RenderYaml(execution, w)
 	}
 
-	if execution.Status != nil {
-		ui.Warn("Status        :", string(*execution.Status))
-	}
-
-	if execution.Id != "" {
-		ui.Warn("Duration:", execution.CalculateDuration().String()+"\n")
-		ui.Table(execution, os.Stdout)
-	}
-
-	ui.NL()
-	ui.NL()
+	return nil
 }
 
 func uiPrintExecutionStatus(client apiclientv1.Client, execution testkube.TestSuiteExecution) error {
@@ -433,7 +454,7 @@ func NewTestSuiteUpdateOptionsFromFlags(cmd *cobra.Command) (options apiclientv1
 	return options, nil
 }
 
-func DownloadArtifacts(id, dir, format string, masks []string, client apiclientv1.Client) {
+func DownloadArtifacts(id, dir, format string, masks []string, client apiclientv1.Client, outputPretty bool) {
 	testSuiteExecution, err := client.GetTestSuiteExecution(id)
 	ui.ExitOnError("getting test suite execution ", err)
 
@@ -441,7 +462,7 @@ func DownloadArtifacts(id, dir, format string, masks []string, client apiclientv
 		for _, step := range execution.Execute {
 			if step.Execution != nil && step.Step != nil && step.Step.Test != "" {
 				if step.Execution.IsPassed() || step.Execution.IsFailed() {
-					tests.DownloadTestArtifacts(step.Execution.Id, filepath.Join(dir, step.Execution.TestName+"-"+step.Execution.Id), format, masks, client)
+					tests.DownloadTestArtifacts(step.Execution.Id, filepath.Join(dir, step.Execution.TestName+"-"+step.Execution.Id), format, masks, client, outputPretty)
 				}
 			}
 		}

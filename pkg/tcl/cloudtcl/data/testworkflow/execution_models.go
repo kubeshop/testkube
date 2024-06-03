@@ -114,6 +114,13 @@ type ExecutionDeleteByWorkflowRequest struct {
 type ExecutionDeleteByWorkflowResponse struct {
 }
 
+type ExecutionDeleteOutputByWorkflowRequest struct {
+	WorkflowName string `json:"workflowName"`
+}
+
+type ExecutionDeleteOutputByWorkflowResponse struct {
+}
+
 type ExecutionDeleteAllRequest struct {
 }
 

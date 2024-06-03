@@ -31,14 +31,14 @@ freeMem=`awk '/MemAvailable/ { print int($2/1024) }' /proc/meminfo`
 echo "Setting dynamically heap size based on available resources JVM_ARGS=-Xmn${JVM_XMN}m -Xms${JVM_XMS}m -Xmx${JVM_XMX}m"
 export JVM_ARGS="-Xmn${JVM_XMN}m -Xms${JVM_XMS}m -Xmx${JVM_XMX}m"
 
-if [ -n "$OVERRIDE_JVM_ARGS" ]; then
-  echo "Overriding JVM_ARGS=${OVERRIDE_JVM_ARGS}"
-  export JVM_ARGS="${OVERRIDE_JVM_ARGS}"
+if [ -n "$SLAVES_OVERRIDE_JVM_ARGS" ]; then
+  echo "Overriding JVM_ARGS=${SLAVES_OVERRIDE_JVM_ARGS}"
+  export JVM_ARGS="${SLAVES_OVERRIDE_JVM_ARGS}"
 fi
 
-if [ -n "$ADDITIONAL_JVM_ARGS" ]; then
-  echo "Appending additional JVM args: ${ADDITIONAL_JVM_ARGS}"
-  export JVM_ARGS="${JVM_ARGS} ${ADDITIONAL_JVM_ARGS}"
+if [ -n "$SLAVES_ADDITIONAL_JVM_ARGS" ]; then
+  echo "Appending additional JVM args: ${SLAVES_ADDITIONAL_JVM_ARGS}"
+  export JVM_ARGS="${JVM_ARGS} ${SLAVES_ADDITIONAL_JVM_ARGS}"
 fi
 
 echo "Available memory: ${freeMem} MB"

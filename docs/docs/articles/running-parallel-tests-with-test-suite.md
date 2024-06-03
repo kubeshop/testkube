@@ -18,7 +18,7 @@ The new Test Suite will be empty. Click on **Add your first test**:
 
 Continue to add tests to your test suite. You can also add a **delay** when necessary to specify he length of time between certain tests.
 
-![Add Additional Test or Delay](../img/add-additional-test-or-delay.webp)
+![Add Additional Test or Delay](../img/add-additional-test-or-delay-05-24.webp)
 
 For this test suite, we have added 5 tests that all run in parallel:
 

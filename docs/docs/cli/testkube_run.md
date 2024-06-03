@@ -9,7 +9,9 @@ testkube run <resourceName> [flags]
 ### Options
 
 ```
-  -h, --help   help for run
+      --go-template string   go template to render (default "{{.}}")
+  -h, --help                 help for run
+  -o, --output string        output type can be one of json|yaml|pretty|go (default "pretty")
 ```
 
 ### Options inherited from parent commands

@@ -13,8 +13,12 @@ import (
 	"io"
 	"time"
 
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/storage"
+
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 var _ OutputRepository = (*MinioRepository)(nil)
@@ -22,15 +26,17 @@ var _ OutputRepository = (*MinioRepository)(nil)
 const bucketFolder = "testworkflows"
 
 type MinioRepository struct {
-	storage storage.Client
-	bucket  string
+	storage             storage.Client
+	executionCollection *mongo.Collection
+	bucket              string
 }
 
-func NewMinioOutputRepository(storageClient storage.Client, bucket string) *MinioRepository {
+func NewMinioOutputRepository(storageClient storage.Client, executionCollection *mongo.Collection, bucket string) *MinioRepository {
 	log.DefaultLogger.Debugw("creating minio workflow output repository", "bucket", bucket)
 	return &MinioRepository{
-		storage: storageClient,
-		bucket:  bucket,
+		storage:             storageClient,
+		executionCollection: executionCollection,
+		bucket:              bucket,
 	}
 }
 
@@ -65,4 +71,31 @@ func (m *MinioRepository) HasLog(ctx context.Context, id, workflowName string) (
 		return false, err
 	}
 	return true, nil
+}
+
+func (m *MinioRepository) DeleteOutputByTestWorkflow(ctx context.Context, testWorkflowName string) error {
+	log.DefaultLogger.Debugw("deleting output by testWorkflowName", "testWorkflowName", testWorkflowName)
+	var executions []testkube.TestWorkflowExecution
+	//TODO
+	cursor, err := m.executionCollection.Find(ctx, bson.M{"testworkflow.name": testWorkflowName})
+	if err != nil {
+		return err
+	}
+	err = cursor.All(ctx, &executions)
+	if err != nil {
+		return err
+	}
+	for _, execution := range executions {
+		log.DefaultLogger.Debugw("deleting output for execution", "execution", execution)
+		err = m.DeleteOutput(ctx, execution.Id)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (m *MinioRepository) DeleteOutput(ctx context.Context, id string) error {
+	log.DefaultLogger.Debugw("deleting test workflow output", "id", id)
+	return m.storage.DeleteFileFromBucket(ctx, m.bucket, bucketFolder, id)
 }

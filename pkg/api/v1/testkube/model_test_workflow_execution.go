@@ -35,4 +35,6 @@ type TestWorkflowExecution struct {
 	Reports          []TestWorkflowReport `json:"reports,omitempty"`
 	Workflow         *TestWorkflow        `json:"workflow"`
 	ResolvedWorkflow *TestWorkflow        `json:"resolvedWorkflow,omitempty"`
+	// test workflow execution name started the test workflow execution
+	TestWorkflowExecutionName string `json:"testWorkflowExecutionName,omitempty"`
 }

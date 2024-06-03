@@ -3,6 +3,7 @@ package tests
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"regexp"
@@ -14,6 +15,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/render"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/renderer"
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	apiclientv1 "github.com/kubeshop/testkube/pkg/api/v1/client"
@@ -29,30 +31,50 @@ const (
 	maxArgSize             = int64(131072) // maximum argument size in linux-based systems is 128 KiB
 )
 
-func printExecutionDetails(execution testkube.Execution) {
-	ui.Warn("Type:             ", execution.TestType)
-	ui.Warn("Name:             ", execution.TestName)
-	if execution.Id != "" {
-		ui.Warn("Execution ID:     ", execution.Id)
-		ui.Warn("Execution name:   ", execution.Name)
-		if execution.Number != 0 {
-			ui.Warn("Execution number: ", fmt.Sprintf("%d", execution.Number))
-		}
-		if execution.ExecutionResult != nil && execution.ExecutionResult.Status != nil {
-			ui.Warn("Status:           ", string(*execution.ExecutionResult.Status))
-		}
-		ui.Warn("Start time:       ", execution.StartTime.String())
-		ui.Warn("End time:         ", execution.EndTime.String())
-		ui.Warn("Duration:         ", execution.Duration)
+func printExecutionDetails(cmd *cobra.Command, w io.Writer, execution testkube.Execution) error {
+	outputFlag := cmd.Flag("output")
+	outputType := render.OutputPretty
+	if outputFlag != nil {
+		outputType = render.OutputType(outputFlag.Value.String())
 	}
 
-	renderer.RenderVariables(execution.Variables)
+	switch outputType {
+	case render.OutputPretty:
+		ui.Warn("Type:             ", execution.TestType)
+		ui.Warn("Name:             ", execution.TestName)
+		if execution.Id != "" {
+			ui.Warn("Execution ID:     ", execution.Id)
+			ui.Warn("Execution name:   ", execution.Name)
+			if execution.Number != 0 {
+				ui.Warn("Execution number: ", fmt.Sprintf("%d", execution.Number))
+			}
+			if execution.ExecutionResult != nil && execution.ExecutionResult.Status != nil {
+				ui.Warn("Status:           ", string(*execution.ExecutionResult.Status))
+			}
+			ui.Warn("Start time:       ", execution.StartTime.String())
+			ui.Warn("End time:         ", execution.EndTime.String())
+			ui.Warn("Duration:         ", execution.Duration)
+		}
 
-	ui.NL()
-	ui.NL()
+		renderer.RenderVariables(execution.Variables)
+
+		ui.NL()
+		ui.NL()
+	case render.OutputYAML:
+		return render.RenderYaml(execution, w)
+	case render.OutputJSON:
+		return render.RenderJSON(execution, w)
+	case render.OutputGoTemplate:
+		tpl := cmd.Flag("go-template").Value.String()
+		return render.RenderGoTemplate(execution, w, tpl)
+	default:
+		return render.RenderYaml(execution, w)
+	}
+
+	return nil
 }
 
-func DownloadTestArtifacts(id, dir, format string, masks []string, client apiclientv1.Client) {
+func DownloadTestArtifacts(id, dir, format string, masks []string, client apiclientv1.Client, outputPretty bool) {
 	artifacts, err := client.GetExecutionArtifacts(id)
 	ui.ExitOnError("getting artifacts", err)
 
@@ -62,10 +84,10 @@ func DownloadTestArtifacts(id, dir, format string, masks []string, client apicli
 	downloadArchive := func(dir string, masks []string) (string, error) {
 		return client.DownloadArchive(id, dir, masks)
 	}
-	downloadArtifacts(dir, format, masks, artifacts, downloadFile, downloadArchive)
+	downloadArtifacts(dir, format, masks, artifacts, downloadFile, downloadArchive, outputPretty)
 }
 
-func DownloadTestWorkflowArtifacts(id, dir, format string, masks []string, client apiclientv1.Client) {
+func DownloadTestWorkflowArtifacts(id, dir, format string, masks []string, client apiclientv1.Client, outputPretty bool) {
 	artifacts, err := client.GetTestWorkflowExecutionArtifacts(id)
 	ui.ExitOnError("getting artifacts", err)
 
@@ -75,7 +97,7 @@ func DownloadTestWorkflowArtifacts(id, dir, format string, masks []string, clien
 	downloadArchive := func(dir string, masks []string) (string, error) {
 		return client.DownloadTestWorkflowArtifactArchive(id, dir, masks)
 	}
-	downloadArtifacts(dir, format, masks, artifacts, downloadFile, downloadArchive)
+	downloadArtifacts(dir, format, masks, artifacts, downloadFile, downloadArchive, outputPretty)
 }
 
 func downloadArtifacts(
@@ -84,11 +106,12 @@ func downloadArtifacts(
 	artifacts testkube.Artifacts,
 	downloadFile func(artifact testkube.Artifact, dir string) (string, error),
 	downloadArchive func(dir string, masks []string) (string, error),
+	outputPretty bool,
 ) {
 	err := os.MkdirAll(dir, os.ModePerm)
 	ui.ExitOnError("creating dir "+dir, err)
 
-	if len(artifacts) > 0 {
+	if len(artifacts) > 0 && outputPretty {
 		ui.Info("Getting artifacts", fmt.Sprintf("count = %d", len(artifacts)), "\n")
 	}
 
@@ -122,7 +145,9 @@ func downloadArtifacts(
 
 			f, err := downloadFile(artifact, dir)
 			ui.ExitOnError("downloading file: "+f, err)
-			ui.Warn(" - downloading file ", f)
+			if outputPretty {
+				ui.Warn(" - downloading file ", f)
+			}
 		}
 	}
 
@@ -142,24 +167,34 @@ func downloadArtifacts(
 		}()
 
 		var archive string
-		ui.Warn(" - preparing archive ")
+		if outputPretty {
+			ui.Warn(" - preparing archive ")
+		}
 
 	outloop:
 		for {
 			select {
 			case <-ticker.C:
-				ui.PrintDot()
+				if outputPretty {
+					ui.PrintDot()
+				}
 			case archive = <-ch:
-				ui.NL()
+				if outputPretty {
+					ui.NL()
+				}
 				break outloop
 			}
 		}
 
-		ui.Warn(" - downloading archive ", archive)
+		if outputPretty {
+			ui.Warn(" - downloading archive ", archive)
+		}
 	}
 
-	ui.NL()
-	ui.NL()
+	if outputPretty {
+		ui.NL()
+		ui.NL()
+	}
 }
 
 func watchLogs(id string, silentMode bool, client apiclientv1.Client) error {

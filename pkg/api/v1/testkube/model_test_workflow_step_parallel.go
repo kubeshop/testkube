@@ -28,10 +28,20 @@ type TestWorkflowStepParallel struct {
 	// delay before the step
 	Delay string `json:"delay,omitempty"`
 	// script to run in a default shell for the container
-	Shell     string                                 `json:"shell,omitempty"`
-	Run       *TestWorkflowStepRun                   `json:"run,omitempty"`
-	Execute   *TestWorkflowStepExecute               `json:"execute,omitempty"`
-	Artifacts *TestWorkflowStepArtifacts             `json:"artifacts,omitempty"`
+	Shell     string                     `json:"shell,omitempty"`
+	Run       *TestWorkflowStepRun       `json:"run,omitempty"`
+	Execute   *TestWorkflowStepExecute   `json:"execute,omitempty"`
+	Artifacts *TestWorkflowStepArtifacts `json:"artifacts,omitempty"`
+	// how many resources could be scheduled in parallel
+	Parallelism int32 `json:"parallelism,omitempty"`
+	// worker description to display
+	Description string       `json:"description,omitempty"`
+	Logs        *BoxedString `json:"logs,omitempty"`
+	// list of files to send to parallel steps
+	Transfer []TestWorkflowStepParallelTransfer `json:"transfer,omitempty"`
+	// list of files to fetch from parallel steps
+	Fetch     []TestWorkflowStepParallelFetch        `json:"fetch,omitempty"`
+	Template  *TestWorkflowTemplateRef               `json:"template,omitempty"`
 	Use       []TestWorkflowTemplateRef              `json:"use,omitempty"`
 	Config    map[string]TestWorkflowParameterSchema `json:"config,omitempty"`
 	Content   *TestWorkflowContent                   `json:"content,omitempty"`
@@ -43,14 +53,4 @@ type TestWorkflowStepParallel struct {
 	Steps     []TestWorkflowStep                     `json:"steps,omitempty"`
 	After     []TestWorkflowStep                     `json:"after,omitempty"`
 	Events    []TestWorkflowEvent                    `json:"events,omitempty"`
-	// how many resources could be scheduled in parallel
-	Parallelism int32 `json:"parallelism,omitempty"`
-	// worker description to display
-	Description string       `json:"description,omitempty"`
-	Logs        *BoxedString `json:"logs,omitempty"`
-	// list of files to send to parallel steps
-	Transfer []TestWorkflowStepParallelTransfer `json:"transfer,omitempty"`
-	// list of files to fetch from parallel steps
-	Fetch    []TestWorkflowStepParallelFetch `json:"fetch,omitempty"`
-	Template *TestWorkflowTemplateRef        `json:"template,omitempty"`
 }
