@@ -91,9 +91,16 @@ func (l *WebhookListener) Disabled() bool {
 }
 
 func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventResult) {
-	if l.disabled {
+	switch {
+	case l.disabled:
 		l.Log.With(event.Log()...).Debug("webhook listener is disabled")
 		return testkube.NewSuccessEventResult(event.Id, "webhook listener is disabled")
+	case event.TestExecution != nil && event.TestExecution.DisableWebhooks:
+		l.Log.With(event.Log()...).Debug("webhook listener is disabled for test execution")
+		return testkube.NewSuccessEventResult(event.Id, "webhook listener is disabled for test execution")
+	case event.TestSuiteExecution != nil && event.TestSuiteExecution.DisableWebhooks:
+		l.Log.With(event.Log()...).Debug("webhook listener is disabled for test suite execution")
+		return testkube.NewSuccessEventResult(event.Id, "webhook listener is disabled for test suite execution")
 	}
 
 	body := bytes.NewBuffer([]byte{})

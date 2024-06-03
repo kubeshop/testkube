@@ -117,6 +117,10 @@ func uiShellTestSuiteWatchCommandBlock(id string) {
 
 // NewTestSuiteUpsertOptionsFromFlags creates test suite upsert options from command flags
 func NewTestSuiteUpsertOptionsFromFlags(cmd *cobra.Command) (options apiclientv1.UpsertTestSuiteOptions, err error) {
+	if common.IsBothEnabledAndDisabledSet(cmd) {
+		ui.Failf("both --enable-webhooks and --disable-webhooks flags are set, please use only one")
+	}
+
 	data, err := common.NewDataFromFlags(cmd)
 	if err != nil {
 		return options, err
@@ -256,11 +260,22 @@ func NewTestSuiteUpsertOptionsFromFlags(cmd *cobra.Command) (options apiclientv1
 		}
 	}
 
+	if cmd.Flag("enable-webhooks").Changed {
+		options.ExecutionRequest.DisableWebhooks = false
+	}
+	if cmd.Flag("disable-webhooks").Changed {
+		options.ExecutionRequest.DisableWebhooks = true
+	}
+
 	return options, nil
 }
 
 // NewTestSuiteUpdateOptionsFromFlags creates test suite update options from command flags
 func NewTestSuiteUpdateOptionsFromFlags(cmd *cobra.Command) (options apiclientv1.UpdateTestSuiteOptions, err error) {
+	if common.IsBothEnabledAndDisabledSet(cmd) {
+		ui.Failf("both --enable-webhooks and --disable-webhooks flags are set, please use only one")
+	}
+
 	data, err := common.NewDataFromFlags(cmd)
 	if err != nil {
 		return options, err
@@ -362,6 +377,18 @@ func NewTestSuiteUpdateOptionsFromFlags(cmd *cobra.Command) (options apiclientv1
 
 		executionRequest.Timeout = &timeout
 		nonEmpty = true
+	}
+
+	var disableWebhook bool
+	if cmd.Flag("enable-webhooks").Changed {
+		nonEmpty = true
+		disableWebhook = false
+		executionRequest.DisableWebhooks = &disableWebhook
+	}
+	if cmd.Flag("disable-webhooks").Changed {
+		nonEmpty = true
+		disableWebhook = true
+		executionRequest.DisableWebhooks = &disableWebhook
 	}
 
 	var values = []struct {
