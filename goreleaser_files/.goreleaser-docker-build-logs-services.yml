@@ -1,5 +1,3 @@
-project_name: testkube-logs-sidecar
-
 env:
   # Goreleaser always uses the docker buildx builder with name "default"; see
   # https://github.com/goreleaser/goreleaser/pull/3199
@@ -12,11 +10,16 @@ env:
   # https://github.com/moby/buildkit#export-cache
   - DOCKER_BUILDX_CACHE_FROM={{ if index .Env "DOCKER_BUILDX_CACHE_FROM"  }}{{ .Env.DOCKER_BUILDX_CACHE_FROM }}{{ else }}type=registry{{ end }}
   - DOCKER_BUILDX_CACHE_TO={{ if index .Env "DOCKER_BUILDX_CACHE_TO"  }}{{ .Env.DOCKER_BUILDX_CACHE_TO }}{{ else }}type=inline{{ end }}
-  - DOCKER_IMAGE_TAG={{ if index .Env "DOCKER_IMAGE_TAG"  }}{{ .Env.DOCKER_IMAGE_TAG }}{{ else }}{{ end }}
+  - SERVICE={{ if index .Env "SERVICE"  }}{{ .Env.SERVICE }}{{ else }}{{ end }}
+  - IMAGE_TAG_SHA={{ if index .Env "IMAGE_TAG_SHA"  }}{{ .Env.IMAGE_TAG_SHA }}{{ else }}{{ end }}
+  # Build Sandbox Image
+  - SANDBOX_IMAGE={{ if index .Env "SANDBOX_IMAGE"  }}{{ .Env.SANDBOX_IMAGE }}{{ else }}{{ end }}
+  - DOCKER_IMAGE_TITLE={{ if index .Env "SANDBOX_IMAGE" }}testkube-sandbox-{{ .Env.SERVICE }}{{ else }}testkube-{{ .Env.SERVICE }}{{ end }}
+  - DOCKER_IMAGE_URL={{ if index .Env "SANDBOX_IMAGE" }}https://hub.docker.com/r/kubeshop/testkube-sandbox{{ else }}https://hub.docker.com/r/kubeshop/testkube-{{ .Env.SERVICE }}{{ end }}
 builds:
   - id: "linux"
-    main: ./cmd/sidecar
-    binary: testkube-logs-sidecar
+    main: ./cmd/{{ .Env.SERVICE }}
+    binary: "testkube-{{ .Env.SERVICE }}"
     env:
       - CGO_ENABLED=0
     goos:
@@ -28,16 +31,18 @@ builds:
     ldflags: -X github.com/kubeshop/testkube/pkg/version.Version={{ .Version }}
       -X github.com/kubeshop/testkube/pkg/version.Commit={{ .FullCommit }}
 dockers:
-  - dockerfile: ./build/sidecar/Dockerfile
+  - dockerfile: ./build/{{ .Env.SERVICE }}/Dockerfile
     use: buildx
     goos: linux
     goarch: amd64
     image_templates:
-      - "{{ if not .Env.DOCKER_IMAGE_TAG }}{{ .Env.DOCKER_REPO }}/testkube-logs-sidecar:{{ .Version }}-amd64{{ end }}"
-      - "{{ if .Env.DOCKER_IMAGE_TAG }}{{ .Env.DOCKER_REPO }}/testkube-logs-sidecar:{{ .Env.DOCKER_IMAGE_TAG }}-amd64{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-{{ .Env.SERVICE }}:{{ .Version }}-amd64{{ end }}"
+      - "{{ if .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-{{ .Env.SERVICE }}:{{ .ShortCommit }}{{ end }}"
+      - "{{ if .Env.SANDBOX_IMAGE }}{{ .Env.DOCKER_REPO }}/testkube-sandbox:{{ .Env.SERVICE }}-{{ .Env.BRANCH_IDENTIFIER }}-{{ .ShortCommit }}{{ end }}"
     build_flag_templates:
       - "--platform=linux/amd64"
-      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.title={{ .Env.DOCKER_IMAGE_TITLE }}"
+      - "--label=org.opencontainers.image.url={{ .Env.DOCKER_IMAGE_URL }}"
       - "--label=org.opencontainers.image.created={{ .Date}}"
       - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
       - "--label=org.opencontainers.image.version={{ .Version }}"
@@ -47,13 +52,13 @@ dockers:
       - "--build-arg=ALPINE_IMAGE={{ .Env.ALPINE_IMAGE }}"
       - "--build-arg=BUSYBOX_IMAGE={{ .Env.BUSYBOX_IMAGE }}"
 
-  - dockerfile: ./build/sidecar/Dockerfile
+  - dockerfile: ./build/{{ .Env.SERVICE }}/Dockerfile
     use: buildx
     goos: linux
     goarch: arm64
     image_templates:
-      - "{{ if not .Env.DOCKER_IMAGE_TAG }}{{ .Env.DOCKER_REPO }}/testkube-logs-sidecar:{{ .Version }}-arm64v8{{ end }}"
-      - "{{ if .Env.DOCKER_IMAGE_TAG }}{{ .Env.DOCKER_REPO }}/testkube-logs-sidecar:{{ .Env.DOCKER_IMAGE_TAG }}-arm64v8{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-{{ .Env.SERVICE }}:{{ .Version }}-arm64v8{{ end }}"
+      - "{{ if .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-{{ .Env.SERVICE }}:{{ .ShortCommit }}{{ end }}"
     build_flag_templates:
       - "--platform=linux/arm64/v8"
       - "--label=org.opencontainers.image.created={{ .Date }}"
@@ -67,15 +72,14 @@ dockers:
       - "--build-arg=BUSYBOX_IMAGE={{ .Env.BUSYBOX_IMAGE }}"
 
 docker_manifests:
-  - name_template: "{{ if not .Env.DOCKER_IMAGE_TAG }}{{ .Env.DOCKER_REPO }}/testkube-logs-sidecar:{{ .Version }}{{ end }}"
+  - name_template: "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-{{ .Env.SERVICE }}:{{ .Version }}{{ end }}"
     image_templates:
-      - "{{ if not .Env.DOCKER_IMAGE_TAG }}{{ .Env.DOCKER_REPO }}/testkube-logs-sidecar:{{ .Version }}-amd64{{ end }}"
-      - "{{ if not .Env.DOCKER_IMAGE_TAG }}{{ .Env.DOCKER_REPO }}/testkube-logs-sidecar:{{ .Version }}-arm64v8{{ end }}"
-  - name_template: "{{ if not .Env.DOCKER_IMAGE_TAG }}{{ .Env.DOCKER_REPO }}/testkube-logs-sidecar:latest{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-{{ .Env.SERVICE }}:{{ .Version }}-amd64{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-{{ .Env.SERVICE }}:{{ .Version }}-arm64v8{{ end }}"
+  - name_template: "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-{{ .Env.SERVICE }}:latest{{ end }}"
     image_templates:
-      - "{{ if not .Env.DOCKER_IMAGE_TAG }}{{ .Env.DOCKER_REPO }}/testkube-logs-sidecar:{{ .Version }}-amd64{{ end }}"
-      - "{{ if not .Env.DOCKER_IMAGE_TAG }}{{ .Env.DOCKER_REPO }}/testkube-logs-sidecar:{{ .Version }}-arm64v8{{ end }}"
-
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-{{ .Env.SERVICE }}:{{ .Version }}-amd64{{ end }}"
+      - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-{{ .Env.SERVICE }}:{{ .Version }}-arm64v8{{ end }}"
 
 release:
   disable: true

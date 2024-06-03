@@ -14,6 +14,10 @@ env:
   - DOCKER_BUILDX_CACHE_TO={{ if index .Env "DOCKER_BUILDX_CACHE_TO"  }}{{ .Env.DOCKER_BUILDX_CACHE_TO }}{{ else }}type=inline{{ end }}
   # Build image with commit sha tag
   - IMAGE_TAG_SHA={{ if index .Env "IMAGE_TAG_SHA"  }}{{ .Env.IMAGE_TAG_SHA }}{{ else }}{{ end }}
+  # Build Sandbox Image
+  - SANDBOX_IMAGE={{ if index .Env "SANDBOX_IMAGE"  }}{{ .Env.SANDBOX_IMAGE }}{{ else }}{{ end }}
+  - DOCKER_IMAGE_TITLE={{ if index .Env "SANDBOX_IMAGE" }}testkube-sandbox-api-server{{ else }}testkube-api-server{{ end }}
+  - DOCKER_IMAGE_URL={{ if index .Env "SANDBOX_IMAGE" }}https://hub.docker.com/r/kubeshop/testkube-sandbox{{ else }}https://hub.docker.com/r/kubeshop/testkube-api-server{{ end }}
 builds:
   - id: "linux"
     main: ./cmd/api-server
@@ -45,9 +49,11 @@ dockers:
     image_templates:
       - "{{ if .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-api-server:{{ .ShortCommit }}{{ end }}"
       - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-api-server:{{ .Version }}-amd64{{ end }}"
+      - "{{ if .Env.SANDBOX_IMAGE }}{{ .Env.DOCKER_REPO }}/testkube-sandbox:api-server-{{ .Env.BRANCH_IDENTIFIER }}-{{ .ShortCommit }}{{ end }}"
     build_flag_templates:
       - "--platform=linux/amd64"
-      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.title={{ .Env.DOCKER_IMAGE_TITLE }}"
+      - "--label=org.opencontainers.image.url={{ .Env.DOCKER_IMAGE_URL }}"
       - "--label=org.opencontainers.image.created={{ .Date}}"
       - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
       - "--label=org.opencontainers.image.version={{ .Version }}"
@@ -66,7 +72,8 @@ dockers:
     build_flag_templates:
       - "--platform=linux/arm64/v8"
       - "--label=org.opencontainers.image.created={{ .Date }}"
-      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.title={{ .Env.DOCKER_IMAGE_TITLE }}"
+      - "--label=org.opencontainers.image.url={{ .Env.DOCKER_IMAGE_URL }}"
       - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
       - "--label=org.opencontainers.image.version={{ .Version }}"
       - "--builder={{ .Env.DOCKER_BUILDX_BUILDER }}"
