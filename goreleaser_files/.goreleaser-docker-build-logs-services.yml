@@ -58,7 +58,7 @@ dockers:
     goarch: arm64
     image_templates:
       - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-{{ .Env.SERVICE }}:{{ .Version }}-arm64v8{{ end }}"
-      - "{{ if .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-{{ .Env.SERVICE }}:{{ .ShortCommit }}-arm64v8{{ end }}"
+      - "{{ if .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-{{ .Env.SERVICE }}:{{ .ShortCommit }}{{ end }}"
     build_flag_templates:
       - "--platform=linux/arm64/v8"
       - "--label=org.opencontainers.image.created={{ .Date }}"
