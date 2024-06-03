@@ -171,6 +171,7 @@ func (c TestClient) ExecuteTest(id, executionName string, options ExecuteTestOpt
 		RunningContext:                     options.RunningContext,
 		SlavePodRequest:                    options.SlavePodRequest,
 		ExecutionNamespace:                 options.ExecutionNamespace,
+		DisableWebhooks:                    options.DisableWebhooks,
 	}
 
 	body, err := json.Marshal(request)
@@ -215,6 +216,7 @@ func (c TestClient) ExecuteTests(selector string, concurrencyLevel int, options 
 		RunningContext:                     options.RunningContext,
 		SlavePodRequest:                    options.SlavePodRequest,
 		ExecutionNamespace:                 options.ExecutionNamespace,
+		DisableWebhooks:                    options.DisableWebhooks,
 	}
 
 	body, err := json.Marshal(request)

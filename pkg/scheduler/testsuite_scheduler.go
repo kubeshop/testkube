@@ -118,6 +118,10 @@ func (s *Scheduler) executeTestSuite(ctx context.Context, testSuite testkube.Tes
 		request.Name = fmt.Sprintf("ts-%s-%d", testSuite.Name, request.Number)
 	}
 
+	if testSuite.ExecutionRequest != nil && testSuite.ExecutionRequest.DisableWebhooks {
+		request.DisableWebhooks = testSuite.ExecutionRequest.DisableWebhooks
+	}
+
 	testsuiteExecution = testkube.NewStartedTestSuiteExecution(testSuite, request)
 	err = s.testsuiteResults.Insert(ctx, testsuiteExecution)
 	if err != nil {
@@ -505,6 +509,7 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 			PvcTemplate:                  request.PvcTemplate,
 			PvcTemplateReference:         request.PvcTemplateReference,
 			DownloadArtifactExecutionIDs: executionIDs,
+			DisableWebhooks:              request.DisableWebhooks,
 		}
 
 		requests := make([]workerpool.Request[testkube.Test, testkube.ExecutionRequest, testkube.Execution], len(testTuples))

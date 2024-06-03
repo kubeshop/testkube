@@ -44,4 +44,6 @@ type TestSuiteExecution struct {
 	RunningContext *RunningContext   `json:"runningContext,omitempty"`
 	// test suite execution name started the test suite execution
 	TestSuiteExecutionName string `json:"testSuiteExecutionName,omitempty"`
+	// whether webhooks on this execution are disabled
+	DisableWebhooks bool `json:"disableWebhooks,omitempty"`
 }
