@@ -495,7 +495,7 @@ var stdFunctions = map[string]StdFunction{
 		ReturnType: TypeString,
 		Handler: func(value ...StaticValue) (Expression, error) {
 			if len(value) != 1 && len(value) != 2 {
-				return nil, fmt.Errorf(`"relpath" function expects 1-2 arguments, %d provided`, len(value))
+				return nil, fmt.Errorf(`"abspath" function expects 1-2 arguments, %d provided`, len(value))
 			}
 			destinationPath, _ := value[0].StringValue()
 			if filepath.IsAbs(destinationPath) {
