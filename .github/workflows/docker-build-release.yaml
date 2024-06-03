@@ -199,7 +199,7 @@ jobs:
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
           ALPINE_IMAGE: ${{ env.ALPINE_IMAGE }}
           BUSYBOX_IMAGE: ${{ env.BUSYBOX_IMAGE }}
-          DOCKER_IMAGE_TAG: ${{ steps.commit.outputs.short }}
+          IMAGE_TAG_SHA: true
           SERVICE: ${{ matrix.service }}
 
       - name: Push Docker images

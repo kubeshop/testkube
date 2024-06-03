@@ -71,7 +71,6 @@ dockers:
       - "--platform=linux/amd64"
       - "--label=org.opencontainers.image.title={{ .Env.DOCKER_IMAGE_TITLE }}"
       - "--label=org.opencontainers.image.url={{ .Env.DOCKER_IMAGE_URL }}"
-      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
       - "--label=org.opencontainers.image.created={{ .Date}}"
       - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
       - "--builder={{ .Env.DOCKER_BUILDX_BUILDER }}"
