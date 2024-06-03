@@ -653,7 +653,7 @@ jobs:
       - name: Push multi-arch image to the Registry
         run: |
           docker push kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-amd64
-          docker push kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-arm64v8
+          docker push kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-arm64
 
   executor_postman_node21:
     runs-on: ubuntu-latest
