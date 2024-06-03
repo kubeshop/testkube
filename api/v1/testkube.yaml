@@ -3346,6 +3346,7 @@ paths:
         - pro
       parameters:
         - $ref: "#/components/parameters/Selector"
+        - $ref: "#/components/parameters/TestWorkflowNames"
       summary: Delete test workflows
       description: Delete test workflows from the kubernetes cluster
       operationId: deleteTestWorkflows
@@ -9974,6 +9975,13 @@ components:
       schema:
         type: string
         description: Labels to filter by
+    TestWorkflowNames:
+      in: query
+      name: testWorkflowNames
+      schema:
+        items:
+          type: string
+        type: array
     ExecutionSelector:
       in: query
       name: executionSelector
