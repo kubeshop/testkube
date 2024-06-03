@@ -14,7 +14,7 @@ env:
   - IMAGE_TAG_SHA={{ if index .Env "IMAGE_TAG_SHA"  }}{{ .Env.IMAGE_TAG_SHA }}{{ else }}{{ end }}
   # Build Sandbox Image
   - SANDBOX_IMAGE={{ if index .Env "SANDBOX_IMAGE"  }}{{ .Env.SANDBOX_IMAGE }}{{ else }}{{ end }}
-  - DOCKER_IMAGE_TITLE={{ if index .Env "SANDBOX_IMAGE" }}testkube-sandbox{{ else }}testkube-postman-node21{{ end }}
+  - DOCKER_IMAGE_TITLE={{ if index .Env "SANDBOX_IMAGE" }}testkube-sandbox-postman-node21{{ else }}testkube-postman-node21{{ end }}
   - DOCKER_IMAGE_URL={{ if index .Env "SANDBOX_IMAGE" }}https://hub.docker.com/r/kubeshop/testkube-sandbox{{ else }}https://hub.docker.com/r/kubeshop/testkube-postman-executor{{ end }}
 builds:
   - id: "linux"
