@@ -95,6 +95,10 @@ func NewRunTestCmd() *cobra.Command {
 				watchEnabled = true
 			}
 
+			if common.IsBothEnabledAndDisabledSet(cmd) {
+				ui.Failf("both --enable-webhooks and --disable-webhooks flags are set, please use only one")
+			}
+
 			outputFlag := cmd.Flag("output")
 			outputType := render.OutputPretty
 			if outputFlag != nil {
@@ -146,6 +150,13 @@ func NewRunTestCmd() *cobra.Command {
 				ExecutePostRunScriptBeforeScraping: executePostRunScriptBeforeScraping,
 				SourceScripts:                      sourceScripts,
 				ExecutionNamespace:                 executionNamespace,
+			}
+
+			if cmd.Flag("enable-webhooks").Changed {
+				options.DisableWebhooks = false
+			}
+			if cmd.Flag("disable-webhooks").Changed {
+				options.DisableWebhooks = true
 			}
 
 			var fields = []struct {
@@ -469,6 +480,8 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringVar(&executionNamespace, "execution-namespace", "", "namespace for test execution (Pro edition only)")
 	cmd.Flags().StringVar(&debugFile, "debugger-file", "", "store debug info into file, stdout by default")
 	cmd.Flags().BoolVar(&attachDebugger, "attach-debugger", false, "attach simple debugger for job, need KUBECONFIG for the agent to be active")
+	cmd.Flags().Bool("disable-webhooks", false, "disable webhooks")
+	cmd.Flags().Bool("enable-webhooks", false, "enable webhooks")
 
 	return cmd
 }

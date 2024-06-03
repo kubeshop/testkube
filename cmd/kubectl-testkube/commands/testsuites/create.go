@@ -121,6 +121,8 @@ func NewCreateTestSuitesCmd() *cobra.Command {
 	cmd.Flags().StringVar(&scraperTemplateReference, "scraper-template-reference", "", "reference to scraper template to use for the test")
 	cmd.Flags().StringVar(&pvcTemplateReference, "pvc-template-reference", "", "reference to pvc template to use for the test")
 	cmd.Flags().BoolVar(&update, "update", false, "update, if test suite already exists")
+	cmd.Flags().Bool("disable-webhooks", false, "disable webhooks")
+	cmd.Flags().Bool("enable-webhooks", false, "enable webhooks")
 
 	return cmd
 }
