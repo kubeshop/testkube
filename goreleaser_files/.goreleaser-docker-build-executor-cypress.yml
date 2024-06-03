@@ -52,7 +52,7 @@ dockers:
     image_templates:
       - "{{ if not .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .Version }}-{{ .Env.EXECUTOR_VERSION }}-arm64{{ end }}"
     build_flag_templates:
-      - "--platform=linux/amd64"
+      - "--platform=linux/arm64"
       - "--label=org.opencontainers.image.title={{ .Env.DOCKER_IMAGE_TITLE }}"
       - "--label=org.opencontainers.image.url={{ .Env.DOCKER_IMAGE_URL }}"
       - "--builder={{ .Env.DOCKER_BUILDX_BUILDER }}"
