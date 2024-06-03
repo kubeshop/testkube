@@ -95,6 +95,17 @@ func (m *MinioRepository) DeleteOutputByTestWorkflow(ctx context.Context, testWo
 	return nil
 }
 
+func (m *MinioRepository) DeleteOutputForTestWorkflows(ctx context.Context, workflowNames []string) error {
+	log.DefaultLogger.Debugw("deleting output for testWorkflows", "testWorkflowNames", workflowNames)
+	for _, testName := range workflowNames {
+		err := m.DeleteOutputByTestWorkflow(ctx, testName)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (m *MinioRepository) DeleteOutput(ctx context.Context, id string) error {
 	log.DefaultLogger.Debugw("deleting test workflow output", "id", id)
 	return m.storage.DeleteFileFromBucket(ctx, m.bucket, bucketFolder, id)
