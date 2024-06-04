@@ -34,8 +34,8 @@ type configMapFiles struct {
 type ConfigMapFiles interface {
 	Volumes() []corev1.Volume
 	ConfigMaps() []corev1.ConfigMap
-	AddTextFile(content string) (corev1.VolumeMount, corev1.Volume, error)
-	AddFile(content []byte) (corev1.VolumeMount, corev1.Volume, error)
+	AddTextFile(content string, mode *int32) (corev1.VolumeMount, corev1.Volume, error)
+	AddFile(content []byte, mode *int32) (corev1.VolumeMount, corev1.Volume, error)
 	FilesCount() int
 }
 
@@ -60,9 +60,13 @@ func (c *configMapFiles) FilesCount() int {
 	return len(c.Mounts)
 }
 
-func (c *configMapFiles) next(minBytes int) (*corev1.ConfigMap, *corev1.Volume, int) {
+func (c *configMapFiles) next(minBytes int, mode *int32) (*corev1.ConfigMap, *corev1.Volume, int) {
 	for i := range c.Cfgs {
 		size := 0
+		cfgMode := c.Vols[i].ConfigMap.DefaultMode
+		if (cfgMode == nil && mode != nil) || (cfgMode != nil && mode == nil) || (cfgMode != nil && *cfgMode != *mode) {
+			continue
+		}
 		for k := range c.Cfgs[i].Data {
 			size += len(c.Cfgs[i].Data[k])
 		}
@@ -90,6 +94,7 @@ func (c *configMapFiles) next(minBytes int) (*corev1.ConfigMap, *corev1.Volume, 
 		Name: cfg.Name,
 		VolumeSource: corev1.VolumeSource{
 			ConfigMap: &corev1.ConfigMapVolumeSource{
+				DefaultMode:          mode,
 				LocalObjectReference: corev1.LocalObjectReference{Name: cfg.Name},
 			},
 		},
@@ -97,31 +102,31 @@ func (c *configMapFiles) next(minBytes int) (*corev1.ConfigMap, *corev1.Volume, 
 	return &c.Cfgs[index], &c.Vols[index], index
 }
 
-func (c *configMapFiles) AddTextFile(file string) (corev1.VolumeMount, corev1.Volume, error) {
+func (c *configMapFiles) AddTextFile(file string, mode *int32) (corev1.VolumeMount, corev1.Volume, error) {
 	if len(file) > maxConfigMapFileSize {
 		return corev1.VolumeMount{}, corev1.Volume{}, fmt.Errorf("the maximum file size is %s", humanize.Bytes(maxConfigMapFileSize))
 	}
 	hash := fmt.Sprintf("%x", sha256.Sum256([]byte(file)))
 	if _, ok := c.Mounts[hash]; !ok {
-		cfg, vol, index := c.next(len(file))
+		cfg, vol, index := c.next(len(file), mode)
 		key := fmt.Sprintf("%d", len(cfg.Data)+len(cfg.BinaryData))
 		cfg.Data[key] = file
-		c.Mounts[hash] = corev1.VolumeMount{Name: vol.Name, ReadOnly: true, SubPath: key}
+		c.Mounts[hash] = corev1.VolumeMount{Name: vol.Name, SubPath: key}
 		c.VolRefs[hash] = index
 	}
 	return c.Mounts[hash], c.Vols[c.VolRefs[hash]], nil
 }
 
-func (c *configMapFiles) AddFile(file []byte) (corev1.VolumeMount, corev1.Volume, error) {
+func (c *configMapFiles) AddFile(file []byte, mode *int32) (corev1.VolumeMount, corev1.Volume, error) {
 	if len(file) > maxConfigMapFileSize {
 		return corev1.VolumeMount{}, corev1.Volume{}, fmt.Errorf("the maximum file size is %s", humanize.Bytes(maxConfigMapFileSize))
 	}
 	hash := fmt.Sprintf("%x", sha256.Sum256(file))
 	if _, ok := c.Mounts[hash]; !ok {
-		cfg, vol, index := c.next(len(file))
+		cfg, vol, index := c.next(len(file), mode)
 		key := fmt.Sprintf("%d", len(cfg.Data)+len(cfg.BinaryData))
 		cfg.BinaryData[key] = file
-		c.Mounts[hash] = corev1.VolumeMount{Name: vol.Name, ReadOnly: true, SubPath: key}
+		c.Mounts[hash] = corev1.VolumeMount{Name: vol.Name, SubPath: key}
 		c.VolRefs[hash] = index
 	}
 	return c.Mounts[hash], c.Vols[c.VolRefs[hash]], nil

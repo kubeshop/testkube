@@ -158,7 +158,7 @@ func ProcessContentFiles(_ InternalProcessor, layer Intermediate, container Cont
 	}
 	for _, f := range step.Content.Files {
 		if f.ContentFrom == nil {
-			vm, err := layer.AddTextFile(f.Content)
+			vm, err := layer.AddTextFile(f.Content, f.Mode)
 			if err != nil {
 				return nil, fmt.Errorf("file %s: could not append: %s", f.Path, err.Error())
 			}
