@@ -417,17 +417,20 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 			"images.persistence.enabled": strconv.FormatBool(e.enableImageDataPersistentCache),
 			"images.persistence.key":     e.imageDataPersistentCacheKey,
 		}).
-		RegisterStringMap("workflow", map[string]string{
+		Register("workflow", map[string]string{
 			"name": workflow.Name,
 		}).
 		Register("resource", map[string]string{
 			"id":       id,
 			"root":     id,
 			"fsPrefix": "",
-		}).
-		RegisterStringMap("execution", map[string]string{
-			"id": id,
 		})
+	mockExecutionMachine := expressionstcl.NewMachine().Register("execution", map[string]interface{}{
+		"id":          id,
+		"name":        "<mock_name>",
+		"number":      "1",
+		"scheduledAt": now.UTC().Format(constants.RFC3339Millis),
+	})
 
 	// Preserve resolved TestWorkflow
 	resolvedWorkflow := workflow.DeepCopy()
@@ -440,9 +443,9 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		workflow.Spec.Pod.ServiceAccountName = "{{internal.serviceaccount.default}}"
 	}
 
-	// Process the TestWorkflow
-	bundle, err := testworkflowprocessor.NewFullFeatured(e.imageInspector).
-		Bundle(ctx, &workflow, machine)
+	// Validate the TestWorkflow
+	_, err = testworkflowprocessor.NewFullFeatured(e.imageInspector).
+		Bundle(ctx, workflow.DeepCopy(), machine, mockExecutionMachine)
 	if err != nil {
 		return execution, errors.Wrap(err, "processing error")
 	}
@@ -461,6 +464,21 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	next, _ := e.repository.GetByNameAndTestWorkflow(ctx, executionName, workflow.Name)
 	if next.Name == executionName {
 		return execution, errors.Wrap(err, "execution name already exists")
+	}
+
+	// Build machine with actual execution data
+	executionMachine := expressionstcl.NewMachine().Register("execution", map[string]interface{}{
+		"id":          id,
+		"name":        executionName,
+		"number":      number,
+		"scheduledAt": now.UTC().Format(constants.RFC3339Millis),
+	})
+
+	// Process the TestWorkflow
+	bundle, err := testworkflowprocessor.NewFullFeatured(e.imageInspector).
+		Bundle(ctx, &workflow, machine, executionMachine)
+	if err != nil {
+		return execution, errors.Wrap(err, "processing error")
 	}
 
 	// Build Execution entity
