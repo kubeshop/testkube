@@ -295,6 +295,8 @@ func MapContentGitAPIToKube(v testkube.TestWorkflowContentGit) testworkflowsv1.C
 		UsernameFrom: common.MapPtr(v.UsernameFrom, MapEnvVarSourceAPIToKube),
 		Token:        v.Token,
 		TokenFrom:    common.MapPtr(v.TokenFrom, MapEnvVarSourceAPIToKube),
+		SshKey:       v.SshKey,
+		SshKeyFrom:   common.MapPtr(v.SshKeyFrom, MapEnvVarSourceAPIToKube),
 		AuthType:     MapGitAuthTypeAPIToKube(v.AuthType),
 		MountPath:    v.MountPath,
 		Paths:        v.Paths,

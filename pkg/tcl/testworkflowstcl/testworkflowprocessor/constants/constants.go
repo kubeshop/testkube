@@ -37,6 +37,7 @@ var (
 	DefaultInitPath        = filepath.Join(DefaultInternalPath, "init")
 	DefaultStatePath       = filepath.Join(DefaultInternalPath, "state")
 	DefaultTransferDirPath = filepath.Join(DefaultInternalPath, "transfer")
+	DefaultTmpDirPath      = filepath.Join(DefaultInternalPath, "tmp")
 	DefaultTransferPort    = 60433
 	InitScript             = strings.TrimSpace(strings.NewReplacer(
 		"<bin>", InternalBinPath,

@@ -38,8 +38,8 @@ type Intermediate interface {
 
 	AddEmptyDirVolume(source *corev1.EmptyDirVolumeSource, mountPath string) corev1.VolumeMount
 
-	AddTextFile(file string) (corev1.VolumeMount, error)
-	AddBinaryFile(file []byte) (corev1.VolumeMount, error)
+	AddTextFile(file string, mode *int32) (corev1.VolumeMount, error)
+	AddBinaryFile(file []byte, mode *int32) (corev1.VolumeMount, error)
 }
 
 type intermediate struct {
@@ -130,12 +130,12 @@ func (s *intermediate) AddEmptyDirVolume(source *corev1.EmptyDirVolumeSource, mo
 
 // Handling files
 
-func (s *intermediate) AddTextFile(file string) (corev1.VolumeMount, error) {
-	mount, _, err := s.Files.AddTextFile(file)
+func (s *intermediate) AddTextFile(file string, mode *int32) (corev1.VolumeMount, error) {
+	mount, _, err := s.Files.AddTextFile(file, mode)
 	return mount, err
 }
 
-func (s *intermediate) AddBinaryFile(file []byte) (corev1.VolumeMount, error) {
-	mount, _, err := s.Files.AddFile(file)
+func (s *intermediate) AddBinaryFile(file []byte, mode *int32) (corev1.VolumeMount, error) {
+	mount, _, err := s.Files.AddFile(file, mode)
 	return mount, err
 }
