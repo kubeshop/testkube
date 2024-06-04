@@ -151,7 +151,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	// Finalize ConfigMaps
 	configMaps := layer.ConfigMaps()
 	for i := range configMaps {
-		AnnotateControlledBy(&configMaps[i], "{{resource.rootId}}", "{{resource.id}}")
+		AnnotateControlledBy(&configMaps[i], "{{resource.root}}", "{{resource.id}}")
 		err = expressionstcl.FinalizeForce(&configMaps[i], machines...)
 		if err != nil {
 			return nil, errors.Wrap(err, "finalizing ConfigMap")
@@ -161,7 +161,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	// Finalize Secrets
 	secrets := layer.Secrets()
 	for i := range secrets {
-		AnnotateControlledBy(&secrets[i], "{{resource.rootId}}", "{{resource.id}}")
+		AnnotateControlledBy(&secrets[i], "{{resource.root}}", "{{resource.id}}")
 		err = expressionstcl.FinalizeForce(&secrets[i], machines...)
 		if err != nil {
 			return nil, errors.Wrap(err, "finalizing Secret")
@@ -180,7 +180,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	// Append main label for the pod
 	layer.AppendPodConfig(&testworkflowsv1.PodConfig{
 		Labels: map[string]string{
-			constants.RootResourceIdLabelName: "{{resource.rootId}}",
+			constants.RootResourceIdLabelName: "{{resource.root}}",
 			constants.ResourceIdLabelName:     "{{resource.id}}",
 		},
 	})
@@ -323,7 +323,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 			ResourceClaims:            podConfig.ResourceClaims,
 		},
 	}
-	AnnotateControlledBy(&podSpec, "{{resource.rootId}}", "{{resource.id}}")
+	AnnotateControlledBy(&podSpec, "{{resource.root}}", "{{resource.id}}")
 	err = expressionstcl.FinalizeForce(&podSpec, machines...)
 	if err != nil {
 		return nil, errors.Wrap(err, "finalizing pod template spec")
@@ -363,7 +363,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 			ActiveDeadlineSeconds: jobConfig.ActiveDeadlineSeconds,
 		},
 	}
-	AnnotateControlledBy(&jobSpec, "{{resource.rootId}}", "{{resource.id}}")
+	AnnotateControlledBy(&jobSpec, "{{resource.root}}", "{{resource.id}}")
 	err = expressionstcl.FinalizeForce(&jobSpec, machines...)
 	if err != nil {
 		return nil, errors.Wrap(err, "finalizing job spec")

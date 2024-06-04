@@ -33,6 +33,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowcontroller"
+	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
 )
 
 func MapDynamicListToStringList(list []interface{}) []string {
@@ -187,11 +188,20 @@ func CreateExecutionMachine(prefix string, index int64) (string, expressionstcl.
 		fsPrefix = fmt.Sprintf("%s/%s", env.Config().Execution.FSPrefix, fsPrefix)
 	}
 	return id, expressionstcl.NewMachine().
-		Register("execution.id", env.ExecutionId()).
-		Register("resource.rootId", env.ExecutionId()).
-		Register("resource.id", id).
-		Register("resource.fsPrefix", fsPrefix).
-		Register("workflow.name", env.WorkflowName())
+		Register("workflow", map[string]string{
+			"name": env.WorkflowName(),
+		}).
+		Register("resource", map[string]string{
+			"rootId":   env.ExecutionId(),
+			"id":       id,
+			"fsPrefix": fsPrefix,
+		}).
+		Register("execution", map[string]interface{}{
+			"id":          env.ExecutionId(),
+			"name":        env.ExecutionName(),
+			"number":      env.ExecutionNumber(),
+			"scheduledAt": env.ExecutionScheduledAt().UTC().Format(constants.RFC3339Millis),
+		})
 }
 
 func GetServiceByResourceId(jobName string) (string, int64) {
