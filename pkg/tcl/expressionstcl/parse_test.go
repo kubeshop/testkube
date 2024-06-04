@@ -293,7 +293,6 @@ a:
 	assert.Equal(t, `[5,6,7]`, MustCompile(`range(5, 8)`).String())
 	assert.InDelta(t, time.Now().UnixMilli(), must(time.Parse(RFC3339Millis, must(MustCompile(`date()`).Static().StringValue()))).UnixMilli(), 5)
 	assert.Equal(t, time.Now().Truncate(24*time.Hour).UnixMilli(), must(time.Parse("2006-01-02", must(MustCompile(`date("2006-01-02")`).Static().StringValue()))).UnixMilli())
-	assert.Equal(t, time.Now().Truncate(24*time.Hour).UnixMilli(), must(MustCompile(`date()`).Static().StringValue()))
 }
 
 func TestCompileWildcard_Unknown(t *testing.T) {
