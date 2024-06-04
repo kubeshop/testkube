@@ -29,6 +29,7 @@ const (
 	RootResourceIdLabelName   = "testworkflowid-root"
 	GroupIdLabelName          = "testworkflowid-group"
 	SignatureAnnotationName   = "testworkflows.testkube.io/signature"
+	RFC3339Millis             = "2006-01-02T15:04:05.000Z07:00"
 )
 
 var (

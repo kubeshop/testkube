@@ -9,8 +9,11 @@
 package env
 
 import (
+	"time"
+
 	"github.com/kelseyhightower/envconfig"
 
+	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -42,6 +45,9 @@ type envCloudConfig struct {
 type envExecutionConfig struct {
 	WorkflowName   string `envconfig:"TK_WF"`
 	Id             string `envconfig:"TK_EX"`
+	Name           string `envconfig:"TK_EXN"`
+	Number         int64  `envconfig:"TK_EXC"`
+	ScheduledAt    string `envconfig:"TK_EXS"`
 	ResourceId     string `envconfig:"TK_EXI"`
 	RootResourceId string `envconfig:"TK_EXR"`
 	FSPrefix       string `envconfig:"TK_FS"`
@@ -130,6 +136,19 @@ func WorkflowName() string {
 
 func ExecutionId() string {
 	return Config().Execution.Id
+}
+
+func ExecutionName() string {
+	return Config().Execution.Name
+}
+
+func ExecutionNumber() int64 {
+	return Config().Execution.Number
+}
+
+func ExecutionScheduledAt() time.Time {
+	t, _ := time.Parse(constants.RFC3339Millis, Config().Execution.ScheduledAt)
+	return t
 }
 
 func JUnitParserEnabled() bool {

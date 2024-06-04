@@ -67,6 +67,9 @@ while the others may be accessible only dynamically in the container.
 | `never`                                                    | ✅                    | Alias for `false`                                                                 |
 | `config` variables (like `config.abc`)                     | ✅                    | Values provided for the configuration                                             |
 | `execution.id`                                             | ✅                    | TestWorkflow Execution's ID                                                       |
+| `execution.name`                                           | ✅                    | TestWorkflow Execution's name                                                     |
+| `execution.number`                                         | ✅                    | TestWorkflow Execution's sequence number                                          |
+| `execution.scheduledAt`                                    | ✅                    | TestWorkflow Execution's scheduled at date                                        |
 | `resource.id`                                              | ✅                    | Either execution ID, or unique ID for parallel steps and services                 |
 | `resource.root`                                            | ✅                    | Either execution ID, or nested resource ID, of the resource that has scheduled it |
 | `namespace`                                                | ✅                    | Namespace where the execution will be scheduled                                   |
