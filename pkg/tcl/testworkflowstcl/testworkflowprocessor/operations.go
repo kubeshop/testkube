@@ -267,6 +267,19 @@ func ProcessContentGit(_ InternalProcessor, layer Intermediate, container Contai
 		args = append(args, "-t", step.Content.Git.Token)
 	}
 
+	// Provide SSH key
+	if step.Content.Git.SshKeyFrom != nil {
+		container.AppendEnv(corev1.EnvVar{Name: "TK_SSH_KEY", ValueFrom: step.Content.Git.SshKeyFrom})
+		args = append(args, "-s", "{{env.TK_SSH_KEY}}")
+	} else if step.Content.Git.SshKey != "" {
+		args = append(args, "-s", step.Content.Git.SshKey)
+	}
+
+	// Provide temporary directory for SSH key to avoid issues with permissions
+	if step.Content.Git.SshKeyFrom != nil || step.Content.Git.SshKey != "" {
+		container.AppendVolumeMounts(layer.AddEmptyDirVolume(nil, constants.DefaultTmpDirPath))
+	}
+
 	// Provide auth type
 	if step.Content.Git.AuthType != "" {
 		args = append(args, "-a", string(step.Content.Git.AuthType))
