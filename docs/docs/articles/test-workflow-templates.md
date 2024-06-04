@@ -91,4 +91,4 @@ Example Test Workflow Templates can be found in the Testkube repository:
 
 - [Cypress](https://github.com/kubeshop/testkube/blob/develop/test/test-workflow-templates/cypress.yaml)
 - [k6](https://github.com/kubeshop/testkube/blob/develop/test/test-workflow-templates/k6.yaml)
-- [postman](https://github.com/kubeshop/testkube/blob/develop/test/test-workflow-templates/cypress.yaml)
+- [postman](https://github.com/kubeshop/testkube/blob/develop/test/test-workflow-templates/postman.yaml)
