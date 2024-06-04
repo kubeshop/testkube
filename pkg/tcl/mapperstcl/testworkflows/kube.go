@@ -15,6 +15,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	commonv1 "github.com/kubeshop/testkube-operator/api/common/v1"
 	executorv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
 	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
 	testsuitesv3 "github.com/kubeshop/testkube-operator/api/testsuite/v3"
@@ -131,9 +132,9 @@ func MapTestContentKubeToContentKube(v testsv3.TestContent) testworkflowsv1.Cont
 	}
 }
 
-func MapExecutionRequestKubeToContainerConfigKube(v testsv3.ExecutionRequest) testworkflowsv1.ContainerConfig {
+func MapVariableKubeToEnvVarKube(variables map[string]commonv1.Variable) []corev1.EnvVar {
 	var env []corev1.EnvVar
-	for _, e := range v.Variables {
+	for _, e := range variables {
 		if e.Value != "" {
 			env = append(env, corev1.EnvVar{
 				Name:  e.Name,
@@ -153,6 +154,16 @@ func MapExecutionRequestKubeToContainerConfigKube(v testsv3.ExecutionRequest) te
 			})
 		}
 	}
+
+	return env
+}
+
+func MapVariableKubeToTestVariableKube(v testsv3.Variable) commonv1.Variable {
+	return commonv1.Variable(v)
+}
+
+func MapExecutionRequestKubeToContainerConfigKube(v testsv3.ExecutionRequest) testworkflowsv1.ContainerConfig {
+	env := MapVariableKubeToEnvVarKube(common.MapMap(v.Variables, MapVariableKubeToTestVariableKube))
 
 	var envFrom []corev1.EnvFromSource
 	for _, configMap := range v.EnvConfigMaps {
@@ -329,31 +340,13 @@ func MapTestKubeToTestWorkflowKube(v testsv3.Test, templateName string) testwork
 	}
 }
 
-func MapTestSuiteExecutionRequestKubeToContainerConfigKube(v testsuitesv3.TestSuiteExecutionRequest) testworkflowsv1.ContainerConfig {
-	var env []corev1.EnvVar
-	for _, e := range v.Variables {
-		if e.Value != "" {
-			env = append(env, corev1.EnvVar{
-				Name:  e.Name,
-				Value: e.Value,
-			})
-		} else if e.ValueFrom.SecretKeyRef != nil {
-			env = append(env, corev1.EnvVar{
-				Name: e.Name,
-				ValueFrom: &corev1.EnvVarSource{
-					SecretKeyRef: &corev1.SecretKeySelector{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: e.ValueFrom.SecretKeyRef.Name,
-						},
-						Key: e.ValueFrom.SecretKeyRef.Key,
-					},
-				},
-			})
-		}
-	}
+func MapVariableKubeToTestSuiteVariableKube(v testsuitesv3.Variable) commonv1.Variable {
+	return commonv1.Variable(v)
+}
 
+func MapTestSuiteExecutionRequestKubeToContainerConfigKube(v testsuitesv3.TestSuiteExecutionRequest) testworkflowsv1.ContainerConfig {
 	return testworkflowsv1.ContainerConfig{
-		Env: env,
+		Env: MapVariableKubeToEnvVarKube(common.MapMap(v.Variables, MapVariableKubeToTestSuiteVariableKube)),
 	}
 }
 
@@ -368,7 +361,7 @@ func MapTestSuiteExecutionRequestKubeToJobConfigKube(v testsuitesv3.TestSuiteExe
 	}
 
 	return testworkflowsv1.JobConfig{
-		Labels:    v.ExecutionLabels,
+		Labels:    labels,
 		Namespace: v.Namespace,
 	}
 }
@@ -388,31 +381,9 @@ func MapTestSuiteStepExecutionRequestKubeToStepDefaultsKube(v *testsuitesv3.Test
 		return testworkflowsv1.StepDefaults{}
 	}
 
-	var env []corev1.EnvVar
-	for _, e := range v.Variables {
-		if e.Value != "" {
-			env = append(env, corev1.EnvVar{
-				Name:  e.Name,
-				Value: e.Value,
-			})
-		} else if e.ValueFrom.SecretKeyRef != nil {
-			env = append(env, corev1.EnvVar{
-				Name: e.Name,
-				ValueFrom: &corev1.EnvVarSource{
-					SecretKeyRef: &corev1.SecretKeySelector{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: e.ValueFrom.SecretKeyRef.Name,
-						},
-						Key: e.ValueFrom.SecretKeyRef.Key,
-					},
-				},
-			})
-		}
-	}
-
 	return testworkflowsv1.StepDefaults{
 		Container: &testworkflowsv1.ContainerConfig{
-			Env:     env,
+			Env:     MapVariableKubeToEnvVarKube(common.MapMap(v.Variables, MapVariableKubeToTestSuiteVariableKube)),
 			Command: &v.Command,
 			Args:    &v.Args,
 		},
