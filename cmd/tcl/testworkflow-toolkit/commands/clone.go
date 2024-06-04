@@ -14,8 +14,10 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/kballard/go-shellquote"
 	"github.com/spf13/cobra"
 
+	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -24,6 +26,7 @@ func NewCloneCmd() *cobra.Command {
 		paths    []string
 		username string
 		token    string
+		sshKey   string
 		authType string
 		revision string
 	)
@@ -63,6 +66,14 @@ func NewCloneCmd() *cobra.Command {
 				}
 			}
 
+			// Use the SSH key
+			if sshKey != "" {
+				sshKeyPath := filepath.Join(constants.DefaultTmpDirPath, "id_rsa")
+				err := os.WriteFile(sshKeyPath, []byte(sshKey), 0400)
+				ui.ExitOnError("saving SSH key temporarily", err)
+				os.Setenv("GIT_SSH_COMMAND", shellquote.Join("ssh", "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null", "-i", sshKeyPath))
+			}
+
 			// Mark directory as safe
 			configArgs := []string{"-c", fmt.Sprintf("safe.directory=%s", outputPath), "-c", "advice.detachedHead=false"}
 
@@ -100,6 +111,7 @@ func NewCloneCmd() *cobra.Command {
 	cmd.Flags().StringSliceVarP(&paths, "paths", "p", nil, "paths for sparse checkout")
 	cmd.Flags().StringVarP(&username, "username", "u", "", "")
 	cmd.Flags().StringVarP(&token, "token", "t", "", "")
+	cmd.Flags().StringVarP(&sshKey, "sshKey", "s", "", "")
 	cmd.Flags().StringVarP(&authType, "authType", "a", "basic", "allowed: basic, header")
 	cmd.Flags().StringVarP(&revision, "revision", "r", "", "commit hash, branch name or tag")
 

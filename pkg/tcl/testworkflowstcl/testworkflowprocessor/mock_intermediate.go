@@ -36,18 +36,18 @@ func (m *MockIntermediate) EXPECT() *MockIntermediateMockRecorder {
 }
 
 // AddBinaryFile mocks base method.
-func (m *MockIntermediate) AddBinaryFile(arg0 []byte) (v10.VolumeMount, error) {
+func (m *MockIntermediate) AddBinaryFile(arg0 []byte, arg1 *int32) (v10.VolumeMount, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddBinaryFile", arg0)
+	ret := m.ctrl.Call(m, "AddBinaryFile", arg0, arg1)
 	ret0, _ := ret[0].(v10.VolumeMount)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // AddBinaryFile indicates an expected call of AddBinaryFile.
-func (mr *MockIntermediateMockRecorder) AddBinaryFile(arg0 interface{}) *gomock.Call {
+func (mr *MockIntermediateMockRecorder) AddBinaryFile(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddBinaryFile", reflect.TypeOf((*MockIntermediate)(nil).AddBinaryFile), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddBinaryFile", reflect.TypeOf((*MockIntermediate)(nil).AddBinaryFile), arg0, arg1)
 }
 
 // AddConfigMap mocks base method.
@@ -93,18 +93,18 @@ func (mr *MockIntermediateMockRecorder) AddSecret(arg0 interface{}) *gomock.Call
 }
 
 // AddTextFile mocks base method.
-func (m *MockIntermediate) AddTextFile(arg0 string) (v10.VolumeMount, error) {
+func (m *MockIntermediate) AddTextFile(arg0 string, arg1 *int32) (v10.VolumeMount, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddTextFile", arg0)
+	ret := m.ctrl.Call(m, "AddTextFile", arg0, arg1)
 	ret0, _ := ret[0].(v10.VolumeMount)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // AddTextFile indicates an expected call of AddTextFile.
-func (mr *MockIntermediateMockRecorder) AddTextFile(arg0 interface{}) *gomock.Call {
+func (mr *MockIntermediateMockRecorder) AddTextFile(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddTextFile", reflect.TypeOf((*MockIntermediate)(nil).AddTextFile), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddTextFile", reflect.TypeOf((*MockIntermediate)(nil).AddTextFile), arg0, arg1)
 }
 
 // AddVolume mocks base method.

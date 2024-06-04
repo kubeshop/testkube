@@ -8621,6 +8621,11 @@ components:
           description: plain text token to fetch with
         tokenFrom:
           $ref: "#/components/schemas/EnvVarSource"
+        sshKey:
+          type: string
+          description: plain text SSH private key to fetch with
+        sshKeyFrom:
+          $ref: "#/components/schemas/EnvVarSource"
         authType:
           $ref: "#/components/schemas/ContentGitAuthType"
         mountPath:
