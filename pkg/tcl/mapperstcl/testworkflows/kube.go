@@ -409,7 +409,7 @@ func MapTestSuiteStepSpecKubeToStepKube(v testsuitesv3.TestSuiteStepSpec) testwo
 		StepControl:  MapTestSuiteStepExecutionRequestKubeToStepControlKube(v.ExecutionRequest),
 		StepDefaults: MapTestSuiteStepExecutionRequestKubeToStepDefaultsKube(v.ExecutionRequest),
 		StepOperations: testworkflowsv1.StepOperations{
-			Delay:   fmt.Sprint(v.Delay),
+			Delay:   fmt.Sprint(v.Delay.Duration),
 			Execute: execute,
 		},
 	}
@@ -427,7 +427,7 @@ func MapTestSuiteBatchStepKubeToStepKube(v testsuitesv3.TestSuiteBatchStep) test
 	}
 }
 
-func MapTestSuiteKubeToTestWorkflowKube(v testsuitesv3.TestSuite, templateName string) testworkflowsv1.TestWorkflow {
+func MapTestSuiteKubeToTestWorkflowKube(v testsuitesv3.TestSuite) testworkflowsv1.TestWorkflow {
 	var events []testworkflowsv1.Event
 	if v.Spec.Schedule != "" {
 		events = append(events, testworkflowsv1.Event{

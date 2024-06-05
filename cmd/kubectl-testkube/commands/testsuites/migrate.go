@@ -1,17 +1,27 @@
 package testsuites
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
 
-	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
-	internalcommon "github.com/kubeshop/testkube/internal/common"
-	testsuitesmapper "github.com/kubeshop/testkube/pkg/mapper/testsuites"
-	testworkflowmappers "github.com/kubeshop/testkube/pkg/tcl/mapperstcl/testworkflows"
+	"github.com/kubeshop/testkube/pkg/api/v1/client"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
+var (
+	printedExecutors = make(map[string]struct{})
+	printedTests     = make(map[string]struct{})
+)
+
 func NewMigrateTestSuitesCmd() *cobra.Command {
+	var (
+		migrateExecutors bool
+		migrateTests     bool
+	)
+
 	cmd := &cobra.Command{
 		Use:     "testsuite <testName>",
 		Aliases: []string{"testsuites", "ts"},
@@ -22,47 +32,73 @@ func NewMigrateTestSuitesCmd() *cobra.Command {
 			client, _, err := common.GetClient(cmd)
 			ui.ExitOnError("getting client", err)
 
-			var name string
 			if len(args) > 0 {
-				name = args[0]
-				testSuite, err := client.GetTestSuite(name)
+				testSuite, err := client.GetTestSuite(args[0])
 				ui.ExitOnError("getting test suite in namespace "+namespace, err)
 
-				ui.NL()
-				ui.Info("Test workflow:")
-				testSuiteCR, err := testsuitesmapper.MapAPIToCR(testSuite)
-				ui.ExitOnError("mapping obj", err)
+				if migrateTests {
+					printTestSuiteTests(client, namespace, testSuite, migrateExecutors)
+				}
 
-				testWorkflow := testworkflowmappers.MapTestSuiteKubeToTestWorkflowKube(testSuiteCR, "")
-				b, err := internalcommon.SerializeCRDs([]testworkflowsv1.TestWorkflow{testWorkflow}, internalcommon.SerializeOptions{
-					OmitCreationTimestamp: true,
-					CleanMeta:             true,
-					Kind:                  testworkflowsv1.Resource,
-					GroupVersion:          &testworkflowsv1.GroupVersion,
-				})
-				ui.ExitOnError("serializing obj", err)
-				ui.Info(string(b))
+				common.PrintTestWorkflowCRDForTestSuite(testSuite)
 			} else {
 				testSuites, err := client.ListTestSuites("")
 				ui.ExitOnError("getting all test suites in namespace "+namespace, err)
 
-				for _, testSuite := range testSuites {
-					testSuiteCR, err := testsuitesmapper.MapAPIToCR(testSuite)
-					ui.ExitOnError("mapping obj", err)
+				for i, testSuite := range testSuites {
+					if migrateTests {
+						printTestSuiteTests(client, namespace, testSuite, migrateExecutors)
+					}
 
-					testWorkflow := testworkflowmappers.MapTestSuiteKubeToTestWorkflowKube(testSuiteCR, "")
-					b, err := internalcommon.SerializeCRDs([]testworkflowsv1.TestWorkflow{testWorkflow}, internalcommon.SerializeOptions{
-						OmitCreationTimestamp: true,
-						CleanMeta:             true,
-						Kind:                  testworkflowsv1.Resource,
-						GroupVersion:          &testworkflowsv1.GroupVersion,
-					})
-					ui.ExitOnError("serializing obj", err)
-					ui.Info(string(b))
+					common.PrintTestWorkflowCRDForTestSuite(testSuite)
+					if i != len(testSuites)-1 {
+						fmt.Printf("\n---\n\n")
+					}
 				}
 			}
 		},
 	}
 
+	cmd.Flags().BoolVar(&migrateTests, "migrate-tests", false, "migrate tests for test suites")
+	cmd.Flags().BoolVar(&migrateExecutors, "migrate-executors", true, "migrate executors for tests")
+
 	return cmd
+}
+
+func printTestSuiteTests(client client.Client, namespace string, testSuite testkube.TestSuite, migrateExecutors bool) {
+	executors, err := client.ListExecutors("")
+	ui.ExitOnError("getting all tests in namespace "+namespace, err)
+
+	executorTypes := make(map[string]testkube.ExecutorDetails)
+	for _, executor := range executors {
+		for _, executorType := range executor.Executor.Types {
+			executorTypes[executorType] = executor
+		}
+	}
+
+	testNames := testSuite.GetTestNames()
+	for _, testName := range testNames {
+		test, err := client.GetTest(testName)
+		ui.ExitOnError("getting test in namespace "+namespace, err)
+
+		templateName := ""
+		if executor, ok := executorTypes[test.Type_]; ok {
+			templateName = executor.Name
+			if official, ok := common.OfficialTestWorkflowTemplates[templateName]; !ok {
+				if _, ok = printedExecutors[templateName]; !ok && migrateExecutors {
+					common.PrintTestWorkflowTemplateCRDForExecutor(executor)
+					fmt.Printf("\n---\n\n")
+					printedExecutors[templateName] = struct{}{}
+				}
+			} else {
+				templateName = official
+			}
+		}
+
+		if _, ok := printedTests[testName]; !ok {
+			common.PrintTestWorkflowCRDForTest(test, templateName)
+			fmt.Printf("\n---\n\n")
+			printedTests[testName] = struct{}{}
+		}
+	}
 }
