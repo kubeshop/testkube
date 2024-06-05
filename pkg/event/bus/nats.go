@@ -149,5 +149,5 @@ func (n *NATSBus) Close() error {
 }
 
 func (n *NATSBus) queueName(subscription, queue string) string {
-	return fmt.Sprintf("%s.%s", SubscriptionName, queue)
+	return fmt.Sprintf("%s.%s", subscription, queue)
 }
