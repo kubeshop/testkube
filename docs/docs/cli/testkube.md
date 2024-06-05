@@ -37,7 +37,7 @@ testkube [flags]
 * [testkube get](testkube_get.md)	 - Get resources
 * [testkube init](testkube_init.md)	 - Init Testkube profiles(standalone-agent|demo|agent)
 * [testkube login](testkube_login.md)	 - Login to Testkube Pro
-* [testkube migrate](testkube_migrate.md)	 - manual migrate command
+* [testkube migrate](testkube_migrate.md)	 - Migrate resources
 * [testkube pro](testkube_pro.md)	 - Testkube Pro commands
 * [testkube purge](testkube_purge.md)	 - Uninstall Testkube from your current kubectl context
 * [testkube run](testkube_run.md)	 - Runs tests, test suites or test workflows
