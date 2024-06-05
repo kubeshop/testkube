@@ -8,7 +8,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
-func NewAgentDebugCmd() *cobra.Command {
+func NewDebugAgentCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "debug",
