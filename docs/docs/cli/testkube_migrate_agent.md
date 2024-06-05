@@ -1,19 +1,19 @@
-## testkube migrate
+## testkube migrate agent
 
-Migrate resources
+manual migrate agent command
 
 ### Synopsis
 
-Migrate available resources, migrate single item or list
+migrate agent command will run agent migrations greater or equals current version
 
 ```
-testkube migrate <resourceName> [flags]
+testkube migrate agent [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for migrate
+  -h, --help   help for agent
 ```
 
 ### Options inherited from parent commands
@@ -30,8 +30,5 @@ testkube migrate <resourceName> [flags]
 
 ### SEE ALSO
 
-* [testkube](testkube.md)	 - Testkube entrypoint for kubectl plugin
-* [testkube migrate agent](testkube_migrate_agent.md)	 - manual migrate agent command
-* [testkube migrate test](testkube_migrate_test.md)	 - Migrate all available tests to test workflows
-* [testkube migrate testsuite](testkube_migrate_testsuite.md)	 - Migrate all available test suites to test workflows
+* [testkube migrate](testkube_migrate.md)	 - Migrate resources
 

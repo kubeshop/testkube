@@ -1,19 +1,20 @@
-## testkube migrate
+## testkube migrate test
 
-Migrate resources
+Migrate all available tests to test workflows
 
 ### Synopsis
 
-Migrate available resources, migrate single item or list
+Migrate all available tests to test workflows from given namespace - if no namespace given "testkube" namespace is used
 
 ```
-testkube migrate <resourceName> [flags]
+testkube migrate test <testName> [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for migrate
+  -h, --help                help for test
+      --migrate-executors   migrate executors for tests (default true)
 ```
 
 ### Options inherited from parent commands
@@ -30,8 +31,5 @@ testkube migrate <resourceName> [flags]
 
 ### SEE ALSO
 
-* [testkube](testkube.md)	 - Testkube entrypoint for kubectl plugin
-* [testkube migrate agent](testkube_migrate_agent.md)	 - manual migrate agent command
-* [testkube migrate test](testkube_migrate_test.md)	 - Migrate all available tests to test workflows
-* [testkube migrate testsuite](testkube_migrate_testsuite.md)	 - Migrate all available test suites to test workflows
+* [testkube migrate](testkube_migrate.md)	 - Migrate resources
 
