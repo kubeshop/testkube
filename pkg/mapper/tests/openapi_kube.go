@@ -835,3 +835,20 @@ func MapTestSuiteExecutionStatusToExecutionStatus(testSuiteStatus *testkube.Test
 
 	return testStatus
 }
+
+// MapTestAPIToCR maps OpenAPI spec to test CRD
+func MapTestAPIToCR(test testkube.Test) (crTest testsv3.Test) {
+	crTest.Name = test.Name
+	crTest.Namespace = test.Namespace
+	crTest.Spec.Description = test.Description
+	crTest.Spec.Content = MapContentToSpecContent(test.Content)
+	crTest.CreationTimestamp.Time = test.Created
+	crTest.Spec.Source = test.Source
+	crTest.Spec.Type_ = test.Type_
+	crTest.Labels = test.Labels
+	crTest.Spec.Schedule = test.Schedule
+	crTest.Spec.ExecutionRequest = MapExecutionRequestToSpecExecutionRequest(test.ExecutionRequest)
+	crTest.Spec.Uploads = test.Uploads
+	crTest.Status = MapStatusToSpec(test.Status)
+	return
+}

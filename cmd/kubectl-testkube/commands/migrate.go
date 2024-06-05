@@ -3,23 +3,38 @@ package commands
 import (
 	"github.com/spf13/cobra"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/agent"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/tests"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testsuites"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 func NewMigrateCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "migrate",
-		Short: "manual migrate command",
-		Long:  `migrate command will run migrations greater or equals current version`,
+		Use:         "migrate <resourceName>",
+		Short:       "Migrate resources",
+		Long:        `Migrate available resources, migrate single item or list`,
+		Annotations: map[string]string{cmdGroupAnnotation: cmdGroupCommands},
 		Run: func(cmd *cobra.Command, args []string) {
-			hasMigrations, err := common.RunMigrations(cmd)
-			ui.ExitOnError("Running migrations", err)
-			if hasMigrations {
-				ui.Success("All migrations executed successfully")
-			}
+			err := cmd.Help()
+			ui.PrintOnError("Displaying help", err)
+		},
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			cfg, err := config.Load()
+			ui.ExitOnError("loading config", err)
+			common.UiContextHeader(cmd, cfg)
+
+			validator.PersistentPreRunVersionCheck(cmd, common.Version)
+
 		},
 	}
+
+	cmd.AddCommand(tests.NewMigrateTestsCmd())
+	cmd.AddCommand(testsuites.NewMigrateTestSuitesCmd())
+	cmd.AddCommand(agent.NewMigrateAgentCmd())
 
 	return cmd
 }
