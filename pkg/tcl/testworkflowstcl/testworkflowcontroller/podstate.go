@@ -21,7 +21,10 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 )
 
-const eventBufferSize = 20
+const (
+	eventBufferSize  = 20
+	alignmentTimeout = 2 * time.Second
+)
 
 var (
 	ErrNotTerminatedYet = errors.New("the container is not terminated yet")
@@ -107,6 +110,44 @@ func (p *podState) setQueuedAt(name string, ts time.Time) {
 	}
 }
 
+func (p *podState) alignQueuedAt(name string, ts time.Time) {
+	go func() {
+		select {
+		case <-time.After(alignmentTimeout):
+		case <-p.ctx.Done():
+			return
+		}
+
+		p.mu.Lock()
+		hasQueued := p.queued[name].IsZero() || !p.queued[name].Before(ts)
+		p.mu.Unlock()
+		if hasQueued {
+			p.setQueuedAt(name, ts)
+		}
+	}()
+}
+
+func (p *podState) alignStartedAt(name string, ts time.Time) {
+	go func() {
+		select {
+		case <-time.After(alignmentTimeout):
+		case <-p.ctx.Done():
+			return
+		}
+
+		p.mu.Lock()
+		hasQueued := p.queued[name].IsZero() || !p.queued[name].Before(ts)
+		hasStarted := p.started[name].IsZero() || !p.started[name].Before(ts)
+		p.mu.Unlock()
+		if hasQueued {
+			p.setQueuedAt(name, ts)
+		}
+		if hasStarted {
+			p.setStartedAt(name, ts)
+		}
+	}()
+}
+
 func (p *podState) setStartedAt(name string, ts time.Time) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -116,6 +157,7 @@ func (p *podState) setStartedAt(name string, ts time.Time) {
 		w := p.preStartWatcher(name)
 		w.Send(podStateUpdate{Started: &ts})
 		w.Close()
+		p.alignQueuedAt(name, ts)
 	}
 }
 
@@ -129,6 +171,7 @@ func (p *podState) setFinishedAt(name string, ts time.Time) {
 			close(p.finishedCh[name])
 			delete(p.finishedCh, name)
 		}
+		p.alignStartedAt(name, ts)
 	}
 }
 
