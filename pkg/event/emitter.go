@@ -181,7 +181,7 @@ func (e *Emitter) notifyHandler(l common.Listener) bus.Handler {
 	return func(event testkube.Event) error {
 		if event.Valid(l.Selector(), l.Events()) {
 			result := l.Notify(event)
-			log.Tracew(logger, "listener notified", append(event.Log(), "result", result))
+			log.Tracew(logger, "listener notified", append(event.Log(), "result", result)...)
 		} else {
 			log.Tracew(logger, "dropping event not matching selector or type", event.Log()...)
 		}
