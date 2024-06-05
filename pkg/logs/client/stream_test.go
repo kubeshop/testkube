@@ -113,7 +113,10 @@ func TestStream_StartStop(t *testing.T) {
 }
 
 func TestStream_Name(t *testing.T) {
-	client, err := NewNatsLogStream(nil)
+	ns, nc := bus.TestServerWithConnection()
+	defer ns.Shutdown()
+
+	client, err := NewNatsLogStream(nc)
 	assert.NoError(t, err)
 
 	t.Run("passed one string param", func(t *testing.T) {
