@@ -308,7 +308,7 @@ func KubectlScaleDeployment(namespace, deployment string, replicas int) (string,
 	return strings.TrimSpace(string(out)), nil
 }
 
-func RunMigrations(cmd *cobra.Command) (hasMigrations bool, err error) {
+func RunAgentMigrations(cmd *cobra.Command) (hasMigrations bool, err error) {
 	client, _, err := GetClient(cmd)
 	ui.ExitOnError("getting client", err)
 
@@ -319,10 +319,10 @@ func RunMigrations(cmd *cobra.Command) (hasMigrations bool, err error) {
 		ui.Failf("Can't detect cluster version")
 	}
 
-	ui.Info("Available migrations for", info.Version)
+	ui.Info("Available agent migrations for", info.Version)
 	results := migrations.Migrator.GetValidMigrations(info.Version, migrator.MigrationTypeClient)
 	if len(results) == 0 {
-		ui.Warn("No migrations available for", info.Version)
+		ui.Warn("No agent migrations available for", info.Version)
 		return false, nil
 	}
 

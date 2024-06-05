@@ -483,3 +483,62 @@ func MapTestStepExecutionRequestCRD(request *testkube.TestSuiteStepExecutionRequ
 		RunningContext:           runningContext,
 	}
 }
+
+// MapAPIToCR maps OpenAPI spec TestSuite to TestSuite CRD
+func MapAPIToCR(test testkube.TestSuite) (cr testsuitesv3.TestSuite, err error) {
+	cr.Name = test.Name
+	cr.Namespace = test.Namespace
+	var batches = []struct {
+		source *[]testkube.TestSuiteBatchStep
+		dest   *[]testsuitesv3.TestSuiteBatchStep
+	}{
+		{
+			source: &test.Before,
+			dest:   &cr.Spec.Before,
+		},
+		{
+			source: &test.Steps,
+			dest:   &cr.Spec.Steps,
+		},
+		{
+			source: &test.After,
+			dest:   &cr.Spec.After,
+		},
+	}
+
+	for i := range batches {
+		for _, b := range *batches[i].source {
+			steps := make([]testsuitesv3.TestSuiteStepSpec, len(b.Execute))
+			for j := range b.Execute {
+				steps[j], err = mapTestStepToCRD(b.Execute[j])
+				if err != nil {
+					return
+				}
+			}
+
+			var downloadArtifacts *testsuitesv3.DownloadArtifactOptions
+			if b.DownloadArtifacts != nil {
+				downloadArtifacts = &testsuitesv3.DownloadArtifactOptions{
+					AllPreviousSteps:    b.DownloadArtifacts.AllPreviousSteps,
+					PreviousStepNumbers: b.DownloadArtifacts.PreviousStepNumbers,
+					PreviousTestNames:   b.DownloadArtifacts.PreviousTestNames,
+				}
+			}
+
+			*batches[i].dest = append(*batches[i].dest, testsuitesv3.TestSuiteBatchStep{
+				StopOnFailure:     b.StopOnFailure,
+				Execute:           steps,
+				DownloadArtifacts: downloadArtifacts,
+			})
+		}
+	}
+
+	cr.Spec.Description = test.Description
+	cr.Spec.Repeats = int(test.Repeats)
+	cr.Labels = test.Labels
+	cr.Spec.Schedule = test.Schedule
+	cr.CreationTimestamp.Time = test.Created
+	cr.Spec.ExecutionRequest = MapExecutionRequestToSpecExecutionRequest(test.ExecutionRequest)
+	cr.Status = MapStatusToSpec(test.Status)
+	return
+}
