@@ -388,6 +388,10 @@ func main() {
 		exitOnError("Creating NATS connection", err)
 	}
 	eventBus := bus.NewNATSBus(nc)
+	if cfg.Trace {
+		eventBus.TraceEvents()
+	}
+
 	eventsEmitter := event.NewEmitter(eventBus, cfg.TestkubeClusterName, envs)
 
 	var logsStream logsclient.Stream

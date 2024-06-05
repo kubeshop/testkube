@@ -149,5 +149,18 @@ func (n *NATSBus) Close() error {
 }
 
 func (n *NATSBus) queueName(subscription, queue string) string {
-	return fmt.Sprintf("%s.%s", SubscriptionName, queue)
+	return fmt.Sprintf("%s.%s", subscription, queue)
+}
+
+func (n *NATSBus) TraceEvents() {
+	s, err := n.nc.Subscribe(SubscriptionName+".>", func(event testkube.Event) {
+		log.Tracew(log.DefaultLogger, "all events.> trace", event.Log()...)
+	})
+
+	if err != nil {
+		log.DefaultLogger.Errorw("error subscribing to all events", "error", err)
+		return
+	}
+
+	log.DefaultLogger.Infow("subscribed to all events", "subscription", s.Subject)
 }

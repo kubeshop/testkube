@@ -92,6 +92,7 @@ type Config struct {
 	EnableSecretsEndpoint                       bool          `envconfig:"ENABLE_SECRETS_ENDPOINT" default:"false"`
 	DisableMongoMigrations                      bool          `envconfig:"DISABLE_MONGO_MIGRATIONS" default:"false"`
 	Debug                                       bool          `envconfig:"DEBUG" default:"false"`
+	Trace                                       bool          `envconfig:"TRACE" default:"false"`
 	EnableImageDataPersistentCache              bool          `envconfig:"TESTKUBE_ENABLE_IMAGE_DATA_PERSISTENT_CACHE" default:"false"`
 	ImageDataPersistentCacheKey                 string        `envconfig:"TESTKUBE_IMAGE_DATA_PERSISTENT_CACHE_KEY" default:"testkube-image-cache"`
 	LogServerGrpcAddress                        string        `envconfig:"LOG_SERVER_GRPC_ADDRESS" default:":9090"`
