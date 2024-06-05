@@ -175,12 +175,19 @@ func (p *podState) setFinishedAt(name string, ts time.Time) {
 	}
 }
 
-func (p *podState) addWarning(name string, event *corev1.Event) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
+func (p *podState) unsafeAddWarning(name string, event *corev1.Event) {
 	if !slices.ContainsFunc(p.warnings[name], common.DeepEqualCmp(event)) {
 		p.warnings[name] = append(p.warnings[name], event)
 		p.preStartWatcher(name).Send(podStateUpdate{Warning: event})
+	}
+}
+
+func (p *podState) addWarning(name string, event *corev1.Event) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.unsafeAddWarning(name, event)
+	if name == "" {
+		p.unsafeAddWarning(InitContainerName, event)
 	}
 }
 

@@ -148,8 +148,6 @@ func WatchPodEventsByPodWatcher(ctx context.Context, clientSet kubernetes.Interf
 	w := newChannel[*corev1.Event](ctx, bufferSize)
 
 	go func() {
-		defer w.Close()
-
 		v, ok := <-pod.PeekMessage(ctx)
 		if !ok {
 			return
