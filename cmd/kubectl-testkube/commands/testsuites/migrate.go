@@ -87,7 +87,7 @@ func printTestSuiteTests(client client.Client, namespace string, executorTypes m
 			templateName = executor.Name
 			if official, ok := common.OfficialTestWorkflowTemplates[templateName]; !ok {
 				if _, ok = printedExecutors[templateName]; !ok && migrateExecutors {
-					common.PrintTestWorkflowTemplateCRDForExecutor(executor)
+					common.PrintTestWorkflowTemplateCRDForExecutor(executor, namespace)
 					fmt.Printf("\n---\n\n")
 					printedExecutors[templateName] = struct{}{}
 				}
