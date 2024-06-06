@@ -32,12 +32,22 @@ func NewMigrateTestSuitesCmd() *cobra.Command {
 			client, _, err := common.GetClient(cmd)
 			ui.ExitOnError("getting client", err)
 
+			executors, err := client.ListExecutors("")
+			ui.ExitOnError("getting all executors in namespace "+namespace, err)
+
+			executorTypes := make(map[string]testkube.ExecutorDetails)
+			for _, executor := range executors {
+				for _, executorType := range executor.Executor.Types {
+					executorTypes[executorType] = executor
+				}
+			}
+
 			if len(args) > 0 {
 				testSuite, err := client.GetTestSuite(args[0])
 				ui.ExitOnError("getting test suite in namespace "+namespace, err)
 
 				if migrateTests {
-					printTestSuiteTests(client, namespace, testSuite, migrateExecutors)
+					printTestSuiteTests(client, namespace, executorTypes, testSuite, migrateExecutors)
 				}
 
 				common.PrintTestWorkflowCRDForTestSuite(testSuite)
@@ -47,7 +57,7 @@ func NewMigrateTestSuitesCmd() *cobra.Command {
 
 				for i, testSuite := range testSuites {
 					if migrateTests {
-						printTestSuiteTests(client, namespace, testSuite, migrateExecutors)
+						printTestSuiteTests(client, namespace, executorTypes, testSuite, migrateExecutors)
 					}
 
 					common.PrintTestWorkflowCRDForTestSuite(testSuite)
@@ -65,17 +75,8 @@ func NewMigrateTestSuitesCmd() *cobra.Command {
 	return cmd
 }
 
-func printTestSuiteTests(client client.Client, namespace string, testSuite testkube.TestSuite, migrateExecutors bool) {
-	executors, err := client.ListExecutors("")
-	ui.ExitOnError("getting all tests in namespace "+namespace, err)
-
-	executorTypes := make(map[string]testkube.ExecutorDetails)
-	for _, executor := range executors {
-		for _, executorType := range executor.Executor.Types {
-			executorTypes[executorType] = executor
-		}
-	}
-
+func printTestSuiteTests(client client.Client, namespace string, executorTypes map[string]testkube.ExecutorDetails,
+	testSuite testkube.TestSuite, migrateExecutors bool) {
 	testNames := testSuite.GetTestNames()
 	for _, testName := range testNames {
 		test, err := client.GetTest(testName)
