@@ -60,7 +60,8 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 				s.Queue("", state.QueuedAt(""))
 				s.Start("", state.StartedAt(""))
 			} else if v.Value.Warning != nil {
-				s.Warning("", v.Value.Warning.CreationTimestamp.Time, v.Value.Warning.Reason, v.Value.Warning.Message)
+				ts := maxTime(v.Value.Warning.CreationTimestamp.Time, v.Value.Warning.FirstTimestamp.Time, v.Value.Warning.LastTimestamp.Time)
+				s.Warning("", ts, v.Value.Warning.Reason, v.Value.Warning.Message)
 			}
 		}
 
@@ -93,7 +94,8 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 					s.Queue(ref, state.QueuedAt(ref))
 					s.Start(ref, state.StartedAt(ref))
 				} else if v.Value.Warning != nil {
-					s.Warning(ref, v.Value.Warning.CreationTimestamp.Time, v.Value.Warning.Reason, v.Value.Warning.Message)
+					ts := maxTime(v.Value.Warning.CreationTimestamp.Time, v.Value.Warning.FirstTimestamp.Time, v.Value.Warning.LastTimestamp.Time)
+					s.Warning("", ts, v.Value.Warning.Reason, v.Value.Warning.Message)
 				}
 			}
 
@@ -184,4 +186,14 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 	}()
 
 	return s.watcher, nil
+}
+
+func maxTime(times ...time.Time) time.Time {
+	var result time.Time
+	for _, t := range times {
+		if t.After(result) {
+			result = t
+		}
+	}
+	return result
 }
