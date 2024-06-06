@@ -7,7 +7,7 @@ Migrate all available test suites to test workflows
 Migrate all available test suites to test workflows from given namespace - if no namespace given "testkube" namespace is used
 
 ```
-testkube migrate testsuite <testName> [flags]
+testkube migrate testsuite <testSuiteName> [flags]
 ```
 
 ### Options
