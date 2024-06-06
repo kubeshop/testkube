@@ -8836,7 +8836,7 @@ components:
       type: object
       properties:
         disableWebhooks:
-          type: bool
+          type: boolean
           description: disable webhooks for this test workflow
           default: false
 
