@@ -11,6 +11,7 @@ package testworkflows
 import (
 	"fmt"
 	"maps"
+	"path/filepath"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -36,12 +37,7 @@ func MapExecutorKubeToTestWorkflowTemplateKube(v executorv1.Executor) testworkfl
 				Name: "Run tests",
 			},
 			StepOperations: testworkflowsv1.StepOperations{
-				Run: &testworkflowsv1.StepRun{
-					ContainerConfig: testworkflowsv1.ContainerConfig{
-						Command: &v.Spec.Command,
-						Args:    &v.Spec.Args,
-					},
-				},
+				Run: MapCommandArgsKubeToStepRunKube(v.Spec.Command, v.Spec.Args),
 			},
 		})
 	}
@@ -212,6 +208,28 @@ func MapExecutionRequestKubeToPodConfigKube(v testsv3.ExecutionRequest) testwork
 	}
 }
 
+func MapCommandArgsKubeToStepRunKube(c, a []string) *testworkflowsv1.StepRun {
+	var command, args *[]string
+	if len(c) != 0 {
+		command = &c
+	}
+
+	if len(a) != 0 {
+		args = &a
+	}
+
+	if command != nil || args != nil {
+		return &testworkflowsv1.StepRun{
+			ContainerConfig: testworkflowsv1.ContainerConfig{
+				Command: command,
+				Args:    args,
+			},
+		}
+	}
+
+	return nil
+}
+
 func MapExecutionRequestKubeToStepKube(v testsv3.ExecutionRequest) testworkflowsv1.Step {
 	var before, after []testworkflowsv1.Step
 	if v.PreRunScript != "" {
@@ -237,13 +255,18 @@ func MapExecutionRequestKubeToStepKube(v testsv3.ExecutionRequest) testworkflows
 	}
 
 	if v.ArtifactRequest != nil {
+		dirs := v.ArtifactRequest.Dirs
+		for i := range dirs {
+			dirs[i] = filepath.Join(dirs[i], "**/*")
+		}
+
 		after = append(after, testworkflowsv1.Step{
 			StepMeta: testworkflowsv1.StepMeta{
 				Name: "Save artifacts",
 			},
 			StepOperations: testworkflowsv1.StepOperations{
 				Artifacts: &testworkflowsv1.StepArtifacts{
-					Paths: v.ArtifactRequest.Dirs,
+					Paths: dirs,
 				},
 			},
 		})
@@ -258,12 +281,7 @@ func MapExecutionRequestKubeToStepKube(v testsv3.ExecutionRequest) testworkflows
 		},
 		Setup: before,
 		StepOperations: testworkflowsv1.StepOperations{
-			Run: &testworkflowsv1.StepRun{
-				ContainerConfig: testworkflowsv1.ContainerConfig{
-					Command: &v.Command,
-					Args:    &v.Args,
-				},
-			},
+			Run: MapCommandArgsKubeToStepRunKube(v.Command, v.Args),
 		},
 		Steps: after,
 	}
@@ -381,11 +399,20 @@ func MapTestSuiteStepExecutionRequestKubeToStepDefaultsKube(v *testsuitesv3.Test
 		return testworkflowsv1.StepDefaults{}
 	}
 
+	var command, args *[]string
+	if len(v.Command) != 0 {
+		command = &v.Command
+	}
+
+	if len(v.Args) != 0 {
+		args = &v.Args
+	}
+
 	return testworkflowsv1.StepDefaults{
 		Container: &testworkflowsv1.ContainerConfig{
 			Env:     MapVariableKubeToEnvVarKube(common.MapMap(v.Variables, MapVariableKubeToTestSuiteVariableKube)),
-			Command: &v.Command,
-			Args:    &v.Args,
+			Command: command,
+			Args:    args,
 		},
 	}
 }
