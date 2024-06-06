@@ -24,6 +24,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const (
+	RFC3339Millis = "2006-01-02T15:04:05.000Z07:00"
+)
+
 type StdFunction struct {
 	ReturnType Type
 	Handler    func(...StaticValue) (Expression, error)
@@ -549,6 +553,18 @@ var stdFunctions = map[string]StdFunction{
 				result[i] = start + i
 			}
 			return NewValue(result), nil
+		},
+	},
+	"date": {
+		ReturnType: TypeString,
+		Handler: func(value ...StaticValue) (Expression, error) {
+			if len(value) == 0 {
+				return NewValue(time.Now().UTC().Format(RFC3339Millis)), nil
+			} else if len(value) == 1 {
+				format, _ := value[0].StringValue()
+				return NewValue(time.Now().UTC().Format(format)), nil
+			}
+			return nil, fmt.Errorf(`"date" function expects 0-1 arguments, %d provided`, len(value))
 		},
 	},
 }
