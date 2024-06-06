@@ -65,8 +65,8 @@ func PrintTestWorkflowCRDForTestSuite(testSuite testkube.TestSuite) {
 }
 
 // PrintTestWorkflowTemplateCRDForExecutor prints test workflow template CRD for Executor
-func PrintTestWorkflowTemplateCRDForExecutor(executor testkube.ExecutorDetails) {
-	executorCR := executorsmapper.MapExecutorDetailsToExecutorCRD(executor)
+func PrintTestWorkflowTemplateCRDForExecutor(executor testkube.ExecutorDetails, namespace string) {
+	executorCR := executorsmapper.MapExecutorDetailsToExecutorCRD(executor, namespace)
 	testWorkflowTemplate := testworkflowmappers.MapExecutorKubeToTestWorkflowTemplateKube(executorCR)
 	b, err := internalcommon.SerializeCRDs([]testworkflowsv1.TestWorkflowTemplate{testWorkflowTemplate}, internalcommon.SerializeOptions{
 		OmitCreationTimestamp: true,

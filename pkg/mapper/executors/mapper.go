@@ -359,19 +359,21 @@ func MapSlavesConfigsToCRD(slavesConfigs *testkube.SlavesMeta) *executorv1.Slave
 }
 
 // MapExecutorDetailsToExecutorCRD maps OpemAPI spec ExecutorDetails to CRD Executor
-func MapExecutorDetailsToExecutorCRD(item testkube.ExecutorDetails) executorv1.Executor {
+func MapExecutorDetailsToExecutorCRD(item testkube.ExecutorDetails, namespace string) executorv1.Executor {
 	if item.Executor == nil {
 		return executorv1.Executor{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: item.Name,
+				Name:      item.Name,
+				Namespace: namespace,
 			},
 		}
 	}
 
 	return executorv1.Executor{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   item.Name,
-			Labels: item.Executor.Labels,
+			Name:      item.Name,
+			Namespace: namespace,
+			Labels:    item.Executor.Labels,
 		},
 		Spec: executorv1.ExecutorSpec{
 			ExecutorType:           executorv1.ExecutorType(item.Executor.ExecutorType),
