@@ -45,7 +45,7 @@ func (c TestSuiteClient) GetTestSuite(id string) (testSuite testkube.TestSuite, 
 	return c.testSuiteTransport.Execute(http.MethodGet, uri, nil, nil)
 }
 
-// GetTestSuitWithExecution returns single test suite by id with execution
+// GetTestSuiteWithExecution returns single test suite by id with execution
 func (c TestSuiteClient) GetTestSuiteWithExecution(id string) (test testkube.TestSuiteWithExecution, err error) {
 	uri := c.testSuiteWithExecutionTransport.GetURI("/test-suite-with-executions/%s", id)
 	return c.testSuiteWithExecutionTransport.Execute(http.MethodGet, uri, nil, nil)
