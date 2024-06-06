@@ -32,18 +32,25 @@ func NewMigrateTestsCmd() *cobra.Command {
 			executors, err := client.ListExecutors("")
 			ui.ExitOnError("getting all executors in namespace "+namespace, err)
 
+			executorTypes := make(map[string]testkube.ExecutorDetails)
+			for _, executor := range executors {
+				for _, executorType := range executor.Executor.Types {
+					executorTypes[executorType] = executor
+				}
+			}
+
 			if len(args) > 0 {
 				test, err := client.GetTest(args[0])
 				ui.ExitOnError("getting test in namespace "+namespace, err)
 
-				templateName := printExecutors(executors, test, migrateExecutors)
+				templateName := printExecutors(executorTypes, test, migrateExecutors)
 				common.PrintTestWorkflowCRDForTest(test, templateName)
 			} else {
 				tests, err := client.ListTests("")
 				ui.ExitOnError("getting all tests in namespace "+namespace, err)
 
 				for i, test := range tests {
-					templateName := printExecutors(executors, test, migrateExecutors)
+					templateName := printExecutors(executorTypes, test, migrateExecutors)
 					common.PrintTestWorkflowCRDForTest(test, templateName)
 					if i != len(tests)-1 {
 						fmt.Printf("\n---\n\n")
@@ -58,14 +65,7 @@ func NewMigrateTestsCmd() *cobra.Command {
 	return cmd
 }
 
-func printExecutors(executors []testkube.ExecutorDetails, test testkube.Test, migrateExecutors bool) string {
-	executorTypes := make(map[string]testkube.ExecutorDetails)
-	for _, executor := range executors {
-		for _, executorType := range executor.Executor.Types {
-			executorTypes[executorType] = executor
-		}
-	}
-
+func printExecutors(executorTypes map[string]testkube.ExecutorDetails, test testkube.Test, migrateExecutors bool) string {
 	templateName := ""
 	if executor, ok := executorTypes[test.Type_]; ok {
 		templateName = executor.Name
