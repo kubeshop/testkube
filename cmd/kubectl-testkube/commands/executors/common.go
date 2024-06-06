@@ -108,7 +108,7 @@ func NewUpsertExecutorOptionsFromFlags(cmd *cobra.Command) (options apiClient.Up
 	return options, nil
 }
 
-// NewUpsertExecutorOptionsFromFlags creates update executor options fom command flags
+// NewUpdateExecutorOptionsFromFlags creates update executor options fom command flags
 func NewUpdateExecutorOptionsFromFlags(cmd *cobra.Command) (options apiClient.UpdateExecutorOptions, err error) {
 	var fields = []struct {
 		name        string
