@@ -381,6 +381,22 @@ var stdFunctions = map[string]StdFunction{
 			return Compile(fmt.Sprintf("list(%s)", strings.Join(result, ",")))
 		},
 	},
+	"entries": {
+		Handler: func(value ...StaticValue) (Expression, error) {
+			if len(value) != 1 {
+				return nil, fmt.Errorf(`"entries" function expects 1 argument, %d provided`, len(value))
+			}
+			dict, err := value[0].MapValue()
+			if err != nil {
+				return nil, fmt.Errorf(`"entries" function expects 1st argument to be a map, %s provided: %v`, value[0], err)
+			}
+			list := make([]MapEntry, 0, len(dict))
+			for k, v := range dict {
+				list = append(list, MapEntry{Key: k, Value: v})
+			}
+			return NewValue(list), nil
+		},
+	},
 	"filter": {
 		Handler: func(value ...StaticValue) (Expression, error) {
 			if len(value) != 2 {
@@ -575,6 +591,11 @@ const (
 	intCastStdFn    = "int"
 	floatCastStdFn  = "float"
 )
+
+type MapEntry struct {
+	Key   string      `json:"key"`
+	Value interface{} `json:"value"`
+}
 
 func CastToString(v Expression) Expression {
 	if v.Static() != nil {
