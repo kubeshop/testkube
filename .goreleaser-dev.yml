@@ -25,9 +25,6 @@ archives:
 checksum:
   name_template: "checksums.txt"
 
-source:
-  rlcp: true
-
 sboms:
   - artifacts: archive
   - id: source 
@@ -59,7 +56,7 @@ release:
   prerelease: auto
 
 brews:
-  - tap:
+  - repository:
       owner: kubeshop
       name: homebrew-testkube-dev
     description: Testkube - your somewhat opinionated and friendly Kubernetes testing framework!
