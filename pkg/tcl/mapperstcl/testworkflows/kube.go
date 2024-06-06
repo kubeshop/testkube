@@ -16,15 +16,14 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	commonv1 "github.com/kubeshop/testkube-operator/api/common/v1"
 	executorv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
 	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
 	testsuitesv3 "github.com/kubeshop/testkube-operator/api/testsuite/v3"
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
-
 	"github.com/kubeshop/testkube/internal/common"
-	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 func MapExecutorKubeToTestWorkflowTemplateKube(v executorv1.Executor) testworkflowsv1.TestWorkflowTemplate {
