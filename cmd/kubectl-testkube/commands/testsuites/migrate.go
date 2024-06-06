@@ -23,7 +23,7 @@ func NewMigrateTestSuitesCmd() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:     "testsuite <testName>",
+		Use:     "testsuite <testSuiteName>",
 		Aliases: []string{"testsuites", "ts"},
 		Short:   "Migrate all available test suites to test workflows",
 		Long:    `Migrate all available test suites to test workflows from given namespace - if no namespace given "testkube" namespace is used`,
