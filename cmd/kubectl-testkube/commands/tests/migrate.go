@@ -30,7 +30,7 @@ func NewMigrateTestsCmd() *cobra.Command {
 			ui.ExitOnError("getting client", err)
 
 			executors, err := client.ListExecutors("")
-			ui.ExitOnError("getting all tests in namespace "+namespace, err)
+			ui.ExitOnError("getting all executors in namespace "+namespace, err)
 
 			if len(args) > 0 {
 				test, err := client.GetTest(args[0])
