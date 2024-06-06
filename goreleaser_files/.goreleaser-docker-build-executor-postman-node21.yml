@@ -1,3 +1,4 @@
+version: 2
 env:
   # Goreleaser always uses the docker buildx builder with name "default"; see
   # https://github.com/goreleaser/goreleaser/pull/3199
