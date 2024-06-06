@@ -83,6 +83,7 @@ func printTestSuiteTests(client client.Client, namespace string, executorTypes m
 		ui.ExitOnError("getting test in namespace "+namespace, err)
 
 		templateName := ""
+		configRun := ""
 		if executor, ok := executorTypes[test.Type_]; ok {
 			templateName = executor.Name
 			if official, ok := common.OfficialTestWorkflowTemplates[templateName]; !ok {
@@ -92,12 +93,13 @@ func printTestSuiteTests(client client.Client, namespace string, executorTypes m
 					printedExecutors[templateName] = struct{}{}
 				}
 			} else {
-				templateName = official
+				templateName = official.Name
+				configRun = official.ConfigRun
 			}
 		}
 
 		if _, ok := printedTests[testName]; !ok {
-			common.PrintTestWorkflowCRDForTest(test, templateName)
+			common.PrintTestWorkflowCRDForTest(test, templateName, configRun)
 			fmt.Printf("\n---\n\n")
 			printedTests[testName] = struct{}{}
 		}

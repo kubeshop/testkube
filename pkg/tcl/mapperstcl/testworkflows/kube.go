@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"maps"
 	"path/filepath"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,6 +23,7 @@ import (
 	testsuitesv3 "github.com/kubeshop/testkube-operator/api/testsuite/v3"
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 func MapExecutorKubeToTestWorkflowTemplateKube(v executorv1.Executor) testworkflowsv1.TestWorkflowTemplate {
@@ -287,7 +289,7 @@ func MapExecutionRequestKubeToStepKube(v testsv3.ExecutionRequest) testworkflows
 	}
 }
 
-func MapTestKubeToTestWorkflowKube(v testsv3.Test, templateName string) testworkflowsv1.TestWorkflow {
+func MapTestKubeToTestWorkflowKube(v testsv3.Test, templateName, configRun string) testworkflowsv1.TestWorkflow {
 	var events []testworkflowsv1.Event
 	if v.Spec.Schedule != "" {
 		events = append(events, testworkflowsv1.Event{
@@ -335,6 +337,13 @@ func MapTestKubeToTestWorkflowKube(v testsv3.Test, templateName string) testwork
 
 	step.Template = &testworkflowsv1.TemplateRef{
 		Name: templateName,
+	}
+
+	if len(configRun) != 0 && step.Run != nil && step.Run.Args != nil {
+		step.Template.Config = map[string]intstr.IntOrString{
+			"run": {Type: intstr.String, StrVal: configRun + " " + strings.Join(*step.Run.Args, " ")},
+		}
+		step.Run = nil
 	}
 
 	return testworkflowsv1.TestWorkflow{

@@ -15,11 +15,14 @@ import (
 )
 
 // OfficialTestWorkflowTemplates contains official test workflow templates
-var OfficialTestWorkflowTemplates = map[string]string{
-	"cypress-executor":    "official--cypress--beta",
-	"k6-executor":         "official--k6--beta",
-	"playwright-executor": "official--playwright--beta",
-	"postman-executor":    "official--postman--beta",
+var OfficialTestWorkflowTemplates = map[string]struct {
+	Name      string
+	ConfigRun string
+}{
+	"cypress-executor":    {Name: "official--cypress--beta", ConfigRun: "npx cypress run"},
+	"k6-executor":         {Name: "official--k6--beta", ConfigRun: "k6 run"},
+	"playwright-executor": {Name: "official--playwright--beta", ConfigRun: "npx playwright test"},
+	"postman-executor":    {Name: "official--postman--beta", ConfigRun: "newman run"},
 }
 
 // UIPrintCRD prints crd to ui
@@ -35,9 +38,9 @@ func UIPrintCRD(tmpl crd.Template, object any, firstEntry *bool) {
 }
 
 // PrintTestWorkflowCRDForTest prints test workflow CRD for Test
-func PrintTestWorkflowCRDForTest(test testkube.Test, templateName string) {
+func PrintTestWorkflowCRDForTest(test testkube.Test, templateName, configRun string) {
 	testCR := testsmapper.MapTestAPIToCR(test)
-	testWorkflow := testworkflowmappers.MapTestKubeToTestWorkflowKube(testCR, templateName)
+	testWorkflow := testworkflowmappers.MapTestKubeToTestWorkflowKube(testCR, templateName, configRun)
 	b, err := internalcommon.SerializeCRDs([]testworkflowsv1.TestWorkflow{testWorkflow}, internalcommon.SerializeOptions{
 		OmitCreationTimestamp: true,
 		CleanMeta:             true,
