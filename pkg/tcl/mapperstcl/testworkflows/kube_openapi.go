@@ -1090,17 +1090,18 @@ func MapIndependentStepKubeToAPI(v testworkflowsv1.IndependentStep) testkube.Tes
 
 func MapSpecKubeToAPI(v testworkflowsv1.TestWorkflowSpec) testkube.TestWorkflowSpec {
 	return testkube.TestWorkflowSpec{
-		Use:       common.MapSlice(v.Use, MapTemplateRefKubeToAPI),
-		Config:    common.MapMap(v.Config, MapParameterSchemaKubeToAPI),
-		Content:   common.MapPtr(v.Content, MapContentKubeToAPI),
-		Services:  common.MapMap(v.Services, MapServiceSpecKubeToAPI),
-		Container: common.MapPtr(v.Container, MapContainerConfigKubeToAPI),
-		Job:       common.MapPtr(v.Job, MapJobConfigKubeToAPI),
-		Pod:       common.MapPtr(v.Pod, MapPodConfigKubeToAPI),
-		Setup:     common.MapSlice(v.Setup, MapStepKubeToAPI),
-		Steps:     common.MapSlice(v.Steps, MapStepKubeToAPI),
-		After:     common.MapSlice(v.After, MapStepKubeToAPI),
-		Events:    common.MapSlice(v.Events, MapEventKubeToAPI),
+		Use:           common.MapSlice(v.Use, MapTemplateRefKubeToAPI),
+		Config:        common.MapMap(v.Config, MapParameterSchemaKubeToAPI),
+		Content:       common.MapPtr(v.Content, MapContentKubeToAPI),
+		Services:      common.MapMap(v.Services, MapServiceSpecKubeToAPI),
+		Container:     common.MapPtr(v.Container, MapContainerConfigKubeToAPI),
+		Job:           common.MapPtr(v.Job, MapJobConfigKubeToAPI),
+		Pod:           common.MapPtr(v.Pod, MapPodConfigKubeToAPI),
+		Setup:         common.MapSlice(v.Setup, MapStepKubeToAPI),
+		Steps:         common.MapSlice(v.Steps, MapStepKubeToAPI),
+		After:         common.MapSlice(v.After, MapStepKubeToAPI),
+		Events:        common.MapSlice(v.Events, MapEventKubeToAPI),
+		Notifications: common.MapPtr(v.Notifications, MapNotificationsConfigKubeToAPI),
 	}
 }
 
@@ -1164,4 +1165,10 @@ func MapTemplateListKubeToAPI(v *testworkflowsv1.TestWorkflowTemplateList) []tes
 		workflows[i] = MapTestWorkflowTemplateKubeToAPI(item)
 	}
 	return workflows
+}
+
+func MapNotificationsConfigKubeToAPI(v testworkflowsv1.NotificationsConfig) testkube.TestWorkflowNotificationsConfig {
+	return testkube.TestWorkflowNotificationsConfig{
+		DisableWebhooks: v.DisableWebhooks,
+	}
 }
