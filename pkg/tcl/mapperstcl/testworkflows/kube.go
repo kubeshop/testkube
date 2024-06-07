@@ -438,6 +438,11 @@ func MapTestSuiteStepSpecKubeToStepKube(v testsuitesv3.TestSuiteStepSpec) testwo
 		}
 	}
 
+	delay := ""
+	if v.Delay.Duration != 0 {
+		delay = fmt.Sprint(v.Delay.Duration)
+	}
+
 	return testworkflowsv1.Step{
 		StepMeta: testworkflowsv1.StepMeta{
 			Name: "Run tests",
@@ -445,7 +450,7 @@ func MapTestSuiteStepSpecKubeToStepKube(v testsuitesv3.TestSuiteStepSpec) testwo
 		StepControl:  MapTestSuiteStepExecutionRequestKubeToStepControlKube(v.ExecutionRequest),
 		StepDefaults: MapTestSuiteStepExecutionRequestKubeToStepDefaultsKube(v.ExecutionRequest),
 		StepOperations: testworkflowsv1.StepOperations{
-			Delay:   fmt.Sprint(v.Delay.Duration),
+			Delay:   delay,
 			Execute: execute,
 		},
 	}
