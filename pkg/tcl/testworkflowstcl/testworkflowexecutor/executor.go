@@ -382,6 +382,11 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		return execution, fmt.Errorf("not supported execution namespace %s", namespace)
 	}
 
+	disableWebhooks := request.DisableWebhooks
+	if !disableWebhooks && workflow.Spec.Notifications != nil {
+		disableWebhooks = workflow.Spec.Notifications.DisableWebhooks
+	}
+
 	// Build the basic Execution data
 	id := primitive.NewObjectID().Hex()
 	now := time.Now()
@@ -503,6 +508,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		Workflow:                  testworkflowmappers.MapKubeToAPI(initialWorkflow),
 		ResolvedWorkflow:          testworkflowmappers.MapKubeToAPI(resolvedWorkflow),
 		TestWorkflowExecutionName: testWorkflowExecutionName,
+		DisableWebhooks:           disableWebhooks,
 	}
 	err = e.repository.Insert(ctx, execution)
 	if err != nil {
