@@ -20,7 +20,8 @@ import (
 )
 
 const (
-	KubernetesLogTimeFormat = "2006-01-02T15:04:05.000000000Z"
+	KubernetesLogTimeFormat         = "2006-01-02T15:04:05.000000000Z"
+	KubernetesTimezoneLogTimeFormat = KubernetesLogTimeFormat + "07:00"
 )
 
 func GetEventContainerName(event *corev1.Event) string {
