@@ -243,6 +243,7 @@ func (s *apiTCL) AbortTestWorkflowExecutionHandler() fiber.Handler {
 		if err != nil {
 			return s.ClientError(c, "aborting test workflow execution", err)
 		}
+		s.Metrics.IncAbortTestWorkflow()
 
 		c.Status(http.StatusNoContent)
 
@@ -359,6 +360,7 @@ func (s *apiTCL) AbortAllTestWorkflowExecutionsHandler() fiber.Handler {
 			if err != nil {
 				return s.ClientError(c, errPrefix, err)
 			}
+			s.Metrics.IncAbortTestWorkflow()
 		}
 
 		c.Status(http.StatusNoContent)

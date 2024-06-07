@@ -27,6 +27,7 @@ import (
 	testworkflowsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testworkflows/v1"
 	initconstants "github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/data"
+	v1 "github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event"
@@ -65,12 +66,14 @@ type executor struct {
 	executionResults               result.Repository
 	testWorkflowExecutionsClient   testworkflowsclientv1.TestWorkflowExecutionsInterface
 	testWorkflowsClient            testworkflowsclientv1.Interface
+	metrics                        v1.Metrics
 	globalTemplateName             string
 	apiUrl                         string
 	namespace                      string
 	defaultRegistry                string
 	enableImageDataPersistentCache bool
 	imageDataPersistentCacheKey    string
+	dashboardURI                   string
 	serviceAccountNames            map[string]string
 }
 
@@ -84,9 +87,10 @@ func New(emitter *event.Emitter,
 	executionResults result.Repository,
 	testWorkflowExecutionsClient testworkflowsclientv1.TestWorkflowExecutionsInterface,
 	testWorkflowsClient testworkflowsclientv1.Interface,
+	metrics v1.Metrics,
 	serviceAccountNames map[string]string,
 	globalTemplateName, namespace, apiUrl, defaultRegistry string,
-	enableImageDataPersistentCache bool, imageDataPersistentCacheKey string) TestWorkflowExecutor {
+	enableImageDataPersistentCache bool, imageDataPersistentCacheKey, dashboardURI string) TestWorkflowExecutor {
 	if serviceAccountNames == nil {
 		serviceAccountNames = make(map[string]string)
 	}
@@ -102,6 +106,7 @@ func New(emitter *event.Emitter,
 		executionResults:               executionResults,
 		testWorkflowExecutionsClient:   testWorkflowExecutionsClient,
 		testWorkflowsClient:            testWorkflowsClient,
+		metrics:                        metrics,
 		serviceAccountNames:            serviceAccountNames,
 		globalTemplateName:             globalTemplateName,
 		apiUrl:                         apiUrl,
@@ -109,6 +114,7 @@ func New(emitter *event.Emitter,
 		defaultRegistry:                defaultRegistry,
 		enableImageDataPersistentCache: enableImageDataPersistentCache,
 		imageDataPersistentCacheKey:    imageDataPersistentCacheKey,
+		dashboardURI:                   dashboardURI,
 	}
 }
 
@@ -302,6 +308,8 @@ func (e *executor) Control(ctx context.Context, testWorkflow *testworkflowsv1.Te
 	}
 
 	wg.Wait()
+
+	e.metrics.IncAndObserveExecuteTestWorkflow(*execution, e.dashboardURI)
 
 	e.updateStatus(testWorkflow, execution, testWorkflowExecution)
 	err = testworkflowcontroller.Cleanup(ctx, e.clientSet, execution.GetNamespace(e.namespace), execution.Id)

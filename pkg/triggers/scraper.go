@@ -155,6 +155,7 @@ func (s *Service) abortRunningTestSuiteExecutions(ctx context.Context, status *t
 				s.logger.Errorf("trigger service: execution scraper component: error aborting test suite execution: %v", err)
 				continue
 			}
+			s.metrics.IncAbortTestSuite()
 
 			s.logger.Debugf("trigger service: execution scraper component: testsuite execution %s is aborted", id)
 			status.removeTestSuiteExecutionID(id)
@@ -193,6 +194,7 @@ func (s *Service) abortRunningTestWorkflowExecutions(ctx context.Context, status
 				s.logger.Errorf("trigger service: execution scraper component: error aborting test workflow execution: %v", err)
 				continue
 			}
+			s.metrics.IncAbortTestWorkflow()
 
 			s.logger.Debugf("trigger service: execution scraper component: testworkflow execution %s is aborted", id)
 			status.removeTestWorkflowExecutionID(id)
