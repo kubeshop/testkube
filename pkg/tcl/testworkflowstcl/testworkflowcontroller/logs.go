@@ -150,7 +150,7 @@ func WatchContainerLogs(ctx context.Context, clientSet kubernetes.Interface, nam
 }
 
 func ReadTimestamp(reader *bufio.Reader) (time.Time, []byte, error) {
-	tsPrefix := make([]byte, 31) // 30 bytes for timestamp + 1 byte for space
+	tsPrefix := make([]byte, 31, 35) // 30 bytes for timestamp + 1 byte for space + 4 additional bytes for non-UTC timezone
 	count, err := io.ReadFull(reader, tsPrefix)
 	if err != nil {
 		return time.Time{}, nil, err
@@ -158,9 +158,22 @@ func ReadTimestamp(reader *bufio.Reader) (time.Time, []byte, error) {
 	if count < 31 {
 		return time.Time{}, nil, io.EOF
 	}
-	ts, err := time.Parse(KubernetesLogTimeFormat, string(tsPrefix[0:30]))
+	var ts time.Time
+	// Handle non-UTC timezones
+	if tsPrefix[29] == '+' {
+		tsSuffix := make([]byte, 5)
+		count, err = io.ReadFull(reader, tsSuffix)
+		if err != nil {
+			return time.Time{}, nil, err
+		}
+		if count < 5 {
+			return time.Time{}, nil, io.EOF
+		}
+		tsPrefix = append(tsPrefix, tsSuffix...)
+	}
+	ts, err = time.Parse(KubernetesTimezoneLogTimeFormat, string(tsPrefix[0:len(tsPrefix)-1]))
 	if err != nil {
 		return time.Time{}, tsPrefix, errors2.Wrap(err, "parsing timestamp")
 	}
-	return ts, tsPrefix, nil
+	return ts.UTC(), tsPrefix, nil
 }
