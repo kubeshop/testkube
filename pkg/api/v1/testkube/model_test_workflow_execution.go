@@ -37,4 +37,6 @@ type TestWorkflowExecution struct {
 	ResolvedWorkflow *TestWorkflow        `json:"resolvedWorkflow,omitempty"`
 	// test workflow execution name started the test workflow execution
 	TestWorkflowExecutionName string `json:"testWorkflowExecutionName,omitempty"`
+	// whether webhooks on the executions of this test workflow are disabled
+	DisableWebhooks bool `json:"disableWebhooks,omitempty"`
 }

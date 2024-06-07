@@ -916,11 +916,12 @@ func MapStepParallelAPIToKube(v testkube.TestWorkflowStepParallel) testworkflows
 		Fetch:       common.MapSlice(v.Fetch, MapStepParallelFetchAPIToKube),
 		TestWorkflowSpec: testworkflowsv1.TestWorkflowSpec{
 			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
-				Config:    common.MapMap(v.Config, MapParameterSchemaAPIToKube),
-				Content:   common.MapPtr(v.Content, MapContentAPIToKube),
-				Container: common.MapPtr(v.Container, MapContainerConfigAPIToKube),
-				Job:       common.MapPtr(v.Job, MapJobConfigAPIToKube),
-				Pod:       common.MapPtr(v.Pod, MapPodConfigAPIToKube),
+				Config:        common.MapMap(v.Config, MapParameterSchemaAPIToKube),
+				Content:       common.MapPtr(v.Content, MapContentAPIToKube),
+				Container:     common.MapPtr(v.Container, MapContainerConfigAPIToKube),
+				Job:           common.MapPtr(v.Job, MapJobConfigAPIToKube),
+				Pod:           common.MapPtr(v.Pod, MapPodConfigAPIToKube),
+				Notifications: common.MapPtr(v.Notifications, MapNotificationsAPIToKube),
 			},
 			Use:   common.MapSlice(v.Use, MapTemplateRefAPIToKube),
 			Setup: common.MapSlice(v.Setup, MapStepAPIToKube),
@@ -1430,5 +1431,11 @@ func MapTestWorkflowAPIToKubeTestWorkflowSummary(v testkube.TestWorkflow) testwo
 		Namespace:   v.Namespace,
 		Labels:      v.Labels,
 		Annotations: v.Annotations,
+	}
+}
+
+func MapNotificationsAPIToKube(v testkube.TestWorkflowNotificationsConfig) testworkflowsv1.NotificationsConfig {
+	return testworkflowsv1.NotificationsConfig{
+		DisableWebhooks: v.DisableWebhooks,
 	}
 }
