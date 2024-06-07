@@ -598,6 +598,7 @@ func main() {
 		resultsRepository,
 		testWorkflowExecutionsClient,
 		testWorkflowsClient,
+		metrics,
 		serviceAccountNames,
 		cfg.GlobalWorkflowTemplateName,
 		cfg.TestkubeNamespace,
@@ -605,6 +606,7 @@ func main() {
 		cfg.TestkubeRegistry,
 		cfg.EnableImageDataPersistentCache,
 		cfg.ImageDataPersistentCacheKey,
+		cfg.TestkubeDashboardURI,
 	)
 
 	// Apply Pro server enhancements
