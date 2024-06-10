@@ -213,21 +213,22 @@ func NewInitCmdDemo() *cobra.Command {
 			ui.Info("Make sure to copy these credentials now as you will not be able to see this again.")
 			ui.NL()
 			ok := ui.Confirm("Do you want to continue?")
+			if !ok {
+				return
+			}
 
 			sendTelemetry(cmd, cfg, license, "user confirmed proceeding")
 
 			ui.Info("You can use `testkube dashboard` to access Testkube without exposing services.")
 			ui.NL()
 
-			if !ok {
-				return
-			}
-
 			if ok := ui.Confirm("Do you want to open the dashboard?"); ok {
 				sendTelemetry(cmd, cfg, license, "opening dashboard")
 				cfg, err := config.Load()
 				ui.ExitOnError("Cannot open dashboard", err)
 				openOnPremDashboard(cmd, cfg, false, license)
+			} else {
+				sendTelemetry(cmd, cfg, license, "skipping dashboard")
 			}
 		},
 	}
