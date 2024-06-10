@@ -37,16 +37,16 @@ const (
 )
 
 func NewProxy(clientset kubernetes.Interface, podsClient tcorev1.PodInterface, logsStream client.Stream, js jetstream.JetStream, log *zap.SugaredLogger,
-	namespace, executionId, source string) *Proxy {
+	namespace, podName, source string) *Proxy {
 	return &Proxy{
-		log:         log.With("service", "logs-proxy", "namespace", namespace, "executionId", executionId),
-		js:          js,
-		clientset:   clientset,
-		namespace:   namespace,
-		executionId: executionId,
-		podsClient:  podsClient,
-		logsStream:  logsStream,
-		source:      source,
+		log:        log.With("service", "logs-proxy", "namespace", namespace, "podName", podName),
+		js:         js,
+		clientset:  clientset,
+		namespace:  namespace,
+		podName:    podName,
+		podsClient: podsClient,
+		logsStream: logsStream,
+		source:     source,
 	}
 }
 
@@ -59,6 +59,7 @@ type Proxy struct {
 	source      string
 	podsClient  tcorev1.PodInterface
 	logsStream  client.InitializedStreamPusher
+	podName     string
 }
 
 func (p *Proxy) Run(ctx context.Context) error {
@@ -69,7 +70,7 @@ func (p *Proxy) Run(ctx context.Context) error {
 	logs := make(chan *events.Log, logsBuffer)
 
 	// create stream for incoming logs
-	_, err := p.logsStream.Init(ctx, p.executionId)
+	_, err := p.logsStream.Init(ctx, p.getSubject())
 	if err != nil {
 		return err
 	}
@@ -92,7 +93,7 @@ func (p *Proxy) Run(ctx context.Context) error {
 			p.log.Warn("logs proxy context cancelled, exiting")
 			return nil
 		default:
-			err = p.logsStream.Push(ctx, p.executionId, l)
+			err = p.logsStream.Push(ctx, p.getSubject(), l)
 			if err != nil {
 				p.handleError(err, "error pushing logs to stream")
 				return err
@@ -105,7 +106,7 @@ func (p *Proxy) Run(ctx context.Context) error {
 }
 
 func (p *Proxy) streamLogs(ctx context.Context, logs chan *events.Log) (err error) {
-	pods, err := executor.GetJobPods(ctx, p.podsClient, p.executionId, 1, 10)
+	pods, err := executor.GetJobPods(ctx, p.podsClient, p.getSubject(), 1, 10)
 	if err != nil {
 		p.handleError(err, "error getting job pods")
 		return err
@@ -250,10 +251,14 @@ func (p *Proxy) getPodContainerStatuses(pod corev1.Pod) (status string) {
 func (p *Proxy) handleError(err error, title string) {
 	if err != nil {
 		p.log.Errorw(title, "error", err)
-		err = p.logsStream.Push(context.Background(), p.executionId, events.NewErrorLog(err).WithSource("logs-proxy"))
+		err = p.logsStream.Push(context.Background(), p.getSubject(), events.NewErrorLog(err).WithSource("logs-proxy"))
 		if err != nil {
 			p.log.Errorw("error pushing error to stream", "title", title, "error", err)
 		}
 
 	}
+}
+
+func (p *Proxy) getSubject() string {
+	return p.podName
 }
