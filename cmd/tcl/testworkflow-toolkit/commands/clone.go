@@ -13,6 +13,9 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
+
+	"github.com/otiai10/copy"
 
 	"github.com/kballard/go-shellquote"
 	"github.com/spf13/cobra"
@@ -39,7 +42,7 @@ func NewCloneCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			uri, err := url.Parse(args[0])
 			ui.ExitOnError("repository uri", err)
-			outputPath, err := filepath.Abs(args[1])
+			destinationPath, err := filepath.Abs(args[1])
 			ui.ExitOnError("output path", err)
 
 			// Disable interactivity
@@ -74,6 +77,9 @@ func NewCloneCmd() *cobra.Command {
 				os.Setenv("GIT_SSH_COMMAND", shellquote.Join("ssh", "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null", "-i", sshKeyPath))
 			}
 
+			// Keep the files in temporary directory
+			outputPath := filepath.Join(constants.DefaultTmpDirPath, "repo")
+
 			// Mark directory as safe
 			configArgs := []string{"-c", fmt.Sprintf("safe.directory=%s", outputPath), "-c", "advice.detachedHead=false"}
 
@@ -105,6 +111,21 @@ func NewCloneCmd() *cobra.Command {
 					ui.ExitOnError("fetching head", err)
 				}
 			}
+
+			// Copy files to the expected directory. Ignore errors, only inform warn about them.
+			err = copy.Copy(outputPath, destinationPath, copy.Options{
+				OnError: func(src, dest string, err error) error {
+					if err != nil {
+						if src == outputPath && strings.Contains(err.Error(), "chmod") {
+							// Ignore chmod error on mounted directory
+							return nil
+						}
+						fmt.Printf("warn: copying to %s: %s\n", dest, err.Error())
+					}
+					return nil
+				},
+			})
+			ui.ExitOnError("copying files to destination", err)
 		},
 	}
 
