@@ -38,9 +38,9 @@ func UIPrintCRD(tmpl crd.Template, object any, firstEntry *bool) {
 }
 
 // PrintTestWorkflowCRDForTest prints test workflow CRD for Test
-func PrintTestWorkflowCRDForTest(test testkube.Test, templateName, configRun string) {
+func PrintTestWorkflowCRDForTest(test testkube.Test, expandTemplate bool, templateName string, configRun string) {
 	testCR := testsmapper.MapTestAPIToCR(test)
-	testWorkflow := testworkflowmappers.MapTestKubeToTestWorkflowKube(testCR, templateName, configRun)
+	testWorkflow := testworkflowmappers.MapTestKubeToTestWorkflowKube(testCR, expandTemplate, templateName, configRun)
 	b, err := internalcommon.SerializeCRDs([]testworkflowsv1.TestWorkflow{testWorkflow}, internalcommon.SerializeOptions{
 		OmitCreationTimestamp: true,
 		CleanMeta:             true,
