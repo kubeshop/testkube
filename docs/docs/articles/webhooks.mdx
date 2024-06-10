@@ -726,8 +726,6 @@ Inside a test suite this would look the following:
 
 The examples show only the `create` operations, however these instructions work the same for `update` and `run` as well.
 
-
-
 #### Disabling Webhooks on Test Workflows
 
 <Tabs>
@@ -742,7 +740,7 @@ testkube create testworkflow --file wf.yaml --name test-workflow --disable-webho
 
 </TabItem>
 
-<TabItem> value="crd" label="CRD">
+<TabItem value="crd" label="CRD">
 
 For disabling webhooks on the test workflows, set the following on the workflow spec:
 
@@ -801,7 +799,7 @@ spec:
 
 </TabItem>
 
-<TabItem> value="api" label="API">
+<TabItem value="api" label="API">
 
 The API expects the following object set under the `spec` attribute:
 
