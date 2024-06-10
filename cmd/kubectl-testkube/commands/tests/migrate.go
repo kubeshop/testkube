@@ -43,15 +43,15 @@ func NewMigrateTestsCmd() *cobra.Command {
 				test, err := client.GetTest(args[0])
 				ui.ExitOnError("getting test in namespace "+namespace, err)
 
-				templateName, confugRun := printExecutors(executorTypes, namespace, test, migrateExecutors)
-				common.PrintTestWorkflowCRDForTest(test, templateName, confugRun)
+				templateName, expandTemplate, confugRun := printExecutors(executorTypes, namespace, test, migrateExecutors)
+				common.PrintTestWorkflowCRDForTest(test, expandTemplate, templateName, confugRun)
 			} else {
 				tests, err := client.ListTests("")
 				ui.ExitOnError("getting all tests in namespace "+namespace, err)
 
 				for i, test := range tests {
-					templateName, confugRun := printExecutors(executorTypes, namespace, test, migrateExecutors)
-					common.PrintTestWorkflowCRDForTest(test, templateName, confugRun)
+					templateName, expandTemplate, confugRun := printExecutors(executorTypes, namespace, test, migrateExecutors)
+					common.PrintTestWorkflowCRDForTest(test, expandTemplate, templateName, confugRun)
 					if i != len(tests)-1 {
 						fmt.Printf("\n---\n\n")
 					}
@@ -66,12 +66,17 @@ func NewMigrateTestsCmd() *cobra.Command {
 }
 
 func printExecutors(executorTypes map[string]testkube.ExecutorDetails, namespace string,
-	test testkube.Test, migrateExecutors bool) (string, string) {
+	test testkube.Test, migrateExecutors bool) (string, bool, string) {
 	templateName := ""
+	expandTemplate := false
 	confugRun := ""
 	if executor, ok := executorTypes[test.Type_]; ok {
-		templateName = executor.Name
 		if official, ok := common.OfficialTestWorkflowTemplates[templateName]; !ok {
+			templateName = executor.Name
+			if executor.Executor != nil {
+				expandTemplate = len(executor.Executor.Command) == 0 && len(executor.Executor.Args) == 0
+			}
+
 			if _, ok = printedExecutors[templateName]; !ok && migrateExecutors {
 				common.PrintTestWorkflowTemplateCRDForExecutor(executor, namespace)
 				fmt.Printf("\n---\n\n")
@@ -83,5 +88,5 @@ func printExecutors(executorTypes map[string]testkube.ExecutorDetails, namespace
 		}
 	}
 
-	return templateName, confugRun
+	return templateName, expandTemplate, confugRun
 }

@@ -289,7 +289,7 @@ func MapExecutionRequestKubeToStepKube(v testsv3.ExecutionRequest) testworkflows
 	}
 }
 
-func MapTestKubeToTestWorkflowKube(v testsv3.Test, templateName, configRun string) testworkflowsv1.TestWorkflow {
+func MapTestKubeToTestWorkflowKube(v testsv3.Test, expandTemplate bool, templateName, configRun string) testworkflowsv1.TestWorkflow {
 	var events []testworkflowsv1.Event
 	if v.Spec.Schedule != "" {
 		events = append(events, testworkflowsv1.Event{
@@ -335,8 +335,17 @@ func MapTestKubeToTestWorkflowKube(v testsv3.Test, templateName, configRun strin
 		}
 	}
 
-	step.Template = &testworkflowsv1.TemplateRef{
-		Name: templateName,
+	var use []testworkflowsv1.TemplateRef
+	if expandTemplate {
+		use = []testworkflowsv1.TemplateRef{
+			{
+				Name: templateName,
+			},
+		}
+	} else {
+		step.Template = &testworkflowsv1.TemplateRef{
+			Name: templateName,
+		}
 	}
 
 	if len(configRun) != 0 && step.Run != nil && step.Run.Args != nil {
@@ -355,6 +364,7 @@ func MapTestKubeToTestWorkflowKube(v testsv3.Test, templateName, configRun strin
 		},
 		Description: v.Spec.Description,
 		Spec: testworkflowsv1.TestWorkflowSpec{
+			Use: use,
 			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
 				Events:    events,
 				Content:   common.MapPtr(v.Spec.Content, MapTestContentKubeToContentKube),
