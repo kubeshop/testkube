@@ -53,16 +53,10 @@ func main() {
 		return
 	}
 
-	podName := cfg.PodName
-	// fallback to exection id for older tests
-	if podName == "" {
-		podName = cfg.ExecutionId
-	}
-
-	log.Debugw("starting logs proxy", "podName", podName, "namespace", cfg.Namespace, "source", cfg.Source, "executionId", cfg.ExecutionId)
+	log.Debugw("starting logs proxy", "podName", cfg.PodName, "namespace", cfg.Namespace, "source", cfg.Source, "executionId", cfg.ExecutionId)
 
 	// run Sidecar Logs Proxy - it will proxy logs from pod to nats
-	proxy := sidecar.NewProxy(clientset, podsClient, logsStream, js, log, cfg.Namespace, podName, cfg.Source)
+	proxy := sidecar.NewProxy(clientset, podsClient, logsStream, js, log, cfg.Namespace, cfg.PodName, cfg.ExecutionId, cfg.Source)
 	if err := proxy.Run(ctx); err != nil {
 		log.Errorw("error proxying logs", "error", err)
 	}
