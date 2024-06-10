@@ -78,7 +78,7 @@ func NewCloneCmd() *cobra.Command {
 			}
 
 			// Keep the files in temporary directory
-			outputPath := constants.DefaultTmpDirPath
+			outputPath := filepath.Join(constants.DefaultTmpDirPath, "repo")
 
 			// Mark directory as safe
 			configArgs := []string{"-c", fmt.Sprintf("safe.directory=%s", outputPath), "-c", "advice.detachedHead=false"}
