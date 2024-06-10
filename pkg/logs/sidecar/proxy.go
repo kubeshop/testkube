@@ -107,41 +107,38 @@ func (p *Proxy) Run(ctx context.Context) error {
 }
 
 func (p *Proxy) streamLogs(ctx context.Context, logs chan *events.Log) (err error) {
-	pods, err := executor.GetJobPods(ctx, p.podsClient, p.getPodName(), 1, 10)
+	pod, err := executor.GetPodByName(ctx, p.podsClient, p.getPodName(), 1, 10)
 	if err != nil {
 		p.handleError(err, "error getting job pods")
 		return err
 	}
 
-	for _, pod := range pods.Items {
-		l := p.log.With("namespace", pod.Namespace, "podName", pod.Name, "podStatus", pod.Status)
+	l := p.log.With("namespace", pod.Namespace, "podName", pod.Name, "podStatus", pod.Status)
 
-		switch pod.Status.Phase {
+	switch pod.Status.Phase {
 
-		case corev1.PodRunning:
-			l.Debug("streaming pod logs: immediately")
-			return p.streamLogsFromPod(pod, logs)
+	case corev1.PodRunning:
+		l.Debug("streaming pod logs: immediately")
+		return p.streamLogsFromPod(*pod, logs)
 
-		case corev1.PodFailed:
-			err := fmt.Errorf("can't get pod logs, pod failed: %s/%s", pod.Namespace, pod.Name)
-			p.handleError(err, "streaming pod logs: pod failed")
-			return err
+	case corev1.PodFailed:
+		err := fmt.Errorf("can't get pod logs, pod failed: %s/%s", pod.Namespace, pod.Name)
+		p.handleError(err, "streaming pod logs: pod failed")
+		return err
 
-		default:
-			l.Debugw("streaming pod logs: waiting for pod to be ready")
-			testFunc := p.isPodLoggable(pod.Name)
-			if err = wait.PollUntilContextTimeout(ctx, pollInterval, podStartTimeout, true, testFunc); err != nil {
-				// try to get pod container statuses from Waiting and Terminated states
-				status := p.getPodContainerStatuses(pod)
-				p.handleError(err, "can't get pod container status after pod failure")
-				return errors.Wrap(err, status)
-			}
-
-			l.Debug("streaming pod logs: pod is loggable")
-			return p.streamLogsFromPod(pod, logs)
+	default:
+		l.Debugw("streaming pod logs: waiting for pod to be ready")
+		testFunc := p.isPodLoggable(pod.Name)
+		if err = wait.PollUntilContextTimeout(ctx, pollInterval, podStartTimeout, true, testFunc); err != nil {
+			// try to get pod container statuses from Waiting and Terminated states
+			status := p.getPodContainerStatuses(*pod)
+			p.handleError(err, "can't get pod container status after pod failure")
+			return errors.Wrap(err, status)
 		}
+
+		l.Debug("streaming pod logs: pod is loggable")
+		return p.streamLogsFromPod(*pod, logs)
 	}
-	return
 }
 
 func (p *Proxy) streamLogsFromPod(pod corev1.Pod, logs chan *events.Log) (err error) {
