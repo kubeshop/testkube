@@ -37,13 +37,14 @@ const (
 )
 
 func NewProxy(clientset kubernetes.Interface, podsClient tcorev1.PodInterface, logsStream client.Stream, js jetstream.JetStream, log *zap.SugaredLogger,
-	namespace, podName, source string) *Proxy {
+	namespace, podName, subject, source string) *Proxy {
 	return &Proxy{
 		log:        log.With("service", "logs-proxy", "namespace", namespace, "podName", podName),
 		js:         js,
 		clientset:  clientset,
 		namespace:  namespace,
 		podName:    podName,
+		subject:    subject,
 		podsClient: podsClient,
 		logsStream: logsStream,
 		source:     source,
@@ -51,15 +52,15 @@ func NewProxy(clientset kubernetes.Interface, podsClient tcorev1.PodInterface, l
 }
 
 type Proxy struct {
-	log         *zap.SugaredLogger
-	js          jetstream.JetStream
-	clientset   kubernetes.Interface
-	namespace   string
-	executionId string
-	source      string
-	podsClient  tcorev1.PodInterface
-	logsStream  client.InitializedStreamPusher
-	podName     string
+	log        *zap.SugaredLogger
+	js         jetstream.JetStream
+	clientset  kubernetes.Interface
+	namespace  string
+	subject    string
+	source     string
+	podsClient tcorev1.PodInterface
+	logsStream client.InitializedStreamPusher
+	podName    string
 }
 
 func (p *Proxy) Run(ctx context.Context) error {
@@ -106,7 +107,7 @@ func (p *Proxy) Run(ctx context.Context) error {
 }
 
 func (p *Proxy) streamLogs(ctx context.Context, logs chan *events.Log) (err error) {
-	pods, err := executor.GetJobPods(ctx, p.podsClient, p.getSubject(), 1, 10)
+	pods, err := executor.GetJobPods(ctx, p.podsClient, p.getPodName(), 1, 10)
 	if err != nil {
 		p.handleError(err, "error getting job pods")
 		return err
@@ -255,10 +256,13 @@ func (p *Proxy) handleError(err error, title string) {
 		if err != nil {
 			p.log.Errorw("error pushing error to stream", "title", title, "error", err)
 		}
-
 	}
 }
 
 func (p *Proxy) getSubject() string {
+	return p.subject
+}
+
+func (p *Proxy) getPodName() string {
 	return p.podName
 }
