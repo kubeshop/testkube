@@ -339,6 +339,22 @@ func IsPodFailed(pod *corev1.Pod) (err error) {
 	return
 }
 
+// GetPodByName returns job pod by name
+func GetPodByName(ctx context.Context, podsClient tcorev1.PodInterface, podName string, retryNr, retryCount int) (*corev1.Pod, error) {
+	pod, err := podsClient.Get(ctx, podName, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	if retryNr == retryCount {
+		return nil, fmt.Errorf("retry count exceeeded, there is no active pod with given name=%s", podName)
+	}
+	if pod == nil {
+		time.Sleep(time.Duration(retryNr * 500 * int(time.Millisecond))) // increase backoff timeout
+		return GetPodByName(ctx, podsClient, podName, retryNr+1, retryCount)
+	}
+	return pod, nil
+}
+
 // GetJobPods returns job pods
 func GetJobPods(ctx context.Context, podsClient tcorev1.PodInterface, jobName string, retryNr, retryCount int) (*corev1.PodList, error) {
 	pods, err := podsClient.List(ctx, metav1.ListOptions{LabelSelector: "job-name=" + jobName})
