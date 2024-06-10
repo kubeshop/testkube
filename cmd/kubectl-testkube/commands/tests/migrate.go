@@ -71,7 +71,7 @@ func printExecutor(executorTypes map[string]testkube.ExecutorDetails, namespace 
 	expandTemplate := false
 	confugRun := ""
 	if executor, ok := executorTypes[test.Type_]; ok {
-		if official, ok := common.OfficialTestWorkflowTemplates[templateName]; !ok {
+		if official, ok := common.OfficialTestWorkflowTemplates[executor.Name]; !ok {
 			templateName = executor.Name
 			if executor.Executor != nil {
 				expandTemplate = len(executor.Executor.Command) == 0 && len(executor.Executor.Args) == 0
