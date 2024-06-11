@@ -532,7 +532,7 @@ To enable a webhook again, you can either set the field `disabled` to `"false"` 
 
 ### Disabling Webhooks on Other Resources
 
-Disabling webhooks can also be done directly on an execution, a test, a test suite and a test workflow. This way the notifications can be disabled temporarily during creation or when they need to be fixed, or updated. The CLI offers the flag `--disable-webhooks`, the API the parameter `disableWebhooks`, and the CRDs the `disableWebhooks`. When not set explicitly, webhooks will be enabled by default.
+Disabling webhooks can also be done directly on an execution, a test, a test suite and a test workflow. This way the notifications can be disabled temporarily during creation or when they need to be fixed or updated. The CLI offers the flag `--disable-webhooks`, the API the parameter `disableWebhooks`, and the CRDs `disableWebhooks`. When not set explicitly, webhooks will be enabled by default.
 
 #### Disabling Webhooks on Tests
 
@@ -589,7 +589,7 @@ The API expects a boolean value of the form:
   }
 ```
 
-Inside a test this would look the following:
+Inside a test this would look like the following:
 
 ```json
 {
@@ -649,7 +649,7 @@ cat ts.json | /Users/lilla/bin/kubectl-testkube create testsuite --disable-webho
 
 <TabItem value="crd" label="CRD">
 
-Use the attribute `disableWebhooks` in the `executionRequest` on CRD level.
+Use the attribute `disableWebhooks` in the `executionRequest` on CRD level:
 
 ```yaml
 apiVersion: tests.testkube.io/v3
@@ -696,7 +696,7 @@ The API expects a boolean value of the form:
   }
 ```
 
-Inside a test suite this would look the following:
+Inside a test suite this would look like the following:
 
 ```json
 {
@@ -893,4 +893,4 @@ Example usage:
 
 </Tabs>
 
-The examples show only the `create` operations, however these instructions work the same for `update` and `run` as well.
+The examples show only the `create` operations, however, these instructions work the same for `update` and `run` as well.
