@@ -266,7 +266,7 @@ func MapExecutionRequestKubeToStepKube(v testsv3.ExecutionRequest) testworkflows
 	if v.ArtifactRequest != nil {
 		dirs := v.ArtifactRequest.Dirs
 		for i := range dirs {
-			dirs[i] = filepath.Join(dirs[i], "**/*")
+			dirs[i] = filepath.Join(v.ArtifactRequest.VolumeMountPath, dirs[i], "**/*")
 		}
 
 		after = append(after, testworkflowsv1.Step{
