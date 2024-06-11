@@ -8,6 +8,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	testworkflowmappers "github.com/kubeshop/testkube/pkg/tcl/mapperstcl/testworkflows"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -82,14 +83,14 @@ func printTestSuiteTests(client client.Client, namespace string, executorTypes m
 		test, err := client.GetTest(testName)
 		ui.ExitOnError("getting test in namespace "+namespace, err)
 
-		templateName := ""
-		expandTemplate := false
-		configRun := ""
+		var templateName string
+		var options testworkflowmappers.Options
+
 		if executor, ok := executorTypes[test.Type_]; ok {
 			if official, ok := common.OfficialTestWorkflowTemplates[executor.Name]; !ok {
 				templateName = executor.Name
 				if executor.Executor != nil {
-					expandTemplate = len(executor.Executor.Command) == 0 && len(executor.Executor.Args) == 0
+					options.ExpandTemplate = len(executor.Executor.Command) == 0 && len(executor.Executor.Args) == 0
 				}
 
 				if _, ok = printedExecutors[templateName]; !ok && migrateExecutors {
@@ -99,12 +100,14 @@ func printTestSuiteTests(client client.Client, namespace string, executorTypes m
 				}
 			} else {
 				templateName = official.Name
-				configRun = official.ConfigRun
+				options.ConfigRun = official.ConfigRun
+				options.NeedWorkingDir = official.NeedWorkingDir
+				options.NeedTestFile = official.NeedTestFile
 			}
 		}
 
 		if _, ok := printedTests[testName]; !ok {
-			common.PrintTestWorkflowCRDForTest(test, expandTemplate, templateName, configRun)
+			common.PrintTestWorkflowCRDForTest(test, templateName, options)
 			fmt.Printf("\n---\n\n")
 			printedTests[testName] = struct{}{}
 		}

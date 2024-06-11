@@ -7,6 +7,7 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	testworkflowmappers "github.com/kubeshop/testkube/pkg/tcl/mapperstcl/testworkflows"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -43,15 +44,15 @@ func NewMigrateTestsCmd() *cobra.Command {
 				test, err := client.GetTest(args[0])
 				ui.ExitOnError("getting test in namespace "+namespace, err)
 
-				templateName, expandTemplate, confugRun := printExecutor(executorTypes, namespace, test, migrateExecutors)
-				common.PrintTestWorkflowCRDForTest(test, expandTemplate, templateName, confugRun)
+				templateName, options := printExecutor(executorTypes, namespace, test, migrateExecutors)
+				common.PrintTestWorkflowCRDForTest(test, templateName, options)
 			} else {
 				tests, err := client.ListTests("")
 				ui.ExitOnError("getting all tests in namespace "+namespace, err)
 
 				for i, test := range tests {
-					templateName, expandTemplate, confugRun := printExecutor(executorTypes, namespace, test, migrateExecutors)
-					common.PrintTestWorkflowCRDForTest(test, expandTemplate, templateName, confugRun)
+					templateName, options := printExecutor(executorTypes, namespace, test, migrateExecutors)
+					common.PrintTestWorkflowCRDForTest(test, templateName, options)
 					if i != len(tests)-1 {
 						fmt.Printf("\n---\n\n")
 					}
@@ -66,15 +67,15 @@ func NewMigrateTestsCmd() *cobra.Command {
 }
 
 func printExecutor(executorTypes map[string]testkube.ExecutorDetails, namespace string,
-	test testkube.Test, migrateExecutors bool) (string, bool, string) {
-	templateName := ""
-	expandTemplate := false
-	confugRun := ""
+	test testkube.Test, migrateExecutors bool) (string, testworkflowmappers.Options) {
+	var templateName string
+	var options testworkflowmappers.Options
+
 	if executor, ok := executorTypes[test.Type_]; ok {
 		if official, ok := common.OfficialTestWorkflowTemplates[executor.Name]; !ok {
 			templateName = executor.Name
 			if executor.Executor != nil {
-				expandTemplate = len(executor.Executor.Command) == 0 && len(executor.Executor.Args) == 0
+				options.ExpandTemplate = len(executor.Executor.Command) == 0 && len(executor.Executor.Args) == 0
 			}
 
 			if _, ok = printedExecutors[templateName]; !ok && migrateExecutors {
@@ -84,9 +85,11 @@ func printExecutor(executorTypes map[string]testkube.ExecutorDetails, namespace 
 			}
 		} else {
 			templateName = official.Name
-			confugRun = official.ConfigRun
+			options.ConfigRun = official.ConfigRun
+			options.NeedWorkingDir = official.NeedWorkingDir
+			options.NeedTestFile = official.NeedTestFile
 		}
 	}
 
-	return templateName, expandTemplate, confugRun
+	return templateName, options
 }
