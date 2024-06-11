@@ -9,7 +9,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
-// NewShowDebugInfoCmd creates a new cobra command to print the debug info to the CLI
+// NewDebugControlPlaneCmd creates a new cobra command to print the debug info to the CLI
 func NewDebugControlPlaneCmd() *cobra.Command {
 	var additionalLabels map[string]string
 	var attachAgentLogs bool

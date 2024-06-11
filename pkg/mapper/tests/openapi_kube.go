@@ -207,6 +207,7 @@ func MapExecutionRequestToSpecExecutionRequest(executionRequest *testkube.Execut
 		EnvConfigMaps:                      mapEnvReferences(executionRequest.EnvConfigMaps),
 		EnvSecrets:                         mapEnvReferences(executionRequest.EnvSecrets),
 		SlavePodRequest:                    podRequest,
+		DisableWebhooks:                    executionRequest.DisableWebhooks,
 	}
 
 	// Pro edition only (tcl protected code)
@@ -631,6 +632,11 @@ func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.
 
 	if executionRequest.ExecutePostRunScriptBeforeScraping != nil {
 		request.ExecutePostRunScriptBeforeScraping = *executionRequest.ExecutePostRunScriptBeforeScraping
+		emptyExecution = false
+	}
+
+	if executionRequest.DisableWebhooks != nil {
+		request.DisableWebhooks = *executionRequest.DisableWebhooks
 		emptyExecution = false
 	}
 

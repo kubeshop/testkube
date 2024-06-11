@@ -37,6 +37,8 @@ type Config struct {
 	ScrapperEnabled                             bool          `envconfig:"SCRAPPERENABLED" default:"false"`
 	LogsBucket                                  string        `envconfig:"LOGS_BUCKET" default:""`
 	LogsStorage                                 string        `envconfig:"LOGS_STORAGE" default:""`
+	NatsEmbedded                                bool          `envconfig:"NATS_EMBEDDED" default:"false"`
+	NatsEmbeddedStoreDir                        string        `envconfig:"NATS_EMBEDDED_STORE_DIR" default:"/app/nats"`
 	NatsURI                                     string        `envconfig:"NATS_URI" default:"nats://localhost:4222"`
 	NatsSecure                                  bool          `envconfig:"NATS_SECURE" default:"false"`
 	NatsSkipVerify                              bool          `envconfig:"NATS_SKIP_VERIFY" default:"false"`
@@ -92,6 +94,7 @@ type Config struct {
 	EnableSecretsEndpoint                       bool          `envconfig:"ENABLE_SECRETS_ENDPOINT" default:"false"`
 	DisableMongoMigrations                      bool          `envconfig:"DISABLE_MONGO_MIGRATIONS" default:"false"`
 	Debug                                       bool          `envconfig:"DEBUG" default:"false"`
+	Trace                                       bool          `envconfig:"TRACE" default:"false"`
 	EnableImageDataPersistentCache              bool          `envconfig:"TESTKUBE_ENABLE_IMAGE_DATA_PERSISTENT_CACHE" default:"false"`
 	ImageDataPersistentCacheKey                 string        `envconfig:"TESTKUBE_IMAGE_DATA_PERSISTENT_CACHE_KEY" default:"testkube-image-cache"`
 	LogServerGrpcAddress                        string        `envconfig:"LOG_SERVER_GRPC_ADDRESS" default:":9090"`

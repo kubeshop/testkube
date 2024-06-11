@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -263,6 +264,7 @@ a:
 	assert.Equal(t, `[0,2,4,6,8]`, MustCompile(`map([10,20,30,40,50], "_.index * 2")`).String())
 	assert.Equal(t, `[2,4,6,8,10]`, MustCompile(`map([1,2,3,4,5], "_.value * 2")`).String())
 	assert.Equal(t, `[0,2,4,6,8]`, MustCompile(`map([10,20,30,40,50], "_.index * 2")`).String())
+	assert.ElementsMatch(t, []interface{}{MapEntry{Key: "A", Value: "B"}, MapEntry{Key: "C", Value: 5.0}}, must(MustCompile(`entries({"A": "B", "C": 5})`).Static().SliceValue()))
 	assert.Equal(t, `[3,4,5]`, MustCompile(`filter([1,2,3,4,5], "_.value > 2")`).String())
 	assert.Equal(t, `[5]`, MustCompile(`jq([1,2,3,4,5], ". | max")`).String())
 	assert.Equal(t, `[{"b":{"v":2}}]`, MustCompile(`jq([{"a":{"v": 1}},{"b":{"v": 2}}], ". | max_by(.v)")`).String())
@@ -290,6 +292,8 @@ a:
 	assert.Equal(t, `[]`, MustCompile(`range(5, 3)`).String())
 	assert.Equal(t, `[0,1,2,3,4]`, MustCompile(`range(5)`).String())
 	assert.Equal(t, `[5,6,7]`, MustCompile(`range(5, 8)`).String())
+	assert.InDelta(t, time.Now().UnixMilli(), must(time.Parse(RFC3339Millis, must(MustCompile(`date()`).Static().StringValue()))).UnixMilli(), 5)
+	assert.Equal(t, time.Now().Truncate(24*time.Hour).UnixMilli(), must(time.Parse("2006-01-02", must(MustCompile(`date("2006-01-02")`).Static().StringValue()))).UnixMilli())
 }
 
 func TestCompileWildcard_Unknown(t *testing.T) {

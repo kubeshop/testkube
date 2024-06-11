@@ -1,3 +1,4 @@
+version: 2
 builds:
   - builder: prebuilt
     goos:
@@ -23,9 +24,6 @@ archives:
       {{- else }}{{ .Arch }}{{ end }}
 checksum:
   name_template: "checksums.txt"
-
-source:
-  rlcp: true
 
 sboms:
   - artifacts: archive
@@ -87,7 +85,7 @@ release:
   prerelease: auto
 
 brews:
-  - tap:
+  - repository:
       owner: kubeshop
       name: homebrew-testkube
     description: Testkube - your somewhat opinionated and friendly Kubernetes testing framework!

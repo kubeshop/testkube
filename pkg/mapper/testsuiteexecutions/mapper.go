@@ -218,6 +218,7 @@ func MapExecutionCRD(request *testkube.Execution) *testsuiteexecutionv1.Executio
 		RunningContext:                     runningContext,
 		ContainerShell:                     request.ContainerShell,
 		SlavePodRequest:                    podRequest,
+		DisableWebhooks:                    request.DisableWebhooks,
 	}
 
 	result.StartTime.Time = request.StartTime

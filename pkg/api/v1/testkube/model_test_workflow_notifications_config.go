@@ -9,10 +9,7 @@
  */
 package testkube
 
-type TestWorkflowExecutionCr struct {
-	TestWorkflow     *ObjectRef                     `json:"testWorkflow"`
-	ExecutionRequest *TestWorkflowExecutionRequest  `json:"executionRequest,omitempty"`
-	Status           *TestWorkflowExecutionStatusCr `json:"status,omitempty"`
-	// disable webhooks for this execution
+type TestWorkflowNotificationsConfig struct {
+	// disable webhooks for this test workflow
 	DisableWebhooks bool `json:"disableWebhooks,omitempty"`
 }

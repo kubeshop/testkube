@@ -60,7 +60,7 @@ jobs:
           readme_file: "./README.md"
 
       - name: Release
-        uses: goreleaser/goreleaser-action@v5
+        uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
           version: latest
@@ -79,7 +79,15 @@ jobs:
           ALPINE_IMAGE: ${{ env.ALPINE_IMAGE }}
           BUSYBOX_IMAGE: ${{ env.BUSYBOX_IMAGE }}
 
-  testworkflow-init:
+  testworkflow:
+    strategy:
+      matrix:
+        service: [ testworkflow-init, testworkflow-toolkit ]
+        include:
+          - service: testworkflow-init
+            repository: testkube-tw-init
+          - service: testworkflow-toolkit
+            repository: testkube-tw-toolkit
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -107,7 +115,7 @@ jobs:
           path: |
             ~/go/pkg/mod
             ~/.cache/go-build
-          key: testkube-tw-init-go-${{ hashFiles('**/go.sum') }}
+          key: ${{ matrix.service }}-go-${{ hashFiles('**/go.sum') }}
 
       - name: Login to DockerHub
         uses: docker/login-action@v3
@@ -116,11 +124,11 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Release
-        uses: goreleaser/goreleaser-action@v5
+        uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
           version: latest
-          args: release -f goreleaser_files/.goreleaser-docker-build-testworkflow-init.yml
+          args: release -f goreleaser_files/.goreleaser-docker-build-testworkflow.yml
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
           ANALYTICS_TRACKING_ID: ${{secrets.TESTKUBE_API_GA_MEASUREMENT_ID}}
@@ -134,81 +142,27 @@ jobs:
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
           ALPINE_IMAGE: ${{ env.ALPINE_IMAGE }}
           BUSYBOX_IMAGE: ${{ env.BUSYBOX_IMAGE }}
-
-  testworkflow-toolkit:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - uses: sigstore/cosign-installer@v3.5.0
-      - uses: anchore/sbom-action/download-syft@v0.16.0
-
-      - name: Set up Docker Buildx
-        id: buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set-up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: stable
-          cache: false
-
-      - name: Go Cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          key: testkube-tw-toolkit-go-${{ hashFiles('**/go.sum') }}
-
-      - name: Login to DockerHub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Release
-        uses: goreleaser/goreleaser-action@v5
-        with:
-          distribution: goreleaser
-          version: latest
-          args: release -f goreleaser_files/.goreleaser-docker-build-testworkflow-toolkit.yml
-        env:
-          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
-          ANALYTICS_TRACKING_ID: ${{secrets.TESTKUBE_API_GA_MEASUREMENT_ID}}
-          ANALYTICS_API_KEY: ${{secrets.TESTKUBE_API_GA_MEASUREMENT_SECRET}}
-          SLACK_BOT_CLIENT_ID: ${{secrets.TESTKUBE_SLACK_BOT_CLIENT_ID}}
-          SLACK_BOT_CLIENT_SECRET: ${{secrets.TESTKUBE_SLACK_BOT_CLIENT_SECRET}}
-          SEGMENTIO_KEY: ${{secrets.TESTKUBE_API_SEGMENTIO_KEY}}
-          CLOUD_SEGMENTIO_KEY: ${{secrets.TESTKUBE_API_CLOUD_SEGMENTIO_KEY}}
-          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
-          DOCKER_BUILDX_CACHE_FROM: "type=gha"
-          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
-          ALPINE_IMAGE: ${{ env.ALPINE_IMAGE }}
-          BUSYBOX_IMAGE: ${{ env.BUSYBOX_IMAGE }}
+          SERVICE: ${{ matrix.service }}
+          REPOSITORY: ${{ matrix.repository }}
 
   single_executor:
     strategy:
       matrix:
         executor:
           [
-            artillery,
-            curl,
-            example,
-            ginkgo,
-            k6,
-            kubepug,
-            postman,
-            soapui,
-            init,
-            scraper,
-            template,
-            tracetest,
-            zap,
+              artillery,
+              curl,
+              example,
+              ginkgo,
+              k6,
+              kubepug,
+              postman,
+              soapui,
+              init,
+              scraper,
+              template,
+              tracetest,
+              zap,
           ]
 
     runs-on: ubuntu-latest
@@ -267,7 +221,7 @@ jobs:
           readme_file: "./contrib/executor/${{ matrix.executor }}/README.md"
 
       - name: Release
-        uses: goreleaser/goreleaser-action@v5
+        uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
           version: latest
@@ -338,7 +292,7 @@ jobs:
           readme_file: "./contrib/executor/jmeter/README.md"
 
       - name: Release
-        uses: goreleaser/goreleaser-action@v5
+        uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
           version: latest
@@ -406,7 +360,7 @@ jobs:
           readme_file: "./contrib/executor/jmeterd/README.md"
 
       - name: Release
-        uses: goreleaser/goreleaser-action@v5
+        uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
           version: latest
@@ -531,7 +485,7 @@ jobs:
           readme_file: "./contrib/executor/maven/README.md"
 
       - name: Release
-        uses: goreleaser/goreleaser-action@v5
+        uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
           version: latest
@@ -599,7 +553,7 @@ jobs:
           readme_file: "./contrib/executor/gradle/README.md"
 
       - name: Release
-        uses: goreleaser/goreleaser-action@v5
+        uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
           version: latest
@@ -615,14 +569,14 @@ jobs:
       matrix:
         version:
           [
-            cypress8,
-            cypress9,
-            cypress10,
-            cypress11,
-            cypress12,
-            cypress13,
-            yarn,
-            npm,
+              cypress8,
+              cypress9,
+              cypress10,
+              cypress11,
+              cypress12,
+              cypress13,
+              yarn,
+              npm,
           ]
 
     runs-on: ubuntu-latest
@@ -684,7 +638,7 @@ jobs:
           strip_v: true
 
       - name: Release
-        uses: goreleaser/goreleaser-action@v5
+        uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
           version: latest
@@ -699,7 +653,7 @@ jobs:
       - name: Push multi-arch image to the Registry
         run: |
           docker push kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-amd64
-          docker push kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-arm64v8
+          docker push kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-arm64
 
   executor_postman_node21:
     runs-on: ubuntu-latest
@@ -747,7 +701,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Release
-        uses: goreleaser/goreleaser-action@v5
+        uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
           version: latest
@@ -764,14 +718,14 @@ jobs:
       matrix:
         version:
           [
-            cypress8,
-            cypress9,
-            cypress10,
-            cypress11,
-            cypress12,
-            cypress13,
-            yarn,
-            npm,
+              cypress8,
+              cypress9,
+              cypress10,
+              cypress11,
+              cypress12,
+              cypress13,
+              yarn,
+              npm,
           ]
 
     runs-on: ubuntu-latest
@@ -810,15 +764,15 @@ jobs:
 
       - name: Create manifests
         run: |
-          docker manifest create kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }} --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress13-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress13-arm64v8
+          docker manifest create kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }} --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress13-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress13-arm64
           docker manifest push -p kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}
           cosign sign kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }} --yes
 
-          docker manifest create kubeshop/testkube-cypress-executor:latest --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress13-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress13-arm64v8
+          docker manifest create kubeshop/testkube-cypress-executor:latest --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress13-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress13-arm64
           docker manifest push -p kubeshop/testkube-cypress-executor:latest
           cosign sign kubeshop/testkube-cypress-executor:latest --yes
 
-          docker manifest create kubeshop/testkube-cypress-executor:legacy --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-npm-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-npm-arm64v8
+          docker manifest create kubeshop/testkube-cypress-executor:legacy --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-npm-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-npm-arm64
           docker manifest push -p kubeshop/testkube-cypress-executor:legacy
           cosign sign kubeshop/testkube-cypress-executor:legacy --yes
 
@@ -879,7 +833,7 @@ jobs:
           readme_file: "./contrib/executor/playwright/README.md"
 
       - name: Release
-        uses: goreleaser/goreleaser-action@v5
+        uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
           version: latest
@@ -889,6 +843,82 @@ jobs:
           DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
           DOCKER_BUILDX_CACHE_FROM: "type=gha"
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
+
+  log_server_sidecar:
+    strategy:
+      matrix:
+        service: [ logs-server, logs-sidecar ]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          # this might remove tools that are actually needed,
+          # if set to "true" but frees about 6 GB
+          tool-cache: false
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: sigstore/cosign-installer@v3.5.0
+      - uses: anchore/sbom-action/download-syft@v0.16.0
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      - name: Go Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ matrix.service }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser-pro
+          version: latest
+          args: release -f ./goreleaser_files/.goreleaser-docker-build-logs-services.yml
+        env:
+          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+          GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
+          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
+          DOCKER_BUILDX_CACHE_FROM: "type=gha"
+          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
+          ALPINE_IMAGE: ${{ env.ALPINE_IMAGE }}
+          BUSYBOX_IMAGE: ${{ env.BUSYBOX_IMAGE }}
+          SERVICE: ${{ matrix.service }}
+
+      - name: Push README to Dockerhub
+        uses: christian-korneck/update-container-description-action@v1
+        env:
+          DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKER_PASS: ${{ secrets.DOCKERHUB_TOKEN }}
+        with:
+          destination_container_repo: kubeshop/testkube-${{ matrix.service }}
+          provider: dockerhub
+          short_description: "Testkube CLI Docker image"
+          readme_file: "./README.md"
 
   update_api_helm_charts:
     needs:
@@ -901,6 +931,8 @@ jobs:
         executor_cypress,
         executor_cypress_manifest,
         executor_playwright,
+        log_server_sidecar,
+        testworkflow
       ]
     runs-on: ubuntu-latest
     steps:

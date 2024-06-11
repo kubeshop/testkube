@@ -195,6 +195,7 @@ func MapExecutionRequestFromSpec(specExecutionRequest *testsv3.ExecutionRequest)
 		EnvConfigMaps:                      MapEnvReferences(specExecutionRequest.EnvConfigMaps),
 		EnvSecrets:                         MapEnvReferences(specExecutionRequest.EnvSecrets),
 		SlavePodRequest:                    podRequest,
+		DisableWebhooks:                    specExecutionRequest.DisableWebhooks,
 	}
 
 	// Pro edition only (tcl protected code)
@@ -526,6 +527,7 @@ func MapSpecExecutionRequestToExecutionUpdateRequest(
 	executionRequest.EnvSecrets = &envSecrets
 	executionRequest.ExecutePostRunScriptBeforeScraping = &request.ExecutePostRunScriptBeforeScraping
 	executionRequest.SourceScripts = &request.SourceScripts
+	executionRequest.DisableWebhooks = &request.DisableWebhooks
 
 	// Pro edition only (tcl protected code)
 	mappertcl.MapSpecExecutionRequestToExecutionUpdateRequest(request, executionRequest)

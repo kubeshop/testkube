@@ -111,3 +111,8 @@ func (r *CloudOutputRepository) DeleteOutputByTestWorkflow(ctx context.Context, 
 	req := ExecutionDeleteOutputByWorkflowRequest{WorkflowName: workflowName}
 	return passNoContent(r.executor, ctx, req)
 }
+
+func (r *CloudOutputRepository) DeleteOutputForTestWorkflows(ctx context.Context, workflowNames []string) (err error) {
+	req := ExecutionDeleteOutputForTestWorkflowsRequest{WorkflowNames: workflowNames}
+	return passNoContent(r.executor, ctx, req)
+}

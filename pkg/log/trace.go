@@ -8,27 +8,29 @@ import (
 	"go.uber.org/zap"
 )
 
+const tracePrefix = "TRACE: "
+
 func Tracew(logger *zap.SugaredLogger, msg string, keysAndValues ...interface{}) {
 	if isTraceEnabled() {
-		logger.Debugw(msg, keysAndValues...)
+		logger.Debugw(tracePrefix+msg, keysAndValues...)
 	}
 }
 
 func Tracef(logger *zap.SugaredLogger, msg string, keysAndValues ...interface{}) {
 	if isTraceEnabled() {
-		logger.Debugf(msg, keysAndValues...)
+		logger.Debugf(tracePrefix+msg, keysAndValues...)
 	}
 }
 
 func Trace(logger *zap.SugaredLogger, msg string, keysAndValues ...interface{}) {
 	if isTraceEnabled() {
-		logger.Debug(msg)
+		logger.Debug(tracePrefix + msg)
 	}
 }
 
 func Traceln(logger *zap.SugaredLogger, msg string, keysAndValues ...interface{}) {
 	if isTraceEnabled() {
-		logger.Debug(msg)
+		logger.Debug(tracePrefix + msg)
 	}
 }
 

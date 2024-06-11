@@ -184,3 +184,7 @@ func ProcessMasterFlags(cmd *cobra.Command, opts *HelmOptions, cfg *config.Data)
 	opts.Master.URIs = uris
 
 }
+
+func IsBothEnabledAndDisabledSet(cmd *cobra.Command) bool {
+	return cmd.Flag("enable-webhooks").Changed && cmd.Flag("disable-webhooks").Changed
+}

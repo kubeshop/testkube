@@ -18,9 +18,12 @@ type TestWorkflowContentGit struct {
 	Username     string        `json:"username,omitempty"`
 	UsernameFrom *EnvVarSource `json:"usernameFrom,omitempty"`
 	// plain text token to fetch with
-	Token     string              `json:"token,omitempty"`
-	TokenFrom *EnvVarSource       `json:"tokenFrom,omitempty"`
-	AuthType  *ContentGitAuthType `json:"authType,omitempty"`
+	Token     string        `json:"token,omitempty"`
+	TokenFrom *EnvVarSource `json:"tokenFrom,omitempty"`
+	// plain text SSH private key to fetch with
+	SshKey     string              `json:"sshKey,omitempty"`
+	SshKeyFrom *EnvVarSource       `json:"sshKeyFrom,omitempty"`
+	AuthType   *ContentGitAuthType `json:"authType,omitempty"`
 	// where to mount the fetched repository contents (defaults to \"repo\" directory in the data volume)
 	MountPath string `json:"mountPath,omitempty"`
 	// paths to fetch for the sparse checkout

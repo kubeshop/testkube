@@ -59,6 +59,10 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 		request.Name = fmt.Sprintf("%s-%d", request.Name, request.Number)
 	}
 
+	if !request.DisableWebhooks && test.ExecutionRequest != nil {
+		request.DisableWebhooks = test.ExecutionRequest.DisableWebhooks
+	}
+
 	// test name + test execution name should be unique
 	execution, _ = s.testResults.GetByNameAndTest(ctx, request.Name, test.Name)
 
@@ -305,6 +309,7 @@ func newExecutionFromExecutionOptions(subscriptionChecker checktcl.SubscriptionC
 	execution.DownloadArtifactExecutionIDs = options.Request.DownloadArtifactExecutionIDs
 	execution.DownloadArtifactTestNames = options.Request.DownloadArtifactTestNames
 	execution.SlavePodRequest = options.Request.SlavePodRequest
+	execution.DisableWebhooks = options.Request.DisableWebhooks
 
 	// Pro edition only (tcl protected code)
 	if schedulertcl.HasExecutionNamespace(&options.Request) {

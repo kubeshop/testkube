@@ -3346,6 +3346,7 @@ paths:
         - pro
       parameters:
         - $ref: "#/components/parameters/Selector"
+        - $ref: "#/components/parameters/TestWorkflowNames"
       summary: Delete test workflows
       description: Delete test workflows from the kubernetes cluster
       operationId: deleteTestWorkflows
@@ -4990,6 +4991,13 @@ components:
         testSuiteExecutionName:
           type: string
           description: test suite execution name started the test suite execution
+        disableWebhooks:
+          type: boolean
+          description: whether webhooks on this execution are disabled
+          default: false
+          example:
+            - true
+            - false
 
     TestSuiteExecutionCR:
       type: object
@@ -5618,6 +5626,13 @@ components:
         executionNamespace:
           type: string
           description: namespace for test execution (Pro edition only)
+        disableWebhooks:
+          type: boolean
+          description: whether webhooks on this execution are disabled
+          default: false
+          example:
+            - true
+            - false
 
     Artifact:
       type: object
@@ -6289,6 +6304,13 @@ components:
         executionNamespace:
           type: string
           description: namespace for test execution (Pro edition only)
+        disableWebhooks:
+          type: boolean
+          description: whether webhooks on this execution are disabled
+          default: false
+          example:
+            - true
+            - false
 
     TestSuiteStepExecutionRequest:
       description: test step execution request body
@@ -6370,6 +6392,13 @@ components:
         runningContext:
           $ref: "#/components/schemas/RunningContext"
           description: running context for the test execution
+        disableWebhooks:
+          type: boolean
+          description: whether webhooks on the executions of this step are disabled
+          default: false
+          example:
+            - true
+            - false
 
     ExecutionUpdateRequest:
       description: test execution request update body
@@ -6471,6 +6500,13 @@ components:
         testSuiteExecutionName:
           type: string
           description: test suite execution name started the test suite execution
+        disableWebhooks:
+          type: boolean
+          description: whether webhooks on the executions of this test suite are disabled
+          default: false
+          example:
+            - true
+            - false
 
     TestSuiteExecutionUpdateRequest:
       description: test suite execution update request body
@@ -7494,6 +7530,10 @@ components:
         testWorkflowExecutionName:
           type: string
           description: test workflow execution name started the test workflow execution
+        disableWebhooks:
+          type: boolean
+          description: whether webhooks on the executions of this test workflow are disabled
+          default: false
 
     TestWorkflowWithExecution:
       type: object
@@ -7578,6 +7618,13 @@ components:
         testWorkflowExecutionName:
           type: string
           description: test workflow execution name started the test workflow execution
+        disableWebhooks:
+          type: boolean
+          description: whether webhooks on the executions of this test workflow are disabled
+          default: false
+          example:
+            - true
+            - false
       required:
         - id
         - name
@@ -8110,6 +8157,9 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/TestWorkflowEvent"
+        notifications:
+          $ref: "#/components/schemas/TestWorkflowNotificationsConfig"
+
 
     TestWorkflowTemplateSpec:
       type: object
@@ -8585,6 +8635,11 @@ components:
           description: plain text token to fetch with
         tokenFrom:
           $ref: "#/components/schemas/EnvVarSource"
+        sshKey:
+          type: string
+          description: plain text SSH private key to fetch with
+        sshKeyFrom:
+          $ref: "#/components/schemas/EnvVarSource"
         authType:
           $ref: "#/components/schemas/ContentGitAuthType"
         mountPath:
@@ -8777,6 +8832,14 @@ components:
           items:
             $ref: "#/components/schemas/VolumeMount"
 
+    TestWorkflowNotificationsConfig:
+      type: object
+      properties:
+        disableWebhooks:
+          type: boolean
+          description: disable webhooks for this test workflow
+          default: false
+
     TestWorkflowStepRun:
       type: object
       properties:
@@ -8944,6 +9007,10 @@ components:
         status:
           $ref: "#/components/schemas/TestWorkflowExecutionStatusCR"
           description: test workflow execution status
+        disableWebhooks:
+          type: boolean
+          description: disable webhooks for this execution
+          default: false
 
     TestWorkflowExecutionStatusCR:
       type: object
@@ -9983,6 +10050,13 @@ components:
       schema:
         type: string
         description: Labels to filter by
+    TestWorkflowNames:
+      in: query
+      name: testWorkflowNames
+      schema:
+        items:
+          type: string
+        type: array
     ExecutionSelector:
       in: query
       name: executionSelector

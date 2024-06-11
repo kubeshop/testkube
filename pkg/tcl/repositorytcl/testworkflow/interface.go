@@ -89,4 +89,6 @@ type OutputRepository interface {
 
 	// DeleteOutputByTestWorkflow deletes execution output by test workflow
 	DeleteOutputByTestWorkflow(ctx context.Context, testWorkflowName string) error
+	// DeleteOutputForTestWorkflows deletes execution output by test workflows
+	DeleteOutputForTestWorkflows(ctx context.Context, workflowNames []string) error
 }

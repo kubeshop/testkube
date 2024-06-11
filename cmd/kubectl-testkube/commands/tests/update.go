@@ -39,6 +39,10 @@ func NewUpdateTestsCmd() *cobra.Command {
 				ui.Failf("pass valid test name (in '--name' flag)")
 			}
 
+			if common.IsBothEnabledAndDisabledSet(cmd) {
+				ui.Failf("both --enable-webhooks and --disable-webhooks flags are set, please use only one")
+			}
+
 			client, namespace, err := common.GetClient(cmd)
 			ui.ExitOnError("getting client", err)
 

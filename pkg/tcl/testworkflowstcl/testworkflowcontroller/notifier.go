@@ -50,6 +50,9 @@ func (n *notifier) RegisterTimestamp(ref string, t time.Time) {
 
 func (n *notifier) Raw(ref string, ts time.Time, message string) {
 	if message != "" {
+		if ref == InitContainerName {
+			ref = ""
+		}
 		// TODO: use timestamp from the message too for lastTs?
 		n.watcher.Send(Notification{
 			Timestamp: ts.UTC(),

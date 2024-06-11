@@ -29,6 +29,7 @@ const (
 	RootResourceIdLabelName   = "testworkflowid-root"
 	GroupIdLabelName          = "testworkflowid-group"
 	SignatureAnnotationName   = "testworkflows.testkube.io/signature"
+	RFC3339Millis             = "2006-01-02T15:04:05.000Z07:00"
 )
 
 var (
@@ -37,6 +38,7 @@ var (
 	DefaultInitPath        = filepath.Join(DefaultInternalPath, "init")
 	DefaultStatePath       = filepath.Join(DefaultInternalPath, "state")
 	DefaultTransferDirPath = filepath.Join(DefaultInternalPath, "transfer")
+	DefaultTmpDirPath      = filepath.Join(DefaultInternalPath, "tmp")
 	DefaultTransferPort    = 60433
 	InitScript             = strings.TrimSpace(strings.NewReplacer(
 		"<bin>", InternalBinPath,

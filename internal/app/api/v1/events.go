@@ -18,18 +18,6 @@ func (s TestkubeAPI) InitEvents() {
 
 	// run workers
 	s.Events.Listen(context.Background())
-
-	// handle response logs
-	go func() {
-		s.Log.Debug("Listening for workers results")
-		for resp := range s.Events.Results {
-			if resp.Error() != "" {
-				s.Log.Errorw("got error when sending webhooks", "response", resp)
-				continue
-			}
-			s.Log.Debugw("got event response", "response", resp)
-		}
-	}()
 }
 
 func (s TestkubeAPI) EventsStreamHandler() fiber.Handler {

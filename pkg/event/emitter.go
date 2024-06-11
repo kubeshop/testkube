@@ -22,7 +22,6 @@ const (
 // NewEmitter returns new emitter instance
 func NewEmitter(eventBus bus.Bus, clusterName string, envs map[string]string) *Emitter {
 	return &Emitter{
-		Results:     make(chan testkube.EventResult, eventsBuffer),
 		Log:         log.DefaultLogger,
 		Loader:      NewLoader(),
 		Bus:         eventBus,
@@ -34,7 +33,6 @@ func NewEmitter(eventBus bus.Bus, clusterName string, envs map[string]string) *E
 
 // Emitter handles events emitting for webhooks
 type Emitter struct {
-	Results     chan testkube.EventResult
 	Listeners   common.Listeners
 	Loader      *Loader
 	Log         *zap.SugaredLogger
@@ -57,25 +55,10 @@ func (e *Emitter) UpdateListeners(listeners common.Listeners) {
 	e.mutex.Lock()
 	defer e.mutex.Unlock()
 
-	oldMap := make(map[string]map[string]common.Listener, 0)
-	newMap := make(map[string]map[string]common.Listener, 0)
 	result := make([]common.Listener, 0)
 
-	for _, l := range e.Listeners {
-		if _, ok := oldMap[l.Kind()]; !ok {
-			oldMap[l.Kind()] = make(map[string]common.Listener, 0)
-		}
-
-		oldMap[l.Kind()][l.Name()] = l
-	}
-
-	for _, l := range listeners {
-		if _, ok := newMap[l.Kind()]; !ok {
-			newMap[l.Kind()] = make(map[string]common.Listener, 0)
-		}
-
-		newMap[l.Kind()][l.Name()] = l
-	}
+	oldMap := listerersToMap(e.Listeners)
+	newMap := listerersToMap(listeners)
 
 	// check for missing listeners
 	for kind, lMap := range oldMap {
@@ -126,6 +109,20 @@ func (e *Emitter) UpdateListeners(listeners common.Listeners) {
 	e.Listeners = result
 }
 
+func listerersToMap(listeners []common.Listener) map[string]map[string]common.Listener {
+	m := make(map[string]map[string]common.Listener, 0)
+
+	for _, l := range listeners {
+		if _, ok := m[l.Kind()]; !ok {
+			m[l.Kind()] = make(map[string]common.Listener, 0)
+		}
+
+		m[l.Kind()][l.Name()] = l
+	}
+
+	return m
+}
+
 // Notify notifies emitter with webhook
 func (e *Emitter) Notify(event testkube.Event) {
 	event.ClusterName = e.ClusterName
@@ -161,19 +158,19 @@ func (e *Emitter) Listen(ctx context.Context) {
 }
 
 func (e *Emitter) startListener(l common.Listener) {
-	e.Log.Infow("starting listener", l.Name(), l.Metadata())
 	err := e.Bus.SubscribeTopic("events.>", l.Name(), e.notifyHandler(l))
 	if err != nil {
-		e.Log.Errorw("error subscribing to event", "error", err)
+		e.Log.Errorw("error while starting listener", "error", err)
 	}
+	e.Log.Infow("started listener", l.Name(), l.Metadata())
 }
 
 func (e *Emitter) stopListener(name string) {
-	e.Log.Infow("stoping listener", name)
 	err := e.Bus.Unsubscribe(name)
 	if err != nil {
-		e.Log.Errorw("error unsubscribing from event", "error", err)
+		e.Log.Errorw("error while stopping listener", "error", err)
 	}
+	e.Log.Infow("stopped listener", name)
 }
 
 func (e *Emitter) notifyHandler(l common.Listener) bus.Handler {
@@ -181,7 +178,7 @@ func (e *Emitter) notifyHandler(l common.Listener) bus.Handler {
 	return func(event testkube.Event) error {
 		if event.Valid(l.Selector(), l.Events()) {
 			result := l.Notify(event)
-			log.Tracew(logger, "listener notified", append(event.Log(), "result", result))
+			log.Tracew(logger, "listener notified", append(event.Log(), "result", result)...)
 		} else {
 			log.Tracew(logger, "dropping event not matching selector or type", event.Log()...)
 		}

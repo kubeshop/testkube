@@ -230,6 +230,7 @@ func MapExecutionRequestToSpecExecutionRequest(executionRequest *testkube.TestSu
 		ScraperTemplateReference: executionRequest.ScraperTemplateReference,
 		PvcTemplate:              executionRequest.PvcTemplate,
 		PvcTemplateReference:     executionRequest.PvcTemplateReference,
+		DisableWebhooks:          executionRequest.DisableWebhooks,
 	}
 }
 
@@ -403,6 +404,11 @@ func MapExecutionUpdateRequestToSpecExecutionRequest(executionRequest *testkube.
 		empty = false
 	}
 
+	if executionRequest.DisableWebhooks != nil {
+		request.DisableWebhooks = *executionRequest.DisableWebhooks
+		empty = false
+	}
+
 	if empty {
 		return nil
 	}
@@ -481,6 +487,7 @@ func MapTestStepExecutionRequestCRD(request *testkube.TestSuiteStepExecutionRequ
 		PvcTemplate:              request.PvcTemplate,
 		PvcTemplateReference:     request.PvcTemplateReference,
 		RunningContext:           runningContext,
+		DisableWebhooks:          request.DisableWebhooks,
 	}
 }
 

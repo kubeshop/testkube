@@ -37,28 +37,30 @@ const (
 )
 
 func NewProxy(clientset kubernetes.Interface, podsClient tcorev1.PodInterface, logsStream client.Stream, js jetstream.JetStream, log *zap.SugaredLogger,
-	namespace, executionId, source string) *Proxy {
+	namespace, podName, subject, source string) *Proxy {
 	return &Proxy{
-		log:         log.With("service", "logs-proxy", "namespace", namespace, "executionId", executionId),
-		js:          js,
-		clientset:   clientset,
-		namespace:   namespace,
-		executionId: executionId,
-		podsClient:  podsClient,
-		logsStream:  logsStream,
-		source:      source,
+		log:        log.With("service", "logs-proxy", "namespace", namespace, "podName", podName),
+		js:         js,
+		clientset:  clientset,
+		namespace:  namespace,
+		podName:    podName,
+		subject:    subject,
+		podsClient: podsClient,
+		logsStream: logsStream,
+		source:     source,
 	}
 }
 
 type Proxy struct {
-	log         *zap.SugaredLogger
-	js          jetstream.JetStream
-	clientset   kubernetes.Interface
-	namespace   string
-	executionId string
-	source      string
-	podsClient  tcorev1.PodInterface
-	logsStream  client.InitializedStreamPusher
+	log        *zap.SugaredLogger
+	js         jetstream.JetStream
+	clientset  kubernetes.Interface
+	namespace  string
+	subject    string
+	source     string
+	podsClient tcorev1.PodInterface
+	logsStream client.InitializedStreamPusher
+	podName    string
 }
 
 func (p *Proxy) Run(ctx context.Context) error {
@@ -69,7 +71,7 @@ func (p *Proxy) Run(ctx context.Context) error {
 	logs := make(chan *events.Log, logsBuffer)
 
 	// create stream for incoming logs
-	_, err := p.logsStream.Init(ctx, p.executionId)
+	_, err := p.logsStream.Init(ctx, p.getSubject())
 	if err != nil {
 		return err
 	}
@@ -92,7 +94,7 @@ func (p *Proxy) Run(ctx context.Context) error {
 			p.log.Warn("logs proxy context cancelled, exiting")
 			return nil
 		default:
-			err = p.logsStream.Push(ctx, p.executionId, l)
+			err = p.logsStream.Push(ctx, p.getSubject(), l)
 			if err != nil {
 				p.handleError(err, "error pushing logs to stream")
 				return err
@@ -105,41 +107,38 @@ func (p *Proxy) Run(ctx context.Context) error {
 }
 
 func (p *Proxy) streamLogs(ctx context.Context, logs chan *events.Log) (err error) {
-	pods, err := executor.GetJobPods(ctx, p.podsClient, p.executionId, 1, 10)
+	pod, err := executor.GetPodByName(ctx, p.podsClient, p.getPodName(), 1, 10)
 	if err != nil {
 		p.handleError(err, "error getting job pods")
 		return err
 	}
 
-	for _, pod := range pods.Items {
-		l := p.log.With("namespace", pod.Namespace, "podName", pod.Name, "podStatus", pod.Status)
+	l := p.log.With("namespace", pod.Namespace, "podName", pod.Name, "podStatus", pod.Status)
 
-		switch pod.Status.Phase {
+	switch pod.Status.Phase {
 
-		case corev1.PodRunning:
-			l.Debug("streaming pod logs: immediately")
-			return p.streamLogsFromPod(pod, logs)
+	case corev1.PodRunning:
+		l.Debug("streaming pod logs: immediately")
+		return p.streamLogsFromPod(*pod, logs)
 
-		case corev1.PodFailed:
-			err := fmt.Errorf("can't get pod logs, pod failed: %s/%s", pod.Namespace, pod.Name)
-			p.handleError(err, "streaming pod logs: pod failed")
-			return err
+	case corev1.PodFailed:
+		err := fmt.Errorf("can't get pod logs, pod failed: %s/%s", pod.Namespace, pod.Name)
+		p.handleError(err, "streaming pod logs: pod failed")
+		return err
 
-		default:
-			l.Debugw("streaming pod logs: waiting for pod to be ready")
-			testFunc := p.isPodLoggable(pod.Name)
-			if err = wait.PollUntilContextTimeout(ctx, pollInterval, podStartTimeout, true, testFunc); err != nil {
-				// try to get pod container statuses from Waiting and Terminated states
-				status := p.getPodContainerStatuses(pod)
-				p.handleError(err, "can't get pod container status after pod failure")
-				return errors.Wrap(err, status)
-			}
-
-			l.Debug("streaming pod logs: pod is loggable")
-			return p.streamLogsFromPod(pod, logs)
+	default:
+		l.Debugw("streaming pod logs: waiting for pod to be ready")
+		testFunc := p.isPodLoggable(pod.Name)
+		if err = wait.PollUntilContextTimeout(ctx, pollInterval, podStartTimeout, true, testFunc); err != nil {
+			// try to get pod container statuses from Waiting and Terminated states
+			status := p.getPodContainerStatuses(*pod)
+			p.handleError(err, "can't get pod container status after pod failure")
+			return errors.Wrap(err, status)
 		}
+
+		l.Debug("streaming pod logs: pod is loggable")
+		return p.streamLogsFromPod(*pod, logs)
 	}
-	return
 }
 
 func (p *Proxy) streamLogsFromPod(pod corev1.Pod, logs chan *events.Log) (err error) {
@@ -250,10 +249,17 @@ func (p *Proxy) getPodContainerStatuses(pod corev1.Pod) (status string) {
 func (p *Proxy) handleError(err error, title string) {
 	if err != nil {
 		p.log.Errorw(title, "error", err)
-		err = p.logsStream.Push(context.Background(), p.executionId, events.NewErrorLog(err).WithSource("logs-proxy"))
+		err = p.logsStream.Push(context.Background(), p.getSubject(), events.NewErrorLog(err).WithSource("logs-proxy"))
 		if err != nil {
 			p.log.Errorw("error pushing error to stream", "title", title, "error", err)
 		}
-
 	}
+}
+
+func (p *Proxy) getSubject() string {
+	return p.subject
+}
+
+func (p *Proxy) getPodName() string {
+	return p.podName
 }

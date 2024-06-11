@@ -85,6 +85,17 @@ var EnvMachine = expressionstcl.NewMachine().
 			return os.Getenv(name[4:]), true
 		}
 		return nil, false
+	}).
+	RegisterAccessor(func(name string) (interface{}, bool) {
+		if name != "env" {
+			return nil, false
+		}
+		env := make(map[string]string)
+		for _, item := range os.Environ() {
+			key, value, _ := strings.Cut(item, "=")
+			env[key] = value
+		}
+		return env, true
 	})
 
 var RefSuccessMachine = expressionstcl.NewMachine().

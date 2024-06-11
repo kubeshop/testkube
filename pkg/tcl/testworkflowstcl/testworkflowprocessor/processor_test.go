@@ -36,7 +36,7 @@ var (
 	ins         = &dummyInspector{}
 	proc        = NewFullFeatured(ins)
 	execMachine = expressionstcl.NewMachine().
-			Register("resource.rootId", "dummy-id").
+			Register("resource.root", "dummy-id").
 			Register("resource.id", "dummy-id-abc")
 )
 

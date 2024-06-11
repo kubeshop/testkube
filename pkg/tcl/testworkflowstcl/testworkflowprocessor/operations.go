@@ -158,7 +158,7 @@ func ProcessContentFiles(_ InternalProcessor, layer Intermediate, container Cont
 	}
 	for _, f := range step.Content.Files {
 		if f.ContentFrom == nil {
-			vm, err := layer.AddTextFile(f.Content)
+			vm, err := layer.AddTextFile(f.Content, f.Mode)
 			if err != nil {
 				return nil, fmt.Errorf("file %s: could not append: %s", f.Path, err.Error())
 			}
@@ -238,6 +238,10 @@ func ProcessContentGit(_ InternalProcessor, layer Intermediate, container Contai
 		mountPath = filepath.Join(constants.DefaultDataPath, "repo")
 	}
 
+	// Build a temporary volume to clone the repository initially.
+	// This will allow mounting files in the destination at the same level (i.e. overriding the configuration).
+	container.AppendVolumeMounts(layer.AddEmptyDirVolume(nil, constants.DefaultTmpDirPath))
+
 	// Build volume pair and share with all siblings
 	volumeMount := layer.AddEmptyDirVolume(nil, mountPath)
 	container.AppendVolumeMounts(volumeMount)
@@ -265,6 +269,14 @@ func ProcessContentGit(_ InternalProcessor, layer Intermediate, container Contai
 		args = append(args, "-t", "{{env.TK_GIT_TOKEN}}")
 	} else if step.Content.Git.Token != "" {
 		args = append(args, "-t", step.Content.Git.Token)
+	}
+
+	// Provide SSH key
+	if step.Content.Git.SshKeyFrom != nil {
+		container.AppendEnv(corev1.EnvVar{Name: "TK_SSH_KEY", ValueFrom: step.Content.Git.SshKeyFrom})
+		args = append(args, "-s", "{{env.TK_SSH_KEY}}")
+	} else if step.Content.Git.SshKey != "" {
+		args = append(args, "-s", step.Content.Git.SshKey)
 	}
 
 	// Provide auth type
