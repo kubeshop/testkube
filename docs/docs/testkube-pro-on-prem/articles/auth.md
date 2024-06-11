@@ -38,7 +38,7 @@ and `<client-secret-key>` placeholders with the corresponding values from the
 secret.
 
 Additionally, you need to replace the `<dex endpoint>` placeholder with the URI
-of exposed Dex endpoint. You should be able to see information about your Dex
+of the exposed Dex endpoint. You should be able to see information about your Dex
 OpenID configuration by performing a GET request to `<dex
 endpoint>/.well-known/openid-configuration`.
 
