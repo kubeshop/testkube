@@ -766,6 +766,7 @@ func parseDefaultExecutors(cfg *config.Config) (executors []testkube.ExecutorDet
 }
 
 func newNATSEncodedConnection(cfg *config.Config) (*nats.EncodedConn, error) {
+	// if embedded NATS server is enabled, we'll replace connection with one to the embedded server
 	if cfg.NatsEmbedded {
 		_, nc, err := event.ServerWithConnection(cfg.NatsEmbeddedStoreDir)
 		if err != nil {

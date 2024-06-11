@@ -12,6 +12,7 @@ const natsConnectionTimeout = 10 * time.Second
 
 var ErrNatsEmbeddedServerTimeout = fmt.Errorf("server not ready for connections in " + natsConnectionTimeout.String())
 
+// ServerWithConnection starts NATS server with embedded JetStream, wait for readines and returns connection to it
 func ServerWithConnection(dir string) (*server.Server, *nats.Conn, error) {
 	opts := &server.Options{
 		JetStream:             true,
