@@ -383,10 +383,11 @@ func main() {
 		envs[pair[0]] += pair[1]
 	}
 
-	nc, err := newNATSConnection(cfg)
+	nc, err := newNATSEncodedConnection(cfg)
 	if err != nil {
 		exitOnError("Creating NATS connection", err)
 	}
+
 	eventBus := bus.NewNATSBus(nc)
 	if cfg.Trace {
 		eventBus.TraceEvents()
@@ -764,7 +765,19 @@ func parseDefaultExecutors(cfg *config.Config) (executors []testkube.ExecutorDet
 	return executors, nil
 }
 
-func newNATSConnection(cfg *config.Config) (*nats.EncodedConn, error) {
+func newNATSEncodedConnection(cfg *config.Config) (*nats.EncodedConn, error) {
+	// if embedded NATS server is enabled, we'll replace connection with one to the embedded server
+	if cfg.NatsEmbedded {
+		_, nc, err := event.ServerWithConnection(cfg.NatsEmbeddedStoreDir)
+		if err != nil {
+			return nil, err
+		}
+
+		log.DefaultLogger.Info("Started embedded NATS server")
+
+		return nats.NewEncodedConn(nc, nats.JSON_ENCODER)
+	}
+
 	return bus.NewNATSEncodedConnection(bus.ConnectionConfig{
 		NatsURI:            cfg.NatsURI,
 		NatsSecure:         cfg.NatsSecure,
