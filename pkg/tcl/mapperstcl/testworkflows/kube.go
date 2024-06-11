@@ -26,6 +26,13 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 )
 
+type Options struct {
+	ExpandTemplate bool
+	NeedWorkingDir bool
+	NeedTestFile   bool
+	ConfigRun      string
+}
+
 func MapExecutorKubeToTestWorkflowTemplateKube(v executorv1.Executor) testworkflowsv1.TestWorkflowTemplate {
 	var workingDir *string
 	if v.Spec.UseDataDirAsWorkingDir {
@@ -289,7 +296,7 @@ func MapExecutionRequestKubeToStepKube(v testsv3.ExecutionRequest) testworkflows
 	}
 }
 
-func MapTestKubeToTestWorkflowKube(v testsv3.Test, expandTemplate bool, templateName, configRun string) testworkflowsv1.TestWorkflow {
+func MapTestKubeToTestWorkflowKube(v testsv3.Test, templateName string, options Options) testworkflowsv1.TestWorkflow {
 	var events []testworkflowsv1.Event
 	if v.Spec.Schedule != "" {
 		events = append(events, testworkflowsv1.Event{
@@ -300,14 +307,26 @@ func MapTestKubeToTestWorkflowKube(v testsv3.Test, expandTemplate bool, template
 	}
 
 	workingDir := ""
+	testFile := ""
 	if v.Spec.Content != nil && v.Spec.Content.Repository != nil {
 		workingDir = v.Spec.Content.Repository.WorkingDir
+		if options.NeedWorkingDir && workingDir == "" {
+			workingDir = v.Spec.Content.Repository.Path
+		}
+
+		if options.NeedTestFile {
+			testFile = filepath.Join("/data/repo", v.Spec.Content.Repository.Path)
+		}
 	}
 
 	container := common.MapPtr(v.Spec.ExecutionRequest, MapExecutionRequestKubeToContainerConfigKube)
 	if workingDir != "" {
 		if container == nil {
 			container = &testworkflowsv1.ContainerConfig{}
+		}
+
+		if !strings.HasPrefix(workingDir, "/") {
+			workingDir = filepath.Join("/data/repo", workingDir)
 		}
 
 		container.WorkingDir = &workingDir
@@ -336,7 +355,7 @@ func MapTestKubeToTestWorkflowKube(v testsv3.Test, expandTemplate bool, template
 	}
 
 	var use []testworkflowsv1.TemplateRef
-	if expandTemplate {
+	if options.ExpandTemplate {
 		use = []testworkflowsv1.TemplateRef{
 			{
 				Name: templateName,
@@ -348,9 +367,14 @@ func MapTestKubeToTestWorkflowKube(v testsv3.Test, expandTemplate bool, template
 		}
 	}
 
-	if len(configRun) != 0 && step.Run != nil && step.Run.Args != nil {
+	if len(options.ConfigRun) != 0 && step.Run != nil && step.Run.Args != nil {
+		configRun := options.ConfigRun + " " + strings.Join(*step.Run.Args, " ")
+		if testFile != "" {
+			configRun += " " + testFile
+		}
+
 		step.Template.Config = map[string]intstr.IntOrString{
-			"run": {Type: intstr.String, StrVal: configRun + " " + strings.Join(*step.Run.Args, " ")},
+			"run": {Type: intstr.String, StrVal: configRun},
 		}
 		step.Run = nil
 	}
