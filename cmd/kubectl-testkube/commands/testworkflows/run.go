@@ -194,6 +194,15 @@ func printResultDifference(res1 *testkube.TestWorkflowResult, res2 *testkube.Tes
 	return changed
 }
 
+func getTimestampLength(line string) int {
+	// 29th character will be either '+' for +00:00 timestamp,
+	// or 'Z' for UTC timestamp (without 00:00 section).
+	if len(line) >= 29 && line[29] == '+' {
+		return len(time.RFC3339Nano)
+	}
+	return LogTimestampLength
+}
+
 func watchTestWorkflowLogs(id string, signature []testkube.TestWorkflowSignature, client apiclientv1.Client) (*testkube.TestWorkflowResult, error) {
 	ui.Info("Getting logs from test workflow job", id)
 
@@ -217,7 +226,7 @@ func watchTestWorkflowLogs(id string, signature []testkube.TestWorkflowSignature
 		// Strip timestamp + space for all new lines in the log
 		for len(l.Log) > 0 {
 			if isLineBeginning {
-				l.Log = l.Log[LogTimestampLength+1:]
+				l.Log = l.Log[getTimestampLength(l.Log)+1:]
 				isLineBeginning = false
 			}
 			newLineIndex := strings.Index(l.Log, "\n")
