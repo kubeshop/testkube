@@ -68,7 +68,6 @@ type ServiceInfo struct {
 	Status      ServiceStatus `json:"status,omitempty"`
 }
 
-// TODO: Pass DEBUG=1 down / enable logs
 func NewServicesCmd() *cobra.Command {
 	var (
 		groupRef string
