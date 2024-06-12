@@ -217,7 +217,13 @@ func watchTestWorkflowLogs(id string, signature []testkube.TestWorkflowSignature
 		// Strip timestamp + space for all new lines in the log
 		for len(l.Log) > 0 {
 			if isLineBeginning {
-				l.Log = l.Log[LogTimestampLength+1:]
+				if len(l.Log) >= 29 && l.Log[29] == '+' {
+					// Custom timezone (+00:00)
+					l.Log = l.Log[len(time.RFC3339Nano)+1:]
+				} else {
+					// UTC timezone (Z)
+					l.Log = l.Log[LogTimestampLength+1:]
+				}
 				isLineBeginning = false
 			}
 			newLineIndex := strings.Index(l.Log, "\n")
