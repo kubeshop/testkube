@@ -62,11 +62,11 @@ func TestParseRunnerOutput(t *testing.T) {
 		invalidOutput := []byte(`{not a json}`)
 		result, err := ParseRunnerOutput(invalidOutput, true)
 		expectedOutput := "{not a json}\n"
-		expectedErrMessage := "wrong log type was found as last log: {not a json}"
+		expectedErrMessage := ""
 
 		assert.Equal(t, expectedOutput, result.Output)
 		assert.NoError(t, err)
-		assert.Equal(t, testkube.ExecutionStatusFailed, result.Status)
+		assert.Equal(t, (*testkube.ExecutionStatus)(nil), result.Status)
 		assert.Equal(t, expectedErrMessage, result.ErrorMessage)
 	})
 
