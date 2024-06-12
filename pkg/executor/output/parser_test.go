@@ -392,6 +392,31 @@ running test [63ca8c8988564860327a16b5]
 		assert.Equal(t, "can't find branch or commit in params, repo:&{Type_:git-file Uri:https://github.com/kubeshop/testkube.git Branch: Commit: Path:test/cypress/executor-smoke/cypress-11 Username: Token: UsernameSecret:<nil> TokenSecret:<nil> WorkingDir:}", result.ErrorMessage)
 
 	})
+
+	t.Run("Output result before last line", func(t *testing.T) {
+		t.Parallel()
+
+		output := []byte(`
+{"level":"info","ts":1718027789.427204,"caller":"scraper/filesystem_extractor.go:225","msg":"scraping artifacts in directory: /data/repo/cypress/screenshots"}
+{"type":"event","content":"test execution finished [66670568584fa9f32faebb41]","time":"2024-06-10T15:56:29.427347688+02:00"}
+{"type":"result","result":{"status":"passed"},"time":"2024-06-10T15:56:29.427366189+02:00"}
+{"level":"warn","ts":1718027789.4272137,"caller":"scraper/filesystem_extractor.go:228","msg":"skipping directory /data/repo/cypress/screenshots because it does not exist"}
+{"level":"info","ts":1718027789.4272206,"caller":"scraper/filesystem_extractor.go:225","msg":"scraping artifacts in directory: /data/repo/cypress/screenshots"}
+`)
+		expectedOutput := `{"level":"info","ts":1718027789.427204,"caller":"scraper/filesystem_extractor.go:225","msg":"scraping artifacts in directory: /data/repo/cypress/screenshots"}
+test execution finished [66670568584fa9f32faebb41]
+
+{"level":"warn","ts":1718027789.4272137,"caller":"scraper/filesystem_extractor.go:228","msg":"skipping directory /data/repo/cypress/screenshots because it does not exist"}
+{"level":"info","ts":1718027789.4272206,"caller":"scraper/filesystem_extractor.go:225","msg":"scraping artifacts in directory: /data/repo/cypress/screenshots"}
+`
+		result, err := ParseRunnerOutput(output, true)
+
+		assert.Equal(t, expectedOutput, result.Output)
+		assert.NoError(t, err)
+		assert.Equal(t, testkube.ExecutionStatusPassed, result.Status)
+		assert.Equal(t, "", result.ErrorMessage)
+	})
+
 }
 
 func TestParseContainerOutput(t *testing.T) {
