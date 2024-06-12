@@ -90,8 +90,9 @@ func TestProcessBasic(t *testing.T) {
 					Annotations: map[string]string(nil),
 				},
 				Spec: corev1.PodSpec{
-					RestartPolicy: corev1.RestartPolicyNever,
-					Volumes:       volumes,
+					RestartPolicy:      corev1.RestartPolicyNever,
+					EnableServiceLinks: common.Ptr(false),
+					Volumes:            volumes,
 					InitContainers: []corev1.Container{
 						{
 							Name:            "tktw-init",
@@ -174,8 +175,9 @@ func TestProcessBasicEnvReference(t *testing.T) {
 	volumeMounts := res.Job.Spec.Template.Spec.InitContainers[0].VolumeMounts
 
 	want := corev1.PodSpec{
-		RestartPolicy: corev1.RestartPolicyNever,
-		Volumes:       volumes,
+		RestartPolicy:      corev1.RestartPolicyNever,
+		EnableServiceLinks: common.Ptr(false),
+		Volumes:            volumes,
 		InitContainers: []corev1.Container{
 			{
 				Name:            "tktw-init",
@@ -246,8 +248,9 @@ func TestProcessMultipleSteps(t *testing.T) {
 	volumeMounts := res.Job.Spec.Template.Spec.InitContainers[0].VolumeMounts
 
 	want := corev1.PodSpec{
-		RestartPolicy: corev1.RestartPolicyNever,
-		Volumes:       volumes,
+		RestartPolicy:      corev1.RestartPolicyNever,
+		EnableServiceLinks: common.Ptr(false),
+		Volumes:            volumes,
 		InitContainers: []corev1.Container{
 			{
 				Name:            "tktw-init",
@@ -338,8 +341,9 @@ func TestProcessNestedSteps(t *testing.T) {
 	volumeMounts := res.Job.Spec.Template.Spec.InitContainers[0].VolumeMounts
 
 	want := corev1.PodSpec{
-		RestartPolicy: corev1.RestartPolicyNever,
-		Volumes:       volumes,
+		RestartPolicy:      corev1.RestartPolicyNever,
+		EnableServiceLinks: common.Ptr(false),
+		Volumes:            volumes,
 		InitContainers: []corev1.Container{
 			{
 				Name:            "tktw-init",
@@ -477,8 +481,9 @@ func TestProcessOptionalSteps(t *testing.T) {
 	volumeMounts := res.Job.Spec.Template.Spec.InitContainers[0].VolumeMounts
 
 	want := corev1.PodSpec{
-		RestartPolicy: corev1.RestartPolicyNever,
-		Volumes:       volumes,
+		RestartPolicy:      corev1.RestartPolicyNever,
+		EnableServiceLinks: common.Ptr(false),
+		Volumes:            volumes,
 		InitContainers: []corev1.Container{
 			{
 				Name:            "tktw-init",
@@ -614,8 +619,9 @@ func TestProcessNegativeSteps(t *testing.T) {
 	volumeMounts := res.Job.Spec.Template.Spec.InitContainers[0].VolumeMounts
 
 	want := corev1.PodSpec{
-		RestartPolicy: corev1.RestartPolicyNever,
-		Volumes:       volumes,
+		RestartPolicy:      corev1.RestartPolicyNever,
+		EnableServiceLinks: common.Ptr(false),
+		Volumes:            volumes,
 		InitContainers: []corev1.Container{
 			{
 				Name:            "tktw-init",
@@ -747,8 +753,9 @@ func TestProcessNegativeContainerStep(t *testing.T) {
 	volumeMounts := res.Job.Spec.Template.Spec.InitContainers[0].VolumeMounts
 
 	want := corev1.PodSpec{
-		RestartPolicy: corev1.RestartPolicyNever,
-		Volumes:       volumes,
+		RestartPolicy:      corev1.RestartPolicyNever,
+		EnableServiceLinks: common.Ptr(false),
+		Volumes:            volumes,
 		InitContainers: []corev1.Container{
 			{
 				Name:            "tktw-init",
@@ -834,8 +841,9 @@ func TestProcessOptionalContainerStep(t *testing.T) {
 	volumeMounts := res.Job.Spec.Template.Spec.InitContainers[0].VolumeMounts
 
 	want := corev1.PodSpec{
-		RestartPolicy: corev1.RestartPolicyNever,
-		Volumes:       volumes,
+		RestartPolicy:      corev1.RestartPolicyNever,
+		EnableServiceLinks: common.Ptr(false),
+		Volumes:            volumes,
 		InitContainers: []corev1.Container{
 			{
 				Name:            "tktw-init",
@@ -930,8 +938,9 @@ func TestProcessLocalContent(t *testing.T) {
 	volumeMountsWithContent := res.Job.Spec.Template.Spec.InitContainers[1].VolumeMounts
 
 	want := corev1.PodSpec{
-		RestartPolicy: corev1.RestartPolicyNever,
-		Volumes:       volumes,
+		RestartPolicy:      corev1.RestartPolicyNever,
+		EnableServiceLinks: common.Ptr(false),
+		Volumes:            volumes,
 		InitContainers: []corev1.Container{
 			{
 				Name:            "tktw-init",
@@ -1032,8 +1041,9 @@ func TestProcessGlobalContent(t *testing.T) {
 	volumeMounts := res.Job.Spec.Template.Spec.InitContainers[0].VolumeMounts
 
 	want := corev1.PodSpec{
-		RestartPolicy: corev1.RestartPolicyNever,
-		Volumes:       volumes,
+		RestartPolicy:      corev1.RestartPolicyNever,
+		EnableServiceLinks: common.Ptr(false),
+		Volumes:            volumes,
 		InitContainers: []corev1.Container{
 			{
 				Name:            "tktw-init",
@@ -1146,8 +1156,9 @@ func TestProcessRunShell(t *testing.T) {
 					Annotations: map[string]string(nil),
 				},
 				Spec: corev1.PodSpec{
-					RestartPolicy: corev1.RestartPolicyNever,
-					Volumes:       volumes,
+					RestartPolicy:      corev1.RestartPolicyNever,
+					EnableServiceLinks: common.Ptr(false),
+					Volumes:            volumes,
 					InitContainers: []corev1.Container{
 						{
 							Name:            "tktw-init",

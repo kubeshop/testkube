@@ -301,6 +301,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		},
 		Spec: corev1.PodSpec{
 			RestartPolicy:             corev1.RestartPolicyNever,
+			EnableServiceLinks:        common.Ptr(false),
 			Volumes:                   volumes,
 			ImagePullSecrets:          podConfig.ImagePullSecrets,
 			ServiceAccountName:        podConfig.ServiceAccountName,
