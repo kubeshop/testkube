@@ -178,7 +178,10 @@ func (n *notifier) Start(ref string, ts time.Time) {
 }
 
 func (n *notifier) Output(ref string, ts time.Time, output *data.Instruction) {
-	if _, ok := n.result.Steps[ref]; !ok {
+	if ref == InitContainerName {
+		ref = ""
+	}
+	if _, ok := n.result.Steps[ref]; !ok && ref != "" {
 		return
 	}
 	n.RegisterTimestamp(ref, ts)
