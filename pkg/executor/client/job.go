@@ -413,19 +413,42 @@ func (c *JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, 
 	}
 	l.Debug("poll immediate end")
 
+	// we need to retrieve the Pod to get its latest status
+	podsClient := c.ClientSet.CoreV1().Pods(execution.TestNamespace)
+	latestExecutorPod, err := podsClient.Get(context.Background(), pod.Name, metav1.GetOptions{})
+	if err != nil {
+		execution.ExecutionResult.Err(err)
+		return execution.ExecutionResult, nil
+	}
+
 	c.streamLog(ctx, execution.Id, events.NewLog("analyzing test results and artfacts"))
 
-	logs, err := executor.GetPodLogs(ctx, c.ClientSet, execution.TestNamespace, pod)
+	logs, err := executor.GetPodLogs(ctx, c.ClientSet, execution.TestNamespace, *latestExecutorPod)
 	if err != nil {
 		l.Errorw("get pod logs error", "error", err)
 		c.streamLog(ctx, execution.Id, events.NewErrorLog(err))
+	}
+
+	if !execution.ExecutionResult.IsFailed() {
+		switch latestExecutorPod.Status.Phase {
+		case corev1.PodSucceeded:
+			execution.ExecutionResult.Success()
+		case corev1.PodFailed:
+			execution.ExecutionResult.Error()
+		}
 	}
 
 	// don't attach logs if logs v2 is enabled - they will be streamed through the logs service
 	attachLogs := !c.features.LogsV2
 	if len(logs) != 0 {
 		// parse job output log (JSON stream)
-		execution.ExecutionResult, err = output.ParseRunnerOutput(logs, attachLogs)
+		result, err := output.ParseRunnerOutput(logs, attachLogs)
+		if result.Status != nil {
+			execution.ExecutionResult = result
+		} else {
+			execution.ExecutionResult.Output = result.Output
+		}
+
 		if err != nil {
 			l.Errorw("parse output error", "error", err)
 			c.streamLog(ctx, execution.Id, events.NewErrorLog(errors.Wrap(err, "can't get test execution job output")))
@@ -436,7 +459,7 @@ func (c *JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, 
 	if execution.ExecutionResult.IsFailed() {
 		errorMessage := execution.ExecutionResult.ErrorMessage
 		if errorMessage == "" {
-			errorMessage = executor.GetPodErrorMessage(ctx, c.ClientSet, &pod)
+			errorMessage = executor.GetPodErrorMessage(ctx, c.ClientSet, latestExecutorPod)
 		}
 
 		execution.ExecutionResult.ErrorMessage = errorMessage

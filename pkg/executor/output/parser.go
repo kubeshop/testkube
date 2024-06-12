@@ -64,7 +64,6 @@ func ParseRunnerOutput(b []byte, attachLogs bool) (*testkube.ExecutionResult, er
 	if err != nil {
 		err := fmt.Errorf("could not parse logs \"%s\": %v", b, err.Error())
 		result.Output = err.Error()
-		result.Err(err)
 		return result.Err(err), err
 	}
 
