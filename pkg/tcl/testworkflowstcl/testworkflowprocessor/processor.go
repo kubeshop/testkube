@@ -336,6 +336,20 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		Command:         []string{"/bin/sh", "-c"},
 		Args:            []string{constants.InitScript},
 		VolumeMounts:    layer.ContainerDefaults().VolumeMounts(),
+		Env: []corev1.EnvVar{
+			{Name: "TK_DEBUG_NODE", ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{FieldPath: "spec.nodeName"},
+			}},
+			{Name: "TK_DEBUG_POD", ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.name"},
+			}},
+			{Name: "TK_DEBUG_NS", ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.namespace"},
+			}},
+			{Name: "TK_DEBUG_SVC", ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{FieldPath: "spec.serviceAccountName"},
+			}},
+		},
 		SecurityContext: &corev1.SecurityContext{
 			RunAsGroup: fsGroup,
 		},
