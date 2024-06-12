@@ -152,6 +152,7 @@ func NewServicesCmd() *cobra.Command {
 							{StepOperations: testworkflowsv1.StepOperations{Run: common2.Ptr(svcSpec.StepRun)}},
 						},
 					}
+					spec.Steps[0].Run.ContainerConfig = testworkflowsv1.ContainerConfig{}
 
 					// Transfer the data
 					if spec.Content == nil {
