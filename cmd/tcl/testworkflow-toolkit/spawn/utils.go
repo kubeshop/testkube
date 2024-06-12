@@ -192,7 +192,7 @@ func CreateExecutionMachine(prefix string, index int64) (string, expressionstcl.
 			"name": env.WorkflowName(),
 		}).
 		Register("resource", map[string]string{
-			"rootId":   env.ExecutionId(),
+			"root":     env.ExecutionId(),
 			"id":       id,
 			"fsPrefix": fsPrefix,
 		}).
