@@ -30,8 +30,10 @@ testkube run test <testName> [flags]
       --context string                             running context description for test execution
       --copy-files stringArray                     file path mappings from host to pod of form source:destination
       --debugger-file string                       store debug info into file, stdout by default
+      --disable-webhooks                           disable webhooks
   -d, --download-artifacts                         download artifacts automatically
       --download-dir string                        download dir (default "artifacts")
+      --enable-webhooks                            enable webhooks
       --execute-postrun-script-before-scraping     whether to execute postrun scipt before scraping or not (prebuilt executor only)
       --execution-label stringToString             execution-label key value pair: --execution-label key1=value1 (default [])
       --execution-namespace string                 namespace for test execution (Pro edition only)
