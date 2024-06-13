@@ -141,6 +141,7 @@ type TestWorkflowAPI interface {
 	DeleteTestWorkflow(name string) error
 	ExecuteTestWorkflow(name string, request testkube.TestWorkflowExecutionRequest) (testkube.TestWorkflowExecution, error)
 	GetTestWorkflowExecutionNotifications(id string) (chan testkube.TestWorkflowExecutionNotification, error)
+	GetTestWorkflowExecutionLogs(id string) ([]byte, error)
 }
 
 // TestWorkflowExecutionAPI describes test workflow api methods
@@ -299,4 +300,5 @@ type Transport[A All] interface {
 	GetLogsV2(uri string, logs chan events.Log) error
 	GetTestWorkflowExecutionNotifications(uri string, notifications chan testkube.TestWorkflowExecutionNotification) error
 	GetFile(uri, fileName, destination string, params map[string][]string) (name string, err error)
+	GetRawBody(method, uri string, body []byte, params map[string]string) (result []byte, err error)
 }
