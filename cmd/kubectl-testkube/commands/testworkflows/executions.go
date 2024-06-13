@@ -1,7 +1,6 @@
 package testworkflows
 
 import (
-	"fmt"
 	"os"
 	"strings"
 
@@ -54,7 +53,8 @@ func NewGetTestWorkflowExecutionsCmd() *cobra.Command {
 			logs, err := client.GetTestWorkflowExecutionLogs(executionID)
 			ui.ExitOnError("getting logs from executor", err)
 
-			fmt.Println(string(logs))
+			isLineBeginning := true
+			printLogLines(string(logs), &isLineBeginning)
 		},
 	}
 

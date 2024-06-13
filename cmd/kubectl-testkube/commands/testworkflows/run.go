@@ -223,25 +223,29 @@ func watchTestWorkflowLogs(id string, signature []testkube.TestWorkflowSignature
 			continue
 		}
 
-		// Strip timestamp + space for all new lines in the log
-		for len(l.Log) > 0 {
-			if isLineBeginning {
-				l.Log = l.Log[getTimestampLength(l.Log)+1:]
-				isLineBeginning = false
-			}
-			newLineIndex := strings.Index(l.Log, "\n")
-			if newLineIndex == -1 {
-				fmt.Print(l.Log)
-				break
-			} else {
-				fmt.Print(l.Log[0 : newLineIndex+1])
-				l.Log = l.Log[newLineIndex+1:]
-				isLineBeginning = true
-			}
-		}
+		printLogLines(l.Log, &isLineBeginning)
 	}
 
 	ui.NL()
 
 	return result, err
+}
+
+func printLogLines(logs string, isLineBeginning *bool) {
+	// Strip timestamp + space for all new lines in the log
+	for len(logs) > 0 {
+		if *isLineBeginning {
+			logs = logs[getTimestampLength(logs)+1:]
+			*isLineBeginning = false
+		}
+		newLineIndex := strings.Index(logs, "\n")
+		if newLineIndex == -1 {
+			fmt.Print(logs)
+			break
+		} else {
+			fmt.Print(logs[0 : newLineIndex+1])
+			logs = logs[newLineIndex+1:]
+			*isLineBeginning = true
+		}
+	}
 }
