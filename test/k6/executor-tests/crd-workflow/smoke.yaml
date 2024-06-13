@@ -157,9 +157,9 @@ metadata:
     core-tests: workflows
 spec:
   config:
-    vus: {type: integer, default: 1000}
+    vus: {type: integer, default: 10}
     duration: {type: string, default: '5s'}
-    workers: {type: integer, default: 5}
+    workers: {type: integer, default: 3}
   content:
     git:
       uri: https://github.com/kubeshop/testkube
@@ -204,9 +204,9 @@ metadata:
     core-tests: workflows
 spec:
   config:
-    vus: {type: integer, default: 1000}
+    vus: {type: integer, default: 10}
     duration: {type: string, default: '5s'}
-    workers: {type: integer, default: 5}
+    workers: {type: integer, default: 3}
   content:
     git:
       uri: https://github.com/kubeshop/testkube
