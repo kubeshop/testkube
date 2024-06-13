@@ -23,15 +23,18 @@ import (
 const (
 	mediaTypeJSON      = "application/json"
 	mediaTypeYAML      = "text/yaml"
+	mediaTypeYAMLAlt   = "application/yaml"
 	mediaTypePlainText = "text/plain"
 )
 
 func ExpectsYAML(c *fiber.Ctx) bool {
-	return c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML || c.Query("_yaml") == "true"
+	accept := c.Accepts(mediaTypeJSON, mediaTypeYAML, mediaTypeYAMLAlt)
+	return accept == mediaTypeYAML || accept == mediaTypeYAMLAlt || c.Query("_yaml") == "true"
 }
 
 func HasYAML(c *fiber.Ctx) bool {
-	return string(c.Request().Header.ContentType()) == mediaTypeYAML
+	contentType := string(c.Request().Header.ContentType())
+	return contentType == mediaTypeYAML || contentType == mediaTypeYAMLAlt
 }
 
 func SendResourceList[T interface{}, U interface{}](c *fiber.Ctx, kind string, groupVersion schema.GroupVersion, jsonMapper func(T) U, data ...T) error {

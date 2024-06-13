@@ -250,7 +250,7 @@ func getDecidingLogLine(logs []Output) *Output {
 			resultLog = log
 		}
 	}
-	if resultLog.Content == "" {
+	if resultLog.Content == "" && resultLog.Result == nil {
 		resultLog = logs[len(logs)-1]
 	}
 

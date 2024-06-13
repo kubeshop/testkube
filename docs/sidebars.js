@@ -64,6 +64,7 @@ const sidebars = {
             "articles/test-workflows-examples-configuration",
             "articles/test-workflows-expressions",
             "articles/test-workflows-examples-templates",
+            "articles/test-workflows-content",
             "articles/test-workflows-test-suites",
             "articles/test-workflows-parallel",
             "articles/test-workflows-services",

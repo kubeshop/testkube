@@ -38,6 +38,20 @@ var (
 	execMachine = expressionstcl.NewMachine().
 			Register("resource.root", "dummy-id").
 			Register("resource.id", "dummy-id-abc")
+	initEnvs = []corev1.EnvVar{
+		{Name: "TK_DEBUG_NODE", ValueFrom: &corev1.EnvVarSource{
+			FieldRef: &corev1.ObjectFieldSelector{FieldPath: "spec.nodeName"},
+		}},
+		{Name: "TK_DEBUG_POD", ValueFrom: &corev1.EnvVarSource{
+			FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.name"},
+		}},
+		{Name: "TK_DEBUG_NS", ValueFrom: &corev1.EnvVarSource{
+			FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.namespace"},
+		}},
+		{Name: "TK_DEBUG_SVC", ValueFrom: &corev1.EnvVarSource{
+			FieldRef: &corev1.ObjectFieldSelector{FieldPath: "spec.serviceAccountName"},
+		}},
+	}
 )
 
 func TestProcessEmpty(t *testing.T) {
@@ -90,8 +104,9 @@ func TestProcessBasic(t *testing.T) {
 					Annotations: map[string]string(nil),
 				},
 				Spec: corev1.PodSpec{
-					RestartPolicy: corev1.RestartPolicyNever,
-					Volumes:       volumes,
+					RestartPolicy:      corev1.RestartPolicyNever,
+					EnableServiceLinks: common.Ptr(false),
+					Volumes:            volumes,
 					InitContainers: []corev1.Container{
 						{
 							Name:            "tktw-init",
@@ -99,6 +114,7 @@ func TestProcessBasic(t *testing.T) {
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Command:         []string{"/bin/sh", "-c"},
 							Args:            []string{constants.InitScript},
+							Env:             initEnvs,
 							VolumeMounts:    volumeMounts,
 							SecurityContext: &corev1.SecurityContext{
 								RunAsGroup: common.Ptr(constants.DefaultFsGroup),
@@ -174,8 +190,9 @@ func TestProcessBasicEnvReference(t *testing.T) {
 	volumeMounts := res.Job.Spec.Template.Spec.InitContainers[0].VolumeMounts
 
 	want := corev1.PodSpec{
-		RestartPolicy: corev1.RestartPolicyNever,
-		Volumes:       volumes,
+		RestartPolicy:      corev1.RestartPolicyNever,
+		EnableServiceLinks: common.Ptr(false),
+		Volumes:            volumes,
 		InitContainers: []corev1.Container{
 			{
 				Name:            "tktw-init",
@@ -183,6 +200,7 @@ func TestProcessBasicEnvReference(t *testing.T) {
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/bin/sh", "-c"},
 				Args:            []string{constants.InitScript},
+				Env:             initEnvs,
 				VolumeMounts:    volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
 					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
@@ -246,8 +264,9 @@ func TestProcessMultipleSteps(t *testing.T) {
 	volumeMounts := res.Job.Spec.Template.Spec.InitContainers[0].VolumeMounts
 
 	want := corev1.PodSpec{
-		RestartPolicy: corev1.RestartPolicyNever,
-		Volumes:       volumes,
+		RestartPolicy:      corev1.RestartPolicyNever,
+		EnableServiceLinks: common.Ptr(false),
+		Volumes:            volumes,
 		InitContainers: []corev1.Container{
 			{
 				Name:            "tktw-init",
@@ -255,6 +274,7 @@ func TestProcessMultipleSteps(t *testing.T) {
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/bin/sh", "-c"},
 				Args:            []string{constants.InitScript},
+				Env:             initEnvs,
 				VolumeMounts:    volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
 					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
@@ -338,8 +358,9 @@ func TestProcessNestedSteps(t *testing.T) {
 	volumeMounts := res.Job.Spec.Template.Spec.InitContainers[0].VolumeMounts
 
 	want := corev1.PodSpec{
-		RestartPolicy: corev1.RestartPolicyNever,
-		Volumes:       volumes,
+		RestartPolicy:      corev1.RestartPolicyNever,
+		EnableServiceLinks: common.Ptr(false),
+		Volumes:            volumes,
 		InitContainers: []corev1.Container{
 			{
 				Name:            "tktw-init",
@@ -347,6 +368,7 @@ func TestProcessNestedSteps(t *testing.T) {
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/bin/sh", "-c"},
 				Args:            []string{constants.InitScript},
+				Env:             initEnvs,
 				VolumeMounts:    volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
 					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
@@ -477,8 +499,9 @@ func TestProcessOptionalSteps(t *testing.T) {
 	volumeMounts := res.Job.Spec.Template.Spec.InitContainers[0].VolumeMounts
 
 	want := corev1.PodSpec{
-		RestartPolicy: corev1.RestartPolicyNever,
-		Volumes:       volumes,
+		RestartPolicy:      corev1.RestartPolicyNever,
+		EnableServiceLinks: common.Ptr(false),
+		Volumes:            volumes,
 		InitContainers: []corev1.Container{
 			{
 				Name:            "tktw-init",
@@ -486,6 +509,7 @@ func TestProcessOptionalSteps(t *testing.T) {
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/bin/sh", "-c"},
 				Args:            []string{constants.InitScript},
+				Env:             initEnvs,
 				VolumeMounts:    volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
 					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
@@ -614,8 +638,9 @@ func TestProcessNegativeSteps(t *testing.T) {
 	volumeMounts := res.Job.Spec.Template.Spec.InitContainers[0].VolumeMounts
 
 	want := corev1.PodSpec{
-		RestartPolicy: corev1.RestartPolicyNever,
-		Volumes:       volumes,
+		RestartPolicy:      corev1.RestartPolicyNever,
+		EnableServiceLinks: common.Ptr(false),
+		Volumes:            volumes,
 		InitContainers: []corev1.Container{
 			{
 				Name:            "tktw-init",
@@ -623,6 +648,7 @@ func TestProcessNegativeSteps(t *testing.T) {
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/bin/sh", "-c"},
 				Args:            []string{constants.InitScript},
+				Env:             initEnvs,
 				VolumeMounts:    volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
 					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
@@ -747,8 +773,9 @@ func TestProcessNegativeContainerStep(t *testing.T) {
 	volumeMounts := res.Job.Spec.Template.Spec.InitContainers[0].VolumeMounts
 
 	want := corev1.PodSpec{
-		RestartPolicy: corev1.RestartPolicyNever,
-		Volumes:       volumes,
+		RestartPolicy:      corev1.RestartPolicyNever,
+		EnableServiceLinks: common.Ptr(false),
+		Volumes:            volumes,
 		InitContainers: []corev1.Container{
 			{
 				Name:            "tktw-init",
@@ -756,6 +783,7 @@ func TestProcessNegativeContainerStep(t *testing.T) {
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/bin/sh", "-c"},
 				Args:            []string{constants.InitScript},
+				Env:             initEnvs,
 				VolumeMounts:    volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
 					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
@@ -834,8 +862,9 @@ func TestProcessOptionalContainerStep(t *testing.T) {
 	volumeMounts := res.Job.Spec.Template.Spec.InitContainers[0].VolumeMounts
 
 	want := corev1.PodSpec{
-		RestartPolicy: corev1.RestartPolicyNever,
-		Volumes:       volumes,
+		RestartPolicy:      corev1.RestartPolicyNever,
+		EnableServiceLinks: common.Ptr(false),
+		Volumes:            volumes,
 		InitContainers: []corev1.Container{
 			{
 				Name:            "tktw-init",
@@ -843,6 +872,7 @@ func TestProcessOptionalContainerStep(t *testing.T) {
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/bin/sh", "-c"},
 				Args:            []string{constants.InitScript},
+				Env:             initEnvs,
 				VolumeMounts:    volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
 					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
@@ -930,8 +960,9 @@ func TestProcessLocalContent(t *testing.T) {
 	volumeMountsWithContent := res.Job.Spec.Template.Spec.InitContainers[1].VolumeMounts
 
 	want := corev1.PodSpec{
-		RestartPolicy: corev1.RestartPolicyNever,
-		Volumes:       volumes,
+		RestartPolicy:      corev1.RestartPolicyNever,
+		EnableServiceLinks: common.Ptr(false),
+		Volumes:            volumes,
 		InitContainers: []corev1.Container{
 			{
 				Name:            "tktw-init",
@@ -939,6 +970,7 @@ func TestProcessLocalContent(t *testing.T) {
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/bin/sh", "-c"},
 				Args:            []string{constants.InitScript},
+				Env:             initEnvs,
 				VolumeMounts:    volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
 					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
@@ -1032,8 +1064,9 @@ func TestProcessGlobalContent(t *testing.T) {
 	volumeMounts := res.Job.Spec.Template.Spec.InitContainers[0].VolumeMounts
 
 	want := corev1.PodSpec{
-		RestartPolicy: corev1.RestartPolicyNever,
-		Volumes:       volumes,
+		RestartPolicy:      corev1.RestartPolicyNever,
+		EnableServiceLinks: common.Ptr(false),
+		Volumes:            volumes,
 		InitContainers: []corev1.Container{
 			{
 				Name:            "tktw-init",
@@ -1041,6 +1074,7 @@ func TestProcessGlobalContent(t *testing.T) {
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/bin/sh", "-c"},
 				Args:            []string{constants.InitScript},
+				Env:             initEnvs,
 				VolumeMounts:    volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
 					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
@@ -1146,8 +1180,9 @@ func TestProcessRunShell(t *testing.T) {
 					Annotations: map[string]string(nil),
 				},
 				Spec: corev1.PodSpec{
-					RestartPolicy: corev1.RestartPolicyNever,
-					Volumes:       volumes,
+					RestartPolicy:      corev1.RestartPolicyNever,
+					EnableServiceLinks: common.Ptr(false),
+					Volumes:            volumes,
 					InitContainers: []corev1.Container{
 						{
 							Name:            "tktw-init",
@@ -1155,6 +1190,7 @@ func TestProcessRunShell(t *testing.T) {
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Command:         []string{"/bin/sh", "-c"},
 							Args:            []string{constants.InitScript},
+							Env:             initEnvs,
 							VolumeMounts:    volumeMounts,
 							SecurityContext: &corev1.SecurityContext{
 								RunAsGroup: common.Ptr(constants.DefaultFsGroup),

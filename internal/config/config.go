@@ -37,6 +37,8 @@ type Config struct {
 	ScrapperEnabled                             bool          `envconfig:"SCRAPPERENABLED" default:"false"`
 	LogsBucket                                  string        `envconfig:"LOGS_BUCKET" default:""`
 	LogsStorage                                 string        `envconfig:"LOGS_STORAGE" default:""`
+	NatsEmbedded                                bool          `envconfig:"NATS_EMBEDDED" default:"false"`
+	NatsEmbeddedStoreDir                        string        `envconfig:"NATS_EMBEDDED_STORE_DIR" default:"/app/nats"`
 	NatsURI                                     string        `envconfig:"NATS_URI" default:"nats://localhost:4222"`
 	NatsSecure                                  bool          `envconfig:"NATS_SECURE" default:"false"`
 	NatsSkipVerify                              bool          `envconfig:"NATS_SKIP_VERIFY" default:"false"`

@@ -357,3 +357,38 @@ func MapSlavesConfigsToCRD(slavesConfigs *testkube.SlavesMeta) *executorv1.Slave
 		Image: slavesConfigs.Image,
 	}
 }
+
+// MapExecutorDetailsToExecutorCRD maps OpemAPI spec ExecutorDetails to CRD Executor
+func MapExecutorDetailsToExecutorCRD(item testkube.ExecutorDetails, namespace string) executorv1.Executor {
+	if item.Executor == nil {
+		return executorv1.Executor{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      item.Name,
+				Namespace: namespace,
+			},
+		}
+	}
+
+	return executorv1.Executor{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      item.Name,
+			Namespace: namespace,
+			Labels:    item.Executor.Labels,
+		},
+		Spec: executorv1.ExecutorSpec{
+			ExecutorType:           executorv1.ExecutorType(item.Executor.ExecutorType),
+			Image:                  item.Executor.Image,
+			ImagePullSecrets:       mapImagePullSecretsToCRD(item.Executor.ImagePullSecrets),
+			Command:                item.Executor.Command,
+			Args:                   item.Executor.Args,
+			Types:                  item.Executor.Types,
+			URI:                    item.Executor.Uri,
+			JobTemplate:            item.Executor.JobTemplate,
+			JobTemplateReference:   item.Executor.JobTemplateReference,
+			Features:               MapFeaturesToCRD(item.Executor.Features),
+			ContentTypes:           MapContentTypesToCRD(item.Executor.ContentTypes),
+			Meta:                   MapMetaToCRD(item.Executor.Meta),
+			UseDataDirAsWorkingDir: item.Executor.UseDataDirAsWorkingDir,
+		},
+	}
+}

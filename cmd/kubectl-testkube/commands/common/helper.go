@@ -30,6 +30,7 @@ type HelmOptions struct {
 	DryRun         bool
 	MultiNamespace bool
 	NoOperator     bool
+	EmbeddedNATS   bool
 }
 
 const (
@@ -117,6 +118,12 @@ func HelmUpgradeOrInstallTestkubeCloud(options HelmOptions, cfg config.Data, isM
 	args = append(args, "--set", fmt.Sprintf("testkube-api.minio.replicas=%d", options.MinioReplicas))
 	args = append(args, "--set", fmt.Sprintf("mongodb.replicas=%d", options.MongoReplicas))
 
+	// if embedded nats is enabled disable nats chart
+	if options.EmbeddedNATS {
+		args = append(args, "--set", "testkube-api.nats.enabled=false")
+		args = append(args, "--set", "testkube-api.nats.embedded=true")
+	}
+
 	args = append(args, options.Name, options.Chart)
 
 	if options.Values != "" {
@@ -190,6 +197,7 @@ func PopulateHelmFlags(cmd *cobra.Command, options *HelmOptions) {
 	cmd.Flags().BoolVar(&options.NoMongo, "no-mongo", false, "don't install MongoDB")
 	cmd.Flags().BoolVar(&options.NoConfirm, "no-confirm", false, "don't ask for confirmation - unatended installation mode")
 	cmd.Flags().BoolVar(&options.DryRun, "dry-run", false, "dry run mode - only print commands that would be executed")
+	cmd.Flags().BoolVar(&options.EmbeddedNATS, "embedded-nats", false, "embedded NATS server in agent")
 }
 
 func PopulateLoginDataToContext(orgID, envID, token, refreshToken string, options HelmOptions, cfg config.Data) error {
@@ -308,7 +316,7 @@ func KubectlScaleDeployment(namespace, deployment string, replicas int) (string,
 	return strings.TrimSpace(string(out)), nil
 }
 
-func RunMigrations(cmd *cobra.Command) (hasMigrations bool, err error) {
+func RunAgentMigrations(cmd *cobra.Command) (hasMigrations bool, err error) {
 	client, _, err := GetClient(cmd)
 	ui.ExitOnError("getting client", err)
 
@@ -319,10 +327,10 @@ func RunMigrations(cmd *cobra.Command) (hasMigrations bool, err error) {
 		ui.Failf("Can't detect cluster version")
 	}
 
-	ui.Info("Available migrations for", info.Version)
+	ui.Info("Available agent migrations for", info.Version)
 	results := migrations.Migrator.GetValidMigrations(info.Version, migrator.MigrationTypeClient)
 	if len(results) == 0 {
-		ui.Warn("No migrations available for", info.Version)
+		ui.Warn("No agent migrations available for", info.Version)
 		return false, nil
 	}
 

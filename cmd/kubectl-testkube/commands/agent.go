@@ -31,7 +31,7 @@ func NewAgentCmd() *cobra.Command {
 		},
 	}
 
-	cmd.AddCommand(agent.NewAgentDebugCmd())
+	cmd.AddCommand(agent.NewDebugAgentCmd())
 
 	return cmd
 }
