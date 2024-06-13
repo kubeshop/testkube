@@ -11,6 +11,7 @@ testkube pro disconnect [flags]
 ```
       --chart string         chart name (usually you don't need to change it) (default "kubeshop/testkube")
       --dry-run              dry run mode - only print commands that would be executed
+      --embedded-nats        embedded NATS server in agent
   -h, --help                 help for disconnect
       --minio-replicas int   MinIO replicas (default 1)
       --mongo-replicas int   MongoDB replicas (default 1)

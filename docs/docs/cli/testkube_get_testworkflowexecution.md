@@ -16,6 +16,7 @@ testkube get testworkflowexecution [executionID] [flags]
   -h, --help                  help for testworkflowexecution
   -l, --label strings         label key value pair: --label key1=value1
       --limit int             max number of records to return (default 1000)
+      --logs-only             show only execution logs
   -w, --testworkflow string   test workflow name
 ```
 
