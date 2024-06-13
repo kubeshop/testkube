@@ -62,7 +62,9 @@ func NewCreateTestWorkflowCmd() *cobra.Command {
 			ui.ExitOnError("getting client", err)
 
 			if cmd.Flag("disable-webhooks").Changed {
-				obj.Spec.Notifications.DisableWebhooks = true
+				obj.Spec.Notifications = &testworkflowsv1.NotificationsConfig{
+					DisableWebhooks: true,
+				}
 			}
 
 			workflow, _ := client.GetTestWorkflow(obj.Name)
