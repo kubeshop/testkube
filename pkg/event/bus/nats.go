@@ -112,6 +112,7 @@ func (n *NATSBus) Subscribe(queueName string, handler Handler) error {
 
 // PublishTopic publishes event to NATS on given topic
 func (n *NATSBus) PublishTopic(topic string, event testkube.Event) error {
+	log.Tracew(log.DefaultLogger, "publishing event", event.Log()...)
 	return n.nc.Publish(topic, event)
 }
 
