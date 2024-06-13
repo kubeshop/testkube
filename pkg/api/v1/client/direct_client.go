@@ -293,6 +293,17 @@ func (t DirectClient[A]) GetFile(uri, fileName, destination string, params map[s
 	return f.Name(), nil
 }
 
+// GetRawBody is a method to make an api call to return raw body
+func (t DirectClient[A]) GetRawBody(method, uri string, body []byte, params map[string]string) (result []byte, err error) {
+	resp, err := t.baseExec(method, uri, fmt.Sprintf("%T", result), body, params)
+	if err != nil {
+		return result, err
+	}
+	defer resp.Body.Close()
+
+	return io.ReadAll(resp.Body)
+}
+
 func (t DirectClient[A]) getFromResponse(resp *http.Response) (result A, err error) {
 	err = json.NewDecoder(resp.Body).Decode(&result)
 	return

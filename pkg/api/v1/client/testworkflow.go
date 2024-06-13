@@ -177,3 +177,9 @@ func (c TestWorkflowClient) DownloadTestWorkflowArtifactArchive(executionID, des
 	uri := c.testWorkflowExecutionTransport.GetURI("/test-workflow-executions/%s/artifact-archive", executionID)
 	return c.testWorkflowExecutionTransport.GetFile(uri, fmt.Sprintf("%s.tar.gz", executionID), destination, map[string][]string{"mask": masks})
 }
+
+// GetTestWorkflowExecutionLogs returns text logs from storage, based on job pods logs
+func (c TestWorkflowClient) GetTestWorkflowExecutionLogs(id string) (result []byte, err error) {
+	uri := c.testWorkflowTransport.GetURI("/test-workflow-executions/%s/logs", id)
+	return c.testWorkflowTransport.GetRawBody(http.MethodGet, uri, nil, nil)
+}

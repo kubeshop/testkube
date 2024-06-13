@@ -246,6 +246,16 @@ func (t ProxyClient[A]) GetFile(uri, fileName, destination string, params map[st
 	return f.Name(), err
 }
 
+// GetRawBody is a method to make an api call to return raw body
+func (t ProxyClient[A]) GetRawBody(method, uri string, body []byte, params map[string]string) (result []byte, err error) {
+	resp, err := t.baseExec(method, uri, fmt.Sprintf("%T", result), body, params)
+	if err != nil {
+		return result, err
+	}
+
+	return resp.Raw()
+}
+
 func (t ProxyClient[A]) getProxy(requestType string) *rest.Request {
 	return t.client.CoreV1().RESTClient().Verb(requestType).
 		Namespace(t.config.Namespace).
