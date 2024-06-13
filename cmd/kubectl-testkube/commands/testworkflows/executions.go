@@ -18,6 +18,7 @@ func NewGetTestWorkflowExecutionsCmd() *cobra.Command {
 		limit            int
 		selectors        []string
 		testWorkflowName string
+		logsOnly         bool
 	)
 
 	cmd := &cobra.Command{
@@ -43,10 +44,13 @@ func NewGetTestWorkflowExecutionsCmd() *cobra.Command {
 			}
 
 			executionID := args[0]
-			execution, err := client.GetTestWorkflowExecution(executionID)
-			ui.ExitOnError("getting recent test workflow execution data id:"+execution.Id, err)
-			err = render.Obj(cmd, execution, os.Stdout, renderer.TestWorkflowExecutionRenderer)
-			ui.ExitOnError("rendering obj", err)
+			if !logsOnly {
+				execution, err := client.GetTestWorkflowExecution(executionID)
+				ui.ExitOnError("getting recent test workflow execution data id:"+execution.Id, err)
+
+				err = render.Obj(cmd, execution, os.Stdout, renderer.TestWorkflowExecutionRenderer)
+				ui.ExitOnError("rendering obj", err)
+			}
 
 			ui.Info("Getting logs for test workflow execution", executionID)
 
@@ -54,13 +58,14 @@ func NewGetTestWorkflowExecutionsCmd() *cobra.Command {
 			ui.ExitOnError("getting logs from executor", err)
 
 			isLineBeginning := true
-			printLogLines(string(logs), &isLineBeginning)
+			printLogLines(string(logs), &isLineBeginning, false)
 		},
 	}
 
 	cmd.Flags().StringVarP(&testWorkflowName, "testworkflow", "w", "", "test workflow name")
 	cmd.Flags().IntVar(&limit, "limit", 1000, "max number of records to return")
 	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label key value pair: --label key1=value1")
+	cmd.Flags().BoolVar(&logsOnly, "logs-only", false, "show only execution logs")
 
 	return cmd
 }

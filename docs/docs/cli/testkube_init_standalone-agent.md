@@ -15,6 +15,7 @@ testkube init standalone-agent [flags]
       --api-prefix string     usually don't need to be changed [required for custom cloud mode] (default "api")
       --chart string          chart name (usually you don't need to change it) (default "kubeshop/testkube")
       --dry-run               dry run mode - only print commands that would be executed
+      --embedded-nats         embedded NATS server in agent
       --env-id string         Testkube Pro environment id [required for centralized mode]
       --export                Export the values.yaml
       --feature-logs-v2       Logs v2 feature flag
