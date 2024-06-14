@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/spf13/cobra"
 
@@ -223,7 +224,7 @@ func watchTestWorkflowLogs(id string, signature []testkube.TestWorkflowSignature
 			continue
 		}
 
-		printLogLines(l.Log, &isLineBeginning, true)
+		printLogLines(l.Log, &isLineBeginning, nil, nil)
 	}
 
 	ui.NL()
@@ -231,15 +232,39 @@ func watchTestWorkflowLogs(id string, signature []testkube.TestWorkflowSignature
 	return result, err
 }
 
-func printLogLines(logs string, isLineBeginning *bool, structuredLogs bool) {
+func printLogLines(logs string, isLineBeginning *bool,
+	steps map[string]testkube.TestWorkflowSignature, results map[string]testkube.TestWorkflowStepResult) {
 	// Strip timestamp + space for all new lines in the log
 	for len(logs) > 0 {
 		if *isLineBeginning {
-			if strings.Index(logs, "\n") >= LogTimestampLength-1 || structuredLogs {
+			newLineIndex := strings.Index(logs, "\n")
+			if newLineIndex >= LogTimestampLength-1 || steps == nil {
 				logs = logs[getTimestampLength(logs)+1:]
 				*isLineBeginning = false
+			} else {
+				if newLineIndex != -1 {
+					name := logs[:newLineIndex]
+					cleanName := strings.TrimFunc(name, func(r rune) bool {
+						return !unicode.IsGraphic(r)
+					})
+
+					cleanName = strings.TrimFunc(strings.TrimSuffix(cleanName, "start"), func(r rune) bool {
+						return !unicode.IsGraphic(r)
+					})
+
+					logs = strings.TrimPrefix(logs, name)
+					if step, ok := steps[cleanName]; ok {
+						stepName := step.Category
+						if step.Name != "" {
+							stepName = step.Name
+						}
+
+						logs = ui.LightCyan(fmt.Sprintf("• %s", stepName)) + logs
+					}
+				}
 			}
 		}
+
 		newLineIndex := strings.Index(logs, "\n")
 		if newLineIndex == -1 {
 			fmt.Print(logs)
