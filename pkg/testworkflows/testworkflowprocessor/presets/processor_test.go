@@ -1,4 +1,4 @@
-package testworkflowprocessor
+package presets
 
 import (
 	"context"
@@ -16,7 +16,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/presets"
 )
 
 type dummyInspector struct{}
@@ -27,7 +26,7 @@ func (*dummyInspector) Inspect(ctx context.Context, registry, image string, pull
 
 var (
 	ins         = &dummyInspector{}
-	proc        = presets.NewPro(ins)
+	proc        = NewPro(ins)
 	execMachine = expressions.NewMachine().
 			Register("resource.root", "dummy-id").
 			Register("resource.id", "dummy-id-abc")
