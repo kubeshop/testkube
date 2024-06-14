@@ -35,6 +35,7 @@ type initProcess struct {
 	results    []string
 	conditions map[string][]string
 	negative   bool
+	toolkit    bool
 	errors     []error
 }
 
@@ -88,6 +89,9 @@ func (p *initProcess) Command() []string {
 	if p.workingDir != "" {
 		args = append(args, constants.ArgWorkingDir, p.workingDir)
 	}
+	if p.toolkit {
+		args = append(args, constants.ArgToolkit)
+	}
 	return append([]string{constants2.DefaultInitPath, p.ref}, append(args, constants.ArgSeparator)...)
 }
 
@@ -126,6 +130,11 @@ func (p *initProcess) SetCommand(command ...string) *initProcess {
 
 func (p *initProcess) SetArgs(args ...string) *initProcess {
 	p.args = args
+	return p
+}
+
+func (p *initProcess) SetToolkit(toolkit bool) *initProcess {
+	p.toolkit = toolkit
 	return p
 }
 
@@ -224,6 +233,7 @@ func (p *initProcess) Children(ref string) *initProcess {
 		results:    p.results,
 		conditions: maps.Clone(p.conditions),
 		negative:   p.negative,
+		toolkit:    p.toolkit,
 		errors:     p.errors,
 	}
 }

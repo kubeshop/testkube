@@ -37,6 +37,7 @@ func main() {
 	resulting := []data.Rule(nil)
 	timeouts := []data.Timeout(nil)
 	paused := false
+	toolkit := false
 	args := []string(nil)
 
 	// Read arguments into the base data
@@ -96,11 +97,19 @@ func main() {
 			config["retryCount"] = os.Args[i+1]
 		case constants.ArgRetryUntil:
 			config["retryUntil"] = os.Args[i+1]
+		case constants.ArgToolkit, constants.ArgToolkitLong:
+			toolkit = true
+			i--
 		case constants.ArgDebug:
 			config["debug"] = os.Args[i+1]
 		default:
 			output.Failf(output.CodeInputError, "unknown parameter: %s", os.Args[i])
 		}
+	}
+
+	// Clean up unnecessary variables for non-toolkit containers
+	if !toolkit {
+		_ = os.Unsetenv("TK_REF")
 	}
 
 	// Configure PWD variable, to make it similar to shell environment variables

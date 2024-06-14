@@ -130,12 +130,20 @@ func buildKubernetesContainers(stage Stage, init *initProcess, fsGroup *int64, m
 		init.ResetResults()
 	}
 
+	refEnvVar := ""
+	for _, e := range cr.Env {
+		if e.Name == "TK_REF" {
+			refEnvVar = e.Value
+		}
+	}
+
 	init.
 		SetNegative(c.Negative()).
 		AddRetryPolicy(c.RetryPolicy(), c.Ref()).
 		SetCommand(cr.Command...).
 		SetArgs(cr.Args...).
-		SetWorkingDir(cr.WorkingDir)
+		SetWorkingDir(cr.WorkingDir).
+		SetToolkit(cr.Image == constants.DefaultToolkitImage && c.Ref() == refEnvVar)
 
 	for _, env := range cr.Env {
 		if strings.Contains(env.Value, "{{") {
