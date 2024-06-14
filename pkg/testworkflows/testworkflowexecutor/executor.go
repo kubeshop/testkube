@@ -32,22 +32,21 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/expressions"
-	"github.com/kubeshop/testkube/pkg/imageinspector"
 	"github.com/kubeshop/testkube/pkg/log"
 	testworkflowmappers "github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/result"
 	"github.com/kubeshop/testkube/pkg/tcl/repositorytcl/testworkflow"
-	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl"
-	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowcontroller"
-	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor"
-	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
-	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowresolver"
 	"github.com/kubeshop/testkube/pkg/telemetry"
+	"github.com/kubeshop/testkube/pkg/testworkflows"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowresolver"
 	"github.com/kubeshop/testkube/pkg/version"
 )
 
-//go:generate mockgen -destination=./mock_executor.go -package=testworkflowexecutor "github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowexecutor" TestWorkflowExecutor
+//go:generate mockgen -destination=./mock_executor.go -package=testworkflowexecutor "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor" TestWorkflowExecutor
 type TestWorkflowExecutor interface {
 	Control(ctx context.Context, testWorkflow *testworkflowsv1.TestWorkflow, execution *testkube.TestWorkflowExecution) error
 	Recover(ctx context.Context)
@@ -61,7 +60,7 @@ type executor struct {
 	repository                     testworkflow.Repository
 	output                         testworkflow.OutputRepository
 	testWorkflowTemplatesClient    testworkflowsclientv1.TestWorkflowTemplatesInterface
-	imageInspector                 imageinspector.Inspector
+	processor                      testworkflowprocessor.Processor
 	configMap                      configRepo.Repository
 	executionResults               result.Repository
 	testWorkflowExecutionsClient   testworkflowsclientv1.TestWorkflowExecutionsInterface
@@ -82,7 +81,7 @@ func New(emitter *event.Emitter,
 	repository testworkflow.Repository,
 	output testworkflow.OutputRepository,
 	testWorkflowTemplatesClient testworkflowsclientv1.TestWorkflowTemplatesInterface,
-	imageInspector imageinspector.Inspector,
+	processor testworkflowprocessor.Processor,
 	configMap configRepo.Repository,
 	executionResults result.Repository,
 	testWorkflowExecutionsClient testworkflowsclientv1.TestWorkflowExecutionsInterface,
@@ -101,7 +100,7 @@ func New(emitter *event.Emitter,
 		repository:                     repository,
 		output:                         output,
 		testWorkflowTemplatesClient:    testWorkflowTemplatesClient,
-		imageInspector:                 imageInspector,
+		processor:                      processor,
 		configMap:                      configMap,
 		executionResults:               executionResults,
 		testWorkflowExecutionsClient:   testWorkflowExecutionsClient,
@@ -465,8 +464,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	}
 
 	// Validate the TestWorkflow
-	_, err = testworkflowprocessor.NewFullFeatured(e.imageInspector).
-		Bundle(ctx, workflow.DeepCopy(), machine, mockExecutionMachine)
+	_, err = e.processor.Bundle(ctx, workflow.DeepCopy(), machine, mockExecutionMachine)
 	if err != nil {
 		return execution, errors.Wrap(err, "processing error")
 	}
@@ -496,8 +494,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	})
 
 	// Process the TestWorkflow
-	bundle, err := testworkflowprocessor.NewFullFeatured(e.imageInspector).
-		Bundle(ctx, &workflow, machine, executionMachine)
+	bundle, err := e.processor.Bundle(ctx, &workflow, machine, executionMachine)
 	if err != nil {
 		return execution, errors.Wrap(err, "processing error")
 	}
@@ -571,16 +568,16 @@ func (e *executor) sendRunWorkflowTelemetry(ctx context.Context, workflow *testw
 	out, err := telemetry.SendRunWorkflowEvent("testkube_api_run_test_workflow", telemetry.RunWorkflowParams{
 		RunParams: telemetry.RunParams{
 			AppVersion: version.Version,
-			DataSource: testworkflowstcl.GetDataSource(workflow.Spec.Content),
-			Host:       testworkflowstcl.GetHostname(),
-			ClusterID:  testworkflowstcl.GetClusterID(ctx, e.configMap),
+			DataSource: testworkflows.GetDataSource(workflow.Spec.Content),
+			Host:       testworkflows.GetHostname(),
+			ClusterID:  testworkflows.GetClusterID(ctx, e.configMap),
 		},
 		WorkflowParams: telemetry.WorkflowParams{
 			TestWorkflowSteps:        int32(len(workflow.Spec.Setup) + len(workflow.Spec.Steps) + len(workflow.Spec.After)),
-			TestWorkflowImage:        testworkflowstcl.GetImage(workflow.Spec.Container),
-			TestWorkflowArtifactUsed: testworkflowstcl.HasWorkflowStepLike(workflow.Spec, testworkflowstcl.HasArtifacts),
-			TestWorkflowKubeshopGitURI: testworkflowstcl.IsKubeshopGitURI(workflow.Spec.Content) ||
-				testworkflowstcl.HasWorkflowStepLike(workflow.Spec, testworkflowstcl.HasKubeshopGitURI),
+			TestWorkflowImage:        testworkflows.GetImage(workflow.Spec.Container),
+			TestWorkflowArtifactUsed: testworkflows.HasWorkflowStepLike(workflow.Spec, testworkflows.HasArtifacts),
+			TestWorkflowKubeshopGitURI: testworkflows.IsKubeshopGitURI(workflow.Spec.Content) ||
+				testworkflows.HasWorkflowStepLike(workflow.Spec, testworkflows.HasKubeshopGitURI),
 		},
 	})
 

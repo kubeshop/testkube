@@ -18,7 +18,7 @@ import (
 
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/expressions"
-	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 )
 
 func AnnotateControlledBy(obj metav1.Object, rootId, id string) {

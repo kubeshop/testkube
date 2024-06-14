@@ -24,16 +24,16 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
-	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 )
 
-//go:generate mockgen -destination=./mock_processor.go -package=testworkflowprocessor "github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor" Processor
+//go:generate mockgen -destination=./mock_processor.go -package=testworkflowprocessor "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor" Processor
 type Processor interface {
 	Register(operation Operation) Processor
 	Bundle(ctx context.Context, workflow *testworkflowsv1.TestWorkflow, machines ...expressions.Machine) (*Bundle, error)
 }
 
-//go:generate mockgen -destination=./mock_internalprocessor.go -package=testworkflowprocessor "github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor" InternalProcessor
+//go:generate mockgen -destination=./mock_internalprocessor.go -package=testworkflowprocessor "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor" InternalProcessor
 type InternalProcessor interface {
 	Process(layer Intermediate, container Container, step testworkflowsv1.Step) (Stage, error)
 }
@@ -47,23 +47,6 @@ type processor struct {
 
 func New(inspector imageinspector.Inspector) Processor {
 	return &processor{inspector: inspector}
-}
-
-func NewFullFeatured(inspector imageinspector.Inspector) Processor {
-	return New(inspector).
-		Register(ProcessDelay).
-		Register(ProcessContentFiles).
-		Register(ProcessContentGit).
-		Register(ProcessContentTarball).
-		Register(ProcessServicesStart).
-		Register(ProcessNestedSetupSteps).
-		Register(ProcessRunCommand).
-		Register(ProcessShellCommand).
-		Register(ProcessExecute).
-		Register(ProcessParallel).
-		Register(ProcessNestedSteps).
-		Register(ProcessServicesStop).
-		Register(ProcessArtifacts)
 }
 
 func (p *processor) Register(operation Operation) Processor {

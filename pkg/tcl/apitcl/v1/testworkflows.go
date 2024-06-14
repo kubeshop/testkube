@@ -23,7 +23,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/scheduler"
-	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowresolver"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowresolver"
 	"github.com/kubeshop/testkube/pkg/workerpool"
 )
 

@@ -28,8 +28,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/scheduler"
 	"github.com/kubeshop/testkube/pkg/tcl/repositorytcl/testworkflow"
-	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowexecutor"
 	"github.com/kubeshop/testkube/pkg/telemetry"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 	"github.com/kubeshop/testkube/pkg/utils"
 	"github.com/kubeshop/testkube/pkg/version"
 )

@@ -19,7 +19,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/expressions"
-	constants2 "github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
+	constants2 "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 )
 
 type initProcess struct {

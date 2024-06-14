@@ -18,7 +18,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/kubeshop/testkube/internal/common"
-	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 )
 
 func cleanupConfigMaps(labelName string) func(ctx context.Context, clientSet kubernetes.Interface, namespace, id string) error {

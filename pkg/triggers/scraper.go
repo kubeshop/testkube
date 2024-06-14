@@ -8,7 +8,7 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event/bus"
-	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowcontroller"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller"
 )
 
 func (s *Service) runExecutionScraper(ctx context.Context) {

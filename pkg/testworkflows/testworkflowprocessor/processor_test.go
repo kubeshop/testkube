@@ -23,7 +23,8 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
-	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/presets"
 )
 
 type dummyInspector struct{}
@@ -34,7 +35,7 @@ func (*dummyInspector) Inspect(ctx context.Context, registry, image string, pull
 
 var (
 	ins         = &dummyInspector{}
-	proc        = NewFullFeatured(ins)
+	proc        = presets.NewPro(ins)
 	execMachine = expressions.NewMachine().
 			Register("resource.root", "dummy-id").
 			Register("resource.id", "dummy-id-abc")

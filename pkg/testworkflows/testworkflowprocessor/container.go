@@ -22,7 +22,7 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
-	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowresolver"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowresolver"
 )
 
 type container struct {
@@ -77,7 +77,7 @@ type ContainerMutations[T any] interface {
 	EnableToolkit(ref string) T
 }
 
-//go:generate mockgen -destination=./mock_container.go -package=testworkflowprocessor "github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor" Container
+//go:generate mockgen -destination=./mock_container.go -package=testworkflowprocessor "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor" Container
 type Container interface {
 	ContainerComposition
 	ContainerAccessors

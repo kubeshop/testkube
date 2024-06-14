@@ -24,6 +24,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
 	"github.com/kubeshop/testkube/pkg/tcl/repositorytcl/testworkflow"
 	"github.com/kubeshop/testkube/pkg/tcl/schedulertcl"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/presets"
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"google.golang.org/grpc"
@@ -93,7 +94,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/migrator"
 	"github.com/kubeshop/testkube/pkg/reconciler"
 	"github.com/kubeshop/testkube/pkg/secret"
-	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowexecutor"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 )
 
 var verbose = flag.Bool("v", false, "enable verbosity level")
@@ -587,14 +588,17 @@ func main() {
 		cfg.EnableK8sEvents,
 	)
 
-	// Pro edition only (tcl protected code)
+	testWorkflowProcessor := presets.NewOpenSource(inspector)
+	if mode == common.ModeAgent {
+		testWorkflowProcessor = presets.NewPro(inspector)
+	}
 	testWorkflowExecutor := testworkflowexecutor.New(
 		eventsEmitter,
 		clientset,
 		testWorkflowResultsRepository,
 		testWorkflowOutputRepository,
 		testWorkflowTemplatesClient,
-		inspector,
+		testWorkflowProcessor,
 		configMapConfig,
 		resultsRepository,
 		testWorkflowExecutionsClient,

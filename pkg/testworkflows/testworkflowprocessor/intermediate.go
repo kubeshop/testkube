@@ -14,10 +14,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
-	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowresolver"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowresolver"
 )
 
-//go:generate mockgen -destination=./mock_intermediate.go -package=testworkflowprocessor "github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor" Intermediate
+//go:generate mockgen -destination=./mock_intermediate.go -package=testworkflowprocessor "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor" Intermediate
 type Intermediate interface {
 	RefCounter
 

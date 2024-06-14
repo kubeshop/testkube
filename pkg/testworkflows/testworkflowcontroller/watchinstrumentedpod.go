@@ -21,7 +21,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor"
 )
 
 const (

@@ -13,7 +13,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/imageinspector"
 )
 
-//go:generate mockgen -destination=./mock_stage.go -package=testworkflowprocessor "github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor" Stage
+//go:generate mockgen -destination=./mock_stage.go -package=testworkflowprocessor "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor" Stage
 type Stage interface {
 	StageMetadata
 	StageLifecycle
