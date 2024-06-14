@@ -5,10 +5,10 @@ import (
 	"io/fs"
 	"testing"
 
-	"github.com/kubeshop/testkube/pkg/tcl/cloudtcl/data/testworkflow"
-
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/common/testdata"
 	"github.com/kubeshop/testkube/pkg/cloud/data/executor"

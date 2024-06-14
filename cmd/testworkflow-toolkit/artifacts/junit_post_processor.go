@@ -11,9 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kubeshop/testkube/pkg/tcl/cloudtcl/data/testworkflow"
-
 	"github.com/pkg/errors"
+
+	"github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
 	cloudexecutor "github.com/kubeshop/testkube/pkg/cloud/data/executor"
