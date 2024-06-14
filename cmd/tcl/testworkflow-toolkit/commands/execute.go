@@ -19,11 +19,11 @@ import (
 	"github.com/spf13/cobra"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
-	common2 "github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/common"
-	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/env"
+	commontcl "github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/common"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/spawn"
-	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/transfer"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/transfer"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -285,11 +285,11 @@ func NewExecuteCmd() *cobra.Command {
 				}
 
 				// Resolve the params
-				params, err := common2.GetParamsSpec(t.Matrix, t.Shards, t.Count, t.MaxCount, baseMachine)
+				params, err := commontcl.GetParamsSpec(t.Matrix, t.Shards, t.Count, t.MaxCount, baseMachine)
 				if err != nil {
 					ui.Fail(errors.Wrap(err, "matrix and sharding"))
 				}
-				fmt.Printf("%s: %s\n", common2.ServiceLabel(t.Name), params.Humanize())
+				fmt.Printf("%s: %s\n", commontcl.ServiceLabel(t.Name), params.Humanize())
 
 				// Create operations for each expected execution
 				for i := int64(0); i < params.Count; i++ {
@@ -323,11 +323,11 @@ func NewExecuteCmd() *cobra.Command {
 				}
 
 				// Resolve the params
-				params, err := common2.GetParamsSpec(w.Matrix, w.Shards, w.Count, w.MaxCount, baseMachine)
+				params, err := commontcl.GetParamsSpec(w.Matrix, w.Shards, w.Count, w.MaxCount, baseMachine)
 				if err != nil {
 					ui.Fail(errors.Wrap(err, "matrix and sharding"))
 				}
-				fmt.Printf("%s: %s\n", common2.ServiceLabel(w.Name), params.Humanize())
+				fmt.Printf("%s: %s\n", commontcl.ServiceLabel(w.Name), params.Humanize())
 
 				// Create operations for each expected execution
 				for i := int64(0); i < params.Count; i++ {

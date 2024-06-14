@@ -29,8 +29,8 @@ import (
 	"github.com/minio/minio-go/v7"
 	"github.com/spf13/cobra"
 
-	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/artifacts"
-	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/env"
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/artifacts"
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 

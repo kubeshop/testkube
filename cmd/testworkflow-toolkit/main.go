@@ -11,8 +11,8 @@ package main
 import (
 	"errors"
 
-	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/commands"
-	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/env"
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/commands"
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 

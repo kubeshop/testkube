@@ -22,12 +22,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
-	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/common"
-	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/env"
+	commontcl "github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/common"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/spawn"
-	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/transfer"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
-	common2 "github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/transfer"
+	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowcontroller"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor"
@@ -116,21 +116,21 @@ func NewServicesCmd() *cobra.Command {
 			// Analyze instances to run
 			state := make(map[string][]ServiceState)
 			instances := make([]ServiceInstance, 0)
-			svcParams := make(map[string]*common.ParamsSpec)
+			svcParams := make(map[string]*commontcl.ParamsSpec)
 			for name, svc := range services {
 				// Resolve the params
-				params, err := common.GetParamsSpec(svc.Matrix, svc.Shards, svc.Count, svc.MaxCount, baseMachine)
-				ui.ExitOnError(fmt.Sprintf("%s: compute matrix and sharding", common.ServiceLabel(name)), err)
+				params, err := commontcl.GetParamsSpec(svc.Matrix, svc.Shards, svc.Count, svc.MaxCount, baseMachine)
+				ui.ExitOnError(fmt.Sprintf("%s: compute matrix and sharding", commontcl.ServiceLabel(name)), err)
 				svcParams[name] = params
 
 				// Ignore no instances
 				if params.Count == 0 {
-					fmt.Printf("%s: 0 instances requested (combinations=%d, count=%d), skipping\n", common.ServiceLabel(name), params.MatrixCount, params.ShardCount)
+					fmt.Printf("%s: 0 instances requested (combinations=%d, count=%d), skipping\n", commontcl.ServiceLabel(name), params.MatrixCount, params.ShardCount)
 					continue
 				}
 
 				// Print information about the number of params
-				fmt.Printf("%s: %s\n", common.ServiceLabel(name), params.String(math.MaxInt64))
+				fmt.Printf("%s: %s\n", commontcl.ServiceLabel(name), params.String(math.MaxInt64))
 
 				svcInstances := make([]ServiceInstance, params.Count)
 				for index := int64(0); index < params.Count; index++ {
@@ -139,17 +139,17 @@ func NewServicesCmd() *cobra.Command {
 					// Clone the spec
 					svcSpec := svc.DeepCopy()
 					err = expressions.Simplify(&svcSpec, machines...)
-					ui.ExitOnError(fmt.Sprintf("%s: %d: error", common.ServiceLabel(name), index), err)
+					ui.ExitOnError(fmt.Sprintf("%s: %d: error", commontcl.ServiceLabel(name), index), err)
 
 					// Build the spec
 					spec := testworkflowsv1.TestWorkflowSpec{
 						TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
 							Content:   svcSpec.Content,
-							Container: common2.Ptr(svcSpec.ContainerConfig),
+							Container: common.Ptr(svcSpec.ContainerConfig),
 							Pod:       svcSpec.Pod,
 						},
 						Steps: []testworkflowsv1.Step{
-							{StepOperations: testworkflowsv1.StepOperations{Run: common2.Ptr(svcSpec.StepRun)}},
+							{StepOperations: testworkflowsv1.StepOperations{Run: common.Ptr(svcSpec.StepRun)}},
 						},
 					}
 					spec.Steps[0].Run.ContainerConfig = testworkflowsv1.ContainerConfig{}
@@ -159,7 +159,7 @@ func NewServicesCmd() *cobra.Command {
 						spec.Content = &testworkflowsv1.Content{}
 					}
 					tarballs, err := spawn.ProcessTransfer(transferSrv, svcSpec.Transfer, machines...)
-					ui.ExitOnError(fmt.Sprintf("%s: %d: error: transfer", common.ServiceLabel(name), index), err)
+					ui.ExitOnError(fmt.Sprintf("%s: %d: error: transfer", commontcl.ServiceLabel(name), index), err)
 					spec.Content.Tarball = append(spec.Content.Tarball, tarballs...)
 
 					// Save the instance
@@ -175,9 +175,9 @@ func NewServicesCmd() *cobra.Command {
 					// Save the timeout
 					if svcSpec.Timeout != "" {
 						v, err := expressions.EvalTemplate(svcSpec.Timeout, machines...)
-						ui.ExitOnError(fmt.Sprintf("%s: %d: error: timeout expression", common.ServiceLabel(name), index), err)
+						ui.ExitOnError(fmt.Sprintf("%s: %d: error: timeout expression", commontcl.ServiceLabel(name), index), err)
 						d, err := time.ParseDuration(strings.ReplaceAll(v, " ", ""))
-						ui.ExitOnError(fmt.Sprintf("%s: %d: error: invalid timeout: %s:", common.ServiceLabel(name), index, v), err)
+						ui.ExitOnError(fmt.Sprintf("%s: %d: error: invalid timeout: %s:", commontcl.ServiceLabel(name), index, v), err)
 						svcInstances[index].Timeout = &d
 					}
 				}
@@ -245,12 +245,12 @@ func NewServicesCmd() *cobra.Command {
 					log("error", "failed to build the service", err.Error())
 					return false
 				}
-				ui.ExitOnError(fmt.Sprintf("%s: %d: failed to prepare resources", common.InstanceLabel(instance.Name, index, params.Count), index), err)
+				ui.ExitOnError(fmt.Sprintf("%s: %d: failed to prepare resources", commontcl.InstanceLabel(instance.Name, index, params.Count), index), err)
 
 				// Apply the service specific data
 				// TODO: Handle RestartPolicy: Always?
 				if instance.RestartPolicy == "Never" {
-					bundle.Job.Spec.BackoffLimit = common2.Ptr(int32(0))
+					bundle.Job.Spec.BackoffLimit = common.Ptr(int32(0))
 					bundle.Job.Spec.Template.Spec.RestartPolicy = "Never"
 				} else {
 					// TODO: Throw errors from the pod containers? Atm it will just end with "Success"...

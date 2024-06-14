@@ -18,7 +18,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
-	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/env"
+	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/commands"
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
 
 	"golang.org/x/sync/errgroup"
 )
@@ -27,11 +28,11 @@ func init() {
 	RootCmd.AddCommand(NewCloneCmd())
 	RootCmd.AddCommand(NewTarballCmd())
 	RootCmd.AddCommand(NewTransferCmd())
-	RootCmd.AddCommand(NewExecuteCmd())
+	RootCmd.AddCommand(commands.NewExecuteCmd())
 	RootCmd.AddCommand(NewArtifactsCmd())
-	RootCmd.AddCommand(NewParallelCmd())
-	RootCmd.AddCommand(NewServicesCmd())
-	RootCmd.AddCommand(NewKillCmd())
+	RootCmd.AddCommand(commands.NewParallelCmd())
+	RootCmd.AddCommand(commands.NewServicesCmd())
+	RootCmd.AddCommand(commands.NewKillCmd())
 }
 
 var RootCmd = &cobra.Command{

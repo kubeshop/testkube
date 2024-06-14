@@ -16,7 +16,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/common"
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/common"
 )
 
 type server struct {

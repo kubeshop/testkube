@@ -10,7 +10,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 
-	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/common/testdata"
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/common/testdata"
 	"github.com/kubeshop/testkube/pkg/cloud/data/artifact"
 	"github.com/kubeshop/testkube/pkg/cloud/data/executor"
 	"github.com/kubeshop/testkube/pkg/filesystem"

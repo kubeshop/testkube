@@ -16,7 +16,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/common"
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/common"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
