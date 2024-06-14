@@ -1,11 +1,3 @@
-// Copyright 2024 Testkube.
-//
-// Licensed as a Testkube Pro file under the Testkube Community
-// License (the "License"); you may not use this file except in compliance with
-// the License. You may obtain a copy of the License at
-//
-//	https://github.com/kubeshop/testkube/blob/main/licenses/TCL.txt
-
 package v1
 
 import (
@@ -27,7 +19,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/workerpool"
 )
 
-func (s *apiTCL) ListTestWorkflowsHandler() fiber.Handler {
+func (s *TestkubeAPI) ListTestWorkflowsHandler() fiber.Handler {
 	errPrefix := "failed to list test workflows"
 	return func(c *fiber.Ctx) (err error) {
 		workflows, err := s.getFilteredTestWorkflowList(c)
@@ -42,7 +34,7 @@ func (s *apiTCL) ListTestWorkflowsHandler() fiber.Handler {
 	}
 }
 
-func (s *apiTCL) GetTestWorkflowHandler() fiber.Handler {
+func (s *TestkubeAPI) GetTestWorkflowHandler() fiber.Handler {
 	return func(c *fiber.Ctx) (err error) {
 		name := c.Params("id")
 		errPrefix := fmt.Sprintf("failed to get test workflow '%s'", name)
@@ -58,7 +50,7 @@ func (s *apiTCL) GetTestWorkflowHandler() fiber.Handler {
 	}
 }
 
-func (s *apiTCL) DeleteTestWorkflowHandler() fiber.Handler {
+func (s *TestkubeAPI) DeleteTestWorkflowHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
 		errPrefix := fmt.Sprintf("failed to delete test workflow '%s'", name)
@@ -82,7 +74,7 @@ func (s *apiTCL) DeleteTestWorkflowHandler() fiber.Handler {
 	}
 }
 
-func (s *apiTCL) DeleteTestWorkflowsHandler() fiber.Handler {
+func (s *TestkubeAPI) DeleteTestWorkflowsHandler() fiber.Handler {
 	errPrefix := "failed to delete test workflows"
 	return func(c *fiber.Ctx) error {
 		selector := c.Query("selector")
@@ -141,7 +133,7 @@ func (s *apiTCL) DeleteTestWorkflowsHandler() fiber.Handler {
 	}
 }
 
-func (s *apiTCL) CreateTestWorkflowHandler() fiber.Handler {
+func (s *TestkubeAPI) CreateTestWorkflowHandler() fiber.Handler {
 	errPrefix := "failed to create test workflow"
 	return func(c *fiber.Ctx) (err error) {
 		// Deserialize resource
@@ -182,7 +174,7 @@ func (s *apiTCL) CreateTestWorkflowHandler() fiber.Handler {
 	}
 }
 
-func (s *apiTCL) UpdateTestWorkflowHandler() fiber.Handler {
+func (s *TestkubeAPI) UpdateTestWorkflowHandler() fiber.Handler {
 	errPrefix := "failed to update test workflow"
 	return func(c *fiber.Ctx) (err error) {
 		name := c.Params("id")
@@ -232,7 +224,7 @@ func (s *apiTCL) UpdateTestWorkflowHandler() fiber.Handler {
 	}
 }
 
-func (s *apiTCL) PreviewTestWorkflowHandler() fiber.Handler {
+func (s *TestkubeAPI) PreviewTestWorkflowHandler() fiber.Handler {
 	errPrefix := "failed to resolve test workflow"
 	return func(c *fiber.Ctx) (err error) {
 		// Check if it should inline templates
@@ -288,7 +280,7 @@ func (s *apiTCL) PreviewTestWorkflowHandler() fiber.Handler {
 }
 
 // TODO: Add metrics
-func (s *apiTCL) ExecuteTestWorkflowHandler() fiber.Handler {
+func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 	return func(c *fiber.Ctx) (err error) {
 		ctx := c.Context()
 		name := c.Params("id")
@@ -342,7 +334,7 @@ func (s *apiTCL) ExecuteTestWorkflowHandler() fiber.Handler {
 	}
 }
 
-func (s *apiTCL) getFilteredTestWorkflowList(c *fiber.Ctx) (*testworkflowsv1.TestWorkflowList, error) {
+func (s *TestkubeAPI) getFilteredTestWorkflowList(c *fiber.Ctx) (*testworkflowsv1.TestWorkflowList, error) {
 	crWorkflows, err := s.TestWorkflowsClient.List(c.Query("selector"))
 	if err != nil {
 		return nil, err

@@ -1,11 +1,3 @@
-// Copyright 2024 Testkube.
-//
-// Licensed as a Testkube Pro file under the Testkube Community
-// License (the "License"); you may not use this file except in compliance with
-// the License. You may obtain a copy of the License at
-//
-//	https://github.com/kubeshop/testkube/blob/main/licenses/TCL.txt
-
 package v1
 
 import (
@@ -22,7 +14,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/repository/result"
 )
 
-func (s *apiTCL) GetTestWorkflowWithExecutionHandler() fiber.Handler {
+func (s *TestkubeAPI) GetTestWorkflowWithExecutionHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
 		errPrefix := fmt.Sprintf("failed to get test workflow '%s' with execution", name)
@@ -49,7 +41,7 @@ func (s *apiTCL) GetTestWorkflowWithExecutionHandler() fiber.Handler {
 	}
 }
 
-func (s *apiTCL) ListTestWorkflowWithExecutionsHandler() fiber.Handler {
+func (s *TestkubeAPI) ListTestWorkflowWithExecutionsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to list test workflows with executions"
 		crWorkflows, err := s.getFilteredTestWorkflowList(c)

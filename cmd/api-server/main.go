@@ -21,7 +21,6 @@ import (
 	cloudtestworkflow "github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
 	testworkflow2 "github.com/kubeshop/testkube/pkg/repository/testworkflow"
-	apitclv1 "github.com/kubeshop/testkube/pkg/tcl/apitcl/v1"
 	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
 	"github.com/kubeshop/testkube/pkg/tcl/schedulertcl"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/presets"
@@ -284,7 +283,6 @@ func main() {
 		mongoResultsRepository := result.NewMongoRepository(db, cfg.APIMongoAllowDiskUse, isDocDb, result.WithFeatureFlags(features), result.WithLogsClient(logGrpcClient))
 		resultsRepository = mongoResultsRepository
 		testResultsRepository = testresult.NewMongoRepository(db, cfg.APIMongoAllowDiskUse, isDocDb)
-		// Pro edition only (tcl protected code)
 		testWorkflowResultsRepository = testworkflow2.NewMongoRepository(db, cfg.APIMongoAllowDiskUse)
 		configRepository = configrepository.NewMongoRepository(db)
 		triggerLeaseBackend = triggers.NewMongoLeaseBackend(db)
@@ -296,7 +294,6 @@ func main() {
 			log.DefaultLogger.Errorw("Error setting expiration policy", "error", expErr)
 		}
 		storageClient = minioClient
-		// Pro edition only (tcl protected code)
 		testWorkflowOutputRepository = testworkflow2.NewMinioOutputRepository(storageClient, db.Collection(testworkflow2.CollectionName), cfg.LogsBucket)
 		artifactStorage = minio.NewMinIOArtifactClient(storageClient)
 		// init storage
@@ -549,45 +546,6 @@ func main() {
 		exitOnError("Creating slack loader", err)
 	}
 
-	api := apiv1.NewTestkubeAPI(
-		cfg.TestkubeNamespace,
-		resultsRepository,
-		testResultsRepository,
-		testsClientV3,
-		executorsClient,
-		testsuitesClientV3,
-		secretClient,
-		webhooksClient,
-		clientset,
-		testkubeClientset,
-		testsourcesClient,
-		configMapConfig,
-		clusterId,
-		eventsEmitter,
-		executor,
-		containerExecutor,
-		metrics,
-		sched,
-		slackLoader,
-		storageClient,
-		cfg.GraphqlPort,
-		artifactStorage,
-		templatesClient,
-		cfg.CDEventsTarget,
-		cfg.TestkubeDashboardURI,
-		cfg.TestkubeHelmchartVersion,
-		mode,
-		eventBus,
-		cfg.EnableSecretsEndpoint,
-		features,
-		logsStream,
-		logGrpcClient,
-		cfg.DisableSecretCreation,
-		subscriptionChecker,
-		serviceAccountNames,
-		cfg.EnableK8sEvents,
-	)
-
 	testWorkflowProcessor := presets.NewOpenSource(inspector)
 	if mode == common.ModeAgent {
 		testWorkflowProcessor = presets.NewPro(inspector)
@@ -614,17 +572,51 @@ func main() {
 		cfg.TestkubeDashboardURI,
 	)
 
-	// Apply Pro server enhancements
-	apiPro := apitclv1.NewApiTCL(
-		api,
-		&proContext,
-		kubeClient,
+	go testWorkflowExecutor.Recover(context.Background())
+
+	api := apiv1.NewTestkubeAPI(
+		cfg.TestkubeNamespace,
+		resultsRepository,
+		testResultsRepository,
 		testWorkflowResultsRepository,
 		testWorkflowOutputRepository,
+		testsClientV3,
+		executorsClient,
+		testsuitesClientV3,
+		secretClient,
+		webhooksClient,
+		clientset,
+		testkubeClientset,
+		testsourcesClient,
+		testWorkflowsClient,
+		testWorkflowTemplatesClient,
 		configMapConfig,
+		clusterId,
+		eventsEmitter,
+		executor,
+		containerExecutor,
 		testWorkflowExecutor,
+		metrics,
+		sched,
+		slackLoader,
+		storageClient,
+		cfg.GraphqlPort,
+		artifactStorage,
+		templatesClient,
+		cfg.CDEventsTarget,
+		cfg.TestkubeDashboardURI,
+		cfg.TestkubeHelmchartVersion,
+		mode,
+		eventBus,
+		cfg.EnableSecretsEndpoint,
+		features,
+		logsStream,
+		logGrpcClient,
+		cfg.DisableSecretCreation,
+		subscriptionChecker,
+		serviceAccountNames,
+		cfg.EnableK8sEvents,
 	)
-	apiPro.AppendRoutes()
 
 	if mode == common.ModeAgent {
 		log.DefaultLogger.Info("starting agent service")
@@ -634,7 +626,7 @@ func main() {
 			api.Mux.Handler(),
 			grpcClient,
 			api.GetLogsStream,
-			apiPro.GetTestWorkflowNotificationsStream,
+			api.GetTestWorkflowNotificationsStream,
 			clusterId,
 			cfg.TestkubeClusterName,
 			envs,
