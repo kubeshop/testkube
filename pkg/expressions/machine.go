@@ -6,11 +6,11 @@
 //
 //     https://github.com/kubeshop/testkube/blob/main/licenses/TCL.txt
 
-package expressionstcl
+package expressions
 
 import "strings"
 
-//go:generate mockgen -destination=./mock_machine.go -package=expressionstcl "github.com/kubeshop/testkube/pkg/tcl/expressionstcl" Machine
+//go:generate mockgen -destination=./mock_machine.go -package=expressions "github.com/kubeshop/testkube/pkg/expressions" Machine
 type Machine interface {
 	Get(name string) (Expression, bool, error)
 	Call(name string, args ...StaticValue) (Expression, bool, error)

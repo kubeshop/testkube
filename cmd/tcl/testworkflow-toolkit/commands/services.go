@@ -28,7 +28,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/spawn"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/transfer"
 	common2 "github.com/kubeshop/testkube/internal/common"
-	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
+	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowcontroller"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
@@ -134,11 +134,11 @@ func NewServicesCmd() *cobra.Command {
 
 				svcInstances := make([]ServiceInstance, params.Count)
 				for index := int64(0); index < params.Count; index++ {
-					machines := []expressionstcl.Machine{baseMachine, params.MachineAt(index)}
+					machines := []expressions.Machine{baseMachine, params.MachineAt(index)}
 
 					// Clone the spec
 					svcSpec := svc.DeepCopy()
-					err = expressionstcl.Simplify(&svcSpec, machines...)
+					err = expressions.Simplify(&svcSpec, machines...)
 					ui.ExitOnError(fmt.Sprintf("%s: %d: error", common.ServiceLabel(name), index), err)
 
 					// Build the spec
@@ -174,7 +174,7 @@ func NewServicesCmd() *cobra.Command {
 
 					// Save the timeout
 					if svcSpec.Timeout != "" {
-						v, err := expressionstcl.EvalTemplate(svcSpec.Timeout, machines...)
+						v, err := expressions.EvalTemplate(svcSpec.Timeout, machines...)
 						ui.ExitOnError(fmt.Sprintf("%s: %d: error: timeout expression", common.ServiceLabel(name), index), err)
 						d, err := time.ParseDuration(strings.ReplaceAll(v, " ", ""))
 						ui.ExitOnError(fmt.Sprintf("%s: %d: error: invalid timeout: %s:", common.ServiceLabel(name), index, v), err)

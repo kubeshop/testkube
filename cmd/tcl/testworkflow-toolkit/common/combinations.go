@@ -19,7 +19,7 @@ import (
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
-	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
+	"github.com/kubeshop/testkube/pkg/expressions"
 )
 
 func CountCombinations(matrix map[string][]interface{}) int64 {
@@ -52,8 +52,8 @@ func GetMatrixValues(matrix map[string][]interface{}, index int64) map[string]in
 	return result
 }
 
-func ReadCount(s intstr.IntOrString, machines ...expressionstcl.Machine) (int64, error) {
-	countExpr, err := expressionstcl.CompileAndResolve(s.String(), machines...)
+func ReadCount(s intstr.IntOrString, machines ...expressions.Machine) (int64, error) {
+	countExpr, err := expressions.CompileAndResolve(s.String(), machines...)
 	if err != nil {
 		return 0, fmt.Errorf("%s: invalid: %s", s.String(), err)
 	}
@@ -70,13 +70,13 @@ func ReadCount(s intstr.IntOrString, machines ...expressionstcl.Machine) (int64,
 	return countVal, nil
 }
 
-func readParams(base map[string]testworkflowsv1.DynamicList, machines ...expressionstcl.Machine) (map[string][]interface{}, error) {
+func readParams(base map[string]testworkflowsv1.DynamicList, machines ...expressions.Machine) (map[string][]interface{}, error) {
 	result := make(map[string][]interface{})
 	for key, items := range base {
 		exprStr := items.Expression
 		if !items.Dynamic {
 			statics := items.DeepCopy().Static
-			err := expressionstcl.FinalizeForce(&statics, machines...)
+			err := expressions.FinalizeForce(&statics, machines...)
 			if err != nil {
 				return nil, fmt.Errorf("%s: error while resolving matrix: %s", key, err)
 			}
@@ -86,7 +86,7 @@ func readParams(base map[string]testworkflowsv1.DynamicList, machines ...express
 			}
 			exprStr = string(b)
 		}
-		expr, err := expressionstcl.CompileAndResolve(exprStr, machines...)
+		expr, err := expressions.CompileAndResolve(exprStr, machines...)
 		if err != nil {
 			return nil, fmt.Errorf("%s: %s: %s", key, exprStr, err)
 		}
@@ -183,7 +183,7 @@ func (p *ParamsSpec) MatrixAt(index int64) map[string]interface{} {
 	return GetMatrixValues(p.Matrix, p.MatrixIndexAt(index))
 }
 
-func (p *ParamsSpec) MachineAt(index int64) expressionstcl.Machine {
+func (p *ParamsSpec) MachineAt(index int64) expressions.Machine {
 	// Get basic indices
 	shardIndex := p.ShardIndexAt(index)
 	matrixIndex := p.MatrixIndexAt(index)
@@ -192,7 +192,7 @@ func (p *ParamsSpec) MachineAt(index int64) expressionstcl.Machine {
 	matrixValues := p.MatrixAt(index)
 	shardValues := p.ShardsAt(index)
 
-	return expressionstcl.NewMachine().
+	return expressions.NewMachine().
 		Register("index", index).
 		Register("count", p.Count).
 		Register("matrixIndex", matrixIndex).
@@ -221,7 +221,7 @@ func (p *ParamsSpec) Humanize() string {
 	return fmt.Sprintf("%d executions requested: %s", p.Count, strings.Join(infos, ", "))
 }
 
-func GetParamsSpec(origMatrix map[string]testworkflowsv1.DynamicList, origShards map[string]testworkflowsv1.DynamicList, origCount *intstr.IntOrString, origMaxCount *intstr.IntOrString, machines ...expressionstcl.Machine) (*ParamsSpec, error) {
+func GetParamsSpec(origMatrix map[string]testworkflowsv1.DynamicList, origShards map[string]testworkflowsv1.DynamicList, origCount *intstr.IntOrString, origMaxCount *intstr.IntOrString, machines ...expressions.Machine) (*ParamsSpec, error) {
 	// Resolve the shards and matrix
 	shards, err := readParams(origShards, machines...)
 	if err != nil {

@@ -10,7 +10,7 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 	v1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
-	expressionstcl "github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
+	expressions "github.com/kubeshop/testkube/pkg/expressions"
 )
 
 // MockProcessor is a mock of Processor interface.
@@ -37,7 +37,7 @@ func (m *MockProcessor) EXPECT() *MockProcessorMockRecorder {
 }
 
 // Bundle mocks base method.
-func (m *MockProcessor) Bundle(arg0 context.Context, arg1 *v1.TestWorkflow, arg2 ...expressionstcl.Machine) (*Bundle, error) {
+func (m *MockProcessor) Bundle(arg0 context.Context, arg1 *v1.TestWorkflow, arg2 ...expressions.Machine) (*Bundle, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {

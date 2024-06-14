@@ -14,16 +14,16 @@ import (
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
+	"github.com/kubeshop/testkube/pkg/expressions"
 )
 
-func MustCall(m expressionstcl.Machine, name string, args ...interface{}) interface{} {
-	list := make([]expressionstcl.StaticValue, len(args))
+func MustCall(m expressions.Machine, name string, args ...interface{}) interface{} {
+	list := make([]expressions.StaticValue, len(args))
 	for i, v := range args {
-		if vv, ok := v.(expressionstcl.StaticValue); ok {
+		if vv, ok := v.(expressions.StaticValue); ok {
 			list[i] = vv
 		} else {
-			list[i] = expressionstcl.NewValue(v)
+			list[i] = expressions.NewValue(v)
 		}
 	}
 	v, ok, err := m.Call(name, list...)

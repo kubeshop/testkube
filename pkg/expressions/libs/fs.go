@@ -18,7 +18,7 @@ import (
 
 	"github.com/bmatcuk/doublestar/v4"
 
-	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
+	"github.com/kubeshop/testkube/pkg/expressions"
 )
 
 func absPath(p, workingDir string) string {
@@ -71,7 +71,7 @@ loop:
 	return result
 }
 
-func readFile(fsys fs.FS, workingDir string, values ...expressionstcl.StaticValue) (interface{}, error) {
+func readFile(fsys fs.FS, workingDir string, values ...expressions.StaticValue) (interface{}, error) {
 	if len(values) != 1 {
 		return nil, errors.New("file() function takes a single argument")
 	}
@@ -102,7 +102,7 @@ func createGlobMatcher(patterns []string) func(string) bool {
 	}
 }
 
-func globFs(fsys fs.FS, workingDir string, values ...expressionstcl.StaticValue) (interface{}, error) {
+func globFs(fsys fs.FS, workingDir string, values ...expressions.StaticValue) (interface{}, error) {
 	if len(values) == 0 {
 		return nil, errors.New("glob() function takes at least one argument")
 	}
@@ -150,16 +150,16 @@ func globFs(fsys fs.FS, workingDir string, values ...expressionstcl.StaticValue)
 	return result, nil
 }
 
-func NewFsMachine(fsys fs.FS, workingDir string) expressionstcl.Machine {
+func NewFsMachine(fsys fs.FS, workingDir string) expressions.Machine {
 	if workingDir == "" {
 		workingDir = "/"
 	}
-	return expressionstcl.NewMachine().
-		RegisterFunction("file", func(values ...expressionstcl.StaticValue) (interface{}, bool, error) {
+	return expressions.NewMachine().
+		RegisterFunction("file", func(values ...expressions.StaticValue) (interface{}, bool, error) {
 			v, err := readFile(fsys, workingDir, values...)
 			return v, true, err
 		}).
-		RegisterFunction("glob", func(values ...expressionstcl.StaticValue) (interface{}, bool, error) {
+		RegisterFunction("glob", func(values ...expressions.StaticValue) (interface{}, bool, error) {
 			v, err := globFs(fsys, workingDir, values...)
 			return v, true, err
 		})

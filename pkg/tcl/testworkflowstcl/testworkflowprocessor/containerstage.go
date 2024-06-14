@@ -11,8 +11,8 @@ package testworkflowprocessor
 import (
 	"github.com/pkg/errors"
 
+	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
-	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 )
 
 type containerStage struct {
@@ -64,12 +64,12 @@ func (s *containerStage) ApplyImages(images map[string]*imageinspector.Info) err
 	return s.container.ApplyImageData(images[s.container.Image()])
 }
 
-func (s *containerStage) Resolve(m ...expressionstcl.Machine) error {
+func (s *containerStage) Resolve(m ...expressions.Machine) error {
 	err := s.container.Resolve(m...)
 	if err != nil {
 		return errors.Wrap(err, "stage container")
 	}
-	return expressionstcl.Simplify(s, m...)
+	return expressions.Simplify(s, m...)
 }
 
 func (s *containerStage) Container() Container {

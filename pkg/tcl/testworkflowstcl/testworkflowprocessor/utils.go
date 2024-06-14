@@ -17,7 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kubeshop/testkube/internal/common"
-	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
+	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
 )
 
@@ -58,7 +58,7 @@ func isNotOptional(stage Stage) bool {
 	return !stage.Optional()
 }
 
-func buildKubernetesContainers(stage Stage, init *initProcess, fsGroup *int64, machines ...expressionstcl.Machine) (containers []corev1.Container, err error) {
+func buildKubernetesContainers(stage Stage, init *initProcess, fsGroup *int64, machines ...expressions.Machine) (containers []corev1.Container, err error) {
 	if stage.Paused() {
 		init.SetPaused(stage.Paused())
 	}

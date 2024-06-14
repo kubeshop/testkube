@@ -9,8 +9,8 @@
 package testworkflowprocessor
 
 import (
+	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
-	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 )
 
 //go:generate mockgen -destination=./mock_stage.go -package=testworkflowprocessor "github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor" Stage
@@ -20,7 +20,7 @@ type Stage interface {
 	Len() int
 	HasPause() bool
 	Signature() Signature
-	Resolve(m ...expressionstcl.Machine) error
+	Resolve(m ...expressions.Machine) error
 	ContainerStages() []ContainerStage
 	GetImages() map[string]struct{}
 	ApplyImages(images map[string]*imageinspector.Info) error

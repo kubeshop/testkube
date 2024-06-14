@@ -17,8 +17,8 @@ import (
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/rand"
-	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 )
 
 func buildTemplate(template testworkflowsv1.TestWorkflowTemplate, cfg map[string]intstr.IntOrString) (testworkflowsv1.TestWorkflowTemplate, error) {
@@ -245,11 +245,11 @@ func applyTemplatesToSpec(spec *testworkflowsv1.TestWorkflowSpec, templates map[
 
 	// Encapsulate TestWorkflow configuration to not pass it into templates accidentally
 	random := rand.String(10)
-	err := expressionstcl.Simplify(spec, expressionstcl.ReplacePrefixMachine("config.", random+"."))
+	err := expressions.Simplify(spec, expressions.ReplacePrefixMachine("config.", random+"."))
 	if err != nil {
 		return err
 	}
-	defer expressionstcl.Simplify(spec, expressionstcl.ReplacePrefixMachine(random+".", "config."))
+	defer expressions.Simplify(spec, expressions.ReplacePrefixMachine(random+".", "config."))
 
 	// Apply top-level templates
 	for i, ref := range spec.Use {

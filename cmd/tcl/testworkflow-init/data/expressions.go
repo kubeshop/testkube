@@ -12,7 +12,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
+	"github.com/kubeshop/testkube/pkg/expressions"
 )
 
 var aliases = map[string]string{
@@ -32,10 +32,10 @@ var aliases = map[string]string{
 	"self.failed": `bool(self.status) && self.status != "skipped"`,
 }
 
-var LocalMachine = expressionstcl.NewMachine().
-	Register("status", expressionstcl.MustCompile("self.status"))
+var LocalMachine = expressions.NewMachine().
+	Register("status", expressions.MustCompile("self.status"))
 
-var RefMachine = expressionstcl.NewMachine().
+var RefMachine = expressions.NewMachine().
 	RegisterAccessor(func(name string) (interface{}, bool) {
 		if name == "_ref" {
 			return Step.Ref, true
@@ -43,13 +43,13 @@ var RefMachine = expressionstcl.NewMachine().
 		return nil, false
 	})
 
-var AliasMachine = expressionstcl.NewMachine().
+var AliasMachine = expressions.NewMachine().
 	RegisterAccessorExt(func(name string) (interface{}, bool, error) {
 		alias, ok := aliases[name]
 		if !ok {
 			return nil, false, nil
 		}
-		expr, err := expressionstcl.Compile(alias)
+		expr, err := expressions.Compile(alias)
 		if err != nil {
 			return expr, false, err
 		}
@@ -57,7 +57,7 @@ var AliasMachine = expressionstcl.NewMachine().
 		return expr, true, err
 	})
 
-var StateMachine = expressionstcl.NewMachine().
+var StateMachine = expressions.NewMachine().
 	RegisterAccessor(func(name string) (interface{}, bool) {
 		if name == "status" {
 			return State.GetStatus(), true
@@ -79,7 +79,7 @@ var StateMachine = expressionstcl.NewMachine().
 		return nil, false, nil
 	})
 
-var EnvMachine = expressionstcl.NewMachine().
+var EnvMachine = expressions.NewMachine().
 	RegisterAccessor(func(name string) (interface{}, bool) {
 		if strings.HasPrefix(name, "env.") {
 			return os.Getenv(name[4:]), true
@@ -98,31 +98,31 @@ var EnvMachine = expressionstcl.NewMachine().
 		return env, true
 	})
 
-var RefSuccessMachine = expressionstcl.NewMachine().
+var RefSuccessMachine = expressions.NewMachine().
 	RegisterAccessor(func(ref string) (interface{}, bool) {
 		s := State.GetStep(ref)
 		return s.Status == StepStatusPassed || s.Status == StepStatusSkipped, s.HasStatus
 	})
 
-var RefStatusMachine = expressionstcl.NewMachine().
+var RefStatusMachine = expressions.NewMachine().
 	RegisterAccessor(func(ref string) (interface{}, bool) {
 		return string(State.GetStep(ref).Status), true
 	})
 
-func Template(tpl string, m ...expressionstcl.Machine) (string, error) {
+func Template(tpl string, m ...expressions.Machine) (string, error) {
 	m = append(m, AliasMachine, GetBaseTestWorkflowMachine())
-	return expressionstcl.EvalTemplate(tpl, m...)
+	return expressions.EvalTemplate(tpl, m...)
 }
 
-func Expression(expr string, m ...expressionstcl.Machine) (expressionstcl.StaticValue, error) {
+func Expression(expr string, m ...expressions.Machine) (expressions.StaticValue, error) {
 	m = append(m, AliasMachine, GetBaseTestWorkflowMachine())
-	return expressionstcl.EvalExpression(expr, m...)
+	return expressions.EvalExpression(expr, m...)
 }
 
-func RefSuccessExpression(expr string) (expressionstcl.StaticValue, error) {
-	return expressionstcl.EvalExpression(expr, RefSuccessMachine)
+func RefSuccessExpression(expr string) (expressions.StaticValue, error) {
+	return expressions.EvalExpression(expr, RefSuccessMachine)
 }
 
-func RefStatusExpression(expr string) (expressionstcl.StaticValue, error) {
-	return expressionstcl.EvalExpression(expr, RefStatusMachine)
+func RefStatusExpression(expr string) (expressions.StaticValue, error) {
+	return expressions.EvalExpression(expr, RefStatusMachine)
 }

@@ -27,7 +27,7 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
+	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/tcl/mapperstcl/testworkflows"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -214,8 +214,8 @@ func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async 
 	}, nil
 }
 
-func registerTransfer(transferSrv transfer.Server, request map[string]testworkflowsv1.TarballRequest, machines ...expressionstcl.Machine) (expressionstcl.Machine, error) {
-	err := expressionstcl.Finalize(&request, machines...)
+func registerTransfer(transferSrv transfer.Server, request map[string]testworkflowsv1.TarballRequest, machines ...expressions.Machine) (expressions.Machine, error) {
+	err := expressions.Finalize(&request, machines...)
 	if err != nil {
 		return nil, errors.Wrap(err, "computing tarball")
 	}
@@ -225,7 +225,7 @@ func registerTransfer(transferSrv transfer.Server, request map[string]testworkfl
 		if t.Files != nil && !t.Files.Dynamic {
 			patterns = spawn.MapDynamicListToStringList(t.Files.Static)
 		} else if t.Files != nil && t.Files.Dynamic {
-			patternsExpr, err := expressionstcl.EvalExpression(t.Files.Expression, machines...)
+			patternsExpr, err := expressions.EvalExpression(t.Files.Expression, machines...)
 			if err != nil {
 				return nil, errors.Wrapf(err, "computing tarball: %s", k)
 			}
@@ -251,7 +251,7 @@ func registerTransfer(transferSrv transfer.Server, request map[string]testworkfl
 			return nil, errors.Wrapf(err, "computing tarball: %s", k)
 		}
 	}
-	return expressionstcl.NewMachine().Register("tarball", tarballs), nil
+	return expressions.NewMachine().Register("tarball", tarballs), nil
 }
 
 func NewExecuteCmd() *cobra.Command {
@@ -304,7 +304,7 @@ func NewExecuteCmd() *cobra.Command {
 					spec.Tarball = nil
 
 					// Prepare the operation to run
-					err = expressionstcl.Finalize(&spec, baseMachine, tarballMachine, params.MachineAt(i))
+					err = expressions.Finalize(&spec, baseMachine, tarballMachine, params.MachineAt(i))
 					if err != nil {
 						ui.Fail(errors.Wrapf(err, "'%s' test: computing execution", spec.Name))
 					}
@@ -342,7 +342,7 @@ func NewExecuteCmd() *cobra.Command {
 					spec.Tarball = nil
 
 					// Prepare the operation to run
-					err = expressionstcl.Finalize(&spec, baseMachine, tarballMachine, params.MachineAt(i))
+					err = expressions.Finalize(&spec, baseMachine, tarballMachine, params.MachineAt(i))
 					if err != nil {
 						ui.Fail(errors.Wrapf(err, "'%s' workflow: computing execution", spec.Name))
 					}

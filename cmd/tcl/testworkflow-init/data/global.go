@@ -11,13 +11,13 @@ package data
 import (
 	"os"
 
-	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
-	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl/libs"
+	"github.com/kubeshop/testkube/pkg/expressions"
+	"github.com/kubeshop/testkube/pkg/expressions/libs"
 )
 
-func GetBaseTestWorkflowMachine() expressionstcl.Machine {
+func GetBaseTestWorkflowMachine() expressions.Machine {
 	var wd, _ = os.Getwd()
 	fileMachine := libs.NewFsMachine(os.DirFS("/"), wd)
 	LoadState()
-	return expressionstcl.CombinedMachines(EnvMachine, StateMachine, fileMachine)
+	return expressions.CombinedMachines(EnvMachine, StateMachine, fileMachine)
 }
