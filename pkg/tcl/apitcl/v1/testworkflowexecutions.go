@@ -25,7 +25,7 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/datefilter"
-	"github.com/kubeshop/testkube/pkg/tcl/repositorytcl/testworkflow"
+	testworkflow2 "github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller"
 )
 
@@ -115,12 +115,12 @@ func (s *apiTCL) ListTestWorkflowExecutionsHandler() fiber.Handler {
 			return s.ClientError(c, errPrefix+": get execution results", err)
 		}
 
-		executionTotals, err := s.TestWorkflowResults.GetExecutionsTotals(c.Context(), testworkflow.NewExecutionsFilter().WithName(filter.Name()))
+		executionTotals, err := s.TestWorkflowResults.GetExecutionsTotals(c.Context(), testworkflow2.NewExecutionsFilter().WithName(filter.Name()))
 		if err != nil {
 			return s.ClientError(c, errPrefix+": get totals", err)
 		}
 
-		filterTotals := *filter.(*testworkflow.FilterImpl)
+		filterTotals := *filter.(*testworkflow2.FilterImpl)
 		filterTotals.WithPage(0).WithPageSize(math.MaxInt32)
 		filteredTotals, err := s.TestWorkflowResults.GetExecutionsTotals(c.Context(), filterTotals)
 		if err != nil {
@@ -338,7 +338,7 @@ func (s *apiTCL) AbortAllTestWorkflowExecutionsHandler() fiber.Handler {
 		errPrefix := fmt.Sprintf("failed to abort test workflow executions '%s'", name)
 
 		// Fetch executions
-		filter := testworkflow.NewExecutionsFilter().WithName(name).WithStatus(string(testkube.RUNNING_TestWorkflowStatus))
+		filter := testworkflow2.NewExecutionsFilter().WithName(name).WithStatus(string(testkube.RUNNING_TestWorkflowStatus))
 		executions, err := s.TestWorkflowResults.GetExecutions(ctx, filter)
 		if err != nil {
 			if IsNotFound(err) {
@@ -472,8 +472,8 @@ func (s *apiTCL) GetTestWorkflowNotificationsStream(ctx context.Context, executi
 	return ch, nil
 }
 
-func getWorkflowExecutionsFilterFromRequest(c *fiber.Ctx) testworkflow.Filter {
-	filter := testworkflow.NewExecutionsFilter()
+func getWorkflowExecutionsFilterFromRequest(c *fiber.Ctx) testworkflow2.Filter {
+	filter := testworkflow2.NewExecutionsFilter()
 	name := c.Params("id", "")
 	if name != "" {
 		filter = filter.WithName(name)

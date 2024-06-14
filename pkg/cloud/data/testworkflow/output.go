@@ -6,10 +6,10 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/kubeshop/testkube/pkg/tcl/repositorytcl/testworkflow"
-
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
+
+	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/cloud/data/executor"

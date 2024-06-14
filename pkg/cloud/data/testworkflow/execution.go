@@ -3,16 +3,16 @@ package testworkflow
 import (
 	"context"
 
-	"github.com/kubeshop/testkube/pkg/tcl/repositorytcl/testworkflow"
-
 	"google.golang.org/grpc"
+
+	testworkflow2 "github.com/kubeshop/testkube/pkg/repository/testworkflow"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/cloud/data/executor"
 )
 
-var _ testworkflow.Repository = (*CloudRepository)(nil)
+var _ testworkflow2.Repository = (*CloudRepository)(nil)
 
 type CloudRepository struct {
 	executor executor.Executor
@@ -62,7 +62,7 @@ func (r *CloudRepository) GetRunning(ctx context.Context) (result []testkube.Tes
 	return pass(r.executor, ctx, req, process)
 }
 
-func (r *CloudRepository) GetExecutionsTotals(ctx context.Context, filter ...testworkflow.Filter) (totals testkube.ExecutionsTotals, err error) {
+func (r *CloudRepository) GetExecutionsTotals(ctx context.Context, filter ...testworkflow2.Filter) (totals testkube.ExecutionsTotals, err error) {
 	req := ExecutionGetExecutionTotalsRequest{Filter: mapFilters(filter)}
 	process := func(v ExecutionGetExecutionTotalsResponse) testkube.ExecutionsTotals {
 		return v.Totals
@@ -70,16 +70,16 @@ func (r *CloudRepository) GetExecutionsTotals(ctx context.Context, filter ...tes
 	return pass(r.executor, ctx, req, process)
 }
 
-func (r *CloudRepository) GetExecutions(ctx context.Context, filter testworkflow.Filter) (result []testkube.TestWorkflowExecution, err error) {
-	req := ExecutionGetExecutionsRequest{Filter: filter.(*testworkflow.FilterImpl)}
+func (r *CloudRepository) GetExecutions(ctx context.Context, filter testworkflow2.Filter) (result []testkube.TestWorkflowExecution, err error) {
+	req := ExecutionGetExecutionsRequest{Filter: filter.(*testworkflow2.FilterImpl)}
 	process := func(v ExecutionGetExecutionsResponse) []testkube.TestWorkflowExecution {
 		return v.WorkflowExecutions
 	}
 	return pass(r.executor, ctx, req, process)
 }
 
-func (r *CloudRepository) GetExecutionsSummary(ctx context.Context, filter testworkflow.Filter) (result []testkube.TestWorkflowExecutionSummary, err error) {
-	req := ExecutionGetExecutionsSummaryRequest{Filter: filter.(*testworkflow.FilterImpl)}
+func (r *CloudRepository) GetExecutionsSummary(ctx context.Context, filter testworkflow2.Filter) (result []testkube.TestWorkflowExecutionSummary, err error) {
+	req := ExecutionGetExecutionsSummaryRequest{Filter: filter.(*testworkflow2.FilterImpl)}
 	process := func(v ExecutionGetExecutionsSummaryResponse) []testkube.TestWorkflowExecutionSummary {
 		return v.WorkflowExecutions
 	}

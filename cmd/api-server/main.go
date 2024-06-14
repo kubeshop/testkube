@@ -20,9 +20,9 @@ import (
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
 	cloudtestworkflow "github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
+	testworkflow2 "github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	apitclv1 "github.com/kubeshop/testkube/pkg/tcl/apitcl/v1"
 	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
-	"github.com/kubeshop/testkube/pkg/tcl/repositorytcl/testworkflow"
 	"github.com/kubeshop/testkube/pkg/tcl/schedulertcl"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/presets"
 
@@ -261,8 +261,8 @@ func main() {
 	// DI
 	var resultsRepository result.Repository
 	var testResultsRepository testresult.Repository
-	var testWorkflowResultsRepository testworkflow.Repository
-	var testWorkflowOutputRepository testworkflow.OutputRepository
+	var testWorkflowResultsRepository testworkflow2.Repository
+	var testWorkflowOutputRepository testworkflow2.OutputRepository
 	var configRepository configrepository.Repository
 	var triggerLeaseBackend triggers.LeaseBackend
 	var artifactStorage domainstorage.ArtifactsStorage
@@ -285,7 +285,7 @@ func main() {
 		resultsRepository = mongoResultsRepository
 		testResultsRepository = testresult.NewMongoRepository(db, cfg.APIMongoAllowDiskUse, isDocDb)
 		// Pro edition only (tcl protected code)
-		testWorkflowResultsRepository = testworkflow.NewMongoRepository(db, cfg.APIMongoAllowDiskUse)
+		testWorkflowResultsRepository = testworkflow2.NewMongoRepository(db, cfg.APIMongoAllowDiskUse)
 		configRepository = configrepository.NewMongoRepository(db)
 		triggerLeaseBackend = triggers.NewMongoLeaseBackend(db)
 		minioClient := newStorageClient(cfg)
@@ -297,7 +297,7 @@ func main() {
 		}
 		storageClient = minioClient
 		// Pro edition only (tcl protected code)
-		testWorkflowOutputRepository = testworkflow.NewMinioOutputRepository(storageClient, db.Collection(testworkflow.CollectionName), cfg.LogsBucket)
+		testWorkflowOutputRepository = testworkflow2.NewMinioOutputRepository(storageClient, db.Collection(testworkflow2.CollectionName), cfg.LogsBucket)
 		artifactStorage = minio.NewMinIOArtifactClient(storageClient)
 		// init storage
 		isMinioStorage := cfg.LogsStorage == "minio"

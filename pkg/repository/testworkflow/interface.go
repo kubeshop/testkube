@@ -36,7 +36,7 @@ type Filter interface {
 	Selector() string
 }
 
-//go:generate mockgen -destination=./mock_repository.go -package=testworkflow "github.com/kubeshop/testkube/pkg/tcl/repositorytcl/testworkflow" Repository
+//go:generate mockgen -destination=./mock_repository.go -package=testworkflow "github.com/kubeshop/testkube/pkg/repository/testworkflow" Repository
 type Repository interface {
 	// Get gets execution result by id or name
 	Get(ctx context.Context, id string) (testkube.TestWorkflowExecution, error)
@@ -74,7 +74,7 @@ type Repository interface {
 	GetTestWorkflowMetrics(ctx context.Context, name string, limit, last int) (metrics testkube.ExecutionsMetrics, err error)
 }
 
-//go:generate mockgen -destination=./mock_output_repository.go -package=testworkflow "github.com/kubeshop/testkube/pkg/tcl/repositorytcl/testworkflow" OutputRepository
+//go:generate mockgen -destination=./mock_output_repository.go -package=testworkflow "github.com/kubeshop/testkube/pkg/repository/testworkflow" OutputRepository
 type OutputRepository interface {
 	// PresignSaveLog builds presigned storage URL to save the output in Minio
 	PresignSaveLog(ctx context.Context, id, workflowName string) (string, error)

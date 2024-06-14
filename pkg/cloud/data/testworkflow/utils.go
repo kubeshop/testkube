@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 
 	"github.com/kubeshop/testkube/pkg/cloud/data/executor"
-	"github.com/kubeshop/testkube/pkg/tcl/repositorytcl/testworkflow"
+	testworkflow2 "github.com/kubeshop/testkube/pkg/repository/testworkflow"
 )
 
 func passWithErr[T any, U any](e executor.Executor, ctx context.Context, req interface{}, fn func(u T) (U, error)) (v U, err error) {
@@ -39,13 +39,13 @@ func passNoContent(e executor.Executor, ctx context.Context, req interface{}) (e
 	})
 }
 
-func mapFilters(s []testworkflow.Filter) []*testworkflow.FilterImpl {
-	v := make([]*testworkflow.FilterImpl, len(s))
+func mapFilters(s []testworkflow2.Filter) []*testworkflow2.FilterImpl {
+	v := make([]*testworkflow2.FilterImpl, len(s))
 	for i := range s {
-		if vv, ok := s[i].(testworkflow.FilterImpl); ok {
+		if vv, ok := s[i].(testworkflow2.FilterImpl); ok {
 			v[i] = &vv
 		} else {
-			v[i] = s[i].(*testworkflow.FilterImpl)
+			v[i] = s[i].(*testworkflow2.FilterImpl)
 		}
 	}
 	return v
