@@ -19,7 +19,7 @@ import (
 	"github.com/pkg/errors"
 	gopsutil "github.com/shirou/gopsutil/v3/process"
 
-	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/constants"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 )
 
 var Step = &step{}

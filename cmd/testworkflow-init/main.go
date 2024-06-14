@@ -20,11 +20,11 @@ import (
 
 	"github.com/kballard/go-shellquote"
 
-	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/constants"
-	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/control"
-	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/data"
-	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/output"
-	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/run"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/control"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/run"
 )
 
 func main() {

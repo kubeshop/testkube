@@ -18,8 +18,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 
-	initconstants "github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/constants"
-	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/data"
+	initconstants "github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor"

@@ -12,7 +12,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/data"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 )
 
 func Failf(exitCode uint8, message string, args ...interface{}) {
