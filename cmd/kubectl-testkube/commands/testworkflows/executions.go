@@ -56,7 +56,6 @@ func NewGetTestWorkflowExecutionsCmd() *cobra.Command {
 			logs, err := client.GetTestWorkflowExecutionLogs(executionID)
 			ui.ExitOnError("getting logs from executor", err)
 
-			isLineBeginning := true
 			steps := make(map[string]testkube.TestWorkflowSignature)
 			sigs := flattenSignatures(execution.Signature)
 			for i := range sigs {
@@ -68,7 +67,7 @@ func NewGetTestWorkflowExecutionsCmd() *cobra.Command {
 				results = execution.Result.Steps
 			}
 
-			printLogLines(string(logs)+"\n", &isLineBeginning, steps, results)
+			printRawLogLines(string(logs)+"\n", steps, results)
 		},
 	}
 
