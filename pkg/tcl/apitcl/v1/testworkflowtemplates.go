@@ -19,7 +19,7 @@ import (
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	mappers2 "github.com/kubeshop/testkube/pkg/tcl/mapperstcl/testworkflows"
+	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 )
 
 func (s *apiTCL) ListTestWorkflowTemplatesHandler() fiber.Handler {
@@ -29,7 +29,7 @@ func (s *apiTCL) ListTestWorkflowTemplatesHandler() fiber.Handler {
 		if err != nil {
 			return s.BadGateway(c, errPrefix, "client problem", err)
 		}
-		err = SendResourceList(c, "TestWorkflowTemplate", testworkflowsv1.GroupVersion, mappers2.MapTestWorkflowTemplateKubeToAPI, templates.Items...)
+		err = SendResourceList(c, "TestWorkflowTemplate", testworkflowsv1.GroupVersion, testworkflows.MapTestWorkflowTemplateKubeToAPI, templates.Items...)
 		if err != nil {
 			return s.InternalError(c, errPrefix, "serialization problem", err)
 		}
@@ -45,7 +45,7 @@ func (s *apiTCL) GetTestWorkflowTemplateHandler() fiber.Handler {
 		if err != nil {
 			return s.ClientError(c, errPrefix, err)
 		}
-		err = SendResource(c, "TestWorkflowTemplate", testworkflowsv1.GroupVersion, mappers2.MapTemplateKubeToAPI, template)
+		err = SendResource(c, "TestWorkflowTemplate", testworkflowsv1.GroupVersion, testworkflows.MapTemplateKubeToAPI, template)
 		if err != nil {
 			return s.InternalError(c, errPrefix, "serialization problem", err)
 		}
@@ -94,7 +94,7 @@ func (s *apiTCL) CreateTestWorkflowTemplateHandler() fiber.Handler {
 			if err != nil {
 				return s.BadRequest(c, errPrefix, "invalid body", err)
 			}
-			obj = mappers2.MapTemplateAPIToKube(v)
+			obj = testworkflows.MapTemplateAPIToKube(v)
 		}
 
 		// Validate resource
@@ -111,7 +111,7 @@ func (s *apiTCL) CreateTestWorkflowTemplateHandler() fiber.Handler {
 		}
 		s.sendCreateWorkflowTemplateTelemetry(c.Context(), obj)
 
-		err = SendResource(c, "TestWorkflowTemplate", testworkflowsv1.GroupVersion, mappers2.MapTemplateKubeToAPI, obj)
+		err = SendResource(c, "TestWorkflowTemplate", testworkflowsv1.GroupVersion, testworkflows.MapTemplateKubeToAPI, obj)
 		if err != nil {
 			return s.InternalError(c, errPrefix, "serialization problem", err)
 		}
@@ -137,7 +137,7 @@ func (s *apiTCL) UpdateTestWorkflowTemplateHandler() fiber.Handler {
 			if err != nil {
 				return s.BadRequest(c, errPrefix, "invalid body", err)
 			}
-			obj = mappers2.MapTemplateAPIToKube(v)
+			obj = testworkflows.MapTemplateAPIToKube(v)
 		}
 
 		// Read existing resource
@@ -161,7 +161,7 @@ func (s *apiTCL) UpdateTestWorkflowTemplateHandler() fiber.Handler {
 			return s.BadRequest(c, errPrefix, "client error", err)
 		}
 
-		err = SendResource(c, "TestWorkflowTemplate", testworkflowsv1.GroupVersion, mappers2.MapTemplateKubeToAPI, obj)
+		err = SendResource(c, "TestWorkflowTemplate", testworkflowsv1.GroupVersion, testworkflows.MapTemplateKubeToAPI, obj)
 		if err != nil {
 			return s.InternalError(c, errPrefix, "serialization problem", err)
 		}
