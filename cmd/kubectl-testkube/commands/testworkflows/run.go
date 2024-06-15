@@ -293,7 +293,7 @@ func printRawLogLines(logs string,
 							}
 						}
 
-						fmt.Print(ui.LightCyan(fmt.Sprintf("\n• %s\n", stepName)))
+						fmt.Print(ui.LightCyan(fmt.Sprintf("\n• (%d/%d) %s\n", i+1, len(steps), stepName)))
 						previousStep = cleanName
 						i++
 					}
