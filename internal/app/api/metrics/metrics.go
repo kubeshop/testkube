@@ -137,7 +137,7 @@ var testWorkflowTemplateDeletesCount = promauto.NewCounterVec(prometheus.Counter
 var testTriggerEventCount = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "testkube_testtrigger_event_count",
 	Help: "The total number of test trigger events",
-}, []string{"resource", "name", "labels", "eventType", "causes"})
+}, []string{"resource", "eventType", "causes"})
 
 func NewMetrics() Metrics {
 	return Metrics{
@@ -489,18 +489,10 @@ func (m Metrics) IncDeleteTestWorkflowTemplate(err error) {
 	}).Inc()
 }
 
-func (m Metrics) IncTestTriggerEventCount(resource, name, eventType string, causes []string, labels map[string]string) {
-	var ls []string
-	for key, value := range labels {
-		ls = append(ls, fmt.Sprintf("%s=%s", key, value))
-	}
-
-	slices.Sort(ls)
+func (m Metrics) IncTestTriggerEventCount(resource, eventType string, causes []string) {
 	slices.Sort(causes)
 	m.TestTriggerEventCount.With(map[string]string{
 		"resource":  resource,
-		"name":      name,
-		"labels":    strings.Join(ls, ","),
 		"eventType": eventType,
 		"causes":    strings.Join(causes, ","),
 	}).Inc()

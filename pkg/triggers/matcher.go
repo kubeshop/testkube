@@ -93,7 +93,7 @@ func (s *Service) match(ctx context.Context, e *watcherEvent) error {
 			causes = append(causes, string(cause))
 		}
 
-		s.metrics.IncTestTriggerEventCount(string(e.resource), e.name, string(e.eventType), causes, e.labels)
+		s.metrics.IncTestTriggerEventCount(string(e.resource), string(e.eventType), causes)
 		if err := s.triggerExecutor(ctx, e, t); err != nil {
 			return err
 		}
