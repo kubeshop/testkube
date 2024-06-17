@@ -18,7 +18,7 @@ import (
 	"sync"
 
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/constants"
-	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
+	"github.com/kubeshop/testkube/pkg/expressions"
 )
 
 const (
@@ -45,12 +45,12 @@ func (s *state) GetStep(ref string) *StepInfo {
 	return State.Steps[ref]
 }
 
-func (s *state) GetOutput(name string) (expressionstcl.Expression, bool, error) {
+func (s *state) GetOutput(name string) (expressions.Expression, bool, error) {
 	v, ok := s.Output[name]
 	if !ok {
-		return expressionstcl.None, false, nil
+		return expressions.None, false, nil
 	}
-	expr, err := expressionstcl.Compile(v)
+	expr, err := expressions.Compile(v)
 	return expr, true, err
 }
 

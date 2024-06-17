@@ -15,33 +15,33 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
-	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
+	"github.com/kubeshop/testkube/pkg/expressions"
 )
 
-var configFinalizer = expressionstcl.PrefixMachine("config.", expressionstcl.FinalizerFail)
+var configFinalizer = expressions.PrefixMachine("config.", expressions.FinalizerFail)
 
-func castParameter(value intstr.IntOrString, schema testworkflowsv1.ParameterSchema) (expressionstcl.Expression, error) {
+func castParameter(value intstr.IntOrString, schema testworkflowsv1.ParameterSchema) (expressions.Expression, error) {
 	v := value.StrVal
 	if value.Type == intstr.Int {
 		v = strconv.Itoa(int(value.IntVal))
 	}
-	expr, err := expressionstcl.CompileTemplate(v)
+	expr, err := expressions.CompileTemplate(v)
 	if err != nil {
 		return nil, err
 	}
 	switch schema.Type {
 	case testworkflowsv1.ParameterTypeBoolean:
-		return expressionstcl.CastToBool(expr).Resolve()
+		return expressions.CastToBool(expr).Resolve()
 	case testworkflowsv1.ParameterTypeInteger:
-		return expressionstcl.CastToInt(expr).Resolve()
+		return expressions.CastToInt(expr).Resolve()
 	case testworkflowsv1.ParameterTypeNumber:
-		return expressionstcl.CastToFloat(expr).Resolve()
+		return expressions.CastToFloat(expr).Resolve()
 	}
-	return expressionstcl.CastToString(expr).Resolve()
+	return expressions.CastToString(expr).Resolve()
 }
 
-func createConfigMachine(cfg map[string]intstr.IntOrString, schema map[string]testworkflowsv1.ParameterSchema) (expressionstcl.Machine, error) {
-	machine := expressionstcl.NewMachine()
+func createConfigMachine(cfg map[string]intstr.IntOrString, schema map[string]testworkflowsv1.ParameterSchema) (expressions.Machine, error) {
+	machine := expressions.NewMachine()
 	for k, v := range cfg {
 		expr, err := castParameter(v, schema[k])
 		if err != nil {
@@ -69,7 +69,7 @@ func ApplyWorkflowConfig(t *testworkflowsv1.TestWorkflow, cfg map[string]intstr.
 	if err != nil {
 		return nil, err
 	}
-	err = expressionstcl.Simplify(&t, machine, configFinalizer)
+	err = expressions.Simplify(&t, machine, configFinalizer)
 	return t, err
 }
 
@@ -81,6 +81,6 @@ func ApplyWorkflowTemplateConfig(t *testworkflowsv1.TestWorkflowTemplate, cfg ma
 	if err != nil {
 		return nil, err
 	}
-	err = expressionstcl.Simplify(&t, machine, configFinalizer)
+	err = expressions.Simplify(&t, machine, configFinalizer)
 	return t, err
 }

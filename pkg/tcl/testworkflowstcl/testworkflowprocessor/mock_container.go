@@ -10,7 +10,7 @@ import (
 	gomock "github.com/golang/mock/gomock"
 	v1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	imageinspector "github.com/kubeshop/testkube/pkg/imageinspector"
-	expressionstcl "github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
+	expressions "github.com/kubeshop/testkube/pkg/expressions"
 	v10 "k8s.io/api/core/v1"
 )
 
@@ -288,7 +288,7 @@ func (mr *MockContainerMockRecorder) Parent() *gomock.Call {
 }
 
 // Resolve mocks base method.
-func (m *MockContainer) Resolve(arg0 ...expressionstcl.Machine) error {
+func (m *MockContainer) Resolve(arg0 ...expressions.Machine) error {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{}
 	for _, a := range arg0 {

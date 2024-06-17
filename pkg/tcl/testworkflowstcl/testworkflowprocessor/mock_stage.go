@@ -10,7 +10,7 @@ import (
 	gomock "github.com/golang/mock/gomock"
 	v1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	imageinspector "github.com/kubeshop/testkube/pkg/imageinspector"
-	expressionstcl "github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
+	expressions "github.com/kubeshop/testkube/pkg/expressions"
 )
 
 // MockStage is a mock of Stage interface.
@@ -237,7 +237,7 @@ func (mr *MockStageMockRecorder) Ref() *gomock.Call {
 }
 
 // Resolve mocks base method.
-func (m *MockStage) Resolve(arg0 ...expressionstcl.Machine) error {
+func (m *MockStage) Resolve(arg0 ...expressions.Machine) error {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{}
 	for _, a := range arg0 {

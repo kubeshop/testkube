@@ -20,8 +20,8 @@ import (
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
-	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowresolver"
 )
 
@@ -35,7 +35,7 @@ type ContainerComposition interface {
 	Parent() Container
 	CreateChild() Container
 
-	Resolve(m ...expressionstcl.Machine) error
+	Resolve(m ...expressions.Machine) error
 }
 
 type ContainerAccessors interface {
@@ -397,7 +397,7 @@ func (c *container) ApplyImageData(image *imageinspector.Info) error {
 	if image == nil {
 		return nil
 	}
-	err := c.Resolve(expressionstcl.NewMachine().
+	err := c.Resolve(expressions.NewMachine().
 		Register("image.command", image.Entrypoint).
 		Register("image.args", image.Cmd).
 		Register("image.workingDir", image.WorkingDir))
@@ -461,8 +461,8 @@ func (c *container) EnableToolkit(ref string) Container {
 		})
 }
 
-func (c *container) Resolve(m ...expressionstcl.Machine) error {
-	base := expressionstcl.NewMachine().
+func (c *container) Resolve(m ...expressions.Machine) error {
+	base := expressions.NewMachine().
 		RegisterAccessor(func(name string) (interface{}, bool) {
 			if !strings.HasPrefix(name, "env.") {
 				return nil, false
@@ -471,7 +471,7 @@ func (c *container) Resolve(m ...expressionstcl.Machine) error {
 			name = name[4:]
 			for i := range env {
 				if env[i].Name == name && env[i].ValueFrom == nil {
-					value, err := expressionstcl.EvalTemplate(env[i].Value)
+					value, err := expressions.EvalTemplate(env[i].Value)
 					if err == nil {
 						return value, true
 					}
@@ -480,5 +480,5 @@ func (c *container) Resolve(m ...expressionstcl.Machine) error {
 			}
 			return nil, false
 		})
-	return expressionstcl.Simplify(c, append([]expressionstcl.Machine{base}, m...)...)
+	return expressions.Simplify(c, append([]expressions.Machine{base}, m...)...)
 }

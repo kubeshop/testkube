@@ -31,11 +31,11 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event"
+	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
 	"github.com/kubeshop/testkube/pkg/log"
 	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/result"
-	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 	testworkflowmappers "github.com/kubeshop/testkube/pkg/tcl/mapperstcl/testworkflows"
 	"github.com/kubeshop/testkube/pkg/tcl/repositorytcl/testworkflow"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl"
@@ -406,7 +406,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	// Build the basic Execution data
 	id := primitive.NewObjectID().Hex()
 	now := time.Now()
-	machine := expressionstcl.NewMachine().
+	machine := expressions.NewMachine().
 		RegisterStringMap("internal", map[string]string{
 			"storage.url":        os.Getenv("STORAGE_ENDPOINT"),
 			"storage.accessKey":  os.Getenv("STORAGE_ACCESSKEYID"),
@@ -446,7 +446,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 			"root":     id,
 			"fsPrefix": "",
 		})
-	mockExecutionMachine := expressionstcl.NewMachine().Register("execution", map[string]interface{}{
+	mockExecutionMachine := expressions.NewMachine().Register("execution", map[string]interface{}{
 		"id":          id,
 		"name":        "<mock_name>",
 		"number":      "1",
@@ -488,7 +488,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	}
 
 	// Build machine with actual execution data
-	executionMachine := expressionstcl.NewMachine().Register("execution", map[string]interface{}{
+	executionMachine := expressions.NewMachine().Register("execution", map[string]interface{}{
 		"id":          id,
 		"name":        executionName,
 		"number":      number,

@@ -29,7 +29,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/transfer"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
+	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowcontroller"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
@@ -110,7 +110,7 @@ func NewParallelCmd() *cobra.Command {
 			descriptions := make([]string, params.Count)
 			logConditions := make([]*string, params.Count)
 			for i := int64(0); i < params.Count; i++ {
-				machines := []expressionstcl.Machine{baseMachine, params.MachineAt(i)}
+				machines := []expressions.Machine{baseMachine, params.MachineAt(i)}
 
 				// Copy the log condition
 				if parallel.Logs != nil {
@@ -119,7 +119,7 @@ func NewParallelCmd() *cobra.Command {
 
 				// Clone the spec
 				spec := parallel.DeepCopy()
-				err = expressionstcl.Simplify(&spec, machines...)
+				err = expressions.Simplify(&spec, machines...)
 				ui.ExitOnError(fmt.Sprintf("%d: error", i), err)
 
 				// Prepare the transfer

@@ -18,7 +18,7 @@ import (
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/internal/common"
-	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
+	"github.com/kubeshop/testkube/pkg/expressions"
 	constants2 "github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
 )
 
@@ -63,7 +63,7 @@ func (p *initProcess) Command() []string {
 	// TODO: Support nested retries
 	policy, ok := p.retry[p.ref]
 	if ok {
-		args = append(args, constants.ArgRetryCount, strconv.Itoa(int(policy.Count)), constants.ArgRetryUntil, expressionstcl.Escape(policy.Until))
+		args = append(args, constants.ArgRetryCount, strconv.Itoa(int(policy.Count)), constants.ArgRetryUntil, expressions.Escape(policy.Until))
 	}
 	if p.negative {
 		args = append(args, constants.ArgNegative, "true")
@@ -109,7 +109,7 @@ func (p *initProcess) param(args ...string) *initProcess {
 
 func (p *initProcess) compile(expr ...string) []string {
 	for i, e := range expr {
-		res, err := expressionstcl.Compile(e)
+		res, err := expressions.Compile(e)
 		if err == nil {
 			expr[i] = res.String()
 		} else {
