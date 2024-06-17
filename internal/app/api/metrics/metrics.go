@@ -22,6 +22,11 @@ var testExecutionsDurationMs = promauto.NewSummaryVec(prometheus.SummaryOpts{
 	Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.95: 0.005, 0.99: 0.001},
 }, []string{"type", "name", "result", "labels", "test_uri"})
 
+var testAbortCount = promauto.NewCounterVec(prometheus.CounterOpts{
+	Name: "testkube_test_aborts_count",
+	Help: "The total number of tests aborted by type events",
+}, []string{"type", "result"})
+
 var testSuiteExecutionsCount = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "testkube_testsuite_executions_count",
 	Help: "The total number of test suite executions",
@@ -32,6 +37,11 @@ var testSuiteExecutionsDurationMs = promauto.NewSummaryVec(prometheus.SummaryOpt
 	Help:       "The duration of test suite executions",
 	Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.95: 0.005, 0.99: 0.001},
 }, []string{"name", "result", "labels", "testsuite_uri"})
+
+var testSuiteAbortCount = promauto.NewCounterVec(prometheus.CounterOpts{
+	Name: "testkube_testsuite_aborts_count",
+	Help: "The total number of test suites aborted by type events",
+}, []string{"result"})
 
 var testCreationCount = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "testkube_test_creations_count",
@@ -78,10 +88,21 @@ var testTriggerBulkDeletesCount = promauto.NewCounterVec(prometheus.CounterOpts{
 	Help: "The total number of test trigger bulk delete events",
 }, []string{"result"})
 
-var testAbortCount = promauto.NewCounterVec(prometheus.CounterOpts{
-	Name: "testkube_test_aborts_count",
-	Help: "The total number of tests aborted by type events",
-}, []string{"type", "result"})
+var testWorkflowExecutionsCount = promauto.NewCounterVec(prometheus.CounterOpts{
+	Name: "testkube_testworkflow_executions_count",
+	Help: "The total number of test workflow executions",
+}, []string{"name", "result", "labels", "testworkflow_uri"})
+
+var testWorkflowExecutionsDurationMs = promauto.NewSummaryVec(prometheus.SummaryOpts{
+	Name:       "testkube_testworkflow_executions_duration_ms",
+	Help:       "The duration of test workflow executions",
+	Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.95: 0.005, 0.99: 0.001},
+}, []string{"name", "result", "labels", "testworkflow_uri"})
+
+var testWorkflowAbortCount = promauto.NewCounterVec(prometheus.CounterOpts{
+	Name: "testkube_testworkflow_aborts_count",
+	Help: "The total number of test workflows aborted by type events",
+}, []string{"result"})
 
 var testWorkflowCreationCount = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "testkube_testworkflow_creations_count",
@@ -113,52 +134,67 @@ var testWorkflowTemplateDeletesCount = promauto.NewCounterVec(prometheus.Counter
 	Help: "The total number of test workflow template deleted events",
 }, []string{"result"})
 
+var testTriggerEventCount = promauto.NewCounterVec(prometheus.CounterOpts{
+	Name: "testkube_testtrigger_event_count",
+	Help: "The total number of test trigger events",
+}, []string{"resource", "name", "labels", "eventType", "causes"})
+
 func NewMetrics() Metrics {
 	return Metrics{
-		TestExecutionsCount:           testExecutionsCount,
-		TestExecutionsDurationMs:      testExecutionsDurationMs,
-		TestSuiteExecutionsCount:      testSuiteExecutionsCount,
-		TestSuiteExecutionsDurationMs: testSuiteExecutionsDurationMs,
-		TestCreations:                 testCreationCount,
-		TestSuiteCreations:            testSuiteCreationCount,
-		TestUpdates:                   testUpdatesCount,
-		TestSuiteUpdates:              testSuiteUpdatesCount,
-		TestTriggerCreations:          testTriggerCreationCount,
-		TestTriggerUpdates:            testTriggerUpdatesCount,
-		TestTriggerDeletes:            testTriggerDeletesCount,
-		TestTriggerBulkUpdates:        testTriggerBulkUpdatesCount,
-		TestTriggerBulkDeletes:        testTriggerBulkDeletesCount,
-		TestAbort:                     testAbortCount,
-		TestWorkflowCreations:         testWorkflowCreationCount,
-		TestWorkflowUpdates:           testWorkflowUpdatesCount,
-		TestWorkflowDeletes:           testWorkflowDeletesCount,
-		TestWorkflowTemplateCreations: testWorkflowTemplateCreationCount,
-		TestWorkflowTemplateUpdates:   testWorkflowTemplateUpdatesCount,
-		TestWorkflowTemplateDeletes:   testWorkflowTemplateDeletesCount,
+		TestExecutionsCount:              testExecutionsCount,
+		TestExecutionsDurationMs:         testExecutionsDurationMs,
+		TestAbort:                        testAbortCount,
+		TestSuiteExecutionsCount:         testSuiteExecutionsCount,
+		TestSuiteExecutionsDurationMs:    testSuiteExecutionsDurationMs,
+		TestSuiteAbort:                   testSuiteAbortCount,
+		TestCreations:                    testCreationCount,
+		TestSuiteCreations:               testSuiteCreationCount,
+		TestUpdates:                      testUpdatesCount,
+		TestSuiteUpdates:                 testSuiteUpdatesCount,
+		TestTriggerCreations:             testTriggerCreationCount,
+		TestTriggerUpdates:               testTriggerUpdatesCount,
+		TestTriggerDeletes:               testTriggerDeletesCount,
+		TestTriggerBulkUpdates:           testTriggerBulkUpdatesCount,
+		TestTriggerBulkDeletes:           testTriggerBulkDeletesCount,
+		TestWorkflowExecutionsCount:      testWorkflowExecutionsCount,
+		TestWorkflowExecutionsDurationMs: testWorkflowExecutionsDurationMs,
+		TestWorkflowAbort:                testWorkflowAbortCount,
+		TestWorkflowCreations:            testWorkflowCreationCount,
+		TestWorkflowUpdates:              testWorkflowUpdatesCount,
+		TestWorkflowDeletes:              testWorkflowDeletesCount,
+		TestWorkflowTemplateCreations:    testWorkflowTemplateCreationCount,
+		TestWorkflowTemplateUpdates:      testWorkflowTemplateUpdatesCount,
+		TestWorkflowTemplateDeletes:      testWorkflowTemplateDeletesCount,
+		TestTriggerEventCount:            testTriggerEventCount,
 	}
 }
 
 type Metrics struct {
-	TestExecutionsCount           *prometheus.CounterVec
-	TestExecutionsDurationMs      *prometheus.SummaryVec
-	TestSuiteExecutionsCount      *prometheus.CounterVec
-	TestSuiteExecutionsDurationMs *prometheus.SummaryVec
-	TestCreations                 *prometheus.CounterVec
-	TestSuiteCreations            *prometheus.CounterVec
-	TestUpdates                   *prometheus.CounterVec
-	TestSuiteUpdates              *prometheus.CounterVec
-	TestTriggerCreations          *prometheus.CounterVec
-	TestTriggerUpdates            *prometheus.CounterVec
-	TestTriggerDeletes            *prometheus.CounterVec
-	TestTriggerBulkUpdates        *prometheus.CounterVec
-	TestTriggerBulkDeletes        *prometheus.CounterVec
-	TestAbort                     *prometheus.CounterVec
-	TestWorkflowCreations         *prometheus.CounterVec
-	TestWorkflowUpdates           *prometheus.CounterVec
-	TestWorkflowDeletes           *prometheus.CounterVec
-	TestWorkflowTemplateCreations *prometheus.CounterVec
-	TestWorkflowTemplateUpdates   *prometheus.CounterVec
-	TestWorkflowTemplateDeletes   *prometheus.CounterVec
+	TestExecutionsCount              *prometheus.CounterVec
+	TestExecutionsDurationMs         *prometheus.SummaryVec
+	TestAbort                        *prometheus.CounterVec
+	TestSuiteExecutionsCount         *prometheus.CounterVec
+	TestSuiteExecutionsDurationMs    *prometheus.SummaryVec
+	TestSuiteAbort                   *prometheus.CounterVec
+	TestCreations                    *prometheus.CounterVec
+	TestSuiteCreations               *prometheus.CounterVec
+	TestUpdates                      *prometheus.CounterVec
+	TestSuiteUpdates                 *prometheus.CounterVec
+	TestTriggerCreations             *prometheus.CounterVec
+	TestTriggerUpdates               *prometheus.CounterVec
+	TestTriggerDeletes               *prometheus.CounterVec
+	TestTriggerBulkUpdates           *prometheus.CounterVec
+	TestTriggerBulkDeletes           *prometheus.CounterVec
+	TestWorkflowExecutionsCount      *prometheus.CounterVec
+	TestWorkflowExecutionsDurationMs *prometheus.SummaryVec
+	TestWorkflowAbort                *prometheus.CounterVec
+	TestWorkflowCreations            *prometheus.CounterVec
+	TestWorkflowUpdates              *prometheus.CounterVec
+	TestWorkflowDeletes              *prometheus.CounterVec
+	TestWorkflowTemplateCreations    *prometheus.CounterVec
+	TestWorkflowTemplateUpdates      *prometheus.CounterVec
+	TestWorkflowTemplateDeletes      *prometheus.CounterVec
+	TestTriggerEventCount            *prometheus.CounterVec
 }
 
 func (m Metrics) IncAndObserveExecuteTest(execution testkube.Execution, dashboardURI string) {
@@ -207,23 +243,19 @@ func (m Metrics) IncAndObserveExecuteTestSuite(execution testkube.TestSuiteExecu
 	}
 
 	slices.Sort(labels)
-	testSuiteName := ""
-	if execution.TestSuite != nil {
-		testSuiteName = execution.TestSuite.Name
-	}
 
 	m.TestSuiteExecutionsCount.With(map[string]string{
 		"name":          name,
 		"result":        status,
 		"labels":        strings.Join(labels, ","),
-		"testsuite_uri": fmt.Sprintf("%s/test-suites/%s", dashboardURI, testSuiteName),
+		"testsuite_uri": fmt.Sprintf("%s/test-suites/%s", dashboardURI, name),
 	}).Inc()
 
 	m.TestSuiteExecutionsDurationMs.With(map[string]string{
 		"name":          name,
 		"result":        status,
 		"labels":        strings.Join(labels, ","),
-		"testsuite_uri": fmt.Sprintf("%s/test-suites/%s", dashboardURI, testSuiteName),
+		"testsuite_uri": fmt.Sprintf("%s/test-suites/%s", dashboardURI, name),
 	}).Observe(float64(execution.DurationMs))
 }
 
@@ -340,6 +372,57 @@ func (m Metrics) IncAbortTest(testType string, failed bool) {
 	}).Inc()
 }
 
+func (m Metrics) IncAbortTestSuite() {
+	result := "aborted"
+	m.TestSuiteAbort.With(map[string]string{
+		"result": result,
+	}).Inc()
+}
+
+func (m Metrics) IncAndObserveExecuteTestWorkflow(execution testkube.TestWorkflowExecution, dashboardURI string) {
+	name := ""
+	status := ""
+	if execution.Workflow != nil {
+		name = execution.Workflow.Name
+	}
+
+	if execution.Result != nil && execution.Result.Status != nil {
+		status = string(*execution.Result.Status)
+	}
+
+	var labels []string
+	if execution.Workflow != nil {
+		for key, value := range execution.Workflow.Labels {
+			labels = append(labels, fmt.Sprintf("%s=%s", key, value))
+		}
+	}
+
+	slices.Sort(labels)
+
+	m.TestWorkflowExecutionsCount.With(map[string]string{
+		"name":             name,
+		"result":           status,
+		"labels":           strings.Join(labels, ","),
+		"testworkflow_uri": fmt.Sprintf("%s/test-workflows/%s", dashboardURI, name),
+	}).Inc()
+
+	if execution.Result != nil {
+		m.TestWorkflowExecutionsDurationMs.With(map[string]string{
+			"name":             name,
+			"result":           status,
+			"labels":           strings.Join(labels, ","),
+			"testworkflow_uri": fmt.Sprintf("%s/test-workflows/%s", dashboardURI, name),
+		}).Observe(float64(execution.Result.DurationMs))
+	}
+}
+
+func (m Metrics) IncAbortTestWorkflow() {
+	result := "aborted"
+	m.TestWorkflowAbort.With(map[string]string{
+		"result": result,
+	}).Inc()
+}
+
 func (m Metrics) IncCreateTestWorkflow(err error) {
 	result := "created"
 	if err != nil {
@@ -403,5 +486,22 @@ func (m Metrics) IncDeleteTestWorkflowTemplate(err error) {
 
 	m.TestWorkflowTemplateDeletes.With(map[string]string{
 		"result": result,
+	}).Inc()
+}
+
+func (m Metrics) IncTestTriggerEventCount(resource, name, eventType string, causes []string, labels map[string]string) {
+	var ls []string
+	for key, value := range labels {
+		ls = append(ls, fmt.Sprintf("%s=%s", key, value))
+	}
+
+	slices.Sort(ls)
+	slices.Sort(causes)
+	m.TestTriggerEventCount.With(map[string]string{
+		"resource":  resource,
+		"name":      name,
+		"labels":    strings.Join(ls, ","),
+		"eventType": eventType,
+		"causes":    strings.Join(causes, ","),
 	}).Inc()
 }
