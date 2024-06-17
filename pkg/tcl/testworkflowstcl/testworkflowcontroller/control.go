@@ -14,7 +14,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/constants"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 )
 
 func SendControlCommand(ctx context.Context, podIP string, name string, body io.Reader) error {

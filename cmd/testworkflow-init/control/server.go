@@ -1,0 +1,72 @@
+package control
+
+import (
+	"context"
+	"fmt"
+	"net"
+	"net/http"
+	"time"
+)
+
+type Pauseable interface {
+	Pause(time.Time) error
+	Resume() error
+}
+
+type server struct {
+	port int
+	step Pauseable
+}
+
+func NewServer(port int, step Pauseable) *server {
+	return &server{
+		port: port,
+		step: step,
+	}
+}
+
+func (s *server) handler() *http.ServeMux {
+	mux := http.NewServeMux()
+	// TODO: Consider "shell" command too for debugging?
+	mux.HandleFunc("/pause", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		if err := s.step.Pause(time.Now()); err != nil {
+			fmt.Printf("Warning: failed to pause: %s\n", err.Error())
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	})
+	mux.HandleFunc("/resume", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		if err := s.step.Resume(); err != nil {
+			fmt.Printf("Warning: failed to resume: %s\n", err.Error())
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	})
+	return mux
+}
+
+func (s *server) Listen() (func(), error) {
+	addr := fmt.Sprintf(":%d", s.port)
+	srv := http.Server{Addr: addr, Handler: s.handler()}
+	listener, err := net.Listen("tcp", addr)
+	if err != nil {
+		return nil, err
+	}
+	stop := func() {
+		_ = srv.Shutdown(context.Background())
+	}
+	go func() {
+		_ = srv.Serve(listener)
+	}()
+	return stop, err
+}

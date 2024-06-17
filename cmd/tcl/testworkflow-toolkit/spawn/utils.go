@@ -24,11 +24,11 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
-	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/data"
-	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/artifacts"
-	common2 "github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/common"
-	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/env"
-	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/transfer"
+	commontcl "github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/common"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/artifacts"
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/transfer"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/expressions"
@@ -251,7 +251,7 @@ func SaveLogs(ctx context.Context, clientSet kubernetes.Interface, storage artif
 }
 
 func CreateLogger(name, description string, index, count int64) func(...string) {
-	label := common2.InstanceLabel(name, index, count)
+	label := commontcl.InstanceLabel(name, index, count)
 	if description != "" {
 		label += " (" + description + ")"
 	}
