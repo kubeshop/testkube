@@ -31,7 +31,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/transfer"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
+	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowcontroller"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
 )
@@ -49,14 +49,14 @@ func MapDynamicListToStringList(list []interface{}) []string {
 	return result
 }
 
-func ProcessTransfer(transferSrv transfer.Server, transfer []testworkflowsv1.StepParallelTransfer, machines ...expressionstcl.Machine) ([]testworkflowsv1.ContentTarball, error) {
+func ProcessTransfer(transferSrv transfer.Server, transfer []testworkflowsv1.StepParallelTransfer, machines ...expressions.Machine) ([]testworkflowsv1.ContentTarball, error) {
 	if len(transfer) == 0 {
 		return nil, nil
 	}
 	result := make([]testworkflowsv1.ContentTarball, 0, len(transfer))
 	for ti, t := range transfer {
 		// Parse 'from' clause
-		from, err := expressionstcl.EvalTemplate(t.From, machines...)
+		from, err := expressions.EvalTemplate(t.From, machines...)
 		if err != nil {
 			return nil, errors.Wrapf(err, "%d.from", ti)
 		}
@@ -64,7 +64,7 @@ func ProcessTransfer(transferSrv transfer.Server, transfer []testworkflowsv1.Ste
 		// Parse 'to' clause
 		to := from
 		if t.To != "" {
-			to, err = expressionstcl.EvalTemplate(t.To, machines...)
+			to, err = expressions.EvalTemplate(t.To, machines...)
 			if err != nil {
 				return nil, errors.Wrapf(err, "%d.to", ti)
 			}
@@ -75,7 +75,7 @@ func ProcessTransfer(transferSrv transfer.Server, transfer []testworkflowsv1.Ste
 		if t.Files != nil && !t.Files.Dynamic {
 			patterns = MapDynamicListToStringList(t.Files.Static)
 		} else if t.Files != nil && t.Files.Dynamic {
-			patternsExpr, err := expressionstcl.EvalExpression(t.Files.Expression, machines...)
+			patternsExpr, err := expressions.EvalExpression(t.Files.Expression, machines...)
 			if err != nil {
 				return nil, errors.Wrapf(err, "%d.files", ti)
 			}
@@ -106,7 +106,7 @@ func ProcessTransfer(transferSrv transfer.Server, transfer []testworkflowsv1.Ste
 	return result, nil
 }
 
-func ProcessFetch(transferSrv transfer.Server, fetch []testworkflowsv1.StepParallelFetch, machines ...expressionstcl.Machine) (*testworkflowsv1.Step, error) {
+func ProcessFetch(transferSrv transfer.Server, fetch []testworkflowsv1.StepParallelFetch, machines ...expressions.Machine) (*testworkflowsv1.Step, error) {
 	if len(fetch) == 0 {
 		return nil, nil
 	}
@@ -114,7 +114,7 @@ func ProcessFetch(transferSrv transfer.Server, fetch []testworkflowsv1.StepParal
 	result := make([]string, 0, len(fetch))
 	for ti, t := range fetch {
 		// Parse 'from' clause
-		from, err := expressionstcl.EvalTemplate(t.From, machines...)
+		from, err := expressions.EvalTemplate(t.From, machines...)
 		if err != nil {
 			return nil, errors.Wrapf(err, "%d.from", ti)
 		}
@@ -122,7 +122,7 @@ func ProcessFetch(transferSrv transfer.Server, fetch []testworkflowsv1.StepParal
 		// Parse 'to' clause
 		to := from
 		if t.To != "" {
-			to, err = expressionstcl.EvalTemplate(t.To, machines...)
+			to, err = expressions.EvalTemplate(t.To, machines...)
 			if err != nil {
 				return nil, errors.Wrapf(err, "%d.to", ti)
 			}
@@ -133,7 +133,7 @@ func ProcessFetch(transferSrv transfer.Server, fetch []testworkflowsv1.StepParal
 		if t.Files != nil && !t.Files.Dynamic {
 			patterns = MapDynamicListToStringList(t.Files.Static)
 		} else if t.Files != nil && t.Files.Dynamic {
-			patternsExpr, err := expressionstcl.EvalExpression(t.Files.Expression, machines...)
+			patternsExpr, err := expressions.EvalExpression(t.Files.Expression, machines...)
 			if err != nil {
 				return nil, errors.Wrapf(err, "%d.files", ti)
 			}
@@ -181,13 +181,13 @@ func ProcessFetch(transferSrv transfer.Server, fetch []testworkflowsv1.StepParal
 	}, nil
 }
 
-func CreateExecutionMachine(prefix string, index int64) (string, expressionstcl.Machine) {
+func CreateExecutionMachine(prefix string, index int64) (string, expressions.Machine) {
 	id := fmt.Sprintf("%s-%s%d", env.ExecutionId(), prefix, index)
 	fsPrefix := fmt.Sprintf("%s/%s%d", env.Ref(), prefix, index+1)
 	if env.Config().Execution.FSPrefix != "" {
 		fsPrefix = fmt.Sprintf("%s/%s", env.Config().Execution.FSPrefix, fsPrefix)
 	}
-	return id, expressionstcl.NewMachine().
+	return id, expressions.NewMachine().
 		Register("workflow", map[string]string{
 			"name": env.WorkflowName(),
 		}).
@@ -260,10 +260,10 @@ func CreateLogger(name, description string, index, count int64) func(...string) 
 	}
 }
 
-func CreateBaseMachine() expressionstcl.Machine {
-	return expressionstcl.CombinedMachines(
+func CreateBaseMachine() expressions.Machine {
+	return expressions.CombinedMachines(
 		data.GetBaseTestWorkflowMachine(),
-		expressionstcl.NewMachine().RegisterStringMap("internal", map[string]string{
+		expressions.NewMachine().RegisterStringMap("internal", map[string]string{
 			"storage.url":        env.Config().ObjectStorage.Endpoint,
 			"storage.accessKey":  env.Config().ObjectStorage.AccessKeyID,
 			"storage.secretKey":  env.Config().ObjectStorage.SecretAccessKey,
@@ -297,7 +297,7 @@ func CreateBaseMachine() expressionstcl.Machine {
 	)
 }
 
-func CreateResultMachine(result testkube.TestWorkflowResult) expressionstcl.Machine {
+func CreateResultMachine(result testkube.TestWorkflowResult) expressions.Machine {
 	status := "queued"
 	if result.Status != nil {
 		if *result.Status == testkube.PASSED_TestWorkflowStatus {
@@ -306,7 +306,7 @@ func CreateResultMachine(result testkube.TestWorkflowResult) expressionstcl.Mach
 			status = string(*result.Status)
 		}
 	}
-	return expressionstcl.NewMachine().
+	return expressions.NewMachine().
 		Register("status", status).
 		Register("always", true).
 		Register("never", false).
@@ -316,8 +316,8 @@ func CreateResultMachine(result testkube.TestWorkflowResult) expressionstcl.Mach
 		Register("success", status == "")
 }
 
-func EvalLogCondition(condition string, result testkube.TestWorkflowResult, machines ...expressionstcl.Machine) (bool, error) {
-	expr, err := expressionstcl.EvalExpression(condition, append([]expressionstcl.Machine{CreateResultMachine(result)}, machines...)...)
+func EvalLogCondition(condition string, result testkube.TestWorkflowResult, machines ...expressions.Machine) (bool, error) {
+	expr, err := expressions.EvalExpression(condition, append([]expressions.Machine{CreateResultMachine(result)}, machines...)...)
 	if err != nil {
 		return false, errors.Wrapf(err, "invalid expression for logs condition: %s", condition)
 	}

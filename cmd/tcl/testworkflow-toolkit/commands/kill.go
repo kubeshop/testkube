@@ -21,7 +21,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/common"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/spawn"
-	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
+	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowcontroller"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -37,17 +37,17 @@ func NewKillCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 
 		Run: func(cmd *cobra.Command, args []string) {
-			machine := expressionstcl.CombinedMachines(data.AliasMachine, data.GetBaseTestWorkflowMachine())
+			machine := expressions.CombinedMachines(data.AliasMachine, data.GetBaseTestWorkflowMachine())
 			groupRef := args[0]
 			clientSet := env.Kubernetes()
 
-			conditions := make(map[string]expressionstcl.Expression)
+			conditions := make(map[string]expressions.Expression)
 			for _, l := range logs {
 				name, condition, found := strings.Cut(l, "=")
 				if !found {
 					condition = "true"
 				}
-				expr, err := expressionstcl.CompileAndResolve(condition, machine)
+				expr, err := expressions.CompileAndResolve(condition, machine)
 				if err != nil {
 					fmt.Printf("warning: service '%s': could not compile condition '%s': %s", name, condition, err.Error())
 				} else {
@@ -69,16 +69,16 @@ func NewKillCmd() *cobra.Command {
 					if _, ok := conditions[service]; !ok {
 						continue
 					}
-					serviceMachine := expressionstcl.NewMachine().
+					serviceMachine := expressions.NewMachine().
 						Register("index", index).
 						RegisterAccessorExt(func(name string) (interface{}, bool, error) {
 							if name == "count" {
-								expr, err := expressionstcl.CompileAndResolve(fmt.Sprintf("len(services.%s)", service))
+								expr, err := expressions.CompileAndResolve(fmt.Sprintf("len(services.%s)", service))
 								return expr, true, err
 							}
 							return nil, false, nil
 						})
-					log, err := expressionstcl.EvalExpression(conditions[service].String(), serviceMachine, machine)
+					log, err := expressions.EvalExpression(conditions[service].String(), serviceMachine, machine)
 					if err != nil {
 						fmt.Printf("warning: service '%s': could not resolve condition '%s': %s", service, log.String(), err.Error())
 					} else if v, _ := log.BoolValue(); v {

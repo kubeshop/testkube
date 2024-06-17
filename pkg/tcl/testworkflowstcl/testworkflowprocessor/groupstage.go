@@ -13,8 +13,8 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
-	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 )
 
 type groupStage struct {
@@ -167,12 +167,12 @@ func (s *groupStage) ApplyImages(images map[string]*imageinspector.Info) error {
 	return nil
 }
 
-func (s *groupStage) Resolve(m ...expressionstcl.Machine) error {
+func (s *groupStage) Resolve(m ...expressions.Machine) error {
 	for i := range s.children {
 		err := s.children[i].Resolve(m...)
 		if err != nil {
 			return errors.Wrap(err, "group stage container")
 		}
 	}
-	return expressionstcl.Simplify(&s.stageMetadata, m...)
+	return expressions.Simplify(&s.stageMetadata, m...)
 }

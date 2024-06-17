@@ -21,8 +21,8 @@ import (
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
-	"github.com/kubeshop/testkube/pkg/tcl/expressionstcl"
 	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
 )
 
@@ -35,7 +35,7 @@ func (*dummyInspector) Inspect(ctx context.Context, registry, image string, pull
 var (
 	ins         = &dummyInspector{}
 	proc        = NewFullFeatured(ins)
-	execMachine = expressionstcl.NewMachine().
+	execMachine = expressions.NewMachine().
 			Register("resource.root", "dummy-id").
 			Register("resource.id", "dummy-id-abc")
 	initEnvs = []corev1.EnvVar{

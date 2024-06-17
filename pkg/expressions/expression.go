@@ -1,14 +1,6 @@
-// Copyright 2024 Testkube.
-//
-// Licensed as a Testkube Pro file under the Testkube Community
-// License (the "License"); you may not use this file except in compliance with
-// the License. You may obtain a copy of the License at
-//
-//     https://github.com/kubeshop/testkube/blob/main/licenses/TCL.txt
+package expressions
 
-package expressionstcl
-
-//go:generate mockgen -destination=./mock_expression.go -package=expressionstcl "github.com/kubeshop/testkube/pkg/tcl/expressionstcl" Expression
+//go:generate mockgen -destination=./mock_expression.go -package=expressions "github.com/kubeshop/testkube/pkg/expressions" Expression
 type Expression interface {
 	String() string
 	SafeString() string
@@ -31,7 +23,7 @@ const (
 	TypeInt64   Type = "int64"
 )
 
-//go:generate mockgen -destination=./mock_staticvalue.go -package=expressionstcl "github.com/kubeshop/testkube/pkg/tcl/expressionstcl" StaticValue
+//go:generate mockgen -destination=./mock_staticvalue.go -package=expressions "github.com/kubeshop/testkube/pkg/expressions" StaticValue
 type StaticValue interface {
 	Expression
 	IsNone() bool
