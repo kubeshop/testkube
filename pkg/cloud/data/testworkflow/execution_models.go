@@ -2,7 +2,7 @@ package testworkflow
 
 import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/tcl/repositorytcl/testworkflow"
+	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 )
 
 type ExecutionGetRequest struct {

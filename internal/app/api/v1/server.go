@@ -13,11 +13,14 @@ import (
 
 	"github.com/pkg/errors"
 
+	testworkflowsv1 "github.com/kubeshop/testkube-operator/pkg/client/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	repoConfig "github.com/kubeshop/testkube/pkg/repository/config"
+	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 
 	"github.com/kubeshop/testkube/pkg/version"
 
@@ -67,6 +70,8 @@ func NewTestkubeAPI(
 	namespace string,
 	testExecutionResults result.Repository,
 	testsuiteExecutionsResults testresult.Repository,
+	testWorkflowResults testworkflow.Repository,
+	testWorkflowOutput testworkflow.OutputRepository,
 	testsClient *testsclientv3.TestsClient,
 	executorsClient *executorsclientv1.ExecutorsClient,
 	testsuitesClient *testsuitesclientv3.TestSuitesClient,
@@ -75,11 +80,14 @@ func NewTestkubeAPI(
 	clientset kubernetes.Interface,
 	testkubeClientset testkubeclientset.Interface,
 	testsourcesClient *testsourcesclientv1.TestSourcesClient,
+	testWorkflowsClient *testworkflowsv1.TestWorkflowsClient,
+	testWorkflowTemplatesClient *testworkflowsv1.TestWorkflowTemplatesClient,
 	configMap repoConfig.Repository,
 	clusterId string,
 	eventsEmitter *event.Emitter,
 	executor client.Executor,
 	containerExecutor client.Executor,
+	testWorkflowExecutor testworkflowexecutor.TestWorkflowExecutor,
 	metrics metrics.Metrics,
 	scheduler *scheduler.Scheduler,
 	slackLoader *slack.SlackLoader,
@@ -116,41 +124,46 @@ func NewTestkubeAPI(
 	}
 
 	s := TestkubeAPI{
-		HTTPServer:            server.NewServer(httpConfig),
-		TestExecutionResults:  testsuiteExecutionsResults,
-		ExecutionResults:      testExecutionResults,
-		TestsClient:           testsClient,
-		ExecutorsClient:       executorsClient,
-		SecretClient:          secretClient,
-		Clientset:             clientset,
-		TestsSuitesClient:     testsuitesClient,
-		TestKubeClientset:     testkubeClientset,
-		Metrics:               metrics,
-		Events:                eventsEmitter,
-		WebhooksClient:        webhookClient,
-		TestSourcesClient:     testsourcesClient,
-		Namespace:             namespace,
-		ConfigMap:             configMap,
-		Executor:              executor,
-		ContainerExecutor:     containerExecutor,
-		scheduler:             scheduler,
-		slackLoader:           slackLoader,
-		Storage:               storage,
-		graphqlPort:           graphqlPort,
-		ArtifactsStorage:      artifactsStorage,
-		TemplatesClient:       templatesClient,
-		dashboardURI:          dashboardURI,
-		helmchartVersion:      helmchartVersion,
-		mode:                  mode,
-		eventsBus:             eventsBus,
-		enableSecretsEndpoint: enableSecretsEndpoint,
-		featureFlags:          ff,
-		logsStream:            logsStream,
-		logGrpcClient:         logGrpcClient,
-		disableSecretCreation: disableSecretCreation,
-		SubscriptionChecker:   subscriptionChecker,
-		LabelSources:          common.Ptr(make([]LabelSource, 0)),
-		ServiceAccountNames:   serviceAccountNames,
+		HTTPServer:                  server.NewServer(httpConfig),
+		TestExecutionResults:        testsuiteExecutionsResults,
+		ExecutionResults:            testExecutionResults,
+		TestWorkflowResults:         testWorkflowResults,
+		TestWorkflowOutput:          testWorkflowOutput,
+		TestsClient:                 testsClient,
+		ExecutorsClient:             executorsClient,
+		SecretClient:                secretClient,
+		Clientset:                   clientset,
+		TestsSuitesClient:           testsuitesClient,
+		TestKubeClientset:           testkubeClientset,
+		TestWorkflowsClient:         testWorkflowsClient,
+		TestWorkflowTemplatesClient: testWorkflowTemplatesClient,
+		Metrics:                     metrics,
+		Events:                      eventsEmitter,
+		WebhooksClient:              webhookClient,
+		TestSourcesClient:           testsourcesClient,
+		Namespace:                   namespace,
+		ConfigMap:                   configMap,
+		Executor:                    executor,
+		ContainerExecutor:           containerExecutor,
+		TestWorkflowExecutor:        testWorkflowExecutor,
+		scheduler:                   scheduler,
+		slackLoader:                 slackLoader,
+		Storage:                     storage,
+		graphqlPort:                 graphqlPort,
+		ArtifactsStorage:            artifactsStorage,
+		TemplatesClient:             templatesClient,
+		dashboardURI:                dashboardURI,
+		helmchartVersion:            helmchartVersion,
+		mode:                        mode,
+		eventsBus:                   eventsBus,
+		enableSecretsEndpoint:       enableSecretsEndpoint,
+		featureFlags:                ff,
+		logsStream:                  logsStream,
+		logGrpcClient:               logGrpcClient,
+		disableSecretCreation:       disableSecretCreation,
+		SubscriptionChecker:         subscriptionChecker,
+		LabelSources:                common.Ptr(make([]LabelSource, 0)),
+		ServiceAccountNames:         serviceAccountNames,
 	}
 
 	// will be reused in websockets handler
@@ -181,44 +194,49 @@ func NewTestkubeAPI(
 
 type TestkubeAPI struct {
 	server.HTTPServer
-	ExecutionResults      result.Repository
-	TestExecutionResults  testresult.Repository
-	Executor              client.Executor
-	ContainerExecutor     client.Executor
-	TestsSuitesClient     *testsuitesclientv3.TestSuitesClient
-	TestsClient           *testsclientv3.TestsClient
-	ExecutorsClient       *executorsclientv1.ExecutorsClient
-	SecretClient          *secret.Client
-	WebhooksClient        *executorsclientv1.WebhooksClient
-	TestKubeClientset     testkubeclientset.Interface
-	TestSourcesClient     *testsourcesclientv1.TestSourcesClient
-	Metrics               metrics.Metrics
-	Storage               storage.Client
-	storageParams         storageParams
-	Namespace             string
-	oauthParams           oauthParams
-	WebsocketLoader       *ws.WebsocketLoader
-	Events                *event.Emitter
-	ConfigMap             repoConfig.Repository
-	scheduler             *scheduler.Scheduler
-	Clientset             kubernetes.Interface
-	slackLoader           *slack.SlackLoader
-	graphqlPort           string
-	ArtifactsStorage      storage.ArtifactsStorage
-	TemplatesClient       *templatesclientv1.TemplatesClient
-	dashboardURI          string
-	helmchartVersion      string
-	mode                  string
-	eventsBus             bus.Bus
-	enableSecretsEndpoint bool
-	featureFlags          featureflags.FeatureFlags
-	logsStream            logsclient.Stream
-	logGrpcClient         logsclient.StreamGetter
-	proContext            *config.ProContext
-	disableSecretCreation bool
-	SubscriptionChecker   checktcl.SubscriptionChecker
-	LabelSources          *[]LabelSource
-	ServiceAccountNames   map[string]string
+	ExecutionResults            result.Repository
+	TestExecutionResults        testresult.Repository
+	TestWorkflowResults         testworkflow.Repository
+	TestWorkflowOutput          testworkflow.OutputRepository
+	Executor                    client.Executor
+	ContainerExecutor           client.Executor
+	TestWorkflowExecutor        testworkflowexecutor.TestWorkflowExecutor
+	TestsSuitesClient           *testsuitesclientv3.TestSuitesClient
+	TestsClient                 *testsclientv3.TestsClient
+	ExecutorsClient             *executorsclientv1.ExecutorsClient
+	SecretClient                *secret.Client
+	WebhooksClient              *executorsclientv1.WebhooksClient
+	TestKubeClientset           testkubeclientset.Interface
+	TestSourcesClient           *testsourcesclientv1.TestSourcesClient
+	TestWorkflowsClient         testworkflowsv1.Interface
+	TestWorkflowTemplatesClient testworkflowsv1.TestWorkflowTemplatesInterface
+	Metrics                     metrics.Metrics
+	Storage                     storage.Client
+	storageParams               storageParams
+	Namespace                   string
+	oauthParams                 oauthParams
+	WebsocketLoader             *ws.WebsocketLoader
+	Events                      *event.Emitter
+	ConfigMap                   repoConfig.Repository
+	scheduler                   *scheduler.Scheduler
+	Clientset                   kubernetes.Interface
+	slackLoader                 *slack.SlackLoader
+	graphqlPort                 string
+	ArtifactsStorage            storage.ArtifactsStorage
+	TemplatesClient             *templatesclientv1.TemplatesClient
+	dashboardURI                string
+	helmchartVersion            string
+	mode                        string
+	eventsBus                   bus.Bus
+	enableSecretsEndpoint       bool
+	featureFlags                featureflags.FeatureFlags
+	logsStream                  logsclient.Stream
+	logGrpcClient               logsclient.StreamGetter
+	proContext                  *config.ProContext
+	disableSecretCreation       bool
+	SubscriptionChecker         checktcl.SubscriptionChecker
+	LabelSources                *[]LabelSource
+	ServiceAccountNames         map[string]string
 }
 
 type storageParams struct {
@@ -390,6 +408,50 @@ func (s *TestkubeAPI) InitRoutes() {
 	testSuiteWithExecutions.Get("/", s.ListTestSuiteWithExecutionsHandler())
 	testSuiteWithExecutions.Get("/:id", s.GetTestSuiteWithExecutionHandler())
 
+	testWorkflows := root.Group("/test-workflows")
+	testWorkflows.Get("/", s.ListTestWorkflowsHandler())
+	testWorkflows.Post("/", s.CreateTestWorkflowHandler())
+	testWorkflows.Delete("/", s.DeleteTestWorkflowsHandler())
+	testWorkflows.Get("/:id", s.GetTestWorkflowHandler())
+	testWorkflows.Put("/:id", s.UpdateTestWorkflowHandler())
+	testWorkflows.Delete("/:id", s.DeleteTestWorkflowHandler())
+	testWorkflows.Get("/:id/executions", s.ListTestWorkflowExecutionsHandler())
+	testWorkflows.Post("/:id/executions", s.ExecuteTestWorkflowHandler())
+	testWorkflows.Get("/:id/metrics", s.GetTestWorkflowMetricsHandler())
+	testWorkflows.Get("/:id/executions/:executionID", s.GetTestWorkflowExecutionHandler())
+	testWorkflows.Post("/:id/abort", s.AbortAllTestWorkflowExecutionsHandler())
+	testWorkflows.Post("/:id/executions/:executionID/abort", s.AbortTestWorkflowExecutionHandler())
+	testWorkflows.Post("/:id/executions/:executionID/pause", s.PauseTestWorkflowExecutionHandler())
+	testWorkflows.Post("/:id/executions/:executionID/resume", s.ResumeTestWorkflowExecutionHandler())
+	testWorkflows.Get("/:id/executions/:executionID/logs", s.GetTestWorkflowExecutionLogsHandler())
+
+	testWorkflowExecutions := root.Group("/test-workflow-executions")
+	testWorkflowExecutions.Get("/", s.ListTestWorkflowExecutionsHandler())
+	testWorkflowExecutions.Get("/:executionID", s.GetTestWorkflowExecutionHandler())
+	testWorkflowExecutions.Get("/:executionID/notifications", s.StreamTestWorkflowExecutionNotificationsHandler())
+	testWorkflowExecutions.Get("/:executionID/notifications/stream", s.StreamTestWorkflowExecutionNotificationsWebSocketHandler())
+	testWorkflowExecutions.Post("/:executionID/abort", s.AbortTestWorkflowExecutionHandler())
+	testWorkflowExecutions.Post("/:executionID/pause", s.PauseTestWorkflowExecutionHandler())
+	testWorkflowExecutions.Post("/:executionID/resume", s.ResumeTestWorkflowExecutionHandler())
+	testWorkflowExecutions.Get("/:executionID/logs", s.GetTestWorkflowExecutionLogsHandler())
+	testWorkflowExecutions.Get("/:executionID/artifacts", s.ListTestWorkflowExecutionArtifactsHandler())
+	testWorkflowExecutions.Get("/:executionID/artifacts/:filename", s.GetTestWorkflowArtifactHandler())
+	testWorkflowExecutions.Get("/:executionID/artifact-archive", s.GetTestWorkflowArtifactArchiveHandler())
+
+	testWorkflowWithExecutions := root.Group("/test-workflow-with-executions")
+	testWorkflowWithExecutions.Get("/", s.ListTestWorkflowWithExecutionsHandler())
+	testWorkflowWithExecutions.Get("/:id", s.GetTestWorkflowWithExecutionHandler())
+
+	root.Post("/preview-test-workflow", s.PreviewTestWorkflowHandler())
+
+	testWorkflowTemplates := root.Group("/test-workflow-templates")
+	testWorkflowTemplates.Get("/", s.ListTestWorkflowTemplatesHandler())
+	testWorkflowTemplates.Post("/", s.CreateTestWorkflowTemplateHandler())
+	testWorkflowTemplates.Delete("/", s.DeleteTestWorkflowTemplatesHandler())
+	testWorkflowTemplates.Get("/:id", s.GetTestWorkflowTemplateHandler())
+	testWorkflowTemplates.Put("/:id", s.UpdateTestWorkflowTemplateHandler())
+	testWorkflowTemplates.Delete("/:id", s.DeleteTestWorkflowTemplateHandler())
+
 	testTriggers := root.Group("/triggers")
 	testTriggers.Get("/", s.ListTestTriggersHandler())
 	testTriggers.Post("/", s.CreateTestTriggerHandler())
@@ -439,6 +501,9 @@ func (s *TestkubeAPI) InitRoutes() {
 
 	files := root.Group("/uploads")
 	files.Post("/", s.UploadFiles())
+
+	// Register TestWorkflows as additional source for labels
+	s.WithLabelSources(s.TestWorkflowsClient, s.TestWorkflowTemplatesClient)
 
 	if s.enableSecretsEndpoint {
 		files := root.Group("/secrets")
