@@ -19,7 +19,7 @@ import (
 
 	executorv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
 	testsourcev1 "github.com/kubeshop/testkube-operator/api/testsource/v1"
-	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 
 	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
 

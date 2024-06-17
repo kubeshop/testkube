@@ -36,7 +36,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/scheduler"
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/tcl/repositorytcl/testworkflow"
-	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowexecutor"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 )
 
 func TestService_Run(t *testing.T) {

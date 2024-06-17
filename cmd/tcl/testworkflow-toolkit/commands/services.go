@@ -29,9 +29,10 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/transfer"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/expressions"
-	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowcontroller"
-	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor"
-	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowprocessor/constants"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/presets"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -239,7 +240,7 @@ func NewServicesCmd() *cobra.Command {
 
 				// Build the resources bundle
 				scheduledAt := time.Now()
-				bundle, err := testworkflowprocessor.NewFullFeatured(inspector).
+				bundle, err := presets.NewPro(inspector).
 					Bundle(context.Background(), &testworkflowsv1.TestWorkflow{Spec: instance.Spec}, machine, baseMachine, params.MachineAt(index))
 				if err != nil {
 					log("error", "failed to build the service", err.Error())
