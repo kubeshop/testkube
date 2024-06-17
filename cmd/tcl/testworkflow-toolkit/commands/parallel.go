@@ -21,12 +21,12 @@ import (
 	"github.com/spf13/cobra"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
-	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-init/data"
-	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/artifacts"
-	common2 "github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/common"
-	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/env"
+	commontcl "github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/common"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/spawn"
-	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/transfer"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/artifacts"
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/transfer"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/expressions"
@@ -75,7 +75,7 @@ func NewParallelCmd() *cobra.Command {
 			transferSrv := transfer.NewServer(constants.DefaultTransferDirPath, env.IP(), constants.DefaultTransferPort)
 
 			// Resolve the params
-			params, err := common2.GetParamsSpec(parallel.Matrix, parallel.Shards, parallel.Count, parallel.MaxCount, baseMachine)
+			params, err := commontcl.GetParamsSpec(parallel.Matrix, parallel.Shards, parallel.Count, parallel.MaxCount, baseMachine)
 			ui.ExitOnError("compute matrix and sharding", err)
 
 			// Clean up universal copy
