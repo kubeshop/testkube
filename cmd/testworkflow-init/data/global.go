@@ -1,6 +1,7 @@
 package data
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/kubeshop/testkube/pkg/expressions"
@@ -8,7 +9,11 @@ import (
 )
 
 func GetBaseTestWorkflowMachine() expressions.Machine {
-	var wd, _ = os.Getwd()
+	var wd, err = os.Getwd()
+	if err != nil {
+		fmt.Printf("warn: problem reading working directory: %s\n", err.Error())
+		wd = "/"
+	}
 	fileMachine := libs.NewFsMachine(os.DirFS("/"), wd)
 	LoadState()
 	return expressions.CombinedMachines(EnvMachine, StateMachine, fileMachine)
