@@ -14,7 +14,7 @@ import (
 	"golang.org/x/exp/maps"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowcontroller"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller"
 )
 
 type registry struct {

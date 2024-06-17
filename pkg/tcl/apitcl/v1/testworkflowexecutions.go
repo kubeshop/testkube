@@ -26,7 +26,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/datefilter"
 	"github.com/kubeshop/testkube/pkg/tcl/repositorytcl/testworkflow"
-	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowcontroller"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller"
 )
 
 func (s *apiTCL) StreamTestWorkflowExecutionNotificationsHandler() fiber.Handler {

@@ -23,7 +23,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/tcl/repositorytcl/testworkflow"
-	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowexecutor"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 )
 
 type apiTCL struct {

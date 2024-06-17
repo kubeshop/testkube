@@ -14,7 +14,7 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
-	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/testworkflowcontroller"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller"
 )
 
 const testWorkflowNotificationsRetryCount = 10
