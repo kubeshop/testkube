@@ -11,6 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testtriggersv1 "github.com/kubeshop/testkube-operator/api/testtriggers/v1"
+	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/log"
 )
 
@@ -89,6 +90,7 @@ func TestService_matchConditionsRetry(t *testing.T) {
 		},
 		triggerStatus: map[statusKey]*triggerStatus{statusKey1: triggerStatus1},
 		logger:        log.DefaultLogger,
+		metrics:       metrics.NewMetrics(),
 	}
 
 	err := s.match(context.Background(), e)
@@ -165,6 +167,7 @@ func TestService_matchConditionsTimeout(t *testing.T) {
 		},
 		triggerStatus: map[statusKey]*triggerStatus{statusKey1: triggerStatus1},
 		logger:        log.DefaultLogger,
+		metrics:       metrics.NewMetrics(),
 	}
 
 	err := s.match(context.Background(), e)
@@ -238,6 +241,7 @@ func TestService_matchProbesMultiple(t *testing.T) {
 		triggerStatus: map[statusKey]*triggerStatus{statusKey1: triggerStatus1},
 		logger:        log.DefaultLogger,
 		httpClient:    http.DefaultClient,
+		metrics:       metrics.NewMetrics(),
 	}
 
 	err = s.match(context.Background(), e)
@@ -304,6 +308,7 @@ func TestService_matchProbesTimeout(t *testing.T) {
 		triggerStatus: map[statusKey]*triggerStatus{statusKey1: triggerStatus1},
 		logger:        log.DefaultLogger,
 		httpClient:    http.DefaultClient,
+		metrics:       metrics.NewMetrics(),
 	}
 
 	err = s.match(context.Background(), e)
@@ -409,6 +414,7 @@ func TestService_match(t *testing.T) {
 		triggerStatus: map[statusKey]*triggerStatus{statusKey1: triggerStatus1},
 		logger:        log.DefaultLogger,
 		httpClient:    http.DefaultClient,
+		metrics:       metrics.NewMetrics(),
 	}
 
 	err = s.match(context.Background(), e)
@@ -459,6 +465,7 @@ func TestService_matchRegex(t *testing.T) {
 		triggerStatus: map[statusKey]*triggerStatus{statusKey1: triggerStatus1},
 		logger:        log.DefaultLogger,
 		httpClient:    http.DefaultClient,
+		metrics:       metrics.NewMetrics(),
 	}
 
 	err := s.match(context.Background(), e)
@@ -500,6 +507,7 @@ func TestService_noMatch(t *testing.T) {
 		triggerExecutor: testExecutorF,
 		triggerStatus:   map[statusKey]*triggerStatus{statusKey1: triggerStatus1},
 		logger:          log.DefaultLogger,
+		metrics:         metrics.NewMetrics(),
 	}
 
 	err := s.match(context.Background(), e)
