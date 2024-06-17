@@ -10,7 +10,7 @@ import (
 	executorsmapper "github.com/kubeshop/testkube/pkg/mapper/executors"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 	testsuitesmapper "github.com/kubeshop/testkube/pkg/mapper/testsuites"
-	testworkflowmappers "github.com/kubeshop/testkube/pkg/tcl/mapperstcl/testworkflows"
+	testworkflowmappers "github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 

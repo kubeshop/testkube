@@ -18,8 +18,8 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	testworkflowmappers "github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/repository/result"
-	testworkflowmappers "github.com/kubeshop/testkube/pkg/tcl/mapperstcl/testworkflows"
 )
 
 func (s *apiTCL) GetTestWorkflowWithExecutionHandler() fiber.Handler {
