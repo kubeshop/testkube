@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/k8sclient"
@@ -19,7 +20,10 @@ const (
 	// mediaTypeJSON is json media type
 	mediaTypeJSON = "application/json"
 	// mediaTypeYAML is yaml media type
-	mediaTypeYAML = "text/yaml"
+	mediaTypeYAML    = "text/yaml"
+	mediaTypeYAMLAlt = "application/yaml"
+	// mediaTypePlainText is plain text media type
+	mediaTypePlainText = "text/plain"
 
 	// contextCloud is cloud context
 	contextCloud = "cloud"
@@ -143,4 +147,31 @@ func (s *TestkubeAPI) DebugHandler() fiber.Handler {
 			ExecutionLogs:  executionLogs,
 		})
 	}
+}
+
+func (s *TestkubeAPI) NotImplemented(c *fiber.Ctx) error {
+	return s.Error(c, http.StatusNotImplemented, errors.New("not implemented yet"))
+}
+
+func (s *TestkubeAPI) BadGateway(c *fiber.Ctx, prefix, description string, err error) error {
+	return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: %s: %w", prefix, description, err))
+}
+
+func (s *TestkubeAPI) InternalError(c *fiber.Ctx, prefix, description string, err error) error {
+	return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: %s: %w", prefix, description, err))
+}
+
+func (s *TestkubeAPI) BadRequest(c *fiber.Ctx, prefix, description string, err error) error {
+	return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: %s: %w", prefix, description, err))
+}
+
+func (s *TestkubeAPI) NotFound(c *fiber.Ctx, prefix, description string, err error) error {
+	return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: %s: %w", prefix, description, err))
+}
+
+func (s *TestkubeAPI) ClientError(c *fiber.Ctx, prefix string, err error) error {
+	if IsNotFound(err) {
+		return s.NotFound(c, prefix, "client not found", err)
+	}
+	return s.BadGateway(c, prefix, "client problem", err)
 }

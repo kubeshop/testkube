@@ -1,11 +1,3 @@
-// Copyright 2024 Testkube.
-//
-// Licensed as a Testkube Pro file under the Testkube Community
-// License (the "License"); you may not use this file except in compliance with
-// the License. You may obtain a copy of the License at
-//
-//	https://github.com/kubeshop/testkube/blob/main/licenses/TCL.txt
-
 package v1
 
 import (
@@ -18,12 +10,12 @@ import (
 	"github.com/kubeshop/testkube/pkg/version"
 )
 
-func (s *apiTCL) sendCreateWorkflowTelemetry(ctx context.Context, workflow *testworkflowsv1.TestWorkflow) {
+func (s *TestkubeAPI) sendCreateWorkflowTelemetry(ctx context.Context, workflow *testworkflowsv1.TestWorkflow) {
 	if workflow == nil {
 		log.DefaultLogger.Debug("empty workflow passed to telemetry event")
 		return
 	}
-	telemetryEnabled, err := s.configMap.GetTelemetryEnabled(ctx)
+	telemetryEnabled, err := s.ConfigMap.GetTelemetryEnabled(ctx)
 	if err != nil {
 		log.DefaultLogger.Debugf("getting telemetry enabled error", "error", err)
 	}
@@ -36,7 +28,7 @@ func (s *apiTCL) sendCreateWorkflowTelemetry(ctx context.Context, workflow *test
 			AppVersion: version.Version,
 			DataSource: testworkflows.GetDataSource(workflow.Spec.Content),
 			Host:       testworkflows.GetHostname(),
-			ClusterID:  testworkflows.GetClusterID(ctx, s.configMap),
+			ClusterID:  testworkflows.GetClusterID(ctx, s.ConfigMap),
 		},
 		WorkflowParams: telemetry.WorkflowParams{
 			TestWorkflowSteps:        int32(len(workflow.Spec.Setup) + len(workflow.Spec.Steps) + len(workflow.Spec.After)),
@@ -54,12 +46,12 @@ func (s *apiTCL) sendCreateWorkflowTelemetry(ctx context.Context, workflow *test
 	}
 }
 
-func (s *apiTCL) sendCreateWorkflowTemplateTelemetry(ctx context.Context, template *testworkflowsv1.TestWorkflowTemplate) {
+func (s *TestkubeAPI) sendCreateWorkflowTemplateTelemetry(ctx context.Context, template *testworkflowsv1.TestWorkflowTemplate) {
 	if template == nil {
 		log.DefaultLogger.Debug("empty template passed to telemetry event")
 		return
 	}
-	telemetryEnabled, err := s.configMap.GetTelemetryEnabled(ctx)
+	telemetryEnabled, err := s.ConfigMap.GetTelemetryEnabled(ctx)
 	if err != nil {
 		log.DefaultLogger.Debugf("getting telemetry enabled error", "error", err)
 	}
@@ -72,7 +64,7 @@ func (s *apiTCL) sendCreateWorkflowTemplateTelemetry(ctx context.Context, templa
 			AppVersion: version.Version,
 			DataSource: testworkflows.GetDataSource(template.Spec.Content),
 			Host:       testworkflows.GetHostname(),
-			ClusterID:  testworkflows.GetClusterID(ctx, s.configMap),
+			ClusterID:  testworkflows.GetClusterID(ctx, s.ConfigMap),
 		},
 		WorkflowParams: telemetry.WorkflowParams{
 			TestWorkflowSteps:        int32(len(template.Spec.Setup) + len(template.Spec.Steps) + len(template.Spec.After)),

@@ -1,11 +1,3 @@
-// Copyright 2024 Testkube.
-//
-// Licensed as a Testkube Pro file under the Testkube Community
-// License (the "License"); you may not use this file except in compliance with
-// the License. You may obtain a copy of the License at
-//
-//	https://github.com/kubeshop/testkube/blob/main/licenses/TCL.txt
-
 package v1
 
 import (
@@ -25,11 +17,11 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/datefilter"
-	"github.com/kubeshop/testkube/pkg/tcl/repositorytcl/testworkflow"
+	testworkflow2 "github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller"
 )
 
-func (s *apiTCL) StreamTestWorkflowExecutionNotificationsHandler() fiber.Handler {
+func (s *TestkubeAPI) StreamTestWorkflowExecutionNotificationsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := c.Context()
 		id := c.Params("executionID")
@@ -71,7 +63,7 @@ func (s *apiTCL) StreamTestWorkflowExecutionNotificationsHandler() fiber.Handler
 	}
 }
 
-func (s *apiTCL) StreamTestWorkflowExecutionNotificationsWebSocketHandler() fiber.Handler {
+func (s *TestkubeAPI) StreamTestWorkflowExecutionNotificationsWebSocketHandler() fiber.Handler {
 	return websocket.New(func(c *websocket.Conn) {
 		ctx, ctxCancel := context.WithCancel(context.Background())
 		id := c.Params("executionID")
@@ -104,7 +96,7 @@ func (s *apiTCL) StreamTestWorkflowExecutionNotificationsWebSocketHandler() fibe
 	})
 }
 
-func (s *apiTCL) ListTestWorkflowExecutionsHandler() fiber.Handler {
+func (s *TestkubeAPI) ListTestWorkflowExecutionsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to list test workflow executions"
 
@@ -115,12 +107,12 @@ func (s *apiTCL) ListTestWorkflowExecutionsHandler() fiber.Handler {
 			return s.ClientError(c, errPrefix+": get execution results", err)
 		}
 
-		executionTotals, err := s.TestWorkflowResults.GetExecutionsTotals(c.Context(), testworkflow.NewExecutionsFilter().WithName(filter.Name()))
+		executionTotals, err := s.TestWorkflowResults.GetExecutionsTotals(c.Context(), testworkflow2.NewExecutionsFilter().WithName(filter.Name()))
 		if err != nil {
 			return s.ClientError(c, errPrefix+": get totals", err)
 		}
 
-		filterTotals := *filter.(*testworkflow.FilterImpl)
+		filterTotals := *filter.(*testworkflow2.FilterImpl)
 		filterTotals.WithPage(0).WithPageSize(math.MaxInt32)
 		filteredTotals, err := s.TestWorkflowResults.GetExecutionsTotals(c.Context(), filterTotals)
 		if err != nil {
@@ -136,7 +128,7 @@ func (s *apiTCL) ListTestWorkflowExecutionsHandler() fiber.Handler {
 	}
 }
 
-func (s *apiTCL) GetTestWorkflowMetricsHandler() fiber.Handler {
+func (s *TestkubeAPI) GetTestWorkflowMetricsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		workflowName := c.Params("id")
 
@@ -161,7 +153,7 @@ func (s *apiTCL) GetTestWorkflowMetricsHandler() fiber.Handler {
 	}
 }
 
-func (s *apiTCL) GetTestWorkflowExecutionHandler() fiber.Handler {
+func (s *TestkubeAPI) GetTestWorkflowExecutionHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := c.Context()
 		id := c.Params("id", "")
@@ -182,7 +174,7 @@ func (s *apiTCL) GetTestWorkflowExecutionHandler() fiber.Handler {
 	}
 }
 
-func (s *apiTCL) GetTestWorkflowExecutionLogsHandler() fiber.Handler {
+func (s *TestkubeAPI) GetTestWorkflowExecutionLogsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := c.Context()
 		id := c.Params("id", "")
@@ -210,7 +202,7 @@ func (s *apiTCL) GetTestWorkflowExecutionLogsHandler() fiber.Handler {
 	}
 }
 
-func (s *apiTCL) AbortTestWorkflowExecutionHandler() fiber.Handler {
+func (s *TestkubeAPI) AbortTestWorkflowExecutionHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := c.Context()
 		name := c.Params("id")
@@ -251,7 +243,7 @@ func (s *apiTCL) AbortTestWorkflowExecutionHandler() fiber.Handler {
 	}
 }
 
-func (s *apiTCL) PauseTestWorkflowExecutionHandler() fiber.Handler {
+func (s *TestkubeAPI) PauseTestWorkflowExecutionHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := c.Context()
 		name := c.Params("id")
@@ -291,7 +283,7 @@ func (s *apiTCL) PauseTestWorkflowExecutionHandler() fiber.Handler {
 	}
 }
 
-func (s *apiTCL) ResumeTestWorkflowExecutionHandler() fiber.Handler {
+func (s *TestkubeAPI) ResumeTestWorkflowExecutionHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := c.Context()
 		name := c.Params("id")
@@ -331,14 +323,14 @@ func (s *apiTCL) ResumeTestWorkflowExecutionHandler() fiber.Handler {
 	}
 }
 
-func (s *apiTCL) AbortAllTestWorkflowExecutionsHandler() fiber.Handler {
+func (s *TestkubeAPI) AbortAllTestWorkflowExecutionsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := c.Context()
 		name := c.Params("id")
 		errPrefix := fmt.Sprintf("failed to abort test workflow executions '%s'", name)
 
 		// Fetch executions
-		filter := testworkflow.NewExecutionsFilter().WithName(name).WithStatus(string(testkube.RUNNING_TestWorkflowStatus))
+		filter := testworkflow2.NewExecutionsFilter().WithName(name).WithStatus(string(testkube.RUNNING_TestWorkflowStatus))
 		executions, err := s.TestWorkflowResults.GetExecutions(ctx, filter)
 		if err != nil {
 			if IsNotFound(err) {
@@ -369,7 +361,7 @@ func (s *apiTCL) AbortAllTestWorkflowExecutionsHandler() fiber.Handler {
 	}
 }
 
-func (s *apiTCL) ListTestWorkflowExecutionArtifactsHandler() fiber.Handler {
+func (s *TestkubeAPI) ListTestWorkflowExecutionArtifactsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		executionID := c.Params("executionID")
 		errPrefix := fmt.Sprintf("failed to list artifacts for test workflow execution %s", executionID)
@@ -388,7 +380,7 @@ func (s *apiTCL) ListTestWorkflowExecutionArtifactsHandler() fiber.Handler {
 	}
 }
 
-func (s *apiTCL) GetTestWorkflowArtifactHandler() fiber.Handler {
+func (s *TestkubeAPI) GetTestWorkflowArtifactHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		executionID := c.Params("executionID")
 		fileName := c.Params("filename")
@@ -420,7 +412,7 @@ func (s *apiTCL) GetTestWorkflowArtifactHandler() fiber.Handler {
 	}
 }
 
-func (s *apiTCL) GetTestWorkflowArtifactArchiveHandler() fiber.Handler {
+func (s *TestkubeAPI) GetTestWorkflowArtifactArchiveHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		executionID := c.Params("executionID")
 		query := c.Request().URI().QueryString()
@@ -445,7 +437,7 @@ func (s *apiTCL) GetTestWorkflowArtifactArchiveHandler() fiber.Handler {
 	}
 }
 
-func (s *apiTCL) GetTestWorkflowNotificationsStream(ctx context.Context, executionID string) (chan testkube.TestWorkflowExecutionNotification, error) {
+func (s *TestkubeAPI) GetTestWorkflowNotificationsStream(ctx context.Context, executionID string) (chan testkube.TestWorkflowExecutionNotification, error) {
 	// Load the execution
 	execution, err := s.TestWorkflowResults.Get(ctx, executionID)
 	if err != nil {
@@ -472,8 +464,8 @@ func (s *apiTCL) GetTestWorkflowNotificationsStream(ctx context.Context, executi
 	return ch, nil
 }
 
-func getWorkflowExecutionsFilterFromRequest(c *fiber.Ctx) testworkflow.Filter {
-	filter := testworkflow.NewExecutionsFilter()
+func getWorkflowExecutionsFilterFromRequest(c *fiber.Ctx) testworkflow2.Filter {
+	filter := testworkflow2.NewExecutionsFilter()
 	name := c.Params("id", "")
 	if name != "" {
 		filter = filter.WithName(name)
