@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/spf13/cobra"
 
@@ -173,22 +174,7 @@ func printResultDifference(res1 *testkube.TestWorkflowResult, res2 *testkube.Tes
 		took := r2.FinishedAt.Sub(r2.QueuedAt).Round(time.Millisecond)
 		changed = true
 
-		switch r2Status {
-		case testkube.RUNNING_TestWorkflowStepStatus:
-			fmt.Print(ui.LightCyan(fmt.Sprintf("\n• (%d/%d) %s\n", i+1, len(steps), name)))
-		case testkube.SKIPPED_TestWorkflowStepStatus:
-			fmt.Print(ui.LightGray("• skipped\n"))
-		case testkube.PASSED_TestWorkflowStepStatus:
-			fmt.Print(ui.Green(fmt.Sprintf("\n• passed in %s\n", took)))
-		case testkube.ABORTED_TestWorkflowStepStatus:
-			fmt.Print(ui.Red("\n• aborted\n"))
-		default:
-			if s.Optional {
-				fmt.Print(ui.Yellow(fmt.Sprintf("\n• %s in %s (ignored)\n", string(r2Status), took)))
-			} else {
-				fmt.Print(ui.Red(fmt.Sprintf("\n• %s in %s\n", string(r2Status), took)))
-			}
-		}
+		printStatus(s, r2Status, took, i, len(steps), name)
 	}
 
 	return changed
@@ -223,7 +209,7 @@ func watchTestWorkflowLogs(id string, signature []testkube.TestWorkflowSignature
 			continue
 		}
 
-		printLogLines(l.Log, &isLineBeginning, true)
+		printStructuredLogLines(l.Log, &isLineBeginning)
 	}
 
 	ui.NL()
@@ -231,15 +217,34 @@ func watchTestWorkflowLogs(id string, signature []testkube.TestWorkflowSignature
 	return result, err
 }
 
-func printLogLines(logs string, isLineBeginning *bool, structuredLogs bool) {
+func printStatus(s testkube.TestWorkflowSignature, rStatus testkube.TestWorkflowStepStatus, took time.Duration,
+	i, n int, name string) {
+	switch rStatus {
+	case testkube.RUNNING_TestWorkflowStepStatus:
+		fmt.Print(ui.LightCyan(fmt.Sprintf("\n• (%d/%d) %s\n", i+1, n, name)))
+	case testkube.SKIPPED_TestWorkflowStepStatus:
+		fmt.Print(ui.LightGray("• skipped\n"))
+	case testkube.PASSED_TestWorkflowStepStatus:
+		fmt.Print(ui.Green(fmt.Sprintf("\n• passed in %s\n", took)))
+	case testkube.ABORTED_TestWorkflowStepStatus:
+		fmt.Print(ui.Red("\n• aborted\n"))
+	default:
+		if s.Optional {
+			fmt.Print(ui.Yellow(fmt.Sprintf("\n• %s in %s (ignored)\n", string(rStatus), took)))
+		} else {
+			fmt.Print(ui.Red(fmt.Sprintf("\n• %s in %s\n", string(rStatus), took)))
+		}
+	}
+}
+
+func printStructuredLogLines(logs string, isLineBeginning *bool) {
 	// Strip timestamp + space for all new lines in the log
 	for len(logs) > 0 {
 		if *isLineBeginning {
-			if strings.Index(logs, "\n") >= LogTimestampLength-1 || structuredLogs {
-				logs = logs[getTimestampLength(logs)+1:]
-				*isLineBeginning = false
-			}
+			logs = logs[getTimestampLength(logs)+1:]
+			*isLineBeginning = false
 		}
+
 		newLineIndex := strings.Index(logs, "\n")
 		if newLineIndex == -1 {
 			fmt.Print(logs)
@@ -248,6 +253,76 @@ func printLogLines(logs string, isLineBeginning *bool, structuredLogs bool) {
 			fmt.Print(logs[0 : newLineIndex+1])
 			logs = logs[newLineIndex+1:]
 			*isLineBeginning = true
+		}
+	}
+}
+
+func printRawLogLines(logs string,
+	steps map[string]testkube.TestWorkflowSignature, results map[string]testkube.TestWorkflowStepResult) {
+	isLineBeginning := true
+	previousStep := ""
+	i := 0
+	// Strip timestamp + space for all new lines in the log
+	for len(logs) > 0 {
+		if isLineBeginning {
+			newLineIndex := strings.Index(logs, "\n")
+			if newLineIndex >= LogTimestampLength-1 {
+				logs = logs[getTimestampLength(logs)+1:]
+				isLineBeginning = false
+			} else {
+				if newLineIndex != -1 {
+					name := logs[:newLineIndex]
+					cleanName := strings.TrimFunc(name, func(r rune) bool {
+						return !unicode.IsGraphic(r)
+					})
+
+					cleanName = strings.TrimFunc(strings.TrimSuffix(cleanName, "start"), func(r rune) bool {
+						return !unicode.IsGraphic(r)
+					})
+
+					if step, ok := steps[cleanName]; ok {
+						stepName := step.Category
+						if step.Name != "" {
+							stepName = step.Name
+						}
+
+						if ps, ok := results[previousStep]; ok && ps.Status != nil {
+							if step, ok := steps[previousStep]; ok {
+								took := ps.FinishedAt.Sub(ps.QueuedAt).Round(time.Millisecond)
+								printStatus(step, *ps.Status, took, i, len(steps), stepName)
+							}
+						}
+
+						fmt.Print(ui.LightCyan(fmt.Sprintf("\n• %s\n", stepName)))
+						previousStep = cleanName
+						i++
+					}
+
+					logs = strings.TrimPrefix(logs, name)
+				}
+			}
+		}
+
+		newLineIndex := strings.Index(logs, "\n")
+		if newLineIndex == -1 {
+			fmt.Print(logs)
+			break
+		} else {
+			fmt.Print(logs[0 : newLineIndex+1])
+			logs = logs[newLineIndex+1:]
+			isLineBeginning = true
+		}
+	}
+
+	if ps, ok := results[previousStep]; ok && ps.Status != nil {
+		if step, ok := steps[previousStep]; ok {
+			stepName := step.Category
+			if step.Name != "" {
+				stepName = step.Name
+			}
+
+			took := ps.FinishedAt.Sub(ps.QueuedAt).Round(time.Millisecond)
+			printStatus(step, *ps.Status, took, i, len(steps), stepName)
 		}
 	}
 }

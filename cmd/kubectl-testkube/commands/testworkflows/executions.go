@@ -44,10 +44,9 @@ func NewGetTestWorkflowExecutionsCmd() *cobra.Command {
 			}
 
 			executionID := args[0]
+			execution, err := client.GetTestWorkflowExecution(executionID)
+			ui.ExitOnError("getting recent test workflow execution data id:"+execution.Id, err)
 			if !logsOnly {
-				execution, err := client.GetTestWorkflowExecution(executionID)
-				ui.ExitOnError("getting recent test workflow execution data id:"+execution.Id, err)
-
 				err = render.Obj(cmd, execution, os.Stdout, renderer.TestWorkflowExecutionRenderer)
 				ui.ExitOnError("rendering obj", err)
 			}
@@ -57,8 +56,18 @@ func NewGetTestWorkflowExecutionsCmd() *cobra.Command {
 			logs, err := client.GetTestWorkflowExecutionLogs(executionID)
 			ui.ExitOnError("getting logs from executor", err)
 
-			isLineBeginning := true
-			printLogLines(string(logs), &isLineBeginning, false)
+			steps := make(map[string]testkube.TestWorkflowSignature)
+			sigs := flattenSignatures(execution.Signature)
+			for i := range sigs {
+				steps[sigs[i].Ref] = sigs[i]
+			}
+
+			var results map[string]testkube.TestWorkflowStepResult
+			if execution.Result != nil {
+				results = execution.Result.Steps
+			}
+
+			printRawLogLines(string(logs)+"\n", steps, results)
 		},
 	}
 
