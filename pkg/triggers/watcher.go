@@ -281,6 +281,8 @@ func (s *Service) podEventHandler(ctx context.Context) cache.ResourceEventHandle
 				newPod.Namespace == s.testkubeNamespace && newPod.Labels["job-name"] != "" && newPod.Labels[testkube.TestLabelTestName] != "" &&
 				!(strings.HasSuffix(oldPod.Name, cexecutor.ScraperPodSuffix) || strings.HasSuffix(newPod.Name, cexecutor.ScraperPodSuffix)) &&
 				oldPod.Labels["job-name"] == newPod.Labels["job-name"] {
+				s.metrics.IncTestTriggerEventCount(string(testtrigger.ResourcePod), newPod.Name, string(testtrigger.CauseEventUpdated),
+					nil, newPod.Labels)
 				s.checkExecutionPodStatus(ctx, oldPod.Labels["job-name"], []*corev1.Pod{oldPod, newPod})
 			}
 		},
