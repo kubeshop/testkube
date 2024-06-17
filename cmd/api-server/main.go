@@ -18,10 +18,10 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
+	cloudtestworkflow "github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
 	apitclv1 "github.com/kubeshop/testkube/pkg/tcl/apitcl/v1"
 	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
-	cloudtestworkflow "github.com/kubeshop/testkube/pkg/tcl/cloudtcl/data/testworkflow"
 	"github.com/kubeshop/testkube/pkg/tcl/repositorytcl/testworkflow"
 	"github.com/kubeshop/testkube/pkg/tcl/schedulertcl"
 
