@@ -63,7 +63,7 @@ spec:
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: postman-workflow-smoke-preofficial-trait
+  name: postman-workflow-smoke-
   labels:
     core-tests: workflows
 spec:
@@ -80,12 +80,12 @@ spec:
         memory: 128Mi
     workingDir: /data/repo/test/postman/executor-tests
   steps:
-  - name: Run from trait
+  - name: Run from 
     workingDir: /data/repo/test/postman/executor-tests
-    template:
-      name: pre-official/postman
+    :
+      name: official/postman/v1
       config:
-        params: "postman-executor-smoke.postman_collection.json --env-var TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value"
+        run: "newman run postman-executor-smoke.postman_collection.json --env-var TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value"
   events:
   - cronjob:
       cron: "35 */4 * * *"
@@ -93,7 +93,7 @@ spec:
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: postman-workflow-smoke-preofficial-trait-without-envs
+  name: postman-workflow-smoke--without-envs
   labels:
     core-tests: workflows
 spec:
@@ -110,11 +110,11 @@ spec:
         memory: 128Mi
     workingDir: /data/repo/test/postman/executor-tests
   steps:
-  - name: Run from trait
-    template:
-      name: pre-official/postman
+  - name: Run from 
+    :
+      name: official/postman/v1
       config:
-        params: "postman-executor-smoke-without-envs.postman_collection.json"
+        run: "newman run postman-executor-smoke-without-envs.postman_collection.json"
   events:
   - cronjob:
       cron: "35 */4 * * *"

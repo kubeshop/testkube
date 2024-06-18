@@ -36,7 +36,7 @@ spec:
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: k6-workflow-smoke-preofficial-trait
+  name: k6-workflow-smoke-template
   labels:
     core-tests: workflows
 spec:
@@ -50,7 +50,7 @@ spec:
     - name: K6_SYSTEM_ENV # currently only possible on this level
       value: K6_SYSTEM_ENV_value
   steps:
-  - name: Run from trait
+  - name: Run from template
     workingDir: /data/repo/test/k6/executor-tests
     content:
       git:
@@ -59,10 +59,10 @@ spec:
         paths:
         - test/k6/executor-tests/k6-smoke-test.js
     template:
-      name: pre-official/k6
+      name: official/k6/v1
       config:
         version: 0.48.0
-        params: "k6-smoke-test.js -e K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value"
+        run: "k6 run k6-smoke-test.js -e K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value"
   events:
   - cronjob:
       cron: "12 */4 * * *"
@@ -70,7 +70,7 @@ spec:
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: k6-workflow-smoke-preofficial-trait-without-checkout-step
+  name: k6-workflow-smoke-template-without-checkout-step
   labels:
     core-tests: workflows
 spec:
@@ -90,13 +90,13 @@ spec:
     - name: K6_SYSTEM_ENV # currently only possible on this level
       value: K6_SYSTEM_ENV_value
   steps:
-  - name: Run from trait
+  - name: Run from template
     workingDir: /data/repo/test/k6/executor-tests
     template:
-      name: pre-official/k6
+      name: official/k6/v1
       config:
         version: 0.48.0
-        params: "k6-smoke-test.js -e K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value"
+        run: "k6 run k6-smoke-test.js -e K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value"
   events:
   - cronjob:
       cron: "12 */4 * * *"

@@ -10,3 +10,4 @@ spec:
       workflows:
       - name: jmeter-workflow-smoke
       - name: jmeter-workflow-smoke-shell-artifacts
+      - name: jmeter-workflow-smoke-from-template
