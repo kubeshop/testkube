@@ -183,7 +183,7 @@ spec:
 Test Suites are migrated to Test Workflows. By default Test Workflows are not generated for 
 the Tests used in the Test Suites.
 
-Original Test Suite CRD
+The original Test Suite CRD:
 
 ```yaml
 apiVersion: tests.testkube.io/v3
