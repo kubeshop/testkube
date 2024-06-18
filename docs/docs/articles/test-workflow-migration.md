@@ -48,7 +48,7 @@ spec:
 kubectl testkube migrate test postman-executor-smoke
 ```
 
-Resulted Test Workflow CRD
+The Resulting Test Workflow CRD:
 
 ```yaml
 kind: TestWorkflow
