@@ -1229,3 +1229,111 @@ func TestProcessRunShell(t *testing.T) {
 	assert.True(t, volumeMounts[0].Name == volumes[0].Name)
 	assert.True(t, volumeMounts[1].Name == volumes[1].Name)
 }
+
+func TestProcessEscapedAnnotations(t *testing.T) {
+	wf := &testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+				Pod: &testworkflowsv1.PodConfig{
+					Annotations: map[string]string{
+						"vault.hashicorp.com/agent-inject-template-database-config.txt": `{{"{{"}}- with secret "internal/data/database/config" -}}{{"{{"}} .Data.data.username }}@{{"{{"}} .Data.data.password }}{{"{{"}}- end -}}`,
+					},
+				},
+			},
+			Steps: []testworkflowsv1.Step{
+				{StepOperations: testworkflowsv1.StepOperations{Run: &testworkflowsv1.StepRun{Shell: common.Ptr("shell-test")}}},
+			},
+		},
+	}
+
+	res, err := proc.Bundle(context.Background(), wf, execMachine)
+	assert.NoError(t, err)
+
+	sig := res.Signature
+	sigSerialized, _ := json.Marshal(sig)
+
+	volumes := res.Job.Spec.Template.Spec.Volumes
+	volumeMounts := res.Job.Spec.Template.Spec.InitContainers[0].VolumeMounts
+
+	want := batchv1.Job{
+		TypeMeta: metav1.TypeMeta{Kind: "Job", APIVersion: "batch/v1"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "dummy-id-abc",
+			Labels: map[string]string{
+				constants.RootResourceIdLabelName: "dummy-id",
+				constants.ResourceIdLabelName:     "dummy-id-abc",
+			},
+			Annotations: map[string]string{
+				constants.SignatureAnnotationName: string(sigSerialized),
+			},
+		},
+		Spec: batchv1.JobSpec{
+			BackoffLimit: common.Ptr(int32(0)),
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						constants.RootResourceIdLabelName: "dummy-id",
+						constants.ResourceIdLabelName:     "dummy-id-abc",
+					},
+					Annotations: map[string]string{
+						"vault.hashicorp.com/agent-inject-template-database-config.txt": `{{- with secret "internal/data/database/config" -}}{{ .Data.data.username }}@{{ .Data.data.password }}{{- end -}}`,
+					},
+				},
+				Spec: corev1.PodSpec{
+					RestartPolicy:      corev1.RestartPolicyNever,
+					EnableServiceLinks: common.Ptr(false),
+					Volumes:            volumes,
+					InitContainers: []corev1.Container{
+						{
+							Name:            "tktw-init",
+							Image:           constants.DefaultInitImage,
+							ImagePullPolicy: corev1.PullIfNotPresent,
+							Command:         []string{"/bin/sh", "-c"},
+							Args:            []string{constants.InitScript},
+							Env:             initEnvs,
+							VolumeMounts:    volumeMounts,
+							SecurityContext: &corev1.SecurityContext{
+								RunAsGroup: common.Ptr(constants.DefaultFsGroup),
+							},
+						},
+					},
+					Containers: []corev1.Container{
+						{
+							Name:            sig[0].Ref(),
+							ImagePullPolicy: "",
+							Image:           constants.DefaultInitImage,
+							Command: []string{
+								"/.tktw/init",
+								sig[0].Ref(),
+								"-c", fmt.Sprintf("%s=passed", sig[0].Ref()),
+								"-r", fmt.Sprintf("=%s", sig[0].Ref()),
+								"--",
+							},
+							Args:         []string{constants.DefaultShellPath, "-c", constants.DefaultShellHeader + "shell-test"},
+							WorkingDir:   "",
+							EnvFrom:      []corev1.EnvFromSource(nil),
+							Env:          []corev1.EnvVar{{Name: "CI", Value: "1"}},
+							Resources:    corev1.ResourceRequirements{},
+							VolumeMounts: volumeMounts,
+							SecurityContext: &corev1.SecurityContext{
+								RunAsGroup: common.Ptr(constants.DefaultFsGroup),
+							},
+						},
+					},
+					SecurityContext: &corev1.PodSecurityContext{
+						FSGroup: common.Ptr(constants.DefaultFsGroup),
+					},
+				},
+			},
+		},
+	}
+
+	assert.Equal(t, want, res.Job)
+
+	assert.Equal(t, 2, len(volumeMounts))
+	assert.Equal(t, 2, len(volumes))
+	assert.Equal(t, constants.DefaultInternalPath, volumeMounts[0].MountPath)
+	assert.Equal(t, constants.DefaultDataPath, volumeMounts[1].MountPath)
+	assert.True(t, volumeMounts[0].Name == volumes[0].Name)
+	assert.True(t, volumeMounts[1].Name == volumes[1].Name)
+}
