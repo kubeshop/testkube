@@ -13,7 +13,7 @@ existing resources or only particular resource.
 
 Tests are migrated to Test Workflows, by default a Test Workflow Template is generated for 
 the Executor connected to the Test. Testkube Test Workflows are not generated for official
-Testkube Test Workflow Templates (K6, Postman, Cypress and Playwright ones)
+Testkube Test Workflow Templates (K6, Postman, Cypress and Playwright ones).
 
 ### Example - Test Workflow for Pre-built Postman Test
 
