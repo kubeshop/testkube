@@ -11,7 +11,7 @@ existing resources or only particular resource.
 
 ## Test Migration
 
-Tests are migrated to Test Workflows, by default Test Workflow Template is generated for 
+Tests are migrated to Test Workflows, by default a Test Workflow Template is generated for 
 the Executor connected to the Test. Testkube Test Workflows are not generated for official
 Testkube Test Workflow Templates (K6, Postman, Cypress and Playwright ones)
 
