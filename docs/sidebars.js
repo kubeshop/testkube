@@ -69,6 +69,7 @@ const sidebars = {
             "articles/test-workflows-parallel",
             "articles/test-workflows-services",
             "articles/test-workflows-matrix-and-sharding",
+            "articles/test-workflow-migration",           
           ],
         },
         {
