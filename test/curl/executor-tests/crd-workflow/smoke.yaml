@@ -36,3 +36,24 @@ spec:
     shell: curl https://testkube.io && sleep 10
     container:
       image: tkoniecznykubeshop/example-private-repo:curl-8.7.1
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: curl-workflow-smoke-matrix
+  labels:
+    core-tests: workflows
+spec:
+  container:
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
+  steps:
+  - name: Run tests
+    parallel:
+      matrix:
+        url: ['https://testkube.io', 'https://docs.testkube.io']
+      shell: curl '{{ matrix.url }}'
+      container:
+        image: curlimages/curl:8.7.1

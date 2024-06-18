@@ -358,3 +358,52 @@ spec:
   events:
   - cronjob:
       cron: "10 */4 * * *"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: cypress-workflow-smoke-matrix
+  labels:
+    core-tests: workflows
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/cypress/executor-tests/cypress-13
+  container:
+    image: cypress/included:13.6.4
+    workingDir: /data/repo/test/cypress/executor-tests/cypress-13
+    resources:
+      requests:
+        cpu: 1
+        memory: 1Gi
+  steps:
+  - name: Run tests
+    parallel:
+      matrix:
+        browser: ['chrome', 'firefox']
+      description: '{{ matrix.browser }} browser'
+      transfer:
+      - from: /data/repo
+      run:
+        args:
+        - '--browser'
+        - '{{ matrix.browser }}'
+        - --env
+        - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+        - --reporter
+        - junit
+        - --reporter-options
+        - mochaFile=/data/artifacts/junit/junit-[hash].xml,toConsole=false
+        env:
+        - name: CYPRESS_CUSTOM_ENV
+          value: CYPRESS_CUSTOM_ENV_value
+    artifacts:
+      workingDir: /data/artifacts
+      paths:
+      - '**/*'
+  events:
+  - cronjob:
+      cron: "12 */4 * * *"
