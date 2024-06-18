@@ -206,7 +206,7 @@ spec:
 kubectl testkube migrate testsuite executor-container-k6-smoke-tests
 ```
 
-Resulted Test Workflow CRD
+The resulting Test Workflow CRD:
 
 ```yaml
 kind: TestWorkflow
