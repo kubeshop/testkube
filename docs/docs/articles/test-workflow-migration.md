@@ -17,7 +17,7 @@ Testkube Test Workflow Templates (K6, Postman, Cypress and Playwright ones).
 
 ### Example - Test Workflow for Pre-built Postman Test
 
-Original Test CRD
+The original Test CRD:
 
 ```yaml
 apiVersion: tests.testkube.io/v3
