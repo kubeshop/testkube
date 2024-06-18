@@ -2,7 +2,7 @@
 
 ## Introduction
 
-In order to simplify migration from Tests and Test Suites for Test Workflows you can
+In order to simplify the migration from Tests and Test Suites to Test Workflows you can
 use `kubectl testkube migrate` Testkube CLI command. It generates CRD definitions for 
 Test Workflows and Test Workflow Tempaltes using your existing Test, Test Suite and Executor
 resources. You will need to check prepared CRDs and apply them to your Kubernetes cluster.
