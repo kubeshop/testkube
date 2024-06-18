@@ -129,7 +129,7 @@ spec:
 kubectl testkube migrate test container-executor-k6-smoke
 ```
 
-Resulted Test Workflow and Test Workflow Template CRD
+The resulting Test Workflow and Test Workflow Template CRD:
 
 ```yaml
 kind: TestWorkflowTemplate
