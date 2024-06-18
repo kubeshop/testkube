@@ -358,3 +358,11 @@ func TestCompileImmutableNone(t *testing.T) {
 	assert.Same(t, None, NewValue(noneValue))
 	assert.Same(t, NewValue(noneValue), NewValue(noneValue))
 }
+
+func TestCompileEscapedTemplate(t *testing.T) {
+	input := `{{"{{"}}- with secret "internal/data/database/config" -}}{{"{{"}} .Data.data.username }}@{{"{{"}} .Data.data.password }}{{"{{"}}- end -}}`
+	output := `{{- with secret "internal/data/database/config" -}}{{ .Data.data.username }}@{{ .Data.data.password }}{{- end -}}`
+
+	assert.Equal(t, input, MustCompileTemplate(input).Template())
+	assert.Equal(t, output, must(MustCompileTemplate(input).Static().StringValue()))
+}
