@@ -1,99 +1,77 @@
 # Configure Identity Providers
 
-You can configure Testkube Pro On-Prem to authenticate users using different identity providers such as Azure AD, Google, Okta, and OIDC. To do this, you need to update the `additionalConfig` field in the Helm chart values with the appropriate configuration for each identity provider.
+You can configure Testkube Pro On-Prem to authenticate users using different
+identity providers.
 
-For a list of all supported identity providers, see [Connectors](https://dexidp.io/docs/connectors/).
-
-The examples below show how to configure Testkube Pro On-Prem with each identity provider by editing the `dex.configTemplate.additionalConfig` field in the Helm chart values.
-
-### Quickstart
-
-For a quickstart, or if you do not have an identity provider, you can configure Testkube Pro On-Prem to use static users.
-See [Static Users](#static-users).
+For a list of all supported identity providers and example configurations
+see the [Dex connectors guide](https://dexidp.io/docs/connectors/).
 
 ### Static Users
 
-To configure Testkube Pro On-Prem with static users, add the following configuration to the `additionalConfig` field:
+For a quickstart or if you do not have an identity provider, you can configure
+Testkube to use static users.
 
 ```yaml
-additionalConfig: |
-  enablePasswordDB: true
-  staticPasswords:
-    - email: <user email>
-      hash: <bcrypt hash of user password>
-      username: <username>
+dex:
+    configTemplate:
+        additionalConfig: |
+            enablePasswordDB: true
+            staticPasswords:
+              - email: <user email>
+                hash: <bcrypt hash of user password>
+                username: <username>
 ```
 
-Replace `<user email>`, `<bcrypt hash of user password>`, and `<username>` with your actual values.
-
-### Azure AD
-
-To configure Testkube Pro On-Prem with Azure AD, add the following configuration to the `additionalConfig` field:
-
-```yaml
-additionalConfig: |
-  connectors:
-    - type: azuread
-      id: azuread
-      name: Azure AD
-      config:
-        clientID: <Azure AD client ID>
-        clientSecret: <Azure AD client secret>
-        redirectURI: <Testkube Pro On-Prem redirect URI>
-```
-
-Replace `Azure AD client ID`, `Azure AD client secret`, and `Testkube Pro On-Prem redirect URI` with your actual Azure AD configuration values.
-
-### Google
-
-To configure Testkube Pro On-Prem with Google, add the following configuration to the 'additionalConfig' field:
-
-```yaml
-additionalConfig: |
-  connectors:
-    - type: google
-      id: google
-      name: Google
-      config:
-        clientID: <Google client ID>
-        clientSecret: <Google client secret>
-        redirectURI: <Testkube Pro On-Prem redirect URI>
-```
-
-Replace `Google client ID`, `Google client secret`, and `Testkube Pro On-Prem redirect URI` with your actual Google configuration values.
-
-### Okta
-
-To configure Testkube Pro On-Prem with Okta, add the following configuration to the `additionalConfig` field:
-
-```yaml
-additionalConfig: |
-  connectors:
-    - type: okta
-      id: okta
-      name: Okta
-      config:
-        issuerURL: <Okta issuer URL>
-        clientID: <Okta client ID>
-        clientSecret: <Okta client secret>
-        redirectURI: <Testkube Pro On-Prem redirect URI>
-```
-
-Replace `Okta issuer URL`, `Okta client ID`, `Okta client secret`, and `Testkube Pro On-Prem redirect URI` with your actual Okta configuration values.
+Replace `<user email>`, `<bcrypt hash of user password>`, and `<username>` with
+the actual values for your user(s).
 
 ### OIDC
 
-To configure Testkube Pro On-Prem with an OIDC provider, add the following configuration to the `additionalConfig` field:
+Examples of OIDC providers include: Okta, Google, Salesforce, and Azure AD v2.
+
+To configure an OIDC provider, set the appropriate values in the
+`testkube-enterprise` chart as shown in the Google example below.
+
+A secret containing credentials for the identity provider may need to be
+created. Replace the `<oidc-credentials-secret-name>`, `<client-id-key`,
+and `<client-secret-key>` placeholders with the corresponding values from the
+secret.
+
+Additionally, you need to replace the `<dex endpoint>` placeholder with the URI
+of the exposed Dex endpoint. You should be able to see information about your Dex
+OpenID configuration by performing a GET request to `<dex
+endpoint>/.well-known/openid-configuration`.
 
 ```yaml
-additionalConfig: |
-  connectors:
-    - type: oidc
-      id: oidc
-      name: OIDC
-      config:
-        issuerURL: <OIDC issuer URL>
-        clientID: <OIDC client ID>
-        clientSecret: <OIDC client secret>
-        redirectURI: <Testkube Pro On-Prem redirect URI>
+dex:
+    envVars:
+        - name: GOOGLE_CLIENT_ID
+          valueFrom:
+              secretKeyRef:
+                  name: <oidc-credentials-secret-name>
+                  key: <client-id-key>
+        - name: GOOGLE_CLIENT_SECRET
+          valueFrom:
+              secretKeyRef:
+                  name: <oidc-credentials-secret-name>
+                  key: <client-secret-key>
+    configTemplate:
+        additionalConfig: |
+        connectors:
+            - type: oidc
+              id: google
+              name: Google
+              config:
+                  # Canonical URL of the provider, also used for configuration discovery.
+                  # This value MUST match the value returned in the provider config discovery.
+                  #
+                  # See: https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig
+                  issuer: https://accounts.google.com
+
+                  # Connector config values starting with a "$" will read from the environment.
+                  clientID: $GOOGLE_CLIENT_ID
+                  clientSecret: $GOOGLE_CLIENT_SECRET
+
+                  # Dex's issuer URL + "/callback"
+                  redirectURI: <dex endpoint>/callback
 ```
