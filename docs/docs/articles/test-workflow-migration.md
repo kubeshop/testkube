@@ -83,7 +83,7 @@ spec:
 
 ### Example - Test Workflow and Test Workflow Template for K6 Container Executor Test
 
-Original Test and Executor CRD
+The original Test and Executor CRD:
 
 ```yaml
 apiVersion: executor.testkube.io/v1
