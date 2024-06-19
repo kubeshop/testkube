@@ -15,15 +15,17 @@ type Notification struct {
 	Ref       string                       `json:"ref,omitempty"`
 	Log       string                       `json:"log,omitempty"`
 	Output    *data.Instruction            `json:"output,omitempty"`
+	Temporary bool                         `json:"temporary,omitempty"`
 }
 
 func (n *Notification) ToInternal() testkube.TestWorkflowExecutionNotification {
 	return testkube.TestWorkflowExecutionNotification{
-		Ts:     n.Timestamp,
-		Result: n.Result,
-		Ref:    n.Ref,
-		Log:    n.Log,
-		Output: InstructionToInternal(n.Output),
+		Ts:        n.Timestamp,
+		Result:    n.Result,
+		Ref:       n.Ref,
+		Log:       n.Log,
+		Output:    InstructionToInternal(n.Output),
+		Temporary: n.Temporary,
 	}
 }
 

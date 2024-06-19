@@ -7743,6 +7743,9 @@ components:
           description: log content, if it's just a log. note, that it includes 30 chars timestamp + space
         output:
           $ref: "#/components/schemas/TestWorkflowOutput"
+        temporary:
+          type: boolean
+          description: should it be considered temporary only for execution time
 
     TestWorkflowOutput:
       type: object

@@ -17,6 +17,9 @@ const (
 var instructionRe = regexp.MustCompile(fmt.Sprintf(`^%s(%s)?([^%s]+)%s([a-zA-Z0-9-_.]+)(?:%s([^\n]+))?%s$`,
 	InstructionPrefix, HintPrefix, InstructionSeparator, InstructionSeparator, InstructionValueSeparator, InstructionSeparator))
 
+var StartHintRe = regexp.MustCompile(fmt.Sprintf(`^%s%s([^%s]+)%sstart%s$`,
+	InstructionPrefix, HintPrefix, InstructionSeparator, InstructionSeparator, InstructionSeparator))
+
 type Instruction struct {
 	Ref   string
 	Name  string
