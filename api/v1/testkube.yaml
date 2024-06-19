@@ -3324,6 +3324,43 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
+  /secrets/{id}:
+    delete:
+      tags:
+      - secrets
+      - api
+      parameters:
+      - $ref: "#/components/parameters/Namespace"
+      summary: "Delete secret"
+      description: "Delete secret in the cluster"
+      operationId: deleteSecret
+      responses:
+        204:
+          description: "successful operation"
+        400:
+          description: "invalid input data"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        404:
+          description: "secret has not been found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with communicating with kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
 
   /test-workflows:
     get:

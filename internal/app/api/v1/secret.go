@@ -122,7 +122,48 @@ func (s *TestkubeAPI) CreateSecretHandler() fiber.Handler {
 			return s.BadRequest(c, errPrefix, "client error", err)
 		}
 
-		c.Status(http.StatusNoContent)
-		return
+		return c.SendStatus(http.StatusNoContent)
+	}
+}
+
+func (s *TestkubeAPI) DeleteSecretHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		name := c.Params("id")
+		errPrefix := fmt.Sprintf("failed to delete secret '%s'", name)
+
+		namespace := c.Query("namespace")
+		if namespace == "" {
+			namespace = s.Namespace
+		}
+
+		// Get the secret details
+		secret, err := s.Clientset.CoreV1().Secrets(namespace).Get(c.Context(), name, metav1.GetOptions{})
+		if err != nil {
+			if IsNotFound(err) {
+				return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: secret not found", errPrefix))
+			}
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not get secret: %s", errPrefix, err))
+		}
+
+		// Disallow when it is not controlled by Testkube
+		if secret.Labels["createdBy"] != "testkube" {
+			if s.enableSecretsEndpoint {
+				return s.Error(c, http.StatusForbidden, fmt.Errorf("%s: secret is not controlled by Testkube", errPrefix))
+			} else {
+				// Make it the same as when it's actually not found, to avoid blind search
+				return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: secret not found", errPrefix))
+			}
+		}
+
+		// Delete the secret
+		err = s.Clientset.CoreV1().Secrets(namespace).Delete(c.Context(), name, metav1.DeleteOptions{
+			GracePeriodSeconds: common.Ptr(int64(0)),
+			PropagationPolicy:  common.Ptr(metav1.DeletePropagationBackground),
+		})
+		if err != nil {
+			return s.BadRequest(c, errPrefix, "client error", err)
+		}
+
+		return c.SendStatus(http.StatusNoContent)
 	}
 }
