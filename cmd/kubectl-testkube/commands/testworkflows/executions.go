@@ -56,18 +56,14 @@ func NewGetTestWorkflowExecutionsCmd() *cobra.Command {
 			logs, err := client.GetTestWorkflowExecutionLogs(executionID)
 			ui.ExitOnError("getting logs from executor", err)
 
-			steps := make(map[string]testkube.TestWorkflowSignature)
 			sigs := flattenSignatures(execution.Signature)
-			for i := range sigs {
-				steps[sigs[i].Ref] = sigs[i]
-			}
 
 			var results map[string]testkube.TestWorkflowStepResult
 			if execution.Result != nil {
 				results = execution.Result.Steps
 			}
 
-			printRawLogLines(string(logs)+"\n", steps, results)
+			printRawLogLines(logs, sigs, results)
 		},
 	}
 
