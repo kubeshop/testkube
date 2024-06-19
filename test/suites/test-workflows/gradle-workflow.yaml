@@ -10,3 +10,4 @@ spec:
       workflows:
       - name: gradle-workflow-smoke-jdk11
       - name: gradle-workflow-smoke-jdk11-default-command
+      - name: gradle-workflow-smoke-jdk11-from-template

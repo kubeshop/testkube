@@ -121,7 +121,7 @@ spec:
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: cypress-workflow-smoke-13-preofficial-trait
+  name: cypress-workflow-smoke-13-template
   labels:
     core-tests: workflows
 spec:
@@ -141,13 +141,13 @@ spec:
       paths:
       - test/cypress/executor-tests/cypress-13
   steps:
-  - name: Run from trait
+  - name: Run from template
     workingDir: /data/repo/test/cypress/executor-tests/cypress-13
     template:
-      name: pre-official/cypress
+      name: official/cypress/v1
       config:
         version: 13.5.0
-        params: "--env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value --config '{\"screenshotsFolder\":\"/data/artifacts/screenshots\",\"videosFolder\":\"/data/artifacts/videos\"}'"
+        run: "npx cypress run --env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value --config '{\"screenshotsFolder\":\"/data/artifacts/screenshots\",\"videosFolder\":\"/data/artifacts/videos\"}'"
   events:
   - cronjob:
       cron: "4 */4 * * *"
@@ -155,7 +155,7 @@ spec:
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: cypress-workflow-smoke-13-preofficial-trait-checkout-on-step
+  name: cypress-workflow-smoke-13-template-checkout-on-step
   labels:
     core-tests: workflows
 spec:
@@ -169,7 +169,7 @@ spec:
     - name: CYPRESS_CUSTOM_ENV # currently only possible on this level
       value: "CYPRESS_CUSTOM_ENV_value"
   steps:
-  - name: Run from trait
+  - name: Run from template
     content:
       git:
         uri: https://github.com/kubeshop/testkube
@@ -178,10 +178,10 @@ spec:
         - test/cypress/executor-tests/cypress-13
     workingDir: /data/repo/test/cypress/executor-tests/cypress-13
     template:
-      name: pre-official/cypress
+      name: official/cypress/v1
       config:
         version: 13.5.0
-        params: "--env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value --config '{\"screenshotsFolder\":\"/data/artifacts/screenshots\",\"videosFolder\":\"/data/artifacts/videos\"}'"
+        run: "npx cypress run --env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value --config '{\"screenshotsFolder\":\"/data/artifacts/screenshots\",\"videosFolder\":\"/data/artifacts/videos\"}'"
   events:
   - cronjob:
       cron: "5 */4 * * *"
@@ -189,7 +189,7 @@ spec:
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: cypress-workflow-smoke-13-preofficial-trait-sub-step
+  name: cypress-workflow-smoke-13-template-sub-step
   labels:
     core-tests: workflows
 spec:
@@ -211,13 +211,13 @@ spec:
         paths:
         - test/cypress/executor-tests/cypress-13
     steps:
-    - name: Run from trait
+    - name: Run from template
       workingDir: /data/repo/test/cypress/executor-tests/cypress-13
       template:
-        name: pre-official/cypress
+        name: official/cypress/v1
         config:
           version: 13.5.0
-          params: "--env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value --config '{\"screenshotsFolder\":\"/data/artifacts/screenshots\",\"videosFolder\":\"/data/artifacts/videos\"}'"
+          run: "npx cypress run --env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value --config '{\"screenshotsFolder\":\"/data/artifacts/screenshots\",\"videosFolder\":\"/data/artifacts/videos\"}'"
   events:
   - cronjob:
       cron: "6 */4 * * *"
@@ -358,3 +358,52 @@ spec:
   events:
   - cronjob:
       cron: "10 */4 * * *"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: cypress-workflow-smoke-matrix
+  labels:
+    core-tests: workflows
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/cypress/executor-tests/cypress-13
+  container:
+    image: cypress/included:13.6.4
+    workingDir: /data/repo/test/cypress/executor-tests/cypress-13
+    resources:
+      requests:
+        cpu: 1
+        memory: 1Gi
+  steps:
+  - name: Run tests
+    parallel:
+      matrix:
+        browser: ['chrome', 'firefox']
+      description: '{{ matrix.browser }} browser'
+      transfer:
+      - from: /data/repo
+      run:
+        args:
+        - '--browser'
+        - '{{ matrix.browser }}'
+        - --env
+        - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+        - --reporter
+        - junit
+        - --reporter-options
+        - mochaFile=/data/artifacts/junit/junit-[hash].xml,toConsole=false
+        env:
+        - name: CYPRESS_CUSTOM_ENV
+          value: CYPRESS_CUSTOM_ENV_value
+    artifacts:
+      workingDir: /data/artifacts
+      paths:
+      - '**/*'
+  events:
+  - cronjob:
+      cron: "12 */4 * * *"
