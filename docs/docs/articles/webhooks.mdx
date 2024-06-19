@@ -404,7 +404,7 @@ The full TestSuiteExecution data model can be found [here](https://github.com/ku
 - `Result` - TestWorkflow execution result
 - `Output` - Additional information from the steps, like referenced executed tests or artifacts
 - `Workflow` - TestWorkflow definition
-- `ResolvedWorkflow` -  TestWorkflow definition with resolved fields
+- `ResolvedWorkflow` - TestWorkflow definition with resolved fields
 
 The full TestWorkflowExecution data model can be found [here](https://github.com/kubeshop/testkube/blob/main/pkg/api/v1/testkube/model_test_workflow_execution.go).
 
@@ -450,6 +450,13 @@ If you are just getting started and want to test your webhook configuration, you
 2. [Webhook.Site](https://webhook.site/): Webhook.Site provides an easy way to capture HTTP payloads, review the headers and body for the incoming requests, and automatically respond with a `200 OK` status code.
 
 By using these services, you can quickly set up an HTTP endpoint to receive webhook payloads during your testing/development process.
+
+## URL Masking
+
+In the “Organization Management” section, under the “Settings” tab, there is an option called “Webhooks URL Masking.”  
+When this toggle is enabled, it will mask the URLs of all webhooks displayed in the user interface.
+
+![Settings - webhook url masking](../img/webhook-url-masking.png)
 
 ## Disabling Webhooks
 
@@ -659,29 +666,27 @@ metadata:
   namespace: testkube
 spec:
   description: Testkube test suite, api, dashboard and performance
-  executionRequest: {
-    disableWebhooks: true
-  }
+  executionRequest: { disableWebhooks: true }
   steps:
-  - execute:
-    - delay: 0s
-      test: testkube-api
-    - delay: 0s
-      test: testkube-dashboard
-    stopOnFailure: false
-  - execute:
-    - delay: 1s
-    stopOnFailure: false
-  - downloadArtifacts:
-      previousTestNames:
-      - testkube-api
-    execute:
-    - delay: 0s
-      test: testkube-dashboard
-    - delay: 1s
-    - delay: 0s
-      test: testkube-homepage
-    stopOnFailure: false
+    - execute:
+        - delay: 0s
+          test: testkube-api
+        - delay: 0s
+          test: testkube-dashboard
+      stopOnFailure: false
+    - execute:
+        - delay: 1s
+      stopOnFailure: false
+    - downloadArtifacts:
+        previousTestNames:
+          - testkube-api
+      execute:
+        - delay: 0s
+          test: testkube-dashboard
+        - delay: 1s
+        - delay: 0s
+          test: testkube-homepage
+      stopOnFailure: false
 ```
 
 </TabItem>
@@ -700,23 +705,23 @@ Inside a test suite this would look like the following:
 
 ```json
 {
-    "name": "test-suite-1",
-    "namespace": "testkube",
-    "description": "Example Test Suite",
-    "steps": [
+  "name": "test-suite-1",
+  "namespace": "testkube",
+  "description": "Example Test Suite",
+  "steps": [
+    {
+      "stopOnFailure": false,
+      "execute": [
         {
-            "stopOnFailure": false,
-            "execute": [
-                {
-                    "test": "existing-test"
-                }
-            ]
+          "test": "existing-test"
         }
-    ],
-    "created": "2024-06-03T10:40:44Z",
-    "executionRequest": {
-      "disableWebhooks": true
-    },
+      ]
+    }
+  ],
+  "created": "2024-06-03T10:40:44Z",
+  "executionRequest": {
+    "disableWebhooks": true
+  }
 }
 ```
 
@@ -745,8 +750,8 @@ testkube create testworkflow --file wf.yaml --name test-workflow --disable-webho
 For disabling webhooks on the test workflows, set the following on the workflow spec:
 
 ```yaml
-  notifications:
-    disableWebhooks: true
+notifications:
+  disableWebhooks: true
 ```
 
 Example usage:
@@ -767,34 +772,34 @@ spec:
   content:
     git:
       paths:
-      - test/k6/executor-tests/k6-smoke-test.js
+        - test/k6/executor-tests/k6-smoke-test.js
       revision: main
       uri: https://github.com/kubeshop/testkube
   notifications:
     disableWebhooks: true
   steps:
-  - artifacts:
-      paths:
-      - '*'
-      workingDir: /data/artifacts
-    container:
-      image: grafana/k6:0.49.0
-    name: Run test
-    run:
-      args:
-      - run
-      - k6-smoke-test.js
-      - -e
-      - K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value
-      env:
-      - name: K6_SYSTEM_ENV
-        value: K6_SYSTEM_ENV_value
-      - name: K6_WEB_DASHBOARD
-        value: "true"
-      - name: K6_WEB_DASHBOARD_EXPORT
-        value: /data/artifacts/k6-test-report.html
-    setup:
-    - shell: mkdir /data/artifacts
+    - artifacts:
+        paths:
+          - "*"
+        workingDir: /data/artifacts
+      container:
+        image: grafana/k6:0.49.0
+      name: Run test
+      run:
+        args:
+          - run
+          - k6-smoke-test.js
+          - -e
+          - K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value
+        env:
+          - name: K6_SYSTEM_ENV
+            value: K6_SYSTEM_ENV_value
+          - name: K6_WEB_DASHBOARD
+            value: "true"
+          - name: K6_WEB_DASHBOARD_EXPORT
+            value: /data/artifacts/k6-test-report.html
+      setup:
+        - shell: mkdir /data/artifacts
 ```
 
 </TabItem>
@@ -813,79 +818,70 @@ Example usage:
 
 ```json
 {
-    "name": "wf1",
-    "namespace": "testkube",
-    "created": "2024-04-04T09:15:12Z",
-    "spec": {
-        "content": {
-            "git": {
-                "uri": "https://github.com/kubeshop/testkube",
-                "revision": "main",
-                "paths": [
-                    "test/k6/executor-tests/k6-smoke-test.js"
-                ]
+  "name": "wf1",
+  "namespace": "testkube",
+  "created": "2024-04-04T09:15:12Z",
+  "spec": {
+    "content": {
+      "git": {
+        "uri": "https://github.com/kubeshop/testkube",
+        "revision": "main",
+        "paths": ["test/k6/executor-tests/k6-smoke-test.js"]
+      }
+    },
+    "container": {
+      "workingDir": {
+        "value": "/data/repo/test/k6/executor-tests"
+      },
+      "resources": {
+        "requests": {
+          "cpu": "128m",
+          "memory": "128Mi"
+        }
+      }
+    },
+    "steps": [
+      {
+        "name": "Run test",
+        "run": {
+          "env": [
+            {
+              "name": "K6_SYSTEM_ENV",
+              "value": "K6_SYSTEM_ENV_value"
+            },
+            {
+              "name": "K6_WEB_DASHBOARD",
+              "value": "true"
+            },
+            {
+              "name": "K6_WEB_DASHBOARD_EXPORT",
+              "value": "/data/artifacts/k6-test-report.html"
             }
+          ],
+          "args": {
+            "value": ["run", "k6-smoke-test.js", "-e", "K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value"]
+          }
         },
         "container": {
-            "workingDir": {
-                "value": "/data/repo/test/k6/executor-tests"
-            },
-            "resources": {
-                "requests": {
-                    "cpu": "128m",
-                    "memory": "128Mi"
-                }
-            }
+          "image": "grafana/k6:0.49.0"
         },
-        "steps": [
-            {
-                "name": "Run test",
-                "run": {
-                    "env": [
-                        {
-                            "name": "K6_SYSTEM_ENV",
-                            "value": "K6_SYSTEM_ENV_value"
-                        },
-                        {
-                            "name": "K6_WEB_DASHBOARD",
-                            "value": "true"
-                        },
-                        {
-                            "name": "K6_WEB_DASHBOARD_EXPORT",
-                            "value": "/data/artifacts/k6-test-report.html"
-                        }
-                    ],
-                    "args": {
-                        "value": [
-                            "run",
-                            "k6-smoke-test.js",
-                            "-e",
-                            "K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value"
-                        ]
-                    }
-                },
-                "container": {
-                    "image": "grafana/k6:0.49.0"
-                },
-                "artifacts": {
-                    "workingDir": {
-                        "value": "/data/artifacts"
-                    },
-                    "paths": [
-                        "*"
-                    ]
-                },
-                "setup": [
-                    {
-                        "shell": "mkdir /data/artifacts"
-                    }
-                ]
-            }
-        ],
-        "notifications": {
-            "disableWebhooks": true
-        }
+        "artifacts": {
+          "workingDir": {
+            "value": "/data/artifacts"
+          },
+          "paths": ["*"]
+        },
+        "setup": [
+          {
+            "shell": "mkdir /data/artifacts"
+          }
+        ]
+      }
+    ],
+    "notifications": {
+      "disableWebhooks": true
     }
+  }
 }
 ```
 
