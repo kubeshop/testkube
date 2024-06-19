@@ -110,5 +110,5 @@ Shout-out to our contributors 🎉 - you're great!
 Go to [contribution document](CONTRIBUTING.md) to read more how can you help us 🔥
 
 # Feedback
-Whether it helps you or not - we'd LOVE to hear from you.  Please let us know what you think and of course, how we can make it better.
+Whether it helps you or not - we'd LOVE to hear from you.  Please let us know what you think and of course, how we can make it better
 Please join our growing community on [Slack](https://testkubeworkspace.slack.com/join/shared_invite/zt-2arhz5vmu-U2r3WZ69iPya5Fw0hMhRDg#/shared-invite/email).
