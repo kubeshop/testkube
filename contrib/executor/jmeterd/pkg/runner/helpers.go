@@ -39,7 +39,7 @@ func getTestPathAndWorkingDir(fs filesystem.FileSystem, execution *testkube.Exec
 		if arg == jmeterTestFileFlag {
 			if (i + 1) < len(execution.Args) {
 				if execution.Args[i+1] != "<runPath>" {
-					testFlag = execution.Args[i+1]
+					testFlag = os.ExpandEnv(execution.Args[i+1])
 					i++
 					continue
 				}
