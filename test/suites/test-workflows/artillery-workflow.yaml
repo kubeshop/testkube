@@ -1,12 +1,12 @@
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: maven-workflow-suite
+  name: artillery-workflow-suite
   labels:
     core-tests: workflows-suite
 spec:
   steps:
   - execute:
       workflows:
-      - name: maven-workflow-smoke-jdk11
-      - name: maven-workflow-smoke-jdk11-from-template
+      - name: artillery-workflow-smoke
+      - name: artillery-workflow-smoke-template

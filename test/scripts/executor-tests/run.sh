@@ -423,15 +423,22 @@ special-cases-jmeter() {
   common_run "$name" "$test_crd_file" "$testsuite_name" "$testsuite_file"
 }
 
+workflow-artillery-smoke() {
+  name="Test Workflow - Artillery"
+  workflow_crd_file="test/artillery/executor-smoke/crd-workflow/smoke.yaml"
+  workflow_suite_name="artillery-workflow-suite"
+  workflow_suite_file="test/suites/test-workflows/artillery-workflow.yaml"
+
+  common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file"
+}
+
 workflow-cypress-smoke() {
   name="Test Workflow - Cypress"
   workflow_crd_file="test/cypress/executor-tests/crd-workflow/smoke.yaml"
   workflow_suite_name="cypress-workflow-suite"
   workflow_suite_file="test/suites/test-workflows/cypress-workflow.yaml"
 
-  custom_workflow_template_crd_file="test/test-workflow-templates/cypress.yaml"
-
-  common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file" "$custom_workflow_template_crd_file"
+  common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file"
 }
 
 workflow-gradle-smoke() {
@@ -458,9 +465,7 @@ workflow-k6-smoke() {
   workflow_suite_name="k6-workflow-suite"
   workflow_suite_file="test/suites/test-workflows/k6-workflow.yaml"
 
-  custom_workflow_template_crd_file="test/test-workflow-templates/k6.yaml"
-
-  common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file" "$custom_workflow_template_crd_file"
+  common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file"
 }
 
 workflow-maven-smoke() {
@@ -487,9 +492,7 @@ workflow-postman-smoke() {
   workflow_suite_name="postman-workflow-suite"
   workflow_suite_file="test/suites/test-workflows/postman-workflow.yaml"
 
-  custom_workflow_template_crd_file="test/test-workflow-templates/postman.yaml"
-
-  common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file" "$custom_workflow_template_crd_file"
+  common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file"
 }
 
 workflow-soapui-smoke() {
