@@ -3,6 +3,7 @@ package testworkflowcontroller
 import (
 	"context"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 )
 
 const (
@@ -211,7 +213,9 @@ func (p *podState) RegisterEvent(event *corev1.Event) {
 	case "Scheduled", "Started":
 		p.setStartedAt(name, event.CreationTimestamp.Time)
 	}
-	if p.StartedAt(name).IsZero() && event.Reason != "Created" && event.Reason != "SuccessfulCreate" {
+	if p.StartedAt(name).IsZero() &&
+		event.Reason != "Created" && event.Reason != "SuccessfulCreate" &&
+		(event.Reason != "Pulled" || (!strings.Contains(event.Message, constants.DefaultInitImage) && !strings.Contains(event.Message, constants.DefaultToolkitImage))) {
 		p.addEvent(name, event)
 	}
 }
