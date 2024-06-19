@@ -82,8 +82,8 @@ spec:
         memory: 512Mi
     workingDir: /data/repo/contrib/executor/gradle/examples/hello-gradle
     env:
-      - name: TESTKUBE_GRADLE
-        value: "true"
+    - name: TESTKUBE_GRADLE
+      value: "true"
   steps:
   - name: Run from template
     template:
