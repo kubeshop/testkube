@@ -28,6 +28,7 @@ type podState struct {
 	started    map[string]time.Time
 	finished   map[string]time.Time
 	warnings   map[string][]*corev1.Event
+	events     map[string][]*corev1.Event
 	prestart   map[string]*channel[podStateUpdate]
 	finishedCh map[string]chan struct{}
 	mu         sync.RWMutex
@@ -39,6 +40,7 @@ type podStateUpdate struct {
 	Queued  *time.Time
 	Started *time.Time
 	Warning *corev1.Event
+	Event   *corev1.Event
 }
 
 func newPodState(parentCtx context.Context) *podState {
@@ -48,6 +50,7 @@ func newPodState(parentCtx context.Context) *podState {
 		started:    map[string]time.Time{},
 		finished:   map[string]time.Time{},
 		warnings:   map[string][]*corev1.Event{},
+		events:     map[string][]*corev1.Event{},
 		prestart:   map[string]*channel[podStateUpdate]{},
 		finishedCh: map[string]chan struct{}{},
 		ctx:        ctx,
@@ -167,19 +170,19 @@ func (p *podState) setFinishedAt(name string, ts time.Time) {
 	}
 }
 
-func (p *podState) unsafeAddWarning(name string, event *corev1.Event) {
-	if !slices.ContainsFunc(p.warnings[name], common.DeepEqualCmp(event)) {
-		p.warnings[name] = append(p.warnings[name], event)
-		p.preStartWatcher(name).Send(podStateUpdate{Warning: event})
+func (p *podState) unsafeAddEvent(name string, event *corev1.Event) {
+	if !slices.ContainsFunc(p.events[name], common.DeepEqualCmp(event)) {
+		p.events[name] = append(p.events[name], event)
+		p.preStartWatcher(name).Send(podStateUpdate{Event: event})
 	}
 }
 
-func (p *podState) addWarning(name string, event *corev1.Event) {
+func (p *podState) addEvent(name string, event *corev1.Event) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	p.unsafeAddWarning(name, event)
+	p.unsafeAddEvent(name, event)
 	if name == "" {
-		p.unsafeAddWarning(InitContainerName, event)
+		p.unsafeAddEvent(InitContainerName, event)
 	}
 }
 
@@ -208,8 +211,8 @@ func (p *podState) RegisterEvent(event *corev1.Event) {
 	case "Scheduled", "Started":
 		p.setStartedAt(name, event.CreationTimestamp.Time)
 	}
-	if event.Type != "Normal" {
-		p.addWarning(name, event)
+	if p.StartedAt(name).IsZero() {
+		p.addEvent(name, event)
 	}
 }
 
