@@ -7481,6 +7481,11 @@ components:
           description: is this Secret controlled by Testkube
         owner:
           $ref: "#/components/schemas/SecretOwner"
+        labels:
+          type: object
+          description: labels associated with the secret
+          additionalProperties:
+            type: string
         keys:
           type: array
           description: secret keys

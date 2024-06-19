@@ -16,6 +16,8 @@ type Secret struct {
 	// is this Secret controlled by Testkube
 	Controlled bool         `json:"controlled"`
 	Owner      *SecretOwner `json:"owner,omitempty"`
+	// labels associated with the secret
+	Labels map[string]string `json:"labels,omitempty"`
 	// secret keys
 	Keys []string `json:"keys,omitempty"`
 }
