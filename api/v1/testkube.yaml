@@ -7470,17 +7470,42 @@ components:
       type: object
       required:
         - name
+        - controlled
       properties:
         name:
           type: string
           description: secret name
           example: "git-secret"
+        controlled:
+          type: boolean
+          description: is this Secret controlled by Testkube
+        owner:
+          $ref: "#/components/schemas/SecretOwner"
         keys:
           type: array
           description: secret keys
           items:
             type: string
           example: ["key1", "key2", "key3"]
+
+    SecretOwner:
+      description: Resource that owns the secret
+      type: object
+      required:
+      - kind
+      - name
+      properties:
+        kind:
+          $ref: "#/components/schemas/SecretOwnerKind"
+        name:
+          type: string
+          description: name of the owner resource
+
+    SecretOwnerKind:
+      type: string
+      enum:
+      - TestWorkflow
+      - TestWorkflowTemplate
 
     TestWorkflow:
       type: object

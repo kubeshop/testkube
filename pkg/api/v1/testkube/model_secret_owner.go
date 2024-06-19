@@ -9,13 +9,9 @@
  */
 package testkube
 
-// Secret with keys
-type Secret struct {
-	// secret name
+// Resource that owns the secret
+type SecretOwner struct {
+	Kind *SecretOwnerKind `json:"kind"`
+	// name of the owner resource
 	Name string `json:"name"`
-	// is this Secret controlled by Testkube
-	Controlled bool         `json:"controlled"`
-	Owner      *SecretOwner `json:"owner,omitempty"`
-	// secret keys
-	Keys []string `json:"keys,omitempty"`
 }
