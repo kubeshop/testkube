@@ -211,7 +211,7 @@ func (p *podState) RegisterEvent(event *corev1.Event) {
 	case "Scheduled", "Started":
 		p.setStartedAt(name, event.CreationTimestamp.Time)
 	}
-	if p.StartedAt(name).IsZero() {
+	if p.StartedAt(name).IsZero() && event.Reason != "Created" && event.Reason != "SuccessfulCreate" {
 		p.addEvent(name, event)
 	}
 }
