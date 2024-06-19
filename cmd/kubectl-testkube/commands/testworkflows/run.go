@@ -1,6 +1,7 @@
 package testworkflows
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"strings"
@@ -19,6 +20,10 @@ import (
 
 const (
 	LogTimestampLength = 30 // time.RFC3339Nano without 00:00 timezone
+)
+
+var (
+	NL = []byte("\n")
 )
 
 func NewRunTestWorkflowCmd() *cobra.Command {
@@ -223,9 +228,9 @@ func watchTestWorkflowLogs(id string, signature []testkube.TestWorkflowSignature
 
 func printStatusHeader(i, n int, name string) {
 	if i == -1 {
-		fmt.Print(ui.LightCyan(fmt.Sprintf("\n• %s\n", name)))
+		fmt.Println("\n" + ui.LightCyan(fmt.Sprintf("• %s", name)))
 	} else {
-		fmt.Print(ui.LightCyan(fmt.Sprintf("\n• (%d/%d) %s\n", i+1, n, name)))
+		fmt.Println("\n" + ui.LightCyan(fmt.Sprintf("• (%d/%d) %s", i+1, n, name)))
 	}
 }
 
@@ -235,16 +240,16 @@ func printStatus(s testkube.TestWorkflowSignature, rStatus testkube.TestWorkflow
 	case testkube.RUNNING_TestWorkflowStepStatus:
 		printStatusHeader(i, n, name)
 	case testkube.SKIPPED_TestWorkflowStepStatus:
-		fmt.Print(ui.LightGray("• skipped\n"))
+		fmt.Println(ui.LightGray("• skipped"))
 	case testkube.PASSED_TestWorkflowStepStatus:
-		fmt.Print(ui.Green(fmt.Sprintf("\n• passed in %s\n", took)))
+		fmt.Println("\n" + ui.Green(fmt.Sprintf("• passed in %s", took)))
 	case testkube.ABORTED_TestWorkflowStepStatus:
-		fmt.Print(ui.Red("\n• aborted\n"))
+		fmt.Println("\n" + ui.Red("• aborted"))
 	default:
 		if s.Optional {
-			fmt.Print(ui.Yellow(fmt.Sprintf("\n• %s in %s (ignored)\n", string(rStatus), took)))
+			fmt.Println("\n" + ui.Yellow(fmt.Sprintf("• %s in %s (ignored)", string(rStatus), took)))
 		} else {
-			fmt.Print(ui.Red(fmt.Sprintf("\n• %s in %s\n", string(rStatus), took)))
+			fmt.Println("\n" + ui.Red(fmt.Sprintf("• %s in %s", string(rStatus), took)))
 		}
 	}
 }
@@ -269,60 +274,57 @@ func printStructuredLogLines(logs string, isLineBeginning *bool) {
 	}
 }
 
-func printRawLogLines(logs string,
-	steps map[string]testkube.TestWorkflowSignature, results map[string]testkube.TestWorkflowStepResult) {
-	previousStep := ""
-	i := 0
+func printRawLogLines(logs []byte, steps []testkube.TestWorkflowSignature, results map[string]testkube.TestWorkflowStepResult) {
+	currentRef := ""
+	i := -1
 	printStatusHeader(-1, len(steps), "Initializing")
 	// Strip timestamp + space for all new lines in the log
 	for len(logs) > 0 {
-		newLineIndex := strings.Index(logs, "\n")
+		newLineIndex := bytes.Index(logs, NL)
+		var line string
 		if newLineIndex == -1 {
-			fmt.Print(logs)
-			break
+			line = string(logs)
+			logs = nil
+		} else {
+			line = string(logs[:newLineIndex])
+			logs = logs[newLineIndex+1:]
 		}
 
-		line := logs[0:newLineIndex]
-		logs = logs[newLineIndex+1:]
-
-		if newLineIndex >= LogTimestampLength-1 {
+		if len(line) >= LogTimestampLength-1 {
 			line = line[getTimestampLength(line)+1:]
 		}
 
 		start := data.StartHintRe.FindStringSubmatch(line)
-		if len(start) > 0 {
-			ref := start[1]
-			if step, ok := steps[ref]; ok {
-				stepName := step.Category
-				if step.Name != "" {
-					stepName = step.Name
-				}
-
-				if ps, ok := results[previousStep]; ok && ps.Status != nil {
-					if step, ok := steps[previousStep]; ok {
-						took := ps.FinishedAt.Sub(ps.QueuedAt).Round(time.Millisecond)
-						printStatus(step, *ps.Status, took, i, len(steps), stepName)
-					}
-				}
-
-				printStatusHeader(i, len(steps), stepName)
-				previousStep = ref
-				i++
-			}
-		} else {
+		if len(start) == 0 {
+			line += "\x07"
 			fmt.Println(line)
+			continue
+		}
+
+		nextRef := start[1]
+
+		for i == -1 || steps[i].Ref != nextRef {
+			if ps, ok := results[currentRef]; ok && ps.Status != nil {
+				took := ps.FinishedAt.Sub(ps.QueuedAt).Round(time.Millisecond)
+				printStatus(steps[i], *ps.Status, took, i, len(steps), steps[i].Label())
+			}
+
+			i++
+			currentRef = steps[i].Ref
+			printStatusHeader(i, len(steps), steps[i].Label())
 		}
 	}
 
-	if ps, ok := results[previousStep]; ok && ps.Status != nil {
-		if step, ok := steps[previousStep]; ok {
-			stepName := step.Category
-			if step.Name != "" {
-				stepName = step.Name
-			}
-
+	for _, step := range steps[i:] {
+		if ps, ok := results[currentRef]; ok && ps.Status != nil {
 			took := ps.FinishedAt.Sub(ps.QueuedAt).Round(time.Millisecond)
-			printStatus(step, *ps.Status, took, i, len(steps), stepName)
+			printStatus(step, *ps.Status, took, i, len(steps), steps[i].Label())
+		}
+
+		i++
+		currentRef = step.Ref
+		if i < len(steps) {
+			printStatusHeader(i, len(steps), steps[i].Label())
 		}
 	}
 }
