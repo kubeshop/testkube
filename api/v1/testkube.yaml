@@ -3284,7 +3284,40 @@ paths:
                 items:
                   $ref: "#/components/schemas/Secret"
         502:
-          description: "problem with communicating with kubernetes cluster or git server"
+          description: "problem with communicating with kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+    post:
+      tags:
+        - secrets
+        - api
+      summary: "Create secret"
+      description: "Create secret in the cluster"
+      operationId: createSecret
+      requestBody:
+        description: secret data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SecretInput"
+      responses:
+        204:
+          description: "successful operation"
+        400:
+          description: "invalid input data"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with communicating with kubernetes cluster"
           content:
             application/problem+json:
               schema:
@@ -7492,6 +7525,33 @@ components:
           items:
             type: string
           example: ["key1", "key2", "key3"]
+
+    SecretInput:
+      description: Secret input information
+      type: object
+      required:
+      - name
+      - data
+      properties:
+        name:
+          type: string
+          description: secret name
+          example: "git-secret"
+        namespace:
+          type: string
+          description: secret namespace
+        owner:
+          $ref: "#/components/schemas/SecretOwner"
+        labels:
+          type: object
+          description: labels associated with the secret
+          additionalProperties:
+            type: string
+        data:
+          type: object
+          description: data to store in the secret
+          additionalProperties:
+            type: string
 
     SecretOwner:
       description: Resource that owns the secret

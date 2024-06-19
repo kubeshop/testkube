@@ -507,6 +507,7 @@ func (s *TestkubeAPI) InitRoutes() {
 
 	secrets := root.Group("/secrets")
 	secrets.Get("/", s.ListSecretsHandler())
+	secrets.Post("/", s.CreateSecretHandler())
 
 	repositories := root.Group("/repositories")
 	repositories.Post("/", s.ValidateRepositoryHandler())

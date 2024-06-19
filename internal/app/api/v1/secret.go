@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -80,5 +81,48 @@ func (s *TestkubeAPI) ListSecretsHandler() fiber.Handler {
 		}
 
 		return c.JSON(results)
+	}
+}
+
+func (s *TestkubeAPI) CreateSecretHandler() fiber.Handler {
+	errPrefix := "failed to create secret"
+	return func(c *fiber.Ctx) (err error) {
+		// Deserialize resource
+		var v *testkube.SecretInput
+		err = c.BodyParser(&v)
+		if err != nil {
+			return s.BadRequest(c, errPrefix, "invalid body", err)
+		}
+
+		// Validate resource
+		if v == nil || v.Name == "" {
+			return s.BadRequest(c, errPrefix, "invalid body", errors.New("name is required"))
+		}
+		if len(v.Data) == 0 {
+			return s.BadRequest(c, errPrefix, "invalid body", errors.New("data should not be empty"))
+		}
+
+		// Apply defaults
+		if v.Namespace == "" {
+			v.Namespace = s.Namespace
+		}
+		if v.Labels == nil {
+			v.Labels = map[string]string{}
+		}
+		v.Labels["createdBy"] = "testkube"
+		if v.Owner != nil && v.Owner.Kind != nil && *v.Owner.Kind != "" && v.Owner.Name != "" {
+			v.Labels["testkubeOwner"] = fmt.Sprintf("%s/%s", v.Owner.Kind, v.Owner.Name)
+		} else {
+			delete(v.Labels, "testkubeOwner")
+		}
+
+		// Create the resource
+		err = s.SecretClient.Create(v.Name, v.Labels, v.Data, v.Namespace)
+		if err != nil {
+			return s.BadRequest(c, errPrefix, "client error", err)
+		}
+
+		c.Status(http.StatusNoContent)
+		return
 	}
 }
