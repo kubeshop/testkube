@@ -210,7 +210,9 @@ func (e *executor) Control(ctx context.Context, testWorkflow *testworkflowsv1.Te
 				continue
 			}
 			if v.Value.Output != nil {
-				execution.Output = append(execution.Output, *testworkflowcontroller.InstructionToInternal(v.Value.Output))
+				if !v.Value.Temporary {
+					execution.Output = append(execution.Output, *testworkflowcontroller.InstructionToInternal(v.Value.Output))
+				}
 			} else if v.Value.Result != nil {
 				execution.Result = v.Value.Result
 				if execution.Result.IsFinished() {
@@ -230,8 +232,8 @@ func (e *executor) Control(ctx context.Context, testWorkflow *testworkflowsv1.Te
 					wg.Done()
 				}()
 				wg.Wait()
-			} else {
-				if ref != v.Value.Ref {
+			} else if !v.Value.Temporary {
+				if ref != v.Value.Ref && v.Value.Ref != "" {
 					ref = v.Value.Ref
 					_, err := writer.Write([]byte(data.SprintHint(ref, initconstants.InstructionStart)))
 					if err != nil {

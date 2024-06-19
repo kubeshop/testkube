@@ -51,9 +51,9 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 			} else if v.Value.Started != nil {
 				s.Queue("", state.QueuedAt(""))
 				s.Start("", state.StartedAt(""))
-			} else if v.Value.Warning != nil {
-				ts := maxTime(v.Value.Warning.CreationTimestamp.Time, v.Value.Warning.FirstTimestamp.Time, v.Value.Warning.LastTimestamp.Time)
-				s.Warning("", ts, v.Value.Warning.Reason, v.Value.Warning.Message)
+			} else if v.Value.Event != nil {
+				ts := maxTime(v.Value.Event.CreationTimestamp.Time, v.Value.Event.FirstTimestamp.Time, v.Value.Event.LastTimestamp.Time)
+				s.Event("", ts, v.Value.Event.Type, v.Value.Event.Reason, v.Value.Event.Message)
 			}
 		}
 
@@ -85,9 +85,9 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 				} else if v.Value.Started != nil {
 					s.Queue(ref, state.QueuedAt(ref))
 					s.Start(ref, state.StartedAt(ref))
-				} else if v.Value.Warning != nil {
-					ts := maxTime(v.Value.Warning.CreationTimestamp.Time, v.Value.Warning.FirstTimestamp.Time, v.Value.Warning.LastTimestamp.Time)
-					s.Warning("", ts, v.Value.Warning.Reason, v.Value.Warning.Message)
+				} else if v.Value.Event != nil {
+					ts := maxTime(v.Value.Event.CreationTimestamp.Time, v.Value.Event.FirstTimestamp.Time, v.Value.Event.LastTimestamp.Time)
+					s.Event(ref, ts, v.Value.Event.Type, v.Value.Event.Reason, v.Value.Event.Message)
 				}
 			}
 
@@ -132,7 +132,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 						s.Resume(ref, end)
 					}
 				} else {
-					s.Raw(ref, v.Value.Time, string(v.Value.Log))
+					s.Raw(ref, v.Value.Time, string(v.Value.Log), false)
 				}
 			}
 
@@ -164,7 +164,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 				if status.Details == "" {
 					status.Details = "Manual"
 				}
-				s.Raw(ref, s.GetLastTimestamp(ref), fmt.Sprintf("\n%s Aborted (%s)", s.GetLastTimestamp(ref).Format(KubernetesLogTimeFormat), status.Details))
+				s.Raw(ref, s.GetLastTimestamp(ref), fmt.Sprintf("\n%s Aborted (%s)", s.GetLastTimestamp(ref).Format(KubernetesLogTimeFormat), status.Details), false)
 				break
 			}
 		}

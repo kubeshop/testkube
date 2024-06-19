@@ -288,8 +288,8 @@ func (c *controller) Logs(parentCtx context.Context, follow bool) io.Reader {
 			return
 		}
 		for v := range w.Channel() {
-			if v.Error == nil && v.Value.Log != "" {
-				if ref != v.Value.Ref {
+			if v.Error == nil && v.Value.Log != "" && !v.Value.Temporary {
+				if ref != v.Value.Ref && v.Value.Ref != "" {
 					ref = v.Value.Ref
 					_, _ = writer.Write([]byte(data.SprintHint(ref, initconstants.InstructionStart)))
 				}

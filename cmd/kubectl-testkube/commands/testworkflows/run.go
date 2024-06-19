@@ -5,13 +5,13 @@ import (
 	"os"
 	"strings"
 	"time"
-	"unicode"
 
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/render"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testworkflows/renderer"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	apiclientv1 "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -148,33 +148,35 @@ func flattenSignatures(sig []testkube.TestWorkflowSignature) []testkube.TestWork
 	return res
 }
 
+func printSingleResultDifference(r1 testkube.TestWorkflowStepResult, r2 testkube.TestWorkflowStepResult, signature testkube.TestWorkflowSignature, index int, steps int) bool {
+	r1Status := testkube.QUEUED_TestWorkflowStepStatus
+	r2Status := testkube.QUEUED_TestWorkflowStepStatus
+	if r1.Status != nil {
+		r1Status = *r1.Status
+	}
+	if r2.Status != nil {
+		r2Status = *r2.Status
+	}
+	if r1Status == r2Status {
+		return false
+	}
+	name := signature.Category
+	if signature.Name != "" {
+		name = signature.Name
+	}
+	took := r2.FinishedAt.Sub(r2.QueuedAt).Round(time.Millisecond)
+
+	printStatus(signature, r2Status, took, index, steps, name)
+	return true
+}
+
 func printResultDifference(res1 *testkube.TestWorkflowResult, res2 *testkube.TestWorkflowResult, steps []testkube.TestWorkflowSignature) bool {
 	if res1 == nil || res2 == nil {
 		return false
 	}
-	changed := false
+	changed := printSingleResultDifference(*res1.Initialization, *res2.Initialization, testkube.TestWorkflowSignature{Name: "Initializing"}, -1, len(steps))
 	for i, s := range steps {
-		r1 := res1.Steps[s.Ref]
-		r2 := res2.Steps[s.Ref]
-		r1Status := testkube.QUEUED_TestWorkflowStepStatus
-		r2Status := testkube.QUEUED_TestWorkflowStepStatus
-		if r1.Status != nil {
-			r1Status = *r1.Status
-		}
-		if r2.Status != nil {
-			r2Status = *r2.Status
-		}
-		if r1Status == r2Status {
-			continue
-		}
-		name := s.Category
-		if s.Name != "" {
-			name = s.Name
-		}
-		took := r2.FinishedAt.Sub(r2.QueuedAt).Round(time.Millisecond)
-		changed = true
-
-		printStatus(s, r2Status, took, i, len(steps), name)
+		changed = changed || printSingleResultDifference(res1.Steps[s.Ref], res2.Steps[s.Ref], s, i, len(steps))
 	}
 
 	return changed
@@ -204,7 +206,9 @@ func watchTestWorkflowLogs(id string, signature []testkube.TestWorkflowSignature
 			continue
 		}
 		if l.Result != nil {
-			isLineBeginning = printResultDifference(result, l.Result, steps)
+			if printResultDifference(result, l.Result, steps) {
+				isLineBeginning = true
+			}
 			result = l.Result
 			continue
 		}
@@ -217,11 +221,19 @@ func watchTestWorkflowLogs(id string, signature []testkube.TestWorkflowSignature
 	return result, err
 }
 
+func printStatusHeader(i, n int, name string) {
+	if i == -1 {
+		fmt.Print(ui.LightCyan(fmt.Sprintf("\n• %s\n", name)))
+	} else {
+		fmt.Print(ui.LightCyan(fmt.Sprintf("\n• (%d/%d) %s\n", i+1, n, name)))
+	}
+}
+
 func printStatus(s testkube.TestWorkflowSignature, rStatus testkube.TestWorkflowStepStatus, took time.Duration,
 	i, n int, name string) {
 	switch rStatus {
 	case testkube.RUNNING_TestWorkflowStepStatus:
-		fmt.Print(ui.LightCyan(fmt.Sprintf("\n• (%d/%d) %s\n", i+1, n, name)))
+		printStatusHeader(i, n, name)
 	case testkube.SKIPPED_TestWorkflowStepStatus:
 		fmt.Print(ui.LightGray("• skipped\n"))
 	case testkube.PASSED_TestWorkflowStepStatus:
@@ -259,58 +271,46 @@ func printStructuredLogLines(logs string, isLineBeginning *bool) {
 
 func printRawLogLines(logs string,
 	steps map[string]testkube.TestWorkflowSignature, results map[string]testkube.TestWorkflowStepResult) {
-	isLineBeginning := true
 	previousStep := ""
 	i := 0
+	printStatusHeader(-1, len(steps), "Initializing")
 	// Strip timestamp + space for all new lines in the log
 	for len(logs) > 0 {
-		if isLineBeginning {
-			newLineIndex := strings.Index(logs, "\n")
-			if newLineIndex >= LogTimestampLength-1 {
-				logs = logs[getTimestampLength(logs)+1:]
-				isLineBeginning = false
-			} else {
-				if newLineIndex != -1 {
-					name := logs[:newLineIndex]
-					cleanName := strings.TrimFunc(name, func(r rune) bool {
-						return !unicode.IsGraphic(r)
-					})
-
-					cleanName = strings.TrimFunc(strings.TrimSuffix(cleanName, "start"), func(r rune) bool {
-						return !unicode.IsGraphic(r)
-					})
-
-					if step, ok := steps[cleanName]; ok {
-						stepName := step.Category
-						if step.Name != "" {
-							stepName = step.Name
-						}
-
-						if ps, ok := results[previousStep]; ok && ps.Status != nil {
-							if step, ok := steps[previousStep]; ok {
-								took := ps.FinishedAt.Sub(ps.QueuedAt).Round(time.Millisecond)
-								printStatus(step, *ps.Status, took, i, len(steps), stepName)
-							}
-						}
-
-						fmt.Print(ui.LightCyan(fmt.Sprintf("\n• %s\n", stepName)))
-						previousStep = cleanName
-						i++
-					}
-
-					logs = strings.TrimPrefix(logs, name)
-				}
-			}
-		}
-
 		newLineIndex := strings.Index(logs, "\n")
 		if newLineIndex == -1 {
 			fmt.Print(logs)
 			break
+		}
+
+		line := logs[0:newLineIndex]
+		logs = logs[newLineIndex+1:]
+
+		if newLineIndex >= LogTimestampLength-1 {
+			line = line[getTimestampLength(line)+1:]
+		}
+
+		start := data.StartHintRe.FindStringSubmatch(line)
+		if len(start) > 0 {
+			ref := start[1]
+			if step, ok := steps[ref]; ok {
+				stepName := step.Category
+				if step.Name != "" {
+					stepName = step.Name
+				}
+
+				if ps, ok := results[previousStep]; ok && ps.Status != nil {
+					if step, ok := steps[previousStep]; ok {
+						took := ps.FinishedAt.Sub(ps.QueuedAt).Round(time.Millisecond)
+						printStatus(step, *ps.Status, took, i, len(steps), stepName)
+					}
+				}
+
+				printStatusHeader(i, len(steps), stepName)
+				previousStep = ref
+				i++
+			}
 		} else {
-			fmt.Print(logs[0 : newLineIndex+1])
-			logs = logs[newLineIndex+1:]
-			isLineBeginning = true
+			fmt.Println(line)
 		}
 	}
 

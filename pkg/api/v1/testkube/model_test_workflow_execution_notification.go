@@ -22,4 +22,6 @@ type TestWorkflowExecutionNotification struct {
 	// log content, if it's just a log. note, that it includes 30 chars timestamp + space
 	Log    string              `json:"log,omitempty"`
 	Output *TestWorkflowOutput `json:"output,omitempty"`
+	// should it be considered temporary only for execution time
+	Temporary bool `json:"temporary,omitempty"`
 }

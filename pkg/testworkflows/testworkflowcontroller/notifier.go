@@ -40,7 +40,7 @@ func (n *notifier) RegisterTimestamp(ref string, t time.Time) {
 	}
 }
 
-func (n *notifier) Raw(ref string, ts time.Time, message string) {
+func (n *notifier) Raw(ref string, ts time.Time, message string, temporary bool) {
 	if message != "" {
 		if ref == InitContainerName {
 			ref = ""
@@ -50,6 +50,7 @@ func (n *notifier) Raw(ref string, ts time.Time, message string) {
 			Timestamp: ts.UTC(),
 			Log:       message,
 			Ref:       ref,
+			Temporary: temporary,
 		})
 	}
 }
@@ -57,7 +58,7 @@ func (n *notifier) Raw(ref string, ts time.Time, message string) {
 func (n *notifier) Log(ref string, ts time.Time, message string) {
 	if message != "" {
 		n.RegisterTimestamp(ref, ts)
-		n.Raw(ref, ts, fmt.Sprintf("%s %s", ts.Format(KubernetesLogTimeFormat), message))
+		n.Raw(ref, ts, fmt.Sprintf("%s %s", ts.Format(KubernetesLogTimeFormat), message), false)
 	}
 }
 
@@ -65,8 +66,14 @@ func (n *notifier) Error(err error) {
 	n.watcher.Error(err)
 }
 
-func (n *notifier) Warning(ref string, ts time.Time, reason, message string) {
-	n.Log(ref, ts, fmt.Sprintf("%s (%s) %s\n", ui.Yellow("warn:"), reason, message))
+func (n *notifier) Event(ref string, ts time.Time, level, reason, message string) {
+	n.RegisterTimestamp(ref, ts)
+	color := ui.LightGray
+	if level != "Normal" {
+		color = ui.Yellow
+	}
+	log := color(fmt.Sprintf("(%s) %s", reason, message))
+	n.Raw(ref, ts, fmt.Sprintf("%s %s\n", ts.Format(KubernetesLogTimeFormat), log), level == "Normal")
 }
 
 func (n *notifier) recompute() {
