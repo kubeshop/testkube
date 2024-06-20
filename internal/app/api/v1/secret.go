@@ -15,12 +15,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/mapper/secrets"
 )
 
-func (s *TestkubeAPI) GetSecretConfigHandler() fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		return c.JSON(s.secretConfig)
-	}
-}
-
 // ListSecretsHandler list secrets and keys
 func (s *TestkubeAPI) ListSecretsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {

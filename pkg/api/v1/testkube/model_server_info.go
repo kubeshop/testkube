@@ -32,8 +32,9 @@ type ServerInfo struct {
 	// enable secret endpoint to list secrets in namespace
 	EnableSecretEndpoint bool `json:"enableSecretEndpoint,omitempty"`
 	// disable secret creation for tests and test sources
-	DisableSecretCreation bool      `json:"disableSecretCreation,omitempty"`
-	Features              *Features `json:"features,omitempty"`
+	DisableSecretCreation bool          `json:"disableSecretCreation,omitempty"`
+	Secret                *SecretConfig `json:"secret,omitempty"`
+	Features              *Features     `json:"features,omitempty"`
 	// execution namespaces
 	ExecutionNamespaces []string `json:"executionNamespaces,omitempty"`
 }

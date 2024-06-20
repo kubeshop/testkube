@@ -574,6 +574,7 @@ func main() {
 
 	go testWorkflowExecutor.Recover(context.Background())
 
+	// TODO: Make granular environment variables, yet backwards compatible
 	secretConfig := testkube.SecretConfig{
 		Prefix:     cfg.SecretCreationPrefix,
 		List:       cfg.EnableSecretsEndpoint,

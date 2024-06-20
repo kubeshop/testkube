@@ -3263,22 +3263,6 @@ paths:
                 items:
                   $ref: "#/components/schemas/Problem"
 
-  /secrets-config:
-    get:
-      tags:
-      - secrets
-      - api
-      summary: "Get secrets configuration"
-      description: "Get configuration for secrets access in Testkube"
-      operationId: getSecretConfig
-      responses:
-        200:
-          description: "successful operation"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/SecretConfig"
-
   /secrets:
     get:
       tags:
@@ -6102,9 +6086,13 @@ components:
         enableSecretEndpoint:
           type: boolean
           description: enable secret endpoint to list secrets in namespace
+          deprecated: true
         disableSecretCreation:
           type: boolean
           description: disable secret creation for tests and test sources
+          deprecated: true
+        secret:
+          $ref: "#/components/schemas/SecretConfig"
         features:
           $ref: "#/components/schemas/Features"
         executionNamespaces:

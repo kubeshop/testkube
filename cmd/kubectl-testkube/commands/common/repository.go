@@ -46,7 +46,7 @@ func NewRepositoryFromFlags(cmd *cobra.Command) (repository *testkube.Repository
 		info, err := client.GetServerInfo()
 		ui.ExitOnError("getting server info", err)
 
-		if !info.DisableSecretCreation {
+		if info.SecretConfig().AutoCreate {
 			gitUsername = cmd.Flag("git-username").Value.String()
 			gitToken = cmd.Flag("git-token").Value.String()
 		}
@@ -228,7 +228,7 @@ func ValidateUpsertOptions(cmd *cobra.Command, sourceName string) error {
 		info, err := client.GetServerInfo()
 		ui.ExitOnError("getting server info", err)
 
-		if !info.DisableSecretCreation {
+		if info.SecretConfig().AutoCreate {
 			gitUsername = cmd.Flag("git-username").Value.String()
 			gitToken = cmd.Flag("git-token").Value.String()
 		}
