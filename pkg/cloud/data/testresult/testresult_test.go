@@ -100,3 +100,27 @@ func TestCloudResultRepository_GetLatestByTestSuites(t *testing.T) {
 	assert.Contains(t, results, expectedResults[0])
 	assert.Contains(t, results, expectedResults[1])
 }
+
+func TestCloudResultRepository_GetPreviousFinishedState(t *testing.T) {
+	t.Parallel()
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockExecutor := executor.NewMockExecutor(mockCtrl)
+	repo := &CloudRepository{executor: mockExecutor}
+
+	testSuiteName := "test_suite_name"
+	date := time.Date(2023, 5, 5, 0, 0, 0, 0, time.UTC)
+	expectedStatus := testkube.TestSuiteExecutionStatusPassed
+	response, _ := json.Marshal(GetPreviousFinishedStateResponse{Result: *expectedStatus})
+
+	mockExecutor.
+		EXPECT().
+		Execute(ctx, CmdTestResultGetPreviousFinishedState, GetPreviousFinishedStateRequest{TestSuiteName: testSuiteName, Date: date}).
+		Return(response, nil)
+
+	status, err := repo.GetPreviousFinishedState(ctx, testSuiteName, date)
+	assert.NoError(t, err)
+	assert.Equal(t, *expectedStatus, status)
+}

@@ -1,6 +1,8 @@
 package testworkflow
 
 import (
+	"time"
+
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 )
@@ -67,6 +69,15 @@ type ExecutionGetExecutionsSummaryRequest struct {
 
 type ExecutionGetExecutionsSummaryResponse struct {
 	WorkflowExecutions []testkube.TestWorkflowExecutionSummary `json:"workflowExecutions"`
+}
+
+type ExecutionGetPreviousFinishedStateRequest struct {
+	WorkflowName string
+	Date         time.Time
+}
+
+type ExecutionGetPreviousFinishedStateResponse struct {
+	Result testkube.TestWorkflowStatus
 }
 
 type ExecutionInsertRequest struct {

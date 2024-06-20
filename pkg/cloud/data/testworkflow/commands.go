@@ -3,23 +3,24 @@ package testworkflow
 import "github.com/kubeshop/testkube/pkg/cloud/data/executor"
 
 const (
-	CmdTestWorkflowExecutionGet                  executor.Command = "workflow_execution_get"
-	CmdTestWorkflowExecutionGetByNameAndWorkflow executor.Command = "workflow_execution_get_by_name_and_workflow"
-	CmdTestWorkflowExecutionGetLatestByWorkflow  executor.Command = "workflow_execution_get_latest_by_workflow"
-	CmdTestWorkflowExecutionGetRunning           executor.Command = "workflow_execution_get_running"
-	CmdTestWorkflowExecutionGetLatestByWorkflows executor.Command = "workflow_execution_get_latest_by_workflows"
-	CmdTestWorkflowExecutionGetExecutionTotals   executor.Command = "workflow_execution_get_execution_totals"
-	CmdTestWorkflowExecutionGetExecutions        executor.Command = "workflow_execution_get_executions"
-	CmdTestWorkflowExecutionGetExecutionsSummary executor.Command = "workflow_execution_get_executions_summary"
-	CmdTestWorkflowExecutionInsert               executor.Command = "workflow_execution_insert"
-	CmdTestWorkflowExecutionUpdate               executor.Command = "workflow_execution_update"
-	CmdTestWorkflowExecutionUpdateResult         executor.Command = "workflow_execution_update_result"
-	CmdTestWorkflowExecutionAddReport            executor.Command = "workflow_execution_add_report"
-	CmdTestWorkflowExecutionUpdateOutput         executor.Command = "workflow_execution_update_output"
-	CmdTestWorkflowExecutionDeleteByWorkflow     executor.Command = "workflow_execution_delete_by_workflow"
-	CmdTestWorkflowExecutionDeleteAll            executor.Command = "workflow_execution_delete_all"
-	CmdTestWorkflowExecutionDeleteByWorkflows    executor.Command = "workflow_execution_delete_by_workflows"
-	CmdTestWorkflowExecutionGetWorkflowMetrics   executor.Command = "workflow_execution_get_workflow_metrics"
+	CmdTestWorkflowExecutionGet                      executor.Command = "workflow_execution_get"
+	CmdTestWorkflowExecutionGetByNameAndWorkflow     executor.Command = "workflow_execution_get_by_name_and_workflow"
+	CmdTestWorkflowExecutionGetLatestByWorkflow      executor.Command = "workflow_execution_get_latest_by_workflow"
+	CmdTestWorkflowExecutionGetRunning               executor.Command = "workflow_execution_get_running"
+	CmdTestWorkflowExecutionGetLatestByWorkflows     executor.Command = "workflow_execution_get_latest_by_workflows"
+	CmdTestWorkflowExecutionGetExecutionTotals       executor.Command = "workflow_execution_get_execution_totals"
+	CmdTestWorkflowExecutionGetExecutions            executor.Command = "workflow_execution_get_executions"
+	CmdTestWorkflowExecutionGetExecutionsSummary     executor.Command = "workflow_execution_get_executions_summary"
+	CmdTestWorkflowExecutionGetPreviousFinishedState executor.Command = "workflow_execution_get_previous_finished_state"
+	CmdTestWorkflowExecutionInsert                   executor.Command = "workflow_execution_insert"
+	CmdTestWorkflowExecutionUpdate                   executor.Command = "workflow_execution_update"
+	CmdTestWorkflowExecutionUpdateResult             executor.Command = "workflow_execution_update_result"
+	CmdTestWorkflowExecutionAddReport                executor.Command = "workflow_execution_add_report"
+	CmdTestWorkflowExecutionUpdateOutput             executor.Command = "workflow_execution_update_output"
+	CmdTestWorkflowExecutionDeleteByWorkflow         executor.Command = "workflow_execution_delete_by_workflow"
+	CmdTestWorkflowExecutionDeleteAll                executor.Command = "workflow_execution_delete_all"
+	CmdTestWorkflowExecutionDeleteByWorkflows        executor.Command = "workflow_execution_delete_by_workflows"
+	CmdTestWorkflowExecutionGetWorkflowMetrics       executor.Command = "workflow_execution_get_workflow_metrics"
 
 	CmdTestWorkflowOutputPresignSaveLog         executor.Command = "workflow_output_presign_save_log"
 	CmdTestWorkflowOutputPresignReadLog         executor.Command = "workflow_output_presign_read_log"
@@ -46,6 +47,8 @@ func command(v interface{}) executor.Command {
 		return CmdTestWorkflowExecutionGetExecutions
 	case ExecutionGetExecutionsSummaryRequest:
 		return CmdTestWorkflowExecutionGetExecutionsSummary
+	case ExecutionGetPreviousFinishedStateRequest:
+		return CmdTestWorkflowExecutionGetPreviousFinishedState
 	case ExecutionInsertRequest:
 		return CmdTestWorkflowExecutionInsert
 	case ExecutionUpdateRequest:

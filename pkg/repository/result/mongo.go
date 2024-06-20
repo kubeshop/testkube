@@ -878,3 +878,29 @@ func cleanSteps(steps []testkube.ExecutionStepResult) []testkube.ExecutionStepRe
 	}
 	return steps
 }
+
+// GetPreviousFinishedState gets previous finished execution state by test
+func (r *MongoRepository) GetPreviousFinishedState(ctx context.Context, testName string, date time.Time) (testkube.ExecutionStatus, error) {
+	opts := options.FindOne().SetProjection(bson.M{"executionresult.status": 1}).SetSort(bson.D{{Key: "endtime", Value: -1}})
+
+	filter := bson.D{
+		{Key: "testname", Value: testName},
+		{Key: "endtime", Value: bson.M{"$lt": date}},
+		{Key: "executionresult.status", Value: bson.M{"$in": []string{"passed", "failed", "skipped", "aborted", "timeout"}}},
+	}
+
+	var result testkube.Execution
+	err := r.ResultsColl.FindOne(ctx, filter, opts).Decode(&result)
+	if err != nil && err == mongo.ErrNoDocuments {
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("error getting previous finished execution status: %w", err)
+	}
+
+	if result.ExecutionResult == nil || result.ExecutionResult.Status == nil {
+		return "", nil
+	}
+
+	return *result.ExecutionResult.Status, nil
+}

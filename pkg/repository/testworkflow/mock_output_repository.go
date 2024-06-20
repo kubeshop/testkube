@@ -5,11 +5,11 @@
 package testworkflow
 
 import (
-	"context"
-	"io"
-	"reflect"
+	context "context"
+	io "io"
+	reflect "reflect"
 
-	"github.com/golang/mock/gomock"
+	gomock "github.com/golang/mock/gomock"
 )
 
 // MockOutputRepository is a mock of OutputRepository interface.
