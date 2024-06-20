@@ -102,6 +102,7 @@ func NewTestkubeAPI(
 	eventsBus bus.Bus,
 	enableSecretsEndpoint bool,
 	enableListingAllSecrets bool,
+	secretCreationPrefix string,
 	ff featureflags.FeatureFlags,
 	logsStream logsclient.Stream,
 	logGrpcClient logsclient.StreamGetter,
@@ -159,6 +160,7 @@ func NewTestkubeAPI(
 		eventsBus:                   eventsBus,
 		enableSecretsEndpoint:       enableSecretsEndpoint,
 		enableListingAllSecrets:     enableListingAllSecrets,
+		secretCreationPrefix:        secretCreationPrefix,
 		featureFlags:                ff,
 		logsStream:                  logsStream,
 		logGrpcClient:               logGrpcClient,
@@ -232,6 +234,7 @@ type TestkubeAPI struct {
 	eventsBus                   bus.Bus
 	enableSecretsEndpoint       bool
 	enableListingAllSecrets     bool
+	secretCreationPrefix        string
 	featureFlags                featureflags.FeatureFlags
 	logsStream                  logsclient.Stream
 	logGrpcClient               logsclient.StreamGetter

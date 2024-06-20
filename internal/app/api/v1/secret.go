@@ -54,7 +54,6 @@ func (s *TestkubeAPI) ListSecretsHandler() fiber.Handler {
 	}
 }
 
-// TODO: How to avoid exposing information about existing secret when enableSecretEndpoint=false
 func (s *TestkubeAPI) CreateSecretHandler() fiber.Handler {
 	errPrefix := "failed to create secret"
 	return func(c *fiber.Ctx) (err error) {
@@ -96,7 +95,7 @@ func (s *TestkubeAPI) CreateSecretHandler() fiber.Handler {
 
 		// Create the resource
 		secret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{Name: input.Name, Labels: input.Labels},
+			ObjectMeta: metav1.ObjectMeta{Name: s.secretCreationPrefix + input.Name, Labels: input.Labels},
 			Type:       corev1.SecretType(input.Type_),
 			StringData: input.Data,
 		}

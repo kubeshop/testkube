@@ -93,6 +93,7 @@ type Config struct {
 	EnableDebugServer                           bool          `envconfig:"ENABLE_DEBUG_SERVER" default:"false"`
 	EnableSecretsEndpoint                       bool          `envconfig:"ENABLE_SECRETS_ENDPOINT" default:"false"`
 	EnableListingAllSecrets                     bool          `envconfig:"ENABLE_LISTING_ALL_SECRETS" default:"false"`
+	SecretCreationPrefix                        string        `envconfig:"SECRET_CREATION_PREFIX" default:"testkube-"`
 	DisableMongoMigrations                      bool          `envconfig:"DISABLE_MONGO_MIGRATIONS" default:"false"`
 	Debug                                       bool          `envconfig:"DEBUG" default:"false"`
 	Trace                                       bool          `envconfig:"TRACE" default:"false"`
