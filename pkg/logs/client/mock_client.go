@@ -9,6 +9,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
+
 	events "github.com/kubeshop/testkube/pkg/logs/events"
 )
 

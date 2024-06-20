@@ -11,6 +11,9 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
 	"github.com/kubeshop/testkube/pkg/mapper/webhooks"
+	"github.com/kubeshop/testkube/pkg/repository/result"
+	"github.com/kubeshop/testkube/pkg/repository/testresult"
+	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 )
 
 var _ common.ListenerLoader = (*WebhooksLoader)(nil)
@@ -20,21 +23,29 @@ type WebhooksLister interface {
 	List(selector string) (*executorsv1.WebhookList, error)
 }
 
-func NewWebhookLoader(log *zap.SugaredLogger, webhooksClient WebhooksLister,
-	templatesClient templatesclientv1.Interface, metrics v1.Metrics) *WebhooksLoader {
+func NewWebhookLoader(log *zap.SugaredLogger, webhooksClient WebhooksLister, templatesClient templatesclientv1.Interface,
+	testExecutionResults result.Repository, testSuiteExecutionResults testresult.Repository, testWorkflowExecutionResults testworkflow.Repository,
+	metrics v1.Metrics,
+) *WebhooksLoader {
 	return &WebhooksLoader{
-		log:             log,
-		WebhooksClient:  webhooksClient,
-		templatesClient: templatesClient,
-		metrics:         metrics,
+		log:                          log,
+		WebhooksClient:               webhooksClient,
+		templatesClient:              templatesClient,
+		testExecutionResults:         testExecutionResults,
+		testSuiteExecutionResults:    testSuiteExecutionResults,
+		testWorkflowExecutionResults: testWorkflowExecutionResults,
+		metrics:                      metrics,
 	}
 }
 
 type WebhooksLoader struct {
-	log             *zap.SugaredLogger
-	WebhooksClient  WebhooksLister
-	templatesClient templatesclientv1.Interface
-	metrics         v1.Metrics
+	log                          *zap.SugaredLogger
+	WebhooksClient               WebhooksLister
+	templatesClient              templatesclientv1.Interface
+	testExecutionResults         result.Repository
+	testSuiteExecutionResults    testresult.Repository
+	testWorkflowExecutionResults testworkflow.Repository
+	metrics                      v1.Metrics
 }
 
 func (r WebhooksLoader) Kind() string {
@@ -71,7 +82,8 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 		types := webhooks.MapEventArrayToCRDEvents(webhook.Spec.Events)
 		name := fmt.Sprintf("%s.%s", webhook.ObjectMeta.Namespace, webhook.ObjectMeta.Name)
 		listeners = append(listeners, NewWebhookListener(name, webhook.Spec.Uri, webhook.Spec.Selector, types,
-			webhook.Spec.PayloadObjectField, payloadTemplate, webhook.Spec.Headers, webhook.Spec.Disabled, r.metrics))
+			webhook.Spec.PayloadObjectField, payloadTemplate, webhook.Spec.Headers, webhook.Spec.Disabled,
+			webhook.Spec.OnStateChange, r.testExecutionResults, r.testSuiteExecutionResults, r.testWorkflowExecutionResults, r.metrics))
 	}
 
 	return listeners, nil

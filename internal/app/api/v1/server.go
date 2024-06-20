@@ -69,7 +69,7 @@ const (
 func NewTestkubeAPI(
 	namespace string,
 	testExecutionResults result.Repository,
-	testsuiteExecutionsResults testresult.Repository,
+	testSuiteExecutionsResults testresult.Repository,
 	testWorkflowResults testworkflow.Repository,
 	testWorkflowOutput testworkflow.OutputRepository,
 	testsClient *testsclientv3.TestsClient,
@@ -125,7 +125,7 @@ func NewTestkubeAPI(
 
 	s := TestkubeAPI{
 		HTTPServer:                  server.NewServer(httpConfig),
-		TestExecutionResults:        testsuiteExecutionsResults,
+		TestExecutionResults:        testSuiteExecutionsResults,
 		ExecutionResults:            testExecutionResults,
 		TestWorkflowResults:         testWorkflowResults,
 		TestWorkflowOutput:          testWorkflowOutput,
@@ -169,7 +169,7 @@ func NewTestkubeAPI(
 	// will be reused in websockets handler
 	s.WebsocketLoader = ws.NewWebsocketLoader()
 
-	s.Events.Loader.Register(webhook.NewWebhookLoader(s.Log, webhookClient, templatesClient, metrics))
+	s.Events.Loader.Register(webhook.NewWebhookLoader(s.Log, webhookClient, templatesClient, testExecutionResults, testSuiteExecutionsResults, testWorkflowResults, metrics))
 	s.Events.Loader.Register(s.WebsocketLoader)
 	s.Events.Loader.Register(s.slackLoader)
 

@@ -23,6 +23,7 @@ func NewCreateWebhookCmd() *cobra.Command {
 		headers                  map[string]string
 		payloadTemplateReference string
 		update                   bool
+		onStateChange            bool
 	)
 
 	cmd := &cobra.Command{
@@ -112,6 +113,7 @@ func NewCreateWebhookCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&update, "update", false, "update, if webhook already exists")
 	cmd.Flags().Bool("disable", false, "disable webhook")
 	cmd.Flags().Bool("enable", false, "enable webhook")
+	cmd.Flags().BoolVar(&onStateChange, "on-state-change", false, "specify whether webhook should be triggered only on a state change")
 
 	return cmd
 }

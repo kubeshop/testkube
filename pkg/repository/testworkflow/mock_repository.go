@@ -5,12 +5,12 @@
 package testworkflow
 
 import (
-	"context"
-	"reflect"
+	context "context"
+	reflect "reflect"
+	time "time"
 
-	"github.com/golang/mock/gomock"
-
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	gomock "github.com/golang/mock/gomock"
+	testkube "github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 // MockRepository is a mock of Repository interface.
@@ -186,6 +186,21 @@ func (m *MockRepository) GetLatestByTestWorkflows(arg0 context.Context, arg1 []s
 func (mr *MockRepositoryMockRecorder) GetLatestByTestWorkflows(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLatestByTestWorkflows", reflect.TypeOf((*MockRepository)(nil).GetLatestByTestWorkflows), arg0, arg1)
+}
+
+// GetPreviousFinishedState mocks base method.
+func (m *MockRepository) GetPreviousFinishedState(arg0 context.Context, arg1 string, arg2 time.Time) (testkube.TestWorkflowStatus, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPreviousFinishedState", arg0, arg1, arg2)
+	ret0, _ := ret[0].(testkube.TestWorkflowStatus)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetPreviousFinishedState indicates an expected call of GetPreviousFinishedState.
+func (mr *MockRepositoryMockRecorder) GetPreviousFinishedState(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPreviousFinishedState", reflect.TypeOf((*MockRepository)(nil).GetPreviousFinishedState), arg0, arg1, arg2)
 }
 
 // GetRunning mocks base method.

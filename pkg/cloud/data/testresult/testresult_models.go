@@ -58,6 +58,15 @@ type GetExecutionsResponse struct {
 	TestSuiteExecutions []testkube.TestSuiteExecution `json:"testSuiteExecutions"`
 }
 
+type GetPreviousFinishedStateRequest struct {
+	TestSuiteName string
+	Date          time.Time
+}
+
+type GetPreviousFinishedStateResponse struct {
+	Result testkube.TestSuiteExecutionStatus
+}
+
 type InsertRequest struct {
 	TestSuiteExecution testkube.TestSuiteExecution `json:"testSuiteExecution"`
 }

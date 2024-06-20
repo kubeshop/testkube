@@ -202,6 +202,21 @@ func (mr *MockRepositoryMockRecorder) GetLatestByTestSuites(arg0, arg1 interface
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLatestByTestSuites", reflect.TypeOf((*MockRepository)(nil).GetLatestByTestSuites), arg0, arg1)
 }
 
+// GetPreviousFinishedState mocks base method.
+func (m *MockRepository) GetPreviousFinishedState(arg0 context.Context, arg1 string, arg2 time.Time) (testkube.TestSuiteExecutionStatus, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPreviousFinishedState", arg0, arg1, arg2)
+	ret0, _ := ret[0].(testkube.TestSuiteExecutionStatus)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetPreviousFinishedState indicates an expected call of GetPreviousFinishedState.
+func (mr *MockRepositoryMockRecorder) GetPreviousFinishedState(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPreviousFinishedState", reflect.TypeOf((*MockRepository)(nil).GetPreviousFinishedState), arg0, arg1, arg2)
+}
+
 // GetTestSuiteMetrics mocks base method.
 func (m *MockRepository) GetTestSuiteMetrics(arg0 context.Context, arg1 string, arg2, arg3 int) (testkube.ExecutionsMetrics, error) {
 	m.ctrl.T.Helper()

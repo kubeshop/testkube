@@ -2,6 +2,7 @@ package testworkflow
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -429,4 +430,29 @@ func (r *MongoRepository) GetTestWorkflowMetrics(ctx context.Context, name strin
 	}
 
 	return metrics, nil
+}
+
+// GetPreviousFinishedState gets previous finished execution state by test workflow
+func (r *MongoRepository) GetPreviousFinishedState(ctx context.Context, testWorkflowName string, date time.Time) (testkube.TestWorkflowStatus, error) {
+	opts := options.FindOne().SetProjection(bson.M{"result.status": 1}).SetSort(bson.D{{Key: "result.finishedat", Value: -1}})
+	filter := bson.D{
+		{Key: "workflow.name", Value: testWorkflowName},
+		{Key: "result.finishedat", Value: bson.M{"$lt": date}},
+		{Key: "result.status", Value: bson.M{"$in": []string{"passed", "failed", "skipped", "aborted", "timeout"}}},
+	}
+
+	var result testkube.TestWorkflowExecution
+	err := r.Coll.FindOne(ctx, filter, opts).Decode(&result)
+	if err != nil && err == mongo.ErrNoDocuments {
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("error decoding previous finished execution status: %w", err)
+	}
+
+	if result.Result == nil || result.Result.Status == nil {
+		return "", nil
+	}
+
+	return *result.Result.Status, nil
 }

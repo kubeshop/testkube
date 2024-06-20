@@ -2,6 +2,7 @@ package testresult
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -540,4 +541,28 @@ func (r *MongoRepository) GetTestSuiteMetrics(ctx context.Context, name string, 
 	}
 
 	return metrics, nil
+}
+
+// GetPreviousFinishedState gets previous finished execution state by test
+func (r *MongoRepository) GetPreviousFinishedState(ctx context.Context, testSuiteName string, date time.Time) (testkube.TestSuiteExecutionStatus, error) {
+	opts := options.FindOne().SetProjection(bson.M{"status": 1}).SetSort(bson.D{{Key: "endtime", Value: -1}})
+	filter := bson.D{
+		{Key: "testsuite.name", Value: testSuiteName},
+		{Key: "endtime", Value: bson.M{"$lt": date}},
+		{Key: "status", Value: bson.M{"$in": []string{"passed", "failed", "skipped", "aborted", "timeout"}}},
+	}
+
+	var result testkube.TestSuiteExecution
+	err := r.Coll.FindOne(ctx, filter, opts).Decode(&result)
+	if err != nil && err == mongo.ErrNoDocuments {
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("error getting previous finished execution status: %w", err)
+	}
+	if result.Status == nil {
+		return "", nil
+	}
+
+	return *result.Status, nil
 }

@@ -2,6 +2,7 @@ package webhook
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -16,6 +17,9 @@ import (
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
 	thttp "github.com/kubeshop/testkube/pkg/http"
 	"github.com/kubeshop/testkube/pkg/log"
+	"github.com/kubeshop/testkube/pkg/repository/result"
+	"github.com/kubeshop/testkube/pkg/repository/testresult"
+	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/utils"
 	"github.com/kubeshop/testkube/pkg/utils/text"
 )
@@ -24,34 +28,45 @@ var _ common.Listener = (*WebhookListener)(nil)
 
 func NewWebhookListener(name, uri, selector string, events []testkube.EventType,
 	payloadObjectField, payloadTemplate string, headers map[string]string, disabled bool,
-	metrics v1.Metrics) *WebhookListener {
+	onStateChange bool,
+	testExecutionResults result.Repository,
+	testSuiteExecutionResults testresult.Repository,
+	testWorkflowExecutionResults testworkflow.Repository, metrics v1.Metrics) *WebhookListener {
 	return &WebhookListener{
-		name:               name,
-		Uri:                uri,
-		Log:                log.DefaultLogger,
-		HttpClient:         thttp.NewClient(),
-		selector:           selector,
-		events:             events,
-		payloadObjectField: payloadObjectField,
-		payloadTemplate:    payloadTemplate,
-		headers:            headers,
-		disabled:           disabled,
-		metrics:            metrics,
+		name:                         name,
+		Uri:                          uri,
+		Log:                          log.DefaultLogger,
+		HttpClient:                   thttp.NewClient(),
+		selector:                     selector,
+		events:                       events,
+		payloadObjectField:           payloadObjectField,
+		payloadTemplate:              payloadTemplate,
+		headers:                      headers,
+		disabled:                     disabled,
+		onStateChange:                onStateChange,
+		testExecutionResults:         testExecutionResults,
+		testSuiteExecutionResults:    testSuiteExecutionResults,
+		testWorkflowExecutionResults: testWorkflowExecutionResults,
+		metrics:                      metrics,
 	}
 }
 
 type WebhookListener struct {
-	name               string
-	Uri                string
-	Log                *zap.SugaredLogger
-	HttpClient         *http.Client
-	events             []testkube.EventType
-	selector           string
-	payloadObjectField string
-	payloadTemplate    string
-	headers            map[string]string
-	disabled           bool
-	metrics            v1.Metrics
+	name                         string
+	Uri                          string
+	Log                          *zap.SugaredLogger
+	HttpClient                   *http.Client
+	events                       []testkube.EventType
+	selector                     string
+	payloadObjectField           string
+	payloadTemplate              string
+	headers                      map[string]string
+	disabled                     bool
+	onStateChange                bool
+	testExecutionResults         result.Repository
+	testSuiteExecutionResults    testresult.Repository
+	testWorkflowExecutionResults testworkflow.Repository
+	metrics                      v1.Metrics
 }
 
 func (l *WebhookListener) Name() string {
@@ -75,6 +90,7 @@ func (l *WebhookListener) Metadata() map[string]string {
 		"payloadTemplate":    l.payloadTemplate,
 		"headers":            fmt.Sprintf("%v", l.headers),
 		"disabled":           fmt.Sprint(l.disabled),
+		"onStateChange":      fmt.Sprint(l.onStateChange),
 	}
 }
 
@@ -130,6 +146,16 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 		l.Log.With(event.Log()...).Debug("webhook listener is disabled for test workflow execution")
 		result = testkube.NewSuccessEventResult(event.Id, "webhook listener is disabled for test workflow execution")
 		return
+	}
+
+	if l.onStateChange {
+		changed, err := l.hasStateChanges(event)
+		if err != nil {
+			l.Log.With(event.Log()...).Errorw(fmt.Sprintf("could not get previous finished state for test %s", event.TestExecution.TestName), "error", err)
+		}
+		if !changed {
+			return testkube.NewSuccessEventResult(event.Id, "webhook set to state change only; state has not changed")
+		}
 	}
 
 	body := bytes.NewBuffer([]byte{})
@@ -245,4 +271,51 @@ func (l *WebhookListener) processTemplate(field, body string, event testkube.Eve
 	}
 
 	return buffer.Bytes(), nil
+}
+
+func (l *WebhookListener) hasStateChanges(event testkube.Event) (bool, error) {
+	log := l.Log.With(event.Log()...)
+
+	if event.TestExecution != nil && event.TestExecution.ExecutionResult != nil {
+		prevStatus, err := l.testExecutionResults.GetPreviousFinishedState(context.Background(), event.TestExecution.TestName, event.TestExecution.EndTime)
+		if err != nil {
+			return false, err
+		}
+		if prevStatus == "" {
+			log.Debugw(fmt.Sprintf("no previous finished state for test %s", event.TestExecution.TestName))
+			return true, nil
+		}
+
+		return *event.TestExecution.ExecutionResult.Status != prevStatus, nil
+	}
+
+	if event.TestSuiteExecution != nil && event.TestSuiteExecution.Status != nil {
+		prevStatus, err := l.testSuiteExecutionResults.GetPreviousFinishedState(context.Background(), event.TestSuiteExecution.TestSuite.Name, event.TestSuiteExecution.EndTime)
+		if err != nil {
+			log.Errorw(fmt.Sprintf("could not get previous finished state for test suite %s", event.TestSuiteExecution.TestSuite.Name), "error", err)
+			return false, err
+		}
+		if prevStatus == "" {
+			log.Debugw(fmt.Sprintf("no previous finished state for test suite %s", event.TestSuiteExecution.TestSuite.Name))
+			return true, nil
+		}
+
+		return *event.TestSuiteExecution.Status != prevStatus, nil
+	}
+
+	if event.TestWorkflowExecution != nil && event.TestWorkflowExecution.Result != nil {
+		prevStatus, err := l.testWorkflowExecutionResults.GetPreviousFinishedState(context.Background(), event.TestWorkflowExecution.Workflow.Name, event.TestWorkflowExecution.StatusAt)
+
+		if err != nil {
+			log.Errorw(fmt.Sprintf("could not get previous finished state for test workflow %s", event.TestWorkflowExecution.Workflow.Name), "error", err)
+			return false, err
+		}
+		if prevStatus == "" {
+			log.Debugw(fmt.Sprintf("no previous finished state for test workflow %s", event.TestWorkflowExecution.Workflow.Name))
+			return true, nil
+		}
+		return *event.TestWorkflowExecution.Result.Status != prevStatus, nil
+	}
+
+	return false, nil
 }

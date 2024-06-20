@@ -120,6 +120,30 @@ func TestCloudResultRepository_GetLatestByTest(t *testing.T) {
 	assert.Equal(t, &endExecution, result)
 }
 
+func TestCloudResultRepository_GetPreviousFinishedState(t *testing.T) {
+	t.Parallel()
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockExecutor := executor.NewMockExecutor(mockCtrl)
+	repo := &CloudRepository{executor: mockExecutor}
+
+	testName := "test_name"
+	date := time.Date(2023, 5, 5, 0, 0, 0, 0, time.UTC)
+	expectedStatus := testkube.PASSED_ExecutionStatus
+	response, _ := json.Marshal(GetPreviousFinishedStateResponse{Result: expectedStatus})
+
+	mockExecutor.
+		EXPECT().
+		Execute(ctx, CmdResultGetPreviousFinishedState, GetPreviousFinishedStateRequest{TestName: testName, Date: date}).
+		Return(response, nil)
+
+	status, err := repo.GetPreviousFinishedState(ctx, testName, date)
+	assert.NoError(t, err)
+	assert.Equal(t, expectedStatus, status)
+}
+
 func TestCloudResultRepository_Insert(t *testing.T) {
 	t.Parallel()
 

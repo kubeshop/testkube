@@ -41,6 +41,8 @@ type Repository interface {
 	GetExecutionsTotals(ctx context.Context, filter ...Filter) (totals testkube.ExecutionsTotals, err error)
 	// GetExecutions gets executions using a filter, use filter with no data for all
 	GetExecutions(ctx context.Context, filter Filter) ([]testkube.TestSuiteExecution, error)
+	// GetPreviousFinishedState gets previous finished execution state by test
+	GetPreviousFinishedState(ctx context.Context, testName string, date time.Time) (testkube.TestSuiteExecutionStatus, error)
 	// Insert inserts new execution result
 	Insert(ctx context.Context, result testkube.TestSuiteExecution) error
 	// Update updates execution result

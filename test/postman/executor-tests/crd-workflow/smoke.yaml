@@ -63,7 +63,7 @@ spec:
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: postman-workflow-smoke-
+  name: postman-workflow-smoke-template
   labels:
     core-tests: workflows
 spec:
@@ -82,7 +82,7 @@ spec:
   steps:
   - name: Run from 
     workingDir: /data/repo/test/postman/executor-tests
-    :
+    template:
       name: official/postman/v1
       config:
         run: "newman run postman-executor-smoke.postman_collection.json --env-var TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value"
@@ -93,7 +93,7 @@ spec:
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: postman-workflow-smoke--without-envs
+  name: postman-workflow-smoke-template-without-envs
   labels:
     core-tests: workflows
 spec:
@@ -111,7 +111,7 @@ spec:
     workingDir: /data/repo/test/postman/executor-tests
   steps:
   - name: Run from 
-    :
+    template:
       name: official/postman/v1
       config:
         run: "newman run postman-executor-smoke-without-envs.postman_collection.json"

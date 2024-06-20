@@ -21,6 +21,7 @@ func MapCRDToAPI(item executorv1.Webhook) testkube.Webhook {
 		PayloadTemplateReference: item.Spec.PayloadTemplateReference,
 		Headers:                  item.Spec.Headers,
 		Disabled:                 item.Spec.Disabled,
+		OnStateChange:            item.Spec.OnStateChange,
 	}
 }
 
@@ -57,6 +58,7 @@ func MapAPIToCRD(request testkube.WebhookCreateRequest) executorv1.Webhook {
 			PayloadTemplateReference: request.PayloadTemplateReference,
 			Headers:                  request.Headers,
 			Disabled:                 request.Disabled,
+			OnStateChange:            request.OnStateChange,
 		},
 	}
 }
@@ -127,6 +129,10 @@ func MapUpdateToSpec(request testkube.WebhookUpdateRequest, webhook *executorv1.
 		webhook.Spec.Disabled = *request.Disabled
 	}
 
+	if request.OnStateChange != nil {
+		webhook.Spec.OnStateChange = *request.OnStateChange
+	}
+
 	return webhook
 }
 
@@ -176,6 +182,7 @@ func MapSpecToUpdate(webhook *executorv1.Webhook) (request testkube.WebhookUpdat
 	request.Labels = &webhook.Labels
 	request.Headers = &webhook.Spec.Headers
 	request.Disabled = &webhook.Spec.Disabled
+	request.OnStateChange = &webhook.Spec.OnStateChange
 
 	return request
 }

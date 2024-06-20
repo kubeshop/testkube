@@ -9,8 +9,8 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 	v1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
-	imageinspector "github.com/kubeshop/testkube/pkg/imageinspector"
 	expressions "github.com/kubeshop/testkube/pkg/expressions"
+	imageinspector "github.com/kubeshop/testkube/pkg/imageinspector"
 	v10 "k8s.io/api/core/v1"
 )
 
