@@ -208,7 +208,7 @@ spec:
       name: official/playwright/v1
       config:
         # params: --workers 4
-        tag: v1.32.3-jammy
+        version: v1.32.3-jammy
   events:
   - cronjob:
       cron: "30 */4 * * *"
