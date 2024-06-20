@@ -3345,8 +3345,107 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
+        403:
+          description: "secret is not controlled by Testkube"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         404:
           description: "secret has not been found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with communicating with kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+    patch:
+      tags:
+      - secrets
+      - api
+      summary: "Update secret"
+      description: "Update secret in the cluster"
+      operationId: updateSecret
+      requestBody:
+        description: secret data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SecretUpdate"
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Secret"
+        400:
+          description: "invalid input data"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        403:
+          description: "secret is not controlled by Testkube"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        404:
+          description: "secret not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with communicating with kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+    get:
+      tags:
+      - secrets
+      - api
+      summary: "Get secret"
+      description: "Get secret in the cluster"
+      operationId: getSecret
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Secret"
+        400:
+          description: "invalid input data"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        404:
+          description: "secret not found"
           content:
             application/problem+json:
               schema:
@@ -7577,6 +7676,27 @@ components:
         namespace:
           type: string
           description: secret namespace
+        owner:
+          $ref: "#/components/schemas/SecretOwner"
+        labels:
+          type: object
+          description: labels associated with the secret
+          additionalProperties:
+            type: string
+        data:
+          type: object
+          description: data to store in the secret
+          additionalProperties:
+            type: string
+
+    SecretUpdate:
+      description: Secret input information to update
+      type: object
+      properties:
+        name:
+          type: string
+          description: secret name
+          example: "git-secret"
         owner:
           $ref: "#/components/schemas/SecretOwner"
         labels:

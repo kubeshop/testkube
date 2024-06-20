@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/mapper/secrets"
 )
 
 // ListSecretsHandler list secrets and keys
@@ -42,42 +42,7 @@ func (s *TestkubeAPI) ListSecretsHandler() fiber.Handler {
 
 		results := make([]testkube.Secret, len(list.Items))
 		for i, secret := range list.Items {
-			// Fetch the available keys
-			keys := make([]string, 0, len(secret.Data)+len(secret.StringData))
-			for k := range secret.Data {
-				keys = append(keys, k)
-			}
-			for k := range secret.StringData {
-				keys = append(keys, k)
-			}
-
-			// Fetch ownership details
-			var owner *testkube.SecretOwner
-			kind, name, _ := strings.Cut(secret.Labels["testkubeOwner"], "/")
-			if kind != "" && name != "" {
-				owner = &testkube.SecretOwner{
-					Kind: common.Ptr(testkube.SecretOwnerKind(kind)),
-					Name: name,
-				}
-			}
-
-			// Ensure it's not created externally
-			controlled := secret.Labels["createdBy"] == "testkube"
-
-			// Clean up the labels
-			delete(secret.Labels, "createdBy")
-			delete(secret.Labels, "testkubeOwner")
-			if len(secret.Labels) == 0 {
-				secret.Labels = nil
-			}
-
-			results[i] = testkube.Secret{
-				Name:       secret.Name,
-				Labels:     secret.Labels,
-				Controlled: controlled,
-				Owner:      owner,
-				Keys:       keys,
-			}
+			results[i] = secrets.MapSecretKubeToAPI(&secret)
 		}
 
 		return c.JSON(results)
@@ -110,8 +75,9 @@ func (s *TestkubeAPI) CreateSecretHandler() fiber.Handler {
 			v.Labels = map[string]string{}
 		}
 		v.Labels["createdBy"] = "testkube"
-		if v.Owner != nil && v.Owner.Kind != nil && *v.Owner.Kind != "" && v.Owner.Name != "" {
-			v.Labels["testkubeOwner"] = fmt.Sprintf("%s/%s", v.Owner.Kind, v.Owner.Name)
+		owner := secrets.MapSecretOwnerAPIToKube(v.Owner)
+		if owner == "" {
+			v.Labels["testkubeOwner"] = owner
 		} else {
 			delete(v.Labels, "testkubeOwner")
 		}
@@ -165,5 +131,106 @@ func (s *TestkubeAPI) DeleteSecretHandler() fiber.Handler {
 		}
 
 		return c.SendStatus(http.StatusNoContent)
+	}
+}
+
+func (s *TestkubeAPI) UpdateSecretHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		name := c.Params("id")
+		errPrefix := fmt.Sprintf("failed to update secret '%s'", name)
+
+		namespace := c.Query("namespace")
+		if namespace == "" {
+			namespace = s.Namespace
+		}
+
+		// Deserialize resource
+		var input *testkube.SecretUpdate
+		err := c.BodyParser(&input)
+		if err != nil {
+			return s.BadRequest(c, errPrefix, "invalid body", err)
+		}
+
+		// Get the secret details
+		secret, err := s.Clientset.CoreV1().Secrets(namespace).Get(c.Context(), name, metav1.GetOptions{})
+		if err != nil {
+			if IsNotFound(err) {
+				return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: secret not found", errPrefix))
+			}
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not get secret: %s", errPrefix, err))
+		}
+
+		// Disallow when it is not controlled by Testkube
+		if secret.Labels["createdBy"] != "testkube" {
+			if s.enableSecretsEndpoint {
+				return s.Error(c, http.StatusForbidden, fmt.Errorf("%s: secret is not controlled by Testkube", errPrefix))
+			} else {
+				// Make it the same as when it's actually not found, to avoid blind search
+				return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: secret not found", errPrefix))
+			}
+		}
+
+		if input.Labels != nil {
+			labels := *input.Labels
+			if labels == nil {
+				labels = map[string]string{}
+			}
+			labels["createdBy"] = "testkube"
+			delete(labels, "testkubeOwner")
+			if secret.Labels["testkubeOwner"] != "" {
+				labels["testkubeOwner"] = secret.Labels["testkubeOwner"]
+			}
+			secret.Labels = labels
+		}
+
+		if input.Data != nil && *input.Data != nil {
+			secret.Data = nil
+			secret.StringData = *input.Data
+		}
+
+		if input.Owner != nil {
+			owner := secrets.MapSecretOwnerAPIToKube(input.Owner)
+			if owner == "" {
+				secret.Labels["testkubeOwner"] = owner
+			} else {
+				delete(secret.Labels, "testkubeOwner")
+			}
+		}
+
+		// Update the secret
+		secret, err = s.Clientset.CoreV1().Secrets(namespace).Update(c.Context(), secret, metav1.UpdateOptions{})
+		if err != nil {
+			return s.BadRequest(c, errPrefix, "client error", err)
+		}
+
+		return c.JSON(secrets.MapSecretKubeToAPI(secret))
+	}
+}
+
+func (s *TestkubeAPI) GetSecretHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		name := c.Params("id")
+		errPrefix := fmt.Sprintf("failed to get secret '%s'", name)
+
+		namespace := c.Query("namespace")
+		if namespace == "" {
+			namespace = s.Namespace
+		}
+
+		// Get the secret details
+		secret, err := s.Clientset.CoreV1().Secrets(namespace).Get(c.Context(), name, metav1.GetOptions{})
+		if err != nil {
+			if IsNotFound(err) {
+				return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: secret not found", errPrefix))
+			}
+			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not get secret: %s", errPrefix, err))
+		}
+
+		// Make it the same as when it's actually not found when disabled, to avoid blind search
+		if secret.Labels["createdBy"] != "testkube" && !s.enableSecretsEndpoint {
+			return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: secret not found", errPrefix))
+		}
+
+		return c.JSON(secrets.MapSecretKubeToAPI(secret))
 	}
 }
