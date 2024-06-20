@@ -7649,6 +7649,10 @@ components:
           type: string
           description: secret name
           example: "git-secret"
+        type:
+          type: string
+          description: secret type
+          default: Opaque
         controlled:
           type: boolean
           description: is this Secret controlled by Testkube
@@ -7677,6 +7681,10 @@ components:
           type: string
           description: secret name
           example: "git-secret"
+        type:
+          type: string
+          description: secret type
+          default: Opaque
         namespace:
           type: string
           description: secret namespace

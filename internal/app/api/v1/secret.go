@@ -86,6 +86,7 @@ func (s *TestkubeAPI) CreateSecretHandler() fiber.Handler {
 		// Create the resource
 		secret := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{Name: input.Name, Labels: input.Labels},
+			Type:       corev1.SecretType(input.Type_),
 			StringData: input.Data,
 		}
 		secret, err = s.Clientset.CoreV1().Secrets(input.Namespace).Create(c.Context(), secret, metav1.CreateOptions{})

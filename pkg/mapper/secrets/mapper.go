@@ -47,8 +47,14 @@ func MapSecretKubeToAPI(secret *corev1.Secret) testkube.Secret {
 		secret.Labels = nil
 	}
 
+	secretType := string(secret.Type)
+	if secret.Type == corev1.SecretTypeOpaque {
+		secretType = ""
+	}
+
 	return testkube.Secret{
 		Name:       secret.Name,
+		Type_:      secretType,
 		Labels:     secret.Labels,
 		Controlled: controlled,
 		Owner:      owner,

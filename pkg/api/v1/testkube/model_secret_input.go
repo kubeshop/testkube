@@ -13,6 +13,8 @@ package testkube
 type SecretInput struct {
 	// secret name
 	Name string `json:"name"`
+	// secret type
+	Type_ string `json:"type,omitempty"`
 	// secret namespace
 	Namespace string       `json:"namespace,omitempty"`
 	Owner     *SecretOwner `json:"owner,omitempty"`

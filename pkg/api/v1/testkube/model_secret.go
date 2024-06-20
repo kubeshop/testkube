@@ -13,6 +13,8 @@ package testkube
 type Secret struct {
 	// secret name
 	Name string `json:"name"`
+	// secret type
+	Type_ string `json:"type,omitempty"`
 	// is this Secret controlled by Testkube
 	Controlled bool         `json:"controlled"`
 	Owner      *SecretOwner `json:"owner,omitempty"`
