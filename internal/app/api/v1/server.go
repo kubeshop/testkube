@@ -511,6 +511,9 @@ func (s *TestkubeAPI) InitRoutes() {
 	// Register TestWorkflows as additional source for labels
 	s.WithLabelSources(s.TestWorkflowsClient, s.TestWorkflowTemplatesClient)
 
+	secretsConfig := root.Group("/secrets-config")
+	secretsConfig.Get("/", s.GetSecretConfigHandler())
+
 	secrets := root.Group("/secrets")
 	secrets.Get("/", s.ListSecretsHandler())
 	secrets.Post("/", s.CreateSecretHandler())

@@ -15,6 +15,20 @@ import (
 	"github.com/kubeshop/testkube/pkg/mapper/secrets"
 )
 
+func (s *TestkubeAPI) GetSecretConfigHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		return c.JSON(testkube.SecretConfig{
+			Prefix:     s.secretCreationPrefix,
+			List:       s.enableSecretsEndpoint,
+			ListAll:    s.enableSecretsEndpoint && s.enableListingAllSecrets,
+			Create:     s.enableSecretsEndpoint && !s.disableSecretCreation,
+			Modify:     s.enableSecretsEndpoint && !s.disableSecretCreation,
+			Delete:     s.enableSecretsEndpoint && !s.disableSecretCreation,
+			AutoCreate: !s.disableSecretCreation,
+		})
+	}
+}
+
 // ListSecretsHandler list secrets and keys
 func (s *TestkubeAPI) ListSecretsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {

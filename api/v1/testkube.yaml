@@ -3263,6 +3263,22 @@ paths:
                 items:
                   $ref: "#/components/schemas/Problem"
 
+  /secrets-config:
+    get:
+      tags:
+      - secrets
+      - api
+      summary: "Get secrets configuration"
+      description: "Get configuration for secrets access in Testkube"
+      operationId: getSecretConfig
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SecretConfig"
+
   /secrets:
     get:
       tags:
@@ -7772,6 +7788,39 @@ components:
       enum:
       - TestWorkflow
       - TestWorkflowTemplate
+
+    SecretConfig:
+      type: object
+      required:
+      - prefix
+      - list
+      - listAll
+      - create
+      - modify
+      - delete
+      - autoCreate
+      properties:
+        prefix:
+          type: string
+          description: prefix for the secrets created via Testkube
+        list:
+          type: boolean
+          description: allow to list secrets created via Testkube
+        listAll:
+          type: boolean
+          description: allow to list all secrets
+        create:
+          type: boolean
+          description: allow to create a new secret via Testkube
+        modify:
+          type: boolean
+          description: allow to modify a secret created via Testkube
+        delete:
+          type: boolean
+          description: allow to delete a secret created via Testkube
+        autoCreate:
+          type: boolean
+          description: allow to automatically create secrets via Testkube for sensitive credentials
 
     TestWorkflow:
       type: object
