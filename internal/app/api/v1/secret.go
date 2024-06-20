@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kubeshop/testkube/internal/common"
@@ -53,42 +54,46 @@ func (s *TestkubeAPI) CreateSecretHandler() fiber.Handler {
 	errPrefix := "failed to create secret"
 	return func(c *fiber.Ctx) (err error) {
 		// Deserialize resource
-		var v *testkube.SecretInput
-		err = c.BodyParser(&v)
+		var input *testkube.SecretInput
+		err = c.BodyParser(&input)
 		if err != nil {
 			return s.BadRequest(c, errPrefix, "invalid body", err)
 		}
 
 		// Validate resource
-		if v == nil || v.Name == "" {
+		if input == nil || input.Name == "" {
 			return s.BadRequest(c, errPrefix, "invalid body", errors.New("name is required"))
 		}
-		if len(v.Data) == 0 {
+		if len(input.Data) == 0 {
 			return s.BadRequest(c, errPrefix, "invalid body", errors.New("data should not be empty"))
 		}
 
 		// Apply defaults
-		if v.Namespace == "" {
-			v.Namespace = s.Namespace
+		if input.Namespace == "" {
+			input.Namespace = s.Namespace
 		}
-		if v.Labels == nil {
-			v.Labels = map[string]string{}
+		if input.Labels == nil {
+			input.Labels = map[string]string{}
 		}
-		v.Labels["createdBy"] = "testkube"
-		owner := secrets.MapSecretOwnerAPIToKube(v.Owner)
+		input.Labels["createdBy"] = "testkube"
+		owner := secrets.MapSecretOwnerAPIToKube(input.Owner)
 		if owner == "" {
-			v.Labels["testkubeOwner"] = owner
+			input.Labels["testkubeOwner"] = owner
 		} else {
-			delete(v.Labels, "testkubeOwner")
+			delete(input.Labels, "testkubeOwner")
 		}
 
 		// Create the resource
-		err = s.SecretClient.Create(v.Name, v.Labels, v.Data, v.Namespace)
+		secret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Name: input.Name, Labels: input.Labels},
+			StringData: input.Data,
+		}
+		secret, err = s.Clientset.CoreV1().Secrets(input.Namespace).Create(c.Context(), secret, metav1.CreateOptions{})
 		if err != nil {
 			return s.BadRequest(c, errPrefix, "client error", err)
 		}
 
-		return c.SendStatus(http.StatusNoContent)
+		return c.JSON(secret)
 	}
 }
 
