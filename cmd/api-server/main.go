@@ -609,6 +609,7 @@ func main() {
 		mode,
 		eventBus,
 		cfg.EnableSecretsEndpoint,
+		cfg.EnableListingAllSecrets,
 		features,
 		logsStream,
 		logGrpcClient,

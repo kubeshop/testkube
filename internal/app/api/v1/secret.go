@@ -20,6 +20,10 @@ func (s *TestkubeAPI) ListSecretsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to list secrets"
 
+		if !s.enableSecretsEndpoint {
+			return s.Error(c, http.StatusForbidden, fmt.Errorf("%s: secret management is disabled", errPrefix))
+		}
+
 		all, err := strconv.ParseBool(c.Query("all", "false"))
 		if err != nil {
 			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse all parameter: %s", errPrefix, err))
@@ -31,7 +35,7 @@ func (s *TestkubeAPI) ListSecretsHandler() fiber.Handler {
 		}
 
 		selector := "createdBy=testkube"
-		if all && s.enableSecretsEndpoint {
+		if all && s.enableListingAllSecrets {
 			selector = ""
 		}
 		list, err := s.Clientset.CoreV1().Secrets(namespace).List(c.Context(), metav1.ListOptions{
@@ -50,9 +54,16 @@ func (s *TestkubeAPI) ListSecretsHandler() fiber.Handler {
 	}
 }
 
+// TODO: How to avoid exposing information about existing secret when enableSecretEndpoint=false
 func (s *TestkubeAPI) CreateSecretHandler() fiber.Handler {
 	errPrefix := "failed to create secret"
 	return func(c *fiber.Ctx) (err error) {
+		if !s.enableSecretsEndpoint {
+			return s.Error(c, http.StatusForbidden, fmt.Errorf("%s: secret management is disabled", errPrefix))
+		} else if !s.disableSecretCreation {
+			return s.Error(c, http.StatusForbidden, fmt.Errorf("%s: secret modifications are disabled", errPrefix))
+		}
+
 		// Deserialize resource
 		var input *testkube.SecretInput
 		err = c.BodyParser(&input)
@@ -103,6 +114,12 @@ func (s *TestkubeAPI) DeleteSecretHandler() fiber.Handler {
 		name := c.Params("id")
 		errPrefix := fmt.Sprintf("failed to delete secret '%s'", name)
 
+		if !s.enableSecretsEndpoint {
+			return s.Error(c, http.StatusForbidden, fmt.Errorf("%s: secret management is disabled", errPrefix))
+		} else if !s.disableSecretCreation {
+			return s.Error(c, http.StatusForbidden, fmt.Errorf("%s: secret modifications are disabled", errPrefix))
+		}
+
 		namespace := c.Query("namespace")
 		if namespace == "" {
 			namespace = s.Namespace
@@ -119,7 +136,7 @@ func (s *TestkubeAPI) DeleteSecretHandler() fiber.Handler {
 
 		// Disallow when it is not controlled by Testkube
 		if secret.Labels["createdBy"] != "testkube" {
-			if s.enableSecretsEndpoint {
+			if s.enableListingAllSecrets {
 				return s.Error(c, http.StatusForbidden, fmt.Errorf("%s: secret is not controlled by Testkube", errPrefix))
 			} else {
 				// Make it the same as when it's actually not found, to avoid blind search
@@ -150,6 +167,12 @@ func (s *TestkubeAPI) UpdateSecretHandler() fiber.Handler {
 			namespace = s.Namespace
 		}
 
+		if !s.enableSecretsEndpoint {
+			return s.Error(c, http.StatusForbidden, fmt.Errorf("%s: secret management is disabled", errPrefix))
+		} else if !s.disableSecretCreation {
+			return s.Error(c, http.StatusForbidden, fmt.Errorf("%s: secret modifications are disabled", errPrefix))
+		}
+
 		// Deserialize resource
 		var input *testkube.SecretUpdate
 		err := c.BodyParser(&input)
@@ -168,7 +191,7 @@ func (s *TestkubeAPI) UpdateSecretHandler() fiber.Handler {
 
 		// Disallow when it is not controlled by Testkube
 		if secret.Labels["createdBy"] != "testkube" {
-			if s.enableSecretsEndpoint {
+			if s.enableListingAllSecrets {
 				return s.Error(c, http.StatusForbidden, fmt.Errorf("%s: secret is not controlled by Testkube", errPrefix))
 			} else {
 				// Make it the same as when it's actually not found, to avoid blind search
@@ -218,6 +241,10 @@ func (s *TestkubeAPI) GetSecretHandler() fiber.Handler {
 		name := c.Params("id")
 		errPrefix := fmt.Sprintf("failed to get secret '%s'", name)
 
+		if !s.enableSecretsEndpoint {
+			return s.Error(c, http.StatusForbidden, fmt.Errorf("%s: secret management is disabled", errPrefix))
+		}
+
 		namespace := c.Query("namespace")
 		if namespace == "" {
 			namespace = s.Namespace
@@ -233,7 +260,7 @@ func (s *TestkubeAPI) GetSecretHandler() fiber.Handler {
 		}
 
 		// Make it the same as when it's actually not found when disabled, to avoid blind search
-		if secret.Labels["createdBy"] != "testkube" && !s.enableSecretsEndpoint {
+		if secret.Labels["createdBy"] != "testkube" && !s.enableListingAllSecrets {
 			return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: secret not found", errPrefix))
 		}
 
