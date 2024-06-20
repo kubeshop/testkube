@@ -574,6 +574,16 @@ func main() {
 
 	go testWorkflowExecutor.Recover(context.Background())
 
+	secretConfig := testkube.SecretConfig{
+		Prefix:     cfg.SecretCreationPrefix,
+		List:       cfg.EnableSecretsEndpoint,
+		ListAll:    cfg.EnableSecretsEndpoint && cfg.EnableListingAllSecrets,
+		Create:     cfg.EnableSecretsEndpoint && !cfg.DisableSecretCreation,
+		Modify:     cfg.EnableSecretsEndpoint && !cfg.DisableSecretCreation,
+		Delete:     cfg.EnableSecretsEndpoint && !cfg.DisableSecretCreation,
+		AutoCreate: !cfg.DisableSecretCreation,
+	}
+
 	api := apiv1.NewTestkubeAPI(
 		cfg.TestkubeNamespace,
 		resultsRepository,
@@ -608,13 +618,10 @@ func main() {
 		cfg.TestkubeHelmchartVersion,
 		mode,
 		eventBus,
-		cfg.EnableSecretsEndpoint,
-		cfg.EnableListingAllSecrets,
-		cfg.SecretCreationPrefix,
+		secretConfig,
 		features,
 		logsStream,
 		logGrpcClient,
-		cfg.DisableSecretCreation,
 		subscriptionChecker,
 		serviceAccountNames,
 		cfg.EnableK8sEvents,
@@ -671,7 +678,7 @@ func main() {
 			triggers.WithHostnameIdentifier(),
 			triggers.WithTestkubeNamespace(cfg.TestkubeNamespace),
 			triggers.WithWatcherNamespaces(cfg.TestkubeWatcherNamespaces),
-			triggers.WithDisableSecretCreation(cfg.DisableSecretCreation),
+			triggers.WithDisableSecretCreation(!secretConfig.AutoCreate),
 		)
 		log.DefaultLogger.Info("starting trigger service")
 		triggerService.Run(ctx)

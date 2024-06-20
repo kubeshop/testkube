@@ -100,13 +100,10 @@ func NewTestkubeAPI(
 	helmchartVersion string,
 	mode string,
 	eventsBus bus.Bus,
-	enableSecretsEndpoint bool,
-	enableListingAllSecrets bool,
-	secretCreationPrefix string,
+	secretConfig testkube.SecretConfig,
 	ff featureflags.FeatureFlags,
 	logsStream logsclient.Stream,
 	logGrpcClient logsclient.StreamGetter,
-	disableSecretCreation bool,
 	subscriptionChecker checktcl.SubscriptionChecker,
 	serviceAccountNames map[string]string,
 	enableK8sEvents bool,
@@ -158,13 +155,10 @@ func NewTestkubeAPI(
 		helmchartVersion:            helmchartVersion,
 		mode:                        mode,
 		eventsBus:                   eventsBus,
-		enableSecretsEndpoint:       enableSecretsEndpoint,
-		enableListingAllSecrets:     enableListingAllSecrets,
-		secretCreationPrefix:        secretCreationPrefix,
+		secretConfig:                secretConfig,
 		featureFlags:                ff,
 		logsStream:                  logsStream,
 		logGrpcClient:               logGrpcClient,
-		disableSecretCreation:       disableSecretCreation,
 		SubscriptionChecker:         subscriptionChecker,
 		LabelSources:                common.Ptr(make([]LabelSource, 0)),
 		ServiceAccountNames:         serviceAccountNames,
@@ -232,14 +226,11 @@ type TestkubeAPI struct {
 	helmchartVersion            string
 	mode                        string
 	eventsBus                   bus.Bus
-	enableSecretsEndpoint       bool
-	enableListingAllSecrets     bool
-	secretCreationPrefix        string
+	secretConfig                testkube.SecretConfig
 	featureFlags                featureflags.FeatureFlags
 	logsStream                  logsclient.Stream
 	logGrpcClient               logsclient.StreamGetter
 	proContext                  *config.ProContext
-	disableSecretCreation       bool
 	SubscriptionChecker         checktcl.SubscriptionChecker
 	LabelSources                *[]LabelSource
 	ServiceAccountNames         map[string]string
