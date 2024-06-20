@@ -7,6 +7,7 @@ import (
 
 	executorsv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
 	templatesclientv1 "github.com/kubeshop/testkube-operator/pkg/client/templates/v1"
+	v1 "github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
 	"github.com/kubeshop/testkube/pkg/mapper/webhooks"
@@ -19,11 +20,13 @@ type WebhooksLister interface {
 	List(selector string) (*executorsv1.WebhookList, error)
 }
 
-func NewWebhookLoader(log *zap.SugaredLogger, webhooksClient WebhooksLister, templatesClient templatesclientv1.Interface) *WebhooksLoader {
+func NewWebhookLoader(log *zap.SugaredLogger, webhooksClient WebhooksLister,
+	templatesClient templatesclientv1.Interface, metrics v1.Metrics) *WebhooksLoader {
 	return &WebhooksLoader{
 		log:             log,
 		WebhooksClient:  webhooksClient,
 		templatesClient: templatesClient,
+		metrics:         metrics,
 	}
 }
 
@@ -31,6 +34,7 @@ type WebhooksLoader struct {
 	log             *zap.SugaredLogger
 	WebhooksClient  WebhooksLister
 	templatesClient templatesclientv1.Interface
+	metrics         v1.Metrics
 }
 
 func (r WebhooksLoader) Kind() string {
@@ -66,7 +70,8 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 
 		types := webhooks.MapEventArrayToCRDEvents(webhook.Spec.Events)
 		name := fmt.Sprintf("%s.%s", webhook.ObjectMeta.Namespace, webhook.ObjectMeta.Name)
-		listeners = append(listeners, NewWebhookListener(name, webhook.Spec.Uri, webhook.Spec.Selector, types, webhook.Spec.PayloadObjectField, payloadTemplate, webhook.Spec.Headers, webhook.Spec.Disabled))
+		listeners = append(listeners, NewWebhookListener(name, webhook.Spec.Uri, webhook.Spec.Selector, types,
+			webhook.Spec.PayloadObjectField, payloadTemplate, webhook.Spec.Headers, webhook.Spec.Disabled, r.metrics))
 	}
 
 	return listeners, nil

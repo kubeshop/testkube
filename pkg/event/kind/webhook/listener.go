@@ -11,6 +11,7 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 
+	v1 "github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
 	thttp "github.com/kubeshop/testkube/pkg/http"
@@ -22,7 +23,8 @@ import (
 var _ common.Listener = (*WebhookListener)(nil)
 
 func NewWebhookListener(name, uri, selector string, events []testkube.EventType,
-	payloadObjectField, payloadTemplate string, headers map[string]string, disabled bool) *WebhookListener {
+	payloadObjectField, payloadTemplate string, headers map[string]string, disabled bool,
+	metrics v1.Metrics) *WebhookListener {
 	return &WebhookListener{
 		name:               name,
 		Uri:                uri,
@@ -34,6 +36,7 @@ func NewWebhookListener(name, uri, selector string, events []testkube.EventType,
 		payloadTemplate:    payloadTemplate,
 		headers:            headers,
 		disabled:           disabled,
+		metrics:            metrics,
 	}
 }
 
@@ -48,6 +51,7 @@ type WebhookListener struct {
 	payloadTemplate    string
 	headers            map[string]string
 	disabled           bool
+	metrics            v1.Metrics
 }
 
 func (l *WebhookListener) Name() string {
@@ -91,19 +95,41 @@ func (l *WebhookListener) Disabled() bool {
 }
 
 func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventResult) {
+	defer func() {
+		var eventType, resource, res string
+		if event.Resource != nil {
+			resource = string(*event.Resource)
+		}
+
+		if event.Type_ != nil {
+			eventType = string(*event.Type_)
+		}
+
+		res = "success"
+		if result.Error() != "" {
+			res = "error"
+		}
+
+		l.metrics.InWebhookEventCount(l.name, resource, eventType, res)
+	}()
+
 	switch {
 	case l.disabled:
 		l.Log.With(event.Log()...).Debug("webhook listener is disabled")
-		return testkube.NewSuccessEventResult(event.Id, "webhook listener is disabled")
+		result = testkube.NewSuccessEventResult(event.Id, "webhook listener is disabled")
+		return
 	case event.TestExecution != nil && event.TestExecution.DisableWebhooks:
 		l.Log.With(event.Log()...).Debug("webhook listener is disabled for test execution")
-		return testkube.NewSuccessEventResult(event.Id, "webhook listener is disabled for test execution")
+		result = testkube.NewSuccessEventResult(event.Id, "webhook listener is disabled for test execution")
+		return
 	case event.TestSuiteExecution != nil && event.TestSuiteExecution.DisableWebhooks:
 		l.Log.With(event.Log()...).Debug("webhook listener is disabled for test suite execution")
-		return testkube.NewSuccessEventResult(event.Id, "webhook listener is disabled for test suite execution")
+		result = testkube.NewSuccessEventResult(event.Id, "webhook listener is disabled for test suite execution")
+		return
 	case event.TestWorkflowExecution != nil && event.TestWorkflowExecution.DisableWebhooks:
 		l.Log.With(event.Log()...).Debug("webhook listener is disabled for test workflow execution")
-		return testkube.NewSuccessEventResult(event.Id, "webhook listener is disabled for test workflow execution")
+		result = testkube.NewSuccessEventResult(event.Id, "webhook listener is disabled for test workflow execution")
+		return
 	}
 
 	body := bytes.NewBuffer([]byte{})
@@ -114,7 +140,8 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 		var data []byte
 		data, err = l.processTemplate("payload", l.payloadTemplate, event)
 		if err != nil {
-			return testkube.NewFailedEventResult(event.Id, err)
+			result = testkube.NewFailedEventResult(event.Id, err)
+			return
 		}
 
 		_, err = body.Write(data)
@@ -130,18 +157,21 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 	if err != nil {
 		err = errors.Wrap(err, "webhook send encode error")
 		log.Errorw("webhook send encode error", "error", err)
-		return testkube.NewFailedEventResult(event.Id, err)
+		result = testkube.NewFailedEventResult(event.Id, err)
+		return
 	}
 
 	data, err := l.processTemplate("uri", l.Uri, event)
 	if err != nil {
-		return testkube.NewFailedEventResult(event.Id, err)
+		result = testkube.NewFailedEventResult(event.Id, err)
+		return
 	}
 
 	request, err := http.NewRequest(http.MethodPost, string(data), body)
 	if err != nil {
 		log.Errorw("webhook request creating error", "error", err)
-		return testkube.NewFailedEventResult(event.Id, err)
+		result = testkube.NewFailedEventResult(event.Id, err)
+		return
 	}
 
 	request.Header.Set("Content-Type", "application/json")
@@ -150,7 +180,8 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 		for i := range values {
 			data, err = l.processTemplate("header", *values[i], event)
 			if err != nil {
-				return testkube.NewFailedEventResult(event.Id, err)
+				result = testkube.NewFailedEventResult(event.Id, err)
+				return
 			}
 
 			*values[i] = string(data)
@@ -162,14 +193,16 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 	resp, err := l.HttpClient.Do(request)
 	if err != nil {
 		log.Errorw("webhook send error", "error", err)
-		return testkube.NewFailedEventResult(event.Id, err)
+		result = testkube.NewFailedEventResult(event.Id, err)
+		return
 	}
 	defer resp.Body.Close()
 
 	data, err = io.ReadAll(resp.Body)
 	if err != nil {
 		log.Errorw("webhook read response error", "error", err)
-		return testkube.NewFailedEventResult(event.Id, err)
+		result = testkube.NewFailedEventResult(event.Id, err)
+		return
 	}
 
 	responseStr := string(data)
@@ -177,11 +210,13 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 	if resp.StatusCode >= 400 {
 		err := fmt.Errorf("webhook response with bad status code: %d", resp.StatusCode)
 		log.Errorw("webhook send error", "error", err, "status", resp.StatusCode)
-		return testkube.NewFailedEventResult(event.Id, err).WithResult(responseStr)
+		result = testkube.NewFailedEventResult(event.Id, err).WithResult(responseStr)
+		return
 	}
 
 	log.Debugw("got webhook send result", "response", responseStr)
-	return testkube.NewSuccessEventResult(event.Id, responseStr)
+	result = testkube.NewSuccessEventResult(event.Id, responseStr)
+	return
 }
 
 func (l *WebhookListener) Kind() string {
