@@ -7653,6 +7653,14 @@ components:
           type: string
           description: secret type
           default: Opaque
+        createdAt:
+          type: string
+          format: date-time
+          example: "2022-07-30T06:54:15Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2022-07-30T06:54:15Z"
         controlled:
           type: boolean
           description: is this Secret controlled by Testkube

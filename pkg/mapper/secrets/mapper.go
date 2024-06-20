@@ -52,8 +52,17 @@ func MapSecretKubeToAPI(secret *corev1.Secret) testkube.Secret {
 		secretType = ""
 	}
 
+	updateTime := secret.CreationTimestamp.Time
+	for _, field := range secret.ManagedFields {
+		if field.Time.After(updateTime) {
+			updateTime = field.Time.Time
+		}
+	}
+
 	return testkube.Secret{
 		Name:       secret.Name,
+		CreatedAt:  secret.CreationTimestamp.Time,
+		UpdatedAt:  updateTime,
 		Type_:      secretType,
 		Labels:     secret.Labels,
 		Controlled: controlled,
