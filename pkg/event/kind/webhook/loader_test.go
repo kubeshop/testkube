@@ -29,7 +29,7 @@ func TestWebhookLoader(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	mockTemplatesClient := templatesclientv1.NewMockInterface(mockCtrl)
-	webhooksLoader := NewWebhookLoader(zap.NewNop().Sugar(), &DummyLoader{}, mockTemplatesClient)
+	webhooksLoader := NewWebhookLoader(zap.NewNop().Sugar(), &DummyLoader{}, mockTemplatesClient, nil, nil, nil)
 	listeners, err := webhooksLoader.Load()
 
 	assert.Equal(t, 1, len(listeners))

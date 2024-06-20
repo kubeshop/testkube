@@ -2,6 +2,8 @@ package testworkflow
 
 import (
 	"context"
+	"encoding/json"
+	"time"
 
 	"google.golang.org/grpc"
 
@@ -139,4 +141,18 @@ func (r *CloudRepository) GetTestWorkflowMetrics(ctx context.Context, name strin
 		return v.Metrics
 	}
 	return pass(r.executor, ctx, req, process)
+}
+
+// GetPreviousFinishedState gets previous finished execution state by test
+func (r *CloudRepository) GetPreviousFinishedState(ctx context.Context, workflowName string, date time.Time) (testkube.TestWorkflowStatus, error) {
+	req := ExecutionGetPreviousFinishedStateRequest{WorkflowName: workflowName, Date: date}
+	response, err := r.executor.Execute(ctx, CmdTestWorkflowExecutionGetPreviousFinishedState, req)
+	if err != nil {
+		return "", err
+	}
+	var commandResponse ExecutionGetPreviousFinishedStateResponse
+	if err := json.Unmarshal(response, &commandResponse); err != nil {
+		return "", err
+	}
+	return commandResponse.Result, nil
 }

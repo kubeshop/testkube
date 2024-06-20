@@ -67,6 +67,15 @@ type GetExecutionTotalsResponse struct {
 	Result testkube.ExecutionsTotals `json:"result"`
 }
 
+type GetPreviousFinishedStateRequest struct {
+	TestName string
+	Date     time.Time
+}
+
+type GetPreviousFinishedStateResponse struct {
+	Result testkube.ExecutionStatus
+}
+
 type InsertRequest struct {
 	Result testkube.Execution `json:"result"`
 }

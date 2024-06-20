@@ -39,6 +39,8 @@ type Repository interface {
 	GetExecution(ctx context.Context, id string) (testkube.Execution, error)
 	// GetByNameAndTest gets execution result by name and test name
 	GetByNameAndTest(ctx context.Context, name, testName string) (testkube.Execution, error)
+	// GetPreviousFinishedState gets previous finished execution state by test
+	GetPreviousFinishedState(ctx context.Context, testName string, date time.Time) (testkube.ExecutionStatus, error)
 	// GetLatestByTest gets latest execution result by test
 	GetLatestByTest(ctx context.Context, testName string) (*testkube.Execution, error)
 	// GetLatestByTests gets latest execution results by test names

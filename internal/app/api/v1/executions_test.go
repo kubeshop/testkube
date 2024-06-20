@@ -236,6 +236,10 @@ func (r MockExecutionResultsRepository) GetNextExecutionNumber(ctx context.Conte
 	panic("not implemented")
 }
 
+func (r MockExecutionResultsRepository) GetPreviousFinishedState(ctx context.Context, testName string, date time.Time) (testkube.ExecutionStatus, error) {
+	panic("not implemented")
+}
+
 func (r MockExecutionResultsRepository) Insert(ctx context.Context, result testkube.Execution) error {
 	panic("not implemented")
 }

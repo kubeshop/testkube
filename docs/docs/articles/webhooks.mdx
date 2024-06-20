@@ -890,3 +890,57 @@ Example usage:
 </Tabs>
 
 The examples show only the `create` operations, however, these instructions work the same for `update` and `run` as well.
+
+## Enable Webhooks on State Changes
+
+It is possible to get notified by webhooks only when the latest execution's outcome differs from the previous one. This way you can see instantly when one of your scheduled tests was healed or when they got broken. It could also help prevent alert fatigue by deduplicating the alerts and therefore decreasing the load on your monitoring systems. Enable this by setting `onStateChange` to true directly on the webhook.
+
+<Tabs>
+
+<TabItem value="cli" label="CLI">
+
+```bash
+testkube update webhook --name example-webhook --on-state-change
+```
+
+</TabItem>
+
+<TabItem value="api" label="API">
+
+```json
+{
+    "name": "example-webhook",
+    "namespace": "testkube",
+    "uri": "https://webhook.url/",
+    "events": [
+        "start-test",
+        "end-test-success",
+        "end-test-failed"
+    ],
+    "disabled": false,
+    "onStateChange": true,
+}
+```
+
+</TabItem>
+
+<TabItem value="crd" label="Custom Resource">
+
+```yaml
+apiVersion: executor.testkube.io/v1
+kind: Webhook
+metadata:
+  name: example-webhook-enabled
+  namespace: testkube
+spec:
+  events:
+  - start-test
+  - end-test-success
+  - end-test-failed
+  onStateChange: true
+  uri: https://webhook.url/
+```
+
+</TabItem>
+
+</Tabs>

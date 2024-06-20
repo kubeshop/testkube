@@ -416,6 +416,11 @@ func (r FakeResultRepository) GetExecutionTotals(ctx context.Context, paging boo
 	panic("implement me")
 }
 
+func (r FakeResultRepository) GetPreviousFinishedState(ctx context.Context, testName string, date time.Time) (result testkube.ExecutionStatus, err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (r FakeResultRepository) Insert(ctx context.Context, result testkube.Execution) error {
 	//TODO implement me
 	panic("implement me")

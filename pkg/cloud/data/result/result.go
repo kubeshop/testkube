@@ -333,3 +333,17 @@ func (r *CloudRepository) GetTestMetrics(ctx context.Context, name string, limit
 func (r *CloudRepository) Count(ctx context.Context, filter result.Filter) (int64, error) {
 	return 0, nil
 }
+
+// GetPreviousFinishedState gets previous finished execution state by test
+func (r *CloudRepository) GetPreviousFinishedState(ctx context.Context, testName string, date time.Time) (testkube.ExecutionStatus, error) {
+	req := GetPreviousFinishedStateRequest{TestName: testName, Date: date}
+	response, err := r.executor.Execute(ctx, CmdResultGetPreviousFinishedState, req)
+	if err != nil {
+		return "", err
+	}
+	var commandResponse GetPreviousFinishedStateResponse
+	if err := json.Unmarshal(response, &commandResponse); err != nil {
+		return "", err
+	}
+	return commandResponse.Result, nil
+}

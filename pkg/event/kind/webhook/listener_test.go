@@ -33,7 +33,7 @@ func TestWebhookListener_Notify(t *testing.T) {
 		svr := httptest.NewServer(testHandler)
 		defer svr.Close()
 
-		l := NewWebhookListener("l1", svr.URL, "", testEventTypes, "", "", nil, false)
+		l := NewWebhookListener("l1", svr.URL, "", testEventTypes, "", "", nil, false, false, nil, nil, nil)
 
 		// when
 		r := l.Notify(testkube.Event{
@@ -55,7 +55,7 @@ func TestWebhookListener_Notify(t *testing.T) {
 		svr := httptest.NewServer(testHandler)
 		defer svr.Close()
 
-		l := NewWebhookListener("l1", svr.URL, "", testEventTypes, "", "", nil, false)
+		l := NewWebhookListener("l1", svr.URL, "", testEventTypes, "", "", nil, false, false, nil, nil, nil)
 
 		// when
 		r := l.Notify(testkube.Event{
@@ -72,7 +72,7 @@ func TestWebhookListener_Notify(t *testing.T) {
 		t.Parallel()
 		// given
 
-		s := NewWebhookListener("l1", "http://baduri.badbadbad", "", testEventTypes, "", "", nil, false)
+		s := NewWebhookListener("l1", "http://baduri.badbadbad", "", testEventTypes, "", "", nil, false, false, nil, nil, nil)
 
 		// when
 		r := s.Notify(testkube.Event{
@@ -105,7 +105,7 @@ func TestWebhookListener_Notify(t *testing.T) {
 		svr := httptest.NewServer(testHandler)
 		defer svr.Close()
 
-		l := NewWebhookListener("l1", svr.URL, "", testEventTypes, "field", "", nil, false)
+		l := NewWebhookListener("l1", svr.URL, "", testEventTypes, "field", "", nil, false, false, nil, nil, nil)
 
 		// when
 		r := l.Notify(testkube.Event{
@@ -131,7 +131,8 @@ func TestWebhookListener_Notify(t *testing.T) {
 		svr := httptest.NewServer(testHandler)
 		defer svr.Close()
 
-		l := NewWebhookListener("l1", svr.URL, "", testEventTypes, "", "{\"id\": \"{{ .Id }}\"}", map[string]string{"Content-Type": "application/json"}, false)
+		l := NewWebhookListener("l1", svr.URL, "", testEventTypes, "", "{\"id\": \"{{ .Id }}\"}",
+			map[string]string{"Content-Type": "application/json"}, false, false, nil, nil, nil)
 
 		// when
 		r := l.Notify(testkube.Event{
@@ -148,7 +149,7 @@ func TestWebhookListener_Notify(t *testing.T) {
 		t.Parallel()
 		// given
 
-		s := NewWebhookListener("l1", "http://baduri.badbadbad", "", testEventTypes, "", "", nil, true)
+		s := NewWebhookListener("l1", "http://baduri.badbadbad", "", testEventTypes, "", "", nil, true, false, nil, nil, nil)
 
 		// when
 		r := s.Notify(testkube.Event{
