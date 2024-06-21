@@ -49,7 +49,7 @@ You will have to set a license key to get started with Testkube. You can also op
 
 ```bash
 global:
-	enterpriseLicense: XXXXXX-XXXXXX-XXXXXX-XXXXXX-XXXXXX-V3
+	enterpriseLicenseKey: XXXXXX-XXXXXX-XXXXXX-XXXXXX-XXXXXX-V3
 ```
 
 ### Domain
