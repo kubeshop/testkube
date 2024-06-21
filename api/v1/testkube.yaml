@@ -3579,6 +3579,8 @@ paths:
         - test-workflows
         - api
         - pro
+      parameters:
+      - $ref: "#/components/parameters/AutoCreateSecrets"
       summary: Create test workflow
       description: Create test workflow in the kubernetes cluster
       operationId: createTestWorkflow
@@ -3588,7 +3590,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/TestWorkflowInput"
+              $ref: "#/components/schemas/TestWorkflow"
           text/yaml:
             schema:
               type: string
@@ -4369,6 +4371,7 @@ paths:
         - pro
       parameters:
         - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/AutoCreateSecrets"
       summary: Update test workflow details
       description: Update test workflow details in the kubernetes cluster
       operationId: updateTestWorkflow
@@ -4378,7 +4381,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/TestWorkflowInput"
+              $ref: "#/components/schemas/TestWorkflow"
           text/yaml:
             schema:
               type: string
@@ -4544,6 +4547,8 @@ paths:
         - test-workflows
         - api
         - pro
+      parameters:
+      - $ref: "#/components/parameters/AutoCreateSecrets"
       summary: Create test workflow template
       description: Create test workflow template in the kubernetes cluster
       operationId: createTestWorkflowTemplate
@@ -4553,7 +4558,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/TestWorkflowTemplateInput"
+              $ref: "#/components/schemas/TestWorkflowTemplate"
           text/yaml:
             schema:
               type: string
@@ -4645,6 +4650,7 @@ paths:
         - pro
       parameters:
         - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/AutoCreateSecrets"
       summary: Update test workflow template details
       description: Update test workflow template details in the kubernetes cluster
       operationId: updateTestWorkflowTemplate
@@ -4654,7 +4660,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/TestWorkflowTemplateInput"
+              $ref: "#/components/schemas/TestWorkflowTemplate"
           text/yaml:
             schema:
               type: string
@@ -7842,18 +7848,6 @@ components:
         status:
           $ref: "#/components/schemas/TestWorkflowStatusSummary"
 
-    TestWorkflowParams:
-      type: object
-      properties:
-        autoCreateSecrets:
-          type: boolean
-
-    TestWorkflowInput:
-      type: object
-      anyOf:
-      - $ref: "#/components/schemas/TestWorkflow"
-      - $ref: "#/components/schemas/TestWorkflowParams"
-
     TestWorkflowExecutionRequest:
       type: object
       properties:
@@ -8304,12 +8298,6 @@ components:
           example: "2022-07-30T06:54:15Z"
         spec:
           $ref: "#/components/schemas/TestWorkflowTemplateSpec"
-
-    TestWorkflowTemplateInput:
-      type: object
-      anyOf:
-      - $ref: "#/components/schemas/TestWorkflowTemplate"
-      - $ref: "#/components/schemas/TestWorkflowParams"
 
     TestWorkflowStepParallel:
       type: object
@@ -10473,6 +10461,14 @@ components:
         type: boolean
         default: false
       description: should inline templates in the resolved workflow
+      required: false
+    AutoCreateSecrets:
+      in: query
+      name: inline
+      schema:
+        type: boolean
+        default: false
+      description: should automatically create secrets from plain-text credentials
       required: false
     All:
       in: query

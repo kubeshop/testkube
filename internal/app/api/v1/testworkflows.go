@@ -10,7 +10,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/yaml"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
@@ -138,27 +137,25 @@ func (s *TestkubeAPI) DeleteTestWorkflowsHandler() fiber.Handler {
 func (s *TestkubeAPI) CreateTestWorkflowHandler() fiber.Handler {
 	errPrefix := "failed to create test workflow"
 	return func(c *fiber.Ctx) (err error) {
+		autoCreateSecrets, err := strconv.ParseBool(c.Query("autoCreateSecrets", "false"))
+		if err != nil {
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse autoCreateSecrets parameter: %s", errPrefix, err))
+		}
+
 		// Deserialize resource
 		obj := new(testworkflowsv1.TestWorkflow)
-		params := testkube.TestWorkflowParams{}
 		if HasYAML(c) {
-			body := c.Body()
-			err = common.DeserializeCRD(obj, body)
-			if err != nil {
-				return s.BadRequest(c, errPrefix, "invalid body", err)
-			}
-			err = yaml.Unmarshal(body, &params)
+			err = common.DeserializeCRD(obj, c.Body())
 			if err != nil {
 				return s.BadRequest(c, errPrefix, "invalid body", err)
 			}
 		} else {
-			var v *testkube.TestWorkflowInput
+			var v *testkube.TestWorkflow
 			err = c.BodyParser(&v)
 			if err != nil {
 				return s.BadRequest(c, errPrefix, "invalid body", err)
 			}
-			obj = testworkflows.MapAPIToKube(&v.TestWorkflow)
-			params = v.TestWorkflowParams
+			obj = testworkflows.MapAPIToKube(v)
 		}
 
 		// Validate resource
@@ -176,7 +173,7 @@ func (s *TestkubeAPI) CreateTestWorkflowHandler() fiber.Handler {
 
 		// Handle secrets auto-creation
 		secrets := s.SecretManager.Batch(execNamespace, "creds-", obj.Name)
-		if params.AutoCreateSecrets {
+		if autoCreateSecrets {
 			_, _ = testworkflowresolver.ReplacePlainTextCredentialsInWorkflow(obj, secrets.Prepare)
 			if err != nil {
 				return s.BadRequest(c, errPrefix, "auto-creating secrets", err)
@@ -218,27 +215,25 @@ func (s *TestkubeAPI) UpdateTestWorkflowHandler() fiber.Handler {
 	return func(c *fiber.Ctx) (err error) {
 		name := c.Params("id")
 
+		autoCreateSecrets, err := strconv.ParseBool(c.Query("autoCreateSecrets", "false"))
+		if err != nil {
+			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse autoCreateSecrets parameter: %s", errPrefix, err))
+		}
+
 		// Deserialize resource
 		obj := new(testworkflowsv1.TestWorkflow)
-		params := testkube.TestWorkflowParams{}
 		if HasYAML(c) {
-			body := c.Body()
-			err = common.DeserializeCRD(obj, body)
-			if err != nil {
-				return s.BadRequest(c, errPrefix, "invalid body", err)
-			}
-			err = yaml.Unmarshal(body, &params)
+			err = common.DeserializeCRD(obj, c.Body())
 			if err != nil {
 				return s.BadRequest(c, errPrefix, "invalid body", err)
 			}
 		} else {
-			var v *testkube.TestWorkflowInput
+			var v *testkube.TestWorkflow
 			err = c.BodyParser(&v)
 			if err != nil {
 				return s.BadRequest(c, errPrefix, "invalid body", err)
 			}
-			obj = testworkflows.MapAPIToKube(&v.TestWorkflow)
-			params = v.TestWorkflowParams
+			obj = testworkflows.MapAPIToKube(v)
 		}
 
 		// Read existing resource
@@ -265,7 +260,7 @@ func (s *TestkubeAPI) UpdateTestWorkflowHandler() fiber.Handler {
 
 		// Handle secrets auto-creation
 		secrets := s.SecretManager.Batch(execNamespace, "creds-", obj.Name)
-		if params.AutoCreateSecrets {
+		if autoCreateSecrets {
 			_, _ = testworkflowresolver.ReplacePlainTextCredentialsInWorkflow(obj, secrets.Prepare)
 			if err != nil {
 				return s.BadRequest(c, errPrefix, "auto-creating secrets", err)
