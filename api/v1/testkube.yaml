@@ -7766,16 +7766,11 @@ components:
       - name
       properties:
         kind:
-          $ref: "#/components/schemas/SecretOwnerKind"
+          description: kind of the resource that is the owner
+          type: string
         name:
           type: string
           description: name of the owner resource
-
-    SecretOwnerKind:
-      type: string
-      enum:
-      - TestWorkflow
-      - TestWorkflowTemplate
 
     SecretConfig:
       type: object

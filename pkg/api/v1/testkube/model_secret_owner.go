@@ -11,7 +11,8 @@ package testkube
 
 // Resource that owns the secret
 type SecretOwner struct {
-	Kind *SecretOwnerKind `json:"kind"`
+	// kind of the resource that is the owner
+	Kind string `json:"kind"`
 	// name of the owner resource
 	Name string `json:"name"`
 }

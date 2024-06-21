@@ -1,15 +1,16 @@
 package v1
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/mapper/secrets"
@@ -54,6 +55,24 @@ func (s *TestkubeAPI) ListSecretsHandler() fiber.Handler {
 	}
 }
 
+func (s *TestkubeAPI) fetchOwnerReference(kind, name string) (metav1.OwnerReference, error) {
+	if kind == testworkflowsv1.Resource {
+		obj, err := s.TestWorkflowsClient.Get(name)
+		if err != nil {
+			return metav1.OwnerReference{}, errors.Wrap(err, "fetching owner")
+		}
+		return metav1.OwnerReference{APIVersion: obj.GroupVersionKind().String(), Kind: obj.Kind, Name: obj.Name, UID: obj.UID}, nil
+	} else if kind == testworkflowsv1.ResourceTemplate {
+		obj, err := s.TestWorkflowsClient.Get(name)
+		if err != nil {
+			return metav1.OwnerReference{}, errors.Wrap(err, "fetching owner")
+		}
+		return metav1.OwnerReference{APIVersion: obj.GroupVersionKind().String(), Kind: obj.Kind, Name: obj.Name, UID: obj.UID}, nil
+	}
+
+	return metav1.OwnerReference{}, fmt.Errorf("unsupported owner kind: %s", kind)
+}
+
 func (s *TestkubeAPI) CreateSecretHandler() fiber.Handler {
 	errPrefix := "failed to create secret"
 	return func(c *fiber.Ctx) (err error) {
@@ -84,19 +103,22 @@ func (s *TestkubeAPI) CreateSecretHandler() fiber.Handler {
 			input.Labels = map[string]string{}
 		}
 		input.Labels["createdBy"] = "testkube"
-		owner := secrets.MapSecretOwnerAPIToKube(input.Owner)
-		if owner == "" {
-			input.Labels["testkubeOwner"] = owner
-		} else {
-			delete(input.Labels, "testkubeOwner")
-		}
 
-		// Create the resource
+		// Set up the secret
 		secret := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{Name: s.secretConfig.Prefix + input.Name, Labels: input.Labels},
 			Type:       corev1.SecretType(input.Type_),
 			StringData: input.Data,
 		}
+		if input.Owner != nil && input.Owner.Kind != "" && input.Owner.Name != "" {
+			ownerRef, err := s.fetchOwnerReference(input.Owner.Kind, input.Owner.Name)
+			if err != nil {
+				return s.BadRequest(c, errPrefix, "invalid owner", err)
+			}
+			secret.OwnerReferences = []metav1.OwnerReference{ownerRef}
+		}
+
+		// Create the resource
 		secret, err = s.Clientset.CoreV1().Secrets(input.Namespace).Create(c.Context(), secret, metav1.CreateOptions{})
 		if err != nil {
 			return s.BadRequest(c, errPrefix, "client error", err)
@@ -211,11 +233,14 @@ func (s *TestkubeAPI) UpdateSecretHandler() fiber.Handler {
 		}
 
 		if input.Owner != nil {
-			owner := secrets.MapSecretOwnerAPIToKube(input.Owner)
-			if owner == "" {
-				secret.Labels["testkubeOwner"] = owner
+			if input.Owner.Kind != "" && input.Owner.Name != "" {
+				ownerRef, err := s.fetchOwnerReference(input.Owner.Kind, input.Owner.Name)
+				if err != nil {
+					return s.BadRequest(c, errPrefix, "invalid owner", err)
+				}
+				secret.OwnerReferences = []metav1.OwnerReference{ownerRef}
 			} else {
-				delete(secret.Labels, "testkubeOwner")
+				secret.OwnerReferences = nil
 			}
 		}
 
