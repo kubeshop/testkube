@@ -92,7 +92,7 @@ func replacePlainTextCredentialsInIndependentService(service *testworkflowsv1.In
 }
 
 func replacePlainTextCredentialsInStepsList(steps []testworkflowsv1.Step, createSecret func(creds map[string]string) (string, error)) (secrets []string, err error) {
-	s := make([]string, 0)
+	var s []string
 	for i := range steps {
 		s, err = replacePlainTextCredentialsInStep(&steps[i], createSecret)
 		secrets = append(secrets, s...)
@@ -104,7 +104,7 @@ func replacePlainTextCredentialsInStepsList(steps []testworkflowsv1.Step, create
 }
 
 func replacePlainTextCredentialsInIndependentStepsList(steps []testworkflowsv1.IndependentStep, createSecret func(creds map[string]string) (string, error)) (secrets []string, err error) {
-	s := make([]string, 0)
+	var s []string
 	for i := range steps {
 		s, err = replacePlainTextCredentialsInIndependentStep(&steps[i], createSecret)
 		secrets = append(secrets, s...)
@@ -116,7 +116,7 @@ func replacePlainTextCredentialsInIndependentStepsList(steps []testworkflowsv1.I
 }
 
 func replacePlainTextCredentialsInServicesMap(services map[string]testworkflowsv1.ServiceSpec, createSecret func(creds map[string]string) (string, error)) (secrets []string, err error) {
-	s := make([]string, 0)
+	var s []string
 	for k, svc := range services {
 		s, err = replacePlainTextCredentialsInService(&svc, createSecret)
 		secrets = append(secrets, s...)
@@ -129,7 +129,7 @@ func replacePlainTextCredentialsInServicesMap(services map[string]testworkflowsv
 }
 
 func replacePlainTextCredentialsInIndependentServicesMap(services map[string]testworkflowsv1.IndependentServiceSpec, createSecret func(creds map[string]string) (string, error)) (secrets []string, err error) {
-	s := make([]string, 0)
+	var s []string
 	for k, svc := range services {
 		s, err = replacePlainTextCredentialsInIndependentService(&svc, createSecret)
 		secrets = append(secrets, s...)
