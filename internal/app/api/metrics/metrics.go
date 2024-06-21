@@ -142,7 +142,7 @@ var testTriggerEventCount = promauto.NewCounterVec(prometheus.CounterOpts{
 var webhookExecutionsCount = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "testkube_webhook_executions_count",
 	Help: "The total number of webhook executions",
-}, []string{"name", "resource", "eventType", "result"})
+}, []string{"name", "eventType", "result"})
 
 func NewMetrics() Metrics {
 	return Metrics{
@@ -506,10 +506,9 @@ func (m Metrics) IncTestTriggerEventCount(name, resource, eventType string, caus
 	}).Inc()
 }
 
-func (m Metrics) InWebhookEventCount(name, resource, eventType, result string) {
+func (m Metrics) InWebhookEventCount(name, eventType, result string) {
 	m.WebhookEventCount.With(map[string]string{
 		"name":      name,
-		"resource":  resource,
 		"eventType": eventType,
 		"result":    result,
 	}).Inc()

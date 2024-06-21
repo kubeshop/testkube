@@ -112,11 +112,7 @@ func (l *WebhookListener) Disabled() bool {
 
 func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventResult) {
 	defer func() {
-		var eventType, resource, res string
-		if event.Resource != nil {
-			resource = string(*event.Resource)
-		}
-
+		var eventType, res string
 		if event.Type_ != nil {
 			eventType = string(*event.Type_)
 		}
@@ -126,7 +122,7 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 			res = "error"
 		}
 
-		l.metrics.InWebhookEventCount(l.name, resource, eventType, res)
+		l.metrics.InWebhookEventCount(l.name, eventType, res)
 	}()
 
 	switch {
