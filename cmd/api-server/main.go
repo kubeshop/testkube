@@ -21,6 +21,7 @@ import (
 	cloudtestworkflow "github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
 	testworkflow2 "github.com/kubeshop/testkube/pkg/repository/testworkflow"
+	"github.com/kubeshop/testkube/pkg/secretmanager"
 	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
 	"github.com/kubeshop/testkube/pkg/tcl/schedulertcl"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/presets"
@@ -585,6 +586,8 @@ func main() {
 		AutoCreate: !cfg.DisableSecretCreation,
 	}
 
+	secretManager := secretmanager.New(clientset, secretConfig)
+
 	api := apiv1.NewTestkubeAPI(
 		cfg.TestkubeNamespace,
 		resultsRepository,
@@ -595,6 +598,7 @@ func main() {
 		executorsClient,
 		testsuitesClientV3,
 		secretClient,
+		secretManager,
 		webhooksClient,
 		clientset,
 		testkubeClientset,

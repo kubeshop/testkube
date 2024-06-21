@@ -19,6 +19,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	repoConfig "github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
+	"github.com/kubeshop/testkube/pkg/secretmanager"
 	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 
@@ -76,6 +77,7 @@ func NewTestkubeAPI(
 	executorsClient *executorsclientv1.ExecutorsClient,
 	testsuitesClient *testsuitesclientv3.TestSuitesClient,
 	secretClient *secret.Client,
+	secretManager secretmanager.SecretManager,
 	webhookClient *executorsclientv1.WebhooksClient,
 	clientset kubernetes.Interface,
 	testkubeClientset testkubeclientset.Interface,
@@ -131,6 +133,7 @@ func NewTestkubeAPI(
 		TestsClient:                 testsClient,
 		ExecutorsClient:             executorsClient,
 		SecretClient:                secretClient,
+		SecretManager:               secretManager,
 		Clientset:                   clientset,
 		TestsSuitesClient:           testsuitesClient,
 		TestKubeClientset:           testkubeClientset,
@@ -203,6 +206,7 @@ type TestkubeAPI struct {
 	TestsClient                 *testsclientv3.TestsClient
 	ExecutorsClient             *executorsclientv1.ExecutorsClient
 	SecretClient                *secret.Client
+	SecretManager               secretmanager.SecretManager
 	WebhooksClient              *executorsclientv1.WebhooksClient
 	TestKubeClientset           testkubeclientset.Interface
 	TestSourcesClient           *testsourcesclientv1.TestSourcesClient
