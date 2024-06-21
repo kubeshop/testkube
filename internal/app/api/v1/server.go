@@ -169,7 +169,7 @@ func NewTestkubeAPI(
 	// will be reused in websockets handler
 	s.WebsocketLoader = ws.NewWebsocketLoader()
 
-	s.Events.Loader.Register(webhook.NewWebhookLoader(s.Log, webhookClient, templatesClient, testExecutionResults, testSuiteExecutionsResults, testWorkflowResults))
+	s.Events.Loader.Register(webhook.NewWebhookLoader(s.Log, webhookClient, templatesClient, testExecutionResults, testSuiteExecutionsResults, testWorkflowResults, metrics))
 	s.Events.Loader.Register(s.WebsocketLoader)
 	s.Events.Loader.Register(s.slackLoader)
 

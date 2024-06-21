@@ -139,6 +139,11 @@ var testTriggerEventCount = promauto.NewCounterVec(prometheus.CounterOpts{
 	Help: "The total number of test trigger events",
 }, []string{"name", "resource", "eventType", "causes"})
 
+var webhookExecutionsCount = promauto.NewCounterVec(prometheus.CounterOpts{
+	Name: "testkube_webhook_executions_count",
+	Help: "The total number of webhook executions",
+}, []string{"name", "eventType", "result"})
+
 func NewMetrics() Metrics {
 	return Metrics{
 		TestExecutionsCount:              testExecutionsCount,
@@ -166,6 +171,7 @@ func NewMetrics() Metrics {
 		TestWorkflowTemplateUpdates:      testWorkflowTemplateUpdatesCount,
 		TestWorkflowTemplateDeletes:      testWorkflowTemplateDeletesCount,
 		TestTriggerEventCount:            testTriggerEventCount,
+		WebhookEventCount:                webhookExecutionsCount,
 	}
 }
 
@@ -195,6 +201,7 @@ type Metrics struct {
 	TestWorkflowTemplateUpdates      *prometheus.CounterVec
 	TestWorkflowTemplateDeletes      *prometheus.CounterVec
 	TestTriggerEventCount            *prometheus.CounterVec
+	WebhookEventCount                *prometheus.CounterVec
 }
 
 func (m Metrics) IncAndObserveExecuteTest(execution testkube.Execution, dashboardURI string) {
@@ -496,5 +503,13 @@ func (m Metrics) IncTestTriggerEventCount(name, resource, eventType string, caus
 		"resource":  resource,
 		"eventType": eventType,
 		"causes":    strings.Join(causes, ","),
+	}).Inc()
+}
+
+func (m Metrics) InWebhookEventCount(name, eventType, result string) {
+	m.WebhookEventCount.With(map[string]string{
+		"name":      name,
+		"eventType": eventType,
+		"result":    result,
 	}).Inc()
 }

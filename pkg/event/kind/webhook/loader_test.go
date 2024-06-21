@@ -9,6 +9,7 @@ import (
 
 	executorsv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
 	templatesclientv1 "github.com/kubeshop/testkube-operator/pkg/client/templates/v1"
+	v1 "github.com/kubeshop/testkube/internal/app/api/metrics"
 )
 
 type DummyLoader struct {
@@ -29,7 +30,7 @@ func TestWebhookLoader(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	mockTemplatesClient := templatesclientv1.NewMockInterface(mockCtrl)
-	webhooksLoader := NewWebhookLoader(zap.NewNop().Sugar(), &DummyLoader{}, mockTemplatesClient, nil, nil, nil)
+	webhooksLoader := NewWebhookLoader(zap.NewNop().Sugar(), &DummyLoader{}, mockTemplatesClient, nil, nil, nil, v1.NewMetrics())
 	listeners, err := webhooksLoader.Load()
 
 	assert.Equal(t, 1, len(listeners))
