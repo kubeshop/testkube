@@ -3588,7 +3588,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/TestWorkflow"
+              $ref: "#/components/schemas/TestWorkflowInput"
           text/yaml:
             schema:
               type: string
@@ -4378,7 +4378,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/TestWorkflow"
+              $ref: "#/components/schemas/TestWorkflowInput"
           text/yaml:
             schema:
               type: string
@@ -4553,7 +4553,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/TestWorkflowTemplate"
+              $ref: "#/components/schemas/TestWorkflowTemplateInput"
           text/yaml:
             schema:
               type: string
@@ -4654,7 +4654,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/TestWorkflowTemplate"
+              $ref: "#/components/schemas/TestWorkflowTemplateInput"
           text/yaml:
             schema:
               type: string
@@ -7842,6 +7842,18 @@ components:
         status:
           $ref: "#/components/schemas/TestWorkflowStatusSummary"
 
+    TestWorkflowParams:
+      type: object
+      properties:
+        autoCreateSecrets:
+          type: boolean
+
+    TestWorkflowInput:
+      type: object
+      anyOf:
+      - $ref: "#/components/schemas/TestWorkflow"
+      - $ref: "#/components/schemas/TestWorkflowParams"
+
     TestWorkflowExecutionRequest:
       type: object
       properties:
@@ -8292,6 +8304,12 @@ components:
           example: "2022-07-30T06:54:15Z"
         spec:
           $ref: "#/components/schemas/TestWorkflowTemplateSpec"
+
+    TestWorkflowTemplateInput:
+      type: object
+      anyOf:
+      - $ref: "#/components/schemas/TestWorkflowTemplate"
+      - $ref: "#/components/schemas/TestWorkflowParams"
 
     TestWorkflowStepParallel:
       type: object
