@@ -378,14 +378,16 @@ The full Execution data model can be found [here](https://github.com/kubeshop/te
 ### TestSuiteExecution:
 
 - `Id` - TestSuiteExecution ID (for example, `64f8d5b2712890925aea51dc`)
-- `Name` - TestSuite name (for example, `ts-executor-postman-smoke-tests-472`)
+- `Name` - TestSuite execution name (for example, `ts-executor-postman-smoke-tests-472`)
 - `Status` - TestSuite execution status (for example, `running` or `passed`)
+- `TestSuite.Name` - TestSuite name (for example, `executor-postman-smoke-tests`)
+- `TestSuite.Namespace` - TestSuite namespace (for example, `testkube`)
 - `Envs` - List of ENV variables
 - `Variables` - List of variables
-- `StartTime` - Test start time (for example, `2023-09-06 19:23:34.543433547 +0000 UTC`)
-- `EndTime` - Time when the test execution finished (for example, `2023-09-06 19:23:42.221493031 +0000 UTC`)
-- `Duration` - Test duration in seconds (for example, `7.68s`)
-- `DurationMs` - Test duration in miliseconds (for example, `7678`)
+- `StartTime` - Test suite start time (for example, `2023-09-06 19:23:34.543433547 +0000 UTC`)
+- `EndTime` - Time when the test suite execution finished (for example, `2023-09-06 19:23:42.221493031 +0000 UTC`)
+- `Duration` - Test suite execution duration in seconds (for example, `7.68s`)
+- `DurationMs` - Test suite execution duration in milliseconds (for example, `7678`)
 - `StepResults`
 - `Labels` - TestSuite labels (for example, `[app:testkube testsuite:executor-postman-smoke-tests]`)
 - `RunningContext` - Running context - how the TestSuite has been triggered (for example, `user-ui`)
