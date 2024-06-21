@@ -21,6 +21,7 @@ The Testkube API Server exposes a `/metrics` endpoint that can be consumed by Pr
 * `testkube_testsuite_executions_duration_ms`- The duration of test suite executions.
 * `testkube_testworkflow_executions_duration_ms`- The duration of test workflow executions.
 * `testkube_testtrigger_event_count` - The total number of test trigger events.
+* `testkube_webhook_executions_count` - The total number of webhook executions.
 
 Note: as the metrics also include labels with the associated test name (see below), no metrics are produced unless some tests were run since last api-server restart 
 
