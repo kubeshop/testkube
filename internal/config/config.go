@@ -79,7 +79,6 @@ type Config struct {
 	TestkubeProKeyFile                          string        `envconfig:"TESTKUBE_PRO_KEY_FILE" default:""`
 	TestkubeProTLSSecret                        string        `envconfig:"TESTKUBE_PRO_TLS_SECRET" default:""`
 	TestkubeProRunnerCustomCASecret             string        `envconfig:"TESTKUBE_PRO_RUNNER_CUSTOM_CA_SECRET" default:""`
-	TestkubeProRemoteURL                        string        `envconfig:"TESTKUBE_PRO_REMOTE_URL" default:"app.testkube.io"`
 	TestkubeWatcherNamespaces                   string        `envconfig:"TESTKUBE_WATCHER_NAMESPACES" default:""`
 	GraphqlPort                                 string        `envconfig:"TESTKUBE_GRAPHQL_PORT" default:"8070"`
 	TestkubeRegistry                            string        `envconfig:"TESTKUBE_REGISTRY" default:""`

@@ -878,7 +878,7 @@ func newProContext(cfg *config.Config, grpcClient cloud.TestKubeCloudAPIClient) 
 		OrgID:                            cfg.TestkubeProOrgID,
 		Migrate:                          cfg.TestkubeProMigrate,
 		ConnectionTimeout:                cfg.TestkubeProConnectionTimeout,
-		RemoteURL:                        cfg.TestkubeProRemoteURL,
+		DashboardURI:                     cfg.TestkubeDashboardURI,
 	}
 
 	if grpcClient == nil {

@@ -12,5 +12,5 @@ type ProContext struct {
 	OrgID                            string
 	Migrate                          string
 	ConnectionTimeout                int
-	RemoteURL                        string
+	DashboardURI                     string
 }

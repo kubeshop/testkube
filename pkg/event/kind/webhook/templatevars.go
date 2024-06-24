@@ -35,19 +35,19 @@ func NewTemplateVars(event testkube.Event, proContext *config.ProContext) Templa
 		vars.LogsCommand = fmt.Sprintf("kubectl testkube get testworkflowexecution %s", event.TestWorkflowExecution.Id)
 	}
 
-	if proContext == nil || proContext.RemoteURL == "" || proContext.OrgID == "" || proContext.EnvID == "" {
+	if proContext == nil || proContext.DashboardURI == "" || proContext.OrgID == "" || proContext.EnvID == "" {
 		return vars
 	}
 
 	switch {
 	case event.TestExecution != nil:
-		vars.ExecutionURL = fmt.Sprintf("https://%s/organization/%s/environment/%s/dashboard/tests/%s/executions/%s", proContext.RemoteURL, proContext.OrgID, proContext.EnvID, event.TestExecution.TestName, event.TestExecution.Id)
+		vars.ExecutionURL = fmt.Sprintf("https://%s/organization/%s/environment/%s/dashboard/tests/%s/executions/%s", proContext.DashboardURI, proContext.OrgID, proContext.EnvID, event.TestExecution.TestName, event.TestExecution.Id)
 		vars.ArtifactURL = fmt.Sprintf("%s/artifacts", vars.ExecutionURL)
 		vars.LogsURL = fmt.Sprintf("%s/log-output", vars.ExecutionURL)
 	case event.TestSuiteExecution != nil:
-		vars.ExecutionURL = fmt.Sprintf("https://%s/organization/%s/environment/%s/dashboard/test-suites/%s/executions/%s", proContext.RemoteURL, proContext.OrgID, proContext.EnvID, event.TestSuiteExecution.TestSuite.Name, event.TestSuiteExecution.Id)
+		vars.ExecutionURL = fmt.Sprintf("https://%s/organization/%s/environment/%s/dashboard/test-suites/%s/executions/%s", proContext.DashboardURI, proContext.OrgID, proContext.EnvID, event.TestSuiteExecution.TestSuite.Name, event.TestSuiteExecution.Id)
 	case event.TestWorkflowExecution != nil:
-		vars.ExecutionURL = fmt.Sprintf("https://%s/organization/%s/environment/%s/dashboard/test-workflows/%s/executions/%s", proContext.RemoteURL, proContext.OrgID, proContext.EnvID, event.TestWorkflowExecution.Workflow.Name, event.TestWorkflowExecution.Id)
+		vars.ExecutionURL = fmt.Sprintf("https://%s/organization/%s/environment/%s/dashboard/test-workflows/%s/executions/%s", proContext.DashboardURI, proContext.OrgID, proContext.EnvID, event.TestWorkflowExecution.Workflow.Name, event.TestWorkflowExecution.Id)
 		vars.ArtifactURL = fmt.Sprintf("%s/artifacts", vars.ExecutionURL)
 		vars.LogsURL = fmt.Sprintf("%s/log-output", vars.ExecutionURL)
 	}

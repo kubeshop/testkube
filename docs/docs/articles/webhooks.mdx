@@ -419,6 +419,8 @@ The full TestWorkflowExecution data model can be found [here](https://github.com
 - `LogsCommand` - the CLI command to access the logs (example: `kubectl testkube get execution 6679893e3b11f4e4900e17a5 --logs-only`)
 - `LogsURL` - dashboard URL to look at the logs (example: `https://app.testkube.io/organization/tkcorg_9deb42dda2197657/environment/tkcenv_1145999f3c4d1115/dashboard/tests/git-zap-api-test/executions/6679893e3b11f4e4900e17a5/log-output`)
 
+Make sure that the value `testkube-api.dashboardUri` in the helm-charts is set to `app.testkube.io`, or your remote dashboard URL, so that the variables above can be populated with the right values.
+
 ## Additional Examples
 
 ### Microsoft Teams
