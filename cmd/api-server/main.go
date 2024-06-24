@@ -603,7 +603,6 @@ func main() {
 		cfg.GraphqlPort,
 		artifactStorage,
 		templatesClient,
-		cfg.CDEventsTarget,
 		cfg.TestkubeDashboardURI,
 		cfg.TestkubeHelmchartVersion,
 		mode,
@@ -615,7 +614,6 @@ func main() {
 		cfg.DisableSecretCreation,
 		subscriptionChecker,
 		serviceAccountNames,
-		cfg.EnableK8sEvents,
 	)
 
 	if mode == common.ModeAgent {
@@ -646,7 +644,7 @@ func main() {
 		eventsEmitter.Loader.Register(agentHandle)
 	}
 
-	api.InitEvents()
+	api.Init(cfg.CDEventsTarget, cfg.EnableK8sEvents)
 	if !cfg.DisableTestTriggers {
 		triggerService := triggers.NewService(
 			sched,
@@ -880,6 +878,7 @@ func newProContext(cfg *config.Config, grpcClient cloud.TestKubeCloudAPIClient) 
 		OrgID:                            cfg.TestkubeProOrgID,
 		Migrate:                          cfg.TestkubeProMigrate,
 		ConnectionTimeout:                cfg.TestkubeProConnectionTimeout,
+		RemoteURL:                        cfg.TestkubeProRemoteURL,
 	}
 
 	if grpcClient == nil {

@@ -95,7 +95,6 @@ func NewTestkubeAPI(
 	graphqlPort string,
 	artifactsStorage storage.ArtifactsStorage,
 	templatesClient *templatesclientv1.TemplatesClient,
-	cdeventsTarget string,
 	dashboardURI string,
 	helmchartVersion string,
 	mode string,
@@ -107,7 +106,6 @@ func NewTestkubeAPI(
 	disableSecretCreation bool,
 	subscriptionChecker checktcl.SubscriptionChecker,
 	serviceAccountNames map[string]string,
-	enableK8sEvents bool,
 ) TestkubeAPI {
 
 	var httpConfig server.Config
@@ -123,7 +121,7 @@ func NewTestkubeAPI(
 		httpConfig.Http.BodyLimit = DefaultHttpBodyLimit
 	}
 
-	s := TestkubeAPI{
+	return TestkubeAPI{
 		HTTPServer:                  server.NewServer(httpConfig),
 		TestExecutionResults:        testSuiteExecutionsResults,
 		ExecutionResults:            testExecutionResults,
@@ -165,31 +163,6 @@ func NewTestkubeAPI(
 		LabelSources:                common.Ptr(make([]LabelSource, 0)),
 		ServiceAccountNames:         serviceAccountNames,
 	}
-
-	// will be reused in websockets handler
-	s.WebsocketLoader = ws.NewWebsocketLoader()
-
-	s.Events.Loader.Register(webhook.NewWebhookLoader(s.Log, webhookClient, templatesClient, testExecutionResults, testSuiteExecutionsResults, testWorkflowResults, metrics))
-	s.Events.Loader.Register(s.WebsocketLoader)
-	s.Events.Loader.Register(s.slackLoader)
-
-	if cdeventsTarget != "" {
-		cdeventLoader, err := cdevent.NewCDEventLoader(cdeventsTarget, clusterId, namespace, dashboardURI, testkube.AllEventTypes)
-		if err == nil {
-			s.Events.Loader.Register(cdeventLoader)
-		} else {
-			s.Log.Debug("cdevents init error", "error", err.Error())
-		}
-	}
-
-	if enableK8sEvents {
-		s.Events.Loader.Register(k8sevent.NewK8sEventLoader(clientset, namespace, testkube.AllEventTypes))
-	}
-
-	s.InitEnvs()
-	s.InitRoutes()
-
-	return s
 }
 
 type TestkubeAPI struct {
@@ -296,6 +269,27 @@ func (s TestkubeAPI) SendTelemetryStartEvent(ctx context.Context, ch chan struct
 			s.Log.Debugw("sending telemetry server start event", "output", out)
 		}
 	}()
+}
+
+func (s *TestkubeAPI) Init(cdEventsTarget string, enableK8sEvents bool) {
+	s.InitEventListeners(
+		s.proContext,
+		s.WebhooksClient,
+		s.TemplatesClient,
+		s.ExecutionResults,
+		s.TestExecutionResults,
+		s.TestWorkflowResults,
+		s.Metrics,
+		cdEventsTarget,
+		s.Config.ClusterID,
+		s.Namespace,
+		s.dashboardURI,
+		enableK8sEvents,
+		s.Clientset,
+	)
+	s.InitEnvs()
+	s.InitRoutes()
+	s.InitEvents()
 }
 
 // InitEnvs initializes api server settings
@@ -588,6 +582,44 @@ func (s *TestkubeAPI) InitRoutes() {
 		})
 		return nil
 	})
+}
+
+func (s TestkubeAPI) InitEventListeners(
+	proContext *config.ProContext,
+	webhookClient *executorsclientv1.WebhooksClient,
+	templatesClient *templatesclientv1.TemplatesClient,
+	testExecutionResults result.Repository,
+	testSuiteExecutionsResults testresult.Repository,
+	testWorkflowResults testworkflow.Repository,
+	metrics metrics.Metrics,
+	cdeventsTarget string,
+	clusterId string,
+	namespace string,
+	dashboardURI string,
+	enableK8sEvents bool,
+	clientset kubernetes.Interface,
+) {
+	// will be reused in websockets handler
+	s.WebsocketLoader = ws.NewWebsocketLoader()
+
+	s.Events.Loader.Register(webhook.NewWebhookLoader(
+		s.Log, webhookClient, templatesClient, testExecutionResults, testSuiteExecutionsResults,
+		testWorkflowResults, metrics, s.proContext))
+	s.Events.Loader.Register(s.WebsocketLoader)
+	s.Events.Loader.Register(s.slackLoader)
+
+	if cdeventsTarget != "" {
+		cdeventLoader, err := cdevent.NewCDEventLoader(cdeventsTarget, clusterId, namespace, dashboardURI, testkube.AllEventTypes)
+		if err == nil {
+			s.Events.Loader.Register(cdeventLoader)
+		} else {
+			s.Log.Debug("cdevents init error", "error", err.Error())
+		}
+	}
+
+	if enableK8sEvents {
+		s.Events.Loader.Register(k8sevent.NewK8sEventLoader(clientset, namespace, testkube.AllEventTypes))
+	}
 }
 
 func (s TestkubeAPI) StartTelemetryHeartbeats(ctx context.Context, ch chan struct{}) {

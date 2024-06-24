@@ -13,6 +13,7 @@ import (
 	"go.uber.org/zap"
 
 	v1 "github.com/kubeshop/testkube/internal/app/api/metrics"
+	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
 	thttp "github.com/kubeshop/testkube/pkg/http"
@@ -31,7 +32,9 @@ func NewWebhookListener(name, uri, selector string, events []testkube.EventType,
 	onStateChange bool,
 	testExecutionResults result.Repository,
 	testSuiteExecutionResults testresult.Repository,
-	testWorkflowExecutionResults testworkflow.Repository, metrics v1.Metrics) *WebhookListener {
+	testWorkflowExecutionResults testworkflow.Repository,
+	metrics v1.Metrics,
+	proContext *config.ProContext) *WebhookListener {
 	return &WebhookListener{
 		name:                         name,
 		Uri:                          uri,
@@ -48,6 +51,7 @@ func NewWebhookListener(name, uri, selector string, events []testkube.EventType,
 		testSuiteExecutionResults:    testSuiteExecutionResults,
 		testWorkflowExecutionResults: testWorkflowExecutionResults,
 		metrics:                      metrics,
+		proContext:                   proContext,
 	}
 }
 
@@ -67,6 +71,7 @@ type WebhookListener struct {
 	testSuiteExecutionResults    testresult.Repository
 	testWorkflowExecutionResults testworkflow.Repository
 	metrics                      v1.Metrics
+	proContext                   *config.ProContext
 }
 
 func (l *WebhookListener) Name() string {
@@ -261,7 +266,7 @@ func (l *WebhookListener) processTemplate(field, body string, event testkube.Eve
 	}
 
 	var buffer bytes.Buffer
-	if err = tmpl.ExecuteTemplate(&buffer, field, event); err != nil {
+	if err = tmpl.ExecuteTemplate(&buffer, field, NewTemplateVars(event, l.proContext)); err != nil {
 		log.Errorw(fmt.Sprintf("executing webhook %s error", field), "error", err)
 		return nil, err
 	}
