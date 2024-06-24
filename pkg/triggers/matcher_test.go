@@ -76,6 +76,7 @@ func TestService_matchConditionsRetry(t *testing.T) {
 			Execution:         "test",
 			ConcurrencyPolicy: "allow",
 			TestSelector:      testtriggersv1.TestTriggerSelector{Name: "some-test"},
+			Disabled:          false,
 		},
 	}
 	statusKey1 := newStatusKey(testTrigger1.Namespace, testTrigger1.Name)
@@ -153,6 +154,7 @@ func TestService_matchConditionsTimeout(t *testing.T) {
 			Execution:         "test",
 			ConcurrencyPolicy: "allow",
 			TestSelector:      testtriggersv1.TestTriggerSelector{Name: "some-test"},
+			Disabled:          false,
 		},
 	}
 	statusKey1 := newStatusKey(testTrigger1.Namespace, testTrigger1.Name)
@@ -225,6 +227,7 @@ func TestService_matchProbesMultiple(t *testing.T) {
 					},
 				},
 			},
+			Disabled: false,
 		},
 	}
 
@@ -292,6 +295,7 @@ func TestService_matchProbesTimeout(t *testing.T) {
 					},
 				},
 			},
+			Disabled: false,
 		},
 	}
 
@@ -397,6 +401,7 @@ func TestService_match(t *testing.T) {
 			Execution:         "test",
 			ConcurrencyPolicy: "allow",
 			TestSelector:      testtriggersv1.TestTriggerSelector{Name: "some-test"},
+			Disabled:          false,
 		},
 	}
 	statusKey1 := newStatusKey(testTrigger1.Namespace, testTrigger1.Name)
@@ -448,6 +453,7 @@ func TestService_matchRegex(t *testing.T) {
 			Execution:         "test",
 			ConcurrencyPolicy: "allow",
 			TestSelector:      testtriggersv1.TestTriggerSelector{NameRegex: "some.*"},
+			Disabled:          false,
 		},
 	}
 	statusKey1 := newStatusKey(testTrigger1.Namespace, testTrigger1.Name)
@@ -495,6 +501,7 @@ func TestService_noMatch(t *testing.T) {
 			Execution:         "test",
 			ConcurrencyPolicy: "allow",
 			TestSelector:      testtriggersv1.TestTriggerSelector{Name: "some-test"},
+			Disabled:          false,
 		},
 	}
 	statusKey1 := newStatusKey(testTrigger1.Namespace, testTrigger1.Name)

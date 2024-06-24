@@ -7140,6 +7140,13 @@ components:
           $ref: "#/components/schemas/TestTriggerSelector"
         concurrencyPolicy:
           $ref: "#/components/schemas/TestTriggerConcurrencyPolicies"
+        disabled:
+          type: boolean
+          description: whether test trigger is disabled
+          default: false
+          example:
+            - true
+            - false
 
     LocalObjectReference:
       description: Reference to Kubernetes object
