@@ -410,6 +410,15 @@ The full TestSuiteExecution data model can be found [here](https://github.com/ku
 
 The full TestWorkflowExecution data model can be found [here](https://github.com/kubeshop/testkube/blob/main/pkg/api/v1/testkube/model_test_workflow_execution.go).
 
+### Additional Top-level Variables:
+
+- `ExecutionCommand` - the CLI command to access the execution (example: `kubectl testkube get execution 6679893e3b11f4e4900e17a5`)
+- `ExecutionURL` - dashboard URL to look at the execution (example: `https://app.testkube.io/organization/tkcorg_9deb42dda2197657/environment/tkcenv_1145999f3c4d1115/dashboard/tests/git-zap-api-test/executions/6679893e3b11f4e4900e17a5`)
+- `ArtifactsCommand` - the CLI command to access the artifacts (example: `kubectl testkube get artifacts 6679893e3b11f4e4900e17a5`)
+- `ArtifactsURL` - dashboard URL to look at the artifacts directly (example: `https://app.testkube.io/organization/tkcorg_9deb42dda2197657/environment/tkcenv_1145999f3c4d1115/dashboard/tests/git-zap-api-test/executions/6679893e3b11f4e4900e17a5/artifacts`)
+- `LogsCommand` - the CLI command to access the logs (example: `kubectl testkube get execution 6679893e3b11f4e4900e17a5 --logs-only`)
+- `LogsURL` - dashboard URL to look at the logs (example: `https://app.testkube.io/organization/tkcorg_9deb42dda2197657/environment/tkcenv_1145999f3c4d1115/dashboard/tests/git-zap-api-test/executions/6679893e3b11f4e4900e17a5/log-output`)
+
 ## Additional Examples
 
 ### Microsoft Teams
