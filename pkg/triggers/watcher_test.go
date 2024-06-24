@@ -117,6 +117,7 @@ func TestService_runWatcher_lease(t *testing.T) {
 				Execution:         "test",
 				ConcurrencyPolicy: "allow",
 				TestSelector:      testtriggersv1.TestTriggerSelector{Name: "some-test"},
+				Disabled:          false,
 			},
 		}
 		createdTestTrigger, err := testKubeClientset.TestsV1().TestTriggers(testNamespace).Create(ctx, &testTrigger, metav1.CreateOptions{})

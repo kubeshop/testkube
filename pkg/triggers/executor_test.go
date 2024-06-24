@@ -168,6 +168,7 @@ func TestExecute(t *testing.T) {
 			Execution:         "test",
 			ConcurrencyPolicy: "allow",
 			TestSelector:      testtriggersv1.TestTriggerSelector{Name: "some-test"},
+			Disabled:          false,
 		},
 	}
 
@@ -238,6 +239,7 @@ func TestWorkflowExecute(t *testing.T) {
 			Execution:         "testworkflow",
 			ConcurrencyPolicy: "allow",
 			TestSelector:      testtriggersv1.TestTriggerSelector{Name: "some-test"},
+			Disabled:          false,
 		},
 	}
 

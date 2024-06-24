@@ -31,6 +31,10 @@ var (
 func (s *Service) match(ctx context.Context, e *watcherEvent) error {
 	for _, status := range s.triggerStatus {
 		t := status.testTrigger
+		if t.Spec.Disabled {
+			continue
+		}
+
 		if t.Spec.Resource != testtriggersv1.TestTriggerResource(e.resource) {
 			continue
 		}
