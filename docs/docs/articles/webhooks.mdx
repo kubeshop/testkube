@@ -412,14 +412,14 @@ The full TestWorkflowExecution data model can be found [here](https://github.com
 
 ### Additional Top-level Variables:
 
-- `ExecutionCommand` - the CLI command to access the execution (example: `kubectl testkube get execution 6679893e3b11f4e4900e17a5`)
-- `ExecutionURL` - dashboard URL to look at the execution (example: `https://app.testkube.io/organization/tkcorg_9deb42dda2197657/environment/tkcenv_1145999f3c4d1115/dashboard/tests/git-zap-api-test/executions/6679893e3b11f4e4900e17a5`)
-- `ArtifactsCommand` - the CLI command to access the artifacts (example: `kubectl testkube get artifacts 6679893e3b11f4e4900e17a5`)
-- `ArtifactsURL` - dashboard URL to look at the artifacts directly (example: `https://app.testkube.io/organization/tkcorg_9deb42dda2197657/environment/tkcenv_1145999f3c4d1115/dashboard/tests/git-zap-api-test/executions/6679893e3b11f4e4900e17a5/artifacts`)
-- `LogsCommand` - the CLI command to access the logs (example: `kubectl testkube get execution 6679893e3b11f4e4900e17a5 --logs-only`)
-- `LogsURL` - dashboard URL to look at the logs (example: `https://app.testkube.io/organization/tkcorg_9deb42dda2197657/environment/tkcenv_1145999f3c4d1115/dashboard/tests/git-zap-api-test/executions/6679893e3b11f4e4900e17a5/log-output`)
+- `ExecutionCommand` - The CLI command to access the execution (example: `kubectl testkube get execution 6679893e3b11f4e4900e17a5`).
+- `ExecutionURL` - The dashboard URL to look at the execution (example: `https://app.testkube.io/organization/tkcorg_9deb42dda2197657/environment/tkcenv_1145999f3c4d1115/dashboard/tests/git-zap-api-test/executions/6679893e3b11f4e4900e17a5`).
+- `ArtifactsCommand` - The CLI command to access the artifacts (example: `kubectl testkube get artifacts 6679893e3b11f4e4900e17a5`).
+- `ArtifactsURL` - The dashboard URL to look at the artifacts directly (example: `https://app.testkube.io/organization/tkcorg_9deb42dda2197657/environment/tkcenv_1145999f3c4d1115/dashboard/tests/git-zap-api-test/executions/6679893e3b11f4e4900e17a5/artifacts`).
+- `LogsCommand` - The CLI command to access the logs (example: `kubectl testkube get execution 6679893e3b11f4e4900e17a5 --logs-only`).
+- `LogsURL` - The dashboard URL to look at the logs (example: `https://app.testkube.io/organization/tkcorg_9deb42dda2197657/environment/tkcenv_1145999f3c4d1115/dashboard/tests/git-zap-api-test/executions/6679893e3b11f4e4900e17a5/log-output`).
 
-Make sure that the value `testkube-api.dashboardUri` in the helm-charts is set to `app.testkube.io`, or your remote dashboard URL, so that the variables above can be populated with the right values.
+Make sure that the value `testkube-api.dashboardUri` in the helm-charts is set to `app.testkube.io`, or your remote dashboard URL, so that the variables above can be populated with the correct values.
 
 ## Additional Examples
 
