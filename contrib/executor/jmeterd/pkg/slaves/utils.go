@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/pkg/errors"
 
@@ -59,6 +60,12 @@ func getSlaveRunnerEnv(envs map[string]string, runnerExecution testkube.Executio
 func getSlaveConfigurationEnv(slaveEnv map[string]testkube.Variable, slavesPodNumber int) []v1.EnvVar {
 	var envVars []v1.EnvVar
 	for envKey, t := range slaveEnv {
+		if envKey == SlavesAdditionalJmeterArgs {
+			if !strings.Contains(t.Value, "-j") {
+				t.Value += " -j /data/server.log"
+			}
+		}
+
 		envVars = append(envVars, v1.EnvVar{Name: envKey, Value: t.Value})
 	}
 

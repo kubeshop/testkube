@@ -54,4 +54,4 @@ SERVER_ARGS="-Dserver.rmi.localport=60001 -Dserver_port=1099 -Jserver.rmi.ssl.di
 echo "Running command: jmeter-server ${SERVER_ARGS} ${SLAVES_ADDITIONAL_JMETER_ARGS}"
 echo
 
-jmeter-server ${SERVER_ARGS} ${SLAVES_ADDITIONAL_JMETER_ARGS}
+/jmeter-server.sh ${SERVER_ARGS} ${SLAVES_ADDITIONAL_JMETER_ARGS}
