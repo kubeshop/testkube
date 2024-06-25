@@ -522,7 +522,7 @@ func newExecutionRequestFromFlags(cmd *cobra.Command) (request *testkube.Executi
 			return nil, err
 		}
 
-		disableSecretCreation = info.DisableSecretCreation
+		disableSecretCreation = !info.SecretConfig().AutoCreate
 	}
 
 	variables, err := common.CreateVariables(cmd, disableSecretCreation)
@@ -1041,7 +1041,7 @@ func newExecutionUpdateRequestFromFlags(cmd *cobra.Command) (request *testkube.E
 			return nil, err
 		}
 
-		variables, err := common.CreateVariables(cmd, info.DisableSecretCreation)
+		variables, err := common.CreateVariables(cmd, !info.SecretConfig().AutoCreate)
 		if err != nil {
 			return nil, err
 		}

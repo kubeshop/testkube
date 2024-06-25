@@ -10,6 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/pkg/secretmanager"
 )
 
 func ExpectsYAML(c *fiber.Ctx) bool {
@@ -58,7 +59,7 @@ func IsNotFound(err error) bool {
 	if err == nil {
 		return false
 	}
-	if errors.Is(err, mongo.ErrNoDocuments) || k8serrors.IsNotFound(err) {
+	if errors.Is(err, mongo.ErrNoDocuments) || k8serrors.IsNotFound(err) || errors.Is(err, secretmanager.ErrNotFound) {
 		return true
 	}
 	if e, ok := status.FromError(err); ok {

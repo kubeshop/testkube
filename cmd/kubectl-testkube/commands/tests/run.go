@@ -115,7 +115,7 @@ func NewRunTestCmd() *cobra.Command {
 			info, err := client.GetServerInfo()
 			ui.WarnOnErrorAndOutputPretty("getting server info", outputPretty, err)
 
-			variables, err := common.CreateVariables(cmd, info.DisableSecretCreation)
+			variables, err := common.CreateVariables(cmd, !info.SecretConfig().AutoCreate)
 			ui.WarnOnErrorAndOutputPretty("getting variables", outputPretty, err)
 
 			envConfigMaps, envSecrets, err := newEnvReferencesFromFlags(cmd)

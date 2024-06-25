@@ -127,7 +127,7 @@ func NewRunTestSuiteCmd() *cobra.Command {
 			info, err := client.GetServerInfo()
 			ui.ExitOnError("getting server info", err)
 
-			options.ExecutionVariables, err = common.CreateVariables(cmd, info.DisableSecretCreation)
+			options.ExecutionVariables, err = common.CreateVariables(cmd, !info.SecretConfig().AutoCreate)
 			ui.WarnOnErrorAndOutputPretty("getting variables", outputPretty, err)
 
 			if gitBranch != "" || gitCommit != "" || gitPath != "" || gitWorkingDir != "" {

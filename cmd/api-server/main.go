@@ -21,6 +21,7 @@ import (
 	cloudtestworkflow "github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
 	testworkflow2 "github.com/kubeshop/testkube/pkg/repository/testworkflow"
+	"github.com/kubeshop/testkube/pkg/secretmanager"
 	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
 	"github.com/kubeshop/testkube/pkg/tcl/schedulertcl"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/presets"
@@ -574,6 +575,19 @@ func main() {
 
 	go testWorkflowExecutor.Recover(context.Background())
 
+	// TODO: Make granular environment variables, yet backwards compatible
+	secretConfig := testkube.SecretConfig{
+		Prefix:     cfg.SecretCreationPrefix,
+		List:       cfg.EnableSecretsEndpoint,
+		ListAll:    cfg.EnableSecretsEndpoint && cfg.EnableListingAllSecrets,
+		Create:     cfg.EnableSecretsEndpoint && !cfg.DisableSecretCreation,
+		Modify:     cfg.EnableSecretsEndpoint && !cfg.DisableSecretCreation,
+		Delete:     cfg.EnableSecretsEndpoint && !cfg.DisableSecretCreation,
+		AutoCreate: !cfg.DisableSecretCreation,
+	}
+
+	secretManager := secretmanager.New(clientset, secretConfig)
+
 	api := apiv1.NewTestkubeAPI(
 		cfg.TestkubeNamespace,
 		resultsRepository,
@@ -584,6 +598,7 @@ func main() {
 		executorsClient,
 		testsuitesClientV3,
 		secretClient,
+		secretManager,
 		webhooksClient,
 		clientset,
 		testkubeClientset,
@@ -608,11 +623,10 @@ func main() {
 		cfg.TestkubeHelmchartVersion,
 		mode,
 		eventBus,
-		cfg.EnableSecretsEndpoint,
+		secretConfig,
 		features,
 		logsStream,
 		logGrpcClient,
-		cfg.DisableSecretCreation,
 		subscriptionChecker,
 		serviceAccountNames,
 		cfg.EnableK8sEvents,
@@ -669,7 +683,7 @@ func main() {
 			triggers.WithHostnameIdentifier(),
 			triggers.WithTestkubeNamespace(cfg.TestkubeNamespace),
 			triggers.WithWatcherNamespaces(cfg.TestkubeWatcherNamespaces),
-			triggers.WithDisableSecretCreation(cfg.DisableSecretCreation),
+			triggers.WithDisableSecretCreation(!secretConfig.AutoCreate),
 		)
 		log.DefaultLogger.Info("starting trigger service")
 		triggerService.Run(ctx)
