@@ -105,7 +105,7 @@ func (s *TestkubeAPI) CreateTestWorkflowTemplateHandler() fiber.Handler {
 		}
 
 		// Handle secrets auto-creation
-		secrets := s.SecretManager.Batch(execNamespace, "creds-", obj.Name)
+		secrets := s.SecretManager.Batch(execNamespace, "tw-", obj.Name)
 		err = testworkflowresolver.ExtractCredentialsInTemplate(obj, secrets.Append)
 		if err != nil {
 			return s.BadRequest(c, errPrefix, "auto-creating secrets", err)
@@ -184,7 +184,7 @@ func (s *TestkubeAPI) UpdateTestWorkflowTemplateHandler() fiber.Handler {
 		}
 
 		// Handle secrets auto-creation
-		secrets := s.SecretManager.Batch(execNamespace, "creds-", obj.Name)
+		secrets := s.SecretManager.Batch(execNamespace, "tw-", obj.Name)
 		err = testworkflowresolver.ExtractCredentialsInTemplate(obj, secrets.Append)
 		if err != nil {
 			return s.BadRequest(c, errPrefix, "auto-creating secrets", err)
