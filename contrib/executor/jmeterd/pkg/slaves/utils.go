@@ -62,7 +62,7 @@ func getSlaveConfigurationEnv(slaveEnv map[string]testkube.Variable, slavesPodNu
 	for envKey, t := range slaveEnv {
 		if envKey == SlavesAdditionalJmeterArgs {
 			if !strings.Contains(t.Value, "-j") {
-				t.Value += " -j /data/server.log"
+				t.Value += " -j /logs/server.log"
 			}
 		}
 
