@@ -12,8 +12,9 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
+const maxSecretSize = 750 * 1024
+
 var (
-	ErrCreateEmptySecret  = errors.New("cannot create empty secret")
 	ErrAutoCreateDisabled = errors.New("auto-creation of secrets is disabled")
 )
 
@@ -23,6 +24,7 @@ type batch struct {
 	prefix    string
 	name      string
 	secrets   []corev1.Secret
+	lengths   []int
 	index     int
 	disabled  bool
 }
@@ -37,13 +39,7 @@ func NewBatch(clientSet kubernetes.Interface, namespace, prefix, name string, di
 	}
 }
 
-func (s *batch) Prepare(creds map[string]string) (string, error) {
-	if s.disabled {
-		return "", ErrAutoCreateDisabled
-	}
-	if len(creds) == 0 {
-		return "", ErrCreateEmptySecret
-	}
+func (s *batch) createSecret() {
 	s.index++
 	suffix := fmt.Sprintf("-%s%d%s", rand.String(2), s.index, rand.String(3))
 	maxNameChars := maxSecretNameLength - len(s.prefix) - len(suffix)
@@ -58,9 +54,44 @@ func (s *batch) Prepare(creds map[string]string) (string, error) {
 			Labels: map[string]string{secretCreatedByLabelName: secretCreatedByTestkubeValue},
 		},
 		Type:       corev1.SecretTypeOpaque,
-		StringData: creds,
+		StringData: map[string]string{},
 	})
-	return name, nil
+	s.lengths = append(s.lengths, 0)
+}
+
+func (s *batch) Append(key string, value string) (*corev1.EnvVarSource, error) {
+	if s.disabled {
+		return nil, ErrAutoCreateDisabled
+	}
+
+	// Append to existing secret if it's small enough
+	length := len(key) + len(value) + 4
+	for i := range s.secrets {
+		if s.lengths[i]+length <= maxSecretSize {
+			for _, ok := s.secrets[i].StringData[key]; ok; _, ok = s.secrets[i].StringData[key] {
+				key += rand.String(2)
+			}
+			s.secrets[i].StringData[key] = value
+			s.lengths[i] += length
+			return &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{Name: s.secrets[i].Name},
+					Key:                  key,
+				},
+			}, nil
+		}
+	}
+
+	// Create a new secret if there is no space for it
+	s.createSecret()
+	s.secrets[len(s.secrets)-1].StringData[key] = value
+	s.lengths[len(s.secrets)-1] += length
+	return &corev1.EnvVarSource{
+		SecretKeyRef: &corev1.SecretKeySelector{
+			LocalObjectReference: corev1.LocalObjectReference{Name: s.secrets[len(s.secrets)-1].Name},
+			Key:                  key,
+		},
+	}, nil
 }
 
 func (s *batch) Create(ctx context.Context, owner *metav1.OwnerReference) error {

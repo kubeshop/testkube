@@ -8,309 +8,330 @@ import (
 )
 
 const (
-	GitUsernameKey = "git-username"
-	GitTokenKey    = "git-token"
-	GitSshKey      = "git-ssh-key"
+	ComputedKeyword = "<computed>"
+	GitUsernameKey  = "git-username"
+	GitTokenKey     = "git-token"
+	GitSshKey       = "git-ssh-key"
+	FileKey         = "file"
+	EnvVarKey       = "env"
 )
 
-func replacePlainTextCredentialsInContent(content *testworkflowsv1.Content, createSecret func(creds map[string]string) (string, error)) ([]string, error) {
+func isComputed(source *corev1.EnvVarSource) bool {
+	return source != nil && source.SecretKeyRef != nil && source.SecretKeyRef.Name == ComputedKeyword
+}
+
+func extractCredentialsInContent(content *testworkflowsv1.Content, externalize func(key, value string) (*corev1.EnvVarSource, error)) error {
 	if content == nil || content.Git == nil {
-		return nil, nil
+		return nil
 	}
 
-	// Build list of required credentials
-	credentials := map[string]string{}
+	// Replace credentials in the Git repository
 	// TODO: Ensure there is no expression inside
-	if content.Git.SshKey != "" {
-		credentials[GitSshKey] = content.Git.SshKey
+	if isComputed(content.Git.SshKeyFrom) {
+		source, err := externalize(GitSshKey, content.Git.SshKeyFrom.SecretKeyRef.Key)
+		if err != nil {
+			return errors.Wrap(err, "failed creating secret for Git credentials")
+		}
+		content.Git.SshKeyFrom = source
 	}
-	if content.Git.Username != "" {
-		credentials[GitUsernameKey] = content.Git.Username
+	if isComputed(content.Git.UsernameFrom) {
+		source, err := externalize(GitUsernameKey, content.Git.UsernameFrom.SecretKeyRef.Key)
+		if err != nil {
+			return errors.Wrap(err, "failed creating secret for Git credentials")
+		}
+		content.Git.UsernameFrom = source
 	}
-	if content.Git.Token != "" {
-		credentials[GitTokenKey] = content.Git.Token
+	if isComputed(content.Git.TokenFrom) {
+		source, err := externalize(GitTokenKey, content.Git.TokenFrom.SecretKeyRef.Key)
+		if err != nil {
+			return errors.Wrap(err, "failed creating secret for Git credentials")
+		}
+		content.Git.TokenFrom = source
 	}
 
-	if len(credentials) == 0 {
-		return nil, nil
+	// TODO: Ensure there is no expression inside
+	for i := range content.Files {
+		if isComputed(content.Files[i].ContentFrom) {
+			source, err := externalize(FileKey, content.Files[i].ContentFrom.SecretKeyRef.Key)
+			if err != nil {
+				return errors.Wrap(err, "failed creating secret for externalized content file")
+			}
+			content.Files[i].ContentFrom = source
+		}
 	}
 
-	// Attempt creating the credentials secret
-	secretName, err := createSecret(credentials)
+	return nil
+}
+
+func extractCredentialsInContainerConfig(container *testworkflowsv1.ContainerConfig, externalize func(key, value string) (*corev1.EnvVarSource, error)) error {
+	if container == nil {
+		return nil
+	}
+	for i := range container.Env {
+		if isComputed(container.Env[i].ValueFrom) {
+			source, err := externalize(FileKey, container.Env[i].ValueFrom.SecretKeyRef.Key)
+			if err != nil {
+				return errors.Wrap(err, "failed creating secret for externalized environment variable")
+			}
+			container.Env[i].ValueFrom = source
+		}
+	}
+	return nil
+}
+
+func extractCredentialsInService(service *testworkflowsv1.ServiceSpec, externalize func(key, value string) (*corev1.EnvVarSource, error)) (err error) {
+	if service == nil {
+		return
+	}
+	return extractCredentialsInIndependentService(&service.IndependentServiceSpec, externalize)
+}
+
+func extractCredentialsInStepRun(step *testworkflowsv1.StepRun, externalize func(key, value string) (*corev1.EnvVarSource, error)) (err error) {
+	if step == nil {
+		return
+	}
+	err = extractCredentialsInContainerConfig(&step.ContainerConfig, externalize)
+	return errors.Wrap(err, "run")
+}
+
+func extractCredentialsInIndependentService(service *testworkflowsv1.IndependentServiceSpec, externalize func(key, value string) (*corev1.EnvVarSource, error)) (err error) {
+	if service == nil {
+		return
+	}
+	err = extractCredentialsInContainerConfig(&service.ContainerConfig, externalize)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed creating secret for Git credentials")
+		return err
 	}
-	if secretName == "" {
-		return nil, nil
+	err = extractCredentialsInStepRun(&service.StepRun, externalize)
+	if err != nil {
+		return err
 	}
-
-	// Apply the credentials
-	if credentials[GitSshKey] != "" {
-		content.Git.SshKey = ""
-		content.Git.SshKeyFrom = &corev1.EnvVarSource{
-			SecretKeyRef: &corev1.SecretKeySelector{
-				LocalObjectReference: corev1.LocalObjectReference{Name: secretName},
-				Key:                  GitSshKey,
-			},
-		}
-	}
-	if credentials[GitUsernameKey] != "" {
-		content.Git.Username = ""
-		content.Git.UsernameFrom = &corev1.EnvVarSource{
-			SecretKeyRef: &corev1.SecretKeySelector{
-				LocalObjectReference: corev1.LocalObjectReference{Name: secretName},
-				Key:                  GitUsernameKey,
-			},
-		}
-	}
-	if credentials[GitTokenKey] != "" {
-		content.Git.Token = ""
-		content.Git.TokenFrom = &corev1.EnvVarSource{
-			SecretKeyRef: &corev1.SecretKeySelector{
-				LocalObjectReference: corev1.LocalObjectReference{Name: secretName},
-				Key:                  GitTokenKey,
-			},
-		}
-	}
-
-	return []string{secretName}, nil
+	err = extractCredentialsInContent(service.Content, externalize)
+	return errors.Wrap(err, "content")
 }
 
-func replacePlainTextCredentialsInService(service *testworkflowsv1.ServiceSpec, createSecret func(creds map[string]string) (string, error)) (secrets []string, err error) {
-	if service == nil {
-		return
-	}
-	return replacePlainTextCredentialsInIndependentService(&service.IndependentServiceSpec, createSecret)
-}
-
-func replacePlainTextCredentialsInIndependentService(service *testworkflowsv1.IndependentServiceSpec, createSecret func(creds map[string]string) (string, error)) (secrets []string, err error) {
-	if service == nil {
-		return
-	}
-	s, err := replacePlainTextCredentialsInContent(service.Content, createSecret)
-	return s, errors.Wrap(err, "content")
-}
-
-func replacePlainTextCredentialsInStepsList(steps []testworkflowsv1.Step, createSecret func(creds map[string]string) (string, error)) (secrets []string, err error) {
-	var s []string
+func extractCredentialsInStepsList(steps []testworkflowsv1.Step, externalize func(key, value string) (*corev1.EnvVarSource, error)) (err error) {
 	for i := range steps {
-		s, err = replacePlainTextCredentialsInStep(&steps[i], createSecret)
-		secrets = append(secrets, s...)
+		err = extractCredentialsInStep(&steps[i], externalize)
 		if err != nil {
-			return secrets, errors.Wrapf(err, "%d", i)
+			return errors.Wrapf(err, "%d", i)
 		}
 	}
-	return secrets, nil
+	return nil
 }
 
-func replacePlainTextCredentialsInIndependentStepsList(steps []testworkflowsv1.IndependentStep, createSecret func(creds map[string]string) (string, error)) (secrets []string, err error) {
-	var s []string
+func extractCredentialsInIndependentStepsList(steps []testworkflowsv1.IndependentStep, externalize func(key, value string) (*corev1.EnvVarSource, error)) (err error) {
 	for i := range steps {
-		s, err = replacePlainTextCredentialsInIndependentStep(&steps[i], createSecret)
-		secrets = append(secrets, s...)
+		err = extractCredentialsInIndependentStep(&steps[i], externalize)
 		if err != nil {
-			return secrets, errors.Wrapf(err, "%d", i)
+			return errors.Wrapf(err, "%d", i)
 		}
 	}
-	return secrets, nil
+	return nil
 }
 
-func replacePlainTextCredentialsInServicesMap(services map[string]testworkflowsv1.ServiceSpec, createSecret func(creds map[string]string) (string, error)) (secrets []string, err error) {
-	var s []string
+func extractCredentialsInServicesMap(services map[string]testworkflowsv1.ServiceSpec, externalize func(key, value string) (*corev1.EnvVarSource, error)) (err error) {
 	for k, svc := range services {
-		s, err = replacePlainTextCredentialsInService(&svc, createSecret)
-		secrets = append(secrets, s...)
+		err = extractCredentialsInService(&svc, externalize)
 		services[k] = svc
 		if err != nil {
-			return s, errors.Wrapf(err, k)
+			return errors.Wrapf(err, k)
 		}
 	}
-	return secrets, nil
+	return nil
 }
 
-func replacePlainTextCredentialsInIndependentServicesMap(services map[string]testworkflowsv1.IndependentServiceSpec, createSecret func(creds map[string]string) (string, error)) (secrets []string, err error) {
-	var s []string
+func extractCredentialsInIndependentServicesMap(services map[string]testworkflowsv1.IndependentServiceSpec, externalize func(key, value string) (*corev1.EnvVarSource, error)) (err error) {
 	for k, svc := range services {
-		s, err = replacePlainTextCredentialsInIndependentService(&svc, createSecret)
-		secrets = append(secrets, s...)
+		err = extractCredentialsInIndependentService(&svc, externalize)
 		services[k] = svc
 		if err != nil {
-			return s, errors.Wrapf(err, k)
+			return errors.Wrapf(err, k)
 		}
 	}
-	return secrets, nil
+	return nil
 }
 
-func replacePlainTextCredentialsInParallel(parallel *testworkflowsv1.StepParallel, createSecret func(creds map[string]string) (string, error)) (secrets []string, err error) {
+func extractCredentialsInParallel(parallel *testworkflowsv1.StepParallel, externalize func(key, value string) (*corev1.EnvVarSource, error)) (err error) {
 	if parallel == nil {
 		return
 	}
-	return replacePlainTextCredentialsInWorkflowSpec(&parallel.TestWorkflowSpec, createSecret)
+	return extractCredentialsInWorkflowSpec(&parallel.TestWorkflowSpec, externalize)
 }
 
-func replacePlainTextCredentialsInIndependentParallel(parallel *testworkflowsv1.IndependentStepParallel, createSecret func(creds map[string]string) (string, error)) (secrets []string, err error) {
+func extractCredentialsInIndependentParallel(parallel *testworkflowsv1.IndependentStepParallel, externalize func(key, value string) (*corev1.EnvVarSource, error)) (err error) {
 	if parallel == nil {
 		return
 	}
-	return replacePlainTextCredentialsInTemplateSpec(&parallel.TestWorkflowTemplateSpec, createSecret)
+	return extractCredentialsInTemplateSpec(&parallel.TestWorkflowTemplateSpec, externalize)
 }
 
-func replacePlainTextCredentialsInStep(step *testworkflowsv1.Step, createSecret func(creds map[string]string) (string, error)) (secrets []string, err error) {
+func extractCredentialsInStep(step *testworkflowsv1.Step, externalize func(key, value string) (*corev1.EnvVarSource, error)) (err error) {
 	if step == nil {
 		return
 	}
 
-	s, err := replacePlainTextCredentialsInContent(step.Content, createSecret)
-	secrets = append(secrets, s...)
+	err = extractCredentialsInContent(step.Content, externalize)
 	if err != nil {
-		return s, errors.Wrap(err, "content")
+		return errors.Wrap(err, "content")
 	}
 
-	s, err = replacePlainTextCredentialsInServicesMap(step.Services, createSecret)
-	secrets = append(secrets, s...)
+	err = extractCredentialsInStepRun(step.Run, externalize)
 	if err != nil {
-		return secrets, errors.Wrap(err, "services")
+		return errors.Wrap(err, "run")
 	}
 
-	s, err = replacePlainTextCredentialsInParallel(step.Parallel, createSecret)
-	secrets = append(secrets, s...)
+	err = extractCredentialsInContainerConfig(step.Container, externalize)
 	if err != nil {
-		return s, errors.Wrap(err, "parallel")
+		return errors.Wrap(err, "container")
 	}
 
-	s, err = replacePlainTextCredentialsInStepsList(step.Setup, createSecret)
-	secrets = append(secrets, s...)
+	err = extractCredentialsInServicesMap(step.Services, externalize)
 	if err != nil {
-		return secrets, errors.Wrap(err, "setup")
+		return errors.Wrap(err, "services")
 	}
 
-	s, err = replacePlainTextCredentialsInStepsList(step.Steps, createSecret)
-	secrets = append(secrets, s...)
+	err = extractCredentialsInParallel(step.Parallel, externalize)
 	if err != nil {
-		return secrets, errors.Wrap(err, "steps")
+		return errors.Wrap(err, "parallel")
 	}
 
-	return secrets, nil
+	err = extractCredentialsInStepsList(step.Setup, externalize)
+	if err != nil {
+		return errors.Wrap(err, "setup")
+	}
+
+	err = extractCredentialsInStepsList(step.Steps, externalize)
+	if err != nil {
+		return errors.Wrap(err, "steps")
+	}
+
+	return nil
 }
 
-func replacePlainTextCredentialsInIndependentStep(step *testworkflowsv1.IndependentStep, createSecret func(creds map[string]string) (string, error)) (secrets []string, err error) {
+func extractCredentialsInIndependentStep(step *testworkflowsv1.IndependentStep, externalize func(key, value string) (*corev1.EnvVarSource, error)) (err error) {
 	if step == nil {
 		return
 	}
 
-	s, err := replacePlainTextCredentialsInContent(step.Content, createSecret)
-	secrets = append(secrets, s...)
+	err = extractCredentialsInContent(step.Content, externalize)
 	if err != nil {
-		return s, errors.Wrap(err, "content")
+		return errors.Wrap(err, "content")
 	}
 
-	s, err = replacePlainTextCredentialsInIndependentServicesMap(step.Services, createSecret)
-	secrets = append(secrets, s...)
+	err = extractCredentialsInStepRun(step.Run, externalize)
 	if err != nil {
-		return secrets, errors.Wrap(err, "services")
+		return errors.Wrap(err, "run")
 	}
 
-	s, err = replacePlainTextCredentialsInIndependentParallel(step.Parallel, createSecret)
-	secrets = append(secrets, s...)
+	err = extractCredentialsInContainerConfig(step.Container, externalize)
 	if err != nil {
-		return s, errors.Wrap(err, "parallel")
+		return errors.Wrap(err, "container")
 	}
 
-	s, err = replacePlainTextCredentialsInIndependentStepsList(step.Setup, createSecret)
-	secrets = append(secrets, s...)
+	err = extractCredentialsInIndependentServicesMap(step.Services, externalize)
 	if err != nil {
-		return secrets, errors.Wrap(err, "setup")
+		return errors.Wrap(err, "services")
 	}
 
-	s, err = replacePlainTextCredentialsInIndependentStepsList(step.Steps, createSecret)
-	secrets = append(secrets, s...)
+	err = extractCredentialsInIndependentParallel(step.Parallel, externalize)
 	if err != nil {
-		return secrets, errors.Wrap(err, "steps")
+		return errors.Wrap(err, "parallel")
 	}
 
-	return secrets, nil
+	err = extractCredentialsInIndependentStepsList(step.Setup, externalize)
+	if err != nil {
+		return errors.Wrap(err, "setup")
+	}
+
+	err = extractCredentialsInIndependentStepsList(step.Steps, externalize)
+	if err != nil {
+		return errors.Wrap(err, "steps")
+	}
+
+	return nil
 }
 
-func replacePlainTextCredentialsInWorkflowSpec(spec *testworkflowsv1.TestWorkflowSpec, createSecret func(creds map[string]string) (string, error)) (secrets []string, err error) {
-	s, err := replacePlainTextCredentialsInContent(spec.Content, createSecret)
-	secrets = append(secrets, s...)
+func extractCredentialsInWorkflowSpec(spec *testworkflowsv1.TestWorkflowSpec, externalize func(key, value string) (*corev1.EnvVarSource, error)) (err error) {
+	err = extractCredentialsInContent(spec.Content, externalize)
 	if err != nil {
-		return s, errors.Wrap(err, "content")
+		return errors.Wrap(err, "content")
 	}
 
-	s, err = replacePlainTextCredentialsInServicesMap(spec.Services, createSecret)
-	secrets = append(secrets, s...)
+	err = extractCredentialsInContainerConfig(spec.Container, externalize)
 	if err != nil {
-		return secrets, errors.Wrap(err, "services")
+		return errors.Wrap(err, "container")
 	}
 
-	s, err = replacePlainTextCredentialsInStepsList(spec.Setup, createSecret)
-	secrets = append(secrets, s...)
+	err = extractCredentialsInServicesMap(spec.Services, externalize)
 	if err != nil {
-		return secrets, errors.Wrap(err, "setup")
+		return errors.Wrap(err, "services")
 	}
 
-	s, err = replacePlainTextCredentialsInStepsList(spec.Steps, createSecret)
-	secrets = append(secrets, s...)
+	err = extractCredentialsInStepsList(spec.Setup, externalize)
 	if err != nil {
-		return secrets, errors.Wrap(err, "steps")
+		return errors.Wrap(err, "setup")
 	}
 
-	s, err = replacePlainTextCredentialsInStepsList(spec.After, createSecret)
-	secrets = append(secrets, s...)
+	err = extractCredentialsInStepsList(spec.Steps, externalize)
 	if err != nil {
-		return secrets, errors.Wrap(err, "after")
+		return errors.Wrap(err, "steps")
 	}
 
-	return secrets, nil
+	err = extractCredentialsInStepsList(spec.After, externalize)
+	if err != nil {
+		return errors.Wrap(err, "after")
+	}
+
+	return nil
 }
 
-func replacePlainTextCredentialsInTemplateSpec(spec *testworkflowsv1.TestWorkflowTemplateSpec, createSecret func(creds map[string]string) (string, error)) (secrets []string, err error) {
-	s, err := replacePlainTextCredentialsInContent(spec.Content, createSecret)
-	secrets = append(secrets, s...)
+func extractCredentialsInTemplateSpec(spec *testworkflowsv1.TestWorkflowTemplateSpec, externalize func(key, value string) (*corev1.EnvVarSource, error)) (err error) {
+	err = extractCredentialsInContent(spec.Content, externalize)
 	if err != nil {
-		return s, errors.Wrap(err, "content")
+		return errors.Wrap(err, "content")
 	}
 
-	s, err = replacePlainTextCredentialsInIndependentServicesMap(spec.Services, createSecret)
-	secrets = append(secrets, s...)
+	err = extractCredentialsInContainerConfig(spec.Container, externalize)
 	if err != nil {
-		return secrets, errors.Wrap(err, "services")
+		return errors.Wrap(err, "container")
 	}
 
-	s, err = replacePlainTextCredentialsInIndependentStepsList(spec.Setup, createSecret)
-	secrets = append(secrets, s...)
+	err = extractCredentialsInIndependentServicesMap(spec.Services, externalize)
 	if err != nil {
-		return secrets, errors.Wrap(err, "setup")
+		return errors.Wrap(err, "services")
 	}
 
-	s, err = replacePlainTextCredentialsInIndependentStepsList(spec.Steps, createSecret)
-	secrets = append(secrets, s...)
+	err = extractCredentialsInIndependentStepsList(spec.Setup, externalize)
 	if err != nil {
-		return secrets, errors.Wrap(err, "steps")
+		return errors.Wrap(err, "setup")
 	}
 
-	s, err = replacePlainTextCredentialsInIndependentStepsList(spec.After, createSecret)
-	secrets = append(secrets, s...)
+	err = extractCredentialsInIndependentStepsList(spec.Steps, externalize)
 	if err != nil {
-		return secrets, errors.Wrap(err, "after")
+		return errors.Wrap(err, "steps")
 	}
 
-	return secrets, nil
+	err = extractCredentialsInIndependentStepsList(spec.After, externalize)
+	if err != nil {
+		return errors.Wrap(err, "after")
+	}
+
+	return nil
 }
 
-func ReplacePlainTextCredentialsInWorkflow(workflow *testworkflowsv1.TestWorkflow, createSecret func(creds map[string]string) (string, error)) (secrets []string, err error) {
+func ExtractCredentialsInWorkflow(workflow *testworkflowsv1.TestWorkflow, externalize func(key, value string) (*corev1.EnvVarSource, error)) (err error) {
 	if workflow == nil {
 		return
 	}
-	secrets, err = replacePlainTextCredentialsInWorkflowSpec(&workflow.Spec, createSecret)
-	return secrets, errors.Wrap(err, "spec")
+	err = extractCredentialsInWorkflowSpec(&workflow.Spec, externalize)
+	return errors.Wrap(err, "spec")
 }
 
-func ReplacePlainTextCredentialsInTemplate(template *testworkflowsv1.TestWorkflowTemplate, createSecret func(creds map[string]string) (string, error)) (secrets []string, err error) {
+func ExtractCredentialsInTemplate(template *testworkflowsv1.TestWorkflowTemplate, externalize func(key, value string) (*corev1.EnvVarSource, error)) (err error) {
 	if template == nil {
 		return
 	}
-	secrets, err = replacePlainTextCredentialsInTemplateSpec(&template.Spec, createSecret)
-	return secrets, errors.Wrap(err, "spec")
+	err = extractCredentialsInTemplateSpec(&template.Spec, externalize)
+	return errors.Wrap(err, "spec")
 }

@@ -16,12 +16,22 @@ func testSecret(name, key string) *corev1.EnvVarSource {
 	}
 }
 
-func testGitPlain(username, token, sshKey string) *testworkflowsv1.Content {
+func testGitCreate(username, token, sshKey string) *testworkflowsv1.Content {
+	var usernameFrom, tokenFrom, sshKeyFrom *corev1.EnvVarSource
+	if username != "" {
+		usernameFrom = testSecret(ComputedKeyword, username)
+	}
+	if token != "" {
+		tokenFrom = testSecret(ComputedKeyword, token)
+	}
+	if sshKey != "" {
+		sshKeyFrom = testSecret(ComputedKeyword, sshKey)
+	}
 	return &testworkflowsv1.Content{
 		Git: &testworkflowsv1.ContentGit{
-			Username: username,
-			Token:    token,
-			SshKey:   sshKey,
+			UsernameFrom: usernameFrom,
+			TokenFrom:    tokenFrom,
+			SshKeyFrom:   sshKeyFrom,
 		},
 	}
 }
@@ -38,40 +48,39 @@ func testGit(username, token, sshKey *corev1.EnvVarSource) *testworkflowsv1.Cont
 
 // Test Workflows
 
-func TestReplacePlainText_ContentUserToken(t *testing.T) {
+func TestExtract_ContentUserToken(t *testing.T) {
 	wf := testworkflowsv1.TestWorkflow{
 		Spec: testworkflowsv1.TestWorkflowSpec{
 			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
-				Content: testGitPlain("some-username", "some-token", ""),
+				Content: testGitCreate("some-username", "some-token", ""),
 			},
 		},
 	}
 	expected := testworkflowsv1.TestWorkflow{
 		Spec: testworkflowsv1.TestWorkflowSpec{
 			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
-				Content: testGit(testSecret("some-secret-1", GitUsernameKey), testSecret("some-secret-1", GitTokenKey), nil),
+				Content: testGit(testSecret("some-secret-1", GitUsernameKey), testSecret("some-secret-2", GitTokenKey), nil),
 			},
 		},
 	}
 	i := 0
-	calls := make([]map[string]string, 0)
-	secrets, err := ReplacePlainTextCredentialsInWorkflow(&wf, func(creds map[string]string) (string, error) {
+	calls := make([][]string, 0)
+	err := ExtractCredentialsInWorkflow(&wf, func(key, value string) (*corev1.EnvVarSource, error) {
 		i++
-		calls = append(calls, creds)
-		return fmt.Sprintf("some-secret-%d", i), nil
+		calls = append(calls, []string{key, value})
+		return testSecret(fmt.Sprintf("some-secret-%d", i), key), nil
 	})
 
 	assert.NoError(t, err)
-	assert.Equal(t, []string{"some-secret-1"}, secrets)
-	assert.Equal(t, []map[string]string{{GitUsernameKey: "some-username", GitTokenKey: "some-token"}}, calls)
+	assert.Equal(t, [][]string{{GitUsernameKey, "some-username"}, {GitTokenKey, "some-token"}}, calls)
 	assert.Equal(t, expected, wf)
 }
 
-func TestReplacePlainText_ContentTokenOnly(t *testing.T) {
+func TestExtract_ContentTokenOnly(t *testing.T) {
 	wf := testworkflowsv1.TestWorkflow{
 		Spec: testworkflowsv1.TestWorkflowSpec{
 			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
-				Content: testGitPlain("", "some-token", ""),
+				Content: testGitCreate("", "some-token", ""),
 			},
 		},
 	}
@@ -83,24 +92,23 @@ func TestReplacePlainText_ContentTokenOnly(t *testing.T) {
 		},
 	}
 	i := 0
-	calls := make([]map[string]string, 0)
-	secrets, err := ReplacePlainTextCredentialsInWorkflow(&wf, func(creds map[string]string) (string, error) {
+	calls := make([][]string, 0)
+	err := ExtractCredentialsInWorkflow(&wf, func(key, value string) (*corev1.EnvVarSource, error) {
 		i++
-		calls = append(calls, creds)
-		return fmt.Sprintf("some-secret-%d", i), nil
+		calls = append(calls, []string{key, value})
+		return testSecret(fmt.Sprintf("some-secret-%d", i), key), nil
 	})
 
 	assert.NoError(t, err)
-	assert.Equal(t, []string{"some-secret-1"}, secrets)
-	assert.Equal(t, []map[string]string{{GitTokenKey: "some-token"}}, calls)
+	assert.Equal(t, [][]string{{GitTokenKey, "some-token"}}, calls)
 	assert.Equal(t, expected, wf)
 }
 
-func TestReplacePlainText_ContentSshOnly(t *testing.T) {
+func TestExtract_ContentSshOnly(t *testing.T) {
 	wf := testworkflowsv1.TestWorkflow{
 		Spec: testworkflowsv1.TestWorkflowSpec{
 			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
-				Content: testGitPlain("", "", "some-key"),
+				Content: testGitCreate("", "", "some-key"),
 			},
 		},
 	}
@@ -112,27 +120,26 @@ func TestReplacePlainText_ContentSshOnly(t *testing.T) {
 		},
 	}
 	i := 0
-	calls := make([]map[string]string, 0)
-	secrets, err := ReplacePlainTextCredentialsInWorkflow(&wf, func(creds map[string]string) (string, error) {
+	calls := make([][]string, 0)
+	err := ExtractCredentialsInWorkflow(&wf, func(key, value string) (*corev1.EnvVarSource, error) {
 		i++
-		calls = append(calls, creds)
-		return fmt.Sprintf("some-secret-%d", i), nil
+		calls = append(calls, []string{key, value})
+		return testSecret(fmt.Sprintf("some-secret-%d", i), key), nil
 	})
 
 	assert.NoError(t, err)
-	assert.Equal(t, []string{"some-secret-1"}, secrets)
-	assert.Equal(t, []map[string]string{{GitSshKey: "some-key"}}, calls)
+	assert.Equal(t, [][]string{{GitSshKey, "some-key"}}, calls)
 	assert.Equal(t, expected, wf)
 }
 
-func TestReplacePlainText_StepContent(t *testing.T) {
+func TestExtract_StepContent(t *testing.T) {
 	wf := testworkflowsv1.TestWorkflow{
 		Spec: testworkflowsv1.TestWorkflowSpec{
 			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
-				Content: testGitPlain("", "", "some-key"),
+				Content: testGitCreate("", "", "some-key"),
 			},
 			Steps: []testworkflowsv1.Step{
-				{StepSource: testworkflowsv1.StepSource{Content: testGitPlain("some-username", "some-token", "")}},
+				{StepSource: testworkflowsv1.StepSource{Content: testGitCreate("some-username", "some-token", "")}},
 			},
 		},
 	}
@@ -142,35 +149,34 @@ func TestReplacePlainText_StepContent(t *testing.T) {
 				Content: testGit(nil, nil, testSecret("some-secret-1", GitSshKey)),
 			},
 			Steps: []testworkflowsv1.Step{
-				{StepSource: testworkflowsv1.StepSource{Content: testGit(testSecret("some-secret-2", GitUsernameKey), testSecret("some-secret-2", GitTokenKey), nil)}},
+				{StepSource: testworkflowsv1.StepSource{Content: testGit(testSecret("some-secret-2", GitUsernameKey), testSecret("some-secret-3", GitTokenKey), nil)}},
 			},
 		},
 	}
 	i := 0
-	calls := make([]map[string]string, 0)
-	secrets, err := ReplacePlainTextCredentialsInWorkflow(&wf, func(creds map[string]string) (string, error) {
+	calls := make([][]string, 0)
+	err := ExtractCredentialsInWorkflow(&wf, func(key, value string) (*corev1.EnvVarSource, error) {
 		i++
-		calls = append(calls, creds)
-		return fmt.Sprintf("some-secret-%d", i), nil
+		calls = append(calls, []string{key, value})
+		return testSecret(fmt.Sprintf("some-secret-%d", i), key), nil
 	})
 
 	assert.NoError(t, err)
-	assert.Equal(t, []string{"some-secret-1", "some-secret-2"}, secrets)
-	assert.Equal(t, []map[string]string{{GitSshKey: "some-key"}, {GitUsernameKey: "some-username", GitTokenKey: "some-token"}}, calls)
+	assert.Equal(t, [][]string{{GitSshKey, "some-key"}, {GitUsernameKey, "some-username"}, {GitTokenKey, "some-token"}}, calls)
 	assert.Equal(t, expected, wf)
 }
 
-func TestReplacePlainText_ParallelContent(t *testing.T) {
+func TestExtract_ParallelContent(t *testing.T) {
 	wf := testworkflowsv1.TestWorkflow{
 		Spec: testworkflowsv1.TestWorkflowSpec{
 			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
-				Content: testGitPlain("", "", "some-key"),
+				Content: testGitCreate("", "", "some-key"),
 			},
 			Steps: []testworkflowsv1.Step{
 				{Parallel: &testworkflowsv1.StepParallel{
 					TestWorkflowSpec: testworkflowsv1.TestWorkflowSpec{
 						TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
-							Content: testGitPlain("some-username", "some-token", ""),
+							Content: testGitCreate("some-username", "some-token", ""),
 						},
 					},
 				}},
@@ -186,7 +192,7 @@ func TestReplacePlainText_ParallelContent(t *testing.T) {
 				{Parallel: &testworkflowsv1.StepParallel{
 					TestWorkflowSpec: testworkflowsv1.TestWorkflowSpec{
 						TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
-							Content: testGit(testSecret("some-secret-2", GitUsernameKey), testSecret("some-secret-2", GitTokenKey), nil),
+							Content: testGit(testSecret("some-secret-2", GitUsernameKey), testSecret("some-secret-3", GitTokenKey), nil),
 						},
 					},
 				}},
@@ -194,29 +200,28 @@ func TestReplacePlainText_ParallelContent(t *testing.T) {
 		},
 	}
 	i := 0
-	calls := make([]map[string]string, 0)
-	secrets, err := ReplacePlainTextCredentialsInWorkflow(&wf, func(creds map[string]string) (string, error) {
+	calls := make([][]string, 0)
+	err := ExtractCredentialsInWorkflow(&wf, func(key, value string) (*corev1.EnvVarSource, error) {
 		i++
-		calls = append(calls, creds)
-		return fmt.Sprintf("some-secret-%d", i), nil
+		calls = append(calls, []string{key, value})
+		return testSecret(fmt.Sprintf("some-secret-%d", i), key), nil
 	})
 
 	assert.NoError(t, err)
-	assert.Equal(t, []string{"some-secret-1", "some-secret-2"}, secrets)
-	assert.Equal(t, []map[string]string{{GitSshKey: "some-key"}, {GitUsernameKey: "some-username", GitTokenKey: "some-token"}}, calls)
+	assert.Equal(t, [][]string{{GitSshKey, "some-key"}, {GitUsernameKey, "some-username"}, {GitTokenKey, "some-token"}}, calls)
 	assert.Equal(t, expected, wf)
 }
 
-func TestReplacePlainText_ServicesContent(t *testing.T) {
+func TestExtract_ServicesContent(t *testing.T) {
 	wf := testworkflowsv1.TestWorkflow{
 		Spec: testworkflowsv1.TestWorkflowSpec{
 			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
-				Content: testGitPlain("", "", "some-key"),
+				Content: testGitCreate("", "", "some-key"),
 			},
 			Services: map[string]testworkflowsv1.ServiceSpec{
 				"some": {
 					IndependentServiceSpec: testworkflowsv1.IndependentServiceSpec{
-						Content: testGitPlain("some-username", "some-token", ""),
+						Content: testGitCreate("some-username", "some-token", ""),
 					},
 				},
 			},
@@ -230,62 +235,60 @@ func TestReplacePlainText_ServicesContent(t *testing.T) {
 			Services: map[string]testworkflowsv1.ServiceSpec{
 				"some": {
 					IndependentServiceSpec: testworkflowsv1.IndependentServiceSpec{
-						Content: testGit(testSecret("some-secret-2", GitUsernameKey), testSecret("some-secret-2", GitTokenKey), nil),
+						Content: testGit(testSecret("some-secret-2", GitUsernameKey), testSecret("some-secret-3", GitTokenKey), nil),
 					},
 				},
 			},
 		},
 	}
 	i := 0
-	calls := make([]map[string]string, 0)
-	secrets, err := ReplacePlainTextCredentialsInWorkflow(&wf, func(creds map[string]string) (string, error) {
+	calls := make([][]string, 0)
+	err := ExtractCredentialsInWorkflow(&wf, func(key, value string) (*corev1.EnvVarSource, error) {
 		i++
-		calls = append(calls, creds)
-		return fmt.Sprintf("some-secret-%d", i), nil
+		calls = append(calls, []string{key, value})
+		return testSecret(fmt.Sprintf("some-secret-%d", i), key), nil
 	})
 
 	assert.NoError(t, err)
-	assert.Equal(t, []string{"some-secret-1", "some-secret-2"}, secrets)
-	assert.Equal(t, []map[string]string{{GitSshKey: "some-key"}, {GitUsernameKey: "some-username", GitTokenKey: "some-token"}}, calls)
+	assert.Equal(t, [][]string{{GitSshKey, "some-key"}, {GitUsernameKey, "some-username"}, {GitTokenKey, "some-token"}}, calls)
 	assert.Equal(t, expected, wf)
 }
 
 // Test Workflow Templates
 
-func TestReplacePlainTextTemplate_ContentUserToken(t *testing.T) {
+func TestExtractTemplate_ContentUserToken(t *testing.T) {
 	wf := testworkflowsv1.TestWorkflowTemplate{
 		Spec: testworkflowsv1.TestWorkflowTemplateSpec{
 			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
-				Content: testGitPlain("some-username", "some-token", ""),
+				Content: testGitCreate("some-username", "some-token", ""),
 			},
 		},
 	}
 	expected := testworkflowsv1.TestWorkflowTemplate{
 		Spec: testworkflowsv1.TestWorkflowTemplateSpec{
 			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
-				Content: testGit(testSecret("some-secret-1", GitUsernameKey), testSecret("some-secret-1", GitTokenKey), nil),
+				Content: testGit(testSecret("some-secret-1", GitUsernameKey), testSecret("some-secret-2", GitTokenKey), nil),
 			},
 		},
 	}
 	i := 0
-	calls := make([]map[string]string, 0)
-	secrets, err := ReplacePlainTextCredentialsInTemplate(&wf, func(creds map[string]string) (string, error) {
+	calls := make([][]string, 0)
+	err := ExtractCredentialsInTemplate(&wf, func(key, value string) (*corev1.EnvVarSource, error) {
 		i++
-		calls = append(calls, creds)
-		return fmt.Sprintf("some-secret-%d", i), nil
+		calls = append(calls, []string{key, value})
+		return testSecret(fmt.Sprintf("some-secret-%d", i), key), nil
 	})
 
 	assert.NoError(t, err)
-	assert.Equal(t, []string{"some-secret-1"}, secrets)
-	assert.Equal(t, []map[string]string{{GitUsernameKey: "some-username", GitTokenKey: "some-token"}}, calls)
+	assert.Equal(t, [][]string{{GitUsernameKey, "some-username"}, {GitTokenKey, "some-token"}}, calls)
 	assert.Equal(t, expected, wf)
 }
 
-func TestReplacePlainTextTemplate_ContentTokenOnly(t *testing.T) {
+func TestExtractTemplate_ContentTokenOnly(t *testing.T) {
 	wf := testworkflowsv1.TestWorkflowTemplate{
 		Spec: testworkflowsv1.TestWorkflowTemplateSpec{
 			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
-				Content: testGitPlain("", "some-token", ""),
+				Content: testGitCreate("", "some-token", ""),
 			},
 		},
 	}
@@ -297,24 +300,23 @@ func TestReplacePlainTextTemplate_ContentTokenOnly(t *testing.T) {
 		},
 	}
 	i := 0
-	calls := make([]map[string]string, 0)
-	secrets, err := ReplacePlainTextCredentialsInTemplate(&wf, func(creds map[string]string) (string, error) {
+	calls := make([][]string, 0)
+	err := ExtractCredentialsInTemplate(&wf, func(key, value string) (*corev1.EnvVarSource, error) {
 		i++
-		calls = append(calls, creds)
-		return fmt.Sprintf("some-secret-%d", i), nil
+		calls = append(calls, []string{key, value})
+		return testSecret(fmt.Sprintf("some-secret-%d", i), key), nil
 	})
 
 	assert.NoError(t, err)
-	assert.Equal(t, []string{"some-secret-1"}, secrets)
-	assert.Equal(t, []map[string]string{{GitTokenKey: "some-token"}}, calls)
+	assert.Equal(t, [][]string{{GitTokenKey, "some-token"}}, calls)
 	assert.Equal(t, expected, wf)
 }
 
-func TestReplacePlainTextTemplate_ContentSshOnly(t *testing.T) {
+func TestExtractTemplate_ContentSshOnly(t *testing.T) {
 	wf := testworkflowsv1.TestWorkflowTemplate{
 		Spec: testworkflowsv1.TestWorkflowTemplateSpec{
 			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
-				Content: testGitPlain("", "", "some-key"),
+				Content: testGitCreate("", "", "some-key"),
 			},
 		},
 	}
@@ -326,27 +328,26 @@ func TestReplacePlainTextTemplate_ContentSshOnly(t *testing.T) {
 		},
 	}
 	i := 0
-	calls := make([]map[string]string, 0)
-	secrets, err := ReplacePlainTextCredentialsInTemplate(&wf, func(creds map[string]string) (string, error) {
+	calls := make([][]string, 0)
+	err := ExtractCredentialsInTemplate(&wf, func(key, value string) (*corev1.EnvVarSource, error) {
 		i++
-		calls = append(calls, creds)
-		return fmt.Sprintf("some-secret-%d", i), nil
+		calls = append(calls, []string{key, value})
+		return testSecret(fmt.Sprintf("some-secret-%d", i), key), nil
 	})
 
 	assert.NoError(t, err)
-	assert.Equal(t, []string{"some-secret-1"}, secrets)
-	assert.Equal(t, []map[string]string{{GitSshKey: "some-key"}}, calls)
+	assert.Equal(t, [][]string{{GitSshKey, "some-key"}}, calls)
 	assert.Equal(t, expected, wf)
 }
 
-func TestReplacePlainTextTemplate_StepContent(t *testing.T) {
+func TestExtractTemplate_StepContent(t *testing.T) {
 	wf := testworkflowsv1.TestWorkflowTemplate{
 		Spec: testworkflowsv1.TestWorkflowTemplateSpec{
 			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
-				Content: testGitPlain("", "", "some-key"),
+				Content: testGitCreate("", "", "some-key"),
 			},
 			Steps: []testworkflowsv1.IndependentStep{
-				{StepSource: testworkflowsv1.StepSource{Content: testGitPlain("some-username", "some-token", "")}},
+				{StepSource: testworkflowsv1.StepSource{Content: testGitCreate("some-username", "some-token", "")}},
 			},
 		},
 	}
@@ -356,35 +357,34 @@ func TestReplacePlainTextTemplate_StepContent(t *testing.T) {
 				Content: testGit(nil, nil, testSecret("some-secret-1", GitSshKey)),
 			},
 			Steps: []testworkflowsv1.IndependentStep{
-				{StepSource: testworkflowsv1.StepSource{Content: testGit(testSecret("some-secret-2", GitUsernameKey), testSecret("some-secret-2", GitTokenKey), nil)}},
+				{StepSource: testworkflowsv1.StepSource{Content: testGit(testSecret("some-secret-2", GitUsernameKey), testSecret("some-secret-3", GitTokenKey), nil)}},
 			},
 		},
 	}
 	i := 0
-	calls := make([]map[string]string, 0)
-	secrets, err := ReplacePlainTextCredentialsInTemplate(&wf, func(creds map[string]string) (string, error) {
+	calls := make([][]string, 0)
+	err := ExtractCredentialsInTemplate(&wf, func(key, value string) (*corev1.EnvVarSource, error) {
 		i++
-		calls = append(calls, creds)
-		return fmt.Sprintf("some-secret-%d", i), nil
+		calls = append(calls, []string{key, value})
+		return testSecret(fmt.Sprintf("some-secret-%d", i), key), nil
 	})
 
 	assert.NoError(t, err)
-	assert.Equal(t, []string{"some-secret-1", "some-secret-2"}, secrets)
-	assert.Equal(t, []map[string]string{{GitSshKey: "some-key"}, {GitUsernameKey: "some-username", GitTokenKey: "some-token"}}, calls)
+	assert.Equal(t, [][]string{{GitSshKey, "some-key"}, {GitUsernameKey, "some-username"}, {GitTokenKey, "some-token"}}, calls)
 	assert.Equal(t, expected, wf)
 }
 
-func TestReplacePlainTextTemplate_ParallelContent(t *testing.T) {
+func TestExtractTemplate_ParallelContent(t *testing.T) {
 	wf := testworkflowsv1.TestWorkflowTemplate{
 		Spec: testworkflowsv1.TestWorkflowTemplateSpec{
 			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
-				Content: testGitPlain("", "", "some-key"),
+				Content: testGitCreate("", "", "some-key"),
 			},
 			Steps: []testworkflowsv1.IndependentStep{
 				{Parallel: &testworkflowsv1.IndependentStepParallel{
 					TestWorkflowTemplateSpec: testworkflowsv1.TestWorkflowTemplateSpec{
 						TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
-							Content: testGitPlain("some-username", "some-token", ""),
+							Content: testGitCreate("some-username", "some-token", ""),
 						},
 					},
 				}},
@@ -400,7 +400,7 @@ func TestReplacePlainTextTemplate_ParallelContent(t *testing.T) {
 				{Parallel: &testworkflowsv1.IndependentStepParallel{
 					TestWorkflowTemplateSpec: testworkflowsv1.TestWorkflowTemplateSpec{
 						TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
-							Content: testGit(testSecret("some-secret-2", GitUsernameKey), testSecret("some-secret-2", GitTokenKey), nil),
+							Content: testGit(testSecret("some-secret-2", GitUsernameKey), testSecret("some-secret-3", GitTokenKey), nil),
 						},
 					},
 				}},
@@ -408,28 +408,27 @@ func TestReplacePlainTextTemplate_ParallelContent(t *testing.T) {
 		},
 	}
 	i := 0
-	calls := make([]map[string]string, 0)
-	secrets, err := ReplacePlainTextCredentialsInTemplate(&wf, func(creds map[string]string) (string, error) {
+	calls := make([][]string, 0)
+	err := ExtractCredentialsInTemplate(&wf, func(key, value string) (*corev1.EnvVarSource, error) {
 		i++
-		calls = append(calls, creds)
-		return fmt.Sprintf("some-secret-%d", i), nil
+		calls = append(calls, []string{key, value})
+		return testSecret(fmt.Sprintf("some-secret-%d", i), key), nil
 	})
 
 	assert.NoError(t, err)
-	assert.Equal(t, []string{"some-secret-1", "some-secret-2"}, secrets)
-	assert.Equal(t, []map[string]string{{GitSshKey: "some-key"}, {GitUsernameKey: "some-username", GitTokenKey: "some-token"}}, calls)
+	assert.Equal(t, [][]string{{GitSshKey, "some-key"}, {GitUsernameKey, "some-username"}, {GitTokenKey, "some-token"}}, calls)
 	assert.Equal(t, expected, wf)
 }
 
-func TestReplacePlainTextTemplate_ServicesContent(t *testing.T) {
+func TestExtractTemplate_ServicesContent(t *testing.T) {
 	wf := testworkflowsv1.TestWorkflowTemplate{
 		Spec: testworkflowsv1.TestWorkflowTemplateSpec{
 			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
-				Content: testGitPlain("", "", "some-key"),
+				Content: testGitCreate("", "", "some-key"),
 			},
 			Services: map[string]testworkflowsv1.IndependentServiceSpec{
 				"some": {
-					Content: testGitPlain("some-username", "some-token", ""),
+					Content: testGitCreate("some-username", "some-token", ""),
 				},
 			},
 		},
@@ -441,21 +440,20 @@ func TestReplacePlainTextTemplate_ServicesContent(t *testing.T) {
 			},
 			Services: map[string]testworkflowsv1.IndependentServiceSpec{
 				"some": {
-					Content: testGit(testSecret("some-secret-2", GitUsernameKey), testSecret("some-secret-2", GitTokenKey), nil),
+					Content: testGit(testSecret("some-secret-2", GitUsernameKey), testSecret("some-secret-3", GitTokenKey), nil),
 				},
 			},
 		},
 	}
 	i := 0
-	calls := make([]map[string]string, 0)
-	secrets, err := ReplacePlainTextCredentialsInTemplate(&wf, func(creds map[string]string) (string, error) {
+	calls := make([][]string, 0)
+	err := ExtractCredentialsInTemplate(&wf, func(key, value string) (*corev1.EnvVarSource, error) {
 		i++
-		calls = append(calls, creds)
-		return fmt.Sprintf("some-secret-%d", i), nil
+		calls = append(calls, []string{key, value})
+		return testSecret(fmt.Sprintf("some-secret-%d", i), key), nil
 	})
 
 	assert.NoError(t, err)
-	assert.Equal(t, []string{"some-secret-1", "some-secret-2"}, secrets)
-	assert.Equal(t, []map[string]string{{GitSshKey: "some-key"}, {GitUsernameKey: "some-username", GitTokenKey: "some-token"}}, calls)
+	assert.Equal(t, [][]string{{GitSshKey, "some-key"}, {GitUsernameKey, "some-username"}, {GitTokenKey, "some-token"}}, calls)
 	assert.Equal(t, expected, wf)
 }
