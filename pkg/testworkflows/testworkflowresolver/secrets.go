@@ -1,6 +1,10 @@
 package testworkflowresolver
 
 import (
+	"fmt"
+	"regexp"
+	"strings"
+
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 
@@ -63,13 +67,19 @@ func extractCredentialsInContent(content *testworkflowsv1.Content, externalize f
 	return nil
 }
 
+var sanitizeNameRe = regexp.MustCompile(`[^a-zA-Z0-9]+`)
+
+func sanitizeName(name string) string {
+	return strings.Trim(strings.ToLower(sanitizeNameRe.ReplaceAllString(name, "-")), "-")
+}
+
 func extractCredentialsInContainerConfig(container *testworkflowsv1.ContainerConfig, externalize func(key, value string) (*corev1.EnvVarSource, error)) error {
 	if container == nil {
 		return nil
 	}
 	for i := range container.Env {
 		if isComputed(container.Env[i].ValueFrom) {
-			source, err := externalize(FileKey, container.Env[i].ValueFrom.SecretKeyRef.Key)
+			source, err := externalize(fmt.Sprintf("%s-%s", EnvVarKey, sanitizeName(container.Env[i].Name)), container.Env[i].ValueFrom.SecretKeyRef.Key)
 			if err != nil {
 				return errors.Wrap(err, "failed creating secret for externalized environment variable")
 			}
