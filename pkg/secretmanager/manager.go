@@ -223,7 +223,7 @@ func (s *secretManager) Update(ctx context.Context, namespace, name string, data
 	}
 
 	// Create the resource
-	secret, err = s.clientSet.CoreV1().Secrets(namespace).Create(ctx, secret, metav1.CreateOptions{})
+	secret, err = s.clientSet.CoreV1().Secrets(namespace).Update(ctx, secret, metav1.UpdateOptions{})
 	if err != nil {
 		return testkube.Secret{}, err
 	}
