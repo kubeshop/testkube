@@ -20,6 +20,7 @@ const (
 	defaultSlavesCount = 0
 	serverPort         = 1099
 	localPort          = 60001
+	logFile            = "/logs/server.log"
 )
 
 func getSlaveRunnerEnv(envs map[string]string, runnerExecution testkube.Execution) []v1.EnvVar {
@@ -59,14 +60,21 @@ func getSlaveRunnerEnv(envs map[string]string, runnerExecution testkube.Executio
 
 func getSlaveConfigurationEnv(slaveEnv map[string]testkube.Variable, slavesPodNumber int) []v1.EnvVar {
 	var envVars []v1.EnvVar
+	found := false
 	for envKey, t := range slaveEnv {
 		if envKey == SlavesAdditionalJmeterArgs {
 			if !strings.Contains(t.Value, "-j") {
-				t.Value += " -j /logs/server.log"
+				t.Value += " -j " + logFile
 			}
+
+			found = true
 		}
 
 		envVars = append(envVars, v1.EnvVar{Name: envKey, Value: t.Value})
+	}
+
+	if !found {
+		envVars = append(envVars, v1.EnvVar{Name: SlavesAdditionalJmeterArgs, Value: " -j " + logFile})
 	}
 
 	envVars = append(envVars, v1.EnvVar{Name: "SLAVE_POD_NUMBER", Value: strconv.Itoa(slavesPodNumber)})
