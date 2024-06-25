@@ -7677,6 +7677,9 @@ components:
           type: string
           description: secret name
           example: "git-secret"
+        namespace:
+          type: string
+          description: secret namespace
         type:
           type: string
           description: secret type

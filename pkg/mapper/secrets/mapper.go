@@ -49,6 +49,7 @@ func MapSecretKubeToAPI(secret *corev1.Secret) testkube.Secret {
 
 	return testkube.Secret{
 		Name:       secret.Name,
+		Namespace:  secret.Namespace,
 		CreatedAt:  secret.CreationTimestamp.Time,
 		UpdatedAt:  updateTime,
 		Type_:      secretType,

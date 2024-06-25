@@ -17,6 +17,8 @@ import (
 type Secret struct {
 	// secret name
 	Name string `json:"name"`
+	// secret namespace
+	Namespace string `json:"namespace,omitempty"`
 	// secret type
 	Type_     string    `json:"type,omitempty"`
 	CreatedAt time.Time `json:"createdAt,omitempty"`
