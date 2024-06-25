@@ -137,11 +137,6 @@ func (s *TestkubeAPI) DeleteTestWorkflowsHandler() fiber.Handler {
 func (s *TestkubeAPI) CreateTestWorkflowHandler() fiber.Handler {
 	errPrefix := "failed to create test workflow"
 	return func(c *fiber.Ctx) (err error) {
-		autoCreateSecrets, err := strconv.ParseBool(c.Query("autoCreateSecrets", "false"))
-		if err != nil {
-			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse autoCreateSecrets parameter: %s", errPrefix, err))
-		}
-
 		// Deserialize resource
 		obj := new(testworkflowsv1.TestWorkflow)
 		if HasYAML(c) {
@@ -173,11 +168,9 @@ func (s *TestkubeAPI) CreateTestWorkflowHandler() fiber.Handler {
 
 		// Handle secrets auto-creation
 		secrets := s.SecretManager.Batch(execNamespace, "creds-", obj.Name)
-		if autoCreateSecrets {
-			err = testworkflowresolver.ExtractCredentialsInWorkflow(obj, secrets.Append)
-			if err != nil {
-				return s.BadRequest(c, errPrefix, "auto-creating secrets", err)
-			}
+		err = testworkflowresolver.ExtractCredentialsInWorkflow(obj, secrets.Append)
+		if err != nil {
+			return s.BadRequest(c, errPrefix, "auto-creating secrets", err)
 		}
 
 		// Create the resource
@@ -214,11 +207,6 @@ func (s *TestkubeAPI) UpdateTestWorkflowHandler() fiber.Handler {
 	errPrefix := "failed to update test workflow"
 	return func(c *fiber.Ctx) (err error) {
 		name := c.Params("id")
-
-		autoCreateSecrets, err := strconv.ParseBool(c.Query("autoCreateSecrets", "false"))
-		if err != nil {
-			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse autoCreateSecrets parameter: %s", errPrefix, err))
-		}
 
 		// Deserialize resource
 		obj := new(testworkflowsv1.TestWorkflow)
@@ -260,11 +248,9 @@ func (s *TestkubeAPI) UpdateTestWorkflowHandler() fiber.Handler {
 
 		// Handle secrets auto-creation
 		secrets := s.SecretManager.Batch(execNamespace, "creds-", obj.Name)
-		if autoCreateSecrets {
-			err = testworkflowresolver.ExtractCredentialsInWorkflow(obj, secrets.Append)
-			if err != nil {
-				return s.BadRequest(c, errPrefix, "auto-creating secrets", err)
-			}
+		err = testworkflowresolver.ExtractCredentialsInWorkflow(obj, secrets.Append)
+		if err != nil {
+			return s.BadRequest(c, errPrefix, "auto-creating secrets", err)
 		}
 
 		// Update the resource
