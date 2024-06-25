@@ -356,12 +356,12 @@ func (s TestkubeAPI) CreateTestHandler() fiber.Handler {
 
 			test = testsmapper.MapUpsertToSpec(request)
 			test.Namespace = s.Namespace
-			if request.Content != nil && request.Content.Repository != nil && !s.disableSecretCreation {
+			if request.Content != nil && request.Content.Repository != nil && s.secretConfig.AutoCreate {
 				secrets = createTestSecretsData(request.Content.Repository.Username, request.Content.Repository.Token)
 			}
 		}
 
-		createdTest, err := s.TestsClient.Create(test, s.disableSecretCreation, tests.Option{Secrets: secrets})
+		createdTest, err := s.TestsClient.Create(test, !s.secretConfig.AutoCreate, tests.Option{Secrets: secrets})
 
 		s.Metrics.IncCreateTest(test.Spec.Type_, err)
 
@@ -425,7 +425,7 @@ func (s TestkubeAPI) UpdateTestHandler() fiber.Handler {
 		if request.Content != nil && (*request.Content) != nil && (*request.Content).Repository != nil && *(*request.Content).Repository != nil {
 			username := (*(*request.Content).Repository).Username
 			token := (*(*request.Content).Repository).Token
-			if (username != nil || token != nil) && !s.disableSecretCreation {
+			if (username != nil || token != nil) && s.secretConfig.AutoCreate {
 				data, err := s.SecretClient.Get(secret.GetMetadataName(name, client.SecretTest))
 				if err != nil && !errors.IsNotFound(err) {
 					return s.Error(c, http.StatusBadGateway, err)
@@ -441,9 +441,9 @@ func (s TestkubeAPI) UpdateTestHandler() fiber.Handler {
 
 		var updatedTest *testsv3.Test
 		if option != nil {
-			updatedTest, err = s.TestsClient.Update(testSpec, s.disableSecretCreation, *option)
+			updatedTest, err = s.TestsClient.Update(testSpec, !s.secretConfig.AutoCreate, *option)
 		} else {
-			updatedTest, err = s.TestsClient.Update(testSpec, s.disableSecretCreation)
+			updatedTest, err = s.TestsClient.Update(testSpec, !s.secretConfig.AutoCreate)
 		}
 
 		s.Metrics.IncUpdateTest(testSpec.Spec.Type_, err)

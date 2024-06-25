@@ -3283,8 +3283,205 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Secret"
+        403:
+          description: "secret management is disabled"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
         502:
-          description: "problem with communicating with kubernetes cluster or git server"
+          description: "problem with communicating with kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+    post:
+      tags:
+        - secrets
+        - api
+      summary: "Create secret"
+      description: "Create secret in the cluster"
+      operationId: createSecret
+      requestBody:
+        description: secret data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SecretInput"
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Secret"
+        400:
+          description: "invalid input data"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        403:
+          description: "secret management or modification are disabled"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with communicating with kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+  /secrets/{id}:
+    delete:
+      tags:
+      - secrets
+      - api
+      parameters:
+      - $ref: "#/components/parameters/Namespace"
+      summary: "Delete secret"
+      description: "Delete secret in the cluster"
+      operationId: deleteSecret
+      responses:
+        204:
+          description: "successful operation"
+        400:
+          description: "invalid input data"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        403:
+          description: "secret is not controlled by Testkube or secret management or modification are disabled"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        404:
+          description: "secret has not been found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with communicating with kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+    patch:
+      tags:
+      - secrets
+      - api
+      summary: "Update secret"
+      description: "Update secret in the cluster"
+      operationId: updateSecret
+      requestBody:
+        description: secret data
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SecretUpdate"
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Secret"
+        400:
+          description: "invalid input data"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        403:
+          description: "secret is not controlled by Testkube or secret management or modification are disabled"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        404:
+          description: "secret not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with communicating with kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+    get:
+      tags:
+      - secrets
+      - api
+      summary: "Get secret"
+      description: "Get secret in the cluster"
+      operationId: getSecret
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Secret"
+        400:
+          description: "invalid input data"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        403:
+          description: "secret is not controlled by Testkube or secret management is disabled"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        404:
+          description: "secret not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: "problem with communicating with kubernetes cluster"
           content:
             application/problem+json:
               schema:
@@ -5889,9 +6086,13 @@ components:
         enableSecretEndpoint:
           type: boolean
           description: enable secret endpoint to list secrets in namespace
+          deprecated: true
         disableSecretCreation:
           type: boolean
           description: disable secret creation for tests and test sources
+          deprecated: true
+        secret:
+          $ref: "#/components/schemas/SecretConfig"
         features:
           $ref: "#/components/schemas/Features"
         executionNamespaces:
@@ -7484,17 +7685,142 @@ components:
       type: object
       required:
         - name
+        - controlled
       properties:
         name:
           type: string
           description: secret name
           example: "git-secret"
+        namespace:
+          type: string
+          description: secret namespace
+        type:
+          type: string
+          description: secret type
+          default: Opaque
+        createdAt:
+          type: string
+          format: date-time
+          example: "2022-07-30T06:54:15Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2022-07-30T06:54:15Z"
+        controlled:
+          type: boolean
+          description: is this Secret controlled by Testkube
+        owner:
+          $ref: "#/components/schemas/SecretOwner"
+        labels:
+          type: object
+          description: labels associated with the secret
+          additionalProperties:
+            type: string
         keys:
           type: array
           description: secret keys
           items:
             type: string
           example: ["key1", "key2", "key3"]
+
+    SecretInput:
+      description: Secret input information
+      type: object
+      required:
+      - name
+      - data
+      properties:
+        name:
+          type: string
+          description: secret name
+          example: "git-secret"
+        type:
+          type: string
+          description: secret type
+          default: Opaque
+        namespace:
+          type: string
+          description: secret namespace
+        owner:
+          $ref: "#/components/schemas/SecretOwner"
+        labels:
+          type: object
+          description: labels associated with the secret
+          additionalProperties:
+            type: string
+        data:
+          type: object
+          description: data to store in the secret
+          additionalProperties:
+            type: string
+
+    SecretUpdate:
+      description: Secret input information to update
+      type: object
+      properties:
+        name:
+          type: string
+          description: secret name
+          example: "git-secret"
+        owner:
+          $ref: "#/components/schemas/SecretOwner"
+        labels:
+          type: object
+          description: labels associated with the secret
+          additionalProperties:
+            type: string
+        data:
+          type: object
+          description: data to store in the secret
+          additionalProperties:
+            type: string
+
+    SecretOwner:
+      description: Resource that owns the secret
+      type: object
+      required:
+      - kind
+      - name
+      properties:
+        kind:
+          description: kind of the resource that is the owner
+          type: string
+        name:
+          type: string
+          description: name of the owner resource
+
+    SecretConfig:
+      type: object
+      required:
+      - prefix
+      - list
+      - listAll
+      - create
+      - modify
+      - delete
+      - autoCreate
+      properties:
+        prefix:
+          type: string
+          description: prefix for the secrets created via Testkube
+        list:
+          type: boolean
+          description: allow to list secrets created via Testkube
+        listAll:
+          type: boolean
+          description: allow to list all secrets
+        create:
+          type: boolean
+          description: allow to create a new secret via Testkube
+        modify:
+          type: boolean
+          description: allow to modify a secret created via Testkube
+        delete:
+          type: boolean
+          description: allow to delete a secret created via Testkube
+        autoCreate:
+          type: boolean
+          description: allow to automatically create secrets via Testkube for sensitive credentials
 
     TestWorkflow:
       type: object

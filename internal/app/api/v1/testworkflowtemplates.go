@@ -7,11 +7,13 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/pkg/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowresolver"
 )
 
 func (s *TestkubeAPI) ListTestWorkflowTemplatesHandler() fiber.Handler {
@@ -82,7 +84,7 @@ func (s *TestkubeAPI) CreateTestWorkflowTemplateHandler() fiber.Handler {
 			}
 		} else {
 			var v *testkube.TestWorkflowTemplate
-			err = c.BodyParser(&v)
+			err = c.BodyParser(&obj)
 			if err != nil {
 				return s.BadRequest(c, errPrefix, "invalid body", err)
 			}
@@ -95,11 +97,38 @@ func (s *TestkubeAPI) CreateTestWorkflowTemplateHandler() fiber.Handler {
 		}
 		obj.Namespace = s.Namespace
 
+		// Get information about execution namespace
+		// TODO: Considering that the TestWorkflow may override it - should it create in all execution namespaces?
+		execNamespace := obj.Namespace
+		if obj.Spec.Job != nil && obj.Spec.Job.Namespace != "" {
+			execNamespace = obj.Spec.Job.Namespace
+		}
+
+		// Handle secrets auto-creation
+		secrets := s.SecretManager.Batch(execNamespace, "tw-", obj.Name)
+		err = testworkflowresolver.ExtractCredentialsInTemplate(obj, secrets.Append)
+		if err != nil {
+			return s.BadRequest(c, errPrefix, "auto-creating secrets", err)
+		}
+
 		// Create the resource
 		obj, err = s.TestWorkflowTemplatesClient.Create(obj)
+		if err != nil {
+			s.Metrics.IncCreateTestWorkflowTemplate(err)
+			return s.BadRequest(c, errPrefix, "client error", err)
+		}
+
+		// Create secrets
+		err = secrets.Create(c.Context(), &metav1.OwnerReference{
+			APIVersion: testworkflowsv1.GroupVersion.String(),
+			Kind:       testworkflowsv1.ResourceTemplate,
+			Name:       obj.Name,
+			UID:        obj.UID,
+		})
 		s.Metrics.IncCreateTestWorkflowTemplate(err)
 		if err != nil {
-			return s.BadRequest(c, errPrefix, "client error", err)
+			_ = s.TestWorkflowTemplatesClient.Delete(obj.Name)
+			return s.BadRequest(c, errPrefix, "auto-creating secrets", err)
 		}
 		s.sendCreateWorkflowTemplateTelemetry(c.Context(), obj)
 
@@ -137,6 +166,7 @@ func (s *TestkubeAPI) UpdateTestWorkflowTemplateHandler() fiber.Handler {
 		if err != nil {
 			return s.ClientError(c, errPrefix, err)
 		}
+		initial := template.DeepCopy()
 
 		// Validate resource
 		if obj == nil {
@@ -146,11 +176,41 @@ func (s *TestkubeAPI) UpdateTestWorkflowTemplateHandler() fiber.Handler {
 		obj.Name = template.Name
 		obj.ResourceVersion = template.ResourceVersion
 
+		// Get information about execution namespace
+		// TODO: Considering that the TestWorkflow may override it - should it create in all execution namespaces?
+		execNamespace := obj.Namespace
+		if obj.Spec.Job != nil && obj.Spec.Job.Namespace != "" {
+			execNamespace = obj.Spec.Job.Namespace
+		}
+
+		// Handle secrets auto-creation
+		secrets := s.SecretManager.Batch(execNamespace, "tw-", obj.Name)
+		err = testworkflowresolver.ExtractCredentialsInTemplate(obj, secrets.Append)
+		if err != nil {
+			return s.BadRequest(c, errPrefix, "auto-creating secrets", err)
+		}
+
 		// Update the resource
 		obj, err = s.TestWorkflowTemplatesClient.Update(obj)
+		if err != nil {
+			s.Metrics.IncUpdateTestWorkflowTemplate(err)
+			return s.BadRequest(c, errPrefix, "client error", err)
+		}
+
+		// Create secrets
+		err = secrets.Create(c.Context(), &metav1.OwnerReference{
+			APIVersion: testworkflowsv1.GroupVersion.String(),
+			Kind:       testworkflowsv1.ResourceTemplate,
+			Name:       obj.Name,
+			UID:        obj.UID,
+		})
 		s.Metrics.IncUpdateTestWorkflowTemplate(err)
 		if err != nil {
-			return s.BadRequest(c, errPrefix, "client error", err)
+			_, err = s.TestWorkflowTemplatesClient.Update(initial)
+			if err != nil {
+				s.Log.Errorf("failed to recover previous TestWorkflowTemplate state: %v", err)
+			}
+			return s.BadRequest(c, errPrefix, "auto-creating secrets", err)
 		}
 
 		err = SendResource(c, "TestWorkflowTemplate", testworkflowsv1.GroupVersion, testworkflows.MapTemplateKubeToAPI, obj)

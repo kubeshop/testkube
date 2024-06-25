@@ -98,10 +98,12 @@ func New(parentCtx context.Context, clientSet kubernetes.Interface, namespace, i
 		case ev, ok := <-jobEvents.PeekMessage(ctx):
 			if !ok {
 				err = context.Canceled
-			}
-			if ev.Value != nil {
+			} else if ev.Value != nil {
 				// Job was there, so it was aborted
 				err = ErrJobAborted
+			} else {
+				// There was an internal error while loading the job event
+				err = ev.Error
 			}
 		case <-time.After(timeout):
 			// The job is actually not found

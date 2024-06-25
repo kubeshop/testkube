@@ -84,8 +84,9 @@ func (s *TestkubeAPI) InfoHandler() fiber.Handler {
 			OrgId:                 orgID,
 			HelmchartVersion:      s.helmchartVersion,
 			DashboardUri:          s.dashboardURI,
-			EnableSecretEndpoint:  s.enableSecretsEndpoint,
-			DisableSecretCreation: s.disableSecretCreation,
+			EnableSecretEndpoint:  s.secretConfig.List,
+			DisableSecretCreation: !s.secretConfig.AutoCreate,
+			Secret:                &s.secretConfig,
 			Features: &testkube.Features{
 				LogsV2: s.featureFlags.LogsV2,
 			},
