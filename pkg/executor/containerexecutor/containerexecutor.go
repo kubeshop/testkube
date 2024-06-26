@@ -84,6 +84,7 @@ func NewContainerExecutor(
 	logsStream logsclient.Stream,
 	features featureflags.FeatureFlags,
 	defaultStorageClassName string,
+	whitelistedContainers []string,
 ) (client *ContainerExecutor, err error) {
 	clientSet, err := k8sclient.ConnectToK8s()
 	if err != nil {
@@ -119,6 +120,7 @@ func NewContainerExecutor(
 		logsStream:              logsStream,
 		features:                features,
 		defaultStorageClassName: defaultStorageClassName,
+		whitelistedContainers:   whitelistedContainers,
 	}, nil
 }
 
@@ -152,6 +154,8 @@ type ContainerExecutor struct {
 	logsStream              logsclient.Stream
 	features                featureflags.FeatureFlags
 	defaultStorageClassName string
+	// whitelistedContainers is a list of containers from which logs are allowed to be streamed.
+	whitelistedContainers []string
 }
 
 type JobOptions struct {
@@ -455,7 +459,7 @@ func (c *ContainerExecutor) updateResultsFromPod(
 					execution.ExecutionResult.Error()
 				}
 
-				scraperLogs, err = executor.GetPodLogs(ctx, c.clientSet, execution.TestNamespace, *latestScraperPod)
+				scraperLogs, err = executor.GetPodLogs(ctx, c.clientSet, execution.TestNamespace, *latestScraperPod, execution.Id, c.whitelistedContainers)
 				if err != nil {
 					l.Errorw("get scraper pod logs error", "error", err)
 				}
@@ -474,7 +478,7 @@ func (c *ContainerExecutor) updateResultsFromPod(
 		}
 	}
 
-	executorLogs, err := executor.GetPodLogs(ctx, c.clientSet, execution.TestNamespace, *latestExecutorPod)
+	executorLogs, err := executor.GetPodLogs(ctx, c.clientSet, execution.TestNamespace, *latestExecutorPod, execution.Id, c.whitelistedContainers)
 	if err != nil {
 		l.Errorw("get executor pod logs error", "error", err)
 	}

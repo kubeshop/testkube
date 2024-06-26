@@ -33,7 +33,7 @@ func (c *ContainerExecutor) TailJobLogs(ctx context.Context, id, namespace strin
 
 			case corev1.PodRunning:
 				l.Debug("tailing pod logs: immediately")
-				return c.TailPodLogs(namespace, pod, logs)
+				return c.TailPodLogs(id, namespace, pod, logs)
 
 			case corev1.PodFailed:
 				err := fmt.Errorf("can't get pod logs, pod failed: %s/%s", pod.Namespace, pod.Name)
@@ -48,14 +48,14 @@ func (c *ContainerExecutor) TailJobLogs(ctx context.Context, id, namespace strin
 				}
 
 				l.Debug("tailing pod logs")
-				return c.TailPodLogs(namespace, pod, logs)
+				return c.TailPodLogs(id, namespace, pod, logs)
 			}
 		}
 	}
 	return
 }
 
-func (c *ContainerExecutor) TailPodLogs(namespace string, pod corev1.Pod, logs chan []byte) (err error) {
+func (c *ContainerExecutor) TailPodLogs(id, namespace string, pod corev1.Pod, logs chan []byte) (err error) {
 	var containers []string
 	for _, container := range pod.Spec.InitContainers {
 		containers = append(containers, container.Name)
@@ -73,6 +73,10 @@ func (c *ContainerExecutor) TailPodLogs(namespace string, pod corev1.Pod, logs c
 	ctx := context.Background()
 
 	for _, container := range containers {
+		if !executor.IsWhitelistedContainer(container, id, c.whitelistedContainers) {
+			wg.Done()
+			continue
+		}
 		go func(container string) {
 			defer wg.Done()
 			podLogOptions := corev1.PodLogOptions{
