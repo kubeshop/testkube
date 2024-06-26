@@ -127,7 +127,7 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 			res = "error"
 		}
 
-		l.metrics.InWebhookEventCount(l.name, eventType, res)
+		l.metrics.IncWebhookEventCount(l.name, eventType, res)
 	}()
 
 	switch {

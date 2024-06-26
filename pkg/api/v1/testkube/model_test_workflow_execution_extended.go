@@ -45,3 +45,18 @@ func (e *TestWorkflowExecution) GetNamespace(defaultNamespace string) string {
 	}
 	return e.Namespace
 }
+
+func (e *TestWorkflowExecution) ContainsExecuteAction() bool {
+	if e.ResolvedWorkflow == nil || e.ResolvedWorkflow.Spec == nil {
+		return false
+	}
+
+	steps := append(e.ResolvedWorkflow.Spec.Setup, append(e.ResolvedWorkflow.Spec.Steps, e.ResolvedWorkflow.Spec.After...)...)
+	for _, step := range steps {
+		if step.ContainsExecuteAction() {
+			return true
+		}
+	}
+
+	return false
+}

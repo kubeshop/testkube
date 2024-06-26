@@ -506,7 +506,7 @@ func (m Metrics) IncTestTriggerEventCount(name, resource, eventType string, caus
 	}).Inc()
 }
 
-func (m Metrics) InWebhookEventCount(name, eventType, result string) {
+func (m Metrics) IncWebhookEventCount(name, eventType, result string) {
 	m.WebhookEventCount.With(map[string]string{
 		"name":      name,
 		"eventType": eventType,

@@ -27,3 +27,22 @@ func (w *TestWorkflowStep) EscapeDots() *TestWorkflowStep {
 func (w *TestWorkflowStep) UnscapeDots() *TestWorkflowStep {
 	return w.ConvertDots(utils.UnescapeDots)
 }
+
+func (w *TestWorkflowStep) ContainsExecuteAction() bool {
+	if w.Execute != nil && (len(w.Execute.Tests) != 0 || len(w.Execute.Workflows) != 0) {
+		return true
+	}
+
+	steps := append(w.Setup, w.Steps...)
+	for _, step := range steps {
+		if step.ContainsExecuteAction() {
+			return true
+		}
+	}
+
+	if w.Parallel.ContainsExecuteAction() {
+		return true
+	}
+
+	return false
+}
