@@ -79,7 +79,20 @@ func (l *CDEventListener) Notify(event testkube.Event) (result testkube.EventRes
 	if event.Type_ != nil && (*event.Type_ == *testkube.EventEndTestAborted || *event.Type_ == *testkube.EventEndTestFailed ||
 		*event.Type_ == *testkube.EventEndTestSuccess || *event.Type_ == *testkube.EventEndTestTimeout) {
 		// Create the output event
-		ev, err = cde.MapTestkubeLogToCDEvent(event, l.clusterID, l.dashboardURI)
+		ev, err = cde.MapTestkubeTestLogToCDEvent(event, l.clusterID, l.dashboardURI)
+		if err != nil {
+			return testkube.NewFailedEventResult(event.Id, err)
+		}
+
+		if err := l.sendCDEvent(ev); err != nil {
+			return testkube.NewFailedEventResult(event.Id, err)
+		}
+	}
+
+	if event.Type_ != nil && (*event.Type_ == *testkube.EventEndTestWorkflowAborted || *event.Type_ == *testkube.EventEndTestWorkflowFailed ||
+		*event.Type_ == *testkube.EventEndTestWorkflowSuccess) {
+		// Create the output event
+		ev, err = cde.MapTestkubeTestWorkflowLogToCDEvent(event, l.clusterID, l.dashboardURI)
 		if err != nil {
 			return testkube.NewFailedEventResult(event.Id, err)
 		}
