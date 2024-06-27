@@ -188,3 +188,31 @@ func ProcessMasterFlags(cmd *cobra.Command, opts *HelmOptions, cfg *config.Data)
 func IsBothEnabledAndDisabledSet(cmd *cobra.Command) bool {
 	return cmd.Flag("enable-webhooks").Changed && cmd.Flag("disable-webhooks").Changed
 }
+
+// CommaList is a custom flag type for features
+type CommaList []string
+
+func (s CommaList) String() string {
+	return strings.Join(s, ",")
+}
+func (s *CommaList) Type() string {
+	return "[]string"
+}
+
+func (s *CommaList) Set(value string) error {
+	*s = strings.Split(value, ",")
+	return nil
+}
+
+// Enabled returns true if the feature is enabled, defaults to all
+func (s *CommaList) Enabled(value string) bool {
+	if len(*s) == 0 {
+		return true
+	}
+	for _, f := range *s {
+		if f == value {
+			return true
+		}
+	}
+	return false
+}

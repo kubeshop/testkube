@@ -75,6 +75,7 @@ func NewDebugCmd() *cobra.Command {
 		}}
 
 	cmd.AddCommand(debug.NewShowDebugInfoCmd())
+	cmd.AddCommand(debug.NewDebugAgentCmd())
 	cmd.AddCommand(debug.NewDebugControlPlaneCmd())
 
 	return cmd
