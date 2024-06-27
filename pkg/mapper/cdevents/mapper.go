@@ -38,6 +38,16 @@ func MapTestkubeEventToCDEvent(tkEvent testkube.Event, clusterID, defaultNamespa
 
 		return MapTestkubeEventQueuedTestWorkflowTestToCDEvent(tkEvent, clusterID, defaultNamespace, dashboardURI)
 	case *testkube.EventStartTestWorkflow:
+		containsExuctionAction := false
+		if tkEvent.TestWorkflowExecution != nil {
+			containsExuctionAction = tkEvent.TestWorkflowExecution.ContainsExecuteAction()
+		}
+
+		if containsExuctionAction {
+			return MapTestkubeEventStartTestWorkflowTestSuiteToCDEvent(tkEvent, clusterID, defaultNamespace, dashboardURI)
+		}
+
+		return MapTestkubeEventStartTestWorkflowTestToCDEvent(tkEvent, clusterID, defaultNamespace, dashboardURI)
 	case *testkube.EventEndTestWorkflowAborted, *testkube.EventEndTestWorkflowFailed, *testkube.EventEndTestWorkflowSuccess:
 	}
 
@@ -504,7 +514,7 @@ func MapTestkubeEventQueuedTestWorkflowTestToCDEvent(event testkube.Event, clust
 
 		ev.SetSubjectTestCase(&cdevents.TestCaseRunQueuedSubjectContentTestCase{
 			Id: workflowName,
-			//			Type: MapTestkubeTestTypeToCDEventTestCaseType(event.TestExecution.TestType),
+			//			Type: MapTestkubeTestTypeToCDEventTestCaseType(event.TestWorkflowExecution.TestType),
 			Uri: fmt.Sprintf("%s/test-workflows/%s", dashboardURI, workflowName),
 		})
 
@@ -573,6 +583,106 @@ func MapTestkubeEventQueuedTestWorkflowTestSuiteToCDEvent(event testkube.Event, 
 		/*
 			if event.TestWorkflowExecution.RunningContext != nil {
 				ev.SetSubjectTrigger(&cdevents.TestSuiteRunQueuedSubjectContentTrigger{
+					Type: MapTestkubeRunningContextTypeToCDEventTiggerType(event.TestWorkflowExecution.RunningContext.Type_),
+				})
+			}
+		*/
+	}
+
+	return ev, nil
+}
+
+// MapTestkubeEventStartTestWorkflowTestToCDEvent maps OpenAPI spec Start Test Workflow Test Event to CDEvent CDEventReader
+func MapTestkubeEventStartTestWorkflowTestToCDEvent(event testkube.Event, clusterID, defaultNamespace, dashboardURI string) (cdevents.CDEventReader, error) {
+	// Create the base event
+	ev, err := cdevents.NewTestCaseRunStartedEvent()
+	if err != nil {
+		return nil, err
+	}
+
+	if event.TestWorkflowExecution != nil {
+		ev.SetSubjectId(event.TestWorkflowExecution.Id)
+	}
+
+	ev.SetSubjectSource(clusterID)
+	ev.SetSource(clusterID)
+	if event.TestExecution != nil {
+		workflowName := ""
+		if event.TestWorkflowExecution.Workflow != nil {
+			workflowName = event.TestWorkflowExecution.Workflow.Name
+		}
+
+		ev.SetSubjectTestCase(&cdevents.TestCaseRunStartedSubjectContentTestCase{
+			Id: workflowName,
+			//			Type: MapTestkubeTestTypeToCDEventTestCaseType(event.TestWorkflowExecution.TestType),
+			Uri: fmt.Sprintf("%s/test-workflows/%s", dashboardURI, workflowName),
+		})
+
+		namespace := event.TestWorkflowExecution.Namespace
+		if namespace == "" {
+			namespace = defaultNamespace
+		}
+
+		ev.SetSubjectEnvironment(&cdevents.Reference{
+			Id:     namespace,
+			Source: clusterID,
+		})
+		/*
+			if event.TestWorkflowExecution.RunningContext != nil {
+				ev.SetSubjectTrigger(&cdevents.TestCaseRunStartedSubjectContentTrigger{
+					Type: MapTestkubeRunningContextTypeToCDEventTiggerType(event.TestWorkflowExecution.RunningContext.Type_),
+				})
+			}
+
+			if event.TestWorkflowExecution.ParentName != "" {
+				ev.SetSubjectTestSuiteRun(&cdevents.Reference{
+					Id:     event.TestWorkflowExecution.ParentName,
+					Source: clusterID,
+				})
+			}
+		*/
+	}
+
+	return ev, nil
+}
+
+// MapTestkubeEventStartTestWorkflowTestSuiteToCDEvent maps OpenAPI spec Start Test Workflow Test Suite Event to CDEvent CDEventReader
+func MapTestkubeEventStartTestWorkflowTestSuiteToCDEvent(event testkube.Event, clusterID, defaultNamespace, dashboardURI string) (cdevents.CDEventReader, error) {
+	// Create the base event
+	ev, err := cdevents.NewTestSuiteRunStartedEvent()
+	if err != nil {
+		return nil, err
+	}
+
+	if event.TestWorkflowExecution != nil {
+		ev.SetSubjectId(event.TestWorkflowExecution.Id)
+	}
+
+	ev.SetSubjectSource(clusterID)
+	ev.SetSource(clusterID)
+	if event.TestWorkflowExecution != nil {
+		workflowName := ""
+		if event.TestWorkflowExecution.Workflow != nil {
+			workflowName = event.TestWorkflowExecution.Workflow.Name
+		}
+
+		ev.SetSubjectTestSuite(&cdevents.TestSuiteRunStartedSubjectContentTestSuite{
+			Id:  workflowName,
+			Uri: fmt.Sprintf("%s/test-workflows/%s", dashboardURI, workflowName),
+		})
+
+		namespace := event.TestWorkflowExecution.Namespace
+		if namespace == "" {
+			namespace = defaultNamespace
+		}
+
+		ev.SetSubjectEnvironment(&cdevents.Reference{
+			Id:     namespace,
+			Source: clusterID,
+		})
+		/*
+			if event.TestWorkflowExecution.RunningContext != nil {
+				ev.SetSubjectTrigger(&cdevents.TestSuiteRunStartedSubjectContentTrigger{
 					Type: MapTestkubeRunningContextTypeToCDEventTiggerType(event.TestWorkflowExecution.RunningContext.Type_),
 				})
 			}
