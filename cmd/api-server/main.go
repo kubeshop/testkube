@@ -463,6 +463,7 @@ func main() {
 		logsStream,
 		features,
 		cfg.TestkubeDefaultStorageClassName,
+		cfg.WhitelistedContainers,
 	)
 	if err != nil {
 		exitOnError("Creating executor client", err)
@@ -509,6 +510,7 @@ func main() {
 		logsStream,
 		features,
 		cfg.TestkubeDefaultStorageClassName,
+		cfg.WhitelistedContainers,
 	)
 	if err != nil {
 		exitOnError("Creating container executor", err)

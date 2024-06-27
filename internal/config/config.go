@@ -7,36 +7,38 @@ import (
 )
 
 type Config struct {
-	APIServerPort                               string        `envconfig:"APISERVER_PORT" default:"8088"`
-	APIServerConfig                             string        `envconfig:"APISERVER_CONFIG" default:""`
-	APIServerFullname                           string        `envconfig:"APISERVER_FULLNAME" default:"testkube-api-server"`
-	APIMongoDSN                                 string        `envconfig:"API_MONGO_DSN" default:"mongodb://localhost:27017"`
-	APIMongoAllowTLS                            bool          `envconfig:"API_MONGO_ALLOW_TLS" default:"false"`
-	APIMongoSSLCert                             string        `envconfig:"API_MONGO_SSL_CERT" default:""`
-	APIMongoSSLCAFileKey                        string        `envconfig:"API_MONGO_SSL_CA_FILE_KEY" default:"sslCertificateAuthorityFile"`
-	APIMongoSSLClientFileKey                    string        `envconfig:"API_MONGO_SSL_CLIENT_FILE_KEY" default:"sslClientCertificateKeyFile"`
-	APIMongoSSLClientFilePass                   string        `envconfig:"API_MONGO_SSL_CLIENT_FILE_PASS_KEY" default:"sslClientCertificateKeyFilePassword"`
-	APIMongoAllowDiskUse                        bool          `envconfig:"API_MONGO_ALLOW_DISK_USE" default:"false"`
-	APIMongoDB                                  string        `envconfig:"API_MONGO_DB" default:"testkube"`
-	APIMongoDBType                              string        `envconfig:"API_MONGO_DB_TYPE" default:"mongo"`
-	SlackToken                                  string        `envconfig:"SLACK_TOKEN" default:""`
-	SlackConfig                                 string        `envconfig:"SLACK_CONFIG" default:""`
-	SlackTemplate                               string        `envconfig:"SLACK_TEMPLATE" default:""`
-	StorageEndpoint                             string        `envconfig:"STORAGE_ENDPOINT" default:"localhost:9000"`
-	StorageBucket                               string        `envconfig:"STORAGE_BUCKET" default:"testkube-logs"`
-	StorageExpiration                           int           `envconfig:"STORAGE_EXPIRATION"`
-	StorageAccessKeyID                          string        `envconfig:"STORAGE_ACCESSKEYID" default:""`
-	StorageSecretAccessKey                      string        `envconfig:"STORAGE_SECRETACCESSKEY" default:""`
-	StorageRegion                               string        `envconfig:"STORAGE_REGION" default:""`
-	StorageToken                                string        `envconfig:"STORAGE_TOKEN" default:""`
-	StorageSSL                                  bool          `envconfig:"STORAGE_SSL" default:"false"`
-	StorageSkipVerify                           bool          `envconfig:"STORAGE_SKIP_VERIFY" default:"false"`
-	StorageCertFile                             string        `envconfig:"STORAGE_CERT_FILE" default:""`
-	StorageKeyFile                              string        `envconfig:"STORAGE_KEY_FILE" default:""`
-	StorageCAFile                               string        `envconfig:"STORAGE_CA_FILE" default:""`
-	ScrapperEnabled                             bool          `envconfig:"SCRAPPERENABLED" default:"false"`
-	LogsBucket                                  string        `envconfig:"LOGS_BUCKET" default:""`
-	LogsStorage                                 string        `envconfig:"LOGS_STORAGE" default:""`
+	APIServerPort             string `envconfig:"APISERVER_PORT" default:"8088"`
+	APIServerConfig           string `envconfig:"APISERVER_CONFIG" default:""`
+	APIServerFullname         string `envconfig:"APISERVER_FULLNAME" default:"testkube-api-server"`
+	APIMongoDSN               string `envconfig:"API_MONGO_DSN" default:"mongodb://localhost:27017"`
+	APIMongoAllowTLS          bool   `envconfig:"API_MONGO_ALLOW_TLS" default:"false"`
+	APIMongoSSLCert           string `envconfig:"API_MONGO_SSL_CERT" default:""`
+	APIMongoSSLCAFileKey      string `envconfig:"API_MONGO_SSL_CA_FILE_KEY" default:"sslCertificateAuthorityFile"`
+	APIMongoSSLClientFileKey  string `envconfig:"API_MONGO_SSL_CLIENT_FILE_KEY" default:"sslClientCertificateKeyFile"`
+	APIMongoSSLClientFilePass string `envconfig:"API_MONGO_SSL_CLIENT_FILE_PASS_KEY" default:"sslClientCertificateKeyFilePassword"`
+	APIMongoAllowDiskUse      bool   `envconfig:"API_MONGO_ALLOW_DISK_USE" default:"false"`
+	APIMongoDB                string `envconfig:"API_MONGO_DB" default:"testkube"`
+	APIMongoDBType            string `envconfig:"API_MONGO_DB_TYPE" default:"mongo"`
+	SlackToken                string `envconfig:"SLACK_TOKEN" default:""`
+	SlackConfig               string `envconfig:"SLACK_CONFIG" default:""`
+	SlackTemplate             string `envconfig:"SLACK_TEMPLATE" default:""`
+	StorageEndpoint           string `envconfig:"STORAGE_ENDPOINT" default:"localhost:9000"`
+	StorageBucket             string `envconfig:"STORAGE_BUCKET" default:"testkube-logs"`
+	StorageExpiration         int    `envconfig:"STORAGE_EXPIRATION"`
+	StorageAccessKeyID        string `envconfig:"STORAGE_ACCESSKEYID" default:""`
+	StorageSecretAccessKey    string `envconfig:"STORAGE_SECRETACCESSKEY" default:""`
+	StorageRegion             string `envconfig:"STORAGE_REGION" default:""`
+	StorageToken              string `envconfig:"STORAGE_TOKEN" default:""`
+	StorageSSL                bool   `envconfig:"STORAGE_SSL" default:"false"`
+	StorageSkipVerify         bool   `envconfig:"STORAGE_SKIP_VERIFY" default:"false"`
+	StorageCertFile           string `envconfig:"STORAGE_CERT_FILE" default:""`
+	StorageKeyFile            string `envconfig:"STORAGE_KEY_FILE" default:""`
+	StorageCAFile             string `envconfig:"STORAGE_CA_FILE" default:""`
+	ScrapperEnabled           bool   `envconfig:"SCRAPPERENABLED" default:"false"`
+	LogsBucket                string `envconfig:"LOGS_BUCKET" default:""`
+	LogsStorage               string `envconfig:"LOGS_STORAGE" default:""`
+	// WhitelistedContainers is a list of containers from which logs should be collected.
+	WhitelistedContainers                       []string      `envconfig:"WHITELISTED_CONTAINERS" default:"init,logs,scraper"`
 	NatsEmbedded                                bool          `envconfig:"NATS_EMBEDDED" default:"false"`
 	NatsEmbeddedStoreDir                        string        `envconfig:"NATS_EMBEDDED_STORE_DIR" default:"/app/nats"`
 	NatsURI                                     string        `envconfig:"NATS_URI" default:"nats://localhost:4222"`

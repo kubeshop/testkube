@@ -100,6 +100,7 @@ func NewJobExecutor(
 	logsStream logsclient.Stream,
 	features featureflags.FeatureFlags,
 	defaultStorageClassName string,
+	whitelistedContainers []string,
 ) (client *JobExecutor, err error) {
 	if serviceAccountNames == nil {
 		serviceAccountNames = make(map[string]string)
@@ -128,6 +129,7 @@ func NewJobExecutor(
 		logsStream:              logsStream,
 		features:                features,
 		defaultStorageClassName: defaultStorageClassName,
+		whitelistedContainers:   whitelistedContainers,
 	}, nil
 }
 
@@ -160,6 +162,8 @@ type JobExecutor struct {
 	logsStream              logsclient.Stream
 	features                featureflags.FeatureFlags
 	defaultStorageClassName string
+	// whitelistedContainers is a list of containers from which logs are allowed to be streamed.
+	whitelistedContainers []string
 }
 
 type JobOptions struct {
@@ -413,9 +417,9 @@ func (c *JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, 
 	}
 	l.Debug("poll immediate end")
 
-	c.streamLog(ctx, execution.Id, events.NewLog("analyzing test results and artfacts"))
+	c.streamLog(ctx, execution.Id, events.NewLog("analyzing test results and artifacts"))
 
-	logs, err := executor.GetPodLogs(ctx, c.ClientSet, execution.TestNamespace, pod)
+	logs, err := executor.GetPodLogs(ctx, c.ClientSet, execution.TestNamespace, pod, execution.Id, c.whitelistedContainers)
 	if err != nil {
 		l.Errorw("get pod logs error", "error", err)
 		c.streamLog(ctx, execution.Id, events.NewErrorLog(err))
@@ -667,12 +671,12 @@ func (c *JobExecutor) TailJobLogs(ctx context.Context, id, namespace string, log
 
 			case corev1.PodRunning:
 				l.Debug("tailing pod logs: immediately")
-				return c.TailPodLogs(ctx, pod, logs)
+				return c.TailPodLogs(ctx, id, pod, logs)
 
 			case corev1.PodFailed:
 				err := errors.Errorf("can't get pod logs, pod failed: %s/%s", pod.Namespace, pod.Name)
 				l.Errorw(err.Error())
-				return c.GetLastLogLineError(ctx, pod)
+				return c.GetLastLogLineError(ctx, pod, id)
 
 			default:
 				l.Debugw("tailing job logs: waiting for pod to be ready")
@@ -682,7 +686,7 @@ func (c *JobExecutor) TailJobLogs(ctx context.Context, id, namespace string, log
 				}
 
 				l.Debug("tailing pod logs")
-				return c.TailPodLogs(ctx, pod, logs)
+				return c.TailPodLogs(ctx, id, pod, logs)
 			}
 		}
 	}
@@ -690,7 +694,9 @@ func (c *JobExecutor) TailJobLogs(ctx context.Context, id, namespace string, log
 	return
 }
 
-func (c *JobExecutor) TailPodLogs(ctx context.Context, pod corev1.Pod, logs chan []byte) (err error) {
+// TailPodLogs returns logs from all containers in pod in parallel.
+// id parameter corresponds to the test execution id, and test pod containers are prefixed by it.
+func (c *JobExecutor) TailPodLogs(ctx context.Context, id string, pod corev1.Pod, logs chan []byte) (err error) {
 	var containers []string
 	for _, container := range pod.Spec.InitContainers {
 		containers = append(containers, container.Name)
@@ -706,6 +712,10 @@ func (c *JobExecutor) TailPodLogs(ctx context.Context, pod corev1.Pod, logs chan
 	wg.Add(len(containers))
 
 	for _, container := range containers {
+		if !executor.IsWhitelistedContainer(container, id, c.whitelistedContainers) {
+			wg.Done()
+			continue
+		}
 		go func(container string) {
 			defer wg.Done()
 
@@ -751,15 +761,17 @@ func (c *JobExecutor) TailPodLogs(ctx context.Context, pod corev1.Pod, logs chan
 }
 
 // GetPodLogError returns last line as error
-func (c *JobExecutor) GetPodLogError(ctx context.Context, pod corev1.Pod) (logsBytes []byte, err error) {
+// id parameter corresponds to the test execution id, and test pod containers are prefixed by it.
+func (c *JobExecutor) GetPodLogError(ctx context.Context, pod corev1.Pod, id string) (logsBytes []byte, err error) {
 	// error line should be last one
-	return executor.GetPodLogs(ctx, c.ClientSet, pod.Namespace, pod, 1)
+	return executor.GetPodLogs(ctx, c.ClientSet, pod.Namespace, pod, id, c.whitelistedContainers, 1)
 }
 
 // GetLastLogLineError return error if last line is failed
-func (c *JobExecutor) GetLastLogLineError(ctx context.Context, pod corev1.Pod) error {
+// id parameter corresponds to the test execution id, and test pod containers are prefixed by it.
+func (c *JobExecutor) GetLastLogLineError(ctx context.Context, pod corev1.Pod, id string) error {
 	l := c.Log.With("pod", pod.Name, "namespace", pod.Namespace)
-	errorLog, err := c.GetPodLogError(ctx, pod)
+	errorLog, err := c.GetPodLogError(ctx, pod, id)
 	if err != nil {
 		l.Errorw("getPodLogs error", "error", err, "pod", pod)
 		return errors.Errorf("getPodLogs error: %v", err)
