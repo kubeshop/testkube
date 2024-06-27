@@ -10,8 +10,14 @@ import (
 
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/expressions"
+	"github.com/kubeshop/testkube/pkg/rand"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 )
+
+var BypassToolkitCheck = corev1.EnvVar{
+	Name:  "TK_TC_SECURITY",
+	Value: rand.String(20),
+}
 
 func AnnotateControlledBy(obj metav1.Object, rootId, id string) {
 	labels := obj.GetLabels()
@@ -122,8 +128,12 @@ func buildKubernetesContainers(stage Stage, init *initProcess, fsGroup *int64, m
 		init.ResetResults()
 	}
 
+	bypass := false
 	refEnvVar := ""
 	for _, e := range cr.Env {
+		if e.Name == BypassToolkitCheck.Name && e.Value == BypassToolkitCheck.Value {
+			bypass = true
+		}
 		if e.Name == "TK_REF" {
 			refEnvVar = e.Value
 		}
@@ -135,7 +145,7 @@ func buildKubernetesContainers(stage Stage, init *initProcess, fsGroup *int64, m
 		SetCommand(cr.Command...).
 		SetArgs(cr.Args...).
 		SetWorkingDir(cr.WorkingDir).
-		SetToolkit(cr.Image == constants.DefaultToolkitImage && c.Ref() == refEnvVar)
+		SetToolkit(bypass || (cr.Image == constants.DefaultToolkitImage && c.Ref() == refEnvVar))
 
 	for _, env := range cr.Env {
 		if strings.Contains(env.Value, "{{") {
