@@ -49,6 +49,16 @@ func MapTestkubeEventToCDEvent(tkEvent testkube.Event, clusterID, defaultNamespa
 
 		return MapTestkubeEventStartTestWorkflowTestToCDEvent(tkEvent, clusterID, defaultNamespace, dashboardURI)
 	case *testkube.EventEndTestWorkflowAborted, *testkube.EventEndTestWorkflowFailed, *testkube.EventEndTestWorkflowSuccess:
+		containsExuctionAction := false
+		if tkEvent.TestWorkflowExecution != nil {
+			containsExuctionAction = tkEvent.TestWorkflowExecution.ContainsExecuteAction()
+		}
+
+		if containsExuctionAction {
+			return MapTestkubeEventFinishTestWorkflowTestSuiteToCDEvent(tkEvent, clusterID, defaultNamespace, dashboardURI)
+		}
+
+		return MapTestkubeEventFinishTestWorkflowTestToCDEvent(tkEvent, clusterID, defaultNamespace, dashboardURI)
 	}
 
 	return nil, fmt.Errorf("not supported event type %s", tkEvent.Type_)
@@ -687,6 +697,149 @@ func MapTestkubeEventStartTestWorkflowTestSuiteToCDEvent(event testkube.Event, c
 				})
 			}
 		*/
+	}
+
+	return ev, nil
+}
+
+// MapTestkubeEventFinishTestWorkflowTestToCDEvent maps OpenAPI spec Failed, Aborted, Timeout, Success Test Workflow Test Event to CDEvent CDEventReader
+func MapTestkubeEventFinishTestWorkflowTestToCDEvent(event testkube.Event, clusterID, defaultNamespace, dashboardURI string) (cdevents.CDEventReader, error) {
+	// Create the base event
+	ev, err := cdevents.NewTestCaseRunFinishedEvent()
+	if err != nil {
+		return nil, err
+	}
+
+	if event.TestExecution != nil {
+		ev.SetSubjectId(event.TestExecution.Id)
+	}
+
+	ev.SetSubjectSource(clusterID)
+	ev.SetSource(clusterID)
+	if event.TestWorkflowExecution != nil {
+		workflowName := ""
+		if event.TestWorkflowExecution.Workflow != nil {
+			workflowName = event.TestWorkflowExecution.Workflow.Name
+		}
+
+		ev.SetSubjectTestCase(&cdevents.TestCaseRunFinishedSubjectContentTestCase{
+			Id: workflowName,
+			//			Type: MapTestkubeTestTypeToCDEventTestCaseType(event.TestWokflowExecution.TestType),
+			Uri: fmt.Sprintf("%s/test-workflows/%s", dashboardURI, workflowName),
+		})
+
+		namespace := event.TestWorkflowExecution.Namespace
+		if namespace == "" {
+			namespace = defaultNamespace
+		}
+
+		ev.SetSubjectEnvironment(&cdevents.Reference{
+			Id:     namespace,
+			Source: clusterID,
+		})
+
+		if event.TestWorkflowExecution.Result != nil {
+			var errs []string
+			if event.TestWorkflowExecution.Result.Initialization != nil &&
+				event.TestWorkflowExecution.Result.Initialization.ErrorMessage != "" {
+				errs = append(errs, event.TestWorkflowExecution.Result.Initialization.ErrorMessage)
+			}
+
+			for _, step := range event.TestWorkflowExecution.Result.Steps {
+				if step.ErrorMessage != "" {
+					errs = append(errs, step.ErrorMessage)
+				}
+			}
+
+			if event.TestWorkflowExecution.Result.IsAborted() {
+				ev.SetSubjectOutcome("cancel")
+				ev.SetSubjectReason(strings.Join(errs, ","))
+			}
+
+			if event.TestWorkflowExecution.Result.IsFailed() {
+				ev.SetSubjectOutcome("fail")
+				ev.SetSubjectReason(strings.Join(errs, ","))
+			}
+
+			if event.TestWorkflowExecution.Result.IsPassed() {
+				ev.SetSubjectOutcome("pass")
+			}
+		}
+		/*
+			if event.TestWorkflowExecution.ParentName != "" {
+				ev.SetSubjectTestSuiteRun(&cdevents.Reference{
+					Id:     event.TestWorkflowExecution.ParentName,
+					Source: clusterID,
+				})
+			}
+		*/
+	}
+
+	return ev, nil
+}
+
+// MapTestkubeEventFinishTestWorkflowTestSuiteToCDEvent maps OpenAPI spec Failed, Aborted, Timeout, Success Test Workflow Test Event to CDEvent CDEventReader
+func MapTestkubeEventFinishTestWorkflowTestSuiteToCDEvent(event testkube.Event, clusterID, defaultNamespace, dashboardURI string) (cdevents.CDEventReader, error) {
+	// Create the base event
+	ev, err := cdevents.NewTestSuiteRunFinishedEvent()
+	if err != nil {
+		return nil, err
+	}
+
+	if event.TestWorkflowExecution != nil {
+		ev.SetSubjectId(event.TestWorkflowExecution.Id)
+	}
+
+	ev.SetSubjectSource(clusterID)
+	ev.SetSource(clusterID)
+	if event.TestWorkflowExecution != nil {
+		workflowName := ""
+		if event.TestWorkflowExecution.Workflow != nil {
+			workflowName = event.TestWorkflowExecution.Workflow.Name
+		}
+
+		ev.SetSubjectTestSuite(&cdevents.TestSuiteRunFinishedSubjectContentTestSuite{
+			Id:  workflowName,
+			Uri: fmt.Sprintf("%s/test-workflows/%s", dashboardURI, workflowName),
+		})
+
+		namespace := event.TestWorkflowExecution.Namespace
+		if namespace == "" {
+			namespace = defaultNamespace
+		}
+
+		ev.SetSubjectEnvironment(&cdevents.Reference{
+			Id:     namespace,
+			Source: clusterID,
+		})
+
+		if event.TestWorkflowExecution.Result != nil {
+			var errs []string
+			if event.TestWorkflowExecution.Result.Initialization != nil &&
+				event.TestWorkflowExecution.Result.Initialization.ErrorMessage != "" {
+				errs = append(errs, event.TestWorkflowExecution.Result.Initialization.ErrorMessage)
+			}
+
+			for _, step := range event.TestWorkflowExecution.Result.Steps {
+				if step.ErrorMessage != "" {
+					errs = append(errs, step.ErrorMessage)
+				}
+			}
+
+			if event.TestWorkflowExecution.Result.IsAborted() {
+				ev.SetSubjectOutcome("cancel")
+				ev.SetSubjectReason(strings.Join(errs, ","))
+			}
+
+			if event.TestWorkflowExecution.Result.IsFailed() {
+				ev.SetSubjectOutcome("fail")
+				ev.SetSubjectReason(strings.Join(errs, ","))
+			}
+
+			if event.TestWorkflowExecution.Result.IsPassed() {
+				ev.SetSubjectOutcome("pass")
+			}
+		}
 	}
 
 	return ev, nil
