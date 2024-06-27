@@ -243,8 +243,8 @@ func MapTestkubeArtifactToCDEvent(execution *testkube.Execution, clusterID, path
 	return ev, nil
 }
 
-// MapTestkubeLogToCDEvent maps OpenAPI spec log to CDEvent CDEventReader
-func MapTestkubeLogToCDEvent(event testkube.Event, clusterID, dashboardURI string) (cdevents.CDEventReader, error) {
+// MapTestkubeTestLogToCDEvent maps OpenAPI spec Test log to CDEvent CDEventReader
+func MapTestkubeTestLogToCDEvent(event testkube.Event, clusterID, dashboardURI string) (cdevents.CDEventReader, error) {
 	// Create the base event
 	ev, err := cdevents.NewTestOutputPublishedEvent()
 	if err != nil {
@@ -840,6 +840,43 @@ func MapTestkubeEventFinishTestWorkflowTestSuiteToCDEvent(event testkube.Event, 
 				ev.SetSubjectOutcome("pass")
 			}
 		}
+	}
+
+	return ev, nil
+}
+
+// MapTestkubeTestWorkflowLogToCDEvent maps OpenAPI spec Test WWorkflow log to CDEvent CDEventReader
+func MapTestkubeTestWorkflowLogToCDEvent(event testkube.Event, clusterID, dashboardURI string) (cdevents.CDEventReader, error) {
+	// Create the base event
+	ev, err := cdevents.NewTestOutputPublishedEvent()
+	if err != nil {
+		return nil, err
+	}
+
+	if event.TestWorkflowExecution != nil {
+		ev.SetSubjectId(event.TestWorkflowExecution.Id + "-log")
+	}
+
+	ev.SetSubjectSource(clusterID)
+	ev.SetSource(clusterID)
+
+	if event.TestWorkflowExecution != nil {
+		ev.SetSubjectTestCaseRun(&cdevents.Reference{
+			Id:     event.TestWorkflowExecution.Id,
+			Source: clusterID,
+		})
+	}
+
+	ev.SetSubjectFormat("text/x-uri")
+	ev.SetSubjectOutputType("log")
+	if event.TestWorkflowExecution != nil {
+		workflowName := ""
+		if event.TestWorkflowExecution.Workflow != nil {
+			workflowName = event.TestWorkflowExecution.Workflow.Name
+		}
+
+		ev.SetSubjectUri(fmt.Sprintf("%s/test-workflows/%s/executions/%s/log-output", dashboardURI,
+			workflowName, event.TestWorkflowExecution.Id))
 	}
 
 	return ev, nil
