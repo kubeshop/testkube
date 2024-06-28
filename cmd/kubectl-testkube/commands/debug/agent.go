@@ -93,7 +93,7 @@ func RunDebugAgentCmdFunc(show *common.CommaList) func(cmd *cobra.Command, args 
 		client, _, err := common.GetClient(cmd)
 		ui.ExitOnError("getting client", err)
 
-		if show.Enabled(showDebug) {
+		if show.Enabled(showControlPlaneConnection) {
 			ui.H2("Agent connection")
 
 			debug, err := GetDebugInfo(client)
@@ -104,10 +104,10 @@ func RunDebugAgentCmdFunc(show *common.CommaList) func(cmd *cobra.Command, args 
 			common.UiPrintContext(cfg)
 		}
 
-		if show.Enabled(showConnection) {
+		if show.Enabled(showRoundtrip) {
 			i, err := client.GetServerInfo()
 			if err != nil {
-				ui.Errf("Error %v", err)
+				ui.Errf("Error while doing roundtrip to agent: %v", err)
 				ui.NL()
 				ui.Info("Possible reasons:")
 				ui.Warn("- Please check if your agent organization and environment are set correctly")

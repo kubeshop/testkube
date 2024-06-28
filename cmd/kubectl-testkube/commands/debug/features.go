@@ -3,13 +3,13 @@ package debug
 import "strings"
 
 const (
-	showPods           = "pods"
-	showServices       = "services"
-	showIngresses      = "ingresses"
-	showStorageClasses = "storageclasses"
-	showEvents         = "events"
-	showDebug          = "debug"
-	showConnection     = "connection"
+	showPods                   = "pods"
+	showServices               = "services"
+	showIngresses              = "ingresses"
+	showStorageClasses         = "storageclasses"
+	showEvents                 = "events"
+	showControlPlaneConnection = "connection"
+	showRoundtrip              = "roundtrip"
 
 	showApiLogs    = "api"
 	showWorkerLogs = "worker"
@@ -27,7 +27,7 @@ var controlPlaneFeatures = []string{
 	showStorageClasses,
 	showEvents,
 	showNatsLogs,
-	showDebug,
+	showControlPlaneConnection,
 	showApiLogs,
 	showNatsLogs,
 	showMongoLogs,
@@ -42,8 +42,8 @@ var agentFeatures = []string{
 	showIngresses,
 	showEvents,
 	showNatsLogs,
-	showDebug,
-	showConnection,
+	showControlPlaneConnection,
+	showRoundtrip,
 }
 
 var agentFeaturesStr = strings.Join(agentFeatures, ",")
