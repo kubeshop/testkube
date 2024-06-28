@@ -434,7 +434,7 @@ func uiGetToken(tokenChan chan cloudlogin.Tokens) (string, string, error) {
 	return token.IDToken, token.RefreshToken, nil
 }
 
-func KubectlPrintLogs(namespace string, labels map[string]string) error {
+func KubectlLogs(namespace string, labels map[string]string) error {
 	kubectl, err := exec.LookPath("kubectl")
 	if err != nil {
 		return err
@@ -491,6 +491,24 @@ func KubectlPrintEvents(namespace string) error {
 	return process.ExecuteAndStreamOutput(kubectl, args...)
 }
 
+func KubectlDescribePods(namespace string) error {
+	kubectl, err := exec.LookPath("kubectl")
+	if err != nil {
+		return err
+	}
+
+	args := []string{
+		"describe",
+		"pods",
+		"-n", namespace,
+	}
+
+	ui.ShellCommand(kubectl, args...)
+	ui.NL()
+
+	return process.ExecuteAndStreamOutput(kubectl, args...)
+}
+
 func KubectlPrintPods(namespace string) error {
 	kubectl, err := exec.LookPath("kubectl")
 	if err != nil {
@@ -510,7 +528,7 @@ func KubectlPrintPods(namespace string) error {
 	return process.ExecuteAndStreamOutput(kubectl, args...)
 }
 
-func KubectlPrintStorageClass(namespace string) error {
+func KubectlGetStorageClass(namespace string) error {
 	kubectl, err := exec.LookPath("kubectl")
 	if err != nil {
 		return err
@@ -525,4 +543,92 @@ func KubectlPrintStorageClass(namespace string) error {
 	ui.NL()
 
 	return process.ExecuteAndStreamOutput(kubectl, args...)
+}
+
+func KubectlGetServices(namespace string) error {
+	kubectl, err := exec.LookPath("kubectl")
+	if err != nil {
+		return err
+	}
+
+	args := []string{
+		"get",
+		"services",
+		"-n", namespace,
+	}
+
+	ui.ShellCommand(kubectl, args...)
+	ui.NL()
+
+	return process.ExecuteAndStreamOutput(kubectl, args...)
+}
+
+func KubectlDescribeServices(namespace string) error {
+	kubectl, err := exec.LookPath("kubectl")
+	if err != nil {
+		return err
+	}
+
+	args := []string{
+		"get",
+		"services",
+		"-n", namespace,
+		"-o", "yaml",
+	}
+
+	ui.ShellCommand(kubectl, args...)
+	ui.NL()
+
+	return process.ExecuteAndStreamOutput(kubectl, args...)
+}
+
+func KubectlGetIngresses(namespace string) error {
+	kubectl, err := exec.LookPath("kubectl")
+	if err != nil {
+		return err
+	}
+
+	args := []string{
+		"get",
+		"ingresses",
+		"-n", namespace,
+	}
+
+	ui.ShellCommand(kubectl, args...)
+	ui.NL()
+
+	return process.ExecuteAndStreamOutput(kubectl, args...)
+}
+
+func KubectlDescribeIngresses(namespace string) error {
+	kubectl, err := exec.LookPath("kubectl")
+	if err != nil {
+		return err
+	}
+
+	args := []string{
+		"get",
+		"ingresses",
+		"-n", namespace,
+		"-o", "yaml",
+	}
+
+	ui.ShellCommand(kubectl, args...)
+	ui.NL()
+
+	return process.ExecuteAndStreamOutput(kubectl, args...)
+}
+
+func UiGetNamespace(cmd *cobra.Command, defaultNamespace string) string {
+	var namespace string
+	var err error
+
+	if cmd.Flag("namespace").Changed {
+		namespace, err = cmd.Flags().GetString("namespace")
+		ui.ExitOnError("getting namespace", err)
+	} else {
+		namespace = ui.TextInput("Please provide namespace for Control Plane", defaultNamespace)
+	}
+
+	return namespace
 }
