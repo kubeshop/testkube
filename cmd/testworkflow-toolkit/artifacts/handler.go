@@ -1,21 +1,28 @@
 package artifacts
 
 import (
+	"context"
 	"fmt"
 	"io/fs"
 	"path/filepath"
 	"sync/atomic"
 
+	cdevents "github.com/cdevents/sdk-go/pkg/api"
+	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/dustin/go-humanize"
+	"github.com/gabriel-vasile/mimetype"
 
+	cde "github.com/kubeshop/testkube/pkg/mapper/cdevents"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 type handler struct {
-	uploader      Uploader
-	processor     Processor
-	postProcessor PostProcessor
-	pathPrefix    string
+	uploader                   Uploader
+	processor                  Processor
+	postProcessor              PostProcessor
+	pathPrefix                 string
+	cdeventsClient             cloudevents.Client
+	cdeventsArtifactParameters cde.CDEventsArtifactParameters
 
 	success   atomic.Uint32
 	errors    atomic.Uint32
@@ -39,6 +46,22 @@ func WithPostProcessor(postProcessor PostProcessor) HandlerOpts {
 func WithPathPrefix(pathPrefix string) HandlerOpts {
 	return func(h *handler) {
 		h.pathPrefix = pathPrefix
+	}
+}
+
+func WithCDEventsTarget(cdEventsTarget string) HandlerOpts {
+	return func(h *handler) {
+		var err error
+		h.cdeventsClient, err = cloudevents.NewClientHTTP(cloudevents.WithTarget(cdEventsTarget))
+		if err != nil {
+			fmt.Printf(ui.LightYellow("failed to create cloud event client: %s"), err.Error())
+		}
+	}
+}
+
+func WithCDEventsArtifactParameters(cdeventsArtifactParameters cde.CDEventsArtifactParameters) HandlerOpts {
+	return func(h *handler) {
+		h.cdeventsArtifactParameters = cdeventsArtifactParameters
 	}
 }
 
@@ -82,6 +105,12 @@ func (h *handler) Add(path string, file fs.File, stat fs.FileInfo) (err error) {
 	err = h.processor.Add(h.uploader, uploadPath, file, stat)
 	if err == nil {
 		h.success.Add(1)
+		if h.cdeventsClient != nil {
+			err = h.sendCDEvent(path)
+			if err != nil {
+				fmt.Printf(ui.LightYellow("failed to send cd event: %s"), err.Error())
+			}
+		}
 	} else {
 		h.errors.Add(1)
 		fmt.Printf(ui.Red("%s: failed: %s"), uploadPath, err.Error())
@@ -126,5 +155,28 @@ func (h *handler) End() (err error) {
 	if errs > 0 {
 		return fmt.Errorf("  %d problems while uploading files", errs)
 	}
+	return nil
+}
+
+func (h *handler) sendCDEvent(path string) error {
+	mtype, err := mimetype.DetectFile(path)
+	if err != nil {
+		return err
+	}
+
+	ev, err := cde.MapTestkubeTestWorkflowArtifactToCDEvent(h.cdeventsArtifactParameters, path, mtype.String())
+	if err != nil {
+		return err
+	}
+
+	ce, err := cdevents.AsCloudEvent(ev)
+	if err != nil {
+		return err
+	}
+
+	if result := h.cdeventsClient.Send(context.Background(), *ce); cloudevents.IsUndelivered(result) {
+		return fmt.Errorf("failed to send, %v", result)
+	}
+
 	return nil
 }

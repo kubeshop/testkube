@@ -40,9 +40,28 @@ func (w *TestWorkflowStep) ContainsExecuteAction() bool {
 		}
 	}
 
-	if w.Parallel.ContainsExecuteAction() {
+	if w.Parallel != nil && w.Parallel.ContainsExecuteAction() {
 		return true
 	}
 
 	return false
+}
+
+func (w *TestWorkflowStep) GetTemplateRefs() []TestWorkflowTemplateRef {
+	var templateRefs []TestWorkflowTemplateRef
+
+	if w.Template != nil {
+		templateRefs = append(templateRefs, *w.Template)
+	}
+
+	steps := append(w.Setup, w.Steps...)
+	for _, step := range steps {
+		templateRefs = append(templateRefs, step.GetTemplateRefs()...)
+	}
+
+	if w.Parallel != nil {
+		templateRefs = append(templateRefs, w.Parallel.GetTemplateRefs()...)
+	}
+
+	return templateRefs
 }

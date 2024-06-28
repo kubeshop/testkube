@@ -571,6 +571,7 @@ func main() {
 		cfg.EnableImageDataPersistentCache,
 		cfg.ImageDataPersistentCacheKey,
 		cfg.TestkubeDashboardURI,
+		clusterId,
 	)
 
 	go testWorkflowExecutor.Recover(context.Background())

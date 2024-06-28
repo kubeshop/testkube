@@ -47,6 +47,10 @@ func (e *TestWorkflowExecution) GetNamespace(defaultNamespace string) string {
 }
 
 func (e *TestWorkflowExecution) ContainsExecuteAction() bool {
+	if e == nil {
+		return false
+	}
+
 	if e.ResolvedWorkflow == nil || e.ResolvedWorkflow.Spec == nil {
 		return false
 	}
@@ -59,4 +63,22 @@ func (e *TestWorkflowExecution) ContainsExecuteAction() bool {
 	}
 
 	return false
+}
+
+func (e *TestWorkflowExecution) GetTemplateRefs() []TestWorkflowTemplateRef {
+	if e == nil {
+		return nil
+	}
+
+	if e.ResolvedWorkflow == nil || e.ResolvedWorkflow.Spec == nil {
+		return nil
+	}
+
+	var templateRefs []TestWorkflowTemplateRef
+	steps := append(e.ResolvedWorkflow.Spec.Setup, append(e.ResolvedWorkflow.Spec.Steps, e.ResolvedWorkflow.Spec.After...)...)
+	for _, step := range steps {
+		templateRefs = append(templateRefs, step.GetTemplateRefs()...)
+	}
+
+	return templateRefs
 }
