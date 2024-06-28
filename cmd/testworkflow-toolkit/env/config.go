@@ -54,6 +54,8 @@ type envSystemConfig struct {
 	Ip                    string `envconfig:"TK_IP"`
 	DashboardUrl          string `envconfig:"TK_DASH"`
 	ApiUrl                string `envconfig:"TK_API"`
+	ClusterID             string `envconfig:"TK_CLU"`
+	CDEventTarget         string `envconfig:"TK_CDE"`
 }
 
 type envImagesConfig struct {

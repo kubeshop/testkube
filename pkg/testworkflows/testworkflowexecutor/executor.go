@@ -65,6 +65,7 @@ type executor struct {
 	enableImageDataPersistentCache bool
 	imageDataPersistentCacheKey    string
 	dashboardURI                   string
+	clusterID                      string
 	serviceAccountNames            map[string]string
 }
 
@@ -81,7 +82,7 @@ func New(emitter *event.Emitter,
 	metrics v1.Metrics,
 	serviceAccountNames map[string]string,
 	globalTemplateName, namespace, apiUrl, defaultRegistry string,
-	enableImageDataPersistentCache bool, imageDataPersistentCacheKey, dashboardURI string) TestWorkflowExecutor {
+	enableImageDataPersistentCache bool, imageDataPersistentCacheKey, dashboardURI, clusterID string) TestWorkflowExecutor {
 	if serviceAccountNames == nil {
 		serviceAccountNames = make(map[string]string)
 	}
@@ -106,6 +107,7 @@ func New(emitter *event.Emitter,
 		enableImageDataPersistentCache: enableImageDataPersistentCache,
 		imageDataPersistentCacheKey:    imageDataPersistentCacheKey,
 		dashboardURI:                   dashboardURI,
+		clusterID:                      clusterID,
 	}
 }
 
@@ -425,6 +427,8 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 			"api.url":         e.apiUrl,
 			"namespace":       namespace,
 			"defaultRegistry": e.defaultRegistry,
+			"clusterId":       e.clusterID,
+			"cdeventsTarget":  os.Getenv("CDEVENTS_TARGET"),
 
 			"images.init":                constants.DefaultInitImage,
 			"images.toolkit":             constants.DefaultToolkitImage,

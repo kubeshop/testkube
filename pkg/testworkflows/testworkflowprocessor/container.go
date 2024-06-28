@@ -431,6 +431,8 @@ func (c *container) EnableToolkit(ref string) Container {
 			"TK_SA":                     "{{internal.serviceaccount.default}}",
 			"TK_DASH":                   "{{internal.dashboard.url}}",
 			"TK_API":                    "{{internal.api.url}}",
+			"TK_CLU":                    "{{internal.clusterId}}",
+			"TK_CDE":                    "{{internal.cdeventsTarget}}",
 			"TK_C_URL":                  "{{internal.cloud.api.url}}",
 			"TK_C_KEY":                  "{{internal.cloud.api.key}}",
 			"TK_C_TLS_INSECURE":         "{{internal.cloud.api.tlsInsecure}}",
