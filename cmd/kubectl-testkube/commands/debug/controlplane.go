@@ -1,8 +1,6 @@
 package debug
 
 import (
-	"os"
-
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
@@ -11,100 +9,107 @@ import (
 
 // NewDebugControlPlaneCmd creates a new cobra command to print the debug info to the CLI
 func NewDebugControlPlaneCmd() *cobra.Command {
-	var additionalLabels map[string]string
-	var attachAgentLogs bool
+	const defaultCPNamespace = "testkube-enterprise"
+	var features common.CommaList
 
 	cmd := &cobra.Command{
 		Use:     "controlplane",
-		Aliases: []string{"ctl", "cp"},
-		Short:   "Show debug info",
-		Long:    "Get all the necessary information to debug an issue in Testkube Control Plane",
+		Aliases: []string{"ctl", "cp", "c"},
+		Short:   "Show Control Plane debug information",
+		Long:    "Get all the necessary information to debug an issue in Testkube Control Plane you can fiter through comma separated list of items to show with additional flag `--show " + controlPlaneFeaturesStr + "`",
 		Run: func(cmd *cobra.Command, args []string) {
+			namespace := common.UiGetNamespace(cmd, defaultCPNamespace)
 
-			spinner := ui.NewSpinner("").WithWriter(os.Stderr)
-			spinner, err := spinner.Start()
-			ui.ExitOnError("starting spinner", err)
+			ui.H1("Getting Control Plane insights, namespace: " + namespace)
 
-			namespace, err := cmd.Flags().GetString("namespace")
-			ui.ExitOnError("getting namespace", err)
+			if features.Enabled(showPods) {
+				ui.H2("Pods")
+				err := common.KubectlPrintPods(namespace)
+				ui.WarnOnError("getting Kubernetes pods", err)
 
-			ui.H1("Getting control plane logs")
-
-			spinner.UpdateText("Getting Kubernetes pods")
-			ui.H2("Kubernetes Pods in namespace:" + namespace)
-			err = common.KubectlPrintPods(namespace)
-			ui.WarnOnError("getting Kubernetes pods", err)
-
-			spinner.UpdateText("Kubernetes Storage Classes")
-			ui.H2("Kubernetes Storage Classes")
-			err = common.KubectlPrintStorageClass(namespace)
-			ui.WarnOnError("getting Kubernetes Storage Classes", err)
-
-			spinner.UpdateText("API Server Logs")
-			ui.H2("API Server Logs")
-			err = common.KubectlPrintLogs(namespace, map[string]string{"app.kubernetes.io/name": "testkube-cloud-api"})
-			ui.WarnOnError("getting api server logs", err)
-
-			spinner.UpdateText("Worker Service Logs")
-			ui.H2("Worker Service Logs")
-			err = common.KubectlPrintLogs(namespace, map[string]string{"app.kubernetes.io/name": "testkube-worker-service"})
-			ui.WarnOnError("getting worker service logs", err)
-
-			spinner.UpdateText("UI Logs")
-			ui.H2("UI Logs")
-			err = common.KubectlPrintLogs(namespace, map[string]string{"app.kubernetes.io/name": "testkube-cloud-ui"})
-			ui.WarnOnError("getting UI logs", err)
-
-			spinner.UpdateText("UI Logs")
-			ui.H2("Dex Logs")
-			err = common.KubectlPrintLogs(namespace, map[string]string{"app.kubernetes.io/name": "dex"})
-			ui.WarnOnError("getting Dex logs", err)
-
-			spinner.UpdateText("UI Logs")
-			ui.H2("Minio Logs")
-			err = common.KubectlPrintLogs(namespace, map[string]string{"app.kubernetes.io/name": "minio"})
-			ui.WarnOnError("getting MinIO logs", err)
-
-			spinner.UpdateText("MongoDB logs")
-			ui.H2("MongoDB logs")
-			err = common.KubectlPrintLogs(namespace, map[string]string{"app.kubernetes.io/name": "mongodb"})
-			ui.WarnOnError("getting MongoDB logs", err)
-
-			spinner.UpdateText("NATS Logs")
-			ui.H2("NATS logs")
-			err = common.KubectlPrintLogs(namespace, map[string]string{"app.kubernetes.io/name": "nats"})
-			ui.WarnOnError("getting worker service logs", err)
-
-			spinner.UpdateText("Kubernetes Events")
-			ui.H2("Kubernetes Events")
-			err = common.KubectlPrintEvents(namespace)
-			ui.WarnOnError("getting Kubernetes events", err)
-
-			if cmd.Flag("attach-agent-log").Value.String() == "true" {
-				spinner.UpdateText("UI Logs")
-				ui.H2("Agent Logs")
-				err = common.KubectlPrintLogs(namespace, map[string]string{"app.kubernetes.io/name": "testkube-agent"})
-				ui.ExitOnError("getting agent logs", err)
-
-				spinner.UpdateText("UI Logs")
-				ui.H1("Agent debug info")
-				client, _, err := common.GetClient(cmd)
-				ui.ExitOnError("getting client", err)
-
-				debug, err := GetDebugInfo(client)
-				ui.ExitOnError("get debug info", err)
-
-				PrintDebugInfo(debug)
+				ui.NL(3)
+				err = common.KubectlDescribePods(namespace)
+				ui.WarnOnError("describing Kubernetes pods", err)
 			}
 
-			spinner.Success("Testkube logs collected successfully")
+			if features.Enabled(showServices) {
+				ui.H2("Services")
+				err := common.KubectlGetServices(namespace)
+				ui.WarnOnError("describing Kubernetes pods", err)
+
+				ui.NL(3)
+				err = common.KubectlDescribeServices(namespace)
+				ui.WarnOnError("describing Kubernetes services", err)
+			}
+
+			if features.Enabled(showIngresses) {
+				ui.H2("Ingresses")
+				err := common.KubectlGetIngresses(namespace)
+				ui.WarnOnError("describing Kubernetes ingresses", err)
+
+				ui.NL(3)
+				err = common.KubectlDescribeIngresses(namespace)
+				ui.WarnOnError("describing Kubernetes services", err)
+			}
+
+			if features.Enabled(showStorageClasses) {
+				ui.H2("Storage Classes")
+				err := common.KubectlGetStorageClass(namespace)
+				ui.WarnOnError("getting Kubernetes Storage Classes", err)
+			}
+
+			if features.Enabled(showEvents) {
+				ui.H2("Kubernetes Events")
+				err := common.KubectlPrintEvents(namespace)
+				ui.WarnOnError("getting Kubernetes events", err)
+			}
+
+			if features.Enabled(showApiLogs) {
+				ui.H2("API Server Logs")
+				err := common.KubectlLogs(namespace, map[string]string{"app.kubernetes.io/name": "testkube-cloud-api"})
+				ui.WarnOnError("getting api server logs", err)
+			}
+
+			if features.Enabled(showWorkerLogs) {
+				ui.H2("Worker Service Logs")
+				err := common.KubectlLogs(namespace, map[string]string{"app.kubernetes.io/name": "testkube-worker-service"})
+				ui.WarnOnError("getting worker service logs", err)
+			}
+
+			if features.Enabled(showUiLogs) {
+				ui.H2("UI Logs")
+				err := common.KubectlLogs(namespace, map[string]string{"app.kubernetes.io/name": "testkube-cloud-ui"})
+				ui.WarnOnError("getting UI logs", err)
+			}
+
+			if features.Enabled(showDexLogs) {
+				ui.H2("Dex Logs")
+				err := common.KubectlLogs(namespace, map[string]string{"app.kubernetes.io/name": "dex"})
+				ui.WarnOnError("getting Dex logs", err)
+			}
+
+			if features.Enabled(showMinioLogs) {
+				ui.H2("Minio Logs")
+				err := common.KubectlLogs(namespace, map[string]string{"app.kubernetes.io/name": "minio"})
+				ui.WarnOnError("getting MinIO logs", err)
+			}
+
+			if features.Enabled(showMongoLogs) {
+				ui.H2("MongoDB logs")
+				err := common.KubectlLogs(namespace, map[string]string{"app.kubernetes.io/name": "mongodb"})
+				ui.WarnOnError("getting MongoDB logs", err)
+			}
+
+			if features.Enabled(showNatsLogs) {
+				ui.H2("NATS logs")
+				err := common.KubectlLogs(namespace, map[string]string{"app.kubernetes.io/name": "nats"})
+				ui.WarnOnError("getting worker service logs", err)
+			}
 
 		},
 	}
 
-	cmd.Flags().StringToStringVar(&additionalLabels, "labels", map[string]string{}, "Labels to filter logs by")
-	cmd.Flags().BoolVar(&attachAgentLogs, "attach-agent-log", false, "Attach agent log to the output keep in mind to configure valid agent first in the Testkube CLI")
+	cmd.Flags().VarP(&features, "show", "s", "Comma-separated list of features to show, one of: "+controlPlaneFeaturesStr+", defaults to all")
 
 	return cmd
-
 }
