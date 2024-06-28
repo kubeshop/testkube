@@ -16,10 +16,11 @@ func NewDebugAgentCmd() *cobra.Command {
 	var show common.CommaList
 
 	cmd := &cobra.Command{
-		Use:   "agent",
-		Short: "Show Agent debug information",
-		Long:  "Get all the necessary information to debug an issue in Testkube Agent you can fiter through comma separated list of items to show with additional flag `--show " + agentFeaturesStr + "`",
-		Run:   RunDebugAgentCmdFunc(&show),
+		Use:     "agent",
+		Aliases: []string{"ag", "a"},
+		Short:   "Show Agent debug information",
+		Long:    "Get all the necessary information to debug an issue in Testkube Agent you can fiter through comma separated list of items to show with additional flag `--show " + agentFeaturesStr + "`",
+		Run:     RunDebugAgentCmdFunc(&show),
 	}
 
 	cmd.Flags().VarP(&show, "show", "s", "Comma-separated list of features to show, one of: "+agentFeaturesStr+", defaults to all")

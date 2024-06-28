@@ -14,7 +14,7 @@ func NewDebugControlPlaneCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:     "controlplane",
-		Aliases: []string{"ctl", "cp"},
+		Aliases: []string{"ctl", "cp", "c"},
 		Short:   "Show Control Plane debug information",
 		Long:    "Get all the necessary information to debug an issue in Testkube Control Plane you can fiter through comma separated list of items to show with additional flag `--show " + controlPlaneFeaturesStr + "`",
 		Run: func(cmd *cobra.Command, args []string) {

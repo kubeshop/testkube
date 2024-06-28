@@ -4,33 +4,33 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
-const (
-	defaultOssNamespace = "testkube"
-)
-
 func NewDebugOssCmd() *cobra.Command {
-	var show common.CommaList
-
 	cmd := &cobra.Command{
-		Use:   "oss",
-		Short: "Show OSS installation debug info",
-		Run:   RunDebugOssCmdFunc(&show),
+		Use:     "oss",
+		Aliases: []string{"o"},
+		Short:   "Show OSS installation debug info",
+		Run: func(cmd *cobra.Command, args []string) {
+			cfg, err := config.Load()
+			ui.ExitOnError("loading config file", err)
+
+			if cfg.ContextType != config.ContextTypeKubeconfig {
+				ui.Errf("OSS debug is only available for kubeconfig context, use `testkube set context` to set kubeconfig context, or `testkube debug agent|controlplane` to debug other variants of Testkube")
+				return
+			}
+
+			client, _, err := common.GetClient(cmd)
+			ui.ExitOnError("getting client", err)
+
+			d, err := GetDebugInfo(client)
+			ui.ExitOnError("get debug info", err)
+
+			PrintDebugInfo(d)
+		},
 	}
 
 	return cmd
-}
-
-func RunDebugOssCmdFunc(show *common.CommaList) func(cmd *cobra.Command, args []string) {
-	return func(cmd *cobra.Command, args []string) {
-		client, _, err := common.GetClient(cmd)
-		ui.ExitOnError("getting client", err)
-
-		d, err := GetDebugInfo(client)
-		ui.ExitOnError("get debug info", err)
-
-		PrintDebugInfo(d)
-	}
 }
