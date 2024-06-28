@@ -27,34 +27,19 @@ func MapTestkubeEventToCDEvent(tkEvent testkube.Event, clusterID, defaultNamespa
 	case *testkube.EventEndTestSuiteAborted, *testkube.EventEndTestSuiteFailed, *testkube.EventEndTestSuiteTimeout, *testkube.EventEndTestSuiteSuccess:
 		return MapTestkubeEventFinishTestSuiteToCDEvent(tkEvent, clusterID, dashboardURI)
 	case *testkube.EventQueueTestWorkflow:
-		containsExuctionAction := false
-		if tkEvent.TestWorkflowExecution != nil {
-			containsExuctionAction = tkEvent.TestWorkflowExecution.ContainsExecuteAction()
-		}
-
-		if containsExuctionAction {
+		if tkEvent.TestWorkflowExecution.ContainsExecuteAction() {
 			return MapTestkubeEventQueuedTestWorkflowTestSuiteToCDEvent(tkEvent, clusterID, defaultNamespace, dashboardURI)
 		}
 
 		return MapTestkubeEventQueuedTestWorkflowTestToCDEvent(tkEvent, clusterID, defaultNamespace, dashboardURI)
 	case *testkube.EventStartTestWorkflow:
-		containsExuctionAction := false
-		if tkEvent.TestWorkflowExecution != nil {
-			containsExuctionAction = tkEvent.TestWorkflowExecution.ContainsExecuteAction()
-		}
-
-		if containsExuctionAction {
+		if tkEvent.TestWorkflowExecution.ContainsExecuteAction() {
 			return MapTestkubeEventStartTestWorkflowTestSuiteToCDEvent(tkEvent, clusterID, defaultNamespace, dashboardURI)
 		}
 
 		return MapTestkubeEventStartTestWorkflowTestToCDEvent(tkEvent, clusterID, defaultNamespace, dashboardURI)
 	case *testkube.EventEndTestWorkflowAborted, *testkube.EventEndTestWorkflowFailed, *testkube.EventEndTestWorkflowSuccess:
-		containsExuctionAction := false
-		if tkEvent.TestWorkflowExecution != nil {
-			containsExuctionAction = tkEvent.TestWorkflowExecution.ContainsExecuteAction()
-		}
-
-		if containsExuctionAction {
+		if tkEvent.TestWorkflowExecution.ContainsExecuteAction() {
 			return MapTestkubeEventFinishTestWorkflowTestSuiteToCDEvent(tkEvent, clusterID, defaultNamespace, dashboardURI)
 		}
 
@@ -523,9 +508,9 @@ func MapTestkubeEventQueuedTestWorkflowTestToCDEvent(event testkube.Event, clust
 		}
 
 		ev.SetSubjectTestCase(&cdevents.TestCaseRunQueuedSubjectContentTestCase{
-			Id: workflowName,
-			//			Type: MapTestkubeTestTypeToCDEventTestCaseType(event.TestWorkflowExecution.TestType),
-			Uri: fmt.Sprintf("%s/test-workflows/%s", dashboardURI, workflowName),
+			Id:   workflowName,
+			Type: MapTestkubeTestWorkflowTemplateToCDEventTestCaseType(event.TestWorkflowExecution.GetTemplateRefs()),
+			Uri:  fmt.Sprintf("%s/test-workflows/%s", dashboardURI, workflowName),
 		})
 
 		namespace := event.TestWorkflowExecution.Namespace
@@ -537,20 +522,6 @@ func MapTestkubeEventQueuedTestWorkflowTestToCDEvent(event testkube.Event, clust
 			Id:     namespace,
 			Source: clusterID,
 		})
-		/*
-			if event.TestWorkflowExecution.RunningContext != nil {
-				ev.SetSubjectTrigger(&cdevents.TestCaseRunQueuedSubjectContentTrigger{
-					Type: MapTestkubeRunningContextTypeToCDEventTiggerType(event.TestWorkflowExecution.RunningContext.Type_),
-				})
-			}
-
-			if event.TestWorkflowExecution.ParentName != "" {
-				ev.SetSubjectTestSuiteRun(&cdevents.Reference{
-					Id:     event.TestWorkflowExecution.ParentName,
-					Source: clusterID,
-				})
-			}
-		*/
 	}
 
 	return ev, nil
@@ -590,13 +561,6 @@ func MapTestkubeEventQueuedTestWorkflowTestSuiteToCDEvent(event testkube.Event, 
 			Id:     namespace,
 			Source: clusterID,
 		})
-		/*
-			if event.TestWorkflowExecution.RunningContext != nil {
-				ev.SetSubjectTrigger(&cdevents.TestSuiteRunQueuedSubjectContentTrigger{
-					Type: MapTestkubeRunningContextTypeToCDEventTiggerType(event.TestWorkflowExecution.RunningContext.Type_),
-				})
-			}
-		*/
 	}
 
 	return ev, nil
@@ -623,9 +587,9 @@ func MapTestkubeEventStartTestWorkflowTestToCDEvent(event testkube.Event, cluste
 		}
 
 		ev.SetSubjectTestCase(&cdevents.TestCaseRunStartedSubjectContentTestCase{
-			Id: workflowName,
-			//			Type: MapTestkubeTestTypeToCDEventTestCaseType(event.TestWorkflowExecution.TestType),
-			Uri: fmt.Sprintf("%s/test-workflows/%s", dashboardURI, workflowName),
+			Id:   workflowName,
+			Type: MapTestkubeTestWorkflowTemplateToCDEventTestCaseType(event.TestWorkflowExecution.GetTemplateRefs()),
+			Uri:  fmt.Sprintf("%s/test-workflows/%s", dashboardURI, workflowName),
 		})
 
 		namespace := event.TestWorkflowExecution.Namespace
@@ -637,20 +601,6 @@ func MapTestkubeEventStartTestWorkflowTestToCDEvent(event testkube.Event, cluste
 			Id:     namespace,
 			Source: clusterID,
 		})
-		/*
-			if event.TestWorkflowExecution.RunningContext != nil {
-				ev.SetSubjectTrigger(&cdevents.TestCaseRunStartedSubjectContentTrigger{
-					Type: MapTestkubeRunningContextTypeToCDEventTiggerType(event.TestWorkflowExecution.RunningContext.Type_),
-				})
-			}
-
-			if event.TestWorkflowExecution.ParentName != "" {
-				ev.SetSubjectTestSuiteRun(&cdevents.Reference{
-					Id:     event.TestWorkflowExecution.ParentName,
-					Source: clusterID,
-				})
-			}
-		*/
 	}
 
 	return ev, nil
@@ -690,13 +640,6 @@ func MapTestkubeEventStartTestWorkflowTestSuiteToCDEvent(event testkube.Event, c
 			Id:     namespace,
 			Source: clusterID,
 		})
-		/*
-			if event.TestWorkflowExecution.RunningContext != nil {
-				ev.SetSubjectTrigger(&cdevents.TestSuiteRunStartedSubjectContentTrigger{
-					Type: MapTestkubeRunningContextTypeToCDEventTiggerType(event.TestWorkflowExecution.RunningContext.Type_),
-				})
-			}
-		*/
 	}
 
 	return ev, nil
@@ -723,9 +666,9 @@ func MapTestkubeEventFinishTestWorkflowTestToCDEvent(event testkube.Event, clust
 		}
 
 		ev.SetSubjectTestCase(&cdevents.TestCaseRunFinishedSubjectContentTestCase{
-			Id: workflowName,
-			//			Type: MapTestkubeTestTypeToCDEventTestCaseType(event.TestWokflowExecution.TestType),
-			Uri: fmt.Sprintf("%s/test-workflows/%s", dashboardURI, workflowName),
+			Id:   workflowName,
+			Type: MapTestkubeTestWorkflowTemplateToCDEventTestCaseType(event.TestWorkflowExecution.GetTemplateRefs()),
+			Uri:  fmt.Sprintf("%s/test-workflows/%s", dashboardURI, workflowName),
 		})
 
 		namespace := event.TestWorkflowExecution.Namespace
@@ -765,14 +708,6 @@ func MapTestkubeEventFinishTestWorkflowTestToCDEvent(event testkube.Event, clust
 				ev.SetSubjectOutcome("pass")
 			}
 		}
-		/*
-			if event.TestWorkflowExecution.ParentName != "" {
-				ev.SetSubjectTestSuiteRun(&cdevents.Reference{
-					Id:     event.TestWorkflowExecution.ParentName,
-					Source: clusterID,
-				})
-			}
-		*/
 	}
 
 	return ev, nil
@@ -875,9 +810,71 @@ func MapTestkubeTestWorkflowLogToCDEvent(event testkube.Event, clusterID, dashbo
 			workflowName = event.TestWorkflowExecution.Workflow.Name
 		}
 
-		ev.SetSubjectUri(fmt.Sprintf("%s/test-workflows/%s/executions/%s/log-output", dashboardURI,
+		ev.SetSubjectUri(fmt.Sprintf("%s/test-workflows/%s/executions/%s", dashboardURI,
 			workflowName, event.TestWorkflowExecution.Id))
 	}
 
+	return ev, nil
+}
+
+// MapTestkubeTestWorkflowTemplateToCDEventTestCaseType maps OpenAPI spec Test Workflow Template to CDEvent Test Case Type
+func MapTestkubeTestWorkflowTemplateToCDEventTestCaseType(templateRefs []testkube.TestWorkflowTemplateRef) string {
+	var types = map[string]string{
+		"official--artillery":  "performance",
+		"official--cypress":    "functional",
+		"official--gradle":     "integration",
+		"official--jmeter":     "performance",
+		"official--k6":         "performance",
+		"official--maven":      "integration",
+		"official--playwright": "functional",
+		"official--postman":    "functional",
+	}
+
+	templateNames := make(map[string]struct{})
+	for _, templateRef := range templateRefs {
+		if strings.Contains(templateRef.Name, "official--") {
+			templateNames[templateRef.Name] = struct{}{}
+		}
+	}
+
+	for key, value := range types {
+		for templateName := range templateNames {
+			if strings.Contains(templateName, key) {
+				return value
+			}
+		}
+	}
+
+	return "other"
+}
+
+// CDEventsArtifactParameters contains cd events artifact parameters
+type CDEventsArtifactParameters struct {
+	Id           string
+	Name         string
+	WorkflowName string
+	ClusterID    string
+	DashboardURI string
+}
+
+// MapTestkubeGTestWorkflowArtifactToCDEvent maps OpenAPI spec Test Artifact to CDEvent CDEventReader
+func MapTestkubeTestWorkflowArtifactToCDEvent(parameters CDEventsArtifactParameters, path, format string) (cdevents.CDEventReader, error) {
+	// Create the base event
+	ev, err := cdevents.NewTestOutputPublishedEvent()
+	if err != nil {
+		return nil, err
+	}
+
+	ev.SetSubjectId(filepath.Join(parameters.Name, path))
+	ev.SetSubjectSource(parameters.ClusterID)
+	ev.SetSource(parameters.ClusterID)
+	ev.SetSubjectTestCaseRun(&cdevents.Reference{
+		Id:     parameters.Id,
+		Source: parameters.ClusterID,
+	})
+
+	ev.SetSubjectFormat(format)
+	ev.SetSubjectOutputType(MapMimeTypeToCDEventOutputType(format))
+	ev.SetSubjectUri(fmt.Sprintf("%s/test-workflows/%s/overview/%s/artifacts", parameters.DashboardURI, parameters.WorkflowName, parameters.Id))
 	return ev, nil
 }

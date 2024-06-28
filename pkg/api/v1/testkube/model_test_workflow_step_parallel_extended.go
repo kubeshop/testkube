@@ -14,3 +14,18 @@ func (w *TestWorkflowStepParallel) ContainsExecuteAction() bool {
 
 	return false
 }
+
+func (w *TestWorkflowStepParallel) GetTemplateRefs() []TestWorkflowTemplateRef {
+	var templateRefs []TestWorkflowTemplateRef
+
+	if w.Template != nil {
+		templateRefs = append(templateRefs, *w.Template)
+	}
+
+	steps := append(w.Setup, append(w.Steps, w.After...)...)
+	for _, step := range steps {
+		templateRefs = append(templateRefs, step.GetTemplateRefs()...)
+	}
+
+	return templateRefs
+}

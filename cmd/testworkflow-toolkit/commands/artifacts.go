@@ -23,6 +23,7 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/artifacts"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
+	"github.com/kubeshop/testkube/pkg/mapper/cdevents"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -144,6 +145,18 @@ func NewArtifactsCmd() *cobra.Command {
 			// Isolate the files under specific prefix
 			if env.Config().Execution.FSPrefix != "" {
 				handlerOpts = append(handlerOpts, artifacts.WithPathPrefix(env.Config().Execution.FSPrefix))
+			}
+
+			// Support cd evaents
+			if env.Config().System.CDEventTarget != "" {
+				handlerOpts = append(handlerOpts, artifacts.WithCDEventsTarget(env.Config().System.CDEventTarget))
+				handlerOpts = append(handlerOpts, artifacts.WithCDEventsArtifactParameters(cdevents.CDEventsArtifactParameters{
+					Id:           env.Config().Execution.Id,
+					Name:         env.Config().Execution.Name,
+					WorkflowName: env.Config().Execution.WorkflowName,
+					ClusterID:    env.Config().System.ClusterID,
+					DashboardURI: env.Config().System.DashboardUrl,
+				}))
 			}
 
 			handler := artifacts.NewHandler(uploader, processor, handlerOpts...)
