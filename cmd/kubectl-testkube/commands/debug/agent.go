@@ -94,18 +94,9 @@ func RunDebugAgentCmdFunc(show *common.CommaList) func(cmd *cobra.Command, args 
 		client, _, err := common.GetClient(cmd)
 		ui.ExitOnError("getting client", err)
 
-		if show.Enabled(showControlPlaneConnection) {
-			ui.H2("Agent connection")
-
-			debug, err := GetDebugInfo(client)
-			ui.ExitOnError("connecting to Control Plane", err)
-			PrintDebugInfo(debug)
-			ui.NL(2)
-
-			common.UiPrintContext(cfg)
-		}
-
 		if show.Enabled(showRoundtrip) {
+			ui.H2("Agent connection through Control Plane from CLI")
+
 			i, err := client.GetServerInfo()
 			if err != nil {
 				ui.Errf("Error while doing roundtrip to agent: %v", err)
@@ -122,6 +113,18 @@ func RunDebugAgentCmdFunc(show *common.CommaList) func(cmd *cobra.Command, args 
 				})
 			}
 		}
+
+		if show.Enabled(showCLIToControlPlane) {
+			ui.H2("Agent connection to Control Plane from CLI")
+
+			debug, err := GetDebugInfo(client)
+			ui.ExitOnError("connecting to Control Plane", err)
+			PrintDebugInfo(debug)
+			ui.NL(2)
+
+			common.UiPrintContext(cfg)
+		}
+
 		ui.NL()
 	}
 }

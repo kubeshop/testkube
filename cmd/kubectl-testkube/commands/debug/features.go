@@ -3,13 +3,13 @@ package debug
 import "strings"
 
 const (
-	showPods                   = "pods"
-	showServices               = "services"
-	showIngresses              = "ingresses"
-	showStorageClasses         = "storageclasses"
-	showEvents                 = "events"
-	showControlPlaneConnection = "connection"
-	showRoundtrip              = "roundtrip"
+	showPods              = "pods"
+	showServices          = "services"
+	showIngresses         = "ingresses"
+	showStorageClasses    = "storageclasses"
+	showEvents            = "events"
+	showCLIToControlPlane = "connection"
+	showRoundtrip         = "roundtrip"
 
 	showApiLogs    = "api"
 	showWorkerLogs = "worker"
@@ -27,7 +27,7 @@ var controlPlaneFeatures = []string{
 	showStorageClasses,
 	showEvents,
 	showNatsLogs,
-	showControlPlaneConnection,
+	showCLIToControlPlane,
 	showApiLogs,
 	showNatsLogs,
 	showMongoLogs,
@@ -42,7 +42,7 @@ var agentFeatures = []string{
 	showIngresses,
 	showEvents,
 	showNatsLogs,
-	showControlPlaneConnection,
+	showCLIToControlPlane,
 	showRoundtrip,
 }
 
