@@ -8,23 +8,26 @@ import (
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
-const defaultAgentNamespace = "testkube"
+const (
+	defaultAgentNamespace = "testkube"
+)
 
 func NewDebugAgentCmd() *cobra.Command {
 	var show common.CommaList
 
 	cmd := &cobra.Command{
 		Use:   "agent",
-		Short: "Debug Agent info",
+		Short: "Show Agent debug information",
+		Long:  "Get all the necessary information to debug an issue in Testkube Agent you can fiter through comma separated list of items to show with additional flag `--show " + agentFeaturesStr + "`",
 		Run:   RunDebugAgentCmdFunc(&show),
 	}
 
-	cmd.Flags().Var(&show, "show", "Comma-separated list of features to show, one of: pods,services,storageclasses,api,worker,ui,dex,nats,mongo,minio, defaults to all")
+	cmd.Flags().VarP(&show, "show", "s", "Comma-separated list of features to show, one of: "+agentFeaturesStr+", defaults to all")
 
 	return cmd
 }
 
-func RunDebugAgentCmdFunc(features *common.CommaList) func(cmd *cobra.Command, args []string) {
+func RunDebugAgentCmdFunc(show *common.CommaList) func(cmd *cobra.Command, args []string) {
 	return func(cmd *cobra.Command, args []string) {
 		cfg, err := config.Load()
 		ui.ExitOnError("loading config file", err)
@@ -42,7 +45,7 @@ func RunDebugAgentCmdFunc(features *common.CommaList) func(cmd *cobra.Command, a
 
 		namespace := common.UiGetNamespace(cmd, defaultAgentNamespace)
 
-		if features.Enabled("pods") {
+		if show.Enabled(showPods) {
 			ui.H2("Pods")
 			err = common.KubectlPrintPods(namespace)
 			ui.WarnOnError("getting Kubernetes pods", err)
@@ -52,7 +55,7 @@ func RunDebugAgentCmdFunc(features *common.CommaList) func(cmd *cobra.Command, a
 			ui.WarnOnError("describing Kubernetes pods", err)
 		}
 
-		if features.Enabled("servives") {
+		if show.Enabled(showServices) {
 			ui.H2("Services")
 			err = common.KubectlGetServices(namespace)
 			ui.WarnOnError("describing Kubernetes pods", err)
@@ -62,26 +65,26 @@ func RunDebugAgentCmdFunc(features *common.CommaList) func(cmd *cobra.Command, a
 			ui.WarnOnError("describing Kubernetes services", err)
 		}
 
-		if features.Enabled("ingresses") {
+		if show.Enabled(showIngresses) {
 			ui.H2("Ingresses")
 			err = common.KubectlGetIngresses(namespace)
 			ui.WarnOnError("describing Kubernetes ingresses", err)
 		}
 
-		if features.Enabled("agent") {
+		if show.Enabled(showApiLogs) {
 			ui.H2("Agent API Logs")
 			err = common.KubectlLogs(namespace, map[string]string{"app.kubernetes.io/name": "api-server"})
 			ui.ExitOnError("getting agent logs", err)
 			ui.NL(2)
 		}
 
-		if features.Enabled("nats") {
+		if show.Enabled(showNatsLogs) {
 			ui.H2("NATS logs")
 			err = common.KubectlLogs(namespace, map[string]string{"app.kubernetes.io/name": "nats"})
 			ui.WarnOnError("getting worker service logs", err)
 		}
 
-		if features.Enabled("events") {
+		if show.Enabled(showEvents) {
 			ui.H2("Kubernetes Events")
 			err = common.KubectlPrintEvents(namespace)
 			ui.WarnOnError("getting Kubernetes events", err)
@@ -90,7 +93,7 @@ func RunDebugAgentCmdFunc(features *common.CommaList) func(cmd *cobra.Command, a
 		client, _, err := common.GetClient(cmd)
 		ui.ExitOnError("getting client", err)
 
-		if features.Enabled("debug") {
+		if show.Enabled(showDebug) {
 			ui.H2("Agent connection")
 
 			debug, err := GetDebugInfo(client)
@@ -101,7 +104,7 @@ func RunDebugAgentCmdFunc(features *common.CommaList) func(cmd *cobra.Command, a
 			common.UiPrintContext(cfg)
 		}
 
-		if features.Enabled("connection") {
+		if show.Enabled(showConnection) {
 			i, err := client.GetServerInfo()
 			if err != nil {
 				ui.Errf("Error %v", err)
