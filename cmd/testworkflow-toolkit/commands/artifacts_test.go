@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
+	"github.com/kubeshop/testkube/pkg/mapper/cdevents"
 	"github.com/kubeshop/testkube/pkg/utils/test"
 
 	"github.com/golang/mock/gomock"
@@ -34,6 +35,10 @@ func TestRun_Integration(t *testing.T) {
 	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		httpRequestCount++
 		if r.Method == http.MethodPut {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		if r.Method == http.MethodPost {
 			w.WriteHeader(http.StatusOK)
 			return
 		}
@@ -66,9 +71,15 @@ func TestRun_Integration(t *testing.T) {
 		return filesystem.NewMockFile(path[1:], b), nil
 	})
 	postProcessor := artifacts.NewJUnitPostProcessor(mockFs, mockClient, "/", "")
-	handler := artifacts.NewHandler(uploader, processor, artifacts.WithPostProcessor(postProcessor))
+	handler := artifacts.NewHandler(uploader, processor, artifacts.WithPostProcessor(postProcessor),
+		artifacts.WithCDEventsTarget(server.URL), artifacts.WithCDEventsArtifactParameters(cdevents.CDEventsArtifactParameters{
+			Id:           "1",
+			Name:         "test-1",
+			WorkflowName: "test",
+			ClusterID:    "12345",
+		}))
 
 	run(handler, walker, testDataFixtures)
 
-	assert.Equal(t, 2, httpRequestCount)
+	assert.Equal(t, 4, httpRequestCount)
 }
