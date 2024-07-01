@@ -580,7 +580,7 @@ func MapTestkubeEventStartTestWorkflowTestToCDEvent(event testkube.Event, cluste
 
 	ev.SetSubjectSource(clusterID)
 	ev.SetSource(clusterID)
-	if event.TestExecution != nil {
+	if event.TestWorkflowExecution != nil {
 		workflowName := ""
 		if event.TestWorkflowExecution.Workflow != nil {
 			workflowName = event.TestWorkflowExecution.Workflow.Name
@@ -653,8 +653,8 @@ func MapTestkubeEventFinishTestWorkflowTestToCDEvent(event testkube.Event, clust
 		return nil, err
 	}
 
-	if event.TestExecution != nil {
-		ev.SetSubjectId(event.TestExecution.Id)
+	if event.TestWorkflowExecution != nil {
+		ev.SetSubjectId(event.TestWorkflowExecution.Id)
 	}
 
 	ev.SetSubjectSource(clusterID)
