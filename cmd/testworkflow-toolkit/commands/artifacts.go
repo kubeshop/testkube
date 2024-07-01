@@ -148,8 +148,8 @@ func NewArtifactsCmd() *cobra.Command {
 			}
 
 			// Support cd evaents
-			if env.Config().System.CDEventTarget != "" {
-				handlerOpts = append(handlerOpts, artifacts.WithCDEventsTarget(env.Config().System.CDEventTarget))
+			if env.Config().System.CDEventsTarget != "" {
+				handlerOpts = append(handlerOpts, artifacts.WithCDEventsTarget(env.Config().System.CDEventsTarget))
 				handlerOpts = append(handlerOpts, artifacts.WithCDEventsArtifactParameters(cdevents.CDEventsArtifactParameters{
 					Id:           env.Config().Execution.Id,
 					Name:         env.Config().Execution.Name,
