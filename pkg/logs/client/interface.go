@@ -9,8 +9,9 @@ import (
 const (
 	StreamPrefix = "log"
 
-	StartSubject = "events.logs.start"
-	StopSubject  = "events.logs.stop"
+	Subscription = "agent"
+	StartSubject = Subscription + ".logs.start"
+	StopSubject  = Subscription + ".logs.stop"
 )
 
 //go:generate mockgen -destination=./mock_stream.go -package=client "github.com/kubeshop/testkube/pkg/logs/client" Stream
