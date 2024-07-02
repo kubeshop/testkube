@@ -71,6 +71,7 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 				DisableWebhooks: disableWebhooks,
 			})
 			if err != nil {
+				// User friendly Open Source operation error
 				errs := []error{constants.ErrOpenSourceExecuteOperationIsNotAvailable,
 					constants.ErrOpenSourceParallelOperationIsNotAvailable,
 					constants.ErrOpenSourceServicesOperationIsNotAvailable}
