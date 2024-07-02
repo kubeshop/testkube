@@ -84,7 +84,7 @@ func (s *TestkubeAPI) CreateTestWorkflowTemplateHandler() fiber.Handler {
 			}
 		} else {
 			var v *testkube.TestWorkflowTemplate
-			err = c.BodyParser(&obj)
+			err = c.BodyParser(&v)
 			if err != nil {
 				return s.BadRequest(c, errPrefix, "invalid body", err)
 			}
