@@ -303,21 +303,21 @@ func ProcessArtifacts(_ InternalProcessor, layer Intermediate, container Contain
 
 func StubExecute(_ InternalProcessor, _ Intermediate, _ Container, step testworkflowsv1.Step) (Stage, error) {
 	if step.Execute != nil {
-		return nil, errors.New(`"execute" operation is not available when running the Testkube Agent in the standalone mode`)
+		return nil, constants.ErrOpenSourceExecuteOperationIsNotAvailable
 	}
 	return nil, nil
 }
 
 func StubParallel(_ InternalProcessor, _ Intermediate, _ Container, step testworkflowsv1.Step) (Stage, error) {
 	if step.Parallel != nil {
-		return nil, errors.New(`"parallel" operation is not available when running the Testkube Agent in the standalone mode`)
+		return nil, constants.ErrOpenSourceParallelOperationIsNotAvailable
 	}
 	return nil, nil
 }
 
 func StubServices(_ InternalProcessor, _ Intermediate, _ Container, step testworkflowsv1.Step) (Stage, error) {
 	if len(step.Services) != 0 {
-		return nil, errors.New(`"services" are not available when running the Testkube Agent in the standalone mode`)
+		return nil, constants.ErrOpenSourceServicesOperationIsNotAvailable
 	}
 	return nil, nil
 }

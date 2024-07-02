@@ -1,6 +1,7 @@
 package constants
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -14,15 +15,16 @@ import (
 )
 
 const (
-	DefaultInternalPath       = "/.tktw"
-	DefaultDataPath           = "/data"
-	DefaultTerminationLogPath = "/dev/termination-log"
-	DefaultFsGroup            = int64(1001)
-	ResourceIdLabelName       = "testworkflowid"
-	RootResourceIdLabelName   = "testworkflowid-root"
-	GroupIdLabelName          = "testworkflowid-group"
-	SignatureAnnotationName   = "testworkflows.testkube.io/signature"
-	RFC3339Millis             = "2006-01-02T15:04:05.000Z07:00"
+	DefaultInternalPath             = "/.tktw"
+	DefaultDataPath                 = "/data"
+	DefaultTerminationLogPath       = "/dev/termination-log"
+	DefaultFsGroup                  = int64(1001)
+	ResourceIdLabelName             = "testworkflowid"
+	RootResourceIdLabelName         = "testworkflowid-root"
+	GroupIdLabelName                = "testworkflowid-group"
+	SignatureAnnotationName         = "testworkflows.testkube.io/signature"
+	RFC3339Millis                   = "2006-01-02T15:04:05.000Z07:00"
+	OpenSourceOperationErrorMessage = "operation is not available when running the Testkube Agent in the standalone mode"
 )
 
 var (
@@ -66,8 +68,11 @@ echo -n ',0' > <terminationLog> && echo 'Done.' && exit 0
 			{Name: "CI", Value: "1"},
 		},
 	}
-	DefaultInitImage    = getInitImage()
-	DefaultToolkitImage = getToolkitImage()
+	DefaultInitImage                             = getInitImage()
+	DefaultToolkitImage                          = getToolkitImage()
+	ErrOpenSourceExecuteOperationIsNotAvailable  = errors.New(`"execute" ` + OpenSourceOperationErrorMessage)
+	ErrOpenSourceParallelOperationIsNotAvailable = errors.New(`"parallel" ` + OpenSourceOperationErrorMessage)
+	ErrOpenSourceServicesOperationIsNotAvailable = errors.New(`"services" ` + OpenSourceOperationErrorMessage)
 )
 
 func stripCommonImagePrefix(image, common string) string {
