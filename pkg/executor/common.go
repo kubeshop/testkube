@@ -545,7 +545,7 @@ func GetPodErrorMessage(ctx context.Context, client kubernetes.Interface, pod *c
 
 	for _, initContainerStatus := range pod.Status.InitContainerStatuses {
 		if initContainerStatus.State.Terminated != nil &&
-			(initContainerStatus.State.Terminated.ExitCode > 1 || initContainerStatus.State.Terminated.ExitCode < -1) &&
+			(initContainerStatus.State.Terminated.ExitCode >= 1 || initContainerStatus.State.Terminated.ExitCode < -1) &&
 			(initContainerStatus.State.Terminated.Message != "" || initContainerStatus.State.Terminated.Reason != "") {
 			if message != "" {
 				message += "\n"
