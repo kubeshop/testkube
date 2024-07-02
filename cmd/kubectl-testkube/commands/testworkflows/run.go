@@ -15,6 +15,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	apiclientv1 "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -69,6 +70,18 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 				Config:          config,
 				DisableWebhooks: disableWebhooks,
 			})
+			if err != nil {
+				errs := []error{constants.ErrOpenSourceExecuteOperationIsNotAvailable,
+					constants.ErrOpenSourceParallelOperationIsNotAvailable,
+					constants.ErrOpenSourceServicesOperationIsNotAvailable}
+				for _, e := range errs {
+					if strings.Contains(err.Error(), e.Error()) {
+						err = e
+						break
+					}
+				}
+			}
+
 			ui.ExitOnError("execute test workflow "+name+" from namespace "+namespace, err)
 			err = renderer.PrintTestWorkflowExecution(cmd, os.Stdout, execution)
 			ui.ExitOnError("render test workflow execution", err)
