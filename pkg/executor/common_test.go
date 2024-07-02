@@ -2,6 +2,7 @@ package executor
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -99,12 +100,12 @@ func TestGetPodLogs(t *testing.T) {
 					Spec: corev1.PodSpec{
 						InitContainers: []corev1.Container{
 							{
-								Name: "init_container",
+								Name: "1234-init",
 							},
 						},
 						Containers: []corev1.Container{
 							{
-								Name: "first_container",
+								Name: "1234",
 							},
 							{
 								Name: "second_container",
@@ -113,19 +114,52 @@ func TestGetPodLogs(t *testing.T) {
 					},
 				},
 			},
-			wantLogs: []byte("fake logsfake logsfake logs"),
+			wantLogs: []byte("fake logsfake logs"),
 			wantErr:  false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotLogs, err := GetPodLogs(context.Background(), tt.args.c, tt.args.namespace, tt.args.pod, tt.args.logLinesCount...)
+			whitelistedContainers := []string{"logs", "init", "scraper"}
+			gotLogs, err := GetPodLogs(context.Background(), tt.args.c, tt.args.namespace, tt.args.pod, "1234", whitelistedContainers, tt.args.logLinesCount...)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetPodLogs() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(gotLogs, tt.wantLogs) {
 				t.Errorf("GetPodLogs() = %v, want %v", gotLogs, tt.wantLogs)
+			}
+		})
+	}
+}
+
+func TestIsWhitelistedContainer(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		containerName string
+		id            string
+		expected      bool
+	}{
+		{"mycontainer", "mycontainer", true},
+		{"mycontainer-init", "mycontainer", true},
+		{"mycontainer-scraper", "mycontainer", true},
+		{"mycontainer-logs", "mycontainer", true},
+		{"anothercontainer", "mycontainer", false},
+		{"istio-init", "mycontainer", false},
+		{"istio-proxy", "mycontainer", false},
+		{"scraper-mycontainer", "mycontainer", false},
+		{"logs-mycontainer", "mycontainer", false},
+		{"", "mycontainer", false},
+		{"mycontainer", "", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(fmt.Sprintf("containerName: %s, id: %s", tt.containerName, tt.id), func(t *testing.T) {
+			whitelisted := []string{"logs", "init", "scraper"}
+			result := IsWhitelistedContainer(tt.containerName, tt.id, whitelisted)
+			if result != tt.expected {
+				t.Errorf("expected %v, got %v", tt.expected, result)
 			}
 		})
 	}

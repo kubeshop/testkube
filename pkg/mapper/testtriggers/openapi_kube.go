@@ -44,6 +44,7 @@ func MapTestTriggerUpsertRequestToTestTriggerCRD(request testkube.TestTriggerUps
 			Execution:         execution,
 			TestSelector:      mapSelectorToCRD(request.TestSelector),
 			ConcurrencyPolicy: concurrencyPolicy,
+			Disabled:          request.Disabled,
 		},
 	}
 }

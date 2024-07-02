@@ -183,6 +183,7 @@ spec:
   testSelector:
     name: sanity-test
     namespace: frontend
+  disabled: false
 ```
 
 You can define **Test Trigger** for Testkube cluster events. 
@@ -205,6 +206,10 @@ spec:
     name: container-executor-postman-smoke-tests
     namespace: testkube
 ```
+
+## Disabling Test Triggers
+
+Disabling test triggers can be helpful to test your configuration during the development. Testkube lets you disable them via the API or modifying the CRD directly specifying `disabled` field value as `true`. By default, test triggers are enabled on creation.
 
 ## Architecture
 

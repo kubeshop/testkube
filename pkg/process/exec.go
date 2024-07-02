@@ -7,6 +7,8 @@ import (
 	"io"
 	"os/exec"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
 type Options struct {
@@ -145,8 +147,15 @@ func ExecuteAndStreamOutput(command string, arguments ...string) error {
 		return err
 	}
 
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return err
+	}
+
 	err = cmd.Start()
 	if err != nil {
+		fmt.Printf("ERR: %+v\n", err)
+
 		return err
 	}
 
@@ -156,10 +165,23 @@ func ExecuteAndStreamOutput(command string, arguments ...string) error {
 		m := scanner.Text()
 		fmt.Println(m)
 	}
-
 	if scanner.Err() != nil {
 		return scanner.Err()
 	}
 
-	return cmd.Wait()
+	scanner = bufio.NewScanner(stderr)
+	errorsBuffer := strings.Builder{}
+	for scanner.Scan() {
+		errorsBuffer.Write(scanner.Bytes())
+	}
+	if scanner.Err() != nil {
+		return scanner.Err()
+	}
+
+	err = cmd.Wait()
+	if err != nil {
+		return errors.Wrap(err, errorsBuffer.String())
+	}
+
+	return nil
 }

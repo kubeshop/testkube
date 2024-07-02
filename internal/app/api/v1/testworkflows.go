@@ -9,6 +9,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/pkg/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
@@ -158,12 +159,40 @@ func (s *TestkubeAPI) CreateTestWorkflowHandler() fiber.Handler {
 		}
 		obj.Namespace = s.Namespace
 
+		// Get information about execution namespace
+		// TODO: Think what to do when it is dynamic - create in all execution namespaces?
+		execNamespace := obj.Namespace
+		if obj.Spec.Job != nil && obj.Spec.Job.Namespace != "" {
+			execNamespace = obj.Spec.Job.Namespace
+		}
+
+		// Handle secrets auto-creation
+		secrets := s.SecretManager.Batch(execNamespace, "tw-", obj.Name)
+		err = testworkflowresolver.ExtractCredentialsInWorkflow(obj, secrets.Append)
+		if err != nil {
+			return s.BadRequest(c, errPrefix, "auto-creating secrets", err)
+		}
+
 		// Create the resource
 		obj, err = s.TestWorkflowsClient.Create(obj)
-		s.Metrics.IncCreateTestWorkflow(err)
 		if err != nil {
+			s.Metrics.IncCreateTestWorkflow(err)
 			return s.BadRequest(c, errPrefix, "client error", err)
 		}
+
+		// Create secrets
+		err = secrets.Create(c.Context(), &metav1.OwnerReference{
+			APIVersion: testworkflowsv1.GroupVersion.String(),
+			Kind:       testworkflowsv1.Resource,
+			Name:       obj.Name,
+			UID:        obj.UID,
+		})
+		s.Metrics.IncCreateTestWorkflow(err)
+		if err != nil {
+			_ = s.TestWorkflowsClient.Delete(obj.Name)
+			return s.BadRequest(c, errPrefix, "auto-creating secrets", err)
+		}
+
 		s.sendCreateWorkflowTelemetry(c.Context(), obj)
 
 		err = SendResource(c, "TestWorkflow", testworkflowsv1.GroupVersion, testworkflows.MapKubeToAPI, obj)
@@ -200,6 +229,7 @@ func (s *TestkubeAPI) UpdateTestWorkflowHandler() fiber.Handler {
 		if err != nil {
 			return s.ClientError(c, errPrefix, err)
 		}
+		initial := workflow.DeepCopy()
 
 		// Validate resource
 		if obj == nil {
@@ -209,11 +239,41 @@ func (s *TestkubeAPI) UpdateTestWorkflowHandler() fiber.Handler {
 		obj.Name = workflow.Name
 		obj.ResourceVersion = workflow.ResourceVersion
 
+		// Get information about execution namespace
+		// TODO: Think what to do when it is dynamic - create in all execution namespaces?
+		execNamespace := obj.Namespace
+		if obj.Spec.Job != nil && obj.Spec.Job.Namespace != "" {
+			execNamespace = obj.Spec.Job.Namespace
+		}
+
+		// Handle secrets auto-creation
+		secrets := s.SecretManager.Batch(execNamespace, "tw-", obj.Name)
+		err = testworkflowresolver.ExtractCredentialsInWorkflow(obj, secrets.Append)
+		if err != nil {
+			return s.BadRequest(c, errPrefix, "auto-creating secrets", err)
+		}
+
 		// Update the resource
 		obj, err = s.TestWorkflowsClient.Update(obj)
+		if err != nil {
+			s.Metrics.IncUpdateTestWorkflow(err)
+			return s.BadRequest(c, errPrefix, "client error", err)
+		}
+
+		// Create secrets
+		err = secrets.Create(c.Context(), &metav1.OwnerReference{
+			APIVersion: testworkflowsv1.GroupVersion.String(),
+			Kind:       testworkflowsv1.Resource,
+			Name:       obj.Name,
+			UID:        obj.UID,
+		})
 		s.Metrics.IncUpdateTestWorkflow(err)
 		if err != nil {
-			return s.BadRequest(c, errPrefix, "client error", err)
+			_, err = s.TestWorkflowsClient.Update(initial)
+			if err != nil {
+				s.Log.Errorf("failed to recover previous TestWorkflow state: %v", err)
+			}
+			return s.BadRequest(c, errPrefix, "auto-creating secrets", err)
 		}
 
 		err = SendResource(c, "TestWorkflow", testworkflowsv1.GroupVersion, testworkflows.MapKubeToAPI, obj)

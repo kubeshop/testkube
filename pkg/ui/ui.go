@@ -101,7 +101,9 @@ func NewArrayTable(a [][]string) ArrayTable                 { return ui.NewArray
 func PrintArrayTable(a [][]string)                          { ui.PrintArrayTable(a) }
 func Confirm(message string) bool                           { return ui.Confirm(message) }
 func Select(title string, options []string) string          { return ui.Select(title, options) }
-func TextInput(message string) string                       { return ui.TextInput(message) }
+func TextInput(message string, defaultValue ...string) string {
+	return ui.TextInput(message, defaultValue...)
+}
 
 func PrintCRD[T interface{}](cr T, kind string, groupVersion schema.GroupVersion) {
 	PrintCRDs([]T{cr}, kind, groupVersion)

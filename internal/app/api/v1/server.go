@@ -19,6 +19,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	repoConfig "github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
+	"github.com/kubeshop/testkube/pkg/secretmanager"
 	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 
@@ -76,6 +77,7 @@ func NewTestkubeAPI(
 	executorsClient *executorsclientv1.ExecutorsClient,
 	testsuitesClient *testsuitesclientv3.TestSuitesClient,
 	secretClient *secret.Client,
+	secretManager secretmanager.SecretManager,
 	webhookClient *executorsclientv1.WebhooksClient,
 	clientset kubernetes.Interface,
 	testkubeClientset testkubeclientset.Interface,
@@ -95,19 +97,16 @@ func NewTestkubeAPI(
 	graphqlPort string,
 	artifactsStorage storage.ArtifactsStorage,
 	templatesClient *templatesclientv1.TemplatesClient,
-	cdeventsTarget string,
 	dashboardURI string,
 	helmchartVersion string,
 	mode string,
 	eventsBus bus.Bus,
-	enableSecretsEndpoint bool,
+	secretConfig testkube.SecretConfig,
 	ff featureflags.FeatureFlags,
 	logsStream logsclient.Stream,
 	logGrpcClient logsclient.StreamGetter,
-	disableSecretCreation bool,
 	subscriptionChecker checktcl.SubscriptionChecker,
 	serviceAccountNames map[string]string,
-	enableK8sEvents bool,
 ) TestkubeAPI {
 
 	var httpConfig server.Config
@@ -123,7 +122,7 @@ func NewTestkubeAPI(
 		httpConfig.Http.BodyLimit = DefaultHttpBodyLimit
 	}
 
-	s := TestkubeAPI{
+	return TestkubeAPI{
 		HTTPServer:                  server.NewServer(httpConfig),
 		TestExecutionResults:        testSuiteExecutionsResults,
 		ExecutionResults:            testExecutionResults,
@@ -132,6 +131,7 @@ func NewTestkubeAPI(
 		TestsClient:                 testsClient,
 		ExecutorsClient:             executorsClient,
 		SecretClient:                secretClient,
+		SecretManager:               secretManager,
 		Clientset:                   clientset,
 		TestsSuitesClient:           testsuitesClient,
 		TestKubeClientset:           testkubeClientset,
@@ -156,40 +156,14 @@ func NewTestkubeAPI(
 		helmchartVersion:            helmchartVersion,
 		mode:                        mode,
 		eventsBus:                   eventsBus,
-		enableSecretsEndpoint:       enableSecretsEndpoint,
+		secretConfig:                secretConfig,
 		featureFlags:                ff,
 		logsStream:                  logsStream,
 		logGrpcClient:               logGrpcClient,
-		disableSecretCreation:       disableSecretCreation,
 		SubscriptionChecker:         subscriptionChecker,
 		LabelSources:                common.Ptr(make([]LabelSource, 0)),
 		ServiceAccountNames:         serviceAccountNames,
 	}
-
-	// will be reused in websockets handler
-	s.WebsocketLoader = ws.NewWebsocketLoader()
-
-	s.Events.Loader.Register(webhook.NewWebhookLoader(s.Log, webhookClient, templatesClient, testExecutionResults, testSuiteExecutionsResults, testWorkflowResults, metrics))
-	s.Events.Loader.Register(s.WebsocketLoader)
-	s.Events.Loader.Register(s.slackLoader)
-
-	if cdeventsTarget != "" {
-		cdeventLoader, err := cdevent.NewCDEventLoader(cdeventsTarget, clusterId, namespace, dashboardURI, testkube.AllEventTypes)
-		if err == nil {
-			s.Events.Loader.Register(cdeventLoader)
-		} else {
-			s.Log.Debug("cdevents init error", "error", err.Error())
-		}
-	}
-
-	if enableK8sEvents {
-		s.Events.Loader.Register(k8sevent.NewK8sEventLoader(clientset, namespace, testkube.AllEventTypes))
-	}
-
-	s.InitEnvs()
-	s.InitRoutes()
-
-	return s
 }
 
 type TestkubeAPI struct {
@@ -205,6 +179,7 @@ type TestkubeAPI struct {
 	TestsClient                 *testsclientv3.TestsClient
 	ExecutorsClient             *executorsclientv1.ExecutorsClient
 	SecretClient                *secret.Client
+	SecretManager               secretmanager.SecretManager
 	WebhooksClient              *executorsclientv1.WebhooksClient
 	TestKubeClientset           testkubeclientset.Interface
 	TestSourcesClient           *testsourcesclientv1.TestSourcesClient
@@ -228,12 +203,11 @@ type TestkubeAPI struct {
 	helmchartVersion            string
 	mode                        string
 	eventsBus                   bus.Bus
-	enableSecretsEndpoint       bool
+	secretConfig                testkube.SecretConfig
 	featureFlags                featureflags.FeatureFlags
 	logsStream                  logsclient.Stream
 	logGrpcClient               logsclient.StreamGetter
 	proContext                  *config.ProContext
-	disableSecretCreation       bool
 	SubscriptionChecker         checktcl.SubscriptionChecker
 	LabelSources                *[]LabelSource
 	ServiceAccountNames         map[string]string
@@ -296,6 +270,27 @@ func (s TestkubeAPI) SendTelemetryStartEvent(ctx context.Context, ch chan struct
 			s.Log.Debugw("sending telemetry server start event", "output", out)
 		}
 	}()
+}
+
+func (s *TestkubeAPI) Init(cdEventsTarget string, enableK8sEvents bool) {
+	s.InitEventListeners(
+		s.proContext,
+		s.WebhooksClient,
+		s.TemplatesClient,
+		s.ExecutionResults,
+		s.TestExecutionResults,
+		s.TestWorkflowResults,
+		s.Metrics,
+		cdEventsTarget,
+		s.Config.ClusterID,
+		s.Namespace,
+		s.dashboardURI,
+		enableK8sEvents,
+		s.Clientset,
+	)
+	s.InitEnvs()
+	s.InitRoutes()
+	s.InitEvents()
 }
 
 // InitEnvs initializes api server settings
@@ -505,10 +500,12 @@ func (s *TestkubeAPI) InitRoutes() {
 	// Register TestWorkflows as additional source for labels
 	s.WithLabelSources(s.TestWorkflowsClient, s.TestWorkflowTemplatesClient)
 
-	if s.enableSecretsEndpoint {
-		files := root.Group("/secrets")
-		files.Get("/", s.ListSecretsHandler())
-	}
+	secrets := root.Group("/secrets")
+	secrets.Get("/", s.ListSecretsHandler())
+	secrets.Post("/", s.CreateSecretHandler())
+	secrets.Get("/:id", s.GetSecretHandler())
+	secrets.Delete("/:id", s.DeleteSecretHandler())
+	secrets.Patch("/:id", s.UpdateSecretHandler())
 
 	repositories := root.Group("/repositories")
 	repositories.Post("/", s.ValidateRepositoryHandler())
@@ -588,6 +585,44 @@ func (s *TestkubeAPI) InitRoutes() {
 		})
 		return nil
 	})
+}
+
+func (s TestkubeAPI) InitEventListeners(
+	proContext *config.ProContext,
+	webhookClient *executorsclientv1.WebhooksClient,
+	templatesClient *templatesclientv1.TemplatesClient,
+	testExecutionResults result.Repository,
+	testSuiteExecutionsResults testresult.Repository,
+	testWorkflowResults testworkflow.Repository,
+	metrics metrics.Metrics,
+	cdeventsTarget string,
+	clusterId string,
+	namespace string,
+	dashboardURI string,
+	enableK8sEvents bool,
+	clientset kubernetes.Interface,
+) {
+	// will be reused in websockets handler
+	s.WebsocketLoader = ws.NewWebsocketLoader()
+
+	s.Events.Loader.Register(webhook.NewWebhookLoader(
+		s.Log, webhookClient, templatesClient, testExecutionResults, testSuiteExecutionsResults,
+		testWorkflowResults, metrics, s.proContext))
+	s.Events.Loader.Register(s.WebsocketLoader)
+	s.Events.Loader.Register(s.slackLoader)
+
+	if cdeventsTarget != "" {
+		cdeventLoader, err := cdevent.NewCDEventLoader(cdeventsTarget, clusterId, namespace, dashboardURI, testkube.AllEventTypes)
+		if err == nil {
+			s.Events.Loader.Register(cdeventLoader)
+		} else {
+			s.Log.Debug("cdevents init error", "error", err.Error())
+		}
+	}
+
+	if enableK8sEvents {
+		s.Events.Loader.Register(k8sevent.NewK8sEventLoader(clientset, namespace, testkube.AllEventTypes))
+	}
 }
 
 func (s TestkubeAPI) StartTelemetryHeartbeats(ctx context.Context, ch chan struct{}) {

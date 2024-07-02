@@ -372,7 +372,7 @@ func GetJobPods(ctx context.Context, podsClient tcorev1.PodInterface, jobName st
 }
 
 // GetPodLogs returns pod logs bytes
-func GetPodLogs(ctx context.Context, c kubernetes.Interface, namespace string, pod corev1.Pod, logLinesCount ...int64) (logs []byte, err error) {
+func GetPodLogs(ctx context.Context, c kubernetes.Interface, namespace string, pod corev1.Pod, id string, whitelistedContainers []string, logLinesCount ...int64) (logs []byte, err error) {
 	var count int64 = defaultLogLinesCount
 	if len(logLinesCount) > 0 {
 		count = logLinesCount[0]
@@ -388,6 +388,9 @@ func GetPodLogs(ctx context.Context, c kubernetes.Interface, namespace string, p
 	}
 
 	for _, container := range containers {
+		if !IsWhitelistedContainer(container, id, whitelistedContainers) {
+			continue
+		}
 		containerLogs, err := GetContainerLogs(ctx, c, &pod, container, namespace, &count)
 		if err != nil {
 			if errors.Is(err, ErrPodInitializing) {
@@ -617,4 +620,20 @@ func GetPodEventsSummary(ctx context.Context, client kubernetes.Interface, pod *
 	}
 
 	return message, nil
+}
+
+func IsWhitelistedContainer(containerName string, id string, whitelistedContainers []string) bool {
+	if containerName == id {
+		return true
+	}
+	withID := func(name string) string {
+		return fmt.Sprintf("%s-%s", id, name)
+	}
+	for _, whitelistedContainer := range whitelistedContainers {
+		if containerName == withID(whitelistedContainer) {
+			return true
+		}
+	}
+
+	return false
 }

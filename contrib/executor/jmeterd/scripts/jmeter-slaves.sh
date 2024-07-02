@@ -51,7 +51,7 @@ echo "********************************************************"
 echo
 
 SERVER_ARGS="-Dserver.rmi.localport=60001 -Dserver_port=1099 -Jserver.rmi.ssl.disable=${SSL_DISABLED}"
-echo "Running command: jmeter-server ${SERVER_ARGS} ${SLAVES_ADDITIONAL_JMETER_ARGS}"
+echo "Running command: jmeter ${RMI_HOST_DEF} -s ${SERVER_ARGS} ${SLAVES_ADDITIONAL_JMETER_ARGS}"
 echo
 
-jmeter-server ${SERVER_ARGS} ${SLAVES_ADDITIONAL_JMETER_ARGS}
+jmeter ${RMI_HOST_DEF} -s ${SERVER_ARGS} ${SLAVES_ADDITIONAL_JMETER_ARGS}

@@ -191,7 +191,7 @@ func NewTestSuiteUpsertOptionsFromFlags(cmd *cobra.Command) (options apiclientv1
 			return options, err
 		}
 
-		disableSecretCreation = info.DisableSecretCreation
+		disableSecretCreation = !info.SecretConfig().AutoCreate
 	}
 
 	variables, err := common.CreateVariables(cmd, disableSecretCreation)
@@ -360,7 +360,7 @@ func NewTestSuiteUpdateOptionsFromFlags(cmd *cobra.Command) (options apiclientv1
 			return options, err
 		}
 
-		variables, err := common.CreateVariables(cmd, info.DisableSecretCreation)
+		variables, err := common.CreateVariables(cmd, !info.SecretConfig().AutoCreate)
 		if err != nil {
 			return options, fmt.Errorf("invalid variables %w", err)
 		}

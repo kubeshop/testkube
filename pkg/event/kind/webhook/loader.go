@@ -8,6 +8,7 @@ import (
 	executorsv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
 	templatesclientv1 "github.com/kubeshop/testkube-operator/pkg/client/templates/v1"
 	v1 "github.com/kubeshop/testkube/internal/app/api/metrics"
+	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
 	"github.com/kubeshop/testkube/pkg/mapper/webhooks"
@@ -25,7 +26,7 @@ type WebhooksLister interface {
 
 func NewWebhookLoader(log *zap.SugaredLogger, webhooksClient WebhooksLister, templatesClient templatesclientv1.Interface,
 	testExecutionResults result.Repository, testSuiteExecutionResults testresult.Repository, testWorkflowExecutionResults testworkflow.Repository,
-	metrics v1.Metrics,
+	metrics v1.Metrics, proContext *config.ProContext,
 ) *WebhooksLoader {
 	return &WebhooksLoader{
 		log:                          log,
@@ -35,6 +36,7 @@ func NewWebhookLoader(log *zap.SugaredLogger, webhooksClient WebhooksLister, tem
 		testSuiteExecutionResults:    testSuiteExecutionResults,
 		testWorkflowExecutionResults: testWorkflowExecutionResults,
 		metrics:                      metrics,
+		proContext:                   proContext,
 	}
 }
 
@@ -46,6 +48,7 @@ type WebhooksLoader struct {
 	testSuiteExecutionResults    testresult.Repository
 	testWorkflowExecutionResults testworkflow.Repository
 	metrics                      v1.Metrics
+	proContext                   *config.ProContext
 }
 
 func (r WebhooksLoader) Kind() string {
@@ -83,7 +86,8 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 		name := fmt.Sprintf("%s.%s", webhook.ObjectMeta.Namespace, webhook.ObjectMeta.Name)
 		listeners = append(listeners, NewWebhookListener(name, webhook.Spec.Uri, webhook.Spec.Selector, types,
 			webhook.Spec.PayloadObjectField, payloadTemplate, webhook.Spec.Headers, webhook.Spec.Disabled,
-			webhook.Spec.OnStateChange, r.testExecutionResults, r.testSuiteExecutionResults, r.testWorkflowExecutionResults, r.metrics))
+			webhook.Spec.OnStateChange, r.testExecutionResults, r.testSuiteExecutionResults, r.testWorkflowExecutionResults,
+			r.metrics, r.proContext))
 	}
 
 	return listeners, nil
