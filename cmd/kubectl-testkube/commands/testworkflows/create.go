@@ -58,6 +58,11 @@ func NewCreateTestWorkflowCmd() *cobra.Command {
 				obj.Name = name
 			}
 
+			// pass name from metadata in case of updating file
+			if obj.Name == "" {
+				obj.Name = obj.GetObjectMeta().GetName()
+			}
+
 			client, _, err := common.GetClient(cmd)
 			ui.ExitOnError("getting client", err)
 
@@ -67,7 +72,9 @@ func NewCreateTestWorkflowCmd() *cobra.Command {
 				}
 			}
 
-			workflow, _ := client.GetTestWorkflow(obj.Name)
+			workflow, err := client.GetTestWorkflow(obj.Name)
+			ui.ExitOnError("getting test workflow "+obj.Name+" in namespace "+obj.Namespace, err)
+
 			if workflow.Name != "" {
 				if !update {
 					ui.Failf("Test workflow with name '%s' already exists in namespace %s, use --update flag for upsert", obj.Name, namespace)
