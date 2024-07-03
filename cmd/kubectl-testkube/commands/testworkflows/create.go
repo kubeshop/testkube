@@ -67,7 +67,15 @@ func NewCreateTestWorkflowCmd() *cobra.Command {
 				}
 			}
 
-			workflow, _ := client.GetTestWorkflow(obj.Name)
+			workflow, err := client.GetTestWorkflow(obj.Name)
+			if err != nil {
+				if update {
+					ui.ExitOnError("getting test workflow "+obj.Name+" in namespace "+obj.Namespace, err)
+				} else {
+					ui.Debug("getting test workflow "+obj.Name+" in namespace "+obj.Namespace, err.Error())
+				}
+			}
+
 			if workflow.Name != "" {
 				if !update {
 					ui.Failf("Test workflow with name '%s' already exists in namespace %s, use --update flag for upsert", obj.Name, namespace)
