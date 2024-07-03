@@ -58,11 +58,6 @@ func NewCreateTestWorkflowCmd() *cobra.Command {
 				obj.Name = name
 			}
 
-			// pass name from metadata in case of updating file
-			if obj.Name == "" {
-				obj.Name = obj.GetObjectMeta().GetName()
-			}
-
 			client, _, err := common.GetClient(cmd)
 			ui.ExitOnError("getting client", err)
 
