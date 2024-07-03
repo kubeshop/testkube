@@ -2,6 +2,7 @@ package testworkflows
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -21,6 +22,7 @@ import (
 
 const (
 	LogTimestampLength = 30 // time.RFC3339Nano without 00:00 timezone
+	apiErrorMessage    = "processing error:"
 )
 
 var (
@@ -72,13 +74,18 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 			})
 			if err != nil {
 				// User friendly Open Source operation error
-				errs := []error{constants.ErrOpenSourceExecuteOperationIsNotAvailable,
-					constants.ErrOpenSourceParallelOperationIsNotAvailable,
-					constants.ErrOpenSourceServicesOperationIsNotAvailable}
-				for _, e := range errs {
-					if strings.Contains(err.Error(), e.Error()) {
-						err = e
-						break
+				errMessage := err.Error()
+				if strings.Contains(errMessage, constants.OpenSourceOperationErrorMessage) {
+					startp := strings.LastIndex(errMessage, apiErrorMessage)
+					endp := strings.Index(errMessage, constants.OpenSourceOperationErrorMessage)
+					if startp != -1 && endp != -1 {
+						startp += len(apiErrorMessage)
+						operation := ""
+						if endp > startp {
+							operation = strings.TrimSpace(errMessage[startp:endp])
+						}
+
+						err = errors.New(operation + " " + constants.OpenSourceOperationErrorMessage)
 					}
 				}
 			}
