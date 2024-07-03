@@ -429,6 +429,7 @@ func (c *container) EnableToolkit(ref string) Container {
 			"TK_EXR":                    "{{resource.root}}",
 			"TK_FS":                     "{{resource.fsPrefix}}",
 			"TK_SA":                     "{{internal.serviceaccount.default}}",
+			"TK_R":                      "{{internal.images.defaultRegistry}}",
 			"TK_DASH":                   "{{internal.dashboard.url}}",
 			"TK_API":                    "{{internal.api.url}}",
 			"TK_CLU":                    "{{internal.clusterId}}",
