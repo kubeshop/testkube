@@ -309,18 +309,34 @@ func (c *container) ToContainerConfig() testworkflowsv1.ContainerConfig {
 	for i := range volumeMounts {
 		volumeMounts[i] = *volumeMounts[i].DeepCopy()
 	}
+	workingDir := common.Ptr(c.WorkingDir())
+	if *workingDir == "" {
+		workingDir = nil
+	}
+	resources := &testworkflowsv1.Resources{
+		Requests: maps.Clone(c.Resources().Requests),
+		Limits:   maps.Clone(c.Resources().Limits),
+	}
+	if len(resources.Requests) == 0 && len(resources.Limits) == 0 {
+		resources = nil
+	}
+	args := common.Ptr(slices.Clone(c.Args()))
+	if *args == nil {
+		args = nil
+	}
+	command := common.Ptr(slices.Clone(c.Command()))
+	if *command == nil {
+		command = nil
+	}
 	return testworkflowsv1.ContainerConfig{
-		WorkingDir:      common.Ptr(c.WorkingDir()),
+		WorkingDir:      workingDir,
 		Image:           c.Image(),
 		ImagePullPolicy: c.ImagePullPolicy(),
 		Env:             env,
 		EnvFrom:         envFrom,
-		Command:         common.Ptr(slices.Clone(c.Command())),
-		Args:            common.Ptr(slices.Clone(c.Args())),
-		Resources: &testworkflowsv1.Resources{
-			Requests: maps.Clone(c.Resources().Requests),
-			Limits:   maps.Clone(c.Resources().Limits),
-		},
+		Command:         command,
+		Args:            args,
+		Resources:       resources,
 		SecurityContext: c.SecurityContext().DeepCopy(),
 		VolumeMounts:    volumeMounts,
 	}
