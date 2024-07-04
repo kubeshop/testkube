@@ -201,6 +201,10 @@ func TestWorkflowExecute(t *testing.T) {
 			"WATCHER_EVENT_NAMESPACE":  "",
 			"WATCHER_EVENT_RESOURCE":   "",
 		},
+		RunningContext: &testkube.RunningContext{
+			Type_:   string(testkube.RunningContextTypeTestTrigger),
+			Context: "test-trigger-1",
+		},
 	}
 	mockTestWorkflowExecution := testkube.TestWorkflowExecution{}
 	mockTestWorkflowExecutor.EXPECT().Execute(gomock.Any(), mockTestWorkflow, mockTestWorkflowExecutionRequest).Return(mockTestWorkflowExecution, nil)
