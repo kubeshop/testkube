@@ -23,7 +23,8 @@ type TestWorkflowExecutionSummary struct {
 	// when the execution has been scheduled to run
 	ScheduledAt time.Time `json:"scheduledAt,omitempty"`
 	// when the execution result's status has changed last time (queued, passed, failed)
-	StatusAt time.Time                  `json:"statusAt,omitempty"`
-	Result   *TestWorkflowResultSummary `json:"result,omitempty"`
-	Workflow *TestWorkflowSummary       `json:"workflow"`
+	StatusAt       time.Time                  `json:"statusAt,omitempty"`
+	Result         *TestWorkflowResultSummary `json:"result,omitempty"`
+	Workflow       *TestWorkflowSummary       `json:"workflow"`
+	RunningContext *RunningContext            `json:"runningContext,omitempty"`
 }

@@ -7038,6 +7038,7 @@ components:
             - testsuite
             - testtrigger
             - scheduler
+            - testworkflow
         context:
           type: string
           description: Context value depending from its type
@@ -7874,6 +7875,9 @@ components:
           type: boolean
           description: whether webhooks on the executions of this test workflow are disabled
           default: false
+        runningContext:
+          $ref: "#/components/schemas/RunningContext"
+          description: running context for the test suite execution          
 
     TestWorkflowWithExecution:
       type: object
@@ -7965,6 +7969,9 @@ components:
           example:
             - true
             - false
+        runningContext:
+          $ref: "#/components/schemas/RunningContext"
+          description: running context for the test suite execution
       required:
         - id
         - name
@@ -7997,6 +8004,9 @@ components:
           $ref: "#/components/schemas/TestWorkflowResultSummary"
         workflow:
           $ref: "#/components/schemas/TestWorkflowSummary"
+        runningContext:
+          $ref: "#/components/schemas/RunningContext"
+          description: running context for the test suite execution          
       required:
         - id
         - name
