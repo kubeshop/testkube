@@ -62,7 +62,7 @@ func buildTestExecution(test testworkflowsv1.StepExecuteTest, async, disableWebh
 
 		exec, err := c.ExecuteTest(test.Name, test.ExecutionRequest.Name, client.ExecuteTestOptions{
 			RunningContext: &testkube.RunningContext{
-				Type_:   "testworkflow",
+				Type_:   string(testkube.RunningContextTypeTestWorkflow),
 				Context: fmt.Sprintf("%s/executions/%s", env.WorkflowName(), env.ExecutionId()),
 			},
 			IsVariablesFileUploaded:            test.ExecutionRequest.IsVariablesFileUploaded,

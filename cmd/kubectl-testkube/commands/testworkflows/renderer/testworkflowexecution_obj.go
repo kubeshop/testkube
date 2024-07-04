@@ -58,6 +58,11 @@ func printPrettyOutput(ui *ui.UI, execution testkube.TestWorkflowExecution) {
 			ui.Warn("Execution number:    ", fmt.Sprintf("%d", execution.Number))
 		}
 		ui.Warn("Requested at:        ", execution.ScheduledAt.String())
+		if execution.RunningContext != nil {
+			ui.Warn("Running context:     ")
+			ui.Warn("Type:                ", execution.RunningContext.Type_)
+			ui.Warn("Context:             ", execution.RunningContext.Context)
+		}
 		if execution.Result != nil && execution.Result.Status != nil {
 			ui.Warn("Status:              ", string(*execution.Result.Status))
 			if !execution.Result.QueuedAt.IsZero() {

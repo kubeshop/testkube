@@ -135,6 +135,10 @@ func (s *Service) execute(ctx context.Context, e *watcherEvent, t *testtriggersv
 
 		request := testkube.TestWorkflowExecutionRequest{
 			Config: make(map[string]string, len(variables)),
+			RunningContext: &testkube.RunningContext{
+				Type_:   string(testkube.RunningContextTypeTestTrigger),
+				Context: t.Name,
+			},
 		}
 
 		for _, variable := range variables {

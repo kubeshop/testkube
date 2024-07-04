@@ -511,6 +511,9 @@ func TestMapTestkubeEventQueuedTestWorkflowTestToCDEvent(t *testing.T) {
 					},
 				},
 			},
+			RunningContext: &testkube.RunningContext{
+				Type_: "scheduler",
+			},
 		},
 	}
 	clusterID := "cluster-1"
@@ -592,6 +595,9 @@ func TestMapTestkubeEventQueuedTestWorkflowTestSuiteToCDEvent(t *testing.T) {
 					},
 				},
 			},
+			RunningContext: &testkube.RunningContext{
+				Type_: "scheduler",
+			},
 		},
 	}
 	clusterID := "cluster-1"
@@ -663,6 +669,9 @@ func TestMapTestkubeEventStartTestWorkflowTestToCDEvent(t *testing.T) {
 						},
 					},
 				},
+			},
+			RunningContext: &testkube.RunningContext{
+				Type_: "scheduler",
 			},
 		},
 	}
@@ -746,6 +755,9 @@ func TestMapTestkubeEventStartTestWorkflowTestSuiteToCDEvent(t *testing.T) {
 					},
 				},
 			},
+			RunningContext: &testkube.RunningContext{
+				Type_: "scheduler",
+			},
 		},
 	}
 	clusterID := "cluster-1"
@@ -826,6 +838,9 @@ func TestMapTestkubeEventFinishTestWorkflowTestToCDEvent(t *testing.T) {
 						ErrorMessage: "fake",
 					},
 				},
+			},
+			RunningContext: &testkube.RunningContext{
+				Type_: "scheduler",
 			},
 		},
 	}
@@ -926,6 +941,9 @@ func TestMapTestkubeEventFinishTestWorkflowTestSuiteToCDEvent(t *testing.T) {
 						ErrorMessage: "fake",
 					},
 				},
+			},
+			RunningContext: &testkube.RunningContext{
+				Type_: "scheduler",
 			},
 		},
 	}

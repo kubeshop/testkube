@@ -414,7 +414,7 @@ func MapTestkubeRunningContextTypeToCDEventTiggerType(contextType string) string
 	switch testkube.RunningContextType(contextType) {
 	case testkube.RunningContextTypeUserCLI, testkube.RunningContextTypeUserUI:
 		return "manual"
-	case testkube.RunningContextTypeTestTrigger, testkube.RunningContextTypeTestSuite:
+	case testkube.RunningContextTypeTestTrigger, testkube.RunningContextTypeTestSuite, testkube.RunningContextTypeTestWorkflow:
 		return "event"
 	case testkube.RunningContextTypeScheduler:
 		return "schedule"
@@ -522,6 +522,12 @@ func MapTestkubeEventQueuedTestWorkflowTestToCDEvent(event testkube.Event, clust
 			Id:     namespace,
 			Source: clusterID,
 		})
+
+		if event.TestWorkflowExecution.RunningContext != nil {
+			ev.SetSubjectTrigger(&cdevents.TestCaseRunQueuedSubjectContentTrigger{
+				Type: MapTestkubeRunningContextTypeToCDEventTiggerType(event.TestWorkflowExecution.RunningContext.Type_),
+			})
+		}
 	}
 
 	return ev, nil
@@ -561,6 +567,12 @@ func MapTestkubeEventQueuedTestWorkflowTestSuiteToCDEvent(event testkube.Event, 
 			Id:     namespace,
 			Source: clusterID,
 		})
+
+		if event.TestWorkflowExecution.RunningContext != nil {
+			ev.SetSubjectTrigger(&cdevents.TestSuiteRunQueuedSubjectContentTrigger{
+				Type: MapTestkubeRunningContextTypeToCDEventTiggerType(event.TestWorkflowExecution.RunningContext.Type_),
+			})
+		}
 	}
 
 	return ev, nil
@@ -601,6 +613,12 @@ func MapTestkubeEventStartTestWorkflowTestToCDEvent(event testkube.Event, cluste
 			Id:     namespace,
 			Source: clusterID,
 		})
+
+		if event.TestWorkflowExecution.RunningContext != nil {
+			ev.SetSubjectTrigger(&cdevents.TestCaseRunStartedSubjectContentTrigger{
+				Type: MapTestkubeRunningContextTypeToCDEventTiggerType(event.TestWorkflowExecution.RunningContext.Type_),
+			})
+		}
 	}
 
 	return ev, nil
@@ -640,6 +658,12 @@ func MapTestkubeEventStartTestWorkflowTestSuiteToCDEvent(event testkube.Event, c
 			Id:     namespace,
 			Source: clusterID,
 		})
+
+		if event.TestWorkflowExecution.RunningContext != nil {
+			ev.SetSubjectTrigger(&cdevents.TestSuiteRunStartedSubjectContentTrigger{
+				Type: MapTestkubeRunningContextTypeToCDEventTiggerType(event.TestWorkflowExecution.RunningContext.Type_),
+			})
+		}
 	}
 
 	return ev, nil
