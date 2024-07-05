@@ -82,7 +82,7 @@ func main() {
 		log.Warnw("error setting expiration policy", "error", err)
 	}
 
-	kv := Must(js.CreateKeyValue(ctx, jetstream.KeyValueConfig{Bucket: cfg.KVBucketName}))
+	kv := Must(js.CreateOrUpdateKeyValue(ctx, jetstream.KeyValueConfig{Bucket: cfg.KVBucketName}))
 	state := state.NewState(kv)
 
 	svc := logs.NewLogsService(nc, js, state, logStream).
