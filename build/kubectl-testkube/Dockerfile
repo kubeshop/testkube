@@ -3,6 +3,7 @@ ARG ALPINE_IMAGE
 FROM ${ALPINE_IMAGE}
 COPY kubectl-testkube /bin/kubectl-testkube
 
+RUN apk --no-cache --update add ca-certificates && (rm -rf /var/cache/apk/* || 0)
 # Create symbolic links for 'testkube' and 'tk' as aliases for 'kubectl-testkube'
 RUN ln -s /bin/kubectl-testkube /bin/testkube
 RUN ln -s /bin/kubectl-testkube /bin/tk
