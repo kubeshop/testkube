@@ -520,6 +520,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		ResolvedWorkflow:          testworkflowmappers.MapKubeToAPI(resolvedWorkflow),
 		TestWorkflowExecutionName: testWorkflowExecutionName,
 		DisableWebhooks:           disableWebhooks,
+		RunningContext:            request.RunningContext,
 	}
 	err = e.repository.Insert(ctx, execution)
 	if err != nil {
