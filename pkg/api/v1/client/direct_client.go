@@ -52,7 +52,7 @@ func ConfigureClient(client *http.Client, token *oauth2.Token, cloudApiKey strin
 		hs["Authorization"] = "Bearer " + cloudApiKey
 	}
 
-	client.Transport = &transport{headers: hs, base: client.Transport}
+	client.Transport = &transport{headers: hs}
 }
 
 // NewDirectClient returns new direct client
