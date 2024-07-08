@@ -15,7 +15,7 @@ type TestWorkflowRunningContextCaller struct {
 	// caller resource name
 	CallerResourceName string `json:"callerResourceName"`
 	// caller resource execution id
-	CallerResourceExecutionID string `json:"callerResourceExecutionID"`
+	CallerResourceExecutionID string `json:"callerResourceExecutionID,omitempty"`
 	// all test workflow execution ids starting from the root
-	FullExecutionPath string `json:"fullExecutionPath"`
+	FullExecutionPath string `json:"fullExecutionPath,omitempty"`
 }

@@ -7063,8 +7063,6 @@ components:
       required:
         - callerResourceType
         - callerResourceName
-        - callerResourceExecutionID
-        - fullExecutionPath
       properties:
         callerResourceType:
           $ref: "#/components/schemas/TestWorkflowRunningContextCallerResourceType"
@@ -7085,6 +7083,7 @@ components:
         - cli
         - ui
         - api
+        - internal
 
     TestWorkflowRunningContextActor:
       description: supported actors for test workflow running context
@@ -7093,12 +7092,14 @@ components:
         - cron
         - testrigger
         - user
+        - testworkflow
 
     TestWorkflowRunningContextCallerResourceType:
       description: supported caller resource types for test workflow running context
       type: string
       enum:
         - testworkflow
+        - testtrigger
 
     Webhook:
       description: CRD based webhook data

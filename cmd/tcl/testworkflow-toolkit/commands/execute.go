@@ -149,13 +149,20 @@ func buildTestExecution(test testworkflowsv1.StepExecuteTest, async, disableWebh
 func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async bool) (func() error, error) {
 	return func() (err error) {
 		c := env.Testkube()
-
 		exec, err := c.ExecuteTestWorkflow(workflow.Name, testkube.TestWorkflowExecutionRequest{
 			Name:   workflow.ExecutionName,
 			Config: testworkflows.MapConfigValueKubeToAPI(workflow.Config),
-			RunningContext: &testkube.RunningContext{
-				Type_:   string(testkube.RunningContextTypeTestWorkflow),
-				Context: fmt.Sprintf("%s/executions/%s", env.WorkflowName(), env.ExecutionId()),
+			RunningContext: []testkube.TestWorkflowRunningContext{
+				{
+					Interface_: common.Ptr(testkube.API_TestWorkflowRunningContextInterface),
+					Actor:      common.Ptr(testkube.TESTWORKFLOW_TestWorkflowRunningContextActor),
+					Caller: &testkube.TestWorkflowRunningContextCaller{
+						CallerResourceType:        common.Ptr(testkube.TESTWORKFLOW_TestWorkflowRunningContextCallerResourceType),
+						CallerResourceName:        env.WorkflowName(),
+						CallerResourceExecutionID: env.ExecutionId(),
+						FullExecutionPath:         env.ExecutionId(),
+					},
+				},
 			},
 		})
 		execName := exec.Name

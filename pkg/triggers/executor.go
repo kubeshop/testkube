@@ -13,6 +13,7 @@ import (
 	testtriggersv1 "github.com/kubeshop/testkube-operator/api/testtriggers/v1"
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 
+	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/scheduler"
 	"github.com/kubeshop/testkube/pkg/workerpool"
@@ -135,9 +136,15 @@ func (s *Service) execute(ctx context.Context, e *watcherEvent, t *testtriggersv
 
 		request := testkube.TestWorkflowExecutionRequest{
 			Config: make(map[string]string, len(variables)),
-			RunningContext: &testkube.RunningContext{
-				Type_:   string(testkube.RunningContextTypeTestTrigger),
-				Context: t.Name,
+			RunningContext: []testkube.TestWorkflowRunningContext{
+				{
+					Interface_: common.Ptr(testkube.INTERNAL_TestWorkflowRunningContextInterface),
+					Actor:      common.Ptr(testkube.TESTRIGGER_TestWorkflowRunningContextActor),
+					Caller: &testkube.TestWorkflowRunningContextCaller{
+						CallerResourceType: common.Ptr(testkube.TESTTRIGGER_TestWorkflowRunningContextCallerResourceType),
+						CallerResourceName: t.Name,
+					},
+				},
 			},
 		}
 

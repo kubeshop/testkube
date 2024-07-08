@@ -14,7 +14,8 @@ type TestWorkflowRunningContextInterface string
 
 // List of TestWorkflowRunningContextInterface
 const (
-	CLI_TestWorkflowRunningContextInterface TestWorkflowRunningContextInterface = "cli"
-	UI_TestWorkflowRunningContextInterface  TestWorkflowRunningContextInterface = "ui"
-	API_TestWorkflowRunningContextInterface TestWorkflowRunningContextInterface = "api"
+	CLI_TestWorkflowRunningContextInterface      TestWorkflowRunningContextInterface = "cli"
+	UI_TestWorkflowRunningContextInterface       TestWorkflowRunningContextInterface = "ui"
+	API_TestWorkflowRunningContextInterface      TestWorkflowRunningContextInterface = "api"
+	INTERNAL_TestWorkflowRunningContextInterface TestWorkflowRunningContextInterface = "internal"
 )
