@@ -68,13 +68,17 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 			}
 
 			name := args[0]
+			interface_ := testkube.CLI_TestWorkflowRunningContextInterface
+			actor := testkube.USER_TestWorkflowRunningContextActor
 			execution, err := client.ExecuteTestWorkflow(name, testkube.TestWorkflowExecutionRequest{
 				Name:            executionName,
 				Config:          config,
 				DisableWebhooks: disableWebhooks,
-				RunningContext: &testkube.RunningContext{
-					Type_:   string(testkube.RunningContextTypeUserCLI),
-					Context: runningContext,
+				RunningContext: []testkube.TestWorkflowRunningContext{
+					{
+						Interface_: &interface_,
+						Actor:      &actor,
+					},
 				},
 			})
 			if err != nil {

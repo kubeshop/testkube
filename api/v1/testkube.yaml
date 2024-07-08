@@ -7043,6 +7043,63 @@ components:
           type: string
           description: Context value depending from its type
 
+    TestWorkflowRunningContext:
+      description: running context for test workflow execution
+      type: object
+      required:
+        - interface
+        - actor
+      properties:
+        interface:
+          $ref: "#/components/schemas/TestWorkflowRunningContextInterface"
+        actor:
+          $ref: "#/components/schemas/TestWorkflowRunningContextActor"
+        caller:
+          $ref: "#/components/schemas/TestWorkflowRunningContextCaller"
+
+    TestWorkflowRunningContextCaller:
+      description: running context caller for test workflow execution
+      type: object
+      required:
+        - callerResourceType
+        - callerResourceName
+        - callerResourceExecutionID
+        - fullExecutionPath
+      properties:
+        callerResourceType:
+          $ref: "#/components/schemas/TestWorkflowRunningContextCallerResourceType"
+        callerResourceName:
+          type: string
+          description: caller resource name
+        callerResourceExecutionID:
+          type: string
+          description: caller resource execution id
+        fullExecutionPath:
+          type: string
+          description: all test workflow execution ids starting from the root
+
+    TestWorkflowRunningContextInterface:
+      description: supported interfaces for test workflow running context
+      type: string
+      enum:
+        - cli
+        - ui
+        - api
+
+    TestWorkflowRunningContextActor:
+      description: supported actors for test workflow running context
+      type: string
+      enum:
+        - cron
+        - testrigger
+        - user
+
+    TestWorkflowRunningContextCallerResourceType:
+      description: supported caller resource types for test workflow running context
+      type: string
+      enum:
+        - testworkflow
+
     Webhook:
       description: CRD based webhook data
       type: object
@@ -7876,8 +7933,10 @@ components:
           description: whether webhooks on the executions of this test workflow are disabled
           default: false
         runningContext:
-          $ref: "#/components/schemas/RunningContext"
-          description: running context for the test suite execution          
+          type: array
+          description: running context for the test workflow execution
+          items:
+            $ref: "#/components/schemas/TestWorkflowRunningContext"         
 
     TestWorkflowWithExecution:
       type: object
@@ -7970,8 +8029,10 @@ components:
             - true
             - false
         runningContext:
-          $ref: "#/components/schemas/RunningContext"
-          description: running context for the test suite execution
+          type: array
+          description: running context for the test workflow execution
+          items:        
+            $ref: "#/components/schemas/TestWorkflowRunningContext"
       required:
         - id
         - name
@@ -8005,8 +8066,10 @@ components:
         workflow:
           $ref: "#/components/schemas/TestWorkflowSummary"
         runningContext:
-          $ref: "#/components/schemas/RunningContext"
-          description: running context for the test suite execution          
+          type: array
+          description: running context for the test workflow execution
+          items:        
+            $ref: "#/components/schemas/TestWorkflowRunningContext"
       required:
         - id
         - name

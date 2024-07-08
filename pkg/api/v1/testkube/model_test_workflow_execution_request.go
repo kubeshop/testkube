@@ -16,6 +16,7 @@ type TestWorkflowExecutionRequest struct {
 	// test workflow execution name started the test workflow execution
 	TestWorkflowExecutionName string `json:"testWorkflowExecutionName,omitempty"`
 	// whether webhooks on the executions of this test workflow are disabled
-	DisableWebhooks bool            `json:"disableWebhooks,omitempty"`
-	RunningContext  *RunningContext `json:"runningContext,omitempty"`
+	DisableWebhooks bool `json:"disableWebhooks,omitempty"`
+	// running context for the test workflow execution
+	RunningContext []TestWorkflowRunningContext `json:"runningContext,omitempty"`
 }
