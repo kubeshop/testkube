@@ -10,7 +10,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
-	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/pkg/version"
 )
 
@@ -36,32 +35,6 @@ var (
 	DefaultTransferDirPath = filepath.Join(DefaultInternalPath, "transfer")
 	DefaultTmpDirPath      = filepath.Join(DefaultInternalPath, "tmp")
 	DefaultTransferPort    = 60433
-	InitScript             = strings.TrimSpace(strings.NewReplacer(
-		"<bin>", InternalBinPath,
-		"<init>", DefaultInitPath,
-		"<state>", DefaultStatePath,
-		"<terminationLog>", DefaultTerminationLogPath,
-		"<debugOutput>", strings.ReplaceAll(data.SprintOutput("tktw-init", "pod", map[string]string{
-			"name":               "$TK_DEBUG_POD",
-			"nodeName":           "$TK_DEBUG_NODE",
-			"namespace":          "$TK_DEBUG_NS",
-			"serviceAccountName": "$TK_DEBUG_SVC",
-			"agent":              version.Version,
-			"toolkit":            stripCommonImagePrefix(getToolkitImage(), "testkube-tw-toolkit"),
-			"init":               stripCommonImagePrefix(getInitImage(), "testkube-tw-init"),
-		}), "\"", "\\\""),
-	).Replace(`
-set -e
-trap '[ $? -eq 0 ] && exit 0 || echo -n "failed,1" > <terminationLog> && exit 1' EXIT
-echo "Configuring state..."
-touch <state> && chmod 777 <state>
-echo "Configuring init process..."
-cp /init <init>
-echo "Configuring shell..."
-cp -rf /bin /.tktw/bin
-echo -n "<debugOutput>"
-echo -n ',0' > <terminationLog> && echo 'Done.' && exit 0
-	`))
 	DefaultShellHeader     = "set -e\n"
 	DefaultContainerConfig = testworkflowsv1.ContainerConfig{
 		Image: DefaultInitImage,

@@ -8,43 +8,43 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/commands"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
-	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
-	"github.com/kubeshop/testkube/cmd/testworkflow-init/state"
+	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 func main() {
 	// Prepare empty state file if it doesn't exist
-	_, err := os.Stat(state.StatePath)
+	_, err := os.Stat(data.StatePath)
 	if errors.Is(err, os.ErrNotExist) {
-		data.PrintHint(state.InitStepName, constants.InstructionStart)
+		data.PrintHint(data.InitStepName, constants.InstructionStart)
 		fmt.Print("Creating state...")
-		err := os.WriteFile(state.StatePath, nil, 0777)
+		err := os.WriteFile(data.StatePath, nil, 0777)
 		if err != nil {
 			fmt.Println(ui.Red(" error"))
-			output.Failf(output.CodeInternal, "failed to create state file: %s", err.Error())
+			data.Failf(data.CodeInternal, "failed to create state file: %s", err.Error())
 		}
 		fmt.Println(" done")
 	} else if err != nil {
-		data.PrintHint(state.InitStepName, constants.InstructionStart)
+		data.PrintHint(data.InitStepName, constants.InstructionStart)
 		fmt.Print("Accessing state...")
 		fmt.Println(ui.Red(" error"))
-		output.Failf(output.CodeInternal, "cannot access state file: %s", err.Error())
+		data.Failf(data.CodeInternal, "cannot access state file: %s", err.Error())
 	}
 
 	// Store the instructions in the state if they are provided
 	instructions := os.Getenv(fmt.Sprintf("_01_%s", constants.EnvInstructions))
 	if instructions != "" {
 		fmt.Print("Initializing state...")
-		err = json.Unmarshal([]byte(instructions), &state.GetState().Actions)
+		err = json.Unmarshal([]byte(instructions), &data.GetState().Actions)
 		if err != nil {
 			fmt.Println(ui.Red(" error"))
-			output.Failf(output.CodeInternal, "failed to read the actions from Pod: %s", err.Error())
+			data.Failf(data.CodeInternal, "failed to read the actions from Pod: %s", err.Error())
 		}
 		fmt.Println(" done")
 
@@ -118,9 +118,9 @@ func main() {
 
 		// Ensure the built-in binaries are available
 		if os.Getenv("PATH") == "" {
-			_ = os.Setenv("PATH", state.InternalBinPath)
+			_ = os.Setenv("PATH", data.InternalBinPath)
 		} else {
-			_ = os.Setenv("PATH", fmt.Sprintf("%s:%s", os.Getenv("PATH"), state.InternalBinPath))
+			_ = os.Setenv("PATH", fmt.Sprintf("%s:%s", os.Getenv("PATH"), data.InternalBinPath))
 		}
 
 		// TODO: Resolve computed environment variables
@@ -128,33 +128,34 @@ func main() {
 
 	// Ensure there is a group index provided
 	if len(os.Args) != 2 {
-		output.Failf(output.CodeInternal, "invalid arguments provided - expected only one")
+		data.Failf(data.CodeInternal, "invalid arguments provided - expected only one")
 	}
 
 	// Determine group index to run
 	groupIndex, err := strconv.ParseInt(os.Args[1], 10, 32)
 	if err != nil {
-		output.Failf(output.CodeInputError, "invalid run group passed: %s", err.Error())
+		data.Failf(data.CodeInputError, "invalid run group passed: %s", err.Error())
 	}
 
 	// Get the list of operations
-	for _, action := range state.GetState().GetActions(int(groupIndex)) {
+	state := data.GetState()
+	for _, action := range state.GetActions(int(groupIndex)) {
 		if action.Declare != nil {
-			state.GetState().SetCondition(action.Declare.Ref, action.Declare.Condition)
-			state.GetState().SetParents(action.Declare.Ref, action.Declare.Parents)
+			state.SetCondition(action.Declare.Ref, action.Declare.Condition)
+			state.SetParents(action.Declare.Ref, action.Declare.Parents)
 		} else if action.Pause != nil {
-			state.GetState().SetPause(action.Pause.Ref, true)
+			state.SetPause(action.Pause.Ref, true)
 		} else if action.Result != nil {
-			state.GetState().SetResult(action.Result.Ref, action.Result.Value)
+			state.SetResult(action.Result.Ref, action.Result.Value)
 		} else if action.Timeout != nil {
-			state.GetState().SetTimeout(action.Timeout.Ref, action.Timeout.Timeout)
+			state.SetTimeout(action.Timeout.Ref, action.Timeout.Timeout)
 		} else if action.CurrentStatus != nil {
-			state.GetState().SetCurrentStatus(*action.CurrentStatus)
+			state.SetCurrentStatus(*action.CurrentStatus)
 		} else if action.Setup != nil {
 			selectBareEnvSet("00")
 			// TODO: Handle error
 			commands.Setup(*action.Setup)
-			data.PrintHintDetails(state.InitStepName, constants.InstructionEnd, "passed")
+			data.PrintHintDetails(data.InitStepName, constants.InstructionEnd, "passed")
 		} else if action.Container != nil {
 			registerEnvSet(action.Container.Ref)
 			selectEnvSet(action.Container.Ref, action.Container.Config.WorkingDir)
@@ -165,32 +166,53 @@ func main() {
 			if *action.Start == "" {
 				continue
 			}
+			state.CurrentRef = *action.Start
+			state.GetStep(*action.Start).StartedAt = common.Ptr(time.Now())
 			data.PrintHint(*action.Start, constants.InstructionStart)
+
+			step := state.GetStep(*action.Start)
+			if step.Condition == "" {
+				step.Condition = "passed"
+			}
+			expr, err := data.Expression(step.Condition, data.RefSuccessMachine)
+			if err != nil {
+				panic(fmt.Sprintf("failed to determine condition of '%s' step: %s: %s", *action.Start, step.Condition, err.Error()))
+			}
+			result, err := expr.BoolValue()
+			if !result {
+				step.Status = common.Ptr(data.StepStatusSkipped)
+				// TODO: Should it immediately inform outside about skip?
+			}
 		} else if action.End != nil {
 			if *action.End == "" {
 				continue
 			}
-			// TODO: Handle groups (`result`)
-			step := state.GetState().GetStep(*action.End)
-			if step != nil {
-				if step.Status == data.StepStatusPassed {
-					data.PrintHintDetails(*action.End, constants.InstructionEnd, "passed")
-				} else {
-					data.PrintHintDetails(*action.End, constants.InstructionEnd, step.Status)
+			step := state.GetStep(*action.End)
+			if step.Status == nil {
+				if step.Result == "" {
+					panic(fmt.Sprintf("missing definition of '%s' step success", *action.End))
 				}
-			} else {
-				// TODO: Compute based on result?
-				data.PrintHintDetails(*action.End, constants.InstructionEnd, "passed")
+				expr, err := data.Expression(step.Result, data.RefSuccessMachine)
+				if err != nil {
+					panic(fmt.Sprintf("failed to determine result of '%s' step: %s: %s", *action.End, step.Result, err.Error()))
+				}
+				result, err := expr.BoolValue()
+				if result {
+					step.Status = common.Ptr(data.StepStatusPassed)
+				} else {
+					step.Status = common.Ptr(data.StepStatusFailed)
+				}
 			}
+			data.PrintHintDetails(*action.End, constants.InstructionEnd, *step.Status)
 		} else {
 			serialized, _ := json.Marshal(action)
-			output.Failf(output.CodeInternal, "Unsupported instruction: %s", string(serialized))
+			data.Failf(data.CodeInternal, "Unsupported instruction: %s", string(serialized))
 		}
 	}
 
 	// Save the data
-	state.SaveState()
-	state.SaveTerminationLog()
+	data.SaveState()
+	data.SaveTerminationLog()
 }
 
 //func main() {

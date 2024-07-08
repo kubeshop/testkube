@@ -34,7 +34,7 @@ func (o *outputProcessor) Write(p []byte) (int, error) {
 			o.lastLine = lines[i]
 		}
 		if instruction != nil && instruction.Value != nil {
-			State.SetOutput(instruction.Ref, instruction.Name, instruction.Value)
+			GetState().SetOutput(instruction.Ref, instruction.Name, instruction.Value)
 		}
 	}
 

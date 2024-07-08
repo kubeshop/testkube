@@ -15,6 +15,6 @@ func GetBaseTestWorkflowMachine() expressions.Machine {
 		wd = "/"
 	}
 	fileMachine := libs.NewFsMachine(os.DirFS("/"), wd)
-	LoadState()
+	GetState() // load state
 	return expressions.CombinedMachines(EnvMachine, StateMachine, fileMachine)
 }

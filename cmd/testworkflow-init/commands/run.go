@@ -8,12 +8,16 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
-	"github.com/kubeshop/testkube/cmd/testworkflow-init/state"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor"
 )
 
 func Run(run testworkflowprocessor.ActionExecute, container testworkflowprocessor.ActionContainer) {
-	// TODO: Validate the condition
+	// Ignore running when the step is already resolved (= skipped)
+	step := data.GetState().GetStep(run.Ref)
+	if step.Status != nil {
+		return
+	}
+
 	// TODO: Compute the pause
 	// TODO: Run the timeout
 	// TODO: Compute the retry
@@ -63,12 +67,12 @@ func Run(run testworkflowprocessor.ActionExecute, container testworkflowprocesso
 	fmt.Printf("Finished step '%s'.\n   Exit code: %d\n   Status: %s\n   Success: %v", run.Ref, exitCode, status, success)
 
 	// Notify about the status
-	state.GetState().SetStepStatus(run.Ref, status)
+	data.GetState().SetStepStatus(run.Ref, status)
 	data.PrintHintDetails(run.Ref, constants.InstructionExecution, constants.ExecutionResult{ExitCode: exitCode, Iteration: 0})
 
 	// Save the data
-	state.SaveState()
-	state.SaveTerminationLog()
+	data.SaveState()
+	data.SaveTerminationLog()
 }
 
 func getProcessStatus(err error) (bool, uint8) {

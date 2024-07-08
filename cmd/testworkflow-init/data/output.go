@@ -1,10 +1,8 @@
-package output
+package data
 
 import (
 	"fmt"
 	"os"
-
-	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 )
 
 func Failf(exitCode uint8, message string, args ...interface{}) {
@@ -12,7 +10,7 @@ func Failf(exitCode uint8, message string, args ...interface{}) {
 	fmt.Printf(message+"\n", args...)
 
 	// Kill the sub-process
-	data.Step.Kill()
+	Step.Kill()
 
 	// Exit
 	os.Exit(int(exitCode))

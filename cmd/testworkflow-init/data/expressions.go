@@ -1,6 +1,7 @@
 package data
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
@@ -17,11 +18,11 @@ var aliases = map[string]string{
 	"self.error":   `self.failed`,
 	"self.success": `self.passed`,
 
-	"passed": `!status`,
-	"failed": `bool(status) && status != "skipped"`,
+	"passed": `status == "passed"`,
+	"failed": `status != "passed" && status != "skipped"`,
 
-	"self.passed": `!self.status`,
-	"self.failed": `bool(self.status) && self.status != "skipped"`,
+	"self.passed": `self.status == "passed"`,
+	"self.failed": `self.status != "passed" && self.status != "skipped"`,
 }
 
 var LocalMachine = expressions.NewMachine().
@@ -51,25 +52,37 @@ var AliasMachine = expressions.NewMachine().
 
 var StateMachine = expressions.NewMachine().
 	RegisterAccessor(func(name string) (interface{}, bool) {
-		// TODO TODO TODO TODO
 		if name == "status" {
-			return State.GetStatus(), true
+			currentStatus := GetState().CurrentStatus
+			//expr, err := expressions.EvalExpression(currentStatus, RefSuccessMachine, AliasMachine, GetBaseTestWorkflowMachine())
+			expr, err := expressions.EvalExpression(currentStatus, RefSuccessMachine, AliasMachine)
+			if err != nil {
+				panic(fmt.Sprintf("current status is invalid: %s: %v", currentStatus, err.Error()))
+			}
+			if passed, _ := expr.BoolValue(); passed {
+				return StepStatusPassed, true
+			}
+			return StepStatusFailed, true
 		} else if name == "self.status" {
-			return State.GetSelfStatus(), true
+			step := GetState().GetStep(name)
+			if step.Status == nil {
+				return nil, false
+			}
+			return *step.Status, true
 		}
 		return nil, false
 	}).
 	RegisterAccessorExt(func(name string) (interface{}, bool, error) {
 		if strings.HasPrefix(name, "output.") {
 			// TODO TODO TODO TODO
-			return State.GetOutput(name[7:])
+			return GetState().GetOutput(name[7:])
 		}
 		return nil, false, nil
 	}).
 	RegisterAccessorExt(func(name string) (interface{}, bool, error) {
 		if strings.HasPrefix(name, "services.") {
 			// TODO TODO TODO TODO
-			return State.GetOutput(name)
+			return GetState().GetOutput(name)
 		}
 		return nil, false, nil
 	})
@@ -95,13 +108,20 @@ var EnvMachine = expressions.NewMachine().
 
 var RefSuccessMachine = expressions.NewMachine().
 	RegisterAccessor(func(ref string) (interface{}, bool) {
-		s := State.GetStep(ref)
-		return s.Status == StepStatusPassed || s.Status == StepStatusSkipped, s.HasStatus
+		s := GetState().GetStep(ref)
+		if s.Status == nil {
+			return nil, false
+		}
+		return *s.Status == StepStatusPassed || *s.Status == StepStatusSkipped, true
 	})
 
 var RefStatusMachine = expressions.NewMachine().
 	RegisterAccessor(func(ref string) (interface{}, bool) {
-		return string(State.GetStep(ref).Status), true
+		status := GetState().GetStep(ref).Status
+		if status == nil {
+			return nil, false
+		}
+		return string(*status), true
 	})
 
 func Template(tpl string, m ...expressions.Machine) (string, error) {

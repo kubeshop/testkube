@@ -109,7 +109,6 @@ func TestProcessBasic(t *testing.T) {
 							Image:           constants.DefaultInitImage,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Command:         []string{"/bin/sh", "-c"},
-							Args:            []string{constants.InitScript},
 							Env:             initEnvs,
 							VolumeMounts:    volumeMounts,
 							SecurityContext: &corev1.SecurityContext{
@@ -195,7 +194,6 @@ func TestProcessBasicEnvReference(t *testing.T) {
 				Image:           constants.DefaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/bin/sh", "-c"},
-				Args:            []string{constants.InitScript},
 				Env:             initEnvs,
 				VolumeMounts:    volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
@@ -269,7 +267,6 @@ func TestProcessMultipleSteps(t *testing.T) {
 				Image:           constants.DefaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/bin/sh", "-c"},
-				Args:            []string{constants.InitScript},
 				Env:             initEnvs,
 				VolumeMounts:    volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
@@ -363,7 +360,6 @@ func TestProcessNestedSteps(t *testing.T) {
 				Image:           constants.DefaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/bin/sh", "-c"},
-				Args:            []string{constants.InitScript},
 				Env:             initEnvs,
 				VolumeMounts:    volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
@@ -504,7 +500,6 @@ func TestProcessOptionalSteps(t *testing.T) {
 				Image:           constants.DefaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/bin/sh", "-c"},
-				Args:            []string{constants.InitScript},
 				Env:             initEnvs,
 				VolumeMounts:    volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
@@ -643,7 +638,6 @@ func TestProcessNegativeSteps(t *testing.T) {
 				Image:           constants.DefaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/bin/sh", "-c"},
-				Args:            []string{constants.InitScript},
 				Env:             initEnvs,
 				VolumeMounts:    volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
@@ -778,7 +772,6 @@ func TestProcessNegativeContainerStep(t *testing.T) {
 				Image:           constants.DefaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/bin/sh", "-c"},
-				Args:            []string{constants.InitScript},
 				Env:             initEnvs,
 				VolumeMounts:    volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
@@ -867,7 +860,6 @@ func TestProcessOptionalContainerStep(t *testing.T) {
 				Image:           constants.DefaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/bin/sh", "-c"},
-				Args:            []string{constants.InitScript},
 				Env:             initEnvs,
 				VolumeMounts:    volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
@@ -965,7 +957,6 @@ func TestProcessLocalContent(t *testing.T) {
 				Image:           constants.DefaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/bin/sh", "-c"},
-				Args:            []string{constants.InitScript},
 				Env:             initEnvs,
 				VolumeMounts:    volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
@@ -1069,7 +1060,6 @@ func TestProcessGlobalContent(t *testing.T) {
 				Image:           constants.DefaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/bin/sh", "-c"},
-				Args:            []string{constants.InitScript},
 				Env:             initEnvs,
 				VolumeMounts:    volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
@@ -1185,7 +1175,6 @@ func TestProcessRunShell(t *testing.T) {
 							Image:           constants.DefaultInitImage,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Command:         []string{"/bin/sh", "-c"},
-							Args:            []string{constants.InitScript},
 							Env:             initEnvs,
 							VolumeMounts:    volumeMounts,
 							SecurityContext: &corev1.SecurityContext{
@@ -1293,7 +1282,6 @@ func TestProcessEscapedAnnotations(t *testing.T) {
 							Image:           constants.DefaultInitImage,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Command:         []string{"/bin/sh", "-c"},
-							Args:            []string{constants.InitScript},
 							Env:             initEnvs,
 							VolumeMounts:    volumeMounts,
 							SecurityContext: &corev1.SecurityContext{
