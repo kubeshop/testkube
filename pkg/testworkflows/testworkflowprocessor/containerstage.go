@@ -52,8 +52,9 @@ func (s *containerStage) Flatten() []Stage {
 	return []Stage{s}
 }
 
-func (s *containerStage) ApplyImages(images map[string]*imageinspector.Info) error {
-	return s.container.ApplyImageData(images[s.container.Image()])
+func (s *containerStage) ApplyImages(images map[string]*imageinspector.Info, imageNameResolutions map[string]string) error {
+	originalImageName := s.container.Image()
+	return s.container.ApplyImageData(images[originalImageName], imageNameResolutions[originalImageName])
 }
 
 func (s *containerStage) Resolve(m ...expressions.Machine) error {

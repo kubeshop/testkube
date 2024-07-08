@@ -149,9 +149,9 @@ func (s *groupStage) Add(stages ...Stage) GroupStage {
 	return s
 }
 
-func (s *groupStage) ApplyImages(images map[string]*imageinspector.Info) error {
+func (s *groupStage) ApplyImages(images map[string]*imageinspector.Info, imageNameResolutions map[string]string) error {
 	for i := range s.children {
-		err := s.children[i].ApplyImages(images)
+		err := s.children[i].ApplyImages(images, imageNameResolutions)
 		if err != nil {
 			return errors.Wrap(err, "applying image data")
 		}

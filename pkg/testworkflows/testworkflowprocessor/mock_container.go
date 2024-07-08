@@ -120,17 +120,17 @@ func (mr *MockContainerMockRecorder) ApplyCR(arg0 interface{}) *gomock.Call {
 }
 
 // ApplyImageData mocks base method.
-func (m *MockContainer) ApplyImageData(arg0 *imageinspector.Info) error {
+func (m *MockContainer) ApplyImageData(arg0 *imageinspector.Info, arg1 string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ApplyImageData", arg0)
+	ret := m.ctrl.Call(m, "ApplyImageData", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ApplyImageData indicates an expected call of ApplyImageData.
-func (mr *MockContainerMockRecorder) ApplyImageData(arg0 interface{}) *gomock.Call {
+func (mr *MockContainerMockRecorder) ApplyImageData(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyImageData", reflect.TypeOf((*MockContainer)(nil).ApplyImageData), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyImageData", reflect.TypeOf((*MockContainer)(nil).ApplyImageData), arg0, arg1)
 }
 
 // Args mocks base method.

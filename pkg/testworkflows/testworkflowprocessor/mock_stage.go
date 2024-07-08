@@ -55,17 +55,17 @@ func (mr *MockStageMockRecorder) AppendConditions(arg0 ...interface{}) *gomock.C
 }
 
 // ApplyImages mocks base method.
-func (m *MockStage) ApplyImages(arg0 map[string]*imageinspector.Info) error {
+func (m *MockStage) ApplyImages(arg0 map[string]*imageinspector.Info, arg1 map[string]string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ApplyImages", arg0)
+	ret := m.ctrl.Call(m, "ApplyImages", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ApplyImages indicates an expected call of ApplyImages.
-func (mr *MockStageMockRecorder) ApplyImages(arg0 interface{}) *gomock.Call {
+func (mr *MockStageMockRecorder) ApplyImages(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyImages", reflect.TypeOf((*MockStage)(nil).ApplyImages), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyImages", reflect.TypeOf((*MockStage)(nil).ApplyImages), arg0, arg1)
 }
 
 // Category mocks base method.

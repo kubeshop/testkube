@@ -65,7 +65,7 @@ type ContainerMutations[T any] interface {
 	SetSecurityContext(sc *corev1.SecurityContext) T
 
 	ApplyCR(cr *testworkflowsv1.ContainerConfig) T
-	ApplyImageData(image *imageinspector.Info) error
+	ApplyImageData(image *imageinspector.Info, resolvedImageName string) error
 	EnableToolkit(ref string) T
 }
 
@@ -385,7 +385,7 @@ func (c *container) ToKubernetesTemplate() (corev1.Container, error) {
 	}, nil
 }
 
-func (c *container) ApplyImageData(image *imageinspector.Info) error {
+func (c *container) ApplyImageData(image *imageinspector.Info, resolvedImageName string) error {
 	if image == nil {
 		return nil
 	}
@@ -396,8 +396,12 @@ func (c *container) ApplyImageData(image *imageinspector.Info) error {
 	if err != nil {
 		return err
 	}
-	if len(c.Command()) == 0 {
-		args := c.Args()
+	command := c.Command()
+	args := c.Args()
+	if resolvedImageName != "" && c.Image() != resolvedImageName {
+		c.SetImage(resolvedImageName)
+	}
+	if len(command) == 0 {
 		c.SetCommand(image.Entrypoint...)
 		if len(args) == 0 {
 			c.SetArgs(image.Cmd...)
