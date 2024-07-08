@@ -153,6 +153,10 @@ func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async 
 		exec, err := c.ExecuteTestWorkflow(workflow.Name, testkube.TestWorkflowExecutionRequest{
 			Name:   workflow.ExecutionName,
 			Config: testworkflows.MapConfigValueKubeToAPI(workflow.Config),
+			RunningContext: &testkube.RunningContext{
+				Type_:   string(testkube.RunningContextTypeTestWorkflow),
+				Context: fmt.Sprintf("%s/executions/%s", env.WorkflowName(), env.ExecutionId()),
+			},
 		})
 		execName := exec.Name
 		if err != nil {
