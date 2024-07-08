@@ -12,12 +12,15 @@ import (
 type groupStage struct {
 	stageMetadata
 	stageLifecycle
-	children []Stage
-	virtual  bool
+	containerDefaults Container
+	children          []Stage
+	virtual           bool
 }
 
 type GroupStage interface {
 	Stage
+	SetContainerDefaults(c Container)
+	ContainerDefaults() Container
 	Children() []Stage
 	RecursiveChildren() []Stage
 	Add(stages ...Stage) GroupStage
@@ -28,6 +31,14 @@ func NewGroupStage(ref string, virtual bool) GroupStage {
 		stageMetadata: stageMetadata{ref: ref},
 		virtual:       virtual,
 	}
+}
+
+func (s *groupStage) SetContainerDefaults(c Container) {
+	s.containerDefaults = c
+}
+
+func (s *groupStage) ContainerDefaults() Container {
+	return s.containerDefaults
 }
 
 func (s *groupStage) Len() int {

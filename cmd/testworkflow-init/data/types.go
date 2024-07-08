@@ -90,10 +90,10 @@ func (s *StepInfo) SetStatus(status StepStatus) {
 	if !s.HasStatus || s.Status == StepStatusPassed {
 		s.Status = status
 		s.HasStatus = true
-		if status == StepStatusPassed {
-			PrintHintDetails(s.Ref, constants.InstructionStatus, "passed")
-		} else {
-			PrintHintDetails(s.Ref, constants.InstructionStatus, status)
-		}
+		//if status == StepStatusPassed {
+		//	PrintHintDetails(s.Ref, constants.InstructionStatus, "passed")
+		//} else {
+		//	PrintHintDetails(s.Ref, constants.InstructionStatus, status)
+		//}
 	}
 }

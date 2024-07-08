@@ -2,6 +2,7 @@ package testworkflowprocessor
 
 import (
 	"fmt"
+	"reflect"
 	"regexp"
 	"slices"
 	"strings"
@@ -14,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/rand"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	constants2 "github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
@@ -88,139 +90,142 @@ func isNotOptional(stage Stage) bool {
 	return !stage.Optional()
 }
 
-func buildKubernetesContainers(stage Stage, init *initProcess, fsGroup *int64, machines ...expressions.Machine) (containers []corev1.Container, err error) {
-	if stage.Paused() {
-		init.SetPaused(stage.Paused())
-	}
-	if stage.Timeout() != "" {
-		init.AddTimeout(stage.Timeout(), stage.Ref())
-	}
-	if stage.Ref() != "" {
-		init.AddCondition(stage.Condition(), stage.Ref())
-	}
-	init.AddRetryPolicy(stage.RetryPolicy(), stage.Ref())
-
-	group, ok := stage.(GroupStage)
-	if ok {
-		recursiveRefs := common.MapSlice(group.RecursiveChildren(), getRef)
-		directRefResults := common.MapSlice(common.FilterSlice(group.Children(), isNotOptional), getRef)
-
-		init.AddCondition(stage.Condition(), recursiveRefs...)
-
-		if group.Negative() {
-			// Create virtual layer that will be put down into actual negative step
-			init.SetRef(stage.Ref() + ".v")
-			init.AddCondition(stage.Condition(), stage.Ref()+".v")
-			init.PrependInitialStatus(stage.Ref() + ".v")
-			init.AddResult("!"+stage.Ref()+".v", stage.Ref())
-		} else if stage.Ref() != "" {
-			init.PrependInitialStatus(stage.Ref())
-		}
-
-		if group.Optional() {
-			init.ResetResults()
-		}
-
-		if group.Negative() {
-			init.AddResult(strings.Join(directRefResults, "&&"), stage.Ref()+".v")
-		} else {
-			init.AddResult(strings.Join(directRefResults, "&&"), stage.Ref())
-		}
-
-		for i, ch := range group.Children() {
-			// Condition should be executed only in the first leaf
-			if i == 1 {
-				init.ResetCondition().SetPaused(false)
-			}
-			// Pass down to another group or container
-			sub, serr := buildKubernetesContainers(ch, init.Children(ch.Ref()), fsGroup, machines...)
-			if serr != nil {
-				return nil, fmt.Errorf("%s: %s: resolving children: %s", stage.Ref(), stage.Name(), serr.Error())
-			}
-			containers = append(containers, sub...)
-		}
-		return
-	}
-	c, ok := stage.(ContainerStage)
-	if !ok {
-		return nil, fmt.Errorf("%s: %s: stage that is neither container nor group", stage.Ref(), stage.Name())
-	}
-	err = c.Container().Detach().Resolve(machines...)
-	if err != nil {
-		return nil, fmt.Errorf("%s: %s: resolving container: %s", stage.Ref(), stage.Name(), err.Error())
-	}
-
-	cr, err := c.Container().ToKubernetesTemplate()
-	if err != nil {
-		return nil, fmt.Errorf("%s: %s: building container template: %s", stage.Ref(), stage.Name(), err.Error())
-	}
-	cr.Name = c.Ref()
-
-	if c.Optional() {
-		init.ResetResults()
-	}
-
-	bypass := false
-	refEnvVar := ""
-	for _, e := range cr.Env {
-		if e.Name == BypassToolkitCheck.Name && e.Value == BypassToolkitCheck.Value {
-			bypass = true
-		}
-		if e.Name == "TK_REF" {
-			refEnvVar = e.Value
-		}
-	}
-
-	init.
-		SetNegative(c.Negative()).
-		AddRetryPolicy(c.RetryPolicy(), c.Ref()).
-		SetCommand(cr.Command...).
-		SetArgs(cr.Args...).
-		SetWorkingDir(cr.WorkingDir).
-		SetToolkit(bypass || (cr.Image == constants.DefaultToolkitImage && c.Ref() == refEnvVar))
-
-	for _, env := range cr.Env {
-		if strings.Contains(env.Value, "{{") {
-			init.AddComputedEnvs(env.Name)
-		}
-	}
-
-	if init.Error() != nil {
-		return nil, init.Error()
-	}
-
-	cr.Command = init.Command()
-	cr.Args = init.Args()
-	cr.WorkingDir = ""
-
-	// Ensure the container will have proper access to FS
-	if cr.SecurityContext == nil {
-		cr.SecurityContext = &corev1.SecurityContext{}
-	}
-	if cr.SecurityContext.RunAsGroup == nil {
-		cr.SecurityContext.RunAsGroup = fsGroup
-	}
-
-	containers = []corev1.Container{cr}
-	return
-}
+//func buildKubernetesContainers(stage Stage, init *initProcess, fsGroup *int64, machines ...expressions.Machine) (containers []corev1.Container, err error) {
+//	if stage.Paused() {
+//		init.SetPaused(stage.Paused())
+//	}
+//	if stage.Timeout() != "" {
+//		init.AddTimeout(stage.Timeout(), stage.Ref())
+//	}
+//	if stage.Ref() != "" {
+//		init.AddCondition(stage.Condition(), stage.Ref())
+//	}
+//	init.AddRetryPolicy(stage.RetryPolicy(), stage.Ref())
+//
+//	group, ok := stage.(GroupStage)
+//	if ok {
+//		recursiveRefs := common.MapSlice(group.RecursiveChildren(), getRef)
+//		directRefResults := common.MapSlice(common.FilterSlice(group.Children(), isNotOptional), getRef)
+//
+//		init.AddCondition(stage.Condition(), recursiveRefs...)
+//
+//		if group.Negative() {
+//			// Create virtual layer that will be put down into actual negative step
+//			init.SetRef(stage.Ref() + ".v")
+//			init.AddCondition(stage.Condition(), stage.Ref()+".v")
+//			init.PrependInitialStatus(stage.Ref() + ".v")
+//			init.AddResult("!"+stage.Ref()+".v", stage.Ref())
+//		} else if stage.Ref() != "" {
+//			init.PrependInitialStatus(stage.Ref())
+//		}
+//
+//		if group.Optional() {
+//			init.ResetResults()
+//		}
+//
+//		if group.Negative() {
+//			init.AddResult(strings.Join(directRefResults, "&&"), stage.Ref()+".v")
+//		} else {
+//			init.AddResult(strings.Join(directRefResults, "&&"), stage.Ref())
+//		}
+//
+//		for i, ch := range group.Children() {
+//			// Condition should be executed only in the first leaf
+//			if i == 1 {
+//				init.ResetCondition().SetPaused(false)
+//			}
+//			// Pass down to another group or container
+//			sub, serr := buildKubernetesContainers(ch, init.Children(ch.Ref()), fsGroup, machines...)
+//			if serr != nil {
+//				return nil, fmt.Errorf("%s: %s: resolving children: %s", stage.Ref(), stage.Name(), serr.Error())
+//			}
+//			containers = append(containers, sub...)
+//		}
+//		return
+//	}
+//	c, ok := stage.(ContainerStage)
+//	if !ok {
+//		return nil, fmt.Errorf("%s: %s: stage that is neither container nor group", stage.Ref(), stage.Name())
+//	}
+//	err = c.Container().Detach().Resolve(machines...)
+//	if err != nil {
+//		return nil, fmt.Errorf("%s: %s: resolving container: %s", stage.Ref(), stage.Name(), err.Error())
+//	}
+//
+//	cr, err := c.Container().ToKubernetesTemplate()
+//	if err != nil {
+//		return nil, fmt.Errorf("%s: %s: building container template: %s", stage.Ref(), stage.Name(), err.Error())
+//	}
+//	cr.Name = c.Ref()
+//
+//	if c.Optional() {
+//		init.ResetResults()
+//	}
+//
+//	bypass := false
+//	refEnvVar := ""
+//	for _, e := range cr.Env {
+//		if e.Name == BypassToolkitCheck.Name && e.Value == BypassToolkitCheck.Value {
+//			bypass = true
+//		}
+//		if e.Name == "TK_REF" {
+//			refEnvVar = e.Value
+//		}
+//	}
+//
+//	init.
+//		SetNegative(c.Negative()).
+//		AddRetryPolicy(c.RetryPolicy(), c.Ref()).
+//		SetCommand(cr.Command...).
+//		SetArgs(cr.Args...).
+//		SetWorkingDir(cr.WorkingDir).
+//		SetToolkit(bypass || (cr.Image == constants.DefaultToolkitImage && c.Ref() == refEnvVar))
+//
+//	for _, env := range cr.Env {
+//		if strings.Contains(env.Value, "{{") {
+//			init.AddComputedEnvs(env.Name)
+//		}
+//	}
+//
+//	if init.Error() != nil {
+//		return nil, init.Error()
+//	}
+//
+//	cr.Command = init.Command()
+//	cr.Args = init.Args()
+//	cr.WorkingDir = ""
+//
+//	// Ensure the container will have proper access to FS
+//	if cr.SecurityContext == nil {
+//		cr.SecurityContext = &corev1.SecurityContext{}
+//	}
+//	if cr.SecurityContext.RunAsGroup == nil {
+//		cr.SecurityContext.RunAsGroup = fsGroup
+//	}
+//
+//	containers = []corev1.Container{cr}
+//	return
+//}
 
 type ActionResult struct {
 	Ref   string `json:"r"`
 	Value string `json:"v"`
 }
 
-type ActionCondition struct {
+type ActionDeclare struct {
 	Condition string   `json:"c"`
 	Ref       string   `json:"r"`
-	Parents   []string `json:"p"`
+	Parents   []string `json:"p,omitempty"`
 }
 
 type ActionExecute struct {
-	Ref      string                          `json:"r"`
-	Parents  []string                        `json:"p,omitempty"`
-	Negative bool                            `json:"n,omitempty"`
-	Config   testworkflowsv1.ContainerConfig `json:"c"`
+	Ref      string `json:"r"`
+	Negative bool   `json:"n,omitempty"`
+}
+
+type ActionContainer struct {
+	Ref    string                          `json:"r"`
+	Config testworkflowsv1.ContainerConfig `json:"c"`
 }
 
 // TODO: Consider for groups too?
@@ -240,18 +245,26 @@ type ActionRetry struct {
 	Until string `json:"u,omitempty"`
 }
 
+type ActionSetup struct {
+	CopyInit     bool `json:"i,omitempty"`
+	CopyBinaries bool `json:"b,omitempty"`
+}
+
 type Action struct {
 	CurrentStatus *string          `json:"s,omitempty"`
 	Start         *string          `json:"S,omitempty"`
 	End           *string          `json:"E,omitempty"`
-	Condition     *ActionCondition `json:"c,omitempty"`
+	Setup         *ActionSetup     `json:"_,omitempty"`
+	Declare       *ActionDeclare   `json:"d,omitempty"`
 	Result        *ActionResult    `json:"r,omitempty"`
+	Container     *ActionContainer `json:"c,omitempty"`
 	Execute       *ActionExecute   `json:"e,omitempty"`
 	Timeout       *ActionTimeout   `json:"t,omitempty"`
 	Pause         *ActionPause     `json:"p,omitempty"`
 	Retry         *ActionRetry     `json:"R,omitempty"`
 }
 
+// TODO: Wrap all errors in this file
 // TODO: tail-recursive
 func analyzeOperations(currentStatus string, parents []string, stage Stage, machines ...expressions.Machine) (actions []Action, err error) {
 	// Store the init status
@@ -260,13 +273,30 @@ func analyzeOperations(currentStatus string, parents []string, stage Stage, mach
 	})
 
 	// Compute the skip condition
-	if stage.Ref() != "" {
-		condition := stage.Condition()
-		if condition == "" {
-			condition = "passed" // TODO: Think if it should default the condition to "passed"
+	condition := stage.Condition()
+	if condition == "" || condition == "null" {
+		condition = "passed" // TODO: Think if it should default the condition to "passed"
+	}
+	actions = append(actions, Action{
+		Declare: &ActionDeclare{Ref: stage.Ref(), Condition: condition, Parents: parents},
+	})
+
+	// Configure the container for action
+	// TODO: Handle the ContainerDefaults properly
+	var containerConfig Container
+	if group, ok := stage.(GroupStage); ok {
+		containerConfig = group.ContainerDefaults()
+	} else {
+		containerConfig = stage.(ContainerStage).Container()
+	}
+	if containerConfig != nil {
+		c := containerConfig.Detach()
+		err = c.Resolve(machines...)
+		if err != nil {
+			return nil, err
 		}
 		actions = append(actions, Action{
-			Condition: &ActionCondition{Ref: stage.Ref(), Condition: condition, Parents: parents},
+			Container: &ActionContainer{Ref: stage.Ref(), Config: c.ToContainerConfig()},
 		})
 	}
 
@@ -298,13 +328,10 @@ func analyzeOperations(currentStatus string, parents []string, stage Stage, mach
 
 	// Handle executable action
 	if exec, ok := stage.(ContainerStage); ok {
-		// Handle execution
 		actions = append(actions, Action{
 			Execute: &ActionExecute{
 				Ref:      exec.Ref(),
-				Parents:  parents,
 				Negative: exec.Negative(),
-				Config:   exec.Container().Detach().ToContainerConfig(),
 			},
 		})
 	}
@@ -384,6 +411,14 @@ func optimizeActions(root Stage, actions []Action) ([]Action, error) {
 	}
 	//delete(refs, "")
 
+	// Delete empty `container` declarations
+	for i := 0; i < len(actions); i++ {
+		if actions[i].Container != nil && reflect.ValueOf(actions[i].Container.Config).IsZero() {
+			actions = append(actions[0:i], actions[i+1:]...)
+			i--
+		}
+	}
+
 	// Wrap all the references with boolean function, and simplify values
 	refReplacements := make(map[string]string)
 	refResults := make(map[string]string)
@@ -410,9 +445,9 @@ func optimizeActions(root Stage, actions []Action) ([]Action, error) {
 			actions[i].CurrentStatus = common.Ptr(simplifyExpression(*actions[i].CurrentStatus, wrapStartRef))
 			actions[i].CurrentStatus = common.Ptr(simplifyExpression(*actions[i].CurrentStatus, wrapEndRef))
 		}
-		if actions[i].Condition != nil {
-			actions[i].Condition.Condition = simplifyExpression(actions[i].Condition.Condition, wrapStartRef)
-			actions[i].Condition.Condition = simplifyExpression(actions[i].Condition.Condition, wrapEndRef)
+		if actions[i].Declare != nil {
+			actions[i].Declare.Condition = simplifyExpression(actions[i].Declare.Condition, wrapStartRef)
+			actions[i].Declare.Condition = simplifyExpression(actions[i].Declare.Condition, wrapEndRef)
 		}
 		if actions[i].Result != nil {
 			actions[i].Result.Value = simplifyExpression(actions[i].Result.Value, wrapStartRef)
@@ -423,12 +458,12 @@ func optimizeActions(root Stage, actions []Action) ([]Action, error) {
 	// Detect immediately skipped steps
 	skipped := make(map[string]struct{})
 	for i := range actions {
-		if actions[i].Condition != nil {
-			v, err := expressions.EvalExpressionPartial(actions[i].Condition.Condition)
+		if actions[i].Declare != nil {
+			v, err := expressions.EvalExpressionPartial(actions[i].Declare.Condition)
 			if err == nil && v.Static() != nil {
 				b, err := v.Static().BoolValue()
 				if err == nil && !b {
-					skipped[actions[i].Condition.Ref] = struct{}{}
+					skipped[actions[i].Declare.Ref] = struct{}{}
 				}
 			}
 		}
@@ -447,9 +482,9 @@ func optimizeActions(root Stage, actions []Action) ([]Action, error) {
 			}
 		}
 
-		if actions[i].Condition != nil {
+		if actions[i].Declare != nil {
 			var err error
-			conditions[actions[i].Condition.Ref], err = expressions.EvalExpressionPartial(actions[i].Condition.Condition)
+			conditions[actions[i].Declare.Ref], err = expressions.EvalExpressionPartial(actions[i].Declare.Condition)
 			if err != nil {
 				return nil, err
 			}
@@ -479,7 +514,7 @@ func optimizeActions(root Stage, actions []Action) ([]Action, error) {
 		}
 
 		// Simplify the condition
-		if actions[i].Condition != nil {
+		if actions[i].Declare != nil {
 			// TODO: Handle `never` and other aliases
 			machine := expressions.NewMachine().RegisterAccessor(func(name string) (interface{}, bool) {
 				if name == "passed" || name == "success" {
@@ -507,10 +542,10 @@ func optimizeActions(root Stage, actions []Action) ([]Action, error) {
 				}
 				return nil, false
 			})
-			actions[i].Condition.Condition = simplifyExpression(actions[i].Condition.Condition, machine)
-			for _, parentRef := range actions[i].Condition.Parents {
+			actions[i].Declare.Condition = simplifyExpression(actions[i].Declare.Condition, machine)
+			for _, parentRef := range actions[i].Declare.Parents {
 				if _, ok := skipped[parentRef]; ok {
-					actions[i].Condition.Condition = "false"
+					actions[i].Declare.Condition = "false"
 					break
 				}
 			}
@@ -532,8 +567,8 @@ func optimizeActions(root Stage, actions []Action) ([]Action, error) {
 		if actions[i].CurrentStatus != nil {
 			actions[i].CurrentStatus = common.Ptr(uncastBoolRefs(*actions[i].CurrentStatus))
 		}
-		if actions[i].Condition != nil {
-			actions[i].Condition.Condition = uncastBoolRefs(actions[i].Condition.Condition)
+		if actions[i].Declare != nil {
+			actions[i].Declare.Condition = uncastBoolRefs(actions[i].Declare.Condition)
 		}
 		if actions[i].Result != nil {
 			actions[i].Result.Value = uncastBoolRefs(actions[i].Result.Value)
@@ -542,7 +577,7 @@ func optimizeActions(root Stage, actions []Action) ([]Action, error) {
 
 	//// TODO: Delete empty conditions
 	//for i := 0; i < len(actions); i++ {
-	//	if actions[i].Condition != nil && actions[i].Condition.Condition == "true" {
+	//	if actions[i].Declare != nil && actions[i].Declare.Condition == "true" {
 	//		actions = append(actions[:i], actions[i+1:]...)
 	//		i--
 	//	}
@@ -551,12 +586,12 @@ func optimizeActions(root Stage, actions []Action) ([]Action, error) {
 	// Detect immediately skipped steps
 	skipped = make(map[string]struct{})
 	for i := range actions {
-		if actions[i].Condition != nil {
-			v, err := expressions.EvalExpressionPartial(actions[i].Condition.Condition)
+		if actions[i].Declare != nil {
+			v, err := expressions.EvalExpressionPartial(actions[i].Declare.Condition)
 			if err == nil && v.Static() != nil {
 				b, err := v.Static().BoolValue()
 				if err == nil && !b {
-					skipped[actions[i].Condition.Ref] = struct{}{}
+					skipped[actions[i].Declare.Ref] = struct{}{}
 				}
 			}
 		}
@@ -600,13 +635,19 @@ func optimizeActions(root Stage, actions []Action) ([]Action, error) {
 				i--
 			}
 		}
+		if actions[i].Container != nil {
+			if _, ok := skipped[actions[i].Container.Ref]; ok {
+				actions = append(actions[:i], actions[i+1:]...)
+				i--
+			}
+		}
 	}
 
 	// Ignore parents for already statically skipped conditions
 	for i := range actions {
-		if actions[i].Condition != nil {
-			if _, ok := skipped[actions[i].Condition.Ref]; ok {
-				actions[i].Condition.Parents = nil
+		if actions[i].Declare != nil {
+			if _, ok := skipped[actions[i].Declare.Ref]; ok {
+				actions[i].Declare.Parents = nil
 			}
 		}
 	}
@@ -692,12 +733,23 @@ func sortActions(actions []Action) {
 		return -1
 	})
 
-	// Move conditions to top
+	// Move declarations to top
 	slices.SortStableFunc(actions, func(a Action, b Action) int {
-		if (a.Condition == nil) == (b.Condition == nil) {
+		if (a.Declare == nil) == (b.Declare == nil) {
 			return 0
 		}
-		if a.Condition == nil {
+		if a.Declare == nil {
+			return 1
+		}
+		return -1
+	})
+
+	// Move setup to top
+	slices.SortStableFunc(actions, func(a Action, b Action) int {
+		if (a.Setup == nil) == (b.Setup == nil) {
+			return 0
+		}
+		if a.Setup == nil {
 			return 1
 		}
 		return -1
@@ -709,7 +761,7 @@ func AnalyzeOperations(root Stage, machines ...expressions.Machine) ([]Action, e
 	if err != nil {
 		return nil, err
 	}
-	actions = append([]Action{{Start: common.Ptr("")}}, actions...)
+	actions = append([]Action{{Setup: &ActionSetup{CopyInit: true, CopyBinaries: true}}, {Start: common.Ptr("")}}, actions...)
 	actions = append(actions, Action{Result: &ActionResult{Ref: "", Value: root.Ref()}}, Action{End: common.Ptr("")})
 
 	// Optimize until simplest list of operations
@@ -723,10 +775,12 @@ func AnalyzeOperations(root Stage, machines ...expressions.Machine) ([]Action, e
 	}
 }
 
+// TODO: Handle Group Stages properly with isolation (to have conditions working perfectly fine, i.e. for isolated image + file() clause)
 func GroupActions(actions []Action) (groups [][]Action) {
 	// Detect "start" and "execute" instructions
 	startIndexes := make([]int, 0)
 	startInstructions := make(map[string]int)
+	containerInstructions := make(map[string]int)
 	executeInstructions := make(map[string]int)
 	executeIndexes := make([]int, 0)
 	for i := range actions {
@@ -736,6 +790,10 @@ func GroupActions(actions []Action) (groups [][]Action) {
 		} else if actions[i].Execute != nil {
 			executeInstructions[actions[i].Execute.Ref] = i
 			executeIndexes = append(executeIndexes, i)
+		} else if actions[i].Container != nil {
+			containerInstructions[actions[i].Container.Ref] = i
+		} else if actions[i].Setup != nil {
+			executeIndexes = append(executeIndexes, i)
 		}
 	}
 
@@ -744,14 +802,33 @@ func GroupActions(actions []Action) (groups [][]Action) {
 	slices.Reverse(startIndexes)
 
 	// Fast-track when there is only a single instruction to execute
-	if len(executeInstructions) <= 1 {
+	if len(executeIndexes) <= 1 {
 		return [][]Action{actions}
 	}
 
 	// Basic behavior: split based on each execute instruction
 	for _, executeIndex := range executeIndexes {
+		if actions[executeIndex].Setup != nil {
+			groups = append([][]Action{actions[executeIndex:]}, groups...)
+			actions = actions[:executeIndex]
+			continue
+		}
 		ref := actions[executeIndex].Execute.Ref
 		startIndex := startInstructions[ref]
+		if containerIndex, ok := containerInstructions[ref]; ok && containerIndex < startIndex {
+			startIndex = containerIndex
+		}
+
+		//// FIXME: Delete, it's a hack to combine steps with same image into a single container
+		//if i != len(executeIndexes)-1 {
+		//	prevRef := actions[executeIndex].Execute.Ref
+		//	prevContainerIndex, prevOk := containerInstructions[prevRef]
+		//	containerIndex, containerOk := containerInstructions[ref]
+		//	if !containerOk || (prevOk && actions[prevContainerIndex].Container.Config.Image == actions[containerIndex].Container.Config.Image) {
+		//		continue
+		//	}
+		//}
+
 		groups = append([][]Action{actions[startIndex:]}, groups...)
 		actions = actions[:startIndex]
 	}
@@ -764,4 +841,139 @@ func GroupActions(actions []Action) (groups [][]Action) {
 	// TODO: Behavior: split based on the image used (isolate variables)
 
 	return groups
+}
+
+// TODO: [{"c":{"c":"true","r":"root"}},{"c":{"c":"true","r":"rbdtn40","p":["root"]}},{"r":{"r":"root","v":"rbdtn40"}},{"r":{"r":"","v":"root"}},{},{"s":"true"},{"S":"root"},{"s":"root"},{"S":"rbdtn40"},{"e":{"r":"rbdtn40","c":{"command":["/.tktw/bin/sh"],"args":["-c","set -e\nsleep 10 \u0026\u0026 echo $SOMETHING \u0026\u0026 tree /.tktw"]}}},{"E":"rbdtn40"},{"E":"root"},{}]
+//       There is some empty object on the last one
+
+// TODO: Disallow bypassing
+func BuildContainer(groupId int, defaultContainer Container, actions []Action) (cr corev1.Container, actionsCleanup []Action, err error) {
+	actions = slices.Clone(actions)
+	actionsCleanup = actions
+
+	// Find the container configurations and executable/setup steps
+	var setup *Action
+	executable := map[string]bool{}
+	containerConfigs := make([]*Action, 0)
+	for i := range actions {
+		if actions[i].Container != nil {
+			containerConfigs = append(containerConfigs, &actions[i])
+		} else if actions[i].Setup != nil {
+			setup = &actions[i]
+		} else if actions[i].Execute != nil {
+			executable[actions[i].Execute.Ref] = true
+		}
+	}
+
+	// Find the highest priority container configuration
+	var bestContainerConfig *Action
+	for i := range containerConfigs {
+		if executable[containerConfigs[i].Container.Ref] {
+			bestContainerConfig = containerConfigs[i]
+			break
+		}
+	}
+	if bestContainerConfig == nil && len(containerConfigs) > 0 {
+		bestContainerConfig = containerConfigs[len(containerConfigs)-1]
+	}
+
+	// Build the cr base
+	// TODO: Handle the case when there are multiple exclusive execution configurations
+	// TODO: Handle a case when that configuration should join multiple configurations (i.e. envs/volumeMounts)
+	if len(containerConfigs) > 0 {
+		cr, err = NewContainer().ApplyCR(&bestContainerConfig.Container.Config).ToKubernetesTemplate()
+		if err != nil {
+			return corev1.Container{}, nil, err
+		}
+
+		// Combine environment variables from each execution
+		cr.Env = nil
+		cr.EnvFrom = nil
+		for i := range containerConfigs {
+			for _, e := range containerConfigs[i].Container.Config.Env {
+				newEnv := *e.DeepCopy()
+				newEnv.Name = fmt.Sprintf("_%d_%s", i, e.Name)
+				cr.Env = append(cr.Env, newEnv)
+			}
+			for _, e := range containerConfigs[i].Container.Config.EnvFrom {
+				newEnvFrom := *e.DeepCopy()
+				newEnvFrom.Prefix = fmt.Sprintf("_%d_%s", i, e.Prefix)
+				cr.EnvFrom = append(cr.EnvFrom, newEnvFrom)
+			}
+		}
+		// TODO: Combine the rest
+	}
+
+	// Set up a default image when not specified
+	if cr.Image == "" {
+		cr.Image = constants.DefaultInitImage
+		cr.ImagePullPolicy = corev1.PullIfNotPresent
+	}
+
+	// Provide the data required for setup step
+	if setup != nil {
+		cr.Env = append(cr.Env,
+			corev1.EnvVar{Name: fmt.Sprintf("_00_%s", constants2.EnvNodeName), ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{FieldPath: "spec.nodeName"},
+			}},
+			corev1.EnvVar{Name: fmt.Sprintf("_00_%s", constants2.EnvPodName), ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.name"},
+			}},
+			corev1.EnvVar{Name: fmt.Sprintf("_00_%s", constants2.EnvNamespaceName), ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.namespace"},
+			}},
+			corev1.EnvVar{Name: fmt.Sprintf("_00_%s", constants2.EnvServiceAccountName), ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{FieldPath: "spec.serviceAccountName"},
+			}},
+			corev1.EnvVar{Name: fmt.Sprintf("_01_%s", constants2.EnvInstructions), ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{FieldPath: fmt.Sprintf("metadata.annotations['%s']", constants.SpecAnnotationName)},
+			}})
+
+		// Apply basic mounts, so there is a state provided
+		for _, volumeMount := range defaultContainer.VolumeMounts() {
+			if !slices.ContainsFunc(cr.VolumeMounts, func(mount corev1.VolumeMount) bool {
+				return mount.Name == volumeMount.Name
+			}) {
+				cr.VolumeMounts = append(cr.VolumeMounts, volumeMount)
+			}
+		}
+	}
+
+	// TODO: Avoid using /.tktw/init if there is Init Image - use /init then
+	initPath := constants.DefaultInitPath
+	if cr.Image == constants.DefaultInitImage {
+		initPath = "/init"
+	}
+
+	// TODO: Avoid using /.tktw/toolkit if there is Toolkit image
+
+	// TODO: Avoid using /.tktw/bin/sh (and other binaries) if there is Init image - use /bin/* then
+
+	// TODO: Copy /init and /toolkit in the Init Container only if there is a need to.
+	//       Probably, include Setup step in the Actions list, so it can be simplified too into a single container,
+	//       and optimized along with others.
+
+	// Point the Init Process to the proper group
+	cr.Name = fmt.Sprintf("%d", groupId+1)
+	cr.Command = []string{initPath, fmt.Sprintf("%d", groupId)}
+	cr.Args = nil
+
+	// Clean up the executions
+	for i := range containerConfigs {
+		// TODO: Clean it up
+		newConfig := testworkflowsv1.ContainerConfig{}
+		if executable[containerConfigs[i].Container.Ref] {
+			newConfig.Command = containerConfigs[i].Container.Config.Command
+			newConfig.Args = containerConfigs[i].Container.Config.Args
+		}
+		newConfig.WorkingDir = containerConfigs[i].Container.Config.WorkingDir
+		// TODO: expose more?
+
+		containerConfigs[i].Container = &ActionContainer{
+			Ref:    containerConfigs[i].Container.Ref,
+			Config: newConfig,
+		}
+	}
+
+	return
 }

@@ -23,6 +23,7 @@ const (
 	RootResourceIdLabelName         = "testworkflowid-root"
 	GroupIdLabelName                = "testworkflowid-group"
 	SignatureAnnotationName         = "testworkflows.testkube.io/signature"
+	SpecAnnotationName              = "testworkflows.testkube.io/spec"
 	RFC3339Millis                   = "2006-01-02T15:04:05.000Z07:00"
 	OpenSourceOperationErrorMessage = "operation is not available when running the Testkube Agent in the standalone mode"
 )

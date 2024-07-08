@@ -51,6 +51,7 @@ var AliasMachine = expressions.NewMachine().
 
 var StateMachine = expressions.NewMachine().
 	RegisterAccessor(func(name string) (interface{}, bool) {
+		// TODO TODO TODO TODO
 		if name == "status" {
 			return State.GetStatus(), true
 		} else if name == "self.status" {
@@ -60,12 +61,14 @@ var StateMachine = expressions.NewMachine().
 	}).
 	RegisterAccessorExt(func(name string) (interface{}, bool, error) {
 		if strings.HasPrefix(name, "output.") {
+			// TODO TODO TODO TODO
 			return State.GetOutput(name[7:])
 		}
 		return nil, false, nil
 	}).
 	RegisterAccessorExt(func(name string) (interface{}, bool, error) {
 		if strings.HasPrefix(name, "services.") {
+			// TODO TODO TODO TODO
 			return State.GetOutput(name)
 		}
 		return nil, false, nil

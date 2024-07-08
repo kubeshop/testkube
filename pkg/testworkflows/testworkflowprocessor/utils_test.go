@@ -18,8 +18,12 @@ func simplify(condition string) string {
 	return c.String()
 }
 
-func condition(ref, condition string, parents ...string) Action {
-	return Action{Condition: &ActionCondition{Ref: ref, Condition: simplify(condition), Parents: parents}}
+func setup(copyInit, copyBinaries bool) Action {
+	return Action{Setup: &ActionSetup{CopyInit: copyInit, CopyBinaries: copyBinaries}}
+}
+
+func declare(ref, condition string, parents ...string) Action {
+	return Action{Declare: &ActionDeclare{Ref: ref, Condition: simplify(condition), Parents: parents}}
 }
 
 func start(ref string) Action {
@@ -42,8 +46,12 @@ func result(ref, value string) Action {
 	return Action{Result: &ActionResult{Ref: ref, Value: simplify(value)}}
 }
 
-func execute(ref string, parents []string, negative bool, config testworkflowsv1.ContainerConfig) Action {
-	return Action{Execute: &ActionExecute{Ref: ref, Parents: parents, Negative: negative, Config: config}}
+func execute(ref string, negative bool) Action {
+	return Action{Execute: &ActionExecute{Ref: ref, Negative: negative}}
+}
+
+func containerConfig(ref string, config testworkflowsv1.ContainerConfig) Action {
+	return Action{Container: &ActionContainer{Ref: ref, Config: config}}
 }
 
 func TestAnalyzeOperations_BasicSteps(t *testing.T) {
@@ -54,10 +62,13 @@ func TestAnalyzeOperations_BasicSteps(t *testing.T) {
 
 	// Build the expectations
 	want := []Action{
+		// Configure
+		setup(true, true),
+
 		// Declare stage conditions
-		condition("init", "true"),
-		condition("step1", "true", "init"),
-		condition("step2", "step1", "init"),
+		declare("init", "true"),
+		declare("step1", "true", "init"),
+		declare("step2", "step1", "init"),
 
 		// Declare stage resolutions
 		result("init", "step1 && step2"),
@@ -70,20 +81,22 @@ func TestAnalyzeOperations_BasicSteps(t *testing.T) {
 
 		// Run the step 1
 		status("init"),
-		start("step1"),
-		execute("step1", []string{"init"}, false, testworkflowsv1.ContainerConfig{
+		containerConfig("step1", testworkflowsv1.ContainerConfig{
 			Image:   "image:1.2.3",
 			Command: common.Ptr([]string{"a", "b"}),
 		}),
+		start("step1"),
+		execute("step1", false),
 		end("step1"),
 
 		// Run the step 2
 		status("step1 && init"),
-		start("step2"),
-		execute("step2", []string{"init"}, false, testworkflowsv1.ContainerConfig{
+		containerConfig("step2", testworkflowsv1.ContainerConfig{
 			Image:   "image:3.2.1",
 			Command: common.Ptr([]string{"c", "d"}),
 		}),
+		start("step2"),
+		execute("step2", false),
 		end("step2"),
 
 		// Finish
@@ -107,10 +120,13 @@ func TestAnalyzeOperations_Pause(t *testing.T) {
 
 	// Build the expectations
 	want := []Action{
+		// Configure
+		setup(true, true),
+
 		// Declare stage conditions
-		condition("init", "true"),
-		condition("step1", "true", "init"),
-		condition("step2", "step1", "init"),
+		declare("init", "true"),
+		declare("step1", "true", "init"),
+		declare("step2", "step1", "init"),
 
 		// Declare information about potential pauses
 		pause("step1"),
@@ -126,20 +142,22 @@ func TestAnalyzeOperations_Pause(t *testing.T) {
 
 		// Run the step 1
 		status("init"),
-		start("step1"),
-		execute("step1", []string{"init"}, false, testworkflowsv1.ContainerConfig{
+		containerConfig("step1", testworkflowsv1.ContainerConfig{
 			Image:   "image:1.2.3",
 			Command: common.Ptr([]string{"a", "b"}),
 		}),
+		start("step1"),
+		execute("step1", false),
 		end("step1"),
 
 		// Run the step 2
 		status("step1 && init"),
-		start("step2"),
-		execute("step2", []string{"init"}, false, testworkflowsv1.ContainerConfig{
+		containerConfig("step2", testworkflowsv1.ContainerConfig{
 			Image:   "image:3.2.1",
 			Command: common.Ptr([]string{"c", "d"}),
 		}),
+		start("step2"),
+		execute("step2", false),
 		end("step2"),
 
 		// Finish
@@ -163,10 +181,13 @@ func TestAnalyzeOperations_NegativeStep(t *testing.T) {
 
 	// Build the expectations
 	want := []Action{
+		// Configure
+		setup(true, true),
+
 		// Declare stage conditions
-		condition("init", "true"),
-		condition("step1", "true", "init"),
-		condition("step2", "step1", "init"),
+		declare("init", "true"),
+		declare("step1", "true", "init"),
+		declare("step2", "step1", "init"),
 
 		// Declare stage resolutions
 		result("init", "step1 && step2"),
@@ -179,20 +200,22 @@ func TestAnalyzeOperations_NegativeStep(t *testing.T) {
 
 		// Run the step 1
 		status("init"),
-		start("step1"),
-		execute("step1", []string{"init"}, true, testworkflowsv1.ContainerConfig{
+		containerConfig("step1", testworkflowsv1.ContainerConfig{
 			Image:   "image:1.2.3",
 			Command: common.Ptr([]string{"a", "b"}),
 		}),
+		start("step1"),
+		execute("step1", true),
 		end("step1"),
 
 		// Run the step 2
 		status("step1 && init"),
-		start("step2"),
-		execute("step2", []string{"init"}, false, testworkflowsv1.ContainerConfig{
+		containerConfig("step2", testworkflowsv1.ContainerConfig{
 			Image:   "image:3.2.1",
 			Command: common.Ptr([]string{"c", "d"}),
 		}),
+		start("step2"),
+		execute("step2", false),
 		end("step2"),
 
 		// Finish
@@ -215,10 +238,13 @@ func TestAnalyzeOperations_NegativeGroup(t *testing.T) {
 
 	// Build the expectations
 	want := []Action{
+		// Configure
+		setup(true, true),
+
 		// Declare stage conditions
-		condition("init", "true"),
-		condition("step1", "true", "init"),
-		condition("step2", "step1", "init"),
+		declare("init", "true"),
+		declare("step1", "true", "init"),
+		declare("step2", "step1", "init"),
 
 		// Declare stage resolutions
 		result("init", "!step1 || !step2"),
@@ -231,20 +257,22 @@ func TestAnalyzeOperations_NegativeGroup(t *testing.T) {
 
 		// Run the step 1
 		status("init"),
-		start("step1"),
-		execute("step1", []string{"init"}, false, testworkflowsv1.ContainerConfig{
+		containerConfig("step1", testworkflowsv1.ContainerConfig{
 			Image:   "image:1.2.3",
 			Command: common.Ptr([]string{"a", "b"}),
 		}),
+		start("step1"),
+		execute("step1", false),
 		end("step1"),
 
 		// Run the step 2
 		status("step1 && init"),
-		start("step2"),
-		execute("step2", []string{"init"}, false, testworkflowsv1.ContainerConfig{
+		containerConfig("step2", testworkflowsv1.ContainerConfig{
 			Image:   "image:3.2.1",
 			Command: common.Ptr([]string{"c", "d"}),
 		}),
+		start("step2"),
+		execute("step2", false),
 		end("step2"),
 
 		// Finish
@@ -268,10 +296,13 @@ func TestAnalyzeOperations_OptionalStep(t *testing.T) {
 
 	// Build the expectations
 	want := []Action{
+		// Configure
+		setup(true, true),
+
 		// Declare stage conditions
-		condition("init", "true"),
-		condition("step1", "true", "init"),
-		condition("step2", "true", "init"), // because step1 is optional
+		declare("init", "true"),
+		declare("step1", "true", "init"),
+		declare("step2", "true", "init"), // because step1 is optional
 
 		// Declare stage resolutions
 		result("init", "step2"),
@@ -284,20 +315,22 @@ func TestAnalyzeOperations_OptionalStep(t *testing.T) {
 
 		// Run the step 1
 		status("init"),
-		start("step1"),
-		execute("step1", []string{"init"}, false, testworkflowsv1.ContainerConfig{
+		containerConfig("step1", testworkflowsv1.ContainerConfig{
 			Image:   "image:1.2.3",
 			Command: common.Ptr([]string{"a", "b"}),
 		}),
+		start("step1"),
+		execute("step1", false),
 		end("step1"),
 
 		// Run the step 2
 		status("init"),
-		start("step2"),
-		execute("step2", []string{"init"}, false, testworkflowsv1.ContainerConfig{
+		containerConfig("step2", testworkflowsv1.ContainerConfig{
 			Image:   "image:3.2.1",
 			Command: common.Ptr([]string{"c", "d"}),
 		}),
+		start("step2"),
+		execute("step2", false),
 		end("step2"),
 
 		// Finish
@@ -322,11 +355,14 @@ func TestAnalyzeOperations_OptionalGroup(t *testing.T) {
 
 	// Build the expectations
 	want := []Action{
+		// Configure
+		setup(true, true),
+
 		// Declare stage conditions
-		condition("init", "true"),
-		condition("inner", "true", "init"),
-		condition("step1", "true", "init", "inner"),
-		condition("step2", "step1", "init", "inner"),
+		declare("init", "true"),
+		declare("inner", "true", "init"),
+		declare("step1", "true", "init", "inner"),
+		declare("step2", "step1", "init", "inner"),
 
 		// Declare stage resolutions
 		result("inner", "step1 && step2"),
@@ -342,20 +378,22 @@ func TestAnalyzeOperations_OptionalGroup(t *testing.T) {
 
 		// Run the step 1
 		status("inner && init"),
-		start("step1"),
-		execute("step1", []string{"init", "inner"}, false, testworkflowsv1.ContainerConfig{
+		containerConfig("step1", testworkflowsv1.ContainerConfig{
 			Image:   "image:1.2.3",
 			Command: common.Ptr([]string{"a", "b"}),
 		}),
+		start("step1"),
+		execute("step1", false),
 		end("step1"),
 
 		// Run the step 2
 		status("step1 && inner && init"),
-		start("step2"),
-		execute("step2", []string{"init", "inner"}, false, testworkflowsv1.ContainerConfig{
+		containerConfig("step2", testworkflowsv1.ContainerConfig{
 			Image:   "image:3.2.1",
 			Command: common.Ptr([]string{"c", "d"}),
 		}),
+		start("step2"),
+		execute("step2", false),
 		end("step2"),
 
 		// Finish
@@ -380,10 +418,13 @@ func TestAnalyzeOperations_IgnoreExecutionOfStaticSkip(t *testing.T) {
 
 	// Build the expectations
 	want := []Action{
+		// Configure
+		setup(true, true),
+
 		// Declare stage conditions
-		condition("init", "true"),
-		condition("step1", "false"),
-		condition("step2", "true", "init"), // because step1 is skipped
+		declare("init", "true"),
+		declare("step1", "false"),
+		declare("step2", "true", "init"), // because step1 is skipped
 
 		// Declare stage resolutions
 		result("init", "step2"),
@@ -400,11 +441,12 @@ func TestAnalyzeOperations_IgnoreExecutionOfStaticSkip(t *testing.T) {
 
 		// Run the step 2
 		status("init"),
-		start("step2"),
-		execute("step2", []string{"init"}, false, testworkflowsv1.ContainerConfig{
+		containerConfig("step2", testworkflowsv1.ContainerConfig{
 			Image:   "image:3.2.1",
 			Command: common.Ptr([]string{"c", "d"}),
 		}),
+		start("step2"),
+		execute("step2", false),
 		end("step2"),
 
 		// Finish
@@ -427,10 +469,13 @@ func TestAnalyzeOperations_IgnoreExecutionOfStaticSkipGroup(t *testing.T) {
 
 	// Build the expectations
 	want := []Action{
+		// Configure
+		setup(true, true),
+
 		// Declare stage conditions
-		condition("init", "false"),
-		condition("step1", "false"),
-		condition("step2", "false"),
+		declare("init", "false"),
+		declare("step1", "false"),
+		declare("step2", "false"),
 
 		// Declare stage resolutions
 		result("", "true"),
@@ -468,10 +513,13 @@ func TestAnalyzeOperations_IgnoreExecutionOfStaticSkipGroup_Pause(t *testing.T) 
 
 	// Build the expectations
 	want := []Action{
+		// Configure
+		setup(true, true),
+
 		// Declare stage conditions
-		condition("init", "false"),
-		condition("step1", "false"),
-		condition("step2", "false"),
+		declare("init", "false"),
+		declare("step1", "false"),
+		declare("step2", "false"),
 
 		// Declare stage resolutions
 		result("", "true"),
@@ -499,6 +547,7 @@ func TestAnalyzeOperations_IgnoreExecutionOfStaticSkipGroup_Pause(t *testing.T) 
 	assert.Equal(t, want, got)
 }
 
+// TODO: Check how the sole `paused: true` step works
 func TestAnalyzeOperations_IgnoreExecutionOfStaticSkip_PauseGroup(t *testing.T) {
 	// Build the structure
 	root := NewGroupStage("init", false)
@@ -510,10 +559,13 @@ func TestAnalyzeOperations_IgnoreExecutionOfStaticSkip_PauseGroup(t *testing.T) 
 
 	// Build the expectations
 	want := []Action{
+		// Configure
+		setup(true, true),
+
 		// Declare stage conditions
-		condition("init", "true"),
-		condition("step1", "false"),
-		condition("step2", "true", "init"), // because step1 is skipped
+		declare("init", "true"),
+		declare("step1", "false"),
+		declare("step2", "true", "init"), // because step1 is skipped
 
 		// Declare information about potential pauses
 		pause("init"),
@@ -533,11 +585,12 @@ func TestAnalyzeOperations_IgnoreExecutionOfStaticSkip_PauseGroup(t *testing.T) 
 
 		// Run the step 2
 		status("init"),
-		start("step2"),
-		execute("step2", []string{"init"}, false, testworkflowsv1.ContainerConfig{
+		containerConfig("step2", testworkflowsv1.ContainerConfig{
 			Image:   "image:3.2.1",
 			Command: common.Ptr([]string{"c", "d"}),
 		}),
+		start("step2"),
+		execute("step2", false),
 		end("step2"),
 
 		// Finish
@@ -553,11 +606,14 @@ func TestAnalyzeOperations_IgnoreExecutionOfStaticSkip_PauseGroup(t *testing.T) 
 
 func TestGroupActions_Basic(t *testing.T) {
 	input := []Action{
+		// Configure
+		setup(true, true),
+
 		// Declare stage conditions
-		condition("init", "true"),
-		condition("step1", "false"),
-		condition("step2", "true", "init"),
-		condition("step3", "true", "init"),
+		declare("init", "true"),
+		declare("step1", "false"),
+		declare("step2", "true", "init"),
+		declare("step3", "true", "init"),
 
 		// Declare stage resolutions
 		result("init", "step2 && step3"),
@@ -574,20 +630,22 @@ func TestGroupActions_Basic(t *testing.T) {
 
 		// Run the step 2
 		status("init"),
-		start("step2"),
-		execute("step2", []string{"init"}, false, testworkflowsv1.ContainerConfig{
+		containerConfig("step2", testworkflowsv1.ContainerConfig{
 			Image:   "image:3.2.1",
 			Command: common.Ptr([]string{"c", "d"}),
 		}),
+		start("step2"),
+		execute("step2", false),
 		end("step2"),
 
 		// Run the step 3
 		status("init"),
-		start("step3"),
-		execute("step3", []string{"init"}, false, testworkflowsv1.ContainerConfig{
+		containerConfig("step3", testworkflowsv1.ContainerConfig{
 			Image:   "image:3.2.1",
 			Command: common.Ptr([]string{"c", "d"}),
 		}),
+		start("step3"),
+		execute("step3", false),
 		end("step3"),
 
 		// Finish
@@ -595,8 +653,9 @@ func TestGroupActions_Basic(t *testing.T) {
 		end(""),
 	}
 	want := [][]Action{
-		input[:16], // ends before start("step3")
-		input[16:],
+		input[:13],   // ends before containerConfig("step2")
+		input[13:18], // ends before containerConfig("step3")
+		input[18:],
 	}
 	got := GroupActions(input)
 	assert.Equal(t, want, got)
