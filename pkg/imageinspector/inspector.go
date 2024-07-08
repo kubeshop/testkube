@@ -79,17 +79,6 @@ func (i *inspector) fetch(ctx context.Context, registry, image string, pullSecre
 	return info, err
 }
 
-func (i *inspector) rawSave(ctx context.Context, registry, image string, info *Info) {
-	if info == nil {
-		return
-	}
-	for _, s := range i.storage {
-		if err := s.Store(ctx, RequestBase{Registry: registry, Image: image}, *info); err != nil {
-			log.DefaultLogger.Warnw("error while saving image details in the cache", "registry", registry, "image", image, "error", err)
-		}
-	}
-}
-
 func (i *inspector) save(ctx context.Context, registry, image string, info *Info) {
 	if info == nil {
 		return
