@@ -291,6 +291,7 @@ func CreateBaseMachine() expressions.Machine {
 			"namespace":       env.Namespace(),
 			"defaultRegistry": env.Config().System.DefaultRegistry,
 
+			"images.defaultRegistry":     env.Config().System.DefaultRegistry,
 			"images.init":                env.Config().Images.Init,
 			"images.toolkit":             env.Config().Images.Toolkit,
 			"images.persistence.enabled": strconv.FormatBool(env.Config().Images.InspectorPersistenceEnabled),

@@ -430,6 +430,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 			"clusterId":       e.clusterID,
 			"cdeventsTarget":  os.Getenv("CDEVENTS_TARGET"),
 
+			"images.defaultRegistry":     e.defaultRegistry,
 			"images.init":                constants.DefaultInitImage,
 			"images.toolkit":             constants.DefaultToolkitImage,
 			"images.persistence.enabled": strconv.FormatBool(e.enableImageDataPersistentCache),

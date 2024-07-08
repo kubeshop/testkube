@@ -193,14 +193,16 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	// Load the image details
 	imageNames := root.GetImages()
 	images := make(map[string]*imageinspector.Info)
+	imageNameResolutions := map[string]string{}
 	for image := range imageNames {
 		info, err := p.inspector.Inspect(ctx, "", image, corev1.PullIfNotPresent, pullSecretNames)
+		imageNameResolutions[image] = p.inspector.ResolveName("", image)
 		if err != nil {
 			return nil, fmt.Errorf("resolving image error: %s: %s", image, err.Error())
 		}
 		images[image] = info
 	}
-	err = root.ApplyImages(images)
+	err = root.ApplyImages(images, imageNameResolutions)
 	if err != nil {
 		return nil, errors.Wrap(err, "applying image data")
 	}

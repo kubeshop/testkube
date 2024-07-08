@@ -24,6 +24,10 @@ func (*dummyInspector) Inspect(ctx context.Context, registry, image string, pull
 	return &imageinspector.Info{}, nil
 }
 
+func (*dummyInspector) ResolveName(registry, image string) string {
+	return image
+}
+
 var (
 	ins         = &dummyInspector{}
 	proc        = NewPro(ins)

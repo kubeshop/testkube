@@ -10,6 +10,7 @@ import (
 //go:generate mockgen -destination=./mock_inspector.go -package=imageinspector "github.com/kubeshop/testkube/pkg/imageinspector" Inspector
 type Inspector interface {
 	Inspect(ctx context.Context, registry, image string, pullPolicy corev1.PullPolicy, pullSecretNames []string) (*Info, error)
+	ResolveName(registry, image string) string
 }
 
 type StorageTransfer interface {

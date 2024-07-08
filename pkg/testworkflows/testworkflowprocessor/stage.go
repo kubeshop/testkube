@@ -15,6 +15,6 @@ type Stage interface {
 	Resolve(m ...expressions.Machine) error
 	ContainerStages() []ContainerStage
 	GetImages() map[string]struct{}
-	ApplyImages(images map[string]*imageinspector.Info) error
+	ApplyImages(images map[string]*imageinspector.Info, imageNameResolutions map[string]string) error
 	Flatten() []Stage
 }
