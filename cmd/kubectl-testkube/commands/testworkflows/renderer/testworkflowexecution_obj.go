@@ -60,8 +60,21 @@ func printPrettyOutput(ui *ui.UI, execution testkube.TestWorkflowExecution) {
 		ui.Warn("Requested at:        ", execution.ScheduledAt.String())
 		for _, ctx := range execution.RunningContext {
 			ui.Warn("Running context:     ")
-			ui.Warn("Type:                ", string(*ctx.Interface_))
-			ui.Warn("Context:             ", string(*ctx.Actor))
+			if ctx.Interface_ != nil {
+				ui.Warn("Type:                ", string(*ctx.Interface_))
+			}
+			if ctx.Actor != nil {
+				ui.Warn("Context:             ", string(*ctx.Actor))
+			}
+			if ctx.Caller != nil {
+				ui.Warn("Caller:                ")
+				if ctx.Caller.CallerResourceType != nil {
+					ui.Warn("Resource type:         ", string(*ctx.Caller.CallerResourceType))
+				}
+				ui.Warn("Resource name:         ", string(ctx.Caller.CallerResourceName))
+				ui.Warn("Resource execution ID: ", string(ctx.Caller.CallerResourceExecutionID))
+				ui.Warn("Full execution path:   ", string(ctx.Caller.FullExecutionPath))
+			}
 		}
 		if execution.Result != nil && execution.Result.Status != nil {
 			ui.Warn("Status:              ", string(*execution.Result.Status))
