@@ -42,7 +42,10 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 
 	// Start watching
 	go func() {
-		defer ctxCancel()
+		defer func() {
+			s.Flush()
+			ctxCancel()
+		}()
 
 		// Watch for the basic initialization warnings
 		for v := range state.PreStart("") {
