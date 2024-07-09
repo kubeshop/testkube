@@ -290,6 +290,8 @@ func CreateBaseMachine() expressions.Machine {
 			"api.url":         env.Config().System.ApiUrl,
 			"namespace":       env.Namespace(),
 			"defaultRegistry": env.Config().System.DefaultRegistry,
+			"clusterId":       env.Config().System.ClusterID,
+			"cdeventsTarget":  env.Config().System.CDEventsTarget,
 
 			"images.defaultRegistry":     env.Config().System.DefaultRegistry,
 			"images.init":                env.Config().Images.Init,
