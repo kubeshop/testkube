@@ -7,6 +7,7 @@ import (
 	cdevents "github.com/cdevents/sdk-go/pkg/api"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
@@ -511,8 +512,10 @@ func TestMapTestkubeEventQueuedTestWorkflowTestToCDEvent(t *testing.T) {
 					},
 				},
 			},
-			RunningContext: &testkube.RunningContext{
-				Type_: "scheduler",
+			RunningContext: []testkube.TestWorkflowRunningContext{
+				{
+					Actor: common.Ptr(testkube.CRON_TestWorkflowRunningContextActor),
+				},
 			},
 		},
 	}
@@ -595,8 +598,10 @@ func TestMapTestkubeEventQueuedTestWorkflowTestSuiteToCDEvent(t *testing.T) {
 					},
 				},
 			},
-			RunningContext: &testkube.RunningContext{
-				Type_: "scheduler",
+			RunningContext: []testkube.TestWorkflowRunningContext{
+				{
+					Actor: common.Ptr(testkube.CRON_TestWorkflowRunningContextActor),
+				},
 			},
 		},
 	}
@@ -670,8 +675,10 @@ func TestMapTestkubeEventStartTestWorkflowTestToCDEvent(t *testing.T) {
 					},
 				},
 			},
-			RunningContext: &testkube.RunningContext{
-				Type_: "scheduler",
+			RunningContext: []testkube.TestWorkflowRunningContext{
+				{
+					Actor: common.Ptr(testkube.CRON_TestWorkflowRunningContextActor),
+				},
 			},
 		},
 	}
@@ -755,8 +762,10 @@ func TestMapTestkubeEventStartTestWorkflowTestSuiteToCDEvent(t *testing.T) {
 					},
 				},
 			},
-			RunningContext: &testkube.RunningContext{
-				Type_: "scheduler",
+			RunningContext: []testkube.TestWorkflowRunningContext{
+				{
+					Actor: common.Ptr(testkube.CRON_TestWorkflowRunningContextActor),
+				},
 			},
 		},
 	}
@@ -839,8 +848,10 @@ func TestMapTestkubeEventFinishTestWorkflowTestToCDEvent(t *testing.T) {
 					},
 				},
 			},
-			RunningContext: &testkube.RunningContext{
-				Type_: "scheduler",
+			RunningContext: []testkube.TestWorkflowRunningContext{
+				{
+					Actor: common.Ptr(testkube.CRON_TestWorkflowRunningContextActor),
+				},
 			},
 		},
 	}
@@ -942,8 +953,10 @@ func TestMapTestkubeEventFinishTestWorkflowTestSuiteToCDEvent(t *testing.T) {
 					},
 				},
 			},
-			RunningContext: &testkube.RunningContext{
-				Type_: "scheduler",
+			RunningContext: []testkube.TestWorkflowRunningContext{
+				{
+					Actor: common.Ptr(testkube.CRON_TestWorkflowRunningContextActor),
+				},
 			},
 		},
 	}
