@@ -149,6 +149,11 @@ func buildTestExecution(test testworkflowsv1.StepExecuteTest, async, disableWebh
 func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async bool) (func() error, error) {
 	return func() (err error) {
 		c := env.Testkube()
+		path := env.Config().Execution.ResourceId
+		if env.Config().Execution.ResourceId != env.Config().Execution.RootResourceId {
+			path = env.Config().Execution.RootResourceId + "/" + path
+		}
+
 		exec, err := c.ExecuteTestWorkflow(workflow.Name, testkube.TestWorkflowExecutionRequest{
 			Name:   workflow.ExecutionName,
 			Config: testworkflows.MapConfigValueKubeToAPI(workflow.Config),
@@ -160,7 +165,7 @@ func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async 
 						CallerResourceType:        common.Ptr(testkube.TESTWORKFLOW_TestWorkflowRunningContextCallerResourceType),
 						CallerResourceName:        env.WorkflowName(),
 						CallerResourceExecutionID: env.ExecutionId(),
-						FullExecutionPath:         env.ExecutionId(),
+						FullExecutionPath:         path,
 					},
 				},
 			},
