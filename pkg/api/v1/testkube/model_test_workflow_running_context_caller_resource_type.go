@@ -14,6 +14,7 @@ type TestWorkflowRunningContextCallerResourceType string
 
 // List of TestWorkflowRunningContextCallerResourceType
 const (
-	TESTWORKFLOW_TestWorkflowRunningContextCallerResourceType TestWorkflowRunningContextCallerResourceType = "testworkflow"
-	TESTTRIGGER_TestWorkflowRunningContextCallerResourceType  TestWorkflowRunningContextCallerResourceType = "testtrigger"
+	TESTWORKFLOW_TestWorkflowRunningContextCallerResourceType          TestWorkflowRunningContextCallerResourceType = "testworkflow"
+	TESTWORKFLOWEXECUTION_TestWorkflowRunningContextCallerResourceType TestWorkflowRunningContextCallerResourceType = "testworkflowexecution"
+	TESTTRIGGER_TestWorkflowRunningContextCallerResourceType           TestWorkflowRunningContextCallerResourceType = "testtrigger"
 )

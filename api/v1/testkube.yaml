@@ -7100,6 +7100,7 @@ components:
       type: string
       enum:
         - testworkflow
+        - testworkflowexecution
         - testtrigger
 
     Webhook:
