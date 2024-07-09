@@ -7093,6 +7093,7 @@ components:
         - testrigger
         - user
         - testworkflow
+        - testworkflowexecution
 
     TestWorkflowRunningContextCallerResourceType:
       description: supported caller resource types for test workflow running context
