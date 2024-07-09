@@ -29,13 +29,10 @@ import (
 	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/result"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
-	"github.com/kubeshop/testkube/pkg/telemetry"
-	"github.com/kubeshop/testkube/pkg/testworkflows"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowresolver"
-	"github.com/kubeshop/testkube/pkg/version"
 )
 
 //go:generate mockgen -destination=./mock_executor.go -package=testworkflowexecutor "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor" TestWorkflowExecutor
@@ -294,6 +291,8 @@ func (e *executor) Control(ctx context.Context, testWorkflow *testworkflowsv1.Te
 		// TODO: Consider AppendOutput ($push) instead
 		_ = e.repository.UpdateOutput(ctx, execution.Id, execution.Output)
 		if execution.Result.IsFinished() {
+			e.sendRunWorkflowTelemetry(ctx, testWorkflow, execution)
+
 			if execution.Result.IsPassed() {
 				e.emitter.Notify(testkube.NewEventEndTestWorkflowSuccess(execution))
 			} else if execution.Result.IsAborted() {
@@ -537,8 +536,6 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		return execution, errors.Wrap(err, "deploying required resources")
 	}
 
-	e.sendRunWorkflowTelemetry(ctx, &workflow)
-
 	// Start to control the results
 	go func() {
 		err = e.Control(context.Background(), initialWorkflow, &execution)
@@ -549,40 +546,4 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	}()
 
 	return execution, nil
-}
-
-func (e *executor) sendRunWorkflowTelemetry(ctx context.Context, workflow *testworkflowsv1.TestWorkflow) {
-	if workflow == nil {
-		log.DefaultLogger.Debug("empty workflow passed to telemetry event")
-		return
-	}
-	telemetryEnabled, err := e.configMap.GetTelemetryEnabled(ctx)
-	if err != nil {
-		log.DefaultLogger.Debugf("getting telemetry enabled error", "error", err)
-	}
-	if !telemetryEnabled {
-		return
-	}
-
-	out, err := telemetry.SendRunWorkflowEvent("testkube_api_run_test_workflow", telemetry.RunWorkflowParams{
-		RunParams: telemetry.RunParams{
-			AppVersion: version.Version,
-			DataSource: testworkflows.GetDataSource(workflow.Spec.Content),
-			Host:       testworkflows.GetHostname(),
-			ClusterID:  testworkflows.GetClusterID(ctx, e.configMap),
-		},
-		WorkflowParams: telemetry.WorkflowParams{
-			TestWorkflowSteps:        int32(len(workflow.Spec.Setup) + len(workflow.Spec.Steps) + len(workflow.Spec.After)),
-			TestWorkflowImage:        testworkflows.GetImage(workflow.Spec.Container),
-			TestWorkflowArtifactUsed: testworkflows.HasWorkflowStepLike(workflow.Spec, testworkflows.HasArtifacts),
-			TestWorkflowKubeshopGitURI: testworkflows.IsKubeshopGitURI(workflow.Spec.Content) ||
-				testworkflows.HasWorkflowStepLike(workflow.Spec, testworkflows.HasKubeshopGitURI),
-		},
-	})
-
-	if err != nil {
-		log.DefaultLogger.Debugf("sending run test workflow telemetry event error", "error", err)
-	} else {
-		log.DefaultLogger.Debugf("sending run test workflow telemetry event", "output", out)
-	}
 }
