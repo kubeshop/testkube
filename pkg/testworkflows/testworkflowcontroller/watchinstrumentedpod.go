@@ -27,7 +27,7 @@ type WatchInstrumentedPodOptions struct {
 	Follow    *bool
 }
 
-func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interface, signature []testworkflowprocessor.Signature, scheduledAt time.Time, pod Channel[*corev1.Pod], podEvents Channel[*corev1.Event], opts WatchInstrumentedPodOptions) (Channel[Notification], error) {
+func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interface, signature []testworkflowprocessor.Signature, scheduledAt time.Time, pod Channel[*corev1.Pod], podEvents Channel[*corev1.Event], opts WatchInstrumentedPodOptions) (<-chan ChannelMessage[Notification], error) {
 	// Avoid missing data
 	if pod == nil {
 		return nil, errors.New("pod watcher is required")
@@ -180,7 +180,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 		}
 	}()
 
-	return s.watcher, nil
+	return s.ch, nil
 }
 
 func maxTime(times ...time.Time) time.Time {

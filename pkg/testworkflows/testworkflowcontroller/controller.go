@@ -212,7 +212,7 @@ func (c *controller) StopController() {
 }
 
 func (c *controller) Watch(parentCtx context.Context) <-chan ChannelMessage[Notification] {
-	w, err := WatchInstrumentedPod(parentCtx, c.clientSet, c.signature, c.scheduledAt, c.pod, c.podEvents, WatchInstrumentedPodOptions{
+	ch, err := WatchInstrumentedPod(parentCtx, c.clientSet, c.signature, c.scheduledAt, c.pod, c.podEvents, WatchInstrumentedPodOptions{
 		JobEvents: c.jobEvents,
 		Job:       c.job,
 	})
@@ -222,7 +222,7 @@ func (c *controller) Watch(parentCtx context.Context) <-chan ChannelMessage[Noti
 		v.Close()
 		return v.Channel()
 	}
-	return w.Channel()
+	return ch
 }
 
 // TODO: Make it actually light
@@ -281,7 +281,7 @@ func (c *controller) Logs(parentCtx context.Context, follow bool) io.Reader {
 		case <-c.podEvents.Peek(parentCtx):
 		case <-alignTimeoutCh:
 		}
-		w, err := WatchInstrumentedPod(parentCtx, c.clientSet, c.signature, c.scheduledAt, c.pod, c.podEvents, WatchInstrumentedPodOptions{
+		ch, err := WatchInstrumentedPod(parentCtx, c.clientSet, c.signature, c.scheduledAt, c.pod, c.podEvents, WatchInstrumentedPodOptions{
 			JobEvents: c.jobEvents,
 			Job:       c.job,
 			Follow:    common.Ptr(follow),
@@ -289,7 +289,7 @@ func (c *controller) Logs(parentCtx context.Context, follow bool) io.Reader {
 		if err != nil {
 			return
 		}
-		for v := range w.Channel() {
+		for v := range ch {
 			if v.Error == nil && v.Value.Log != "" && !v.Value.Temporary {
 				if ref != v.Value.Ref && v.Value.Ref != "" {
 					ref = v.Value.Ref
