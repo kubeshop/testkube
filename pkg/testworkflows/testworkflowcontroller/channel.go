@@ -20,6 +20,7 @@ type Channel[T any] interface {
 	Channel() <-chan ChannelMessage[T]
 	Close()
 	Done() <-chan struct{}
+	CtxErr() error
 }
 
 type channel[T any] struct {
@@ -167,4 +168,8 @@ func (c *channel[T]) Close() {
 
 func (c *channel[T]) Done() <-chan struct{} {
 	return c.ctx.Done()
+}
+
+func (c *channel[T]) CtxErr() error {
+	return c.ctx.Err()
 }

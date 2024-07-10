@@ -3,6 +3,7 @@ package testworkflowcontroller
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
@@ -12,12 +13,38 @@ import (
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
+const (
+	FlushResultTime    = 50 * time.Millisecond
+	FlushResultMaxTime = 100 * time.Millisecond
+)
+
 type notifier struct {
-	watcher     *channel[Notification]
+	ctx         context.Context
+	ch          chan ChannelMessage[Notification]
 	result      testkube.TestWorkflowResult
 	sig         []testkube.TestWorkflowSignature
 	scheduledAt time.Time
 	lastTs      map[string]time.Time
+
+	resultMu        sync.Mutex
+	resultCh        chan struct{}
+	resultScheduled bool
+}
+
+func (n *notifier) send(value Notification) {
+	// Ignore when the channel is already closed
+	defer func() {
+		recover()
+	}()
+	n.ch <- ChannelMessage[Notification]{Value: value}
+}
+
+func (n *notifier) error(err error) {
+	// Ignore when the channel is already closed
+	defer func() {
+		recover()
+	}()
+	n.ch <- ChannelMessage[Notification]{Error: err}
 }
 
 func (n *notifier) GetLastTimestamp(ref string) time.Time {
@@ -40,13 +67,69 @@ func (n *notifier) RegisterTimestamp(ref string, t time.Time) {
 	}
 }
 
+func (n *notifier) Flush() {
+	n.resultMu.Lock()
+	defer n.resultMu.Unlock()
+	if !n.resultScheduled {
+		return
+	}
+	n.send(Notification{Timestamp: n.result.LatestTimestamp(), Result: n.result.Clone()})
+	n.resultScheduled = false
+}
+
+func (n *notifier) scheduleFlush() {
+	n.resultMu.Lock()
+	defer n.resultMu.Unlock()
+
+	// Inform existing scheduler about the next result
+	if n.resultScheduled {
+		select {
+		case n.resultCh <- struct{}{}:
+		default:
+		}
+		return
+	}
+
+	// Run the scheduler
+	n.resultScheduled = true
+	go func() {
+		flushTimer := time.NewTimer(FlushResultMaxTime)
+		flushTimerEnabled := false
+
+		for {
+			if n.ctx.Err() != nil {
+				return
+			}
+
+			select {
+			case <-n.ctx.Done():
+				n.Flush()
+				return
+			case <-flushTimer.C:
+				n.Flush()
+				flushTimerEnabled = false
+			case <-time.After(FlushResultTime):
+				n.Flush()
+				flushTimerEnabled = false
+			case <-n.resultCh:
+				if !flushTimerEnabled {
+					flushTimerEnabled = true
+					flushTimer.Reset(FlushResultMaxTime)
+				}
+				continue
+			}
+		}
+	}()
+}
+
 func (n *notifier) Raw(ref string, ts time.Time, message string, temporary bool) {
 	if message != "" {
 		if ref == InitContainerName {
 			ref = ""
 		}
 		// TODO: use timestamp from the message too for lastTs?
-		n.watcher.Send(Notification{
+		n.Flush()
+		n.send(Notification{
 			Timestamp: ts.UTC(),
 			Log:       message,
 			Ref:       ref,
@@ -63,7 +146,7 @@ func (n *notifier) Log(ref string, ts time.Time, message string) {
 }
 
 func (n *notifier) Error(err error) {
-	n.watcher.Error(err)
+	n.error(err)
 }
 
 func (n *notifier) Event(ref string, ts time.Time, level, reason, message string) {
@@ -92,7 +175,7 @@ func (n *notifier) recompute() {
 
 func (n *notifier) emit() {
 	n.recompute()
-	n.watcher.Send(Notification{Timestamp: n.result.LatestTimestamp(), Result: n.result.Clone()})
+	n.scheduleFlush()
 }
 
 func (n *notifier) queue(ts time.Time) {
@@ -184,7 +267,8 @@ func (n *notifier) Output(ref string, ts time.Time, output *data.Instruction) {
 		return
 	}
 	n.RegisterTimestamp(ref, ts)
-	n.watcher.Send(Notification{Timestamp: ts.UTC(), Ref: ref, Output: output})
+	n.Flush()
+	n.send(Notification{Timestamp: ts.UTC(), Ref: ref, Output: output})
 }
 
 func (n *notifier) Finish(ts time.Time) {
@@ -270,11 +354,21 @@ func newNotifier(ctx context.Context, signature []testworkflowprocessor.Signatur
 	}
 	result.Recompute(sig, scheduledAt)
 
+	ch := make(chan ChannelMessage[Notification])
+
+	go func() {
+		<-ctx.Done()
+		close(ch)
+	}()
+
 	return &notifier{
-		watcher:     newChannel[Notification](ctx, 0),
+		ch:          ch,
+		ctx:         ctx,
 		sig:         sig,
 		scheduledAt: scheduledAt,
 		result:      result,
 		lastTs:      make(map[string]time.Time),
+
+		resultCh: make(chan struct{}, 1),
 	}
 }
