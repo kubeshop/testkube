@@ -23,8 +23,7 @@ import (
 
 const (
 	FlushLogMaxSize = 100_000
-	FlushLogTime    = 50 * time.Millisecond
-	FlushLogMaxTime = 100 * time.Millisecond
+	FlushLogTime    = 100 * time.Millisecond
 )
 
 type Comment struct {
@@ -150,45 +149,48 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 			defer logBufferMu.Unlock()
 			unsafeFlushLogBuffer()
 		}
-		appendLog := func(ts time.Time, log []byte) {
-			if len(log) == 0 {
-				return
-			}
+		appendLog := func(ts time.Time, log ...[]byte) {
 			logBufferMu.Lock()
 			defer logBufferMu.Unlock()
-			if logBufferLog.Len() == 0 {
+
+			initialLogLen := logBufferLog.Len()
+			if initialLogLen == 0 {
 				logBufferTs = ts
 			}
-			logBufferLog.Write(log)
+			for i := range log {
+				logBufferLog.Write(log[i])
+			}
 
-			// Inform the flushing worker about a new log to flush
-			select {
-			case logBufferCh <- struct{}{}:
-			default:
+			finalLogLen := logBufferLog.Len()
+			flushable := finalLogLen > FlushLogMaxSize
+			if flushable {
+				unsafeFlushLogBuffer()
+			}
+
+			// Inform the flushing worker about a new log to flush.
+			// Do it only when it's not scheduled
+			if initialLogLen == 0 || flushable {
+				select {
+				case logBufferCh <- struct{}{}:
+				default:
+				}
 			}
 		}
 
-		// Flush the log automatically when expected
+		// Flush the log automatically after 100ms
 		bufferCtx, bufferCtxCancel := context.WithCancel(ctx)
 		defer bufferCtxCancel()
 		go func() {
-			flushLogTimer := time.NewTimer(FlushLogMaxTime)
-			flushLogTimerEnabled := false
-
+			t := time.NewTimer(FlushLogTime)
 			for {
+				t.Stop()
+
 				if bufferCtx.Err() != nil {
 					return
 				}
 
 				logLen := logBufferLog.Len()
-
-				if logLen > FlushLogMaxSize {
-					flushLogBuffer()
-					continue
-				}
-
 				if logLen == 0 {
-					flushLogTimerEnabled = false
 					select {
 					case <-bufferCtx.Done():
 						return
@@ -197,17 +199,14 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 					}
 				}
 
-				if !flushLogTimerEnabled {
-					flushLogTimerEnabled = true
-					flushLogTimer.Reset(FlushLogMaxTime)
-				}
-
+				t.Reset(FlushLogTime)
 				select {
 				case <-bufferCtx.Done():
+					if !t.Stop() {
+						<-t.C
+					}
 					return
-				case <-flushLogTimer.C:
-					flushLogBuffer()
-				case <-time.After(FlushLogTime):
+				case <-t.C:
 					flushLogBuffer()
 				case <-logBufferCh:
 					continue
@@ -245,7 +244,7 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 				if err != nil {
 					return
 				}
-				reader = bufio.NewReader(stream)
+				reader.Reset(stream)
 				hadAnyContent = false
 				continue
 			} else {
@@ -285,19 +284,15 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 				// Append as regular log if expected
 				if !hadComment {
 					if !isStarted {
-						appendLog(tsReader.ts, tsReader.Prefix())
-						appendLog(tsReader.ts, line)
+						appendLog(tsReader.ts, tsReader.Prefix(), line)
 						isStarted = true
 					} else if isNewLine {
-						appendLog(tsReader.ts, []byte("\n"))
-						appendLog(tsReader.ts, tsReader.Prefix())
-						appendLog(tsReader.ts, line)
+						appendLog(tsReader.ts, []byte("\n"), tsReader.Prefix(), line)
 					}
 					isNewLine = true
 				}
 			} else if isStarted {
-				appendLog(tsReader.ts, []byte("\n"))
-				appendLog(tsReader.ts, tsReader.Prefix())
+				appendLog(tsReader.ts, []byte("\n"), tsReader.Prefix())
 			}
 
 			// Handle the error
