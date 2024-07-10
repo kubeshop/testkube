@@ -131,7 +131,7 @@ jobs:
         with:
           fetch-depth: 0
       - uses: sigstore/cosign-installer@v3.5.0
-      - uses: anchore/sbom-action/download-syft@v0.16.0
+      - uses: anchore/sbom-action/download-syft@v0.16.1
       - name: Download Artifacts for Linux
         uses: actions/download-artifact@master
         with:
