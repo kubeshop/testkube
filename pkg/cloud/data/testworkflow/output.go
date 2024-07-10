@@ -3,6 +3,7 @@ package testworkflow
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"io"
 	"net/http"
 
@@ -18,11 +19,25 @@ import (
 var _ testworkflow.OutputRepository = (*CloudOutputRepository)(nil)
 
 type CloudOutputRepository struct {
-	executor executor.Executor
+	executor   executor.Executor
+	httpClient *http.Client
 }
 
-func NewCloudOutputRepository(client cloud.TestKubeCloudAPIClient, grpcConn *grpc.ClientConn, apiKey string) *CloudOutputRepository {
-	return &CloudOutputRepository{executor: executor.NewCloudGRPCExecutor(client, grpcConn, apiKey)}
+type Option func(*CloudOutputRepository)
+
+func WithSkipVerify() Option {
+	return func(r *CloudOutputRepository) {
+		transport := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
+		r.httpClient.Transport = transport
+	}
+}
+
+func NewCloudOutputRepository(client cloud.TestKubeCloudAPIClient, grpcConn *grpc.ClientConn, apiKey string, opts ...Option) *CloudOutputRepository {
+	r := &CloudOutputRepository{executor: executor.NewCloudGRPCExecutor(client, grpcConn, apiKey), httpClient: http.DefaultClient}
+	for _, opt := range opts {
+		opt(r)
+	}
+	return r
 }
 
 // PresignSaveLog builds presigned storage URL to save the output in Cloud
@@ -59,7 +74,7 @@ func (r *CloudOutputRepository) SaveLog(ctx context.Context, id, workflowName st
 	if err != nil {
 		return err
 	}
-	res, err := http.DefaultClient.Do(req)
+	res, err := r.httpClient.Do(req)
 	if err != nil {
 		return errors.Wrap(err, "failed to save file in cloud storage")
 	}
@@ -79,7 +94,7 @@ func (r *CloudOutputRepository) ReadLog(ctx context.Context, id, workflowName st
 	if err != nil {
 		return nil, err
 	}
-	res, err := http.DefaultClient.Do(req)
+	res, err := r.httpClient.Do(req)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get file from cloud storage")
 	}

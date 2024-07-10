@@ -27,7 +27,7 @@ type WatchInstrumentedPodOptions struct {
 	Follow    *bool
 }
 
-func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interface, signature []testworkflowprocessor.Signature, scheduledAt time.Time, pod Channel[*corev1.Pod], podEvents Channel[*corev1.Event], opts WatchInstrumentedPodOptions) (Channel[Notification], error) {
+func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interface, signature []testworkflowprocessor.Signature, scheduledAt time.Time, pod Channel[*corev1.Pod], podEvents Channel[*corev1.Event], opts WatchInstrumentedPodOptions) (<-chan ChannelMessage[Notification], error) {
 	// Avoid missing data
 	if pod == nil {
 		return nil, errors.New("pod watcher is required")
@@ -42,7 +42,10 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 
 	// Start watching
 	go func() {
-		defer ctxCancel()
+		defer func() {
+			s.Flush()
+			ctxCancel()
+		}()
 
 		// Watch for the basic initialization warnings
 		for v := range state.PreStart("") {
@@ -99,7 +102,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 
 			// Watch the container logs
 			follow := common.ResolvePtr(opts.Follow, true) && !state.IsFinished(ref)
-			for v := range WatchContainerLogs(ctx, clientSet, podObj.Namespace, podObj.Name, ref, 10, follow, pod).Channel() {
+			for v := range WatchContainerLogs(ctx, clientSet, podObj.Namespace, podObj.Name, ref, 10, pod).Channel() {
 				if v.Error != nil {
 					s.Error(v.Error)
 				} else if v.Value.Output != nil {
@@ -177,7 +180,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 		}
 	}()
 
-	return s.watcher, nil
+	return s.ch, nil
 }
 
 func maxTime(times ...time.Time) time.Time {
