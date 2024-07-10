@@ -8,8 +8,9 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unsafe"
 
-	errors2 "github.com/pkg/errors"
+	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -219,31 +220,27 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 
 		// Parse and return the logs
 		reader := bufio.NewReader(stream)
-		var tsPrefix, tmpTsPrefix []byte
+		tsReader := newTimestampReader()
 		isNewLine := false
 		isStarted := false
-		var ts, tmpTs time.Time
 		for {
 			var prepend []byte
 
 			// Read next timestamp
-			tmpTs, tmpTsPrefix, err = ReadTimestamp(reader)
+			err = tsReader.Read(reader)
 			if err == nil {
 				// Strip older logs - SinceTime in Kubernetes logs is ignoring milliseconds precision
-				if since != nil && since.After(tmpTs) {
+				if since != nil && since.After(tsReader.ts) {
 					_, _ = utils.ReadLongLine(reader)
 					continue
 				}
-
-				ts = tmpTs
-				tsPrefix = tmpTsPrefix
 				hadAnyContent = true
 			} else if err == io.EOF {
 				if !hadAnyContent {
 					return
 				}
 				// Reinitialize logs stream
-				since = common.Ptr(ts.Add(1))
+				since = common.Ptr(tsReader.ts.Add(1))
 				stream, err = getContainerLogsStream(ctx, clientSet, namespace, podName, containerName, pod, since)
 				if err != nil {
 					return
@@ -253,8 +250,8 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 				continue
 			} else {
 				// Edge case: Kubernetes may send critical errors without timestamp (like ionotify)
-				if len(tmpTsPrefix) > 0 {
-					prepend = tmpTsPrefix
+				if len(tsReader.Prefix()) > 0 {
+					prepend = bytes.Clone(tsReader.Prefix())
 				}
 				flushLogBuffer()
 				w.Error(err)
@@ -275,7 +272,7 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 				if err == nil && instruction != nil {
 					isNewLine = false
 					hadComment = true
-					log := ContainerLog{Time: ts}
+					log := ContainerLog{Time: tsReader.ts}
 					if isHint {
 						log.Hint = instruction
 					} else {
@@ -288,19 +285,19 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 				// Append as regular log if expected
 				if !hadComment {
 					if !isStarted {
-						appendLog(ts, tsPrefix)
-						appendLog(ts, line)
+						appendLog(tsReader.ts, tsReader.Prefix())
+						appendLog(tsReader.ts, line)
 						isStarted = true
 					} else if isNewLine {
-						appendLog(ts, []byte("\n"))
-						appendLog(ts, tsPrefix)
-						appendLog(ts, line)
+						appendLog(tsReader.ts, []byte("\n"))
+						appendLog(tsReader.ts, tsReader.Prefix())
+						appendLog(tsReader.ts, line)
 					}
 					isNewLine = true
 				}
 			} else if isStarted {
-				appendLog(ts, []byte("\n"))
-				appendLog(ts, tsPrefix)
+				appendLog(tsReader.ts, []byte("\n"))
+				appendLog(tsReader.ts, tsReader.Prefix())
 			}
 
 			// Handle the error
@@ -317,31 +314,111 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 	return w
 }
 
-func ReadTimestamp(reader *bufio.Reader) (time.Time, []byte, error) {
-	tsPrefix := make([]byte, 31, 35) // 30 bytes for timestamp + 1 byte for space + 4 additional bytes for non-UTC timezone
-	count, err := io.ReadFull(reader, tsPrefix)
+var (
+	ErrInvalidTimestamp = errors.New("invalid timestamp")
+)
+
+type timestampReader struct {
+	buffer []byte
+	bytes  int
+	ts     time.Time
+	utc    *bool
+}
+
+func newTimestampReader() *timestampReader {
+	return &timestampReader{
+		buffer: make([]byte, 31, 36), // 30 bytes for timestamp + 1 byte for space + 5 additional bytes for non-UTC timezone
+	}
+}
+
+func (t *timestampReader) Prefix() []byte {
+	return t.buffer[:t.bytes]
+}
+
+// read is initial operation for reading the timestamp,
+// that is the slowest one, but also detects the timestamp format.
+// It's meant to be executed just once, for performance reasons.
+func (t *timestampReader) read(reader *bufio.Reader) error {
+	// Read the possible timestamp slice
+	read, err := io.ReadFull(reader, t.buffer[:31])
+	t.bytes = read
 	if err != nil {
-		return time.Time{}, nil, err
+		return err
 	}
-	if count < 31 {
-		return time.Time{}, nil, io.EOF
-	}
-	var ts time.Time
-	// Handle non-UTC timezones
-	if tsPrefix[29] == '+' {
-		tsSuffix := make([]byte, 5)
-		count, err = io.ReadFull(reader, tsSuffix)
+
+	// Detect the timezone format and adjust the reader if needed
+	utc := t.buffer[29] == 'Z'
+	t.utc = &utc
+	if !utc && len(t.buffer) < 35 {
+		// Increase capacity to store the +00:00 time
+		t.buffer = append(t.buffer, make([]byte, 5)...)
+
+		// Read the missing part
+		read, err = io.ReadFull(reader, t.buffer[31:])
+		t.bytes += read
 		if err != nil {
-			return time.Time{}, nil, err
+			return err
 		}
-		if count < 5 {
-			return time.Time{}, nil, io.EOF
-		}
-		tsPrefix = append(tsPrefix, tsSuffix...)
 	}
-	ts, err = time.Parse(KubernetesTimezoneLogTimeFormat, string(tsPrefix[0:len(tsPrefix)-1]))
+
+	// Compute the timestamp
+	if utc {
+		ts, err := time.Parse(time.RFC3339Nano, unsafe.String(&t.buffer[0], 30))
+		if err != nil {
+			return ErrInvalidTimestamp
+		}
+		t.ts = ts
+	} else {
+		ts, err := time.Parse(time.RFC3339Nano, unsafe.String(&t.buffer[0], 35))
+		if err != nil {
+			return ErrInvalidTimestamp
+		}
+		t.ts = ts.UTC()
+	}
+	return nil
+}
+
+// readUTC is optimized operation for reading the UTC timestamp (Z).
+func (t *timestampReader) readUTC(reader *bufio.Reader) error {
+	// Read the possible timestamp slice
+	read, err := io.ReadFull(reader, t.buffer)
+	t.bytes = read
 	if err != nil {
-		return time.Time{}, tsPrefix, errors2.Wrap(err, "parsing timestamp")
+		return err
 	}
-	return ts.UTC(), tsPrefix, nil
+
+	// Compute the timestamp
+	ts, err := time.Parse(time.RFC3339Nano, unsafe.String(&t.buffer[0], 30))
+	if err != nil {
+		return ErrInvalidTimestamp
+	}
+	t.ts = ts
+	return nil
+}
+
+// readNonUTC is optimized operation for reading the non-UTC timestamp (+00:00).
+func (t *timestampReader) readNonUTC(reader *bufio.Reader) error {
+	// Read the possible timestamp slice
+	read, err := io.ReadFull(reader, t.buffer)
+	t.bytes = read
+	if err != nil {
+		return err
+	}
+
+	// Compute the timestamp
+	ts, err := time.Parse(time.RFC3339Nano, unsafe.String(&t.buffer[0], 35))
+	if err != nil {
+		return ErrInvalidTimestamp
+	}
+	t.ts = ts.UTC()
+	return nil
+}
+
+func (t *timestampReader) Read(reader *bufio.Reader) error {
+	if t.utc == nil {
+		return t.read(reader)
+	} else if *t.utc {
+		return t.readUTC(reader)
+	}
+	return t.readNonUTC(reader)
 }
