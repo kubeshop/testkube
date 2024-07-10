@@ -23,6 +23,7 @@ import (
 
 const (
 	FlushLogMaxSize = 100_000
+	FlushBufferSize = 65_536
 	FlushLogTime    = 100 * time.Millisecond
 )
 
@@ -218,7 +219,7 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 		defer flushLogBuffer()
 
 		// Parse and return the logs
-		reader := bufio.NewReader(stream)
+		reader := bufio.NewReaderSize(stream, FlushBufferSize)
 		tsReader := newTimestampReader()
 		isNewLine := false
 		isStarted := false
