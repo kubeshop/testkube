@@ -32,10 +32,9 @@ var (
 
 func NewRunTestWorkflowCmd() *cobra.Command {
 	var (
-		executionName  string
-		config         map[string]string
-		watchEnabled   bool
-		runningContext string
+		executionName string
+		config        map[string]string
+		watchEnabled  bool
 	)
 
 	cmd := &cobra.Command{
@@ -124,7 +123,6 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&watchEnabled, "watch", "f", false, "watch for changes after start")
 	cmd.Flags().Bool("disable-webhooks", false, "disable webhooks for this execution")
 	cmd.Flags().Bool("enable-webhooks", false, "enable webhooks for this execution")
-	cmd.Flags().StringVar(&runningContext, "context", "", "running context description for test execution")
 
 	return cmd
 }
