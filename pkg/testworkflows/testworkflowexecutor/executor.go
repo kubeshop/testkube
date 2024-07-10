@@ -491,6 +491,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		"name":        executionName,
 		"number":      number,
 		"scheduledAt": now.UTC().Format(constants.RFC3339Millis),
+		"parentIds":   strings.Join(request.ParentExecutionIds, "/"),
 	})
 
 	// Process the TestWorkflow
