@@ -314,7 +314,7 @@ func (e *executor) Control(ctx context.Context, testWorkflow *testworkflowsv1.Te
 
 	e.metrics.IncAndObserveExecuteTestWorkflow(*execution, e.dashboardURI)
 
-	e.updateStatus(testWorkflow, execution, testWorkflowExecution)
+	e.updateStatus(testWorkflow, execution, testWorkflowExecution) // TODO: Consider if it is needed
 	err = testworkflowcontroller.Cleanup(ctx, e.clientSet, execution.GetNamespace(e.namespace), execution.Id)
 	if err != nil {
 		log.DefaultLogger.Errorw("failed to cleanup TestWorkflow resources", "id", execution.Id, "error", err)

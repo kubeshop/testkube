@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"errors"
 	"io"
 	"strings"
 	"sync"
@@ -12,15 +11,17 @@ import (
 
 	errors2 "github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
+	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/utils"
 )
 
 const (
-	FlushLogMaxSize = 65_536
+	FlushLogMaxSize = 100_000
 	FlushLogTime    = 50 * time.Millisecond
 	FlushLogMaxTime = 100 * time.Millisecond
 )
@@ -38,50 +39,101 @@ type ContainerLog struct {
 	Output *data.Instruction
 }
 
-func WatchContainerLogs(ctx context.Context, clientSet kubernetes.Interface, namespace, podName, containerName string, bufferSize int, follow bool, pod Channel[*corev1.Pod]) Channel[ContainerLog] {
+// getContainerLogsStream is getting logs stream, and tries to reinitialize the stream on EOF.
+// EOF may happen not only on the actual container end, but also in case of the log rotation.
+// @see {@link https://stackoverflow.com/a/68673451}
+func getContainerLogsStream(ctx context.Context, clientSet kubernetes.Interface, namespace, podName, containerName string, pod Channel[*corev1.Pod], since *time.Time) (io.Reader, error) {
+	// Fail immediately if the context is finished
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+
+	// Build Kubernetes structure for time
+	var sinceTime *metav1.Time
+	if since != nil {
+		sinceTime = &metav1.Time{Time: *since}
+	}
+
+	// Create logs stream request
+	req := clientSet.CoreV1().Pods(namespace).GetLogs(podName, &corev1.PodLogOptions{
+		Container:  containerName,
+		Follow:     true,
+		Timestamps: true,
+		SinceTime:  sinceTime,
+	})
+	var err error
+	var stream io.ReadCloser
+	for {
+		stream, err = req.Stream(ctx)
+		if err != nil {
+			// The container is not necessarily already started when Started event is received
+			if !strings.Contains(err.Error(), "is waiting to start") {
+				return nil, err
+			}
+			p := <-pod.Peek(ctx)
+			if p == nil {
+				return bytes.NewReader(nil), io.EOF
+			}
+			containerDone := IsPodDone(p)
+			for i := range p.Status.InitContainerStatuses {
+				if p.Status.InitContainerStatuses[i].Name == containerName {
+					if p.Status.InitContainerStatuses[i].State.Terminated != nil {
+						containerDone = true
+						break
+					}
+				}
+			}
+			for i := range p.Status.ContainerStatuses {
+				if p.Status.ContainerStatuses[i].Name == containerName {
+					if p.Status.ContainerStatuses[i].State.Terminated != nil {
+						containerDone = true
+						break
+					}
+				}
+			}
+
+			if containerDone {
+				return bytes.NewReader(nil), io.EOF
+			}
+			continue
+		}
+		break
+	}
+	return stream, nil
+}
+
+func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interface, namespace, podName, containerName string, bufferSize int, pod Channel[*corev1.Pod]) Channel[ContainerLog] {
+	ctx, ctxCancel := context.WithCancel(parentCtx)
 	w := newChannel[ContainerLog](ctx, bufferSize)
 
 	go func() {
-		defer w.Close()
+		<-w.Done()
+		ctxCancel()
+	}()
+
+	go func() {
+		defer ctxCancel()
 		var err error
 
-		// Create logs stream request
-		req := clientSet.CoreV1().Pods(namespace).GetLogs(podName, &corev1.PodLogOptions{
-			Follow:     follow,
-			Timestamps: true,
-			Container:  containerName,
-		})
-		var stream io.ReadCloser
-		for {
-			stream, err = req.Stream(ctx)
-			if err != nil {
-				// The container is not necessarily already started when Started event is received
-				if !strings.Contains(err.Error(), "is waiting to start") {
-					w.Error(err)
-					return
-				}
-				p := <-pod.Peek(ctx)
-				if p != nil && IsPodDone(p) {
-					w.Error(errors.New("pod is finished and there are no logs for this container"))
-				}
-				continue
-			}
-			break
-		}
+		var since *time.Time
 
-		go func() {
-			<-w.Done()
-			_ = stream.Close()
-		}()
+		// Create logs stream request
+		stream, err := getContainerLogsStream(ctx, clientSet, namespace, podName, containerName, pod, since)
+		hadAnyContent := false
+		if err == io.EOF {
+			return
+		} else if err != nil {
+			w.Error(err)
+			return
+		}
 
 		// Build a buffer for logs to avoid scheduling Log notification for each write
 		var logBufferLog bytes.Buffer
 		var logBufferTs time.Time
 		var logBufferMu sync.Mutex
 		var logBufferCh = make(chan struct{}, 1)
-		defer close(logBufferCh)
 		unsafeFlushLogBuffer := func() {
-			if logBufferLog.Len() == 0 {
+			if logBufferLog.Len() == 0 || w.CtxErr() != nil {
 				return
 			}
 			message := make([]byte, logBufferLog.Len())
@@ -91,7 +143,6 @@ func WatchContainerLogs(ctx context.Context, clientSet kubernetes.Interface, nam
 				return
 			}
 			w.Send(ContainerLog{Time: logBufferTs, Log: message})
-
 		}
 		flushLogBuffer := func() {
 			logBufferMu.Lock()
@@ -115,7 +166,6 @@ func WatchContainerLogs(ctx context.Context, clientSet kubernetes.Interface, nam
 			default:
 			}
 		}
-		defer flushLogBuffer()
 
 		// Flush the log automatically when expected
 		bufferCtx, bufferCtxCancel := context.WithCancel(ctx)
@@ -164,6 +214,9 @@ func WatchContainerLogs(ctx context.Context, clientSet kubernetes.Interface, nam
 			}
 		}()
 
+		// Flush the rest of logs if it is closed
+		defer flushLogBuffer()
+
 		// Parse and return the logs
 		reader := bufio.NewReader(stream)
 		var tsPrefix, tmpTsPrefix []byte
@@ -176,10 +229,28 @@ func WatchContainerLogs(ctx context.Context, clientSet kubernetes.Interface, nam
 			// Read next timestamp
 			tmpTs, tmpTsPrefix, err = ReadTimestamp(reader)
 			if err == nil {
+				// Strip older logs - SinceTime in Kubernetes logs is ignoring milliseconds precision
+				if since != nil && since.After(tmpTs) {
+					_, _ = utils.ReadLongLine(reader)
+					continue
+				}
+
 				ts = tmpTs
 				tsPrefix = tmpTsPrefix
+				hadAnyContent = true
 			} else if err == io.EOF {
-				return
+				if !hadAnyContent {
+					return
+				}
+				// Reinitialize logs stream
+				since = common.Ptr(ts.Add(1))
+				stream, err = getContainerLogsStream(ctx, clientSet, namespace, podName, containerName, pod, since)
+				if err != nil {
+					return
+				}
+				reader = bufio.NewReader(stream)
+				hadAnyContent = false
+				continue
 			} else {
 				// Edge case: Kubernetes may send critical errors without timestamp (like ionotify)
 				if len(tmpTsPrefix) > 0 {
