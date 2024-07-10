@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -448,6 +449,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		"name":        "<mock_name>",
 		"number":      "1",
 		"scheduledAt": now.UTC().Format(constants.RFC3339Millis),
+		"parentIds":   strings.Join(request.ParentExecutionIds, "/"),
 	})
 
 	// Preserve resolved TestWorkflow

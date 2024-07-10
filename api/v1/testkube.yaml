@@ -7939,7 +7939,12 @@ components:
           type: array
           description: running context for the test workflow execution
           items:
-            $ref: "#/components/schemas/TestWorkflowRunningContext"         
+            $ref: "#/components/schemas/TestWorkflowRunningContext"
+        parentExecutionIds:
+          type: array
+          description: parent execution ids
+          items:
+            type: string
 
     TestWorkflowWithExecution:
       type: object
@@ -8034,7 +8039,7 @@ components:
         runningContext:
           type: array
           description: running context for the test workflow execution
-          items:        
+          items:
             $ref: "#/components/schemas/TestWorkflowRunningContext"
       required:
         - id
@@ -8071,7 +8076,7 @@ components:
         runningContext:
           type: array
           description: running context for the test workflow execution
-          items:        
+          items:
             $ref: "#/components/schemas/TestWorkflowRunningContext"
       required:
         - id
