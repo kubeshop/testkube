@@ -468,7 +468,7 @@ func (c *container) Resolve(m ...expressions.Machine) error {
 			}
 			env := c.Env()
 			name = name[4:]
-			for i := range env {
+			for i := len(env) - 1; i >= 0; i-- {
 				if env[i].Name == name && env[i].ValueFrom == nil {
 					value, err := expressions.EvalTemplate(env[i].Value)
 					if err == nil {
