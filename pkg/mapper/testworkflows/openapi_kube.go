@@ -1377,6 +1377,7 @@ func MapTestWorkflowExecutionAPIToKube(v *testkube.TestWorkflowExecution) *testw
 		Workflow:                  common.MapPtr(v.Workflow, MapTestWorkflowAPIToKube),
 		ResolvedWorkflow:          common.MapPtr(v.ResolvedWorkflow, MapTestWorkflowAPIToKube),
 		TestWorkflowExecutionName: v.TestWorkflowExecutionName,
+		DisableWebhooks:           v.DisableWebhooks,
 	}
 }
 
