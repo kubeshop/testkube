@@ -80,7 +80,6 @@ func TestSuiteRenderer(client client.Client, ui *ui.UI, obj interface{}) error {
 		if ts.ExecutionRequest.PvcTemplateReference != "" {
 			ui.Warn("  PVC template reference:      ", ts.ExecutionRequest.PvcTemplateReference)
 		}
-		ui.Warn("  Disable webhooks:       ", fmt.Sprint(ts.ExecutionRequest.DisableWebhooks))
 	}
 
 	batches := append(ts.Before, ts.Steps...)
