@@ -28,7 +28,7 @@ testkube [flags]
 * [testkube create](testkube_create.md)	 - Create resource
 * [testkube create-ticket](testkube_create-ticket.md)	 - Create bug ticket
 * [testkube dashboard](testkube_dashboard.md)	 - Open Testkube dashboard
-* [testkube debug](testkube_debug.md)	 - Print environment information for debugging
+* [testkube debug](testkube_debug.md)	 - Print debugging info
 * [testkube delete](testkube_delete.md)	 - Delete resources
 * [testkube disable](testkube_disable.md)	 - Disable feature
 * [testkube download](testkube_download.md)	 - Artifacts management commands

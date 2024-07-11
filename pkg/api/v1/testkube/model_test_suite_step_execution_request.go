@@ -45,6 +45,6 @@ type TestSuiteStepExecutionRequest struct {
 	// name of the template resource
 	PvcTemplateReference string          `json:"pvcTemplateReference,omitempty"`
 	RunningContext       *RunningContext `json:"runningContext,omitempty"`
-	// whether webhooks on the executions of this step are disabled
+	// whether webhooks on the execution of this step are disabled
 	DisableWebhooks bool `json:"disableWebhooks,omitempty"`
 }

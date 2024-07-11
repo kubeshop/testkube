@@ -1,10 +1,6 @@
 ## testkube debug
 
-Print environment information for debugging
-
-```
-testkube debug [flags]
-```
+Print debugging info
 
 ### Options
 
@@ -27,6 +23,7 @@ testkube debug [flags]
 ### SEE ALSO
 
 * [testkube](testkube.md)	 - Testkube entrypoint for kubectl plugin
-* [testkube debug controlplane](testkube_debug_controlplane.md)	 - Show debug info
-* [testkube debug info](testkube_debug_info.md)	 - Show debug info
+* [testkube debug agent](testkube_debug_agent.md)	 - Show Agent debug information
+* [testkube debug controlplane](testkube_debug_controlplane.md)	 - Show Control Plane debug information
+* [testkube debug oss](testkube_debug_oss.md)	 - Show OSS installation debug info
 
