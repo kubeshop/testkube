@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	KubernetesLogTimeFormat         = "2006-01-02T15:04:05.999999999Z"
+	KubernetesLogTimeFormat         = "2006-01-02T15:04:05.000000000Z"
 	KubernetesTimezoneLogTimeFormat = KubernetesLogTimeFormat + "07:00"
 )
 
