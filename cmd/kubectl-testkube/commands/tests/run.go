@@ -96,10 +96,6 @@ func NewRunTestCmd() *cobra.Command {
 				watchEnabled = true
 			}
 
-			if common.IsBothEnabledAndDisabledSet(cmd) {
-				ui.Failf("both --enable-webhooks and --disable-webhooks flags are set, please use only one")
-			}
-
 			outputFlag := cmd.Flag("output")
 			outputType := render.OutputPretty
 			if outputFlag != nil {

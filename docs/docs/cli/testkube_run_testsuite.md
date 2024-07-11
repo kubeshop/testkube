@@ -18,7 +18,6 @@ testkube run testsuite <testSuiteName> [flags]
       --disable-webhooks                           disable webhooks
   -d, --download-artifacts                         download artifacts automatically
       --download-dir string                        download dir (default "artifacts")
-      --enable-webhooks                            enable webhooks
       --execution-label stringToString             execution-label adds a label to execution in form of key value pair: --execution-label key1=value1 (default [])
       --format string                              data format for storing files, one of folder|archive (default "folder")
       --git-branch string                          if uri is git repository we can set additional branch parameter

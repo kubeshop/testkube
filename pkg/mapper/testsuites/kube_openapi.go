@@ -192,7 +192,6 @@ func MapExecutionRequestFromSpec(specExecutionRequest *testsuitesv3.TestSuiteExe
 		PvcTemplateReference:     specExecutionRequest.PvcTemplateReference,
 		ScraperTemplate:          specExecutionRequest.ScraperTemplate,
 		ScraperTemplateReference: specExecutionRequest.ScraperTemplateReference,
-		DisableWebhooks:          specExecutionRequest.DisableWebhooks,
 	}
 }
 
@@ -354,7 +353,6 @@ func MapSpecExecutionRequestToExecutionUpdateRequest(request *testsuitesv3.TestS
 
 	vars := MergeVariablesAndParams(request.Variables, nil)
 	executionRequest.Variables = &vars
-	executionRequest.DisableWebhooks = &request.DisableWebhooks
 
 	return executionRequest
 }
@@ -406,6 +404,5 @@ func MapTestStepExecutionRequestCRDToAPI(request *testsuitesv3.TestSuiteStepExec
 		PvcTemplate:              request.PvcTemplate,
 		PvcTemplateReference:     request.PvcTemplateReference,
 		RunningContext:           runningContext,
-		DisableWebhooks:          request.DisableWebhooks,
 	}
 }

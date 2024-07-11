@@ -146,13 +146,14 @@ func buildTestExecution(test testworkflowsv1.StepExecuteTest, async, disableWebh
 	}, nil
 }
 
-func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async bool) (func() error, error) {
+func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async, disableWebhooks bool) (func() error, error) {
 	return func() (err error) {
 		c := env.Testkube()
 
 		exec, err := c.ExecuteTestWorkflow(workflow.Name, testkube.TestWorkflowExecutionRequest{
-			Name:   workflow.ExecutionName,
-			Config: testworkflows.MapConfigValueKubeToAPI(workflow.Config),
+			Name:            workflow.ExecutionName,
+			Config:          testworkflows.MapConfigValueKubeToAPI(workflow.Config),
+			DisableWebhooks: disableWebhooks,
 		})
 		execName := exec.Name
 		if err != nil {
@@ -346,7 +347,7 @@ func NewExecuteCmd() *cobra.Command {
 					if err != nil {
 						ui.Fail(errors.Wrapf(err, "'%s' workflow: computing execution", spec.Name))
 					}
-					fn, err := buildWorkflowExecution(*spec, async)
+					fn, err := buildWorkflowExecution(*spec, async, disableWebhooks)
 					if err != nil {
 						ui.Fail(err)
 					}

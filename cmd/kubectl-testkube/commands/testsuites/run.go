@@ -48,6 +48,7 @@ func NewRunTestSuiteCmd() *cobra.Command {
 		format                   string
 		masks                    []string
 		silentMode               bool
+		disableWebhooks          bool
 	)
 
 	cmd := &cobra.Command{
@@ -67,10 +68,6 @@ func NewRunTestSuiteCmd() *cobra.Command {
 			client, namespace, err := common.GetClient(cmd)
 			ui.ExitOnError("getting client", err)
 
-			if common.IsBothEnabledAndDisabledSet(cmd) {
-				ui.Failf("both --enable-webhooks and --disable-webhooks flags are set, please use only one")
-			}
-
 			var executions []testkube.TestSuiteExecution
 
 			options := apiv1.ExecuteTestSuiteOptions{
@@ -85,13 +82,7 @@ func NewRunTestSuiteCmd() *cobra.Command {
 				JobTemplateReference:     jobTemplateReference,
 				ScraperTemplateReference: scraperTemplateReference,
 				PvcTemplateReference:     pvcTemplateReference,
-			}
-
-			if cmd.Flag("enable-webhooks").Changed {
-				options.DisableWebhooks = false
-			}
-			if cmd.Flag("disable-webhooks").Changed {
-				options.DisableWebhooks = true
+				DisableWebhooks:          disableWebhooks,
 			}
 
 			var fields = []struct {
@@ -245,8 +236,7 @@ func NewRunTestSuiteCmd() *cobra.Command {
 	cmd.Flags().StringVar(&format, "format", "folder", "data format for storing files, one of folder|archive")
 	cmd.Flags().StringArrayVarP(&masks, "mask", "", []string{}, "regexp to filter downloaded files, single or comma separated, like report/.* or .*\\.json,.*\\.js$")
 	cmd.Flags().BoolVarP(&silentMode, "silent", "", false, "don't print intermediate test suite execution")
-	cmd.Flags().Bool("disable-webhooks", false, "disable webhooks")
-	cmd.Flags().Bool("enable-webhooks", false, "enable webhooks")
+	cmd.Flags().BoolVar(&disableWebhooks, "disable-webhooks", false, "disable webhooks")
 
 	return cmd
 }
