@@ -43,7 +43,7 @@ type ContainerLog struct {
 // getContainerLogsStream is getting logs stream, and tries to reinitialize the stream on EOF.
 // EOF may happen not only on the actual container end, but also in case of the log rotation.
 // @see {@link https://stackoverflow.com/a/68673451}
-func getContainerLogsStream(ctx context.Context, clientSet kubernetes.Interface, namespace, podName, containerName string, pod Channel[*corev1.Pod], since *time.Time) (io.Reader, error) {
+func getContainerLogsStream(ctx context.Context, clientSet kubernetes.Interface, namespace, podName, containerName string, follow bool, pod Channel[*corev1.Pod], since *time.Time) (io.Reader, error) {
 	// Fail immediately if the context is finished
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
@@ -58,7 +58,7 @@ func getContainerLogsStream(ctx context.Context, clientSet kubernetes.Interface,
 	// Create logs stream request
 	req := clientSet.CoreV1().Pods(namespace).GetLogs(podName, &corev1.PodLogOptions{
 		Container:  containerName,
-		Follow:     true,
+		Follow:     follow,
 		Timestamps: true,
 		SinceTime:  sinceTime,
 	})
@@ -103,7 +103,7 @@ func getContainerLogsStream(ctx context.Context, clientSet kubernetes.Interface,
 	return stream, nil
 }
 
-func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interface, namespace, podName, containerName string, bufferSize int, pod Channel[*corev1.Pod]) Channel[ContainerLog] {
+func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interface, namespace, podName, containerName string, follow bool, bufferSize int, pod Channel[*corev1.Pod]) Channel[ContainerLog] {
 	ctx, ctxCancel := context.WithCancel(parentCtx)
 	w := newChannel[ContainerLog](ctx, bufferSize)
 
@@ -119,7 +119,7 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 		var since *time.Time
 
 		// Create logs stream request
-		stream, err := getContainerLogsStream(ctx, clientSet, namespace, podName, containerName, pod, since)
+		stream, err := getContainerLogsStream(ctx, clientSet, namespace, podName, containerName, follow, pod, since)
 		hadAnyContent := false
 		if err == io.EOF {
 			return
@@ -241,7 +241,7 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 				}
 				// Reinitialize logs stream
 				since = common.Ptr(tsReader.ts.Add(1))
-				stream, err = getContainerLogsStream(ctx, clientSet, namespace, podName, containerName, pod, since)
+				stream, err = getContainerLogsStream(ctx, clientSet, namespace, podName, containerName, follow, pod, since)
 				if err != nil {
 					return
 				}
