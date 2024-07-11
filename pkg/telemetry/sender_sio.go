@@ -70,7 +70,7 @@ func mapEvent(userID string, event Event) analytics.Track {
 	return analytics.Track{
 		Event:      event.Name,
 		UserId:     userID,
-		Properties: mapProperties(event.Params),
+		Properties: mapProperties(event.Name, event.Params),
 		Context: &analytics.Context{
 			App: analytics.AppInfo{
 				Name:    event.Params.AppName,
@@ -81,7 +81,7 @@ func mapEvent(userID string, event Event) analytics.Track {
 	}
 }
 
-func mapProperties(params Params) analytics.Properties {
+func mapProperties(name string, params Params) analytics.Properties {
 	properties := analytics.NewProperties().
 		Set("name", params.AppName).
 		Set("version", params.AppVersion).
@@ -131,6 +131,19 @@ func mapProperties(params Params) analytics.Properties {
 
 	if params.TestSuiteSteps != 0 {
 		properties = properties.Set("testSuiteSteps", params.TestSuiteSteps)
+	}
+	if name == "testkube_api_run_test_workflow" {
+		properties = properties.Set("testWorkflowSteps", params.TestWorkflowSteps)
+		properties = properties.Set("testWorkflowExecuteCount", params.TestWorkflowExecuteCount)
+		properties = properties.Set("testWorkflowParallelUsed", params.TestWorkflowParallelUsed)
+		properties = properties.Set("testWorkflowMatrixUsed", params.TestWorkflowMatrixUsed)
+		properties = properties.Set("testWorkflowServicesUsed", params.TestWorkflowServicesUsed)
+		properties = properties.Set("testWorkflowIsSample", params.TestWorkflowIsSample)
+		properties = properties.Set("testWorkflowTemplates", params.TestWorkflowTemplates)
+		properties = properties.Set("testWorkflowImages", params.TestWorkflowImages)
+		properties = properties.Set("testWorkflowTemplateUsed", params.TestWorkflowTemplateUsed)
+		properties = properties.Set("testWorkflowArtifactUsed", params.TestWorkflowArtifactUsed)
+		properties = properties.Set("testWorkflowImage", params.TestWorkflowImage)
 	}
 
 	return properties
