@@ -80,6 +80,8 @@ func UpdateTestSuitesCmd() *cobra.Command {
 	cmd.Flags().StringVar(&cronJobTemplateReference, "cronjob-template-reference", "", "reference to cron job template to use for the test")
 	cmd.Flags().StringVar(&scraperTemplateReference, "scraper-template-reference", "", "reference to scraper template to use for the test")
 	cmd.Flags().StringVar(&pvcTemplateReference, "pvc-template-reference", "", "reference to pvc template to use for the test")
+	cmd.Flags().MarkDeprecated("disable-webhooks", "disable-webhooks is deprecated")
+	cmd.Flags().MarkDeprecated("enable-webhooks", "enable-webhooks is deprecated")
 
 	return cmd
 }

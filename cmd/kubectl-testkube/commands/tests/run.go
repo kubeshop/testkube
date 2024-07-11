@@ -472,6 +472,7 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringVar(&debugFile, "debugger-file", "", "store debug info into file, stdout by default")
 	cmd.Flags().BoolVar(&attachDebugger, "attach-debugger", false, "attach simple debugger for job, need KUBECONFIG for the agent to be active")
 	cmd.Flags().BoolVar(&disableWebhooks, "disable-webhooks", false, "disable webhooks")
+	cmd.Flags().MarkDeprecated("enable-webhooks", "enable-webhooks is deprecated")
 
 	return cmd
 }

@@ -88,6 +88,7 @@ func NewCreateTestWorkflowCmd() *cobra.Command {
 	cmd.Flags().StringVar(&name, "name", "", "test workflow name")
 	cmd.Flags().BoolVar(&update, "update", false, "update, if test workflow already exists")
 	cmd.Flags().StringVarP(&filePath, "file", "f", "", "file path to get the test workflow specification")
+	cmd.Flags().MarkDeprecated("disable-webhooks", "disable-webhooks is deprecated")
 
 	return cmd
 }

@@ -104,6 +104,7 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 	cmd.Flags().StringToStringVarP(&config, "config", "", map[string]string{}, "configuration variables in a form of name1=val1 passed to executor")
 	cmd.Flags().BoolVarP(&watchEnabled, "watch", "f", false, "watch for changes after start")
 	cmd.Flags().BoolVar(&disableWebhooks, "disable-webhooks", false, "disable webhooks for this execution")
+	cmd.Flags().MarkDeprecated("enable-webhooks", "enable-webhooks is deprecated")
 
 	return cmd
 }

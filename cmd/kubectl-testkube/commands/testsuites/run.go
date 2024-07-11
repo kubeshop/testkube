@@ -237,6 +237,7 @@ func NewRunTestSuiteCmd() *cobra.Command {
 	cmd.Flags().StringArrayVarP(&masks, "mask", "", []string{}, "regexp to filter downloaded files, single or comma separated, like report/.* or .*\\.json,.*\\.js$")
 	cmd.Flags().BoolVarP(&silentMode, "silent", "", false, "don't print intermediate test suite execution")
 	cmd.Flags().BoolVar(&disableWebhooks, "disable-webhooks", false, "disable webhooks")
+	cmd.Flags().MarkDeprecated("enable-webhooks", "enable-webhooks is deprecated")
 
 	return cmd
 }
