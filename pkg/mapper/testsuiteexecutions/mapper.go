@@ -368,6 +368,7 @@ func MapAPIToCRD(request *testkube.TestSuiteExecution, generation int64) testsui
 			ExecuteStepResults: executeStepResults,
 			Labels:             request.Labels,
 			RunningContext:     runningContext,
+			DisableWebhooks:    request.DisableWebhooks,
 		},
 	}
 
