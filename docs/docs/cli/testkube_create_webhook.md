@@ -14,7 +14,6 @@ testkube create webhook [flags]
 
 ```
       --disable                             disable webhook
-      --enable                              enable webhook
   -e, --events stringArray                  event types handled by webhook e.g. start-test|end-test
       --header stringToString               webhook header value pair (golang template supported): --header Content-Type=application/xml (default [])
   -h, --help                                help for webhook

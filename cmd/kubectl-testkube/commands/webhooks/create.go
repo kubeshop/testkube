@@ -23,6 +23,7 @@ func NewCreateWebhookCmd() *cobra.Command {
 		headers                  map[string]string
 		payloadTemplateReference string
 		update                   bool
+		disable                  bool
 		onStateChange            bool
 	)
 
@@ -39,10 +40,6 @@ func NewCreateWebhookCmd() *cobra.Command {
 				ui.Failf("pass valid name (in '--name' flag)")
 			}
 
-			if isBothEnabledAndDisabledSet(cmd) {
-				ui.Failf("both --enable and --disable flags are set, please use only one")
-			}
-
 			namespace := cmd.Flag("namespace").Value.String()
 			var client apiv1.Client
 			if !crdOnly {
@@ -50,13 +47,6 @@ func NewCreateWebhookCmd() *cobra.Command {
 				ui.ExitOnError("getting client", err)
 
 				webhook, _ := client.GetWebhook(name)
-				if cmd.Flag("enable").Changed {
-					webhook.Disabled = false
-				}
-				if cmd.Flag("disable").Changed {
-					webhook.Disabled = true
-				}
-
 				if name == webhook.Name {
 					if cmd.Flag("update").Changed {
 						if !update {
@@ -111,8 +101,8 @@ func NewCreateWebhookCmd() *cobra.Command {
 	cmd.Flags().StringToStringVarP(&headers, "header", "", nil, "webhook header value pair (golang template supported): --header Content-Type=application/xml")
 	cmd.Flags().StringVar(&payloadTemplateReference, "payload-template-reference", "", "reference to payload template to use for the webhook")
 	cmd.Flags().BoolVar(&update, "update", false, "update, if webhook already exists")
-	cmd.Flags().Bool("disable", false, "disable webhook")
-	cmd.Flags().Bool("enable", false, "enable webhook")
+	cmd.Flags().BoolVar(&disable, "disable", false, "disable webhook")
+	cmd.Flags().MarkDeprecated("enable", "enable webhook is deprecated")
 	cmd.Flags().BoolVar(&onStateChange, "on-state-change", false, "specify whether webhook should be triggered only on a state change")
 
 	return cmd
