@@ -12,12 +12,6 @@ import (
 )
 
 func Run(run testworkflowprocessor.ActionExecute, container testworkflowprocessor.ActionContainer) {
-	// Ignore running when the step is already resolved (= skipped)
-	step := data.GetState().GetStep(run.Ref)
-	if step.Status != nil {
-		return
-	}
-
 	// TODO: Compute the pause
 	// TODO: Run the timeout
 	// TODO: Compute the retry

@@ -5,13 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"regexp"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/commands"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/container"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor"
@@ -53,78 +52,8 @@ func main() {
 		_ = os.Unsetenv(constants.EnvInstructions)
 	}
 
-	// Fetch information about default working directory
-	defaultWorkingDir, _ := os.Getwd()
-
-	// Extract the environment variables
-	scopedRegex := regexp.MustCompile(`^_(00|01|\d|[1-9]\d*)_`)
-	env := make(map[string]map[string]string)
-	baseEnv := map[string]string{}
-	for _, item := range os.Environ() {
-		match := scopedRegex.FindStringSubmatch(item)
-		key, value, _ := strings.Cut(item, "=")
-		if match == nil {
-			baseEnv[key] = value
-			continue
-		}
-		if env[match[1]] == nil {
-			env[match[1]] = map[string]string{}
-		}
-		env[match[1]][key[len(match[0]):]] = value
-		os.Unsetenv(key)
-	}
-
-	selectBareEnvSet := func(index string) {
-		os.Clearenv()
-		for k, v := range baseEnv {
-			_ = os.Setenv(k, v)
-		}
-		for k, v := range env[index] {
-			_ = os.Setenv(k, v)
-		}
-	}
-
 	// Distribute the details
 	currentContainer := testworkflowprocessor.ActionContainer{}
-	envSet := 0
-	envIndexMap := map[string]string{}
-	registerEnvSet := func(ref string) {
-		if _, ok := envIndexMap[ref]; !ok {
-			envIndexMap[ref] = fmt.Sprintf("%d", envSet)
-			envSet++
-		}
-	}
-	selectEnvSet := func(ref string, workingDir *string) {
-		if _, ok := envIndexMap[ref]; ok {
-			selectBareEnvSet(envIndexMap[ref])
-		} else {
-			selectBareEnvSet("<unknown>")
-		}
-
-		// Configure the working directory
-		if workingDir != nil && *workingDir != "" {
-			os.Chdir(*workingDir)
-		} else {
-			os.Chdir(defaultWorkingDir)
-		}
-
-		// Configure PWD variable, to make it similar to shell environment variables
-		if os.Getenv("PWD") == "" {
-			cwd, err := os.Getwd()
-			if err == nil {
-				_ = os.Setenv("PWD", cwd)
-			}
-		}
-
-		// Ensure the built-in binaries are available
-		if os.Getenv("PATH") == "" {
-			_ = os.Setenv("PATH", data.InternalBinPath)
-		} else {
-			_ = os.Setenv("PATH", fmt.Sprintf("%s:%s", os.Getenv("PATH"), data.InternalBinPath))
-		}
-
-		// TODO: Resolve computed environment variables
-	}
 
 	// Ensure there is a group index provided
 	if len(os.Args) != 2 {
@@ -152,15 +81,21 @@ func main() {
 		} else if action.CurrentStatus != nil {
 			state.SetCurrentStatus(*action.CurrentStatus)
 		} else if action.Setup != nil {
-			selectBareEnvSet("00")
 			// TODO: Handle error
+			container.Container.UseEnv("00")
 			commands.Setup(*action.Setup)
 			data.PrintHintDetails(data.InitStepName, constants.InstructionEnd, "passed")
 		} else if action.Container != nil {
-			registerEnvSet(action.Container.Ref)
-			selectEnvSet(action.Container.Ref, action.Container.Config.WorkingDir)
+			container.Container.SetConfig(action.Container.Config)
+			container.Container.AdvanceEnv()
 			currentContainer = *action.Container
 		} else if action.Execute != nil {
+			// Ignore running when the step is already resolved (= skipped)
+			step := data.GetState().GetStep(action.Execute.Ref)
+			if step.Status != nil {
+				return
+			}
+
 			commands.Run(*action.Execute, currentContainer)
 		} else if action.Start != nil {
 			if *action.Start == "" {
