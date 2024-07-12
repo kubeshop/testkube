@@ -414,9 +414,24 @@ func MapTestkubeRunningContextTypeToCDEventTiggerType(contextType string) string
 	switch testkube.RunningContextType(contextType) {
 	case testkube.RunningContextTypeUserCLI, testkube.RunningContextTypeUserUI:
 		return "manual"
-	case testkube.RunningContextTypeTestTrigger, testkube.RunningContextTypeTestSuite:
+	case testkube.RunningContextTypeTestTrigger, testkube.RunningContextTypeTestSuite, testkube.RunningContextTypeTestWorkflow:
 		return "event"
 	case testkube.RunningContextTypeScheduler:
+		return "schedule"
+	}
+
+	return "other"
+}
+
+// MapTestkubeTestWorkflowRunningContextActorToCDEventTiggerType maps OpenAPI spec Test Workflow Running Context Actor to CDEvent Trigger Type
+func MapTestkubeTestWorkflowRunningContextActorToCDEventTiggerType(actor testkube.TestWorkflowRunningContextActor) string {
+	switch actor {
+	case testkube.USER_TestWorkflowRunningContextActor:
+		return "manual"
+	case testkube.TESTWORKFLOW_TestWorkflowRunningContextActor, testkube.TESTWORKFLOWEXECUTION_TestWorkflowRunningContextActor,
+		testkube.TESTRIGGER_TestWorkflowRunningContextActor:
+		return "event"
+	case testkube.CRON_TestWorkflowRunningContextActor:
 		return "schedule"
 	}
 
@@ -487,6 +502,16 @@ func MapMimeTypeToCDEventOutputType(mimeType string) string {
 	return "other"
 }
 
+func getActor(runningContext []testkube.TestWorkflowRunningContext) *testkube.TestWorkflowRunningContextActor {
+	for _, ctx := range runningContext {
+		if ctx.Actor != nil {
+			return ctx.Actor
+		}
+	}
+
+	return nil
+}
+
 // MapTestkubeEventQueuedTestWorkflowTestToCDEvent maps OpenAPI spec Queued Test Workflow Test Event to CDEvent CDEventReader
 func MapTestkubeEventQueuedTestWorkflowTestToCDEvent(event testkube.Event, clusterID, defaultNamespace, dashboardURI string) (cdevents.CDEventReader, error) {
 	// Create the base event
@@ -522,6 +547,12 @@ func MapTestkubeEventQueuedTestWorkflowTestToCDEvent(event testkube.Event, clust
 			Id:     namespace,
 			Source: clusterID,
 		})
+
+		if actor := getActor(event.TestWorkflowExecution.RunningContext); actor != nil {
+			ev.SetSubjectTrigger(&cdevents.TestCaseRunQueuedSubjectContentTrigger{
+				Type: MapTestkubeTestWorkflowRunningContextActorToCDEventTiggerType(*actor),
+			})
+		}
 	}
 
 	return ev, nil
@@ -561,6 +592,12 @@ func MapTestkubeEventQueuedTestWorkflowTestSuiteToCDEvent(event testkube.Event, 
 			Id:     namespace,
 			Source: clusterID,
 		})
+
+		if actor := getActor(event.TestWorkflowExecution.RunningContext); actor != nil {
+			ev.SetSubjectTrigger(&cdevents.TestSuiteRunQueuedSubjectContentTrigger{
+				Type: MapTestkubeTestWorkflowRunningContextActorToCDEventTiggerType(*actor),
+			})
+		}
 	}
 
 	return ev, nil
@@ -601,6 +638,12 @@ func MapTestkubeEventStartTestWorkflowTestToCDEvent(event testkube.Event, cluste
 			Id:     namespace,
 			Source: clusterID,
 		})
+
+		if actor := getActor(event.TestWorkflowExecution.RunningContext); actor != nil {
+			ev.SetSubjectTrigger(&cdevents.TestCaseRunStartedSubjectContentTrigger{
+				Type: MapTestkubeTestWorkflowRunningContextActorToCDEventTiggerType(*actor),
+			})
+		}
 	}
 
 	return ev, nil
@@ -640,6 +683,12 @@ func MapTestkubeEventStartTestWorkflowTestSuiteToCDEvent(event testkube.Event, c
 			Id:     namespace,
 			Source: clusterID,
 		})
+
+		if actor := getActor(event.TestWorkflowExecution.RunningContext); actor != nil {
+			ev.SetSubjectTrigger(&cdevents.TestSuiteRunStartedSubjectContentTrigger{
+				Type: MapTestkubeTestWorkflowRunningContextActorToCDEventTiggerType(*actor),
+			})
+		}
 	}
 
 	return ev, nil

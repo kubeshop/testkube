@@ -14,6 +14,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/render"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testworkflows/renderer"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
+	intcommon "github.com/kubeshop/testkube/internal/common"
 	apiclientv1 "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
@@ -71,6 +72,12 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 				Name:            executionName,
 				Config:          config,
 				DisableWebhooks: disableWebhooks,
+				RunningContext: []testkube.TestWorkflowRunningContext{
+					{
+						Interface_: intcommon.Ptr(testkube.CLI_TestWorkflowRunningContextInterface),
+						Actor:      intcommon.Ptr(testkube.USER_TestWorkflowRunningContextActor),
+					},
+				},
 			})
 			if err != nil {
 				// User friendly Open Source operation error

@@ -203,6 +203,7 @@ func CreateExecutionMachine(prefix string, index int64) (string, expressions.Mac
 			"name":        env.ExecutionName(),
 			"number":      env.ExecutionNumber(),
 			"scheduledAt": env.ExecutionScheduledAt().UTC().Format(constants.RFC3339Millis),
+			"parentIds":   env.Config().Execution.ParentIds,
 		})
 }
 

@@ -19,6 +19,7 @@ import (
 	testsuitesv3 "github.com/kubeshop/testkube-operator/pkg/client/testsuites/v3"
 	testworkflowsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
+	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/configmap"
 	"github.com/kubeshop/testkube/pkg/event"
@@ -200,6 +201,16 @@ func TestWorkflowExecute(t *testing.T) {
 			"WATCHER_EVENT_NAME":       "",
 			"WATCHER_EVENT_NAMESPACE":  "",
 			"WATCHER_EVENT_RESOURCE":   "",
+		},
+		RunningContext: []testkube.TestWorkflowRunningContext{
+			{
+				Interface_: common.Ptr(testkube.INTERNAL_TestWorkflowRunningContextInterface),
+				Actor:      common.Ptr(testkube.TESTRIGGER_TestWorkflowRunningContextActor),
+				Caller: &testkube.TestWorkflowRunningContextCaller{
+					CallerResourceType: common.Ptr(testkube.TESTTRIGGER_TestWorkflowRunningContextCallerResourceType),
+					CallerResourceName: "test-trigger-1",
+				},
+			},
 		},
 	}
 	mockTestWorkflowExecution := testkube.TestWorkflowExecution{}

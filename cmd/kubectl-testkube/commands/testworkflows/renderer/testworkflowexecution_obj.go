@@ -58,10 +58,32 @@ func printPrettyOutput(ui *ui.UI, execution testkube.TestWorkflowExecution) {
 			ui.Warn("Execution number:    ", fmt.Sprintf("%d", execution.Number))
 		}
 		ui.Warn("Requested at:        ", execution.ScheduledAt.String())
+		for _, ctx := range execution.RunningContext {
+			ui.Warn("Running context:     ")
+			if ctx.Interface_ != nil {
+				ui.Warn("Interface:           ", string(*ctx.Interface_))
+			}
+			if ctx.Actor != nil {
+				ui.Warn("Actor:               ", string(*ctx.Actor))
+			}
+			if ctx.Caller != nil {
+				ui.Warn("Caller:                ")
+				if ctx.Caller.CallerResourceType != nil {
+					ui.Warn("Resource type:       ", string(*ctx.Caller.CallerResourceType))
+				}
+				ui.Warn("Resource name:       ", ctx.Caller.CallerResourceName)
+				if ctx.Caller.CallerResourceExecutionID != "" {
+					ui.Warn("Execution ID:        ", ctx.Caller.CallerResourceExecutionID)
+				}
+				if ctx.Caller.FullExecutionPath != "" {
+					ui.Warn("Full execution path: ", ctx.Caller.FullExecutionPath)
+				}
+			}
+		}
 		if execution.Result != nil && execution.Result.Status != nil {
 			ui.Warn("Status:              ", string(*execution.Result.Status))
 			if !execution.Result.QueuedAt.IsZero() {
-				ui.Warn("Queued at:          ", execution.Result.QueuedAt.String())
+				ui.Warn("Queued at:           ", execution.Result.QueuedAt.String())
 			}
 			if !execution.Result.StartedAt.IsZero() {
 				ui.Warn("Started at:          ", execution.Result.StartedAt.String())

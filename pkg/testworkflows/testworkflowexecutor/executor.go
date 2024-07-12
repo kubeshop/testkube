@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -448,6 +449,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		"name":        "<mock_name>",
 		"number":      "1",
 		"scheduledAt": now.UTC().Format(constants.RFC3339Millis),
+		"parentIds":   strings.Join(request.ParentExecutionIds, "/"),
 	})
 
 	// Preserve resolved TestWorkflow
@@ -489,6 +491,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		"name":        executionName,
 		"number":      number,
 		"scheduledAt": now.UTC().Format(constants.RFC3339Millis),
+		"parentIds":   strings.Join(request.ParentExecutionIds, "/"),
 	})
 
 	// Process the TestWorkflow
@@ -520,6 +523,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		ResolvedWorkflow:          testworkflowmappers.MapKubeToAPI(resolvedWorkflow),
 		TestWorkflowExecutionName: testWorkflowExecutionName,
 		DisableWebhooks:           disableWebhooks,
+		RunningContext:            request.RunningContext,
 	}
 	err = e.repository.Insert(ctx, execution)
 	if err != nil {
