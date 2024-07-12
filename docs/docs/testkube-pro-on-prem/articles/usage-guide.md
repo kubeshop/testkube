@@ -2,108 +2,125 @@
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-- [Testkube Pro On-Prem Helm Chart Installation and Usage Guide](#testkube-enterprise-helm-chart-installation-and-usage-guide)
-  - [Installation of Testkube Enterprise and an Agent in the same cluster](#installation-of-testkube-enterprise-and-an-agent-in-the-same-cluster)
-  - [Installation of Testkube Enterprise and an Agent in multiple clusters](#installation-of-testkube-enterprise-and-an-agent-in-multiple-clusters)
-  - [Prerequisites](#prerequisites)
-  - [Configuration](#configuration)
-    - [Docker images](#docker-images)
-    - [License](#license)
-      - [Online License](#online-license)
-      - [Offline License](#offline-license)
-    - [Ingress](#ingress)
-      - [Configuration](#configuration-1)
-      - [Domain](#domain)
-      - [TLS](#tls)
-    - [Auth](#auth)
-    - [Metrics](#metrics)
-    - [Invitations](#invitations)
-      - [Invitations via email](#invitations-via-email)
-      - [Auto-accept invitations](#auto-accept-invitations)
-    - [Organization and Environment Management](#organization-and-environment-management)
-  - [Bring Your Own Infra](#bring-your-own-infra)
-    - [MongoDB](#mongodb)
-    - [NATS](#nats)
-    - [MinIO](#minio)
-    - [Dex](#dex)
-  - [Installation](#installation)
-    - [Production setup](#production-setup)
-  - [FAQ](#faq)
+
+- [Components](#components)
+- [Installation modes](#installation-modes)
+  - [Demo single-cluster installation](#demo-single-cluster-installation)
+  - [Multi-cluster installation](#multi-cluster-installation)
+    - [Prerequisites](#prerequisites)
+- [Configuration](#configuration)
+  - [License](#license)
+    - [Online License](#online-license)
+    - [Offline License](#offline-license)
+  - [Ingress](#ingress)
+    - [Configuration](#configuration-1)
+    - [Domain](#domain)
+    - [TLS](#tls)
+    - [Self-signed certificates](#self-signed-certificates)
+  - [Auth](#auth)
+  - [Metrics](#metrics)
+  - [Invitations](#invitations)
+    - [Invitations Via Email](#invitations-via-email)
+    - [Auto-accept Invitations](#auto-accept-invitations)
+  - [Organization and Environment Management](#organization-and-environment-management)
+- [Bring Your Own Infra](#bring-your-own-infra)
+  - [MongoDB](#mongodb)
+  - [NATS](#nats)
+  - [MinIO](#minio)
+  - [Dex](#dex)
+- [Installation](#installation)
+  - [Production Setup](#production-setup)
+- [FAQ](#faq)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
-
-Welcome to the Testkube Enterprise Helm chart installation and usage guide.
+Welcome to the Testkube On-Prem Helm chart installation and usage guide.
 This comprehensive guide provides step-by-step instructions for installing and utilizing the Testkube Enterprise Helm chart.
-Testkube Enterprise is a cutting-edge Kubernetes-native testing platform designed to optimize your testing and quality assurance processes with enterprise-grade features.
+Testkube On-Prem is a cutting-edge Kubernetes-native testing platform designed to optimize your testing and quality assurance processes with enterprise-grade features.
 
-## Installation of Testkube Enterprise and an Agent in the same cluster
+## Components
 
-We have a simplified installation process to allow to deploy everything in a single cluster. You can find all the details at [the Testkube Quickstart](../../articles/install/quickstart-install.mdx).
+Testkube On-Prem consists of the following components:
+* Testkube Control Plane - The central component that manages connected Agents.
+  * API - A service which runs the REST, Agent gRPC and Websocket APIs for interacting with the Control Plane.
+    * Helm chart - Bundled as a subchart in the [testkube-enterprise](https://github.com/kubeshop/testkube-cloud-charts/tree/main/charts/testkube-enterprise) Helm chart.
+    * Docker image - [kubeshop/testkube-enterprise-api](https://hub.docker.com/r/kubeshop/testkube-enterprise-api)
+  * Dashboard - The web-based UI for managing tests, environments, and users.
+    * Helm chart - Bundled as a subchart in the [testkube-enterprise](https://github.com/kubeshop/testkube-cloud-charts/tree/main/charts/testkube-enterprise) Helm chart. 
+    * Docker image - [kubeshop/testkube-enterprise-ui](https://hub.docker.com/r/kubeshop/testkube-enterprise-ui)
+  * Worker Service - A service which handles async operations for artifacts and test executions.
+    * Helm chart - Bundled as a subchart in the [testkube-enterprise](https://github.com/kubeshop/testkube-cloud-charts/tree/main/charts/testkube-enterprise) Helm chart. 
+    * Docker image - [kubeshop/testkube-enterprise-worker-service](https://hub.docker.com/r/kubeshop/testkube-enterprise-worker-service)
+* Testkube Agent - A lightweight component that connects to the Control Plane and executes test runs.
+  * Helm chart - [kubeshop/testkube](https://github.com/kubeshop/helm-charts/tree/main/charts/testkube)
+  * Docker image - [kubeshop/testkube-api-server](https://hub.docker.com/r/kubeshop/testkube-api-server)
 
+The Control Plane Helm charts are published in the [testkubeenterprise](https://kubeshop.github.io/testkube-cloud-charts) Helm registry.
+Run the following command to add the Testkube On-Prem Helm registry:
+```bash
+helm repo add testkubeenterprise https://kubeshop.github.io/testkube-cloud-charts
+```
 
-## Installation of Testkube Enterprise and an Agent in multiple clusters
-## Prerequisites
+The Agent Helm chart is published in the [kubeshop](https://kubeshop.github.io/helm-charts) Helm registry.
+Run the following command to add the Testkube Helm registry:
+```bash
+helm repo add kubeshop https://kubeshop.github.io/helm-charts
+```
+
+For external dependencies, check the [Bring Your Own Infra](#bring-your-own-infra) section.
+
+## Installation modes
+
+Testkube On-Prem supports two installation modes: a demo single-cluster and a multi-cluster installation.
+
+For a quick start, we recommend beginning with the demo single-cluster installation.
+This setup installs both the Testkube Control Plane and an Agent within the same cluster.
+
+Once you're familiar with this configuration, you can proceed to the multi-cluster installation,
+which deploys the Testkube Control Plane in one cluster, while Agents can be installed in the same or different clusters.
+
+### Demo single-cluster installation
+
+We offer a demo installer which deploys Testkube On-Prem and connects an Agent in a single cluster.
+You can find all the details at [the Testkube Quickstart](../../articles/install/quickstart-install.mdx).
+
+### Multi-cluster installation
+
+Multi-cluster installation is a more advanced setup that requires additional configuration.
+This setup is recommended for production environments where you want to separate the Control Plane and Agents for better scalability and security.
+
+This setup configures the Testkube Control Plane in a central cluster and exposes the necessary components so Agents can connect from the same or other clusters.
+
+#### Prerequisites
 
 Before you proceed with the installation, please ensure that you have the following prerequisites in place:
 * Kubernetes cluster (version 1.21+)
 * [Helm](https://helm.sh/docs/intro/quickstart/) (version 3+)
-* [cert-manager](https://cert-manager.io/docs/installation/) (version 1.11+) - Used for TLS certificate management.
-* [NGINX Controller](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/) (version v1.8+) - Used for Ingress configuration.
+* (RECOMMENDED) [cert-manager](https://cert-manager.io/docs/installation/) (version 1.11+) - Used for TLS certificate management.
+* (RECOMMENDED) [NGINX Controller](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/) (version v1.8+) - Used for Ingress configuration.
 * (OPTIONAL) [Prometheus Operator](https://github.com/prometheus-operator/prometheus-operator) (version 0.49+) - used for metrics collection
 * Own a public/private domain for creating Ingress rules.
 * License Key and/or License File, if offline access is required.
 
-**NOTE**
-While it is possible to use custom TLS certificates for the Testkube Enterprise API and Dashboard,
-we strongly recommend using `cert-manager` for easier certificate management.
+If your Kubernetes cluster is using Istio, please refer to the [Istio](../../articles/istio.md) article for additional configuration.
 
 ## Configuration
-
-### Docker Images
-
-**DEPRECATION NOTICE**: As of November 2023, Testkube Enterprise Docker images are publicly accessible.
-You only need to follow the steps in this section if you wish to re-publish the images to your private Docker registry;
-otherwise, you may skip this section.
-
-To begin, ensure that you have access to the Testkube Enterprise API & Dashboard Docker images.
-You can either request access from your Testkube representative or upload the Docker image tarball artifacts to a private Docker registry.
-
-Next, create a secret to store your Docker registry credentials:
-```bash
-kubectl create secret docker-registry testkube-enterprise-registry \
-  --docker-server=<your-registry-server> \
-  --docker-username=<your-name>          \
-  --docker-password=<your-pword>         \
-  --docker-email=<your-email>            \
-  --namespace=testkube-enterprise
-```
-
-Make sure to configure the image pull secrets in your `values.yaml` file:
-```helm
-global:
-  imagePullSecrets:
-    - name: testkube-enterprise-registry
-```
 
 ### License
 
 Select the appropriate license type for your environment.
 
+If your environment can access the Testkube On-Prem License Server (https://api.keygen.sh), you can use an **Online License** which only requires a **License Key**.
+
 For air-gapped & firewalled environments, we offer an option to use an [Offline License](#offline-license) for enhanced security.
 An **Offline License** consists of a **License Key** and **License File**.
 
-If your environment has internet access, you can use an [Online License](#online-license), which only requires the **License Key**.
-
 #### Online License
-
-If your environment has internet access, you can use an **Online License**, which only requires the **License Key**,
-and can be provided as a Helm parameter or Kubernetes secret.
 
 To provide the **License Key** as a Helm parameter, use the following configuration:
 ```helm
 global:
-  enterpriseLicenseKey: <your license key>
+  enterpriseLicenseKey: <license key>
 ```
 
 To provide the **License Key** as a Kubernetes secret, first we need to create a secret with the required field.
@@ -116,7 +133,7 @@ kubectl create secret generic testkube-enterprise-license \
 And then use the following Helm chart configuration:
 ```helm
 global:
-  enterpriseLicenseSecretRef: <secret name>
+  enterpriseLicenseSecretRef: testkube-enterprise-license
 ```
 
 #### Offline License
@@ -128,7 +145,7 @@ The Kubernetes secret needs to contain 2 entries: `license.lic` and `LICENSE_KEY
 To create the secret with the **License Key** and **License File**, run the following command:
 ```bash
 kubectl create secret generic testkube-enterprise-license \
-  --from-literal=LICENSE_KEY=<your license key>            \
+  --from-literal=LICENSE_KEY=<your license key>           \
   --from-file=license.lic=<path-to-license-file>          \
   --namespace=testkube-enterprise
 ```
@@ -137,23 +154,15 @@ After creating the secret, use the following Helm chart configuration:
 ```helm
 global:
   enterpriseOfflineAccess: true
-  licenseFileSecret: testkube-enterprise-license
-```
-
-Alternatively, you can provide the **License File** as a Helm parameter:
-```helm
-global:
-  licenseKey: <your license key>
-  licenseFile: <your license file>
+  enterpriseLicenseSecretRef: testkube-enterprise-license
 ```
 
 ### Ingress
 
-Testkube Enterprise requires the NGINX Controller to configure and optimize its protocols.
-NGINX is the sole supported Ingress Controller, and is essential for Testkube Enterprise's operation.
+Testkube On-Prem officially only supports the NGINX Controller as the default configuration relies on NGINX.
+Other Ingress Controllers can also be used (i.e. Istio Ingress Controller), but they may require additional configuration.
 
-
-We highly recommend installing Testkube Enterprise with Ingress enabled.
+We highly recommend installing Testkube On-Prem with Ingress enabled.
 This requires a valid domain (public or private) with a valid TLS certificate.
 Ingresses are enabled and created by default.
 
@@ -171,10 +180,7 @@ testkube-cloud-api:
 
 #### Configuration
 
-To ensure the reliable functioning of gRPC and Websockets protocols, Testkube Enterprise is locked in with NGINX Ingress Controller.
-
-Below are current configurations per Ingress resource which ensure Testkube Enterprise protocols work performant and reliably.
-It is not recommended to change any of these settings!
+Below are current configurations per Ingress resource which ensure Testkube On-Prem protocols work performant and reliably.
 
 gRPC Ingress annotations:
 ```kubernetes
@@ -195,7 +201,7 @@ If you want to use a different Ingress Controller, please reach out to our suppo
 
 #### Domain
 
-Testkube Enterprise requires a domain (public or internal) under which it will expose the following services:
+Testkube On-Prem requires a domain (public or internal) under which it will expose the following services:
 
 | Subdomain                       | Service          |
 |---------------------------------|------------------|
@@ -204,16 +210,15 @@ Testkube Enterprise requires a domain (public or internal) under which it will e
 | `agent.(sub)<your-domain>`      | gRPC API         |
 | `websockets.(sub)<your-domain>` | WebSockets API   |
 | `storage.(sub)<your-domain>`    | Storage API      |
-| `status.(sub)<your-domain>`     | Status Pages API |
 
 #### TLS
 
-For best the performance, TLS should be terminated at the application level (Testkube Enterprise API) instead of NGINX/Ingress level because
+For best performance, it is recommended to terminate TLS at the application level (Testkube Control Plane) instead of NGINX/Ingress level because
 gRPC and Websockets protocols perform significantly better when HTTP2 protocol is used end-to-end.
 Note that NGINX, by default, downgrades the HTTP2 protocol to HTTP1.1 when the backend service is using an insecure port.
 
 If `cert-manager` (check the [Prerequisites](#prerequisites) for installation guide) is installed in your cluster, it should be configured to issue certificates for the configured domain by using the `Issuer` or `ClusterIssuer` resource.
-Testkube Enterprise Helm chart needs the following config in that case:
+Testkube On-Prem Helm chart needs the following config in that case:
 ```helm
 global:
   certificateProvider: "cert-manager"
@@ -221,14 +226,13 @@ global:
     issuerRef: <issuer|clusterissuer name>
 ```
 
-By default, Testkube Enterprise uses a `ClusterIssuer` `cert-manager` resource, that can be changed by setting the `testkube-cloud-api.api.tls.certManager.issuerKind` field to `Issuer`.
+By default, Testkube On-Prem uses a `ClusterIssuer` `cert-manager` resource, that can be changed by setting the `testkube-cloud-api.api.tls.certManager.issuerKind` field to `Issuer`.
 
 If `cert-manager` is not installed in your cluster, valid TLS certificates (for API & Dashboard) which cover the following subdomains need to be provided:
 * API (tls secret name is configured with `testkube-cloud-api.api.tls.tlsSecret` field)
     * `api.<your-domain>`
     * `agent.<your-domain>`
     * `websockets.<your-domain>`
-    * `status.<your-domain>`
 * Dashboard (TLS secret name is configured with `testkube-cloud-ui.ingress.tlsSecretName` field)
     * `dashboard.<your-domain>`
       Also, `global.certificateProvider` should be set to blank ("").
@@ -237,39 +241,44 @@ global:
   certificateProvider: ""
 ```
 
-#### Custom certificates
+#### Self-signed certificates
 
-In order to use custom certificates, first a secret needs to be created with the following entries:
-* `tls.crt` - the certificate
-* `tls.key` - the private key
-* `ca.crt` - the CA certificate (if the certificate is not self-signed)
+If the Testkube On-Prem Control Plane components are behind a Load Balancer utilizing self-signed certificates, additional configuration must be provided to the Agent Helm chart during installation.
+Use one of the following methods to configure the Agent Helm chart to trust the self-signed certificates:
+1. Inject the custom CA certificate
+    ```helm
+    # testkube chart
+    global:
+      tls:
+        caCertPath: /etc/testkube/certs
+      volumes:
+        additionalVolumes:
+          - name: custom-ca
+            secret:
+              secretName: custom-cert
+        additionalVolumeMounts:
+          - name: custom-ca
+            mountPath: /etc/testkube/certs
+            readOnly: true
+    ```
+2. Skip TLS verification (not recommended in a production setup)
+    ```helm
+    # testkube chart
+    global:
+      tls:
+        skipVerify: true
+    ```
 
-If certificate-based authentication is required, the custom certificates need to be configured in the following places:
-* Enterprise API
-  * If `MINIO_ENDPOINT` is set to an exposed URL, then the following Helm values need to be configured:
-    - The following Helm parameter needs to be enabled to inject the custom certificate into MinIO `testkube-cloud-api.minio.certSecret.enabled: true`
-    - If the certificate is not self-signed, the CA cert needs to be injected also by enabling the Helm parameter `testkube-cloud-api.minio.mountCACertificate: true`
-    - Custom certificate verification can also be skipped by setting `testkube-cloud-api.minio.skipVerify: true`
-  * If `MINIO_ENDPOINT` uses the Kubernetes DNS record (`testkube-enterprise-minio.<namespace>.svc.cluster.local:9000`), `AGENT_STORAGE_HOSTNAME` should be set to point to the exposed storage URL
-* Agent
-  * Agent API
-    - If the Enterprise API is configured to use certificate-based authentication or is using a certificate signed by a custom CA, the Agent API needs to be configured to use the same certificates by pointing `testkube-api.cloud.tls.certificate.secretRef` to the Kubernetes secret which contains the certificates
-    - Custom certificate verification can also be skipped by setting `testkube-api.cloud.tls.skipVerify: true`
-  * Storage
-    - The following Helm parameter needs to be enabled to inject the custom certificate into MinIO `testkube-api.storage.certSecret.enabled: true`
-    - If the certificate is not self-signed, the CA cert needs to be injected also by enabling the Helm parameter `testkube-cloud-api.minio.mountCACertificate: true`
-    - Custom certificate verification can also be skipped by setting `testkube-api.storage.skipVerify: true`
 
 ### Auth
 
-Testkube Enterprise utilizes [Dex](https://dexidp.io/) for authentication and authorization.
+Testkube On-Prem utilizes [Dex](https://dexidp.io/) for authentication and authorization.
 For detailed instruction on configuring Dex, please refer to the [Identity Provider](./auth.md) document.
 
 ### Metrics
 
-Testkube Enterprise exposes Prometheus metrics on the `/metrics` endpoint and uses a `ServiceMonitor` resource to expose them to Prometheus.
+Testkube On-Prem exposes Prometheus metrics on the `/metrics` endpoint and uses a `ServiceMonitor` resource to expose them to Prometheus.
 In order for this to work, you need to have `Prometheus Operator` installed in your cluster so that the `ServiceMonitor` resource can be created.
-
 
 Use the following configuration to enable metrics:
 ```helm
@@ -280,14 +289,14 @@ testkube-cloud-api:
 
 ### Invitations
 
-Testkube Enterprise allows you to invite users to Organizations and Environments within Testkube, granting them specific roles and permissions.
+Testkube On-Prem allows you to invite users to Organizations and Environments within Testkube, granting them specific roles and permissions.
 
 There are two supported invitation modes: `email` and `auto-accept`.
 Use `email` to send an invitation for the user to accept, and `auto-accept` to automatically add users without requiring acceptance.
 
 #### Invitations Via Email
 
-If `testkube-cloud-api.api.inviteMode` is set to `email`, Testkube Enterprise will send emails when a user gets invited to
+If `testkube-cloud-api.api.inviteMode` is set to `email`, Testkube On-Prem will send emails when a user gets invited to
 an Organization or an Environment and when SMTP settings need to be configured in the API Helm chart.
 
 ```helm
@@ -308,7 +317,7 @@ testkube-cloud-api:
 
 #### Auto-accept Invitations
 
-If `testkube-cloud-api.api.inviteMode` is set to `auto-accept`, Testkube Enterprise will automatically add users to
+If `testkube-cloud-api.api.inviteMode` is set to `auto-accept`, Testkube On-Prem will automatically add users to
 Organizations and Environments when they get invited.
 
 ```helm
@@ -367,11 +376,11 @@ testkube-cloud-api:
 
 ## Bring Your Own Infra
 
-Testkube Enterprise supports integrating with existing infrastructure components such as MongoDB, NATS, Dex, etc.
+Testkube On-Prem supports integrating with existing infrastructure components such as MongoDB, NATS, Dex, etc.
 
 ### MongoDB
 
-Testkube Enterprise uses MongoDB as a database for storing all the data.
+Testkube On-Prem uses MongoDB as a database for storing all the data.
 By default, it will install a MongoDB instance using the Bitnami MongoDB Helm chart.
 
 If you wish to use an existing MongoDB instance, you can configure the following values:
@@ -387,7 +396,7 @@ testkube-cloud-api:
 
 ### NATS
 
-Testkube Enterprise uses NATS as a message broker for communication between API and Agents.
+Testkube On-Prem uses NATS as a message broker for communication between Control Plane components.
 
 If you wish to use an existing NATS instance, you can configure the following values:
 ```helm
@@ -402,7 +411,7 @@ testkube-cloud-api:
 
 ### MinIO
 
-Testkube Enterprise uses MinIO as a storage backend for storing artifacts.
+Testkube On-Prem uses MinIO as a storage backend for storing artifacts.
 
 If you wish to use an existing MinIO instance, you can configure the following values:
 ```helm
@@ -415,7 +424,7 @@ testkube-cloud-api:
 
 ### Dex
 
-Testkube Enterprise uses Dex as an identity provider.
+Testkube On-Prem uses Dex as an identity provider.
 
 If you wish to use an existing Dex instance, you can configure the following values:
 ```helm
@@ -431,7 +440,7 @@ testkube-cloud-api:
 
 ## Installation
 
-1. Add our Testkube Enterprise Helm registry:
+1. Add our Testkube On-Prem Helm registry:
     ```bash
     helm repo add testkubeenterprise https://kubeshop.github.io/testkube-cloud-charts
     ```
@@ -459,11 +468,11 @@ For best performance and reliability, users should follow this official setup gu
 5. Configure Metrics as described in the [Metrics](#metrics) section
 6. Configure Invitations as described in the [Invitations](#invitations) section
 7. Configure BYOI components as described in the [Bring Your Own Infra](#bring-your-own-infra) section
-8. Install Testkube Enterprise as described in the [Installation](#installation) section
+8. Install Testkube On-Prem as described in the [Installation](#installation) section
 
 ## FAQ
 
-Q: Testkube Enterprise API is crashing (pod is in `Error`/`CrashLoopBackOff` state) with the following error:
+Q: Testkube Control Plane API is crashing (pod is in `Error`/`CrashLoopBackOff` state) with the following error:
 ```
 panic: license file is invalid
 ```
