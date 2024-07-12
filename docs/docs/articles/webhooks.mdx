@@ -491,7 +491,7 @@ testkube create webhook --disable --name "${WEBHOOK_NAME}" ...
 To enable it explicitly:
 
 ```bash
-testkube create webhook --enable --name "${WEBHOOK_NAME}" ...
+testkube create webhook --disable=false --name "${WEBHOOK_NAME}" ...
 ```
 
 #### Set on Update
@@ -505,7 +505,7 @@ testkube update webhook --disable --name "${WEBHOOK_NAME}"
 To enable:
 
 ```bash
-testkube update webhook --enable --name "${WEBHOOK_NAME}"
+testkube update webhook --disable=false --name "${WEBHOOK_NAME}"
 ```
 
 </TabItem>
