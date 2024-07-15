@@ -9,10 +9,10 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/orchestration"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action"
 )
 
-func Run(run testworkflowprocessor.ActionExecute, container testworkflowprocessor.ActionContainer) {
+func Run(run action.ActionExecute, container action.ActionContainer) {
 	state := data.GetState()
 	step := state.GetStep(run.Ref)
 
@@ -65,7 +65,7 @@ func Run(run testworkflowprocessor.ActionExecute, container testworkflowprocesso
 
 	// Notify about the status
 	step.SetStatus(status)
-	orchestration.FinishExecution(run.Ref, constants.ExecutionResult{ExitCode: exitCode, Iteration: 0})
+	orchestration.FinishExecution(step, constants.ExecutionResult{ExitCode: exitCode, Iteration: 0})
 
 	// Save the data
 	data.SaveState()

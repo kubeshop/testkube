@@ -132,11 +132,3 @@ func Expression(expr string, m ...expressions.Machine) (expressions.StaticValue,
 	m = append(m, AliasMachine, GetBaseTestWorkflowMachine())
 	return expressions.EvalExpression(expr, m...)
 }
-
-func RefSuccessExpression(expr string) (expressions.StaticValue, error) {
-	return expressions.EvalExpression(expr, RefSuccessMachine)
-}
-
-func RefStatusExpression(expr string) (expressions.StaticValue, error) {
-	return expressions.EvalExpression(expr, RefStatusMachine)
-}

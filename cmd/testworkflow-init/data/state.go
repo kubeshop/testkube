@@ -8,11 +8,11 @@ import (
 	"sync"
 
 	"github.com/kubeshop/testkube/pkg/expressions"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action"
 )
 
 type state struct {
-	Actions [][]testworkflowprocessor.Action `json:"a,omitempty"`
+	Actions [][]action.Action `json:"a,omitempty"`
 
 	CurrentRef    string               `json:"c,omitempty"`
 	CurrentStatus string               `json:"s,omitempty"`
@@ -20,7 +20,7 @@ type state struct {
 	Steps         map[string]*StepData `json:"S,omitempty"`
 }
 
-func (s *state) GetActions(groupIndex int) []testworkflowprocessor.Action {
+func (s *state) GetActions(groupIndex int) []action.Action {
 	if groupIndex < 0 || groupIndex >= len(s.Actions) {
 		panic("unknown actions group")
 	}
@@ -50,7 +50,7 @@ func (s *state) SetOutput(ref, name string, value interface{}) {
 
 func (s *state) GetStep(ref string) *StepData {
 	if s.Steps[ref] == nil {
-		s.Steps[ref] = &StepData{}
+		s.Steps[ref] = &StepData{Ref: ref}
 	}
 	if s.Steps[ref].Condition == "" {
 		s.Steps[ref].Condition = "passed"

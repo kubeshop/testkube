@@ -1,7 +1,6 @@
 package testworkflowprocessor
 
 import (
-	"encoding/json"
 	"fmt"
 	"reflect"
 	"regexp"
@@ -19,6 +18,7 @@ import (
 	constants2 "github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/expressions"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 )
 
@@ -208,115 +208,11 @@ func isNotOptional(stage Stage) bool {
 //	return
 //}
 
-type ActionResult struct {
-	Ref   string `json:"r"`
-	Value string `json:"v"`
-}
-
-type ActionDeclare struct {
-	Condition string   `json:"c"`
-	Ref       string   `json:"r"`
-	Parents   []string `json:"p,omitempty"`
-}
-
-type ActionExecute struct {
-	Ref      string `json:"r"`
-	Negative bool   `json:"n,omitempty"`
-}
-
-type ActionContainer struct {
-	Ref    string                          `json:"r"`
-	Config testworkflowsv1.ContainerConfig `json:"c"`
-}
-
-// TODO: Consider for groups too?
-type ActionPause struct {
-	Ref string `json:"r"`
-}
-
-type ActionTimeout struct {
-	Ref     string `json:"r"`
-	Timeout string `json:"t"`
-}
-
-// TODO: RetryAction as a conditional GoTo back?
-type ActionRetry struct {
-	Ref   string `json:"r"`
-	Count int32  `json:"c,omitempty"`
-	Until string `json:"u,omitempty"`
-}
-
-type ActionSetup struct {
-	CopyInit     bool `json:"i,omitempty"`
-	CopyBinaries bool `json:"b,omitempty"`
-}
-
-type Action struct {
-	CurrentStatus *string          `json:"s,omitempty"`
-	Start         *string          `json:"S,omitempty"`
-	End           *string          `json:"E,omitempty"`
-	Setup         *ActionSetup     `json:"_,omitempty"`
-	Declare       *ActionDeclare   `json:"d,omitempty"`
-	Result        *ActionResult    `json:"r,omitempty"`
-	Container     *ActionContainer `json:"c,omitempty"`
-	Execute       *ActionExecute   `json:"e,omitempty"`
-	Timeout       *ActionTimeout   `json:"t,omitempty"`
-	Pause         *ActionPause     `json:"p,omitempty"`
-	Retry         *ActionRetry     `json:"R,omitempty"`
-}
-
-type ActionType string
-
-const (
-	// Declarations
-	ActionTypeDeclare ActionType = "declare"
-	ActionTypePause              = "pause"
-	ActionTypeResult             = "result"
-	ActionTypeTimeout            = "timeout"
-	ActionTypeRetry              = "retry"
-
-	// Operations
-	ActionTypeContainerTransition = "container"
-	ActionTypeCurrentStatus       = "status"
-	ActionTypeStart               = "start"
-	ActionTypeEnd                 = "end"
-	ActionTypeSetup               = "setup"
-	ActionTypeExecute             = "execute"
-)
-
-func (a *Action) Type() ActionType {
-	if a.Declare != nil {
-		return ActionTypeDeclare
-	} else if a.Pause != nil {
-		return ActionTypePause
-	} else if a.Result != nil {
-		return ActionTypeResult
-	} else if a.Timeout != nil {
-		return ActionTypeTimeout
-	} else if a.Retry != nil {
-		return ActionTypeRetry
-	} else if a.Container != nil {
-		return ActionTypeContainerTransition
-	} else if a.CurrentStatus != nil {
-		return ActionTypeCurrentStatus
-	} else if a.Start != nil {
-		return ActionTypeStart
-	} else if a.End != nil {
-		return ActionTypeEnd
-	} else if a.Setup != nil {
-		return ActionTypeSetup
-	} else if a.Execute != nil {
-		return ActionTypeExecute
-	}
-	v, e := json.Marshal(a)
-	panic(fmt.Sprintf("unknown action type: %s, %v", v, e))
-}
-
 // TODO: Wrap all errors in this file
 // TODO: tail-recursive
-func analyzeOperations(currentStatus string, parents []string, stage Stage, machines ...expressions.Machine) (actions []Action, err error) {
+func analyzeOperations(currentStatus string, parents []string, stage Stage, machines ...expressions.Machine) (actions []action.Action, err error) {
 	// Store the init status
-	actions = append(actions, Action{
+	actions = append(actions, action.Action{
 		CurrentStatus: common.Ptr(currentStatus),
 	})
 
@@ -325,8 +221,8 @@ func analyzeOperations(currentStatus string, parents []string, stage Stage, mach
 	if condition == "" || condition == "null" {
 		condition = "passed" // TODO: Think if it should default the condition to "passed"
 	}
-	actions = append(actions, Action{
-		Declare: &ActionDeclare{Ref: stage.Ref(), Condition: condition, Parents: parents},
+	actions = append(actions, action.Action{
+		Declare: &action.ActionDeclare{Ref: stage.Ref(), Condition: condition, Parents: parents},
 	})
 
 	// Configure the container for action
@@ -343,41 +239,41 @@ func analyzeOperations(currentStatus string, parents []string, stage Stage, mach
 		if err != nil {
 			return nil, err
 		}
-		actions = append(actions, Action{
-			Container: &ActionContainer{Ref: stage.Ref(), Config: c.ToContainerConfig()},
+		actions = append(actions, action.Action{
+			Container: &action.ActionContainer{Ref: stage.Ref(), Config: c.ToContainerConfig()},
 		})
 	}
 
 	// Mark the current operation as started
-	actions = append(actions, Action{
+	actions = append(actions, action.Action{
 		Start: common.Ptr(stage.Ref()),
 	})
 
 	// Store the timeout information
 	if stage.Timeout() != "" {
-		actions = append(actions, Action{
-			Timeout: &ActionTimeout{Ref: stage.Ref(), Timeout: stage.Timeout()},
+		actions = append(actions, action.Action{
+			Timeout: &action.ActionTimeout{Ref: stage.Ref(), Timeout: stage.Timeout()},
 		})
 	}
 
 	// Store the retry condition
 	if stage.RetryPolicy().Count != 0 {
-		actions = append(actions, Action{
-			Retry: &ActionRetry{Ref: stage.Ref(), Count: stage.RetryPolicy().Count, Until: stage.RetryPolicy().Until},
+		actions = append(actions, action.Action{
+			Retry: &action.ActionRetry{Ref: stage.Ref(), Count: stage.RetryPolicy().Count, Until: stage.RetryPolicy().Until},
 		})
 	}
 
 	// Handle pause
 	if stage.Paused() {
-		actions = append(actions, Action{
-			Pause: &ActionPause{Ref: stage.Ref()},
+		actions = append(actions, action.Action{
+			Pause: &action.ActionPause{Ref: stage.Ref()},
 		})
 	}
 
 	// Handle executable action
 	if exec, ok := stage.(ContainerStage); ok {
-		actions = append(actions, Action{
-			Execute: &ActionExecute{
+		actions = append(actions, action.Action{
+			Execute: &action.ActionExecute{
 				Ref:      exec.Ref(),
 				Negative: exec.Negative(),
 			},
@@ -424,11 +320,11 @@ func analyzeOperations(currentStatus string, parents []string, stage Stage, mach
 				result = strings.Join(refs, "&&")
 			}
 		}
-		actions = append(actions, Action{Result: &ActionResult{Ref: group.Ref(), Value: result}})
+		actions = append(actions, action.Action{Result: &action.ActionResult{Ref: group.Ref(), Value: result}})
 	}
 
 	// Mark the current operation as finished
-	actions = append(actions, Action{
+	actions = append(actions, action.Action{
 		End: common.Ptr(stage.Ref()),
 	})
 
@@ -443,7 +339,7 @@ func simplifyExpression(expr string, machines ...expressions.Machine) string {
 	return expr
 }
 
-func optimizeActions(root Stage, actions []Action) ([]Action, error) {
+func optimizeActions(root Stage, actions []action.Action) ([]action.Action, error) {
 	// Detect all the step references
 	refs := make(map[string]struct{})
 	executableRefs := make(map[string]struct{})
@@ -736,9 +632,9 @@ func optimizeActions(root Stage, actions []Action) ([]Action, error) {
 	return actions, nil
 }
 
-func sortActions(actions []Action) {
+func sortActions(actions []action.Action) {
 	// Move retry policies to top
-	slices.SortStableFunc(actions, func(a Action, b Action) int {
+	slices.SortStableFunc(actions, func(a action.Action, b action.Action) int {
 		if (a.Retry == nil) == (b.Retry == nil) {
 			return 0
 		}
@@ -749,7 +645,7 @@ func sortActions(actions []Action) {
 	})
 
 	// Move timeouts to top
-	slices.SortStableFunc(actions, func(a Action, b Action) int {
+	slices.SortStableFunc(actions, func(a action.Action, b action.Action) int {
 		if (a.Timeout == nil) == (b.Timeout == nil) {
 			return 0
 		}
@@ -760,7 +656,7 @@ func sortActions(actions []Action) {
 	})
 
 	// Move results to top
-	slices.SortStableFunc(actions, func(a Action, b Action) int {
+	slices.SortStableFunc(actions, func(a action.Action, b action.Action) int {
 		if (a.Result == nil) == (b.Result == nil) {
 			return 0
 		}
@@ -771,7 +667,7 @@ func sortActions(actions []Action) {
 	})
 
 	// Move pause information to top
-	slices.SortStableFunc(actions, func(a Action, b Action) int {
+	slices.SortStableFunc(actions, func(a action.Action, b action.Action) int {
 		if (a.Pause == nil) == (b.Pause == nil) {
 			return 0
 		}
@@ -782,7 +678,7 @@ func sortActions(actions []Action) {
 	})
 
 	// Move declarations to top
-	slices.SortStableFunc(actions, func(a Action, b Action) int {
+	slices.SortStableFunc(actions, func(a action.Action, b action.Action) int {
 		if (a.Declare == nil) == (b.Declare == nil) {
 			return 0
 		}
@@ -793,7 +689,7 @@ func sortActions(actions []Action) {
 	})
 
 	// Move setup to top
-	slices.SortStableFunc(actions, func(a Action, b Action) int {
+	slices.SortStableFunc(actions, func(a action.Action, b action.Action) int {
 		if (a.Setup == nil) == (b.Setup == nil) {
 			return 0
 		}
@@ -804,13 +700,13 @@ func sortActions(actions []Action) {
 	})
 }
 
-func AnalyzeOperations(root Stage, machines ...expressions.Machine) ([]Action, error) {
+func AnalyzeOperations(root Stage, machines ...expressions.Machine) ([]action.Action, error) {
 	actions, err := analyzeOperations("true", nil, root, machines...)
 	if err != nil {
 		return nil, err
 	}
-	actions = append([]Action{{Setup: &ActionSetup{CopyInit: true, CopyBinaries: true}}, {Start: common.Ptr("")}}, actions...)
-	actions = append(actions, Action{Result: &ActionResult{Ref: "", Value: root.Ref()}}, Action{End: common.Ptr("")})
+	actions = append([]action.Action{{Setup: &action.ActionSetup{CopyInit: true, CopyBinaries: true}}, {Start: common.Ptr("")}}, actions...)
+	actions = append(actions, action.Action{Result: &action.ActionResult{Ref: "", Value: root.Ref()}}, action.Action{End: common.Ptr("")})
 
 	// Optimize until simplest list of operations
 	for {
@@ -824,7 +720,7 @@ func AnalyzeOperations(root Stage, machines ...expressions.Machine) ([]Action, e
 }
 
 // TODO: Handle Group Stages properly with isolation (to have conditions working perfectly fine, i.e. for isolated image + file() clause)
-func GroupActions(actions []Action) (groups [][]Action) {
+func GroupActions(actions []action.Action) (groups [][]action.Action) {
 	// Detect "start" and "execute" instructions
 	startIndexes := make([]int, 0)
 	startInstructions := make(map[string]int)
@@ -851,13 +747,13 @@ func GroupActions(actions []Action) (groups [][]Action) {
 
 	// Fast-track when there is only a single instruction to execute
 	if len(executeIndexes) <= 1 {
-		return [][]Action{actions}
+		return [][]action.Action{actions}
 	}
 
 	// Basic behavior: split based on each execute instruction
 	for _, executeIndex := range executeIndexes {
 		if actions[executeIndex].Setup != nil {
-			groups = append([][]Action{actions[executeIndex:]}, groups...)
+			groups = append([][]action.Action{actions[executeIndex:]}, groups...)
 			actions = actions[:executeIndex]
 			continue
 		}
@@ -877,7 +773,7 @@ func GroupActions(actions []Action) (groups [][]Action) {
 		//	}
 		//}
 
-		groups = append([][]Action{actions[startIndex:]}, groups...)
+		groups = append([][]action.Action{actions[startIndex:]}, groups...)
 		actions = actions[:startIndex]
 	}
 	if len(actions) > 0 {
@@ -895,14 +791,14 @@ func GroupActions(actions []Action) (groups [][]Action) {
 //       There is some empty object on the last one
 
 // TODO: Disallow bypassing
-func BuildContainer(groupId int, defaultContainer Container, actions []Action) (cr corev1.Container, actionsCleanup []Action, err error) {
+func BuildContainer(groupId int, defaultContainer Container, actions []action.Action) (cr corev1.Container, actionsCleanup []action.Action, err error) {
 	actions = slices.Clone(actions)
 	actionsCleanup = actions
 
 	// Find the container configurations and executable/setup steps
-	var setup *Action
+	var setup *action.Action
 	executable := map[string]bool{}
-	containerConfigs := make([]*Action, 0)
+	containerConfigs := make([]*action.Action, 0)
 	for i := range actions {
 		if actions[i].Container != nil {
 			containerConfigs = append(containerConfigs, &actions[i])
@@ -914,7 +810,7 @@ func BuildContainer(groupId int, defaultContainer Container, actions []Action) (
 	}
 
 	// Find the highest priority container configuration
-	var bestContainerConfig *Action
+	var bestContainerConfig *action.Action
 	for i := range containerConfigs {
 		if executable[containerConfigs[i].Container.Ref] {
 			bestContainerConfig = containerConfigs[i]
@@ -1002,7 +898,7 @@ func BuildContainer(groupId int, defaultContainer Container, actions []Action) (
 	// TODO: Avoid using /.tktw/bin/sh (and other binaries) if there is Init image - use /bin/* then
 
 	// TODO: Copy /init and /toolkit in the Init Container only if there is a need to.
-	//       Probably, include Setup step in the Actions list, so it can be simplified too into a single container,
+	//       Probably, include Setup step in the action.Actions list, so it can be simplified too into a single container,
 	//       and optimized along with others.
 
 	// Point the Init Process to the proper group
@@ -1021,7 +917,7 @@ func BuildContainer(groupId int, defaultContainer Container, actions []Action) (
 		newConfig.WorkingDir = containerConfigs[i].Container.Config.WorkingDir
 		// TODO: expose more?
 
-		containerConfigs[i].Container = &ActionContainer{
+		containerConfigs[i].Container = &action.ActionContainer{
 			Ref:    containerConfigs[i].Container.Ref,
 			Config: newConfig,
 		}

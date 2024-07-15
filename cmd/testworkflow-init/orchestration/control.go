@@ -1,32 +1,38 @@
 package orchestration
 
 import (
+	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
-	"github.com/kubeshop/testkube/internal/common"
 )
 
-func Start(ref string) {
+func Start(step *data.StepData) {
 	state := data.GetState()
-	state.CurrentRef = ref
-	state.GetStep(ref).StartedAt = common.Ptr(time.Now())
-	data.PrintHint(ref, constants.InstructionStart)
+	state.CurrentRef = step.Ref
+	startedAt := time.Now()
+	step.StartedAt = &startedAt
+	data.PrintHint(step.Ref, constants.InstructionStart)
 }
 
-func Pause(ref string) {
+func Pause(step *data.StepData) {
 	//data.Step.Pause(time.Now())
 }
 
-func Resume(ref string) {
+func Resume(step *data.StepData) {
 	//d
 }
 
-func FinishExecution(ref string, result constants.ExecutionResult) {
-	data.PrintHintDetails(ref, constants.InstructionExecution, result)
+func FinishExecution(step *data.StepData, result constants.ExecutionResult) {
+	data.PrintHintDetails(step.Ref, constants.InstructionExecution, result)
 }
 
-func End(ref string, status data.StepStatus) {
-	data.PrintHintDetails(ref, constants.InstructionEnd, status)
+func End(step *data.StepData) {
+	if !step.IsFinished() {
+		v, e := json.Marshal(step)
+		panic(fmt.Sprintf("cannot mark unfinished step as finished: %s, %v", string(v), e))
+	}
+	data.PrintHintDetails(step.Ref, constants.InstructionEnd, *step.Status)
 }

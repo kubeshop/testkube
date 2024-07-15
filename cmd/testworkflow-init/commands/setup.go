@@ -5,20 +5,21 @@ import (
 	"os"
 	"os/exec"
 
+	"github.com/gookit/color"
+
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor"
-	"github.com/kubeshop/testkube/pkg/ui"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action"
 	"github.com/kubeshop/testkube/pkg/version"
 )
 
-func Setup(config testworkflowprocessor.ActionSetup) {
+func Setup(config action.ActionSetup) {
 	// Copy the init process TODO: only when it is required
 	fmt.Print("Configuring init process...")
 	if config.CopyInit {
 		err := exec.Command("cp", "/init", data.InitPath).Run()
 		if err != nil {
-			fmt.Println(ui.Red(" error"))
+			fmt.Println(color.FgRed.Render(" error"))
 			data.Failf(data.CodeInternal, "failed to copy the /init process: %s", err.Error())
 		}
 		fmt.Println(" done")
@@ -33,7 +34,7 @@ func Setup(config testworkflowprocessor.ActionSetup) {
 		// Copying individual files will lead to high FS usage
 		err := exec.Command("cp", "-rf", "/bin", data.InternalBinPath).Run()
 		if err != nil {
-			fmt.Println(ui.Red(" error"))
+			fmt.Println(color.FgRed.Render(" error"))
 			data.Failf(data.CodeInternal, "failed to copy the /init process: %s", err.Error())
 		}
 		fmt.Println(" done")
@@ -41,7 +42,7 @@ func Setup(config testworkflowprocessor.ActionSetup) {
 		fmt.Println(" skipped")
 	}
 
-	// Expose debugging Pod information
+	// Expose debugging Pod inforation
 	data.PrintOutput(data.InitStepName, "pod", map[string]string{
 		"name":               os.Getenv(constants.EnvPodName),
 		"nodeName":           os.Getenv(constants.EnvNodeName),
