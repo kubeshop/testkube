@@ -892,7 +892,11 @@ func BuildContainer(groupId int, defaultContainer Container, actions []Action) (
 		for i := range containerConfigs {
 			for _, e := range containerConfigs[i].Container.Config.Env {
 				newEnv := *e.DeepCopy()
-				newEnv.Name = fmt.Sprintf("_%d_%s", i, e.Name)
+				if strings.Contains(newEnv.Value, "{{") {
+					newEnv.Name = fmt.Sprintf("_%dC_%s", i, e.Name)
+				} else {
+					newEnv.Name = fmt.Sprintf("_%d_%s", i, e.Name)
+				}
 				cr.Env = append(cr.Env, newEnv)
 			}
 			for _, e := range containerConfigs[i].Container.Config.EnvFrom {

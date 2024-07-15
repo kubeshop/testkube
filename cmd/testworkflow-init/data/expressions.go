@@ -54,8 +54,7 @@ var StateMachine = expressions.NewMachine().
 	RegisterAccessor(func(name string) (interface{}, bool) {
 		if name == "status" {
 			currentStatus := GetState().CurrentStatus
-			//expr, err := expressions.EvalExpression(currentStatus, RefSuccessMachine, AliasMachine, GetBaseTestWorkflowMachine())
-			expr, err := expressions.EvalExpression(currentStatus, RefSuccessMachine, AliasMachine)
+			expr, err := expressions.EvalExpression(currentStatus, RefStatusMachine, AliasMachine)
 			if err != nil {
 				panic(fmt.Sprintf("current status is invalid: %s: %v", currentStatus, err.Error()))
 			}
