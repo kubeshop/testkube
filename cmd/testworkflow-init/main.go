@@ -5,13 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"strconv"
-	"time"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/commands"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
-	"github.com/kubeshop/testkube/cmd/testworkflow-init/container"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/orchestration"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -66,6 +66,9 @@ func main() {
 		data.Failf(data.CodeInputError, "invalid run group passed: %s", err.Error())
 	}
 
+	// Keep a list of paused steps for execution
+	delayedPauses := make([]string, 0)
+
 	// Get the list of operations
 	state := data.GetState()
 	for _, action := range state.GetActions(int(groupIndex)) {
@@ -82,18 +85,37 @@ func main() {
 			state.SetCurrentStatus(*action.CurrentStatus)
 		} else if action.Setup != nil {
 			// TODO: Handle error
-			container.Setup.UseEnv("00")
+			orchestration.Setup.UseEnv("00")
 			commands.Setup(*action.Setup)
-			data.PrintHintDetails(data.InitStepName, constants.InstructionEnd, "passed")
+			orchestration.End(data.InitStepName, data.StepStatusPassed)
 		} else if action.Container != nil {
-			container.Setup.SetConfig(action.Container.Config)
-			container.Setup.AdvanceEnv()
+			orchestration.Setup.SetConfig(action.Container.Config)
+			orchestration.Setup.AdvanceEnv()
 			currentContainer = *action.Container
 		} else if action.Execute != nil {
 			// Ignore running when the step is already resolved (= skipped)
-			step := data.GetState().GetStep(action.Execute.Ref)
+			step := state.GetStep(action.Execute.Ref)
 			if step.Status != nil {
 				return
+			}
+
+			// Compute the pause
+			paused := make([]string, 0)
+			if slices.Contains(delayedPauses, action.Execute.Ref) {
+				paused = append(paused, action.Execute.Ref)
+			}
+			for _, parentRef := range step.Parents {
+				if slices.Contains(delayedPauses, parentRef) {
+					paused = append(paused, parentRef)
+				}
+			}
+
+			// Pause
+			if len(paused) > 0 {
+				delayedPauses = nil
+				orchestration.Pause(action.Execute.Ref)
+				// // TODO: Wait for resume
+				//orchestration.Resume(action.Execute.Ref)
 			}
 
 			commands.Run(*action.Execute, currentContainer)
@@ -101,14 +123,9 @@ func main() {
 			if *action.Start == "" {
 				continue
 			}
-			state.CurrentRef = *action.Start
-			state.GetStep(*action.Start).StartedAt = common.Ptr(time.Now())
-			data.PrintHint(*action.Start, constants.InstructionStart)
+			orchestration.Start(*action.Start)
 
 			step := state.GetStep(*action.Start)
-			if step.Condition == "" {
-				step.Condition = "passed"
-			}
 			expr, err := data.Expression(step.Condition, data.RefSuccessMachine)
 			if err != nil {
 				panic(fmt.Sprintf("failed to determine condition of '%s' step: %s: %s", *action.Start, step.Condition, err.Error()))
@@ -117,6 +134,11 @@ func main() {
 			if !result {
 				step.Status = common.Ptr(data.StepStatusSkipped)
 				// TODO: Should it immediately inform outside about skip?
+			}
+
+			// Delay the pause until next children execution
+			if step.Status == nil && step.Paused {
+				delayedPauses = append(delayedPauses, state.CurrentRef)
 			}
 		} else if action.End != nil {
 			if *action.End == "" {
@@ -138,7 +160,7 @@ func main() {
 					step.Status = common.Ptr(data.StepStatusFailed)
 				}
 			}
-			data.PrintHintDetails(*action.End, constants.InstructionEnd, *step.Status)
+			orchestration.End(*action.End, *step.Status)
 		} else {
 			serialized, _ := json.Marshal(action)
 			data.Failf(data.CodeInternal, "Unsupported instruction: %s", string(serialized))

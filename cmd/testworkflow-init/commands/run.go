@@ -8,11 +8,13 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/orchestration"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor"
 )
 
 func Run(run testworkflowprocessor.ActionExecute, container testworkflowprocessor.ActionContainer) {
-	// TODO: Compute the pause
+	state := data.GetState()
+
 	// TODO: Run the timeout
 	// TODO: Compute the retry
 
@@ -61,8 +63,8 @@ func Run(run testworkflowprocessor.ActionExecute, container testworkflowprocesso
 	fmt.Printf("Finished step '%s'.\n   Exit code: %d\n   Status: %s\n   Success: %v", run.Ref, exitCode, status, success)
 
 	// Notify about the status
-	data.GetState().SetStepStatus(run.Ref, status)
-	data.PrintHintDetails(run.Ref, constants.InstructionExecution, constants.ExecutionResult{ExitCode: exitCode, Iteration: 0})
+	state.SetStepStatus(run.Ref, status)
+	orchestration.FinishExecution(run.Ref, constants.ExecutionResult{ExitCode: exitCode, Iteration: 0})
 
 	// Save the data
 	data.SaveState()

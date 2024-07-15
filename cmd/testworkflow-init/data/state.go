@@ -52,6 +52,9 @@ func (s *state) GetStep(ref string) *StepData {
 	if s.Steps[ref] == nil {
 		s.Steps[ref] = &StepData{}
 	}
+	if s.Steps[ref].Condition == "" {
+		s.Steps[ref].Condition = "passed"
+	}
 	return s.Steps[ref]
 }
 
