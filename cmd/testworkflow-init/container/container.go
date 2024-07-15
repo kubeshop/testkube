@@ -12,18 +12,18 @@ import (
 
 var (
 	scopedRegex          = regexp.MustCompile(`^_(00|01|\d|[1-9]\d*)_`)
-	Container            = newContainer()
+	Setup                = newSetup()
 	defaultWorkingDir, _ = os.Getwd()
 )
 
-type container struct {
+type setup struct {
 	envBase         map[string]string
 	envGroups       map[string]map[string]string
 	envCurrentGroup int
 }
 
-func newContainer() *container {
-	c := &container{
+func newSetup() *setup {
+	c := &setup{
 		envBase:         map[string]string{},
 		envGroups:       map[string]map[string]string{},
 		envCurrentGroup: -1,
@@ -32,7 +32,7 @@ func newContainer() *container {
 	return c
 }
 
-func (c *container) initialize() {
+func (c *setup) initialize() {
 	// Iterate over the environment variables to group them
 	for _, item := range os.Environ() {
 		match := scopedRegex.FindStringSubmatch(item)
@@ -50,14 +50,14 @@ func (c *container) initialize() {
 	}
 }
 
-func (c *container) UseBaseEnv() {
+func (c *setup) UseBaseEnv() {
 	os.Clearenv()
 	for k, v := range c.envBase {
 		_ = os.Setenv(k, v)
 	}
 }
 
-func (c *container) UseEnv(group string) {
+func (c *setup) UseEnv(group string) {
 	c.UseBaseEnv()
 	for k, v := range c.envGroups[group] {
 		_ = os.Setenv(k, v)
@@ -81,16 +81,16 @@ func (c *container) UseEnv(group string) {
 	// TODO: Resolve computed environment variables
 }
 
-func (c *container) UseCurrentEnv() {
+func (c *setup) UseCurrentEnv() {
 	c.UseEnv(fmt.Sprintf("%d", c.envCurrentGroup))
 }
 
-func (c *container) AdvanceEnv() {
+func (c *setup) AdvanceEnv() {
 	c.envCurrentGroup++
 	c.UseCurrentEnv()
 }
 
-func (c *container) SetConfig(config testworkflowsv1.ContainerConfig) {
+func (c *setup) SetConfig(config testworkflowsv1.ContainerConfig) {
 	if config.WorkingDir == nil || *config.WorkingDir == "" {
 		_ = os.Chdir(*config.WorkingDir)
 	} else {

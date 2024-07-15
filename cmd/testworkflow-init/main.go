@@ -82,12 +82,12 @@ func main() {
 			state.SetCurrentStatus(*action.CurrentStatus)
 		} else if action.Setup != nil {
 			// TODO: Handle error
-			container.Container.UseEnv("00")
+			container.Setup.UseEnv("00")
 			commands.Setup(*action.Setup)
 			data.PrintHintDetails(data.InitStepName, constants.InstructionEnd, "passed")
 		} else if action.Container != nil {
-			container.Container.SetConfig(action.Container.Config)
-			container.Container.AdvanceEnv()
+			container.Setup.SetConfig(action.Container.Config)
+			container.Setup.AdvanceEnv()
 			currentContainer = *action.Container
 		} else if action.Execute != nil {
 			// Ignore running when the step is already resolved (= skipped)
