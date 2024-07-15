@@ -429,6 +429,7 @@ func (c *container) EnableToolkit(ref string) Container {
 			"TK_EXN":                    "{{execution.name}}",
 			"TK_EXC":                    "{{execution.number}}",
 			"TK_EXS":                    "{{execution.scheduledAt}}",
+			"TK_DWH":                    "{{execution.disableWebhooks}}",
 			"TK_EXI":                    "{{resource.id}}",
 			"TK_EXR":                    "{{resource.root}}",
 			"TK_FS":                     "{{resource.fsPrefix}}",

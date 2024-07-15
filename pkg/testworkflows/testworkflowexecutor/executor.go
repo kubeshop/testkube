@@ -439,10 +439,11 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 			"fsPrefix": "",
 		})
 	mockExecutionMachine := expressions.NewMachine().Register("execution", map[string]interface{}{
-		"id":          id,
-		"name":        "<mock_name>",
-		"number":      "1",
-		"scheduledAt": now.UTC().Format(constants.RFC3339Millis),
+		"id":              id,
+		"name":            "<mock_name>",
+		"number":          "1",
+		"scheduledAt":     now.UTC().Format(constants.RFC3339Millis),
+		"disableWebhooks": request.DisableWebhooks,
 	})
 
 	// Preserve resolved TestWorkflow
@@ -480,10 +481,11 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 
 	// Build machine with actual execution data
 	executionMachine := expressions.NewMachine().Register("execution", map[string]interface{}{
-		"id":          id,
-		"name":        executionName,
-		"number":      number,
-		"scheduledAt": now.UTC().Format(constants.RFC3339Millis),
+		"id":              id,
+		"name":            executionName,
+		"number":          number,
+		"scheduledAt":     now.UTC().Format(constants.RFC3339Millis),
+		"disableWebhooks": request.DisableWebhooks,
 	})
 
 	// Process the TestWorkflow

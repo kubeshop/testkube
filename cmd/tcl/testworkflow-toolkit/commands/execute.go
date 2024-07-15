@@ -52,7 +52,7 @@ type executionResult struct {
 	Status string `json:"status"`
 }
 
-func buildTestExecution(test testworkflowsv1.StepExecuteTest, async, disableWebhooks bool) (func() error, error) {
+func buildTestExecution(test testworkflowsv1.StepExecuteTest, async bool) (func() error, error) {
 	return func() (err error) {
 		c := env.Testkube()
 
@@ -84,7 +84,7 @@ func buildTestExecution(test testworkflowsv1.StepExecuteTest, async, disableWebh
 			EnvConfigMaps:                      common.MapSlice(test.ExecutionRequest.EnvConfigMaps, testworkflows.MapTestEnvReferenceKubeToAPI),
 			EnvSecrets:                         common.MapSlice(test.ExecutionRequest.EnvSecrets, testworkflows.MapTestEnvReferenceKubeToAPI),
 			ExecutionNamespace:                 test.ExecutionRequest.ExecutionNamespace,
-			DisableWebhooks:                    disableWebhooks,
+			DisableWebhooks:                    env.ExecutionDisableWebhooks(),
 		})
 		execName := exec.Name
 		if err != nil {
@@ -146,14 +146,14 @@ func buildTestExecution(test testworkflowsv1.StepExecuteTest, async, disableWebh
 	}, nil
 }
 
-func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async, disableWebhooks bool) (func() error, error) {
+func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async bool) (func() error, error) {
 	return func() (err error) {
 		c := env.Testkube()
 
 		exec, err := c.ExecuteTestWorkflow(workflow.Name, testkube.TestWorkflowExecutionRequest{
 			Name:            workflow.ExecutionName,
 			Config:          testworkflows.MapConfigValueKubeToAPI(workflow.Config),
-			DisableWebhooks: disableWebhooks,
+			DisableWebhooks: env.ExecutionDisableWebhooks(),
 		})
 		execName := exec.Name
 		if err != nil {
@@ -257,11 +257,10 @@ func registerTransfer(transferSrv transfer.Server, request map[string]testworkfl
 
 func NewExecuteCmd() *cobra.Command {
 	var (
-		tests           []string
-		workflows       []string
-		parallelism     int
-		async           bool
-		disableWebhooks bool
+		tests       []string
+		workflows   []string
+		parallelism int
+		async       bool
 	)
 
 	cmd := &cobra.Command{
@@ -309,7 +308,7 @@ func NewExecuteCmd() *cobra.Command {
 					if err != nil {
 						ui.Fail(errors.Wrapf(err, "'%s' test: computing execution", spec.Name))
 					}
-					fn, err := buildTestExecution(*spec, async, disableWebhooks)
+					fn, err := buildTestExecution(*spec, async)
 					if err != nil {
 						ui.Fail(err)
 					}
@@ -347,7 +346,7 @@ func NewExecuteCmd() *cobra.Command {
 					if err != nil {
 						ui.Fail(errors.Wrapf(err, "'%s' workflow: computing execution", spec.Name))
 					}
-					fn, err := buildWorkflowExecution(*spec, async, disableWebhooks)
+					fn, err := buildWorkflowExecution(*spec, async)
 					if err != nil {
 						ui.Fail(err)
 					}
@@ -410,7 +409,6 @@ func NewExecuteCmd() *cobra.Command {
 	cmd.Flags().StringArrayVarP(&workflows, "workflow", "w", nil, "workflows to run")
 	cmd.Flags().IntVarP(&parallelism, "parallelism", "p", 0, "how many items could be executed at once")
 	cmd.Flags().BoolVar(&async, "async", false, "should it wait for results")
-	cmd.Flags().BoolVar(&disableWebhooks, "disableWebhooks", false, "should it disable webhooks")
 
 	return cmd
 }
