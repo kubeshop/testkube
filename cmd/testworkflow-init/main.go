@@ -78,7 +78,7 @@ func main() {
 			state.SetParents(action.Declare.Ref, action.Declare.Parents)
 
 		case testworkflowprocessor.ActionTypePause:
-			state.SetPause(action.Pause.Ref, true)
+			state.SetPausedOnStart(action.Pause.Ref, true)
 
 		case testworkflowprocessor.ActionTypeResult:
 			state.SetResult(action.Result.Ref, action.Result.Value)
@@ -117,7 +117,7 @@ func main() {
 			}
 
 			// Delay the pause until next children execution
-			if step.Status == nil && step.Paused {
+			if step.Status == nil && step.PausedOnStart {
 				delayedPauses = append(delayedPauses, state.CurrentRef)
 			}
 

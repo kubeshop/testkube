@@ -66,8 +66,8 @@ func (s *state) SetParents(ref string, parents []string) {
 	s.GetStep(ref).Parents = parents
 }
 
-func (s *state) SetPause(ref string, pause bool) {
-	s.GetStep(ref).Paused = pause
+func (s *state) SetPausedOnStart(ref string, pause bool) {
+	s.GetStep(ref).PausedOnStart = pause
 }
 
 func (s *state) SetTimeout(ref string, timeout string) {
