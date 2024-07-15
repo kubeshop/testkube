@@ -43,7 +43,7 @@ type envExecutionConfig struct {
 	ResourceId      string `envconfig:"TK_EXI"`
 	RootResourceId  string `envconfig:"TK_EXR"`
 	FSPrefix        string `envconfig:"TK_FS"`
-	disableWebhooks bool   `envconfig:"TK_DWH"`
+	DisableWebhooks bool   `envconfig:"TK_DWH"`
 }
 
 type envSystemConfig struct {
@@ -147,7 +147,7 @@ func ExecutionScheduledAt() time.Time {
 }
 
 func ExecutionDisableWebhooks() bool {
-	return Config().Execution.disableWebhooks
+	return Config().Execution.DisableWebhooks
 }
 
 func JUnitParserEnabled() bool {
