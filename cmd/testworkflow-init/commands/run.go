@@ -14,6 +14,7 @@ import (
 
 func Run(run testworkflowprocessor.ActionExecute, container testworkflowprocessor.ActionContainer) {
 	state := data.GetState()
+	step := state.GetStep(run.Ref)
 
 	// TODO: Run the timeout
 	// TODO: Compute the retry
@@ -63,7 +64,7 @@ func Run(run testworkflowprocessor.ActionExecute, container testworkflowprocesso
 	fmt.Printf("Finished step '%s'.\n   Exit code: %d\n   Status: %s\n   Success: %v", run.Ref, exitCode, status, success)
 
 	// Notify about the status
-	state.SetStepStatus(run.Ref, status)
+	step.SetStatus(status)
 	orchestration.FinishExecution(run.Ref, constants.ExecutionResult{ExitCode: exitCode, Iteration: 0})
 
 	// Save the data

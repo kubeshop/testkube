@@ -58,30 +58,6 @@ func (s *state) GetStep(ref string) *StepData {
 	return s.Steps[ref]
 }
 
-func (s *state) SetCondition(ref, expression string) {
-	s.GetStep(ref).Condition = expression
-}
-
-func (s *state) SetParents(ref string, parents []string) {
-	s.GetStep(ref).Parents = parents
-}
-
-func (s *state) SetPausedOnStart(ref string, pause bool) {
-	s.GetStep(ref).PausedOnStart = pause
-}
-
-func (s *state) SetTimeout(ref string, timeout string) {
-	s.GetStep(ref).Timeout = timeout
-}
-
-func (s *state) SetResult(ref, expression string) {
-	s.GetStep(ref).Result = expression
-}
-
-func (s *state) SetRetryPolicy(ref string, policy RetryPolicy) {
-	s.GetStep(ref).Retry = policy
-}
-
 func (s *state) SetCurrentStatus(expression string) {
 	s.CurrentStatus = expression
 }
@@ -89,13 +65,6 @@ func (s *state) SetCurrentStatus(expression string) {
 var currentState = &state{
 	Output: map[string]string{},
 	Steps:  map[string]*StepData{},
-}
-
-func (s *state) SetStepStatus(ref string, status StepStatus) {
-	if _, ok := s.Steps[ref]; !ok {
-		s.Steps[ref] = &StepData{}
-	}
-	s.Steps[ref].Status = &status
 }
 
 func readState(filePath string) {

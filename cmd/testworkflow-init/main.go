@@ -69,28 +69,30 @@ func main() {
 	// Keep a list of paused steps for execution
 	delayedPauses := make([]string, 0)
 
-	// Get the list of operations
+	// Interpret the operations
 	state := data.GetState()
 	for _, action := range state.GetActions(int(groupIndex)) {
 		switch action.Type() {
 		case testworkflowprocessor.ActionTypeDeclare:
-			state.SetCondition(action.Declare.Ref, action.Declare.Condition)
-			state.SetParents(action.Declare.Ref, action.Declare.Parents)
+			state.GetStep(action.Declare.Ref).
+				SetCondition(action.Declare.Condition).
+				SetParents(action.Declare.Parents)
 
 		case testworkflowprocessor.ActionTypePause:
-			state.SetPausedOnStart(action.Pause.Ref, true)
+			state.GetStep(action.Pause.Ref).
+				SetPausedOnStart(true)
 
 		case testworkflowprocessor.ActionTypeResult:
-			state.SetResult(action.Result.Ref, action.Result.Value)
+			state.GetStep(action.Result.Ref).
+				SetResult(action.Result.Value)
 
 		case testworkflowprocessor.ActionTypeTimeout:
-			state.SetTimeout(action.Timeout.Ref, action.Timeout.Timeout)
+			state.GetStep(action.Timeout.Ref).
+				SetTimeout(action.Timeout.Timeout)
 
 		case testworkflowprocessor.ActionTypeRetry:
-			state.SetRetryPolicy(action.Retry.Ref, data.RetryPolicy{
-				Count: action.Retry.Count,
-				Until: action.Retry.Until,
-			})
+			state.GetStep(action.Retry.Ref).
+				SetRetryPolicy(data.RetryPolicy{Count: action.Retry.Count, Until: action.Retry.Until})
 
 		case testworkflowprocessor.ActionTypeContainerTransition:
 			orchestration.Setup.SetConfig(action.Container.Config)
