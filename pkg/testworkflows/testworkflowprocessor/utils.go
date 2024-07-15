@@ -1,6 +1,7 @@
 package testworkflowprocessor
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"regexp"
@@ -262,6 +263,53 @@ type Action struct {
 	Timeout       *ActionTimeout   `json:"t,omitempty"`
 	Pause         *ActionPause     `json:"p,omitempty"`
 	Retry         *ActionRetry     `json:"R,omitempty"`
+}
+
+type ActionType string
+
+const (
+	// Declarations
+	ActionTypeDeclare ActionType = "declare"
+	ActionTypePause              = "pause"
+	ActionTypeResult             = "result"
+	ActionTypeTimeout            = "timeout"
+	ActionTypeRetry              = "retry"
+
+	// Operations
+	ActionTypeContainerTransition = "container"
+	ActionTypeCurrentStatus       = "status"
+	ActionTypeStart               = "start"
+	ActionTypeEnd                 = "end"
+	ActionTypeSetup               = "setup"
+	ActionTypeExecute             = "execute"
+)
+
+func (a *Action) Type() ActionType {
+	if a.Declare != nil {
+		return ActionTypeDeclare
+	} else if a.Pause != nil {
+		return ActionTypePause
+	} else if a.Result != nil {
+		return ActionTypeResult
+	} else if a.Timeout != nil {
+		return ActionTypeTimeout
+	} else if a.Retry != nil {
+		return ActionTypeRetry
+	} else if a.Container != nil {
+		return ActionTypeContainerTransition
+	} else if a.CurrentStatus != nil {
+		return ActionTypeCurrentStatus
+	} else if a.Start != nil {
+		return ActionTypeStart
+	} else if a.End != nil {
+		return ActionTypeEnd
+	} else if a.Setup != nil {
+		return ActionTypeSetup
+	} else if a.Execute != nil {
+		return ActionTypeExecute
+	}
+	v, e := json.Marshal(a)
+	panic(fmt.Sprintf("unknown action type: %s, %v", v, e))
 }
 
 // TODO: Wrap all errors in this file

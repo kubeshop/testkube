@@ -72,27 +72,84 @@ func main() {
 	// Get the list of operations
 	state := data.GetState()
 	for _, action := range state.GetActions(int(groupIndex)) {
-		if action.Declare != nil {
+		switch action.Type() {
+		case testworkflowprocessor.ActionTypeDeclare:
 			state.SetCondition(action.Declare.Ref, action.Declare.Condition)
 			state.SetParents(action.Declare.Ref, action.Declare.Parents)
-		} else if action.Pause != nil {
+
+		case testworkflowprocessor.ActionTypePause:
 			state.SetPause(action.Pause.Ref, true)
-		} else if action.Result != nil {
+
+		case testworkflowprocessor.ActionTypeResult:
 			state.SetResult(action.Result.Ref, action.Result.Value)
-		} else if action.Timeout != nil {
+
+		case testworkflowprocessor.ActionTypeTimeout:
 			state.SetTimeout(action.Timeout.Ref, action.Timeout.Timeout)
-		} else if action.CurrentStatus != nil {
+
+		case testworkflowprocessor.ActionTypeRetry:
+			state.SetRetryPolicy(action.Retry.Ref, data.RetryPolicy{
+				Count: action.Retry.Count,
+				Until: action.Retry.Until,
+			})
+
+		case testworkflowprocessor.ActionTypeContainerTransition:
+			orchestration.Setup.SetConfig(action.Container.Config)
+			orchestration.Setup.AdvanceEnv()
+			currentContainer = *action.Container
+
+		case testworkflowprocessor.ActionTypeCurrentStatus:
 			state.SetCurrentStatus(*action.CurrentStatus)
-		} else if action.Setup != nil {
+
+		case testworkflowprocessor.ActionTypeStart:
+			if *action.Start == "" {
+				continue
+			}
+			orchestration.Start(*action.Start)
+
+			step := state.GetStep(*action.Start)
+			expr, err := data.Expression(step.Condition, data.RefSuccessMachine)
+			if err != nil {
+				panic(fmt.Sprintf("failed to determine condition of '%s' step: %s: %s", *action.Start, step.Condition, err.Error()))
+			}
+			result, err := expr.BoolValue()
+			if !result {
+				step.Status = common.Ptr(data.StepStatusSkipped)
+			}
+
+			// Delay the pause until next children execution
+			if step.Status == nil && step.Paused {
+				delayedPauses = append(delayedPauses, state.CurrentRef)
+			}
+
+		case testworkflowprocessor.ActionTypeEnd:
+			if *action.End == "" {
+				continue
+			}
+			step := state.GetStep(*action.End)
+			if step.Status == nil {
+				if step.Result == "" {
+					panic(fmt.Sprintf("missing definition of '%s' step success", *action.End))
+				}
+				expr, err := data.Expression(step.Result, data.RefSuccessMachine)
+				if err != nil {
+					panic(fmt.Sprintf("failed to determine result of '%s' step: %s: %s", *action.End, step.Result, err.Error()))
+				}
+				result, err := expr.BoolValue()
+				if result {
+					step.Status = common.Ptr(data.StepStatusPassed)
+				} else {
+					step.Status = common.Ptr(data.StepStatusFailed)
+				}
+			}
+			orchestration.End(*action.End, *step.Status)
+
+		case testworkflowprocessor.ActionTypeSetup:
 			// TODO: Handle error
 			orchestration.Setup.UseEnv("00")
 			commands.Setup(*action.Setup)
 			orchestration.End(data.InitStepName, data.StepStatusPassed)
-		} else if action.Container != nil {
-			orchestration.Setup.SetConfig(action.Container.Config)
-			orchestration.Setup.AdvanceEnv()
-			currentContainer = *action.Container
-		} else if action.Execute != nil {
+
+		case testworkflowprocessor.ActionTypeExecute:
 			// Ignore running when the step is already resolved (= skipped)
 			step := state.GetStep(action.Execute.Ref)
 			if step.Status != nil {
@@ -119,51 +176,6 @@ func main() {
 			}
 
 			commands.Run(*action.Execute, currentContainer)
-		} else if action.Start != nil {
-			if *action.Start == "" {
-				continue
-			}
-			orchestration.Start(*action.Start)
-
-			step := state.GetStep(*action.Start)
-			expr, err := data.Expression(step.Condition, data.RefSuccessMachine)
-			if err != nil {
-				panic(fmt.Sprintf("failed to determine condition of '%s' step: %s: %s", *action.Start, step.Condition, err.Error()))
-			}
-			result, err := expr.BoolValue()
-			if !result {
-				step.Status = common.Ptr(data.StepStatusSkipped)
-				// TODO: Should it immediately inform outside about skip?
-			}
-
-			// Delay the pause until next children execution
-			if step.Status == nil && step.Paused {
-				delayedPauses = append(delayedPauses, state.CurrentRef)
-			}
-		} else if action.End != nil {
-			if *action.End == "" {
-				continue
-			}
-			step := state.GetStep(*action.End)
-			if step.Status == nil {
-				if step.Result == "" {
-					panic(fmt.Sprintf("missing definition of '%s' step success", *action.End))
-				}
-				expr, err := data.Expression(step.Result, data.RefSuccessMachine)
-				if err != nil {
-					panic(fmt.Sprintf("failed to determine result of '%s' step: %s: %s", *action.End, step.Result, err.Error()))
-				}
-				result, err := expr.BoolValue()
-				if result {
-					step.Status = common.Ptr(data.StepStatusPassed)
-				} else {
-					step.Status = common.Ptr(data.StepStatusFailed)
-				}
-			}
-			orchestration.End(*action.End, *step.Status)
-		} else {
-			serialized, _ := json.Marshal(action)
-			data.Failf(data.CodeInternal, "Unsupported instruction: %s", string(serialized))
 		}
 	}
 
