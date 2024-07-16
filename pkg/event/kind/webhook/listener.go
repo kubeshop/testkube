@@ -29,7 +29,6 @@ var _ common.Listener = (*WebhookListener)(nil)
 
 func NewWebhookListener(name, uri, selector string, events []testkube.EventType,
 	payloadObjectField, payloadTemplate string, headers map[string]string, disabled bool,
-	onStateChange bool,
 	testExecutionResults result.Repository,
 	testSuiteExecutionResults testresult.Repository,
 	testWorkflowExecutionResults testworkflow.Repository,
@@ -46,7 +45,6 @@ func NewWebhookListener(name, uri, selector string, events []testkube.EventType,
 		payloadTemplate:              payloadTemplate,
 		headers:                      headers,
 		disabled:                     disabled,
-		onStateChange:                onStateChange,
 		testExecutionResults:         testExecutionResults,
 		testSuiteExecutionResults:    testSuiteExecutionResults,
 		testWorkflowExecutionResults: testWorkflowExecutionResults,
@@ -66,7 +64,6 @@ type WebhookListener struct {
 	payloadTemplate              string
 	headers                      map[string]string
 	disabled                     bool
-	onStateChange                bool
 	testExecutionResults         result.Repository
 	testSuiteExecutionResults    testresult.Repository
 	testWorkflowExecutionResults testworkflow.Repository
@@ -95,7 +92,6 @@ func (l *WebhookListener) Metadata() map[string]string {
 		"payloadTemplate":    l.payloadTemplate,
 		"headers":            fmt.Sprintf("%v", l.headers),
 		"disabled":           fmt.Sprint(l.disabled),
-		"onStateChange":      fmt.Sprint(l.onStateChange),
 	}
 }
 
@@ -149,7 +145,7 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 		return
 	}
 
-	if l.onStateChange {
+	if true {
 		changed, err := l.hasStateChanges(event)
 		if err != nil {
 			l.Log.With(event.Log()...).Errorw(fmt.Sprintf("could not get previous finished state for test %s", event.TestExecution.TestName), "error", err)

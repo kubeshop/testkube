@@ -42,11 +42,6 @@ func NewCreateWebhookOptionsFromFlags(cmd *cobra.Command) (options apiv1.CreateW
 		return options, err
 	}
 
-	onStateChange, err := cmd.Flags().GetBool("on-state-change")
-	if err != nil {
-		return options, err
-	}
-
 	disabled, err := cmd.Flags().GetBool("disable")
 	if err != nil {
 		return options, err
@@ -64,7 +59,6 @@ func NewCreateWebhookOptionsFromFlags(cmd *cobra.Command) (options apiv1.CreateW
 		PayloadTemplate:          payloadTemplateContent,
 		Headers:                  headers,
 		PayloadTemplateReference: payloadTemplateReference,
-		OnStateChange:            onStateChange,
 		Disabled:                 disabled,
 	}
 
@@ -155,14 +149,6 @@ func NewUpdateWebhookOptionsFromFlags(cmd *cobra.Command) (options apiv1.UpdateW
 			return options, err
 		}
 		options.Disabled = &disabled
-	}
-
-	if cmd.Flag("on-state-change").Changed {
-		onStateChange, err := cmd.Flags().GetBool("on-state-change")
-		if err != nil {
-			return options, err
-		}
-		options.OnStateChange = &onStateChange
 	}
 
 	return options, nil

@@ -7096,13 +7096,6 @@ components:
           example:
             - true
             - false
-        onStateChange:
-          type: boolean
-          description: whether webhook is triggered on state change only
-          default: false
-          example:
-            - true
-            - false
 
     Event:
       description: Event data
