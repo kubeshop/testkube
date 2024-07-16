@@ -145,7 +145,7 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 		return
 	}
 
-	if true {
+	if false {
 		changed, err := l.hasStateChanges(event)
 		if err != nil {
 			l.Log.With(event.Log()...).Errorw(fmt.Sprintf("could not get previous finished state for test %s", event.TestExecution.TestName), "error", err)
