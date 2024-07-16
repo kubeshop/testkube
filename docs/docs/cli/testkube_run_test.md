@@ -33,7 +33,6 @@ testkube run test <testName> [flags]
       --disable-webhooks                           disable webhooks
   -d, --download-artifacts                         download artifacts automatically
       --download-dir string                        download dir (default "artifacts")
-      --enable-webhooks                            enable webhooks
       --execute-postrun-script-before-scraping     whether to execute postrun scipt before scraping or not (prebuilt executor only)
       --execution-label stringToString             execution-label key value pair: --execution-label key1=value1 (default [])
       --execution-namespace string                 namespace for test execution (Pro edition only)

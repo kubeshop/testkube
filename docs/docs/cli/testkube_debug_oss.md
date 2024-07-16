@@ -1,15 +1,15 @@
-## testkube agent
+## testkube debug oss
 
-Testkube Pro Agent related commands
+Show OSS installation debug info
 
 ```
-testkube agent [flags]
+testkube debug oss [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for agent
+  -h, --help   help for oss
 ```
 
 ### Options inherited from parent commands
@@ -26,5 +26,5 @@ testkube agent [flags]
 
 ### SEE ALSO
 
-* [testkube](testkube.md)	 - Testkube entrypoint for kubectl plugin
+* [testkube debug](testkube_debug.md)	 - Print debugging info
 

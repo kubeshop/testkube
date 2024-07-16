@@ -215,6 +215,7 @@ func MapAPIToCRD(request *testkube.Execution, generation int64) testexecutionv1.
 			RunningContext:                     runningContext,
 			ContainerShell:                     request.ContainerShell,
 			SlavePodRequest:                    podRequest,
+			DisableWebhooks:                    request.DisableWebhooks,
 		},
 	}
 

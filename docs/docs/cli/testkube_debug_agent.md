@@ -1,15 +1,20 @@
-## testkube agent
+## testkube debug agent
 
-Testkube Pro Agent related commands
+Show Agent debug information
+
+### Synopsis
+
+Get all the necessary information to debug an issue in Testkube Agent you can fiter through comma separated list of items to show with additional flag `--show pods,services,ingresses,events,nats,connection,roundtrip`
 
 ```
-testkube agent [flags]
+testkube debug agent [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help   help for agent
+  -h, --help            help for agent
+  -s, --show []string   Comma-separated list of features to show, one of: pods,services,ingresses,events,nats,connection,roundtrip, defaults to all
 ```
 
 ### Options inherited from parent commands
@@ -26,5 +31,5 @@ testkube agent [flags]
 
 ### SEE ALSO
 
-* [testkube](testkube.md)	 - Testkube entrypoint for kubectl plugin
+* [testkube debug](testkube_debug.md)	 - Print debugging info
 

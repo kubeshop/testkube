@@ -54,6 +54,6 @@ type TestSuiteExecutionUpdateRequest struct {
 	ConcurrencyLevel *int32 `json:"concurrencyLevel,omitempty"`
 	// test suite execution name started the test suite execution
 	TestSuiteExecutionName *string `json:"testSuiteExecutionName,omitempty"`
-	// whether webhooks on the executions of this test suite are disabled
+	// whether webhooks on the execution of this test suite are disabled
 	DisableWebhooks *bool `json:"disableWebhooks,omitempty"`
 }

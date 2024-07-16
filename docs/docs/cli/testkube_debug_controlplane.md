@@ -1,10 +1,10 @@
 ## testkube debug controlplane
 
-Show debug info
+Show Control Plane debug information
 
 ### Synopsis
 
-Get all the necessary information to debug an issue in Testkube Control Plane
+Get all the necessary information to debug an issue in Testkube Control Plane you can fiter through comma separated list of items to show with additional flag `--show pods,services,ingresses,storageclasses,events,nats,connection,api,nats,mongo,dex,ui,worker`
 
 ```
 testkube debug controlplane [flags]
@@ -13,9 +13,8 @@ testkube debug controlplane [flags]
 ### Options
 
 ```
-      --attach-agent-log        Attach agent log to the output keep in mind to configure valid agent first in the Testkube CLI
-  -h, --help                    help for controlplane
-      --labels stringToString   Labels to filter logs by (default [])
+  -h, --help            help for controlplane
+  -s, --show []string   Comma-separated list of features to show, one of: pods,services,ingresses,storageclasses,events,nats,connection,api,nats,mongo,dex,ui,worker, defaults to all
 ```
 
 ### Options inherited from parent commands
@@ -32,5 +31,5 @@ testkube debug controlplane [flags]
 
 ### SEE ALSO
 
-* [testkube debug](testkube_debug.md)	 - Print environment information for debugging
+* [testkube debug](testkube_debug.md)	 - Print debugging info
 

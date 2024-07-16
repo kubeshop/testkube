@@ -118,10 +118,6 @@ func (s *Scheduler) executeTestSuite(ctx context.Context, testSuite testkube.Tes
 		request.Name = fmt.Sprintf("ts-%s-%d", testSuite.Name, request.Number)
 	}
 
-	if testSuite.ExecutionRequest != nil && testSuite.ExecutionRequest.DisableWebhooks {
-		request.DisableWebhooks = testSuite.ExecutionRequest.DisableWebhooks
-	}
-
 	testsuiteExecution = testkube.NewStartedTestSuiteExecution(testSuite, request)
 	err = s.testsuiteResults.Insert(ctx, testsuiteExecution)
 	if err != nil {
