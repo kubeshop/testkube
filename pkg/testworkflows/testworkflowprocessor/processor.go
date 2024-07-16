@@ -252,7 +252,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	actionGroups := GroupActions(actions)
 	containers := make([]corev1.Container, len(actionGroups))
 	for i := range actionGroups {
-		var bareActions []Action
+		var bareActions []action.Action
 		containers[i], bareActions, err = BuildContainer(i, layer.ContainerDefaults(), actionGroups[i])
 		actionGroups[i] = bareActions
 		if err != nil {
