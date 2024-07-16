@@ -32,6 +32,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowresolver"
 )
 
@@ -504,14 +505,14 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		Number:      number,
 		ScheduledAt: now,
 		StatusAt:    now,
-		Signature:   testworkflowprocessor.MapSignatureListToInternal(bundle.Signature),
+		Signature:   stage.MapSignatureListToInternal(bundle.Signature),
 		Result: &testkube.TestWorkflowResult{
 			Status:          common.Ptr(testkube.QUEUED_TestWorkflowStatus),
 			PredictedStatus: common.Ptr(testkube.PASSED_TestWorkflowStatus),
 			Initialization: &testkube.TestWorkflowStepResult{
 				Status: common.Ptr(testkube.QUEUED_TestWorkflowStepStatus),
 			},
-			Steps: testworkflowprocessor.MapSignatureListToStepResults(bundle.Signature),
+			Steps: stage.MapSignatureListToStepResults(bundle.Signature),
 		},
 		Output:                    []testkube.TestWorkflowOutput{},
 		Workflow:                  testworkflowmappers.MapKubeToAPI(initialWorkflow),

@@ -5,10 +5,12 @@
 package testworkflowprocessor
 
 import (
-	reflect "reflect"
+	"reflect"
 
-	gomock "github.com/golang/mock/gomock"
+	"github.com/golang/mock/gomock"
+
 	v1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
 
 // MockInternalProcessor is a mock of InternalProcessor interface.
@@ -35,10 +37,10 @@ func (m *MockInternalProcessor) EXPECT() *MockInternalProcessorMockRecorder {
 }
 
 // Process mocks base method.
-func (m *MockInternalProcessor) Process(arg0 Intermediate, arg1 Container, arg2 v1.Step) (Stage, error) {
+func (m *MockInternalProcessor) Process(arg0 Intermediate, arg1 stage.Container, arg2 v1.Step) (stage.Stage, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Process", arg0, arg1, arg2)
-	ret0, _ := ret[0].(Stage)
+	ret0, _ := ret[0].(stage.Stage)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

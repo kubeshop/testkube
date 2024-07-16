@@ -1,4 +1,4 @@
-package testworkflowprocessor
+package stage
 
 type StageMetadata interface {
 	Ref() string

@@ -2,15 +2,16 @@
 // Source: github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor (interfaces: Stage)
 
 // Package testworkflowprocessor is a generated GoMock package.
-package testworkflowprocessor
+package stage
 
 import (
-	reflect "reflect"
+	"reflect"
 
-	gomock "github.com/golang/mock/gomock"
+	"github.com/golang/mock/gomock"
+
 	v1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
-	expressions "github.com/kubeshop/testkube/pkg/expressions"
-	imageinspector "github.com/kubeshop/testkube/pkg/imageinspector"
+	"github.com/kubeshop/testkube/pkg/expressions"
+	"github.com/kubeshop/testkube/pkg/imageinspector"
 )
 
 // MockStage is a mock of Stage interface.

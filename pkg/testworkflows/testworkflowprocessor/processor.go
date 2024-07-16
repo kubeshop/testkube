@@ -18,6 +18,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/imageinspector"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -29,10 +30,10 @@ type Processor interface {
 
 //go:generate mockgen -destination=./mock_internalprocessor.go -package=testworkflowprocessor "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor" InternalProcessor
 type InternalProcessor interface {
-	Process(layer Intermediate, container Container, step testworkflowsv1.Step) (Stage, error)
+	Process(layer Intermediate, container stage.Container, step testworkflowsv1.Step) (stage.Stage, error)
 }
 
-type Operation = func(processor InternalProcessor, layer Intermediate, container Container, step testworkflowsv1.Step) (Stage, error)
+type Operation = func(processor InternalProcessor, layer Intermediate, container stage.Container, step testworkflowsv1.Step) (stage.Stage, error)
 
 type processor struct {
 	inspector  imageinspector.Inspector
@@ -48,7 +49,7 @@ func (p *processor) Register(operation Operation) Processor {
 	return p
 }
 
-func (p *processor) process(layer Intermediate, container Container, step testworkflowsv1.Step, ref string) (Stage, error) {
+func (p *processor) process(layer Intermediate, container stage.Container, step testworkflowsv1.Step, ref string) (stage.Stage, error) {
 	// Configure defaults
 	if step.WorkingDir != nil {
 		container.SetWorkingDir(*step.WorkingDir)
@@ -56,7 +57,7 @@ func (p *processor) process(layer Intermediate, container Container, step testwo
 	container.ApplyCR(step.Container)
 
 	// Build an initial group for the inner items
-	self := NewGroupStage(ref, false)
+	self := stage.NewGroupStage(ref, false)
 	self.SetName(step.Name)
 	self.SetOptional(step.Optional).SetNegative(step.Negative).SetTimeout(step.Timeout).SetPaused(step.Paused)
 	if step.Condition != "" {
@@ -76,7 +77,7 @@ func (p *processor) process(layer Intermediate, container Container, step testwo
 
 	// Add virtual pause step in case no other is there
 	if self.HasPause() && len(self.Children()) == 0 {
-		pause := NewContainerStage(self.Ref()+"pause", container.CreateChild().
+		pause := stage.NewContainerStage(self.Ref()+"pause", container.CreateChild().
 			SetCommand(constants.DefaultShellPath).
 			SetArgs("-c", "exit 0"))
 		pause.SetCategory("Wait for continue")
@@ -86,7 +87,7 @@ func (p *processor) process(layer Intermediate, container Container, step testwo
 	return self, nil
 }
 
-func (p *processor) Process(layer Intermediate, container Container, step testworkflowsv1.Step) (Stage, error) {
+func (p *processor) Process(layer Intermediate, container stage.Container, step testworkflowsv1.Step) (stage.Stage, error) {
 	return p.process(layer, container, step, layer.NextRef())
 }
 
@@ -212,7 +213,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	// Adjust the security context in case it's a single container besides the Testkube' containers
 	// TODO: Consider flag argument, that would be used only for services?
 	containerStages := root.ContainerStages()
-	var otherContainers []ContainerStage
+	var otherContainers []stage.ContainerStage
 	for _, c := range containerStages {
 		if c.Container().Image() != constants.DefaultInitImage && c.Container().Image() != constants.DefaultToolkitImage {
 			otherContainers = append(otherContainers, c)

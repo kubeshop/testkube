@@ -8,6 +8,7 @@ import (
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/expressions"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
 
 func simplify(condition string) string {
@@ -23,7 +24,7 @@ func setup(copyInit, copyBinaries bool) Action {
 }
 
 func declare(ref, condition string, parents ...string) Action {
-	return Action{Declare: &ActionDeclare{Ref: ref, Condition: simplify(condition), Parents: parents}}
+	return Action{Declare: &ActionDeclare{Ref: ref, stage.Condition: simplify(condition), Parents: parents}}
 }
 
 func start(ref string) Action {
@@ -51,14 +52,14 @@ func execute(ref string, negative bool) Action {
 }
 
 func containerConfig(ref string, config testworkflowsv1.ContainerConfig) Action {
-	return Action{Container: &ActionContainer{Ref: ref, Config: config}}
+	return Action{stage.Container: &ActionContainer{Ref: ref, Config: config}}
 }
 
 func TestAnalyzeOperations_BasicSteps(t *testing.T) {
 	// Build the structure
-	root := NewGroupStage("init", false)
-	root.Add(NewContainerStage("step1", NewContainer().SetImage("image:1.2.3").SetCommand("a", "b")))
-	root.Add(NewContainerStage("step2", NewContainer().SetImage("image:3.2.1").SetCommand("c", "d")))
+	root := stage.NewGroupStage("init", false)
+	root.Add(stage.NewContainerStage("step1", stage.NewContainer().SetImage("image:1.2.3").SetCommand("a", "b")))
+	root.Add(stage.NewContainerStage("step2", stage.NewContainer().SetImage("image:3.2.1").SetCommand("c", "d")))
 
 	// Build the expectations
 	want := []Action{
@@ -112,11 +113,11 @@ func TestAnalyzeOperations_BasicSteps(t *testing.T) {
 
 func TestAnalyzeOperations_Pause(t *testing.T) {
 	// Build the structure
-	root := NewGroupStage("init", false)
-	step1 := NewContainerStage("step1", NewContainer().SetImage("image:1.2.3").SetCommand("a", "b"))
+	root := stage.NewGroupStage("init", false)
+	step1 := stage.NewContainerStage("step1", stage.NewContainer().SetImage("image:1.2.3").SetCommand("a", "b"))
 	step1.SetPaused(true)
 	root.Add(step1)
-	root.Add(NewContainerStage("step2", NewContainer().SetImage("image:3.2.1").SetCommand("c", "d")))
+	root.Add(stage.NewContainerStage("step2", stage.NewContainer().SetImage("image:3.2.1").SetCommand("c", "d")))
 
 	// Build the expectations
 	want := []Action{
@@ -173,11 +174,11 @@ func TestAnalyzeOperations_Pause(t *testing.T) {
 
 func TestAnalyzeOperations_NegativeStep(t *testing.T) {
 	// Build the structure
-	root := NewGroupStage("init", false)
-	step1 := NewContainerStage("step1", NewContainer().SetImage("image:1.2.3").SetCommand("a", "b"))
+	root := stage.NewGroupStage("init", false)
+	step1 := stage.NewContainerStage("step1", stage.NewContainer().SetImage("image:1.2.3").SetCommand("a", "b"))
 	step1.SetNegative(true)
 	root.Add(step1)
-	root.Add(NewContainerStage("step2", NewContainer().SetImage("image:3.2.1").SetCommand("c", "d")))
+	root.Add(stage.NewContainerStage("step2", stage.NewContainer().SetImage("image:3.2.1").SetCommand("c", "d")))
 
 	// Build the expectations
 	want := []Action{
@@ -231,10 +232,10 @@ func TestAnalyzeOperations_NegativeStep(t *testing.T) {
 
 func TestAnalyzeOperations_NegativeGroup(t *testing.T) {
 	// Build the structure
-	root := NewGroupStage("init", false)
+	root := stage.NewGroupStage("init", false)
 	root.SetNegative(true)
-	root.Add(NewContainerStage("step1", NewContainer().SetImage("image:1.2.3").SetCommand("a", "b")))
-	root.Add(NewContainerStage("step2", NewContainer().SetImage("image:3.2.1").SetCommand("c", "d")))
+	root.Add(stage.NewContainerStage("step1", stage.NewContainer().SetImage("image:1.2.3").SetCommand("a", "b")))
+	root.Add(stage.NewContainerStage("step2", stage.NewContainer().SetImage("image:3.2.1").SetCommand("c", "d")))
 
 	// Build the expectations
 	want := []Action{
@@ -288,11 +289,11 @@ func TestAnalyzeOperations_NegativeGroup(t *testing.T) {
 
 func TestAnalyzeOperations_OptionalStep(t *testing.T) {
 	// Build the structure
-	root := NewGroupStage("init", false)
-	step1 := NewContainerStage("step1", NewContainer().SetImage("image:1.2.3").SetCommand("a", "b"))
+	root := stage.NewGroupStage("init", false)
+	step1 := stage.NewContainerStage("step1", stage.NewContainer().SetImage("image:1.2.3").SetCommand("a", "b"))
 	step1.SetOptional(true)
 	root.Add(step1)
-	root.Add(NewContainerStage("step2", NewContainer().SetImage("image:3.2.1").SetCommand("c", "d")))
+	root.Add(stage.NewContainerStage("step2", stage.NewContainer().SetImage("image:3.2.1").SetCommand("c", "d")))
 
 	// Build the expectations
 	want := []Action{
@@ -346,11 +347,11 @@ func TestAnalyzeOperations_OptionalStep(t *testing.T) {
 
 func TestAnalyzeOperations_OptionalGroup(t *testing.T) {
 	// Build the structure
-	root := NewGroupStage("init", false)
-	group := NewGroupStage("inner", false)
+	root := stage.NewGroupStage("init", false)
+	group := stage.NewGroupStage("inner", false)
 	group.SetOptional(true)
-	group.Add(NewContainerStage("step1", NewContainer().SetImage("image:1.2.3").SetCommand("a", "b")))
-	group.Add(NewContainerStage("step2", NewContainer().SetImage("image:3.2.1").SetCommand("c", "d")))
+	group.Add(stage.NewContainerStage("step1", stage.NewContainer().SetImage("image:1.2.3").SetCommand("a", "b")))
+	group.Add(stage.NewContainerStage("step2", stage.NewContainer().SetImage("image:3.2.1").SetCommand("c", "d")))
 	root.Add(group)
 
 	// Build the expectations
@@ -410,11 +411,11 @@ func TestAnalyzeOperations_OptionalGroup(t *testing.T) {
 
 func TestAnalyzeOperations_IgnoreExecutionOfStaticSkip(t *testing.T) {
 	// Build the structure
-	root := NewGroupStage("init", false)
-	step1 := NewContainerStage("step1", NewContainer().SetImage("image:1.2.3").SetCommand("a", "b"))
+	root := stage.NewGroupStage("init", false)
+	step1 := stage.NewContainerStage("step1", stage.NewContainer().SetImage("image:1.2.3").SetCommand("a", "b"))
 	step1.SetCondition("false")
 	root.Add(step1)
-	root.Add(NewContainerStage("step2", NewContainer().SetImage("image:3.2.1").SetCommand("c", "d")))
+	root.Add(stage.NewContainerStage("step2", stage.NewContainer().SetImage("image:3.2.1").SetCommand("c", "d")))
 
 	// Build the expectations
 	want := []Action{
@@ -462,10 +463,10 @@ func TestAnalyzeOperations_IgnoreExecutionOfStaticSkip(t *testing.T) {
 
 func TestAnalyzeOperations_IgnoreExecutionOfStaticSkipGroup(t *testing.T) {
 	// Build the structure
-	root := NewGroupStage("init", false)
+	root := stage.NewGroupStage("init", false)
 	root.SetCondition("false")
-	root.Add(NewContainerStage("step1", NewContainer().SetImage("image:1.2.3").SetCommand("a", "b")))
-	root.Add(NewContainerStage("step2", NewContainer().SetImage("image:3.2.1").SetCommand("c", "d")))
+	root.Add(stage.NewContainerStage("step1", stage.NewContainer().SetImage("image:1.2.3").SetCommand("a", "b")))
+	root.Add(stage.NewContainerStage("step2", stage.NewContainer().SetImage("image:3.2.1").SetCommand("c", "d")))
 
 	// Build the expectations
 	want := []Action{
@@ -505,11 +506,11 @@ func TestAnalyzeOperations_IgnoreExecutionOfStaticSkipGroup(t *testing.T) {
 
 func TestAnalyzeOperations_IgnoreExecutionOfStaticSkipGroup_Pause(t *testing.T) {
 	// Build the structure
-	root := NewGroupStage("init", false)
+	root := stage.NewGroupStage("init", false)
 	root.SetCondition("false")
 	root.SetPaused(true)
-	root.Add(NewContainerStage("step1", NewContainer().SetImage("image:1.2.3").SetCommand("a", "b")))
-	root.Add(NewContainerStage("step2", NewContainer().SetImage("image:3.2.1").SetCommand("c", "d")))
+	root.Add(stage.NewContainerStage("step1", stage.NewContainer().SetImage("image:1.2.3").SetCommand("a", "b")))
+	root.Add(stage.NewContainerStage("step2", stage.NewContainer().SetImage("image:3.2.1").SetCommand("c", "d")))
 
 	// Build the expectations
 	want := []Action{
@@ -550,12 +551,12 @@ func TestAnalyzeOperations_IgnoreExecutionOfStaticSkipGroup_Pause(t *testing.T) 
 // TODO: Check how the sole `paused: true` step works
 func TestAnalyzeOperations_IgnoreExecutionOfStaticSkip_PauseGroup(t *testing.T) {
 	// Build the structure
-	root := NewGroupStage("init", false)
+	root := stage.NewGroupStage("init", false)
 	root.SetPaused(true)
-	step1 := NewContainerStage("step1", NewContainer().SetImage("image:1.2.3").SetCommand("a", "b"))
+	step1 := stage.NewContainerStage("step1", stage.NewContainer().SetImage("image:1.2.3").SetCommand("a", "b"))
 	step1.SetCondition("false")
 	root.Add(step1)
-	root.Add(NewContainerStage("step2", NewContainer().SetImage("image:3.2.1").SetCommand("c", "d")))
+	root.Add(stage.NewContainerStage("step2", stage.NewContainer().SetImage("image:3.2.1").SetCommand("c", "d")))
 
 	// Build the expectations
 	want := []Action{

@@ -14,8 +14,8 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
 
 const (
@@ -75,7 +75,7 @@ func New(parentCtx context.Context, clientSet kubernetes.Interface, namespace, i
 
 	// Ensure the main Job exists in the cluster,
 	// and obtain the signature
-	var sig []testworkflowprocessor.Signature
+	var sig []stage.Signature
 	var err error
 	select {
 	case j, ok := <-job.PeekMessage(ctx):
@@ -88,7 +88,7 @@ func New(parentCtx context.Context, clientSet kubernetes.Interface, namespace, i
 			ctxCancel()
 			return nil, j.Error
 		}
-		sig, err = testworkflowprocessor.GetSignatureFromJSON([]byte(j.Value.Annotations[constants.SignatureAnnotationName]))
+		sig, err = stage.GetSignatureFromJSON([]byte(j.Value.Annotations[constants.SignatureAnnotationName]))
 		if err != nil {
 			ctxCancel()
 			return nil, errors.Wrap(err, "invalid job signature")
@@ -133,7 +133,7 @@ type controller struct {
 	id          string
 	namespace   string
 	scheduledAt time.Time
-	signature   []testworkflowprocessor.Signature
+	signature   []stage.Signature
 	clientSet   kubernetes.Interface
 	ctx         context.Context
 	ctxCancel   context.CancelFunc
@@ -231,7 +231,7 @@ func (c *controller) WatchLightweight(parentCtx context.Context) <-chan Lightwei
 	prevNodeName := ""
 	prevPodIP := ""
 	prevStatus := testkube.QUEUED_TestWorkflowStatus
-	sig := testworkflowprocessor.MapSignatureListToInternal(c.signature)
+	sig := stage.MapSignatureListToInternal(c.signature)
 	ch := make(chan LightweightNotification)
 	go func() {
 		defer close(ch)

@@ -20,6 +20,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
+	stage2 "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
 
 var BypassToolkitCheck = corev1.EnvVar{
@@ -83,11 +84,11 @@ func AnnotateGroupId(obj metav1.Object, id string) {
 	}
 }
 
-func getRef(stage Stage) string {
+func getRef(stage stage2.Stage) string {
 	return stage.Ref()
 }
 
-func isNotOptional(stage Stage) bool {
+func isNotOptional(stage stage2.Stage) bool {
 	return !stage.Optional()
 }
 
@@ -210,7 +211,7 @@ func isNotOptional(stage Stage) bool {
 
 // TODO: Wrap all errors in this file
 // TODO: tail-recursive
-func analyzeOperations(currentStatus string, parents []string, stage Stage, machines ...expressions.Machine) (actions []action.Action, err error) {
+func analyzeOperations(currentStatus string, parents []string, stage stage2.Stage, machines ...expressions.Machine) (actions []action.Action, err error) {
 	// Store the init status
 	actions = append(actions, action.Action{
 		CurrentStatus: common.Ptr(currentStatus),
@@ -227,11 +228,11 @@ func analyzeOperations(currentStatus string, parents []string, stage Stage, mach
 
 	// Configure the container for action
 	// TODO: Handle the ContainerDefaults properly
-	var containerConfig Container
-	if group, ok := stage.(GroupStage); ok {
+	var containerConfig stage2.Container
+	if group, ok := stage.(stage2.GroupStage); ok {
 		containerConfig = group.ContainerDefaults()
 	} else {
-		containerConfig = stage.(ContainerStage).Container()
+		containerConfig = stage.(stage2.ContainerStage).Container()
 	}
 	if containerConfig != nil {
 		c := containerConfig.Detach()
@@ -271,7 +272,7 @@ func analyzeOperations(currentStatus string, parents []string, stage Stage, mach
 	}
 
 	// Handle executable action
-	if exec, ok := stage.(ContainerStage); ok {
+	if exec, ok := stage.(stage2.ContainerStage); ok {
 		actions = append(actions, action.Action{
 			Execute: &action.ActionExecute{
 				Ref:      exec.Ref(),
@@ -281,7 +282,7 @@ func analyzeOperations(currentStatus string, parents []string, stage Stage, mach
 	}
 
 	// Handle group
-	if group, ok := stage.(GroupStage); ok {
+	if group, ok := stage.(stage2.GroupStage); ok {
 		// Build initial status for children
 		// TODO: Handle negative
 		// TODO: Consider enum value instead of boolean
@@ -339,7 +340,7 @@ func simplifyExpression(expr string, machines ...expressions.Machine) string {
 	return expr
 }
 
-func optimizeActions(root Stage, actions []action.Action) ([]action.Action, error) {
+func optimizeActions(root stage2.Stage, actions []action.Action) ([]action.Action, error) {
 	// Detect all the step references
 	refs := make(map[string]struct{})
 	executableRefs := make(map[string]struct{})
@@ -700,7 +701,7 @@ func sortActions(actions []action.Action) {
 	})
 }
 
-func AnalyzeOperations(root Stage, machines ...expressions.Machine) ([]action.Action, error) {
+func AnalyzeOperations(root stage2.Stage, machines ...expressions.Machine) ([]action.Action, error) {
 	actions, err := analyzeOperations("true", nil, root, machines...)
 	if err != nil {
 		return nil, err
@@ -791,7 +792,7 @@ func GroupActions(actions []action.Action) (groups [][]action.Action) {
 //       There is some empty object on the last one
 
 // TODO: Disallow bypassing
-func BuildContainer(groupId int, defaultContainer Container, actions []action.Action) (cr corev1.Container, actionsCleanup []action.Action, err error) {
+func BuildContainer(groupId int, defaultContainer stage2.Container, actions []action.Action) (cr corev1.Container, actionsCleanup []action.Action, err error) {
 	actions = slices.Clone(actions)
 	actionsCleanup = actions
 
@@ -825,7 +826,7 @@ func BuildContainer(groupId int, defaultContainer Container, actions []action.Ac
 	// TODO: Handle the case when there are multiple exclusive execution configurations
 	// TODO: Handle a case when that configuration should join multiple configurations (i.e. envs/volumeMounts)
 	if len(containerConfigs) > 0 {
-		cr, err = NewContainer().ApplyCR(&bestContainerConfig.Container.Config).ToKubernetesTemplate()
+		cr, err = stage2.NewContainer().ApplyCR(&bestContainerConfig.Container.Config).ToKubernetesTemplate()
 		if err != nil {
 			return corev1.Container{}, nil, err
 		}

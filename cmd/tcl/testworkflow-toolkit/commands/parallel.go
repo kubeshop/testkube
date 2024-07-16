@@ -31,9 +31,9 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/presets"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -200,7 +200,7 @@ func NewParallelCmd() *cobra.Command {
 				}
 
 				// Compute the bundle instructions
-				sig := testworkflowprocessor.MapSignatureListToInternal(bundle.Signature)
+				sig := stage.MapSignatureListToInternal(bundle.Signature)
 				namespace := bundle.Job.Namespace
 				if namespace == "" {
 					namespace = env.Namespace()
