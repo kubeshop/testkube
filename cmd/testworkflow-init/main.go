@@ -14,7 +14,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/orchestration"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 )
 
 func main() {
@@ -53,7 +53,7 @@ func main() {
 	}
 
 	// Distribute the details
-	currentContainer := actiontypes.ActionContainer{}
+	currentContainer := lite.LiteActionContainer{}
 
 	// Ensure there is a group index provided
 	if len(os.Args) != 2 {
@@ -73,36 +73,36 @@ func main() {
 	state := data.GetState()
 	for _, action := range state.GetActions(int(groupIndex)) {
 		switch action.Type() {
-		case actiontypes.ActionTypeDeclare:
+		case lite.ActionTypeDeclare:
 			state.GetStep(action.Declare.Ref).
 				SetCondition(action.Declare.Condition).
 				SetParents(action.Declare.Parents)
 
-		case actiontypes.ActionTypePause:
+		case lite.ActionTypePause:
 			state.GetStep(action.Pause.Ref).
 				SetPausedOnStart(true)
 
-		case actiontypes.ActionTypeResult:
+		case lite.ActionTypeResult:
 			state.GetStep(action.Result.Ref).
 				SetResult(action.Result.Value)
 
-		case actiontypes.ActionTypeTimeout:
+		case lite.ActionTypeTimeout:
 			state.GetStep(action.Timeout.Ref).
 				SetTimeout(action.Timeout.Timeout)
 
-		case actiontypes.ActionTypeRetry:
+		case lite.ActionTypeRetry:
 			state.GetStep(action.Retry.Ref).
 				SetRetryPolicy(data.RetryPolicy{Count: action.Retry.Count, Until: action.Retry.Until})
 
-		case actiontypes.ActionTypeContainerTransition:
+		case lite.ActionTypeContainerTransition:
 			orchestration.Setup.SetConfig(action.Container.Config)
 			orchestration.Setup.AdvanceEnv()
 			currentContainer = *action.Container
 
-		case actiontypes.ActionTypeCurrentStatus:
+		case lite.ActionTypeCurrentStatus:
 			state.SetCurrentStatus(*action.CurrentStatus)
 
-		case actiontypes.ActionTypeStart:
+		case lite.ActionTypeStart:
 			if *action.Start == "" {
 				continue
 			}
@@ -123,7 +123,7 @@ func main() {
 				delayedPauses = append(delayedPauses, state.CurrentRef)
 			}
 
-		case actiontypes.ActionTypeEnd:
+		case lite.ActionTypeEnd:
 			if *action.End == "" {
 				continue
 			}
@@ -137,7 +137,7 @@ func main() {
 			}
 			orchestration.End(step)
 
-		case actiontypes.ActionTypeSetup:
+		case lite.ActionTypeSetup:
 			// TODO: Handle error
 			orchestration.Setup.UseEnv("00")
 			step := state.GetStep(data.InitStepName)
@@ -145,7 +145,7 @@ func main() {
 			step.SetStatus(data.StepStatusPassed)
 			orchestration.End(step)
 
-		case actiontypes.ActionTypeExecute:
+		case lite.ActionTypeExecute:
 			// Ignore running when the step is already resolved (= skipped)
 			step := state.GetStep(action.Execute.Ref)
 			if step.Status != nil {

@@ -6,10 +6,10 @@ import (
 	"regexp"
 	"strings"
 
-	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/expressions/libs"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 )
 
 var (
@@ -137,7 +137,7 @@ func (c *setup) AdvanceEnv() {
 	c.UseCurrentEnv()
 }
 
-func (c *setup) SetConfig(config testworkflowsv1.ContainerConfig) {
+func (c *setup) SetConfig(config lite.LiteContainerConfig) {
 	if config.WorkingDir == nil || *config.WorkingDir == "" {
 		_ = os.Chdir(*config.WorkingDir)
 	} else {

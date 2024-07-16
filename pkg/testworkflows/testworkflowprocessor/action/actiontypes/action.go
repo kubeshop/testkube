@@ -5,107 +5,51 @@ import (
 	"fmt"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 )
-
-type ActionResult struct {
-	Ref   string `json:"r"`
-	Value string `json:"v"`
-}
-
-type ActionDeclare struct {
-	Condition string   `json:"c"`
-	Ref       string   `json:"r"`
-	Parents   []string `json:"p,omitempty"`
-}
-
-type ActionExecute struct {
-	Ref      string `json:"r"`
-	Negative bool   `json:"n,omitempty"`
-}
 
 type ActionContainer struct {
 	Ref    string                          `json:"r"`
 	Config testworkflowsv1.ContainerConfig `json:"c"`
 }
 
-// TODO: Consider for groups too?
-type ActionPause struct {
-	Ref string `json:"r"`
-}
-
-type ActionTimeout struct {
-	Ref     string `json:"r"`
-	Timeout string `json:"t"`
-}
-
-// TODO: RetryAction as a conditional GoTo back?
-type ActionRetry struct {
-	Ref   string `json:"r"`
-	Count int32  `json:"c,omitempty"`
-	Until string `json:"u,omitempty"`
-}
-
-type ActionSetup struct {
-	CopyInit     bool `json:"i,omitempty"`
-	CopyBinaries bool `json:"b,omitempty"`
-}
-
 type Action struct {
-	CurrentStatus *string          `json:"s,omitempty"`
-	Start         *string          `json:"S,omitempty"`
-	End           *string          `json:"E,omitempty"`
-	Setup         *ActionSetup     `json:"_,omitempty"`
-	Declare       *ActionDeclare   `json:"d,omitempty"`
-	Result        *ActionResult    `json:"r,omitempty"`
-	Container     *ActionContainer `json:"c,omitempty"`
-	Execute       *ActionExecute   `json:"e,omitempty"`
-	Timeout       *ActionTimeout   `json:"t,omitempty"`
-	Pause         *ActionPause     `json:"p,omitempty"`
-	Retry         *ActionRetry     `json:"R,omitempty"`
+	CurrentStatus *string             `json:"s,omitempty"`
+	Start         *string             `json:"S,omitempty"`
+	End           *string             `json:"E,omitempty"`
+	Setup         *lite.ActionSetup   `json:"_,omitempty"`
+	Declare       *lite.ActionDeclare `json:"d,omitempty"`
+	Result        *lite.ActionResult  `json:"r,omitempty"`
+	Container     *ActionContainer    `json:"c,omitempty"`
+	Execute       *lite.ActionExecute `json:"e,omitempty"`
+	Timeout       *lite.ActionTimeout `json:"t,omitempty"`
+	Pause         *lite.ActionPause   `json:"p,omitempty"`
+	Retry         *lite.ActionRetry   `json:"R,omitempty"`
 }
 
-type ActionType string
-
-const (
-	// Declarations
-	ActionTypeDeclare ActionType = "declare"
-	ActionTypePause              = "pause"
-	ActionTypeResult             = "result"
-	ActionTypeTimeout            = "timeout"
-	ActionTypeRetry              = "retry"
-
-	// Operations
-	ActionTypeContainerTransition = "container"
-	ActionTypeCurrentStatus       = "status"
-	ActionTypeStart               = "start"
-	ActionTypeEnd                 = "end"
-	ActionTypeSetup               = "setup"
-	ActionTypeExecute             = "execute"
-)
-
-func (a *Action) Type() ActionType {
+func (a *Action) Type() lite.ActionType {
 	if a.Declare != nil {
-		return ActionTypeDeclare
+		return lite.ActionTypeDeclare
 	} else if a.Pause != nil {
-		return ActionTypePause
+		return lite.ActionTypePause
 	} else if a.Result != nil {
-		return ActionTypeResult
+		return lite.ActionTypeResult
 	} else if a.Timeout != nil {
-		return ActionTypeTimeout
+		return lite.ActionTypeTimeout
 	} else if a.Retry != nil {
-		return ActionTypeRetry
+		return lite.ActionTypeRetry
 	} else if a.Container != nil {
-		return ActionTypeContainerTransition
+		return lite.ActionTypeContainerTransition
 	} else if a.CurrentStatus != nil {
-		return ActionTypeCurrentStatus
+		return lite.ActionTypeCurrentStatus
 	} else if a.Start != nil {
-		return ActionTypeStart
+		return lite.ActionTypeStart
 	} else if a.End != nil {
-		return ActionTypeEnd
+		return lite.ActionTypeEnd
 	} else if a.Setup != nil {
-		return ActionTypeSetup
+		return lite.ActionTypeSetup
 	} else if a.Execute != nil {
-		return ActionTypeExecute
+		return lite.ActionTypeExecute
 	}
 	v, e := json.Marshal(a)
 	panic(fmt.Sprintf("unknown action type: %s, %v", string(v), e))
