@@ -15,7 +15,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
 	constants2 "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
@@ -75,7 +75,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 
 		// Load the references
 		refs := make([][]string, 0)
-		var instructions [][]action.Action
+		var instructions [][]actiontypes.Action
 		err := json.Unmarshal([]byte(podObj.Annotations[constants2.SpecAnnotationName]), &instructions)
 		if err != nil {
 			// TODO: Don't panic

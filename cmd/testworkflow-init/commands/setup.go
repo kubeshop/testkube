@@ -9,11 +9,11 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
 	"github.com/kubeshop/testkube/pkg/version"
 )
 
-func Setup(config action.ActionSetup) {
+func Setup(config actiontypes.ActionSetup) {
 	// Copy the init process TODO: only when it is required
 	fmt.Print("Configuring init process...")
 	if config.CopyInit {

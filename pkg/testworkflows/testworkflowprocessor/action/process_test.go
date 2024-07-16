@@ -1,4 +1,4 @@
-package testworkflowprocessor
+package action
 
 import (
 	"testing"
@@ -8,6 +8,7 @@ import (
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/expressions"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
 
@@ -19,50 +20,50 @@ func simplify(condition string) string {
 	return c.String()
 }
 
-func setup(copyInit, copyBinaries bool) Action {
-	return Action{Setup: &ActionSetup{CopyInit: copyInit, CopyBinaries: copyBinaries}}
+func setup(copyInit, copyBinaries bool) actiontypes.Action {
+	return actiontypes.Action{Setup: &actiontypes.ActionSetup{CopyInit: copyInit, CopyBinaries: copyBinaries}}
 }
 
-func declare(ref, condition string, parents ...string) Action {
-	return Action{Declare: &ActionDeclare{Ref: ref, stage.Condition: simplify(condition), Parents: parents}}
+func declare(ref, condition string, parents ...string) actiontypes.Action {
+	return actiontypes.Action{Declare: &actiontypes.ActionDeclare{Ref: ref, Condition: simplify(condition), Parents: parents}}
 }
 
-func start(ref string) Action {
-	return Action{Start: common.Ptr(ref)}
+func start(ref string) actiontypes.Action {
+	return actiontypes.Action{Start: common.Ptr(ref)}
 }
 
-func pause(ref string) Action {
-	return Action{Pause: &ActionPause{Ref: ref}}
+func pause(ref string) actiontypes.Action {
+	return actiontypes.Action{Pause: &actiontypes.ActionPause{Ref: ref}}
 }
 
-func end(ref string) Action {
-	return Action{End: common.Ptr(ref)}
+func end(ref string) actiontypes.Action {
+	return actiontypes.Action{End: common.Ptr(ref)}
 }
 
-func status(status string) Action {
-	return Action{CurrentStatus: common.Ptr(simplify(status))}
+func status(status string) actiontypes.Action {
+	return actiontypes.Action{CurrentStatus: common.Ptr(simplify(status))}
 }
 
-func result(ref, value string) Action {
-	return Action{Result: &ActionResult{Ref: ref, Value: simplify(value)}}
+func result(ref, value string) actiontypes.Action {
+	return actiontypes.Action{Result: &actiontypes.ActionResult{Ref: ref, Value: simplify(value)}}
 }
 
-func execute(ref string, negative bool) Action {
-	return Action{Execute: &ActionExecute{Ref: ref, Negative: negative}}
+func execute(ref string, negative bool) actiontypes.Action {
+	return actiontypes.Action{Execute: &actiontypes.ActionExecute{Ref: ref, Negative: negative}}
 }
 
-func containerConfig(ref string, config testworkflowsv1.ContainerConfig) Action {
-	return Action{stage.Container: &ActionContainer{Ref: ref, Config: config}}
+func containerConfig(ref string, config testworkflowsv1.ContainerConfig) actiontypes.Action {
+	return actiontypes.Action{Container: &actiontypes.ActionContainer{Ref: ref, Config: config}}
 }
 
-func TestAnalyzeOperations_BasicSteps(t *testing.T) {
+func TestProcess_BasicSteps(t *testing.T) {
 	// Build the structure
 	root := stage.NewGroupStage("init", false)
 	root.Add(stage.NewContainerStage("step1", stage.NewContainer().SetImage("image:1.2.3").SetCommand("a", "b")))
 	root.Add(stage.NewContainerStage("step2", stage.NewContainer().SetImage("image:3.2.1").SetCommand("c", "d")))
 
 	// Build the expectations
-	want := []Action{
+	want := []actiontypes.Action{
 		// Configure
 		setup(true, true),
 
@@ -106,12 +107,12 @@ func TestAnalyzeOperations_BasicSteps(t *testing.T) {
 	}
 
 	// Assert
-	got, err := AnalyzeOperations(root)
+	got, err := Process(root)
 	assert.NoError(t, err)
 	assert.Equal(t, want, got)
 }
 
-func TestAnalyzeOperations_Pause(t *testing.T) {
+func TestProcess_Pause(t *testing.T) {
 	// Build the structure
 	root := stage.NewGroupStage("init", false)
 	step1 := stage.NewContainerStage("step1", stage.NewContainer().SetImage("image:1.2.3").SetCommand("a", "b"))
@@ -120,7 +121,7 @@ func TestAnalyzeOperations_Pause(t *testing.T) {
 	root.Add(stage.NewContainerStage("step2", stage.NewContainer().SetImage("image:3.2.1").SetCommand("c", "d")))
 
 	// Build the expectations
-	want := []Action{
+	want := []actiontypes.Action{
 		// Configure
 		setup(true, true),
 
@@ -167,12 +168,12 @@ func TestAnalyzeOperations_Pause(t *testing.T) {
 	}
 
 	// Assert
-	got, err := AnalyzeOperations(root)
+	got, err := Process(root)
 	assert.NoError(t, err)
 	assert.Equal(t, want, got)
 }
 
-func TestAnalyzeOperations_NegativeStep(t *testing.T) {
+func TestProcess_NegativeStep(t *testing.T) {
 	// Build the structure
 	root := stage.NewGroupStage("init", false)
 	step1 := stage.NewContainerStage("step1", stage.NewContainer().SetImage("image:1.2.3").SetCommand("a", "b"))
@@ -181,7 +182,7 @@ func TestAnalyzeOperations_NegativeStep(t *testing.T) {
 	root.Add(stage.NewContainerStage("step2", stage.NewContainer().SetImage("image:3.2.1").SetCommand("c", "d")))
 
 	// Build the expectations
-	want := []Action{
+	want := []actiontypes.Action{
 		// Configure
 		setup(true, true),
 
@@ -225,12 +226,12 @@ func TestAnalyzeOperations_NegativeStep(t *testing.T) {
 	}
 
 	// Assert
-	got, err := AnalyzeOperations(root)
+	got, err := Process(root)
 	assert.NoError(t, err)
 	assert.Equal(t, want, got)
 }
 
-func TestAnalyzeOperations_NegativeGroup(t *testing.T) {
+func TestProcess_NegativeGroup(t *testing.T) {
 	// Build the structure
 	root := stage.NewGroupStage("init", false)
 	root.SetNegative(true)
@@ -238,7 +239,7 @@ func TestAnalyzeOperations_NegativeGroup(t *testing.T) {
 	root.Add(stage.NewContainerStage("step2", stage.NewContainer().SetImage("image:3.2.1").SetCommand("c", "d")))
 
 	// Build the expectations
-	want := []Action{
+	want := []actiontypes.Action{
 		// Configure
 		setup(true, true),
 
@@ -282,12 +283,12 @@ func TestAnalyzeOperations_NegativeGroup(t *testing.T) {
 	}
 
 	// Assert
-	got, err := AnalyzeOperations(root)
+	got, err := Process(root)
 	assert.NoError(t, err)
 	assert.Equal(t, want, got)
 }
 
-func TestAnalyzeOperations_OptionalStep(t *testing.T) {
+func TestProcess_OptionalStep(t *testing.T) {
 	// Build the structure
 	root := stage.NewGroupStage("init", false)
 	step1 := stage.NewContainerStage("step1", stage.NewContainer().SetImage("image:1.2.3").SetCommand("a", "b"))
@@ -296,7 +297,7 @@ func TestAnalyzeOperations_OptionalStep(t *testing.T) {
 	root.Add(stage.NewContainerStage("step2", stage.NewContainer().SetImage("image:3.2.1").SetCommand("c", "d")))
 
 	// Build the expectations
-	want := []Action{
+	want := []actiontypes.Action{
 		// Configure
 		setup(true, true),
 
@@ -340,12 +341,12 @@ func TestAnalyzeOperations_OptionalStep(t *testing.T) {
 	}
 
 	// Assert
-	got, err := AnalyzeOperations(root)
+	got, err := Process(root)
 	assert.NoError(t, err)
 	assert.Equal(t, want, got)
 }
 
-func TestAnalyzeOperations_OptionalGroup(t *testing.T) {
+func TestProcess_OptionalGroup(t *testing.T) {
 	// Build the structure
 	root := stage.NewGroupStage("init", false)
 	group := stage.NewGroupStage("inner", false)
@@ -355,7 +356,7 @@ func TestAnalyzeOperations_OptionalGroup(t *testing.T) {
 	root.Add(group)
 
 	// Build the expectations
-	want := []Action{
+	want := []actiontypes.Action{
 		// Configure
 		setup(true, true),
 
@@ -404,12 +405,12 @@ func TestAnalyzeOperations_OptionalGroup(t *testing.T) {
 	}
 
 	// Assert
-	got, err := AnalyzeOperations(root)
+	got, err := Process(root)
 	assert.NoError(t, err)
 	assert.Equal(t, want, got)
 }
 
-func TestAnalyzeOperations_IgnoreExecutionOfStaticSkip(t *testing.T) {
+func TestProcess_IgnoreExecutionOfStaticSkip(t *testing.T) {
 	// Build the structure
 	root := stage.NewGroupStage("init", false)
 	step1 := stage.NewContainerStage("step1", stage.NewContainer().SetImage("image:1.2.3").SetCommand("a", "b"))
@@ -418,7 +419,7 @@ func TestAnalyzeOperations_IgnoreExecutionOfStaticSkip(t *testing.T) {
 	root.Add(stage.NewContainerStage("step2", stage.NewContainer().SetImage("image:3.2.1").SetCommand("c", "d")))
 
 	// Build the expectations
-	want := []Action{
+	want := []actiontypes.Action{
 		// Configure
 		setup(true, true),
 
@@ -456,12 +457,12 @@ func TestAnalyzeOperations_IgnoreExecutionOfStaticSkip(t *testing.T) {
 	}
 
 	// Assert
-	got, err := AnalyzeOperations(root)
+	got, err := Process(root)
 	assert.NoError(t, err)
 	assert.Equal(t, want, got)
 }
 
-func TestAnalyzeOperations_IgnoreExecutionOfStaticSkipGroup(t *testing.T) {
+func TestProcess_IgnoreExecutionOfStaticSkipGroup(t *testing.T) {
 	// Build the structure
 	root := stage.NewGroupStage("init", false)
 	root.SetCondition("false")
@@ -469,7 +470,7 @@ func TestAnalyzeOperations_IgnoreExecutionOfStaticSkipGroup(t *testing.T) {
 	root.Add(stage.NewContainerStage("step2", stage.NewContainer().SetImage("image:3.2.1").SetCommand("c", "d")))
 
 	// Build the expectations
-	want := []Action{
+	want := []actiontypes.Action{
 		// Configure
 		setup(true, true),
 
@@ -499,12 +500,12 @@ func TestAnalyzeOperations_IgnoreExecutionOfStaticSkipGroup(t *testing.T) {
 	}
 
 	// Assert
-	got, err := AnalyzeOperations(root)
+	got, err := Process(root)
 	assert.NoError(t, err)
 	assert.Equal(t, want, got)
 }
 
-func TestAnalyzeOperations_IgnoreExecutionOfStaticSkipGroup_Pause(t *testing.T) {
+func TestProcess_IgnoreExecutionOfStaticSkipGroup_Pause(t *testing.T) {
 	// Build the structure
 	root := stage.NewGroupStage("init", false)
 	root.SetCondition("false")
@@ -513,7 +514,7 @@ func TestAnalyzeOperations_IgnoreExecutionOfStaticSkipGroup_Pause(t *testing.T) 
 	root.Add(stage.NewContainerStage("step2", stage.NewContainer().SetImage("image:3.2.1").SetCommand("c", "d")))
 
 	// Build the expectations
-	want := []Action{
+	want := []actiontypes.Action{
 		// Configure
 		setup(true, true),
 
@@ -543,13 +544,13 @@ func TestAnalyzeOperations_IgnoreExecutionOfStaticSkipGroup_Pause(t *testing.T) 
 	}
 
 	// Assert
-	got, err := AnalyzeOperations(root)
+	got, err := Process(root)
 	assert.NoError(t, err)
 	assert.Equal(t, want, got)
 }
 
 // TODO: Check how the sole `paused: true` step works
-func TestAnalyzeOperations_IgnoreExecutionOfStaticSkip_PauseGroup(t *testing.T) {
+func TestProcess_IgnoreExecutionOfStaticSkip_PauseGroup(t *testing.T) {
 	// Build the structure
 	root := stage.NewGroupStage("init", false)
 	root.SetPaused(true)
@@ -559,7 +560,7 @@ func TestAnalyzeOperations_IgnoreExecutionOfStaticSkip_PauseGroup(t *testing.T) 
 	root.Add(stage.NewContainerStage("step2", stage.NewContainer().SetImage("image:3.2.1").SetCommand("c", "d")))
 
 	// Build the expectations
-	want := []Action{
+	want := []actiontypes.Action{
 		// Configure
 		setup(true, true),
 
@@ -600,64 +601,7 @@ func TestAnalyzeOperations_IgnoreExecutionOfStaticSkip_PauseGroup(t *testing.T) 
 	}
 
 	// Assert
-	got, err := AnalyzeOperations(root)
+	got, err := Process(root)
 	assert.NoError(t, err)
-	assert.Equal(t, want, got)
-}
-
-func TestGroupActions_Basic(t *testing.T) {
-	input := []Action{
-		// Configure
-		setup(true, true),
-
-		// Declare stage conditions
-		declare("init", "true"),
-		declare("step1", "false"),
-		declare("step2", "true", "init"),
-		declare("step3", "true", "init"),
-
-		// Declare stage resolutions
-		result("init", "step2 && step3"),
-		result("", "init"),
-
-		// Initialize
-		start(""),
-		status("true"),
-		start("init"),
-
-		// Run the step 1
-		status("init"),
-		start("step1"),
-
-		// Run the step 2
-		status("init"),
-		containerConfig("step2", testworkflowsv1.ContainerConfig{
-			Image:   "image:3.2.1",
-			Command: common.Ptr([]string{"c", "d"}),
-		}),
-		start("step2"),
-		execute("step2", false),
-		end("step2"),
-
-		// Run the step 3
-		status("init"),
-		containerConfig("step3", testworkflowsv1.ContainerConfig{
-			Image:   "image:3.2.1",
-			Command: common.Ptr([]string{"c", "d"}),
-		}),
-		start("step3"),
-		execute("step3", false),
-		end("step3"),
-
-		// Finish
-		end("init"),
-		end(""),
-	}
-	want := [][]Action{
-		input[:13],   // ends before containerConfig("step2")
-		input[13:18], // ends before containerConfig("step3")
-		input[18:],
-	}
-	got := GroupActions(input)
 	assert.Equal(t, want, got)
 }

@@ -8,11 +8,11 @@ import (
 	"sync"
 
 	"github.com/kubeshop/testkube/pkg/expressions"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
 )
 
 type state struct {
-	Actions [][]action.Action `json:"a,omitempty"`
+	Actions [][]actiontypes.Action `json:"a,omitempty"`
 
 	CurrentRef    string               `json:"c,omitempty"`
 	CurrentStatus string               `json:"s,omitempty"`
@@ -20,7 +20,7 @@ type state struct {
 	Steps         map[string]*StepData `json:"S,omitempty"`
 }
 
-func (s *state) GetActions(groupIndex int) []action.Action {
+func (s *state) GetActions(groupIndex int) []actiontypes.Action {
 	if groupIndex < 0 || groupIndex >= len(s.Actions) {
 		panic("unknown actions group")
 	}

@@ -17,6 +17,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -247,15 +248,15 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	}
 
 	// Build list of the containers
-	actions, err := AnalyzeOperations(root, machines...)
+	actions, err := action.Process(root, machines...)
 	if err != nil {
 		return nil, errors.Wrap(err, "analyzing Kubernetes container operations")
 	}
-	actionGroups := GroupActions(actions)
+	actionGroups := action.Group(actions)
 	containers := make([]corev1.Container, len(actionGroups))
 	for i := range actionGroups {
-		var bareActions []action.Action
-		containers[i], bareActions, err = BuildContainer(i, layer.ContainerDefaults(), actionGroups[i])
+		var bareActions []actiontypes.Action
+		containers[i], bareActions, err = action.CreateContainer(i, layer.ContainerDefaults(), actionGroups[i])
 		actionGroups[i] = bareActions
 		if err != nil {
 			return nil, errors.Wrap(err, "building Kubernetes containers")

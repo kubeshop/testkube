@@ -9,10 +9,10 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/orchestration"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
 )
 
-func Run(run action.ActionExecute, container action.ActionContainer) {
+func Run(run actiontypes.ActionExecute, container actiontypes.ActionContainer) {
 	state := data.GetState()
 	step := state.GetStep(run.Ref)
 
