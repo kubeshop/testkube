@@ -55,16 +55,30 @@ It is an array of config objects and can use any config combinations:
     - end-test-failed
     - end-test-aborted
     - end-test-timeout
+    - become-test-up
+    - become-test-down
+    - become-test-failed
+    - become-test-aborted
+    - become-test-timeout
     - start-testsuite
     - end-testsuite-success
     - end-testsuite-failed
     - end-testsuite-aborted
     - end-testsuite-timeout
+    - become-testsuite-up
+    - become-testsuite-down
+    - become-testsuite-failed
+    - become-testsuite-aborted
+    - become-testsuite-timeout
     - start-testworkflow
     - queue-testworkflow    
     - end-testworkflow-success
     - end-testworkflow-failed
     - end-testworkflow-aborted
+    - become-testworkflow-up
+    - become-testworkflow-down
+    - become-testworkflow-failed
+    - become-testworkflow-aborted 
 ```
 
 To apply, pass the file to the Helm values:
@@ -119,16 +133,30 @@ For example:
     - end-test-failed
     - end-test-aborted
     - end-test-timeout
+    - become-test-up
+    - become-test-down
+    - become-test-failed
+    - become-test-aborted
+    - become-test-timeout
     - start-testsuite
     - end-testsuite-success
     - end-testsuite-failed
     - end-testsuite-aborted
     - end-testsuite-timeout
+    - become-testsuite-up
+    - become-testsuite-down
+    - become-testsuite-failed
+    - become-testsuite-aborted
+    - become-testsuite-timeout
     - start-testworkflow
     - queue-testworkflow    
     - end-testworkflow-success
     - end-testworkflow-failed
     - end-testworkflow-aborted
+    - become-testworkflow-up
+    - become-testworkflow-down
+    - become-testworkflow-failed
+    - become-testworkflow-aborted 
 ```
 
 This will send notifications to the channel with the id `C01234567` for the test, test suites and test workflows with labels `label1:value1` as well as tests with the names "sanity" and "testName2", test suites with the names "test-suite1" and "test-suite2" and test workflows with the names "test-workflow1" and "test-workflow2", on events with the labels "end-test-failed", "end-test-timeout", "end-testsuite-failed", "end-testsuite-timeout" and "end-testworkflow-failed", and to the channel with the id `C07654342` for tests with labels `label3:value4`, tests with the names "integration-test1" and "integration-test2", test suites with the names "integration-test-suite1" and "integration-test-suite2" and test workflows with the names "integration-test-workflow1" and "integration-test-workflow2" on all events.
