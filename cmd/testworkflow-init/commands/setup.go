@@ -42,7 +42,7 @@ func Setup(config lite.ActionSetup) {
 		fmt.Println(" skipped")
 	}
 
-	// Expose debugging Pod inforation
+	// Expose debugging Pod information
 	data.PrintOutput(data.InitStepName, "pod", map[string]string{
 		"name":               os.Getenv(constants.EnvPodName),
 		"nodeName":           os.Getenv(constants.EnvNodeName),
