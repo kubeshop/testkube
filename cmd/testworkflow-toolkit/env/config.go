@@ -35,14 +35,15 @@ type envCloudConfig struct {
 }
 
 type envExecutionConfig struct {
-	WorkflowName   string `envconfig:"TK_WF"`
-	Id             string `envconfig:"TK_EX"`
-	Name           string `envconfig:"TK_EXN"`
-	Number         int64  `envconfig:"TK_EXC"`
-	ScheduledAt    string `envconfig:"TK_EXS"`
-	ResourceId     string `envconfig:"TK_EXI"`
-	RootResourceId string `envconfig:"TK_EXR"`
-	FSPrefix       string `envconfig:"TK_FS"`
+	WorkflowName    string `envconfig:"TK_WF"`
+	Id              string `envconfig:"TK_EX"`
+	Name            string `envconfig:"TK_EXN"`
+	Number          int64  `envconfig:"TK_EXC"`
+	ScheduledAt     string `envconfig:"TK_EXS"`
+	ResourceId      string `envconfig:"TK_EXI"`
+	RootResourceId  string `envconfig:"TK_EXR"`
+	FSPrefix        string `envconfig:"TK_FS"`
+	DisableWebhooks bool   `envconfig:"TK_DWH"`
 }
 
 type envSystemConfig struct {
@@ -143,6 +144,10 @@ func ExecutionNumber() int64 {
 func ExecutionScheduledAt() time.Time {
 	t, _ := time.Parse(constants.RFC3339Millis, Config().Execution.ScheduledAt)
 	return t
+}
+
+func ExecutionDisableWebhooks() bool {
+	return Config().Execution.DisableWebhooks
 }
 
 func JUnitParserEnabled() bool {

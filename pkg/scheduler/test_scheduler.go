@@ -59,10 +59,6 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 		request.Name = fmt.Sprintf("%s-%d", request.Name, request.Number)
 	}
 
-	if !request.DisableWebhooks && test.ExecutionRequest != nil {
-		request.DisableWebhooks = test.ExecutionRequest.DisableWebhooks
-	}
-
 	// test name + test execution name should be unique
 	execution, _ = s.testResults.GetByNameAndTest(ctx, request.Name, test.Name)
 

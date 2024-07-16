@@ -17,7 +17,6 @@ func UpdateWebhookCmd() *cobra.Command {
 		payloadTemplate          string
 		headers                  map[string]string
 		payloadTemplateReference string
-		enable                   bool
 		disable                  bool
 		onStateChange            bool
 	)
@@ -30,10 +29,6 @@ func UpdateWebhookCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			if name == "" {
 				ui.Failf("pass valid name (in '--name' flag)")
-			}
-
-			if isBothEnabledAndDisabledSet(cmd) {
-				ui.Failf("both --enable and --disable flags are set, please use only one")
 			}
 
 			client, namespace, err := common.GetClient(cmd)
@@ -64,7 +59,7 @@ func UpdateWebhookCmd() *cobra.Command {
 	cmd.Flags().StringToStringVarP(&headers, "header", "", nil, "webhook header value pair (golang template supported): --header Content-Type=application/xml")
 	cmd.Flags().StringVar(&payloadTemplateReference, "payload-template-reference", "", "reference to payload template to use for the webhook")
 	cmd.Flags().BoolVar(&disable, "disable", false, "disable webhook")
-	cmd.Flags().BoolVar(&enable, "enable", false, "enable webhook")
+	cmd.Flags().MarkDeprecated("enable", "enable webhook is depecated")
 	cmd.Flags().BoolVar(&onStateChange, "on-state-change", false, "specify whether webhook should be triggered only on a state change")
 
 	return cmd

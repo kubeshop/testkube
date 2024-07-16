@@ -6595,7 +6595,7 @@ components:
           description: running context for the test execution
         disableWebhooks:
           type: boolean
-          description: whether webhooks on the executions of this step are disabled
+          description: whether webhooks on the execution of this step are disabled
           default: false
           example:
             - true
@@ -6703,7 +6703,7 @@ components:
           description: test suite execution name started the test suite execution
         disableWebhooks:
           type: boolean
-          description: whether webhooks on the executions of this test suite are disabled
+          description: whether webhooks on the execution of this test suite are disabled
           default: false
           example:
             - true
@@ -7872,7 +7872,7 @@ components:
           description: test workflow execution name started the test workflow execution
         disableWebhooks:
           type: boolean
-          description: whether webhooks on the executions of this test workflow are disabled
+          description: whether webhooks on the execution of this test workflow are disabled
           default: false
 
     TestWorkflowWithExecution:
@@ -7960,7 +7960,7 @@ components:
           description: test workflow execution name started the test workflow execution
         disableWebhooks:
           type: boolean
-          description: whether webhooks on the executions of this test workflow are disabled
+          description: whether webhooks on the execution of this test workflow are disabled
           default: false
           example:
             - true
@@ -8500,9 +8500,6 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/TestWorkflowEvent"
-        notifications:
-          $ref: "#/components/schemas/TestWorkflowNotificationsConfig"
-
 
     TestWorkflowTemplateSpec:
       type: object
@@ -9175,14 +9172,6 @@ components:
           items:
             $ref: "#/components/schemas/VolumeMount"
 
-    TestWorkflowNotificationsConfig:
-      type: object
-      properties:
-        disableWebhooks:
-          type: boolean
-          description: disable webhooks for this test workflow
-          default: false
-
     TestWorkflowStepRun:
       type: object
       properties:
@@ -9350,10 +9339,6 @@ components:
         status:
           $ref: "#/components/schemas/TestWorkflowExecutionStatusCR"
           description: test workflow execution status
-        disableWebhooks:
-          type: boolean
-          description: disable webhooks for this execution
-          default: false
 
     TestWorkflowExecutionStatusCR:
       type: object

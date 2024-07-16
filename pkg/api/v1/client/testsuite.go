@@ -162,6 +162,7 @@ func (c TestSuiteClient) ExecuteTestSuite(id, executionName string, options Exec
 		ScraperTemplateReference: options.ScraperTemplateReference,
 		PvcTemplate:              options.PvcTemplate,
 		PvcTemplateReference:     options.PvcTemplateReference,
+		DisableWebhooks:          options.DisableWebhooks,
 	}
 
 	body, err := json.Marshal(executionRequest)
@@ -190,6 +191,7 @@ func (c TestSuiteClient) ExecuteTestSuites(selector string, concurrencyLevel int
 		ScraperTemplateReference: options.ScraperTemplateReference,
 		PvcTemplate:              options.PvcTemplate,
 		PvcTemplateReference:     options.PvcTemplateReference,
+		DisableWebhooks:          options.DisableWebhooks,
 	}
 
 	body, err := json.Marshal(executionRequest)

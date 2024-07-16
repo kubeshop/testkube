@@ -60,6 +60,7 @@ func ExecutionRenderer(client client.Client, ui *ui.UI, obj interface{}) error {
 		ui.Warn("  Auth type:      ", execution.Content.Repository.AuthType)
 	}
 
+	ui.Warn("Disabled webhooks:", fmt.Sprint(execution.DisableWebhooks))
 	if err := render.RenderExecutionResult(client, &execution, false, true); err != nil {
 		return err
 	}

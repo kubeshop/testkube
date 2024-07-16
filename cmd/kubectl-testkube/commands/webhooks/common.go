@@ -47,6 +47,11 @@ func NewCreateWebhookOptionsFromFlags(cmd *cobra.Command) (options apiv1.CreateW
 		return options, err
 	}
 
+	disabled, err := cmd.Flags().GetBool("disable")
+	if err != nil {
+		return options, err
+	}
+
 	payloadTemplateReference := cmd.Flag("payload-template-reference").Value.String()
 	options = apiv1.CreateWebhookOptions{
 		Name:                     name,
@@ -60,13 +65,7 @@ func NewCreateWebhookOptionsFromFlags(cmd *cobra.Command) (options apiv1.CreateW
 		Headers:                  headers,
 		PayloadTemplateReference: payloadTemplateReference,
 		OnStateChange:            onStateChange,
-	}
-
-	if cmd.Flag("enable").Changed {
-		options.Disabled = false
-	}
-	if cmd.Flag("disable").Changed {
-		options.Disabled = true
+		Disabled:                 disabled,
 	}
 
 	return options, nil
@@ -150,13 +149,12 @@ func NewUpdateWebhookOptionsFromFlags(cmd *cobra.Command) (options apiv1.UpdateW
 		options.Headers = &headers
 	}
 
-	if cmd.Flag("enable").Changed {
-		options.Disabled = new(bool)
-		*options.Disabled = false
-	}
 	if cmd.Flag("disable").Changed {
-		options.Disabled = new(bool)
-		*options.Disabled = true
+		disabled, err := cmd.Flags().GetBool("disable")
+		if err != nil {
+			return options, err
+		}
+		options.Disabled = &disabled
 	}
 
 	if cmd.Flag("on-state-change").Changed {
@@ -168,8 +166,4 @@ func NewUpdateWebhookOptionsFromFlags(cmd *cobra.Command) (options apiv1.UpdateW
 	}
 
 	return options, nil
-}
-
-func isBothEnabledAndDisabledSet(cmd *cobra.Command) bool {
-	return cmd.Flag("enable").Changed && cmd.Flag("disable").Changed
 }
