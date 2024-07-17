@@ -7,6 +7,7 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 	stage2 "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
 
@@ -24,7 +25,7 @@ func process(currentStatus string, parents []string, stage stage2.Stage, machine
 		condition = "passed" // TODO: Think if it should default the condition to "passed"
 	}
 	actions = append(actions, actiontypes.Action{
-		Declare: &actiontypes.ActionDeclare{Ref: stage.Ref(), Condition: condition, Parents: parents},
+		Declare: &lite.ActionDeclare{Ref: stage.Ref(), Condition: condition, Parents: parents},
 	})
 
 	// Configure the container for action
@@ -54,28 +55,28 @@ func process(currentStatus string, parents []string, stage stage2.Stage, machine
 	// Store the timeout information
 	if stage.Timeout() != "" {
 		actions = append(actions, actiontypes.Action{
-			Timeout: &actiontypes.ActionTimeout{Ref: stage.Ref(), Timeout: stage.Timeout()},
+			Timeout: &lite.ActionTimeout{Ref: stage.Ref(), Timeout: stage.Timeout()},
 		})
 	}
 
 	// Store the retry condition
 	if stage.RetryPolicy().Count != 0 {
 		actions = append(actions, actiontypes.Action{
-			Retry: &actiontypes.ActionRetry{Ref: stage.Ref(), Count: stage.RetryPolicy().Count, Until: stage.RetryPolicy().Until},
+			Retry: &lite.ActionRetry{Ref: stage.Ref(), Count: stage.RetryPolicy().Count, Until: stage.RetryPolicy().Until},
 		})
 	}
 
 	// Handle pause
 	if stage.Paused() {
 		actions = append(actions, actiontypes.Action{
-			Pause: &actiontypes.ActionPause{Ref: stage.Ref()},
+			Pause: &lite.ActionPause{Ref: stage.Ref()},
 		})
 	}
 
 	// Handle executable action
 	if exec, ok := stage.(stage2.ContainerStage); ok {
 		actions = append(actions, actiontypes.Action{
-			Execute: &actiontypes.ActionExecute{
+			Execute: &lite.ActionExecute{
 				Ref:      exec.Ref(),
 				Negative: exec.Negative(),
 			},
@@ -122,7 +123,7 @@ func process(currentStatus string, parents []string, stage stage2.Stage, machine
 				result = strings.Join(refs, "&&")
 			}
 		}
-		actions = append(actions, actiontypes.Action{Result: &actiontypes.ActionResult{Ref: group.Ref(), Value: result}})
+		actions = append(actions, actiontypes.Action{Result: &lite.ActionResult{Ref: group.Ref(), Value: result}})
 	}
 
 	// Mark the current operation as finished
@@ -138,8 +139,8 @@ func Process(root stage2.Stage, machines ...expressions.Machine) ([]actiontypes.
 	if err != nil {
 		return nil, err
 	}
-	actions = append([]actiontypes.Action{{Setup: &actiontypes.ActionSetup{CopyInit: true, CopyBinaries: true}}, {Start: common.Ptr("")}}, actions...)
-	actions = append(actions, actiontypes.Action{Result: &actiontypes.ActionResult{Ref: "", Value: root.Ref()}}, actiontypes.Action{End: common.Ptr("")})
+	actions = append([]actiontypes.Action{{Setup: &lite.ActionSetup{CopyInit: true, CopyBinaries: true}}, {Start: common.Ptr("")}}, actions...)
+	actions = append(actions, actiontypes.Action{Result: &lite.ActionResult{Ref: "", Value: root.Ref()}}, actiontypes.Action{End: common.Ptr("")})
 
 	// Optimize until simplest list of operations
 	for {

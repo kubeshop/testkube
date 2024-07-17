@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/signal"
 	"slices"
 	"strconv"
+	"syscall"
 
 	"github.com/gookit/color"
 
@@ -37,7 +39,9 @@ func main() {
 	}
 
 	// Store the instructions in the state if they are provided
-	instructions := os.Getenv(fmt.Sprintf("_01_%s", constants.EnvInstructions))
+	orchestration.Setup.UseEnv("01")
+	instructions := os.Getenv(constants.EnvInstructions)
+	orchestration.Setup.UseBaseEnv()
 	if instructions != "" {
 		fmt.Print("Initializing state...")
 		err = json.Unmarshal([]byte(instructions), &data.GetState().Actions)
@@ -49,7 +53,6 @@ func main() {
 
 		// Release the memory
 		instructions = ""
-		_ = os.Unsetenv(constants.EnvInstructions)
 	}
 
 	// Distribute the details
@@ -65,6 +68,19 @@ func main() {
 	if err != nil {
 		data.Failf(data.CodeInputError, "invalid run group passed: %s", err.Error())
 	}
+
+	// Handle aborting
+	stopSignal := make(chan os.Signal, 1)
+	signal.Notify(stopSignal, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-stopSignal
+		fmt.Println("The task was aborted.")
+		// TODO: Mark current step as aborted
+		data.SaveState()
+		data.SaveTerminationLog()
+		_ = orchestration.Executions.KillAll()
+		os.Exit(0)
+	}()
 
 	// Keep a list of paused steps for execution
 	delayedPauses := make([]string, 0)
@@ -149,7 +165,7 @@ func main() {
 			// Ignore running when the step is already resolved (= skipped)
 			step := state.GetStep(action.Execute.Ref)
 			if step.Status != nil {
-				return
+				continue
 			}
 
 			// Compute the pause
@@ -178,6 +194,9 @@ func main() {
 	// Save the data
 	data.SaveState()
 	data.SaveTerminationLog()
+
+	_ = orchestration.Executions.KillAll()
+	os.Exit(0)
 }
 
 //func main() {
@@ -267,67 +286,6 @@ func main() {
 //			output.Failf(output.CodeInputError, "unknown parameter: %s", os.Args[i])
 //		}
 //	}
-//
-//	// Clean up unnecessary variables for non-toolkit containers
-//	if !toolkit {
-//		_ = os.Unsetenv("TK_REF")
-//	}
-//
-//	// Configure PWD variable, to make it similar to shell environment variables
-//	if os.Getenv("PWD") == "" {
-//		cwd, err := os.Getwd()
-//		if err == nil {
-//			_ = os.Setenv("PWD", cwd)
-//		}
-//	}
-//
-//	// Compute environment variables
-//	for _, name := range computed {
-//		initial := os.Getenv(name)
-//		value, err := data.Template(initial)
-//		if err != nil {
-//			output.Failf(output.CodeInputError, `resolving "%s" environment variable: %s: %s`, name, initial, err.Error())
-//		}
-//		_ = os.Setenv(name, value)
-//	}
-//
-//	// Compute conditional steps - ignore errors initially, as the may be dependent on themselves
-//	data.Iterate(conditions, func(c data.Rule) bool {
-//		expr, err := data.Expression(c.Expr)
-//		if err != nil {
-//			return false
-//		}
-//		v, _ := expr.BoolValue()
-//		if !v {
-//			for _, r := range c.Refs {
-//				data.State.GetStep(r).Skip(now)
-//			}
-//		}
-//		return true
-//	})
-//
-//	// Fail invalid conditional steps
-//	for _, c := range conditions {
-//		_, err := data.Expression(c.Expr)
-//		if err != nil {
-//			output.Failf(output.CodeInputError, "broken condition for refs: %s: %s: %s", strings.Join(c.Refs, ", "), c.Expr, err.Error())
-//		}
-//	}
-//
-//	// Start all acknowledged steps
-//	for _, f := range resulting {
-//		for _, r := range f.Refs {
-//			if r != "" {
-//				data.State.GetStep(r).Start(now)
-//			}
-//		}
-//	}
-//	for _, t := range timeouts {
-//		if t.Ref != "" {
-//			data.State.GetStep(t.Ref).Start(now)
-//		}
-//	}
-//	data.State.GetStep(data.Step.Ref).Start(now)
 //
 //	// Register timeouts
 //	for _, t := range timeouts {

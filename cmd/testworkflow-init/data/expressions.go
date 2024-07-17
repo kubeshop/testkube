@@ -63,7 +63,8 @@ var StateMachine = expressions.NewMachine().
 			}
 			return StepStatusFailed, true
 		} else if name == "self.status" {
-			step := GetState().GetStep(name)
+			state := GetState()
+			step := state.GetStep(state.CurrentRef)
 			if step.Status == nil {
 				return nil, false
 			}

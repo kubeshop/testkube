@@ -8,15 +8,13 @@ import (
 
 type outputProcessor struct {
 	writer   io.Writer
-	ref      string
 	closed   bool
 	lastLine []byte
 }
 
-func NewOutputProcessor(ref string, writer io.Writer) io.WriteCloser {
+func NewOutputProcessor(writer io.Writer) io.WriteCloser {
 	return &outputProcessor{
 		writer: writer,
-		ref:    ref,
 	}
 }
 

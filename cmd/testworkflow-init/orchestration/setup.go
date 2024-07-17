@@ -3,6 +3,7 @@ package orchestration
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -99,6 +100,11 @@ func (c *setup) UseEnv(group string) {
 		_ = os.Setenv("PATH", fmt.Sprintf("%s:%s", os.Getenv("PATH"), data.InternalBinPath))
 	}
 
+	// TODO: Delete unnecessary variables for non-toolkit operations
+	//if !toolkit {
+	//	_ = os.Unsetenv("TK_REF")
+	//}
+
 	// Compute dynamic environment variables
 	addonMachine := expressions.CombinedMachines(data.RefSuccessMachine, data.AliasMachine, data.StateMachine, libs.NewFsMachine(os.DirFS("/"), cwd))
 	localEnvMachine := expressions.NewMachine().
@@ -137,10 +143,28 @@ func (c *setup) AdvanceEnv() {
 	c.UseCurrentEnv()
 }
 
+func (c *setup) SetWorkingDir(workingDir string) {
+	_ = os.Chdir(defaultWorkingDir)
+	if workingDir == "" {
+		return
+	}
+	wd, err := filepath.Abs(workingDir)
+	if err == nil {
+		_ = os.MkdirAll(wd, 0755)
+		err = os.Chdir(wd)
+	} else {
+		_ = os.MkdirAll(wd, 0755)
+		err = os.Chdir(workingDir)
+	}
+	if err != nil {
+		fmt.Printf("warning: error using %s as working directory: %s\n", workingDir, err.Error())
+	}
+}
+
 func (c *setup) SetConfig(config lite.LiteContainerConfig) {
 	if config.WorkingDir == nil || *config.WorkingDir == "" {
-		_ = os.Chdir(*config.WorkingDir)
+		c.SetWorkingDir("")
 	} else {
-		_ = os.Chdir(defaultWorkingDir)
+		c.SetWorkingDir(*config.WorkingDir)
 	}
 }
