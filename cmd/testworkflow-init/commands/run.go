@@ -68,9 +68,6 @@ func Run(run lite.ActionExecute, container lite.LiteActionContainer) {
 
 	// TODO: Retry if expected
 
-	// Debug information
-	fmt.Printf("Finished step '%s'.\n   Exit code: %d\n   Status: %s\n   Success: %v", run.Ref, result.ExitCode, status, success)
-
 	// Notify about the status
 	step.SetStatus(status)
 	orchestration.FinishExecution(step, constants.ExecutionResult{ExitCode: result.ExitCode, Iteration: 0})
