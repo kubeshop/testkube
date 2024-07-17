@@ -48,6 +48,45 @@ func TestEmitter_IsValidEvent_ForTest(t *testing.T) {
 		assert.Equal(t, []EventType{START_TEST_EventType}, types)
 		assert.True(t, valid)
 	})
+
+	t.Run("should pass events with become events", func(t *testing.T) {
+		// given
+		execution := NewQueuedExecution()
+		e := Event{Type_: EventEndTestFailed, TestExecution: execution}
+
+		// when
+		types, valid := e.Valid("", []EventType{BECOME_TEST_DOWN_EventType, BECOME_TEST_FAILED_EventType})
+
+		// then
+		assert.Equal(t, []EventType{BECOME_TEST_DOWN_EventType, BECOME_TEST_FAILED_EventType}, types)
+		assert.True(t, valid)
+	})
+
+	t.Run("should pass events with become and regular events", func(t *testing.T) {
+		// given
+		execution := NewQueuedExecution()
+		e := Event{Type_: EventEndTestFailed, TestExecution: execution}
+
+		// when
+		types, valid := e.Valid("", []EventType{BECOME_TEST_DOWN_EventType, END_TEST_FAILED_EventType})
+
+		// then
+		assert.Equal(t, []EventType{BECOME_TEST_DOWN_EventType, END_TEST_FAILED_EventType}, types)
+		assert.True(t, valid)
+	})
+
+	t.Run("should not pass events with wrong become events", func(t *testing.T) {
+		// given
+		execution := NewQueuedExecution()
+		e := Event{Type_: EventEndTestFailed, TestExecution: execution}
+
+		// when
+		types, valid := e.Valid("", []EventType{BECOME_TEST_UP_EventType})
+
+		// then
+		assert.Nil(t, types)
+		assert.False(t, valid)
+	})
 }
 
 func TestEmitter_IsValidEvent_ForTestSuite(t *testing.T) {
@@ -92,6 +131,45 @@ func TestEmitter_IsValidEvent_ForTestSuite(t *testing.T) {
 		assert.Equal(t, []EventType{START_TESTSUITE_EventType}, types)
 		assert.True(t, valid)
 	})
+
+	t.Run("should pass events with become events", func(t *testing.T) {
+		// given
+		execution := NewQueuedTestSuiteExecution("", "")
+		e := Event{Type_: EventEndTestSuiteFailed, TestSuiteExecution: execution}
+
+		// when
+		types, valid := e.Valid("", []EventType{BECOME_TESTSUITE_DOWN_EventType, BECOME_TESTSUITE_FAILED_EventType})
+
+		// then
+		assert.Equal(t, []EventType{BECOME_TESTSUITE_DOWN_EventType, BECOME_TESTSUITE_FAILED_EventType}, types)
+		assert.True(t, valid)
+	})
+
+	t.Run("should pass events with become and regular events", func(t *testing.T) {
+		// given
+		execution := NewQueuedTestSuiteExecution("", "")
+		e := Event{Type_: EventEndTestSuiteFailed, TestSuiteExecution: execution}
+
+		// when
+		types, valid := e.Valid("", []EventType{BECOME_TESTSUITE_DOWN_EventType, END_TESTSUITE_FAILED_EventType})
+
+		// then
+		assert.Equal(t, []EventType{BECOME_TESTSUITE_DOWN_EventType, END_TESTSUITE_FAILED_EventType}, types)
+		assert.True(t, valid)
+	})
+
+	t.Run("should not pass events with wrong become events", func(t *testing.T) {
+		// given
+		execution := NewQueuedTestSuiteExecution("", "")
+		e := Event{Type_: EventEndTestSuiteFailed, TestSuiteExecution: execution}
+
+		// when
+		types, valid := e.Valid("", []EventType{BECOME_TESTSUITE_UP_EventType})
+
+		// then
+		assert.Nil(t, types)
+		assert.False(t, valid)
+	})
 }
 
 func TestEmitter_IsValidEvent_ForTestWorkflow(t *testing.T) {
@@ -135,6 +213,45 @@ func TestEmitter_IsValidEvent_ForTestWorkflow(t *testing.T) {
 		// then
 		assert.Equal(t, []EventType{START_TESTWORKFLOW_EventType}, types)
 		assert.True(t, valid)
+	})
+
+	t.Run("should pass events with become events", func(t *testing.T) {
+		// given
+		execution := &TestWorkflowExecution{}
+		e := Event{Type_: EventEndTestWorkflowFailed, TestWorkflowExecution: execution}
+
+		// when
+		types, valid := e.Valid("", []EventType{BECOME_TESTWORKFLOW_DOWN_EventType, BECOME_TESTWORKFLOW_FAILED_EventType})
+
+		// then
+		assert.Equal(t, []EventType{BECOME_TESTWORKFLOW_DOWN_EventType, BECOME_TESTWORKFLOW_FAILED_EventType}, types)
+		assert.True(t, valid)
+	})
+
+	t.Run("should pass events with become and regular events", func(t *testing.T) {
+		// given
+		execution := &TestWorkflowExecution{}
+		e := Event{Type_: EventEndTestWorkflowFailed, TestWorkflowExecution: execution}
+
+		// when
+		types, valid := e.Valid("", []EventType{BECOME_TESTWORKFLOW_DOWN_EventType, END_TESTWORKFLOW_FAILED_EventType})
+
+		// then
+		assert.Equal(t, []EventType{BECOME_TESTWORKFLOW_DOWN_EventType, END_TESTWORKFLOW_FAILED_EventType}, types)
+		assert.True(t, valid)
+	})
+
+	t.Run("should not pass events with wrong become events", func(t *testing.T) {
+		// given
+		execution := &TestWorkflowExecution{}
+		e := Event{Type_: EventEndTestWorkflowFailed, TestWorkflowExecution: execution}
+
+		// when
+		types, valid := e.Valid("", []EventType{BECOME_TESTWORKFLOW_UP_EventType})
+
+		// then
+		assert.Nil(t, types)
+		assert.False(t, valid)
 	})
 }
 
