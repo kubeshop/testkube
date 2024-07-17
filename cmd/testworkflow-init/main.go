@@ -75,7 +75,6 @@ func main() {
 	go func() {
 		<-stopSignal
 		fmt.Println("The task was aborted.")
-		// TODO: Mark current step as aborted
 		data.SaveState()
 		data.SaveTerminationLog()
 		orchestration.Executions.Abort() // TODO: Persist in the state
