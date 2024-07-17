@@ -145,10 +145,10 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 		return
 	}
 
-	if false {
-		changed, err := l.hasStateChanges(event)
+	if event.Type_ != nil && event.Type_.IsBecome() {
+		changed, err := l.hasBecomeState(event)
 		if err != nil {
-			l.Log.With(event.Log()...).Errorw(fmt.Sprintf("could not get previous finished state for test %s", event.TestExecution.TestName), "error", err)
+			l.Log.With(event.Log()...).Errorw("could not get previous finished state", "error", err)
 		}
 		if !changed {
 			return testkube.NewSuccessEventResult(event.Id, "webhook set to state change only; state has not changed")
@@ -270,10 +270,10 @@ func (l *WebhookListener) processTemplate(field, body string, event testkube.Eve
 	return buffer.Bytes(), nil
 }
 
-func (l *WebhookListener) hasStateChanges(event testkube.Event) (bool, error) {
+func (l *WebhookListener) hasBecomeState(event testkube.Event) (bool, error) {
 	log := l.Log.With(event.Log()...)
 
-	if event.TestExecution != nil && event.TestExecution.ExecutionResult != nil {
+	if event.TestExecution != nil && event.Type_ != nil {
 		prevStatus, err := l.testExecutionResults.GetPreviousFinishedState(context.Background(), event.TestExecution.TestName, event.TestExecution.EndTime)
 		if err != nil {
 			return false, err
@@ -283,10 +283,10 @@ func (l *WebhookListener) hasStateChanges(event testkube.Event) (bool, error) {
 			return true, nil
 		}
 
-		return *event.TestExecution.ExecutionResult.Status != prevStatus, nil
+		return event.Type_.IsBecomeExecutionStatus(prevStatus), nil
 	}
 
-	if event.TestSuiteExecution != nil && event.TestSuiteExecution.Status != nil {
+	if event.TestSuiteExecution != nil && event.Type_ != nil {
 		prevStatus, err := l.testSuiteExecutionResults.GetPreviousFinishedState(context.Background(), event.TestSuiteExecution.TestSuite.Name, event.TestSuiteExecution.EndTime)
 		if err != nil {
 			log.Errorw(fmt.Sprintf("could not get previous finished state for test suite %s", event.TestSuiteExecution.TestSuite.Name), "error", err)
@@ -297,10 +297,10 @@ func (l *WebhookListener) hasStateChanges(event testkube.Event) (bool, error) {
 			return true, nil
 		}
 
-		return *event.TestSuiteExecution.Status != prevStatus, nil
+		return event.Type_.IsBecomeTestSuiteExecutionStatus(prevStatus), nil
 	}
 
-	if event.TestWorkflowExecution != nil && event.TestWorkflowExecution.Result != nil {
+	if event.TestWorkflowExecution != nil && event.Type_ != nil {
 		prevStatus, err := l.testWorkflowExecutionResults.GetPreviousFinishedState(context.Background(), event.TestWorkflowExecution.Workflow.Name, event.TestWorkflowExecution.StatusAt)
 
 		if err != nil {
@@ -311,7 +311,7 @@ func (l *WebhookListener) hasStateChanges(event testkube.Event) (bool, error) {
 			log.Debugw(fmt.Sprintf("no previous finished state for test workflow %s", event.TestWorkflowExecution.Workflow.Name))
 			return true, nil
 		}
-		return *event.TestWorkflowExecution.Result.Status != prevStatus, nil
+		return event.Type_.IsBecomeTestWorkflowExecutionStatus(prevStatus), nil
 	}
 
 	return false, nil

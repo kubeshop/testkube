@@ -176,9 +176,12 @@ func (e *Emitter) stopListener(name string) {
 func (e *Emitter) notifyHandler(l common.Listener) bus.Handler {
 	logger := e.Log.With("listen-on", l.Events(), "queue-group", l.Name(), "selector", l.Selector(), "metadata", l.Metadata())
 	return func(event testkube.Event) error {
-		if event.Valid(l.Selector(), l.Events()) {
-			result := l.Notify(event)
-			log.Tracew(logger, "listener notified", append(event.Log(), "result", result)...)
+		if types, valid := event.Valid(l.Selector(), l.Events()); valid {
+			for i := range types {
+				event.Type_ = &types[i]
+				result := l.Notify(event)
+				log.Tracew(logger, "listener notified", append(event.Log(), "result", result)...)
+			}
 		} else {
 			log.Tracew(logger, "dropping event not matching selector or type", event.Log()...)
 		}

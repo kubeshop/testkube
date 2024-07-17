@@ -15,7 +15,7 @@ func TestEmitter_IsValidEvent_ForTest(t *testing.T) {
 		e := Event{Type_: EventStartTest, TestExecution: execution}
 
 		// when
-		valid := e.Valid("test=1", AllEventTypes)
+		_, valid := e.Valid("test=1", AllEventTypes)
 
 		// then
 		assert.True(t, valid)
@@ -28,7 +28,7 @@ func TestEmitter_IsValidEvent_ForTest(t *testing.T) {
 		e := Event{Type_: EventStartTest, TestExecution: execution}
 
 		// when
-		valid := e.Valid("test=1", AllEventTypes)
+		_, valid := e.Valid("test=1", AllEventTypes)
 
 		// then
 		assert.False(t, valid)
@@ -40,7 +40,7 @@ func TestEmitter_IsValidEvent_ForTest(t *testing.T) {
 		e := Event{Type_: EventStartTest, TestExecution: execution}
 
 		// when
-		valid := e.Valid("", AllEventTypes)
+		_, valid := e.Valid("", AllEventTypes)
 
 		// then
 		assert.True(t, valid)
@@ -56,7 +56,7 @@ func TestEmitter_IsValidEvent_ForTestSuite(t *testing.T) {
 		e := Event{Type_: EventStartTestSuite, TestSuiteExecution: execution}
 
 		// when
-		valid := e.Valid("test=1", AllEventTypes)
+		_, valid := e.Valid("test=1", AllEventTypes)
 
 		// then
 		assert.True(t, valid)
@@ -69,7 +69,7 @@ func TestEmitter_IsValidEvent_ForTestSuite(t *testing.T) {
 		e := Event{Type_: EventStartTestSuite, TestSuiteExecution: execution}
 
 		// when
-		valid := e.Valid("test=1", AllEventTypes)
+		_, valid := e.Valid("test=1", AllEventTypes)
 
 		// then
 		assert.False(t, valid)
@@ -81,7 +81,7 @@ func TestEmitter_IsValidEvent_ForTestSuite(t *testing.T) {
 		e := Event{Type_: EventStartTestSuite, TestSuiteExecution: execution}
 
 		// when
-		valid := e.Valid("", AllEventTypes)
+		_, valid := e.Valid("", AllEventTypes)
 
 		// then
 		assert.True(t, valid)
@@ -97,7 +97,7 @@ func TestEmitter_IsValidEvent_ForTestWorkflow(t *testing.T) {
 		e := Event{Type_: EventStartTestWorkflow, TestWorkflowExecution: execution}
 
 		// when
-		valid := e.Valid("test=1", AllEventTypes)
+		_, valid := e.Valid("test=1", AllEventTypes)
 
 		// then
 		assert.True(t, valid)
@@ -110,7 +110,7 @@ func TestEmitter_IsValidEvent_ForTestWorkflow(t *testing.T) {
 		e := Event{Type_: EventStartTestWorkflow, TestWorkflowExecution: execution}
 
 		// when
-		valid := e.Valid("test=1", AllEventTypes)
+		_, valid := e.Valid("test=1", AllEventTypes)
 
 		// then
 		assert.False(t, valid)
@@ -122,7 +122,7 @@ func TestEmitter_IsValidEvent_ForTestWorkflow(t *testing.T) {
 		e := Event{Type_: EventStartTestWorkflow, TestWorkflowExecution: execution}
 
 		// when
-		valid := e.Valid("", AllEventTypes)
+		_, valid := e.Valid("", AllEventTypes)
 
 		// then
 		assert.True(t, valid)
