@@ -23,6 +23,7 @@ type executionResult struct {
 }
 
 type executionGroup struct {
+	aborted   atomic.Bool
 	outStream io.Writer
 	errStream io.Writer
 
@@ -124,16 +125,6 @@ func (e *executionGroup) ResumeAll() (err error) {
 }
 
 func (e *executionGroup) KillAll() (err error) {
-	// Lock running
-	swapped := e.paused.CompareAndSwap(true, false)
-	if !swapped {
-		return nil
-	}
-	defer e.pauseMu.Unlock()
-
-	// Save the information about current pause time
-	e.pausedStart = time.Now()
-
 	// Lock the executions state
 	e.executionsMu.Lock()
 	defer e.executionsMu.Unlock()
@@ -149,11 +140,20 @@ func (e *executionGroup) KillAll() (err error) {
 
 	// Ignore the init process, to not suspend it accidentally
 	ps.VirtualizePath(int32(os.Getpid()))
-	err = ps.Resume()
+	err = ps.Kill()
 	return errors.Wrap(err, "failed to resume")
 
 	// Display output TODO
 	//PrintHintDetails(s.Ref, constants.InstructionResume, t.Format(constants.PreciseTimeFormat))
+}
+
+func (e *executionGroup) Abort() {
+	e.aborted.Store(true)
+	_ = e.KillAll()
+}
+
+func (e *executionGroup) IsAborted() bool {
+	return e.aborted.Load()
 }
 
 type execution struct {
@@ -164,11 +164,23 @@ type execution struct {
 }
 
 func (e *execution) Run() (*executionResult, error) {
+	// Immediately fail when aborted
+	if e.group.aborted.Load() {
+		return &executionResult{ExitCode: data.CodeAborted}, nil
+	}
+
 	// Ensure it's not paused
 	e.group.pauseMu.Lock()
 
 	// Ensure the command is not running multiple times
 	e.cmdMu.Lock()
+
+	// Immediately fail when aborted
+	if e.group.aborted.Load() {
+		e.group.pauseMu.Unlock()
+		e.cmdMu.Unlock()
+		return &executionResult{ExitCode: data.CodeAborted}, nil
+	}
 
 	// Initialize local state
 	var exitCode uint8
@@ -189,6 +201,11 @@ func (e *execution) Run() (*executionResult, error) {
 	e.cmdMu.Lock()
 	e.cmd = nil
 	e.cmdMu.Unlock()
+
+	// Fail when aborted
+	if e.group.aborted.Load() {
+		exitCode = data.CodeAborted
+	}
 
 	return &executionResult{ExitCode: exitCode}, nil
 }

@@ -78,8 +78,7 @@ func main() {
 		// TODO: Mark current step as aborted
 		data.SaveState()
 		data.SaveTerminationLog()
-		_ = orchestration.Executions.KillAll()
-		os.Exit(0)
+		orchestration.Executions.Abort() // TODO: Persist in the state
 	}()
 
 	// Keep a list of paused steps for execution
@@ -168,6 +167,12 @@ func main() {
 				continue
 			}
 
+			// Ignore when it is aborted
+			if orchestration.Executions.IsAborted() {
+				step.SetStatus(data.StepStatusAborted)
+				continue
+			}
+
 			// Compute the pause
 			paused := make([]string, 0)
 			if slices.Contains(delayedPauses, action.Execute.Ref) {
@@ -196,7 +201,11 @@ func main() {
 	data.SaveTerminationLog()
 
 	_ = orchestration.Executions.KillAll()
-	os.Exit(0)
+	if orchestration.Executions.IsAborted() {
+		os.Exit(int(data.CodeAborted))
+	} else {
+		os.Exit(0)
+	}
 }
 
 //func main() {

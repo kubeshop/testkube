@@ -133,7 +133,7 @@ func processes() (*processNode, bool, error) {
 	var errs []error
 	for _, p := range list {
 		detached[p.Pid] = struct{}{}
-		r[p.Pid] = &processNode{pid: p.Pid}
+		r[p.Pid] = &processNode{pid: p.Pid, nodes: map[*processNode]struct{}{}}
 	}
 
 	// Create tree of processes
