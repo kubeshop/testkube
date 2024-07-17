@@ -669,6 +669,26 @@ The examples show only the `create` operations, however, these instructions work
 ## Enable Webhooks on State Changes
 
 It is possible to get notified by webhooks only when the latest execution's outcome differs from the previous one. This way you can see instantly when one of your scheduled tests was healed or when they got broken. It could also help prevent alert fatigue by deduplicating the alerts and therefore decreasing the load on your monitoring systems.
+Testkube suppots special webhook event types to track changes between current and previous execution states.
+For Tests:
+- become-test-up (from any error state to succeed one)
+- become-test-down (from succeed state to any error one)
+- become-test-failed (from any state to failed one)
+- become-test-aborted (from any state to aborted one)
+- become-test-timeout (from any state to timeout one)
+
+For Test Suites:
+- become-testsuite-up (from any error state to succeed one)
+- become-testsuite-down (from succeed state to any error one)
+- become-testsuite-failed (from any state to failed one)
+- become-testsuite-aborted (from any state to aborted one)
+- become-testsuite-timeout (from any state to timeout one)
+
+For Test Workflowss:
+- become-testworkflow-up (from any error state to succeed one)
+- become-testworkflow-down (from succeed state to any error one)
+- become-testworkflow-failed (from any state to failed one)
+- become-testworkflow-aborted (from any state to aborted one)
 
 <Tabs>
 
