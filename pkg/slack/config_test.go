@@ -22,30 +22,16 @@ const notificationConfigString = `[
         "end-test-failed",
         "end-test-aborted",
         "end-test-timeout",
-        "become-test-up",
-        "become-test-down",
-        "become-test-failed",
-        "become-test-aborted",
-        "become-test-timeout",
         "start-testsuite",
         "end-testsuite-success",
         "end-testsuite-failed",
         "end-testsuite-aborted",
         "end-testsuite-timeout",
-        "become-testsuite-up",
-        "become-testsuite-down",
-        "become-testsuite-failed",
-        "become-testsuite-aborted",
-        "become-testsuite-timeout",
         "start-testworkflow",
         "queue-testworkflow",
         "end-testworkflow-success",
         "end-testworkflow-failed",
-        "end-testworkflow-aborted",
-        "become-testworkflow-up",
-        "become-testworkflow-down",
-        "become-testworkflow-failed",
-        "become-testworkflow-aborted"
+        "end-testworkflow-aborted"
       ]
     }
   ]`
