@@ -77,7 +77,7 @@ func main() {
 		fmt.Println("The task was aborted.")
 		data.SaveState()
 		data.SaveTerminationLog()
-		orchestration.Executions.Abort() // TODO: Persist in the state
+		orchestration.Executions.Abort()
 	}()
 
 	// Keep a list of paused steps for execution
