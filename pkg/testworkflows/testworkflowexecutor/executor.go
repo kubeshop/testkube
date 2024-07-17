@@ -434,6 +434,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 			"images.toolkit":             constants.DefaultToolkitImage,
 			"images.persistence.enabled": strconv.FormatBool(e.enableImageDataPersistentCache),
 			"images.persistence.key":     e.imageDataPersistentCacheKey,
+			"images.cache.ttl":           common.GetOr(os.Getenv("TESTKUBE_IMAGE_CREDENTIALS_CACHE_TTL"), "30m"),
 		}).
 		Register("workflow", map[string]string{
 			"name": workflow.Name,
