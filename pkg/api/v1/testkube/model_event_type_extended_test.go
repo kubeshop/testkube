@@ -7,8 +7,11 @@ import (
 )
 
 func TestEventType_IsBecome(t *testing.T) {
+	t.Parallel()
 
 	t.Run("should return true for become events", func(t *testing.T) {
+		t.Parallel()
+
 		events := map[EventType]bool{
 			START_TEST_EventType:             false,
 			BECOME_TEST_UP_EventType:         true,
@@ -33,8 +36,11 @@ func TestEventType_IsBecome(t *testing.T) {
 }
 
 func TestEventType_MapBecomeToRegular(t *testing.T) {
+	t.Parallel()
 
 	t.Run("should return event types for become events", func(t *testing.T) {
+		t.Parallel()
+
 		events := map[EventType][]EventType{
 			START_TEST_EventType:             nil,
 			BECOME_TEST_UP_EventType:         {END_TEST_SUCCESS_EventType},
@@ -59,8 +65,11 @@ func TestEventType_MapBecomeToRegular(t *testing.T) {
 }
 
 func TestEventType_IsBecomeExecutionStatus(t *testing.T) {
+	t.Parallel()
 
 	t.Run("should return true for become execution status", func(t *testing.T) {
+		t.Parallel()
+
 		events := []struct {
 			eventType EventType
 			status    ExecutionStatus
@@ -98,8 +107,11 @@ func TestEventType_IsBecomeExecutionStatus(t *testing.T) {
 }
 
 func TestEventType_IsBecomeTestSuiteExecutionStatus(t *testing.T) {
+	t.Parallel()
 
 	t.Run("should return true for become test suite execution status", func(t *testing.T) {
+		t.Parallel()
+
 		events := []struct {
 			eventType EventType
 			status    TestSuiteExecutionStatus
@@ -137,8 +149,11 @@ func TestEventType_IsBecomeTestSuiteExecutionStatus(t *testing.T) {
 }
 
 func TestEventType_IsBecomeTestWorkflowExecutionStatus(t *testing.T) {
+	t.Parallel()
 
 	t.Run("should return true for become test workflow execution status", func(t *testing.T) {
+		t.Parallel()
+
 		events := []struct {
 			eventType EventType
 			status    TestWorkflowStatus
