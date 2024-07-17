@@ -60,10 +60,11 @@ type envSystemConfig struct {
 }
 
 type envImagesConfig struct {
-	Init                         string `envconfig:"TESTKUBE_TW_INIT_IMAGE"`
-	Toolkit                      string `envconfig:"TESTKUBE_TW_TOOLKIT_IMAGE"`
-	InspectorPersistenceEnabled  bool   `envconfig:"TK_IMG_P" default:"false"`
-	InspectorPersistenceCacheKey string `envconfig:"TK_IMG_PK"`
+	Init                         string        `envconfig:"TESTKUBE_TW_INIT_IMAGE"`
+	Toolkit                      string        `envconfig:"TESTKUBE_TW_TOOLKIT_IMAGE"`
+	InspectorPersistenceEnabled  bool          `envconfig:"TK_IMG_P" default:"false"`
+	InspectorPersistenceCacheKey string        `envconfig:"TK_IMG_PK"`
+	ImageCredentialsCacheTTL     time.Duration `envconfig:"TK_IMG_CRED_TTL" default:"0"`
 }
 
 type featuresConfig struct {
