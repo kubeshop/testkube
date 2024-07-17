@@ -15,9 +15,10 @@ func TestEmitter_IsValidEvent_ForTest(t *testing.T) {
 		e := Event{Type_: EventStartTest, TestExecution: execution}
 
 		// when
-		_, valid := e.Valid("test=1", AllEventTypes)
+		types, valid := e.Valid("test=1", AllEventTypes)
 
 		// then
+		assert.Equal(t, []EventType{START_TEST_EventType}, types)
 		assert.True(t, valid)
 	})
 
@@ -28,9 +29,10 @@ func TestEmitter_IsValidEvent_ForTest(t *testing.T) {
 		e := Event{Type_: EventStartTest, TestExecution: execution}
 
 		// when
-		_, valid := e.Valid("test=1", AllEventTypes)
+		types, valid := e.Valid("test=1", AllEventTypes)
 
 		// then
+		assert.Equal(t, []EventType{START_TEST_EventType}, types)
 		assert.False(t, valid)
 	})
 
@@ -40,9 +42,10 @@ func TestEmitter_IsValidEvent_ForTest(t *testing.T) {
 		e := Event{Type_: EventStartTest, TestExecution: execution}
 
 		// when
-		_, valid := e.Valid("", AllEventTypes)
+		types, valid := e.Valid("", AllEventTypes)
 
 		// then
+		assert.Equal(t, []EventType{START_TEST_EventType}, types)
 		assert.True(t, valid)
 	})
 }
@@ -56,9 +59,10 @@ func TestEmitter_IsValidEvent_ForTestSuite(t *testing.T) {
 		e := Event{Type_: EventStartTestSuite, TestSuiteExecution: execution}
 
 		// when
-		_, valid := e.Valid("test=1", AllEventTypes)
+		types, valid := e.Valid("test=1", AllEventTypes)
 
 		// then
+		assert.Equal(t, []EventType{START_TESTSUITE_EventType}, types)
 		assert.True(t, valid)
 	})
 
@@ -69,9 +73,10 @@ func TestEmitter_IsValidEvent_ForTestSuite(t *testing.T) {
 		e := Event{Type_: EventStartTestSuite, TestSuiteExecution: execution}
 
 		// when
-		_, valid := e.Valid("test=1", AllEventTypes)
+		types, valid := e.Valid("test=1", AllEventTypes)
 
 		// then
+		assert.Equal(t, []EventType{START_TESTSUITE_EventType}, types)
 		assert.False(t, valid)
 	})
 
@@ -81,9 +86,10 @@ func TestEmitter_IsValidEvent_ForTestSuite(t *testing.T) {
 		e := Event{Type_: EventStartTestSuite, TestSuiteExecution: execution}
 
 		// when
-		_, valid := e.Valid("", AllEventTypes)
+		types, valid := e.Valid("", AllEventTypes)
 
 		// then
+		assert.Equal(t, []EventType{START_TESTSUITE_EventType}, types)
 		assert.True(t, valid)
 	})
 }
@@ -97,9 +103,10 @@ func TestEmitter_IsValidEvent_ForTestWorkflow(t *testing.T) {
 		e := Event{Type_: EventStartTestWorkflow, TestWorkflowExecution: execution}
 
 		// when
-		_, valid := e.Valid("test=1", AllEventTypes)
+		types, valid := e.Valid("test=1", AllEventTypes)
 
 		// then
+		assert.Equal(t, []EventType{START_TESTWORKFLOW_EventType}, types)
 		assert.True(t, valid)
 	})
 
@@ -110,9 +117,10 @@ func TestEmitter_IsValidEvent_ForTestWorkflow(t *testing.T) {
 		e := Event{Type_: EventStartTestWorkflow, TestWorkflowExecution: execution}
 
 		// when
-		_, valid := e.Valid("test=1", AllEventTypes)
+		types, valid := e.Valid("test=1", AllEventTypes)
 
 		// then
+		assert.Equal(t, []EventType{START_TESTWORKFLOW_EventType}, types)
 		assert.False(t, valid)
 	})
 
@@ -122,9 +130,10 @@ func TestEmitter_IsValidEvent_ForTestWorkflow(t *testing.T) {
 		e := Event{Type_: EventStartTestWorkflow, TestWorkflowExecution: execution}
 
 		// when
-		_, valid := e.Valid("", AllEventTypes)
+		types, valid := e.Valid("", AllEventTypes)
 
 		// then
+		assert.Equal(t, []EventType{START_TESTWORKFLOW_EventType}, types)
 		assert.True(t, valid)
 	})
 }
