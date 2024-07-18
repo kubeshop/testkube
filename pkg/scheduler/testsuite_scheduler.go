@@ -248,18 +248,14 @@ func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteE
 
 	if testsuiteExecution.Status != nil && *testsuiteExecution.Status == testkube.ABORTING_TestSuiteExecutionStatus {
 		if abortionStatus != nil && *abortionStatus == testkube.TIMEOUT_TestSuiteExecutionStatus {
-			s.events.Notify(testkube.NewEventEndTestSuiteTimeout(testsuiteExecution))
 			testsuiteExecution.Status = testkube.TestSuiteExecutionStatusTimeout
 		} else {
-			s.events.Notify(testkube.NewEventEndTestSuiteAborted(testsuiteExecution))
 			testsuiteExecution.Status = testkube.TestSuiteExecutionStatusAborted
 		}
 	} else if hasFailedSteps {
 		testsuiteExecution.Status = testkube.TestSuiteExecutionStatusFailed
-		s.events.Notify(testkube.NewEventEndTestSuiteFailed(testsuiteExecution))
 	} else {
 		testsuiteExecution.Status = testkube.TestSuiteExecutionStatusPassed
-		s.events.Notify(testkube.NewEventEndTestSuiteSuccess(testsuiteExecution))
 	}
 
 	s.metrics.IncAndObserveExecuteTestSuite(*testsuiteExecution, s.dashboardURI)
@@ -280,6 +276,19 @@ func (s *Scheduler) runAfterEachStep(ctx context.Context, execution *testkube.Te
 	}
 
 	wg.Done()
+
+	if execution.Status != nil {
+		switch *execution.Status {
+		case *testkube.TestSuiteExecutionStatusTimeout:
+			s.events.Notify(testkube.NewEventEndTestSuiteTimeout(execution))
+		case *testkube.TestSuiteExecutionStatusAborted:
+			s.events.Notify(testkube.NewEventEndTestSuiteAborted(execution))
+		case *testkube.TestSuiteExecutionStatusFailed:
+			s.events.Notify(testkube.NewEventEndTestSuiteFailed(execution))
+		case *testkube.TestSuiteExecutionStatusPassed:
+			s.events.Notify(testkube.NewEventEndTestSuiteSuccess(execution))
+		}
+	}
 
 	if execution.TestSuite != nil {
 		testSuite, err := s.testSuitesClient.Get(execution.TestSuite.Name)

@@ -170,7 +170,7 @@ func (e *Emitter) stopListener(name string) {
 	if err != nil {
 		e.Log.Errorw("error while stopping listener", "error", err)
 	}
-	e.Log.Infow("stopped listener", name)
+	e.Log.Info("stopped listener", name)
 }
 
 func (e *Emitter) notifyHandler(l common.Listener) bus.Handler {
@@ -194,7 +194,7 @@ func (e *Emitter) Reconcile(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			e.Log.Infow("stopping reconciler")
+			e.Log.Info("stopping reconciler")
 			return
 		default:
 			listeners := e.Loader.Reconcile()
