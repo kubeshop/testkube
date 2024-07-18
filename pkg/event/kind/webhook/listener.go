@@ -146,12 +146,12 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 	}
 
 	if event.Type_ != nil && event.Type_.IsBecome() {
-		changed, err := l.hasBecomeState(event)
+		became, err := l.hasBecomeState(event)
 		if err != nil {
 			l.Log.With(event.Log()...).Errorw("could not get previous finished state", "error", err)
 		}
-		if !changed {
-			return testkube.NewSuccessEventResult(event.Id, "webhook set to state change only; state has not changed")
+		if !became {
+			return testkube.NewSuccessEventResult(event.Id, "webhook is set to become state only; state has not become")
 		}
 	}
 
@@ -278,6 +278,7 @@ func (l *WebhookListener) hasBecomeState(event testkube.Event) (bool, error) {
 		if err != nil {
 			return false, err
 		}
+
 		if prevStatus == "" {
 			log.Debugw(fmt.Sprintf("no previous finished state for test %s", event.TestExecution.TestName))
 			return true, nil
@@ -286,12 +287,12 @@ func (l *WebhookListener) hasBecomeState(event testkube.Event) (bool, error) {
 		return event.Type_.IsBecomeExecutionStatus(prevStatus), nil
 	}
 
-	if event.TestSuiteExecution != nil && event.Type_ != nil {
+	if event.TestSuiteExecution != nil && event.TestSuiteExecution.TestSuite != nil && event.Type_ != nil {
 		prevStatus, err := l.testSuiteExecutionResults.GetPreviousFinishedState(context.Background(), event.TestSuiteExecution.TestSuite.Name, event.TestSuiteExecution.EndTime)
 		if err != nil {
-			log.Errorw(fmt.Sprintf("could not get previous finished state for test suite %s", event.TestSuiteExecution.TestSuite.Name), "error", err)
 			return false, err
 		}
+
 		if prevStatus == "" {
 			log.Debugw(fmt.Sprintf("no previous finished state for test suite %s", event.TestSuiteExecution.TestSuite.Name))
 			return true, nil
@@ -300,17 +301,17 @@ func (l *WebhookListener) hasBecomeState(event testkube.Event) (bool, error) {
 		return event.Type_.IsBecomeTestSuiteExecutionStatus(prevStatus), nil
 	}
 
-	if event.TestWorkflowExecution != nil && event.Type_ != nil {
+	if event.TestWorkflowExecution != nil && event.TestWorkflowExecution.Workflow != nil && event.Type_ != nil {
 		prevStatus, err := l.testWorkflowExecutionResults.GetPreviousFinishedState(context.Background(), event.TestWorkflowExecution.Workflow.Name, event.TestWorkflowExecution.StatusAt)
-
 		if err != nil {
-			log.Errorw(fmt.Sprintf("could not get previous finished state for test workflow %s", event.TestWorkflowExecution.Workflow.Name), "error", err)
 			return false, err
 		}
+
 		if prevStatus == "" {
 			log.Debugw(fmt.Sprintf("no previous finished state for test workflow %s", event.TestWorkflowExecution.Workflow.Name))
 			return true, nil
 		}
+
 		return event.Type_.IsBecomeTestWorkflowExecutionStatus(prevStatus), nil
 	}
 
