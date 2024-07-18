@@ -120,7 +120,6 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 
 		// Create logs stream request
 		stream, err := getContainerLogsStream(ctx, clientSet, namespace, podName, containerName, follow, pod, since)
-		hadAnyContent := false
 		if err == io.EOF {
 			return
 		} else if err != nil {
@@ -220,90 +219,125 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 
 		// Parse and return the logs
 		reader := bufio.NewReaderSize(stream, FlushBufferSize)
+		readerAnyContent := false
 		tsReader := newTimestampReader()
-		isNewLine := false
-		isStarted := false
+		lastTs := time.Now()
+
+		hasNewLine := false
+
 		for {
-			var prepend []byte
+			// --- Step 1: READING TIMESTAMP
 
 			// Read next timestamp
 			err = tsReader.Read(reader)
-			if err == nil {
-				// Strip older logs - SinceTime in Kubernetes logs is ignoring milliseconds precision
-				if since != nil && since.After(tsReader.ts) {
-					_, _ = utils.ReadLongLine(reader)
+
+			// Ignore too old logs. SinceTime in Kubernetes is precise only to seconds
+			if err == nil && !readerAnyContent {
+				if since != nil && !since.After(tsReader.ts) {
+					isPrefix := false
+					for isPrefix && err != nil {
+						_, isPrefix, err = reader.ReadLine()
+					}
 					continue
 				}
-				hadAnyContent = true
-			} else if err == io.EOF {
-				if !hadAnyContent {
-					return
-				}
-				// Reinitialize logs stream
-				since = common.Ptr(tsReader.ts.Add(1))
+			}
+
+			// Save information about the last timestamp
+			if err == nil {
+				lastTs = tsReader.ts
+			}
+
+			// If the stream is finished,
+			// either the logfile has been rotated, or the container actually finished.
+			// Assume that only if there was EOF without any logs since, the container is done.
+			if err == io.EOF && !readerAnyContent {
+				return
+			}
+
+			// If there was EOF, and we are not sure if container is done,
+			// reinitialize the stream from the time we have finished.
+			if err == io.EOF {
+				since = common.Ptr(lastTs.Add(1))
 				stream, err = getContainerLogsStream(ctx, clientSet, namespace, podName, containerName, follow, pod, since)
 				if err != nil {
 					return
 				}
 				reader.Reset(stream)
-				hadAnyContent = false
+				readerAnyContent = false
 				continue
-			} else {
-				// Edge case: Kubernetes may send critical errors without timestamp (like ionotify)
-				if len(tsReader.Prefix()) > 0 {
-					prepend = bytes.Clone(tsReader.Prefix())
+			}
+
+			// Edge case: Kubernetes may send critical errors without timestamp (like ionotify)
+			if errors.Is(err, ErrInvalidTimestamp) && len(tsReader.Prefix()) > 0 {
+				appendLog(lastTs, []byte(tsReader.Format(lastTs)), []byte(" "), tsReader.Prefix())
+				rest, _ := utils.ReadLongLine(reader)
+				appendLog(lastTs, rest, []byte("\n"))
+				hasNewLine = false
+				continue
+			}
+
+			// Push information about any other error
+			if err != nil {
+				w.Error(err)
+				continue
+			}
+
+			// --- Step 2: READING THE BEGINNING OF THE LINE
+
+			line, isPrefix, err := reader.ReadLine()
+
+			// Between instructions there may be empty line that should be just ignored
+			if !isPrefix && len(line) == 0 {
+				if hasNewLine {
+					appendLog(lastTs, []byte("\n"))
+				}
+				continue
+			}
+
+			// Fast-track: we know this line won't be an instruction
+			if !data.MayBeInstruction(line) {
+				if hasNewLine {
+					appendLog(lastTs, []byte("\n"))
+				}
+				appendLog(lastTs, tsReader.Prefix(), line)
+				for isPrefix && err == nil {
+					line, isPrefix, err = reader.ReadLine()
+					appendLog(lastTs, line)
+				}
+				hasNewLine = true
+				continue
+			}
+
+			// --- Step 3: FINISH READING THE LINE AND EXPORT DATA
+
+			// Ensure we read the whole line to buffer to validate if it is instruction
+			for isPrefix && err == nil {
+				var currentLine []byte
+				currentLine, isPrefix, err = reader.ReadLine()
+				line = append(line, currentLine...)
+			}
+
+			// Detect instruction
+			instruction, isHint, err := data.DetectInstruction(line)
+			if err == nil && instruction != nil {
+				item := ContainerLog{Time: lastTs}
+				if isHint {
+					item.Hint = instruction
+				} else {
+					item.Output = instruction
 				}
 				flushLogBuffer()
-				w.Error(err)
+				w.Send(item)
+				hasNewLine = false
+				continue
 			}
 
-			// Check for the next part
-			line, err := utils.ReadLongLine(reader)
-			if len(prepend) > 0 {
-				line = append(prepend, line...)
+			// Print line if it's not an instruction
+			if hasNewLine {
+				appendLog(lastTs, []byte("\n"))
 			}
-
-			// Process the received line
-			if !isNewLine && len(line) == 0 {
-				isNewLine = true
-			} else if len(line) > 0 {
-				hadComment := false
-				instruction, isHint, err := data.DetectInstruction(line)
-				if err == nil && instruction != nil {
-					isNewLine = false
-					hadComment = true
-					log := ContainerLog{Time: tsReader.ts}
-					if isHint {
-						log.Hint = instruction
-					} else {
-						log.Output = instruction
-					}
-					flushLogBuffer()
-					w.Send(log)
-				}
-
-				// Append as regular log if expected
-				if !hadComment {
-					if !isStarted {
-						appendLog(tsReader.ts, tsReader.Prefix(), line)
-						isStarted = true
-					} else if isNewLine {
-						appendLog(tsReader.ts, []byte("\n"), tsReader.Prefix(), line)
-					}
-					isNewLine = true
-				}
-			} else if isStarted {
-				appendLog(tsReader.ts, []byte("\n"), tsReader.Prefix())
-			}
-
-			// Handle the error
-			if err != nil {
-				if err != io.EOF {
-					flushLogBuffer()
-					w.Error(err)
-				}
-				return
-			}
+			appendLog(lastTs, tsReader.Prefix(), line)
+			hasNewLine = true
 		}
 	}()
 
@@ -372,6 +406,13 @@ func (t *timestampReader) read(reader *bufio.Reader) error {
 		t.ts = ts.UTC()
 	}
 	return nil
+}
+
+func (t *timestampReader) Format(ts time.Time) string {
+	if t.utc == nil || *t.utc {
+		return ts.Format(KubernetesLogTimeFormat)
+	}
+	return ts.Format(KubernetesTimezoneLogTimeFormat)
 }
 
 // readUTC is optimized operation for reading the UTC timestamp (Z).

@@ -88,9 +88,20 @@ func PrintHintDetails(ref string, name string, value interface{}) {
 	fmt.Print(SprintHintDetails(ref, name, value))
 }
 
+func MayBeInstruction(line []byte) bool {
+	if len(line) >= len(InstructionPrefix) {
+		for i := 0; i < len(InstructionPrefix); i++ {
+			if line[i] != InstructionPrefix[i] {
+				return false
+			}
+		}
+	}
+	return true
+}
+
 func DetectInstruction(line []byte) (*Instruction, bool, error) {
 	// Fast check to avoid regexes
-	if len(line) < 4 || string(line[0:len(InstructionPrefix)]) != InstructionPrefix || string(line[:len(InstructionPrefix)]) != InstructionPrefix {
+	if len(line) < 4 || !MayBeInstruction(line) {
 		return nil, false, nil
 	}
 	// Parse the line
