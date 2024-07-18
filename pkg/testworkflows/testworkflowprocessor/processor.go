@@ -20,7 +20,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
-	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 //go:generate mockgen -destination=./mock_processor.go -package=testworkflowprocessor "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor" Processor
@@ -385,10 +384,6 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		constants.SpecAnnotationName: string(actionGroupsSerialized),
 	})
 	jobSpec.Spec.Template.Annotations = podAnnotations
-
-	fmt.Println(ui.Cyan(string(actionGroupsSerialized)))
-	jobSpecSerialized, _ := common.SerializeCRD(jobSpec, common.SerializeOptions{})
-	fmt.Println(ui.Green(string(jobSpecSerialized)))
 
 	// Build bundle
 	bundle = &Bundle{
