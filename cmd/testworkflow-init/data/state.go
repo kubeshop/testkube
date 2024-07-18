@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 
 	"github.com/kubeshop/testkube/pkg/expressions"
@@ -12,7 +13,8 @@ import (
 )
 
 type state struct {
-	Actions [][]lite.LiteAction `json:"a,omitempty"`
+	Actions           [][]lite.LiteAction `json:"a,omitempty"`
+	CurrentGroupIndex int                 `json:"g,omitempty"`
 
 	CurrentRef    string               `json:"c,omitempty"`
 	CurrentStatus string               `json:"s,omitempty"`
@@ -24,6 +26,7 @@ func (s *state) GetActions(groupIndex int) []lite.LiteAction {
 	if groupIndex < 0 || groupIndex >= len(s.Actions) {
 		panic("unknown actions group")
 	}
+	s.CurrentGroupIndex = groupIndex
 	return s.Actions[groupIndex]
 }
 
@@ -97,6 +100,39 @@ func persistState(filePath string) {
 	}
 }
 
+func persistTerminationLog() {
+	// Read the state
+	s := GetState()
+
+	// Get list of statuses
+	actions := s.GetActions(s.CurrentGroupIndex)
+	statuses := make([]string, 0)
+	for i := range actions {
+		ref := ""
+		if actions[i].Type() == lite.ActionTypeEnd {
+			ref = *actions[i].End
+		}
+		if actions[i].Type() == lite.ActionTypeSetup {
+			ref = InitStepName
+		}
+		if ref == "" {
+			continue
+		}
+		step := s.GetStep(ref)
+		if step.Status == nil {
+			statuses = append(statuses, fmt.Sprintf("%s,%d", StepStatusAborted, CodeAborted))
+		} else {
+			statuses = append(statuses, fmt.Sprintf("%s,%d", (*step.Status).Code(), step.ExitCode))
+		}
+	}
+
+	// Write the termination log
+	err := os.WriteFile(TerminationLogPath, []byte(strings.Join(statuses, "/")), 0)
+	if err != nil {
+		Failf(CodeInternal, "failed to save the termination log: %s", err.Error())
+	}
+}
+
 var loadStateMu sync.Mutex
 var loadedState bool
 
@@ -112,12 +148,5 @@ func GetState() *state {
 
 func SaveState() {
 	persistState(StatePath)
-}
-
-func SaveTerminationLog() {
-	// Write the termination log TODO: do that generically
-	err := os.WriteFile(TerminationLogPath, []byte(",0"), 0)
-	if err != nil {
-		Failf(CodeInternal, "failed to mark as done: %s", err.Error())
-	}
+	persistTerminationLog()
 }

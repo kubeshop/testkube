@@ -60,7 +60,9 @@ func Run(run lite.ActionExecute, container lite.LiteActionContainer) {
 	if run.Negative {
 		success = !success
 	}
-	if success {
+	if result.Aborted {
+		status = data.StepStatusAborted
+	} else if success {
 		status = data.StepStatusPassed
 	} else {
 		status = data.StepStatusFailed
@@ -69,12 +71,8 @@ func Run(run lite.ActionExecute, container lite.LiteActionContainer) {
 	// TODO: Retry if expected
 
 	// Notify about the status
-	step.SetStatus(status)
+	step.SetStatus(status).SetExitCode(result.ExitCode)
 	orchestration.FinishExecution(step, constants.ExecutionResult{ExitCode: result.ExitCode, Iteration: 0})
-
-	// Save the data
-	data.SaveState()
-	data.SaveTerminationLog()
 }
 
 func getProcessStatus(err error) (bool, uint8) {

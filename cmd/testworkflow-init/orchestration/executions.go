@@ -20,6 +20,7 @@ var (
 
 type executionResult struct {
 	ExitCode uint8
+	Aborted  bool
 }
 
 type executionGroup struct {
@@ -166,7 +167,7 @@ type execution struct {
 func (e *execution) Run() (*executionResult, error) {
 	// Immediately fail when aborted
 	if e.group.aborted.Load() {
-		return &executionResult{ExitCode: data.CodeAborted}, nil
+		return &executionResult{Aborted: true, ExitCode: data.CodeAborted}, nil
 	}
 
 	// Ensure it's not paused
@@ -179,7 +180,7 @@ func (e *execution) Run() (*executionResult, error) {
 	if e.group.aborted.Load() {
 		e.group.pauseMu.Unlock()
 		e.cmdMu.Unlock()
-		return &executionResult{ExitCode: data.CodeAborted}, nil
+		return &executionResult{Aborted: true, ExitCode: data.CodeAborted}, nil
 	}
 
 	// Initialize local state
@@ -204,7 +205,7 @@ func (e *execution) Run() (*executionResult, error) {
 
 	// Fail when aborted
 	if e.group.aborted.Load() {
-		exitCode = data.CodeAborted
+		return &executionResult{Aborted: true, ExitCode: data.CodeAborted}, nil
 	}
 
 	return &executionResult{ExitCode: exitCode}, nil

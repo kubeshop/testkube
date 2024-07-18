@@ -12,6 +12,7 @@ type RetryPolicy struct {
 
 type StepData struct {
 	Ref           string      `json:"_,omitempty"`
+	ExitCode      uint8       `json:"e,omitempty"`
 	Status        *StepStatus `json:"s,omitempty"`
 	StartedAt     *time.Time  `json:"S,omitempty"`
 	Condition     string      `json:"c,omitempty"`
@@ -57,6 +58,11 @@ func (s *StepData) ResolveResult() (StepStatus, error) {
 		return StepStatusPassed, nil
 	}
 	return StepStatusFailed, nil
+}
+
+func (s *StepData) SetExitCode(exitCode uint8) *StepData {
+	s.ExitCode = exitCode
+	return s
 }
 
 func (s *StepData) SetCondition(expression string) *StepData {

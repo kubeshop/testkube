@@ -2,7 +2,6 @@ package testworkflowcontroller
 
 import (
 	"regexp"
-	"strconv"
 	"time"
 
 	batchv1 "k8s.io/api/batch/v1"
@@ -34,42 +33,20 @@ func IsJobDone(job *batchv1.Job) bool {
 	return (job.Status.Active == 0 && (job.Status.Succeeded > 0 || job.Status.Failed > 0)) || job.ObjectMeta.DeletionTimestamp != nil
 }
 
-type ContainerResult struct {
+type ContainerResultStep struct {
 	Status     testkube.TestWorkflowStepStatus
+	ExitCode   int
+	Details    string
+	FinishedAt time.Time
+}
+
+type ContainerResult struct {
+	Steps      []ContainerResultStep
 	Details    string
 	ExitCode   int
 	FinishedAt time.Time
 }
 
 var UnknownContainerResult = ContainerResult{
-	Status:   testkube.ABORTED_TestWorkflowStepStatus,
 	ExitCode: -1,
-}
-
-func GetContainerResult(c corev1.ContainerStatus) ContainerResult {
-	if c.State.Waiting != nil {
-		return ContainerResult{Status: testkube.QUEUED_TestWorkflowStepStatus, ExitCode: -1}
-	}
-	if c.State.Running != nil {
-		return ContainerResult{Status: testkube.RUNNING_TestWorkflowStepStatus, ExitCode: -1}
-	}
-	re := regexp.MustCompile(`^([^,]*),(0|[1-9]\d*)$`)
-
-	// Workaround - GKE sends SIGKILL after the container is already terminated,
-	// and the pod gets stuck then.
-	if c.State.Terminated.Reason != "Completed" {
-		return ContainerResult{Status: testkube.ABORTED_TestWorkflowStepStatus, Details: c.State.Terminated.Reason, ExitCode: -1, FinishedAt: c.State.Terminated.FinishedAt.Time}
-	}
-
-	msg := c.State.Terminated.Message
-	match := re.FindStringSubmatch(msg)
-	if match == nil {
-		return ContainerResult{Status: testkube.ABORTED_TestWorkflowStepStatus, ExitCode: -1, FinishedAt: c.State.Terminated.FinishedAt.Time}
-	}
-	status := testkube.TestWorkflowStepStatus(match[1])
-	exitCode, _ := strconv.Atoi(match[2])
-	if status == "" {
-		status = testkube.PASSED_TestWorkflowStepStatus
-	}
-	return ContainerResult{Status: status, ExitCode: exitCode, FinishedAt: c.State.Terminated.FinishedAt.Time}
 }

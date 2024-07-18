@@ -2,7 +2,9 @@ package testworkflowcontroller
 
 import (
 	"context"
+	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -11,7 +13,9 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 )
 
@@ -333,7 +337,38 @@ func (p *podState) containerResult(name string) (ContainerResult, error) {
 		}
 		return UnknownContainerResult, ErrNotTerminatedYet
 	}
-	return GetContainerResult(*status), nil
+
+	result := ContainerResult{
+		ExitCode:   int(status.State.Terminated.ExitCode),
+		FinishedAt: status.State.Terminated.FinishedAt.Time,
+	}
+
+	// Workaround - GKE sends SIGKILL after the container is already terminated,
+	// and the pod gets stuck then.
+	if status.State.Terminated.Reason != "Completed" {
+		result.Details = status.State.Terminated.Reason
+	}
+
+	re := regexp.MustCompile(`^([^,]),(0|[1-9]\d*)$`)
+	for _, message := range strings.Split(status.State.Terminated.Message, "/") {
+		match := re.FindStringSubmatch(message)
+		if match == nil {
+			result.Steps = append(result.Steps, ContainerResultStep{
+				Status:   testkube.ABORTED_TestWorkflowStepStatus,
+				ExitCode: -1,
+			})
+		} else {
+			exitCode, _ := strconv.Atoi(match[2])
+			result.Steps = append(result.Steps, ContainerResultStep{
+				Status:     testkube.TestWorkflowStepStatus(data.StepStatusFromCode(match[1])),
+				Details:    result.Details,
+				FinishedAt: result.FinishedAt,
+				ExitCode:   exitCode,
+			})
+		}
+	}
+
+	return result, nil
 }
 
 func (p *podState) ContainerResult(name string) (ContainerResult, error) {

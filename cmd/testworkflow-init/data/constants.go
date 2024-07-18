@@ -27,6 +27,26 @@ const (
 	StepStatusSkipped StepStatus = "skipped"
 )
 
+func (s StepStatus) Code() string {
+	return string(s)[0:1]
+}
+
+func StepStatusFromCode(code string) StepStatus {
+	switch code {
+	case string(StepStatusPassed)[0:1]:
+		return StepStatusPassed
+	case string(StepStatusTimeout)[0:1]:
+		return StepStatusTimeout
+	case string(StepStatusFailed)[0:1]:
+		return StepStatusFailed
+	case string(StepStatusAborted)[0:1]:
+		return StepStatusAborted
+	case string(StepStatusSkipped)[0:1]:
+		return StepStatusSkipped
+	}
+	return StepStatusAborted
+}
+
 const (
 	CodeTimeout    uint8 = 124
 	CodeAborted    uint8 = 137

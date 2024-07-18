@@ -287,7 +287,7 @@ func (n *notifier) UpdateStepStatus(ref string, status testkube.TestWorkflowStep
 	n.emit()
 }
 
-func (n *notifier) finishInit(status ContainerResult) {
+func (n *notifier) finishInit(status ContainerResultStep) {
 	if n.result.Initialization.FinishedAt.Equal(status.FinishedAt) && n.result.Initialization.Status != nil && *n.result.Initialization.Status == status.Status {
 		return
 	}
@@ -298,7 +298,26 @@ func (n *notifier) finishInit(status ContainerResult) {
 	n.emit()
 }
 
-func (n *notifier) FinishStep(ref string, status ContainerResult) {
+func (n *notifier) IsAnyAborted() bool {
+	if n.result.Initialization.Status != nil && *n.result.Initialization.Status == testkube.ABORTED_TestWorkflowStepStatus {
+		return true
+	}
+	for _, s := range n.result.Steps {
+		if s.Status != nil && *s.Status == testkube.ABORTED_TestWorkflowStepStatus {
+			return true
+		}
+	}
+	return false
+}
+
+func (n *notifier) IsFinished(ref string) bool {
+	if ref == InitContainerName {
+		return !n.result.Initialization.FinishedAt.IsZero()
+	}
+	return !n.result.Steps[ref].FinishedAt.IsZero()
+}
+
+func (n *notifier) FinishStep(ref string, status ContainerResultStep) {
 	if ref == InitContainerName {
 		n.finishInit(status)
 		return

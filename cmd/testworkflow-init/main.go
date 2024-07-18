@@ -30,6 +30,7 @@ func main() {
 			fmt.Println(color.FgRed.Render(" error"))
 			data.Failf(data.CodeInternal, "failed to create state file: %s", err.Error())
 		}
+		os.Chmod(data.StatePath, 0777)
 		fmt.Println(" done")
 	} else if err != nil {
 		data.PrintHint(data.InitStepName, constants.InstructionStart)
@@ -75,8 +76,6 @@ func main() {
 	go func() {
 		<-stopSignal
 		fmt.Println("The task was aborted.")
-		data.SaveState()
-		data.SaveTerminationLog()
 		orchestration.Executions.Abort()
 	}()
 
@@ -193,12 +192,12 @@ func main() {
 
 			commands.Run(*action.Execute, currentContainer)
 		}
+
+		// Save the status after each action
+		data.SaveState()
 	}
 
-	// Save the data
-	data.SaveState()
-	data.SaveTerminationLog()
-
+	// Stop the container after all the instructions are interpret
 	_ = orchestration.Executions.KillAll()
 	if orchestration.Executions.IsAborted() {
 		os.Exit(int(data.CodeAborted))
