@@ -126,7 +126,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	if err != nil {
 		return nil, errors.Wrap(err, "error while simplifying workflow instructions")
 	}
-	root, err := p.process(layer, layer.ContainerDefaults(), rootStep, "root")
+	root, err := p.process(layer, layer.ContainerDefaults(), rootStep, constants.RootOperationName)
 	if err != nil {
 		return nil, errors.Wrap(err, "processing error")
 	}

@@ -145,8 +145,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 				} else if v.Value.Output != nil {
 					s.Output(v.Value.Output.Ref, v.Value.Time, v.Value.Output)
 				} else if v.Value.Hint != nil {
-					// Ignore tree root hints
-					if v.Value.Hint.Ref == "root" {
+					if v.Value.Hint.Ref == constants2.RootOperationName {
 						continue
 					}
 					switch v.Value.Hint.Name {
