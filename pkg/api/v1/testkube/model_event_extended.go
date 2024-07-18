@@ -240,6 +240,7 @@ func (e Event) Valid(selector string, types []EventType) (matchedTypes []EventTy
 			if et == e.Type() {
 				typesMatch = true
 				matchedTypes = append(matchedTypes, t)
+				break
 			}
 		}
 	}
