@@ -51,6 +51,8 @@ jobs:
           # Replace slashes with dashes using sed
           echo branch_identifier=$(echo "$branch_identifier" | sed 's/\//-/g') >> $GITHUB_ENV
 
+          echo "Sandbox test"
+
       - name: Release
         uses: goreleaser/goreleaser-action@v6
         with:
