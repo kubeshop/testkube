@@ -786,7 +786,6 @@ jobs:
           executor_maven,
           executor_gradle,
           executor_cypress,
-          executor_cypress_manifest,
           executor_playwright,
           log_server_sidecar,
           testworkflow
