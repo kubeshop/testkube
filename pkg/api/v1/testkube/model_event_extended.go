@@ -215,7 +215,7 @@ func (e Event) Log() []any {
 	}
 }
 
-func (e Event) Valid(selector string, types []EventType) (valid bool) {
+func (e Event) Valid(selector string, types []EventType) (matchedTypes []EventType, valid bool) {
 	var executionLabels map[string]string
 
 	// load labels from event test execution or test-suite execution or test workflow execution
@@ -231,21 +231,29 @@ func (e Event) Valid(selector string, types []EventType) (valid bool) {
 
 	typesMatch := false
 	for _, t := range types {
-		if t == e.Type() {
-			typesMatch = true
-			break
+		ts := []EventType{t}
+		if t.IsBecome() {
+			ts = t.MapBecomeToRegular()
+		}
+
+		for _, et := range ts {
+			if et == e.Type() {
+				typesMatch = true
+				matchedTypes = append(matchedTypes, t)
+				break
+			}
 		}
 	}
 
 	if !typesMatch {
-		return false
+		return nil, false
 	}
 
 	valid = selector == ""
 	if !valid {
 		selector, err := labels.Parse(selector)
 		if err != nil {
-			return false
+			return nil, false
 		}
 
 		valid = selector.Matches(labels.Set(executionLabels))

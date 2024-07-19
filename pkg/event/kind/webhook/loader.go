@@ -86,7 +86,7 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 		name := fmt.Sprintf("%s.%s", webhook.ObjectMeta.Namespace, webhook.ObjectMeta.Name)
 		listeners = append(listeners, NewWebhookListener(name, webhook.Spec.Uri, webhook.Spec.Selector, types,
 			webhook.Spec.PayloadObjectField, payloadTemplate, webhook.Spec.Headers, webhook.Spec.Disabled,
-			webhook.Spec.OnStateChange, r.testExecutionResults, r.testSuiteExecutionResults, r.testWorkflowExecutionResults,
+			r.testExecutionResults, r.testSuiteExecutionResults, r.testWorkflowExecutionResults,
 			r.metrics, r.proContext))
 	}
 

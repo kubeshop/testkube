@@ -124,6 +124,42 @@ func TestEmitter_Notify(t *testing.T) {
 	})
 }
 
+func TestEmitter_NotifyBecome(t *testing.T) {
+	t.Parallel()
+
+	t.Run("notifies listeners in queue groups for become events", func(t *testing.T) {
+		t.Parallel()
+		// given
+		eventBus := bus.NewEventBusMock()
+		emitter := NewEmitter(eventBus, "", nil)
+		// and 2 listeners subscribed to the same queue
+		// * first on pod1
+		listener1 := &dummy.DummyListener{Id: "l5", Types: []testkube.EventType{
+			testkube.BECOME_TEST_FAILED_EventType, testkube.BECOME_TEST_DOWN_EventType, testkube.END_TEST_FAILED_EventType}}
+		// * second on pod2
+		listener2 := &dummy.DummyListener{Id: "l5", Types: []testkube.EventType{
+			testkube.BECOME_TEST_FAILED_EventType, testkube.BECOME_TEST_DOWN_EventType, testkube.END_TEST_FAILED_EventType}}
+
+		emitter.Register(listener1)
+		emitter.Register(listener2)
+
+		// and listening emitter
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		emitter.Listen(ctx)
+
+		time.Sleep(time.Millisecond * 50)
+
+		// when event sent to queue group
+		emitter.Notify(newExampleTestEvent5())
+
+		time.Sleep(time.Millisecond * 50)
+
+		// then only one listener should be notified
+		assert.Equal(t, 3, listener2.GetNotificationCount()+listener1.GetNotificationCount())
+	})
+}
+
 func TestEmitter_Reconcile(t *testing.T) {
 	t.Parallel()
 
@@ -175,6 +211,14 @@ func newExampleTestEvent2() testkube.Event {
 		Id:            "eventID2",
 		Type_:         testkube.EventStartTest,
 		TestExecution: testkube.NewExecutionWithID("executionID2", "test/test", "test"),
+	}
+}
+
+func newExampleTestEvent5() testkube.Event {
+	return testkube.Event{
+		Id:            "eventID5",
+		Type_:         testkube.EventEndTestFailed,
+		TestExecution: testkube.NewExecutionWithID("executionID5", "test/test", "test"),
 	}
 }
 

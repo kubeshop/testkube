@@ -14,6 +14,7 @@ type DummyListener struct {
 	Id                string
 	NotificationCount int32
 	SelectorString    string
+	Types             []testkube.EventType
 }
 
 func (l *DummyListener) GetNotificationCount() int {
@@ -35,6 +36,10 @@ func (l *DummyListener) Name() string {
 }
 
 func (l *DummyListener) Events() []testkube.EventType {
+	if l.Types != nil {
+		return l.Types
+	}
+
 	return testkube.AllEventTypes
 }
 
