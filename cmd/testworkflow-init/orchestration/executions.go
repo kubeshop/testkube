@@ -7,7 +7,6 @@ import (
 	"os/exec"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/pkg/errors"
 
@@ -31,10 +30,8 @@ type executionGroup struct {
 	executions   []*execution
 	executionsMu sync.Mutex
 
-	paused      atomic.Bool
-	pausedNs    atomic.Int64
-	pausedStart time.Time
-	pauseMu     sync.Mutex
+	paused  atomic.Bool
+	pauseMu sync.Mutex
 }
 
 func newExecutionGroup(outStream io.Writer, errStream io.Writer) *executionGroup {
@@ -59,16 +56,13 @@ func (e *executionGroup) Create(cmd string, args []string) *execution {
 	return ex
 }
 
-func (e *executionGroup) PauseAll() (err error) {
+func (e *executionGroup) Pause() (err error) {
 	// Lock running
 	swapped := e.paused.CompareAndSwap(false, true)
 	if !swapped {
 		return nil
 	}
 	e.pauseMu.Lock()
-
-	// Save the information about current pause time
-	e.pausedStart = time.Now()
 
 	// Lock the executions state
 	e.executionsMu.Lock()
@@ -87,21 +81,15 @@ func (e *executionGroup) PauseAll() (err error) {
 	ps.VirtualizePath(int32(os.Getpid()))
 	err = ps.Suspend()
 	return errors.Wrap(err, "failed to pause")
-
-	// Display output TODO
-	//PrintHintDetails(s.Ref, constants.InstructionPause, t.Format(constants.PreciseTimeFormat))
 }
 
-func (e *executionGroup) ResumeAll() (err error) {
+func (e *executionGroup) Resume() (err error) {
 	// Lock running
 	swapped := e.paused.CompareAndSwap(true, false)
 	if !swapped {
 		return nil
 	}
 	defer e.pauseMu.Unlock()
-
-	// Finish current pause period TODO: is it needed?
-	e.pausedNs.Add(time.Now().Sub(e.pausedStart).Nanoseconds())
 
 	// Lock the executions state
 	e.executionsMu.Lock()
@@ -120,12 +108,9 @@ func (e *executionGroup) ResumeAll() (err error) {
 	ps.VirtualizePath(int32(os.Getpid()))
 	err = ps.Resume()
 	return errors.Wrap(err, "failed to resume")
-
-	// Display output TODO
-	//PrintHintDetails(s.Ref, constants.InstructionResume, t.Format(constants.PreciseTimeFormat))
 }
 
-func (e *executionGroup) KillAll() (err error) {
+func (e *executionGroup) Kill() (err error) {
 	// Lock the executions state
 	e.executionsMu.Lock()
 	defer e.executionsMu.Unlock()
@@ -133,24 +118,21 @@ func (e *executionGroup) KillAll() (err error) {
 	// Retrieve all started processes
 	ps, totalFailure, err := processes()
 	if totalFailure {
-		return errors.Wrap(err, "failed to resume: failed to list processes")
+		return errors.Wrap(err, "failed to kill: failed to list processes")
 	}
 	if err != nil {
-		fmt.Printf("warning: failed to resume: failed to list some processes: %v\n", err.Error())
+		fmt.Printf("warning: failed to kill: failed to list some processes: %v\n", err.Error())
 	}
 
 	// Ignore the init process, to not suspend it accidentally
 	ps.VirtualizePath(int32(os.Getpid()))
 	err = ps.Kill()
-	return errors.Wrap(err, "failed to resume")
-
-	// Display output TODO
-	//PrintHintDetails(s.Ref, constants.InstructionResume, t.Format(constants.PreciseTimeFormat))
+	return errors.Wrap(err, "failed to kill")
 }
 
 func (e *executionGroup) Abort() {
 	e.aborted.Store(true)
-	_ = e.KillAll()
+	_ = e.Kill()
 }
 
 func (e *executionGroup) IsAborted() bool {

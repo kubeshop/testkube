@@ -48,7 +48,7 @@ func Run(run lite.ActionExecute, container lite.LiteActionContainer) {
 			}
 			fmt.Println("Timed out.")
 		}
-		_ = orchestration.Executions.KillAll()
+		_ = orchestration.Executions.Kill()
 
 		return
 	}
@@ -87,6 +87,11 @@ func Run(run lite.ActionExecute, container lite.LiteActionContainer) {
 	// Register timeouts
 	stopTimeoutWatcher := orchestration.WatchTimeout(finalizeTimeout, leaf...)
 	defer stopTimeoutWatcher()
+
+	// Ensure there won't be any hanging processes after the command is executed
+	defer func() {
+		_ = orchestration.Executions.Kill()
+	}()
 
 	// Run the operation
 	execution := orchestration.Executions.Create(command[0], command[1:])

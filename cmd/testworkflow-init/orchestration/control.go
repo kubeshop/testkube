@@ -17,12 +17,14 @@ func Start(step *data.StepData) {
 	data.PrintHint(step.Ref, constants.InstructionStart)
 }
 
-func Pause(step *data.StepData) {
-	//data.Step.Pause(time.Now())
+func Pause(step *data.StepData, ts time.Time) {
+	step.RegisterPauseStart(ts)
+	data.PrintHintDetails(step.Ref, constants.InstructionPause, ts.UTC().Format(constants.PreciseTimeFormat))
 }
 
-func Resume(step *data.StepData) {
-	//d
+func Resume(step *data.StepData, ts time.Time) {
+	step.RegisterPauseEnd(ts)
+	data.PrintHintDetails(step.Ref, constants.InstructionResume, ts.UTC().Format(constants.PreciseTimeFormat))
 }
 
 func FinishExecution(step *data.StepData, result constants.ExecutionResult) {

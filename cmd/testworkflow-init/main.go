@@ -9,11 +9,13 @@ import (
 	"slices"
 	"strconv"
 	"syscall"
+	"time"
 
 	"github.com/gookit/color"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/commands"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/control"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/orchestration"
 	"github.com/kubeshop/testkube/pkg/expressions"
@@ -81,11 +83,57 @@ func main() {
 		orchestration.Executions.Abort()
 	}()
 
+	// Read the current state
+	state := data.GetState()
+
+	// Run the control server
+	handlePause := func(ts time.Time, step *data.StepData) error {
+		if step.PausedStart != nil {
+			return nil
+		}
+		err = orchestration.Executions.Pause()
+		if err != nil {
+			fmt.Printf("warning: pause: %s\n", err.Error())
+		}
+		orchestration.Pause(step, *step.StartedAt)
+		for _, parentRef := range step.Parents {
+			parent := state.GetStep(parentRef)
+			orchestration.Pause(parent, *step.StartedAt)
+		}
+		return err
+	}
+	handleResume := func(ts time.Time, step *data.StepData) error {
+		if step.PausedStart == nil {
+			return nil
+		}
+		err = orchestration.Executions.Resume()
+		if err != nil {
+			fmt.Printf("warning: resume: %s\n", err.Error())
+		}
+		orchestration.Resume(step, ts)
+		for _, parentRef := range step.Parents {
+			parent := state.GetStep(parentRef)
+			orchestration.Resume(parent, ts)
+		}
+		return err
+	}
+	controlSrv := control.NewServer(constants.ControlServerPort, control.ControlServerOptions{
+		HandlePause: func(ts time.Time) error {
+			return handlePause(ts, state.GetStep(state.CurrentRef))
+		},
+		HandleResume: func(ts time.Time) error {
+			return handleResume(ts, state.GetStep(state.CurrentRef))
+		},
+	})
+	_, err = controlSrv.Listen()
+	if err != nil {
+		data.Failf(data.CodeInternal, "Failed to start control server at port %d: %s\n", constants.ControlServerPort, err.Error())
+	}
+
 	// Keep a list of paused steps for execution
 	delayedPauses := make([]string, 0)
 
 	// Interpret the operations
-	state := data.GetState()
 	for _, action := range state.GetActions(int(groupIndex)) {
 		switch action.Type() {
 		case lite.ActionTypeDeclare:
@@ -187,9 +235,7 @@ func main() {
 			// Pause
 			if len(paused) > 0 {
 				delayedPauses = nil
-				orchestration.Pause(step)
-				// // TODO: Wait for resume
-				//orchestration.Resume(action.Execute.Ref)
+				_ = handlePause(*step.StartedAt, step)
 			}
 
 			// Avoid execution if it's finished
@@ -247,8 +293,11 @@ func main() {
 		data.SaveState()
 	}
 
+	// Ensure the latest state is saved
+	data.SaveState()
+
 	// Stop the container after all the instructions are interpret
-	_ = orchestration.Executions.KillAll()
+	_ = orchestration.Executions.Kill()
 	if orchestration.Executions.IsAborted() {
 		os.Exit(int(data.CodeAborted))
 	} else {
