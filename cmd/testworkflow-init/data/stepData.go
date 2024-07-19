@@ -3,6 +3,7 @@ package data
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"sync"
 	"time"
 )
@@ -23,6 +24,7 @@ type StepData struct {
 	PausedOnStart bool           `json:"P,omitempty"`
 	Retry         RetryPolicy    `json:"r,omitempty"`
 	Result        string         `json:"R,omitempty"`
+	Iteration     int32          `json:"i,omitempty"`
 
 	// Pausing
 	PausedNs    int64      `json:"n,omitempty"`
@@ -79,6 +81,8 @@ func (s *StepData) SetCondition(expression string) *StepData {
 }
 
 func (s *StepData) SetParents(parents []string) *StepData {
+	parents = slices.Clone(parents)
+	slices.Reverse(parents)
 	s.Parents = parents
 	return s
 }

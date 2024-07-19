@@ -59,16 +59,16 @@ var StateMachine = expressions.NewMachine().
 				panic(fmt.Sprintf("current status is invalid: %s: %v", currentStatus, err.Error()))
 			}
 			if passed, _ := expr.BoolValue(); passed {
-				return StepStatusPassed, true
+				return string(StepStatusPassed), true
 			}
-			return StepStatusFailed, true
+			return string(StepStatusFailed), true
 		} else if name == "self.status" {
 			state := GetState()
 			step := state.GetStep(state.CurrentRef)
 			if step.Status == nil {
 				return nil, false
 			}
-			return *step.Status, true
+			return string(*step.Status), true
 		}
 		return nil, false
 	}).

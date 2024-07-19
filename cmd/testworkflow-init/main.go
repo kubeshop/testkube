@@ -16,6 +16,8 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/orchestration"
+	"github.com/kubeshop/testkube/pkg/expressions"
+	"github.com/kubeshop/testkube/pkg/expressions/libs"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 )
 
@@ -195,7 +197,50 @@ func main() {
 				continue
 			}
 
-			commands.Run(*action.Execute, currentContainer)
+			// Iterate retries
+			for {
+				// Reset the status
+				step.Status = nil
+
+				// Ignore when it is aborted
+				if orchestration.Executions.IsAborted() {
+					step.SetStatus(data.StepStatusAborted)
+					break
+				}
+
+				// Run the command
+				commands.Run(*action.Execute, currentContainer)
+
+				// TODO: Handle retry policy in tree independently
+				// Verify if there may be any other iteration
+				if step.Iteration >= step.Retry.Count {
+					break
+				}
+
+				// Verify if the retry condition is matching
+				wd, _ := os.Getwd()
+				if wd == "" {
+					wd = "/"
+				}
+				until := step.Retry.Until
+				if until == "" {
+					until = "passed"
+				}
+				machine := expressions.CombinedMachines(data.LocalMachine, data.RefSuccessMachine, data.AliasMachine, data.StateMachine, libs.NewFsMachine(os.DirFS("/"), wd))
+				expr, err := expressions.CompileAndResolve(until, machine, expressions.FinalizerFail)
+				if err != nil {
+					fmt.Printf("failed to execute retry condition: %s: %s\n", until, err.Error())
+					break
+				}
+				shouldStop, _ := expr.Static().BoolValue()
+				if shouldStop {
+					break
+				}
+
+				// Continue with the next iteration
+				step.Iteration++
+				fmt.Printf("\nExit code: %d • Retrying: attempt #%d (of %d):\n", step.ExitCode, step.Iteration, step.Retry.Count)
+			}
 		}
 
 		// Save the status after each action

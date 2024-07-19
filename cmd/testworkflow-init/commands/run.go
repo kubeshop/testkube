@@ -61,8 +61,6 @@ func Run(run lite.ActionExecute, container lite.LiteActionContainer) {
 		return
 	}
 
-	// TODO: Compute the retry
-
 	// Obtain command to run
 	command := make([]string, 0)
 	if container.Config.Command != nil {
@@ -114,8 +112,6 @@ func Run(run lite.ActionExecute, container lite.LiteActionContainer) {
 		status = data.StepStatusFailed
 	}
 
-	// TODO: Retry if expected
-
 	// Abandon saving execution data if the step has been finished before
 	if step.IsFinished() {
 		return
@@ -123,5 +119,5 @@ func Run(run lite.ActionExecute, container lite.LiteActionContainer) {
 
 	// Notify about the status
 	step.SetStatus(status).SetExitCode(result.ExitCode)
-	orchestration.FinishExecution(step, constants.ExecutionResult{ExitCode: result.ExitCode, Iteration: 0})
+	orchestration.FinishExecution(step, constants.ExecutionResult{ExitCode: result.ExitCode, Iteration: int(step.Iteration)})
 }
