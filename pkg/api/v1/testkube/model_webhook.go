@@ -29,6 +29,4 @@ type Webhook struct {
 	Labels map[string]string `json:"labels,omitempty"`
 	// whether webhook is disabled
 	Disabled bool `json:"disabled,omitempty"`
-	// whether webhook is triggered on state change only
-	OnStateChange bool `json:"onStateChange,omitempty"`
 }

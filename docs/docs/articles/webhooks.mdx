@@ -80,7 +80,7 @@ spec:
   selector: ""
 ```
 
-Where <YOUR_ENDPOINT_URL> should be replaced with the HTTPS endpoint URL where you want to receive the webhook events.
+Where `<YOUR_ENDPOINT_URL>` should be replaced with the HTTPS endpoint URL where you want to receive the webhook events.
 
 And then apply with:
 
@@ -170,7 +170,7 @@ And set it with `--payload-template template.json`.
 testkube create webhook --name example-webhook --events start-test --events end-test-passed --events end-test-failed --payload-template template.json --uri <YOUR_ENDPOINT_URL>
 ```
 
-Where <YOUR_ENDPOINT_URL> should be replaced with the HTTPS endpoint URL where you want to receive the webhook events.
+Where `<YOUR_ENDPOINT_URL>` should be replaced with the HTTPS endpoint URL where you want to receive the webhook events.
 
 ```sh title="Expected output:"
 Webhook created example-webhook 🥇
@@ -310,16 +310,30 @@ Webhooks can be triggered on any of the following events:
 - end-test-failed
 - end-test-aborted
 - end-test-timeout
+- become-test-up
+- become-test-down
+- become-test-failed
+- become-test-aborted
+- become-test-timeout
 - start-testsuite
 - end-testsuite-success
 - end-testsuite-failed
 - end-testsuite-aborted
 - end-testsuite-timeout
-- start-testworkflow
+- become-testsuite-up
+- become-testsuite-down
+- become-testsuite-failed
+- become-testsuite-aborted
+- become-testsuite-timeout
+- queue-testworkflow
 - start-testworkflow
 - end-testworkflow-success
 - end-testworkflow-failed
 - end-testworkflow-aborted
+- become-testworkflow-up
+- become-testworkflow-down
+- become-testworkflow-failed
+- become-testworkflow-aborted 
 - created
 - updated
 - deleted
@@ -353,6 +367,10 @@ The full Event Data Model can be found [here](https://github.com/kubeshop/testku
 
 ### TestExecution (Execution):
 
+:::warning
+Test and Test Suite webhooks are being deprecated from Testkube.
+:::
+
 - `Id` - Execution ID (for example, `64f8cf3c712890925aea51ce`)
 - `TestName` - Test Name (for example, `postman-executor-smoke`)
 - `TestSuiteName` - Test Suite name (if run as a part of a Test Suite)
@@ -376,6 +394,10 @@ The full Event Data Model can be found [here](https://github.com/kubeshop/testku
 The full Execution data model can be found [here](https://github.com/kubeshop/testkube/blob/main/pkg/api/v1/testkube/model_execution.go).
 
 ### TestSuiteExecution:
+
+:::warning
+Test and Test Suite webhooks are being deprecated from Testkube.
+:::
 
 - `Id` - TestSuiteExecution ID (for example, `64f8d5b2712890925aea51dc`)
 - `Name` - TestSuite execution name (for example, `ts-executor-postman-smoke-tests-472`)
@@ -646,14 +668,34 @@ The examples show only the `create` operations, however, these instructions work
 
 ## Enable Webhooks on State Changes
 
-It is possible to get notified by webhooks only when the latest execution's outcome differs from the previous one. This way you can see instantly when one of your scheduled tests was healed or when they got broken. It could also help prevent alert fatigue by deduplicating the alerts and therefore decreasing the load on your monitoring systems. Enable this by setting `onStateChange` to true directly on the webhook.
+It is possible to get notified by webhooks only when the latest execution's outcome differs from the previous one. This way you can see instantly when one of your scheduled tests was healed or when they got broken. It could also help prevent alert fatigue by deduplicating the alerts and therefore decreasing the load on your monitoring systems.
+Testkube suppots special webhook event types to track changes between current and previous execution states.
+For Tests:
+- become-test-up (from any error state to succeed one)
+- become-test-down (from succeed state to any error one)
+- become-test-failed (from any state to failed one)
+- become-test-aborted (from any state to aborted one)
+- become-test-timeout (from any state to timeout one)
+
+For Test Suites:
+- become-testsuite-up (from any error state to succeed one)
+- become-testsuite-down (from succeed state to any error one)
+- become-testsuite-failed (from any state to failed one)
+- become-testsuite-aborted (from any state to aborted one)
+- become-testsuite-timeout (from any state to timeout one)
+
+For Test Workflows:
+- become-testworkflow-up (from any error state to succeed one)
+- become-testworkflow-down (from succeed state to any error one)
+- become-testworkflow-failed (from any state to failed one)
+- become-testworkflow-aborted (from any state to aborted one)
 
 <Tabs>
 
 <TabItem value="cli" label="CLI">
 
 ```bash
-testkube update webhook --name example-webhook --on-state-change
+testkube update webhook --name example-webhook
 ```
 
 </TabItem>
@@ -671,7 +713,6 @@ testkube update webhook --name example-webhook --on-state-change
         "end-test-failed"
     ],
     "disabled": false,
-    "onStateChange": true,
 }
 ```
 
@@ -690,7 +731,6 @@ spec:
   - start-test
   - end-test-success
   - end-test-failed
-  onStateChange: true
   uri: https://webhook.url/
 ```
 

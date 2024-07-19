@@ -19,7 +19,6 @@ testkube update webhook [flags]
   -h, --help                                help for webhook
   -l, --label stringToString                label key value pair: --label key1=value1 (default [])
   -n, --name string                         unique webhook name - mandatory
-      --on-state-change                     specify whether webhook should be triggered only on a state change
       --payload-field string                field to use for notification object payload
       --payload-template string             if webhook needs to send a custom notification, then a path to template file should be provided
       --payload-template-reference string   reference to payload template to use for the webhook

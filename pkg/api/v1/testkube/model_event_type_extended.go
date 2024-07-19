@@ -57,3 +57,166 @@ func EventTypesFromSlice(types []string) []EventType {
 	}
 	return t
 }
+
+func (t EventType) IsBecome() bool {
+	types := []EventType{
+		BECOME_TEST_UP_EventType,
+		BECOME_TEST_DOWN_EventType,
+		BECOME_TEST_FAILED_EventType,
+		BECOME_TEST_ABORTED_EventType,
+		BECOME_TEST_TIMEOUT_EventType,
+
+		BECOME_TESTSUITE_UP_EventType,
+		BECOME_TESTSUITE_DOWN_EventType,
+		BECOME_TESTSUITE_FAILED_EventType,
+		BECOME_TESTSUITE_ABORTED_EventType,
+		BECOME_TESTSUITE_TIMEOUT_EventType,
+
+		BECOME_TESTWORKFLOW_UP_EventType,
+		BECOME_TESTWORKFLOW_DOWN_EventType,
+		BECOME_TESTWORKFLOW_FAILED_EventType,
+		BECOME_TESTWORKFLOW_ABORTED_EventType,
+	}
+
+	for _, tp := range types {
+		if tp == t {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (t EventType) MapBecomeToRegular() []EventType {
+	eventMap := map[EventType][]EventType{
+		BECOME_TEST_UP_EventType:      {END_TEST_SUCCESS_EventType},
+		BECOME_TEST_DOWN_EventType:    {END_TEST_FAILED_EventType, END_TEST_ABORTED_EventType, END_TEST_TIMEOUT_EventType},
+		BECOME_TEST_FAILED_EventType:  {END_TEST_FAILED_EventType},
+		BECOME_TEST_ABORTED_EventType: {END_TEST_ABORTED_EventType},
+		BECOME_TEST_TIMEOUT_EventType: {END_TEST_TIMEOUT_EventType},
+
+		BECOME_TESTSUITE_UP_EventType:      {END_TESTSUITE_SUCCESS_EventType},
+		BECOME_TESTSUITE_DOWN_EventType:    {END_TESTSUITE_FAILED_EventType, END_TESTSUITE_ABORTED_EventType, END_TESTSUITE_TIMEOUT_EventType},
+		BECOME_TESTSUITE_FAILED_EventType:  {END_TESTSUITE_FAILED_EventType},
+		BECOME_TESTSUITE_ABORTED_EventType: {END_TESTSUITE_ABORTED_EventType},
+		BECOME_TESTSUITE_TIMEOUT_EventType: {END_TESTSUITE_TIMEOUT_EventType},
+
+		BECOME_TESTWORKFLOW_UP_EventType:      {END_TESTWORKFLOW_SUCCESS_EventType},
+		BECOME_TESTWORKFLOW_DOWN_EventType:    {END_TESTWORKFLOW_FAILED_EventType, END_TESTWORKFLOW_ABORTED_EventType},
+		BECOME_TESTWORKFLOW_FAILED_EventType:  {END_TESTWORKFLOW_FAILED_EventType},
+		BECOME_TESTWORKFLOW_ABORTED_EventType: {END_TESTWORKFLOW_ABORTED_EventType},
+	}
+
+	return eventMap[t]
+}
+
+func (t EventType) IsBecomeExecutionStatus(previousStatus ExecutionStatus) bool {
+	eventMap := map[EventType]map[ExecutionStatus]struct{}{
+		BECOME_TEST_UP_EventType: {
+			FAILED_ExecutionStatus:  {},
+			ABORTED_ExecutionStatus: {},
+			TIMEOUT_ExecutionStatus: {},
+		},
+
+		BECOME_TEST_DOWN_EventType: {
+			PASSED_ExecutionStatus: {},
+		},
+
+		BECOME_TEST_FAILED_EventType: {
+			PASSED_ExecutionStatus:  {},
+			ABORTED_ExecutionStatus: {},
+			TIMEOUT_ExecutionStatus: {},
+		},
+
+		BECOME_TEST_ABORTED_EventType: {
+			PASSED_ExecutionStatus:  {},
+			FAILED_ExecutionStatus:  {},
+			TIMEOUT_ExecutionStatus: {},
+		},
+
+		BECOME_TEST_TIMEOUT_EventType: {
+			PASSED_ExecutionStatus:  {},
+			FAILED_ExecutionStatus:  {},
+			ABORTED_ExecutionStatus: {},
+		},
+	}
+
+	if statusMap, ok := eventMap[t]; ok {
+		if _, ok := statusMap[previousStatus]; ok {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (t EventType) IsBecomeTestSuiteExecutionStatus(previousStatus TestSuiteExecutionStatus) bool {
+	eventMap := map[EventType]map[TestSuiteExecutionStatus]struct{}{
+		BECOME_TESTSUITE_UP_EventType: {
+			FAILED_TestSuiteExecutionStatus:  {},
+			ABORTED_TestSuiteExecutionStatus: {},
+			TIMEOUT_TestSuiteExecutionStatus: {},
+		},
+
+		BECOME_TESTSUITE_DOWN_EventType: {
+			PASSED_TestSuiteExecutionStatus: {},
+		},
+
+		BECOME_TESTSUITE_FAILED_EventType: {
+			PASSED_TestSuiteExecutionStatus:  {},
+			ABORTED_TestSuiteExecutionStatus: {},
+			TIMEOUT_TestSuiteExecutionStatus: {},
+		},
+
+		BECOME_TESTSUITE_ABORTED_EventType: {
+			PASSED_TestSuiteExecutionStatus:  {},
+			FAILED_TestSuiteExecutionStatus:  {},
+			TIMEOUT_TestSuiteExecutionStatus: {},
+		},
+
+		BECOME_TESTSUITE_TIMEOUT_EventType: {
+			PASSED_TestSuiteExecutionStatus:  {},
+			FAILED_TestSuiteExecutionStatus:  {},
+			ABORTED_TestSuiteExecutionStatus: {},
+		},
+	}
+
+	if statusMap, ok := eventMap[t]; ok {
+		if _, ok := statusMap[previousStatus]; ok {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (t EventType) IsBecomeTestWorkflowExecutionStatus(previousStatus TestWorkflowStatus) bool {
+	eventMap := map[EventType]map[TestWorkflowStatus]struct{}{
+		BECOME_TESTWORKFLOW_UP_EventType: {
+			FAILED_TestWorkflowStatus:  {},
+			ABORTED_TestWorkflowStatus: {},
+		},
+
+		BECOME_TESTWORKFLOW_DOWN_EventType: {
+			PASSED_TestWorkflowStatus: {},
+		},
+
+		BECOME_TESTWORKFLOW_FAILED_EventType: {
+			PASSED_TestWorkflowStatus:  {},
+			ABORTED_TestWorkflowStatus: {},
+		},
+
+		BECOME_TESTWORKFLOW_ABORTED_EventType: {
+			PASSED_TestWorkflowStatus: {},
+			FAILED_TestWorkflowStatus: {},
+		},
+	}
+
+	if statusMap, ok := eventMap[t]; ok {
+		if _, ok := statusMap[previousStatus]; ok {
+			return true
+		}
+	}
+
+	return false
+}
