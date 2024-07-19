@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 	"sync"
 
@@ -59,6 +60,33 @@ func (s *state) GetStep(ref string) *StepData {
 		s.Steps[ref].Condition = "passed"
 	}
 	return s.Steps[ref]
+}
+
+func (s *state) getSubSteps(ref string, visited *map[*StepData]struct{}) {
+	// Ignore already visited node
+	if _, ok := (*visited)[s.Steps[ref]]; ok {
+		return
+	}
+
+	// Append the node
+	(*visited)[s.Steps[ref]] = struct{}{}
+
+	// Visit its children
+	for _, sub := range s.Steps {
+		if slices.Contains(sub.Parents, ref) {
+			s.getSubSteps(sub.Ref, visited)
+		}
+	}
+}
+
+func (s *state) GetSubSteps(ref string) []*StepData {
+	visited := map[*StepData]struct{}{}
+	s.getSubSteps(ref, &visited)
+	result := make([]*StepData, 0, len(visited))
+	for r := range visited {
+		result = append(result, r)
+	}
+	return result
 }
 
 func (s *state) SetCurrentStatus(expression string) {

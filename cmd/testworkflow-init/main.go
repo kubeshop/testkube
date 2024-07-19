@@ -132,7 +132,7 @@ func main() {
 			}
 
 			// Delay the pause until next children execution
-			if step.Status == nil && step.PausedOnStart {
+			if !step.IsFinished() && step.PausedOnStart {
 				delayedPauses = append(delayedPauses, state.CurrentRef)
 			}
 
@@ -161,7 +161,7 @@ func main() {
 		case lite.ActionTypeExecute:
 			// Ignore running when the step is already resolved (= skipped)
 			step := state.GetStep(action.Execute.Ref)
-			if step.Status != nil {
+			if step.IsFinished() {
 				continue
 			}
 
@@ -188,6 +188,11 @@ func main() {
 				orchestration.Pause(step)
 				// // TODO: Wait for resume
 				//orchestration.Resume(action.Execute.Ref)
+			}
+
+			// Avoid execution if it's finished
+			if step.IsFinished() {
+				continue
 			}
 
 			commands.Run(*action.Execute, currentContainer)

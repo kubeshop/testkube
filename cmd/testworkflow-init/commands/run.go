@@ -3,7 +3,6 @@ package commands
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"slices"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
@@ -18,7 +17,50 @@ func Run(run lite.ActionExecute, container lite.LiteActionContainer) {
 	state := data.GetState()
 	step := state.GetStep(run.Ref)
 
-	// TODO: Run the timeout
+	// List all the parents
+	leaf := []*data.StepData{step}
+	for i := range step.Parents {
+		leaf = append(leaf, state.GetStep(step.Parents[i]))
+	}
+
+	// TODO: Consider moving timeout to main.go
+	// Create timeout finalizer
+	finalizeTimeout := func() {
+		// Check timed out steps in leaf
+		timedOut := orchestration.GetTimedOut(leaf...)
+		if timedOut == nil {
+			return
+		}
+
+		// Iterate over timed out step
+		for _, r := range timedOut {
+			r.SetStatus(data.StepStatusTimeout)
+			sub := state.GetSubSteps(r.Ref)
+			for i := range sub {
+				if sub[i].IsFinished() {
+					continue
+				}
+				if sub[i].IsStarted() {
+					sub[i].SetStatus(data.StepStatusTimeout)
+				} else {
+					sub[i].SetStatus(data.StepStatusSkipped)
+				}
+			}
+			fmt.Println("Timed out.")
+		}
+		_ = orchestration.Executions.KillAll()
+
+		return
+	}
+
+	// Handle immediate timeout
+	finalizeTimeout()
+
+	// Abandon executing if the step was finished before
+	if step.IsFinished() {
+		return
+	}
+
 	// TODO: Compute the retry
 
 	// Obtain command to run
@@ -43,6 +85,10 @@ func Run(run lite.ActionExecute, container lite.LiteActionContainer) {
 		}
 		command[i], _ = value.Static().StringValue()
 	}
+
+	// Register timeouts
+	stopTimeoutWatcher := orchestration.WatchTimeout(finalizeTimeout, leaf...)
+	defer stopTimeoutWatcher()
 
 	// Run the operation
 	execution := orchestration.Executions.Create(command[0], command[1:])
@@ -70,21 +116,12 @@ func Run(run lite.ActionExecute, container lite.LiteActionContainer) {
 
 	// TODO: Retry if expected
 
+	// Abandon saving execution data if the step has been finished before
+	if step.IsFinished() {
+		return
+	}
+
 	// Notify about the status
 	step.SetStatus(status).SetExitCode(result.ExitCode)
 	orchestration.FinishExecution(step, constants.ExecutionResult{ExitCode: result.ExitCode, Iteration: 0})
-}
-
-func getProcessStatus(err error) (bool, uint8) {
-	if err == nil {
-		return true, 0
-	}
-	if e, ok := err.(*exec.ExitError); ok {
-		if e.ProcessState != nil {
-			return false, uint8(e.ProcessState.ExitCode())
-		}
-		return false, 1
-	}
-	fmt.Println(err.Error())
-	return false, 1
 }

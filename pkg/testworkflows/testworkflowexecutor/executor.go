@@ -122,7 +122,7 @@ func (e *executor) handleFatalError(execution *testkube.TestWorkflowExecution, e
 	if ts.IsZero() {
 		ts = time.Now()
 		if isAborted || isTimeout {
-			ts = ts.Truncate(testworkflowcontroller.DefaultInitTimeout)
+			ts = ts.Add(-1 * testworkflowcontroller.DefaultInitTimeout)
 		}
 	}
 
