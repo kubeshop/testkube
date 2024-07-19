@@ -10,11 +10,8 @@ const (
 
 var (
 	InternalBinPath = filepath.Join(InternalPath, "bin")
-	ShellPath       = filepath.Join(InternalBinPath, "sh")
 	InitPath        = filepath.Join(InternalPath, "init")
 	StatePath       = filepath.Join(InternalPath, "state")
-	TransferDirPath = filepath.Join(InternalPath, "transfer")
-	TmpDirPath      = filepath.Join(InternalPath, "tmp")
 )
 
 type StepStatus string
@@ -48,9 +45,7 @@ func StepStatusFromCode(code string) StepStatus {
 }
 
 const (
-	CodeTimeout    uint8 = 124
 	CodeAborted    uint8 = 137
 	CodeInputError uint8 = 155
-	CodeNoCommand  uint8 = 189
 	CodeInternal   uint8 = 190
 )

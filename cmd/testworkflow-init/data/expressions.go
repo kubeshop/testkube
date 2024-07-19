@@ -31,7 +31,7 @@ var LocalMachine = expressions.NewMachine().
 var RefMachine = expressions.NewMachine().
 	RegisterAccessor(func(name string) (interface{}, bool) {
 		if name == "_ref" {
-			return Step.Ref, true
+			return GetState().CurrentRef, true
 		}
 		return nil, false
 	})
