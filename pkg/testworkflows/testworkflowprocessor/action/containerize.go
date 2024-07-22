@@ -80,6 +80,8 @@ func CreateContainer(groupId int, defaultContainer stage2.Container, actions []a
 	if cr.Image == "" {
 		cr.Image = constants.DefaultInitImage
 		cr.ImagePullPolicy = corev1.PullIfNotPresent
+	} else if cr.ImagePullPolicy == "" {
+		cr.ImagePullPolicy = corev1.PullIfNotPresent
 	}
 
 	// Provide the data required for setup step

@@ -9,6 +9,7 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
 
@@ -21,11 +22,11 @@ func simplify(condition string) string {
 }
 
 func setup(copyInit, copyBinaries bool) actiontypes.Action {
-	return actiontypes.Action{Setup: &actiontypes.ActionSetup{CopyInit: copyInit, CopyBinaries: copyBinaries}}
+	return actiontypes.Action{Setup: &lite.ActionSetup{CopyInit: copyInit, CopyBinaries: copyBinaries}}
 }
 
 func declare(ref, condition string, parents ...string) actiontypes.Action {
-	return actiontypes.Action{Declare: &actiontypes.ActionDeclare{Ref: ref, Condition: simplify(condition), Parents: parents}}
+	return actiontypes.Action{Declare: &lite.ActionDeclare{Ref: ref, Condition: simplify(condition), Parents: parents}}
 }
 
 func start(ref string) actiontypes.Action {
@@ -33,7 +34,7 @@ func start(ref string) actiontypes.Action {
 }
 
 func pause(ref string) actiontypes.Action {
-	return actiontypes.Action{Pause: &actiontypes.ActionPause{Ref: ref}}
+	return actiontypes.Action{Pause: &lite.ActionPause{Ref: ref}}
 }
 
 func end(ref string) actiontypes.Action {
@@ -45,11 +46,11 @@ func status(status string) actiontypes.Action {
 }
 
 func result(ref, value string) actiontypes.Action {
-	return actiontypes.Action{Result: &actiontypes.ActionResult{Ref: ref, Value: simplify(value)}}
+	return actiontypes.Action{Result: &lite.ActionResult{Ref: ref, Value: simplify(value)}}
 }
 
 func execute(ref string, negative bool) actiontypes.Action {
-	return actiontypes.Action{Execute: &actiontypes.ActionExecute{Ref: ref, Negative: negative}}
+	return actiontypes.Action{Execute: &lite.ActionExecute{Ref: ref, Negative: negative}}
 }
 
 func containerConfig(ref string, config testworkflowsv1.ContainerConfig) actiontypes.Action {
