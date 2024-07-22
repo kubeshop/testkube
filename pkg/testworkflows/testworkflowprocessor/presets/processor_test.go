@@ -16,6 +16,7 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 )
@@ -36,35 +37,37 @@ var (
 	execMachine = expressions.NewMachine().
 			Register("resource.root", "dummy-id").
 			Register("resource.id", "dummy-id-abc")
-	envInstructions = corev1.EnvVar{Name: "_01_" + constants2.EnvInstructions, ValueFrom: &corev1.EnvVarSource{
-		FieldRef: &corev1.ObjectFieldSelector{FieldPath: fmt.Sprintf("metadata.annotations['%s']", constants.SpecAnnotationName)},
-	}}
-	envDebugNode = corev1.EnvVar{Name: "_00_" + constants2.EnvNodeName, ValueFrom: &corev1.EnvVarSource{
+	envInstructions = lite.EnvVarFrom("01", false, constants2.EnvInstructions, corev1.EnvVarSource{
+		FieldRef: &corev1.ObjectFieldSelector{FieldPath: constants.SpecAnnotationFieldPath},
+	})
+	envDebugNode = lite.EnvVarFrom("00", false, constants2.EnvNodeName, corev1.EnvVarSource{
 		FieldRef: &corev1.ObjectFieldSelector{FieldPath: "spec.nodeName"},
-	}}
-	envDebugPod = corev1.EnvVar{Name: "_00_" + constants2.EnvPodName, ValueFrom: &corev1.EnvVarSource{
+	})
+	envDebugPod = lite.EnvVarFrom("00", false, constants2.EnvPodName, corev1.EnvVarSource{
 		FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.name"},
-	}}
-	envDebugNamespace = corev1.EnvVar{Name: "_00_" + constants2.EnvNamespaceName, ValueFrom: &corev1.EnvVarSource{
+	})
+	envDebugNamespace = lite.EnvVarFrom("00", false, constants2.EnvNamespaceName, corev1.EnvVarSource{
 		FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.namespace"},
-	}}
-	envDebugServiceAccount = corev1.EnvVar{Name: "_00_" + constants2.EnvServiceAccountName, ValueFrom: &corev1.EnvVarSource{
+	})
+	envDebugServiceAccount = lite.EnvVarFrom("00", false, constants2.EnvServiceAccountName, corev1.EnvVarSource{
 		FieldRef: &corev1.ObjectFieldSelector{FieldPath: "spec.serviceAccountName"},
-	}}
+	})
 )
 
 func env(index int, computed bool, name, value string) corev1.EnvVar {
-	suffix := ""
-	if computed {
-		suffix = "C"
-	}
-	return corev1.EnvVar{
-		Name:  fmt.Sprintf("_%d%s_%s", index, suffix, name),
-		Value: value,
-	}
+	return lite.EnvVar(fmt.Sprintf("%d", index), computed, name, value)
 }
 
-func getSpec(actions [][]lite.LiteAction) string {
+func cmd(values ...string) *[]string {
+	return &values
+}
+
+func cmdShell(shell string) *[]string {
+	args := []string{"-c", "set -e\n" + shell}
+	return &args
+}
+
+func getSpec(actions actiontypes.ActionGroups) string {
 	v, err := json.Marshal(actions)
 	if err != nil {
 		panic(err)
@@ -99,6 +102,32 @@ func TestProcessBasic(t *testing.T) {
 	volumes := res.Job.Spec.Template.Spec.Volumes
 	volumeMounts := res.Job.Spec.Template.Spec.InitContainers[0].VolumeMounts
 
+	wantInstructions := actiontypes.NewActionGroups().
+		Append(func(list actiontypes.ActionList) actiontypes.ActionList {
+			return list.
+				Setup(true, true).
+				Declare(constants.RootOperationName, "true").
+				Declare(sig[0].Ref(), "true", constants.RootOperationName).
+				Result(constants.RootOperationName, sig[0].Ref()).
+				Result("", constants.RootOperationName).
+				Start("").
+				CurrentStatus("true").
+				Start(constants.RootOperationName).
+				CurrentStatus(constants.RootOperationName)
+		}).
+		Append(func(list actiontypes.ActionList) actiontypes.ActionList {
+			return list.
+				MutateContainer(sig[0].Ref(), testworkflowsv1.ContainerConfig{
+					Command: cmd("/.tktw/bin/sh"),
+					Args:    cmdShell("shell-test"),
+				}).
+				Start(sig[0].Ref()).
+				Execute(sig[0].Ref(), false).
+				End(sig[0].Ref()).
+				End(constants.RootOperationName).
+				End("")
+		})
+
 	want := batchv1.Job{
 		TypeMeta: metav1.TypeMeta{Kind: "Job", APIVersion: "batch/v1"},
 		ObjectMeta: metav1.ObjectMeta{
@@ -120,30 +149,7 @@ func TestProcessBasic(t *testing.T) {
 						constants.RootResourceIdLabelName: "dummy-id",
 					},
 					Annotations: map[string]string{
-						constants.SpecAnnotationName: getSpec([][]lite.LiteAction{
-							{
-								{Setup: &lite.ActionSetup{CopyInit: true, CopyBinaries: true}},
-								{Declare: &lite.ActionDeclare{Ref: constants.RootOperationName, Condition: "true"}},
-								{Declare: &lite.ActionDeclare{Ref: sig[0].Ref(), Condition: "true", Parents: []string{"root"}}},
-								{Result: &lite.ActionResult{Ref: constants.RootOperationName, Value: sig[0].Ref()}},
-								{Result: &lite.ActionResult{Ref: "", Value: constants.RootOperationName}},
-								{Start: common.Ptr("")},
-								{CurrentStatus: common.Ptr("true")},
-								{Start: common.Ptr(constants.RootOperationName)},
-								{CurrentStatus: common.Ptr("root")},
-							},
-							{
-								{Container: &lite.LiteActionContainer{Ref: sig[0].Ref(), Config: lite.LiteContainerConfig{
-									Command: common.Ptr([]string{"/.tktw/bin/sh"}),
-									Args:    common.Ptr([]string{"-c", "set -e\nshell-test"}),
-								}}},
-								{Start: common.Ptr(sig[0].Ref())},
-								{Execute: &lite.ActionExecute{Ref: sig[0].Ref()}},
-								{End: common.Ptr(sig[0].Ref())},
-								{End: common.Ptr(constants.RootOperationName)},
-								{End: common.Ptr("")},
-							},
-						}),
+						constants.SpecAnnotationName: getSpec(wantInstructions),
 					},
 				},
 				Spec: corev1.PodSpec{
@@ -229,30 +235,31 @@ func TestProcessBasicEnvReference(t *testing.T) {
 	volumes := res.Job.Spec.Template.Spec.Volumes
 	volumeMounts := res.Job.Spec.Template.Spec.InitContainers[0].VolumeMounts
 
-	wantInstructions := [][]lite.LiteAction{
-		{
-			{Setup: &lite.ActionSetup{CopyInit: true, CopyBinaries: true}},
-			{Declare: &lite.ActionDeclare{Ref: constants.RootOperationName, Condition: "true"}},
-			{Declare: &lite.ActionDeclare{Ref: sig[0].Ref(), Condition: "true", Parents: []string{"root"}}},
-			{Result: &lite.ActionResult{Ref: constants.RootOperationName, Value: sig[0].Ref()}},
-			{Result: &lite.ActionResult{Ref: "", Value: constants.RootOperationName}},
-			{Start: common.Ptr("")},
-			{CurrentStatus: common.Ptr("true")},
-			{Start: common.Ptr(constants.RootOperationName)},
-			{CurrentStatus: common.Ptr("root")},
-		},
-		{
-			{Container: &lite.LiteActionContainer{Ref: sig[0].Ref(), Config: lite.LiteContainerConfig{
-				Command: common.Ptr([]string{"/.tktw/bin/sh"}),
-				Args:    common.Ptr([]string{"-c", "set -e\nshell-test"}),
-			}}},
-			{Start: common.Ptr(sig[0].Ref())},
-			{Execute: &lite.ActionExecute{Ref: sig[0].Ref()}},
-			{End: common.Ptr(sig[0].Ref())},
-			{End: common.Ptr(constants.RootOperationName)},
-			{End: common.Ptr("")},
-		},
-	}
+	wantInstructions := lite.NewLiteActionGroups().
+		Append(func(list lite.LiteActionList) lite.LiteActionList {
+			return list.
+				Setup(true, true).
+				Declare(constants.RootOperationName, "true").
+				Declare(sig[0].Ref(), "true", constants.RootOperationName).
+				Result(constants.RootOperationName, sig[0].Ref()).
+				Result("", constants.RootOperationName).
+				Start("").
+				CurrentStatus("true").
+				Start(constants.RootOperationName).
+				CurrentStatus(constants.RootOperationName)
+		}).
+		Append(func(list lite.LiteActionList) lite.LiteActionList {
+			return list.
+				MutateContainer(lite.LiteContainerConfig{
+					Command: cmd("/.tktw/bin/sh"),
+					Args:    cmdShell("shell-test"),
+				}).
+				Start(sig[0].Ref()).
+				Execute(sig[0].Ref(), false).
+				End(sig[0].Ref()).
+				End(constants.RootOperationName).
+				End("")
+		})
 
 	wantPod := corev1.PodSpec{
 		RestartPolicy:      corev1.RestartPolicyNever,
@@ -302,7 +309,7 @@ func TestProcessBasicEnvReference(t *testing.T) {
 		},
 	}
 
-	var gotInstructions [][]lite.LiteAction
+	var gotInstructions lite.LiteActionGroups
 	instructionsErr := json.Unmarshal([]byte(res.Job.Spec.Template.Annotations[constants.SpecAnnotationName]), &gotInstructions)
 
 	assert.NoError(t, instructionsErr)

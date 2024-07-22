@@ -11,53 +11,44 @@ import (
 )
 
 func TestGroup_Basic(t *testing.T) {
-	input := []actiontypes.Action{
+	input := actiontypes.NewActionList().
 		// Configure
-		setup(true, true),
+		Setup(true, true).
+		Declare("init", "true").
+		Declare("step1", "false").
+		Declare("step2", "true", "init").
+		Declare("step3", "true", "init").
+		Result("init", "step2 && step3").
+		Result("", "init").
+		Start("").
+		CurrentStatus("true").
+		Start("init").
+		// Step 1 is never running
+		CurrentStatus("init").
+		Start("step1").
+		CurrentStatus("init").
 
-		// Declare stage conditions
-		declare("init", "true"),
-		declare("step1", "false"),
-		declare("step2", "true", "init"),
-		declare("step3", "true", "init"),
-
-		// Declare stage resolutions
-		result("init", "step2 && step3"),
-		result("", "init"),
-
-		// Initialize
-		start(""),
-		status("true"),
-		start("init"),
-
-		// Run the step 1
-		status("init"),
-		start("step1"),
-
-		// Run the step 2
-		status("init"),
-		containerConfig("step2", testworkflowsv1.ContainerConfig{
+		// Run step 2
+		MutateContainer("step2", testworkflowsv1.ContainerConfig{
 			Image:   "image:3.2.1",
 			Command: common.Ptr([]string{"c", "d"}),
-		}),
-		start("step2"),
-		execute("step2", false),
-		end("step2"),
+		}).
+		Start("step2").
+		Execute("step2", false).
+		End("step2").
+		CurrentStatus("init").
 
-		// Run the step 3
-		status("init"),
-		containerConfig("step3", testworkflowsv1.ContainerConfig{
+		// Run step 3
+		MutateContainer("step3", testworkflowsv1.ContainerConfig{
 			Image:   "image:3.2.1",
 			Command: common.Ptr([]string{"c", "d"}),
-		}),
-		start("step3"),
-		execute("step3", false),
-		end("step3"),
+		}).
+		Start("step3").
+		Execute("step3", false).
+		End("step3").
+		End("init").
+		End("")
 
-		// Finish
-		end("init"),
-		end(""),
-	}
 	want := [][]actiontypes.Action{
 		input[:13],   // ends before containerConfig("step2")
 		input[13:18], // ends before containerConfig("step3")

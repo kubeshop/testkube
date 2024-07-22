@@ -69,7 +69,6 @@ type LiteContainerConfig struct {
 }
 
 type LiteActionContainer struct {
-	Ref    string              `json:"r"`
 	Config LiteContainerConfig `json:"c"`
 }
 

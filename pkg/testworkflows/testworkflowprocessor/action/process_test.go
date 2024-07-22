@@ -9,7 +9,6 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
 
@@ -21,42 +20,6 @@ func simplify(condition string) string {
 	return c.String()
 }
 
-func setup(copyInit, copyBinaries bool) actiontypes.Action {
-	return actiontypes.Action{Setup: &lite.ActionSetup{CopyInit: copyInit, CopyBinaries: copyBinaries}}
-}
-
-func declare(ref, condition string, parents ...string) actiontypes.Action {
-	return actiontypes.Action{Declare: &lite.ActionDeclare{Ref: ref, Condition: simplify(condition), Parents: parents}}
-}
-
-func start(ref string) actiontypes.Action {
-	return actiontypes.Action{Start: common.Ptr(ref)}
-}
-
-func pause(ref string) actiontypes.Action {
-	return actiontypes.Action{Pause: &lite.ActionPause{Ref: ref}}
-}
-
-func end(ref string) actiontypes.Action {
-	return actiontypes.Action{End: common.Ptr(ref)}
-}
-
-func status(status string) actiontypes.Action {
-	return actiontypes.Action{CurrentStatus: common.Ptr(simplify(status))}
-}
-
-func result(ref, value string) actiontypes.Action {
-	return actiontypes.Action{Result: &lite.ActionResult{Ref: ref, Value: simplify(value)}}
-}
-
-func execute(ref string, negative bool) actiontypes.Action {
-	return actiontypes.Action{Execute: &lite.ActionExecute{Ref: ref, Negative: negative}}
-}
-
-func containerConfig(ref string, config testworkflowsv1.ContainerConfig) actiontypes.Action {
-	return actiontypes.Action{Container: &actiontypes.ActionContainer{Ref: ref, Config: config}}
-}
-
 func TestProcess_BasicSteps(t *testing.T) {
 	// Build the structure
 	root := stage.NewGroupStage("init", false)
@@ -64,53 +27,52 @@ func TestProcess_BasicSteps(t *testing.T) {
 	root.Add(stage.NewContainerStage("step2", stage.NewContainer().SetImage("image:3.2.1").SetCommand("c", "d")))
 
 	// Build the expectations
-	want := []actiontypes.Action{
+	want := actiontypes.NewActionList().
 		// Configure
-		setup(true, true),
+		Setup(true, true).
 
 		// Declare stage conditions
-		declare("init", "true"),
-		declare("step1", "true", "init"),
-		declare("step2", "step1", "init"),
+		Declare("init", "true").
+		Declare("step1", "true", "init").
+		Declare("step2", "step1", "init").
 
-		// Declare stage resolutions
-		result("init", "step1 && step2"),
-		result("", "init"),
+		// Declare group resolutions
+		Result("init", "step1&&step2").
+		Result("", "init").
 
 		// Initialize
-		start(""),
-		status("true"),
-		start("init"),
+		Start("").
+		CurrentStatus("true").
+		Start("init").
 
 		// Run the step 1
-		status("init"),
-		containerConfig("step1", testworkflowsv1.ContainerConfig{
+		CurrentStatus("init").
+		MutateContainer("step1", testworkflowsv1.ContainerConfig{
 			Image:   "image:1.2.3",
 			Command: common.Ptr([]string{"a", "b"}),
-		}),
-		start("step1"),
-		execute("step1", false),
-		end("step1"),
+		}).
+		Start("step1").
+		Execute("step1", false).
+		End("step1").
 
 		// Run the step 2
-		status("step1 && init"),
-		containerConfig("step2", testworkflowsv1.ContainerConfig{
+		CurrentStatus("step1&&init").
+		MutateContainer("step2", testworkflowsv1.ContainerConfig{
 			Image:   "image:3.2.1",
 			Command: common.Ptr([]string{"c", "d"}),
-		}),
-		start("step2"),
-		execute("step2", false),
-		end("step2"),
+		}).
+		Start("step2").
+		Execute("step2", false).
+		End("step2").
 
 		// Finish
-		end("init"),
-		end(""),
-	}
+		End("init").
+		End("")
 
 	// Assert
 	got, err := Process(root)
 	assert.NoError(t, err)
-	assert.Equal(t, want, got)
+	assert.Equal(t, want, actiontypes.ActionList(got))
 }
 
 func TestProcess_Pause(t *testing.T) {
@@ -122,56 +84,55 @@ func TestProcess_Pause(t *testing.T) {
 	root.Add(stage.NewContainerStage("step2", stage.NewContainer().SetImage("image:3.2.1").SetCommand("c", "d")))
 
 	// Build the expectations
-	want := []actiontypes.Action{
+	want := actiontypes.NewActionList().
 		// Configure
-		setup(true, true),
+		Setup(true, true).
 
 		// Declare stage conditions
-		declare("init", "true"),
-		declare("step1", "true", "init"),
-		declare("step2", "step1", "init"),
+		Declare("init", "true").
+		Declare("step1", "true", "init").
+		Declare("step2", "step1", "init").
 
 		// Declare information about potential pauses
-		pause("step1"),
+		Pause("step1").
 
-		// Declare stage resolutions
-		result("init", "step1 && step2"),
-		result("", "init"),
+		// Declare group resolutions
+		Result("init", "step1&&step2").
+		Result("", "init").
 
 		// Initialize
-		start(""),
-		status("true"),
-		start("init"),
+		Start("").
+		CurrentStatus("true").
+		Start("init").
 
 		// Run the step 1
-		status("init"),
-		containerConfig("step1", testworkflowsv1.ContainerConfig{
+		CurrentStatus("init").
+		MutateContainer("step1", testworkflowsv1.ContainerConfig{
 			Image:   "image:1.2.3",
 			Command: common.Ptr([]string{"a", "b"}),
-		}),
-		start("step1"),
-		execute("step1", false),
-		end("step1"),
+		}).
+		Start("step1").
+		Execute("step1", false).
+		End("step1").
 
 		// Run the step 2
-		status("step1 && init"),
-		containerConfig("step2", testworkflowsv1.ContainerConfig{
+		CurrentStatus("step1&&init").
+		MutateContainer("step2", testworkflowsv1.ContainerConfig{
 			Image:   "image:3.2.1",
 			Command: common.Ptr([]string{"c", "d"}),
-		}),
-		start("step2"),
-		execute("step2", false),
-		end("step2"),
+		}).
+		Start("step2").
+		Execute("step2", false).
+		End("step2").
 
 		// Finish
-		end("init"),
-		end(""),
-	}
+		End("init").
+		End("")
 
 	// Assert
 	got, err := Process(root)
 	assert.NoError(t, err)
-	assert.Equal(t, want, got)
+	assert.Equal(t, want, actiontypes.ActionList(got))
 }
 
 func TestProcess_NegativeStep(t *testing.T) {
@@ -183,53 +144,52 @@ func TestProcess_NegativeStep(t *testing.T) {
 	root.Add(stage.NewContainerStage("step2", stage.NewContainer().SetImage("image:3.2.1").SetCommand("c", "d")))
 
 	// Build the expectations
-	want := []actiontypes.Action{
+	want := actiontypes.NewActionList().
 		// Configure
-		setup(true, true),
+		Setup(true, true).
 
 		// Declare stage conditions
-		declare("init", "true"),
-		declare("step1", "true", "init"),
-		declare("step2", "step1", "init"),
+		Declare("init", "true").
+		Declare("step1", "true", "init").
+		Declare("step2", "step1", "init").
 
-		// Declare stage resolutions
-		result("init", "step1 && step2"),
-		result("", "init"),
+		// Declare group resolutions
+		Result("init", "step1&&step2").
+		Result("", "init").
 
 		// Initialize
-		start(""),
-		status("true"),
-		start("init"),
+		Start("").
+		CurrentStatus("true").
+		Start("init").
 
 		// Run the step 1
-		status("init"),
-		containerConfig("step1", testworkflowsv1.ContainerConfig{
+		CurrentStatus("init").
+		MutateContainer("step1", testworkflowsv1.ContainerConfig{
 			Image:   "image:1.2.3",
 			Command: common.Ptr([]string{"a", "b"}),
-		}),
-		start("step1"),
-		execute("step1", true),
-		end("step1"),
+		}).
+		Start("step1").
+		Execute("step1", true).
+		End("step1").
 
 		// Run the step 2
-		status("step1 && init"),
-		containerConfig("step2", testworkflowsv1.ContainerConfig{
+		CurrentStatus("step1&&init").
+		MutateContainer("step2", testworkflowsv1.ContainerConfig{
 			Image:   "image:3.2.1",
 			Command: common.Ptr([]string{"c", "d"}),
-		}),
-		start("step2"),
-		execute("step2", false),
-		end("step2"),
+		}).
+		Start("step2").
+		Execute("step2", false).
+		End("step2").
 
 		// Finish
-		end("init"),
-		end(""),
-	}
+		End("init").
+		End("")
 
 	// Assert
 	got, err := Process(root)
 	assert.NoError(t, err)
-	assert.Equal(t, want, got)
+	assert.Equal(t, want, actiontypes.ActionList(got))
 }
 
 func TestProcess_NegativeGroup(t *testing.T) {
@@ -240,53 +200,52 @@ func TestProcess_NegativeGroup(t *testing.T) {
 	root.Add(stage.NewContainerStage("step2", stage.NewContainer().SetImage("image:3.2.1").SetCommand("c", "d")))
 
 	// Build the expectations
-	want := []actiontypes.Action{
+	want := actiontypes.NewActionList().
 		// Configure
-		setup(true, true),
+		Setup(true, true).
 
 		// Declare stage conditions
-		declare("init", "true"),
-		declare("step1", "true", "init"),
-		declare("step2", "step1", "init"),
+		Declare("init", "true").
+		Declare("step1", "true", "init").
+		Declare("step2", "step1", "init").
 
-		// Declare stage resolutions
-		result("init", "!step1 || !step2"),
-		result("", "init"),
+		// Declare group resolutions
+		Result("init", "!step1||!step2").
+		Result("", "init").
 
 		// Initialize
-		start(""),
-		status("true"),
-		start("init"),
+		Start("").
+		CurrentStatus("true").
+		Start("init").
 
 		// Run the step 1
-		status("init"),
-		containerConfig("step1", testworkflowsv1.ContainerConfig{
+		CurrentStatus("init").
+		MutateContainer("step1", testworkflowsv1.ContainerConfig{
 			Image:   "image:1.2.3",
 			Command: common.Ptr([]string{"a", "b"}),
-		}),
-		start("step1"),
-		execute("step1", false),
-		end("step1"),
+		}).
+		Start("step1").
+		Execute("step1", false).
+		End("step1").
 
 		// Run the step 2
-		status("step1 && init"),
-		containerConfig("step2", testworkflowsv1.ContainerConfig{
+		CurrentStatus("step1&&init").
+		MutateContainer("step2", testworkflowsv1.ContainerConfig{
 			Image:   "image:3.2.1",
 			Command: common.Ptr([]string{"c", "d"}),
-		}),
-		start("step2"),
-		execute("step2", false),
-		end("step2"),
+		}).
+		Start("step2").
+		Execute("step2", false).
+		End("step2").
 
 		// Finish
-		end("init"),
-		end(""),
-	}
+		End("init").
+		End("")
 
 	// Assert
 	got, err := Process(root)
 	assert.NoError(t, err)
-	assert.Equal(t, want, got)
+	assert.Equal(t, want, actiontypes.ActionList(got))
 }
 
 func TestProcess_OptionalStep(t *testing.T) {
@@ -298,53 +257,52 @@ func TestProcess_OptionalStep(t *testing.T) {
 	root.Add(stage.NewContainerStage("step2", stage.NewContainer().SetImage("image:3.2.1").SetCommand("c", "d")))
 
 	// Build the expectations
-	want := []actiontypes.Action{
+	want := actiontypes.NewActionList().
 		// Configure
-		setup(true, true),
+		Setup(true, true).
 
 		// Declare stage conditions
-		declare("init", "true"),
-		declare("step1", "true", "init"),
-		declare("step2", "true", "init"), // because step1 is optional
+		Declare("init", "true").
+		Declare("step1", "true", "init").
+		Declare("step2", "true", "init"). // because step1 is optional
 
-		// Declare stage resolutions
-		result("init", "step2"),
-		result("", "init"),
+		// Declare group resolutions
+		Result("init", "step2").
+		Result("", "init").
 
 		// Initialize
-		start(""),
-		status("true"),
-		start("init"),
+		Start("").
+		CurrentStatus("true").
+		Start("init").
 
 		// Run the step 1
-		status("init"),
-		containerConfig("step1", testworkflowsv1.ContainerConfig{
+		CurrentStatus("init").
+		MutateContainer("step1", testworkflowsv1.ContainerConfig{
 			Image:   "image:1.2.3",
 			Command: common.Ptr([]string{"a", "b"}),
-		}),
-		start("step1"),
-		execute("step1", false),
-		end("step1"),
+		}).
+		Start("step1").
+		Execute("step1", false).
+		End("step1").
 
 		// Run the step 2
-		status("init"),
-		containerConfig("step2", testworkflowsv1.ContainerConfig{
+		CurrentStatus("init").
+		MutateContainer("step2", testworkflowsv1.ContainerConfig{
 			Image:   "image:3.2.1",
 			Command: common.Ptr([]string{"c", "d"}),
-		}),
-		start("step2"),
-		execute("step2", false),
-		end("step2"),
+		}).
+		Start("step2").
+		Execute("step2", false).
+		End("step2").
 
 		// Finish
-		end("init"),
-		end(""),
-	}
+		End("init").
+		End("")
 
 	// Assert
 	got, err := Process(root)
 	assert.NoError(t, err)
-	assert.Equal(t, want, got)
+	assert.Equal(t, want, actiontypes.ActionList(got))
 }
 
 func TestProcess_OptionalGroup(t *testing.T) {
@@ -357,58 +315,57 @@ func TestProcess_OptionalGroup(t *testing.T) {
 	root.Add(group)
 
 	// Build the expectations
-	want := []actiontypes.Action{
+	want := actiontypes.NewActionList().
 		// Configure
-		setup(true, true),
+		Setup(true, true).
 
 		// Declare stage conditions
-		declare("init", "true"),
-		declare("inner", "true", "init"),
-		declare("step1", "true", "init", "inner"),
-		declare("step2", "step1", "init", "inner"),
+		Declare("init", "true").
+		Declare("inner", "true", "init").
+		Declare("step1", "true", "init", "inner").
+		Declare("step2", "step1", "init", "inner").
 
-		// Declare stage resolutions
-		result("inner", "step1 && step2"),
-		result("init", "true"),
-		result("", "init"),
+		// Declare group resolutions
+		Result("inner", "step1&&step2").
+		Result("init", "true").
+		Result("", "init").
 
 		// Initialize
-		start(""),
-		status("true"),
-		start("init"),
-		status("init"),
-		start("inner"),
+		Start("").
+		CurrentStatus("true").
+		Start("init").
+		CurrentStatus("init").
+		Start("inner").
 
 		// Run the step 1
-		status("inner && init"),
-		containerConfig("step1", testworkflowsv1.ContainerConfig{
+		CurrentStatus("inner&&init").
+		MutateContainer("step1", testworkflowsv1.ContainerConfig{
 			Image:   "image:1.2.3",
 			Command: common.Ptr([]string{"a", "b"}),
-		}),
-		start("step1"),
-		execute("step1", false),
-		end("step1"),
+		}).
+		Start("step1").
+		Execute("step1", false).
+		End("step1").
 
 		// Run the step 2
-		status("step1 && inner && init"),
-		containerConfig("step2", testworkflowsv1.ContainerConfig{
+		CurrentStatus("step1&&inner&&init").
+		MutateContainer("step2", testworkflowsv1.ContainerConfig{
 			Image:   "image:3.2.1",
 			Command: common.Ptr([]string{"c", "d"}),
-		}),
-		start("step2"),
-		execute("step2", false),
-		end("step2"),
+		}).
+		Start("step2").
+		Execute("step2", false).
+		End("step2").
 
 		// Finish
-		end("inner"),
-		end("init"),
-		end(""),
-	}
+		End("inner").
+		End("init").
+		End("")
 
 	// Assert
 	got, err := Process(root)
 	assert.NoError(t, err)
-	assert.Equal(t, want, got)
+	assert.Equal(t, want, actiontypes.ActionList(got))
 }
 
 func TestProcess_IgnoreExecutionOfStaticSkip(t *testing.T) {
@@ -420,47 +377,47 @@ func TestProcess_IgnoreExecutionOfStaticSkip(t *testing.T) {
 	root.Add(stage.NewContainerStage("step2", stage.NewContainer().SetImage("image:3.2.1").SetCommand("c", "d")))
 
 	// Build the expectations
-	want := []actiontypes.Action{
+	want := actiontypes.NewActionList().
 		// Configure
-		setup(true, true),
+		Setup(true, true).
 
 		// Declare stage conditions
-		declare("init", "true"),
-		declare("step1", "false"),
-		declare("step2", "true", "init"), // because step1 is skipped
+		Declare("init", "true").
+		Declare("step1", "false").
+		Declare("step2", "true", "init"). // because step1 is skipped
 
-		// Declare stage resolutions
-		result("init", "step2"),
-		result("", "init"),
+		// Declare group resolutions
+		Result("init", "step2").
+		Result("", "init").
 
 		// Initialize
-		start(""),
-		status("true"),
-		start("init"),
+		Start("").
+		CurrentStatus("true").
+		Start("init").
 
 		// Run the step 1
-		status("init"),
-		start("step1"),
+		CurrentStatus("init").
+		Start("step1"). // don't execute as it is skipped
+		//End("step1"). // FIXME: Shouldn't be????
 
 		// Run the step 2
-		status("init"),
-		containerConfig("step2", testworkflowsv1.ContainerConfig{
+		CurrentStatus("init").
+		MutateContainer("step2", testworkflowsv1.ContainerConfig{
 			Image:   "image:3.2.1",
 			Command: common.Ptr([]string{"c", "d"}),
-		}),
-		start("step2"),
-		execute("step2", false),
-		end("step2"),
+		}).
+		Start("step2").
+		Execute("step2", false).
+		End("step2").
 
 		// Finish
-		end("init"),
-		end(""),
-	}
+		End("init").
+		End("")
 
 	// Assert
 	got, err := Process(root)
 	assert.NoError(t, err)
-	assert.Equal(t, want, got)
+	assert.Equal(t, want, actiontypes.ActionList(got))
 }
 
 func TestProcess_IgnoreExecutionOfStaticSkipGroup(t *testing.T) {
@@ -471,39 +428,41 @@ func TestProcess_IgnoreExecutionOfStaticSkipGroup(t *testing.T) {
 	root.Add(stage.NewContainerStage("step2", stage.NewContainer().SetImage("image:3.2.1").SetCommand("c", "d")))
 
 	// Build the expectations
-	want := []actiontypes.Action{
+	want := actiontypes.NewActionList().
 		// Configure
-		setup(true, true),
+		Setup(true, true).
 
 		// Declare stage conditions
-		declare("init", "false"),
-		declare("step1", "false"),
-		declare("step2", "false"),
+		Declare("init", "false").
+		Declare("step1", "false").
+		Declare("step2", "false").
 
-		// Declare stage resolutions
-		result("", "true"),
+		// Declare group resolutions
+		Result("", "true").
 
 		// Initialize
-		start(""),
-		status("true"),
-		start("init"),
+		Start("").
+		CurrentStatus("true").
+		Start("init").
 
 		// Run the step 1
-		status("true"),
-		start("step1"),
+		CurrentStatus("true").
+		Start("step1"). // don't execute as it is skipped
+		//End("step1"). // FIXME: Shouldn't be????
 
 		// Run the step 2
-		status("true"),
-		start("step2"),
+		CurrentStatus("true").
+		Start("step2"). // don't execute as it is skipped
+		//End("step2"). // FIXME: Shouldn't be????
 
 		// Finish
-		end(""),
-	}
+		//End("init"). // FIXME: Shouldn't be????
+		End("")
 
 	// Assert
 	got, err := Process(root)
 	assert.NoError(t, err)
-	assert.Equal(t, want, got)
+	assert.Equal(t, want, actiontypes.ActionList(got))
 }
 
 func TestProcess_IgnoreExecutionOfStaticSkipGroup_Pause(t *testing.T) {
@@ -515,42 +474,45 @@ func TestProcess_IgnoreExecutionOfStaticSkipGroup_Pause(t *testing.T) {
 	root.Add(stage.NewContainerStage("step2", stage.NewContainer().SetImage("image:3.2.1").SetCommand("c", "d")))
 
 	// Build the expectations
-	want := []actiontypes.Action{
+	want := actiontypes.NewActionList().
 		// Configure
-		setup(true, true),
+		Setup(true, true).
 
 		// Declare stage conditions
-		declare("init", "false"),
-		declare("step1", "false"),
-		declare("step2", "false"),
+		Declare("init", "false").
+		Declare("step1", "false").
+		Declare("step2", "false").
 
-		// Declare stage resolutions
-		result("", "true"),
+		//Pause("init"). // ignored as it's not executed
+
+		// Declare group resolutions
+		Result("", "true").
 
 		// Initialize
-		start(""),
-		status("true"),
-		start("init"),
+		Start("").
+		CurrentStatus("true").
+		Start("init").
 
 		// Run the step 1
-		status("true"),
-		start("step1"),
+		CurrentStatus("true").
+		Start("step1"). // don't execute as it is skipped
+		//End("step1"). // FIXME: Shouldn't be????
 
 		// Run the step 2
-		status("true"),
-		start("step2"),
+		CurrentStatus("true").
+		Start("step2"). // don't execute as it is skipped
+		//End("step2"). // FIXME: Shouldn't be????
 
 		// Finish
-		end(""),
-	}
+		//End("init"). // FIXME: Shouldn't be????
+		End("")
 
 	// Assert
 	got, err := Process(root)
 	assert.NoError(t, err)
-	assert.Equal(t, want, got)
+	assert.Equal(t, want, actiontypes.ActionList(got))
 }
 
-// TODO: Check how the sole `paused: true` step works
 func TestProcess_IgnoreExecutionOfStaticSkip_PauseGroup(t *testing.T) {
 	// Build the structure
 	root := stage.NewGroupStage("init", false)
@@ -561,48 +523,48 @@ func TestProcess_IgnoreExecutionOfStaticSkip_PauseGroup(t *testing.T) {
 	root.Add(stage.NewContainerStage("step2", stage.NewContainer().SetImage("image:3.2.1").SetCommand("c", "d")))
 
 	// Build the expectations
-	want := []actiontypes.Action{
+	want := actiontypes.NewActionList().
 		// Configure
-		setup(true, true),
+		Setup(true, true).
 
 		// Declare stage conditions
-		declare("init", "true"),
-		declare("step1", "false"),
-		declare("step2", "true", "init"), // because step1 is skipped
+		Declare("init", "true").
+		Declare("step1", "false").
+		Declare("step2", "true", "init"). // because step1 is skipped
 
 		// Declare information about potential pauses
-		pause("init"),
+		Pause("init").
 
-		// Declare stage resolutions
-		result("init", "step2"),
-		result("", "init"),
+		// Declare group resolutions
+		Result("init", "step2").
+		Result("", "init").
 
 		// Initialize
-		start(""),
-		status("true"),
-		start("init"),
+		Start("").
+		CurrentStatus("true").
+		Start("init").
 
 		// Run the step 1
-		status("init"),
-		start("step1"),
+		CurrentStatus("init").
+		Start("step1"). // don't execute as it is skipped
+		//End("step1"). // FIXME: Shouldn't be????
 
 		// Run the step 2
-		status("init"),
-		containerConfig("step2", testworkflowsv1.ContainerConfig{
+		CurrentStatus("init").
+		MutateContainer("step2", testworkflowsv1.ContainerConfig{
 			Image:   "image:3.2.1",
 			Command: common.Ptr([]string{"c", "d"}),
-		}),
-		start("step2"),
-		execute("step2", false),
-		end("step2"),
+		}).
+		Start("step2").
+		Execute("step2", false).
+		End("step2").
 
 		// Finish
-		end("init"),
-		end(""),
-	}
+		End("init").
+		End("")
 
 	// Assert
 	got, err := Process(root)
 	assert.NoError(t, err)
-	assert.Equal(t, want, got)
+	assert.Equal(t, want, actiontypes.ActionList(got))
 }
