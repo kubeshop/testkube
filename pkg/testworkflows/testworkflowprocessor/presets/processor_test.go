@@ -64,13 +64,6 @@ func env(index int, computed bool, name, value string) corev1.EnvVar {
 	}
 }
 
-func envFrom(index int, name string, value corev1.EnvVarSource) corev1.EnvVar {
-	return corev1.EnvVar{
-		Name:      fmt.Sprintf("_%d_%s", index, name),
-		ValueFrom: &value,
-	}
-}
-
 func getSpec(actions [][]lite.LiteAction) string {
 	v, err := json.Marshal(actions)
 	if err != nil {
@@ -231,11 +224,37 @@ func TestProcessBasicEnvReference(t *testing.T) {
 	}
 
 	res, err := proc.Bundle(context.Background(), wf, execMachine)
+	sig := res.Signature
 
 	volumes := res.Job.Spec.Template.Spec.Volumes
 	volumeMounts := res.Job.Spec.Template.Spec.InitContainers[0].VolumeMounts
 
-	want := corev1.PodSpec{
+	wantInstructions := [][]lite.LiteAction{
+		{
+			{Setup: &lite.ActionSetup{CopyInit: true, CopyBinaries: true}},
+			{Declare: &lite.ActionDeclare{Ref: constants.RootOperationName, Condition: "true"}},
+			{Declare: &lite.ActionDeclare{Ref: sig[0].Ref(), Condition: "true", Parents: []string{"root"}}},
+			{Result: &lite.ActionResult{Ref: constants.RootOperationName, Value: sig[0].Ref()}},
+			{Result: &lite.ActionResult{Ref: "", Value: constants.RootOperationName}},
+			{Start: common.Ptr("")},
+			{CurrentStatus: common.Ptr("true")},
+			{Start: common.Ptr(constants.RootOperationName)},
+			{CurrentStatus: common.Ptr("root")},
+		},
+		{
+			{Container: &lite.LiteActionContainer{Ref: sig[0].Ref(), Config: lite.LiteContainerConfig{
+				Command: common.Ptr([]string{"/.tktw/bin/sh"}),
+				Args:    common.Ptr([]string{"-c", "set -e\nshell-test"}),
+			}}},
+			{Start: common.Ptr(sig[0].Ref())},
+			{Execute: &lite.ActionExecute{Ref: sig[0].Ref()}},
+			{End: common.Ptr(sig[0].Ref())},
+			{End: common.Ptr(constants.RootOperationName)},
+			{End: common.Ptr("")},
+		},
+	}
+
+	wantPod := corev1.PodSpec{
 		RestartPolicy:      corev1.RestartPolicyNever,
 		EnableServiceLinks: common.Ptr(false),
 		Volumes:            volumes,
@@ -283,8 +302,14 @@ func TestProcessBasicEnvReference(t *testing.T) {
 		},
 	}
 
+	var gotInstructions [][]lite.LiteAction
+	instructionsErr := json.Unmarshal([]byte(res.Job.Spec.Template.Annotations[constants.SpecAnnotationName]), &gotInstructions)
+
+	assert.NoError(t, instructionsErr)
+	assert.Equal(t, wantInstructions, gotInstructions)
+
 	assert.NoError(t, err)
-	assert.Equal(t, want, res.Job.Spec.Template.Spec)
+	assert.Equal(t, wantPod, res.Job.Spec.Template.Spec)
 }
 
 //func TestProcessMultipleSteps(t *testing.T) {
