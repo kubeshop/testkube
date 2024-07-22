@@ -48,18 +48,18 @@ type ActionType string
 const (
 	// Declarations
 	ActionTypeDeclare ActionType = "declare"
-	ActionTypePause              = "pause"
-	ActionTypeResult             = "result"
-	ActionTypeTimeout            = "timeout"
-	ActionTypeRetry              = "retry"
+	ActionTypePause   ActionType = "pause"
+	ActionTypeResult  ActionType = "result"
+	ActionTypeTimeout ActionType = "timeout"
+	ActionTypeRetry   ActionType = "retry"
 
 	// Operations
-	ActionTypeContainerTransition = "container"
-	ActionTypeCurrentStatus       = "status"
-	ActionTypeStart               = "start"
-	ActionTypeEnd                 = "end"
-	ActionTypeSetup               = "setup"
-	ActionTypeExecute             = "execute"
+	ActionTypeContainerTransition ActionType = "container"
+	ActionTypeCurrentStatus       ActionType = "status"
+	ActionTypeStart               ActionType = "start"
+	ActionTypeEnd                 ActionType = "end"
+	ActionTypeSetup               ActionType = "setup"
+	ActionTypeExecute             ActionType = "execute"
 )
 
 type LiteContainerConfig struct {

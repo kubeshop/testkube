@@ -74,8 +74,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 		podObj := <-pod.Peek(ctx)
 
 		// Load the references
-		refs := make([][]string, 0)
-		endRefs := make([][]string, 0)
+		var refs, endRefs [][]string
 		var instructions [][]actiontypes.Action
 		err := json.Unmarshal([]byte(podObj.Annotations[constants2.SpecAnnotationName]), &instructions)
 		if err != nil {

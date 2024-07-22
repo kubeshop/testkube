@@ -141,7 +141,6 @@ func (e *executionGroup) IsAborted() bool {
 
 type execution struct {
 	cmd   *exec.Cmd
-	runMu sync.Mutex
 	cmdMu sync.Mutex
 	group *executionGroup
 }
