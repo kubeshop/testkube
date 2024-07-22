@@ -34,6 +34,7 @@ func (r *MongoRepository) GetNextExecutionNumber(ctx context.Context, name strin
 		Number:        int(number),
 		ExecutionType: executionType,
 	}
+
 	opts := options.FindOneAndUpdate()
 	opts.SetUpsert(true)
 
