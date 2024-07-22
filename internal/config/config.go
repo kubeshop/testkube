@@ -82,36 +82,39 @@ type Config struct {
 	TestkubeProTLSSecret                        string        `envconfig:"TESTKUBE_PRO_TLS_SECRET" default:""`
 	TestkubeProRunnerCustomCASecret             string        `envconfig:"TESTKUBE_PRO_RUNNER_CUSTOM_CA_SECRET" default:""`
 	TestkubeWatcherNamespaces                   string        `envconfig:"TESTKUBE_WATCHER_NAMESPACES" default:""`
-	GraphqlPort                                 string        `envconfig:"TESTKUBE_GRAPHQL_PORT" default:"8070"`
 	TestkubeRegistry                            string        `envconfig:"TESTKUBE_REGISTRY" default:""`
 	TestkubePodStartTimeout                     time.Duration `envconfig:"TESTKUBE_POD_START_TIMEOUT" default:"30m"`
-	CDEventsTarget                              string        `envconfig:"CDEVENTS_TARGET" default:""`
-	TestkubeDashboardURI                        string        `envconfig:"TESTKUBE_DASHBOARD_URI" default:""`
-	DisableReconciler                           bool          `envconfig:"DISABLE_RECONCILER" default:"false"`
-	TestkubeClusterName                         string        `envconfig:"TESTKUBE_CLUSTER_NAME" default:""`
-	CompressArtifacts                           bool          `envconfig:"COMPRESSARTIFACTS" default:"false"`
-	TestkubeHelmchartVersion                    string        `envconfig:"TESTKUBE_HELMCHART_VERSION" default:""`
-	DebugListenAddr                             string        `envconfig:"DEBUG_LISTEN_ADDR" default:"0.0.0.0:1337"`
-	EnableDebugServer                           bool          `envconfig:"ENABLE_DEBUG_SERVER" default:"false"`
-	EnableSecretsEndpoint                       bool          `envconfig:"ENABLE_SECRETS_ENDPOINT" default:"false"`
-	EnableListingAllSecrets                     bool          `envconfig:"ENABLE_LISTING_ALL_SECRETS" default:"false"`
-	SecretCreationPrefix                        string        `envconfig:"SECRET_CREATION_PREFIX" default:"testkube-"`
-	DisableMongoMigrations                      bool          `envconfig:"DISABLE_MONGO_MIGRATIONS" default:"false"`
-	Debug                                       bool          `envconfig:"DEBUG" default:"false"`
-	Trace                                       bool          `envconfig:"TRACE" default:"false"`
-	EnableImageDataPersistentCache              bool          `envconfig:"TESTKUBE_ENABLE_IMAGE_DATA_PERSISTENT_CACHE" default:"false"`
-	ImageDataPersistentCacheKey                 string        `envconfig:"TESTKUBE_IMAGE_DATA_PERSISTENT_CACHE_KEY" default:"testkube-image-cache"`
-	LogServerGrpcAddress                        string        `envconfig:"LOG_SERVER_GRPC_ADDRESS" default:":9090"`
-	LogServerSecure                             bool          `envconfig:"LOG_SERVER_SECURE" default:"false"`
-	LogServerSkipVerify                         bool          `envconfig:"LOG_SERVER_SKIP_VERIFY" default:"false"`
-	LogServerCertFile                           string        `envconfig:"LOG_SERVER_CERT_FILE" default:""`
-	LogServerKeyFile                            string        `envconfig:"LOG_SERVER_KEY_FILE" default:""`
-	LogServerCAFile                             string        `envconfig:"LOG_SERVER_CA_FILE" default:""`
-	DisableSecretCreation                       bool          `envconfig:"DISABLE_SECRET_CREATION" default:"false"`
-	TestkubeExecutionNamespaces                 string        `envconfig:"TESTKUBE_EXECUTION_NAMESPACES" default:""`
-	TestkubeDefaultStorageClassName             string        `envconfig:"TESTKUBE_DEFAULT_STORAGE_CLASS_NAME" default:""`
-	GlobalWorkflowTemplateName                  string        `envconfig:"TESTKUBE_GLOBAL_WORKFLOW_TEMPLATE_NAME" default:""`
-	EnableK8sEvents                             bool          `envconfig:"ENABLE_K8S_EVENTS" default:"true"`
+	// TestkubeImageCredentialsCacheTTL is the duration for which the image pull credentials should be cached provided as a Go duration string.
+	// If set to 0, the cache is disabled.
+	TestkubeImageCredentialsCacheTTL time.Duration `envconfig:"TESTKUBE_IMAGE_CREDENTIALS_CACHE_TTL" default:"30m"`
+	GraphqlPort                      string        `envconfig:"TESTKUBE_GRAPHQL_PORT" default:"8070"`
+	CDEventsTarget                   string        `envconfig:"CDEVENTS_TARGET" default:""`
+	TestkubeDashboardURI             string        `envconfig:"TESTKUBE_DASHBOARD_URI" default:""`
+	DisableReconciler                bool          `envconfig:"DISABLE_RECONCILER" default:"false"`
+	TestkubeClusterName              string        `envconfig:"TESTKUBE_CLUSTER_NAME" default:""`
+	CompressArtifacts                bool          `envconfig:"COMPRESSARTIFACTS" default:"false"`
+	TestkubeHelmchartVersion         string        `envconfig:"TESTKUBE_HELMCHART_VERSION" default:""`
+	DebugListenAddr                  string        `envconfig:"DEBUG_LISTEN_ADDR" default:"0.0.0.0:1337"`
+	EnableDebugServer                bool          `envconfig:"ENABLE_DEBUG_SERVER" default:"false"`
+	EnableSecretsEndpoint            bool          `envconfig:"ENABLE_SECRETS_ENDPOINT" default:"false"`
+	EnableListingAllSecrets          bool          `envconfig:"ENABLE_LISTING_ALL_SECRETS" default:"false"`
+	SecretCreationPrefix             string        `envconfig:"SECRET_CREATION_PREFIX" default:"testkube-"`
+	DisableMongoMigrations           bool          `envconfig:"DISABLE_MONGO_MIGRATIONS" default:"false"`
+	Debug                            bool          `envconfig:"DEBUG" default:"false"`
+	Trace                            bool          `envconfig:"TRACE" default:"false"`
+	EnableImageDataPersistentCache   bool          `envconfig:"TESTKUBE_ENABLE_IMAGE_DATA_PERSISTENT_CACHE" default:"false"`
+	ImageDataPersistentCacheKey      string        `envconfig:"TESTKUBE_IMAGE_DATA_PERSISTENT_CACHE_KEY" default:"testkube-image-cache"`
+	LogServerGrpcAddress             string        `envconfig:"LOG_SERVER_GRPC_ADDRESS" default:":9090"`
+	LogServerSecure                  bool          `envconfig:"LOG_SERVER_SECURE" default:"false"`
+	LogServerSkipVerify              bool          `envconfig:"LOG_SERVER_SKIP_VERIFY" default:"false"`
+	LogServerCertFile                string        `envconfig:"LOG_SERVER_CERT_FILE" default:""`
+	LogServerKeyFile                 string        `envconfig:"LOG_SERVER_KEY_FILE" default:""`
+	LogServerCAFile                  string        `envconfig:"LOG_SERVER_CA_FILE" default:""`
+	DisableSecretCreation            bool          `envconfig:"DISABLE_SECRET_CREATION" default:"false"`
+	TestkubeExecutionNamespaces      string        `envconfig:"TESTKUBE_EXECUTION_NAMESPACES" default:""`
+	TestkubeDefaultStorageClassName  string        `envconfig:"TESTKUBE_DEFAULT_STORAGE_CLASS_NAME" default:""`
+	GlobalWorkflowTemplateName       string        `envconfig:"TESTKUBE_GLOBAL_WORKFLOW_TEMPLATE_NAME" default:""`
+	EnableK8sEvents                  bool          `envconfig:"ENABLE_K8S_EVENTS" default:"true"`
 
 	// DEPRECATED: Use TestkubeProAPIKey instead
 	TestkubeCloudAPIKey string `envconfig:"TESTKUBE_CLOUD_API_KEY" default:""`

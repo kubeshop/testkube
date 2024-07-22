@@ -457,6 +457,7 @@ func (c *container) EnableToolkit(ref string) Container {
 			"TESTKUBE_TW_INIT_IMAGE":    "{{internal.images.init}}",
 			"TK_IMG_P":                  "{{internal.images.persistence.enabled}}",
 			"TK_IMG_PK":                 "{{internal.images.persistence.key}}",
+			"TK_IMG_CRED_TTL":           "{{internal.images.cache.ttl}}",
 		})
 }
 

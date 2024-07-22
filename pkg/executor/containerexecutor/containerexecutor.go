@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/kubeshop/testkube/pkg/cache"
+
 	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/pkg/featureflags"
@@ -85,6 +87,7 @@ func NewContainerExecutor(
 	features featureflags.FeatureFlags,
 	defaultStorageClassName string,
 	whitelistedContainers []string,
+	imageCredentialsCacheTTL time.Duration,
 ) (client *ContainerExecutor, err error) {
 	clientSet, err := k8sclient.ConnectToK8s()
 	if err != nil {
@@ -96,31 +99,32 @@ func NewContainerExecutor(
 	}
 
 	return &ContainerExecutor{
-		clientSet:               clientSet,
-		repository:              repo,
-		log:                     log.DefaultLogger,
-		images:                  images,
-		templates:               templates,
-		imageInspector:          imageInspector,
-		configMap:               configMap,
-		serviceAccountNames:     serviceAccountNames,
-		metrics:                 metrics,
-		emitter:                 emiter,
-		testsClient:             testsClient,
-		executorsClient:         executorsClient,
-		testExecutionsClient:    testExecutionsClient,
-		templatesClient:         templatesClient,
-		registry:                registry,
-		podStartTimeout:         podStartTimeout,
-		clusterID:               clusterID,
-		dashboardURI:            dashboardURI,
-		apiURI:                  apiURI,
-		natsURI:                 natsUri,
-		debug:                   debug,
-		logsStream:              logsStream,
-		features:                features,
-		defaultStorageClassName: defaultStorageClassName,
-		whitelistedContainers:   whitelistedContainers,
+		clientSet:                clientSet,
+		repository:               repo,
+		log:                      log.DefaultLogger,
+		images:                   images,
+		templates:                templates,
+		imageInspector:           imageInspector,
+		configMap:                configMap,
+		serviceAccountNames:      serviceAccountNames,
+		metrics:                  metrics,
+		emitter:                  emiter,
+		testsClient:              testsClient,
+		executorsClient:          executorsClient,
+		testExecutionsClient:     testExecutionsClient,
+		templatesClient:          templatesClient,
+		registry:                 registry,
+		podStartTimeout:          podStartTimeout,
+		clusterID:                clusterID,
+		dashboardURI:             dashboardURI,
+		apiURI:                   apiURI,
+		natsURI:                  natsUri,
+		debug:                    debug,
+		logsStream:               logsStream,
+		features:                 features,
+		defaultStorageClassName:  defaultStorageClassName,
+		whitelistedContainers:    whitelistedContainers,
+		imageCredentialsCacheTTL: imageCredentialsCacheTTL,
 	}, nil
 }
 
@@ -156,6 +160,8 @@ type ContainerExecutor struct {
 	defaultStorageClassName string
 	// whitelistedContainers is a list of containers from which logs are allowed to be streamed.
 	whitelistedContainers []string
+	// imageCredentialsCacheTTL defines the ttl for image credentials cache.
+	imageCredentialsCacheTTL time.Duration
 }
 
 type JobOptions struct {
@@ -323,7 +329,11 @@ func (c *ContainerExecutor) createJob(ctx context.Context, execution testkube.Ex
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to build secrets client")
 		}
-		inspector = imageinspector.NewInspector(c.registry, imageinspector.NewSkopeoFetcher(), imageinspector.NewSecretFetcher(secretClient))
+		inspector = imageinspector.NewInspector(
+			c.registry,
+			imageinspector.NewSkopeoFetcher(),
+			imageinspector.NewSecretFetcher(secretClient, cache.NewInMemoryCache[*corev1.Secret](), imageinspector.WithSecretCacheTTL(c.imageCredentialsCacheTTL)),
+		)
 	}
 
 	jobOptions, err := NewJobOptions(c.log, c.templatesClient, c.images, c.templates, inspector,

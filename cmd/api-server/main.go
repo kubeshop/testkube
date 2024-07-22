@@ -13,6 +13,10 @@ import (
 	"syscall"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
+
+	"github.com/kubeshop/testkube/pkg/cache"
+
 	"github.com/nats-io/nats.go"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -487,7 +491,7 @@ func main() {
 	inspector := imageinspector.NewInspector(
 		cfg.TestkubeRegistry,
 		imageinspector.NewSkopeoFetcher(),
-		imageinspector.NewSecretFetcher(secretClient),
+		imageinspector.NewSecretFetcher(secretClient, cache.NewInMemoryCache[*corev1.Secret](), imageinspector.WithSecretCacheTTL(cfg.TestkubeImageCredentialsCacheTTL)),
 		inspectorStorages...,
 	)
 
@@ -515,6 +519,7 @@ func main() {
 		features,
 		cfg.TestkubeDefaultStorageClassName,
 		cfg.WhitelistedContainers,
+		cfg.TestkubeImageCredentialsCacheTTL,
 	)
 	if err != nil {
 		exitOnError("Creating container executor", err)

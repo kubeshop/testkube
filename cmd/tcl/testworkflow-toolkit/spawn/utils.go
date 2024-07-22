@@ -298,6 +298,7 @@ func CreateBaseMachine() expressions.Machine {
 			"images.toolkit":             env.Config().Images.Toolkit,
 			"images.persistence.enabled": strconv.FormatBool(env.Config().Images.InspectorPersistenceEnabled),
 			"images.persistence.key":     env.Config().Images.InspectorPersistenceCacheKey,
+			"images.cache.ttl":           env.Config().Images.ImageCredentialsCacheTTL.String(),
 		}),
 	)
 }
