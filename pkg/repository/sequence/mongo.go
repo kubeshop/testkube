@@ -74,12 +74,16 @@ func (r *MongoRepository) GetNextExecutionNumber(ctx context.Context, name strin
 		ExecutionType: executionType,
 	}
 
-	opts := options.FindOneAndUpdate()
-	opts.SetUpsert(true)
-
-	err = r.Coll.FindOneAndUpdate(ctx, bson.M{"_id": id}, bson.M{"$set": executionNumber}, opts).Err()
-	if err != nil && !mongo.IsDuplicateKeyError(err) {
+	err = r.Coll.FindOne(ctx, bson.M{"_id": id}).Err()
+	if err != nil && err != mongo.ErrNoDocuments {
 		return 0, err
+	}
+
+	if err == mongo.ErrNoDocuments {
+		_, err = r.Coll.InsertOne(ctx, executionNumber)
+		if err != nil && !mongo.IsDuplicateKeyError(err) {
+			return 0, err
+		}
 	}
 
 	if number != 0 {
@@ -89,6 +93,7 @@ func (r *MongoRepository) GetNextExecutionNumber(ctx context.Context, name strin
 		}
 	}
 
+	opts := options.FindOneAndUpdate()
 	opts.SetUpsert(false)
 	opts.SetReturnDocument(options.After)
 
