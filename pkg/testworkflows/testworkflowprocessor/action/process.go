@@ -12,7 +12,6 @@ import (
 )
 
 // TODO: Wrap all errors in this file
-// TODO: tail-recursive
 func process(currentStatus string, parents []string, stage stage2.Stage, machines ...expressions.Machine) (actions []actiontypes.Action, err error) {
 	// Store the init status
 	actions = append(actions, actiontypes.Action{
@@ -22,7 +21,7 @@ func process(currentStatus string, parents []string, stage stage2.Stage, machine
 	// Compute the skip condition
 	condition := stage.Condition()
 	if condition == "" || condition == "null" {
-		condition = "passed" // TODO: Think if it should default the condition to "passed"
+		condition = "passed"
 	}
 	actions = append(actions, actiontypes.Action{
 		Declare: &lite.ActionDeclare{Ref: stage.Ref(), Condition: condition, Parents: parents},

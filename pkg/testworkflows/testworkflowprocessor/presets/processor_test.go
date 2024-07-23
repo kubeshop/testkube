@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -65,6 +66,10 @@ func cmd(values ...string) *[]string {
 func cmdShell(shell string) *[]string {
 	args := []string{"-c", "set -e\n" + shell}
 	return &args
+}
+
+func and(values ...string) string {
+	return strings.Join(values, "&&")
 }
 
 func getSpec(actions actiontypes.ActionGroups) string {
@@ -319,231 +324,308 @@ func TestProcessBasicEnvReference(t *testing.T) {
 	assert.Equal(t, wantPod, res.Job.Spec.Template.Spec)
 }
 
-//func TestProcessMultipleSteps(t *testing.T) {
-//	wf := &testworkflowsv1.TestWorkflow{
-//		Spec: testworkflowsv1.TestWorkflowSpec{
-//			Steps: []testworkflowsv1.Step{
-//				{StepOperations: testworkflowsv1.StepOperations{Shell: "shell-test"}},
-//				{StepOperations: testworkflowsv1.StepOperations{Shell: "shell-test-2"}},
-//			},
-//		},
-//	}
-//
-//	res, err := proc.Bundle(context.Background(), wf, execMachine)
-//	sig := res.Signature
-//
-//	volumes := res.Job.Spec.Template.Spec.Volumes
-//	volumeMounts := res.Job.Spec.Template.Spec.InitContainers[0].VolumeMounts
-//
-//	want := corev1.PodSpec{
-//		RestartPolicy:      corev1.RestartPolicyNever,
-//		EnableServiceLinks: common.Ptr(false),
-//		Volumes:            volumes,
-//		InitContainers: []corev1.Container{
-//			{
-//				Name:            "tktw-init",
-//				Image:           constants.DefaultInitImage,
-//				ImagePullPolicy: corev1.PullIfNotPresent,
-//				Command:         []string{"/bin/sh", "-c"},
-//				Env:             initEnvs,
-//				VolumeMounts:    volumeMounts,
-//				SecurityContext: &corev1.SecurityContext{
-//					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
-//				},
-//			},
-//			{
-//				Name:            sig[0].Ref(),
-//				ImagePullPolicy: "",
-//				Image:           constants.DefaultInitImage,
-//				Command: []string{
-//					"/.tktw/init",
-//					sig[0].Ref(),
-//					"-c", fmt.Sprintf("%s,%s=passed", sig[0].Ref(), sig[1].Ref()),
-//					"-r", fmt.Sprintf("=%s&&%s", sig[0].Ref(), sig[1].Ref()),
-//					"--",
-//				},
-//				Args:         []string{constants.DefaultShellPath, "-c", constants.DefaultShellHeader + "shell-test"},
-//				WorkingDir:   "",
-//				EnvFrom:      []corev1.EnvFromSource(nil),
-//				Env:          []corev1.EnvVar{{Name: "CI", Value: "1"}},
-//				Resources:    corev1.ResourceRequirements{},
-//				VolumeMounts: volumeMounts,
-//				SecurityContext: &corev1.SecurityContext{
-//					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
-//				},
-//			},
-//		},
-//		Containers: []corev1.Container{
-//			{
-//				Name:            sig[1].Ref(),
-//				ImagePullPolicy: "",
-//				Image:           constants.DefaultInitImage,
-//				Command: []string{
-//					"/.tktw/init",
-//					sig[1].Ref(),
-//					"-c", fmt.Sprintf("%s=passed", sig[1].Ref()),
-//					"-r", fmt.Sprintf("=%s&&%s", sig[0].Ref(), sig[1].Ref()),
-//					"--",
-//				},
-//				Args:         []string{constants.DefaultShellPath, "-c", constants.DefaultShellHeader + "shell-test-2"},
-//				WorkingDir:   "",
-//				EnvFrom:      []corev1.EnvFromSource(nil),
-//				Env:          []corev1.EnvVar{{Name: "CI", Value: "1"}},
-//				Resources:    corev1.ResourceRequirements{},
-//				VolumeMounts: volumeMounts,
-//				SecurityContext: &corev1.SecurityContext{
-//					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
-//				},
-//			},
-//		},
-//		SecurityContext: &corev1.PodSecurityContext{
-//			FSGroup: common.Ptr(constants.DefaultFsGroup),
-//		},
-//	}
-//
-//	assert.NoError(t, err)
-//	assert.Equal(t, want, res.Job.Spec.Template.Spec)
-//}
-//
-//func TestProcessNestedSteps(t *testing.T) {
-//	wf := &testworkflowsv1.TestWorkflow{
-//		Spec: testworkflowsv1.TestWorkflowSpec{
-//			Steps: []testworkflowsv1.Step{
-//				{StepMeta: testworkflowsv1.StepMeta{Name: "A"}, StepOperations: testworkflowsv1.StepOperations{Shell: "shell-test"}},
-//				{
-//					StepMeta: testworkflowsv1.StepMeta{Name: "B"},
-//					Steps: []testworkflowsv1.Step{
-//						{StepMeta: testworkflowsv1.StepMeta{Name: "C"}, StepOperations: testworkflowsv1.StepOperations{Shell: "shell-test-2"}},
-//						{StepMeta: testworkflowsv1.StepMeta{Name: "D"}, StepOperations: testworkflowsv1.StepOperations{Shell: "shell-test-3"}},
-//					},
-//				},
-//				{StepMeta: testworkflowsv1.StepMeta{Name: "E"}, StepOperations: testworkflowsv1.StepOperations{Shell: "shell-test-4"}},
-//			},
-//		},
-//	}
-//
-//	res, err := proc.Bundle(context.Background(), wf, execMachine)
-//	sig := res.Signature
-//
-//	volumes := res.Job.Spec.Template.Spec.Volumes
-//	volumeMounts := res.Job.Spec.Template.Spec.InitContainers[0].VolumeMounts
-//
-//	want := corev1.PodSpec{
-//		RestartPolicy:      corev1.RestartPolicyNever,
-//		EnableServiceLinks: common.Ptr(false),
-//		Volumes:            volumes,
-//		InitContainers: []corev1.Container{
-//			{
-//				Name:            "tktw-init",
-//				Image:           constants.DefaultInitImage,
-//				ImagePullPolicy: corev1.PullIfNotPresent,
-//				Command:         []string{"/bin/sh", "-c"},
-//				Env:             initEnvs,
-//				VolumeMounts:    volumeMounts,
-//				SecurityContext: &corev1.SecurityContext{
-//					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
-//				},
-//			},
-//			{
-//				Name:            sig[0].Ref(),
-//				ImagePullPolicy: "",
-//				Image:           constants.DefaultInitImage,
-//				Command: []string{
-//					"/.tktw/init",
-//					sig[0].Ref(),
-//					"-c", fmt.Sprintf("%s,%s,%s,%s=passed", sig[0].Ref(), sig[1].Children()[0].Ref(), sig[1].Children()[1].Ref(), sig[2].Ref()),
-//					"-r", fmt.Sprintf("=%s&&%s&&%s", sig[0].Ref(), sig[1].Ref(), sig[2].Ref()),
-//					"--",
-//				},
-//				Args:         []string{constants.DefaultShellPath, "-c", constants.DefaultShellHeader + "shell-test"},
-//				WorkingDir:   "",
-//				EnvFrom:      []corev1.EnvFromSource(nil),
-//				Env:          []corev1.EnvVar{{Name: "CI", Value: "1"}},
-//				Resources:    corev1.ResourceRequirements{},
-//				VolumeMounts: volumeMounts,
-//				SecurityContext: &corev1.SecurityContext{
-//					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
-//				},
-//			},
-//			{
-//				Name:            sig[1].Children()[0].Ref(),
-//				ImagePullPolicy: "",
-//				Image:           constants.DefaultInitImage,
-//				Command: []string{
-//					"/.tktw/init",
-//					sig[1].Children()[0].Ref(),
-//					"-i", fmt.Sprintf("%s", sig[1].Ref()),
-//					"-c", fmt.Sprintf("%s,%s,%s=passed", sig[1].Ref(), sig[1].Children()[0].Ref(), sig[1].Children()[1].Ref()),
-//					"-r", fmt.Sprintf("=%s&&%s&&%s", sig[0].Ref(), sig[1].Ref(), sig[2].Ref()),
-//					"-r", fmt.Sprintf("%s=%s&&%s", sig[1].Ref(), sig[1].Children()[0].Ref(), sig[1].Children()[1].Ref()),
-//					"--",
-//				},
-//				Args:         []string{constants.DefaultShellPath, "-c", constants.DefaultShellHeader + "shell-test-2"},
-//				WorkingDir:   "",
-//				EnvFrom:      []corev1.EnvFromSource(nil),
-//				Env:          []corev1.EnvVar{{Name: "CI", Value: "1"}},
-//				Resources:    corev1.ResourceRequirements{},
-//				VolumeMounts: volumeMounts,
-//				SecurityContext: &corev1.SecurityContext{
-//					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
-//				},
-//			},
-//			{
-//				Name:            sig[1].Children()[1].Ref(),
-//				ImagePullPolicy: "",
-//				Image:           constants.DefaultInitImage,
-//				Command: []string{
-//					"/.tktw/init",
-//					sig[1].Children()[1].Ref(),
-//					"-i", fmt.Sprintf("%s", sig[1].Ref()),
-//					"-c", fmt.Sprintf("%s=passed", sig[1].Children()[1].Ref()),
-//					"-r", fmt.Sprintf("=%s&&%s&&%s", sig[0].Ref(), sig[1].Ref(), sig[2].Ref()),
-//					"-r", fmt.Sprintf("%s=%s&&%s", sig[1].Ref(), sig[1].Children()[0].Ref(), sig[1].Children()[1].Ref()),
-//					"--",
-//				},
-//				Args:         []string{constants.DefaultShellPath, "-c", constants.DefaultShellHeader + "shell-test-3"},
-//				WorkingDir:   "",
-//				EnvFrom:      []corev1.EnvFromSource(nil),
-//				Env:          []corev1.EnvVar{{Name: "CI", Value: "1"}},
-//				Resources:    corev1.ResourceRequirements{},
-//				VolumeMounts: volumeMounts,
-//				SecurityContext: &corev1.SecurityContext{
-//					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
-//				},
-//			},
-//		},
-//		Containers: []corev1.Container{
-//			{
-//				Name:            sig[2].Ref(),
-//				ImagePullPolicy: "",
-//				Image:           constants.DefaultInitImage,
-//				Command: []string{
-//					"/.tktw/init",
-//					sig[2].Ref(),
-//					"-c", fmt.Sprintf("%s=passed", sig[2].Ref()),
-//					"-r", fmt.Sprintf("=%s&&%s&&%s", sig[0].Ref(), sig[1].Ref(), sig[2].Ref()),
-//					"--",
-//				},
-//				Args:         []string{constants.DefaultShellPath, "-c", constants.DefaultShellHeader + "shell-test-4"},
-//				WorkingDir:   "",
-//				EnvFrom:      []corev1.EnvFromSource(nil),
-//				Env:          []corev1.EnvVar{{Name: "CI", Value: "1"}},
-//				Resources:    corev1.ResourceRequirements{},
-//				VolumeMounts: volumeMounts,
-//				SecurityContext: &corev1.SecurityContext{
-//					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
-//				},
-//			},
-//		},
-//		SecurityContext: &corev1.PodSecurityContext{
-//			FSGroup: common.Ptr(constants.DefaultFsGroup),
-//		},
-//	}
-//
-//	assert.NoError(t, err)
-//	assert.Equal(t, want, res.Job.Spec.Template.Spec)
-//}
-//
+func TestProcessMultipleSteps(t *testing.T) {
+	wf := &testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			Steps: []testworkflowsv1.Step{
+				{StepOperations: testworkflowsv1.StepOperations{Shell: "shell-test"}},
+				{StepOperations: testworkflowsv1.StepOperations{Shell: "shell-test-2"}},
+			},
+		},
+	}
+
+	res, err := proc.Bundle(context.Background(), wf, execMachine)
+	sig := res.Signature
+
+	volumes := res.Job.Spec.Template.Spec.Volumes
+	volumeMounts := res.Job.Spec.Template.Spec.InitContainers[0].VolumeMounts
+
+	wantInstructions := lite.NewLiteActionGroups().
+		Append(func(list lite.LiteActionList) lite.LiteActionList {
+			return list.
+				Setup(true, true).
+				Declare(constants.RootOperationName, "true").
+				Declare(sig[0].Ref(), "true", constants.RootOperationName).
+				Declare(sig[1].Ref(), sig[0].Ref(), constants.RootOperationName).
+				Result(constants.RootOperationName, and(sig[0].Ref(), sig[1].Ref())).
+				Result("", constants.RootOperationName).
+				Start("").
+				CurrentStatus("true").
+				Start(constants.RootOperationName).
+				CurrentStatus(constants.RootOperationName)
+		}).
+		Append(func(list lite.LiteActionList) lite.LiteActionList {
+			return list.
+				MutateContainer(lite.LiteContainerConfig{
+					Command: cmd("/.tktw/bin/sh"),
+					Args:    cmdShell("shell-test"),
+				}).
+				Start(sig[0].Ref()).
+				Execute(sig[0].Ref(), false).
+				End(sig[0].Ref()).
+				CurrentStatus(and(sig[0].Ref(), constants.RootOperationName))
+		}).
+		Append(func(list lite.LiteActionList) lite.LiteActionList {
+			return list.
+				MutateContainer(lite.LiteContainerConfig{
+					Command: cmd("/.tktw/bin/sh"),
+					Args:    cmdShell("shell-test-2"),
+				}).
+				Start(sig[1].Ref()).
+				Execute(sig[1].Ref(), false).
+				End(sig[1].Ref()).
+				End(constants.RootOperationName).
+				End("")
+		})
+
+	want := corev1.PodSpec{
+		RestartPolicy:      corev1.RestartPolicyNever,
+		EnableServiceLinks: common.Ptr(false),
+		Volumes:            volumes,
+		InitContainers: []corev1.Container{
+			{
+				Name:            "1",
+				Image:           constants.DefaultInitImage,
+				ImagePullPolicy: corev1.PullIfNotPresent,
+				Command:         []string{"/init", "0"},
+				Env: []corev1.EnvVar{
+					envDebugNode,
+					envDebugPod,
+					envDebugNamespace,
+					envDebugServiceAccount,
+					envInstructions,
+				},
+				VolumeMounts: volumeMounts,
+				SecurityContext: &corev1.SecurityContext{
+					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
+				},
+			},
+			{
+				Name:            "2",
+				Image:           constants.DefaultInitImage,
+				ImagePullPolicy: corev1.PullIfNotPresent,
+				Command:         []string{"/init", "1"},
+				Env: []corev1.EnvVar{
+					env(0, false, "CI", "1"),
+				},
+				VolumeMounts: volumeMounts,
+				SecurityContext: &corev1.SecurityContext{
+					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
+				},
+			},
+		},
+		Containers: []corev1.Container{
+			{
+				Name:            "3",
+				Image:           constants.DefaultInitImage,
+				ImagePullPolicy: corev1.PullIfNotPresent,
+				Command:         []string{"/init", "2"},
+				Env: []corev1.EnvVar{
+					env(0, false, "CI", "1"),
+				},
+				VolumeMounts: volumeMounts,
+				SecurityContext: &corev1.SecurityContext{
+					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
+				},
+			},
+		},
+		SecurityContext: &corev1.PodSecurityContext{
+			FSGroup: common.Ptr(constants.DefaultFsGroup),
+		},
+	}
+
+	var gotInstructions lite.LiteActionGroups
+	instructionsErr := json.Unmarshal([]byte(res.Job.Spec.Template.Annotations[constants.SpecAnnotationName]), &gotInstructions)
+
+	assert.NoError(t, instructionsErr)
+	assert.Equal(t, wantInstructions, gotInstructions)
+
+	assert.NoError(t, err)
+	assert.Equal(t, want, res.Job.Spec.Template.Spec)
+}
+
+func TestProcessNestedSteps(t *testing.T) {
+	wf := &testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			Steps: []testworkflowsv1.Step{
+				{StepMeta: testworkflowsv1.StepMeta{Name: "A"}, StepOperations: testworkflowsv1.StepOperations{Shell: "shell-test"}},
+				{
+					StepMeta: testworkflowsv1.StepMeta{Name: "B"},
+					Steps: []testworkflowsv1.Step{
+						{StepMeta: testworkflowsv1.StepMeta{Name: "C"}, StepOperations: testworkflowsv1.StepOperations{Shell: "shell-test-2"}},
+						{StepMeta: testworkflowsv1.StepMeta{Name: "D"}, StepOperations: testworkflowsv1.StepOperations{Shell: "shell-test-3"}},
+					},
+				},
+				{StepMeta: testworkflowsv1.StepMeta{Name: "E"}, StepOperations: testworkflowsv1.StepOperations{Shell: "shell-test-4"}},
+			},
+		},
+	}
+
+	res, err := proc.Bundle(context.Background(), wf, execMachine)
+	sig := res.Signature
+
+	volumes := res.Job.Spec.Template.Spec.Volumes
+	volumeMounts := res.Job.Spec.Template.Spec.InitContainers[0].VolumeMounts
+
+	wantInstructions := lite.NewLiteActionGroups().
+		Append(func(list lite.LiteActionList) lite.LiteActionList {
+			return list.
+				Setup(true, true).
+				Declare(constants.RootOperationName, "true").
+				Declare(sig[0].Ref(), "true", constants.RootOperationName).
+				Declare(sig[1].Ref(), sig[0].Ref(), constants.RootOperationName).
+				Declare(sig[1].Children()[0].Ref(), sig[0].Ref(), constants.RootOperationName, sig[1].Ref()).
+				Declare(sig[1].Children()[1].Ref(), and(sig[1].Children()[0].Ref(), sig[0].Ref()), constants.RootOperationName, sig[1].Ref()).
+				Declare(sig[2].Ref(), and(sig[1].Ref(), sig[0].Ref()), constants.RootOperationName).
+				Result(sig[1].Ref(), and(sig[1].Children()[0].Ref(), sig[1].Children()[1].Ref())).
+				Result(constants.RootOperationName, and(sig[0].Ref(), sig[1].Ref(), sig[2].Ref())).
+				Result("", constants.RootOperationName).
+				Start("").
+				CurrentStatus("true").
+				Start(constants.RootOperationName).
+				CurrentStatus(constants.RootOperationName)
+		}).
+		Append(func(list lite.LiteActionList) lite.LiteActionList {
+			return list.
+				MutateContainer(lite.LiteContainerConfig{
+					Command: cmd("/.tktw/bin/sh"),
+					Args:    cmdShell("shell-test"),
+				}).
+				Start(sig[0].Ref()).
+				Execute(sig[0].Ref(), false).
+				End(sig[0].Ref()).
+				CurrentStatus(and(sig[0].Ref(), constants.RootOperationName)).
+				Start(sig[1].Ref()).
+				CurrentStatus(and(sig[1].Ref(), sig[0].Ref(), constants.RootOperationName))
+		}).
+		Append(func(list lite.LiteActionList) lite.LiteActionList {
+			return list.
+				MutateContainer(lite.LiteContainerConfig{
+					Command: cmd("/.tktw/bin/sh"),
+					Args:    cmdShell("shell-test-2"),
+				}).
+				Start(sig[1].Children()[0].Ref()).
+				Execute(sig[1].Children()[0].Ref(), false).
+				End(sig[1].Children()[0].Ref()).
+				CurrentStatus(and(sig[1].Children()[0].Ref(), sig[1].Ref(), sig[0].Ref(), constants.RootOperationName))
+		}).
+		Append(func(list lite.LiteActionList) lite.LiteActionList {
+			return list.
+				MutateContainer(lite.LiteContainerConfig{
+					Command: cmd("/.tktw/bin/sh"),
+					Args:    cmdShell("shell-test-3"),
+				}).
+				Start(sig[1].Children()[1].Ref()).
+				Execute(sig[1].Children()[1].Ref(), false).
+				End(sig[1].Children()[1].Ref()).
+				End(sig[1].Ref()).
+				CurrentStatus(and(sig[1].Ref(), sig[0].Ref(), constants.RootOperationName))
+		}).
+		Append(func(list lite.LiteActionList) lite.LiteActionList {
+			return list.
+				MutateContainer(lite.LiteContainerConfig{
+					Command: cmd("/.tktw/bin/sh"),
+					Args:    cmdShell("shell-test-4"),
+				}).
+				Start(sig[2].Ref()).
+				Execute(sig[2].Ref(), false).
+				End(sig[2].Ref()).
+				End(constants.RootOperationName).
+				End("")
+		})
+
+	want := corev1.PodSpec{
+		RestartPolicy:      corev1.RestartPolicyNever,
+		EnableServiceLinks: common.Ptr(false),
+		Volumes:            volumes,
+		InitContainers: []corev1.Container{
+			{
+				Name:            "1",
+				Image:           constants.DefaultInitImage,
+				ImagePullPolicy: corev1.PullIfNotPresent,
+				Command:         []string{"/init", "0"},
+				Env: []corev1.EnvVar{
+					envDebugNode,
+					envDebugPod,
+					envDebugNamespace,
+					envDebugServiceAccount,
+					envInstructions,
+				},
+				VolumeMounts: volumeMounts,
+				SecurityContext: &corev1.SecurityContext{
+					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
+				},
+			},
+			{
+				Name:            "2",
+				Image:           constants.DefaultInitImage,
+				ImagePullPolicy: corev1.PullIfNotPresent,
+				Command:         []string{"/init", "1"},
+				Env: []corev1.EnvVar{
+					env(0, false, "CI", "1"),
+				},
+				VolumeMounts: volumeMounts,
+				SecurityContext: &corev1.SecurityContext{
+					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
+				},
+			},
+			{
+				Name:            "3",
+				Image:           constants.DefaultInitImage,
+				ImagePullPolicy: corev1.PullIfNotPresent,
+				Command:         []string{"/init", "2"},
+				Env: []corev1.EnvVar{
+					env(0, false, "CI", "1"),
+				},
+				VolumeMounts: volumeMounts,
+				SecurityContext: &corev1.SecurityContext{
+					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
+				},
+			},
+			{
+				Name:            "4",
+				Image:           constants.DefaultInitImage,
+				ImagePullPolicy: corev1.PullIfNotPresent,
+				Command:         []string{"/init", "3"},
+				Env: []corev1.EnvVar{
+					env(0, false, "CI", "1"),
+				},
+				VolumeMounts: volumeMounts,
+				SecurityContext: &corev1.SecurityContext{
+					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
+				},
+			},
+		},
+		Containers: []corev1.Container{
+			{
+				Name:            "5",
+				Image:           constants.DefaultInitImage,
+				ImagePullPolicy: corev1.PullIfNotPresent,
+				Command:         []string{"/init", "4"},
+				Env: []corev1.EnvVar{
+					env(0, false, "CI", "1"),
+				},
+				VolumeMounts: volumeMounts,
+				SecurityContext: &corev1.SecurityContext{
+					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
+				},
+			},
+		},
+		SecurityContext: &corev1.PodSecurityContext{
+			FSGroup: common.Ptr(constants.DefaultFsGroup),
+		},
+	}
+
+	var gotInstructions lite.LiteActionGroups
+	instructionsErr := json.Unmarshal([]byte(res.Job.Spec.Template.Annotations[constants.SpecAnnotationName]), &gotInstructions)
+
+	assert.NoError(t, instructionsErr)
+	assert.Equal(t, wantInstructions, gotInstructions)
+
+	assert.NoError(t, err)
+	assert.Equal(t, want, res.Job.Spec.Template.Spec)
+}
+
 //func TestProcessOptionalSteps(t *testing.T) {
 //	wf := &testworkflowsv1.TestWorkflow{
 //		Spec: testworkflowsv1.TestWorkflowSpec{

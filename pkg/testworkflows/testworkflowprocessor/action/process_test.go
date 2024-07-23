@@ -75,6 +75,96 @@ func TestProcess_BasicSteps(t *testing.T) {
 	assert.Equal(t, want, actiontypes.ActionList(got))
 }
 
+func TestProcess_Grouping(t *testing.T) {
+	// Build the structure
+	root := stage.NewGroupStage("init", false)
+	root.Add(stage.NewContainerStage("step1", stage.NewContainer().SetImage("image:1.2.3").SetCommand("a", "b")))
+	group1 := stage.NewGroupStage("group1", false)
+	group1.Add(stage.NewContainerStage("step2", stage.NewContainer().SetImage("image:3.2.1").SetCommand("c", "d")))
+	group1.Add(stage.NewContainerStage("step3", stage.NewContainer().SetImage("image:3.2.1").SetCommand("c", "d")))
+	root.Add(group1)
+	root.Add(stage.NewContainerStage("step4", stage.NewContainer().SetImage("image:3.2.1").SetCommand("c", "d")))
+
+	// Build the expectations
+	want := actiontypes.NewActionList().
+		// Configure
+		Setup(true, true).
+
+		// Declare stage conditions
+		Declare("init", "true").
+		Declare("step1", "true", "init").
+		Declare("group1", "step1", "init").
+		Declare("step2", "step1", "init", "group1").
+		Declare("step3", "step2&&step1", "init", "group1").
+		Declare("step4", "group1&&step1", "init").
+
+		// Declare group resolutions
+		Result("group1", "step2&&step3").
+		Result("init", "step1&&group1&&step4").
+		Result("", "init").
+
+		// Initialize
+		Start("").
+		CurrentStatus("true").
+		Start("init").
+
+		// Run the step 1
+		CurrentStatus("init").
+		MutateContainer("step1", testworkflowsv1.ContainerConfig{
+			Image:   "image:1.2.3",
+			Command: common.Ptr([]string{"a", "b"}),
+		}).
+		Start("step1").
+		Execute("step1", false).
+		End("step1").
+
+		// Start the group 1
+		CurrentStatus("step1&&init").
+		Start("group1").
+
+		// Run the step 2
+		CurrentStatus("group1&&step1&&init").
+		MutateContainer("step2", testworkflowsv1.ContainerConfig{
+			Image:   "image:3.2.1",
+			Command: common.Ptr([]string{"c", "d"}),
+		}).
+		Start("step2").
+		Execute("step2", false).
+		End("step2").
+
+		// Run the step 2
+		CurrentStatus("step2&&group1&&step1&&init").
+		MutateContainer("step3", testworkflowsv1.ContainerConfig{
+			Image:   "image:3.2.1",
+			Command: common.Ptr([]string{"c", "d"}),
+		}).
+		Start("step3").
+		Execute("step3", false).
+		End("step3").
+
+		// End the group 1
+		End("group1").
+
+		// Run the step 4
+		CurrentStatus("group1&&step1&&init").
+		MutateContainer("step4", testworkflowsv1.ContainerConfig{
+			Image:   "image:3.2.1",
+			Command: common.Ptr([]string{"c", "d"}),
+		}).
+		Start("step4").
+		Execute("step4", false).
+		End("step4").
+
+		// Finish
+		End("init").
+		End("")
+
+	// Assert
+	got, err := Process(root)
+	assert.NoError(t, err)
+	assert.Equal(t, want, actiontypes.ActionList(got))
+}
+
 func TestProcess_Pause(t *testing.T) {
 	// Build the structure
 	root := stage.NewGroupStage("init", false)
@@ -398,7 +488,7 @@ func TestProcess_IgnoreExecutionOfStaticSkip(t *testing.T) {
 		// Run the step 1
 		CurrentStatus("init").
 		Start("step1"). // don't execute as it is skipped
-		//End("step1"). // FIXME: Shouldn't be????
+		End("step1").
 
 		// Run the step 2
 		CurrentStatus("init").
@@ -448,15 +538,15 @@ func TestProcess_IgnoreExecutionOfStaticSkipGroup(t *testing.T) {
 		// Run the step 1
 		CurrentStatus("true").
 		Start("step1"). // don't execute as it is skipped
-		//End("step1"). // FIXME: Shouldn't be????
+		End("step1").
 
 		// Run the step 2
 		CurrentStatus("true").
 		Start("step2"). // don't execute as it is skipped
-		//End("step2"). // FIXME: Shouldn't be????
+		End("step2").
 
 		// Finish
-		//End("init"). // FIXME: Shouldn't be????
+		End("init").
 		End("")
 
 	// Assert
@@ -496,15 +586,15 @@ func TestProcess_IgnoreExecutionOfStaticSkipGroup_Pause(t *testing.T) {
 		// Run the step 1
 		CurrentStatus("true").
 		Start("step1"). // don't execute as it is skipped
-		//End("step1"). // FIXME: Shouldn't be????
+		End("step1").
 
 		// Run the step 2
 		CurrentStatus("true").
 		Start("step2"). // don't execute as it is skipped
-		//End("step2"). // FIXME: Shouldn't be????
+		End("step2").
 
 		// Finish
-		//End("init"). // FIXME: Shouldn't be????
+		End("init").
 		End("")
 
 	// Assert
@@ -547,7 +637,7 @@ func TestProcess_IgnoreExecutionOfStaticSkip_PauseGroup(t *testing.T) {
 		// Run the step 1
 		CurrentStatus("init").
 		Start("step1"). // don't execute as it is skipped
-		//End("step1"). // FIXME: Shouldn't be????
+		End("step1").
 
 		// Run the step 2
 		CurrentStatus("init").

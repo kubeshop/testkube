@@ -25,8 +25,11 @@ func optimize(actions []actiontypes.Action) ([]actiontypes.Action, error) {
 			refs[actions[i].Execute.Ref] = struct{}{}
 			executableRefs[actions[i].Execute.Ref] = struct{}{}
 		}
+		if actions[i].End != nil {
+			refs[*actions[i].End] = struct{}{}
+			executableRefs[*actions[i].End] = struct{}{}
+		}
 	}
-	//delete(refs, "")
 
 	// Delete empty `container` declarations
 	for i := 0; i < len(actions); i++ {
@@ -128,6 +131,8 @@ func optimize(actions []actiontypes.Action) ([]actiontypes.Action, error) {
 		// Mark step as executed
 		if actions[i].Execute != nil {
 			executed[actions[i].Execute.Ref] = struct{}{}
+		} else if actions[i].End != nil {
+			executed[*actions[i].End] = struct{}{}
 		}
 
 		// Simplify the condition
@@ -145,6 +150,10 @@ func optimize(actions []actiontypes.Action) ([]actiontypes.Action, error) {
 					if _, ok := executed[name]; !ok {
 						return true, true
 					}
+					// Do not go deeper if the result is not determined yet
+					if v.Static() == nil {
+						return nil, false
+					}
 					c, ok2 := conditions[name]
 					if ok2 {
 						return expressions.MustCompile(fmt.Sprintf(`(%s) && (%s)`, c.String(), v.String())), true
@@ -160,6 +169,7 @@ func optimize(actions []actiontypes.Action) ([]actiontypes.Action, error) {
 				return nil, false
 			})
 			actions[i].Declare.Condition = simplifyExpression(actions[i].Declare.Condition, machine)
+			conditions[actions[i].Declare.Ref] = expressions.MustCompile(actions[i].Declare.Condition)
 			for _, parentRef := range actions[i].Declare.Parents {
 				if _, ok := skipped[parentRef]; ok {
 					actions[i].Declare.Condition = "false"
@@ -192,14 +202,6 @@ func optimize(actions []actiontypes.Action) ([]actiontypes.Action, error) {
 		}
 	}
 
-	//// TODO: Delete empty conditions
-	//for i := 0; i < len(actions); i++ {
-	//	if actions[i].Declare != nil && actions[i].Declare.Condition == "true" {
-	//		actions = append(actions[:i], actions[i+1:]...)
-	//		i--
-	//	}
-	//}
-
 	// Detect immediately skipped steps
 	skipped = make(map[string]struct{})
 	for i := range actions {
@@ -218,12 +220,6 @@ func optimize(actions []actiontypes.Action) ([]actiontypes.Action, error) {
 	for i := 0; i < len(actions); i++ {
 		if actions[i].Execute != nil {
 			if _, ok := skipped[actions[i].Execute.Ref]; ok {
-				actions = append(actions[:i], actions[i+1:]...)
-				i--
-			}
-		}
-		if actions[i].End != nil {
-			if _, ok := skipped[*actions[i].End]; ok {
 				actions = append(actions[:i], actions[i+1:]...)
 				i--
 			}
