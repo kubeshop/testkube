@@ -292,9 +292,9 @@ func main() {
 		isDocDb := cfg.APIMongoDBType == storage.TypeDocDB
 		sequenceRepository := sequence.NewMongoRepository(db)
 		mongoResultsRepository := result.NewMongoRepository(db, cfg.APIMongoAllowDiskUse, isDocDb, result.WithFeatureFlags(features),
-			result.WithLogsClient(logGrpcClient), result.WithMongoRepositorySequenceCollection(sequenceRepository))
+			result.WithLogsClient(logGrpcClient), result.WithMongoRepositorySequence(sequenceRepository))
 		resultsRepository = mongoResultsRepository
-		testResultsRepository = testresult.NewMongoRepository(db, cfg.APIMongoAllowDiskUse, isDocDb)
+		testResultsRepository = testresult.NewMongoRepository(db, cfg.APIMongoAllowDiskUse, isDocDb, testresult.WithMongoRepositorySequence(sequenceRepository))
 		testWorkflowResultsRepository = testworkflow2.NewMongoRepository(db, cfg.APIMongoAllowDiskUse)
 		configRepository = configrepository.NewMongoRepository(db)
 		triggerLeaseBackend = triggers.NewMongoLeaseBackend(db)

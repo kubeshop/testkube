@@ -121,7 +121,7 @@ func WithMongoRepositoryResultCollection(collection *mongo.Collection) MongoRepo
 	}
 }
 
-func WithMongoRepositorySequenceCollection(sequenceRepository sequence.Repository) MongoRepositoryOpt {
+func WithMongoRepositorySequence(sequenceRepository sequence.Repository) MongoRepositoryOpt {
 	return func(r *MongoRepository) {
 		r.sequenceRepository = sequenceRepository
 	}

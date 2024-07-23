@@ -51,7 +51,7 @@ func WithMongoRepositoryCollection(collection *mongo.Collection) MongoRepository
 	}
 }
 
-func WithMongoRepositorySequenceCollection(sequenceRepository sequence.Repository) MongoRepositoryOpt {
+func WithMongoRepositorySequence(sequenceRepository sequence.Repository) MongoRepositoryOpt {
 	return func(r *MongoRepository) {
 		r.sequenceRepository = sequenceRepository
 	}
