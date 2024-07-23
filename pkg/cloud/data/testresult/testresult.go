@@ -252,3 +252,7 @@ func (r *CloudRepository) GetPreviousFinishedState(ctx context.Context, testSuit
 	}
 	return commandResponse.Result, nil
 }
+
+func (r *CloudRepository) GetNextExecutionNumber(ctx context.Context, name string) (number int32, err error) {
+	return 0, nil
+}

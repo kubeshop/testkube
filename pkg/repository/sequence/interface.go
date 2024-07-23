@@ -13,5 +13,5 @@ type Repository interface {
 	// DeleteExecutionNumbers deletes multiple execution numbers by names and type
 	DeleteExecutionNumbers(ctx context.Context, names []string, executionType ExecutionType) (err error)
 	// DeleteAllExecutionNumbers deletes all execution numbers by type
-	DeleteAllExecutionNumbers(ctx context.Context, executionType string) (err error)
+	DeleteAllExecutionNumbers(ctx context.Context, executionType ExecutionType) (err error)
 }

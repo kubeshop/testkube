@@ -132,7 +132,7 @@ func (r *MongoRepository) DeleteExecutionNumbers(ctx context.Context, names []st
 }
 
 // DeleteAllExecutionNumbers deletes all execution numbers by type
-func (r *MongoRepository) DeleteAllExecutionNumbers(ctx context.Context, executionType string) (err error) {
+func (r *MongoRepository) DeleteAllExecutionNumbers(ctx context.Context, executionType ExecutionType) (err error) {
 	isTestSuite := false
 	if executionType == "testsuite" {
 		isTestSuite = true

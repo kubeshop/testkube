@@ -113,7 +113,7 @@ func (s *Scheduler) executeTestSuite(ctx context.Context, testSuite testkube.Tes
 
 	s.logger.Infow("Executing testsuite", "test", testSuite.Name, "request", request, "ExecutionRequest", testSuite.ExecutionRequest)
 
-	request.Number = s.getNextExecutionNumber("ts-" + testSuite.Name)
+	request.Number = s.getNextTestSuiteExecutionNumber(testSuite.Name)
 	if request.Name == "" {
 		request.Name = fmt.Sprintf("ts-%s-%d", testSuite.Name, request.Number)
 	}

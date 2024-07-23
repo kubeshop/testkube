@@ -722,7 +722,7 @@ func (r *MongoRepository) DeleteAll(ctx context.Context) (err error) {
 		return
 	}
 	if r.sequenceRepository != nil {
-		err = r.sequenceRepository.DeleteAllExecutionNumbers(ctx, string(sequence.ExecutionTypeTest))
+		err = r.sequenceRepository.DeleteAllExecutionNumbers(ctx, sequence.ExecutionTypeTest)
 		if err != nil {
 			return
 		}
