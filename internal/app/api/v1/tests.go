@@ -475,23 +475,25 @@ func (s TestkubeAPI) DeleteTestHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, fmt.Errorf("failed to delete test: id cannot be empty"))
 		}
 		errPrefix := fmt.Sprintf("failed to delete test %s", name)
-		err := s.TestsClient.Delete(name)
-		if err != nil {
-			if errors.IsNotFound(err) {
-				return s.Warn(c, http.StatusNotFound, fmt.Errorf("%s: client could not find test: %w", errPrefix, err))
-			}
+		skipCRD := c.Query("skipDeleteCRD", "")
+		if skipCRD != "true" {
+			err := s.TestsClient.Delete(name)
+			if err != nil {
+				if errors.IsNotFound(err) {
+					return s.Warn(c, http.StatusNotFound, fmt.Errorf("%s: client could not find test: %w", errPrefix, err))
+				}
 
-			if _, ok := err.(*testsclientv3.DeleteDependenciesError); ok {
-				return s.Warn(c, http.StatusInternalServerError, fmt.Errorf("client deleted test %s but deleting test dependencies(secrets) returned errors: %w", name, err))
-			}
+				if _, ok := err.(*testsclientv3.DeleteDependenciesError); ok {
+					return s.Warn(c, http.StatusInternalServerError, fmt.Errorf("client deleted test %s but deleting test dependencies(secrets) returned errors: %w", name, err))
+				}
 
-			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: client could not delete test: %w", errPrefix, err))
+				return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: client could not delete test: %w", errPrefix, err))
+			}
 		}
-
 		skipExecutions := c.Query("skipDeleteExecutions", "")
 		if skipExecutions != "true" {
 			// delete executions for test
-			if err = s.ExecutionResults.DeleteByTest(c.Context(), name); err != nil {
+			if err := s.ExecutionResults.DeleteByTest(c.Context(), name); err != nil {
 				return s.Warn(c, http.StatusInternalServerError, fmt.Errorf("test %s was deleted but deleting test executions returned error: %w", name, err))
 			}
 		}

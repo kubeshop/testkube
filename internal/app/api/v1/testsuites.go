@@ -246,23 +246,25 @@ func (s TestkubeAPI) DeleteTestSuiteHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
 		errPrefix := fmt.Sprintf("failed to delete test suite %s", name)
+		skipCRD := c.Query("skipDeleteCRD", "")
+		if skipCRD != "true" {
+			err := s.TestsSuitesClient.Delete(name)
+			if err != nil {
+				if errors.IsNotFound(err) {
+					return s.Warn(c, http.StatusNotFound, fmt.Errorf("%s: test suite not found: %w", errPrefix, err))
+				}
 
-		err := s.TestsSuitesClient.Delete(name)
-		if err != nil {
-			if errors.IsNotFound(err) {
-				return s.Warn(c, http.StatusNotFound, fmt.Errorf("%s: test suite not found: %w", errPrefix, err))
+				return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not delete test suite: %w", errPrefix, err))
 			}
-
-			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not delete test suite: %w", errPrefix, err))
 		}
 
 		// delete executions for test
-		if err = s.ExecutionResults.DeleteByTestSuite(c.Context(), name); err != nil {
+		if err := s.ExecutionResults.DeleteByTestSuite(c.Context(), name); err != nil {
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not delete test suite test executions: %w", errPrefix, err))
 		}
 
 		// delete executions for test suite
-		if err = s.TestExecutionResults.DeleteByTestSuite(c.Context(), name); err != nil {
+		if err := s.TestExecutionResults.DeleteByTestSuite(c.Context(), name); err != nil {
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not delete test suite executions: %w", errPrefix, err))
 		}
 

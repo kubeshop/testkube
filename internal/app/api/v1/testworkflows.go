@@ -55,14 +55,17 @@ func (s *TestkubeAPI) DeleteTestWorkflowHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
 		errPrefix := fmt.Sprintf("failed to delete test workflow '%s'", name)
-		err := s.TestWorkflowsClient.Delete(name)
-		s.Metrics.IncDeleteTestWorkflow(err)
-		if err != nil {
-			return s.ClientError(c, errPrefix, err)
+		skipCRD := c.Query("skipDeleteCRD", "")
+		if skipCRD != "true" {
+			err := s.TestWorkflowsClient.Delete(name)
+			s.Metrics.IncDeleteTestWorkflow(err)
+			if err != nil {
+				return s.ClientError(c, errPrefix, err)
+			}
 		}
 		skipExecutions := c.Query("skipDeleteExecutions", "")
 		if skipExecutions != "true" {
-			err = s.TestWorkflowOutput.DeleteOutputByTestWorkflow(context.Background(), name)
+			err := s.TestWorkflowOutput.DeleteOutputByTestWorkflow(context.Background(), name)
 			if err != nil {
 				return s.ClientError(c, "deleting executions output", err)
 			}
