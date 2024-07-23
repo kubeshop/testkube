@@ -2,6 +2,7 @@ package testworkflow
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -14,6 +15,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/repository/sequence"
 )
 
 var _ Repository = (*MongoRepository)(nil)
@@ -35,14 +37,21 @@ func NewMongoRepository(db *mongo.Database, allowDiskUse bool, opts ...MongoRepo
 }
 
 type MongoRepository struct {
-	db           *mongo.Database
-	Coll         *mongo.Collection
-	allowDiskUse bool
+	db                 *mongo.Database
+	Coll               *mongo.Collection
+	allowDiskUse       bool
+	sequenceRepository sequence.Repository
 }
 
 func WithMongoRepositoryCollection(collection *mongo.Collection) MongoRepositoryOpt {
 	return func(r *MongoRepository) {
 		r.Coll = collection
+	}
+}
+
+func WithMongoRepositorySequence(sequenceRepository sequence.Repository) MongoRepositoryOpt {
+	return func(r *MongoRepository) {
+		r.sequenceRepository = sequenceRepository
 	}
 }
 
@@ -360,12 +369,26 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 
 // DeleteByTestWorkflow deletes execution results by workflow
 func (r *MongoRepository) DeleteByTestWorkflow(ctx context.Context, workflowName string) (err error) {
+	if r.sequenceRepository != nil {
+		err = r.sequenceRepository.DeleteExecutionNumber(ctx, workflowName, sequence.ExecutionTypeTestWorkflow)
+		if err != nil {
+			return
+		}
+	}
+
 	_, err = r.Coll.DeleteMany(ctx, bson.M{"workflow.name": workflowName})
 	return
 }
 
 // DeleteAll deletes all execution results
 func (r *MongoRepository) DeleteAll(ctx context.Context) (err error) {
+	if r.sequenceRepository != nil {
+		err = r.sequenceRepository.DeleteAllExecutionNumbers(ctx, sequence.ExecutionTypeTestWorkflow)
+		if err != nil {
+			return
+		}
+	}
+
 	_, err = r.Coll.DeleteMany(ctx, bson.M{})
 	return
 }
@@ -382,6 +405,13 @@ func (r *MongoRepository) DeleteByTestWorkflows(ctx context.Context, workflowNam
 	}
 
 	filter := bson.M{"$or": conditions}
+
+	if r.sequenceRepository != nil {
+		err = r.sequenceRepository.DeleteExecutionNumbers(ctx, workflowNames, sequence.ExecutionTypeTestSuite)
+		if err != nil {
+			return
+		}
+	}
 
 	_, err = r.Coll.DeleteMany(ctx, filter)
 	return
@@ -455,4 +485,13 @@ func (r *MongoRepository) GetPreviousFinishedState(ctx context.Context, testWork
 	}
 
 	return *result.Result.Status, nil
+}
+
+// GetNextExecutionNumber gets next execution number by name
+func (r *MongoRepository) GetNextExecutionNumber(ctx context.Context, name string) (number int32, err error) {
+	if r.sequenceRepository != nil {
+		return 0, errors.New("no sequence repository provided")
+	}
+
+	return r.sequenceRepository.GetNextExecutionNumber(ctx, name, sequence.ExecutionTypeTestWorkflow)
 }

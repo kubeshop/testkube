@@ -294,8 +294,10 @@ func main() {
 		mongoResultsRepository := result.NewMongoRepository(db, cfg.APIMongoAllowDiskUse, isDocDb, result.WithFeatureFlags(features),
 			result.WithLogsClient(logGrpcClient), result.WithMongoRepositorySequence(sequenceRepository))
 		resultsRepository = mongoResultsRepository
-		testResultsRepository = testresult.NewMongoRepository(db, cfg.APIMongoAllowDiskUse, isDocDb, testresult.WithMongoRepositorySequence(sequenceRepository))
-		testWorkflowResultsRepository = testworkflow2.NewMongoRepository(db, cfg.APIMongoAllowDiskUse)
+		testResultsRepository = testresult.NewMongoRepository(db, cfg.APIMongoAllowDiskUse, isDocDb,
+			testresult.WithMongoRepositorySequence(sequenceRepository))
+		testWorkflowResultsRepository = testworkflow2.NewMongoRepository(db, cfg.APIMongoAllowDiskUse,
+			testworkflow2.WithMongoRepositorySequence(sequenceRepository))
 		configRepository = configrepository.NewMongoRepository(db)
 		triggerLeaseBackend = triggers.NewMongoLeaseBackend(db)
 		minioClient := newStorageClient(cfg)
@@ -573,7 +575,6 @@ func main() {
 		testWorkflowTemplatesClient,
 		testWorkflowProcessor,
 		configMapConfig,
-		resultsRepository,
 		testWorkflowExecutionsClient,
 		testWorkflowsClient,
 		metrics,
