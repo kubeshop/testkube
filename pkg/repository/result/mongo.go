@@ -2,6 +2,7 @@ package result
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -18,14 +19,14 @@ import (
 	"github.com/kubeshop/testkube/pkg/featureflags"
 	"github.com/kubeshop/testkube/pkg/log"
 	logsclient "github.com/kubeshop/testkube/pkg/logs/client"
+	"github.com/kubeshop/testkube/pkg/repository/sequence"
 	"github.com/kubeshop/testkube/pkg/storage"
 )
 
 var _ Repository = (*MongoRepository)(nil)
 
 const (
-	CollectionResults   = "results"
-	CollectionSequences = "sequences"
+	CollectionResults = "results"
 	// OutputPrefixSize is the size of the beginning of execution output in case this doesn't fit into Mongo
 	OutputPrefixSize = 1 * 1024 * 1024
 	// OutputMaxSize is the size of the execution output in case this doesn't fit into the 16 MB limited by Mongo
@@ -41,7 +42,6 @@ func NewMongoRepository(db *mongo.Database, allowDiskUse, isDocDb bool, opts ...
 	r := &MongoRepository{
 		db:               db,
 		ResultsColl:      db.Collection(CollectionResults),
-		SequencesColl:    db.Collection(CollectionSequences),
 		OutputRepository: NewMongoOutputRepository(db),
 		allowDiskUse:     allowDiskUse,
 		isDocDb:          isDocDb,
@@ -64,7 +64,6 @@ func NewMongoRepositoryWithOutputRepository(
 	r := &MongoRepository{
 		db:               db,
 		ResultsColl:      db.Collection(CollectionResults),
-		SequencesColl:    db.Collection(CollectionSequences),
 		OutputRepository: outputRepository,
 		allowDiskUse:     allowDiskUse,
 		log:              log.DefaultLogger,
@@ -77,28 +76,29 @@ func NewMongoRepositoryWithOutputRepository(
 	return r
 }
 
-func NewMongoRepositoryWithMinioOutputStorage(db *mongo.Database, allowDiskUse bool, storageClient storage.Client, bucket string) *MongoRepository {
+func NewMongoRepositoryWithMinioOutputStorage(db *mongo.Database, allowDiskUse bool,
+	storageClient storage.Client, bucket string, sequenceRepository sequence.Repository) *MongoRepository {
 	repo := MongoRepository{
-		db:            db,
-		ResultsColl:   db.Collection(CollectionResults),
-		SequencesColl: db.Collection(CollectionSequences),
-		allowDiskUse:  allowDiskUse,
-		log:           log.DefaultLogger,
+		db:                 db,
+		ResultsColl:        db.Collection(CollectionResults),
+		allowDiskUse:       allowDiskUse,
+		log:                log.DefaultLogger,
+		sequenceRepository: sequenceRepository,
 	}
 	repo.OutputRepository = NewMinioOutputRepository(storageClient, repo.ResultsColl, bucket)
 	return &repo
 }
 
 type MongoRepository struct {
-	db               *mongo.Database
-	ResultsColl      *mongo.Collection
-	SequencesColl    *mongo.Collection
-	OutputRepository OutputRepository
-	logGrpcClient    logsclient.StreamGetter
-	allowDiskUse     bool
-	isDocDb          bool
-	features         featureflags.FeatureFlags
-	log              *zap.SugaredLogger
+	db                 *mongo.Database
+	ResultsColl        *mongo.Collection
+	OutputRepository   OutputRepository
+	logGrpcClient      logsclient.StreamGetter
+	allowDiskUse       bool
+	isDocDb            bool
+	features           featureflags.FeatureFlags
+	log                *zap.SugaredLogger
+	sequenceRepository sequence.Repository
 }
 
 type MongoRepositoryOpt func(*MongoRepository)
@@ -121,9 +121,9 @@ func WithMongoRepositoryResultCollection(collection *mongo.Collection) MongoRepo
 	}
 }
 
-func WithMongoRepositorySequenceCollection(collection *mongo.Collection) MongoRepositoryOpt {
+func WithMongoRepositorySequenceCollection(sequenceRepository sequence.Repository) MongoRepositoryOpt {
 	return func(r *MongoRepository) {
-		r.SequencesColl = collection
+		r.sequenceRepository = sequenceRepository
 	}
 }
 
@@ -695,9 +695,11 @@ func (r *MongoRepository) DeleteByTest(ctx context.Context, testName string) (er
 	if err != nil {
 		return
 	}
-	err = r.DeleteExecutionNumber(ctx, testName)
-	if err != nil {
-		return
+	if r.sequenceRepository != nil {
+		err = r.sequenceRepository.DeleteExecutionNumber(ctx, testName, sequence.ExecutionTypeTest)
+		if err != nil {
+			return
+		}
 	}
 	_, err = r.ResultsColl.DeleteMany(ctx, bson.M{"testname": testName})
 	return
@@ -706,10 +708,6 @@ func (r *MongoRepository) DeleteByTest(ctx context.Context, testName string) (er
 // DeleteByTestSuite deletes execution results by test suite
 func (r *MongoRepository) DeleteByTestSuite(ctx context.Context, testSuiteName string) (err error) {
 	err = r.OutputRepository.DeleteOutputByTestSuite(ctx, testSuiteName)
-	if err != nil {
-		return
-	}
-	err = r.DeleteExecutionNumber(ctx, testSuiteName)
 	if err != nil {
 		return
 	}
@@ -723,9 +721,11 @@ func (r *MongoRepository) DeleteAll(ctx context.Context) (err error) {
 	if err != nil {
 		return
 	}
-	err = r.DeleteAllExecutionNumbers(ctx, false)
-	if err != nil {
-		return
+	if r.sequenceRepository != nil {
+		err = r.sequenceRepository.DeleteAllExecutionNumbers(ctx, string(sequence.ExecutionTypeTest))
+		if err != nil {
+			return
+		}
 	}
 	_, err = r.ResultsColl.DeleteMany(ctx, bson.M{})
 	return
@@ -754,9 +754,11 @@ func (r *MongoRepository) DeleteByTests(ctx context.Context, testNames []string)
 		return
 	}
 
-	err = r.DeleteExecutionNumbers(ctx, testNames)
-	if err != nil {
-		return
+	if r.sequenceRepository != nil {
+		err = r.sequenceRepository.DeleteExecutionNumbers(ctx, testNames, sequence.ExecutionTypeTest)
+		if err != nil {
+			return
+		}
 	}
 	_, err = r.ResultsColl.DeleteMany(ctx, filter)
 	return
@@ -785,11 +787,6 @@ func (r *MongoRepository) DeleteByTestSuites(ctx context.Context, testSuiteNames
 		return
 	}
 
-	err = r.DeleteExecutionNumbers(ctx, testSuiteNames)
-	if err != nil {
-		return
-	}
-
 	_, err = r.ResultsColl.DeleteMany(ctx, filter)
 	return
 }
@@ -797,11 +794,6 @@ func (r *MongoRepository) DeleteByTestSuites(ctx context.Context, testSuiteNames
 // DeleteForAllTestSuites deletes execution results for all test suites
 func (r *MongoRepository) DeleteForAllTestSuites(ctx context.Context) (err error) {
 	err = r.OutputRepository.DeleteOutputForAllTestSuite(ctx)
-	if err != nil {
-		return
-	}
-
-	err = r.DeleteAllExecutionNumbers(ctx, true)
 	if err != nil {
 		return
 	}
@@ -903,4 +895,13 @@ func (r *MongoRepository) GetPreviousFinishedState(ctx context.Context, testName
 	}
 
 	return *result.ExecutionResult.Status, nil
+}
+
+// GetNextExecutionNumber gets next execution number by name
+func (r *MongoRepository) GetNextExecutionNumber(ctx context.Context, name string) (number int32, err error) {
+	if r.sequenceRepository != nil {
+		return 0, errors.New("no sequence repository provided")
+	}
+
+	return r.sequenceRepository.GetNextExecutionNumber(ctx, name, sequence.ExecutionTypeTest)
 }
