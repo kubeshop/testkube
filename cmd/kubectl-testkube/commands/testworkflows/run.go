@@ -13,7 +13,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/render"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testworkflows/renderer"
-	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	apiclientv1 "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
@@ -304,7 +304,7 @@ func printRawLogLines(logs []byte, steps []testkube.TestWorkflowSignature, resul
 			line = line[getTimestampLength(line)+1:]
 		}
 
-		start := data.StartHintRe.FindStringSubmatch(line)
+		start := instructions.StartHintRe.FindStringSubmatch(line)
 		if len(start) == 0 {
 			line += "\x07"
 			fmt.Println(line)

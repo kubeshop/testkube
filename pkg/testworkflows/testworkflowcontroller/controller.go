@@ -11,7 +11,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	initconstants "github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
-	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
@@ -293,7 +293,7 @@ func (c *controller) Logs(parentCtx context.Context, follow bool) io.Reader {
 			if v.Error == nil && v.Value.Log != "" && !v.Value.Temporary {
 				if ref != v.Value.Ref && v.Value.Ref != "" {
 					ref = v.Value.Ref
-					_, _ = writer.Write([]byte(data.SprintHint(ref, initconstants.InstructionStart)))
+					_, _ = writer.Write([]byte(instructions.SprintHint(ref, initconstants.InstructionStart)))
 				}
 				_, _ = writer.Write([]byte(v.Value.Log))
 			}

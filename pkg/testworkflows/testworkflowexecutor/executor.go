@@ -18,7 +18,7 @@ import (
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	testworkflowsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testworkflows/v1"
 	initconstants "github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
-	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	v1 "github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -235,7 +235,7 @@ func (e *executor) Control(ctx context.Context, testWorkflow *testworkflowsv1.Te
 			} else if !v.Value.Temporary {
 				if ref != v.Value.Ref && v.Value.Ref != "" {
 					ref = v.Value.Ref
-					_, err := writer.Write([]byte(data.SprintHint(ref, initconstants.InstructionStart)))
+					_, err := writer.Write([]byte(instructions.SprintHint(ref, initconstants.InstructionStart)))
 					if err != nil {
 						log.DefaultLogger.Error(errors.Wrap(err, "saving log output signature"))
 					}

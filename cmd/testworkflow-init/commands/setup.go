@@ -1,49 +1,50 @@
 package commands
 
 import (
-	"fmt"
 	"os"
 	"os/exec"
 
-	"github.com/gookit/color"
-
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 	"github.com/kubeshop/testkube/pkg/version"
 )
 
 func Setup(config lite.ActionSetup) {
+	stdout := output.Std
+	stdoutUnsafe := stdout.Direct()
+
 	// Copy the init process TODO: only when it is required
-	fmt.Print("Configuring init process...")
+	stdoutUnsafe.Print("Configuring init process...")
 	if config.CopyInit {
 		err := exec.Command("cp", "/init", data.InitPath).Run()
 		if err != nil {
-			fmt.Println(color.FgRed.Render(" error"))
+			stdoutUnsafe.Error(" error")
 			data.Failf(data.CodeInternal, "failed to copy the /init process: %s", err.Error())
 		}
-		fmt.Println(" done")
+		stdoutUnsafe.Print(" done\n")
 	} else {
-		fmt.Println(" skipped")
+		stdoutUnsafe.Print(" skipped\n")
 	}
 
 	// Copy the shell and useful libraries TODO: only when it is required
-	fmt.Print("Configuring shell...")
+	stdoutUnsafe.Print("Configuring shell...")
 	if config.CopyBinaries {
 		// Use `cp` on the whole directory, as it has plenty of files, which lead to the same FS block.
 		// Copying individual files will lead to high FS usage
 		err := exec.Command("cp", "-rf", "/bin", data.InternalBinPath).Run()
 		if err != nil {
-			fmt.Println(color.FgRed.Render(" error"))
+			stdoutUnsafe.Error(" error\n")
 			data.Failf(data.CodeInternal, "failed to copy the /init process: %s", err.Error())
 		}
-		fmt.Println(" done")
+		stdoutUnsafe.Print(" done\n")
 	} else {
-		fmt.Println(" skipped")
+		stdoutUnsafe.Print(" skipped\n")
 	}
 
 	// Expose debugging Pod information
-	data.PrintOutput(data.InitStepName, "pod", map[string]string{
+	stdoutUnsafe.Output(data.InitStepName, "pod", map[string]string{
 		"name":               os.Getenv(constants.EnvPodName),
 		"nodeName":           os.Getenv(constants.EnvNodeName),
 		"namespace":          os.Getenv(constants.EnvNamespaceName),

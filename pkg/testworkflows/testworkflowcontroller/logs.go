@@ -15,7 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/utils"
@@ -29,15 +29,15 @@ const (
 
 type Comment struct {
 	Time   time.Time
-	Hint   *data.Instruction
-	Output *data.Instruction
+	Hint   *instructions.Instruction
+	Output *instructions.Instruction
 }
 
 type ContainerLog struct {
 	Time   time.Time
 	Log    []byte
-	Hint   *data.Instruction
-	Output *data.Instruction
+	Hint   *instructions.Instruction
+	Output *instructions.Instruction
 }
 
 // getContainerLogsStream is getting logs stream, and tries to reinitialize the stream on EOF.
@@ -295,7 +295,7 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 			}
 
 			// Fast-track: we know this line won't be an instruction
-			if !data.MayBeInstruction(line) {
+			if !instructions.MayBeInstruction(line) {
 				if hasNewLine {
 					appendLog(lastTs, []byte("\n"))
 				}
@@ -318,7 +318,7 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 			}
 
 			// Detect instruction
-			instruction, isHint, err := data.DetectInstruction(line)
+			instruction, isHint, err := instructions.DetectInstruction(line)
 			if err == nil && instruction != nil {
 				item := ContainerLog{Time: lastTs}
 				if isHint {

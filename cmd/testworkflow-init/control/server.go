@@ -6,6 +6,8 @@ import (
 	"net"
 	"net/http"
 	"time"
+
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
 )
 
 type Pauseable interface {
@@ -39,6 +41,9 @@ func NewServer(port int, step Pauseable) *server {
 }
 
 func (s *server) handler() *http.ServeMux {
+	stdout := output.Std
+	stdoutUnsafe := stdout.Direct()
+
 	mux := http.NewServeMux()
 	// TODO: Consider "shell" command too for debugging?
 	mux.HandleFunc("/pause", func(w http.ResponseWriter, r *http.Request) {
@@ -47,7 +52,7 @@ func (s *server) handler() *http.ServeMux {
 			return
 		}
 		if err := s.step.Pause(time.Now()); err != nil {
-			fmt.Printf("Warning: failed to pause: %s\n", err.Error())
+			stdoutUnsafe.Printf("Warning: failed to pause: %s\n", err.Error())
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -59,7 +64,7 @@ func (s *server) handler() *http.ServeMux {
 			return
 		}
 		if err := s.step.Resume(time.Now()); err != nil {
-			fmt.Printf("Warning: failed to resume: %s\n", err.Error())
+			stdoutUnsafe.Printf("Warning: failed to resume: %s\n", err.Error())
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}

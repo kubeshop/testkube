@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"os"
 	"os/signal"
 	"slices"
@@ -11,35 +10,42 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/gookit/color"
-
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/commands"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/control"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/orchestration"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/expressions/libs"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 )
 
+// TODO: Use output.Std (or output.Std.Direct()) for all panic(), Failf, Print, Printf and Println
 func main() {
+	stdout := output.Std
+	stdoutUnsafe := stdout.Direct()
+
+	// TODO: Detect the sensitive words, i.e. from secret environment variables
+	//       Probably limit to length > 3
+	stdout.SetSensitiveWords([]string{})
+
 	// Prepare empty state file if it doesn't exist
 	_, err := os.Stat(data.StatePath)
 	if errors.Is(err, os.ErrNotExist) {
-		data.PrintHint(data.InitStepName, constants.InstructionStart)
-		fmt.Print("Creating state...")
+		stdout.Hint(data.InitStepName, constants.InstructionStart)
+		stdoutUnsafe.Print("Creating state...")
 		err := os.WriteFile(data.StatePath, nil, 0777)
 		if err != nil {
-			fmt.Println(color.FgRed.Render(" error"))
+			stdoutUnsafe.Error(" error\n")
 			data.Failf(data.CodeInternal, "failed to create state file: %s", err.Error())
 		}
 		os.Chmod(data.StatePath, 0777)
-		fmt.Println(" done")
+		stdoutUnsafe.Print(" done\n")
 	} else if err != nil {
-		data.PrintHint(data.InitStepName, constants.InstructionStart)
-		fmt.Print("Accessing state...")
-		fmt.Println(color.FgRed.Render(" error"))
+		stdout.Hint(data.InitStepName, constants.InstructionStart)
+		stdoutUnsafe.Print("Accessing state...")
+		stdoutUnsafe.Error(" error\n")
 		data.Failf(data.CodeInternal, "cannot access state file: %s", err.Error())
 	}
 
@@ -48,13 +54,13 @@ func main() {
 	instructions := os.Getenv(constants.EnvInstructions)
 	orchestration.Setup.UseBaseEnv()
 	if instructions != "" {
-		fmt.Print("Initializing state...")
+		stdoutUnsafe.Print("Initializing state...")
 		err = json.Unmarshal([]byte(instructions), &data.GetState().Actions)
 		if err != nil {
-			fmt.Println(color.FgRed.Render(" error"))
+			stdoutUnsafe.Error(" error\n")
 			data.Failf(data.CodeInternal, "failed to read the actions from Pod: %s", err.Error())
 		}
-		fmt.Println(" done")
+		stdoutUnsafe.Print(" done\n")
 
 		// Release the memory
 		instructions = ""
@@ -79,7 +85,7 @@ func main() {
 	signal.Notify(stopSignal, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		<-stopSignal
-		fmt.Println("The task was aborted.")
+		stdoutUnsafe.Print("The task was aborted.\n")
 		orchestration.Executions.Abort()
 	}()
 
@@ -93,7 +99,7 @@ func main() {
 		}
 		err = orchestration.Executions.Pause()
 		if err != nil {
-			fmt.Printf("warning: pause: %s\n", err.Error())
+			stdoutUnsafe.Warnf("warning: pause: %s\n", err.Error())
 		}
 		orchestration.Pause(step, *step.StartedAt)
 		for _, parentRef := range step.Parents {
@@ -108,7 +114,7 @@ func main() {
 		}
 		err = orchestration.Executions.Resume()
 		if err != nil {
-			fmt.Printf("warning: resume: %s\n", err.Error())
+			stdoutUnsafe.Warnf("warning: resume: %s\n", err.Error())
 		}
 		orchestration.Resume(step, ts)
 		for _, parentRef := range step.Parents {
@@ -175,7 +181,7 @@ func main() {
 			// Determine if the step should be skipped
 			executable, err := step.ResolveCondition()
 			if err != nil {
-				panic(fmt.Sprintf("failed to determine condition of '%s' step: %s: %s", *action.Start, step.Condition, err.Error()))
+				data.Failf(data.CodeInternal, "failed to determine condition of '%s' step: %s: %v", *action.Start, step.Condition, err.Error())
 			}
 			if !executable {
 				step.SetStatus(data.StepStatusSkipped)
@@ -194,7 +200,7 @@ func main() {
 			if step.Status == nil {
 				status, err := step.ResolveResult()
 				if err != nil {
-					panic(fmt.Sprintf("failed to determine result of '%s' step: %s: %s", *action.End, step.Result, err.Error()))
+					data.Failf(data.CodeInternal, "failed to determine result of '%s' step: %s: %v", *action.End, step.Result, err.Error())
 				}
 				step.SetStatus(status)
 			}
@@ -275,7 +281,7 @@ func main() {
 				machine := expressions.CombinedMachines(data.LocalMachine, data.RefSuccessMachine, data.AliasMachine, data.StateMachine, libs.NewFsMachine(os.DirFS("/"), wd))
 				expr, err := expressions.CompileAndResolve(until, machine, expressions.FinalizerFail)
 				if err != nil {
-					fmt.Printf("failed to execute retry condition: %s: %s\n", until, err.Error())
+					stdout.Printf("failed to execute retry condition: %s: %s\n", until, err.Error())
 					break
 				}
 				shouldStop, _ := expr.Static().BoolValue()
@@ -285,8 +291,8 @@ func main() {
 
 				// Continue with the next iteration
 				step.Iteration++
-				data.PrintHintDetails(step.Ref, constants.InstructionIteration, step.Iteration)
-				fmt.Printf("\nExit code: %d • Retrying: attempt #%d (of %d):\n", step.ExitCode, step.Iteration, step.Retry.Count)
+				stdout.HintDetails(step.Ref, constants.InstructionIteration, step.Iteration)
+				stdoutUnsafe.Printf("\nExit code: %d • Retrying: attempt #%d (of %d):\n", step.ExitCode, step.Iteration, step.Retry.Count)
 			}
 		}
 

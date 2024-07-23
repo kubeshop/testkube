@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/log"
 )
@@ -14,7 +14,7 @@ type Notification struct {
 	Result    *testkube.TestWorkflowResult `json:"result,omitempty"`
 	Ref       string                       `json:"ref,omitempty"`
 	Log       string                       `json:"log,omitempty"`
-	Output    *data.Instruction            `json:"output,omitempty"`
+	Output    *instructions.Instruction    `json:"output,omitempty"`
 	Temporary bool                         `json:"temporary,omitempty"`
 }
 
@@ -29,7 +29,7 @@ func (n *Notification) ToInternal() testkube.TestWorkflowExecutionNotification {
 	}
 }
 
-func InstructionToInternal(instruction *data.Instruction) *testkube.TestWorkflowOutput {
+func InstructionToInternal(instruction *instructions.Instruction) *testkube.TestWorkflowOutput {
 	if instruction == nil {
 		return nil
 	}

@@ -11,10 +11,11 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
 )
 
 var (
-	Executions = newExecutionGroup(data.NewOutputProcessor(os.Stdout), os.Stderr)
+	Executions = newExecutionGroup(data.NewOutputProcessor(output.Std), output.Std)
 )
 
 type executionResult struct {

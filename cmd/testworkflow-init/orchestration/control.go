@@ -7,6 +7,7 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 )
 
 func Start(step *data.StepData) {
@@ -14,21 +15,21 @@ func Start(step *data.StepData) {
 	state.CurrentRef = step.Ref
 	startedAt := time.Now()
 	step.StartedAt = &startedAt
-	data.PrintHint(step.Ref, constants.InstructionStart)
+	instructions.PrintHint(step.Ref, constants.InstructionStart)
 }
 
 func Pause(step *data.StepData, ts time.Time) {
 	step.RegisterPauseStart(ts)
-	data.PrintHintDetails(step.Ref, constants.InstructionPause, ts.UTC().Format(constants.PreciseTimeFormat))
+	instructions.PrintHintDetails(step.Ref, constants.InstructionPause, ts.UTC().Format(constants.PreciseTimeFormat))
 }
 
 func Resume(step *data.StepData, ts time.Time) {
 	step.RegisterPauseEnd(ts)
-	data.PrintHintDetails(step.Ref, constants.InstructionResume, ts.UTC().Format(constants.PreciseTimeFormat))
+	instructions.PrintHintDetails(step.Ref, constants.InstructionResume, ts.UTC().Format(constants.PreciseTimeFormat))
 }
 
 func FinishExecution(step *data.StepData, result constants.ExecutionResult) {
-	data.PrintHintDetails(step.Ref, constants.InstructionExecution, result)
+	instructions.PrintHintDetails(step.Ref, constants.InstructionExecution, result)
 }
 
 func End(step *data.StepData) {
@@ -36,5 +37,5 @@ func End(step *data.StepData) {
 		v, e := json.Marshal(step)
 		panic(fmt.Sprintf("cannot mark unfinished step as finished: %s, %v", string(v), e))
 	}
-	data.PrintHintDetails(step.Ref, constants.InstructionEnd, *step.Status)
+	instructions.PrintHintDetails(step.Ref, constants.InstructionEnd, *step.Status)
 }

@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
@@ -259,7 +259,7 @@ func (n *notifier) Start(ref string, ts time.Time) {
 	}
 }
 
-func (n *notifier) Output(ref string, ts time.Time, output *data.Instruction) {
+func (n *notifier) Output(ref string, ts time.Time, output *instructions.Instruction) {
 	if ref == InitContainerName {
 		ref = ""
 	}

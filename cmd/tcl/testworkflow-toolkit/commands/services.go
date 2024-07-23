@@ -24,7 +24,7 @@ import (
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	commontcl "github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/common"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/spawn"
-	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
+	ins "github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/transfer"
 	"github.com/kubeshop/testkube/internal/common"
@@ -113,7 +113,7 @@ func NewServicesCmd() *cobra.Command {
 				}
 
 				// Initialize empty array of details for each of the services
-				data.PrintHintDetails(env.Ref(), fmt.Sprintf("services.%s", name), []ServiceState{})
+				ins.PrintHintDetails(env.Ref(), fmt.Sprintf("services.%s", name), []ServiceState{})
 			}
 
 			// Analyze instances to run
@@ -191,12 +191,12 @@ func NewServicesCmd() *cobra.Command {
 				for i := range svcInstances {
 					state[name][i].Description = svcInstances[i].Description
 				}
-				data.PrintHintDetails(env.Ref(), fmt.Sprintf("services.%s", name), state)
+				ins.PrintHintDetails(env.Ref(), fmt.Sprintf("services.%s", name), state)
 			}
 
 			// Inform about each service instance
 			for _, instance := range instances {
-				data.PrintOutput(env.Ref(), "service", ServiceInfo{
+				ins.PrintOutput(env.Ref(), "service", ServiceInfo{
 					Group:       groupRef,
 					Index:       instance.Index,
 					Name:        instance.Name,
@@ -344,7 +344,7 @@ func NewServicesCmd() *cobra.Command {
 						state[instance.Name][index].Ip = v.PodIP
 						log(fmt.Sprintf("assigned to %s IP", ui.LightBlue(v.PodIP)))
 						info.Status = ServiceStatusRunning
-						data.PrintOutput(env.Ref(), "service", info)
+						ins.PrintOutput(env.Ref(), "service", info)
 					}
 
 					if v.Current == mainRef {
@@ -364,7 +364,7 @@ func NewServicesCmd() *cobra.Command {
 				if !started {
 					info.Status = ServiceStatusFailed
 					log("container failed")
-					data.PrintOutput(env.Ref(), "service", info)
+					ins.PrintOutput(env.Ref(), "service", info)
 					return false
 				}
 
@@ -392,7 +392,7 @@ func NewServicesCmd() *cobra.Command {
 					log("container ready")
 					info.Status = ServiceStatusReady
 				}
-				data.PrintOutput(env.Ref(), "service", info)
+				ins.PrintOutput(env.Ref(), "service", info)
 
 				return ready
 			}
@@ -402,7 +402,7 @@ func NewServicesCmd() *cobra.Command {
 
 			// Inform about the services state
 			for k := range state {
-				data.PrintHintDetails(env.Ref(), fmt.Sprintf("services.%s", k), state[k])
+				ins.PrintHintDetails(env.Ref(), fmt.Sprintf("services.%s", k), state[k])
 			}
 
 			// Notify the results

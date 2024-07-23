@@ -1,19 +1,22 @@
 package commands
 
 import (
-	"fmt"
 	"os"
 	"slices"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/orchestration"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/expressions/libs"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 )
 
 func Run(run lite.ActionExecute, container lite.LiteActionContainer) {
+	stdout := output.Std
+	stdoutUnsafe := stdout.Direct()
+
 	state := data.GetState()
 	step := state.GetStep(run.Ref)
 
@@ -46,7 +49,7 @@ func Run(run lite.ActionExecute, container lite.LiteActionContainer) {
 					sub[i].SetStatus(data.StepStatusSkipped)
 				}
 			}
-			fmt.Println("Timed out.")
+			stdoutUnsafe.Println("Timed out.")
 		}
 		_ = orchestration.Executions.Kill()
 
@@ -79,7 +82,7 @@ func Run(run lite.ActionExecute, container lite.LiteActionContainer) {
 	for i := range command {
 		value, err := expressions.CompileAndResolveTemplate(command[i], machine, expressions.FinalizerFail)
 		if err != nil {
-			panic(fmt.Sprintf("failed to compute argument '%d': %s", i, err.Error()))
+			data.Failf(data.CodeInternal, "failed to compute argument '%d': %s", i, err.Error())
 		}
 		command[i], _ = value.Static().StringValue()
 	}

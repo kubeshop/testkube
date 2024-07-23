@@ -1,13 +1,14 @@
 package data
 
 import (
-	"fmt"
 	"os"
+
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
 )
 
 func Failf(exitCode uint8, message string, args ...interface{}) {
 	// Print message
-	fmt.Printf(message+"\n", args...)
+	output.Std.Printf(message+"\n", args...)
 
 	// Exit
 	os.Exit(int(exitCode))

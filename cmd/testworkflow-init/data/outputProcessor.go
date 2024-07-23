@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"errors"
 	"io"
+
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 )
 
 type outputProcessor struct {
@@ -27,7 +29,7 @@ func (o *outputProcessor) Write(p []byte) (int, error) {
 	lines := bytes.Split(append(o.lastLine, p...), []byte("\n"))
 	o.lastLine = nil
 	for i := range lines {
-		instruction, _, _ := DetectInstruction(lines[i])
+		instruction, _, _ := instructions.DetectInstruction(lines[i])
 		if instruction == nil && i == len(lines)-1 {
 			o.lastLine = lines[i]
 		}
