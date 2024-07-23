@@ -7,18 +7,9 @@ import (
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
-	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
-
-func simplify(condition string) string {
-	c, err := expressions.MustCompile(condition).Resolve()
-	if err != nil {
-		panic(err)
-	}
-	return c.String()
-}
 
 func TestProcess_BasicSteps(t *testing.T) {
 	// Build the structure
