@@ -38,25 +38,25 @@ var (
 	execMachine = expressions.NewMachine().
 			Register("resource.root", "dummy-id").
 			Register("resource.id", "dummy-id-abc")
-	envInstructions = lite.EnvVarFrom("01", false, constants2.EnvInstructions, corev1.EnvVarSource{
+	envInstructions = lite.EnvVarFrom("01", false, false, constants2.EnvInstructions, corev1.EnvVarSource{
 		FieldRef: &corev1.ObjectFieldSelector{FieldPath: constants.SpecAnnotationFieldPath},
 	})
-	envDebugNode = lite.EnvVarFrom("00", false, constants2.EnvNodeName, corev1.EnvVarSource{
+	envDebugNode = lite.EnvVarFrom("00", false, false, constants2.EnvNodeName, corev1.EnvVarSource{
 		FieldRef: &corev1.ObjectFieldSelector{FieldPath: "spec.nodeName"},
 	})
-	envDebugPod = lite.EnvVarFrom("00", false, constants2.EnvPodName, corev1.EnvVarSource{
+	envDebugPod = lite.EnvVarFrom("00", false, false, constants2.EnvPodName, corev1.EnvVarSource{
 		FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.name"},
 	})
-	envDebugNamespace = lite.EnvVarFrom("00", false, constants2.EnvNamespaceName, corev1.EnvVarSource{
+	envDebugNamespace = lite.EnvVarFrom("00", false, false, constants2.EnvNamespaceName, corev1.EnvVarSource{
 		FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.namespace"},
 	})
-	envDebugServiceAccount = lite.EnvVarFrom("00", false, constants2.EnvServiceAccountName, corev1.EnvVarSource{
+	envDebugServiceAccount = lite.EnvVarFrom("00", false, false, constants2.EnvServiceAccountName, corev1.EnvVarSource{
 		FieldRef: &corev1.ObjectFieldSelector{FieldPath: "spec.serviceAccountName"},
 	})
 )
 
 func env(index int, computed bool, name, value string) corev1.EnvVar {
-	return lite.EnvVar(fmt.Sprintf("%d", index), computed, name, value)
+	return lite.EnvVar(fmt.Sprintf("%d", index), computed, false, name, value)
 }
 
 func cmd(values ...string) *[]string {

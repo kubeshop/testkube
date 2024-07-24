@@ -10,6 +10,7 @@ import (
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	constants2 "github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	stage2 "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
@@ -60,16 +61,15 @@ func CreateContainer(groupId int, defaultContainer stage2.Container, actions []a
 		for i := range containerConfigs {
 			for _, e := range containerConfigs[i].Container.Config.Env {
 				newEnv := *e.DeepCopy()
-				if strings.Contains(newEnv.Value, "{{") {
-					newEnv.Name = fmt.Sprintf("_%dC_%s", i, e.Name)
-				} else {
-					newEnv.Name = fmt.Sprintf("_%d_%s", i, e.Name)
-				}
+				computed := strings.Contains(newEnv.Value, "{{")
+				sensitive := newEnv.ValueFrom != nil && newEnv.ValueFrom.SecretKeyRef != nil
+				newEnv.Name = lite.EnvName(fmt.Sprintf("%d", i), computed, sensitive, e.Name)
 				cr.Env = append(cr.Env, newEnv)
 			}
 			for _, e := range containerConfigs[i].Container.Config.EnvFrom {
 				newEnvFrom := *e.DeepCopy()
-				newEnvFrom.Prefix = fmt.Sprintf("_%d_%s", i, e.Prefix)
+				sensitive := newEnvFrom.SecretRef != nil
+				newEnvFrom.Prefix = lite.EnvName(fmt.Sprintf("%d", i), false, sensitive, e.Prefix)
 				cr.EnvFrom = append(cr.EnvFrom, newEnvFrom)
 			}
 		}

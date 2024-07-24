@@ -10,6 +10,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/gookit/color"
+
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/commands"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/control"
@@ -23,12 +25,13 @@ import (
 
 // TODO: Use output.Std (or output.Std.Direct()) for all panic(), Failf, Print, Printf and Println
 func main() {
+	// Force colors
+	color.ForceColor()
+
+	// Configure standard output
 	stdout := output.Std
 	stdoutUnsafe := stdout.Direct()
-
-	// TODO: Detect the sensitive words, i.e. from secret environment variables
-	//       Probably limit to length > 3
-	stdout.SetSensitiveWords([]string{})
+	stdout.SetSensitiveReplacement(color.FgGray.Render("*m̷a̷s̷k̷e̷d̷*"))
 
 	// Prepare empty state file if it doesn't exist
 	_, err := os.Stat(data.StatePath)
@@ -53,6 +56,7 @@ func main() {
 	orchestration.Setup.UseEnv("01")
 	instructions := os.Getenv(constants.EnvInstructions)
 	orchestration.Setup.UseBaseEnv()
+	stdout.SetSensitiveWords(orchestration.Setup.GetSensitiveWords())
 	if instructions != "" {
 		stdoutUnsafe.Print("Initializing state...")
 		err = json.Unmarshal([]byte(instructions), &data.GetState().Actions)
@@ -166,6 +170,7 @@ func main() {
 		case lite.ActionTypeContainerTransition:
 			orchestration.Setup.SetConfig(action.Container.Config)
 			orchestration.Setup.AdvanceEnv()
+			stdout.SetSensitiveWords(orchestration.Setup.GetSensitiveWords())
 			currentContainer = *action.Container
 
 		case lite.ActionTypeCurrentStatus:
@@ -209,6 +214,7 @@ func main() {
 		case lite.ActionTypeSetup:
 			// TODO: Handle error
 			orchestration.Setup.UseEnv("00")
+			stdout.SetSensitiveWords(orchestration.Setup.GetSensitiveWords())
 			step := state.GetStep(data.InitStepName)
 			commands.Setup(*action.Setup)
 			step.SetStatus(data.StepStatusPassed)

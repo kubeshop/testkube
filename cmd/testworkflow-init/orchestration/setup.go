@@ -14,9 +14,10 @@ import (
 )
 
 var (
-	scopedRegex       = regexp.MustCompile(`^_(00|01|\d|[1-9]\d*)(C)?_`)
-	Setup             = newSetup()
-	defaultWorkingDir = getWorkingDir()
+	scopedRegex            = regexp.MustCompile(`^_(00|01|\d|[1-9]\d*)(C)?(S?)_`)
+	Setup                  = newSetup()
+	defaultWorkingDir      = getWorkingDir()
+	MinSensitiveWordLength = 4
 )
 
 func getWorkingDir() string {
@@ -28,18 +29,21 @@ func getWorkingDir() string {
 }
 
 type setup struct {
-	envBase           map[string]string
-	envGroups         map[string]map[string]string
-	envGroupsComputed map[string]map[string]struct{}
-	envCurrentGroup   int
+	envBase            map[string]string
+	envGroups          map[string]map[string]string
+	envGroupsComputed  map[string]map[string]struct{}
+	envGroupsSensitive map[string]map[string]struct{}
+	envCurrentGroup    int
+	envSelectedGroup   string
 }
 
 func newSetup() *setup {
 	c := &setup{
-		envBase:           map[string]string{},
-		envGroups:         map[string]map[string]string{},
-		envGroupsComputed: map[string]map[string]struct{}{},
-		envCurrentGroup:   -1,
+		envBase:            map[string]string{},
+		envGroups:          map[string]map[string]string{},
+		envGroupsComputed:  map[string]map[string]struct{}{},
+		envGroupsSensitive: map[string]map[string]struct{}{},
+		envCurrentGroup:    -1,
 	}
 	c.initialize()
 	return c
@@ -58,10 +62,14 @@ func (c *setup) initialize() {
 		if c.envGroups[match[1]] == nil {
 			c.envGroups[match[1]] = map[string]string{}
 			c.envGroupsComputed[match[1]] = map[string]struct{}{}
+			c.envGroupsSensitive[match[1]] = map[string]struct{}{}
 		}
 		c.envGroups[match[1]][key[len(match[0]):]] = value
 		if match[2] == "C" {
 			c.envGroupsComputed[match[1]][key[len(match[0]):]] = struct{}{}
+		}
+		if match[3] == "S" {
+			c.envGroupsSensitive[match[1]][key[len(match[0]):]] = struct{}{}
 		}
 		os.Unsetenv(key)
 	}
@@ -74,8 +82,32 @@ func (c *setup) UseBaseEnv() {
 	}
 }
 
+func (c *setup) GetSensitiveWords() []string {
+	words := make([]string, 0)
+	for k := range c.envBase {
+		value := os.Getenv(k)
+		if len(value) < MinSensitiveWordLength {
+			continue
+		}
+		if _, ok := c.envGroupsSensitive[c.envSelectedGroup][k]; ok {
+			words = append(words, value)
+		}
+	}
+	for k := range c.envGroups[c.envSelectedGroup] {
+		value := os.Getenv(k)
+		if len(value) < MinSensitiveWordLength {
+			continue
+		}
+		if _, ok := c.envGroupsSensitive[c.envSelectedGroup][k]; ok {
+			words = append(words, value)
+		}
+	}
+	return words
+}
+
 func (c *setup) UseEnv(group string) {
 	c.UseBaseEnv()
+	c.envSelectedGroup = group
 
 	envTemplates := map[string]string{}
 	envResolutions := map[string]expressions.Expression{}

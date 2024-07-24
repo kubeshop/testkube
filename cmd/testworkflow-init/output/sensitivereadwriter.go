@@ -35,6 +35,10 @@ func newSensitiveReadWriter(dst io.Writer, replacement string, words []string) *
 	}
 }
 
+func (s *sensitiveReadWriter) SetSensitiveReplacement(replacement string) {
+	s.replacement = []byte(replacement)
+}
+
 func (s *sensitiveReadWriter) SetSensitiveWords(words []string) {
 	rootNode := NewSearchTree()
 	for _, word := range words {

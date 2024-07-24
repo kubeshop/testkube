@@ -3,13 +3,10 @@ package output
 import (
 	"io"
 	"os"
-
-	"github.com/gookit/color"
 )
 
 var (
-	Std         = NewStream(os.Stdout)
-	DefaultMask = color.FgDarkGray.Render("</*****/>")
+	Std = NewStream(os.Stdout)
 )
 
 type stream struct {
@@ -21,7 +18,7 @@ type stream struct {
 func NewStream(dst io.Writer) *stream {
 	s := &stream{}
 	s.printer = &printer{direct: dst}
-	s.printer.through = newSensitiveReadWriter(dst, DefaultMask, nil)
+	s.printer.through = newSensitiveReadWriter(dst, "*****", nil)
 	s.direct = &stream{printer: &printer{direct: s.printer.direct, through: s.printer.direct}}
 	return s
 }
@@ -33,6 +30,12 @@ func (s *stream) Direct() *stream {
 func (s *stream) SetSensitiveWords(words []string) {
 	if v, ok := s.printer.through.(*sensitiveReadWriter); ok {
 		v.SetSensitiveWords(words)
+	}
+}
+
+func (s *stream) SetSensitiveReplacement(replacement string) {
+	if v, ok := s.printer.through.(*sensitiveReadWriter); ok {
+		v.SetSensitiveReplacement(replacement)
 	}
 }
 
