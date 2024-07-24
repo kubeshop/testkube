@@ -94,7 +94,6 @@ func (r *MongoRepository) GetNextExecutionNumber(ctx context.Context, name strin
 	}
 
 	opts := options.FindOneAndUpdate()
-	opts.SetUpsert(false)
 	opts.SetReturnDocument(options.After)
 
 	err = r.Coll.FindOneAndUpdate(ctx, bson.M{"_id": id}, bson.M{"$inc": bson.M{"number": 1}}, opts).Decode(&executionNumber)
