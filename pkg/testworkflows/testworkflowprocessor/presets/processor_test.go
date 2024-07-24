@@ -22,10 +22,25 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 )
 
+const (
+	dummyUserId  = 1234
+	dummyGroupId = 4321
+)
+
+var (
+	dummyEntrypoint = []string{"/dummy-entrypoint", "entrypoint-arg"}
+	dummyCmd        = []string{"/dummy-cmd", "cmd-arg"}
+)
+
 type dummyInspector struct{}
 
 func (*dummyInspector) Inspect(ctx context.Context, registry, image string, pullPolicy corev1.PullPolicy, pullSecretNames []string) (*imageinspector.Info, error) {
-	return &imageinspector.Info{}, nil
+	return &imageinspector.Info{
+		Entrypoint: dummyEntrypoint,
+		Cmd:        dummyCmd,
+		User:       dummyUserId,
+		Group:      dummyGroupId,
+	}, nil
 }
 
 func (*dummyInspector) ResolveName(registry, image string) string {
@@ -123,7 +138,7 @@ func TestProcessBasic(t *testing.T) {
 		Append(func(list actiontypes.ActionList) actiontypes.ActionList {
 			return list.
 				MutateContainer(sig[0].Ref(), testworkflowsv1.ContainerConfig{
-					Command: cmd("/.tktw/bin/sh"),
+					Command: cmd("/bin/sh"),
 					Args:    cmdShell("shell-test"),
 				}).
 				Start(sig[0].Ref()).
@@ -213,6 +228,133 @@ func TestProcessBasic(t *testing.T) {
 	assert.True(t, volumeMounts[1].Name == volumes[1].Name)
 }
 
+func TestProcessShellWithNonStandardImage(t *testing.T) {
+	wf := &testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			Steps: []testworkflowsv1.Step{
+				{
+					StepDefaults:   testworkflowsv1.StepDefaults{Container: &testworkflowsv1.ContainerConfig{Image: "custom:1.2.3"}},
+					StepOperations: testworkflowsv1.StepOperations{Shell: "shell-test"},
+				},
+			},
+		},
+	}
+
+	res, err := proc.Bundle(context.Background(), wf, execMachine)
+	assert.NoError(t, err)
+
+	sig := res.Signature
+	sigSerialized, _ := json.Marshal(sig)
+
+	volumes := res.Job.Spec.Template.Spec.Volumes
+	volumeMounts := res.Job.Spec.Template.Spec.InitContainers[0].VolumeMounts
+
+	wantInstructions := actiontypes.NewActionGroups().
+		Append(func(list actiontypes.ActionList) actiontypes.ActionList {
+			return list.
+				Setup(true, true).
+				Declare(constants.RootOperationName, "true").
+				Declare(sig[0].Ref(), "true", constants.RootOperationName).
+				Result(constants.RootOperationName, sig[0].Ref()).
+				Result("", constants.RootOperationName).
+				Start("").
+				CurrentStatus("true").
+				Start(constants.RootOperationName).
+				CurrentStatus(constants.RootOperationName)
+		}).
+		Append(func(list actiontypes.ActionList) actiontypes.ActionList {
+			return list.
+				MutateContainer(sig[0].Ref(), testworkflowsv1.ContainerConfig{
+					Command: cmd("/.tktw/bin/sh"),
+					Args:    cmdShell("shell-test"),
+				}).
+				Start(sig[0].Ref()).
+				Execute(sig[0].Ref(), false).
+				End(sig[0].Ref()).
+				End(constants.RootOperationName).
+				End("")
+		})
+
+	want := batchv1.Job{
+		TypeMeta: metav1.TypeMeta{Kind: "Job", APIVersion: "batch/v1"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "dummy-id-abc",
+			Labels: map[string]string{
+				constants.ResourceIdLabelName:     "dummy-id-abc",
+				constants.RootResourceIdLabelName: "dummy-id",
+			},
+			Annotations: map[string]string{
+				constants.SignatureAnnotationName: string(sigSerialized),
+			},
+		},
+		Spec: batchv1.JobSpec{
+			BackoffLimit: common.Ptr(int32(0)),
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						constants.ResourceIdLabelName:     "dummy-id-abc",
+						constants.RootResourceIdLabelName: "dummy-id",
+					},
+					Annotations: map[string]string{
+						constants.SpecAnnotationName: getSpec(wantInstructions),
+					},
+				},
+				Spec: corev1.PodSpec{
+					RestartPolicy:      corev1.RestartPolicyNever,
+					EnableServiceLinks: common.Ptr(false),
+					Volumes:            volumes,
+					InitContainers: []corev1.Container{
+						{
+							Name:            "1",
+							Image:           constants.DefaultInitImage,
+							ImagePullPolicy: corev1.PullIfNotPresent,
+							Command:         []string{"/init", "0"},
+							Env: []corev1.EnvVar{
+								envDebugNode,
+								envDebugPod,
+								envDebugNamespace,
+								envDebugServiceAccount,
+								envInstructions,
+							},
+							VolumeMounts: volumeMounts,
+							SecurityContext: &corev1.SecurityContext{
+								RunAsGroup: common.Ptr(int64(dummyGroupId)),
+							},
+						},
+					},
+					Containers: []corev1.Container{
+						{
+							Name:            "2",
+							Image:           "custom:1.2.3",
+							ImagePullPolicy: corev1.PullIfNotPresent,
+							Command:         []string{"/.tktw/init", "1"},
+							Env: []corev1.EnvVar{
+								env(0, false, "CI", "1"),
+							},
+							VolumeMounts: volumeMounts,
+							SecurityContext: &corev1.SecurityContext{
+								RunAsGroup: common.Ptr(int64(dummyGroupId)),
+							},
+						},
+					},
+					SecurityContext: &corev1.PodSecurityContext{
+						FSGroup: common.Ptr(int64(dummyGroupId)),
+					},
+				},
+			},
+		},
+	}
+
+	assert.Equal(t, want, res.Job)
+
+	assert.Equal(t, 2, len(volumeMounts))
+	assert.Equal(t, 2, len(volumes))
+	assert.Equal(t, constants.DefaultInternalPath, volumeMounts[0].MountPath)
+	assert.Equal(t, constants.DefaultDataPath, volumeMounts[1].MountPath)
+	assert.True(t, volumeMounts[0].Name == volumes[0].Name)
+	assert.True(t, volumeMounts[1].Name == volumes[1].Name)
+}
+
 func TestProcessBasicEnvReference(t *testing.T) {
 	wf := &testworkflowsv1.TestWorkflow{
 		Spec: testworkflowsv1.TestWorkflowSpec{
@@ -256,7 +398,7 @@ func TestProcessBasicEnvReference(t *testing.T) {
 		Append(func(list lite.LiteActionList) lite.LiteActionList {
 			return list.
 				MutateContainer(lite.LiteContainerConfig{
-					Command: cmd("/.tktw/bin/sh"),
+					Command: cmd("/bin/sh"),
 					Args:    cmdShell("shell-test"),
 				}).
 				Start(sig[0].Ref()).
@@ -357,7 +499,7 @@ func TestProcessMultipleSteps(t *testing.T) {
 		Append(func(list lite.LiteActionList) lite.LiteActionList {
 			return list.
 				MutateContainer(lite.LiteContainerConfig{
-					Command: cmd("/.tktw/bin/sh"),
+					Command: cmd("/bin/sh"),
 					Args:    cmdShell("shell-test"),
 				}).
 				Start(sig[0].Ref()).
@@ -368,7 +510,7 @@ func TestProcessMultipleSteps(t *testing.T) {
 		Append(func(list lite.LiteActionList) lite.LiteActionList {
 			return list.
 				MutateContainer(lite.LiteContainerConfig{
-					Command: cmd("/.tktw/bin/sh"),
+					Command: cmd("/bin/sh"),
 					Args:    cmdShell("shell-test-2"),
 				}).
 				Start(sig[1].Ref()).
@@ -488,7 +630,7 @@ func TestProcessNestedSteps(t *testing.T) {
 		Append(func(list lite.LiteActionList) lite.LiteActionList {
 			return list.
 				MutateContainer(lite.LiteContainerConfig{
-					Command: cmd("/.tktw/bin/sh"),
+					Command: cmd("/bin/sh"),
 					Args:    cmdShell("shell-test"),
 				}).
 				Start(sig[0].Ref()).
@@ -501,7 +643,7 @@ func TestProcessNestedSteps(t *testing.T) {
 		Append(func(list lite.LiteActionList) lite.LiteActionList {
 			return list.
 				MutateContainer(lite.LiteContainerConfig{
-					Command: cmd("/.tktw/bin/sh"),
+					Command: cmd("/bin/sh"),
 					Args:    cmdShell("shell-test-2"),
 				}).
 				Start(sig[1].Children()[0].Ref()).
@@ -512,7 +654,7 @@ func TestProcessNestedSteps(t *testing.T) {
 		Append(func(list lite.LiteActionList) lite.LiteActionList {
 			return list.
 				MutateContainer(lite.LiteContainerConfig{
-					Command: cmd("/.tktw/bin/sh"),
+					Command: cmd("/bin/sh"),
 					Args:    cmdShell("shell-test-3"),
 				}).
 				Start(sig[1].Children()[1].Ref()).
@@ -524,7 +666,7 @@ func TestProcessNestedSteps(t *testing.T) {
 		Append(func(list lite.LiteActionList) lite.LiteActionList {
 			return list.
 				MutateContainer(lite.LiteContainerConfig{
-					Command: cmd("/.tktw/bin/sh"),
+					Command: cmd("/bin/sh"),
 					Args:    cmdShell("shell-test-4"),
 				}).
 				Start(sig[2].Ref()).
@@ -857,7 +999,7 @@ func TestProcessShell(t *testing.T) {
 		Append(func(list lite.LiteActionList) lite.LiteActionList {
 			return list.
 				MutateContainer(lite.LiteContainerConfig{
-					Command: cmd("/.tktw/bin/sh"),
+					Command: cmd("/bin/sh"),
 					Args:    cmdShell("shell-test"),
 				}).
 				Start(sig[0].Ref()).
