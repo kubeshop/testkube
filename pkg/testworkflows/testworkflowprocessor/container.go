@@ -6,9 +6,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
-	quantity "k8s.io/apimachinery/pkg/api/resource"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
@@ -348,28 +346,9 @@ func (c *container) ToKubernetesTemplate() (corev1.Container, error) {
 	if cr.WorkingDir != nil {
 		workingDir = *cr.WorkingDir
 	}
-	resources := corev1.ResourceRequirements{}
-	if cr.Resources != nil {
-		if len(cr.Resources.Requests) > 0 {
-			resources.Requests = make(corev1.ResourceList)
-		}
-		if len(cr.Resources.Limits) > 0 {
-			resources.Limits = make(corev1.ResourceList)
-		}
-		for k, v := range cr.Resources.Requests {
-			var err error
-			resources.Requests[k], err = quantity.ParseQuantity(v.String())
-			if err != nil {
-				return corev1.Container{}, errors.Wrap(err, "parsing resources")
-			}
-		}
-		for k, v := range cr.Resources.Limits {
-			var err error
-			resources.Limits[k], err = quantity.ParseQuantity(v.String())
-			if err != nil {
-				return corev1.Container{}, errors.Wrap(err, "parsing resources")
-			}
-		}
+	resources, resourcesErr := MapResourcesToKubernetesResources(cr.Resources)
+	if resourcesErr != nil {
+		return corev1.Container{}, resourcesErr
 	}
 	return corev1.Container{
 		Image:           cr.Image,

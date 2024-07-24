@@ -312,6 +312,11 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		},
 	}
 	AnnotateControlledBy(&podSpec, resourceRoot.Template(), resourceId.Template())
+
+	defaultResources, defaultResourcesErr := MapResourcesToKubernetesResources(common.Ptr(layer.ContainerDefaults().Resources()))
+	if defaultResourcesErr != nil {
+		return nil, defaultResourcesErr
+	}
 	initContainer := corev1.Container{
 		Name:            "tktw-init",
 		Image:           constants.DefaultInitImage,
@@ -319,6 +324,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		Command:         []string{"/bin/sh", "-c"},
 		Args:            []string{constants.InitScript},
 		VolumeMounts:    layer.ContainerDefaults().VolumeMounts(),
+		Resources:       defaultResources,
 		Env: []corev1.EnvVar{
 			{Name: "TK_DEBUG_NODE", ValueFrom: &corev1.EnvVarSource{
 				FieldRef: &corev1.ObjectFieldSelector{FieldPath: "spec.nodeName"},
