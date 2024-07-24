@@ -2,6 +2,8 @@ package sequence
 
 import (
 	"context"
+	"fmt"
+	"sync"
 	"testing"
 
 	"github.com/kubeshop/testkube/internal/config"
@@ -66,5 +68,79 @@ func TestNewMongoRepository_GetNextExecutionNumber_Sequential_Integration(t *tes
 		num, err := repo.GetNextExecutionNumber(ctx, "name", tt.executionType)
 		assert.NoError(t, err)
 		assert.Equal(t, tt.expectedValue, num)
+	}
+}
+
+func TestNewMongoRepository_GetNextExecutionNumber_Parallel_Integration(t *testing.T) {
+	test.IntegrationTest(t)
+
+	ctx := context.Background()
+
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(cfg.APIMongoDSN))
+	if err != nil {
+		t.Fatalf("error connecting to mongo: %v", err)
+	}
+	db := client.Database("sequence-mongo-repository-test")
+	t.Cleanup(func() {
+		db.Drop(ctx)
+	})
+
+	repo := NewMongoRepository(db)
+
+	var tests = []struct {
+		expectedValue int32
+		executionType ExecutionType
+	}{
+		{
+			1,
+			ExecutionTypeTest,
+		},
+		{
+			2,
+			ExecutionTypeTest,
+		},
+		{
+			1,
+			ExecutionTypeTestSuite,
+		},
+		{
+			2,
+			ExecutionTypeTestSuite,
+		},
+		{
+			1,
+			ExecutionTypeTestWorkflow,
+		},
+		{
+			2,
+			ExecutionTypeTestWorkflow,
+		},
+	}
+
+	var results sync.Map
+	var wg sync.WaitGroup
+
+	for i := range tests {
+		wg.Add(1)
+		go func(executionType ExecutionType) {
+			defer wg.Done()
+
+			num, err := repo.GetNextExecutionNumber(ctx, "name", executionType)
+			assert.NoError(t, err)
+
+			results.Store(fmt.Sprintf("%s_%d", executionType, num), num)
+		}(tests[i].executionType)
+	}
+
+	wg.Wait()
+
+	for _, tt := range tests {
+		num, ok := results.Load(fmt.Sprintf("%s_%d", tt.executionType, tt.expectedValue))
+		assert.Equal(t, true, ok)
+
+		value, ok := num.(int32)
+		assert.Equal(t, true, ok)
+
+		assert.Subset(t, []int32{1, 2}, []int32{value})
 	}
 }
