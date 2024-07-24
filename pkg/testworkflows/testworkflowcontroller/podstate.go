@@ -354,8 +354,9 @@ func (p *podState) containerResult(name string) (ContainerResult, error) {
 		match := re.FindStringSubmatch(message)
 		if match == nil {
 			result.Steps = append(result.Steps, ContainerResultStep{
-				Status:   testkube.ABORTED_TestWorkflowStepStatus,
-				ExitCode: -1,
+				Status:     testkube.ABORTED_TestWorkflowStepStatus,
+				FinishedAt: result.FinishedAt,
+				ExitCode:   -1,
 			})
 		} else {
 			exitCode, _ := strconv.Atoi(match[2])
