@@ -45,6 +45,9 @@ func CreateContainer(groupId int, defaultContainer stage2.Container, actions []a
 	if bestContainerConfig == nil && len(containerConfigs) > 0 {
 		bestContainerConfig = containerConfigs[len(containerConfigs)-1]
 	}
+	if bestContainerConfig == nil {
+		bestContainerConfig = &actiontypes.Action{Container: &actiontypes.ActionContainer{Config: defaultContainer.ToContainerConfig()}}
+	}
 
 	// Build the cr base
 	// TODO: Handle the case when there are multiple exclusive execution configurations
