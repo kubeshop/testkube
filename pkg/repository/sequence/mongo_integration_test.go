@@ -32,27 +32,39 @@ func TestNewMongoRepository_GetNextExecutionNumber_Sequential_Integration(t *tes
 
 	repo := NewMongoRepository(db)
 
-	num1, err := repo.GetNextExecutionNumber(ctx, "name", ExecutionTypeTest)
-	assert.NoError(t, err)
-	assert.Equal(t, 1, num1)
+	var tests = []struct {
+		expectedValue int32
+		executionType ExecutionType
+	}{
+		{
+			1,
+			ExecutionTypeTest,
+		},
+		{
+			2,
+			ExecutionTypeTest,
+		},
+		{
+			1,
+			ExecutionTypeTestSuite,
+		},
+		{
+			2,
+			ExecutionTypeTestSuite,
+		},
+		{
+			1,
+			ExecutionTypeTestWorkflow,
+		},
+		{
+			2,
+			ExecutionTypeTestWorkflow,
+		},
+	}
 
-	num2, err := repo.GetNextExecutionNumber(ctx, "name", ExecutionTypeTest)
-	assert.NoError(t, err)
-	assert.Equal(t, 2, num2)
-
-	num3, err := repo.GetNextExecutionNumber(ctx, "name", ExecutionTypeTestSuite)
-	assert.NoError(t, err)
-	assert.Equal(t, 1, num3)
-
-	num4, err := repo.GetNextExecutionNumber(ctx, "name", ExecutionTypeTestSuite)
-	assert.NoError(t, err)
-	assert.Equal(t, 2, num4)
-
-	num5, err := repo.GetNextExecutionNumber(ctx, "name", ExecutionTypeTestWorkflow)
-	assert.NoError(t, err)
-	assert.Equal(t, 1, num5)
-
-	num6, err := repo.GetNextExecutionNumber(ctx, "name", ExecutionTypeTestWorkflow)
-	assert.NoError(t, err)
-	assert.Equal(t, 2, num6)
+	for _, tt := range tests {
+		num, err := repo.GetNextExecutionNumber(ctx, "name", tt.executionType)
+		assert.NoError(t, err)
+		assert.Equal(t, tt.expectedValue, num)
+	}
 }
