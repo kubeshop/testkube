@@ -229,41 +229,40 @@ func (ag *Agent) updateContextWithMetadata(ctx context.Context) context.Context 
 	))
 
 }
-func (ag *Agent) run(ctx context.Context) (err error) {
-	ctx = ag.updateContextWithMetadata(ctx)
-
-	g, groupCtx := errgroup.WithContext(ctx)
+func (ag *Agent) run(parent context.Context) (err error) {
+	g, ctx := errgroup.WithContext(ag.updateContextWithMetadata(parent))
 
 	g.Go(func() error {
-		return ag.runCommandLoop(groupCtx)
+		return ag.runCommandLoop(ctx)
 	})
 
 	g.Go(func() error {
-		return ag.runWorkers(groupCtx, ag.workerCount)
+		return ag.runWorkers(ctx, ag.workerCount)
 	})
 
 	g.Go(func() error {
-		return ag.runEventLoop(groupCtx)
+		return ag.runEventLoop(ctx)
 	})
 
 	if !ag.features.LogsV2 {
 		g.Go(func() error {
-			return ag.runLogStreamLoop(groupCtx)
+			return ag.runLogStreamLoop(ctx)
 		})
 		g.Go(func() error {
-			return ag.runLogStreamWorker(groupCtx, ag.logStreamWorkerCount)
+			return ag.runLogStreamWorker(ctx, ag.logStreamWorkerCount)
 		})
 	}
 
 	g.Go(func() error {
-		return ag.runTestWorkflowNotificationsLoop(groupCtx)
+		return ag.runTestWorkflowNotificationsLoop(ctx)
 	})
 	g.Go(func() error {
-		return ag.runTestWorkflowNotificationsWorker(groupCtx, ag.testWorkflowNotificationsWorkerCount)
+		return ag.runTestWorkflowNotificationsWorker(ctx, ag.testWorkflowNotificationsWorkerCount)
 	})
 
-	md, ok := metadata.FromOutgoingContext(groupCtx)
-	ag.logger.Infow("initiating agent", "ok", ok, "metadata", md)
+	mdIn, _ := metadata.FromIncomingContext(ctx)
+	mdOut, _ := metadata.FromOutgoingContext(ctx)
+	ag.logger.Infow("initiating agent", "metadataIn", mdIn, "metadataOut", mdOut)
 
 	err = g.Wait()
 
