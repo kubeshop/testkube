@@ -116,19 +116,11 @@ func CreateContainer(groupId int, defaultContainer stage2.Container, actions []a
 		}
 	}
 
-	// TODO: Avoid using /.tktw/init if there is Init Image - use /init then
+	// Avoid using /.tktw/init if there is Init Process Image - use /init then
 	initPath := constants.DefaultInitPath
 	if cr.Image == constants.DefaultInitImage {
 		initPath = "/init"
 	}
-
-	// TODO: Avoid using /.tktw/toolkit if there is Toolkit image
-
-	// TODO: Avoid using /.tktw/bin/sh (and other binaries) if there is Init image - use /bin/* then
-
-	// TODO: Copy /init and /toolkit in the Init Container only if there is a need to.
-	//       Probably, include Setup step in the action.Actions list, so it can be simplified too into a single container,
-	//       and optimized along with others.
 
 	// Point the Init Process to the proper group
 	cr.Name = fmt.Sprintf("%d", groupId+1)

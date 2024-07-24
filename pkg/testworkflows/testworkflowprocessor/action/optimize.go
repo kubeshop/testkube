@@ -4,12 +4,15 @@ import (
 	"fmt"
 	"reflect"
 	"regexp"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/util/rand"
 
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 )
 
 func optimize(actions []actiontypes.Action) ([]actiontypes.Action, error) {
@@ -264,6 +267,27 @@ func optimize(actions []actiontypes.Action) ([]actiontypes.Action, error) {
 			}
 		}
 	}
+
+	// TODO: Avoid using /.tktw/toolkit if there is Toolkit image
+
+	// TODO: Copy /init and /toolkit in the Init Container only if there is a need to.
+	//       Probably, include Setup step in the action.Actions list, so it can be simplified too into a single container,
+	//       and optimized along with others.
+
+	// Avoid using /.tktw/bin/sh when it is internal image used, with binaries in /bin
+	for i := range actions {
+		if actions[i].Type() != lite.ActionTypeContainerTransition {
+			continue
+		}
+		if actions[i].Container.Config.Image != constants.DefaultInitImage && actions[i].Container.Config.Image != constants.DefaultToolkitImage {
+			continue
+		}
+		if actions[i].Container.Config.Command != nil && len(*actions[i].Container.Config.Command) > 0 && strings.HasPrefix((*actions[i].Container.Config.Command)[0], constants.InternalBinPath+"/") {
+			(*actions[i].Container.Config.Command)[0] = "/bin" + (*actions[i].Container.Config.Command)[0][len(constants.InternalBinPath):]
+		}
+	}
+
+	// TODO: Avoid copying init process in case only Init Process image is used
 
 	// Get rid of skipped steps from initial statuses and results
 	skipMachine := expressions.NewMachine().
