@@ -131,7 +131,6 @@ type Agent struct {
 	client  cloud.TestKubeCloudAPIClient
 	handler fasthttp.RequestHandler
 	logger  *zap.SugaredLogger
-	apiKey  string
 
 	workerCount    int
 	requestBuffer  chan *cloud.ExecuteRequest
@@ -214,29 +213,21 @@ func (ag *Agent) Run(ctx context.Context) error {
 
 // updateContextWithMetadata adds metadata to the context
 func (ag *Agent) updateContextWithMetadata(ctx context.Context) context.Context {
-	ctx = AddAPIKeyMeta(ctx, ag.proContext.APIKey)
-	ctx = metadata.AppendToOutgoingContext(ctx, headerClusterId, ag.clusterID)
-	ctx = metadata.AppendToOutgoingContext(ctx, headerMigrate, ag.proContext.Migrate)
-	ctx = metadata.AppendToOutgoingContext(ctx, headerEnvID, ag.proContext.EnvID)
-	ctx = metadata.AppendToOutgoingContext(ctx, headerOrgId, ag.proContext.OrgID)
 	runnerId := ag.proContext.RunnerId
-
 	// TODO for testing - we need to figure out how to set runnerId correctly
 	if runnerId == "" && ag.clusterID != "" {
 		runnerId = ag.clusterID
 	}
-	ctx = metadata.AppendToOutgoingContext(ctx, headerRunnerId, runnerId)
 
-	ag.logger.Infow(
-		"metadata added to context",
-		headerRunnerId, runnerId,
+	return metadata.NewOutgoingContext(ctx, metadata.Pairs(
+		headerApiKey, ag.proContext.APIKey,
 		headerClusterId, ag.clusterID,
+		headerMigrate, ag.proContext.Migrate,
 		headerEnvID, ag.proContext.EnvID,
 		headerOrgId, ag.proContext.OrgID,
-		headerMigrate, ag.proContext.Migrate,
-	)
+		headerRunnerId, runnerId,
+	))
 
-	return ctx
 }
 func (ag *Agent) run(ctx context.Context) (err error) {
 	ctx = ag.updateContextWithMetadata(ctx)
@@ -271,7 +262,7 @@ func (ag *Agent) run(ctx context.Context) (err error) {
 		return ag.runTestWorkflowNotificationsWorker(groupCtx, ag.testWorkflowNotificationsWorkerCount)
 	})
 
-	md, ok := metadata.FromIncomingContext(ctx)
+	md, ok := metadata.FromOutgoingContext(groupCtx)
 	ag.logger.Infow("initiating agent", "ok", ok, "metadata", md)
 
 	err = g.Wait()
