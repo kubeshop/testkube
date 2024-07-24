@@ -261,6 +261,8 @@ func (ag *Agent) run(ctx context.Context) (err error) {
 		return ag.runTestWorkflowNotificationsWorker(groupCtx, ag.testWorkflowNotificationsWorkerCount)
 	})
 
+	ag.logger.Infow("initiating agent", "runner-id", ctx.Value("runner-id"))
+
 	err = g.Wait()
 
 	return err
