@@ -224,7 +224,7 @@ func (ag *Agent) updateContextWithMetadata(ctx context.Context) context.Context 
 	if runnerId == "" && ag.clusterID != "" {
 		runnerId = ag.clusterID
 	}
-	ctx = metadata.AppendToOutgoingContext(ctx, runnerIdMeta, ag.proContext.RunnerId)
+	ctx = metadata.AppendToOutgoingContext(ctx, runnerIdMeta, runnerId)
 
 	return ctx
 }
