@@ -138,7 +138,7 @@ func (r *MongoRepository) DeleteExecutionNumbers(ctx context.Context, names []st
 // DeleteAllExecutionNumbers deletes all execution numbers by type
 func (r *MongoRepository) DeleteAllExecutionNumbers(ctx context.Context, executionType ExecutionType) (err error) {
 	isTestSuite := false
-	if executionType == "testsuite" {
+	if executionType == ExecutionTypeTestSuite {
 		isTestSuite = true
 	}
 
@@ -168,7 +168,7 @@ func getMongoId(name string, executionType ExecutionType) string {
 
 func getOldName(name string, executionType ExecutionType) string {
 	oldPrefix := ""
-	if executionType == "testsuite" {
+	if executionType == ExecutionTypeTestSuite {
 		oldPrefix = "ts-"
 	}
 
