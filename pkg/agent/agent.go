@@ -34,6 +34,7 @@ import (
 const (
 	timeout            = 10 * time.Second
 	apiKeyMeta         = "api-key"
+	runnerIdMeta       = "runner-id"
 	clusterIDMeta      = "cluster-id"
 	cloudMigrateMeta   = "migrate"
 	orgIdMeta          = "environment-id"
@@ -173,7 +174,6 @@ func NewAgent(logger *zap.SugaredLogger,
 	return &Agent{
 		handler:                                 handler,
 		logger:                                  logger.With("service", "Agent", "environmentId", proContext.EnvID),
-		apiKey:                                  proContext.APIKey,
 		client:                                  client,
 		events:                                  make(chan testkube.Event),
 		workerCount:                             proContext.WorkerCount,
@@ -212,8 +212,22 @@ func (ag *Agent) Run(ctx context.Context) error {
 	}
 }
 
+// updateContextWithMetadata adds metadata to the context
+func (ag *Agent) updateContextWithMetadata(ctx context.Context) context.Context {
+	ctx = AddAPIKeyMeta(ctx, ag.proContext.APIKey)
+	ctx = metadata.AppendToOutgoingContext(ctx, clusterIDMeta, ag.clusterID)
+	ctx = metadata.AppendToOutgoingContext(ctx, cloudMigrateMeta, ag.proContext.Migrate)
+	ctx = metadata.AppendToOutgoingContext(ctx, envIdMeta, ag.proContext.EnvID)
+	ctx = metadata.AppendToOutgoingContext(ctx, orgIdMeta, ag.proContext.OrgID)
+	ctx = metadata.AppendToOutgoingContext(ctx, runnerIdMeta, ag.proContext.RunnerId)
+
+	return ctx
+}
 func (ag *Agent) run(ctx context.Context) (err error) {
+	ctx = ag.updateContextWithMetadata(ctx)
+
 	g, groupCtx := errgroup.WithContext(ctx)
+
 	g.Go(func() error {
 		return ag.runCommandLoop(groupCtx)
 	})
@@ -308,13 +322,6 @@ func (ag *Agent) receiveCommand(ctx context.Context, stream cloud.TestKubeCloudA
 }
 
 func (ag *Agent) runCommandLoop(ctx context.Context) error {
-	ctx = AddAPIKeyMeta(ctx, ag.proContext.APIKey)
-
-	ctx = metadata.AppendToOutgoingContext(ctx, clusterIDMeta, ag.clusterID)
-	ctx = metadata.AppendToOutgoingContext(ctx, cloudMigrateMeta, ag.proContext.Migrate)
-	ctx = metadata.AppendToOutgoingContext(ctx, envIdMeta, ag.proContext.EnvID)
-	ctx = metadata.AppendToOutgoingContext(ctx, orgIdMeta, ag.proContext.OrgID)
-
 	ag.logger.Infow("initiating streaming connection with control plane")
 	// creates a new Stream from the client side. ctx is used for the lifetime of the stream.
 	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}

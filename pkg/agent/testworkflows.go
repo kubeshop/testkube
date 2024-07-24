@@ -29,8 +29,6 @@ func getTestWorkflowNotificationType(n testkube.TestWorkflowExecutionNotificatio
 }
 
 func (ag *Agent) runTestWorkflowNotificationsLoop(ctx context.Context) error {
-	ctx = AddAPIKeyMeta(ctx, ag.apiKey)
-
 	ag.logger.Infow("initiating workflow notifications streaming connection with Cloud API")
 	// creates a new Stream from the client side. ctx is used for the lifetime of the stream.
 	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
