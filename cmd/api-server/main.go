@@ -896,6 +896,7 @@ func newGRPCTransportCredentials(cfg *config.Config) (credentials.TransportCrede
 func newProContext(cfg *config.Config, grpcClient cloud.TestKubeCloudAPIClient) config.ProContext {
 	proContext := config.ProContext{
 		APIKey:                           cfg.TestkubeProAPIKey,
+		RunnerId:                         cfg.TestkubeProRunnerId,
 		URL:                              cfg.TestkubeProURL,
 		TLSInsecure:                      cfg.TestkubeProTLSInsecure,
 		WorkerCount:                      cfg.TestkubeProWorkerCount,

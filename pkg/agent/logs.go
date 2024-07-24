@@ -18,8 +18,6 @@ import (
 const logStreamRetryCount = 10
 
 func (ag *Agent) runLogStreamLoop(ctx context.Context) error {
-	ctx = AddAPIKeyMeta(ctx, ag.apiKey)
-
 	ag.logger.Infow("initiating log streaming connection with control plane")
 	// creates a new Stream from the client side. ctx is used for the lifetime of the stream.
 	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
