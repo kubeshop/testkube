@@ -163,7 +163,7 @@ func (r *MongoRepository) getOldNumber(ctx context.Context, name string) (int32,
 }
 
 func getMongoId(name string, executionType ExecutionType) string {
-	return fmt.Sprintf("%s-%s", name, executionType)
+	return fmt.Sprintf("%s-%s", executionType, name)
 }
 
 func getOldName(name string, executionType ExecutionType) string {
