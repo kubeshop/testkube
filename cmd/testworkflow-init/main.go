@@ -19,7 +19,6 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/orchestration"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
 	"github.com/kubeshop/testkube/pkg/expressions"
-	"github.com/kubeshop/testkube/pkg/expressions/libs"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 )
 
@@ -276,16 +275,12 @@ func main() {
 				}
 
 				// Verify if the retry condition is matching
-				wd, _ := os.Getwd()
-				if wd == "" {
-					wd = "/"
-				}
 				until := step.Retry.Until
 				if until == "" {
 					until = "passed"
 				}
-				machine := expressions.CombinedMachines(data.LocalMachine, data.RefSuccessMachine, data.AliasMachine, data.StateMachine, libs.NewFsMachine(os.DirFS("/"), wd))
-				expr, err := expressions.CompileAndResolve(until, machine, expressions.FinalizerFail)
+				machine := expressions.CombinedMachines(data.LocalMachine, data.GetInternalTestWorkflowMachine())
+				expr, err := expressions.CompileAndResolve(until, data.LocalMachine, machine, expressions.FinalizerFail)
 				if err != nil {
 					stdout.Printf("failed to execute retry condition: %s: %s\n", until, err.Error())
 					break

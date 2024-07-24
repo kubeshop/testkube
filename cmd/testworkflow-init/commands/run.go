@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"os"
 	"slices"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
@@ -9,7 +8,6 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/orchestration"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
 	"github.com/kubeshop/testkube/pkg/expressions"
-	"github.com/kubeshop/testkube/pkg/expressions/libs"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 )
 
@@ -17,6 +15,7 @@ func Run(run lite.ActionExecute, container lite.LiteActionContainer) {
 	stdout := output.Std
 	stdoutUnsafe := stdout.Direct()
 
+	machine := data.GetInternalTestWorkflowMachine()
 	state := data.GetState()
 	step := state.GetStep(run.Ref)
 
@@ -74,11 +73,6 @@ func Run(run lite.ActionExecute, container lite.LiteActionContainer) {
 	}
 
 	// Resolve the command to run
-	wd, _ := os.Getwd()
-	if wd == "" {
-		wd = "/"
-	}
-	machine := expressions.CombinedMachines(data.RefSuccessMachine, data.AliasMachine, data.StateMachine, libs.NewFsMachine(os.DirFS("/"), wd))
 	for i := range command {
 		value, err := expressions.CompileAndResolveTemplate(command[i], machine, expressions.FinalizerFail)
 		if err != nil {
