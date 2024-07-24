@@ -219,6 +219,11 @@ func (ag *Agent) updateContextWithMetadata(ctx context.Context) context.Context 
 	ctx = metadata.AppendToOutgoingContext(ctx, cloudMigrateMeta, ag.proContext.Migrate)
 	ctx = metadata.AppendToOutgoingContext(ctx, envIdMeta, ag.proContext.EnvID)
 	ctx = metadata.AppendToOutgoingContext(ctx, orgIdMeta, ag.proContext.OrgID)
+	runnerId := ag.proContext.RunnerId
+	// TODO for testing - we need to figure out how to set runnerId correctly
+	if runnerId == "" && ag.clusterID != "" {
+		runnerId = ag.clusterID
+	}
 	ctx = metadata.AppendToOutgoingContext(ctx, runnerIdMeta, ag.proContext.RunnerId)
 
 	return ctx
@@ -305,7 +310,7 @@ func (ag *Agent) receiveCommand(ctx context.Context, stream cloud.TestKubeCloudA
 		err := resp.err
 
 		if err != nil {
-			ag.logger.Errorf("agent stream receive: %v", err)
+			ag.logger.Errorf("received error from control plane: %v", err)
 			return nil, err
 		}
 	case <-ctx.Done():

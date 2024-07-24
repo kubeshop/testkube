@@ -173,7 +173,7 @@ func (ag *Agent) receiveTestWorkflowNotificationsRequest(ctx context.Context, st
 		err := resp.err
 
 		if err != nil {
-			ag.logger.Errorf("agent stream receive: %v", err)
+			ag.logger.Errorf("received error from control plane: %v", err)
 			return nil, err
 		}
 	case <-ctx.Done():
