@@ -597,7 +597,7 @@ func (r *MongoRepository) GetPreviousFinishedState(ctx context.Context, testSuit
 
 // GetNextExecutionNumber gets next execution number by name
 func (r *MongoRepository) GetNextExecutionNumber(ctx context.Context, name string) (number int32, err error) {
-	if r.sequenceRepository != nil {
+	if r.sequenceRepository == nil {
 		return 0, errors.New("no sequence repository provided")
 	}
 
