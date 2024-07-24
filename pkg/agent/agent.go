@@ -33,12 +33,12 @@ import (
 
 const (
 	timeout            = 10 * time.Second
-	apiKeyMeta         = "api-key"
-	runnerIdMeta       = "runner-id"
-	clusterIDMeta      = "cluster-id"
-	cloudMigrateMeta   = "migrate"
-	orgIdMeta          = "environment-id"
-	envIdMeta          = "organization-id"
+	headerApiKey       = "api-key"
+	headerRunnerId     = "runner-id"
+	headerClusterId    = "cluster-id"
+	headerMigrate      = "migrate"
+	headerOrgId        = "environment-id"
+	headerEnvID        = "organization-id"
 	healthcheckCommand = "healthcheck"
 )
 
@@ -215,18 +215,26 @@ func (ag *Agent) Run(ctx context.Context) error {
 // updateContextWithMetadata adds metadata to the context
 func (ag *Agent) updateContextWithMetadata(ctx context.Context) context.Context {
 	ctx = AddAPIKeyMeta(ctx, ag.proContext.APIKey)
-	ctx = metadata.AppendToOutgoingContext(ctx, clusterIDMeta, ag.clusterID)
-	ctx = metadata.AppendToOutgoingContext(ctx, cloudMigrateMeta, ag.proContext.Migrate)
-	ctx = metadata.AppendToOutgoingContext(ctx, envIdMeta, ag.proContext.EnvID)
-	ctx = metadata.AppendToOutgoingContext(ctx, orgIdMeta, ag.proContext.OrgID)
+	ctx = metadata.AppendToOutgoingContext(ctx, headerClusterId, ag.clusterID)
+	ctx = metadata.AppendToOutgoingContext(ctx, headerMigrate, ag.proContext.Migrate)
+	ctx = metadata.AppendToOutgoingContext(ctx, headerEnvID, ag.proContext.EnvID)
+	ctx = metadata.AppendToOutgoingContext(ctx, headerOrgId, ag.proContext.OrgID)
 	runnerId := ag.proContext.RunnerId
+
 	// TODO for testing - we need to figure out how to set runnerId correctly
 	if runnerId == "" && ag.clusterID != "" {
 		runnerId = ag.clusterID
 	}
-	ctx = metadata.AppendToOutgoingContext(ctx, runnerIdMeta, runnerId)
+	ctx = metadata.AppendToOutgoingContext(ctx, headerRunnerId, runnerId)
 
-	ag.logger.Infow("metadata added to context", "runner-id", runnerId, "cluster-id", ag.clusterID, "environment-id", ag.proContext.EnvID, "organization-id", ag.proContext.OrgID, "migrate", ag.proContext.Migrate)
+	ag.logger.Infow(
+		"metadata added to context",
+		headerRunnerId, runnerId,
+		headerClusterId, ag.clusterID,
+		headerEnvID, ag.proContext.EnvID,
+		headerOrgId, ag.proContext.OrgID,
+		headerMigrate, ag.proContext.Migrate,
+	)
 
 	return ctx
 }
@@ -444,7 +452,7 @@ func (ag *Agent) executeCommand(ctx context.Context, cmd *cloud.ExecuteRequest) 
 }
 
 func AddAPIKeyMeta(ctx context.Context, apiKey string) context.Context {
-	md := metadata.Pairs(apiKeyMeta, apiKey)
+	md := metadata.Pairs(headerApiKey, apiKey)
 	return metadata.NewOutgoingContext(ctx, md)
 }
 
