@@ -226,6 +226,8 @@ func (ag *Agent) updateContextWithMetadata(ctx context.Context) context.Context 
 	}
 	ctx = metadata.AppendToOutgoingContext(ctx, runnerIdMeta, runnerId)
 
+	ag.logger.Infow("metadata added to context", "runner-id", runnerId, "cluster-id", ag.clusterID, "environment-id", ag.proContext.EnvID, "organization-id", ag.proContext.OrgID, "migrate", ag.proContext.Migrate)
+
 	return ctx
 }
 func (ag *Agent) run(ctx context.Context) (err error) {
