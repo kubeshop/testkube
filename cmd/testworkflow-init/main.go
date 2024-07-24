@@ -232,6 +232,12 @@ func main() {
 				continue
 			}
 
+			// List all the parents
+			leaf := []*data.StepData{step}
+			for i := range step.Parents {
+				leaf = append(leaf, state.GetStep(step.Parents[i]))
+			}
+
 			// Compute the pause
 			paused := make([]string, 0)
 			if slices.Contains(delayedPauses, action.Execute.Ref) {
@@ -249,6 +255,38 @@ func main() {
 				_ = handlePause(*step.StartedAt, step)
 			}
 
+			// Configure timeout finalizer
+			finalizeTimeout := func() {
+				// Check timed out steps in leaf
+				timedOut := orchestration.GetTimedOut(leaf...)
+				if timedOut == nil {
+					return
+				}
+
+				// Iterate over timed out step
+				for _, r := range timedOut {
+					r.SetStatus(data.StepStatusTimeout)
+					sub := state.GetSubSteps(r.Ref)
+					for i := range sub {
+						if sub[i].IsFinished() {
+							continue
+						}
+						if sub[i].IsStarted() {
+							sub[i].SetStatus(data.StepStatusTimeout)
+						} else {
+							sub[i].SetStatus(data.StepStatusSkipped)
+						}
+					}
+					stdoutUnsafe.Println("Timed out.")
+				}
+				_ = orchestration.Executions.Kill()
+
+				return
+			}
+
+			// Handle immediate timeout
+			finalizeTimeout()
+
 			// Avoid execution if it's finished
 			if step.IsFinished() {
 				continue
@@ -265,8 +303,17 @@ func main() {
 					break
 				}
 
+				// Register timeouts
+				stopTimeoutWatcher := orchestration.WatchTimeout(finalizeTimeout, leaf...)
+
 				// Run the command
 				commands.Run(*action.Execute, currentContainer)
+
+				// Stop timer listener
+				stopTimeoutWatcher()
+
+				// Ensure there won't be any hanging processes after the command is executed
+				_ = orchestration.Executions.Kill()
 
 				// TODO: Handle retry policy in tree independently
 				// Verify if there may be any other iteration

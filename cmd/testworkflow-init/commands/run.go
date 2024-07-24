@@ -6,57 +6,14 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/orchestration"
-	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 )
 
 func Run(run lite.ActionExecute, container lite.LiteActionContainer) {
-	stdout := output.Std
-	stdoutUnsafe := stdout.Direct()
-
 	machine := data.GetInternalTestWorkflowMachine()
 	state := data.GetState()
 	step := state.GetStep(run.Ref)
-
-	// List all the parents
-	leaf := []*data.StepData{step}
-	for i := range step.Parents {
-		leaf = append(leaf, state.GetStep(step.Parents[i]))
-	}
-
-	// TODO: Consider moving timeout to main.go
-	// Create timeout finalizer
-	finalizeTimeout := func() {
-		// Check timed out steps in leaf
-		timedOut := orchestration.GetTimedOut(leaf...)
-		if timedOut == nil {
-			return
-		}
-
-		// Iterate over timed out step
-		for _, r := range timedOut {
-			r.SetStatus(data.StepStatusTimeout)
-			sub := state.GetSubSteps(r.Ref)
-			for i := range sub {
-				if sub[i].IsFinished() {
-					continue
-				}
-				if sub[i].IsStarted() {
-					sub[i].SetStatus(data.StepStatusTimeout)
-				} else {
-					sub[i].SetStatus(data.StepStatusSkipped)
-				}
-			}
-			stdoutUnsafe.Println("Timed out.")
-		}
-		_ = orchestration.Executions.Kill()
-
-		return
-	}
-
-	// Handle immediate timeout
-	finalizeTimeout()
 
 	// Abandon executing if the step was finished before
 	if step.IsFinished() {
@@ -80,15 +37,6 @@ func Run(run lite.ActionExecute, container lite.LiteActionContainer) {
 		}
 		command[i], _ = value.Static().StringValue()
 	}
-
-	// Register timeouts
-	stopTimeoutWatcher := orchestration.WatchTimeout(finalizeTimeout, leaf...)
-	defer stopTimeoutWatcher()
-
-	// Ensure there won't be any hanging processes after the command is executed
-	defer func() {
-		_ = orchestration.Executions.Kill()
-	}()
 
 	// Run the operation
 	execution := orchestration.Executions.Create(command[0], command[1:])
