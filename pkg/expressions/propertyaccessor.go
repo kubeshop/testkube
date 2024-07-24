@@ -33,6 +33,9 @@ func (s *propertyAccessor) Template() string {
 }
 
 func (s *propertyAccessor) SafeResolve(m ...Machine) (v Expression, changed bool, err error) {
+	if s.value == nil {
+		return nil, false, errors.New("no parent to access")
+	}
 	if s.value.Static() == nil {
 		s.value, changed, err = s.value.SafeResolve(m...)
 		if !changed || err != nil || s.value.Static() == nil {
