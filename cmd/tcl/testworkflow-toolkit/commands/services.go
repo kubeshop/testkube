@@ -32,7 +32,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/presets"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -277,19 +276,12 @@ func NewServicesCmd() *cobra.Command {
 					namespace = env.Namespace()
 				}
 
-				var instructions [][]actiontypes.Action
-				mainRef := ""
+				var instructions actiontypes.ActionGroups
 				err = json.Unmarshal([]byte(bundle.Job.Spec.Template.Annotations[constants.SpecAnnotationName]), &instructions)
 				if err != nil {
 					panic(fmt.Sprintf("invalid instructions: %v", err))
-				} else {
-					lastGroup := instructions[len(instructions)-1]
-					for i := range lastGroup {
-						if lastGroup[i].Type() == lite.ActionTypeStart {
-							mainRef = *lastGroup[i].Start
-						}
-					}
 				}
+				mainRef := instructions.GetLastRef()
 
 				// Deploy the resources
 				// TODO: Avoid using Job
