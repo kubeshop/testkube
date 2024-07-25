@@ -287,7 +287,25 @@ func optimize(actions []actiontypes.Action) ([]actiontypes.Action, error) {
 		}
 	}
 
-	// TODO: Avoid copying init process in case only Init Process image is used
+	// Avoid copying init process and common binaries, when it is not necessary
+	copyInit := false
+	copyBinaries := false
+	for i := range actions {
+		if actions[i].Type() == lite.ActionTypeContainerTransition {
+			if actions[i].Container.Config.Image != constants.DefaultInitImage {
+				copyInit = true
+				if actions[i].Container.Config.Image != constants.DefaultToolkitImage {
+					copyBinaries = true
+				}
+			}
+		}
+	}
+	for i := range actions {
+		if actions[i].Type() == lite.ActionTypeSetup {
+			actions[i].Setup.CopyInit = copyInit
+			actions[i].Setup.CopyBinaries = copyBinaries
+		}
+	}
 
 	// Get rid of skipped steps from initial statuses and results
 	skipMachine := expressions.NewMachine().
