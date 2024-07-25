@@ -21,7 +21,6 @@ type ActionExecute struct {
 	Negative bool   `json:"n,omitempty"`
 }
 
-// TODO: Consider for groups too?
 type ActionPause struct {
 	Ref string `json:"r"`
 }
@@ -31,7 +30,6 @@ type ActionTimeout struct {
 	Timeout string `json:"t"`
 }
 
-// TODO: RetryAction as a conditional GoTo back?
 type ActionRetry struct {
 	Ref   string `json:"r"`
 	Count int32  `json:"c,omitempty"`
