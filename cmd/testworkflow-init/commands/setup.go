@@ -8,7 +8,6 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
-	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 	"github.com/kubeshop/testkube/pkg/version"
 )
@@ -52,8 +51,8 @@ func Setup(config lite.ActionSetup) {
 		"namespace":          os.Getenv(constants.EnvNamespaceName),
 		"serviceAccountName": os.Getenv(constants.EnvServiceAccountName),
 		"agent":              version.Version,
-		"toolkit":            stripCommonImagePrefix(env.Config().Images.Toolkit, "testkube-tw-toolkit"),
-		"init":               stripCommonImagePrefix(env.Config().Images.Init, "testkube-tw-init"),
+		"toolkit":            stripCommonImagePrefix(os.Getenv("TESTKUBE_TW_TOOLKIT_IMAGE"), "testkube-tw-toolkit"),
+		"init":               stripCommonImagePrefix(os.Getenv("TESTKUBE_TW_INIT_IMAGE"), "testkube-tw-init"),
 	})
 }
 

@@ -1,10 +1,39 @@
 package actiontypes
 
 import (
+	"fmt"
+
+	corev1 "k8s.io/api/core/v1"
+
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 )
+
+func EnvName(group string, computed bool, sensitive bool, name string) string {
+	suffix := ""
+	if computed {
+		suffix = "C"
+	}
+	if sensitive {
+		suffix += "S"
+	}
+	return fmt.Sprintf("_%s%s_%s", group, suffix, name)
+}
+
+func EnvVar(group string, computed, sensitive bool, name, value string) corev1.EnvVar {
+	return corev1.EnvVar{
+		Name:  EnvName(group, computed, sensitive, name),
+		Value: value,
+	}
+}
+
+func EnvVarFrom(group string, computed, sensitive bool, name string, value corev1.EnvVarSource) corev1.EnvVar {
+	return corev1.EnvVar{
+		Name:      EnvName(group, computed, sensitive, name),
+		ValueFrom: &value,
+	}
+}
 
 type ActionList []Action
 
