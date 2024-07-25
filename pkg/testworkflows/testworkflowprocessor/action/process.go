@@ -84,8 +84,6 @@ func process(currentStatus string, parents []string, stage stage2.Stage, machine
 	// Handle group
 	if group, ok := stage.(stage2.GroupStage); ok {
 		// Build initial status for children
-		// TODO: Handle negative
-		// TODO: Consider enum value instead of boolean
 		if currentStatus == "true" {
 			currentStatus = stage.Ref()
 		} else {
