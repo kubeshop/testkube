@@ -147,13 +147,16 @@ func main() {
 	cfg.CleanLegacyVars()
 	exitOnError("error getting application config", err)
 
+	md := metadata.Pairs("api-key", cfg.TestkubeProAPIKey, "runner-id", cfg.TestkubeProRunnerId)
+	ctx := metadata.NewOutgoingContext(context.Background(), md)
+
 	features, err := featureflags.Get()
 	exitOnError("error getting application feature flags", err)
 
 	log.DefaultLogger.Infow("Feature flags configured", "ff", features)
 
 	// Run services within an errgroup to propagate errors between services.
-	g, ctx := errgroup.WithContext(context.Background())
+	g, ctx := errgroup.WithContext(ctx)
 
 	// Cancel the errgroup context on SIGINT and SIGTERM,
 	// which shuts everything down gracefully.
@@ -431,7 +434,7 @@ func main() {
 		exitOnError("Creating job templates", err)
 	}
 
-	proContext := newProContext(cfg, grpcClient)
+	proContext := newProContext(ctx, cfg, grpcClient)
 
 	// Check Pro/Enterprise subscription
 	var subscriptionChecker checktcl.SubscriptionChecker
@@ -895,7 +898,7 @@ func newGRPCTransportCredentials(cfg *config.Config) (credentials.TransportCrede
 	})
 }
 
-func newProContext(cfg *config.Config, grpcClient cloud.TestKubeCloudAPIClient) config.ProContext {
+func newProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.TestKubeCloudAPIClient) config.ProContext {
 	proContext := config.ProContext{
 		APIKey:                           cfg.TestkubeProAPIKey,
 		RunnerId:                         cfg.TestkubeProRunnerId,
@@ -916,22 +919,22 @@ func newProContext(cfg *config.Config, grpcClient cloud.TestKubeCloudAPIClient) 
 		return proContext
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	ctx, cancel := context.WithTimeout(ctx, time.Second*3)
 	md := metadata.Pairs("api-key", cfg.TestkubeProAPIKey, "runner-id", cfg.TestkubeProRunnerId)
 	ctx = metadata.NewOutgoingContext(ctx, md)
 	defer cancel()
-	getProContext, err := grpcClient.GetProContext(ctx, &emptypb.Empty{})
+	proContextResponse, err := grpcClient.GetProContext(ctx, &emptypb.Empty{})
 	if err != nil {
 		log.DefaultLogger.Warnf("cannot fetch pro-context from cloud: %s", err)
 		return proContext
 	}
 
 	if proContext.EnvID == "" {
-		proContext.EnvID = getProContext.EnvId
+		proContext.EnvID = proContextResponse.EnvId
 	}
 
 	if proContext.OrgID == "" {
-		proContext.OrgID = getProContext.OrgId
+		proContext.OrgID = proContextResponse.OrgId
 	}
 
 	return proContext
