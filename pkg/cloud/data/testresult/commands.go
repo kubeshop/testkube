@@ -18,4 +18,5 @@ const (
 	CmdTestResultDeleteAll                executor.Command = "test_result_delete_all"
 	CmdTestResultDeleteByTestSuites       executor.Command = "test_result_delete_by_test_suites"
 	CmdTestResultGetTestSuiteMetrics      executor.Command = "test_result_get_test_suite_metrics"
+	CmdTestResultGetNextExecutionNumber   executor.Command = "test_result_get_next_execution_number"
 )
