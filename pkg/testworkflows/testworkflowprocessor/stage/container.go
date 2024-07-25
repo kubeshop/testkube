@@ -96,7 +96,7 @@ func (c *container) Root() Container {
 	if c.parent == nil {
 		return c
 	}
-	return c.parent.Parent()
+	return c.parent.Root()
 }
 
 func (c *container) Parent() Container {
@@ -104,7 +104,7 @@ func (c *container) Parent() Container {
 }
 
 func (c *container) CreateChild() Container {
-	return &container{parent: c}
+	return &container{parent: c, toolkit: c.toolkit}
 }
 
 // Getters
@@ -345,6 +345,7 @@ func (c *container) ToContainerConfig() testworkflowsv1.ContainerConfig {
 }
 
 func (c *container) Detach() Container {
+	c.toolkit = c.IsToolkit()
 	c.Cr = c.ToContainerConfig()
 	c.parent = nil
 	return c
