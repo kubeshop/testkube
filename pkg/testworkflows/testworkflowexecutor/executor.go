@@ -326,11 +326,7 @@ func (e *executor) Control(ctx context.Context, testWorkflow *testworkflowsv1.Te
 	return nil
 }
 
-func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWorkflow, request testkube.TestWorkflowExecutionRequest) (
-
-	AppendToOutgoingContext()
-
-	execution testkube.TestWorkflowExecution, err error) {
+func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWorkflow, request testkube.TestWorkflowExecutionRequest) (execution testkube.TestWorkflowExecution, err error) {
 	// Delete unnecessary data
 	delete(workflow.Annotations, "kubectl.kubernetes.io/last-applied-configuration")
 
