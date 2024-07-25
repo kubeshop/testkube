@@ -8108,6 +8108,9 @@ components:
             - false
         tags:
           $ref: "#/components/schemas/TestWorkflowTagValue"
+        runnerID:
+          type: string
+          description: Runner id that executed the test workflow
       required:
         - id
         - name
@@ -8331,9 +8334,6 @@ components:
           type: object
           additionalProperties:
             $ref: "#/components/schemas/TestWorkflowStepResult"
-        runnerID:
-          type: string
-          description: Runner id that executed the test workflow
       required:
         - status
         - predictedStatus
