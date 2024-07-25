@@ -42,21 +42,12 @@ func (o HelmOptions) GetApiURI() string {
 	return o.Master.URIs.Api
 }
 
-func GetCurrentKubernetesContext() (string, error) {
-	kubectl, err := exec.LookPath("kubectl")
-	if err != nil {
-		return "", err
+func HelmUpgradeOrInstallTestkubeCloud(options HelmOptions, cfg config.Data, isMigration bool) *CLIError {
+	helmPath, cliErr := lookupHelmPath()
+	if cliErr != nil {
+		return cliErr
 	}
 
-	out, err := process.Execute(kubectl, "config", "current-context")
-	if err != nil {
-		return "", err
-	}
-
-	return strings.TrimSpace(string(out)), nil
-}
-
-func HelmUpgradeOrInstallTestkubeCloud(options HelmOptions, cfg config.Data, isMigration bool) error {
 	// disable mongo and minio for cloud
 	options.NoMinio = true
 	options.NoMongo = true
@@ -67,34 +58,105 @@ func HelmUpgradeOrInstallTestkubeCloud(options HelmOptions, cfg config.Data, isM
 	}
 
 	if options.Master.AgentToken == "" {
-		return fmt.Errorf("agent key and agent uri are required, please pass it with `--agent-token` and `--agent-uri` flags")
+		return NewCLIError(
+			TKErrInvalidInstallConfig,
+			"Invalid install config",
+			"Provide the agent token by setting the '--agent-token' flag",
+			errors.New("agent key is required"))
 	}
 
-	helmPath, err := exec.LookPath("helm")
+	if cliErr := updateHelmRepo(helmPath, options.DryRun); cliErr != nil {
+		return cliErr
+	}
+
+	args := prepareTestkubeProHelmArgs(options, isMigration)
+	output, err := runHelmCommand(helmPath, args, options.DryRun)
 	if err != nil {
 		return err
 	}
 
-	// repo update
-	args := []string{"repo", "add", "kubeshop", "https://kubeshop.github.io/helm-charts"}
-	_, err = process.ExecuteWithOptions(process.Options{Command: helmPath, Args: args, DryRun: options.DryRun})
+	ui.Debug("Helm command output:")
+	ui.Debug(helmPath, args...)
+
+	ui.Debug("Helm install testkube output", output)
+
+	return nil
+}
+
+func HelmUpgradeOrInstallTestkube(options HelmOptions) *CLIError {
+	helmPath, err := lookupHelmPath()
+	if err != nil {
+		return err
+	}
+
+	ui.Info("Helm installing testkube framework")
+	if err = updateHelmRepo(helmPath, options.DryRun); err != nil {
+		return err
+	}
+
+	args := prepareTestkubeHelmArgs(options)
+	output, err := runHelmCommand(helmPath, args, options.DryRun)
+	if err != nil {
+		return NewCLIError(TKErrHelmCommandFailed, "Helm command failed: install or upgrade", "", err)
+	}
+
+	ui.Debug("Helm install testkube output", output)
+	return nil
+}
+
+func lookupHelmPath() (string, *CLIError) {
+	helmPath, err := exec.LookPath("helm")
+	if err != nil {
+		return "", NewCLIError(
+			TKErrMissingDependencyHelm,
+			"Required dependency not found: helm",
+			"Install Helm by following this guide: https://helm.sh/docs/intro/install/",
+			err,
+		)
+	}
+	return helmPath, nil
+}
+
+func updateHelmRepo(helmPath string, dryRun bool) *CLIError {
+	helmRepoURL := "https://kubeshop.github.io/helm-charts"
+	_, err := runHelmCommand(helmPath, []string{"repo", "add", "kubeshop", helmRepoURL}, dryRun)
 	if err != nil && !strings.Contains(err.Error(), "Error: repository name (kubeshop) already exists, please specify a different name") {
-		ui.WarnOnError("adding testkube repo", err)
+		return err
 	}
 
-	_, err = process.ExecuteWithOptions(process.Options{Command: helmPath, Args: []string{"repo", "update"}, DryRun: options.DryRun})
-	ui.ExitOnError("updating helm repositories", err)
-
-	// upgrade cloud
-	args = []string{
-		"upgrade", "--install", "--create-namespace",
-		"--namespace", options.Namespace,
-		"--set", "testkube-api.cloud.url=" + options.Master.URIs.Agent,
-		"--set", "testkube-api.cloud.key=" + options.Master.AgentToken,
-		"--set", "testkube-api.cloud.uiURL=" + options.Master.URIs.Ui,
-		"--set", "testkube-logs.pro.url=" + options.Master.URIs.Logs,
-		"--set", "testkube-logs.pro.key=" + options.Master.AgentToken,
+	_, err = runHelmCommand(helmPath, []string{"repo", "update"}, dryRun)
+	if err != nil {
+		return err
 	}
+
+	return nil
+}
+
+func runHelmCommand(helmPath string, args []string, dryRun bool) (commandOutput string, cliErr *CLIError) {
+	output, err := process.ExecuteWithOptions(process.Options{Command: helmPath, Args: args, DryRun: dryRun})
+	if err != nil {
+		return "", NewCLIError(
+			TKErrHelmCommandFailed,
+			"Helm command failed",
+			"Retry the command with a bigger timeout by setting --timeout 30m, if the error still persists, reach out to Testkube support",
+			err,
+		)
+	}
+	return string(output), nil
+}
+
+// prepareTestkubeProHelmArgs prepares Helm arguments for Testkube Pro installation.
+func prepareTestkubeProHelmArgs(options HelmOptions, isMigration bool) []string {
+	args := prepareCommonHelmArgs(options)
+
+	args = append(args,
+		"--set", "testkube-api.cloud.url="+options.Master.URIs.Agent,
+		"--set", "testkube-api.cloud.key="+options.Master.AgentToken,
+		"--set", "testkube-api.cloud.uiURL="+options.Master.URIs.Ui,
+		"--set", "testkube-logs.pro.url="+options.Master.URIs.Logs,
+		"--set", "testkube-logs.pro.key="+options.Master.AgentToken,
+	)
+
 	if isMigration {
 		args = append(args, "--set", "testkube-api.cloud.migrate=true")
 	}
@@ -103,20 +165,44 @@ func HelmUpgradeOrInstallTestkubeCloud(options HelmOptions, cfg config.Data, isM
 		args = append(args, "--set", fmt.Sprintf("testkube-api.cloud.envId=%s", options.Master.EnvId))
 		args = append(args, "--set", fmt.Sprintf("testkube-logs.pro.envId=%s", options.Master.EnvId))
 	}
+
 	if options.Master.OrgId != "" {
 		args = append(args, "--set", fmt.Sprintf("testkube-api.cloud.orgId=%s", options.Master.OrgId))
 		args = append(args, "--set", fmt.Sprintf("testkube-logs.pro.orgId=%s", options.Master.OrgId))
 	}
 
-	args = append(args, "--set", fmt.Sprintf("global.features.logsV2=%v", options.Master.Features.LogsV2))
+	return args
+}
 
-	args = append(args, "--set", fmt.Sprintf("testkube-api.multinamespace.enabled=%t", options.MultiNamespace))
-	args = append(args, "--set", fmt.Sprintf("testkube-operator.enabled=%t", !options.NoOperator))
-	args = append(args, "--set", fmt.Sprintf("mongodb.enabled=%t", !options.NoMongo))
-	args = append(args, "--set", fmt.Sprintf("testkube-api.minio.enabled=%t", !options.NoMinio))
+// prepareTestkubeHelmArgs prepares Helm arguments for Testkube OS installation.
+func prepareTestkubeHelmArgs(options HelmOptions) []string {
+	args := prepareCommonHelmArgs(options)
 
-	args = append(args, "--set", fmt.Sprintf("testkube-api.minio.replicas=%d", options.MinioReplicas))
-	args = append(args, "--set", fmt.Sprintf("mongodb.replicas=%d", options.MongoReplicas))
+	if options.NoMinio {
+		args = append(args, "--set", "testkube-api.logs.storage=mongo")
+	} else {
+		args = append(args, "--set", "testkube-api.logs.storage=minio")
+	}
+
+	return args
+}
+
+// prepareCommonHelmArgs prepares common Helm arguments for both OS and Pro installation.
+func prepareCommonHelmArgs(options HelmOptions) []string {
+	args := []string{
+		"upgrade", "--install", "--create-namespace",
+		"--namespace", options.Namespace,
+		"--set", fmt.Sprintf("global.features.logsV2=%v", options.Master.Features.LogsV2),
+		"--set", fmt.Sprintf("testkube-api.multinamespace.enabled=%t", options.MultiNamespace),
+		"--set", fmt.Sprintf("testkube-api.minio.enabled=%t", !options.NoMinio),
+		"--set", fmt.Sprintf("testkube-api.minio.replicas=%d", options.MinioReplicas), "--set", fmt.Sprintf("testkube-operator.enabled=%t", !options.NoOperator),
+		"--set", fmt.Sprintf("mongodb.enabled=%t", !options.NoMongo),
+		"--set", fmt.Sprintf("mongodb.replicas=%d", options.MongoReplicas),
+	}
+
+	if options.Values != "" {
+		args = append(args, "--values", options.Values)
+	}
 
 	// if embedded nats is enabled disable nats chart
 	if options.EmbeddedNATS {
@@ -125,66 +211,7 @@ func HelmUpgradeOrInstallTestkubeCloud(options HelmOptions, cfg config.Data, isM
 	}
 
 	args = append(args, options.Name, options.Chart)
-
-	if options.Values != "" {
-		args = append(args, "--values", options.Values)
-	}
-
-	out, err := process.ExecuteWithOptions(process.Options{Command: helmPath, Args: args, DryRun: options.DryRun})
-	if err != nil {
-		return err
-	}
-
-	ui.Debug("Helm command output:")
-	ui.Debug(helmPath, args...)
-
-	ui.Debug("Helm install testkube output", string(out))
-
-	return nil
-}
-
-func HelmUpgradeOrInstalTestkube(options HelmOptions) error {
-	helmPath, err := exec.LookPath("helm")
-	if err != nil {
-		return err
-	}
-
-	ui.Info("Helm installing testkube framework")
-	args := []string{"repo", "add", "kubeshop", "https://kubeshop.github.io/helm-charts"}
-	_, err = process.ExecuteWithOptions(process.Options{Command: helmPath, Args: args, DryRun: options.DryRun})
-	if err != nil && !strings.Contains(err.Error(), "Error: repository name (kubeshop) already exists, please specify a different name") {
-		ui.WarnOnError("adding testkube repo", err)
-	}
-
-	_, err = process.ExecuteWithOptions(process.Options{Command: helmPath, Args: []string{"repo", "update"}, DryRun: options.DryRun})
-	ui.ExitOnError("updating helm repositories", err)
-
-	args = []string{"upgrade", "--install", "--create-namespace", "--namespace", options.Namespace}
-	args = append(args, "--set", fmt.Sprintf("testkube-api.multinamespace.enabled=%t", options.MultiNamespace))
-	args = append(args, "--set", fmt.Sprintf("testkube-operator.enabled=%t", !options.NoOperator))
-	args = append(args, "--set", fmt.Sprintf("mongodb.enabled=%t", !options.NoMongo))
-	args = append(args, "--set", fmt.Sprintf("testkube-api.minio.enabled=%t", !options.NoMinio))
-	if options.NoMinio {
-		args = append(args, "--set", "testkube-api.logs.storage=mongo")
-	} else {
-		args = append(args, "--set", "testkube-api.logs.storage=minio")
-	}
-
-	args = append(args, "--set", fmt.Sprintf("global.features.logsV2=%v", options.Master.Features.LogsV2))
-
-	args = append(args, options.Name, options.Chart)
-
-	if options.Values != "" {
-		args = append(args, "--values", options.Values)
-	}
-
-	out, err := process.ExecuteWithOptions(process.Options{Command: helmPath, Args: args, DryRun: options.DryRun})
-	if err != nil {
-		return err
-	}
-
-	ui.Debug("Helm install testkube output", string(out))
-	return nil
+	return args
 }
 
 func PopulateHelmFlags(cmd *cobra.Command, options *HelmOptions) {
@@ -283,6 +310,7 @@ func IsUserLoggedIn(cfg config.Data, options HelmOptions) bool {
 	}
 	return false
 }
+
 func UpdateTokens(cfg config.Data, token, refreshToken string) error {
 	var updated bool
 	if token != cfg.CloudContext.ApiKey {
@@ -299,21 +327,6 @@ func UpdateTokens(cfg config.Data, token, refreshToken string) error {
 	}
 
 	return nil
-}
-
-func KubectlScaleDeployment(namespace, deployment string, replicas int) (string, error) {
-	kubectl, err := exec.LookPath("kubectl")
-	if err != nil {
-		return "", err
-	}
-
-	// kubectl patch --namespace=$n deployment $1 -p "{\"spec\":{\"replicas\": $2}}"
-	out, err := process.Execute(kubectl, "patch", "--namespace", namespace, "deployment", deployment, "-p", fmt.Sprintf("{\"spec\":{\"replicas\": %d}}", replicas))
-	if err != nil {
-		return "", err
-	}
-
-	return strings.TrimSpace(string(out)), nil
 }
 
 func RunAgentMigrations(cmd *cobra.Command) (hasMigrations bool, err error) {
@@ -438,8 +451,37 @@ func uiGetToken(tokenChan chan cloudlogin.Tokens) (string, string, error) {
 	return token.IDToken, token.RefreshToken, nil
 }
 
+func GetCurrentKubernetesContext() (string, *CLIError) {
+	kubectlPath, cliErr := lookupKubectlPath()
+	if cliErr != nil {
+		return "", cliErr
+	}
+
+	output, err := runKubectlCommand(kubectlPath, []string{"config", "current-context"})
+	if err != nil {
+		return "", err
+	}
+
+	return strings.TrimSpace(output), nil
+}
+
+func KubectlScaleDeployment(namespace, deployment string, replicas int) (string, error) {
+	kubectl, cliErr := lookupKubectlPath()
+	if cliErr != nil {
+		return "", cliErr
+	}
+
+	// kubectl patch --namespace=$n deployment $1 -p "{\"spec\":{\"replicas\": $2}}"
+	out, err := process.Execute(kubectl, "patch", "--namespace", namespace, "deployment", deployment, "-p", fmt.Sprintf("{\"spec\":{\"replicas\": %d}}", replicas))
+	if err != nil {
+		return "", err
+	}
+
+	return strings.TrimSpace(string(out)), nil
+}
+
 func KubectlLogs(namespace string, labels map[string]string) error {
-	kubectl, err := exec.LookPath("kubectl")
+	kubectl, err := lookupKubectlPath()
 	if err != nil {
 		return err
 	}
@@ -464,9 +506,9 @@ func KubectlLogs(namespace string, labels map[string]string) error {
 }
 
 func KubectlPrintEvents(namespace string) error {
-	kubectl, err := exec.LookPath("kubectl")
-	if err != nil {
-		return err
+	kubectl, cliErr := lookupKubectlPath()
+	if cliErr != nil {
+		return cliErr
 	}
 
 	args := []string{
@@ -478,7 +520,7 @@ func KubectlPrintEvents(namespace string) error {
 	ui.ShellCommand(kubectl, args...)
 	ui.NL()
 
-	err = process.ExecuteAndStreamOutput(kubectl, args...)
+	err := process.ExecuteAndStreamOutput(kubectl, args...)
 	if err != nil {
 		return err
 	}
@@ -496,7 +538,7 @@ func KubectlPrintEvents(namespace string) error {
 }
 
 func KubectlDescribePods(namespace string) error {
-	kubectl, err := exec.LookPath("kubectl")
+	kubectl, err := lookupKubectlPath()
 	if err != nil {
 		return err
 	}
@@ -514,7 +556,7 @@ func KubectlDescribePods(namespace string) error {
 }
 
 func KubectlPrintPods(namespace string) error {
-	kubectl, err := exec.LookPath("kubectl")
+	kubectl, err := lookupKubectlPath()
 	if err != nil {
 		return err
 	}
@@ -533,7 +575,7 @@ func KubectlPrintPods(namespace string) error {
 }
 
 func KubectlGetStorageClass(namespace string) error {
-	kubectl, err := exec.LookPath("kubectl")
+	kubectl, err := lookupKubectlPath()
 	if err != nil {
 		return err
 	}
@@ -550,7 +592,7 @@ func KubectlGetStorageClass(namespace string) error {
 }
 
 func KubectlGetServices(namespace string) error {
-	kubectl, err := exec.LookPath("kubectl")
+	kubectl, err := lookupKubectlPath()
 	if err != nil {
 		return err
 	}
@@ -568,7 +610,7 @@ func KubectlGetServices(namespace string) error {
 }
 
 func KubectlDescribeServices(namespace string) error {
-	kubectl, err := exec.LookPath("kubectl")
+	kubectl, err := lookupKubectlPath()
 	if err != nil {
 		return err
 	}
@@ -587,7 +629,7 @@ func KubectlDescribeServices(namespace string) error {
 }
 
 func KubectlGetIngresses(namespace string) error {
-	kubectl, err := exec.LookPath("kubectl")
+	kubectl, err := lookupKubectlPath()
 	if err != nil {
 		return err
 	}
@@ -605,7 +647,7 @@ func KubectlGetIngresses(namespace string) error {
 }
 
 func KubectlDescribeIngresses(namespace string) error {
-	kubectl, err := exec.LookPath("kubectl")
+	kubectl, err := lookupKubectlPath()
 	if err != nil {
 		return err
 	}
@@ -621,6 +663,32 @@ func KubectlDescribeIngresses(namespace string) error {
 	ui.NL()
 
 	return process.ExecuteAndStreamOutput(kubectl, args...)
+}
+
+func lookupKubectlPath() (string, *CLIError) {
+	kubectlPath, err := exec.LookPath("kubectl")
+	if err != nil {
+		return "", NewCLIError(
+			TKErrMissingDependencyKubectl,
+			"Required dependency not found: kubectl",
+			"Install kubectl by following this guide: https://kubernetes.io/docs/tasks/tools/#kubectl",
+			err,
+		)
+	}
+	return kubectlPath, nil
+}
+
+func runKubectlCommand(kubectlPath string, args []string) (output string, cliErr *CLIError) {
+	out, err := process.Execute(kubectlPath, args...)
+	if err != nil {
+		return "", NewCLIError(
+			TKErrKubectlCommandFailed,
+			"Kubectl command failed",
+			"Check does the kubeconfig file (~/.kube/config) exist and has correct permissions and is the Kubernetes cluster reachable and has Ready nodes by running 'kubectl get nodes' ",
+			err,
+		)
+	}
+	return string(out), nil
 }
 
 func UiGetNamespace(cmd *cobra.Command, defaultNamespace string) string {
