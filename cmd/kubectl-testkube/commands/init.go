@@ -85,8 +85,7 @@ func NewInitCmdStandalone() *cobra.Command {
 
 			common.ProcessMasterFlags(cmd, &options, nil)
 
-			err := common.HelmUpgradeOrInstalTestkube(options)
-			ui.ExitOnError("Cannot install Testkube", err)
+			common.HandleCLIError(common.HelmUpgradeOrInstallTestkube(options))
 
 			ui.Info(`To help improve the quality of Testkube, we collect anonymous basic telemetry data. Head out to https://docs.testkube.io/articles/telemetry to read our policy or feel free to:`)
 
@@ -136,10 +135,10 @@ func NewInitCmdDemo() *cobra.Command {
 
 			sendTelemetry(cmd, cfg, license, "installation launched")
 
-			kubecontext, err := common.GetCurrentKubernetesContext()
-			if err != nil {
-				ui.Failf("kubeconfig not found")
+			kubecontext, cliErr := common.GetCurrentKubernetesContext()
+			if cliErr != nil {
 				sendErrTelemetry(cmd, cfg, "install_kubeconfig_not_found", license, "kubeconfig not found", err)
+				common.HandleCLIError(cliErr)
 			}
 			sendTelemetry(cmd, cfg, license, "kubeconfig found")
 
@@ -249,7 +248,8 @@ func isContextApproved(isNoConfirm bool, installedComponent string) bool {
 		ui.NL()
 
 		currentContext, err := common.GetCurrentKubernetesContext()
-		ui.ExitOnError("getting current context", err)
+		common.HandleCLIError(err)
+
 		ui.Alert("Current kubectl context:", currentContext)
 		ui.NL()
 
