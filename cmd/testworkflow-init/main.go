@@ -21,7 +21,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 )
 
-// TODO: Use output.Std (or output.Std.Direct()) for all panic(), Failf, Print, Printf and Println
 func main() {
 	// Force colors
 	color.ForceColor()
@@ -39,7 +38,7 @@ func main() {
 		err := os.WriteFile(data.StatePath, nil, 0777)
 		if err != nil {
 			stdoutUnsafe.Error(" error\n")
-			data.Failf(data.CodeInternal, "failed to create state file: %s", err.Error())
+			output.ExitErrorf(data.CodeInternal, "failed to create state file: %s", err.Error())
 		}
 		os.Chmod(data.StatePath, 0777)
 		stdoutUnsafe.Print(" done\n")
@@ -47,7 +46,7 @@ func main() {
 		stdout.Hint(data.InitStepName, constants.InstructionStart)
 		stdoutUnsafe.Print("Accessing state...")
 		stdoutUnsafe.Error(" error\n")
-		data.Failf(data.CodeInternal, "cannot access state file: %s", err.Error())
+		output.ExitErrorf(data.CodeInternal, "cannot access state file: %s", err.Error())
 	}
 
 	// Store the instructions in the state if they are provided
@@ -68,13 +67,13 @@ func main() {
 
 	// Ensure there is a group index provided
 	if len(os.Args) != 2 {
-		data.Failf(data.CodeInternal, "invalid arguments provided - expected only one")
+		output.ExitErrorf(data.CodeInternal, "invalid arguments provided - expected only one")
 	}
 
 	// Determine group index to run
 	groupIndex, err := strconv.ParseInt(os.Args[1], 10, 32)
 	if err != nil {
-		data.Failf(data.CodeInputError, "invalid run group passed: %s", err.Error())
+		output.ExitErrorf(data.CodeInputError, "invalid run group passed: %s", err.Error())
 	}
 
 	// Handle aborting
@@ -96,7 +95,7 @@ func main() {
 		}
 		err = orchestration.Executions.Pause()
 		if err != nil {
-			stdoutUnsafe.Warnf("warning: pause: %s\n", err.Error())
+			stdoutUnsafe.Warnf("warn: pause: %s\n", err.Error())
 		}
 		orchestration.Pause(step, *step.StartedAt)
 		for _, parentRef := range step.Parents {
@@ -111,7 +110,7 @@ func main() {
 		}
 		err = orchestration.Executions.Resume()
 		if err != nil {
-			stdoutUnsafe.Warnf("warning: resume: %s\n", err.Error())
+			stdoutUnsafe.Warnf("warn: resume: %s\n", err.Error())
 		}
 		orchestration.Resume(step, ts)
 		for _, parentRef := range step.Parents {
@@ -130,7 +129,7 @@ func main() {
 	})
 	_, err = controlSrv.Listen()
 	if err != nil {
-		data.Failf(data.CodeInternal, "Failed to start control server at port %d: %s\n", constants.ControlServerPort, err.Error())
+		output.ExitErrorf(data.CodeInternal, "Failed to start control server at port %d: %s\n", constants.ControlServerPort, err.Error())
 	}
 
 	// Keep a list of paused steps for execution
@@ -179,7 +178,7 @@ func main() {
 			// Determine if the step should be skipped
 			executable, err := step.ResolveCondition()
 			if err != nil {
-				data.Failf(data.CodeInternal, "failed to determine condition of '%s' step: %s: %v", *action.Start, step.Condition, err.Error())
+				output.ExitErrorf(data.CodeInternal, "failed to determine condition of '%s' step: %s: %v", *action.Start, step.Condition, err.Error())
 			}
 			if !executable {
 				step.SetStatus(data.StepStatusSkipped)
@@ -198,7 +197,7 @@ func main() {
 			if step.Status == nil {
 				status, err := step.ResolveResult()
 				if err != nil {
-					data.Failf(data.CodeInternal, "failed to determine result of '%s' step: %s: %v", *action.End, step.Result, err.Error())
+					output.ExitErrorf(data.CodeInternal, "failed to determine result of '%s' step: %s: %v", *action.End, step.Result, err.Error())
 				}
 				step.SetStatus(status)
 			}

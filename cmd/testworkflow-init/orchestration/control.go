@@ -2,12 +2,12 @@ package orchestration
 
 import (
 	"encoding/json"
-	"fmt"
 	"time"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
 )
 
 func Start(step *data.StepData) {
@@ -35,7 +35,7 @@ func FinishExecution(step *data.StepData, result constants.ExecutionResult) {
 func End(step *data.StepData) {
 	if !step.IsFinished() {
 		v, e := json.Marshal(step)
-		panic(fmt.Sprintf("cannot mark unfinished step as finished: %s, %v", string(v), e))
+		output.ExitErrorf(data.CodeInternal, "cannot mark unfinished step as finished: %s, %v", string(v), e)
 	}
 	instructions.PrintHintDetails(step.Ref, constants.InstructionEnd, *step.Status)
 }

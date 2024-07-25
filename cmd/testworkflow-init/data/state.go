@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 )
@@ -48,7 +49,7 @@ func (s *state) SetOutput(ref, name string, value interface{}) {
 	if err == nil {
 		s.Output[name] = string(v)
 	} else {
-		fmt.Printf("Warning: couldn't save '%s' (%s) output: %s\n", name, ref, err.Error())
+		output.Std.Warnf("warn: couldn't save '%s' (%s) output: %s\n", name, ref, err.Error())
 	}
 }
 
@@ -157,7 +158,7 @@ func persistTerminationLog() {
 	// Write the termination log
 	err := os.WriteFile(TerminationLogPath, []byte(strings.Join(statuses, "/")), 0)
 	if err != nil {
-		Failf(CodeInternal, "failed to save the termination log: %s", err.Error())
+		output.UnsafeExitErrorf(CodeInternal, "failed to save the termination log: %s", err.Error())
 	}
 }
 

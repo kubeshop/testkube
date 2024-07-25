@@ -1,10 +1,10 @@
 package data
 
 import (
-	"fmt"
 	"os"
 	"strings"
 
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
 	"github.com/kubeshop/testkube/pkg/expressions"
 )
 
@@ -56,7 +56,7 @@ var StateMachine = expressions.NewMachine().
 			currentStatus := GetState().CurrentStatus
 			expr, err := expressions.EvalExpression(currentStatus, RefStatusMachine, AliasMachine)
 			if err != nil {
-				panic(fmt.Sprintf("current status is invalid: %s: %v", currentStatus, err.Error()))
+				output.ExitErrorf(CodeInternal, "current status is invalid: %s: %v\n", currentStatus, err.Error())
 			}
 			if passed, _ := expr.BoolValue(); passed {
 				return string(StepStatusPassed), true

@@ -10,6 +10,7 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/expressions/libs"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
@@ -173,7 +174,7 @@ func (c *setup) UseEnv(group string) {
 	for name, expr := range envTemplates {
 		value, err := expressions.CompileAndResolveTemplate(expr, localEnvMachine, addonMachine, expressions.FinalizerFail)
 		if err != nil {
-			panic(fmt.Sprintf("failed to compute '%s' environment variable: %s", name, err.Error()))
+			output.ExitErrorf(data.CodeInputError, "failed to compute '%s' environment variable: %s", name, err.Error())
 		}
 		str, _ := value.Static().StringValue()
 		_ = os.Setenv(name, str)
@@ -203,7 +204,7 @@ func (c *setup) SetWorkingDir(workingDir string) {
 		err = os.Chdir(workingDir)
 	}
 	if err != nil {
-		fmt.Printf("warning: error using %s as working directory: %s\n", workingDir, err.Error())
+		output.Std.Direct().Warnf("warn: error using %s as working directory: %s\n", workingDir, err.Error())
 	}
 }
 

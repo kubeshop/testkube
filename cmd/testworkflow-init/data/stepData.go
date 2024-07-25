@@ -2,10 +2,11 @@ package data
 
 import (
 	"errors"
-	"fmt"
 	"slices"
 	"sync"
 	"time"
+
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
 )
 
 type RetryPolicy struct {
@@ -98,7 +99,7 @@ func (s *StepData) SetTimeout(timeout string) *StepData {
 	}
 	duration, err := time.ParseDuration(timeout)
 	if err != nil {
-		panic(fmt.Sprintf("invalid timeout duration: %s: %s", timeout, err.Error()))
+		output.ExitErrorf(CodeInputError, "invalid timeout duration: %s: %s", timeout, err.Error())
 	}
 	s.Timeout = &duration
 	return s

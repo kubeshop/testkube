@@ -6,6 +6,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/orchestration"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 )
@@ -33,7 +34,7 @@ func Run(run lite.ActionExecute, container lite.LiteActionContainer) {
 	for i := range command {
 		value, err := expressions.CompileAndResolveTemplate(command[i], machine, expressions.FinalizerFail)
 		if err != nil {
-			data.Failf(data.CodeInternal, "failed to compute argument '%d': %s", i, err.Error())
+			output.ExitErrorf(data.CodeInternal, "failed to compute argument '%d': %s", i, err.Error())
 		}
 		command[i], _ = value.Static().StringValue()
 	}
@@ -42,7 +43,7 @@ func Run(run lite.ActionExecute, container lite.LiteActionContainer) {
 	execution := orchestration.Executions.Create(command[0], command[1:])
 	result, err := execution.Run()
 	if err != nil {
-		data.Failf(data.CodeInternal, "failed to execute: %v", err)
+		output.ExitErrorf(data.CodeInternal, "failed to execute: %v", err)
 	}
 
 	// Initialize local state

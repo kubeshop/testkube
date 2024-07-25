@@ -1,7 +1,6 @@
 package orchestration
 
 import (
-	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -75,7 +74,7 @@ func (e *executionGroup) Pause() (err error) {
 		return errors.Wrap(err, "failed to pause: failed to list processes")
 	}
 	if err != nil {
-		fmt.Printf("warning: failed to pause: failed to list some processes: %v\n", err.Error())
+		output.Std.Direct().Warnf("warn: failed to pause: failed to list some processes: %v\n", err)
 	}
 
 	// Ignore the init process, to not suspend it accidentally
@@ -102,7 +101,7 @@ func (e *executionGroup) Resume() (err error) {
 		return errors.Wrap(err, "failed to resume: failed to list processes")
 	}
 	if err != nil {
-		fmt.Printf("warning: failed to resume: failed to list some processes: %v\n", err.Error())
+		output.Std.Direct().Warnf("warn: failed to resume: failed to list some processes: %v\n", err)
 	}
 
 	// Ignore the init process, to not suspend it accidentally
@@ -122,7 +121,7 @@ func (e *executionGroup) Kill() (err error) {
 		return errors.Wrap(err, "failed to kill: failed to list processes")
 	}
 	if err != nil {
-		fmt.Printf("warning: failed to kill: failed to list some processes: %v\n", err.Error())
+		output.Std.Direct().Warnf("warn: failed to kill: failed to list some processes: %v\n", err.Error())
 	}
 
 	// Ignore the init process, to not suspend it accidentally
@@ -203,6 +202,5 @@ func getProcessStatus(err error) (bool, uint8) {
 		}
 		return false, 1
 	}
-	fmt.Println(err.Error())
 	return false, 1
 }

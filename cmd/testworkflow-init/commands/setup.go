@@ -23,7 +23,7 @@ func Setup(config lite.ActionSetup) {
 		err := exec.Command("cp", "/init", data.InitPath).Run()
 		if err != nil {
 			stdoutUnsafe.Error(" error")
-			data.Failf(data.CodeInternal, "failed to copy the /init process: %s", err.Error())
+			output.ExitErrorf(data.CodeInternal, "failed to copy the /init process: %s", err.Error())
 		}
 		stdoutUnsafe.Print(" done\n")
 	} else {
@@ -38,7 +38,7 @@ func Setup(config lite.ActionSetup) {
 		err := exec.Command("cp", "-rf", "/bin", data.InternalBinPath).Run()
 		if err != nil {
 			stdoutUnsafe.Error(" error\n")
-			data.Failf(data.CodeInternal, "failed to copy the /init process: %s", err.Error())
+			output.ExitErrorf(data.CodeInternal, "failed to copy the /init process: %s", err.Error())
 		}
 		stdoutUnsafe.Print(" done\n")
 	} else {

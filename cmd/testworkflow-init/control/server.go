@@ -52,7 +52,7 @@ func (s *server) handler() *http.ServeMux {
 			return
 		}
 		if err := s.step.Pause(time.Now()); err != nil {
-			stdoutUnsafe.Printf("Warning: failed to pause: %s\n", err.Error())
+			stdoutUnsafe.Warnf("warn: failed to pause: %s\n", err.Error())
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -64,7 +64,7 @@ func (s *server) handler() *http.ServeMux {
 			return
 		}
 		if err := s.step.Resume(time.Now()); err != nil {
-			stdoutUnsafe.Printf("Warning: failed to resume: %s\n", err.Error())
+			stdoutUnsafe.Warnf("warn: failed to resume: %s\n", err.Error())
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
