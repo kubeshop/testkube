@@ -8,9 +8,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestSensitiveReadWriter_Full(t *testing.T) {
+func TestObfuscator_Full(t *testing.T) {
 	buf := &bytes.Buffer{}
-	passthrough := newSensitiveReadWriter(buf, "*****", []string{
+	passthrough := newObfuscator(buf, "*****", []string{
 		"sensitive",
 		"scope",
 		"testKube",
@@ -24,9 +24,9 @@ func TestSensitiveReadWriter_Full(t *testing.T) {
 	assert.Equal(t, "there is some ***** content in ***** of testkube", string(result))
 }
 
-func TestSensitiveReadWriter_End(t *testing.T) {
+func TestObfuscator_End(t *testing.T) {
 	buf := &bytes.Buffer{}
-	passthrough := newSensitiveReadWriter(buf, "*****", []string{
+	passthrough := newObfuscator(buf, "*****", []string{
 		"sensitive",
 		"scope",
 		"testKube",
@@ -40,9 +40,9 @@ func TestSensitiveReadWriter_End(t *testing.T) {
 	assert.Equal(t, "there is some *****", string(result))
 }
 
-func TestSensitiveReadWriter_Partial(t *testing.T) {
+func TestObfuscator_Partial(t *testing.T) {
 	buf := &bytes.Buffer{}
-	passthrough := newSensitiveReadWriter(buf, "*****", []string{
+	passthrough := newObfuscator(buf, "*****", []string{
 		"sensitive",
 		"scope",
 	})
@@ -56,9 +56,9 @@ func TestSensitiveReadWriter_Partial(t *testing.T) {
 	assert.Equal(t, "there is some ***** content in ***** of testkube", string(result))
 }
 
-func TestSensitiveReadWriter_FlushLowerHit(t *testing.T) {
+func TestObfuscator_FlushLowerHit(t *testing.T) {
 	buf := &bytes.Buffer{}
-	passthrough := newSensitiveReadWriter(buf, "*****", []string{
+	passthrough := newObfuscator(buf, "*****", []string{
 		"sensitive",
 		"sens",
 	})
@@ -72,9 +72,9 @@ func TestSensitiveReadWriter_FlushLowerHit(t *testing.T) {
 	assert.Equal(t, "*****itiv", string(result))
 }
 
-func TestSensitiveReadWriter_FlushNoHit(t *testing.T) {
+func TestObfuscator_FlushNoHit(t *testing.T) {
 	buf := &bytes.Buffer{}
-	passthrough := newSensitiveReadWriter(buf, "*****", []string{
+	passthrough := newObfuscator(buf, "*****", []string{
 		"sensitive",
 	})
 
@@ -87,9 +87,9 @@ func TestSensitiveReadWriter_FlushNoHit(t *testing.T) {
 	assert.Equal(t, "sensitiv", string(result))
 }
 
-func TestSensitiveReadWriter_FlushDoubleHit(t *testing.T) {
+func TestObfuscator_FlushDoubleHit(t *testing.T) {
 	buf := &bytes.Buffer{}
-	passthrough := newSensitiveReadWriter(buf, "*****", []string{
+	passthrough := newObfuscator(buf, "*****", []string{
 		"sensitive",
 		"sens",
 		"tiv",
@@ -104,9 +104,9 @@ func TestSensitiveReadWriter_FlushDoubleHit(t *testing.T) {
 	assert.Equal(t, "*****i*****", string(result))
 }
 
-func TestSensitiveReadWriter_Order(t *testing.T) {
+func TestObfuscator_Order(t *testing.T) {
 	buf := &bytes.Buffer{}
-	passthrough := newSensitiveReadWriter(buf, "*****", []string{
+	passthrough := newObfuscator(buf, "*****", []string{
 		"sensitive",
 		"sens",
 	})
@@ -119,9 +119,9 @@ func TestSensitiveReadWriter_Order(t *testing.T) {
 	assert.Equal(t, "there is some ***** content in scope of testkube", string(result))
 }
 
-func TestSensitiveReadWriter_Multiple(t *testing.T) {
+func TestObfuscator_Multiple(t *testing.T) {
 	buf := &bytes.Buffer{}
-	passthrough := newSensitiveReadWriter(buf, "*****", []string{
+	passthrough := newObfuscator(buf, "*****", []string{
 		"hello world",
 		"hello",
 		"blah",

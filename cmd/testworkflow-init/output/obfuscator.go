@@ -6,7 +6,7 @@ import (
 	"unsafe"
 )
 
-type sensitiveReadWriter struct {
+type obfuscator struct {
 	dst         io.Writer
 	replacement []byte
 
@@ -19,14 +19,14 @@ type sensitiveReadWriter struct {
 	writeMu sync.Mutex
 }
 
-func newSensitiveReadWriter(dst io.Writer, replacement string, words []string) *sensitiveReadWriter {
+func newObfuscator(dst io.Writer, replacement string, words []string) *obfuscator {
 	// Build radix-tree for checking the words
 	rootNode := NewSearchTree()
 	for _, word := range words {
 		rootNode.Append(unsafe.Slice(unsafe.StringData(word), len(word)))
 	}
 
-	return &sensitiveReadWriter{
+	return &obfuscator{
 		dst:         dst,
 		replacement: []byte(replacement),
 		rootNode:    rootNode,
@@ -35,11 +35,11 @@ func newSensitiveReadWriter(dst io.Writer, replacement string, words []string) *
 	}
 }
 
-func (s *sensitiveReadWriter) SetSensitiveReplacement(replacement string) {
+func (s *obfuscator) SetSensitiveReplacement(replacement string) {
 	s.replacement = []byte(replacement)
 }
 
-func (s *sensitiveReadWriter) SetSensitiveWords(words []string) {
+func (s *obfuscator) SetSensitiveWords(words []string) {
 	rootNode := NewSearchTree()
 	for _, word := range words {
 		rootNode.Append(unsafe.Slice(unsafe.StringData(word), len(word)))
@@ -51,14 +51,14 @@ func (s *sensitiveReadWriter) SetSensitiveWords(words []string) {
 	s.currentNode = s.rootNode
 }
 
-func (s *sensitiveReadWriter) resetBuffer() {
+func (s *obfuscator) resetBuffer() {
 	s.currentBuffer = nil
 	s.currentPosition = 0
 	s.currentEnd = -1
 	s.currentNode = s.rootNode
 }
 
-func (s *sensitiveReadWriter) Write(p []byte) (n int, err error) {
+func (s *obfuscator) Write(p []byte) (n int, err error) {
 	s.writeMu.Lock()
 	defer s.writeMu.Unlock()
 
@@ -138,7 +138,7 @@ func (s *sensitiveReadWriter) Write(p []byte) (n int, err error) {
 	return n, nil
 }
 
-func (s *sensitiveReadWriter) Flush() error {
+func (s *obfuscator) Flush() error {
 	for s.currentBuffer != nil {
 		// Flush all if there is no smaller sensitive chunk
 		if s.currentEnd == -1 {
