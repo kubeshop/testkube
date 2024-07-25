@@ -28,7 +28,6 @@ func process(currentStatus string, parents []string, stage stage2.Stage, machine
 	})
 
 	// Configure the container for action
-	// TODO: Handle the ContainerDefaults properly
 	var containerConfig stage2.Container
 	if group, ok := stage.(stage2.GroupStage); ok {
 		containerConfig = group.ContainerDefaults()
