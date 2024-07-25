@@ -125,7 +125,7 @@ func TestProcessBasic(t *testing.T) {
 	wantActions := actiontypes.NewActionGroups().
 		Append(func(list actiontypes.ActionList) actiontypes.ActionList {
 			return list.
-				Setup(true, true).
+				Setup(false, false).
 				Declare(constants.RootOperationName, "true").
 				Declare(sig[0].Ref(), "true", constants.RootOperationName).
 				Result(constants.RootOperationName, sig[0].Ref()).
@@ -385,7 +385,7 @@ func TestProcessBasicEnvReference(t *testing.T) {
 	wantActions := lite.NewLiteActionGroups().
 		Append(func(list lite.LiteActionList) lite.LiteActionList {
 			return list.
-				Setup(true, true).
+				Setup(false, false).
 				Declare(constants.RootOperationName, "true").
 				Declare(sig[0].Ref(), "true", constants.RootOperationName).
 				Result(constants.RootOperationName, sig[0].Ref()).
@@ -458,7 +458,7 @@ func TestProcessBasicEnvReference(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Equal(t, wantPod, res.Job.Spec.Template.Spec)
-	assert.Equal(t, wantActions, res.Actions())
+	assert.Equal(t, wantActions, res.LiteActions())
 }
 
 func TestProcessMultipleSteps(t *testing.T) {
@@ -480,7 +480,7 @@ func TestProcessMultipleSteps(t *testing.T) {
 	wantActions := lite.NewLiteActionGroups().
 		Append(func(list lite.LiteActionList) lite.LiteActionList {
 			return list.
-				Setup(true, true).
+				Setup(false, false).
 				Declare(constants.RootOperationName, "true").
 				Declare(sig[0].Ref(), "true", constants.RootOperationName).
 				Declare(sig[1].Ref(), sig[0].Ref(), constants.RootOperationName).
@@ -573,7 +573,7 @@ func TestProcessMultipleSteps(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Equal(t, want, res.Job.Spec.Template.Spec)
-	assert.Equal(t, wantActions, res.Actions())
+	assert.Equal(t, wantActions, res.LiteActions())
 }
 
 func TestProcessNestedSteps(t *testing.T) {
@@ -602,7 +602,7 @@ func TestProcessNestedSteps(t *testing.T) {
 	wantActions := lite.NewLiteActionGroups().
 		Append(func(list lite.LiteActionList) lite.LiteActionList {
 			return list.
-				Setup(true, true).
+				Setup(false, false).
 				Declare(constants.RootOperationName, "true").
 				Declare(sig[0].Ref(), "true", constants.RootOperationName).
 				Declare(sig[1].Ref(), sig[0].Ref(), constants.RootOperationName).
@@ -749,7 +749,7 @@ func TestProcessNestedSteps(t *testing.T) {
 	}
 
 	assert.NoError(t, err)
-	assert.Equal(t, wantActions, res.Actions())
+	assert.Equal(t, wantActions, res.LiteActions())
 	assert.Equal(t, want, res.Job.Spec.Template.Spec)
 }
 
@@ -971,7 +971,7 @@ func TestProcessShell(t *testing.T) {
 	want := lite.NewLiteActionGroups().
 		Append(func(list lite.LiteActionList) lite.LiteActionList {
 			return list.
-				Setup(true, true).
+				Setup(false, false).
 				Declare(constants.RootOperationName, "true").
 				Declare(sig[0].Ref(), "true", constants.RootOperationName).
 				Result(constants.RootOperationName, sig[0].Ref()).
@@ -995,5 +995,5 @@ func TestProcessShell(t *testing.T) {
 		})
 
 	assert.NoError(t, err)
-	assert.Equal(t, want, res.Actions())
+	assert.Equal(t, want, res.LiteActions())
 }

@@ -511,7 +511,7 @@ func TestProcess_IgnoreExecutionOfStaticSkipGroup(t *testing.T) {
 	// Build the expectations
 	want := actiontypes.NewActionList().
 		// Configure
-		Setup(true, true).
+		Setup(false, false). // don't copy as there is nothing to do
 
 		// Declare stage conditions
 		Declare("init", "false").
@@ -557,7 +557,7 @@ func TestProcess_IgnoreExecutionOfStaticSkipGroup_Pause(t *testing.T) {
 	// Build the expectations
 	want := actiontypes.NewActionList().
 		// Configure
-		Setup(true, true).
+		Setup(false, false). // don't copy as there is nothing to do
 
 		// Declare stage conditions
 		Declare("init", "false").

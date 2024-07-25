@@ -11,6 +11,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
@@ -22,10 +23,14 @@ type Bundle struct {
 	Signature  []stage.Signature
 }
 
-func (b *Bundle) Actions() actiontypes.ActionGroups {
-	var actions actiontypes.ActionGroups
+func (b *Bundle) Actions() (actions actiontypes.ActionGroups) {
 	_ = json.Unmarshal([]byte(b.Job.Spec.Template.Annotations[constants.SpecAnnotationName]), &actions)
-	return actions
+	return
+}
+
+func (b *Bundle) LiteActions() (actions lite.LiteActionGroups) {
+	_ = json.Unmarshal([]byte(b.Job.Spec.Template.Annotations[constants.SpecAnnotationName]), &actions)
+	return
 }
 
 func (b *Bundle) Deploy(ctx context.Context, clientSet kubernetes.Interface, namespace string) (err error) {
