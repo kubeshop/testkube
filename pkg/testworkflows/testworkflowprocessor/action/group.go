@@ -50,7 +50,7 @@ func Group(actions []actiontypes.Action) (groups [][]actiontypes.Action) {
 			startIndex = containerIndex
 		}
 
-		//// FIXME: Delete, it's a hack to combine steps with same image into a single container
+		//// TODO: Combine multiple operations in a single container if it's possible
 		//if i != len(executeIndexes)-1 {
 		//	prevRef := actions[executeIndex].Execute.Ref
 		//	prevContainerIndex, prevOk := containerInstructions[prevRef]
