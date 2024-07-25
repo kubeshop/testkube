@@ -255,8 +255,12 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 				// Mark all not started steps as skipped
 				for ref := range s.result.Steps {
 					if !s.IsFinished(ref) {
+						status := testkube.SKIPPED_TestWorkflowStepStatus
+						if s.result.Steps[ref].Status != nil && *s.result.Steps[ref].Status == testkube.ABORTED_TestWorkflowStepStatus {
+							status = testkube.ABORTED_TestWorkflowStepStatus
+						}
 						s.FinishStep(ref, ContainerResultStep{
-							Status:     testkube.SKIPPED_TestWorkflowStepStatus,
+							Status:     status,
 							ExitCode:   -1,
 							Details:    "The execution was aborted before.",
 							FinishedAt: lastTs,
