@@ -13,5 +13,6 @@ type ProContext struct {
 	Migrate                          string
 	ConnectionTimeout                int
 	DashboardURI                     string
+	ClusterId                        string
 	RunnerId                         string
 }

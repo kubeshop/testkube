@@ -435,6 +435,7 @@ func main() {
 	}
 
 	proContext := newProContext(ctx, cfg, grpcClient)
+	proContext.ClusterId = clusterId
 
 	// Check Pro/Enterprise subscription
 	var subscriptionChecker checktcl.SubscriptionChecker
