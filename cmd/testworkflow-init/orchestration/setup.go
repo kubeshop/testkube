@@ -25,6 +25,9 @@ var (
 		"TK_OS_ACCESSKEY", // Object Storage Access Key
 		"TK_OS_SECRETKEY", // Object Storage Secret Key
 		"TK_OS_TOKEN",     // Object Storage Token
+		"TK_GIT_USERNAME", // Git Username
+		"TK_GIT_TOKEN",    // Git Token
+		"TK_SSH_KEY",      // Git SSH Key
 	}
 )
 
