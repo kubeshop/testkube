@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 
@@ -50,21 +49,6 @@ var (
 	ErrOpenSourceParallelOperationIsNotAvailable = errors.New(`"parallel" ` + OpenSourceOperationErrorMessage)
 	ErrOpenSourceServicesOperationIsNotAvailable = errors.New(`"services" ` + OpenSourceOperationErrorMessage)
 )
-
-func stripCommonImagePrefix(image, common string) string {
-	if !strings.HasPrefix(image, "docker.io/") {
-		return image
-	}
-	image = image[10:]
-	if !strings.HasPrefix(image, "kubeshop/") {
-		return image
-	}
-	image = image[9:]
-	if !strings.HasPrefix(image, common+":") {
-		return image
-	}
-	return image[len(common)+1:]
-}
 
 func getInitImage() string {
 	img := os.Getenv("TESTKUBE_TW_INIT_IMAGE")

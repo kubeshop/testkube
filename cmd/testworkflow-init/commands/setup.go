@@ -3,10 +3,12 @@ package commands
 import (
 	"os"
 	"os/exec"
+	"strings"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 	"github.com/kubeshop/testkube/pkg/version"
 )
@@ -50,8 +52,22 @@ func Setup(config lite.ActionSetup) {
 		"namespace":          os.Getenv(constants.EnvNamespaceName),
 		"serviceAccountName": os.Getenv(constants.EnvServiceAccountName),
 		"agent":              version.Version,
-		// TODO: Recover that
-		//"toolkit": stripCommonImagePrefix(getToolkitImage(), "testkube-tw-toolkit"),
-		//"init": stripCommonImagePrefix(getInitImage(), "testkube-tw-init"),
+		"toolkit":            stripCommonImagePrefix(env.Config().Images.Toolkit, "testkube-tw-toolkit"),
+		"init":               stripCommonImagePrefix(env.Config().Images.Init, "testkube-tw-init"),
 	})
+}
+
+func stripCommonImagePrefix(image, common string) string {
+	if !strings.HasPrefix(image, "docker.io/") {
+		return image
+	}
+	image = image[10:]
+	if !strings.HasPrefix(image, "kubeshop/") {
+		return image
+	}
+	image = image[9:]
+	if !strings.HasPrefix(image, common+":") {
+		return image
+	}
+	return image[len(common)+1:]
 }
