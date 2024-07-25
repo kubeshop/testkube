@@ -20,19 +20,6 @@ type server struct {
 	target Pauseable
 }
 
-type ControlServerOptions struct {
-	HandlePause  func(ts time.Time) error
-	HandleResume func(ts time.Time) error
-}
-
-func (p ControlServerOptions) Pause(ts time.Time) error {
-	return p.HandlePause(ts)
-}
-
-func (p ControlServerOptions) Resume(ts time.Time) error {
-	return p.HandleResume(ts)
-}
-
 func NewServer(port int, target Pauseable) *server {
 	return &server{
 		port:   port,

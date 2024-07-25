@@ -119,7 +119,7 @@ func main() {
 		}
 		return err
 	}
-	controlSrv := control.NewServer(constants.ControlServerPort, control.ControlServerOptions{
+	controlSrv := control.NewServer(constants.ControlServerPort, control.ServerOptions{
 		HandlePause: func(ts time.Time) error {
 			return handlePause(ts, state.GetStep(state.CurrentRef))
 		},
