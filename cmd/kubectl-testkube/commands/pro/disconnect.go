@@ -47,12 +47,10 @@ func NewDisconnectCmd() *cobra.Command {
 				apiContext = actx
 			}
 			var clusterContext string
+			var cliErr *common.CLIError
 			if cfg.ContextType == config.ContextTypeKubeconfig {
-				clusterContext, err = common.GetCurrentKubernetesContext()
-				if err != nil {
-					pterm.Error.Printfln("Failed to get current Kubernetes context: %s", err.Error())
-					return
-				}
+				clusterContext, cliErr = common.GetCurrentKubernetesContext()
+				common.HandleCLIError(cliErr)
 			}
 
 			// TODO: implement context info
@@ -80,8 +78,11 @@ func NewDisconnectCmd() *cobra.Command {
 
 			spinner := ui.NewSpinner("Disconnecting from Testkube Pro")
 
-			err = common.HelmUpgradeOrInstalTestkube(opts)
-			ui.ExitOnError("Installing Testkube Pro", err)
+			if cliErr := common.HelmUpgradeOrInstallTestkube(opts); cliErr != nil {
+				spinner.Fail()
+				common.HandleCLIError(cliErr)
+			}
+
 			spinner.Success()
 
 			// let's scale down deployment of mongo

@@ -1,6 +1,8 @@
 package commands
 
 import (
+	"os"
+
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
@@ -35,7 +37,9 @@ func NewUpgradeCmd() *cobra.Command {
 				ui.Warn("Please be sure you're on valid kubectl context before continuing!")
 				ui.NL()
 
-				currentContext, err := common.GetCurrentKubernetesContext()
+				currentContext, cliErr := common.GetCurrentKubernetesContext()
+				common.HandleCLIError(cliErr)
+
 				ui.ExitOnError("getting current context", err)
 				ui.Alert("Current kubectl context:", currentContext)
 				ui.NL()
@@ -70,8 +74,10 @@ func NewUpgradeCmd() *cobra.Command {
 					ui.Success("All agent migrations executed successfully")
 				}
 
-				err = common.HelmUpgradeOrInstalTestkube(options)
-				ui.ExitOnError("Upgrading Testkube", err)
+				if cliErr := common.HelmUpgradeOrInstallTestkube(options); cliErr != nil {
+					cliErr.Print()
+					os.Exit(1)
+				}
 			}
 
 		},
