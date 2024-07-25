@@ -122,7 +122,7 @@ func TestProcessBasic(t *testing.T) {
 	volumes := res.Job.Spec.Template.Spec.Volumes
 	volumeMounts := res.Job.Spec.Template.Spec.InitContainers[0].VolumeMounts
 
-	wantInstructions := actiontypes.NewActionGroups().
+	wantActions := actiontypes.NewActionGroups().
 		Append(func(list actiontypes.ActionList) actiontypes.ActionList {
 			return list.
 				Setup(true, true).
@@ -169,7 +169,7 @@ func TestProcessBasic(t *testing.T) {
 						constants.RootResourceIdLabelName: "dummy-id",
 					},
 					Annotations: map[string]string{
-						constants.SpecAnnotationName: getSpec(wantInstructions),
+						constants.SpecAnnotationName: getSpec(wantActions),
 					},
 				},
 				Spec: corev1.PodSpec{
@@ -249,7 +249,7 @@ func TestProcessShellWithNonStandardImage(t *testing.T) {
 	volumes := res.Job.Spec.Template.Spec.Volumes
 	volumeMounts := res.Job.Spec.Template.Spec.InitContainers[0].VolumeMounts
 
-	wantInstructions := actiontypes.NewActionGroups().
+	wantActions := actiontypes.NewActionGroups().
 		Append(func(list actiontypes.ActionList) actiontypes.ActionList {
 			return list.
 				Setup(true, true).
@@ -296,7 +296,7 @@ func TestProcessShellWithNonStandardImage(t *testing.T) {
 						constants.RootResourceIdLabelName: "dummy-id",
 					},
 					Annotations: map[string]string{
-						constants.SpecAnnotationName: getSpec(wantInstructions),
+						constants.SpecAnnotationName: getSpec(wantActions),
 					},
 				},
 				Spec: corev1.PodSpec{
@@ -382,7 +382,7 @@ func TestProcessBasicEnvReference(t *testing.T) {
 	volumes := res.Job.Spec.Template.Spec.Volumes
 	volumeMounts := res.Job.Spec.Template.Spec.InitContainers[0].VolumeMounts
 
-	wantInstructions := lite.NewLiteActionGroups().
+	wantActions := lite.NewLiteActionGroups().
 		Append(func(list lite.LiteActionList) lite.LiteActionList {
 			return list.
 				Setup(true, true).
@@ -456,14 +456,9 @@ func TestProcessBasicEnvReference(t *testing.T) {
 		},
 	}
 
-	var gotInstructions lite.LiteActionGroups
-	actionsErr := json.Unmarshal([]byte(res.Job.Spec.Template.Annotations[constants.SpecAnnotationName]), &gotInstructions)
-
-	assert.NoError(t, actionsErr)
-	assert.Equal(t, wantInstructions, gotInstructions)
-
 	assert.NoError(t, err)
 	assert.Equal(t, wantPod, res.Job.Spec.Template.Spec)
+	assert.Equal(t, wantActions, res.Actions())
 }
 
 func TestProcessMultipleSteps(t *testing.T) {
@@ -482,7 +477,7 @@ func TestProcessMultipleSteps(t *testing.T) {
 	volumes := res.Job.Spec.Template.Spec.Volumes
 	volumeMounts := res.Job.Spec.Template.Spec.InitContainers[0].VolumeMounts
 
-	wantInstructions := lite.NewLiteActionGroups().
+	wantActions := lite.NewLiteActionGroups().
 		Append(func(list lite.LiteActionList) lite.LiteActionList {
 			return list.
 				Setup(true, true).
@@ -576,14 +571,9 @@ func TestProcessMultipleSteps(t *testing.T) {
 		},
 	}
 
-	var gotInstructions lite.LiteActionGroups
-	actionsErr := json.Unmarshal([]byte(res.Job.Spec.Template.Annotations[constants.SpecAnnotationName]), &gotInstructions)
-
-	assert.NoError(t, actionsErr)
-	assert.Equal(t, wantInstructions, gotInstructions)
-
 	assert.NoError(t, err)
 	assert.Equal(t, want, res.Job.Spec.Template.Spec)
+	assert.Equal(t, wantActions, res.Actions())
 }
 
 func TestProcessNestedSteps(t *testing.T) {
@@ -609,7 +599,7 @@ func TestProcessNestedSteps(t *testing.T) {
 	volumes := res.Job.Spec.Template.Spec.Volumes
 	volumeMounts := res.Job.Spec.Template.Spec.InitContainers[0].VolumeMounts
 
-	wantInstructions := lite.NewLiteActionGroups().
+	wantActions := lite.NewLiteActionGroups().
 		Append(func(list lite.LiteActionList) lite.LiteActionList {
 			return list.
 				Setup(true, true).
@@ -758,13 +748,8 @@ func TestProcessNestedSteps(t *testing.T) {
 		},
 	}
 
-	var gotInstructions lite.LiteActionGroups
-	actionsErr := json.Unmarshal([]byte(res.Job.Spec.Template.Annotations[constants.SpecAnnotationName]), &gotInstructions)
-
-	assert.NoError(t, actionsErr)
-	assert.Equal(t, wantInstructions, gotInstructions)
-
 	assert.NoError(t, err)
+	assert.Equal(t, wantActions, res.Actions())
 	assert.Equal(t, want, res.Job.Spec.Template.Spec)
 }
 
@@ -1009,10 +994,6 @@ func TestProcessShell(t *testing.T) {
 				End("")
 		})
 
-	var actions lite.LiteActionGroups
-	actionsErr := json.Unmarshal([]byte(res.Job.Spec.Template.Annotations[constants.SpecAnnotationName]), &actions)
-
 	assert.NoError(t, err)
-	assert.NoError(t, actionsErr)
-	assert.Equal(t, want, actions)
+	assert.Equal(t, want, res.Actions())
 }
