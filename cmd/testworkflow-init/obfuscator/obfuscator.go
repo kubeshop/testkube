@@ -1,4 +1,4 @@
-package output
+package obfuscator
 
 import (
 	"io"
@@ -7,8 +7,8 @@ import (
 )
 
 type obfuscator struct {
-	dst         io.Writer
-	replacement []byte
+	dst      io.Writer
+	replacer func([]byte) []byte
 
 	rootNode        *SearchTree
 	currentNode     *SearchTree
@@ -19,7 +19,7 @@ type obfuscator struct {
 	writeMu sync.Mutex
 }
 
-func newObfuscator(dst io.Writer, replacement string, words []string) *obfuscator {
+func New(dst io.Writer, replacer func([]byte) []byte, words []string) *obfuscator {
 	// Build radix-tree for checking the words
 	rootNode := NewSearchTree()
 	for _, word := range words {
@@ -28,15 +28,15 @@ func newObfuscator(dst io.Writer, replacement string, words []string) *obfuscato
 
 	return &obfuscator{
 		dst:         dst,
-		replacement: []byte(replacement),
+		replacer:    replacer,
 		rootNode:    rootNode,
 		currentNode: rootNode,
 		currentEnd:  -1,
 	}
 }
 
-func (s *obfuscator) SetSensitiveReplacement(replacement string) {
-	s.replacement = []byte(replacement)
+func (s *obfuscator) SetSensitiveReplacer(replacer func([]byte) []byte) {
+	s.replacer = replacer
 }
 
 func (s *obfuscator) SetSensitiveWords(words []string) {
@@ -118,8 +118,9 @@ func (s *obfuscator) Write(p []byte) (n int, err error) {
 		}
 
 		// Flush the acknowledged sensitive data
-		nn, err = s.dst.Write(s.replacement)
-		nn += currentEnd - len(s.replacement)
+		replacement := s.replacer(p[:currentEnd])
+		nn, err = s.dst.Write(replacement)
+		nn += currentEnd - len(replacement)
 		n += nn
 		p = p[currentEnd:]
 		currentEnd = -1
@@ -153,7 +154,7 @@ func (s *obfuscator) Flush() error {
 		}
 
 		// Flush the next sensitive part
-		_, err := s.dst.Write(s.replacement)
+		_, err := s.dst.Write(s.replacer(s.currentBuffer[:s.currentEnd]))
 		if err != nil {
 			return err
 		}

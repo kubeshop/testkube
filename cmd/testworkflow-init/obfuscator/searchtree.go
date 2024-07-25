@@ -1,4 +1,4 @@
-package output
+package obfuscator
 
 type SearchTree struct {
 	tree map[byte]*SearchTree

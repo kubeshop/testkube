@@ -15,6 +15,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/control"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/obfuscator"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/orchestration"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
 	"github.com/kubeshop/testkube/pkg/expressions"
@@ -30,7 +31,7 @@ func main() {
 	stdoutUnsafe := stdout.Direct()
 
 	// Configure sensitive data obfuscation
-	stdout.SetSensitiveReplacement(color.FgGray.Render("*m̷a̷s̷k̷e̷d̷*"))
+	stdout.SetSensitiveReplacer(obfuscator.ShowLastCharacters("****", 2))
 	orchestration.Setup.SetSensitiveWordMinimumLength(4)
 
 	// Prepare empty state file if it doesn't exist

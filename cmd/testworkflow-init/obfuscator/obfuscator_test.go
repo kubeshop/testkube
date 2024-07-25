@@ -1,4 +1,4 @@
-package output
+package obfuscator
 
 import (
 	"bytes"
@@ -10,7 +10,7 @@ import (
 
 func TestObfuscator_Full(t *testing.T) {
 	buf := &bytes.Buffer{}
-	passthrough := newObfuscator(buf, "*****", []string{
+	passthrough := New(buf, FullReplace("*****"), []string{
 		"sensitive",
 		"scope",
 		"testKube",
@@ -26,7 +26,7 @@ func TestObfuscator_Full(t *testing.T) {
 
 func TestObfuscator_End(t *testing.T) {
 	buf := &bytes.Buffer{}
-	passthrough := newObfuscator(buf, "*****", []string{
+	passthrough := New(buf, FullReplace("*****"), []string{
 		"sensitive",
 		"scope",
 		"testKube",
@@ -42,7 +42,7 @@ func TestObfuscator_End(t *testing.T) {
 
 func TestObfuscator_Partial(t *testing.T) {
 	buf := &bytes.Buffer{}
-	passthrough := newObfuscator(buf, "*****", []string{
+	passthrough := New(buf, FullReplace("*****"), []string{
 		"sensitive",
 		"scope",
 	})
@@ -58,7 +58,7 @@ func TestObfuscator_Partial(t *testing.T) {
 
 func TestObfuscator_FlushLowerHit(t *testing.T) {
 	buf := &bytes.Buffer{}
-	passthrough := newObfuscator(buf, "*****", []string{
+	passthrough := New(buf, FullReplace("*****"), []string{
 		"sensitive",
 		"sens",
 	})
@@ -74,7 +74,7 @@ func TestObfuscator_FlushLowerHit(t *testing.T) {
 
 func TestObfuscator_FlushNoHit(t *testing.T) {
 	buf := &bytes.Buffer{}
-	passthrough := newObfuscator(buf, "*****", []string{
+	passthrough := New(buf, FullReplace("*****"), []string{
 		"sensitive",
 	})
 
@@ -89,7 +89,7 @@ func TestObfuscator_FlushNoHit(t *testing.T) {
 
 func TestObfuscator_FlushDoubleHit(t *testing.T) {
 	buf := &bytes.Buffer{}
-	passthrough := newObfuscator(buf, "*****", []string{
+	passthrough := New(buf, FullReplace("*****"), []string{
 		"sensitive",
 		"sens",
 		"tiv",
@@ -106,7 +106,7 @@ func TestObfuscator_FlushDoubleHit(t *testing.T) {
 
 func TestObfuscator_Order(t *testing.T) {
 	buf := &bytes.Buffer{}
-	passthrough := newObfuscator(buf, "*****", []string{
+	passthrough := New(buf, FullReplace("*****"), []string{
 		"sensitive",
 		"sens",
 	})
@@ -121,7 +121,7 @@ func TestObfuscator_Order(t *testing.T) {
 
 func TestObfuscator_Multiple(t *testing.T) {
 	buf := &bytes.Buffer{}
-	passthrough := newObfuscator(buf, "*****", []string{
+	passthrough := New(buf, FullReplace("*****"), []string{
 		"hello world",
 		"hello",
 		"blah",

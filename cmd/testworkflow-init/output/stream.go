@@ -3,11 +3,18 @@ package output
 import (
 	"io"
 	"os"
+
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/obfuscator"
 )
 
 var (
 	Std = NewStream(os.Stdout)
 )
+
+type ObfuscatorLike interface {
+	SetSensitiveWords([]string)
+	SetSensitiveReplacer(func([]byte) []byte)
+}
 
 type stream struct {
 	*printer
@@ -18,7 +25,7 @@ type stream struct {
 func NewStream(dst io.Writer) *stream {
 	s := &stream{}
 	s.printer = &printer{direct: dst}
-	s.printer.through = newObfuscator(dst, "*****", nil)
+	s.printer.through = obfuscator.New(dst, obfuscator.FullReplace("*****"), nil)
 	s.direct = &stream{printer: &printer{direct: s.printer.direct, through: s.printer.direct}}
 	return s
 }
@@ -28,14 +35,14 @@ func (s *stream) Direct() *stream {
 }
 
 func (s *stream) SetSensitiveWords(words []string) {
-	if v, ok := s.printer.through.(*obfuscator); ok {
+	if v, ok := s.printer.through.(ObfuscatorLike); ok {
 		v.SetSensitiveWords(words)
 	}
 }
 
-func (s *stream) SetSensitiveReplacement(replacement string) {
-	if v, ok := s.printer.through.(*obfuscator); ok {
-		v.SetSensitiveReplacement(replacement)
+func (s *stream) SetSensitiveReplacer(replacer func(value []byte) []byte) {
+	if v, ok := s.printer.through.(ObfuscatorLike); ok {
+		v.SetSensitiveReplacer(replacer)
 	}
 }
 
