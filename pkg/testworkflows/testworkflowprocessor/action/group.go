@@ -6,7 +6,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
 )
 
-// TODO: Handle Group Stages properly with isolation (to have conditions working perfectly fine, i.e. for isolated image + file() clause)
 func Group(actions []actiontypes.Action) (groups [][]actiontypes.Action) {
 	// Detect "start" and "execute" instructions
 	startIndexes := make([]int, 0)
