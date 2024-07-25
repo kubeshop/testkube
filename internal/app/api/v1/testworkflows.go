@@ -13,6 +13,7 @@ import (
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/pkg/agent"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/scheduler"
@@ -345,7 +346,8 @@ func (s *TestkubeAPI) PreviewTestWorkflowHandler() fiber.Handler {
 // TODO: Add metrics
 func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 	return func(c *fiber.Ctx) (err error) {
-		ctx := c.Context()
+		// pass metadata to context
+		ctx := agent.Context(c.Context(), *s.proContext)
 		name := c.Params("id")
 		errPrefix := fmt.Sprintf("failed to execute test workflow '%s'", name)
 		workflow, err := s.TestWorkflowsClient.Get(name)

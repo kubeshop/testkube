@@ -32,14 +32,16 @@ import (
 )
 
 const (
-	timeout            = 10 * time.Second
-	headerApiKey       = "api-key"
-	headerRunnerId     = "runner-id"
-	headerClusterId    = "cluster-id"
-	headerMigrate      = "migrate"
-	headerOrgId        = "environment-id"
-	headerEnvID        = "organization-id"
-	healthcheckCommand = "healthcheck"
+	timeout = 10 * time.Second
+
+	HeaderApiKey    = "api-key"
+	HeaderRunnerId  = "runner-id"
+	HeaderClusterId = "cluster-id"
+	HeaderMigrate   = "migrate"
+	HeaderOrgId     = "environment-id"
+	HeaderEnvID     = "organization-id"
+
+	HealthcheckCommand = "healthcheck"
 )
 
 // buffer up to five messages per worker
@@ -213,21 +215,7 @@ func (ag *Agent) Run(ctx context.Context) error {
 
 // updateContextWithMetadata adds metadata to the context
 func (ag *Agent) updateContextWithMetadata(ctx context.Context) context.Context {
-	runnerId := ag.proContext.RunnerId
-	// TODO for testing - we need to figure out how to set runnerId correctly
-	if runnerId == "" && ag.clusterID != "" {
-		runnerId = ag.clusterID
-	}
-
-	return metadata.NewOutgoingContext(ctx, metadata.Pairs(
-		headerApiKey, ag.proContext.APIKey,
-		headerClusterId, ag.clusterID,
-		headerMigrate, ag.proContext.Migrate,
-		headerEnvID, ag.proContext.EnvID,
-		headerOrgId, ag.proContext.OrgID,
-		headerRunnerId, runnerId,
-	))
-
+	return Context(ctx, ag.proContext)
 }
 func (ag *Agent) run(parent context.Context) (err error) {
 	g, ctx := errgroup.WithContext(ag.updateContextWithMetadata(parent))
@@ -395,7 +383,7 @@ func (ag *Agent) runWorkers(ctx context.Context, numWorkers int) error {
 
 func (ag *Agent) executeCommand(ctx context.Context, cmd *cloud.ExecuteRequest) *cloud.ExecuteResponse {
 	switch {
-	case cmd.Url == healthcheckCommand:
+	case cmd.Url == HealthcheckCommand:
 		return &cloud.ExecuteResponse{MessageId: cmd.MessageId, Status: 0}
 	default:
 		req := &fasthttp.RequestCtx{}
@@ -442,11 +430,24 @@ func (ag *Agent) executeCommand(ctx context.Context, cmd *cloud.ExecuteRequest) 
 }
 
 func AddAPIKeyMeta(ctx context.Context, apiKey string) context.Context {
-	md := metadata.Pairs(headerApiKey, apiKey)
+	md := metadata.Pairs(HeaderApiKey, apiKey)
 	return metadata.NewOutgoingContext(ctx, md)
 }
 
 type cloudResponse struct {
 	resp *cloud.ExecuteRequest
 	err  error
+}
+
+// Context returns new enriched context with meteadata from ProContext
+func Context(ctx context.Context, proContext config.ProContext) context.Context {
+	return metadata.NewOutgoingContext(ctx, metadata.Pairs(
+		HeaderApiKey, proContext.APIKey,
+		HeaderClusterId, proContext.ClusterId,
+		HeaderMigrate, proContext.Migrate,
+		HeaderEnvID, proContext.EnvID,
+		HeaderOrgId, proContext.OrgID,
+		HeaderRunnerId, proContext.RunnerId,
+	))
+
 }
