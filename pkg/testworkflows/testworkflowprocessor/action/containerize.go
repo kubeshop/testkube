@@ -62,6 +62,7 @@ func CreateContainer(groupId int, defaultContainer stage2.Container, actions []a
 		cr.Env = nil
 		cr.EnvFrom = nil
 		for i := range containerConfigs {
+			// TODO: Avoid having multiple copies of the same environment variable
 			for _, e := range containerConfigs[i].Container.Config.Env {
 				newEnv := *e.DeepCopy()
 				computed := strings.Contains(newEnv.Value, "{{")

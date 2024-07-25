@@ -17,10 +17,9 @@ import (
 )
 
 var (
-	scopedRegex            = regexp.MustCompile(`^_(00|01|\d|[1-9]\d*)(C)?(S?)_`)
-	Setup                  = newSetup()
-	defaultWorkingDir      = getWorkingDir()
-	MinSensitiveWordLength = 4
+	scopedRegex       = regexp.MustCompile(`^_(00|01|\d|[1-9]\d*)(C)?(S?)_`)
+	Setup             = newSetup()
+	defaultWorkingDir = getWorkingDir()
 )
 
 func getWorkingDir() string {
@@ -32,21 +31,23 @@ func getWorkingDir() string {
 }
 
 type setup struct {
-	envBase            map[string]string
-	envGroups          map[string]map[string]string
-	envGroupsComputed  map[string]map[string]struct{}
-	envGroupsSensitive map[string]map[string]struct{}
-	envCurrentGroup    int
-	envSelectedGroup   string
+	envBase                map[string]string
+	envGroups              map[string]map[string]string
+	envGroupsComputed      map[string]map[string]struct{}
+	envGroupsSensitive     map[string]map[string]struct{}
+	envCurrentGroup        int
+	envSelectedGroup       string
+	minSensitiveWordLength int
 }
 
 func newSetup() *setup {
 	c := &setup{
-		envBase:            map[string]string{},
-		envGroups:          map[string]map[string]string{},
-		envGroupsComputed:  map[string]map[string]struct{}{},
-		envGroupsSensitive: map[string]map[string]struct{}{},
-		envCurrentGroup:    -1,
+		envBase:                map[string]string{},
+		envGroups:              map[string]map[string]string{},
+		envGroupsComputed:      map[string]map[string]struct{}{},
+		envGroupsSensitive:     map[string]map[string]struct{}{},
+		envCurrentGroup:        -1,
+		minSensitiveWordLength: 1,
 	}
 	c.initialize()
 	return c
@@ -85,11 +86,19 @@ func (c *setup) UseBaseEnv() {
 	}
 }
 
+func (c *setup) SetSensitiveWordMinimumLength(length int) {
+	if length > 0 {
+		c.minSensitiveWordLength = length
+	} else {
+		c.minSensitiveWordLength = 1
+	}
+}
+
 func (c *setup) GetSensitiveWords() []string {
 	words := make([]string, 0)
 	for k := range c.envBase {
 		value := os.Getenv(k)
-		if len(value) < MinSensitiveWordLength {
+		if len(value) < c.minSensitiveWordLength {
 			continue
 		}
 		if _, ok := c.envGroupsSensitive[c.envSelectedGroup][k]; ok {
@@ -98,7 +107,7 @@ func (c *setup) GetSensitiveWords() []string {
 	}
 	for k := range c.envGroups[c.envSelectedGroup] {
 		value := os.Getenv(k)
-		if len(value) < MinSensitiveWordLength {
+		if len(value) < c.minSensitiveWordLength {
 			continue
 		}
 		if _, ok := c.envGroupsSensitive[c.envSelectedGroup][k]; ok {

@@ -28,7 +28,10 @@ func main() {
 	// Configure standard output
 	stdout := output.Std
 	stdoutUnsafe := stdout.Direct()
+
+	// Configure sensitive data obfuscation
 	stdout.SetSensitiveReplacement(color.FgGray.Render("*m̷a̷s̷k̷e̷d̷*"))
+	orchestration.Setup.SetSensitiveWordMinimumLength(4)
 
 	// Prepare empty state file if it doesn't exist
 	_, err := os.Stat(data.StatePath)
