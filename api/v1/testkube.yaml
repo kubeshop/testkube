@@ -8331,6 +8331,9 @@ components:
           type: object
           additionalProperties:
             $ref: "#/components/schemas/TestWorkflowStepResult"
+        runnerID:
+          type: string
+          description: Runner id that executed the test workflow
       required:
         - status
         - predictedStatus
