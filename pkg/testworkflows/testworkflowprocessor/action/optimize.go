@@ -320,21 +320,5 @@ func optimize(actions []actiontypes.Action) ([]actiontypes.Action, error) {
 		}
 	}
 
-	//// TODO
-	//// Avoid unused consecutive initial statuses
-	//lastIndex := -1
-	//wasRequired := true
-	//for i := 0; i < len(actions); i++ {
-	//	wasRequired = wasRequired || actions[i].End != nil || actions[i].Retry != nil || actions[i].Pause != nil
-	//	if actions[i].CurrentStatus != nil {
-	//		if !wasRequired {
-	//			actions = append(actions[:lastIndex], actions[lastIndex+1:]...)
-	//			i--
-	//		}
-	//		lastIndex = i
-	//		wasRequired = false
-	//	}
-	//}
-
 	return actions, nil
 }
