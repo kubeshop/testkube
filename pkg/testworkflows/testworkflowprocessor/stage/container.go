@@ -413,11 +413,17 @@ func (c *container) ApplyImageData(image *imageinspector.Info, resolvedImageName
 }
 
 func (c *container) IsToolkit() bool {
-	return c.toolkit || slices.Contains(c.Env(), BypassToolkitCheck)
+	return c.toolkit || (c.parent != nil && c.parent.IsToolkit()) || slices.Contains(c.Cr.Env, BypassToolkitCheck)
+}
+
+func (c *container) MarkAsToolkit() Container {
+	c.toolkit = true
+	return c
 }
 
 func (c *container) EnableToolkit(ref string) Container {
 	return c.
+		MarkAsToolkit().
 		AppendEnv(corev1.EnvVar{
 			Name:      "TK_IP",
 			ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "status.podIP"}},
