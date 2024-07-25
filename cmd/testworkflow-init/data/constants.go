@@ -29,16 +29,19 @@ func (s StepStatus) Code() string {
 }
 
 func StepStatusFromCode(code string) StepStatus {
-	switch code {
-	case string(StepStatusPassed)[0:1]:
-		return StepStatusPassed
-	case string(StepStatusTimeout)[0:1]:
-		return StepStatusTimeout
-	case string(StepStatusFailed)[0:1]:
-		return StepStatusFailed
-	case string(StepStatusAborted)[0:1]:
+	if len(code) != 1 {
 		return StepStatusAborted
-	case string(StepStatusSkipped)[0:1]:
+	}
+	switch code[0] {
+	case StepStatusPassed[0]:
+		return StepStatusPassed
+	case StepStatusTimeout[0]:
+		return StepStatusTimeout
+	case StepStatusFailed[0]:
+		return StepStatusFailed
+	case StepStatusAborted[0]:
+		return StepStatusAborted
+	case StepStatusSkipped[0]:
 		return StepStatusSkipped
 	}
 	return StepStatusAborted
