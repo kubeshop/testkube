@@ -35,6 +35,4 @@ type TestWorkflowResult struct {
 	Pauses          []TestWorkflowPause               `json:"pauses,omitempty"`
 	Initialization  *TestWorkflowStepResult           `json:"initialization,omitempty"`
 	Steps           map[string]TestWorkflowStepResult `json:"steps,omitempty"`
-	// Runner id that executed the test workflow
-	RunnerID string `json:"runnerID,omitempty"`
 }

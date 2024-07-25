@@ -39,4 +39,6 @@ type TestWorkflowExecution struct {
 	TestWorkflowExecutionName string `json:"testWorkflowExecutionName,omitempty"`
 	// whether webhooks on the execution of this test workflow are disabled
 	DisableWebhooks bool `json:"disableWebhooks,omitempty"`
+	// Runner id that executed the test workflow
+	RunnerID string `json:"runnerID,omitempty"`
 }
