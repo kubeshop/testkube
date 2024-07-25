@@ -17,9 +17,15 @@ import (
 )
 
 var (
-	scopedRegex       = regexp.MustCompile(`^_(00|01|\d|[1-9]\d*)(C)?(S?)_`)
-	Setup             = newSetup()
-	defaultWorkingDir = getWorkingDir()
+	scopedRegex              = regexp.MustCompile(`^_(00|01|\d|[1-9]\d*)(C)?(S?)_`)
+	Setup                    = newSetup()
+	defaultWorkingDir        = getWorkingDir()
+	commonSensitiveVariables = []string{
+		"TK_C_KEY",        // Cloud API key
+		"TK_OS_ACCESSKEY", // Object Storage Access Key
+		"TK_OS_SECRETKEY", // Object Storage Secret Key
+		"TK_OS_TOKEN",     // Object Storage Token
+	}
 )
 
 func getWorkingDir() string {
@@ -96,6 +102,13 @@ func (c *setup) SetSensitiveWordMinimumLength(length int) {
 
 func (c *setup) GetSensitiveWords() []string {
 	words := make([]string, 0)
+	for _, name := range commonSensitiveVariables {
+		value := os.Getenv(name)
+		if len(value) < c.minSensitiveWordLength {
+			continue
+		}
+		words = append(words, value)
+	}
 	for k := range c.envBase {
 		value := os.Getenv(k)
 		if len(value) < c.minSensitiveWordLength {
