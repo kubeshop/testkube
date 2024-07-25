@@ -185,6 +185,13 @@ func main() {
 			}
 			if !executable {
 				step.SetStatus(data.StepStatusSkipped)
+
+				// Skip all the children
+				for _, v := range state.Steps {
+					if slices.Contains(v.Parents, step.Ref) {
+						v.SetStatus(data.StepStatusSkipped)
+					}
+				}
 			}
 
 			// Delay the pause until next children execution
