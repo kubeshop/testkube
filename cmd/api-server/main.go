@@ -585,6 +585,7 @@ func main() {
 		cfg.ImageDataPersistentCacheKey,
 		cfg.TestkubeDashboardURI,
 		clusterId,
+		proContext.RunnerId,
 	)
 
 	go testWorkflowExecutor.Recover(context.Background())
@@ -915,7 +916,7 @@ func newProContext(cfg *config.Config, grpcClient cloud.TestKubeCloudAPIClient) 
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
-	md := metadata.Pairs("api-key", cfg.TestkubeProAPIKey)
+	md := metadata.Pairs("api-key", cfg.TestkubeProAPIKey, "runner-id", cfg.TestkubeProRunnerId)
 	ctx = metadata.NewOutgoingContext(ctx, md)
 	defer cancel()
 	getProContext, err := grpcClient.GetProContext(ctx, &emptypb.Empty{})

@@ -63,6 +63,7 @@ type executor struct {
 	imageDataPersistentCacheKey    string
 	dashboardURI                   string
 	clusterID                      string
+	runnerID                       string
 	serviceAccountNames            map[string]string
 }
 
@@ -78,7 +79,7 @@ func New(emitter *event.Emitter,
 	metrics v1.Metrics,
 	serviceAccountNames map[string]string,
 	globalTemplateName, namespace, apiUrl, defaultRegistry string,
-	enableImageDataPersistentCache bool, imageDataPersistentCacheKey, dashboardURI, clusterID string) TestWorkflowExecutor {
+	enableImageDataPersistentCache bool, imageDataPersistentCacheKey, dashboardURI, clusterID, runnerID string) TestWorkflowExecutor {
 	if serviceAccountNames == nil {
 		serviceAccountNames = make(map[string]string)
 	}
@@ -103,6 +104,7 @@ func New(emitter *event.Emitter,
 		imageDataPersistentCacheKey:    imageDataPersistentCacheKey,
 		dashboardURI:                   dashboardURI,
 		clusterID:                      clusterID,
+		runnerID:                       runnerID,
 	}
 }
 
@@ -321,6 +323,9 @@ func (e *executor) Control(ctx context.Context, testWorkflow *testworkflowsv1.Te
 }
 
 func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWorkflow, request testkube.TestWorkflowExecutionRequest) (
+
+	AppendToOutgoingContext()
+
 	execution testkube.TestWorkflowExecution, err error) {
 	// Delete unnecessary data
 	delete(workflow.Annotations, "kubectl.kubernetes.io/last-applied-configuration")
