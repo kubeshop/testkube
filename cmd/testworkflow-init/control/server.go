@@ -12,12 +12,12 @@ import (
 
 type Pauseable interface {
 	Pause(time.Time) error
-	Resume(time2 time.Time) error
+	Resume(ts time.Time) error
 }
 
 type server struct {
-	port int
-	step Pauseable
+	port   int
+	target Pauseable
 }
 
 type ControlServerOptions struct {
@@ -33,10 +33,10 @@ func (p ControlServerOptions) Resume(ts time.Time) error {
 	return p.HandleResume(ts)
 }
 
-func NewServer(port int, step Pauseable) *server {
+func NewServer(port int, target Pauseable) *server {
 	return &server{
-		port: port,
-		step: step,
+		port:   port,
+		target: target,
 	}
 }
 
@@ -51,7 +51,7 @@ func (s *server) handler() *http.ServeMux {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		if err := s.step.Pause(time.Now()); err != nil {
+		if err := s.target.Pause(time.Now()); err != nil {
 			stdoutUnsafe.Warnf("warn: failed to pause: %s\n", err.Error())
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -63,7 +63,7 @@ func (s *server) handler() *http.ServeMux {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		if err := s.step.Resume(time.Now()); err != nil {
+		if err := s.target.Resume(time.Now()); err != nil {
 			stdoutUnsafe.Warnf("warn: failed to resume: %s\n", err.Error())
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
