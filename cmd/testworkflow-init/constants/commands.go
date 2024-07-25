@@ -5,5 +5,5 @@ const (
 	EnvPodName            = "TKI_P"
 	EnvNamespaceName      = "TKI_S"
 	EnvServiceAccountName = "TKI_A"
-	EnvInstructions       = "TKI_I"
+	EnvActions            = "TKI_I"
 )

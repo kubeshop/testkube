@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"errors"
 	"os"
 	"os/signal"
@@ -52,21 +51,16 @@ func main() {
 	}
 
 	// Store the instructions in the state if they are provided
-	orchestration.Setup.UseEnv("01")
-	instructions := os.Getenv(constants.EnvInstructions)
 	orchestration.Setup.UseBaseEnv()
 	stdout.SetSensitiveWords(orchestration.Setup.GetSensitiveWords())
-	if instructions != "" {
+	actionGroups := orchestration.Setup.GetActionGroups()
+	if actionGroups != nil {
 		stdoutUnsafe.Print("Initializing state...")
-		err = json.Unmarshal([]byte(instructions), &data.GetState().Actions)
-		if err != nil {
-			stdoutUnsafe.Error(" error\n")
-			data.Failf(data.CodeInternal, "failed to read the actions from Pod: %s", err.Error())
-		}
+		data.GetState().Actions = actionGroups
 		stdoutUnsafe.Print(" done\n")
 
 		// Release the memory
-		instructions = ""
+		actionGroups = nil
 	}
 
 	// Distribute the details

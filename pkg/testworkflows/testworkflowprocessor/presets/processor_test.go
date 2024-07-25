@@ -53,7 +53,7 @@ var (
 	execMachine = expressions.NewMachine().
 			Register("resource.root", "dummy-id").
 			Register("resource.id", "dummy-id-abc")
-	envInstructions = lite.EnvVarFrom("01", false, false, constants2.EnvInstructions, corev1.EnvVarSource{
+	envInstructions = lite.EnvVarFrom("01", false, false, constants2.EnvActions, corev1.EnvVarSource{
 		FieldRef: &corev1.ObjectFieldSelector{FieldPath: constants.SpecAnnotationFieldPath},
 	})
 	envDebugNode = lite.EnvVarFrom("00", false, false, constants2.EnvNodeName, corev1.EnvVarSource{
@@ -457,9 +457,9 @@ func TestProcessBasicEnvReference(t *testing.T) {
 	}
 
 	var gotInstructions lite.LiteActionGroups
-	instructionsErr := json.Unmarshal([]byte(res.Job.Spec.Template.Annotations[constants.SpecAnnotationName]), &gotInstructions)
+	actionsErr := json.Unmarshal([]byte(res.Job.Spec.Template.Annotations[constants.SpecAnnotationName]), &gotInstructions)
 
-	assert.NoError(t, instructionsErr)
+	assert.NoError(t, actionsErr)
 	assert.Equal(t, wantInstructions, gotInstructions)
 
 	assert.NoError(t, err)
@@ -577,9 +577,9 @@ func TestProcessMultipleSteps(t *testing.T) {
 	}
 
 	var gotInstructions lite.LiteActionGroups
-	instructionsErr := json.Unmarshal([]byte(res.Job.Spec.Template.Annotations[constants.SpecAnnotationName]), &gotInstructions)
+	actionsErr := json.Unmarshal([]byte(res.Job.Spec.Template.Annotations[constants.SpecAnnotationName]), &gotInstructions)
 
-	assert.NoError(t, instructionsErr)
+	assert.NoError(t, actionsErr)
 	assert.Equal(t, wantInstructions, gotInstructions)
 
 	assert.NoError(t, err)
@@ -759,9 +759,9 @@ func TestProcessNestedSteps(t *testing.T) {
 	}
 
 	var gotInstructions lite.LiteActionGroups
-	instructionsErr := json.Unmarshal([]byte(res.Job.Spec.Template.Annotations[constants.SpecAnnotationName]), &gotInstructions)
+	actionsErr := json.Unmarshal([]byte(res.Job.Spec.Template.Annotations[constants.SpecAnnotationName]), &gotInstructions)
 
-	assert.NoError(t, instructionsErr)
+	assert.NoError(t, actionsErr)
 	assert.Equal(t, wantInstructions, gotInstructions)
 
 	assert.NoError(t, err)
@@ -1009,10 +1009,10 @@ func TestProcessShell(t *testing.T) {
 				End("")
 		})
 
-	var instructions lite.LiteActionGroups
-	instructionsErr := json.Unmarshal([]byte(res.Job.Spec.Template.Annotations[constants.SpecAnnotationName]), &instructions)
+	var actions lite.LiteActionGroups
+	actionsErr := json.Unmarshal([]byte(res.Job.Spec.Template.Annotations[constants.SpecAnnotationName]), &actions)
 
 	assert.NoError(t, err)
-	assert.NoError(t, instructionsErr)
-	assert.Equal(t, want, instructions)
+	assert.NoError(t, actionsErr)
+	assert.Equal(t, want, actions)
 }

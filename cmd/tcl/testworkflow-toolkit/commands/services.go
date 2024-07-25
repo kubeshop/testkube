@@ -24,14 +24,13 @@ import (
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	commontcl "github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/common"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/spawn"
-	ins "github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/transfer"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/presets"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -112,7 +111,7 @@ func NewServicesCmd() *cobra.Command {
 				}
 
 				// Initialize empty array of details for each of the services
-				ins.PrintHintDetails(env.Ref(), fmt.Sprintf("services.%s", name), []ServiceState{})
+				instructions.PrintHintDetails(env.Ref(), fmt.Sprintf("services.%s", name), []ServiceState{})
 			}
 
 			// Analyze instances to run
@@ -190,12 +189,12 @@ func NewServicesCmd() *cobra.Command {
 				for i := range svcInstances {
 					state[name][i].Description = svcInstances[i].Description
 				}
-				ins.PrintHintDetails(env.Ref(), fmt.Sprintf("services.%s", name), state)
+				instructions.PrintHintDetails(env.Ref(), fmt.Sprintf("services.%s", name), state)
 			}
 
 			// Inform about each service instance
 			for _, instance := range instances {
-				ins.PrintOutput(env.Ref(), "service", ServiceInfo{
+				instructions.PrintOutput(env.Ref(), "service", ServiceInfo{
 					Group:       groupRef,
 					Index:       instance.Index,
 					Name:        instance.Name,
@@ -276,12 +275,7 @@ func NewServicesCmd() *cobra.Command {
 					namespace = env.Namespace()
 				}
 
-				var instructions actiontypes.ActionGroups
-				err = json.Unmarshal([]byte(bundle.Job.Spec.Template.Annotations[constants.SpecAnnotationName]), &instructions)
-				if err != nil {
-					panic(fmt.Sprintf("invalid instructions: %v", err))
-				}
-				mainRef := instructions.GetLastRef()
+				mainRef := bundle.Actions().GetLastRef()
 
 				// Deploy the resources
 				// TODO: Avoid using Job
@@ -336,7 +330,7 @@ func NewServicesCmd() *cobra.Command {
 						state[instance.Name][index].Ip = v.PodIP
 						log(fmt.Sprintf("assigned to %s IP", ui.LightBlue(v.PodIP)))
 						info.Status = ServiceStatusRunning
-						ins.PrintOutput(env.Ref(), "service", info)
+						instructions.PrintOutput(env.Ref(), "service", info)
 					}
 
 					if v.Current == mainRef {
@@ -356,7 +350,7 @@ func NewServicesCmd() *cobra.Command {
 				if !started {
 					info.Status = ServiceStatusFailed
 					log("container failed")
-					ins.PrintOutput(env.Ref(), "service", info)
+					instructions.PrintOutput(env.Ref(), "service", info)
 					return false
 				}
 
@@ -384,7 +378,7 @@ func NewServicesCmd() *cobra.Command {
 					log("container ready")
 					info.Status = ServiceStatusReady
 				}
-				ins.PrintOutput(env.Ref(), "service", info)
+				instructions.PrintOutput(env.Ref(), "service", info)
 
 				return ready
 			}
@@ -394,7 +388,7 @@ func NewServicesCmd() *cobra.Command {
 
 			// Inform about the services state
 			for k := range state {
-				ins.PrintHintDetails(env.Ref(), fmt.Sprintf("services.%s", k), state[k])
+				instructions.PrintHintDetails(env.Ref(), fmt.Sprintf("services.%s", k), state[k])
 			}
 
 			// Notify the results

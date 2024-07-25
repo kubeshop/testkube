@@ -102,8 +102,8 @@ func CreateContainer(groupId int, defaultContainer stage2.Container, actions []a
 			corev1.EnvVar{Name: fmt.Sprintf("_00_%s", constants2.EnvServiceAccountName), ValueFrom: &corev1.EnvVarSource{
 				FieldRef: &corev1.ObjectFieldSelector{FieldPath: "spec.serviceAccountName"},
 			}},
-			corev1.EnvVar{Name: fmt.Sprintf("_01_%s", constants2.EnvInstructions), ValueFrom: &corev1.EnvVarSource{
-				FieldRef: &corev1.ObjectFieldSelector{FieldPath: fmt.Sprintf("metadata.annotations['%s']", constants.SpecAnnotationName)},
+			corev1.EnvVar{Name: fmt.Sprintf("_01_%s", constants2.EnvActions), ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{FieldPath: constants.SpecAnnotationFieldPath},
 			}})
 
 		// Apply basic mounts, so there is a state provided

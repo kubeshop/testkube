@@ -75,26 +75,25 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 
 		// Load the references
 		var refs, endRefs [][]string
-		var instructions [][]actiontypes.Action
-		err := json.Unmarshal([]byte(podObj.Annotations[constants2.SpecAnnotationName]), &instructions)
+		var actions actiontypes.ActionGroups
+		err := json.Unmarshal([]byte(podObj.Annotations[constants2.SpecAnnotationName]), &actions)
 		if err != nil {
-			// TODO: Don't panic
-			panic(fmt.Sprintf("invalid instructions: %v", err))
-		} else {
-			refs = make([][]string, len(instructions))
-			endRefs = make([][]string, len(instructions))
-			for i := range instructions {
-				for j := range instructions[i] {
-					if instructions[i][j].Setup != nil {
-						refs[i] = append(refs[i], InitContainerName)
-						endRefs[i] = append(endRefs[i], InitContainerName)
-					}
-					if instructions[i][j].Start != nil && *instructions[i][j].Start != "" {
-						refs[i] = append(refs[i], *instructions[i][j].Start)
-					}
-					if instructions[i][j].End != nil && *instructions[i][j].End != "" {
-						endRefs[i] = append(endRefs[i], *instructions[i][j].End)
-					}
+			s.Error(fmt.Errorf("invalid instructions: %v", err))
+			return
+		}
+		refs = make([][]string, len(actions))
+		endRefs = make([][]string, len(actions))
+		for i := range actions {
+			for j := range actions[i] {
+				if actions[i][j].Setup != nil {
+					refs[i] = append(refs[i], InitContainerName)
+					endRefs[i] = append(endRefs[i], InitContainerName)
+				}
+				if actions[i][j].Start != nil && *actions[i][j].Start != "" {
+					refs[i] = append(refs[i], *actions[i][j].Start)
+				}
+				if actions[i][j].End != nil && *actions[i][j].End != "" {
+					endRefs[i] = append(endRefs[i], *actions[i][j].End)
 				}
 			}
 		}

@@ -1,12 +1,14 @@
 package orchestration
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/expressions/libs"
@@ -103,6 +105,18 @@ func (c *setup) GetSensitiveWords() []string {
 		}
 	}
 	return words
+}
+
+func (c *setup) GetActionGroups() (actions [][]lite.LiteAction) {
+	serialized := c.envGroups["01"][constants.EnvActions]
+	if serialized == "" {
+		return
+	}
+	err := json.Unmarshal([]byte(serialized), &actions)
+	if err != nil {
+		panic(fmt.Sprintf("failed to read the actions from Pod: %s", err.Error()))
+	}
+	return actions
 }
 
 func (c *setup) UseEnv(group string) {

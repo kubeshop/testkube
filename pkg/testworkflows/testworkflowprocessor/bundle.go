@@ -2,6 +2,7 @@ package testworkflowprocessor
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/pkg/errors"
 	batchv1 "k8s.io/api/batch/v1"
@@ -9,6 +10,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
 
@@ -17,6 +20,12 @@ type Bundle struct {
 	ConfigMaps []corev1.ConfigMap
 	Job        batchv1.Job
 	Signature  []stage.Signature
+}
+
+func (b *Bundle) Actions() actiontypes.ActionGroups {
+	var actions actiontypes.ActionGroups
+	_ = json.Unmarshal([]byte(b.Job.Spec.Template.Annotations[constants.SpecAnnotationName]), &actions)
+	return actions
 }
 
 func (b *Bundle) Deploy(ctx context.Context, clientSet kubernetes.Interface, namespace string) (err error) {
