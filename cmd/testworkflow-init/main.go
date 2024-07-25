@@ -326,8 +326,7 @@ func main() {
 				if until == "" {
 					until = "passed"
 				}
-				machine := expressions.CombinedMachines(data.LocalMachine, data.GetInternalTestWorkflowMachine())
-				expr, err := expressions.CompileAndResolve(until, data.LocalMachine, machine, expressions.FinalizerFail)
+				expr, err := expressions.CompileAndResolve(until, data.LocalMachine, data.GetInternalTestWorkflowMachine(), expressions.FinalizerFail)
 				if err != nil {
 					stdout.Printf("failed to execute retry condition: %s: %s\n", until, err.Error())
 					break
