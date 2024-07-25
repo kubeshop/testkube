@@ -270,10 +270,6 @@ func optimize(actions []actiontypes.Action) ([]actiontypes.Action, error) {
 
 	// TODO: Avoid using /.tktw/toolkit if there is Toolkit image
 
-	// TODO: Copy /init and /toolkit in the Init Container only if there is a need to.
-	//       Probably, include Setup step in the action.Actions list, so it can be simplified too into a single container,
-	//       and optimized along with others.
-
 	// Avoid using /.tktw/bin/sh when it is internal image used, with binaries in /bin
 	for i := range actions {
 		if actions[i].Type() != lite.ActionTypeContainerTransition {
