@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/pkg/errors"
+
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
@@ -11,7 +13,6 @@ import (
 	stage2 "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
 
-// TODO: Wrap all errors in this file
 func process(currentStatus string, parents []string, stage stage2.Stage, machines ...expressions.Machine) (actions []actiontypes.Action, err error) {
 	// Store the init status
 	actions = append(actions, actiontypes.Action{
@@ -96,7 +97,7 @@ func process(currentStatus string, parents []string, stage stage2.Stage, machine
 		for _, ch := range group.Children() {
 			sub, err := process(currentStatus, parents, ch, machines...)
 			if err != nil {
-				return nil, err
+				return nil, errors.Wrap(err, "processing group children")
 			}
 			if !ch.Optional() {
 				currentStatus = fmt.Sprintf("%s && %s", ch.Ref(), currentStatus)
@@ -144,7 +145,7 @@ func Process(root stage2.Stage, machines ...expressions.Machine) ([]actiontypes.
 		actions, err = optimize(actions)
 		if err != nil || len(actions) == prevLength {
 			sort(actions)
-			return actions, err
+			return actions, errors.Wrap(err, "processing operations")
 		}
 	}
 }
