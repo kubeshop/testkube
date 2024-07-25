@@ -156,11 +156,6 @@ func (c *setup) UseEnv(group string) {
 		_ = os.Setenv("PATH", fmt.Sprintf("%s:%s", os.Getenv("PATH"), data.InternalBinPath))
 	}
 
-	// TODO: Delete unnecessary variables for non-toolkit operations
-	//if !toolkit {
-	//	_ = os.Unsetenv("TK_REF")
-	//}
-
 	// Compute dynamic environment variables
 	addonMachine := expressions.CombinedMachines(data.RefSuccessMachine, data.AliasMachine, data.StateMachine, libs.NewFsMachine(os.DirFS("/"), cwd))
 	localEnvMachine := expressions.NewMachine().

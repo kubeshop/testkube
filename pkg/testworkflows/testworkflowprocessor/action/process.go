@@ -78,6 +78,7 @@ func process(currentStatus string, parents []string, stage stage2.Stage, machine
 			Execute: &lite.ActionExecute{
 				Ref:      exec.Ref(),
 				Negative: exec.Negative(),
+				Toolkit:  exec.IsToolkit(),
 			},
 		})
 	}

@@ -16,8 +16,9 @@ import (
 )
 
 type container struct {
-	parent *container
-	Cr     testworkflowsv1.ContainerConfig `expr:"include"`
+	parent  *container
+	toolkit bool
+	Cr      testworkflowsv1.ContainerConfig `expr:"include"`
 }
 
 type ContainerComposition interface {
@@ -47,6 +48,7 @@ type ContainerAccessors interface {
 
 	HasVolumeAt(path string) bool
 	ToContainerConfig() testworkflowsv1.ContainerConfig
+	IsToolkit() bool
 }
 
 type ContainerMutations[T any] interface {
@@ -408,6 +410,10 @@ func (c *container) ApplyImageData(image *imageinspector.Info, resolvedImageName
 		c.SetWorkingDir(image.WorkingDir)
 	}
 	return nil
+}
+
+func (c *container) IsToolkit() bool {
+	return c.toolkit || slices.Contains(c.Env(), BypassToolkitCheck)
 }
 
 func (c *container) EnableToolkit(ref string) Container {

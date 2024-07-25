@@ -235,6 +235,12 @@ func main() {
 				continue
 			}
 
+			// Configure the environment
+			orchestration.Setup.UseCurrentEnv()
+			if !action.Execute.Toolkit {
+				_ = os.Unsetenv("TK_REF")
+			}
+
 			// List all the parents
 			leaf := []*data.StepData{step}
 			for i := range step.Parents {

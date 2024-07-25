@@ -14,7 +14,6 @@ import (
 	stage2 "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
 
-// TODO: Disallow bypassing
 func CreateContainer(groupId int, defaultContainer stage2.Container, actions []actiontypes.Action) (cr corev1.Container, actionsCleanup []actiontypes.Action, err error) {
 	actions = slices.Clone(actions)
 	actionsCleanup = actions

@@ -2,10 +2,17 @@ package stage
 
 import (
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/rand"
 
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
 )
+
+var BypassToolkitCheck = corev1.EnvVar{
+	Name:  "TK_TC_SECURITY",
+	Value: rand.String(20),
+}
 
 type containerStage struct {
 	stageMetadata
@@ -16,6 +23,7 @@ type containerStage struct {
 type ContainerStage interface {
 	Stage
 	Container() Container
+	IsToolkit() bool
 }
 
 func NewContainerStage(ref string, container Container) ContainerStage {
@@ -71,4 +79,8 @@ func (s *containerStage) Container() Container {
 
 func (s *containerStage) HasPause() bool {
 	return s.paused
+}
+
+func (s *containerStage) IsToolkit() bool {
+	return s.container.IsToolkit()
 }

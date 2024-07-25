@@ -2,17 +2,10 @@ package testworkflowprocessor
 
 import (
 	batchv1 "k8s.io/api/batch/v1"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/rand"
 
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 )
-
-var BypassToolkitCheck = corev1.EnvVar{
-	Name:  "TK_TC_SECURITY",
-	Value: rand.String(20),
-}
 
 func AnnotateControlledBy(obj metav1.Object, rootId, id string) {
 	labels := obj.GetLabels()
