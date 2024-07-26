@@ -221,13 +221,19 @@ func main() {
 			orchestration.End(step)
 
 		case lite.ActionTypeSetup:
-			// TODO: Handle error
 			orchestration.Setup.UseEnv(constants.EnvGroupDebug)
 			stdout.SetSensitiveWords(orchestration.Setup.GetSensitiveWords())
 			step := state.GetStep(data.InitStepName)
-			commands.Setup(*action.Setup)
-			step.SetStatus(data.StepStatusPassed)
+			err := commands.Setup(*action.Setup)
+			if err == nil {
+				step.SetStatus(data.StepStatusPassed)
+			} else {
+				step.SetStatus(data.StepStatusFailed)
+			}
 			orchestration.End(step)
+			if err != nil {
+				os.Exit(1)
+			}
 
 		case lite.ActionTypeExecute:
 			// Ignore running when the step is already resolved (= skipped)

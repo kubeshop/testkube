@@ -12,24 +12,25 @@ import (
 	"github.com/kubeshop/testkube/pkg/version"
 )
 
-func Setup(config lite.ActionSetup) {
+func Setup(config lite.ActionSetup) error {
 	stdout := output.Std
 	stdoutUnsafe := stdout.Direct()
 
-	// Copy the init process TODO: only when it is required
+	// Copy the init process
 	stdoutUnsafe.Print("Configuring init process...")
 	if config.CopyInit {
 		err := exec.Command("cp", "/init", data.InitPath).Run()
 		if err != nil {
-			stdoutUnsafe.Error(" error")
-			output.ExitErrorf(data.CodeInternal, "failed to copy the /init process: %s", err.Error())
+			stdoutUnsafe.Error(" error\n")
+			stdoutUnsafe.Errorf("  failed to copy the /init process: %s\n", err.Error())
+			return err
 		}
 		stdoutUnsafe.Print(" done\n")
 	} else {
 		stdoutUnsafe.Print(" skipped\n")
 	}
 
-	// Copy the shell and useful libraries TODO: only when it is required
+	// Copy the shell and useful libraries
 	stdoutUnsafe.Print("Configuring shell...")
 	if config.CopyBinaries {
 		// Use `cp` on the whole directory, as it has plenty of files, which lead to the same FS block.
@@ -37,7 +38,8 @@ func Setup(config lite.ActionSetup) {
 		err := exec.Command("cp", "-rf", "/bin", data.InternalBinPath).Run()
 		if err != nil {
 			stdoutUnsafe.Error(" error\n")
-			output.ExitErrorf(data.CodeInternal, "failed to copy the /init process: %s", err.Error())
+			stdoutUnsafe.Errorf("  failed to copy the binaries: %s\n", err.Error())
+			return err
 		}
 		stdoutUnsafe.Print(" done\n")
 	} else {
@@ -54,6 +56,8 @@ func Setup(config lite.ActionSetup) {
 		"toolkit":            stripCommonImagePrefix(os.Getenv("TESTKUBE_TW_TOOLKIT_IMAGE"), "testkube-tw-toolkit"),
 		"init":               stripCommonImagePrefix(os.Getenv("TESTKUBE_TW_INIT_IMAGE"), "testkube-tw-init"),
 	})
+
+	return nil
 }
 
 func stripCommonImagePrefix(image, common string) string {
