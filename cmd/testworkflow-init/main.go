@@ -1,219 +1,89 @@
 package main
 
 import (
-	"fmt"
+	"errors"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"slices"
-	"strings"
+	"strconv"
 	"syscall"
 	"time"
 
-	"github.com/kballard/go-shellquote"
+	"github.com/gookit/color"
 
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/commands"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/control"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/obfuscator"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/orchestration"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
-	"github.com/kubeshop/testkube/cmd/testworkflow-init/run"
+	"github.com/kubeshop/testkube/pkg/expressions"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
+)
+
+const (
+	SensitiveMask             = "****"
+	SensitiveVisibleLastChars = 2
+	SensitiveMinimumLength    = 4
 )
 
 func main() {
-	if len(os.Args) < 2 {
-		output.Failf(output.CodeInputError, "missing step reference")
-	}
-	data.Step.Ref = os.Args[1]
+	// Force colors
+	color.ForceColor()
 
-	now := time.Now()
+	// Configure standard output
+	stdout := output.Std
+	stdoutUnsafe := stdout.Direct()
 
-	// Load shared state
-	data.LoadState()
+	// Configure sensitive data obfuscation
+	stdout.SetSensitiveReplacer(obfuscator.ShowLastCharacters(SensitiveMask, SensitiveVisibleLastChars))
+	orchestration.Setup.SetSensitiveWordMinimumLength(SensitiveMinimumLength)
 
-	// Initialize space for parsing args
-	config := map[string]string{}
-	computed := []string(nil)
-	conditions := []data.Rule(nil)
-	resulting := []data.Rule(nil)
-	timeouts := []data.Timeout(nil)
-	paused := false
-	toolkit := false
-	args := []string(nil)
-
-	// Read arguments into the base data
-	for i := 2; i < len(os.Args); i += 2 {
-		if i+1 == len(os.Args) {
-			break
-		}
-		switch os.Args[i] {
-		case constants.ArgSeparator:
-			args = os.Args[i+1:]
-			i = len(os.Args)
-		case constants.ArgInit, constants.ArgInitLong:
-			data.Step.InitStatus = os.Args[i+1]
-		case constants.ArgCondition, constants.ArgConditionLong:
-			v := strings.SplitN(os.Args[i+1], "=", 2)
-			refs := strings.Split(v[0], ",")
-			if len(v) == 2 {
-				conditions = append(conditions, data.Rule{Expr: v[1], Refs: refs})
-			} else {
-				conditions = append(conditions, data.Rule{Expr: "true", Refs: refs})
-			}
-		case constants.ArgResult, constants.ArgResultLong:
-			v := strings.SplitN(os.Args[i+1], "=", 2)
-			refs := strings.Split(v[0], ",")
-			if len(v) == 2 {
-				resulting = append(resulting, data.Rule{Expr: v[1], Refs: refs})
-			} else {
-				resulting = append(resulting, data.Rule{Expr: "true", Refs: refs})
-			}
-		case constants.ArgTimeout, constants.ArgTimeoutLong:
-			v := strings.SplitN(os.Args[i+1], "=", 2)
-			if len(v) == 2 {
-				timeouts = append(timeouts, data.Timeout{Ref: v[0], Duration: v[1]})
-			} else {
-				timeouts = append(timeouts, data.Timeout{Ref: v[0], Duration: ""})
-			}
-		case constants.ArgComputeEnv, constants.ArgComputeEnvLong:
-			computed = append(computed, strings.Split(os.Args[i+1], ",")...)
-		case constants.ArgPaused, constants.ArgPausedLong:
-			paused = true
-			i--
-		case constants.ArgNegative, constants.ArgNegativeLong:
-			config["negative"] = os.Args[i+1]
-		case constants.ArgWorkingDir, constants.ArgWorkingDirLong:
-			wd, err := filepath.Abs(os.Args[i+1])
-			if err == nil {
-				_ = os.MkdirAll(wd, 0755)
-				err = os.Chdir(wd)
-			} else {
-				_ = os.MkdirAll(wd, 0755)
-				err = os.Chdir(os.Args[i+1])
-			}
-			if err != nil {
-				fmt.Printf("warning: error using %s as working director: %s\n", os.Args[i+1], err.Error())
-			}
-		case constants.ArgRetryCount:
-			config["retryCount"] = os.Args[i+1]
-		case constants.ArgRetryUntil:
-			config["retryUntil"] = os.Args[i+1]
-		case constants.ArgToolkit, constants.ArgToolkitLong:
-			toolkit = true
-			i--
-		case constants.ArgDebug:
-			config["debug"] = os.Args[i+1]
-		default:
-			output.Failf(output.CodeInputError, "unknown parameter: %s", os.Args[i])
-		}
-	}
-
-	// Clean up unnecessary variables for non-toolkit containers
-	if !toolkit {
-		_ = os.Unsetenv("TK_REF")
-	}
-
-	// Configure PWD variable, to make it similar to shell environment variables
-	if os.Getenv("PWD") == "" {
-		cwd, err := os.Getwd()
-		if err == nil {
-			_ = os.Setenv("PWD", cwd)
-		}
-	}
-
-	// Compute environment variables
-	for _, name := range computed {
-		initial := os.Getenv(name)
-		value, err := data.Template(initial)
+	// Prepare empty state file if it doesn't exist
+	_, err := os.Stat(data.StatePath)
+	if errors.Is(err, os.ErrNotExist) {
+		stdout.Hint(data.InitStepName, constants.InstructionStart)
+		stdoutUnsafe.Print("Creating state...")
+		err := os.WriteFile(data.StatePath, nil, 0777)
 		if err != nil {
-			output.Failf(output.CodeInputError, `resolving "%s" environment variable: %s: %s`, name, initial, err.Error())
+			stdoutUnsafe.Error(" error\n")
+			output.ExitErrorf(data.CodeInternal, "failed to create state file: %s", err.Error())
 		}
-		_ = os.Setenv(name, value)
+		os.Chmod(data.StatePath, 0777)
+		stdoutUnsafe.Print(" done\n")
+	} else if err != nil {
+		stdout.Hint(data.InitStepName, constants.InstructionStart)
+		stdoutUnsafe.Print("Accessing state...")
+		stdoutUnsafe.Error(" error\n")
+		output.ExitErrorf(data.CodeInternal, "cannot access state file: %s", err.Error())
 	}
 
-	// Compute conditional steps - ignore errors initially, as the may be dependent on themselves
-	data.Iterate(conditions, func(c data.Rule) bool {
-		expr, err := data.Expression(c.Expr)
-		if err != nil {
-			return false
-		}
-		v, _ := expr.BoolValue()
-		if !v {
-			for _, r := range c.Refs {
-				data.State.GetStep(r).Skip(now)
-			}
-		}
-		return true
-	})
+	// Store the instructions in the state if they are provided
+	orchestration.Setup.UseBaseEnv()
+	stdout.SetSensitiveWords(orchestration.Setup.GetSensitiveWords())
+	actionGroups := orchestration.Setup.GetActionGroups()
+	if actionGroups != nil {
+		stdoutUnsafe.Print("Initializing state...")
+		data.GetState().Actions = actionGroups
+		stdoutUnsafe.Print(" done\n")
 
-	// Fail invalid conditional steps
-	for _, c := range conditions {
-		_, err := data.Expression(c.Expr)
-		if err != nil {
-			output.Failf(output.CodeInputError, "broken condition for refs: %s: %s: %s", strings.Join(c.Refs, ", "), c.Expr, err.Error())
-		}
+		// Release the memory
+		actionGroups = nil
 	}
 
-	// Start all acknowledged steps
-	for _, f := range resulting {
-		for _, r := range f.Refs {
-			if r != "" {
-				data.State.GetStep(r).Start(now)
-			}
-		}
-	}
-	for _, t := range timeouts {
-		if t.Ref != "" {
-			data.State.GetStep(t.Ref).Start(now)
-		}
-	}
-	data.State.GetStep(data.Step.Ref).Start(now)
+	// Distribute the details
+	currentContainer := lite.LiteActionContainer{}
 
-	// Register timeouts
-	for _, t := range timeouts {
-		err := data.State.GetStep(t.Ref).SetTimeoutDuration(now, t.Duration)
-		if err != nil {
-			output.Failf(output.CodeInputError, "broken timeout for ref: %s: %s: %s", t.Ref, t.Duration, err.Error())
-		}
+	// Ensure there is a group index provided
+	if len(os.Args) != 2 {
+		output.ExitErrorf(data.CodeInternal, "invalid arguments provided - expected only one")
 	}
 
-	// Save the resulting conditions
-	data.Config.Resulting = resulting
-
-	// Don't call further if the step is already skipped
-	if data.State.GetStep(data.Step.Ref).Status == data.StepStatusSkipped {
-		if data.Config.Debug {
-			fmt.Printf("Skipped.\n")
-		}
-		data.Finish()
-	}
-
-	// Handle pausing
-	if paused {
-		data.Step.Pause(now)
-	}
-
-	// Load the rest of the configuration
-	var err error
-	for k, v := range config {
-		config[k], err = data.Template(v)
-		if err != nil {
-			output.Failf(output.CodeInputError, `resolving "%s" param: %s: %s`, k, v, err.Error())
-		}
-	}
-	data.LoadConfig(config)
-
-	// Compute templates in the cmd/args
-	original := slices.Clone(args)
-	for i := range args {
-		args[i], err = data.Template(args[i])
-		if err != nil {
-			output.Failf(output.CodeInputError, `resolving command: %s: %s`, shellquote.Join(original...), err.Error())
-		}
-	}
-
-	// Fail when there is nothing to run
-	if len(args) == 0 {
-		output.Failf(output.CodeNoCommand, "missing command to run")
+	// Determine group index to run
+	groupIndex, err := strconv.ParseInt(os.Args[1], 10, 32)
+	if err != nil {
+		output.ExitErrorf(data.CodeInputError, "invalid run group passed: %s", err.Error())
 	}
 
 	// Handle aborting
@@ -221,45 +91,292 @@ func main() {
 	signal.Notify(stopSignal, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		<-stopSignal
-		fmt.Println("The task was aborted.")
-		data.Step.Status = data.StepStatusAborted
-		data.Step.ExitCode = output.CodeAborted
-		data.Finish()
+		stdoutUnsafe.Print("The task was aborted.\n")
+		orchestration.Executions.Abort()
 	}()
 
-	// Handle timeouts.
-	// Ignores time when the step was paused.
-	for _, t := range timeouts {
-		go func(ref string) {
-			start := now
-			timeout := data.State.GetStep(ref).TimeoutAt.Sub(start)
-			for {
-				time.Sleep(timeout)
-				took := data.Step.Took(start)
-				if took < timeout {
-					timeout -= took
-					continue
-				}
-				fmt.Printf("Timed out.\n")
-				data.State.GetStep(ref).SetStatus(data.StepStatusTimeout)
-				data.Step.Status = data.StepStatusTimeout
-				data.Step.ExitCode = output.CodeTimeout
-				data.Finish()
-			}
-		}(t.Ref)
-	}
+	// Read the current state
+	state := data.GetState()
 
 	// Run the control server
-	controlSrv := control.NewServer(constants.ControlServerPort, data.Step)
+	handlePause := func(ts time.Time, step *data.StepData) error {
+		if step.PausedStart != nil {
+			return nil
+		}
+		err = orchestration.Executions.Pause()
+		if err != nil {
+			stdoutUnsafe.Warnf("warn: pause: %s\n", err.Error())
+		}
+		orchestration.Pause(step, *step.StartedAt)
+		for _, parentRef := range step.Parents {
+			parent := state.GetStep(parentRef)
+			orchestration.Pause(parent, *step.StartedAt)
+		}
+		return err
+	}
+	handleResume := func(ts time.Time, step *data.StepData) error {
+		if step.PausedStart == nil {
+			return nil
+		}
+		err = orchestration.Executions.Resume()
+		if err != nil {
+			stdoutUnsafe.Warnf("warn: resume: %s\n", err.Error())
+		}
+		orchestration.Resume(step, ts)
+		for _, parentRef := range step.Parents {
+			parent := state.GetStep(parentRef)
+			orchestration.Resume(parent, ts)
+		}
+		return err
+	}
+	controlSrv := control.NewServer(constants.ControlServerPort, control.ServerOptions{
+		HandlePause: func(ts time.Time) error {
+			return handlePause(ts, state.GetStep(state.CurrentRef))
+		},
+		HandleResume: func(ts time.Time) error {
+			return handleResume(ts, state.GetStep(state.CurrentRef))
+		},
+	})
 	_, err = controlSrv.Listen()
 	if err != nil {
-		fmt.Printf("Failed to start control server at port %d: %s\n", constants.ControlServerPort, err.Error())
-		os.Exit(int(output.CodeInternal))
+		output.ExitErrorf(data.CodeInternal, "Failed to start control server at port %d: %s\n", constants.ControlServerPort, err.Error())
 	}
 
-	// Start the task
-	data.Step.Executed = true
-	run.Run(args[0], args[1:])
+	// Keep a list of paused steps for execution
+	delayedPauses := make([]string, 0)
 
-	os.Exit(0)
+	// Interpret the operations
+	for _, action := range state.GetActions(int(groupIndex)) {
+		switch action.Type() {
+		case lite.ActionTypeDeclare:
+			state.GetStep(action.Declare.Ref).
+				SetCondition(action.Declare.Condition).
+				SetParents(action.Declare.Parents)
+
+		case lite.ActionTypePause:
+			state.GetStep(action.Pause.Ref).
+				SetPausedOnStart(true)
+
+		case lite.ActionTypeResult:
+			state.GetStep(action.Result.Ref).
+				SetResult(action.Result.Value)
+
+		case lite.ActionTypeTimeout:
+			state.GetStep(action.Timeout.Ref).
+				SetTimeout(action.Timeout.Timeout)
+
+		case lite.ActionTypeRetry:
+			state.GetStep(action.Retry.Ref).
+				SetRetryPolicy(data.RetryPolicy{Count: action.Retry.Count, Until: action.Retry.Until})
+
+		case lite.ActionTypeContainerTransition:
+			orchestration.Setup.SetConfig(action.Container.Config)
+			orchestration.Setup.AdvanceEnv()
+			stdout.SetSensitiveWords(orchestration.Setup.GetSensitiveWords())
+			currentContainer = *action.Container
+
+		case lite.ActionTypeCurrentStatus:
+			state.SetCurrentStatus(*action.CurrentStatus)
+
+		case lite.ActionTypeStart:
+			if *action.Start == "" {
+				continue
+			}
+			step := state.GetStep(*action.Start)
+			orchestration.Start(step)
+
+			// Determine if the step should be skipped
+			executable, err := step.ResolveCondition()
+			if err != nil {
+				output.ExitErrorf(data.CodeInternal, "failed to determine condition of '%s' step: %s: %v", *action.Start, step.Condition, err.Error())
+			}
+			if !executable {
+				step.SetStatus(data.StepStatusSkipped)
+
+				// Skip all the children
+				for _, v := range state.Steps {
+					if slices.Contains(v.Parents, step.Ref) {
+						v.SetStatus(data.StepStatusSkipped)
+					}
+				}
+			}
+
+			// Delay the pause until next children execution
+			if !step.IsFinished() && step.PausedOnStart {
+				delayedPauses = append(delayedPauses, state.CurrentRef)
+			}
+
+		case lite.ActionTypeEnd:
+			if *action.End == "" {
+				continue
+			}
+			step := state.GetStep(*action.End)
+			if step.Status == nil {
+				status, err := step.ResolveResult()
+				if err != nil {
+					output.ExitErrorf(data.CodeInternal, "failed to determine result of '%s' step: %s: %v", *action.End, step.Result, err.Error())
+				}
+				step.SetStatus(status)
+			}
+			orchestration.End(step)
+
+		case lite.ActionTypeSetup:
+			orchestration.Setup.UseEnv(constants.EnvGroupDebug)
+			stdout.SetSensitiveWords(orchestration.Setup.GetSensitiveWords())
+			step := state.GetStep(data.InitStepName)
+			err := commands.Setup(*action.Setup)
+			if err == nil {
+				step.SetStatus(data.StepStatusPassed)
+			} else {
+				step.SetStatus(data.StepStatusFailed)
+			}
+			orchestration.End(step)
+			if err != nil {
+				os.Exit(1)
+			}
+
+		case lite.ActionTypeExecute:
+			// Ignore running when the step is already resolved (= skipped)
+			step := state.GetStep(action.Execute.Ref)
+			if step.IsFinished() {
+				continue
+			}
+
+			// Ignore when it is aborted
+			if orchestration.Executions.IsAborted() {
+				step.SetStatus(data.StepStatusAborted)
+				continue
+			}
+
+			// Configure the environment
+			orchestration.Setup.UseCurrentEnv()
+			if !action.Execute.Toolkit {
+				_ = os.Unsetenv("TK_REF")
+			}
+
+			// List all the parents
+			leaf := []*data.StepData{step}
+			for i := range step.Parents {
+				leaf = append(leaf, state.GetStep(step.Parents[i]))
+			}
+
+			// Compute the pause
+			paused := make([]string, 0)
+			if slices.Contains(delayedPauses, action.Execute.Ref) {
+				paused = append(paused, action.Execute.Ref)
+			}
+			for _, parentRef := range step.Parents {
+				if slices.Contains(delayedPauses, parentRef) {
+					paused = append(paused, parentRef)
+				}
+			}
+
+			// Pause
+			if len(paused) > 0 {
+				delayedPauses = nil
+				_ = handlePause(*step.StartedAt, step)
+			}
+
+			// Configure timeout finalizer
+			finalizeTimeout := func() {
+				// Check timed out steps in leaf
+				timedOut := orchestration.GetTimedOut(leaf...)
+				if timedOut == nil {
+					return
+				}
+
+				// Iterate over timed out step
+				for _, r := range timedOut {
+					r.SetStatus(data.StepStatusTimeout)
+					sub := state.GetSubSteps(r.Ref)
+					for i := range sub {
+						if sub[i].IsFinished() {
+							continue
+						}
+						if sub[i].IsStarted() {
+							sub[i].SetStatus(data.StepStatusTimeout)
+						} else {
+							sub[i].SetStatus(data.StepStatusSkipped)
+						}
+					}
+					stdoutUnsafe.Println("Timed out.")
+				}
+				_ = orchestration.Executions.Kill()
+
+				return
+			}
+
+			// Handle immediate timeout
+			finalizeTimeout()
+
+			// Avoid execution if it's finished
+			if step.IsFinished() {
+				continue
+			}
+
+			// Iterate retries
+			for {
+				// Reset the status
+				step.Status = nil
+
+				// Ignore when it is aborted
+				if orchestration.Executions.IsAborted() {
+					step.SetStatus(data.StepStatusAborted)
+					break
+				}
+
+				// Register timeouts
+				stopTimeoutWatcher := orchestration.WatchTimeout(finalizeTimeout, leaf...)
+
+				// Run the command
+				commands.Run(*action.Execute, currentContainer)
+
+				// Stop timer listener
+				stopTimeoutWatcher()
+
+				// Ensure there won't be any hanging processes after the command is executed
+				_ = orchestration.Executions.Kill()
+
+				// TODO: Handle retry policy in tree independently
+				// Verify if there may be any other iteration
+				if step.Iteration >= step.Retry.Count {
+					break
+				}
+
+				// Verify if the retry condition is matching
+				until := step.Retry.Until
+				if until == "" {
+					until = "passed"
+				}
+				expr, err := expressions.CompileAndResolve(until, data.LocalMachine, data.GetInternalTestWorkflowMachine(), expressions.FinalizerFail)
+				if err != nil {
+					stdout.Printf("failed to execute retry condition: %s: %s\n", until, err.Error())
+					break
+				}
+				shouldStop, _ := expr.Static().BoolValue()
+				if shouldStop {
+					break
+				}
+
+				// Continue with the next iteration
+				step.Iteration++
+				stdout.HintDetails(step.Ref, constants.InstructionIteration, step.Iteration)
+				stdoutUnsafe.Printf("\nExit code: %d • Retrying: attempt #%d (of %d):\n", step.ExitCode, step.Iteration, step.Retry.Count)
+			}
+		}
+
+		// Save the status after each action
+		data.SaveState()
+	}
+
+	// Ensure the latest state is saved
+	data.SaveState()
+
+	// Stop the container after all the instructions are interpret
+	_ = orchestration.Executions.Kill()
+	if orchestration.Executions.IsAborted() {
+		os.Exit(int(data.CodeAborted))
+	} else {
+		os.Exit(0)
+	}
 }

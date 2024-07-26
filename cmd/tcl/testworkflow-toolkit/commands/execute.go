@@ -22,6 +22,7 @@ import (
 	commontcl "github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/common"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/spawn"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/transfer"
 	"github.com/kubeshop/testkube/internal/common"
@@ -92,7 +93,7 @@ func buildTestExecution(test testworkflowsv1.StepExecuteTest, async bool) (func(
 			return
 		}
 
-		data.PrintOutput(env.Ref(), "test-start", &testExecutionDetails{
+		instructions.PrintOutput(env.Ref(), "test-start", &testExecutionDetails{
 			Id:          exec.Id,
 			Name:        exec.Name,
 			TestName:    exec.TestName,
@@ -126,7 +127,7 @@ func buildTestExecution(test testworkflowsv1.StepExecuteTest, async bool) (func(
 					break loop
 				}
 				if prevStatus != status {
-					data.PrintOutput(env.Ref(), "test-status", &executionResult{Id: exec.Id, Status: string(status)})
+					instructions.PrintOutput(env.Ref(), "test-status", &executionResult{Id: exec.Id, Status: string(status)})
 				}
 				prevStatus = status
 			}
@@ -140,7 +141,7 @@ func buildTestExecution(test testworkflowsv1.StepExecuteTest, async bool) (func(
 			color = ui.Red
 		}
 
-		data.PrintOutput(env.Ref(), "test-end", &executionResult{Id: exec.Id, Status: string(status)})
+		instructions.PrintOutput(env.Ref(), "test-end", &executionResult{Id: exec.Id, Status: string(status)})
 		fmt.Printf("%s • %s\n", color(execName), string(status))
 		return
 	}, nil
@@ -161,7 +162,7 @@ func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async 
 			return
 		}
 
-		data.PrintOutput(env.Ref(), "testworkflow-start", &testWorkflowExecutionDetails{
+		instructions.PrintOutput(env.Ref(), "testworkflow-start", &testWorkflowExecutionDetails{
 			Id:               exec.Id,
 			Name:             exec.Name,
 			TestWorkflowName: exec.Workflow.Name,
@@ -195,7 +196,7 @@ func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async 
 					break loop
 				}
 				if prevStatus != status {
-					data.PrintOutput(env.Ref(), "testworkflow-status", &executionResult{Id: exec.Id, Status: string(status)})
+					instructions.PrintOutput(env.Ref(), "testworkflow-status", &executionResult{Id: exec.Id, Status: string(status)})
 				}
 				prevStatus = status
 			}
@@ -209,7 +210,7 @@ func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async 
 			color = ui.Red
 		}
 
-		data.PrintOutput(env.Ref(), "testworkflow-end", &executionResult{Id: exec.Id, Status: string(status)})
+		instructions.PrintOutput(env.Ref(), "testworkflow-end", &executionResult{Id: exec.Id, Status: string(status)})
 		fmt.Printf("%s • %s\n", color(execName), string(status))
 		return
 	}, nil

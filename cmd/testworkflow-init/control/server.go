@@ -6,26 +6,31 @@ import (
 	"net"
 	"net/http"
 	"time"
+
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
 )
 
 type Pauseable interface {
 	Pause(time.Time) error
-	Resume() error
+	Resume(ts time.Time) error
 }
 
 type server struct {
-	port int
-	step Pauseable
+	port   int
+	target Pauseable
 }
 
-func NewServer(port int, step Pauseable) *server {
+func NewServer(port int, target Pauseable) *server {
 	return &server{
-		port: port,
-		step: step,
+		port:   port,
+		target: target,
 	}
 }
 
 func (s *server) handler() *http.ServeMux {
+	stdout := output.Std
+	stdoutUnsafe := stdout.Direct()
+
 	mux := http.NewServeMux()
 	// TODO: Consider "shell" command too for debugging?
 	mux.HandleFunc("/pause", func(w http.ResponseWriter, r *http.Request) {
@@ -33,8 +38,8 @@ func (s *server) handler() *http.ServeMux {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		if err := s.step.Pause(time.Now()); err != nil {
-			fmt.Printf("Warning: failed to pause: %s\n", err.Error())
+		if err := s.target.Pause(time.Now()); err != nil {
+			stdoutUnsafe.Warnf("warn: failed to pause: %s\n", err.Error())
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -45,8 +50,8 @@ func (s *server) handler() *http.ServeMux {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		if err := s.step.Resume(); err != nil {
-			fmt.Printf("Warning: failed to resume: %s\n", err.Error())
+		if err := s.target.Resume(time.Now()); err != nil {
+			stdoutUnsafe.Warnf("warn: failed to resume: %s\n", err.Error())
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}

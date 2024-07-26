@@ -22,15 +22,16 @@ import (
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowresolver"
 )
 
-func ProcessExecute(_ testworkflowprocessor.InternalProcessor, layer testworkflowprocessor.Intermediate, container testworkflowprocessor.Container, step testworkflowsv1.Step) (testworkflowprocessor.Stage, error) {
+func ProcessExecute(_ testworkflowprocessor.InternalProcessor, layer testworkflowprocessor.Intermediate, container stage.Container, step testworkflowsv1.Step) (stage.Stage, error) {
 	if step.Execute == nil {
 		return nil, nil
 	}
 	container = container.CreateChild()
-	stage := testworkflowprocessor.NewContainerStage(layer.NextRef(), container)
+	stage := stage.NewContainerStage(layer.NextRef(), container)
 	stage.SetRetryPolicy(step.Retry)
 	hasWorkflows := len(step.Execute.Workflows) > 0
 	hasTests := len(step.Execute.Tests) > 0
@@ -82,12 +83,12 @@ func ProcessExecute(_ testworkflowprocessor.InternalProcessor, layer testworkflo
 	return stage, nil
 }
 
-func ProcessParallel(_ testworkflowprocessor.InternalProcessor, layer testworkflowprocessor.Intermediate, container testworkflowprocessor.Container, step testworkflowsv1.Step) (testworkflowprocessor.Stage, error) {
+func ProcessParallel(_ testworkflowprocessor.InternalProcessor, layer testworkflowprocessor.Intermediate, container stage.Container, step testworkflowsv1.Step) (stage.Stage, error) {
 	if step.Parallel == nil {
 		return nil, nil
 	}
 
-	stage := testworkflowprocessor.NewContainerStage(layer.NextRef(), container.CreateChild())
+	stage := stage.NewContainerStage(layer.NextRef(), container.CreateChild())
 	stage.SetCategory("Run in parallel")
 
 	// Inherit container defaults
@@ -111,7 +112,7 @@ func ProcessParallel(_ testworkflowprocessor.InternalProcessor, layer testworkfl
 	return stage, nil
 }
 
-func ProcessServicesStart(_ testworkflowprocessor.InternalProcessor, layer testworkflowprocessor.Intermediate, container testworkflowprocessor.Container, step testworkflowsv1.Step) (testworkflowprocessor.Stage, error) {
+func ProcessServicesStart(_ testworkflowprocessor.InternalProcessor, layer testworkflowprocessor.Intermediate, container stage.Container, step testworkflowsv1.Step) (stage.Stage, error) {
 	if len(step.Services) == 0 {
 		return nil, nil
 	}
@@ -120,7 +121,7 @@ func ProcessServicesStart(_ testworkflowprocessor.InternalProcessor, layer testw
 	podsRef := layer.NextRef()
 	container.AppendEnv(corev1.EnvVar{Name: "TK_SVC_REF", Value: podsRef})
 
-	stage := testworkflowprocessor.NewContainerStage(layer.NextRef(), container.CreateChild())
+	stage := stage.NewContainerStage(layer.NextRef(), container.CreateChild())
 	stage.SetCategory("Start services")
 
 	stage.Container().
@@ -143,12 +144,12 @@ func ProcessServicesStart(_ testworkflowprocessor.InternalProcessor, layer testw
 	return stage, nil
 }
 
-func ProcessServicesStop(_ testworkflowprocessor.InternalProcessor, layer testworkflowprocessor.Intermediate, container testworkflowprocessor.Container, step testworkflowsv1.Step) (testworkflowprocessor.Stage, error) {
+func ProcessServicesStop(_ testworkflowprocessor.InternalProcessor, layer testworkflowprocessor.Intermediate, container stage.Container, step testworkflowsv1.Step) (stage.Stage, error) {
 	if len(step.Services) == 0 {
 		return nil, nil
 	}
 
-	stage := testworkflowprocessor.NewContainerStage(layer.NextRef(), container.CreateChild())
+	stage := stage.NewContainerStage(layer.NextRef(), container.CreateChild())
 	stage.SetCondition("always") // TODO: actually, it's enough to do it when "Start services" is not skipped
 	stage.SetOptional(true)
 	stage.SetCategory("Stop services")

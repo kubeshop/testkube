@@ -22,5 +22,8 @@ func DedupeEnvVars(envs []corev1.EnvVar) []corev1.EnvVar {
 			result = append([]corev1.EnvVar{envs[i]}, result...)
 		}
 	}
+	if len(result) == 0 {
+		return nil
+	}
 	return result
 }

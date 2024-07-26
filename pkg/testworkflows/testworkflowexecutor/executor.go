@@ -18,7 +18,7 @@ import (
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	testworkflowsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testworkflows/v1"
 	initconstants "github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
-	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	v1 "github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -32,6 +32,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowresolver"
 )
 
@@ -121,7 +122,7 @@ func (e *executor) handleFatalError(execution *testkube.TestWorkflowExecution, e
 	if ts.IsZero() {
 		ts = time.Now()
 		if isAborted || isTimeout {
-			ts = ts.Truncate(testworkflowcontroller.DefaultInitTimeout)
+			ts = ts.Add(-1 * testworkflowcontroller.DefaultInitTimeout)
 		}
 	}
 
@@ -234,7 +235,7 @@ func (e *executor) Control(ctx context.Context, testWorkflow *testworkflowsv1.Te
 			} else if !v.Value.Temporary {
 				if ref != v.Value.Ref && v.Value.Ref != "" {
 					ref = v.Value.Ref
-					_, err := writer.Write([]byte(data.SprintHint(ref, initconstants.InstructionStart)))
+					_, err := writer.Write([]byte(instructions.SprintHint(ref, initconstants.InstructionStart)))
 					if err != nil {
 						log.DefaultLogger.Error(errors.Wrap(err, "saving log output signature"))
 					}
@@ -504,14 +505,14 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		Number:      number,
 		ScheduledAt: now,
 		StatusAt:    now,
-		Signature:   testworkflowprocessor.MapSignatureListToInternal(bundle.Signature),
+		Signature:   stage.MapSignatureListToInternal(bundle.Signature),
 		Result: &testkube.TestWorkflowResult{
 			Status:          common.Ptr(testkube.QUEUED_TestWorkflowStatus),
 			PredictedStatus: common.Ptr(testkube.PASSED_TestWorkflowStatus),
 			Initialization: &testkube.TestWorkflowStepResult{
 				Status: common.Ptr(testkube.QUEUED_TestWorkflowStepStatus),
 			},
-			Steps: testworkflowprocessor.MapSignatureListToStepResults(bundle.Signature),
+			Steps: stage.MapSignatureListToStepResults(bundle.Signature),
 		},
 		Output:                    []testkube.TestWorkflowOutput{},
 		Workflow:                  testworkflowmappers.MapKubeToAPI(initialWorkflow),
