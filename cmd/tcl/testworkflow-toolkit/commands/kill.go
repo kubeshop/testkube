@@ -74,7 +74,7 @@ func NewKillCmd() *cobra.Command {
 						Register("index", index).
 						RegisterAccessorExt(func(name string) (interface{}, bool, error) {
 							if name == "count" {
-								expr, err := expressions.CompileAndResolve(fmt.Sprintf("len(services.%s)", service))
+								expr, err := expressions.CompileAndResolve(fmt.Sprintf("len(%s)", data.ServicesPrefix+service))
 								return expr, true, err
 							}
 							return nil, false, nil

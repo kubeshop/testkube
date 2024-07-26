@@ -91,7 +91,7 @@ func (c *setup) initialize() {
 func (c *setup) UseBaseEnv() {
 	os.Clearenv()
 	for k, v := range c.envBase {
-		_ = os.Setenv(k, v)
+		os.Setenv(k, v)
 	}
 }
 
@@ -155,21 +155,21 @@ func (c *setup) UseEnv(group string) {
 		if _, ok := c.envGroupsComputed[group][k]; ok {
 			envTemplates[k] = v
 		} else {
-			_ = os.Setenv(k, v)
+			os.Setenv(k, v)
 		}
 	}
 
 	// Configure PWD variable, to make it similar to shell environment variables
 	cwd := getWorkingDir()
 	if os.Getenv("PWD") == "" {
-		_ = os.Setenv("PWD", cwd)
+		os.Setenv("PWD", cwd)
 	}
 
 	// Ensure the built-in binaries are available
 	if os.Getenv("PATH") == "" {
-		_ = os.Setenv("PATH", data.InternalBinPath)
+		os.Setenv("PATH", data.InternalBinPath)
 	} else {
-		_ = os.Setenv("PATH", fmt.Sprintf("%s:%s", os.Getenv("PATH"), data.InternalBinPath))
+		os.Setenv("PATH", fmt.Sprintf("%s:%s", os.Getenv("PATH"), data.InternalBinPath))
 	}
 
 	// Compute dynamic environment variables
@@ -197,7 +197,7 @@ func (c *setup) UseEnv(group string) {
 			output.ExitErrorf(data.CodeInputError, "failed to compute '%s' environment variable: %s", name, err.Error())
 		}
 		str, _ := value.Static().StringValue()
-		_ = os.Setenv(name, str)
+		os.Setenv(name, str)
 	}
 }
 

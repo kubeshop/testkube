@@ -30,6 +30,11 @@ func Run(run lite.ActionExecute, container lite.LiteActionContainer) {
 		command = append(command, *container.Config.Args...)
 	}
 
+	// Ensure the command is not empty
+	if len(command) == 0 {
+		output.ExitErrorf(data.CodeInputError, "command is required")
+	}
+
 	// Resolve the command to run
 	for i := range command {
 		value, err := expressions.CompileAndResolveTemplate(command[i], machine, expressions.FinalizerFail)

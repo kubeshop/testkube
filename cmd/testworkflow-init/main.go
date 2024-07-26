@@ -22,6 +22,12 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 )
 
+const (
+	SensitiveMask             = "****"
+	SensitiveVisibleLastChars = 2
+	SensitiveMinimumLength    = 4
+)
+
 func main() {
 	// Force colors
 	color.ForceColor()
@@ -31,8 +37,8 @@ func main() {
 	stdoutUnsafe := stdout.Direct()
 
 	// Configure sensitive data obfuscation
-	stdout.SetSensitiveReplacer(obfuscator.ShowLastCharacters("****", 2))
-	orchestration.Setup.SetSensitiveWordMinimumLength(4)
+	stdout.SetSensitiveReplacer(obfuscator.ShowLastCharacters(SensitiveMask, SensitiveVisibleLastChars))
+	orchestration.Setup.SetSensitiveWordMinimumLength(SensitiveMinimumLength)
 
 	// Prepare empty state file if it doesn't exist
 	_, err := os.Stat(data.StatePath)

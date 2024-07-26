@@ -24,6 +24,7 @@ import (
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	commontcl "github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/common"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/spawn"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/transfer"
@@ -111,7 +112,7 @@ func NewServicesCmd() *cobra.Command {
 				}
 
 				// Initialize empty array of details for each of the services
-				instructions.PrintHintDetails(env.Ref(), fmt.Sprintf("services.%s", name), []ServiceState{})
+				instructions.PrintHintDetails(env.Ref(), data.ServicesPrefix+name, []ServiceState{})
 			}
 
 			// Analyze instances to run
@@ -189,7 +190,7 @@ func NewServicesCmd() *cobra.Command {
 				for i := range svcInstances {
 					state[name][i].Description = svcInstances[i].Description
 				}
-				instructions.PrintHintDetails(env.Ref(), fmt.Sprintf("services.%s", name), state)
+				instructions.PrintHintDetails(env.Ref(), data.ServicesPrefix+name, state)
 			}
 
 			// Inform about each service instance
@@ -388,7 +389,7 @@ func NewServicesCmd() *cobra.Command {
 
 			// Inform about the services state
 			for k := range state {
-				instructions.PrintHintDetails(env.Ref(), fmt.Sprintf("services.%s", k), state[k])
+				instructions.PrintHintDetails(env.Ref(), data.ServicesPrefix+k, state[k])
 			}
 
 			// Notify the results
