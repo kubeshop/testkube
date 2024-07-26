@@ -5,10 +5,13 @@
 package testworkflowprocessor
 
 import (
-	reflect "reflect"
+	"reflect"
 
-	gomock "github.com/golang/mock/gomock"
+	"github.com/golang/mock/gomock"
+
 	v1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
+
 	v10 "k8s.io/api/core/v1"
 )
 
@@ -164,10 +167,10 @@ func (mr *MockIntermediateMockRecorder) ConfigMaps() *gomock.Call {
 }
 
 // ContainerDefaults mocks base method.
-func (m *MockIntermediate) ContainerDefaults() Container {
+func (m *MockIntermediate) ContainerDefaults() stage.Container {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ContainerDefaults")
-	ret0, _ := ret[0].(Container)
+	ret0, _ := ret[0].(stage.Container)
 	return ret0
 }
 

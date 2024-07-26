@@ -1,4 +1,4 @@
-package testworkflowprocessor
+package stage
 
 import (
 	"maps"
@@ -16,8 +16,9 @@ import (
 )
 
 type container struct {
-	parent *container
-	Cr     testworkflowsv1.ContainerConfig `expr:"include"`
+	parent  *container
+	toolkit bool
+	Cr      testworkflowsv1.ContainerConfig `expr:"include"`
 }
 
 type ContainerComposition interface {
@@ -47,6 +48,7 @@ type ContainerAccessors interface {
 
 	HasVolumeAt(path string) bool
 	ToContainerConfig() testworkflowsv1.ContainerConfig
+	IsToolkit() bool
 }
 
 type ContainerMutations[T any] interface {
@@ -67,7 +69,7 @@ type ContainerMutations[T any] interface {
 	EnableToolkit(ref string) T
 }
 
-//go:generate mockgen -destination=./mock_container.go -package=testworkflowprocessor "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor" Container
+//go:generate mockgen -destination=./mock_container.go -package=stage "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage" Container
 type Container interface {
 	ContainerComposition
 	ContainerAccessors
@@ -94,7 +96,7 @@ func (c *container) Root() Container {
 	if c.parent == nil {
 		return c
 	}
-	return c.parent.Parent()
+	return c.parent.Root()
 }
 
 func (c *container) Parent() Container {
@@ -102,7 +104,7 @@ func (c *container) Parent() Container {
 }
 
 func (c *container) CreateChild() Container {
-	return &container{parent: c}
+	return &container{parent: c, toolkit: c.toolkit}
 }
 
 // Getters
@@ -309,24 +311,41 @@ func (c *container) ToContainerConfig() testworkflowsv1.ContainerConfig {
 	for i := range volumeMounts {
 		volumeMounts[i] = *volumeMounts[i].DeepCopy()
 	}
+	workingDir := common.Ptr(c.WorkingDir())
+	if *workingDir == "" {
+		workingDir = nil
+	}
+	resources := &testworkflowsv1.Resources{
+		Requests: maps.Clone(c.Resources().Requests),
+		Limits:   maps.Clone(c.Resources().Limits),
+	}
+	if len(resources.Requests) == 0 && len(resources.Limits) == 0 {
+		resources = nil
+	}
+	args := common.Ptr(slices.Clone(c.Args()))
+	if *args == nil {
+		args = nil
+	}
+	command := common.Ptr(slices.Clone(c.Command()))
+	if *command == nil {
+		command = nil
+	}
 	return testworkflowsv1.ContainerConfig{
-		WorkingDir:      common.Ptr(c.WorkingDir()),
+		WorkingDir:      workingDir,
 		Image:           c.Image(),
 		ImagePullPolicy: c.ImagePullPolicy(),
 		Env:             env,
 		EnvFrom:         envFrom,
-		Command:         common.Ptr(slices.Clone(c.Command())),
-		Args:            common.Ptr(slices.Clone(c.Args())),
-		Resources: &testworkflowsv1.Resources{
-			Requests: maps.Clone(c.Resources().Requests),
-			Limits:   maps.Clone(c.Resources().Limits),
-		},
+		Command:         command,
+		Args:            args,
+		Resources:       resources,
 		SecurityContext: c.SecurityContext().DeepCopy(),
 		VolumeMounts:    volumeMounts,
 	}
 }
 
 func (c *container) Detach() Container {
+	c.toolkit = c.IsToolkit()
 	c.Cr = c.ToContainerConfig()
 	c.parent = nil
 	return c
@@ -394,8 +413,18 @@ func (c *container) ApplyImageData(image *imageinspector.Info, resolvedImageName
 	return nil
 }
 
+func (c *container) IsToolkit() bool {
+	return c.toolkit || (c.parent != nil && c.parent.IsToolkit()) || slices.Contains(c.Cr.Env, BypassToolkitCheck)
+}
+
+func (c *container) MarkAsToolkit() Container {
+	c.toolkit = true
+	return c
+}
+
 func (c *container) EnableToolkit(ref string) Container {
 	return c.
+		MarkAsToolkit().
 		AppendEnv(corev1.EnvVar{
 			Name:      "TK_IP",
 			ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "status.podIP"}},

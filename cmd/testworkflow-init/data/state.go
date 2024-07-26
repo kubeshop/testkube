@@ -2,39 +2,34 @@ package data
 
 import (
 	"bytes"
-	"encoding/gob"
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
+	"slices"
+	"strings"
 	"sync"
 
-	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
 	"github.com/kubeshop/testkube/pkg/expressions"
-)
-
-const (
-	defaultInternalPath       = "/.tktw"
-	defaultTerminationLogPath = "/dev/termination-log"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 )
 
 type state struct {
-	Status TestWorkflowStatus   `json:"status"`
-	Steps  map[string]*StepInfo `json:"steps"`
-	Output map[string]string    `json:"output"`
+	Actions           [][]lite.LiteAction `json:"a,omitempty"`
+	CurrentGroupIndex int                 `json:"g,omitempty"`
+
+	CurrentRef    string               `json:"c,omitempty"`
+	CurrentStatus string               `json:"s,omitempty"`
+	Output        map[string]string    `json:"o,omitempty"`
+	Steps         map[string]*StepData `json:"S,omitempty"`
 }
 
-var State = &state{
-	Steps:  map[string]*StepInfo{},
-	Output: map[string]string{},
-}
-
-func (s *state) GetStep(ref string) *StepInfo {
-	_, ok := State.Steps[ref]
-	if !ok {
-		State.Steps[ref] = &StepInfo{Ref: ref}
+func (s *state) GetActions(groupIndex int) []lite.LiteAction {
+	if groupIndex < 0 || groupIndex >= len(s.Actions) {
+		panic("unknown actions group")
 	}
-	return State.Steps[ref]
+	s.CurrentGroupIndex = groupIndex
+	return s.Actions[groupIndex]
 }
 
 func (s *state) GetOutput(name string) (expressions.Expression, bool, error) {
@@ -54,37 +49,54 @@ func (s *state) SetOutput(ref, name string, value interface{}) {
 	if err == nil {
 		s.Output[name] = string(v)
 	} else {
-		fmt.Printf("Warning: couldn't save '%s' (%s) output: %s\n", name, ref, err.Error())
+		output.Std.Warnf("warn: couldn't save '%s' (%s) output: %s\n", name, ref, err.Error())
 	}
 }
 
-func (s *state) GetSelfStatus() string {
-	if Step.Executed {
-		return string(Step.Status)
+func (s *state) GetStep(ref string) *StepData {
+	if s.Steps[ref] == nil {
+		s.Steps[ref] = &StepData{Ref: ref}
 	}
-	v := s.GetStep(Step.Ref)
-	if v.Status != StepStatusPassed {
-		return string(v.Status)
+	if s.Steps[ref].Condition == "" {
+		s.Steps[ref].Condition = "passed"
 	}
-	return string(Step.Status)
+	return s.Steps[ref]
 }
 
-func (s *state) GetStatus() string {
-	if Step.Executed {
-		return string(Step.Status)
+func (s *state) getSubSteps(ref string, visited *map[*StepData]struct{}) {
+	// Ignore already visited node
+	if _, ok := (*visited)[s.Steps[ref]]; ok {
+		return
 	}
-	if Step.InitStatus == "" {
-		return string(s.Status)
+
+	// Append the node
+	(*visited)[s.Steps[ref]] = struct{}{}
+
+	// Visit its children
+	for _, sub := range s.Steps {
+		if slices.Contains(sub.Parents, ref) {
+			s.getSubSteps(sub.Ref, visited)
+		}
 	}
-	v, err := RefStatusExpression(Step.InitStatus)
-	if err != nil {
-		return string(s.Status)
+}
+
+func (s *state) GetSubSteps(ref string) []*StepData {
+	visited := map[*StepData]struct{}{}
+	s.getSubSteps(ref, &visited)
+	result := make([]*StepData, 0, len(visited))
+	for r := range visited {
+		result = append(result, r)
 	}
-	str, _ := v.Static().StringValue()
-	if str == "" {
-		return string(s.Status)
-	}
-	return str
+	return result
+}
+
+func (s *state) SetCurrentStatus(expression string) {
+	s.CurrentStatus = expression
+}
+
+var currentState = &state{
+	Output: map[string]string{},
+	Steps:  map[string]*StepData{},
 }
 
 func readState(filePath string) {
@@ -98,7 +110,7 @@ func readState(filePath string) {
 	if len(b) == 0 {
 		return
 	}
-	err = gob.NewDecoder(bytes.NewBuffer(b)).Decode(&State)
+	err = json.NewDecoder(bytes.NewBuffer(b)).Decode(&currentState)
 	if err != nil {
 		panic(err)
 	}
@@ -106,7 +118,7 @@ func readState(filePath string) {
 
 func persistState(filePath string) {
 	b := bytes.Buffer{}
-	err := gob.NewEncoder(&b).Encode(State)
+	err := json.NewEncoder(&b).Encode(currentState)
 	if err != nil {
 		panic(err)
 	}
@@ -117,67 +129,53 @@ func persistState(filePath string) {
 	}
 }
 
-func recomputeStatuses() {
-	// Read current status
-	status := StepStatus(State.GetSelfStatus())
+func persistTerminationLog() {
+	// Read the state
+	s := GetState()
 
-	// Update own status
-	State.GetStep(Step.Ref).SetStatus(status)
-
-	// Update expected failure statuses
-	Iterate(Config.Resulting, func(r Rule) bool {
-		v, err := RefSuccessExpression(r.Expr)
-		if err != nil {
-			return false
+	// Get list of statuses
+	actions := s.GetActions(s.CurrentGroupIndex)
+	statuses := make([]string, 0)
+	for i := range actions {
+		ref := ""
+		if actions[i].Type() == lite.ActionTypeEnd {
+			ref = *actions[i].End
 		}
-		vv, _ := v.Static().BoolValue()
-		if !vv {
-			for _, ref := range r.Refs {
-				if ref == "" {
-					State.Status = TestWorkflowStatusFailed
-				} else {
-					State.GetStep(ref).SetStatus(StepStatusFailed)
-				}
-			}
+		if actions[i].Type() == lite.ActionTypeSetup {
+			ref = InitStepName
 		}
-		return true
-	})
-}
+		if ref == "" {
+			continue
+		}
+		step := s.GetStep(ref)
+		if step.Status == nil {
+			statuses = append(statuses, fmt.Sprintf("%s,%d", StepStatusAborted, CodeAborted))
+		} else {
+			statuses = append(statuses, fmt.Sprintf("%s,%d", (*step.Status).Code(), step.ExitCode))
+		}
+	}
 
-func persistStatus(filePath string) {
-	// Persist container termination result
-	res := fmt.Sprintf(`%s,%d`, State.GetStep(Step.Ref).Status, Step.ExitCode)
-	err := os.WriteFile(filePath, []byte(res), 0755)
+	// Write the termination log
+	err := os.WriteFile(TerminationLogPath, []byte(strings.Join(statuses, "/")), 0)
 	if err != nil {
-		panic(err)
+		output.UnsafeExitErrorf(CodeInternal, "failed to save the termination log: %s", err.Error())
 	}
 }
 
 var loadStateMu sync.Mutex
 var loadedState bool
 
-func LoadState() {
+func GetState() *state {
 	defer loadStateMu.Unlock()
 	loadStateMu.Lock()
 	if !loadedState {
-		readState(filepath.Join(defaultInternalPath, "state"))
+		readState(StatePath)
 		loadedState = true
 	}
+	return currentState
 }
 
-func Finish() {
-	// Persist step information and shared data
-	recomputeStatuses()
-	persistStatus(defaultTerminationLogPath)
-	persistState(filepath.Join(defaultInternalPath, "state"))
-
-	// Kill the sub-process
-	Step.Kill()
-
-	// Emit end hint to allow exporting the timestamp
-	PrintHint(Step.Ref, constants.InstructionEnd)
-
-	// The init process needs to finish with zero exit code,
-	// to continue with the next container.
-	os.Exit(0)
+func SaveState() {
+	persistState(StatePath)
+	persistTerminationLog()
 }

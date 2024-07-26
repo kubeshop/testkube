@@ -4,19 +4,19 @@ import (
 	"bytes"
 	"errors"
 	"io"
+
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 )
 
 type outputProcessor struct {
 	writer   io.Writer
-	ref      string
 	closed   bool
 	lastLine []byte
 }
 
-func NewOutputProcessor(ref string, writer io.Writer) io.WriteCloser {
+func NewOutputProcessor(writer io.Writer) io.WriteCloser {
 	return &outputProcessor{
 		writer: writer,
-		ref:    ref,
 	}
 }
 
@@ -29,12 +29,12 @@ func (o *outputProcessor) Write(p []byte) (int, error) {
 	lines := bytes.Split(append(o.lastLine, p...), []byte("\n"))
 	o.lastLine = nil
 	for i := range lines {
-		instruction, _, _ := DetectInstruction(lines[i])
+		instruction, _, _ := instructions.DetectInstruction(lines[i])
 		if instruction == nil && i == len(lines)-1 {
 			o.lastLine = lines[i]
 		}
 		if instruction != nil && instruction.Value != nil {
-			State.SetOutput(instruction.Ref, instruction.Name, instruction.Value)
+			GetState().SetOutput(instruction.Ref, instruction.Name, instruction.Value)
 		}
 	}
 
