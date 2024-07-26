@@ -49,15 +49,7 @@ func Group(actions []actiontypes.Action) (groups [][]actiontypes.Action) {
 			startIndex = containerIndex
 		}
 
-		//// TODO: Combine multiple operations in a single container if it's possible
-		//if i != len(executeIndexes)-1 {
-		//	prevRef := actions[executeIndex].Execute.Ref
-		//	prevContainerIndex, prevOk := containerInstructions[prevRef]
-		//	containerIndex, containerOk := containerInstructions[ref]
-		//	if !containerOk || (prevOk && actions[prevContainerIndex].Container.Config.Image == actions[containerIndex].Container.Config.Image) {
-		//		continue
-		//	}
-		//}
+		// TODO: Combine multiple operations in a single container if it's possible
 
 		groups = append([][]actiontypes.Action{actions[startIndex:]}, groups...)
 		actions = actions[:startIndex]
