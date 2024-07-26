@@ -222,7 +222,7 @@ func main() {
 
 		case lite.ActionTypeSetup:
 			// TODO: Handle error
-			orchestration.Setup.UseEnv("00")
+			orchestration.Setup.UseEnv(constants.EnvGroupDebug)
 			stdout.SetSensitiveWords(orchestration.Setup.GetSensitiveWords())
 			step := state.GetStep(data.InitStepName)
 			commands.Setup(*action.Setup)

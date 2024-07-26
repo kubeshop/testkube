@@ -134,7 +134,7 @@ func (c *setup) GetSensitiveWords() []string {
 }
 
 func (c *setup) GetActionGroups() (actions [][]lite.LiteAction) {
-	serialized := c.envGroups["01"][constants.EnvActions]
+	serialized := c.envGroups[constants.EnvGroupActions][constants.EnvActions]
 	if serialized == "" {
 		return
 	}

@@ -53,19 +53,19 @@ var (
 	execMachine = expressions.NewMachine().
 			Register("resource.root", "dummy-id").
 			Register("resource.id", "dummy-id-abc")
-	envInstructions = actiontypes.EnvVarFrom("01", false, false, constants2.EnvActions, corev1.EnvVarSource{
+	envActions = actiontypes.EnvVarFrom(constants2.EnvGroupActions, false, false, constants2.EnvActions, corev1.EnvVarSource{
 		FieldRef: &corev1.ObjectFieldSelector{FieldPath: constants.SpecAnnotationFieldPath},
 	})
-	envDebugNode = actiontypes.EnvVarFrom("00", false, false, constants2.EnvNodeName, corev1.EnvVarSource{
+	envDebugNode = actiontypes.EnvVarFrom(constants2.EnvGroupDebug, false, false, constants2.EnvNodeName, corev1.EnvVarSource{
 		FieldRef: &corev1.ObjectFieldSelector{FieldPath: "spec.nodeName"},
 	})
-	envDebugPod = actiontypes.EnvVarFrom("00", false, false, constants2.EnvPodName, corev1.EnvVarSource{
+	envDebugPod = actiontypes.EnvVarFrom(constants2.EnvGroupDebug, false, false, constants2.EnvPodName, corev1.EnvVarSource{
 		FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.name"},
 	})
-	envDebugNamespace = actiontypes.EnvVarFrom("00", false, false, constants2.EnvNamespaceName, corev1.EnvVarSource{
+	envDebugNamespace = actiontypes.EnvVarFrom(constants2.EnvGroupDebug, false, false, constants2.EnvNamespaceName, corev1.EnvVarSource{
 		FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.namespace"},
 	})
-	envDebugServiceAccount = actiontypes.EnvVarFrom("00", false, false, constants2.EnvServiceAccountName, corev1.EnvVarSource{
+	envDebugServiceAccount = actiontypes.EnvVarFrom(constants2.EnvGroupDebug, false, false, constants2.EnvServiceAccountName, corev1.EnvVarSource{
 		FieldRef: &corev1.ObjectFieldSelector{FieldPath: "spec.serviceAccountName"},
 	})
 )
@@ -187,7 +187,7 @@ func TestProcessBasic(t *testing.T) {
 								envDebugPod,
 								envDebugNamespace,
 								envDebugServiceAccount,
-								envInstructions,
+								envActions,
 							},
 							VolumeMounts: volumeMounts,
 							SecurityContext: &corev1.SecurityContext{
@@ -314,7 +314,7 @@ func TestProcessShellWithNonStandardImage(t *testing.T) {
 								envDebugPod,
 								envDebugNamespace,
 								envDebugServiceAccount,
-								envInstructions,
+								envActions,
 							},
 							VolumeMounts: volumeMounts,
 							SecurityContext: &corev1.SecurityContext{
@@ -423,7 +423,7 @@ func TestProcessBasicEnvReference(t *testing.T) {
 					envDebugPod,
 					envDebugNamespace,
 					envDebugServiceAccount,
-					envInstructions,
+					envActions,
 				},
 				VolumeMounts: volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
@@ -530,7 +530,7 @@ func TestProcessMultipleSteps(t *testing.T) {
 					envDebugPod,
 					envDebugNamespace,
 					envDebugServiceAccount,
-					envInstructions,
+					envActions,
 				},
 				VolumeMounts: volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
@@ -681,7 +681,7 @@ func TestProcessNestedSteps(t *testing.T) {
 					envDebugPod,
 					envDebugNamespace,
 					envDebugServiceAccount,
-					envInstructions,
+					envActions,
 				},
 				VolumeMounts: volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
@@ -794,7 +794,7 @@ func TestProcessLocalContent(t *testing.T) {
 					envDebugPod,
 					envDebugNamespace,
 					envDebugServiceAccount,
-					envInstructions,
+					envActions,
 				},
 				VolumeMounts: volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
@@ -885,7 +885,7 @@ func TestProcessGlobalContent(t *testing.T) {
 					envDebugPod,
 					envDebugNamespace,
 					envDebugServiceAccount,
-					envInstructions,
+					envActions,
 				},
 				VolumeMounts: volumeMounts,
 				SecurityContext: &corev1.SecurityContext{

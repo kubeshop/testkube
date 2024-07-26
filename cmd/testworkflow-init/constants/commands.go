@@ -1,6 +1,9 @@
 package constants
 
 const (
+	EnvGroupActions = "01"
+	EnvGroupDebug   = "00"
+
 	EnvNodeName           = "TKI_N"
 	EnvPodName            = "TKI_P"
 	EnvNamespaceName      = "TKI_S"

@@ -89,19 +89,19 @@ func CreateContainer(groupId int, defaultContainer stage2.Container, actions []a
 	// Provide the data required for setup step
 	if setup != nil {
 		cr.Env = append(cr.Env,
-			corev1.EnvVar{Name: fmt.Sprintf("_00_%s", constants2.EnvNodeName), ValueFrom: &corev1.EnvVarSource{
+			corev1.EnvVar{Name: fmt.Sprintf("_%s_%s", constants2.EnvGroupDebug, constants2.EnvNodeName), ValueFrom: &corev1.EnvVarSource{
 				FieldRef: &corev1.ObjectFieldSelector{FieldPath: "spec.nodeName"},
 			}},
-			corev1.EnvVar{Name: fmt.Sprintf("_00_%s", constants2.EnvPodName), ValueFrom: &corev1.EnvVarSource{
+			corev1.EnvVar{Name: fmt.Sprintf("_%s_%s", constants2.EnvGroupDebug, constants2.EnvPodName), ValueFrom: &corev1.EnvVarSource{
 				FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.name"},
 			}},
-			corev1.EnvVar{Name: fmt.Sprintf("_00_%s", constants2.EnvNamespaceName), ValueFrom: &corev1.EnvVarSource{
+			corev1.EnvVar{Name: fmt.Sprintf("_%s_%s", constants2.EnvGroupDebug, constants2.EnvNamespaceName), ValueFrom: &corev1.EnvVarSource{
 				FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.namespace"},
 			}},
-			corev1.EnvVar{Name: fmt.Sprintf("_00_%s", constants2.EnvServiceAccountName), ValueFrom: &corev1.EnvVarSource{
+			corev1.EnvVar{Name: fmt.Sprintf("_%s_%s", constants2.EnvGroupDebug, constants2.EnvServiceAccountName), ValueFrom: &corev1.EnvVarSource{
 				FieldRef: &corev1.ObjectFieldSelector{FieldPath: "spec.serviceAccountName"},
 			}},
-			corev1.EnvVar{Name: fmt.Sprintf("_01_%s", constants2.EnvActions), ValueFrom: &corev1.EnvVarSource{
+			corev1.EnvVar{Name: fmt.Sprintf("_%s_%s", constants2.EnvGroupActions, constants2.EnvActions), ValueFrom: &corev1.EnvVarSource{
 				FieldRef: &corev1.ObjectFieldSelector{FieldPath: constants.SpecAnnotationFieldPath},
 			}})
 
