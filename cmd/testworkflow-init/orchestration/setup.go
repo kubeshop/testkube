@@ -216,13 +216,13 @@ func (c *setup) SetWorkingDir(workingDir string) {
 		return
 	}
 	wd, err := filepath.Abs(workingDir)
-	if err == nil {
+	if err != nil {
+		wd = workingDir
 		_ = os.MkdirAll(wd, 0755)
-		err = os.Chdir(wd)
 	} else {
-		_ = os.MkdirAll(wd, 0755)
-		err = os.Chdir(workingDir)
+		err = os.MkdirAll(wd, 0755)
 	}
+
 	if err != nil {
 		output.Std.Direct().Warnf("warn: error using %s as working directory: %s\n", workingDir, err.Error())
 	}
