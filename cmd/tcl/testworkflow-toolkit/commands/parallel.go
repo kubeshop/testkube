@@ -23,7 +23,7 @@ import (
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	commontcl "github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/common"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/spawn"
-	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/artifacts"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/transfer"
@@ -31,9 +31,9 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/presets"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -163,7 +163,7 @@ func NewParallelCmd() *cobra.Command {
 
 			// Send initial output
 			for index := range specs {
-				data.PrintOutput(env.Ref(), "parallel", ParallelStatus{
+				instructions.PrintOutput(env.Ref(), "parallel", ParallelStatus{
 					Index:       index,
 					Description: descriptions[index],
 				})
@@ -200,7 +200,7 @@ func NewParallelCmd() *cobra.Command {
 				}
 
 				// Compute the bundle instructions
-				sig := testworkflowprocessor.MapSignatureListToInternal(bundle.Signature)
+				sig := stage.MapSignatureListToInternal(bundle.Signature)
 				namespace := bundle.Job.Namespace
 				if namespace == "" {
 					namespace = env.Namespace()
@@ -228,7 +228,7 @@ func NewParallelCmd() *cobra.Command {
 					if shouldSaveLogs {
 						logsFilePath, err := spawn.SaveLogs(context.Background(), clientSet, storage, namespace, id, "", index)
 						if err == nil {
-							data.PrintOutput(env.Ref(), "parallel", ParallelStatus{Index: int(index), Logs: storage.FullPath(logsFilePath)})
+							instructions.PrintOutput(env.Ref(), "parallel", ParallelStatus{Index: int(index), Logs: storage.FullPath(logsFilePath)})
 							log("saved logs")
 						} else {
 							log("warning", "problem saving the logs", err.Error())
@@ -246,7 +246,7 @@ func NewParallelCmd() *cobra.Command {
 				}()
 
 				// Inform about the step structure
-				data.PrintOutput(env.Ref(), "parallel", ParallelStatus{Index: int(index), Signature: sig})
+				instructions.PrintOutput(env.Ref(), "parallel", ParallelStatus{Index: int(index), Signature: sig})
 
 				// Control the execution
 				// TODO: Consider aggregated controller to limit number of watchers
@@ -291,11 +291,11 @@ func NewParallelCmd() *cobra.Command {
 						prevStep = v.Current
 						prevStatus = v.Status
 						if v.Result.IsFinished() {
-							data.PrintOutput(env.Ref(), "parallel", ParallelStatus{Index: int(index), Status: v.Status, Result: v.Result})
+							instructions.PrintOutput(env.Ref(), "parallel", ParallelStatus{Index: int(index), Status: v.Status, Result: v.Result})
 							ctxCancel()
 							return v.Result.IsPassed()
 						} else {
-							data.PrintOutput(env.Ref(), "parallel", ParallelStatus{Index: int(index), Status: v.Status, Current: v.Current})
+							instructions.PrintOutput(env.Ref(), "parallel", ParallelStatus{Index: int(index), Status: v.Status, Current: v.Current})
 						}
 					}
 				}

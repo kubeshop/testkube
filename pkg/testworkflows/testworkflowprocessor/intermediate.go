@@ -6,6 +6,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowresolver"
 )
 
@@ -13,7 +14,7 @@ import (
 type Intermediate interface {
 	RefCounter
 
-	ContainerDefaults() Container
+	ContainerDefaults() stage.Container
 	PodConfig() testworkflowsv1.PodConfig
 	JobConfig() testworkflowsv1.JobConfig
 
@@ -38,8 +39,8 @@ type intermediate struct {
 	RefCounter
 
 	// Routine
-	Root      GroupStage `expr:"include"`
-	Container Container  `expr:"include"`
+	Root      stage.GroupStage `expr:"include"`
+	Container stage.Container  `expr:"include"`
 
 	// Job & Pod resources & data
 	Pod testworkflowsv1.PodConfig `expr:"include"`
@@ -57,12 +58,12 @@ func NewIntermediate() Intermediate {
 	ref := NewRefCounter()
 	return &intermediate{
 		RefCounter: ref,
-		Root:       NewGroupStage("", true),
-		Container:  NewContainer(),
+		Root:       stage.NewGroupStage("", true),
+		Container:  stage.NewContainer(),
 		Files:      NewConfigMapFiles(fmt.Sprintf("{{resource.id}}-%s", ref.NextRef()), nil)}
 }
 
-func (s *intermediate) ContainerDefaults() Container {
+func (s *intermediate) ContainerDefaults() stage.Container {
 	return s.Container
 }
 

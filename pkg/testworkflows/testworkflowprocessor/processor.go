@@ -16,7 +16,10 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
 
 //go:generate mockgen -destination=./mock_processor.go -package=testworkflowprocessor "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor" Processor
@@ -27,10 +30,10 @@ type Processor interface {
 
 //go:generate mockgen -destination=./mock_internalprocessor.go -package=testworkflowprocessor "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor" InternalProcessor
 type InternalProcessor interface {
-	Process(layer Intermediate, container Container, step testworkflowsv1.Step) (Stage, error)
+	Process(layer Intermediate, container stage.Container, step testworkflowsv1.Step) (stage.Stage, error)
 }
 
-type Operation = func(processor InternalProcessor, layer Intermediate, container Container, step testworkflowsv1.Step) (Stage, error)
+type Operation = func(processor InternalProcessor, layer Intermediate, container stage.Container, step testworkflowsv1.Step) (stage.Stage, error)
 
 type processor struct {
 	inspector  imageinspector.Inspector
@@ -46,7 +49,7 @@ func (p *processor) Register(operation Operation) Processor {
 	return p
 }
 
-func (p *processor) process(layer Intermediate, container Container, step testworkflowsv1.Step, ref string) (Stage, error) {
+func (p *processor) process(layer Intermediate, container stage.Container, step testworkflowsv1.Step, ref string) (stage.Stage, error) {
 	// Configure defaults
 	if step.WorkingDir != nil {
 		container.SetWorkingDir(*step.WorkingDir)
@@ -54,7 +57,7 @@ func (p *processor) process(layer Intermediate, container Container, step testwo
 	container.ApplyCR(step.Container)
 
 	// Build an initial group for the inner items
-	self := NewGroupStage(ref, false)
+	self := stage.NewGroupStage(ref, false)
 	self.SetName(step.Name)
 	self.SetOptional(step.Optional).SetNegative(step.Negative).SetTimeout(step.Timeout).SetPaused(step.Paused)
 	if step.Condition != "" {
@@ -74,7 +77,7 @@ func (p *processor) process(layer Intermediate, container Container, step testwo
 
 	// Add virtual pause step in case no other is there
 	if self.HasPause() && len(self.Children()) == 0 {
-		pause := NewContainerStage(self.Ref()+"pause", container.CreateChild().
+		pause := stage.NewContainerStage(self.Ref()+"pause", container.CreateChild().
 			SetCommand(constants.DefaultShellPath).
 			SetArgs("-c", "exit 0"))
 		pause.SetCategory("Wait for continue")
@@ -84,7 +87,7 @@ func (p *processor) process(layer Intermediate, container Container, step testwo
 	return self, nil
 }
 
-func (p *processor) Process(layer Intermediate, container Container, step testworkflowsv1.Step) (Stage, error) {
+func (p *processor) Process(layer Intermediate, container stage.Container, step testworkflowsv1.Step) (stage.Stage, error) {
 	return p.process(layer, container, step, layer.NextRef())
 }
 
@@ -123,7 +126,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	if err != nil {
 		return nil, errors.Wrap(err, "error while simplifying workflow instructions")
 	}
-	root, err := p.process(layer, layer.ContainerDefaults(), rootStep, "")
+	root, err := p.process(layer, layer.ContainerDefaults(), rootStep, constants.RootOperationName)
 	if err != nil {
 		return nil, errors.Wrap(err, "processing error")
 	}
@@ -210,7 +213,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	// Adjust the security context in case it's a single container besides the Testkube' containers
 	// TODO: Consider flag argument, that would be used only for services?
 	containerStages := root.ContainerStages()
-	var otherContainers []ContainerStage
+	var otherContainers []stage.ContainerStage
 	for _, c := range containerStages {
 		if c.Container().Image() != constants.DefaultInitImage && c.Container().Image() != constants.DefaultToolkitImage {
 			otherContainers = append(otherContainers, c)
@@ -244,10 +247,21 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	}
 
 	// Build list of the containers
-	containers, err := buildKubernetesContainers(root, NewInitProcess().SetRef(root.Ref()), fsGroup, machines...)
+	actions, err := action.Process(root, machines...)
 	if err != nil {
-		return nil, errors.Wrap(err, "building Kubernetes containers")
+		return nil, errors.Wrap(err, "analyzing Kubernetes container operations")
 	}
+	actionGroups := action.Group(actions)
+	containers := make([]corev1.Container, len(actionGroups))
+	for i := range actionGroups {
+		var bareActions []actiontypes.Action
+		containers[i], bareActions, err = action.CreateContainer(i, layer.ContainerDefaults(), actionGroups[i])
+		actionGroups[i] = bareActions
+		if err != nil {
+			return nil, errors.Wrap(err, "building Kubernetes containers")
+		}
+	}
+
 	for i := range containers {
 		err = expressions.FinalizeForce(&containers[i].EnvFrom, machines...)
 		if err != nil {
@@ -270,6 +284,19 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		for j := range containers[i].VolumeMounts {
 			if !filepath.IsAbs(containers[i].VolumeMounts[j].MountPath) {
 				containers[i].VolumeMounts[j].MountPath = filepath.Clean(filepath.Join(workingDir, containers[i].VolumeMounts[j].MountPath))
+			}
+		}
+
+		// Avoid having working directory set up, so we have the default one
+		containers[i].WorkingDir = ""
+
+		// Ensure the cr will have proper access to FS
+		if fsGroup != nil {
+			if containers[i].SecurityContext == nil {
+				containers[i].SecurityContext = &corev1.SecurityContext{}
+			}
+			if containers[i].SecurityContext.RunAsGroup == nil {
+				containers[i].SecurityContext.RunAsGroup = fsGroup
 			}
 		}
 	}
@@ -312,42 +339,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		},
 	}
 	AnnotateControlledBy(&podSpec, resourceRoot.Template(), resourceId.Template())
-
-	defaultResources, defaultResourcesErr := MapResourcesToKubernetesResources(common.Ptr(layer.ContainerDefaults().Resources()))
-	if defaultResourcesErr != nil {
-		return nil, defaultResourcesErr
-	}
-	initContainer := corev1.Container{
-		Name:            "tktw-init",
-		Image:           constants.DefaultInitImage,
-		ImagePullPolicy: corev1.PullIfNotPresent,
-		Command:         []string{"/bin/sh", "-c"},
-		Args:            []string{constants.InitScript},
-		VolumeMounts:    layer.ContainerDefaults().VolumeMounts(),
-		Resources:       defaultResources,
-		Env: []corev1.EnvVar{
-			{Name: "TK_DEBUG_NODE", ValueFrom: &corev1.EnvVarSource{
-				FieldRef: &corev1.ObjectFieldSelector{FieldPath: "spec.nodeName"},
-			}},
-			{Name: "TK_DEBUG_POD", ValueFrom: &corev1.EnvVarSource{
-				FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.name"},
-			}},
-			{Name: "TK_DEBUG_NS", ValueFrom: &corev1.EnvVarSource{
-				FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.namespace"},
-			}},
-			{Name: "TK_DEBUG_SVC", ValueFrom: &corev1.EnvVarSource{
-				FieldRef: &corev1.ObjectFieldSelector{FieldPath: "spec.serviceAccountName"},
-			}},
-		},
-		SecurityContext: &corev1.SecurityContext{
-			RunAsGroup: fsGroup,
-		},
-	}
-	err = expressions.FinalizeForce(&initContainer, machines...)
-	if err != nil {
-		return nil, errors.Wrap(err, "finalizing container's resources")
-	}
-	podSpec.Spec.InitContainers = append([]corev1.Container{initContainer}, containers[:len(containers)-1]...)
+	podSpec.Spec.InitContainers = containers[:len(containers)-1]
 	podSpec.Spec.Containers = containers[len(containers)-1:]
 
 	// Build job spec
@@ -382,6 +374,16 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		constants.SignatureAnnotationName: string(sigSerialized),
 	})
 	jobSpec.Annotations = jobAnnotations
+
+	// Build running instructions
+	// TODO: Get rid of the unnecessary ContainerConfig parts
+	actionGroupsSerialized, _ := json.Marshal(actionGroups)
+	podAnnotations := make(map[string]string)
+	maps.Copy(podAnnotations, jobSpec.Spec.Template.Annotations)
+	maps.Copy(podAnnotations, map[string]string{
+		constants.SpecAnnotationName: string(actionGroupsSerialized),
+	})
+	jobSpec.Spec.Template.Annotations = podAnnotations
 
 	// Build bundle
 	bundle = &Bundle{

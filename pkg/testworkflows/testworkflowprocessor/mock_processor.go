@@ -5,12 +5,14 @@
 package testworkflowprocessor
 
 import (
-	context "context"
-	reflect "reflect"
+	"context"
+	"reflect"
 
-	gomock "github.com/golang/mock/gomock"
+	"github.com/golang/mock/gomock"
+
 	v1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
-	expressions "github.com/kubeshop/testkube/pkg/expressions"
+	"github.com/kubeshop/testkube/pkg/expressions"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
 
 // MockProcessor is a mock of Processor interface.
@@ -57,7 +59,7 @@ func (mr *MockProcessorMockRecorder) Bundle(arg0, arg1 interface{}, arg2 ...inte
 }
 
 // Register mocks base method.
-func (m *MockProcessor) Register(arg0 func(InternalProcessor, Intermediate, Container, v1.Step) (Stage, error)) Processor {
+func (m *MockProcessor) Register(arg0 func(InternalProcessor, Intermediate, stage.Container, v1.Step) (stage.Stage, error)) Processor {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Register", arg0)
 	ret0, _ := ret[0].(Processor)

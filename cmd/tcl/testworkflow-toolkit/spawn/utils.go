@@ -33,8 +33,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
 
 func MapDynamicListToStringList(list []interface{}) []string {
@@ -174,7 +174,7 @@ func ProcessFetch(transferSrv transfer.Server, fetch []testworkflowsv1.StepParal
 					Env: []corev1.EnvVar{
 						{Name: "TK_NS", Value: env.Namespace()},
 						{Name: "TK_REF", Value: env.Ref()},
-						testworkflowprocessor.BypassToolkitCheck,
+						stage.BypassToolkitCheck,
 					},
 					Args: &result,
 				},
