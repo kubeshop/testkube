@@ -91,6 +91,7 @@ func (r *CloudRepository) GetExecutionsSummary(ctx context.Context, filter testw
 
 func (r *CloudRepository) Insert(ctx context.Context, result testkube.TestWorkflowExecution) (err error) {
 
+	// TODO remove
 	fmt.Printf("%+v\n", ctx)
 
 	req := ExecutionInsertRequest{WorkflowExecution: result}
@@ -98,7 +99,10 @@ func (r *CloudRepository) Insert(ctx context.Context, result testkube.TestWorkfl
 }
 
 func (r *CloudRepository) Update(ctx context.Context, result testkube.TestWorkflowExecution) (err error) {
+
+	// TODO remove
 	fmt.Printf("%+v\n", ctx)
+
 	req := ExecutionUpdateRequest{WorkflowExecution: result}
 	return passNoContent(r.executor, ctx, req)
 }
