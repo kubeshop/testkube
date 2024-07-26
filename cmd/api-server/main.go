@@ -921,8 +921,6 @@ func newProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Tes
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, time.Second*3)
-	md := metadata.Pairs("api-key", cfg.TestkubeProAPIKey, "runner-id", cfg.TestkubeProRunnerId)
-	ctx = metadata.NewOutgoingContext(ctx, md)
 	defer cancel()
 	proContextResponse, err := grpcClient.GetProContext(ctx, &emptypb.Empty{})
 	if err != nil {

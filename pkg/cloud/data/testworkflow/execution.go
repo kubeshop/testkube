@@ -3,6 +3,7 @@ package testworkflow
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"google.golang.org/grpc"
@@ -89,11 +90,15 @@ func (r *CloudRepository) GetExecutionsSummary(ctx context.Context, filter testw
 }
 
 func (r *CloudRepository) Insert(ctx context.Context, result testkube.TestWorkflowExecution) (err error) {
+
+	fmt.Printf("%+v\n", ctx)
+
 	req := ExecutionInsertRequest{WorkflowExecution: result}
 	return passNoContent(r.executor, ctx, req)
 }
 
 func (r *CloudRepository) Update(ctx context.Context, result testkube.TestWorkflowExecution) (err error) {
+	fmt.Printf("%+v\n", ctx)
 	req := ExecutionUpdateRequest{WorkflowExecution: result}
 	return passNoContent(r.executor, ctx, req)
 }
