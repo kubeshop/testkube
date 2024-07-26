@@ -61,7 +61,7 @@ func ImageInspector() imageinspector.Inspector {
 	}
 	return imageinspector.NewInspector(
 		Config().System.DefaultRegistry,
-		imageinspector.NewSkopeoFetcher(),
+		imageinspector.NewCraneFetcher(),
 		imageinspector.NewSecretFetcher(secretClient, cache.NewInMemoryCache[*corev1.Secret](), imageinspector.WithSecretCacheTTL(Config().Images.ImageCredentialsCacheTTL)),
 		inspectorStorages...,
 	)

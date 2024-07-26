@@ -331,7 +331,7 @@ func (c *ContainerExecutor) createJob(ctx context.Context, execution testkube.Ex
 		}
 		inspector = imageinspector.NewInspector(
 			c.registry,
-			imageinspector.NewSkopeoFetcher(),
+			imageinspector.NewCraneFetcher(),
 			imageinspector.NewSecretFetcher(secretClient, cache.NewInMemoryCache[*corev1.Secret](), imageinspector.WithSecretCacheTTL(c.imageCredentialsCacheTTL)),
 		)
 	}
