@@ -16,6 +16,8 @@ import (
 type TestWorkflowExecutionSummary struct {
 	// unique execution identifier
 	Id string `json:"id"`
+	// runner identifier
+	RunnerID string `json:"runnerID,omitempty"`
 	// execution name
 	Name string `json:"name"`
 	// sequence number for the execution
