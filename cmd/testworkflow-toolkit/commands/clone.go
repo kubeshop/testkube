@@ -7,9 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/otiai10/copy"
-
 	"github.com/kballard/go-shellquote"
+	"github.com/otiai10/copy"
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
@@ -18,7 +17,7 @@ import (
 
 func NewCloneCmd() *cobra.Command {
 	var (
-		paths    []string
+		rawPaths []string
 		username string
 		token    string
 		sshKey   string
@@ -39,6 +38,15 @@ func NewCloneCmd() *cobra.Command {
 
 			// Disable interactivity
 			os.Setenv("GIT_TERMINAL_PROMPT", "0")
+
+			// Clean paths for sparse checkout to make them more compliant with Git requirements
+			paths := make([]string, 0)
+			for _, p := range rawPaths {
+				p = filepath.Clean(p)
+				if p != "" && p != "." {
+					paths = append(paths, p)
+				}
+			}
 
 			authArgs := make([]string, 0)
 
@@ -105,6 +113,7 @@ func NewCloneCmd() *cobra.Command {
 			}
 
 			// Copy files to the expected directory. Ignore errors, only inform warn about them.
+			fmt.Printf("Moving the contents to %s...\n", destinationPath)
 			err = copy.Copy(outputPath, destinationPath, copy.Options{
 				OnError: func(src, dest string, err error) error {
 					if err != nil {
@@ -118,10 +127,12 @@ func NewCloneCmd() *cobra.Command {
 				},
 			})
 			ui.ExitOnError("copying files to destination", err)
+			err = os.RemoveAll(outputPath)
+			ui.ExitOnError("deleting the temporary directory", err)
 		},
 	}
 
-	cmd.Flags().StringSliceVarP(&paths, "paths", "p", nil, "paths for sparse checkout")
+	cmd.Flags().StringSliceVarP(&rawPaths, "paths", "p", nil, "paths for sparse checkout")
 	cmd.Flags().StringVarP(&username, "username", "u", "", "")
 	cmd.Flags().StringVarP(&token, "token", "t", "", "")
 	cmd.Flags().StringVarP(&sshKey, "sshKey", "s", "", "")
