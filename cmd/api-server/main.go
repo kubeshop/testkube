@@ -490,7 +490,7 @@ func main() {
 	}
 	inspector := imageinspector.NewInspector(
 		cfg.TestkubeRegistry,
-		imageinspector.NewSkopeoFetcher(),
+		imageinspector.NewCraneFetcher(),
 		imageinspector.NewSecretFetcher(secretClient, cache.NewInMemoryCache[*corev1.Secret](), imageinspector.WithSecretCacheTTL(cfg.TestkubeImageCredentialsCacheTTL)),
 		inspectorStorages...,
 	)

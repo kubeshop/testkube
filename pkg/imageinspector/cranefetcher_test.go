@@ -1,4 +1,4 @@
-package skopeo
+package imageinspector
 
 import (
 	"testing"
@@ -7,6 +7,34 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+// TestExtractRegistry uses table-driven tests to validate the extractRegistry function.
+func TestExtractRegistry(t *testing.T) {
+	tests := []struct {
+		name     string
+		image    string
+		expected string
+	}{
+		{"DockerHub short", "nginx:latest", "https://index.docker.io/v1/"},
+		{"DockerHub long", "library/nginx:latest", "https://index.docker.io/v1/"},
+		{"GCR", "gcr.io/google-containers/busybox:latest", "gcr.io"},
+		{"ECR", "123456789012.dkr.ecr.us-east-1.amazonaws.com/my-application:latest", "123456789012.dkr.ecr.us-east-1.amazonaws.com"},
+		{"MCR", "mcr.microsoft.com/dotnet/core/sdk:3.1", "mcr.microsoft.com"},
+		{"Quay", "quay.io/bitnami/nginx:latest", "quay.io"},
+		{"Custom port", "localhost:5000/myimage:latest", "localhost:5000"},
+		{"No tag", "myregistry.com/myimage", "myregistry.com"},
+		{"Only image", "myimage", "https://index.docker.io/v1/"},
+		{"Custom GitLab", "registry.gitlab.com/company/base-docker-images/ubuntu-python-base-image:3.12.0-jammy", "registry.gitlab.com"},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			got := extractRegistry(tc.image)
+			assert.Equal(t, tc.expected, got)
+		})
+	}
+}
 
 func TestParseSecretData(t *testing.T) {
 	t.Parallel()
@@ -84,52 +112,4 @@ func TestParseSecretData(t *testing.T) {
 		assert.ErrorContains(t, err, "illegal base64 data")
 	})
 
-}
-
-// TestTrimTopNonJSON tests the trimNonJSON function with various inputs to ensure it correctly trims non-JSON leading characters.
-func TestTrimTopNonJSON(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    []byte
-		expected []byte
-	}{
-		{
-			name:     "No JSON",
-			input:    []byte("hello world"),
-			expected: nil,
-		},
-		{
-			name:     "Valid JSON at start",
-			input:    []byte(`{"key": "value"}`),
-			expected: []byte(`{"key": "value"}`),
-		},
-		{
-			name:     "JSON with leading text",
-			input:    []byte(`error: failed {"key": "value"}`),
-			expected: []byte(`{"key": "value"}`),
-		},
-		{
-			name:     "Multiple JSON objects, trim to first",
-			input:    []byte(`error: failed {"key1": "value1"} another error {"key2": "value2"}`),
-			expected: []byte(`{"key1": "value1"} another error {"key2": "value2"}`),
-		},
-		{
-			name:     "No opening brace",
-			input:    []byte(`error: failed no json here`),
-			expected: nil,
-		},
-		{
-			name: "Leading spaces and newline before JSON",
-			input: []byte(`  
-			            {"key": "value"}`),
-			expected: []byte(`{"key": "value"}`),
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := trimTopNonJSON(tt.input)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
 }
