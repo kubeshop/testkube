@@ -6,10 +6,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -259,7 +259,7 @@ func (n *notifier) Start(ref string, ts time.Time) {
 	}
 }
 
-func (n *notifier) Output(ref string, ts time.Time, output *data.Instruction) {
+func (n *notifier) Output(ref string, ts time.Time, output *instructions.Instruction) {
 	if ref == InitContainerName {
 		ref = ""
 	}
@@ -287,7 +287,7 @@ func (n *notifier) UpdateStepStatus(ref string, status testkube.TestWorkflowStep
 	n.emit()
 }
 
-func (n *notifier) finishInit(status ContainerResult) {
+func (n *notifier) finishInit(status ContainerResultStep) {
 	if n.result.Initialization.FinishedAt.Equal(status.FinishedAt) && n.result.Initialization.Status != nil && *n.result.Initialization.Status == status.Status {
 		return
 	}
@@ -298,7 +298,26 @@ func (n *notifier) finishInit(status ContainerResult) {
 	n.emit()
 }
 
-func (n *notifier) FinishStep(ref string, status ContainerResult) {
+func (n *notifier) IsAnyAborted() bool {
+	if n.result.Initialization.Status != nil && *n.result.Initialization.Status == testkube.ABORTED_TestWorkflowStepStatus {
+		return true
+	}
+	for _, s := range n.result.Steps {
+		if s.Status != nil && *s.Status == testkube.ABORTED_TestWorkflowStepStatus {
+			return true
+		}
+	}
+	return false
+}
+
+func (n *notifier) IsFinished(ref string) bool {
+	if ref == InitContainerName {
+		return !n.result.Initialization.FinishedAt.IsZero()
+	}
+	return !n.result.Steps[ref].FinishedAt.IsZero()
+}
+
+func (n *notifier) FinishStep(ref string, status ContainerResultStep) {
 	if ref == InitContainerName {
 		n.finishInit(status)
 		return
@@ -338,7 +357,7 @@ func (n *notifier) GetStepResult(ref string) testkube.TestWorkflowStepResult {
 	return n.result.Steps[ref]
 }
 
-func newNotifier(ctx context.Context, signature []testworkflowprocessor.Signature, scheduledAt time.Time) *notifier {
+func newNotifier(ctx context.Context, signature []stage.Signature, scheduledAt time.Time) *notifier {
 	// Initialize the zero result
 	sig := make([]testkube.TestWorkflowSignature, len(signature))
 	for i, s := range signature {
@@ -350,7 +369,7 @@ func newNotifier(ctx context.Context, signature []testworkflowprocessor.Signatur
 		Initialization: &testkube.TestWorkflowStepResult{
 			Status: common.Ptr(testkube.QUEUED_TestWorkflowStepStatus),
 		},
-		Steps: testworkflowprocessor.MapSignatureListToStepResults(signature),
+		Steps: stage.MapSignatureListToStepResults(signature),
 	}
 	result.Recompute(sig, scheduledAt)
 

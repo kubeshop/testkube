@@ -185,9 +185,11 @@ func applyTemplatesToStep(step testworkflowsv1.Step, templates map[string]testwo
 			step.Parallel.Steps = append([]testworkflowsv1.Step{{
 				StepControl:    step.Parallel.StepControl,
 				StepOperations: step.Parallel.StepOperations,
+				Template:       step.Parallel.Template,
 			}}, step.Parallel.Steps...)
 			step.Parallel.StepControl = testworkflowsv1.StepControl{}
 			step.Parallel.StepOperations = testworkflowsv1.StepOperations{}
+			step.Parallel.Template = nil
 		}
 
 		// Resolve the spec inside of parallel step

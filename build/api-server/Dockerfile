@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 ARG ALPINE_IMAGE
 FROM ${ALPINE_IMAGE}
-RUN apk --no-cache add ca-certificates libssl3 git skopeo
+RUN apk --no-cache add ca-certificates libssl3 git
 WORKDIR /root/
 COPY testkube-api-server /bin/app
 USER 1001

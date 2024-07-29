@@ -2,6 +2,7 @@ package pro
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 
@@ -33,7 +34,16 @@ func NewInitCmd() *cobra.Command {
 			ui.Logo()
 
 			cfg, err := config.Load()
-			ui.ExitOnError("loading config file", err)
+			if err != nil {
+				cliErr := common.NewCLIError(
+					common.TKErrConfigLoadingFailed,
+					"Error loading testkube config file",
+					"Check is the Testkube config file (~/.testkube/config.json) accessible and has right permissions",
+					err,
+				)
+				cliErr.Print()
+				os.Exit(1)
+			}
 			ui.NL()
 
 			common.ProcessMasterFlags(cmd, &options, &cfg)
@@ -45,11 +55,10 @@ func NewInitCmd() *cobra.Command {
 				ui.Warn("Please be sure you're on valid kubectl context before continuing!")
 				ui.NL()
 
-				currentContext, err := common.GetCurrentKubernetesContext()
-
-				if err != nil {
+				currentContext, cliErr := common.GetCurrentKubernetesContext()
+				if cliErr != nil {
 					sendErrTelemetry(cmd, cfg, "k8s_context", err)
-					ui.ExitOnError("getting current context", err)
+					common.HandleCLIError(cliErr)
 				}
 				ui.Alert("Current kubectl context:", currentContext)
 				ui.NL()
@@ -63,11 +72,12 @@ func NewInitCmd() *cobra.Command {
 			}
 
 			spinner := ui.NewSpinner("Installing Testkube")
-			err = common.HelmUpgradeOrInstallTestkubeCloud(options, cfg, false)
-			if err != nil {
-				sendErrTelemetry(cmd, cfg, "helm_install", err)
-				ui.ExitOnError("Installing Testkube", err)
+			if cliErr := common.HelmUpgradeOrInstallTestkubeCloud(options, cfg, false); cliErr != nil {
+				spinner.Fail()
+				sendErrTelemetry(cmd, cfg, "helm_install", cliErr)
+				common.HandleCLIError(cliErr)
 			}
+
 			spinner.Success()
 
 			ui.NL()

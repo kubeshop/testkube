@@ -71,11 +71,11 @@ func (ui *UI) Alert(message string, subMessages ...string) {
 }
 
 func (ui *UI) LogLine(message string) {
-	fmt.Fprintf(ui.Writer, "%s\n", DarkGray(message))
+	fmt.Fprintf(ui.Writer, "%s\n", LightGray(message))
 }
 
 func (ui *UI) LogMultiLine(message string) {
-	fmt.Fprintf(ui.Writer, "%s\n\n", DarkGray(message))
+	fmt.Fprintf(ui.Writer, "%s\n\n", LightGray(message))
 }
 
 func (ui *UI) Debug(message string, subMessages ...string) {
@@ -127,7 +127,7 @@ func (ui *UI) PrintDisabled(message string, subMessages ...string) {
 }
 
 func (ui *UI) Info(message string, subMessages ...string) {
-	fmt.Fprintf(ui.Writer, "%s", DarkGray(message))
+	fmt.Fprintf(ui.Writer, "%s", White(message))
 	for _, sub := range subMessages {
 		fmt.Fprintf(ui.Writer, " %s", LightGray(sub))
 	}
@@ -157,8 +157,8 @@ func (ui *UI) Failf(err string, params ...interface{}) {
 }
 
 func (ui *UI) CommandOutput(output []byte, command string, params ...string) {
-	fullCommand := fmt.Sprintf("%s %s", LightCyan(command), DarkGray(strings.Join(params, " ")))
-	fmt.Fprintf(ui.Writer, "command: %s\noutput:\n%s\n", LightGray(fullCommand), DarkGray(string(output)))
+	fullCommand := fmt.Sprintf("%s %s", White(command), LightGray(strings.Join(params, " ")))
+	fmt.Fprintf(ui.Writer, "command: %s\noutput:\n%s\n", White(fullCommand), LightGray(string(output)))
 }
 
 func (ui *UI) Medal() {
@@ -187,7 +187,7 @@ func (ui *UI) GroupCompleted(main string, sub ...string) {
 
 func (ui *UI) InfoGrid(table map[string]string) {
 	for k, v := range table {
-		fmt.Fprintf(ui.Writer, "  %s: %s\n", DarkGray(k), LightBlue(v))
+		fmt.Fprintf(ui.Writer, "  %s: %s\n", LightGray(k), LightBlue(v))
 	}
 	fmt.Fprintln(ui.Writer)
 }
@@ -213,7 +213,7 @@ func (ui *UI) Properties(table [][]string) {
 
 func (ui *UI) Vector(table []string) {
 	for _, v := range table {
-		fmt.Fprintf(ui.Writer, "  %s\n", DarkGray(v))
+		fmt.Fprintf(ui.Writer, "  %s\n", LightGray(v))
 	}
 }
 
@@ -221,7 +221,7 @@ func (ui *UI) Vector(table []string) {
 func (ui *UI) ShellCommand(title string, commands ...string) {
 	fmt.Fprintf(ui.Writer, "$ %s", LightGray(title))
 	for _, sub := range commands {
-		fmt.Fprintf(ui.Writer, DarkGray(" \\\n")+LightGray("\t%s"), sub)
+		fmt.Fprintf(ui.Writer, LightGray(" \\\n\t%s"), sub)
 	}
 	fmt.Fprintln(ui.Writer)
 }

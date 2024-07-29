@@ -70,7 +70,7 @@ spec:
           value: minio123
         shell: |
           apt-get update
-          apt-get install -y ca-certificates libssl3 git skopeo
+          apt-get install -y ca-certificates libssl3 git
           go install gotest.tools/gotestsum@v1.9.0
 
           # TODO: Support job executor tests too (./...)

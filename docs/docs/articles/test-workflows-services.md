@@ -422,7 +422,7 @@ spec:
           value: mongodb://root:p4ssw0rd@{{services.db.0.ip}}:27017
         shell: |
           apt-get update
-          apt-get install -y ca-certificates libssl3 git skopeo
+          apt-get install -y ca-certificates libssl3 git
           go install gotest.tools/gotestsum@v1.9.0
 
           INTEGRATION=y gotestsum --format short-verbose -- -count 1 -run _Integration -cover ./pkg/repository/...

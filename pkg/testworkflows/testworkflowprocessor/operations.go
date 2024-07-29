@@ -10,9 +10,10 @@ import (
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
 
-func ProcessDelay(_ InternalProcessor, layer Intermediate, container Container, step testworkflowsv1.Step) (Stage, error) {
+func ProcessDelay(_ InternalProcessor, layer Intermediate, container stage.Container, step testworkflowsv1.Step) (stage.Stage, error) {
 	if step.Delay == "" {
 		return nil, nil
 	}
@@ -23,28 +24,28 @@ func ProcessDelay(_ InternalProcessor, layer Intermediate, container Container, 
 	shell := container.CreateChild().
 		SetCommand("sleep").
 		SetArgs(fmt.Sprintf("%g", t.Seconds()))
-	stage := NewContainerStage(layer.NextRef(), shell)
+	stage := stage.NewContainerStage(layer.NextRef(), shell)
 	stage.SetCategory(fmt.Sprintf("Delay: %s", step.Delay))
 	return stage, nil
 }
 
-func ProcessShellCommand(_ InternalProcessor, layer Intermediate, container Container, step testworkflowsv1.Step) (Stage, error) {
+func ProcessShellCommand(_ InternalProcessor, layer Intermediate, container stage.Container, step testworkflowsv1.Step) (stage.Stage, error) {
 	if step.Shell == "" {
 		return nil, nil
 	}
 	shell := container.CreateChild().SetCommand(constants.DefaultShellPath).SetArgs("-c", constants.DefaultShellHeader+step.Shell)
-	stage := NewContainerStage(layer.NextRef(), shell)
+	stage := stage.NewContainerStage(layer.NextRef(), shell)
 	stage.SetCategory("Run shell command")
 	stage.SetRetryPolicy(step.Retry)
 	return stage, nil
 }
 
-func ProcessRunCommand(_ InternalProcessor, layer Intermediate, container Container, step testworkflowsv1.Step) (Stage, error) {
+func ProcessRunCommand(_ InternalProcessor, layer Intermediate, container stage.Container, step testworkflowsv1.Step) (stage.Stage, error) {
 	if step.Run == nil {
 		return nil, nil
 	}
 	container = container.CreateChild().ApplyCR(&step.Run.ContainerConfig)
-	stage := NewContainerStage(layer.NextRef(), container)
+	stage := stage.NewContainerStage(layer.NextRef(), container)
 	stage.SetRetryPolicy(step.Retry)
 	stage.SetCategory("Run")
 	if step.Run.Shell != nil {
@@ -57,8 +58,8 @@ func ProcessRunCommand(_ InternalProcessor, layer Intermediate, container Contai
 	return stage, nil
 }
 
-func ProcessNestedSetupSteps(p InternalProcessor, layer Intermediate, container Container, step testworkflowsv1.Step) (Stage, error) {
-	group := NewGroupStage(layer.NextRef(), true)
+func ProcessNestedSetupSteps(p InternalProcessor, layer Intermediate, container stage.Container, step testworkflowsv1.Step) (stage.Stage, error) {
+	group := stage.NewGroupStage(layer.NextRef(), true)
 	for _, n := range step.Setup {
 		stage, err := p.Process(layer, container.CreateChild(), n)
 		if err != nil {
@@ -69,8 +70,8 @@ func ProcessNestedSetupSteps(p InternalProcessor, layer Intermediate, container 
 	return group, nil
 }
 
-func ProcessNestedSteps(p InternalProcessor, layer Intermediate, container Container, step testworkflowsv1.Step) (Stage, error) {
-	group := NewGroupStage(layer.NextRef(), true)
+func ProcessNestedSteps(p InternalProcessor, layer Intermediate, container stage.Container, step testworkflowsv1.Step) (stage.Stage, error) {
+	group := stage.NewGroupStage(layer.NextRef(), true)
 	for _, n := range step.Steps {
 		stage, err := p.Process(layer, container.CreateChild(), n)
 		if err != nil {
@@ -81,7 +82,7 @@ func ProcessNestedSteps(p InternalProcessor, layer Intermediate, container Conta
 	return group, nil
 }
 
-func ProcessContentFiles(_ InternalProcessor, layer Intermediate, container Container, step testworkflowsv1.Step) (Stage, error) {
+func ProcessContentFiles(_ InternalProcessor, layer Intermediate, container stage.Container, step testworkflowsv1.Step) (stage.Stage, error) {
 	if step.Content == nil {
 		return nil, nil
 	}
@@ -151,13 +152,13 @@ func ProcessContentFiles(_ InternalProcessor, layer Intermediate, container Cont
 	return nil, nil
 }
 
-func ProcessContentGit(_ InternalProcessor, layer Intermediate, container Container, step testworkflowsv1.Step) (Stage, error) {
+func ProcessContentGit(_ InternalProcessor, layer Intermediate, container stage.Container, step testworkflowsv1.Step) (stage.Stage, error) {
 	if step.Content == nil || step.Content.Git == nil {
 		return nil, nil
 	}
 
 	selfContainer := container.CreateChild()
-	stage := NewContainerStage(layer.NextRef(), selfContainer)
+	stage := stage.NewContainerStage(layer.NextRef(), selfContainer)
 	stage.SetRetryPolicy(step.Retry)
 	stage.SetCategory("Clone Git repository")
 
@@ -230,13 +231,13 @@ func ProcessContentGit(_ InternalProcessor, layer Intermediate, container Contai
 	return stage, nil
 }
 
-func ProcessContentTarball(_ InternalProcessor, layer Intermediate, container Container, step testworkflowsv1.Step) (Stage, error) {
+func ProcessContentTarball(_ InternalProcessor, layer Intermediate, container stage.Container, step testworkflowsv1.Step) (stage.Stage, error) {
 	if step.Content == nil || len(step.Content.Tarball) == 0 {
 		return nil, nil
 	}
 
 	selfContainer := container.CreateChild()
-	stage := NewContainerStage(layer.NextRef(), selfContainer)
+	stage := stage.NewContainerStage(layer.NextRef(), selfContainer)
 	stage.SetRetryPolicy(step.Retry)
 	stage.SetCategory("Fetch tarball")
 
@@ -269,7 +270,7 @@ func ProcessContentTarball(_ InternalProcessor, layer Intermediate, container Co
 	return stage, nil
 }
 
-func ProcessArtifacts(_ InternalProcessor, layer Intermediate, container Container, step testworkflowsv1.Step) (Stage, error) {
+func ProcessArtifacts(_ InternalProcessor, layer Intermediate, container stage.Container, step testworkflowsv1.Step) (stage.Stage, error) {
 	if step.Artifacts == nil {
 		return nil, nil
 	}
@@ -280,7 +281,7 @@ func ProcessArtifacts(_ InternalProcessor, layer Intermediate, container Contain
 
 	selfContainer := container.CreateChild().
 		ApplyCR(&testworkflowsv1.ContainerConfig{WorkingDir: step.Artifacts.WorkingDir})
-	stage := NewContainerStage(layer.NextRef(), selfContainer)
+	stage := stage.NewContainerStage(layer.NextRef(), selfContainer)
 	stage.SetRetryPolicy(step.Retry)
 	stage.SetCondition("always")
 	stage.SetCategory("Upload artifacts")
@@ -301,21 +302,21 @@ func ProcessArtifacts(_ InternalProcessor, layer Intermediate, container Contain
 	return stage, nil
 }
 
-func StubExecute(_ InternalProcessor, _ Intermediate, _ Container, step testworkflowsv1.Step) (Stage, error) {
+func StubExecute(_ InternalProcessor, _ Intermediate, _ stage.Container, step testworkflowsv1.Step) (stage.Stage, error) {
 	if step.Execute != nil {
 		return nil, constants.ErrOpenSourceExecuteOperationIsNotAvailable
 	}
 	return nil, nil
 }
 
-func StubParallel(_ InternalProcessor, _ Intermediate, _ Container, step testworkflowsv1.Step) (Stage, error) {
+func StubParallel(_ InternalProcessor, _ Intermediate, _ stage.Container, step testworkflowsv1.Step) (stage.Stage, error) {
 	if step.Parallel != nil {
 		return nil, constants.ErrOpenSourceParallelOperationIsNotAvailable
 	}
 	return nil, nil
 }
 
-func StubServices(_ InternalProcessor, _ Intermediate, _ Container, step testworkflowsv1.Step) (Stage, error) {
+func StubServices(_ InternalProcessor, _ Intermediate, _ stage.Container, step testworkflowsv1.Step) (stage.Stage, error) {
 	if len(step.Services) != 0 {
 		return nil, constants.ErrOpenSourceServicesOperationIsNotAvailable
 	}
