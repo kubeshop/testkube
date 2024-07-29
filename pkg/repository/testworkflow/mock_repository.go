@@ -188,6 +188,21 @@ func (mr *MockRepositoryMockRecorder) GetLatestByTestWorkflows(arg0, arg1 interf
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLatestByTestWorkflows", reflect.TypeOf((*MockRepository)(nil).GetLatestByTestWorkflows), arg0, arg1)
 }
 
+// GetNextExecutionNumber mocks base method.
+func (m *MockRepository) GetNextExecutionNumber(arg0 context.Context, arg1 string) (int32, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetNextExecutionNumber", arg0, arg1)
+	ret0, _ := ret[0].(int32)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetNextExecutionNumber indicates an expected call of GetNextExecutionNumber.
+func (mr *MockRepositoryMockRecorder) GetNextExecutionNumber(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNextExecutionNumber", reflect.TypeOf((*MockRepository)(nil).GetNextExecutionNumber), arg0, arg1)
+}
+
 // GetPreviousFinishedState mocks base method.
 func (m *MockRepository) GetPreviousFinishedState(arg0 context.Context, arg1 string, arg2 time.Time) (testkube.TestWorkflowStatus, error) {
 	m.ctrl.T.Helper()

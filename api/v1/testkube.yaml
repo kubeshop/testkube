@@ -556,6 +556,7 @@ paths:
         - api
       parameters:
         - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/SkipDeleteCRD"
       summary: "Delete test suite"
       description: "Deletes a test suite"
       operationId: deleteTestSuite
@@ -1664,6 +1665,7 @@ paths:
       parameters:
         - $ref: "#/components/parameters/ID"
         - $ref: "#/components/parameters/SkipDeleteExecutions"
+        - $ref: "#/components/parameters/SkipDeleteCRD"
       summary: "Delete test"
       description: "Deletes a test"
       operationId: deleteTest
@@ -3351,6 +3353,7 @@ paths:
       - api
       parameters:
       - $ref: "#/components/parameters/Namespace"
+      - $ref: "#/components/parameters/ID"
       summary: "Delete secret"
       description: "Delete secret in the cluster"
       operationId: deleteSecret
@@ -3393,6 +3396,8 @@ paths:
       tags:
       - secrets
       - api
+      parameters:
+        - $ref: "#/components/parameters/ID"
       summary: "Update secret"
       description: "Update secret in the cluster"
       operationId: updateSecret
@@ -3446,6 +3451,8 @@ paths:
       tags:
       - secrets
       - api
+      parameters:
+        - $ref: "#/components/parameters/ID"
       summary: "Get secret"
       description: "Get secret in the cluster"
       operationId: getSecret
@@ -4424,6 +4431,7 @@ paths:
       parameters:
         - $ref: "#/components/parameters/ID"
         - $ref: "#/components/parameters/SkipDeleteExecutions"
+        - $ref: "#/components/parameters/SkipDeleteCRD"        
       summary: Delete test workflow
       description: Delete test workflow from the kubernetes cluster
       operationId: deleteTestWorkflow
@@ -10472,6 +10480,14 @@ components:
         type: boolean
         default: false
       description: flag to request all resources
+      required: false
+    SkipDeleteCRD:
+      in: query
+      name: skipDeleteCRD
+      schema:
+        type: boolean
+        default: false
+      description: dont delete CRD
       required: false
   requestBodies:
     UploadsBody:

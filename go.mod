@@ -24,6 +24,7 @@ require (
 	github.com/gofiber/websocket/v2 v2.1.1
 	github.com/golang/mock v1.6.0
 	github.com/google/go-cmp v0.6.0
+	github.com/google/go-containerregistry v0.20.1
 	github.com/google/uuid v1.5.0
 	github.com/gookit/color v1.5.4
 	github.com/gorilla/websocket v1.5.0
@@ -33,7 +34,7 @@ require (
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/kubepug/kubepug v1.7.1
-	github.com/kubeshop/testkube-operator v1.15.2-beta1.0.20240719112653-d677ef7c3437
+	github.com/kubeshop/testkube-operator v1.15.2-beta1.0.20240729112855-d7bd9c5f64a9
 	github.com/minio/minio-go/v7 v7.0.47
 	github.com/montanaflynn/stats v0.6.6
 	github.com/moogar0880/problems v0.1.1

@@ -29,6 +29,7 @@ type Filter interface {
 
 //go:generate mockgen -destination=./mock_repository.go -package=testresult "github.com/kubeshop/testkube/pkg/repository/testresult" Repository
 type Repository interface {
+	Sequences
 	// Get gets execution result by id or name
 	Get(ctx context.Context, id string) (testkube.TestSuiteExecution, error)
 	// GetByNameAndTestSuite gets execution result by name
@@ -61,4 +62,9 @@ type Repository interface {
 	GetTestSuiteMetrics(ctx context.Context, name string, limit, last int) (metrics testkube.ExecutionsMetrics, err error)
 	// Count returns executions count
 	Count(ctx context.Context, filter Filter) (int64, error)
+}
+
+type Sequences interface {
+	// GetNextExecutionNumber gets next execution number by name
+	GetNextExecutionNumber(ctx context.Context, name string) (number int32, err error)
 }

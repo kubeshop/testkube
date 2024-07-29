@@ -30,6 +30,7 @@ type Filter interface {
 
 //go:generate mockgen -destination=./mock_repository.go -package=testworkflow "github.com/kubeshop/testkube/pkg/repository/testworkflow" Repository
 type Repository interface {
+	Sequences
 	// Get gets execution result by id or name
 	Get(ctx context.Context, id string) (testkube.TestWorkflowExecution, error)
 	// GetByNameAndTestWorkflow gets execution result by name
@@ -66,6 +67,11 @@ type Repository interface {
 	DeleteByTestWorkflows(ctx context.Context, workflowNames []string) (err error)
 	// GetTestWorkflowMetrics get metrics based on the TestWorkflow results
 	GetTestWorkflowMetrics(ctx context.Context, name string, limit, last int) (metrics testkube.ExecutionsMetrics, err error)
+}
+
+type Sequences interface {
+	// GetNextExecutionNumber gets next execution number by name
+	GetNextExecutionNumber(ctx context.Context, name string) (number int32, err error)
 }
 
 //go:generate mockgen -destination=./mock_output_repository.go -package=testworkflow "github.com/kubeshop/testkube/pkg/repository/testworkflow" OutputRepository

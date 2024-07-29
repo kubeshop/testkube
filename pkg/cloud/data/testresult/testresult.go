@@ -252,3 +252,16 @@ func (r *CloudRepository) GetPreviousFinishedState(ctx context.Context, testSuit
 	}
 	return commandResponse.Result, nil
 }
+
+func (r *CloudRepository) GetNextExecutionNumber(ctx context.Context, testSuiteName string) (number int32, err error) {
+	req := NextExecutionNumberRequest{TestSuiteName: testSuiteName}
+	response, err := r.executor.Execute(ctx, CmdTestResultGetNextExecutionNumber, req)
+	if err != nil {
+		return 0, err
+	}
+	var commandResponse NextExecutionNumberResponse
+	if err := json.Unmarshal(response, &commandResponse); err != nil {
+		return 0, err
+	}
+	return commandResponse.TestSuiteNumber, nil
+}
