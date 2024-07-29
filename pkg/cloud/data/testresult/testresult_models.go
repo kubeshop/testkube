@@ -118,3 +118,11 @@ type GetTestSuiteMetricsRequest struct {
 type GetTestSuiteMetricsResponse struct {
 	Metrics testkube.ExecutionsMetrics `json:"metrics"`
 }
+
+type NextExecutionNumberRequest struct {
+	TestSuiteName string `json:"testSuiteName"`
+}
+
+type NextExecutionNumberResponse struct {
+	TestSuiteNumber int32 `json:"testSuiteNumber"`
+}

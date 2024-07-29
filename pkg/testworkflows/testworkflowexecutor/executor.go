@@ -27,7 +27,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/log"
 	testworkflowmappers "github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
-	"github.com/kubeshop/testkube/pkg/repository/result"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor"
@@ -52,7 +51,6 @@ type executor struct {
 	testWorkflowTemplatesClient    testworkflowsclientv1.TestWorkflowTemplatesInterface
 	processor                      testworkflowprocessor.Processor
 	configMap                      configRepo.Repository
-	executionResults               result.Repository
 	testWorkflowExecutionsClient   testworkflowsclientv1.TestWorkflowExecutionsInterface
 	testWorkflowsClient            testworkflowsclientv1.Interface
 	metrics                        v1.Metrics
@@ -74,7 +72,6 @@ func New(emitter *event.Emitter,
 	testWorkflowTemplatesClient testworkflowsclientv1.TestWorkflowTemplatesInterface,
 	processor testworkflowprocessor.Processor,
 	configMap configRepo.Repository,
-	executionResults result.Repository,
 	testWorkflowExecutionsClient testworkflowsclientv1.TestWorkflowExecutionsInterface,
 	testWorkflowsClient testworkflowsclientv1.Interface,
 	metrics v1.Metrics,
@@ -93,7 +90,6 @@ func New(emitter *event.Emitter,
 		testWorkflowTemplatesClient:    testWorkflowTemplatesClient,
 		processor:                      processor,
 		configMap:                      configMap,
-		executionResults:               executionResults,
 		testWorkflowExecutionsClient:   testWorkflowExecutionsClient,
 		testWorkflowsClient:            testWorkflowsClient,
 		metrics:                        metrics,
@@ -466,8 +462,11 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	}
 
 	// Load execution identifier data
-	// TODO: Consider if that should not be shared (as now it is between Tests and Test Suites)
-	number, _ := e.executionResults.GetNextExecutionNumber(context.Background(), workflow.Name)
+	number, err := e.repository.GetNextExecutionNumber(context.Background(), workflow.Name)
+	if err != nil {
+		log.DefaultLogger.Errorw("failed to retrieve TestWorkflow execution number", "id", id, "error", err)
+	}
+
 	executionName := request.Name
 	if executionName == "" {
 		executionName = fmt.Sprintf("%s-%d", workflow.Name, number)

@@ -50,7 +50,7 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 		request.Name = test.ExecutionRequest.Name
 	}
 
-	request.Number = s.getNextExecutionNumber(test.Name)
+	request.Number = s.getNextTestExecutionNumber(test.Name)
 	if request.Name == "" {
 		request.Name = fmt.Sprintf("%s-%d", test.Name, request.Number)
 	}
@@ -192,8 +192,18 @@ func (s *Scheduler) getExecutor(testName string) client.Executor {
 	}
 }
 
-func (s *Scheduler) getNextExecutionNumber(testName string) int32 {
+func (s *Scheduler) getNextTestExecutionNumber(testName string) int32 {
 	number, err := s.testResults.GetNextExecutionNumber(context.Background(), testName)
+	if err != nil {
+		s.logger.Errorw("retrieving latest execution", "error", err)
+		return number
+	}
+
+	return number
+}
+
+func (s *Scheduler) getNextTestSuiteExecutionNumber(testSuiteName string) int32 {
+	number, err := s.testsuiteResults.GetNextExecutionNumber(context.Background(), testSuiteName)
 	if err != nil {
 		s.logger.Errorw("retrieving latest execution", "error", err)
 		return number

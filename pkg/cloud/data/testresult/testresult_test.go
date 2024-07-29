@@ -124,3 +124,26 @@ func TestCloudResultRepository_GetPreviousFinishedState(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, *expectedStatus, status)
 }
+
+func TestCloudResultRepository_GetNextExecutionNumber(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockExecutor := executor.NewMockExecutor(ctrl)
+
+	testSuiteName := "testsuite-1"
+	var testSuiteNumber int32 = 3
+
+	// Setup expectations for the mockedExecutor.Execute method
+	expectedReq := NextExecutionNumberRequest{TestSuiteName: testSuiteName}
+	expectedResponse, _ := json.Marshal(&NextExecutionNumberResponse{TestSuiteNumber: testSuiteNumber})
+	mockExecutor.EXPECT().Execute(gomock.Any(), CmdTestResultGetNextExecutionNumber, expectedReq).Return(expectedResponse, nil)
+
+	r := &CloudRepository{executor: mockExecutor}
+
+	result, err := r.GetNextExecutionNumber(ctx, testSuiteName)
+	assert.NoError(t, err)
+	assert.Equal(t, testSuiteNumber, result)
+}

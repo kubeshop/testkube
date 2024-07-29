@@ -170,3 +170,11 @@ type ExecutionsAddReportRequest struct {
 }
 
 type ExecutionsAddReportResponse struct{}
+
+type ExecutionGetNextExecutionNumberRequest struct {
+	TestWorkflowName string `json:"testWorkflowName"`
+}
+
+type ExecutionGetNextExecutionNumberResponse struct {
+	TestWorkflowNumber int32 `json:"testWorkflowNumber"`
+}

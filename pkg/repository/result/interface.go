@@ -80,8 +80,8 @@ type Repository interface {
 }
 
 type Sequences interface {
-	// GetNextExecutionNumber gets next execution number by test name
-	GetNextExecutionNumber(ctx context.Context, testName string) (number int32, err error)
+	// GetNextExecutionNumber gets next execution number by name
+	GetNextExecutionNumber(ctx context.Context, name string) (number int32, err error)
 }
 
 //go:generate mockgen -destination=./mock_output_repository.go -package=result "github.com/kubeshop/testkube/pkg/repository/result" OutputRepository
