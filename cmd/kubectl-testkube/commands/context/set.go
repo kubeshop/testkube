@@ -48,6 +48,16 @@ func NewSetContextCmd() *cobra.Command {
 
 				cfg = common.PopulateCloudConfig(cfg, apiKey, &opts)
 
+				if cfg.CloudContext.ApiKey != "" {
+					var err error
+					cfg, err = common.PopulateOrgAndEnvNames(cfg, opts.Master.OrgId, opts.Master.EnvId, opts.Master.URIs.Api)
+					if err != nil {
+						ui.Failf("Error populating org and env names: %s", err)
+					}
+				} else {
+					ui.Warn("No API key provided, you need to login to Testkube Cloud")
+				}
+
 			case config.ContextTypeKubeconfig:
 				// kubeconfig special use cases
 
