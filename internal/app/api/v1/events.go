@@ -22,7 +22,7 @@ func (s TestkubeAPI) InitEvents() {
 
 func (s TestkubeAPI) EventsStreamHandler() fiber.Handler {
 	return websocket.New(func(c *websocket.Conn) {
-		s.Log.Debugw("handling websocket connection", "id", c.Params("id"), "locals", c.Locals, "remoteAddr", c.RemoteAddr(), "localAddr", c.LocalAddr())
+		s.Log.Debugw("handling websocket connection", "id", c.Params("id"), "remoteAddr", c.RemoteAddr(), "localAddr", c.LocalAddr())
 
 		// wait for disconnect
 		// WebsocketLoader will add WebsocketListener which will send data to `c`
