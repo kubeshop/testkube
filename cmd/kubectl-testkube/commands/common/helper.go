@@ -393,16 +393,6 @@ func PopulateCloudConfig(cfg config.Data, apiKey string, opts *HelmOptions) conf
 	cfg.CloudContext.UiUri = opts.Master.URIs.Ui
 	cfg.CloudContext.AgentUri = opts.Master.URIs.Agent
 
-	if cfg.CloudContext.ApiKey != "" {
-		var err error
-		cfg, err = PopulateOrgAndEnvNames(cfg, opts.Master.OrgId, opts.Master.EnvId, opts.Master.URIs.Api)
-		if err != nil {
-			ui.Failf("Error populating org and env names: %s", err)
-		}
-	} else {
-		ui.Warn("No API key provided, you need to login to Testkube Cloud")
-	}
-
 	return cfg
 }
 
