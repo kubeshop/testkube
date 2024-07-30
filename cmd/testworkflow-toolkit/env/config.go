@@ -30,7 +30,7 @@ type envObjectStorageConfig struct {
 type envCloudConfig struct {
 	Url         string `envconfig:"TK_C_URL"`
 	ApiKey      string `envconfig:"TK_C_KEY"`
-	UiUri       string `envconfig:"TK_C_UI_URI"`
+	UiUrl       string `envconfig:"TK_C_UI_URL"`
 	OrgId       string `envconfig:"TK_C_ORG_ID"`
 	EnvId       string `envconfig:"TK_C_ENV_ID"`
 	SkipVerify  bool   `envconfig:"TK_C_SKIP_VERIFY" default:"false"`
