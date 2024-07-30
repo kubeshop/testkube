@@ -587,7 +587,7 @@ func (s *TestkubeAPI) InitRoutes() {
 	})
 }
 
-func (s TestkubeAPI) InitEventListeners(
+func (s *TestkubeAPI) InitEventListeners(
 	proContext *config.ProContext,
 	webhookClient *executorsclientv1.WebhooksClient,
 	templatesClient *templatesclientv1.TemplatesClient,
