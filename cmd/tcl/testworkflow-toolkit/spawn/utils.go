@@ -286,7 +286,7 @@ func CreateBaseMachine() expressions.Machine {
 			"cloud.api.tlsInsecure": strconv.FormatBool(env.Config().Cloud.TlsInsecure),
 			"cloud.api.skipVerify":  strconv.FormatBool(env.Config().Cloud.SkipVerify),
 			"cloud.api.url":         env.Config().Cloud.Url,
-			"cloud.ui.url":          env.Config().Cloud.UiUri,
+			"cloud.ui.url":          env.Config().Cloud.UiUrl,
 			"cloud.api.orgId":       env.Config().Cloud.OrgId,
 			"cloud.api.envId":       env.Config().Cloud.EnvId,
 
