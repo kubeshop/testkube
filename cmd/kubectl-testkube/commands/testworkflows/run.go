@@ -12,6 +12,7 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/render"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/tests"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testworkflows/renderer"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	apiclientv1 "github.com/kubeshop/testkube/pkg/api/v1/client"
@@ -31,10 +32,14 @@ var (
 
 func NewRunTestWorkflowCmd() *cobra.Command {
 	var (
-		executionName   string
-		config          map[string]string
-		watchEnabled    bool
-		disableWebhooks bool
+		executionName            string
+		config                   map[string]string
+		watchEnabled             bool
+		disableWebhooks          bool
+		downloadArtifactsEnabled bool
+		downloadDir              string
+		format                   string
+		masks                    []string
 	)
 
 	cmd := &cobra.Command{
@@ -89,6 +94,9 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 				if watchEnabled {
 					exitCode = uiWatch(execution, client)
 					ui.NL()
+					if downloadArtifactsEnabled {
+						tests.DownloadTestWorkflowArtifacts(execution.Id, downloadDir, format, masks, client, outputPretty)
+					}
 				} else {
 					uiShellWatchExecution(execution.Id)
 				}
@@ -105,6 +113,10 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&watchEnabled, "watch", "f", false, "watch for changes after start")
 	cmd.Flags().BoolVar(&disableWebhooks, "disable-webhooks", false, "disable webhooks for this execution")
 	cmd.Flags().MarkDeprecated("enable-webhooks", "enable-webhooks is deprecated")
+	cmd.Flags().StringVar(&downloadDir, "download-dir", "artifacts", "download dir")
+	cmd.Flags().BoolVarP(&downloadArtifactsEnabled, "download-artifacts", "d", false, "download artifacts automatically")
+	cmd.Flags().StringVar(&format, "format", "folder", "data format for storing files, one of folder|archive")
+	cmd.Flags().StringArrayVarP(&masks, "mask", "", []string{}, "regexp to filter downloaded files, single or comma separated, like report/.* or .*\\.json,.*\\.js$")
 
 	return cmd
 }
