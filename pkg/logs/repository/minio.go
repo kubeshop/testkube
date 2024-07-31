@@ -99,7 +99,7 @@ func (r MinioLogsRepository) readLineLogsV2(file io.Reader, ch chan events.LogRe
 			err = json.Unmarshal(b, &log)
 			if err != nil {
 				r.log.Errorw("error unmarshalling log line", "error", err)
-				ch <- events.LogResponse{Error: err}
+				//				ch <- events.LogResponse{Error: err}
 				continue
 			}
 
