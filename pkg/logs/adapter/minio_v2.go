@@ -15,9 +15,6 @@ import (
 	minioconnecter "github.com/kubeshop/testkube/pkg/storage/minio"
 )
 
-// DefaultDataDir is a default directory where logs are stored (logs-service Dockerfile creates this directory)
-const DefaultDataDir = "/data"
-
 var _ Adapter = &MinioV2Adapter{}
 
 // NewMinioV2Adapter creates new MinioV2Adapter which will send data to local MinIO bucket
