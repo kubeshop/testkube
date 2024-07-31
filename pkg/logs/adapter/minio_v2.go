@@ -110,8 +110,10 @@ func (s *MinioV2Adapter) deleteFile(id string) {
 	delete(s.files, id)
 }
 
-func (s *MinioV2Adapter) WithPath(path string) {
-	s.path = path
+func (s *MinioV2Adapter) WithNonEmptyPath(path string) {
+	if path != "" {
+		s.path = path
+	}
 }
 
 func (s *MinioV2Adapter) Notify(ctx context.Context, id string, e events.Log) error {
