@@ -429,13 +429,8 @@ func (ag *Agent) executeCommand(ctx context.Context, cmd *cloud.ExecuteRequest) 
 	}
 }
 
-func AddAPIKeyMeta(ctx context.Context, apiKey string) context.Context {
-	md := metadata.Pairs(HeaderApiKey, apiKey)
-	return metadata.NewOutgoingContext(ctx, md)
-}
-
-func AddRunnerIdMeta(ctx context.Context, runnerId string) context.Context {
-	md := metadata.Pairs(HeaderRunnerId, runnerId)
+func AddContextMetadata(ctx context.Context, apiKey, runnerId string) context.Context {
+	md := metadata.Pairs(HeaderApiKey, apiKey, HeaderRunnerId, runnerId)
 	return metadata.NewOutgoingContext(ctx, md)
 }
 
