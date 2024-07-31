@@ -22,6 +22,10 @@ var _ Adapter = &MinioV2Adapter{}
 
 // NewMinioV2Adapter creates new MinioV2Adapter which will send data to local MinIO bucket
 func NewMinioV2Adapter(endpoint, accessKeyID, secretAccessKey, region, token, bucket string, ssl, skipVerify bool, certFile, keyFile, caFile string) (*MinioV2Adapter, error) {
+	dir, err := os.MkdirTemp("", "minio")
+	if err != nil {
+		return nil, err
+	}
 	ctx := context.Background()
 	opts := minioconnecter.GetTLSOptions(ssl, skipVerify, certFile, keyFile, caFile)
 	c := &MinioV2Adapter{
@@ -30,7 +34,7 @@ func NewMinioV2Adapter(endpoint, accessKeyID, secretAccessKey, region, token, bu
 		bucket:         bucket,
 		region:         region,
 		files:          make(map[string]*os.File),
-		path:           DefaultDataDir,
+		path:           dir,
 	}
 	minioClient, err := c.minioConnecter.GetClient()
 	if err != nil {

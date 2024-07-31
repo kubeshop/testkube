@@ -7,6 +7,8 @@ WORKDIR /root/
 
 RUN mkdir /data
 RUN chown -R 1001:0 /data
+RUN chmod -R 666 /data
+
 
 COPY testkube-logs-server /bin/app
 USER 1001
