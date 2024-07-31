@@ -7157,6 +7157,16 @@ components:
         context:
           type: string
           description: Context value depending from its type
+        runnerIds: 
+          type: array 
+          items: 
+            type: string
+        tags: 
+          type: object
+          additionalProperties:
+            type: string 
+
+
 
     Webhook:
       description: CRD based webhook data
