@@ -45,8 +45,7 @@ func (e *CloudGRPCExecutor) Execute(ctx context.Context, command Command, payloa
 		Command: string(command),
 		Payload: &s,
 	}
-	ctx = agent.AddAPIKeyMeta(ctx, e.apiKey)
-	ctx = agent.AddRunnerIdMeta(ctx, e.runnerId)
+	ctx = agent.AddContextMetadata(ctx, e.apiKey, e.runnerId)
 	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
 	cmdResponse, err := e.client.Call(ctx, &req, opts...)
 	if err != nil {

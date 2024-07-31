@@ -101,7 +101,7 @@ func NewArtifactsCmd() *cobra.Command {
 			if env.CloudEnabled() {
 				ctx, cancel := context.WithTimeout(cmd.Context(), 30*time.Second)
 				defer cancel()
-				ctx = agent.AddAPIKeyMeta(ctx, env.Config().Cloud.ApiKey)
+				ctx = agent.AddContextMetadata(ctx, env.Config().Cloud.ApiKey, "")
 				executor, client := env.Cloud(ctx)
 				proContext, err := client.GetProContext(ctx, &emptypb.Empty{})
 				var supported []*cloud.Capability
