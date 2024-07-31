@@ -22,13 +22,14 @@ type Executor interface {
 }
 
 type CloudGRPCExecutor struct {
-	client cloud.TestKubeCloudAPIClient
-	conn   *grpc.ClientConn
-	apiKey string
+	client   cloud.TestKubeCloudAPIClient
+	conn     *grpc.ClientConn
+	apiKey   string
+	runnerId string
 }
 
-func NewCloudGRPCExecutor(client cloud.TestKubeCloudAPIClient, grpcConn *grpc.ClientConn, apiKey string) *CloudGRPCExecutor {
-	return &CloudGRPCExecutor{client: client, conn: grpcConn, apiKey: apiKey}
+func NewCloudGRPCExecutor(client cloud.TestKubeCloudAPIClient, grpcConn *grpc.ClientConn, apiKey, runnerId string) *CloudGRPCExecutor {
+	return &CloudGRPCExecutor{client: client, conn: grpcConn, apiKey: apiKey, runnerId: runnerId}
 }
 
 func (e *CloudGRPCExecutor) Execute(ctx context.Context, command Command, payload any) (response []byte, err error) {
@@ -45,6 +46,7 @@ func (e *CloudGRPCExecutor) Execute(ctx context.Context, command Command, payloa
 		Payload: &s,
 	}
 	ctx = agent.AddAPIKeyMeta(ctx, e.apiKey)
+	ctx = agent.AddRunnerIdMeta(ctx, e.runnerId)
 	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
 	cmdResponse, err := e.client.Call(ctx, &req, opts...)
 	if err != nil {

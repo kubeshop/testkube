@@ -434,6 +434,11 @@ func AddAPIKeyMeta(ctx context.Context, apiKey string) context.Context {
 	return metadata.NewOutgoingContext(ctx, md)
 }
 
+func AddRunnerIdMeta(ctx context.Context, runnerId string) context.Context {
+	md := metadata.Pairs(HeaderRunnerId, runnerId)
+	return metadata.NewOutgoingContext(ctx, md)
+}
+
 type cloudResponse struct {
 	resp *cloud.ExecuteRequest
 	err  error

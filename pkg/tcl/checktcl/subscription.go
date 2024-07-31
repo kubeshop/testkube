@@ -29,7 +29,7 @@ type SubscriptionChecker struct {
 
 // NewSubscriptionChecker creates a new subscription checker using the agent token
 func NewSubscriptionChecker(ctx context.Context, proContext config.ProContext, cloudClient cloud.TestKubeCloudAPIClient, grpcConn *grpc.ClientConn) (SubscriptionChecker, error) {
-	executor := executor.NewCloudGRPCExecutor(cloudClient, grpcConn, proContext.APIKey)
+	executor := executor.NewCloudGRPCExecutor(cloudClient, grpcConn, proContext.APIKey, proContext.RunnerId)
 
 	req := GetOrganizationPlanRequest{}
 	response, err := executor.Execute(ctx, cloudconfig.CmdConfigGetOrganizationPlan, req)
