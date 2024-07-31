@@ -56,7 +56,7 @@ type Config struct {
 	StorageCertFile        string `envconfig:"STORAGE_CERT_FILE" default:""`
 	StorageKeyFile         string `envconfig:"STORAGE_KEY_FILE" default:""`
 	StorageCAFile          string `envconfig:"STORAGE_CA_FILE" default:""`
-	StorageFilePath        string `envconfig:"STORAGE_FILE_PATH" default:"/data"`
+	StorageFilePath        string `envconfig:"STORAGE_FILE_PATH" default:""`
 }
 
 func Get() (*Config, error) {
