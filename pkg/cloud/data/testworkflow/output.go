@@ -32,8 +32,8 @@ func WithSkipVerify() Option {
 	}
 }
 
-func NewCloudOutputRepository(client cloud.TestKubeCloudAPIClient, grpcConn *grpc.ClientConn, apiKey string, opts ...Option) *CloudOutputRepository {
-	r := &CloudOutputRepository{executor: executor.NewCloudGRPCExecutor(client, grpcConn, apiKey), httpClient: http.DefaultClient}
+func NewCloudOutputRepository(client cloud.TestKubeCloudAPIClient, grpcConn *grpc.ClientConn, apiKey, runnerId string, opts ...Option) *CloudOutputRepository {
+	r := &CloudOutputRepository{executor: executor.NewCloudGRPCExecutor(client, grpcConn, apiKey, runnerId), httpClient: http.DefaultClient}
 	for _, opt := range opts {
 		opt(r)
 	}
