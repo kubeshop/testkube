@@ -137,7 +137,7 @@ func main() {
 			cfg.StorageCAFile)
 
 		minioAdapter.
-			WithPath(cfg.StorageFilePath)
+			WithNonEmptyPath(cfg.StorageFilePath)
 
 		if err != nil {
 			log.Errorw("error creating minio adapter", "error", err)
