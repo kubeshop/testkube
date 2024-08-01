@@ -192,6 +192,10 @@ func PrintTestWorkflowExecutionURIs(execution *testkube.TestWorkflowExecution) {
 		return
 	}
 
+	if execution.Result == nil || !execution.Result.IsFinished() {
+		return
+	}
+
 	ui.NL()
 	workflowName := ""
 	if execution.Workflow != nil {
