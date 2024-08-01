@@ -71,6 +71,8 @@ func printPrettyOutput(ui *ui.UI, execution testkube.TestWorkflowExecution) {
 				ui.Warn("Finished at:         ", execution.Result.FinishedAt.String())
 				ui.Warn("Duration:            ", execution.Result.FinishedAt.Sub(execution.Result.QueuedAt).String())
 			}
+
+			render.PrintTestWorkflowExecutionURIs(&execution)
 		}
 	}
 
