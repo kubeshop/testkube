@@ -101,6 +101,10 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 					uiShellWatchExecution(execution.Id)
 				}
 
+				execution, err = client.GetTestWorkflowExecution(execution.Id)
+				ui.ExitOnError("get execution failed", err)
+
+				render.PrintTestWorkflowExecutionURIs(&execution)
 				uiShellGetExecution(execution.Id)
 			}
 
