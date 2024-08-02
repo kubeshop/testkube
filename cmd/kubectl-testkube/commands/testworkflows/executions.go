@@ -29,6 +29,14 @@ func NewGetTestWorkflowExecutionsCmd() *cobra.Command {
 		Long:    `Gets TestWorkflow execution details by ID, or list if id is not passed`,
 
 		Run: func(cmd *cobra.Command, args []string) {
+			outputFlag := cmd.Flag("output")
+			outputType := render.OutputPretty
+			if outputFlag != nil {
+				outputType = render.OutputType(outputFlag.Value.String())
+			}
+
+			outputPretty := outputType == render.OutputPretty
+
 			client, _, err := common.GetClient(cmd)
 			ui.ExitOnError("getting client", err)
 
@@ -51,19 +59,24 @@ func NewGetTestWorkflowExecutionsCmd() *cobra.Command {
 				ui.ExitOnError("rendering obj", err)
 			}
 
-			ui.Info("Getting logs for test workflow execution", executionID)
+			if outputPretty {
+				ui.Info("Getting logs for test workflow execution", executionID)
 
-			logs, err := client.GetTestWorkflowExecutionLogs(executionID)
-			ui.ExitOnError("getting logs from executor", err)
+				logs, err := client.GetTestWorkflowExecutionLogs(executionID)
+				ui.ExitOnError("getting logs from executor", err)
 
-			sigs := flattenSignatures(execution.Signature)
+				sigs := flattenSignatures(execution.Signature)
 
-			var results map[string]testkube.TestWorkflowStepResult
-			if execution.Result != nil {
-				results = execution.Result.Steps
+				var results map[string]testkube.TestWorkflowStepResult
+				if execution.Result != nil {
+					results = execution.Result.Steps
+				}
+
+				printRawLogLines(logs, sigs, results)
+				if !logsOnly {
+					render.PrintTestWorkflowExecutionURIs(&execution)
+				}
 			}
-
-			printRawLogLines(logs, sigs, results)
 		},
 	}
 
