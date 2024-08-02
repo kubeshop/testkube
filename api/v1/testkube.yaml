@@ -9301,6 +9301,10 @@ components:
           $ref: "#/components/schemas/BoxedInteger"
         multipleOf:
           $ref: "#/components/schemas/BoxedInteger"
+        sensitive:
+          type: boolean
+          default: false
+          description: whether this value should be stored in the secret
       required:
         - type
 
