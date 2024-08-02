@@ -11,6 +11,7 @@ import (
 const runContextAgent = "agent"
 
 type Params struct {
+	ErrorCode                  string     `json:"error_code,omitempty"`
 	EventCount                 int64      `json:"event_count,omitempty"`
 	EventCategory              string     `json:"event_category,omitempty"`
 	AppVersion                 string     `json:"app_version,omitempty"`

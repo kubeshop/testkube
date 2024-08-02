@@ -25,6 +25,10 @@ type HelmOptions struct {
 	NoMinio, NoMongo, NoConfirm    bool
 	MinioReplicas, MongoReplicas   int
 
+	// On-prem
+	LicenseKey    string
+	DemoValuesURL string
+
 	Master config.Master
 	// For debug
 	DryRun         bool
@@ -42,7 +46,28 @@ func (o HelmOptions) GetApiURI() string {
 	return o.Master.URIs.Api
 }
 
-func HelmUpgradeOrInstallTestkubeCloud(options HelmOptions, cfg config.Data, isMigration bool) *CLIError {
+func HelmUpgradeOrInstallTestkubeOnPremDemo(options HelmOptions) *CLIError {
+	helmPath, cliErr := lookupHelmPath()
+	if cliErr != nil {
+		return cliErr
+	}
+
+	if err := updateHelmRepo(helmPath, options.DryRun, true); err != nil {
+		return err
+	}
+
+	args := prepareTestkubeOnPremDemoArgs(options)
+	output, err := runHelmCommand(helmPath, args, options.DryRun)
+	if err != nil {
+		return err
+	}
+
+	ui.Debug("Helm install testkube output", output)
+	return nil
+
+}
+
+func HelmUpgradeOrInstallTestkubeAgent(options HelmOptions, cfg config.Data, isMigration bool) *CLIError {
 	helmPath, cliErr := lookupHelmPath()
 	if cliErr != nil {
 		return cliErr
@@ -65,7 +90,7 @@ func HelmUpgradeOrInstallTestkubeCloud(options HelmOptions, cfg config.Data, isM
 			errors.New("agent key is required"))
 	}
 
-	if cliErr := updateHelmRepo(helmPath, options.DryRun); cliErr != nil {
+	if cliErr := updateHelmRepo(helmPath, options.DryRun, false); cliErr != nil {
 		return cliErr
 	}
 
@@ -89,15 +114,14 @@ func HelmUpgradeOrInstallTestkube(options HelmOptions) *CLIError {
 		return err
 	}
 
-	ui.Info("Helm installing testkube framework")
-	if err = updateHelmRepo(helmPath, options.DryRun); err != nil {
+	if err = updateHelmRepo(helmPath, options.DryRun, false); err != nil {
 		return err
 	}
 
 	args := prepareTestkubeHelmArgs(options)
 	output, err := runHelmCommand(helmPath, args, options.DryRun)
 	if err != nil {
-		return NewCLIError(TKErrHelmCommandFailed, "Helm command failed: install or upgrade", "", err)
+		return err
 	}
 
 	ui.Debug("Helm install testkube output", output)
@@ -117,10 +141,16 @@ func lookupHelmPath() (string, *CLIError) {
 	return helmPath, nil
 }
 
-func updateHelmRepo(helmPath string, dryRun bool) *CLIError {
-	helmRepoURL := "https://kubeshop.github.io/helm-charts"
-	_, err := runHelmCommand(helmPath, []string{"repo", "add", "kubeshop", helmRepoURL}, dryRun)
-	if err != nil && !strings.Contains(err.Error(), "Error: repository name (kubeshop) already exists, please specify a different name") {
+func updateHelmRepo(helmPath string, dryRun bool, isOnPrem bool) *CLIError {
+	registryURL := "https://kubeshop.github.io/helm-charts"
+	registryName := "kubeshop"
+	if isOnPrem {
+		registryURL = "https://kubeshop.github.io/testkube-cloud-charts"
+		registryName = "testkubeenterprise"
+	}
+	_, err := runHelmCommand(helmPath, []string{"repo", "add", registryName, registryURL}, dryRun)
+	errMsg := fmt.Sprintf("Error: repository name (%s) already exists, please specify a different name", registryName)
+	if err != nil && !strings.Contains(err.Error(), errMsg) {
 		return err
 	}
 
@@ -143,6 +173,17 @@ func runHelmCommand(helmPath string, args []string, dryRun bool) (commandOutput 
 		)
 	}
 	return string(output), nil
+}
+
+func prepareTestkubeOnPremDemoArgs(options HelmOptions) []string {
+	return []string{
+		"upgrade", "--install",
+		"--create-namespace",
+		"--namespace", options.Namespace,
+		"--set", "global.enterpriseLicenseKey=" + options.LicenseKey,
+		"--values", options.DemoValuesURL,
+		"--wait",
+		"testkube", "testkubeenterprise/testkube-enterprise"}
 }
 
 // prepareTestkubeProHelmArgs prepares Helm arguments for Testkube Pro installation.
