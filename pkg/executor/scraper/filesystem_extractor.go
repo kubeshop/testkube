@@ -174,10 +174,11 @@ func (e *ArchiveFilesystemExtractor) newTarballMeta(files []*archive.File) (*Obj
 }
 
 func (e *ArchiveFilesystemExtractor) newArchiveFile(baseDir string, path string) (*archive.File, error) {
-	f, err := e.fs.OpenFileBuffered(path)
+	f, cancel, err := e.fs.ReadFileBuffered(path)
 	if err != nil {
 		return nil, errors.Wrapf(err, "error opening file %s", path)
 	}
+	defer cancel()
 
 	stat, err := e.fs.Stat(path)
 	if err != nil {
@@ -270,10 +271,11 @@ func (e *RecursiveFilesystemExtractor) Extract(ctx context.Context, paths, masks
 					log.DefaultLogger.Warnf("error notifying for file %s", path)
 				}
 
-				reader, err := e.fs.OpenFileBuffered(path)
+				reader, cancel, err := e.fs.ReadFileBuffered(path)
 				if err != nil {
 					return errors.Wrapf(err, "error opening buffered %s", path)
 				}
+				defer cancel()
 				relpath, err := filepath.Rel(dir, path)
 				if err != nil {
 					return errors.Wrapf(err, "error getting relative path for %s", path)
