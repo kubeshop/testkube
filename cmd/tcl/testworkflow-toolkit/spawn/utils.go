@@ -264,6 +264,11 @@ func CreateLogger(name, description string, index, count int64) func(...string) 
 }
 
 func CreateBaseMachine() expressions.Machine {
+	dashboardUrl := env.Config().System.DashboardUrl
+	if env.Config().Cloud.ApiKey != "" {
+		dashboardUrl = fmt.Sprintf("%s/organization/%s/environment/%s/dashboard",
+			env.Config().Cloud.UiUrl, env.Config().Cloud.OrgId, env.Config().Cloud.EnvId)
+	}
 	return expressions.CombinedMachines(
 		data.GetBaseTestWorkflowMachine(),
 		expressions.NewMachine().RegisterStringMap("internal", map[string]string{
@@ -303,7 +308,16 @@ func CreateBaseMachine() expressions.Machine {
 			"images.persistence.enabled": strconv.FormatBool(env.Config().Images.InspectorPersistenceEnabled),
 			"images.persistence.key":     env.Config().Images.InspectorPersistenceCacheKey,
 			"images.cache.ttl":           env.Config().Images.ImageCredentialsCacheTTL.String(),
-		}),
+		}).
+			Register("dashboard", map[string]string{
+				"url": dashboardUrl,
+			}).
+			Register("organization", map[string]string{
+				"id": env.Config().Cloud.OrgId,
+			}).
+			Register("environment", map[string]string{
+				"id": env.Config().Cloud.EnvId,
+			}),
 	)
 }
 
