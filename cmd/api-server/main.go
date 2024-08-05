@@ -27,6 +27,7 @@ import (
 	testworkflow2 "github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/secretmanager"
 	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
+	"github.com/kubeshop/testkube/pkg/tcl/controlplanetcl"
 	"github.com/kubeshop/testkube/pkg/tcl/schedulertcl"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/presets"
 
@@ -442,6 +443,17 @@ func main() {
 	if mode == common.ModeAgent {
 		subscriptionChecker, err = checktcl.NewSubscriptionChecker(ctx, proContext, grpcClient, grpcConn)
 		exitOnError("Failed creating subscription checker", err)
+
+		// Load environment/org details based on token grpc call
+		environment, err := controlplanetcl.GetEnvironment(ctx, proContext, grpcClient, grpcConn)
+		warnOnError("Getting environment details from control plane", err)
+		proContext.EnvID = environment.Id
+		proContext.EnvName = environment.Name
+		proContext.EnvSlug = environment.Slug
+		proContext.OrgID = environment.OrganizationId
+		proContext.OrgName = environment.OrganizationName
+		proContext.OrgSlug = environment.OrganizationSlug
+
 	}
 
 	serviceAccountNames := map[string]string{
@@ -942,5 +954,11 @@ func exitOnError(title string, err error) {
 	if err != nil {
 		log.DefaultLogger.Errorw(title, "error", err)
 		os.Exit(1)
+	}
+}
+
+func warnOnError(title string, err error) {
+	if err != nil {
+		log.DefaultLogger.Errorw(title, "error", err)
 	}
 }
