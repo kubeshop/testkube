@@ -19,6 +19,7 @@ import (
 	testworkflowsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testworkflows/v1"
 	initconstants "github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
 	v1 "github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -389,6 +390,17 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		return execution, fmt.Errorf("not supported execution namespace %s", namespace)
 	}
 
+	// Determine the dashboard information
+	cloudApiKey := common.GetOr(os.Getenv("TESTKUBE_PRO_API_KEY"), os.Getenv("TESTKUBE_CLOUD_API_KEY"))
+	cloudOrgId := common.GetOr(os.Getenv("TESTKUBE_PRO_ORG_ID"), os.Getenv("TESTKUBE_CLOUD_ORG_ID"))
+	cloudEnvId := common.GetOr(os.Getenv("TESTKUBE_PRO_ENV_ID"), os.Getenv("TESTKUBE_CLOUD_ENV_ID"))
+	cloudUiUrl := common.GetOr(os.Getenv("TESTKUBE_PRO_UI_URL"), os.Getenv("TESTKUBE_CLOUD_UI_URL"))
+	dashboardUrl := env.Config().System.DashboardUrl
+	if env.Config().Cloud.ApiKey != "" {
+		dashboardUrl = fmt.Sprintf("%s/organization/%s/environment/%s/dashboard",
+			cloudUiUrl, env.Config().Cloud.OrgId, env.Config().Cloud.EnvId)
+	}
+
 	// Build the basic Execution data
 	id := primitive.NewObjectID().Hex()
 	now := time.Now()
@@ -407,13 +419,13 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 			"storage.caFile":     os.Getenv("STORAGE_CA_FILE"),
 
 			"cloud.enabled":         strconv.FormatBool(os.Getenv("TESTKUBE_PRO_API_KEY") != "" || os.Getenv("TESTKUBE_CLOUD_API_KEY") != ""),
-			"cloud.api.key":         common.GetOr(os.Getenv("TESTKUBE_PRO_API_KEY"), os.Getenv("TESTKUBE_CLOUD_API_KEY")),
+			"cloud.api.key":         cloudApiKey,
 			"cloud.api.tlsInsecure": common.GetOr(os.Getenv("TESTKUBE_PRO_TLS_INSECURE"), os.Getenv("TESTKUBE_CLOUD_TLS_INSECURE"), "false"),
 			"cloud.api.skipVerify":  common.GetOr(os.Getenv("TESTKUBE_PRO_SKIP_VERIFY"), os.Getenv("TESTKUBE_CLOUD_SKIP_VERIFY"), "false"),
 			"cloud.api.url":         common.GetOr(os.Getenv("TESTKUBE_PRO_URL"), os.Getenv("TESTKUBE_CLOUD_URL")),
-			"cloud.ui.url":          common.GetOr(os.Getenv("TESTKUBE_PRO_UI_URL"), os.Getenv("TESTKUBE_CLOUD_UI_URL")),
-			"cloud.api.orgId":       common.GetOr(os.Getenv("TESTKUBE_PRO_ORG_ID"), os.Getenv("TESTKUBE_CLOUD_ORG_ID")),
-			"cloud.api.envId":       common.GetOr(os.Getenv("TESTKUBE_PRO_ENV_ID"), os.Getenv("TESTKUBE_CLOUD_ENV_ID")),
+			"cloud.ui.url":          cloudUiUrl,
+			"cloud.api.orgId":       cloudOrgId,
+			"cloud.api.envId":       cloudEnvId,
 
 			"serviceaccount.default": e.serviceAccountNames[namespace],
 
@@ -438,6 +450,15 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 			"id":       id,
 			"root":     id,
 			"fsPrefix": "",
+		}).
+		Register("dashboard", map[string]string{
+			"url": dashboardUrl,
+		}).
+		Register("organization", map[string]string{
+			"id": cloudOrgId,
+		}).
+		Register("environment", map[string]string{
+			"id": cloudEnvId,
 		})
 	mockExecutionMachine := expressions.NewMachine().Register("execution", map[string]interface{}{
 		"id":              id,
