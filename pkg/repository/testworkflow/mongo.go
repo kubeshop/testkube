@@ -13,6 +13,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo/writeconcern"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/repository/sequence"
@@ -268,12 +269,42 @@ func (r *MongoRepository) GetExecutionsSummary(ctx context.Context, filter Filte
 	return
 }
 
-func (r *MongoRepository) Insert(ctx context.Context, result testkube.TestWorkflowExecution) (err error) {
+func (r *MongoRepository) Insert(ctx context.Context, result *testkube.TestWorkflowExecution) (err error) {
 	result.EscapeDots()
 	if result.Reports == nil {
 		result.Reports = []testkube.TestWorkflowReport{}
 	}
-	_, err = r.Coll.InsertOne(ctx, result)
+
+	wc := writeconcern.New(writeconcern.WMajority())
+	txnOptions := options.Transaction().SetWriteConcern(wc)
+	session, err := r.db.Client().StartSession()
+	if err != nil {
+		return err
+	}
+	defer session.EndSession(ctx)
+
+	_, err = session.WithTransaction(ctx, func(sessCtx mongo.SessionContext) (interface{}, error) {
+		number, err := r.sequenceRepository.GetNextExecutionNumber(sessCtx, result.Workflow.Name, sequence.ExecutionTypeTestWorkflow)
+		if err != nil {
+			return nil, err
+		}
+
+		result.Number = number
+		if result.Name == "" {
+			result.Name = fmt.Sprintf("%s-%d", result.Workflow.Name, result.Number)
+		}
+
+		// Ensure it is unique name
+		// TODO: Consider if we shouldn't make name unique across all TestWorkflows
+		next, _ := r.GetByNameAndTestWorkflow(sessCtx, result.Name, result.Workflow.Name)
+		if next.Name == result.Name {
+			return nil, errors.New("execution name already exists")
+		}
+
+		_, err = r.Coll.InsertOne(sessCtx, result)
+		return nil, err
+	}, txnOptions)
+
 	return
 }
 

@@ -12,6 +12,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/repository/sequence"
 )
 
 var (
@@ -32,13 +33,14 @@ func TestNewMongoRepository_UpdateReport_Integration(t *testing.T) {
 		db.Drop(ctx)
 	})
 
-	repo := NewMongoRepository(db, false)
+	seq := sequence.NewMongoRepository(db)
+	repo := NewMongoRepository(db, false, WithMongoRepositorySequence(seq))
 
 	execution := testkube.TestWorkflowExecution{
 		Id:   "test-id",
 		Name: "test-name",
 	}
-	if err := repo.Insert(ctx, execution); err != nil {
+	if err := repo.Insert(ctx, &execution); err != nil {
 		t.Fatalf("error inserting execution: %v", err)
 	}
 

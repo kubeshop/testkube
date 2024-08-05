@@ -50,7 +50,7 @@ type Repository interface {
 	// GetPreviousFinishedState gets previous finished execution state by test
 	GetPreviousFinishedState(ctx context.Context, testName string, date time.Time) (testkube.TestWorkflowStatus, error)
 	// Insert inserts new execution result
-	Insert(ctx context.Context, result testkube.TestWorkflowExecution) error
+	Insert(ctx context.Context, result *testkube.TestWorkflowExecution) error
 	// Update updates execution
 	Update(ctx context.Context, result testkube.TestWorkflowExecution) error
 	// UpdateResult updates execution result

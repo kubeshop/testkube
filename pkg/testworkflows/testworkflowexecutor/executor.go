@@ -464,30 +464,38 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		return execution, errors.Wrap(err, "processing error")
 	}
 
-	// Load execution identifier data
-	number, err := e.repository.GetNextExecutionNumber(context.Background(), workflow.Name)
-	if err != nil {
-		log.DefaultLogger.Errorw("failed to retrieve TestWorkflow execution number", "id", id, "error", err)
-	}
-
-	executionName := request.Name
-	if executionName == "" {
-		executionName = fmt.Sprintf("%s-%d", workflow.Name, number)
-	}
-
 	testWorkflowExecutionName := request.TestWorkflowExecutionName
-	// Ensure it is unique name
-	// TODO: Consider if we shouldn't make name unique across all TestWorkflows
-	next, _ := e.repository.GetByNameAndTestWorkflow(ctx, executionName, workflow.Name)
-	if next.Name == executionName {
-		return execution, errors.Wrap(err, "execution name already exists")
+	// Build Execution entity
+	// TODO: Consider storing "config" as well
+	execution = testkube.TestWorkflowExecution{
+		Id:          id,
+		Name:        request.Name,
+		Namespace:   namespace,
+		ScheduledAt: now,
+		StatusAt:    now,
+		Result: &testkube.TestWorkflowResult{
+			Status:          common.Ptr(testkube.QUEUED_TestWorkflowStatus),
+			PredictedStatus: common.Ptr(testkube.PASSED_TestWorkflowStatus),
+			Initialization: &testkube.TestWorkflowStepResult{
+				Status: common.Ptr(testkube.QUEUED_TestWorkflowStepStatus),
+			},
+		},
+		Output:                    []testkube.TestWorkflowOutput{},
+		Workflow:                  testworkflowmappers.MapKubeToAPI(initialWorkflow),
+		ResolvedWorkflow:          testworkflowmappers.MapKubeToAPI(resolvedWorkflow),
+		TestWorkflowExecutionName: testWorkflowExecutionName,
+		DisableWebhooks:           request.DisableWebhooks,
+	}
+	err = e.repository.Insert(ctx, &execution)
+	if err != nil {
+		return execution, errors.Wrap(err, "inserting execution to storage")
 	}
 
 	// Build machine with actual execution data
 	executionMachine := expressions.NewMachine().Register("execution", map[string]interface{}{
 		"id":              id,
-		"name":            executionName,
-		"number":          number,
+		"name":            execution.Name,
+		"number":          execution.Number,
 		"scheduledAt":     now.UTC().Format(constants.RFC3339Millis),
 		"disableWebhooks": request.DisableWebhooks,
 	})
@@ -498,33 +506,12 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		return execution, errors.Wrap(err, "processing error")
 	}
 
-	// Build Execution entity
-	// TODO: Consider storing "config" as well
-	execution = testkube.TestWorkflowExecution{
-		Id:          id,
-		Name:        executionName,
-		Namespace:   namespace,
-		Number:      number,
-		ScheduledAt: now,
-		StatusAt:    now,
-		Signature:   stage.MapSignatureListToInternal(bundle.Signature),
-		Result: &testkube.TestWorkflowResult{
-			Status:          common.Ptr(testkube.QUEUED_TestWorkflowStatus),
-			PredictedStatus: common.Ptr(testkube.PASSED_TestWorkflowStatus),
-			Initialization: &testkube.TestWorkflowStepResult{
-				Status: common.Ptr(testkube.QUEUED_TestWorkflowStepStatus),
-			},
-			Steps: stage.MapSignatureListToStepResults(bundle.Signature),
-		},
-		Output:                    []testkube.TestWorkflowOutput{},
-		Workflow:                  testworkflowmappers.MapKubeToAPI(initialWorkflow),
-		ResolvedWorkflow:          testworkflowmappers.MapKubeToAPI(resolvedWorkflow),
-		TestWorkflowExecutionName: testWorkflowExecutionName,
-		DisableWebhooks:           request.DisableWebhooks,
-	}
-	err = e.repository.Insert(ctx, execution)
+	execution.Signature = stage.MapSignatureListToInternal(bundle.Signature)
+	execution.Result.Steps = stage.MapSignatureListToStepResults(bundle.Signature)
+
+	err = e.repository.Update(ctx, execution)
 	if err != nil {
-		return execution, errors.Wrap(err, "inserting execution to storage")
+		return execution, errors.Wrap(err, "updating execution to storage")
 	}
 
 	// Inform about execution start

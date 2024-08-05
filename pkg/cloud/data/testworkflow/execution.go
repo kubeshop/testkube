@@ -88,8 +88,8 @@ func (r *CloudRepository) GetExecutionsSummary(ctx context.Context, filter testw
 	return pass(r.executor, ctx, req, process)
 }
 
-func (r *CloudRepository) Insert(ctx context.Context, result testkube.TestWorkflowExecution) (err error) {
-	req := ExecutionInsertRequest{WorkflowExecution: result}
+func (r *CloudRepository) Insert(ctx context.Context, result *testkube.TestWorkflowExecution) (err error) {
+	req := ExecutionInsertRequest{WorkflowExecution: *result}
 	return passNoContent(r.executor, ctx, req)
 }
 
