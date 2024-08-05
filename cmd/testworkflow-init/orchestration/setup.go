@@ -222,6 +222,7 @@ func (c *setup) SetWorkingDir(workingDir string) {
 	} else {
 		err = os.MkdirAll(wd, 0755)
 	}
+	err = os.Chdir(wd)
 
 	if err != nil {
 		output.Std.Direct().Warnf("warn: error using %s as working directory: %s\n", workingDir, err.Error())
