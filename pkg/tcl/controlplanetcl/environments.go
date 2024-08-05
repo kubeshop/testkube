@@ -6,7 +6,7 @@ import (
 
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/cloud"
-	cloudconfig "github.com/kubeshop/testkube/pkg/cloud/data/config"
+	"github.com/kubeshop/testkube/pkg/cloud/data/controlplane"
 	"github.com/kubeshop/testkube/pkg/cloud/data/executor"
 	"google.golang.org/grpc"
 )
@@ -15,7 +15,7 @@ func GetEnvironment(ctx context.Context, proContext config.ProContext, cloudClie
 	executor := executor.NewCloudGRPCExecutor(cloudClient, grpcConn, proContext.APIKey, proContext.RunnerId)
 
 	req := GetEnvironmentRequest{}
-	respBytes, err := executor.Execute(ctx, cloudconfig.CmdConfigGetEnvironment, req)
+	respBytes, err := executor.Execute(ctx, controlplane.CmdConfigGetEnvironment, req)
 	if err != nil {
 		return GetEnvironmentResponse{}, err
 	}

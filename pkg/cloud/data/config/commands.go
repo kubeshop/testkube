@@ -8,5 +8,4 @@ const (
 	CmdConfigGet                 executor.Command = "get"
 	CmdConfigUpsert              executor.Command = "upsert"
 	CmdConfigGetOrganizationPlan executor.Command = "get_org_plan"
-	CmdConfigGetEnvironment      executor.Command = "get_environment"
 )
