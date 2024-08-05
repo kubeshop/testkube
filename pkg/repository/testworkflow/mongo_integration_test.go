@@ -37,8 +37,10 @@ func TestNewMongoRepository_UpdateReport_Integration(t *testing.T) {
 	repo := NewMongoRepository(db, false, WithMongoRepositorySequence(seq))
 
 	execution := testkube.TestWorkflowExecution{
-		Id:   "test-id",
-		Name: "test-name",
+		Id: "test-id",
+		Workflow: &testkube.TestWorkflow{
+			Name: "test-name",
+		},
 	}
 	if err := repo.Insert(ctx, &execution); err != nil {
 		t.Fatalf("error inserting execution: %v", err)
