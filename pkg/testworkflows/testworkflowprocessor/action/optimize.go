@@ -277,7 +277,7 @@ func optimize(actions []actiontypes.Action) ([]actiontypes.Action, error) {
 			continue
 		}
 		if actions[i].Container.Config.Command != nil && len(*actions[i].Container.Config.Command) > 0 && strings.HasPrefix((*actions[i].Container.Config.Command)[0], constants.InternalBinPath+"/") {
-			(*actions[i].Container.Config.Command)[0] = "/bin" + (*actions[i].Container.Config.Command)[0][len(constants.InternalBinPath):]
+			(*actions[i].Container.Config.Command)[0] = "/tktw-bin" + (*actions[i].Container.Config.Command)[0][len(constants.InternalBinPath):]
 		}
 	}
 
@@ -289,7 +289,7 @@ func optimize(actions []actiontypes.Action) ([]actiontypes.Action, error) {
 		if actions[i].Type() == lite.ActionTypeContainerTransition {
 			if actions[i].Container.Config.Image != constants.DefaultInitImage && actions[i].Container.Config.Image != constants.DefaultToolkitImage {
 				copyInit = true
-				copyBinaries = true // TODO: Copy only `busybox` binaries
+				copyBinaries = true
 			}
 			if actions[i].Container.Config.Image == constants.DefaultToolkitImage {
 				hasToolkit = true
