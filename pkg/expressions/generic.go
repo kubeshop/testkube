@@ -9,6 +9,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
+var ErrWalkStop = errors.New("end walking")
+
 type tagData struct {
 	key   string
 	value string
@@ -257,6 +259,18 @@ func finalize(t interface{}, tag tagData, m ...Machine) error {
 
 func Simplify(t interface{}, m ...Machine) error {
 	return simplify(t, tagData{value: "include"}, m...)
+}
+
+func WalkVariables(t interface{}, variableFn func(name string) error) error {
+	m := NewMachine().RegisterAccessorExt(func(name string) (interface{}, bool, error) {
+		err := variableFn(name)
+		return nil, err != nil, err
+	})
+	err := Simplify(t, m)
+	if errors.Is(err, ErrWalkStop) {
+		return nil
+	}
+	return err
 }
 
 func SimplifyForce(t interface{}, m ...Machine) error {
