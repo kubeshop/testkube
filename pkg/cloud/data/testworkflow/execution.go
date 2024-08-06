@@ -7,6 +7,7 @@ import (
 
 	"google.golang.org/grpc"
 
+	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	testworkflow2 "github.com/kubeshop/testkube/pkg/repository/testworkflow"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -168,4 +169,21 @@ func (r *CloudRepository) GetNextExecutionNumber(ctx context.Context, testWorkfl
 		return 0, err
 	}
 	return commandResponse.TestWorkflowNumber, nil
+}
+
+func (r *CloudRepository) List(selector string) (*testworkflowsv1.TestWorkflowList, error) {
+	req := TestWorkflowListRequest{Selector: selector}
+	response, err := r.executor.Execute(context.Background(), CmdTestWorkflowList, req)
+	if err != nil {
+		return nil, err
+	}
+	var commandResponse TestWorkflowListResponse
+	if err := json.Unmarshal(response, &commandResponse); err != nil {
+		return nil, err
+	}
+	var list testworkflowsv1.TestWorkflowList
+	for _, tw := range commandResponse.TestWorkflows {
+		_ = tw
+	}
+	return &list, nil
 }
