@@ -10,6 +10,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	stage2 "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
 
@@ -132,21 +133,51 @@ func process(currentStatus string, parents []string, stage stage2.Stage, machine
 	return
 }
 
+func buildSetupAction(actions actiontypes.ActionList) lite.ActionSetup {
+	copyInit := false
+	copyBinaries := false
+	hasToolkit := false
+
+	// Avoid copying init process, toolkit and common binaries, when it is not necessary
+	for i := range actions {
+		if actions[i].Type() == lite.ActionTypeContainerTransition {
+			if actions[i].Container.Config.Image != constants.DefaultInitImage && actions[i].Container.Config.Image != constants.DefaultToolkitImage {
+				copyInit = true
+				copyBinaries = true
+			}
+			if actions[i].Container.Config.Image == constants.DefaultToolkitImage {
+				hasToolkit = true
+			}
+		}
+	}
+
+	return lite.ActionSetup{CopyInit: copyInit, CopyToolkit: copyInit && hasToolkit, CopyBinaries: copyBinaries}
+}
+
 func Process(root stage2.Stage, machines ...expressions.Machine) (actiontypes.ActionList, error) {
 	actions, err := process("true", nil, root, machines...)
 	if err != nil {
 		return nil, err
 	}
-	actions = append([]actiontypes.Action{{Setup: &lite.ActionSetup{CopyInit: true, CopyToolkit: true, CopyBinaries: true}}, {Start: common.Ptr("")}}, actions...)
+	actions = append([]actiontypes.Action{{Start: common.Ptr("")}}, actions...)
 	actions = append(actions, actiontypes.Action{Result: &lite.ActionResult{Ref: "", Value: root.Ref()}}, actiontypes.Action{End: common.Ptr("")})
 
 	// Optimize until simplest list of operations
 	for {
 		prevLength := len(actions)
 		actions, err = optimize(actions)
-		if err != nil || len(actions) == prevLength {
-			sort(actions)
-			return actions, errors.Wrap(err, "processing operations")
+
+		// Continue until final optimizations are applied
+		if err == nil && len(actions) != prevLength {
+			continue
 		}
+
+		setup := buildSetupAction(actions)
+		actions = append([]actiontypes.Action{{Setup: &setup}}, actions...)
+
+		// Sort for easier reading
+		sort(actions)
+
+		return actions, errors.Wrap(err, "processing operations")
 	}
 }
