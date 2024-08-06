@@ -13,7 +13,7 @@ import (
 	stage2 "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
 
-func process(currentStatus string, parents []string, stage stage2.Stage, machines ...expressions.Machine) (actions []actiontypes.Action, err error) {
+func process(currentStatus string, parents []string, stage stage2.Stage, machines ...expressions.Machine) (actions actiontypes.ActionList, err error) {
 	// Store the init status
 	actions = append(actions, actiontypes.Action{
 		CurrentStatus: common.Ptr(currentStatus),
@@ -132,7 +132,7 @@ func process(currentStatus string, parents []string, stage stage2.Stage, machine
 	return
 }
 
-func Process(root stage2.Stage, machines ...expressions.Machine) ([]actiontypes.Action, error) {
+func Process(root stage2.Stage, machines ...expressions.Machine) (actiontypes.ActionList, error) {
 	actions, err := process("true", nil, root, machines...)
 	if err != nil {
 		return nil, err
