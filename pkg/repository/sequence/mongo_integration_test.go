@@ -92,7 +92,7 @@ func TestNewMongoRepository_GetNextExecutionNumber_Sequential_Integration(t *tes
 	}
 
 	for _, tt := range tests {
-		num, err := repo.GetNextExecutionNumber(ctx, "name", tt.executionType)
+		num, err := repo.GetNextExecutionNumber(ctx, tt.name, tt.executionType)
 		assert.NoError(t, err)
 		assert.Equal(t, tt.expectedValue, num)
 	}
@@ -156,14 +156,14 @@ func TestNewMongoRepository_GetNextExecutionNumber_Parallel_Integration(t *testi
 
 	for i := range tests {
 		wg.Add(1)
-		go func(executionType ExecutionType) {
+		go func(name string, executionType ExecutionType) {
 			defer wg.Done()
 
-			num, err := repo.GetNextExecutionNumber(ctx, tests[i].name, executionType)
+			num, err := repo.GetNextExecutionNumber(ctx, name, executionType)
 			assert.NoError(t, err)
 
 			results.Store(fmt.Sprintf("%s_%d", executionType, num), num)
-		}(tests[i].executionType)
+		}(tests[i].name, tests[i].executionType)
 	}
 
 	wg.Wait()
