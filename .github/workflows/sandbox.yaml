@@ -5,12 +5,16 @@ on:
       - sandbox/**
     paths-ignore:
       - 'docs/**'
+  pull_request:
+    types:
+      - opened
 env:
   ALPINE_IMAGE: alpine:3.20.0
   BUSYBOX_IMAGE: busybox:1.36.1-musl
 
 jobs:
   api:
+    if: startsWith(github.ref, 'refs/heads/sandbox/')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -79,6 +83,7 @@ jobs:
           docker push kubeshop/testkube-sandbox:api-server-${{ env.branch_identifier }}-${{ steps.commit.outputs.short }}
 
   testworkflow:
+    if: startsWith(github.ref, 'refs/heads/sandbox/')
     strategy:
       matrix:
         service: [testworkflow-init, testworkflow-toolkit]
@@ -157,6 +162,7 @@ jobs:
           docker push kubeshop/testkube-sandbox:${{ matrix.service }}-${{ env.branch_identifier }}-${{ steps.commit.outputs.short }}
 
   single_executor:
+    if: startsWith(github.ref, 'refs/heads/sandbox/')
     strategy:
       matrix:
         executor: [artillery, curl, example, ginkgo, k6, kubepug, postman, soapui, init, scraper, template, tracetest, zap ]
@@ -226,6 +232,7 @@ jobs:
           docker push kubeshop/testkube-sandbox:${{ matrix.executor }}-executor-${{ env.branch_identifier }}-${{ steps.commit.outputs.short }}
 
   executor_jmeter:
+    if: startsWith(github.ref, 'refs/heads/sandbox/')
     runs-on: ubuntu-latest
     steps:
 
@@ -289,6 +296,7 @@ jobs:
           docker push kubeshop/testkube-sandbox:jmeter-executor-${{ env.branch_identifier }}-${{ steps.commit.outputs.short }}
 
   executor_jmeterd:
+    if: startsWith(github.ref, 'refs/heads/sandbox/')
     runs-on: ubuntu-latest
     steps:
 
@@ -352,6 +360,7 @@ jobs:
           docker push kubeshop/testkube-sandbox:jmeterd-executor-${{ env.branch_identifier }}-${{ steps.commit.outputs.short }}
 
   jmeterd_slave:
+    if: startsWith(github.ref, 'refs/heads/sandbox/')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -396,6 +405,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
 
   executor_maven:
+    if: startsWith(github.ref, 'refs/heads/sandbox/')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -458,6 +468,7 @@ jobs:
           docker push kubeshop/testkube-sandbox:maven-executor-${{ env.branch_identifier }}-${{ steps.commit.outputs.short }}
 
   executor_gradle:
+    if: startsWith(github.ref, 'refs/heads/sandbox/')
     runs-on: ubuntu-latest
     steps:
 
@@ -521,6 +532,7 @@ jobs:
           docker push kubeshop/testkube-sandbox:gradle-executor-${{ env.branch_identifier }}-${{ steps.commit.outputs.short }}
 
   executor_cypress:
+    if: startsWith(github.ref, 'refs/heads/sandbox/')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -583,6 +595,7 @@ jobs:
           docker push kubeshop/testkube-sandbox:cypress-executor-${{ env.branch_identifier }}-${{ steps.commit.outputs.short }}
 
   executor_playwright:
+    if: startsWith(github.ref, 'refs/heads/sandbox/')
     runs-on: ubuntu-latest
     steps:
       -  name: Checkout
@@ -645,6 +658,7 @@ jobs:
           docker push kubeshop/testkube-sandbox:playwright-executor-${{ env.branch_identifier }}-${{ steps.commit.outputs.short }}
 
   executor_postman_node21:
+    if: startsWith(github.ref, 'refs/heads/sandbox/')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -707,6 +721,7 @@ jobs:
           docker push kubeshop/testkube-sandbox:postman-node21-executor-${{ env.branch_identifier }}-${{ steps.commit.outputs.short }}
 
   log_server_sidecar:
+    if: startsWith(github.ref, 'refs/heads/sandbox/')
     strategy:
       matrix:
         service: [ logs-server, logs-sidecar ]
@@ -778,6 +793,7 @@ jobs:
           docker push kubeshop/testkube-sandbox:${{ matrix.service }}-${{ env.branch_identifier }}-${{ steps.commit.outputs.short }}
 
   dispatch:
+    if: startsWith(github.ref, 'refs/heads/sandbox/')
     needs:
       [
           api,
@@ -806,3 +822,45 @@ jobs:
           repository: kubeshop/testkube-deployment
           event-type: sandbox_image_update
           client-payload: '{"ref_name": "${{ github.ref_name }}"}'
+
+      - name: Output summary
+        run: |
+          echo -e "### Sandbox Environment" >> $GITHUB_STEP_SUMMARY
+          echo -e '```' >> $GITHUB_STEP_SUMMARY
+          echo -e "## URLs" >> $GITHUB_STEP_SUMMARY
+          echo "- Dashboard: https://dashboard.${{ github.ref_name }}.testkube.dev" >> $GITHUB_STEP_SUMMARY
+          echo "- API: https://api.${{ github.ref_name }}.testkube.dev" >> $GITHUB_STEP_SUMMARY
+          echo "- Agent: https://agent.${{ github.ref_name }}.testkube.dev" >> $GITHUB_STEP_SUMMARY
+          echo "- Storage: https://storage.${{ github.ref_name }}.testkube.dev" >> $GITHUB_STEP_SUMMARY
+          echo "- Websockets: https://websockets.${{ github.ref_name }}.testkube.dev" >> $GITHUB_STEP_SUMMARY
+          echo -e '```' >> $GITHUB_STEP_SUMMARY
+
+  pr_creation:
+    if: startsWith(github.event.pull_request.head.ref, 'sandbox/')
+    runs-on: ubuntu-latest
+    steps:
+    - name: Get a branch name if PR is created
+      run: |
+        # get a branch name
+        branch_ref="${{ github.event.pull_request.head.ref }}"
+
+        #remove slash
+        branch_ref="${branch_ref#*/}"
+
+        #create env var
+        echo "branch_ref=$branch_ref" >> $GITHUB_ENV
+
+    - name: Render template
+      id: template
+      uses: chuhlomin/render-template@v1.4
+      with:
+        template: .github/comment-template.md
+        vars: |
+          branch_ref: ${{ env.branch_ref }}
+
+    - name: Create comment on a PR with the endpoints
+      uses: peter-evans/create-or-update-comment@v4
+      with:
+        token: ${{ secrets.CI_BOT_TOKEN }}
+        issue-number: ${{ github.event.pull_request.number }}
+        body: ${{ steps.template.outputs.result }}
