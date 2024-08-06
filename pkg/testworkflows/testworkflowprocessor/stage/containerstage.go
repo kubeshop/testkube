@@ -18,12 +18,16 @@ type containerStage struct {
 	stageMetadata
 	stageLifecycle
 	container Container
+	pure      bool
 }
 
 type ContainerStage interface {
 	Stage
 	Container() Container
 	IsToolkit() bool
+
+	SetPure(pure bool) ContainerStage
+	Pure() bool // TODO: Consider purity level?
 }
 
 func NewContainerStage(ref string, container Container) ContainerStage {
@@ -83,4 +87,13 @@ func (s *containerStage) HasPause() bool {
 
 func (s *containerStage) IsToolkit() bool {
 	return s.container.IsToolkit()
+}
+
+func (s *containerStage) Pure() bool {
+	return s.pure
+}
+
+func (s *containerStage) SetPure(pure bool) ContainerStage {
+	s.pure = pure
+	return s
 }

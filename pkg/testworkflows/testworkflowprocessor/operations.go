@@ -26,6 +26,10 @@ func ProcessDelay(_ InternalProcessor, layer Intermediate, container stage.Conta
 		SetArgs(fmt.Sprintf("%g", t.Seconds()))
 	stage := stage.NewContainerStage(layer.NextRef(), shell)
 	stage.SetCategory(fmt.Sprintf("Delay: %s", step.Delay))
+
+	// Allow to combine it within other containers
+	stage.SetPure(true)
+
 	return stage, nil
 }
 
@@ -241,6 +245,9 @@ func ProcessContentTarball(_ InternalProcessor, layer Intermediate, container st
 	stage.SetRetryPolicy(step.Retry)
 	stage.SetCategory("Fetch tarball")
 
+	// Allow to combine it within other containers
+	stage.SetPure(true)
+
 	selfContainer.
 		SetImage(constants.DefaultToolkitImage).
 		SetImagePullPolicy(corev1.PullIfNotPresent).
@@ -285,6 +292,9 @@ func ProcessArtifacts(_ InternalProcessor, layer Intermediate, container stage.C
 	stage.SetRetryPolicy(step.Retry)
 	stage.SetCondition("always")
 	stage.SetCategory("Upload artifacts")
+
+	// Allow to combine it within other containers
+	stage.SetPure(true)
 
 	selfContainer.
 		SetImage(constants.DefaultToolkitImage).
