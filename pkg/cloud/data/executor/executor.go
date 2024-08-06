@@ -13,6 +13,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/cloud"
 )
 
+// DEPRACTED: use v2.Executor (generics powered) instead
+
 type Command string
 
 //go:generate mockgen -destination=./mock_executor.go -package=executor "github.com/kubeshop/testkube/pkg/cloud/data/executor" Executor
