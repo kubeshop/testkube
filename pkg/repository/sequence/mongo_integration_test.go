@@ -36,30 +36,57 @@ func TestNewMongoRepository_GetNextExecutionNumber_Sequential_Integration(t *tes
 
 	var tests = []struct {
 		expectedValue int32
+		name          string
 		executionType ExecutionType
 	}{
 		{
 			1,
+			"test",
 			ExecutionTypeTest,
 		},
 		{
 			2,
+			"test",
 			ExecutionTypeTest,
 		},
 		{
 			1,
+			"testsuite",
 			ExecutionTypeTestSuite,
 		},
 		{
 			2,
+			"testsuite",
 			ExecutionTypeTestSuite,
 		},
 		{
 			1,
+			"testworkflow",
 			ExecutionTypeTestWorkflow,
 		},
 		{
 			2,
+			"testworkflow",
+			ExecutionTypeTestWorkflow,
+		},
+		{
+			1,
+			"ts-old-testsuite",
+			ExecutionTypeTest,
+		},
+		{
+			1,
+			"old-testworkflow",
+			ExecutionTypeTest,
+		},
+		{
+			2,
+			"old-testsuite",
+			ExecutionTypeTestSuite,
+		},
+		{
+			2,
+			"old-testworkflow",
 			ExecutionTypeTestWorkflow,
 		},
 	}
@@ -120,26 +147,6 @@ func TestNewMongoRepository_GetNextExecutionNumber_Parallel_Integration(t *testi
 		{
 			2,
 			"testworkflow",
-			ExecutionTypeTestWorkflow,
-		},
-		{
-			1,
-			"ts-old-testsuite",
-			ExecutionTypeTest,
-		},
-		{
-			1,
-			"old-testworkflow",
-			ExecutionTypeTest,
-		},
-		{
-			2,
-			"old-testsuite",
-			ExecutionTypeTestSuite,
-		},
-		{
-			2,
-			"old-testworkflow",
 			ExecutionTypeTestWorkflow,
 		},
 	}
