@@ -89,30 +89,37 @@ func TestNewMongoRepository_GetNextExecutionNumber_Parallel_Integration(t *testi
 
 	var tests = []struct {
 		expectedValue int32
+		name          string
 		executionType ExecutionType
 	}{
 		{
 			1,
+			"test",
 			ExecutionTypeTest,
 		},
 		{
 			2,
+			"test",
 			ExecutionTypeTest,
 		},
 		{
 			1,
+			"testsuite",
 			ExecutionTypeTestSuite,
 		},
 		{
 			2,
+			"testsuite",
 			ExecutionTypeTestSuite,
 		},
 		{
 			1,
+			"testworkflow",
 			ExecutionTypeTestWorkflow,
 		},
 		{
 			2,
+			"testworkflow",
 			ExecutionTypeTestWorkflow,
 		},
 	}
@@ -125,7 +132,7 @@ func TestNewMongoRepository_GetNextExecutionNumber_Parallel_Integration(t *testi
 		go func(executionType ExecutionType) {
 			defer wg.Done()
 
-			num, err := repo.GetNextExecutionNumber(ctx, "name", executionType)
+			num, err := repo.GetNextExecutionNumber(ctx, tests[i].name, executionType)
 			assert.NoError(t, err)
 
 			results.Store(fmt.Sprintf("%s_%d", executionType, num), num)
