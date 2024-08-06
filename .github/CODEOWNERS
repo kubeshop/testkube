@@ -6,7 +6,7 @@
 LICENSE @kubeshop/testkube-docs
 *.md @kubeshop/testkube-docs
 
-/test/ @kubeshop/testkube-qa
+/test/ @kubeshop/testkube-qa @kubeshop/testkube
 
 /.github/ @kubeshop/testkube-devops
 /goreleaser_files/ @kubeshop/testkube-devops
