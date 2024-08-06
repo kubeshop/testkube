@@ -6,7 +6,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
-	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 )
 
@@ -77,18 +76,6 @@ func (a ActionList) MutateContainer(ref string, config testworkflowsv1.Container
 	return append(a, Action{Container: &ActionContainer{Ref: ref, Config: config}})
 }
 
-func (a ActionList) GetLastRef() string {
-	for i := len(a) - 1; i >= 0; i-- {
-		switch a[i].Type() {
-		case lite.ActionTypeStart:
-			return *a[i].Start
-		case lite.ActionTypeSetup:
-			return data.InitStepName
-		}
-	}
-	return ""
-}
-
 type ActionGroups []ActionList
 
 func (a ActionGroups) Append(fn func(list ActionList) ActionList) ActionGroups {
@@ -97,17 +84,4 @@ func (a ActionGroups) Append(fn func(list ActionList) ActionList) ActionGroups {
 
 func NewActionGroups() ActionGroups {
 	return nil
-}
-
-func (a ActionGroups) GetLastRef() (ref string) {
-	for i := len(a) - 1; i >= 0; i-- {
-
-		for j := len(a[i]) - 1; j >= 0; j-- {
-			ref = a[i].GetLastRef()
-			if ref != "" {
-				return
-			}
-		}
-	}
-	return
 }
