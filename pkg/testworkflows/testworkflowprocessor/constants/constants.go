@@ -32,7 +32,7 @@ var (
 	InternalBinPath        = filepath.Join(DefaultInternalPath, "bin")
 	DefaultShellPath       = filepath.Join(InternalBinPath, "sh")
 	DefaultInitPath        = filepath.Join(DefaultInternalPath, "init")
-	DefaultStatePath       = filepath.Join(DefaultInternalPath, "state")
+	DefaultToolkitPath     = filepath.Join(DefaultInternalPath, "toolkit")
 	DefaultTransferDirPath = filepath.Join(DefaultInternalPath, "transfer")
 	DefaultTmpDirPath      = filepath.Join(DefaultInternalPath, "tmp")
 	DefaultTransferPort    = 60433

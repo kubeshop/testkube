@@ -170,7 +170,7 @@ func ProcessFetch(transferSrv transfer.Server, fetch []testworkflowsv1.StepParal
 				ContainerConfig: testworkflowsv1.ContainerConfig{
 					Image:           env.Config().Images.Toolkit,
 					ImagePullPolicy: corev1.PullIfNotPresent,
-					Command:         common.Ptr([]string{"/toolkit", "transfer"}),
+					Command:         common.Ptr([]string{constants.DefaultToolkitPath, "transfer"}),
 					Env: []corev1.EnvVar{
 						{Name: "TK_NS", Value: env.Namespace()},
 						{Name: "TK_REF", Value: env.Ref()},

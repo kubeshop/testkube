@@ -180,7 +180,7 @@ func ProcessContentGit(_ InternalProcessor, layer Intermediate, container stage.
 		SetWorkingDir("/").
 		SetImage(constants.DefaultToolkitImage).
 		SetImagePullPolicy(corev1.PullIfNotPresent).
-		SetCommand("/toolkit", "clone", step.Content.Git.Uri).
+		SetCommand(constants.DefaultToolkitPath, "clone", step.Content.Git.Uri).
 		EnableToolkit(stage.Ref())
 
 	args := []string{mountPath}
@@ -244,7 +244,7 @@ func ProcessContentTarball(_ InternalProcessor, layer Intermediate, container st
 	selfContainer.
 		SetImage(constants.DefaultToolkitImage).
 		SetImagePullPolicy(corev1.PullIfNotPresent).
-		SetCommand("/toolkit", "tarball").
+		SetCommand(constants.DefaultToolkitPath, "tarball").
 		EnableToolkit(stage.Ref())
 
 	// Build volume pair and share with all siblings
@@ -289,7 +289,7 @@ func ProcessArtifacts(_ InternalProcessor, layer Intermediate, container stage.C
 	selfContainer.
 		SetImage(constants.DefaultToolkitImage).
 		SetImagePullPolicy(corev1.PullIfNotPresent).
-		SetCommand("/toolkit", "artifacts", "-m", constants.DefaultDataPath).
+		SetCommand(constants.DefaultToolkitPath, "artifacts", "-m", constants.DefaultDataPath).
 		EnableToolkit(stage.Ref())
 
 	args := make([]string, 0)

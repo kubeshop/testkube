@@ -137,7 +137,7 @@ func Process(root stage2.Stage, machines ...expressions.Machine) ([]actiontypes.
 	if err != nil {
 		return nil, err
 	}
-	actions = append([]actiontypes.Action{{Setup: &lite.ActionSetup{CopyInit: true, CopyBinaries: true}}, {Start: common.Ptr("")}}, actions...)
+	actions = append([]actiontypes.Action{{Setup: &lite.ActionSetup{CopyInit: true, CopyToolkit: true, CopyBinaries: true}}, {Start: common.Ptr("")}}, actions...)
 	actions = append(actions, actiontypes.Action{Result: &lite.ActionResult{Ref: "", Value: root.Ref()}}, actiontypes.Action{End: common.Ptr("")})
 
 	// Optimize until simplest list of operations

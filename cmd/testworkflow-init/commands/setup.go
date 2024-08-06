@@ -30,6 +30,20 @@ func Setup(config lite.ActionSetup) error {
 		stdoutUnsafe.Print(" skipped\n")
 	}
 
+	// Copy the toolkit
+	stdoutUnsafe.Print("Configuring toolkit...")
+	if config.CopyToolkit {
+		err := exec.Command("cp", "/toolkit", data.ToolkitPath).Run()
+		if err != nil {
+			stdoutUnsafe.Error(" error\n")
+			stdoutUnsafe.Errorf("  failed to copy the /toolkit utilities: %s\n", err.Error())
+			return err
+		}
+		stdoutUnsafe.Print(" done\n")
+	} else {
+		stdoutUnsafe.Print(" skipped\n")
+	}
+
 	// Copy the shell and useful libraries
 	stdoutUnsafe.Print("Configuring shell...")
 	if config.CopyBinaries {
