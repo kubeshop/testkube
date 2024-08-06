@@ -207,6 +207,10 @@ func prepareTestkubeProHelmArgs(options HelmOptions, isMigration bool) []string 
 		args = append(args, "--set", fmt.Sprintf("testkube-logs.pro.envId=%s", options.Master.EnvId))
 	}
 
+	if options.Master.RunnerId != "" {
+		args = append(args, "--set", fmt.Sprintf("testkube-api.cloud.runnerId=%s", options.Master.RunnerId))
+	}
+
 	if options.Master.OrgId != "" {
 		args = append(args, "--set", fmt.Sprintf("testkube-api.cloud.orgId=%s", options.Master.OrgId))
 		args = append(args, "--set", fmt.Sprintf("testkube-logs.pro.orgId=%s", options.Master.OrgId))
