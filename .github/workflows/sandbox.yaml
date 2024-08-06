@@ -823,16 +823,24 @@ jobs:
           event-type: sandbox_image_update
           client-payload: '{"ref_name": "${{ github.ref_name }}"}'
 
+      - name: Get branch name
+        run: |
+          # Extract everything after the first slash
+          branch_identifier=$(echo "$GITHUB_REF_NAME" | cut -d'/' -f2-)
+
+          # Replace slashes with dashes using sed
+          echo branch_identifier=$(echo "$branch_identifier" | sed 's/\//-/g') >> $GITHUB_ENV
+
       - name: Output summary
         run: |
           echo -e "### Sandbox Environment" >> $GITHUB_STEP_SUMMARY
           echo -e '```' >> $GITHUB_STEP_SUMMARY
           echo -e "## URLs" >> $GITHUB_STEP_SUMMARY
-          echo "- Dashboard: https://dashboard.${{ github.ref_name }}.testkube.dev" >> $GITHUB_STEP_SUMMARY
-          echo "- API: https://api.${{ github.ref_name }}.testkube.dev" >> $GITHUB_STEP_SUMMARY
-          echo "- Agent: https://agent.${{ github.ref_name }}.testkube.dev" >> $GITHUB_STEP_SUMMARY
-          echo "- Storage: https://storage.${{ github.ref_name }}.testkube.dev" >> $GITHUB_STEP_SUMMARY
-          echo "- Websockets: https://websockets.${{ github.ref_name }}.testkube.dev" >> $GITHUB_STEP_SUMMARY
+          echo "- Dashboard: https://dashboard.${{ env.branch_identifier }}.testkube.dev" >> $GITHUB_STEP_SUMMARY
+          echo "- API: https://api.${{ env.branch_identifier }}.testkube.dev" >> $GITHUB_STEP_SUMMARY
+          echo "- Agent: https://agent.${{ env.branch_identifier }}.testkube.dev" >> $GITHUB_STEP_SUMMARY
+          echo "- Storage: https://storage.${{ env.branch_identifier }}.testkube.dev" >> $GITHUB_STEP_SUMMARY
+          echo "- Websockets: https://websockets.${{ env.branch_identifier }}.testkube.dev" >> $GITHUB_STEP_SUMMARY
           echo -e '```' >> $GITHUB_STEP_SUMMARY
 
   pr_creation:
