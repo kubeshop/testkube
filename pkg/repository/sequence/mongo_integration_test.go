@@ -122,6 +122,26 @@ func TestNewMongoRepository_GetNextExecutionNumber_Parallel_Integration(t *testi
 			"testworkflow",
 			ExecutionTypeTestWorkflow,
 		},
+		{
+			1,
+			"ts-old-testsuite",
+			ExecutionTypeTest,
+		},
+		{
+			1,
+			"old-testworkflow",
+			ExecutionTypeTest,
+		},
+		{
+			2,
+			"old-testsuite",
+			ExecutionTypeTestSuite,
+		},
+		{
+			2,
+			"old-testworkflow",
+			ExecutionTypeTestWorkflow,
+		},
 	}
 
 	var results sync.Map
