@@ -7,6 +7,7 @@ type Master struct {
 	IdToken        string                    `json:"idToken,omitempty"`
 	OrgId          string                    `json:"orgId,omitempty"`
 	EnvId          string                    `json:"envId,omitempty"`
+	RunnerId       string                    `json:"runnerId,omitempty"`
 	Insecure       bool                      `json:"insecure,omitempty"`
 	UiUrlPrefix    string                    `json:"uiUrlPrefix,omitempty"`
 	AgentUrlPrefix string                    `json:"agentUrlPrefix,omitempty"`
