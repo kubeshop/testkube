@@ -13,16 +13,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/cloud"
 )
 
-// DEPRACTED: use v2.Executor (generics powered) instead
-
-type Command string
-
-//go:generate mockgen -destination=./mock_executor.go -package=executor "github.com/kubeshop/testkube/pkg/cloud/data/executor" Executor
-type Executor interface {
-	Execute(ctx context.Context, command Command, payload any) (response []byte, err error)
-	Close() error
-}
-
 type CloudGRPCExecutor struct {
 	client   cloud.TestKubeCloudAPIClient
 	conn     *grpc.ClientConn
@@ -58,4 +48,9 @@ func (e *CloudGRPCExecutor) Execute(ctx context.Context, command Command, payloa
 
 func (e *CloudGRPCExecutor) Close() error {
 	return e.conn.Close()
+}
+
+func ToResponse[T any](in []byte) (response T, err error) {
+	err = json.Unmarshal(in, &response)
+	return
 }
