@@ -39,6 +39,7 @@ func TestNewMongoRepository_GetNextExecutionNumber_Sequential_Integration(t *tes
 		name          string
 		executionType ExecutionType
 	}{
+		// check for new resources
 		{
 			1,
 			"test",
@@ -69,6 +70,7 @@ func TestNewMongoRepository_GetNextExecutionNumber_Sequential_Integration(t *tes
 			"testworkflow",
 			ExecutionTypeTestWorkflow,
 		},
+		// check for existing resources
 		{
 			1,
 			"ts-old-testsuite",

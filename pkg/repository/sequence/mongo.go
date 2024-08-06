@@ -154,12 +154,14 @@ func (r *MongoRepository) DeleteAllExecutionNumbers(ctx context.Context, executi
 func (r *MongoRepository) getOldNumber(ctx context.Context, name string, executionType ExecutionType) (int32, error) {
 	var oldExecutionNumber oldExecutionNumber
 
+	// get old number from OSS or old agent - old cloud configuration
 	err := r.Coll.FindOne(ctx, bson.M{"name": name}).Decode(&oldExecutionNumber)
 	if err != nil && err != mongo.ErrNoDocuments {
 		return 0, err
 	}
 
 	number := int32(oldExecutionNumber.Number)
+	// get old number from old agennt - nre cloud configuration
 	if number == 0 && (executionType == ExecutionTypeTestSuite || executionType == ExecutionTypeTestWorkflow) {
 		var executionNumber executionNumber
 
