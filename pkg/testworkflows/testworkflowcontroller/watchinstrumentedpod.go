@@ -255,13 +255,15 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 				for ref := range s.result.Steps {
 					if !s.IsFinished(ref) {
 						status := testkube.SKIPPED_TestWorkflowStepStatus
-						if s.result.Steps[ref].Status != nil && *s.result.Steps[ref].Status == testkube.ABORTED_TestWorkflowStepStatus {
+						details := "The execution was aborted before."
+						if s.result.Steps[ref].Status != nil && *s.result.Steps[ref].Status != testkube.QUEUED_TestWorkflowStepStatus {
 							status = testkube.ABORTED_TestWorkflowStepStatus
+							details = ""
 						}
 						s.FinishStep(ref, ContainerResultStep{
 							Status:     status,
 							ExitCode:   -1,
-							Details:    "The execution was aborted before.",
+							Details:    details,
 							FinishedAt: lastTs,
 						})
 					}
