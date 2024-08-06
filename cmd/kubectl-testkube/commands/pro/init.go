@@ -36,7 +36,7 @@ func NewInitCmd() *cobra.Command {
 			cfg, err := config.Load()
 			if err != nil {
 				cliErr := common.NewCLIError(
-					common.TKErrConfigLoadingFailed,
+					common.TKErrConfigInitFailed,
 					"Error loading testkube config file",
 					"Check is the Testkube config file (~/.testkube/config.json) accessible and has right permissions",
 					err,
@@ -72,7 +72,7 @@ func NewInitCmd() *cobra.Command {
 			}
 
 			spinner := ui.NewSpinner("Installing Testkube")
-			if cliErr := common.HelmUpgradeOrInstallTestkubeCloud(options, cfg, false); cliErr != nil {
+			if cliErr := common.HelmUpgradeOrInstallTestkubeAgent(options, cfg, false); cliErr != nil {
 				spinner.Fail()
 				sendErrTelemetry(cmd, cfg, "helm_install", cliErr)
 				common.HandleCLIError(cliErr)

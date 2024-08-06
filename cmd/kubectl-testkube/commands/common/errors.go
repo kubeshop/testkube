@@ -4,8 +4,12 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/spf13/cobra"
+
 	"github.com/pterm/pterm"
 )
+
+type ErrorCode string
 
 const (
 	// TKERR-1xx errors are to issues when running testkube CLI commands.
@@ -13,32 +17,51 @@ const (
 	// TKERR-11xx errors are related to missing dependencies.
 
 	// TKErrMissingDependencyHelm is returned when kubectl is not found in $PATH.
-	TKErrMissingDependencyHelm = "TKERR-1101"
+	TKErrMissingDependencyHelm ErrorCode = "TKERR-1101"
 	// TKErrMissingDependencyKubectl is returned when kubectl is not found in $PATH.
-	TKErrMissingDependencyKubectl = "TKERR-1102"
+	TKErrMissingDependencyKubectl ErrorCode = "TKERR-1102"
 
 	// TKERR-12xx errors are related to configuration issues.
 
-	// TKErrConfigLoadingFailed is returned when configuration loading fails.
-	TKErrConfigLoadingFailed = "TKERR-1201"
+	// TKErrConfigInitFailed is returned when configuration init fails.
+	TKErrConfigInitFailed ErrorCode = "TKERR-1201"
 	// TKErrInvalidInstallConfig is returned when invalid configuration is supplied when installing or upgrading.
-	TKErrInvalidInstallConfig = "TKERR-1202"
+	TKErrInvalidInstallConfig ErrorCode = "TKERR-1202"
 
 	// TKERR-13xx errors are related to install operations.
 
 	// TKErrHelmCommandFailed is returned when a helm command fails.
-	TKErrHelmCommandFailed = "TKERR-1301"
+	TKErrHelmCommandFailed ErrorCode = "TKERR-1301"
 	// TKErrKubectlCommandFailed is returned when a kubectl command fail.
-	TKErrKubectlCommandFailed = "TKERR-1302"
+	TKErrKubectlCommandFailed ErrorCode = "TKERR-1302"
 )
 
+const helpUrl = "https://testkubeworkspace.slack.com"
+
 type CLIError struct {
-	Code        string
+	Code        ErrorCode
 	Title       string
 	Description string
 	ActualError error
 	StackTrace  string
 	MoreInfo    string
+	Telemetry   *ErrorTelemetry
+}
+
+type ErrorTelemetry struct {
+	Command *cobra.Command
+	Step    string
+	Type    string
+	License string
+}
+
+func (e *CLIError) AddTelemetry(cmd *cobra.Command, step, errType, license string) {
+	e.Telemetry = &ErrorTelemetry{
+		Command: cmd,
+		Step:    step,
+		Type:    errType,
+		License: license,
+	}
 }
 
 func (e *CLIError) Error() string {
@@ -58,15 +81,20 @@ func (e *CLIError) Print() {
 		items = append(items, pterm.BulletListItem{Level: 0, Text: pterm.Sprintf("%s", e.MoreInfo), TextStyle: pterm.NewStyle(pterm.FgGray)})
 	}
 	pterm.DefaultBulletList.WithItems(items).Render()
+
+	pterm.Println()
+	pterm.Println("Let us help you!")
+	pterm.Printfln("Come say hi on Slack: %s", helpUrl)
 }
 
-func NewCLIError(code, title, moreInfoURL string, err error) *CLIError {
+func NewCLIError(code ErrorCode, title, moreInfoURL string, err error) *CLIError {
 	return &CLIError{
 		Code:        code,
 		Title:       title,
 		Description: err.Error(),
 		ActualError: err,
 		MoreInfo:    moreInfoURL,
+		StackTrace:  fmt.Sprintf("%+v", err),
 	}
 }
 

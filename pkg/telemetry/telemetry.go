@@ -49,11 +49,26 @@ func SendCmdEvent(cmd *cobra.Command, version string) (string, error) {
 }
 
 func SendCmdErrorEvent(cmd *cobra.Command, version, errType string, errorStackTrace string) (string, error) {
-	return SendCmdErrorEventWithLicense(cmd, version, errType, errorStackTrace, "", "")
+	return SendCmdErrorEventWithLicense(cmd, version, errType, errorStackTrace, "", "", "")
+}
+
+func HandleCLIErrorTelemetry(version string, err *common.CLIError) (string, error) {
+	if err.Telemetry != nil {
+		return SendCmdErrorEventWithLicense(
+			err.Telemetry.Command,
+			version,
+			err.Telemetry.Type,
+			err.StackTrace,
+			err.Telemetry.License,
+			err.Telemetry.Step,
+			string(err.Code),
+		)
+	}
+	return "", nil
 }
 
 // SendCmdErrorEventWithLicense will send CLI error event with license
-func SendCmdErrorEventWithLicense(cmd *cobra.Command, version, errType, errorStackTrace, license, step string) (string, error) {
+func SendCmdErrorEventWithLicense(cmd *cobra.Command, version, errType, errorStackTrace, license, step, errCode string) (string, error) {
 
 	// get all sub-commands passed to cli
 	command := strings.TrimPrefix(cmd.CommandPath(), "kubectl-testkube ")
@@ -79,6 +94,7 @@ func SendCmdErrorEventWithLicense(cmd *cobra.Command, version, errType, errorSta
 					Architecture:    runtime.GOARCH,
 					Context:         getCurrentContext(),
 					ClusterType:     GetClusterType(),
+					ErrorCode:       errCode,
 					ErrorType:       errType,
 					ErrorStackTrace: errorStackTrace,
 					License:         license,
