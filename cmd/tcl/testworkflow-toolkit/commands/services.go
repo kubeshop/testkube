@@ -179,7 +179,7 @@ func NewServicesCmd() *cobra.Command {
 						v, err := expressions.EvalTemplate(svcSpec.Timeout, machines...)
 						ui.ExitOnError(fmt.Sprintf("%s: %d: error: timeout expression", commontcl.ServiceLabel(name), index), err)
 						d, err := time.ParseDuration(strings.ReplaceAll(v, " ", ""))
-						ui.ExitOnError(fmt.Sprintf("%s: %d: error: invalid timeout: %s:", commontcl.ServiceLabel(name), index, v), err)
+						ui.ExitOnError(fmt.Sprintf("%s: %d: error: invalid timeout: %s", commontcl.ServiceLabel(name), index, v), err)
 						svcInstances[index].Timeout = &d
 					}
 				}

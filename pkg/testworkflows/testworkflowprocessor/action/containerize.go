@@ -21,6 +21,7 @@ func CreateContainer(groupId int, defaultContainer stage2.Container, actions []a
 	// Find the container configurations and executable/setup steps
 	var setup *actiontypes.Action
 	executable := map[string]bool{}
+	toolkit := map[string]bool{}
 	containerConfigs := make([]*actiontypes.Action, 0)
 	for i := range actions {
 		if actions[i].Container != nil {
@@ -29,15 +30,21 @@ func CreateContainer(groupId int, defaultContainer stage2.Container, actions []a
 			setup = &actions[i]
 		} else if actions[i].Execute != nil {
 			executable[actions[i].Execute.Ref] = true
+			if actions[i].Execute.Toolkit {
+				toolkit[actions[i].Execute.Ref] = true
+			}
 		}
 	}
 
 	// Find the highest priority container configuration
 	var bestContainerConfig *actiontypes.Action
+	var bestIsToolkit = false
 	for i := range containerConfigs {
 		if executable[containerConfigs[i].Container.Ref] {
-			bestContainerConfig = containerConfigs[i]
-			break
+			if bestContainerConfig == nil || bestIsToolkit {
+				bestContainerConfig = containerConfigs[i]
+				bestIsToolkit = toolkit[bestContainerConfig.Container.Ref]
+			}
 		}
 	}
 	if bestContainerConfig == nil && len(containerConfigs) > 0 {
@@ -75,7 +82,20 @@ func CreateContainer(groupId int, defaultContainer stage2.Container, actions []a
 				cr.EnvFrom = append(cr.EnvFrom, newEnvFrom)
 			}
 		}
-		// TODO: Combine the rest
+
+		// Combine the volume mounts
+		for i := range containerConfigs {
+		loop:
+			for _, v := range containerConfigs[i].Container.Config.VolumeMounts {
+				for j := range cr.VolumeMounts {
+					if cr.VolumeMounts[j].MountPath == v.MountPath {
+						// TODO: ensure compatibility?
+						continue loop
+					}
+				}
+				cr.VolumeMounts = append(cr.VolumeMounts, v)
+			}
+		}
 	}
 
 	// Set up a default image when not specified
@@ -124,11 +144,6 @@ func CreateContainer(groupId int, defaultContainer stage2.Container, actions []a
 	initPath := constants.DefaultInitPath
 	if cr.Image == constants.DefaultInitImage || cr.Image == constants.DefaultToolkitImage {
 		initPath = "/init"
-	}
-
-	// Avoid using /.tktw/toolkit if there is Toolkit Image - use /toolkit then
-	if len(cr.Command) > 0 && cr.Command[0] == constants.DefaultToolkitPath && cr.Image == constants.DefaultToolkitImage {
-		cr.Command[0] = "/toolkit"
 	}
 
 	// Point the Init Process to the proper group

@@ -261,7 +261,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 			break
 		}
 	}
-	actionGroups := action.Group(actions)
+	actionGroups := action.Finalize(action.Group(actions))
 	containers := make([]corev1.Container, len(actionGroups))
 	for i := range actionGroups {
 		var bareActions []actiontypes.Action
