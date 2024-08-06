@@ -184,7 +184,7 @@ func ProcessContentGit(_ InternalProcessor, layer Intermediate, container stage.
 		SetWorkingDir("/").
 		SetImage(constants.DefaultToolkitImage).
 		SetImagePullPolicy(corev1.PullIfNotPresent).
-		SetCommand(constants.DefaultToolkitPath, "clone", step.Content.Git.Uri).
+		SetCommand("/toolkit", "clone", step.Content.Git.Uri).
 		EnableToolkit(stage.Ref())
 
 	args := []string{mountPath}
