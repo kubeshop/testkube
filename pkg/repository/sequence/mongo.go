@@ -161,7 +161,7 @@ func (r *MongoRepository) getOldNumber(ctx context.Context, name string, executi
 	}
 
 	number := int32(oldExecutionNumber.Number)
-	// get old number from old agennt - nre cloud configuration
+	// get old number from old agennt - new cloud configuration
 	if number == 0 && (executionType == ExecutionTypeTestSuite || executionType == ExecutionTypeTestWorkflow) {
 		var executionNumber executionNumber
 
