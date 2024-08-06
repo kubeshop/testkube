@@ -20,6 +20,7 @@ type ActionExecute struct {
 	Ref      string `json:"r"`
 	Negative bool   `json:"n,omitempty"`
 	Toolkit  bool   `json:"t,omitempty"`
+	Pure     bool   `json:"p,omitempty"`
 }
 
 type ActionPause struct {
