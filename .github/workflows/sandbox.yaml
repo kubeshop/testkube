@@ -3,7 +3,6 @@ on:
   push:
     branches:
       - sandbox/**
-      - ci/**
     paths-ignore:
       - 'docs/**'
   pull_request:
@@ -15,7 +14,7 @@ env:
 
 jobs:
   api:
-    if: startsWith(github.ref, 'refs/heads/ci/')
+    if: startsWith(github.ref, 'refs/heads/sandbox/')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -794,18 +793,18 @@ jobs:
           docker push kubeshop/testkube-sandbox:${{ matrix.service }}-${{ env.branch_identifier }}-${{ steps.commit.outputs.short }}
 
   dispatch:
-    if: startsWith(github.ref, 'refs/heads/ci/')
+    if: startsWith(github.ref, 'refs/heads/sandbox/')
     needs:
       [
           api,
-#          single_executor,
-#          executor_jmeter,
-#          executor_maven,
-#          executor_gradle,
-#          executor_cypress,
-#          executor_playwright,
-#          log_server_sidecar,
-#          testworkflow
+          single_executor,
+          executor_jmeter,
+          executor_maven,
+          executor_gradle,
+          executor_cypress,
+          executor_playwright,
+          log_server_sidecar,
+          testworkflow
       ]
     runs-on: ubuntu-latest
     steps:
@@ -816,13 +815,13 @@ jobs:
           private-key: ${{ secrets.PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
 
-#      - name: Repository dispatch
-#        uses: peter-evans/repository-dispatch@v3
-#        with:
-#          token: ${{ steps.app-token.outputs.token }}
-#          repository: kubeshop/testkube-deployment
-#          event-type: sandbox_image_update
-#          client-payload: '{"ref_name": "${{ github.ref_name }}"}'
+      - name: Repository dispatch
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          repository: kubeshop/testkube-deployment
+          event-type: sandbox_image_update
+          client-payload: '{"ref_name": "${{ github.ref_name }}"}'
 
       - name: Output summary
         run: |
