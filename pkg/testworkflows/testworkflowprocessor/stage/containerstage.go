@@ -52,8 +52,8 @@ func (s *containerStage) ContainerStages() []ContainerStage {
 	return []ContainerStage{s}
 }
 
-func (s *containerStage) GetImages() map[string]struct{} {
-	return map[string]struct{}{s.container.Image(): {}}
+func (s *containerStage) GetImages(isGroupNeeded bool) map[string]bool {
+	return map[string]bool{s.container.Image(): s.container.NeedsImageData(isGroupNeeded)}
 }
 
 func (s *containerStage) Flatten() []Stage {

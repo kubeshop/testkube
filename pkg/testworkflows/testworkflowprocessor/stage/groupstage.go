@@ -1,8 +1,6 @@
 package stage
 
 import (
-	"maps"
-
 	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/pkg/expressions"
@@ -100,10 +98,12 @@ func (s *groupStage) RecursiveChildren() []Stage {
 	return res
 }
 
-func (s *groupStage) GetImages() map[string]struct{} {
-	v := make(map[string]struct{})
+func (s *groupStage) GetImages(isGroupNeeded bool) map[string]bool {
+	v := make(map[string]bool)
 	for _, ch := range s.children {
-		maps.Copy(v, ch.GetImages())
+		for name, needsMetadata := range ch.GetImages(isGroupNeeded) {
+			v[name] = v[name] || needsMetadata
+		}
 	}
 	return v
 }
