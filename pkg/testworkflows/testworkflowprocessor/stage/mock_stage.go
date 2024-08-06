@@ -5,13 +5,12 @@
 package stage
 
 import (
-	"reflect"
+	reflect "reflect"
 
-	"github.com/golang/mock/gomock"
-
+	gomock "github.com/golang/mock/gomock"
 	v1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
-	"github.com/kubeshop/testkube/pkg/expressions"
-	"github.com/kubeshop/testkube/pkg/imageinspector"
+	expressions "github.com/kubeshop/testkube/pkg/expressions"
+	imageinspector "github.com/kubeshop/testkube/pkg/imageinspector"
 )
 
 // MockStage is a mock of Stage interface.
@@ -126,17 +125,17 @@ func (mr *MockStageMockRecorder) Flatten() *gomock.Call {
 }
 
 // GetImages mocks base method.
-func (m *MockStage) GetImages() map[string]struct{} {
+func (m *MockStage) GetImages(arg0 bool) map[string]bool {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetImages")
-	ret0, _ := ret[0].(map[string]struct{})
+	ret := m.ctrl.Call(m, "GetImages", arg0)
+	ret0, _ := ret[0].(map[string]bool)
 	return ret0
 }
 
 // GetImages indicates an expected call of GetImages.
-func (mr *MockStageMockRecorder) GetImages() *gomock.Call {
+func (mr *MockStageMockRecorder) GetImages(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetImages", reflect.TypeOf((*MockStage)(nil).GetImages))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetImages", reflect.TypeOf((*MockStage)(nil).GetImages), arg0)
 }
 
 // HasPause mocks base method.

@@ -49,6 +49,7 @@ type ContainerAccessors interface {
 	HasVolumeAt(path string) bool
 	ToContainerConfig() testworkflowsv1.ContainerConfig
 	IsToolkit() bool
+	NeedsImageData(isGroupNeeded bool) bool
 }
 
 type ContainerMutations[T any] interface {
@@ -384,6 +385,9 @@ func (c *container) ToKubernetesTemplate() (corev1.Container, error) {
 }
 
 func (c *container) ApplyImageData(image *imageinspector.Info, resolvedImageName string) error {
+	if resolvedImageName != "" && c.Image() != resolvedImageName {
+		c.SetImage(resolvedImageName)
+	}
 	if image == nil {
 		return nil
 	}
@@ -396,9 +400,6 @@ func (c *container) ApplyImageData(image *imageinspector.Info, resolvedImageName
 	}
 	command := c.Command()
 	args := c.Args()
-	if resolvedImageName != "" && c.Image() != resolvedImageName {
-		c.SetImage(resolvedImageName)
-	}
 	if len(command) == 0 {
 		c.SetCommand(image.Entrypoint...)
 		if len(args) == 0 {
@@ -411,6 +412,26 @@ func (c *container) ApplyImageData(image *imageinspector.Info, resolvedImageName
 		c.SetWorkingDir(image.WorkingDir)
 	}
 	return nil
+}
+
+// NeedsImageData checks if we need to fetch metadata of the destination image from Container Registry
+func (c *container) NeedsImageData(isGroupNeeded bool) bool {
+	if len(c.Command()) == 0 || c.WorkingDir() == "" {
+		return true
+	}
+	securityContext := c.SecurityContext()
+	if isGroupNeeded && (securityContext == nil || securityContext.RunAsGroup == nil) {
+		return true
+	}
+	usesVariables := false
+	expressions.WalkVariables(c, func(name string) error {
+		if name == "image.command" || name == "image.args" || name == "image.workingDir" {
+			usesVariables = true
+			return expressions.ErrWalkStop
+		}
+		return nil
+	})
+	return usesVariables
 }
 
 func (c *container) IsToolkit() bool {
@@ -473,8 +494,8 @@ func (c *container) EnableToolkit(ref string) Container {
 		})
 }
 
-func (c *container) Resolve(m ...expressions.Machine) error {
-	base := expressions.NewMachine().
+func (c *container) envMachine() expressions.Machine {
+	return expressions.NewMachine().
 		RegisterAccessor(func(name string) (interface{}, bool) {
 			if !strings.HasPrefix(name, "env.") {
 				return nil, false
@@ -492,5 +513,8 @@ func (c *container) Resolve(m ...expressions.Machine) error {
 			}
 			return nil, false
 		})
-	return expressions.Simplify(c, append([]expressions.Machine{base}, m...)...)
+}
+
+func (c *container) Resolve(m ...expressions.Machine) error {
+	return expressions.Simplify(c, append([]expressions.Machine{c.envMachine()}, m...)...)
 }

@@ -287,6 +287,20 @@ func (mr *MockContainerMockRecorder) IsToolkit() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsToolkit", reflect.TypeOf((*MockContainer)(nil).IsToolkit))
 }
 
+// NeedsImageData mocks base method.
+func (m *MockContainer) NeedsImageData(arg0 bool) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NeedsImageData", arg0)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// NeedsImageData indicates an expected call of NeedsImageData.
+func (mr *MockContainerMockRecorder) NeedsImageData(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NeedsImageData", reflect.TypeOf((*MockContainer)(nil).NeedsImageData), arg0)
+}
+
 // Parent mocks base method.
 func (m *MockContainer) Parent() Container {
 	m.ctrl.T.Helper()
