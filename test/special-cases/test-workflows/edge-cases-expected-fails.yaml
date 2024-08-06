@@ -10,7 +10,7 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/cypress/executor-tests/cypress
+      - test/cypress/executor-tests/some-incorrect-path
   container:
     resources:
       requests:
@@ -21,6 +21,42 @@ spec:
   - name: Run tests
     run:
       image: cypress/included:13.6.4
+      args:
+      - --env
+      - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+      - --config
+      - '{"screenshotsFolder":"/data/artifacts/screenshots","videosFolder":"/data/artifacts/videos"}'
+      env:
+      - name: CYPRESS_CUSTOM_ENV
+        value: CYPRESS_CUSTOM_ENV_value
+    artifacts:
+      workingDir: /data/artifacts
+      paths:
+      - '**/*'
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-cypress-incorrect-image-name
+  labels:
+    core-tests: expected-fail
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/cypress/executor-tests/cypress-13
+  container:
+    resources:
+      requests:
+        cpu: 2
+        memory: 2Gi
+    workingDir: /data/repo/test/cypress/executor-tests/cypress-13
+  steps:
+  - name: Run tests
+    run:
+      image: cypress/some-incorrect-name:13.6.4
       args:
       - --env
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
