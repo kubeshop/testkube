@@ -15,7 +15,7 @@ func GetEnvironment(ctx context.Context, proContext config.ProContext, cloudClie
 	executor := executor.NewCloudGRPCExecutor(cloudClient, grpcConn, proContext.APIKey, proContext.RunnerId)
 
 	req := GetEnvironmentRequest{}
-	respBytes, err := executor.Execute(ctx, controlplane.CmdConfigGetEnvironment, req)
+	respBytes, err := executor.Execute(ctx, controlplane.CmdControlPlaneGetEnvironment, req)
 	if err != nil {
 		return GetEnvironmentResponse{}, err
 	}
