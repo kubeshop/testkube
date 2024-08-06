@@ -14,7 +14,7 @@ import (
 	stage2 "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
 
-func CreateContainer(groupId int, defaultContainer stage2.Container, actions []actiontypes.Action) (cr corev1.Container, actionsCleanup []actiontypes.Action, err error) {
+func CreateContainer(groupId int, defaultContainer stage2.Container, actions []actiontypes.Action, usesToolkit bool) (cr corev1.Container, actionsCleanup []actiontypes.Action, err error) {
 	actions = slices.Clone(actions)
 	actionsCleanup = actions
 
@@ -86,6 +86,11 @@ func CreateContainer(groupId int, defaultContainer stage2.Container, actions []a
 		cr.ImagePullPolicy = corev1.PullIfNotPresent
 	}
 
+	// Use the Toolkit image instead of Init if it's anyway used
+	if usesToolkit && cr.Image == constants.DefaultInitImage {
+		cr.Image = constants.DefaultToolkitImage
+	}
+
 	// Provide the data required for setup step
 	if setup != nil {
 		cr.Env = append(cr.Env,
@@ -117,8 +122,13 @@ func CreateContainer(groupId int, defaultContainer stage2.Container, actions []a
 
 	// Avoid using /.tktw/init if there is Init Process Image - use /init then
 	initPath := constants.DefaultInitPath
-	if cr.Image == constants.DefaultInitImage {
+	if cr.Image == constants.DefaultInitImage || cr.Image == constants.DefaultToolkitImage {
 		initPath = "/init"
+	}
+
+	// Avoid using /.tktw/toolkit if there is Toolkit Image - use /toolkit then
+	if len(cr.Command) > 0 && cr.Command[0] == constants.DefaultToolkitPath && cr.Image == constants.DefaultToolkitImage {
+		cr.Command[0] = "/toolkit"
 	}
 
 	// Point the Init Process to the proper group

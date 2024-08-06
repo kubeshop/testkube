@@ -268,8 +268,6 @@ func optimize(actions []actiontypes.Action) ([]actiontypes.Action, error) {
 		}
 	}
 
-	// TODO: Avoid using /.tktw/toolkit if there is Toolkit image
-
 	// Avoid using /.tktw/bin/sh when it is internal image used, with binaries in /bin
 	for i := range actions {
 		if actions[i].Type() != lite.ActionTypeContainerTransition {
@@ -285,20 +283,23 @@ func optimize(actions []actiontypes.Action) ([]actiontypes.Action, error) {
 
 	// Avoid copying init process and common binaries, when it is not necessary
 	copyInit := false
+	hasToolkit := false
 	copyBinaries := false
 	for i := range actions {
 		if actions[i].Type() == lite.ActionTypeContainerTransition {
-			if actions[i].Container.Config.Image != constants.DefaultInitImage {
+			if actions[i].Container.Config.Image != constants.DefaultInitImage && actions[i].Container.Config.Image != constants.DefaultToolkitImage {
 				copyInit = true
-				if actions[i].Container.Config.Image != constants.DefaultToolkitImage {
-					copyBinaries = true
-				}
+				copyBinaries = true // TODO: Copy only `busybox` binaries
+			}
+			if actions[i].Container.Config.Image == constants.DefaultToolkitImage {
+				hasToolkit = true
 			}
 		}
 	}
 	for i := range actions {
 		if actions[i].Type() == lite.ActionTypeSetup {
 			actions[i].Setup.CopyInit = copyInit
+			actions[i].Setup.CopyToolkit = copyInit && hasToolkit
 			actions[i].Setup.CopyBinaries = copyBinaries
 		}
 	}

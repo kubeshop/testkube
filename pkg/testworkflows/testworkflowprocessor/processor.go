@@ -18,6 +18,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/imageinspector"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
@@ -253,11 +254,18 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	if err != nil {
 		return nil, errors.Wrap(err, "analyzing Kubernetes container operations")
 	}
+	usesToolkit := false
+	for _, a := range actions {
+		if a.Type() == lite.ActionTypeExecute && a.Execute.Toolkit {
+			usesToolkit = true
+			break
+		}
+	}
 	actionGroups := action.Group(actions)
 	containers := make([]corev1.Container, len(actionGroups))
 	for i := range actionGroups {
 		var bareActions []actiontypes.Action
-		containers[i], bareActions, err = action.CreateContainer(i, layer.ContainerDefaults(), actionGroups[i])
+		containers[i], bareActions, err = action.CreateContainer(i, layer.ContainerDefaults(), actionGroups[i], usesToolkit)
 		actionGroups[i] = bareActions
 		if err != nil {
 			return nil, errors.Wrap(err, "building Kubernetes containers")
@@ -378,7 +386,6 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	jobSpec.Annotations = jobAnnotations
 
 	// Build running instructions
-	// TODO: Get rid of the unnecessary ContainerConfig parts
 	actionGroupsSerialized, _ := json.Marshal(actionGroups)
 	podAnnotations := make(map[string]string)
 	maps.Copy(podAnnotations, jobSpec.Spec.Template.Annotations)

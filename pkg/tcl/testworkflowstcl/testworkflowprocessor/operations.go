@@ -44,7 +44,7 @@ func ProcessExecute(_ testworkflowprocessor.InternalProcessor, layer testworkflo
 	container.
 		SetImage(constants.DefaultToolkitImage).
 		SetImagePullPolicy(corev1.PullIfNotPresent).
-		SetCommand("/toolkit", "execute").
+		SetCommand(constants.DefaultToolkitPath, "execute").
 		EnableToolkit(stage.Ref()).
 		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, constants.DefaultTransferDirPath))
 	args := make([]string, 0)

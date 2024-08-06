@@ -39,6 +39,7 @@ type ActionRetry struct {
 
 type ActionSetup struct {
 	CopyInit     bool `json:"i,omitempty"`
+	CopyToolkit  bool `json:"t,omitempty"`
 	CopyBinaries bool `json:"b,omitempty"`
 }
 
