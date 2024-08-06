@@ -193,17 +193,21 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		pullSecretNames[i] = v.Name
 	}
 
-	// Load the image details
-	imageNames := root.GetImages()
+	// Load the image details when necessary
+	hasPodSecurityContextGroup := podConfig.SecurityContext != nil && podConfig.SecurityContext.RunAsGroup != nil
+	imageNames := root.GetImages(hasPodSecurityContextGroup)
 	images := make(map[string]*imageinspector.Info)
 	imageNameResolutions := map[string]string{}
-	for image := range imageNames {
-		info, err := p.inspector.Inspect(ctx, "", image, corev1.PullIfNotPresent, pullSecretNames)
+	for image, needsMetadata := range imageNames {
+		var info *imageinspector.Info
+		if needsMetadata {
+			info, err = p.inspector.Inspect(ctx, "", image, corev1.PullIfNotPresent, pullSecretNames)
+			images[image] = info
+		}
 		imageNameResolutions[image] = p.inspector.ResolveName("", image)
 		if err != nil {
 			return nil, fmt.Errorf("resolving image error: %s: %s", image, err.Error())
 		}
-		images[image] = info
 	}
 	err = root.ApplyImages(images, imageNameResolutions)
 	if err != nil {
@@ -221,21 +225,19 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	}
 	if len(otherContainers) == 1 {
 		image := otherContainers[0].Container().Image()
-		if _, ok := images[image]; ok {
-			sc := otherContainers[0].Container().SecurityContext()
-			if sc == nil {
-				sc = &corev1.SecurityContext{}
-			}
-			if podConfig.SecurityContext == nil {
-				podConfig.SecurityContext = &corev1.PodSecurityContext{}
-			}
-			if sc.RunAsGroup == nil && podConfig.SecurityContext.RunAsGroup == nil {
-				sc.RunAsGroup = common.Ptr(images[image].Group)
-				otherContainers[0].Container().SetSecurityContext(sc)
-			}
-			if podConfig.SecurityContext.FSGroup == nil {
-				podConfig.SecurityContext.FSGroup = sc.RunAsGroup
-			}
+		sc := otherContainers[0].Container().SecurityContext()
+		if sc == nil {
+			sc = &corev1.SecurityContext{}
+		}
+		if podConfig.SecurityContext == nil {
+			podConfig.SecurityContext = &corev1.PodSecurityContext{}
+		}
+		if sc.RunAsGroup == nil && podConfig.SecurityContext.RunAsGroup == nil && images[image] != nil {
+			sc.RunAsGroup = common.Ptr(images[image].Group)
+			otherContainers[0].Container().SetSecurityContext(sc)
+		}
+		if podConfig.SecurityContext.FSGroup == nil {
+			podConfig.SecurityContext.FSGroup = sc.RunAsGroup
 		}
 	}
 	containerStages = nil
