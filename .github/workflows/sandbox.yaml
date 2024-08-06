@@ -860,7 +860,7 @@ jobs:
 
     - name: Render template
       id: template
-      uses: chuhlomin/render-template@v1.4
+      uses: chuhlomin/render-template@v1.10
       with:
         template: .github/sandbox-comment-template.md
         vars: |
