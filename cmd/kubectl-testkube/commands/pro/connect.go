@@ -137,7 +137,7 @@ func NewConnectCmd() *cobra.Command {
 			}
 
 			spinner := ui.NewSpinner("Connecting Testkube Pro")
-			if cliErr = common.HelmUpgradeOrInstallTestkubeCloud(opts, cfg, true); cliErr != nil {
+			if cliErr = common.HelmUpgradeOrInstallTestkubeAgent(opts, cfg, true); cliErr != nil {
 				spinner.Fail()
 				common.HandleCLIError(cliErr)
 			}
