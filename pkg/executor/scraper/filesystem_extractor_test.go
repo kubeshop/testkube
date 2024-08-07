@@ -19,6 +19,10 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor/scraper"
 )
 
+func mockClose() error {
+	return nil
+}
+
 func TestRecursiveFilesystemExtractor_Extract(t *testing.T) {
 	t.Parallel()
 
@@ -27,7 +31,7 @@ func TestRecursiveFilesystemExtractor_Extract(t *testing.T) {
 
 	fs := filesystem.NewMockFileSystem(ctrl)
 	fs.EXPECT().Stat("/my/directory").Return(nil, nil)
-	fs.EXPECT().OpenFileBuffered("/my/directory/file1").Return(bufio.NewReader(strings.NewReader("test")), nil)
+	fs.EXPECT().ReadFileBuffered("/my/directory/file1").Return(bufio.NewReader(strings.NewReader("test")), mockClose, nil)
 	extractor := scraper.NewRecursiveFilesystemExtractor(fs)
 
 	// Set up the expected calls to the mocked fs object
@@ -63,7 +67,7 @@ func TestArchiveFilesystemExtractor_Extract_NoMeta(t *testing.T) {
 	fs := filesystem.NewMockFileSystem(ctrl)
 	fs.EXPECT().Stat("/my/directory").Return(nil, nil)
 	testContent := "test"
-	fs.EXPECT().OpenFileBuffered("/my/directory/file1").Return(bufio.NewReader(strings.NewReader(testContent)), nil)
+	fs.EXPECT().ReadFileBuffered("/my/directory/file1").Return(bufio.NewReader(strings.NewReader(testContent)), mockClose, nil)
 	testFileInfo := filesystem.MockFileInfo{
 		FName:    "/my/directory/file1",
 		FSize:    int64(len(testContent)),
@@ -116,7 +120,7 @@ func TestArchiveFilesystemExtractor_Extract_Meta(t *testing.T) {
 	fs := filesystem.NewMockFileSystem(ctrl)
 	fs.EXPECT().Stat("/my/directory").Return(nil, nil)
 	testContent := "test"
-	fs.EXPECT().OpenFileBuffered("/my/directory/file1").Return(bufio.NewReader(strings.NewReader(testContent)), nil)
+	fs.EXPECT().ReadFileBuffered("/my/directory/file1").Return(bufio.NewReader(strings.NewReader(testContent)), mockClose, nil)
 	testFileInfo := filesystem.MockFileInfo{
 		FName:    "/my/directory/file1",
 		FSize:    int64(len(testContent)),
