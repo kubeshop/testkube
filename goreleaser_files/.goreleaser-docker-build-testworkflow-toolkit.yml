@@ -18,7 +18,7 @@ env:
   - DOCKER_IMAGE_TITLE={{ if index .Env "SANDBOX_IMAGE" }}testkube-sandbox-{{ .Env.SERVICE }}{{ else }}{{ .Env.REPOSITORY }}{{ end }}
   - DOCKER_IMAGE_URL={{ if index .Env "SANDBOX_IMAGE" }}https://hub.docker.com/r/kubeshop/testkube-sandbox{{ else }}https://hub.docker.com/r/kubeshop/{{ .Env.REPOSITORY }}{{ end }}
 builds:
-  - id: "linux"
+  - id: "linux-init"
     main: "./cmd/testworkflow-init"
     binary: "testworkflow-init"
     env:
@@ -33,7 +33,7 @@ builds:
       -X github.com/kubeshop/testkube/pkg/version.Version={{ .Version }}
       -X github.com/kubeshop/testkube/pkg/version.Commit={{ .FullCommit }}
       -s -w
-  - id: "linux"
+  - id: "linux-toolkit"
     main: "./cmd/testworkflow-toolkit"
     binary: "testworkflow-toolkit"
     env:
