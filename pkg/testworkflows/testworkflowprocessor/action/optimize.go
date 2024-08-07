@@ -13,9 +13,6 @@ func optimize(actions actiontypes.ActionList) (actiontypes.ActionList, error) {
 	// Wrap all the references with boolean function, and simplify values
 	actions = actions.CastRefStatusToBool()
 
-	// Detect immediately skipped steps
-	skipped := actions.SkippedRefs()
-
 	// Pre-resolve conditions
 	actions, err := actions.SimplifyIntermediateStatuses(expressions.MustCompile("true"))
 	if err != nil {
@@ -26,7 +23,7 @@ func optimize(actions actiontypes.ActionList) (actiontypes.ActionList, error) {
 	actions = actions.UncastRefStatusFromBool()
 
 	// Detect immediately skipped steps
-	skipped = actions.SkippedRefs()
+	skipped := actions.SkippedRefs()
 
 	// Avoid executing skipped steps (Execute, Timeout, Retry, Result & End)
 	actions = actions.Skip(skipped)
