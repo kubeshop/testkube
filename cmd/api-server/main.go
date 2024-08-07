@@ -154,7 +154,9 @@ func main() {
 	features, err := featureflags.Get()
 	exitOnError("error getting application feature flags", err)
 
-	log.DefaultLogger.Infow("Feature flags configured", "ff", features)
+	logger := log.DefaultLogger.With("apiVersion", version.Version)
+
+	logger.Infow("Feature flags configured", "ff", features)
 
 	// Run services within an errgroup to propagate errors between services.
 	g, ctx := errgroup.WithContext(ctx)
@@ -453,7 +455,6 @@ func main() {
 		proContext.OrgID = environment.OrganizationId
 		proContext.OrgName = environment.OrganizationName
 		proContext.OrgSlug = environment.OrganizationSlug
-
 	}
 
 	serviceAccountNames := map[string]string{

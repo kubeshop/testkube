@@ -7899,6 +7899,8 @@ components:
           type: boolean
           description: whether webhooks on the execution of this test workflow are disabled
           default: false
+        runningContext:
+          $ref: "#/components/schemas/RunningContext"
 
     TestWorkflowWithExecution:
       type: object
@@ -7990,9 +7992,11 @@ components:
           example:
             - true
             - false
-        runnerID:
+        runnerId:
           type: string
           description: Runner id that executed the test workflow
+        runningContext:
+          $ref: "#/components/schemas/RunningContext"
       required:
         - id
         - name
