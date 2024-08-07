@@ -220,7 +220,7 @@ func (c *setup) SetWorkingDir(workingDir string) {
 		wd = workingDir
 		_ = os.MkdirAll(wd, 0755)
 	} else {
-		err = os.MkdirAll(wd, 0755)
+		_ = os.MkdirAll(wd, 0755)
 	}
 	err = os.Chdir(wd)
 

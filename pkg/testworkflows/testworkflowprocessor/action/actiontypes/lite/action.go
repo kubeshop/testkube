@@ -20,6 +20,7 @@ type ActionExecute struct {
 	Ref      string `json:"r"`
 	Negative bool   `json:"n,omitempty"`
 	Toolkit  bool   `json:"t,omitempty"`
+	Pure     bool   `json:"p,omitempty"`
 }
 
 type ActionPause struct {
@@ -39,6 +40,7 @@ type ActionRetry struct {
 
 type ActionSetup struct {
 	CopyInit     bool `json:"i,omitempty"`
+	CopyToolkit  bool `json:"t,omitempty"`
 	CopyBinaries bool `json:"b,omitempty"`
 }
 

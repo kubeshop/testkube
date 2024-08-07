@@ -1,6 +1,8 @@
 package stage
 
 import (
+	"slices"
+
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/rand"
@@ -14,16 +16,25 @@ var BypassToolkitCheck = corev1.EnvVar{
 	Value: rand.String(20),
 }
 
+var BypassPure = corev1.EnvVar{
+	Name:  "TK_TC_PURE",
+	Value: rand.String(20),
+}
+
 type containerStage struct {
 	stageMetadata
 	stageLifecycle
 	container Container
+	pure      bool
 }
 
 type ContainerStage interface {
 	Stage
 	Container() Container
 	IsToolkit() bool
+
+	SetPure(pure bool) ContainerStage
+	Pure() bool // TODO: Consider purity level?
 }
 
 func NewContainerStage(ref string, container Container) ContainerStage {
@@ -83,4 +94,13 @@ func (s *containerStage) HasPause() bool {
 
 func (s *containerStage) IsToolkit() bool {
 	return s.container.IsToolkit()
+}
+
+func (s *containerStage) Pure() bool {
+	return s.pure || slices.Contains(s.container.Env(), BypassPure)
+}
+
+func (s *containerStage) SetPure(pure bool) ContainerStage {
+	s.pure = pure
+	return s
 }

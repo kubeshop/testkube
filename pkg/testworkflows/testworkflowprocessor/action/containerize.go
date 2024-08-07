@@ -14,13 +14,14 @@ import (
 	stage2 "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
 
-func CreateContainer(groupId int, defaultContainer stage2.Container, actions []actiontypes.Action) (cr corev1.Container, actionsCleanup []actiontypes.Action, err error) {
+func CreateContainer(groupId int, defaultContainer stage2.Container, actions []actiontypes.Action, usesToolkit bool) (cr corev1.Container, actionsCleanup []actiontypes.Action, err error) {
 	actions = slices.Clone(actions)
 	actionsCleanup = actions
 
 	// Find the container configurations and executable/setup steps
 	var setup *actiontypes.Action
 	executable := map[string]bool{}
+	toolkit := map[string]bool{}
 	containerConfigs := make([]*actiontypes.Action, 0)
 	for i := range actions {
 		if actions[i].Container != nil {
@@ -29,15 +30,21 @@ func CreateContainer(groupId int, defaultContainer stage2.Container, actions []a
 			setup = &actions[i]
 		} else if actions[i].Execute != nil {
 			executable[actions[i].Execute.Ref] = true
+			if actions[i].Execute.Toolkit {
+				toolkit[actions[i].Execute.Ref] = true
+			}
 		}
 	}
 
 	// Find the highest priority container configuration
 	var bestContainerConfig *actiontypes.Action
+	var bestIsToolkit = false
 	for i := range containerConfigs {
 		if executable[containerConfigs[i].Container.Ref] {
-			bestContainerConfig = containerConfigs[i]
-			break
+			if bestContainerConfig == nil || bestIsToolkit {
+				bestContainerConfig = containerConfigs[i]
+				bestIsToolkit = toolkit[bestContainerConfig.Container.Ref]
+			}
 		}
 	}
 	if bestContainerConfig == nil && len(containerConfigs) > 0 {
@@ -47,9 +54,11 @@ func CreateContainer(groupId int, defaultContainer stage2.Container, actions []a
 		bestContainerConfig = &actiontypes.Action{Container: &actiontypes.ActionContainer{Config: defaultContainer.ToContainerConfig()}}
 	}
 
-	// Build the cr base
-	// TODO: Handle the case when there are multiple exclusive execution configurations
-	// TODO: Handle a case when that configuration should join multiple configurations (i.e. envs/volumeMounts)
+	// Build the CR base
+	cr, _ = defaultContainer.Detach().ToKubernetesTemplate()
+	cr.Image = ""
+	cr.Env = nil
+	cr.EnvFrom = nil
 	if len(containerConfigs) > 0 {
 		cr, err = stage2.NewContainer().ApplyCR(&bestContainerConfig.Container.Config).ToKubernetesTemplate()
 		if err != nil {
@@ -75,7 +84,19 @@ func CreateContainer(groupId int, defaultContainer stage2.Container, actions []a
 				cr.EnvFrom = append(cr.EnvFrom, newEnvFrom)
 			}
 		}
-		// TODO: Combine the rest
+
+		// Combine the volume mounts
+		for i := range containerConfigs {
+		loop:
+			for _, v := range containerConfigs[i].Container.Config.VolumeMounts {
+				for j := range cr.VolumeMounts {
+					if cr.VolumeMounts[j].MountPath == v.MountPath {
+						continue loop
+					}
+				}
+				cr.VolumeMounts = append(cr.VolumeMounts, v)
+			}
+		}
 	}
 
 	// Set up a default image when not specified
@@ -84,6 +105,11 @@ func CreateContainer(groupId int, defaultContainer stage2.Container, actions []a
 		cr.ImagePullPolicy = corev1.PullIfNotPresent
 	} else if cr.ImagePullPolicy == "" {
 		cr.ImagePullPolicy = corev1.PullIfNotPresent
+	}
+
+	// Use the Toolkit image instead of Init if it's anyway used
+	if usesToolkit && cr.Image == constants.DefaultInitImage {
+		cr.Image = constants.DefaultToolkitImage
 	}
 
 	// Provide the data required for setup step
@@ -104,20 +130,11 @@ func CreateContainer(groupId int, defaultContainer stage2.Container, actions []a
 			corev1.EnvVar{Name: fmt.Sprintf("_%s_%s", constants2.EnvGroupActions, constants2.EnvActions), ValueFrom: &corev1.EnvVarSource{
 				FieldRef: &corev1.ObjectFieldSelector{FieldPath: constants.SpecAnnotationFieldPath},
 			}})
-
-		// Apply basic mounts, so there is a state provided
-		for _, volumeMount := range defaultContainer.VolumeMounts() {
-			if !slices.ContainsFunc(cr.VolumeMounts, func(mount corev1.VolumeMount) bool {
-				return mount.Name == volumeMount.Name
-			}) {
-				cr.VolumeMounts = append(cr.VolumeMounts, volumeMount)
-			}
-		}
 	}
 
 	// Avoid using /.tktw/init if there is Init Process Image - use /init then
 	initPath := constants.DefaultInitPath
-	if cr.Image == constants.DefaultInitImage {
+	if cr.Image == constants.DefaultInitImage || cr.Image == constants.DefaultToolkitImage {
 		initPath = "/init"
 	}
 
@@ -128,14 +145,12 @@ func CreateContainer(groupId int, defaultContainer stage2.Container, actions []a
 
 	// Clean up the executions
 	for i := range containerConfigs {
-		// TODO: Clean it up
 		newConfig := testworkflowsv1.ContainerConfig{}
 		if executable[containerConfigs[i].Container.Ref] {
 			newConfig.Command = containerConfigs[i].Container.Config.Command
 			newConfig.Args = containerConfigs[i].Container.Config.Args
 		}
 		newConfig.WorkingDir = containerConfigs[i].Container.Config.WorkingDir
-		// TODO: expose more?
 
 		containerConfigs[i].Container = &actiontypes.ActionContainer{
 			Ref:    containerConfigs[i].Container.Ref,

@@ -13,7 +13,7 @@ import (
 	stage2 "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
 
-func process(currentStatus string, parents []string, stage stage2.Stage, machines ...expressions.Machine) (actions []actiontypes.Action, err error) {
+func process(currentStatus string, parents []string, stage stage2.Stage, machines ...expressions.Machine) (actions actiontypes.ActionList, err error) {
 	// Store the init status
 	actions = append(actions, actiontypes.Action{
 		CurrentStatus: common.Ptr(currentStatus),
@@ -79,6 +79,7 @@ func process(currentStatus string, parents []string, stage stage2.Stage, machine
 				Ref:      exec.Ref(),
 				Negative: exec.Negative(),
 				Toolkit:  exec.IsToolkit(),
+				Pure:     exec.Pure(),
 			},
 		})
 	}
@@ -132,21 +133,27 @@ func process(currentStatus string, parents []string, stage stage2.Stage, machine
 	return
 }
 
-func Process(root stage2.Stage, machines ...expressions.Machine) ([]actiontypes.Action, error) {
+func Process(root stage2.Stage, machines ...expressions.Machine) (actiontypes.ActionList, error) {
 	actions, err := process("true", nil, root, machines...)
 	if err != nil {
 		return nil, err
 	}
-	actions = append([]actiontypes.Action{{Setup: &lite.ActionSetup{CopyInit: true, CopyBinaries: true}}, {Start: common.Ptr("")}}, actions...)
+	actions = append([]actiontypes.Action{{Start: common.Ptr("")}}, actions...)
 	actions = append(actions, actiontypes.Action{Result: &lite.ActionResult{Ref: "", Value: root.Ref()}}, actiontypes.Action{End: common.Ptr("")})
 
 	// Optimize until simplest list of operations
 	for {
 		prevLength := len(actions)
 		actions, err = optimize(actions)
-		if err != nil || len(actions) == prevLength {
-			sort(actions)
-			return actions, errors.Wrap(err, "processing operations")
+
+		// Continue until final optimizations are applied
+		if err == nil && len(actions) != prevLength {
+			continue
 		}
+
+		// Sort for easier reading
+		sort(actions)
+
+		return actions, errors.Wrap(err, "processing operations")
 	}
 }

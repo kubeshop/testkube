@@ -11,6 +11,7 @@ const (
 var (
 	InternalBinPath = filepath.Join(InternalPath, "bin")
 	InitPath        = filepath.Join(InternalPath, "init")
+	ToolkitPath     = filepath.Join(InternalPath, "toolkit")
 	StatePath       = filepath.Join(InternalPath, "state")
 )
 
