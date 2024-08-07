@@ -909,6 +909,7 @@ func MapStepParallelAPIToKube(v testkube.TestWorkflowStepParallel) testworkflows
 		TestWorkflowSpec: testworkflowsv1.TestWorkflowSpec{
 			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
 				Config:    common.MapMap(v.Config, MapParameterSchemaAPIToKube),
+				System:    common.MapPtr(v.System, MapSystemAPIToKube),
 				Content:   common.MapPtr(v.Content, MapContentAPIToKube),
 				Container: common.MapPtr(v.Container, MapContainerConfigAPIToKube),
 				Job:       common.MapPtr(v.Job, MapJobConfigAPIToKube),
@@ -953,6 +954,7 @@ func MapIndependentStepParallelAPIToKube(v testkube.TestWorkflowIndependentStepP
 		TestWorkflowTemplateSpec: testworkflowsv1.TestWorkflowTemplateSpec{
 			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
 				Config:    common.MapMap(v.Config, MapParameterSchemaAPIToKube),
+				System:    common.MapPtr(v.System, MapSystemAPIToKube),
 				Content:   common.MapPtr(v.Content, MapContentAPIToKube),
 				Container: common.MapPtr(v.Container, MapContainerConfigAPIToKube),
 				Job:       common.MapPtr(v.Job, MapJobConfigAPIToKube),
@@ -1109,6 +1111,7 @@ func MapStepAPIToKube(v testkube.TestWorkflowStep) testworkflowsv1.Step {
 		StepMeta: testworkflowsv1.StepMeta{
 			Name:      v.Name,
 			Condition: v.Condition,
+			Pure:      MapBoxedBooleanToBool(v.Pure),
 		},
 		StepControl: testworkflowsv1.StepControl{
 			Paused:   v.Paused,
@@ -1145,6 +1148,7 @@ func MapIndependentStepAPIToKube(v testkube.TestWorkflowIndependentStep) testwor
 		StepMeta: testworkflowsv1.StepMeta{
 			Name:      v.Name,
 			Condition: v.Condition,
+			Pure:      MapBoxedBooleanToBool(v.Pure),
 		},
 		StepControl: testworkflowsv1.StepControl{
 			Paused:   v.Paused,
@@ -1174,10 +1178,18 @@ func MapIndependentStepAPIToKube(v testkube.TestWorkflowIndependentStep) testwor
 	}
 }
 
+func MapSystemAPIToKube(v testkube.TestWorkflowSystem) testworkflowsv1.TestWorkflowSystem {
+	return testworkflowsv1.TestWorkflowSystem{
+		PureByDefault:      v.PureByDefault,
+		IsolatedContainers: v.IsolatedContainers,
+	}
+}
+
 func MapSpecAPIToKube(v testkube.TestWorkflowSpec) testworkflowsv1.TestWorkflowSpec {
 	return testworkflowsv1.TestWorkflowSpec{
 		TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
 			Config:    common.MapMap(v.Config, MapParameterSchemaAPIToKube),
+			System:    common.MapPtr(v.System, MapSystemAPIToKube),
 			Content:   common.MapPtr(v.Content, MapContentAPIToKube),
 			Container: common.MapPtr(v.Container, MapContainerConfigAPIToKube),
 			Job:       common.MapPtr(v.Job, MapJobConfigAPIToKube),
@@ -1196,6 +1208,7 @@ func MapTemplateSpecAPIToKube(v testkube.TestWorkflowTemplateSpec) testworkflows
 	return testworkflowsv1.TestWorkflowTemplateSpec{
 		TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
 			Config:    common.MapMap(v.Config, MapParameterSchemaAPIToKube),
+			System:    common.MapPtr(v.System, MapSystemAPIToKube),
 			Content:   common.MapPtr(v.Content, MapContentAPIToKube),
 			Container: common.MapPtr(v.Container, MapContainerConfigAPIToKube),
 			Job:       common.MapPtr(v.Job, MapJobConfigAPIToKube),
