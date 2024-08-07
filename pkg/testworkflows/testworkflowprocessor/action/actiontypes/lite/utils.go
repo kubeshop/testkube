@@ -6,8 +6,8 @@ func NewLiteActionList() LiteActionList {
 	return nil
 }
 
-func (a LiteActionList) Setup(copyInit, copyBinaries bool) LiteActionList {
-	return append(a, LiteAction{Setup: &ActionSetup{CopyInit: copyInit, CopyBinaries: copyBinaries}})
+func (a LiteActionList) Setup(copyInit, copyToolkit, copyBinaries bool) LiteActionList {
+	return append(a, LiteAction{Setup: &ActionSetup{CopyInit: copyInit, CopyToolkit: copyToolkit, CopyBinaries: copyBinaries}})
 }
 
 func (a LiteActionList) Declare(ref string, condition string, parents ...string) LiteActionList {
