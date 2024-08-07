@@ -59,6 +59,10 @@ func printPrettyOutput(ui *ui.UI, execution testkube.TestWorkflowExecution) {
 		}
 		ui.Warn("Requested at:        ", execution.ScheduledAt.String())
 		ui.Warn("Disabled webhooks:   ", fmt.Sprint(execution.DisableWebhooks))
+		if len(execution.Tags) > 0 {
+			ui.NL()
+			ui.Warn("Tags:            ", testkube.MapToString(execution.Tags))
+		}
 		if execution.Result != nil && execution.Result.Status != nil {
 			ui.Warn("Status:              ", string(*execution.Result.Status))
 			if !execution.Result.QueuedAt.IsZero() {
