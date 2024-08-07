@@ -36,6 +36,9 @@ func ProcessExecute(_ testworkflowprocessor.InternalProcessor, layer testworkflo
 	hasWorkflows := len(step.Execute.Workflows) > 0
 	hasTests := len(step.Execute.Tests) > 0
 
+	// Allow to combine it within other containers
+	stage.SetPure(true)
+
 	// Fail if there is nothing to run
 	if !hasTests && !hasWorkflows {
 		return nil, errors.New("no test workflows and tests provided to the 'execute' step")
@@ -44,7 +47,7 @@ func ProcessExecute(_ testworkflowprocessor.InternalProcessor, layer testworkflo
 	container.
 		SetImage(constants.DefaultToolkitImage).
 		SetImagePullPolicy(corev1.PullIfNotPresent).
-		SetCommand("/toolkit", "execute").
+		SetCommand(constants.DefaultToolkitPath, "execute").
 		EnableToolkit(stage.Ref()).
 		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, constants.DefaultTransferDirPath))
 	args := make([]string, 0)
@@ -91,6 +94,9 @@ func ProcessParallel(_ testworkflowprocessor.InternalProcessor, layer testworkfl
 	stage := stage.NewContainerStage(layer.NextRef(), container.CreateChild())
 	stage.SetCategory("Run in parallel")
 
+	// Allow to combine it within other containers
+	stage.SetPure(true)
+
 	// Inherit container defaults
 	inherited := common.Ptr(stage.Container().ToContainerConfig())
 	inherited.VolumeMounts = nil
@@ -99,7 +105,7 @@ func ProcessParallel(_ testworkflowprocessor.InternalProcessor, layer testworkfl
 	stage.Container().
 		SetImage(constants.DefaultToolkitImage).
 		SetImagePullPolicy(corev1.PullIfNotPresent).
-		SetCommand("/toolkit", "parallel").
+		SetCommand(constants.DefaultToolkitPath, "parallel").
 		EnableToolkit(stage.Ref()).
 		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, constants.DefaultTransferDirPath))
 
@@ -124,10 +130,13 @@ func ProcessServicesStart(_ testworkflowprocessor.InternalProcessor, layer testw
 	stage := stage.NewContainerStage(layer.NextRef(), container.CreateChild())
 	stage.SetCategory("Start services")
 
+	// Allow to combine it within other containers
+	stage.SetPure(true)
+
 	stage.Container().
 		SetImage(constants.DefaultToolkitImage).
 		SetImagePullPolicy(corev1.PullIfNotPresent).
-		SetCommand("/toolkit", "services", "-g", "{{env.TK_SVC_REF}}").
+		SetCommand(constants.DefaultToolkitPath, "services", "-g", "{{env.TK_SVC_REF}}").
 		EnableToolkit(stage.Ref()).
 		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, constants.DefaultTransferDirPath))
 
@@ -154,10 +163,13 @@ func ProcessServicesStop(_ testworkflowprocessor.InternalProcessor, layer testwo
 	stage.SetOptional(true)
 	stage.SetCategory("Stop services")
 
+	// Allow to combine it within other containers
+	stage.SetPure(true)
+
 	stage.Container().
 		SetImage(constants.DefaultToolkitImage).
 		SetImagePullPolicy(corev1.PullIfNotPresent).
-		SetCommand("/toolkit", "kill", "{{env.TK_SVC_REF}}").
+		SetCommand(constants.DefaultToolkitPath, "kill", "{{env.TK_SVC_REF}}").
 		EnableToolkit(stage.Ref()).
 		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, constants.DefaultTransferDirPath))
 

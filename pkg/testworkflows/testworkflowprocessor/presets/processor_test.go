@@ -120,12 +120,12 @@ func TestProcessBasic(t *testing.T) {
 	sigSerialized, _ := json.Marshal(sig)
 
 	volumes := res.Job.Spec.Template.Spec.Volumes
-	volumeMounts := res.Job.Spec.Template.Spec.InitContainers[0].VolumeMounts
+	volumeMounts := res.Job.Spec.Template.Spec.Containers[0].VolumeMounts
 
 	wantActions := actiontypes.NewActionGroups().
 		Append(func(list actiontypes.ActionList) actiontypes.ActionList {
 			return list.
-				Setup(false, false).
+				Setup(false, false, false).
 				Declare(constants.RootOperationName, "true").
 				Declare(sig[0].Ref(), "true", constants.RootOperationName).
 				Result(constants.RootOperationName, sig[0].Ref()).
@@ -133,12 +133,11 @@ func TestProcessBasic(t *testing.T) {
 				Start("").
 				CurrentStatus("true").
 				Start(constants.RootOperationName).
-				CurrentStatus(constants.RootOperationName)
-		}).
-		Append(func(list actiontypes.ActionList) actiontypes.ActionList {
-			return list.
+				CurrentStatus(constants.RootOperationName).
+
+				// Joined as default image is used
 				MutateContainer(sig[0].Ref(), testworkflowsv1.ContainerConfig{
-					Command: cmd("/bin/sh"),
+					Command: cmd("/.tktw-bin/sh"),
 					Args:    cmdShell("shell-test"),
 				}).
 				Start(sig[0].Ref()).
@@ -176,33 +175,20 @@ func TestProcessBasic(t *testing.T) {
 					RestartPolicy:      corev1.RestartPolicyNever,
 					EnableServiceLinks: common.Ptr(false),
 					Volumes:            volumes,
-					InitContainers: []corev1.Container{
+					InitContainers:     []corev1.Container{},
+					Containers: []corev1.Container{
 						{
 							Name:            "1",
 							Image:           constants.DefaultInitImage,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Command:         []string{"/init", "0"},
 							Env: []corev1.EnvVar{
+								env(0, false, "CI", "1"),
 								envDebugNode,
 								envDebugPod,
 								envDebugNamespace,
 								envDebugServiceAccount,
 								envActions,
-							},
-							VolumeMounts: volumeMounts,
-							SecurityContext: &corev1.SecurityContext{
-								RunAsGroup: common.Ptr(constants.DefaultFsGroup),
-							},
-						},
-					},
-					Containers: []corev1.Container{
-						{
-							Name:            "2",
-							Image:           constants.DefaultInitImage,
-							ImagePullPolicy: corev1.PullIfNotPresent,
-							Command:         []string{"/init", "1"},
-							Env: []corev1.EnvVar{
-								env(0, false, "CI", "1"),
 							},
 							VolumeMounts: volumeMounts,
 							SecurityContext: &corev1.SecurityContext{
@@ -252,7 +238,7 @@ func TestProcessShellWithNonStandardImage(t *testing.T) {
 	wantActions := actiontypes.NewActionGroups().
 		Append(func(list actiontypes.ActionList) actiontypes.ActionList {
 			return list.
-				Setup(true, true).
+				Setup(true, false, true).
 				Declare(constants.RootOperationName, "true").
 				Declare(sig[0].Ref(), "true", constants.RootOperationName).
 				Result(constants.RootOperationName, sig[0].Ref()).
@@ -380,12 +366,12 @@ func TestProcessBasicEnvReference(t *testing.T) {
 	sig := res.Signature
 
 	volumes := res.Job.Spec.Template.Spec.Volumes
-	volumeMounts := res.Job.Spec.Template.Spec.InitContainers[0].VolumeMounts
+	volumeMounts := res.Job.Spec.Template.Spec.Containers[0].VolumeMounts
 
 	wantActions := lite.NewLiteActionGroups().
 		Append(func(list lite.LiteActionList) lite.LiteActionList {
 			return list.
-				Setup(false, false).
+				Setup(false, false, false).
 				Declare(constants.RootOperationName, "true").
 				Declare(sig[0].Ref(), "true", constants.RootOperationName).
 				Result(constants.RootOperationName, sig[0].Ref()).
@@ -393,12 +379,9 @@ func TestProcessBasicEnvReference(t *testing.T) {
 				Start("").
 				CurrentStatus("true").
 				Start(constants.RootOperationName).
-				CurrentStatus(constants.RootOperationName)
-		}).
-		Append(func(list lite.LiteActionList) lite.LiteActionList {
-			return list.
+				CurrentStatus(constants.RootOperationName).
 				MutateContainer(lite.LiteContainerConfig{
-					Command: cmd("/bin/sh"),
+					Command: cmd("/.tktw-bin/sh"),
 					Args:    cmdShell("shell-test"),
 				}).
 				Start(sig[0].Ref()).
@@ -412,31 +395,13 @@ func TestProcessBasicEnvReference(t *testing.T) {
 		RestartPolicy:      corev1.RestartPolicyNever,
 		EnableServiceLinks: common.Ptr(false),
 		Volumes:            volumes,
-		InitContainers: []corev1.Container{
+		InitContainers:     []corev1.Container{},
+		Containers: []corev1.Container{
 			{
 				Name:            "1",
 				Image:           constants.DefaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/init", "0"},
-				Env: []corev1.EnvVar{
-					envDebugNode,
-					envDebugPod,
-					envDebugNamespace,
-					envDebugServiceAccount,
-					envActions,
-				},
-				VolumeMounts: volumeMounts,
-				SecurityContext: &corev1.SecurityContext{
-					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
-				},
-			},
-		},
-		Containers: []corev1.Container{
-			{
-				Name:            "2",
-				Image:           constants.DefaultInitImage,
-				ImagePullPolicy: corev1.PullIfNotPresent,
-				Command:         []string{"/init", "1"},
 				Env: []corev1.EnvVar{
 					env(0, false, "CI", "1"),
 					env(0, false, "ZERO", "foo"),
@@ -444,6 +409,11 @@ func TestProcessBasicEnvReference(t *testing.T) {
 					env(0, false, "INPUT", "foobar"),
 					env(0, true, "NEXT", "foo{{env.UNDETERMINED}}foofoobarbar"),
 					env(0, false, "LAST", "foofoobarbar"),
+					envDebugNode,
+					envDebugPod,
+					envDebugNamespace,
+					envDebugServiceAccount,
+					envActions,
 				},
 				VolumeMounts: volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
@@ -480,7 +450,7 @@ func TestProcessMultipleSteps(t *testing.T) {
 	wantActions := lite.NewLiteActionGroups().
 		Append(func(list lite.LiteActionList) lite.LiteActionList {
 			return list.
-				Setup(false, false).
+				Setup(false, false, false).
 				Declare(constants.RootOperationName, "true").
 				Declare(sig[0].Ref(), "true", constants.RootOperationName).
 				Declare(sig[1].Ref(), sig[0].Ref(), constants.RootOperationName).
@@ -489,12 +459,11 @@ func TestProcessMultipleSteps(t *testing.T) {
 				Start("").
 				CurrentStatus("true").
 				Start(constants.RootOperationName).
-				CurrentStatus(constants.RootOperationName)
-		}).
-		Append(func(list lite.LiteActionList) lite.LiteActionList {
-			return list.
+				CurrentStatus(constants.RootOperationName).
+
+				// Joined as default container is used
 				MutateContainer(lite.LiteContainerConfig{
-					Command: cmd("/bin/sh"),
+					Command: cmd("/.tktw-bin/sh"),
 					Args:    cmdShell("shell-test"),
 				}).
 				Start(sig[0].Ref()).
@@ -505,7 +474,7 @@ func TestProcessMultipleSteps(t *testing.T) {
 		Append(func(list lite.LiteActionList) lite.LiteActionList {
 			return list.
 				MutateContainer(lite.LiteContainerConfig{
-					Command: cmd("/bin/sh"),
+					Command: cmd("/.tktw-bin/sh"),
 					Args:    cmdShell("shell-test-2"),
 				}).
 				Start(sig[1].Ref()).
@@ -526,6 +495,7 @@ func TestProcessMultipleSteps(t *testing.T) {
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/init", "0"},
 				Env: []corev1.EnvVar{
+					env(0, false, "CI", "1"),
 					envDebugNode,
 					envDebugPod,
 					envDebugNamespace,
@@ -537,26 +507,13 @@ func TestProcessMultipleSteps(t *testing.T) {
 					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
 			},
+		},
+		Containers: []corev1.Container{
 			{
 				Name:            "2",
 				Image:           constants.DefaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/init", "1"},
-				Env: []corev1.EnvVar{
-					env(0, false, "CI", "1"),
-				},
-				VolumeMounts: volumeMounts,
-				SecurityContext: &corev1.SecurityContext{
-					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
-				},
-			},
-		},
-		Containers: []corev1.Container{
-			{
-				Name:            "3",
-				Image:           constants.DefaultInitImage,
-				ImagePullPolicy: corev1.PullIfNotPresent,
-				Command:         []string{"/init", "2"},
 				Env: []corev1.EnvVar{
 					env(0, false, "CI", "1"),
 				},
@@ -602,7 +559,7 @@ func TestProcessNestedSteps(t *testing.T) {
 	wantActions := lite.NewLiteActionGroups().
 		Append(func(list lite.LiteActionList) lite.LiteActionList {
 			return list.
-				Setup(false, false).
+				Setup(false, false, false).
 				Declare(constants.RootOperationName, "true").
 				Declare(sig[0].Ref(), "true", constants.RootOperationName).
 				Declare(sig[1].Ref(), sig[0].Ref(), constants.RootOperationName).
@@ -615,12 +572,11 @@ func TestProcessNestedSteps(t *testing.T) {
 				Start("").
 				CurrentStatus("true").
 				Start(constants.RootOperationName).
-				CurrentStatus(constants.RootOperationName)
-		}).
-		Append(func(list lite.LiteActionList) lite.LiteActionList {
-			return list.
+				CurrentStatus(constants.RootOperationName).
+
+				// Joined as default container is used
 				MutateContainer(lite.LiteContainerConfig{
-					Command: cmd("/bin/sh"),
+					Command: cmd("/.tktw-bin/sh"),
 					Args:    cmdShell("shell-test"),
 				}).
 				Start(sig[0].Ref()).
@@ -633,7 +589,7 @@ func TestProcessNestedSteps(t *testing.T) {
 		Append(func(list lite.LiteActionList) lite.LiteActionList {
 			return list.
 				MutateContainer(lite.LiteContainerConfig{
-					Command: cmd("/bin/sh"),
+					Command: cmd("/.tktw-bin/sh"),
 					Args:    cmdShell("shell-test-2"),
 				}).
 				Start(sig[1].Children()[0].Ref()).
@@ -644,7 +600,7 @@ func TestProcessNestedSteps(t *testing.T) {
 		Append(func(list lite.LiteActionList) lite.LiteActionList {
 			return list.
 				MutateContainer(lite.LiteContainerConfig{
-					Command: cmd("/bin/sh"),
+					Command: cmd("/.tktw-bin/sh"),
 					Args:    cmdShell("shell-test-3"),
 				}).
 				Start(sig[1].Children()[1].Ref()).
@@ -656,7 +612,7 @@ func TestProcessNestedSteps(t *testing.T) {
 		Append(func(list lite.LiteActionList) lite.LiteActionList {
 			return list.
 				MutateContainer(lite.LiteContainerConfig{
-					Command: cmd("/bin/sh"),
+					Command: cmd("/.tktw-bin/sh"),
 					Args:    cmdShell("shell-test-4"),
 				}).
 				Start(sig[2].Ref()).
@@ -677,6 +633,7 @@ func TestProcessNestedSteps(t *testing.T) {
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/init", "0"},
 				Env: []corev1.EnvVar{
+					env(0, false, "CI", "1"),
 					envDebugNode,
 					envDebugPod,
 					envDebugNamespace,
@@ -714,26 +671,13 @@ func TestProcessNestedSteps(t *testing.T) {
 					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
 			},
+		},
+		Containers: []corev1.Container{
 			{
 				Name:            "4",
 				Image:           constants.DefaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/init", "3"},
-				Env: []corev1.EnvVar{
-					env(0, false, "CI", "1"),
-				},
-				VolumeMounts: volumeMounts,
-				SecurityContext: &corev1.SecurityContext{
-					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
-				},
-			},
-		},
-		Containers: []corev1.Container{
-			{
-				Name:            "5",
-				Image:           constants.DefaultInitImage,
-				ImagePullPolicy: corev1.PullIfNotPresent,
-				Command:         []string{"/init", "4"},
 				Env: []corev1.EnvVar{
 					env(0, false, "CI", "1"),
 				},
@@ -776,8 +720,8 @@ func TestProcessLocalContent(t *testing.T) {
 	assert.NoError(t, err)
 
 	volumes := res.Job.Spec.Template.Spec.Volumes
-	volumeMounts := res.Job.Spec.Template.Spec.InitContainers[0].VolumeMounts
-	volumeMountsWithContent := res.Job.Spec.Template.Spec.InitContainers[1].VolumeMounts
+	volumeMounts := res.Job.Spec.Template.Spec.Containers[0].VolumeMounts
+	volumeMountsWithContent := res.Job.Spec.Template.Spec.InitContainers[0].VolumeMounts
 
 	want := corev1.PodSpec{
 		RestartPolicy:      corev1.RestartPolicyNever,
@@ -790,24 +734,12 @@ func TestProcessLocalContent(t *testing.T) {
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/init", "0"},
 				Env: []corev1.EnvVar{
+					env(0, false, "CI", "1"),
 					envDebugNode,
 					envDebugPod,
 					envDebugNamespace,
 					envDebugServiceAccount,
 					envActions,
-				},
-				VolumeMounts: volumeMounts,
-				SecurityContext: &corev1.SecurityContext{
-					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
-				},
-			},
-			{
-				Name:            "2",
-				Image:           constants.DefaultInitImage,
-				ImagePullPolicy: corev1.PullIfNotPresent,
-				Command:         []string{"/init", "1"},
-				Env: []corev1.EnvVar{
-					env(0, false, "CI", "1"),
 				},
 				VolumeMounts: volumeMountsWithContent,
 				SecurityContext: &corev1.SecurityContext{
@@ -817,10 +749,10 @@ func TestProcessLocalContent(t *testing.T) {
 		},
 		Containers: []corev1.Container{
 			{
-				Name:            "3",
+				Name:            "2",
 				Image:           constants.DefaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
-				Command:         []string{"/init", "2"},
+				Command:         []string{"/init", "1"},
 				Env: []corev1.EnvVar{
 					env(0, false, "CI", "1"),
 				},
@@ -881,6 +813,7 @@ func TestProcessGlobalContent(t *testing.T) {
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/init", "0"},
 				Env: []corev1.EnvVar{
+					env(0, false, "CI", "1"),
 					envDebugNode,
 					envDebugPod,
 					envDebugNamespace,
@@ -892,26 +825,13 @@ func TestProcessGlobalContent(t *testing.T) {
 					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
 			},
+		},
+		Containers: []corev1.Container{
 			{
 				Name:            "2",
 				Image:           constants.DefaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/init", "1"},
-				Env: []corev1.EnvVar{
-					env(0, false, "CI", "1"),
-				},
-				VolumeMounts: volumeMounts,
-				SecurityContext: &corev1.SecurityContext{
-					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
-				},
-			},
-		},
-		Containers: []corev1.Container{
-			{
-				Name:            "3",
-				Image:           constants.DefaultInitImage,
-				ImagePullPolicy: corev1.PullIfNotPresent,
-				Command:         []string{"/init", "2"},
 				Env: []corev1.EnvVar{
 					env(0, false, "CI", "1"),
 				},
@@ -928,6 +848,7 @@ func TestProcessGlobalContent(t *testing.T) {
 
 	assert.Equal(t, want, res.Job.Spec.Template.Spec)
 	assert.Equal(t, 3, len(volumeMounts))
+	fmt.Println(volumeMounts)
 	assert.Equal(t, "/some/path", volumeMounts[2].MountPath)
 	assert.Equal(t, 1, len(res.ConfigMaps))
 	assert.Equal(t, volumeMounts[2].Name, volumes[2].Name)
@@ -971,7 +892,7 @@ func TestProcessShell(t *testing.T) {
 	want := lite.NewLiteActionGroups().
 		Append(func(list lite.LiteActionList) lite.LiteActionList {
 			return list.
-				Setup(false, false).
+				Setup(false, false, false).
 				Declare(constants.RootOperationName, "true").
 				Declare(sig[0].Ref(), "true", constants.RootOperationName).
 				Result(constants.RootOperationName, sig[0].Ref()).
@@ -979,12 +900,11 @@ func TestProcessShell(t *testing.T) {
 				Start("").
 				CurrentStatus("true").
 				Start(constants.RootOperationName).
-				CurrentStatus(constants.RootOperationName)
-		}).
-		Append(func(list lite.LiteActionList) lite.LiteActionList {
-			return list.
+				CurrentStatus(constants.RootOperationName).
+
+				// Joined together as default image is used
 				MutateContainer(lite.LiteContainerConfig{
-					Command: cmd("/bin/sh"),
+					Command: cmd("/.tktw-bin/sh"),
 					Args:    cmdShell("shell-test"),
 				}).
 				Start(sig[0].Ref()).
