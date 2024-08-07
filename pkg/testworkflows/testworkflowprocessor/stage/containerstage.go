@@ -1,6 +1,8 @@
 package stage
 
 import (
+	"slices"
+
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/rand"
@@ -11,6 +13,11 @@ import (
 
 var BypassToolkitCheck = corev1.EnvVar{
 	Name:  "TK_TC_SECURITY",
+	Value: rand.String(20),
+}
+
+var BypassPure = corev1.EnvVar{
+	Name:  "TK_TC_PURE",
 	Value: rand.String(20),
 }
 
@@ -90,7 +97,7 @@ func (s *containerStage) IsToolkit() bool {
 }
 
 func (s *containerStage) Pure() bool {
-	return s.pure
+	return s.pure || slices.Contains(s.container.Env(), BypassPure)
 }
 
 func (s *containerStage) SetPure(pure bool) ContainerStage {
