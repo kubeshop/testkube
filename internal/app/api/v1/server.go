@@ -82,7 +82,7 @@ func NewTestkubeAPI(
 	clientset kubernetes.Interface,
 	testkubeClientset testkubeclientset.Interface,
 	testsourcesClient *testsourcesclientv1.TestSourcesClient,
-	testWorkflowsClient *testworkflowsv1.TestWorkflowsClient,
+	testWorkflowsClient testworkflowsv1.Interface,
 	testWorkflowTemplatesClient *testworkflowsv1.TestWorkflowTemplatesClient,
 	configMap repoConfig.Repository,
 	clusterId string,
