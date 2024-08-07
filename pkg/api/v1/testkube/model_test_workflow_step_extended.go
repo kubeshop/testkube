@@ -14,6 +14,9 @@ func (w *TestWorkflowStep) ConvertDots(fn func(string) string) *TestWorkflowStep
 	if w.Template != nil && w.Template.Config != nil {
 		w.Template.Config = convertDotsInMap(w.Template.Config, fn)
 	}
+	if w.Parallel != nil && w.Parallel.Execution != nil && w.Parallel.Execution.Tags != nil {
+		w.Parallel.Execution.Tags = convertDotsInMap(w.Parallel.Execution.Tags, fn)
+	}
 	for i := range w.Steps {
 		w.Steps[i].ConvertDots(fn)
 	}
