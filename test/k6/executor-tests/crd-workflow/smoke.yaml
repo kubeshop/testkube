@@ -29,9 +29,6 @@ spec:
       env:
       - name: K6_SYSTEM_ENV
         value: K6_SYSTEM_ENV_value
-  events:
-  - cronjob:
-      cron: "12 */4 * * *"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -63,9 +60,6 @@ spec:
       config:
         version: 0.48.0
         run: "k6 run k6-smoke-test.js -e K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value"
-  events:
-  - cronjob:
-      cron: "12 */4 * * *"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -97,9 +91,6 @@ spec:
       config:
         version: 0.48.0
         run: "k6 run k6-smoke-test.js -e K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value"
-  events:
-  - cronjob:
-      cron: "12 */4 * * *"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -145,9 +136,6 @@ spec:
         artifacts:
           paths:
           - '*'
-  events:
-  - cronjob:
-      cron: "12 */4 * * *"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -192,9 +180,6 @@ spec:
             --vus {{ shellquote(config.vus) }} \
             --duration {{ shellquote(config.duration) }} \
             --execution-segment {{ index }}/{{ count }}:{{ index + 1 }}/{{ count }}
-  events:
-  - cronjob:
-      cron: "20 */4 * * *"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -252,6 +237,3 @@ spec:
         workingDir: /data
         paths:
         - '*.html'
-  events:
-  - cronjob:
-      cron: "30 */4 * * *"

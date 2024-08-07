@@ -27,9 +27,6 @@ spec:
       env:
       - name: TESTKUBE_MAVEN
         value: "true"
-  events:
-  - cronjob:
-      cron: "13 */4 * * *"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -59,6 +56,3 @@ spec:
       name: official/maven/v1
       config:
         version: 3.9.6-eclipse-temurin-11-focal
-  events:
-  - cronjob:
-      cron: "15 */4 * * *"
