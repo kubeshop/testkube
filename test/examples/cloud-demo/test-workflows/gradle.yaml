@@ -28,6 +28,3 @@ spec:
       env:
       - name: TESTKUBE_GRADLE
         value: "true"
-  events:
-  - cronjob:
-      cron: "38 */4 * * *"
