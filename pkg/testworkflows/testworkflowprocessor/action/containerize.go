@@ -54,9 +54,7 @@ func CreateContainer(groupId int, defaultContainer stage2.Container, actions []a
 		bestContainerConfig = &actiontypes.Action{Container: &actiontypes.ActionContainer{Config: defaultContainer.ToContainerConfig()}}
 	}
 
-	// Build the cr base
-	// TODO: Handle the case when there are multiple exclusive execution configurations
-	// TODO: Handle a case when that configuration should join multiple configurations (i.e. envs/volumeMounts)
+	// Build the CR base
 	if len(containerConfigs) > 0 {
 		cr, err = stage2.NewContainer().ApplyCR(&bestContainerConfig.Container.Config).ToKubernetesTemplate()
 		if err != nil {
@@ -89,7 +87,6 @@ func CreateContainer(groupId int, defaultContainer stage2.Container, actions []a
 			for _, v := range containerConfigs[i].Container.Config.VolumeMounts {
 				for j := range cr.VolumeMounts {
 					if cr.VolumeMounts[j].MountPath == v.MountPath {
-						// TODO: ensure compatibility?
 						continue loop
 					}
 				}
@@ -153,14 +150,12 @@ func CreateContainer(groupId int, defaultContainer stage2.Container, actions []a
 
 	// Clean up the executions
 	for i := range containerConfigs {
-		// TODO: Clean it up
 		newConfig := testworkflowsv1.ContainerConfig{}
 		if executable[containerConfigs[i].Container.Ref] {
 			newConfig.Command = containerConfigs[i].Container.Config.Command
 			newConfig.Args = containerConfigs[i].Container.Config.Args
 		}
 		newConfig.WorkingDir = containerConfigs[i].Container.Config.WorkingDir
-		// TODO: expose more?
 
 		containerConfigs[i].Container = &actiontypes.ActionContainer{
 			Ref:    containerConfigs[i].Container.Ref,
