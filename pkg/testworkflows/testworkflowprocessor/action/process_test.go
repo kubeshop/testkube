@@ -58,7 +58,7 @@ func TestProcess_BasicSteps(t *testing.T) {
 		End("")
 
 	// Assert
-	got, err := Process(root)
+	got, err := Process(root, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, want, got)
 }
@@ -145,7 +145,7 @@ func TestProcess_Grouping(t *testing.T) {
 		End("")
 
 	// Assert
-	got, err := Process(root)
+	got, err := Process(root, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, want, got)
 }
@@ -202,7 +202,7 @@ func TestProcess_Pause(t *testing.T) {
 		End("")
 
 	// Assert
-	got, err := Process(root)
+	got, err := Process(root, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, want, got)
 }
@@ -256,7 +256,7 @@ func TestProcess_NegativeStep(t *testing.T) {
 		End("")
 
 	// Assert
-	got, err := Process(root)
+	got, err := Process(root, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, want, got)
 }
@@ -309,7 +309,7 @@ func TestProcess_NegativeGroup(t *testing.T) {
 		End("")
 
 	// Assert
-	got, err := Process(root)
+	got, err := Process(root, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, want, got)
 }
@@ -363,7 +363,7 @@ func TestProcess_OptionalStep(t *testing.T) {
 		End("")
 
 	// Assert
-	got, err := Process(root)
+	got, err := Process(root, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, want, got)
 }
@@ -423,7 +423,7 @@ func TestProcess_OptionalGroup(t *testing.T) {
 		End("")
 
 	// Assert
-	got, err := Process(root)
+	got, err := Process(root, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, want, got)
 }
@@ -472,7 +472,7 @@ func TestProcess_IgnoreExecutionOfStaticSkip(t *testing.T) {
 		End("")
 
 	// Assert
-	got, err := Process(root)
+	got, err := Process(root, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, want, got)
 }
@@ -514,7 +514,7 @@ func TestProcess_IgnoreExecutionOfStaticSkipGroup(t *testing.T) {
 		End("")
 
 	// Assert
-	got, err := Process(root)
+	got, err := Process(root, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, want, got)
 }
@@ -559,7 +559,7 @@ func TestProcess_IgnoreExecutionOfStaticSkipGroup_Pause(t *testing.T) {
 		End("")
 
 	// Assert
-	got, err := Process(root)
+	got, err := Process(root, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, want, got)
 }
@@ -612,7 +612,7 @@ func TestProcess_IgnoreExecutionOfStaticSkip_PauseGroup(t *testing.T) {
 		End("")
 
 	// Assert
-	got, err := Process(root)
+	got, err := Process(root, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, want, got)
 }

@@ -34,7 +34,7 @@ type ContainerStage interface {
 	IsToolkit() bool
 
 	SetPure(pure bool) ContainerStage
-	Pure() bool // TODO: Consider purity level?
+	Pure() bool
 }
 
 func NewContainerStage(ref string, container Container) ContainerStage {

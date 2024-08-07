@@ -59,6 +59,7 @@ func (p *processor) process(layer Intermediate, container stage.Container, step 
 
 	// Build an initial group for the inner items
 	self := stage.NewGroupStage(ref, false)
+	self.SetPure(step.Pure)
 	self.SetName(step.Name)
 	self.SetOptional(step.Optional).SetNegative(step.Negative).SetTimeout(step.Timeout).SetPaused(step.Paused)
 	if step.Condition != "" {
@@ -80,7 +81,8 @@ func (p *processor) process(layer Intermediate, container stage.Container, step 
 	if self.HasPause() && len(self.Children()) == 0 {
 		pause := stage.NewContainerStage(self.Ref()+"pause", container.CreateChild().
 			SetCommand(constants.DefaultShellPath).
-			SetArgs("-c", "exit 0"))
+			SetArgs("-c", "exit 0")).
+			SetPure(true)
 		pause.SetCategory("Wait for continue")
 		self.Add(pause)
 	}
@@ -250,7 +252,11 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	}
 
 	// Build list of the containers
-	actions, err := action.Process(root, machines...)
+	var pureByDefault *bool
+	if workflow.Spec.System != nil && workflow.Spec.System.PureByDefault {
+		pureByDefault = common.Ptr(true)
+	}
+	actions, err := action.Process(root, pureByDefault, machines...)
 	if err != nil {
 		return nil, errors.Wrap(err, "analyzing Kubernetes container operations")
 	}
@@ -261,7 +267,8 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 			break
 		}
 	}
-	actionGroups := action.Finalize(action.Group(actions))
+	isolatedContainers := workflow.Spec.System != nil && workflow.Spec.System.IsolatedContainers
+	actionGroups := action.Finalize(action.Group(actions, isolatedContainers), isolatedContainers)
 	containers := make([]corev1.Container, len(actionGroups))
 	for i := range actionGroups {
 		var bareActions []actiontypes.Action

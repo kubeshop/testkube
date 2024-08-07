@@ -64,6 +64,7 @@ func injectTemplateToSpec(spec *testworkflowsv1.TestWorkflowSpec, template testw
 	spec.Content = MergeContent(template.Spec.Content, spec.Content)
 	spec.Services = MergeMap(common.MapMap(template.Spec.Services, ConvertIndependentServiceToService), spec.Services)
 	spec.Container = MergeContainerConfig(template.Spec.Container, spec.Container)
+	spec.System = MergeSystem(template.Spec.System, spec.System)
 
 	// Include the steps from the template
 	setup := common.MapSlice(template.Spec.Setup, ConvertIndependentStepToStep)
@@ -91,6 +92,11 @@ func InjectStepTemplate(step *testworkflowsv1.Step, template testworkflowsv1.Tes
 	step.Content = MergeContent(template.Spec.Content, step.Content)
 	step.Services = MergeMap(common.MapMap(template.Spec.Services, ConvertIndependentServiceToService), step.Services)
 	step.Container = MergeContainerConfig(template.Spec.Container, step.Container)
+
+	// Define the step purity
+	if step.Pure != nil && template.Spec.System != nil && template.Spec.System.PureByDefault && !template.Spec.System.IsolatedContainers {
+		step.Pure = common.Ptr(true)
+	}
 
 	// Fast-track when the template doesn't contain any steps to run
 	if len(template.Spec.Setup) == 0 && len(template.Spec.Steps) == 0 && len(template.Spec.After) == 0 {

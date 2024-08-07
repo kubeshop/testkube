@@ -13,7 +13,7 @@ import (
 	stage2 "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
 
-func process(currentStatus string, parents []string, stage stage2.Stage, machines ...expressions.Machine) (actions actiontypes.ActionList, err error) {
+func process(currentStatus string, parents []string, stage stage2.Stage, inheritedPure *bool, machines ...expressions.Machine) (actions actiontypes.ActionList, err error) {
 	// Store the init status
 	actions = append(actions, actiontypes.Action{
 		CurrentStatus: common.Ptr(currentStatus),
@@ -74,12 +74,17 @@ func process(currentStatus string, parents []string, stage stage2.Stage, machine
 
 	// Handle executable action
 	if exec, ok := stage.(stage2.ContainerStage); ok {
+		toolkit := exec.IsToolkit()
+		pure := exec.Pure()
+		if !toolkit && !pure && inheritedPure != nil {
+			pure = *inheritedPure
+		}
 		actions = append(actions, actiontypes.Action{
 			Execute: &lite.ActionExecute{
 				Ref:      exec.Ref(),
 				Negative: exec.Negative(),
-				Toolkit:  exec.IsToolkit(),
-				Pure:     exec.Pure(),
+				Toolkit:  toolkit,
+				Pure:     pure,
 			},
 		})
 	}
@@ -94,10 +99,15 @@ func process(currentStatus string, parents []string, stage stage2.Stage, machine
 		}
 		parents = append(parents, group.Ref())
 
+		// Adjust the inherited purity
+		if group.Pure() != nil {
+			inheritedPure = group.Pure()
+		}
+
 		// Handle children
 		refs := make([]string, 0)
 		for _, ch := range group.Children() {
-			sub, err := process(currentStatus, parents, ch, machines...)
+			sub, err := process(currentStatus, parents, ch, inheritedPure, machines...)
 			if err != nil {
 				return nil, errors.Wrap(err, "processing group children")
 			}
@@ -133,8 +143,8 @@ func process(currentStatus string, parents []string, stage stage2.Stage, machine
 	return
 }
 
-func Process(root stage2.Stage, machines ...expressions.Machine) (actiontypes.ActionList, error) {
-	actions, err := process("true", nil, root, machines...)
+func Process(root stage2.Stage, inheritedPure *bool, machines ...expressions.Machine) (actiontypes.ActionList, error) {
+	actions, err := process("true", nil, root, inheritedPure, machines...)
 	if err != nil {
 		return nil, err
 	}

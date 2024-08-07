@@ -13,6 +13,7 @@ type groupStage struct {
 	containerDefaults Container
 	children          []Stage
 	virtual           bool
+	pure              *bool
 }
 
 type GroupStage interface {
@@ -22,6 +23,8 @@ type GroupStage interface {
 	Children() []Stage
 	RecursiveChildren() []Stage
 	Add(stages ...Stage) GroupStage
+	Pure() *bool
+	SetPure(pure *bool) GroupStage
 }
 
 func NewGroupStage(ref string, virtual bool) GroupStage {
@@ -145,6 +148,13 @@ func (s *groupStage) Flatten() []Stage {
 		if s.paused {
 			first.SetPaused(true)
 		}
+		if s.pure != nil {
+			if firstContainer, ok := first.(ContainerStage); ok && *s.pure {
+				firstContainer.SetPure(true)
+			} else if firstGroup, ok := first.(GroupStage); ok && firstGroup.Pure() == nil {
+				firstGroup.SetPure(s.pure)
+			}
+		}
 		return []Stage{first}
 	}
 
@@ -178,4 +188,13 @@ func (s *groupStage) Resolve(m ...expressions.Machine) error {
 		}
 	}
 	return expressions.Simplify(&s.stageMetadata, m...)
+}
+
+func (s *groupStage) Pure() *bool {
+	return s.pure
+}
+
+func (s *groupStage) SetPure(pure *bool) GroupStage {
+	s.pure = pure
+	return s
 }
