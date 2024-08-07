@@ -492,6 +492,21 @@ func predictTestWorkflowStepStatus(v TestWorkflowStepResult, sig TestWorkflowSig
 }
 
 func recomputeTestWorkflowStepResult(v TestWorkflowStepResult, sig TestWorkflowSignature, r *TestWorkflowResult) TestWorkflowStepResult {
+	// Ensure there is a queue time if the step is already started
+	if v.QueuedAt.IsZero() {
+		if !v.StartedAt.IsZero() {
+			v.QueuedAt = v.StartedAt
+		} else if !v.FinishedAt.IsZero() {
+			v.QueuedAt = v.FinishedAt
+		}
+	}
+
+	// Ensure there is a start time if the step is already finished
+	if v.StartedAt.IsZero() && !v.FinishedAt.IsZero() {
+		v.StartedAt = v.QueuedAt
+	}
+
+	// Compute children
 	children := sig.Children
 	if len(children) == 0 {
 		return v
