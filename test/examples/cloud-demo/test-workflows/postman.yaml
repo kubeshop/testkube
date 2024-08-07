@@ -26,6 +26,3 @@ spec:
       - postman-executor-smoke.postman_collection.json
       - "--env-var"
       - "TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value"
-  events:
-  - cronjob:
-      cron: "55 */4 * * *"

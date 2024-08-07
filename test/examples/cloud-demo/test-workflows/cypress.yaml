@@ -35,6 +35,3 @@ spec:
       artifacts:
         paths:
         - '**/*'
-  events:
-  - cronjob:
-      cron: "35 */4 * * *"
