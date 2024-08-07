@@ -40,8 +40,8 @@ func NewActionList() ActionList {
 	return nil
 }
 
-func (a ActionList) Setup(copyInit, copyBinaries bool) ActionList {
-	return append(a, Action{Setup: &lite.ActionSetup{CopyInit: copyInit, CopyBinaries: copyBinaries}})
+func (a ActionList) Setup(copyInit, copyToolkit, copyBinaries bool) ActionList {
+	return append(a, Action{Setup: &lite.ActionSetup{CopyInit: copyInit, CopyToolkit: copyToolkit, CopyBinaries: copyBinaries}})
 }
 
 func (a ActionList) Declare(ref string, condition string, parents ...string) ActionList {
