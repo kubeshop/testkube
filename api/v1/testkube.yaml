@@ -3735,6 +3735,7 @@ paths:
         - pro
       parameters:
         - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/TagSelector"
       summary: List test workflow executions
       description: List test workflow executions
       operationId: listTestWorkflowExecutionsByTestWorkflow
@@ -3963,6 +3964,7 @@ paths:
         - pro
       parameters:
         - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/TagSelector"
       summary: List test workflow executions
       description: List test workflow executions
       operationId: listTestWorkflowExecutions
@@ -7889,6 +7891,8 @@ components:
           type: boolean
           description: whether webhooks on the execution of this test workflow are disabled
           default: false
+        tags:
+          $ref: "#/components/schemas/TestWorkflowTagValue"
 
     TestWorkflowWithExecution:
       type: object
@@ -7980,6 +7984,8 @@ components:
           example:
             - true
             - false
+        tags:
+          $ref: "#/components/schemas/TestWorkflowTagValue"
       required:
         - id
         - name
@@ -8012,6 +8018,8 @@ components:
           $ref: "#/components/schemas/TestWorkflowResultSummary"
         workflow:
           $ref: "#/components/schemas/TestWorkflowSummary"
+        tags:
+          $ref: "#/components/schemas/TestWorkflowTagValue"
       required:
         - id
         - name
@@ -8515,6 +8523,8 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/TestWorkflowEvent"
+        execution:
+          $ref: "#/components/schemas/TestWorkflowTagSchema"
 
     TestWorkflowTemplateSpec:
       type: object
@@ -8549,6 +8559,8 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/TestWorkflowEvent"
+        execution:
+          $ref: "#/components/schemas/TestWorkflowTagSchema"
 
     TestWorkflowStepControl:
       type: object
@@ -8753,6 +8765,8 @@ components:
               $ref: "#/components/schemas/TestWorkflowTarballRequest"
           config:
             $ref: "#/components/schemas/TestWorkflowConfigValue"
+          tags:
+            $ref: "#/components/schemas/TestWorkflowTagValue"
 
     TestWorkflowStepExecuteTestRef:
       type: object
@@ -9365,6 +9379,19 @@ components:
           type: integer
           format: int64
           description: test workflow execution generation
+
+    TestWorkflowTagValue:
+      type: object
+      description: tag values to pass to the test workflow execution
+      additionalProperties:
+        type: string
+
+    TestWorkflowTagSchema:
+      type: object
+      description: test workflow execution tag definition
+      properties:
+        tags:
+          $ref: "#/components/schemas/TestWorkflowTagValue"
 
     ContentGitAuthType:
       type: string
@@ -10489,6 +10516,12 @@ components:
         default: false
       description: dont delete CRD
       required: false
+    TagSelector:
+      in: query
+      name: tagSelector
+      schema:
+        type: string
+        description: Test workflow execution tags
   requestBodies:
     UploadsBody:
       description: "Upload files request body data"
