@@ -55,6 +55,9 @@ func CreateContainer(groupId int, defaultContainer stage2.Container, actions []a
 	}
 
 	// Build the CR base
+	cr, _ = defaultContainer.Detach().ToKubernetesTemplate()
+	cr.Env = nil
+	cr.EnvFrom = nil
 	if len(containerConfigs) > 0 {
 		cr, err = stage2.NewContainer().ApplyCR(&bestContainerConfig.Container.Config).ToKubernetesTemplate()
 		if err != nil {
@@ -126,15 +129,6 @@ func CreateContainer(groupId int, defaultContainer stage2.Container, actions []a
 			corev1.EnvVar{Name: fmt.Sprintf("_%s_%s", constants2.EnvGroupActions, constants2.EnvActions), ValueFrom: &corev1.EnvVarSource{
 				FieldRef: &corev1.ObjectFieldSelector{FieldPath: constants.SpecAnnotationFieldPath},
 			}})
-
-		// Apply basic mounts, so there is a state provided
-		for _, volumeMount := range defaultContainer.VolumeMounts() {
-			if !slices.ContainsFunc(cr.VolumeMounts, func(mount corev1.VolumeMount) bool {
-				return mount.Name == volumeMount.Name
-			}) {
-				cr.VolumeMounts = append(cr.VolumeMounts, volumeMount)
-			}
-		}
 	}
 
 	// Avoid using /.tktw/init if there is Init Process Image - use /init then

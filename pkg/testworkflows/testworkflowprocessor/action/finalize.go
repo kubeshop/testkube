@@ -90,15 +90,21 @@ func Finalize(groups actiontypes.ActionGroups) actiontypes.ActionGroups {
 	}
 
 	// Build the setup action
-	setup := actiontypes.Action{Setup: &lite.ActionSetup{
+	setup := actiontypes.ActionList{{Setup: &lite.ActionSetup{
 		CopyInit:     copyInit,
 		CopyToolkit:  copyToolkit,
 		CopyBinaries: copyBinaries,
-	}}
+	}}}
 
-	// Finalize
+	// Inject into the first group if possible
 	if canMergeSetup {
-		return append(actiontypes.ActionGroups{append(actiontypes.ActionList{setup}, groups[0]...)}, groups[1:]...)
+		return append(actiontypes.ActionGroups{append(setup, groups[0]...)}, groups[1:]...)
 	}
-	return append(actiontypes.ActionGroups{{setup}}, groups...)
+
+	// Move non-executable steps from the 2nd group into setup
+	for groups[0][0].Type() != lite.ActionTypeContainerTransition {
+		setup = append(setup, groups[0][0])
+		groups[0] = groups[0][1:]
+	}
+	return append(actiontypes.ActionGroups{setup}, groups...)
 }

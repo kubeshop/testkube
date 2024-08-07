@@ -13,7 +13,6 @@ import (
 func TestGroup_Basic(t *testing.T) {
 	input := actiontypes.NewActionList().
 		// Configure
-		Setup(true, true).
 		Declare("init", "true").
 		Declare("step1", "false").
 		Declare("step2", "true", "init").
@@ -49,11 +48,12 @@ func TestGroup_Basic(t *testing.T) {
 		End("init").
 		End("")
 
-	want := [][]actiontypes.Action{
-		input[:13],   // ends before containerConfig("step2")
-		input[13:18], // ends before containerConfig("step3")
-		input[18:],
+	setup := actiontypes.NewActionList().Setup(true, false, true)
+	want := actiontypes.ActionGroups{
+		append(setup, input[:12]...), // ends before containerConfig("step2")
+		input[12:17],                 // ends before containerConfig("step3")
+		input[17:],
 	}
-	got := Group(input)
+	got := Finalize(Group(input))
 	assert.Equal(t, want, got)
 }
