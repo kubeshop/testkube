@@ -561,7 +561,8 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		TestWorkflowExecutionName: testWorkflowExecutionName,
 		DisableWebhooks:           request.DisableWebhooks,
 		Tags:                      tags,
-		RunnerID:                  e.runnerID,
+		RunnerId:                  e.runnerID,
+		RunningContext:            request.RunningContext,
 	}
 	err = e.repository.Insert(ctx, execution)
 	if err != nil {

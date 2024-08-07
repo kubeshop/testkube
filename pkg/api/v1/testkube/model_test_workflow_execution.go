@@ -41,5 +41,6 @@ type TestWorkflowExecution struct {
 	DisableWebhooks bool              `json:"disableWebhooks,omitempty"`
 	Tags            map[string]string `json:"tags,omitempty"`
 	// Runner id that executed the test workflow
-	RunnerID string `json:"runnerID,omitempty"`
+	RunnerId       string          `json:"runnerId,omitempty"`
+	RunningContext *RunningContext `json:"runningContext,omitempty"`
 }

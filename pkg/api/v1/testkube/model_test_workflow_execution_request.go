@@ -18,4 +18,5 @@ type TestWorkflowExecutionRequest struct {
 	// whether webhooks on the execution of this test workflow are disabled
 	DisableWebhooks bool              `json:"disableWebhooks,omitempty"`
 	Tags            map[string]string `json:"tags,omitempty"`
+	RunningContext  *RunningContext   `json:"runningContext,omitempty"`
 }
