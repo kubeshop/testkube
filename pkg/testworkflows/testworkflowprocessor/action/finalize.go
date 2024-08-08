@@ -104,9 +104,12 @@ func Finalize(groups actiontypes.ActionGroups, isolatedContainers bool) actionty
 	}
 
 	// Move non-executable steps from the 2nd group into setup
-	for groups[0][0].Type() != lite.ActionTypeContainerTransition {
+	for len(groups[0]) > 0 && groups[0][0].Type() != lite.ActionTypeContainerTransition {
 		setup = append(setup, groups[0][0])
 		groups[0] = groups[0][1:]
+	}
+	if len(groups[0]) == 0 {
+		groups = groups[1:]
 	}
 	return append(actiontypes.ActionGroups{setup}, groups...)
 }

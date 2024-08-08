@@ -1056,3 +1056,61 @@ func TestProcessConditionWithMultipleOperations(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, want, res.LiteActions())
 }
+
+func TestProcessNamedGroupWithSkippedSteps(t *testing.T) {
+	wf := &testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+				System: &testworkflowsv1.TestWorkflowSystem{
+					IsolatedContainers: common.Ptr(true),
+				},
+			},
+			Steps: []testworkflowsv1.Step{
+				{StepMeta: testworkflowsv1.StepMeta{Name: "test-group", Condition: "always"}, Steps: []testworkflowsv1.Step{
+					{StepMeta: testworkflowsv1.StepMeta{Condition: "never"}, StepOperations: testworkflowsv1.StepOperations{Shell: "shell-test-1"}},
+					{StepMeta: testworkflowsv1.StepMeta{Condition: "never"}, StepOperations: testworkflowsv1.StepOperations{Shell: "shell-test-2"}},
+				}},
+			},
+		},
+	}
+
+	res, err := proc.Bundle(context.Background(), wf, execMachine)
+	sig := res.Signature
+
+	want := lite.NewLiteActionGroups().
+		Append(func(list lite.LiteActionList) lite.LiteActionList {
+			return list.
+				// configure
+				Setup(false, false, false).
+				Declare(constants.RootOperationName, "true").
+				Declare(sig[0].Ref(), "true", constants.RootOperationName).
+				Declare(sig[0].Children()[0].Ref(), "false").
+				Declare(sig[0].Children()[1].Ref(), "false").
+				Result(sig[0].Ref(), "true").
+				Result(constants.RootOperationName, sig[0].Ref()).
+				Result("", constants.RootOperationName).
+				Start("").
+				CurrentStatus("true").
+				Start(constants.RootOperationName).
+				CurrentStatus(constants.RootOperationName).
+
+				// start the group
+				Start(sig[0].Ref()).
+				CurrentStatus(and(sig[0].Ref(), constants.RootOperationName)).
+
+				// void operations
+				Start(sig[0].Children()[0].Ref()).
+				End(sig[0].Children()[0].Ref()).
+				CurrentStatus(and(sig[0].Ref(), constants.RootOperationName)).
+				Start(sig[0].Children()[1].Ref()).
+				End(sig[0].Children()[1].Ref()).
+
+				// finish all
+				End(sig[0].Ref()).
+				End(constants.RootOperationName).
+				End("")
+		})
+
+	assert.NoError(t, err)
+	assert.Equal(t, want, res.LiteActions())
+}
