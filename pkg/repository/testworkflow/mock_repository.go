@@ -249,7 +249,7 @@ func (mr *MockRepositoryMockRecorder) GetTestWorkflowMetrics(arg0, arg1, arg2, a
 }
 
 // Insert mocks base method.
-func (m *MockRepository) Insert(arg0 context.Context, arg1 testkube.TestWorkflowExecution) error {
+func (m *MockRepository) Insert(arg0 context.Context, arg1 *testkube.TestWorkflowExecution) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Insert", arg0, arg1)
 	ret0, _ := ret[0].(error)

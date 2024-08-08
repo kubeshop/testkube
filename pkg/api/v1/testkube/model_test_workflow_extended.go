@@ -33,6 +33,9 @@ func (w *TestWorkflow) ConvertDots(fn func(string) string) *TestWorkflow {
 	if w.Labels == nil {
 		w.Labels = convertDotsInMap(w.Labels, fn)
 	}
+	if w.Spec == nil {
+		return w
+	}
 	if w.Spec.Pod != nil {
 		w.Spec.Pod.Labels = convertDotsInMap(w.Spec.Pod.Labels, fn)
 		w.Spec.Pod.Annotations = convertDotsInMap(w.Spec.Pod.Annotations, fn)
