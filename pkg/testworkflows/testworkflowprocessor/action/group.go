@@ -62,7 +62,7 @@ func getContainerConfigs(actions actiontypes.ActionList) (configs []testworkflow
 	return
 }
 
-func Group(actions actiontypes.ActionList) (groups actiontypes.ActionGroups) {
+func Group(actions actiontypes.ActionList, isolatedContainers bool) (groups actiontypes.ActionGroups) {
 	// Detect "start" and "execute" instructions
 	startIndexes := make([]int, 0)
 	startInstructions := make(map[string]int)
@@ -110,6 +110,11 @@ func Group(actions actiontypes.ActionList) (groups actiontypes.ActionGroups) {
 	}
 	if len(actions) > 0 {
 		groups[0] = append(actions, groups[0]...)
+	}
+
+	// Do not try merging the containers
+	if isolatedContainers {
+		return groups
 	}
 
 	// Combine multiple operations in a single container if it's possible
