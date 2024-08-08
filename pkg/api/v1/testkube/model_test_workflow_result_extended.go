@@ -530,7 +530,7 @@ func recomputeTestWorkflowStepResult(v TestWorkflowStepResult, sig TestWorkflowS
 	// It is finished already
 	if !v.FinishedAt.IsZero() {
 		predicted, finished := predictTestWorkflowStepStatus(v, sig, r)
-		if finished {
+		if finished && (v.Status == nil || *v.Status == QUEUED_TestWorkflowStepStatus || *v.Status == PAUSED_TestWorkflowStepStatus || *v.Status == RUNNING_TestWorkflowStepStatus) {
 			v.Status = common.Ptr(predicted)
 		}
 		return v
