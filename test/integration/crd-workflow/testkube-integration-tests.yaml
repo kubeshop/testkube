@@ -50,7 +50,7 @@ spec:
   steps:
     - name: Run integration tests
       run:
-        image: golang:1.22.1-bookworm
+        image: golang:1.22.3-bookworm
         workingDir: /data/repo
         volumeMounts:
         - name: gocache

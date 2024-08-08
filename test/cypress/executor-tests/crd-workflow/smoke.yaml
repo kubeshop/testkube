@@ -387,6 +387,9 @@ spec:
       description: '{{ matrix.browser }} browser'
       transfer:
       - from: /data/repo
+      fetch:
+      - from: /data/artifacts
+        to: /data/artifacts/{{ matrix.browser }}
       run:
         args:
         - '--browser'
