@@ -24,5 +24,4 @@ type TestWorkflowStepExecuteTestWorkflowRef struct {
 	ExecutionName string                                `json:"executionName,omitempty"`
 	Tarball       map[string]TestWorkflowTarballRequest `json:"tarball,omitempty"`
 	Config        map[string]string                     `json:"config,omitempty"`
-	Tags          map[string]string                     `json:"tags,omitempty"`
 }

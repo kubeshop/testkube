@@ -17,11 +17,6 @@ func (w *TestWorkflowStep) ConvertDots(fn func(string) string) *TestWorkflowStep
 	if w.Parallel != nil && w.Parallel.Execution != nil && w.Parallel.Execution.Tags != nil {
 		w.Parallel.Execution.Tags = convertDotsInMap(w.Parallel.Execution.Tags, fn)
 	}
-	if w.Execute != nil {
-		for i := range w.Execute.Workflows {
-			w.Execute.Workflows[i].Tags = convertDotsInMap(w.Execute.Workflows[i].Tags, fn)
-		}
-	}
 	for i := range w.Steps {
 		w.Steps[i].ConvertDots(fn)
 	}
