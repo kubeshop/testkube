@@ -546,6 +546,9 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		RunnerId:                  e.runnerID,
 		RunningContext:            request.RunningContext,
 	}
+
+	log.DefaultLogger.Infow("inserting execution", "execution", execution, "runningContext", request.RunningContext)
+
 	err = e.repository.Insert(ctx, execution)
 	if err != nil {
 		return execution, errors.Wrap(err, "inserting execution to storage")
