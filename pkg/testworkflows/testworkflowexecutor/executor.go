@@ -3,8 +3,11 @@ package testworkflowexecutor
 import (
 	"bufio"
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"strconv"
 	"sync"
@@ -466,6 +469,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		"number":          "1",
 		"scheduledAt":     now.UTC().Format(constants.RFC3339Millis),
 		"disableWebhooks": request.DisableWebhooks,
+		"tags":            "",
 	})
 
 	// Preserve resolved TestWorkflow
@@ -504,6 +508,27 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		return execution, errors.Wrap(err, "execution name already exists")
 	}
 
+	var tags map[string]string
+	if workflow.Spec.Execution != nil {
+		tags = workflow.Spec.Execution.Tags
+		if request.Tags != nil {
+			if tags == nil {
+				tags = make(map[string]string)
+			}
+
+			maps.Copy(tags, request.Tags)
+		}
+	}
+
+	var tagsData string
+	if tags != nil {
+		if data, err := json.Marshal(tags); err != nil {
+			log.DefaultLogger.Errorw("failed to marshal tags", "id", id, "error", err)
+		} else {
+			tagsData = base64.StdEncoding.EncodeToString(data)
+		}
+	}
+
 	// Build machine with actual execution data
 	executionMachine := expressions.NewMachine().Register("execution", map[string]interface{}{
 		"id":              id,
@@ -511,6 +536,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		"number":          number,
 		"scheduledAt":     now.UTC().Format(constants.RFC3339Millis),
 		"disableWebhooks": request.DisableWebhooks,
+		"tags":            tagsData,
 	})
 
 	// Process the TestWorkflow
@@ -542,6 +568,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		ResolvedWorkflow:          testworkflowmappers.MapKubeToAPI(resolvedWorkflow),
 		TestWorkflowExecutionName: testWorkflowExecutionName,
 		DisableWebhooks:           request.DisableWebhooks,
+		Tags:                      tags,
 	}
 	err = e.repository.Insert(ctx, execution)
 	if err != nil {
