@@ -117,7 +117,3 @@ func GetSignatureFromJSON(v []byte) ([]Signature, error) {
 	}
 	return res, err
 }
-
-func GetVirtualSignature(children []Signature) Signature {
-	return &signature{ChildrenValue: children}
-}

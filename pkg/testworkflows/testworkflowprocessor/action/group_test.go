@@ -54,6 +54,6 @@ func TestGroup_Basic(t *testing.T) {
 		input[12:17],                 // ends before containerConfig("step3")
 		input[17:],
 	}
-	got := Finalize(Group(input))
+	got := Finalize(Group(input, false), false)
 	assert.Equal(t, want, got)
 }

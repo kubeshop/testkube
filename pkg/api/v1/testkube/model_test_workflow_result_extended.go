@@ -157,7 +157,46 @@ func (r *TestWorkflowResult) UpdateStepResult(sig []TestWorkflowSignature, ref s
 func (r *TestWorkflowResult) RecomputeDuration() {
 	if !r.FinishedAt.IsZero() {
 		r.PausedMs = 0
+
+		// Get unique pause periods
+		pauses := make([]TestWorkflowPause, 0)
+	loop:
 		for _, p := range r.Pauses {
+			// Finalize the pause if it's not
+			step := r.Steps[p.Ref]
+			if !step.FinishedAt.IsZero() && p.ResumedAt.IsZero() {
+				p.ResumedAt = step.FinishedAt
+			}
+
+			for i := range pauses {
+				// They don't overlap
+				if p.PausedAt.After(pauses[i].ResumedAt) || p.ResumedAt.Before(pauses[i].PausedAt) {
+					continue
+				}
+
+				// The existing pause period may take some period before
+				if pauses[i].PausedAt.After(p.PausedAt) {
+					pauses[i].PausedAt = p.PausedAt
+					p.PausedAt = pauses[i].ResumedAt
+					if p.ResumedAt.Before(p.PausedAt) {
+						p.ResumedAt = p.PausedAt
+					}
+				}
+
+				// The existing pause period may take some period after
+				if pauses[i].ResumedAt.Before(p.ResumedAt) {
+					pauses[i].ResumedAt = p.ResumedAt
+					p.ResumedAt = pauses[i].PausedAt
+				}
+
+				// The pause is already enclosed in existing list
+				continue loop
+			}
+
+			pauses = append(pauses, p)
+		}
+
+		for _, p := range pauses {
 			resumedAt := p.ResumedAt
 			if resumedAt.IsZero() {
 				resumedAt = r.FinishedAt
@@ -167,6 +206,7 @@ func (r *TestWorkflowResult) RecomputeDuration() {
 				r.PausedMs += milli
 			}
 		}
+
 		totalDuration := r.FinishedAt.Sub(r.QueuedAt)
 		duration := totalDuration - time.Duration(1e3*r.PausedMs)
 		if totalDuration < 0 {
@@ -451,7 +491,7 @@ func adjustMinimumTime(dst, min time.Time) time.Time {
 func predictTestWorkflowStepStatus(v TestWorkflowStepResult, sig TestWorkflowSignature, r *TestWorkflowResult) (TestWorkflowStepStatus, bool) {
 	children := sig.Children
 	if len(children) == 0 {
-		if getTestWorkflowStepStatus(v) == QUEUED_TestWorkflowStepStatus || getTestWorkflowStepStatus(v) == RUNNING_TestWorkflowStepStatus || getTestWorkflowStepStatus(v) == PAUSED_TestWorkflowStepStatus {
+		if !getTestWorkflowStepStatus(v).Finished() {
 			return PASSED_TestWorkflowStepStatus, false
 		}
 		return *v.Status, true
@@ -473,7 +513,7 @@ func predictTestWorkflowStepStatus(v TestWorkflowStepResult, sig TestWorkflowSig
 		if !ch.Optional && (status == FAILED_TestWorkflowStepStatus || status == TIMEOUT_TestWorkflowStepStatus) {
 			failed = true
 		}
-		if status == QUEUED_TestWorkflowStepStatus || status == RUNNING_TestWorkflowStepStatus || status == PAUSED_TestWorkflowStepStatus {
+		if !status.Finished() {
 			finished = false
 		}
 	}
@@ -530,7 +570,7 @@ func recomputeTestWorkflowStepResult(v TestWorkflowStepResult, sig TestWorkflowS
 	// It is finished already
 	if !v.FinishedAt.IsZero() {
 		predicted, finished := predictTestWorkflowStepStatus(v, sig, r)
-		if finished {
+		if finished && (v.Status == nil || !(*v.Status).Finished()) {
 			v.Status = common.Ptr(predicted)
 		}
 		return v

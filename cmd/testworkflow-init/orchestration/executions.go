@@ -177,6 +177,7 @@ func (e *execution) Run() (*executionResult, error) {
 		e.group.pauseMu.Unlock()
 		e.cmdMu.Unlock()
 		_, exitCode = getProcessStatus(err)
+		e.cmd.Stderr.Write(append([]byte(err.Error()), '\n'))
 	}
 
 	// Clean up
