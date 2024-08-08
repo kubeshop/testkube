@@ -497,7 +497,7 @@ func adjustMinimumTime(dst, min time.Time) time.Time {
 func predictTestWorkflowStepStatus(v TestWorkflowStepResult, sig TestWorkflowSignature, r *TestWorkflowResult) (TestWorkflowStepStatus, bool) {
 	children := sig.Children
 	if len(children) == 0 {
-		if getTestWorkflowStepStatus(v) == QUEUED_TestWorkflowStepStatus || getTestWorkflowStepStatus(v) == RUNNING_TestWorkflowStepStatus || getTestWorkflowStepStatus(v) == PAUSED_TestWorkflowStepStatus {
+		if !getTestWorkflowStepStatus(v).Finished() {
 			return PASSED_TestWorkflowStepStatus, false
 		}
 		return *v.Status, true
@@ -519,7 +519,7 @@ func predictTestWorkflowStepStatus(v TestWorkflowStepResult, sig TestWorkflowSig
 		if !ch.Optional && (status == FAILED_TestWorkflowStepStatus || status == TIMEOUT_TestWorkflowStepStatus) {
 			failed = true
 		}
-		if status == QUEUED_TestWorkflowStepStatus || status == RUNNING_TestWorkflowStepStatus || status == PAUSED_TestWorkflowStepStatus {
+		if !status.Finished() {
 			finished = false
 		}
 	}
@@ -576,7 +576,7 @@ func recomputeTestWorkflowStepResult(v TestWorkflowStepResult, sig TestWorkflowS
 	// It is finished already
 	if !v.FinishedAt.IsZero() {
 		predicted, finished := predictTestWorkflowStepStatus(v, sig, r)
-		if finished && (v.Status == nil || *v.Status == QUEUED_TestWorkflowStepStatus || *v.Status == PAUSED_TestWorkflowStepStatus || *v.Status == RUNNING_TestWorkflowStepStatus) {
+		if finished && (v.Status == nil || !(*v.Status).Finished()) {
 			v.Status = common.Ptr(predicted)
 		}
 		return v
