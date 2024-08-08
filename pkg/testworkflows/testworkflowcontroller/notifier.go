@@ -343,9 +343,6 @@ func (n *notifier) Pause(ref string, ts time.Time) {
 }
 
 func (n *notifier) Resume(ref string, ts time.Time) {
-	if n.result.Steps[ref].Status == nil || *n.result.Steps[ref].Status != testkube.PAUSED_TestWorkflowStepStatus {
-		return
-	}
 	n.result.PauseEnd(n.sig, n.scheduledAt, ref, ts)
 	n.emit()
 }

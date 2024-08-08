@@ -6,7 +6,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 )
 
-func Finalize(groups actiontypes.ActionGroups) actiontypes.ActionGroups {
+func Finalize(groups actiontypes.ActionGroups, isolatedContainers bool) actiontypes.ActionGroups {
 	if len(groups) == 0 {
 		return actiontypes.ActionGroups{{{Setup: &lite.ActionSetup{
 			CopyInit:     false,
@@ -49,27 +49,29 @@ func Finalize(groups actiontypes.ActionGroups) actiontypes.ActionGroups {
 	}
 
 	// Determine if the setup step can be combined with the further group
-	canMergeSetup := true
+	canMergeSetup := !isolatedContainers
 	maybeCopyToolkit := false
-	for i := range groups[0] {
-		// Ignore non-transition actions
-		if groups[0][i].Type() != lite.ActionTypeContainerTransition {
-			continue
-		}
+	if canMergeSetup {
+		for i := range groups[0] {
+			// Ignore non-transition actions
+			if groups[0][i].Type() != lite.ActionTypeContainerTransition {
+				continue
+			}
 
-		// Disallow merging setup step for custom images
-		if groups[0][i].Container.Config.Image != constants.DefaultInitImage && groups[0][i].Container.Config.Image != constants.DefaultToolkitImage {
-			canMergeSetup = false
-			break
-		}
+			// Disallow merging setup step for custom images
+			if groups[0][i].Container.Config.Image != constants.DefaultInitImage && groups[0][i].Container.Config.Image != constants.DefaultToolkitImage {
+				canMergeSetup = false
+				break
+			}
 
-		// Allow merging setup step with toolkit image
-		if groups[0][i].Container.Config.Image == constants.DefaultToolkitImage {
-			maybeCopyToolkit = true
+			// Allow merging setup step with toolkit image
+			if groups[0][i].Container.Config.Image == constants.DefaultToolkitImage {
+				maybeCopyToolkit = true
+			}
 		}
-	}
-	if maybeCopyToolkit && canMergeSetup {
-		copyToolkit = true
+		if maybeCopyToolkit && canMergeSetup {
+			copyToolkit = true
+		}
 	}
 
 	// Avoid using /.tktw/toolkit when the toolkit is not copied
@@ -102,9 +104,12 @@ func Finalize(groups actiontypes.ActionGroups) actiontypes.ActionGroups {
 	}
 
 	// Move non-executable steps from the 2nd group into setup
-	for groups[0][0].Type() != lite.ActionTypeContainerTransition {
+	for len(groups[0]) > 0 && groups[0][0].Type() != lite.ActionTypeContainerTransition {
 		setup = append(setup, groups[0][0])
 		groups[0] = groups[0][1:]
+	}
+	if len(groups[0]) == 0 {
+		groups = groups[1:]
 	}
 	return append(actiontypes.ActionGroups{setup}, groups...)
 }

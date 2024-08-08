@@ -17,10 +17,11 @@ import (
 )
 
 type Bundle struct {
-	Secrets    []corev1.Secret
-	ConfigMaps []corev1.ConfigMap
-	Job        batchv1.Job
-	Signature  []stage.Signature
+	Secrets       []corev1.Secret
+	ConfigMaps    []corev1.ConfigMap
+	Job           batchv1.Job
+	Signature     []stage.Signature
+	FullSignature []stage.Signature
 }
 
 func (b *Bundle) Actions() (actions actiontypes.ActionGroups) {

@@ -12,6 +12,7 @@ type Stage interface {
 	Len() int
 	HasPause() bool
 	Signature() Signature
+	FullSignature() Signature
 	Resolve(m ...expressions.Machine) error
 	ContainerStages() []ContainerStage
 	GetImages(isGroupNeeded bool) map[string]bool

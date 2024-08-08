@@ -34,7 +34,7 @@ type ContainerStage interface {
 	IsToolkit() bool
 
 	SetPure(pure bool) ContainerStage
-	Pure() bool // TODO: Consider purity level?
+	Pure() bool
 }
 
 func NewContainerStage(ref string, container Container) ContainerStage {
@@ -57,6 +57,10 @@ func (s *containerStage) Signature() Signature {
 		NegativeValue: s.negative,
 		ChildrenValue: nil,
 	}
+}
+
+func (s *containerStage) FullSignature() Signature {
+	return s.Signature()
 }
 
 func (s *containerStage) ContainerStages() []ContainerStage {
