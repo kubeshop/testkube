@@ -15,6 +15,7 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/agent"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/scheduler"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowresolver"
@@ -361,6 +362,8 @@ func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 		if err != nil && !errors.Is(err, fiber.ErrUnprocessableEntity) {
 			return s.BadRequest(c, errPrefix, "invalid body", err)
 		}
+
+		log.DefaultLogger.Infow("TestWorkflow execution request", "name", name, "request", request)
 
 		var results []testkube.TestWorkflowExecution
 		var errs []error
