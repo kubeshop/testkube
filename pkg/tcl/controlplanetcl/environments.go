@@ -3,11 +3,12 @@ package controlplanetcl
 import (
 	"context"
 
+	"google.golang.org/grpc"
+
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/cloud/data/controlplane"
 	"github.com/kubeshop/testkube/pkg/cloud/data/executor"
-	"google.golang.org/grpc"
 )
 
 func GetEnvironment(ctx context.Context, proContext config.ProContext, cloudClient cloud.TestKubeCloudAPIClient, grpcConn *grpc.ClientConn) (resp GetEnvironmentResponse, err error) {
