@@ -511,13 +511,14 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	var tags map[string]string
 	if workflow.Spec.Execution != nil {
 		tags = workflow.Spec.Execution.Tags
-		if request.Tags != nil {
-			if tags == nil {
-				tags = make(map[string]string)
-			}
+	}
 
-			maps.Copy(tags, request.Tags)
+	if request.Tags != nil {
+		if tags == nil {
+			tags = make(map[string]string)
 		}
+
+		maps.Copy(tags, request.Tags)
 	}
 
 	var tagsData string
