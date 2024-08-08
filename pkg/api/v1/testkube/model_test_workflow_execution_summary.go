@@ -26,4 +26,5 @@ type TestWorkflowExecutionSummary struct {
 	StatusAt time.Time                  `json:"statusAt,omitempty"`
 	Result   *TestWorkflowResultSummary `json:"result,omitempty"`
 	Workflow *TestWorkflowSummary       `json:"workflow"`
+	Tags     map[string]string          `json:"tags,omitempty"`
 }

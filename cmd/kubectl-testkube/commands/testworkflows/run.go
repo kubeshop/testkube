@@ -40,6 +40,7 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 		downloadDir              string
 		format                   string
 		masks                    []string
+		tags                     map[string]string
 	)
 
 	cmd := &cobra.Command{
@@ -65,6 +66,7 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 				Name:            executionName,
 				Config:          config,
 				DisableWebhooks: disableWebhooks,
+				Tags:            tags,
 			})
 			if err != nil {
 				// User friendly Open Source operation error
@@ -121,6 +123,7 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&downloadArtifactsEnabled, "download-artifacts", "d", false, "download artifacts automatically")
 	cmd.Flags().StringVar(&format, "format", "folder", "data format for storing files, one of folder|archive")
 	cmd.Flags().StringArrayVarP(&masks, "mask", "", []string{}, "regexp to filter downloaded files, single or comma separated, like report/.* or .*\\.json,.*\\.js$")
+	cmd.Flags().StringToStringVarP(&tags, "tag", "", map[string]string{}, "execution tags in a form of name1=val1 passed to executor")
 
 	return cmd
 }

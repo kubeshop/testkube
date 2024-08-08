@@ -7,15 +7,16 @@ import (
 )
 
 type FilterImpl struct {
-	FName       string
-	FLastNDays  int
-	FStartDate  *time.Time
-	FEndDate    *time.Time
-	FStatuses   []testkube.TestWorkflowStatus
-	FPage       int
-	FPageSize   int
-	FTextSearch string
-	FSelector   string
+	FName        string
+	FLastNDays   int
+	FStartDate   *time.Time
+	FEndDate     *time.Time
+	FStatuses    []testkube.TestWorkflowStatus
+	FPage        int
+	FPageSize    int
+	FTextSearch  string
+	FSelector    string
+	FTagSelector string
 }
 
 func NewExecutionsFilter() *FilterImpl {
@@ -68,6 +69,11 @@ func (f *FilterImpl) WithTextSearch(textSearch string) *FilterImpl {
 
 func (f *FilterImpl) WithSelector(selector string) *FilterImpl {
 	f.FSelector = selector
+	return f
+}
+
+func (f *FilterImpl) WithTagSelector(tagSelector string) *FilterImpl {
+	f.FTagSelector = tagSelector
 	return f
 }
 
@@ -129,4 +135,8 @@ func (f FilterImpl) TextSearch() string {
 
 func (f FilterImpl) Selector() string {
 	return f.FSelector
+}
+
+func (f FilterImpl) TagSelector() string {
+	return f.FTagSelector
 }

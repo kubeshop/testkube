@@ -360,6 +360,18 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 		}
 	}
 
+	if filter.TagSelector() != "" {
+		items := strings.Split(filter.TagSelector(), ",")
+		for _, item := range items {
+			elements := strings.Split(item, "=")
+			if len(elements) == 2 {
+				query["tags."+elements[0]] = elements[1]
+			} else if len(elements) == 1 {
+				query["tags."+elements[0]] = bson.M{"$exists": true}
+			}
+		}
+	}
+
 	opts.SetSkip(int64(filter.Page() * filter.PageSize()))
 	opts.SetLimit(int64(filter.PageSize()))
 	opts.SetSort(bson.D{{Key: "scheduledat", Value: -1}})

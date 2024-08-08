@@ -43,6 +43,7 @@ type TestWorkflowStepParallel struct {
 	Steps     []TestWorkflowStep                     `json:"steps,omitempty"`
 	After     []TestWorkflowStep                     `json:"after,omitempty"`
 	Events    []TestWorkflowEvent                    `json:"events,omitempty"`
+	Execution *TestWorkflowTagSchema                 `json:"execution,omitempty"`
 	// how many resources could be scheduled in parallel
 	Parallelism int32 `json:"parallelism,omitempty"`
 	// worker description to display

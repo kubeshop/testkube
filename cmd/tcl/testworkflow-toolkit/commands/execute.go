@@ -9,6 +9,7 @@
 package commands
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -151,10 +152,21 @@ func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async 
 	return func() (err error) {
 		c := env.Testkube()
 
+		var tags map[string]string
+		if tagsData := env.ExecutionTags(); tagsData != "" {
+			data, err := base64.StdEncoding.DecodeString(tagsData)
+			if err != nil {
+				ui.Errf("failed to decode tags: %s: %s", workflow.Name, err.Error())
+			} else if err = json.Unmarshal(data, &tags); err != nil {
+				ui.Errf("failed to unmarshal tags: %s: %s", workflow.Name, err.Error())
+			}
+		}
+
 		exec, err := c.ExecuteTestWorkflow(workflow.Name, testkube.TestWorkflowExecutionRequest{
 			Name:            workflow.ExecutionName,
 			Config:          testworkflows.MapConfigValueKubeToAPI(workflow.Config),
 			DisableWebhooks: env.ExecutionDisableWebhooks(),
+			Tags:            tags,
 		})
 		execName := exec.Name
 		if err != nil {

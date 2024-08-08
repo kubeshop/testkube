@@ -376,3 +376,21 @@ func ConvertIndependentStepToStep(step testworkflowsv1.IndependentStep) (res tes
 	res.Steps = common.MapSlice(step.Steps, ConvertIndependentStepToStep)
 	return res
 }
+
+func MergeExecution(dst, include *testworkflowsv1.TestWorkflowTagSchema) *testworkflowsv1.TestWorkflowTagSchema {
+	if dst == nil {
+		return include
+	} else if include == nil {
+		return dst
+	}
+
+	if include.Tags != nil {
+		if dst.Tags == nil {
+			dst.Tags = make(map[string]string)
+		}
+
+		maps.Copy(dst.Tags, include.Tags)
+	}
+
+	return dst
+}

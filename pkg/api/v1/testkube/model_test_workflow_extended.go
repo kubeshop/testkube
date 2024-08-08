@@ -30,7 +30,7 @@ func (w *TestWorkflow) ConvertDots(fn func(string) string) *TestWorkflow {
 	if w == nil {
 		return w
 	}
-	if w.Labels == nil {
+	if w.Labels != nil {
 		w.Labels = convertDotsInMap(w.Labels, fn)
 	}
 	if w.Spec.Pod != nil {
@@ -56,6 +56,10 @@ func (w *TestWorkflow) ConvertDots(fn func(string) string) *TestWorkflow {
 	for i := range w.Spec.After {
 		w.Spec.After[i].ConvertDots(fn)
 	}
+	if w.Spec.Execution != nil {
+		w.Spec.Execution.Tags = convertDotsInMap(w.Spec.Execution.Tags, fn)
+	}
+
 	return w
 }
 

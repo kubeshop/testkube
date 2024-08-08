@@ -333,6 +333,9 @@ var (
 				},
 			},
 		},
+		Execution: &testworkflowsv1.TestWorkflowTagSchema{
+			Tags: map[string]string{"some-key": "some-value"},
+		},
 	}
 )
 

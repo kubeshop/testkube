@@ -47,6 +47,7 @@ type envExecutionConfig struct {
 	RootResourceId  string `envconfig:"TK_EXR"`
 	FSPrefix        string `envconfig:"TK_FS"`
 	DisableWebhooks bool   `envconfig:"TK_DWH"`
+	Tags            string `envconfig:"TK_TAG"`
 }
 
 type envSystemConfig struct {
@@ -156,4 +157,8 @@ func ExecutionDisableWebhooks() bool {
 
 func JUnitParserEnabled() bool {
 	return Config().Features.EnableJUnitParser
+}
+
+func ExecutionTags() string {
+	return Config().Execution.Tags
 }

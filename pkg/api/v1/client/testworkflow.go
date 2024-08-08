@@ -136,14 +136,15 @@ func (c TestWorkflowClient) GetTestWorkflowExecution(id string) (testkube.TestWo
 }
 
 // ListTestWorkflowExecutions list test workflow executions for selected workflow
-func (c TestWorkflowClient) ListTestWorkflowExecutions(id string, limit int, selector string) (testkube.TestWorkflowExecutionsResult, error) {
+func (c TestWorkflowClient) ListTestWorkflowExecutions(id string, limit int, selector, tagSelector string) (testkube.TestWorkflowExecutionsResult, error) {
 	uri := c.testWorkflowExecutionsResultTransport.GetURI("/test-workflow-executions/")
 	if id != "" {
 		uri = c.testWorkflowExecutionsResultTransport.GetURI(fmt.Sprintf("/test-workflows/%s/executions", id))
 	}
 	params := map[string]string{
-		"selector": selector,
-		"pageSize": fmt.Sprintf("%d", limit),
+		"selector":    selector,
+		"pageSize":    fmt.Sprintf("%d", limit),
+		"tagSelector": tagSelector,
 	}
 	return c.testWorkflowExecutionsResultTransport.Execute(http.MethodGet, uri, nil, params)
 }

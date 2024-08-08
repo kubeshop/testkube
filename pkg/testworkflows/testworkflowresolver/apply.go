@@ -59,6 +59,7 @@ func injectTemplateToSpec(spec *testworkflowsv1.TestWorkflowSpec, template testw
 	spec.Pod = MergePodConfig(template.Spec.Pod, spec.Pod)
 	spec.Job = MergeJobConfig(template.Spec.Job, spec.Job)
 	spec.Events = append(template.Spec.Events, spec.Events...)
+	spec.Execution = MergeExecution(template.Spec.Execution, spec.Execution)
 
 	// Apply basic configuration
 	spec.Content = MergeContent(template.Spec.Content, spec.Content)

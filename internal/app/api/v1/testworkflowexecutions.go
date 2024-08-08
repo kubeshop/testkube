@@ -510,5 +510,10 @@ func getWorkflowExecutionsFilterFromRequest(c *fiber.Ctx) testworkflow2.Filter {
 		filter = filter.WithSelector(selector)
 	}
 
+	tagSelector := c.Query("tagSelector")
+	if tagSelector != "" {
+		filter = filter.WithTagSelector(tagSelector)
+	}
+
 	return filter
 }

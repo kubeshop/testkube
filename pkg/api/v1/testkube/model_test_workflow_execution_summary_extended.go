@@ -7,7 +7,7 @@ import (
 type TestWorkflowExecutionSummaries []TestWorkflowExecutionSummary
 
 func (executions TestWorkflowExecutionSummaries) Table() (header []string, output [][]string) {
-	header = []string{"Id", "Name", "Test Workflow Name", "Status", "Labels"}
+	header = []string{"Id", "Name", "Test Workflow Name", "Status", "Labels", "Tags"}
 
 	for _, e := range executions {
 		status := "unknown"
@@ -21,6 +21,7 @@ func (executions TestWorkflowExecutionSummaries) Table() (header []string, outpu
 			e.Workflow.Name,
 			status,
 			MapToString(e.Workflow.Labels),
+			MapToString(e.Tags),
 		})
 	}
 
@@ -29,6 +30,9 @@ func (executions TestWorkflowExecutionSummaries) Table() (header []string, outpu
 
 func (e *TestWorkflowExecutionSummary) ConvertDots(fn func(string) string) *TestWorkflowExecutionSummary {
 	e.Workflow.ConvertDots(fn)
+	if e.Tags != nil {
+		e.Tags = convertDotsInMap(e.Tags, fn)
+	}
 	return e
 }
 
