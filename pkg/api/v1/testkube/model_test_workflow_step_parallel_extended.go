@@ -1,7 +1,5 @@
 package testkube
 
-import "github.com/kubeshop/testkube/pkg/utils"
-
 func (w *TestWorkflowStepParallel) ContainsExecuteAction() bool {
 	if w.Execute != nil && (len(w.Execute.Tests) != 0 || len(w.Execute.Workflows) != 0) {
 		return true
@@ -30,19 +28,4 @@ func (w *TestWorkflowStepParallel) GetTemplateRefs() []TestWorkflowTemplateRef {
 	}
 
 	return templateRefs
-}
-
-func (w *TestWorkflowStepParallel) ConvertDots(fn func(string) string) *TestWorkflowStepParallel {
-	if w.Execution != nil && w.Execution.Tags != nil {
-		w.Execution.Tags = convertDotsInMap(w.Execution.Tags, fn)
-	}
-
-	return w
-}
-
-func (w *TestWorkflowStepParallel) EscapeDots() *TestWorkflowStepParallel {
-	return w.ConvertDots(utils.EscapeDots)
-}
-func (w *TestWorkflowStepParallel) UnscapeDots() *TestWorkflowStepParallel {
-	return w.ConvertDots(utils.UnescapeDots)
 }
