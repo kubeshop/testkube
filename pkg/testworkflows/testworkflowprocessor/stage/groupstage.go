@@ -54,13 +54,18 @@ func (s *groupStage) HasPause() bool {
 	return s.paused || (len(s.Children()) > 0 && s.Children()[0].HasPause())
 }
 
-func (s *groupStage) Signature() Signature {
+func (s *groupStage) signature(full bool) Signature {
 	sig := []Signature(nil)
 	for _, ch := range s.Children() {
-		si := ch.Signature()
+		var si Signature
+		if full {
+			si = ch.FullSignature()
+		} else {
+			si = ch.Signature()
+		}
 		_, ok := ch.(GroupStage)
 		// Include children directly, if the stage is virtual
-		if ok && si.Name() == "" && !si.Optional() && !si.Negative() {
+		if !full && ok && si.Name() == "" && !si.Optional() && !si.Negative() {
 			sig = append(sig, si.Children()...)
 		} else {
 			sig = append(sig, si)
@@ -75,6 +80,14 @@ func (s *groupStage) Signature() Signature {
 		NegativeValue: s.negative,
 		ChildrenValue: sig,
 	}
+}
+
+func (s *groupStage) Signature() Signature {
+	return s.signature(false)
+}
+
+func (s *groupStage) FullSignature() Signature {
+	return s.signature(true)
 }
 
 func (s *groupStage) ContainerStages() []ContainerStage {
@@ -135,7 +148,12 @@ func (s *groupStage) Flatten() []Stage {
 		if first.Name() == "" {
 			first.SetName(s.name)
 		}
-		first.AppendConditions(s.condition)
+		if first.Condition() == "" {
+			// Virtualize with the default condition
+			first.AppendConditions(s.condition, "passed")
+		} else {
+			first.AppendConditions(s.condition)
+		}
 		if first.Timeout() == "" {
 			first.SetTimeout(s.timeout)
 		}

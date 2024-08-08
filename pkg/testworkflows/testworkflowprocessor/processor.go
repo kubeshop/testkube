@@ -185,6 +185,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 
 	// Build signature
 	sig := root.Signature().Children()
+	fullSig := root.FullSignature().Children()
 
 	// Load the image pull secrets
 	pullSecretNames := make([]string, len(podConfig.ImagePullSecrets))
@@ -399,10 +400,11 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 
 	// Build bundle
 	bundle = &Bundle{
-		ConfigMaps: configMaps,
-		Secrets:    secrets,
-		Job:        jobSpec,
-		Signature:  sig,
+		ConfigMaps:    configMaps,
+		Secrets:       secrets,
+		Job:           jobSpec,
+		Signature:     sig,
+		FullSignature: fullSig,
 	}
 	return bundle, nil
 }

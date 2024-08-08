@@ -944,7 +944,7 @@ func TestProcessNestedCondition(t *testing.T) {
 				Setup(false, false, false).
 				Declare(constants.RootOperationName, "true").
 				Declare(sig[0].Ref(), "true", constants.RootOperationName).
-				Declare(sig[1].Ref(), "true", constants.RootOperationName).
+				Declare(sig[1].Ref(), sig[0].Ref(), constants.RootOperationName).
 				Result(constants.RootOperationName, and(sig[0].Ref(), sig[1].Ref())).
 				Result("", constants.RootOperationName).
 				Start("").
@@ -970,6 +970,85 @@ func TestProcessNestedCondition(t *testing.T) {
 			Start(sig[1].Ref()).
 			Execute(sig[1].Ref(), false).
 			End(sig[1].Ref()).
+			End(constants.RootOperationName).
+			End("")
+	})
+
+	assert.NoError(t, err)
+	assert.Equal(t, want, res.LiteActions())
+}
+
+func TestProcessConditionWithMultipleOperations(t *testing.T) {
+	wf := &testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+				System: &testworkflowsv1.TestWorkflowSystem{
+					IsolatedContainers: common.Ptr(true),
+				},
+			},
+			Steps: []testworkflowsv1.Step{
+				{StepOperations: testworkflowsv1.StepOperations{Run: &testworkflowsv1.StepRun{Shell: common.Ptr("shell-test")}}},
+				{StepMeta: testworkflowsv1.StepMeta{Condition: "always"}, StepOperations: testworkflowsv1.StepOperations{
+					Run:   &testworkflowsv1.StepRun{Shell: common.Ptr("shell-test")},
+					Shell: "shell-test-2",
+				}},
+			},
+		},
+	}
+
+	res, err := proc.Bundle(context.Background(), wf, execMachine)
+	sig := res.Signature
+	virtual := res.FullSignature[1]
+
+	want := lite.NewLiteActionGroups().
+		Append(func(list lite.LiteActionList) lite.LiteActionList {
+			return list.
+				Setup(false, false, false).
+				Declare(constants.RootOperationName, "true").
+				Declare(sig[0].Ref(), "true", constants.RootOperationName).
+				Declare(virtual.Ref(), "true", constants.RootOperationName).
+				Declare(sig[1].Ref(), "true", constants.RootOperationName, virtual.Ref()).
+				Declare(sig[2].Ref(), "true", constants.RootOperationName, virtual.Ref()).
+				Result(virtual.Ref(), and(sig[1].Ref(), sig[2].Ref())).
+				Result(constants.RootOperationName, and(sig[0].Ref(), virtual.Ref())).
+				Result("", constants.RootOperationName).
+				Start("").
+				CurrentStatus("true").
+				Start(constants.RootOperationName).
+				CurrentStatus(constants.RootOperationName)
+		}).Append(func(list lite.LiteActionList) lite.LiteActionList {
+		return list.
+			MutateContainer(lite.LiteContainerConfig{
+				Command: cmd("/.tktw-bin/sh"),
+				Args:    cmdShell("shell-test"),
+			}).
+			Start(sig[0].Ref()).
+			Execute(sig[0].Ref(), false).
+			End(sig[0].Ref()).
+			CurrentStatus(and(sig[0].Ref(), constants.RootOperationName)).
+			Start(virtual.Ref()).
+			CurrentStatus(and(virtual.Ref(), sig[0].Ref(), constants.RootOperationName))
+	}).Append(func(list lite.LiteActionList) lite.LiteActionList {
+		return list.
+			MutateContainer(lite.LiteContainerConfig{
+				Command: cmd("/.tktw-bin/sh"),
+				Args:    cmdShell("shell-test"),
+			}).
+			Start(sig[1].Ref()).
+			Execute(sig[1].Ref(), false).
+			End(sig[1].Ref()).
+			CurrentStatus(and(sig[1].Ref(), virtual.Ref(), sig[0].Ref(), constants.RootOperationName))
+
+	}).Append(func(list lite.LiteActionList) lite.LiteActionList {
+		return list.
+			MutateContainer(lite.LiteContainerConfig{
+				Command: cmd("/.tktw-bin/sh"),
+				Args:    cmdShell("shell-test-2"),
+			}).
+			Start(sig[2].Ref()).
+			Execute(sig[2].Ref(), false).
+			End(sig[2].Ref()).
+			End(virtual.Ref()).
 			End(constants.RootOperationName).
 			End("")
 	})

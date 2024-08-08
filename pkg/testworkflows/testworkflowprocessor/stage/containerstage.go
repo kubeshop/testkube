@@ -59,6 +59,10 @@ func (s *containerStage) Signature() Signature {
 	}
 }
 
+func (s *containerStage) FullSignature() Signature {
+	return s.Signature()
+}
+
 func (s *containerStage) ContainerStages() []ContainerStage {
 	return []ContainerStage{s}
 }

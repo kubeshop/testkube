@@ -13,7 +13,7 @@ import (
 	stage2 "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
 
-func process(currentStatus string, parents []string, stage stage2.Stage, inheritedPure *bool, machines ...expressions.Machine) (actions actiontypes.ActionList, err error) {
+func process(currentStatus string, parents []string, stage stage2.Stage, parentCondition string, inheritedPure *bool, machines ...expressions.Machine) (actions actiontypes.ActionList, err error) {
 	// Store the init status
 	actions = append(actions, actiontypes.Action{
 		CurrentStatus: common.Ptr(currentStatus),
@@ -21,9 +21,14 @@ func process(currentStatus string, parents []string, stage stage2.Stage, inherit
 
 	// Compute the skip condition
 	condition := stage.Condition()
-	if condition == "" || condition == "null" {
-		condition = "passed"
+	if condition == "" {
+		if parentCondition == "" {
+			condition = "passed"
+		} else {
+			condition = parentCondition
+		}
 	}
+
 	actions = append(actions, actiontypes.Action{
 		Declare: &lite.ActionDeclare{Ref: stage.Ref(), Condition: condition, Parents: parents},
 	})
@@ -107,7 +112,7 @@ func process(currentStatus string, parents []string, stage stage2.Stage, inherit
 		// Handle children
 		refs := make([]string, 0)
 		for _, ch := range group.Children() {
-			sub, err := process(currentStatus, parents, ch, inheritedPure, machines...)
+			sub, err := process(currentStatus, parents, ch, group.Condition(), inheritedPure, machines...)
 			if err != nil {
 				return nil, errors.Wrap(err, "processing group children")
 			}
@@ -144,7 +149,7 @@ func process(currentStatus string, parents []string, stage stage2.Stage, inherit
 }
 
 func Process(root stage2.Stage, inheritedPure *bool, machines ...expressions.Machine) (actiontypes.ActionList, error) {
-	actions, err := process("true", nil, root, inheritedPure, machines...)
+	actions, err := process("true", nil, root, "", inheritedPure, machines...)
 	if err != nil {
 		return nil, err
 	}
