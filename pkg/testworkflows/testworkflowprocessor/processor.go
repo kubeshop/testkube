@@ -62,7 +62,11 @@ func (p *processor) process(layer Intermediate, container stage.Container, step 
 	self.SetPure(step.Pure)
 	self.SetName(step.Name)
 	self.SetOptional(step.Optional).SetNegative(step.Negative).SetTimeout(step.Timeout).SetPaused(step.Paused)
-	self.SetCondition(step.Condition)
+	if step.Condition == "" {
+		self.SetCondition("passed")
+	} else {
+		self.SetCondition(step.Condition)
+	}
 
 	// Run operations
 	for _, op := range p.operations {
