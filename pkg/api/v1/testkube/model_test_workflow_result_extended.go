@@ -1,7 +1,6 @@
 package testkube
 
 import (
-	"fmt"
 	"slices"
 	"time"
 
@@ -243,10 +242,8 @@ func (r *TestWorkflowResult) HasUnfinishedPause(ref string) bool {
 
 func (r *TestWorkflowResult) PauseStart(sig []TestWorkflowSignature, scheduledAt time.Time, ref string, start time.Time) {
 	if r.HasPauseAt(ref, start) {
-		fmt.Println("     Already had a pause")
 		return
 	}
-	fmt.Println("     Added a pause entry")
 	r.Pauses = append(r.Pauses, TestWorkflowPause{Ref: ref, PausedAt: start})
 	r.Recompute(sig, scheduledAt)
 }
@@ -256,15 +253,12 @@ func (r *TestWorkflowResult) PauseEnd(sig []TestWorkflowSignature, scheduledAt t
 		if p.Ref != ref {
 			continue
 		}
-		fmt.Println("     Found pause for ref possibly to resume", ref)
 		if !p.PausedAt.After(end) && !p.ResumedAt.Before(end) {
 			// It's already covered by another period
-			fmt.Println("     It's already covered", p.PausedAt, p.ResumedAt)
 			return
 		}
 		if !p.PausedAt.After(end) && (p.ResumedAt.IsZero() || p.ResumedAt.Equal(end)) {
 			// It found a period to fulfill
-			fmt.Println("     Filling the pause from", p.PausedAt)
 			r.Pauses[i].ResumedAt = end
 			r.Recompute(sig, scheduledAt)
 			return
