@@ -8765,8 +8765,6 @@ components:
               $ref: "#/components/schemas/TestWorkflowTarballRequest"
           config:
             $ref: "#/components/schemas/TestWorkflowConfigValue"
-          tags:
-            $ref: "#/components/schemas/TestWorkflowTagValue"
 
     TestWorkflowStepExecuteTestRef:
       type: object
