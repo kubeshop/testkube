@@ -307,8 +307,12 @@ func MergeSystem(dst, include *testworkflowsv1.TestWorkflowSystem) *testworkflow
 	} else if include == nil {
 		return dst
 	}
-	dst.IsolatedContainers = dst.IsolatedContainers || include.IsolatedContainers
-	dst.PureByDefault = dst.PureByDefault || include.PureByDefault
+	if include.PureByDefault != nil {
+		dst.PureByDefault = include.PureByDefault
+	}
+	if include.IsolatedContainers != nil {
+		dst.IsolatedContainers = include.IsolatedContainers
+	}
 	return dst
 }
 

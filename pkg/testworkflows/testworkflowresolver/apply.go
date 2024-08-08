@@ -94,7 +94,7 @@ func InjectStepTemplate(step *testworkflowsv1.Step, template testworkflowsv1.Tes
 	step.Container = MergeContainerConfig(template.Spec.Container, step.Container)
 
 	// Define the step purity
-	if step.Pure != nil && template.Spec.System != nil && template.Spec.System.PureByDefault && !template.Spec.System.IsolatedContainers {
+	if step.Pure != nil && template.Spec.System != nil && template.Spec.System.PureByDefault != nil && *template.Spec.System.PureByDefault {
 		step.Pure = common.Ptr(true)
 	}
 

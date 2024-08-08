@@ -1180,8 +1180,8 @@ func MapIndependentStepAPIToKube(v testkube.TestWorkflowIndependentStep) testwor
 
 func MapSystemAPIToKube(v testkube.TestWorkflowSystem) testworkflowsv1.TestWorkflowSystem {
 	return testworkflowsv1.TestWorkflowSystem{
-		PureByDefault:      v.PureByDefault,
-		IsolatedContainers: v.IsolatedContainers,
+		PureByDefault:      MapBoxedBooleanToBool(v.PureByDefault),
+		IsolatedContainers: MapBoxedBooleanToBool(v.IsolatedContainers),
 	}
 }
 

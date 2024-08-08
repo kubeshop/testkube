@@ -10,8 +10,6 @@
 package testkube
 
 type TestWorkflowSystem struct {
-	// assume all the steps are pure by default
-	PureByDefault bool `json:"pureByDefault,omitempty"`
-	// disable the behavior of merging multiple operations in a single container
-	IsolatedContainers bool `json:"isolatedContainers,omitempty"`
+	PureByDefault      *BoxedBoolean `json:"pureByDefault,omitempty"`
+	IsolatedContainers *BoxedBoolean `json:"isolatedContainers,omitempty"`
 }

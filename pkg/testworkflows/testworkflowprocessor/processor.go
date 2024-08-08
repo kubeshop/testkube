@@ -253,7 +253,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 
 	// Build list of the containers
 	var pureByDefault *bool
-	if workflow.Spec.System != nil && workflow.Spec.System.PureByDefault {
+	if workflow.Spec.System != nil && workflow.Spec.System.PureByDefault != nil && *workflow.Spec.System.PureByDefault {
 		pureByDefault = common.Ptr(true)
 	}
 	actions, err := action.Process(root, pureByDefault, machines...)
@@ -267,7 +267,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 			break
 		}
 	}
-	isolatedContainers := workflow.Spec.System != nil && workflow.Spec.System.IsolatedContainers
+	isolatedContainers := workflow.Spec.System != nil && workflow.Spec.System.IsolatedContainers != nil && *workflow.Spec.System.IsolatedContainers
 	actionGroups := action.Finalize(action.Group(actions, isolatedContainers), isolatedContainers)
 	containers := make([]corev1.Container, len(actionGroups))
 	for i := range actionGroups {

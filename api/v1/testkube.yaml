@@ -8482,11 +8482,9 @@ components:
       type: object
       properties:
         pureByDefault:
-          type: boolean
-          description: assume all the steps are pure by default
+          $ref: "#/components/schemas/BoxedBoolean"
         isolatedContainers:
-          type: boolean
-          description: disable the behavior of merging multiple operations in a single container
+          $ref: "#/components/schemas/BoxedBoolean"
 
     TestWorkflowSpec:
       type: object
