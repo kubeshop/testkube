@@ -41,6 +41,7 @@ type cloudUploader struct {
 	parallelism  int
 	error        atomic.Bool
 	reqEnhancers []CloudUploaderRequestEnhancer
+	waitMu       sync.Mutex
 }
 
 func (d *cloudUploader) Start() (err error) {
@@ -140,6 +141,8 @@ func (d *cloudUploader) Add(path string, file io.Reader, size int64) error {
 }
 
 func (d *cloudUploader) End() error {
+	d.waitMu.Lock()
+	defer d.waitMu.Unlock()
 	d.wg.Wait()
 	if d.error.Load() {
 		return fmt.Errorf("upload failed")
