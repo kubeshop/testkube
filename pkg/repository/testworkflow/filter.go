@@ -73,6 +73,16 @@ func (f *FilterImpl) WithSelector(selector string) *FilterImpl {
 	return f
 }
 
+func (f *FilterImpl) WithTags(tags map[string]string) *FilterImpl {
+	f.FTags = tags
+	return f
+}
+
+func (f *FilterImpl) WithRunnerIds(runnerIds []string) *FilterImpl {
+	f.FRunnerIds = runnerIds
+	return f
+}
+
 func (f FilterImpl) Name() string {
 	return f.FName
 }
