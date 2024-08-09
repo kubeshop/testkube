@@ -3,11 +3,8 @@ package testworkflowexecutor
 import (
 	"bufio"
 	"context"
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"io"
-	"maps"
 	"os"
 	"strconv"
 	"sync"
@@ -37,6 +34,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowresolver"
+	"github.com/kubeshop/testkube/pkg/utils"
 )
 
 //go:generate mockgen -destination=./mock_executor.go -package=testworkflowexecutor "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor" TestWorkflowExecutor
@@ -513,21 +511,10 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		tags = workflow.Spec.Execution.Tags
 	}
 
-	if request.Tags != nil {
-		if tags == nil {
-			tags = make(map[string]string)
-		}
-
-		maps.Copy(tags, request.Tags)
-	}
-
-	var tagsData string
-	if tags != nil {
-		if data, err := json.Marshal(tags); err != nil {
-			log.DefaultLogger.Errorw("failed to marshal tags", "id", id, "error", err)
-		} else {
-			tagsData = base64.StdEncoding.EncodeToString(data)
-		}
+	tags = testworkflowresolver.MergeTags(tags, request.Tags)
+	tagsData, err := utils.EncodeStringMapToEnvVar(tags)
+	if err != nil {
+		log.DefaultLogger.Errorw("failed to encode tags", "id", id, "error", err)
 	}
 
 	// Build machine with actual execution data

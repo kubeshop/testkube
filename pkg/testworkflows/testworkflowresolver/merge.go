@@ -384,12 +384,17 @@ func MergeExecution(dst, include *testworkflowsv1.TestWorkflowTagSchema) *testwo
 		return dst
 	}
 
-	if include.Tags != nil {
-		if dst.Tags == nil {
-			dst.Tags = make(map[string]string)
+	dst.Tags = MergeTags(dst.Tags, include.Tags)
+	return dst
+}
+
+func MergeTags(dst, src map[string]string) map[string]string {
+	if src != nil {
+		if dst == nil {
+			dst = make(map[string]string)
 		}
 
-		maps.Copy(dst.Tags, include.Tags)
+		maps.Copy(dst, src)
 	}
 
 	return dst

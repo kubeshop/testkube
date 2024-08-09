@@ -9,7 +9,6 @@
 package commands
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -33,6 +32,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/ui"
+	"github.com/kubeshop/testkube/pkg/utils"
 )
 
 type testExecutionDetails struct {
@@ -152,14 +152,9 @@ func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async 
 	return func() (err error) {
 		c := env.Testkube()
 
-		var tags map[string]string
-		if tagsData := env.ExecutionTags(); tagsData != "" {
-			data, err := base64.StdEncoding.DecodeString(tagsData)
-			if err != nil {
-				ui.Errf("failed to decode tags: %s: %s", workflow.Name, err.Error())
-			} else if err = json.Unmarshal(data, &tags); err != nil {
-				ui.Errf("failed to unmarshal tags: %s: %s", workflow.Name, err.Error())
-			}
+		tags, err := utils.DecodeEnvVarToStringMap(env.ExecutionTags())
+		if err != nil {
+			ui.Errf("failed to decode tags: %s: %s", workflow.Name, err.Error())
 		}
 
 		exec, err := c.ExecuteTestWorkflow(workflow.Name, testkube.TestWorkflowExecutionRequest{
