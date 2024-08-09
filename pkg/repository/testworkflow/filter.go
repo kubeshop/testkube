@@ -16,10 +16,12 @@ type FilterImpl struct {
 	FPageSize   int
 	FTextSearch string
 	FSelector   string
+	FRunnerIds  []string
+	FTags       map[string]string
 }
 
 func NewExecutionsFilter() *FilterImpl {
-	result := FilterImpl{FPage: 0, FPageSize: PageDefaultLimit}
+	result := FilterImpl{FPage: 0, FPageSize: PageDefaultLimit, FTags: make(map[string]string)}
 	return &result
 }
 
@@ -129,4 +131,12 @@ func (f FilterImpl) TextSearch() string {
 
 func (f FilterImpl) Selector() string {
 	return f.FSelector
+}
+
+func (f FilterImpl) RunnerIds() []string {
+	return f.FRunnerIds
+}
+
+func (f FilterImpl) Tags() map[string]string {
+	return f.FTags
 }
