@@ -67,6 +67,7 @@ type Config struct {
 	TestkubeOAuthProvider                       string        `envconfig:"TESTKUBE_OAUTH_PROVIDER" default:""`
 	TestkubeOAuthScopes                         string        `envconfig:"TESTKUBE_OAUTH_SCOPES" default:""`
 	TestkubeProAPIKey                           string        `envconfig:"TESTKUBE_PRO_API_KEY" default:""`
+	TestkubeProRunnerId                         string        `envconfig:"TESTKUBE_PRO_RUNNER_ID" default:"default-runner"`
 	TestkubeProURL                              string        `envconfig:"TESTKUBE_PRO_URL" default:""`
 	TestkubeProTLSInsecure                      bool          `envconfig:"TESTKUBE_PRO_TLS_INSECURE" default:"false"`
 	TestkubeProWorkerCount                      int           `envconfig:"TESTKUBE_PRO_WORKER_COUNT" default:"50"`

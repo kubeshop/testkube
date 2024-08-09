@@ -6,6 +6,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
+var _ Filter = &FilterImpl{}
+
 type FilterImpl struct {
 	FName       string
 	FLastNDays  int
@@ -16,10 +18,12 @@ type FilterImpl struct {
 	FPageSize   int
 	FTextSearch string
 	FSelector   string
+	FRunnerIds  []string
+	FRunnerTags map[string]string
 }
 
 func NewExecutionsFilter() *FilterImpl {
-	result := FilterImpl{FPage: 0, FPageSize: PageDefaultLimit}
+	result := FilterImpl{FPage: 0, FPageSize: PageDefaultLimit, FRunnerTags: make(map[string]string)}
 	return &result
 }
 
@@ -68,6 +72,16 @@ func (f *FilterImpl) WithTextSearch(textSearch string) *FilterImpl {
 
 func (f *FilterImpl) WithSelector(selector string) *FilterImpl {
 	f.FSelector = selector
+	return f
+}
+
+func (f *FilterImpl) WithRunnerTags(tags map[string]string) *FilterImpl {
+	f.FRunnerTags = tags
+	return f
+}
+
+func (f *FilterImpl) WithRunnerIds(runnerIds []string) *FilterImpl {
+	f.FRunnerIds = runnerIds
 	return f
 }
 
@@ -129,4 +143,12 @@ func (f FilterImpl) TextSearch() string {
 
 func (f FilterImpl) Selector() string {
 	return f.FSelector
+}
+
+func (f FilterImpl) RunnerIds() []string {
+	return f.FRunnerIds
+}
+
+func (f FilterImpl) RunnerTags() map[string]string {
+	return f.FRunnerTags
 }

@@ -22,7 +22,7 @@ var (
 	cfg, _ = config.Get()
 )
 
-func getRepository() (*MongoRepository, error) {
+func getRepository(mongoDbName string) (*MongoRepository, error) {
 	db, err := storage.GetMongoDatabase(cfg.APIMongoDSN, mongoDbName, storage.TypeMongoDB, false, nil)
 	repository := NewMongoRepository(db)
 	return repository, err
@@ -34,13 +34,15 @@ func TestStorage_Integration(t *testing.T) {
 
 	assert := require.New(t)
 
-	repository, err := getRepository()
-	assert.NoError(err)
-
-	err = repository.Coll.Drop(context.TODO())
-	assert.NoError(err)
-
 	t.Run("GetUniqueClusterId should return same id for each call", func(t *testing.T) {
+		repository, err := getRepository("testkube_storage_integration_test_get_uniqiu_cluster_id")
+		assert.NoError(err)
+
+		t.Cleanup(func() {
+			err = repository.Coll.Drop(context.TODO())
+			assert.NoError(err)
+		})
+
 		t.Parallel()
 		// given/when
 		id1, err := repository.GetUniqueClusterId(context.Background())
@@ -60,9 +62,18 @@ func TestStorage_Integration(t *testing.T) {
 
 	t.Run("Upsert should insert new config entry", func(t *testing.T) {
 		t.Parallel()
+
+		repository, err := getRepository("testkube_storage_integration_test_insert_new_config")
+		assert.NoError(err)
+
+		t.Cleanup(func() {
+			err = repository.Coll.Drop(context.TODO())
+			assert.NoError(err)
+		})
+
 		// given,
 		clusterId := "uniq3"
-		_, err := repository.Upsert(context.Background(), testkube.Config{
+		_, err = repository.Upsert(context.Background(), testkube.Config{
 			ClusterId: clusterId,
 		})
 		assert.NoError(err)

@@ -360,6 +360,19 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 		}
 	}
 
+	if len(filter.RunnerIds()) > 0 {
+		query["runningcontext.runnerids"] = bson.M{"$in": filter.RunnerIds()}
+	}
+
+	// this one needs wildard index or changing the model to {k:X v:Y}
+	if len(filter.RunnerTags()) > 0 {
+		q := []bson.M{}
+		for k, v := range filter.RunnerTags() {
+			q = append(q, bson.M{"runningcontext.tags." + k: v})
+		}
+		query["$and"] = q
+	}
+
 	opts.SetSkip(int64(filter.Page() * filter.PageSize()))
 	opts.SetLimit(int64(filter.PageSize()))
 	opts.SetSort(bson.D{{Key: "scheduledat", Value: -1}})

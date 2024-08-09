@@ -63,6 +63,7 @@ type executor struct {
 	imageDataPersistentCacheKey    string
 	dashboardURI                   string
 	clusterID                      string
+	runnerID                       string
 	serviceAccountNames            map[string]string
 }
 
@@ -78,7 +79,7 @@ func New(emitter *event.Emitter,
 	metrics v1.Metrics,
 	serviceAccountNames map[string]string,
 	globalTemplateName, namespace, apiUrl, defaultRegistry string,
-	enableImageDataPersistentCache bool, imageDataPersistentCacheKey, dashboardURI, clusterID string) TestWorkflowExecutor {
+	enableImageDataPersistentCache bool, imageDataPersistentCacheKey, dashboardURI, clusterID, runnerID string) TestWorkflowExecutor {
 	if serviceAccountNames == nil {
 		serviceAccountNames = make(map[string]string)
 	}
@@ -103,6 +104,7 @@ func New(emitter *event.Emitter,
 		imageDataPersistentCacheKey:    imageDataPersistentCacheKey,
 		dashboardURI:                   dashboardURI,
 		clusterID:                      clusterID,
+		runnerID:                       runnerID,
 	}
 }
 
@@ -320,8 +322,7 @@ func (e *executor) Control(ctx context.Context, testWorkflow *testworkflowsv1.Te
 	return nil
 }
 
-func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWorkflow, request testkube.TestWorkflowExecutionRequest) (
-	execution testkube.TestWorkflowExecution, err error) {
+func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWorkflow, request testkube.TestWorkflowExecutionRequest) (execution testkube.TestWorkflowExecution, err error) {
 	// Delete unnecessary data
 	delete(workflow.Annotations, "kubectl.kubernetes.io/last-applied-configuration")
 
@@ -542,7 +543,12 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		ResolvedWorkflow:          testworkflowmappers.MapKubeToAPI(resolvedWorkflow),
 		TestWorkflowExecutionName: testWorkflowExecutionName,
 		DisableWebhooks:           request.DisableWebhooks,
+		RunnerId:                  e.runnerID,
+		RunningContext:            request.RunningContext,
 	}
+
+	log.DefaultLogger.Infow("inserting execution", "execution", execution, "runningContext", request.RunningContext)
+
 	err = e.repository.Insert(ctx, execution)
 	if err != nil {
 		return execution, errors.Wrap(err, "inserting execution to storage")

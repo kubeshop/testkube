@@ -9,7 +9,6 @@ import (
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/encoding/gzip"
-	"google.golang.org/grpc/metadata"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
@@ -62,11 +61,7 @@ func (ag *Agent) Notify(event testkube.Event) (result testkube.EventResult) {
 }
 
 func (ag *Agent) runEventLoop(ctx context.Context) error {
-	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name)}
-	md := metadata.Pairs(apiKeyMeta, ag.apiKey)
-	ctx = metadata.NewOutgoingContext(ctx, md)
-
-	stream, err := ag.client.Send(ctx, opts...)
+	stream, err := ag.client.Send(ctx, grpc.UseCompressor(gzip.Name))
 	if err != nil {
 		ag.logger.Errorf("failed to execute: %v", err)
 		return errors.Wrap(err, "failed to setup stream")

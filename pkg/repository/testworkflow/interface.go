@@ -26,6 +26,8 @@ type Filter interface {
 	TextSearchDefined() bool
 	TextSearch() string
 	Selector() string
+	RunnerIds() []string
+	RunnerTags() map[string]string
 }
 
 //go:generate mockgen -destination=./mock_repository.go -package=testworkflow "github.com/kubeshop/testkube/pkg/repository/testworkflow" Repository

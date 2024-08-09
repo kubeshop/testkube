@@ -27,6 +27,7 @@ import (
 	testworkflow2 "github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/secretmanager"
 	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
+	"github.com/kubeshop/testkube/pkg/tcl/controlplanetcl"
 	"github.com/kubeshop/testkube/pkg/tcl/schedulertcl"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/presets"
 
@@ -147,13 +148,18 @@ func main() {
 	cfg.CleanLegacyVars()
 	exitOnError("error getting application config", err)
 
+	md := metadata.Pairs("api-key", cfg.TestkubeProAPIKey, "runner-id", cfg.TestkubeProRunnerId)
+	ctx := metadata.NewOutgoingContext(context.Background(), md)
+
 	features, err := featureflags.Get()
 	exitOnError("error getting application feature flags", err)
 
-	log.DefaultLogger.Infow("Feature flags configured", "ff", features)
+	logger := log.DefaultLogger.With("apiVersion", version.Version)
+
+	logger.Infow("Feature flags configured", "ff", features)
 
 	// Run services within an errgroup to propagate errors between services.
-	g, ctx := errgroup.WithContext(context.Background())
+	g, ctx := errgroup.WithContext(ctx)
 
 	// Cancel the errgroup context on SIGINT and SIGTERM,
 	// which shuts everything down gracefully.
@@ -271,18 +277,18 @@ func main() {
 	var artifactStorage domainstorage.ArtifactsStorage
 	var storageClient domainstorage.Client
 	if mode == common.ModeAgent {
-		resultsRepository = cloudresult.NewCloudResultRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
-		testResultsRepository = cloudtestresult.NewCloudRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
-		configRepository = cloudconfig.NewCloudResultRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
+		resultsRepository = cloudresult.NewCloudResultRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey, cfg.TestkubeProRunnerId)
+		testResultsRepository = cloudtestresult.NewCloudRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey, cfg.TestkubeProRunnerId)
+		configRepository = cloudconfig.NewCloudResultRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey, cfg.TestkubeProRunnerId)
 		// Pro edition only (tcl protected code)
-		testWorkflowResultsRepository = cloudtestworkflow.NewCloudRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
+		testWorkflowResultsRepository = cloudtestworkflow.NewCloudRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey, cfg.TestkubeProRunnerId)
 		var opts []cloudtestworkflow.Option
 		if cfg.StorageSkipVerify {
 			opts = append(opts, cloudtestworkflow.WithSkipVerify())
 		}
-		testWorkflowOutputRepository = cloudtestworkflow.NewCloudOutputRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey, opts...)
+		testWorkflowOutputRepository = cloudtestworkflow.NewCloudOutputRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey, cfg.TestkubeProRunnerId, opts...)
 		triggerLeaseBackend = triggers.NewAcquireAlwaysLeaseBackend()
-		artifactStorage = cloudartifacts.NewCloudArtifactsStorage(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
+		artifactStorage = cloudartifacts.NewCloudArtifactsStorage(grpcClient, grpcConn, cfg.TestkubeProAPIKey, cfg.TestkubeProRunnerId)
 	} else {
 		mongoSSLConfig := getMongoSSLConfig(cfg, secretClient)
 		db, err := storage.GetMongoDatabase(cfg.APIMongoDSN, cfg.APIMongoDB, cfg.APIMongoDBType, cfg.APIMongoAllowTLS, mongoSSLConfig)
@@ -431,13 +437,24 @@ func main() {
 		exitOnError("Creating job templates", err)
 	}
 
-	proContext := newProContext(cfg, grpcClient)
+	proContext := newProContext(ctx, cfg, grpcClient)
+	proContext.ClusterId = clusterId
 
 	// Check Pro/Enterprise subscription
 	var subscriptionChecker checktcl.SubscriptionChecker
 	if mode == common.ModeAgent {
 		subscriptionChecker, err = checktcl.NewSubscriptionChecker(ctx, proContext, grpcClient, grpcConn)
 		exitOnError("Failed creating subscription checker", err)
+
+		// Load environment/org details based on token grpc call
+		environment, err := controlplanetcl.GetEnvironment(ctx, proContext, grpcClient, grpcConn)
+		warnOnError("Getting environment details from control plane", err)
+		proContext.EnvID = environment.Id
+		proContext.EnvName = environment.Name
+		proContext.EnvSlug = environment.Slug
+		proContext.OrgID = environment.OrganizationId
+		proContext.OrgName = environment.OrganizationName
+		proContext.OrgSlug = environment.OrganizationSlug
 	}
 
 	serviceAccountNames := map[string]string{
@@ -585,6 +602,7 @@ func main() {
 		cfg.ImageDataPersistentCacheKey,
 		cfg.TestkubeDashboardURI,
 		clusterId,
+		proContext.RunnerId,
 	)
 
 	go testWorkflowExecutor.Recover(context.Background())
@@ -893,9 +911,10 @@ func newGRPCTransportCredentials(cfg *config.Config) (credentials.TransportCrede
 	})
 }
 
-func newProContext(cfg *config.Config, grpcClient cloud.TestKubeCloudAPIClient) config.ProContext {
+func newProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.TestKubeCloudAPIClient) config.ProContext {
 	proContext := config.ProContext{
 		APIKey:                           cfg.TestkubeProAPIKey,
+		RunnerId:                         cfg.TestkubeProRunnerId,
 		URL:                              cfg.TestkubeProURL,
 		TLSInsecure:                      cfg.TestkubeProTLSInsecure,
 		WorkerCount:                      cfg.TestkubeProWorkerCount,
@@ -913,22 +932,20 @@ func newProContext(cfg *config.Config, grpcClient cloud.TestKubeCloudAPIClient) 
 		return proContext
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
-	md := metadata.Pairs("api-key", cfg.TestkubeProAPIKey)
-	ctx = metadata.NewOutgoingContext(ctx, md)
+	ctx, cancel := context.WithTimeout(ctx, time.Second*3)
 	defer cancel()
-	getProContext, err := grpcClient.GetProContext(ctx, &emptypb.Empty{})
+	proContextResponse, err := grpcClient.GetProContext(ctx, &emptypb.Empty{})
 	if err != nil {
 		log.DefaultLogger.Warnf("cannot fetch pro-context from cloud: %s", err)
 		return proContext
 	}
 
 	if proContext.EnvID == "" {
-		proContext.EnvID = getProContext.EnvId
+		proContext.EnvID = proContextResponse.EnvId
 	}
 
 	if proContext.OrgID == "" {
-		proContext.OrgID = getProContext.OrgId
+		proContext.OrgID = proContextResponse.OrgId
 	}
 
 	return proContext
@@ -938,5 +955,11 @@ func exitOnError(title string, err error) {
 	if err != nil {
 		log.DefaultLogger.Errorw(title, "error", err)
 		os.Exit(1)
+	}
+}
+
+func warnOnError(title string, err error) {
+	if err != nil {
+		log.DefaultLogger.Errorw(title, "error", err)
 	}
 }

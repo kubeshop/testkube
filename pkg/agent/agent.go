@@ -32,13 +32,16 @@ import (
 )
 
 const (
-	timeout            = 10 * time.Second
-	apiKeyMeta         = "api-key"
-	clusterIDMeta      = "cluster-id"
-	cloudMigrateMeta   = "migrate"
-	orgIdMeta          = "environment-id"
-	envIdMeta          = "organization-id"
-	healthcheckCommand = "healthcheck"
+	timeout = 10 * time.Second
+
+	HeaderApiKey    = "api-key"
+	HeaderRunnerId  = "runner-id"
+	HeaderClusterId = "cluster-id"
+	HeaderMigrate   = "migrate"
+	HeaderOrgId     = "environment-id"
+	HeaderEnvID     = "organization-id"
+
+	HealthcheckCommand = "healthcheck"
 )
 
 // buffer up to five messages per worker
@@ -130,7 +133,6 @@ type Agent struct {
 	client  cloud.TestKubeCloudAPIClient
 	handler fasthttp.RequestHandler
 	logger  *zap.SugaredLogger
-	apiKey  string
 
 	workerCount    int
 	requestBuffer  chan *cloud.ExecuteRequest
@@ -173,7 +175,6 @@ func NewAgent(logger *zap.SugaredLogger,
 	return &Agent{
 		handler:                                 handler,
 		logger:                                  logger.With("service", "Agent", "environmentId", proContext.EnvID),
-		apiKey:                                  proContext.APIKey,
 		client:                                  client,
 		events:                                  make(chan testkube.Event),
 		workerCount:                             proContext.WorkerCount,
@@ -212,35 +213,44 @@ func (ag *Agent) Run(ctx context.Context) error {
 	}
 }
 
-func (ag *Agent) run(ctx context.Context) (err error) {
-	g, groupCtx := errgroup.WithContext(ctx)
+// updateContextWithMetadata adds metadata to the context
+func (ag *Agent) updateContextWithMetadata(ctx context.Context) context.Context {
+	return Context(ctx, ag.proContext)
+}
+func (ag *Agent) run(parent context.Context) (err error) {
+	g, ctx := errgroup.WithContext(ag.updateContextWithMetadata(parent))
+
 	g.Go(func() error {
-		return ag.runCommandLoop(groupCtx)
+		return ag.runCommandLoop(ctx)
 	})
 
 	g.Go(func() error {
-		return ag.runWorkers(groupCtx, ag.workerCount)
+		return ag.runWorkers(ctx, ag.workerCount)
 	})
 
 	g.Go(func() error {
-		return ag.runEventLoop(groupCtx)
+		return ag.runEventLoop(ctx)
 	})
 
 	if !ag.features.LogsV2 {
 		g.Go(func() error {
-			return ag.runLogStreamLoop(groupCtx)
+			return ag.runLogStreamLoop(ctx)
 		})
 		g.Go(func() error {
-			return ag.runLogStreamWorker(groupCtx, ag.logStreamWorkerCount)
+			return ag.runLogStreamWorker(ctx, ag.logStreamWorkerCount)
 		})
 	}
 
 	g.Go(func() error {
-		return ag.runTestWorkflowNotificationsLoop(groupCtx)
+		return ag.runTestWorkflowNotificationsLoop(ctx)
 	})
 	g.Go(func() error {
-		return ag.runTestWorkflowNotificationsWorker(groupCtx, ag.testWorkflowNotificationsWorkerCount)
+		return ag.runTestWorkflowNotificationsWorker(ctx, ag.testWorkflowNotificationsWorkerCount)
 	})
+
+	mdIn, _ := metadata.FromIncomingContext(ctx)
+	mdOut, _ := metadata.FromOutgoingContext(ctx)
+	ag.logger.Infow("initiating agent", "metadataIn", mdIn, "metadataOut", mdOut)
 
 	err = g.Wait()
 
@@ -291,7 +301,7 @@ func (ag *Agent) receiveCommand(ctx context.Context, stream cloud.TestKubeCloudA
 		err := resp.err
 
 		if err != nil {
-			ag.logger.Errorf("agent stream receive: %v", err)
+			ag.logger.Errorf("received error from control plane: %v", err)
 			return nil, err
 		}
 	case <-ctx.Done():
@@ -308,13 +318,6 @@ func (ag *Agent) receiveCommand(ctx context.Context, stream cloud.TestKubeCloudA
 }
 
 func (ag *Agent) runCommandLoop(ctx context.Context) error {
-	ctx = AddAPIKeyMeta(ctx, ag.proContext.APIKey)
-
-	ctx = metadata.AppendToOutgoingContext(ctx, clusterIDMeta, ag.clusterID)
-	ctx = metadata.AppendToOutgoingContext(ctx, cloudMigrateMeta, ag.proContext.Migrate)
-	ctx = metadata.AppendToOutgoingContext(ctx, envIdMeta, ag.proContext.EnvID)
-	ctx = metadata.AppendToOutgoingContext(ctx, orgIdMeta, ag.proContext.OrgID)
-
 	ag.logger.Infow("initiating streaming connection with control plane")
 	// creates a new Stream from the client side. ctx is used for the lifetime of the stream.
 	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
@@ -380,7 +383,7 @@ func (ag *Agent) runWorkers(ctx context.Context, numWorkers int) error {
 
 func (ag *Agent) executeCommand(ctx context.Context, cmd *cloud.ExecuteRequest) *cloud.ExecuteResponse {
 	switch {
-	case cmd.Url == healthcheckCommand:
+	case cmd.Url == HealthcheckCommand:
 		return &cloud.ExecuteResponse{MessageId: cmd.MessageId, Status: 0}
 	default:
 		req := &fasthttp.RequestCtx{}
@@ -426,12 +429,25 @@ func (ag *Agent) executeCommand(ctx context.Context, cmd *cloud.ExecuteRequest) 
 	}
 }
 
-func AddAPIKeyMeta(ctx context.Context, apiKey string) context.Context {
-	md := metadata.Pairs(apiKeyMeta, apiKey)
+func AddContextMetadata(ctx context.Context, apiKey, runnerId string) context.Context {
+	md := metadata.Pairs(HeaderApiKey, apiKey, HeaderRunnerId, runnerId)
 	return metadata.NewOutgoingContext(ctx, md)
 }
 
 type cloudResponse struct {
 	resp *cloud.ExecuteRequest
 	err  error
+}
+
+// Context returns new enriched context with meteadata from ProContext
+func Context(ctx context.Context, proContext config.ProContext) context.Context {
+	return metadata.NewOutgoingContext(ctx, metadata.Pairs(
+		HeaderApiKey, proContext.APIKey,
+		HeaderClusterId, proContext.ClusterId,
+		HeaderMigrate, proContext.Migrate,
+		HeaderEnvID, proContext.EnvID,
+		HeaderOrgId, proContext.OrgID,
+		HeaderRunnerId, proContext.RunnerId,
+	))
+
 }

@@ -48,6 +48,7 @@ func init() {
 	RootCmd.AddCommand(NewGenerateCmd())
 
 	RootCmd.AddCommand(NewInitCmd())
+	RootCmd.AddCommand(NewRunnerCmd())
 	RootCmd.AddCommand(NewUpgradeCmd())
 	RootCmd.AddCommand(NewPurgeCmd())
 	RootCmd.AddCommand(NewWatchCmd())

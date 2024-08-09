@@ -90,5 +90,5 @@ func Cloud(ctx context.Context) (cloudexecutor.Executor, cloud.TestKubeCloudAPIC
 		ui.Fail(fmt.Errorf("failed to connect with Cloud: %w", err))
 	}
 	grpcClient := cloud.NewTestKubeCloudAPIClient(grpcConn)
-	return cloudexecutor.NewCloudGRPCExecutor(grpcClient, grpcConn, cfg.ApiKey), grpcClient
+	return cloudexecutor.NewCloudGRPCExecutor(grpcClient, grpcConn, cfg.ApiKey, cfg.RunnerId), grpcClient
 }

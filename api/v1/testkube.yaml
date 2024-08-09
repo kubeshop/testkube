@@ -7049,6 +7049,16 @@ components:
         context:
           type: string
           description: Context value depending from its type
+        runnerIds: 
+          type: array 
+          items: 
+            type: string
+        tags: 
+          type: object
+          additionalProperties:
+            type: string 
+
+
 
     Webhook:
       description: CRD based webhook data
@@ -7889,6 +7899,8 @@ components:
           type: boolean
           description: whether webhooks on the execution of this test workflow are disabled
           default: false
+        runningContext:
+          $ref: "#/components/schemas/RunningContext"
 
     TestWorkflowWithExecution:
       type: object
@@ -7980,6 +7992,11 @@ components:
           example:
             - true
             - false
+        runnerId:
+          type: string
+          description: Runner id that executed the test workflow
+        runningContext:
+          $ref: "#/components/schemas/RunningContext"
       required:
         - id
         - name
@@ -7993,6 +8010,10 @@ components:
           description: unique execution identifier
           format: bson objectId
           example: "62f395e004109209b50edfc1"
+        runnerID:
+          type: string
+          description: runner identifier
+          example: "some-unique-id-per-env-1"
         name:
           type: string
           description: execution name
@@ -8012,6 +8033,8 @@ components:
           $ref: "#/components/schemas/TestWorkflowResultSummary"
         workflow:
           $ref: "#/components/schemas/TestWorkflowSummary"
+        runningContext:
+          $ref: "#/components/schemas/RunningContext"
       required:
         - id
         - name

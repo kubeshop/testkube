@@ -14,5 +14,7 @@ type RunningContext struct {
 	// One of possible context types
 	Type_ string `json:"type"`
 	// Context value depending from its type
-	Context string `json:"context,omitempty"`
+	Context   string            `json:"context,omitempty"`
+	RunnerIds []string          `json:"runnerIds,omitempty"`
+	Tags      map[string]string `json:"tags,omitempty"`
 }
