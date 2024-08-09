@@ -19,7 +19,7 @@ var (
 
 const (
 	SubscribeBuffer        = 1
-	SubscriptionName       = "events"
+	SubscriptionName       = "agent"
 	InternalPublishTopic   = "internal.all"
 	InternalSubscribeTopic = "internal.>"
 )
@@ -155,7 +155,7 @@ func (n *NATSBus) queueName(subscription, queue string) string {
 
 func (n *NATSBus) TraceEvents() {
 	s, err := n.nc.Subscribe(SubscriptionName+".>", func(event testkube.Event) {
-		log.Tracew(log.DefaultLogger, "all events.> trace", event.Log()...)
+		log.Tracew(log.DefaultLogger, "got message on events", event.Log()...)
 	})
 
 	if err != nil {

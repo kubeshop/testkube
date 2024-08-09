@@ -8,8 +8,9 @@ import (
 )
 
 const (
-	TestStartSubject = "events.test.start"
-	TestStopSubject  = "events.test.stop"
+	Subscription     = "agent"
+	TestStartSubject = Subscription + ".test.start"
+	TestStopSubject  = Subscription + ".test.stop"
 )
 
 // check if Event implements model generic event type
@@ -270,14 +271,14 @@ func (e Event) Topic() string {
 	}
 
 	if e.Resource == nil {
-		return "events.all"
+		return Subscription + ".all"
 	}
 
 	if e.ResourceId == "" {
-		return "events." + string(*e.Resource)
+		return Subscription + "." + string(*e.Resource)
 	}
 
-	return "events." + string(*e.Resource) + "." + e.ResourceId
+	return Subscription + "." + string(*e.Resource) + "." + e.ResourceId
 }
 
 // GetResourceId implmenents generic event trigger
