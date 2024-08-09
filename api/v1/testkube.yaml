@@ -8164,6 +8164,8 @@ components:
           $ref: "#/components/schemas/TestWorkflowSummary"
         tags:
           $ref: "#/components/schemas/TestWorkflowTagValue"
+        runningContext:
+          $ref: "#/components/schemas/RunningContext"
       required:
         - id
         - name
