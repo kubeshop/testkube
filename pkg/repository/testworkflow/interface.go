@@ -28,7 +28,7 @@ type Filter interface {
 	Selector() string
 	TagSelector() string
 	RunnerIds() []string
-	Tags() map[string]string
+	RunnerTags() map[string]string
 }
 
 //go:generate mockgen -destination=./mock_repository.go -package=testworkflow "github.com/kubeshop/testkube/pkg/repository/testworkflow" Repository
