@@ -365,8 +365,8 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 	}
 
 	// this one needs wildard index or changing the model to {k:X v:Y}
-	if len(filter.Tags()) > 0 {
-		for k, v := range filter.Tags() {
+	if len(filter.RunnerTags()) > 0 {
+		for k, v := range filter.RunnerTags() {
 			query["runningcontext.tags."+k] = v
 		}
 	}
