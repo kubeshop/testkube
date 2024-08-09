@@ -380,9 +380,11 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 	// TODO - use tags for tags and runnerId - remove it from the model
 	// this one needs wildard index or changing the model to {k:X v:Y}
 	if len(filter.RunnerTags()) > 0 {
+		q := []bson.M{}
 		for k, v := range filter.RunnerTags() {
-			query["runningcontext.tags."+k] = v
+			q = append(q, bson.M{"runningcontext.tags." + k: v})
 		}
+		query["$and"] = q
 	}
 
 	opts.SetSkip(int64(filter.Page() * filter.PageSize()))
