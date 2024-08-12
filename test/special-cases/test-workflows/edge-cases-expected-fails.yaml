@@ -208,6 +208,7 @@ spec:
       - '{"screenshotsFolder":"/data/artifacts/screenshots","videosFolder":"/data/artifacts/videos"}'
     steps:
     - name: Saving artifacts
+      condition: always
       workingDir: /data/artifacts
       artifacts:
         paths:
