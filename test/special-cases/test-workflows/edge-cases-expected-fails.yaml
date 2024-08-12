@@ -149,6 +149,40 @@ spec:
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
+  name: expected-fail-timeout
+  labels:
+    core-tests: expected-fail
+spec:
+  job:
+    activeDeadlineSeconds: 1
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/k6/executor-tests/k6-smoke-test.js
+  container:
+    resources:
+      requests:
+        cpu: 128m
+        memory: 128Mi
+    workingDir: /data/repo/test/k6/executor-tests
+  steps:
+  - name: Run test
+    run:
+      image: grafana/k6:0.43.1
+      args:
+      - run
+      - k6-smoke-test.js
+      - -e
+      - K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value
+      env:
+      - name: K6_SYSTEM_ENV
+        value: K6_SYSTEM_ENV_value
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
   name: expected-fail-cypress-artifacts-condition-always-with-artifacts
   labels:
     core-tests: expected-fail
@@ -170,13 +204,8 @@ spec:
     run:
       image: cypress/included:13.6.4
       args:
-      - --env
-      - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
       - --config
       - '{"screenshotsFolder":"/data/artifacts/screenshots","videosFolder":"/data/artifacts/videos"}'
-      env:
-      - name: CYPRESS_CUSTOM_ENV
-        value: CYPRESS_CUSTOM_ENV_value
     steps:
     - name: Saving artifacts
       workingDir: /data/artifacts
