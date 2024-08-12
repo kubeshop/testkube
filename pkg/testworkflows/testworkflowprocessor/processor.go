@@ -205,7 +205,12 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	for image, needsMetadata := range imageNames {
 		var info *imageinspector.Info
 		if needsMetadata {
-			info, err = p.inspector.Inspect(ctx, "", image, corev1.PullIfNotPresent, pullSecretNames)
+			im := image
+			if image == "testworkflow-toolkit" {
+				im = "kubeshop/testkube-tw-toolkit:7120500"
+			}
+
+			info, err = p.inspector.Inspect(ctx, "", im, corev1.PullIfNotPresent, pullSecretNames)
 			images[image] = info
 		}
 		imageNameResolutions[image] = p.inspector.ResolveName("", image)
