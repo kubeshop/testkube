@@ -124,6 +124,20 @@ func (mr *MockStageMockRecorder) Flatten() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Flatten", reflect.TypeOf((*MockStage)(nil).Flatten))
 }
 
+// FullSignature mocks base method.
+func (m *MockStage) FullSignature() Signature {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FullSignature")
+	ret0, _ := ret[0].(Signature)
+	return ret0
+}
+
+// FullSignature indicates an expected call of FullSignature.
+func (mr *MockStageMockRecorder) FullSignature() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FullSignature", reflect.TypeOf((*MockStage)(nil).FullSignature))
+}
+
 // GetImages mocks base method.
 func (m *MockStage) GetImages(arg0 bool) map[string]bool {
 	m.ctrl.T.Helper()

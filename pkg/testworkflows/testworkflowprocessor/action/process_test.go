@@ -19,9 +19,6 @@ func TestProcess_BasicSteps(t *testing.T) {
 
 	// Build the expectations
 	want := actiontypes.NewActionList().
-		// Configure
-		Setup(true, true).
-
 		// Declare stage conditions
 		Declare("init", "true").
 		Declare("step1", "true", "init").
@@ -61,9 +58,9 @@ func TestProcess_BasicSteps(t *testing.T) {
 		End("")
 
 	// Assert
-	got, err := Process(root)
+	got, err := Process(root, nil)
 	assert.NoError(t, err)
-	assert.Equal(t, want, actiontypes.ActionList(got))
+	assert.Equal(t, want, got)
 }
 
 func TestProcess_Grouping(t *testing.T) {
@@ -78,9 +75,6 @@ func TestProcess_Grouping(t *testing.T) {
 
 	// Build the expectations
 	want := actiontypes.NewActionList().
-		// Configure
-		Setup(true, true).
-
 		// Declare stage conditions
 		Declare("init", "true").
 		Declare("step1", "true", "init").
@@ -151,9 +145,9 @@ func TestProcess_Grouping(t *testing.T) {
 		End("")
 
 	// Assert
-	got, err := Process(root)
+	got, err := Process(root, nil)
 	assert.NoError(t, err)
-	assert.Equal(t, want, actiontypes.ActionList(got))
+	assert.Equal(t, want, got)
 }
 
 func TestProcess_Pause(t *testing.T) {
@@ -166,9 +160,6 @@ func TestProcess_Pause(t *testing.T) {
 
 	// Build the expectations
 	want := actiontypes.NewActionList().
-		// Configure
-		Setup(true, true).
-
 		// Declare stage conditions
 		Declare("init", "true").
 		Declare("step1", "true", "init").
@@ -211,9 +202,9 @@ func TestProcess_Pause(t *testing.T) {
 		End("")
 
 	// Assert
-	got, err := Process(root)
+	got, err := Process(root, nil)
 	assert.NoError(t, err)
-	assert.Equal(t, want, actiontypes.ActionList(got))
+	assert.Equal(t, want, got)
 }
 
 func TestProcess_NegativeStep(t *testing.T) {
@@ -226,9 +217,6 @@ func TestProcess_NegativeStep(t *testing.T) {
 
 	// Build the expectations
 	want := actiontypes.NewActionList().
-		// Configure
-		Setup(true, true).
-
 		// Declare stage conditions
 		Declare("init", "true").
 		Declare("step1", "true", "init").
@@ -268,9 +256,9 @@ func TestProcess_NegativeStep(t *testing.T) {
 		End("")
 
 	// Assert
-	got, err := Process(root)
+	got, err := Process(root, nil)
 	assert.NoError(t, err)
-	assert.Equal(t, want, actiontypes.ActionList(got))
+	assert.Equal(t, want, got)
 }
 
 func TestProcess_NegativeGroup(t *testing.T) {
@@ -282,9 +270,6 @@ func TestProcess_NegativeGroup(t *testing.T) {
 
 	// Build the expectations
 	want := actiontypes.NewActionList().
-		// Configure
-		Setup(true, true).
-
 		// Declare stage conditions
 		Declare("init", "true").
 		Declare("step1", "true", "init").
@@ -324,9 +309,9 @@ func TestProcess_NegativeGroup(t *testing.T) {
 		End("")
 
 	// Assert
-	got, err := Process(root)
+	got, err := Process(root, nil)
 	assert.NoError(t, err)
-	assert.Equal(t, want, actiontypes.ActionList(got))
+	assert.Equal(t, want, got)
 }
 
 func TestProcess_OptionalStep(t *testing.T) {
@@ -339,9 +324,6 @@ func TestProcess_OptionalStep(t *testing.T) {
 
 	// Build the expectations
 	want := actiontypes.NewActionList().
-		// Configure
-		Setup(true, true).
-
 		// Declare stage conditions
 		Declare("init", "true").
 		Declare("step1", "true", "init").
@@ -381,9 +363,9 @@ func TestProcess_OptionalStep(t *testing.T) {
 		End("")
 
 	// Assert
-	got, err := Process(root)
+	got, err := Process(root, nil)
 	assert.NoError(t, err)
-	assert.Equal(t, want, actiontypes.ActionList(got))
+	assert.Equal(t, want, got)
 }
 
 func TestProcess_OptionalGroup(t *testing.T) {
@@ -397,9 +379,6 @@ func TestProcess_OptionalGroup(t *testing.T) {
 
 	// Build the expectations
 	want := actiontypes.NewActionList().
-		// Configure
-		Setup(true, true).
-
 		// Declare stage conditions
 		Declare("init", "true").
 		Declare("inner", "true", "init").
@@ -444,9 +423,9 @@ func TestProcess_OptionalGroup(t *testing.T) {
 		End("")
 
 	// Assert
-	got, err := Process(root)
+	got, err := Process(root, nil)
 	assert.NoError(t, err)
-	assert.Equal(t, want, actiontypes.ActionList(got))
+	assert.Equal(t, want, got)
 }
 
 func TestProcess_IgnoreExecutionOfStaticSkip(t *testing.T) {
@@ -459,9 +438,6 @@ func TestProcess_IgnoreExecutionOfStaticSkip(t *testing.T) {
 
 	// Build the expectations
 	want := actiontypes.NewActionList().
-		// Configure
-		Setup(true, true).
-
 		// Declare stage conditions
 		Declare("init", "true").
 		Declare("step1", "false").
@@ -496,9 +472,9 @@ func TestProcess_IgnoreExecutionOfStaticSkip(t *testing.T) {
 		End("")
 
 	// Assert
-	got, err := Process(root)
+	got, err := Process(root, nil)
 	assert.NoError(t, err)
-	assert.Equal(t, want, actiontypes.ActionList(got))
+	assert.Equal(t, want, got)
 }
 
 func TestProcess_IgnoreExecutionOfStaticSkipGroup(t *testing.T) {
@@ -510,9 +486,6 @@ func TestProcess_IgnoreExecutionOfStaticSkipGroup(t *testing.T) {
 
 	// Build the expectations
 	want := actiontypes.NewActionList().
-		// Configure
-		Setup(false, false). // don't copy as there is nothing to do
-
 		// Declare stage conditions
 		Declare("init", "false").
 		Declare("step1", "false").
@@ -541,9 +514,9 @@ func TestProcess_IgnoreExecutionOfStaticSkipGroup(t *testing.T) {
 		End("")
 
 	// Assert
-	got, err := Process(root)
+	got, err := Process(root, nil)
 	assert.NoError(t, err)
-	assert.Equal(t, want, actiontypes.ActionList(got))
+	assert.Equal(t, want, got)
 }
 
 func TestProcess_IgnoreExecutionOfStaticSkipGroup_Pause(t *testing.T) {
@@ -556,9 +529,6 @@ func TestProcess_IgnoreExecutionOfStaticSkipGroup_Pause(t *testing.T) {
 
 	// Build the expectations
 	want := actiontypes.NewActionList().
-		// Configure
-		Setup(false, false). // don't copy as there is nothing to do
-
 		// Declare stage conditions
 		Declare("init", "false").
 		Declare("step1", "false").
@@ -589,9 +559,9 @@ func TestProcess_IgnoreExecutionOfStaticSkipGroup_Pause(t *testing.T) {
 		End("")
 
 	// Assert
-	got, err := Process(root)
+	got, err := Process(root, nil)
 	assert.NoError(t, err)
-	assert.Equal(t, want, actiontypes.ActionList(got))
+	assert.Equal(t, want, got)
 }
 
 func TestProcess_IgnoreExecutionOfStaticSkip_PauseGroup(t *testing.T) {
@@ -605,9 +575,6 @@ func TestProcess_IgnoreExecutionOfStaticSkip_PauseGroup(t *testing.T) {
 
 	// Build the expectations
 	want := actiontypes.NewActionList().
-		// Configure
-		Setup(true, true).
-
 		// Declare stage conditions
 		Declare("init", "true").
 		Declare("step1", "false").
@@ -645,7 +612,7 @@ func TestProcess_IgnoreExecutionOfStaticSkip_PauseGroup(t *testing.T) {
 		End("")
 
 	// Assert
-	got, err := Process(root)
+	got, err := Process(root, nil)
 	assert.NoError(t, err)
-	assert.Equal(t, want, actiontypes.ActionList(got))
+	assert.Equal(t, want, got)
 }

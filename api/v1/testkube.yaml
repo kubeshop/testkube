@@ -8486,6 +8486,14 @@ components:
       required:
       - from
 
+    TestWorkflowSystem:
+      type: object
+      properties:
+        pureByDefault:
+          $ref: "#/components/schemas/BoxedBoolean"
+        isolatedContainers:
+          $ref: "#/components/schemas/BoxedBoolean"
+
     TestWorkflowSpec:
       type: object
       properties:
@@ -8495,6 +8503,8 @@ components:
             $ref: "#/components/schemas/TestWorkflowTemplateRef"
         config:
           $ref: "#/components/schemas/TestWorkflowConfigSchema"
+        system:
+          $ref: "#/components/schemas/TestWorkflowSystem"
         content:
           $ref: "#/components/schemas/TestWorkflowContent"
         services:
@@ -8531,6 +8541,8 @@ components:
       properties:
         config:
           $ref: "#/components/schemas/TestWorkflowConfigSchema"
+        system:
+          $ref: "#/components/schemas/TestWorkflowSystem"
         content:
           $ref: "#/components/schemas/TestWorkflowContent"
         services:
@@ -8607,6 +8619,8 @@ components:
         condition:
           type: string
           description: expression to declare under which conditions the step should be run; defaults to "passed", except artifacts where it defaults to "always"
+        pure:
+          $ref: "#/components/schemas/BoxedBoolean"
         paused:
           type: boolean
           description: should the step be paused initially
@@ -8667,6 +8681,8 @@ components:
         condition:
           type: string
           description: expression to declare under which conditions the step should be run; defaults to "passed", except artifacts where it defaults to "always"
+        pure:
+          $ref: "#/components/schemas/BoxedBoolean"
         paused:
           type: boolean
           description: should the step be paused initially

@@ -301,6 +301,21 @@ func MergeResources(dst, include *testworkflowsv1.Resources) *testworkflowsv1.Re
 	return dst
 }
 
+func MergeSystem(dst, include *testworkflowsv1.TestWorkflowSystem) *testworkflowsv1.TestWorkflowSystem {
+	if dst == nil {
+		return include
+	} else if include == nil {
+		return dst
+	}
+	if include.PureByDefault != nil {
+		dst.PureByDefault = include.PureByDefault
+	}
+	if include.IsolatedContainers != nil {
+		dst.IsolatedContainers = include.IsolatedContainers
+	}
+	return dst
+}
+
 func MergeContainerConfig(dst, include *testworkflowsv1.ContainerConfig) *testworkflowsv1.ContainerConfig {
 	if dst == nil {
 		return include

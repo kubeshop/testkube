@@ -26,6 +26,10 @@ func ProcessDelay(_ InternalProcessor, layer Intermediate, container stage.Conta
 		SetArgs(fmt.Sprintf("%g", t.Seconds()))
 	stage := stage.NewContainerStage(layer.NextRef(), shell)
 	stage.SetCategory(fmt.Sprintf("Delay: %s", step.Delay))
+
+	// Allow to combine it within other containers
+	stage.SetPure(true)
+
 	return stage, nil
 }
 
@@ -241,10 +245,13 @@ func ProcessContentTarball(_ InternalProcessor, layer Intermediate, container st
 	stage.SetRetryPolicy(step.Retry)
 	stage.SetCategory("Fetch tarball")
 
+	// Allow to combine it within other containers
+	stage.SetPure(true)
+
 	selfContainer.
 		SetImage(constants.DefaultToolkitImage).
 		SetImagePullPolicy(corev1.PullIfNotPresent).
-		SetCommand("/toolkit", "tarball").
+		SetCommand(constants.DefaultToolkitPath, "tarball").
 		EnableToolkit(stage.Ref())
 
 	// Build volume pair and share with all siblings
@@ -286,10 +293,13 @@ func ProcessArtifacts(_ InternalProcessor, layer Intermediate, container stage.C
 	stage.SetCondition("always")
 	stage.SetCategory("Upload artifacts")
 
+	// Allow to combine it within other containers
+	stage.SetPure(true)
+
 	selfContainer.
 		SetImage(constants.DefaultToolkitImage).
 		SetImagePullPolicy(corev1.PullIfNotPresent).
-		SetCommand("/toolkit", "artifacts", "-m", constants.DefaultDataPath).
+		SetCommand(constants.DefaultToolkitPath, "artifacts", "-m", constants.DefaultDataPath).
 		EnableToolkit(stage.Ref())
 
 	args := make([]string, 0)

@@ -39,9 +39,6 @@ spec:
     artifacts:
       paths:
       - playwright-report/**/*
-  events:
-  - cronjob:
-      cron: "20 */4 * * *"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -90,9 +87,6 @@ spec:
       artifacts:
         paths:
         - '**/*'
-  events:
-  - cronjob:
-      cron: "20 */4 * * *"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -134,9 +128,6 @@ spec:
       artifacts:
         paths:
         - '**/*'
-  events:
-  - cronjob:
-      cron: "25 */4 * * *"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -178,9 +169,6 @@ spec:
     artifacts:
       paths:
       - /data/repo/**/playwright-report/**/*
-  events:
-  - cronjob:
-      cron: "25 */4 * * *"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -209,9 +197,6 @@ spec:
       config:
         # params: --workers 4
         version: v1.32.3-jammy
-  events:
-  - cronjob:
-      cron: "30 */4 * * *"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -249,6 +234,3 @@ spec:
     artifacts:
       paths:
       - "playwright-report/**"
-  events:
-  - cronjob:
-      cron: "25 */4 * * *"

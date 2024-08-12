@@ -102,8 +102,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 )
 
-var verbose = flag.Bool("v", false, "enable verbosity level")
-
 func init() {
 	flag.Parse()
 }
@@ -208,7 +206,7 @@ func main() {
 			cfg.TestkubeProURL,
 			cfg.TestkubeProCertFile,
 			cfg.TestkubeProKeyFile,
-			cfg.TestkubeProCAFile,
+			cfg.TestkubeProCAFile, //nolint
 			log.DefaultLogger,
 		)
 		exitOnError("error creating gRPC connection", err)

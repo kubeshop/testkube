@@ -18,6 +18,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/imageinspector"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
@@ -58,12 +59,13 @@ func (p *processor) process(layer Intermediate, container stage.Container, step 
 
 	// Build an initial group for the inner items
 	self := stage.NewGroupStage(ref, false)
+	self.SetPure(step.Pure)
 	self.SetName(step.Name)
 	self.SetOptional(step.Optional).SetNegative(step.Negative).SetTimeout(step.Timeout).SetPaused(step.Paused)
-	if step.Condition != "" {
-		self.SetCondition(step.Condition)
-	} else {
+	if step.Condition == "" {
 		self.SetCondition("passed")
+	} else {
+		self.SetCondition(step.Condition)
 	}
 
 	// Run operations
@@ -79,7 +81,8 @@ func (p *processor) process(layer Intermediate, container stage.Container, step 
 	if self.HasPause() && len(self.Children()) == 0 {
 		pause := stage.NewContainerStage(self.Ref()+"pause", container.CreateChild().
 			SetCommand(constants.DefaultShellPath).
-			SetArgs("-c", "exit 0"))
+			SetArgs("-c", "exit 0")).
+			SetPure(true)
 		pause.SetCategory("Wait for continue")
 		self.Add(pause)
 	}
@@ -186,6 +189,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 
 	// Build signature
 	sig := root.Signature().Children()
+	fullSig := root.FullSignature().Children()
 
 	// Load the image pull secrets
 	pullSecretNames := make([]string, len(podConfig.ImagePullSecrets))
@@ -249,15 +253,27 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	}
 
 	// Build list of the containers
-	actions, err := action.Process(root, machines...)
+	var pureByDefault *bool
+	if workflow.Spec.System != nil && workflow.Spec.System.PureByDefault != nil && *workflow.Spec.System.PureByDefault {
+		pureByDefault = common.Ptr(true)
+	}
+	actions, err := action.Process(root, pureByDefault, machines...)
 	if err != nil {
 		return nil, errors.Wrap(err, "analyzing Kubernetes container operations")
 	}
-	actionGroups := action.Group(actions)
+	usesToolkit := false
+	for _, a := range actions {
+		if a.Type() == lite.ActionTypeExecute && a.Execute.Toolkit {
+			usesToolkit = true
+			break
+		}
+	}
+	isolatedContainers := workflow.Spec.System != nil && workflow.Spec.System.IsolatedContainers != nil && *workflow.Spec.System.IsolatedContainers
+	actionGroups := action.Finalize(action.Group(actions, isolatedContainers), isolatedContainers)
 	containers := make([]corev1.Container, len(actionGroups))
 	for i := range actionGroups {
 		var bareActions []actiontypes.Action
-		containers[i], bareActions, err = action.CreateContainer(i, layer.ContainerDefaults(), actionGroups[i])
+		containers[i], bareActions, err = action.CreateContainer(i, layer.ContainerDefaults(), actionGroups[i], usesToolkit)
 		actionGroups[i] = bareActions
 		if err != nil {
 			return nil, errors.Wrap(err, "building Kubernetes containers")
@@ -378,7 +394,6 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	jobSpec.Annotations = jobAnnotations
 
 	// Build running instructions
-	// TODO: Get rid of the unnecessary ContainerConfig parts
 	actionGroupsSerialized, _ := json.Marshal(actionGroups)
 	podAnnotations := make(map[string]string)
 	maps.Copy(podAnnotations, jobSpec.Spec.Template.Annotations)
@@ -389,10 +404,11 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 
 	// Build bundle
 	bundle = &Bundle{
-		ConfigMaps: configMaps,
-		Secrets:    secrets,
-		Job:        jobSpec,
-		Signature:  sig,
+		ConfigMaps:    configMaps,
+		Secrets:       secrets,
+		Job:           jobSpec,
+		Signature:     sig,
+		FullSignature: fullSig,
 	}
 	return bundle, nil
 }

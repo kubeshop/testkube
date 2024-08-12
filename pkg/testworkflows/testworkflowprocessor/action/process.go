@@ -13,7 +13,7 @@ import (
 	stage2 "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
 
-func process(currentStatus string, parents []string, stage stage2.Stage, machines ...expressions.Machine) (actions []actiontypes.Action, err error) {
+func process(currentStatus string, parents []string, stage stage2.Stage, parentCondition string, inheritedPure *bool, machines ...expressions.Machine) (actions actiontypes.ActionList, err error) {
 	// Store the init status
 	actions = append(actions, actiontypes.Action{
 		CurrentStatus: common.Ptr(currentStatus),
@@ -21,9 +21,14 @@ func process(currentStatus string, parents []string, stage stage2.Stage, machine
 
 	// Compute the skip condition
 	condition := stage.Condition()
-	if condition == "" || condition == "null" {
-		condition = "passed"
+	if condition == "" {
+		if parentCondition == "" {
+			condition = "passed"
+		} else {
+			condition = parentCondition
+		}
 	}
+
 	actions = append(actions, actiontypes.Action{
 		Declare: &lite.ActionDeclare{Ref: stage.Ref(), Condition: condition, Parents: parents},
 	})
@@ -74,11 +79,17 @@ func process(currentStatus string, parents []string, stage stage2.Stage, machine
 
 	// Handle executable action
 	if exec, ok := stage.(stage2.ContainerStage); ok {
+		toolkit := exec.IsToolkit()
+		pure := exec.Pure()
+		if !toolkit && !pure && inheritedPure != nil {
+			pure = *inheritedPure
+		}
 		actions = append(actions, actiontypes.Action{
 			Execute: &lite.ActionExecute{
 				Ref:      exec.Ref(),
 				Negative: exec.Negative(),
-				Toolkit:  exec.IsToolkit(),
+				Toolkit:  toolkit,
+				Pure:     pure,
 			},
 		})
 	}
@@ -93,10 +104,15 @@ func process(currentStatus string, parents []string, stage stage2.Stage, machine
 		}
 		parents = append(parents, group.Ref())
 
+		// Adjust the inherited purity
+		if group.Pure() != nil {
+			inheritedPure = group.Pure()
+		}
+
 		// Handle children
 		refs := make([]string, 0)
 		for _, ch := range group.Children() {
-			sub, err := process(currentStatus, parents, ch, machines...)
+			sub, err := process(currentStatus, parents, ch, group.Condition(), inheritedPure, machines...)
 			if err != nil {
 				return nil, errors.Wrap(err, "processing group children")
 			}
@@ -132,21 +148,27 @@ func process(currentStatus string, parents []string, stage stage2.Stage, machine
 	return
 }
 
-func Process(root stage2.Stage, machines ...expressions.Machine) ([]actiontypes.Action, error) {
-	actions, err := process("true", nil, root, machines...)
+func Process(root stage2.Stage, inheritedPure *bool, machines ...expressions.Machine) (actiontypes.ActionList, error) {
+	actions, err := process("true", nil, root, "", inheritedPure, machines...)
 	if err != nil {
 		return nil, err
 	}
-	actions = append([]actiontypes.Action{{Setup: &lite.ActionSetup{CopyInit: true, CopyBinaries: true}}, {Start: common.Ptr("")}}, actions...)
+	actions = append([]actiontypes.Action{{Start: common.Ptr("")}}, actions...)
 	actions = append(actions, actiontypes.Action{Result: &lite.ActionResult{Ref: "", Value: root.Ref()}}, actiontypes.Action{End: common.Ptr("")})
 
 	// Optimize until simplest list of operations
 	for {
 		prevLength := len(actions)
 		actions, err = optimize(actions)
-		if err != nil || len(actions) == prevLength {
-			sort(actions)
-			return actions, errors.Wrap(err, "processing operations")
+
+		// Continue until final optimizations are applied
+		if err == nil && len(actions) != prevLength {
+			continue
 		}
+
+		// Sort for easier reading
+		sort(actions)
+
+		return actions, errors.Wrap(err, "processing operations")
 	}
 }

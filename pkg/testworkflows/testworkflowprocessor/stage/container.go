@@ -217,8 +217,10 @@ func (c *container) HasVolumeAt(path string) bool {
 		absPath = filepath.Join(c.WorkingDir(), path)
 	}
 	mounts := c.VolumeMounts()
+	absPath = filepath.Clean(absPath)
 	for _, mount := range mounts {
-		if strings.HasPrefix(filepath.Clean(absPath), filepath.Clean(mount.MountPath)+"/") {
+		mountPath := filepath.Clean(mount.MountPath)
+		if absPath == mountPath || strings.HasPrefix(absPath, mountPath+"/") {
 			return true
 		}
 	}

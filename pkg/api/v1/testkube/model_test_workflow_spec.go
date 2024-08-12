@@ -12,6 +12,7 @@ package testkube
 type TestWorkflowSpec struct {
 	Use       []TestWorkflowTemplateRef              `json:"use,omitempty"`
 	Config    map[string]TestWorkflowParameterSchema `json:"config,omitempty"`
+	System    *TestWorkflowSystem                    `json:"system,omitempty"`
 	Content   *TestWorkflowContent                   `json:"content,omitempty"`
 	Services  map[string]TestWorkflowServiceSpec     `json:"services,omitempty"`
 	Container *TestWorkflowContainerConfig           `json:"container,omitempty"`
