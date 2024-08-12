@@ -16,8 +16,8 @@ func NewOpenSource(inspector imageinspector.Inspector) testworkflowprocessor.Pro
 		Register(testworkflowprocessor.ProcessNestedSetupSteps).
 		Register(testworkflowprocessor.ProcessRunCommand).
 		Register(testworkflowprocessor.ProcessShellCommand).
-		Register(testworkflowprocessor.StubExecute).
-		Register(testworkflowprocessor.StubParallel).
+		Register(testworkflowprocessortcl.ProcessExecute).
+		Register(testworkflowprocessortcl.ProcessParallel).
 		Register(testworkflowprocessor.ProcessNestedSteps).
 		Register(testworkflowprocessor.ProcessArtifacts)
 }

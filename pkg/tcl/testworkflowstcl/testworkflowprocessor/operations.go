@@ -46,7 +46,7 @@ func ProcessExecute(_ testworkflowprocessor.InternalProcessor, layer testworkflo
 
 	container.
 		SetImage(constants.DefaultToolkitImage).
-		SetImagePullPolicy(corev1.PullIfNotPresent).
+		SetImagePullPolicy(corev1.PullNever).
 		SetCommand(constants.DefaultToolkitPath, "execute").
 		EnableToolkit(stage.Ref()).
 		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, constants.DefaultTransferDirPath))
@@ -104,7 +104,7 @@ func ProcessParallel(_ testworkflowprocessor.InternalProcessor, layer testworkfl
 
 	stage.Container().
 		SetImage(constants.DefaultToolkitImage).
-		SetImagePullPolicy(corev1.PullIfNotPresent).
+		SetImagePullPolicy(corev1.PullNever).
 		SetCommand(constants.DefaultToolkitPath, "parallel").
 		EnableToolkit(stage.Ref()).
 		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, constants.DefaultTransferDirPath))
