@@ -162,9 +162,9 @@ func EncodeStringMapToEnvVar(mapStr map[string]string) (string, error) {
 	var str string
 	if mapStr != nil {
 		if data, err := json.Marshal(mapStr); err != nil {
-			str = base64.StdEncoding.EncodeToString(data)
-		} else {
 			return "", err
+		} else {
+			str = base64.StdEncoding.EncodeToString(data)
 		}
 	}
 
@@ -175,8 +175,7 @@ func EncodeStringMapToEnvVar(mapStr map[string]string) (string, error) {
 func DecodeEnvVarToStringMap(str string) (map[string]string, error) {
 	var mapStr map[string]string
 	if str != "" {
-		data, err := base64.StdEncoding.DecodeString(str)
-		if err != nil {
+		if data, err := base64.StdEncoding.DecodeString(str); err != nil {
 			return nil, err
 		} else if err = json.Unmarshal(data, &mapStr); err != nil {
 			return nil, err
