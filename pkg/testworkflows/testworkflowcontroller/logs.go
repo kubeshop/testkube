@@ -40,6 +40,23 @@ type ContainerLog struct {
 	Output *instructions.Instruction
 }
 
+type ContainerLogType string
+
+const (
+	ContainerLogTypeHint   ContainerLogType = "hint"
+	ContainerLogTypeOutput ContainerLogType = "output"
+	ContainerLogTypeLog    ContainerLogType = ""
+)
+
+func (c *ContainerLog) Type() ContainerLogType {
+	if c.Hint != nil {
+		return ContainerLogTypeHint
+	} else if c.Output != nil {
+		return ContainerLogTypeOutput
+	}
+	return ContainerLogTypeLog
+}
+
 // getContainerLogsStream is getting logs stream, and tries to reinitialize the stream on EOF.
 // EOF may happen not only on the actual container end, but also in case of the log rotation.
 // @see {@link https://stackoverflow.com/a/68673451}
