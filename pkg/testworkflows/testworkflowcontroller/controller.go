@@ -231,6 +231,7 @@ func (c *controller) WatchLightweight(parentCtx context.Context) <-chan Lightwei
 	prevNodeName := ""
 	prevPodIP := ""
 	prevStatus := testkube.QUEUED_TestWorkflowStatus
+	prevIsFinished := false
 	sig := stage.MapSignatureListToInternal(c.signature)
 	ch := make(chan LightweightNotification)
 	go func() {
@@ -245,6 +246,7 @@ func (c *controller) WatchLightweight(parentCtx context.Context) <-chan Lightwei
 			podIP, _ := c.PodIP(parentCtx)
 			current := prevCurrent
 			status := prevStatus
+			isFinished := prevIsFinished
 			if v.Value.Result != nil {
 				if v.Value.Result.Status != nil {
 					status = *v.Value.Result.Status
@@ -252,13 +254,17 @@ func (c *controller) WatchLightweight(parentCtx context.Context) <-chan Lightwei
 					status = testkube.QUEUED_TestWorkflowStatus
 				}
 				current = v.Value.Result.Current(sig)
+				isFinished = v.Value.Result.IsFinished()
 			}
 
-			if nodeName != prevNodeName || podIP != prevPodIP || prevStatus != status || prevCurrent != current {
+			// TODO: the final status should always have the finishedAt too,
+			//       there should be no need for checking isFinished diff
+			if nodeName != prevNodeName || isFinished != prevIsFinished || podIP != prevPodIP || prevStatus != status || prevCurrent != current {
 				prevNodeName = nodeName
 				prevPodIP = podIP
 				prevStatus = status
 				prevCurrent = current
+				prevIsFinished = isFinished
 				ch <- LightweightNotification{NodeName: nodeName, PodIP: podIP, Status: status, Current: current, Result: v.Value.Result}
 			}
 		}
