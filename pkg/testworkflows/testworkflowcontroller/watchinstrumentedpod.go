@@ -269,19 +269,26 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 						Status:     testkube.ABORTED_TestWorkflowStepStatus,
 						ExitCode:   -1,
 						Details:    result.Details,
-						FinishedAt: result.FinishedAt,
+						FinishedAt: s.GetStepResult(ref).FinishedAt,
+					}
+					if status.FinishedAt.IsZero() {
+						status.FinishedAt = result.FinishedAt
 					}
 					if status.FinishedAt.IsZero() {
 						status.FinishedAt = state.FinishedAt("")
-						if status.FinishedAt.IsZero() {
-							status.FinishedAt = s.GetLastTimestamp(lastStarted)
-						}
+					}
+					if status.FinishedAt.IsZero() {
+						status.FinishedAt = s.GetLastTimestamp(lastStarted)
 					}
 
 					if len(result.Steps) > i {
 						status = result.Steps[i]
 						if status.Details == "" {
 							status.Details = result.Details
+						}
+						finishedAt := s.GetStepResult(ref).FinishedAt
+						if !finishedAt.IsZero() {
+							status.FinishedAt = finishedAt
 						}
 					}
 					s.FinishStep(ref, status)

@@ -404,8 +404,12 @@ func (r *TestWorkflowResult) Recompute(sig []TestWorkflowSignature, scheduledAt 
 		r.Status = common.Ptr(RUNNING_TestWorkflowStatus)
 	}
 
-	if r.FinishedAt.IsZero() && r.Status != nil && *r.Status == ABORTED_TestWorkflowStatus {
-		r.FinishedAt = r.LatestTimestamp()
+	// Ensure the finish time is after all other timestamps
+	if !r.FinishedAt.IsZero() || (r.Status != nil && *r.Status == ABORTED_TestWorkflowStatus) {
+		lastTs := r.LatestTimestamp()
+		if r.FinishedAt.Before(lastTs) {
+			r.FinishedAt = lastTs
+		}
 	}
 
 	// Compute the duration

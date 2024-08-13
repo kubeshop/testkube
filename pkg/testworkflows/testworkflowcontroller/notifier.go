@@ -292,11 +292,11 @@ func (n *notifier) Output(ref string, ts time.Time, output *instructions.Instruc
 }
 
 func (n *notifier) Finish(ts time.Time) {
-	n.resultMu.Lock()
-	defer n.resultMu.Unlock()
-	if !n.result.FinishedAt.Before(ts) {
+	if ts.IsZero() {
 		return
 	}
+	n.resultMu.Lock()
+	defer n.resultMu.Unlock()
 	n.result.FinishedAt = ts
 	n.emit()
 }
