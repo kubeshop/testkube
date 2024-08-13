@@ -8,7 +8,7 @@ import (
 )
 
 func (r *TestWorkflowResult) IsFinished() bool {
-	return !r.IsStatus(QUEUED_TestWorkflowStatus) && !r.IsStatus(RUNNING_TestWorkflowStatus) && !r.IsStatus(PAUSED_TestWorkflowStatus)
+	return !r.FinishedAt.IsZero() && !r.IsStatus(QUEUED_TestWorkflowStatus) && !r.IsStatus(RUNNING_TestWorkflowStatus) && !r.IsStatus(PAUSED_TestWorkflowStatus)
 }
 
 func (r *TestWorkflowResult) IsStatus(s TestWorkflowStatus) bool {
@@ -90,7 +90,7 @@ func (r *TestWorkflowResult) Fatal(err error, aborted bool, ts time.Time) {
 	if r.FinishedAt.IsZero() {
 		r.FinishedAt = ts.UTC()
 	}
-	if r.Initialization.Status == nil || (*r.Initialization.Status == QUEUED_TestWorkflowStepStatus) || (*r.Initialization.Status == RUNNING_TestWorkflowStepStatus) {
+	if r.Initialization.Status == nil || !(*r.Initialization.Status).Finished() {
 		r.Initialization.Status = common.Ptr(FAILED_TestWorkflowStepStatus)
 		if aborted {
 			r.Initialization.Status = common.Ptr(ABORTED_TestWorkflowStepStatus)
@@ -158,16 +158,23 @@ func (r *TestWorkflowResult) RecomputeDuration() {
 	if !r.FinishedAt.IsZero() {
 		r.PausedMs = 0
 
+		// Finalize pauses
+		for i := range r.Pauses {
+			step := r.Steps[r.Pauses[i].Ref]
+			if !step.FinishedAt.IsZero() {
+				if r.Pauses[i].ResumedAt.IsZero() {
+					r.Pauses[i].ResumedAt = step.FinishedAt
+				}
+				if r.Pauses[i].PausedAt.Before(step.StartedAt) {
+					r.Pauses[i].PausedAt = step.StartedAt
+				}
+			}
+		}
+
 		// Get unique pause periods
 		pauses := make([]TestWorkflowPause, 0)
 	loop:
 		for _, p := range r.Pauses {
-			// Finalize the pause if it's not
-			step := r.Steps[p.Ref]
-			if !step.FinishedAt.IsZero() && p.ResumedAt.IsZero() {
-				p.ResumedAt = step.FinishedAt
-			}
-
 			for i := range pauses {
 				// They don't overlap
 				if p.PausedAt.After(pauses[i].ResumedAt) || p.ResumedAt.Before(pauses[i].PausedAt) {
@@ -324,6 +331,14 @@ func (r *TestWorkflowResult) Recompute(sig []TestWorkflowSignature, scheduledAt 
 	}
 	for _, s := range seq {
 		r.Steps[s.ref] = s.result
+	}
+
+	// Ensure initialization timestamps
+	if !r.Initialization.FinishedAt.IsZero() && r.Initialization.StartedAt.IsZero() {
+		r.Initialization.StartedAt = r.Initialization.FinishedAt
+	}
+	if !r.Initialization.StartedAt.IsZero() && r.Initialization.QueuedAt.IsZero() {
+		r.Initialization.QueuedAt = r.Initialization.StartedAt
 	}
 
 	// Calibrate the clock for group steps
@@ -543,7 +558,16 @@ func recomputeTestWorkflowStepResult(v TestWorkflowStepResult, sig TestWorkflowS
 
 	// Ensure there is a start time if the step is already finished
 	if v.StartedAt.IsZero() && !v.FinishedAt.IsZero() {
-		v.StartedAt = v.QueuedAt
+		if v.QueuedAt.IsZero() {
+			v.StartedAt = v.FinishedAt
+		} else {
+			v.StartedAt = v.QueuedAt
+		}
+	}
+
+	// Ensure there is a queued time if the step is already finished
+	if v.QueuedAt.IsZero() && !v.StartedAt.IsZero() {
+		v.QueuedAt = v.StartedAt
 	}
 
 	// Compute children
