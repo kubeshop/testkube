@@ -22,8 +22,9 @@ import (
 )
 
 const (
-	InitContainerName = "tktw-init"
-	IdleTimeout       = 100 * time.Millisecond
+	InitContainerName    = "tktw-init"
+	IdleTimeout          = 100 * time.Millisecond
+	ExpectedDelayTimeout = 1 * time.Second
 )
 
 type WatchInstrumentedPodOptions struct {
@@ -80,7 +81,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 		// Handle when the execution have been finished, but there may be no Pod
 		case <-state.Finished(""):
 			select {
-			case <-time.After(1 * time.Second):
+			case <-time.After(ExpectedDelayTimeout):
 				s.Error(fmt.Errorf("the execution is finished, but failed to get pod"))
 				return
 			case p := <-pod.Peek(ctx):

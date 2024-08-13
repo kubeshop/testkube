@@ -495,7 +495,7 @@ func initializePodState(parentCtx context.Context, pod Channel[*corev1.Pod], pod
 						} else if ok {
 							state.RegisterPod(p.Value)
 						}
-					case <-time.After(2 * time.Second):
+					case <-time.After(alignmentTimeout):
 						// Continue - likely we won't receive Pod status
 					}
 				}
