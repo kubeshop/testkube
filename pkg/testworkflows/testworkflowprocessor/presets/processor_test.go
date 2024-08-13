@@ -727,7 +727,6 @@ func TestProcessLocalContent(t *testing.T) {
 		RestartPolicy:      corev1.RestartPolicyNever,
 		EnableServiceLinks: common.Ptr(false),
 		Volumes:            volumes,
-		PreemptionPolicy:   common.Ptr(corev1.PreemptNever),
 		InitContainers: []corev1.Container{
 			{
 				Name:            "1",
