@@ -110,6 +110,7 @@ func main() {
 		orchestration.Pause(step, *step.StartedAt)
 		for _, parentRef := range step.Parents {
 			parent := state.GetStep(parentRef)
+			// TODO: What about parents of the parents?
 			orchestration.Pause(parent, *step.StartedAt)
 		}
 		return err
@@ -125,6 +126,7 @@ func main() {
 		orchestration.Resume(step, ts)
 		for _, parentRef := range step.Parents {
 			parent := state.GetStep(parentRef)
+			// TODO: What about parents of the parents?
 			orchestration.Resume(parent, ts)
 		}
 		return err

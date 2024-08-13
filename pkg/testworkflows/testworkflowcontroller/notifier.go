@@ -292,11 +292,11 @@ func (n *notifier) Output(ref string, ts time.Time, output *instructions.Instruc
 }
 
 func (n *notifier) Finish(ts time.Time) {
-	n.resultMu.Lock()
-	defer n.resultMu.Unlock()
-	if !n.result.FinishedAt.Before(ts) {
+	if ts.IsZero() {
 		return
 	}
+	n.resultMu.Lock()
+	defer n.resultMu.Unlock()
 	n.result.FinishedAt = ts
 	n.emit()
 }
@@ -312,7 +312,7 @@ func (n *notifier) UpdateStepStatus(ref string, status testkube.TestWorkflowStep
 }
 
 func (n *notifier) finishInit(status ContainerResultStep) {
-	if n.result.Initialization.FinishedAt.Equal(status.FinishedAt) && n.result.Initialization.Status != nil && *n.result.Initialization.Status == status.Status {
+	if n.result.Initialization.FinishedAt.Equal(status.FinishedAt) && n.result.Initialization.Status != nil && *n.result.Initialization.Status == status.Status && (status.Status != testkube.ABORTED_TestWorkflowStepStatus || n.result.Initialization.ErrorMessage == status.Details) {
 		return
 	}
 	n.result.Initialization.FinishedAt = status.FinishedAt.UTC()
@@ -352,7 +352,7 @@ func (n *notifier) FinishStep(ref string, status ContainerResultStep) {
 		n.finishInit(status)
 		return
 	}
-	if n.result.Steps[ref].FinishedAt.Equal(status.FinishedAt) && n.result.Steps[ref].Status != nil && *n.result.Steps[ref].Status == status.Status {
+	if n.result.Steps[ref].FinishedAt.Equal(status.FinishedAt) && n.result.Steps[ref].Status != nil && *n.result.Steps[ref].Status == status.Status && (status.Status != testkube.ABORTED_TestWorkflowStepStatus || n.result.Steps[ref].ErrorMessage == status.Details) {
 		return
 	}
 	s := n.result.Steps[ref]
