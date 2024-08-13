@@ -277,16 +277,6 @@ func (c *controller) Logs(parentCtx context.Context, follow bool) io.Reader {
 	go func() {
 		defer writer.Close()
 		ref := ""
-		// Wait until there will be events fetched first
-		alignTimeoutCh := time.After(alignmentTimeout)
-		select {
-		case <-c.jobEvents.Peek(parentCtx):
-		case <-alignTimeoutCh:
-		}
-		select {
-		case <-c.podEvents.Peek(parentCtx):
-		case <-alignTimeoutCh:
-		}
 		ch, err := WatchInstrumentedPod(parentCtx, c.clientSet, c.signature, c.scheduledAt, c.pod, c.podEvents, WatchInstrumentedPodOptions{
 			JobEvents: c.jobEvents,
 			Job:       c.job,
