@@ -326,6 +326,9 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	if podConfig.SecurityContext.FSGroup == nil {
 		podConfig.SecurityContext.FSGroup = common.Ptr(constants.DefaultFsGroup)
 	}
+	if podConfig.PreemptionPolicy == nil {
+		podConfig.PreemptionPolicy = common.Ptr(corev1.PreemptNever)
+	}
 	podSpec := corev1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: podConfig.Annotations,
