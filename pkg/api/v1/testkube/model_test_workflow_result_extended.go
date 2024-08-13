@@ -168,6 +168,9 @@ func (r *TestWorkflowResult) RecomputeDuration() {
 				if r.Pauses[i].PausedAt.Before(step.StartedAt) {
 					r.Pauses[i].PausedAt = step.StartedAt
 				}
+				if r.Pauses[i].ResumedAt.Before(r.Pauses[i].PausedAt) {
+					r.Pauses[i].PausedAt = r.Pauses[i].ResumedAt
+				}
 			}
 		}
 
