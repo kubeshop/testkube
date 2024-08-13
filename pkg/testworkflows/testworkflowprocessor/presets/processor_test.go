@@ -175,7 +175,6 @@ func TestProcessBasic(t *testing.T) {
 					RestartPolicy:      corev1.RestartPolicyNever,
 					EnableServiceLinks: common.Ptr(false),
 					Volumes:            volumes,
-					PreemptionPolicy:   common.Ptr(corev1.PreemptNever),
 					InitContainers:     []corev1.Container{},
 					Containers: []corev1.Container{
 						{
@@ -290,7 +289,6 @@ func TestProcessShellWithNonStandardImage(t *testing.T) {
 					RestartPolicy:      corev1.RestartPolicyNever,
 					EnableServiceLinks: common.Ptr(false),
 					Volumes:            volumes,
-					PreemptionPolicy:   common.Ptr(corev1.PreemptNever),
 					InitContainers: []corev1.Container{
 						{
 							Name:            "1",
@@ -397,7 +395,6 @@ func TestProcessBasicEnvReference(t *testing.T) {
 		RestartPolicy:      corev1.RestartPolicyNever,
 		EnableServiceLinks: common.Ptr(false),
 		Volumes:            volumes,
-		PreemptionPolicy:   common.Ptr(corev1.PreemptNever),
 		InitContainers:     []corev1.Container{},
 		Containers: []corev1.Container{
 			{
@@ -491,7 +488,6 @@ func TestProcessMultipleSteps(t *testing.T) {
 		RestartPolicy:      corev1.RestartPolicyNever,
 		EnableServiceLinks: common.Ptr(false),
 		Volumes:            volumes,
-		PreemptionPolicy:   common.Ptr(corev1.PreemptNever),
 		InitContainers: []corev1.Container{
 			{
 				Name:            "1",
@@ -630,7 +626,6 @@ func TestProcessNestedSteps(t *testing.T) {
 		RestartPolicy:      corev1.RestartPolicyNever,
 		EnableServiceLinks: common.Ptr(false),
 		Volumes:            volumes,
-		PreemptionPolicy:   common.Ptr(corev1.PreemptNever),
 		InitContainers: []corev1.Container{
 			{
 				Name:            "1",
@@ -812,7 +807,6 @@ func TestProcessGlobalContent(t *testing.T) {
 		RestartPolicy:      corev1.RestartPolicyNever,
 		EnableServiceLinks: common.Ptr(false),
 		Volumes:            volumes,
-		PreemptionPolicy:   common.Ptr(corev1.PreemptNever),
 		InitContainers: []corev1.Container{
 			{
 				Name:            "1",
