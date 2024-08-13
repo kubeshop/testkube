@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/gookit/color"
 	"github.com/pkg/errors"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -65,13 +66,27 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 		}
 
 		// Ensure the queue/start time has been saved
-		if s.result.QueuedAt.IsZero() || s.result.StartedAt.IsZero() {
+		if (s.result.QueuedAt.IsZero() || s.result.StartedAt.IsZero()) && state.FinishedAt("").IsZero() {
 			s.Error(errors.New("missing information about scheduled pod"))
 			return
 		}
 
 		// Load the namespace information
-		podObj := <-pod.Peek(ctx)
+		var podObj *corev1.Pod
+		select {
+		// Obtain the Pod information for further execution
+		case p := <-pod.Peek(ctx):
+			podObj = p
+		// Handle when the execution have been finished, but there may be no Pod
+		case <-state.Finished(""):
+			select {
+			case <-time.After(1 * time.Second):
+				s.Error(fmt.Errorf("the execution is finished, but failed to get pod"))
+				return
+			case p := <-pod.Peek(ctx):
+				podObj = p
+			}
+		}
 
 		// Load the references
 		var refs, endRefs [][]string
@@ -113,8 +128,30 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 			// Update queue time
 			s.Queue(initialRef, lastTs)
 
-			// Watch the container events
-			for v := range state.PreStart(containerName) {
+			// Watch the container events, along with final finish too
+			preStartCh := state.PreStart(containerName)
+			finishedCh := state.Finished("")
+		loop:
+			for {
+				var v ChannelMessage[podStateUpdate]
+				select {
+				case vv, ok := <-preStartCh:
+					if !ok {
+						break loop
+					}
+					v = vv
+				default:
+					select {
+					case vv, ok := <-preStartCh:
+						if !ok {
+							break loop
+						}
+						v = vv
+					case <-finishedCh:
+						break loop
+					}
+				}
+
 				if v.Value.Queued != nil {
 					s.Queue(initialRef, state.QueuedAt(containerName))
 				} else if v.Value.Started != nil {
@@ -127,22 +164,27 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 			}
 
 			// Ensure the queue/start time has been saved
-			if s.GetStepResult(initialRef).QueuedAt.IsZero() || s.GetStepResult(initialRef).StartedAt.IsZero() {
+			if (s.GetStepResult(initialRef).QueuedAt.IsZero() || s.GetStepResult(initialRef).StartedAt.IsZero()) && state.FinishedAt("").IsZero() {
 				s.Error(fmt.Errorf("missing information about scheduled '%s' step in '%s' container", initialRef, container.Name))
 				return
 			}
 
 			// Watch the container logs
-			follow := common.ResolvePtr(opts.Follow, true) && !state.IsFinished(containerName)
+			follow := common.ResolvePtr(opts.Follow, true) && !state.IsFinished(containerName) && !state.IsFinished("")
 			aborted := false
 			lastStarted := initialRef
 			executionStatuses := map[string]constants.ExecutionResult{}
 			for v := range WatchContainerLogs(ctx, clientSet, podObj.Namespace, podObj.Name, containerName, follow, 10, pod).Channel() {
 				if v.Error != nil {
 					s.Error(v.Error)
-				} else if v.Value.Output != nil {
+				}
+
+				switch v.Value.Type() {
+				case ContainerLogTypeLog:
+					s.Raw(lastStarted, v.Value.Time, string(v.Value.Log), false)
+				case ContainerLogTypeOutput:
 					s.Output(v.Value.Output.Ref, v.Value.Time, v.Value.Output)
-				} else if v.Value.Hint != nil {
+				case ContainerLogTypeHint:
 					if v.Value.Hint.Ref == constants2.RootOperationName {
 						continue
 					}
@@ -189,18 +231,22 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 						}
 						s.Resume(v.Value.Hint.Ref, end)
 					}
-				} else {
-					s.Raw(lastStarted, v.Value.Time, string(v.Value.Log), false)
 				}
 			}
 
 			if aborted {
 				// Don't wait for any other statuses if we already know that some task has been aborted
 			} else if follow {
-				<-state.Finished(container.Name)
+				select {
+				case <-state.Finished(container.Name):
+				case <-state.Finished(""):
+					// Finish fast when the whole execution has been finished
+				}
 			} else {
 				select {
 				case <-state.Finished(container.Name):
+				case <-state.Finished(""):
+					// Finish fast when the whole execution has been finished
 				case <-time.After(IdleTimeout):
 					return
 				}
@@ -222,48 +268,72 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 					status := ContainerResultStep{
 						Status:     testkube.ABORTED_TestWorkflowStepStatus,
 						ExitCode:   -1,
-						Details:    "",
+						Details:    result.Details,
 						FinishedAt: result.FinishedAt,
 					}
+					if status.FinishedAt.IsZero() {
+						status.FinishedAt = state.FinishedAt("")
+						if status.FinishedAt.IsZero() {
+							status.FinishedAt = s.GetLastTimestamp(lastStarted)
+						}
+					}
+
 					if len(result.Steps) > i {
 						status = result.Steps[i]
+						if status.Details == "" {
+							status.Details = result.Details
+						}
 					}
-					if !s.IsFinished(ref) {
-						s.FinishStep(ref, status)
+					s.FinishStep(ref, status)
+					if status.Status == testkube.ABORTED_TestWorkflowStepStatus {
+						lastStarted = ref
+						break
 					}
 				}
 			}
 
 			// Update the last timestamp
-			lastTs = s.GetLastTimestamp(lastStarted)
+			nextLastTs := s.GetLastTimestamp(lastStarted)
+			if nextLastTs.After(lastTs) {
+				lastTs = nextLastTs
+			}
 
 			// Break the function if the step has been aborted.
 			// Breaking only to the loop is not enough,
 			// because due to GKE bug, the Job is still pending,
 			// so it will get stuck there.
 			if s.IsAnyAborted() {
+				result, _ := state.ContainerResult(container.Name)
 				reason := s.result.Steps[lastStarted].ErrorMessage
+				if reason == "" {
+					reason = result.Details
+				}
 				message := "Aborted"
 				if reason == "" {
-					message = fmt.Sprintf("\n%s Aborted", s.GetLastTimestamp(lastStarted).Format(KubernetesLogTimeFormat))
+					message = fmt.Sprintf("\n%s Aborted", lastTs.Format(KubernetesLogTimeFormat))
 				} else {
-					message = fmt.Sprintf("\n%s Aborted (%s)", s.GetLastTimestamp(lastStarted).Format(KubernetesLogTimeFormat), reason)
+					message = fmt.Sprintf("\n%s Aborted (%s)", lastTs.Format(KubernetesLogTimeFormat), reason)
 				}
-				s.Raw(lastStarted, s.GetLastTimestamp(lastStarted), message, false)
+				s.Raw(lastStarted, lastTs, message, false)
 
 				// Mark all not started steps as skipped
 				for ref := range s.result.Steps {
 					if !s.IsFinished(ref) {
 						status := testkube.SKIPPED_TestWorkflowStepStatus
-						details := "The execution was aborted before."
+						details := "The execution was aborted before"
 						if s.result.Steps[ref].Status != nil && *s.result.Steps[ref].Status != testkube.QUEUED_TestWorkflowStepStatus {
 							status = testkube.ABORTED_TestWorkflowStepStatus
-							details = ""
+							details = result.Details
+						} else if result.Details != "" {
+							details = fmt.Sprintf("The execution was aborted before %s", color.FgDarkGray.Render("("+result.Details+")"))
+						}
+						if details != "" {
+							s.Raw(ref, lastTs, fmt.Sprintf("%s %s", lastTs.Format(KubernetesLogTimeFormat), details), false)
 						}
 						s.FinishStep(ref, ContainerResultStep{
 							Status:     status,
 							ExitCode:   -1,
-							Details:    details,
+							Details:    "",
 							FinishedAt: lastTs,
 						})
 					}
