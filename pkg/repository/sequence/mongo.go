@@ -62,7 +62,7 @@ type executionNumber struct {
 // GetNextExecutionNumber gets next execution number by name and type
 func (r *MongoRepository) GetNextExecutionNumber(ctx context.Context, name string, executionType ExecutionType) (number int32, err error) {
 	oldName := getOldName(name, executionType)
-	number, err = r.getOldNumber(ctx, oldName)
+	number, err = r.getOldNumber(ctx, oldName, executionType)
 	if err != nil {
 		return 0, err
 	}
@@ -151,15 +151,29 @@ func (r *MongoRepository) DeleteAllExecutionNumbers(ctx context.Context, executi
 	return err
 }
 
-func (r *MongoRepository) getOldNumber(ctx context.Context, name string) (int32, error) {
-	var executionNumber oldExecutionNumber
+func (r *MongoRepository) getOldNumber(ctx context.Context, name string, executionType ExecutionType) (int32, error) {
+	var oldExecutionNumber oldExecutionNumber
 
-	err := r.Coll.FindOne(ctx, bson.M{"name": name}).Decode(&executionNumber)
+	// get old number from OSS or old agent - old cloud configuration
+	err := r.Coll.FindOne(ctx, bson.M{"name": name}).Decode(&oldExecutionNumber)
 	if err != nil && err != mongo.ErrNoDocuments {
 		return 0, err
 	}
 
-	return int32(executionNumber.Number), nil
+	number := int32(oldExecutionNumber.Number)
+	// get old number from old agennt - new cloud configuration
+	if number == 0 && (executionType == ExecutionTypeTestSuite || executionType == ExecutionTypeTestWorkflow) {
+		var executionNumber executionNumber
+
+		err = r.Coll.FindOne(ctx, bson.M{"_id": getMongoId(name, ExecutionTypeTest)}).Decode(&executionNumber)
+		if err != nil && err != mongo.ErrNoDocuments {
+			return 0, err
+		}
+
+		number = int32(executionNumber.Number)
+	}
+
+	return number, nil
 }
 
 func getMongoId(name string, executionType ExecutionType) string {

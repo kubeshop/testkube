@@ -27,9 +27,6 @@ spec:
       - -n
       - -t
       - jmeter-executor-smoke.jmx
-  events:
-  - cronjob:
-      cron: "11 */4 * * *"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -61,9 +58,6 @@ spec:
       artifacts:
         paths:
         - '**/*'
-  events:
-  - cronjob:
-      cron: "11 */4 * * *"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow

@@ -18,6 +18,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/imageinspector"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
@@ -58,12 +59,13 @@ func (p *processor) process(layer Intermediate, container stage.Container, step 
 
 	// Build an initial group for the inner items
 	self := stage.NewGroupStage(ref, false)
+	self.SetPure(step.Pure)
 	self.SetName(step.Name)
 	self.SetOptional(step.Optional).SetNegative(step.Negative).SetTimeout(step.Timeout).SetPaused(step.Paused)
-	if step.Condition != "" {
-		self.SetCondition(step.Condition)
-	} else {
+	if step.Condition == "" {
 		self.SetCondition("passed")
+	} else {
+		self.SetCondition(step.Condition)
 	}
 
 	// Run operations
@@ -79,7 +81,8 @@ func (p *processor) process(layer Intermediate, container stage.Container, step 
 	if self.HasPause() && len(self.Children()) == 0 {
 		pause := stage.NewContainerStage(self.Ref()+"pause", container.CreateChild().
 			SetCommand(constants.DefaultShellPath).
-			SetArgs("-c", "exit 0"))
+			SetArgs("-c", "exit 0")).
+			SetPure(true)
 		pause.SetCategory("Wait for continue")
 		self.Add(pause)
 	}
@@ -186,6 +189,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 
 	// Build signature
 	sig := root.Signature().Children()
+	fullSig := root.FullSignature().Children()
 
 	// Load the image pull secrets
 	pullSecretNames := make([]string, len(podConfig.ImagePullSecrets))
@@ -193,17 +197,21 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		pullSecretNames[i] = v.Name
 	}
 
-	// Load the image details
-	imageNames := root.GetImages()
+	// Load the image details when necessary
+	hasPodSecurityContextGroup := podConfig.SecurityContext != nil && podConfig.SecurityContext.RunAsGroup != nil
+	imageNames := root.GetImages(hasPodSecurityContextGroup)
 	images := make(map[string]*imageinspector.Info)
 	imageNameResolutions := map[string]string{}
-	for image := range imageNames {
-		info, err := p.inspector.Inspect(ctx, "", image, corev1.PullIfNotPresent, pullSecretNames)
+	for image, needsMetadata := range imageNames {
+		var info *imageinspector.Info
+		if needsMetadata {
+			info, err = p.inspector.Inspect(ctx, "", image, corev1.PullIfNotPresent, pullSecretNames)
+			images[image] = info
+		}
 		imageNameResolutions[image] = p.inspector.ResolveName("", image)
 		if err != nil {
 			return nil, fmt.Errorf("resolving image error: %s: %s", image, err.Error())
 		}
-		images[image] = info
 	}
 	err = root.ApplyImages(images, imageNameResolutions)
 	if err != nil {
@@ -221,21 +229,19 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	}
 	if len(otherContainers) == 1 {
 		image := otherContainers[0].Container().Image()
-		if _, ok := images[image]; ok {
-			sc := otherContainers[0].Container().SecurityContext()
-			if sc == nil {
-				sc = &corev1.SecurityContext{}
-			}
-			if podConfig.SecurityContext == nil {
-				podConfig.SecurityContext = &corev1.PodSecurityContext{}
-			}
-			if sc.RunAsGroup == nil && podConfig.SecurityContext.RunAsGroup == nil {
-				sc.RunAsGroup = common.Ptr(images[image].Group)
-				otherContainers[0].Container().SetSecurityContext(sc)
-			}
-			if podConfig.SecurityContext.FSGroup == nil {
-				podConfig.SecurityContext.FSGroup = sc.RunAsGroup
-			}
+		sc := otherContainers[0].Container().SecurityContext()
+		if sc == nil {
+			sc = &corev1.SecurityContext{}
+		}
+		if podConfig.SecurityContext == nil {
+			podConfig.SecurityContext = &corev1.PodSecurityContext{}
+		}
+		if sc.RunAsGroup == nil && podConfig.SecurityContext.RunAsGroup == nil && images[image] != nil {
+			sc.RunAsGroup = common.Ptr(images[image].Group)
+			otherContainers[0].Container().SetSecurityContext(sc)
+		}
+		if podConfig.SecurityContext.FSGroup == nil {
+			podConfig.SecurityContext.FSGroup = sc.RunAsGroup
 		}
 	}
 	containerStages = nil
@@ -247,15 +253,27 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	}
 
 	// Build list of the containers
-	actions, err := action.Process(root, machines...)
+	var pureByDefault *bool
+	if workflow.Spec.System != nil && workflow.Spec.System.PureByDefault != nil && *workflow.Spec.System.PureByDefault {
+		pureByDefault = common.Ptr(true)
+	}
+	actions, err := action.Process(root, pureByDefault, machines...)
 	if err != nil {
 		return nil, errors.Wrap(err, "analyzing Kubernetes container operations")
 	}
-	actionGroups := action.Group(actions)
+	usesToolkit := false
+	for _, a := range actions {
+		if a.Type() == lite.ActionTypeExecute && a.Execute.Toolkit {
+			usesToolkit = true
+			break
+		}
+	}
+	isolatedContainers := workflow.Spec.System != nil && workflow.Spec.System.IsolatedContainers != nil && *workflow.Spec.System.IsolatedContainers
+	actionGroups := action.Finalize(action.Group(actions, isolatedContainers), isolatedContainers)
 	containers := make([]corev1.Container, len(actionGroups))
 	for i := range actionGroups {
 		var bareActions []actiontypes.Action
-		containers[i], bareActions, err = action.CreateContainer(i, layer.ContainerDefaults(), actionGroups[i])
+		containers[i], bareActions, err = action.CreateContainer(i, layer.ContainerDefaults(), actionGroups[i], usesToolkit)
 		actionGroups[i] = bareActions
 		if err != nil {
 			return nil, errors.Wrap(err, "building Kubernetes containers")
@@ -376,7 +394,6 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	jobSpec.Annotations = jobAnnotations
 
 	// Build running instructions
-	// TODO: Get rid of the unnecessary ContainerConfig parts
 	actionGroupsSerialized, _ := json.Marshal(actionGroups)
 	podAnnotations := make(map[string]string)
 	maps.Copy(podAnnotations, jobSpec.Spec.Template.Annotations)
@@ -387,10 +404,11 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 
 	// Build bundle
 	bundle = &Bundle{
-		ConfigMaps: configMaps,
-		Secrets:    secrets,
-		Job:        jobSpec,
-		Signature:  sig,
+		ConfigMaps:    configMaps,
+		Secrets:       secrets,
+		Job:           jobSpec,
+		Signature:     sig,
+		FullSignature: fullSig,
 	}
 	return bundle, nil
 }

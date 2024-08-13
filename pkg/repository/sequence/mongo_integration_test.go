@@ -36,36 +36,65 @@ func TestNewMongoRepository_GetNextExecutionNumber_Sequential_Integration(t *tes
 
 	var tests = []struct {
 		expectedValue int32
+		name          string
 		executionType ExecutionType
 	}{
+		// check for new resources
 		{
 			1,
+			"test",
 			ExecutionTypeTest,
 		},
 		{
 			2,
+			"test",
 			ExecutionTypeTest,
 		},
 		{
 			1,
+			"testsuite",
 			ExecutionTypeTestSuite,
 		},
 		{
 			2,
+			"testsuite",
 			ExecutionTypeTestSuite,
 		},
 		{
 			1,
+			"testworkflow",
 			ExecutionTypeTestWorkflow,
 		},
 		{
 			2,
+			"testworkflow",
+			ExecutionTypeTestWorkflow,
+		},
+		// check for existing resources
+		{
+			1,
+			"ts-old-testsuite",
+			ExecutionTypeTest,
+		},
+		{
+			1,
+			"old-testworkflow",
+			ExecutionTypeTest,
+		},
+		{
+			2,
+			"old-testsuite",
+			ExecutionTypeTestSuite,
+		},
+		{
+			2,
+			"old-testworkflow",
 			ExecutionTypeTestWorkflow,
 		},
 	}
 
 	for _, tt := range tests {
-		num, err := repo.GetNextExecutionNumber(ctx, "name", tt.executionType)
+		num, err := repo.GetNextExecutionNumber(ctx, tt.name, tt.executionType)
 		assert.NoError(t, err)
 		assert.Equal(t, tt.expectedValue, num)
 	}
@@ -89,30 +118,37 @@ func TestNewMongoRepository_GetNextExecutionNumber_Parallel_Integration(t *testi
 
 	var tests = []struct {
 		expectedValue int32
+		name          string
 		executionType ExecutionType
 	}{
 		{
 			1,
+			"test",
 			ExecutionTypeTest,
 		},
 		{
 			2,
+			"test",
 			ExecutionTypeTest,
 		},
 		{
 			1,
+			"testsuite",
 			ExecutionTypeTestSuite,
 		},
 		{
 			2,
+			"testsuite",
 			ExecutionTypeTestSuite,
 		},
 		{
 			1,
+			"testworkflow",
 			ExecutionTypeTestWorkflow,
 		},
 		{
 			2,
+			"testworkflow",
 			ExecutionTypeTestWorkflow,
 		},
 	}
@@ -122,14 +158,14 @@ func TestNewMongoRepository_GetNextExecutionNumber_Parallel_Integration(t *testi
 
 	for i := range tests {
 		wg.Add(1)
-		go func(executionType ExecutionType) {
+		go func(name string, executionType ExecutionType) {
 			defer wg.Done()
 
-			num, err := repo.GetNextExecutionNumber(ctx, "name", executionType)
+			num, err := repo.GetNextExecutionNumber(ctx, name, executionType)
 			assert.NoError(t, err)
 
 			results.Store(fmt.Sprintf("%s_%d", executionType, num), num)
-		}(tests[i].executionType)
+		}(tests[i].name, tests[i].executionType)
 	}
 
 	wg.Wait()

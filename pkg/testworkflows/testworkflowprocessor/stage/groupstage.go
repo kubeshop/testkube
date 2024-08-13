@@ -1,8 +1,6 @@
 package stage
 
 import (
-	"maps"
-
 	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/pkg/expressions"
@@ -15,6 +13,7 @@ type groupStage struct {
 	containerDefaults Container
 	children          []Stage
 	virtual           bool
+	pure              *bool
 }
 
 type GroupStage interface {
@@ -24,6 +23,8 @@ type GroupStage interface {
 	Children() []Stage
 	RecursiveChildren() []Stage
 	Add(stages ...Stage) GroupStage
+	Pure() *bool
+	SetPure(pure *bool) GroupStage
 }
 
 func NewGroupStage(ref string, virtual bool) GroupStage {
@@ -53,13 +54,18 @@ func (s *groupStage) HasPause() bool {
 	return s.paused || (len(s.Children()) > 0 && s.Children()[0].HasPause())
 }
 
-func (s *groupStage) Signature() Signature {
+func (s *groupStage) signature(full bool) Signature {
 	sig := []Signature(nil)
 	for _, ch := range s.Children() {
-		si := ch.Signature()
+		var si Signature
+		if full {
+			si = ch.FullSignature()
+		} else {
+			si = ch.Signature()
+		}
 		_, ok := ch.(GroupStage)
 		// Include children directly, if the stage is virtual
-		if ok && si.Name() == "" && !si.Optional() && !si.Negative() {
+		if !full && ok && si.Name() == "" && !si.Optional() && !si.Negative() {
 			sig = append(sig, si.Children()...)
 		} else {
 			sig = append(sig, si)
@@ -74,6 +80,14 @@ func (s *groupStage) Signature() Signature {
 		NegativeValue: s.negative,
 		ChildrenValue: sig,
 	}
+}
+
+func (s *groupStage) Signature() Signature {
+	return s.signature(false)
+}
+
+func (s *groupStage) FullSignature() Signature {
+	return s.signature(true)
 }
 
 func (s *groupStage) ContainerStages() []ContainerStage {
@@ -100,10 +114,12 @@ func (s *groupStage) RecursiveChildren() []Stage {
 	return res
 }
 
-func (s *groupStage) GetImages() map[string]struct{} {
-	v := make(map[string]struct{})
+func (s *groupStage) GetImages(isGroupNeeded bool) map[string]bool {
+	v := make(map[string]bool)
 	for _, ch := range s.children {
-		maps.Copy(v, ch.GetImages())
+		for name, needsMetadata := range ch.GetImages(isGroupNeeded) {
+			v[name] = v[name] || needsMetadata
+		}
 	}
 	return v
 }
@@ -132,7 +148,12 @@ func (s *groupStage) Flatten() []Stage {
 		if first.Name() == "" {
 			first.SetName(s.name)
 		}
-		first.AppendConditions(s.condition)
+		if first.Condition() == "" {
+			// Virtualize with the default condition
+			first.AppendConditions(s.condition, "passed")
+		} else {
+			first.AppendConditions(s.condition)
+		}
 		if first.Timeout() == "" {
 			first.SetTimeout(s.timeout)
 		}
@@ -144,6 +165,13 @@ func (s *groupStage) Flatten() []Stage {
 		}
 		if s.paused {
 			first.SetPaused(true)
+		}
+		if s.pure != nil {
+			if firstContainer, ok := first.(ContainerStage); ok && *s.pure {
+				firstContainer.SetPure(true)
+			} else if firstGroup, ok := first.(GroupStage); ok && firstGroup.Pure() == nil {
+				firstGroup.SetPure(s.pure)
+			}
 		}
 		return []Stage{first}
 	}
@@ -178,4 +206,13 @@ func (s *groupStage) Resolve(m ...expressions.Machine) error {
 		}
 	}
 	return expressions.Simplify(&s.stageMetadata, m...)
+}
+
+func (s *groupStage) Pure() *bool {
+	return s.pure
+}
+
+func (s *groupStage) SetPure(pure *bool) GroupStage {
+	s.pure = pure
+	return s
 }

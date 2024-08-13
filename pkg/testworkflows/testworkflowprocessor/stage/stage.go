@@ -12,9 +12,10 @@ type Stage interface {
 	Len() int
 	HasPause() bool
 	Signature() Signature
+	FullSignature() Signature
 	Resolve(m ...expressions.Machine) error
 	ContainerStages() []ContainerStage
-	GetImages() map[string]struct{}
+	GetImages(isGroupNeeded bool) map[string]bool
 	ApplyImages(images map[string]*imageinspector.Info, imageNameResolutions map[string]string) error
 	Flatten() []Stage
 }

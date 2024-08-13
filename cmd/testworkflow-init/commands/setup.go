@@ -30,12 +30,26 @@ func Setup(config lite.ActionSetup) error {
 		stdoutUnsafe.Print(" skipped\n")
 	}
 
+	// Copy the toolkit
+	stdoutUnsafe.Print("Configuring toolkit...")
+	if config.CopyToolkit {
+		err := exec.Command("cp", "/toolkit", data.ToolkitPath).Run()
+		if err != nil {
+			stdoutUnsafe.Error(" error\n")
+			stdoutUnsafe.Errorf("  failed to copy the /toolkit utilities: %s\n", err.Error())
+			return err
+		}
+		stdoutUnsafe.Print(" done\n")
+	} else {
+		stdoutUnsafe.Print(" skipped\n")
+	}
+
 	// Copy the shell and useful libraries
 	stdoutUnsafe.Print("Configuring shell...")
 	if config.CopyBinaries {
 		// Use `cp` on the whole directory, as it has plenty of files, which lead to the same FS block.
 		// Copying individual files will lead to high FS usage
-		err := exec.Command("cp", "-rf", "/bin", data.InternalBinPath).Run()
+		err := exec.Command("cp", "-rf", "/.tktw-bin", data.InternalBinPath).Run()
 		if err != nil {
 			stdoutUnsafe.Error(" error\n")
 			stdoutUnsafe.Errorf("  failed to copy the binaries: %s\n", err.Error())
