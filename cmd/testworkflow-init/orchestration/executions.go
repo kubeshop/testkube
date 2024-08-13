@@ -133,6 +133,7 @@ func (e *executionGroup) Kill() (err error) {
 func (e *executionGroup) Abort() {
 	e.aborted.Store(true)
 	_ = e.Kill()
+	_ = e.Resume()
 }
 
 func (e *executionGroup) IsAborted() bool {
