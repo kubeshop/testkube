@@ -269,6 +269,7 @@ func MapParameterSchemaAPIToKube(v testkube.TestWorkflowParameterSchema) testwor
 			ExclusiveMaximum: MapBoxedIntegerToInt64(v.ExclusiveMaximum),
 			MultipleOf:       MapBoxedIntegerToInt64(v.MultipleOf),
 		},
+		Sensitive: v.Sensitive,
 	}
 }
 
