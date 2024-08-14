@@ -380,21 +380,28 @@ func (p *podState) containerResult(name string) (ContainerResult, error) {
 	re := regexp.MustCompile(`^([^,]),(0|[1-9]\d*)$`)
 	for _, message := range strings.Split(status.State.Terminated.Message, "/") {
 		match := re.FindStringSubmatch(message)
+
+		// Stop parsing in case of invalid aborted message
 		if match == nil {
-			result.Steps = append(result.Steps, ContainerResultStep{
-				Status:     testkube.ABORTED_TestWorkflowStepStatus,
-				FinishedAt: result.FinishedAt,
-				ExitCode:   -1,
-			})
-		} else {
-			exitCode, _ := strconv.Atoi(match[2])
-			result.Steps = append(result.Steps, ContainerResultStep{
-				Status:     testkube.TestWorkflowStepStatus(data.StepStatusFromCode(match[1])),
-				Details:    result.Details,
-				FinishedAt: result.FinishedAt,
-				ExitCode:   exitCode,
-			})
+			break
 		}
+
+		// Gather information
+		stepStatus := testkube.TestWorkflowStepStatus(data.StepStatusFromCode(match[1]))
+		exitCode, _ := strconv.Atoi(match[2])
+
+		// Stop parsing in case of aborted error, to determine it automatically better
+		if stepStatus == testkube.ABORTED_TestWorkflowStepStatus {
+			break
+		}
+
+		// Append the next result
+		result.Steps = append(result.Steps, ContainerResultStep{
+			Status:     stepStatus,
+			Details:    result.Details,
+			FinishedAt: result.FinishedAt,
+			ExitCode:   exitCode,
+		})
 	}
 
 	return result, nil
