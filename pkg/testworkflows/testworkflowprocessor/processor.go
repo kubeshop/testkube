@@ -106,8 +106,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, constants.DefaultDataPath))
 
 	mapEnv := make(map[string]corev1.EnvVarSource)
-	secretMachine := libs.NewSecretMachine(mapEnv)
-	extendedMachines := append(machines, secretMachine)
+	extendedMachines := append(machines, libs.NewSecretMachine(mapEnv))
 
 	// Fetch resource root and resource ID
 	resourceRoot, err := expressions.EvalExpression("resource.root", extendedMachines...)
