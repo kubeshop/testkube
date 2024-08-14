@@ -242,7 +242,7 @@ func NewServicesCmd() *cobra.Command {
 				// Build the resources bundle
 				scheduledAt := time.Now()
 				bundle, err := presets.NewPro(inspector).
-					Bundle(context.Background(), &testworkflowsv1.TestWorkflow{Spec: instance.Spec}, machine, baseMachine, params.MachineAt(index))
+					Bundle(context.Background(), &testworkflowsv1.TestWorkflow{Spec: instance.Spec}, nil, machine, baseMachine, params.MachineAt(index))
 				if err != nil {
 					log("error", "failed to build the service", err.Error())
 					return false

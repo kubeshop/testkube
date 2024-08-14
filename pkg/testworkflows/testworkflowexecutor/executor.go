@@ -56,7 +56,7 @@ type executor struct {
 	testWorkflowExecutionsClient   testworkflowsclientv1.TestWorkflowExecutionsInterface
 	testWorkflowsClient            testworkflowsclientv1.Interface
 	metrics                        v1.Metrics
-	secretManager                  secretmanager.SecretManager
+	secretConfig                   testkube.SecretConfig
 	globalTemplateName             string
 	apiUrl                         string
 	namespace                      string
@@ -78,7 +78,7 @@ func New(emitter *event.Emitter,
 	testWorkflowExecutionsClient testworkflowsclientv1.TestWorkflowExecutionsInterface,
 	testWorkflowsClient testworkflowsclientv1.Interface,
 	metrics v1.Metrics,
-	secretManager secretmanager.SecretManager,
+	secretConfig testkube.SecretConfig,
 	serviceAccountNames map[string]string,
 	globalTemplateName, namespace, apiUrl, defaultRegistry string,
 	enableImageDataPersistentCache bool, imageDataPersistentCacheKey, dashboardURI, clusterID string) TestWorkflowExecutor {
@@ -97,7 +97,7 @@ func New(emitter *event.Emitter,
 		testWorkflowExecutionsClient:   testWorkflowExecutionsClient,
 		testWorkflowsClient:            testWorkflowsClient,
 		metrics:                        metrics,
-		secretManager:                  secretManager,
+		secretConfig:                   secretConfig,
 		serviceAccountNames:            serviceAccountNames,
 		globalTemplateName:             globalTemplateName,
 		apiUrl:                         apiUrl,
@@ -363,15 +363,21 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		}
 	}
 
-	// Get information about execution namespace
-	// TODO: Think what to do when it is dynamic - create in all execution namespaces?
-	execNamespace := workflow.Namespace
+	namespace := e.namespace
 	if workflow.Spec.Job != nil && workflow.Spec.Job.Namespace != "" {
-		execNamespace = workflow.Spec.Job.Namespace
+		namespace = workflow.Spec.Job.Namespace
 	}
 
+	if _, ok := e.serviceAccountNames[namespace]; !ok {
+		return execution, fmt.Errorf("not supported execution namespace %s", namespace)
+	}
+
+	// Build the basic Execution data
+	id := primitive.NewObjectID().Hex()
+
 	// Handle secrets auto-creation
-	secrets := e.secretManager.Batch(execNamespace, "tw-", workflow.Name)
+	secretManager := secretmanager.New(e.clientSet, e.secretConfig)
+	secrets := secretManager.Batch(namespace, "twe-", id)
 
 	// Apply the configuration
 	_, err = testworkflowresolver.ApplyWorkflowConfig(&workflow, testworkflowmappers.MapConfigValueAPIToKube(request.Config), secrets.Append)
@@ -395,15 +401,6 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		}
 	}
 
-	namespace := e.namespace
-	if workflow.Spec.Job != nil && workflow.Spec.Job.Namespace != "" {
-		namespace = workflow.Spec.Job.Namespace
-	}
-
-	if _, ok := e.serviceAccountNames[namespace]; !ok {
-		return execution, fmt.Errorf("not supported execution namespace %s", namespace)
-	}
-
 	// Determine the dashboard information
 	cloudApiKey := common.GetOr(os.Getenv("TESTKUBE_PRO_API_KEY"), os.Getenv("TESTKUBE_CLOUD_API_KEY"))
 	cloudOrgId := common.GetOr(os.Getenv("TESTKUBE_PRO_ORG_ID"), os.Getenv("TESTKUBE_CLOUD_ORG_ID"))
@@ -415,8 +412,6 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 			cloudUiUrl, env.Config().Cloud.OrgId, env.Config().Cloud.EnvId)
 	}
 
-	// Build the basic Execution data
-	id := primitive.NewObjectID().Hex()
 	now := time.Now()
 	machine := expressions.NewMachine().
 		RegisterStringMap("internal", map[string]string{
@@ -494,7 +489,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	}
 
 	// Validate the TestWorkflow
-	_, err = e.processor.Bundle(ctx, workflow.DeepCopy(), machine, mockExecutionMachine)
+	_, err = e.processor.Bundle(ctx, workflow.DeepCopy(), secrets.Get(), machine, mockExecutionMachine)
 	if err != nil {
 		return execution, errors.Wrap(err, "processing error")
 	}
@@ -528,7 +523,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	})
 
 	// Process the TestWorkflow
-	bundle, err := e.processor.Bundle(ctx, &workflow, machine, executionMachine)
+	bundle, err := e.processor.Bundle(ctx, &workflow, secrets.Get(), machine, executionMachine)
 	if err != nil {
 		return execution, errors.Wrap(err, "processing error")
 	}

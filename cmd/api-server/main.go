@@ -589,7 +589,7 @@ func main() {
 		testWorkflowExecutionsClient,
 		testWorkflowsClient,
 		metrics,
-		secretManager,
+		secretConfig,
 		serviceAccountNames,
 		cfg.GlobalWorkflowTemplateName,
 		cfg.TestkubeNamespace,

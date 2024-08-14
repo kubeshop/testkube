@@ -193,7 +193,7 @@ func NewParallelCmd() *cobra.Command {
 				// Build the resources bundle
 				scheduledAt := time.Now()
 				bundle, err := presets.NewPro(inspector).
-					Bundle(context.Background(), &testworkflowsv1.TestWorkflow{Spec: *spec}, machine, baseMachine, params.MachineAt(index))
+					Bundle(context.Background(), &testworkflowsv1.TestWorkflow{Spec: *spec}, nil, machine, baseMachine, params.MachineAt(index))
 				if err != nil {
 					fmt.Printf("%d: failed to prepare resources: %s\n", index, err.Error())
 					return false
