@@ -29,6 +29,7 @@ import (
 	testworkflowmappers "github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
+	"github.com/kubeshop/testkube/pkg/secretmanager"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
@@ -55,6 +56,7 @@ type executor struct {
 	testWorkflowExecutionsClient   testworkflowsclientv1.TestWorkflowExecutionsInterface
 	testWorkflowsClient            testworkflowsclientv1.Interface
 	metrics                        v1.Metrics
+	secretManager                  secretmanager.SecretManager
 	globalTemplateName             string
 	apiUrl                         string
 	namespace                      string
@@ -76,6 +78,7 @@ func New(emitter *event.Emitter,
 	testWorkflowExecutionsClient testworkflowsclientv1.TestWorkflowExecutionsInterface,
 	testWorkflowsClient testworkflowsclientv1.Interface,
 	metrics v1.Metrics,
+	secretManager secretmanager.SecretManager,
 	serviceAccountNames map[string]string,
 	globalTemplateName, namespace, apiUrl, defaultRegistry string,
 	enableImageDataPersistentCache bool, imageDataPersistentCacheKey, dashboardURI, clusterID string) TestWorkflowExecutor {
@@ -94,6 +97,7 @@ func New(emitter *event.Emitter,
 		testWorkflowExecutionsClient:   testWorkflowExecutionsClient,
 		testWorkflowsClient:            testWorkflowsClient,
 		metrics:                        metrics,
+		secretManager:                  secretManager,
 		serviceAccountNames:            serviceAccountNames,
 		globalTemplateName:             globalTemplateName,
 		apiUrl:                         apiUrl,
@@ -359,14 +363,24 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		}
 	}
 
+	// Get information about execution namespace
+	// TODO: Think what to do when it is dynamic - create in all execution namespaces?
+	execNamespace := workflow.Namespace
+	if workflow.Spec.Job != nil && workflow.Spec.Job.Namespace != "" {
+		execNamespace = workflow.Spec.Job.Namespace
+	}
+
+	// Handle secrets auto-creation
+	secrets := e.secretManager.Batch(execNamespace, "tw-", workflow.Name)
+
 	// Apply the configuration
-	_, err = testworkflowresolver.ApplyWorkflowConfig(&workflow, testworkflowmappers.MapConfigValueAPIToKube(request.Config))
+	_, err = testworkflowresolver.ApplyWorkflowConfig(&workflow, testworkflowmappers.MapConfigValueAPIToKube(request.Config), secrets.Append)
 	if err != nil {
 		return execution, errors.Wrap(err, "configuration")
 	}
 
 	// Resolve the TestWorkflow
-	err = testworkflowresolver.ApplyTemplates(&workflow, tplsMap)
+	err = testworkflowresolver.ApplyTemplates(&workflow, tplsMap, secrets.Append)
 	if err != nil {
 		return execution, errors.Wrap(err, "resolving error")
 	}
@@ -375,7 +389,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	if globalTemplateRef.Name != "" {
 		testworkflowresolver.AddGlobalTemplateRef(&workflow, globalTemplateRef)
 		workflow.Spec.Use = nil
-		err = testworkflowresolver.ApplyTemplates(&workflow, tplsMap)
+		err = testworkflowresolver.ApplyTemplates(&workflow, tplsMap, secrets.Append)
 		if err != nil {
 			return execution, errors.Wrap(err, "resolving with global templates error")
 		}

@@ -215,7 +215,7 @@ var (
 func TestApplyTemplatesMissingTemplate(t *testing.T) {
 	wf := workflowSteps.DeepCopy()
 	wf.Spec.Use = []testworkflowsv1.TemplateRef{{Name: "unknown"}}
-	err := ApplyTemplates(wf, templates)
+	err := ApplyTemplates(wf, templates, nil)
 
 	assert.Error(t, err)
 	assert.Equal(t, err.Error(), `spec.use[0]: resolving template: template "unknown" not found`)
@@ -224,7 +224,7 @@ func TestApplyTemplatesMissingTemplate(t *testing.T) {
 func TestApplyTemplatesMissingConfig(t *testing.T) {
 	wf := workflowSteps.DeepCopy()
 	wf.Spec.Use = []testworkflowsv1.TemplateRef{tplPodConfigRefEmpty}
-	err := ApplyTemplates(wf, templates)
+	err := ApplyTemplates(wf, templates, nil)
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), `spec.use[0]: resolving template:`)
@@ -234,7 +234,7 @@ func TestApplyTemplatesMissingConfig(t *testing.T) {
 func TestApplyTemplatesInvalidConfig(t *testing.T) {
 	wf := workflowSteps.DeepCopy()
 	wf.Spec.Use = []testworkflowsv1.TemplateRef{tplStepsConfigRefStringInvalid}
-	err := ApplyTemplates(wf, templates)
+	err := ApplyTemplates(wf, templates, nil)
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), `spec.use[0]: resolving template: config.index`)
@@ -244,7 +244,7 @@ func TestApplyTemplatesInvalidConfig(t *testing.T) {
 func TestApplyTemplatesConfig(t *testing.T) {
 	wf := workflowPod.DeepCopy()
 	wf.Spec.Use = []testworkflowsv1.TemplateRef{tplPodConfigRef}
-	err := ApplyTemplates(wf, templates)
+	err := ApplyTemplates(wf, templates, nil)
 
 	want := workflowPod.DeepCopy()
 	want.Spec.Pod.Labels["department"] = "test-department"
@@ -256,7 +256,7 @@ func TestApplyTemplatesConfig(t *testing.T) {
 func TestApplyTemplatesNoConfigMismatchNoOverride(t *testing.T) {
 	wf := workflowPodConfig.DeepCopy()
 	wf.Spec.Use = []testworkflowsv1.TemplateRef{tplPodConfigRef}
-	err := ApplyTemplates(wf, templates)
+	err := ApplyTemplates(wf, templates, nil)
 
 	want := workflowPodConfig.DeepCopy()
 	want.Spec.Pod.Labels["department"] = "{{config.department}}"
@@ -268,7 +268,7 @@ func TestApplyTemplatesNoConfigMismatchNoOverride(t *testing.T) {
 func TestApplyTemplatesMergeTopLevelSteps(t *testing.T) {
 	wf := workflowSteps.DeepCopy()
 	wf.Spec.Use = []testworkflowsv1.TemplateRef{tplStepsRef}
-	err := ApplyTemplates(wf, templates)
+	err := ApplyTemplates(wf, templates, nil)
 
 	want := workflowSteps.DeepCopy()
 	want.Spec.Setup = []testworkflowsv1.Step{
@@ -291,7 +291,7 @@ func TestApplyTemplatesMergeTopLevelSteps(t *testing.T) {
 func TestApplyTemplatesMergeMultipleTopLevelSteps(t *testing.T) {
 	wf := workflowSteps.DeepCopy()
 	wf.Spec.Use = []testworkflowsv1.TemplateRef{tplStepsRef, tplStepsConfigRef}
-	err := ApplyTemplates(wf, templates)
+	err := ApplyTemplates(wf, templates, nil)
 
 	want := workflowSteps.DeepCopy()
 	want.Spec.Setup = []testworkflowsv1.Step{
@@ -320,7 +320,7 @@ func TestApplyTemplatesMergeMultipleTopLevelSteps(t *testing.T) {
 func TestApplyTemplatesMergeMultipleConfigurable(t *testing.T) {
 	wf := workflowSteps.DeepCopy()
 	wf.Spec.Use = []testworkflowsv1.TemplateRef{tplStepsConfigRefStringValid, tplStepsConfigRef}
-	err := ApplyTemplates(wf, templates)
+	err := ApplyTemplates(wf, templates, nil)
 
 	want := workflowSteps.DeepCopy()
 	want.Spec.Setup = []testworkflowsv1.Step{
@@ -352,7 +352,7 @@ func TestApplyTemplatesMergeMultipleConfigurable(t *testing.T) {
 func TestApplyTemplatesStepBasic(t *testing.T) {
 	s := *basicStep.DeepCopy()
 	s.Use = []testworkflowsv1.TemplateRef{tplEnvRef}
-	s, err := applyTemplatesToStep(s, templates)
+	s, err := applyTemplatesToStep(s, templates, nil)
 
 	want := *basicStep.DeepCopy()
 	want.Container.Env = append(tplEnv.Spec.Container.Env, want.Container.Env...)
@@ -364,7 +364,7 @@ func TestApplyTemplatesStepBasic(t *testing.T) {
 func TestApplyTemplatesStepIgnorePod(t *testing.T) {
 	s := *basicStep.DeepCopy()
 	s.Use = []testworkflowsv1.TemplateRef{tplPodRef}
-	s, err := applyTemplatesToStep(s, templates)
+	s, err := applyTemplatesToStep(s, templates, nil)
 
 	want := *basicStep.DeepCopy()
 
@@ -375,7 +375,7 @@ func TestApplyTemplatesStepIgnorePod(t *testing.T) {
 func TestApplyTemplatesStepBasicIsolatedIgnore(t *testing.T) {
 	s := *basicStep.DeepCopy()
 	s.Template = &tplEnvRef
-	s, err := applyTemplatesToStep(s, templates)
+	s, err := applyTemplatesToStep(s, templates, nil)
 
 	want := *basicStep.DeepCopy()
 
@@ -386,7 +386,7 @@ func TestApplyTemplatesStepBasicIsolatedIgnore(t *testing.T) {
 func TestApplyTemplatesStepBasicIsolated(t *testing.T) {
 	s := *basicStep.DeepCopy()
 	s.Template = &tplStepsRef
-	s, err := applyTemplatesToStep(s, templates)
+	s, err := applyTemplatesToStep(s, templates, nil)
 
 	want := *basicStep.DeepCopy()
 	want.Steps = append([]testworkflowsv1.Step{
@@ -402,7 +402,7 @@ func TestApplyTemplatesStepBasicIsolated(t *testing.T) {
 func TestApplyTemplatesStepBasicIsolatedWrapped(t *testing.T) {
 	s := *basicStep.DeepCopy()
 	s.Template = &tplStepsEnvRef
-	s, err := applyTemplatesToStep(s, templates)
+	s, err := applyTemplatesToStep(s, templates, nil)
 
 	want := *basicStep.DeepCopy()
 	want.Steps = append([]testworkflowsv1.Step{{
@@ -425,7 +425,7 @@ func TestApplyTemplatesStepBasicIsolatedWrapped(t *testing.T) {
 func TestApplyTemplatesStepBasicSteps(t *testing.T) {
 	s := *basicStep.DeepCopy()
 	s.Use = []testworkflowsv1.TemplateRef{tplStepsRef}
-	s, err := applyTemplatesToStep(s, templates)
+	s, err := applyTemplatesToStep(s, templates, nil)
 
 	want := *basicStep.DeepCopy()
 	want.Setup = []testworkflowsv1.Step{
@@ -444,7 +444,7 @@ func TestApplyTemplatesStepBasicSteps(t *testing.T) {
 func TestApplyTemplatesStepBasicMultipleSteps(t *testing.T) {
 	s := *basicStep.DeepCopy()
 	s.Use = []testworkflowsv1.TemplateRef{tplStepsRef, tplStepsConfigRef}
-	s, err := applyTemplatesToStep(s, templates)
+	s, err := applyTemplatesToStep(s, templates, nil)
 
 	want := *basicStep.DeepCopy()
 	want.Setup = []testworkflowsv1.Step{
@@ -469,7 +469,7 @@ func TestApplyTemplatesStepBasicMultipleSteps(t *testing.T) {
 func TestApplyTemplatesStepAdvancedIsolated(t *testing.T) {
 	s := *advancedStep.DeepCopy()
 	s.Template = &tplStepsRef
-	s, err := applyTemplatesToStep(s, templates)
+	s, err := applyTemplatesToStep(s, templates, nil)
 
 	want := *advancedStep.DeepCopy()
 	want.Steps = append([]testworkflowsv1.Step{
@@ -485,7 +485,7 @@ func TestApplyTemplatesStepAdvancedIsolated(t *testing.T) {
 func TestApplyTemplatesStepAdvancedIsolatedWrapped(t *testing.T) {
 	s := *advancedStep.DeepCopy()
 	s.Template = &tplStepsEnvRef
-	s, err := applyTemplatesToStep(s, templates)
+	s, err := applyTemplatesToStep(s, templates, nil)
 
 	want := *advancedStep.DeepCopy()
 	want.Steps = append([]testworkflowsv1.Step{{
@@ -513,7 +513,7 @@ func TestApplyTemplatesParallel(t *testing.T) {
 			Steps: []testworkflowsv1.Step{basicStep},
 		},
 	}
-	s, err := applyTemplatesToStep(s, templates)
+	s, err := applyTemplatesToStep(s, templates, nil)
 
 	want := *advancedStep.DeepCopy()
 	want.Parallel = &testworkflowsv1.StepParallel{
@@ -545,7 +545,7 @@ func TestApplyTemplatesParallel(t *testing.T) {
 func TestApplyTemplatesStepAdvancedSteps(t *testing.T) {
 	s := *advancedStep.DeepCopy()
 	s.Use = []testworkflowsv1.TemplateRef{tplStepsRef}
-	s, err := applyTemplatesToStep(s, templates)
+	s, err := applyTemplatesToStep(s, templates, nil)
 
 	want := *advancedStep.DeepCopy()
 	want.Setup = []testworkflowsv1.Step{
@@ -564,7 +564,7 @@ func TestApplyTemplatesStepAdvancedSteps(t *testing.T) {
 func TestApplyTemplatesStepAdvancedMultipleSteps(t *testing.T) {
 	s := *advancedStep.DeepCopy()
 	s.Use = []testworkflowsv1.TemplateRef{tplStepsRef, tplStepsConfigRef}
-	s, err := applyTemplatesToStep(s, templates)
+	s, err := applyTemplatesToStep(s, templates, nil)
 
 	want := *advancedStep.DeepCopy()
 	want.Setup = []testworkflowsv1.Step{
@@ -594,7 +594,7 @@ func TestApplyTemplatesConfigOverflow(t *testing.T) {
 			"department": {Type: intstr.String, StrVal: "{{config.value}}"},
 		},
 	}}
-	err := ApplyTemplates(wf, templates)
+	err := ApplyTemplates(wf, templates, nil)
 
 	want := workflowPod.DeepCopy()
 	want.Spec.Pod.Labels["department"] = "{{config.value}}"

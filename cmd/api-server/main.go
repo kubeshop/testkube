@@ -561,6 +561,19 @@ func main() {
 		exitOnError("Creating slack loader", err)
 	}
 
+	// TODO: Make granular environment variables, yet backwards compatible
+	secretConfig := testkube.SecretConfig{
+		Prefix:     cfg.SecretCreationPrefix,
+		List:       cfg.EnableSecretsEndpoint,
+		ListAll:    cfg.EnableSecretsEndpoint && cfg.EnableListingAllSecrets,
+		Create:     cfg.EnableSecretsEndpoint && !cfg.DisableSecretCreation,
+		Modify:     cfg.EnableSecretsEndpoint && !cfg.DisableSecretCreation,
+		Delete:     cfg.EnableSecretsEndpoint && !cfg.DisableSecretCreation,
+		AutoCreate: !cfg.DisableSecretCreation,
+	}
+
+	secretManager := secretmanager.New(clientset, secretConfig)
+
 	testWorkflowProcessor := presets.NewOpenSource(inspector)
 	if mode == common.ModeAgent {
 		testWorkflowProcessor = presets.NewPro(inspector)
@@ -576,6 +589,7 @@ func main() {
 		testWorkflowExecutionsClient,
 		testWorkflowsClient,
 		metrics,
+		secretManager,
 		serviceAccountNames,
 		cfg.GlobalWorkflowTemplateName,
 		cfg.TestkubeNamespace,
@@ -588,19 +602,6 @@ func main() {
 	)
 
 	go testWorkflowExecutor.Recover(context.Background())
-
-	// TODO: Make granular environment variables, yet backwards compatible
-	secretConfig := testkube.SecretConfig{
-		Prefix:     cfg.SecretCreationPrefix,
-		List:       cfg.EnableSecretsEndpoint,
-		ListAll:    cfg.EnableSecretsEndpoint && cfg.EnableListingAllSecrets,
-		Create:     cfg.EnableSecretsEndpoint && !cfg.DisableSecretCreation,
-		Modify:     cfg.EnableSecretsEndpoint && !cfg.DisableSecretCreation,
-		Delete:     cfg.EnableSecretsEndpoint && !cfg.DisableSecretCreation,
-		AutoCreate: !cfg.DisableSecretCreation,
-	}
-
-	secretManager := secretmanager.New(clientset, secretConfig)
 
 	api := apiv1.NewTestkubeAPI(
 		cfg.TestkubeNamespace,

@@ -575,6 +575,16 @@ var stdFunctions = map[string]StdFunction{
 			return nil, fmt.Errorf(`"date" function expects 0-1 arguments, %d provided`, len(value))
 		},
 	},
+	"secret": {
+		Handler: func(value ...StaticValue) (Expression, error) {
+			if len(value) != 2 {
+				return nil, fmt.Errorf(`"secret" function expects 2 arguments, %d provided`, len(value))
+			}
+
+			key, _ := value[1].StringValue()
+			return NewValue(fmt.Sprintf("{{env.%s}}", key)), nil
+		},
+	},
 }
 
 const (
