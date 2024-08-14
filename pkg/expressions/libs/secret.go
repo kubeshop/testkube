@@ -17,7 +17,7 @@ func NewSecretMachine(mapEnvs map[string]corev1.EnvVarSource) expressions.Machin
 
 			secretName, _ := values[0].StringValue()
 			keyName, _ := values[1].StringValue()
-			envName := fmt.Sprintf("%s_%s", secretName, keyName)
+			envName := fmt.Sprintf("S_N_%s_K_%s", secretName, keyName)
 			mapEnvs[envName] = corev1.EnvVarSource{
 				SecretKeyRef: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
