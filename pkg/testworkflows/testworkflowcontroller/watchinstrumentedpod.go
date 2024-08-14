@@ -116,6 +116,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 
 		// For each container:
 		lastTs := s.result.Initialization.FinishedAt
+		aborted := false
 		for _, container := range append(podObj.Spec.InitContainers, podObj.Spec.Containers...) {
 			// Ignore non-standard TestWorkflow containers
 			number, err := strconv.Atoi(container.Name)
@@ -171,7 +172,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 			}
 
 			// Watch the container logs
-			follow := common.ResolvePtr(opts.Follow, true) && !state.IsFinished(containerName) && !state.IsFinished("")
+			follow := !aborted && common.ResolvePtr(opts.Follow, true) && !state.IsFinished(containerName) && !state.IsFinished("")
 			lastStarted := initialRef
 			executionStatuses := map[string]constants.ExecutionResult{}
 			for v := range WatchContainerLogs(ctx, clientSet, podObj.Namespace, podObj.Name, containerName, follow, 10, pod).Channel() {
@@ -191,18 +192,26 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 					switch v.Value.Hint.Name {
 					case constants.InstructionStart:
 						lastStarted = v.Value.Hint.Ref
-						s.Start(v.Value.Hint.Ref, v.Value.Time)
+						if !aborted {
+							s.Start(v.Value.Hint.Ref, v.Value.Time)
+						}
 					case constants.InstructionEnd:
 						status := testkube.TestWorkflowStepStatus(v.Value.Hint.Value.(string))
 						if status == "" {
 							status = testkube.PASSED_TestWorkflowStepStatus
 						}
-						s.FinishStep(v.Value.Hint.Ref, ContainerResultStep{
-							Status:     status,
-							Details:    executionStatuses[v.Value.Hint.Ref].Details,
-							ExitCode:   int(executionStatuses[v.Value.Hint.Ref].ExitCode),
-							FinishedAt: v.Value.Time,
-						})
+						if !aborted {
+							s.FinishStep(v.Value.Hint.Ref, ContainerResultStep{
+								Status:     status,
+								Details:    executionStatuses[v.Value.Hint.Ref].Details,
+								ExitCode:   int(executionStatuses[v.Value.Hint.Ref].ExitCode),
+								FinishedAt: v.Value.Time,
+							})
+						}
+						if status == testkube.ABORTED_TestWorkflowStepStatus {
+							aborted = true
+							continue
+						}
 					case constants.InstructionExecution:
 						serialized, _ := json.Marshal(v.Value.Hint.Value)
 						var executionResult constants.ExecutionResult
@@ -234,7 +243,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 				case <-state.Finished(""):
 					// Finish fast when the whole execution has been finished
 				}
-			} else {
+			} else if !aborted {
 				select {
 				case <-state.Finished(container.Name):
 				case <-state.Finished(""):
