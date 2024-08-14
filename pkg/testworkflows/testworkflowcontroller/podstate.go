@@ -31,6 +31,7 @@ var (
 
 type podState struct {
 	pod        *corev1.Pod
+	job        *batchv1.Job
 	queued     map[string]time.Time
 	started    map[string]time.Time
 	finished   map[string]time.Time
@@ -279,6 +280,12 @@ func (p *podState) RegisterPod(pod *corev1.Pod) {
 }
 
 func (p *podState) RegisterJob(job *batchv1.Job) {
+	if job == nil {
+		return
+	}
+	p.mu.Lock()
+	p.job = job
+	p.mu.Unlock()
 	p.setQueuedAt("", job.CreationTimestamp.Time)
 	if job.Status.CompletionTime != nil {
 		p.setFinishedAt("", job.Status.CompletionTime.Time)
@@ -349,6 +356,18 @@ func (p *podState) FinishedAt(name string) time.Time {
 func (p *podState) containerResult(name string) (ContainerResult, error) {
 	status := p.containerStatus(name)
 	if status == nil || status.State.Terminated == nil {
+		if p.job != nil && IsJobDone(p.job) {
+			for _, c := range p.job.Status.Conditions {
+				if c.Type == batchv1.JobFailed {
+					if c.Status == corev1.ConditionTrue && c.Reason == "DeadlineExceeded" {
+						result := UnknownContainerResult
+						result.Details = fmt.Sprintf("Job timed out after %d seconds.", *p.job.Spec.ActiveDeadlineSeconds)
+						return result, nil
+					}
+					break
+				}
+			}
+		}
 		if p.pod != nil && IsPodDone(p.pod) {
 			result := UnknownContainerResult
 			for _, c := range p.pod.Status.Conditions {
@@ -375,6 +394,22 @@ func (p *podState) containerResult(name string) (ContainerResult, error) {
 	// and the pod gets stuck then.
 	if status.State.Terminated.Reason != "Completed" {
 		result.Details = status.State.Terminated.Reason
+	}
+
+	// Handle the pod timeout
+	if result.Details == "Error" && p.pod.Status.Reason == "DeadlineExceeded" && p.pod.Spec.ActiveDeadlineSeconds != nil {
+		result.Details = fmt.Sprintf("Pod timed out after %d seconds.", *p.pod.Spec.ActiveDeadlineSeconds)
+	}
+
+	if p.job != nil && p.job.Spec.ActiveDeadlineSeconds != nil {
+		for _, c := range p.job.Status.Conditions {
+			if c.Type == batchv1.JobFailed {
+				if c.Status == corev1.ConditionTrue && c.Reason == "DeadlineExceeded" {
+					result.Details = fmt.Sprintf("Job timed out after %d seconds.", *p.job.Spec.ActiveDeadlineSeconds)
+				}
+				break
+			}
+		}
 	}
 
 	re := regexp.MustCompile(`^([^,]),(0|[1-9]\d*)$`)
