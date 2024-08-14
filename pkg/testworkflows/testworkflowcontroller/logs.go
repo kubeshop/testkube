@@ -88,6 +88,9 @@ func getContainerLogsStream(ctx context.Context, clientSet kubernetes.Interface,
 			if !strings.Contains(err.Error(), "is waiting to start") {
 				return nil, err
 			}
+			if !follow {
+				return bytes.NewReader(nil), io.EOF
+			}
 			p := <-pod.Peek(ctx)
 			if p == nil {
 				return bytes.NewReader(nil), io.EOF

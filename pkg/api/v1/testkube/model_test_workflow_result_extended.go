@@ -540,10 +540,10 @@ func predictTestWorkflowStepStatus(v TestWorkflowStepResult, sig TestWorkflowSig
 		}
 	}
 
-	if getTestWorkflowStepStatus(v) == FAILED_TestWorkflowStepStatus {
-		return FAILED_TestWorkflowStepStatus, finished
-	} else if aborted {
+	if aborted {
 		return ABORTED_TestWorkflowStepStatus, finished
+	} else if getTestWorkflowStepStatus(v) == FAILED_TestWorkflowStepStatus {
+		return FAILED_TestWorkflowStepStatus, finished
 	} else if (failed && !sig.Negative) || (!failed && sig.Negative) {
 		return FAILED_TestWorkflowStepStatus, finished
 	} else if skipped {
@@ -593,15 +593,15 @@ func recomputeTestWorkflowStepResult(v TestWorkflowStepResult, sig TestWorkflowS
 	v.StartedAt = r.Steps[children[0].Ref].StartedAt
 	v.FinishedAt = r.Steps[children[len(children)-1].Ref].StartedAt
 
-	// It has been already marked as failed internally from some step below
-	if getTestWorkflowStepStatus(v) == FAILED_TestWorkflowStepStatus {
+	// It has been already marked internally from some step below
+	predicted, finished := predictTestWorkflowStepStatus(v, sig, r)
+	if finished && getTestWorkflowStepStatus(v) == predicted {
 		return v
 	}
 
 	// It is finished already
 	if !v.FinishedAt.IsZero() {
-		predicted, finished := predictTestWorkflowStepStatus(v, sig, r)
-		if finished && (v.Status == nil || !(*v.Status).Finished()) {
+		if finished && (v.Status == nil || predicted == ABORTED_TestWorkflowStepStatus || !(*v.Status).Finished()) {
 			v.Status = common.Ptr(predicted)
 		}
 		return v
