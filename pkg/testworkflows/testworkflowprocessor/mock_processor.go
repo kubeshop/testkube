@@ -12,7 +12,6 @@ import (
 	v1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	expressions "github.com/kubeshop/testkube/pkg/expressions"
 	stage "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
-	v10 "k8s.io/api/core/v1"
 )
 
 // MockProcessor is a mock of Processor interface.
@@ -39,7 +38,7 @@ func (m *MockProcessor) EXPECT() *MockProcessorMockRecorder {
 }
 
 // Bundle mocks base method.
-func (m *MockProcessor) Bundle(arg0 context.Context, arg1 *v1.TestWorkflow, arg2 []v10.Secret, arg3 ...expressions.Machine) (*Bundle, error) {
+func (m *MockProcessor) Bundle(arg0 context.Context, arg1 *v1.TestWorkflow, arg2 BundleOptions, arg3 ...expressions.Machine) (*Bundle, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1, arg2}
 	for _, a := range arg3 {

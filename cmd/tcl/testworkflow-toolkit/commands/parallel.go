@@ -31,6 +31,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/presets"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
@@ -193,7 +194,8 @@ func NewParallelCmd() *cobra.Command {
 				// Build the resources bundle
 				scheduledAt := time.Now()
 				bundle, err := presets.NewPro(inspector).
-					Bundle(context.Background(), &testworkflowsv1.TestWorkflow{Spec: *spec}, nil, machine, baseMachine, params.MachineAt(index))
+					Bundle(context.Background(), &testworkflowsv1.TestWorkflow{Spec: *spec}, testworkflowprocessor.BundleOptions{},
+						machine, baseMachine, params.MachineAt(index))
 				if err != nil {
 					fmt.Printf("%d: failed to prepare resources: %s\n", index, err.Error())
 					return false

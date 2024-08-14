@@ -488,7 +488,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	}
 
 	// Validate the TestWorkflow
-	_, err = e.processor.Bundle(ctx, workflow.DeepCopy(), secrets.Get(), machine, mockExecutionMachine)
+	_, err = e.processor.Bundle(ctx, workflow.DeepCopy(), testworkflowprocessor.BundleOptions{Secrets: secrets.Get()}, machine, mockExecutionMachine)
 	if err != nil {
 		return execution, errors.Wrap(err, "processing error")
 	}
@@ -522,7 +522,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	})
 
 	// Process the TestWorkflow
-	bundle, err := e.processor.Bundle(ctx, &workflow, secrets.Get(), machine, executionMachine)
+	bundle, err := e.processor.Bundle(ctx, &workflow, testworkflowprocessor.BundleOptions{Secrets: secrets.Get()}, machine, executionMachine)
 	if err != nil {
 		return execution, errors.Wrap(err, "processing error")
 	}

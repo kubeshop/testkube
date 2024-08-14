@@ -17,6 +17,7 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
@@ -98,7 +99,7 @@ func getSpec(actions actiontypes.ActionGroups) string {
 func TestProcessEmpty(t *testing.T) {
 	wf := &testworkflowsv1.TestWorkflow{}
 
-	_, err := proc.Bundle(context.Background(), wf, nil, execMachine)
+	_, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{}, execMachine)
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "has nothing to run")
@@ -113,7 +114,7 @@ func TestProcessBasic(t *testing.T) {
 		},
 	}
 
-	res, err := proc.Bundle(context.Background(), wf, nil, execMachine)
+	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{}, execMachine)
 	assert.NoError(t, err)
 
 	sig := res.Signature
@@ -226,7 +227,7 @@ func TestProcessShellWithNonStandardImage(t *testing.T) {
 		},
 	}
 
-	res, err := proc.Bundle(context.Background(), wf, nil, execMachine)
+	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{}, execMachine)
 	assert.NoError(t, err)
 
 	sig := res.Signature
@@ -362,7 +363,7 @@ func TestProcessBasicEnvReference(t *testing.T) {
 		},
 	}
 
-	res, err := proc.Bundle(context.Background(), wf, nil, execMachine)
+	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{}, execMachine)
 	sig := res.Signature
 
 	volumes := res.Job.Spec.Template.Spec.Volumes
@@ -441,7 +442,7 @@ func TestProcessMultipleSteps(t *testing.T) {
 		},
 	}
 
-	res, err := proc.Bundle(context.Background(), wf, nil, execMachine)
+	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{}, execMachine)
 	sig := res.Signature
 
 	volumes := res.Job.Spec.Template.Spec.Volumes
@@ -550,7 +551,7 @@ func TestProcessNestedSteps(t *testing.T) {
 		},
 	}
 
-	res, err := proc.Bundle(context.Background(), wf, nil, execMachine)
+	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{}, execMachine)
 	sig := res.Signature
 
 	volumes := res.Job.Spec.Template.Spec.Volumes
@@ -716,7 +717,7 @@ func TestProcessLocalContent(t *testing.T) {
 		},
 	}
 
-	res, err := proc.Bundle(context.Background(), wf, nil, execMachine)
+	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{}, execMachine)
 	assert.NoError(t, err)
 
 	volumes := res.Job.Spec.Template.Spec.Volumes
@@ -796,7 +797,7 @@ func TestProcessGlobalContent(t *testing.T) {
 		},
 	}
 
-	res, err := proc.Bundle(context.Background(), wf, nil, execMachine)
+	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{}, execMachine)
 	assert.NoError(t, err)
 
 	volumes := res.Job.Spec.Template.Spec.Volumes
@@ -872,7 +873,7 @@ func TestProcessEscapedAnnotations(t *testing.T) {
 		},
 	}
 
-	res, err := proc.Bundle(context.Background(), wf, nil, execMachine)
+	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{}, execMachine)
 	assert.NoError(t, err)
 	assert.Equal(t, `{{- with secret "internal/data/database/config" -}}{{ .Data.data.username }}@{{ .Data.data.password }}{{- end -}}`, res.Job.Spec.Template.Annotations["vault.hashicorp.com/agent-inject-template-database-config.txt"])
 }
@@ -886,7 +887,7 @@ func TestProcessShell(t *testing.T) {
 		},
 	}
 
-	res, err := proc.Bundle(context.Background(), wf, nil, execMachine)
+	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{}, execMachine)
 	sig := res.Signature
 
 	want := lite.NewLiteActionGroups().
@@ -935,7 +936,7 @@ func TestProcessNestedCondition(t *testing.T) {
 		},
 	}
 
-	res, err := proc.Bundle(context.Background(), wf, nil, execMachine)
+	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{}, execMachine)
 	sig := res.Signature
 
 	want := lite.NewLiteActionGroups().
@@ -996,7 +997,7 @@ func TestProcessConditionWithMultipleOperations(t *testing.T) {
 		},
 	}
 
-	res, err := proc.Bundle(context.Background(), wf, nil, execMachine)
+	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{}, execMachine)
 	sig := res.Signature
 	virtual := res.FullSignature[1]
 
@@ -1074,7 +1075,7 @@ func TestProcessNamedGroupWithSkippedSteps(t *testing.T) {
 		},
 	}
 
-	res, err := proc.Bundle(context.Background(), wf, nil, execMachine)
+	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{}, execMachine)
 	sig := res.Signature
 
 	want := lite.NewLiteActionGroups().

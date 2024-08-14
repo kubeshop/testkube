@@ -27,7 +27,7 @@ import (
 //go:generate mockgen -destination=./mock_processor.go -package=testworkflowprocessor "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor" Processor
 type Processor interface {
 	Register(operation Operation) Processor
-	Bundle(ctx context.Context, workflow *testworkflowsv1.TestWorkflow, configSecrets []corev1.Secret, machines ...expressions.Machine) (*Bundle, error)
+	Bundle(ctx context.Context, workflow *testworkflowsv1.TestWorkflow, options BundleOptions, machines ...expressions.Machine) (*Bundle, error)
 }
 
 //go:generate mockgen -destination=./mock_internalprocessor.go -package=testworkflowprocessor "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor" InternalProcessor
@@ -95,7 +95,8 @@ func (p *processor) Process(layer Intermediate, container stage.Container, step 
 	return p.process(layer, container, step, layer.NextRef())
 }
 
-func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWorkflow, configSecrets []corev1.Secret, machines ...expressions.Machine) (bundle *Bundle, err error) {
+func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWorkflow, options BundleOptions,
+	machines ...expressions.Machine) (bundle *Bundle, err error) {
 	// Initialize intermediate layer
 	layer := NewIntermediate().
 		AppendPodConfig(workflow.Spec.Pod).
@@ -154,7 +155,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	}
 
 	// Finalize Secrets
-	secrets := append(layer.Secrets(), configSecrets...)
+	secrets := append(layer.Secrets(), options.Secrets...)
 	for i := range secrets {
 		AnnotateControlledBy(&secrets[i], resourceRoot.Template(), resourceId.Template())
 		err = expressions.FinalizeForce(&secrets[i], extendedMachines...)
