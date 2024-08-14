@@ -183,7 +183,7 @@ func ProcessContentGit(_ InternalProcessor, layer Intermediate, container stage.
 	selfContainer.
 		SetWorkingDir("/").
 		SetImage(constants.DefaultToolkitImage).
-		SetImagePullPolicy(corev1.PullNever).
+		SetImagePullPolicy(corev1.PullIfNotPresent).
 		SetCommand("/toolkit", "clone", step.Content.Git.Uri).
 		EnableToolkit(stage.Ref())
 
@@ -298,7 +298,7 @@ func ProcessArtifacts(_ InternalProcessor, layer Intermediate, container stage.C
 
 	selfContainer.
 		SetImage(constants.DefaultToolkitImage).
-		SetImagePullPolicy(corev1.PullNever).
+		SetImagePullPolicy(corev1.PullIfNotPresent).
 		SetCommand(constants.DefaultToolkitPath, "artifacts", "-m", constants.DefaultDataPath).
 		EnableToolkit(stage.Ref())
 

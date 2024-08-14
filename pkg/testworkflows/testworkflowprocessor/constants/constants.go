@@ -64,7 +64,6 @@ func getInitImage() string {
 
 func getToolkitImage() string {
 	img := os.Getenv("TESTKUBE_TW_TOOLKIT_IMAGE")
-	img = "testworkflow-toolkit"
 	if img == "" {
 		ver := version.Version
 		if ver == "" || ver == "dev" {
