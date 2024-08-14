@@ -353,9 +353,7 @@ func (p *podState) containerResult(name string) (ContainerResult, error) {
 			result := UnknownContainerResult
 			for _, c := range p.pod.Status.Conditions {
 				if c.Type == corev1.DisruptionTarget && c.Status == corev1.ConditionTrue {
-					if c.Reason == "EvictionByEvictionAPI" {
-						result.Details = "Pod has been requested for deletion using the Kubernetes API"
-					} else if c.Message == "" {
+					if c.Message == "" {
 						result.Details = c.Reason
 					} else {
 						result.Details = fmt.Sprintf("%s: %s", c.Reason, c.Message)
