@@ -286,7 +286,11 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 						status.FinishedAt = finishedAt
 					}
 				}
-				s.FinishStep(ref, status)
+				// Ignore if it's already finished
+				currentStatus := s.GetStepResult(ref).Status
+				if currentStatus == nil || !currentStatus.Finished() || *currentStatus == testkube.ABORTED_TestWorkflowStepStatus {
+					s.FinishStep(ref, status)
+				}
 				if status.Status == testkube.ABORTED_TestWorkflowStepStatus {
 					lastStarted = ref
 					break
@@ -304,7 +308,6 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 			// because due to GKE bug, the Job is still pending,
 			// so it will get stuck there.
 			if s.IsAnyAborted() {
-				result, _ := state.ContainerResult(container.Name)
 				reason := s.result.Steps[lastStarted].ErrorMessage
 				if reason == "" {
 					reason = result.Details
