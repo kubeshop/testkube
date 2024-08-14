@@ -172,7 +172,6 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 
 			// Watch the container logs
 			follow := common.ResolvePtr(opts.Follow, true) && !state.IsFinished(containerName) && !state.IsFinished("")
-			aborted := false
 			lastStarted := initialRef
 			executionStatuses := map[string]constants.ExecutionResult{}
 			for v := range WatchContainerLogs(ctx, clientSet, podObj.Namespace, podObj.Name, containerName, follow, 10, pod).Channel() {
@@ -204,12 +203,6 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 							ExitCode:   int(executionStatuses[v.Value.Hint.Ref].ExitCode),
 							FinishedAt: v.Value.Time,
 						})
-
-						// Escape when the job was aborted
-						if status == testkube.ABORTED_TestWorkflowStepStatus {
-							aborted = true
-							break
-						}
 					case constants.InstructionExecution:
 						serialized, _ := json.Marshal(v.Value.Hint.Value)
 						var executionResult constants.ExecutionResult
@@ -235,9 +228,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 				}
 			}
 
-			if aborted {
-				// Don't wait for any other statuses if we already know that some task has been aborted
-			} else if follow {
+			if follow {
 				select {
 				case <-state.Finished(container.Name):
 				case <-state.Finished(""):
@@ -254,49 +245,42 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 			}
 
 			// Fall back results to the termination log
-			if !aborted {
-				result, err := state.ContainerResult(container.Name)
-				if err != nil {
-					s.Error(err)
-					break
+			result, _ := state.ContainerResult(container.Name)
+			for i, ref := range endRefs[index] {
+				// Ignore tree root hints
+				if ref == "root" {
+					continue
+				}
+				status := ContainerResultStep{
+					Status:     testkube.ABORTED_TestWorkflowStepStatus,
+					ExitCode:   -1,
+					Details:    result.Details,
+					FinishedAt: s.GetStepResult(ref).FinishedAt,
+				}
+				if status.FinishedAt.IsZero() {
+					status.FinishedAt = result.FinishedAt
+				}
+				if status.FinishedAt.IsZero() {
+					status.FinishedAt = state.FinishedAt("")
+				}
+				if status.FinishedAt.IsZero() {
+					status.FinishedAt = s.GetLastTimestamp(lastStarted)
 				}
 
-				for i, ref := range endRefs[index] {
-					// Ignore tree root hints
-					if ref == "root" {
-						continue
+				if len(result.Steps) > i {
+					status = result.Steps[i]
+					if status.Details == "" {
+						status.Details = result.Details
 					}
-					status := ContainerResultStep{
-						Status:     testkube.ABORTED_TestWorkflowStepStatus,
-						ExitCode:   -1,
-						Details:    result.Details,
-						FinishedAt: s.GetStepResult(ref).FinishedAt,
+					finishedAt := s.GetStepResult(ref).FinishedAt
+					if !finishedAt.IsZero() {
+						status.FinishedAt = finishedAt
 					}
-					if status.FinishedAt.IsZero() {
-						status.FinishedAt = result.FinishedAt
-					}
-					if status.FinishedAt.IsZero() {
-						status.FinishedAt = state.FinishedAt("")
-					}
-					if status.FinishedAt.IsZero() {
-						status.FinishedAt = s.GetLastTimestamp(lastStarted)
-					}
-
-					if len(result.Steps) > i {
-						status = result.Steps[i]
-						if status.Details == "" {
-							status.Details = result.Details
-						}
-						finishedAt := s.GetStepResult(ref).FinishedAt
-						if !finishedAt.IsZero() {
-							status.FinishedAt = finishedAt
-						}
-					}
-					s.FinishStep(ref, status)
-					if status.Status == testkube.ABORTED_TestWorkflowStepStatus {
-						lastStarted = ref
-						break
-					}
+				}
+				s.FinishStep(ref, status)
+				if status.Status == testkube.ABORTED_TestWorkflowStepStatus {
+					lastStarted = ref
+					break
 				}
 			}
 
