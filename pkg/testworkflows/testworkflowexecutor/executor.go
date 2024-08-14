@@ -56,7 +56,7 @@ type executor struct {
 	testWorkflowExecutionsClient   testworkflowsclientv1.TestWorkflowExecutionsInterface
 	testWorkflowsClient            testworkflowsclientv1.Interface
 	metrics                        v1.Metrics
-	secretConfig                   testkube.SecretConfig
+	secretManager                  secretmanager.SecretManager
 	globalTemplateName             string
 	apiUrl                         string
 	namespace                      string
@@ -78,7 +78,7 @@ func New(emitter *event.Emitter,
 	testWorkflowExecutionsClient testworkflowsclientv1.TestWorkflowExecutionsInterface,
 	testWorkflowsClient testworkflowsclientv1.Interface,
 	metrics v1.Metrics,
-	secretConfig testkube.SecretConfig,
+	secretManager secretmanager.SecretManager,
 	serviceAccountNames map[string]string,
 	globalTemplateName, namespace, apiUrl, defaultRegistry string,
 	enableImageDataPersistentCache bool, imageDataPersistentCacheKey, dashboardURI, clusterID string) TestWorkflowExecutor {
@@ -97,7 +97,7 @@ func New(emitter *event.Emitter,
 		testWorkflowExecutionsClient:   testWorkflowExecutionsClient,
 		testWorkflowsClient:            testWorkflowsClient,
 		metrics:                        metrics,
-		secretConfig:                   secretConfig,
+		secretManager:                  secretManager,
 		serviceAccountNames:            serviceAccountNames,
 		globalTemplateName:             globalTemplateName,
 		apiUrl:                         apiUrl,
@@ -376,8 +376,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	id := primitive.NewObjectID().Hex()
 
 	// Handle secrets auto-creation
-	secretManager := secretmanager.New(e.clientSet, e.secretConfig)
-	secrets := secretManager.Batch(namespace, "twe-", id)
+	secrets := e.secretManager.Batch(namespace, "twe-", id)
 
 	// Apply the configuration
 	_, err = testworkflowresolver.ApplyWorkflowConfig(&workflow, testworkflowmappers.MapConfigValueAPIToKube(request.Config), secrets.Append)
