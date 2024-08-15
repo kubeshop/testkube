@@ -265,6 +265,7 @@ func NewParallelCmd() *cobra.Command {
 
 				prevStatus := testkube.QUEUED_TestWorkflowStatus
 				prevStep := ""
+				prevIsFinished := false
 				scheduled := false
 				for v := range ctrl.WatchLightweight(ctx) {
 					// Handle error
@@ -285,14 +286,17 @@ func NewParallelCmd() *cobra.Command {
 					}
 
 					// Handle result change
-					if v.Status != prevStatus || v.Current != prevStep {
+					// TODO: the final status should always have the finishedAt too,
+					//       there should be no need for checking isFinished diff
+					if v.Status != prevStatus || lastResult.IsFinished() != prevIsFinished || v.Current != prevStep {
 						if v.Status != prevStatus {
 							log(string(v.Status))
 						}
 						updates <- Update{index: index, result: v.Result}
 						prevStep = v.Current
 						prevStatus = v.Status
-						if v.Result.IsFinished() {
+						prevIsFinished = lastResult.IsFinished()
+						if lastResult.IsFinished() {
 							instructions.PrintOutput(env.Ref(), "parallel", ParallelStatus{Index: int(index), Status: v.Status, Result: v.Result})
 							ctxCancel()
 							return v.Result.IsPassed()

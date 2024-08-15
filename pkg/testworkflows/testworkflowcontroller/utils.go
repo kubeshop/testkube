@@ -2,6 +2,7 @@ package testworkflowcontroller
 
 import (
 	"regexp"
+	"slices"
 	"time"
 
 	batchv1 "k8s.io/api/batch/v1"
@@ -29,8 +30,16 @@ func IsPodDone(pod *corev1.Pod) bool {
 	return (pod.Status.Phase != corev1.PodPending && pod.Status.Phase != corev1.PodRunning) || pod.ObjectMeta.DeletionTimestamp != nil
 }
 
+func isJobConditionEnd(condition batchv1.JobCondition) bool {
+	return (condition.Type == batchv1.JobFailed || condition.Type == batchv1.JobComplete) && condition.Status == corev1.ConditionTrue && !condition.LastTransitionTime.IsZero()
+}
+
 func IsJobDone(job *batchv1.Job) bool {
-	return (job.Status.Active == 0 && (job.Status.Succeeded > 0 || job.Status.Failed > 0)) || job.ObjectMeta.DeletionTimestamp != nil
+	return (job.Status.Active == 0 && (job.Status.Succeeded > 0 || job.Status.Failed > 0)) || job.ObjectMeta.DeletionTimestamp != nil || job.Status.CompletionTime != nil || slices.ContainsFunc(job.Status.Conditions, isJobConditionEnd)
+}
+
+func HadPodScheduled(job *batchv1.Job) bool {
+	return job.Status.Active > 0 || job.Status.Succeeded > 0 || job.Status.Failed > 0
 }
 
 type ContainerResultStep struct {

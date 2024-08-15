@@ -366,6 +366,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	podSpec.Spec.Containers = containers[len(containers)-1:]
 
 	// Build job spec
+	// TODO: Add ownerReferences in case of parent pod?
 	jobSpec := batchv1.Job{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Job",

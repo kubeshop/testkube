@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/gookit/color"
 	"github.com/pkg/errors"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -21,8 +22,9 @@ import (
 )
 
 const (
-	InitContainerName = "tktw-init"
-	IdleTimeout       = 100 * time.Millisecond
+	InitContainerName    = "tktw-init"
+	IdleTimeout          = 100 * time.Millisecond
+	ExpectedDelayTimeout = 1 * time.Second
 )
 
 type WatchInstrumentedPodOptions struct {
@@ -65,13 +67,27 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 		}
 
 		// Ensure the queue/start time has been saved
-		if s.result.QueuedAt.IsZero() || s.result.StartedAt.IsZero() {
+		if (s.result.QueuedAt.IsZero() || s.result.StartedAt.IsZero()) && state.FinishedAt("").IsZero() {
 			s.Error(errors.New("missing information about scheduled pod"))
 			return
 		}
 
 		// Load the namespace information
-		podObj := <-pod.Peek(ctx)
+		var podObj *corev1.Pod
+		select {
+		// Obtain the Pod information for further execution
+		case p := <-pod.Peek(ctx):
+			podObj = p
+		// Handle when the execution have been finished, but there may be no Pod
+		case <-state.Finished(""):
+			select {
+			case <-time.After(ExpectedDelayTimeout):
+				s.Error(fmt.Errorf("the execution is finished, but failed to get pod"))
+				return
+			case p := <-pod.Peek(ctx):
+				podObj = p
+			}
+		}
 
 		// Load the references
 		var refs, endRefs [][]string
@@ -100,6 +116,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 
 		// For each container:
 		lastTs := s.result.Initialization.FinishedAt
+		aborted := false
 		for _, container := range append(podObj.Spec.InitContainers, podObj.Spec.Containers...) {
 			// Ignore non-standard TestWorkflow containers
 			number, err := strconv.Atoi(container.Name)
@@ -113,8 +130,30 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 			// Update queue time
 			s.Queue(initialRef, lastTs)
 
-			// Watch the container events
-			for v := range state.PreStart(containerName) {
+			// Watch the container events, along with final finish too
+			preStartCh := state.PreStart(containerName)
+			finishedCh := state.Finished("")
+		loop:
+			for {
+				var v ChannelMessage[podStateUpdate]
+				select {
+				case vv, ok := <-preStartCh:
+					if !ok {
+						break loop
+					}
+					v = vv
+				default:
+					select {
+					case vv, ok := <-preStartCh:
+						if !ok {
+							break loop
+						}
+						v = vv
+					case <-finishedCh:
+						break loop
+					}
+				}
+
 				if v.Value.Queued != nil {
 					s.Queue(initialRef, state.QueuedAt(containerName))
 				} else if v.Value.Started != nil {
@@ -127,45 +166,51 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 			}
 
 			// Ensure the queue/start time has been saved
-			if s.GetStepResult(initialRef).QueuedAt.IsZero() || s.GetStepResult(initialRef).StartedAt.IsZero() {
+			if (s.GetStepResult(initialRef).QueuedAt.IsZero() || s.GetStepResult(initialRef).StartedAt.IsZero()) && state.FinishedAt("").IsZero() {
 				s.Error(fmt.Errorf("missing information about scheduled '%s' step in '%s' container", initialRef, container.Name))
 				return
 			}
 
 			// Watch the container logs
-			follow := common.ResolvePtr(opts.Follow, true) && !state.IsFinished(containerName)
-			aborted := false
+			follow := !aborted && common.ResolvePtr(opts.Follow, true) && !state.IsFinished(containerName) && !state.IsFinished("")
 			lastStarted := initialRef
 			executionStatuses := map[string]constants.ExecutionResult{}
 			for v := range WatchContainerLogs(ctx, clientSet, podObj.Namespace, podObj.Name, containerName, follow, 10, pod).Channel() {
 				if v.Error != nil {
 					s.Error(v.Error)
-				} else if v.Value.Output != nil {
+				}
+
+				switch v.Value.Type() {
+				case ContainerLogTypeLog:
+					s.Raw(lastStarted, v.Value.Time, string(v.Value.Log), false)
+				case ContainerLogTypeOutput:
 					s.Output(v.Value.Output.Ref, v.Value.Time, v.Value.Output)
-				} else if v.Value.Hint != nil {
+				case ContainerLogTypeHint:
 					if v.Value.Hint.Ref == constants2.RootOperationName {
 						continue
 					}
 					switch v.Value.Hint.Name {
 					case constants.InstructionStart:
 						lastStarted = v.Value.Hint.Ref
-						s.Start(v.Value.Hint.Ref, v.Value.Time)
+						if !aborted {
+							s.Start(v.Value.Hint.Ref, v.Value.Time)
+						}
 					case constants.InstructionEnd:
 						status := testkube.TestWorkflowStepStatus(v.Value.Hint.Value.(string))
 						if status == "" {
 							status = testkube.PASSED_TestWorkflowStepStatus
 						}
-						s.FinishStep(v.Value.Hint.Ref, ContainerResultStep{
-							Status:     status,
-							Details:    executionStatuses[v.Value.Hint.Ref].Details,
-							ExitCode:   int(executionStatuses[v.Value.Hint.Ref].ExitCode),
-							FinishedAt: v.Value.Time,
-						})
-
-						// Escape when the job was aborted
+						if !aborted {
+							s.FinishStep(v.Value.Hint.Ref, ContainerResultStep{
+								Status:     status,
+								Details:    executionStatuses[v.Value.Hint.Ref].Details,
+								ExitCode:   int(executionStatuses[v.Value.Hint.Ref].ExitCode),
+								FinishedAt: v.Value.Time,
+							})
+						}
 						if status == testkube.ABORTED_TestWorkflowStepStatus {
 							aborted = true
-							break
+							continue
 						}
 					case constants.InstructionExecution:
 						serialized, _ := json.Marshal(v.Value.Hint.Value)
@@ -189,53 +234,74 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 						}
 						s.Resume(v.Value.Hint.Ref, end)
 					}
-				} else {
-					s.Raw(lastStarted, v.Value.Time, string(v.Value.Log), false)
 				}
 			}
 
-			if aborted {
-				// Don't wait for any other statuses if we already know that some task has been aborted
-			} else if follow {
-				<-state.Finished(container.Name)
-			} else {
+			if follow {
 				select {
 				case <-state.Finished(container.Name):
+				case <-state.Finished(""):
+					// Finish fast when the whole execution has been finished
+				}
+			} else if !aborted {
+				select {
+				case <-state.Finished(container.Name):
+				case <-state.Finished(""):
+					// Finish fast when the whole execution has been finished
 				case <-time.After(IdleTimeout):
 					return
 				}
 			}
 
 			// Fall back results to the termination log
-			if !aborted {
-				result, err := state.ContainerResult(container.Name)
-				if err != nil {
-					s.Error(err)
-					break
+			result, _ := state.ContainerResult(container.Name)
+			for i, ref := range endRefs[index] {
+				// Ignore tree root hints
+				if ref == "root" {
+					continue
+				}
+				status := ContainerResultStep{
+					Status:     testkube.ABORTED_TestWorkflowStepStatus,
+					ExitCode:   -1,
+					Details:    result.Details,
+					FinishedAt: s.GetStepResult(ref).FinishedAt,
+				}
+				if status.FinishedAt.IsZero() {
+					status.FinishedAt = result.FinishedAt
+				}
+				if status.FinishedAt.IsZero() {
+					status.FinishedAt = state.FinishedAt("")
+				}
+				if status.FinishedAt.IsZero() {
+					status.FinishedAt = s.GetLastTimestamp(lastStarted)
 				}
 
-				for i, ref := range endRefs[index] {
-					// Ignore tree root hints
-					if ref == "root" {
-						continue
+				if len(result.Steps) > i {
+					status = result.Steps[i]
+					if status.Details == "" {
+						status.Details = result.Details
 					}
-					status := ContainerResultStep{
-						Status:     testkube.ABORTED_TestWorkflowStepStatus,
-						ExitCode:   -1,
-						Details:    "",
-						FinishedAt: result.FinishedAt,
+					finishedAt := s.GetStepResult(ref).FinishedAt
+					if !finishedAt.IsZero() {
+						status.FinishedAt = finishedAt
 					}
-					if len(result.Steps) > i {
-						status = result.Steps[i]
-					}
-					if !s.IsFinished(ref) {
-						s.FinishStep(ref, status)
-					}
+				}
+				// Ignore if it's already finished
+				currentStatus := s.GetStepResult(ref).Status
+				if currentStatus == nil || !currentStatus.Finished() || *currentStatus == testkube.ABORTED_TestWorkflowStepStatus {
+					s.FinishStep(ref, status)
+				}
+				if status.Status == testkube.ABORTED_TestWorkflowStepStatus {
+					lastStarted = ref
+					break
 				}
 			}
 
 			// Update the last timestamp
-			lastTs = s.GetLastTimestamp(lastStarted)
+			nextLastTs := s.GetLastTimestamp(lastStarted)
+			if nextLastTs.After(lastTs) {
+				lastTs = nextLastTs
+			}
 
 			// Break the function if the step has been aborted.
 			// Breaking only to the loop is not enough,
@@ -243,27 +309,35 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 			// so it will get stuck there.
 			if s.IsAnyAborted() {
 				reason := s.result.Steps[lastStarted].ErrorMessage
+				if reason == "" {
+					reason = result.Details
+				}
 				message := "Aborted"
 				if reason == "" {
-					message = fmt.Sprintf("\n%s Aborted", s.GetLastTimestamp(lastStarted).Format(KubernetesLogTimeFormat))
+					message = fmt.Sprintf("\n%s Aborted", lastTs.Format(KubernetesLogTimeFormat))
 				} else {
-					message = fmt.Sprintf("\n%s Aborted (%s)", s.GetLastTimestamp(lastStarted).Format(KubernetesLogTimeFormat), reason)
+					message = fmt.Sprintf("\n%s Aborted (%s)", lastTs.Format(KubernetesLogTimeFormat), reason)
 				}
-				s.Raw(lastStarted, s.GetLastTimestamp(lastStarted), message, false)
+				s.Raw(lastStarted, lastTs, message, false)
 
 				// Mark all not started steps as skipped
 				for ref := range s.result.Steps {
 					if !s.IsFinished(ref) {
 						status := testkube.SKIPPED_TestWorkflowStepStatus
-						details := "The execution was aborted before."
+						details := "The execution was aborted before"
 						if s.result.Steps[ref].Status != nil && *s.result.Steps[ref].Status != testkube.QUEUED_TestWorkflowStepStatus {
 							status = testkube.ABORTED_TestWorkflowStepStatus
-							details = ""
+							details = result.Details
+						} else if result.Details != "" {
+							details = fmt.Sprintf("The execution was aborted before %s", color.FgDarkGray.Render("("+result.Details+")"))
+						}
+						if details != "" {
+							s.Raw(ref, lastTs, fmt.Sprintf("%s %s", lastTs.Format(KubernetesLogTimeFormat), details), false)
 						}
 						s.FinishStep(ref, ContainerResultStep{
 							Status:     status,
 							ExitCode:   -1,
-							Details:    details,
+							Details:    "",
 							FinishedAt: lastTs,
 						})
 					}
