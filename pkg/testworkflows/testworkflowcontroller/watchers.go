@@ -13,15 +13,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 )
 
-const (
-	TimeoutSeconds = int64(365 * 24 * 3600)
-)
-
-type kubernetesClient[T any, U any] interface {
-	List(ctx context.Context, options metav1.ListOptions) (*T, error)
-	Watch(ctx context.Context, options metav1.ListOptions) (watch.Interface, error)
-}
-
 func readKubernetesChannel[T any](w *channel[*T], input <-chan watch.Event, stopFn func(*T) bool) {
 	for {
 		// Prioritize checking for done
@@ -53,7 +44,7 @@ func readKubernetesChannel[T any](w *channel[*T], input <-chan watch.Event, stop
 // TODO: Allow rebuilding watcher after the connection is down
 func watchKubernetes[T any, U any](ctx context.Context, w *channel[*U], client kubernetesClient[T, U], accessor func(*T) ([]U, string), stopFn func(*U) bool, opts metav1.ListOptions) {
 	if opts.TimeoutSeconds == nil {
-		opts.TimeoutSeconds = common.Ptr(TimeoutSeconds)
+		opts.TimeoutSeconds = common.Ptr(DefaultTimeoutSeconds)
 	}
 
 	// Read initial data
@@ -123,7 +114,7 @@ func WatchJob(ctx context.Context, clientSet kubernetes.Interface, namespace, na
 		}
 		watchKubernetes(w.ctx, w, clientSet.BatchV1().Jobs(namespace), getItems, IsJobDone, metav1.ListOptions{
 			FieldSelector:  "metadata.name=" + name,
-			TimeoutSeconds: common.Ptr(TimeoutSeconds),
+			TimeoutSeconds: common.Ptr(DefaultTimeoutSeconds),
 		})
 	}()
 
