@@ -6,6 +6,7 @@ import (
 	"math"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/pkg/errors"
@@ -17,38 +18,45 @@ import (
 )
 
 type podWatcher struct {
-	client kubernetesClient[corev1.PodList, *corev1.Pod]
-	opts   metav1.ListOptions
-	peek   *corev1.Pod
-	ch     chan *corev1.Pod
-	peekCh chan struct{}
-	ctx    context.Context
-	cancel context.CancelFunc
-	err    error
-	mu     sync.Mutex
-	peekMu sync.Mutex
+	client  kubernetesClient[corev1.PodList, *corev1.Pod]
+	opts    metav1.ListOptions
+	peek    *corev1.Pod
+	started atomic.Bool
+	ch      chan *corev1.Pod
+	peekCh  chan struct{}
+	ctx     context.Context
+	cancel  context.CancelFunc
+	err     error
+	mu      sync.Mutex
+	peekMu  sync.Mutex
 }
 
 type PodWatcher interface {
 	Channel() <-chan *corev1.Pod
-	Peek() <-chan *corev1.Pod
+	Peek(ctx context.Context) <-chan *corev1.Pod
 	Update(t time.Duration) (int, error)
+	Started() bool
 	Stop()
+	Done() <-chan struct{}
 	Err() error
 }
 
-func NewPodWatcher(ctx context.Context, client kubernetesClient[corev1.PodList, *corev1.Pod], opts metav1.ListOptions, bufferSize int) PodWatcher {
-	childCtx, ctxCancel := context.WithCancel(ctx)
+func NewPodWatcher(parentCtx context.Context, client kubernetesClient[corev1.PodList, *corev1.Pod], opts metav1.ListOptions, bufferSize int) PodWatcher {
+	ctx, ctxCancel := context.WithCancel(parentCtx)
 	opts.AllowWatchBookmarks = true
 	watcher := &podWatcher{
 		client: client,
 		opts:   opts,
 		ch:     make(chan *corev1.Pod, bufferSize),
-		ctx:    childCtx,
+		ctx:    ctx,
 		cancel: ctxCancel,
 	}
 	go watcher.cycle()
 	return watcher
+}
+
+func (e *podWatcher) Started() bool {
+	return e.started.Load()
 }
 
 func (e *podWatcher) setError(err error) {
@@ -157,6 +165,8 @@ func (e *podWatcher) watch() error {
 		recover()
 	}()
 
+	e.started.Store(true)
+
 	// Read the items
 	ch := watcher.ResultChan()
 	for {
@@ -239,11 +249,16 @@ func (e *podWatcher) cycle() {
 	e.cancel()
 }
 
-func (e *podWatcher) Peek() <-chan *corev1.Pod {
+func (e *podWatcher) Peek(ctx context.Context) <-chan *corev1.Pod {
 	ch := make(chan *corev1.Pod)
 
 	go func() {
-		<-e.peekCh
+		select {
+		case <-e.peekCh:
+		case <-ctx.Done():
+			close(ch)
+			return
+		}
 		e.peekMu.Lock()
 		pod := e.peek
 		e.peekMu.Unlock()
@@ -263,6 +278,10 @@ func (e *podWatcher) Err() error {
 		return e.err
 	}
 	return e.ctx.Err()
+}
+
+func (e *podWatcher) Done() <-chan struct{} {
+	return e.ctx.Done()
 }
 
 // Channel returns the channel for reading the pod.

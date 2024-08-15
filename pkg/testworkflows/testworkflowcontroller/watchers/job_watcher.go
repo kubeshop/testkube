@@ -6,6 +6,7 @@ import (
 	"math"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/pkg/errors"
@@ -17,38 +18,45 @@ import (
 )
 
 type jobWatcher struct {
-	client kubernetesClient[batchv1.JobList, *batchv1.Job]
-	opts   metav1.ListOptions
-	peek   *batchv1.Job
-	ch     chan *batchv1.Job
-	peekCh chan struct{}
-	ctx    context.Context
-	cancel context.CancelFunc
-	err    error
-	mu     sync.Mutex
-	peekMu sync.Mutex
+	client  kubernetesClient[batchv1.JobList, *batchv1.Job]
+	opts    metav1.ListOptions
+	peek    *batchv1.Job
+	started atomic.Bool
+	ch      chan *batchv1.Job
+	peekCh  chan struct{}
+	ctx     context.Context
+	cancel  context.CancelFunc
+	err     error
+	mu      sync.Mutex
+	peekMu  sync.Mutex
 }
 
 type JobWatcher interface {
 	Channel() <-chan *batchv1.Job
-	Peek() <-chan *batchv1.Job
+	Peek(ctx context.Context) <-chan *batchv1.Job
 	Update(t time.Duration) (int, error)
+	Started() bool
 	Stop()
+	Done() <-chan struct{}
 	Err() error
 }
 
-func NewJobWatcher(ctx context.Context, client kubernetesClient[batchv1.JobList, *batchv1.Job], opts metav1.ListOptions, bufferSize int) JobWatcher {
-	childCtx, ctxCancel := context.WithCancel(ctx)
+func NewJobWatcher(parentCtx context.Context, client kubernetesClient[batchv1.JobList, *batchv1.Job], opts metav1.ListOptions, bufferSize int) JobWatcher {
+	ctx, ctxCancel := context.WithCancel(parentCtx)
 	opts.AllowWatchBookmarks = true
 	watcher := &jobWatcher{
 		client: client,
 		opts:   opts,
 		ch:     make(chan *batchv1.Job, bufferSize),
-		ctx:    childCtx,
+		ctx:    ctx,
 		cancel: ctxCancel,
 	}
 	go watcher.cycle()
 	return watcher
+}
+
+func (e *jobWatcher) Started() bool {
+	return e.started.Load(true)
 }
 
 func (e *jobWatcher) setError(err error) {
@@ -157,6 +165,8 @@ func (e *jobWatcher) watch() error {
 		recover()
 	}()
 
+	e.started.Store(true)
+
 	// Read the items
 	ch := watcher.ResultChan()
 	for {
@@ -239,11 +249,16 @@ func (e *jobWatcher) cycle() {
 	e.cancel()
 }
 
-func (e *jobWatcher) Peek() <-chan *batchv1.Job {
+func (e *jobWatcher) Peek(ctx context.Context) <-chan *batchv1.Job {
 	ch := make(chan *batchv1.Job)
 
 	go func() {
-		<-e.peekCh
+		select {
+		case <-e.peekCh:
+		case <-ctx.Done():
+			close(ch)
+			return
+		}
 		e.peekMu.Lock()
 		job := e.peek
 		e.peekMu.Unlock()
@@ -263,6 +278,10 @@ func (e *jobWatcher) Err() error {
 		return e.err
 	}
 	return e.ctx.Err()
+}
+
+func (e *jobWatcher) Done() <-chan struct{} {
+	return e.ctx.Done()
 }
 
 // Channel returns the channel for reading the job.

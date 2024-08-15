@@ -4,6 +4,7 @@ import (
 	"context"
 	"math"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -14,34 +15,69 @@ import (
 )
 
 type eventsWatcher struct {
-	client kubernetesClient[corev1.EventList, *corev1.Event]
-	opts   metav1.ListOptions
-	ch     chan *corev1.Event
-	ctx    context.Context
-	cancel context.CancelFunc
-	err    error
-	mu     sync.Mutex
+	client  kubernetesClient[corev1.EventList, *corev1.Event]
+	opts    metav1.ListOptions
+	optsCh  chan struct{}
+	started atomic.Bool
+	ch      chan *corev1.Event
+	ctx     context.Context
+	cancel  context.CancelFunc
+	err     error
+	mu      sync.Mutex
 }
 
 type EventsWatcher interface {
 	Channel() <-chan *corev1.Event
 	Update(t time.Duration) (int, error)
+	Started() bool
 	Stop()
+	Done() <-chan struct{}
 	Err() error
 }
 
-func NewEventsWatcher(ctx context.Context, client kubernetesClient[corev1.EventList, *corev1.Event], opts metav1.ListOptions, bufferSize int) EventsWatcher {
-	childCtx, ctxCancel := context.WithCancel(ctx)
-	opts.AllowWatchBookmarks = true
+func NewEventsWatcher(parentCtx context.Context, client kubernetesClient[corev1.EventList, *corev1.Event], opts metav1.ListOptions, bufferSize int) EventsWatcher {
+	ctx, ctxCancel := context.WithCancel(parentCtx)
 	watcher := &eventsWatcher{
 		client: client,
 		opts:   opts,
+		optsCh: make(chan struct{}),
 		ch:     make(chan *corev1.Event, bufferSize),
-		ctx:    childCtx,
+		ctx:    ctx,
 		cancel: ctxCancel,
 	}
+	close(watcher.optsCh)
 	go watcher.cycle()
 	return watcher
+}
+
+func NewAsyncEventsWatcher(parentCtx context.Context, client kubernetesClient[corev1.EventList, *corev1.Event], opts <-chan metav1.ListOptions, bufferSize int) EventsWatcher {
+	ctx, ctxCancel := context.WithCancel(parentCtx)
+	watcher := &eventsWatcher{
+		client: client,
+		optsCh: make(chan struct{}),
+		ch:     make(chan *corev1.Event, bufferSize),
+		ctx:    ctx,
+		cancel: ctxCancel,
+	}
+	close(watcher.optsCh)
+	go watcher.waitForOpts(opts)
+	go watcher.cycle()
+	return watcher
+}
+
+func (e *eventsWatcher) Started() bool {
+	return e.started.Load()
+}
+
+func (e *eventsWatcher) waitForOpts(opts <-chan metav1.ListOptions) {
+	select {
+	case v, _ := <-opts:
+		e.mu.Lock()
+		e.opts = v
+		e.mu.Unlock()
+	case <-e.ctx.Done():
+	}
+	close(e.optsCh)
 }
 
 func (e *eventsWatcher) setError(err error) {
@@ -52,6 +88,9 @@ func (e *eventsWatcher) setError(err error) {
 }
 
 func (e *eventsWatcher) read(t time.Duration) (int, error) {
+	// Wait for readiness
+	<-e.optsCh
+
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
@@ -98,6 +137,7 @@ func (e *eventsWatcher) watch() error {
 	if opts.TimeoutSeconds == nil {
 		opts.TimeoutSeconds = common.Ptr(defaultWatchTimeoutSeconds)
 	}
+	opts.AllowWatchBookmarks = true
 	watcher, err := e.client.Watch(e.ctx, opts)
 	defer watcher.Stop()
 	if err != nil {
@@ -108,6 +148,8 @@ func (e *eventsWatcher) watch() error {
 	defer func() {
 		recover()
 	}()
+
+	e.started.Store(true)
 
 	// Read the items
 	ch := watcher.ResultChan()
@@ -158,6 +200,9 @@ func (e *eventsWatcher) cycle() {
 		close(e.ch)
 	}()
 
+	// Wait for readiness
+	<-e.optsCh
+
 	// Read the initial data
 	_, err := e.read(0)
 	if err != nil {
@@ -180,6 +225,10 @@ func (e *eventsWatcher) Err() error {
 		return e.err
 	}
 	return e.ctx.Err()
+}
+
+func (e *eventsWatcher) Done() <-chan struct{} {
+	return e.ctx.Done()
 }
 
 // Channel returns the channel for reading the events.
