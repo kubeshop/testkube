@@ -56,7 +56,7 @@ func createConfigMachine(cfg map[string]intstr.IntOrString, schema map[string]te
 				return nil, errors.Wrap(err, "config."+k)
 			}
 			if envVar.SecretKeyRef != nil {
-				expr = expressions.NewValue(fmt.Sprintf("{{secret('%s', '%s')}}", envVar.SecretKeyRef.Name, envVar.SecretKeyRef.Key))
+				expr = expressions.NewValue(fmt.Sprintf("{{secret(\"%s\", \"%s\")}}", envVar.SecretKeyRef.Name, envVar.SecretKeyRef.Key))
 			}
 		}
 		machine.Register("config."+k, expr)
@@ -73,7 +73,7 @@ func createConfigMachine(cfg map[string]intstr.IntOrString, schema map[string]te
 					return nil, errors.Wrap(err, "config."+k)
 				}
 				if envVar.SecretKeyRef != nil {
-					expr = expressions.NewValue(fmt.Sprintf("{{secret('%s', '%s')}}", envVar.SecretKeyRef.Name, envVar.SecretKeyRef.Key))
+					expr = expressions.NewValue(fmt.Sprintf("{{secret(\"%s\", \"%s\")}}", envVar.SecretKeyRef.Name, envVar.SecretKeyRef.Key))
 				}
 			}
 			machine.Register("config."+k, expr)
