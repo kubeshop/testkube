@@ -334,7 +334,7 @@ func NewServicesCmd() *cobra.Command {
 						instructions.PrintOutput(env.Ref(), "service", info)
 					}
 
-					if v.Current == mainRef {
+					if v.Current == mainRef && state[instance.Name][index].Ip != "" {
 						started = true
 						if instance.ReadinessProbe == nil {
 							log("container started")
