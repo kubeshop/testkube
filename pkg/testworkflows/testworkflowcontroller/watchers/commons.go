@@ -64,5 +64,15 @@ func IsPodFinished(pod *corev1.Pod) bool {
 			}
 		}
 	}
-	return false
+	for i := range pod.Status.InitContainerStatuses {
+		if pod.Status.InitContainerStatuses[i].State.Terminated != nil && pod.Status.InitContainerStatuses[i].State.Terminated.Reason != "" {
+			return true
+		}
+	}
+	for i := range pod.Status.ContainerStatuses {
+		if pod.Status.ContainerStatuses[i].State.Terminated == nil {
+			return false
+		}
+	}
+	return true
 }
