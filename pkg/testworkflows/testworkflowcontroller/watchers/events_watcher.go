@@ -19,7 +19,7 @@ type eventsWatcher struct {
 	opts      metav1.ListOptions
 	optsCh    chan struct{}
 	started   atomic.Bool
-	startedCh chan struct{}
+	startedCh chan struct{} // TODO: Ensure there is no memory leak
 	ch        chan *corev1.Event
 	ctx       context.Context
 	cancel    context.CancelFunc
@@ -67,7 +67,6 @@ func NewAsyncEventsWatcher(parentCtx context.Context, client kubernetesClient[co
 		ctx:       ctx,
 		cancel:    ctxCancel,
 	}
-	close(watcher.optsCh)
 	go watcher.waitForOpts(opts)
 	go watcher.cycle()
 	return watcher
@@ -154,8 +153,9 @@ func (e *eventsWatcher) read(t time.Duration) (int, error) {
 
 	// Mark as initial list is starting to propagate
 	e.count.Add(uint32(len(list.Items)))
-	e.started.Store(true)
-	e.startedCh = make(chan struct{})
+	if e.started.CompareAndSwap(false, true) {
+		close(e.startedCh)
+	}
 
 	// Ignore error when the channel is already closed
 	defer func() {
@@ -164,11 +164,8 @@ func (e *eventsWatcher) read(t time.Duration) (int, error) {
 
 	// Send the received events
 	for i := range list.Items {
-		if list.Items[0].CreationTimestamp.Time.After(e.lastTs) {
-			e.lastTs = list.Items[0].CreationTimestamp.Time
-		}
-		if list.Items[0].LastTimestamp.Time.After(e.lastTs) {
-			e.lastTs = list.Items[0].LastTimestamp.Time
+		if GetEventTimestamp(&list.Items[0]).After(e.lastTs) {
+			e.lastTs = GetEventTimestamp(&list.Items[0])
 		}
 		e.ch <- common.Ptr(list.Items[i])
 	}
@@ -249,6 +246,9 @@ func (e *eventsWatcher) cycle() {
 	go func() {
 		<-e.ctx.Done()
 		close(e.ch)
+		if e.started.CompareAndSwap(false, true) {
+			close(e.startedCh)
+		}
 	}()
 
 	// Wait for readiness

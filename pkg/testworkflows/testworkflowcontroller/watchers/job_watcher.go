@@ -22,7 +22,7 @@ type jobWatcher struct {
 	opts      metav1.ListOptions
 	peek      *batchv1.Job
 	started   atomic.Bool
-	startedCh chan struct{}
+	startedCh chan struct{} // TODO: Ensure there is no memory leak
 	ch        chan *batchv1.Job
 	peekCh    chan struct{}
 	ctx       context.Context
@@ -150,8 +150,9 @@ func (e *jobWatcher) read(t time.Duration) (int, error) {
 		e.peekMu.Unlock()
 
 		// Mark as initial list is starting to propagate
-		e.started.Store(true)
-		e.startedCh = make(chan struct{})
+		if e.started.CompareAndSwap(false, true) {
+			close(e.startedCh)
+		}
 
 		if job == nil {
 			// there is no job, but it's not a change.
@@ -167,8 +168,9 @@ func (e *jobWatcher) read(t time.Duration) (int, error) {
 	e.setLastJob(common.Ptr(list.Items[0]))
 
 	// Mark as initial list is starting to propagate
-	e.started.Store(true)
-	e.startedCh = make(chan struct{})
+	if e.started.CompareAndSwap(false, true) {
+		close(e.startedCh)
+	}
 
 	// There is no update
 	if list.Items[0].ResourceVersion == e.opts.ResourceVersion {
@@ -261,7 +263,11 @@ func (e *jobWatcher) cycle() {
 		peekCh := e.peekCh
 		e.peekCh = nil
 		if peekCh != nil {
-			close(e.peekCh)
+			close(peekCh)
+		}
+
+		if e.started.CompareAndSwap(false, true) {
+			close(e.startedCh)
 		}
 	}()
 

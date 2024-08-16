@@ -22,7 +22,7 @@ type podWatcher struct {
 	opts      metav1.ListOptions
 	peek      *corev1.Pod
 	started   atomic.Bool
-	startedCh chan struct{}
+	startedCh chan struct{} // TODO: Ensure there is no memory leak
 	ch        chan *corev1.Pod
 	peekCh    chan struct{}
 	ctx       context.Context
@@ -128,10 +128,6 @@ func (e *podWatcher) read(t time.Duration) (int, error) {
 	// Update the latest resource version
 	e.opts.ResourceVersion = list.ResourceVersion
 
-	// Mark as initial list is starting to propagate
-	e.started.Store(true)
-	e.startedCh = make(chan struct{})
-
 	// Ignore error when the channel is already closed
 	defer func() {
 		recover()
@@ -153,8 +149,9 @@ func (e *podWatcher) read(t time.Duration) (int, error) {
 		e.peekMu.Unlock()
 
 		// Mark as initial list is starting to propagate
-		e.started.Store(true)
-		e.startedCh = make(chan struct{})
+		if e.started.CompareAndSwap(false, true) {
+			close(e.startedCh)
+		}
 
 		if pod == nil {
 			// there is no pod, but it's not a change.
@@ -170,8 +167,9 @@ func (e *podWatcher) read(t time.Duration) (int, error) {
 	e.setLastPod(common.Ptr(list.Items[0]))
 
 	// Mark as initial list is starting to propagate
-	e.started.Store(true)
-	e.startedCh = make(chan struct{})
+	if e.started.CompareAndSwap(false, true) {
+		close(e.startedCh)
+	}
 
 	// There is no update
 	if list.Items[0].ResourceVersion == e.opts.ResourceVersion {
@@ -265,7 +263,11 @@ func (e *podWatcher) cycle() {
 		peekCh := e.peekCh
 		e.peekCh = nil
 		if peekCh != nil {
-			close(e.peekCh)
+			close(peekCh)
+		}
+
+		if e.started.CompareAndSwap(false, true) {
+			close(e.startedCh)
 		}
 	}()
 
