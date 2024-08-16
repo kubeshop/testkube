@@ -18,24 +18,26 @@ import (
 )
 
 type podWatcher struct {
-	client  kubernetesClient[corev1.PodList, *corev1.Pod]
-	opts    metav1.ListOptions
-	peek    *corev1.Pod
-	started atomic.Bool
-	ch      chan *corev1.Pod
-	peekCh  chan struct{}
-	ctx     context.Context
-	cancel  context.CancelFunc
-	err     error
-	mu      sync.Mutex
-	peekMu  sync.Mutex
+	client    kubernetesClient[corev1.PodList, *corev1.Pod]
+	opts      metav1.ListOptions
+	peek      *corev1.Pod
+	started   atomic.Bool
+	startedCh chan struct{}
+	ch        chan *corev1.Pod
+	peekCh    chan struct{}
+	ctx       context.Context
+	cancel    context.CancelFunc
+	err       error
+	mu        sync.Mutex
+	peekMu    sync.Mutex
 }
 
 type PodWatcher interface {
 	Channel() <-chan *corev1.Pod
 	Peek(ctx context.Context) <-chan *corev1.Pod
 	Update(t time.Duration) (int, error)
-	Started() bool
+	IsStarted() bool
+	Started() <-chan struct{}
 	Stop()
 	Done() <-chan struct{}
 	Err() error
@@ -45,18 +47,36 @@ func NewPodWatcher(parentCtx context.Context, client kubernetesClient[corev1.Pod
 	ctx, ctxCancel := context.WithCancel(parentCtx)
 	opts.AllowWatchBookmarks = true
 	watcher := &podWatcher{
-		client: client,
-		opts:   opts,
-		ch:     make(chan *corev1.Pod, bufferSize),
-		ctx:    ctx,
-		cancel: ctxCancel,
+		client:    client,
+		opts:      opts,
+		ch:        make(chan *corev1.Pod, bufferSize),
+		startedCh: make(chan struct{}),
+		peekCh:    make(chan struct{}),
+		ctx:       ctx,
+		cancel:    ctxCancel,
 	}
 	go watcher.cycle()
 	return watcher
 }
 
-func (e *podWatcher) Started() bool {
+func (e *podWatcher) IsStarted() bool {
 	return e.started.Load()
+}
+
+func (e *podWatcher) Started() <-chan struct{} {
+	ch := make(chan struct{})
+	if e.started.Load() || e.ctx.Err() != nil || e.startedCh == nil {
+		close(ch)
+	} else {
+		go func() {
+			select {
+			case <-e.ctx.Done():
+			case <-e.startedCh:
+			}
+			close(ch)
+		}()
+	}
+	return ch
 }
 
 func (e *podWatcher) setError(err error) {
@@ -107,6 +127,10 @@ func (e *podWatcher) read(t time.Duration) (int, error) {
 	// Update the latest resource version
 	e.opts.ResourceVersion = list.ResourceVersion
 
+	// Mark as initial list is starting to propagate
+	e.started.Store(true)
+	e.startedCh = make(chan struct{})
+
 	// Ignore error when the channel is already closed
 	defer func() {
 		recover()
@@ -142,12 +166,13 @@ func (e *podWatcher) read(t time.Duration) (int, error) {
 	}
 
 	// The pod has been updated
-	e.ch <- common.Ptr(list.Items[0])
 	e.setLastPod(common.Ptr(list.Items[0]))
+	e.ch <- common.Ptr(list.Items[0])
 
 	return 1, nil
 }
 
+// TODO: handle resource too old
 func (e *podWatcher) watch() error {
 	// Initialize the watcher
 	opts := e.opts
@@ -156,6 +181,7 @@ func (e *podWatcher) watch() error {
 	}
 	watcher, err := e.client.Watch(e.ctx, opts)
 	defer watcher.Stop()
+
 	if err != nil {
 		return err
 	}
@@ -164,8 +190,6 @@ func (e *podWatcher) watch() error {
 	defer func() {
 		recover()
 	}()
-
-	e.started.Store(true)
 
 	// Read the items
 	ch := watcher.ResultChan()
@@ -204,8 +228,8 @@ func (e *podWatcher) watch() error {
 			}
 
 			// Send the event back
-			e.ch <- object
 			e.setLastPod(object)
+			e.ch <- object
 
 			// Handle the deletion
 			e.mu.Lock()

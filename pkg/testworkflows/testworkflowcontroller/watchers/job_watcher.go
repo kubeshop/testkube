@@ -18,24 +18,26 @@ import (
 )
 
 type jobWatcher struct {
-	client  kubernetesClient[batchv1.JobList, *batchv1.Job]
-	opts    metav1.ListOptions
-	peek    *batchv1.Job
-	started atomic.Bool
-	ch      chan *batchv1.Job
-	peekCh  chan struct{}
-	ctx     context.Context
-	cancel  context.CancelFunc
-	err     error
-	mu      sync.Mutex
-	peekMu  sync.Mutex
+	client    kubernetesClient[batchv1.JobList, *batchv1.Job]
+	opts      metav1.ListOptions
+	peek      *batchv1.Job
+	started   atomic.Bool
+	startedCh chan struct{}
+	ch        chan *batchv1.Job
+	peekCh    chan struct{}
+	ctx       context.Context
+	cancel    context.CancelFunc
+	err       error
+	mu        sync.Mutex
+	peekMu    sync.Mutex
 }
 
 type JobWatcher interface {
 	Channel() <-chan *batchv1.Job
 	Peek(ctx context.Context) <-chan *batchv1.Job
 	Update(t time.Duration) (int, error)
-	Started() bool
+	IsStarted() bool
+	Started() <-chan struct{}
 	Stop()
 	Done() <-chan struct{}
 	Err() error
@@ -45,18 +47,36 @@ func NewJobWatcher(parentCtx context.Context, client kubernetesClient[batchv1.Jo
 	ctx, ctxCancel := context.WithCancel(parentCtx)
 	opts.AllowWatchBookmarks = true
 	watcher := &jobWatcher{
-		client: client,
-		opts:   opts,
-		ch:     make(chan *batchv1.Job, bufferSize),
-		ctx:    ctx,
-		cancel: ctxCancel,
+		client:    client,
+		opts:      opts,
+		ch:        make(chan *batchv1.Job, bufferSize),
+		startedCh: make(chan struct{}),
+		peekCh:    make(chan struct{}),
+		ctx:       ctx,
+		cancel:    ctxCancel,
 	}
 	go watcher.cycle()
 	return watcher
 }
 
-func (e *jobWatcher) Started() bool {
-	return e.started.Load(true)
+func (e *jobWatcher) IsStarted() bool {
+	return e.started.Load()
+}
+
+func (e *jobWatcher) Started() <-chan struct{} {
+	ch := make(chan struct{})
+	if e.started.Load() || e.ctx.Err() != nil || e.startedCh == nil {
+		close(ch)
+	} else {
+		go func() {
+			select {
+			case <-e.ctx.Done():
+			case <-e.startedCh:
+			}
+			close(ch)
+		}()
+	}
+	return ch
 }
 
 func (e *jobWatcher) setError(err error) {
@@ -100,12 +120,17 @@ func (e *jobWatcher) read(t time.Duration) (int, error) {
 		opts.TimeoutSeconds = common.Ptr(defaultListTimeoutSeconds)
 	}
 	list, err := e.client.List(e.ctx, e.opts)
+
 	if err != nil {
 		return 0, err
 	}
 
 	// Update the latest resource version
 	e.opts.ResourceVersion = list.ResourceVersion
+
+	// Mark as initial list is starting to propagate
+	e.started.Store(true)
+	e.startedCh = make(chan struct{})
 
 	// Ignore error when the channel is already closed
 	defer func() {
@@ -142,12 +167,13 @@ func (e *jobWatcher) read(t time.Duration) (int, error) {
 	}
 
 	// The job has been updated
-	e.ch <- common.Ptr(list.Items[0])
 	e.setLastJob(common.Ptr(list.Items[0]))
+	e.ch <- common.Ptr(list.Items[0])
 
 	return 1, nil
 }
 
+// TODO: handle resource too old
 func (e *jobWatcher) watch() error {
 	// Initialize the watcher
 	opts := e.opts
@@ -164,8 +190,6 @@ func (e *jobWatcher) watch() error {
 	defer func() {
 		recover()
 	}()
-
-	e.started.Store(true)
 
 	// Read the items
 	ch := watcher.ResultChan()
@@ -204,8 +228,8 @@ func (e *jobWatcher) watch() error {
 			}
 
 			// Send the event back
-			e.ch <- object
 			e.setLastJob(object)
+			e.ch <- object
 
 			// Handle the deletion
 			e.mu.Lock()
