@@ -3,6 +3,9 @@
   <img style="width:66%" src="assets/testkube-color-dark.png#gh-light-mode-only" alt="Testkube Logo Dark" />
 </p>
 
+<p align="center">
+_Your friendly Test Orchestration and Execution platform for Kubernetes!_
+</p>
 
 <p align="center">
   <a href="https://github.com/kubeshop/testkube/releases"><img title="Release" src="https://img.shields.io/github/v/release/kubeshop/testkube"/></a>
