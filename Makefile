@@ -216,6 +216,7 @@ version-bump-dev:
 	go run cmd/tools/main.go bump --dev
 
 commands-reference:
+	mkdir -p docs/docs/cli
 	go run cmd/kubectl-testkube/main.go generate doc
 
 .PHONY: docs
