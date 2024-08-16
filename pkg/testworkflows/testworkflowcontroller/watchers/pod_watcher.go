@@ -36,6 +36,7 @@ type PodWatcher interface {
 	Channel() <-chan *corev1.Pod
 	Peek(ctx context.Context) <-chan *corev1.Pod
 	Update(t time.Duration) (int, error)
+	Exists() bool
 	IsStarted() bool
 	Started() <-chan struct{}
 	Stop()
@@ -150,6 +151,11 @@ func (e *podWatcher) read(t time.Duration) (int, error) {
 		e.peekMu.Lock()
 		pod := e.peek
 		e.peekMu.Unlock()
+
+		// Mark as initial list is starting to propagate
+		e.started.Store(true)
+		e.startedCh = make(chan struct{})
+
 		if pod == nil {
 			// there is no pod, but it's not a change.
 			return 0, nil
@@ -160,13 +166,19 @@ func (e *podWatcher) read(t time.Duration) (int, error) {
 		}
 	}
 
+	// Store information about the last pod for peeking
+	e.setLastPod(common.Ptr(list.Items[0]))
+
+	// Mark as initial list is starting to propagate
+	e.started.Store(true)
+	e.startedCh = make(chan struct{})
+
 	// There is no update
 	if list.Items[0].ResourceVersion == e.opts.ResourceVersion {
 		return 0, nil
 	}
 
-	// The pod has been updated
-	e.setLastPod(common.Ptr(list.Items[0]))
+	// Send the item
 	e.ch <- common.Ptr(list.Items[0])
 
 	return 1, nil
@@ -271,6 +283,12 @@ func (e *podWatcher) cycle() {
 	}
 	e.setError(err)
 	e.cancel()
+}
+
+func (e *podWatcher) Exists() bool {
+	e.peekMu.Lock()
+	defer e.peekMu.Unlock()
+	return e.peek != nil
 }
 
 func (e *podWatcher) Peek(ctx context.Context) <-chan *corev1.Pod {

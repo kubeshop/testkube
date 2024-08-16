@@ -24,6 +24,7 @@ type eventsWatcher struct {
 	ctx       context.Context
 	cancel    context.CancelFunc
 	err       error
+	count     atomic.Uint32
 	mu        sync.Mutex
 	lastTs    time.Time
 }
@@ -32,6 +33,7 @@ type EventsWatcher interface {
 	LastAcknowledgedTime() time.Time
 	Channel() <-chan *corev1.Event
 	Update(t time.Duration) (int, error)
+	Count() int
 	IsStarted() bool
 	Started() <-chan struct{}
 	Stop()
@@ -75,6 +77,10 @@ func (e *eventsWatcher) LastAcknowledgedTime() time.Time {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	return e.lastTs
+}
+
+func (e *eventsWatcher) Count() int {
+	return int(e.count.Load())
 }
 
 func (e *eventsWatcher) IsStarted() bool {
@@ -139,7 +145,15 @@ func (e *eventsWatcher) read(t time.Duration) (int, error) {
 	// Update the latest resource version
 	e.opts.ResourceVersion = list.ResourceVersion
 
+	// Omit the events that have been already sent
+	for i := range list.Items {
+		if list.Items[i].ResourceVersion == e.opts.ResourceVersion {
+			list.Items = list.Items[i+1:]
+		}
+	}
+
 	// Mark as initial list is starting to propagate
+	e.count.Add(uint32(len(list.Items)))
 	e.started.Store(true)
 	e.startedCh = make(chan struct{})
 
@@ -147,13 +161,6 @@ func (e *eventsWatcher) read(t time.Duration) (int, error) {
 	defer func() {
 		recover()
 	}()
-
-	// Omit the events that have been already sent
-	for i := range list.Items {
-		if list.Items[i].ResourceVersion == e.opts.ResourceVersion {
-			list.Items = list.Items[i+1:]
-		}
-	}
 
 	// Send the received events
 	for i := range list.Items {
@@ -231,6 +238,7 @@ func (e *eventsWatcher) watch() error {
 			}
 
 			// Send the event back
+			e.count.Add(1)
 			e.ch <- object
 		}
 	}

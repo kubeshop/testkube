@@ -36,6 +36,7 @@ type JobWatcher interface {
 	Channel() <-chan *batchv1.Job
 	Peek(ctx context.Context) <-chan *batchv1.Job
 	Update(t time.Duration) (int, error)
+	Exists() bool
 	IsStarted() bool
 	Started() <-chan struct{}
 	Stop()
@@ -128,10 +129,6 @@ func (e *jobWatcher) read(t time.Duration) (int, error) {
 	// Update the latest resource version
 	e.opts.ResourceVersion = list.ResourceVersion
 
-	// Mark as initial list is starting to propagate
-	e.started.Store(true)
-	e.startedCh = make(chan struct{})
-
 	// Ignore error when the channel is already closed
 	defer func() {
 		recover()
@@ -151,6 +148,11 @@ func (e *jobWatcher) read(t time.Duration) (int, error) {
 		e.peekMu.Lock()
 		job := e.peek
 		e.peekMu.Unlock()
+
+		// Mark as initial list is starting to propagate
+		e.started.Store(true)
+		e.startedCh = make(chan struct{})
+
 		if job == nil {
 			// there is no job, but it's not a change.
 			return 0, nil
@@ -161,13 +163,19 @@ func (e *jobWatcher) read(t time.Duration) (int, error) {
 		}
 	}
 
+	// Store information about the last job for peeking
+	e.setLastJob(common.Ptr(list.Items[0]))
+
+	// Mark as initial list is starting to propagate
+	e.started.Store(true)
+	e.startedCh = make(chan struct{})
+
 	// There is no update
 	if list.Items[0].ResourceVersion == e.opts.ResourceVersion {
 		return 0, nil
 	}
 
-	// The job has been updated
-	e.setLastJob(common.Ptr(list.Items[0]))
+	// Send the item
 	e.ch <- common.Ptr(list.Items[0])
 
 	return 1, nil
@@ -271,6 +279,12 @@ func (e *jobWatcher) cycle() {
 	}
 	e.setError(err)
 	e.cancel()
+}
+
+func (e *jobWatcher) Exists() bool {
+	e.peekMu.Lock()
+	defer e.peekMu.Unlock()
+	return e.peek != nil
 }
 
 func (e *jobWatcher) Peek(ctx context.Context) <-chan *batchv1.Job {
