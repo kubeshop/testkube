@@ -24,6 +24,7 @@ type podWatcher struct {
 	started   atomic.Bool
 	startedCh chan struct{} // TODO: Ensure there is no memory leak
 	ch        chan *corev1.Pod
+	peekable  atomic.Bool
 	peekCh    chan struct{}
 	ctx       context.Context
 	cancel    context.CancelFunc
@@ -99,11 +100,11 @@ func (e *podWatcher) finalize(pod *corev1.Pod) bool {
 func (e *podWatcher) setLastPod(pod *corev1.Pod) {
 	e.peekMu.Lock()
 	defer e.peekMu.Unlock()
-	e.peek = pod
-	peekCh := e.peekCh
-	e.peekCh = nil
-	if peekCh == nil {
-		close(peekCh)
+	if pod != nil {
+		e.peek = pod
+	}
+	if e.peekable.CompareAndSwap(false, true) {
+		close(e.peekCh)
 	}
 }
 
@@ -190,11 +191,10 @@ func (e *podWatcher) watch() error {
 		opts.TimeoutSeconds = common.Ptr(defaultWatchTimeoutSeconds)
 	}
 	watcher, err := e.client.Watch(e.ctx, opts)
-	defer watcher.Stop()
-
 	if err != nil {
 		return err
 	}
+	defer watcher.Stop()
 
 	// Ignore error when the channel is already closed
 	defer func() {
@@ -260,10 +260,9 @@ func (e *podWatcher) cycle() {
 
 		e.peekMu.Lock()
 		defer e.peekMu.Unlock()
-		peekCh := e.peekCh
-		e.peekCh = nil
-		if peekCh != nil {
-			close(peekCh)
+
+		if e.peekable.CompareAndSwap(false, true) {
+			close(e.peekCh)
 		}
 
 		if e.started.CompareAndSwap(false, true) {
@@ -274,6 +273,7 @@ func (e *podWatcher) cycle() {
 	// Read the initial data
 	_, err := e.read(0)
 	if err != nil {
+		fmt.Println("POD", e.opts, "read error", err)
 		e.setError(err)
 		return
 	}
@@ -283,6 +283,7 @@ func (e *podWatcher) cycle() {
 	for err == nil {
 		err = e.watch()
 	}
+	fmt.Println("POD", e.opts, "watch error", "at", e.opts.ResourceVersion, err)
 	e.setError(err)
 	e.cancel()
 }
@@ -294,8 +295,23 @@ func (e *podWatcher) Exists() bool {
 }
 
 func (e *podWatcher) Peek(ctx context.Context) <-chan *corev1.Pod {
-	ch := make(chan *corev1.Pod)
+	if e.peekable.Load() {
+		ch := make(chan *corev1.Pod, 1)
 
+		e.peekMu.Lock()
+		pod := e.peek
+		e.peekMu.Unlock()
+
+		ch <- pod
+		close(ch)
+		return ch
+	} else if e.ctx.Err() != nil {
+		ch := make(chan *corev1.Pod)
+		close(ch)
+		return ch
+	}
+
+	ch := make(chan *corev1.Pod)
 	go func() {
 		select {
 		case <-e.peekCh:

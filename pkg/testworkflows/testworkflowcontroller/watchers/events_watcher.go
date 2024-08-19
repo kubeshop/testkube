@@ -182,10 +182,10 @@ func (e *eventsWatcher) watch() error {
 	}
 	opts.AllowWatchBookmarks = true
 	watcher, err := e.client.Watch(e.ctx, opts)
-	defer watcher.Stop()
 	if err != nil {
 		return err
 	}
+	defer watcher.Stop()
 
 	// Ignore error when the channel is already closed
 	defer func() {

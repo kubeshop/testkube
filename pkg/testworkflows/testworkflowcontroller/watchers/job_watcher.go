@@ -24,7 +24,8 @@ type jobWatcher struct {
 	started   atomic.Bool
 	startedCh chan struct{} // TODO: Ensure there is no memory leak
 	ch        chan *batchv1.Job
-	peekCh    chan struct{}
+	peekable  atomic.Bool
+	peekCh    chan struct{} // TODO: Ensure there is no memory leak
 	ctx       context.Context
 	cancel    context.CancelFunc
 	err       error
@@ -99,11 +100,11 @@ func (e *jobWatcher) finalize(job *batchv1.Job) bool {
 func (e *jobWatcher) setLastJob(job *batchv1.Job) {
 	e.peekMu.Lock()
 	defer e.peekMu.Unlock()
-	e.peek = job
-	peekCh := e.peekCh
-	e.peekCh = nil
-	if peekCh == nil {
-		close(peekCh)
+	if job != nil {
+		e.peek = job
+	}
+	if e.peekable.CompareAndSwap(false, true) {
+		close(e.peekCh)
 	}
 }
 
@@ -191,10 +192,10 @@ func (e *jobWatcher) watch() error {
 		opts.TimeoutSeconds = common.Ptr(defaultWatchTimeoutSeconds)
 	}
 	watcher, err := e.client.Watch(e.ctx, opts)
-	defer watcher.Stop()
 	if err != nil {
 		return err
 	}
+	defer watcher.Stop()
 
 	// Ignore error when the channel is already closed
 	defer func() {
@@ -260,10 +261,8 @@ func (e *jobWatcher) cycle() {
 
 		e.peekMu.Lock()
 		defer e.peekMu.Unlock()
-		peekCh := e.peekCh
-		e.peekCh = nil
-		if peekCh != nil {
-			close(peekCh)
+		if e.peekable.CompareAndSwap(false, true) {
+			close(e.peekCh)
 		}
 
 		if e.started.CompareAndSwap(false, true) {
@@ -294,8 +293,23 @@ func (e *jobWatcher) Exists() bool {
 }
 
 func (e *jobWatcher) Peek(ctx context.Context) <-chan *batchv1.Job {
-	ch := make(chan *batchv1.Job)
+	if e.peekable.Load() {
+		ch := make(chan *batchv1.Job, 1)
 
+		e.peekMu.Lock()
+		job := e.peek
+		e.peekMu.Unlock()
+
+		ch <- job
+		close(ch)
+		return ch
+	} else if e.ctx.Err() != nil {
+		ch := make(chan *batchv1.Job)
+		close(ch)
+		return ch
+	}
+
+	ch := make(chan *batchv1.Job)
 	go func() {
 		select {
 		case <-e.peekCh:
