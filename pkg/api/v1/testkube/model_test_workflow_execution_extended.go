@@ -5,7 +5,7 @@ import "github.com/kubeshop/testkube/pkg/utils"
 type TestWorkflowExecutions []TestWorkflowExecution
 
 func (executions TestWorkflowExecutions) Table() (header []string, output [][]string) {
-	header = []string{"Id", "Name", "Test Workflow Name", "Status", "Labels"}
+	header = []string{"Id", "Name", "Test Workflow Name", "Status", "Labels", "Tags"}
 
 	for _, e := range executions {
 		status := "unknown"
@@ -19,6 +19,7 @@ func (executions TestWorkflowExecutions) Table() (header []string, output [][]st
 			e.Workflow.Name,
 			status,
 			MapToString(e.Workflow.Labels),
+			MapToString(e.Tags),
 		})
 	}
 
@@ -28,6 +29,9 @@ func (executions TestWorkflowExecutions) Table() (header []string, output [][]st
 func (e *TestWorkflowExecution) ConvertDots(fn func(string) string) *TestWorkflowExecution {
 	e.Workflow.ConvertDots(fn)
 	e.ResolvedWorkflow.ConvertDots(fn)
+	if e.Tags != nil {
+		e.Tags = convertDotsInMap(e.Tags, fn)
+	}
 	return e
 }
 

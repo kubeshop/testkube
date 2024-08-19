@@ -34,6 +34,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowresolver"
+	"github.com/kubeshop/testkube/pkg/utils"
 )
 
 //go:generate mockgen -destination=./mock_executor.go -package=testworkflowexecutor "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor" TestWorkflowExecutor
@@ -466,6 +467,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		"number":          "1",
 		"scheduledAt":     now.UTC().Format(constants.RFC3339Millis),
 		"disableWebhooks": request.DisableWebhooks,
+		"tags":            "",
 	})
 
 	// Preserve resolved TestWorkflow
@@ -504,6 +506,17 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		return execution, errors.Wrap(err, "execution name already exists")
 	}
 
+	var tags map[string]string
+	if workflow.Spec.Execution != nil {
+		tags = workflow.Spec.Execution.Tags
+	}
+
+	tags = testworkflowresolver.MergeTags(tags, request.Tags)
+	tagsData, err := utils.EncodeStringMapToEnvVar(tags)
+	if err != nil {
+		log.DefaultLogger.Errorw("failed to encode tags", "id", id, "error", err)
+	}
+
 	// Build machine with actual execution data
 	executionMachine := expressions.NewMachine().Register("execution", map[string]interface{}{
 		"id":              id,
@@ -511,6 +524,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		"number":          number,
 		"scheduledAt":     now.UTC().Format(constants.RFC3339Millis),
 		"disableWebhooks": request.DisableWebhooks,
+		"tags":            tagsData,
 	})
 
 	// Process the TestWorkflow
@@ -542,6 +556,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		ResolvedWorkflow:          testworkflowmappers.MapKubeToAPI(resolvedWorkflow),
 		TestWorkflowExecutionName: testWorkflowExecutionName,
 		DisableWebhooks:           request.DisableWebhooks,
+		Tags:                      tags,
 	}
 	err = e.repository.Insert(ctx, execution)
 	if err != nil {

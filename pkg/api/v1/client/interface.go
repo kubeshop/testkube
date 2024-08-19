@@ -147,7 +147,7 @@ type TestWorkflowAPI interface {
 // TestWorkflowExecutionAPI describes test workflow api methods
 type TestWorkflowExecutionAPI interface {
 	GetTestWorkflowExecution(executionID string) (execution testkube.TestWorkflowExecution, err error)
-	ListTestWorkflowExecutions(id string, limit int, selector string) (executions testkube.TestWorkflowExecutionsResult, err error)
+	ListTestWorkflowExecutions(id string, limit int, selector, tagSelector string) (executions testkube.TestWorkflowExecutionsResult, err error)
 	AbortTestWorkflowExecution(workflow string, id string) error
 	AbortTestWorkflowExecutions(workflow string) error
 	GetTestWorkflowExecutionArtifacts(executionID string) (artifacts testkube.Artifacts, err error)

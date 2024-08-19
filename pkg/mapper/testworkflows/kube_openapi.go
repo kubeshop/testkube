@@ -1104,6 +1104,7 @@ func MapSpecKubeToAPI(v testworkflowsv1.TestWorkflowSpec) testkube.TestWorkflowS
 		Steps:     common.MapSlice(v.Steps, MapStepKubeToAPI),
 		After:     common.MapSlice(v.After, MapStepKubeToAPI),
 		Events:    common.MapSlice(v.Events, MapEventKubeToAPI),
+		Execution: common.MapPtr(v.Execution, MapTestWorkflowTagSchemaKubeToAPI),
 	}
 }
 
@@ -1119,6 +1120,7 @@ func MapTemplateSpecKubeToAPI(v testworkflowsv1.TestWorkflowTemplateSpec) testku
 		Steps:     common.MapSlice(v.Steps, MapIndependentStepKubeToAPI),
 		After:     common.MapSlice(v.After, MapIndependentStepKubeToAPI),
 		Events:    common.MapSlice(v.Events, MapEventKubeToAPI),
+		Execution: common.MapPtr(v.Execution, MapTestWorkflowTagSchemaKubeToAPI),
 	}
 }
 
@@ -1168,4 +1170,10 @@ func MapTemplateListKubeToAPI(v *testworkflowsv1.TestWorkflowTemplateList) []tes
 		workflows[i] = MapTestWorkflowTemplateKubeToAPI(item)
 	}
 	return workflows
+}
+
+func MapTestWorkflowTagSchemaKubeToAPI(v testworkflowsv1.TestWorkflowTagSchema) testkube.TestWorkflowTagSchema {
+	return testkube.TestWorkflowTagSchema{
+		Tags: v.Tags,
+	}
 }
