@@ -2,6 +2,7 @@ package testworkflowcontroller
 
 import (
 	"context"
+	"fmt"
 	"regexp"
 	"slices"
 	"strconv"
@@ -30,6 +31,7 @@ var (
 
 type podState struct {
 	pod        *corev1.Pod
+	job        *batchv1.Job
 	queued     map[string]time.Time
 	started    map[string]time.Time
 	finished   map[string]time.Time
@@ -85,6 +87,9 @@ func newPodState(parentCtx context.Context) *podState {
 func (p *podState) preStartWatcher(name string) *channel[podStateUpdate] {
 	if _, ok := p.prestart[name]; !ok {
 		p.prestart[name] = newChannel[podStateUpdate](p.ctx, eventBufferSize)
+		if p.ctx.Err() != nil || p.unsafeIsStarted(name) || p.unsafeIsFinished(name) {
+			p.prestart[name].Close()
+		}
 	}
 	return p.prestart[name]
 }
@@ -275,9 +280,22 @@ func (p *podState) RegisterPod(pod *corev1.Pod) {
 }
 
 func (p *podState) RegisterJob(job *batchv1.Job) {
+	if job == nil {
+		return
+	}
+	p.mu.Lock()
+	p.job = job
+	p.mu.Unlock()
 	p.setQueuedAt("", job.CreationTimestamp.Time)
 	if job.Status.CompletionTime != nil {
 		p.setFinishedAt("", job.Status.CompletionTime.Time)
+	} else if slices.ContainsFunc(job.Status.Conditions, isJobConditionEnd) {
+		for i := range job.Status.Conditions {
+			if isJobConditionEnd(job.Status.Conditions[i]) {
+				p.setFinishedAt("", job.Status.Conditions[i].LastTransitionTime.Time)
+				break
+			}
+		}
 	} else if job.DeletionTimestamp != nil {
 		p.setFinishedAt("", job.DeletionTimestamp.Time)
 	}
@@ -293,11 +311,18 @@ func (p *podState) PreStart(name string) <-chan ChannelMessage[podStateUpdate] {
 	return p.preStartWatcher(name).Channel()
 }
 
+func (p *podState) unsafeIsStarted(name string) bool {
+	return !p.started[name].IsZero()
+}
+
+func (p *podState) unsafeIsFinished(name string) bool {
+	return !p.finished[name].IsZero()
+}
+
 func (p *podState) IsFinished(name string) bool {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	_, ok := p.finished[name]
-	return ok && p.ctx.Err() == nil
+	return p.unsafeIsFinished(name)
 }
 
 func (p *podState) Finished(name string) chan struct{} {
@@ -331,9 +356,31 @@ func (p *podState) FinishedAt(name string) time.Time {
 func (p *podState) containerResult(name string) (ContainerResult, error) {
 	status := p.containerStatus(name)
 	if status == nil || status.State.Terminated == nil {
-		// TODO: Handle it nicer
+		if p.job != nil && IsJobDone(p.job) {
+			for _, c := range p.job.Status.Conditions {
+				if c.Type == batchv1.JobFailed {
+					if c.Status == corev1.ConditionTrue && c.Reason == "DeadlineExceeded" {
+						result := UnknownContainerResult
+						result.Details = fmt.Sprintf("Job timed out after %d seconds.", *p.job.Spec.ActiveDeadlineSeconds)
+						return result, nil
+					}
+					break
+				}
+			}
+		}
 		if p.pod != nil && IsPodDone(p.pod) {
-			return UnknownContainerResult, nil
+			result := UnknownContainerResult
+			for _, c := range p.pod.Status.Conditions {
+				if c.Type == corev1.DisruptionTarget && c.Status == corev1.ConditionTrue {
+					if c.Message == "" {
+						result.Details = c.Reason
+					} else {
+						result.Details = fmt.Sprintf("%s: %s", c.Reason, c.Message)
+					}
+					break
+				}
+			}
+			return result, nil
 		}
 		return UnknownContainerResult, ErrNotTerminatedYet
 	}
@@ -349,24 +396,47 @@ func (p *podState) containerResult(name string) (ContainerResult, error) {
 		result.Details = status.State.Terminated.Reason
 	}
 
+	// Handle the pod timeout
+	if result.Details == "Error" && p.pod.Status.Reason == "DeadlineExceeded" && p.pod.Spec.ActiveDeadlineSeconds != nil {
+		result.Details = fmt.Sprintf("Pod timed out after %d seconds.", *p.pod.Spec.ActiveDeadlineSeconds)
+	}
+
+	if p.job != nil && p.job.Spec.ActiveDeadlineSeconds != nil {
+		for _, c := range p.job.Status.Conditions {
+			if c.Type == batchv1.JobFailed {
+				if c.Status == corev1.ConditionTrue && c.Reason == "DeadlineExceeded" {
+					result.Details = fmt.Sprintf("Job timed out after %d seconds.", *p.job.Spec.ActiveDeadlineSeconds)
+				}
+				break
+			}
+		}
+	}
+
 	re := regexp.MustCompile(`^([^,]),(0|[1-9]\d*)$`)
 	for _, message := range strings.Split(status.State.Terminated.Message, "/") {
 		match := re.FindStringSubmatch(message)
+
+		// Stop parsing in case of invalid aborted message
 		if match == nil {
-			result.Steps = append(result.Steps, ContainerResultStep{
-				Status:     testkube.ABORTED_TestWorkflowStepStatus,
-				FinishedAt: result.FinishedAt,
-				ExitCode:   -1,
-			})
-		} else {
-			exitCode, _ := strconv.Atoi(match[2])
-			result.Steps = append(result.Steps, ContainerResultStep{
-				Status:     testkube.TestWorkflowStepStatus(data.StepStatusFromCode(match[1])),
-				Details:    result.Details,
-				FinishedAt: result.FinishedAt,
-				ExitCode:   exitCode,
-			})
+			break
 		}
+
+		// Gather information
+		stepStatus := testkube.TestWorkflowStepStatus(data.StepStatusFromCode(match[1]))
+		exitCode, _ := strconv.Atoi(match[2])
+
+		// Stop parsing in case of aborted error, to determine it automatically better
+		if stepStatus == testkube.ABORTED_TestWorkflowStepStatus {
+			break
+		}
+
+		// Append the next result
+		result.Steps = append(result.Steps, ContainerResultStep{
+			Status:     stepStatus,
+			Details:    result.Details,
+			FinishedAt: result.FinishedAt,
+			ExitCode:   exitCode,
+		})
 	}
 
 	return result, nil
@@ -381,58 +451,97 @@ func (p *podState) ContainerResult(name string) (ContainerResult, error) {
 func initializePodState(parentCtx context.Context, pod Channel[*corev1.Pod], podEvents Channel[*corev1.Event], job Channel[*batchv1.Job], jobEvents Channel[*corev1.Event], errorHandler func(error)) *podState {
 	ctx, ctxCancel := context.WithCancel(parentCtx)
 	state := newPodState(ctx)
+
+	// Fill optional channels
+	if job == nil {
+		job = newChannel[*batchv1.Job](ctx, 0)
+		job.Close()
+	}
+	if jobEvents == nil {
+		jobEvents = newChannel[*corev1.Event](ctx, 0)
+		jobEvents.Close()
+	}
+
 	go func() {
 		defer ctxCancel()
-		var wg sync.WaitGroup
-		if job != nil {
-			wg.Add(1)
-			go func() {
-				for v := range job.Channel() {
-					if v.Error != nil {
-						errorHandler(v.Error)
-					} else {
-						state.RegisterJob(v.Value)
-					}
+
+		// Build channels for the streams
+		left := 4
+		jobCh := job.Channel()
+		jobEventsCh := jobEvents.Channel()
+		podCh := pod.Channel()
+		podEventsCh := podEvents.Channel()
+
+		// Loop for the data
+		for {
+			if left == 0 {
+				return
+			}
+
+			// Prioritize pod & events
+			select {
+			case <-parentCtx.Done():
+				return
+			case v, ok := <-podCh:
+				if !ok {
+					podCh = nil
+					left--
+					continue
 				}
-				wg.Done()
-			}()
-		}
-		if jobEvents != nil {
-			wg.Add(1)
-			go func() {
-				for v := range jobEvents.Channel() {
-					if v.Error != nil {
-						errorHandler(v.Error)
-					} else {
-						state.RegisterEvent(v.Value)
-					}
-				}
-				wg.Done()
-			}()
-		}
-		wg.Add(1)
-		go func() {
-			for v := range podEvents.Channel() {
 				if v.Error != nil {
 					errorHandler(v.Error)
-				} else {
-					state.RegisterEvent(v.Value)
+					continue
 				}
-			}
-			wg.Done()
-		}()
-		wg.Add(1)
-		go func() {
-			for v := range pod.Channel() {
+				state.RegisterPod(v.Value)
+			case v, ok := <-jobEventsCh:
+				if !ok {
+					jobEventsCh = nil
+					left--
+					continue
+				}
 				if v.Error != nil {
 					errorHandler(v.Error)
-				} else {
-					state.RegisterPod(v.Value)
+					continue
 				}
+				state.RegisterEvent(v.Value)
+			case v, ok := <-podEventsCh:
+				if !ok {
+					podEventsCh = nil
+					left--
+					continue
+				}
+				if v.Error != nil {
+					errorHandler(v.Error)
+					continue
+				}
+				state.RegisterEvent(v.Value)
+			case v, ok := <-jobCh:
+				if !ok {
+					jobCh = nil
+					left--
+					continue
+				}
+				if v.Error != nil {
+					errorHandler(v.Error)
+					continue
+				}
+
+				// Try to firstly finish with the Pod information when it's possible
+				if IsJobDone(v.Value) && state.FinishedAt("").IsZero() && HadPodScheduled(v.Value) {
+					select {
+					case p, ok := <-podCh:
+						if p.Error != nil {
+							errorHandler(p.Error)
+						} else if ok {
+							state.RegisterPod(p.Value)
+						}
+					case <-time.After(alignmentTimeout):
+						// Continue - likely we won't receive Pod status
+					}
+				}
+				state.RegisterJob(v.Value)
 			}
-			wg.Done()
-		}()
-		wg.Wait()
+		}
 	}()
 	return state
 }

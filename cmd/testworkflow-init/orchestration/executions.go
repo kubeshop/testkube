@@ -133,6 +133,7 @@ func (e *executionGroup) Kill() (err error) {
 func (e *executionGroup) Abort() {
 	e.aborted.Store(true)
 	_ = e.Kill()
+	_ = e.Resume()
 }
 
 func (e *executionGroup) IsAborted() bool {
@@ -166,17 +167,18 @@ func (e *execution) Run() (*executionResult, error) {
 
 	// Initialize local state
 	var exitCode uint8
+	var aborted bool
 
 	// Run the command
 	err := e.cmd.Start()
 	if err == nil {
 		e.group.pauseMu.Unlock()
 		e.cmdMu.Unlock()
-		_, exitCode = getProcessStatus(e.cmd.Wait())
+		aborted, exitCode = getProcessStatus(e.cmd.Wait())
 	} else {
 		e.group.pauseMu.Unlock()
 		e.cmdMu.Unlock()
-		_, exitCode = getProcessStatus(err)
+		aborted, exitCode = getProcessStatus(err)
 		e.cmd.Stderr.Write(append([]byte(err.Error()), '\n'))
 	}
 
@@ -184,6 +186,12 @@ func (e *execution) Run() (*executionResult, error) {
 	e.cmdMu.Lock()
 	e.cmd = nil
 	e.cmdMu.Unlock()
+
+	// Mark the execution group as aborted when this process was aborted.
+	// In Kubernetes, when that child process is killed, it may mean OOM Kill.
+	if aborted && !e.group.aborted.Load() {
+		e.group.Abort()
+	}
 
 	// Fail when aborted
 	if e.group.aborted.Load() {
@@ -195,11 +203,11 @@ func (e *execution) Run() (*executionResult, error) {
 
 func getProcessStatus(err error) (bool, uint8) {
 	if err == nil {
-		return true, 0
+		return false, 0
 	}
 	if e, ok := err.(*exec.ExitError); ok {
 		if e.ProcessState != nil {
-			return false, uint8(e.ProcessState.ExitCode())
+			return e.ProcessState.String() == "signal: killed", uint8(e.ProcessState.ExitCode())
 		}
 		return false, 1
 	}
