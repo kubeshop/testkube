@@ -33,6 +33,7 @@ type EventsWatcher interface {
 	LastAcknowledgedTime() time.Time
 	Channel() <-chan *corev1.Event
 	Update(t time.Duration) (int, error)
+	Ensure(tsInPast time.Time, timeout time.Duration) (int, error)
 	Count() int
 	IsStarted() bool
 	Started() <-chan struct{}
@@ -120,7 +121,7 @@ func (e *eventsWatcher) setError(err error) {
 	e.cancel()
 }
 
-func (e *eventsWatcher) read(t time.Duration) (<-chan readStart, <-chan struct{}) {
+func (e *eventsWatcher) read(tsInPast time.Time, t time.Duration) (<-chan readStart, <-chan struct{}) {
 	started := make(chan readStart, 1)
 	finished := make(chan struct{})
 
@@ -162,6 +163,16 @@ func (e *eventsWatcher) read(t time.Duration) (<-chan readStart, <-chan struct{}
 			close(started)
 		}
 
+		// Update the last acknowledged timestamp
+		if tsInPast.After(e.lastTs) {
+			e.lastTs = tsInPast
+		}
+		for i := range list.Items {
+			if GetEventTimestamp(&list.Items[i]).After(e.lastTs) {
+				e.lastTs = GetEventTimestamp(&list.Items[i])
+			}
+		}
+
 		// Mark as initial list is starting to propagate
 		e.count.Add(uint32(len(list.Items)))
 		if e.started.CompareAndSwap(false, true) {
@@ -175,10 +186,6 @@ func (e *eventsWatcher) read(t time.Duration) (<-chan readStart, <-chan struct{}
 
 		// Send the received events
 		for i := range list.Items {
-			if GetEventTimestamp(&list.Items[0]).After(e.lastTs) {
-				e.lastTs = GetEventTimestamp(&list.Items[0])
-			}
-
 			// Inform about start
 			if i == 0 {
 				started <- readStart{count: len(list.Items)}
@@ -275,7 +282,7 @@ func (e *eventsWatcher) cycle() {
 	<-e.optsCh
 
 	// Read the initial data
-	started, finished := e.read(0)
+	started, finished := e.read(time.Time{}, 0)
 	result, _ := <-started
 	if result.err != nil {
 		e.setError(result.err)
@@ -322,7 +329,28 @@ func (e *eventsWatcher) Update(t time.Duration) (int, error) {
 	<-e.optsCh
 
 	// Start reading data
-	started, _ := e.read(t)
+	started, _ := e.read(time.Time{}, t)
+	result, _ := <-started
+	return result.count, result.err
+}
+
+// Ensure checks if there are already acknowledged events for particular timestamp
+func (e *eventsWatcher) Ensure(tsInPast time.Time, timeout time.Duration) (int, error) {
+	// Wait for readiness
+	<-e.optsCh
+
+	// Fast-track when the timestamp is already acknowledged
+	e.mu.Lock()
+	if tsInPast.Before(e.lastTs) {
+		e.mu.Unlock()
+		return 0, nil
+	}
+	e.mu.Unlock()
+
+	// Start reading data
+	// TODO: use time.After to check for events from Watch?
+	// TODO: Consider exact time? We may miss some events though
+	started, _ := e.read(tsInPast.Truncate(time.Second).Add(-1), timeout)
 	result, _ := <-started
 	return result.count, result.err
 }

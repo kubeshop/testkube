@@ -108,6 +108,7 @@ func (e *jobWatcher) setLastJob(job *batchv1.Job) {
 	}
 }
 
+// TODO: add readMu lock, work better with mu lock
 func (e *jobWatcher) read(t time.Duration) (<-chan readStart, <-chan struct{}) {
 	started := make(chan readStart, 1)
 	finished := make(chan struct{})
