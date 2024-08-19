@@ -188,6 +188,9 @@ func NewParallelCmd() *cobra.Command {
 				log := spawn.CreateLogger("worker", descriptions[index], index, params.Count)
 				id, machine := spawn.CreateExecutionMachine("", index)
 
+				// Register that there is some operation queued
+				registry.SetStatus(index, nil)
+
 				updates <- Update{index: index}
 
 				// Build the resources bundle
@@ -196,6 +199,7 @@ func NewParallelCmd() *cobra.Command {
 					Bundle(context.Background(), &testworkflowsv1.TestWorkflow{Spec: *spec}, machine, baseMachine, params.MachineAt(index))
 				if err != nil {
 					fmt.Printf("%d: failed to prepare resources: %s\n", index, err.Error())
+					registry.Destroy(index)
 					return false
 				}
 
