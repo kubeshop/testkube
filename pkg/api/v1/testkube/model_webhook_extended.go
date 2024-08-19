@@ -29,3 +29,19 @@ func (list Webhooks) Table() (header []string, output [][]string) {
 
 	return
 }
+
+func (w Webhook) GetName() string {
+	return w.Name
+}
+
+func (w Webhook) GetNamespace() string {
+	return w.Namespace
+}
+
+func (w Webhook) GetLabels() map[string]string {
+	return w.Labels
+}
+
+func (w Webhook) GetAnnotations() map[string]string {
+	return w.Annotations
+}

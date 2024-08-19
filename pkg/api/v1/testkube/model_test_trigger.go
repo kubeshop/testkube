@@ -15,7 +15,9 @@ type TestTrigger struct {
 	// test trigger namespace
 	Namespace string `json:"namespace,omitempty"`
 	// test trigger labels
-	Labels           map[string]string     `json:"labels,omitempty"`
+	Labels map[string]string `json:"labels,omitempty"`
+	// test trigger annotations
+	Annotations      map[string]string     `json:"annotations,omitempty"`
 	Resource         *TestTriggerResources `json:"resource"`
 	ResourceSelector *TestTriggerSelector  `json:"resourceSelector"`
 	// listen for event for selected resource
