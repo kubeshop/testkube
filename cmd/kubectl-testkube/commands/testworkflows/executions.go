@@ -19,6 +19,7 @@ func NewGetTestWorkflowExecutionsCmd() *cobra.Command {
 		selectors        []string
 		testWorkflowName string
 		logsOnly         bool
+		tags             []string
 	)
 
 	cmd := &cobra.Command{
@@ -44,7 +45,8 @@ func NewGetTestWorkflowExecutionsCmd() *cobra.Command {
 				client, _, err := common.GetClient(cmd)
 				ui.ExitOnError("getting client", err)
 
-				executions, err := client.ListTestWorkflowExecutions(testWorkflowName, limit, strings.Join(selectors, ","))
+				executions, err := client.ListTestWorkflowExecutions(testWorkflowName, limit,
+					strings.Join(selectors, ","), strings.Join(tags, ","))
 				ui.ExitOnError("getting test workflow executions list", err)
 				err = render.List(cmd, testkube.TestWorkflowExecutionSummaries(executions.Results), os.Stdout)
 				ui.ExitOnError("rendering list", err)
@@ -84,6 +86,7 @@ func NewGetTestWorkflowExecutionsCmd() *cobra.Command {
 	cmd.Flags().IntVar(&limit, "limit", 1000, "max number of records to return")
 	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label key value pair: --label key1=value1")
 	cmd.Flags().BoolVar(&logsOnly, "logs-only", false, "show only execution logs")
+	cmd.Flags().StringSliceVarP(&tags, "tag", "", nil, "tag key value pair: --tag key1=value1")
 
 	return cmd
 }
