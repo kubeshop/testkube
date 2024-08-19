@@ -2,8 +2,9 @@ package client
 
 import (
 	"encoding/json"
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"net/http"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 // NewTestTriggerClient creates new TestTrigger client
