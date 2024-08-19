@@ -120,57 +120,77 @@ func (e *eventsWatcher) setError(err error) {
 	e.cancel()
 }
 
-func (e *eventsWatcher) read(t time.Duration) (int, error) {
-	// Wait for readiness
-	<-e.optsCh
+func (e *eventsWatcher) read(t time.Duration) (<-chan readStart, <-chan struct{}) {
+	started := make(chan readStart, 1)
+	finished := make(chan struct{})
 
-	e.mu.Lock()
-	defer e.mu.Unlock()
+	go func() {
+		e.mu.Lock()
+		defer func() {
+			close(finished)
+			e.mu.Unlock()
+		}()
 
-	// Fetch the data
-	opts := e.opts
-	opts.ResourceVersion = ""
-	if t != 0 {
-		opts.TimeoutSeconds = common.Ptr(int64(math.Ceil(t.Seconds())))
-	}
-	if opts.TimeoutSeconds == nil {
-		opts.TimeoutSeconds = common.Ptr(defaultListTimeoutSeconds)
-	}
-	list, err := e.client.List(e.ctx, e.opts)
-	if err != nil {
-		return 0, err
-	}
-
-	// Update the latest resource version
-	e.opts.ResourceVersion = list.ResourceVersion
-
-	// Omit the events that have been already sent
-	for i := range list.Items {
-		if list.Items[i].ResourceVersion == e.opts.ResourceVersion {
-			list.Items = list.Items[i+1:]
+		// Fetch the data
+		opts := e.opts
+		opts.ResourceVersion = ""
+		if t != 0 {
+			opts.TimeoutSeconds = common.Ptr(int64(math.Ceil(t.Seconds())))
 		}
-	}
+		if opts.TimeoutSeconds == nil {
+			opts.TimeoutSeconds = common.Ptr(defaultListTimeoutSeconds)
+		}
+		list, err := e.client.List(e.ctx, e.opts)
+		if err != nil {
+			started <- readStart{err: err}
+			close(started)
+			return
+		}
 
-	// Mark as initial list is starting to propagate
-	e.count.Add(uint32(len(list.Items)))
-	if e.started.CompareAndSwap(false, true) {
-		close(e.startedCh)
-	}
+		// Update the latest resource version
+		e.opts.ResourceVersion = list.ResourceVersion
 
-	// Ignore error when the channel is already closed
-	defer func() {
-		recover()
+		// Omit the events that have been already sent
+		for i := range list.Items {
+			if list.Items[i].ResourceVersion == e.opts.ResourceVersion {
+				list.Items = list.Items[i+1:]
+			}
+		}
+
+		if len(list.Items) == 0 {
+			started <- readStart{count: 0}
+			close(started)
+		}
+
+		// Mark as initial list is starting to propagate
+		e.count.Add(uint32(len(list.Items)))
+		if e.started.CompareAndSwap(false, true) {
+			close(e.startedCh)
+		}
+
+		// Ignore error when the channel is already closed
+		defer func() {
+			recover()
+		}()
+
+		// Send the received events
+		for i := range list.Items {
+			if GetEventTimestamp(&list.Items[0]).After(e.lastTs) {
+				e.lastTs = GetEventTimestamp(&list.Items[0])
+			}
+
+			// Inform about start
+			if i == 0 {
+				started <- readStart{count: len(list.Items)}
+				close(started)
+			}
+
+			// Send the next item
+			e.ch <- common.Ptr(list.Items[i])
+		}
 	}()
 
-	// Send the received events
-	for i := range list.Items {
-		if GetEventTimestamp(&list.Items[0]).After(e.lastTs) {
-			e.lastTs = GetEventTimestamp(&list.Items[0])
-		}
-		e.ch <- common.Ptr(list.Items[i])
-	}
-
-	return len(list.Items), nil
+	return started, finished
 }
 
 // TODO: handle resource too old
@@ -255,14 +275,17 @@ func (e *eventsWatcher) cycle() {
 	<-e.optsCh
 
 	// Read the initial data
-	_, err := e.read(0)
-	if err != nil {
-		e.setError(err)
+	started, finished := e.read(0)
+	result, _ := <-started
+	if result.err != nil {
+		e.setError(result.err)
 		return
 	}
+	<-finished
 
 	// Watch for the data updates,
 	// and restart the watcher as long as there are no errors
+	var err error
 	for err == nil {
 		err = e.watch()
 	}
@@ -295,5 +318,11 @@ func (e *eventsWatcher) Stop() {
 // Update gets the latest list of the events, to ensure that nothing is missed at that point.
 // It returns number of items that have been appended.
 func (e *eventsWatcher) Update(t time.Duration) (int, error) {
-	return e.read(t)
+	// Wait for readiness
+	<-e.optsCh
+
+	// Start reading data
+	started, _ := e.read(t)
+	result, _ := <-started
+	return result.count, result.err
 }

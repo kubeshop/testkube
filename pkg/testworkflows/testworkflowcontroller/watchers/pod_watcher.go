@@ -108,79 +108,103 @@ func (e *podWatcher) setLastPod(pod *corev1.Pod) {
 	}
 }
 
-func (e *podWatcher) read(t time.Duration) (int, error) {
-	e.mu.Lock()
-	defer e.mu.Unlock()
+func (e *podWatcher) read(t time.Duration) (<-chan readStart, <-chan struct{}) {
+	started := make(chan readStart, 1)
+	finished := make(chan struct{})
 
-	// Fetch the data
-	opts := e.opts
-	opts.ResourceVersion = ""
-	if t != 0 {
-		opts.TimeoutSeconds = common.Ptr(int64(math.Ceil(t.Seconds())))
-	}
-	if opts.TimeoutSeconds == nil {
-		opts.TimeoutSeconds = common.Ptr(defaultListTimeoutSeconds)
-	}
-	list, err := e.client.List(e.ctx, e.opts)
-	if err != nil {
-		return 0, err
-	}
+	go func() {
+		e.mu.Lock()
+		defer func() {
+			close(finished)
+			e.mu.Unlock()
+		}()
 
-	// Update the latest resource version
-	e.opts.ResourceVersion = list.ResourceVersion
-
-	// Ignore error when the channel is already closed
-	defer func() {
-		recover()
-	}()
-
-	// Disallow watching multiple pods in that watcher
-	if len(list.Items) > 1 {
-		names := make([]string, len(list.Items))
-		for i := range list.Items {
-			names[i] = list.Items[i].Name
+		// Fetch the data
+		opts := e.opts
+		opts.ResourceVersion = ""
+		if t != 0 {
+			opts.TimeoutSeconds = common.Ptr(int64(math.Ceil(t.Seconds())))
 		}
-		return 0, fmt.Errorf("found more than one pod for selected criteria: %s", strings.Join(names, ", "))
-	}
+		if opts.TimeoutSeconds == nil {
+			opts.TimeoutSeconds = common.Ptr(defaultListTimeoutSeconds)
+		}
+		list, err := e.client.List(e.ctx, e.opts)
+		if err != nil {
+			started <- readStart{err: err}
+			close(started)
+			return
+		}
 
-	// Handle lack of the pod
-	if len(list.Items) == 0 {
-		e.peekMu.Lock()
-		pod := e.peek
-		e.peekMu.Unlock()
+		// Update the latest resource version
+		e.opts.ResourceVersion = list.ResourceVersion
+
+		// Disallow watching multiple pods in that watcher
+		if len(list.Items) > 1 {
+			names := make([]string, len(list.Items))
+			for i := range list.Items {
+				names[i] = list.Items[i].Name
+			}
+			started <- readStart{err: fmt.Errorf("found more than one pod for selected criteria: %s", strings.Join(names, ", "))}
+			close(started)
+			return
+		}
+
+		// Ignore error when the channel is already closed
+		defer func() {
+			recover()
+		}()
+
+		// Handle lack of the pod
+		if len(list.Items) == 0 {
+			e.peekMu.Lock()
+			pod := e.peek
+			e.peekMu.Unlock()
+
+			// Mark as initial list is starting to propagate
+			if e.started.CompareAndSwap(false, true) {
+				close(e.startedCh)
+			}
+
+			if pod == nil {
+				// there is no pod, but it's not a change.
+				started <- readStart{count: 0}
+				close(started)
+				return
+			} else {
+				// the pod was there, but it's deleted now.
+				e.finalize(nil)
+
+				// Inform about start
+				started <- readStart{count: 1, err: ErrDone}
+				close(started)
+				return
+			}
+		}
+
+		// Store information about the last pod for peeking
+		e.setLastPod(common.Ptr(list.Items[0]))
 
 		// Mark as initial list is starting to propagate
 		if e.started.CompareAndSwap(false, true) {
 			close(e.startedCh)
 		}
 
-		if pod == nil {
-			// there is no pod, but it's not a change.
-			return 0, nil
-		} else {
-			// the pod was there, but it's deleted now.
-			e.finalize(nil)
-			return 1, ErrDone
+		// There is no update
+		if list.Items[0].ResourceVersion == e.opts.ResourceVersion {
+			started <- readStart{count: 0}
+			close(started)
+			return
 		}
-	}
 
-	// Store information about the last pod for peeking
-	e.setLastPod(common.Ptr(list.Items[0]))
+		// Inform about start
+		started <- readStart{count: len(list.Items)}
+		close(started)
 
-	// Mark as initial list is starting to propagate
-	if e.started.CompareAndSwap(false, true) {
-		close(e.startedCh)
-	}
+		// Send the item
+		e.ch <- common.Ptr(list.Items[0])
+	}()
 
-	// There is no update
-	if list.Items[0].ResourceVersion == e.opts.ResourceVersion {
-		return 0, nil
-	}
-
-	// Send the item
-	e.ch <- common.Ptr(list.Items[0])
-
-	return 1, nil
+	return started, finished
 }
 
 // TODO: handle resource too old
@@ -271,19 +295,20 @@ func (e *podWatcher) cycle() {
 	}()
 
 	// Read the initial data
-	_, err := e.read(0)
-	if err != nil {
-		fmt.Println("POD", e.opts, "read error", err)
-		e.setError(err)
+	started, finished := e.read(0)
+	result, _ := <-started
+	if result.err != nil {
+		e.setError(result.err)
 		return
 	}
+	<-finished
 
 	// Watch for the data updates,
 	// and restart the watcher as long as there are no errors
+	var err error
 	for err == nil {
 		err = e.watch()
 	}
-	fmt.Println("POD", e.opts, "watch error", "at", e.opts.ResourceVersion, err)
 	e.setError(err)
 	e.cancel()
 }
@@ -357,9 +382,10 @@ func (e *podWatcher) Stop() {
 // Update gets the latest list of the pod, to ensure that nothing is missed at that point.
 // It returns number of items that have been appended.
 func (e *podWatcher) Update(t time.Duration) (int, error) {
-	count, err := e.read(t)
-	if errors.Is(err, ErrDone) {
-		err = nil
+	started, _ := e.read(t)
+	result, _ := <-started
+	if errors.Is(result.err, ErrDone) {
+		result.err = nil
 	}
-	return count, err
+	return result.count, result.err
 }
