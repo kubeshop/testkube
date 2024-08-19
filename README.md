@@ -61,7 +61,7 @@ more about different ways to deploy and run Testkube.
 
 ### Documentation
 
-Extensive documentation is available at [docs.testkube.io](https://docs.testkube.io)
+Extensive documentation is available at [docs.testkube.io](https://docs.testkube.io).
 
 ## Contributing
 
