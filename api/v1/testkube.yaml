@@ -3349,11 +3349,11 @@ paths:
   /secrets/{id}:
     delete:
       tags:
-      - secrets
-      - api
+        - secrets
+        - api
       parameters:
-      - $ref: "#/components/parameters/Namespace"
-      - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/Namespace"
+        - $ref: "#/components/parameters/ID"
       summary: "Delete secret"
       description: "Delete secret in the cluster"
       operationId: deleteSecret
@@ -3394,8 +3394,8 @@ paths:
                   $ref: "#/components/schemas/Problem"
     patch:
       tags:
-      - secrets
-      - api
+        - secrets
+        - api
       parameters:
         - $ref: "#/components/parameters/ID"
       summary: "Update secret"
@@ -3449,8 +3449,8 @@ paths:
                   $ref: "#/components/schemas/Problem"
     get:
       tags:
-      - secrets
-      - api
+        - secrets
+        - api
       parameters:
         - $ref: "#/components/parameters/ID"
       summary: "Get secret"
@@ -3782,7 +3782,7 @@ paths:
         - pro
       parameters:
         - $ref: "#/components/parameters/ID"
-        - $ref: "#/components/parameters/TestWorkflowExecutionName"        
+        - $ref: "#/components/parameters/TestWorkflowExecutionName"
       summary: Execute test workflow
       description: Execute test workflow in the kubernetes cluster
       operationId: executeTestWorkflow
@@ -4193,7 +4193,7 @@ paths:
                 items:
                   $ref: "#/components/schemas/Problem"
 
-    /test-workflow-executions/{executionID}/logs:
+  /test-workflow-executions/{executionID}/logs:
     get:
       parameters:
         - $ref: "#/components/parameters/executionID"
@@ -4478,7 +4478,7 @@ paths:
       parameters:
         - $ref: "#/components/parameters/ID"
         - $ref: "#/components/parameters/SkipDeleteExecutions"
-        - $ref: "#/components/parameters/SkipDeleteCRD"        
+        - $ref: "#/components/parameters/SkipDeleteCRD"
       summary: Delete test workflow
       description: Delete test workflow from the kubernetes cluster
       operationId: deleteTestWorkflow
@@ -7236,7 +7236,7 @@ components:
         - become-testworkflow-up
         - become-testworkflow-down
         - become-testworkflow-failed
-        - become-testworkflow-aborted        
+        - become-testworkflow-aborted
         - created
         - updated
         - deleted
@@ -7789,8 +7789,8 @@ components:
       description: Secret input information
       type: object
       required:
-      - name
-      - data
+        - name
+        - data
       properties:
         name:
           type: string
@@ -7841,8 +7841,8 @@ components:
       description: Resource that owns the secret
       type: object
       required:
-      - kind
-      - name
+        - kind
+        - name
       properties:
         kind:
           description: kind of the resource that is the owner
@@ -7854,13 +7854,13 @@ components:
     SecretConfig:
       type: object
       required:
-      - prefix
-      - list
-      - listAll
-      - create
-      - modify
-      - delete
-      - autoCreate
+        - prefix
+        - list
+        - listAll
+        - create
+        - modify
+        - delete
+        - autoCreate
       properties:
         prefix:
           type: string
@@ -7986,7 +7986,7 @@ components:
         namespace:
           type: string
           description: execution namespace
-          example: "my-testkube"          
+          example: "my-testkube"
         number:
           type: integer
           description: sequence number for the execution
@@ -8276,8 +8276,8 @@ components:
           format: date-time
           description: when the pause has ended
       required:
-      - ref
-      - pausedAt
+        - ref
+        - pausedAt
 
     TestWorkflowStepResult:
       type: object
@@ -8381,97 +8381,97 @@ components:
     TestWorkflowStepParallel:
       type: object
       allOf:
-      - $ref: "#/components/schemas/TestWorkflowSpec"
-      - $ref: "#/components/schemas/TestWorkflowStepExecuteStrategy"
-      - $ref: "#/components/schemas/TestWorkflowStepControl"
-      - $ref: "#/components/schemas/TestWorkflowStepOperations"
-      - properties:
-          parallelism:
-            type: integer
-            description: how many resources could be scheduled in parallel
-          description:
-            type: string
-            description: worker description to display
-          logs:
-            $ref: "#/components/schemas/BoxedString"
-          transfer:
-            type: array
-            description: list of files to send to parallel steps
-            items:
-              $ref: "#/components/schemas/TestWorkflowStepParallelTransfer"
-          fetch:
-            type: array
-            description: list of files to fetch from parallel steps
-            items:
-              $ref: "#/components/schemas/TestWorkflowStepParallelFetch"
-          template:
-            $ref: "#/components/schemas/TestWorkflowTemplateRef"
+        - $ref: "#/components/schemas/TestWorkflowSpec"
+        - $ref: "#/components/schemas/TestWorkflowStepExecuteStrategy"
+        - $ref: "#/components/schemas/TestWorkflowStepControl"
+        - $ref: "#/components/schemas/TestWorkflowStepOperations"
+        - properties:
+            parallelism:
+              type: integer
+              description: how many resources could be scheduled in parallel
+            description:
+              type: string
+              description: worker description to display
+            logs:
+              $ref: "#/components/schemas/BoxedString"
+            transfer:
+              type: array
+              description: list of files to send to parallel steps
+              items:
+                $ref: "#/components/schemas/TestWorkflowStepParallelTransfer"
+            fetch:
+              type: array
+              description: list of files to fetch from parallel steps
+              items:
+                $ref: "#/components/schemas/TestWorkflowStepParallelFetch"
+            template:
+              $ref: "#/components/schemas/TestWorkflowTemplateRef"
 
     TestWorkflowIndependentStepParallel:
       type: object
       allOf:
-      - $ref: "#/components/schemas/TestWorkflowTemplateSpec"
-      - $ref: "#/components/schemas/TestWorkflowStepExecuteStrategy"
-      - $ref: "#/components/schemas/TestWorkflowStepControl"
-      - $ref: "#/components/schemas/TestWorkflowStepOperations"
-      - properties:
-          parallelism:
-            type: integer
-            description: how many resources could be scheduled in parallel
-          description:
-            type: string
-            description: worker description to display
-          logs:
-            $ref: "#/components/schemas/BoxedString"
-          transfer:
-            type: array
-            description: list of files to send to parallel steps
-            items:
-              $ref: "#/components/schemas/TestWorkflowStepParallelTransfer"
-          fetch:
-            type: array
-            description: list of files to fetch from parallel steps
-            items:
-              $ref: "#/components/schemas/TestWorkflowStepParallelFetch"
+        - $ref: "#/components/schemas/TestWorkflowTemplateSpec"
+        - $ref: "#/components/schemas/TestWorkflowStepExecuteStrategy"
+        - $ref: "#/components/schemas/TestWorkflowStepControl"
+        - $ref: "#/components/schemas/TestWorkflowStepOperations"
+        - properties:
+            parallelism:
+              type: integer
+              description: how many resources could be scheduled in parallel
+            description:
+              type: string
+              description: worker description to display
+            logs:
+              $ref: "#/components/schemas/BoxedString"
+            transfer:
+              type: array
+              description: list of files to send to parallel steps
+              items:
+                $ref: "#/components/schemas/TestWorkflowStepParallelTransfer"
+            fetch:
+              type: array
+              description: list of files to fetch from parallel steps
+              items:
+                $ref: "#/components/schemas/TestWorkflowStepParallelFetch"
 
     TestWorkflowIndependentServiceSpec:
       type: object
       allOf:
-      - $ref: "#/components/schemas/TestWorkflowStepExecuteStrategy"
-      - $ref: "#/components/schemas/TestWorkflowStepRun"
-      - properties:
-          description:
-            type: string
-            description: "service description to display"
-          timeout:
-            type: string
-            description: "maximum time until reaching readiness"
-          transfer:
-            type: array
-            description: list of files to send to parallel steps
-            items:
-              $ref: "#/components/schemas/TestWorkflowStepParallelTransfer"
-          content:
-            $ref: "#/components/schemas/TestWorkflowContent"
-          pod:
-            $ref: "#/components/schemas/TestWorkflowPodConfig"
-          logs:
-            $ref: "#/components/schemas/BoxedString"
-          restartPolicy:
-            type: string
-          readinessProbe:
-            $ref: "#/components/schemas/Probe"
+        - $ref: "#/components/schemas/TestWorkflowStepExecuteStrategy"
+        - $ref: "#/components/schemas/TestWorkflowStepRun"
+        - properties:
+            description:
+              type: string
+              description: "service description to display"
+            timeout:
+              type: string
+              description: "maximum time until reaching readiness"
+            transfer:
+              type: array
+              description: list of files to send to parallel steps
+              items:
+                $ref: "#/components/schemas/TestWorkflowStepParallelTransfer"
+            content:
+              $ref: "#/components/schemas/TestWorkflowContent"
+            pod:
+              $ref: "#/components/schemas/TestWorkflowPodConfig"
+            logs:
+              $ref: "#/components/schemas/BoxedString"
+            restartPolicy:
+              type: string
+            readinessProbe:
+              $ref: "#/components/schemas/Probe"
 
     TestWorkflowServiceSpec:
       type: object
       allOf:
-      - $ref: "#/components/schemas/TestWorkflowStepExecuteStrategy"
-      - $ref: "#/components/schemas/TestWorkflowIndependentServiceSpec"
-      - properties:
-          use:
-            type: array
-            items:
-              $ref: "#/components/schemas/TestWorkflowTemplateRef"
+        - $ref: "#/components/schemas/TestWorkflowStepExecuteStrategy"
+        - $ref: "#/components/schemas/TestWorkflowIndependentServiceSpec"
+        - properties:
+            use:
+              type: array
+              items:
+                $ref: "#/components/schemas/TestWorkflowTemplateRef"
 
     TestWorkflowStepExecuteStrategy:
       type: object
@@ -8486,20 +8486,20 @@ components:
           additionalProperties:
             description: "dynamic expression or static list of values"
             oneOf:
-            - type: string
-            - type: array
-              items:
-                type: string
+              - type: string
+              - type: array
+                items:
+                  type: string
         shards:
           type: object
           description: "parameters that should be distributed across sharded instances"
           additionalProperties:
             description: "dynamic expression or static list of values"
             oneOf:
-            - type: string
-            - type: array
-              items:
-                type: string
+              - type: string
+              - type: array
+                items:
+                  type: string
 
     TestWorkflowStepParallelTransfer:
       type: object
@@ -8515,7 +8515,7 @@ components:
         mount:
           $ref: "#/components/schemas/BoxedBoolean"
       required:
-      - from
+        - from
 
     TestWorkflowStepParallelFetch:
       type: object
@@ -8529,7 +8529,7 @@ components:
         files:
           $ref: "#/components/schemas/TestWorkflowTarballFilePattern"
       required:
-      - from
+        - from
 
     TestWorkflowSystem:
       type: object
@@ -8809,45 +8809,45 @@ components:
     TestWorkflowStepExecuteTestWorkflowRef:
       type: object
       allOf:
-      - $ref: "#/components/schemas/TestWorkflowStepExecuteStrategy"
-      - properties:
-          name:
-            type: string
-            description: TestWorkflow name to include
-          description:
-            type: string
-            description: TestWorkflow execution description to display
-          executionName:
-            type: string
-            description: TestWorkflow execution name override
-          tarball:
-            type: object
-            additionalProperties:
-              $ref: "#/components/schemas/TestWorkflowTarballRequest"
-          config:
-            $ref: "#/components/schemas/TestWorkflowConfigValue"
+        - $ref: "#/components/schemas/TestWorkflowStepExecuteStrategy"
+        - properties:
+            name:
+              type: string
+              description: TestWorkflow name to include
+            description:
+              type: string
+              description: TestWorkflow execution description to display
+            executionName:
+              type: string
+              description: TestWorkflow execution name override
+            tarball:
+              type: object
+              additionalProperties:
+                $ref: "#/components/schemas/TestWorkflowTarballRequest"
+            config:
+              $ref: "#/components/schemas/TestWorkflowConfigValue"
 
     TestWorkflowStepExecuteTestRef:
       type: object
       allOf:
-      - $ref: "#/components/schemas/TestWorkflowStepExecuteStrategy"
-      - properties:
-          name:
-            type: string
-            description: test name to schedule
-          description:
-            type: string
-            description: test execution description to display
-          count:
-            $ref: "#/components/schemas/BoxedString"
-          maxCount:
-            $ref: "#/components/schemas/BoxedString"
-          executionRequest:
-            $ref: "#/components/schemas/TestWorkflowStepExecuteTestExecutionRequest"
-          tarball:
-            type: object
-            additionalProperties:
-              $ref: "#/components/schemas/TestWorkflowTarballRequest"
+        - $ref: "#/components/schemas/TestWorkflowStepExecuteStrategy"
+        - properties:
+            name:
+              type: string
+              description: test name to schedule
+            description:
+              type: string
+              description: test execution description to display
+            count:
+              $ref: "#/components/schemas/BoxedString"
+            maxCount:
+              $ref: "#/components/schemas/BoxedString"
+            executionRequest:
+              $ref: "#/components/schemas/TestWorkflowStepExecuteTestExecutionRequest"
+            tarball:
+              type: object
+              additionalProperties:
+                $ref: "#/components/schemas/TestWorkflowTarballRequest"
 
     TestWorkflowTarballRequest:
       type: object
@@ -8858,7 +8858,7 @@ components:
         files:
           $ref: "#/components/schemas/TestWorkflowTarballFilePattern"
       required:
-      - from
+        - from
 
     TestWorkflowTarballFilePattern:
       type: object
@@ -8905,23 +8905,23 @@ components:
           items:
             type: string
           example:
-          - "curl"
+            - "curl"
         args:
           type: array
           description: "additional executor binary arguments"
           items:
             type: string
           example:
-          - "--repeats"
-          - "5"
-          - "--insecure"
+            - "--repeats"
+            - "5"
+            - "--insecure"
         argsMode:
           type: string
           description: usage mode for arguments
           enum:
-          - append
-          - override
-          - replace
+            - append
+            - override
+            - replace
         image:
           type: string
           description: container image, executor will run inside this image
@@ -9108,8 +9108,8 @@ components:
         mount:
           $ref: "#/components/schemas/BoxedBoolean"
       required:
-      - url
-      - path
+        - url
+        - path
 
     TestWorkflowRef:
       type: object
@@ -9676,7 +9676,7 @@ components:
         preference:
           $ref: "#/components/schemas/NodeSelectorTerm"
       required:
-      - preference
+        - preference
 
     NodeAffinity:
       type: object
@@ -9746,7 +9746,7 @@ components:
         podAffinityTerm:
           $ref: "#/components/schemas/PodAffinityTerm"
       required:
-      - podAffinityTerm
+        - podAffinityTerm
 
     Affinity:
       type: object
@@ -9892,7 +9892,7 @@ components:
       type: object
 
     HostPathVolumeSource:
-      description: 'hostPath represents a pre-existing file or
+      description: "hostPath represents a pre-existing file or
         directory on the host machine that is directly exposed
         to the container. This is generally used for system agents
         or other privileged things that are allowed to see the
@@ -9900,12 +9900,12 @@ components:
         info: https://kubernetes.io/docs/concepts/storage/volumes#hostpath
         --- TODO(jonesdl) We need to restrict who can use host
         directory mounts and who can/can not mount host directories
-        as read/write.'
+        as read/write."
       properties:
         path:
-          description: 'path of the directory on the host. If
+          description: "path of the directory on the host. If
             the path is a symlink, it will follow the link to
-            the real path. More info: https://kubernetes.io/docs/concepts/storage/volumes#hostpath'
+            the real path. More info: https://kubernetes.io/docs/concepts/storage/volumes#hostpath"
           type: string
         type:
           $ref: "#/components/schemas/BoxedString"
@@ -9914,8 +9914,8 @@ components:
       type: object
 
     EmptyDirVolumeSource:
-      description: 'emptyDir represents a temporary directory
-        that shares a pod''s lifetime. More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir'
+      description: "emptyDir represents a temporary directory
+        that shares a pod's lifetime. More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir"
       properties:
         medium:
           description: 'medium represents what type of storage
@@ -9929,9 +9929,9 @@ components:
       type: object
 
     GCEPersistentDiskVolumeSource:
-      description: 'gcePersistentDisk represents a GCE Disk resource
-        that is attached to a kubelet''s host machine and then
-        exposed to the pod. More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk'
+      description: "gcePersistentDisk represents a GCE Disk resource
+        that is attached to a kubelet's host machine and then
+        exposed to the pod. More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk"
       properties:
         fsType:
           description: 'fsType is filesystem type of the volume
@@ -9952,23 +9952,23 @@ components:
           format: int32
           type: integer
         pdName:
-          description: 'pdName is unique name of the PD resource
+          description: "pdName is unique name of the PD resource
             in GCE. Used to identify the disk in GCE. More info:
-            https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk'
+            https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk"
           type: string
         readOnly:
-          description: 'readOnly here will force the ReadOnly
+          description: "readOnly here will force the ReadOnly
             setting in VolumeMounts. Defaults to false. More info:
-            https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk'
+            https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk"
           type: boolean
       required:
         - pdName
       type: object
 
     AWSElasticBlockStoreVolumeSource:
-      description: 'awsElasticBlockStore represents an AWS Disk
-        resource that is attached to a kubelet''s host machine
-        and then exposed to the pod. More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore'
+      description: "awsElasticBlockStore represents an AWS Disk
+        resource that is attached to a kubelet's host machine
+        and then exposed to the pod. More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore"
       properties:
         fsType:
           description: 'fsType is the filesystem type of the volume
@@ -9989,21 +9989,21 @@ components:
           format: int32
           type: integer
         readOnly:
-          description: 'readOnly value true will force the readOnly
-            setting in VolumeMounts. More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore'
+          description: "readOnly value true will force the readOnly
+            setting in VolumeMounts. More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore"
           type: boolean
         volumeID:
-          description: 'volumeID is unique ID of the persistent
+          description: "volumeID is unique ID of the persistent
             disk resource in AWS (Amazon EBS volume). More info:
-            https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore'
+            https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore"
           type: string
       required:
         - volumeID
       type: object
 
     SecretVolumeSource:
-      description: 'secret represents a secret that should populate
-        this volume. More info: https://kubernetes.io/docs/concepts/storage/volumes#secret'
+      description: "secret represents a secret that should populate
+        this volume. More info: https://kubernetes.io/docs/concepts/storage/volumes#secret"
       properties:
         defaultMode:
           $ref: "#/components/schemas/BoxedInteger"
@@ -10043,27 +10043,27 @@ components:
             or its keys must be defined
           type: boolean
         secretName:
-          description: 'secretName is the name of the secret in
-            the pod''s namespace to use. More info: https://kubernetes.io/docs/concepts/storage/volumes#secret'
+          description: "secretName is the name of the secret in
+            the pod's namespace to use. More info: https://kubernetes.io/docs/concepts/storage/volumes#secret"
           type: string
       type: object
 
     NFSVolumeSource:
-      description: 'nfs represents an NFS mount on the host that
-        shares a pod''s lifetime More info: https://kubernetes.io/docs/concepts/storage/volumes#nfs'
+      description: "nfs represents an NFS mount on the host that
+        shares a pod's lifetime More info: https://kubernetes.io/docs/concepts/storage/volumes#nfs"
       properties:
         path:
-          description: 'path that is exported by the NFS server.
-            More info: https://kubernetes.io/docs/concepts/storage/volumes#nfs'
+          description: "path that is exported by the NFS server.
+            More info: https://kubernetes.io/docs/concepts/storage/volumes#nfs"
           type: string
         readOnly:
-          description: 'readOnly here will force the NFS export
+          description: "readOnly here will force the NFS export
             to be mounted with read-only permissions. Defaults
-            to false. More info: https://kubernetes.io/docs/concepts/storage/volumes#nfs'
+            to false. More info: https://kubernetes.io/docs/concepts/storage/volumes#nfs"
           type: boolean
         server:
-          description: 'server is the hostname or IP address of
-            the NFS server. More info: https://kubernetes.io/docs/concepts/storage/volumes#nfs'
+          description: "server is the hostname or IP address of
+            the NFS server. More info: https://kubernetes.io/docs/concepts/storage/volumes#nfs"
           type: string
       required:
         - path
@@ -10071,14 +10071,14 @@ components:
       type: object
 
     PersistentVolumeClaimVolumeSource:
-      description: 'persistentVolumeClaimVolumeSource represents
+      description: "persistentVolumeClaimVolumeSource represents
         a reference to a PersistentVolumeClaim in the same namespace.
-        More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims'
+        More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims"
       properties:
         claimName:
-          description: 'claimName is the name of a PersistentVolumeClaim
+          description: "claimName is the name of a PersistentVolumeClaim
             in the same namespace as the pod using this volume.
-            More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims'
+            More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims"
           type: string
         readOnly:
           description: readOnly Will force the ReadOnly setting
@@ -10093,30 +10093,30 @@ components:
         that shares a pod's lifetime
       properties:
         monitors:
-          description: 'monitors is Required: Monitors is a collection
-            of Ceph monitors More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it'
+          description: "monitors is Required: Monitors is a collection
+            of Ceph monitors More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it"
           items:
             type: string
           type: array
         path:
-          description: 'path is Optional: Used as the mounted
-            root, rather than the full Ceph tree, default is /'
+          description: "path is Optional: Used as the mounted
+            root, rather than the full Ceph tree, default is /"
           type: string
         readOnly:
-          description: 'readOnly is Optional: Defaults to false
+          description: "readOnly is Optional: Defaults to false
             (read/write). ReadOnly here will force the ReadOnly
-            setting in VolumeMounts. More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it'
+            setting in VolumeMounts. More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it"
           type: boolean
         secretFile:
-          description: 'secretFile is Optional: SecretFile is
+          description: "secretFile is Optional: SecretFile is
             the path to key ring for User, default is /etc/ceph/user.secret
-            More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it'
+            More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it"
           type: string
         secretRef:
           $ref: "#/components/schemas/LocalObjectReference"
         user:
-          description: 'user is optional: User is the rados user
-            name, default is admin More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it'
+          description: "user is optional: User is the rados user
+            name, default is admin More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it"
           type: string
       required:
         - monitors
@@ -10180,8 +10180,9 @@ components:
             type: object
           type: array
         name:
-          description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                TODO: Add other useful fields. apiVersion, kind, uid?'
+          description:
+            "Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+            TODO: Add other useful fields. apiVersion, kind, uid?"
           type: string
         optional:
           description: optional specify whether the ConfigMap
@@ -10266,9 +10267,10 @@ components:
               description: The key to select.
               type: string
             name:
-              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+              description:
+                "Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
                 TODO: Add other useful fields. apiVersion, kind,
-                uid?'
+                uid?"
               type: string
             optional:
               description: Specify whether the ConfigMap or its
@@ -10278,11 +10280,11 @@ components:
           type: object
           required:
             - fieldPath
-          description: 'Selects a field of the pod: supports metadata.name,
-            metadata.namespace, `metadata.labels[''<KEY>'']`,
-            `metadata.annotations[''<KEY>'']`, spec.nodeName,
+          description: "Selects a field of the pod: supports metadata.name,
+            metadata.namespace, `metadata.labels['<KEY>']`,
+            `metadata.annotations['<KEY>']`, spec.nodeName,
             spec.serviceAccountName, status.hostIP, status.podIP,
-            status.podIPs.'
+            status.podIPs."
           properties:
             apiVersion:
               description: Version of the schema the FieldPath
@@ -10296,20 +10298,20 @@ components:
           type: object
           required:
             - resource
-          description: 'Selects a resource of the container: only
+          description: "Selects a resource of the container: only
             resources limits and requests (limits.cpu, limits.memory,
             limits.ephemeral-storage, requests.cpu, requests.memory
-            and requests.ephemeral-storage) are currently supported.'
+            and requests.ephemeral-storage) are currently supported."
           properties:
             containerName:
-              description: 'Container name: required for volumes,
-                optional for env vars'
+              description: "Container name: required for volumes,
+                optional for env vars"
               type: string
             divisor:
               type: string
               pattern: "^[0-9]+(m|[GMK]i)$"
             resource:
-              description: 'Required: resource to select'
+              description: "Required: resource to select"
               type: string
         secretKeyRef:
           type: object
@@ -10323,9 +10325,10 @@ components:
                 be a valid secret key.
               type: string
             name:
-              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+              description:
+                "Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
                 TODO: Add other useful fields. apiVersion, kind,
-                uid?'
+                uid?"
               type: string
             optional:
               description: Specify whether the Secret or its key
@@ -10601,4 +10604,3 @@ components:
               filePath:
                 type: string
                 example: folder/file.txt
-
