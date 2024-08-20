@@ -4193,6 +4193,51 @@ paths:
                 items:
                   $ref: "#/components/schemas/Problem"
 
+    /test-workflow-executions/{executionID}/logs:
+    get:
+      parameters:
+        - $ref: "#/components/parameters/executionID"
+      tags:
+        - test-workflows
+        - logs
+        - executions
+        - api
+        - pro
+      summary: "Get test workflow execution's logs by ID"
+      description: "Returns logs of the given executionID"
+      operationId: getTestWorkflowExecutionLogs
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: string
+        404:
+          description: "execution not found"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        402:
+          description: "missing Pro subscription for a commercial feature"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        500:
+          description: "problem with getting execution's artifacts from storage"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
   /test-workflow-executions/{executionID}/abort:
     post:
       tags:
