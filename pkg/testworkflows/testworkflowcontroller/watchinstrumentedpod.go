@@ -12,7 +12,6 @@ import (
 	constants2 "github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller/watchers"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
@@ -105,24 +104,22 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 		}
 		log("pod likely started")
 
-		// Handle the case where the Pod is not accessible
-		pod := state.Pod()
-		if pod == nil {
-			log("no pod found")
-			// FIXME:
+		// Load the pod information
+		if state.PodCreationTimestamp().IsZero() {
+			log("no pod creation time found")
 			notifier.Error(fmt.Errorf("pod is not there"))
 			return
 		}
-		notifier.Start("", pod.CreationTimestamp.Time) // TODO: Fallback?
+
+		notifier.Start("", state.PodCreationTimestamp())
 		log("pod started")
 
 		// Read the execution instructions
 		var refs, endRefs [][]string
-		var actions actiontypes.ActionGroups
-		err := json.Unmarshal([]byte(pod.Annotations[constants.SpecAnnotationName]), &actions)
+		actions, err := state.ActionGroups()
 		if err != nil {
 			// FIXME:
-			notifier.Error(fmt.Errorf("invalid instructions: %v", err))
+			notifier.Error(fmt.Errorf("cannot read execution instructions: %v", err))
 			return
 		}
 		refs = make([][]string, len(actions))
@@ -155,6 +152,8 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 			for ok := true; ok; _, ok = <-state.Updated() {
 				log("waiting for container start", container)
 
+				// TODO: Read the Pod Events for the Container Events
+
 				// Determine if the container should be already accessible
 				if watchers.IsContainerStarted(state.Pod(), container) || watchers.IsContainerFinished(state.Pod(), container) {
 					break
@@ -176,7 +175,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 			isDone := func() bool {
 				return opts.DisableFollow || watchers.IsContainerFinished(state.Pod(), container) || watchers.IsJobFinished(state.Job())
 			}
-			for v := range WatchContainerLogs(ctx, clientSet, pod.Namespace, pod.Name, container, 10, isDone).Channel() {
+			for v := range WatchContainerLogs(ctx, clientSet, state.Namespace(), state.PodName(), container, 10, isDone).Channel() {
 				if v.Error != nil {
 					log("container error", container, v.Error)
 					notifier.Error(v.Error)
@@ -356,13 +355,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 
 		// Mark as finished
 		// TODO: Calibrate with top timestamp?
-		job := state.Job()
-		pod = state.Pod()
-		if !watchers.GetPodCompletionTimestamp(pod).IsZero() {
-			notifier.Finish(watchers.GetPodCompletionTimestamp(pod))
-		} else {
-			notifier.Finish(watchers.GetJobCompletionTimestamp(job))
-		}
+		notifier.Finish(state.CompletionTimestamp())
 	}()
 
 	return notifier.ch, nil

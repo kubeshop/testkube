@@ -2,6 +2,10 @@ package testworkflowcontroller
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
+	"regexp"
+	"strings"
 	"sync"
 	"time"
 
@@ -9,6 +13,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller/watchers"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
+)
+
+var (
+	ErrMissingPod = errors.New("missing pod information")
 )
 
 type executionState struct {
@@ -88,6 +98,144 @@ func (e *executionState) Updated() <-chan struct{} {
 		return ch
 	}
 	return e.updatesCh
+}
+
+func (e *executionState) ActionGroups() (actions actiontypes.ActionGroups, err error) {
+	if e.pod != nil {
+		err = json.Unmarshal([]byte(e.pod.Annotations[constants.SpecAnnotationName]), &actions)
+		return
+	}
+	if e.job != nil {
+		err = json.Unmarshal([]byte(e.job.Spec.Template.Annotations[constants.SpecAnnotationName]), &actions)
+		return
+	}
+	return nil, ErrMissingPod
+}
+
+func (e *executionState) CompletionTimestamp() time.Time {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+
+	// Get from pod if it's possible
+	if e.pod != nil {
+		return watchers.GetPodCompletionTimestamp(e.pod)
+	}
+
+	// Get from job if it's possible
+	if e.job != nil {
+		return watchers.GetJobCompletionTimestamp(e.job)
+	}
+
+	// Get the information based on the Job events
+	for _, event := range e.jobEvents {
+		if event.Reason == "BackoffLimitExceeded" || event.Reason == "Completed" {
+			// (BackoffLimitExceeded) Job has reached the specified backoff limit
+			// (Completed) Job completed
+			return watchers.GetEventTimestamp(event)
+		}
+	}
+
+	return time.Time{}
+}
+
+func (e *executionState) PodName() string {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+
+	// Get directly from the pod if it's possible
+	if e.pod != nil {
+		return e.pod.Name
+	}
+
+	// Get the information based on the Job events
+	for _, event := range e.jobEvents {
+		if event.Reason == "SuccessfulCreate" {
+			// (SuccessfulCreate) Created pod: 66c49ca3284bce9380023421-78fmp
+			return event.Message[strings.LastIndex(event.Message, " ")+1:]
+		}
+	}
+
+	// Get the information based on the Pod events
+	for _, event := range e.podEvents {
+		if event.Reason == "Scheduled" {
+			// (Scheduled) Successfully assigned distributed-tests/66c49ca3284bce9380023421-78fmp to homelab
+			match := regexp.MustCompile(`assigned\s+(\S+)`).FindStringSubmatch(event.Message)
+			if match != nil {
+				return match[1]
+			}
+		}
+	}
+
+	return ""
+}
+
+func (e *executionState) PodCreationTimestamp() time.Time {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+
+	// Get directly from the pod if it's possible
+	if e.pod != nil {
+		return e.pod.CreationTimestamp.Time
+	}
+
+	// Get the information based on the Job events
+	for _, event := range e.jobEvents {
+		if event.Reason == "SuccessfulCreate" {
+			// (SuccessfulCreate) Created pod: 66c49ca3284bce9380023421-78fmp
+			return watchers.GetEventTimestamp(event)
+		}
+	}
+
+	// Get the information based on the Pod events
+	if len(e.podEvents) > 0 {
+		return e.podEvents[0].CreationTimestamp.Time
+	}
+
+	return time.Time{}
+}
+
+func (e *executionState) PodNodeName() string {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+
+	// Get directly from the pod if it's possible
+	if e.pod != nil {
+		nodeName := e.pod.Status.NominatedNodeName
+		if nodeName == "" {
+			nodeName = e.pod.Spec.NodeName
+		}
+		return nodeName
+	}
+
+	// Get the information based on the Pod events
+	for _, event := range e.podEvents {
+		if event.Reason == "Scheduled" {
+			// (Scheduled) Successfully assigned distributed-tests/66c49ca3284bce9380023421-78fmp to homelab
+			return event.Message[strings.LastIndex(event.Message, " ")+1:]
+		}
+	}
+
+	return ""
+}
+
+func (e *executionState) Namespace() string {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+
+	if e.pod != nil {
+		return e.pod.Namespace
+	}
+	if e.job != nil {
+		return e.job.Namespace
+	}
+	if len(e.podEvents) > 0 {
+		return e.podEvents[0].Namespace
+	}
+	if len(e.jobEvents) > 0 {
+		return e.jobEvents[0].Namespace
+	}
+
+	return ""
 }
 
 func readImmediate[T any](ch <-chan T, process func(T), end func()) int {
