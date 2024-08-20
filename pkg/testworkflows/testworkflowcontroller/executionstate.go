@@ -2,8 +2,6 @@ package testworkflowcontroller
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"sync"
 	"time"
 
@@ -11,7 +9,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller/watchers"
-	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 type executionState struct {
@@ -58,8 +55,6 @@ func (e *executionState) registerJob(job *batchv1.Job) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	e.job = job
-	v, _ := json.Marshal(job)
-	fmt.Println(ui.Red(job.Name), "registered job", string(v))
 }
 
 func (e *executionState) JobEvents() []*corev1.Event {

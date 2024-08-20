@@ -120,18 +120,15 @@ func IsContainerStarted(pod *corev1.Pod, name string) bool {
 		return false
 	}
 	status := GetContainerStatus(pod, name)
-	if (status.Started != nil && *status.Started) || status.Ready {
-		return true
+	if status == nil {
+		return false
 	}
-	return false
+	return (status.Started != nil && *status.Started) || status.Ready
 }
 
 func IsContainerFinished(pod *corev1.Pod, name string) bool {
 	status := GetContainerStatus(pod, name)
-	if status.State.Terminated != nil {
-		return true
-	}
-	return false
+	return status != nil && status.State.Terminated != nil
 }
 
 func GetEventTimestamp(event *corev1.Event) time.Time {
