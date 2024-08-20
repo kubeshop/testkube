@@ -6,14 +6,14 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
 	initconstants "github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
-	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller/watchers"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
@@ -56,61 +56,71 @@ type Controller interface {
 }
 
 func New(parentCtx context.Context, clientSet kubernetes.Interface, namespace, id string, scheduledAt time.Time, opts ...ControllerOptions) (Controller, error) {
-	// Get the initialization timeout
-	timeout := DefaultInitTimeout
-	for _, opt := range opts {
-		if opt.Timeout != 0 {
-			timeout = opt.Timeout
-		}
-	}
-
 	// Create local context for stopping all the processes
 	ctx, ctxCancel := context.WithCancel(parentCtx)
 
 	// Optimistically, start watching all the resources
-	job := WatchJob(ctx, clientSet, namespace, id, 0)
-	pod := WatchMainPod(ctx, clientSet, namespace, id, 0)
-	jobEvents := WatchJobEvents(ctx, clientSet, namespace, id, 0)
-	podEvents := WatchPodEventsByPodWatcher(ctx, clientSet, namespace, pod, 0)
-
-	// Ensure the main Job exists in the cluster,
-	// and obtain the signature
-	var sig []stage.Signature
-	var err error
-	select {
-	case j, ok := <-job.PeekMessage(ctx):
-		if !ok {
-			j.Error = context.Canceled
-		} else if j.Error == nil && j.Value == nil {
-			j.Error = ErrJobAborted
-		}
-		if j.Error != nil {
-			ctxCancel()
-			return nil, j.Error
-		}
-		sig, err = stage.GetSignatureFromJSON([]byte(j.Value.Annotations[constants.SignatureAnnotationName]))
-		if err != nil {
-			ctxCancel()
-			return nil, errors.Wrap(err, "invalid job signature")
-		}
-	case <-time.After(timeout):
+	jobWatcher := watchers.NewJobWatcher(ctx, clientSet.BatchV1().Jobs(namespace), metav1.ListOptions{
+		FieldSelector: "metadata.name=" + id,
+	}, 1)
+	podWatcher := watchers.NewPodWatcher(ctx, clientSet.CoreV1().Pods(namespace), metav1.ListOptions{
+		LabelSelector: constants.ResourceIdLabelName + "=" + id,
+	}, 1)
+	jobEventsWatcher := watchers.NewEventsWatcher(ctx, clientSet.CoreV1().Events(namespace), metav1.ListOptions{
+		FieldSelector: "involvedObject.name=" + id,
+		TypeMeta:      metav1.TypeMeta{Kind: "Job"},
+	}, 10)
+	podListOptionsCh := make(chan metav1.ListOptions)
+	go func() {
 		select {
-		case ev, ok := <-jobEvents.PeekMessage(ctx):
-			if !ok {
-				err = context.Canceled
-			} else if ev.Value != nil {
-				// Job was there, so it was aborted
-				err = ErrJobAborted
-			} else {
-				// There was an internal error while loading the job event
-				err = ev.Error
+		case <-ctx.Done():
+		case p, ok := <-podWatcher.Peek(ctx):
+			if ok {
+				podListOptionsCh <- metav1.ListOptions{
+					FieldSelector: "involvedObject.name=" + p.Name,
+					TypeMeta:      metav1.TypeMeta{Kind: "Pod"},
+				}
 			}
-		case <-time.After(timeout):
-			// The job is actually not found
-			err = ErrJobTimeout
 		}
+		close(podListOptionsCh)
+	}()
+	podEventsWatcher := watchers.NewAsyncEventsWatcher(ctx, clientSet.CoreV1().Events(namespace), podListOptionsCh, 10)
+
+	// Wait for the job information
+	<-jobWatcher.Started()
+
+	// If there is no job found, check if there was any event related to that.
+	// We can't do a lot about it anyway, unless finishing the cached TestWorkflowResult.
+	if !jobWatcher.Exists() {
+		<-jobEventsWatcher.Started()
+		defer ctxCancel()
+
+		// TODO: Consider if the Job is required at all
+		// The job existed, as there are some events related to that
+		if jobEventsWatcher.Count() > 0 {
+			return nil, ErrJobAborted
+		}
+
+		// There are no leftovers after that job
+		return nil, ErrJobTimeout
+	}
+
+	// Obtain the signature from the Job
+	job := <-jobWatcher.Peek(ctx)
+	sig, err := stage.GetSignatureFromJSON([]byte(job.Annotations[constants.SignatureAnnotationName]))
+	if err != nil {
 		ctxCancel()
-		return nil, err
+		return nil, errors.Wrap(err, "invalid job signature")
+	}
+	// Wait for the other lists to be started
+	<-jobEventsWatcher.Started()
+	<-podWatcher.Started()
+	select {
+	case _, ok := <-podWatcher.Peek(ctx):
+		if ok {
+			<-podEventsWatcher.Started()
+		}
+	default:
 	}
 
 	// Build accessible controller
@@ -122,10 +132,10 @@ func New(parentCtx context.Context, clientSet kubernetes.Interface, namespace, i
 		clientSet:   clientSet,
 		ctx:         ctx,
 		ctxCancel:   ctxCancel,
-		job:         job,
-		jobEvents:   jobEvents,
-		pod:         pod,
-		podEvents:   podEvents,
+		job:         jobWatcher,
+		jobEvents:   jobEventsWatcher,
+		pod:         podWatcher,
+		podEvents:   podEventsWatcher,
 	}, nil
 }
 
@@ -137,10 +147,10 @@ type controller struct {
 	clientSet   kubernetes.Interface
 	ctx         context.Context
 	ctxCancel   context.CancelFunc
-	job         Channel[*batchv1.Job]
-	jobEvents   Channel[*corev1.Event]
-	pod         Channel[*corev1.Pod]
-	podEvents   Channel[*corev1.Event]
+	job         watchers.JobWatcher
+	jobEvents   watchers.EventsWatcher
+	pod         watchers.PodWatcher
+	podEvents   watchers.EventsWatcher
 }
 
 func (c *controller) Abort(ctx context.Context) error {
@@ -152,17 +162,14 @@ func (c *controller) Cleanup(ctx context.Context) error {
 }
 
 func (c *controller) peekPod(ctx context.Context) (*corev1.Pod, error) {
-	v, ok := <-c.pod.PeekMessage(ctx)
-	if v.Error != nil {
-		return nil, v.Error
-	}
+	v, ok := <-c.pod.Peek(ctx)
 	if !ok {
-		return nil, context.Canceled
+		return v, c.pod.Err()
 	}
-	if v.Value == nil {
+	if v == nil {
 		return nil, errors.New("empty pod information")
 	}
-	return v.Value, nil
+	return v, nil
 }
 
 func (c *controller) PodIP(ctx context.Context) (string, error) {
@@ -212,10 +219,7 @@ func (c *controller) StopController() {
 }
 
 func (c *controller) Watch(parentCtx context.Context) <-chan ChannelMessage[Notification] {
-	ch, err := WatchInstrumentedPod(parentCtx, c.clientSet, c.signature, c.scheduledAt, c.pod, c.podEvents, WatchInstrumentedPodOptions{
-		JobEvents: c.jobEvents,
-		Job:       c.job,
-	})
+	ch, err := WatchInstrumentedPod(parentCtx, c.clientSet, c.signature, c.scheduledAt, c.job, c.pod, c.jobEvents, c.podEvents, WatchInstrumentedPodOptions{})
 	if err != nil {
 		v := newChannel[Notification](context.Background(), 1)
 		v.Error(err)
@@ -272,15 +276,14 @@ func (c *controller) WatchLightweight(parentCtx context.Context) <-chan Lightwei
 	return ch
 }
 
+// TODO: Avoid WatchInstrumentedPod
 func (c *controller) Logs(parentCtx context.Context, follow bool) io.Reader {
 	reader, writer := io.Pipe()
 	go func() {
 		defer writer.Close()
 		ref := ""
-		ch, err := WatchInstrumentedPod(parentCtx, c.clientSet, c.signature, c.scheduledAt, c.pod, c.podEvents, WatchInstrumentedPodOptions{
-			JobEvents: c.jobEvents,
-			Job:       c.job,
-			Follow:    common.Ptr(follow),
+		ch, err := WatchInstrumentedPod(parentCtx, c.clientSet, c.signature, c.scheduledAt, c.job, c.pod, c.jobEvents, c.podEvents, WatchInstrumentedPodOptions{
+			DisableFollow: !follow,
 		})
 		if err != nil {
 			return

@@ -262,6 +262,25 @@ func (e *jobWatcher) watch() error {
 				continue
 			}
 
+			// Try to configure deletion timestamp if Kubernetes engine doesn't support it
+			if event.Type == watch.Deleted && object.DeletionTimestamp == nil {
+				ts := object.CreationTimestamp.Time
+				if object.Status.CompletionTime != nil && object.Status.CompletionTime.After(ts) {
+					ts = object.Status.CompletionTime.Time
+				}
+				for i := range object.Status.Conditions {
+					if object.Status.Conditions[i].LastTransitionTime.After(ts) {
+						ts = object.Status.Conditions[i].LastTransitionTime.Time
+					}
+				}
+				for i := range object.ManagedFields {
+					if object.ManagedFields[i].Time != nil && object.ManagedFields[i].Time.After(ts) {
+						ts = object.ManagedFields[i].Time.Time
+					}
+				}
+				object.DeletionTimestamp = &metav1.Time{ts}
+			}
+
 			// Send the event back
 			e.setLastJob(object)
 			e.ch <- object

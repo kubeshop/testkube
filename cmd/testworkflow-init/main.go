@@ -91,7 +91,6 @@ func main() {
 	signal.Notify(stopSignal, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		<-stopSignal
-		stdoutUnsafe.Print("The task was aborted.\n")
 		orchestration.Executions.Abort()
 	}()
 

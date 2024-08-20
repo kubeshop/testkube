@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"strings"
 	"sync"
@@ -18,6 +19,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/log"
+	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/kubeshop/testkube/pkg/utils"
 )
 
@@ -60,7 +62,7 @@ func (c *ContainerLog) Type() ContainerLogType {
 // getContainerLogsStream is getting logs stream, and tries to reinitialize the stream on EOF.
 // EOF may happen not only on the actual container end, but also in case of the log rotation.
 // @see {@link https://stackoverflow.com/a/68673451}
-func getContainerLogsStream(ctx context.Context, clientSet kubernetes.Interface, namespace, podName, containerName string, follow bool, pod Channel[*corev1.Pod], since *time.Time) (io.Reader, error) {
+func getContainerLogsStream(ctx context.Context, clientSet kubernetes.Interface, namespace, podName, containerName string, isDone func() bool, since *time.Time) (io.Reader, error) {
 	// Fail immediately if the context is finished
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
@@ -75,7 +77,7 @@ func getContainerLogsStream(ctx context.Context, clientSet kubernetes.Interface,
 	// Create logs stream request
 	req := clientSet.CoreV1().Pods(namespace).GetLogs(podName, &corev1.PodLogOptions{
 		Container:  containerName,
-		Follow:     follow,
+		Follow:     !isDone(),
 		Timestamps: true,
 		SinceTime:  sinceTime,
 	})
@@ -84,36 +86,12 @@ func getContainerLogsStream(ctx context.Context, clientSet kubernetes.Interface,
 	for {
 		stream, err = req.Stream(ctx)
 		if err != nil {
+			fmt.Println(ui.Cyan(podName), "log error", err.Error(), isDone())
 			// The container is not necessarily already started when Started event is received
 			if !strings.Contains(err.Error(), "is waiting to start") {
 				return nil, err
 			}
-			if !follow {
-				return bytes.NewReader(nil), io.EOF
-			}
-			p := <-pod.Peek(ctx)
-			if p == nil {
-				return bytes.NewReader(nil), io.EOF
-			}
-			containerDone := IsPodDone(p)
-			for i := range p.Status.InitContainerStatuses {
-				if p.Status.InitContainerStatuses[i].Name == containerName {
-					if p.Status.InitContainerStatuses[i].State.Terminated != nil {
-						containerDone = true
-						break
-					}
-				}
-			}
-			for i := range p.Status.ContainerStatuses {
-				if p.Status.ContainerStatuses[i].Name == containerName {
-					if p.Status.ContainerStatuses[i].State.Terminated != nil {
-						containerDone = true
-						break
-					}
-				}
-			}
-
-			if containerDone {
+			if isDone() {
 				return bytes.NewReader(nil), io.EOF
 			}
 			continue
@@ -123,7 +101,8 @@ func getContainerLogsStream(ctx context.Context, clientSet kubernetes.Interface,
 	return stream, nil
 }
 
-func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interface, namespace, podName, containerName string, follow bool, bufferSize int, pod Channel[*corev1.Pod]) Channel[ContainerLog] {
+// TODO: Get rid of Channel[]
+func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interface, namespace, podName, containerName string, bufferSize int, isDone func() bool) Channel[ContainerLog] {
 	ctx, ctxCancel := context.WithCancel(parentCtx)
 	w := newChannel[ContainerLog](ctx, bufferSize)
 
@@ -139,7 +118,7 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 		var since *time.Time
 
 		// Create logs stream request
-		stream, err := getContainerLogsStream(ctx, clientSet, namespace, podName, containerName, follow, pod, since)
+		stream, err := getContainerLogsStream(ctx, clientSet, namespace, podName, containerName, isDone, since)
 		if err == io.EOF {
 			return
 		} else if err != nil {
@@ -278,7 +257,7 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 			// reinitialize the stream from the time we have finished.
 			if err == io.EOF {
 				since = common.Ptr(lastTs.Add(1))
-				stream, err = getContainerLogsStream(ctx, clientSet, namespace, podName, containerName, follow, pod, since)
+				stream, err = getContainerLogsStream(ctx, clientSet, namespace, podName, containerName, isDone, since)
 				if err != nil {
 					return
 				}

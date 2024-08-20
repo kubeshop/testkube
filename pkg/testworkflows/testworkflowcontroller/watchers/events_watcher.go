@@ -2,6 +2,7 @@ package watchers
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"sync"
 	"sync/atomic"
@@ -12,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 
 	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 type eventsWatcher struct {
@@ -339,8 +341,15 @@ func (e *eventsWatcher) Ensure(tsInPast time.Time, timeout time.Duration) (int, 
 	// Wait for readiness
 	<-e.optsCh
 
+	selector := e.opts.LabelSelector
+	if selector == "" {
+		selector = e.opts.FieldSelector
+	}
+
 	// Fast-track when the timestamp is already acknowledged
 	e.mu.Lock()
+	fmt.Println(ui.Blue(selector), "ensuring events", tsInPast.Before(e.lastTs))
+	defer fmt.Println(ui.Blue(selector), "finished events")
 	if tsInPast.Before(e.lastTs) {
 		e.mu.Unlock()
 		return 0, nil

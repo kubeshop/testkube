@@ -190,6 +190,13 @@ func (n *notifier) emit() {
 	n.scheduleFlush()
 }
 
+func (n *notifier) Finalize() {
+	n.resultMu.Lock()
+	defer n.resultMu.Unlock()
+	n.result.Finalize()
+	n.scheduleFlush()
+}
+
 func (n *notifier) queue(ts time.Time) {
 	if n.result.QueuedAt.Equal(ts) {
 		return

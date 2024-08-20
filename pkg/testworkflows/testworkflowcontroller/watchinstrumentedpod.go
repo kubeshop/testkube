@@ -4,97 +4,125 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/gookit/color"
-	"github.com/pkg/errors"
-	batchv1 "k8s.io/api/batch/v1"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
-	"github.com/kubeshop/testkube/internal/common"
+	constants2 "github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller/watchers"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
-	constants2 "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
 
 const (
-	InitContainerName    = "tktw-init"
-	IdleTimeout          = 100 * time.Millisecond
-	ExpectedDelayTimeout = 1 * time.Second
+	InitContainerName = "tktw-init"
 )
 
 type WatchInstrumentedPodOptions struct {
-	JobEvents Channel[*corev1.Event]
-	Job       Channel[*batchv1.Job]
-	Follow    *bool
+	DisableFollow bool
 }
 
-func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interface, signature []stage.Signature, scheduledAt time.Time, pod Channel[*corev1.Pod], podEvents Channel[*corev1.Event], opts WatchInstrumentedPodOptions) (<-chan ChannelMessage[Notification], error) {
-	// Avoid missing data
-	if pod == nil {
-		return nil, errors.New("pod watcher is required")
+func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interface, signature []stage.Signature, scheduledAt time.Time, jobWatcher watchers.JobWatcher, podWatcher watchers.PodWatcher, jobEventsWatcher watchers.EventsWatcher, podEventsWatcher watchers.EventsWatcher, opts WatchInstrumentedPodOptions) (<-chan ChannelMessage[Notification], error) {
+	ctx, ctxCancel := context.WithCancel(parentCtx)
+	notifier := newNotifier(ctx, signature, scheduledAt)
+	state := NewExecutionState(ctx, jobWatcher, podWatcher, jobEventsWatcher, podEventsWatcher)
+
+	log := func(data ...interface{}) {
+		// FIXME delete?
+		//data = append([]interface{}{ui.Green(state.Job().Name)}, data...)
+		//fmt.Println(data...)
 	}
 
-	// Initialize controller state
-	ctx, ctxCancel := context.WithCancel(parentCtx)
-	s := newNotifier(ctx, signature, scheduledAt)
-
-	// Initialize pod state
-	state := initializePodState(ctx, pod, podEvents, opts.Job, opts.JobEvents, s.Error)
-
-	// Start watching
 	go func() {
 		defer func() {
-			s.Flush()
+			notifier.Finalize()
+			notifier.Flush()
 			ctxCancel()
+			log("closed")
 		}()
 
-		// Watch for the basic initialization warnings
-		for v := range state.PreStart("") {
-			if v.Value.Queued != nil {
-				s.Queue("", state.QueuedAt(""))
-			} else if v.Value.Started != nil {
-				s.Queue("", state.QueuedAt(""))
-				s.Start("", state.StartedAt(""))
-			} else if v.Value.Event != nil {
-				ts := maxTime(v.Value.Event.CreationTimestamp.Time, v.Value.Event.FirstTimestamp.Time, v.Value.Event.LastTimestamp.Time)
-				s.Event("", ts, v.Value.Event.Type, v.Value.Event.Reason, v.Value.Event.Message)
-			}
-		}
+		// Mark Job as started
+		notifier.Queue("", state.Job().CreationTimestamp.Time)
+		log("queued")
 
-		// Ensure the queue/start time has been saved
-		if (s.result.QueuedAt.IsZero() || s.result.StartedAt.IsZero()) && state.FinishedAt("").IsZero() {
-			s.Error(errors.New("missing information about scheduled pod"))
+		// Wait until the Pod is scheduled
+		currentJobEventsIndex := 0
+		for ok := true; ok; _, ok = <-state.Updated() {
+			log("checking for scheduled pod")
+			for _, ev := range state.JobEvents()[currentJobEventsIndex:] {
+				currentJobEventsIndex++
+				if ev.Reason != "BackoffLimitExceeded" {
+					notifier.Event("", watchers.GetEventTimestamp(ev), ev.Type, ev.Reason, ev.Message)
+				}
+			}
+
+			// Continue if the Pod has been scheduled
+			if state.Pod() != nil {
+				break
+			}
+
+			// Determine if the job is not failed already without the Pod
+			if watchers.IsJobFinished(state.Job()) {
+				break
+			}
+			log("checking for scheduled pod: iteration end")
+		}
+		log("pod is scheduled")
+
+		// Wait until the Pod is started
+		currentPodEventsIndex := 0
+		for ok := true; ok; _, ok = <-state.Updated() {
+			log("waiting for started pod")
+			for _, ev := range state.PodEvents()[currentPodEventsIndex:] {
+				currentPodEventsIndex++
+
+				// Display only events that are unrelated to further containers
+				name := GetEventContainerName(ev)
+				if name == "" || name == "0" {
+					notifier.Event("", watchers.GetEventTimestamp(ev), ev.Type, ev.Reason, ev.Message)
+				}
+			}
+
+			// Continue if the Pod has been started
+			isPodStarted := state.Pod() != nil && watchers.IsPodStarted(state.Pod())
+			if isPodStarted {
+				break
+			}
+
+			// Determine if the pod is not failed without starting
+			if watchers.IsPodFinished(state.Pod()) {
+				break
+			}
+
+			// Determine if the job is not failed already without the Pod
+			if watchers.IsJobFinished(state.Job()) {
+				break
+			}
+			log("waiting for started pod: iteration end")
+		}
+		log("pod likely started")
+
+		// Handle the case where the Pod is not accessible
+		pod := state.Pod()
+		if pod == nil {
+			log("no pod found")
+			// FIXME:
+			notifier.Error(fmt.Errorf("pod is not there"))
 			return
 		}
+		notifier.Start("", pod.CreationTimestamp.Time) // TODO: Fallback?
+		log("pod started")
 
-		// Load the namespace information
-		var podObj *corev1.Pod
-		select {
-		// Obtain the Pod information for further execution
-		case p := <-pod.Peek(ctx):
-			podObj = p
-		// Handle when the execution have been finished, but there may be no Pod
-		case <-state.Finished(""):
-			select {
-			case <-time.After(ExpectedDelayTimeout):
-				s.Error(fmt.Errorf("the execution is finished, but failed to get pod"))
-				return
-			case p := <-pod.Peek(ctx):
-				podObj = p
-			}
-		}
-
-		// Load the references
+		// Read the execution instructions
 		var refs, endRefs [][]string
 		var actions actiontypes.ActionGroups
-		err := json.Unmarshal([]byte(podObj.Annotations[constants2.SpecAnnotationName]), &actions)
+		err := json.Unmarshal([]byte(pod.Annotations[constants.SpecAnnotationName]), &actions)
 		if err != nil {
-			s.Error(fmt.Errorf("invalid instructions: %v", err))
+			// FIXME:
+			notifier.Error(fmt.Errorf("invalid instructions: %v", err))
 			return
 		}
 		refs = make([][]string, len(actions))
@@ -114,94 +142,70 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 			}
 		}
 
-		// For each container:
-		lastTs := s.result.Initialization.FinishedAt
+		// Iterate over containers
 		aborted := false
-		for _, container := range append(podObj.Spec.InitContainers, podObj.Spec.Containers...) {
-			// Ignore non-standard TestWorkflow containers
-			number, err := strconv.Atoi(container.Name)
-			if err != nil || number > len(refs) {
-				continue
-			}
-			index := number - 1
-			containerName := container.Name
-			initialRef := refs[index][0]
+		registeredAbortedOperation := false
+		lastStarted := InitContainerName
+		executionStatuses := map[string]constants2.ExecutionResult{}
+		for containerIndex := 0; containerIndex < len(refs); containerIndex++ {
+			container := fmt.Sprintf("%d", containerIndex+1)
+			log("iterating containers", container)
 
-			// Update queue time
-			s.Queue(initialRef, lastTs)
+			// Wait until the Container is started
+			for ok := true; ok; _, ok = <-state.Updated() {
+				log("waiting for container start", container)
 
-			// Watch the container events, along with final finish too
-			preStartCh := state.PreStart(containerName)
-			finishedCh := state.Finished("")
-		loop:
-			for {
-				var v ChannelMessage[podStateUpdate]
-				select {
-				case vv, ok := <-preStartCh:
-					if !ok {
-						break loop
-					}
-					v = vv
-				default:
-					select {
-					case vv, ok := <-preStartCh:
-						if !ok {
-							break loop
-						}
-						v = vv
-					case <-finishedCh:
-						break loop
-					}
+				// Determine if the container should be already accessible
+				if watchers.IsContainerStarted(state.Pod(), container) || watchers.IsContainerFinished(state.Pod(), container) {
+					break
 				}
 
-				if v.Value.Queued != nil {
-					s.Queue(initialRef, state.QueuedAt(containerName))
-				} else if v.Value.Started != nil {
-					s.Queue(initialRef, state.QueuedAt(containerName))
-					s.Start(initialRef, state.StartedAt(containerName))
-				} else if v.Value.Event != nil {
-					ts := maxTime(v.Value.Event.CreationTimestamp.Time, v.Value.Event.FirstTimestamp.Time, v.Value.Event.LastTimestamp.Time)
-					s.Event(initialRef, ts, v.Value.Event.Type, v.Value.Event.Reason, v.Value.Event.Message)
+				// Determine if the job is not failed already without the Pod
+				if watchers.IsJobFinished(state.Job()) {
+					break
 				}
-			}
 
-			// Ensure the queue/start time has been saved
-			if (s.GetStepResult(initialRef).QueuedAt.IsZero() || s.GetStepResult(initialRef).StartedAt.IsZero()) && state.FinishedAt("").IsZero() {
-				s.Error(fmt.Errorf("missing information about scheduled '%s' step in '%s' container", initialRef, container.Name))
-				return
+				log("waiting for container start: iteration end", container)
 			}
+			log("container started", container)
 
-			// Watch the container logs
-			follow := !aborted && common.ResolvePtr(opts.Follow, true) && !state.IsFinished(containerName) && !state.IsFinished("")
-			lastStarted := initialRef
-			executionStatuses := map[string]constants.ExecutionResult{}
-			for v := range WatchContainerLogs(ctx, clientSet, podObj.Namespace, podObj.Name, containerName, follow, 10, pod).Channel() {
+			// Start the initial one
+			lastStarted = refs[containerIndex][0]
+
+			// Read the Container logs
+			isDone := func() bool {
+				return opts.DisableFollow || watchers.IsContainerFinished(state.Pod(), container) || watchers.IsJobFinished(state.Job())
+			}
+			for v := range WatchContainerLogs(ctx, clientSet, pod.Namespace, pod.Name, container, 10, isDone).Channel() {
 				if v.Error != nil {
-					s.Error(v.Error)
+					log("container error", container, v.Error)
+					notifier.Error(v.Error)
+					continue
 				}
+				log("container log", container)
 
 				switch v.Value.Type() {
 				case ContainerLogTypeLog:
-					s.Raw(lastStarted, v.Value.Time, string(v.Value.Log), false)
+					notifier.Raw(lastStarted, v.Value.Time, string(v.Value.Log), false)
 				case ContainerLogTypeOutput:
-					s.Output(v.Value.Output.Ref, v.Value.Time, v.Value.Output)
+					notifier.Output(v.Value.Output.Ref, v.Value.Time, v.Value.Output)
 				case ContainerLogTypeHint:
-					if v.Value.Hint.Ref == constants2.RootOperationName {
+					if v.Value.Hint.Ref == constants.RootOperationName {
 						continue
 					}
 					switch v.Value.Hint.Name {
-					case constants.InstructionStart:
+					case constants2.InstructionStart:
 						lastStarted = v.Value.Hint.Ref
 						if !aborted {
-							s.Start(v.Value.Hint.Ref, v.Value.Time)
+							notifier.Start(v.Value.Hint.Ref, v.Value.Time)
 						}
-					case constants.InstructionEnd:
+					case constants2.InstructionEnd:
 						status := testkube.TestWorkflowStepStatus(v.Value.Hint.Value.(string))
 						if status == "" {
 							status = testkube.PASSED_TestWorkflowStepStatus
 						}
 						if !aborted {
-							s.FinishStep(v.Value.Hint.Ref, ContainerResultStep{
+							notifier.FinishStep(v.Value.Hint.Ref, ContainerResultStep{
 								Status:     status,
 								Details:    executionStatuses[v.Value.Hint.Ref].Details,
 								ExitCode:   int(executionStatuses[v.Value.Hint.Ref].ExitCode),
@@ -212,158 +216,154 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 							aborted = true
 							continue
 						}
-					case constants.InstructionExecution:
+					case constants2.InstructionExecution:
 						serialized, _ := json.Marshal(v.Value.Hint.Value)
-						var executionResult constants.ExecutionResult
+						var executionResult constants2.ExecutionResult
 						_ = json.Unmarshal(serialized, &executionResult)
 						executionStatuses[v.Value.Hint.Ref] = executionResult
-					case constants.InstructionPause:
+					case constants2.InstructionPause:
 						ts, _ := v.Value.Hint.Value.(string)
-						start, err := time.Parse(constants.PreciseTimeFormat, ts)
+						start, err := time.Parse(constants2.PreciseTimeFormat, ts)
 						if err != nil {
 							start = v.Value.Time
-							s.Error(fmt.Errorf("invalid timestamp provided with pausing instruction: %v", v.Value.Hint.Value))
+							notifier.Error(fmt.Errorf("invalid timestamp provided with pausing instruction: %v", v.Value.Hint.Value))
 						}
-						s.Pause(v.Value.Hint.Ref, start)
-					case constants.InstructionResume:
+						notifier.Pause(v.Value.Hint.Ref, start)
+					case constants2.InstructionResume:
 						ts, _ := v.Value.Hint.Value.(string)
-						end, err := time.Parse(constants.PreciseTimeFormat, ts)
+						end, err := time.Parse(constants2.PreciseTimeFormat, ts)
 						if err != nil {
 							end = v.Value.Time
-							s.Error(fmt.Errorf("invalid timestamp provided with resuming instruction: %v", v.Value.Hint.Value))
+							notifier.Error(fmt.Errorf("invalid timestamp provided with resuming instruction: %v", v.Value.Hint.Value))
 						}
-						s.Resume(v.Value.Hint.Ref, end)
+						notifier.Resume(v.Value.Hint.Ref, end)
 					}
 				}
 			}
+			log("container log finished", container)
 
-			if follow {
-				select {
-				case <-state.Finished(container.Name):
-				case <-state.Finished(""):
-					// Finish fast when the whole execution has been finished
+			// Wait until the Container is terminated
+			for ok := true; ok; _, ok = <-state.Updated() {
+				log("waiting for terminated container", container)
+				// Determine if the container should be already stopped
+				if watchers.IsContainerFinished(state.Pod(), container) {
+					break
 				}
-			} else if !aborted {
-				select {
-				case <-state.Finished(container.Name):
-				case <-state.Finished(""):
-					// Finish fast when the whole execution has been finished
-				case <-time.After(IdleTimeout):
-					return
+
+				// Determine if the pod is not failed already without the container stopped
+				if watchers.IsPodFinished(state.Pod()) {
+					break
 				}
+
+				// Determine if the job is not failed already without the Pod
+				if watchers.IsJobFinished(state.Job()) {
+					break
+				}
+				log("waiting for terminated container: iteration end", container)
 			}
+			log("container terminated", container)
 
-			// Fall back results to the termination log
-			result, _ := state.ContainerResult(container.Name)
-			for i, ref := range endRefs[index] {
-				// Ignore tree root hints
+			// Load the correlation data about status
+			status := watchers.GetContainerStatus(state.Pod(), container)
+			result := watchers.ReadContainerResult(state.Pod(), state.Job(), status)
+			log("container result", container, status, result)
+
+			for i, ref := range endRefs[containerIndex] {
 				if ref == "root" {
 					continue
 				}
-				status := ContainerResultStep{
-					Status:     testkube.ABORTED_TestWorkflowStepStatus,
+
+				// TODO: Avoid passing that information?
+				finishedAt := notifier.GetStepResult(ref).FinishedAt
+				if finishedAt.IsZero() && status != nil && status.State.Terminated != nil {
+					finishedAt = status.State.Terminated.FinishedAt.Time
+				}
+
+				// Handle available result
+				if len(result.Statuses) > i {
+					// Send information about step finish
+					notifier.FinishStep(ref, ContainerResultStep{
+						Status:     result.Statuses[i].Status,
+						ExitCode:   result.Statuses[i].ExitCode,
+						Details:    "",
+						FinishedAt: finishedAt,
+					})
+					continue
+				}
+
+				// Ignore when there is already the status available
+				registeredStatus := notifier.GetStepResult(ref).Status
+				if registeredStatus != nil && registeredStatus.Finished() {
+					continue
+				}
+
+				// Handle missing result - first aborted task
+				if !registeredAbortedOperation {
+					registeredAbortedOperation = true
+
+					details := "The execution has been aborted."
+					if result.ErrorDetails != "" {
+						details = fmt.Sprintf("The execution has been aborted. %s", color.FgDarkGray.Render("("+result.ErrorDetails+")"))
+					}
+
+					notifier.FinishStep(ref, ContainerResultStep{
+						Status:     testkube.ABORTED_TestWorkflowStepStatus,
+						ExitCode:   -1,
+						Details:    details,
+						FinishedAt: finishedAt,
+					})
+					continue
+				}
+
+				// Handle missing result - after aborted task
+				// TODO: Consider if that should be displayed
+				details := "The execution was aborted before."
+				if result.ErrorDetails != "" {
+					details = fmt.Sprintf("The execution was aborted before. %s", color.FgDarkGray.Render("("+result.ErrorDetails+")"))
+				}
+				notifier.FinishStep(ref, ContainerResultStep{
+					Status:     testkube.SKIPPED_TestWorkflowStepStatus,
 					ExitCode:   -1,
-					Details:    result.Details,
-					FinishedAt: s.GetStepResult(ref).FinishedAt,
-				}
-				if status.FinishedAt.IsZero() {
-					status.FinishedAt = result.FinishedAt
-				}
-				if status.FinishedAt.IsZero() {
-					status.FinishedAt = state.FinishedAt("")
-				}
-				if status.FinishedAt.IsZero() {
-					status.FinishedAt = s.GetLastTimestamp(lastStarted)
-				}
-
-				if len(result.Steps) > i {
-					status = result.Steps[i]
-					if status.Details == "" {
-						status.Details = result.Details
-					}
-					finishedAt := s.GetStepResult(ref).FinishedAt
-					if !finishedAt.IsZero() {
-						status.FinishedAt = finishedAt
-					}
-				}
-				// Ignore if it's already finished
-				currentStatus := s.GetStepResult(ref).Status
-				if currentStatus == nil || !currentStatus.Finished() || *currentStatus == testkube.ABORTED_TestWorkflowStepStatus {
-					s.FinishStep(ref, status)
-				}
-				if status.Status == testkube.ABORTED_TestWorkflowStepStatus {
-					lastStarted = ref
-					break
-				}
-			}
-
-			// Update the last timestamp
-			nextLastTs := s.GetLastTimestamp(lastStarted)
-			if nextLastTs.After(lastTs) {
-				lastTs = nextLastTs
-			}
-
-			// Break the function if the step has been aborted.
-			// Breaking only to the loop is not enough,
-			// because due to GKE bug, the Job is still pending,
-			// so it will get stuck there.
-			if s.IsAnyAborted() {
-				reason := s.result.Steps[lastStarted].ErrorMessage
-				if reason == "" {
-					reason = result.Details
-				}
-				message := "Aborted"
-				if reason == "" {
-					message = fmt.Sprintf("\n%s Aborted", lastTs.Format(KubernetesLogTimeFormat))
-				} else {
-					message = fmt.Sprintf("\n%s Aborted (%s)", lastTs.Format(KubernetesLogTimeFormat), reason)
-				}
-				s.Raw(lastStarted, lastTs, message, false)
-
-				// Mark all not started steps as skipped
-				for ref := range s.result.Steps {
-					if !s.IsFinished(ref) {
-						status := testkube.SKIPPED_TestWorkflowStepStatus
-						details := "The execution was aborted before"
-						if s.result.Steps[ref].Status != nil && *s.result.Steps[ref].Status != testkube.QUEUED_TestWorkflowStepStatus {
-							status = testkube.ABORTED_TestWorkflowStepStatus
-							details = result.Details
-						} else if result.Details != "" {
-							details = fmt.Sprintf("The execution was aborted before %s", color.FgDarkGray.Render("("+result.Details+")"))
-						}
-						if details != "" {
-							s.Raw(ref, lastTs, fmt.Sprintf("%s %s", lastTs.Format(KubernetesLogTimeFormat), details), false)
-						}
-						s.FinishStep(ref, ContainerResultStep{
-							Status:     status,
-							ExitCode:   -1,
-							Details:    "",
-							FinishedAt: lastTs,
-						})
-					}
-				}
-
-				break
+					Details:    details,
+					FinishedAt: finishedAt,
+				})
 			}
 		}
+		log("finished iterating over containers")
 
-		// Watch the completion time
-		if s.result.FinishedAt.IsZero() {
-			<-state.Finished("")
-			f := state.FinishedAt("")
-			s.Finish(f)
+		// Wait until the Pod or Job is finished
+		for ok := true; ok; _, ok = <-state.Updated() {
+			log("waiting for finished pod")
+			if watchers.IsPodFinished(state.Pod()) {
+				break
+			}
+			if watchers.IsJobFinished(state.Job()) {
+				break
+			}
+			log("waiting for finished pod: iteration end")
+		}
+		log("pod is finished")
+
+		// Wait until the Job is finished FIXME: Don't
+		for ok := true; ok; _, ok = <-state.Updated() {
+			log("waiting for finished job")
+			if watchers.IsJobFinished(state.Job()) {
+				break
+			}
+			log("waiting for finished job: iteration end")
+		}
+		log("job is finished")
+
+		// Mark as finished
+		// TODO: Calibrate with top timestamp?
+		job := state.Job()
+		pod = state.Pod()
+		if !watchers.GetPodCompletionTimestamp(pod).IsZero() {
+			notifier.Finish(watchers.GetPodCompletionTimestamp(pod))
+		} else {
+			notifier.Finish(watchers.GetJobCompletionTimestamp(job))
 		}
 	}()
 
-	return s.ch, nil
-}
-
-func maxTime(times ...time.Time) time.Time {
-	var result time.Time
-	for _, t := range times {
-		if t.After(result) {
-			result = t
-		}
-	}
-	return result
+	return notifier.ch, nil
 }

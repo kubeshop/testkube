@@ -2,10 +2,8 @@ package testworkflowcontroller
 
 import (
 	"regexp"
-	"slices"
 	"time"
 
-	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -30,18 +28,6 @@ func IsPodDone(pod *corev1.Pod) bool {
 	return (pod.Status.Phase != corev1.PodPending && pod.Status.Phase != corev1.PodRunning) || pod.ObjectMeta.DeletionTimestamp != nil
 }
 
-func isJobConditionEnd(condition batchv1.JobCondition) bool {
-	return (condition.Type == batchv1.JobFailed || condition.Type == batchv1.JobComplete) && condition.Status == corev1.ConditionTrue && !condition.LastTransitionTime.IsZero()
-}
-
-func IsJobDone(job *batchv1.Job) bool {
-	return (job.Status.Active == 0 && (job.Status.Succeeded > 0 || job.Status.Failed > 0)) || job.ObjectMeta.DeletionTimestamp != nil || job.Status.CompletionTime != nil || slices.ContainsFunc(job.Status.Conditions, isJobConditionEnd)
-}
-
-func HadPodScheduled(job *batchv1.Job) bool {
-	return job.Status.Active > 0 || job.Status.Succeeded > 0 || job.Status.Failed > 0
-}
-
 type ContainerResultStep struct {
 	Status     testkube.TestWorkflowStepStatus
 	ExitCode   int
@@ -54,8 +40,4 @@ type ContainerResult struct {
 	Details    string
 	ExitCode   int
 	FinishedAt time.Time
-}
-
-var UnknownContainerResult = ContainerResult{
-	ExitCode: -1,
 }

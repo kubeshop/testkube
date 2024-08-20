@@ -613,3 +613,7 @@ func recomputeTestWorkflowStepResult(v TestWorkflowStepResult, sig TestWorkflowS
 
 	return v
 }
+
+func (r *TestWorkflowResult) Finalize() {
+
+}
