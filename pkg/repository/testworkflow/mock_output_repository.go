@@ -109,10 +109,10 @@ func (mr *MockOutputRepositoryMockRecorder) PresignSaveLog(arg0, arg1, arg2 inte
 }
 
 // ReadLog mocks base method.
-func (m *MockOutputRepository) ReadLog(arg0 context.Context, arg1, arg2 string) (io.Reader, error) {
+func (m *MockOutputRepository) ReadLog(arg0 context.Context, arg1, arg2 string) (io.ReadCloser, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ReadLog", arg0, arg1, arg2)
-	ret0, _ := ret[0].(io.Reader)
+	ret0, _ := ret[0].(io.ReadCloser)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

@@ -23,7 +23,7 @@ func NewTarballCmd() *cobra.Command {
 				os.Exit(0)
 			}
 
-			for _, pair := range pairs {
+			processPair := func(pair string) {
 				dirPath, url, found := strings.Cut(pair, "=")
 				if !found {
 					ui.Fail(fmt.Errorf("invalid tarball pair: %s", pair))
@@ -33,6 +33,7 @@ func NewTarballCmd() *cobra.Command {
 				// Start downloading the file
 				resp, err := http.Get(url)
 				ui.ExitOnError("download the tarball", err)
+				defer resp.Body.Close()
 
 				if resp.StatusCode != http.StatusOK {
 					ui.Fail(fmt.Errorf("failed to download the tarball: status code %d", resp.StatusCode))
@@ -43,6 +44,10 @@ func NewTarballCmd() *cobra.Command {
 				if err != nil {
 					ui.Fail(err)
 				}
+			}
+
+			for _, pair := range pairs {
+				processPair(pair)
 			}
 		},
 	}
