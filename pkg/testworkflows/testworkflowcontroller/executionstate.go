@@ -138,6 +138,9 @@ func (e *executionState) CompletionTimestamp() time.Time {
 	return time.Time{}
 }
 
+// TODO: Prepare something like WatcherSet, that will have hooks upon watchers, to build info like that
+//
+//	also, the Pod Events Watcher inside will be able to use job events pod name fallback
 func (e *executionState) PodName() string {
 	e.mu.RLock()
 	defer e.mu.RUnlock()

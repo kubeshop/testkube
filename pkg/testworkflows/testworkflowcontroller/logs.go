@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"fmt"
 	"io"
 	"strings"
 	"sync"
@@ -19,7 +18,6 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/log"
-	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/kubeshop/testkube/pkg/utils"
 )
 
@@ -86,7 +84,6 @@ func getContainerLogsStream(ctx context.Context, clientSet kubernetes.Interface,
 	for {
 		stream, err = req.Stream(ctx)
 		if err != nil {
-			fmt.Println(ui.Cyan(podName), "log error", err.Error(), isDone())
 			// The container is not necessarily already started when Started event is received
 			if !strings.Contains(err.Error(), "is waiting to start") {
 				return nil, err
