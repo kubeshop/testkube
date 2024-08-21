@@ -14,6 +14,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/utils/test"
 )
 
+const validateAgainstKubernetesVersion string = "v1.28.3"
+
 func TestRunString_Integration(t *testing.T) {
 	test.IntegrationTest(t)
 	t.Parallel()
@@ -40,6 +42,8 @@ func TestRunString_Integration(t *testing.T) {
 		execution.Command = []string{"kubepug"}
 		execution.Args = []string{
 			"--format=json",
+			"--k8s-version",
+			validateAgainstKubernetesVersion,
 			"--input-file",
 			"<runPath>",
 		}
@@ -85,6 +89,8 @@ metadata:
 		execution.Command = []string{"kubepug"}
 		execution.Args = []string{
 			"--format=json",
+			"--k8s-version",
+			validateAgainstKubernetesVersion,
 			"--input-file",
 			"<runPath>",
 		}
@@ -173,6 +179,8 @@ spec:
 		execution.Command = []string{"kubepug"}
 		execution.Args = []string{
 			"--format=json",
+			"--k8s-version",
+			validateAgainstKubernetesVersion,
 			"--input-file",
 			"<runPath>",
 		}
@@ -208,6 +216,8 @@ func TestRunFileURI_Integration(t *testing.T) {
 		execution.Command = []string{"kubepug"}
 		execution.Args = []string{
 			"--format=json",
+			"--k8s-version",
+			validateAgainstKubernetesVersion,
 			"--input-file",
 			"<runPath>",
 		}
@@ -244,6 +254,8 @@ func TestRunFileURI_Integration(t *testing.T) {
 		execution.Command = []string{"kubepug"}
 		execution.Args = []string{
 			"--format=json",
+			"--k8s-version",
+			validateAgainstKubernetesVersion,
 			"--input-file",
 			"<runPath>",
 		}
@@ -287,6 +299,8 @@ func TestRunGitFile_Integration(t *testing.T) {
 		execution.Command = []string{"kubepug"}
 		execution.Args = []string{
 			"--format=json",
+			"--k8s-version",
+			validateAgainstKubernetesVersion,
 			"--input-file",
 			"<runPath>",
 		}
@@ -323,6 +337,8 @@ func TestRunGitFile_Integration(t *testing.T) {
 		execution.Command = []string{"kubepug"}
 		execution.Args = []string{
 			"--format=json",
+			"--k8s-version",
+			validateAgainstKubernetesVersion,
 			"--input-file",
 			"<runPath>",
 		}
@@ -370,6 +386,8 @@ func TestRunGitDirectory_Integration(t *testing.T) {
 		execution.Command = []string{"kubepug"}
 		execution.Args = []string{
 			"--format=json",
+			"--k8s-version",
+			validateAgainstKubernetesVersion,
 			"--input-file",
 			"<runPath>",
 		}
@@ -478,6 +496,8 @@ spec:
 		execution.Command = []string{"kubepug"}
 		execution.Args = []string{
 			"--format=json",
+			"--k8s-version",
+			validateAgainstKubernetesVersion,
 			"--input-file",
 			"<runPath>",
 		}
@@ -566,6 +586,8 @@ spec:
 		execution.Command = []string{"kubepug"}
 		execution.Args = []string{
 			"--format=json",
+			"--k8s-version",
+			validateAgainstKubernetesVersion,
 			"--input-file",
 			"<runPath>",
 			"--k8s-version=v1.7.0", // last version apps/v1beta2/Deployment was valid
