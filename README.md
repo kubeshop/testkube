@@ -37,9 +37,9 @@ for running any kind of tests at scale across your entire application infrastruc
 Testkube breaks down Test Execution into 5 steps:
 
 1. **Define** - Use Test Workflows to configure executions of your current testing tools or scripts. 
-  Orchestrate multiple Workflows to build complex Suites for System Testing - [Read More](https://docs.testkube.io/articles/defining-tests)
+  Orchestrate multiple Workflows to build complex Suites for System Testing - [Read More](https://docs.testkube.io/articles/defining-tests).
 2. **Trigger** - Trigger tests through the API/CLI, from your existing CI/CD/GitOps workflows, using fixed schedules or 
-  by listening to Kubernetes Events or creating execution CRDs - [Read More](https://docs.testkube.io/articles/triggering-tests)
+  by listening to Kubernetes Events or creating execution CRDs - [Read More](https://docs.testkube.io/articles/triggering-tests).
 3. **Scale** - Leverage Kubernetes native scalability functionality to scale your test executions 
   across distributed nodes for both load and functional testing with popular tools like K6, Playwright, JMeter and Cypress - [Read More](https://docs.testkube.io/articles/running-scaling-tests).
 4. **Troubleshoot** - Testkube can collect any logs and artifacts (videos, reports, etc.) produced by your testing tools 
@@ -61,7 +61,7 @@ more about different ways to deploy and run Testkube.
 
 ### Documentation
 
-Extensive documentation is available at [docs.testkube.io](https://docs.testkube.io)
+Extensive documentation is available at [docs.testkube.io](https://docs.testkube.io).
 
 ## Contributing
 
