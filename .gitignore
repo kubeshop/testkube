@@ -23,6 +23,8 @@ vendor/
 # Node modulesz
 **/node_modules
 
+/gen
+
 ### JetBrains
 .idea
 *.iml
@@ -42,3 +44,4 @@ movie.mp4
 /darwin
 /dist
 .vscode
+
