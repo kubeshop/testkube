@@ -37,7 +37,6 @@ type JobWatcher interface {
 	Update(t time.Duration) (int, error)
 	IsStarted() bool
 	Started() <-chan struct{}
-	Stop()
 	Done() <-chan struct{}
 	Err() error
 }
@@ -334,11 +333,6 @@ func (e *jobWatcher) Done() <-chan struct{} {
 // Channel returns the channel for reading the job.
 func (e *jobWatcher) Channel() <-chan *batchv1.Job {
 	return e.ch
-}
-
-// Stop cancels all the on-going communication
-func (e *jobWatcher) Stop() {
-	e.cancel()
 }
 
 // Update gets the latest list of the job, to ensure that nothing is missed at that point.

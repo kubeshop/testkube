@@ -40,7 +40,6 @@ type EventsWatcher interface {
 	Count() int
 	IsStarted() bool
 	Started() <-chan struct{}
-	Stop()
 	Done() <-chan struct{}
 	Err() error
 }
@@ -325,11 +324,6 @@ func (e *eventsWatcher) Done() <-chan struct{} {
 // Channel returns the channel for reading the events.
 func (e *eventsWatcher) Channel() <-chan *corev1.Event {
 	return e.ch
-}
-
-// Stop cancels all the on-going communication
-func (e *eventsWatcher) Stop() {
-	e.cancel()
 }
 
 // Update gets the latest list of the events, to ensure that nothing is missed at that point.

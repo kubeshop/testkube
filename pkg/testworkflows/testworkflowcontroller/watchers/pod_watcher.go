@@ -37,7 +37,6 @@ type PodWatcher interface {
 	Update(t time.Duration) (int, error)
 	IsStarted() bool
 	Started() <-chan struct{}
-	Stop()
 	Done() <-chan struct{}
 	Err() error
 }
@@ -348,11 +347,6 @@ func (e *podWatcher) Done() <-chan struct{} {
 // Channel returns the channel for reading the pod.
 func (e *podWatcher) Channel() <-chan *corev1.Pod {
 	return e.ch
-}
-
-// Stop cancels all the on-going communication
-func (e *podWatcher) Stop() {
-	e.cancel()
 }
 
 // Update gets the latest list of the pod, to ensure that nothing is missed at that point.
