@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"regexp"
 	"strings"
 	"sync"
@@ -16,7 +15,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller/watchers"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
-	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 var (
@@ -277,10 +275,10 @@ func NewExecutionState(parentCtx context.Context, watcher watchers.ExecutionWatc
 
 	log := func(args ...interface{}) {
 		// FIXME: delete?
-		if state.Job() != nil {
-			args = append([]interface{}{ui.LightBlue("x: " + state.Job().Name)}, args...)
-		}
-		fmt.Println(args...)
+		//if state.Job() != nil {
+		//	args = append([]interface{}{ui.LightBlue("x: " + state.Job().Name)}, args...)
+		//}
+		//fmt.Println(args...)
 	}
 
 	// Compute status
@@ -325,10 +323,11 @@ func NewExecutionState(parentCtx context.Context, watcher watchers.ExecutionWatc
 
 		// Load the missing pod events
 		readImmediatePodEvents()
-		if state.Pod() != nil {
-			watcher.ReadPodEventsAt(watcher.PodCompletionTimestamp(true), 1*time.Second)
-			readImmediatePodEvents()
+		watcher.ReadPodEventsAt(watcher.PodCompletionTimestamp(true), 1*time.Second) // FIXME
+		readImmediatePodEvents()
 
+		// Load missing job
+		if state.Pod() != nil {
 			// Wait a moment if there won't be maybe finished job
 			if state.Pod().DeletionTimestamp != nil && !watchers.IsJobFinished(state.Job()) {
 				time.Sleep(300 * time.Millisecond)
@@ -373,7 +372,7 @@ func NewExecutionState(parentCtx context.Context, watcher watchers.ExecutionWatc
 
 		// Load the missing job events
 		readImmediateJobEvents()
-		watcher.ReadJobEventsAt(watcher.JobCompletionTimestamp(true), 1*time.Second)
+		watcher.ReadJobEventsAt(watcher.JobCompletionTimestamp(true), 1*time.Second) // FIXME
 		readImmediateJobEvents()
 
 		// Close the job events channel

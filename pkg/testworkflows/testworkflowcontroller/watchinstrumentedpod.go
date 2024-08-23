@@ -15,7 +15,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller/watchers"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
-	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 const (
@@ -34,8 +33,8 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 
 	log := func(data ...interface{}) {
 		// FIXME delete?
-		data = append([]interface{}{ui.Green(state.Job().Name)}, data...)
-		fmt.Println(data...)
+		//data = append([]interface{}{ui.Green(state.Job().Name)}, data...)
+		//fmt.Println(data...)
 	}
 
 	go func() {
