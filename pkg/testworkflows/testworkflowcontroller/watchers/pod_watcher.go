@@ -57,7 +57,7 @@ func NewPodWatcher(parentCtx context.Context, client kubernetesClient[corev1.Pod
 
 func (e *podWatcher) Started() <-chan struct{} {
 	ch := make(chan struct{})
-	if e.started.Load() || e.ctx.Err() != nil || e.startedCh == nil {
+	if e.started.Load() || e.ctx.Err() != nil {
 		close(ch)
 	} else {
 		go func() {

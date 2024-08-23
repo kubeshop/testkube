@@ -87,7 +87,7 @@ func (e *eventsWatcher) Count() int {
 
 func (e *eventsWatcher) Started() <-chan struct{} {
 	ch := make(chan struct{})
-	if e.started.Load() || e.ctx.Err() != nil || e.startedCh == nil {
+	if e.started.Load() || e.ctx.Err() != nil {
 		close(ch)
 	} else {
 		go func() {
