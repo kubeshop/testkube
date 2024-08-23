@@ -23,6 +23,7 @@ type jobWatcher struct {
 	opts      metav1.ListOptions
 	listener  func(job *batchv1.Job)
 	started   atomic.Bool
+	watching  atomic.Bool
 	startedCh chan struct{} // TODO: Ensure there is no memory leak
 	ch        chan *batchv1.Job
 	ctx       context.Context
@@ -186,8 +187,10 @@ func (e *jobWatcher) watch() error {
 	defer watcher.Stop()
 
 	// Ignore error when the channel is already closed
+	e.watching.Store(true)
 	defer func() {
 		recover()
+		e.watching.Store(false)
 	}()
 
 	// Read the items

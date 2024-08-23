@@ -23,6 +23,7 @@ type podWatcher struct {
 	opts      metav1.ListOptions
 	listener  func(*corev1.Pod)
 	started   atomic.Bool
+	watching  atomic.Bool
 	startedCh chan struct{} // TODO: Ensure there is no memory leak
 	ch        chan *corev1.Pod
 	ctx       context.Context
@@ -185,8 +186,10 @@ func (e *podWatcher) watch() error {
 	defer watcher.Stop()
 
 	// Ignore error when the channel is already closed
+	e.watching.Store(true)
 	defer func() {
 		recover()
+		e.watching.Store(false)
 	}()
 
 	// Read the items

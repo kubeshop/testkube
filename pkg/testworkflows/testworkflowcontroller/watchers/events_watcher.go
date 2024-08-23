@@ -21,6 +21,7 @@ type eventsWatcher struct {
 	opts      metav1.ListOptions
 	optsCh    chan struct{}
 	started   atomic.Bool
+	watching  atomic.Bool
 	startedCh chan struct{} // TODO: Ensure there is no memory leak
 	listener  func(*corev1.Event)
 	ch        chan *corev1.Event
@@ -201,8 +202,10 @@ func (e *eventsWatcher) watch() error {
 	defer watcher.Stop()
 
 	// Ignore error when the channel is already closed
+	e.watching.Store(true)
 	defer func() {
 		recover()
+		e.watching.Store(false)
 	}()
 
 	// Read the items
