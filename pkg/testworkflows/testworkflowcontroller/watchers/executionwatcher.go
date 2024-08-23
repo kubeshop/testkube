@@ -42,11 +42,15 @@ type executionWatcher struct {
 	jobCompletionTimestamp *time.Time
 	podFinished            bool
 	jobFinished            bool
+	jobWatcher             JobWatcher
+	podWatcher             PodWatcher
+	jobEventsWatcher       EventsWatcher
+	podEventsWatcher       EventsWatcher
 
-	jobWatcher       JobWatcher
-	podWatcher       PodWatcher
-	jobEventsWatcher EventsWatcher
-	podEventsWatcher EventsWatcher
+	updatesCh chan struct{}
+
+	latestPod *corev1.Pod
+	latestJob *batchv1.Job
 
 	ctx       context.Context
 	ctxCancel context.CancelFunc
@@ -77,8 +81,10 @@ type ExecutionWatcher interface {
 	JobEventsErr() error
 	PodEvents() <-chan *corev1.Event
 	PodEventsErr() error
+	LatestJob() *batchv1.Job
 	Job() <-chan *batchv1.Job
 	JobErr() error
+	LatestPod() *corev1.Pod
 	Pod() <-chan *corev1.Pod
 	PodErr() error
 	ReadJobEventsAt(ts time.Time, timeout time.Duration)
@@ -86,6 +92,8 @@ type ExecutionWatcher interface {
 	RefreshPod(timeout time.Duration)
 	RefreshJob(timeout time.Duration)
 	Started() <-chan struct{}
+
+	Updated() <-chan struct{}
 }
 
 func (e *executionWatcher) registerJob(job *batchv1.Job) {
@@ -93,6 +101,7 @@ func (e *executionWatcher) registerJob(job *batchv1.Job) {
 	defer e.mu.Unlock()
 
 	// Save the job information
+	e.latestJob = job
 	e.jobCreationTimestamp = common.Ptr(job.CreationTimestamp.Time)
 	if IsJobFinished(job) {
 		e.jobFinished = true
@@ -112,6 +121,7 @@ func (e *executionWatcher) registerPod(pod *corev1.Pod) {
 	defer e.mu.Unlock()
 
 	// Save the pod information
+	e.latestPod = pod
 	e.podName = pod.Name
 	e.podCreationTimestamp = common.Ptr(pod.CreationTimestamp.Time)
 	if IsPodFinished(pod) {
@@ -360,12 +370,44 @@ func (e *executionWatcher) Started() <-chan struct{} {
 	return ch
 }
 
+func (e *executionWatcher) LatestJob() *batchv1.Job {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	return e.latestJob
+}
+
+func (e *executionWatcher) LatestPod() *corev1.Pod {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	return e.latestPod
+}
+
 func (e *executionWatcher) JobExists() bool {
-	return e.jobWatcher.Exists()
+	return e.Job() != nil
 }
 
 func (e *executionWatcher) PodExists() bool {
-	return e.podWatcher.Exists()
+	return e.Pod() != nil
+}
+
+func (e *executionWatcher) Updated() <-chan struct{} {
+	ch := make(chan struct{})
+	if e.ctx.Err() != nil {
+		close(ch)
+		return ch
+	}
+	return e.updatesCh
+}
+
+func (e *executionWatcher) emit() {
+	defer func() {
+		recover()
+	}()
+
+	select {
+	case e.updatesCh <- struct{}{}:
+	default:
+	}
 }
 
 func NewExecutionWatcher(parentCtx context.Context, clientSet kubernetes.Interface, namespace, id string, signature []stage.Signature) ExecutionWatcher {
@@ -378,6 +420,7 @@ func NewExecutionWatcher(parentCtx context.Context, clientSet kubernetes.Interfa
 		ctxCancel: ctxCancel,
 		id:        id,
 		namespace: namespace,
+		updatesCh: make(chan struct{}, 1),
 	}
 
 	// Pre-configure signature if it's known
@@ -422,6 +465,15 @@ func NewExecutionWatcher(parentCtx context.Context, clientSet kubernetes.Interfa
 		}
 	}()
 	watcher.podEventsWatcher = NewAsyncEventsWatcher(ctx, clientSet.CoreV1().Events(namespace), podListOptionsCh, 10, watcher.registerPodEvent)
+
+	// Close updates channel when all individual watchers are complete
+	go func() {
+		<-watcher.jobWatcher.Done()
+		<-watcher.podWatcher.Done()
+		<-watcher.podEventsWatcher.Done()
+		<-watcher.jobEventsWatcher.Done()
+		close(watcher.updatesCh)
+	}()
 
 	return watcher
 }

@@ -90,7 +90,9 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 				// Display only events that are unrelated to further containers
 				name := GetEventContainerName(ev)
 				if name == "" || name == "0" {
-					notifier.Event("", watchers.GetEventTimestamp(ev), ev.Type, ev.Reason, ev.Message)
+					if ev.Reason != "Created" && ev.Reason != "Started" {
+						notifier.Event("", watchers.GetEventTimestamp(ev), ev.Type, ev.Reason, ev.Message)
+					}
 				}
 			}
 
@@ -184,9 +186,12 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 				currentPodEventsIndex++
 
 				// Display only events that are unrelated to further containers
+				// TODO: Try to attach it to first recognizable step?
 				name := GetEventContainerName(ev)
 				if name == container {
-					notifier.Event("", watchers.GetEventTimestamp(ev), ev.Type, ev.Reason, ev.Message)
+					if ev.Reason != "Created" && ev.Reason != "Started" {
+						notifier.Event("", watchers.GetEventTimestamp(ev), ev.Type, ev.Reason, ev.Message)
+					}
 				}
 			}
 

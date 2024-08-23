@@ -21,25 +21,20 @@ import (
 type jobWatcher struct {
 	client    kubernetesClient[batchv1.JobList, *batchv1.Job]
 	opts      metav1.ListOptions
-	peek      *batchv1.Job
 	hook      func(job *batchv1.Job)
 	started   atomic.Bool
 	startedCh chan struct{} // TODO: Ensure there is no memory leak
 	ch        chan *batchv1.Job
-	peekable  atomic.Bool
-	peekCh    chan struct{} // TODO: Ensure there is no memory leak
 	ctx       context.Context
 	cancel    context.CancelFunc
 	err       error
 	mu        sync.Mutex
-	peekMu    sync.Mutex
+	existed   atomic.Bool
 }
 
 type JobWatcher interface {
 	Channel() <-chan *batchv1.Job
-	Peek(ctx context.Context) <-chan *batchv1.Job
 	Update(t time.Duration) (int, error)
-	Exists() bool
 	IsStarted() bool
 	Started() <-chan struct{}
 	Stop()
@@ -56,7 +51,6 @@ func NewJobWatcher(parentCtx context.Context, client kubernetesClient[batchv1.Jo
 		hook:      hook,
 		ch:        make(chan *batchv1.Job, bufferSize),
 		startedCh: make(chan struct{}),
-		peekCh:    make(chan struct{}),
 		ctx:       ctx,
 		cancel:    ctxCancel,
 	}
@@ -98,17 +92,6 @@ func (e *jobWatcher) finalize(job *batchv1.Job) bool {
 		return true
 	}
 	return false
-}
-
-func (e *jobWatcher) setLastJob(job *batchv1.Job) {
-	e.peekMu.Lock()
-	defer e.peekMu.Unlock()
-	if job != nil {
-		e.peek = job
-	}
-	if e.peekable.CompareAndSwap(false, true) {
-		close(e.peekCh)
-	}
 }
 
 // TODO: add readMu lock, work better with mu lock
@@ -165,21 +148,12 @@ func (e *jobWatcher) read(t time.Duration) (<-chan readStart, <-chan struct{}) {
 
 		// Handle lack of the job
 		if len(list.Items) == 0 {
-			e.peekMu.Lock()
-			job := e.peek
-			e.peekMu.Unlock()
-
 			// Mark as initial list is starting to propagate
 			if e.started.CompareAndSwap(false, true) {
 				close(e.startedCh)
 			}
 
-			if job == nil {
-				// there is no job, but it's not a change.
-				started <- readStart{count: 0}
-				close(started)
-				return
-			} else {
+			if e.existed.Load() {
 				// the job was there, but it's deleted now.
 				e.finalize(nil)
 
@@ -187,11 +161,16 @@ func (e *jobWatcher) read(t time.Duration) (<-chan readStart, <-chan struct{}) {
 				started <- readStart{count: 1, err: ErrDone}
 				close(started)
 				return
+			} else {
+				// there is no job, but it's not a change.
+				started <- readStart{count: 0}
+				close(started)
+				return
 			}
 		}
 
-		// Store information about the last job for peeking
-		e.setLastJob(common.Ptr(list.Items[0]))
+		// Mark as existing
+		e.existed.Store(true)
 
 		// Mark as initial list is starting to propagate
 		if e.started.CompareAndSwap(false, true) {
@@ -292,8 +271,10 @@ func (e *jobWatcher) watch() error {
 				object.DeletionTimestamp = &metav1.Time{ts}
 			}
 
+			// Mark as existing
+			e.existed.Store(true)
+
 			// Send the event back
-			e.setLastJob(object)
 			e.ch <- object
 
 			// Handle the deletion
@@ -312,12 +293,6 @@ func (e *jobWatcher) cycle() {
 	go func() {
 		<-e.ctx.Done()
 		close(e.ch)
-
-		e.peekMu.Lock()
-		defer e.peekMu.Unlock()
-		if e.peekable.CompareAndSwap(false, true) {
-			close(e.peekCh)
-		}
 
 		if e.started.CompareAndSwap(false, true) {
 			close(e.startedCh)
@@ -341,49 +316,6 @@ func (e *jobWatcher) cycle() {
 	}
 	e.setError(err)
 	e.cancel()
-}
-
-func (e *jobWatcher) Exists() bool {
-	e.peekMu.Lock()
-	defer e.peekMu.Unlock()
-	return e.peek != nil
-}
-
-func (e *jobWatcher) Peek(ctx context.Context) <-chan *batchv1.Job {
-	if e.peekable.Load() {
-		ch := make(chan *batchv1.Job, 1)
-
-		e.peekMu.Lock()
-		job := e.peek
-		e.peekMu.Unlock()
-
-		ch <- job
-		close(ch)
-		return ch
-	} else if e.ctx.Err() != nil {
-		ch := make(chan *batchv1.Job)
-		close(ch)
-		return ch
-	}
-
-	ch := make(chan *batchv1.Job)
-	go func() {
-		select {
-		case <-e.peekCh:
-		case <-ctx.Done():
-			close(ch)
-			return
-		}
-		e.peekMu.Lock()
-		job := e.peek
-		e.peekMu.Unlock()
-		if job != nil {
-			ch <- job
-		}
-		close(ch)
-	}()
-
-	return ch
 }
 
 func (e *jobWatcher) Err() error {

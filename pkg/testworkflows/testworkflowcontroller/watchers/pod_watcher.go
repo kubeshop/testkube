@@ -21,25 +21,20 @@ import (
 type podWatcher struct {
 	client    kubernetesClient[corev1.PodList, *corev1.Pod]
 	opts      metav1.ListOptions
-	peek      *corev1.Pod
 	hook      func(*corev1.Pod)
 	started   atomic.Bool
 	startedCh chan struct{} // TODO: Ensure there is no memory leak
 	ch        chan *corev1.Pod
-	peekable  atomic.Bool
-	peekCh    chan struct{}
 	ctx       context.Context
 	cancel    context.CancelFunc
 	err       error
 	mu        sync.Mutex
-	peekMu    sync.Mutex
+	existed   atomic.Bool
 }
 
 type PodWatcher interface {
 	Channel() <-chan *corev1.Pod
-	Peek(ctx context.Context) <-chan *corev1.Pod
 	Update(t time.Duration) (int, error)
-	Exists() bool
 	IsStarted() bool
 	Started() <-chan struct{}
 	Stop()
@@ -56,7 +51,6 @@ func NewPodWatcher(parentCtx context.Context, client kubernetesClient[corev1.Pod
 		hook:      hook,
 		ch:        make(chan *corev1.Pod, bufferSize),
 		startedCh: make(chan struct{}),
-		peekCh:    make(chan struct{}),
 		ctx:       ctx,
 		cancel:    ctxCancel,
 	}
@@ -98,17 +92,6 @@ func (e *podWatcher) finalize(pod *corev1.Pod) bool {
 		return true
 	}
 	return false
-}
-
-func (e *podWatcher) setLastPod(pod *corev1.Pod) {
-	e.peekMu.Lock()
-	defer e.peekMu.Unlock()
-	if pod != nil {
-		e.peek = pod
-	}
-	if e.peekable.CompareAndSwap(false, true) {
-		close(e.peekCh)
-	}
 }
 
 func (e *podWatcher) read(t time.Duration) (<-chan readStart, <-chan struct{}) {
@@ -164,33 +147,29 @@ func (e *podWatcher) read(t time.Duration) (<-chan readStart, <-chan struct{}) {
 
 		// Handle lack of the pod
 		if len(list.Items) == 0 {
-			e.peekMu.Lock()
-			pod := e.peek
-			e.peekMu.Unlock()
 
 			// Mark as initial list is starting to propagate
 			if e.started.CompareAndSwap(false, true) {
 				close(e.startedCh)
 			}
 
-			if pod == nil {
-				// there is no pod, but it's not a change.
-				started <- readStart{count: 0}
-				close(started)
-				return
-			} else {
+			if e.existed.Load() {
 				// the pod was there, but it's deleted now.
 				e.finalize(nil)
 
 				// Inform about start
 				started <- readStart{count: 1, err: ErrDone}
 				close(started)
-				return
+			} else {
+				// there is no pod, but it's not a change.
+				started <- readStart{count: 0}
+				close(started)
 			}
+			return
 		}
 
-		// Store information about the last pod for peeking
-		e.setLastPod(common.Ptr(list.Items[0]))
+		// Mark as existing
+		e.existed.Store(true)
 
 		// Mark as initial list is starting to propagate
 		if e.started.CompareAndSwap(false, true) {
@@ -307,8 +286,10 @@ func (e *podWatcher) watch() error {
 				object.DeletionTimestamp = &metav1.Time{ts}
 			}
 
+			// Mark as existing
+			e.existed.Store(true)
+
 			// Send the event back
-			e.setLastPod(object)
 			e.ch <- object
 
 			// Handle the deletion
@@ -327,14 +308,6 @@ func (e *podWatcher) cycle() {
 	go func() {
 		<-e.ctx.Done()
 		close(e.ch)
-
-		e.peekMu.Lock()
-		defer e.peekMu.Unlock()
-
-		if e.peekable.CompareAndSwap(false, true) {
-			close(e.peekCh)
-		}
-
 		if e.started.CompareAndSwap(false, true) {
 			close(e.startedCh)
 		}
@@ -357,49 +330,6 @@ func (e *podWatcher) cycle() {
 	}
 	e.setError(err)
 	e.cancel()
-}
-
-func (e *podWatcher) Exists() bool {
-	e.peekMu.Lock()
-	defer e.peekMu.Unlock()
-	return e.peek != nil
-}
-
-func (e *podWatcher) Peek(ctx context.Context) <-chan *corev1.Pod {
-	if e.peekable.Load() {
-		ch := make(chan *corev1.Pod, 1)
-
-		e.peekMu.Lock()
-		pod := e.peek
-		e.peekMu.Unlock()
-
-		ch <- pod
-		close(ch)
-		return ch
-	} else if e.ctx.Err() != nil {
-		ch := make(chan *corev1.Pod)
-		close(ch)
-		return ch
-	}
-
-	ch := make(chan *corev1.Pod)
-	go func() {
-		select {
-		case <-e.peekCh:
-		case <-ctx.Done():
-			close(ch)
-			return
-		}
-		e.peekMu.Lock()
-		pod := e.peek
-		e.peekMu.Unlock()
-		if pod != nil {
-			ch <- pod
-		}
-		close(ch)
-	}()
-
-	return ch
 }
 
 func (e *podWatcher) Err() error {
