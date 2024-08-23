@@ -21,7 +21,7 @@ import (
 type jobWatcher struct {
 	client    kubernetesClient[batchv1.JobList, *batchv1.Job]
 	opts      metav1.ListOptions
-	hook      func(job *batchv1.Job)
+	listener  func(job *batchv1.Job)
 	started   atomic.Bool
 	startedCh chan struct{} // TODO: Ensure there is no memory leak
 	ch        chan *batchv1.Job
@@ -35,19 +35,18 @@ type jobWatcher struct {
 type JobWatcher interface {
 	Channel() <-chan *batchv1.Job
 	Update(t time.Duration) (int, error)
-	IsStarted() bool
 	Started() <-chan struct{}
 	Done() <-chan struct{}
 	Err() error
 }
 
-func NewJobWatcher(parentCtx context.Context, client kubernetesClient[batchv1.JobList, *batchv1.Job], opts metav1.ListOptions, bufferSize int, hook func(job *batchv1.Job)) JobWatcher {
+func NewJobWatcher(parentCtx context.Context, client kubernetesClient[batchv1.JobList, *batchv1.Job], opts metav1.ListOptions, bufferSize int, listener func(job *batchv1.Job)) JobWatcher {
 	ctx, ctxCancel := context.WithCancel(parentCtx)
 	opts.AllowWatchBookmarks = true
 	watcher := &jobWatcher{
 		client:    client,
 		opts:      opts,
-		hook:      hook,
+		listener:  listener,
 		ch:        make(chan *batchv1.Job, bufferSize),
 		startedCh: make(chan struct{}),
 		ctx:       ctx,
@@ -55,10 +54,6 @@ func NewJobWatcher(parentCtx context.Context, client kubernetesClient[batchv1.Jo
 	}
 	go watcher.cycle()
 	return watcher
-}
-
-func (e *jobWatcher) IsStarted() bool {
-	return e.started.Load()
 }
 
 func (e *jobWatcher) Started() <-chan struct{} {
@@ -135,9 +130,9 @@ func (e *jobWatcher) read(t time.Duration) (<-chan readStart, <-chan struct{}) {
 			return
 		}
 
-		// Send the item immediately to the hook aside of all the other processing
+		// Send the item immediately to the listener aside of all the other processing
 		if len(list.Items) == 1 {
-			e.hook(common.Ptr(list.Items[0]))
+			e.listener(common.Ptr(list.Items[0]))
 		}
 
 		// Ignore error when the channel is already closed
@@ -248,8 +243,8 @@ func (e *jobWatcher) watch() error {
 				continue
 			}
 
-			// Send the item immediately to the hook aside of all the other processing
-			e.hook(object)
+			// Send the item immediately to the listener aside of all the other processing
+			e.listener(object)
 
 			// Try to configure deletion timestamp if Kubernetes engine doesn't support it
 			if event.Type == watch.Deleted && object.DeletionTimestamp == nil {

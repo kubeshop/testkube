@@ -22,7 +22,7 @@ type eventsWatcher struct {
 	optsCh    chan struct{}
 	started   atomic.Bool
 	startedCh chan struct{} // TODO: Ensure there is no memory leak
-	hook      func(*corev1.Event)
+	listener  func(*corev1.Event)
 	ch        chan *corev1.Event
 	ctx       context.Context
 	cancel    context.CancelFunc
@@ -38,18 +38,17 @@ type EventsWatcher interface {
 	Update(t time.Duration) (int, error)
 	Ensure(tsInPast time.Time, timeout time.Duration) (int, error)
 	Count() int
-	IsStarted() bool
 	Started() <-chan struct{}
 	Done() <-chan struct{}
 	Err() error
 }
 
-func NewEventsWatcher(parentCtx context.Context, client kubernetesClient[corev1.EventList, *corev1.Event], opts metav1.ListOptions, bufferSize int, hook func(event *corev1.Event)) EventsWatcher {
+func NewEventsWatcher(parentCtx context.Context, client kubernetesClient[corev1.EventList, *corev1.Event], opts metav1.ListOptions, bufferSize int, listener func(event *corev1.Event)) EventsWatcher {
 	ctx, ctxCancel := context.WithCancel(parentCtx)
 	watcher := &eventsWatcher{
 		client:    client,
 		opts:      opts,
-		hook:      hook,
+		listener:  listener,
 		optsCh:    make(chan struct{}),
 		ch:        make(chan *corev1.Event, bufferSize),
 		startedCh: make(chan struct{}),
@@ -61,11 +60,11 @@ func NewEventsWatcher(parentCtx context.Context, client kubernetesClient[corev1.
 	return watcher
 }
 
-func NewAsyncEventsWatcher(parentCtx context.Context, client kubernetesClient[corev1.EventList, *corev1.Event], opts <-chan metav1.ListOptions, bufferSize int, hook func(event *corev1.Event)) EventsWatcher {
+func NewAsyncEventsWatcher(parentCtx context.Context, client kubernetesClient[corev1.EventList, *corev1.Event], opts <-chan metav1.ListOptions, bufferSize int, listener func(event *corev1.Event)) EventsWatcher {
 	ctx, ctxCancel := context.WithCancel(parentCtx)
 	watcher := &eventsWatcher{
 		client:    client,
-		hook:      hook,
+		listener:  listener,
 		optsCh:    make(chan struct{}),
 		ch:        make(chan *corev1.Event, bufferSize),
 		startedCh: make(chan struct{}),
@@ -85,10 +84,6 @@ func (e *eventsWatcher) LastAcknowledgedTime() time.Time {
 
 func (e *eventsWatcher) Count() int {
 	return int(e.count.Load())
-}
-
-func (e *eventsWatcher) IsStarted() bool {
-	return e.started.Load()
 }
 
 func (e *eventsWatcher) Started() <-chan struct{} {
@@ -183,9 +178,9 @@ func (e *eventsWatcher) read(tsInPast time.Time, t time.Duration) (<-chan readSt
 			close(e.startedCh)
 		}
 
-		// Send the items immediately to the hook aside of all the other processing
+		// Send the items immediately to the listener aside of all the other processing
 		for i := range list.Items {
-			e.hook(common.Ptr(list.Items[i]))
+			e.listener(common.Ptr(list.Items[i]))
 		}
 
 		// Ignore error when the channel is already closed
@@ -267,8 +262,8 @@ func (e *eventsWatcher) watch() error {
 				continue
 			}
 
-			// Send the item immediately to the hook aside of all the other processing
-			e.hook(object)
+			// Send the item immediately to the listener aside of all the other processing
+			e.listener(object)
 
 			// Send the event back
 			e.count.Add(1)
