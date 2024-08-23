@@ -26,8 +26,7 @@ type podWatcher struct {
 	startedCh chan struct{} // TODO: Ensure there is no memory leak
 	ch        chan *corev1.Pod
 	ctx       context.Context
-	cancel    context.CancelFunc
-	err       error
+	cancel    context.CancelCauseFunc
 	mu        sync.Mutex
 	existed   atomic.Bool
 }
@@ -41,7 +40,7 @@ type PodWatcher interface {
 }
 
 func NewPodWatcher(parentCtx context.Context, client kubernetesClient[corev1.PodList, *corev1.Pod], opts metav1.ListOptions, bufferSize int, listener func(*corev1.Pod)) PodWatcher {
-	ctx, ctxCancel := context.WithCancel(parentCtx)
+	ctx, ctxCancel := context.WithCancelCause(parentCtx)
 	opts.AllowWatchBookmarks = true
 	watcher := &podWatcher{
 		client:    client,
@@ -72,17 +71,9 @@ func (e *podWatcher) Started() <-chan struct{} {
 	return ch
 }
 
-func (e *podWatcher) setError(err error) {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-	e.err = err
-	e.cancel()
-}
-
 func (e *podWatcher) finalize(pod *corev1.Pod) bool {
 	if IsPodFinished(pod) {
-		e.err = ErrDone
-		e.cancel()
+		e.cancel(ErrDone)
 		return true
 	}
 	return false
@@ -311,7 +302,7 @@ func (e *podWatcher) cycle() {
 	started, finished := e.read(0)
 	result, _ := <-started
 	if result.err != nil {
-		e.setError(result.err)
+		e.cancel(result.err)
 		return
 	}
 	<-finished
@@ -322,16 +313,10 @@ func (e *podWatcher) cycle() {
 	for err == nil {
 		err = e.watch()
 	}
-	e.setError(err)
-	e.cancel()
+	e.cancel(err)
 }
 
 func (e *podWatcher) Err() error {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-	if e.err != nil {
-		return e.err
-	}
 	return e.ctx.Err()
 }
 

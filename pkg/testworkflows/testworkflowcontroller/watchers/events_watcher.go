@@ -25,8 +25,7 @@ type eventsWatcher struct {
 	listener  func(*corev1.Event)
 	ch        chan *corev1.Event
 	ctx       context.Context
-	cancel    context.CancelFunc
-	err       error
+	cancel    context.CancelCauseFunc
 	count     atomic.Uint32
 	mu        sync.Mutex
 	lastTs    time.Time
@@ -44,7 +43,7 @@ type EventsWatcher interface {
 }
 
 func NewEventsWatcher(parentCtx context.Context, client kubernetesClient[corev1.EventList, *corev1.Event], opts metav1.ListOptions, bufferSize int, listener func(event *corev1.Event)) EventsWatcher {
-	ctx, ctxCancel := context.WithCancel(parentCtx)
+	ctx, ctxCancel := context.WithCancelCause(parentCtx)
 	watcher := &eventsWatcher{
 		client:    client,
 		opts:      opts,
@@ -61,7 +60,7 @@ func NewEventsWatcher(parentCtx context.Context, client kubernetesClient[corev1.
 }
 
 func NewAsyncEventsWatcher(parentCtx context.Context, client kubernetesClient[corev1.EventList, *corev1.Event], opts <-chan metav1.ListOptions, bufferSize int, listener func(event *corev1.Event)) EventsWatcher {
-	ctx, ctxCancel := context.WithCancel(parentCtx)
+	ctx, ctxCancel := context.WithCancelCause(parentCtx)
 	watcher := &eventsWatcher{
 		client:    client,
 		listener:  listener,
@@ -111,13 +110,6 @@ func (e *eventsWatcher) waitForOpts(opts <-chan metav1.ListOptions) {
 	case <-e.ctx.Done():
 	}
 	close(e.optsCh)
-}
-
-func (e *eventsWatcher) setError(err error) {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-	e.err = err
-	e.cancel()
 }
 
 func (e *eventsWatcher) read(tsInPast time.Time, t time.Duration) (<-chan readStart, <-chan struct{}) {
@@ -289,7 +281,7 @@ func (e *eventsWatcher) cycle() {
 	started, finished := e.read(time.Time{}, 0)
 	result, _ := <-started
 	if result.err != nil {
-		e.setError(result.err)
+		e.cancel(result.err)
 		return
 	}
 	<-finished
@@ -300,15 +292,10 @@ func (e *eventsWatcher) cycle() {
 	for err == nil {
 		err = e.watch()
 	}
-	e.setError(err)
+	e.cancel(err)
 }
 
 func (e *eventsWatcher) Err() error {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-	if e.err != nil {
-		return e.err
-	}
 	return e.ctx.Err()
 }
 

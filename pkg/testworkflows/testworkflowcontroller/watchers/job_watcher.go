@@ -26,8 +26,7 @@ type jobWatcher struct {
 	startedCh chan struct{} // TODO: Ensure there is no memory leak
 	ch        chan *batchv1.Job
 	ctx       context.Context
-	cancel    context.CancelFunc
-	err       error
+	cancel    context.CancelCauseFunc
 	mu        sync.Mutex
 	existed   atomic.Bool
 }
@@ -41,7 +40,7 @@ type JobWatcher interface {
 }
 
 func NewJobWatcher(parentCtx context.Context, client kubernetesClient[batchv1.JobList, *batchv1.Job], opts metav1.ListOptions, bufferSize int, listener func(job *batchv1.Job)) JobWatcher {
-	ctx, ctxCancel := context.WithCancel(parentCtx)
+	ctx, ctxCancel := context.WithCancelCause(parentCtx)
 	opts.AllowWatchBookmarks = true
 	watcher := &jobWatcher{
 		client:    client,
@@ -72,17 +71,9 @@ func (e *jobWatcher) Started() <-chan struct{} {
 	return ch
 }
 
-func (e *jobWatcher) setError(err error) {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-	e.err = err
-	e.cancel()
-}
-
 func (e *jobWatcher) finalize(job *batchv1.Job) bool {
 	if IsJobFinished(job) {
-		e.err = ErrDone
-		e.cancel()
+		e.cancel(ErrDone)
 		return true
 	}
 	return false
@@ -297,7 +288,7 @@ func (e *jobWatcher) cycle() {
 	started, finished := e.read(0)
 	result, _ := <-started
 	if result.err != nil {
-		e.setError(result.err)
+		e.cancel(result.err)
 		return
 	}
 	<-finished
@@ -308,16 +299,10 @@ func (e *jobWatcher) cycle() {
 	for err == nil {
 		err = e.watch()
 	}
-	e.setError(err)
-	e.cancel()
+	e.cancel(err)
 }
 
 func (e *jobWatcher) Err() error {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-	if e.err != nil {
-		return e.err
-	}
 	return e.ctx.Err()
 }
 
