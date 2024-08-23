@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	batchv1 "k8s.io/api/batch/v1"
@@ -47,6 +48,9 @@ type executionWatcher struct {
 	jobEventsWatcher       EventsWatcher
 	podEventsWatcher       EventsWatcher
 
+	podListOptionsCh     chan metav1.ListOptions
+	podEventsInitialized atomic.Bool
+
 	updatesCh chan struct{}
 
 	latestPod *corev1.Pod
@@ -55,7 +59,8 @@ type executionWatcher struct {
 	ctx       context.Context
 	ctxCancel context.CancelFunc
 
-	mu sync.RWMutex
+	mu        sync.RWMutex
+	receiveMu sync.Mutex
 }
 
 type ExecutionWatcher interface {
@@ -94,6 +99,47 @@ type ExecutionWatcher interface {
 	Started() <-chan struct{}
 
 	Updated() <-chan struct{}
+}
+
+func (e *executionWatcher) initializePodEventsWatcher(name string) {
+	if name != "" && e.podEventsInitialized.CompareAndSwap(false, true) {
+		e.podListOptionsCh <- metav1.ListOptions{
+			FieldSelector: "involvedObject.name=" + name,
+			TypeMeta:      metav1.TypeMeta{Kind: "Pod"},
+		}
+		close(e.podListOptionsCh)
+	}
+}
+
+func (e *executionWatcher) receiveJob(job *batchv1.Job) {
+	e.receiveMu.Lock()
+	defer e.receiveMu.Unlock()
+
+	e.registerJob(job)
+}
+
+func (e *executionWatcher) receivePod(pod *corev1.Pod) {
+	e.receiveMu.Lock()
+	defer e.receiveMu.Unlock()
+
+	e.initializePodEventsWatcher(pod.Name)
+	e.registerPod(pod)
+}
+
+func (e *executionWatcher) receiveJobEvent(event *corev1.Event) {
+	e.receiveMu.Lock()
+	defer e.receiveMu.Unlock()
+
+	e.registerJobEvent(event)
+	e.initializePodEventsWatcher(e.PodName())
+}
+
+func (e *executionWatcher) receivePodEvent(event *corev1.Event) {
+	e.receiveMu.Lock()
+	defer e.receiveMu.Unlock()
+
+	e.registerPodEvent(event)
+	e.initializePodEventsWatcher(e.PodName())
 }
 
 func (e *executionWatcher) registerJob(job *batchv1.Job) {
@@ -416,11 +462,12 @@ func NewExecutionWatcher(parentCtx context.Context, clientSet kubernetes.Interfa
 
 	// Prepare initial execution watcher
 	watcher := &executionWatcher{
-		ctx:       ctx,
-		ctxCancel: ctxCancel,
-		id:        id,
-		namespace: namespace,
-		updatesCh: make(chan struct{}, 1),
+		ctx:              ctx,
+		ctxCancel:        ctxCancel,
+		id:               id,
+		namespace:        namespace,
+		updatesCh:        make(chan struct{}, 1),
+		podListOptionsCh: make(chan metav1.ListOptions),
 	}
 
 	// Pre-configure signature if it's known
@@ -434,45 +481,30 @@ func NewExecutionWatcher(parentCtx context.Context, clientSet kubernetes.Interfa
 	// Optimistically, start watching all the easily reachable resources
 	watcher.jobWatcher = NewJobWatcher(ctx, clientSet.BatchV1().Jobs(namespace), metav1.ListOptions{
 		FieldSelector: "metadata.name=" + id,
-	}, 1, watcher.registerJob)
+	}, 1, watcher.receiveJob)
 	watcher.podWatcher = NewPodWatcher(ctx, clientSet.CoreV1().Pods(namespace), metav1.ListOptions{
 		LabelSelector: constants.ResourceIdLabelName + "=" + id,
-	}, 1, watcher.registerPod)
+	}, 1, watcher.receivePod)
 	watcher.jobEventsWatcher = NewEventsWatcher(ctx, clientSet.CoreV1().Events(namespace), metav1.ListOptions{
 		FieldSelector: "involvedObject.name=" + id,
 		TypeMeta:      metav1.TypeMeta{Kind: "Job"},
-	}, 10, watcher.registerJobEvent)
+	}, 10, watcher.receiveJobEvent)
 
-	// Create asynchronously started watcher for Pod events, based on detected Pod's name
-	podListOptionsCh := make(chan metav1.ListOptions)
-	go func() {
-		defer close(podListOptionsCh)
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-time.After(100 * time.Millisecond):
-				// TODO: Event based?
-				podName := watcher.PodName()
-				if podName != "" {
-					podListOptionsCh <- metav1.ListOptions{
-						FieldSelector: "involvedObject.name=" + podName,
-						TypeMeta:      metav1.TypeMeta{Kind: "Pod"},
-					}
-					return
-				}
-			}
-		}
-	}()
-	watcher.podEventsWatcher = NewAsyncEventsWatcher(ctx, clientSet.CoreV1().Events(namespace), podListOptionsCh, 10, watcher.registerPodEvent)
+	watcher.podEventsWatcher = NewAsyncEventsWatcher(ctx, clientSet.CoreV1().Events(namespace), watcher.podListOptionsCh, 10, watcher.receivePodEvent)
 
 	// Close updates channel when all individual watchers are complete
 	go func() {
 		<-watcher.jobWatcher.Done()
 		<-watcher.podWatcher.Done()
-		<-watcher.podEventsWatcher.Done()
 		<-watcher.jobEventsWatcher.Done()
+		if watcher.podEventsInitialized.Load() {
+			<-watcher.podEventsWatcher.Done()
+		}
 		close(watcher.updatesCh)
+		if !watcher.podEventsInitialized.Load() {
+			close(watcher.podListOptionsCh)
+		}
+		watcher.podListOptionsCh = nil
 	}()
 
 	return watcher
