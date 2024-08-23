@@ -114,15 +114,6 @@ func (e *executor) Deploy(ctx context.Context, bundle *testworkflowprocessor.Bun
 func (e *executor) handleFatalError(execution *testkube.TestWorkflowExecution, err error, ts time.Time) {
 	// Detect error type
 	isAborted := errors.Is(err, testworkflowcontroller.ErrJobAborted)
-	isTimeout := errors.Is(err, testworkflowcontroller.ErrJobTimeout)
-
-	// Build error timestamp, adjusting it for aborting job
-	if ts.IsZero() {
-		ts = time.Now()
-		if isAborted || isTimeout {
-			ts = ts.Add(-1 * testworkflowcontroller.DefaultInitTimeout)
-		}
-	}
 
 	// Apply the expected result
 	execution.Result.Fatal(err, isAborted, ts)

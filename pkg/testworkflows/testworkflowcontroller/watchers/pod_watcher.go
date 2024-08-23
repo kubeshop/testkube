@@ -15,12 +15,14 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 
 	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 type podWatcher struct {
 	client    kubernetesClient[corev1.PodList, *corev1.Pod]
 	opts      metav1.ListOptions
 	peek      *corev1.Pod
+	hook      func(*corev1.Pod)
 	started   atomic.Bool
 	startedCh chan struct{} // TODO: Ensure there is no memory leak
 	ch        chan *corev1.Pod
@@ -45,12 +47,13 @@ type PodWatcher interface {
 	Err() error
 }
 
-func NewPodWatcher(parentCtx context.Context, client kubernetesClient[corev1.PodList, *corev1.Pod], opts metav1.ListOptions, bufferSize int) PodWatcher {
+func NewPodWatcher(parentCtx context.Context, client kubernetesClient[corev1.PodList, *corev1.Pod], opts metav1.ListOptions, bufferSize int, hook func(*corev1.Pod)) PodWatcher {
 	ctx, ctxCancel := context.WithCancel(parentCtx)
 	opts.AllowWatchBookmarks = true
 	watcher := &podWatcher{
 		client:    client,
 		opts:      opts,
+		hook:      hook,
 		ch:        make(chan *corev1.Pod, bufferSize),
 		startedCh: make(chan struct{}),
 		peekCh:    make(chan struct{}),
@@ -147,6 +150,11 @@ func (e *podWatcher) read(t time.Duration) (<-chan readStart, <-chan struct{}) {
 			started <- readStart{err: fmt.Errorf("found more than one pod for selected criteria: %s", strings.Join(names, ", "))}
 			close(started)
 			return
+		}
+
+		// Send the item immediately to the hook aside of all the other processing
+		if len(list.Items) == 1 {
+			e.hook(common.Ptr(list.Items[0]))
 		}
 
 		// Ignore error when the channel is already closed
@@ -260,6 +268,9 @@ func (e *podWatcher) watch() error {
 			if event.Type == watch.Bookmark {
 				continue
 			}
+
+			// Send the item immediately to the hook aside of all the other processing
+			e.hook(object)
 
 			// Try to configure deletion timestamp if Kubernetes engine doesn't support it
 			if event.Type == watch.Deleted && object.DeletionTimestamp == nil {
@@ -417,6 +428,8 @@ func (e *podWatcher) Stop() {
 // Update gets the latest list of the pod, to ensure that nothing is missed at that point.
 // It returns number of items that have been appended.
 func (e *podWatcher) Update(t time.Duration) (int, error) {
+	fmt.Println(ui.Red("REFRESHING Pod"), e.opts)
+
 	started, _ := e.read(t)
 	result, _ := <-started
 	if errors.Is(result.err, ErrDone) {

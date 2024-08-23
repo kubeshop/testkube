@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"regexp"
 	"strings"
 	"sync"
@@ -15,6 +16,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller/watchers"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
+	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 var (
@@ -162,7 +164,7 @@ func (e *executionState) PodName() string {
 	for _, event := range e.podEvents {
 		if event.Reason == "Scheduled" {
 			// (Scheduled) Successfully assigned distributed-tests/66c49ca3284bce9380023421-78fmp to homelab
-			match := regexp.MustCompile(`assigned\s+(\S+)`).FindStringSubmatch(event.Message)
+			match := regexp.MustCompile(`/(\S+)`).FindStringSubmatch(event.Message)
 			if match != nil {
 				return match[1]
 			}
@@ -259,7 +261,7 @@ func readImmediate[T any](ch <-chan T, process func(T), end func()) int {
 	}
 }
 
-func NewExecutionState(parentCtx context.Context, jobWatcher watchers.JobWatcher, podWatcher watchers.PodWatcher, jobEventsWatcher watchers.EventsWatcher, podEventsWatcher watchers.EventsWatcher) *executionState {
+func NewExecutionState(parentCtx context.Context, watcher watchers.ExecutionWatcher) *executionState {
 	ctx, ctxCancel := context.WithCancel(parentCtx)
 	state := &executionState{
 		ctx:       ctx,
@@ -268,17 +270,17 @@ func NewExecutionState(parentCtx context.Context, jobWatcher watchers.JobWatcher
 
 	// Get all data source channels
 	var chMu sync.Mutex
-	jobEventsCh := jobEventsWatcher.Channel()
-	podEventsCh := podEventsWatcher.Channel()
-	podCh := podWatcher.Channel()
-	jobCh := jobWatcher.Channel()
+	jobEventsCh := watcher.JobEvents()
+	podEventsCh := watcher.PodEvents()
+	podCh := watcher.Pod()
+	jobCh := watcher.Job()
 
 	log := func(args ...interface{}) {
 		// FIXME: delete?
-		//if state.Job() != nil {
-		//	args = append([]interface{}{ui.LightBlue("x: " + state.Job().Name)}, args...)
-		//}
-		//fmt.Println(args...)
+		if state.Job() != nil {
+			args = append([]interface{}{ui.LightBlue("x: " + state.Job().Name)}, args...)
+		}
+		fmt.Println(args...)
 	}
 
 	// Compute status
@@ -324,8 +326,20 @@ func NewExecutionState(parentCtx context.Context, jobWatcher watchers.JobWatcher
 		// Load the missing pod events
 		readImmediatePodEvents()
 		if state.Pod() != nil {
-			podEventsWatcher.Ensure(watchers.GetPodCompletionTimestamp(state.Pod()), 1*time.Second)
+			watcher.ReadPodEventsAt(watcher.PodCompletionTimestamp(true), 1*time.Second)
 			readImmediatePodEvents()
+
+			// Wait a moment if there won't be maybe finished job
+			if state.Pod().DeletionTimestamp != nil && !watchers.IsJobFinished(state.Job()) {
+				time.Sleep(300 * time.Millisecond)
+				readImmediateJob()
+			}
+
+			// Try to obtain the latest Job data
+			if state.Pod().DeletionTimestamp != nil && !watchers.IsJobFinished(state.Job()) && !watcher.JobFinished() {
+				watcher.RefreshJob(2 * time.Second)
+				readImmediateJob()
+			}
 		}
 
 		// Close the pod events channel
@@ -344,14 +358,22 @@ func NewExecutionState(parentCtx context.Context, jobWatcher watchers.JobWatcher
 
 		// Load the missing pod information
 		readImmediatePod()
+
+		// Wait a moment if there won't be maybe finished job
 		if !watchers.IsPodFinished(state.Pod()) {
-			podWatcher.Update(2 * time.Second)
+			time.Sleep(300 * time.Millisecond)
+			readImmediatePod()
+		}
+
+		// Try to obtain the latest Job data
+		if !watchers.IsPodFinished(state.Pod()) && !watcher.PodFinished() {
+			watcher.RefreshPod(2 * time.Second)
 			readImmediatePod()
 		}
 
 		// Load the missing job events
 		readImmediateJobEvents()
-		jobEventsWatcher.Ensure(watchers.GetJobCompletionTimestamp(state.Job()), 1*time.Second)
+		watcher.ReadJobEventsAt(watcher.JobCompletionTimestamp(true), 1*time.Second)
 		readImmediateJobEvents()
 
 		// Close the job events channel
@@ -374,10 +396,6 @@ func NewExecutionState(parentCtx context.Context, jobWatcher watchers.JobWatcher
 
 		// Load the missing job information in case the pod is deleted
 		readImmediateJob()
-		if pod.DeletionTimestamp != nil && !watchers.IsJobFinished(state.Job()) {
-			jobWatcher.Update(2 * time.Second)
-			readImmediateJob()
-		}
 	}
 	registerJob := func(job *batchv1.Job) {
 		log("register job", watchers.IsPodFinished(state.Pod()), watchers.IsJobFinished(job))
@@ -396,7 +414,7 @@ func NewExecutionState(parentCtx context.Context, jobWatcher watchers.JobWatcher
 		// Load the missing pod information in case the job is finished
 		readImmediatePod()
 		if !watchers.IsPodFinished(state.Pod()) && watchers.IsJobFinished(job) {
-			podWatcher.Update(2 * time.Second) // TODO: Use Ensure?
+			watcher.RefreshPod(2 * time.Second) // TODO: Use Ensure?
 			readImmediatePod()
 		}
 	}
@@ -440,20 +458,6 @@ func NewExecutionState(parentCtx context.Context, jobWatcher watchers.JobWatcher
 		log("closing updates channel")
 		close(state.updatesCh)
 	}()
-
-	select {
-	case job, ok := <-jobWatcher.Peek(ctx):
-		if ok {
-			state.job = job
-		}
-	}
-	select {
-	case pod, ok := <-podWatcher.Peek(ctx):
-		if ok {
-			state.pod = pod
-		}
-	case <-time.After(100 * time.Millisecond):
-	}
 
 	readImmediateJobEvents()
 	readImmediatePodEvents()

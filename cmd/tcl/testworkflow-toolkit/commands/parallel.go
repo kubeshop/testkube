@@ -254,9 +254,7 @@ func NewParallelCmd() *cobra.Command {
 
 				// Control the execution
 				// TODO: Consider aggregated controller to limit number of watchers
-				ctrl, err := testworkflowcontroller.New(context.Background(), clientSet, namespace, id, scheduledAt, testworkflowcontroller.ControllerOptions{
-					Timeout: spawn.ControllerTimeout,
-				})
+				ctrl, err := testworkflowcontroller.New(context.Background(), clientSet, namespace, id, scheduledAt)
 				if err != nil {
 					log("error", "failed to connect to the job", err.Error())
 					return false

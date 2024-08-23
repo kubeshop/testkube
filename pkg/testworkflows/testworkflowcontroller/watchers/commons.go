@@ -232,7 +232,7 @@ func GetJobError(job *batchv1.Job) string {
 	return ""
 }
 
-func ReadContainerResult(pod *corev1.Pod, job *batchv1.Job, status *corev1.ContainerStatus) ContainerResult {
+func ReadContainerResult(status *corev1.ContainerStatus, errorFallback string) ContainerResult {
 	result := ContainerResult{}
 
 	if status != nil && status.State.Terminated != nil {
@@ -268,14 +268,8 @@ func ReadContainerResult(pod *corev1.Pod, job *batchv1.Job, status *corev1.Conta
 	}
 
 	// Obtain non-standard error from the other resources too
-	if result.ErrorDetails == "" || result.ErrorDetails == "Error" {
-		podError := GetPodError(pod)
-		jobError := GetJobError(job)
-		if podError != "" {
-			result.ErrorDetails = podError
-		} else if jobError != "" {
-			result.ErrorDetails = jobError
-		}
+	if (result.ErrorDetails == "" || result.ErrorDetails == "Error") && errorFallback != "" {
+		result.ErrorDetails = errorFallback
 	}
 
 	// Re-label generic error

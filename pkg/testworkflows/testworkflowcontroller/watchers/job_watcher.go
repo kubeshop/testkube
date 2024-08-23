@@ -15,12 +15,14 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 
 	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 type jobWatcher struct {
 	client    kubernetesClient[batchv1.JobList, *batchv1.Job]
 	opts      metav1.ListOptions
 	peek      *batchv1.Job
+	hook      func(job *batchv1.Job)
 	started   atomic.Bool
 	startedCh chan struct{} // TODO: Ensure there is no memory leak
 	ch        chan *batchv1.Job
@@ -45,12 +47,13 @@ type JobWatcher interface {
 	Err() error
 }
 
-func NewJobWatcher(parentCtx context.Context, client kubernetesClient[batchv1.JobList, *batchv1.Job], opts metav1.ListOptions, bufferSize int) JobWatcher {
+func NewJobWatcher(parentCtx context.Context, client kubernetesClient[batchv1.JobList, *batchv1.Job], opts metav1.ListOptions, bufferSize int, hook func(job *batchv1.Job)) JobWatcher {
 	ctx, ctxCancel := context.WithCancel(parentCtx)
 	opts.AllowWatchBookmarks = true
 	watcher := &jobWatcher{
 		client:    client,
 		opts:      opts,
+		hook:      hook,
 		ch:        make(chan *batchv1.Job, bufferSize),
 		startedCh: make(chan struct{}),
 		peekCh:    make(chan struct{}),
@@ -148,6 +151,11 @@ func (e *jobWatcher) read(t time.Duration) (<-chan readStart, <-chan struct{}) {
 			started <- readStart{err: fmt.Errorf("found more than one job for selected criteria: %s", strings.Join(names, ", "))}
 			close(started)
 			return
+		}
+
+		// Send the item immediately to the hook aside of all the other processing
+		if len(list.Items) == 1 {
+			e.hook(common.Ptr(list.Items[0]))
 		}
 
 		// Ignore error when the channel is already closed
@@ -261,6 +269,9 @@ func (e *jobWatcher) watch() error {
 			if event.Type == watch.Bookmark {
 				continue
 			}
+
+			// Send the item immediately to the hook aside of all the other processing
+			e.hook(object)
 
 			// Try to configure deletion timestamp if Kubernetes engine doesn't support it
 			if event.Type == watch.Deleted && object.DeletionTimestamp == nil {
@@ -401,6 +412,8 @@ func (e *jobWatcher) Stop() {
 // Update gets the latest list of the job, to ensure that nothing is missed at that point.
 // It returns number of items that have been appended.
 func (e *jobWatcher) Update(t time.Duration) (int, error) {
+	fmt.Println(ui.Red("REFRESHING Job"), e.opts)
+
 	started, _ := e.read(t)
 	result, _ := <-started
 	if errors.Is(result.err, ErrDone) {

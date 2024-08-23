@@ -304,9 +304,7 @@ func NewServicesCmd() *cobra.Command {
 				// TODO: Consider aggregated controller to limit number of watchers
 				ctx, ctxCancel := context.WithCancel(timeoutCtx)
 				defer ctxCancel()
-				ctrl, err := testworkflowcontroller.New(ctx, clientSet, namespace, id, scheduledAt, testworkflowcontroller.ControllerOptions{
-					Timeout: spawn.ControllerTimeout,
-				})
+				ctrl, err := testworkflowcontroller.New(ctx, clientSet, namespace, id, scheduledAt)
 				if err != nil {
 					log("error", "failed to connect to the job", err.Error())
 					return false

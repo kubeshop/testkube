@@ -245,9 +245,7 @@ func ExecuteParallel[T any](run func(int64, *T) bool, items []T, parallelism int
 
 func SaveLogs(ctx context.Context, clientSet kubernetes.Interface, storage artifacts.InternalArtifactStorage, namespace, id, prefix string, index int64) (string, error) {
 	filePath := fmt.Sprintf("logs/%s%d.log", prefix, index)
-	ctrl, err := testworkflowcontroller.New(ctx, clientSet, namespace, id, time.Time{}, testworkflowcontroller.ControllerOptions{
-		Timeout: ControllerTimeout,
-	})
+	ctrl, err := testworkflowcontroller.New(ctx, clientSet, namespace, id, time.Time{})
 	if err == nil {
 		err = storage.SaveStream(filePath, ctrl.Logs(ctx, false))
 		ctrl.StopController()

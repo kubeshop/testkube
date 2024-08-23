@@ -2,6 +2,7 @@ package watchers
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"sync"
 	"sync/atomic"
@@ -12,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 
 	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 type eventsWatcher struct {
@@ -20,6 +22,7 @@ type eventsWatcher struct {
 	optsCh    chan struct{}
 	started   atomic.Bool
 	startedCh chan struct{} // TODO: Ensure there is no memory leak
+	hook      func(*corev1.Event)
 	ch        chan *corev1.Event
 	ctx       context.Context
 	cancel    context.CancelFunc
@@ -42,11 +45,12 @@ type EventsWatcher interface {
 	Err() error
 }
 
-func NewEventsWatcher(parentCtx context.Context, client kubernetesClient[corev1.EventList, *corev1.Event], opts metav1.ListOptions, bufferSize int) EventsWatcher {
+func NewEventsWatcher(parentCtx context.Context, client kubernetesClient[corev1.EventList, *corev1.Event], opts metav1.ListOptions, bufferSize int, hook func(event *corev1.Event)) EventsWatcher {
 	ctx, ctxCancel := context.WithCancel(parentCtx)
 	watcher := &eventsWatcher{
 		client:    client,
 		opts:      opts,
+		hook:      hook,
 		optsCh:    make(chan struct{}),
 		ch:        make(chan *corev1.Event, bufferSize),
 		startedCh: make(chan struct{}),
@@ -58,10 +62,11 @@ func NewEventsWatcher(parentCtx context.Context, client kubernetesClient[corev1.
 	return watcher
 }
 
-func NewAsyncEventsWatcher(parentCtx context.Context, client kubernetesClient[corev1.EventList, *corev1.Event], opts <-chan metav1.ListOptions, bufferSize int) EventsWatcher {
+func NewAsyncEventsWatcher(parentCtx context.Context, client kubernetesClient[corev1.EventList, *corev1.Event], opts <-chan metav1.ListOptions, bufferSize int, hook func(event *corev1.Event)) EventsWatcher {
 	ctx, ctxCancel := context.WithCancel(parentCtx)
 	watcher := &eventsWatcher{
 		client:    client,
+		hook:      hook,
 		optsCh:    make(chan struct{}),
 		ch:        make(chan *corev1.Event, bufferSize),
 		startedCh: make(chan struct{}),
@@ -179,20 +184,22 @@ func (e *eventsWatcher) read(tsInPast time.Time, t time.Duration) (<-chan readSt
 			close(e.startedCh)
 		}
 
+		// Send the items immediately to the hook aside of all the other processing
+		for i := range list.Items {
+			e.hook(common.Ptr(list.Items[i]))
+		}
+
 		// Ignore error when the channel is already closed
 		defer func() {
 			recover()
 		}()
 
+		// Inform about start
+		started <- readStart{count: len(list.Items)}
+		close(started)
+
 		// Send the received events
 		for i := range list.Items {
-			// Inform about start
-			if i == 0 {
-				started <- readStart{count: len(list.Items)}
-				close(started)
-			}
-
-			// Send the next item
 			e.ch <- common.Ptr(list.Items[i])
 		}
 	}()
@@ -260,6 +267,9 @@ func (e *eventsWatcher) watch() error {
 			if event.Type == watch.Bookmark {
 				continue
 			}
+
+			// Send the item immediately to the hook aside of all the other processing
+			e.hook(object)
 
 			// Send the event back
 			e.count.Add(1)
@@ -351,6 +361,8 @@ func (e *eventsWatcher) Ensure(tsInPast time.Time, timeout time.Duration) (int, 
 		return 0, nil
 	}
 	e.mu.Unlock()
+
+	fmt.Println(ui.Red("REFRESHING Events"), e.opts)
 
 	// Start reading data
 	// TODO: use time.After to check for events from Watch?
