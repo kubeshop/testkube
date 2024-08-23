@@ -230,37 +230,7 @@ func (e *podWatcher) watch() error {
 
 			// Try to configure deletion timestamp if Kubernetes engine doesn't support it
 			if event.Type == watch.Deleted && object.DeletionTimestamp == nil {
-				ts := object.CreationTimestamp.Time
-				if object.Status.StartTime != nil && object.Status.StartTime.After(ts) {
-					ts = object.Status.StartTime.Time
-				}
-				for i := range object.Status.Conditions {
-					if object.Status.Conditions[i].LastTransitionTime.After(ts) {
-						ts = object.Status.Conditions[i].LastTransitionTime.Time
-					}
-				}
-				for i := range object.Status.InitContainerStatuses {
-					if object.Status.InitContainerStatuses[i].State.Terminated != nil && object.Status.InitContainerStatuses[i].State.Terminated.FinishedAt.After(ts) {
-						ts = object.Status.InitContainerStatuses[i].State.Terminated.FinishedAt.Time
-					}
-					if object.Status.InitContainerStatuses[i].LastTerminationState.Terminated != nil && object.Status.InitContainerStatuses[i].LastTerminationState.Terminated.FinishedAt.After(ts) {
-						ts = object.Status.InitContainerStatuses[i].LastTerminationState.Terminated.FinishedAt.Time
-					}
-				}
-				for i := range object.Status.ContainerStatuses {
-					if object.Status.ContainerStatuses[i].State.Terminated != nil && object.Status.ContainerStatuses[i].State.Terminated.FinishedAt.After(ts) {
-						ts = object.Status.ContainerStatuses[i].State.Terminated.FinishedAt.Time
-					}
-					if object.Status.ContainerStatuses[i].LastTerminationState.Terminated != nil && object.Status.ContainerStatuses[i].LastTerminationState.Terminated.FinishedAt.After(ts) {
-						ts = object.Status.ContainerStatuses[i].LastTerminationState.Terminated.FinishedAt.Time
-					}
-				}
-				for i := range object.ManagedFields {
-					if object.ManagedFields[i].Time != nil && object.ManagedFields[i].Time.After(ts) {
-						ts = object.ManagedFields[i].Time.Time
-					}
-				}
-				object.DeletionTimestamp = &metav1.Time{ts}
+				object.DeletionTimestamp = &metav1.Time{GetPodLastTimestamp(object)}
 			}
 
 			// Mark as existing

@@ -142,6 +142,30 @@ func GetEventTimestamp(event *corev1.Event) time.Time {
 	return ts
 }
 
+func GetJobLastTimestamp(job *batchv1.Job) time.Time {
+	if job.DeletionTimestamp != nil {
+		return job.DeletionTimestamp.Time
+	}
+	ts := job.CreationTimestamp.Time
+	if job.Status.CompletionTime != nil && job.Status.CompletionTime.After(ts) {
+		ts = job.Status.CompletionTime.Time
+	}
+	for i := range job.Status.Conditions {
+		if job.Status.Conditions[i].LastProbeTime.After(ts) {
+			ts = job.Status.Conditions[i].LastProbeTime.Time
+		}
+		if job.Status.Conditions[i].LastTransitionTime.After(ts) {
+			ts = job.Status.Conditions[i].LastTransitionTime.Time
+		}
+	}
+	for i := range job.ManagedFields {
+		if job.ManagedFields[i].Time != nil && job.ManagedFields[i].Time.After(ts) {
+			ts = job.ManagedFields[i].Time.Time
+		}
+	}
+	return ts
+}
+
 func GetJobCompletionTimestamp(job *batchv1.Job) time.Time {
 	if job == nil {
 		return time.Time{}
@@ -160,6 +184,46 @@ func GetJobCompletionTimestamp(job *batchv1.Job) time.Time {
 		return job.DeletionTimestamp.Time
 	}
 	return time.Time{}
+}
+
+func GetPodLastTimestamp(pod *corev1.Pod) time.Time {
+	if pod.DeletionTimestamp != nil {
+		return pod.DeletionTimestamp.Time
+	}
+	ts := pod.CreationTimestamp.Time
+	if pod.Status.StartTime != nil && pod.Status.StartTime.After(ts) {
+		ts = pod.Status.StartTime.Time
+	}
+	for i := range pod.Status.Conditions {
+		if pod.Status.Conditions[i].LastProbeTime.After(ts) {
+			ts = pod.Status.Conditions[i].LastProbeTime.Time
+		}
+		if pod.Status.Conditions[i].LastTransitionTime.After(ts) {
+			ts = pod.Status.Conditions[i].LastTransitionTime.Time
+		}
+	}
+	for i := range pod.Status.InitContainerStatuses {
+		if pod.Status.InitContainerStatuses[i].State.Terminated != nil && pod.Status.InitContainerStatuses[i].State.Terminated.FinishedAt.After(ts) {
+			ts = pod.Status.InitContainerStatuses[i].State.Terminated.FinishedAt.Time
+		}
+		if pod.Status.InitContainerStatuses[i].LastTerminationState.Terminated != nil && pod.Status.InitContainerStatuses[i].LastTerminationState.Terminated.FinishedAt.After(ts) {
+			ts = pod.Status.InitContainerStatuses[i].LastTerminationState.Terminated.FinishedAt.Time
+		}
+	}
+	for i := range pod.Status.ContainerStatuses {
+		if pod.Status.ContainerStatuses[i].State.Terminated != nil && pod.Status.ContainerStatuses[i].State.Terminated.FinishedAt.After(ts) {
+			ts = pod.Status.ContainerStatuses[i].State.Terminated.FinishedAt.Time
+		}
+		if pod.Status.ContainerStatuses[i].LastTerminationState.Terminated != nil && pod.Status.ContainerStatuses[i].LastTerminationState.Terminated.FinishedAt.After(ts) {
+			ts = pod.Status.ContainerStatuses[i].LastTerminationState.Terminated.FinishedAt.Time
+		}
+	}
+	for i := range pod.ManagedFields {
+		if pod.ManagedFields[i].Time != nil && pod.ManagedFields[i].Time.After(ts) {
+			ts = pod.ManagedFields[i].Time.Time
+		}
+	}
+	return ts
 }
 
 func GetPodCompletionTimestamp(pod *corev1.Pod) time.Time {
