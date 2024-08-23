@@ -26,7 +26,6 @@ type eventsWatcher struct {
 	ch        chan *corev1.Event
 	ctx       context.Context
 	cancel    context.CancelCauseFunc
-	count     atomic.Uint32
 	mu        sync.Mutex
 	lastTs    time.Time
 }
@@ -36,7 +35,6 @@ type EventsWatcher interface {
 	Channel() <-chan *corev1.Event
 	Update(t time.Duration) (int, error)
 	Ensure(tsInPast time.Time, timeout time.Duration) (int, error)
-	Count() int
 	Started() <-chan struct{}
 	Done() <-chan struct{}
 	Err() error
@@ -79,10 +77,6 @@ func (e *eventsWatcher) LastAcknowledgedTime() time.Time {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	return e.lastTs
-}
-
-func (e *eventsWatcher) Count() int {
-	return int(e.count.Load())
 }
 
 func (e *eventsWatcher) Started() <-chan struct{} {
@@ -165,7 +159,6 @@ func (e *eventsWatcher) read(tsInPast time.Time, t time.Duration) (<-chan readSt
 		}
 
 		// Mark as initial list is starting to propagate
-		e.count.Add(uint32(len(list.Items)))
 		if e.started.CompareAndSwap(false, true) {
 			close(e.startedCh)
 		}
@@ -258,7 +251,6 @@ func (e *eventsWatcher) watch() error {
 			e.listener(object)
 
 			// Send the event back
-			e.count.Add(1)
 			e.ch <- object
 		}
 	}

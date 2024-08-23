@@ -71,14 +71,6 @@ func (e *podWatcher) Started() <-chan struct{} {
 	return ch
 }
 
-func (e *podWatcher) finalize(pod *corev1.Pod) bool {
-	if IsPodFinished(pod) {
-		e.cancel(ErrDone)
-		return true
-	}
-	return false
-}
-
 func (e *podWatcher) read(t time.Duration) (<-chan readStart, <-chan struct{}) {
 	started := make(chan readStart, 1)
 	finished := make(chan struct{})
@@ -140,7 +132,7 @@ func (e *podWatcher) read(t time.Duration) (<-chan readStart, <-chan struct{}) {
 
 			if e.existed.Load() {
 				// the pod was there, but it's deleted now.
-				e.finalize(nil)
+				e.cancel(ErrDone)
 
 				// Inform about start
 				started <- readStart{count: 1, err: ErrDone}
@@ -278,12 +270,10 @@ func (e *podWatcher) watch() error {
 			e.ch <- object
 
 			// Handle the deletion
-			e.mu.Lock()
-			if e.finalize(object) {
-				e.mu.Unlock()
+			if IsPodFinished(object) {
+				e.cancel(ErrDone)
 				return ErrDone
 			}
-			e.mu.Unlock()
 		}
 	}
 }

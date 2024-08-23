@@ -71,14 +71,6 @@ func (e *jobWatcher) Started() <-chan struct{} {
 	return ch
 }
 
-func (e *jobWatcher) finalize(job *batchv1.Job) bool {
-	if IsJobFinished(job) {
-		e.cancel(ErrDone)
-		return true
-	}
-	return false
-}
-
 // TODO: add readMu lock, work better with mu lock
 func (e *jobWatcher) read(t time.Duration) (<-chan readStart, <-chan struct{}) {
 	started := make(chan readStart, 1)
@@ -140,7 +132,7 @@ func (e *jobWatcher) read(t time.Duration) (<-chan readStart, <-chan struct{}) {
 
 			if e.existed.Load() {
 				// the job was there, but it's deleted now.
-				e.finalize(nil)
+				e.cancel(ErrDone)
 
 				// Inform about start
 				started <- readStart{count: 1, err: ErrDone}
@@ -263,12 +255,10 @@ func (e *jobWatcher) watch() error {
 			e.ch <- object
 
 			// Handle the deletion
-			e.mu.Lock()
-			if e.finalize(object) {
-				e.mu.Unlock()
+			if IsJobFinished(object) {
+				e.cancel(ErrDone)
 				return ErrDone
 			}
-			e.mu.Unlock()
 		}
 	}
 }
