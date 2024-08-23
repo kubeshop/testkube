@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/gookit/color"
@@ -29,6 +30,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 	ctx, ctxCancel := context.WithCancel(parentCtx)
 	notifier := newNotifier(ctx, signature, scheduledAt)
 	state := NewExecutionState(ctx, watcher)
+	signatureSeq := stage.MapSignatureToSequence(signature)
 
 	log := func(data ...interface{}) {
 		// FIXME delete?
@@ -89,10 +91,8 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 
 				// Display only events that are unrelated to further containers
 				name := GetEventContainerName(ev)
-				if name == "" || name == "0" {
-					if ev.Reason != "Created" && ev.Reason != "Started" {
-						notifier.Event("", watchers.GetEventTimestamp(ev), ev.Type, ev.Reason, ev.Message)
-					}
+				if name == "" {
+					notifier.Event("", watchers.GetEventTimestamp(ev), ev.Type, ev.Reason, ev.Message)
 				}
 			}
 
@@ -126,15 +126,15 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 		log("pod started")
 
 		// Read the execution instructions
-		var refs, endRefs [][]string
 		actions, err := state.ActionGroups()
 		if err != nil {
 			// FIXME:
 			notifier.Error(fmt.Errorf("cannot read execution instructions: %v", err))
 			return
 		}
-		refs = make([][]string, len(actions))
-		endRefs = make([][]string, len(actions))
+		refs := make([][]string, len(actions))
+		initialRefs := make([]string, len(actions))
+		endRefs := make([][]string, len(actions))
 		for i := range actions {
 			for j := range actions[i] {
 				if actions[i][j].Setup != nil {
@@ -149,6 +149,20 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 				}
 			}
 		}
+		for i := range refs {
+			for j := range refs[i] {
+				if refs[i][j] == InitContainerName {
+					initialRefs[i] = ""
+					break
+				}
+				if slices.ContainsFunc(signatureSeq, func(sig stage.Signature) bool {
+					return len(sig.Children()) == 0
+				}) {
+					initialRefs[i] = refs[i][j]
+					break
+				}
+			}
+		}
 
 		// Iterate over containers
 		aborted := false
@@ -158,6 +172,19 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 		for containerIndex := 0; containerIndex < len(refs); containerIndex++ {
 			container := fmt.Sprintf("%d", containerIndex+1)
 			log("iterating containers", container)
+
+			// Read the Pod Events for the Container Events
+			for _, ev := range state.PodEvents()[currentPodEventsIndex:] {
+				currentPodEventsIndex++
+
+				// Display only events that are unrelated to further containers
+				// TODO: Try to attach it to first recognizable step?
+				name := GetEventContainerName(ev)
+				if name == container {
+					//if name == container && ev.Reason != "Created" && ev.Reason != "Started" {
+					notifier.Event(initialRefs[containerIndex], watchers.GetEventTimestamp(ev), ev.Type, ev.Reason, ev.Message)
+				}
+			}
 
 			// Wait until the Container is started
 			currentPodEventsIndex = 0
@@ -180,20 +207,6 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 
 			// Start the initial one
 			lastStarted = refs[containerIndex][0]
-
-			// Read the Pod Events for the Container Events
-			for _, ev := range state.PodEvents()[currentPodEventsIndex:] {
-				currentPodEventsIndex++
-
-				// Display only events that are unrelated to further containers
-				// TODO: Try to attach it to first recognizable step?
-				name := GetEventContainerName(ev)
-				if name == container {
-					if ev.Reason != "Created" && ev.Reason != "Started" {
-						notifier.Event("", watchers.GetEventTimestamp(ev), ev.Type, ev.Reason, ev.Message)
-					}
-				}
-			}
 
 			// Read the Container logs
 			isDone := func() bool {
