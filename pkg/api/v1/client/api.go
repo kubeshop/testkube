@@ -8,9 +8,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
-// check in compile time if interface is implemented
-var _ Client = (*APIClient)(nil)
-
 // NewProxyAPIClient returns proxy api client
 func NewProxyAPIClient(client kubernetes.Interface, config APIConfig) APIClient {
 	return APIClient{
@@ -46,6 +43,7 @@ func NewProxyAPIClient(client kubernetes.Interface, config APIConfig) APIClient 
 			NewProxyClient[testkube.Artifact](client, config),
 		),
 		TestWorkflowTemplateClient: NewTestWorkflowTemplateClient(NewProxyClient[testkube.TestWorkflowTemplate](client, config)),
+		TestTriggerClient:          NewTestTriggerClient(NewProxyClient[testkube.TestTrigger](client, config)),
 	}
 }
 
@@ -84,6 +82,7 @@ func NewDirectAPIClient(httpClient *http.Client, sseClient *http.Client, apiURI,
 			NewDirectClient[testkube.Artifact](httpClient, apiURI, apiPathPrefix),
 		),
 		TestWorkflowTemplateClient: NewTestWorkflowTemplateClient(NewDirectClient[testkube.TestWorkflowTemplate](httpClient, apiURI, apiPathPrefix)),
+		TestTriggerClient:          NewTestTriggerClient(NewDirectClient[testkube.TestTrigger](httpClient, apiURI, apiPathPrefix)),
 	}
 }
 
@@ -122,6 +121,7 @@ func NewCloudAPIClient(httpClient *http.Client, sseClient *http.Client, apiURI, 
 			NewCloudClient[testkube.Artifact](httpClient, apiURI, apiPathPrefix),
 		),
 		TestWorkflowTemplateClient: NewTestWorkflowTemplateClient(NewCloudClient[testkube.TestWorkflowTemplate](httpClient, apiURI, apiPathPrefix)),
+		TestTriggerClient:          NewTestTriggerClient(NewCloudClient[testkube.TestTrigger](httpClient, apiURI, apiPathPrefix)),
 	}
 }
 
@@ -137,4 +137,8 @@ type APIClient struct {
 	TemplateClient
 	TestWorkflowClient
 	TestWorkflowTemplateClient
+	TestTriggerClient
 }
+
+// check in compile time if interface is implemented
+var _ Client = (*APIClient)(nil)

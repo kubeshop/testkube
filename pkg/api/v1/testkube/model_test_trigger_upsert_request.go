@@ -16,7 +16,9 @@ type TestTriggerUpsertRequest struct {
 	// object name
 	Name string `json:"name"`
 	// test trigger labels
-	Labels           map[string]string     `json:"labels,omitempty"`
+	Labels map[string]string `json:"labels,omitempty"`
+	// test trigger annotations
+	Annotations      map[string]string     `json:"annotations,omitempty"`
 	Resource         *TestTriggerResources `json:"resource"`
 	ResourceSelector *TestTriggerSelector  `json:"resourceSelector"`
 	// listen for event for selected resource

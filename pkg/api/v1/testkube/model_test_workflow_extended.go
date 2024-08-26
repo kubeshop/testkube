@@ -76,3 +76,19 @@ func (w *TestWorkflow) GetObjectRef() *ObjectRef {
 
 func (w *TestWorkflow) QuoteWorkflowTextFields() {
 }
+
+func (w TestWorkflow) GetName() string {
+	return w.Name
+}
+
+func (w TestWorkflow) GetNamespace() string {
+	return w.Namespace
+}
+
+func (w TestWorkflow) GetLabels() map[string]string {
+	return w.Labels
+}
+
+func (w TestWorkflow) GetAnnotations() map[string]string {
+	return w.Annotations
+}
