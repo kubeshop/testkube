@@ -3782,7 +3782,7 @@ paths:
         - pro
       parameters:
         - $ref: "#/components/parameters/ID"
-        - $ref: "#/components/parameters/TestWorkflowExecutionName"        
+        - $ref: "#/components/parameters/TestWorkflowExecutionName"
       summary: Execute test workflow
       description: Execute test workflow in the kubernetes cluster
       operationId: executeTestWorkflow
@@ -4433,7 +4433,7 @@ paths:
       parameters:
         - $ref: "#/components/parameters/ID"
         - $ref: "#/components/parameters/SkipDeleteExecutions"
-        - $ref: "#/components/parameters/SkipDeleteCRD"        
+        - $ref: "#/components/parameters/SkipDeleteCRD"
       summary: Delete test workflow
       description: Delete test workflow from the kubernetes cluster
       operationId: deleteTestWorkflow
@@ -7099,6 +7099,14 @@ components:
           example:
             env: "prod"
             app: "backend"
+        annotations:
+          type: object
+          description: "webhook annotations"
+          additionalProperties:
+            type: string
+          example:
+            env: "prod"
+            app: "backend"
         disabled:
           type: boolean
           description: whether webhook is disabled
@@ -7191,7 +7199,7 @@ components:
         - become-testworkflow-up
         - become-testworkflow-down
         - become-testworkflow-failed
-        - become-testworkflow-aborted        
+        - become-testworkflow-aborted
         - created
         - updated
         - deleted
@@ -7337,6 +7345,14 @@ components:
             type: string
           example:
             env: "prod"
+            app: "backend"
+        annotations:
+          type: object
+          description: "test trigger annotations"
+          additionalProperties:
+            type: string
+          example:
+            group: "teamA"
             app: "backend"
         resource:
           $ref: "#/components/schemas/TestTriggerResources"
@@ -7941,7 +7957,7 @@ components:
         namespace:
           type: string
           description: execution namespace
-          example: "my-testkube"          
+          example: "my-testkube"
         number:
           type: integer
           description: sequence number for the execution
