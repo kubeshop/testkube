@@ -119,6 +119,10 @@ func MapUpdateToSpec(request testkube.WebhookUpdateRequest, webhook *executorv1.
 		webhook.Labels = *request.Labels
 	}
 
+	if request.Annotations != nil {
+		webhook.Annotations = *request.Annotations
+	}
+
 	if request.Headers != nil {
 		webhook.Spec.Headers = *request.Headers
 	}
@@ -174,6 +178,7 @@ func MapSpecToUpdate(webhook *executorv1.Webhook) (request testkube.WebhookUpdat
 	request.Events = &events
 
 	request.Labels = &webhook.Labels
+	request.Annotations = &webhook.Annotations
 	request.Headers = &webhook.Spec.Headers
 	request.Disabled = &webhook.Spec.Disabled
 

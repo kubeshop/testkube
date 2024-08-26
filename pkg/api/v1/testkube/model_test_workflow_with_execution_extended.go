@@ -26,3 +26,19 @@ func (t TestWorkflowWithExecutions) Table() (header []string, output [][]string)
 
 	return
 }
+
+func (t TestWorkflowWithExecution) GetName() string {
+	return t.Workflow.Name
+}
+
+func (t TestWorkflowWithExecution) GetNamespace() string {
+	return t.Workflow.Namespace
+}
+
+func (t TestWorkflowWithExecution) GetLabels() map[string]string {
+	return t.Workflow.Labels
+}
+
+func (t TestWorkflowWithExecution) GetAnnotations() map[string]string {
+	return t.Workflow.Annotations
+}
