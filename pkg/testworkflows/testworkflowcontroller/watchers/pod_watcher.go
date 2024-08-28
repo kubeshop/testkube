@@ -15,7 +15,6 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 
 	"github.com/kubeshop/testkube/internal/common"
-	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 type podWatcher struct {
@@ -25,7 +24,6 @@ type podWatcher struct {
 	started   atomic.Bool
 	watching  atomic.Bool
 	startedCh chan struct{} // TODO: Ensure there is no memory leak
-	ch        chan *corev1.Pod
 	ctx       context.Context
 	cancel    context.CancelCauseFunc
 	mu        sync.Mutex
@@ -33,21 +31,19 @@ type podWatcher struct {
 }
 
 type PodWatcher interface {
-	Channel() <-chan *corev1.Pod
 	Update(t time.Duration) (int, error)
 	Started() <-chan struct{}
 	Done() <-chan struct{}
 	Err() error
 }
 
-func NewPodWatcher(parentCtx context.Context, client kubernetesClient[corev1.PodList, *corev1.Pod], opts metav1.ListOptions, bufferSize int, listener func(*corev1.Pod)) PodWatcher {
+func NewPodWatcher(parentCtx context.Context, client kubernetesClient[corev1.PodList, *corev1.Pod], opts metav1.ListOptions, listener func(*corev1.Pod)) PodWatcher {
 	ctx, ctxCancel := context.WithCancelCause(parentCtx)
 	opts.AllowWatchBookmarks = true
 	watcher := &podWatcher{
 		client:    client,
 		opts:      opts,
 		listener:  listener,
-		ch:        make(chan *corev1.Pod, bufferSize),
 		startedCh: make(chan struct{}),
 		ctx:       ctx,
 		cancel:    ctxCancel,
@@ -72,6 +68,7 @@ func (e *podWatcher) Started() <-chan struct{} {
 	return ch
 }
 
+// TODO: add readMu lock, work better with mu lock
 func (e *podWatcher) read(t time.Duration) (<-chan readStart, <-chan struct{}) {
 	started := make(chan readStart, 1)
 	finished := make(chan struct{})
@@ -99,9 +96,6 @@ func (e *podWatcher) read(t time.Duration) (<-chan readStart, <-chan struct{}) {
 			return
 		}
 
-		// Update the latest resource version
-		e.opts.ResourceVersion = list.ResourceVersion
-
 		// Disallow watching multiple pods in that watcher
 		if len(list.Items) > 1 {
 			names := make([]string, len(list.Items))
@@ -113,23 +107,10 @@ func (e *podWatcher) read(t time.Duration) (<-chan readStart, <-chan struct{}) {
 			return
 		}
 
-		// Send the item immediately to the listener aside of all the other processing
-		if len(list.Items) == 1 {
-			e.listener(common.Ptr(list.Items[0]))
-		}
-
-		// Ignore error when the channel is already closed
-		defer func() {
-			recover()
-		}()
-
 		// Handle lack of the pod
 		if len(list.Items) == 0 {
-
-			// Mark as initial list is starting to propagate
-			if e.started.CompareAndSwap(false, true) {
-				close(e.startedCh)
-			}
+			// Update the latest resource version
+			e.opts.ResourceVersion = list.ResourceVersion
 
 			if e.existed.Load() {
 				// the pod was there, but it's deleted now.
@@ -143,15 +124,13 @@ func (e *podWatcher) read(t time.Duration) (<-chan readStart, <-chan struct{}) {
 				started <- readStart{count: 0}
 				close(started)
 			}
+
+			// Mark as initial list is starting to propagate
+			if e.started.CompareAndSwap(false, true) {
+				close(e.startedCh)
+			}
+
 			return
-		}
-
-		// Mark as existing
-		e.existed.Store(true)
-
-		// Mark as initial list is starting to propagate
-		if e.started.CompareAndSwap(false, true) {
-			close(e.startedCh)
 		}
 
 		// There is no update
@@ -161,12 +140,23 @@ func (e *podWatcher) read(t time.Duration) (<-chan readStart, <-chan struct{}) {
 			return
 		}
 
+		// Mark as existing
+		e.existed.Store(true)
+
+		// Update the latest resource version
+		e.opts.ResourceVersion = list.ResourceVersion
+
 		// Inform about start
 		started <- readStart{count: len(list.Items)}
 		close(started)
 
 		// Send the item
-		e.ch <- common.Ptr(list.Items[0])
+		e.listener(common.Ptr(list.Items[0]))
+
+		// Mark as initial list is starting to propagate
+		if e.started.CompareAndSwap(false, true) {
+			close(e.startedCh)
+		}
 	}()
 
 	return started, finished
@@ -228,19 +218,16 @@ func (e *podWatcher) watch() error {
 				continue
 			}
 
-			// Send the item immediately to the listener aside of all the other processing
-			e.listener(object)
-
 			// Try to configure deletion timestamp if Kubernetes engine doesn't support it
 			if event.Type == watch.Deleted && object.DeletionTimestamp == nil {
-				object.DeletionTimestamp = &metav1.Time{GetPodLastTimestamp(object)}
+				object.DeletionTimestamp = &metav1.Time{Time: GetPodLastTimestamp(object)}
 			}
 
 			// Mark as existing
 			e.existed.Store(true)
 
 			// Send the event back
-			e.ch <- object
+			e.listener(object)
 
 			// Handle the deletion
 			if IsPodFinished(object) {
@@ -255,7 +242,6 @@ func (e *podWatcher) cycle() {
 	// Close the channel when the watcher is stopped
 	go func() {
 		<-e.ctx.Done()
-		close(e.ch)
 		if e.started.CompareAndSwap(false, true) {
 			close(e.startedCh)
 		}
@@ -287,16 +273,9 @@ func (e *podWatcher) Done() <-chan struct{} {
 	return e.ctx.Done()
 }
 
-// Channel returns the channel for reading the pod.
-func (e *podWatcher) Channel() <-chan *corev1.Pod {
-	return e.ch
-}
-
 // Update gets the latest list of the pod, to ensure that nothing is missed at that point.
 // It returns number of items that have been appended.
 func (e *podWatcher) Update(t time.Duration) (int, error) {
-	fmt.Println(ui.Red("REFRESHING Pod"), e.opts)
-
 	started, _ := e.read(t)
 	result, _ := <-started
 	if errors.Is(result.err, ErrDone) {

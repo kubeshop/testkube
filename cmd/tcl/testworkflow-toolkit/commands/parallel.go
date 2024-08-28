@@ -218,6 +218,7 @@ func NewParallelCmd() *cobra.Command {
 				}
 
 				// Final clean up
+				var ctrl testworkflowcontroller.Controller
 				var lastResult testkube.TestWorkflowResult
 				defer func() {
 					shouldSaveLogs := logConditions[index] == nil
@@ -230,7 +231,7 @@ func NewParallelCmd() *cobra.Command {
 
 					// Save logs
 					if shouldSaveLogs {
-						logsFilePath, err := spawn.SaveLogs(context.Background(), clientSet, storage, namespace, id, "", index)
+						logsFilePath, err := spawn.SaveLogsWithController(context.Background(), storage, ctrl, "", index)
 						if err == nil {
 							instructions.PrintOutput(env.Ref(), "parallel", ParallelStatus{Index: int(index), Logs: storage.FullPath(logsFilePath)})
 							log("saved logs")
@@ -254,7 +255,7 @@ func NewParallelCmd() *cobra.Command {
 
 				// Control the execution
 				// TODO: Consider aggregated controller to limit number of watchers
-				ctrl, err := testworkflowcontroller.New(context.Background(), clientSet, namespace, id, scheduledAt)
+				ctrl, err = testworkflowcontroller.New(context.Background(), clientSet, namespace, id, scheduledAt)
 				if err != nil {
 					log("error", "failed to connect to the job", err.Error())
 					return false
@@ -325,7 +326,8 @@ func NewParallelCmd() *cobra.Command {
 					// Resume all at once
 					if registry.Count() > 0 && registry.AllPaused() {
 						fmt.Println("resuming all workers")
-						registry.EachAsync(func(index int64, ctrl testworkflowcontroller.Controller) {
+						registry.EachAsyncAtOnce(func(index int64, ctrl testworkflowcontroller.Controller, wait func()) {
+							wait()
 							err := ctrl.Resume(context.Background())
 							if err != nil {
 								spawn.CreateLogger("worker", descriptions[index], index, params.Count)("warning", "failed to resume", err.Error())

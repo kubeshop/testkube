@@ -24,7 +24,6 @@ type eventsWatcher struct {
 	watching  atomic.Bool
 	startedCh chan struct{} // TODO: Ensure there is no memory leak
 	listener  func(*corev1.Event)
-	ch        chan *corev1.Event
 	ctx       context.Context
 	cancel    context.CancelCauseFunc
 	mu        sync.Mutex
@@ -33,7 +32,6 @@ type eventsWatcher struct {
 
 type EventsWatcher interface {
 	LastAcknowledgedTime() time.Time
-	Channel() <-chan *corev1.Event
 	Update(t time.Duration) (int, error)
 	Ensure(tsInPast time.Time, timeout time.Duration) (int, error)
 	Started() <-chan struct{}
@@ -41,14 +39,13 @@ type EventsWatcher interface {
 	Err() error
 }
 
-func NewEventsWatcher(parentCtx context.Context, client kubernetesClient[corev1.EventList, *corev1.Event], opts metav1.ListOptions, bufferSize int, listener func(event *corev1.Event)) EventsWatcher {
+func NewEventsWatcher(parentCtx context.Context, client kubernetesClient[corev1.EventList, *corev1.Event], opts metav1.ListOptions, listener func(event *corev1.Event)) EventsWatcher {
 	ctx, ctxCancel := context.WithCancelCause(parentCtx)
 	watcher := &eventsWatcher{
 		client:    client,
 		opts:      opts,
 		listener:  listener,
 		optsCh:    make(chan struct{}),
-		ch:        make(chan *corev1.Event, bufferSize),
 		startedCh: make(chan struct{}),
 		ctx:       ctx,
 		cancel:    ctxCancel,
@@ -58,13 +55,12 @@ func NewEventsWatcher(parentCtx context.Context, client kubernetesClient[corev1.
 	return watcher
 }
 
-func NewAsyncEventsWatcher(parentCtx context.Context, client kubernetesClient[corev1.EventList, *corev1.Event], opts <-chan metav1.ListOptions, bufferSize int, listener func(event *corev1.Event)) EventsWatcher {
+func NewAsyncEventsWatcher(parentCtx context.Context, client kubernetesClient[corev1.EventList, *corev1.Event], opts <-chan metav1.ListOptions, listener func(event *corev1.Event)) EventsWatcher {
 	ctx, ctxCancel := context.WithCancelCause(parentCtx)
 	watcher := &eventsWatcher{
 		client:    client,
 		listener:  listener,
 		optsCh:    make(chan struct{}),
-		ch:        make(chan *corev1.Event, bufferSize),
 		startedCh: make(chan struct{}),
 		ctx:       ctx,
 		cancel:    ctxCancel,
@@ -145,8 +141,12 @@ func (e *eventsWatcher) read(tsInPast time.Time, t time.Duration) (<-chan readSt
 		}
 
 		if len(list.Items) == 0 {
+			if e.started.CompareAndSwap(false, true) {
+				close(e.startedCh)
+			}
 			started <- readStart{count: 0}
 			close(started)
+			return
 		}
 
 		// Update the last acknowledged timestamp
@@ -159,28 +159,18 @@ func (e *eventsWatcher) read(tsInPast time.Time, t time.Duration) (<-chan readSt
 			}
 		}
 
-		// Mark as initial list is starting to propagate
-		if e.started.CompareAndSwap(false, true) {
-			close(e.startedCh)
-		}
-
-		// Send the items immediately to the listener aside of all the other processing
-		for i := range list.Items {
-			e.listener(common.Ptr(list.Items[i]))
-		}
-
-		// Ignore error when the channel is already closed
-		defer func() {
-			recover()
-		}()
-
 		// Inform about start
 		started <- readStart{count: len(list.Items)}
 		close(started)
 
 		// Send the received events
 		for i := range list.Items {
-			e.ch <- common.Ptr(list.Items[i])
+			e.listener(common.Ptr(list.Items[i]))
+		}
+
+		// Mark as initial list is starting to propagate
+		if e.started.CompareAndSwap(false, true) {
+			close(e.startedCh)
 		}
 	}()
 
@@ -252,9 +242,6 @@ func (e *eventsWatcher) watch() error {
 
 			// Send the item immediately to the listener aside of all the other processing
 			e.listener(object)
-
-			// Send the event back
-			e.ch <- object
 		}
 	}
 }
@@ -263,7 +250,6 @@ func (e *eventsWatcher) cycle() {
 	// Close the channel when the watcher is stopped
 	go func() {
 		<-e.ctx.Done()
-		close(e.ch)
 		if e.started.CompareAndSwap(false, true) {
 			close(e.startedCh)
 		}
@@ -296,11 +282,6 @@ func (e *eventsWatcher) Err() error {
 
 func (e *eventsWatcher) Done() <-chan struct{} {
 	return e.ctx.Done()
-}
-
-// Channel returns the channel for reading the events.
-func (e *eventsWatcher) Channel() <-chan *corev1.Event {
-	return e.ch
 }
 
 // Update gets the latest list of the events, to ensure that nothing is missed at that point.

@@ -24,8 +24,9 @@ const (
 )
 
 var (
-	ErrDone         = errors.New("resource is done")
-	terminatedLogRe = regexp.MustCompile(`^([^,]),(0|[1-9]\d*)$`)
+	ErrDone                      = errors.New("resource is done")
+	terminatedLogRe              = regexp.MustCompile(`^([^,]),(0|[1-9]\d*)$`)
+	involvedFieldPathContainerRe = regexp.MustCompile(`^spec\.(?:initContainers|containers)\{([^]]+)}`)
 )
 
 type kubernetesClient[T any, U any] interface {
@@ -71,6 +72,9 @@ func IsPodFinished(pod *corev1.Pod) bool {
 	if pod.Status.Phase == corev1.PodUnknown {
 		for i := range pod.Status.Conditions {
 			if pod.Status.Conditions[i].Type == corev1.DisruptionTarget && pod.Status.Conditions[i].Status == corev1.ConditionTrue {
+				return true
+			}
+			if pod.Status.Conditions[i].Reason == "PodCompleted" {
 				return true
 			}
 		}
@@ -123,7 +127,7 @@ func IsContainerStarted(pod *corev1.Pod, name string) bool {
 	if status == nil {
 		return false
 	}
-	return (status.Started != nil && *status.Started) || status.Ready
+	return (status.Started != nil && *status.Started) || status.Ready || status.State.Running != nil
 }
 
 func IsContainerFinished(pod *corev1.Pod, name string) bool {
@@ -230,10 +234,6 @@ func GetPodCompletionTimestamp(pod *corev1.Pod) time.Time {
 	if pod == nil {
 		return time.Time{}
 	}
-	if !IsPodFinished(pod) {
-		return time.Time{}
-	}
-
 	ts := time.Time{}
 	for _, c := range pod.Status.Conditions {
 		// TODO: Filter to only finished values
@@ -342,4 +342,36 @@ func ReadContainerResult(status *corev1.ContainerStatus, errorFallback string) C
 	}
 
 	return result
+}
+
+func GetEventContainerName(event *corev1.Event) string {
+	path := event.InvolvedObject.FieldPath
+	if involvedFieldPathContainerRe.Match([]byte(path)) {
+		name := involvedFieldPathContainerRe.ReplaceAllString(event.InvolvedObject.FieldPath, "$1")
+		return name
+	}
+	return ""
+}
+
+func CreateJobCompleteCondition(ts time.Time) batchv1.JobCondition {
+	return batchv1.JobCondition{
+		Type:               batchv1.JobComplete,
+		Status:             "True",
+		LastProbeTime:      metav1.Time{Time: ts},
+		LastTransitionTime: metav1.Time{Time: ts},
+	}
+}
+
+func CreateJobFailedCondition(ts time.Time, reason, message string) batchv1.JobCondition {
+	if reason == "" {
+		reason = "Error"
+	}
+	return batchv1.JobCondition{
+		Type:               batchv1.JobFailed,
+		Status:             "True",
+		LastProbeTime:      metav1.Time{Time: ts},
+		LastTransitionTime: metav1.Time{Time: ts},
+		Reason:             reason,
+		Message:            message,
+	}
 }

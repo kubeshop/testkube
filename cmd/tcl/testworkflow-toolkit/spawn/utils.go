@@ -243,14 +243,22 @@ func ExecuteParallel[T any](run func(int64, *T) bool, items []T, parallelism int
 	return int64(len(items)) - success.Load()
 }
 
-func SaveLogs(ctx context.Context, clientSet kubernetes.Interface, storage artifacts.InternalArtifactStorage, namespace, id, prefix string, index int64) (string, error) {
-	filePath := fmt.Sprintf("logs/%s%d.log", prefix, index)
-	ctrl, err := testworkflowcontroller.New(ctx, clientSet, namespace, id, time.Time{})
-	if err == nil {
-		err = storage.SaveStream(filePath, ctrl.Logs(ctx, false))
-		ctrl.StopController()
+func SaveLogsWithController(ctx context.Context, storage artifacts.InternalArtifactStorage, ctrl testworkflowcontroller.Controller, prefix string, index int64) (string, error) {
+	if ctrl == nil {
+		return "", errors.New("cannot control TestWorkflow's execution")
 	}
+	filePath := fmt.Sprintf("logs/%s%d.log", prefix, index)
+	err := storage.SaveStream(filePath, ctrl.Logs(ctx, false))
 	return filePath, err
+}
+
+func SaveLogs(ctx context.Context, clientSet kubernetes.Interface, storage artifacts.InternalArtifactStorage, namespace, id, prefix string, index int64) (string, error) {
+	ctrl, err := testworkflowcontroller.New(ctx, clientSet, namespace, id, time.Time{})
+	if err != nil {
+		return "", err
+	}
+	defer ctrl.StopController()
+	return SaveLogsWithController(ctx, storage, ctrl, prefix, index)
 }
 
 func CreateLogger(name, description string, index, count int64) func(...string) {

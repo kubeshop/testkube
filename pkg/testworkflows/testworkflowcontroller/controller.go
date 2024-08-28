@@ -64,17 +64,19 @@ func New(parentCtx context.Context, clientSet kubernetes.Interface, namespace, i
 	ctx, ctxCancel := context.WithCancel(parentCtx)
 
 	// Build the execution watcher
-	watcher := watchers.NewExecutionWatcher(ctx, clientSet, namespace, id, signature)
+	watcher := watchers.NewExecutionWatcher(ctx, clientSet, namespace, id, signature, scheduledAt)
 
 	// Wait for the initial data read
 	<-watcher.Started()
 
 	// Check if we have any resources that we could base on
-	if !watcher.JobExists() && !watcher.PodExists() && !watcher.PodFinished() {
-		defer ctxCancel()
+	if watcher.State().Job() == nil && watcher.State().Pod() == nil && watcher.State().CompletionTimestamp().IsZero() {
+		defer func() {
+			ctxCancel()
+		}()
 
 		// There was a job or pod for this execution, so we may only assume it is aborted
-		if watcher.JobExists() || watcher.PodExists() || watcher.PodFinished() || watcher.JobFinished() {
+		if !watcher.State().JobEvents().FirstTimestamp().IsZero() || !watcher.State().PodEvents().FirstTimestamp().IsZero() {
 			return nil, ErrJobAborted
 		}
 
@@ -83,7 +85,7 @@ func New(parentCtx context.Context, clientSet kubernetes.Interface, namespace, i
 	}
 
 	// Obtain the signature
-	sig, err := watcher.Signature()
+	sig, err := watcher.State().Signature()
 	if err != nil {
 		ctxCancel()
 		return nil, errors.Wrap(err, "invalid job signature")
@@ -122,7 +124,7 @@ func (c *controller) Cleanup(ctx context.Context) error {
 }
 
 func (c *controller) PodIP() (string, error) {
-	podIP := c.watcher.PodIP()
+	podIP := c.watcher.State().PodIP()
 	if podIP == "" {
 		if c.watcher.PodErr() != nil {
 			return "", c.watcher.PodErr()
@@ -133,7 +135,7 @@ func (c *controller) PodIP() (string, error) {
 }
 
 func (c *controller) NodeName() (string, error) {
-	nodeName := c.watcher.PodNodeName()
+	nodeName := c.watcher.State().PodName()
 	if nodeName == "" {
 		if c.watcher.PodErr() != nil {
 			return "", c.watcher.PodErr()
