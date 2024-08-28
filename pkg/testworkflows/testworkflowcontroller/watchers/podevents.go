@@ -24,7 +24,7 @@ type PodEvents interface {
 	NodeName() string
 	FirstTimestamp() time.Time
 	LastTimestamp() time.Time
-	AssignmentTimestamp() time.Time
+	StartTimestamp() time.Time
 	FinishTimestamp() time.Time
 	Error() bool
 	ErrorReason() string
@@ -113,7 +113,7 @@ func (p *podEvents) LastTimestamp() (ts time.Time) {
 	return ts
 }
 
-func (p *podEvents) AssignmentTimestamp() time.Time {
+func (p *podEvents) StartTimestamp() time.Time {
 	for i := range p.events {
 		if p.events[i].Reason == "Scheduled" {
 			// (Scheduled) Successfully assigned distributed-tests/66c49ca3284bce9380023421-78fmp to homelab

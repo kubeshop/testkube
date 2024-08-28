@@ -146,6 +146,16 @@ func GetEventTimestamp(event *corev1.Event) time.Time {
 	return ts
 }
 
+func GetFirstEventTimestamp(event *corev1.Event) time.Time {
+	if !event.FirstTimestamp.IsZero() {
+		return event.FirstTimestamp.Time
+	}
+	if !event.CreationTimestamp.IsZero() {
+		return event.CreationTimestamp.Time
+	}
+	return event.LastTimestamp.Time
+}
+
 func GetJobLastTimestamp(job *batchv1.Job) time.Time {
 	if job.DeletionTimestamp != nil {
 		return job.DeletionTimestamp.Time

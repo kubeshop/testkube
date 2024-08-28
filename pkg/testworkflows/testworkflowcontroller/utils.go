@@ -7,6 +7,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 )
 
 const (
@@ -40,4 +42,30 @@ type ContainerResult struct {
 	Details    string
 	ExitCode   int
 	FinishedAt time.Time
+}
+
+func ExtractRefsFromActionList(list actiontypes.ActionList) (started []string, finished []string) {
+	for i := range list {
+		switch list[i].Type() {
+		case lite.ActionTypeSetup:
+			started = append(started, InitContainerName)
+			finished = append(finished, InitContainerName)
+		case lite.ActionTypeStart:
+			started = append(started, *list[i].Start)
+		case lite.ActionTypeEnd:
+			finished = append(finished, *list[i].End)
+		}
+	}
+	return
+}
+
+func ExtractRefsFromActionGroup(group actiontypes.ActionGroups) (started [][]string, finished [][]string) {
+	started = make([][]string, len(group))
+	finished = make([][]string, len(group))
+	for i := range group {
+		s, f := ExtractRefsFromActionList(group[i])
+		started[i] = s
+		finished[i] = f
+	}
+	return
 }

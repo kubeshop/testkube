@@ -59,14 +59,25 @@ type ExecutionState interface {
 	Signature() ([]stage.Signature, error)
 	ActionGroups() (actiontypes.ActionGroups, error)
 
-	ApproxJobCreationTimestamp() time.Time
+	PodCreationTimestamp() time.Time
+	EstimatedPodCreationTimestamp() time.Time
 
-	ApproxJob() (Job, error)
-	ApproxPod() (Pod, error)
-	MustApproxJob() Job
-	MustApproxPod() Pod
-	ApproxJobExists() bool
-	ApproxPodExists() bool
+	PodStartTimestamp() time.Time
+	EstimatedPodStartTimestamp() time.Time
+
+	JobCreationTimestamp() time.Time
+	EstimatedJobCreationTimestamp() time.Time
+
+	PodCreated() bool
+	PodStarted() bool
+	Completed() bool
+
+	EstimatedJob() (Job, error)
+	EstimatedPod() (Pod, error)
+	MustEstimatedJob() Job
+	MustEstimatedPod() Pod
+	EstimatedJobExists() bool
+	EstimatedPodExists() bool
 }
 
 func NewExecutionState(job Job, pod Pod, jobEvents JobEvents, podEvents PodEvents, opts *ExecutionStateOptions) ExecutionState {
@@ -258,7 +269,7 @@ func (e *executionState) ContainerFinished(name string) bool {
 	//}
 
 	// TODO?
-	return !e.CompletionTimestamp().IsZero() ||
+	return !e.Completed() ||
 		(e.pod != nil && e.pod.ContainerFinished(name))
 	//return !e.CompletionTimestamp().IsZero() ||
 	//	(e.pod != nil && e.pod.ContainerFinished(name)) ||
@@ -266,7 +277,14 @@ func (e *executionState) ContainerFinished(name string) bool {
 	//	e.podEvents.Container(nextName).Started()
 }
 
-func (e *executionState) ApproxJobCreationTimestamp() time.Time {
+func (e *executionState) JobCreationTimestamp() time.Time {
+	if e.job != nil {
+		return e.job.CreationTimestamp()
+	}
+	return time.Time{}
+}
+
+func (e *executionState) EstimatedJobCreationTimestamp() time.Time {
 	if e.job != nil {
 		return e.job.CreationTimestamp()
 	}
@@ -277,18 +295,25 @@ func (e *executionState) ApproxJobCreationTimestamp() time.Time {
 	if e.podEvents.FirstTimestamp().Before(ts) {
 		ts = e.podEvents.FirstTimestamp()
 	}
-	if e.pod != nil && e.pod.CreationTimestamp().Before(ts) {
-		ts = e.pod.CreationTimestamp()
+	if !e.EstimatedPodCreationTimestamp().IsZero() && e.EstimatedPodCreationTimestamp().Before(ts) {
+		ts = e.EstimatedPodCreationTimestamp()
 	}
 	return ts
 }
 
-func (e *executionState) ApproxPodCreationTimestamp() time.Time {
+func (e *executionState) PodCreationTimestamp() time.Time {
 	if e.pod != nil {
 		return e.pod.CreationTimestamp()
 	}
 	if !e.jobEvents.PodCreationTimestamp().IsZero() {
 		return e.jobEvents.PodCreationTimestamp()
+	}
+	return time.Time{}
+}
+
+func (e *executionState) EstimatedPodCreationTimestamp() time.Time {
+	if !e.PodCreationTimestamp().IsZero() {
+		return e.PodCreationTimestamp()
 	}
 	if !e.podEvents.FirstTimestamp().IsZero() {
 		return e.podEvents.FirstTimestamp()
@@ -296,17 +321,48 @@ func (e *executionState) ApproxPodCreationTimestamp() time.Time {
 	return time.Time{}
 }
 
-func (e *executionState) ApproxJobExists() bool {
-	_, err := e.ApproxJob()
+func (e *executionState) PodStartTimestamp() time.Time {
+	if e.pod != nil && !e.pod.StartTimestamp().IsZero() {
+		return e.pod.StartTimestamp()
+	}
+	return e.podEvents.StartTimestamp()
+}
+
+func (e *executionState) EstimatedPodStartTimestamp() time.Time {
+	if !e.PodStartTimestamp().IsZero() {
+		return e.PodStartTimestamp()
+	}
+	for _, ev := range e.podEvents.Original() {
+		if GetEventContainerName(ev) != "" {
+			return GetFirstEventTimestamp(ev)
+		}
+	}
+	return time.Time{}
+}
+
+func (e *executionState) PodCreated() bool {
+	return !e.EstimatedPodCreationTimestamp().IsZero()
+}
+
+func (e *executionState) PodStarted() bool {
+	return !e.EstimatedPodStartTimestamp().IsZero()
+}
+
+func (e *executionState) Completed() bool {
+	return !e.CompletionTimestamp().IsZero()
+}
+
+func (e *executionState) EstimatedJobExists() bool {
+	_, err := e.EstimatedJob()
 	return err == nil
 }
 
-func (e *executionState) ApproxPodExists() bool {
-	_, err := e.ApproxPod()
+func (e *executionState) EstimatedPodExists() bool {
+	_, err := e.EstimatedPod()
 	return err == nil
 }
 
-func (e *executionState) ApproxJob() (Job, error) {
+func (e *executionState) EstimatedJob() (Job, error) {
 	if e.job != nil {
 		return e.job, nil
 	}
@@ -320,14 +376,14 @@ func (e *executionState) ApproxJob() (Job, error) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:              e.ResourceId(),
 			Namespace:         e.Namespace(),
-			CreationTimestamp: metav1.Time{Time: e.ApproxJobCreationTimestamp()},
+			CreationTimestamp: metav1.Time{Time: e.EstimatedJobCreationTimestamp()},
 			Labels: map[string]string{
 				constants.ResourceIdLabelName:     e.ResourceId(),
 				constants.RootResourceIdLabelName: e.RootResourceId(),
 			},
 		},
 		Status: batchv1.JobStatus{
-			StartTime: &metav1.Time{Time: e.ApproxJobCreationTimestamp()},
+			StartTime: &metav1.Time{Time: e.EstimatedJobCreationTimestamp()},
 		},
 		Spec: batchv1.JobSpec{
 			Parallelism:  common.Ptr(int32(1)),
@@ -371,16 +427,16 @@ func (e *executionState) ApproxJob() (Job, error) {
 		object.Status.Conditions = []batchv1.JobCondition{
 			CreateJobCompleteCondition(e.pod.FinishTimestamp()),
 		}
-	} else if e.pod != nil || !e.jobEvents.PodCreationTimestamp().IsZero() || !e.podEvents.AssignmentTimestamp().IsZero() {
+	} else if e.pod != nil || !e.jobEvents.PodCreationTimestamp().IsZero() || !e.podEvents.StartTimestamp().IsZero() {
 		// Pod seems to be already running
 		object.Status.Active = 1
-		if !e.podEvents.AssignmentTimestamp().IsZero() {
+		if !e.podEvents.StartTimestamp().IsZero() {
 			object.Status.Ready = common.Ptr(int32(1))
 		}
 	}
 
 	// Build the Pod template
-	approxPod, err := e.ApproxPod()
+	approxPod, err := e.EstimatedPod()
 	if err != nil {
 		return nil, err
 	}
@@ -393,15 +449,15 @@ func (e *executionState) ApproxJob() (Job, error) {
 	return NewJob(object), nil
 }
 
-func (e *executionState) MustApproxJob() Job {
-	j, err := e.ApproxJob()
+func (e *executionState) MustEstimatedJob() Job {
+	j, err := e.EstimatedJob()
 	if err != nil {
 		panic(err)
 	}
 	return j
 }
 
-func (e *executionState) ApproxPod() (Pod, error) {
+func (e *executionState) EstimatedPod() (Pod, error) {
 	if e.pod != nil {
 		return e.pod, nil
 	}
@@ -418,7 +474,7 @@ func (e *executionState) ApproxPod() (Pod, error) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:              e.PodName(),
 			Namespace:         e.Namespace(),
-			CreationTimestamp: metav1.Time{Time: e.ApproxPodCreationTimestamp()},
+			CreationTimestamp: metav1.Time{Time: e.EstimatedPodCreationTimestamp()},
 			Labels: map[string]string{
 				constants.ResourceIdLabelName:     e.ResourceId(),
 				constants.RootResourceIdLabelName: e.RootResourceId(),
@@ -506,7 +562,7 @@ func (e *executionState) ApproxPod() (Pod, error) {
 			startTs = e.podEvents.Container("1").StartTimestamp()
 		}
 		if startTs.IsZero() {
-			startTs = e.podEvents.AssignmentTimestamp()
+			startTs = e.podEvents.StartTimestamp()
 		}
 		if !startTs.IsZero() {
 			object.Status.StartTime = &metav1.Time{Time: startTs}
@@ -540,9 +596,9 @@ func (e *executionState) ApproxPod() (Pod, error) {
 	}
 	podInitialized := corev1.ConditionFalse
 	podInitializedTs := metav1.Time{}
-	if !e.podEvents.AssignmentTimestamp().IsZero() { // TODO?
+	if !e.podEvents.StartTimestamp().IsZero() { // TODO?
 		podInitialized = corev1.ConditionTrue
-		podInitializedTs.Time = e.podEvents.AssignmentTimestamp()
+		podInitializedTs.Time = e.podEvents.StartTimestamp()
 	}
 	podReady := corev1.ConditionFalse
 	podReadyTs := metav1.Time{}
@@ -552,9 +608,9 @@ func (e *executionState) ApproxPod() (Pod, error) {
 	}
 	podScheduled := corev1.ConditionFalse
 	podScheduledTs := metav1.Time{}
-	if !e.podEvents.AssignmentTimestamp().IsZero() {
+	if !e.podEvents.StartTimestamp().IsZero() {
 		podScheduled = corev1.ConditionTrue
-		podScheduledTs.Time = e.podEvents.AssignmentTimestamp()
+		podScheduledTs.Time = e.podEvents.StartTimestamp()
 	}
 	object.Status.Conditions = []corev1.PodCondition{
 		{Type: corev1.ContainersReady, Status: containersReady, LastTransitionTime: containersReadyTs, Reason: conditionReason},
@@ -566,8 +622,8 @@ func (e *executionState) ApproxPod() (Pod, error) {
 	return NewPod(object), nil
 }
 
-func (e *executionState) MustApproxPod() Pod {
-	p, err := e.ApproxPod()
+func (e *executionState) MustEstimatedPod() Pod {
+	p, err := e.EstimatedPod()
 	if err != nil {
 		panic(err)
 	}
