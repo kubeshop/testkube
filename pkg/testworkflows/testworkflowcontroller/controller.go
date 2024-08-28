@@ -135,7 +135,7 @@ func (c *controller) PodIP() (string, error) {
 }
 
 func (c *controller) NodeName() (string, error) {
-	nodeName := c.watcher.State().PodName()
+	nodeName := c.watcher.State().PodNodeName()
 	if nodeName == "" {
 		if c.watcher.PodErr() != nil {
 			return "", c.watcher.PodErr()

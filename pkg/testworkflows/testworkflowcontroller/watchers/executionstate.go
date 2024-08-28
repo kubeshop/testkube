@@ -269,7 +269,7 @@ func (e *executionState) ContainerFinished(name string) bool {
 	//}
 
 	// TODO?
-	return !e.Completed() ||
+	return e.Completed() ||
 		(e.pod != nil && e.pod.ContainerFinished(name))
 	//return !e.CompletionTimestamp().IsZero() ||
 	//	(e.pod != nil && e.pod.ContainerFinished(name)) ||

@@ -372,7 +372,7 @@ func NewExecutionWatcher(parentCtx context.Context, clientSet kubernetes.Interfa
 			next(false)
 			watcher.Commit()
 
-			if !watcher.State().CompletionTimestamp().IsZero() {
+			if watcher.State().Completed() {
 				return
 			}
 		}

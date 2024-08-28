@@ -287,7 +287,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 					}
 				}
 			}
-			log("container log finished", container)
+			log("container log finished", container, watcher.State().CompletionTimestamp().String(), watcher.State().Completed(), watcher.State().ContainerFinished(container))
 
 			// Wait until the Container is terminated
 			for ok := true; ok; _, ok = <-watcher.Updated() {
@@ -308,7 +308,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 			log("container result", container, result)
 
 			for i, ref := range endRefs[containerIndex] {
-				if ref == "root" {
+				if ref == "root" || ref == "" {
 					continue
 				}
 
