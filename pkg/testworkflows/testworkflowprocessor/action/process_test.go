@@ -616,3 +616,59 @@ func TestProcess_IgnoreExecutionOfStaticSkip_PauseGroup(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, want, got)
 }
+
+func TestProcess_ConsecutiveAlways(t *testing.T) {
+	// Build the structure
+	root := stage.NewGroupStage("init", false)
+	step1 := stage.NewContainerStage("step1", stage.NewContainer().SetImage("image:1.2.3").SetCommand("a", "b"))
+	step1.SetCondition("always")
+	root.Add(step1)
+	step2 := stage.NewContainerStage("step2", stage.NewContainer().SetImage("image:3.2.1").SetCommand("c", "d"))
+	step2.SetCondition("always")
+	root.Add(step2)
+
+	// Build the expectations
+	want := actiontypes.NewActionList().
+		// Declare stage conditions
+		Declare("init", "true").
+		Declare("step1", "true", "init").
+		Declare("step2", "true", "init").
+
+		// Declare group resolutions
+		Result("init", "step1&&step2").
+		Result("", "init").
+
+		// Initialize
+		Start("").
+		CurrentStatus("true").
+		Start("init").
+
+		// Run the step 1
+		CurrentStatus("init").
+		MutateContainer("step1", testworkflowsv1.ContainerConfig{
+			Image:   "image:1.2.3",
+			Command: common.Ptr([]string{"a", "b"}),
+		}).
+		Start("step1").
+		Execute("step1", false).
+		End("step1").
+
+		// Run the step 2
+		CurrentStatus("step1&&init").
+		MutateContainer("step2", testworkflowsv1.ContainerConfig{
+			Image:   "image:3.2.1",
+			Command: common.Ptr([]string{"c", "d"}),
+		}).
+		Start("step2").
+		Execute("step2", false).
+		End("step2").
+
+		// Finish
+		End("init").
+		End("")
+
+	// Assert
+	got, err := Process(root, nil)
+	assert.NoError(t, err)
+	assert.Equal(t, want, got)
+}
