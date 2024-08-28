@@ -918,6 +918,64 @@ func TestProcessShell(t *testing.T) {
 	assert.Equal(t, want, res.LiteActions())
 }
 
+func TestProcessConsecutiveAlways(t *testing.T) {
+	wf := &testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+				System: &testworkflowsv1.TestWorkflowSystem{
+					IsolatedContainers: common.Ptr(true),
+				},
+			},
+			Steps: []testworkflowsv1.Step{
+				{StepOperations: testworkflowsv1.StepOperations{Run: &testworkflowsv1.StepRun{Shell: common.Ptr("shell-test")}}},
+				{StepMeta: testworkflowsv1.StepMeta{Condition: "always"}, StepOperations: testworkflowsv1.StepOperations{Run: &testworkflowsv1.StepRun{Shell: common.Ptr("shell-test")}}},
+			},
+		},
+	}
+
+	res, err := proc.Bundle(context.Background(), wf, execMachine)
+	sig := res.Signature
+
+	want := lite.NewLiteActionGroups().
+		Append(func(list lite.LiteActionList) lite.LiteActionList {
+			return list.
+				Setup(false, false, false).
+				Declare(constants.RootOperationName, "true").
+				Declare(sig[0].Ref(), "true", constants.RootOperationName).
+				Declare(sig[1].Ref(), "true", constants.RootOperationName).
+				Result(constants.RootOperationName, and(sig[0].Ref(), sig[1].Ref())).
+				Result("", constants.RootOperationName).
+				Start("").
+				CurrentStatus("true").
+				Start(constants.RootOperationName).
+				CurrentStatus(constants.RootOperationName)
+		}).Append(func(list lite.LiteActionList) lite.LiteActionList {
+		return list.
+			MutateContainer(lite.LiteContainerConfig{
+				Command: cmd("/.tktw-bin/sh"),
+				Args:    cmdShell("shell-test"),
+			}).
+			Start(sig[0].Ref()).
+			Execute(sig[0].Ref(), false).
+			End(sig[0].Ref()).
+			CurrentStatus(and(sig[0].Ref(), constants.RootOperationName))
+	}).Append(func(list lite.LiteActionList) lite.LiteActionList {
+		return list.
+			MutateContainer(lite.LiteContainerConfig{
+				Command: cmd("/.tktw-bin/sh"),
+				Args:    cmdShell("shell-test"),
+			}).
+			Start(sig[1].Ref()).
+			Execute(sig[1].Ref(), false).
+			End(sig[1].Ref()).
+			End(constants.RootOperationName).
+			End("")
+	})
+
+	assert.NoError(t, err)
+	assert.Equal(t, want, res.LiteActions())
+}
+
 func TestProcessNestedCondition(t *testing.T) {
 	wf := &testworkflowsv1.TestWorkflow{
 		Spec: testworkflowsv1.TestWorkflowSpec{

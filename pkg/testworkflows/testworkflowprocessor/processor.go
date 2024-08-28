@@ -74,7 +74,12 @@ func (p *processor) process(layer Intermediate, container stage.Container, step 
 		if err != nil {
 			return nil, err
 		}
-		self.Add(stage)
+		if stage != nil {
+			if step.Condition != "" {
+				stage.SetCondition(step.Condition)
+			}
+			self.Add(stage)
+		}
 	}
 
 	// Add virtual pause step in case no other is there
