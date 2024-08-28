@@ -78,8 +78,9 @@ func NewCloneCmd() *cobra.Command {
 				}
 			}
 
-			// Use the SSH key
-			if sshKey != "" {
+			// Use the SSH key (ensure there is new line at EOF)
+			sshKey = strings.TrimRight(sshKey, "\n") + "\n"
+			if sshKey != "\n" {
 				sshKeyPath := filepath.Join(constants.DefaultTmpDirPath, "id_rsa")
 				err := os.WriteFile(sshKeyPath, []byte(sshKey), 0400)
 				ui.ExitOnError("saving SSH key temporarily", err)
