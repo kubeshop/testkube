@@ -3,6 +3,7 @@ package testworkflowprocessor
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -296,10 +297,18 @@ func ProcessArtifacts(_ InternalProcessor, layer Intermediate, container stage.C
 	// Allow to combine it within other containers
 	stage.SetPure(true)
 
+	cmd := []string{constants.DefaultToolkitPath, "artifacts"}
+	for _, mount := range container.VolumeMounts() {
+		if mount.MountPath == constants.DefaultInternalPath {
+			continue
+		}
+		cmd = append(cmd, "-m", strings.TrimRight(mount.MountPath, `/\`))
+	}
+
 	selfContainer.
 		SetImage(constants.DefaultToolkitImage).
 		SetImagePullPolicy(corev1.PullIfNotPresent).
-		SetCommand(constants.DefaultToolkitPath, "artifacts", "-m", constants.DefaultDataPath).
+		SetCommand(cmd...).
 		EnableToolkit(stage.Ref())
 
 	args := make([]string, 0)
