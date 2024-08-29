@@ -1,15 +1,17 @@
 package store
 
 import (
+	"context"
 	"sync"
 	"sync/atomic"
 )
 
 type updateImmediate struct {
-	ch     chan struct{}
 	nextCh chan struct{}
 	mu     sync.Mutex
 	closed atomic.Bool
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
 type Update interface {
@@ -20,8 +22,31 @@ type Update interface {
 }
 
 func (u *updateImmediate) Channel() <-chan struct{} {
-	// TODO: use individual channels with Next()
-	return u.ch
+	ch := make(chan struct{}, 1)
+	go func() {
+		defer func() {
+			close(ch)
+			<-ch
+		}()
+		for {
+			select {
+			case <-u.ctx.Done():
+				return
+			default:
+			}
+			select {
+			case <-u.ctx.Done():
+				return
+			case <-u.Next():
+				select {
+				case <-u.ctx.Done():
+					return
+				case ch <- struct{}{}:
+				}
+			}
+		}
+	}()
+	return ch
 }
 
 func (u *updateImmediate) Next() <-chan struct{} {
@@ -38,12 +63,9 @@ func (u *updateImmediate) Emit() {
 		recover() // ignore closed channel error
 		u.mu.Unlock()
 	}()
-	if len(u.ch) == 0 {
-		u.ch <- struct{}{}
-		nextCh := u.nextCh
-		u.nextCh = make(chan struct{})
-		close(nextCh)
-	}
+	nextCh := u.nextCh
+	u.nextCh = make(chan struct{})
+	close(nextCh)
 }
 
 func (u *updateImmediate) Close() {
@@ -51,12 +73,12 @@ func (u *updateImmediate) Close() {
 		recover() // ignore closed channel
 	}()
 	if u.closed.CompareAndSwap(false, true) {
-		close(u.ch)
-		<-u.ch
 		close(u.nextCh)
+		u.cancel()
 	}
 }
 
 func NewUpdate() Update {
-	return &updateImmediate{ch: make(chan struct{}, 1), nextCh: make(chan struct{})}
+	ctx, cancel := context.WithCancel(context.Background())
+	return &updateImmediate{nextCh: make(chan struct{}), ctx: ctx, cancel: cancel}
 }

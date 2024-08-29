@@ -51,6 +51,7 @@ type ExecutionWatcher interface {
 
 	Started() <-chan struct{}
 	Updated() <-chan struct{}
+	Next() <-chan struct{}
 }
 
 func (e *executionWatcher) initializePodEventsWatcher() {
@@ -138,6 +139,10 @@ func (e *executionWatcher) Started() <-chan struct{} {
 
 func (e *executionWatcher) Updated() <-chan struct{} {
 	return e.update.Channel()
+}
+
+func (e *executionWatcher) Next() <-chan struct{} {
+	return e.update.Next()
 }
 
 func NewExecutionWatcher(parentCtx context.Context, clientSet kubernetes.Interface, namespace, id string, signature []stage.Signature, scheduledAt time.Time) ExecutionWatcher {

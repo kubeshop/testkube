@@ -79,8 +79,10 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 	notifier := newNotifier(ctx, signature, scheduledAt)
 	signatureSeq := stage.MapSignatureToSequence(signature)
 
+	updatesCh := watcher.Updated()
+
 	log := func(data ...interface{}) {
-		// FIXME delete?
+		//// FIXME delete?
 		//data = append([]interface{}{ui.Green(watcher.State().Job().ResourceId())}, data...)
 		//fmt.Println(data...)
 	}
@@ -105,9 +107,12 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 
 		// Wait until the Pod is scheduled
 		currentJobEventsIndex := 0
-		for ok := true; ok; _, ok = <-watcher.Updated() {
+		currentPodEventsIndex := 0
+		for ok := true; ok; _, ok = <-updatesCh {
 			log("checking for scheduled pod")
 			for _, ev := range watcher.State().JobEvents().Original()[currentJobEventsIndex:] {
+				currentJobEventsIndex++
+
 				log("reading event", ev)
 				if ev.Reason != "BackoffLimitExceeded" {
 					notifier.Event("", watchers.GetEventTimestamp(ev), ev.Type, ev.Reason, ev.Message)
@@ -115,19 +120,6 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 				log("finished reading event", ev)
 			}
 			log("job events read")
-
-			if watcher.State().PodCreated() || watcher.State().Completed() {
-				break
-			}
-			log("checking for scheduled pod: iteration end")
-		}
-		log("pod is scheduled")
-
-		// Wait until the Pod is started
-		currentPodEventsIndex := 0
-		for ok := true; ok; _, ok = <-watcher.Updated() {
-			log("waiting for started pod")
-			// TODO: Watch the Job events too still?
 			for _, ev := range watcher.State().PodEvents().Original()[currentPodEventsIndex:] {
 				currentPodEventsIndex++
 
@@ -137,13 +129,31 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 					notifier.Event("", watchers.GetEventTimestamp(ev), ev.Type, ev.Reason, ev.Message)
 				}
 			}
+			log("pod events read")
 
 			if watcher.State().PodStarted() || watcher.State().Completed() {
 				break
 			}
-			log("waiting for started pod: iteration end")
+			log("checking for scheduled pod: iteration end")
 		}
 		log("pod likely started")
+
+		// Handle the case when it has been complete without pod start
+		if !watcher.State().PodStarted() && watcher.State().Completed() {
+			log("complete without pod")
+			details := watcher.State().Job().ExecutionError()
+			if details == "" {
+				details = "Job was aborted"
+			}
+			notifier.Finish(watcher.State().CompletionTimestamp())
+			notifier.finishInit(ContainerResultStep{
+				Status:     testkube.ABORTED_TestWorkflowStepStatus,
+				FinishedAt: watcher.State().CompletionTimestamp(),
+				Details:    details,
+			})
+			// TODO: set all steps as aborted
+			return
+		}
 
 		// Load the pod information
 		// TODO: when it's complete without pod start, try to check if maybe job was not aborted etc
@@ -191,7 +201,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 
 			// Wait until the Container is started
 			currentPodEventsIndex = 0
-			for ok := true; ok; _, ok = <-watcher.Updated() {
+			for ok := true; ok; _, ok = <-updatesCh {
 				log("waiting for container start", container)
 
 				// Read the Pod Events for the Container Events
@@ -290,7 +300,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 			log("container log finished", container, watcher.State().CompletionTimestamp().String(), watcher.State().Completed(), watcher.State().ContainerFinished(container))
 
 			// Wait until the Container is terminated
-			for ok := true; ok; _, ok = <-watcher.Updated() {
+			for ok := true; ok; _, ok = <-updatesCh {
 				log("waiting for terminated container", container)
 
 				// Determine if the container should be already stopped
@@ -378,7 +388,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 			}
 
 			select {
-			case _, ok := <-watcher.Updated():
+			case _, ok := <-updatesCh:
 				if !ok || watcher.State().Completed() {
 					break loop
 				}
