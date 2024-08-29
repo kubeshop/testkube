@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/kballard/go-shellquote"
@@ -13,6 +14,10 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/ui"
+)
+
+var (
+	protocolRe = regexp.MustCompile(`^[^:]+://`)
 )
 
 func NewCloneCmd() *cobra.Command {
@@ -31,6 +36,10 @@ func NewCloneCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(2),
 
 		Run: func(cmd *cobra.Command, args []string) {
+			// Append SSH protocol if there is missing one and it looks like that (git@github.com:kubeshop/testkube.git)
+			if !protocolRe.MatchString(args[0]) && strings.ContainsRune(args[0], ':') && !strings.ContainsRune(args[0], '\\') {
+				args[0] = "ssh://" + strings.Replace(args[0], ":", "/", 1)
+			}
 			uri, err := url.Parse(args[0])
 			ui.ExitOnError("repository uri", err)
 			destinationPath, err := filepath.Abs(args[1])
@@ -69,8 +78,9 @@ func NewCloneCmd() *cobra.Command {
 				}
 			}
 
-			// Use the SSH key
-			if sshKey != "" {
+			// Use the SSH key (ensure there is new line at EOF)
+			sshKey = strings.TrimRight(sshKey, "\n") + "\n"
+			if sshKey != "\n" {
 				sshKeyPath := filepath.Join(constants.DefaultTmpDirPath, "id_rsa")
 				err := os.WriteFile(sshKeyPath, []byte(sshKey), 0400)
 				ui.ExitOnError("saving SSH key temporarily", err)
