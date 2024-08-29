@@ -102,18 +102,44 @@ func getContainerLogsStream(ctx context.Context, clientSet kubernetes.Interface,
 	return stream, nil
 }
 
-// TODO: Get rid of Channel[]
-func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interface, namespace, podName, containerName string, bufferSize int, isDone func() bool) Channel[ContainerLog] {
+func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interface, namespace, podName, containerName string, bufferSize int, isDone func() bool) <-chan ChannelMessage[ContainerLog] {
 	ctx, ctxCancel := context.WithCancel(parentCtx)
-	w := newChannel[ContainerLog](ctx, bufferSize)
+	ch := make(chan ChannelMessage[ContainerLog], bufferSize)
+
+	sendError := func(err error) {
+		defer func() {
+			recover() // ignore already closed
+		}()
+
+		ch <- ChannelMessage[ContainerLog]{Error: err}
+	}
+
+	sendLog := func(log ContainerLog) {
+		defer func() {
+			recover() // ignore already closed
+		}()
+
+		ch <- ChannelMessage[ContainerLog]{Value: log}
+	}
 
 	go func() {
-		<-w.Done()
+		<-parentCtx.Done()
 		ctxCancel()
+		fmt.Println(podName, "LOGS STOPPING")
 	}()
 
 	go func() {
-		defer ctxCancel()
+		<-ctx.Done()
+		close(ch)
+		fmt.Println(podName, "CLOSED CHANNEL")
+	}()
+
+	go func() {
+		defer func() {
+			fmt.Println(podName, "ENDING GOROUTINE")
+			ctxCancel()
+			fmt.Println(podName, "ENDED GOROUTINE")
+		}()
 		var err error
 
 		var since *time.Time
@@ -123,7 +149,7 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 		if err == io.EOF {
 			return
 		} else if err != nil && !errors.Is(err, context.Canceled) {
-			w.Error(err)
+			sendError(err)
 			return
 		}
 
@@ -133,7 +159,7 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 		var logBufferMu sync.Mutex
 		var logBufferCh = make(chan struct{}, 1)
 		unsafeFlushLogBuffer := func() {
-			if logBufferLog.Len() == 0 || w.CtxErr() != nil {
+			if logBufferLog.Len() == 0 || ctx.Err() != nil {
 				return
 			}
 			message := make([]byte, logBufferLog.Len())
@@ -142,7 +168,7 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 				log.DefaultLogger.Errorf("failed to read log buffer: %s/%s", podName, containerName)
 				return
 			}
-			w.Send(ContainerLog{Time: logBufferTs, Log: message})
+			sendLog(ContainerLog{Time: logBufferTs, Log: message})
 		}
 		flushLogBuffer := func() {
 			logBufferMu.Lock()
@@ -305,7 +331,7 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 
 			// Push information about any other error
 			if err != nil {
-				w.Error(err)
+				sendError(err)
 				continue
 			}
 
@@ -357,7 +383,7 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 				}
 				fmt.Println(podName, "flusing log")
 				flushLogBuffer()
-				w.Send(item)
+				sendLog(item)
 				fmt.Println(podName, "sending instruction")
 				hasNewLine = false
 				continue
@@ -372,7 +398,7 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 		}
 	}()
 
-	return w
+	return ch
 }
 
 var (

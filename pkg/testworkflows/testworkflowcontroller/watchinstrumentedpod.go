@@ -234,7 +234,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 			isDone := func() bool {
 				return opts.DisableFollow || watcher.State().ContainerFinished(container) || watcher.State().Completed()
 			}
-			for v := range WatchContainerLogs(ctx, clientSet, watcher.State().Namespace(), watcher.State().PodName(), container, 10, isDone).Channel() {
+			for v := range WatchContainerLogs(ctx, clientSet, watcher.State().Namespace(), watcher.State().PodName(), container, 10, isDone) {
 				if v.Error != nil {
 					log("container error", container, v.Error)
 					notifier.Error(v.Error)
