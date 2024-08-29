@@ -15,6 +15,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller/watchers"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
+	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 const (
@@ -82,9 +83,9 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 	updatesCh := watcher.Updated()
 
 	log := func(data ...interface{}) {
-		//// FIXME delete?
-		//data = append([]interface{}{ui.Green(watcher.State().Job().ResourceId())}, data...)
-		//fmt.Println(data...)
+		// FIXME delete?
+		data = append([]interface{}{ui.Green(watcher.State().Job().ResourceId())}, data...)
+		fmt.Println(data...)
 	}
 
 	go func() {
@@ -239,7 +240,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 					notifier.Error(v.Error)
 					continue
 				}
-				log("container log", container)
+				log("container log", container, v.Value.Type())
 
 				switch v.Value.Type() {
 				case ContainerLogTypeLog:
@@ -393,6 +394,9 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 					break loop
 				}
 			case <-time.After(30 * time.Second):
+				watcher.RefreshPod(30 * time.Second) // FIXME?
+				watcher.RefreshJob(30 * time.Second) // FIXME?
+
 				// Fallback in case of missing data
 				if watcher.State().Completed() {
 					break loop

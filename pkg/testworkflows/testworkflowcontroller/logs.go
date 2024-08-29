@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"encoding/json"
+	"fmt"
 	"io"
 	"strings"
 	"sync"
@@ -83,7 +85,9 @@ func getContainerLogsStream(ctx context.Context, clientSet kubernetes.Interface,
 	var stream io.ReadCloser
 	for {
 		stream, err = req.Stream(ctx)
+		fmt.Println(podName, "LOGS STARTING STREAM")
 		if err != nil {
+			fmt.Println(podName, "LOGS ERR", err.Error())
 			// The container is not necessarily already started when Started event is received
 			if !strings.Contains(err.Error(), "is waiting to start") {
 				return nil, err
@@ -118,7 +122,7 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 		stream, err := getContainerLogsStream(ctx, clientSet, namespace, podName, containerName, isDone, since)
 		if err == io.EOF {
 			return
-		} else if err != nil {
+		} else if err != nil && !errors.Is(err, context.Canceled) {
 			w.Error(err)
 			return
 		}
@@ -146,6 +150,10 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 			unsafeFlushLogBuffer()
 		}
 		appendLog := func(ts time.Time, log ...[]byte) {
+			for i := range log {
+				v, _ := json.Marshal(string(log[i]))
+				fmt.Println(podName, "appended log", string(v))
+			}
 			logBufferMu.Lock()
 			defer logBufferMu.Unlock()
 
@@ -175,8 +183,16 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 
 		// Flush the log automatically after 100ms
 		bufferCtx, bufferCtxCancel := context.WithCancel(ctx)
-		defer bufferCtxCancel()
+		defer func() {
+			fmt.Println(podName, "cancelling buffer context")
+			bufferCtxCancel()
+			fmt.Println(podName, "canceled buffer context")
+		}()
 		go func() {
+			fmt.Println(podName, "start frequential flush")
+			defer func() {
+				fmt.Println(podName, "stop frequential flush")
+			}()
 			t := time.NewTimer(FlushLogTime)
 			for {
 				t.Stop()
@@ -211,7 +227,11 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 		}()
 
 		// Flush the rest of logs if it is closed
-		defer flushLogBuffer()
+		defer func() {
+			fmt.Println(podName, "END flushing")
+			flushLogBuffer()
+			fmt.Println(podName, "END flushed")
+		}()
 
 		// Parse and return the logs
 		reader := bufio.NewReaderSize(stream, FlushBufferSize)
@@ -222,10 +242,13 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 		hasNewLine := false
 
 		for {
+			fmt.Println(podName, "waiting for timestamp")
 			// --- Step 1: READING TIMESTAMP
 
 			// Read next timestamp
 			err = tsReader.Read(reader)
+
+			fmt.Println(podName, "timestamp read", err)
 
 			// Ignore too old logs. SinceTime in Kubernetes is precise only to seconds
 			if err == nil && !readerAnyContent {
@@ -247,12 +270,16 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 			// either the logfile has been rotated, or the container actually finished.
 			// Assume that only if there was EOF without any logs since, the container is done.
 			if err == io.EOF && !readerAnyContent {
+				fmt.Println(podName, "stream is finished, no additional content")
 				return
 			}
+
+			fmt.Println(podName, "continuing")
 
 			// If there was EOF, and we are not sure if container is done,
 			// reinitialize the stream from the time we have finished.
 			if err == io.EOF {
+				fmt.Println(podName, "restarting stream", err)
 				since = common.Ptr(lastTs.Add(1))
 				stream, err = getContainerLogsStream(ctx, clientSet, namespace, podName, containerName, isDone, since)
 				if err != nil {
@@ -263,10 +290,14 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 				continue
 			}
 
+			fmt.Println(podName, "further", err)
+
 			// Edge case: Kubernetes may send critical errors without timestamp (like ionotify)
 			if errors.Is(err, ErrInvalidTimestamp) && len(tsReader.Prefix()) > 0 {
 				appendLog(lastTs, []byte(tsReader.Format(lastTs)), []byte(" "), tsReader.Prefix())
+				fmt.Println(podName, "LOG CRITICAL ERROR", string(tsReader.Prefix()))
 				rest, _ := utils.ReadLongLine(reader)
+				fmt.Println(podName, "LOG CRITICAL ERROR FINALIZATION", string(rest))
 				appendLog(lastTs, rest, []byte("\n"))
 				hasNewLine = false
 				continue
@@ -316,14 +347,18 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 			// Detect instruction
 			instruction, isHint, err := instructions.DetectInstruction(line)
 			if err == nil && instruction != nil {
+				v, _ := json.Marshal(string(line))
+				fmt.Println(podName, "detected instruction", string(v))
 				item := ContainerLog{Time: lastTs}
 				if isHint {
 					item.Hint = instruction
 				} else {
 					item.Output = instruction
 				}
+				fmt.Println(podName, "flusing log")
 				flushLogBuffer()
 				w.Send(item)
+				fmt.Println(podName, "sending instruction")
 				hasNewLine = false
 				continue
 			}

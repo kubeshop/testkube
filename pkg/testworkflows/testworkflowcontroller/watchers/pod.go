@@ -61,9 +61,9 @@ func (p *pod) RootResourceId() string {
 }
 
 func (p *pod) NodeName() string {
-	nodeName := p.original.Status.NominatedNodeName
+	nodeName := p.original.Spec.NodeName
 	if nodeName == "" {
-		nodeName = p.original.Spec.NodeName
+		nodeName = p.original.Status.NominatedNodeName
 	}
 	return nodeName
 }

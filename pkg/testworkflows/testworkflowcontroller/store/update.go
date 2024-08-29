@@ -7,11 +7,12 @@ import (
 )
 
 type updateImmediate struct {
-	nextCh chan struct{}
-	mu     sync.Mutex
-	closed atomic.Bool
-	ctx    context.Context
-	cancel context.CancelFunc
+	nextCh    chan struct{}
+	mu        sync.Mutex
+	iteration atomic.Uint32
+	closed    atomic.Bool
+	ctx       context.Context
+	cancel    context.CancelFunc
 }
 
 type Update interface {
@@ -28,16 +29,33 @@ func (u *updateImmediate) Channel() <-chan struct{} {
 			close(ch)
 			<-ch
 		}()
+		next := u.Next()
+		iteration := u.iteration.Load()
 		for {
 			select {
 			case <-u.ctx.Done():
 				return
 			default:
 			}
+
+			// TODO: Consider some frequent check for the iteration too?
+			currentIteration := u.iteration.Load()
+			if iteration != currentIteration {
+				iteration = currentIteration
+				select {
+				case <-u.ctx.Done():
+					return
+				case ch <- struct{}{}:
+				}
+				continue
+			}
+
 			select {
 			case <-u.ctx.Done():
 				return
-			case <-u.Next():
+			case <-next:
+				next = u.Next()
+				iteration = u.iteration.Load()
 				select {
 				case <-u.ctx.Done():
 					return
