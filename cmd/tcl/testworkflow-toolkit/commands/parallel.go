@@ -23,6 +23,8 @@ import (
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	commontcl "github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/common"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/spawn"
+	constants2 "github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/control"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/artifacts"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
@@ -335,8 +337,21 @@ func NewParallelCmd() *cobra.Command {
 					if registry.Count() > 0 && registry.AllPaused() {
 						fmt.Println("resuming all workers")
 						registry.EachAsyncAtOnce(func(index int64, ctrl testworkflowcontroller.Controller, wait func()) {
+							podIp, _ := ctrl.PodIP()
+							if podIp == "" {
+								wait()
+								return
+							}
+							// TODO: RETRY ON FAILURE? BREAK AFTER MULTIPLE FAILURES?
+							client, err := control.NewClient(context.Background(), podIp, constants2.ControlServerPort)
+							if err != nil {
+								spawn.CreateLogger("worker", descriptions[index], index, params.Count)("warning", "failed to connect to control server to resume", err.Error())
+								wait()
+								return
+							}
+							defer client.Close()
 							wait()
-							err := ctrl.Resume(context.Background())
+							err = client.Resume()
 							if err != nil {
 								spawn.CreateLogger("worker", descriptions[index], index, params.Count)("warning", "failed to resume", err.Error())
 							}
