@@ -314,16 +314,24 @@ func NewParallelCmd() *cobra.Command {
 			// Orchestrate resume
 			go func() {
 				for update := range updates {
+					fmt.Println("update received")
 					if update.result != nil {
+						if update.result.Status == nil {
+							fmt.Println("  update", update.index, "EMPTY")
+						} else {
+							fmt.Println("  update", update.index, *update.result.Status)
+						}
 						registry.SetStatus(update.index, update.result.Status)
 					}
 
 					// Delete obsolete data
 					if update.done || update.err != nil {
+						fmt.Println("  destroy", update.index)
 						registry.Destroy(update.index)
 					}
 
 					// Resume all at once
+					fmt.Println("  registry:", registry.Count(), registry.CountStatuses())
 					if registry.Count() > 0 && registry.AllPaused() {
 						fmt.Println("resuming all workers")
 						registry.EachAsyncAtOnce(func(index int64, ctrl testworkflowcontroller.Controller, wait func()) {
