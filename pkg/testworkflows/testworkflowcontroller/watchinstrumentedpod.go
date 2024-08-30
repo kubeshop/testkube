@@ -15,7 +15,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller/watchers"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
-	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 const (
@@ -84,8 +83,10 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 
 	log := func(data ...interface{}) {
 		// FIXME delete?
-		data = append([]interface{}{ui.Green(watcher.State().Job().ResourceId())}, data...)
-		fmt.Println(data...)
+		if debug != "" {
+			//data = append([]interface{}{ui.Green(watcher.State().Job().ResourceId())}, data...)
+			//fmt.Println(data...)
+		}
 	}
 
 	go func() {
@@ -99,6 +100,10 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 			notifier.Finalize()
 			notifier.Flush()
 			ctxCancel()
+			if watcher.State().Pod() != nil {
+				v, _ := json.Marshal(watcher.State().Pod().Original())
+				log("last pod", string(v))
+			}
 			log("closed")
 		}()
 
@@ -249,15 +254,19 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 					notifier.Output(v.Value.Output.Ref, v.Value.Time, v.Value.Output)
 				case ContainerLogTypeHint:
 					if v.Value.Hint.Ref == constants.RootOperationName {
+						log("root operation ignored")
 						continue
 					}
 					switch v.Value.Hint.Name {
 					case constants2.InstructionStart:
+						log("start", v.Value.Hint.Ref)
 						lastStarted = v.Value.Hint.Ref
 						if !aborted {
 							notifier.Start(v.Value.Hint.Ref, v.Value.Time)
 						}
+						log("start computed", v.Value.Hint.Ref)
 					case constants2.InstructionEnd:
+						log("end", v.Value.Hint.Ref)
 						status := testkube.TestWorkflowStepStatus(v.Value.Hint.Value.(string))
 						if status == "" {
 							status = testkube.PASSED_TestWorkflowStepStatus
@@ -270,16 +279,20 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 								FinishedAt: v.Value.Time,
 							})
 						}
+						log("end computed", v.Value.Hint.Ref)
 						if status == testkube.ABORTED_TestWorkflowStepStatus {
 							aborted = true
 							continue
 						}
 					case constants2.InstructionExecution:
+						log("execution", v.Value.Hint.Ref)
 						serialized, _ := json.Marshal(v.Value.Hint.Value)
 						var executionResult constants2.ExecutionResult
 						_ = json.Unmarshal(serialized, &executionResult)
 						executionStatuses[v.Value.Hint.Ref] = executionResult
+						log("execution computed", v.Value.Hint.Ref)
 					case constants2.InstructionPause:
+						log("pause", v.Value.Hint.Ref)
 						ts, _ := v.Value.Hint.Value.(string)
 						start, err := time.Parse(constants2.PreciseTimeFormat, ts)
 						if err != nil {
@@ -287,7 +300,9 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 							notifier.Error(fmt.Errorf("invalid timestamp provided with pausing instruction: %v", v.Value.Hint.Value))
 						}
 						notifier.Pause(v.Value.Hint.Ref, start)
+						log("pause computed", v.Value.Hint.Ref)
 					case constants2.InstructionResume:
+						log("resume", v.Value.Hint.Ref)
 						ts, _ := v.Value.Hint.Value.(string)
 						end, err := time.Parse(constants2.PreciseTimeFormat, ts)
 						if err != nil {
@@ -295,7 +310,9 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 							notifier.Error(fmt.Errorf("invalid timestamp provided with resuming instruction: %v", v.Value.Hint.Value))
 						}
 						notifier.Resume(v.Value.Hint.Ref, end)
+						log("resume computed", v.Value.Hint.Ref)
 					}
+					log("hint finished")
 				}
 			}
 			log("container log finished", container, watcher.State().CompletionTimestamp().String(), watcher.State().Completed(), watcher.State().ContainerFinished(container))

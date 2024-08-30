@@ -78,59 +78,31 @@ func (n *notifier) RegisterTimestamp(ref string, t time.Time) {
 
 func (n *notifier) Flush() {
 	n.flushMu.Lock()
-	defer n.flushMu.Unlock()
 	if !n.flushScheduled {
+		n.flushMu.Unlock()
 		return
 	}
 	n.resultMu.RLock()
-	defer n.resultMu.RUnlock()
-	n.send(Notification{Timestamp: n.result.LatestTimestamp(), Result: n.result.Clone()})
+	notification := Notification{Timestamp: n.result.LatestTimestamp(), Result: n.result.Clone()}
+	n.resultMu.RUnlock()
 	n.flushScheduled = false
+	n.flushMu.Unlock()
+	n.send(notification)
 }
 
 func (n *notifier) scheduleFlush() {
 	n.flushMu.Lock()
-	defer n.flushMu.Unlock()
-
-	// Inform existing scheduler about the next result
-	if n.flushScheduled {
-		select {
-		case n.flushCh <- struct{}{}:
-		default:
-		}
-		return
-	}
-
-	// Run the scheduler
-	n.flushScheduled = true
-	go func() {
-		flushTimer := time.NewTimer(FlushResultMaxTime)
-		flushTimerEnabled := false
-
-		for {
-			if n.ctx.Err() != nil {
-				return
-			}
-
-			select {
-			case <-n.ctx.Done():
-				n.Flush()
-				return
-			case <-flushTimer.C:
-				n.Flush()
-				flushTimerEnabled = false
-			case <-time.After(FlushResultTime):
-				n.Flush()
-				flushTimerEnabled = false
-			case <-n.flushCh:
-				if !flushTimerEnabled {
-					flushTimerEnabled = true
-					flushTimer.Reset(FlushResultMaxTime)
-				}
-				continue
-			}
-		}
+	defer func() {
+		recover() // ignore writing to closed channel
+		n.flushMu.Unlock()
 	}()
+
+	// Inform scheduler about the next result
+	n.flushScheduled = true
+	select {
+	case n.flushCh <- struct{}{}:
+	default:
+	}
 }
 
 func (n *notifier) Raw(ref string, ts time.Time, message string, temporary bool) {
@@ -185,81 +157,85 @@ func (n *notifier) recompute() {
 	n.result.Recompute(n.sig, n.scheduledAt)
 }
 
-func (n *notifier) emit() {
-	n.recompute()
-	n.scheduleFlush()
-}
-
 func (n *notifier) Finalize() {
 	n.resultMu.Lock()
-	defer n.resultMu.Unlock()
 	n.result.Finalize()
+	n.resultMu.Unlock()
 	n.scheduleFlush()
 }
 
-func (n *notifier) queue(ts time.Time) {
+func (n *notifier) queue(ts time.Time) bool {
 	if n.result.QueuedAt.Equal(ts) {
-		return
+		return false
 	}
 	n.result.QueuedAt = ts.UTC()
-	n.emit()
+	return true
 }
 
-func (n *notifier) queueInit(ts time.Time) {
+func (n *notifier) queueInit(ts time.Time) bool {
 	if n.result.Initialization.QueuedAt.Equal(ts) {
-		return
+		return false
 	}
 	n.result.Initialization.QueuedAt = ts.UTC()
-	n.emit()
+	return true
 }
 
-func (n *notifier) queueStep(ref string, ts time.Time) {
+func (n *notifier) queueStep(ref string, ts time.Time) bool {
 	if n.result.Steps[ref].QueuedAt.Equal(ts) {
-		return
+		return false
 	}
 	s := n.result.Steps[ref]
 	s.QueuedAt = ts.UTC()
 	n.result.Steps[ref] = s
-	n.emit()
+	return true
 }
 
 func (n *notifier) Queue(ref string, ts time.Time) {
 	n.resultMu.Lock()
-	defer n.resultMu.Unlock()
+	var changed bool
 	if ref == "" {
-		n.queue(ts)
+		changed = n.queue(ts)
 	} else if ref == InitContainerName {
-		n.queueInit(ts)
+		changed = n.queueInit(ts)
 	} else {
-		n.queueStep(ref, ts)
+		changed = n.queueStep(ref, ts)
+	}
+
+	// Recompute and unlock result before scheduling flush
+	if changed {
+		n.recompute()
+	}
+	n.resultMu.Unlock()
+	if changed {
+		n.scheduleFlush()
 	}
 }
 
-func (n *notifier) start(ts time.Time) {
+func (n *notifier) start(ts time.Time) bool {
 	if n.result.StartedAt.Equal(ts) {
-		return
+		return false
 	}
 	n.result.StartedAt = ts.UTC()
 	if n.result.Status == nil || *n.result.Status == testkube.QUEUED_TestWorkflowStatus {
 		n.result.Status = common.Ptr(testkube.RUNNING_TestWorkflowStatus)
 	}
-	n.emit()
+	return true
 }
 
-func (n *notifier) startInit(ts time.Time) {
+func (n *notifier) startInit(ts time.Time) bool {
 	if n.result.Initialization.StartedAt.Equal(ts) {
-		return
+		return false
 	}
 	n.result.Initialization.StartedAt = ts.UTC()
 	if n.result.Initialization.Status == nil || *n.result.Initialization.Status == testkube.QUEUED_TestWorkflowStepStatus {
 		n.result.Initialization.Status = common.Ptr(testkube.RUNNING_TestWorkflowStepStatus)
 	}
-	n.emit()
+	return true
 }
 
-func (n *notifier) startStep(ref string, ts time.Time) {
+func (n *notifier) startStep(ref string, ts time.Time) bool {
 	if n.result.Steps[ref].StartedAt.Equal(ts) {
-		return
+		return false
 	}
 	s := n.result.Steps[ref]
 	s.StartedAt = ts.UTC()
@@ -267,32 +243,42 @@ func (n *notifier) startStep(ref string, ts time.Time) {
 		s.Status = common.Ptr(testkube.RUNNING_TestWorkflowStepStatus)
 	}
 	n.result.Steps[ref] = s
-	n.emit()
+	return true
 }
 
 func (n *notifier) Start(ref string, ts time.Time) {
 	n.resultMu.Lock()
-	defer n.resultMu.Unlock()
 
+	var changed bool
 	if ref == "" {
-		n.start(ts)
+		changed = n.start(ts)
 	} else if ref == InitContainerName {
-		n.startInit(ts)
+		changed = n.startInit(ts)
 	} else {
-		n.startStep(ref, ts)
+		changed = n.startStep(ref, ts)
+	}
+
+	// Recompute and unlock result before scheduling flush
+	if changed {
+		n.recompute()
+	}
+	n.resultMu.Unlock()
+	if changed {
+		n.scheduleFlush()
 	}
 }
 
 func (n *notifier) Output(ref string, ts time.Time, output *instructions.Instruction) {
-	n.resultMu.RLock()
 	if ref == InitContainerName {
 		ref = ""
-	}
-	if _, ok := n.result.Steps[ref]; !ok && ref != "" {
+	} else if ref != "" {
+		n.resultMu.RLock()
+		if _, ok := n.result.Steps[ref]; !ok {
+			n.resultMu.RUnlock()
+			return
+		}
 		n.resultMu.RUnlock()
-		return
 	}
-	n.resultMu.RUnlock()
 	n.RegisterTimestamp(ref, ts)
 	n.Flush()
 	n.send(Notification{Timestamp: ts.UTC(), Ref: ref, Output: output})
@@ -303,30 +289,46 @@ func (n *notifier) Finish(ts time.Time) {
 		return
 	}
 	n.resultMu.Lock()
-	defer n.resultMu.Unlock()
 	n.result.FinishedAt = ts
-	n.emit()
+	n.recompute()
+	n.resultMu.Unlock()
+	n.scheduleFlush()
 }
 
 func (n *notifier) UpdateStepStatus(ref string, status testkube.TestWorkflowStepStatus) {
 	n.resultMu.Lock()
-	defer n.resultMu.Unlock()
 	if _, ok := n.result.Steps[ref]; !ok || (n.result.Steps[ref].Status != nil || *n.result.Steps[ref].Status == status) {
+		n.resultMu.Unlock()
 		return
 	}
 	n.result.UpdateStepResult(n.sig, ref, testkube.TestWorkflowStepResult{Status: &status}, n.scheduledAt)
-	n.emit()
+	n.recompute()
+	n.resultMu.Unlock()
+	n.scheduleFlush()
 }
 
-func (n *notifier) finishInit(status ContainerResultStep) {
+func (n *notifier) finishInit(status ContainerResultStep) bool {
 	if n.result.Initialization.FinishedAt.Equal(status.FinishedAt) && n.result.Initialization.Status != nil && *n.result.Initialization.Status == status.Status && (status.Status != testkube.ABORTED_TestWorkflowStepStatus || n.result.Initialization.ErrorMessage == status.Details) {
-		return
+		return false
 	}
 	n.result.Initialization.FinishedAt = status.FinishedAt.UTC()
 	n.result.Initialization.Status = common.Ptr(status.Status)
 	n.result.Initialization.ExitCode = float64(status.ExitCode)
 	n.result.Initialization.ErrorMessage = status.Details
-	n.emit()
+	return true
+}
+
+func (n *notifier) finishStep(ref string, status ContainerResultStep) bool {
+	if n.result.Steps[ref].FinishedAt.Equal(status.FinishedAt) && n.result.Steps[ref].Status != nil && *n.result.Steps[ref].Status == status.Status && (status.Status != testkube.ABORTED_TestWorkflowStepStatus || n.result.Steps[ref].ErrorMessage == status.Details) {
+		return false
+	}
+	s := n.result.Steps[ref]
+	s.FinishedAt = status.FinishedAt.UTC()
+	s.Status = common.Ptr(status.Status)
+	s.ExitCode = float64(status.ExitCode)
+	s.ErrorMessage = status.Details
+	n.result.Steps[ref] = s
+	return true
 }
 
 func (n *notifier) IsAnyAborted() bool {
@@ -354,38 +356,41 @@ func (n *notifier) IsFinished(ref string) bool {
 
 func (n *notifier) FinishStep(ref string, status ContainerResultStep) {
 	n.resultMu.Lock()
-	defer n.resultMu.Unlock()
+
+	var changed bool
 	if ref == InitContainerName {
-		n.finishInit(status)
-		return
+		changed = n.finishInit(status)
+	} else {
+		changed = n.finishStep(ref, status)
 	}
-	if n.result.Steps[ref].FinishedAt.Equal(status.FinishedAt) && n.result.Steps[ref].Status != nil && *n.result.Steps[ref].Status == status.Status && (status.Status != testkube.ABORTED_TestWorkflowStepStatus || n.result.Steps[ref].ErrorMessage == status.Details) {
-		return
+
+	if changed {
+		n.recompute()
 	}
-	s := n.result.Steps[ref]
-	s.FinishedAt = status.FinishedAt.UTC()
-	s.Status = common.Ptr(status.Status)
-	s.ExitCode = float64(status.ExitCode)
-	s.ErrorMessage = status.Details
-	n.result.Steps[ref] = s
-	n.emit()
+	n.resultMu.Unlock()
+	if changed {
+		n.scheduleFlush()
+	}
 }
 
 func (n *notifier) Pause(ref string, ts time.Time) {
 	n.resultMu.Lock()
-	defer n.resultMu.Unlock()
 	if n.result.Steps[ref].Status != nil && *n.result.Steps[ref].Status == testkube.PAUSED_TestWorkflowStepStatus {
+		n.resultMu.Unlock()
 		return
 	}
 	n.result.PauseStart(n.sig, n.scheduledAt, ref, ts)
-	n.emit()
+	n.recompute()
+	n.resultMu.Unlock()
+	n.scheduleFlush()
 }
 
 func (n *notifier) Resume(ref string, ts time.Time) {
 	n.resultMu.Lock()
-	defer n.resultMu.Unlock()
 	n.result.PauseEnd(n.sig, n.scheduledAt, ref, ts)
-	n.emit()
+	n.recompute()
+	n.resultMu.Unlock()
+	n.scheduleFlush()
 }
 
 func (n *notifier) GetStepResult(ref string) testkube.TestWorkflowStepResult {
@@ -413,15 +418,8 @@ func newNotifier(ctx context.Context, signature []stage.Signature, scheduledAt t
 	}
 	result.Recompute(sig, scheduledAt)
 
-	ch := make(chan ChannelMessage[Notification])
-
-	go func() {
-		<-ctx.Done()
-		close(ch)
-	}()
-
-	return &notifier{
-		ch:          ch,
+	n := &notifier{
+		ch:          make(chan ChannelMessage[Notification]),
 		ctx:         ctx,
 		sig:         sig,
 		scheduledAt: scheduledAt,
@@ -430,4 +428,53 @@ func newNotifier(ctx context.Context, signature []stage.Signature, scheduledAt t
 
 		flushCh: make(chan struct{}, 1),
 	}
+
+	go func() {
+		<-ctx.Done()
+		close(n.ch)
+	}()
+
+	go func() {
+		defer func() {
+			close(n.flushCh)
+		}()
+		for {
+			// Prioritize final flush when it is done
+			select {
+			case <-n.ctx.Done():
+				n.Flush()
+				return
+			default:
+			}
+
+			// Wait until first message
+			select {
+			case <-n.ctx.Done():
+				n.Flush()
+				return
+			case <-n.flushCh:
+				maxTimer := time.NewTimer(FlushResultMaxTime)
+			buffering:
+				for {
+					select {
+					case <-n.ctx.Done():
+						break buffering
+					case <-maxTimer.C:
+						n.Flush()
+						break buffering
+					case <-time.After(FlushResultTime):
+						n.Flush()
+						break buffering
+					case <-n.flushCh:
+						continue
+					}
+				}
+				if !maxTimer.Stop() {
+					<-maxTimer.C
+				}
+			}
+		}
+	}()
+
+	return n
 }

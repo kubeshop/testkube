@@ -296,6 +296,7 @@ func (e *executor) Control(ctx context.Context, testWorkflow *testworkflowsv1.Te
 	// Stream the log into Minio
 	err = e.output.SaveLog(context.Background(), execution.Id, execution.Workflow.Name, reader)
 	if err != nil {
+		// TODO: Try to write again, if there was a failure while saving the log output
 		log.DefaultLogger.Errorw("failed to save TestWorkflow log output", "id", execution.Id, "error", err)
 	}
 
