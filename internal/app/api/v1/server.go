@@ -480,6 +480,9 @@ func (s *TestkubeAPI) InitRoutes() {
 	labels := root.Group("/labels")
 	labels.Get("/", s.ListLabelsHandler())
 
+	tags := root.Group("/tags")
+	tags.Get("/", s.ListTestWorkflowTagsHandler())
+
 	slack := root.Group("/slack")
 	slack.Get("/", s.OauthHandler())
 

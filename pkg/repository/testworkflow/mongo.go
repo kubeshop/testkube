@@ -507,3 +507,37 @@ func (r *MongoRepository) GetNextExecutionNumber(ctx context.Context, name strin
 
 	return r.sequenceRepository.GetNextExecutionNumber(ctx, name, sequence.ExecutionTypeTestWorkflow)
 }
+
+func (r *MongoRepository) GetTestWorkflowTags(ctx context.Context) (tags map[string][]string, err error) {
+	pipeline := []bson.M{
+		{"$match": bson.M{"tags": bson.M{"$exists": true}}},
+		{"$project": bson.M{
+			"tags": 1,
+		}},
+	}
+
+	opts := options.Aggregate()
+	if r.allowDiskUse {
+		opts.SetAllowDiskUse(r.allowDiskUse)
+	}
+
+	cursor, err := r.Coll.Aggregate(ctx, pipeline, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	var executions []testkube.TestWorkflowExecution
+	err = cursor.All(ctx, &executions)
+	if err != nil {
+		return nil, err
+	}
+
+	tags = make(map[string][]string)
+	for _, execution := range executions {
+		for key, value := range execution.Tags {
+			tags[key] = append(tags[key], value)
+		}
+	}
+
+	return tags, nil
+}

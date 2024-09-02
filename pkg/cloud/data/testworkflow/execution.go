@@ -169,3 +169,7 @@ func (r *CloudRepository) GetNextExecutionNumber(ctx context.Context, testWorkfl
 	}
 	return commandResponse.TestWorkflowNumber, nil
 }
+
+func (r *CloudRepository) GetTestWorkflowTags(ctx context.Context) (tags map[string][]string, err error) {
+	return nil, nil
+}
