@@ -570,6 +570,7 @@ main() {
       playwright-smoke
       postman-smoke
       soapui-smoke
+      workflow-artillery-smoke
       workflow-cypress-smoke
       workflow-gradle-smoke
       workflow-jmeter-smoke
