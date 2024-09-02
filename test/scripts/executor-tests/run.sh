@@ -586,6 +586,7 @@ main() {
       special-cases-jmeter
       ;;
     workflow)
+      workflow-artillery-smoke
       workflow-cypress-smoke
       workflow-gradle-smoke
       workflow-jmeter-smoke
