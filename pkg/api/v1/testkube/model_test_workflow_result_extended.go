@@ -148,7 +148,24 @@ func getTestWorkflowStepStatus(result TestWorkflowStepResult) TestWorkflowStepSt
 
 func (r *TestWorkflowResult) UpdateStepResult(sig []TestWorkflowSignature, ref string, result TestWorkflowStepResult, scheduledAt time.Time) TestWorkflowStepResult {
 	v := r.Steps[ref]
-	v.Merge(result)
+	if result.ErrorMessage != "" {
+		v.ErrorMessage = result.ErrorMessage
+	}
+	if result.Status != nil {
+		v.Status = result.Status
+	}
+	if result.ExitCode != 0 && (v.ExitCode == 0 || v.ExitCode == -1) {
+		v.ExitCode = result.ExitCode
+	}
+	if !result.QueuedAt.IsZero() {
+		v.QueuedAt = result.QueuedAt
+	}
+	if !result.StartedAt.IsZero() {
+		v.StartedAt = result.StartedAt
+	}
+	if !result.FinishedAt.IsZero() {
+		v.FinishedAt = result.FinishedAt
+	}
 	r.Steps[ref] = v
 	r.Recompute(sig, scheduledAt)
 	return v
