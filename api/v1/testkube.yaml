@@ -9457,6 +9457,12 @@ components:
         tags:
           $ref: "#/components/schemas/TestWorkflowTagValue"
 
+    TestWorkflowExecutionTags:
+      type: object
+      properties:
+        tags:
+          $ref: "#/components/schemas/TestWorkflowTagValue"
+
     ContentGitAuthType:
       type: string
       description: auth type for git requests

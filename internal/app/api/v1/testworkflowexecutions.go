@@ -517,33 +517,3 @@ func getWorkflowExecutionsFilterFromRequest(c *fiber.Ctx) testworkflow2.Filter {
 
 	return filter
 }
-
-func (s *TestkubeAPI) ListTestWorkflowTagsHandler() fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		errPrefix := "failed to get tags for test workflow executions"
-
-		tags, err := s.TestWorkflowResults.GetTestWorkflowTags(c.Context())
-		if err != nil {
-			return s.ClientError(c, errPrefix, err)
-		}
-
-		results := make(map[string][]string)
-		for key, testValues := range tags {
-			valuesMap := make(map[string]struct{})
-			if values, ok := results[key]; ok {
-				for _, v := range values {
-					valuesMap[v] = struct{}{}
-				}
-			}
-
-			for _, tag := range testValues {
-				if _, ok := valuesMap[tag]; !ok {
-					results[key] = append(results[key], tag)
-					valuesMap[tag] = struct{}{}
-				}
-			}
-		}
-
-		return c.JSON(results)
-	}
-}

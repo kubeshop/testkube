@@ -508,7 +508,7 @@ func (r *MongoRepository) GetNextExecutionNumber(ctx context.Context, name strin
 	return r.sequenceRepository.GetNextExecutionNumber(ctx, name, sequence.ExecutionTypeTestWorkflow)
 }
 
-func (r *MongoRepository) GetTestWorkflowTags(ctx context.Context) (tags map[string][]string, err error) {
+func (r *MongoRepository) GetExecutionTags(ctx context.Context) (tags map[string][]string, err error) {
 	pipeline := []bson.M{
 		{"$match": bson.M{"tags": bson.M{"$exists": true}}},
 		{"$project": bson.M{
@@ -526,7 +526,7 @@ func (r *MongoRepository) GetTestWorkflowTags(ctx context.Context) (tags map[str
 		return nil, err
 	}
 
-	var executions []testkube.TestWorkflowExecution
+	var executions []testkube.TestWorkflowExecutionTags
 	err = cursor.All(ctx, &executions)
 	if err != nil {
 		return nil, err
