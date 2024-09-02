@@ -342,19 +342,43 @@ func NewParallelCmd() *cobra.Command {
 								wait()
 								return
 							}
-							// TODO: RETRY ON FAILURE? BREAK AFTER MULTIPLE FAILURES?
+
 							client, err := control.NewClient(context.Background(), podIp, constants2.ControlServerPort)
-							if err != nil {
-								spawn.CreateLogger("worker", descriptions[index], index, params.Count)("warning", "failed to connect to control server to resume", err.Error())
-								wait()
-								return
-							}
-							defer client.Close()
 							wait()
-							err = client.Resume()
-							if err != nil {
-								spawn.CreateLogger("worker", descriptions[index], index, params.Count)("warning", "failed to resume", err.Error())
+							defer func() {
+								if client != nil {
+									client.Close()
+								}
+							}()
+
+							// Fast-track: immediate success
+							if err == nil {
+								err = client.Resume()
+								if err == nil {
+									return
+								}
+								spawn.CreateLogger("worker", descriptions[index], index, params.Count)("warning", "failed to resume, retrying...", err.Error())
 							}
+
+							// Retrying mechanism
+							for i := 0; i < 6; i++ {
+								if client != nil {
+									client.Close()
+								}
+								client, err = control.NewClient(context.Background(), podIp, constants2.ControlServerPort)
+								if err == nil {
+									err = client.Resume()
+									if err == nil {
+										return
+									}
+								}
+								spawn.CreateLogger("worker", descriptions[index], index, params.Count)("warning", "failed to to resume, retrying...", err.Error())
+								time.Sleep(300 * time.Millisecond)
+							}
+
+							// Total failure while retrying
+							spawn.CreateLogger("worker", descriptions[index], index, params.Count)("warning", "failed to to resume, maximum retries reached. aborting...", err.Error())
+							_ = ctrl.Abort(context.Background())
 						})
 					}
 				}
