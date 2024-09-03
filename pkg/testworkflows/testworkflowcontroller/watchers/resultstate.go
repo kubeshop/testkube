@@ -146,11 +146,10 @@ func (r *resultState) markAborted() {
 	// Load the error message
 	defaultMessage := "Job was aborted" // TODO: Move as constant
 	bareErrorMessage := defaultMessage
-	errorMessage := defaultMessage
 	if r.state != nil && r.state.ExecutionError() != "" {
 		bareErrorMessage = r.state.ExecutionError()
-		errorMessage = fmt.Sprintf("Aborted (%s)", bareErrorMessage)
 	}
+	errorMessage := fmt.Sprintf("The execution has been aborted. (%s)", bareErrorMessage)
 
 	// Fetch the sequence
 	sig, _ := r.state.Signature()
@@ -255,16 +254,20 @@ func (r *resultState) adjustTimestamps() {
 		r.result.Initialization.StartedAt = latestTimestamp(r.result.Initialization.StartedAt, containerStartTs, r.result.Initialization.QueuedAt)
 	}
 
-	// Ensure there is the end time for the initialization if it's done
-	if r.result.Initialization.Finished() && r.result.Initialization.FinishedAt.IsZero() {
-		// Fallback to have any timestamp in case something went wrong
-		r.result.Initialization.FinishedAt = r.result.Initialization.StartedAt
-	}
-
 	// Build the completion timestamp
 	var completionTs time.Time
 	if r.state != nil {
 		completionTs = r.state.CompletionTimestamp()
+	}
+
+	// Ensure there is the end time for the initialization if it's done
+	if r.result.Initialization.Finished() && r.result.Initialization.FinishedAt.IsZero() {
+		// Fallback to have any timestamp in case something went wrong
+		if r.result.Initialization.Aborted() {
+			r.result.Initialization.FinishedAt = latestTimestamp(r.result.Initialization.StartedAt, completionTs)
+		} else {
+			r.result.Initialization.FinishedAt = r.result.Initialization.StartedAt
+		}
 	}
 
 	// Fetch the sequence

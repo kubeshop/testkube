@@ -48,6 +48,14 @@ func (n *notifier) error(err error) {
 	n.ch <- ChannelMessage[Notification]{Error: err}
 }
 
+func (n *notifier) Result(result testkube.TestWorkflowResult) {
+	n.resultMu.Lock()
+	n.result = result
+	n.resultMu.Unlock()
+	// TODO: Consider checking for change?
+	n.scheduleFlush()
+}
+
 func (n *notifier) unsafeGetLastTimestamp(ref string) time.Time {
 	last := n.lastTs[ref]
 	if n.result.Steps[ref].FinishedAt.After(last) {
@@ -62,6 +70,7 @@ func (n *notifier) unsafeGetLastTimestamp(ref string) time.Time {
 	return last
 }
 
+// TODO: Is it needed? Maybe should work differently?
 func (n *notifier) GetLastTimestamp(ref string) time.Time {
 	n.resultMu.RLock()
 	defer n.resultMu.RUnlock()
@@ -142,132 +151,6 @@ func (n *notifier) Event(ref string, ts time.Time, level, reason, message string
 	n.Raw(ref, ts, fmt.Sprintf("%s %s\n", ts.Format(KubernetesLogTimeFormat), log), level == "Normal")
 }
 
-func (n *notifier) recompute() {
-	lastTs := n.unsafeGetLastTimestamp("")
-	if !n.result.Initialization.FinishedAt.IsZero() && n.result.Initialization.FinishedAt.Before(lastTs) {
-		n.result.Initialization.FinishedAt = lastTs
-	}
-	for k := range n.result.Steps {
-		if !n.result.Steps[k].FinishedAt.IsZero() && n.result.Steps[k].FinishedAt.Before(lastTs) {
-			step := n.result.Steps[k]
-			step.FinishedAt = lastTs
-			n.result.Steps[k] = step
-		}
-	}
-	n.result.Recompute(n.sig, n.scheduledAt)
-}
-
-func (n *notifier) Finalize() {
-	n.resultMu.Lock()
-	n.result.Finalize()
-	n.resultMu.Unlock()
-	n.scheduleFlush()
-}
-
-func (n *notifier) queue(ts time.Time) bool {
-	if n.result.QueuedAt.Equal(ts) {
-		return false
-	}
-	n.result.QueuedAt = ts.UTC()
-	return true
-}
-
-func (n *notifier) queueInit(ts time.Time) bool {
-	if n.result.Initialization.QueuedAt.Equal(ts) {
-		return false
-	}
-	n.result.Initialization.QueuedAt = ts.UTC()
-	return true
-}
-
-func (n *notifier) queueStep(ref string, ts time.Time) bool {
-	if n.result.Steps[ref].QueuedAt.Equal(ts) {
-		return false
-	}
-	s := n.result.Steps[ref]
-	s.QueuedAt = ts.UTC()
-	n.result.Steps[ref] = s
-	return true
-}
-
-func (n *notifier) Queue(ref string, ts time.Time) {
-	n.resultMu.Lock()
-	var changed bool
-	if ref == "" {
-		changed = n.queue(ts)
-	} else if ref == InitContainerName {
-		changed = n.queueInit(ts)
-	} else {
-		changed = n.queueStep(ref, ts)
-	}
-
-	// Recompute and unlock result before scheduling flush
-	if changed {
-		n.recompute()
-	}
-	n.resultMu.Unlock()
-	if changed {
-		n.scheduleFlush()
-	}
-}
-
-func (n *notifier) start(ts time.Time) bool {
-	if n.result.StartedAt.Equal(ts) {
-		return false
-	}
-	n.result.StartedAt = ts.UTC()
-	if n.result.Status == nil || *n.result.Status == testkube.QUEUED_TestWorkflowStatus {
-		n.result.Status = common.Ptr(testkube.RUNNING_TestWorkflowStatus)
-	}
-	return true
-}
-
-func (n *notifier) startInit(ts time.Time) bool {
-	if n.result.Initialization.StartedAt.Equal(ts) {
-		return false
-	}
-	n.result.Initialization.StartedAt = ts.UTC()
-	if n.result.Initialization.Status == nil || *n.result.Initialization.Status == testkube.QUEUED_TestWorkflowStepStatus {
-		n.result.Initialization.Status = common.Ptr(testkube.RUNNING_TestWorkflowStepStatus)
-	}
-	return true
-}
-
-func (n *notifier) startStep(ref string, ts time.Time) bool {
-	if n.result.Steps[ref].StartedAt.Equal(ts) {
-		return false
-	}
-	s := n.result.Steps[ref]
-	s.StartedAt = ts.UTC()
-	if s.Status == nil || *s.Status == testkube.QUEUED_TestWorkflowStepStatus {
-		s.Status = common.Ptr(testkube.RUNNING_TestWorkflowStepStatus)
-	}
-	n.result.Steps[ref] = s
-	return true
-}
-
-func (n *notifier) Start(ref string, ts time.Time) {
-	n.resultMu.Lock()
-
-	var changed bool
-	if ref == "" {
-		changed = n.start(ts)
-	} else if ref == InitContainerName {
-		changed = n.startInit(ts)
-	} else {
-		changed = n.startStep(ref, ts)
-	}
-
-	// Recompute and unlock result before scheduling flush
-	if changed {
-		n.recompute()
-	}
-	n.resultMu.Unlock()
-	if changed {
-		n.scheduleFlush()
-	}
-}
-
 func (n *notifier) Output(ref string, ts time.Time, output *instructions.Instruction) {
 	if ref == InitContainerName {
 		ref = ""
@@ -284,124 +167,6 @@ func (n *notifier) Output(ref string, ts time.Time, output *instructions.Instruc
 	n.send(Notification{Timestamp: ts.UTC(), Ref: ref, Output: output})
 }
 
-func (n *notifier) Finish(ts time.Time) {
-	if ts.IsZero() {
-		return
-	}
-	n.resultMu.Lock()
-	n.result.FinishedAt = ts
-	n.recompute()
-	n.resultMu.Unlock()
-	n.scheduleFlush()
-}
-
-func (n *notifier) UpdateStepStatus(ref string, status testkube.TestWorkflowStepStatus) {
-	n.resultMu.Lock()
-	if _, ok := n.result.Steps[ref]; !ok || (n.result.Steps[ref].Status != nil || *n.result.Steps[ref].Status == status) {
-		n.resultMu.Unlock()
-		return
-	}
-	n.result.UpdateStepResult(n.sig, ref, testkube.TestWorkflowStepResult{Status: &status}, n.scheduledAt)
-	n.recompute()
-	n.resultMu.Unlock()
-	n.scheduleFlush()
-}
-
-func (n *notifier) finishInit(status ContainerResultStep) bool {
-	if n.result.Initialization.FinishedAt.Equal(status.FinishedAt) && n.result.Initialization.Status != nil && *n.result.Initialization.Status == status.Status && (status.Status != testkube.ABORTED_TestWorkflowStepStatus || n.result.Initialization.ErrorMessage == status.Details) {
-		return false
-	}
-	n.result.Initialization.FinishedAt = status.FinishedAt.UTC()
-	n.result.Initialization.Status = common.Ptr(status.Status)
-	n.result.Initialization.ExitCode = float64(status.ExitCode)
-	n.result.Initialization.ErrorMessage = status.Details
-	return true
-}
-
-func (n *notifier) finishStep(ref string, status ContainerResultStep) bool {
-	if n.result.Steps[ref].FinishedAt.Equal(status.FinishedAt) && n.result.Steps[ref].Status != nil && *n.result.Steps[ref].Status == status.Status && (status.Status != testkube.ABORTED_TestWorkflowStepStatus || n.result.Steps[ref].ErrorMessage == status.Details) {
-		return false
-	}
-	s := n.result.Steps[ref]
-	s.FinishedAt = status.FinishedAt.UTC()
-	s.Status = common.Ptr(status.Status)
-	s.ExitCode = float64(status.ExitCode)
-	s.ErrorMessage = status.Details
-	n.result.Steps[ref] = s
-	return true
-}
-
-func (n *notifier) IsAnyAborted() bool {
-	n.resultMu.RLock()
-	defer n.resultMu.RUnlock()
-	if n.result.Initialization.Status != nil && *n.result.Initialization.Status == testkube.ABORTED_TestWorkflowStepStatus {
-		return true
-	}
-	for _, s := range n.result.Steps {
-		if s.Status != nil && *s.Status == testkube.ABORTED_TestWorkflowStepStatus {
-			return true
-		}
-	}
-	return false
-}
-
-func (n *notifier) IsFinished(ref string) bool {
-	n.resultMu.RLock()
-	defer n.resultMu.RUnlock()
-	if ref == InitContainerName {
-		return !n.result.Initialization.FinishedAt.IsZero()
-	}
-	return !n.result.Steps[ref].FinishedAt.IsZero()
-}
-
-func (n *notifier) FinishStep(ref string, status ContainerResultStep) {
-	n.resultMu.Lock()
-
-	var changed bool
-	if ref == InitContainerName {
-		changed = n.finishInit(status)
-	} else {
-		changed = n.finishStep(ref, status)
-	}
-
-	if changed {
-		n.recompute()
-	}
-	n.resultMu.Unlock()
-	if changed {
-		n.scheduleFlush()
-	}
-}
-
-func (n *notifier) Pause(ref string, ts time.Time) {
-	n.resultMu.Lock()
-	if n.result.Steps[ref].Status != nil && *n.result.Steps[ref].Status == testkube.PAUSED_TestWorkflowStepStatus {
-		n.resultMu.Unlock()
-		return
-	}
-	n.result.PauseStart(n.sig, n.scheduledAt, ref, ts)
-	n.recompute()
-	n.resultMu.Unlock()
-	n.scheduleFlush()
-}
-
-func (n *notifier) Resume(ref string, ts time.Time) {
-	n.resultMu.Lock()
-	n.result.PauseEnd(n.sig, n.scheduledAt, ref, ts)
-	n.recompute()
-	n.resultMu.Unlock()
-	n.scheduleFlush()
-}
-
-func (n *notifier) GetStepResult(ref string) testkube.TestWorkflowStepResult {
-	n.resultMu.RLock()
-	defer n.resultMu.RUnlock()
-	if ref == InitContainerName {
-		return *n.result.Initialization
-	}
-	return n.result.Steps[ref]
-}
-
 func newNotifier(ctx context.Context, signature []stage.Signature, scheduledAt time.Time) *notifier {
 	// Initialize the zero result
 	sig := make([]testkube.TestWorkflowSignature, len(signature))
@@ -416,7 +181,6 @@ func newNotifier(ctx context.Context, signature []stage.Signature, scheduledAt t
 		},
 		Steps: stage.MapSignatureListToStepResults(signature),
 	}
-	result.Recompute(sig, scheduledAt)
 
 	n := &notifier{
 		ch:          make(chan ChannelMessage[Notification]),

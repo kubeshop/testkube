@@ -2,19 +2,15 @@ package testworkflowcontroller
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"slices"
 	"time"
 
-	"github.com/gookit/color"
 	"k8s.io/client-go/kubernetes"
 
-	constants2 "github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
-	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller/watchers"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
 
@@ -81,21 +77,6 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 	signatureSeq := stage.MapSignatureToSequence(signature)
 	resultState := watchers.NewResultState(testkube.TestWorkflowResult{}) // TODO: Use already acknowledge result as the initial one
 
-	notifierProxyCh := make(chan ChannelMessage[Notification])
-	go func() {
-		defer close(notifierProxyCh)
-		for v := range notifier.ch {
-			if v.Error != nil || v.Value.Result == nil {
-				notifierProxyCh <- v
-			} else {
-				notifierProxyCh <- ChannelMessage[Notification]{Value: Notification{
-					Timestamp: v.Value.Timestamp,
-					Result:    common.Ptr(resultState.Result()),
-				}}
-			}
-		}
-	}()
-
 	updatesCh := watcher.Updated()
 
 	log := func(data ...interface{}) {
@@ -116,19 +97,15 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 			//debug.del(watcher.State().ResourceId()) FIXME
 			resultState.Align(watcher.State()) // TODO: IS IT NEEDED? OR MAYBE SHOULD BE STH LIKE FINISH?
 			resultState.End()
-			notifier.Finalize()
+			notifier.Result(resultState.Result())
 			notifier.Flush()
 			ctxCancel()
-			//if watcher.State().Pod() != nil {
-			//	v, _ := json.Marshal(watcher.State().Pod().Original())
-			//	log("last pod", string(v))
-			//}
 			log("closed")
 		}()
 
 		// Mark Job as started
-		notifier.Queue("", watcher.State().EstimatedJobCreationTimestamp())
 		resultState.Align(watcher.State())
+		notifier.Result(resultState.Result())
 		log("queued")
 
 		// Wait until the Pod is scheduled
@@ -168,18 +145,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 		if !watcher.State().PodStarted() && watcher.State().Completed() {
 			log("complete without pod")
 			resultState.Align(watcher.State())
-
-			details := watcher.State().Job().ExecutionError()
-			if details == "" {
-				details = "Job was aborted"
-			}
-			notifier.Finish(watcher.State().CompletionTimestamp())
-			notifier.finishInit(ContainerResultStep{
-				Status:     testkube.ABORTED_TestWorkflowStepStatus,
-				FinishedAt: watcher.State().CompletionTimestamp(),
-				Details:    details,
-			})
-			// TODO: set all steps as aborted
+			notifier.Result(resultState.Result())
 			return
 		}
 
@@ -192,7 +158,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 		}
 
 		resultState.Align(watcher.State())
-		notifier.Start("", watcher.State().EstimatedPodStartTimestamp())
+		notifier.Result(resultState.Result())
 		log("pod started")
 
 		// Read the execution instructions
@@ -202,7 +168,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 			notifier.Error(fmt.Errorf("cannot read execution instructions: %v", err))
 			return
 		}
-		refs, endRefs := ExtractRefsFromActionGroup(actions)
+		refs, _ := ExtractRefsFromActionGroup(actions)
 		initialRefs := make([]string, len(actions))
 		for i := range refs {
 			for j := range refs[i] {
@@ -220,10 +186,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 		}
 
 		// Iterate over containers
-		aborted := false
-		registeredAbortedOperation := false
 		lastStarted := InitContainerName
-		executionStatuses := map[string]constants2.ExecutionResult{}
 		for containerIndex := 0; containerIndex < len(refs); containerIndex++ {
 			container := fmt.Sprintf("%d", containerIndex+1)
 			log("iterating containers", container)
@@ -262,6 +225,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 			isDone := func() bool {
 				return opts.DisableFollow || watcher.State().ContainerFinished(container) || watcher.State().Completed()
 			}
+			// TODO: Avoid fetching log for the containers that are known to never start
 			for v := range WatchContainerLogs(ctx, clientSet, watcher.State().Namespace(), watcher.State().PodName(), container, 10, isDone) {
 				if v.Error != nil {
 					log("container error", container, v.Error)
@@ -276,67 +240,11 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 				case ContainerLogTypeOutput:
 					notifier.Output(v.Value.Output.Ref, v.Value.Time, v.Value.Output)
 				case ContainerLogTypeHint:
-					resultState.Append(v.Value.Time, *v.Value.Hint)
-
-					if v.Value.Hint.Ref == constants.RootOperationName {
-						log("root operation ignored")
-						continue
-					}
-					switch v.Value.Hint.Name {
-					case constants2.InstructionStart:
-						log("start", v.Value.Hint.Ref)
+					if v.Value.Hint.Name == constants.InstructionStart {
 						lastStarted = v.Value.Hint.Ref
-						if !aborted {
-							notifier.Start(v.Value.Hint.Ref, v.Value.Time)
-						}
-						log("start computed", v.Value.Hint.Ref)
-					case constants2.InstructionEnd:
-						log("end", v.Value.Hint.Ref)
-						status := testkube.TestWorkflowStepStatus(v.Value.Hint.Value.(string))
-						if status == "" {
-							status = testkube.PASSED_TestWorkflowStepStatus
-						}
-						if !aborted {
-							notifier.FinishStep(v.Value.Hint.Ref, ContainerResultStep{
-								Status:     status,
-								Details:    executionStatuses[v.Value.Hint.Ref].Details,
-								ExitCode:   int(executionStatuses[v.Value.Hint.Ref].ExitCode),
-								FinishedAt: v.Value.Time,
-							})
-						}
-						log("end computed", v.Value.Hint.Ref)
-						if status == testkube.ABORTED_TestWorkflowStepStatus {
-							aborted = true
-							continue
-						}
-					case constants2.InstructionExecution:
-						log("execution", v.Value.Hint.Ref)
-						serialized, _ := json.Marshal(v.Value.Hint.Value)
-						var executionResult constants2.ExecutionResult
-						_ = json.Unmarshal(serialized, &executionResult)
-						executionStatuses[v.Value.Hint.Ref] = executionResult
-						log("execution computed", v.Value.Hint.Ref)
-					case constants2.InstructionPause:
-						log("pause", v.Value.Hint.Ref)
-						ts, _ := v.Value.Hint.Value.(string)
-						start, err := time.Parse(constants2.PreciseTimeFormat, ts)
-						if err != nil {
-							start = v.Value.Time
-							notifier.Error(fmt.Errorf("invalid timestamp provided with pausing instruction: %v", v.Value.Hint.Value))
-						}
-						notifier.Pause(v.Value.Hint.Ref, start)
-						log("pause computed", v.Value.Hint.Ref)
-					case constants2.InstructionResume:
-						log("resume", v.Value.Hint.Ref)
-						ts, _ := v.Value.Hint.Value.(string)
-						end, err := time.Parse(constants2.PreciseTimeFormat, ts)
-						if err != nil {
-							end = v.Value.Time
-							notifier.Error(fmt.Errorf("invalid timestamp provided with resuming instruction: %v", v.Value.Hint.Value))
-						}
-						notifier.Resume(v.Value.Hint.Ref, end)
-						log("resume computed", v.Value.Hint.Ref)
 					}
+					resultState.Append(v.Value.Time, *v.Value.Hint)
+					notifier.Result(resultState.Result())
 					log("hint finished")
 				}
 			}
@@ -359,71 +267,9 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 
 			// Load the correlation data about status
 			resultState.Align(watcher.State())
-
 			// TODO: Should not wait for the actual container result?
-			result := watcher.State().MustEstimatedPod().ContainerResult(container, watcher.State().Job().ExecutionError())
-			log("container result", container, result)
-
-			for i, ref := range endRefs[containerIndex] {
-				if ref == "root" || ref == "" {
-					continue
-				}
-
-				// TODO: Avoid passing that information?
-				finishedAt := notifier.GetStepResult(ref).FinishedAt
-				if finishedAt.IsZero() {
-					finishedAt = watcher.State().MustEstimatedPod().ContainerFinishTimestamp(container)
-				}
-
-				// Handle available result
-				if len(result.Statuses) > i {
-					// Send information about step finish
-					notifier.FinishStep(ref, ContainerResultStep{
-						Status:     result.Statuses[i].Status,
-						ExitCode:   result.Statuses[i].ExitCode,
-						Details:    "",
-						FinishedAt: finishedAt,
-					})
-					continue
-				}
-
-				// Ignore when there is already the status available
-				registeredStatus := notifier.GetStepResult(ref).Status
-				if registeredStatus != nil && registeredStatus.Finished() {
-					continue
-				}
-
-				// Handle missing result - first aborted task
-				if !registeredAbortedOperation {
-					registeredAbortedOperation = true
-
-					details := "The execution has been aborted."
-					if result.ErrorDetails != "" {
-						details = fmt.Sprintf("The execution has been aborted. %s", color.FgDarkGray.Render("("+result.ErrorDetails+")"))
-					}
-
-					notifier.FinishStep(ref, ContainerResultStep{
-						Status:     testkube.ABORTED_TestWorkflowStepStatus,
-						ExitCode:   -1,
-						Details:    details,
-						FinishedAt: finishedAt,
-					})
-					continue
-				}
-
-				// Handle missing result - after aborted task
-				// TODO: Consider if that should be displayed
-				details := "The execution was aborted before."
-				if result.ErrorDetails != "" {
-					details = fmt.Sprintf("The execution was aborted before. %s", color.FgDarkGray.Render("("+result.ErrorDetails+")"))
-				}
-				notifier.FinishStep(ref, ContainerResultStep{
-					Status:     testkube.SKIPPED_TestWorkflowStepStatus,
-					ExitCode:   -1,
-					Details:    details,
-					FinishedAt: finishedAt,
-				})
-			}
+			notifier.Result(resultState.Result())
+			log("container result", container)
 		}
 		log("finished iterating over containers")
 
@@ -454,10 +300,9 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 		// Mark as finished
 		// TODO: Calibrate with top timestamp?
 		resultState.Align(watcher.State())
-
-		notifier.Finish(watcher.State().CompletionTimestamp())
+		notifier.Result(resultState.Result())
 	}()
 
-	return notifierProxyCh, nil
-	//return notifier.ch, nil
+	//return notifierProxyCh, nil
+	return notifier.ch, nil
 }
