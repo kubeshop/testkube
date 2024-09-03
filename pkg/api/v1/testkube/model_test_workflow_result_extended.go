@@ -300,11 +300,11 @@ func (r *TestWorkflowResult) Recompute(sig []TestWorkflowSignature, scheduledAt 
 	}
 
 	// Build status on the internal failure
-	if getTestWorkflowStepStatus(*r.Initialization) == ABORTED_TestWorkflowStepStatus {
+	if r.Initialization.Status.Aborted() {
 		r.Status = common.Ptr(ABORTED_TestWorkflowStatus)
 		r.PredictedStatus = r.Status
 		return
-	} else if getTestWorkflowStepStatus(*r.Initialization) == FAILED_TestWorkflowStepStatus {
+	} else if r.Initialization.Status.Failed() {
 		r.Status = common.Ptr(FAILED_TestWorkflowStatus)
 		r.PredictedStatus = r.Status
 		return
@@ -530,7 +530,7 @@ func adjustMinimumTime(dst, min time.Time) time.Time {
 func predictTestWorkflowStepStatus(v TestWorkflowStepResult, sig TestWorkflowSignature, r *TestWorkflowResult) (TestWorkflowStepStatus, bool) {
 	children := sig.Children
 	if len(children) == 0 {
-		if !getTestWorkflowStepStatus(v).Finished() {
+		if !v.Finished() {
 			return PASSED_TestWorkflowStepStatus, false
 		}
 		return *v.Status, true
@@ -542,14 +542,14 @@ func predictTestWorkflowStepStatus(v TestWorkflowStepResult, sig TestWorkflowSig
 	failed := false
 	finished := true
 	for _, ch := range children {
-		status := getTestWorkflowStepStatus(r.Steps[ch.Ref])
-		if status != SKIPPED_TestWorkflowStepStatus {
+		status := r.Steps[ch.Ref].Status
+		if !status.Skipped() {
 			skipped = false
 		}
-		if status == ABORTED_TestWorkflowStepStatus {
+		if status.Aborted() {
 			aborted = true
 		}
-		if !ch.Optional && (status == FAILED_TestWorkflowStepStatus || status == TIMEOUT_TestWorkflowStepStatus) {
+		if !ch.Optional && (status.Failed() || status.TimedOut()) {
 			failed = true
 		}
 		if !status.Finished() {
@@ -559,7 +559,7 @@ func predictTestWorkflowStepStatus(v TestWorkflowStepResult, sig TestWorkflowSig
 
 	if aborted {
 		return ABORTED_TestWorkflowStepStatus, finished
-	} else if getTestWorkflowStepStatus(v) == FAILED_TestWorkflowStepStatus {
+	} else if v.Status.Failed() {
 		return FAILED_TestWorkflowStepStatus, finished
 	} else if (failed && !sig.Negative) || (!failed && sig.Negative) {
 		return FAILED_TestWorkflowStepStatus, finished

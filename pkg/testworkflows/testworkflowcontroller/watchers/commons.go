@@ -16,11 +16,14 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 )
 
 const (
 	defaultListTimeoutSeconds  = int64(30)
 	defaultWatchTimeoutSeconds = int64(365 * 24 * 3600)
+	InitStepRef                = "tktw-init"
 )
 
 var (
@@ -384,4 +387,30 @@ func CreateJobFailedCondition(ts time.Time, reason, message string) batchv1.JobC
 		Reason:             reason,
 		Message:            message,
 	}
+}
+
+func ExtractRefsFromActionList(list actiontypes.ActionList) (started []string, finished []string) {
+	for i := range list {
+		switch list[i].Type() {
+		case lite.ActionTypeSetup:
+			started = append(started, InitStepRef)
+			finished = append(finished, InitStepRef)
+		case lite.ActionTypeStart:
+			started = append(started, *list[i].Start)
+		case lite.ActionTypeEnd:
+			finished = append(finished, *list[i].End)
+		}
+	}
+	return
+}
+
+func ExtractRefsFromActionGroup(group actiontypes.ActionGroups) (started [][]string, finished [][]string) {
+	started = make([][]string, len(group))
+	finished = make([][]string, len(group))
+	for i := range group {
+		s, f := ExtractRefsFromActionList(group[i])
+		started[i] = s
+		finished[i] = f
+	}
+	return
 }

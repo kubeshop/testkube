@@ -2,6 +2,7 @@ package watchers
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -31,8 +32,10 @@ type Pod interface {
 	Signature() ([]stage.Signature, error)
 	ContainerStarted(name string) bool
 	ContainerFinished(name string) bool
+	ContainerStartTimestamp(name string) time.Time
 	ContainerFinishTimestamp(name string) time.Time
 	ContainerResult(name string, executionError string) ContainerResult
+	ContainerError() string
 	ExecutionError() string
 }
 
@@ -119,6 +122,19 @@ func (p *pod) ContainerFinished(name string) bool {
 	return IsContainerFinished(p.original, name)
 }
 
+func (p *pod) ContainerStartTimestamp(name string) time.Time {
+	status := GetContainerStatus(p.original, name)
+	if status == nil {
+		return time.Time{}
+	}
+	if status.State.Running != nil {
+		return status.State.Running.StartedAt.Time
+	} else if status.State.Terminated != nil {
+		return status.State.Terminated.StartedAt.Time
+	}
+	return time.Time{}
+}
+
 func (p *pod) ContainerFinishTimestamp(name string) time.Time {
 	status := GetContainerStatus(p.original, name)
 	if status == nil || status.State.Terminated == nil {
@@ -135,6 +151,30 @@ func (p *pod) ContainerResult(name string, executionError string) ContainerResul
 	return ReadContainerResult(GetContainerStatus(p.original, name), executionError)
 }
 
+func (p *pod) ContainerError() string {
+	// Iterate over all init containers, as even unrelated to Test Workflows will cause error
+	for _, c := range p.original.Status.InitContainerStatuses {
+		if c.State.Terminated != nil && c.State.Terminated.Reason != "" && c.State.Terminated.Reason != "Completed" {
+			return c.State.Terminated.Reason
+		}
+	}
+
+	// Check only for the last Test Workflow's container, as this is the one we are interested in
+	actions, _ := p.ActionGroups()
+	lastContainer := fmt.Sprintf("%d", len(actions))
+	for _, c := range p.original.Status.ContainerStatuses {
+		if c.Name == lastContainer && c.State.Terminated != nil && c.State.Terminated.Reason != "" && c.State.Terminated.Reason != "Completed" {
+			return c.State.Terminated.Reason
+		}
+	}
+
+	return ""
+}
+
 func (p *pod) ExecutionError() string {
-	return GetPodError(p.original)
+	errStr := GetPodError(p.original)
+	if errStr == "Error" || errStr == "" {
+		return p.ContainerError()
+	}
+	return errStr
 }

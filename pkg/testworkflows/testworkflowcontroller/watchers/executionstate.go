@@ -54,10 +54,15 @@ type ExecutionState interface {
 	PodIP() string
 	PodDeletionTimestamp() time.Time
 	CompletionTimestamp() time.Time
+	ContainerStartTimestamp(name string) time.Time
 	ContainerStarted(name string) bool
 	ContainerFinished(name string) bool
 	Signature() ([]stage.Signature, error)
 	ActionGroups() (actiontypes.ActionGroups, error)
+
+	ExecutionError() string
+	JobExecutionError() string
+	PodExecutionError() string
 
 	PodCreationTimestamp() time.Time
 	EstimatedPodCreationTimestamp() time.Time
@@ -166,6 +171,13 @@ func (e *executionState) CompletionTimestamp() time.Time {
 		return e.jobEvents.FinishTimestamp()
 	}
 	return time.Time{}
+}
+
+func (e *executionState) ContainerStartTimestamp(name string) time.Time {
+	if e.pod != nil && !e.pod.ContainerStartTimestamp(name).IsZero() {
+		return e.pod.ContainerStartTimestamp(name)
+	}
+	return e.podEvents.Container(name).StartTimestamp()
 }
 
 func (e *executionState) Namespace() string {
@@ -360,6 +372,57 @@ func (e *executionState) EstimatedJobExists() bool {
 func (e *executionState) EstimatedPodExists() bool {
 	_, err := e.EstimatedPod()
 	return err == nil
+}
+
+func (e *executionState) JobExecutionError() string {
+	if e.job != nil && e.job.ExecutionError() != "" {
+		return e.job.ExecutionError()
+	}
+
+	if e.jobEvents.Error() {
+		reason := e.jobEvents.ErrorReason()
+		message := e.jobEvents.ErrorMessage()
+		if message == "" {
+			return reason
+		}
+		return fmt.Sprintf("(%s) %s", reason, message)
+	}
+
+	return ""
+}
+
+func (e *executionState) PodExecutionError() string {
+	errorStr := ""
+	if e.pod != nil && e.pod.ExecutionError() != "" {
+		errorStr = e.pod.ExecutionError()
+	}
+
+	if (errorStr == "" || errorStr == "Error") && e.podEvents.Error() {
+		reason := e.podEvents.ErrorReason()
+		message := e.podEvents.ErrorMessage()
+		if message == "" {
+			return reason
+		}
+		return fmt.Sprintf("(%s) %s", reason, message)
+	}
+
+	if errorStr == "Error" {
+		return "Fatal Error"
+	}
+
+	return errorStr
+}
+
+func (e *executionState) ExecutionError() string {
+	podErr := e.PodExecutionError()
+	jobErr := e.JobExecutionError()
+	if podErr == "" && jobErr == "BackoffLimitExceeded" {
+		return "Fatal Error"
+	}
+	if podErr == "" || (podErr == "Fatal Error" && jobErr != "" && jobErr != "BackoffLimitExceeded") {
+		return jobErr
+	}
+	return podErr
 }
 
 func (e *executionState) EstimatedJob() (Job, error) {

@@ -72,6 +72,9 @@ func (s *signature) Sequence() []Signature {
 }
 
 func MapSignatureToSequence(v []Signature) []Signature {
+	if len(v) == 0 {
+		return nil
+	}
 	return (&signature{ChildrenValue: v}).Sequence()[1:]
 }
 
