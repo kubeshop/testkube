@@ -532,6 +532,10 @@ func (r *MongoRepository) GetExecutionTags(ctx context.Context) (tags map[string
 		return nil, err
 	}
 
+	for i := range executions {
+		executions[i].UnscapeDots()
+	}
+
 	tags = make(map[string][]string)
 	for _, execution := range executions {
 		for key, value := range execution.Tags {
