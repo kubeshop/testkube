@@ -2340,6 +2340,40 @@ paths:
                 items:
                   $ref: "#/components/schemas/Problem"
 
+  /tags:
+    get:
+      tags:
+        - tags
+      summary: "List tags"
+      description: "list all available tags"
+      operationId: listTags
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    type: string
+                example:
+                  app:
+                    - backend
+                  env:
+                    - prod
+                  toDelete:
+                    - "yes"
+        502:
+          description: "problem with read information from kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
   /webhooks:
     get:
       tags:
@@ -9419,6 +9453,12 @@ components:
     TestWorkflowTagSchema:
       type: object
       description: test workflow execution tag definition
+      properties:
+        tags:
+          $ref: "#/components/schemas/TestWorkflowTagValue"
+
+    TestWorkflowExecutionTags:
+      type: object
       properties:
         tags:
           $ref: "#/components/schemas/TestWorkflowTagValue"

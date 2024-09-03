@@ -68,6 +68,8 @@ type Repository interface {
 	DeleteByTestWorkflows(ctx context.Context, workflowNames []string) (err error)
 	// GetTestWorkflowMetrics get metrics based on the TestWorkflow results
 	GetTestWorkflowMetrics(ctx context.Context, name string, limit, last int) (metrics testkube.ExecutionsMetrics, err error)
+	// GetExecutionTags gets execution tags
+	GetExecutionTags(ctx context.Context) (map[string][]string, error)
 }
 
 type Sequences interface {

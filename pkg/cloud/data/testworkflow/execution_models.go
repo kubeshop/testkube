@@ -178,3 +178,10 @@ type ExecutionGetNextExecutionNumberRequest struct {
 type ExecutionGetNextExecutionNumberResponse struct {
 	TestWorkflowNumber int32 `json:"testWorkflowNumber"`
 }
+
+type ExecutionGetExecutionTagsRequest struct {
+}
+
+type ExecutionGetExecutionTagsResponse struct {
+	Tags map[string][]string `json:"tags"`
+}
