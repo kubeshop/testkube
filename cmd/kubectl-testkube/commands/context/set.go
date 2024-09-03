@@ -52,7 +52,7 @@ func NewSetContextCmd() *cobra.Command {
 					var err error
 					cfg, err = common.PopulateOrgAndEnvNames(cfg, opts.Master.OrgId, opts.Master.EnvId, opts.Master.URIs.Api)
 					if err != nil {
-						ui.Failf("Error populating org and env names: %s", err)
+						ui.Errf("Error populating org and env names: %s", err)
 					}
 				} else {
 					ui.Warn("No API key provided, you need to login to Testkube Cloud")
@@ -76,10 +76,9 @@ func NewSetContextCmd() *cobra.Command {
 				common.UiCloudContextValidationError(err)
 			}
 
-			ui.Success("Your config was updated with new values")
-			ui.NL()
 			common.UiPrintContext(cfg)
-
+			ui.NL()
+			ui.Success("Your config was updated with new values")
 		},
 	}
 
