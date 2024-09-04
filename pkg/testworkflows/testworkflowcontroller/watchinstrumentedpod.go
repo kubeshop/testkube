@@ -24,9 +24,8 @@ type WatchInstrumentedPodOptions struct {
 
 func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interface, signature []stage.Signature, scheduledAt time.Time, watcher watchers.ExecutionWatcher, opts WatchInstrumentedPodOptions) (<-chan ChannelMessage[Notification], error) {
 	ctx, ctxCancel := context.WithCancel(parentCtx)
-	notifier := newNotifier(ctx, signature)
+	notifier := newNotifier(ctx, testkube.TestWorkflowResult{}, scheduledAt)
 	signatureSeq := stage.MapSignatureToSequence(signature)
-	resultState := watchers.NewResultState(testkube.TestWorkflowResult{}, scheduledAt) // TODO: Use already acknowledge result as the initial one
 
 	updatesCh := watcher.Updated(ctx)
 
@@ -36,16 +35,14 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 				notifier.Error(fmt.Errorf("fatal error watching data: %v", r))
 			}
 
-			resultState.Align(watcher.State())
-			resultState.End()
-			notifier.Result(resultState.Result())
+			notifier.Align(watcher.State())
+			notifier.End()
 			ctxCancel()
 			close(notifier.ch)
 		}()
 
 		// Mark Job as started
-		resultState.Align(watcher.State())
-		notifier.Result(resultState.Result())
+		notifier.Align(watcher.State())
 
 		// Wait until the Pod is scheduled
 		currentJobEventsIndex := 0
@@ -80,20 +77,17 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 
 		// Handle the case when it has been complete without pod start
 		if !watcher.State().PodStarted() && watcher.State().Completed() {
-			resultState.Align(watcher.State())
-			notifier.Result(resultState.Result())
+			notifier.Align(watcher.State())
 			return
 		}
 
 		// Load the pod information
-		// TODO: when it's complete without pod start, try to check if maybe job was not aborted etc
 		if watcher.State().EstimatedPodStartTimestamp().IsZero() {
 			notifier.Error(fmt.Errorf("cannot estimate Pod start"))
 			return
 		}
 
-		resultState.Align(watcher.State())
-		notifier.Result(resultState.Result())
+		notifier.Align(watcher.State())
 
 		// Read the execution instructions
 		actions, err := watcher.State().ActionGroups()
@@ -174,8 +168,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 					if v.Value.Hint.Name == constants.InstructionEnd && testkube.TestWorkflowStepStatus(v.Value.Hint.Value.(string)) == testkube.ABORTED_TestWorkflowStepStatus {
 						aborted = true
 					}
-					resultState.Append(v.Value.Time, *v.Value.Hint)
-					notifier.Result(resultState.Result())
+					notifier.Instruction(v.Value.Time, *v.Value.Hint)
 				}
 			}
 
@@ -200,8 +193,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 			// TODO: Include Container/Pod events after the finish (?)
 
 			// Load the correlation data about status
-			resultState.Align(watcher.State())
-			notifier.Result(resultState.Result())
+			notifier.Align(watcher.State())
 
 			// Don't iterate over further containers if this one has failed completely
 			if aborted || watcher.State().ContainerFailed(container) {
@@ -213,8 +205,6 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 		// TODO: Ignore when it's for services?
 	loop:
 		for {
-			// FIXME?
-			//if watcher.State().Completed() || !resultState.Result().FinishedAt.IsZero() {
 			if watcher.State().Completed() || ctx.Err() != nil || opts.DisableFollow {
 				break loop
 			}
@@ -245,8 +235,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 
 		// Mark as finished
 		// TODO: Calibrate with top timestamp?
-		resultState.Align(watcher.State())
-		notifier.Result(resultState.Result())
+		notifier.Align(watcher.State())
 	}()
 
 	//return notifierProxyCh, nil
