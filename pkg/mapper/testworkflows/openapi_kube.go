@@ -1196,6 +1196,7 @@ func MapSpecAPIToKube(v testkube.TestWorkflowSpec) testworkflowsv1.TestWorkflowS
 			Job:       common.MapPtr(v.Job, MapJobConfigAPIToKube),
 			Pod:       common.MapPtr(v.Pod, MapPodConfigAPIToKube),
 			Events:    common.MapSlice(v.Events, MapEventAPIToKube),
+			Execution: common.MapPtr(v.Execution, MapTestWorkflowTagSchemaAPIToKube),
 		},
 		Services: common.MapMap(v.Services, MapServiceSpecAPIToKube),
 		Use:      common.MapSlice(v.Use, MapTemplateRefAPIToKube),
@@ -1215,6 +1216,7 @@ func MapTemplateSpecAPIToKube(v testkube.TestWorkflowTemplateSpec) testworkflows
 			Job:       common.MapPtr(v.Job, MapJobConfigAPIToKube),
 			Pod:       common.MapPtr(v.Pod, MapPodConfigAPIToKube),
 			Events:    common.MapSlice(v.Events, MapEventAPIToKube),
+			Execution: common.MapPtr(v.Execution, MapTestWorkflowTagSchemaAPIToKube),
 		},
 		Services: common.MapMap(v.Services, MapIndependentServiceSpecAPIToKube),
 		Setup:    common.MapSlice(v.Setup, MapIndependentStepAPIToKube),
@@ -1392,6 +1394,7 @@ func MapTestWorkflowExecutionAPIToKube(v *testkube.TestWorkflowExecution) *testw
 		ResolvedWorkflow:          common.MapPtr(v.ResolvedWorkflow, MapTestWorkflowAPIToKube),
 		TestWorkflowExecutionName: v.TestWorkflowExecutionName,
 		DisableWebhooks:           v.DisableWebhooks,
+		Tags:                      v.Tags,
 	}
 }
 
@@ -1412,6 +1415,7 @@ func MapTestWorkflowExecutionAPIToKubeTestWorkflowStatusSummary(v *testkube.Test
 			StatusAt:    metav1.NewTime(v.StatusAt),
 			Result:      common.MapPtr(v.Result, MapTestWorkflowResultAPIToKubeTestWorkflowResultSummary),
 			Workflow:    common.MapPtr(v.Workflow, MapTestWorkflowAPIToKubeTestWorkflowSummary),
+			Tags:        v.Tags,
 		},
 	}
 }
@@ -1437,5 +1441,11 @@ func MapTestWorkflowAPIToKubeTestWorkflowSummary(v testkube.TestWorkflow) testwo
 		Namespace:   v.Namespace,
 		Labels:      v.Labels,
 		Annotations: v.Annotations,
+	}
+}
+
+func MapTestWorkflowTagSchemaAPIToKube(v testkube.TestWorkflowTagSchema) testworkflowsv1.TestWorkflowTagSchema {
+	return testworkflowsv1.TestWorkflowTagSchema{
+		Tags: v.Tags,
 	}
 }

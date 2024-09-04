@@ -360,6 +360,18 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 		}
 	}
 
+	if filter.TagSelector() != "" {
+		items := strings.Split(filter.TagSelector(), ",")
+		for _, item := range items {
+			elements := strings.Split(item, "=")
+			if len(elements) == 2 {
+				query["tags."+elements[0]] = elements[1]
+			} else if len(elements) == 1 {
+				query["tags."+elements[0]] = bson.M{"$exists": true}
+			}
+		}
+	}
+
 	opts.SetSkip(int64(filter.Page() * filter.PageSize()))
 	opts.SetLimit(int64(filter.PageSize()))
 	opts.SetSort(bson.D{{Key: "scheduledat", Value: -1}})
@@ -494,4 +506,42 @@ func (r *MongoRepository) GetNextExecutionNumber(ctx context.Context, name strin
 	}
 
 	return r.sequenceRepository.GetNextExecutionNumber(ctx, name, sequence.ExecutionTypeTestWorkflow)
+}
+
+func (r *MongoRepository) GetExecutionTags(ctx context.Context) (tags map[string][]string, err error) {
+	pipeline := []bson.M{
+		{"$match": bson.M{"tags": bson.M{"$exists": true}}},
+		{"$project": bson.M{
+			"tags": 1,
+		}},
+	}
+
+	opts := options.Aggregate()
+	if r.allowDiskUse {
+		opts.SetAllowDiskUse(r.allowDiskUse)
+	}
+
+	cursor, err := r.Coll.Aggregate(ctx, pipeline, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	var executions []testkube.TestWorkflowExecutionTags
+	err = cursor.All(ctx, &executions)
+	if err != nil {
+		return nil, err
+	}
+
+	for i := range executions {
+		executions[i].UnscapeDots()
+	}
+
+	tags = make(map[string][]string)
+	for _, execution := range executions {
+		for key, value := range execution.Tags {
+			tags[key] = append(tags[key], value)
+		}
+	}
+
+	return tags, nil
 }

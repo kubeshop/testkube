@@ -248,6 +248,21 @@ func (mr *MockRepositoryMockRecorder) GetTestWorkflowMetrics(arg0, arg1, arg2, a
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTestWorkflowMetrics", reflect.TypeOf((*MockRepository)(nil).GetTestWorkflowMetrics), arg0, arg1, arg2, arg3)
 }
 
+// GetExecutionTags mocks base method.
+func (m *MockRepository) GetExecutionTags(arg0 context.Context) (map[string][]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetExecutionTags", arg0)
+	ret0, _ := ret[0].(map[string][]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetExecutionTags indicates an expected call of GetExecutionTags.
+func (mr *MockRepositoryMockRecorder) GetExecutionTags(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExecutionTags", reflect.TypeOf((*MockRepository)(nil).GetExecutionTags), arg0)
+}
+
 // Insert mocks base method.
 func (m *MockRepository) Insert(arg0 context.Context, arg1 testkube.TestWorkflowExecution) error {
 	m.ctrl.T.Helper()
