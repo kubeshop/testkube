@@ -2,7 +2,7 @@ package watchers
 
 import (
 	"encoding/json"
-	"fmt"
+	"strconv"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -169,10 +169,12 @@ func (p *pod) ContainerError() string {
 	}
 
 	// Check only for the last Test Workflow's container, as this is the one we are interested in
-	actions, _ := p.ActionGroups()
-	lastContainer := fmt.Sprintf("%d", len(actions))
 	for _, c := range p.original.Status.ContainerStatuses {
-		if c.Name == lastContainer && c.State.Terminated != nil && c.State.Terminated.Reason != "" && c.State.Terminated.Reason != "Completed" {
+		// Check for the container that has number in it, as it's likely TestWorkflow's one
+		if _, err := strconv.ParseInt(c.Name, 10, 64); err != nil {
+			continue
+		}
+		if c.State.Terminated != nil && c.State.Terminated.Reason != "" && c.State.Terminated.Reason != "Completed" {
 			return c.State.Terminated.Reason
 		}
 	}
