@@ -17,3 +17,19 @@ func (t TestWorkflowTemplates) Table() (header []string, output [][]string) {
 
 	return
 }
+
+func (w TestWorkflowTemplate) GetName() string {
+	return w.Name
+}
+
+func (w TestWorkflowTemplate) GetNamespace() string {
+	return w.Namespace
+}
+
+func (w TestWorkflowTemplate) GetLabels() map[string]string {
+	return w.Labels
+}
+
+func (w TestWorkflowTemplate) GetAnnotations() map[string]string {
+	return w.Annotations
+}
