@@ -36,7 +36,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 				notifier.Error(fmt.Errorf("fatal error watching data: %v", r))
 			}
 
-			resultState.Align(watcher.State()) // TODO: IS IT NEEDED? OR MAYBE SHOULD BE STH LIKE FINISH?
+			resultState.Align(watcher.State())
 			resultState.End()
 			notifier.Result(resultState.Result())
 			ctxCancel()
@@ -98,7 +98,6 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 		// Read the execution instructions
 		actions, err := watcher.State().ActionGroups()
 		if err != nil {
-			// FIXME:
 			notifier.Error(fmt.Errorf("cannot read execution instructions: %v", err))
 			return
 		}
@@ -133,10 +132,8 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 					currentPodEventsIndex++
 
 					// Display only events that are unrelated to further containers
-					// TODO: Try to attach it to first recognizable step?
 					name := GetEventContainerName(ev)
-					if name == container {
-						//if name == container && ev.Reason != "Created" && ev.Reason != "Started" {
+					if name == container && ev.Reason != "Created" && ev.Reason != "Started" {
 						notifier.Event(initialRefs[containerIndex], watchers.GetEventTimestamp(ev), ev.Type, ev.Reason, ev.Message)
 					}
 				}
@@ -218,7 +215,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 		for {
 			// FIXME?
 			//if watcher.State().Completed() || !resultState.Result().FinishedAt.IsZero() {
-			if watcher.State().Completed() || ctx.Err() != nil {
+			if watcher.State().Completed() || ctx.Err() != nil || opts.DisableFollow {
 				break loop
 			}
 
