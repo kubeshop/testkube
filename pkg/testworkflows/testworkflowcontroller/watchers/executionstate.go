@@ -149,7 +149,12 @@ func (e *executionState) CompletionTimestamp() time.Time {
 		return e.PodDeletionTimestamp()
 	}
 	if e.job != nil && !e.job.FinishTimestamp().IsZero() {
-		return e.job.FinishTimestamp()
+		ts := e.job.FinishTimestamp()
+		// It may be not accurate, so try to take it from the events too
+		if ts.Before(e.PodEvents().LastTimestamp()) {
+			return e.PodEvents().LastTimestamp()
+		}
+		return ts
 	}
 	if !e.podEvents.FinishTimestamp().IsZero() {
 		return e.podEvents.FinishTimestamp()
