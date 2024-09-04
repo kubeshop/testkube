@@ -29,7 +29,7 @@ func (s *TestkubeAPI) ListTagsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to list execution tags"
 
-		tags, err := s.TestWorkflowResults.GetExecutionTags(c.Context())
+		tags, err := s.TestWorkflowResults.GetExecutionTags(c.Context(), "")
 		if err != nil {
 			return s.ClientError(c, errPrefix, err)
 		}
