@@ -53,9 +53,16 @@ func NewResultState(initial testkube.TestWorkflowResult) ResultState {
 		initial.Status = common.Ptr(testkube.QUEUED_TestWorkflowStatus)
 	}
 
+	// Mark initial as non-finished, as the state is not yet marked as ended
+	if initial.Status.Finished() {
+		initial.Status = common.Ptr(testkube.RUNNING_TestWorkflowStatus)
+	}
+	if !initial.FinishedAt.IsZero() {
+		initial.FinishedAt = time.Time{}
+	}
+
 	// Build the state object
 	state := &resultState{result: initial}
-	state.applyPredictedStatus()
 	return state
 }
 
@@ -79,79 +86,6 @@ func (r *resultState) useInitialStateData() {
 
 func (r *resultState) reconcileStateData() {
 	// TODO: Apply predicted status
-}
-
-func (r *resultState) reconcileDuration() {
-	r.result.RecomputeDuration()
-}
-
-func (r *resultState) areAllStepsFinished() bool {
-	return r.result.AreAllStepsFinished()
-}
-
-func (r *resultState) isAnyStepAborted() bool {
-	// When initialization was aborted or failed - it's immediately end
-	if r.result.Initialization.Status.AnyError() {
-		return true
-	}
-
-	// Analyze the rest of the steps
-	for _, step := range r.result.Steps {
-		// When any step was aborted - it's immediately end
-		if step.Status != nil && *step.Status == testkube.ABORTED_TestWorkflowStepStatus {
-			return true
-		}
-	}
-	return false
-}
-
-func (r *resultState) isAnyStepPaused() bool {
-	if *r.result.Initialization.Status == testkube.PAUSED_TestWorkflowStepStatus {
-		return true
-	}
-	for _, step := range r.result.Steps {
-		if step.Status != nil && *step.Status == testkube.PAUSED_TestWorkflowStepStatus {
-			return true
-		}
-	}
-	return false
-}
-
-func (r *resultState) applyMissingPauses() {
-	for ref := range r.result.Steps {
-		if !r.result.Steps[ref].Status.Paused() && !r.result.Steps[ref].Status.Finished() && r.result.HasUnfinishedPause(ref) {
-			step := r.result.Steps[ref]
-			step.Status = common.Ptr(testkube.PAUSED_TestWorkflowStepStatus)
-			r.result.Steps[ref] = step
-		}
-	}
-}
-
-func (r *resultState) applyStatus() {
-	if !r.result.FinishedAt.IsZero() && r.areAllStepsFinished() {
-		r.result.Status = r.result.PredictedStatus
-	} else if r.isAnyStepPaused() {
-		r.result.Status = common.Ptr(testkube.PAUSED_TestWorkflowStatus)
-	} else if !r.result.StartedAt.IsZero() {
-		r.result.Status = common.Ptr(testkube.RUNNING_TestWorkflowStatus)
-	}
-}
-
-func (r *resultState) applyPredictedStatus() {
-	// Mark as aborted, when any step is aborted
-	if r.isAnyStepAborted() || r.result.Initialization.Status.AnyError() {
-		r.result.PredictedStatus = common.Ptr(testkube.ABORTED_TestWorkflowStatus)
-		return
-	}
-
-	// Determine if there are some steps failed
-	for ref := range r.result.Steps {
-		if r.result.Steps[ref].Status != nil && r.result.Steps[ref].Status.AnyError() {
-			r.result.PredictedStatus = common.Ptr(testkube.FAILED_TestWorkflowStatus)
-			return
-		}
-	}
-	r.result.PredictedStatus = common.Ptr(testkube.PASSED_TestWorkflowStatus)
 }
 
 func (r *resultState) markAborted() {
@@ -240,34 +174,6 @@ func (r *resultState) markAborted() {
 	}
 }
 
-func (r *resultState) lastTimestamp() time.Time {
-	ts := latestTimestamp(r.result.QueuedAt, r.result.StartedAt, r.result.Initialization.QueuedAt, r.result.Initialization.StartedAt, r.result.Initialization.FinishedAt)
-	for i := range r.result.Steps {
-		ts = latestTimestamp(ts, r.result.Steps[i].QueuedAt, r.result.Steps[i].StartedAt, r.result.Steps[i].FinishedAt)
-	}
-	return ts
-}
-
-func (r *resultState) adjustTimestamps() {
-	// Build the completion timestamp
-	var completionTs time.Time
-	if r.state != nil {
-		completionTs = r.state.CompletionTimestamp()
-	}
-
-	// Build the timestamp for initial container
-	var containerStartTs time.Time
-	if r.state != nil {
-		containerStartTs = r.state.ContainerStartTimestamp("1")
-	}
-
-	if len(r.sigSequence) == 0 {
-		// TODO: Try to estimate signature sequence (?)
-	}
-
-	r.result.RecomputeTimestamps(r.sigSequence, containerStartTs, completionTs, r.ended)
-}
-
 func (r *resultState) fillGaps(force bool) {
 	if r.state == nil {
 		return
@@ -339,14 +245,29 @@ func (r *resultState) fillGaps(force bool) {
 
 // TODO: Check if duplicates are needed there
 func (r *resultState) reconcile() {
-	r.reconcileDuration()
+	// Build the completion timestamp
+	var completionTs time.Time
+	if r.state != nil {
+		completionTs = r.state.CompletionTimestamp()
+	}
+
+	// Build the timestamp for initial container
+	var containerStartTs time.Time
+	if r.state != nil {
+		containerStartTs = r.state.ContainerStartTimestamp("1")
+	}
+
+	//// TODO: Try to estimate signature sequence (?)
+	//if len(r.sigSequence) == 0 {
+	//}
+
+	r.result.HealDuration()
 	r.fillGaps(false)
-	r.adjustTimestamps()
+	r.result.HealTimestamps(r.sigSequence, containerStartTs, completionTs, r.ended)
 	r.fillGaps(false) // do it 2nd time, in case timestamps have added result.finishedAt date
-	r.reconcileDuration()
-	r.applyMissingPauses()
-	r.applyPredictedStatus()
-	r.applyStatus()
+	r.result.HealDuration()
+	r.result.HealMissingPauseStatuses()
+	r.result.HealStatus()
 }
 
 // Append applies the precise hint information about the action that took place
@@ -446,10 +367,6 @@ func (r *resultState) useActionGroups(actions actiontypes.ActionGroups) {
 func (r *resultState) Align(state ExecutionState) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	//defer func() {
-	//	vv, _ := json.Marshal(r.result)
-	//	fmt.Println("ALIGN", state.ResourceId(), string(vv))
-	//}()
 	defer r.reconcile()
 
 	r.state = state
