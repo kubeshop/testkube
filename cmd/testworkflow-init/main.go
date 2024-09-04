@@ -367,6 +367,9 @@ func main() {
 		}
 
 		// Save the status after each action
+		// TODO: Avoid saving the state when there are no changes
+		// TODO: Avoid saving the termination log when there are no changes
+		// TODO: Avoid saving at all when it's not closing?
 		data.SaveState()
 	}
 

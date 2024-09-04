@@ -26,10 +26,6 @@ func (r *TestWorkflowStepResult) Skipped() bool {
 	return r.Status.Skipped()
 }
 
-func (r *TestWorkflowStepResult) Progress() bool {
-	return r.Status.Progress()
-}
-
 func (r *TestWorkflowStepResult) NotStarted() bool {
 	return r.Status.NotStarted()
 }

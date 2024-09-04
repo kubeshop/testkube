@@ -18,6 +18,7 @@ type Value[T any] interface {
 	Latest() *T
 	Exists() bool
 	Next() <-chan struct{}
+	Channel(ctx context.Context) <-chan *T
 
 	Cancel()
 	Canceled() bool
@@ -59,6 +60,24 @@ func (v *value[T]) Next() <-chan struct{} {
 	v.mu.RLock()
 	defer v.mu.RUnlock()
 	return v.update.Next()
+}
+
+func (v *value[T]) Channel(ctx context.Context) <-chan *T {
+	updateCh := v.update.Channel(ctx)
+	ch := make(chan *T)
+	go func() {
+		defer close(ch)
+		latest := v.Latest()
+		ch <- latest
+		for range updateCh {
+			next := v.Latest()
+			if next != latest {
+				latest = next
+				ch <- latest
+			}
+		}
+	}()
+	return ch
 }
 
 func (v *value[T]) Cancel() {

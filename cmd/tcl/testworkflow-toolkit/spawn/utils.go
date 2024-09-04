@@ -244,6 +244,10 @@ func ExecuteParallel[T any](run func(int64, *T) bool, items []T, parallelism int
 }
 
 func SaveLogsWithController(ctx context.Context, storage artifacts.InternalArtifactStorage, ctrl testworkflowcontroller.Controller, prefix string, index int64) (string, error) {
+	//fmt.Println("started streaming", ctrl.ResourceID())
+	//defer func() {
+	//	fmt.Println("finished streaming", ctrl.ResourceID())
+	//}()
 	if ctrl == nil {
 		return "", errors.New("cannot control TestWorkflow's execution")
 	}

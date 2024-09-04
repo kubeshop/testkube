@@ -20,6 +20,7 @@ type resultState struct {
 	result testkube.TestWorkflowResult
 	state  ExecutionState
 	mu     sync.RWMutex
+	ended  bool
 }
 
 type ResultState interface {
@@ -113,15 +114,23 @@ func (r *resultState) isAnyStepPaused() bool {
 	return false
 }
 
-func (r *resultState) applyStatus() {
-	if !r.result.FinishedAt.IsZero() {
-		r.result.Status = r.result.PredictedStatus
-	} else if !r.result.StartedAt.IsZero() {
-		if r.isAnyStepPaused() {
-			r.result.Status = common.Ptr(testkube.PAUSED_TestWorkflowStatus)
-		} else {
-			r.result.Status = common.Ptr(testkube.RUNNING_TestWorkflowStatus)
+func (r *resultState) applyMissingPauses() {
+	for ref := range r.result.Steps {
+		if !r.result.Steps[ref].Status.Paused() && !r.result.Steps[ref].Status.Finished() && r.result.HasUnfinishedPause(ref) {
+			step := r.result.Steps[ref]
+			step.Status = common.Ptr(testkube.PAUSED_TestWorkflowStepStatus)
+			r.result.Steps[ref] = step
 		}
+	}
+}
+
+func (r *resultState) applyStatus() {
+	if r.ended && !r.result.FinishedAt.IsZero() && r.areAllStepsFinished() {
+		r.result.Status = r.result.PredictedStatus
+	} else if r.isAnyStepPaused() {
+		r.result.Status = common.Ptr(testkube.PAUSED_TestWorkflowStatus)
+	} else if !r.result.StartedAt.IsZero() {
+		r.result.Status = common.Ptr(testkube.RUNNING_TestWorkflowStatus)
 	}
 }
 
@@ -402,11 +411,14 @@ func (r *resultState) fillGaps(force bool) {
 	}
 }
 
+// TODO: Check if duplicates are needed there
 func (r *resultState) reconcile() {
+	r.reconcileDuration()
 	r.fillGaps(false)
 	r.adjustTimestamps()
 	r.fillGaps(false) // do it 2nd time, in case timestamps have added result.finishedAt date
 	r.reconcileDuration()
+	r.applyMissingPauses()
 	r.applyPredictedStatus()
 	r.applyStatus()
 }
@@ -509,6 +521,10 @@ func (r *resultState) Append(ts time.Time, hint instructions.Instruction) {
 func (r *resultState) Align(state ExecutionState) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	//defer func() {
+	//	vv, _ := json.Marshal(r.result)
+	//	fmt.Println("ALIGN", state.ResourceId(), string(vv))
+	//}()
 	defer r.reconcile()
 
 	r.state = state
@@ -540,6 +556,9 @@ func (r *resultState) Align(state ExecutionState) {
 func (r *resultState) End() {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
+	// Mark as finished
+	r.ended = true
 
 	// Ensure that the steps without the information are marked as aborted
 	r.fillGaps(true)

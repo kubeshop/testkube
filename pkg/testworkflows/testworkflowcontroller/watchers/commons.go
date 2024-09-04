@@ -279,7 +279,7 @@ func GetPodError(pod *corev1.Pod) string {
 		return ""
 	}
 	if pod.Status.Reason == "DeadlineExceeded" && pod.Spec.ActiveDeadlineSeconds != nil {
-		return fmt.Sprintf("Pod timed out after %d seconds.", *pod.Spec.ActiveDeadlineSeconds)
+		return fmt.Sprintf("Pod timed out after %d seconds", *pod.Spec.ActiveDeadlineSeconds)
 	}
 	for _, c := range pod.Status.Conditions {
 		if c.Type == corev1.DisruptionTarget && c.Status == corev1.ConditionTrue {
@@ -299,12 +299,12 @@ func GetJobError(job *batchv1.Job) string {
 	if job.Spec.ActiveDeadlineSeconds != nil {
 		for _, c := range job.Status.Conditions {
 			if c.Type == batchv1.JobFailed && c.Status == corev1.ConditionTrue && c.Reason == "DeadlineExceeded" {
-				return fmt.Sprintf("Job timed out after %d seconds.", *job.Spec.ActiveDeadlineSeconds)
+				return fmt.Sprintf("Job timed out after %d seconds", *job.Spec.ActiveDeadlineSeconds)
 			}
 		}
 	}
 	if job.DeletionTimestamp != nil {
-		return "Job has been aborted."
+		return "Job has been aborted"
 	}
 	return ""
 }

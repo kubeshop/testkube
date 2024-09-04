@@ -12,8 +12,16 @@ func (s *TestWorkflowStepStatus) Skipped() bool {
 	return s != nil && *s == SKIPPED_TestWorkflowStepStatus
 }
 
-func (s *TestWorkflowStepStatus) Progress() bool {
-	return s != nil && (*s == RUNNING_TestWorkflowStepStatus || *s == PAUSED_TestWorkflowStepStatus)
+func (s *TestWorkflowStepStatus) Paused() bool {
+	return s != nil && *s == PAUSED_TestWorkflowStepStatus
+}
+
+func (s *TestWorkflowStepStatus) Running() bool {
+	return s != nil && *s == RUNNING_TestWorkflowStepStatus
+}
+
+func (s *TestWorkflowStepStatus) AnyProgress() bool {
+	return s.Running() || s.Paused()
 }
 
 func (s *TestWorkflowStepStatus) TimedOut() bool {

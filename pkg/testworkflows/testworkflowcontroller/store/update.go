@@ -16,13 +16,13 @@ type updateImmediate struct {
 }
 
 type Update interface {
-	Channel() <-chan struct{}
+	Channel(context.Context) <-chan struct{}
 	Next() <-chan struct{}
 	Emit()
 	Close()
 }
 
-func (u *updateImmediate) Channel() <-chan struct{} {
+func (u *updateImmediate) Channel(ctx context.Context) <-chan struct{} {
 	ch := make(chan struct{}, 1)
 	go func() {
 		defer func() {
@@ -35,6 +35,8 @@ func (u *updateImmediate) Channel() <-chan struct{} {
 			select {
 			case <-u.ctx.Done():
 				return
+			case <-ctx.Done():
+				return
 			default:
 			}
 
@@ -45,13 +47,19 @@ func (u *updateImmediate) Channel() <-chan struct{} {
 				select {
 				case <-u.ctx.Done():
 					return
+				case <-ctx.Done():
+					return
 				case ch <- struct{}{}:
+				default:
 				}
+				next = u.Next()
 				continue
 			}
 
 			select {
 			case <-u.ctx.Done():
+				return
+			case <-ctx.Done():
 				return
 			case <-next:
 				next = u.Next()
@@ -59,7 +67,10 @@ func (u *updateImmediate) Channel() <-chan struct{} {
 				select {
 				case <-u.ctx.Done():
 					return
+				case <-ctx.Done():
+					return
 				case ch <- struct{}{}:
+				default:
 				}
 			}
 		}
@@ -74,6 +85,7 @@ func (u *updateImmediate) Next() <-chan struct{} {
 }
 
 func (u *updateImmediate) Emit() {
+	// TODO: Think if that's fine
 	if !u.mu.TryLock() {
 		return
 	}

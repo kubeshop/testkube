@@ -286,6 +286,8 @@ func NewParallelCmd() *cobra.Command {
 					// Save the last result
 					if v.Result != nil {
 						lastResult = *v.Result
+						//xx, _ := json.Marshal(v.Result)
+						//log(string(xx))
 					}
 
 					// Handle result change
@@ -299,6 +301,8 @@ func NewParallelCmd() *cobra.Command {
 						prevStep = v.Current
 						prevStatus = v.Status
 						prevIsFinished = lastResult.IsFinished()
+
+						// TODO: Maybe wait until end of channel
 						if lastResult.IsFinished() {
 							instructions.PrintOutput(env.Ref(), "parallel", ParallelStatus{Index: int(index), Status: v.Status, Result: v.Result})
 							ctxCancel()
@@ -307,6 +311,12 @@ func NewParallelCmd() *cobra.Command {
 							instructions.PrintOutput(env.Ref(), "parallel", ParallelStatus{Index: int(index), Status: v.Status, Current: v.Current})
 						}
 					}
+				}
+
+				if !lastResult.IsFinished() {
+					// TODO: Adjust other parts of the result?
+					log("could not compute status of the worker - aborting")
+					instructions.PrintOutput(env.Ref(), "parallel", ParallelStatus{Index: int(index), Status: testkube.ABORTED_TestWorkflowStatus, Result: &lastResult})
 				}
 
 				ctxCancel()
@@ -327,6 +337,7 @@ func NewParallelCmd() *cobra.Command {
 
 					// Resume all at once
 					if registry.Count() > 0 && registry.AllPaused() {
+						fmt.Println("resuming all workers")
 						registry.EachAsyncAtOnce(func(index int64, ctrl testworkflowcontroller.Controller, wait func()) {
 							podIp, _ := ctrl.PodIP()
 							if podIp == "" {

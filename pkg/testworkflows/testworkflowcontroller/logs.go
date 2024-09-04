@@ -132,19 +132,12 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 	}
 
 	go func() {
-		<-parentCtx.Done()
-		ctxCancel()
-	}()
-
-	go func() {
 		<-ctx.Done()
 		close(ch)
 	}()
 
 	go func() {
-		defer func() {
-			ctxCancel()
-		}()
+		defer ctxCancel()
 		var err error
 
 		var since *time.Time
@@ -153,8 +146,10 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 		stream, err := getContainerLogsStream(ctx, clientSet, namespace, podName, containerName, isDone, since)
 		if err == io.EOF {
 			return
-		} else if err != nil && !errors.Is(err, context.Canceled) {
-			sendError(err)
+		} else if err != nil {
+			if !errors.Is(err, context.Canceled) {
+				sendError(err)
+			}
 			return
 		}
 
@@ -265,6 +260,11 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 
 			// Read next timestamp
 			err = tsReader.Read(reader)
+
+			// Handle context canceled
+			if errors.Is(err, context.Canceled) {
+				return
+			}
 
 			// Ignore too old logs. SinceTime in Kubernetes is precise only to seconds
 			if err == nil && !readerAnyContent {

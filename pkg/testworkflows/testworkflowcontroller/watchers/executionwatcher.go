@@ -50,7 +50,7 @@ type ExecutionWatcher interface {
 	RefreshJob(timeout time.Duration)
 
 	Started() <-chan struct{}
-	Updated() <-chan struct{}
+	Updated(ctx context.Context) <-chan struct{}
 	Next() <-chan struct{}
 }
 
@@ -137,8 +137,8 @@ func (e *executionWatcher) Started() <-chan struct{} {
 	return e.initialCommitCh
 }
 
-func (e *executionWatcher) Updated() <-chan struct{} {
-	return e.update.Channel()
+func (e *executionWatcher) Updated(ctx context.Context) <-chan struct{} {
+	return e.update.Channel(ctx)
 }
 
 func (e *executionWatcher) Next() <-chan struct{} {
@@ -369,7 +369,7 @@ func NewExecutionWatcher(parentCtx context.Context, clientSet kubernetes.Interfa
 		}
 		watcher.Commit()
 		for {
-			_, ok := <-update.Channel()
+			_, ok := <-update.Channel(ctx)
 			if !ok {
 				break
 			}

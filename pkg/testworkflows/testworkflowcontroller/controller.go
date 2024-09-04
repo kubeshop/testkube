@@ -49,6 +49,7 @@ type Controller interface {
 	Logs(ctx context.Context, follow bool) io.Reader
 	NodeName() (string, error)
 	PodIP() (string, error)
+	ResourceID() string
 	StopController()
 }
 
@@ -113,6 +114,10 @@ type controller struct {
 	ctx         context.Context
 	ctxCancel   context.CancelFunc
 	watcher     watchers.ExecutionWatcher
+}
+
+func (c *controller) ResourceID() string {
+	return c.id
 }
 
 func (c *controller) Abort(ctx context.Context) error {
@@ -226,9 +231,12 @@ func (c *controller) WatchLightweight(parentCtx context.Context) <-chan Lightwei
 // TODO: Avoid WatchInstrumentedPod
 func (c *controller) Logs(parentCtx context.Context, follow bool) io.Reader {
 	reader, writer := io.Pipe()
-	// TODO: Create own context
 	go func() {
-		defer writer.Close()
+		defer func() {
+			//fmt.Println(c.id, "finishing streaming logs for")
+			writer.Close()
+			//fmt.Println(c.id, "finished streaming logs for")
+		}()
 		ref := ""
 		ch, err := WatchInstrumentedPod(parentCtx, c.clientSet, c.signature, c.scheduledAt, c.watcher, WatchInstrumentedPodOptions{
 			DisableFollow: !follow,

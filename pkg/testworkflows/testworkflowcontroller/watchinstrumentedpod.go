@@ -73,16 +73,17 @@ type WatchInstrumentedPodOptions struct {
 
 func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interface, signature []stage.Signature, scheduledAt time.Time, watcher watchers.ExecutionWatcher, opts WatchInstrumentedPodOptions) (<-chan ChannelMessage[Notification], error) {
 	ctx, ctxCancel := context.WithCancel(parentCtx)
-	notifier := newNotifier(ctx, signature, scheduledAt)
+	notifier := newNotifier(ctx, signature)
 	signatureSeq := stage.MapSignatureToSequence(signature)
 	resultState := watchers.NewResultState(testkube.TestWorkflowResult{}) // TODO: Use already acknowledge result as the initial one
 
-	updatesCh := watcher.Updated()
+	updatesCh := watcher.Updated(ctx)
 
+	//r := rand.String(10)
 	log := func(data ...interface{}) {
 		// FIXME delete?
 		if debug != "" {
-			//data = append([]interface{}{ui.Green(watcher.State().Job().ResourceId())}, data...)
+			//data = append([]interface{}{ui.Green(watcher.State().Job().ResourceId()), ui.Blue(r)}, data...)
 			//fmt.Println(data...)
 		}
 	}
@@ -98,8 +99,8 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 			resultState.Align(watcher.State()) // TODO: IS IT NEEDED? OR MAYBE SHOULD BE STH LIKE FINISH?
 			resultState.End()
 			notifier.Result(resultState.Result())
-			notifier.Flush()
 			ctxCancel()
+			close(notifier.ch)
 			log("closed")
 		}()
 
@@ -140,6 +141,11 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 			log("checking for scheduled pod: iteration end")
 		}
 		log("pod likely started")
+
+		// Stop immediately after the operation is canceled
+		if ctx.Err() != nil {
+			return
+		}
 
 		// Handle the case when it has been complete without pod start
 		if !watcher.State().PodStarted() && watcher.State().Completed() {
@@ -188,7 +194,9 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 		// Iterate over containers
 		lastStarted := InitContainerName
 		for containerIndex := 0; containerIndex < len(refs); containerIndex++ {
+			aborted := false
 			container := fmt.Sprintf("%d", containerIndex+1)
+
 			log("iterating containers", container)
 
 			// Wait until the Container is started
@@ -218,6 +226,11 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 			}
 			log("container started", container)
 
+			// Stop immediately after the operation is canceled
+			if ctx.Err() != nil {
+				return
+			}
+
 			// Start the initial one
 			lastStarted = refs[containerIndex][0]
 
@@ -243,12 +256,20 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 					if v.Value.Hint.Name == constants.InstructionStart {
 						lastStarted = v.Value.Hint.Ref
 					}
+					if v.Value.Hint.Name == constants.InstructionEnd && testkube.TestWorkflowStepStatus(v.Value.Hint.Value.(string)) == testkube.ABORTED_TestWorkflowStepStatus {
+						aborted = true
+					}
 					resultState.Append(v.Value.Time, *v.Value.Hint)
 					notifier.Result(resultState.Result())
 					log("hint finished")
 				}
 			}
 			log("container log finished", container, watcher.State().CompletionTimestamp().String(), watcher.State().Completed(), watcher.State().ContainerFinished(container))
+
+			// Stop immediately after the operation is canceled
+			if ctx.Err() != nil {
+				return
+			}
 
 			// Wait until the Container is terminated
 			for ok := true; ok; _, ok = <-updatesCh {
@@ -263,29 +284,46 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 			}
 			log("container terminated", container)
 
+			// Stop immediately after the operation is canceled
+			if ctx.Err() != nil {
+				return
+			}
+
 			// TODO: Include Container/Pod events after the finish (?)
 
 			// Load the correlation data about status
 			resultState.Align(watcher.State())
-			// TODO: Should not wait for the actual container result?
 			notifier.Result(resultState.Result())
 			log("container result", container)
+
+			// Don't iterate over further containers if this one has failed completely
+			if aborted || watcher.State().ContainerFailed(container) {
+				break
+			}
 		}
 		log("finished iterating over containers")
 
 		// Wait until everything is finished
+		// TODO: Ignore when it's for services?
 	loop:
 		for {
-			if watcher.State().Completed() {
+			// FIXME?
+			//if watcher.State().Completed() || !resultState.Result().FinishedAt.IsZero() {
+			if watcher.State().Completed() || ctx.Err() != nil {
 				break loop
 			}
 
+			log("looping over completion", watcher.State().CompletionTimestamp(), resultState.Result().FinishedAt)
+
 			select {
+			case <-ctx.Done():
+				return
 			case _, ok := <-updatesCh:
 				if !ok || watcher.State().Completed() {
 					break loop
 				}
 			case <-time.After(30 * time.Second):
+				log("reloading pod & job")
 				watcher.RefreshPod(30 * time.Second) // FIXME?
 				watcher.RefreshJob(30 * time.Second) // FIXME?
 
@@ -295,6 +333,11 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 				}
 				// TODO: shouldn't be just a critical error?
 			}
+		}
+
+		// Stop immediately after the operation is canceled
+		if ctx.Err() != nil {
+			return
 		}
 
 		// Mark as finished

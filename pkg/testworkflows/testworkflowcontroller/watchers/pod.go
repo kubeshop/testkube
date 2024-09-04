@@ -32,6 +32,7 @@ type Pod interface {
 	Signature() ([]stage.Signature, error)
 	ContainerStarted(name string) bool
 	ContainerFinished(name string) bool
+	ContainerFailed(name string) bool
 	ContainerStartTimestamp(name string) time.Time
 	ContainerFinishTimestamp(name string) time.Time
 	ContainerResult(name string, executionError string) ContainerResult
@@ -120,6 +121,14 @@ func (p *pod) ContainerStarted(name string) bool {
 
 func (p *pod) ContainerFinished(name string) bool {
 	return IsContainerFinished(p.original, name)
+}
+
+func (p *pod) ContainerFailed(name string) bool {
+	status := GetContainerStatus(p.original, name)
+	if status == nil {
+		return false
+	}
+	return status.State.Terminated != nil && status.State.Terminated.Reason != "" && status.State.Terminated.Reason != "Completed"
 }
 
 func (p *pod) ContainerStartTimestamp(name string) time.Time {

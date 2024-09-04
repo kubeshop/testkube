@@ -137,6 +137,7 @@ func (e *eventsWatcher) read(tsInPast time.Time, t time.Duration) (<-chan readSt
 		for i := range list.Items {
 			if list.Items[i].ResourceVersion == e.opts.ResourceVersion {
 				list.Items = list.Items[i+1:]
+				break
 			}
 		}
 
