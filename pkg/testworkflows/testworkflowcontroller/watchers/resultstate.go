@@ -19,9 +19,10 @@ const (
 )
 
 type resultState struct {
-	result testkube.TestWorkflowResult
-	state  ExecutionState
-	mu     sync.RWMutex
+	result      testkube.TestWorkflowResult
+	state       ExecutionState
+	mu          sync.RWMutex
+	scheduledAt time.Time
 
 	// Temporary data to avoid finishing before
 	ended bool
@@ -41,7 +42,7 @@ type ResultState interface {
 
 // TODO: Optimize memory
 // TODO: Provide initial actions/signature
-func NewResultState(initial testkube.TestWorkflowResult) ResultState {
+func NewResultState(initial testkube.TestWorkflowResult, scheduledAt time.Time) ResultState {
 	// Apply data that are required yet may be missing
 	if initial.Initialization == nil {
 		initial.Initialization = &testkube.TestWorkflowStepResult{
@@ -64,7 +65,7 @@ func NewResultState(initial testkube.TestWorkflowResult) ResultState {
 	}
 
 	// Build the state object
-	state := &resultState{result: initial}
+	state := &resultState{result: initial, scheduledAt: scheduledAt}
 	return state
 }
 
@@ -177,8 +178,7 @@ func (r *resultState) reconcile() {
 	//}
 
 	r.fillGaps(false)
-	r.result.HealDuration()
-	r.result.HealTimestamps(r.sigSequence, containerStartTs, completionTs, r.ended)
+	r.result.HealTimestamps(r.sigSequence, r.scheduledAt, containerStartTs, completionTs, r.ended)
 	r.result.HealDuration()
 	r.result.HealMissingPauseStatuses()
 	r.result.HealStatus()

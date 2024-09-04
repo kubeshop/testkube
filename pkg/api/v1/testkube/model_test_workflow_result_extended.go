@@ -369,7 +369,12 @@ func (r *TestWorkflowResult) HealStatus() {
 	r.healStatus()
 }
 
-func (r *TestWorkflowResult) HealTimestamps(sigSequence []TestWorkflowSignature, firstContainerStartTs time.Time, completionTs time.Time, ended bool) {
+// TODO: Take in account scheduledAt to avoid having timestamp before schedule (because of seconds precision)
+func (r *TestWorkflowResult) HealTimestamps(sigSequence []TestWorkflowSignature, scheduledTs, firstContainerStartTs, completionTs time.Time, ended bool) {
+	// Adjust queue/start time to the schedule time
+	r.QueuedAt = latestTimestamp(r.QueuedAt, scheduledTs)
+	r.StartedAt = latestTimestamp(r.StartedAt, r.QueuedAt)
+
 	// Detect the initialization queue time
 	r.Initialization.QueuedAt = earliestTimestamp(r.StartedAt, r.Initialization.QueuedAt)
 
@@ -398,7 +403,7 @@ func (r *TestWorkflowResult) HealTimestamps(sigSequence []TestWorkflowSignature,
 		if !step.QueuedAt.Equal(lastTs) {
 			step.QueuedAt = lastTs
 		}
-		if step.FinishedAt.IsZero() && step.Status.Aborted() {
+		if step.FinishedAt.IsZero() && (step.Status.Aborted() || (step.Status.Skipped() && step.ErrorMessage != "")) {
 			step.FinishedAt = completionTs
 		}
 		if !step.QueuedAt.IsZero() && !step.FinishedAt.IsZero() && step.StartedAt.IsZero() {

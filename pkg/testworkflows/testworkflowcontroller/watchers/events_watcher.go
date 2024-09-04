@@ -2,7 +2,6 @@ package watchers
 
 import (
 	"context"
-	"fmt"
 	"math"
 	"sync"
 	"sync/atomic"
@@ -13,7 +12,6 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 
 	"github.com/kubeshop/testkube/internal/common"
-	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 type eventsWatcher struct {
@@ -302,11 +300,6 @@ func (e *eventsWatcher) Ensure(tsInPast time.Time, timeout time.Duration) (int, 
 	// Wait for readiness
 	<-e.optsCh
 
-	selector := e.opts.LabelSelector
-	if selector == "" {
-		selector = e.opts.FieldSelector
-	}
-
 	// Fast-track when the timestamp is already acknowledged
 	e.mu.Lock()
 	if tsInPast.Before(e.lastTs) {
@@ -314,8 +307,6 @@ func (e *eventsWatcher) Ensure(tsInPast time.Time, timeout time.Duration) (int, 
 		return 0, nil
 	}
 	e.mu.Unlock()
-
-	fmt.Println(ui.Red("REFRESHING Events"), e.opts)
 
 	// Start reading data
 	// TODO: use time.After to check for events from Watch?

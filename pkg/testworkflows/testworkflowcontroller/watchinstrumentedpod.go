@@ -26,7 +26,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 	ctx, ctxCancel := context.WithCancel(parentCtx)
 	notifier := newNotifier(ctx, signature)
 	signatureSeq := stage.MapSignatureToSequence(signature)
-	resultState := watchers.NewResultState(testkube.TestWorkflowResult{}) // TODO: Use already acknowledge result as the initial one
+	resultState := watchers.NewResultState(testkube.TestWorkflowResult{}, scheduledAt) // TODO: Use already acknowledge result as the initial one
 
 	updatesCh := watcher.Updated(ctx)
 

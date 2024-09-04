@@ -188,7 +188,7 @@ func (e *execution) Run() (*executionResult, error) {
 	} else {
 		e.group.pauseMu.Unlock()
 		e.cmdMu.Unlock()
-		aborted, exitDetails, exitCode = getProcessStatus(err)
+		aborted, _, exitCode = getProcessStatus(err)
 		if exitCode < 0 {
 			exitCode = 255
 		}
