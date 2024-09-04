@@ -16,11 +16,14 @@ const (
 	KubernetesTimezoneLogTimeFormat = KubernetesLogTimeFormat + "07:00"
 )
 
+var (
+	containerNameRe = regexp.MustCompile(`^spec\.(?:initContainers|containers)\{([^]]+)}`)
+)
+
 func GetEventContainerName(event *corev1.Event) string {
-	regex := regexp.MustCompile(`^spec\.(?:initContainers|containers)\{([^]]+)}`)
 	path := event.InvolvedObject.FieldPath
-	if regex.Match([]byte(path)) {
-		name := regex.ReplaceAllString(event.InvolvedObject.FieldPath, "$1")
+	if containerNameRe.Match([]byte(path)) {
+		name := containerNameRe.ReplaceAllString(event.InvolvedObject.FieldPath, "$1")
 		return name
 	}
 	return ""
