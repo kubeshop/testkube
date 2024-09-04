@@ -3,10 +3,17 @@ package testkube
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"slices"
 	"time"
 
+	"github.com/gookit/color"
+
 	"github.com/kubeshop/testkube/internal/common"
+)
+
+const (
+	InitStepRef = "tktw-init"
 )
 
 func (r *TestWorkflowResult) IsFinished() bool {
@@ -145,6 +152,14 @@ func (r *TestWorkflowResult) IsAnyStepPaused() bool {
 		}
 	}
 	return false
+}
+
+func (r *TestWorkflowResult) IsKnownStep(ref string) bool {
+	if ref == InitStepRef {
+		return true
+	}
+	_, ok := r.Steps[ref]
+	return ok
 }
 
 func (r *TestWorkflowResult) AreAllStepsFinished() bool {
@@ -416,6 +431,86 @@ func (r *TestWorkflowResult) HealTimestamps(sigSequence []TestWorkflowSignature,
 
 	if !completionTs.IsZero() && ended {
 		r.FinishedAt = firstNonZero(r.approxCurrentTimestamp(), completionTs)
+	}
+}
+
+func (r *TestWorkflowResult) HealAborted(sigSequence []TestWorkflowSignature, errorStr, defaultErrorStr string) {
+	errorMessage := fmt.Sprintf("The execution has been aborted. (%s)", errorStr)
+
+	// Create marker to know if there is any step marked as aborted already
+	aborted := false
+
+	// Check the initialization step
+	if !r.Initialization.Finished() || r.Initialization.Aborted() {
+		aborted = true
+		r.Initialization.Status = common.Ptr(ABORTED_TestWorkflowStepStatus)
+		r.Initialization.ErrorMessage = errorMessage
+	}
+
+	// Check all the executable steps in the sequence
+	for i := range sigSequence {
+		ref := sigSequence[i].Ref
+		if ref == InitStepRef || !r.IsKnownStep(ref) || len(sigSequence[i].Children) > 0 {
+			continue
+		}
+		step := r.Steps[ref]
+		if step.Finished() && !step.Aborted() && (!step.Skipped() || step.ErrorMessage == "") {
+			if step.Status.Aborted() && (step.ErrorMessage == "" || step.ErrorMessage == defaultErrorStr) {
+				step.ErrorMessage = errorMessage
+			}
+			continue
+		}
+		if aborted {
+			step.Status = common.Ptr(SKIPPED_TestWorkflowStepStatus)
+			step.ErrorMessage = fmt.Sprintf("The execution was aborted before. %s", color.FgDarkGray.Render("("+errorStr+")"))
+		} else {
+			aborted = true
+			step.Status = common.Ptr(ABORTED_TestWorkflowStepStatus)
+			step.ErrorMessage = errorMessage
+		}
+		r.Steps[ref] = step
+	}
+
+	// Adjust all the group steps in the sequence.
+	// Do it from end, so we can handle nested groups
+	for i := len(sigSequence) - 1; i >= 0; i-- {
+		ref := sigSequence[i].Ref
+		if ref == InitStepRef || !r.IsKnownStep(ref) || len(sigSequence[i].Children) == 0 {
+			continue
+		}
+		step := r.Steps[ref]
+		if step.Finished() {
+			continue
+		}
+		allSkipped := true
+		anyAborted := false
+		for _, childSig := range sigSequence[i].Children {
+			// TODO: What about nested virtual groups? We don't have their statuses
+			if !r.IsKnownStep(childSig.Ref) {
+				continue
+			}
+			if r.Steps[childSig.Ref].Status.Aborted() {
+				anyAborted = true
+			}
+			if !r.Steps[childSig.Ref].Status.Skipped() {
+				allSkipped = false
+			}
+		}
+		if allSkipped {
+			step.Status = common.Ptr(SKIPPED_TestWorkflowStepStatus)
+		} else if anyAborted {
+			step.Status = common.Ptr(ABORTED_TestWorkflowStepStatus)
+		}
+	}
+
+	// The rest of steps is unrecognized, so just mark them as aborted with information about faulty state
+	for ref, step := range r.Steps {
+		if step.Finished() {
+			continue
+		}
+		step.Status = common.Ptr(ABORTED_TestWorkflowStepStatus)
+		step.ErrorMessage = fmt.Sprintf("The execution was aborted, but we could not determine steps order: %s", errorStr)
+		r.Steps[ref] = step
 	}
 }
 

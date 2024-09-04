@@ -6,14 +6,16 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gookit/color"
-
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
+)
+
+const (
+	DefaultErrorMessage = "Manual"
 )
 
 type resultState struct {
@@ -86,92 +88,6 @@ func (r *resultState) useInitialStateData() {
 
 func (r *resultState) reconcileStateData() {
 	// TODO: Apply predicted status
-}
-
-func (r *resultState) markAborted() {
-	// Load the error message
-	defaultMessage := "Manual" // TODO: Move as constant
-	bareErrorMessage := defaultMessage
-	if r.state != nil && r.state.ExecutionError() != "" {
-		bareErrorMessage = r.state.ExecutionError()
-	}
-	errorMessage := fmt.Sprintf("The execution has been aborted. (%s)", bareErrorMessage)
-
-	// Create marker to know if there is any step marked as aborted already
-	aborted := false
-
-	// Check the initialization step
-	if !r.result.Initialization.Finished() || r.result.Initialization.Aborted() {
-		aborted = true
-		r.result.Initialization.Status = common.Ptr(testkube.ABORTED_TestWorkflowStepStatus)
-		r.result.Initialization.ErrorMessage = errorMessage
-	}
-
-	// Check all the executable steps in the sequence
-	for i := range r.sigSequence {
-		ref := r.sigSequence[i].Ref
-		if ref == InitStepRef || !r.isKnownStep(ref) || len(r.sigSequence[i].Children) > 0 {
-			continue
-		}
-		step := r.result.Steps[ref]
-		if step.Finished() && !step.Aborted() && (!step.Skipped() || step.ErrorMessage == "") {
-			if *step.Status == testkube.ABORTED_TestWorkflowStepStatus && (step.ErrorMessage == "" || step.ErrorMessage == defaultMessage) {
-				step.ErrorMessage = errorMessage
-			}
-			continue
-		}
-		if aborted {
-			step.Status = common.Ptr(testkube.SKIPPED_TestWorkflowStepStatus)
-			step.ErrorMessage = fmt.Sprintf("The execution was aborted before. %s", color.FgDarkGray.Render("("+bareErrorMessage+")"))
-		} else {
-			aborted = true
-			step.Status = common.Ptr(testkube.ABORTED_TestWorkflowStepStatus)
-			step.ErrorMessage = errorMessage
-		}
-		r.result.Steps[ref] = step
-	}
-
-	// Adjust all the group steps in the sequence.
-	// Do it from end, so we can handle nested groups
-	for i := len(r.sigSequence) - 1; i >= 0; i-- {
-		ref := r.sigSequence[i].Ref
-		if ref == InitStepRef || !r.isKnownStep(ref) || len(r.sigSequence[i].Children) == 0 {
-			continue
-		}
-		step := r.result.Steps[ref]
-		if step.Finished() {
-			continue
-		}
-		allSkipped := true
-		anyAborted := false
-		for _, childSig := range r.sigSequence[i].Children {
-			// TODO: What about nested virtual groups? We don't have their statuses
-			if !r.isKnownStep(childSig.Ref) {
-				continue
-			}
-			if r.result.Steps[childSig.Ref].Status.Aborted() {
-				anyAborted = true
-			}
-			if !r.result.Steps[childSig.Ref].Status.Skipped() {
-				allSkipped = false
-			}
-		}
-		if allSkipped {
-			step.Status = common.Ptr(testkube.SKIPPED_TestWorkflowStepStatus)
-		} else if anyAborted {
-			step.Status = common.Ptr(testkube.ABORTED_TestWorkflowStepStatus)
-		}
-	}
-
-	// The rest of steps is unrecognized, so just mark them as aborted with information about faulty state
-	for ref, step := range r.result.Steps {
-		if step.Finished() {
-			continue
-		}
-		step.Status = common.Ptr(testkube.ABORTED_TestWorkflowStepStatus)
-		step.ErrorMessage = fmt.Sprintf("The execution was aborted, but we could not determine steps order: %s", bareErrorMessage)
-		r.result.Steps[ref] = step
-	}
 }
 
 func (r *resultState) fillGaps(force bool) {
@@ -408,19 +324,15 @@ func (r *resultState) End() {
 	// Mark as finished
 	r.ended = true
 
-	// Ensure that the steps without the information are marked as aborted
+	// Ensure that the steps without the information are fulfilled and marked as aborted
 	r.fillGaps(true)
-	r.markAborted()
+
+	errorMessage := DefaultErrorMessage
+	if r.state != nil && r.state.ExecutionError() != "" {
+		errorMessage = r.state.ExecutionError()
+	}
+	r.result.HealAborted(r.sigSequence, errorMessage, DefaultErrorMessage)
 
 	// Finalize the status
 	r.reconcile()
-}
-
-func latestTimestamp(ts ...time.Time) (latest time.Time) {
-	for _, t := range ts {
-		if !t.IsZero() && (latest.IsZero() || t.After(latest)) {
-			latest = t
-		}
-	}
-	return
 }
