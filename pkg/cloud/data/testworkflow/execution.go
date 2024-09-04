@@ -170,8 +170,8 @@ func (r *CloudRepository) GetNextExecutionNumber(ctx context.Context, testWorkfl
 	return commandResponse.TestWorkflowNumber, nil
 }
 
-func (r *CloudRepository) GetExecutionTags(ctx context.Context) (tags map[string][]string, err error) {
-	req := ExecutionGetExecutionTagsRequest{}
+func (r *CloudRepository) GetExecutionTags(ctx context.Context, testWorkflowName string) (tags map[string][]string, err error) {
+	req := ExecutionGetExecutionTagsRequest{TestWorkflowName: testWorkflowName}
 	process := func(v ExecutionGetExecutionTagsResponse) map[string][]string {
 		return v.Tags
 	}

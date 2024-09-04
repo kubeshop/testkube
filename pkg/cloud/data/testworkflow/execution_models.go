@@ -180,6 +180,7 @@ type ExecutionGetNextExecutionNumberResponse struct {
 }
 
 type ExecutionGetExecutionTagsRequest struct {
+	TestWorkflowName string `json:"testWorkflowName"`
 }
 
 type ExecutionGetExecutionTagsResponse struct {
