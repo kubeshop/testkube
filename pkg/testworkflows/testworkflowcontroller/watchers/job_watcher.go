@@ -220,7 +220,7 @@ func (e *jobWatcher) watch() error {
 
 			// Try to configure deletion timestamp if Kubernetes engine doesn't support it
 			if event.Type == watch.Deleted && object.DeletionTimestamp == nil {
-				object.DeletionTimestamp = &metav1.Time{GetJobLastTimestamp(object)}
+				object.DeletionTimestamp = &metav1.Time{Time: GetJobLastTimestamp(object)}
 			}
 
 			// Mark as existing

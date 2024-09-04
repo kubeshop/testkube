@@ -162,6 +162,7 @@ func (r *resultState) fillGaps(force bool) {
 
 func (r *resultState) reconcile() {
 	// Build the completion timestamp
+	// TODO: use latest timestamp (like event's, job's or log)
 	var completionTs time.Time
 	if r.state != nil {
 		completionTs = r.state.CompletionTimestamp()
