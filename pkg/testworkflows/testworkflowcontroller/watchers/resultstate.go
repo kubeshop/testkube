@@ -21,7 +21,10 @@ type resultState struct {
 	result testkube.TestWorkflowResult
 	state  ExecutionState
 	mu     sync.RWMutex
-	ended  bool
+
+	// Temporary data to avoid finishing before
+	temporaryFinishedAt time.Time
+	ended               bool
 
 	// Cached data
 	actions     actiontypes.ActionGroups
@@ -132,7 +135,7 @@ func (r *resultState) applyMissingPauses() {
 }
 
 func (r *resultState) applyStatus() {
-	if r.ended && !r.result.FinishedAt.IsZero() && r.areAllStepsFinished() {
+	if !r.result.FinishedAt.IsZero() && r.areAllStepsFinished() {
 		r.result.Status = r.result.PredictedStatus
 	} else if r.isAnyStepPaused() {
 		r.result.Status = common.Ptr(testkube.PAUSED_TestWorkflowStatus)
@@ -245,7 +248,6 @@ func (r *resultState) markAborted() {
 }
 
 func (r *resultState) lastTimestamp() time.Time {
-	// omit r.result.FinishedAt to avoid this approximation
 	ts := latestTimestamp(r.result.QueuedAt, r.result.StartedAt, r.result.Initialization.QueuedAt, r.result.Initialization.StartedAt, r.result.Initialization.FinishedAt)
 	for i := range r.result.Steps {
 		ts = latestTimestamp(ts, r.result.Steps[i].QueuedAt, r.result.Steps[i].StartedAt, r.result.Steps[i].FinishedAt)
@@ -329,7 +331,11 @@ func (r *resultState) adjustTimestamps() {
 	}
 
 	if r.areAllStepsFinished() {
-		r.result.FinishedAt = firstNonZero(r.lastTimestamp(), completionTs)
+		r.temporaryFinishedAt = firstNonZero(r.lastTimestamp(), completionTs)
+	}
+
+	if r.ended {
+		r.result.FinishedAt = r.temporaryFinishedAt
 	}
 }
 
@@ -430,7 +436,7 @@ func (r *resultState) Append(ts time.Time, hint instructions.Instruction) {
 			status = testkube.PASSED_TestWorkflowStatus
 		}
 		r.result.Status = common.Ptr(status)
-		r.result.FinishedAt = ts
+		r.temporaryFinishedAt = ts
 	}
 
 	// Load the current step information

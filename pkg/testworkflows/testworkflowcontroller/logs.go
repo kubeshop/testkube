@@ -4,9 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"encoding/json"
 	"io"
-	"os"
 	"strings"
 	"sync"
 	"time"
@@ -100,20 +98,9 @@ func getContainerLogsStream(ctx context.Context, clientSet kubernetes.Interface,
 	return stream, nil
 }
 
-var (
-	debug = os.Getenv("TK_REF")
-)
-
 func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interface, namespace, podName, containerName string, bufferSize int, isDone func() bool) <-chan ChannelMessage[ContainerLog] {
 	ctx, ctxCancel := context.WithCancel(parentCtx)
 	ch := make(chan ChannelMessage[ContainerLog], bufferSize)
-
-	loggy := func(data ...interface{}) {
-		if debug != "" {
-			//data = append([]interface{}{podName}, data...)
-			//fmt.Println(data...)
-		}
-	}
 
 	sendError := func(err error) {
 		defer func() {
@@ -355,8 +342,6 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 			// Detect instruction
 			instruction, isHint, err := instructions.DetectInstruction(line)
 			if err == nil && instruction != nil {
-				v, _ := json.Marshal(string(line))
-				loggy("detected instruction", string(v))
 				item := ContainerLog{Time: lastTs}
 				if isHint {
 					item.Hint = instruction
