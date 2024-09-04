@@ -390,8 +390,11 @@ func NewParallelCmd() *cobra.Command {
 
 			// Create channel for execution
 			failed := spawn.ExecuteParallel(run, specs, parallelism)
+
+			// Wait for the results
 			if failed == 0 {
 				fmt.Printf("Successfully finished %d workers.\n", params.Count)
+				os.Exit(0)
 			} else {
 				fmt.Printf("Failed to finish %d out of %d expected workers.\n", failed, params.Count)
 				os.Exit(1)
