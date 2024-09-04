@@ -2,6 +2,8 @@ kind: TestWorkflow
 apiVersion: testworkflows.testkube.io/v1
 metadata:
   name: tw-suite-small-smoke
+  labels:
+    core-tests: workflows-suite
 spec:
   steps:
   - execute:
