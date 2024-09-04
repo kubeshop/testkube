@@ -286,8 +286,6 @@ func NewParallelCmd() *cobra.Command {
 					// Save the last result
 					if v.Result != nil {
 						lastResult = *v.Result
-						//xx, _ := json.Marshal(v.Result)
-						//log(string(xx))
 					}
 
 					// Handle result change
@@ -313,11 +311,15 @@ func NewParallelCmd() *cobra.Command {
 					}
 				}
 
-				if !lastResult.IsFinished() {
-					// TODO: Adjust other parts of the result?
-					log("could not compute status of the worker - aborting")
-					instructions.PrintOutput(env.Ref(), "parallel", ParallelStatus{Index: int(index), Status: testkube.ABORTED_TestWorkflowStatus, Result: &lastResult})
+				// Fallback in case there is a problem with finishing
+				log("could not determine status of the worker - aborting")
+				instructions.PrintOutput(env.Ref(), "parallel", ParallelStatus{Index: int(index), Status: testkube.ABORTED_TestWorkflowStatus, Result: &lastResult})
+				log(string(testkube.ABORTED_TestWorkflowStatus))
+				lastResult.Status = common.Ptr(testkube.ABORTED_TestWorkflowStatus)
+				if lastResult.FinishedAt.IsZero() {
+					lastResult.FinishedAt = time.Now().UTC()
 				}
+				updates <- Update{index: index, result: lastResult.Clone()}
 
 				ctxCancel()
 				return false

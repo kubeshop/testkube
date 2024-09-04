@@ -260,19 +260,7 @@ func (e *executionState) ContainerStarted(name string) bool {
 }
 
 func (e *executionState) ContainerFinished(name string) bool {
-	//index, err := strconv.Atoi(name)
-	//nextName := fmt.Sprintf("%d", index+1)
-	//if err != nil {
-	//	nextName = ""
-	//}
-
-	// TODO?
-	return e.Completed() ||
-		(e.pod != nil && e.pod.ContainerFinished(name))
-	//return !e.CompletionTimestamp().IsZero() ||
-	//	(e.pod != nil && e.pod.ContainerFinished(name)) ||
-	//	e.podEvents.Container(nextName).Created() ||
-	//	e.podEvents.Container(nextName).Started()
+	return e.pod != nil && e.pod.ContainerFinished(name)
 }
 
 func (e *executionState) ContainerFailed(name string) bool {
