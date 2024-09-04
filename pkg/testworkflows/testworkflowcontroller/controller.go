@@ -15,10 +15,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
 
-const (
-	DefaultInitTimeout = 5 * time.Second
-)
-
 var (
 	ErrJobAborted     = errors.New("job was aborted")
 	ErrJobTimeout     = errors.New("timeout retrieving job")
@@ -187,7 +183,6 @@ func (c *controller) WatchLightweight(parentCtx context.Context) <-chan Lightwei
 	prevNodeName := ""
 	prevPodIP := ""
 	prevStatus := testkube.QUEUED_TestWorkflowStatus
-	prevIsFinished := false
 	sig := stage.MapSignatureListToInternal(c.signature)
 	ch := make(chan LightweightNotification)
 	go func() {
@@ -202,7 +197,6 @@ func (c *controller) WatchLightweight(parentCtx context.Context) <-chan Lightwei
 			podIP, _ := c.PodIP()
 			current := prevCurrent
 			status := prevStatus
-			isFinished := prevIsFinished
 			if v.Value.Result != nil {
 				if v.Value.Result.Status != nil {
 					status = *v.Value.Result.Status
@@ -210,17 +204,13 @@ func (c *controller) WatchLightweight(parentCtx context.Context) <-chan Lightwei
 					status = testkube.QUEUED_TestWorkflowStatus
 				}
 				current = v.Value.Result.Current(sig)
-				isFinished = v.Value.Result.IsFinished()
 			}
 
-			// TODO: the final status should always have the finishedAt too,
-			//       there should be no need for checking isFinished diff
-			if nodeName != prevNodeName || isFinished != prevIsFinished || podIP != prevPodIP || prevStatus != status || prevCurrent != current {
+			if nodeName != prevNodeName || podIP != prevPodIP || prevStatus != status || prevCurrent != current {
 				prevNodeName = nodeName
 				prevPodIP = podIP
 				prevStatus = status
 				prevCurrent = current
-				prevIsFinished = isFinished
 				ch <- LightweightNotification{NodeName: nodeName, PodIP: podIP, Status: status, Current: current, Result: v.Value.Result}
 			}
 		}
@@ -232,11 +222,7 @@ func (c *controller) WatchLightweight(parentCtx context.Context) <-chan Lightwei
 func (c *controller) Logs(parentCtx context.Context, follow bool) io.Reader {
 	reader, writer := io.Pipe()
 	go func() {
-		defer func() {
-			//fmt.Println(c.id, "finishing streaming logs for")
-			writer.Close()
-			//fmt.Println(c.id, "finished streaming logs for")
-		}()
+		defer writer.Close()
 		ref := ""
 		ch, err := WatchInstrumentedPod(parentCtx, c.clientSet, c.signature, c.scheduledAt, c.watcher, WatchInstrumentedPodOptions{
 			DisableFollow: !follow,

@@ -40,7 +40,6 @@ func (u *updateImmediate) Channel(ctx context.Context) <-chan struct{} {
 			default:
 			}
 
-			// TODO: Consider some frequent check for the iteration too?
 			currentIteration := u.iteration.Load()
 			if iteration != currentIteration {
 				iteration = currentIteration

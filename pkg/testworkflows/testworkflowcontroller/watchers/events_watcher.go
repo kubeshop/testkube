@@ -309,8 +309,6 @@ func (e *eventsWatcher) Ensure(tsInPast time.Time, timeout time.Duration) (int, 
 	e.mu.Unlock()
 
 	// Start reading data
-	// TODO: use time.After to check for events from Watch?
-	// TODO: Consider exact time? We may miss some events though
 	started, _ := e.read(tsInPast.Truncate(time.Second).Add(-1), timeout)
 	result, _ := <-started
 	return result.count, result.err

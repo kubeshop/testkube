@@ -42,8 +42,6 @@ type ExecutionWatcher interface {
 	JobErr() error
 	PodErr() error
 
-	ReadJobEventsAt(ts time.Time, timeout time.Duration)
-	ReadPodEventsAt(ts time.Time, timeout time.Duration)
 	RefreshPod(timeout time.Duration)
 	RefreshJob(timeout time.Duration)
 
@@ -75,10 +73,7 @@ func (e *executionWatcher) State() ExecutionState {
 func (e *executionWatcher) Commit() {
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	// FIXME
-	uncommited := *e.uncommitted
-	uncommitedCopy := uncommited
-	e.state = common.Ptr(uncommitedCopy)
+	e.state = common.Ptr(*e.uncommitted)
 	if e.initialCommitInitialized.CompareAndSwap(false, true) {
 		close(e.initialCommitCh)
 	}
@@ -99,14 +94,6 @@ func (e *executionWatcher) JobErr() error {
 
 func (e *executionWatcher) PodErr() error {
 	return e.podWatcher.Err()
-}
-
-func (e *executionWatcher) ReadJobEventsAt(ts time.Time, timeout time.Duration) {
-	e.jobEventsWatcher.Ensure(ts, timeout)
-}
-
-func (e *executionWatcher) ReadPodEventsAt(ts time.Time, timeout time.Duration) {
-	e.podEventsWatcher.Ensure(ts, timeout)
 }
 
 func (e *executionWatcher) RefreshPod(timeout time.Duration) {
@@ -164,7 +151,6 @@ func NewExecutionWatcher(parentCtx context.Context, clientSet kubernetes.Interfa
 		initialCommitCh: make(chan struct{}),
 	}
 
-	//update := store.NewBatchUpdate(5 * time.Millisecond)
 	update := store.NewUpdate()
 	job := store.NewValue[batchv1.Job](ctx, update)
 	pod := store.NewValue[corev1.Pod](ctx, update)

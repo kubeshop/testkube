@@ -268,7 +268,6 @@ func NewParallelCmd() *cobra.Command {
 
 				prevStatus := testkube.QUEUED_TestWorkflowStatus
 				prevStep := ""
-				prevIsFinished := false
 				scheduled := false
 				for v := range ctrl.WatchLightweight(ctx) {
 					// Handle error
@@ -289,18 +288,14 @@ func NewParallelCmd() *cobra.Command {
 					}
 
 					// Handle result change
-					// TODO: the final status should always have the finishedAt too,
-					//       there should be no need for checking isFinished diff
-					if v.Status != prevStatus || lastResult.IsFinished() != prevIsFinished || v.Current != prevStep {
+					if v.Status != prevStatus || v.Current != prevStep {
 						if v.Status != prevStatus {
 							log(string(v.Status))
 						}
 						updates <- Update{index: index, result: v.Result}
 						prevStep = v.Current
 						prevStatus = v.Status
-						prevIsFinished = lastResult.IsFinished()
 
-						// TODO: Maybe wait until end of channel
 						if lastResult.IsFinished() {
 							instructions.PrintOutput(env.Ref(), "parallel", ParallelStatus{Index: int(index), Status: v.Status, Result: v.Result})
 							ctxCancel()
@@ -376,12 +371,12 @@ func NewParallelCmd() *cobra.Command {
 										return
 									}
 								}
-								spawn.CreateLogger("worker", descriptions[index], index, params.Count)("warning", "failed to to resume, retrying...", err.Error())
+								spawn.CreateLogger("worker", descriptions[index], index, params.Count)("warning", "failed to resume, retrying...", err.Error())
 								time.Sleep(300 * time.Millisecond)
 							}
 
 							// Total failure while retrying
-							spawn.CreateLogger("worker", descriptions[index], index, params.Count)("warning", "failed to to resume, maximum retries reached. aborting...", err.Error())
+							spawn.CreateLogger("worker", descriptions[index], index, params.Count)("warning", "failed to resume, maximum retries reached. aborting...", err.Error())
 							_ = ctrl.Abort(context.Background())
 						})
 					}

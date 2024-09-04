@@ -65,17 +65,6 @@ func (r *registry) AllPaused() bool {
 	return true
 }
 
-func (r *registry) CountStatuses() map[testkube.TestWorkflowStatus]int {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-
-	statuses := map[testkube.TestWorkflowStatus]int{}
-	for _, u := range r.statuses {
-		statuses[u]++
-	}
-	return statuses
-}
-
 func (r *registry) Get(index int64) testworkflowcontroller.Controller {
 	r.mu.RLock()
 	defer r.mu.RUnlock()

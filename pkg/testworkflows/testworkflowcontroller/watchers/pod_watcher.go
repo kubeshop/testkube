@@ -23,7 +23,7 @@ type podWatcher struct {
 	listener  func(*corev1.Pod)
 	started   atomic.Bool
 	watching  atomic.Bool
-	startedCh chan struct{} // TODO: Ensure there is no memory leak
+	startedCh chan struct{}
 	ctx       context.Context
 	cancel    context.CancelCauseFunc
 	mu        sync.Mutex

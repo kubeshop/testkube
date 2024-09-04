@@ -64,12 +64,6 @@ func (s *internalArtifactStorage) SaveStream(artifactPath string, stream io.Read
 		return err
 	}
 
-	//b, err := io.ReadAll(stream)
-	//if err != nil && !errors.Is(err, io.EOF) {
-	//	return err
-	//}
-	//buf := bytes.NewBuffer(b)
-
 	size := -1
 	if streamL, ok := stream.(withLength); ok {
 		size = streamL.Len()

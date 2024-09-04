@@ -23,7 +23,7 @@ type jobWatcher struct {
 	listener  func(job *batchv1.Job)
 	started   atomic.Bool
 	watching  atomic.Bool
-	startedCh chan struct{} // TODO: Ensure there is no memory leak
+	startedCh chan struct{}
 	ctx       context.Context
 	cancel    context.CancelCauseFunc
 	mu        sync.Mutex
