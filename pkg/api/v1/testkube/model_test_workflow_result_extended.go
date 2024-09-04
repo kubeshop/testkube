@@ -429,7 +429,7 @@ func (r *TestWorkflowResult) HealTimestamps(sigSequence []TestWorkflowSignature,
 		r.Steps[s.Ref] = step
 	}
 
-	if !completionTs.IsZero() && ended {
+	if ended {
 		r.FinishedAt = firstNonZero(r.approxCurrentTimestamp(), completionTs)
 	}
 }
