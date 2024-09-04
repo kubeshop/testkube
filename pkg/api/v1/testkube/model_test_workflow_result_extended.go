@@ -48,6 +48,14 @@ func (r *TestWorkflowResult) LatestTimestamp() time.Time {
 	return ts
 }
 
+func (r *TestWorkflowResult) approxCurrentTimestamp() time.Time {
+	ts := latestTimestamp(r.QueuedAt, r.StartedAt, r.Initialization.QueuedAt, r.Initialization.StartedAt, r.Initialization.FinishedAt)
+	for i := range r.Steps {
+		ts = latestTimestamp(ts, r.Steps[i].QueuedAt, r.Steps[i].StartedAt, r.Steps[i].FinishedAt)
+	}
+	return ts
+}
+
 func (r *TestWorkflowResult) IsQueued() bool {
 	return r.IsStatus(QUEUED_TestWorkflowStatus)
 }
@@ -74,6 +82,59 @@ func (r *TestWorkflowResult) IsPaused() bool {
 
 func (r *TestWorkflowResult) IsAnyError() bool {
 	return r.IsFinished() && !r.IsStatus(PASSED_TestWorkflowStatus)
+}
+
+func (r *TestWorkflowResult) HasPauseAt(ref string, t time.Time) bool {
+	for _, p := range r.Pauses {
+		if ref == p.Ref && !p.PausedAt.After(t) && (p.ResumedAt.IsZero() || !p.ResumedAt.Before(t)) {
+			return true
+		}
+	}
+	return false
+}
+
+func (r *TestWorkflowResult) HasUnfinishedPause(ref string) bool {
+	for _, p := range r.Pauses {
+		if ref == p.Ref && p.ResumedAt.IsZero() {
+			return true
+		}
+	}
+	return false
+}
+
+func (r *TestWorkflowResult) Current(sig []TestWorkflowSignature) string {
+	if !r.IsRunning() || r.Initialization.FinishedAt.IsZero() {
+		return ""
+	}
+	current := ""
+	walkSteps(sig, func(signature TestWorkflowSignature) {
+		if s, ok := r.Steps[signature.Ref]; ok && len(signature.Children) == 0 && !s.QueuedAt.IsZero() && s.FinishedAt.IsZero() && current == "" {
+			current = signature.Ref
+		}
+	})
+	return current
+}
+
+func (r *TestWorkflowResult) AreAllStepsFinished() bool {
+	for _, step := range r.Steps {
+		if !step.Finished() {
+			return false
+		}
+	}
+	return true
+}
+
+// TODO: Optimize
+func (r *TestWorkflowResult) Equal(r2 *TestWorkflowResult) bool {
+	if r == nil && r2 == nil {
+		return true
+	}
+	if r == nil || r2 == nil {
+		return false
+	}
+	v1, _ := json.Marshal(r)
+	v2, _ := json.Marshal(r2)
+	return bytes.Equal(v1, v2)
 }
 
 func (r *TestWorkflowResult) Fatal(err error, aborted bool, ts time.Time) {
@@ -219,48 +280,69 @@ func (r *TestWorkflowResult) RecomputeDuration() {
 	}
 }
 
-func (r *TestWorkflowResult) HasPauseAt(ref string, t time.Time) bool {
-	for _, p := range r.Pauses {
-		if ref == p.Ref && !p.PausedAt.After(t) && (p.ResumedAt.IsZero() || !p.ResumedAt.Before(t)) {
-			return true
+func (r *TestWorkflowResult) RecomputeTimestamps(sigSequence []TestWorkflowSignature, firstContainerStartTs time.Time, completionTs time.Time, ended bool) {
+	// Detect the initialization queue time
+	r.Initialization.QueuedAt = earliestTimestamp(r.StartedAt, r.Initialization.QueuedAt)
+
+	// Ensure there is the start time for the initialization if it's started or done
+	if !r.Initialization.NotStarted() {
+		r.Initialization.StartedAt = latestTimestamp(r.Initialization.StartedAt, firstContainerStartTs, r.Initialization.QueuedAt)
+	}
+
+	// Ensure there is the end time for the initialization if it's done
+	if r.Initialization.Finished() && r.Initialization.FinishedAt.IsZero() {
+		// Fallback to have any timestamp in case something went wrong
+		if r.Initialization.Aborted() {
+			r.Initialization.FinishedAt = latestTimestamp(r.Initialization.StartedAt, completionTs)
+		} else {
+			r.Initialization.FinishedAt = r.Initialization.StartedAt
 		}
 	}
-	return false
-}
 
-func (r *TestWorkflowResult) HasUnfinishedPause(ref string) bool {
-	for _, p := range r.Pauses {
-		if ref == p.Ref && p.ResumedAt.IsZero() {
-			return true
+	// Set up everywhere queued at time to past finished time
+	lastTs := r.Initialization.FinishedAt
+	for _, s := range sigSequence {
+		if len(s.Children) > 0 {
+			continue
 		}
-	}
-	return false
-}
-
-func (r *TestWorkflowResult) Current(sig []TestWorkflowSignature) string {
-	if !r.IsRunning() || r.Initialization.FinishedAt.IsZero() {
-		return ""
-	}
-	current := ""
-	walkSteps(sig, func(signature TestWorkflowSignature) {
-		if s, ok := r.Steps[signature.Ref]; ok && len(signature.Children) == 0 && !s.QueuedAt.IsZero() && s.FinishedAt.IsZero() && current == "" {
-			current = signature.Ref
+		step := r.Steps[s.Ref]
+		if !step.QueuedAt.Equal(lastTs) {
+			step.QueuedAt = lastTs
 		}
-	})
-	return current
-}
+		if step.FinishedAt.IsZero() && step.Status.Aborted() {
+			step.FinishedAt = completionTs
+		}
+		if !step.QueuedAt.IsZero() && !step.FinishedAt.IsZero() && step.StartedAt.IsZero() {
+			step.StartedAt = step.QueuedAt
+		}
 
-// TODO: Optimize
-func (r *TestWorkflowResult) Equal(r2 *TestWorkflowResult) bool {
-	if r == nil && r2 == nil {
-		return true
+		r.Steps[s.Ref] = step
+		lastTs = step.FinishedAt
 	}
-	if r == nil || r2 == nil {
-		return false
+
+	// Set up for groups too.
+	// Do it from end, so we handle nested groups
+	for i := len(sigSequence) - 1; i >= 0; i-- {
+		if len(sigSequence[i].Children) == 0 {
+			continue
+		}
+		s := sigSequence[i]
+		seq := s.Sequence()
+		expectedQueuedAt := r.Steps[seq[1].Ref].QueuedAt
+		expectedFinishedAt := r.Steps[seq[len(seq)-1].Ref].FinishedAt
+		step := r.Steps[s.Ref]
+		if !r.Steps[s.Ref].QueuedAt.Equal(expectedQueuedAt) {
+			step.QueuedAt = expectedQueuedAt
+		}
+		if !r.Steps[s.Ref].FinishedAt.Equal(expectedFinishedAt) {
+			step.FinishedAt = expectedFinishedAt
+		}
+		r.Steps[s.Ref] = step
 	}
-	v1, _ := json.Marshal(r)
-	v2, _ := json.Marshal(r2)
-	return bytes.Equal(v1, v2)
+
+	if !completionTs.IsZero() && ended {
+		r.FinishedAt = firstNonZero(r.approxCurrentTimestamp(), completionTs)
+	}
 }
 
 func walkSteps(sig []TestWorkflowSignature, fn func(signature TestWorkflowSignature)) {
@@ -268,4 +350,31 @@ func walkSteps(sig []TestWorkflowSignature, fn func(signature TestWorkflowSignat
 		walkSteps(s.Children, fn)
 		fn(s)
 	}
+}
+
+func firstNonZero(timestamps ...time.Time) time.Time {
+	for _, t := range timestamps {
+		if !t.IsZero() {
+			return t
+		}
+	}
+	return time.Time{}
+}
+
+func earliestTimestamp(ts ...time.Time) (earliest time.Time) {
+	for _, t := range ts {
+		if !t.IsZero() && (earliest.IsZero() || t.Before(earliest)) {
+			earliest = t
+		}
+	}
+	return
+}
+
+func latestTimestamp(ts ...time.Time) (latest time.Time) {
+	for _, t := range ts {
+		if !t.IsZero() && (latest.IsZero() || t.After(latest)) {
+			latest = t
+		}
+	}
+	return
 }

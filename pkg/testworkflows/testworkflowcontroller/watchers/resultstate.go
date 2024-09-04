@@ -13,7 +13,6 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
-	constants2 "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
 
@@ -23,13 +22,12 @@ type resultState struct {
 	mu     sync.RWMutex
 
 	// Temporary data to avoid finishing before
-	temporaryFinishedAt time.Time
-	ended               bool
+	ended bool
 
 	// Cached data
 	actions     actiontypes.ActionGroups
 	endRefs     [][]string
-	sigSequence []stage.Signature
+	sigSequence []testkube.TestWorkflowSignature
 }
 
 type ResultState interface {
@@ -88,12 +86,7 @@ func (r *resultState) reconcileDuration() {
 }
 
 func (r *resultState) areAllStepsFinished() bool {
-	for _, step := range r.result.Steps {
-		if !step.Finished() {
-			return false
-		}
-	}
-	return true
+	return r.result.AreAllStepsFinished()
 }
 
 func (r *resultState) isAnyStepAborted() bool {
@@ -163,7 +156,7 @@ func (r *resultState) applyPredictedStatus() {
 
 func (r *resultState) markAborted() {
 	// Load the error message
-	defaultMessage := "Job was aborted" // TODO: Move as constant
+	defaultMessage := "Manual" // TODO: Move as constant
 	bareErrorMessage := defaultMessage
 	if r.state != nil && r.state.ExecutionError() != "" {
 		bareErrorMessage = r.state.ExecutionError()
@@ -182,8 +175,8 @@ func (r *resultState) markAborted() {
 
 	// Check all the executable steps in the sequence
 	for i := range r.sigSequence {
-		ref := r.sigSequence[i].Ref()
-		if ref == InitStepRef || !r.isKnownStep(ref) || len(r.sigSequence[i].Children()) > 0 {
+		ref := r.sigSequence[i].Ref
+		if ref == InitStepRef || !r.isKnownStep(ref) || len(r.sigSequence[i].Children) > 0 {
 			continue
 		}
 		step := r.result.Steps[ref]
@@ -207,8 +200,8 @@ func (r *resultState) markAborted() {
 	// Adjust all the group steps in the sequence.
 	// Do it from end, so we can handle nested groups
 	for i := len(r.sigSequence) - 1; i >= 0; i-- {
-		ref := r.sigSequence[i].Ref()
-		if ref == InitStepRef || !r.isKnownStep(ref) || len(r.sigSequence[i].Children()) == 0 {
+		ref := r.sigSequence[i].Ref
+		if ref == InitStepRef || !r.isKnownStep(ref) || len(r.sigSequence[i].Children) == 0 {
 			continue
 		}
 		step := r.result.Steps[ref]
@@ -217,15 +210,15 @@ func (r *resultState) markAborted() {
 		}
 		allSkipped := true
 		anyAborted := false
-		for _, childSig := range r.sigSequence[i].Children() {
+		for _, childSig := range r.sigSequence[i].Children {
 			// TODO: What about nested virtual groups? We don't have their statuses
-			if !r.isKnownStep(childSig.Ref()) {
+			if !r.isKnownStep(childSig.Ref) {
 				continue
 			}
-			if r.result.Steps[childSig.Ref()].Status.Aborted() {
+			if r.result.Steps[childSig.Ref].Status.Aborted() {
 				anyAborted = true
 			}
-			if !r.result.Steps[childSig.Ref()].Status.Skipped() {
+			if !r.result.Steps[childSig.Ref].Status.Skipped() {
 				allSkipped = false
 			}
 		}
@@ -256,87 +249,23 @@ func (r *resultState) lastTimestamp() time.Time {
 }
 
 func (r *resultState) adjustTimestamps() {
-	// Detect the initialization queue time
-	r.result.Initialization.QueuedAt = earliestTimestamp(r.result.StartedAt, r.result.Initialization.QueuedAt)
-
-	// Ensure there is the start time for the initialization if it's started or done
-	if !r.result.Initialization.NotStarted() {
-		var containerStartTs time.Time
-		if r.state != nil {
-			containerStartTs = r.state.ContainerStartTimestamp("1")
-		}
-		r.result.Initialization.StartedAt = latestTimestamp(r.result.Initialization.StartedAt, containerStartTs, r.result.Initialization.QueuedAt)
-	}
-
 	// Build the completion timestamp
 	var completionTs time.Time
 	if r.state != nil {
 		completionTs = r.state.CompletionTimestamp()
 	}
 
-	// Ensure there is the end time for the initialization if it's done
-	if r.result.Initialization.Finished() && r.result.Initialization.FinishedAt.IsZero() {
-		// Fallback to have any timestamp in case something went wrong
-		if r.result.Initialization.Aborted() {
-			r.result.Initialization.FinishedAt = latestTimestamp(r.result.Initialization.StartedAt, completionTs)
-		} else {
-			r.result.Initialization.FinishedAt = r.result.Initialization.StartedAt
-		}
+	// Build the timestamp for initial container
+	var containerStartTs time.Time
+	if r.state != nil {
+		containerStartTs = r.state.ContainerStartTimestamp("1")
 	}
 
-	sigSequence := r.sigSequence
-	if len(sigSequence) == 0 {
+	if len(r.sigSequence) == 0 {
 		// TODO: Try to estimate signature sequence (?)
 	}
 
-	// Set up everywhere queued at time to past finished time
-	lastTs := r.result.Initialization.FinishedAt
-	for _, s := range sigSequence {
-		if len(s.Children()) > 0 {
-			continue
-		}
-		step := r.result.Steps[s.Ref()]
-		if !step.QueuedAt.Equal(lastTs) {
-			step.QueuedAt = lastTs
-		}
-		if step.FinishedAt.IsZero() && step.Status != nil && *step.Status == testkube.ABORTED_TestWorkflowStepStatus {
-			step.FinishedAt = completionTs
-		}
-		if !step.QueuedAt.IsZero() && !step.FinishedAt.IsZero() && step.StartedAt.IsZero() {
-			step.StartedAt = step.QueuedAt
-		}
-
-		r.result.Steps[s.Ref()] = step
-		lastTs = step.FinishedAt
-	}
-
-	// Set up for groups too.
-	// Do it from end, so we handle nested groups
-	for i := len(sigSequence) - 1; i >= 0; i-- {
-		if len(sigSequence[i].Children()) == 0 {
-			continue
-		}
-		s := sigSequence[i]
-		seq := s.Sequence()
-		expectedQueuedAt := r.result.Steps[seq[1].Ref()].QueuedAt
-		expectedFinishedAt := r.result.Steps[seq[len(seq)-1].Ref()].FinishedAt
-		step := r.result.Steps[s.Ref()]
-		if !r.result.Steps[s.Ref()].QueuedAt.Equal(expectedQueuedAt) {
-			step.QueuedAt = expectedQueuedAt
-		}
-		if !r.result.Steps[s.Ref()].FinishedAt.Equal(expectedFinishedAt) {
-			step.FinishedAt = expectedFinishedAt
-		}
-		r.result.Steps[s.Ref()] = step
-	}
-
-	if r.areAllStepsFinished() {
-		r.temporaryFinishedAt = firstNonZero(r.lastTimestamp(), completionTs)
-	}
-
-	if r.ended {
-		r.result.FinishedAt = r.temporaryFinishedAt
-	}
+	r.result.RecomputeTimestamps(r.sigSequence, containerStartTs, completionTs, r.ended)
 }
 
 func (r *resultState) fillGaps(force bool) {
@@ -360,7 +289,7 @@ func (r *resultState) fillGaps(force bool) {
 		processedStepsCount = len(r.sigSequence)
 	} else {
 		for i := range r.sigSequence {
-			step := r.result.Steps[r.sigSequence[i].Ref()]
+			step := r.result.Steps[r.sigSequence[i].Ref]
 			if !step.NotStarted() {
 				processedStepsCount = i
 				if step.Finished() {
@@ -388,7 +317,7 @@ func (r *resultState) fillGaps(force bool) {
 
 	// Apply statuses from the container results since the last step
 	for i := 0; i < processedStepsCount; i++ {
-		ref := r.sigSequence[i].Ref()
+		ref := r.sigSequence[i].Ref
 		container := containerResults[containerIndexes[ref]]
 		if len(container.Statuses) <= refIndexes[ref] {
 			continue
@@ -428,16 +357,6 @@ func (r *resultState) Append(ts time.Time, hint instructions.Instruction) {
 
 	// Ensure we have UTC timestamp
 	ts = ts.UTC()
-
-	// Save the information about the final status if it's possible
-	if hint.Ref == constants2.RootOperationName && hint.Name == constants.InstructionEnd {
-		status := testkube.TestWorkflowStatus(hint.Value.(string))
-		if status == "" {
-			status = testkube.PASSED_TestWorkflowStatus
-		}
-		r.result.Status = common.Ptr(status)
-		r.temporaryFinishedAt = ts
-	}
 
 	// Load the current step information
 	init := hint.Ref == InitStepRef
@@ -516,8 +435,7 @@ func (r *resultState) Append(ts time.Time, hint instructions.Instruction) {
 }
 
 func (r *resultState) useSignature(sig []stage.Signature) {
-	sigSequence := stage.MapSignatureToSequence(sig)
-	r.sigSequence = sigSequence
+	r.sigSequence = stage.MapSignatureListToInternal(stage.MapSignatureToSequence(sig))
 }
 
 func (r *resultState) useActionGroups(actions actiontypes.ActionGroups) {
@@ -556,8 +474,8 @@ func (r *resultState) Align(state ExecutionState) {
 
 	// Create missing step results that are recognized with the signature
 	for i := range r.sigSequence {
-		if _, ok := r.result.Steps[r.sigSequence[i].Ref()]; !ok {
-			r.result.Steps[r.sigSequence[i].Ref()] = testkube.TestWorkflowStepResult{
+		if _, ok := r.result.Steps[r.sigSequence[i].Ref]; !ok {
+			r.result.Steps[r.sigSequence[i].Ref] = testkube.TestWorkflowStepResult{
 				Status: common.Ptr(testkube.QUEUED_TestWorkflowStepStatus),
 			}
 		}
@@ -579,24 +497,6 @@ func (r *resultState) End() {
 
 	// Finalize the status
 	r.reconcile()
-}
-
-func firstNonZero(timestamps ...time.Time) time.Time {
-	for _, t := range timestamps {
-		if !t.IsZero() {
-			return t
-		}
-	}
-	return time.Time{}
-}
-
-func earliestTimestamp(ts ...time.Time) (earliest time.Time) {
-	for _, t := range ts {
-		if !t.IsZero() && (earliest.IsZero() || t.Before(earliest)) {
-			earliest = t
-		}
-	}
-	return
 }
 
 func latestTimestamp(ts ...time.Time) (latest time.Time) {
