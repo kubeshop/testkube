@@ -142,11 +142,11 @@ func (e *executionState) PodDeletionTimestamp() time.Time {
 }
 
 func (e *executionState) CompletionTimestamp() time.Time {
-	if !e.PodDeletionTimestamp().IsZero() {
-		return e.PodDeletionTimestamp()
-	}
 	if e.pod != nil && !e.pod.FinishTimestamp().IsZero() {
 		return e.pod.FinishTimestamp()
+	}
+	if !e.PodDeletionTimestamp().IsZero() {
+		return e.PodDeletionTimestamp()
 	}
 	if e.job != nil && !e.job.FinishTimestamp().IsZero() {
 		return e.job.FinishTimestamp()

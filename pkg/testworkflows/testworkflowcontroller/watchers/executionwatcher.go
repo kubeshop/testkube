@@ -2,12 +2,10 @@ package watchers
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	"github.com/pkg/errors"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -190,27 +188,15 @@ func NewExecutionWatcher(parentCtx context.Context, clientSet kubernetes.Interfa
 	// Watch for errors
 	go func() {
 		<-watcher.jobWatcher.Done()
-		if !errors.Is(watcher.jobWatcher.Err(), context.Canceled) {
-			fmt.Println("DEBUG: JOB WATCHER ERROR", watcher.jobWatcher.Err())
-		}
 	}()
 	go func() {
 		<-watcher.podWatcher.Done()
-		if !errors.Is(watcher.podWatcher.Err(), context.Canceled) {
-			fmt.Println("DEBUG: POD WATCHER ERROR", watcher.podWatcher.Err())
-		}
 	}()
 	go func() {
 		<-watcher.podEventsWatcher.Done()
-		if !errors.Is(watcher.podEventsWatcher.Err(), context.Canceled) {
-			fmt.Println("DEBUG: POD EVENTS WATCHER ERROR", watcher.podEventsWatcher.Err())
-		}
 	}()
 	go func() {
 		<-watcher.jobEventsWatcher.Done()
-		if !errors.Is(watcher.jobEventsWatcher.Err(), context.Canceled) {
-			fmt.Println("DEBUG: JOB EVENTS WATCHER ERROR", watcher.jobEventsWatcher.Err())
-		}
 	}()
 
 	// Close updates channel when all individual watchers are complete
@@ -244,7 +230,7 @@ func NewExecutionWatcher(parentCtx context.Context, clientSet kubernetes.Interfa
 		if pod.Latest() != nil {
 			watcher.uncommitted.pod = NewPod(pod.Latest())
 		}
-		for ok := true; ok; { // TODO?
+		for ok := true; ok; {
 			var event *corev1.Event
 			select {
 			case event, ok = <-podEventsCh:
@@ -272,19 +258,8 @@ func NewExecutionWatcher(parentCtx context.Context, clientSet kubernetes.Interfa
 		next = func(force bool) {
 			// Read the latest data
 			readLatestData()
-
-			// TODO: Avoid in the next iteration if it's not new and non-critical
-			//hasMissingPodEvents := false
-			//hasMissingPod := false
-			//hasMissingJob := false
-			//hasMissingJobEvents := false
 			hasMissingCriticalPod := false
 			hasMissingCriticalJob := false
-
-			// TODO Determine if there are missing pod events
-			// TODO Determine if there are missing job events
-
-			// TODO: Container Started event is there, pod is not
 
 			// Determine if there is missing pod state after critical error
 			if watcher.uncommitted.podEvents.Error() && (watcher.uncommitted.pod == nil || !watcher.uncommitted.pod.Finished()) {
@@ -331,7 +306,7 @@ func NewExecutionWatcher(parentCtx context.Context, clientSet kubernetes.Interfa
 				wg.Wait()
 				readLatestData()
 			} else {
-				timer := time.After(500 * time.Millisecond)
+				timer := time.After(750 * time.Millisecond)
 
 				if hasMissingCriticalJob {
 					select {
@@ -344,7 +319,7 @@ func NewExecutionWatcher(parentCtx context.Context, clientSet kubernetes.Interfa
 				}
 
 				// Load missing pod updates gracefully
-				if hasMissingCriticalPod { // TODO: Check if that's  already proper
+				if hasMissingCriticalPod {
 					if watcher.uncommitted.pod == nil || pod.Latest() != watcher.uncommitted.pod.Original() {
 						select {
 						case <-pod.Next():
@@ -362,7 +337,7 @@ func NewExecutionWatcher(parentCtx context.Context, clientSet kubernetes.Interfa
 
 		<-watcher.baseStarted()
 
-		next(false) // TODO: don't wait for baseStarted, as pod events are delayed then
+		next(false)
 		if watcher.podEventsInitialized.Load() {
 			<-watcher.podEventsWatcher.Started()
 			next(false)
