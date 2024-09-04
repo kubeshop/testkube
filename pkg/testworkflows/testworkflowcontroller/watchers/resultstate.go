@@ -12,6 +12,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
 	constants2 "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
@@ -21,6 +22,11 @@ type resultState struct {
 	state  ExecutionState
 	mu     sync.RWMutex
 	ended  bool
+
+	// Cached data
+	actions     actiontypes.ActionGroups
+	endRefs     [][]string
+	sigSequence []stage.Signature
 }
 
 type ResultState interface {
@@ -31,6 +37,7 @@ type ResultState interface {
 }
 
 // TODO: Optimize memory
+// TODO: Provide initial actions/signature
 func NewResultState(initial testkube.TestWorkflowResult) ResultState {
 	// Apply data that are required yet may be missing
 	if initial.Initialization == nil {
@@ -160,10 +167,6 @@ func (r *resultState) markAborted() {
 	}
 	errorMessage := fmt.Sprintf("The execution has been aborted. (%s)", bareErrorMessage)
 
-	// Fetch the sequence
-	sig, _ := r.state.Signature()
-	sigSequence := stage.MapSignatureToSequence(sig)
-
 	// Create marker to know if there is any step marked as aborted already
 	aborted := false
 
@@ -175,9 +178,9 @@ func (r *resultState) markAborted() {
 	}
 
 	// Check all the executable steps in the sequence
-	for i := range sigSequence {
-		ref := sigSequence[i].Ref()
-		if ref == InitStepRef || !r.isKnownStep(ref) || len(sigSequence[i].Children()) > 0 {
+	for i := range r.sigSequence {
+		ref := r.sigSequence[i].Ref()
+		if ref == InitStepRef || !r.isKnownStep(ref) || len(r.sigSequence[i].Children()) > 0 {
 			continue
 		}
 		step := r.result.Steps[ref]
@@ -200,9 +203,9 @@ func (r *resultState) markAborted() {
 
 	// Adjust all the group steps in the sequence.
 	// Do it from end, so we can handle nested groups
-	for i := len(sigSequence) - 1; i >= 0; i-- {
-		ref := sigSequence[i].Ref()
-		if ref == InitStepRef || !r.isKnownStep(ref) || len(sigSequence[i].Children()) == 0 {
+	for i := len(r.sigSequence) - 1; i >= 0; i-- {
+		ref := r.sigSequence[i].Ref()
+		if ref == InitStepRef || !r.isKnownStep(ref) || len(r.sigSequence[i].Children()) == 0 {
 			continue
 		}
 		step := r.result.Steps[ref]
@@ -211,7 +214,7 @@ func (r *resultState) markAborted() {
 		}
 		allSkipped := true
 		anyAborted := false
-		for _, childSig := range sigSequence[i].Children() {
+		for _, childSig := range r.sigSequence[i].Children() {
 			// TODO: What about nested virtual groups? We don't have their statuses
 			if !r.isKnownStep(childSig.Ref()) {
 				continue
@@ -279,26 +282,17 @@ func (r *resultState) adjustTimestamps() {
 		}
 	}
 
-	// Fetch the sequence
-	var sig []stage.Signature
-	if r.state != nil {
-		sig, _ = r.state.Signature()
-	}
-	sigSequence := stage.MapSignatureToSequence(sig)
-	sigSequenceExecutionOnly := common.FilterSlice(sigSequence, func(sig stage.Signature) bool {
-		return len(sig.Children()) == 0
-	})
-	sigSequenceExecutionGroupOnly := common.FilterSlice(sigSequence, func(sig stage.Signature) bool {
-		return len(sig.Children()) > 0
-	})
-
+	sigSequence := r.sigSequence
 	if len(sigSequence) == 0 {
-		// TODO: Try to estimate signature sequence
+		// TODO: Try to estimate signature sequence (?)
 	}
 
 	// Set up everywhere queued at time to past finished time
 	lastTs := r.result.Initialization.FinishedAt
-	for _, s := range sigSequenceExecutionOnly {
+	for _, s := range sigSequence {
+		if len(s.Children()) > 0 {
+			continue
+		}
 		step := r.result.Steps[s.Ref()]
 		if !step.QueuedAt.Equal(lastTs) {
 			step.QueuedAt = lastTs
@@ -316,8 +310,11 @@ func (r *resultState) adjustTimestamps() {
 
 	// Set up for groups too.
 	// Do it from end, so we handle nested groups
-	for i := len(sigSequenceExecutionGroupOnly) - 1; i >= 0; i-- {
-		s := sigSequenceExecutionGroupOnly[i]
+	for i := len(sigSequence) - 1; i >= 0; i-- {
+		if len(sigSequence[i].Children()) == 0 {
+			continue
+		}
+		s := sigSequence[i]
 		seq := s.Sequence()
 		expectedQueuedAt := r.result.Steps[seq[1].Ref()].QueuedAt
 		expectedFinishedAt := r.result.Steps[seq[len(seq)-1].Ref()].FinishedAt
@@ -351,19 +348,13 @@ func (r *resultState) fillGaps(force bool) {
 		return
 	}
 
-	// Determine the execution instructions
-	actions, _ := r.state.ActionGroups()
-	_, endRefs := ExtractRefsFromActionGroup(actions)
-	signature, _ := r.state.Signature()
-	signatureSeq := stage.MapSignatureToSequence(signature)
-
 	// Find the furthest step with any status
 	processedStepsCount := 0
 	if force {
-		processedStepsCount = len(signatureSeq)
+		processedStepsCount = len(r.sigSequence)
 	} else {
-		for i := range signatureSeq {
-			step := r.result.Steps[signatureSeq[i].Ref()]
+		for i := range r.sigSequence {
+			step := r.result.Steps[r.sigSequence[i].Ref()]
 			if !step.NotStarted() {
 				processedStepsCount = i
 				if step.Finished() {
@@ -376,22 +367,22 @@ func (r *resultState) fillGaps(force bool) {
 	// Analyze the references
 	containerIndexes := make(map[string]int)
 	refIndexes := make(map[string]int)
-	for containerIndex := range endRefs {
-		for refIndex := range endRefs[containerIndex] {
-			containerIndexes[endRefs[containerIndex][refIndex]] = containerIndex
-			refIndexes[endRefs[containerIndex][refIndex]] = refIndex
+	for containerIndex := range r.endRefs {
+		for refIndex := range r.endRefs[containerIndex] {
+			containerIndexes[r.endRefs[containerIndex][refIndex]] = containerIndex
+			refIndexes[r.endRefs[containerIndex][refIndex]] = refIndex
 		}
 	}
 
 	// Gather the container results
-	containerResults := make([]ContainerResult, len(actions))
-	for i := range actions {
+	containerResults := make([]ContainerResult, len(r.actions))
+	for i := range r.actions {
 		containerResults[i] = r.state.Pod().ContainerResult(fmt.Sprintf("%d", i+1), r.state.ExecutionError())
 	}
 
 	// Apply statuses from the container results since the last step
 	for i := 0; i < processedStepsCount; i++ {
-		ref := signatureSeq[i].Ref()
+		ref := r.sigSequence[i].Ref()
 		container := containerResults[containerIndexes[ref]]
 		if len(container.Statuses) <= refIndexes[ref] {
 			continue
@@ -518,6 +509,16 @@ func (r *resultState) Append(ts time.Time, hint instructions.Instruction) {
 	}
 }
 
+func (r *resultState) useSignature(sig []stage.Signature) {
+	sigSequence := stage.MapSignatureToSequence(sig)
+	r.sigSequence = sigSequence
+}
+
+func (r *resultState) useActionGroups(actions actiontypes.ActionGroups) {
+	r.actions = actions
+	_, r.endRefs = ExtractRefsFromActionGroup(actions)
+}
+
 func (r *resultState) Align(state ExecutionState) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -529,6 +530,16 @@ func (r *resultState) Align(state ExecutionState) {
 
 	r.state = state
 
+	// Cache the data used for reconciliation
+	if len(r.sigSequence) == 0 {
+		sig, _ := r.state.Signature()
+		r.useSignature(sig)
+	}
+	if len(r.actions) == 0 {
+		actions, _ := r.state.ActionGroups()
+		r.useActionGroups(actions)
+	}
+
 	// Initialization phase
 	if !state.EstimatedJobCreationTimestamp().IsZero() {
 		r.result.QueuedAt = state.EstimatedJobCreationTimestamp().UTC()
@@ -537,14 +548,10 @@ func (r *resultState) Align(state ExecutionState) {
 		r.result.StartedAt = state.EstimatedPodCreationTimestamp().UTC()
 	}
 
-	// Determine the execution instructions
-	signature, _ := state.Signature()
-	signatureSeq := stage.MapSignatureToSequence(signature)
-
 	// Create missing step results that are recognized with the signature
-	for i := range signatureSeq {
-		if _, ok := r.result.Steps[signatureSeq[i].Ref()]; !ok {
-			r.result.Steps[signatureSeq[i].Ref()] = testkube.TestWorkflowStepResult{
+	for i := range r.sigSequence {
+		if _, ok := r.result.Steps[r.sigSequence[i].Ref()]; !ok {
+			r.result.Steps[r.sigSequence[i].Ref()] = testkube.TestWorkflowStepResult{
 				Status: common.Ptr(testkube.QUEUED_TestWorkflowStepStatus),
 			}
 		}
