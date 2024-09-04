@@ -934,7 +934,7 @@ func TestProcessConsecutiveAlways(t *testing.T) {
 		},
 	}
 
-	res, err := proc.Bundle(context.Background(), wf, execMachine)
+	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{}, execMachine)
 	sig := res.Signature
 
 	want := lite.NewLiteActionGroups().
