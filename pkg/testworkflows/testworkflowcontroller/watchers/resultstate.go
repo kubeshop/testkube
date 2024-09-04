@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	DefaultErrorMessage = "Manual"
+	DefaultErrorMessage = "Job has been aborted"
 )
 
 type resultState struct {
@@ -159,7 +159,6 @@ func (r *resultState) fillGaps(force bool) {
 	}
 }
 
-// TODO: Check if duplicates are needed there
 func (r *resultState) reconcile() {
 	// Build the completion timestamp
 	var completionTs time.Time
@@ -177,10 +176,9 @@ func (r *resultState) reconcile() {
 	//if len(r.sigSequence) == 0 {
 	//}
 
-	r.result.HealDuration()
 	r.fillGaps(false)
+	r.result.HealDuration()
 	r.result.HealTimestamps(r.sigSequence, containerStartTs, completionTs, r.ended)
-	r.fillGaps(false) // do it 2nd time, in case timestamps have added result.finishedAt date
 	r.result.HealDuration()
 	r.result.HealMissingPauseStatuses()
 	r.result.HealStatus()
