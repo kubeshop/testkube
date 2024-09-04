@@ -350,6 +350,8 @@ func (r *TestWorkflowResult) healStatus() {
 }
 
 func (r *TestWorkflowResult) HealStatus() {
+	r.healPredictedStatus()
+	r.healStatus()
 }
 
 func (r *TestWorkflowResult) HealTimestamps(sigSequence []TestWorkflowSignature, firstContainerStartTs time.Time, completionTs time.Time, ended bool) {
