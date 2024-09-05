@@ -278,7 +278,8 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 
 			// If there was EOF, and we are not sure if container is done,
 			// reinitialize the stream from the time we have finished.
-			if err == io.EOF {
+			// Similarly for GOAWAY, that may be caused by too long connection.
+			if err == io.EOF || (err != nil && strings.Contains(err.Error(), "GOAWAY")) {
 				since = common.Ptr(lastTs.Add(1))
 				stream, err = getContainerLogsStream(ctx, clientSet, namespace, podName, containerName, isDone, since)
 				if err != nil {
