@@ -284,3 +284,9 @@ func (e Event) Topic() string {
 func (e Event) GetResourceId() string {
 	return e.ResourceId
 }
+
+// Sanitized returns event without sensitive data
+func (e Event) Sanitized() Event {
+	e.Envs = nil
+	return e
+}
