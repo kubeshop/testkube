@@ -33,7 +33,9 @@ func NewWebhookListener(name, uri, selector string, events []testkube.EventType,
 	testSuiteExecutionResults testresult.Repository,
 	testWorkflowExecutionResults testworkflow.Repository,
 	metrics v1.Metrics,
-	proContext *config.ProContext) *WebhookListener {
+	proContext *config.ProContext,
+	envs map[string]string,
+) *WebhookListener {
 	return &WebhookListener{
 		name:                         name,
 		Uri:                          uri,
@@ -50,6 +52,7 @@ func NewWebhookListener(name, uri, selector string, events []testkube.EventType,
 		testWorkflowExecutionResults: testWorkflowExecutionResults,
 		metrics:                      metrics,
 		proContext:                   proContext,
+		envs:                         envs,
 	}
 }
 
@@ -69,6 +72,7 @@ type WebhookListener struct {
 	testWorkflowExecutionResults testworkflow.Repository
 	metrics                      v1.Metrics
 	proContext                   *config.ProContext
+	envs                         map[string]string
 }
 
 func (l *WebhookListener) Name() string {
@@ -112,6 +116,9 @@ func (l *WebhookListener) Disabled() bool {
 }
 
 func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventResult) {
+	// load global envs to be able to use them in templates
+	event.Envs = l.envs
+
 	defer func() {
 		var eventType, res string
 		if event.Type_ != nil {
@@ -169,9 +176,11 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 
 		_, err = body.Write(data)
 	} else {
+		// clean envs if not requested explicitly by payload template
+		event.Envs = nil
 		err = json.NewEncoder(body).Encode(event)
 		if err == nil && l.payloadObjectField != "" {
-			data := map[string]string{l.payloadObjectField: string(body.Bytes())}
+			data := map[string]string{l.payloadObjectField: body.String()}
 			body.Reset()
 			err = json.NewEncoder(body).Encode(data)
 		}

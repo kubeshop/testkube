@@ -30,7 +30,6 @@ func getRepository() (*MongoRepository, error) {
 
 func TestStorage_Integration(t *testing.T) {
 	test.IntegrationTest(t)
-	t.Parallel()
 
 	assert := require.New(t)
 
@@ -41,7 +40,6 @@ func TestStorage_Integration(t *testing.T) {
 	assert.NoError(err)
 
 	t.Run("GetUniqueClusterId should return same id for each call", func(t *testing.T) {
-		t.Parallel()
 		// given/when
 		id1, err := repository.GetUniqueClusterId(context.Background())
 		assert.NoError(err)
@@ -59,7 +57,6 @@ func TestStorage_Integration(t *testing.T) {
 	})
 
 	t.Run("Upsert should insert new config entry", func(t *testing.T) {
-		t.Parallel()
 		// given,
 		clusterId := "uniq3"
 		_, err := repository.Upsert(context.Background(), testkube.Config{
