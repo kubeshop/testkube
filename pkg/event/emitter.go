@@ -20,14 +20,13 @@ const (
 )
 
 // NewEmitter returns new emitter instance
-func NewEmitter(eventBus bus.Bus, clusterName string, envs map[string]string) *Emitter {
+func NewEmitter(eventBus bus.Bus, clusterName string) *Emitter {
 	return &Emitter{
 		Log:         log.DefaultLogger,
 		Loader:      NewLoader(),
 		Bus:         eventBus,
 		Listeners:   make(common.Listeners, 0),
 		ClusterName: clusterName,
-		Envs:        envs,
 	}
 }
 
@@ -39,7 +38,6 @@ type Emitter struct {
 	mutex       sync.RWMutex
 	Bus         bus.Bus
 	ClusterName string
-	Envs        map[string]string
 }
 
 // Register adds new listener
@@ -126,7 +124,6 @@ func listerersToMap(listeners []common.Listener) map[string]map[string]common.Li
 // Notify notifies emitter with webhook
 func (e *Emitter) Notify(event testkube.Event) {
 	event.ClusterName = e.ClusterName
-	event.Envs = e.Envs
 	err := e.Bus.PublishTopic(event.Topic(), event)
 	if err != nil {
 		e.Log.Errorw("error publishing event", append(event.Log(), "error", err))

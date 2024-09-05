@@ -107,6 +107,7 @@ func NewTestkubeAPI(
 	logGrpcClient logsclient.StreamGetter,
 	subscriptionChecker checktcl.SubscriptionChecker,
 	serviceAccountNames map[string]string,
+	envs map[string]string,
 ) TestkubeAPI {
 
 	var httpConfig server.Config
@@ -163,6 +164,7 @@ func NewTestkubeAPI(
 		SubscriptionChecker:         subscriptionChecker,
 		LabelSources:                common.Ptr(make([]LabelSource, 0)),
 		ServiceAccountNames:         serviceAccountNames,
+		Envs:                        envs,
 	}
 }
 
@@ -211,6 +213,7 @@ type TestkubeAPI struct {
 	SubscriptionChecker         checktcl.SubscriptionChecker
 	LabelSources                *[]LabelSource
 	ServiceAccountNames         map[string]string
+	Envs                        map[string]string
 }
 
 type storageParams struct {
@@ -610,7 +613,7 @@ func (s *TestkubeAPI) InitEventListeners(
 
 	s.Events.Loader.Register(webhook.NewWebhookLoader(
 		s.Log, webhookClient, templatesClient, testExecutionResults, testSuiteExecutionsResults,
-		testWorkflowResults, metrics, s.proContext))
+		testWorkflowResults, metrics, s.proContext, s.Envs))
 	s.Events.Loader.Register(s.WebsocketLoader)
 	s.Events.Loader.Register(s.slackLoader)
 
