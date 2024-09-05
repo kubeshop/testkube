@@ -126,8 +126,7 @@ func listerersToMap(listeners []common.Listener) map[string]map[string]common.Li
 // Notify notifies emitter with webhook
 func (e *Emitter) Notify(event testkube.Event) {
 	event.ClusterName = e.ClusterName
-	event.Envs = e.Envs
-	err := e.Bus.PublishTopic(event.Topic(), event.Sanitized())
+	err := e.Bus.PublishTopic(event.Topic(), event)
 	if err != nil {
 		e.Log.Errorw("error publishing event", append(event.Log(), "error", err))
 		return
