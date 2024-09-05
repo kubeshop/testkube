@@ -23,6 +23,7 @@ const maxPortNumber = 65535
 func NewDashboardCmd() *cobra.Command {
 	var namespace string
 	var verbose bool
+	var skipBrowser bool
 
 	cmd := &cobra.Command{
 		Use:     "dashboard",
@@ -40,7 +41,7 @@ func NewDashboardCmd() *cobra.Command {
 			if cfg.ContextType != config.ContextTypeCloud {
 				isDashboardRunning, _ := k8sclient.IsPodOfServiceRunning(context.Background(), cfg.Namespace, config.EnterpriseUiName)
 				if isDashboardRunning {
-					openOnPremDashboard(cmd, cfg, verbose, "")
+					openOnPremDashboard(cmd, cfg, verbose, skipBrowser, "")
 				} else {
 					ui.Warn("No dashboard found. Is it running in the " + namespace + " namespace?")
 				}
@@ -52,6 +53,7 @@ func NewDashboardCmd() *cobra.Command {
 
 	cmd.Flags().BoolVarP(&verbose, "verbose", "", false, "show additional debug messages")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "Namespace to install "+demoInstallationName)
+	cmd.Flags().BoolVarP(&skipBrowser, "skip-browser", "", false, "skip opening dashboard in the browser, only for on-premise installation")
 
 	return cmd
 }
@@ -63,7 +65,7 @@ func openCloudDashboard(cfg config.Data) {
 	ui.PrintOnError("openning dashboard", err)
 }
 
-func openOnPremDashboard(cmd *cobra.Command, cfg config.Data, verbose bool, license string) {
+func openOnPremDashboard(cmd *cobra.Command, cfg config.Data, verbose, skipBrowser bool, license string) {
 	uiLocalPort, err := getDashboardLocalPort(config.EnterpriseApiForwardingPort)
 	ui.PrintOnError("getting an ui forwarding available port", err)
 	uri := fmt.Sprintf("http://localhost:%d", uiLocalPort)
@@ -91,14 +93,16 @@ func openOnPremDashboard(cmd *cobra.Command, cfg config.Data, verbose bool, lice
 	}
 	ui.ExitOnError("port forwarding minio", err)
 
-	err = open.Run(uri)
-	if err != nil {
-		sendErrTelemetry(cmd, cfg, "open_dashboard", license, "opening dashboard", err)
+	if !skipBrowser {
+		err = open.Run(uri)
+		if err != nil {
+			sendErrTelemetry(cmd, cfg, "open_dashboard", license, "opening dashboard", err)
+		}
+
+		ui.ExitOnError("opening dashboard in browser", err)
+
+		sendTelemetry(cmd, cfg, license, "dashbboard opened successfully")
 	}
-
-	ui.ExitOnError("opening dashboard in browser", err)
-
-	sendTelemetry(cmd, cfg, license, "dashbboard opened successfully")
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
