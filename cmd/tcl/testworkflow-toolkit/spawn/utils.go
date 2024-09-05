@@ -243,12 +243,24 @@ func ExecuteParallel[T any](run func(int64, *T) bool, items []T, parallelism int
 	return int64(len(items)) - success.Load()
 }
 
-func SaveLogsWithController(ctx context.Context, storage artifacts.InternalArtifactStorage, ctrl testworkflowcontroller.Controller, prefix string, index int64) (string, error) {
+func SaveLogsWithController(parentCtx context.Context, storage artifacts.InternalArtifactStorage, ctrl testworkflowcontroller.Controller, prefix string, index int64) (string, error) {
 	if ctrl == nil {
 		return "", errors.New("cannot control TestWorkflow's execution")
 	}
+
+	maxAttempts := 5
 	filePath := fmt.Sprintf("logs/%s%d.log", prefix, index)
-	err := storage.SaveStream(filePath, ctrl.Logs(ctx, false))
+	var err error
+	for i := 0; i < maxAttempts; i++ {
+		ctx, ctxCancel := context.WithCancel(parentCtx)
+		err = storage.SaveStream(filePath, ctrl.Logs(ctx, false))
+		ctxCancel()
+		if err == nil {
+			break
+		}
+		time.Sleep(300 * time.Millisecond)
+	}
+
 	return filePath, err
 }
 
