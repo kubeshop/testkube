@@ -86,12 +86,15 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 
 		types := webhooks.MapEventArrayToCRDEvents(webhook.Spec.Events)
 		name := fmt.Sprintf("%s.%s", webhook.ObjectMeta.Namespace, webhook.ObjectMeta.Name)
-		listener := NewWebhookListener(name, webhook.Spec.Uri, webhook.Spec.Selector, types,
-			webhook.Spec.PayloadObjectField, payloadTemplate, webhook.Spec.Headers, webhook.Spec.Disabled,
-			r.testExecutionResults, r.testSuiteExecutionResults, r.testWorkflowExecutionResults,
-			r.metrics, r.proContext, r.envs,
+		listeners = append(
+			listeners,
+			NewWebhookListener(
+				name, webhook.Spec.Uri, webhook.Spec.Selector, types,
+				webhook.Spec.PayloadObjectField, payloadTemplate, webhook.Spec.Headers, webhook.Spec.Disabled,
+				r.testExecutionResults, r.testSuiteExecutionResults, r.testWorkflowExecutionResults,
+				r.metrics, r.proContext, r.envs,
+			),
 		)
-		listeners = append(listeners, listener)
 	}
 
 	return listeners, nil
