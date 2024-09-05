@@ -25,6 +25,9 @@ const (
 	FlushLogMaxSize = 100_000
 	FlushBufferSize = 65_536
 	FlushLogTime    = 100 * time.Millisecond
+
+	LogRetryOnConnectionLostDelay  = 300 * time.Millisecond
+	LogRetryOnWaitingForStartDelay = 100 * time.Millisecond
 )
 
 type Comment struct {
@@ -60,7 +63,7 @@ func (c *ContainerLog) Type() ContainerLogType {
 // getContainerLogsStream is getting logs stream, and tries to reinitialize the stream on EOF.
 // EOF may happen not only on the actual container end, but also in case of the log rotation.
 // @see {@link https://stackoverflow.com/a/68673451}
-func getContainerLogsStream(ctx context.Context, clientSet kubernetes.Interface, namespace, podName, containerName string, follow bool, pod Channel[*corev1.Pod], since *time.Time) (io.Reader, error) {
+func getContainerLogsStream(ctx context.Context, clientSet kubernetes.Interface, namespace, podName, containerName string, isDone func() bool, since *time.Time) (io.Reader, error) {
 	// Fail immediately if the context is finished
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
@@ -75,7 +78,7 @@ func getContainerLogsStream(ctx context.Context, clientSet kubernetes.Interface,
 	// Create logs stream request
 	req := clientSet.CoreV1().Pods(namespace).GetLogs(podName, &corev1.PodLogOptions{
 		Container:  containerName,
-		Follow:     follow,
+		Follow:     !isDone(),
 		Timestamps: true,
 		SinceTime:  sinceTime,
 	})
@@ -84,38 +87,19 @@ func getContainerLogsStream(ctx context.Context, clientSet kubernetes.Interface,
 	for {
 		stream, err = req.Stream(ctx)
 		if err != nil {
+			// There may be problems with Kubernetes cluster - retry then
+			if strings.Contains(err.Error(), "connection lost") {
+				time.Sleep(LogRetryOnConnectionLostDelay)
+				continue
+			}
 			// The container is not necessarily already started when Started event is received
 			if !strings.Contains(err.Error(), "is waiting to start") {
 				return nil, err
 			}
-			if !follow {
+			if isDone() {
 				return bytes.NewReader(nil), io.EOF
 			}
-			p := <-pod.Peek(ctx)
-			if p == nil {
-				return bytes.NewReader(nil), io.EOF
-			}
-			containerDone := IsPodDone(p)
-			for i := range p.Status.InitContainerStatuses {
-				if p.Status.InitContainerStatuses[i].Name == containerName {
-					if p.Status.InitContainerStatuses[i].State.Terminated != nil {
-						containerDone = true
-						break
-					}
-				}
-			}
-			for i := range p.Status.ContainerStatuses {
-				if p.Status.ContainerStatuses[i].Name == containerName {
-					if p.Status.ContainerStatuses[i].State.Terminated != nil {
-						containerDone = true
-						break
-					}
-				}
-			}
-
-			if containerDone {
-				return bytes.NewReader(nil), io.EOF
-			}
+			time.Sleep(LogRetryOnWaitingForStartDelay)
 			continue
 		}
 		break
@@ -123,13 +107,34 @@ func getContainerLogsStream(ctx context.Context, clientSet kubernetes.Interface,
 	return stream, nil
 }
 
-func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interface, namespace, podName, containerName string, follow bool, bufferSize int, pod Channel[*corev1.Pod]) Channel[ContainerLog] {
+func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interface, namespace, podName, containerName string, bufferSize int, isDone func() bool) <-chan ChannelMessage[ContainerLog] {
 	ctx, ctxCancel := context.WithCancel(parentCtx)
-	w := newChannel[ContainerLog](ctx, bufferSize)
+	ch := make(chan ChannelMessage[ContainerLog], bufferSize)
+	var mu sync.Mutex
+
+	sendError := func(err error) {
+		defer func() {
+			recover() // ignore already closed
+			mu.Unlock()
+		}()
+
+		mu.Lock()
+		ch <- ChannelMessage[ContainerLog]{Error: err}
+	}
+
+	sendLog := func(log ContainerLog) {
+		defer func() {
+			recover() // ignore already closed
+			mu.Unlock()
+		}()
+
+		mu.Lock()
+		ch <- ChannelMessage[ContainerLog]{Value: log}
+	}
 
 	go func() {
-		<-w.Done()
-		ctxCancel()
+		<-ctx.Done()
+		close(ch)
 	}()
 
 	go func() {
@@ -139,11 +144,13 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 		var since *time.Time
 
 		// Create logs stream request
-		stream, err := getContainerLogsStream(ctx, clientSet, namespace, podName, containerName, follow, pod, since)
+		stream, err := getContainerLogsStream(ctx, clientSet, namespace, podName, containerName, isDone, since)
 		if err == io.EOF {
 			return
 		} else if err != nil {
-			w.Error(err)
+			if !errors.Is(err, context.Canceled) {
+				sendError(err)
+			}
 			return
 		}
 
@@ -153,7 +160,7 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 		var logBufferMu sync.Mutex
 		var logBufferCh = make(chan struct{}, 1)
 		unsafeFlushLogBuffer := func() {
-			if logBufferLog.Len() == 0 || w.CtxErr() != nil {
+			if logBufferLog.Len() == 0 || ctx.Err() != nil {
 				return
 			}
 			message := make([]byte, logBufferLog.Len())
@@ -162,7 +169,7 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 				log.DefaultLogger.Errorf("failed to read log buffer: %s/%s", podName, containerName)
 				return
 			}
-			w.Send(ContainerLog{Time: logBufferTs, Log: message})
+			sendLog(ContainerLog{Time: logBufferTs, Log: message})
 		}
 		flushLogBuffer := func() {
 			logBufferMu.Lock()
@@ -199,7 +206,9 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 
 		// Flush the log automatically after 100ms
 		bufferCtx, bufferCtxCancel := context.WithCancel(ctx)
-		defer bufferCtxCancel()
+		defer func() {
+			bufferCtxCancel()
+		}()
 		go func() {
 			t := time.NewTimer(FlushLogTime)
 			for {
@@ -235,7 +244,9 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 		}()
 
 		// Flush the rest of logs if it is closed
-		defer flushLogBuffer()
+		defer func() {
+			flushLogBuffer()
+		}()
 
 		// Parse and return the logs
 		reader := bufio.NewReaderSize(stream, FlushBufferSize)
@@ -251,15 +262,21 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 			// Read next timestamp
 			err = tsReader.Read(reader)
 
+			// Handle context canceled
+			if errors.Is(err, context.Canceled) {
+				return
+			}
+
 			// Ignore too old logs. SinceTime in Kubernetes is precise only to seconds
 			if err == nil && !readerAnyContent {
-				if since != nil && !since.After(tsReader.ts) {
-					isPrefix := false
-					for isPrefix && err != nil {
+				if since != nil && since.After(tsReader.ts) {
+					isPrefix := true
+					for isPrefix && err == nil {
 						_, isPrefix, err = reader.ReadLine()
 					}
 					continue
 				}
+				readerAnyContent = true
 			}
 
 			// Save information about the last timestamp
@@ -276,9 +293,10 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 
 			// If there was EOF, and we are not sure if container is done,
 			// reinitialize the stream from the time we have finished.
-			if err == io.EOF {
+			// Similarly for GOAWAY, that may be caused by too long connection.
+			if err == io.EOF || (err != nil && strings.Contains(err.Error(), "GOAWAY")) {
 				since = common.Ptr(lastTs.Add(1))
-				stream, err = getContainerLogsStream(ctx, clientSet, namespace, podName, containerName, follow, pod, since)
+				stream, err = getContainerLogsStream(ctx, clientSet, namespace, podName, containerName, isDone, since)
 				if err != nil {
 					return
 				}
@@ -298,7 +316,7 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 
 			// Push information about any other error
 			if err != nil {
-				w.Error(err)
+				sendError(err)
 				continue
 			}
 
@@ -347,7 +365,7 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 					item.Output = instruction
 				}
 				flushLogBuffer()
-				w.Send(item)
+				sendLog(item)
 				hasNewLine = false
 				continue
 			}
@@ -361,7 +379,7 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 		}
 	}()
 
-	return w
+	return ch
 }
 
 var (

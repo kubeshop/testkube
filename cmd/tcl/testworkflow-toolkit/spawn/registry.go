@@ -10,6 +10,7 @@ package spawn
 
 import (
 	"sync"
+	"sync/atomic"
 
 	"golang.org/x/exp/maps"
 
@@ -92,6 +93,40 @@ func (r *registry) EachAsync(fn func(int64, testworkflowcontroller.Controller)) 
 			ctrl := r.Get(index)
 			if ctrl != nil {
 				fn(index, ctrl)
+			}
+			wg.Done()
+		}(index)
+	}
+	wg.Wait()
+}
+
+func (r *registry) EachAsyncAtOnce(fn func(int64, testworkflowcontroller.Controller, func())) {
+	r.mu.RLock()
+	indexes := maps.Keys(r.controllers)
+	r.mu.RUnlock()
+
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	cond := sync.NewCond(&mu)
+
+	counter := atomic.Int32{}
+	ready := func() {
+		v := counter.Add(1)
+		if v < int32(len(indexes)) {
+			cond.Wait()
+		} else {
+			cond.Broadcast()
+		}
+	}
+
+	wg.Add(len(indexes))
+	for _, index := range indexes {
+		go func(index int64) {
+			ctrl := r.Get(index)
+			cond.L.Lock()
+			defer cond.L.Unlock()
+			if ctrl != nil {
+				fn(index, ctrl, ready)
 			}
 			wg.Done()
 		}(index)

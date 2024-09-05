@@ -3,7 +3,6 @@ package testworkflowcontroller
 import (
 	"context"
 
-	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
@@ -12,15 +11,6 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 )
-
-const (
-	TimeoutSeconds = int64(365 * 24 * 3600)
-)
-
-type kubernetesClient[T any, U any] interface {
-	List(ctx context.Context, options metav1.ListOptions) (*T, error)
-	Watch(ctx context.Context, options metav1.ListOptions) (watch.Interface, error)
-}
 
 func readKubernetesChannel[T any](w *channel[*T], input <-chan watch.Event, stopFn func(*T) bool) {
 	for {
@@ -53,7 +43,7 @@ func readKubernetesChannel[T any](w *channel[*T], input <-chan watch.Event, stop
 // TODO: Allow rebuilding watcher after the connection is down
 func watchKubernetes[T any, U any](ctx context.Context, w *channel[*U], client kubernetesClient[T, U], accessor func(*T) ([]U, string), stopFn func(*U) bool, opts metav1.ListOptions) {
 	if opts.TimeoutSeconds == nil {
-		opts.TimeoutSeconds = common.Ptr(TimeoutSeconds)
+		opts.TimeoutSeconds = common.Ptr(DefaultTimeoutSeconds)
 	}
 
 	// Read initial data
@@ -99,73 +89,9 @@ func watchPod(ctx context.Context, clientSet kubernetes.Interface, namespace str
 	return w
 }
 
-func watchEvents(clientSet kubernetes.Interface, namespace string, options metav1.ListOptions, w *channel[*corev1.Event]) Channel[*corev1.Event] {
-	go func() {
-		defer w.Close()
-
-		getItems := func(t *corev1.EventList) ([]corev1.Event, string) {
-			return t.Items, t.ResourceVersion
-		}
-		watchKubernetes(w.ctx, w, clientSet.CoreV1().Events(namespace), getItems, common.Never[*corev1.Event], options)
-	}()
-
-	return w
-}
-
-func WatchJob(ctx context.Context, clientSet kubernetes.Interface, namespace, name string, bufferSize int) Channel[*batchv1.Job] {
-	w := newChannel[*batchv1.Job](ctx, bufferSize)
-
-	go func() {
-		defer w.Close()
-
-		getItems := func(list *batchv1.JobList) ([]batchv1.Job, string) {
-			return list.Items, list.ResourceVersion
-		}
-		watchKubernetes(w.ctx, w, clientSet.BatchV1().Jobs(namespace), getItems, IsJobDone, metav1.ListOptions{
-			FieldSelector:  "metadata.name=" + name,
-			TimeoutSeconds: common.Ptr(TimeoutSeconds),
-		})
-	}()
-
-	return w
-}
-
+// TODO: Delete
 func WatchMainPod(ctx context.Context, clientSet kubernetes.Interface, namespace, name string, bufferSize int) Channel[*corev1.Pod] {
 	return watchPod(ctx, clientSet, namespace, bufferSize, metav1.ListOptions{
 		LabelSelector: constants.ResourceIdLabelName + "=" + name,
 	})
-}
-
-func WatchPodEventsByPodWatcher(ctx context.Context, clientSet kubernetes.Interface, namespace string, pod Peekable[*corev1.Pod], bufferSize int) Channel[*corev1.Event] {
-	w := newChannel[*corev1.Event](ctx, bufferSize)
-
-	go func() {
-		v, ok := <-pod.PeekMessage(ctx)
-		if !ok {
-			return
-		}
-		if v.Error != nil {
-			w.Error(v.Error)
-			return
-		}
-
-		// Combine all streams together
-		watchEvents(clientSet, namespace, metav1.ListOptions{
-			FieldSelector: "involvedObject.name=" + v.Value.Name,
-			TypeMeta:      metav1.TypeMeta{Kind: "Pod"},
-		}, w)
-	}()
-
-	return w
-}
-
-func WatchJobEvents(ctx context.Context, clientSet kubernetes.Interface, namespace, name string, bufferSize int) Channel[*corev1.Event] {
-	return WatchEvents(ctx, clientSet, namespace, bufferSize, metav1.ListOptions{
-		FieldSelector: "involvedObject.name=" + name,
-		TypeMeta:      metav1.TypeMeta{Kind: "Job"},
-	})
-}
-
-func WatchEvents(ctx context.Context, clientSet kubernetes.Interface, namespace string, bufferSize int, options metav1.ListOptions) Channel[*corev1.Event] {
-	return watchEvents(clientSet, namespace, options, newChannel[*corev1.Event](ctx, bufferSize))
 }
