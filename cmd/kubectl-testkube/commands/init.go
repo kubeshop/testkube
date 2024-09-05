@@ -253,7 +253,7 @@ func NewInitCmdDemo() *cobra.Command {
 			sendTelemetry(cmd, cfg, license, "opening dashboard")
 			cfg, err = config.Load()
 			ui.ExitOnError("Cannot open dashboard", err)
-			openOnPremDashboard(cmd, cfg, false, license)
+			openOnPremDashboard(cmd, cfg, false, false, license)
 		},
 	}
 
