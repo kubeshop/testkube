@@ -209,8 +209,10 @@ func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async 
 		for {
 			time.Sleep(100 * time.Millisecond)
 			for i := 0; i < GetExecutionRetryOnFailureMaxAttempts; i++ {
-				exec, err = c.GetTestWorkflowExecution(exec.Id)
+				var nextExec testkube.TestWorkflowExecution
+				nextExec, err = c.GetTestWorkflowExecution(exec.Id)
 				if err == nil {
+					exec = nextExec
 					break
 				}
 				if i+1 < GetExecutionRetryOnFailureMaxAttempts {
