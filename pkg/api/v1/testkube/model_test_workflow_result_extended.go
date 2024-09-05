@@ -410,6 +410,13 @@ func (r *TestWorkflowResult) HealTimestamps(sigSequence []TestWorkflowSignature,
 			step.StartedAt = step.QueuedAt
 		}
 
+		if !step.StartedAt.IsZero() && step.StartedAt.Before(step.QueuedAt) {
+			step.StartedAt = step.QueuedAt
+		}
+		if !step.FinishedAt.IsZero() && step.FinishedAt.Before(step.StartedAt) {
+			step.FinishedAt = step.StartedAt
+		}
+
 		r.Steps[s.Ref] = step
 		lastTs = step.FinishedAt
 	}
