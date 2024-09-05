@@ -395,35 +395,6 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	}
 	jobSpec.Spec.Template = podSpec
 
-	for i := range jobSpec.Spec.Template.Spec.InitContainers {
-		for envName, envSource := range mapEnv {
-			e := corev1.EnvVar{
-				Name:      envName,
-				ValueFrom: envSource.DeepCopy(),
-			}
-			jobSpec.Spec.Template.Spec.InitContainers[i].Env = append(jobSpec.Spec.Template.Spec.InitContainers[i].Env, e)
-		}
-	}
-
-	for i := range jobSpec.Spec.Template.Spec.Containers {
-		for envName, envSource := range mapEnv {
-			e := corev1.EnvVar{
-				Name:      envName,
-				ValueFrom: envSource.DeepCopy(),
-			}
-			jobSpec.Spec.Template.Spec.Containers[i].Env = append(jobSpec.Spec.Template.Spec.Containers[i].Env, e)
-		}
-	}
-
-	// Build signature
-	sigSerialized, _ := json.Marshal(sig)
-	jobAnnotations := make(map[string]string)
-	maps.Copy(jobAnnotations, jobSpec.Annotations)
-	maps.Copy(jobAnnotations, map[string]string{
-		constants.SignatureAnnotationName: string(sigSerialized),
-	})
-	jobSpec.Annotations = jobAnnotations
-
 	// Build running instructions
 	sigSerialized, _ := json.Marshal(sig)
 	actionGroupsSerialized, _ := json.Marshal(actionGroups)
