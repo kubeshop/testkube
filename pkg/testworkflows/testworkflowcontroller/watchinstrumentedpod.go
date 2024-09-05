@@ -233,7 +233,6 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 		}
 
 		// Mark as finished
-		// TODO: Calibrate with top timestamp?
 		notifier.Align(watcher.State())
 	}()
 

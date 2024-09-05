@@ -96,6 +96,7 @@ func getContainerLogsStream(ctx context.Context, clientSet kubernetes.Interface,
 			if isDone() {
 				return bytes.NewReader(nil), io.EOF
 			}
+			time.Sleep(100 * time.Millisecond)
 			continue
 		}
 		break
@@ -106,20 +107,25 @@ func getContainerLogsStream(ctx context.Context, clientSet kubernetes.Interface,
 func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interface, namespace, podName, containerName string, bufferSize int, isDone func() bool) <-chan ChannelMessage[ContainerLog] {
 	ctx, ctxCancel := context.WithCancel(parentCtx)
 	ch := make(chan ChannelMessage[ContainerLog], bufferSize)
+	var mu sync.Mutex
 
 	sendError := func(err error) {
 		defer func() {
 			recover() // ignore already closed
+			mu.Unlock()
 		}()
 
+		mu.Lock()
 		ch <- ChannelMessage[ContainerLog]{Error: err}
 	}
 
 	sendLog := func(log ContainerLog) {
 		defer func() {
 			recover() // ignore already closed
+			mu.Unlock()
 		}()
 
+		mu.Lock()
 		ch <- ChannelMessage[ContainerLog]{Value: log}
 	}
 
@@ -260,13 +266,14 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 
 			// Ignore too old logs. SinceTime in Kubernetes is precise only to seconds
 			if err == nil && !readerAnyContent {
-				if since != nil && !since.After(tsReader.ts) {
-					isPrefix := false
-					for isPrefix && err != nil {
+				if since != nil && since.After(tsReader.ts) {
+					isPrefix := true
+					for isPrefix && err == nil {
 						_, isPrefix, err = reader.ReadLine()
 					}
 					continue
 				}
+				readerAnyContent = true
 			}
 
 			// Save information about the last timestamp

@@ -218,7 +218,6 @@ func (c *controller) WatchLightweight(parentCtx context.Context) <-chan Lightwei
 	return ch
 }
 
-// TODO: Avoid WatchInstrumentedPod
 func (c *controller) Logs(parentCtx context.Context, follow bool) io.Reader {
 	reader, writer := io.Pipe()
 	go func() {

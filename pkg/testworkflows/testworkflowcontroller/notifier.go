@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
@@ -22,15 +21,16 @@ const (
 	InitStepRef         = "tktw-init"
 )
 
+// Not thread-safe, should be used synchronously
 type notifier struct {
 	// Data
 	result      testkube.TestWorkflowResult
 	state       watchers.ExecutionState
-	mu          sync.RWMutex
 	scheduledAt time.Time
 
 	// Temporary data to avoid finishing too early
-	ended bool
+	lastTs time.Time
+	ended  bool
 
 	// Cached data for better performance
 	actions     actiontypes.ActionGroups
@@ -71,6 +71,9 @@ func (n *notifier) sendResult() {
 }
 
 func (n *notifier) Raw(ref string, ts time.Time, message string, temporary bool) {
+	if ts.After(n.lastTs) {
+		n.lastTs = ts
+	}
 	if message != "" {
 		if ref == InitContainerName {
 			ref = ""
@@ -124,8 +127,6 @@ func (n *notifier) useActionGroups(actions actiontypes.ActionGroups) {
 }
 
 func (n *notifier) Align(state watchers.ExecutionState) {
-	n.mu.Lock()
-	defer n.mu.Unlock()
 	defer n.sendResult()
 	defer n.reconcile()
 
@@ -161,8 +162,6 @@ func (n *notifier) Align(state watchers.ExecutionState) {
 
 // Instruction applies the precise hint information about the action that took place
 func (n *notifier) Instruction(ts time.Time, hint instructions.Instruction) {
-	n.mu.Lock()
-	defer n.mu.Unlock()
 	defer n.sendResult()
 	defer n.reconcile()
 
@@ -248,8 +247,6 @@ func (n *notifier) Instruction(ts time.Time, hint instructions.Instruction) {
 // End tries to finalize the result based on the available data.
 // It will try to fill all the gaps.
 func (n *notifier) End() {
-	n.mu.Lock()
-	defer n.mu.Unlock()
 	defer n.sendResult()
 
 	// Mark as finished
@@ -339,10 +336,12 @@ func (n *notifier) fillGaps(force bool) {
 
 func (n *notifier) reconcile() {
 	// Build the completion timestamp
-	// TODO: use latest timestamp (like event's, job's or log)
 	var completionTs time.Time
 	if n.state != nil {
 		completionTs = n.state.CompletionTimestamp()
+	}
+	if !completionTs.IsZero() && n.lastTs.After(completionTs) {
+		completionTs = n.lastTs
 	}
 
 	// Build the timestamp for initial container

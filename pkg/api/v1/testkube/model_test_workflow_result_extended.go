@@ -395,7 +395,7 @@ func (r *TestWorkflowResult) HealTimestamps(sigSequence []TestWorkflowSignature,
 
 	// Set up everywhere queued at time to past finished time
 	lastTs := r.Initialization.FinishedAt
-	for _, s := range sigSequence {
+	for i, s := range sigSequence {
 		if len(s.Children) > 0 {
 			continue
 		}
@@ -405,6 +405,19 @@ func (r *TestWorkflowResult) HealTimestamps(sigSequence []TestWorkflowSignature,
 		}
 		if step.FinishedAt.IsZero() && (step.Status.Aborted() || (step.Status.Skipped() && step.ErrorMessage != "")) {
 			step.FinishedAt = completionTs
+		}
+		if step.FinishedAt.IsZero() && ended {
+			if len(sigSequence) > i+1 {
+				if !r.Steps[sigSequence[i+1].Ref].QueuedAt.IsZero() {
+					step.FinishedAt = r.Steps[sigSequence[i+1].Ref].QueuedAt
+				} else if !r.Steps[sigSequence[i+1].Ref].StartedAt.IsZero() {
+					step.FinishedAt = r.Steps[sigSequence[i+1].Ref].StartedAt
+				} else {
+					step.FinishedAt = completionTs
+				}
+			} else {
+				step.FinishedAt = completionTs
+			}
 		}
 		if !step.QueuedAt.IsZero() && !step.FinishedAt.IsZero() && step.StartedAt.IsZero() {
 			step.StartedAt = step.QueuedAt
