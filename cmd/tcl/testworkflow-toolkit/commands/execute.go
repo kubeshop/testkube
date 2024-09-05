@@ -35,6 +35,14 @@ import (
 	"github.com/kubeshop/testkube/pkg/utils"
 )
 
+const (
+	CreateExecutionRetryOnFailureMaxAttempts = 5
+	CreateExecutionRetryOnFailureBaseDelay   = 100 * time.Millisecond
+
+	GetExecutionRetryOnFailureMaxAttempts = 10
+	GetExecutionRetryOnFailureDelay       = 300 * time.Millisecond
+)
+
 type testExecutionDetails struct {
 	Id          string `json:"id"`
 	Name        string `json:"name"`
@@ -157,17 +165,28 @@ func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async 
 			ui.Errf("failed to decode tags: %s: %s", workflow.Name, err.Error())
 		}
 
-		exec, err := c.ExecuteTestWorkflow(workflow.Name, testkube.TestWorkflowExecutionRequest{
-			Name:            workflow.ExecutionName,
-			Config:          testworkflows.MapConfigValueKubeToAPI(workflow.Config),
-			DisableWebhooks: env.ExecutionDisableWebhooks(),
-			Tags:            tags,
-		})
-		execName := exec.Name
+		var exec testkube.TestWorkflowExecution
+		for i := 0; i < CreateExecutionRetryOnFailureMaxAttempts; i++ {
+			exec, err = c.ExecuteTestWorkflow(workflow.Name, testkube.TestWorkflowExecutionRequest{
+				Name:            workflow.ExecutionName,
+				Config:          testworkflows.MapConfigValueKubeToAPI(workflow.Config),
+				DisableWebhooks: env.ExecutionDisableWebhooks(),
+				Tags:            tags,
+			})
+			if err == nil {
+				break
+			}
+			if i+1 < CreateExecutionRetryOnFailureMaxAttempts {
+				nextDelay := time.Duration(i+1) * CreateExecutionRetryOnFailureBaseDelay
+				ui.Errf("failed to execute test workflow: retrying in %s (attempt %d/%d): %s: %s", nextDelay.String(), i+2, CreateExecutionRetryOnFailureMaxAttempts, workflow.Name, err.Error())
+				time.Sleep(nextDelay)
+			}
+		}
 		if err != nil {
 			ui.Errf("failed to execute test workflow: %s: %s", workflow.Name, err.Error())
 			return
 		}
+		execName := exec.Name
 
 		instructions.PrintOutput(env.Ref(), "testworkflow-start", &testWorkflowExecutionDetails{
 			Id:               exec.Id,
@@ -189,7 +208,16 @@ func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async 
 	loop:
 		for {
 			time.Sleep(100 * time.Millisecond)
-			exec, err = c.GetTestWorkflowExecution(exec.Id)
+			for i := 0; i < GetExecutionRetryOnFailureMaxAttempts; i++ {
+				exec, err = c.GetTestWorkflowExecution(exec.Id)
+				if err == nil {
+					break
+				}
+				if i+1 < GetExecutionRetryOnFailureMaxAttempts {
+					ui.Errf("error while getting execution result: retrying in %s (attempt %d/%d): %s: %s", GetExecutionRetryOnFailureDelay.String(), i+2, GetExecutionRetryOnFailureMaxAttempts, ui.LightCyan(execName), err.Error())
+					time.Sleep(GetExecutionRetryOnFailureDelay)
+				}
+			}
 			if err != nil {
 				ui.Errf("error while getting execution result: %s: %s", ui.LightCyan(execName), err.Error())
 				return
