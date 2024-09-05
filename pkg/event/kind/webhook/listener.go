@@ -33,7 +33,9 @@ func NewWebhookListener(name, uri, selector string, events []testkube.EventType,
 	testSuiteExecutionResults testresult.Repository,
 	testWorkflowExecutionResults testworkflow.Repository,
 	metrics v1.Metrics,
-	proContext *config.ProContext) *WebhookListener {
+	proContext *config.ProContext,
+	envs map[string]string,
+) *WebhookListener {
 	return &WebhookListener{
 		name:                         name,
 		Uri:                          uri,
@@ -50,6 +52,7 @@ func NewWebhookListener(name, uri, selector string, events []testkube.EventType,
 		testWorkflowExecutionResults: testWorkflowExecutionResults,
 		metrics:                      metrics,
 		proContext:                   proContext,
+		envs:                         envs,
 	}
 }
 
@@ -69,6 +72,7 @@ type WebhookListener struct {
 	testWorkflowExecutionResults testworkflow.Repository
 	metrics                      v1.Metrics
 	proContext                   *config.ProContext
+	envs                         map[string]string
 }
 
 func (l *WebhookListener) Name() string {
