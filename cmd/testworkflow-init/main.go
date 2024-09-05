@@ -91,7 +91,6 @@ func main() {
 	signal.Notify(stopSignal, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		<-stopSignal
-		stdoutUnsafe.Print("The task was aborted.\n")
 		orchestration.Executions.Abort()
 	}()
 
@@ -368,7 +367,7 @@ func main() {
 		}
 
 		// Save the status after each action
-		data.SaveState()
+		data.SaveTerminationLog()
 	}
 
 	// Ensure the latest state is saved

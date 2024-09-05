@@ -155,9 +155,7 @@ func TestProcessBasic(t *testing.T) {
 				constants.ResourceIdLabelName:     "dummy-id-abc",
 				constants.RootResourceIdLabelName: "dummy-id",
 			},
-			Annotations: map[string]string{
-				constants.SignatureAnnotationName: string(sigSerialized),
-			},
+			Annotations: nil,
 		},
 		Spec: batchv1.JobSpec{
 			BackoffLimit: common.Ptr(int32(0)),
@@ -168,7 +166,8 @@ func TestProcessBasic(t *testing.T) {
 						constants.RootResourceIdLabelName: "dummy-id",
 					},
 					Annotations: map[string]string{
-						constants.SpecAnnotationName: getSpec(wantActions),
+						constants.SignatureAnnotationName: string(sigSerialized),
+						constants.SpecAnnotationName:      getSpec(wantActions),
 					},
 				},
 				Spec: corev1.PodSpec{
@@ -269,9 +268,7 @@ func TestProcessShellWithNonStandardImage(t *testing.T) {
 				constants.ResourceIdLabelName:     "dummy-id-abc",
 				constants.RootResourceIdLabelName: "dummy-id",
 			},
-			Annotations: map[string]string{
-				constants.SignatureAnnotationName: string(sigSerialized),
-			},
+			Annotations: nil,
 		},
 		Spec: batchv1.JobSpec{
 			BackoffLimit: common.Ptr(int32(0)),
@@ -282,7 +279,8 @@ func TestProcessShellWithNonStandardImage(t *testing.T) {
 						constants.RootResourceIdLabelName: "dummy-id",
 					},
 					Annotations: map[string]string{
-						constants.SpecAnnotationName: getSpec(wantActions),
+						constants.SignatureAnnotationName: string(sigSerialized),
+						constants.SpecAnnotationName:      getSpec(wantActions),
 					},
 				},
 				Spec: corev1.PodSpec{
