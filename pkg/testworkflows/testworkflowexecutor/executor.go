@@ -37,6 +37,11 @@ import (
 	"github.com/kubeshop/testkube/pkg/utils"
 )
 
+const (
+	SaveLogsRetryMaxAttempts = 10
+	SaveLogsRetryBaseDelay   = 300 * time.Millisecond
+)
+
 //go:generate mockgen -destination=./mock_executor.go -package=testworkflowexecutor "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor" TestWorkflowExecutor
 type TestWorkflowExecutor interface {
 	Control(ctx context.Context, testWorkflow *testworkflowsv1.TestWorkflow, execution *testkube.TestWorkflowExecution) error
@@ -297,10 +302,9 @@ func (e *executor) Control(ctx context.Context, testWorkflow *testworkflowsv1.Te
 	err = e.output.SaveLog(context.Background(), execution.Id, execution.Workflow.Name, reader)
 
 	// Retry saving the logs to Minio if something goes wrong
-	maxAttempts := 10
-	for attempt := 1; err != nil && attempt <= maxAttempts; attempt++ {
+	for attempt := 1; err != nil && attempt <= SaveLogsRetryMaxAttempts; attempt++ {
 		log.DefaultLogger.Errorw("retrying save of TestWorkflow log output", "id", execution.Id, "error", err)
-		time.Sleep(time.Duration(300*attempt) * time.Millisecond)
+		time.Sleep(SaveLogsRetryBaseDelay * time.Duration(attempt))
 		err = e.output.SaveLog(context.Background(), execution.Id, execution.Workflow.Name, ctrl.Logs(context.Background(), false))
 	}
 	if err != nil {

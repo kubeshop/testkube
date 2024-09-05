@@ -37,6 +37,11 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
 
+const (
+	LogsRetryOnFailureDelay = 300 * time.Millisecond
+	LogsRetryMaxAttempts    = 5
+)
+
 func MapDynamicListToStringList(list []interface{}) []string {
 	result := make([]string, len(list))
 	for i := range list {
@@ -248,17 +253,16 @@ func SaveLogsWithController(parentCtx context.Context, storage artifacts.Interna
 		return "", errors.New("cannot control TestWorkflow's execution")
 	}
 
-	maxAttempts := 5
 	filePath := fmt.Sprintf("logs/%s%d.log", prefix, index)
 	var err error
-	for i := 0; i < maxAttempts; i++ {
+	for i := 0; i < LogsRetryMaxAttempts; i++ {
 		ctx, ctxCancel := context.WithCancel(parentCtx)
 		err = storage.SaveStream(filePath, ctrl.Logs(ctx, false))
 		ctxCancel()
 		if err == nil {
 			break
 		}
-		time.Sleep(300 * time.Millisecond)
+		time.Sleep(LogsRetryOnFailureDelay)
 	}
 
 	return filePath, err

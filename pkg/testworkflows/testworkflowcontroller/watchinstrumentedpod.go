@@ -16,6 +16,8 @@ import (
 
 const (
 	InitContainerName = "tktw-init"
+
+	ForceFinalizationDelay = 30 * time.Second
 )
 
 type WatchInstrumentedPodOptions struct {
@@ -215,7 +217,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 				if !ok || watcher.State().Completed() {
 					break loop
 				}
-			case <-time.After(30 * time.Second):
+			case <-time.After(ForceFinalizationDelay):
 				watcher.RefreshPod(ctx)
 				watcher.RefreshJob(ctx)
 

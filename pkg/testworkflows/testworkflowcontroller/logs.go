@@ -25,6 +25,9 @@ const (
 	FlushLogMaxSize = 100_000
 	FlushBufferSize = 65_536
 	FlushLogTime    = 100 * time.Millisecond
+
+	LogRetryOnConnectionLostDelay  = 300 * time.Millisecond
+	LogRetryOnWaitingForStartDelay = 100 * time.Millisecond
 )
 
 type Comment struct {
@@ -86,7 +89,7 @@ func getContainerLogsStream(ctx context.Context, clientSet kubernetes.Interface,
 		if err != nil {
 			// There may be problems with Kubernetes cluster - retry then
 			if strings.Contains(err.Error(), "connection lost") {
-				time.Sleep(300 * time.Millisecond)
+				time.Sleep(LogRetryOnConnectionLostDelay)
 				continue
 			}
 			// The container is not necessarily already started when Started event is received
@@ -96,7 +99,7 @@ func getContainerLogsStream(ctx context.Context, clientSet kubernetes.Interface,
 			if isDone() {
 				return bytes.NewReader(nil), io.EOF
 			}
-			time.Sleep(100 * time.Millisecond)
+			time.Sleep(LogRetryOnWaitingForStartDelay)
 			continue
 		}
 		break

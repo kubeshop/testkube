@@ -17,6 +17,11 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
 
+const (
+	ReadLatestBufferingTimeframe = 5 * time.Millisecond
+	ReadCriticalGracefullyTime   = 750 * time.Millisecond
+)
+
 type executionWatcher struct {
 	jobWatcher               JobWatcher
 	podWatcher               PodWatcher
@@ -208,7 +213,7 @@ func NewExecutionWatcher(parentCtx context.Context, clientSet kubernetes.Interfa
 	podEventsCh := podEvents.Channel()
 	jobEventsCh := jobEvents.Channel()
 	readLatestData := func() {
-		time.Sleep(5 * time.Millisecond)
+		time.Sleep(ReadLatestBufferingTimeframe)
 
 		if job.Latest() != nil {
 			watcher.uncommitted.job = NewJob(job.Latest())
@@ -292,7 +297,7 @@ func NewExecutionWatcher(parentCtx context.Context, clientSet kubernetes.Interfa
 				wg.Wait()
 				readLatestData()
 			} else {
-				timer := time.After(750 * time.Millisecond)
+				timer := time.After(ReadCriticalGracefullyTime)
 
 				if hasMissingCriticalJob {
 					select {

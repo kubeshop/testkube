@@ -39,6 +39,10 @@ import (
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
+const (
+	ResumeRetryOnFailureDelay = 300 * time.Millisecond
+)
+
 type ParallelStatus struct {
 	Index       int                              `json:"index"`
 	Description string                           `json:"description,omitempty"`
@@ -372,7 +376,7 @@ func NewParallelCmd() *cobra.Command {
 									}
 								}
 								spawn.CreateLogger("worker", descriptions[index], index, params.Count)("warning", "failed to resume, retrying...", err.Error())
-								time.Sleep(300 * time.Millisecond)
+								time.Sleep(ResumeRetryOnFailureDelay)
 							}
 
 							// Total failure while retrying

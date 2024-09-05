@@ -12,6 +12,10 @@ import (
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
+const (
+	TarballRetryMaxAttempts = 5
+)
+
 func NewTarballCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "tarball <pathUrlPairs>",
@@ -31,7 +35,6 @@ func NewTarballCmd() *cobra.Command {
 				fmt.Printf("Downloading and unpacking %s to %s...\n", url, dirPath)
 
 				// Start downloading the file
-				maxAttempts := 5
 				attempt := 1
 				for {
 					resp, err := http.Get(url)
@@ -50,11 +53,11 @@ func NewTarballCmd() *cobra.Command {
 					}
 
 					// Retry when it is possible
-					if maxAttempts == attempt {
+					if TarballRetryMaxAttempts == attempt {
 						os.Exit(1)
 					}
 					attempt++
-					fmt.Printf("Retrying - attempt %d/%d.\n", attempt, maxAttempts)
+					fmt.Printf("Retrying - attempt %d/%d.\n", attempt, TarballRetryMaxAttempts)
 				}
 			}
 		},
