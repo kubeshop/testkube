@@ -295,8 +295,15 @@ func (e *executor) Control(ctx context.Context, testWorkflow *testworkflowsv1.Te
 
 	// Stream the log into Minio
 	err = e.output.SaveLog(context.Background(), execution.Id, execution.Workflow.Name, reader)
+
+	// Retry saving the logs to Minio if something goes wrong
+	maxAttempts := 10
+	for attempt := 1; err != nil && attempt <= maxAttempts; attempt++ {
+		log.DefaultLogger.Errorw("retrying save of TestWorkflow log output", "id", execution.Id, "error", err)
+		time.Sleep(time.Duration(300*attempt) * time.Millisecond)
+		err = e.output.SaveLog(context.Background(), execution.Id, execution.Workflow.Name, ctrl.Logs(context.Background(), false))
+	}
 	if err != nil {
-		// TODO: Try to write again, if there was a failure while saving the log output
 		log.DefaultLogger.Errorw("failed to save TestWorkflow log output", "id", execution.Id, "error", err)
 	}
 
