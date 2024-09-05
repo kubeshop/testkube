@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	defaultListTimeoutSeconds  = int64(30)
+	defaultListTimeoutSeconds  = int64(240)
 	defaultWatchTimeoutSeconds = int64(365 * 24 * 3600)
 	InitStepRef                = "tktw-init"
 )

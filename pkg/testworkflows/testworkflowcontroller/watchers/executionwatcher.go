@@ -42,8 +42,8 @@ type ExecutionWatcher interface {
 	JobErr() error
 	PodErr() error
 
-	RefreshPod(timeout time.Duration)
-	RefreshJob(timeout time.Duration)
+	RefreshPod(ctx context.Context)
+	RefreshJob(ctx context.Context)
 
 	Started() <-chan struct{}
 	Updated(ctx context.Context) <-chan struct{}
@@ -96,12 +96,12 @@ func (e *executionWatcher) PodErr() error {
 	return e.podWatcher.Err()
 }
 
-func (e *executionWatcher) RefreshPod(timeout time.Duration) {
-	e.podWatcher.Update(timeout)
+func (e *executionWatcher) RefreshPod(ctx context.Context) {
+	e.podWatcher.Update(ctx)
 }
 
-func (e *executionWatcher) RefreshJob(timeout time.Duration) {
-	e.jobWatcher.Update(timeout)
+func (e *executionWatcher) RefreshJob(ctx context.Context) {
+	e.jobWatcher.Update(ctx)
 }
 
 func (e *executionWatcher) baseStarted() <-chan struct{} {
@@ -278,14 +278,14 @@ func NewExecutionWatcher(parentCtx context.Context, clientSet kubernetes.Interfa
 				if hasMissingCriticalJob {
 					wg.Add(1)
 					go func() {
-						watcher.jobWatcher.Update(2 * time.Second)
+						watcher.jobWatcher.Update(ctx)
 						wg.Done()
 					}()
 				}
 				if hasMissingCriticalPod {
 					wg.Add(1)
 					go func() {
-						watcher.podWatcher.Update(2 * time.Second)
+						watcher.podWatcher.Update(ctx)
 						wg.Done()
 					}()
 				}

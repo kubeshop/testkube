@@ -202,7 +202,6 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 		}
 
 		// Wait until everything is finished
-		// TODO: Ignore when it's for services?
 	loop:
 		for {
 			if watcher.State().Completed() || ctx.Err() != nil || opts.DisableFollow {
@@ -217,8 +216,8 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 					break loop
 				}
 			case <-time.After(30 * time.Second):
-				watcher.RefreshPod(30 * time.Second) // FIXME?
-				watcher.RefreshJob(30 * time.Second) // FIXME?
+				watcher.RefreshPod(ctx)
+				watcher.RefreshJob(ctx)
 
 				// Fallback in case of missing data
 				if watcher.State().Completed() {

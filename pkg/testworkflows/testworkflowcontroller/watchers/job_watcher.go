@@ -3,11 +3,9 @@ package watchers
 import (
 	"context"
 	"fmt"
-	"math"
 	"strings"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/pkg/errors"
 	batchv1 "k8s.io/api/batch/v1"
@@ -31,7 +29,7 @@ type jobWatcher struct {
 }
 
 type JobWatcher interface {
-	Update(t time.Duration) (int, error)
+	Update(ctx context.Context) (int, error)
 	Started() <-chan struct{}
 	Done() <-chan struct{}
 	Err() error
@@ -69,27 +67,35 @@ func (e *jobWatcher) Started() <-chan struct{} {
 }
 
 // TODO: add readMu lock, work better with mu lock
-func (e *jobWatcher) read(t time.Duration) (<-chan readStart, <-chan struct{}) {
+func (e *jobWatcher) read(sideCtx context.Context) (<-chan readStart, <-chan struct{}) {
 	started := make(chan readStart, 1)
 	finished := make(chan struct{})
+
+	ctx, ctxCancel := context.WithCancelCause(sideCtx)
+	go func() {
+		select {
+		case <-e.ctx.Done():
+			ctxCancel(e.ctx.Err())
+		case <-ctx.Done():
+			ctxCancel(ctx.Err())
+		}
+	}()
 
 	go func() {
 		e.mu.Lock()
 		defer func() {
 			close(finished)
+			ctxCancel(context.Canceled)
 			e.mu.Unlock()
 		}()
 
 		// Fetch the data
 		opts := e.opts
 		opts.ResourceVersion = ""
-		if t != 0 {
-			opts.TimeoutSeconds = common.Ptr(int64(math.Ceil(t.Seconds())))
-		}
 		if opts.TimeoutSeconds == nil {
 			opts.TimeoutSeconds = common.Ptr(defaultListTimeoutSeconds)
 		}
-		list, err := e.client.List(e.ctx, e.opts)
+		list, err := e.client.List(ctx, e.opts)
 		if err != nil {
 			started <- readStart{err: err}
 			close(started)
@@ -248,7 +254,7 @@ func (e *jobWatcher) cycle() {
 	}()
 
 	// Read the initial data
-	started, finished := e.read(0)
+	started, finished := e.read(context.Background())
 	result, _ := <-started
 	if result.err != nil {
 		e.cancel(result.err)
@@ -275,8 +281,8 @@ func (e *jobWatcher) Done() <-chan struct{} {
 
 // Update gets the latest list of the job, to ensure that nothing is missed at that point.
 // It returns number of items that have been appended.
-func (e *jobWatcher) Update(t time.Duration) (int, error) {
-	started, _ := e.read(t)
+func (e *jobWatcher) Update(ctx context.Context) (int, error) {
+	started, _ := e.read(ctx)
 	result, _ := <-started
 	if errors.Is(result.err, ErrDone) {
 		result.err = nil
