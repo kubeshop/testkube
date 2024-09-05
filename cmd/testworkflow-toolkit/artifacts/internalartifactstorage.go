@@ -1,14 +1,11 @@
 package artifacts
 
 import (
-	"bytes"
 	"context"
 	"io"
 	"path/filepath"
 	"sync"
 	"time"
-
-	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
 )
@@ -17,6 +14,10 @@ type InternalArtifactStorage interface {
 	FullPath(artifactPath string) string
 	SaveStream(artifactPath string, stream io.Reader) error
 	Wait() error
+}
+
+type withLength interface {
+	Len() int
 }
 
 type internalArtifactStorage struct {
@@ -62,13 +63,12 @@ func (s *internalArtifactStorage) SaveStream(artifactPath string, stream io.Read
 	if err != nil {
 		return err
 	}
-	// TODO: Stream the data instead
-	b, err := io.ReadAll(stream)
-	if err != nil && !errors.Is(err, io.EOF) {
-		return err
+
+	size := -1
+	if streamL, ok := stream.(withLength); ok {
+		size = streamL.Len()
 	}
-	buf := bytes.NewBuffer(b)
-	err = s.uploader.Add(filepath.Join(s.prefix, artifactPath), buf, int64(buf.Len()))
+	err = s.uploader.Add(filepath.Join(s.prefix, artifactPath), stream, int64(size))
 	if err != nil {
 		return err
 	}

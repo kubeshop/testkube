@@ -2,34 +2,44 @@ package testworkflowcontroller
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"sync"
 	"time"
 
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller/watchers"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 const (
-	FlushResultTime    = 50 * time.Millisecond
-	FlushResultMaxTime = 100 * time.Millisecond
+	DefaultErrorMessage = "Job has been aborted"
 )
 
+// Not thread-safe, should be used synchronously
 type notifier struct {
-	ctx         context.Context
-	ch          chan ChannelMessage[Notification]
+	// Data
 	result      testkube.TestWorkflowResult
-	sig         []testkube.TestWorkflowSignature
+	state       watchers.ExecutionState
 	scheduledAt time.Time
-	lastTs      map[string]time.Time
 
-	resultMu       sync.RWMutex
-	flushMu        sync.Mutex
-	flushCh        chan struct{}
-	flushScheduled bool
+	// Temporary data to avoid finishing too early
+	lastTs time.Time
+	ended  bool
+
+	// Cached data for better performance
+	actions     actiontypes.ActionGroups
+	endRefs     [][]string
+	sigSequence []testkube.TestWorkflowSignature
+
+	// Sending state
+	ctx context.Context
+	ch  chan ChannelMessage[Notification]
 }
 
 func (n *notifier) send(value Notification) {
@@ -37,7 +47,10 @@ func (n *notifier) send(value Notification) {
 	defer func() {
 		recover()
 	}()
-	n.ch <- ChannelMessage[Notification]{Value: value}
+	select {
+	case <-n.ctx.Done():
+	case n.ch <- ChannelMessage[Notification]{Value: value}:
+	}
 }
 
 func (n *notifier) error(err error) {
@@ -45,101 +58,26 @@ func (n *notifier) error(err error) {
 	defer func() {
 		recover()
 	}()
-	n.ch <- ChannelMessage[Notification]{Error: err}
-}
-
-func (n *notifier) unsafeGetLastTimestamp(ref string) time.Time {
-	last := n.lastTs[ref]
-	if n.result.Steps[ref].FinishedAt.After(last) {
-		return n.result.Steps[ref].FinishedAt
-	}
-	if n.result.Steps[ref].StartedAt.After(last) {
-		return n.result.Steps[ref].StartedAt
-	}
-	if n.result.Steps[ref].QueuedAt.After(last) {
-		return n.result.Steps[ref].QueuedAt
-	}
-	return last
-}
-
-func (n *notifier) GetLastTimestamp(ref string) time.Time {
-	n.resultMu.RLock()
-	defer n.resultMu.RUnlock()
-	return n.unsafeGetLastTimestamp(ref)
-}
-
-func (n *notifier) RegisterTimestamp(ref string, t time.Time) {
-	if t.After(n.GetLastTimestamp(ref)) {
-		n.resultMu.Lock()
-		n.lastTs[ref] = t.UTC()
-		n.resultMu.Unlock()
+	select {
+	case <-n.ctx.Done():
+	case n.ch <- ChannelMessage[Notification]{Error: err}:
 	}
 }
 
-func (n *notifier) Flush() {
-	n.flushMu.Lock()
-	defer n.flushMu.Unlock()
-	if !n.flushScheduled {
-		return
-	}
-	n.resultMu.RLock()
-	defer n.resultMu.RUnlock()
-	n.send(Notification{Timestamp: n.result.LatestTimestamp(), Result: n.result.Clone()})
-	n.flushScheduled = false
-}
-
-func (n *notifier) scheduleFlush() {
-	n.flushMu.Lock()
-	defer n.flushMu.Unlock()
-
-	// Inform existing scheduler about the next result
-	if n.flushScheduled {
-		select {
-		case n.flushCh <- struct{}{}:
-		default:
-		}
-		return
-	}
-
-	// Run the scheduler
-	n.flushScheduled = true
-	go func() {
-		flushTimer := time.NewTimer(FlushResultMaxTime)
-		flushTimerEnabled := false
-
-		for {
-			if n.ctx.Err() != nil {
-				return
-			}
-
-			select {
-			case <-n.ctx.Done():
-				n.Flush()
-				return
-			case <-flushTimer.C:
-				n.Flush()
-				flushTimerEnabled = false
-			case <-time.After(FlushResultTime):
-				n.Flush()
-				flushTimerEnabled = false
-			case <-n.flushCh:
-				if !flushTimerEnabled {
-					flushTimerEnabled = true
-					flushTimer.Reset(FlushResultMaxTime)
-				}
-				continue
-			}
-		}
-	}()
+// TODO: Find a way to avoid sending if it is identical
+func (n *notifier) sendResult() {
+	result := n.result.Clone()
+	n.send(Notification{Timestamp: result.LatestTimestamp(), Result: result})
 }
 
 func (n *notifier) Raw(ref string, ts time.Time, message string, temporary bool) {
+	if ts.After(n.lastTs) {
+		n.lastTs = ts
+	}
 	if message != "" {
-		if ref == InitContainerName {
+		if ref == data.InitStepName {
 			ref = ""
 		}
-		// TODO: use timestamp from the message too for lastTs?
-		n.Flush()
 		n.send(Notification{
 			Timestamp: ts.UTC(),
 			Log:       message,
@@ -151,7 +89,6 @@ func (n *notifier) Raw(ref string, ts time.Time, message string, temporary bool)
 
 func (n *notifier) Log(ref string, ts time.Time, message string) {
 	if message != "" {
-		n.RegisterTimestamp(ref, ts)
 		n.Raw(ref, ts, fmt.Sprintf("%s %s", ts.Format(KubernetesLogTimeFormat), message), false)
 	}
 }
@@ -161,7 +98,6 @@ func (n *notifier) Error(err error) {
 }
 
 func (n *notifier) Event(ref string, ts time.Time, level, reason, message string) {
-	n.RegisterTimestamp(ref, ts)
 	color := ui.LightGray
 	if level != "Normal" {
 		color = ui.Yellow
@@ -170,257 +106,290 @@ func (n *notifier) Event(ref string, ts time.Time, level, reason, message string
 	n.Raw(ref, ts, fmt.Sprintf("%s %s\n", ts.Format(KubernetesLogTimeFormat), log), level == "Normal")
 }
 
-func (n *notifier) recompute() {
-	lastTs := n.unsafeGetLastTimestamp("")
-	if !n.result.Initialization.FinishedAt.IsZero() && n.result.Initialization.FinishedAt.Before(lastTs) {
-		n.result.Initialization.FinishedAt = lastTs
-	}
-	for k := range n.result.Steps {
-		if !n.result.Steps[k].FinishedAt.IsZero() && n.result.Steps[k].FinishedAt.Before(lastTs) {
-			step := n.result.Steps[k]
-			step.FinishedAt = lastTs
-			n.result.Steps[k] = step
+func (n *notifier) Output(ref string, ts time.Time, output *instructions.Instruction) {
+	if ref == data.InitStepName {
+		ref = ""
+	} else if ref != "" {
+		if _, ok := n.result.Steps[ref]; !ok {
+			return
 		}
 	}
-	n.result.Recompute(n.sig, n.scheduledAt)
-}
-
-func (n *notifier) emit() {
-	n.recompute()
-	n.scheduleFlush()
-}
-
-func (n *notifier) queue(ts time.Time) {
-	if n.result.QueuedAt.Equal(ts) {
-		return
-	}
-	n.result.QueuedAt = ts.UTC()
-	n.emit()
-}
-
-func (n *notifier) queueInit(ts time.Time) {
-	if n.result.Initialization.QueuedAt.Equal(ts) {
-		return
-	}
-	n.result.Initialization.QueuedAt = ts.UTC()
-	n.emit()
-}
-
-func (n *notifier) queueStep(ref string, ts time.Time) {
-	if n.result.Steps[ref].QueuedAt.Equal(ts) {
-		return
-	}
-	s := n.result.Steps[ref]
-	s.QueuedAt = ts.UTC()
-	n.result.Steps[ref] = s
-	n.emit()
-}
-
-func (n *notifier) Queue(ref string, ts time.Time) {
-	n.resultMu.Lock()
-	defer n.resultMu.Unlock()
-	if ref == "" {
-		n.queue(ts)
-	} else if ref == InitContainerName {
-		n.queueInit(ts)
-	} else {
-		n.queueStep(ref, ts)
-	}
-}
-
-func (n *notifier) start(ts time.Time) {
-	if n.result.StartedAt.Equal(ts) {
-		return
-	}
-	n.result.StartedAt = ts.UTC()
-	if n.result.Status == nil || *n.result.Status == testkube.QUEUED_TestWorkflowStatus {
-		n.result.Status = common.Ptr(testkube.RUNNING_TestWorkflowStatus)
-	}
-	n.emit()
-}
-
-func (n *notifier) startInit(ts time.Time) {
-	if n.result.Initialization.StartedAt.Equal(ts) {
-		return
-	}
-	n.result.Initialization.StartedAt = ts.UTC()
-	if n.result.Initialization.Status == nil || *n.result.Initialization.Status == testkube.QUEUED_TestWorkflowStepStatus {
-		n.result.Initialization.Status = common.Ptr(testkube.RUNNING_TestWorkflowStepStatus)
-	}
-	n.emit()
-}
-
-func (n *notifier) startStep(ref string, ts time.Time) {
-	if n.result.Steps[ref].StartedAt.Equal(ts) {
-		return
-	}
-	s := n.result.Steps[ref]
-	s.StartedAt = ts.UTC()
-	if s.Status == nil || *s.Status == testkube.QUEUED_TestWorkflowStepStatus {
-		s.Status = common.Ptr(testkube.RUNNING_TestWorkflowStepStatus)
-	}
-	n.result.Steps[ref] = s
-	n.emit()
-}
-
-func (n *notifier) Start(ref string, ts time.Time) {
-	n.resultMu.Lock()
-	defer n.resultMu.Unlock()
-
-	if ref == "" {
-		n.start(ts)
-	} else if ref == InitContainerName {
-		n.startInit(ts)
-	} else {
-		n.startStep(ref, ts)
-	}
-}
-
-func (n *notifier) Output(ref string, ts time.Time, output *instructions.Instruction) {
-	n.resultMu.RLock()
-	if ref == InitContainerName {
-		ref = ""
-	}
-	if _, ok := n.result.Steps[ref]; !ok && ref != "" {
-		n.resultMu.RUnlock()
-		return
-	}
-	n.resultMu.RUnlock()
-	n.RegisterTimestamp(ref, ts)
-	n.Flush()
 	n.send(Notification{Timestamp: ts.UTC(), Ref: ref, Output: output})
 }
 
-func (n *notifier) Finish(ts time.Time) {
-	if ts.IsZero() {
-		return
-	}
-	n.resultMu.Lock()
-	defer n.resultMu.Unlock()
-	n.result.FinishedAt = ts
-	n.emit()
+func (n *notifier) useSignature(sig []stage.Signature) {
+	n.sigSequence = stage.MapSignatureListToInternal(stage.MapSignatureToSequence(sig))
 }
 
-func (n *notifier) UpdateStepStatus(ref string, status testkube.TestWorkflowStepStatus) {
-	n.resultMu.Lock()
-	defer n.resultMu.Unlock()
-	if _, ok := n.result.Steps[ref]; !ok || (n.result.Steps[ref].Status != nil || *n.result.Steps[ref].Status == status) {
-		return
-	}
-	n.result.UpdateStepResult(n.sig, ref, testkube.TestWorkflowStepResult{Status: &status}, n.scheduledAt)
-	n.emit()
+func (n *notifier) useActionGroups(actions actiontypes.ActionGroups) {
+	n.actions = actions
+	_, n.endRefs = ExtractRefsFromActionGroup(actions)
 }
 
-func (n *notifier) finishInit(status ContainerResultStep) {
-	if n.result.Initialization.FinishedAt.Equal(status.FinishedAt) && n.result.Initialization.Status != nil && *n.result.Initialization.Status == status.Status && (status.Status != testkube.ABORTED_TestWorkflowStepStatus || n.result.Initialization.ErrorMessage == status.Details) {
-		return
-	}
-	n.result.Initialization.FinishedAt = status.FinishedAt.UTC()
-	n.result.Initialization.Status = common.Ptr(status.Status)
-	n.result.Initialization.ExitCode = float64(status.ExitCode)
-	n.result.Initialization.ErrorMessage = status.Details
-	n.emit()
-}
+func (n *notifier) Align(state watchers.ExecutionState) {
+	defer n.sendResult()
+	defer n.reconcile()
 
-func (n *notifier) IsAnyAborted() bool {
-	n.resultMu.RLock()
-	defer n.resultMu.RUnlock()
-	if n.result.Initialization.Status != nil && *n.result.Initialization.Status == testkube.ABORTED_TestWorkflowStepStatus {
-		return true
+	n.state = state
+
+	// Cache the data used for reconciliation
+	if len(n.sigSequence) == 0 {
+		sig, _ := n.state.Signature()
+		n.useSignature(sig)
 	}
-	for _, s := range n.result.Steps {
-		if s.Status != nil && *s.Status == testkube.ABORTED_TestWorkflowStepStatus {
-			return true
+	if len(n.actions) == 0 {
+		actions, _ := n.state.ActionGroups()
+		n.useActionGroups(actions)
+	}
+
+	// Initialization phase
+	if !state.EstimatedJobCreationTimestamp().IsZero() {
+		n.result.QueuedAt = state.EstimatedJobCreationTimestamp().UTC()
+	}
+	if !state.EstimatedPodCreationTimestamp().IsZero() {
+		n.result.StartedAt = state.EstimatedPodCreationTimestamp().UTC()
+	}
+
+	// Create missing step results that are recognized with the signature
+	for i := range n.sigSequence {
+		if _, ok := n.result.Steps[n.sigSequence[i].Ref]; !ok {
+			n.result.Steps[n.sigSequence[i].Ref] = testkube.TestWorkflowStepResult{
+				Status: common.Ptr(testkube.QUEUED_TestWorkflowStepStatus),
+			}
 		}
 	}
-	return false
 }
 
-func (n *notifier) IsFinished(ref string) bool {
-	n.resultMu.RLock()
-	defer n.resultMu.RUnlock()
-	if ref == InitContainerName {
-		return !n.result.Initialization.FinishedAt.IsZero()
+// Instruction applies the precise hint information about the action that took place
+func (n *notifier) Instruction(ts time.Time, hint instructions.Instruction) {
+	defer n.sendResult()
+	defer n.reconcile()
+
+	// Ensure we have UTC timestamp
+	ts = ts.UTC()
+
+	// Load the current step information
+	init := hint.Ref == data.InitStepName
+	step, ok := n.result.Steps[hint.Ref]
+	if init {
+		step = *n.result.Initialization
+		ok = true
 	}
-	return !n.result.Steps[ref].FinishedAt.IsZero()
-}
 
-func (n *notifier) FinishStep(ref string, status ContainerResultStep) {
-	n.resultMu.Lock()
-	defer n.resultMu.Unlock()
-	if ref == InitContainerName {
-		n.finishInit(status)
+	// Ignore the virtual steps
+	if !ok {
 		return
 	}
-	if n.result.Steps[ref].FinishedAt.Equal(status.FinishedAt) && n.result.Steps[ref].Status != nil && *n.result.Steps[ref].Status == status.Status && (status.Status != testkube.ABORTED_TestWorkflowStepStatus || n.result.Steps[ref].ErrorMessage == status.Details) {
+
+	// Apply the hint
+	switch hint.Name {
+	case constants.InstructionStart:
+		step.StartedAt = ts
+		step.Status = common.Ptr(testkube.RUNNING_TestWorkflowStepStatus)
+	case constants.InstructionEnd:
+		status := testkube.TestWorkflowStepStatus(hint.Value.(string))
+		if status == "" {
+			status = testkube.PASSED_TestWorkflowStepStatus
+		}
+		step.Status = common.Ptr(status)
+		step.FinishedAt = ts
+	case constants.InstructionExecution:
+		serialized, _ := json.Marshal(hint.Value)
+		var executionResult constants.ExecutionResult
+		_ = json.Unmarshal(serialized, &executionResult)
+		step.ExitCode = float64(executionResult.ExitCode)
+		if executionResult.Details != "" {
+			step.ErrorMessage = executionResult.Details
+		}
+	case constants.InstructionPause:
+		pauseTsStr := hint.Value.(string)
+		pauseTs, err := time.Parse(time.RFC3339Nano, pauseTsStr)
+		if err != nil {
+			pauseTs = ts
+		}
+		if !n.result.HasPauseAt(hint.Ref, pauseTs) {
+			step.Status = common.Ptr(testkube.PAUSED_TestWorkflowStepStatus)
+			n.result.Pauses = append(n.result.Pauses, testkube.TestWorkflowPause{Ref: hint.Ref, PausedAt: pauseTs})
+		}
+	case constants.InstructionResume:
+		resumeTsStr := hint.Value.(string)
+		resumeTs, err := time.Parse(time.RFC3339Nano, resumeTsStr)
+		if err != nil {
+			resumeTs = ts
+		}
+		if n.result.HasPauseAt(hint.Ref, resumeTs) {
+			step.Status = common.Ptr(testkube.RUNNING_TestWorkflowStepStatus)
+			for pi, p := range n.result.Pauses {
+				if p.Ref != hint.Ref {
+					continue
+				}
+				// Check if it's not already covered by that period
+				if !p.PausedAt.After(resumeTs) && !p.ResumedAt.Before(resumeTs) {
+					break
+				}
+				// Check if the period could not be fulfilled with that timestamp
+				if !p.PausedAt.After(resumeTs) && (p.ResumedAt.IsZero() || p.ResumedAt.Equal(resumeTs)) {
+					n.result.Pauses[pi].ResumedAt = resumeTs
+					break
+				}
+			}
+		}
+	}
+
+	// Save the step
+	if init {
+		n.result.Initialization = common.Ptr(step)
+	} else {
+		n.result.Steps[hint.Ref] = step
+	}
+}
+
+// End tries to finalize the result based on the available data.
+// It will try to fill all the gaps.
+func (n *notifier) End() {
+	defer n.sendResult()
+
+	// Mark as finished
+	n.ended = true
+
+	// Ensure that the steps without the information are fulfilled and marked as aborted
+	n.fillGaps(true)
+
+	errorMessage := DefaultErrorMessage
+	if n.state != nil && n.state.ExecutionError() != "" {
+		errorMessage = n.state.ExecutionError()
+	}
+	n.result.HealAborted(n.sigSequence, errorMessage, DefaultErrorMessage)
+
+	// Finalize the status
+	n.reconcile()
+}
+
+func (n *notifier) fillGaps(force bool) {
+	if n.state == nil {
 		return
 	}
-	s := n.result.Steps[ref]
-	s.FinishedAt = status.FinishedAt.UTC()
-	s.Status = common.Ptr(status.Status)
-	s.ExitCode = float64(status.ExitCode)
-	s.ErrorMessage = status.Details
-	n.result.Steps[ref] = s
-	n.emit()
-}
 
-func (n *notifier) Pause(ref string, ts time.Time) {
-	n.resultMu.Lock()
-	defer n.resultMu.Unlock()
-	if n.result.Steps[ref].Status != nil && *n.result.Steps[ref].Status == testkube.PAUSED_TestWorkflowStepStatus {
+	// Mark the initialization step as running
+	if n.state.PodCreated() && n.result.Initialization.NotStarted() {
+		n.result.Initialization.Status = common.Ptr(testkube.RUNNING_TestWorkflowStepStatus)
+	}
+
+	// Don't compute anything more if there is no Pod information
+	if n.state.Pod() == nil {
 		return
 	}
-	n.result.PauseStart(n.sig, n.scheduledAt, ref, ts)
-	n.emit()
-}
 
-func (n *notifier) Resume(ref string, ts time.Time) {
-	n.resultMu.Lock()
-	defer n.resultMu.Unlock()
-	n.result.PauseEnd(n.sig, n.scheduledAt, ref, ts)
-	n.emit()
-}
-
-func (n *notifier) GetStepResult(ref string) testkube.TestWorkflowStepResult {
-	n.resultMu.RLock()
-	defer n.resultMu.RUnlock()
-	if ref == InitContainerName {
-		return *n.result.Initialization
+	// Find the furthest step with any status
+	processedStepsCount := 0
+	if force {
+		processedStepsCount = len(n.sigSequence)
+	} else {
+		for i := range n.sigSequence {
+			step := n.result.Steps[n.sigSequence[i].Ref]
+			if !step.NotStarted() {
+				processedStepsCount = i
+				if step.Finished() {
+					processedStepsCount++
+				}
+			}
+		}
 	}
-	return n.result.Steps[ref]
+
+	// Analyze the references
+	containerIndexes := make(map[string]int)
+	refIndexes := make(map[string]int)
+	for containerIndex := range n.endRefs {
+		for refIndex := range n.endRefs[containerIndex] {
+			containerIndexes[n.endRefs[containerIndex][refIndex]] = containerIndex
+			refIndexes[n.endRefs[containerIndex][refIndex]] = refIndex
+		}
+	}
+
+	// Gather the container results
+	containerResults := make([]watchers.ContainerResult, len(n.actions))
+	for i := range n.actions {
+		containerResults[i] = n.state.Pod().ContainerResult(fmt.Sprintf("%d", i+1), n.state.ExecutionError())
+	}
+
+	// Apply statuses from the container results since the last step
+	for i := 0; i < processedStepsCount; i++ {
+		ref := n.sigSequence[i].Ref
+		container := containerResults[containerIndexes[ref]]
+		if len(container.Statuses) <= refIndexes[ref] {
+			continue
+		}
+
+		// TODO: estimate startedAt/finishedAt too?
+
+		if ref == data.InitStepName {
+			n.result.Initialization.Status = common.Ptr(container.Statuses[refIndexes[ref]].Status)
+			n.result.Initialization.ExitCode = float64(container.Statuses[refIndexes[ref]].ExitCode)
+		} else {
+			step := n.result.Steps[ref]
+			step.Status = common.Ptr(container.Statuses[refIndexes[ref]].Status)
+			step.ExitCode = float64(container.Statuses[refIndexes[ref]].ExitCode)
+			n.result.Steps[ref] = step
+		}
+	}
 }
 
-func newNotifier(ctx context.Context, signature []stage.Signature, scheduledAt time.Time) *notifier {
-	// Initialize the zero result
-	sig := make([]testkube.TestWorkflowSignature, len(signature))
-	for i, s := range signature {
-		sig[i] = s.ToInternal()
+func (n *notifier) reconcile() {
+	// Build the completion timestamp
+	var completionTs time.Time
+	if n.state != nil {
+		completionTs = n.state.CompletionTimestamp()
 	}
-	result := testkube.TestWorkflowResult{
-		Status:          common.Ptr(testkube.QUEUED_TestWorkflowStatus),
-		PredictedStatus: common.Ptr(testkube.PASSED_TestWorkflowStatus),
-		Initialization: &testkube.TestWorkflowStepResult{
+	if !completionTs.IsZero() && n.lastTs.After(completionTs) {
+		completionTs = n.lastTs
+	}
+
+	// Build the timestamp for initial container
+	var containerStartTs time.Time
+	if n.state != nil {
+		containerStartTs = n.state.ContainerStartTimestamp("1")
+	}
+
+	//// TODO: Try to estimate signature sequence (?)
+	//if len(n.sigSequence) == 0 {
+	//}
+
+	n.fillGaps(false)
+	n.result.HealTimestamps(n.sigSequence, n.scheduledAt, containerStartTs, completionTs, n.ended)
+	n.result.HealDuration()
+	n.result.HealMissingPauseStatuses()
+	n.result.HealStatus()
+}
+
+// TODO: Optimize memory
+// TODO: Provide initial actions/signature
+func newNotifier(ctx context.Context, initialResult testkube.TestWorkflowResult, scheduledAt time.Time) *notifier {
+	// Apply data that are required yet may be missing
+	if initialResult.Initialization == nil {
+		initialResult.Initialization = &testkube.TestWorkflowStepResult{
 			Status: common.Ptr(testkube.QUEUED_TestWorkflowStepStatus),
-		},
-		Steps: stage.MapSignatureListToStepResults(signature),
+		}
 	}
-	result.Recompute(sig, scheduledAt)
+	if initialResult.Steps == nil {
+		initialResult.Steps = make(map[string]testkube.TestWorkflowStepResult)
+	}
+	if initialResult.Status == nil {
+		initialResult.Status = common.Ptr(testkube.QUEUED_TestWorkflowStatus)
+	}
 
-	ch := make(chan ChannelMessage[Notification])
-
-	go func() {
-		<-ctx.Done()
-		close(ch)
-	}()
+	// Mark initial as non-finished, as the state is not yet marked as ended
+	if initialResult.Status.Finished() {
+		initialResult.Status = common.Ptr(testkube.RUNNING_TestWorkflowStatus)
+	}
+	if !initialResult.FinishedAt.IsZero() {
+		initialResult.FinishedAt = time.Time{}
+	}
 
 	return &notifier{
-		ch:          ch,
-		ctx:         ctx,
-		sig:         sig,
+		result:      initialResult,
 		scheduledAt: scheduledAt,
-		result:      result,
-		lastTs:      make(map[string]time.Time),
 
-		flushCh: make(chan struct{}, 1),
+		ch:  make(chan ChannelMessage[Notification]),
+		ctx: ctx,
 	}
 }

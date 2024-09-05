@@ -14,23 +14,18 @@ func (r *TestWorkflowStepResult) Clone() *TestWorkflowStepResult {
 	}
 }
 
-func (r *TestWorkflowStepResult) Merge(next TestWorkflowStepResult) {
-	if next.ErrorMessage != "" {
-		r.ErrorMessage = next.ErrorMessage
-	}
-	if next.Status != nil {
-		r.Status = next.Status
-	}
-	if next.ExitCode != 0 && (r.ExitCode == 0 || r.ExitCode == -1) {
-		r.ExitCode = next.ExitCode
-	}
-	if !next.QueuedAt.IsZero() {
-		r.QueuedAt = next.QueuedAt
-	}
-	if !next.StartedAt.IsZero() {
-		r.StartedAt = next.StartedAt
-	}
-	if !next.FinishedAt.IsZero() {
-		r.FinishedAt = next.FinishedAt
-	}
+func (r *TestWorkflowStepResult) Finished() bool {
+	return r.Status.Finished()
+}
+
+func (r *TestWorkflowStepResult) Aborted() bool {
+	return r.Status.Aborted()
+}
+
+func (r *TestWorkflowStepResult) Skipped() bool {
+	return r.Status.Skipped()
+}
+
+func (r *TestWorkflowStepResult) NotStarted() bool {
+	return r.Status.NotStarted()
 }

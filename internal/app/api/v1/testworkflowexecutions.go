@@ -224,14 +224,8 @@ func (s *TestkubeAPI) AbortTestWorkflowExecutionHandler() fiber.Handler {
 			return s.BadRequest(c, errPrefix, "checking execution", errors.New("execution already finished"))
 		}
 
-		// Obtain the controller
-		ctrl, err := testworkflowcontroller.New(ctx, s.Clientset, execution.GetNamespace(s.Namespace), execution.Id, execution.ScheduledAt)
-		if err != nil {
-			return s.BadRequest(c, errPrefix, "fetching job", err)
-		}
-
-		// Abort the execution
-		err = ctrl.Abort(ctx)
+		// Abort the Test Workflow
+		err = testworkflowcontroller.Abort(ctx, s.Clientset, execution.GetNamespace(s.Namespace), execution.Id)
 		if err != nil {
 			return s.ClientError(c, "aborting test workflow execution", err)
 		}
