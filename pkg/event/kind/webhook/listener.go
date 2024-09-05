@@ -176,9 +176,11 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 
 		_, err = body.Write(data)
 	} else {
+		// clean envs if not requested explicitly by payload template
+		event.Envs = nil
 		err = json.NewEncoder(body).Encode(event)
 		if err == nil && l.payloadObjectField != "" {
-			data := map[string]string{l.payloadObjectField: string(body.Bytes())}
+			data := map[string]string{l.payloadObjectField: body.String()}
 			body.Reset()
 			err = json.NewEncoder(body).Encode(data)
 		}
