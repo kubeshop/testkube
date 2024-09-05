@@ -216,13 +216,14 @@ func printResultDifference(res1 *testkube.TestWorkflowResult, res2 *testkube.Tes
 	return changed
 }
 
+// getTimestampLength returns length of timestamp in the line if timestamp is valid RFC timestamp.
 func getTimestampLength(line string) int {
 	// 29th character will be either '+' for +00:00 timestamp,
 	// or 'Z' for UTC timestamp (without 00:00 section).
-	if len(line) >= 29 && line[29] == '+' {
+	if len(line) >= 29 && (line[29] == '+' || line[29] == 'Z') {
 		return len(time.RFC3339Nano)
 	}
-	return LogTimestampLength
+	return 0
 }
 
 func watchTestWorkflowLogs(id string, signature []testkube.TestWorkflowSignature, client apiclientv1.Client) (*testkube.TestWorkflowResult, error) {
