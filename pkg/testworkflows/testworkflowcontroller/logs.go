@@ -84,6 +84,11 @@ func getContainerLogsStream(ctx context.Context, clientSet kubernetes.Interface,
 	for {
 		stream, err = req.Stream(ctx)
 		if err != nil {
+			// There may be problems with Kubernetes cluster - retry then
+			if strings.Contains(err.Error(), "connection lost") {
+				time.Sleep(300 * time.Millisecond)
+				continue
+			}
 			// The container is not necessarily already started when Started event is received
 			if !strings.Contains(err.Error(), "is waiting to start") {
 				return nil, err
