@@ -1,0 +1,14 @@
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: tw-suite-small-smoke-cron-trigger
+  labels:
+    core-tests: workflows
+spec:
+  steps:
+  - execute:
+      workflows:
+      - name: tw-suite-small-smoke
+  events:
+  - cronjob:
+      cron: "0,20,40 * * * *" # every 20 minutes

@@ -7,6 +7,7 @@ metadata:
 spec:
   steps:
   - execute:
+      parallelism: 2
       workflows:
       - name: cypress-workflow-smoke-13
       - name: cypress-workflow-smoke-13-video-recording-enabled

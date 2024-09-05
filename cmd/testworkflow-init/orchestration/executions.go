@@ -1,6 +1,7 @@
 package orchestration
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -166,7 +167,8 @@ func (e *execution) Run() (*executionResult, error) {
 	}
 
 	// Initialize local state
-	var exitCode uint8
+	var exitCode int
+	var exitDetails string
 	var aborted bool
 
 	// Run the command
@@ -174,11 +176,22 @@ func (e *execution) Run() (*executionResult, error) {
 	if err == nil {
 		e.group.pauseMu.Unlock()
 		e.cmdMu.Unlock()
-		aborted, exitCode = getProcessStatus(e.cmd.Wait())
+		aborted, exitDetails, exitCode = getProcessStatus(e.cmd.Wait())
+		if exitCode < 0 {
+			exitCode = 255
+			// Handle edge case, when i.e. EPIPE happened
+			if !aborted {
+				aborted = true
+				e.cmd.Stderr.Write([]byte(fmt.Sprintf("\nThe process has been corrupted: %s\nIt may be caused by lack of resources on node (i.e. memory or disk space), or external issues.\n", exitDetails)))
+			}
+		}
 	} else {
 		e.group.pauseMu.Unlock()
 		e.cmdMu.Unlock()
-		aborted, exitCode = getProcessStatus(err)
+		aborted, _, exitCode = getProcessStatus(err)
+		if exitCode < 0 {
+			exitCode = 255
+		}
 		e.cmd.Stderr.Write(append([]byte(err.Error()), '\n'))
 	}
 
@@ -198,18 +211,19 @@ func (e *execution) Run() (*executionResult, error) {
 		return &executionResult{Aborted: true, ExitCode: data.CodeAborted}, nil
 	}
 
-	return &executionResult{ExitCode: exitCode}, nil
+	return &executionResult{ExitCode: uint8(exitCode)}, nil
 }
 
-func getProcessStatus(err error) (bool, uint8) {
+func getProcessStatus(err error) (bool, string, int) {
 	if err == nil {
-		return false, 0
+		return false, "", 0
 	}
 	if e, ok := err.(*exec.ExitError); ok {
 		if e.ProcessState != nil {
-			return e.ProcessState.String() == "signal: killed", uint8(e.ProcessState.ExitCode())
+			details := e.ProcessState.String()
+			return details == "signal: killed", details, e.ProcessState.ExitCode()
 		}
-		return false, 1
+		return false, "", 1
 	}
-	return false, 1
+	return false, "", 1
 }

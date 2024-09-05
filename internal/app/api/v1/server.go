@@ -412,6 +412,7 @@ func (s *TestkubeAPI) InitRoutes() {
 	testWorkflows.Delete("/:id", s.DeleteTestWorkflowHandler())
 	testWorkflows.Get("/:id/executions", s.ListTestWorkflowExecutionsHandler())
 	testWorkflows.Post("/:id/executions", s.ExecuteTestWorkflowHandler())
+	testWorkflows.Get("/:id/tags", s.ListTagsHandler())
 	testWorkflows.Get("/:id/metrics", s.GetTestWorkflowMetricsHandler())
 	testWorkflows.Get("/:id/executions/:executionID", s.GetTestWorkflowExecutionHandler())
 	testWorkflows.Post("/:id/abort", s.AbortAllTestWorkflowExecutionsHandler())
@@ -436,6 +437,7 @@ func (s *TestkubeAPI) InitRoutes() {
 	testWorkflowWithExecutions := root.Group("/test-workflow-with-executions")
 	testWorkflowWithExecutions.Get("/", s.ListTestWorkflowWithExecutionsHandler())
 	testWorkflowWithExecutions.Get("/:id", s.GetTestWorkflowWithExecutionHandler())
+	testWorkflowWithExecutions.Get("/:id/tags", s.ListTagsHandler())
 
 	root.Post("/preview-test-workflow", s.PreviewTestWorkflowHandler())
 

@@ -425,11 +425,13 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	jobSpec.Annotations = jobAnnotations
 
 	// Build running instructions
+	sigSerialized, _ := json.Marshal(sig)
 	actionGroupsSerialized, _ := json.Marshal(actionGroups)
 	podAnnotations := make(map[string]string)
 	maps.Copy(podAnnotations, jobSpec.Spec.Template.Annotations)
 	maps.Copy(podAnnotations, map[string]string{
-		constants.SpecAnnotationName: string(actionGroupsSerialized),
+		constants.SignatureAnnotationName: string(sigSerialized),
+		constants.SpecAnnotationName:      string(actionGroupsSerialized),
 	})
 	jobSpec.Spec.Template.Annotations = podAnnotations
 

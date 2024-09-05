@@ -508,9 +508,14 @@ func (r *MongoRepository) GetNextExecutionNumber(ctx context.Context, name strin
 	return r.sequenceRepository.GetNextExecutionNumber(ctx, name, sequence.ExecutionTypeTestWorkflow)
 }
 
-func (r *MongoRepository) GetExecutionTags(ctx context.Context) (tags map[string][]string, err error) {
+func (r *MongoRepository) GetExecutionTags(ctx context.Context, testWorkflowName string) (tags map[string][]string, err error) {
+	query := bson.M{"tags": bson.M{"$exists": true}}
+	if testWorkflowName != "" {
+		query["workflow.name"] = testWorkflowName
+	}
+
 	pipeline := []bson.M{
-		{"$match": bson.M{"tags": bson.M{"$exists": true}}},
+		{"$match": query},
 		{"$project": bson.M{
 			"tags": 1,
 		}},
