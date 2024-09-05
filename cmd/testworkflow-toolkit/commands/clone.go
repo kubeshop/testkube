@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/kballard/go-shellquote"
 	"github.com/otiai10/copy"
@@ -14,6 +15,11 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/ui"
+)
+
+const (
+	CloneRetryOnFailureMaxAttempts = 5
+	CloneRetryOnFailureBaseDelay   = 100 * time.Millisecond
 )
 
 var (
@@ -97,19 +103,19 @@ func NewCloneCmd() *cobra.Command {
 			if len(paths) == 0 {
 				ui.Debug("full checkout")
 				if revision == "" {
-					err = Run("git", "clone", configArgs, authArgs, "--depth", 1, "--verbose", uri.String(), outputPath)
+					err = RunWithRetry(CloneRetryOnFailureMaxAttempts, CloneRetryOnFailureBaseDelay, "git", "clone", configArgs, authArgs, "--depth", 1, "--verbose", uri.String(), outputPath)
 				} else {
-					err = Run("git", "clone", configArgs, authArgs, "--depth", 1, "--branch", revision, "--verbose", uri.String(), outputPath)
+					err = RunWithRetry(CloneRetryOnFailureMaxAttempts, CloneRetryOnFailureBaseDelay, "git", "clone", configArgs, authArgs, "--depth", 1, "--branch", revision, "--verbose", uri.String(), outputPath)
 				}
 				ui.ExitOnError("cloning repository", err)
 			} else {
 				ui.Debug("sparse checkout")
-				err = Run("git", "clone", configArgs, authArgs, "--filter=blob:none", "--no-checkout", "--sparse", "--depth", 1, "--verbose", uri.String(), outputPath)
+				err = RunWithRetry(CloneRetryOnFailureMaxAttempts, CloneRetryOnFailureBaseDelay, "git", "clone", configArgs, authArgs, "--filter=blob:none", "--no-checkout", "--sparse", "--depth", 1, "--verbose", uri.String(), outputPath)
 				ui.ExitOnError("cloning repository", err)
-				err = Run("git", "-C", outputPath, configArgs, "sparse-checkout", "set", "--no-cone", paths)
+				err = RunWithRetry(CloneRetryOnFailureMaxAttempts, CloneRetryOnFailureBaseDelay, "git", "-C", outputPath, configArgs, "sparse-checkout", "set", "--no-cone", paths)
 				ui.ExitOnError("sparse checkout repository", err)
 				if revision != "" {
-					err = Run("git", "-C", outputPath, configArgs, "fetch", authArgs, "--depth", 1, "origin", revision)
+					err = RunWithRetry(CloneRetryOnFailureMaxAttempts, CloneRetryOnFailureBaseDelay, "git", "-C", outputPath, configArgs, "fetch", authArgs, "--depth", 1, "origin", revision)
 					ui.ExitOnError("fetching revision", err)
 					err = Run("git", "-C", outputPath, configArgs, "checkout", "FETCH_HEAD")
 					ui.ExitOnError("checking out head", err)
