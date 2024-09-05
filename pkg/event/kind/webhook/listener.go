@@ -116,6 +116,10 @@ func (l *WebhookListener) Disabled() bool {
 }
 
 func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventResult) {
+
+	// load global envs to be able to use them in templates
+	event.Envs = l.envs
+
 	defer func() {
 		var eventType, res string
 		if event.Type_ != nil {
