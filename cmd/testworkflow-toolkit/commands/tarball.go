@@ -57,7 +57,7 @@ func NewTarballCmd() *cobra.Command {
 						os.Exit(1)
 					}
 					attempt++
-					fmt.Printf("Retrying - attempt %d/%d.\n", attempt, TarballRetryMaxAttempts)
+					fmt.Printf("retrying - attempt %d/%d.\n", attempt, TarballRetryMaxAttempts)
 				}
 			}
 		},
