@@ -129,6 +129,10 @@ func persistState(filePath string) {
 	}
 }
 
+var (
+	prevTerminationLog []string
+)
+
 func persistTerminationLog() {
 	// Read the state
 	s := GetState()
@@ -155,6 +159,12 @@ func persistTerminationLog() {
 		}
 	}
 
+	// Avoid using FS when it is not necessary
+	if slices.Equal(prevTerminationLog, statuses) {
+		return
+	}
+	prevTerminationLog = statuses
+
 	// Write the termination log
 	err := os.WriteFile(TerminationLogPath, []byte(strings.Join(statuses, "/")), 0)
 	if err != nil {
@@ -173,6 +183,10 @@ func GetState() *state {
 		loadedState = true
 	}
 	return currentState
+}
+
+func SaveTerminationLog() {
+	persistTerminationLog()
 }
 
 func SaveState() {
