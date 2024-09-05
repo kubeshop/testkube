@@ -9,11 +9,8 @@ import (
 
 	"github.com/gookit/color"
 
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/internal/common"
-)
-
-const (
-	InitStepRef = "tktw-init"
 )
 
 func (r *TestWorkflowResult) IsFinished() bool {
@@ -155,7 +152,7 @@ func (r *TestWorkflowResult) IsAnyStepPaused() bool {
 }
 
 func (r *TestWorkflowResult) IsKnownStep(ref string) bool {
-	if ref == InitStepRef {
+	if ref == data.InitStepName {
 		return true
 	}
 	_, ok := r.Steps[ref]
@@ -475,7 +472,7 @@ func (r *TestWorkflowResult) HealAborted(sigSequence []TestWorkflowSignature, er
 	// Check all the executable steps in the sequence
 	for i := range sigSequence {
 		ref := sigSequence[i].Ref
-		if ref == InitStepRef || !r.IsKnownStep(ref) || len(sigSequence[i].Children) > 0 {
+		if ref == data.InitStepName || !r.IsKnownStep(ref) || len(sigSequence[i].Children) > 0 {
 			continue
 		}
 		step := r.Steps[ref]
@@ -500,7 +497,7 @@ func (r *TestWorkflowResult) HealAborted(sigSequence []TestWorkflowSignature, er
 	// Do it from end, so we can handle nested groups
 	for i := len(sigSequence) - 1; i >= 0; i-- {
 		ref := sigSequence[i].Ref
-		if ref == InitStepRef || !r.IsKnownStep(ref) || len(sigSequence[i].Children) == 0 {
+		if ref == data.InitStepName || !r.IsKnownStep(ref) || len(sigSequence[i].Children) == 0 {
 			continue
 		}
 		step := r.Steps[ref]

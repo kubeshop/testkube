@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -18,7 +19,6 @@ import (
 
 const (
 	DefaultErrorMessage = "Job has been aborted"
-	InitStepRef         = "tktw-init"
 )
 
 // Not thread-safe, should be used synchronously
@@ -75,7 +75,7 @@ func (n *notifier) Raw(ref string, ts time.Time, message string, temporary bool)
 		n.lastTs = ts
 	}
 	if message != "" {
-		if ref == InitContainerName {
+		if ref == data.InitStepName {
 			ref = ""
 		}
 		n.send(Notification{
@@ -107,7 +107,7 @@ func (n *notifier) Event(ref string, ts time.Time, level, reason, message string
 }
 
 func (n *notifier) Output(ref string, ts time.Time, output *instructions.Instruction) {
-	if ref == InitContainerName {
+	if ref == data.InitStepName {
 		ref = ""
 	} else if ref != "" {
 		if _, ok := n.result.Steps[ref]; !ok {
@@ -169,7 +169,7 @@ func (n *notifier) Instruction(ts time.Time, hint instructions.Instruction) {
 	ts = ts.UTC()
 
 	// Load the current step information
-	init := hint.Ref == InitStepRef
+	init := hint.Ref == data.InitStepName
 	step, ok := n.result.Steps[hint.Ref]
 	if init {
 		step = *n.result.Initialization
@@ -322,7 +322,7 @@ func (n *notifier) fillGaps(force bool) {
 
 		// TODO: estimate startedAt/finishedAt too?
 
-		if ref == InitStepRef {
+		if ref == data.InitStepName {
 			n.result.Initialization.Status = common.Ptr(container.Statuses[refIndexes[ref]].Status)
 			n.result.Initialization.ExitCode = float64(container.Statuses[refIndexes[ref]].ExitCode)
 		} else {

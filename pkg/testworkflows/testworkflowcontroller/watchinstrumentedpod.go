@@ -9,14 +9,13 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller/watchers"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
 
 const (
-	InitContainerName = "tktw-init"
-
 	ForceFinalizationDelay = 30 * time.Second
 )
 
@@ -101,7 +100,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 		initialRefs := make([]string, len(actions))
 		for i := range refs {
 			for j := range refs[i] {
-				if refs[i][j] == InitContainerName {
+				if refs[i][j] == data.InitStepName {
 					initialRefs[i] = ""
 					break
 				}
@@ -115,7 +114,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 		}
 
 		// Iterate over containers
-		lastStarted := InitContainerName
+		lastStarted := data.InitStepName
 		for containerIndex := 0; containerIndex < len(refs); containerIndex++ {
 			aborted := false
 			container := fmt.Sprintf("%d", containerIndex+1)

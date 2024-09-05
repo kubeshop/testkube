@@ -23,7 +23,6 @@ import (
 const (
 	defaultListTimeoutSeconds  = int64(240)
 	defaultWatchTimeoutSeconds = int64(365 * 24 * 3600)
-	InitStepRef                = "tktw-init"
 )
 
 var (
@@ -393,8 +392,8 @@ func ExtractRefsFromActionList(list actiontypes.ActionList) (started []string, f
 	for i := range list {
 		switch list[i].Type() {
 		case lite.ActionTypeSetup:
-			started = append(started, InitStepRef)
-			finished = append(finished, InitStepRef)
+			started = append(started, data.InitStepName)
+			finished = append(finished, data.InitStepName)
 		case lite.ActionTypeStart:
 			started = append(started, *list[i].Start)
 		case lite.ActionTypeEnd:
