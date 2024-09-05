@@ -358,7 +358,7 @@ func (e *executionState) JobExecutionError() string {
 		if message == "" {
 			return reason
 		}
-		return fmt.Sprintf("(%s) %s", reason, message)
+		return fmt.Sprintf("%s: %s", reason, message)
 	}
 
 	return ""
@@ -376,7 +376,7 @@ func (e *executionState) PodExecutionError() string {
 		if message == "" {
 			return reason
 		}
-		return fmt.Sprintf("(%s) %s", reason, message)
+		return fmt.Sprintf("%s: %s", reason, message)
 	}
 
 	if errorStr == "Error" {
@@ -389,10 +389,10 @@ func (e *executionState) PodExecutionError() string {
 func (e *executionState) ExecutionError() string {
 	podErr := e.PodExecutionError()
 	jobErr := e.JobExecutionError()
-	if podErr == "" && jobErr == "BackoffLimitExceeded" {
+	if podErr == "" && strings.HasPrefix(jobErr, "BackoffLimitExceeded") {
 		return "Fatal Error"
 	}
-	if podErr == "" || (podErr == "Fatal Error" && jobErr != "" && jobErr != "BackoffLimitExceeded") {
+	if podErr == "" || (podErr == "Fatal Error" && jobErr != "" && !strings.HasPrefix(jobErr, "BackoffLimitExceeded")) {
 		return jobErr
 	}
 	return podErr
