@@ -45,6 +45,7 @@ func (DebugTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 func proxyPass(res http.ResponseWriter, req *http.Request) {
 	fmt.Printf("\n-------------\n")
 	body, _ := io.ReadAll(req.Body)
+	req.Body.Close()
 	fmt.Printf("%s\n", body)
 
 	prefix := fmt.Sprintf("/api/v1/namespaces/%s/services/testkube-api-server:%d/proxy", *namespace, *apiPort)

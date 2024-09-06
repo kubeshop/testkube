@@ -35,6 +35,7 @@ func (c RESTClient[T]) List() ([]T, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 
 	var orgsResponse ListResponse[T]
 	err = json.NewDecoder(resp.Body).Decode(&orgsResponse)
@@ -52,6 +53,7 @@ func (c RESTClient[T]) Get(id string) (e T, err error) {
 	if err != nil {
 		return e, err
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode > 299 {
 		d, err := io.ReadAll(resp.Body)
@@ -87,6 +89,7 @@ func (c RESTClient[T]) Create(entity T, overridePath ...string) (e T, err error)
 	if err != nil {
 		return e, err
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode > 299 {
 		d, err := io.ReadAll(resp.Body)

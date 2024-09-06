@@ -23,7 +23,7 @@ func (c *ArtifactClient) ListFiles(ctx context.Context, executionId, testName, t
 }
 
 // DownloadFile downloads file from bucket from the config
-func (c *ArtifactClient) DownloadFile(ctx context.Context, file, executionId, testName, testSuiteName, testWorkflowName string) (io.Reader, error) {
+func (c *ArtifactClient) DownloadFile(ctx context.Context, file, executionId, testName, testSuiteName, testWorkflowName string) (io.ReadCloser, error) {
 	return c.client.DownloadFile(ctx, executionId, file)
 }
 

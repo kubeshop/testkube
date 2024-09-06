@@ -79,9 +79,7 @@ func WriteTarball(stream io.Writer, dirPath string, files []string) error {
 	return err
 }
 
-func UnpackTarball(dirPath string, stream io.ReadCloser) error {
-	defer stream.Close()
-
+func UnpackTarball(dirPath string, stream io.Reader) error {
 	// Process the files
 	uncompressedStream, err := gzip.NewReader(stream)
 	if err != nil {
