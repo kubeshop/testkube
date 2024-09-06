@@ -51,7 +51,6 @@ func (ag *Agent) Metadata() map[string]string {
 
 func (ag *Agent) Notify(event testkube.Event) (result testkube.EventResult) {
 	event.ClusterName = ag.clusterName
-	event.Envs = ag.envs
 	// Non blocking send
 	select {
 	case ag.events <- event:

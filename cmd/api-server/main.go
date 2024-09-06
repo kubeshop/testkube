@@ -403,7 +403,7 @@ func main() {
 		eventBus.TraceEvents()
 	}
 
-	eventsEmitter := event.NewEmitter(eventBus, cfg.TestkubeClusterName, envs)
+	eventsEmitter := event.NewEmitter(eventBus, cfg.TestkubeClusterName)
 
 	var logsStream logsclient.Stream
 
@@ -643,6 +643,7 @@ func main() {
 		logGrpcClient,
 		subscriptionChecker,
 		serviceAccountNames,
+		envs,
 	)
 
 	if mode == common.ModeAgent {
