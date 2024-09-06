@@ -327,7 +327,7 @@ spec:
   steps:
   - name: Run tests
     parallel:
-      maxCount: 3
+      maxCount: 2
       shards:
         testFiles: 'glob("cypress/e2e/**/*.js")'
       description: '{{ join(map(shard.testFiles, "relpath(_.value, \"cypress/e2e\")"), ", ") }}'
