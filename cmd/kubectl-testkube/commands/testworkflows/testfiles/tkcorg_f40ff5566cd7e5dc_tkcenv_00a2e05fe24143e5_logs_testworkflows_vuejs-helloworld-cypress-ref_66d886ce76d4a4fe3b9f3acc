@@ -1,0 +1,106 @@
+2024-09-04T16:11:59.795602620Z Creating state... done
+2024-09-04T16:11:59.795972926Z Initializing state... done
+2024-09-04T16:11:59.807253202Z Configuring init process... done
+2024-09-04T16:11:59.857925791Z Configuring toolkit... done
+2024-09-04T16:11:59.869914377Z Configuring shell... done
+
+rlrt2h0start
+2024-09-04T16:11:59.907990370Z Cloning into '/.tktw/tmp/repo'...
+2024-09-04T16:12:00.966598849Z warning: redirecting to https://gitlab.com/mobivia/driverservices/digital-analytics/acceptance-tests-helloworld.git/
+2024-09-04T16:12:00.966791552Z POST git-upload-pack (175 bytes)
+2024-09-04T16:12:01.378704464Z POST git-upload-pack (264 bytes)
+2024-09-04T16:12:03.470302624Z warning: redirecting to https://gitlab.com/mobivia/driverservices/digital-analytics/acceptance-tests-helloworld.git/
+2024-09-04T16:12:04.174558387Z From https://gitlab.com/mobivia/driverservices/digital-analytics/acceptance-tests-helloworld
+2024-09-04T16:12:04.174591387Z  * branch            main       -> FETCH_HEAD
+2024-09-04T16:12:05.216729010Z warning: redirecting to https://gitlab.com/mobivia/driverservices/digital-analytics/acceptance-tests-helloworld.git/
+2024-09-04T16:12:05.722868504Z HEAD is now at fca4067 fix: url vue3
+2024-09-04T16:12:05.739329261Z Switched to and reset branch 'main'
+2024-09-04T16:12:05.739654766Z Your branch is up to date with 'origin/main'.
+2024-09-04T16:12:05.739973571Z Moving the contents to /data/repo...
+
+rdm5f70start
+2024-09-04T16:12:10.257608620Z npm warn deprecated mkdirp@0.5.4: Legacy versions of mkdirp are no longer supported. Please update to mkdirp 1.x. (Note that the API surface has changed to use Promises in 1.x.)
+2024-09-04T16:12:10.348509839Z npm warn deprecated debug@3.2.6: Debug versions >=3.2.0 <3.2.7 || >=4 <4.3.1 have a low-severity ReDos regression when used in a Node.js environment. It is recommended you upgrade to 3.2.7 or 4.3.1. (https://github.com/visionmedia/debug/issues/797)
+2024-09-04T16:12:10.513200811Z npm warn deprecated uuid@3.4.0: Please upgrade  to version 7 or higher.  Older versions may use Math.random() in certain circumstances, which is known to be problematic.  See https://v8.dev/blog/math-random for details.
+
+2024-09-04T16:12:21.740248495Z added 447 packages, and audited 448 packages in 15s
+
+2024-09-04T16:12:21.740256595Z 93 packages are looking for funding
+2024-09-04T16:12:21.740260095Z   run `npm fund` for details
+
+2024-09-04T16:12:21.751484669Z 14 vulnerabilities (2 low, 4 moderate, 5 high, 3 critical)
+
+2024-09-04T16:12:21.751492569Z To address issues that do not require attention, run:
+2024-09-04T16:12:21.751495470Z   npm audit fix
+
+2024-09-04T16:12:21.751501770Z To address all issues (including breaking changes), run:
+2024-09-04T16:12:21.751505070Z   npm audit fix --force
+
+2024-09-04T16:12:21.751511070Z Run `npm audit` for details.
+
+rpnlcb0start
+2024-09-04T16:12:24.122975690Z [STARTED] Task without title.
+2024-09-04T16:12:25.628510166Z [SUCCESS] Task without title.
+2024-09-04T16:12:26.426638558Z [196:0904/181226.426151:ERROR:zygote_host_impl_linux.cc(263)] Failed to adjust OOM score of renderer with pid 350: Permission denied (13)
+2024-09-04T16:12:26.446563267Z libva error: vaGetDriverNameByIndex() failed with unknown libva error, driver_name = (null)
+
+2024-09-04T16:12:26.475579618Z DevTools listening on ws://127.0.0.1:37349/devtools/browser/37b3ba9b-2052-4e83-b459-5b678461bbf0
+2024-09-04T16:12:26.479198274Z [350:0904/181226.478660:ERROR:gpu_memory_buffer_support_x11.cc(44)] dri3 extension not supported.
+2024-09-04T16:12:28.733213971Z [33mCypress could not verify that this server is running:[39m
+2024-09-04T16:12:28.733254671Z [33m[39m
+2024-09-04T16:12:28.733260171Z [33m[90m  > [33m[94mhttp://vuejs-helloworld-chore-test-chart.aks-dev-app-northeurope-02--digipaas-sandbox.svc.cluster.local[33m[39m
+2024-09-04T16:12:28.733264071Z [33m[39m
+2024-09-04T16:12:28.733268072Z [33mWe are verifying this server because it has been configured as your [33mbaseUrl[33m.[39m
+2024-09-04T16:12:28.733271972Z [33m[39m
+2024-09-04T16:12:28.733276472Z [33mCypress automatically waits until your server is accessible before running tests.[39m
+2024-09-04T16:12:28.733280572Z [33m[39m
+2024-09-04T16:12:28.733284772Z [33m[90mWe will try connecting to it 3 more times...[33m[39m
+2024-09-04T16:12:31.916838009Z [33m[90mWe will try connecting to it 2 more times...[33m[39m
+2024-09-04T16:12:35.037053332Z [33m[90mWe will try connecting to it 1 more time...[33m[39m
+2024-09-04T16:12:35.037091233Z [33m[90m[33m[39m
+2024-09-04T16:12:39.235596190Z [31mCypress failed to verify that your server is running.[39m
+2024-09-04T16:12:39.235636291Z [31m[39m
+2024-09-04T16:12:39.235642291Z [31mPlease start this server and then run Cypress again.[39m
+
+rcl4v60start
+2024-09-04T16:12:40.957851794Z Root: [96m/data/repo[0m
+2024-09-04T16:12:40.957873795Z Patterns:
+2024-09-04T16:12:40.957878295Z - [95m/data/repo/cypress/results/**/*[0m
+
+2024-09-04T16:12:40.958021097Z {"level":"info","ts":"2024-09-04T16:12:40Z","caller":"agent/agent.go:85","msg":"initiating connection with control plane","userAgent":"2.1.7/7d8758fc4cad10973190e659b5a88c0a9fc08c30","server":"agent.norauto.testkube.io:443","insecure":false,"skipVerify":false,"certFile":"","keyFile":"","caFile":""}
+
+2024-09-04T16:12:41.517832279Z No artifacts found.
+2024-09-04T16:12:41.517922581Z Took 0s.
+
+rtdmvx0start
+2024-09-04T16:12:41.669854210Z node:fs:1507
+2024-09-04T16:12:41.669876010Z   const result = binding.readdir(
+2024-09-04T16:12:41.669880310Z                          ^
+
+2024-09-04T16:12:41.669886910Z Error: ENOENT: no such file or directory, scandir 'html-report/input/cucumber-report.json'
+2024-09-04T16:12:41.669890710Z     at Object.readdirSync (node:fs:1507:26)
+2024-09-04T16:12:41.669894011Z     at isValidJsonFile (/data/repo/node_modules/cucumber-html-reporter/lib/reporter.js:536:44)
+2024-09-04T16:12:41.669897111Z     at Object.generate (/data/repo/node_modules/cucumber-html-reporter/lib/reporter.js:573:7)
+2024-09-04T16:12:41.669901111Z     at Object.generateReport [as generate] (/data/repo/node_modules/cucumber-html-reporter/index.js:30:19)
+2024-09-04T16:12:41.669904611Z     at file:///data/repo/html-report/cucumber-html-report.js:17:10
+2024-09-04T16:12:41.669907611Z     at ModuleJob.run (node:internal/modules/esm/module_job:234:25)
+2024-09-04T16:12:41.669910811Z     at async ModuleLoader.import (node:internal/modules/esm/loader:473:24)
+2024-09-04T16:12:41.669913811Z     at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:123:5) {
+2024-09-04T16:12:41.669917011Z   errno: -2,
+2024-09-04T16:12:41.669920311Z   code: 'ENOENT',
+2024-09-04T16:12:41.669923211Z   syscall: 'scandir',
+2024-09-04T16:12:41.669926411Z   path: 'html-report/input/cucumber-report.json'
+2024-09-04T16:12:41.669929411Z }
+
+2024-09-04T16:12:41.669935211Z Node.js v20.17.0
+
+rcl76h0start
+2024-09-04T16:12:41.715088803Z Root: [96m/data/repo[0m
+2024-09-04T16:12:41.715114204Z Patterns:
+2024-09-04T16:12:41.715119004Z - [95m/data/repo/html-report/output/report.html[0m
+
+2024-09-04T16:12:41.715852115Z {"level":"info","ts":"2024-09-04T16:12:41Z","caller":"agent/agent.go:85","msg":"initiating connection with control plane","userAgent":"2.1.7/7d8758fc4cad10973190e659b5a88c0a9fc08c30","server":"agent.norauto.testkube.io:443","insecure":false,"skipVerify":false,"certFile":"","keyFile":"","caFile":""}
+2024-09-04T16:12:42.136273061Z Warning: '/data/repo/html-report/output/report.html' ignored from scraping: stat data/repo/html-report/output/report.html: no such file or directory
+
+2024-09-04T16:12:42.136351662Z No artifacts found.
+2024-09-04T16:12:42.136356762Z Took 0s.

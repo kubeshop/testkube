@@ -1,6 +1,7 @@
 package testworkflows
 
 import (
+	"bufio"
 	"bytes"
 	"errors"
 	"fmt"
@@ -284,23 +285,22 @@ func printStatus(s testkube.TestWorkflowSignature, rStatus testkube.TestWorkflow
 	}
 }
 
-func printStructuredLogLines(logs string, isLineBeginning *bool) {
-	// Strip timestamp + space for all new lines in the log
-	for len(logs) > 0 {
-		if *isLineBeginning {
-			logs = logs[getTimestampLength(logs)+1:]
-			*isLineBeginning = false
+// if format is any RFC based timestamp
+// locate next space after timestamp and trim
+func trimTimestamp(line string) string {
+	if strings.Index(line, "T") == 10 {
+		idx := strings.Index(line, " ")
+		if len(line) >= idx {
+			return line[idx:]
 		}
+	}
+	return line
+}
 
-		newLineIndex := strings.Index(logs, "\n")
-		if newLineIndex == -1 {
-			fmt.Print(logs)
-			break
-		} else {
-			fmt.Print(logs[0 : newLineIndex+1])
-			logs = logs[newLineIndex+1:]
-			*isLineBeginning = true
-		}
+func printStructuredLogLines(logs string, _ *bool) {
+	scanner := bufio.NewScanner(strings.NewReader(logs))
+	for scanner.Scan() {
+		fmt.Println(trimTimestamp(scanner.Text()))
 	}
 }
 
@@ -320,9 +320,7 @@ func printRawLogLines(logs []byte, steps []testkube.TestWorkflowSignature, resul
 			logs = logs[newLineIndex+1:]
 		}
 
-		if len(line) >= LogTimestampLength-1 {
-			line = line[getTimestampLength(line)+1:]
-		}
+		line = trimTimestamp(line)
 
 		start := instructions.StartHintRe.FindStringSubmatch(line)
 		if len(start) == 0 {
