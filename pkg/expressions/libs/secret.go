@@ -2,6 +2,7 @@ package libs
 
 import (
 	"fmt"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 
@@ -17,7 +18,14 @@ func NewSecretMachine(mapEnvs map[string]corev1.EnvVarSource) expressions.Machin
 
 			secretName, _ := values[0].StringValue()
 			keyName, _ := values[1].StringValue()
-			envName := fmt.Sprintf("S_N_%s_K_%s", secretName, keyName)
+			escapedSecretName := strings.ReplaceAll(secretName, "-", "_")
+			escapedKeyName := keyName
+			i := 0
+			for strings.Contains(escapedKeyName, "-") {
+				escapedKeyName = strings.Replace(escapedKeyName, "-", fmt.Sprintf("_%d_", i), 1)
+			}
+
+			envName := fmt.Sprintf("S_N_%s_K_%s", escapedSecretName, escapedKeyName)
 			mapEnvs[envName] = corev1.EnvVarSource{
 				SecretKeyRef: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
