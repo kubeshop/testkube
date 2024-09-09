@@ -241,7 +241,7 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 
 	if resp.StatusCode >= 400 {
 		err := fmt.Errorf("webhook response with bad status code: %d", resp.StatusCode)
-		log.Errorw("webhook send error", "error", err, "status", resp.StatusCode)
+		log.Errorw("webhook send error", "error", err, "status", resp.StatusCode, "response", responseStr)
 		result = testkube.NewFailedEventResult(event.Id, err).WithResult(responseStr)
 		return
 	}
