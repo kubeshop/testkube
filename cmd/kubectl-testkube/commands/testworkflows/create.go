@@ -1,6 +1,8 @@
 package testworkflows
 
 import (
+	"errors"
+	"fmt"
 	"io"
 	"os"
 
@@ -63,8 +65,13 @@ func NewCreateTestWorkflowCmd() *cobra.Command {
 
 			workflow, err := client.GetTestWorkflow(obj.Name)
 			if err != nil {
+				for _, e := range UnwrapAll(err) {
+					fmt.Printf("%T\n", e)
+				}
+
 				if update {
-					ui.ExitOnError("getting test workflow "+obj.Name+" in namespace "+obj.Namespace, err)
+					// allow to `create --update` if test workflow does not exist
+					ui.WarnOnError("getting test workflow "+obj.Name+" in namespace "+obj.Namespace, err)
 				} else {
 					ui.Debug("getting test workflow "+obj.Name+" in namespace "+obj.Namespace, err.Error())
 				}
@@ -91,4 +98,13 @@ func NewCreateTestWorkflowCmd() *cobra.Command {
 	cmd.Flags().MarkDeprecated("disable-webhooks", "disable-webhooks is deprecated")
 
 	return cmd
+}
+
+func UnwrapAll(err error) []error {
+	var allErrors []error
+	for err != nil {
+		allErrors = append(allErrors, err)
+		err = errors.Unwrap(err) // Unwrap the next error
+	}
+	return allErrors
 }
