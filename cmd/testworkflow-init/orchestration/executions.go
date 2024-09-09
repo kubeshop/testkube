@@ -182,7 +182,7 @@ func (e *execution) Run() (*executionResult, error) {
 			// Handle edge case, when i.e. EPIPE happened
 			if !aborted {
 				aborted = true
-				e.cmd.Stderr.Write([]byte(fmt.Sprintf("\nThe process has been corrupted: %s\nIt may be caused by lack of resources on node (i.e. memory or disk space), or external issues.\n", exitDetails)))
+				e.cmd.Stderr.Write([]byte(fmt.Sprintf("\nThe process has been corrupted: %s.\n", exitDetails)))
 			}
 		}
 	} else {
