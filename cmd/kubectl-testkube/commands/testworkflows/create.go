@@ -64,7 +64,8 @@ func NewCreateTestWorkflowCmd() *cobra.Command {
 			workflow, err := client.GetTestWorkflow(obj.Name)
 			if err != nil {
 				if update {
-					ui.ExitOnError("getting test workflow "+obj.Name+" in namespace "+obj.Namespace, err)
+					// allow to `create --update` if test workflow does not exist
+					ui.WarnOnError("getting test workflow "+obj.Name+" in namespace "+obj.Namespace, err)
 				} else {
 					ui.Debug("getting test workflow "+obj.Name+" in namespace "+obj.Namespace, err.Error())
 				}
