@@ -7,8 +7,6 @@ import (
 
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/util/intstr"
-
-	"github.com/kubeshop/testkube/pkg/log"
 )
 
 var ErrWalkStop = errors.New("end walking")
@@ -215,7 +213,11 @@ func resolve(v reflect.Value, t tagData, m []Machine, force bool, finalize bool)
 				vv, _ = expr2.Static().StringValue()
 			} else {
 				vv = expr.Template()
-				log.DefaultLogger.Info("template values", vv, str)
+				if t.value == "template" && !IsTemplateStringWithoutExpressions(v.String()) {
+					if expr.Static() != nil {
+						vv, _ = expr.Static().StringValue()
+					}
+				}
 			}
 
 			changed = vv != str
