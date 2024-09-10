@@ -191,12 +191,7 @@ func resolve(v reflect.Value, t tagData, m []Machine, force bool, finalize bool)
 				vv = expr.String()
 			}
 
-			if strings.Contains(vv, "\"{{\"}}") {
-				vv = strings.ReplaceAll(vv, "\"{{\"}}", "")
-			}
-
 			changed = vv != str
-			log.DefaultLogger.Info("expression values", changed, vv, str, finalize)
 			if ptr.Kind() == reflect.String {
 				v.SetString(vv)
 			} else if ptr.Kind() == reflect.Interface {
@@ -220,14 +215,10 @@ func resolve(v reflect.Value, t tagData, m []Machine, force bool, finalize bool)
 				vv, _ = expr2.Static().StringValue()
 			} else {
 				vv = expr.Template()
-			}
-
-			if strings.Contains(vv, "\"{{\"}}") {
-				vv = strings.ReplaceAll(vv, "\"{{\"}}", "")
+				log.DefaultLogger.Info("template values", vv, str)
 			}
 
 			changed = vv != str
-			log.DefaultLogger.Infof("template values", changed, vv, str, finalize)
 			if ptr.Kind() == reflect.String {
 				v.SetString(vv)
 			} else if ptr.Kind() == reflect.Interface {
@@ -256,7 +247,6 @@ func simplify(t interface{}, tag tagData, m ...Machine) error {
 		if i > maxCallStack {
 			return fmt.Errorf("maximum call stack exceeded while simplifying struct")
 		}
-		log.DefaultLogger.Infof("test workflow %d: %v", i, t)
 		changed, err = resolve(v, tag, m, false, false)
 		i++
 	}
