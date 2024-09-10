@@ -188,7 +188,6 @@ func resolve(v reflect.Value, t tagData, m []Machine, force bool, finalize bool)
 			} else {
 				vv = expr.String()
 			}
-
 			changed = vv != str
 			if ptr.Kind() == reflect.String {
 				v.SetString(vv)
@@ -219,7 +218,6 @@ func resolve(v reflect.Value, t tagData, m []Machine, force bool, finalize bool)
 					}
 				}
 			}
-
 			changed = vv != str
 			if ptr.Kind() == reflect.String {
 				v.SetString(vv)
