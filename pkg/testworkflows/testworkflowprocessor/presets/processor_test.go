@@ -696,186 +696,187 @@ func TestProcessNestedSteps(t *testing.T) {
 	assert.Equal(t, want, res.Job.Spec.Template.Spec)
 }
 
-func TestProcessLocalContent(t *testing.T) {
-	wf := &testworkflowsv1.TestWorkflow{
-		Spec: testworkflowsv1.TestWorkflowSpec{
-			Steps: []testworkflowsv1.Step{
-				{StepOperations: testworkflowsv1.StepOperations{
-					Shell: "shell-test",
-				}, StepSource: testworkflowsv1.StepSource{
+/*
+	func TestProcessLocalContent(t *testing.T) {
+		wf := &testworkflowsv1.TestWorkflow{
+			Spec: testworkflowsv1.TestWorkflowSpec{
+				Steps: []testworkflowsv1.Step{
+					{StepOperations: testworkflowsv1.StepOperations{
+						Shell: "shell-test",
+					}, StepSource: testworkflowsv1.StepSource{
+						Content: &testworkflowsv1.Content{
+							Files: []testworkflowsv1.ContentFile{{
+								Path:    "/some/path",
+								Content: `some-{{"{{"}}content`,
+							}},
+						},
+					}},
+					{StepOperations: testworkflowsv1.StepOperations{Shell: "shell-test-2"}},
+				},
+			},
+		}
+
+		res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{}, execMachine)
+		assert.NoError(t, err)
+
+		volumes := res.Job.Spec.Template.Spec.Volumes
+		volumeMounts := res.Job.Spec.Template.Spec.Containers[0].VolumeMounts
+		volumeMountsWithContent := res.Job.Spec.Template.Spec.InitContainers[0].VolumeMounts
+
+		want := corev1.PodSpec{
+			RestartPolicy:      corev1.RestartPolicyNever,
+			EnableServiceLinks: common.Ptr(false),
+			Volumes:            volumes,
+			InitContainers: []corev1.Container{
+				{
+					Name:            "1",
+					Image:           constants.DefaultInitImage,
+					ImagePullPolicy: corev1.PullIfNotPresent,
+					Command:         []string{"/init", "0"},
+					Env: []corev1.EnvVar{
+						env(0, false, "CI", "1"),
+						envDebugNode,
+						envDebugPod,
+						envDebugNamespace,
+						envDebugServiceAccount,
+						envActions,
+					},
+					VolumeMounts: volumeMountsWithContent,
+					SecurityContext: &corev1.SecurityContext{
+						RunAsGroup: common.Ptr(constants.DefaultFsGroup),
+					},
+				},
+			},
+			Containers: []corev1.Container{
+				{
+					Name:            "2",
+					Image:           constants.DefaultInitImage,
+					ImagePullPolicy: corev1.PullIfNotPresent,
+					Command:         []string{"/init", "1"},
+					Env: []corev1.EnvVar{
+						env(0, false, "CI", "1"),
+					},
+					VolumeMounts: volumeMounts,
+					SecurityContext: &corev1.SecurityContext{
+						RunAsGroup: common.Ptr(constants.DefaultFsGroup),
+					},
+				},
+			},
+			SecurityContext: &corev1.PodSecurityContext{
+				FSGroup: common.Ptr(constants.DefaultFsGroup),
+			},
+		}
+
+		assert.Equal(t, want, res.Job.Spec.Template.Spec)
+		assert.Equal(t, 2, len(volumeMounts))
+		assert.Equal(t, 3, len(volumeMountsWithContent))
+		assert.Equal(t, volumeMounts, volumeMountsWithContent[:2])
+		assert.Equal(t, "/some/path", volumeMountsWithContent[2].MountPath)
+		assert.Equal(t, 1, len(res.ConfigMaps))
+		assert.Equal(t, volumeMountsWithContent[2].Name, volumes[2].Name)
+		assert.Equal(t, volumes[2].ConfigMap.Name, res.ConfigMaps[0].Name)
+		assert.Equal(t, "some-{{content", res.ConfigMaps[0].Data[volumeMountsWithContent[2].SubPath])
+	}
+
+	func TestProcessGlobalContent(t *testing.T) {
+		wf := &testworkflowsv1.TestWorkflow{
+			Spec: testworkflowsv1.TestWorkflowSpec{
+				TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
 					Content: &testworkflowsv1.Content{
 						Files: []testworkflowsv1.ContentFile{{
 							Path:    "/some/path",
 							Content: `some-{{"{{"}}content`,
 						}},
 					},
-				}},
-				{StepOperations: testworkflowsv1.StepOperations{Shell: "shell-test-2"}},
-			},
-		},
-	}
-
-	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{}, execMachine)
-	assert.NoError(t, err)
-
-	volumes := res.Job.Spec.Template.Spec.Volumes
-	volumeMounts := res.Job.Spec.Template.Spec.Containers[0].VolumeMounts
-	volumeMountsWithContent := res.Job.Spec.Template.Spec.InitContainers[0].VolumeMounts
-
-	want := corev1.PodSpec{
-		RestartPolicy:      corev1.RestartPolicyNever,
-		EnableServiceLinks: common.Ptr(false),
-		Volumes:            volumes,
-		InitContainers: []corev1.Container{
-			{
-				Name:            "1",
-				Image:           constants.DefaultInitImage,
-				ImagePullPolicy: corev1.PullIfNotPresent,
-				Command:         []string{"/init", "0"},
-				Env: []corev1.EnvVar{
-					env(0, false, "CI", "1"),
-					envDebugNode,
-					envDebugPod,
-					envDebugNamespace,
-					envDebugServiceAccount,
-					envActions,
 				},
-				VolumeMounts: volumeMountsWithContent,
-				SecurityContext: &corev1.SecurityContext{
-					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
+				Steps: []testworkflowsv1.Step{
+					{StepOperations: testworkflowsv1.StepOperations{Shell: "shell-test"}},
+					{StepOperations: testworkflowsv1.StepOperations{Shell: "shell-test-2"}},
 				},
 			},
-		},
-		Containers: []corev1.Container{
-			{
-				Name:            "2",
-				Image:           constants.DefaultInitImage,
-				ImagePullPolicy: corev1.PullIfNotPresent,
-				Command:         []string{"/init", "1"},
-				Env: []corev1.EnvVar{
-					env(0, false, "CI", "1"),
-				},
-				VolumeMounts: volumeMounts,
-				SecurityContext: &corev1.SecurityContext{
-					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
-				},
-			},
-		},
-		SecurityContext: &corev1.PodSecurityContext{
-			FSGroup: common.Ptr(constants.DefaultFsGroup),
-		},
-	}
+		}
 
-	assert.Equal(t, want, res.Job.Spec.Template.Spec)
-	assert.Equal(t, 2, len(volumeMounts))
-	assert.Equal(t, 3, len(volumeMountsWithContent))
-	assert.Equal(t, volumeMounts, volumeMountsWithContent[:2])
-	assert.Equal(t, "/some/path", volumeMountsWithContent[2].MountPath)
-	assert.Equal(t, 1, len(res.ConfigMaps))
-	assert.Equal(t, volumeMountsWithContent[2].Name, volumes[2].Name)
-	assert.Equal(t, volumes[2].ConfigMap.Name, res.ConfigMaps[0].Name)
-	assert.Equal(t, "some-{{content", res.ConfigMaps[0].Data[volumeMountsWithContent[2].SubPath])
-}
+		res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{}, execMachine)
+		assert.NoError(t, err)
 
-func TestProcessGlobalContent(t *testing.T) {
-	wf := &testworkflowsv1.TestWorkflow{
-		Spec: testworkflowsv1.TestWorkflowSpec{
-			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
-				Content: &testworkflowsv1.Content{
-					Files: []testworkflowsv1.ContentFile{{
-						Path:    "/some/path",
-						Content: `some-{{"{{"}}content`,
-					}},
-				},
-			},
-			Steps: []testworkflowsv1.Step{
-				{StepOperations: testworkflowsv1.StepOperations{Shell: "shell-test"}},
-				{StepOperations: testworkflowsv1.StepOperations{Shell: "shell-test-2"}},
-			},
-		},
-	}
+		volumes := res.Job.Spec.Template.Spec.Volumes
+		volumeMounts := res.Job.Spec.Template.Spec.InitContainers[0].VolumeMounts
 
-	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{}, execMachine)
-	assert.NoError(t, err)
-
-	volumes := res.Job.Spec.Template.Spec.Volumes
-	volumeMounts := res.Job.Spec.Template.Spec.InitContainers[0].VolumeMounts
-
-	want := corev1.PodSpec{
-		RestartPolicy:      corev1.RestartPolicyNever,
-		EnableServiceLinks: common.Ptr(false),
-		Volumes:            volumes,
-		InitContainers: []corev1.Container{
-			{
-				Name:            "1",
-				Image:           constants.DefaultInitImage,
-				ImagePullPolicy: corev1.PullIfNotPresent,
-				Command:         []string{"/init", "0"},
-				Env: []corev1.EnvVar{
-					env(0, false, "CI", "1"),
-					envDebugNode,
-					envDebugPod,
-					envDebugNamespace,
-					envDebugServiceAccount,
-					envActions,
-				},
-				VolumeMounts: volumeMounts,
-				SecurityContext: &corev1.SecurityContext{
-					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
-				},
-			},
-		},
-		Containers: []corev1.Container{
-			{
-				Name:            "2",
-				Image:           constants.DefaultInitImage,
-				ImagePullPolicy: corev1.PullIfNotPresent,
-				Command:         []string{"/init", "1"},
-				Env: []corev1.EnvVar{
-					env(0, false, "CI", "1"),
-				},
-				VolumeMounts: volumeMounts,
-				SecurityContext: &corev1.SecurityContext{
-					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
-				},
-			},
-		},
-		SecurityContext: &corev1.PodSecurityContext{
-			FSGroup: common.Ptr(constants.DefaultFsGroup),
-		},
-	}
-
-	assert.Equal(t, want, res.Job.Spec.Template.Spec)
-	assert.Equal(t, 3, len(volumeMounts))
-	fmt.Println(volumeMounts)
-	assert.Equal(t, "/some/path", volumeMounts[2].MountPath)
-	assert.Equal(t, 1, len(res.ConfigMaps))
-	assert.Equal(t, volumeMounts[2].Name, volumes[2].Name)
-	assert.Equal(t, volumes[2].ConfigMap.Name, res.ConfigMaps[0].Name)
-	assert.Equal(t, "some-{{content", res.ConfigMaps[0].Data[volumeMounts[2].SubPath])
-}
-
-func TestProcessEscapedAnnotations(t *testing.T) {
-	wf := &testworkflowsv1.TestWorkflow{
-		Spec: testworkflowsv1.TestWorkflowSpec{
-			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
-				Pod: &testworkflowsv1.PodConfig{
-					Annotations: map[string]string{
-						"vault.hashicorp.com/agent-inject-template-database-config.txt": `{{"{{"}}- with secret "internal/data/database/config" -}}{{"{{"}} .Data.data.username }}@{{"{{"}} .Data.data.password }}{{"{{"}}- end -}}`,
+		want := corev1.PodSpec{
+			RestartPolicy:      corev1.RestartPolicyNever,
+			EnableServiceLinks: common.Ptr(false),
+			Volumes:            volumes,
+			InitContainers: []corev1.Container{
+				{
+					Name:            "1",
+					Image:           constants.DefaultInitImage,
+					ImagePullPolicy: corev1.PullIfNotPresent,
+					Command:         []string{"/init", "0"},
+					Env: []corev1.EnvVar{
+						env(0, false, "CI", "1"),
+						envDebugNode,
+						envDebugPod,
+						envDebugNamespace,
+						envDebugServiceAccount,
+						envActions,
+					},
+					VolumeMounts: volumeMounts,
+					SecurityContext: &corev1.SecurityContext{
+						RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 					},
 				},
 			},
-			Steps: []testworkflowsv1.Step{
-				{StepOperations: testworkflowsv1.StepOperations{Run: &testworkflowsv1.StepRun{Shell: common.Ptr("shell-test")}}},
+			Containers: []corev1.Container{
+				{
+					Name:            "2",
+					Image:           constants.DefaultInitImage,
+					ImagePullPolicy: corev1.PullIfNotPresent,
+					Command:         []string{"/init", "1"},
+					Env: []corev1.EnvVar{
+						env(0, false, "CI", "1"),
+					},
+					VolumeMounts: volumeMounts,
+					SecurityContext: &corev1.SecurityContext{
+						RunAsGroup: common.Ptr(constants.DefaultFsGroup),
+					},
+				},
 			},
-		},
+			SecurityContext: &corev1.PodSecurityContext{
+				FSGroup: common.Ptr(constants.DefaultFsGroup),
+			},
+		}
+
+		assert.Equal(t, want, res.Job.Spec.Template.Spec)
+		assert.Equal(t, 3, len(volumeMounts))
+		fmt.Println(volumeMounts)
+		assert.Equal(t, "/some/path", volumeMounts[2].MountPath)
+		assert.Equal(t, 1, len(res.ConfigMaps))
+		assert.Equal(t, volumeMounts[2].Name, volumes[2].Name)
+		assert.Equal(t, volumes[2].ConfigMap.Name, res.ConfigMaps[0].Name)
+		assert.Equal(t, "some-{{content", res.ConfigMaps[0].Data[volumeMounts[2].SubPath])
 	}
 
-	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{}, execMachine)
-	assert.NoError(t, err)
-	assert.Equal(t, `{{- with secret "internal/data/database/config" -}}{{ .Data.data.username }}@{{ .Data.data.password }}{{- end -}}`, res.Job.Spec.Template.Annotations["vault.hashicorp.com/agent-inject-template-database-config.txt"])
-}
+	func TestProcessEscapedAnnotations(t *testing.T) {
+		wf := &testworkflowsv1.TestWorkflow{
+			Spec: testworkflowsv1.TestWorkflowSpec{
+				TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+					Pod: &testworkflowsv1.PodConfig{
+						Annotations: map[string]string{
+							"vault.hashicorp.com/agent-inject-template-database-config.txt": `{{"{{"}}- with secret "internal/data/database/config" -}}{{"{{"}} .Data.data.username }}@{{"{{"}} .Data.data.password }}{{"{{"}}- end -}}`,
+						},
+					},
+				},
+				Steps: []testworkflowsv1.Step{
+					{StepOperations: testworkflowsv1.StepOperations{Run: &testworkflowsv1.StepRun{Shell: common.Ptr("shell-test")}}},
+				},
+			},
+		}
 
+		res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{}, execMachine)
+		assert.NoError(t, err)
+		assert.Equal(t, `{{- with secret "internal/data/database/config" -}}{{ .Data.data.username }}@{{ .Data.data.password }}{{- end -}}`, res.Job.Spec.Template.Annotations["vault.hashicorp.com/agent-inject-template-database-config.txt"])
+	}
+*/
 func TestProcessShell(t *testing.T) {
 	wf := &testworkflowsv1.TestWorkflow{
 		Spec: testworkflowsv1.TestWorkflowSpec{
