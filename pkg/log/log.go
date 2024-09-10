@@ -3,9 +3,10 @@ package log
 import (
 	"log"
 
-	"github.com/kubeshop/testkube/pkg/envs"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+
+	"github.com/kubeshop/testkube/pkg/envs"
 )
 
 // New returns new logger instance
