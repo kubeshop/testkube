@@ -494,6 +494,7 @@ func (c *container) EnableToolkit(ref string) Container {
 			"TK_IMG_P":                  "{{internal.images.persistence.enabled}}",
 			"TK_IMG_PK":                 "{{internal.images.persistence.key}}",
 			"TK_IMG_CRED_TTL":           "{{internal.images.cache.ttl}}",
+			"TK_LBL":                    "{{workflow.labels}}",
 		})
 }
 
