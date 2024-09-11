@@ -8120,7 +8120,6 @@ components:
             - false
         tags:
           $ref: "#/components/schemas/TestWorkflowTagValue"
-        runnerID:
         runnerId:
           type: string
           description: Runner id that executed the test workflow
