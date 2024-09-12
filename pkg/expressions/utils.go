@@ -2,6 +2,7 @@ package expressions
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/pkg/errors"
 )
@@ -79,4 +80,8 @@ func EvalExpression(str string, machines ...Machine) (StaticValue, error) {
 
 func Escape(str string) string {
 	return NewStringValue(str).Template()
+}
+
+func EscapeLabelKeyForVarName(key string) string {
+	return strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(key, ".", "_"), "-", "_"), "/", "_")
 }
