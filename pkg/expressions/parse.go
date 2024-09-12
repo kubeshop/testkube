@@ -257,9 +257,9 @@ func IsTemplateStringWithoutExpressions(tpl string) bool {
 }
 
 func IsTemplateStringWithInternalFnCall(tpl string) bool {
-	return strings.Contains(tpl, "{{"+InternalFnCall)
+	return strings.Contains(tpl, "{{\"{{\"}}"+InternalFnCall)
 }
 
 func CleanTemplateStringInternalFnCall(tpl string) string {
-	return strings.ReplaceAll(tpl, "{{"+InternalFnCall, "{{")
+	return strings.ReplaceAll(tpl, "{{\"{{\"}}"+InternalFnCall, "{{")
 }
