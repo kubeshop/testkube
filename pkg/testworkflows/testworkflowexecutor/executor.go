@@ -8,7 +8,6 @@ import (
 	"io"
 	"os"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -412,7 +411,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	now := time.Now()
 	labels := make(map[string]string)
 	for key, value := range workflow.Labels {
-		labels[strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(key, ".", "_"), "-", "_"), "/", "_")] = value
+		labels[expressions.EscapeLabelKeyForVarName(key)] = value
 	}
 
 	labelMap, err := json.Marshal(labels)
