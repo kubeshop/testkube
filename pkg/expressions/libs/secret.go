@@ -35,7 +35,7 @@ func NewSecretMachine(mapEnvs map[string]corev1.EnvVarSource) expressions.Machin
 				},
 			}
 
-			return expressions.NewValue(fmt.Sprintf("{{env.%s}}", envName)), true, nil
+			return expressions.NewValue(fmt.Sprintf("{{%senv.%s}}", expressions.InternalFnCall, envName)), true, nil
 		})
 
 }

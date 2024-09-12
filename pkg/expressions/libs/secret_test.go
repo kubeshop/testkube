@@ -5,12 +5,14 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
+
+	"github.com/kubeshop/testkube/pkg/expressions"
 )
 
 func TestSecret(t *testing.T) {
 	mapEnvs := make(map[string]corev1.EnvVarSource)
 	machine := NewSecretMachine(mapEnvs)
-	assert.Equal(t, "{{env.S_N_name_one_K_key_0_two}}", MustCall(machine, "secret", "name-one", "key-two"))
+	assert.Equal(t, "{{"+expressions.InternalFnCall+"env.S_N_name_one_K_key_0_two}}", MustCall(machine, "secret", "name-one", "key-two"))
 	assert.EqualValues(t, map[string]corev1.EnvVarSource{
 		"S_N_name_one_K_key_0_two": {
 			SecretKeyRef: &corev1.SecretKeySelector{
