@@ -48,6 +48,7 @@ type envExecutionConfig struct {
 	FSPrefix        string `envconfig:"TK_FS"`
 	DisableWebhooks bool   `envconfig:"TK_DWH"`
 	Tags            string `envconfig:"TK_TAG"`
+	Labels          string `envconfig:"TK_LBL"`
 }
 
 type envSystemConfig struct {

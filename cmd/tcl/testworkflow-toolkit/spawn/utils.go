@@ -197,7 +197,8 @@ func CreateExecutionMachine(prefix string, index int64) (string, expressions.Mac
 	}
 	return id, expressions.NewMachine().
 		Register("workflow", map[string]string{
-			"name": env.WorkflowName(),
+			"name":   env.WorkflowName(),
+			"labels": env.Config().Execution.Labels,
 		}).
 		Register("resource", map[string]string{
 			"root":     env.ExecutionId(),
@@ -293,6 +294,12 @@ func CreateBaseMachine() expressions.Machine {
 		dashboardUrl = fmt.Sprintf("%s/organization/%s/environment/%s/dashboard",
 			env.Config().Cloud.UiUrl, env.Config().Cloud.OrgId, env.Config().Cloud.EnvId)
 	}
+
+	var labelMap map[string]string
+	if labels := env.Config().Execution.Labels; labels != "" {
+		json.Unmarshal([]byte(labels), &labelMap)
+	}
+
 	return expressions.CombinedMachines(
 		data.GetBaseTestWorkflowMachine(),
 		expressions.NewMachine().RegisterStringMap("internal", map[string]string{
@@ -341,7 +348,8 @@ func CreateBaseMachine() expressions.Machine {
 			}).
 			Register("environment", map[string]string{
 				"id": env.Config().Cloud.EnvId,
-			}),
+			}).
+			RegisterStringMap("labels", labelMap),
 	)
 }
 
