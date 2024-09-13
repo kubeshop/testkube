@@ -153,6 +153,7 @@ func NewCloneCmd() *cobra.Command {
 			ui.ExitOnError("deleting the temporary directory", err)
 		},
 	}
+	
 
 	cmd.Flags().StringSliceVarP(&rawPaths, "paths", "p", nil, "paths for sparse checkout")
 	cmd.Flags().StringVarP(&username, "username", "u", "", "")
