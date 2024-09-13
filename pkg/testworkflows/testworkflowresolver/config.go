@@ -51,13 +51,9 @@ func createConfigMachine(cfg map[string]intstr.IntOrString, schema map[string]te
 			return nil, errors.Wrap(err, "config."+k)
 		}
 		if schema[k].Sensitive && externalize != nil {
-			envVar, err := externalize(k, expr.String())
+			expr, err = getSecretCallExpression(expr, k, externalize)
 			if err != nil {
-				return nil, errors.Wrap(err, "config."+k)
-			}
-			if envVar.SecretKeyRef != nil {
-				expr = expressions.NewValue(fmt.Sprintf("{{%ssecret(\"%s\", \"%s\")}}", expressions.InternalFnCall,
-					envVar.SecretKeyRef.Name, envVar.SecretKeyRef.Key))
+				return nil, err
 			}
 		}
 		machine.Register("config."+k, expr)
@@ -69,19 +65,29 @@ func createConfigMachine(cfg map[string]intstr.IntOrString, schema map[string]te
 				return nil, errors.Wrap(err, "config."+k)
 			}
 			if schema[k].Sensitive && externalize != nil {
-				envVar, err := externalize(k, expr.String())
+				expr, err = getSecretCallExpression(expr, k, externalize)
 				if err != nil {
-					return nil, errors.Wrap(err, "config."+k)
-				}
-				if envVar.SecretKeyRef != nil {
-					expr = expressions.NewValue(fmt.Sprintf("{{%ssecret(\"%s\", \"%s\")}}", expressions.InternalFnCall,
-						envVar.SecretKeyRef.Name, envVar.SecretKeyRef.Key))
+					return nil, err
 				}
 			}
 			machine.Register("config."+k, expr)
 		}
 	}
 	return machine, nil
+}
+
+func getSecretCallExpression(expr expressions.Expression, k string, externalize func(key, value string) (*corev1.EnvVarSource, error)) (
+	expressions.Expression, error) {
+	envVar, err := externalize(k, expr.String())
+	if err != nil {
+		return nil, errors.Wrap(err, "config."+k)
+	}
+	if envVar.SecretKeyRef != nil {
+		expr = expressions.NewValue(fmt.Sprintf("{{%ssecret(\"%s\", \"%s\")}}", expressions.InternalFnCall,
+			envVar.SecretKeyRef.Name, envVar.SecretKeyRef.Key))
+	}
+
+	return expr, nil
 }
 
 func ApplyWorkflowConfig(t *testworkflowsv1.TestWorkflow, cfg map[string]intstr.IntOrString,

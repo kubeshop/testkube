@@ -395,25 +395,8 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	}
 	jobSpec.Spec.Template = podSpec
 
-	for i := range jobSpec.Spec.Template.Spec.InitContainers {
-		for envName, envSource := range mapEnv {
-			e := corev1.EnvVar{
-				Name:      envName,
-				ValueFrom: envSource.DeepCopy(),
-			}
-			jobSpec.Spec.Template.Spec.InitContainers[i].Env = append(jobSpec.Spec.Template.Spec.InitContainers[i].Env, e)
-		}
-	}
-
-	for i := range jobSpec.Spec.Template.Spec.Containers {
-		for envName, envSource := range mapEnv {
-			e := corev1.EnvVar{
-				Name:      envName,
-				ValueFrom: envSource.DeepCopy(),
-			}
-			jobSpec.Spec.Template.Spec.Containers[i].Env = append(jobSpec.Spec.Template.Spec.Containers[i].Env, e)
-		}
-	}
+	addEnvVarToContainerSpec(mapEnv, jobSpec.Spec.Template.Spec.InitContainers)
+	addEnvVarToContainerSpec(mapEnv, jobSpec.Spec.Template.Spec.Containers)
 
 	// Build running instructions
 	sigSerialized, _ := json.Marshal(sig)
@@ -435,4 +418,16 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		FullSignature: fullSig,
 	}
 	return bundle, nil
+}
+
+func addEnvVarToContainerSpec(mapEnv map[string]corev1.EnvVarSource, containers []corev1.Container) {
+	for i := range containers {
+		for envName, envSource := range mapEnv {
+			e := corev1.EnvVar{
+				Name:      envName,
+				ValueFrom: envSource.DeepCopy(),
+			}
+			containers[i].Env = append(containers[i].Env, e)
+		}
+	}
 }
