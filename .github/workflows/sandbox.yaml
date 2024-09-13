@@ -844,10 +844,10 @@ jobs:
           echo -e '```' >> $GITHUB_STEP_SUMMARY
 
   pr_creation:
-    if: startsWith(github.event.pull_request.head.ref, 'sandbox/')
     runs-on: ubuntu-latest
     steps:
     - name: Get a branch name if PR is created
+      if: startsWith(github.event.pull_request.head.ref, 'sandbox/')
       run: |
         # get a branch name
         branch_ref="${{ github.event.pull_request.head.ref }}"
@@ -859,6 +859,7 @@ jobs:
         echo "branch_ref=$branch_ref" >> $GITHUB_ENV
 
     - name: Render template
+      if: startsWith(github.event.pull_request.head.ref, 'sandbox/')
       id: template
       uses: chuhlomin/render-template@v1.10
       with:
@@ -867,6 +868,7 @@ jobs:
           branch_ref: ${{ env.branch_ref }}
 
     - name: Create comment on a PR with the endpoints
+      if: startsWith(github.event.pull_request.head.ref, 'sandbox/')
       uses: peter-evans/create-or-update-comment@v4
       with:
         token: ${{ secrets.CI_BOT_TOKEN }}
