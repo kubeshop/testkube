@@ -95,7 +95,6 @@ func NewCloneCmd() *cobra.Command {
 
 			// Keep the files in temporary directory
 			outputPath := filepath.Join(constants.DefaultTmpDirPath, "repo")
-
 			// Mark directory as safe
 			configArgs := []string{"-c", fmt.Sprintf("safe.directory=%s", outputPath), "-c", "advice.detachedHead=false"}
 
@@ -127,6 +126,13 @@ func NewCloneCmd() *cobra.Command {
 					ui.ExitOnError("fetching head", err)
 				}
 			}
+
+			fmt.Printf("Sparse checkout paths: %s\n", strings.Join(paths, ", "))
+
+			filepath.Walk(outputPath, func(name string, info os.FileInfo, err error) error {
+				fmt.Println(name)
+				return nil
+			})
 
 			// Copy files to the expected directory. Ignore errors, only inform warn about them.
 			fmt.Printf("Moving the contents to %s...\n", destinationPath)
