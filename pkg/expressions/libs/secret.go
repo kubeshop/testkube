@@ -20,8 +20,7 @@ func NewSecretMachine(mapEnvs map[string]corev1.EnvVarSource) expressions.Machin
 			keyName, _ := values[1].StringValue()
 			escapedSecretName := strings.ReplaceAll(secretName, "-", "_")
 			escapedKeyName := keyName
-			i := 0
-			for strings.Contains(escapedKeyName, "-") {
+			for i := 0; strings.Contains(escapedKeyName, "-"); i++ {
 				escapedKeyName = strings.Replace(escapedKeyName, "-", fmt.Sprintf("_%d_", i), 1)
 			}
 
