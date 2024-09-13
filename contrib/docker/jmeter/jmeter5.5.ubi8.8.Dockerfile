@@ -11,7 +11,7 @@ LABEL org.opencontainers.image.title="JMeter"                                   
       org.opencontainers.image.maintainer="support@testkube.io"                                             \
       org.opencontainers.image.vendor="testkube"                                                            \
       org.opencontainers.image.url="https://cloud.testkube.io"                                              \
-      org.opencontainers.image.source="https://github.com/kubeshop/testkube/tree/develop/contrib/docker/jmeter"
+      org.opencontainers.image.source="https://github.com/kubeshop/testkube/tree/main/contrib/docker/jmeter"
 
 # Update the system and install required libraries
 RUN microdnf update -y                                         && \

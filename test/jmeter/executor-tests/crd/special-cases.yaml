@@ -178,7 +178,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube.git
-      branch: develop
+      branch: main
       path: test/jmeter/executor-tests
   executionRequest:
     args:
@@ -212,7 +212,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube.git
-      branch: develop
+      branch: main
       path: test/jmeter/executor-tests
   executionRequest:
     args:
@@ -251,7 +251,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube.git
-      branch: develop
+      branch: main
       path: test/jmeter/executor-tests
       workingDir: test/jmeter/executor-tests
   executionRequest:
@@ -428,7 +428,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube.git
-      branch: develop
+      branch: main
       path: test/jmeter/executor-tests/jmeter-executor-smoke-incorrect-url-2.jmx
   executionRequest:
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
@@ -455,7 +455,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube.git
-      branch: develop
+      branch: main
       path: test/jmeter/executor-tests/jmeter-executor-smoke-incorrect-url-2.jmx
   executionRequest:
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
