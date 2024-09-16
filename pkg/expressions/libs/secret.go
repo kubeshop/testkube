@@ -18,13 +18,17 @@ func NewSecretMachine(mapEnvs map[string]corev1.EnvVarSource) expressions.Machin
 
 			secretName, _ := values[0].StringValue()
 			keyName, _ := values[1].StringValue()
-			escapedSecretName := strings.ReplaceAll(secretName, "-", "_")
-			escapedKeyName := keyName
-			for i := 0; strings.Contains(escapedKeyName, "-"); i++ {
-				escapedKeyName = strings.Replace(escapedKeyName, "-", fmt.Sprintf("_%d_", i), 1)
+			strs := []string{secretName, keyName}
+			for i := range strs {
+				j := 0
+				for _, char := range []string{"-", "."} {
+					for ; strings.Contains(strs[i], char); j++ {
+						strs[i] = strings.Replace(strs[i], char, fmt.Sprintf("_%d_", j), 1)
+					}
+				}
 			}
 
-			envName := fmt.Sprintf("S_N_%s_K_%s", escapedSecretName, escapedKeyName)
+			envName := fmt.Sprintf("S_N_%s_K_%s", strs[0], strs[1])
 			mapEnvs[envName] = corev1.EnvVarSource{
 				SecretKeyRef: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
