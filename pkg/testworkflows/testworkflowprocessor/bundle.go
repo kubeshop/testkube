@@ -16,6 +16,10 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
 
+type BundleOptions struct {
+	Secrets []corev1.Secret
+}
+
 type Bundle struct {
 	Secrets       []corev1.Secret
 	ConfigMaps    []corev1.ConfigMap

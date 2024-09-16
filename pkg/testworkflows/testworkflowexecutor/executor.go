@@ -30,6 +30,7 @@ import (
 	testworkflowmappers "github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
+	"github.com/kubeshop/testkube/pkg/secretmanager"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
@@ -62,6 +63,7 @@ type executor struct {
 	testWorkflowExecutionsClient   testworkflowsclientv1.TestWorkflowExecutionsInterface
 	testWorkflowsClient            testworkflowsclientv1.Interface
 	metrics                        v1.Metrics
+	secretManager                  secretmanager.SecretManager
 	globalTemplateName             string
 	apiUrl                         string
 	namespace                      string
@@ -83,6 +85,7 @@ func New(emitter *event.Emitter,
 	testWorkflowExecutionsClient testworkflowsclientv1.TestWorkflowExecutionsInterface,
 	testWorkflowsClient testworkflowsclientv1.Interface,
 	metrics v1.Metrics,
+	secretManager secretmanager.SecretManager,
 	serviceAccountNames map[string]string,
 	globalTemplateName, namespace, apiUrl, defaultRegistry string,
 	enableImageDataPersistentCache bool, imageDataPersistentCacheKey, dashboardURI, clusterID string) TestWorkflowExecutor {
@@ -101,6 +104,7 @@ func New(emitter *event.Emitter,
 		testWorkflowExecutionsClient:   testWorkflowExecutionsClient,
 		testWorkflowsClient:            testWorkflowsClient,
 		metrics:                        metrics,
+		secretManager:                  secretManager,
 		serviceAccountNames:            serviceAccountNames,
 		globalTemplateName:             globalTemplateName,
 		apiUrl:                         apiUrl,
@@ -364,14 +368,29 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		}
 	}
 
+	namespace := e.namespace
+	if workflow.Spec.Job != nil && workflow.Spec.Job.Namespace != "" {
+		namespace = workflow.Spec.Job.Namespace
+	}
+
+	if _, ok := e.serviceAccountNames[namespace]; !ok {
+		return execution, fmt.Errorf("not supported execution namespace %s", namespace)
+	}
+
+	// Build the basic Execution data
+	id := primitive.NewObjectID().Hex()
+
+	// Handle secrets auto-creation
+	secrets := e.secretManager.Batch(namespace, "twe-", id)
+
 	// Apply the configuration
-	_, err = testworkflowresolver.ApplyWorkflowConfig(&workflow, testworkflowmappers.MapConfigValueAPIToKube(request.Config))
+	_, err = testworkflowresolver.ApplyWorkflowConfig(&workflow, testworkflowmappers.MapConfigValueAPIToKube(request.Config), secrets.Append)
 	if err != nil {
 		return execution, errors.Wrap(err, "configuration")
 	}
 
 	// Resolve the TestWorkflow
-	err = testworkflowresolver.ApplyTemplates(&workflow, tplsMap)
+	err = testworkflowresolver.ApplyTemplates(&workflow, tplsMap, secrets.Append)
 	if err != nil {
 		return execution, errors.Wrap(err, "resolving error")
 	}
@@ -380,19 +399,10 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	if globalTemplateRef.Name != "" {
 		testworkflowresolver.AddGlobalTemplateRef(&workflow, globalTemplateRef)
 		workflow.Spec.Use = nil
-		err = testworkflowresolver.ApplyTemplates(&workflow, tplsMap)
+		err = testworkflowresolver.ApplyTemplates(&workflow, tplsMap, secrets.Append)
 		if err != nil {
 			return execution, errors.Wrap(err, "resolving with global templates error")
 		}
-	}
-
-	namespace := e.namespace
-	if workflow.Spec.Job != nil && workflow.Spec.Job.Namespace != "" {
-		namespace = workflow.Spec.Job.Namespace
-	}
-
-	if _, ok := e.serviceAccountNames[namespace]; !ok {
-		return execution, fmt.Errorf("not supported execution namespace %s", namespace)
 	}
 
 	// Determine the dashboard information
@@ -406,8 +416,6 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 			cloudUiUrl, env.Config().Cloud.OrgId, env.Config().Cloud.EnvId)
 	}
 
-	// Build the basic Execution data
-	id := primitive.NewObjectID().Hex()
 	now := time.Now()
 	labels := make(map[string]string)
 	for key, value := range workflow.Labels {
@@ -499,7 +507,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	}
 
 	// Validate the TestWorkflow
-	_, err = e.processor.Bundle(ctx, workflow.DeepCopy(), machine, mockExecutionMachine)
+	_, err = e.processor.Bundle(ctx, workflow.DeepCopy(), testworkflowprocessor.BundleOptions{Secrets: secrets.Get()}, machine, mockExecutionMachine)
 	if err != nil {
 		return execution, errors.Wrap(err, "processing error")
 	}
@@ -545,7 +553,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	})
 
 	// Process the TestWorkflow
-	bundle, err := e.processor.Bundle(ctx, &workflow, machine, executionMachine)
+	bundle, err := e.processor.Bundle(ctx, &workflow, testworkflowprocessor.BundleOptions{Secrets: secrets.Get()}, machine, executionMachine)
 	if err != nil {
 		return execution, errors.Wrap(err, "processing error")
 	}
