@@ -370,6 +370,7 @@ func MapParameterSchemaKubeToAPI(v testworkflowsv1.ParameterSchema) testkube.Tes
 		ExclusiveMinimum: MapInt64ToBoxedInteger(v.ExclusiveMinimum),
 		ExclusiveMaximum: MapInt64ToBoxedInteger(v.ExclusiveMaximum),
 		MultipleOf:       MapInt64ToBoxedInteger(v.MultipleOf),
+		Sensitive:        v.Sensitive,
 	}
 }
 

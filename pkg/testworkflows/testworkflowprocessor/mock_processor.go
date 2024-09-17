@@ -5,14 +5,13 @@
 package testworkflowprocessor
 
 import (
-	"context"
-	"reflect"
+	context "context"
+	reflect "reflect"
 
-	"github.com/golang/mock/gomock"
-
+	gomock "github.com/golang/mock/gomock"
 	v1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
-	"github.com/kubeshop/testkube/pkg/expressions"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
+	expressions "github.com/kubeshop/testkube/pkg/expressions"
+	stage "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
 
 // MockProcessor is a mock of Processor interface.
@@ -39,10 +38,10 @@ func (m *MockProcessor) EXPECT() *MockProcessorMockRecorder {
 }
 
 // Bundle mocks base method.
-func (m *MockProcessor) Bundle(arg0 context.Context, arg1 *v1.TestWorkflow, arg2 ...expressions.Machine) (*Bundle, error) {
+func (m *MockProcessor) Bundle(arg0 context.Context, arg1 *v1.TestWorkflow, arg2 BundleOptions, arg3 ...expressions.Machine) (*Bundle, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{arg0, arg1}
-	for _, a := range arg2 {
+	varargs := []interface{}{arg0, arg1, arg2}
+	for _, a := range arg3 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "Bundle", varargs...)
@@ -52,9 +51,9 @@ func (m *MockProcessor) Bundle(arg0 context.Context, arg1 *v1.TestWorkflow, arg2
 }
 
 // Bundle indicates an expected call of Bundle.
-func (mr *MockProcessorMockRecorder) Bundle(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+func (mr *MockProcessorMockRecorder) Bundle(arg0, arg1, arg2 interface{}, arg3 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	varargs := append([]interface{}{arg0, arg1, arg2}, arg3...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Bundle", reflect.TypeOf((*MockProcessor)(nil).Bundle), varargs...)
 }
 

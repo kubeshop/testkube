@@ -5,12 +5,11 @@
 package testworkflowprocessor
 
 import (
-	"reflect"
+	reflect "reflect"
 
-	"github.com/golang/mock/gomock"
-
+	gomock "github.com/golang/mock/gomock"
 	v1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
+	stage "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
 
 // MockInternalProcessor is a mock of InternalProcessor interface.
