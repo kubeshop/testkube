@@ -2,7 +2,7 @@ name: Docker images build develop
 on:
   push:
     branches:
-      - develop
+      - main
     paths-ignore:
       - 'docs/**'
 env:
