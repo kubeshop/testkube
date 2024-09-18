@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/kubeshop/testkube/pkg/repository/common"
+	"github.com/kubeshop/testkube/pkg/utils"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -370,6 +371,19 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 				query["tags."+elements[0]] = bson.M{"$exists": true}
 			}
 		}
+	}
+
+	if filter.LabelSelector() != nil && len(filter.LabelSelector().Or) > 0 {
+		subquery := bson.A{}
+		for _, label := range filter.LabelSelector().Or {
+			if label.Value != nil {
+				subquery = append(subquery, bson.M{"workflow.labels." + utils.EscapeDots(label.Key): *label.Value})
+			} else if label.Exists != nil {
+				subquery = append(subquery,
+					bson.M{"workflow.labels." + utils.EscapeDots(label.Key): bson.M{"$exists": *label.Exists}})
+			}
+		}
+		query["$or"] = subquery
 	}
 
 	opts.SetSkip(int64(filter.Page() * filter.PageSize()))
