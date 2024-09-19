@@ -86,3 +86,130 @@ func TestNewMongoRepository_UpdateReport_Integration(t *testing.T) {
 	assert.Equal(t, *report1, fresh.Reports[0])
 	assert.Equal(t, *report2, fresh.Reports[1])
 }
+
+func TestNewMongoRepository_Executions_Integration(t *testing.T) {
+	test.IntegrationTest(t)
+
+	ctx := context.Background()
+
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(cfg.APIMongoDSN))
+	if err != nil {
+		t.Fatalf("error connecting to mongo: %v", err)
+	}
+	db := client.Database("testworkflow-executions-mongo-repository-test")
+	t.Cleanup(func() {
+		db.Drop(ctx)
+	})
+
+	repo := NewMongoRepository(db, false)
+
+	execution := testkube.TestWorkflowExecution{
+		Id:   "test-id",
+		Name: "test-name",
+		Workflow: &testkube.TestWorkflow{
+			Name: "test-name",
+			Labels: map[string]string{
+				"workflow.labels.testkube.io/group": "grp1",
+			},
+			Spec: &testkube.TestWorkflowSpec{},
+		},
+	}
+	if err := repo.Insert(ctx, execution); err != nil {
+		t.Fatalf("error inserting execution: %v", err)
+	}
+
+	execution = testkube.TestWorkflowExecution{
+		Id:   "test-no-group",
+		Name: "test-no-group-name",
+		Workflow: &testkube.TestWorkflow{
+			Name:   "test-no-group-name",
+			Labels: map[string]string{},
+			Spec:   &testkube.TestWorkflowSpec{},
+		},
+	}
+	if err := repo.Insert(ctx, execution); err != nil {
+		t.Fatalf("error inserting execution: %v", err)
+	}
+	execution = testkube.TestWorkflowExecution{
+		Id:   "test-group2-id",
+		Name: "test-group2-name",
+		Workflow: &testkube.TestWorkflow{
+			Name: "test-group2-name",
+			Labels: map[string]string{
+				"workflow.labels.testkube.io/group": "grp2",
+			},
+			Spec: &testkube.TestWorkflowSpec{},
+		},
+	}
+	if err := repo.Insert(ctx, execution); err != nil {
+		t.Fatalf("error inserting execution: %v", err)
+	}
+
+	res, err := repo.GetExecutions(ctx, NewExecutionsFilter())
+	if err != nil {
+		t.Fatalf("error getting executions: %v", err)
+	}
+
+	assert.Len(t, res, 3)
+
+	labelSelector := LabelSelector{
+		Or: []Label{
+			{Key: "workflow.labels.testkube.io/group", Value: strPtr("grp2")},
+		},
+	}
+	res, err = repo.GetExecutions(ctx, NewExecutionsFilter().WithLabelSelector(&labelSelector))
+	if err != nil {
+		t.Fatalf("error getting executions: %v", err)
+	}
+
+	assert.Len(t, res, 1)
+	assert.Equal(t, "test-group2-name", res[0].Name)
+
+	labelSelector = LabelSelector{
+		Or: []Label{
+			{Key: "workflow.labels.testkube.io/group", Exists: boolPtr(false)},
+		},
+	}
+	res, err = repo.GetExecutions(ctx, NewExecutionsFilter().WithLabelSelector(&labelSelector))
+	if err != nil {
+		t.Fatalf("error getting executions: %v", err)
+	}
+
+	assert.Len(t, res, 1)
+	assert.Equal(t, "test-no-group-name", res[0].Name)
+
+	labelSelector = LabelSelector{
+		Or: []Label{
+			{Key: "workflow.labels.testkube.io/group", Exists: boolPtr(false)},
+			{Key: "workflow.labels.testkube.io/group", Value: strPtr("grp2")},
+		},
+	}
+	res, err = repo.GetExecutions(ctx, NewExecutionsFilter().WithLabelSelector(&labelSelector))
+	if err != nil {
+		t.Fatalf("error getting executions: %v", err)
+	}
+
+	assert.Len(t, res, 2)
+
+	labelSelector = LabelSelector{
+		Or: []Label{
+			{Key: "workflow.labels.testkube.io/group", Exists: boolPtr(false)},
+			{Key: "workflow.labels.testkube.io/group", Value: strPtr("grp1")},
+			{Key: "workflow.labels.testkube.io/group", Value: strPtr("grp2")},
+		},
+	}
+	res, err = repo.GetExecutions(ctx, NewExecutionsFilter().WithLabelSelector(&labelSelector))
+	if err != nil {
+		t.Fatalf("error getting executions: %v", err)
+	}
+
+	assert.Len(t, res, 3)
+}
+
+func strPtr(s string) *string {
+	return &s
+}
+
+func boolPtr(b bool) *bool {
+	return &b
+}
