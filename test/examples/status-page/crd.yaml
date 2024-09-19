@@ -7,6 +7,7 @@ spec:
   - cronjob:
       cron: '*/5 * * * *'
   container:
+    image: curlimages/curl:8.7.1
     resources:
       requests:
         cpu: 32m
@@ -14,8 +15,6 @@ spec:
   steps:
   - name: Run tests
     shell: curl -f -LI https://testkube.io
-    container:
-      image: curlimages/curl:8.7.1
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -26,6 +25,7 @@ spec:
   - cronjob:
       cron: '*/5 * * * *'
   container:
+    image: curlimages/curl:8.7.1
     resources:
       requests:
         cpu: 32m
@@ -33,8 +33,6 @@ spec:
   steps:
   - name: Run tests
     shell: curl -f -LI https://docs.testkube.io
-    container:
-      image: curlimages/curl:8.7.1
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -45,6 +43,7 @@ spec:
   - cronjob:
       cron: '*/5 * * * *'
   container:
+    image: curlimages/curl:8.7.1
     resources:
       requests:
         cpu: 32m
@@ -52,5 +51,3 @@ spec:
   steps:
   - name: Run tests
     shell: curl -f -LI https://testkube.io/blog
-    container:
-      image: curlimages/curl:8.7.1
