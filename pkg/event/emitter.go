@@ -155,11 +155,12 @@ func (e *Emitter) Listen(ctx context.Context) {
 }
 
 func (e *Emitter) startListener(l common.Listener) {
-	err := e.Bus.SubscribeTopic("events.>", l.Name(), e.notifyHandler(l))
+	err := e.Bus.SubscribeTopic(bus.SubscriptionName+".>", l.Name(), e.notifyHandler(l))
 	if err != nil {
 		e.Log.Errorw("error while starting listener", "error", err)
+		return
 	}
-	e.Log.Infow("started listener", l.Name(), l.Metadata())
+	e.Log.Infow("started listener", "name", l.Name(), "metadata", l.Metadata())
 }
 
 func (e *Emitter) stopListener(name string) {
@@ -171,7 +172,7 @@ func (e *Emitter) stopListener(name string) {
 }
 
 func (e *Emitter) notifyHandler(l common.Listener) bus.Handler {
-	logger := e.Log.With("listen-on", l.Events(), "queue-group", l.Name(), "selector", l.Selector(), "metadata", l.Metadata())
+	logger := e.Log.With("queue-group", l.Name())
 	return func(event testkube.Event) error {
 		if types, valid := event.Valid(l.Selector(), l.Events()); valid {
 			for i := range types {
@@ -180,7 +181,7 @@ func (e *Emitter) notifyHandler(l common.Listener) bus.Handler {
 				log.Tracew(logger, "listener notified", append(event.Log(), "result", result)...)
 			}
 		} else {
-			log.Tracew(logger, "dropping event not matching selector or type", event.Log()...)
+			log.Tracew(logger, "dropping event not matching selector or type", append(event.Log(), "listen-on", l.Events(), "selector", l.Selector(), "metadata", l.Metadata())...)
 		}
 		return nil
 	}

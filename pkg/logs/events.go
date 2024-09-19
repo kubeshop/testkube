@@ -27,8 +27,9 @@ const (
 	StartQueue = "logsstart"
 	StopQueue  = "logsstop"
 
-	LogStartSubject = "events.logs.start"
-	LogStopSubject  = "events.logs.stop"
+	Subscription    = "agent"
+	LogStartSubject = Subscription + ".logs.start"
+	LogStopSubject  = Subscription + ".logs.stop"
 )
 
 var (
