@@ -12,7 +12,7 @@ spec:
         memory: 32Mi
   steps:
   - name: Run tests
-    shell: curl https://testkube.io
+    shell: curl -f -LI https://testkube.io
     container:
       image: curlimages/curl:8.7.1
 ---
@@ -33,7 +33,7 @@ spec:
         memory: 32Mi
   steps:
   - name: Run tests
-    shell: curl https://testkube.io && sleep 10
+    shell: curl -f -LI https://testkube.io && sleep 10
     container:
       image: tkoniecznykubeshop/example-private-repo:curl-8.7.1
 ---
@@ -54,6 +54,6 @@ spec:
     parallel:
       matrix:
         url: ['https://testkube.io', 'https://docs.testkube.io']
-      shell: curl '{{ matrix.url }}'
+      shell: curl -f -LI '{{ matrix.url }}'
       container:
         image: curlimages/curl:8.7.1
