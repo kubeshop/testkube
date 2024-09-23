@@ -299,7 +299,6 @@ func TestNewMongoRepository_GetExecutions_Tags_Integration(t *testing.T) {
 	}
 
 	assert.Len(t, res, 2)
-	assert.Equal(t, "test-name-1", res[0].Name)
 
 	tagSelector = "my.key1=value3,key2"
 	res, err = repo.GetExecutions(ctx, NewExecutionsFilter().WithTagSelector(tagSelector))
@@ -308,6 +307,7 @@ func TestNewMongoRepository_GetExecutions_Tags_Integration(t *testing.T) {
 	}
 
 	assert.Len(t, res, 1)
+	assert.Equal(t, "test-name-3", res[0].Name)
 
 	tagSelector = "my.key1=value1,key2=value2"
 	res, err = repo.GetExecutions(ctx, NewExecutionsFilter().WithTagSelector(tagSelector))
