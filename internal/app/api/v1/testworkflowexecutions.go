@@ -47,14 +47,29 @@ func (s *TestkubeAPI) StreamTestWorkflowExecutionNotificationsHandler() fiber.Ha
 
 		// Stream the notifications
 		ctx.SetBodyStreamWriter(func(w *bufio.Writer) {
-			_ = w.Flush()
+			err := w.Flush()
+			if err != nil {
+				s.Log.Errorw("could not flush stream body", "error", err)
+			}
+
 			enc := json.NewEncoder(w)
 
 			for n := range ctrl.Watch(ctx) {
 				if n.Error == nil {
-					_ = enc.Encode(n.Value)
-					_, _ = fmt.Fprintf(w, "\n")
-					_ = w.Flush()
+					err := enc.Encode(n.Value)
+					if err != nil {
+						s.Log.Errorw("could not encode value", "error", err)
+					}
+
+					_, err = fmt.Fprintf(w, "\n")
+					if err != nil {
+						s.Log.Errorw("could not print new line", "error", err)
+					}
+
+					err = w.Flush()
+					if err != nil {
+						s.Log.Errorw("could not flush stream body", "error", err)
+					}
 				}
 			}
 		})
