@@ -29,8 +29,15 @@ func EnvName(group string, computed bool, sensitive bool, name string) string {
 func NewSecretMachine(mapEnvs map[string]corev1.EnvVarSource) expressions.Machine {
 	return expressions.NewMachine().
 		RegisterFunction("secret", func(values ...expressions.StaticValue) (interface{}, bool, error) {
-			if len(values) != 2 {
-				return nil, true, fmt.Errorf(`"secret" function expects 2 arguments, %d provided`, len(values))
+			computed := false
+			if len(values) == 3 {
+				if values[2].IsBool() {
+					computed, _ = values[2].BoolValue()
+				} else {
+					return nil, true, fmt.Errorf(`"secret" function expects 3rd argument to be boolean, %s provided`, values[3].String())
+				}
+			} else if len(values) != 2 {
+				return nil, true, fmt.Errorf(`"secret" function expects 2-3 arguments, %d provided`, len(values))
 			}
 
 			secretName, _ := values[0].StringValue()
@@ -47,7 +54,7 @@ func NewSecretMachine(mapEnvs map[string]corev1.EnvVarSource) expressions.Machin
 
 			// TODO: Avoid adding the secrets to all the groups with virtual SN group
 			envName := fmt.Sprintf("%s_K_%s", strs[0], strs[1])
-			internalName := EnvName(GlobalSecretGroup, false, true, envName)
+			internalName := EnvName(GlobalSecretGroup, computed, true, envName)
 			mapEnvs[internalName] = corev1.EnvVarSource{
 				SecretKeyRef: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{

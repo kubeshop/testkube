@@ -78,12 +78,12 @@ func createConfigMachine(cfg map[string]intstr.IntOrString, schema map[string]te
 
 func getSecretCallExpression(expr expressions.Expression, k string, externalize func(key, value string) (*corev1.EnvVarSource, error)) (
 	expressions.Expression, error) {
-	envVar, err := externalize(k, expr.String())
+	envVar, err := externalize(k, expr.Template())
 	if err != nil {
 		return nil, errors.Wrap(err, "config."+k)
 	}
 	if envVar.SecretKeyRef != nil {
-		expr = expressions.NewValue(fmt.Sprintf("{{%ssecret(\"%s\", \"%s\")}}", expressions.InternalFnCall,
+		expr = expressions.NewValue(fmt.Sprintf("{{%ssecret(\"%s\", \"%s\", true)}}", expressions.InternalFnCall,
 			envVar.SecretKeyRef.Name, envVar.SecretKeyRef.Key))
 	}
 
