@@ -16,10 +16,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 )
 
-const (
-	GlobalSecretGroup = "02"
-)
-
 var (
 	scopedRegex              = regexp.MustCompile(`^_(00|01|02|\d|[1-9]\d*)(C)?(S?)_`)
 	Setup                    = newSetup()
@@ -135,12 +131,12 @@ func (c *setup) GetSensitiveWords() []string {
 		}
 	}
 	// TODO: Avoid adding the secrets to all the groups without isolation
-	for k := range c.envGroups[GlobalSecretGroup] {
+	for k := range c.envGroups[constants.EnvGroupSecrets] {
 		value := os.Getenv(k)
 		if len(value) < c.minSensitiveWordLength {
 			continue
 		}
-		if _, ok := c.envGroupsSensitive[GlobalSecretGroup][k]; ok {
+		if _, ok := c.envGroupsSensitive[constants.EnvGroupSecrets][k]; ok {
 			words = append(words, value)
 		}
 	}
@@ -174,8 +170,8 @@ func (c *setup) UseEnv(group string) {
 	}
 
 	// TODO: Avoid adding the secrets to all the groups without isolation
-	for k, v := range c.envGroups[GlobalSecretGroup] {
-		if _, ok := c.envGroupsComputed[GlobalSecretGroup][k]; ok {
+	for k, v := range c.envGroups[constants.EnvGroupSecrets] {
+		if _, ok := c.envGroupsComputed[constants.EnvGroupSecrets][k]; ok {
 			envTemplates[k] = v
 		} else {
 			os.Setenv(k, v)

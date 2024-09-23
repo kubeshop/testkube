@@ -1,4 +1,4 @@
-package libs
+package testworkflowprocessor
 
 import (
 	"testing"
@@ -11,8 +11,8 @@ import (
 
 func TestSecret(t *testing.T) {
 	mapEnvs := make(map[string]corev1.EnvVarSource)
-	machine := NewSecretMachine(mapEnvs)
-	assert.Equal(t, "{{"+expressions.InternalFnCall+"env.name_0_one_1_two_K_key_0_three_1_four}}", MustCall(machine, "secret", "name-one.two", "key-three.four"))
+	machine := createSecretMachine(mapEnvs)
+	assert.Equal(t, "{{"+expressions.InternalFnCall+"env.name_0_one_1_two_K_key_0_three_1_four}}", expressions.MustCall(machine, "secret", "name-one.two", "key-three.four"))
 	assert.EqualValues(t, map[string]corev1.EnvVarSource{
 		"_02S_name_0_one_1_two_K_key_0_three_1_four": {
 			SecretKeyRef: &corev1.SecretKeySelector{
@@ -27,8 +27,8 @@ func TestSecret(t *testing.T) {
 
 func TestSecretComputed(t *testing.T) {
 	mapEnvs := make(map[string]corev1.EnvVarSource)
-	machine := NewSecretMachine(mapEnvs)
-	assert.Equal(t, "{{"+expressions.InternalFnCall+"env.name_0_one_1_two_K_key_0_three_1_four}}", MustCall(machine, "secret", "name-one.two", "key-three.four", true))
+	machine := createSecretMachine(mapEnvs)
+	assert.Equal(t, "{{"+expressions.InternalFnCall+"env.name_0_one_1_two_K_key_0_three_1_four}}", expressions.MustCall(machine, "secret", "name-one.two", "key-three.four", true))
 	assert.EqualValues(t, map[string]corev1.EnvVarSource{
 		"_02CS_name_0_one_1_two_K_key_0_three_1_four": {
 			SecretKeyRef: &corev1.SecretKeySelector{
