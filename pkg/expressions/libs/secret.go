@@ -9,6 +9,23 @@ import (
 	"github.com/kubeshop/testkube/pkg/expressions"
 )
 
+const (
+	GlobalSecretGroup = "02"
+)
+
+// FIXME: it's copied from actiontypes to avoid import cycle
+func EnvName(group string, computed bool, sensitive bool, name string) string {
+	suffix := ""
+	if computed {
+		suffix = "C"
+	}
+	if sensitive {
+		suffix += "S"
+	}
+	return fmt.Sprintf("_%s%s_%s", group, suffix, name)
+}
+
+// TODO: Probably it shouldn't be part of expressions lib, as it's actually workflow processing
 func NewSecretMachine(mapEnvs map[string]corev1.EnvVarSource) expressions.Machine {
 	return expressions.NewMachine().
 		RegisterFunction("secret", func(values ...expressions.StaticValue) (interface{}, bool, error) {
@@ -28,8 +45,10 @@ func NewSecretMachine(mapEnvs map[string]corev1.EnvVarSource) expressions.Machin
 				}
 			}
 
-			envName := fmt.Sprintf("S_N_%s_K_%s", strs[0], strs[1])
-			mapEnvs[envName] = corev1.EnvVarSource{
+			// TODO: Avoid adding the secrets to all the groups with virtual SN group
+			envName := fmt.Sprintf("%s_K_%s", strs[0], strs[1])
+			internalName := EnvName(GlobalSecretGroup, false, true, envName)
+			mapEnvs[internalName] = corev1.EnvVarSource{
 				SecretKeyRef: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: secretName,

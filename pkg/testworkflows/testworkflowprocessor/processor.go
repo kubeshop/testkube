@@ -395,6 +395,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	}
 	jobSpec.Spec.Template = podSpec
 
+	// TODO: Avoid adding the secrets to all the groups without isolation
 	addEnvVarToContainerSpec(mapEnv, jobSpec.Spec.Template.Spec.InitContainers)
 	addEnvVarToContainerSpec(mapEnv, jobSpec.Spec.Template.Spec.Containers)
 
