@@ -85,3 +85,22 @@ func Escape(str string) string {
 func EscapeLabelKeyForVarName(key string) string {
 	return strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(key, ".", "_"), "-", "_"), "/", "_")
 }
+
+func MustCall(m Machine, name string, args ...interface{}) interface{} {
+	list := make([]StaticValue, len(args))
+	for i, v := range args {
+		if vv, ok := v.(StaticValue); ok {
+			list[i] = vv
+		} else {
+			list[i] = NewValue(v)
+		}
+	}
+	v, ok, err := m.Call(name, list...)
+	if err != nil {
+		panic(err)
+	}
+	if !ok {
+		panic("not recognized")
+	}
+	return v.Static().Value()
+}

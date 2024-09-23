@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	scopedRegex              = regexp.MustCompile(`^_(00|01|\d|[1-9]\d*)(C)?(S?)_`)
+	scopedRegex              = regexp.MustCompile(`^_(00|01|02|\d|[1-9]\d*)(C)?(S?)_`)
 	Setup                    = newSetup()
 	defaultWorkingDir        = getWorkingDir()
 	commonSensitiveVariables = []string{
@@ -130,6 +130,16 @@ func (c *setup) GetSensitiveWords() []string {
 			words = append(words, value)
 		}
 	}
+	// TODO(TKC-2585): Avoid adding the secrets to all the groups without isolation
+	for k := range c.envGroups[constants.EnvGroupSecrets] {
+		value := os.Getenv(k)
+		if len(value) < c.minSensitiveWordLength {
+			continue
+		}
+		if _, ok := c.envGroupsSensitive[constants.EnvGroupSecrets][k]; ok {
+			words = append(words, value)
+		}
+	}
 	return words
 }
 
@@ -153,6 +163,15 @@ func (c *setup) UseEnv(group string) {
 	envResolutions := map[string]expressions.Expression{}
 	for k, v := range c.envGroups[group] {
 		if _, ok := c.envGroupsComputed[group][k]; ok {
+			envTemplates[k] = v
+		} else {
+			os.Setenv(k, v)
+		}
+	}
+
+	// TODO(TKC-2585): Avoid adding the secrets to all the groups without isolation
+	for k, v := range c.envGroups[constants.EnvGroupSecrets] {
+		if _, ok := c.envGroupsComputed[constants.EnvGroupSecrets][k]; ok {
 			envTemplates[k] = v
 		} else {
 			os.Setenv(k, v)

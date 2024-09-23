@@ -15,7 +15,6 @@ import (
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/expressions"
-	"github.com/kubeshop/testkube/pkg/expressions/libs"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
@@ -112,7 +111,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, constants.DefaultDataPath))
 
 	mapEnv := make(map[string]corev1.EnvVarSource)
-	extendedMachines := append(machines, libs.NewSecretMachine(mapEnv))
+	extendedMachines := append(machines, createSecretMachine(mapEnv))
 
 	// Fetch resource root and resource ID
 	resourceRoot, err := expressions.EvalExpression("resource.root", extendedMachines...)
@@ -395,6 +394,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	}
 	jobSpec.Spec.Template = podSpec
 
+	// TODO(TKC-2585): Avoid adding the secrets to all the groups without isolation
 	addEnvVarToContainerSpec(mapEnv, jobSpec.Spec.Template.Spec.InitContainers)
 	addEnvVarToContainerSpec(mapEnv, jobSpec.Spec.Template.Spec.Containers)
 
