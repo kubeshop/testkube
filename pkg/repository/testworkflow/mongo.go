@@ -363,14 +363,16 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 
 	if filter.TagSelector() != "" {
 		items := strings.Split(filter.TagSelector(), ",")
+		subquery := bson.A{}
 		for _, item := range items {
 			elements := strings.Split(item, "=")
 			if len(elements) == 2 {
-				query["tags."+elements[0]] = elements[1]
+				subquery = append(subquery, bson.M{"tags." + utils.EscapeDots(elements[0]): elements[1]})
 			} else if len(elements) == 1 {
-				query["tags."+elements[0]] = bson.M{"$exists": true}
+				subquery = append(subquery, bson.M{"tags." + utils.EscapeDots(elements[0]): bson.M{"$exists": true}})
 			}
 		}
+		query["$or"] = subquery
 	}
 
 	if filter.LabelSelector() != nil && len(filter.LabelSelector().Or) > 0 {

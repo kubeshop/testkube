@@ -213,3 +213,91 @@ func strPtr(s string) *string {
 func boolPtr(b bool) *bool {
 	return &b
 }
+
+func TestNewMongoRepository_GetExecutions_Tags_Integration(t *testing.T) {
+	test.IntegrationTest(t)
+
+	ctx := context.Background()
+
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(cfg.APIMongoDSN))
+	if err != nil {
+		t.Fatalf("error connecting to mongo: %v", err)
+	}
+	db := client.Database("testworkflow-executions-tags-mongo-repository-test")
+	t.Cleanup(func() {
+		db.Drop(ctx)
+	})
+
+	repo := NewMongoRepository(db, false)
+
+	execution := testkube.TestWorkflowExecution{
+		Id:   "test-id-1",
+		Name: "test-name-1",
+		Workflow: &testkube.TestWorkflow{
+			Name: "test-name-1",
+			Spec: &testkube.TestWorkflowSpec{},
+		},
+		Tags: map[string]string{
+			"my.key1": "value1",
+		},
+	}
+	if err := repo.Insert(ctx, execution); err != nil {
+		t.Fatalf("error inserting execution: %v", err)
+	}
+
+	execution = testkube.TestWorkflowExecution{
+		Id:   "test-id-2",
+		Name: "test-name-2",
+		Workflow: &testkube.TestWorkflow{
+			Name: "test-name-2",
+			Spec: &testkube.TestWorkflowSpec{},
+		},
+		Tags: map[string]string{
+			"key2": "value2",
+		},
+	}
+	if err := repo.Insert(ctx, execution); err != nil {
+		t.Fatalf("error inserting execution: %v", err)
+	}
+
+	res, err := repo.GetExecutions(ctx, NewExecutionsFilter())
+	if err != nil {
+		t.Fatalf("error getting executions: %v", err)
+	}
+
+	assert.Len(t, res, 2)
+
+	tagSelector := "my.key1=value1"
+	res, err = repo.GetExecutions(ctx, NewExecutionsFilter().WithTagSelector(tagSelector))
+	if err != nil {
+		t.Fatalf("error getting executions: %v", err)
+	}
+
+	assert.Len(t, res, 1)
+	assert.Equal(t, "test-name-1", res[0].Name)
+
+	tagSelector = "my.key1"
+	res, err = repo.GetExecutions(ctx, NewExecutionsFilter().WithTagSelector(tagSelector))
+	if err != nil {
+		t.Fatalf("error getting executions: %v", err)
+	}
+
+	assert.Len(t, res, 1)
+	assert.Equal(t, "test-name-1", res[0].Name)
+
+	tagSelector = "my.key1=value1,key2"
+	res, err = repo.GetExecutions(ctx, NewExecutionsFilter().WithTagSelector(tagSelector))
+	if err != nil {
+		t.Fatalf("error getting executions: %v", err)
+	}
+
+	assert.Len(t, res, 2)
+
+	tagSelector = "my.key1=value1,key2=value2"
+	res, err = repo.GetExecutions(ctx, NewExecutionsFilter().WithTagSelector(tagSelector))
+	if err != nil {
+		t.Fatalf("error getting executions: %v", err)
+	}
+
+	assert.Len(t, res, 2)
+}
