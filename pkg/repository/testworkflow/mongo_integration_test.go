@@ -260,12 +260,28 @@ func TestNewMongoRepository_GetExecutions_Tags_Integration(t *testing.T) {
 		t.Fatalf("error inserting execution: %v", err)
 	}
 
+	execution = testkube.TestWorkflowExecution{
+		Id:   "test-id-3",
+		Name: "test-name-3",
+		Workflow: &testkube.TestWorkflow{
+			Name: "test-name-3",
+			Spec: &testkube.TestWorkflowSpec{},
+		},
+		Tags: map[string]string{
+			"my.key1": "value3",
+			"key2":    "",
+		},
+	}
+	if err := repo.Insert(ctx, execution); err != nil {
+		t.Fatalf("error inserting execution: %v", err)
+	}
+
 	res, err := repo.GetExecutions(ctx, NewExecutionsFilter())
 	if err != nil {
 		t.Fatalf("error getting executions: %v", err)
 	}
 
-	assert.Len(t, res, 2)
+	assert.Len(t, res, 3)
 
 	tagSelector := "my.key1=value1"
 	res, err = repo.GetExecutions(ctx, NewExecutionsFilter().WithTagSelector(tagSelector))
@@ -282,18 +298,26 @@ func TestNewMongoRepository_GetExecutions_Tags_Integration(t *testing.T) {
 		t.Fatalf("error getting executions: %v", err)
 	}
 
-	assert.Len(t, res, 1)
+	assert.Len(t, res, 2)
 	assert.Equal(t, "test-name-1", res[0].Name)
 
-	tagSelector = "my.key1=value1,key2"
+	tagSelector = "my.key1=value3,key2"
 	res, err = repo.GetExecutions(ctx, NewExecutionsFilter().WithTagSelector(tagSelector))
 	if err != nil {
 		t.Fatalf("error getting executions: %v", err)
 	}
 
-	assert.Len(t, res, 2)
+	assert.Len(t, res, 1)
 
 	tagSelector = "my.key1=value1,key2=value2"
+	res, err = repo.GetExecutions(ctx, NewExecutionsFilter().WithTagSelector(tagSelector))
+	if err != nil {
+		t.Fatalf("error getting executions: %v", err)
+	}
+
+	assert.Len(t, res, 0)
+
+	tagSelector = "my.key1=value1,my.key1=value3"
 	res, err = repo.GetExecutions(ctx, NewExecutionsFilter().WithTagSelector(tagSelector))
 	if err != nil {
 		t.Fatalf("error getting executions: %v", err)

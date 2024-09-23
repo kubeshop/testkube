@@ -385,10 +385,14 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 				tagValues = append(tagValues, value)
 			}
 
-			subquery = append(subquery, bson.M{tag: bson.M{"$in": tagValues}})
+			if len(tagValues) > 0 {
+				subquery = append(subquery, bson.M{tag: bson.M{"$in": tagValues}})
+			}
 		}
 
-		query["$and"] = subquery
+		if len(subquery) > 0 {
+			query["$and"] = subquery
+		}
 	}
 
 	if filter.LabelSelector() != nil && len(filter.LabelSelector().Or) > 0 {
