@@ -49,7 +49,7 @@ func (s *TestkubeAPI) StreamTestWorkflowExecutionNotificationsHandler() fiber.Ha
 		ctx.SetBodyStreamWriter(func(w *bufio.Writer) {
 			err := w.Flush()
 			if err != nil {
-				s.Log.Errorw("could not flush stream body", "error", err)
+				s.Log.Errorw("could not flush stream body", "error", err, "id", id)
 			}
 
 			enc := json.NewEncoder(w)
@@ -58,17 +58,17 @@ func (s *TestkubeAPI) StreamTestWorkflowExecutionNotificationsHandler() fiber.Ha
 				if n.Error == nil {
 					err := enc.Encode(n.Value)
 					if err != nil {
-						s.Log.Errorw("could not encode value", "error", err)
+						s.Log.Errorw("could not encode value", "error", err, "id", id)
 					}
 
 					_, err = fmt.Fprintf(w, "\n")
 					if err != nil {
-						s.Log.Errorw("could not print new line", "error", err)
+						s.Log.Errorw("could not print new line", "error", err, "id", id)
 					}
 
 					err = w.Flush()
 					if err != nil {
-						s.Log.Errorw("could not flush stream body", "error", err)
+						s.Log.Errorw("could not flush stream body", "error", err, "id", id)
 					}
 				}
 			}
