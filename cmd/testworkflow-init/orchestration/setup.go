@@ -130,7 +130,7 @@ func (c *setup) GetSensitiveWords() []string {
 			words = append(words, value)
 		}
 	}
-	// TODO: Avoid adding the secrets to all the groups without isolation
+	// TODO(TKC-2585): Avoid adding the secrets to all the groups without isolation
 	for k := range c.envGroups[constants.EnvGroupSecrets] {
 		value := os.Getenv(k)
 		if len(value) < c.minSensitiveWordLength {
@@ -169,7 +169,7 @@ func (c *setup) UseEnv(group string) {
 		}
 	}
 
-	// TODO: Avoid adding the secrets to all the groups without isolation
+	// TODO(TKC-2585): Avoid adding the secrets to all the groups without isolation
 	for k, v := range c.envGroups[constants.EnvGroupSecrets] {
 		if _, ok := c.envGroupsComputed[constants.EnvGroupSecrets][k]; ok {
 			envTemplates[k] = v

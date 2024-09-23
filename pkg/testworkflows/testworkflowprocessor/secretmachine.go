@@ -37,7 +37,7 @@ func createSecretMachine(mapEnvs map[string]corev1.EnvVarSource) expressions.Mac
 				}
 			}
 
-			// TODO: Avoid adding the secrets to all the groups with virtual SN group
+			// TODO(TKC-2585): Avoid adding the secrets to all the groups with virtual 02 group
 			envName := fmt.Sprintf("%s_K_%s", strs[0], strs[1])
 			internalName := actiontypes.EnvName(constants.EnvGroupSecrets, computed, true, envName)
 			mapEnvs[internalName] = corev1.EnvVarSource{
