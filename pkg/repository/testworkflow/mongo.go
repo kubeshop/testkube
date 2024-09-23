@@ -377,6 +377,7 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 		for tag, values := range inValues {
 			if _, ok := existsValues[tag]; ok {
 				subquery = append(subquery, bson.M{tag: bson.M{"$exists": true}})
+				delete(existsValues, tag)
 				continue
 			}
 
@@ -388,6 +389,10 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 			if len(tagValues) > 0 {
 				subquery = append(subquery, bson.M{tag: bson.M{"$in": tagValues}})
 			}
+		}
+
+		for tag := range existsValues {
+			subquery = append(subquery, bson.M{tag: bson.M{"$exists": true}})
 		}
 
 		if len(subquery) > 0 {
