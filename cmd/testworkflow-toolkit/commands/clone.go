@@ -127,15 +127,8 @@ func NewCloneCmd() *cobra.Command {
 				}
 			}
 
-			fmt.Printf("Sparse checkout paths: %s\n", strings.Join(paths, ", "))
-
-			filepath.Walk(outputPath, func(name string, info os.FileInfo, err error) error {
-				fmt.Println(name)
-				return nil
-			})
-
 			// Copy files to the expected directory. Ignore errors, only inform warn about them.
-			fmt.Printf("Moving the contents to %s...\n", destinationPath)
+			fmt.Printf(":arrow-right: Moving the contents to %s...\n", destinationPath)
 			err = copy.Copy(outputPath, destinationPath, copy.Options{
 				OnError: func(src, dest string, err error) error {
 					if err != nil {
@@ -149,6 +142,12 @@ func NewCloneCmd() *cobra.Command {
 				},
 			})
 			ui.ExitOnError("copying files to destination", err)
+
+			filepath.Walk(destinationPath, func(name string, info os.FileInfo, err error) error {
+				fmt.Println(name)
+				return nil
+			})
+
 			err = os.RemoveAll(outputPath)
 			ui.ExitOnError("deleting the temporary directory", err)
 		},
