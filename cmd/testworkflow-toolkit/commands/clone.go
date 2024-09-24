@@ -98,7 +98,7 @@ func NewCloneCmd() *cobra.Command {
 			// Mark directory as safe
 			configArgs := []string{"-c", fmt.Sprintf("safe.directory=%s", outputPath), "-c", "advice.detachedHead=false"}
 
-			fmt.Printf("&#128230; ")
+			fmt.Printf("📦 ")
 
 			// Clone repository
 			if len(paths) == 0 {
@@ -130,7 +130,7 @@ func NewCloneCmd() *cobra.Command {
 			}
 
 			// Copy files to the expected directory. Ignore errors, only inform warn about them.
-			fmt.Printf("&#128230; Moving the contents to %s...\n", destinationPath)
+			fmt.Printf("📥 Moving the contents to %s...\n", destinationPath)
 			err = copy.Copy(outputPath, destinationPath, copy.Options{
 				OnError: func(src, dest string, err error) error {
 					if err != nil {
@@ -144,7 +144,7 @@ func NewCloneCmd() *cobra.Command {
 				},
 			})
 			ui.ExitOnError("copying files to destination", err)
-
+			fmt.Printf("🔎 Destination folder contains following files ...\n")
 			filepath.Walk(destinationPath, func(name string, info os.FileInfo, err error) error {
 				fmt.Println(name)
 				return nil
