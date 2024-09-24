@@ -363,13 +363,40 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 
 	if filter.TagSelector() != "" {
 		items := strings.Split(filter.TagSelector(), ",")
+		inValues := make(map[string][]string)
+		existsValues := make(map[string]struct{})
 		for _, item := range items {
 			elements := strings.Split(item, "=")
 			if len(elements) == 2 {
-				query["tags."+elements[0]] = elements[1]
+				inValues["tags."+utils.EscapeDots(elements[0])] = append(inValues["tags."+utils.EscapeDots(elements[0])], elements[1])
 			} else if len(elements) == 1 {
-				query["tags."+elements[0]] = bson.M{"$exists": true}
+				existsValues["tags."+utils.EscapeDots(elements[0])] = struct{}{}
 			}
+		}
+		subquery := bson.A{}
+		for tag, values := range inValues {
+			if _, ok := existsValues[tag]; ok {
+				subquery = append(subquery, bson.M{tag: bson.M{"$exists": true}})
+				delete(existsValues, tag)
+				continue
+			}
+
+			tagValues := bson.A{}
+			for _, value := range values {
+				tagValues = append(tagValues, value)
+			}
+
+			if len(tagValues) > 0 {
+				subquery = append(subquery, bson.M{tag: bson.M{"$in": tagValues}})
+			}
+		}
+
+		for tag := range existsValues {
+			subquery = append(subquery, bson.M{tag: bson.M{"$exists": true}})
+		}
+
+		if len(subquery) > 0 {
+			query["$and"] = subquery
 		}
 	}
 
