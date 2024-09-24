@@ -128,7 +128,7 @@ func NewCloneCmd() *cobra.Command {
 			}
 
 			// Copy files to the expected directory. Ignore errors, only inform warn about them.
-			fmt.Printf(":arrow-right: Moving the contents to %s...\n", destinationPath)
+			fmt.Printf(":arrow_right: Moving the contents to %s...\n", destinationPath)
 			err = copy.Copy(outputPath, destinationPath, copy.Options{
 				OnError: func(src, dest string, err error) error {
 					if err != nil {
