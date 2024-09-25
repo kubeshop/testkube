@@ -18,4 +18,5 @@ spec:
       - name: cypress-workflow-smoke-12.7.0
       - name: cypress-workflow-smoke-13-junit-report
       - name: distributed-cypress-workflow-smoke-13
-      - name: cypress-workflow-smoke-matrix
+      - name: cypress-workflow-smoke-matrix-junit
+      
