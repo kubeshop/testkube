@@ -494,15 +494,10 @@ func (c *Client) uploadFile(ctx context.Context, bucket, bucketFolder, filePath 
 		filePath = strings.Trim(bucketFolder, "/") + "/" + filePath
 	}
 
-	var partSize uint64
-	if objectSize == -1 {
-		partSize = absMinPartSize
-	}
-
 	c.Log.Debugw("saving object in minio", "file", filePath, "bucket", bucket)
 	_, err = c.minioClient.PutObject(ctx, bucket, filePath, reader, objectSize, minio.PutObjectOptions{
 		ContentType: "application/octet-stream",
-		PartSize:    partSize})
+		PartSize:    absMinPartSize})
 	if err != nil {
 		return fmt.Errorf("minio saving file (%s) put object error: %w", filePath, err)
 	}

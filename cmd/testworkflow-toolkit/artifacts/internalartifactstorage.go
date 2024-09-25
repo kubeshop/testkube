@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
+	"github.com/kubeshop/testkube/pkg/bufferedstream"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 )
 
 type InternalArtifactStorage interface {
@@ -67,6 +69,13 @@ func (s *internalArtifactStorage) SaveStream(artifactPath string, stream io.Read
 	size := -1
 	if streamL, ok := stream.(withLength); ok {
 		size = streamL.Len()
+	} else {
+		stream, err = bufferedstream.NewBufferedStream(constants.DefaultTmpDirPath, "log", stream)
+		if err != nil {
+			return err
+		}
+		defer stream.(bufferedstream.BufferedStream).Cleanup()
+		size = stream.(bufferedstream.BufferedStream).Len()
 	}
 	err = s.uploader.Add(filepath.Join(s.prefix, artifactPath), stream, int64(size))
 	if err != nil {
