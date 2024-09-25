@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"io/fs"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -145,8 +146,12 @@ func NewCloneCmd() *cobra.Command {
 			})
 			ui.ExitOnError("copying files to destination", err)
 			fmt.Printf("🔎 Destination folder contains following files ...\n")
-			filepath.Walk(destinationPath, func(name string, info os.FileInfo, err error) error {
-				fmt.Println(name)
+			filepath.Walk(destinationPath, func(name string, info fs.FileInfo, err error) error {
+				icon := "📄"
+				if info.IsDir() {
+					icon = "📁"
+				}
+				fmt.Println(icon + " " + name)
 				return nil
 			})
 
