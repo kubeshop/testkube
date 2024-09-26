@@ -147,12 +147,24 @@ func NewCloneCmd() *cobra.Command {
 			ui.ExitOnError("copying files to destination", err)
 			fmt.Printf("🔎 Destination folder contains following files ...\n")
 			filepath.Walk(destinationPath, func(name string, info fs.FileInfo, err error) error {
-				icon := "📄"
+
+				// bold the folder name
 				if info.IsDir() {
-					icon = "📁"
+					fmt.Printf("\033[1m%s\033[0m\n", name)
+				} else {
+					fmt.Println(name)
 				}
-				fmt.Println(icon + " " + name)
 				return nil
+
+				// // Calculate the depth of the current file or directory
+				// depth := strings.Count(name, string(os.PathSeparator)) - strings.Count(destinationPath, string(os.PathSeparator))
+
+				// // Indent the path based on the depth
+				// indent := strings.Repeat("  ", depth)
+				
+				// // Print the path with appropriate indentation
+				// fmt.Println(indent + "├── " + info.Name())
+				// return nil
 			})
 
 			err = os.RemoveAll(outputPath)
