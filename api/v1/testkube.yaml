@@ -7157,6 +7157,16 @@ components:
         context:
           type: string
           description: Context value depending from its type
+        runnerIds: 
+          type: array 
+          items: 
+            type: string
+        tags: 
+          type: object
+          additionalProperties:
+            type: string 
+
+
 
     Webhook:
       description: CRD based webhook data
@@ -8001,6 +8011,10 @@ components:
     TestWorkflowExecutionRequest:
       type: object
       properties:
+        id:
+          type: string
+          description: custom execution id
+          defatult: ""
         name:
           type: string
           description: custom execution name
@@ -8015,6 +8029,8 @@ components:
           default: false
         tags:
           $ref: "#/components/schemas/TestWorkflowTagValue"
+        runningContext:
+          $ref: "#/components/schemas/RunningContext"
 
     TestWorkflowWithExecution:
       type: object
@@ -8108,6 +8124,15 @@ components:
             - false
         tags:
           $ref: "#/components/schemas/TestWorkflowTagValue"
+        runnerId:
+          type: string
+          description: Runner id that executed the test workflow
+        runningContext:
+          $ref: "#/components/schemas/RunningContext"
+        groupId:
+          type: string
+          description: test workflow correlation id when run against multiple agent in On Prem mode
+
       required:
         - id
         - name
@@ -8120,7 +8145,15 @@ components:
           type: string
           description: unique execution identifier
           format: bson objectId
-          example: "62f395e004109209b50edfc1"
+          example: "twes0m33x3cut10n1d"
+        runnerId:
+          type: string
+          description: runner identifier
+          example: "some-unique-id-per-env-1"
+        groupId:
+          type: string
+          description: group identifier when run against multiple runner
+          example: "twgs0m3gr0up1d"
         name:
           type: string
           description: execution name
@@ -8142,6 +8175,8 @@ components:
           $ref: "#/components/schemas/TestWorkflowSummary"
         tags:
           $ref: "#/components/schemas/TestWorkflowTagValue"
+        runningContext:
+          $ref: "#/components/schemas/RunningContext"
       required:
         - id
         - name

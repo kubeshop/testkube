@@ -72,6 +72,8 @@ type executor struct {
 	imageDataPersistentCacheKey    string
 	dashboardURI                   string
 	clusterID                      string
+	runnerID                       string
+	isRuner                        bool
 	serviceAccountNames            map[string]string
 }
 
@@ -88,7 +90,7 @@ func New(emitter *event.Emitter,
 	secretManager secretmanager.SecretManager,
 	serviceAccountNames map[string]string,
 	globalTemplateName, namespace, apiUrl, defaultRegistry string,
-	enableImageDataPersistentCache bool, imageDataPersistentCacheKey, dashboardURI, clusterID string) TestWorkflowExecutor {
+	enableImageDataPersistentCache bool, imageDataPersistentCacheKey, dashboardURI, clusterID, runnerID string) TestWorkflowExecutor {
 	if serviceAccountNames == nil {
 		serviceAccountNames = make(map[string]string)
 	}
@@ -114,6 +116,8 @@ func New(emitter *event.Emitter,
 		imageDataPersistentCacheKey:    imageDataPersistentCacheKey,
 		dashboardURI:                   dashboardURI,
 		clusterID:                      clusterID,
+		runnerID:                       runnerID,
+		isRuner:                        runnerID != "",
 	}
 }
 
@@ -329,8 +333,14 @@ func (e *executor) Control(ctx context.Context, testWorkflow *testworkflowsv1.Te
 	return nil
 }
 
-func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWorkflow, request testkube.TestWorkflowExecutionRequest) (
-	execution testkube.TestWorkflowExecution, err error) {
+func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWorkflow, request testkube.TestWorkflowExecutionRequest) (execution testkube.TestWorkflowExecution, err error) {
+
+	// We'll get basic execuition data from the request (from Control Plane as it manages the data in runner mode)
+	id := primitive.NewObjectID().Hex()
+	if request.Id != "" {
+		id = request.Id
+	}
+
 	// Delete unnecessary data
 	delete(workflow.Annotations, "kubectl.kubernetes.io/last-applied-configuration")
 
@@ -377,9 +387,6 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		return execution, fmt.Errorf("not supported execution namespace %s", namespace)
 	}
 
-	// Build the basic Execution data
-	id := primitive.NewObjectID().Hex()
-
 	// Handle secrets auto-creation
 	secrets := e.secretManager.Batch(namespace, "twe-", id)
 
@@ -415,6 +422,8 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		dashboardUrl = fmt.Sprintf("%s/organization/%s/environment/%s/dashboard",
 			cloudUiUrl, env.Config().Cloud.OrgId, env.Config().Cloud.EnvId)
 	}
+
+	// Build the basic Execution data
 
 	now := time.Now()
 	labels := make(map[string]string)
@@ -512,25 +521,6 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		return execution, errors.Wrap(err, "processing error")
 	}
 
-	// Load execution identifier data
-	number, err := e.repository.GetNextExecutionNumber(context.Background(), workflow.Name)
-	if err != nil {
-		log.DefaultLogger.Errorw("failed to retrieve TestWorkflow execution number", "id", id, "error", err)
-	}
-
-	executionName := request.Name
-	if executionName == "" {
-		executionName = fmt.Sprintf("%s-%d", workflow.Name, number)
-	}
-
-	testWorkflowExecutionName := request.TestWorkflowExecutionName
-	// Ensure it is unique name
-	// TODO: Consider if we shouldn't make name unique across all TestWorkflows
-	next, _ := e.repository.GetByNameAndTestWorkflow(ctx, executionName, workflow.Name)
-	if next.Name == executionName {
-		return execution, errors.Wrap(err, "execution name already exists")
-	}
-
 	var tags map[string]string
 	if workflow.Spec.Execution != nil {
 		tags = workflow.Spec.Execution.Tags
@@ -542,11 +532,55 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		log.DefaultLogger.Errorw("failed to encode tags", "id", id, "error", err)
 	}
 
+	// Get (for centralized mode) TW execution or create it
+	if request.Id != "" {
+		execution, err = e.repository.Get(ctx, request.Id)
+		if err != nil {
+			return execution, errors.Wrap(err, "can't get execution "+request.Id+" from control plane")
+		}
+	} else {
+		// TODO: Consider storing "config" as well
+
+		// Load execution identifier data
+		number, err := e.repository.GetNextExecutionNumber(context.Background(), workflow.Name)
+		if err != nil {
+			log.DefaultLogger.Errorw("failed to retrieve TestWorkflow execution number", "id", id, "error", err)
+		}
+
+		executionName := request.Name
+		if executionName == "" {
+			executionName = fmt.Sprintf("%s-%d", workflow.Name, number)
+		}
+
+		testWorkflowExecutionName := request.TestWorkflowExecutionName
+		// Ensure it is unique name
+		// TODO: Consider if we shouldn't make name unique across all TestWorkflows
+		next, _ := e.repository.GetByNameAndTestWorkflow(ctx, executionName, workflow.Name)
+		if next.Name == executionName {
+			return execution, errors.Wrap(err, "execution name already exists")
+		}
+
+		execution = testkube.TestWorkflowExecution{
+			Id:                        id,
+			Name:                      executionName,
+			Number:                    number,
+			TestWorkflowExecutionName: testWorkflowExecutionName,
+			DisableWebhooks:           request.DisableWebhooks,
+			RunnerId:                  e.runnerID,
+			RunningContext:            request.RunningContext,
+		}
+	}
+
+	// Load rest data
+	execution.Namespace = namespace
+	execution.ScheduledAt = now
+	execution.StatusAt = now
+
 	// Build machine with actual execution data
 	executionMachine := expressions.NewMachine().Register("execution", map[string]interface{}{
-		"id":              id,
-		"name":            executionName,
-		"number":          number,
+		"id":              execution.Id,
+		"name":            execution.Name,
+		"number":          execution.Number,
 		"scheduledAt":     now.UTC().Format(constants.RFC3339Millis),
 		"disableWebhooks": request.DisableWebhooks,
 		"tags":            tagsData,
@@ -558,34 +592,38 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		return execution, errors.Wrap(err, "processing error")
 	}
 
-	// Build Execution entity
-	// TODO: Consider storing "config" as well
-	execution = testkube.TestWorkflowExecution{
-		Id:          id,
-		Name:        executionName,
-		Namespace:   namespace,
-		Number:      number,
-		ScheduledAt: now,
-		StatusAt:    now,
-		Signature:   stage.MapSignatureListToInternal(bundle.Signature),
-		Result: &testkube.TestWorkflowResult{
-			Status:          common.Ptr(testkube.QUEUED_TestWorkflowStatus),
-			PredictedStatus: common.Ptr(testkube.PASSED_TestWorkflowStatus),
-			Initialization: &testkube.TestWorkflowStepResult{
-				Status: common.Ptr(testkube.QUEUED_TestWorkflowStepStatus),
-			},
-			Steps: stage.MapSignatureListToStepResults(bundle.Signature),
+	execution.Signature = stage.MapSignatureListToInternal(bundle.Signature)
+	execution.Result = &testkube.TestWorkflowResult{
+		Status:          common.Ptr(testkube.QUEUED_TestWorkflowStatus),
+		PredictedStatus: common.Ptr(testkube.PASSED_TestWorkflowStatus),
+		Initialization: &testkube.TestWorkflowStepResult{
+			Status: common.Ptr(testkube.QUEUED_TestWorkflowStepStatus),
 		},
-		Output:                    []testkube.TestWorkflowOutput{},
-		Workflow:                  testworkflowmappers.MapKubeToAPI(initialWorkflow),
-		ResolvedWorkflow:          testworkflowmappers.MapKubeToAPI(resolvedWorkflow),
-		TestWorkflowExecutionName: testWorkflowExecutionName,
-		DisableWebhooks:           request.DisableWebhooks,
-		Tags:                      tags,
+		Steps: stage.MapSignatureListToStepResults(bundle.Signature),
 	}
-	err = e.repository.Insert(ctx, execution)
-	if err != nil {
-		return execution, errors.Wrap(err, "inserting execution to storage")
+
+	execution.Output = []testkube.TestWorkflowOutput{}
+	execution.Workflow = testworkflowmappers.MapKubeToAPI(initialWorkflow)
+	execution.ResolvedWorkflow = testworkflowmappers.MapKubeToAPI(resolvedWorkflow)
+	execution.Tags = tags
+
+	// Insert or save execution
+	if request.Id != "" {
+		execution.Id = request.Id
+
+		err = e.repository.Update(ctx, execution)
+		if err != nil {
+			return execution, errors.Wrap(err, "inserting execution to storage")
+		}
+
+		log.DefaultLogger.Infof("testworkflow execution %s updated", execution.Id)
+	} else {
+		err = e.repository.Insert(ctx, execution)
+		if err != nil {
+			return execution, errors.Wrap(err, "inserting execution to storage")
+		}
+
+		log.DefaultLogger.Infof("testworkflow execution %s created", execution.Id)
 	}
 
 	// Inform about execution start

@@ -32,17 +32,20 @@ import (
 )
 
 const (
-	timeout            = 10 * time.Second
-	apiKeyMeta         = "api-key"
-	clusterIDMeta      = "cluster-id"
-	cloudMigrateMeta   = "migrate"
-	orgIdMeta          = "environment-id"
-	envIdMeta          = "organization-id"
-	healthcheckCommand = "healthcheck"
-)
+	timeout = 10 * time.Second
 
-// buffer up to five messages per worker
-const bufferSizePerWorker = 5
+	HeaderApiKey    = "api-key"
+	HeaderRunnerId  = "runner-id"
+	HeaderClusterId = "cluster-id"
+	HeaderMigrate   = "migrate"
+	HeaderOrgId     = "environment-id"
+	HeaderEnvID     = "organization-id"
+
+	HealthcheckCommand = "healthcheck"
+
+	// buffer up to five messages per worker
+	bufferSizePerWorker = 5
+)
 
 func NewGRPCConnection(
 	ctx context.Context,
@@ -130,7 +133,6 @@ type Agent struct {
 	client  cloud.TestKubeCloudAPIClient
 	handler fasthttp.RequestHandler
 	logger  *zap.SugaredLogger
-	apiKey  string
 
 	workerCount    int
 	requestBuffer  chan *cloud.ExecuteRequest
@@ -157,7 +159,11 @@ type Agent struct {
 	features    featureflags.FeatureFlags
 
 	proContext config.ProContext
+
+	commandHandlers map[cloud.Command]CommandHandler
 }
+
+type CommandHandler func(ctx context.Context, c *cloud.ExecuteRequest) *cloud.ExecuteResponse
 
 func NewAgent(logger *zap.SugaredLogger,
 	handler fasthttp.RequestHandler,
@@ -173,7 +179,6 @@ func NewAgent(logger *zap.SugaredLogger,
 	return &Agent{
 		handler:                                 handler,
 		logger:                                  logger.With("service", "Agent", "environmentId", proContext.EnvID),
-		apiKey:                                  proContext.APIKey,
 		client:                                  client,
 		events:                                  make(chan testkube.Event),
 		workerCount:                             proContext.WorkerCount,
@@ -195,7 +200,12 @@ func NewAgent(logger *zap.SugaredLogger,
 		envs:                                    envs,
 		features:                                features,
 		proContext:                              proContext,
+		commandHandlers:                         make(map[cloud.Command]CommandHandler),
 	}, nil
+}
+
+func (ag *Agent) RegisterCommandHandler(c cloud.Command, f func(ctx context.Context, c *cloud.ExecuteRequest) *cloud.ExecuteResponse) {
+	ag.commandHandlers[c] = f
 }
 
 func (ag *Agent) Run(ctx context.Context) error {
@@ -212,35 +222,44 @@ func (ag *Agent) Run(ctx context.Context) error {
 	}
 }
 
-func (ag *Agent) run(ctx context.Context) (err error) {
-	g, groupCtx := errgroup.WithContext(ctx)
+// updateContextWithMetadata adds metadata to the context
+func (ag *Agent) updateContextWithMetadata(ctx context.Context) context.Context {
+	return Context(ctx, ag.proContext)
+}
+func (ag *Agent) run(parent context.Context) (err error) {
+	g, ctx := errgroup.WithContext(ag.updateContextWithMetadata(parent))
+
 	g.Go(func() error {
-		return ag.runCommandLoop(groupCtx)
+		return ag.runCommandLoop(ctx)
 	})
 
 	g.Go(func() error {
-		return ag.runWorkers(groupCtx, ag.workerCount)
+		return ag.runWorkers(ctx, ag.workerCount)
 	})
 
 	g.Go(func() error {
-		return ag.runEventLoop(groupCtx)
+		return ag.runEventLoop(ctx)
 	})
 
 	if !ag.features.LogsV2 {
 		g.Go(func() error {
-			return ag.runLogStreamLoop(groupCtx)
+			return ag.runLogStreamLoop(ctx)
 		})
 		g.Go(func() error {
-			return ag.runLogStreamWorker(groupCtx, ag.logStreamWorkerCount)
+			return ag.runLogStreamWorker(ctx, ag.logStreamWorkerCount)
 		})
 	}
 
 	g.Go(func() error {
-		return ag.runTestWorkflowNotificationsLoop(groupCtx)
+		return ag.runTestWorkflowNotificationsLoop(ctx)
 	})
 	g.Go(func() error {
-		return ag.runTestWorkflowNotificationsWorker(groupCtx, ag.testWorkflowNotificationsWorkerCount)
+		return ag.runTestWorkflowNotificationsWorker(ctx, ag.testWorkflowNotificationsWorkerCount)
 	})
+
+	mdIn, _ := metadata.FromIncomingContext(ctx)
+	mdOut, _ := metadata.FromOutgoingContext(ctx)
+	ag.logger.Infow("initiating agent", "metadataIn", mdIn, "metadataOut", mdOut)
 
 	err = g.Wait()
 
@@ -291,7 +310,7 @@ func (ag *Agent) receiveCommand(ctx context.Context, stream cloud.TestKubeCloudA
 		err := resp.err
 
 		if err != nil {
-			ag.logger.Errorf("agent stream receive: %v", err)
+			ag.logger.Errorf("received error from control plane: %v", err)
 			return nil, err
 		}
 	case <-ctx.Done():
@@ -308,13 +327,6 @@ func (ag *Agent) receiveCommand(ctx context.Context, stream cloud.TestKubeCloudA
 }
 
 func (ag *Agent) runCommandLoop(ctx context.Context) error {
-	ctx = AddAPIKeyMeta(ctx, ag.proContext.APIKey)
-
-	ctx = metadata.AppendToOutgoingContext(ctx, clusterIDMeta, ag.clusterID)
-	ctx = metadata.AppendToOutgoingContext(ctx, cloudMigrateMeta, ag.proContext.Migrate)
-	ctx = metadata.AppendToOutgoingContext(ctx, envIdMeta, ag.proContext.EnvID)
-	ctx = metadata.AppendToOutgoingContext(ctx, orgIdMeta, ag.proContext.OrgID)
-
 	ag.logger.Infow("initiating streaming connection with control plane")
 	// creates a new Stream from the client side. ctx is used for the lifetime of the stream.
 	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
@@ -364,6 +376,7 @@ func (ag *Agent) runWorkers(ctx context.Context, numWorkers int) error {
 			for {
 				select {
 				case cmd := <-ag.requestBuffer:
+
 					select {
 					case ag.responseBuffer <- ag.executeCommand(groupCtx, cmd):
 					case <-groupCtx.Done():
@@ -378,10 +391,31 @@ func (ag *Agent) runWorkers(ctx context.Context, numWorkers int) error {
 	return g.Wait()
 }
 
+// handleCommand handles command from control plane, it's bypassing old proxy call to the HTTP API when PB command field is set
+func (ag *Agent) handleCommand(ctx context.Context, c *cloud.ExecuteRequest) *cloud.ExecuteResponse {
+	cmd := cloud.Command(c.Command)
+	if handler, ok := ag.commandHandlers[cmd]; ok {
+		ag.logger.Infow("executing command", "command", c.Command)
+		return handler(ctx, c)
+	}
+
+	var names string
+	for name := range ag.commandHandlers {
+		names += " " + string(name)
+	}
+
+	ag.logger.Errorf("command not found", "availableHandlers", names, "command", c.Command)
+	return &cloud.ExecuteResponse{MessageId: c.MessageId, Status: 404, Body: []byte("command not found, you've passed unhandled GRPC request command, check agent / control plane versions for API consistency, available handlers: " + names)}
+}
+
 func (ag *Agent) executeCommand(ctx context.Context, cmd *cloud.ExecuteRequest) *cloud.ExecuteResponse {
 	switch {
-	case cmd.Url == healthcheckCommand:
+	case cmd.Url == HealthcheckCommand || cmd.Command == string(cloud.HealthcheckCommand):
 		return &cloud.ExecuteResponse{MessageId: cmd.MessageId, Status: 0}
+	// if command is set, we handle it as a command bypassing HTTP proxy
+	case cmd.Command != "":
+		return ag.handleCommand(ctx, cmd)
+	// defaults fallback to HTTP proxy requests were passed to API server, new mode will pass directly to the handlers above
 	default:
 		req := &fasthttp.RequestCtx{}
 		r := fasthttp.AcquireRequest()
@@ -426,12 +460,25 @@ func (ag *Agent) executeCommand(ctx context.Context, cmd *cloud.ExecuteRequest) 
 	}
 }
 
-func AddAPIKeyMeta(ctx context.Context, apiKey string) context.Context {
-	md := metadata.Pairs(apiKeyMeta, apiKey)
+func AddContextMetadata(ctx context.Context, apiKey, runnerId string) context.Context {
+	md := metadata.Pairs(HeaderApiKey, apiKey, HeaderRunnerId, runnerId)
 	return metadata.NewOutgoingContext(ctx, md)
 }
 
 type cloudResponse struct {
 	resp *cloud.ExecuteRequest
 	err  error
+}
+
+// Context returns new enriched context with meteadata from ProContext
+func Context(ctx context.Context, proContext config.ProContext) context.Context {
+	return metadata.NewOutgoingContext(ctx, metadata.Pairs(
+		HeaderApiKey, proContext.APIKey,
+		HeaderClusterId, proContext.ClusterId,
+		HeaderMigrate, proContext.Migrate,
+		HeaderEnvID, proContext.EnvID,
+		HeaderOrgId, proContext.OrgID,
+		HeaderRunnerId, proContext.RunnerId,
+	))
+
 }

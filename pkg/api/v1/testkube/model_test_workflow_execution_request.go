@@ -10,6 +10,8 @@
 package testkube
 
 type TestWorkflowExecutionRequest struct {
+	// custom execution id
+	Id string `json:"id,omitempty"`
 	// custom execution name
 	Name   string            `json:"name,omitempty"`
 	Config map[string]string `json:"config,omitempty"`
@@ -18,4 +20,5 @@ type TestWorkflowExecutionRequest struct {
 	// whether webhooks on the execution of this test workflow are disabled
 	DisableWebhooks bool              `json:"disableWebhooks,omitempty"`
 	Tags            map[string]string `json:"tags,omitempty"`
+	RunningContext  *RunningContext   `json:"runningContext,omitempty"`
 }

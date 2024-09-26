@@ -13,22 +13,15 @@ import (
 	"github.com/kubeshop/testkube/pkg/cloud"
 )
 
-type Command string
-
-//go:generate mockgen -destination=./mock_executor.go -package=executor "github.com/kubeshop/testkube/pkg/cloud/data/executor" Executor
-type Executor interface {
-	Execute(ctx context.Context, command Command, payload any) (response []byte, err error)
-	Close() error
-}
-
 type CloudGRPCExecutor struct {
-	client cloud.TestKubeCloudAPIClient
-	conn   *grpc.ClientConn
-	apiKey string
+	client   cloud.TestKubeCloudAPIClient
+	conn     *grpc.ClientConn
+	apiKey   string
+	runnerId string
 }
 
-func NewCloudGRPCExecutor(client cloud.TestKubeCloudAPIClient, grpcConn *grpc.ClientConn, apiKey string) *CloudGRPCExecutor {
-	return &CloudGRPCExecutor{client: client, conn: grpcConn, apiKey: apiKey}
+func NewCloudGRPCExecutor(client cloud.TestKubeCloudAPIClient, grpcConn *grpc.ClientConn, apiKey, runnerId string) *CloudGRPCExecutor {
+	return &CloudGRPCExecutor{client: client, conn: grpcConn, apiKey: apiKey, runnerId: runnerId}
 }
 
 func (e *CloudGRPCExecutor) Execute(ctx context.Context, command Command, payload any) (response []byte, err error) {
@@ -44,7 +37,7 @@ func (e *CloudGRPCExecutor) Execute(ctx context.Context, command Command, payloa
 		Command: string(command),
 		Payload: &s,
 	}
-	ctx = agent.AddAPIKeyMeta(ctx, e.apiKey)
+	ctx = agent.AddContextMetadata(ctx, e.apiKey, e.runnerId)
 	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
 	cmdResponse, err := e.client.Call(ctx, &req, opts...)
 	if err != nil {
@@ -55,4 +48,9 @@ func (e *CloudGRPCExecutor) Execute(ctx context.Context, command Command, payloa
 
 func (e *CloudGRPCExecutor) Close() error {
 	return e.conn.Close()
+}
+
+func ToResponse[T any](in []byte) (response T, err error) {
+	err = json.Unmarshal(in, &response)
+	return
 }

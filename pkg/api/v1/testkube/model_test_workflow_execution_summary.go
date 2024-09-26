@@ -16,6 +16,10 @@ import (
 type TestWorkflowExecutionSummary struct {
 	// unique execution identifier
 	Id string `json:"id"`
+	// runner identifier
+	RunnerId string `json:"runnerId,omitempty"`
+	// group identifier when run against multiple runner
+	GroupId string `json:"groupId,omitempty"`
 	// execution name
 	Name string `json:"name"`
 	// sequence number for the execution
@@ -23,8 +27,9 @@ type TestWorkflowExecutionSummary struct {
 	// when the execution has been scheduled to run
 	ScheduledAt time.Time `json:"scheduledAt,omitempty"`
 	// when the execution result's status has changed last time (queued, passed, failed)
-	StatusAt time.Time                  `json:"statusAt,omitempty"`
-	Result   *TestWorkflowResultSummary `json:"result,omitempty"`
-	Workflow *TestWorkflowSummary       `json:"workflow"`
-	Tags     map[string]string          `json:"tags,omitempty"`
+	StatusAt       time.Time                  `json:"statusAt,omitempty"`
+	Result         *TestWorkflowResultSummary `json:"result,omitempty"`
+	Workflow       *TestWorkflowSummary       `json:"workflow"`
+	Tags           map[string]string          `json:"tags,omitempty"`
+	RunningContext *RunningContext            `json:"runningContext,omitempty"`
 }

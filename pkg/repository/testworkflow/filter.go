@@ -6,6 +6,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
+var _ Filter = &FilterImpl{}
+
 type FilterImpl struct {
 	FName          string
 	FNames         []string
@@ -19,10 +21,13 @@ type FilterImpl struct {
 	FSelector      string
 	FTagSelector   string
 	FLabelSelector *LabelSelector
+	FRunnerIds     []string
+	FTags          map[string]string
+	FRunnerTags    map[string]string
 }
 
 func NewExecutionsFilter() *FilterImpl {
-	result := FilterImpl{FPage: 0, FPageSize: PageDefaultLimit}
+	result := FilterImpl{FPage: 0, FPageSize: PageDefaultLimit, FRunnerTags: make(map[string]string)}
 	return &result
 }
 
@@ -86,6 +91,21 @@ func (f *FilterImpl) WithTagSelector(tagSelector string) *FilterImpl {
 
 func (f *FilterImpl) WithLabelSelector(selector *LabelSelector) *FilterImpl {
 	f.FLabelSelector = selector
+	return f
+}
+
+func (f *FilterImpl) WithTags(tags map[string]string) *FilterImpl {
+	f.FTags = tags
+	return f
+}
+
+func (f *FilterImpl) WithRunnerTags(tags map[string]string) *FilterImpl {
+	f.FRunnerTags = tags
+	return f
+}
+
+func (f *FilterImpl) WithRunnerIds(runnerIds []string) *FilterImpl {
+	f.FRunnerIds = runnerIds
 	return f
 }
 
@@ -163,4 +183,12 @@ func (f FilterImpl) TagSelector() string {
 
 func (f FilterImpl) LabelSelector() *LabelSelector {
 	return f.FLabelSelector
+}
+
+func (f FilterImpl) RunnerIds() []string {
+	return f.FRunnerIds
+}
+
+func (f FilterImpl) RunnerTags() map[string]string {
+	return f.FRunnerTags
 }

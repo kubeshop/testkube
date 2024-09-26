@@ -64,6 +64,7 @@ message ExecuteRequest {
     map<string, HeaderValue> headers = 3;
     bytes body                       = 4;
     string message_id                = 5;
+    string command                   = 6;
 }
 
 message TestWorkflowNotificationsRequest {

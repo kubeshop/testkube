@@ -67,6 +67,90 @@ const (
 	DefaultHttpBodyLimit = 1 * 1024 * 1024 * 1024 // 1GB - needed for file uploads
 )
 
+// New for new agent - need to be decoupled
+func New(
+	namespace string,
+	testWorkflowResults testworkflow.Repository,
+	testWorkflowOutput testworkflow.OutputRepository,
+	clientset kubernetes.Interface,
+	testkubeClientset testkubeclientset.Interface,
+	testsourcesClient *testsourcesclientv1.TestSourcesClient,
+	testWorkflowsClient *testworkflowsv1.TestWorkflowsClient,
+	testWorkflowTemplatesClient *testworkflowsv1.TestWorkflowTemplatesClient,
+	configMap repoConfig.Repository,
+	clusterId string,
+	eventsEmitter *event.Emitter,
+	testWorkflowExecutor testworkflowexecutor.TestWorkflowExecutor,
+	metrics metrics.Metrics,
+	storage storage.Client,
+	graphqlPort string,
+	artifactsStorage storage.ArtifactsStorage,
+	templatesClient *templatesclientv1.TemplatesClient,
+	dashboardURI string,
+	helmchartVersion string,
+	eventsBus bus.Bus,
+	secretConfig testkube.SecretConfig,
+	envs map[string]string,
+) TestkubeAPI {
+
+	var httpConfig server.Config
+	err := envconfig.Process("APISERVER", &httpConfig)
+	// Do we want to panic here or just ignore the error
+	if err != nil {
+		panic(err)
+	}
+
+	httpConfig.ClusterID = clusterId
+	httpConfig.Http.BodyLimit = httpConfig.HttpBodyLimit
+	if httpConfig.HttpBodyLimit == 0 {
+		httpConfig.Http.BodyLimit = DefaultHttpBodyLimit
+	}
+
+	return TestkubeAPI{
+		HTTPServer: server.NewServer(httpConfig),
+		// TestExecutionResults:        testSuiteExecutionsResults,
+		// ExecutionResults:            testExecutionResults,
+		TestWorkflowResults: testWorkflowResults,
+		TestWorkflowOutput:  testWorkflowOutput,
+		// TestsClient:                 testsClient,
+		// ExecutorsClient:             executorsClient,
+		// SecretClient:                secretClient,
+		// SecretManager:               secretManager,
+		Clientset: clientset,
+		// TestsSuitesClient:           testsuitesClient,
+		TestKubeClientset:           testkubeClientset,
+		TestWorkflowsClient:         testWorkflowsClient,
+		TestWorkflowTemplatesClient: testWorkflowTemplatesClient,
+		Metrics:                     metrics,
+		Events:                      eventsEmitter,
+		// WebhooksClient:              webhookClient,
+		TestSourcesClient: testsourcesClient,
+		Namespace:         namespace,
+		ConfigMap:         configMap,
+		// Executor:                    executor,
+		// ContainerExecutor:           containerExecutor,
+		TestWorkflowExecutor: testWorkflowExecutor,
+		// scheduler:                   scheduler,
+		// slackLoader:                 slackLoader,
+		Storage:          storage,
+		graphqlPort:      graphqlPort,
+		ArtifactsStorage: artifactsStorage,
+		TemplatesClient:  templatesClient,
+		dashboardURI:     dashboardURI,
+		helmchartVersion: helmchartVersion,
+		mode:             common.ModeAgent,
+		eventsBus:        eventsBus,
+		secretConfig:     secretConfig,
+		// featureFlags:                ff,
+		// logsStream:                  logsStream,
+		// logGrpcClient:               logGrpcClient,
+		// SubscriptionChecker:         subscriptionChecker,
+		LabelSources: common.Ptr(make([]LabelSource, 0)),
+		// ServiceAccountNames:         serviceAccountNames,
+		Envs: envs,
+	}
+}
+
 func NewTestkubeAPI(
 	namespace string,
 	testExecutionResults result.Repository,
@@ -414,6 +498,7 @@ func (s *TestkubeAPI) InitRoutes() {
 	testWorkflows.Put("/:id", s.UpdateTestWorkflowHandler())
 	testWorkflows.Delete("/:id", s.DeleteTestWorkflowHandler())
 	testWorkflows.Get("/:id/executions", s.ListTestWorkflowExecutionsHandler())
+	testWorkflows.Post("/:id/executions/v2", s.ExecuteTestWorkflowHandlerV2()) // TODO merge with above after testing
 	testWorkflows.Post("/:id/executions", s.ExecuteTestWorkflowHandler())
 	testWorkflows.Get("/:id/tags", s.ListTagsHandler())
 	testWorkflows.Get("/:id/metrics", s.GetTestWorkflowMetricsHandler())
