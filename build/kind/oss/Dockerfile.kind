@@ -25,7 +25,7 @@ RUN curl -sSLf https://get.testkube.io | bash
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-# Step 8: Example K6 Test Workkflow CRD and preload Kind images
+# Step 8: Example K6 Test Workflow CRD and preload Kind images
 COPY ./images /images
 COPY k6.yaml /examples/k6.yaml
 
