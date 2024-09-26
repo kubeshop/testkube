@@ -63,7 +63,7 @@ do
 
   # Check if there are any pods in the Testkube namespace
   if [ -z "$pod_status" ]; then
-    log "No pods found in Testkube namespace"
+    log "No pods found in Testkube namespace."
     exit 1
   fi
 
@@ -77,7 +77,7 @@ do
     status=$(echo "$line" | awk '{print $3}')
     
     if [ "$status" != "Running" ]; then
-      log "Pod $pod_name is not running. Status: $status"
+      log "Pod $pod_name is not running. Status: $status."
       all_running=false
       break
     else
@@ -89,10 +89,10 @@ do
 
       # Check if logs contain the desired pattern
       if echo "$pod_logs" | grep -q "$log_pattern"; then
-        log "Log pattern found: $log_pattern"
+        log "Log pattern found: $log_pattern."
         found_pattern=true
       else
-        log "Log pattern not found: $log_pattern"
+        log "Log pattern not found: $log_pattern."
         break
       fi
     fi
