@@ -353,40 +353,6 @@ func (s *TestkubeAPI) PreviewTestWorkflowHandler() fiber.Handler {
 	}
 }
 
-// TODO Remove one below - looks like it's not needed to push it through go routines on the end there is only single request response
-func (s *TestkubeAPI) ExecuteTestWorkflowHandlerV2() fiber.Handler {
-	return func(c *fiber.Ctx) (err error) {
-		// pass metadata to context
-		ctx := agent.Context(c.Context(), *s.proContext)
-		name := c.Params("id")
-		errPrefix := fmt.Sprintf("failed to execute test workflow '%s'", name)
-		workflow, err := s.TestWorkflowsClient.Get(name)
-		if err != nil {
-			return s.ClientError(c, errPrefix, err)
-		}
-
-		// Load the execution request
-		// {"id":"tkctwe_49cd55608bc2407f801d97c1fbc5576b","runningContext":{"type":"user-ui","runnerIds":["ma1"]}}
-		var request testkube.TestWorkflowExecutionRequest
-		err = c.BodyParser(&request)
-		if err != nil && !errors.Is(err, fiber.ErrUnprocessableEntity) {
-			return s.BadRequest(c, errPrefix, "invalid body", err)
-		} else if err != nil {
-			log.DefaultLogger.Errorw("TestWorkflow execution request parsing error", "error", err, "body", string(c.Body()))
-		}
-
-		log.DefaultLogger.Infow("TestWorkflow execution request on runner", "name", name, "request", request, "error", err)
-		request.TestWorkflowExecutionName = strings.Clone(c.Query("testWorkflowExecutionName"))
-
-		execution, err := s.TestWorkflowExecutor.Execute(ctx, *workflow, request)
-		if err != nil {
-			return s.InternalError(c, errPrefix, "execution error", err)
-		}
-
-		return c.JSON(execution)
-	}
-}
-
 // TODO: Add metrics
 func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 	return func(c *fiber.Ctx) (err error) {
