@@ -8,6 +8,30 @@ log() {
   echo "[INFO] $1"
 }
 
+# Check if agent key is provided
+if [ -z "$AGENT_KEY" ]; then
+  log "Please provide AGENT_KEY env var"
+  exit 1
+fi
+
+# Check if org id is provided
+if [ -z "$ORG_ID" ]; then
+  log "Please provide ORG_ID env var"
+  exit 1
+fi
+
+# Check if env id is provided
+if [ -z "$ENV_ID" ]; then
+  log "Please provide ENV_ID env var"
+  exit 1
+fi
+
+# Check if cloud url is provided
+if [ -z "$CLOUD_URL" ]; then
+  log "Please provide CLOUD_URL env var"
+  exit 1
+fi
+
 # Step 1: Start docker service in background
 /usr/local/bin/dockerd-entrypoint.sh &
 
@@ -46,7 +70,7 @@ helm repo update
 
 # Step 7: Install Testkube using Helm
 log "Installing Testkube via Helm..."
-helm install testkube testkube/testkube --namespace testkube --create-namespace
+helm install testkube testkube/testkube --namespace testkube --create-namespace  --set testkube-api.cloud.key=$AGENT_KEY --set testkube-api.cloud.orgId=$ORG_ID --set testkube-api.cloud.envId=$ENV_ID --set testkube-api.minio.enabled=false --set mongodb.enabled=false --set testkube-dashboard.enabled=false --set testkube-api.cloud.url=$CLOUD_URL
 if [ $? -ne 0 ]; then
   log "Testkube installation failed."
   exit 1
@@ -116,10 +140,9 @@ if [ $counter -eq 15 ]; then
 fi
 log "Testkube is up and running."
 
-# Step 9: Create and Run Testkube k6 Test Workflow 
+# Step 9: Create Testkube k6 Test Workflow 
 log "Creating and running Testkube k6 Test Workflow..."
 kubectl apply -f /examples/k6.yaml -n testkube
-kubectl testkube run testworkflow k6-workflow-smoke -f
 
 log "Testkube installation successful!"
 log "You can now use Testkube in your Kind Kubernetes cluster."
