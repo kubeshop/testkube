@@ -8014,7 +8014,7 @@ components:
         id:
           type: string
           description: custom execution id
-          defatult: ""
+          default: ""
         name:
           type: string
           description: custom execution name
