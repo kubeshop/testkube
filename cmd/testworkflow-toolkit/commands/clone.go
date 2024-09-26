@@ -150,7 +150,7 @@ func NewCloneCmd() *cobra.Command {
 
 				// bold the folder name
 				if info.IsDir() {
-					fmt.Printf("📥\033[1m%s\033[0m\n", name)
+					fmt.Printf("📦\x1b[1m%s\x1b[0m\n", name)
 				} else {
 					fmt.Println(name)
 				}
