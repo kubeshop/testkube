@@ -50,7 +50,7 @@ func (m *MinioRepository) SaveLog(ctx context.Context, id, workflowName string, 
 		return nil
 	}
 	defer buffer.Cleanup()
-	return m.storage.UploadFileToBucket(ctx, m.bucket, bucketFolder, id, reader, int64(buffer.Len()))
+	return m.storage.UploadFileToBucket(ctx, m.bucket, bucketFolder, id, buffer, int64(buffer.Len()))
 }
 
 func (m *MinioRepository) ReadLog(ctx context.Context, id, workflowName string) (io.Reader, error) {
