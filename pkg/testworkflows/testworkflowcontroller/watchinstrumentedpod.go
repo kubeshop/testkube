@@ -67,7 +67,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 				}
 			}
 
-			if watcher.State().PodStarted() || watcher.State().Completed() {
+			if watcher.State().PodStarted() || watcher.State().Completed() || opts.DisableFollow {
 				break
 			}
 		}
@@ -78,7 +78,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 		}
 
 		// Handle the case when it has been complete without pod start
-		if !watcher.State().PodStarted() && watcher.State().Completed() {
+		if !watcher.State().PodStarted() && (watcher.State().Completed() || opts.DisableFollow) {
 			notifier.Align(watcher.State())
 			return
 		}
@@ -141,7 +141,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 				}
 
 				// Determine if the container should be already accessible
-				if watcher.State().ContainerStarted(container) || watcher.State().Completed() {
+				if watcher.State().ContainerStarted(container) || watcher.State().Completed() || opts.DisableFollow {
 					break
 				}
 			}
@@ -191,7 +191,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 			// Wait until the Container is terminated
 			for ok := true; ok; _, ok = <-updatesCh {
 				// Determine if the container should be already stopped
-				if watcher.State().ContainerFinished(container) || watcher.State().Completed() {
+				if watcher.State().ContainerFinished(container) || watcher.State().Completed() || opts.DisableFollow {
 					break
 				}
 			}
