@@ -3,14 +3,15 @@ package handlers
 import (
 	"context"
 
+	"github.com/pkg/errors"
+	"go.uber.org/zap"
+
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/pkg/client/testworkflows/v1"
 	"github.com/kubeshop/testkube/pkg/agent"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 	"github.com/kubeshop/testkube/pkg/utils/codec"
-	"github.com/pkg/errors"
-	"go.uber.org/zap"
 )
 
 // TODO - valid error handling

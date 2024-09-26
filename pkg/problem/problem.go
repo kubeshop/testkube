@@ -1,9 +1,10 @@
 package problem
 
 import (
+	"github.com/moogar0880/problems"
+
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/utils/codec"
-	"github.com/moogar0880/problems"
 )
 
 // Porblem is struct defining RFC7807 Problem Details
