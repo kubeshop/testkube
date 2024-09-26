@@ -161,7 +161,7 @@ func NewCloneCmd() *cobra.Command {
 
 				// // Indent the path based on the depth
 				// indent := strings.Repeat("  ", depth)
-				
+
 				// // Print the path with appropriate indentation
 				// fmt.Println(indent + "├── " + info.Name())
 				// return nil
