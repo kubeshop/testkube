@@ -5,12 +5,15 @@ import (
 	"net"
 	"net/http"
 	"time"
+
+	"github.com/hashicorp/go-retryablehttp"
 )
 
 const (
 	NetDialTimeout      = 30 * time.Second
 	TLSHandshakeTimeout = 30 * time.Second
 	ClientTimeout       = 5 * time.Minute
+	MaxRetries          = 10
 )
 
 func NewClient(insecure ...bool) *http.Client {
@@ -47,8 +50,9 @@ func NewSSEClient(insecure ...bool) *http.Client {
 		}
 	}
 
-	return &http.Client{
-		Timeout:   time.Hour,
-		Transport: netTransport,
-	}
+	retryClient := retryablehttp.NewClient()
+	retryClient.RetryMax = MaxRetries
+	retryClient.HTTPClient.Timeout = time.Hour
+	retryClient.HTTPClient.Transport = netTransport
+	return retryClient.StandardClient()
 }

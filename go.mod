@@ -29,6 +29,7 @@ require (
 	github.com/gookit/color v1.5.4
 	github.com/gorilla/websocket v1.5.0
 	github.com/h2non/filetype v1.1.3
+	github.com/hashicorp/go-retryablehttp v0.7.7
 	github.com/itchyny/gojq v0.12.14
 	github.com/joshdk/go-junit v1.0.0
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
@@ -106,7 +107,7 @@ require (
 	github.com/emicklei/go-restful/v3 v3.11.0 // indirect
 	github.com/evanphx/json-patch v5.6.0+incompatible // indirect
 	github.com/evanphx/json-patch/v5 v5.7.0 // indirect
-	github.com/fatih/color v1.15.0 // indirect
+	github.com/fatih/color v1.16.0 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/go-errors/errors v1.5.1 // indirect
 	github.com/go-logr/logr v1.3.0 // indirect
@@ -126,6 +127,7 @@ require (
 	github.com/google/pprof v0.0.0-20210720184732-4bb14d4b1be1 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/gorilla/css v1.0.0 // indirect
+	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.1 // indirect
 	github.com/henvic/httpretty v0.0.6 // indirect
 	github.com/imdario/mergo v0.3.16 // indirect
