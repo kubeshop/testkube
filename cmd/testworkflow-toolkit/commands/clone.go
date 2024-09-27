@@ -155,16 +155,6 @@ func NewCloneCmd() *cobra.Command {
 					fmt.Println(name)
 				}
 				return nil
-
-				// // Calculate the depth of the current file or directory
-				// depth := strings.Count(name, string(os.PathSeparator)) - strings.Count(destinationPath, string(os.PathSeparator))
-
-				// // Indent the path based on the depth
-				// indent := strings.Repeat("  ", depth)
-
-				// // Print the path with appropriate indentation
-				// fmt.Println(indent + "├── " + info.Name())
-				// return nil
 			})
 
 			err = os.RemoveAll(outputPath)
