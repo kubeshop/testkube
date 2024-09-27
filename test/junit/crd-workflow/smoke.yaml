@@ -8,7 +8,7 @@ spec:
   content:
     git:
       uri: https://github.com/kubeshop/testkube
-      revision: main
+      revision: workflow-tests-junit # TODO: update
       paths:
       - test/junit/junit5-project
   container:
