@@ -1,7 +1,9 @@
 package http
 
 import (
+	"context"
 	"crypto/tls"
+	"fmt"
 	"net"
 	"net/http"
 	"time"
@@ -54,5 +56,14 @@ func NewSSEClient(insecure ...bool) *http.Client {
 	retryClient.RetryMax = MaxRetries
 	retryClient.HTTPClient.Timeout = time.Hour
 	retryClient.HTTPClient.Transport = netTransport
+	retryClient.CheckRetry = defaultRetryPolicy
 	return retryClient.StandardClient()
+}
+
+func defaultRetryPolicy(ctx context.Context, resp *http.Response, err error) (bool, error) {
+	if err != nil {
+		fmt.Println("http error", err)
+		return true, nil
+	}
+	return false, nil
 }

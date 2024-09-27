@@ -75,7 +75,7 @@ func NewDirectAPIClient(httpClient *http.Client, sseClient *http.Client, apiURI,
 		CopyFileClient:   NewCopyFileDirectClient(httpClient, apiURI, apiPathPrefix),
 		TemplateClient:   NewTemplateClient(NewDirectClient[testkube.Template](httpClient, apiURI, apiPathPrefix)),
 		TestWorkflowClient: NewTestWorkflowClient(
-			NewDirectClient[testkube.TestWorkflow](httpClient, apiURI, apiPathPrefix),
+			NewDirectClient[testkube.TestWorkflow](httpClient, apiURI, apiPathPrefix).WithSSEClient(sseClient),
 			NewDirectClient[testkube.TestWorkflowWithExecution](httpClient, apiURI, apiPathPrefix),
 			NewDirectClient[testkube.TestWorkflowExecution](httpClient, apiURI, apiPathPrefix),
 			NewDirectClient[testkube.TestWorkflowExecutionsResult](httpClient, apiURI, apiPathPrefix),
