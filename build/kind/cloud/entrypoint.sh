@@ -14,18 +14,6 @@ if [ -z "$AGENT_KEY" ]; then
   exit 1
 fi
 
-# Check if org id is provided
-if [ -z "$ORG_ID" ]; then
-  log "Please provide ORG_ID env var"
-  exit 1
-fi
-
-# Check if env id is provided
-if [ -z "$ENV_ID" ]; then
-  log "Please provide ENV_ID env var"
-  exit 1
-fi
-
 # Check if cloud url is provided
 if [ -z "$CLOUD_URL" ]; then
   log "Please provide CLOUD_URL env var"
@@ -70,7 +58,7 @@ helm repo update
 
 # Step 7: Install Testkube using Helm
 log "Installing Testkube via Helm..."
-helm install testkube testkube/testkube --namespace testkube --create-namespace  --set testkube-api.cloud.key=$AGENT_KEY --set testkube-api.cloud.orgId=$ORG_ID --set testkube-api.cloud.envId=$ENV_ID --set testkube-api.minio.enabled=false --set mongodb.enabled=false --set testkube-dashboard.enabled=false --set testkube-api.cloud.url=$CLOUD_URL
+helm install testkube testkube/testkube --namespace testkube --create-namespace  --set testkube-api.cloud.key=$AGENT_KEY --set testkube-api.minio.enabled=false --set mongodb.enabled=false --set testkube-dashboard.enabled=false --set testkube-api.cloud.url=$CLOUD_URL
 if [ $? -ne 0 ]; then
   log "Testkube installation failed."
   exit 1
