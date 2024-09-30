@@ -636,7 +636,6 @@ func main() {
 		metrics,
 		sched,
 		slackLoader,
-		storageClient,
 		cfg.GraphqlPort,
 		artifactStorage,
 		templatesClient,
