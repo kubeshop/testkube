@@ -38,6 +38,7 @@ public class TestSmoke1 {
         catch(Exception e) {
             System.out.println(e);
         }
+
         assertEquals(1, 1);
     }
 
@@ -54,6 +55,7 @@ public class TestSmoke1 {
         catch(Exception e) {
             System.out.println(e);
         }
+        
         assertEquals(1, 1);
     }
 }

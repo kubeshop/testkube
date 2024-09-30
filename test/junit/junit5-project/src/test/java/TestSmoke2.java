@@ -13,6 +13,7 @@ public class TestSmoke2 {
         catch(Exception e) {
             System.out.println(e);
         }
+        
         assertEquals(1, 1);
     }
 
@@ -29,6 +30,7 @@ public class TestSmoke2 {
         catch(Exception e) {
             System.out.println(e);
         }
+
         assertEquals(1, 1);
     }
 

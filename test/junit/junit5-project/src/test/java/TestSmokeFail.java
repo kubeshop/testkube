@@ -18,6 +18,7 @@ public class TestSmokeFail {
         catch(Exception e) {
             System.out.println(e);
         }
+        
         assertEquals(1, 1);
     }
 
@@ -29,6 +30,29 @@ public class TestSmokeFail {
         catch(Exception e) {
             System.out.println(e);
         }
+
+        assertEquals(1, 2);
+    }
+
+    @Test
+    public void test4() {
+        assertEquals(1, 2);
+    }
+
+    @Test
+    public void test5() {
+        try {
+            TimeUnit.SECONDS.sleep(2);
+        }
+        catch(Exception e) {
+            System.out.println(e);
+        }
+
+        assertEquals(1, 2);
+    }
+
+    @Test
+    public void test6() {
         assertEquals(1, 2);
     }
 }
