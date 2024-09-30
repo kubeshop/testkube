@@ -20,12 +20,12 @@ spec:
     workingDir: /data/repo/test/junit/junit5-project
   steps:
   - name: Run tests
-    shell: mvn test -Dtest=TestSmoke1,TestSmoke2
+    shell: mvn test -Dtest=TestSmoke1,TestSmoke2 && ls -lahR
     steps:
     - name: Saving artifacts
       artifacts:
         paths:
-        - 'surefire-reports/**/*'
+        - 'target/surefire-reports/**/*'
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
