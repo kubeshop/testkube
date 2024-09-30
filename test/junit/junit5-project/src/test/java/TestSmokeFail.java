@@ -18,7 +18,7 @@ public class TestSmokeFail {
         catch(Exception e) {
             System.out.println(e);
         }
-        
+
         assertEquals(1, 1);
     }
 
@@ -48,11 +48,11 @@ public class TestSmokeFail {
             System.out.println(e);
         }
 
-        assertEquals(1, 2);
+        assertEquals(1, 1);
     }
 
     @Test
     public void test6() {
-        assertEquals(1, 2);
+        assertEquals(1, 1);
     }
 }
