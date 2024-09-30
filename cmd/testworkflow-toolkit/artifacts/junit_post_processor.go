@@ -1,8 +1,6 @@
 package artifacts
 
 import (
-	"bufio"
-	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -63,10 +61,7 @@ func (p *JUnitPostProcessor) Add(path string) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to read %s", path)
 	}
-	ok, err := isJUnitReport(xmlData)
-	if err != nil {
-		return errors.Wrapf(err, "failed to check if %s is a JUnit report", path)
-	}
+	ok := isJUnitReport(xmlData)
 	if !ok {
 		return nil
 	}
@@ -104,33 +99,29 @@ func isXMLFile(stat fs.FileInfo) bool {
 	return strings.HasSuffix(stat.Name(), ".xml")
 }
 
-// isJUnitReport checks if the file starts with a JUnit XML tag
-func isJUnitReport(xmlData []byte) (bool, error) {
+// isJUnitReport checks if the XML data is a JUnit report.
+func isJUnitReport(xmlData []byte) bool {
 	const BYTE_SIZE_8KB = 8 * 1024
 
-	// Limit check to first 8KB
+	tags := []string{
+		"<?xml",
+		"<testsuite",
+		"<testsuites",
+	}
+
 	if len(xmlData) > BYTE_SIZE_8KB {
 		xmlData = xmlData[:BYTE_SIZE_8KB]
 	}
 
-	scanner := bufio.NewScanner(bytes.NewReader(xmlData))
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		line = strings.TrimSpace(line) // Remove leading and trailing whitespace
+	content := string(xmlData)
 
-		// Skip comments and declarations
-		if strings.HasPrefix(line, "<!--") || strings.HasPrefix(line, "<?xml") {
-			continue
-		}
-		if strings.Contains(line, "<testsuite") || strings.Contains(line, "<testsuites") {
-			return true, nil
-		}
-		if strings.Contains(line, "<") { // Stop if any non-JUnit tag is found
-			break
+	for _, tag := range tags {
+		if !strings.Contains(content, tag) {
+			return false
 		}
 	}
 
-	return false, scanner.Err()
+	return true
 }
 
 func (p *JUnitPostProcessor) End() error {

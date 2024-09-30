@@ -176,3 +176,5 @@ var InvalidJUnit = `<?xml version="1.0" encoding="UTF-8"?>
 <foo>
 	<bar>
 </foo>`
+
+var OneLineJUnit = `<?xml version="1.0" encoding="UTF-8"?><testsuites><testsuite name="TestSuite" tests="2" errors="0" failures="1" skipped="0"><testcase name="Test1" classname="TestClass"><failure message="Test failed">Failure details</failure></testcase><testcase name="Test2" classname="TestClass"/></testsuite></testsuites>`

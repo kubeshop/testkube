@@ -146,6 +146,11 @@ func TestIsJUnitReport(t *testing.T) {
 			file: filesystem.NewMockFile("invalid.xml", []byte(testdata.InvalidJUnit)),
 			want: false,
 		},
+		{
+			name: "one-line junit",
+			file: filesystem.NewMockFile("pytest.xml", []byte(testdata.OneLineJUnit)),
+			want: true,
+		},
 	}
 
 	for _, tc := range tests {
@@ -154,10 +159,7 @@ func TestIsJUnitReport(t *testing.T) {
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
-			ok, err := isJUnitReport(data)
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
+			ok := isJUnitReport(data)
 			assert.Equal(t, tc.want, ok)
 		})
 	}
