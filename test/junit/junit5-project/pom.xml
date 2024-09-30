@@ -24,6 +24,13 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.5.0</version>
+                <configuration>
+                    <properties>
+                        <configurationParameters>
+                            junit.platform.reporting.output.dir = surefire-reports
+                        </configurationParameters>
+                    </properties>
+			    </configuration>
             </plugin>
 
             <plugin>
