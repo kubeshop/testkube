@@ -1,13 +1,18 @@
-package example.testsuite;
-
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class TestSmoke1 {
     @BeforeEach
     public void beforeEach() {
-        TimeUnit.SECONDS.sleep(1);
+        try {
+            TimeUnit.SECONDS.sleep(1);
+        }
+        catch(Exception e) {
+            System.out.println(e);
+        }
     }
 
     @Test
@@ -27,7 +32,12 @@ public class TestSmoke1 {
 
     @Test
     public void test4() {
-        TimeUnit.SECONDS.sleep(3);
+        try {
+            TimeUnit.SECONDS.sleep(3);
+        }
+        catch(Exception e) {
+            System.out.println(e);
+        }
         assertEquals(1, 1);
     }
 
@@ -38,7 +48,12 @@ public class TestSmoke1 {
 
     @Test
     public void test6() {
-        TimeUnit.SECONDS.sleep(6);
+        try {
+            TimeUnit.SECONDS.sleep(6);
+        }
+        catch(Exception e) {
+            System.out.println(e);
+        }
         assertEquals(1, 1);
     }
 }
