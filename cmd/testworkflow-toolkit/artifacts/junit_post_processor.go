@@ -104,13 +104,17 @@ func isXMLFile(stat fs.FileInfo) bool {
 	return strings.HasSuffix(stat.Name(), ".xml")
 }
 
-// isJUnitReport checks if the file starts with a JUnit XML tag
 func isJUnitReport(xmlData []byte) (bool, error) {
+	const BYTE_SIZE_8KB = 8 * 1024
+
+	// Limit check to first 8KB
+	if len(xmlData) > BYTE_SIZE_8KB {
+		xmlData = xmlData[:BYTE_SIZE_8KB]
+	}
+
 	scanner := bufio.NewScanner(bytes.NewReader(xmlData))
-	// Read only the first few lines of the file
 	for scanner.Scan() {
-		line := scanner.Text()
-		line = strings.TrimSpace(line) // Remove leading and trailing whitespace
+		line := strings.TrimSpace(scanner.Text())
 
 		// Skip comments and declarations
 		if strings.HasPrefix(line, "<!--") || strings.HasPrefix(line, "<?xml") {
