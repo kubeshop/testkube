@@ -156,7 +156,8 @@ type Agent struct {
 	envs        map[string]string
 	features    featureflags.FeatureFlags
 
-	proContext config.ProContext
+	proContext   config.ProContext
+	timeoutTimer *time.Timer
 }
 
 func NewAgent(logger *zap.SugaredLogger,
@@ -272,6 +273,17 @@ func (ag *Agent) sendResponse(ctx context.Context, stream cloud.TestKubeCloudAPI
 	}
 }
 
+func (ag *Agent) newTimeoutTimer() {
+	ag.timeoutTimer = time.NewTimer(ag.receiveTimeout)
+}
+
+func (ag *Agent) resetTimoutTimer() {
+	// it could not be initiated when eventLoop will be faster than command loop on start
+	if ag.timeoutTimer != nil {
+		ag.timeoutTimer.Reset(ag.receiveTimeout)
+	}
+}
+
 func (ag *Agent) receiveCommand(ctx context.Context, stream cloud.TestKubeCloudAPI_ExecuteClient) (*cloud.ExecuteRequest, error) {
 	respChan := make(chan cloudResponse, 1)
 	go func() {
@@ -279,12 +291,13 @@ func (ag *Agent) receiveCommand(ctx context.Context, stream cloud.TestKubeCloudA
 		respChan <- cloudResponse{resp: cmd, err: err}
 	}()
 
-	t := time.NewTimer(ag.receiveTimeout)
+	ag.newTimeoutTimer()
+
 	var cmd *cloud.ExecuteRequest
 	select {
 	case resp := <-respChan:
-		if !t.Stop() {
-			<-t.C
+		if !ag.timeoutTimer.Stop() {
+			<-ag.timeoutTimer.C
 		}
 
 		cmd = resp.resp
@@ -295,12 +308,12 @@ func (ag *Agent) receiveCommand(ctx context.Context, stream cloud.TestKubeCloudA
 			return nil, err
 		}
 	case <-ctx.Done():
-		if !t.Stop() {
-			<-t.C
+		if !ag.timeoutTimer.Stop() {
+			<-ag.timeoutTimer.C
 		}
 
 		return nil, ctx.Err()
-	case <-t.C:
+	case <-ag.timeoutTimer.C:
 		return nil, errors.New("stream receive too slow")
 	}
 
