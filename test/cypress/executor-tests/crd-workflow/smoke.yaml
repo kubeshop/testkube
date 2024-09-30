@@ -35,9 +35,6 @@ spec:
       artifacts:
         paths:
         - '**/*'
-  events:
-  - cronjob:
-      cron: "1 */4 * * *"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -76,9 +73,6 @@ spec:
       artifacts:
         paths:
         - '**/*'
-  events:
-  - cronjob:
-      cron: "2 */4 * * *"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -114,9 +108,6 @@ spec:
     artifacts:
       paths:
       - '**/*'
-  events:
-  - cronjob:
-      cron: "3 */4 * * *"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -148,9 +139,6 @@ spec:
       config:
         version: 13.5.0
         run: "npx cypress run --env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value --config '{\"screenshotsFolder\":\"/data/artifacts/screenshots\",\"videosFolder\":\"/data/artifacts/videos\"}'"
-  events:
-  - cronjob:
-      cron: "4 */4 * * *"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -182,9 +170,6 @@ spec:
       config:
         version: 13.5.0
         run: "npx cypress run --env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value --config '{\"screenshotsFolder\":\"/data/artifacts/screenshots\",\"videosFolder\":\"/data/artifacts/videos\"}'"
-  events:
-  - cronjob:
-      cron: "5 */4 * * *"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -218,9 +203,6 @@ spec:
         config:
           version: 13.5.0
           run: "npx cypress run --env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value --config '{\"screenshotsFolder\":\"/data/artifacts/screenshots\",\"videosFolder\":\"/data/artifacts/videos\"}'"
-  events:
-  - cronjob:
-      cron: "6 */4 * * *"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -259,9 +241,6 @@ spec:
       artifacts:
         paths:
         - '**/*'
-  events:
-  - cronjob:
-      cron: "7 */4 * * *"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -304,9 +283,6 @@ spec:
       artifacts:
         paths:
         - '**/*'
-  events:
-  - cronjob:
-      cron: "8 */4 * * *"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -355,14 +331,11 @@ spec:
       workingDir: /data/artifacts
       paths:
       - '**/*'
-  events:
-  - cronjob:
-      cron: "10 */4 * * *"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: cypress-workflow-smoke-matrix
+  name: cypress-workflow-smoke-matrix-junit
   labels:
     core-tests: workflows
 spec:
@@ -407,6 +380,3 @@ spec:
       workingDir: /data/artifacts
       paths:
       - '**/*'
-  events:
-  - cronjob:
-      cron: "12 */4 * * *"

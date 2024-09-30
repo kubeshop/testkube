@@ -432,6 +432,15 @@ workflow-artillery-smoke() {
   common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file"
 }
 
+workflow-curl-smoke() {
+  name="Test Workflow - Curl"
+  workflow_crd_file="test/curl/executor-tests/crd-workflow/smoke.yaml"
+  workflow_suite_name="curl-workflow-suite"
+  workflow_suite_file="test/suites/test-workflows/curl-workflow.yaml"
+
+  common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file"
+}
+
 workflow-cypress-smoke() {
   name="Test Workflow - Cypress"
   workflow_crd_file="test/cypress/executor-tests/crd-workflow/smoke.yaml"
@@ -455,6 +464,15 @@ workflow-jmeter-smoke() {
   workflow_crd_file="test/jmeter/executor-tests/crd-workflow/smoke.yaml"
   workflow_suite_name="jmeter-workflow-suite"
   workflow_suite_file="test/suites/test-workflows/jmeter-workflow.yaml"
+
+  common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file"
+}
+
+workflow-junit-smoke() {
+  name="Test Workflow - JUnit 5"
+  workflow_crd_file="test/junit/crd-workflow/smoke.yaml"
+  workflow_suite_name="junit-workflow-suite"
+  workflow_suite_file="test/suites/test-workflows/junit-workflow.yaml"
 
   common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file"
 }
@@ -495,6 +513,15 @@ workflow-postman-smoke() {
   common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file"
 }
 
+workflow-pytest-smoke() {
+  name="Test Workflow - Pytest"
+  workflow_crd_file="test/pytest/crd-workflow/smoke.yaml"
+  workflow_suite_name="pytest-workflow-suite"
+  workflow_suite_file="test/suites/test-workflows/pytest-workflow.yaml"
+
+  common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file"
+}
+
 workflow-soapui-smoke() {
   name="Test Workflow - SoapUI"
   workflow_crd_file="test/soapui/executor-smoke/crd-workflow/smoke.yaml"
@@ -526,7 +553,6 @@ main() {
       container-postman-smoke
       container-playwright-smoke
       container-soapui-smoke
-      curl-smoke
       cypress-smoke
       ginkgo-smoke
       gradle-smoke
@@ -540,13 +566,16 @@ main() {
       playwright-smoke
       soapui-smoke
       workflow-artillery-smoke
+      workflow-curl-smoke
       workflow-cypress-smoke
       workflow-gradle-smoke
       workflow-jmeter-smoke
+      workflow-junit-smoke
       workflow-k6-smoke
       workflow-maven-smoke
       workflow-playwright-smoke
       workflow-postman-smoke
+      workflow-pytest-smoke
       workflow-soapui-smoke
       workflow-special-cases-failures
       ;;
@@ -561,7 +590,6 @@ main() {
       container-postman-smoke
       container-playwright-smoke
       container-soapui-smoke
-      curl-smoke
       cypress-smoke
       ginkgo-smoke
       gradle-smoke
@@ -573,13 +601,16 @@ main() {
       postman-smoke
       soapui-smoke
       workflow-artillery-smoke
+      workflow-curl-smoke
       workflow-cypress-smoke
       workflow-gradle-smoke
       workflow-jmeter-smoke
+      workflow-junit-smoke
       workflow-k6-smoke
       workflow-maven-smoke
       workflow-playwright-smoke
       workflow-postman-smoke
+      workflow-pytest-smoke
       workflow-soapui-smoke
       ;;
     special)
@@ -590,13 +621,16 @@ main() {
       ;;
     workflow)
       workflow-artillery-smoke
+      workflow-curl-smoke
       workflow-cypress-smoke
       workflow-gradle-smoke
       workflow-jmeter-smoke
+      workflow-junit-smoke
       workflow-k6-smoke
       workflow-maven-smoke
       workflow-playwright-smoke
       workflow-postman-smoke
+      workflow-pytest-smoke
       workflow-soapui-smoke
       workflow-special-cases-failures
       ;;
