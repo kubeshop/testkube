@@ -647,7 +647,6 @@ func main() {
 		features,
 		logsStream,
 		logGrpcClient,
-		subscriptionChecker,
 		serviceAccountNames,
 		envs,
 		cfg.TestkubeDockerImageVersion,
