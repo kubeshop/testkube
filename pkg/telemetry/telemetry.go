@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/http"
 	"os"
-	"regexp"
 	"runtime"
 	"sync"
 
@@ -190,27 +189,13 @@ func getCommandWithoutAttempt(cmd *cobra.Command) string {
 }
 
 func getCurrentContext() RunContext {
-	// Regular expression to check Docker hostname.
-	re := regexp.MustCompile(`^[0-9a-f]{12}$`)
-	hostname, err := os.ReadFile("/etc/hostname")
-	if err != nil {
-		log.DefaultLogger.Debugw("Reading etc hostname", err)
-	}
-
-	containerEnv := containerEnvKubernetes
-	if re.Match(hostname) {
-		containerEnv = containerEnvDocker
-	}
-
 	data, err := config.Load()
 	if err != nil {
 		return RunContext{
-			ContainerEnv: containerEnv,
-			Type:         "invalid-context",
+			Type: "invalid-context",
 		}
 	}
 	return RunContext{
-		ContainerEnv:   containerEnv,
 		Type:           string(data.ContextType),
 		OrganizationId: data.CloudContext.OrganizationId,
 		EnvironmentId:  data.CloudContext.EnvironmentId,

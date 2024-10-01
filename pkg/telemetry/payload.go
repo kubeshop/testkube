@@ -12,7 +12,6 @@ import (
 const (
 	runContextAgent        = "agent"
 	containerEnvKubernetes = "kubernetes"
-	containerEnvDocker     = "docker"
 )
 
 type Params struct {
