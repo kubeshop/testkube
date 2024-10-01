@@ -8,7 +8,7 @@ spec:
   content:
     git:
       uri: https://github.com/kubeshop/testkube
-      revision: workflow-tests-junit # TODO: update
+      revision: main
       paths:
       - test/pytest/pytest-project
   container:
@@ -34,7 +34,7 @@ spec:
   content:
     git:
       uri: https://github.com/kubeshop/testkube
-      revision: workflow-tests-junit # TODO: update
+      revision: main
       paths:
       - test/pytest/pytest-project
   container:
@@ -64,7 +64,7 @@ spec:
   content:
     git:
       uri: https://github.com/kubeshop/testkube
-      revision: workflow-tests-junit # TODO: update
+      revision: main
       paths:
       - test/pytest/pytest-project
   container:
