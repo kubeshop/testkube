@@ -190,7 +190,7 @@ func getCommandWithoutAttempt(cmd *cobra.Command) string {
 }
 
 func getCurrentContext() RunContext {
-	// Regular expression to Docker hostname.
+	// Regular expression to check Docker hostname.
 	re := regexp.MustCompile(`^[0-9a-f]{12}$`)
 	hostname, err := os.ReadFile("/etc/hostname")
 	if err != nil {
