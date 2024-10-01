@@ -63,6 +63,7 @@ func (p *JUnitPostProcessor) Add(path string) error {
 	}
 	ok := isJUnitReport(xmlData)
 	if !ok {
+		fmt.Printf("Skipping non-JUnit report: %s\n", ui.LightCyan(path))
 		return nil
 	}
 	fmt.Printf("Processing JUnit report: %s\n", ui.LightCyan(path))
@@ -80,6 +81,7 @@ func (p *JUnitPostProcessor) sendJUnitReport(path string, report []byte) error {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
+	fmt.Printf("Sending JUnit report to the cloud: %s\n", ui.LightCyan(path))
 	_, err := p.client.Execute(ctx, testworkflow.CmdTestWorkflowExecutionAddReport, &testworkflow.ExecutionsAddReportRequest{
 		ID:           env.ExecutionId(),
 		WorkflowName: env.WorkflowName(),
