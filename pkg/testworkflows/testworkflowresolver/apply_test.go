@@ -16,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	"github.com/kubeshop/testkube/internal/common"
 )
 
 var (
@@ -598,6 +599,76 @@ func TestApplyTemplatesConfigOverflow(t *testing.T) {
 
 	want := workflowPod.DeepCopy()
 	want.Spec.Pod.Labels["department"] = "{{config.value}}"
+
+	assert.NoError(t, err)
+	assert.Equal(t, want, wf)
+}
+
+func TestApplyTemplates_ConditionAlways(t *testing.T) {
+	tpls := map[string]testworkflowsv1.TestWorkflowTemplate{
+		"example": {
+			Spec: testworkflowsv1.TestWorkflowTemplateSpec{
+				TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+					Config: map[string]testworkflowsv1.ParameterSchema{
+						"result": {
+							Type:    testworkflowsv1.ParameterTypeString,
+							Default: &intstr.IntOrString{Type: intstr.String, StrVal: ""},
+						},
+					},
+				},
+				Steps: []testworkflowsv1.IndependentStep{
+					{
+						StepMeta: testworkflowsv1.StepMeta{Condition: "always"},
+						StepOperations: testworkflowsv1.StepOperations{
+							Run: &testworkflowsv1.StepRun{
+								ContainerConfig: testworkflowsv1.ContainerConfig{
+									Env: []corev1.EnvVar{
+										{Name: "result", Value: "{{ config.result }}"},
+									},
+								},
+								Shell: common.Ptr("echo $result"),
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	wf := &testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			Steps: []testworkflowsv1.Step{
+				{StepOperations: testworkflowsv1.StepOperations{Shell: "exit 0"}},
+				{Template: &testworkflowsv1.TemplateRef{
+					Name: "example",
+					Config: map[string]intstr.IntOrString{
+						"result": {Type: intstr.String, StrVal: "{{ passed }}"},
+					},
+				}},
+			},
+		},
+	}
+	err := ApplyTemplates(wf, tpls, nil)
+
+	want := &testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			Steps: []testworkflowsv1.Step{
+				{StepOperations: testworkflowsv1.StepOperations{Shell: "exit 0"}},
+				{
+					StepMeta: testworkflowsv1.StepMeta{Condition: "always"},
+					StepOperations: testworkflowsv1.StepOperations{
+						Run: &testworkflowsv1.StepRun{
+							ContainerConfig: testworkflowsv1.ContainerConfig{
+								Env: []corev1.EnvVar{
+									{Name: "result", Value: "{{passed}}"},
+								},
+							},
+							Shell: common.Ptr("echo $result"),
+						},
+					},
+				},
+			},
+		},
+	}
 
 	assert.NoError(t, err)
 	assert.Equal(t, want, wf)

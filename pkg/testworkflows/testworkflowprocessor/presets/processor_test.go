@@ -1174,3 +1174,72 @@ func TestProcessNamedGroupWithSkippedSteps(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, want, res.LiteActions())
 }
+
+func TestProcess_ConditionAlways(t *testing.T) {
+	wf := &testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			Steps: []testworkflowsv1.Step{
+				{StepOperations: testworkflowsv1.StepOperations{Shell: "test-command-1"}},
+				{
+					StepMeta: testworkflowsv1.StepMeta{Condition: "always"},
+					StepOperations: testworkflowsv1.StepOperations{
+						Run: &testworkflowsv1.StepRun{
+							ContainerConfig: testworkflowsv1.ContainerConfig{
+								Env: []corev1.EnvVar{
+									{Name: "result", Value: "{{passed}}"},
+								},
+							},
+							Shell: common.Ptr("echo $result"),
+						},
+					},
+				},
+			},
+		},
+	}
+
+	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{}, execMachine)
+	sig := res.Signature
+
+	want := lite.NewLiteActionGroups().
+		Append(func(list lite.LiteActionList) lite.LiteActionList {
+			return list.
+				// configure
+				Setup(false, false, false).
+				Declare(constants.RootOperationName, "true").
+				Declare(sig[0].Ref(), "true", constants.RootOperationName).
+				Declare(sig[1].Ref(), "true", constants.RootOperationName).
+				Result(constants.RootOperationName, and(sig[0].Ref(), sig[1].Ref())).
+				Result("", constants.RootOperationName).
+
+				// initialize
+				Start("").
+				CurrentStatus("true").
+				Start(constants.RootOperationName).
+				CurrentStatus(constants.RootOperationName).
+
+				// start first container
+				MutateContainer(lite.LiteContainerConfig{
+					Command: cmd("/.tktw-bin/sh"),
+					Args:    cmdShell("test-command-1"),
+				}).
+				Start(sig[0].Ref()).
+				Execute(sig[0].Ref(), false).
+				End(sig[0].Ref()).
+				CurrentStatus(and(sig[0].Ref(), constants.RootOperationName))
+		}).
+		Append(func(list lite.LiteActionList) lite.LiteActionList {
+			return list.
+				MutateContainer(lite.LiteContainerConfig{
+					Command: cmd("/.tktw-bin/sh"),
+					Args:    cmdShell("echo $result"),
+				}).
+				Start(sig[1].Ref()).
+				Execute(sig[1].Ref(), false).
+				End(sig[1].Ref()).
+				End(constants.RootOperationName).
+				End("")
+		})
+
+	assert.NoError(t, err)
+	assert.Equal(t, want, res.LiteActions())
+}
