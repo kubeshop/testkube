@@ -9,14 +9,13 @@ import (
 	"os"
 	"time"
 
-	"google.golang.org/grpc/keepalive"
-
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/version"
 
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/encoding/gzip"
+	"google.golang.org/grpc/keepalive"
 
 	"github.com/pkg/errors"
 	"github.com/valyala/fasthttp"

@@ -186,3 +186,27 @@ type ExecutionGetExecutionTagsRequest struct {
 type ExecutionGetExecutionTagsResponse struct {
 	Tags map[string][]string `json:"tags"`
 }
+
+type TestWorkflowListRequest struct {
+	Selector string `json:"selector"`
+}
+
+type TestWorkflowListResponse struct {
+	TestWorkflows []testkube.TestWorkflow `json:"testWorkflows"`
+}
+
+type TestWorkflowGetRequest struct {
+	Name string `json:"name"`
+}
+
+type TestWorkflowGetResponse struct {
+	TestWorkflow testkube.TestWorkflow `json:"testWorkflow"`
+}
+
+type TestWorkflowTemplateGetRequest struct {
+	Name string `json:"name"`
+}
+
+type TestWorkflowTemplateGetResponse struct {
+	TestWorkflowTemplate testkube.TestWorkflowTemplate `json:"testWorkflowTemplate"`
+}

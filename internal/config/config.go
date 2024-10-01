@@ -37,6 +37,7 @@ type Config struct {
 	ScrapperEnabled           bool   `envconfig:"SCRAPPERENABLED" default:"false"`
 	LogsBucket                string `envconfig:"LOGS_BUCKET" default:""`
 	LogsStorage               string `envconfig:"LOGS_STORAGE" default:""`
+	WorkflowStorage           string `envconfig:"WORKFLOW_STORAGE" default:"crd"`
 	// WhitelistedContainers is a list of containers from which logs should be collected.
 	WhitelistedContainers                       []string      `envconfig:"WHITELISTED_CONTAINERS" default:"init,logs,scraper"`
 	NatsEmbedded                                bool          `envconfig:"NATS_EMBEDDED" default:"false"`

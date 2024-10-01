@@ -29,6 +29,9 @@ const (
 	CmdTestWorkflowOutputHasLog                 executor.Command = "workflow_output_has_log"
 	CmdTestWorkflowOutputDeleteByTestWorkflow   executor.Command = "workflow_output_delete_by_test_workflow"
 	CmdTestworkflowOutputDeleteForTestWorkflows executor.Command = "workflow_output_delete_for_test_workflows"
+
+	CmdTestWorkflowGet         executor.Command = "workflow_get"
+	CmdTestWorkflowTemplateGet executor.Command = "workflow_template_get"
 )
 
 func command(v interface{}) executor.Command {
@@ -82,6 +85,11 @@ func command(v interface{}) executor.Command {
 		return CmdTestWorkflowOutputDeleteByTestWorkflow
 	case ExecutionDeleteOutputForTestWorkflowsRequest:
 		return CmdTestworkflowOutputDeleteForTestWorkflows
+
+	case TestWorkflowGetRequest:
+		return CmdTestWorkflowGet
+	case TestWorkflowTemplateGetRequest:
+		return CmdTestWorkflowTemplateGet
 	}
 	panic("unknown test workflows Cloud request")
 }
