@@ -66,7 +66,7 @@ var StateMachine = expressions.NewMachine().
 	RegisterAccessor(func(name string) (interface{}, bool) {
 		if name == "status" {
 			currentStatus := GetState().CurrentStatus
-			expr, err := expressions.EvalExpression(currentStatus, RefStatusMachine, AliasMachine)
+			expr, err := expressions.EvalExpression(currentStatus, RefNotFailedMachine, AliasMachine)
 			if err != nil {
 				output.ExitErrorf(CodeInternal, "current status is invalid: %s: %v\n", currentStatus, err.Error())
 			}
@@ -126,19 +126,17 @@ var RefSuccessMachine = expressions.NewMachine().
 		return *s.Status == StepStatusPassed || *s.Status == StepStatusSkipped, true
 	})
 
-var RefStatusMachine = expressions.NewMachine().
+var RefNotFailedMachine = expressions.NewMachine().
 	RegisterAccessor(func(ref string) (interface{}, bool) {
-		status := GetState().GetStep(ref).Status
-		if status == nil {
-			return nil, false
+		s := GetState().GetStep(ref)
+		if s.Status == nil && s.Result != "" {
+			exp, err := expressions.Compile(s.Result)
+			if err == nil {
+				return exp, true
+			}
 		}
-		return string(*status), true
+		return s.Status == nil || *s.Status == StepStatusPassed || *s.Status == StepStatusSkipped, true
 	})
-
-func Template(tpl string, m ...expressions.Machine) (string, error) {
-	m = append(m, AliasMachine, GetBaseTestWorkflowMachine())
-	return expressions.EvalTemplate(tpl, m...)
-}
 
 func Expression(expr string, m ...expressions.Machine) (expressions.StaticValue, error) {
 	m = append(m, AliasMachine, GetBaseTestWorkflowMachine())
