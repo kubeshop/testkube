@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"io/fs"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -95,9 +96,10 @@ func NewCloneCmd() *cobra.Command {
 
 			// Keep the files in temporary directory
 			outputPath := filepath.Join(constants.DefaultTmpDirPath, "repo")
-
 			// Mark directory as safe
 			configArgs := []string{"-c", fmt.Sprintf("safe.directory=%s", outputPath), "-c", "advice.detachedHead=false"}
+
+			fmt.Printf("📦 ")
 
 			// Clone repository
 			if len(paths) == 0 {
@@ -129,7 +131,7 @@ func NewCloneCmd() *cobra.Command {
 			}
 
 			// Copy files to the expected directory. Ignore errors, only inform warn about them.
-			fmt.Printf("Moving the contents to %s...\n", destinationPath)
+			fmt.Printf("📥 Moving the contents to %s...\n", destinationPath)
 			err = copy.Copy(outputPath, destinationPath, copy.Options{
 				OnError: func(src, dest string, err error) error {
 					if err != nil {
@@ -143,6 +145,18 @@ func NewCloneCmd() *cobra.Command {
 				},
 			})
 			ui.ExitOnError("copying files to destination", err)
+			fmt.Printf("🔎 Destination folder contains following files ...\n")
+			filepath.Walk(destinationPath, func(name string, info fs.FileInfo, err error) error {
+
+				// bold the folder name
+				if info.IsDir() {
+					fmt.Printf("\x1b[1m%s\x1b[0m\n", name)
+				} else {
+					fmt.Println(name)
+				}
+				return nil
+			})
+
 			err = os.RemoveAll(outputPath)
 			ui.ExitOnError("deleting the temporary directory", err)
 		},
