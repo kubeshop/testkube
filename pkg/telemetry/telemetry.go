@@ -205,7 +205,7 @@ func getCurrentContext() RunContext {
 	data, err := config.Load()
 	if err != nil {
 		return RunContext{
-			ContainerEnv: string(hostname),
+			ContainerEnv: containerEnv,
 			Type:         "invalid-context",
 		}
 	}
