@@ -118,12 +118,12 @@ func isJUnitReport(xmlData []byte) bool {
 	content := string(xmlData)
 
 	for _, tag := range tags {
-		if !strings.Contains(content, tag) {
-			return false
+		if strings.Contains(content, tag) {
+			return true
 		}
 	}
 
-	return true
+	return false
 }
 
 func (p *JUnitPostProcessor) End() error {

@@ -148,7 +148,17 @@ func TestIsJUnitReport(t *testing.T) {
 		},
 		{
 			name: "one-line junit",
-			file: filesystem.NewMockFile("pytest.xml", []byte(testdata.OneLineJUnit)),
+			file: filesystem.NewMockFile("oneline.xml", []byte(testdata.OneLineJUnit)),
+			want: true,
+		},
+		{
+			name: "testsuites only junit",
+			file: filesystem.NewMockFile("testsuites.xml", []byte(testdata.TestsuitesOnlyJUnit)),
+			want: true,
+		},
+		{
+			name: "testsuite only junit",
+			file: filesystem.NewMockFile("testsuite.xml", []byte(testdata.TestsuiteOnlyJUnit)),
 			want: true,
 		},
 	}
