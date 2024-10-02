@@ -197,6 +197,8 @@ func (w *walker) walk(fsys fs.FS, path string, walker WalkerFn) error {
 		sanitizedPath = "."
 	}
 
+	fmt.Printf("Walking: %s\n", sanitizedPath)
+
 	return fs.WalkDir(fsys, sanitizedPath, func(filePath string, d fs.DirEntry, err error) error {
 		resolvedPath := "/" + filepath.ToSlash(filePath)
 		if !w.matches(resolvedPath) {
@@ -219,6 +221,7 @@ func (w *walker) walk(fsys fs.FS, path string, walker WalkerFn) error {
 
 		// Pass the data to final walker
 		relativeFilePath := strings.TrimLeft(resolvedPath[len(w.root):], "/")
+		fmt.Printf("Relative path: %s\n", relativeFilePath)
 		file, err := fsys.Open(filePath)
 		return walker(relativeFilePath, file, stat, err)
 	})
