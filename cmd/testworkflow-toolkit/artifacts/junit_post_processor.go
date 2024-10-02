@@ -58,10 +58,15 @@ func (p *JUnitPostProcessor) Add(path string) error {
 	if ok := isXMLFile(stat); !ok {
 		return nil
 	}
-	xmlData, err := io.ReadAll(file)
-	if err != nil {
+	// Read only the first 8KB of data
+	const BYTE_SIZE_8KB = 8 * 1024
+	xmlData := make([]byte, BYTE_SIZE_8KB)
+	n, err := file.Read(xmlData)
+	if err != nil && err != io.EOF {
 		return errors.Wrapf(err, "failed to read %s", path)
 	}
+	// Trim the slice to the actual number of bytes read
+	xmlData = xmlData[:n]
 	ok := isJUnitReport(xmlData)
 	if !ok {
 		return nil
@@ -103,15 +108,9 @@ func isXMLFile(stat fs.FileInfo) bool {
 
 // isJUnitReport checks if the XML data is a JUnit report.
 func isJUnitReport(xmlData []byte) bool {
-	const BYTE_SIZE_8KB = 8 * 1024
-
 	tags := []string{
 		"<testsuite",
 		"<testsuites",
-	}
-
-	if len(xmlData) > BYTE_SIZE_8KB {
-		xmlData = xmlData[:BYTE_SIZE_8KB]
 	}
 
 	content := string(xmlData)
