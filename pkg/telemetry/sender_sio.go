@@ -90,6 +90,7 @@ func mapProperties(name string, params Params) analytics.Properties {
 		Set("clusterId", params.ClusterID).
 		Set("eventCategory", params.EventCategory).
 		Set("host", params.Host).
+		Set("containerEnv", params.Context.ContainerEnv).
 		Set("contextType", params.Context.Type).
 		Set("cloudOrganizationId", params.Context.OrganizationId).
 		Set("cloudEnvironmentId", params.Context.EnvironmentId).
