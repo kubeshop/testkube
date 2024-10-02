@@ -81,10 +81,6 @@ func (p *JUnitPostProcessor) Add(path string) error {
 
 // sendJUnitReport sends the JUnit report to the Agent gRPC API.
 func (p *JUnitPostProcessor) sendJUnitReport(path string, report []byte) error {
-	// Apply path prefix correctly
-	if p.pathPrefix != "" {
-		path = filepath.Join(p.pathPrefix, path)
-	}
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 	fmt.Printf("Sending JUnit report to the cloud: %s\n", ui.LightCyan(path))
