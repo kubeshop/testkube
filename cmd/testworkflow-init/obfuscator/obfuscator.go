@@ -135,7 +135,7 @@ func (s *obfuscator) Write(p []byte) (n int, err error) {
 
 	// Write the rest of data
 	if len(p) > 0 {
-		nn, err = s.dst.Write(p)
+		_, err = s.dst.Write(p)
 		return size, err
 	}
 	return size, nil

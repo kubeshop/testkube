@@ -214,6 +214,17 @@ func NewInitCmdDemo() *cobra.Command {
 				DemoValuesURL: demoValuesUrl,
 				DryRun:        dryRun,
 			}
+
+			cliErr = common.CleanExistingCompletedMigrationJobs(options.Namespace)
+			if cliErr != nil {
+				spinner.Fail("Failed to install Testkube On-Prem Demo")
+				if cfg.TelemetryEnabled {
+					cliErr.AddTelemetry(cmd, "installing", "install_failed", license)
+					_, _ = telemetry.HandleCLIErrorTelemetry(common.Version, cliErr)
+				}
+				common.HandleCLIError(cliErr)
+			}
+
 			cliErr = common.HelmUpgradeOrInstallTestkubeOnPremDemo(options)
 			if cliErr != nil {
 				spinner.Fail("Failed to install Testkube On-Prem Demo")
