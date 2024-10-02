@@ -21,8 +21,8 @@ type CloudArtifactsStorage struct {
 
 var ErrOperationNotSupported = errors.New("operation not supported")
 
-func NewCloudArtifactsStorage(cloudClient cloud.TestKubeCloudAPIClient, grpcConn *grpc.ClientConn, apiKey string) *CloudArtifactsStorage {
-	return &CloudArtifactsStorage{executor: executor.NewCloudGRPCExecutor(cloudClient, grpcConn, apiKey)}
+func NewCloudArtifactsStorage(cloudClient cloud.TestKubeCloudAPIClient, grpcConn *grpc.ClientConn, apiKey, runnerId string) *CloudArtifactsStorage {
+	return &CloudArtifactsStorage{executor: executor.NewCloudGRPCExecutor(cloudClient, grpcConn, apiKey, runnerId)}
 }
 
 func (c *CloudArtifactsStorage) ListFiles(ctx context.Context, executionID, testName, testSuiteName, testWorkflowName string) ([]testkube.Artifact, error) {

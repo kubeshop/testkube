@@ -155,7 +155,7 @@ func (c NatsLogStream) handleJetstreamMessage(log *zap.SugaredLogger, ch chan ev
 }
 
 // syncCall sends request to given subject and waits for response
-func (c NatsLogStream) syncCall(ctx context.Context, subject, id string) (resp StreamResponse, err error) {
+func (c NatsLogStream) syncCall(_ context.Context, subject, id string) (resp StreamResponse, err error) {
 	b, err := json.Marshal(events.NewTrigger(id))
 	if err != nil {
 		return resp, err

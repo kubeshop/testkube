@@ -33,6 +33,7 @@ type envCloudConfig struct {
 	UiUrl       string `envconfig:"TK_C_UI_URL"`
 	OrgId       string `envconfig:"TK_C_ORG_ID"`
 	EnvId       string `envconfig:"TK_C_ENV_ID"`
+	RunnerId    string `envconfig:"TK_C_RUNNER_ID" default:""`
 	SkipVerify  bool   `envconfig:"TK_C_SKIP_VERIFY" default:"false"`
 	TlsInsecure bool   `envconfig:"TK_C_TLS_INSECURE" default:"false"`
 }

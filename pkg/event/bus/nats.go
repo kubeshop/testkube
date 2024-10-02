@@ -70,10 +70,6 @@ func NewNATSEncodedConnection(cfg ConnectionConfig, opts ...nats.Option) (*nats.
 		return nil, err
 	}
 
-	if err != nil {
-		log.DefaultLogger.Errorw("error creating NATS connection", "error", err)
-	}
-
 	return ec, nil
 }
 

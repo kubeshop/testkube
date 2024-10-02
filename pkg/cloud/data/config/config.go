@@ -18,8 +18,8 @@ type CloudRepository struct {
 	executor executor.Executor
 }
 
-func NewCloudResultRepository(cloudClient cloud.TestKubeCloudAPIClient, grpcConn *grpc.ClientConn, apiKey string) *CloudRepository {
-	return &CloudRepository{executor: executor.NewCloudGRPCExecutor(cloudClient, grpcConn, apiKey)}
+func NewCloudResultRepository(cloudClient cloud.TestKubeCloudAPIClient, grpcConn *grpc.ClientConn, apiKey, runnerId string) *CloudRepository {
+	return &CloudRepository{executor: executor.NewCloudGRPCExecutor(cloudClient, grpcConn, apiKey, runnerId)}
 }
 
 func (r *CloudRepository) GetUniqueClusterId(ctx context.Context) (string, error) {

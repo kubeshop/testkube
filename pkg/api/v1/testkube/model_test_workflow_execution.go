@@ -40,4 +40,9 @@ type TestWorkflowExecution struct {
 	// whether webhooks on the execution of this test workflow are disabled
 	DisableWebhooks bool              `json:"disableWebhooks,omitempty"`
 	Tags            map[string]string `json:"tags,omitempty"`
+	// Runner id that executed the test workflow
+	RunnerId       string          `json:"runnerId,omitempty"`
+	RunningContext *RunningContext `json:"runningContext,omitempty"`
+	// test workflow correlation id when run against multiple agent in On Prem mode
+	GroupId string `json:"groupId,omitempty"`
 }

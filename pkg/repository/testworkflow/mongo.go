@@ -376,6 +376,7 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 			} else if len(elements) == 1 {
 				existsValues["tags."+utils.EscapeDots(elements[0])] = struct{}{}
 			}
+
 		}
 		subquery := bson.A{}
 		for tag, values := range inValues {
@@ -415,6 +416,20 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 			}
 		}
 		query["$or"] = subquery
+	}
+
+	if len(filter.RunnerIds()) > 0 {
+		query["runnerid"] = bson.M{"$in": filter.RunnerIds()}
+	}
+
+	// TODO - use tags for tags and runnerId - remove it from the model
+	// this one needs wildard index or changing the model to {k:X v:Y}
+	if len(filter.RunnerTags()) > 0 {
+		q := []bson.M{}
+		for k, v := range filter.RunnerTags() {
+			q = append(q, bson.M{"runningcontext.tags." + k: v})
+		}
+		query["$and"] = q
 	}
 
 	opts.SetSkip(int64(filter.Page() * filter.PageSize()))
