@@ -122,7 +122,7 @@ func runMigrations() (err error) {
 	return migrations.Migrator.Run(version.Version, migrator.MigrationTypeServer)
 }
 
-func runMongoMigrations(ctx context.Context, db *mongo.Database, migrationsDir string) error {
+func runMongoMigrations(ctx context.Context, db *mongo.Database, _ string) error {
 	migrationsCollectionName := "__migrations"
 	activeMigrations, err := dbmigrator.GetDbMigrationsFromFs(dbmigrations.MongoMigrationsFs)
 	if err != nil {

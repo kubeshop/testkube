@@ -162,6 +162,30 @@ func updateHelmRepo(helmPath string, dryRun bool, isOnPrem bool) *CLIError {
 	return nil
 }
 
+// It cleans existing migrations job with long TTL
+func CleanExistingCompletedMigrationJobs(namespace string) (cliErr *CLIError) {
+	kubectlPath, cliErr := lookupKubectlPath()
+	if cliErr != nil {
+		return cliErr
+	}
+
+	// Clean the job only when it's found and it's state is successful - ignore pending migrations.
+	succeeded, _ := runKubectlCommand(kubectlPath, []string{"get", "job", "testkube-enterprise-api-migrations", "-n", namespace, "-o", "jsonpath={.status.succeeded}"})
+	if succeeded == "1" {
+		_, err := runKubectlCommand(kubectlPath, []string{"delete", "job", "testkube-enterprise-api-migrations", "--namespace", namespace})
+		if err != nil {
+			return NewCLIError(
+				TKErrCleanOldMigrationJobFailed,
+				"Can't clean old migrations job",
+				"Migration job can't be deleted from some reason, check for errors in installation namespace, check execution. As a workaround try to delete job manually and retry installation/upgrade process",
+				err,
+			)
+		}
+	}
+
+	return nil
+}
+
 func runHelmCommand(helmPath string, args []string, dryRun bool) (commandOutput string, cliErr *CLIError) {
 	output, err := process.ExecuteWithOptions(process.Options{Command: helmPath, Args: args, DryRun: dryRun})
 	if err != nil {

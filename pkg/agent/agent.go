@@ -378,7 +378,7 @@ func (ag *Agent) runWorkers(ctx context.Context, numWorkers int) error {
 	return g.Wait()
 }
 
-func (ag *Agent) executeCommand(ctx context.Context, cmd *cloud.ExecuteRequest) *cloud.ExecuteResponse {
+func (ag *Agent) executeCommand(_ context.Context, cmd *cloud.ExecuteRequest) *cloud.ExecuteResponse {
 	switch {
 	case cmd.Url == healthcheckCommand:
 		return &cloud.ExecuteResponse{MessageId: cmd.MessageId, Status: 0}
