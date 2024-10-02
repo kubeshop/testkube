@@ -116,7 +116,6 @@ func (h *handler) Add(path string, file fs.File, stat fs.FileInfo) (err error) {
 		fmt.Printf(ui.Red("%s: failed: %s"), uploadPath, err.Error())
 	}
 	if h.postProcessor != nil {
-		fmt.Printf("Path sent to post processor: %s\n", ui.LightCyan(path))
 		err = h.postProcessor.Add(path)
 		if err != nil {
 			h.errors.Add(1)

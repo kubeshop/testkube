@@ -181,8 +181,6 @@ func run(handler artifacts.Handler, walker artifacts.Walker, dirFS fs.FS) {
 
 	started := time.Now()
 	err = walker.Walk(dirFS, func(path string, file fs.File, _ fs.FileInfo, err error) error {
-		fmt.Printf("Processing: %s\n", ui.LightCyan(path))
-
 		if err != nil {
 			fmt.Printf("Warning: '%s' has been ignored, as there was a problem reading it: %s\n", path, err.Error())
 			return nil

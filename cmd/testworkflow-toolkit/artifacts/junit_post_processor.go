@@ -37,8 +37,6 @@ func (p *JUnitPostProcessor) Start() error {
 
 // Add checks if the file is a JUnit report and sends it to the cloud.
 func (p *JUnitPostProcessor) Add(path string) error {
-	fmt.Printf("Checking file: %s\n", ui.LightCyan(path))
-	fmt.Printf("Path prefix: %s\n", ui.LightCyan(p.pathPrefix))
 	uploadPath := path
 	if p.pathPrefix != "" {
 		uploadPath = filepath.Join(p.pathPrefix, uploadPath)
@@ -83,7 +81,6 @@ func (p *JUnitPostProcessor) Add(path string) error {
 func (p *JUnitPostProcessor) sendJUnitReport(path string, report []byte) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
-	fmt.Printf("Sending JUnit report to the cloud: %s\n", ui.LightCyan(path))
 	_, err := p.client.Execute(ctx, testworkflow.CmdTestWorkflowExecutionAddReport, &testworkflow.ExecutionsAddReportRequest{
 		ID:           env.ExecutionId(),
 		WorkflowName: env.WorkflowName(),
