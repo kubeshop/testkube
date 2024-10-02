@@ -61,10 +61,8 @@ func (p *JUnitPostProcessor) Add(path string) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to read %s", path)
 	}
-	fmt.Printf("================ XML Data Start ================\n%s\n================ XML Data End ================\n", xmlData)
 	ok := isJUnitReport(xmlData)
 	if !ok {
-		fmt.Printf("Skipping non-JUnit report: %s\n", ui.LightCyan(path))
 		return nil
 	}
 	fmt.Printf("Processing JUnit report: %s\n", ui.LightCyan(path))
