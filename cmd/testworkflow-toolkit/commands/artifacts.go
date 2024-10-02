@@ -114,6 +114,7 @@ func NewArtifactsCmd() *cobra.Command {
 				defer executor.Close()
 
 				if env.JUnitParserEnabled() || capabilities.Enabled(supported, capabilities.CapabilityJUnitReports) {
+					fmt.Printf("FSPrefix: %s\n", env.Config().Execution.FSPrefix)
 					junitProcessor := artifacts.NewJUnitPostProcessor(filesystem.NewOSFileSystem(), executor, walker.Root(), env.Config().Execution.FSPrefix)
 					handlerOpts = append(handlerOpts, artifacts.WithPostProcessor(junitProcessor))
 				}

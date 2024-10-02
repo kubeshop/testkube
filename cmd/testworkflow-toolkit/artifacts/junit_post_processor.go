@@ -38,6 +38,7 @@ func (p *JUnitPostProcessor) Start() error {
 // Add checks if the file is a JUnit report and sends it to the cloud.
 func (p *JUnitPostProcessor) Add(path string) error {
 	fmt.Printf("Checking file: %s\n", ui.LightCyan(path))
+	fmt.Printf("Path prefix: %s\n", ui.LightCyan(p.pathPrefix))
 	uploadPath := path
 	if p.pathPrefix != "" {
 		uploadPath = filepath.Join(p.pathPrefix, uploadPath)
