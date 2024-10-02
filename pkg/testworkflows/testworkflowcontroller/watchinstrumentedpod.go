@@ -10,6 +10,7 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller/watchers"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
@@ -66,7 +67,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 				}
 			}
 
-			if watcher.State().PodStarted() || watcher.State().Completed() {
+			if watcher.State().PodStarted() || watcher.State().Completed() || opts.DisableFollow {
 				break
 			}
 		}
@@ -77,7 +78,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 		}
 
 		// Handle the case when it has been complete without pod start
-		if !watcher.State().PodStarted() && watcher.State().Completed() {
+		if !watcher.State().PodStarted() && (watcher.State().Completed() || opts.DisableFollow) {
 			notifier.Align(watcher.State())
 			return
 		}
@@ -96,7 +97,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 			notifier.Error(fmt.Errorf("cannot read execution instructions: %v", err))
 			return
 		}
-		refs, _ := ExtractRefsFromActionGroup(actions)
+		refs, endRefs := ExtractRefsFromActionGroup(actions)
 		initialRefs := make([]string, len(actions))
 		for i := range refs {
 			for j := range refs[i] {
@@ -119,6 +120,12 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 			aborted := false
 			container := fmt.Sprintf("%d", containerIndex+1)
 
+			// Determine the last ref in this container, so we can confirm that the logs have been read until end
+			lastRef := endRefs[containerIndex][len(endRefs[containerIndex])-1]
+			if lastRef == "" && len(endRefs[containerIndex]) > 1 {
+				lastRef = endRefs[containerIndex][len(endRefs[containerIndex])-2]
+			}
+
 			// Wait until the Container is started
 			currentPodEventsIndex = 0
 			for ok := true; ok; _, ok = <-updatesCh {
@@ -134,7 +141,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 				}
 
 				// Determine if the container should be already accessible
-				if watcher.State().ContainerStarted(container) || watcher.State().Completed() {
+				if watcher.State().ContainerStarted(container) || watcher.State().Completed() || opts.DisableFollow {
 					break
 				}
 			}
@@ -148,10 +155,13 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 			lastStarted = refs[containerIndex][0]
 
 			// Read the Container logs
+			isLastHint := func(hint *instructions.Instruction) bool {
+				return hint != nil && hint.Ref == lastRef && hint.Name == constants.InstructionEnd
+			}
 			isDone := func() bool {
 				return opts.DisableFollow || watcher.State().ContainerFinished(container) || watcher.State().Completed()
 			}
-			for v := range WatchContainerLogs(ctx, clientSet, watcher.State().Namespace(), watcher.State().PodName(), container, 10, isDone) {
+			for v := range WatchContainerLogs(ctx, clientSet, watcher.State().Namespace(), watcher.State().PodName(), container, 10, isDone, isLastHint) {
 				if v.Error != nil {
 					notifier.Error(v.Error)
 					continue
@@ -181,7 +191,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 			// Wait until the Container is terminated
 			for ok := true; ok; _, ok = <-updatesCh {
 				// Determine if the container should be already stopped
-				if watcher.State().ContainerFinished(container) || watcher.State().Completed() {
+				if watcher.State().ContainerFinished(container) || watcher.State().Completed() || opts.DisableFollow {
 					break
 				}
 			}

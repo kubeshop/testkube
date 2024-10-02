@@ -107,7 +107,7 @@ func getContainerLogsStream(ctx context.Context, clientSet kubernetes.Interface,
 	return stream, nil
 }
 
-func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interface, namespace, podName, containerName string, bufferSize int, isDone func() bool) <-chan ChannelMessage[ContainerLog] {
+func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interface, namespace, podName, containerName string, bufferSize int, isDone func() bool, isLastHint func(*instructions.Instruction) bool) <-chan ChannelMessage[ContainerLog] {
 	ctx, ctxCancel := context.WithCancel(parentCtx)
 	ch := make(chan ChannelMessage[ContainerLog], bufferSize)
 	var mu sync.Mutex
@@ -253,6 +253,7 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 		readerAnyContent := false
 		tsReader := newTimestampReader()
 		lastTs := time.Now()
+		completed := false
 
 		hasNewLine := false
 
@@ -286,8 +287,10 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 
 			// If the stream is finished,
 			// either the logfile has been rotated, or the container actually finished.
-			// Assume that only if there was EOF without any logs since, the container is done.
-			if err == io.EOF && !readerAnyContent {
+			// Consider the container is done only when either:
+			// - there was EOF without any logs since, or
+			// - the last expected instruction was already delivered
+			if err == io.EOF && (!readerAnyContent || completed) {
 				return
 			}
 
@@ -361,6 +364,9 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 				item := ContainerLog{Time: lastTs}
 				if isHint {
 					item.Hint = instruction
+					if !completed && isLastHint(instruction) {
+						completed = true
+					}
 				} else {
 					item.Output = instruction
 				}

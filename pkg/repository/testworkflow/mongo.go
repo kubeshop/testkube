@@ -315,6 +315,10 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 		query["workflow.name"] = filter.Name()
 	}
 
+	if filter.NamesDefined() {
+		query["workflow.name"] = bson.M{"$in": filter.Names()}
+	}
+
 	if filter.TextSearchDefined() {
 		query["name"] = bson.M{"$regex": primitive.Regex{Pattern: filter.TextSearch(), Options: "i"}}
 	}

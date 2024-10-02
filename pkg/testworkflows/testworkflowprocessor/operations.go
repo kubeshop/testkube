@@ -173,10 +173,6 @@ func ProcessContentGit(_ InternalProcessor, layer Intermediate, container stage.
 		mountPath = filepath.Join(constants.DefaultDataPath, "repo")
 	}
 
-	// Build a temporary volume to clone the repository initially.
-	// This will allow mounting files in the destination at the same level (i.e. overriding the configuration).
-	container.AppendVolumeMounts(layer.AddEmptyDirVolume(nil, constants.DefaultTmpDirPath))
-
 	// Build volume pair and share with all siblings
 	volumeMount := layer.AddEmptyDirVolume(nil, mountPath)
 	container.AppendVolumeMounts(volumeMount)

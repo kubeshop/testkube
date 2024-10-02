@@ -11,10 +11,13 @@ spec:
       workflows:
       - name: artillery-workflow-suite
       - name: cypress-workflow-suite
+      - name: curl-workflow-suite
       - name: gradle-workflow-suite
       - name: jmeter-workflow-suite
+      - name: junit-workflow-suite
       - name: k6-workflow-suite
       - name: maven-workflow-suite
       - name: playwright-workflow-suite
       - name: postman-workflow-suite
+      - name: pytest-workflow-suite
       - name: soapui-workflow-suite

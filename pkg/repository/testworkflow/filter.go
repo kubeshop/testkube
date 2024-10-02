@@ -8,6 +8,7 @@ import (
 
 type FilterImpl struct {
 	FName          string
+	FNames         []string
 	FLastNDays     int
 	FStartDate     *time.Time
 	FEndDate       *time.Time
@@ -27,6 +28,11 @@ func NewExecutionsFilter() *FilterImpl {
 
 func (f *FilterImpl) WithName(name string) *FilterImpl {
 	f.FName = name
+	return f
+}
+
+func (f *FilterImpl) WithNames(names []string) *FilterImpl {
+	f.FNames = names
 	return f
 }
 
@@ -89,6 +95,14 @@ func (f FilterImpl) Name() string {
 
 func (f FilterImpl) NameDefined() bool {
 	return f.FName != ""
+}
+
+func (f FilterImpl) Names() []string {
+	return f.FNames
+}
+
+func (f FilterImpl) NamesDefined() bool {
+	return len(f.FNames) > 0
 }
 
 func (f FilterImpl) LastNDaysDefined() bool {
