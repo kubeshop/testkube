@@ -58,7 +58,7 @@ helm repo update
 
 # Step 7: Install Testkube using Helm
 log "Installing Testkube via Helm..."
-helm install testkube testkube/testkube --namespace testkube --create-namespace  --set testkube-api.cloud.key=$AGENT_KEY --set testkube-api.minio.enabled=false --set mongodb.enabled=false --set testkube-dashboard.enabled=false --set testkube-api.cloud.url=$CLOUD_URL
+helm install testkube testkube/testkube --namespace testkube --create-namespace  --set testkube-api.cloud.key=$AGENT_KEY --set testkube-api.minio.enabled=false --set mongodb.enabled=false --set testkube-dashboard.enabled=false --set testkube-api.cloud.url=$CLOUD_URL --set testkube-api.containerEnv=docker
 if [ $? -ne 0 ]; then
   log "Testkube installation failed."
   exit 1
