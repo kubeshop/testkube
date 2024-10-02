@@ -107,7 +107,6 @@ func isJUnitReport(xmlData []byte) bool {
 	const BYTE_SIZE_8KB = 8 * 1024
 
 	tags := []string{
-		"<?xml",
 		"<testsuite",
 		"<testsuites",
 	}
