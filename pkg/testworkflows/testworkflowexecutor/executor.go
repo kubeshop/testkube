@@ -355,6 +355,8 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		tplsMap[tplName] = *tpl
 	}
 
+	// Determine execution namespace
+	// TODO: It should take in account the workflow with applied templates
 	namespace := e.namespace
 	if workflow.Spec.Job != nil && workflow.Spec.Job.Namespace != "" {
 		namespace = workflow.Spec.Job.Namespace
@@ -439,6 +441,8 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		return execution, errors.Wrap(err, "execution name already exists")
 	}
 
+	// Build tags
+	// TODO: It should take in account the final resolved workflow (?)
 	var tags map[string]string
 	if workflow.Spec.Execution != nil {
 		tags = workflow.Spec.Execution.Tags
