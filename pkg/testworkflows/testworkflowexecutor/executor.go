@@ -334,6 +334,9 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	now := time.Now().UTC()
 	executionId := primitive.NewObjectIDFromTimestamp(now).Hex()
 
+	// Initialize the storage for dynamically created secrets
+	secrets := e.secretManager.Batch("twe-", executionId).ForceEnable()
+
 	// Preserve initial workflow
 	initialWorkflow := workflow.DeepCopy()
 
@@ -342,6 +345,12 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		testworkflowresolver.AddGlobalTemplateRef(&workflow, testworkflowsv1.TemplateRef{
 			Name: testworkflowresolver.GetDisplayTemplateName(e.globalTemplateName),
 		})
+	}
+
+	// Apply the configuration
+	_, err = testworkflowresolver.ApplyWorkflowConfig(&workflow, testworkflowmappers.MapConfigValueAPIToKube(request.Config), secrets.Append)
+	if err != nil {
+		return execution, errors.Wrap(err, "configuration")
 	}
 
 	// Fetch all required templates
@@ -364,15 +373,6 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 
 	if _, ok := e.serviceAccountNames[namespace]; !ok {
 		return execution, fmt.Errorf("not supported execution namespace %s", namespace)
-	}
-
-	// Handle creating secrets for sensitive configuration variables
-	secrets := e.secretManager.Batch("twe-", executionId).ForceEnable()
-
-	// Apply the configuration
-	_, err = testworkflowresolver.ApplyWorkflowConfig(&workflow, testworkflowmappers.MapConfigValueAPIToKube(request.Config), secrets.Append)
-	if err != nil {
-		return execution, errors.Wrap(err, "configuration")
 	}
 
 	// Resolve the TestWorkflow
