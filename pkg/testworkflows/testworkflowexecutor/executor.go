@@ -329,6 +329,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	execution testkube.TestWorkflowExecution, err error) {
 	// Delete unnecessary data
 	delete(workflow.Annotations, "kubectl.kubernetes.io/last-applied-configuration")
+	workflow.Namespace = ""
 
 	// Build the (possible) execution ID
 	now := time.Now().UTC()
