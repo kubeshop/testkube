@@ -34,6 +34,9 @@ const (
 	TKErrHelmCommandFailed ErrorCode = "TKERR-1301"
 	// TKErrKubectlCommandFailed is returned when a kubectl command fail.
 	TKErrKubectlCommandFailed ErrorCode = "TKERR-1302"
+
+	// TKErrCleanOldMigrationJobFailed is returned in case of issues with old migration jobs.
+	TKErrCleanOldMigrationJobFailed ErrorCode = "TKERR-1401"
 )
 
 const helpUrl = "https://testkubeworkspace.slack.com"
