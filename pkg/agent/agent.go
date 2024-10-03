@@ -276,6 +276,7 @@ func (ag *Agent) receiveCommand(ctx context.Context, stream cloud.TestKubeCloudA
 	respChan := make(chan cloudResponse, 1)
 	go func() {
 		cmd, err := stream.Recv()
+		fmt.Println("received", cmd)
 		respChan <- cloudResponse{resp: cmd, err: err}
 	}()
 
