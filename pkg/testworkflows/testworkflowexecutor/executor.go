@@ -382,6 +382,15 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		return execution, fmt.Errorf("not supported execution namespace %s", namespace)
 	}
 
+	// Apply default service account
+	if workflow.Spec.Pod == nil {
+		workflow.Spec.Pod = &testworkflowsv1.PodConfig{}
+	}
+	if workflow.Spec.Pod.ServiceAccountName == "" {
+		workflow.Spec.Pod.ServiceAccountName = "{{internal.serviceaccount.default}}"
+	}
+
+	// Prepare all the data for resolving Test Workflow
 	storageMachine := createStorageMachine()
 	cloudMachine := createCloudMachine()
 	workflowMachine := createWorkflowMachine(workflow)
@@ -403,16 +412,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 			"images.persistence.key":     e.imageDataPersistentCacheKey,
 			"images.cache.ttl":           common.GetOr(os.Getenv("TESTKUBE_IMAGE_CREDENTIALS_CACHE_TTL"), "30m"),
 		})
-
 	machine := expressions.CombinedMachines(storageMachine, cloudMachine, workflowMachine, resourceMachine, restMachine)
-
-	// Apply default service account
-	if workflow.Spec.Pod == nil {
-		workflow.Spec.Pod = &testworkflowsv1.PodConfig{}
-	}
-	if workflow.Spec.Pod.ServiceAccountName == "" {
-		workflow.Spec.Pod.ServiceAccountName = "{{internal.serviceaccount.default}}"
-	}
 
 	// Load execution identifier data
 	number, err := e.repository.GetNextExecutionNumber(context.Background(), workflow.Name)
