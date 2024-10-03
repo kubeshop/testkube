@@ -325,20 +325,83 @@ func (e *executor) Control(ctx context.Context, testWorkflow *testworkflowsv1.Te
 	return nil
 }
 
+func (e *executor) saveInitializationError(ctx context.Context, execution testkube.TestWorkflowExecution, header string, err error) (testkube.TestWorkflowExecution, error) {
+	execution.InitializationError(header, err)
+	err = e.repository.Insert(ctx, execution)
+	if err != nil {
+		return execution, errors.Wrap(err, fmt.Sprintf("inserting execution to storage after error: %s: %s", header, err))
+	}
+	e.emitter.Notify(testkube.NewEventQueueTestWorkflow(&execution))
+	e.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(&execution))
+	return execution, nil
+}
+
 func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWorkflow, request testkube.TestWorkflowExecutionRequest) (
 	execution testkube.TestWorkflowExecution, err error) {
 	// Delete unnecessary data
 	delete(workflow.Annotations, "kubectl.kubernetes.io/last-applied-configuration")
 
-	// Build the (possible) execution ID
+	// Build the initial execution entity
 	now := time.Now().UTC()
 	executionId := primitive.NewObjectIDFromTimestamp(now).Hex()
+
+	// Load execution identifier data
+	// TODO: if request.Name is provided, consider checking for uniqueness early, and not incrementing the execution number.
+	number, err := e.repository.GetNextExecutionNumber(context.Background(), workflow.Name)
+	if err != nil {
+		log.DefaultLogger.Errorw("failed to retrieve TestWorkflow execution number", "id", executionId, "error", err)
+	}
+	executionName := request.Name
+	if executionName == "" {
+		executionName = fmt.Sprintf("%s-%d", workflow.Name, number)
+	}
+
+	// Ensure the execution name is unique
+	// TODO: Consider if we shouldn't make name unique across all TestWorkflows
+	next, _ := e.repository.GetByNameAndTestWorkflow(ctx, executionName, workflow.Name)
+	if next.Name == executionName {
+		return execution, errors.Wrap(err, "execution name already exists")
+	}
 
 	// Initialize the storage for dynamically created secrets
 	secrets := e.secretManager.Batch("twe-", executionId).ForceEnable()
 
 	// Preserve initial workflow
 	initialWorkflow := workflow.DeepCopy()
+	initialWorkflowApi := testworkflowmappers.MapKubeToAPI(initialWorkflow)
+
+	// Simplify the workflow data initially
+	_ = expressions.Simplify(&workflow)
+
+	// Create the execution entity
+	execution = testkube.TestWorkflowExecution{
+		Id:          executionId,
+		Name:        executionName,
+		Number:      number,
+		ScheduledAt: now,
+		StatusAt:    now,
+		Signature:   []testkube.TestWorkflowSignature{},
+		Result: &testkube.TestWorkflowResult{
+			Status:          common.Ptr(testkube.QUEUED_TestWorkflowStatus),
+			PredictedStatus: common.Ptr(testkube.PASSED_TestWorkflowStatus),
+			Initialization: &testkube.TestWorkflowStepResult{
+				Status: common.Ptr(testkube.QUEUED_TestWorkflowStepStatus),
+			},
+			Steps: map[string]testkube.TestWorkflowStepResult{},
+		},
+		Output:                    []testkube.TestWorkflowOutput{},
+		Workflow:                  initialWorkflowApi,
+		ResolvedWorkflow:          initialWorkflowApi,
+		TestWorkflowExecutionName: request.TestWorkflowExecutionName,
+		DisableWebhooks:           request.DisableWebhooks,
+		Tags:                      map[string]string{},
+	}
+
+	// Try to resolve tags initially
+	if workflow.Spec.Execution != nil {
+		execution.Tags = workflow.Spec.Execution.Tags
+	}
+	execution.Tags = testworkflowresolver.MergeTags(execution.Tags, request.Tags)
 
 	// Inject the global template
 	if e.globalTemplateName != "" {
@@ -350,7 +413,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	// Apply the configuration
 	_, err = testworkflowresolver.ApplyWorkflowConfig(&workflow, testworkflowmappers.MapConfigValueAPIToKube(request.Config), secrets.Append)
 	if err != nil {
-		return execution, errors.Wrap(err, "configuration")
+		return e.saveInitializationError(ctx, execution, "Failed to apply configuration.", err)
 	}
 
 	// Fetch all required templates
@@ -359,7 +422,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	for tplName := range tpls {
 		tpl, err := e.testWorkflowTemplatesClient.Get(tplName)
 		if err != nil {
-			return execution, errors.Wrap(err, "fetching error")
+			return e.saveInitializationError(ctx, execution, fmt.Sprintf("Failed to fetch '%s' template.", testworkflowresolver.GetDisplayTemplateName(tplName)), err)
 		}
 		tplsMap[tplName] = *tpl
 	}
@@ -367,7 +430,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	// Resolve the TestWorkflow
 	err = testworkflowresolver.ApplyTemplates(&workflow, tplsMap, secrets.Append)
 	if err != nil {
-		return execution, errors.Wrap(err, "resolving error")
+		return e.saveInitializationError(ctx, execution, "Failed to apply templates.", err)
 	}
 
 	// Preserve resolved TestWorkflow
@@ -379,7 +442,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		namespace = workflow.Spec.Job.Namespace
 	}
 	if _, ok := e.serviceAccountNames[namespace]; !ok {
-		return execution, fmt.Errorf("not supported execution namespace %s", namespace)
+		return e.saveInitializationError(ctx, execution, fmt.Sprintf("Not supported '%s' execution namespace.", namespace), err)
 	}
 
 	// Apply default service account
@@ -389,6 +452,16 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	if workflow.Spec.Pod.ServiceAccountName == "" {
 		workflow.Spec.Pod.ServiceAccountName = "{{internal.serviceaccount.default}}"
 	}
+
+	// Try to resolve the tags further
+	if workflow.Spec.Execution != nil {
+		execution.Tags = workflow.Spec.Execution.Tags
+	}
+	execution.Tags = testworkflowresolver.MergeTags(execution.Tags, request.Tags)
+
+	// Apply more resolved data to the execution
+	execution.Namespace = namespace // TODO: DELETE?
+	execution.ResolvedWorkflow = testworkflowmappers.MapKubeToAPI(resolvedWorkflow)
 
 	// Prepare all the data for resolving Test Workflow
 	storageMachine := createStorageMachine()
@@ -414,31 +487,6 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		})
 	machine := expressions.CombinedMachines(storageMachine, cloudMachine, workflowMachine, resourceMachine, restMachine)
 
-	// Load execution identifier data
-	number, err := e.repository.GetNextExecutionNumber(context.Background(), workflow.Name)
-	if err != nil {
-		log.DefaultLogger.Errorw("failed to retrieve TestWorkflow execution number", "id", executionId, "error", err)
-	}
-	executionName := request.Name
-	if executionName == "" {
-		executionName = fmt.Sprintf("%s-%d", workflow.Name, number)
-	}
-
-	// Ensure it is unique name
-	// TODO: Consider if we shouldn't make name unique across all TestWorkflows
-	next, _ := e.repository.GetByNameAndTestWorkflow(ctx, executionName, workflow.Name)
-	if next.Name == executionName {
-		return execution, errors.Wrap(err, "execution name already exists")
-	}
-
-	// Build tags
-	// TODO: It should take in account the final resolved workflow (?)
-	var tags map[string]string
-	if workflow.Spec.Execution != nil {
-		tags = workflow.Spec.Execution.Tags
-	}
-	tags = testworkflowresolver.MergeTags(tags, request.Tags)
-
 	// Build machine with actual execution data
 	executionMachine := expressions.NewMachine().Register("execution", map[string]interface{}{
 		"id":              executionId,
@@ -446,40 +494,29 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		"number":          number,
 		"scheduledAt":     now.Format(constants.RFC3339Millis),
 		"disableWebhooks": request.DisableWebhooks,
-		"tags":            tags,
+		"tags":            execution.Tags,
 	})
+
+	// Simplify the workflow
+	_ = expressions.Simplify(&workflow, machine, executionMachine)
+
+	// Build the final tags
+	if workflow.Spec.Execution != nil {
+		execution.Tags = workflow.Spec.Execution.Tags
+	}
+	execution.Tags = testworkflowresolver.MergeTags(execution.Tags, request.Tags)
 
 	// Process the TestWorkflow
 	bundle, err := e.processor.Bundle(ctx, &workflow, testworkflowprocessor.BundleOptions{Secrets: secrets.Get()}, machine, executionMachine)
 	if err != nil {
-		return execution, errors.Wrap(err, "processing error")
+		return e.saveInitializationError(ctx, execution, "Failed to process Test Workflow.", err)
 	}
 
-	// Build Execution entity
-	// TODO: Consider storing "config" as well
-	execution = testkube.TestWorkflowExecution{
-		Id:          executionId,
-		Name:        executionName,
-		Namespace:   namespace,
-		Number:      number,
-		ScheduledAt: now,
-		StatusAt:    now,
-		Signature:   stage.MapSignatureListToInternal(bundle.Signature),
-		Result: &testkube.TestWorkflowResult{
-			Status:          common.Ptr(testkube.QUEUED_TestWorkflowStatus),
-			PredictedStatus: common.Ptr(testkube.PASSED_TestWorkflowStatus),
-			Initialization: &testkube.TestWorkflowStepResult{
-				Status: common.Ptr(testkube.QUEUED_TestWorkflowStepStatus),
-			},
-			Steps: stage.MapSignatureListToStepResults(bundle.Signature),
-		},
-		Output:                    []testkube.TestWorkflowOutput{},
-		Workflow:                  testworkflowmappers.MapKubeToAPI(initialWorkflow),
-		ResolvedWorkflow:          testworkflowmappers.MapKubeToAPI(resolvedWorkflow),
-		TestWorkflowExecutionName: request.TestWorkflowExecutionName,
-		DisableWebhooks:           request.DisableWebhooks,
-		Tags:                      tags,
-	}
+	// Apply the signature
+	execution.Signature = stage.MapSignatureListToInternal(bundle.Signature)
+	execution.Result.Steps = stage.MapSignatureListToStepResults(bundle.Signature)
+
+	// Insert the execution
 	err = e.repository.Insert(ctx, execution)
 	if err != nil {
 		return execution, errors.Wrap(err, "inserting execution to storage")
@@ -491,6 +528,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	// Deploy required resources
 	err = e.Deploy(context.Background(), bundle)
 	if err != nil {
+		// TODO: Treat as initialization error
 		e.handleFatalError(&execution, err, time.Time{})
 		return execution, errors.Wrap(err, "deploying required resources")
 	}
