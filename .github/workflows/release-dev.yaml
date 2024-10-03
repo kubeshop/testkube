@@ -121,6 +121,48 @@ jobs:
             ${{ matrix.name }}/testkube_${{ matrix.name }}_*
           retention-days: 1
 
+  build_agent_image:
+    name: Build a Docker image for Testkube Agent
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Get tag
+        id: tag
+        uses: dawidd6/action-get-tag@v1
+        with:
+          strip_v: true
+
+      - name: Preload kind images
+        run: |
+          mkdir -p build/kind/images
+          docker pull kindest/node:v1.30.0
+          docker save kindest/node:v1.30.0 > build/kind/images/node.tar
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: build/kind
+          file: build/kind/Dockerfile.kind
+          platforms: linux/amd64,linux/arm64/v8
+          provenance: mode=max
+          push: true
+          sbom: true
+          tags: kubeshop/testkube-agent:${{steps.tag.outputs.tag}}
+
   release:
     name: Create and upload release-artifacts
     needs: pre_build
