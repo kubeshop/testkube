@@ -9,8 +9,6 @@ import (
 	"os"
 	"time"
 
-	"google.golang.org/grpc/keepalive"
-
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/version"
 
@@ -75,12 +73,6 @@ func NewGRPCConnection(
 		creds = insecure.NewCredentials()
 	}
 
-	kacp := keepalive.ClientParameters{
-		Time:                10 * time.Second,
-		Timeout:             5 * time.Second,
-		PermitWithoutStream: true,
-	}
-
 	userAgent := version.Version + "/" + version.Commit
 	logger.Infow("initiating connection with control plane", "userAgent", userAgent, "server", server, "insecure", isInsecure, "skipVerify", skipVerify, "certFile", certFile, "keyFile", keyFile, "caFile", caFile)
 	// WithBlock, WithReturnConnectionError and FailOnNonTempDialError are recommended not to be used by gRPC go docs
@@ -93,7 +85,6 @@ func NewGRPCConnection(
 		grpc.FailOnNonTempDialError(true),
 		grpc.WithUserAgent(userAgent),
 		grpc.WithTransportCredentials(creds),
-		grpc.WithKeepaliveParams(kacp),
 	)
 }
 
