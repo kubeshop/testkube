@@ -145,7 +145,7 @@ EOF
 
   # Send the message to GA via HTTP API
   # "
-  curl -X POST -H "Content-Type: application/json" -d "$payload" https://www.google-analytics.com/mp/collect?measurement_id="$GA_ID"&api_secret="$GA_SECRET"
+  curl -X POST -H "Content-Type: application/json" -d "$payload" "https://www.google-analytics.com/mp/collect?measurement_id=$GA_ID&api_secret=$GA_SECRET"
 
   # Check if the curl command was successful
   if [ $? -eq 0 ]; then
