@@ -370,6 +370,9 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		return execution, errors.Wrap(err, "resolving error")
 	}
 
+	// Preserve resolved TestWorkflow
+	resolvedWorkflow := workflow.DeepCopy()
+
 	// Determine execution namespace
 	namespace := e.namespace
 	if workflow.Spec.Job != nil && workflow.Spec.Job.Namespace != "" {
@@ -402,9 +405,6 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		})
 
 	machine := expressions.CombinedMachines(storageMachine, cloudMachine, workflowMachine, resourceMachine, restMachine)
-
-	// Preserve resolved TestWorkflow
-	resolvedWorkflow := workflow.DeepCopy()
 
 	// Apply default service account
 	if workflow.Spec.Pod == nil {
