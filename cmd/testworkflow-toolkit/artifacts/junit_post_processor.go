@@ -57,19 +57,20 @@ func (p *JUnitPostProcessor) Add(path string) error {
 	if ok := isXMLFile(stat); !ok {
 		return nil
 	}
-	// Read only the first 8KB of data
-	const BYTE_SIZE_8KB = 8 * 1024
-	xmlData := make([]byte, BYTE_SIZE_8KB)
-	n, err := file.Read(xmlData)
-	if err != nil && err != io.EOF {
+
+	xmlData, err := io.ReadAll(file)
+	if err != nil {
 		return errors.Wrapf(err, "failed to read %s", path)
 	}
-	// Trim the slice to the actual number of bytes read
-	xmlData = xmlData[:n]
-	ok := isJUnitReport(xmlData)
+
+	// Check if it's a JUnit report using only the first 8KB
+	const BYTE_SIZE_8KB = 8 * 1024
+	checkSize := min(len(xmlData), BYTE_SIZE_8KB)
+	ok := isJUnitReport(xmlData[:checkSize])
 	if !ok {
 		return nil
 	}
+
 	fmt.Printf("Processing JUnit report: %s\n", ui.LightCyan(path))
 	if err := p.sendJUnitReport(uploadPath, xmlData); err != nil {
 		return errors.Wrapf(err, "failed to send JUnit report %s", stat.Name())
