@@ -145,12 +145,12 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
-          file: build/kind/Dockerfile.kind
           context: build/kind
-          platforms: linux/amd64,linux/arm64
-          sbom: true
+          file: build/kind/Dockerfile.kind
+          platforms: linux/amd64,linux/arm64,linux/arm/v8
           provenance: mode=max
           push: true
+          sbom: true
           tags: kubeshop/testkube-agent:${{steps.tag.outputs.tag}},kubeshop/testkube-agent:latest
 
 #  release:
