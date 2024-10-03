@@ -289,7 +289,7 @@ done
 
 if [ $counter -eq 15 ]; then
   log "Testkube validation failed."
-    send_telenetry "docker_installation_failed" "tetkube_error" "Tstkube pods are not up and running"
+    send_telenetry "docker_installation_failed" "tetkube_error" "Testkube pods are not up and running"
   exit 1
 fi
 log "Testkube is up and running."
