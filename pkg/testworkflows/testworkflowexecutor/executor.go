@@ -364,8 +364,13 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		tplsMap[tplName] = *tpl
 	}
 
+	// Resolve the TestWorkflow
+	err = testworkflowresolver.ApplyTemplates(&workflow, tplsMap, secrets.Append)
+	if err != nil {
+		return execution, errors.Wrap(err, "resolving error")
+	}
+
 	// Determine execution namespace
-	// TODO: It should take in account the workflow with applied templates
 	namespace := e.namespace
 	if workflow.Spec.Job != nil && workflow.Spec.Job.Namespace != "" {
 		namespace = workflow.Spec.Job.Namespace
@@ -373,12 +378,6 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 
 	if _, ok := e.serviceAccountNames[namespace]; !ok {
 		return execution, fmt.Errorf("not supported execution namespace %s", namespace)
-	}
-
-	// Resolve the TestWorkflow
-	err = testworkflowresolver.ApplyTemplates(&workflow, tplsMap, secrets.Append)
-	if err != nil {
-		return execution, errors.Wrap(err, "resolving error")
 	}
 
 	storageMachine := createStorageMachine()
