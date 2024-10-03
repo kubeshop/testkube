@@ -63,7 +63,7 @@ func (p *JUnitPostProcessor) Add(path string) error {
 	const BYTE_SIZE_8KB = 8 * 1024
 	buffer := make([]byte, BYTE_SIZE_8KB)
 	n, err := io.ReadFull(file, buffer)
-	if err != nil && err != io.ErrUnexpectedEOF && err != io.EOF {
+	if err != nil && !errors.Is(err, io.ErrUnexpectedEOF) && !errors.Is(err, io.EOF) {
 		return errors.Wrapf(err, "failed to read initial content from %s", path)
 	}
 	buffer = buffer[:n] // Trim buffer to actual bytes read
@@ -72,17 +72,12 @@ func (p *JUnitPostProcessor) Add(path string) error {
 		return nil
 	}
 
-	// Read the rest of the file if necessary
-	var xmlData []byte
-	if n == BYTE_SIZE_8KB {
-		rest, err := io.ReadAll(file)
-		if err != nil {
-			return errors.Wrapf(err, "failed to read remaining content from %s", path)
-		}
-		xmlData = append(buffer, rest...)
-	} else {
-		xmlData = buffer
+	// Read the rest of the file
+	rest, err := io.ReadAll(file)
+	if err != nil {
+		return errors.Wrapf(err, "failed to read remaining content from %s", path)
 	}
+	xmlData := append(buffer, rest...)
 
 	fmt.Printf("Processing JUnit report: %s\n", ui.LightCyan(path))
 	if err := p.sendJUnitReport(uploadPath, xmlData); err != nil {
