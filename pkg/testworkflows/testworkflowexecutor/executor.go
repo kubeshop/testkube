@@ -425,13 +425,11 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	if err != nil {
 		log.DefaultLogger.Errorw("failed to retrieve TestWorkflow execution number", "id", executionId, "error", err)
 	}
-
 	executionName := request.Name
 	if executionName == "" {
 		executionName = fmt.Sprintf("%s-%d", workflow.Name, number)
 	}
 
-	testWorkflowExecutionName := request.TestWorkflowExecutionName
 	// Ensure it is unique name
 	// TODO: Consider if we shouldn't make name unique across all TestWorkflows
 	next, _ := e.repository.GetByNameAndTestWorkflow(ctx, executionName, workflow.Name)
@@ -484,7 +482,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		Output:                    []testkube.TestWorkflowOutput{},
 		Workflow:                  testworkflowmappers.MapKubeToAPI(initialWorkflow),
 		ResolvedWorkflow:          testworkflowmappers.MapKubeToAPI(resolvedWorkflow),
-		TestWorkflowExecutionName: testWorkflowExecutionName,
+		TestWorkflowExecutionName: request.TestWorkflowExecutionName,
 		DisableWebhooks:           request.DisableWebhooks,
 		Tags:                      tags,
 	}
