@@ -1,18 +1,14 @@
 package testworkflowexecutor
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"strconv"
-	"time"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/expressions"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 )
 
 func createStorageMachine() expressions.Machine {
@@ -84,19 +80,4 @@ func createResourceMachine(resourceId, rootResourceId, fsPrefix string) expressi
 		"root":     rootResourceId,
 		"fsPrefix": fsPrefix,
 	})
-}
-
-func validateWorkflow(ctx context.Context, processor testworkflowprocessor.Processor, workflow testworkflowsv1.TestWorkflow, disableWebhooks bool, machines ...expressions.Machine) error {
-	machines = append([]expressions.Machine{
-		expressions.NewMachine().Register("execution", map[string]interface{}{
-			"id":              "507f191e810c19729de860ea",
-			"name":            "<mock_name>",
-			"number":          "1",
-			"scheduledAt":     time.Now().UTC().Format(constants.RFC3339Millis),
-			"disableWebhooks": disableWebhooks,
-			"tags":            map[string]string(nil),
-		}),
-	}, machines...)
-	_, err := processor.Bundle(ctx, workflow.DeepCopy(), testworkflowprocessor.BundleOptions{}, machines...)
-	return err
 }

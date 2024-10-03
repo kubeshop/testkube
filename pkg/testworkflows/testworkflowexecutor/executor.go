@@ -414,12 +414,6 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		workflow.Spec.Pod.ServiceAccountName = "{{internal.serviceaccount.default}}"
 	}
 
-	// Validate the TestWorkflow
-	err = validateWorkflow(ctx, e.processor, workflow, request.DisableWebhooks, machine)
-	if err != nil {
-		return execution, errors.Wrap(err, "processing error")
-	}
-
 	// Load execution identifier data
 	number, err := e.repository.GetNextExecutionNumber(context.Background(), workflow.Name)
 	if err != nil {
