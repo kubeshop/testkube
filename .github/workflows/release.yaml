@@ -115,9 +115,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
@@ -145,7 +142,8 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
-          file: build/kind/Dockerfile.kind
+          file: Dockerfile.kind
+          context: build/kind
           platforms: linux/amd64,linux/arm64
           sbom: true
           provenance: mode=max
