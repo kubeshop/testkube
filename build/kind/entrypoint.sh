@@ -17,7 +17,6 @@ _detect_arch() {
     i386) echo "i386"
     ;;
     *) echo "Unsupported processor architecture";
-    return 1
     ;;
      esac
 }
