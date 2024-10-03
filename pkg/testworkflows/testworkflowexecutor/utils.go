@@ -5,6 +5,7 @@ import (
 	"os"
 	"strconv"
 
+	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/expressions"
@@ -58,4 +59,17 @@ func createCloudMachine() expressions.Machine {
 		Register("dashboard", map[string]string{
 			"url": dashboardUrl,
 		})
+}
+
+func createWorkflowMachine(workflow testworkflowsv1.TestWorkflow) expressions.Machine {
+	escapedLabels := make(map[string]string)
+	for key, value := range workflow.Labels {
+		escapedLabels[expressions.EscapeLabelKeyForVarName(key)] = value
+	}
+	return expressions.NewMachine().
+		Register("workflow", map[string]interface{}{
+			"name":   interface{}(workflow.Name),
+			"labels": interface{}(workflow.Labels),
+		}).
+		RegisterStringMap("labels", escapedLabels)
 }

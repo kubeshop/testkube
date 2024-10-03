@@ -3,7 +3,6 @@ package testworkflowexecutor
 import (
 	"bufio"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -386,18 +385,10 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	// TODO: Should it use env.Config()?
 
 	now := time.Now()
-	labels := make(map[string]string)
-	for key, value := range workflow.Labels {
-		labels[expressions.EscapeLabelKeyForVarName(key)] = value
-	}
-
-	labelMap, err := json.Marshal(labels)
-	if err != nil {
-		return execution, errors.Wrap(err, "marsalling labels error")
-	}
 
 	storageMachine := createStorageMachine()
 	cloudMachine := createCloudMachine()
+	workflowMachine := createWorkflowMachine(workflow)
 	restMachine := expressions.NewMachine().
 		RegisterStringMap("internal", map[string]string{
 			"serviceaccount.default": e.serviceAccountNames[namespace],
@@ -415,18 +406,13 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 			"images.persistence.key":     e.imageDataPersistentCacheKey,
 			"images.cache.ttl":           common.GetOr(os.Getenv("TESTKUBE_IMAGE_CREDENTIALS_CACHE_TTL"), "30m"),
 		}).
-		Register("workflow", map[string]string{
-			"name":   workflow.Name,
-			"labels": string(labelMap),
-		}).
 		Register("resource", map[string]string{
 			"id":       executionId,
 			"root":     executionId,
 			"fsPrefix": "",
-		}).
-		RegisterStringMap("labels", labels)
+		})
 
-	machine := expressions.CombinedMachines(storageMachine, cloudMachine, restMachine)
+	machine := expressions.CombinedMachines(storageMachine, cloudMachine, workflowMachine, restMachine)
 
 	mockExecutionMachine := expressions.NewMachine().Register("execution", map[string]interface{}{
 		"id":              executionId,
