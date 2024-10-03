@@ -332,7 +332,8 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	delete(workflow.Annotations, "kubectl.kubernetes.io/last-applied-configuration")
 
 	// Build the (possible) execution ID
-	executionId := primitive.NewObjectID().Hex()
+	now := time.Now()
+	executionId := primitive.NewObjectIDFromTimestamp(now).Hex()
 
 	// Preserve initial workflow
 	initialWorkflow := workflow.DeepCopy()
@@ -380,11 +381,6 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	if err != nil {
 		return execution, errors.Wrap(err, "resolving error")
 	}
-
-	// Determine the dashboard information
-	// TODO: Should it use env.Config()?
-
-	now := time.Now()
 
 	storageMachine := createStorageMachine()
 	cloudMachine := createCloudMachine()
