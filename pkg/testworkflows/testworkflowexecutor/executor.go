@@ -406,15 +406,6 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 
 	machine := expressions.CombinedMachines(storageMachine, cloudMachine, workflowMachine, resourceMachine, restMachine)
 
-	mockExecutionMachine := expressions.NewMachine().Register("execution", map[string]interface{}{
-		"id":              executionId,
-		"name":            "<mock_name>",
-		"number":          "1",
-		"scheduledAt":     now.UTC().Format(constants.RFC3339Millis),
-		"disableWebhooks": request.DisableWebhooks,
-		"tags":            "",
-	})
-
 	// Preserve resolved TestWorkflow
 	resolvedWorkflow := workflow.DeepCopy()
 
@@ -427,7 +418,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	}
 
 	// Validate the TestWorkflow
-	_, err = e.processor.Bundle(ctx, workflow.DeepCopy(), testworkflowprocessor.BundleOptions{Secrets: secrets.Get()}, machine, mockExecutionMachine)
+	err = validateWorkflow(ctx, e.processor, workflow, request.DisableWebhooks, machine)
 	if err != nil {
 		return execution, errors.Wrap(err, "processing error")
 	}
