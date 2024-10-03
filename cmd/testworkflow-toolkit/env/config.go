@@ -1,6 +1,8 @@
 package env
 
 import (
+	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
@@ -160,6 +162,15 @@ func JUnitParserEnabled() bool {
 	return Config().Features.EnableJUnitParser
 }
 
-func ExecutionTags() string {
-	return Config().Execution.Tags
+func ExecutionTags() map[string]string {
+	serialized := Config().Execution.Tags
+	if serialized == "" {
+		return nil
+	}
+	var deserialized map[string]string
+	err := json.Unmarshal([]byte(serialized), &deserialized)
+	if err != nil {
+		panic(fmt.Sprintf("failed to decode tags: %s", err.Error()))
+	}
+	return deserialized
 }

@@ -94,7 +94,7 @@ func validateWorkflow(ctx context.Context, processor testworkflowprocessor.Proce
 			"number":          "1",
 			"scheduledAt":     time.Now().UTC().Format(constants.RFC3339Millis),
 			"disableWebhooks": disableWebhooks,
-			"tags":            "", // FIXME?
+			"tags":            map[string]string(nil),
 		}),
 	}, machines...)
 	_, err := processor.Bundle(ctx, workflow.DeepCopy(), testworkflowprocessor.BundleOptions{}, machines...)

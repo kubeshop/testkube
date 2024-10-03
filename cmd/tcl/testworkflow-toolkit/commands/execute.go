@@ -32,7 +32,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/ui"
-	"github.com/kubeshop/testkube/pkg/utils"
 )
 
 const (
@@ -160,10 +159,7 @@ func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async 
 	return func() (err error) {
 		c := env.Testkube()
 
-		tags, err := utils.DecodeEnvVarToStringMap(env.ExecutionTags())
-		if err != nil {
-			ui.Errf("failed to decode tags: %s: %s", workflow.Name, err.Error())
-		}
+		tags := env.ExecutionTags()
 
 		var exec testkube.TestWorkflowExecution
 		for i := 0; i < CreateExecutionRetryOnFailureMaxAttempts; i++ {

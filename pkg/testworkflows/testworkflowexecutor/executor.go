@@ -33,7 +33,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowresolver"
-	"github.com/kubeshop/testkube/pkg/utils"
 )
 
 const (
@@ -446,12 +445,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	if workflow.Spec.Execution != nil {
 		tags = workflow.Spec.Execution.Tags
 	}
-
 	tags = testworkflowresolver.MergeTags(tags, request.Tags)
-	tagsData, err := utils.EncodeStringMapToEnvVar(tags)
-	if err != nil {
-		log.DefaultLogger.Errorw("failed to encode tags", "id", executionId, "error", err)
-	}
 
 	// Build machine with actual execution data
 	executionMachine := expressions.NewMachine().Register("execution", map[string]interface{}{
@@ -460,7 +454,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		"number":          number,
 		"scheduledAt":     now.Format(constants.RFC3339Millis),
 		"disableWebhooks": request.DisableWebhooks,
-		"tags":            tagsData,
+		"tags":            tags,
 	})
 
 	// Process the TestWorkflow
