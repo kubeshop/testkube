@@ -19,7 +19,6 @@ import (
 	testworkflowsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testworkflows/v1"
 	initconstants "github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
-	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
 	v1 "github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -333,6 +332,9 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	// Delete unnecessary data
 	delete(workflow.Annotations, "kubectl.kubernetes.io/last-applied-configuration")
 
+	// Build the (possible) execution ID
+	id := primitive.NewObjectID().Hex()
+
 	// Preserve initial workflow
 	initialWorkflow := workflow.DeepCopy()
 
@@ -365,9 +367,6 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		return execution, fmt.Errorf("not supported execution namespace %s", namespace)
 	}
 
-	// Build the basic Execution data
-	id := primitive.NewObjectID().Hex()
-
 	// Handle secrets auto-creation
 	secrets := e.secretManager.Batch(namespace, "twe-", id)
 
@@ -384,15 +383,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	}
 
 	// Determine the dashboard information
-	cloudApiKey := common.GetOr(os.Getenv("TESTKUBE_PRO_API_KEY"), os.Getenv("TESTKUBE_CLOUD_API_KEY"))
-	cloudOrgId := common.GetOr(os.Getenv("TESTKUBE_PRO_ORG_ID"), os.Getenv("TESTKUBE_CLOUD_ORG_ID"))
-	cloudEnvId := common.GetOr(os.Getenv("TESTKUBE_PRO_ENV_ID"), os.Getenv("TESTKUBE_CLOUD_ENV_ID"))
-	cloudUiUrl := common.GetOr(os.Getenv("TESTKUBE_PRO_UI_URL"), os.Getenv("TESTKUBE_CLOUD_UI_URL"))
-	dashboardUrl := env.Config().System.DashboardUrl
-	if env.Config().Cloud.ApiKey != "" {
-		dashboardUrl = fmt.Sprintf("%s/organization/%s/environment/%s/dashboard",
-			cloudUiUrl, env.Config().Cloud.OrgId, env.Config().Cloud.EnvId)
-	}
+	// TODO: Should it use env.Config()?
 
 	now := time.Now()
 	labels := make(map[string]string)
@@ -405,32 +396,12 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		return execution, errors.Wrap(err, "marsalling labels error")
 	}
 
-	machine := expressions.NewMachine().
+	storageMachine := createStorageMachine()
+	cloudMachine := createCloudMachine()
+	restMachine := expressions.NewMachine().
 		RegisterStringMap("internal", map[string]string{
-			"storage.url":        os.Getenv("STORAGE_ENDPOINT"),
-			"storage.accessKey":  os.Getenv("STORAGE_ACCESSKEYID"),
-			"storage.secretKey":  os.Getenv("STORAGE_SECRETACCESSKEY"),
-			"storage.region":     os.Getenv("STORAGE_REGION"),
-			"storage.bucket":     os.Getenv("STORAGE_BUCKET"),
-			"storage.token":      os.Getenv("STORAGE_TOKEN"),
-			"storage.ssl":        common.GetOr(os.Getenv("STORAGE_SSL"), "false"),
-			"storage.skipVerify": common.GetOr(os.Getenv("STORAGE_SKIP_VERIFY"), "false"),
-			"storage.certFile":   os.Getenv("STORAGE_CERT_FILE"),
-			"storage.keyFile":    os.Getenv("STORAGE_KEY_FILE"),
-			"storage.caFile":     os.Getenv("STORAGE_CA_FILE"),
-
-			"cloud.enabled":         strconv.FormatBool(os.Getenv("TESTKUBE_PRO_API_KEY") != "" || os.Getenv("TESTKUBE_CLOUD_API_KEY") != ""),
-			"cloud.api.key":         cloudApiKey,
-			"cloud.api.tlsInsecure": common.GetOr(os.Getenv("TESTKUBE_PRO_TLS_INSECURE"), os.Getenv("TESTKUBE_CLOUD_TLS_INSECURE"), "false"),
-			"cloud.api.skipVerify":  common.GetOr(os.Getenv("TESTKUBE_PRO_SKIP_VERIFY"), os.Getenv("TESTKUBE_CLOUD_SKIP_VERIFY"), "false"),
-			"cloud.api.url":         common.GetOr(os.Getenv("TESTKUBE_PRO_URL"), os.Getenv("TESTKUBE_CLOUD_URL")),
-			"cloud.ui.url":          cloudUiUrl,
-			"cloud.api.orgId":       cloudOrgId,
-			"cloud.api.envId":       cloudEnvId,
-
 			"serviceaccount.default": e.serviceAccountNames[namespace],
 
-			"dashboard.url":   os.Getenv("TESTKUBE_DASHBOARD_URI"),
 			"api.url":         e.apiUrl,
 			"namespace":       namespace,
 			"defaultRegistry": e.defaultRegistry,
@@ -453,16 +424,9 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 			"root":     id,
 			"fsPrefix": "",
 		}).
-		Register("dashboard", map[string]string{
-			"url": dashboardUrl,
-		}).
-		Register("organization", map[string]string{
-			"id": cloudOrgId,
-		}).
-		Register("environment", map[string]string{
-			"id": cloudEnvId,
-		}).
 		RegisterStringMap("labels", labels)
+
+	machine := expressions.CombinedMachines(storageMachine, cloudMachine, restMachine)
 
 	mockExecutionMachine := expressions.NewMachine().Register("execution", map[string]interface{}{
 		"id":              id,
