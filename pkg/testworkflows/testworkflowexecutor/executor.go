@@ -13,7 +13,6 @@ import (
 
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/kubernetes"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
@@ -337,8 +336,17 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	// Preserve initial workflow
 	initialWorkflow := workflow.DeepCopy()
 
-	// Fetch the templates
+	// Inject the global template
+	if e.globalTemplateName != "" {
+		testworkflowresolver.AddGlobalTemplateRef(&workflow, testworkflowsv1.TemplateRef{
+			Name: testworkflowresolver.GetDisplayTemplateName(e.globalTemplateName),
+		})
+	}
+
+	// Recognize the required templates
 	tpls := testworkflowresolver.ListTemplates(&workflow)
+
+	// Fetch all required templates
 	tplsMap := make(map[string]testworkflowsv1.TestWorkflowTemplate, len(tpls))
 	for tplName := range tpls {
 		tpl, err := e.testWorkflowTemplatesClient.Get(tplName)
@@ -346,26 +354,6 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 			return execution, errors.Wrap(err, "fetching error")
 		}
 		tplsMap[tplName] = *tpl
-	}
-
-	// Fetch the global template
-	globalTemplateRef := testworkflowsv1.TemplateRef{}
-	if e.globalTemplateName != "" {
-		internalName := testworkflowresolver.GetInternalTemplateName(e.globalTemplateName)
-		displayName := testworkflowresolver.GetDisplayTemplateName(e.globalTemplateName)
-
-		if _, ok := tplsMap[internalName]; !ok {
-			globalTemplatePtr, err := e.testWorkflowTemplatesClient.Get(internalName)
-			if err != nil && !k8serrors.IsNotFound(err) {
-				return execution, errors.Wrap(err, "global template error")
-			} else if err == nil {
-				tplsMap[internalName] = *globalTemplatePtr
-			}
-		}
-		if _, ok := tplsMap[internalName]; ok {
-			globalTemplateRef = testworkflowsv1.TemplateRef{Name: displayName}
-			workflow.Spec.Use = append([]testworkflowsv1.TemplateRef{globalTemplateRef}, workflow.Spec.Use...)
-		}
 	}
 
 	namespace := e.namespace
@@ -393,16 +381,6 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	err = testworkflowresolver.ApplyTemplates(&workflow, tplsMap, secrets.Append)
 	if err != nil {
 		return execution, errors.Wrap(err, "resolving error")
-	}
-
-	// Apply global template to parallel steps
-	if globalTemplateRef.Name != "" {
-		testworkflowresolver.AddGlobalTemplateRef(&workflow, globalTemplateRef)
-		workflow.Spec.Use = nil
-		err = testworkflowresolver.ApplyTemplates(&workflow, tplsMap, secrets.Append)
-		if err != nil {
-			return execution, errors.Wrap(err, "resolving with global templates error")
-		}
 	}
 
 	// Determine the dashboard information
