@@ -37,7 +37,7 @@ done
 
 # Step 4: Create Kind cluster using a specific Kubernetes version
 log "Creating Kubernetes cluster using Kind (Kubernetes v1.31.0)..."
-kind create cluster --name testkube-cluster --image kindest/node:v1.31.0 --wait 5m
+kind create cluster --name testkube-cluster --image kindest/node:v1.30.0 --wait 5m
 if [ $? -ne 0 ]; then
   log "Failed to create Kind cluster."
   exit 1

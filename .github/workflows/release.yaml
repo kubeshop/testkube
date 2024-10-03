@@ -142,15 +142,17 @@ jobs:
           docker pull kindest/node:v1.31.0
           docker save kindest/node:v1.31.0 > build/kind/images/node.tar
 
+          docker version
+
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
           context: build/kind
           file: build/kind/Dockerfile.kind
           platforms: linux/amd64,linux/arm64
-     #     provenance: mode=max
+          provenance: mode=max
           push: true
-     #     sbom: true
+          sbom: true
           tags: kubeshop/testkube-agent:${{steps.tag.outputs.tag}},kubeshop/testkube-agent:latest
 
 #  release:
