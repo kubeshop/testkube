@@ -68,8 +68,8 @@ func createWorkflowMachine(workflow testworkflowsv1.TestWorkflow) expressions.Ma
 	}
 	return expressions.NewMachine().
 		Register("workflow", map[string]interface{}{
-			"name":   interface{}(workflow.Name),
-			"labels": interface{}(workflow.Labels),
+			"name":   workflow.Name,
+			"labels": workflow.Labels,
 		}).
 		RegisterStringMap("labels", escapedLabels)
 }
