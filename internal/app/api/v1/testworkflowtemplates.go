@@ -105,7 +105,7 @@ func (s *TestkubeAPI) CreateTestWorkflowTemplateHandler() fiber.Handler {
 		}
 
 		// Handle secrets auto-creation
-		secrets := s.SecretManager.Batch(execNamespace, "tw-", obj.Name)
+		secrets := s.SecretManager.Batch("tw-", obj.Name)
 		err = testworkflowresolver.ExtractCredentialsInTemplate(obj, secrets.Append)
 		if err != nil {
 			return s.BadRequest(c, errPrefix, "auto-creating secrets", err)
@@ -119,7 +119,7 @@ func (s *TestkubeAPI) CreateTestWorkflowTemplateHandler() fiber.Handler {
 		}
 
 		// Create secrets
-		err = secrets.Create(c.Context(), &metav1.OwnerReference{
+		err = s.SecretManager.InsertBatch(c.Context(), execNamespace, secrets, &metav1.OwnerReference{
 			APIVersion: testworkflowsv1.GroupVersion.String(),
 			Kind:       testworkflowsv1.ResourceTemplate,
 			Name:       obj.Name,
@@ -184,7 +184,7 @@ func (s *TestkubeAPI) UpdateTestWorkflowTemplateHandler() fiber.Handler {
 		}
 
 		// Handle secrets auto-creation
-		secrets := s.SecretManager.Batch(execNamespace, "tw-", obj.Name)
+		secrets := s.SecretManager.Batch("tw-", obj.Name)
 		err = testworkflowresolver.ExtractCredentialsInTemplate(obj, secrets.Append)
 		if err != nil {
 			return s.BadRequest(c, errPrefix, "auto-creating secrets", err)
@@ -198,7 +198,7 @@ func (s *TestkubeAPI) UpdateTestWorkflowTemplateHandler() fiber.Handler {
 		}
 
 		// Create secrets
-		err = secrets.Create(c.Context(), &metav1.OwnerReference{
+		err = s.SecretManager.InsertBatch(c.Context(), execNamespace, secrets, &metav1.OwnerReference{
 			APIVersion: testworkflowsv1.GroupVersion.String(),
 			Kind:       testworkflowsv1.ResourceTemplate,
 			Name:       obj.Name,

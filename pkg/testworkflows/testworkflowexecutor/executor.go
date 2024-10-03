@@ -365,8 +365,8 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		return execution, fmt.Errorf("not supported execution namespace %s", namespace)
 	}
 
-	// Handle secrets auto-creation
-	secrets := e.secretManager.Batch(namespace, "twe-", executionId)
+	// Handle creating secrets for sensitive configuration variables
+	secrets := e.secretManager.Batch("twe-", executionId).ForceEnable()
 
 	// Apply the configuration
 	_, err = testworkflowresolver.ApplyWorkflowConfig(&workflow, testworkflowmappers.MapConfigValueAPIToKube(request.Config), secrets.Append)
