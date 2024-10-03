@@ -333,7 +333,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	delete(workflow.Annotations, "kubectl.kubernetes.io/last-applied-configuration")
 
 	// Build the (possible) execution ID
-	id := primitive.NewObjectID().Hex()
+	executionId := primitive.NewObjectID().Hex()
 
 	// Preserve initial workflow
 	initialWorkflow := workflow.DeepCopy()
@@ -368,7 +368,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	}
 
 	// Handle secrets auto-creation
-	secrets := e.secretManager.Batch(namespace, "twe-", id)
+	secrets := e.secretManager.Batch(namespace, "twe-", executionId)
 
 	// Apply the configuration
 	_, err = testworkflowresolver.ApplyWorkflowConfig(&workflow, testworkflowmappers.MapConfigValueAPIToKube(request.Config), secrets.Append)
@@ -420,8 +420,8 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 			"labels": string(labelMap),
 		}).
 		Register("resource", map[string]string{
-			"id":       id,
-			"root":     id,
+			"id":       executionId,
+			"root":     executionId,
 			"fsPrefix": "",
 		}).
 		RegisterStringMap("labels", labels)
@@ -429,7 +429,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	machine := expressions.CombinedMachines(storageMachine, cloudMachine, restMachine)
 
 	mockExecutionMachine := expressions.NewMachine().Register("execution", map[string]interface{}{
-		"id":              id,
+		"id":              executionId,
 		"name":            "<mock_name>",
 		"number":          "1",
 		"scheduledAt":     now.UTC().Format(constants.RFC3339Millis),
@@ -457,7 +457,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	// Load execution identifier data
 	number, err := e.repository.GetNextExecutionNumber(context.Background(), workflow.Name)
 	if err != nil {
-		log.DefaultLogger.Errorw("failed to retrieve TestWorkflow execution number", "id", id, "error", err)
+		log.DefaultLogger.Errorw("failed to retrieve TestWorkflow execution number", "id", executionId, "error", err)
 	}
 
 	executionName := request.Name
@@ -481,12 +481,12 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	tags = testworkflowresolver.MergeTags(tags, request.Tags)
 	tagsData, err := utils.EncodeStringMapToEnvVar(tags)
 	if err != nil {
-		log.DefaultLogger.Errorw("failed to encode tags", "id", id, "error", err)
+		log.DefaultLogger.Errorw("failed to encode tags", "id", executionId, "error", err)
 	}
 
 	// Build machine with actual execution data
 	executionMachine := expressions.NewMachine().Register("execution", map[string]interface{}{
-		"id":              id,
+		"id":              executionId,
 		"name":            executionName,
 		"number":          number,
 		"scheduledAt":     now.UTC().Format(constants.RFC3339Millis),
@@ -503,7 +503,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	// Build Execution entity
 	// TODO: Consider storing "config" as well
 	execution = testkube.TestWorkflowExecution{
-		Id:          id,
+		Id:          executionId,
 		Name:        executionName,
 		Namespace:   namespace,
 		Number:      number,
