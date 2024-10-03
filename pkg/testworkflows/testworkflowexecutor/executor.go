@@ -375,7 +375,6 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	if workflow.Spec.Job != nil && workflow.Spec.Job.Namespace != "" {
 		namespace = workflow.Spec.Job.Namespace
 	}
-
 	if _, ok := e.serviceAccountNames[namespace]; !ok {
 		return execution, fmt.Errorf("not supported execution namespace %s", namespace)
 	}
