@@ -344,10 +344,8 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		})
 	}
 
-	// Recognize the required templates
-	tpls := testworkflowresolver.ListTemplates(&workflow)
-
 	// Fetch all required templates
+	tpls := testworkflowresolver.ListTemplates(&workflow)
 	tplsMap := make(map[string]testworkflowsv1.TestWorkflowTemplate, len(tpls))
 	for tplName := range tpls {
 		tpl, err := e.testWorkflowTemplatesClient.Get(tplName)
