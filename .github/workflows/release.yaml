@@ -147,7 +147,7 @@ jobs:
         with:
           context: build/kind
           file: build/kind/Dockerfile.kind
-          platforms: linux/amd64,linux/arm/v8
+          platforms: linux/amd64,linux/arm64/v8
           provenance: mode=max
           push: true
           sbom: true
