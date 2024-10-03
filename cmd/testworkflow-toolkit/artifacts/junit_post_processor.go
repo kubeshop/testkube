@@ -50,6 +50,7 @@ func (p *JUnitPostProcessor) Add(path string) error {
 		return errors.Wrapf(err, "failed to open %s", path)
 	}
 	defer func() { _ = file.Close() }()
+
 	stat, err := file.Stat()
 	if err != nil {
 		return errors.Wrapf(err, "failed to get file info for %s", path)
@@ -58,17 +59,29 @@ func (p *JUnitPostProcessor) Add(path string) error {
 		return nil
 	}
 
-	xmlData, err := io.ReadAll(file)
-	if err != nil {
-		return errors.Wrapf(err, "failed to read %s", path)
+	// Read first 8KB
+	const BYTE_SIZE_8KB = 8 * 1024
+	buffer := make([]byte, BYTE_SIZE_8KB)
+	n, err := io.ReadFull(file, buffer)
+	if err != nil && err != io.ErrUnexpectedEOF && err != io.EOF {
+		return errors.Wrapf(err, "failed to read initial content from %s", path)
+	}
+	buffer = buffer[:n] // Trim buffer to actual bytes read
+
+	if !isJUnitReport(buffer) {
+		return nil
 	}
 
-	// Check if it's a JUnit report using only the first 8KB
-	const BYTE_SIZE_8KB = 8 * 1024
-	checkSize := min(len(xmlData), BYTE_SIZE_8KB)
-	ok := isJUnitReport(xmlData[:checkSize])
-	if !ok {
-		return nil
+	// Read the rest of the file if necessary
+	var xmlData []byte
+	if n == BYTE_SIZE_8KB {
+		rest, err := io.ReadAll(file)
+		if err != nil {
+			return errors.Wrapf(err, "failed to read remaining content from %s", path)
+		}
+		xmlData = append(buffer, rest...)
+	} else {
+		xmlData = buffer
 	}
 
 	fmt.Printf("Processing JUnit report: %s\n", ui.LightCyan(path))
