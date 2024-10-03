@@ -332,7 +332,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	delete(workflow.Annotations, "kubectl.kubernetes.io/last-applied-configuration")
 
 	// Build the (possible) execution ID
-	now := time.Now()
+	now := time.Now().UTC()
 	executionId := primitive.NewObjectIDFromTimestamp(now).Hex()
 
 	// Preserve initial workflow
@@ -467,7 +467,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		"id":              executionId,
 		"name":            executionName,
 		"number":          number,
-		"scheduledAt":     now.UTC().Format(constants.RFC3339Millis),
+		"scheduledAt":     now.Format(constants.RFC3339Millis),
 		"disableWebhooks": request.DisableWebhooks,
 		"tags":            tagsData,
 	})
