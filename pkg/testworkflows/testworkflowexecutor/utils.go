@@ -73,3 +73,11 @@ func createWorkflowMachine(workflow testworkflowsv1.TestWorkflow) expressions.Ma
 		}).
 		RegisterStringMap("labels", escapedLabels)
 }
+
+func createResourceMachine(resourceId, rootResourceId, fsPrefix string) expressions.Machine {
+	return expressions.NewMachine().Register("resource", map[string]string{
+		"id":       resourceId,
+		"root":     rootResourceId,
+		"fsPrefix": fsPrefix,
+	})
+}

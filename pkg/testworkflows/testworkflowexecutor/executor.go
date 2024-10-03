@@ -385,6 +385,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	storageMachine := createStorageMachine()
 	cloudMachine := createCloudMachine()
 	workflowMachine := createWorkflowMachine(workflow)
+	resourceMachine := createResourceMachine(executionId, executionId, "")
 	restMachine := expressions.NewMachine().
 		RegisterStringMap("internal", map[string]string{
 			"serviceaccount.default": e.serviceAccountNames[namespace],
@@ -401,14 +402,9 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 			"images.persistence.enabled": strconv.FormatBool(e.enableImageDataPersistentCache),
 			"images.persistence.key":     e.imageDataPersistentCacheKey,
 			"images.cache.ttl":           common.GetOr(os.Getenv("TESTKUBE_IMAGE_CREDENTIALS_CACHE_TTL"), "30m"),
-		}).
-		Register("resource", map[string]string{
-			"id":       executionId,
-			"root":     executionId,
-			"fsPrefix": "",
 		})
 
-	machine := expressions.CombinedMachines(storageMachine, cloudMachine, workflowMachine, restMachine)
+	machine := expressions.CombinedMachines(storageMachine, cloudMachine, workflowMachine, resourceMachine, restMachine)
 
 	mockExecutionMachine := expressions.NewMachine().Register("execution", map[string]interface{}{
 		"id":              executionId,
