@@ -1,8 +1,6 @@
 package artifacts
 
 import (
-	"bufio"
-	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -59,14 +57,16 @@ func (p *JUnitPostProcessor) Add(path string) error {
 	if ok := isXMLFile(stat); !ok {
 		return nil
 	}
-	xmlData, err := io.ReadAll(file)
-	if err != nil {
+	// Read only the first 8KB of data
+	const BYTE_SIZE_8KB = 8 * 1024
+	xmlData := make([]byte, BYTE_SIZE_8KB)
+	n, err := file.Read(xmlData)
+	if err != nil && err != io.EOF {
 		return errors.Wrapf(err, "failed to read %s", path)
 	}
-	ok, err := isJUnitReport(xmlData)
-	if err != nil {
-		return errors.Wrapf(err, "failed to check if %s is a JUnit report", path)
-	}
+	// Trim the slice to the actual number of bytes read
+	xmlData = xmlData[:n]
+	ok := isJUnitReport(xmlData)
 	if !ok {
 		return nil
 	}
@@ -79,10 +79,6 @@ func (p *JUnitPostProcessor) Add(path string) error {
 
 // sendJUnitReport sends the JUnit report to the Agent gRPC API.
 func (p *JUnitPostProcessor) sendJUnitReport(path string, report []byte) error {
-	// Apply path prefix correctly
-	if p.pathPrefix != "" {
-		path = filepath.Join(p.pathPrefix, path)
-	}
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 	_, err := p.client.Execute(ctx, testworkflow.CmdTestWorkflowExecutionAddReport, &testworkflow.ExecutionsAddReportRequest{
@@ -104,27 +100,22 @@ func isXMLFile(stat fs.FileInfo) bool {
 	return strings.HasSuffix(stat.Name(), ".xml")
 }
 
-// isJUnitReport checks if the file starts with a JUnit XML tag
-func isJUnitReport(xmlData []byte) (bool, error) {
-	scanner := bufio.NewScanner(bytes.NewReader(xmlData))
-	// Read only the first few lines of the file
-	for scanner.Scan() {
-		line := scanner.Text()
-		line = strings.TrimSpace(line) // Remove leading and trailing whitespace
+// isJUnitReport checks if the XML data is a JUnit report.
+func isJUnitReport(xmlData []byte) bool {
+	tags := []string{
+		"<testsuite",
+		"<testsuites",
+	}
 
-		// Skip comments and declarations
-		if strings.HasPrefix(line, "<!--") || strings.HasPrefix(line, "<?xml") {
-			continue
-		}
-		if strings.Contains(line, "<testsuite") || strings.Contains(line, "<testsuites") {
-			return true, nil
-		}
-		if strings.Contains(line, "<") { // Stop if any non-JUnit tag is found
-			break
+	content := string(xmlData)
+
+	for _, tag := range tags {
+		if strings.Contains(content, tag) {
+			return true
 		}
 	}
 
-	return false, scanner.Err()
+	return false
 }
 
 func (p *JUnitPostProcessor) End() error {
