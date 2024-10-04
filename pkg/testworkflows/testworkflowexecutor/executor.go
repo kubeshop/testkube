@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	errors2 "errors"
 	"fmt"
 	"io"
 	"os"
@@ -38,6 +39,9 @@ import (
 )
 
 const (
+	SaveResultRetryMaxAttempts = 100
+	SaveResultRetryBaseDelay   = 300 * time.Millisecond
+
 	SaveLogsRetryMaxAttempts = 10
 	SaveLogsRetryBaseDelay   = 300 * time.Millisecond
 )
@@ -523,15 +527,86 @@ func (e *executor) notifyResult(execution *testkube.TestWorkflowExecution) {
 	}
 }
 
-func (e *executor) saveEmptyLogs(execution *testkube.TestWorkflowExecution) {
+func (e *executor) saveEmptyLogs(execution *testkube.TestWorkflowExecution) (err error) {
 	if !execution.Result.IsFinished() {
-		return
+		return nil
 	}
-	err := e.output.SaveLog(context.Background(), execution.Id, execution.Workflow.Name, bytes.NewReader(nil))
-	if err != nil {
-		// TODO: Retry on error
-		log.DefaultLogger.Errorw("failed to save empty logs", "id", execution.Id, "error", err)
+	for i := 1; i <= SaveLogsRetryMaxAttempts; i++ {
+		err = e.output.SaveLog(context.Background(), execution.Id, execution.Workflow.Name, bytes.NewReader(nil))
+		if err == nil {
+			return nil
+		}
+		log.DefaultLogger.Warnw("failed to save empty logs. retrying...", "id", execution.Id, "error", err)
+		time.Sleep(time.Duration(i) * SaveResultRetryBaseDelay)
 	}
+	log.DefaultLogger.Errorw("failed to save empty logs", "id", execution.Id, "error", err)
+	return err
+}
+
+func (e *executor) updateInDatabase(ctx context.Context, execution *testkube.TestWorkflowExecution) (err error) {
+	for i := 1; i <= SaveResultRetryMaxAttempts; i++ {
+		err = e.repository.Update(ctx, *execution)
+		if err == nil {
+			return nil
+		}
+		log.DefaultLogger.Warnw("failed to update execution. retrying...", "id", execution.Id, "error", err)
+		time.Sleep(time.Duration(i) * SaveResultRetryBaseDelay)
+	}
+	log.DefaultLogger.Errorw("failed to update execution", "id", execution.Id, "error", err)
+	return errors.Wrap(err, fmt.Sprintf("updating execution in storage: %s", err.Error()))
+}
+
+func (e *executor) updateInKubernetes(_ context.Context, execution *testkube.TestWorkflowExecution) (err error) {
+	if execution.TestWorkflowExecutionName == "" {
+		return nil
+	}
+	for i := 1; i <= SaveResultRetryMaxAttempts; i++ {
+		// Load current object
+		var cr *testworkflowsv1.TestWorkflowExecution
+		cr, err = e.testWorkflowExecutionsClient.Get(execution.TestWorkflowExecutionName)
+		if err == nil {
+			cr.Status = testworkflowmappers.MapTestWorkflowExecutionStatusAPIToKube(execution, cr.Generation)
+			if err := e.testWorkflowExecutionsClient.UpdateStatus(cr); err == nil {
+				return nil
+			}
+		}
+		log.DefaultLogger.Warnw("failed to update execution object in cluster. retrying...", "id", execution.Id, "error", err)
+		time.Sleep(time.Duration(i) * SaveResultRetryBaseDelay)
+	}
+	log.DefaultLogger.Errorw("failed to update execution object in cluster", "id", execution.Id, "error", err)
+	return errors.Wrap(err, fmt.Sprintf("updating execution object in cluster: %s", err.Error()))
+}
+
+func (e *executor) update(ctx context.Context, execution *testkube.TestWorkflowExecution) error {
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	// TODO: Update also TestWorkflow.Status in Kubernetes
+	var err1, err2 error
+	go func() {
+		err1 = e.updateInDatabase(ctx, execution)
+		wg.Done()
+	}()
+	go func() {
+		err2 = e.updateInKubernetes(ctx, execution)
+		wg.Done()
+	}()
+	wg.Wait()
+
+	return errors2.Join(err1, err2)
+}
+
+func (e *executor) insert(ctx context.Context, execution *testkube.TestWorkflowExecution) (err error) {
+	for i := 1; i <= SaveResultRetryMaxAttempts; i++ {
+		err = e.repository.Insert(ctx, *execution)
+		if err == nil {
+			return nil
+		}
+		log.DefaultLogger.Warnw("failed to insert execution. retrying...", "id", execution.Id, "error", err)
+		time.Sleep(time.Duration(i) * SaveResultRetryBaseDelay)
+	}
+	log.DefaultLogger.Errorw("failed to insert execution", "id", execution.Id, "error", err)
+	return errors.Wrap(err, fmt.Sprintf("inserting execution in storage: %s", err.Error()))
 }
 
 func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWorkflow, request testkube.TestWorkflowExecutionRequest) (
@@ -544,15 +619,13 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	}
 
 	// Insert the execution
-	// TODO: Consider applying to the TestWorkflowExecution object in Kubernetes
-	insertErr := e.repository.Insert(ctx, *execution)
+	insertErr := e.insert(context.Background(), execution)
 	if insertErr != nil {
 		e.saveEmptyLogs(execution)
 		if err != nil {
-			return *execution, errors.Wrap(insertErr, fmt.Sprintf("inserting execution to storage after error: %s", err.Error()))
+			return *execution, errors.Wrap(insertErr, fmt.Sprintf("initializing error: %s: saving", err.Error()))
 		}
-		// FIXME: Retry insert on error
-		return *execution, errors.Wrap(insertErr, "inserting execution to storage")
+		return *execution, insertErr
 	}
 	e.emitter.Notify(testkube.NewEventQueueTestWorkflow(execution))
 
@@ -562,6 +635,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	// Handle finished execution (i.e. initialization error)
 	if execution.Result.IsFinished() {
 		e.saveEmptyLogs(execution)
+		e.updateInKubernetes(ctx, execution)
 		return *execution, nil
 	}
 
@@ -574,13 +648,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	if err != nil {
 		defer e.saveEmptyLogs(execution)
 		execution.InitializationError("Failed to process Test Workflow.", err)
-		// TODO: Consider applying to the TestWorkflowExecution object in Kubernetes
-		updateErr := e.repository.UpdateResult(context.Background(), execution.Id, execution.Result)
-		if updateErr != nil {
-			// FIXME: Retry update on error
-			return *execution, errors.Wrap(updateErr, fmt.Sprintf("updating execution in storage after error: %s", err.Error()))
-		}
-		return *execution, nil
+		return *execution, errors.Wrap(e.update(context.Background(), execution), fmt.Sprintf("processing error: %s: saving", err.Error()))
 	}
 
 	// Apply the signature
@@ -590,8 +658,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	updateErr := e.repository.Update(context.Background(), *execution)
 	if updateErr != nil {
 		e.saveEmptyLogs(execution)
-		// FIXME: Retry update on error
-		return *execution, errors.Wrap(updateErr, "updating execution in storage")
+		return *execution, e.update(context.Background(), execution)
 	}
 
 	// Inform about execution start TODO: Consider
@@ -602,13 +669,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	if err != nil {
 		defer e.saveEmptyLogs(execution)
 		execution.InitializationError("Failed to deploy the execution resources.", err)
-		// TODO: Consider applying to the TestWorkflowExecution object in Kubernetes
-		updateErr := e.repository.UpdateResult(context.Background(), execution.Id, execution.Result)
-		if updateErr != nil {
-			// FIXME: Retry update on error
-			return *execution, errors.Wrap(updateErr, fmt.Sprintf("updating execution result in storage after error: %s", err.Error()))
-		}
-		return *execution, nil
+		return *execution, errors.Wrap(e.update(context.Background(), execution), fmt.Sprintf("deployment error: %s: saving", err.Error()))
 	}
 
 	// Start to control the results
