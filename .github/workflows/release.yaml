@@ -153,7 +153,7 @@ jobs:
             ga_id=${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_ID}}
             ga_secret=${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_SECRET}}
           context: build/kind
-          file: build/kind/Dockerfile.kind
+          file: build/kind/kind.Dockerfile
           platforms: linux/amd64,linux/arm64
           provenance: mode=max
           push: true
