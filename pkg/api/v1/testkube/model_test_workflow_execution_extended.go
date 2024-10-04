@@ -109,4 +109,5 @@ func (e *TestWorkflowExecution) InitializationError(header string, err error) {
 		step.FinishedAt = e.ScheduledAt
 		e.Result.Steps[ref] = step
 	}
+	e.Result.HealDuration(e.ScheduledAt)
 }

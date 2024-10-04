@@ -61,7 +61,7 @@ func createCloudMachine() expressions.Machine {
 		})
 }
 
-func createWorkflowMachine(workflow testworkflowsv1.TestWorkflow) expressions.Machine {
+func createWorkflowMachine(workflow *testworkflowsv1.TestWorkflow) expressions.Machine {
 	escapedLabels := make(map[string]string)
 	for key, value := range workflow.Labels {
 		escapedLabels[expressions.EscapeLabelKeyForVarName(key)] = value

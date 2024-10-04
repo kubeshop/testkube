@@ -2,6 +2,7 @@ package testworkflowexecutor
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
@@ -325,19 +327,45 @@ func (e *executor) Control(ctx context.Context, testWorkflow *testworkflowsv1.Te
 	return nil
 }
 
-func (e *executor) saveInitializationError(ctx context.Context, execution testkube.TestWorkflowExecution, header string, err error) (testkube.TestWorkflowExecution, error) {
-	execution.InitializationError(header, err)
-	err = e.repository.Insert(ctx, execution)
-	if err != nil {
-		return execution, errors.Wrap(err, fmt.Sprintf("inserting execution to storage after error: %s: %s", header, err))
-	}
-	e.emitter.Notify(testkube.NewEventQueueTestWorkflow(&execution))
-	e.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(&execution))
-	return execution, nil
+func (e *executor) getMachine(workflow *testworkflowsv1.TestWorkflow, namespace string, resourceId, rootResourceId, fsPrefix string) expressions.Machine {
+	// Prepare all the data for resolving Test Workflow
+	storageMachine := createStorageMachine()
+	cloudMachine := createCloudMachine()
+	workflowMachine := createWorkflowMachine(workflow)
+	resourceMachine := createResourceMachine(resourceId, rootResourceId, fsPrefix)
+	restMachine := expressions.NewMachine().
+		RegisterStringMap("internal", map[string]string{
+			"serviceaccount.default": e.serviceAccountNames[namespace],
+
+			"api.url":         e.apiUrl,
+			"namespace":       namespace,
+			"defaultRegistry": e.defaultRegistry,
+			"clusterId":       e.clusterID,
+			"cdeventsTarget":  os.Getenv("CDEVENTS_TARGET"),
+
+			"images.defaultRegistry":     e.defaultRegistry,
+			"images.init":                constants.DefaultInitImage,
+			"images.toolkit":             constants.DefaultToolkitImage,
+			"images.persistence.enabled": strconv.FormatBool(e.enableImageDataPersistentCache),
+			"images.persistence.key":     e.imageDataPersistentCacheKey,
+			"images.cache.ttl":           common.GetOr(os.Getenv("TESTKUBE_IMAGE_CREDENTIALS_CACHE_TTL"), "30m"),
+		})
+	return expressions.CombinedMachines(storageMachine, cloudMachine, workflowMachine, resourceMachine, restMachine)
 }
 
-func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWorkflow, request testkube.TestWorkflowExecutionRequest) (
-	execution testkube.TestWorkflowExecution, err error) {
+func (e *executor) getExecutionMachine(execution *testkube.TestWorkflowExecution) expressions.Machine {
+	// Build machine with actual execution data
+	return expressions.NewMachine().Register("execution", map[string]interface{}{
+		"id":              execution.Id,
+		"name":            execution.Name,
+		"number":          execution.Number,
+		"scheduledAt":     execution.ScheduledAt.Format(constants.RFC3339Millis),
+		"disableWebhooks": execution.DisableWebhooks,
+		"tags":            execution.Tags,
+	})
+}
+
+func (e *executor) initialize(ctx context.Context, workflow *testworkflowsv1.TestWorkflow, request *testkube.TestWorkflowExecutionRequest) (execution *testkube.TestWorkflowExecution, namespace string, secrets []corev1.Secret, err error) {
 	// Delete unnecessary data
 	delete(workflow.Annotations, "kubectl.kubernetes.io/last-applied-configuration")
 
@@ -360,11 +388,11 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	// TODO: Consider if we shouldn't make name unique across all TestWorkflows
 	next, _ := e.repository.GetByNameAndTestWorkflow(ctx, executionName, workflow.Name)
 	if next.Name == executionName {
-		return execution, errors.Wrap(err, "execution name already exists")
+		return execution, "", nil, errors.Wrap(err, "execution name already exists")
 	}
 
 	// Initialize the storage for dynamically created secrets
-	secrets := e.secretManager.Batch("twe-", executionId).ForceEnable()
+	secretsBatch := e.secretManager.Batch("twe-", executionId).ForceEnable()
 
 	// Preserve initial workflow
 	initialWorkflow := workflow.DeepCopy()
@@ -374,7 +402,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	_ = expressions.Simplify(&workflow)
 
 	// Create the execution entity
-	execution = testkube.TestWorkflowExecution{
+	execution = &testkube.TestWorkflowExecution{
 		Id:          executionId,
 		Name:        executionName,
 		Number:      number,
@@ -405,44 +433,49 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 
 	// Inject the global template
 	if e.globalTemplateName != "" {
-		testworkflowresolver.AddGlobalTemplateRef(&workflow, testworkflowsv1.TemplateRef{
+		testworkflowresolver.AddGlobalTemplateRef(workflow, testworkflowsv1.TemplateRef{
 			Name: testworkflowresolver.GetDisplayTemplateName(e.globalTemplateName),
 		})
 	}
 
 	// Apply the configuration
-	_, err = testworkflowresolver.ApplyWorkflowConfig(&workflow, testworkflowmappers.MapConfigValueAPIToKube(request.Config), secrets.Append)
+	_, err = testworkflowresolver.ApplyWorkflowConfig(workflow, testworkflowmappers.MapConfigValueAPIToKube(request.Config), secretsBatch.Append)
 	if err != nil {
-		return e.saveInitializationError(ctx, execution, "Failed to apply configuration.", err)
+		execution.InitializationError("Failed to apply configuration.", err)
+		return execution, "", nil, err
 	}
 
 	// Fetch all required templates
-	tpls := testworkflowresolver.ListTemplates(&workflow)
+	tpls := testworkflowresolver.ListTemplates(workflow)
 	tplsMap := make(map[string]testworkflowsv1.TestWorkflowTemplate, len(tpls))
 	for tplName := range tpls {
 		tpl, err := e.testWorkflowTemplatesClient.Get(tplName)
 		if err != nil {
-			return e.saveInitializationError(ctx, execution, fmt.Sprintf("Failed to fetch '%s' template.", testworkflowresolver.GetDisplayTemplateName(tplName)), err)
+			execution.InitializationError(fmt.Sprintf("Failed to fetch '%s' template.", testworkflowresolver.GetDisplayTemplateName(tplName)), err)
+			return execution, "", nil, err
 		}
 		tplsMap[tplName] = *tpl
 	}
 
 	// Resolve the TestWorkflow
-	err = testworkflowresolver.ApplyTemplates(&workflow, tplsMap, secrets.Append)
+	err = testworkflowresolver.ApplyTemplates(workflow, tplsMap, secretsBatch.Append)
 	if err != nil {
-		return e.saveInitializationError(ctx, execution, "Failed to apply templates.", err)
+		execution.InitializationError("Failed to apply templates.", err)
+		return execution, "", nil, err
 	}
 
 	// Preserve resolved TestWorkflow
 	resolvedWorkflow := workflow.DeepCopy()
 
 	// Determine execution namespace
-	namespace := e.namespace
+	// TODO: Should not default namespace be on runner?
+	namespace = e.namespace
 	if workflow.Spec.Job != nil && workflow.Spec.Job.Namespace != "" {
 		namespace = workflow.Spec.Job.Namespace
 	}
 	if _, ok := e.serviceAccountNames[namespace]; !ok {
-		return e.saveInitializationError(ctx, execution, fmt.Sprintf("Not supported '%s' execution namespace.", namespace), err)
+		execution.InitializationError(fmt.Sprintf("Not supported '%s' execution namespace.", namespace), err)
+		return execution, "", nil, err
 	}
 
 	// Apply default service account
@@ -463,41 +496,9 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	execution.Namespace = namespace // TODO: DELETE?
 	execution.ResolvedWorkflow = testworkflowmappers.MapKubeToAPI(resolvedWorkflow)
 
-	// Prepare all the data for resolving Test Workflow
-	storageMachine := createStorageMachine()
-	cloudMachine := createCloudMachine()
-	workflowMachine := createWorkflowMachine(workflow)
-	resourceMachine := createResourceMachine(executionId, executionId, "")
-	restMachine := expressions.NewMachine().
-		RegisterStringMap("internal", map[string]string{
-			"serviceaccount.default": e.serviceAccountNames[namespace],
-
-			"api.url":         e.apiUrl,
-			"namespace":       namespace,
-			"defaultRegistry": e.defaultRegistry,
-			"clusterId":       e.clusterID,
-			"cdeventsTarget":  os.Getenv("CDEVENTS_TARGET"),
-
-			"images.defaultRegistry":     e.defaultRegistry,
-			"images.init":                constants.DefaultInitImage,
-			"images.toolkit":             constants.DefaultToolkitImage,
-			"images.persistence.enabled": strconv.FormatBool(e.enableImageDataPersistentCache),
-			"images.persistence.key":     e.imageDataPersistentCacheKey,
-			"images.cache.ttl":           common.GetOr(os.Getenv("TESTKUBE_IMAGE_CREDENTIALS_CACHE_TTL"), "30m"),
-		})
-	machine := expressions.CombinedMachines(storageMachine, cloudMachine, workflowMachine, resourceMachine, restMachine)
-
-	// Build machine with actual execution data
-	executionMachine := expressions.NewMachine().Register("execution", map[string]interface{}{
-		"id":              executionId,
-		"name":            executionName,
-		"number":          number,
-		"scheduledAt":     now.Format(constants.RFC3339Millis),
-		"disableWebhooks": request.DisableWebhooks,
-		"tags":            execution.Tags,
-	})
-
 	// Simplify the workflow
+	machine := e.getMachine(workflow, namespace, executionId, executionId, "")
+	executionMachine := e.getExecutionMachine(execution)
 	_ = expressions.Simplify(&workflow, machine, executionMachine)
 
 	// Build the final tags
@@ -506,41 +507,119 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	}
 	execution.Tags = testworkflowresolver.MergeTags(execution.Tags, request.Tags)
 
-	// Process the TestWorkflow
-	bundle, err := e.processor.Bundle(ctx, &workflow, testworkflowprocessor.BundleOptions{Secrets: secrets.Get()}, machine, executionMachine)
+	return execution, namespace, secretsBatch.Get(), nil
+}
+
+func (e *executor) notifyResult(execution *testkube.TestWorkflowExecution) {
+	if !execution.Result.IsFinished() {
+		return
+	}
+	if execution.Result.IsPassed() {
+		e.emitter.Notify(testkube.NewEventEndTestWorkflowSuccess(execution))
+	} else if execution.Result.IsAborted() {
+		e.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(execution))
+	} else {
+		e.emitter.Notify(testkube.NewEventEndTestWorkflowFailed(execution))
+	}
+}
+
+func (e *executor) saveEmptyLogs(execution *testkube.TestWorkflowExecution) {
+	if !execution.Result.IsFinished() {
+		return
+	}
+	err := e.output.SaveLog(context.Background(), execution.Id, execution.Workflow.Name, bytes.NewReader(nil))
 	if err != nil {
-		return e.saveInitializationError(ctx, execution, "Failed to process Test Workflow.", err)
+		// TODO: Retry on error
+		log.DefaultLogger.Errorw("failed to save empty logs", "id", execution.Id, "error", err)
+	}
+}
+
+func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWorkflow, request testkube.TestWorkflowExecutionRequest) (
+	testkube.TestWorkflowExecution, error) {
+	execution, namespace, secrets, err := e.initialize(ctx, &workflow, &request)
+
+	// Handle error without execution built
+	if execution == nil {
+		return testkube.TestWorkflowExecution{}, err
+	}
+
+	// Insert the execution
+	// TODO: Consider applying to the TestWorkflowExecution object in Kubernetes
+	insertErr := e.repository.Insert(ctx, *execution)
+	if insertErr != nil {
+		e.saveEmptyLogs(execution)
+		if err != nil {
+			return *execution, errors.Wrap(insertErr, fmt.Sprintf("inserting execution to storage after error: %s", err.Error()))
+		}
+		// FIXME: Retry insert on error
+		return *execution, errors.Wrap(insertErr, "inserting execution to storage")
+	}
+	e.emitter.Notify(testkube.NewEventQueueTestWorkflow(execution))
+
+	// Send events
+	defer e.notifyResult(execution)
+
+	// Handle finished execution (i.e. initialization error)
+	if execution.Result.IsFinished() {
+		e.saveEmptyLogs(execution)
+		return *execution, nil
+	}
+
+	// Process and deploy the execution
+	machine := e.getMachine(&workflow, namespace, execution.Id, execution.Id, "")
+	executionMachine := e.getExecutionMachine(execution)
+
+	// Process the TestWorkflow
+	bundle, err := e.processor.Bundle(ctx, &workflow, testworkflowprocessor.BundleOptions{Secrets: secrets}, machine, executionMachine)
+	if err != nil {
+		defer e.saveEmptyLogs(execution)
+		execution.InitializationError("Failed to process Test Workflow.", err)
+		// TODO: Consider applying to the TestWorkflowExecution object in Kubernetes
+		updateErr := e.repository.UpdateResult(context.Background(), execution.Id, execution.Result)
+		if updateErr != nil {
+			// FIXME: Retry update on error
+			return *execution, errors.Wrap(updateErr, fmt.Sprintf("updating execution in storage after error: %s", err.Error()))
+		}
+		return *execution, nil
 	}
 
 	// Apply the signature
 	execution.Signature = stage.MapSignatureListToInternal(bundle.Signature)
 	execution.Result.Steps = stage.MapSignatureListToStepResults(bundle.Signature)
-
-	// Insert the execution
-	err = e.repository.Insert(ctx, execution)
-	if err != nil {
-		return execution, errors.Wrap(err, "inserting execution to storage")
+	// TODO: Consider applying to the TestWorkflowExecution object in Kubernetes
+	updateErr := e.repository.Update(context.Background(), *execution)
+	if updateErr != nil {
+		e.saveEmptyLogs(execution)
+		// FIXME: Retry update on error
+		return *execution, errors.Wrap(updateErr, "updating execution in storage")
 	}
 
-	// Inform about execution start
-	e.emitter.Notify(testkube.NewEventQueueTestWorkflow(&execution))
+	// Inform about execution start TODO: Consider
+	//e.emitter.Notify(testkube.NewEventStartTestWorkflow(execution))
 
 	// Deploy required resources
 	err = e.Deploy(context.Background(), bundle)
 	if err != nil {
-		// TODO: Treat as initialization error
-		e.handleFatalError(&execution, err, time.Time{})
-		return execution, errors.Wrap(err, "deploying required resources")
+		defer e.saveEmptyLogs(execution)
+		execution.InitializationError("Failed to deploy the execution resources.", err)
+		// TODO: Consider applying to the TestWorkflowExecution object in Kubernetes
+		updateErr := e.repository.UpdateResult(context.Background(), execution.Id, execution.Result)
+		if updateErr != nil {
+			// FIXME: Retry update on error
+			return *execution, errors.Wrap(updateErr, fmt.Sprintf("updating execution result in storage after error: %s", err.Error()))
+		}
+		return *execution, nil
 	}
 
 	// Start to control the results
 	go func() {
-		err = e.Control(context.Background(), initialWorkflow, &execution)
+		// TODO: Use OpenAPI objects only
+		err = e.Control(context.Background(), testworkflowmappers.MapAPIToKube(execution.Workflow), execution)
 		if err != nil {
-			e.handleFatalError(&execution, err, time.Time{})
+			e.handleFatalError(execution, err, time.Time{})
 			return
 		}
 	}()
 
-	return execution, nil
+	return *execution, nil
 }

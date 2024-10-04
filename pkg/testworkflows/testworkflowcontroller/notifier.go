@@ -356,7 +356,7 @@ func (n *notifier) reconcile() {
 
 	n.fillGaps(false)
 	n.result.HealTimestamps(n.sigSequence, n.scheduledAt, containerStartTs, completionTs, n.ended)
-	n.result.HealDuration()
+	n.result.HealDuration(n.scheduledAt)
 	n.result.HealMissingPauseStatuses()
 	n.result.HealStatus(n.sigSequence)
 }
