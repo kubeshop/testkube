@@ -139,13 +139,16 @@ jobs:
       - name: Preload kind images
         run: |
           mkdir -p build/kind/images
-          docker pull kindest/node:v1.30.0
-          docker save kindest/node:v1.30.0 > build/kind/images/node.tar
+          docker pull --platform linux/amd64 kindest/node:v1.31.0
+          docker save kindest/node:v1.31.0 > build/kind/images/node.tar
+
+          docker pull --platform linux/arm64 kindest/node:v1.31.0
+          docker save kindest/node:v1.31.0 > build/kind/images/node.tar
 
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
-      #    build-args: segmentio_key="${{secrets.TESTKUBE_SEGMENTIO_KEY}}",ga_id="${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_ID}}",ga_secret="${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_SECRET}}"
+          build-args: segmentio_key="${{secrets.TESTKUBE_SEGMENTIO_KEY}}",ga_id="${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_ID}}",ga_secret="${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_SECRET}}"
           context: build/kind
           file: build/kind/Dockerfile.kind
           platforms: linux/amd64,linux/arm64
