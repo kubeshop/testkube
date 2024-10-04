@@ -117,3 +117,7 @@ func (s *batch) Create(ctx context.Context, owner *metav1.OwnerReference) error 
 	}
 	return nil
 }
+
+func (s *batch) Get() []corev1.Secret {
+	return s.secrets
+}

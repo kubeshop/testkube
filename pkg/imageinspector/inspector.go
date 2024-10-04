@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"regexp"
 
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -18,6 +19,10 @@ type inspector struct {
 	storage         []Storage
 }
 
+var (
+	ImageWithRegistryRe = regexp.MustCompile(`^[^/]+\.[^/]+/`)
+)
+
 func NewInspector(defaultRegistry string, infoFetcher InfoFetcher, secretFetcher SecretFetcher, storage ...Storage) Inspector {
 	return &inspector{
 		defaultRegistry: defaultRegistry,
@@ -27,7 +32,7 @@ func NewInspector(defaultRegistry string, infoFetcher InfoFetcher, secretFetcher
 	}
 }
 
-func (i *inspector) get(ctx context.Context, registry, image string) *Info {
+func (i *inspector) rawGet(ctx context.Context, registry, image string) *Info {
 	for _, s := range i.storage {
 		v, err := s.Get(ctx, RequestBase{Registry: registry, Image: image})
 		if err != nil && !errors.Is(err, context.Canceled) {
@@ -38,6 +43,16 @@ func (i *inspector) get(ctx context.Context, registry, image string) *Info {
 		}
 	}
 	return nil
+}
+
+func (i *inspector) get(ctx context.Context, registry, image string) *Info {
+	if resolvedName := i.ResolveName(registry, image); resolvedName != image {
+		v := i.rawGet(ctx, "", resolvedName)
+		if v != nil {
+			return v
+		}
+	}
+	return i.rawGet(ctx, registry, image)
 }
 
 func (i *inspector) fetch(ctx context.Context, registry, image string, pullSecretNames []string) (*Info, error) {
@@ -68,11 +83,28 @@ func (i *inspector) save(ctx context.Context, registry, image string, info *Info
 	if info == nil {
 		return
 	}
+	if resolvedName := i.ResolveName(registry, image); resolvedName != image {
+		registry = ""
+		image = resolvedName
+	}
 	for _, s := range i.storage {
 		if err := s.Store(ctx, RequestBase{Registry: registry, Image: image}, *info); err != nil {
 			log.DefaultLogger.Warnw("error while saving image details in the cache", "registry", registry, "image", image, "error", err)
 		}
 	}
+}
+
+func (i *inspector) ResolveName(registry, image string) string {
+	if ImageWithRegistryRe.MatchString(image) {
+		return image
+	}
+	if registry == "" {
+		registry = i.defaultRegistry
+	}
+	if registry == "" {
+		return image
+	}
+	return fmt.Sprintf("%s/%s", registry, image)
 }
 
 func (i *inspector) Inspect(ctx context.Context, registry, image string, pullPolicy corev1.PullPolicy, pullSecretNames []string) (*Info, error) {

@@ -39,6 +39,3 @@ spec:
     artifacts:
       paths:
       - playwright-report/**/*
-  events:
-  - cronjob:
-      cron: "50 */4 * * *"

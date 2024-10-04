@@ -26,7 +26,7 @@ type WebhooksLister interface {
 
 func NewWebhookLoader(log *zap.SugaredLogger, webhooksClient WebhooksLister, templatesClient templatesclientv1.Interface,
 	testExecutionResults result.Repository, testSuiteExecutionResults testresult.Repository, testWorkflowExecutionResults testworkflow.Repository,
-	metrics v1.Metrics, proContext *config.ProContext,
+	metrics v1.Metrics, proContext *config.ProContext, envs map[string]string,
 ) *WebhooksLoader {
 	return &WebhooksLoader{
 		log:                          log,
@@ -37,6 +37,7 @@ func NewWebhookLoader(log *zap.SugaredLogger, webhooksClient WebhooksLister, tem
 		testWorkflowExecutionResults: testWorkflowExecutionResults,
 		metrics:                      metrics,
 		proContext:                   proContext,
+		envs:                         envs,
 	}
 }
 
@@ -49,6 +50,7 @@ type WebhooksLoader struct {
 	testWorkflowExecutionResults testworkflow.Repository
 	metrics                      v1.Metrics
 	proContext                   *config.ProContext
+	envs                         map[string]string
 }
 
 func (r WebhooksLoader) Kind() string {
@@ -84,10 +86,15 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 
 		types := webhooks.MapEventArrayToCRDEvents(webhook.Spec.Events)
 		name := fmt.Sprintf("%s.%s", webhook.ObjectMeta.Namespace, webhook.ObjectMeta.Name)
-		listeners = append(listeners, NewWebhookListener(name, webhook.Spec.Uri, webhook.Spec.Selector, types,
-			webhook.Spec.PayloadObjectField, payloadTemplate, webhook.Spec.Headers, webhook.Spec.Disabled,
-			webhook.Spec.OnStateChange, r.testExecutionResults, r.testSuiteExecutionResults, r.testWorkflowExecutionResults,
-			r.metrics, r.proContext))
+		listeners = append(
+			listeners,
+			NewWebhookListener(
+				name, webhook.Spec.Uri, webhook.Spec.Selector, types,
+				webhook.Spec.PayloadObjectField, payloadTemplate, webhook.Spec.Headers, webhook.Spec.Disabled,
+				r.testExecutionResults, r.testSuiteExecutionResults, r.testWorkflowExecutionResults,
+				r.metrics, r.proContext, r.envs,
+			),
+		)
 	}
 
 	return listeners, nil

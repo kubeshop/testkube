@@ -370,6 +370,7 @@ func MapParameterSchemaKubeToAPI(v testworkflowsv1.ParameterSchema) testkube.Tes
 		ExclusiveMinimum: MapInt64ToBoxedInteger(v.ExclusiveMinimum),
 		ExclusiveMaximum: MapInt64ToBoxedInteger(v.ExclusiveMaximum),
 		MultipleOf:       MapInt64ToBoxedInteger(v.MultipleOf),
+		Sensitive:        v.Sensitive,
 	}
 }
 
@@ -867,6 +868,7 @@ func MapStepParallelKubeToAPI(v testworkflowsv1.StepParallel) testkube.TestWorkf
 		Fetch:       common.MapSlice(v.Fetch, MapStepParallelFetchKubeToAPI),
 		Use:         common.MapSlice(v.Use, MapTemplateRefKubeToAPI),
 		Config:      common.MapMap(v.Config, MapParameterSchemaKubeToAPI),
+		System:      common.MapPtr(v.System, MapSystemKubeToAPI),
 		Content:     common.MapPtr(v.Content, MapContentKubeToAPI),
 		Container:   common.MapPtr(v.Container, MapContainerConfigKubeToAPI),
 		Job:         common.MapPtr(v.Job, MapJobConfigKubeToAPI),
@@ -900,6 +902,7 @@ func MapIndependentStepParallelKubeToAPI(v testworkflowsv1.IndependentStepParall
 		Transfer:    common.MapSlice(v.Transfer, MapStepParallelTransferKubeToAPI),
 		Fetch:       common.MapSlice(v.Fetch, MapStepParallelFetchKubeToAPI),
 		Config:      common.MapMap(v.Config, MapParameterSchemaKubeToAPI),
+		System:      common.MapPtr(v.System, MapSystemKubeToAPI),
 		Content:     common.MapPtr(v.Content, MapContentKubeToAPI),
 		Container:   common.MapPtr(v.Container, MapContainerConfigKubeToAPI),
 		Job:         common.MapPtr(v.Job, MapJobConfigKubeToAPI),
@@ -1036,6 +1039,7 @@ func MapStepKubeToAPI(v testworkflowsv1.Step) testkube.TestWorkflowStep {
 		Paused:     v.Paused,
 		Negative:   v.Negative,
 		Optional:   v.Optional,
+		Pure:       MapBoolToBoxedBoolean(v.Pure),
 		Use:        common.MapSlice(v.Use, MapTemplateRefKubeToAPI),
 		Template:   common.MapPtr(v.Template, MapTemplateRefKubeToAPI),
 		Retry:      common.MapPtr(v.Retry, MapRetryPolicyKubeToAPI),
@@ -1062,6 +1066,7 @@ func MapIndependentStepKubeToAPI(v testworkflowsv1.IndependentStep) testkube.Tes
 		Paused:     v.Paused,
 		Negative:   v.Negative,
 		Optional:   v.Optional,
+		Pure:       MapBoolToBoxedBoolean(v.Pure),
 		Retry:      common.MapPtr(v.Retry, MapRetryPolicyKubeToAPI),
 		Timeout:    v.Timeout,
 		Delay:      v.Delay,
@@ -1079,26 +1084,35 @@ func MapIndependentStepKubeToAPI(v testworkflowsv1.IndependentStep) testkube.Tes
 	}
 }
 
+func MapSystemKubeToAPI(v testworkflowsv1.TestWorkflowSystem) testkube.TestWorkflowSystem {
+	return testkube.TestWorkflowSystem{
+		PureByDefault:      MapBoolToBoxedBoolean(v.PureByDefault),
+		IsolatedContainers: MapBoolToBoxedBoolean(v.IsolatedContainers),
+	}
+}
+
 func MapSpecKubeToAPI(v testworkflowsv1.TestWorkflowSpec) testkube.TestWorkflowSpec {
 	return testkube.TestWorkflowSpec{
-		Use:           common.MapSlice(v.Use, MapTemplateRefKubeToAPI),
-		Config:        common.MapMap(v.Config, MapParameterSchemaKubeToAPI),
-		Content:       common.MapPtr(v.Content, MapContentKubeToAPI),
-		Services:      common.MapMap(v.Services, MapServiceSpecKubeToAPI),
-		Container:     common.MapPtr(v.Container, MapContainerConfigKubeToAPI),
-		Job:           common.MapPtr(v.Job, MapJobConfigKubeToAPI),
-		Pod:           common.MapPtr(v.Pod, MapPodConfigKubeToAPI),
-		Setup:         common.MapSlice(v.Setup, MapStepKubeToAPI),
-		Steps:         common.MapSlice(v.Steps, MapStepKubeToAPI),
-		After:         common.MapSlice(v.After, MapStepKubeToAPI),
-		Events:        common.MapSlice(v.Events, MapEventKubeToAPI),
-		Notifications: common.MapPtr(v.Notifications, MapNotificationsConfigKubeToAPI),
+		Use:       common.MapSlice(v.Use, MapTemplateRefKubeToAPI),
+		Config:    common.MapMap(v.Config, MapParameterSchemaKubeToAPI),
+		System:    common.MapPtr(v.System, MapSystemKubeToAPI),
+		Content:   common.MapPtr(v.Content, MapContentKubeToAPI),
+		Services:  common.MapMap(v.Services, MapServiceSpecKubeToAPI),
+		Container: common.MapPtr(v.Container, MapContainerConfigKubeToAPI),
+		Job:       common.MapPtr(v.Job, MapJobConfigKubeToAPI),
+		Pod:       common.MapPtr(v.Pod, MapPodConfigKubeToAPI),
+		Setup:     common.MapSlice(v.Setup, MapStepKubeToAPI),
+		Steps:     common.MapSlice(v.Steps, MapStepKubeToAPI),
+		After:     common.MapSlice(v.After, MapStepKubeToAPI),
+		Events:    common.MapSlice(v.Events, MapEventKubeToAPI),
+		Execution: common.MapPtr(v.Execution, MapTestWorkflowTagSchemaKubeToAPI),
 	}
 }
 
 func MapTemplateSpecKubeToAPI(v testworkflowsv1.TestWorkflowTemplateSpec) testkube.TestWorkflowTemplateSpec {
 	return testkube.TestWorkflowTemplateSpec{
 		Config:    common.MapMap(v.Config, MapParameterSchemaKubeToAPI),
+		System:    common.MapPtr(v.System, MapSystemKubeToAPI),
 		Content:   common.MapPtr(v.Content, MapContentKubeToAPI),
 		Container: common.MapPtr(v.Container, MapContainerConfigKubeToAPI),
 		Job:       common.MapPtr(v.Job, MapJobConfigKubeToAPI),
@@ -1107,6 +1121,7 @@ func MapTemplateSpecKubeToAPI(v testworkflowsv1.TestWorkflowTemplateSpec) testku
 		Steps:     common.MapSlice(v.Steps, MapIndependentStepKubeToAPI),
 		After:     common.MapSlice(v.After, MapIndependentStepKubeToAPI),
 		Events:    common.MapSlice(v.Events, MapEventKubeToAPI),
+		Execution: common.MapPtr(v.Execution, MapTestWorkflowTagSchemaKubeToAPI),
 	}
 }
 
@@ -1158,8 +1173,8 @@ func MapTemplateListKubeToAPI(v *testworkflowsv1.TestWorkflowTemplateList) []tes
 	return workflows
 }
 
-func MapNotificationsConfigKubeToAPI(v testworkflowsv1.NotificationsConfig) testkube.TestWorkflowNotificationsConfig {
-	return testkube.TestWorkflowNotificationsConfig{
-		DisableWebhooks: v.DisableWebhooks,
+func MapTestWorkflowTagSchemaKubeToAPI(v testworkflowsv1.TestWorkflowTagSchema) testkube.TestWorkflowTagSchema {
+	return testkube.TestWorkflowTagSchema{
+		Tags: v.Tags,
 	}
 }

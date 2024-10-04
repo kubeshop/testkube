@@ -61,16 +61,11 @@ func NewCreateTestWorkflowCmd() *cobra.Command {
 			client, _, err := common.GetClient(cmd)
 			ui.ExitOnError("getting client", err)
 
-			if cmd.Flag("disable-webhooks").Changed {
-				obj.Spec.Notifications = &testworkflowsv1.NotificationsConfig{
-					DisableWebhooks: true,
-				}
-			}
-
 			workflow, err := client.GetTestWorkflow(obj.Name)
 			if err != nil {
 				if update {
-					ui.ExitOnError("getting test workflow "+obj.Name+" in namespace "+obj.Namespace, err)
+					// allow to `create --update` if test workflow does not exist
+					ui.WarnOnError("getting test workflow "+obj.Name+" in namespace "+obj.Namespace, err)
 				} else {
 					ui.Debug("getting test workflow "+obj.Name+" in namespace "+obj.Namespace, err.Error())
 				}
@@ -94,7 +89,7 @@ func NewCreateTestWorkflowCmd() *cobra.Command {
 	cmd.Flags().StringVar(&name, "name", "", "test workflow name")
 	cmd.Flags().BoolVar(&update, "update", false, "update, if test workflow already exists")
 	cmd.Flags().StringVarP(&filePath, "file", "f", "", "file path to get the test workflow specification")
-	cmd.Flags().Bool("disable-webhooks", false, "disable webhooks for this test workflow")
+	cmd.Flags().MarkDeprecated("disable-webhooks", "disable-webhooks is deprecated")
 
 	return cmd
 }

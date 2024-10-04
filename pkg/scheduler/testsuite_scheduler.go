@@ -113,13 +113,9 @@ func (s *Scheduler) executeTestSuite(ctx context.Context, testSuite testkube.Tes
 
 	s.logger.Infow("Executing testsuite", "test", testSuite.Name, "request", request, "ExecutionRequest", testSuite.ExecutionRequest)
 
-	request.Number = s.getNextExecutionNumber("ts-" + testSuite.Name)
+	request.Number = s.getNextTestSuiteExecutionNumber(testSuite.Name)
 	if request.Name == "" {
 		request.Name = fmt.Sprintf("ts-%s-%d", testSuite.Name, request.Number)
-	}
-
-	if testSuite.ExecutionRequest != nil && testSuite.ExecutionRequest.DisableWebhooks {
-		request.DisableWebhooks = testSuite.ExecutionRequest.DisableWebhooks
 	}
 
 	testsuiteExecution = testkube.NewStartedTestSuiteExecution(testSuite, request)
@@ -252,18 +248,14 @@ func (s *Scheduler) runSteps(ctx context.Context, wg *sync.WaitGroup, testsuiteE
 
 	if testsuiteExecution.Status != nil && *testsuiteExecution.Status == testkube.ABORTING_TestSuiteExecutionStatus {
 		if abortionStatus != nil && *abortionStatus == testkube.TIMEOUT_TestSuiteExecutionStatus {
-			s.events.Notify(testkube.NewEventEndTestSuiteTimeout(testsuiteExecution))
 			testsuiteExecution.Status = testkube.TestSuiteExecutionStatusTimeout
 		} else {
-			s.events.Notify(testkube.NewEventEndTestSuiteAborted(testsuiteExecution))
 			testsuiteExecution.Status = testkube.TestSuiteExecutionStatusAborted
 		}
 	} else if hasFailedSteps {
 		testsuiteExecution.Status = testkube.TestSuiteExecutionStatusFailed
-		s.events.Notify(testkube.NewEventEndTestSuiteFailed(testsuiteExecution))
 	} else {
 		testsuiteExecution.Status = testkube.TestSuiteExecutionStatusPassed
-		s.events.Notify(testkube.NewEventEndTestSuiteSuccess(testsuiteExecution))
 	}
 
 	s.metrics.IncAndObserveExecuteTestSuite(*testsuiteExecution, s.dashboardURI)
@@ -284,6 +276,19 @@ func (s *Scheduler) runAfterEachStep(ctx context.Context, execution *testkube.Te
 	}
 
 	wg.Done()
+
+	if execution.Status != nil {
+		switch *execution.Status {
+		case *testkube.TestSuiteExecutionStatusTimeout:
+			s.events.Notify(testkube.NewEventEndTestSuiteTimeout(execution))
+		case *testkube.TestSuiteExecutionStatusAborted:
+			s.events.Notify(testkube.NewEventEndTestSuiteAborted(execution))
+		case *testkube.TestSuiteExecutionStatusFailed:
+			s.events.Notify(testkube.NewEventEndTestSuiteFailed(execution))
+		case *testkube.TestSuiteExecutionStatusPassed:
+			s.events.Notify(testkube.NewEventEndTestSuiteSuccess(execution))
+		}
+	}
 
 	if execution.TestSuite != nil {
 		testSuite, err := s.testSuitesClient.Get(execution.TestSuite.Name)

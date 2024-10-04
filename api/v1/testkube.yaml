@@ -556,6 +556,7 @@ paths:
         - api
       parameters:
         - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/SkipDeleteCRD"
       summary: "Delete test suite"
       description: "Deletes a test suite"
       operationId: deleteTestSuite
@@ -1664,6 +1665,7 @@ paths:
       parameters:
         - $ref: "#/components/parameters/ID"
         - $ref: "#/components/parameters/SkipDeleteExecutions"
+        - $ref: "#/components/parameters/SkipDeleteCRD"
       summary: "Delete test"
       description: "Deletes a test"
       operationId: deleteTest
@@ -2311,6 +2313,40 @@ paths:
       summary: "List labels"
       description: "list all available labels"
       operationId: listLabels
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    type: string
+                example:
+                  app:
+                    - backend
+                  env:
+                    - prod
+                  toDelete:
+                    - "yes"
+        502:
+          description: "problem with read information from kubernetes cluster"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
+  /tags:
+    get:
+      tags:
+        - tags
+      summary: "List tags"
+      description: "list all available tags"
+      operationId: listTags
       responses:
         200:
           description: "successful operation"
@@ -3351,6 +3387,7 @@ paths:
       - api
       parameters:
       - $ref: "#/components/parameters/Namespace"
+      - $ref: "#/components/parameters/ID"
       summary: "Delete secret"
       description: "Delete secret in the cluster"
       operationId: deleteSecret
@@ -3393,6 +3430,8 @@ paths:
       tags:
       - secrets
       - api
+      parameters:
+        - $ref: "#/components/parameters/ID"
       summary: "Update secret"
       description: "Update secret in the cluster"
       operationId: updateSecret
@@ -3446,6 +3485,8 @@ paths:
       tags:
       - secrets
       - api
+      parameters:
+        - $ref: "#/components/parameters/ID"
       summary: "Get secret"
       description: "Get secret in the cluster"
       operationId: getSecret
@@ -3720,6 +3761,42 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
+  /test-workflow-with-executions/{id}/tags:
+    get:
+      tags:
+        - test-workflows
+        - api
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      summary: List test workflow execution tags
+      description: List test workflow execution tags for all executed test workflows
+      operationId: listTestWorkflowWithExecutionTags
+      responses:
+        200:
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    type: string
+                example:
+                  app:
+                    - backend
+                  env:
+                    - prod
+                  toDelete:
+                    - "yes"
+        502:
+          description: problem communicating with kubernetes cluster
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
   /test-workflows/{id}/executions:
     get:
       tags:
@@ -3728,6 +3805,7 @@ paths:
         - pro
       parameters:
         - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/TagSelector"
       summary: List test workflow executions
       description: List test workflow executions
       operationId: listTestWorkflowExecutionsByTestWorkflow
@@ -3774,7 +3852,7 @@ paths:
         - pro
       parameters:
         - $ref: "#/components/parameters/ID"
-        - $ref: "#/components/parameters/TestWorkflowExecutionName"        
+        - $ref: "#/components/parameters/TestWorkflowExecutionName"
       summary: Execute test workflow
       description: Execute test workflow in the kubernetes cluster
       operationId: executeTestWorkflow
@@ -3810,6 +3888,42 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
+        502:
+          description: problem communicating with kubernetes cluster
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+  /test-workflows/{id}/tags:
+    get:
+      tags:
+        - test-workflows
+        - api
+      parameters:
+        - $ref: "#/components/parameters/ID"
+      summary: List test workflow execution tags
+      description: List test workflow execution tags for all executed test workflows
+      operationId: listTestWorkflowTagsByTestWorkflow
+      responses:
+        200:
+          description: successful list operation
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    type: string
+                example:
+                  app:
+                    - backend
+                  env:
+                    - prod
+                  toDelete:
+                    - "yes"
         502:
           description: problem communicating with kubernetes cluster
           content:
@@ -3956,6 +4070,7 @@ paths:
         - pro
       parameters:
         - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/TagSelector"
       summary: List test workflow executions
       description: List test workflow executions
       operationId: listTestWorkflowExecutions
@@ -4424,6 +4539,7 @@ paths:
       parameters:
         - $ref: "#/components/parameters/ID"
         - $ref: "#/components/parameters/SkipDeleteExecutions"
+        - $ref: "#/components/parameters/SkipDeleteCRD"
       summary: Delete test workflow
       description: Delete test workflow from the kubernetes cluster
       operationId: deleteTestWorkflow
@@ -6595,7 +6711,7 @@ components:
           description: running context for the test execution
         disableWebhooks:
           type: boolean
-          description: whether webhooks on the executions of this step are disabled
+          description: whether webhooks on the execution of this step are disabled
           default: false
           example:
             - true
@@ -6703,7 +6819,7 @@ components:
           description: test suite execution name started the test suite execution
         disableWebhooks:
           type: boolean
-          description: whether webhooks on the executions of this test suite are disabled
+          description: whether webhooks on the execution of this test suite are disabled
           default: false
           example:
             - true
@@ -7150,16 +7266,17 @@ components:
           example:
             env: "prod"
             app: "backend"
+        annotations:
+          type: object
+          description: "webhook annotations"
+          additionalProperties:
+            type: string
+          example:
+            env: "prod"
+            app: "backend"
         disabled:
           type: boolean
           description: whether webhook is disabled
-          default: false
-          example:
-            - true
-            - false
-        onStateChange:
-          type: boolean
-          description: whether webhook is triggered on state change only
           default: false
           example:
             - true
@@ -7226,16 +7343,30 @@ components:
         - end-test-failed
         - end-test-aborted
         - end-test-timeout
+        - become-test-up
+        - become-test-down
+        - become-test-failed
+        - become-test-aborted
+        - become-test-timeout
         - start-testsuite
         - end-testsuite-success
         - end-testsuite-failed
         - end-testsuite-aborted
         - end-testsuite-timeout
+        - become-testsuite-up
+        - become-testsuite-down
+        - become-testsuite-failed
+        - become-testsuite-aborted
+        - become-testsuite-timeout
         - queue-testworkflow
         - start-testworkflow
         - end-testworkflow-success
         - end-testworkflow-failed
         - end-testworkflow-aborted
+        - become-testworkflow-up
+        - become-testworkflow-down
+        - become-testworkflow-failed
+        - become-testworkflow-aborted
         - created
         - updated
         - deleted
@@ -7381,6 +7512,14 @@ components:
             type: string
           example:
             env: "prod"
+            app: "backend"
+        annotations:
+          type: object
+          description: "test trigger annotations"
+          additionalProperties:
+            type: string
+          example:
+            group: "teamA"
             app: "backend"
         resource:
           $ref: "#/components/schemas/TestTriggerResources"
@@ -7933,8 +8072,10 @@ components:
           description: test workflow execution name started the test workflow execution
         disableWebhooks:
           type: boolean
-          description: whether webhooks on the executions of this test workflow are disabled
+          description: whether webhooks on the execution of this test workflow are disabled
           default: false
+        tags:
+          $ref: "#/components/schemas/TestWorkflowTagValue"
         runningContext:
           type: array
           description: running context for the test workflow execution
@@ -7944,7 +8085,7 @@ components:
           type: array
           description: parent execution ids
           items:
-            type: string
+            type: string          
 
     TestWorkflowWithExecution:
       type: object
@@ -7993,7 +8134,7 @@ components:
         namespace:
           type: string
           description: execution namespace
-          example: "my-testkube"          
+          example: "my-testkube"
         number:
           type: integer
           description: sequence number for the execution
@@ -8031,11 +8172,13 @@ components:
           description: test workflow execution name started the test workflow execution
         disableWebhooks:
           type: boolean
-          description: whether webhooks on the executions of this test workflow are disabled
+          description: whether webhooks on the execution of this test workflow are disabled
           default: false
           example:
             - true
             - false
+        tags:
+          $ref: "#/components/schemas/TestWorkflowTagValue"
         runningContext:
           type: array
           description: running context for the test workflow execution
@@ -8073,6 +8216,8 @@ components:
           $ref: "#/components/schemas/TestWorkflowResultSummary"
         workflow:
           $ref: "#/components/schemas/TestWorkflowSummary"
+        tags:
+          $ref: "#/components/schemas/TestWorkflowTagValue"
         runningContext:
           type: array
           description: running context for the test workflow execution
@@ -8544,6 +8689,14 @@ components:
       required:
       - from
 
+    TestWorkflowSystem:
+      type: object
+      properties:
+        pureByDefault:
+          $ref: "#/components/schemas/BoxedBoolean"
+        isolatedContainers:
+          $ref: "#/components/schemas/BoxedBoolean"
+
     TestWorkflowSpec:
       type: object
       properties:
@@ -8553,6 +8706,8 @@ components:
             $ref: "#/components/schemas/TestWorkflowTemplateRef"
         config:
           $ref: "#/components/schemas/TestWorkflowConfigSchema"
+        system:
+          $ref: "#/components/schemas/TestWorkflowSystem"
         content:
           $ref: "#/components/schemas/TestWorkflowContent"
         services:
@@ -8581,15 +8736,16 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/TestWorkflowEvent"
-        notifications:
-          $ref: "#/components/schemas/TestWorkflowNotificationsConfig"
-
+        execution:
+          $ref: "#/components/schemas/TestWorkflowTagSchema"
 
     TestWorkflowTemplateSpec:
       type: object
       properties:
         config:
           $ref: "#/components/schemas/TestWorkflowConfigSchema"
+        system:
+          $ref: "#/components/schemas/TestWorkflowSystem"
         content:
           $ref: "#/components/schemas/TestWorkflowContent"
         services:
@@ -8618,6 +8774,8 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/TestWorkflowEvent"
+        execution:
+          $ref: "#/components/schemas/TestWorkflowTagSchema"
 
     TestWorkflowStepControl:
       type: object
@@ -8664,6 +8822,8 @@ components:
         condition:
           type: string
           description: expression to declare under which conditions the step should be run; defaults to "passed", except artifacts where it defaults to "always"
+        pure:
+          $ref: "#/components/schemas/BoxedBoolean"
         paused:
           type: boolean
           description: should the step be paused initially
@@ -8724,6 +8884,8 @@ components:
         condition:
           type: string
           description: expression to declare under which conditions the step should be run; defaults to "passed", except artifacts where it defaults to "always"
+        pure:
+          $ref: "#/components/schemas/BoxedBoolean"
         paused:
           type: boolean
           description: should the step be paused initially
@@ -9256,14 +9418,6 @@ components:
           items:
             $ref: "#/components/schemas/VolumeMount"
 
-    TestWorkflowNotificationsConfig:
-      type: object
-      properties:
-        disableWebhooks:
-          type: boolean
-          description: disable webhooks for this test workflow
-          default: false
-
     TestWorkflowStepRun:
       type: object
       properties:
@@ -9378,6 +9532,10 @@ components:
           $ref: "#/components/schemas/BoxedInteger"
         multipleOf:
           $ref: "#/components/schemas/BoxedInteger"
+        sensitive:
+          type: boolean
+          default: false
+          description: whether this value should be stored in the secret
       required:
         - type
 
@@ -9431,10 +9589,6 @@ components:
         status:
           $ref: "#/components/schemas/TestWorkflowExecutionStatusCR"
           description: test workflow execution status
-        disableWebhooks:
-          type: boolean
-          description: disable webhooks for this execution
-          default: false
 
     TestWorkflowExecutionStatusCR:
       type: object
@@ -9446,6 +9600,25 @@ components:
           type: integer
           format: int64
           description: test workflow execution generation
+
+    TestWorkflowTagValue:
+      type: object
+      description: tag values to pass to the test workflow execution
+      additionalProperties:
+        type: string
+
+    TestWorkflowTagSchema:
+      type: object
+      description: test workflow execution tag definition
+      properties:
+        tags:
+          $ref: "#/components/schemas/TestWorkflowTagValue"
+
+    TestWorkflowExecutionTags:
+      type: object
+      properties:
+        tags:
+          $ref: "#/components/schemas/TestWorkflowTagValue"
 
     ContentGitAuthType:
       type: string
@@ -10562,6 +10735,20 @@ components:
         default: false
       description: flag to request all resources
       required: false
+    SkipDeleteCRD:
+      in: query
+      name: skipDeleteCRD
+      schema:
+        type: boolean
+        default: false
+      description: dont delete CRD
+      required: false
+    TagSelector:
+      in: query
+      name: tagSelector
+      schema:
+        type: string
+        description: Test workflow execution tags
   requestBodies:
     UploadsBody:
       description: "Upload files request body data"

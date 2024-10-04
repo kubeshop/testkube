@@ -1,14 +1,20 @@
 package testkube
 
 import (
+	"bytes"
+	"encoding/json"
+	"fmt"
 	"slices"
 	"time"
 
+	"github.com/gookit/color"
+
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/internal/common"
 )
 
 func (r *TestWorkflowResult) IsFinished() bool {
-	return !r.IsStatus(QUEUED_TestWorkflowStatus) && !r.IsStatus(RUNNING_TestWorkflowStatus) && !r.IsStatus(PAUSED_TestWorkflowStatus)
+	return !r.FinishedAt.IsZero() && r.Status.Finished()
 }
 
 func (r *TestWorkflowResult) IsStatus(s TestWorkflowStatus) bool {
@@ -46,6 +52,14 @@ func (r *TestWorkflowResult) LatestTimestamp() time.Time {
 	return ts
 }
 
+func (r *TestWorkflowResult) approxCurrentTimestamp() time.Time {
+	ts := latestTimestamp(r.QueuedAt, r.StartedAt, r.Initialization.QueuedAt, r.Initialization.StartedAt, r.Initialization.FinishedAt)
+	for i := range r.Steps {
+		ts = latestTimestamp(ts, r.Steps[i].QueuedAt, r.Steps[i].StartedAt, r.Steps[i].FinishedAt)
+	}
+	return ts
+}
+
 func (r *TestWorkflowResult) IsQueued() bool {
 	return r.IsStatus(QUEUED_TestWorkflowStatus)
 }
@@ -74,6 +88,99 @@ func (r *TestWorkflowResult) IsAnyError() bool {
 	return r.IsFinished() && !r.IsStatus(PASSED_TestWorkflowStatus)
 }
 
+func (r *TestWorkflowResult) HasPauseAt(ref string, t time.Time) bool {
+	for _, p := range r.Pauses {
+		if ref == p.Ref && !p.PausedAt.After(t) && (p.ResumedAt.IsZero() || !p.ResumedAt.Before(t)) {
+			return true
+		}
+	}
+	return false
+}
+
+func (r *TestWorkflowResult) HasUnfinishedPause(ref string) bool {
+	for _, p := range r.Pauses {
+		if ref == p.Ref && p.ResumedAt.IsZero() {
+			return true
+		}
+	}
+	return false
+}
+
+func (r *TestWorkflowResult) Current(sig []TestWorkflowSignature) string {
+	if !r.IsRunning() || r.Initialization.FinishedAt.IsZero() {
+		return ""
+	}
+	current := ""
+	walkSteps(sig, func(signature TestWorkflowSignature) {
+		if s, ok := r.Steps[signature.Ref]; ok && len(signature.Children) == 0 && !s.QueuedAt.IsZero() && s.FinishedAt.IsZero() && current == "" {
+			current = signature.Ref
+		}
+	})
+	return current
+}
+
+func (r *TestWorkflowResult) IsAnyStepAborted() bool {
+	// When initialization was aborted or failed - it's immediately end
+	if r.Initialization.Status.AnyError() {
+		return true
+	}
+
+	// Analyze the rest of the steps
+	for _, step := range r.Steps {
+		// When any step was aborted - it's immediately end
+		if step.Status.Aborted() {
+			return true
+		}
+	}
+	return false
+}
+
+func (r *TestWorkflowResult) IsAnyStepPaused() bool {
+	// When initialization was aborted or failed - it's immediately end
+	if r.Initialization.Status.AnyError() {
+		return true
+	}
+
+	// Analyze the rest of the steps
+	for _, step := range r.Steps {
+		// When any step was aborted - it's immediately end
+		if step.Status.Paused() {
+			return true
+		}
+	}
+	return false
+}
+
+func (r *TestWorkflowResult) IsKnownStep(ref string) bool {
+	if ref == data.InitStepName {
+		return true
+	}
+	_, ok := r.Steps[ref]
+	return ok
+}
+
+func (r *TestWorkflowResult) AreAllStepsFinished() bool {
+	for _, step := range r.Steps {
+		if !step.Finished() {
+			return false
+		}
+	}
+	return true
+}
+
+// TODO: Optimize
+func (r *TestWorkflowResult) Equal(r2 *TestWorkflowResult) bool {
+	if r == nil && r2 == nil {
+		return true
+	}
+	if r == nil || r2 == nil {
+		return false
+	}
+	v1, _ := json.Marshal(r)
+	v2, _ := json.Marshal(r2)
+	return bytes.Equal(v1, v2)
+}
+
 func (r *TestWorkflowResult) Fatal(err error, aborted bool, ts time.Time) {
 	r.Initialization.ErrorMessage = err.Error()
 	r.Status = common.Ptr(FAILED_TestWorkflowStatus)
@@ -90,7 +197,7 @@ func (r *TestWorkflowResult) Fatal(err error, aborted bool, ts time.Time) {
 	if r.FinishedAt.IsZero() {
 		r.FinishedAt = ts.UTC()
 	}
-	if r.Initialization.Status == nil || (*r.Initialization.Status == QUEUED_TestWorkflowStepStatus) || (*r.Initialization.Status == RUNNING_TestWorkflowStepStatus) {
+	if r.Initialization.Status == nil || !(*r.Initialization.Status).Finished() {
 		r.Initialization.Status = common.Ptr(FAILED_TestWorkflowStepStatus)
 		if aborted {
 			r.Initialization.Status = common.Ptr(ABORTED_TestWorkflowStepStatus)
@@ -111,7 +218,7 @@ func (r *TestWorkflowResult) Fatal(err error, aborted bool, ts time.Time) {
 			r.Steps[i] = s
 		}
 	}
-	r.RecomputeDuration()
+	r.HealDuration()
 }
 
 func (r *TestWorkflowResult) Clone() *TestWorkflowResult {
@@ -139,25 +246,59 @@ func (r *TestWorkflowResult) Clone() *TestWorkflowResult {
 	}
 }
 
-func getTestWorkflowStepStatus(result TestWorkflowStepResult) TestWorkflowStepStatus {
-	if result.Status == nil {
-		return QUEUED_TestWorkflowStepStatus
-	}
-	return *result.Status
-}
-
-func (r *TestWorkflowResult) UpdateStepResult(sig []TestWorkflowSignature, ref string, result TestWorkflowStepResult, scheduledAt time.Time) TestWorkflowStepResult {
-	v := r.Steps[ref]
-	v.Merge(result)
-	r.Steps[ref] = v
-	r.Recompute(sig, scheduledAt)
-	return v
-}
-
-func (r *TestWorkflowResult) RecomputeDuration() {
+func (r *TestWorkflowResult) HealDuration() {
 	if !r.FinishedAt.IsZero() {
 		r.PausedMs = 0
+
+		// Finalize pauses
+		for i := range r.Pauses {
+			step := r.Steps[r.Pauses[i].Ref]
+			if !step.FinishedAt.IsZero() {
+				if r.Pauses[i].ResumedAt.IsZero() {
+					r.Pauses[i].ResumedAt = step.FinishedAt
+				}
+				if r.Pauses[i].PausedAt.Before(step.StartedAt) {
+					r.Pauses[i].PausedAt = step.StartedAt
+				}
+				if r.Pauses[i].ResumedAt.Before(r.Pauses[i].PausedAt) {
+					r.Pauses[i].PausedAt = r.Pauses[i].ResumedAt
+				}
+			}
+		}
+
+		// Get unique pause periods
+		pauses := make([]TestWorkflowPause, 0)
+	loop:
 		for _, p := range r.Pauses {
+			for i := range pauses {
+				// They don't overlap
+				if p.PausedAt.After(pauses[i].ResumedAt) || p.ResumedAt.Before(pauses[i].PausedAt) {
+					continue
+				}
+
+				// The existing pause period may take some period before
+				if pauses[i].PausedAt.After(p.PausedAt) {
+					pauses[i].PausedAt = p.PausedAt
+					p.PausedAt = pauses[i].ResumedAt
+					if p.ResumedAt.Before(p.PausedAt) {
+						p.ResumedAt = p.PausedAt
+					}
+				}
+
+				// The existing pause period may take some period after
+				if pauses[i].ResumedAt.Before(p.ResumedAt) {
+					pauses[i].ResumedAt = p.ResumedAt
+					p.ResumedAt = pauses[i].PausedAt
+				}
+
+				// The pause is already enclosed in existing list
+				continue loop
+			}
+
+			pauses = append(pauses, p)
+		}
+
+		for _, p := range pauses {
 			resumedAt := p.ResumedAt
 			if resumedAt.IsZero() {
 				resumedAt = r.FinishedAt
@@ -167,6 +308,7 @@ func (r *TestWorkflowResult) RecomputeDuration() {
 				r.PausedMs += milli
 			}
 		}
+
 		totalDuration := r.FinishedAt.Sub(r.QueuedAt)
 		duration := totalDuration - time.Duration(1e3*r.PausedMs)
 		if totalDuration < 0 {
@@ -182,212 +324,216 @@ func (r *TestWorkflowResult) RecomputeDuration() {
 	}
 }
 
-func (r *TestWorkflowResult) HasPauseAt(ref string, t time.Time) bool {
-	for _, p := range r.Pauses {
-		if ref == p.Ref && !p.PausedAt.After(t) && (p.ResumedAt.IsZero() || !p.ResumedAt.Before(t)) {
-			return true
-		}
-	}
-	return false
-}
-
-func (r *TestWorkflowResult) HasUnfinishedPause(ref string) bool {
-	for _, p := range r.Pauses {
-		if ref == p.Ref && p.ResumedAt.IsZero() {
-			return true
-		}
-	}
-	return false
-}
-
-func (r *TestWorkflowResult) PauseStart(sig []TestWorkflowSignature, scheduledAt time.Time, ref string, start time.Time) {
-	if r.HasPauseAt(ref, start) {
-		return
-	}
-	r.Pauses = append(r.Pauses, TestWorkflowPause{Ref: ref, PausedAt: start})
-	r.Recompute(sig, scheduledAt)
-}
-
-func (r *TestWorkflowResult) PauseEnd(sig []TestWorkflowSignature, scheduledAt time.Time, ref string, end time.Time) {
-	for i, p := range r.Pauses {
-		if p.Ref != ref {
-			continue
-		}
-		if !p.PausedAt.After(end) && !p.ResumedAt.Before(end) {
-			// It's already covered by another period
-			return
-		}
-		if !p.PausedAt.After(end) && (p.ResumedAt.IsZero() || p.ResumedAt.Equal(end)) {
-			// It found a period to fulfill
-			r.Pauses[i].ResumedAt = end
-			r.Recompute(sig, scheduledAt)
-			return
+func (r *TestWorkflowResult) HealMissingPauseStatuses() {
+	for ref := range r.Steps {
+		if !r.Steps[ref].Status.Paused() && !r.Steps[ref].Status.Finished() && r.HasUnfinishedPause(ref) {
+			step := r.Steps[ref]
+			step.Status = common.Ptr(PAUSED_TestWorkflowStepStatus)
+			r.Steps[ref] = step
 		}
 	}
 }
 
-func (r *TestWorkflowResult) Recompute(sig []TestWorkflowSignature, scheduledAt time.Time) {
-	// Recompute steps
-	for _, ch := range sig {
-		r.RecomputeStep(ch)
-	}
-
-	// Build status on the internal failure
-	if getTestWorkflowStepStatus(*r.Initialization) == ABORTED_TestWorkflowStepStatus {
-		r.Status = common.Ptr(ABORTED_TestWorkflowStatus)
-		r.PredictedStatus = r.Status
-		return
-	} else if getTestWorkflowStepStatus(*r.Initialization) == FAILED_TestWorkflowStepStatus {
-		r.Status = common.Ptr(FAILED_TestWorkflowStatus)
-		r.PredictedStatus = r.Status
+func (r *TestWorkflowResult) healPredictedStatus() {
+	// Mark as aborted, when any step is aborted
+	if r.IsAnyStepAborted() || r.Initialization.Status.AnyError() {
+		r.PredictedStatus = common.Ptr(ABORTED_TestWorkflowStatus)
 		return
 	}
 
-	// Calibrate the execution time initially
-	r.QueuedAt = adjustMinimumTime(r.QueuedAt, scheduledAt)
-	r.StartedAt = adjustMinimumTime(r.StartedAt, r.QueuedAt)
-	r.FinishedAt = adjustMinimumTime(r.FinishedAt, r.StartedAt)
-	initialDate := r.StartedAt
-	if initialDate.IsZero() {
-		initialDate = r.QueuedAt
-	}
-
-	// Calibrate the initialization step
-	if r.Initialization != nil {
-		r.Initialization.QueuedAt = adjustMinimumTime(r.Initialization.QueuedAt, initialDate)
-		r.Initialization.StartedAt = adjustMinimumTime(r.Initialization.StartedAt, r.Initialization.QueuedAt)
-		r.Initialization.FinishedAt = adjustMinimumTime(r.Initialization.FinishedAt, r.Initialization.StartedAt)
-		initialDate = getLastDate(*r.Initialization, initialDate)
-	}
-
-	// Prepare sequential list of container steps
-	type step struct {
-		ref    string
-		result TestWorkflowStepResult
-	}
-	seq := make([]step, 0)
-	walkSteps(sig, func(s TestWorkflowSignature) {
-		if len(s.Children) > 0 {
+	// Determine if there are some steps failed
+	for ref := range r.Steps {
+		if r.Steps[ref].Status != nil && r.Steps[ref].Status.AnyError() {
+			r.PredictedStatus = common.Ptr(FAILED_TestWorkflowStatus)
 			return
 		}
-		seq = append(seq, step{ref: s.Ref, result: r.Steps[s.Ref]})
-	})
-
-	// Calibrate the clock for container steps
-	for i := 0; i < len(seq); i++ {
-		if i != 0 {
-			initialDate = getLastDate(seq[i-1].result, initialDate)
-		}
-		seq[i].result.QueuedAt = initialDate
-		seq[i].result.StartedAt = adjustMinimumTime(seq[i].result.StartedAt, seq[i].result.QueuedAt)
-		seq[i].result.FinishedAt = adjustMinimumTime(seq[i].result.FinishedAt, seq[i].result.StartedAt)
 	}
-	for _, s := range seq {
-		r.Steps[s.ref] = s.result
-	}
+	r.PredictedStatus = common.Ptr(PASSED_TestWorkflowStatus)
+}
 
-	// Calibrate the clock for group steps
-	walkSteps(sig, func(s TestWorkflowSignature) {
-		if len(s.Children) == 0 {
-			return
-		}
-		first := getFirstContainer(s.Children)
-		last := getLastContainer(s.Children)
-		if first == nil || last == nil {
-			return
-		}
-		res := r.Steps[s.Ref]
-		res.QueuedAt = r.Steps[first.Ref].QueuedAt
-		res.StartedAt = r.Steps[first.Ref].StartedAt
-		res.FinishedAt = r.Steps[last.Ref].FinishedAt
-		r.Steps[s.Ref] = res
-	})
-
-	// Calibrate execution clock
-	if r.Initialization != nil {
-		if !r.Initialization.QueuedAt.IsZero() && r.Initialization.QueuedAt.Before(r.QueuedAt) {
-			r.QueuedAt = r.Initialization.QueuedAt
-		}
-		if !r.Initialization.StartedAt.IsZero() && r.Initialization.StartedAt.Before(r.StartedAt) {
-			r.StartedAt = r.Initialization.StartedAt
-		}
-	}
-	last := r.Steps[sig[len(sig)-1].Ref]
-	if !last.FinishedAt.IsZero() {
-		r.FinishedAt = adjustMinimumTime(r.FinishedAt, last.FinishedAt)
-	}
-
-	// Check pause status
-	isPaused := false
-	walkSteps(sig, func(s TestWorkflowSignature) {
-		if r.Steps[s.Ref].Status != nil && *r.Steps[s.Ref].Status == PAUSED_TestWorkflowStepStatus {
-			isPaused = true
-		}
-	})
-
-	// Recompute the TestWorkflow status
-	totalSig := TestWorkflowSignature{Children: sig}
-	result, _ := predictTestWorkflowStepStatus(TestWorkflowStepResult{}, totalSig, r)
-	status := common.Ptr(FAILED_TestWorkflowStatus)
-	switch result {
-	case ABORTED_TestWorkflowStepStatus:
-		status = common.Ptr(ABORTED_TestWorkflowStatus)
-	case PASSED_TestWorkflowStepStatus, SKIPPED_TestWorkflowStepStatus:
-		status = common.Ptr(PASSED_TestWorkflowStatus)
-	}
-	r.PredictedStatus = status
-	if !r.FinishedAt.IsZero() || *status == ABORTED_TestWorkflowStatus {
+func (r *TestWorkflowResult) healStatus() {
+	if !r.FinishedAt.IsZero() && r.AreAllStepsFinished() {
 		r.Status = r.PredictedStatus
-	} else if isPaused {
+	} else if r.IsAnyStepPaused() {
 		r.Status = common.Ptr(PAUSED_TestWorkflowStatus)
-	}
-
-	if !isPaused && r.Status != nil && *r.Status == PAUSED_TestWorkflowStatus {
+	} else if !r.StartedAt.IsZero() {
 		r.Status = common.Ptr(RUNNING_TestWorkflowStatus)
 	}
-
-	if r.FinishedAt.IsZero() && r.Status != nil && *r.Status == ABORTED_TestWorkflowStatus {
-		r.FinishedAt = r.LatestTimestamp()
-	}
-
-	// Compute the duration
-	r.RecomputeDuration()
 }
 
-func (r *TestWorkflowResult) RecomputeStep(sig TestWorkflowSignature) {
-	// Compute nested steps
-	for _, ch := range sig.Children {
-		r.RecomputeStep(ch)
-	}
-
-	// Simplify accessing value
-	v := r.Steps[sig.Ref]
-	defer func() {
-		r.Steps[sig.Ref] = v
-	}()
-
-	// Compute time
-	v = recomputeTestWorkflowStepResult(v, sig, r)
-
-	// Mark as paused during pause period
-	if r.HasUnfinishedPause(sig.Ref) && !r.IsFinished() && v.FinishedAt.IsZero() {
-		v.Status = common.Ptr(PAUSED_TestWorkflowStepStatus)
-	} else if v.Status != nil && *v.Status == PAUSED_TestWorkflowStepStatus {
-		v.Status = common.Ptr(RUNNING_TestWorkflowStepStatus)
-	}
+func (r *TestWorkflowResult) HealStatus() {
+	r.healPredictedStatus()
+	r.healStatus()
 }
 
-func (r *TestWorkflowResult) Current(sig []TestWorkflowSignature) string {
-	if !r.IsRunning() || r.Initialization.FinishedAt.IsZero() {
-		return ""
+// TODO: Take in account scheduledAt to avoid having timestamp before schedule (because of seconds precision)
+func (r *TestWorkflowResult) HealTimestamps(sigSequence []TestWorkflowSignature, scheduledTs, firstContainerStartTs, completionTs time.Time, ended bool) {
+	// Adjust queue/start time to the schedule time
+	r.QueuedAt = latestTimestamp(r.QueuedAt, scheduledTs)
+	r.StartedAt = latestTimestamp(r.StartedAt, r.QueuedAt)
+
+	// Detect the initialization queue time
+	r.Initialization.QueuedAt = earliestTimestamp(r.StartedAt, r.Initialization.QueuedAt)
+
+	// Ensure there is the start time for the initialization if it's started or done
+	if !r.Initialization.NotStarted() {
+		r.Initialization.StartedAt = latestTimestamp(r.Initialization.StartedAt, firstContainerStartTs, r.Initialization.QueuedAt)
 	}
-	current := ""
-	walkSteps(sig, func(signature TestWorkflowSignature) {
-		if s, ok := r.Steps[signature.Ref]; ok && len(signature.Children) == 0 && !s.QueuedAt.IsZero() && s.FinishedAt.IsZero() && current == "" {
-			current = signature.Ref
+
+	// Ensure there is the end time for the initialization if it's done
+	if r.Initialization.Finished() && r.Initialization.FinishedAt.IsZero() {
+		// Fallback to have any timestamp in case something went wrong
+		if r.Initialization.Aborted() {
+			r.Initialization.FinishedAt = latestTimestamp(r.Initialization.StartedAt, completionTs)
+		} else {
+			r.Initialization.FinishedAt = r.Initialization.StartedAt
 		}
-	})
-	return current
+	}
+
+	// Set up everywhere queued at time to past finished time
+	lastTs := r.Initialization.FinishedAt
+	for i, s := range sigSequence {
+		if len(s.Children) > 0 {
+			continue
+		}
+		step := r.Steps[s.Ref]
+		if !step.QueuedAt.Equal(lastTs) {
+			step.QueuedAt = lastTs
+		}
+		if step.FinishedAt.IsZero() && (step.Status.Aborted() || (step.Status.Skipped() && step.ErrorMessage != "")) {
+			step.FinishedAt = completionTs
+		}
+		if step.FinishedAt.IsZero() && ended {
+			if len(sigSequence) > i+1 {
+				if !r.Steps[sigSequence[i+1].Ref].QueuedAt.IsZero() {
+					step.FinishedAt = r.Steps[sigSequence[i+1].Ref].QueuedAt
+				} else if !r.Steps[sigSequence[i+1].Ref].StartedAt.IsZero() {
+					step.FinishedAt = r.Steps[sigSequence[i+1].Ref].StartedAt
+				} else {
+					step.FinishedAt = completionTs
+				}
+			} else {
+				step.FinishedAt = completionTs
+			}
+		}
+		if !step.QueuedAt.IsZero() && !step.FinishedAt.IsZero() && step.StartedAt.IsZero() {
+			step.StartedAt = step.QueuedAt
+		}
+
+		if !step.StartedAt.IsZero() && step.StartedAt.Before(step.QueuedAt) {
+			step.StartedAt = step.QueuedAt
+		}
+		if !step.FinishedAt.IsZero() && step.FinishedAt.Before(step.StartedAt) {
+			step.FinishedAt = step.StartedAt
+		}
+
+		r.Steps[s.Ref] = step
+		lastTs = step.FinishedAt
+	}
+
+	// Set up for groups too.
+	// Do it from end, so we handle nested groups
+	for i := len(sigSequence) - 1; i >= 0; i-- {
+		if len(sigSequence[i].Children) == 0 {
+			continue
+		}
+		s := sigSequence[i]
+		seq := s.Sequence()
+		expectedQueuedAt := r.Steps[seq[1].Ref].QueuedAt
+		expectedFinishedAt := r.Steps[seq[len(seq)-1].Ref].FinishedAt
+		step := r.Steps[s.Ref]
+		if !r.Steps[s.Ref].QueuedAt.Equal(expectedQueuedAt) {
+			step.QueuedAt = expectedQueuedAt
+		}
+		if !r.Steps[s.Ref].FinishedAt.Equal(expectedFinishedAt) {
+			step.FinishedAt = expectedFinishedAt
+		}
+		r.Steps[s.Ref] = step
+	}
+
+	if ended {
+		r.FinishedAt = firstNonZero(r.approxCurrentTimestamp(), completionTs)
+	}
+}
+
+func (r *TestWorkflowResult) HealAborted(sigSequence []TestWorkflowSignature, errorStr, defaultErrorStr string) {
+	errorMessage := fmt.Sprintf("The execution has been aborted. (%s)", errorStr)
+
+	// Create marker to know if there is any step marked as aborted already
+	aborted := false
+
+	// Check the initialization step
+	if !r.Initialization.Finished() || r.Initialization.Aborted() {
+		aborted = true
+		r.Initialization.Status = common.Ptr(ABORTED_TestWorkflowStepStatus)
+		r.Initialization.ErrorMessage = errorMessage
+	}
+
+	// Check all the executable steps in the sequence
+	for i := range sigSequence {
+		ref := sigSequence[i].Ref
+		if ref == data.InitStepName || !r.IsKnownStep(ref) || len(sigSequence[i].Children) > 0 {
+			continue
+		}
+		step := r.Steps[ref]
+		if step.Finished() && !step.Aborted() && (!step.Skipped() || step.ErrorMessage == "") {
+			if step.Status.Aborted() && (step.ErrorMessage == "" || step.ErrorMessage == defaultErrorStr) {
+				step.ErrorMessage = errorMessage
+			}
+			continue
+		}
+		if aborted {
+			step.Status = common.Ptr(SKIPPED_TestWorkflowStepStatus)
+			step.ErrorMessage = fmt.Sprintf("The execution was aborted before. %s", color.FgDarkGray.Render("("+errorStr+")"))
+		} else {
+			aborted = true
+			step.Status = common.Ptr(ABORTED_TestWorkflowStepStatus)
+			step.ErrorMessage = errorMessage
+		}
+		r.Steps[ref] = step
+	}
+
+	// Adjust all the group steps in the sequence.
+	// Do it from end, so we can handle nested groups
+	for i := len(sigSequence) - 1; i >= 0; i-- {
+		ref := sigSequence[i].Ref
+		if ref == data.InitStepName || !r.IsKnownStep(ref) || len(sigSequence[i].Children) == 0 {
+			continue
+		}
+		step := r.Steps[ref]
+		if step.Finished() {
+			continue
+		}
+		allSkipped := true
+		anyAborted := false
+		for _, childSig := range sigSequence[i].Children {
+			// TODO: What about nested virtual groups? We don't have their statuses
+			if !r.IsKnownStep(childSig.Ref) {
+				continue
+			}
+			if r.Steps[childSig.Ref].Status.Aborted() {
+				anyAborted = true
+			}
+			if !r.Steps[childSig.Ref].Status.Skipped() {
+				allSkipped = false
+			}
+		}
+		if allSkipped {
+			step.Status = common.Ptr(SKIPPED_TestWorkflowStepStatus)
+		} else if anyAborted {
+			step.Status = common.Ptr(ABORTED_TestWorkflowStepStatus)
+		}
+	}
+
+	// The rest of steps is unrecognized, so just mark them as aborted with information about faulty state
+	for ref, step := range r.Steps {
+		if step.Finished() {
+			continue
+		}
+		step.Status = common.Ptr(ABORTED_TestWorkflowStepStatus)
+		step.ErrorMessage = fmt.Sprintf("The execution was aborted, but we could not determine steps order: %s", errorStr)
+		r.Steps[ref] = step
+	}
 }
 
 func walkSteps(sig []TestWorkflowSignature, fn func(signature TestWorkflowSignature)) {
@@ -397,133 +543,29 @@ func walkSteps(sig []TestWorkflowSignature, fn func(signature TestWorkflowSignat
 	}
 }
 
-func getFirstContainer(sig []TestWorkflowSignature) *TestWorkflowSignature {
-	for i := 0; i < len(sig); i++ {
-		s := sig[i]
-		if len(s.Children) == 0 {
-			return &s
-		}
-		c := getFirstContainer(s.Children)
-		if c != nil {
-			return c
+func firstNonZero(timestamps ...time.Time) time.Time {
+	for _, t := range timestamps {
+		if !t.IsZero() {
+			return t
 		}
 	}
-	return nil
+	return time.Time{}
 }
 
-func getLastContainer(sig []TestWorkflowSignature) *TestWorkflowSignature {
-	for i := len(sig) - 1; i >= 0; i-- {
-		s := sig[i]
-		if len(s.Children) == 0 {
-			return &s
-		}
-		c := getLastContainer(s.Children)
-		if c != nil {
-			return c
+func earliestTimestamp(ts ...time.Time) (earliest time.Time) {
+	for _, t := range ts {
+		if !t.IsZero() && (earliest.IsZero() || t.Before(earliest)) {
+			earliest = t
 		}
 	}
-	return nil
+	return
 }
 
-func getLastDate(r TestWorkflowStepResult, def time.Time) time.Time {
-	if !r.FinishedAt.IsZero() {
-		return r.FinishedAt
-	}
-	if !r.StartedAt.IsZero() {
-		return r.StartedAt
-	}
-	if !r.QueuedAt.IsZero() {
-		return r.QueuedAt
-	}
-	return def
-}
-
-func adjustMinimumTime(dst, min time.Time) time.Time {
-	if dst.IsZero() {
-		return dst
-	}
-	if min.After(dst) {
-		return min
-	}
-	return dst
-}
-
-func predictTestWorkflowStepStatus(v TestWorkflowStepResult, sig TestWorkflowSignature, r *TestWorkflowResult) (TestWorkflowStepStatus, bool) {
-	children := sig.Children
-	if len(children) == 0 {
-		if getTestWorkflowStepStatus(v) == QUEUED_TestWorkflowStepStatus || getTestWorkflowStepStatus(v) == RUNNING_TestWorkflowStepStatus || getTestWorkflowStepStatus(v) == PAUSED_TestWorkflowStepStatus {
-			return PASSED_TestWorkflowStepStatus, false
-		}
-		return *v.Status, true
-	}
-
-	// Compute the status
-	skipped := true
-	aborted := false
-	failed := false
-	finished := true
-	for _, ch := range children {
-		status := getTestWorkflowStepStatus(r.Steps[ch.Ref])
-		if status != SKIPPED_TestWorkflowStepStatus {
-			skipped = false
-		}
-		if status == ABORTED_TestWorkflowStepStatus {
-			aborted = true
-		}
-		if !ch.Optional && (status == FAILED_TestWorkflowStepStatus || status == TIMEOUT_TestWorkflowStepStatus) {
-			failed = true
-		}
-		if status == QUEUED_TestWorkflowStepStatus || status == RUNNING_TestWorkflowStepStatus || status == PAUSED_TestWorkflowStepStatus {
-			finished = false
+func latestTimestamp(ts ...time.Time) (latest time.Time) {
+	for _, t := range ts {
+		if !t.IsZero() && (latest.IsZero() || t.After(latest)) {
+			latest = t
 		}
 	}
-
-	if getTestWorkflowStepStatus(v) == FAILED_TestWorkflowStepStatus {
-		return FAILED_TestWorkflowStepStatus, finished
-	} else if aborted {
-		return ABORTED_TestWorkflowStepStatus, finished
-	} else if (failed && !sig.Negative) || (!failed && sig.Negative) {
-		return FAILED_TestWorkflowStepStatus, finished
-	} else if skipped {
-		return SKIPPED_TestWorkflowStepStatus, finished
-	} else {
-		return PASSED_TestWorkflowStepStatus, finished
-	}
-}
-
-func recomputeTestWorkflowStepResult(v TestWorkflowStepResult, sig TestWorkflowSignature, r *TestWorkflowResult) TestWorkflowStepResult {
-	children := sig.Children
-	if len(children) == 0 {
-		return v
-	}
-
-	// Compute nested steps
-	for _, ch := range children {
-		r.RecomputeStep(ch)
-	}
-
-	// Compute time
-	v.QueuedAt = r.Steps[children[0].Ref].QueuedAt
-	v.StartedAt = r.Steps[children[0].Ref].StartedAt
-	v.FinishedAt = r.Steps[children[len(children)-1].Ref].StartedAt
-
-	// It has been already marked as failed internally from some step below
-	if getTestWorkflowStepStatus(v) == FAILED_TestWorkflowStepStatus {
-		return v
-	}
-
-	// It is finished already
-	if !v.FinishedAt.IsZero() {
-		predicted, finished := predictTestWorkflowStepStatus(v, sig, r)
-		if finished {
-			v.Status = common.Ptr(predicted)
-		}
-		return v
-	}
-
-	if !v.StartedAt.IsZero() {
-		v.Status = common.Ptr(RUNNING_TestWorkflowStepStatus)
-	}
-
-	return v
+	return
 }

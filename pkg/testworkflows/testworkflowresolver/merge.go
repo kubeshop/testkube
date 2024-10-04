@@ -301,6 +301,21 @@ func MergeResources(dst, include *testworkflowsv1.Resources) *testworkflowsv1.Re
 	return dst
 }
 
+func MergeSystem(dst, include *testworkflowsv1.TestWorkflowSystem) *testworkflowsv1.TestWorkflowSystem {
+	if dst == nil {
+		return include
+	} else if include == nil {
+		return dst
+	}
+	if include.PureByDefault != nil {
+		dst.PureByDefault = include.PureByDefault
+	}
+	if include.IsolatedContainers != nil {
+		dst.IsolatedContainers = include.IsolatedContainers
+	}
+	return dst
+}
+
 func MergeContainerConfig(dst, include *testworkflowsv1.ContainerConfig) *testworkflowsv1.ContainerConfig {
 	if dst == nil {
 		return include
@@ -375,4 +390,27 @@ func ConvertIndependentStepToStep(step testworkflowsv1.IndependentStep) (res tes
 	res.Setup = common.MapSlice(step.Setup, ConvertIndependentStepToStep)
 	res.Steps = common.MapSlice(step.Steps, ConvertIndependentStepToStep)
 	return res
+}
+
+func MergeExecution(dst, include *testworkflowsv1.TestWorkflowTagSchema) *testworkflowsv1.TestWorkflowTagSchema {
+	if dst == nil {
+		return include
+	} else if include == nil {
+		return dst
+	}
+
+	dst.Tags = MergeTags(dst.Tags, include.Tags)
+	return dst
+}
+
+func MergeTags(dst, src map[string]string) map[string]string {
+	if src != nil {
+		if dst == nil {
+			dst = make(map[string]string)
+		}
+
+		maps.Copy(dst, src)
+	}
+
+	return dst
 }

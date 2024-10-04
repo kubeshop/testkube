@@ -13,6 +13,10 @@ import (
 	"syscall"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
+
+	"github.com/kubeshop/testkube/pkg/cache"
+
 	"github.com/nats-io/nats.go"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -53,6 +57,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/cloud"
 	configrepository "github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/result"
+	"github.com/kubeshop/testkube/pkg/repository/sequence"
 	"github.com/kubeshop/testkube/pkg/repository/storage"
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
 
@@ -97,8 +102,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 )
 
-var verbose = flag.Bool("v", false, "enable verbosity level")
-
 func init() {
 	flag.Parse()
 }
@@ -119,7 +122,7 @@ func runMigrations() (err error) {
 	return migrations.Migrator.Run(version.Version, migrator.MigrationTypeServer)
 }
 
-func runMongoMigrations(ctx context.Context, db *mongo.Database, migrationsDir string) error {
+func runMongoMigrations(ctx context.Context, db *mongo.Database, _ string) error {
 	migrationsCollectionName := "__migrations"
 	activeMigrations, err := dbmigrator.GetDbMigrationsFromFs(dbmigrations.MongoMigrationsFs)
 	if err != nil {
@@ -203,7 +206,7 @@ func main() {
 			cfg.TestkubeProURL,
 			cfg.TestkubeProCertFile,
 			cfg.TestkubeProKeyFile,
-			cfg.TestkubeProCAFile,
+			cfg.TestkubeProCAFile, //nolint
 			log.DefaultLogger,
 		)
 		exitOnError("error creating gRPC connection", err)
@@ -273,7 +276,11 @@ func main() {
 		configRepository = cloudconfig.NewCloudResultRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
 		// Pro edition only (tcl protected code)
 		testWorkflowResultsRepository = cloudtestworkflow.NewCloudRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
-		testWorkflowOutputRepository = cloudtestworkflow.NewCloudOutputRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
+		var opts []cloudtestworkflow.Option
+		if cfg.StorageSkipVerify {
+			opts = append(opts, cloudtestworkflow.WithSkipVerify())
+		}
+		testWorkflowOutputRepository = cloudtestworkflow.NewCloudOutputRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey, opts...)
 		triggerLeaseBackend = triggers.NewAcquireAlwaysLeaseBackend()
 		artifactStorage = cloudartifacts.NewCloudArtifactsStorage(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
 	} else {
@@ -281,10 +288,14 @@ func main() {
 		db, err := storage.GetMongoDatabase(cfg.APIMongoDSN, cfg.APIMongoDB, cfg.APIMongoDBType, cfg.APIMongoAllowTLS, mongoSSLConfig)
 		exitOnError("Getting mongo database", err)
 		isDocDb := cfg.APIMongoDBType == storage.TypeDocDB
-		mongoResultsRepository := result.NewMongoRepository(db, cfg.APIMongoAllowDiskUse, isDocDb, result.WithFeatureFlags(features), result.WithLogsClient(logGrpcClient))
+		sequenceRepository := sequence.NewMongoRepository(db)
+		mongoResultsRepository := result.NewMongoRepository(db, cfg.APIMongoAllowDiskUse, isDocDb, result.WithFeatureFlags(features),
+			result.WithLogsClient(logGrpcClient), result.WithMongoRepositorySequence(sequenceRepository))
 		resultsRepository = mongoResultsRepository
-		testResultsRepository = testresult.NewMongoRepository(db, cfg.APIMongoAllowDiskUse, isDocDb)
-		testWorkflowResultsRepository = testworkflow2.NewMongoRepository(db, cfg.APIMongoAllowDiskUse)
+		testResultsRepository = testresult.NewMongoRepository(db, cfg.APIMongoAllowDiskUse, isDocDb,
+			testresult.WithMongoRepositorySequence(sequenceRepository))
+		testWorkflowResultsRepository = testworkflow2.NewMongoRepository(db, cfg.APIMongoAllowDiskUse,
+			testworkflow2.WithMongoRepositorySequence(sequenceRepository))
 		configRepository = configrepository.NewMongoRepository(db)
 		triggerLeaseBackend = triggers.NewMongoLeaseBackend(db)
 		minioClient := newStorageClient(cfg)
@@ -392,7 +403,7 @@ func main() {
 		eventBus.TraceEvents()
 	}
 
-	eventsEmitter := event.NewEmitter(eventBus, cfg.TestkubeClusterName, envs)
+	eventsEmitter := event.NewEmitter(eventBus, cfg.TestkubeClusterName)
 
 	var logsStream logsclient.Stream
 
@@ -482,8 +493,8 @@ func main() {
 	}
 	inspector := imageinspector.NewInspector(
 		cfg.TestkubeRegistry,
-		imageinspector.NewSkopeoFetcher(),
-		imageinspector.NewSecretFetcher(secretClient),
+		imageinspector.NewCraneFetcher(),
+		imageinspector.NewSecretFetcher(secretClient, cache.NewInMemoryCache[*corev1.Secret](), imageinspector.WithSecretCacheTTL(cfg.TestkubeImageCredentialsCacheTTL)),
 		inspectorStorages...,
 	)
 
@@ -511,6 +522,7 @@ func main() {
 		features,
 		cfg.TestkubeDefaultStorageClassName,
 		cfg.WhitelistedContainers,
+		cfg.TestkubeImageCredentialsCacheTTL,
 	)
 	if err != nil {
 		exitOnError("Creating container executor", err)
@@ -549,35 +561,6 @@ func main() {
 		exitOnError("Creating slack loader", err)
 	}
 
-	testWorkflowProcessor := presets.NewOpenSource(inspector)
-	if mode == common.ModeAgent {
-		testWorkflowProcessor = presets.NewPro(inspector)
-	}
-	testWorkflowExecutor := testworkflowexecutor.New(
-		eventsEmitter,
-		clientset,
-		testWorkflowResultsRepository,
-		testWorkflowOutputRepository,
-		testWorkflowTemplatesClient,
-		testWorkflowProcessor,
-		configMapConfig,
-		resultsRepository,
-		testWorkflowExecutionsClient,
-		testWorkflowsClient,
-		metrics,
-		serviceAccountNames,
-		cfg.GlobalWorkflowTemplateName,
-		cfg.TestkubeNamespace,
-		"http://"+cfg.APIServerFullname+":"+cfg.APIServerPort,
-		cfg.TestkubeRegistry,
-		cfg.EnableImageDataPersistentCache,
-		cfg.ImageDataPersistentCacheKey,
-		cfg.TestkubeDashboardURI,
-		clusterId,
-	)
-
-	go testWorkflowExecutor.Recover(context.Background())
-
 	// TODO: Make granular environment variables, yet backwards compatible
 	secretConfig := testkube.SecretConfig{
 		Prefix:     cfg.SecretCreationPrefix,
@@ -590,6 +573,35 @@ func main() {
 	}
 
 	secretManager := secretmanager.New(clientset, secretConfig)
+
+	testWorkflowProcessor := presets.NewOpenSource(inspector)
+	if mode == common.ModeAgent {
+		testWorkflowProcessor = presets.NewPro(inspector)
+	}
+	testWorkflowExecutor := testworkflowexecutor.New(
+		eventsEmitter,
+		clientset,
+		testWorkflowResultsRepository,
+		testWorkflowOutputRepository,
+		testWorkflowTemplatesClient,
+		testWorkflowProcessor,
+		configMapConfig,
+		testWorkflowExecutionsClient,
+		testWorkflowsClient,
+		metrics,
+		secretManager,
+		serviceAccountNames,
+		cfg.GlobalWorkflowTemplateName,
+		cfg.TestkubeNamespace,
+		"http://"+cfg.APIServerFullname+":"+cfg.APIServerPort,
+		cfg.TestkubeRegistry,
+		cfg.EnableImageDataPersistentCache,
+		cfg.ImageDataPersistentCacheKey,
+		cfg.TestkubeDashboardURI,
+		clusterId,
+	)
+
+	go testWorkflowExecutor.Recover(context.Background())
 
 	api := apiv1.NewTestkubeAPI(
 		cfg.TestkubeNamespace,
@@ -631,6 +643,7 @@ func main() {
 		logGrpcClient,
 		subscriptionChecker,
 		serviceAccountNames,
+		envs,
 	)
 
 	if mode == common.ModeAgent {

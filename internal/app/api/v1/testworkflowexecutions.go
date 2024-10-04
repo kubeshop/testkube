@@ -47,14 +47,29 @@ func (s *TestkubeAPI) StreamTestWorkflowExecutionNotificationsHandler() fiber.Ha
 
 		// Stream the notifications
 		ctx.SetBodyStreamWriter(func(w *bufio.Writer) {
-			_ = w.Flush()
+			err := w.Flush()
+			if err != nil {
+				s.Log.Errorw("could not flush stream body", "error", err, "id", id)
+			}
+
 			enc := json.NewEncoder(w)
 
 			for n := range ctrl.Watch(ctx) {
 				if n.Error == nil {
-					_ = enc.Encode(n.Value)
-					_, _ = fmt.Fprintf(w, "\n")
-					_ = w.Flush()
+					err := enc.Encode(n.Value)
+					if err != nil {
+						s.Log.Errorw("could not encode value", "error", err, "id", id)
+					}
+
+					_, err = fmt.Fprintf(w, "\n")
+					if err != nil {
+						s.Log.Errorw("could not print new line", "error", err, "id", id)
+					}
+
+					err = w.Flush()
+					if err != nil {
+						s.Log.Errorw("could not flush stream body", "error", err, "id", id)
+					}
 				}
 			}
 		})
@@ -224,14 +239,8 @@ func (s *TestkubeAPI) AbortTestWorkflowExecutionHandler() fiber.Handler {
 			return s.BadRequest(c, errPrefix, "checking execution", errors.New("execution already finished"))
 		}
 
-		// Obtain the controller
-		ctrl, err := testworkflowcontroller.New(ctx, s.Clientset, execution.GetNamespace(s.Namespace), execution.Id, execution.ScheduledAt)
-		if err != nil {
-			return s.BadRequest(c, errPrefix, "fetching job", err)
-		}
-
-		// Abort the execution
-		err = ctrl.Abort(ctx)
+		// Abort the Test Workflow
+		err = testworkflowcontroller.Abort(ctx, s.Clientset, execution.GetNamespace(s.Namespace), execution.Id)
 		if err != nil {
 			return s.ClientError(c, "aborting test workflow execution", err)
 		}
@@ -508,6 +517,11 @@ func getWorkflowExecutionsFilterFromRequest(c *fiber.Ctx) testworkflow2.Filter {
 	selector := c.Query("selector")
 	if selector != "" {
 		filter = filter.WithSelector(selector)
+	}
+
+	tagSelector := c.Query("tagSelector")
+	if tagSelector != "" {
+		filter = filter.WithTagSelector(tagSelector)
 	}
 
 	return filter

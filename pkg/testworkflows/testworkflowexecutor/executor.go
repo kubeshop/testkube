@@ -3,6 +3,7 @@ package testworkflowexecutor
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -19,7 +20,8 @@ import (
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	testworkflowsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testworkflows/v1"
 	initconstants "github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
-	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
 	v1 "github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -28,15 +30,19 @@ import (
 	"github.com/kubeshop/testkube/pkg/log"
 	testworkflowmappers "github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
-	"github.com/kubeshop/testkube/pkg/repository/result"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
-	"github.com/kubeshop/testkube/pkg/telemetry"
-	"github.com/kubeshop/testkube/pkg/testworkflows"
+	"github.com/kubeshop/testkube/pkg/secretmanager"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowresolver"
-	"github.com/kubeshop/testkube/pkg/version"
+	"github.com/kubeshop/testkube/pkg/utils"
+)
+
+const (
+	SaveLogsRetryMaxAttempts = 10
+	SaveLogsRetryBaseDelay   = 300 * time.Millisecond
 )
 
 //go:generate mockgen -destination=./mock_executor.go -package=testworkflowexecutor "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor" TestWorkflowExecutor
@@ -55,10 +61,10 @@ type executor struct {
 	testWorkflowTemplatesClient    testworkflowsclientv1.TestWorkflowTemplatesInterface
 	processor                      testworkflowprocessor.Processor
 	configMap                      configRepo.Repository
-	executionResults               result.Repository
 	testWorkflowExecutionsClient   testworkflowsclientv1.TestWorkflowExecutionsInterface
 	testWorkflowsClient            testworkflowsclientv1.Interface
 	metrics                        v1.Metrics
+	secretManager                  secretmanager.SecretManager
 	globalTemplateName             string
 	apiUrl                         string
 	namespace                      string
@@ -77,10 +83,10 @@ func New(emitter *event.Emitter,
 	testWorkflowTemplatesClient testworkflowsclientv1.TestWorkflowTemplatesInterface,
 	processor testworkflowprocessor.Processor,
 	configMap configRepo.Repository,
-	executionResults result.Repository,
 	testWorkflowExecutionsClient testworkflowsclientv1.TestWorkflowExecutionsInterface,
 	testWorkflowsClient testworkflowsclientv1.Interface,
 	metrics v1.Metrics,
+	secretManager secretmanager.SecretManager,
 	serviceAccountNames map[string]string,
 	globalTemplateName, namespace, apiUrl, defaultRegistry string,
 	enableImageDataPersistentCache bool, imageDataPersistentCacheKey, dashboardURI, clusterID string) TestWorkflowExecutor {
@@ -96,10 +102,10 @@ func New(emitter *event.Emitter,
 		testWorkflowTemplatesClient:    testWorkflowTemplatesClient,
 		processor:                      processor,
 		configMap:                      configMap,
-		executionResults:               executionResults,
 		testWorkflowExecutionsClient:   testWorkflowExecutionsClient,
 		testWorkflowsClient:            testWorkflowsClient,
 		metrics:                        metrics,
+		secretManager:                  secretManager,
 		serviceAccountNames:            serviceAccountNames,
 		globalTemplateName:             globalTemplateName,
 		apiUrl:                         apiUrl,
@@ -119,15 +125,6 @@ func (e *executor) Deploy(ctx context.Context, bundle *testworkflowprocessor.Bun
 func (e *executor) handleFatalError(execution *testkube.TestWorkflowExecution, err error, ts time.Time) {
 	// Detect error type
 	isAborted := errors.Is(err, testworkflowcontroller.ErrJobAborted)
-	isTimeout := errors.Is(err, testworkflowcontroller.ErrJobTimeout)
-
-	// Build error timestamp, adjusting it for aborting job
-	if ts.IsZero() {
-		ts = time.Now()
-		if isAborted || isTimeout {
-			ts = ts.Truncate(testworkflowcontroller.DefaultInitTimeout)
-		}
-	}
 
 	// Apply the expected result
 	execution.Result.Fatal(err, isAborted, ts)
@@ -238,7 +235,7 @@ func (e *executor) Control(ctx context.Context, testWorkflow *testworkflowsv1.Te
 			} else if !v.Value.Temporary {
 				if ref != v.Value.Ref && v.Value.Ref != "" {
 					ref = v.Value.Ref
-					_, err := writer.Write([]byte(data.SprintHint(ref, initconstants.InstructionStart)))
+					_, err := writer.Write([]byte(instructions.SprintHint(ref, initconstants.InstructionStart)))
 					if err != nil {
 						log.DefaultLogger.Error(errors.Wrap(err, "saving log output signature"))
 					}
@@ -295,6 +292,8 @@ func (e *executor) Control(ctx context.Context, testWorkflow *testworkflowsv1.Te
 		// TODO: Consider AppendOutput ($push) instead
 		_ = e.repository.UpdateOutput(ctx, execution.Id, execution.Output)
 		if execution.Result.IsFinished() {
+			e.sendRunWorkflowTelemetry(ctx, testWorkflow, execution)
+
 			if execution.Result.IsPassed() {
 				e.emitter.Notify(testkube.NewEventEndTestWorkflowSuccess(execution))
 			} else if execution.Result.IsAborted() {
@@ -307,6 +306,13 @@ func (e *executor) Control(ctx context.Context, testWorkflow *testworkflowsv1.Te
 
 	// Stream the log into Minio
 	err = e.output.SaveLog(context.Background(), execution.Id, execution.Workflow.Name, reader)
+
+	// Retry saving the logs to Minio if something goes wrong
+	for attempt := 1; err != nil && attempt <= SaveLogsRetryMaxAttempts; attempt++ {
+		log.DefaultLogger.Errorw("retrying save of TestWorkflow log output", "id", execution.Id, "error", err)
+		time.Sleep(SaveLogsRetryBaseDelay * time.Duration(attempt))
+		err = e.output.SaveLog(context.Background(), execution.Id, execution.Workflow.Name, ctrl.Logs(context.Background(), false))
+	}
 	if err != nil {
 		log.DefaultLogger.Errorw("failed to save TestWorkflow log output", "id", execution.Id, "error", err)
 	}
@@ -315,7 +321,7 @@ func (e *executor) Control(ctx context.Context, testWorkflow *testworkflowsv1.Te
 
 	e.metrics.IncAndObserveExecuteTestWorkflow(*execution, e.dashboardURI)
 
-	e.updateStatus(testWorkflow, execution, testWorkflowExecution)
+	e.updateStatus(testWorkflow, execution, testWorkflowExecution) // TODO: Consider if it is needed
 	err = testworkflowcontroller.Cleanup(ctx, e.clientSet, execution.GetNamespace(e.namespace), execution.Id)
 	if err != nil {
 		log.DefaultLogger.Errorw("failed to cleanup TestWorkflow resources", "id", execution.Id, "error", err)
@@ -363,28 +369,6 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		}
 	}
 
-	// Apply the configuration
-	_, err = testworkflowresolver.ApplyWorkflowConfig(&workflow, testworkflowmappers.MapConfigValueAPIToKube(request.Config))
-	if err != nil {
-		return execution, errors.Wrap(err, "configuration")
-	}
-
-	// Resolve the TestWorkflow
-	err = testworkflowresolver.ApplyTemplates(&workflow, tplsMap)
-	if err != nil {
-		return execution, errors.Wrap(err, "resolving error")
-	}
-
-	// Apply global template to parallel steps
-	if globalTemplateRef.Name != "" {
-		testworkflowresolver.AddGlobalTemplateRef(&workflow, globalTemplateRef)
-		workflow.Spec.Use = nil
-		err = testworkflowresolver.ApplyTemplates(&workflow, tplsMap)
-		if err != nil {
-			return execution, errors.Wrap(err, "resolving with global templates error")
-		}
-	}
-
 	namespace := e.namespace
 	if workflow.Spec.Job != nil && workflow.Spec.Job.Namespace != "" {
 		namespace = workflow.Spec.Job.Namespace
@@ -394,14 +378,56 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		return execution, fmt.Errorf("not supported execution namespace %s", namespace)
 	}
 
-	disableWebhooks := request.DisableWebhooks
-	if !disableWebhooks && workflow.Spec.Notifications != nil {
-		disableWebhooks = workflow.Spec.Notifications.DisableWebhooks
-	}
-
 	// Build the basic Execution data
 	id := primitive.NewObjectID().Hex()
+
+	// Handle secrets auto-creation
+	secrets := e.secretManager.Batch(namespace, "twe-", id)
+
+	// Apply the configuration
+	_, err = testworkflowresolver.ApplyWorkflowConfig(&workflow, testworkflowmappers.MapConfigValueAPIToKube(request.Config), secrets.Append)
+	if err != nil {
+		return execution, errors.Wrap(err, "configuration")
+	}
+
+	// Resolve the TestWorkflow
+	err = testworkflowresolver.ApplyTemplates(&workflow, tplsMap, secrets.Append)
+	if err != nil {
+		return execution, errors.Wrap(err, "resolving error")
+	}
+
+	// Apply global template to parallel steps
+	if globalTemplateRef.Name != "" {
+		testworkflowresolver.AddGlobalTemplateRef(&workflow, globalTemplateRef)
+		workflow.Spec.Use = nil
+		err = testworkflowresolver.ApplyTemplates(&workflow, tplsMap, secrets.Append)
+		if err != nil {
+			return execution, errors.Wrap(err, "resolving with global templates error")
+		}
+	}
+
+	// Determine the dashboard information
+	cloudApiKey := common.GetOr(os.Getenv("TESTKUBE_PRO_API_KEY"), os.Getenv("TESTKUBE_CLOUD_API_KEY"))
+	cloudOrgId := common.GetOr(os.Getenv("TESTKUBE_PRO_ORG_ID"), os.Getenv("TESTKUBE_CLOUD_ORG_ID"))
+	cloudEnvId := common.GetOr(os.Getenv("TESTKUBE_PRO_ENV_ID"), os.Getenv("TESTKUBE_CLOUD_ENV_ID"))
+	cloudUiUrl := common.GetOr(os.Getenv("TESTKUBE_PRO_UI_URL"), os.Getenv("TESTKUBE_CLOUD_UI_URL"))
+	dashboardUrl := env.Config().System.DashboardUrl
+	if env.Config().Cloud.ApiKey != "" {
+		dashboardUrl = fmt.Sprintf("%s/organization/%s/environment/%s/dashboard",
+			cloudUiUrl, env.Config().Cloud.OrgId, env.Config().Cloud.EnvId)
+	}
+
 	now := time.Now()
+	labels := make(map[string]string)
+	for key, value := range workflow.Labels {
+		labels[expressions.EscapeLabelKeyForVarName(key)] = value
+	}
+
+	labelMap, err := json.Marshal(labels)
+	if err != nil {
+		return execution, errors.Wrap(err, "marsalling labels error")
+	}
+
 	machine := expressions.NewMachine().
 		RegisterStringMap("internal", map[string]string{
 			"storage.url":        os.Getenv("STORAGE_ENDPOINT"),
@@ -417,10 +443,13 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 			"storage.caFile":     os.Getenv("STORAGE_CA_FILE"),
 
 			"cloud.enabled":         strconv.FormatBool(os.Getenv("TESTKUBE_PRO_API_KEY") != "" || os.Getenv("TESTKUBE_CLOUD_API_KEY") != ""),
-			"cloud.api.key":         common.GetOr(os.Getenv("TESTKUBE_PRO_API_KEY"), os.Getenv("TESTKUBE_CLOUD_API_KEY")),
+			"cloud.api.key":         cloudApiKey,
 			"cloud.api.tlsInsecure": common.GetOr(os.Getenv("TESTKUBE_PRO_TLS_INSECURE"), os.Getenv("TESTKUBE_CLOUD_TLS_INSECURE"), "false"),
 			"cloud.api.skipVerify":  common.GetOr(os.Getenv("TESTKUBE_PRO_SKIP_VERIFY"), os.Getenv("TESTKUBE_CLOUD_SKIP_VERIFY"), "false"),
 			"cloud.api.url":         common.GetOr(os.Getenv("TESTKUBE_PRO_URL"), os.Getenv("TESTKUBE_CLOUD_URL")),
+			"cloud.ui.url":          cloudUiUrl,
+			"cloud.api.orgId":       cloudOrgId,
+			"cloud.api.envId":       cloudEnvId,
 
 			"serviceaccount.default": e.serviceAccountNames[namespace],
 
@@ -431,25 +460,41 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 			"clusterId":       e.clusterID,
 			"cdeventsTarget":  os.Getenv("CDEVENTS_TARGET"),
 
+			"images.defaultRegistry":     e.defaultRegistry,
 			"images.init":                constants.DefaultInitImage,
 			"images.toolkit":             constants.DefaultToolkitImage,
 			"images.persistence.enabled": strconv.FormatBool(e.enableImageDataPersistentCache),
 			"images.persistence.key":     e.imageDataPersistentCacheKey,
+			"images.cache.ttl":           common.GetOr(os.Getenv("TESTKUBE_IMAGE_CREDENTIALS_CACHE_TTL"), "30m"),
 		}).
 		Register("workflow", map[string]string{
-			"name": workflow.Name,
+			"name":   workflow.Name,
+			"labels": string(labelMap),
 		}).
 		Register("resource", map[string]string{
 			"id":       id,
 			"root":     id,
 			"fsPrefix": "",
-		})
+		}).
+		Register("dashboard", map[string]string{
+			"url": dashboardUrl,
+		}).
+		Register("organization", map[string]string{
+			"id": cloudOrgId,
+		}).
+		Register("environment", map[string]string{
+			"id": cloudEnvId,
+		}).
+		RegisterStringMap("labels", labels)
+
 	mockExecutionMachine := expressions.NewMachine().Register("execution", map[string]interface{}{
-		"id":          id,
-		"name":        "<mock_name>",
-		"number":      "1",
-		"scheduledAt": now.UTC().Format(constants.RFC3339Millis),
-		"parentIds":   strings.Join(request.ParentExecutionIds, "/"),
+		"id":              id,
+		"name":            "<mock_name>",
+		"number":          "1",
+		"scheduledAt":     now.UTC().Format(constants.RFC3339Millis),
+		"disableWebhooks": request.DisableWebhooks,
+		"tags":            "",
+		"parentIds":       strings.Join(request.ParentExecutionIds, "/"),
 	})
 
 	// Preserve resolved TestWorkflow
@@ -464,14 +509,17 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	}
 
 	// Validate the TestWorkflow
-	_, err = e.processor.Bundle(ctx, workflow.DeepCopy(), machine, mockExecutionMachine)
+	_, err = e.processor.Bundle(ctx, workflow.DeepCopy(), testworkflowprocessor.BundleOptions{Secrets: secrets.Get()}, machine, mockExecutionMachine)
 	if err != nil {
 		return execution, errors.Wrap(err, "processing error")
 	}
 
 	// Load execution identifier data
-	// TODO: Consider if that should not be shared (as now it is between Tests and Test Suites)
-	number, _ := e.executionResults.GetNextExecutionNumber(context.Background(), workflow.Name)
+	number, err := e.repository.GetNextExecutionNumber(context.Background(), workflow.Name)
+	if err != nil {
+		log.DefaultLogger.Errorw("failed to retrieve TestWorkflow execution number", "id", id, "error", err)
+	}
+
 	executionName := request.Name
 	if executionName == "" {
 		executionName = fmt.Sprintf("%s-%d", workflow.Name, number)
@@ -485,17 +533,30 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		return execution, errors.Wrap(err, "execution name already exists")
 	}
 
+	var tags map[string]string
+	if workflow.Spec.Execution != nil {
+		tags = workflow.Spec.Execution.Tags
+	}
+
+	tags = testworkflowresolver.MergeTags(tags, request.Tags)
+	tagsData, err := utils.EncodeStringMapToEnvVar(tags)
+	if err != nil {
+		log.DefaultLogger.Errorw("failed to encode tags", "id", id, "error", err)
+	}
+
 	// Build machine with actual execution data
 	executionMachine := expressions.NewMachine().Register("execution", map[string]interface{}{
-		"id":          id,
-		"name":        executionName,
-		"number":      number,
-		"scheduledAt": now.UTC().Format(constants.RFC3339Millis),
-		"parentIds":   strings.Join(request.ParentExecutionIds, "/"),
+		"id":              id,
+		"name":            executionName,
+		"number":          number,
+		"scheduledAt":     now.UTC().Format(constants.RFC3339Millis),
+		"disableWebhooks": request.DisableWebhooks,
+		"tags":            tagsData,
+		"parentIds":       strings.Join(request.ParentExecutionIds, "/"),
 	})
 
 	// Process the TestWorkflow
-	bundle, err := e.processor.Bundle(ctx, &workflow, machine, executionMachine)
+	bundle, err := e.processor.Bundle(ctx, &workflow, testworkflowprocessor.BundleOptions{Secrets: secrets.Get()}, machine, executionMachine)
 	if err != nil {
 		return execution, errors.Wrap(err, "processing error")
 	}
@@ -509,20 +570,21 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		Number:      number,
 		ScheduledAt: now,
 		StatusAt:    now,
-		Signature:   testworkflowprocessor.MapSignatureListToInternal(bundle.Signature),
+		Signature:   stage.MapSignatureListToInternal(bundle.Signature),
 		Result: &testkube.TestWorkflowResult{
 			Status:          common.Ptr(testkube.QUEUED_TestWorkflowStatus),
 			PredictedStatus: common.Ptr(testkube.PASSED_TestWorkflowStatus),
 			Initialization: &testkube.TestWorkflowStepResult{
 				Status: common.Ptr(testkube.QUEUED_TestWorkflowStepStatus),
 			},
-			Steps: testworkflowprocessor.MapSignatureListToStepResults(bundle.Signature),
+			Steps: stage.MapSignatureListToStepResults(bundle.Signature),
 		},
 		Output:                    []testkube.TestWorkflowOutput{},
 		Workflow:                  testworkflowmappers.MapKubeToAPI(initialWorkflow),
 		ResolvedWorkflow:          testworkflowmappers.MapKubeToAPI(resolvedWorkflow),
 		TestWorkflowExecutionName: testWorkflowExecutionName,
-		DisableWebhooks:           disableWebhooks,
+		DisableWebhooks:           request.DisableWebhooks,
+		Tags:                      tags,
 		RunningContext:            request.RunningContext,
 	}
 	err = e.repository.Insert(ctx, execution)
@@ -540,8 +602,6 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		return execution, errors.Wrap(err, "deploying required resources")
 	}
 
-	e.sendRunWorkflowTelemetry(ctx, &workflow)
-
 	// Start to control the results
 	go func() {
 		err = e.Control(context.Background(), initialWorkflow, &execution)
@@ -552,40 +612,4 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	}()
 
 	return execution, nil
-}
-
-func (e *executor) sendRunWorkflowTelemetry(ctx context.Context, workflow *testworkflowsv1.TestWorkflow) {
-	if workflow == nil {
-		log.DefaultLogger.Debug("empty workflow passed to telemetry event")
-		return
-	}
-	telemetryEnabled, err := e.configMap.GetTelemetryEnabled(ctx)
-	if err != nil {
-		log.DefaultLogger.Debugf("getting telemetry enabled error", "error", err)
-	}
-	if !telemetryEnabled {
-		return
-	}
-
-	out, err := telemetry.SendRunWorkflowEvent("testkube_api_run_test_workflow", telemetry.RunWorkflowParams{
-		RunParams: telemetry.RunParams{
-			AppVersion: version.Version,
-			DataSource: testworkflows.GetDataSource(workflow.Spec.Content),
-			Host:       testworkflows.GetHostname(),
-			ClusterID:  testworkflows.GetClusterID(ctx, e.configMap),
-		},
-		WorkflowParams: telemetry.WorkflowParams{
-			TestWorkflowSteps:        int32(len(workflow.Spec.Setup) + len(workflow.Spec.Steps) + len(workflow.Spec.After)),
-			TestWorkflowImage:        testworkflows.GetImage(workflow.Spec.Container),
-			TestWorkflowArtifactUsed: testworkflows.HasWorkflowStepLike(workflow.Spec, testworkflows.HasArtifacts),
-			TestWorkflowKubeshopGitURI: testworkflows.IsKubeshopGitURI(workflow.Spec.Content) ||
-				testworkflows.HasWorkflowStepLike(workflow.Spec, testworkflows.HasKubeshopGitURI),
-		},
-	})
-
-	if err != nil {
-		log.DefaultLogger.Debugf("sending run test workflow telemetry event error", "error", err)
-	} else {
-		log.DefaultLogger.Debugf("sending run test workflow telemetry event", "output", out)
-	}
 }

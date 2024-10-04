@@ -24,6 +24,7 @@ type Client interface {
 	TestWorkflowAPI
 	TestWorkflowExecutionAPI
 	TestWorkflowTemplateAPI
+	TestTriggerAPI
 }
 
 // TestAPI describes test api methods
@@ -97,6 +98,16 @@ type WebhookAPI interface {
 	DeleteWebhooks(selector string) (err error)
 }
 
+// TestTriggerAPI describes test triggers api methods
+type TestTriggerAPI interface {
+	CreateTestTrigger(options CreateTestTriggerOptions) (testTrigger testkube.TestTrigger, err error)
+	UpdateTestTrigger(options UpdateTestTriggerOptions) (testTrigger testkube.TestTrigger, err error)
+	GetTestTrigger(name string) (testTrigger testkube.TestTrigger, err error)
+	ListTestTriggers(selector string) (testTriggers []testkube.TestTrigger, err error)
+	DeleteTestTrigger(name string) (err error)
+	DeleteTestTriggers(selector string) (err error)
+}
+
 // TemplateAPI describes template api methods
 type TemplateAPI interface {
 	CreateTemplate(options CreateTemplateOptions) (template testkube.Template, err error)
@@ -147,7 +158,7 @@ type TestWorkflowAPI interface {
 // TestWorkflowExecutionAPI describes test workflow api methods
 type TestWorkflowExecutionAPI interface {
 	GetTestWorkflowExecution(executionID string) (execution testkube.TestWorkflowExecution, err error)
-	ListTestWorkflowExecutions(id string, limit int, selector string) (executions testkube.TestWorkflowExecutionsResult, err error)
+	ListTestWorkflowExecutions(id string, limit int, selector, tagSelector string) (executions testkube.TestWorkflowExecutionsResult, err error)
 	AbortTestWorkflowExecution(workflow string, id string) error
 	AbortTestWorkflowExecutions(workflow string) error
 	GetTestWorkflowExecutionArtifacts(executionID string) (artifacts testkube.Artifacts, err error)
@@ -212,6 +223,12 @@ type CreateTemplateOptions testkube.TemplateCreateRequest
 // UpdateTemplateOptions - is mapping for now to OpenAPI schema for changing template request
 type UpdateTemplateOptions testkube.TemplateUpdateRequest
 
+// CreateTestTriggerOptions - is mapping for now to OpenAPI schema for creating trigger
+type CreateTestTriggerOptions testkube.TestTriggerUpsertRequest
+
+// UpdateTestTriggerOptions - is mapping for now to OpenAPI schema for changing trigger request
+type UpdateTestTriggerOptions testkube.TestTriggerUpsertRequest
+
 // TODO consider replacing it with testkube.ExecutionRequest - looks almost the samea and redundant
 // ExecuteTestOptions contains test run options
 type ExecuteTestOptions struct {
@@ -275,7 +292,8 @@ type Gettable interface {
 		testkube.Webhook | testkube.TestWithExecution | testkube.TestSuiteWithExecution | testkube.TestWithExecutionSummary |
 		testkube.TestSuiteWithExecutionSummary | testkube.Artifact | testkube.ServerInfo | testkube.Config | testkube.DebugInfo |
 		testkube.TestSource | testkube.Template |
-		testkube.TestWorkflow | testkube.TestWorkflowWithExecution | testkube.TestWorkflowTemplate | testkube.TestWorkflowExecution
+		testkube.TestWorkflow | testkube.TestWorkflowWithExecution | testkube.TestWorkflowTemplate | testkube.TestWorkflowExecution |
+		testkube.TestTrigger
 }
 
 // Executable is an interface of executable objects

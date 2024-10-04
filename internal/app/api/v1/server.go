@@ -107,6 +107,7 @@ func NewTestkubeAPI(
 	logGrpcClient logsclient.StreamGetter,
 	subscriptionChecker checktcl.SubscriptionChecker,
 	serviceAccountNames map[string]string,
+	envs map[string]string,
 ) TestkubeAPI {
 
 	var httpConfig server.Config
@@ -163,6 +164,7 @@ func NewTestkubeAPI(
 		SubscriptionChecker:         subscriptionChecker,
 		LabelSources:                common.Ptr(make([]LabelSource, 0)),
 		ServiceAccountNames:         serviceAccountNames,
+		Envs:                        envs,
 	}
 }
 
@@ -211,6 +213,7 @@ type TestkubeAPI struct {
 	SubscriptionChecker         checktcl.SubscriptionChecker
 	LabelSources                *[]LabelSource
 	ServiceAccountNames         map[string]string
+	Envs                        map[string]string
 }
 
 type storageParams struct {
@@ -412,6 +415,7 @@ func (s *TestkubeAPI) InitRoutes() {
 	testWorkflows.Delete("/:id", s.DeleteTestWorkflowHandler())
 	testWorkflows.Get("/:id/executions", s.ListTestWorkflowExecutionsHandler())
 	testWorkflows.Post("/:id/executions", s.ExecuteTestWorkflowHandler())
+	testWorkflows.Get("/:id/tags", s.ListTagsHandler())
 	testWorkflows.Get("/:id/metrics", s.GetTestWorkflowMetricsHandler())
 	testWorkflows.Get("/:id/executions/:executionID", s.GetTestWorkflowExecutionHandler())
 	testWorkflows.Post("/:id/abort", s.AbortAllTestWorkflowExecutionsHandler())
@@ -436,6 +440,7 @@ func (s *TestkubeAPI) InitRoutes() {
 	testWorkflowWithExecutions := root.Group("/test-workflow-with-executions")
 	testWorkflowWithExecutions.Get("/", s.ListTestWorkflowWithExecutionsHandler())
 	testWorkflowWithExecutions.Get("/:id", s.GetTestWorkflowWithExecutionHandler())
+	testWorkflowWithExecutions.Get("/:id/tags", s.ListTagsHandler())
 
 	root.Post("/preview-test-workflow", s.PreviewTestWorkflowHandler())
 
@@ -479,6 +484,9 @@ func (s *TestkubeAPI) InitRoutes() {
 
 	labels := root.Group("/labels")
 	labels.Get("/", s.ListLabelsHandler())
+
+	tags := root.Group("/tags")
+	tags.Get("/", s.ListTagsHandler())
 
 	slack := root.Group("/slack")
 	slack.Get("/", s.OauthHandler())
@@ -587,7 +595,7 @@ func (s *TestkubeAPI) InitRoutes() {
 	})
 }
 
-func (s TestkubeAPI) InitEventListeners(
+func (s *TestkubeAPI) InitEventListeners(
 	proContext *config.ProContext,
 	webhookClient *executorsclientv1.WebhooksClient,
 	templatesClient *templatesclientv1.TemplatesClient,
@@ -607,7 +615,7 @@ func (s TestkubeAPI) InitEventListeners(
 
 	s.Events.Loader.Register(webhook.NewWebhookLoader(
 		s.Log, webhookClient, templatesClient, testExecutionResults, testSuiteExecutionsResults,
-		testWorkflowResults, metrics, s.proContext))
+		testWorkflowResults, metrics, s.proContext, s.Envs))
 	s.Events.Loader.Register(s.WebsocketLoader)
 	s.Events.Loader.Register(s.slackLoader)
 

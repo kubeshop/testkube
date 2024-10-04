@@ -49,3 +49,17 @@ func (mr *MockInspectorMockRecorder) Inspect(arg0, arg1, arg2, arg3, arg4 interf
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Inspect", reflect.TypeOf((*MockInspector)(nil).Inspect), arg0, arg1, arg2, arg3, arg4)
 }
+
+// ResolveName mocks base method.
+func (m *MockInspector) ResolveName(arg0, arg1 string) string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ResolveName", arg0, arg1)
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// ResolveName indicates an expected call of ResolveName.
+func (mr *MockInspectorMockRecorder) ResolveName(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResolveName", reflect.TypeOf((*MockInspector)(nil).ResolveName), arg0, arg1)
+}

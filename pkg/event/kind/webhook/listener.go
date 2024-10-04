@@ -29,12 +29,13 @@ var _ common.Listener = (*WebhookListener)(nil)
 
 func NewWebhookListener(name, uri, selector string, events []testkube.EventType,
 	payloadObjectField, payloadTemplate string, headers map[string]string, disabled bool,
-	onStateChange bool,
 	testExecutionResults result.Repository,
 	testSuiteExecutionResults testresult.Repository,
 	testWorkflowExecutionResults testworkflow.Repository,
 	metrics v1.Metrics,
-	proContext *config.ProContext) *WebhookListener {
+	proContext *config.ProContext,
+	envs map[string]string,
+) *WebhookListener {
 	return &WebhookListener{
 		name:                         name,
 		Uri:                          uri,
@@ -46,12 +47,12 @@ func NewWebhookListener(name, uri, selector string, events []testkube.EventType,
 		payloadTemplate:              payloadTemplate,
 		headers:                      headers,
 		disabled:                     disabled,
-		onStateChange:                onStateChange,
 		testExecutionResults:         testExecutionResults,
 		testSuiteExecutionResults:    testSuiteExecutionResults,
 		testWorkflowExecutionResults: testWorkflowExecutionResults,
 		metrics:                      metrics,
 		proContext:                   proContext,
+		envs:                         envs,
 	}
 }
 
@@ -66,12 +67,12 @@ type WebhookListener struct {
 	payloadTemplate              string
 	headers                      map[string]string
 	disabled                     bool
-	onStateChange                bool
 	testExecutionResults         result.Repository
 	testSuiteExecutionResults    testresult.Repository
 	testWorkflowExecutionResults testworkflow.Repository
 	metrics                      v1.Metrics
 	proContext                   *config.ProContext
+	envs                         map[string]string
 }
 
 func (l *WebhookListener) Name() string {
@@ -95,7 +96,6 @@ func (l *WebhookListener) Metadata() map[string]string {
 		"payloadTemplate":    l.payloadTemplate,
 		"headers":            fmt.Sprintf("%v", l.headers),
 		"disabled":           fmt.Sprint(l.disabled),
-		"onStateChange":      fmt.Sprint(l.onStateChange),
 	}
 }
 
@@ -116,6 +116,9 @@ func (l *WebhookListener) Disabled() bool {
 }
 
 func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventResult) {
+	// load global envs to be able to use them in templates
+	event.Envs = l.envs
+
 	defer func() {
 		var eventType, res string
 		if event.Type_ != nil {
@@ -149,13 +152,13 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 		return
 	}
 
-	if l.onStateChange {
-		changed, err := l.hasStateChanges(event)
+	if event.Type_ != nil && event.Type_.IsBecome() {
+		became, err := l.hasBecomeState(event)
 		if err != nil {
-			l.Log.With(event.Log()...).Errorw(fmt.Sprintf("could not get previous finished state for test %s", event.TestExecution.TestName), "error", err)
+			l.Log.With(event.Log()...).Errorw("could not get previous finished state", "error", err)
 		}
-		if !changed {
-			return testkube.NewSuccessEventResult(event.Id, "webhook set to state change only; state has not changed")
+		if !became {
+			return testkube.NewSuccessEventResult(event.Id, "webhook is set to become state only; state has not become")
 		}
 	}
 
@@ -173,9 +176,11 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 
 		_, err = body.Write(data)
 	} else {
+		// clean envs if not requested explicitly by payload template
+		event.Envs = nil
 		err = json.NewEncoder(body).Encode(event)
 		if err == nil && l.payloadObjectField != "" {
-			data := map[string]string{l.payloadObjectField: string(body.Bytes())}
+			data := map[string]string{l.payloadObjectField: body.String()}
 			body.Reset()
 			err = json.NewEncoder(body).Encode(data)
 		}
@@ -236,7 +241,7 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 
 	if resp.StatusCode >= 400 {
 		err := fmt.Errorf("webhook response with bad status code: %d", resp.StatusCode)
-		log.Errorw("webhook send error", "error", err, "status", resp.StatusCode)
+		log.Errorw("webhook send error", "error", err, "status", resp.StatusCode, "response", responseStr)
 		result = testkube.NewFailedEventResult(event.Id, err).WithResult(responseStr)
 		return
 	}
@@ -274,48 +279,49 @@ func (l *WebhookListener) processTemplate(field, body string, event testkube.Eve
 	return buffer.Bytes(), nil
 }
 
-func (l *WebhookListener) hasStateChanges(event testkube.Event) (bool, error) {
+func (l *WebhookListener) hasBecomeState(event testkube.Event) (bool, error) {
 	log := l.Log.With(event.Log()...)
 
-	if event.TestExecution != nil && event.TestExecution.ExecutionResult != nil {
+	if event.TestExecution != nil && event.Type_ != nil {
 		prevStatus, err := l.testExecutionResults.GetPreviousFinishedState(context.Background(), event.TestExecution.TestName, event.TestExecution.EndTime)
 		if err != nil {
 			return false, err
 		}
+
 		if prevStatus == "" {
 			log.Debugw(fmt.Sprintf("no previous finished state for test %s", event.TestExecution.TestName))
 			return true, nil
 		}
 
-		return *event.TestExecution.ExecutionResult.Status != prevStatus, nil
+		return event.Type_.IsBecomeExecutionStatus(prevStatus), nil
 	}
 
-	if event.TestSuiteExecution != nil && event.TestSuiteExecution.Status != nil {
+	if event.TestSuiteExecution != nil && event.TestSuiteExecution.TestSuite != nil && event.Type_ != nil {
 		prevStatus, err := l.testSuiteExecutionResults.GetPreviousFinishedState(context.Background(), event.TestSuiteExecution.TestSuite.Name, event.TestSuiteExecution.EndTime)
 		if err != nil {
-			log.Errorw(fmt.Sprintf("could not get previous finished state for test suite %s", event.TestSuiteExecution.TestSuite.Name), "error", err)
 			return false, err
 		}
+
 		if prevStatus == "" {
 			log.Debugw(fmt.Sprintf("no previous finished state for test suite %s", event.TestSuiteExecution.TestSuite.Name))
 			return true, nil
 		}
 
-		return *event.TestSuiteExecution.Status != prevStatus, nil
+		return event.Type_.IsBecomeTestSuiteExecutionStatus(prevStatus), nil
 	}
 
-	if event.TestWorkflowExecution != nil && event.TestWorkflowExecution.Result != nil {
+	if event.TestWorkflowExecution != nil && event.TestWorkflowExecution.Workflow != nil && event.Type_ != nil {
 		prevStatus, err := l.testWorkflowExecutionResults.GetPreviousFinishedState(context.Background(), event.TestWorkflowExecution.Workflow.Name, event.TestWorkflowExecution.StatusAt)
-
 		if err != nil {
-			log.Errorw(fmt.Sprintf("could not get previous finished state for test workflow %s", event.TestWorkflowExecution.Workflow.Name), "error", err)
 			return false, err
 		}
+
 		if prevStatus == "" {
 			log.Debugw(fmt.Sprintf("no previous finished state for test workflow %s", event.TestWorkflowExecution.Workflow.Name))
 			return true, nil
 		}
-		return *event.TestWorkflowExecution.Result.Status != prevStatus, nil
+
+		return event.Type_.IsBecomeTestWorkflowExecutionStatus(prevStatus), nil
 	}
 
 	return false, nil

@@ -2,6 +2,7 @@ package testresult
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -14,6 +15,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/repository/sequence"
 )
 
 var _ Repository = (*MongoRepository)(nil)
@@ -36,15 +38,22 @@ func NewMongoRepository(db *mongo.Database, allowDiskUse, isDocDb bool, opts ...
 }
 
 type MongoRepository struct {
-	db           *mongo.Database
-	Coll         *mongo.Collection
-	allowDiskUse bool
-	isDocDb      bool
+	db                 *mongo.Database
+	Coll               *mongo.Collection
+	allowDiskUse       bool
+	isDocDb            bool
+	sequenceRepository sequence.Repository
 }
 
 func WithMongoRepositoryCollection(collection *mongo.Collection) MongoRepositoryOpt {
 	return func(r *MongoRepository) {
 		r.Coll = collection
+	}
+}
+
+func WithMongoRepositorySequence(sequenceRepository sequence.Repository) MongoRepositoryOpt {
+	return func(r *MongoRepository) {
+		r.sequenceRepository = sequenceRepository
 	}
 }
 
@@ -464,12 +473,25 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 
 // DeleteByTestSuite deletes execution results by test suite
 func (r *MongoRepository) DeleteByTestSuite(ctx context.Context, testSuiteName string) (err error) {
+	if r.sequenceRepository != nil {
+		err = r.sequenceRepository.DeleteExecutionNumber(ctx, testSuiteName, sequence.ExecutionTypeTestSuite)
+		if err != nil {
+			return
+		}
+	}
 	_, err = r.Coll.DeleteMany(ctx, bson.M{"testsuite.name": testSuiteName})
 	return
 }
 
 // DeleteAll deletes all execution results
 func (r *MongoRepository) DeleteAll(ctx context.Context) (err error) {
+	if r.sequenceRepository != nil {
+		err = r.sequenceRepository.DeleteAllExecutionNumbers(ctx, sequence.ExecutionTypeTestSuite)
+		if err != nil {
+			return
+		}
+	}
+
 	_, err = r.Coll.DeleteMany(ctx, bson.M{})
 	return
 }
@@ -492,6 +514,12 @@ func (r *MongoRepository) DeleteByTestSuites(ctx context.Context, testSuiteNames
 		filter = bson.M{"testsuite.name": testSuiteNames[0]}
 	}
 
+	if r.sequenceRepository != nil {
+		err = r.sequenceRepository.DeleteExecutionNumbers(ctx, testSuiteNames, sequence.ExecutionTypeTestSuite)
+		if err != nil {
+			return
+		}
+	}
 	_, err = r.Coll.DeleteMany(ctx, filter)
 	return
 }
@@ -565,4 +593,13 @@ func (r *MongoRepository) GetPreviousFinishedState(ctx context.Context, testSuit
 	}
 
 	return *result.Status, nil
+}
+
+// GetNextExecutionNumber gets next execution number by name
+func (r *MongoRepository) GetNextExecutionNumber(ctx context.Context, name string) (number int32, err error) {
+	if r.sequenceRepository == nil {
+		return 0, errors.New("no sequence repository provided")
+	}
+
+	return r.sequenceRepository.GetNextExecutionNumber(ctx, name, sequence.ExecutionTypeTestSuite)
 }

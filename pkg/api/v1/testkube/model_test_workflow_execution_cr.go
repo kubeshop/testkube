@@ -13,6 +13,4 @@ type TestWorkflowExecutionCr struct {
 	TestWorkflow     *ObjectRef                     `json:"testWorkflow"`
 	ExecutionRequest *TestWorkflowExecutionRequest  `json:"executionRequest,omitempty"`
 	Status           *TestWorkflowExecutionStatusCr `json:"status,omitempty"`
-	// disable webhooks for this execution
-	DisableWebhooks bool `json:"disableWebhooks,omitempty"`
 }

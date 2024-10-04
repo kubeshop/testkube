@@ -27,8 +27,8 @@ type WebhookUpdateRequest struct {
 	Headers *map[string]string `json:"headers,omitempty"`
 	// webhook labels
 	Labels *map[string]string `json:"labels,omitempty"`
+	// webhook annotations
+	Annotations *map[string]string `json:"annotations,omitempty"`
 	// whether webhook is disabled
 	Disabled *bool `json:"disabled,omitempty"`
-	// whether webhook is triggered on state change only
-	OnStateChange *bool `json:"onStateChange,omitempty"`
 }

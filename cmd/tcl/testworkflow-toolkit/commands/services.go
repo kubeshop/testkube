@@ -25,6 +25,7 @@ import (
 	commontcl "github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/common"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/spawn"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/transfer"
 	"github.com/kubeshop/testkube/internal/common"
@@ -111,7 +112,7 @@ func NewServicesCmd() *cobra.Command {
 				}
 
 				// Initialize empty array of details for each of the services
-				data.PrintHintDetails(env.Ref(), fmt.Sprintf("services.%s", name), []ServiceState{})
+				instructions.PrintHintDetails(env.Ref(), data.ServicesPrefix+name, []ServiceState{})
 			}
 
 			// Analyze instances to run
@@ -178,7 +179,7 @@ func NewServicesCmd() *cobra.Command {
 						v, err := expressions.EvalTemplate(svcSpec.Timeout, machines...)
 						ui.ExitOnError(fmt.Sprintf("%s: %d: error: timeout expression", commontcl.ServiceLabel(name), index), err)
 						d, err := time.ParseDuration(strings.ReplaceAll(v, " ", ""))
-						ui.ExitOnError(fmt.Sprintf("%s: %d: error: invalid timeout: %s:", commontcl.ServiceLabel(name), index, v), err)
+						ui.ExitOnError(fmt.Sprintf("%s: %d: error: invalid timeout: %s", commontcl.ServiceLabel(name), index, v), err)
 						svcInstances[index].Timeout = &d
 					}
 				}
@@ -189,12 +190,12 @@ func NewServicesCmd() *cobra.Command {
 				for i := range svcInstances {
 					state[name][i].Description = svcInstances[i].Description
 				}
-				data.PrintHintDetails(env.Ref(), fmt.Sprintf("services.%s", name), state)
+				instructions.PrintHintDetails(env.Ref(), data.ServicesPrefix+name, state)
 			}
 
 			// Inform about each service instance
 			for _, instance := range instances {
-				data.PrintOutput(env.Ref(), "service", ServiceInfo{
+				instructions.PrintOutput(env.Ref(), "service", ServiceInfo{
 					Group:       groupRef,
 					Index:       instance.Index,
 					Name:        instance.Name,
@@ -241,7 +242,8 @@ func NewServicesCmd() *cobra.Command {
 				// Build the resources bundle
 				scheduledAt := time.Now()
 				bundle, err := presets.NewPro(inspector).
-					Bundle(context.Background(), &testworkflowsv1.TestWorkflow{Spec: instance.Spec}, machine, baseMachine, params.MachineAt(index))
+					Bundle(context.Background(), &testworkflowsv1.TestWorkflow{Spec: instance.Spec}, testworkflowprocessor.BundleOptions{},
+						machine, baseMachine, params.MachineAt(index))
 				if err != nil {
 					log("error", "failed to build the service", err.Error())
 					return false
@@ -274,7 +276,8 @@ func NewServicesCmd() *cobra.Command {
 				if namespace == "" {
 					namespace = env.Namespace()
 				}
-				mainRef := bundle.Job.Spec.Template.Spec.Containers[0].Name
+
+				mainRef := bundle.Actions().GetLastRef()
 
 				// Deploy the resources
 				// TODO: Avoid using Job
@@ -302,9 +305,7 @@ func NewServicesCmd() *cobra.Command {
 				// TODO: Consider aggregated controller to limit number of watchers
 				ctx, ctxCancel := context.WithCancel(timeoutCtx)
 				defer ctxCancel()
-				ctrl, err := testworkflowcontroller.New(ctx, clientSet, namespace, id, scheduledAt, testworkflowcontroller.ControllerOptions{
-					Timeout: spawn.ControllerTimeout,
-				})
+				ctrl, err := testworkflowcontroller.New(ctx, clientSet, namespace, id, scheduledAt)
 				if err != nil {
 					log("error", "failed to connect to the job", err.Error())
 					return false
@@ -329,10 +330,10 @@ func NewServicesCmd() *cobra.Command {
 						state[instance.Name][index].Ip = v.PodIP
 						log(fmt.Sprintf("assigned to %s IP", ui.LightBlue(v.PodIP)))
 						info.Status = ServiceStatusRunning
-						data.PrintOutput(env.Ref(), "service", info)
+						instructions.PrintOutput(env.Ref(), "service", info)
 					}
 
-					if v.Current == mainRef {
+					if v.Current == mainRef && state[instance.Name][index].Ip != "" {
 						started = true
 						if instance.ReadinessProbe == nil {
 							log("container started")
@@ -349,7 +350,7 @@ func NewServicesCmd() *cobra.Command {
 				if !started {
 					info.Status = ServiceStatusFailed
 					log("container failed")
-					data.PrintOutput(env.Ref(), "service", info)
+					instructions.PrintOutput(env.Ref(), "service", info)
 					return false
 				}
 
@@ -377,7 +378,7 @@ func NewServicesCmd() *cobra.Command {
 					log("container ready")
 					info.Status = ServiceStatusReady
 				}
-				data.PrintOutput(env.Ref(), "service", info)
+				instructions.PrintOutput(env.Ref(), "service", info)
 
 				return ready
 			}
@@ -387,7 +388,7 @@ func NewServicesCmd() *cobra.Command {
 
 			// Inform about the services state
 			for k := range state {
-				data.PrintHintDetails(env.Ref(), fmt.Sprintf("services.%s", k), state[k])
+				instructions.PrintHintDetails(env.Ref(), data.ServicesPrefix+k, state[k])
 			}
 
 			// Notify the results

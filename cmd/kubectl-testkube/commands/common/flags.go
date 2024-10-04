@@ -148,11 +148,11 @@ func ProcessMasterFlags(cmd *cobra.Command, opts *HelmOptions, cfg *config.Data)
 	}
 
 	if cmd.Flag("ui-prefix") != nil && cmd.Flags().Changed("ui-prefix") {
-		opts.Master.ApiUrlPrefix = cmd.Flag("api-prefix").Value.String()
+		opts.Master.UiUrlPrefix = cmd.Flag("ui-prefix").Value.String()
 	}
 
 	if cmd.Flag("logs-prefix") != nil && cmd.Flags().Changed("logs-prefix") {
-		opts.Master.ApiUrlPrefix = cmd.Flag("api-prefix").Value.String()
+		opts.Master.LogsUrlPrefix = cmd.Flag("logs-prefix").Value.String()
 	}
 
 	uris := NewMasterUris(opts.Master.ApiUrlPrefix,
@@ -183,10 +183,6 @@ func ProcessMasterFlags(cmd *cobra.Command, opts *HelmOptions, cfg *config.Data)
 
 	opts.Master.URIs = uris
 
-}
-
-func IsBothEnabledAndDisabledSet(cmd *cobra.Command) bool {
-	return cmd.Flag("enable-webhooks").Changed && cmd.Flag("disable-webhooks").Changed
 }
 
 // CommaList is a custom flag type for features

@@ -18,8 +18,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - uses: sigstore/cosign-installer@v3.5.0
-      - uses: anchore/sbom-action/download-syft@v0.16.0
+      - uses: sigstore/cosign-installer@v3.6.0
+      - uses: anchore/sbom-action/download-syft@v0.17.0
 
       - name: Set up Docker Buildx
         id: buildx
@@ -93,8 +93,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - uses: sigstore/cosign-installer@v3.5.0
-      - uses: anchore/sbom-action/download-syft@v0.16.0
+      - uses: sigstore/cosign-installer@v3.6.0
+      - uses: anchore/sbom-action/download-syft@v0.17.0
 
       - name: Set up Docker Buildx
         id: buildx
@@ -128,7 +128,7 @@ jobs:
         with:
           distribution: goreleaser
           version: latest
-          args: release -f goreleaser_files/.goreleaser-docker-build-testworkflow.yml
+          args: release -f goreleaser_files/.goreleaser-docker-build-${{ matrix.service }}.yml
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
           ANALYTICS_TRACKING_ID: ${{secrets.TESTKUBE_API_GA_MEASUREMENT_ID}}
@@ -177,8 +177,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - uses: sigstore/cosign-installer@v3.5.0
-      - uses: anchore/sbom-action/download-syft@v0.16.0
+      - uses: sigstore/cosign-installer@v3.6.0
+      - uses: anchore/sbom-action/download-syft@v0.17.0
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -248,8 +248,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - uses: sigstore/cosign-installer@v3.5.0
-      - uses: anchore/sbom-action/download-syft@v0.16.0
+      - uses: sigstore/cosign-installer@v3.6.0
+      - uses: anchore/sbom-action/download-syft@v0.17.0
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -316,8 +316,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - uses: sigstore/cosign-installer@v3.5.0
-      - uses: anchore/sbom-action/download-syft@v0.16.0
+      - uses: sigstore/cosign-installer@v3.6.0
+      - uses: anchore/sbom-action/download-syft@v0.17.0
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -441,8 +441,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - uses: sigstore/cosign-installer@v3.5.0
-      - uses: anchore/sbom-action/download-syft@v0.16.0
+      - uses: sigstore/cosign-installer@v3.6.0
+      - uses: anchore/sbom-action/download-syft@v0.17.0
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -509,8 +509,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - uses: sigstore/cosign-installer@v3.5.0
-      - uses: anchore/sbom-action/download-syft@v0.16.0
+      - uses: sigstore/cosign-installer@v3.6.0
+      - uses: anchore/sbom-action/download-syft@v0.17.0
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -668,8 +668,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - uses: sigstore/cosign-installer@v3.5.0
-      - uses: anchore/sbom-action/download-syft@v0.16.0
+      - uses: sigstore/cosign-installer@v3.6.0
+      - uses: anchore/sbom-action/download-syft@v0.17.0
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -740,8 +740,8 @@ jobs:
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
-      - uses: sigstore/cosign-installer@v3.5.0
-      - uses: anchore/sbom-action/download-syft@v0.16.0
+      - uses: sigstore/cosign-installer@v3.6.0
+      - uses: anchore/sbom-action/download-syft@v0.17.0
 
       - name: Set up Docker Buildx
         id: buildx
@@ -789,8 +789,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - uses: sigstore/cosign-installer@v3.5.0
-      - uses: anchore/sbom-action/download-syft@v0.16.0
+      - uses: sigstore/cosign-installer@v3.6.0
+      - uses: anchore/sbom-action/download-syft@v0.17.0
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -862,8 +862,8 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: sigstore/cosign-installer@v3.5.0
-      - uses: anchore/sbom-action/download-syft@v0.16.0
+      - uses: sigstore/cosign-installer@v3.6.0
+      - uses: anchore/sbom-action/download-syft@v0.17.0
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3

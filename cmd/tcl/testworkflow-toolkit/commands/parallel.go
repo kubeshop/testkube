@@ -23,7 +23,9 @@ import (
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	commontcl "github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/common"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/spawn"
-	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
+	constants2 "github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/control"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/artifacts"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/transfer"
@@ -34,7 +36,12 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/presets"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 	"github.com/kubeshop/testkube/pkg/ui"
+)
+
+const (
+	ResumeRetryOnFailureDelay = 300 * time.Millisecond
 )
 
 type ParallelStatus struct {
@@ -163,7 +170,7 @@ func NewParallelCmd() *cobra.Command {
 
 			// Send initial output
 			for index := range specs {
-				data.PrintOutput(env.Ref(), "parallel", ParallelStatus{
+				instructions.PrintOutput(env.Ref(), "parallel", ParallelStatus{
 					Index:       index,
 					Description: descriptions[index],
 				})
@@ -188,19 +195,24 @@ func NewParallelCmd() *cobra.Command {
 				log := spawn.CreateLogger("worker", descriptions[index], index, params.Count)
 				id, machine := spawn.CreateExecutionMachine("", index)
 
+				// Register that there is some operation queued
+				registry.SetStatus(index, nil)
+
 				updates <- Update{index: index}
 
 				// Build the resources bundle
 				scheduledAt := time.Now()
 				bundle, err := presets.NewPro(inspector).
-					Bundle(context.Background(), &testworkflowsv1.TestWorkflow{Spec: *spec}, machine, baseMachine, params.MachineAt(index))
+					Bundle(context.Background(), &testworkflowsv1.TestWorkflow{Spec: *spec}, testworkflowprocessor.BundleOptions{},
+						machine, baseMachine, params.MachineAt(index))
 				if err != nil {
 					fmt.Printf("%d: failed to prepare resources: %s\n", index, err.Error())
+					registry.Destroy(index)
 					return false
 				}
 
 				// Compute the bundle instructions
-				sig := testworkflowprocessor.MapSignatureListToInternal(bundle.Signature)
+				sig := stage.MapSignatureListToInternal(bundle.Signature)
 				namespace := bundle.Job.Namespace
 				if namespace == "" {
 					namespace = env.Namespace()
@@ -214,6 +226,7 @@ func NewParallelCmd() *cobra.Command {
 				}
 
 				// Final clean up
+				var ctrl testworkflowcontroller.Controller
 				var lastResult testkube.TestWorkflowResult
 				defer func() {
 					shouldSaveLogs := logConditions[index] == nil
@@ -226,9 +239,9 @@ func NewParallelCmd() *cobra.Command {
 
 					// Save logs
 					if shouldSaveLogs {
-						logsFilePath, err := spawn.SaveLogs(context.Background(), clientSet, storage, namespace, id, "", index)
+						logsFilePath, err := spawn.SaveLogsWithController(context.Background(), storage, ctrl, "", index)
 						if err == nil {
-							data.PrintOutput(env.Ref(), "parallel", ParallelStatus{Index: int(index), Logs: storage.FullPath(logsFilePath)})
+							instructions.PrintOutput(env.Ref(), "parallel", ParallelStatus{Index: int(index), Logs: storage.FullPath(logsFilePath)})
 							log("saved logs")
 						} else {
 							log("warning", "problem saving the logs", err.Error())
@@ -246,13 +259,11 @@ func NewParallelCmd() *cobra.Command {
 				}()
 
 				// Inform about the step structure
-				data.PrintOutput(env.Ref(), "parallel", ParallelStatus{Index: int(index), Signature: sig})
+				instructions.PrintOutput(env.Ref(), "parallel", ParallelStatus{Index: int(index), Signature: sig})
 
 				// Control the execution
 				// TODO: Consider aggregated controller to limit number of watchers
-				ctrl, err := testworkflowcontroller.New(context.Background(), clientSet, namespace, id, scheduledAt, testworkflowcontroller.ControllerOptions{
-					Timeout: spawn.ControllerTimeout,
-				})
+				ctrl, err = testworkflowcontroller.New(context.Background(), clientSet, namespace, id, scheduledAt)
 				if err != nil {
 					log("error", "failed to connect to the job", err.Error())
 					return false
@@ -290,15 +301,26 @@ func NewParallelCmd() *cobra.Command {
 						updates <- Update{index: index, result: v.Result}
 						prevStep = v.Current
 						prevStatus = v.Status
-						if v.Result.IsFinished() {
-							data.PrintOutput(env.Ref(), "parallel", ParallelStatus{Index: int(index), Status: v.Status, Result: v.Result})
+
+						if lastResult.IsFinished() {
+							instructions.PrintOutput(env.Ref(), "parallel", ParallelStatus{Index: int(index), Status: v.Status, Result: v.Result})
 							ctxCancel()
 							return v.Result.IsPassed()
 						} else {
-							data.PrintOutput(env.Ref(), "parallel", ParallelStatus{Index: int(index), Status: v.Status, Current: v.Current})
+							instructions.PrintOutput(env.Ref(), "parallel", ParallelStatus{Index: int(index), Status: v.Status, Current: v.Current})
 						}
 					}
 				}
+
+				// Fallback in case there is a problem with finishing
+				log("could not determine status of the worker - aborting")
+				instructions.PrintOutput(env.Ref(), "parallel", ParallelStatus{Index: int(index), Status: testkube.ABORTED_TestWorkflowStatus, Result: &lastResult})
+				log(string(testkube.ABORTED_TestWorkflowStatus))
+				lastResult.Status = common.Ptr(testkube.ABORTED_TestWorkflowStatus)
+				if lastResult.FinishedAt.IsZero() {
+					lastResult.FinishedAt = time.Now().UTC()
+				}
+				updates <- Update{index: index, result: lastResult.Clone()}
 
 				ctxCancel()
 				return false
@@ -319,11 +341,49 @@ func NewParallelCmd() *cobra.Command {
 					// Resume all at once
 					if registry.Count() > 0 && registry.AllPaused() {
 						fmt.Println("resuming all workers")
-						registry.EachAsync(func(index int64, ctrl testworkflowcontroller.Controller) {
-							err := ctrl.Resume(context.Background())
-							if err != nil {
-								spawn.CreateLogger("worker", descriptions[index], index, params.Count)("warning", "failed to resume", err.Error())
+						registry.EachAsyncAtOnce(func(index int64, ctrl testworkflowcontroller.Controller, wait func()) {
+							podIp, _ := ctrl.PodIP()
+							if podIp == "" {
+								wait()
+								return
 							}
+
+							client, err := control.NewClient(context.Background(), podIp, constants2.ControlServerPort)
+							wait()
+							defer func() {
+								if client != nil {
+									client.Close()
+								}
+							}()
+
+							// Fast-track: immediate success
+							if err == nil {
+								err = client.Resume()
+								if err == nil {
+									return
+								}
+								spawn.CreateLogger("worker", descriptions[index], index, params.Count)("warning", "failed to resume, retrying...", err.Error())
+							}
+
+							// Retrying mechanism
+							for i := 0; i < 6; i++ {
+								if client != nil {
+									client.Close()
+								}
+								client, err = control.NewClient(context.Background(), podIp, constants2.ControlServerPort)
+								if err == nil {
+									err = client.Resume()
+									if err == nil {
+										return
+									}
+								}
+								spawn.CreateLogger("worker", descriptions[index], index, params.Count)("warning", "failed to resume, retrying...", err.Error())
+								time.Sleep(ResumeRetryOnFailureDelay)
+							}
+
+							// Total failure while retrying
+							spawn.CreateLogger("worker", descriptions[index], index, params.Count)("warning", "failed to resume, maximum retries reached. aborting...", err.Error())
+							_ = ctrl.Abort(context.Background())
 						})
 					}
 				}
@@ -331,8 +391,11 @@ func NewParallelCmd() *cobra.Command {
 
 			// Create channel for execution
 			failed := spawn.ExecuteParallel(run, specs, parallelism)
+
+			// Wait for the results
 			if failed == 0 {
 				fmt.Printf("Successfully finished %d workers.\n", params.Count)
+				os.Exit(0)
 			} else {
 				fmt.Printf("Failed to finish %d out of %d expected workers.\n", failed, params.Count)
 				os.Exit(1)

@@ -33,8 +33,13 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
+)
+
+const (
+	LogsRetryOnFailureDelay = 300 * time.Millisecond
+	LogsRetryMaxAttempts    = 5
 )
 
 func MapDynamicListToStringList(list []interface{}) []string {
@@ -170,11 +175,12 @@ func ProcessFetch(transferSrv transfer.Server, fetch []testworkflowsv1.StepParal
 				ContainerConfig: testworkflowsv1.ContainerConfig{
 					Image:           env.Config().Images.Toolkit,
 					ImagePullPolicy: corev1.PullIfNotPresent,
-					Command:         common.Ptr([]string{"/toolkit", "transfer"}),
+					Command:         common.Ptr([]string{constants.DefaultToolkitPath, "transfer"}),
 					Env: []corev1.EnvVar{
 						{Name: "TK_NS", Value: env.Namespace()},
 						{Name: "TK_REF", Value: env.Ref()},
-						testworkflowprocessor.BypassToolkitCheck,
+						stage.BypassToolkitCheck,
+						stage.BypassPure,
 					},
 					Args: &result,
 				},
@@ -191,7 +197,8 @@ func CreateExecutionMachine(prefix string, index int64) (string, expressions.Mac
 	}
 	return id, expressions.NewMachine().
 		Register("workflow", map[string]string{
-			"name": env.WorkflowName(),
+			"name":   env.WorkflowName(),
+			"labels": env.Config().Execution.Labels,
 		}).
 		Register("resource", map[string]string{
 			"root":     env.ExecutionId(),
@@ -199,11 +206,13 @@ func CreateExecutionMachine(prefix string, index int64) (string, expressions.Mac
 			"fsPrefix": fsPrefix,
 		}).
 		Register("execution", map[string]interface{}{
-			"id":          env.ExecutionId(),
-			"name":        env.ExecutionName(),
-			"number":      env.ExecutionNumber(),
-			"scheduledAt": env.ExecutionScheduledAt().UTC().Format(constants.RFC3339Millis),
-			"parentIds":   env.Config().Execution.ParentIds,
+			"id":              env.ExecutionId(),
+			"name":            env.ExecutionName(),
+			"number":          env.ExecutionNumber(),
+			"scheduledAt":     env.ExecutionScheduledAt().UTC().Format(constants.RFC3339Millis),
+			"disableWebhooks": env.ExecutionDisableWebhooks(),
+			"tags":            env.ExecutionTags(),
+			"parentIds":       env.Config().Execution.ParentIds,
 		})
 }
 
@@ -241,16 +250,33 @@ func ExecuteParallel[T any](run func(int64, *T) bool, items []T, parallelism int
 	return int64(len(items)) - success.Load()
 }
 
-func SaveLogs(ctx context.Context, clientSet kubernetes.Interface, storage artifacts.InternalArtifactStorage, namespace, id, prefix string, index int64) (string, error) {
-	filePath := fmt.Sprintf("logs/%s%d.log", prefix, index)
-	ctrl, err := testworkflowcontroller.New(ctx, clientSet, namespace, id, time.Time{}, testworkflowcontroller.ControllerOptions{
-		Timeout: ControllerTimeout,
-	})
-	if err == nil {
-		err = storage.SaveStream(filePath, ctrl.Logs(ctx, false))
-		ctrl.StopController()
+func SaveLogsWithController(parentCtx context.Context, storage artifacts.InternalArtifactStorage, ctrl testworkflowcontroller.Controller, prefix string, index int64) (string, error) {
+	if ctrl == nil {
+		return "", errors.New("cannot control TestWorkflow's execution")
 	}
+
+	filePath := fmt.Sprintf("logs/%s%d.log", prefix, index)
+	var err error
+	for i := 0; i < LogsRetryMaxAttempts; i++ {
+		ctx, ctxCancel := context.WithCancel(parentCtx)
+		err = storage.SaveStream(filePath, ctrl.Logs(ctx, false))
+		ctxCancel()
+		if err == nil {
+			break
+		}
+		time.Sleep(LogsRetryOnFailureDelay)
+	}
+
 	return filePath, err
+}
+
+func SaveLogs(ctx context.Context, clientSet kubernetes.Interface, storage artifacts.InternalArtifactStorage, namespace, id, prefix string, index int64) (string, error) {
+	ctrl, err := testworkflowcontroller.New(ctx, clientSet, namespace, id, time.Time{})
+	if err != nil {
+		return "", err
+	}
+	defer ctrl.StopController()
+	return SaveLogsWithController(ctx, storage, ctrl, prefix, index)
 }
 
 func CreateLogger(name, description string, index, count int64) func(...string) {
@@ -264,6 +290,17 @@ func CreateLogger(name, description string, index, count int64) func(...string) 
 }
 
 func CreateBaseMachine() expressions.Machine {
+	dashboardUrl := env.Config().System.DashboardUrl
+	if env.Config().Cloud.ApiKey != "" {
+		dashboardUrl = fmt.Sprintf("%s/organization/%s/environment/%s/dashboard",
+			env.Config().Cloud.UiUrl, env.Config().Cloud.OrgId, env.Config().Cloud.EnvId)
+	}
+
+	var labelMap map[string]string
+	if labels := env.Config().Execution.Labels; labels != "" {
+		json.Unmarshal([]byte(labels), &labelMap)
+	}
+
 	return expressions.CombinedMachines(
 		data.GetBaseTestWorkflowMachine(),
 		expressions.NewMachine().RegisterStringMap("internal", map[string]string{
@@ -286,17 +323,34 @@ func CreateBaseMachine() expressions.Machine {
 			"cloud.api.tlsInsecure": strconv.FormatBool(env.Config().Cloud.TlsInsecure),
 			"cloud.api.skipVerify":  strconv.FormatBool(env.Config().Cloud.SkipVerify),
 			"cloud.api.url":         env.Config().Cloud.Url,
+			"cloud.ui.url":          env.Config().Cloud.UiUrl,
+			"cloud.api.orgId":       env.Config().Cloud.OrgId,
+			"cloud.api.envId":       env.Config().Cloud.EnvId,
 
 			"dashboard.url":   env.Config().System.DashboardUrl,
 			"api.url":         env.Config().System.ApiUrl,
 			"namespace":       env.Namespace(),
 			"defaultRegistry": env.Config().System.DefaultRegistry,
+			"clusterId":       env.Config().System.ClusterID,
+			"cdeventsTarget":  env.Config().System.CDEventsTarget,
 
+			"images.defaultRegistry":     env.Config().System.DefaultRegistry,
 			"images.init":                env.Config().Images.Init,
 			"images.toolkit":             env.Config().Images.Toolkit,
 			"images.persistence.enabled": strconv.FormatBool(env.Config().Images.InspectorPersistenceEnabled),
 			"images.persistence.key":     env.Config().Images.InspectorPersistenceCacheKey,
-		}),
+			"images.cache.ttl":           env.Config().Images.ImageCredentialsCacheTTL.String(),
+		}).
+			Register("dashboard", map[string]string{
+				"url": dashboardUrl,
+			}).
+			Register("organization", map[string]string{
+				"id": env.Config().Cloud.OrgId,
+			}).
+			Register("environment", map[string]string{
+				"id": env.Config().Cloud.EnvId,
+			}).
+			RegisterStringMap("labels", labelMap),
 	)
 }
 

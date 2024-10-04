@@ -17,7 +17,8 @@ type Options struct {
 	DryRun  bool
 }
 
-// Execute runs system command and returns whole output also in case of error
+// ExecuteWithOptions runs system command and returns whole output also in case of error.
+// It also supports dry-run mode, where it only prints the command to be executed.
 func ExecuteWithOptions(options Options) (out []byte, err error) {
 	if options.DryRun {
 		fmt.Println("$ " + strings.Join(append([]string{options.Command}, options.Args...), " "))

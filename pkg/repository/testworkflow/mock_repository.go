@@ -108,6 +108,21 @@ func (mr *MockRepositoryMockRecorder) GetByNameAndTestWorkflow(arg0, arg1, arg2 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByNameAndTestWorkflow", reflect.TypeOf((*MockRepository)(nil).GetByNameAndTestWorkflow), arg0, arg1, arg2)
 }
 
+// GetExecutionTags mocks base method.
+func (m *MockRepository) GetExecutionTags(arg0 context.Context, arg1 string) (map[string][]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetExecutionTags", arg0, arg1)
+	ret0, _ := ret[0].(map[string][]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetExecutionTags indicates an expected call of GetExecutionTags.
+func (mr *MockRepositoryMockRecorder) GetExecutionTags(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExecutionTags", reflect.TypeOf((*MockRepository)(nil).GetExecutionTags), arg0, arg1)
+}
+
 // GetExecutions mocks base method.
 func (m *MockRepository) GetExecutions(arg0 context.Context, arg1 Filter) ([]testkube.TestWorkflowExecution, error) {
 	m.ctrl.T.Helper()
@@ -186,6 +201,21 @@ func (m *MockRepository) GetLatestByTestWorkflows(arg0 context.Context, arg1 []s
 func (mr *MockRepositoryMockRecorder) GetLatestByTestWorkflows(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLatestByTestWorkflows", reflect.TypeOf((*MockRepository)(nil).GetLatestByTestWorkflows), arg0, arg1)
+}
+
+// GetNextExecutionNumber mocks base method.
+func (m *MockRepository) GetNextExecutionNumber(arg0 context.Context, arg1 string) (int32, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetNextExecutionNumber", arg0, arg1)
+	ret0, _ := ret[0].(int32)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetNextExecutionNumber indicates an expected call of GetNextExecutionNumber.
+func (mr *MockRepositoryMockRecorder) GetNextExecutionNumber(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNextExecutionNumber", reflect.TypeOf((*MockRepository)(nil).GetNextExecutionNumber), arg0, arg1)
 }
 
 // GetPreviousFinishedState mocks base method.

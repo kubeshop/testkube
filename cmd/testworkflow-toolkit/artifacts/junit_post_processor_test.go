@@ -3,6 +3,7 @@ package artifacts
 import (
 	"io"
 	"io/fs"
+	"path/filepath"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -69,6 +70,33 @@ func TestJUnitPostProcessor_Add(t *testing.T) {
 		})
 	}
 
+}
+
+func TestJUnitPostProcessor_Add_WithPathPrefix(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockFS := filesystem.NewMockFileSystem(mockCtrl)
+	mockClient := executor.NewMockExecutor(mockCtrl)
+
+	pathPrefix := "prefixed/junit/report/"
+	filePath := "junit.xml"
+	junitContent := []byte(testdata.BasicJUnit)
+
+	mockFS.EXPECT().OpenFileRO(gomock.Any()).Return(filesystem.NewMockFile("junit.xml", junitContent), nil)
+
+	pp := NewJUnitPostProcessor(mockFS, mockClient, "/test_root", pathPrefix)
+
+	expectedPayload := testworkflow.ExecutionsAddReportRequest{
+		Filepath: filepath.Join(pathPrefix, filePath),
+		Report:   junitContent,
+	}
+
+	mockClient.EXPECT().Execute(gomock.Any(), testworkflow.CmdTestWorkflowExecutionAddReport, gomock.Eq(&expectedPayload)).Return(nil, nil)
+
+	err := pp.Add(filePath)
+
+	assert.NoError(t, err)
 }
 
 func TestIsXMLFile(t *testing.T) {
@@ -146,6 +174,21 @@ func TestIsJUnitReport(t *testing.T) {
 			file: filesystem.NewMockFile("invalid.xml", []byte(testdata.InvalidJUnit)),
 			want: false,
 		},
+		{
+			name: "one-line junit",
+			file: filesystem.NewMockFile("oneline.xml", []byte(testdata.OneLineJUnit)),
+			want: true,
+		},
+		{
+			name: "testsuites only junit",
+			file: filesystem.NewMockFile("testsuites.xml", []byte(testdata.TestsuitesOnlyJUnit)),
+			want: true,
+		},
+		{
+			name: "testsuite only junit",
+			file: filesystem.NewMockFile("testsuite.xml", []byte(testdata.TestsuiteOnlyJUnit)),
+			want: true,
+		},
 	}
 
 	for _, tc := range tests {
@@ -154,10 +197,7 @@ func TestIsJUnitReport(t *testing.T) {
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
-			ok, err := isJUnitReport(data)
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
+			ok := isJUnitReport(data)
 			assert.Equal(t, tc.want, ok)
 		})
 	}

@@ -1,6 +1,7 @@
 package telemetry
 
 import (
+	"os"
 	"runtime"
 	"strings"
 
@@ -8,9 +9,13 @@ import (
 	"github.com/kubeshop/testkube/pkg/utils/text"
 )
 
-const runContextAgent = "agent"
+const (
+	runContextAgent        = "agent"
+	containerEnvKubernetes = "kubernetes"
+)
 
 type Params struct {
+	ErrorCode                  string     `json:"error_code,omitempty"`
 	EventCount                 int64      `json:"event_count,omitempty"`
 	EventCategory              string     `json:"event_category,omitempty"`
 	AppVersion                 string     `json:"app_version,omitempty"`
@@ -34,9 +39,16 @@ type Params struct {
 	ErrorType                  string     `json:"error_type,omitempty"`
 	ErrorStackTrace            string     `json:"error_stacktrace,omitempty"`
 	TestWorkflowSteps          int32      `json:"test_workflow_steps,omitempty"`
+	TestWorkflowExecuteCount   int32      `json:"test_workflow_execute_count,omitempty"`
+	TestWorkflowParallelUsed   bool       `json:"test_workflow_parallel_used,omitempty"`
+	TestWorkflowMatrixUsed     bool       `json:"test_workflow_matrix_used,omitempty"`
+	TestWorkflowServicesUsed   bool       `json:"test_workflow_services_used,omitempty"`
+	TestWorkflowIsSample       bool       `json:"test_workflow_is_sample,omitempty"`
+	TestWorkflowTemplates      []string   `json:"testWorkflowTemplates"`
+	TestWorkflowImages         []string   `json:"testWorkflowImages"`
 	TestWorkflowTemplateUsed   bool       `json:"test_workflow_template_used,omitempty"`
-	TestWorkflowImage          string     `json:"test_workflow_image,omitempty"`
 	TestWorkflowArtifactUsed   bool       `json:"test_workflow_artifact_used,omitempty"`
+	TestWorkflowImage          string     `json:"test_workflow_image,omitempty"`
 	TestWorkflowKubeshopGitURI bool       `json:"test_workflow_kubeshop_git_uri,omitempty"`
 	License                    string     `json:"license,omitempty"`
 	Step                       string     `json:"step,omitempty"`
@@ -80,13 +92,21 @@ type RunContext struct {
 	Type           string
 	OrganizationId string
 	EnvironmentId  string
+	ContainerEnv   string
 }
 
 type WorkflowParams struct {
 	TestWorkflowSteps          int32
-	TestWorkflowTemplateUsed   bool
+	TestWorkflowExecuteCount   int32
 	TestWorkflowImage          string
 	TestWorkflowArtifactUsed   bool
+	TestWorkflowParallelUsed   bool
+	TestWorkflowMatrixUsed     bool
+	TestWorkflowServicesUsed   bool
+	TestWorkflowTemplateUsed   bool
+	TestWorkflowIsSample       bool
+	TestWorkflowTemplates      []string
+	TestWorkflowImages         []string
 	TestWorkflowKubeshopGitURI bool
 }
 
@@ -290,7 +310,14 @@ func NewRunWorkflowPayload(name, clusterType string, params RunWorkflowParams) P
 					ClusterType:                clusterType,
 					Context:                    getAgentContext(),
 					TestWorkflowSteps:          params.TestWorkflowSteps,
+					TestWorkflowExecuteCount:   params.TestWorkflowExecuteCount,
+					TestWorkflowParallelUsed:   params.TestWorkflowParallelUsed,
 					TestWorkflowTemplateUsed:   params.TestWorkflowTemplateUsed,
+					TestWorkflowMatrixUsed:     params.TestWorkflowMatrixUsed,
+					TestWorkflowServicesUsed:   params.TestWorkflowServicesUsed,
+					TestWorkflowIsSample:       params.TestWorkflowIsSample,
+					TestWorkflowTemplates:      params.TestWorkflowTemplates,
+					TestWorkflowImages:         params.TestWorkflowImages,
 					TestWorkflowImage:          params.TestWorkflowImage,
 					TestWorkflowArtifactUsed:   params.TestWorkflowArtifactUsed,
 					TestWorkflowKubeshopGitURI: params.TestWorkflowKubeshopGitURI,
@@ -318,6 +345,10 @@ func AnonymizeHost(host string) string {
 func getAgentContext() RunContext {
 	orgID := utils.GetEnvVarWithDeprecation("TESTKUBE_PRO_ORG_ID", "TESTKUBE_CLOUD_ORG_ID", "")
 	envID := utils.GetEnvVarWithDeprecation("TESTKUBE_PRO_ENV_ID", "TESTKUBE_CLOUD_ENV_ID", "")
+	containerEnv := os.Getenv("TESTKUBE_CONTAINER_ENV")
+	if containerEnv == "" {
+		containerEnv = containerEnvKubernetes
+	}
 
 	if orgID == "" || envID == "" {
 		return RunContext{}
@@ -326,5 +357,6 @@ func getAgentContext() RunContext {
 		Type:           runContextAgent,
 		EnvironmentId:  envID,
 		OrganizationId: orgID,
+		ContainerEnv:   containerEnv,
 	}
 }

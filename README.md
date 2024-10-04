@@ -3,21 +3,6 @@
   <img style="width:66%" src="assets/testkube-color-dark.png#gh-light-mode-only" alt="Testkube Logo Dark" />
 </p>
 
-
-
-<p align="center">
-  Welcome to Testkube - Your friendly cloud-native testing framework for Kubernetes
-</p>
-
-<p align="center">
-  <a href="https://testkube.io">Website</a>&nbsp;|&nbsp;
-  <a href="https://docs.testkube.io">Documentation</a>&nbsp;|&nbsp; 
-  <a href="https://twitter.com/testkube_io">Twitter</a>&nbsp;|&nbsp; 
-  <a href="https://testkubeworkspace.slack.com/join/shared_invite/zt-2arhz5vmu-U2r3WZ69iPya5Fw0hMhRDg#/shared-invite/email">Slack</a>&nbsp;|&nbsp; 
-  <a href="https://kubeshop.io/category/testkube">Blog</a>
-</p>
-
-
 <p align="center">
   <a href="https://github.com/kubeshop/testkube/releases"><img title="Release" src="https://img.shields.io/github/v/release/kubeshop/testkube"/></a>
   <a href=""><img title="Downloads" src="https://img.shields.io/github/downloads/kubeshop/testkube/total.svg"/></a>
@@ -30,12 +15,11 @@
 </p>
 
 <p align="center">
-  <a target="_new" href="https://www.youtube.com/watch?v=GVvgLuxdrXE&t=47s">
-    <img src="assets/intro-to-testkube.jpg" style="width:66%;height:auto">
-    <p align="center">
-      Click on the image or this link to watch the "Intro to Testkube" short video (3 mins)
-    </p>
-  </a>
+  <a href="https://testkube.io">Website</a>&nbsp;|&nbsp;
+  <a href="https://docs.testkube.io">Documentation</a>&nbsp;|&nbsp; 
+  <a href="https://twitter.com/testkube_io">Twitter</a>&nbsp;|&nbsp; 
+  <a href="https://testkubeworkspace.slack.com/join/shared_invite/zt-2arhz5vmu-U2r3WZ69iPya5Fw0hMhRDg#/shared-invite/email">Slack</a>&nbsp;|&nbsp; 
+  <a href="https://kubeshop.io/category/testkube">Blog</a>
 </p>
 
 
@@ -45,54 +29,39 @@ Known vulnerabilities: [![Testkube](https://snyk.io/test/github/kubeshop/testkub
 [![helm-charts](https://snyk.io/test/github/kubeshop/helm-charts/badge.svg)](https://snyk.io/test/github/kubeshop/helm-charts)
 -->
 
-# Welcome to Testkube
-Your friendly cloud-native testing framework for Kubernetes.
+# Welcome to Testkube!
 
+Testkube decouples test orchestration and execution from your CI/CD/GitOps tooling and provides a centralized platform 
+for running any kind of tests at scale across your entire application infrastructure. 
 
+Testkube breaks down Test Execution into 5 steps:
 
-<p align="center">
-    <img src="assets/testkube-intro.gif">
-</p>
+1. **Define** - Use Test Workflows to configure executions of your current testing tools or scripts. 
+  Orchestrate multiple Workflows to build complex Suites for System Testing - [Read More](https://docs.testkube.io/articles/defining-tests).
+2. **Trigger** - Trigger tests through the API/CLI, from your existing CI/CD/GitOps workflows, using fixed schedules or 
+  by listening to Kubernetes Events or creating execution CRDs - [Read More](https://docs.testkube.io/articles/triggering-tests).
+3. **Scale** - Leverage Kubernetes native scalability functionality to scale your test executions 
+  across distributed nodes for both load and functional testing with popular tools like K6, Playwright, JMeter and Cypress - [Read More](https://docs.testkube.io/articles/running-scaling-tests).
+4. **Troubleshoot** - Testkube can collect any logs and artifacts (videos, reports, etc.) produced by your testing tools 
+  and scripts during test execution and make these available through the CLI or UI - [Read More](https://docs.testkube.io/articles/troubleshooting-tests).
+5. **Report** - Testkube Test Insights allow you to create both operational and functional reports for all your test executions 
+  to help you improve testing efforts and activities over time - [Read More](https://docs.testkube.io/articles/analyzing-results).
 
-Testkube natively integrates test orchestration and execution into Kubernetes and your CI/CD/GitOps pipeline. It decouples test artifacts and execution from CI/CD tooling; tests are meant to be part of your clusters state and can be executed as needed:
-- Kubectl plugin
-- Externally triggered via API (CI, external tooling, etc)
-- Automatically on deployment of annotated/labeled services/pods/etc (WIP)
+### Getting Started
 
-Testkube advantages:
-- Avoids vendor lock-in for test orchestration and execution in CI/CD  pipelines
-- Makes it easy to orchestrate and run any kind of tests - functional, load/performance, security, compliance, etc. in your clusters, without having to wrap them in docker-images or providing network access
-- Makes it possible to decouple test execution from build processes; engineers should be able to run specific tests whenever needed
-- Centralizes all test results in a consistent format for "actionable QA analytics"
-- Provides a modular architecture for adding new types of tests and executors
+There are several ways to get started with Testkube:
 
-Main Testkube components are:
+- The [Quickstart](https://docs.testkube.io/articles/tutorial/quickstart) is the easiest way to set up 
+  Testkube and run your first tests
+- The [Helm Chart Installation](https://docs.testkube.io/articles/install/install-with-helm) gives you more 
+  control over the installed components.
 
-- kubectl Testkube plugin - simple - installed w/o 3rd party repositories (like Krew etc), communicates with
-- API Server - work orchestrator, runs executors, gather execution results
-- [CRDs Operator](https://github.com/kubeshop/testkube-operator) - watches Testkube CR, handles changes, communicates with API Server
-- Executors - runs tests defined for specific runner
-  - [Postman Executor](https://github.com/kubeshop/testkube-executor-postman) - runs Postman Collections
-  - [Cypress Executor](https://github.com/kubeshop/testkube-executor-cypress) - runs Cypress Tests
-  - [K6 Executor](https://github.com/kubeshop/testkube-executor-k6) - runs K6 performance tests ([@lreimer](https://github.com/lreimer))
-  - [SoapUI](https://docs.testkube.io/test-types/executor-soapui/) - runs SoapUI tests
-  - [Kubepug](https://docs.testkube.io/test-types/executor-kubepug/) - runs Kubepug tests
-  - [Artillery.io](https://docs.testkube.io/test-types/executor-artillery/) - runs Artillery tests
-  - [Curl Executor](https://docs.testkube.io/test-types/curl) - runs simple Curl commands
-  - [Maven](https://docs.testkube.io/test-types/executor-maven/) - Runs tests written in Java using Maven ([@lreimer](https://github.com/lreimer))
-  - [Gradle](https://docs.testkube.io/test-types/executor-gradle/) - Runs tests written in Java using Gradle ([@lreimer](https://github.com/lreimer))
-  - [Ginkgo](https://docs.testkube.io/test-types/executor-ginkgo/) - Runs tests written in Go using Ginkgo ([@jdborneman-terminus](https://github.com/jdborneman-terminus))
-  - [Executor Template](https://github.com/kubeshop/testkube-executor-template) - for creating your own executors
-- Results DB - for centralized test results aggregation and analysis
+Check out the [Deployment Architectures](https://docs.testkube.io/articles/install/deployment-architectures) document to learn
+more about different ways to deploy and run Testkube.
 
+### Documentation
 
-## Getting Started
-
-Checkout the [Getting Started](https://docs.testkube.io/articles/getting-started-overview) guides to set up Testkube and run your first tests!
-
-# Documentation
-
-Is available at [docs.testkube.io](https://docs.testkube.io)
+Extensive documentation is available at [docs.testkube.io](https://docs.testkube.io).
 
 ## Contributing
 
@@ -110,5 +79,6 @@ Shout-out to our contributors 🎉 - you're great!
 Go to [contribution document](CONTRIBUTING.md) to read more how can you help us 🔥
 
 # Feedback
+
 Whether it helps you or not - we'd LOVE to hear from you.  Please let us know what you think and of course, how we can make it better
 Please join our growing community on [Slack](https://testkubeworkspace.slack.com/join/shared_invite/zt-2arhz5vmu-U2r3WZ69iPya5Fw0hMhRDg#/shared-invite/email).

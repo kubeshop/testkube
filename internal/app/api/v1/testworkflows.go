@@ -55,14 +55,17 @@ func (s *TestkubeAPI) DeleteTestWorkflowHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
 		errPrefix := fmt.Sprintf("failed to delete test workflow '%s'", name)
-		err := s.TestWorkflowsClient.Delete(name)
-		s.Metrics.IncDeleteTestWorkflow(err)
-		if err != nil {
-			return s.ClientError(c, errPrefix, err)
+		skipCRD := c.Query("skipDeleteCRD", "")
+		if skipCRD != "true" {
+			err := s.TestWorkflowsClient.Delete(name)
+			s.Metrics.IncDeleteTestWorkflow(err)
+			if err != nil {
+				return s.ClientError(c, errPrefix, err)
+			}
 		}
 		skipExecutions := c.Query("skipDeleteExecutions", "")
 		if skipExecutions != "true" {
-			err = s.TestWorkflowOutput.DeleteOutputByTestWorkflow(context.Background(), name)
+			err := s.TestWorkflowOutput.DeleteOutputByTestWorkflow(context.Background(), name)
 			if err != nil {
 				return s.ClientError(c, "deleting executions output", err)
 			}
@@ -324,8 +327,17 @@ func (s *TestkubeAPI) PreviewTestWorkflowHandler() fiber.Handler {
 				tplsMap[name] = *tpl
 			}
 
+			// Get information about execution namespace
+			// TODO: Think what to do when it is dynamic - create in all execution namespaces?
+			execNamespace := obj.Namespace
+			if obj.Spec.Job != nil && obj.Spec.Job.Namespace != "" {
+				execNamespace = obj.Spec.Job.Namespace
+			}
+
+			// Handle secrets auto-creation
+			secrets := s.SecretManager.Batch(execNamespace, "tw-", obj.Name)
 			// Resolve the TestWorkflow
-			err = testworkflowresolver.ApplyTemplates(obj, tplsMap)
+			err = testworkflowresolver.ApplyTemplates(obj, tplsMap, secrets.Append)
 			if err != nil {
 				return s.BadRequest(c, errPrefix, "resolving error", err)
 			}

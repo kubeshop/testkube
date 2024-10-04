@@ -30,20 +30,26 @@ type envObjectStorageConfig struct {
 type envCloudConfig struct {
 	Url         string `envconfig:"TK_C_URL"`
 	ApiKey      string `envconfig:"TK_C_KEY"`
+	UiUrl       string `envconfig:"TK_C_UI_URL"`
+	OrgId       string `envconfig:"TK_C_ORG_ID"`
+	EnvId       string `envconfig:"TK_C_ENV_ID"`
 	SkipVerify  bool   `envconfig:"TK_C_SKIP_VERIFY" default:"false"`
 	TlsInsecure bool   `envconfig:"TK_C_TLS_INSECURE" default:"false"`
 }
 
 type envExecutionConfig struct {
-	WorkflowName   string `envconfig:"TK_WF"`
-	Id             string `envconfig:"TK_EX"`
-	Name           string `envconfig:"TK_EXN"`
-	Number         int64  `envconfig:"TK_EXC"`
-	ScheduledAt    string `envconfig:"TK_EXS"`
-	ResourceId     string `envconfig:"TK_EXI"`
-	RootResourceId string `envconfig:"TK_EXR"`
-	FSPrefix       string `envconfig:"TK_FS"`
-	ParentIds      string `envconfig:"TK_PAR"`
+	WorkflowName    string `envconfig:"TK_WF"`
+	Id              string `envconfig:"TK_EX"`
+	Name            string `envconfig:"TK_EXN"`
+	Number          int64  `envconfig:"TK_EXC"`
+	ScheduledAt     string `envconfig:"TK_EXS"`
+	ResourceId      string `envconfig:"TK_EXI"`
+	RootResourceId  string `envconfig:"TK_EXR"`
+	FSPrefix        string `envconfig:"TK_FS"`
+	DisableWebhooks bool   `envconfig:"TK_DWH"`
+	Tags            string `envconfig:"TK_TAG"`
+	Labels          string `envconfig:"TK_LBL"`
+	ParentIds       string `envconfig:"TK_PAR"`
 }
 
 type envSystemConfig struct {
@@ -60,10 +66,11 @@ type envSystemConfig struct {
 }
 
 type envImagesConfig struct {
-	Init                         string `envconfig:"TESTKUBE_TW_INIT_IMAGE"`
-	Toolkit                      string `envconfig:"TESTKUBE_TW_TOOLKIT_IMAGE"`
-	InspectorPersistenceEnabled  bool   `envconfig:"TK_IMG_P" default:"false"`
-	InspectorPersistenceCacheKey string `envconfig:"TK_IMG_PK"`
+	Init                         string        `envconfig:"TESTKUBE_TW_INIT_IMAGE"`
+	Toolkit                      string        `envconfig:"TESTKUBE_TW_TOOLKIT_IMAGE"`
+	InspectorPersistenceEnabled  bool          `envconfig:"TK_IMG_P" default:"false"`
+	InspectorPersistenceCacheKey string        `envconfig:"TK_IMG_PK"`
+	ImageCredentialsCacheTTL     time.Duration `envconfig:"TK_IMG_CRED_TTL" default:"0"`
 }
 
 type featuresConfig struct {
@@ -146,6 +153,14 @@ func ExecutionScheduledAt() time.Time {
 	return t
 }
 
+func ExecutionDisableWebhooks() bool {
+	return Config().Execution.DisableWebhooks
+}
+
 func JUnitParserEnabled() bool {
 	return Config().Features.EnableJUnitParser
+}
+
+func ExecutionTags() string {
+	return Config().Execution.Tags
 }

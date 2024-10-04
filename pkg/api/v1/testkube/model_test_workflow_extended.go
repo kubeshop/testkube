@@ -30,7 +30,7 @@ func (w *TestWorkflow) ConvertDots(fn func(string) string) *TestWorkflow {
 	if w == nil {
 		return w
 	}
-	if w.Labels == nil {
+	if w.Labels != nil {
 		w.Labels = convertDotsInMap(w.Labels, fn)
 	}
 	if w.Spec.Pod != nil {
@@ -56,6 +56,10 @@ func (w *TestWorkflow) ConvertDots(fn func(string) string) *TestWorkflow {
 	for i := range w.Spec.After {
 		w.Spec.After[i].ConvertDots(fn)
 	}
+	if w.Spec.Execution != nil {
+		w.Spec.Execution.Tags = convertDotsInMap(w.Spec.Execution.Tags, fn)
+	}
+
 	return w
 }
 
@@ -75,4 +79,20 @@ func (w *TestWorkflow) GetObjectRef() *ObjectRef {
 }
 
 func (w *TestWorkflow) QuoteWorkflowTextFields() {
+}
+
+func (w TestWorkflow) GetName() string {
+	return w.Name
+}
+
+func (w TestWorkflow) GetNamespace() string {
+	return w.Namespace
+}
+
+func (w TestWorkflow) GetLabels() map[string]string {
+	return w.Labels
+}
+
+func (w TestWorkflow) GetAnnotations() map[string]string {
+	return w.Annotations
 }

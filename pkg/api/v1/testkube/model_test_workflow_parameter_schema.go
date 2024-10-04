@@ -29,4 +29,6 @@ type TestWorkflowParameterSchema struct {
 	ExclusiveMinimum *BoxedInteger `json:"exclusiveMinimum,omitempty"`
 	ExclusiveMaximum *BoxedInteger `json:"exclusiveMaximum,omitempty"`
 	MultipleOf       *BoxedInteger `json:"multipleOf,omitempty"`
+	// whether this value should be stored in the secret
+	Sensitive bool `json:"sensitive,omitempty"`
 }

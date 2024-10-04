@@ -8,7 +8,7 @@ spec:
   config:
     revision:
       type: string
-      default: develop
+      default: main
   content:
     git:
       uri: https://github.com/kubeshop/testkube.git
@@ -50,7 +50,7 @@ spec:
   steps:
     - name: Run integration tests
       run:
-        image: golang:1.22.1-bookworm
+        image: golang:1.22.3-bookworm
         workingDir: /data/repo
         volumeMounts:
         - name: gocache
@@ -70,7 +70,7 @@ spec:
           value: minio123
         shell: |
           apt-get update
-          apt-get install -y ca-certificates libssl3 git skopeo
+          apt-get install -y ca-certificates libssl3 git
           go install gotest.tools/gotestsum@v1.9.0
 
           # TODO: Support job executor tests too (./...)

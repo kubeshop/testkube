@@ -9,6 +9,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
+var ErrWalkStop = errors.New("end walking")
+
 type tagData struct {
 	key   string
 	value string
@@ -210,6 +212,11 @@ func resolve(v reflect.Value, t tagData, m []Machine, force bool, finalize bool)
 				vv, _ = expr2.Static().StringValue()
 			} else {
 				vv = expr.Template()
+				if t.value == "template" && !IsTemplateStringWithoutExpressions(str) {
+					if IsTemplateStringWithInternalFnCall(vv) {
+						vv = CleanTemplateStringInternalFnCall(vv)
+					}
+				}
 			}
 			changed = vv != str
 			if ptr.Kind() == reflect.String {
@@ -257,6 +264,18 @@ func finalize(t interface{}, tag tagData, m ...Machine) error {
 
 func Simplify(t interface{}, m ...Machine) error {
 	return simplify(t, tagData{value: "include"}, m...)
+}
+
+func WalkVariables(t interface{}, variableFn func(name string) error) error {
+	m := NewMachine().RegisterAccessorExt(func(name string) (interface{}, bool, error) {
+		err := variableFn(name)
+		return nil, err != nil, err
+	})
+	err := Simplify(t, m)
+	if errors.Is(err, ErrWalkStop) {
+		return nil
+	}
+	return err
 }
 
 func SimplifyForce(t interface{}, m ...Machine) error {

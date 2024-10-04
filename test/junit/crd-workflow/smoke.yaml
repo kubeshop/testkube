@@ -1,0 +1,80 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: junit5-workflow-smoke
+  labels:
+    core-tests: workflows
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/junit/junit5-project
+  container:
+    image: maven:3.9.9-eclipse-temurin-11-alpine
+    resources:
+      requests:
+        cpu: 256m
+        memory: 256Mi
+    workingDir: /data/repo/test/junit/junit5-project
+  steps:
+  - name: Run tests
+    shell: mvn test -Dtest=TestSmoke1,TestSmoke2
+    artifacts:
+      paths:
+      - 'target/surefire-reports/**/*'
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: junit5-workflow-smoke-expected-fail
+  labels:
+    core-tests: expected-fail
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/junit/junit5-project
+  container:
+    image: maven:3.9.9-eclipse-temurin-11-alpine
+    resources:
+      requests:
+        cpu: 256m
+        memory: 256Mi
+    workingDir: /data/repo/test/junit/junit5-project
+  steps:
+  - name: Run tests
+    shell: mvn test -Dtest=TestSmokeFail
+    artifacts:
+      paths:
+      - 'target/surefire-reports/**/*'
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: junit5-workflow-smoke-mixed-results
+  labels:
+    core-tests: expected-fail
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/junit/junit5-project
+  container:
+    image: maven:3.9.9-eclipse-temurin-11-alpine
+    resources:
+      requests:
+        cpu: 256m
+        memory: 256Mi
+    workingDir: /data/repo/test/junit/junit5-project
+  steps:
+  - name: Run tests
+    shell: mvn test
+    artifacts:
+      paths:
+      - 'target/surefire-reports/**/*'

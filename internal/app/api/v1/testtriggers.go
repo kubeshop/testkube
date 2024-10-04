@@ -114,6 +114,7 @@ func (s *TestkubeAPI) UpdateTestTriggerHandler() fiber.Handler {
 		crdTestTrigger := testtriggersmapper.MapTestTriggerUpsertRequestToTestTriggerCRD(request)
 		testTrigger.Spec = crdTestTrigger.Spec
 		testTrigger.Labels = request.Labels
+		testTrigger.Annotations = request.Annotations
 		testTrigger, err = s.TestKubeClientset.TestsV1().TestTriggers(namespace).Update(c.UserContext(), testTrigger, v1.UpdateOptions{})
 
 		s.Metrics.IncUpdateTestTrigger(err)

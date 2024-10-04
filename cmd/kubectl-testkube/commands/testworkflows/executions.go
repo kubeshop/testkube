@@ -19,6 +19,7 @@ func NewGetTestWorkflowExecutionsCmd() *cobra.Command {
 		selectors        []string
 		testWorkflowName string
 		logsOnly         bool
+		tags             []string
 	)
 
 	cmd := &cobra.Command{
@@ -29,6 +30,14 @@ func NewGetTestWorkflowExecutionsCmd() *cobra.Command {
 		Long:    `Gets TestWorkflow execution details by ID, or list if id is not passed`,
 
 		Run: func(cmd *cobra.Command, args []string) {
+			outputFlag := cmd.Flag("output")
+			outputType := render.OutputPretty
+			if outputFlag != nil {
+				outputType = render.OutputType(outputFlag.Value.String())
+			}
+
+			outputPretty := outputType == render.OutputPretty
+
 			client, _, err := common.GetClient(cmd)
 			ui.ExitOnError("getting client", err)
 
@@ -36,7 +45,8 @@ func NewGetTestWorkflowExecutionsCmd() *cobra.Command {
 				client, _, err := common.GetClient(cmd)
 				ui.ExitOnError("getting client", err)
 
-				executions, err := client.ListTestWorkflowExecutions(testWorkflowName, limit, strings.Join(selectors, ","))
+				executions, err := client.ListTestWorkflowExecutions(testWorkflowName, limit,
+					strings.Join(selectors, ","), strings.Join(tags, ","))
 				ui.ExitOnError("getting test workflow executions list", err)
 				err = render.List(cmd, testkube.TestWorkflowExecutionSummaries(executions.Results), os.Stdout)
 				ui.ExitOnError("rendering list", err)
@@ -51,19 +61,24 @@ func NewGetTestWorkflowExecutionsCmd() *cobra.Command {
 				ui.ExitOnError("rendering obj", err)
 			}
 
-			ui.Info("Getting logs for test workflow execution", executionID)
+			if outputPretty {
+				ui.Info("Getting logs for test workflow execution", executionID)
 
-			logs, err := client.GetTestWorkflowExecutionLogs(executionID)
-			ui.ExitOnError("getting logs from executor", err)
+				logs, err := client.GetTestWorkflowExecutionLogs(executionID)
+				ui.ExitOnError("getting logs from executor", err)
 
-			sigs := flattenSignatures(execution.Signature)
+				sigs := flattenSignatures(execution.Signature)
 
-			var results map[string]testkube.TestWorkflowStepResult
-			if execution.Result != nil {
-				results = execution.Result.Steps
+				var results map[string]testkube.TestWorkflowStepResult
+				if execution.Result != nil {
+					results = execution.Result.Steps
+				}
+
+				printRawLogLines(logs, sigs, results)
+				if !logsOnly {
+					render.PrintTestWorkflowExecutionURIs(&execution)
+				}
 			}
-
-			printRawLogLines(logs, sigs, results)
 		},
 	}
 
@@ -71,6 +86,7 @@ func NewGetTestWorkflowExecutionsCmd() *cobra.Command {
 	cmd.Flags().IntVar(&limit, "limit", 1000, "max number of records to return")
 	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label key value pair: --label key1=value1")
 	cmd.Flags().BoolVar(&logsOnly, "logs-only", false, "show only execution logs")
+	cmd.Flags().StringSliceVarP(&tags, "tag", "", nil, "tag key value pair: --tag key1=value1")
 
 	return cmd
 }

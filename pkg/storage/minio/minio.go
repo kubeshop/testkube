@@ -31,6 +31,10 @@ var _ storage.Client = (*Client)(nil)
 // ErrArtifactsNotFound contains error for not existing artifacts
 var ErrArtifactsNotFound = errors.New("Execution doesn't have any artifacts associated with it")
 
+// absMinPartSize - absolute minimum part size (5 MiB) below which
+// a part in a multipart upload may not be uploaded.
+const absMinPartSize = 1024 * 1024 * 5
+
 // Client for managing MinIO storage server
 type Client struct {
 	region         string
@@ -491,7 +495,9 @@ func (c *Client) uploadFile(ctx context.Context, bucket, bucketFolder, filePath 
 	}
 
 	c.Log.Debugw("saving object in minio", "file", filePath, "bucket", bucket)
-	_, err = c.minioClient.PutObject(ctx, bucket, filePath, reader, objectSize, minio.PutObjectOptions{ContentType: "application/octet-stream"})
+	_, err = c.minioClient.PutObject(ctx, bucket, filePath, reader, objectSize, minio.PutObjectOptions{
+		ContentType: "application/octet-stream",
+		PartSize:    absMinPartSize})
 	if err != nil {
 		return fmt.Errorf("minio saving file (%s) put object error: %w", filePath, err)
 	}

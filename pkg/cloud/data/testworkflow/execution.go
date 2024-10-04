@@ -156,3 +156,24 @@ func (r *CloudRepository) GetPreviousFinishedState(ctx context.Context, workflow
 	}
 	return commandResponse.Result, nil
 }
+
+func (r *CloudRepository) GetNextExecutionNumber(ctx context.Context, testWorkflowName string) (number int32, err error) {
+	req := ExecutionGetNextExecutionNumberRequest{TestWorkflowName: testWorkflowName}
+	response, err := r.executor.Execute(ctx, CmdTestWorkflowExecutionGetNextExecutionNumber, req)
+	if err != nil {
+		return 0, err
+	}
+	var commandResponse ExecutionGetNextExecutionNumberResponse
+	if err := json.Unmarshal(response, &commandResponse); err != nil {
+		return 0, err
+	}
+	return commandResponse.TestWorkflowNumber, nil
+}
+
+func (r *CloudRepository) GetExecutionTags(ctx context.Context, testWorkflowName string) (tags map[string][]string, err error) {
+	req := ExecutionGetExecutionTagsRequest{TestWorkflowName: testWorkflowName}
+	process := func(v ExecutionGetExecutionTagsResponse) map[string][]string {
+		return v.Tags
+	}
+	return pass(r.executor, ctx, req, process)
+}

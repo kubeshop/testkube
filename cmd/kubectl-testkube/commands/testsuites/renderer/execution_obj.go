@@ -29,6 +29,7 @@ func TestSuiteExecutionRenderer(client client.Client, ui *ui.UI, obj interface{}
 		ui.Warn("Context:", execution.RunningContext.Context)
 	}
 
+	ui.Warn("Disabled webhooks:", fmt.Sprint(execution.DisableWebhooks))
 	info, err := client.GetServerInfo()
 	ui.ExitOnError("getting server info", err)
 

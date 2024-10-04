@@ -25,7 +25,7 @@ func NewRunTestCmd() *cobra.Command {
 		image                              string
 		iterations                         int
 		watchEnabled                       bool
-		executorArgs                       []string
+		binaryArgs                         []string
 		variables                          []string
 		secretVariables                    []string
 		variablesFile                      string
@@ -83,6 +83,7 @@ func NewRunTestCmd() *cobra.Command {
 		executionNamespace                 string
 		attachDebugger                     bool
 		debugFile                          string
+		disableWebhooks                    bool
 	)
 
 	cmd := &cobra.Command{
@@ -93,10 +94,6 @@ func NewRunTestCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			if attachDebugger {
 				watchEnabled = true
-			}
-
-			if common.IsBothEnabledAndDisabledSet(cmd) {
-				ui.Failf("both --enable-webhooks and --disable-webhooks flags are set, please use only one")
 			}
 
 			outputFlag := cmd.Flag("output")
@@ -117,6 +114,9 @@ func NewRunTestCmd() *cobra.Command {
 
 			variables, err := common.CreateVariables(cmd, !info.SecretConfig().AutoCreate)
 			ui.WarnOnErrorAndOutputPretty("getting variables", outputPretty, err)
+
+			executorArgs, err := testkube.PrepareExecutorArgs(binaryArgs)
+			ui.ExitOnError("getting args", err)
 
 			envConfigMaps, envSecrets, err := newEnvReferencesFromFlags(cmd)
 			ui.WarnOnErrorAndOutputPretty("getting env config maps and secrets", outputPretty, err)
@@ -150,13 +150,7 @@ func NewRunTestCmd() *cobra.Command {
 				ExecutePostRunScriptBeforeScraping: executePostRunScriptBeforeScraping,
 				SourceScripts:                      sourceScripts,
 				ExecutionNamespace:                 executionNamespace,
-			}
-
-			if cmd.Flag("enable-webhooks").Changed {
-				options.DisableWebhooks = false
-			}
-			if cmd.Flag("disable-webhooks").Changed {
-				options.DisableWebhooks = true
+				DisableWebhooks:                    disableWebhooks,
 			}
 
 			var fields = []struct {
@@ -421,7 +415,7 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringArrayVarP(&variables, "variable", "v", []string{}, "execution variable passed to executor")
 	cmd.Flags().StringArrayVarP(&secretVariables, "secret-variable", "s", []string{}, "execution secret variable passed to executor")
 	cmd.Flags().StringArrayVar(&command, "command", []string{}, "command passed to image in executor")
-	cmd.Flags().StringArrayVarP(&executorArgs, "args", "", []string{}, "executor binary additional arguments")
+	cmd.Flags().StringArrayVarP(&binaryArgs, "args", "", []string{}, "executor binary additional arguments")
 	cmd.Flags().StringVarP(&argsMode, "args-mode", "", "append", "usage mode for argumnets. one of append|override|replace")
 	cmd.Flags().BoolVarP(&watchEnabled, "watch", "f", false, "watch for changes after start")
 	cmd.Flags().StringVar(&downloadDir, "download-dir", "artifacts", "download dir")
@@ -480,8 +474,8 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringVar(&executionNamespace, "execution-namespace", "", "namespace for test execution (Pro edition only)")
 	cmd.Flags().StringVar(&debugFile, "debugger-file", "", "store debug info into file, stdout by default")
 	cmd.Flags().BoolVar(&attachDebugger, "attach-debugger", false, "attach simple debugger for job, need KUBECONFIG for the agent to be active")
-	cmd.Flags().Bool("disable-webhooks", false, "disable webhooks")
-	cmd.Flags().Bool("enable-webhooks", false, "enable webhooks")
+	cmd.Flags().BoolVar(&disableWebhooks, "disable-webhooks", false, "disable webhooks")
+	cmd.Flags().MarkDeprecated("enable-webhooks", "enable-webhooks is deprecated")
 
 	return cmd
 }

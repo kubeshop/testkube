@@ -58,6 +58,11 @@ func printPrettyOutput(ui *ui.UI, execution testkube.TestWorkflowExecution) {
 			ui.Warn("Execution number:    ", fmt.Sprintf("%d", execution.Number))
 		}
 		ui.Warn("Requested at:        ", execution.ScheduledAt.String())
+		ui.Warn("Disabled webhooks:   ", fmt.Sprint(execution.DisableWebhooks))
+		if len(execution.Tags) > 0 {
+			ui.NL()
+			ui.Warn("Tags:                ", testkube.MapToString(execution.Tags))
+		}
 		for _, ctx := range execution.RunningContext {
 			ui.Warn("Running context:     ")
 			if ctx.Interface_ != nil {

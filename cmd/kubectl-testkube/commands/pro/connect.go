@@ -52,9 +52,10 @@ func NewConnectCmd() *cobra.Command {
 			common.ProcessMasterFlags(cmd, &opts, &cfg)
 
 			var clusterContext string
+			var cliErr *common.CLIError
 			if cfg.ContextType == config.ContextTypeKubeconfig {
-				clusterContext, err = common.GetCurrentKubernetesContext()
-				ui.ExitOnError("getting current kubernetes context", err)
+				clusterContext, cliErr = common.GetCurrentKubernetesContext()
+				common.HandleCLIError(cliErr)
 			}
 
 			// TODO: implement context info
@@ -136,8 +137,11 @@ func NewConnectCmd() *cobra.Command {
 			}
 
 			spinner := ui.NewSpinner("Connecting Testkube Pro")
-			err = common.HelmUpgradeOrInstallTestkubeCloud(opts, cfg, true)
-			ui.ExitOnError("Installing Testkube Pro", err)
+			if cliErr = common.HelmUpgradeOrInstallTestkubeAgent(opts, cfg, true); cliErr != nil {
+				spinner.Fail()
+				common.HandleCLIError(cliErr)
+			}
+
 			spinner.Success()
 
 			ui.NL()

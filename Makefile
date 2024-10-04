@@ -137,7 +137,7 @@ openapi-generate-model-testkube:
 	find ./pkg/api/v1/testkube -name "*update*.go" -type f -exec sed -i '' -e "s/ \*ExecutorMeta/ \*\*ExecutorMetaUpdate/g" {} \;
 	find ./pkg/api/v1/testkube -name "*update*.go" -type f -exec sed -i '' -e "s/ \*PodRequest/ \*\*PodUpdateRequest/g" {} \;
 	find ./pkg/api/v1/testkube -name "*update*.go" -type f -exec sed -i '' -e "s/ \*PodResourcesRequest/ \*\*PodResourcesUpdateRequest/g" {} \;
-	find ./pkg/api/v1/testkube -name "*update*.go" -type f -exec sed -i '' -e "s/ \*ResourceRequest/ \*ResourceUpdateRequest/g" {} \;	
+	find ./pkg/api/v1/testkube -name "*update*.go" -type f -exec sed -i '' -e "s/ \*ResourceRequest/ \*ResourceUpdateRequest/g" {} \;
 	find ./pkg/api/v1/testkube -type f -exec sed -i '' -e "s/ Deprecated/ \\n\/\/ Deprecated/g" {} \;
 	go fmt pkg/api/v1/testkube/*.go
 
@@ -216,6 +216,7 @@ version-bump-dev:
 	go run cmd/tools/main.go bump --dev
 
 commands-reference:
+	mkdir -p gen/docs/cli
 	go run cmd/kubectl-testkube/main.go generate doc
 
 .PHONY: docs

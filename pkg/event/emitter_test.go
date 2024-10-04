@@ -25,7 +25,7 @@ func TestEmitter_Register(t *testing.T) {
 		t.Parallel()
 		// given
 		eventBus := bus.NewEventBusMock()
-		emitter := NewEmitter(eventBus, "", nil)
+		emitter := NewEmitter(eventBus, "")
 		// when
 		emitter.Register(&dummy.DummyListener{Id: "l1"})
 
@@ -43,7 +43,7 @@ func TestEmitter_Listen(t *testing.T) {
 		t.Parallel()
 		// given
 		eventBus := bus.NewEventBusMock()
-		emitter := NewEmitter(eventBus, "", nil)
+		emitter := NewEmitter(eventBus, "")
 		// given listener with matching selector
 		listener1 := &dummy.DummyListener{Id: "l1", SelectorString: "type=listener1"}
 		// and listener with second matic selector
@@ -97,7 +97,7 @@ func TestEmitter_Notify(t *testing.T) {
 		t.Parallel()
 		// given
 		eventBus := bus.NewEventBusMock()
-		emitter := NewEmitter(eventBus, "", nil)
+		emitter := NewEmitter(eventBus, "")
 		// and 2 listeners subscribed to the same queue
 		// * first on pod1
 		listener1 := &dummy.DummyListener{Id: "l3"}
@@ -124,6 +124,42 @@ func TestEmitter_Notify(t *testing.T) {
 	})
 }
 
+func TestEmitter_NotifyBecome(t *testing.T) {
+	t.Parallel()
+
+	t.Run("notifies listeners in queue groups for become events", func(t *testing.T) {
+		t.Parallel()
+		// given
+		eventBus := bus.NewEventBusMock()
+		emitter := NewEmitter(eventBus, "")
+		// and 2 listeners subscribed to the same queue
+		// * first on pod1
+		listener1 := &dummy.DummyListener{Id: "l5", Types: []testkube.EventType{
+			testkube.BECOME_TEST_FAILED_EventType, testkube.BECOME_TEST_DOWN_EventType, testkube.END_TEST_FAILED_EventType}}
+		// * second on pod2
+		listener2 := &dummy.DummyListener{Id: "l5", Types: []testkube.EventType{
+			testkube.BECOME_TEST_FAILED_EventType, testkube.BECOME_TEST_DOWN_EventType, testkube.END_TEST_FAILED_EventType}}
+
+		emitter.Register(listener1)
+		emitter.Register(listener2)
+
+		// and listening emitter
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		emitter.Listen(ctx)
+
+		time.Sleep(time.Millisecond * 50)
+
+		// when event sent to queue group
+		emitter.Notify(newExampleTestEvent5())
+
+		time.Sleep(time.Millisecond * 50)
+
+		// then only one listener should be notified
+		assert.Equal(t, 3, listener2.GetNotificationCount()+listener1.GetNotificationCount())
+	})
+}
+
 func TestEmitter_Reconcile(t *testing.T) {
 	t.Parallel()
 
@@ -131,7 +167,7 @@ func TestEmitter_Reconcile(t *testing.T) {
 		t.Parallel()
 		// given first reconciler loop was done
 		eventBus := bus.NewEventBusMock()
-		emitter := NewEmitter(eventBus, "", nil)
+		emitter := NewEmitter(eventBus, "")
 		emitter.Loader.Register(&dummy.DummyLoader{IdPrefix: "dummy1"})
 		emitter.Loader.Register(&dummy.DummyLoader{IdPrefix: "dummy2"})
 
@@ -178,6 +214,14 @@ func newExampleTestEvent2() testkube.Event {
 	}
 }
 
+func newExampleTestEvent5() testkube.Event {
+	return testkube.Event{
+		Id:            "eventID5",
+		Type_:         testkube.EventEndTestFailed,
+		TestExecution: testkube.NewExecutionWithID("executionID5", "test/test", "test"),
+	}
+}
+
 func TestEmitter_UpdateListeners(t *testing.T) {
 	t.Parallel()
 
@@ -185,7 +229,7 @@ func TestEmitter_UpdateListeners(t *testing.T) {
 		t.Parallel()
 		// given
 		eventBus := bus.NewEventBusMock()
-		emitter := NewEmitter(eventBus, "", nil)
+		emitter := NewEmitter(eventBus, "")
 		// given listener with matching selector
 		listener1 := &dummy.DummyListener{Id: "l1", SelectorString: "type=listener1"}
 		// and listener with second matching selector

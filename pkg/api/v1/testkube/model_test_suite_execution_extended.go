@@ -39,11 +39,11 @@ func NewStartedTestSuiteExecution(testSuite TestSuite, request TestSuiteExecutio
 		Variables:              map[string]Variable{},
 		RunningContext:         request.RunningContext,
 		TestSuiteExecutionName: request.TestSuiteExecutionName,
+		DisableWebhooks:        request.DisableWebhooks,
 	}
 
 	if testSuite.ExecutionRequest != nil {
 		testExecution.Variables = testSuite.ExecutionRequest.Variables
-		testExecution.DisableWebhooks = testSuite.ExecutionRequest.DisableWebhooks
 	}
 
 	// override variables from request

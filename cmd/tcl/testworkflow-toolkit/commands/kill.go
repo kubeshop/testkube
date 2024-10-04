@@ -19,6 +19,7 @@ import (
 	commontcl "github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/common"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/spawn"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/artifacts"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/pkg/expressions"
@@ -73,7 +74,7 @@ func NewKillCmd() *cobra.Command {
 						Register("index", index).
 						RegisterAccessorExt(func(name string) (interface{}, bool, error) {
 							if name == "count" {
-								expr, err := expressions.CompileAndResolve(fmt.Sprintf("len(services.%s)", service))
+								expr, err := expressions.CompileAndResolve(fmt.Sprintf("len(%s)", data.ServicesPrefix+service))
 								return expr, true, err
 							}
 							return nil, false, nil
@@ -104,7 +105,7 @@ func NewKillCmd() *cobra.Command {
 
 					logsFilePath, err := spawn.SaveLogs(context.Background(), clientSet, storage, env.Namespace(), id, service+"/", index)
 					if err == nil {
-						data.PrintOutput(env.Ref(), "service", ServiceInfo{Group: groupRef, Name: service, Index: index, Logs: storage.FullPath(logsFilePath)})
+						instructions.PrintOutput(env.Ref(), "service", ServiceInfo{Group: groupRef, Name: service, Index: index, Logs: storage.FullPath(logsFilePath)})
 						log("saved logs")
 					} else {
 						log("warning", "problem saving the logs", err.Error())

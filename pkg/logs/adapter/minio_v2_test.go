@@ -27,7 +27,7 @@ func TestLogsV2Local(t *testing.T) {
 	t.Skip("only local")
 	ctx := context.Background()
 	consumer, _ := NewMinioV2Adapter(cfg.StorageEndpoint, cfg.StorageAccessKeyID, cfg.StorageSecretAccessKey, cfg.StorageRegion, cfg.StorageToken, "test-1", cfg.StorageSSL, cfg.StorageSkipVerify, cfg.StorageCertFile, cfg.StorageKeyFile, cfg.StorageCAFile)
-	consumer.WithPath("./")
+	consumer.WithNonEmptyPath("./")
 	id := "test-bla"
 	err := consumer.Init(ctx, id)
 	assert.NoError(t, err)

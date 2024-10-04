@@ -1,0 +1,14 @@
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: tw-suite-full-smoke-cron-trigger
+  labels:
+    core-tests: workflows
+spec:
+  steps:
+  - execute:
+      workflows:
+      - name: tw-suite-full-smoke
+  events:
+  - cronjob:
+      cron: "30 */4 * * *" # every 4 hours

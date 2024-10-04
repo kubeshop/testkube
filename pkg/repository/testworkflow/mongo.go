@@ -2,11 +2,13 @@ package testworkflow
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/kubeshop/testkube/pkg/repository/common"
+	"github.com/kubeshop/testkube/pkg/utils"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -14,6 +16,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/repository/sequence"
 )
 
 var _ Repository = (*MongoRepository)(nil)
@@ -35,14 +38,21 @@ func NewMongoRepository(db *mongo.Database, allowDiskUse bool, opts ...MongoRepo
 }
 
 type MongoRepository struct {
-	db           *mongo.Database
-	Coll         *mongo.Collection
-	allowDiskUse bool
+	db                 *mongo.Database
+	Coll               *mongo.Collection
+	allowDiskUse       bool
+	sequenceRepository sequence.Repository
 }
 
 func WithMongoRepositoryCollection(collection *mongo.Collection) MongoRepositoryOpt {
 	return func(r *MongoRepository) {
 		r.Coll = collection
+	}
+}
+
+func WithMongoRepositorySequence(sequenceRepository sequence.Repository) MongoRepositoryOpt {
+	return func(r *MongoRepository) {
+		r.sequenceRepository = sequenceRepository
 	}
 }
 
@@ -305,6 +315,10 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 		query["workflow.name"] = filter.Name()
 	}
 
+	if filter.NamesDefined() {
+		query["workflow.name"] = bson.M{"$in": filter.Names()}
+	}
+
 	if filter.TextSearchDefined() {
 		query["name"] = bson.M{"$regex": primitive.Regex{Pattern: filter.TextSearch(), Options: "i"}}
 	}
@@ -351,6 +365,58 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 		}
 	}
 
+	if filter.TagSelector() != "" {
+		items := strings.Split(filter.TagSelector(), ",")
+		inValues := make(map[string][]string)
+		existsValues := make(map[string]struct{})
+		for _, item := range items {
+			elements := strings.Split(item, "=")
+			if len(elements) == 2 {
+				inValues["tags."+utils.EscapeDots(elements[0])] = append(inValues["tags."+utils.EscapeDots(elements[0])], elements[1])
+			} else if len(elements) == 1 {
+				existsValues["tags."+utils.EscapeDots(elements[0])] = struct{}{}
+			}
+		}
+		subquery := bson.A{}
+		for tag, values := range inValues {
+			if _, ok := existsValues[tag]; ok {
+				subquery = append(subquery, bson.M{tag: bson.M{"$exists": true}})
+				delete(existsValues, tag)
+				continue
+			}
+
+			tagValues := bson.A{}
+			for _, value := range values {
+				tagValues = append(tagValues, value)
+			}
+
+			if len(tagValues) > 0 {
+				subquery = append(subquery, bson.M{tag: bson.M{"$in": tagValues}})
+			}
+		}
+
+		for tag := range existsValues {
+			subquery = append(subquery, bson.M{tag: bson.M{"$exists": true}})
+		}
+
+		if len(subquery) > 0 {
+			query["$and"] = subquery
+		}
+	}
+
+	if filter.LabelSelector() != nil && len(filter.LabelSelector().Or) > 0 {
+		subquery := bson.A{}
+		for _, label := range filter.LabelSelector().Or {
+			if label.Value != nil {
+				subquery = append(subquery, bson.M{"workflow.labels." + utils.EscapeDots(label.Key): *label.Value})
+			} else if label.Exists != nil {
+				subquery = append(subquery,
+					bson.M{"workflow.labels." + utils.EscapeDots(label.Key): bson.M{"$exists": *label.Exists}})
+			}
+		}
+		query["$or"] = subquery
+	}
+
 	opts.SetSkip(int64(filter.Page() * filter.PageSize()))
 	opts.SetLimit(int64(filter.PageSize()))
 	opts.SetSort(bson.D{{Key: "scheduledat", Value: -1}})
@@ -360,12 +426,26 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 
 // DeleteByTestWorkflow deletes execution results by workflow
 func (r *MongoRepository) DeleteByTestWorkflow(ctx context.Context, workflowName string) (err error) {
+	if r.sequenceRepository != nil {
+		err = r.sequenceRepository.DeleteExecutionNumber(ctx, workflowName, sequence.ExecutionTypeTestWorkflow)
+		if err != nil {
+			return
+		}
+	}
+
 	_, err = r.Coll.DeleteMany(ctx, bson.M{"workflow.name": workflowName})
 	return
 }
 
 // DeleteAll deletes all execution results
 func (r *MongoRepository) DeleteAll(ctx context.Context) (err error) {
+	if r.sequenceRepository != nil {
+		err = r.sequenceRepository.DeleteAllExecutionNumbers(ctx, sequence.ExecutionTypeTestWorkflow)
+		if err != nil {
+			return
+		}
+	}
+
 	_, err = r.Coll.DeleteMany(ctx, bson.M{})
 	return
 }
@@ -382,6 +462,13 @@ func (r *MongoRepository) DeleteByTestWorkflows(ctx context.Context, workflowNam
 	}
 
 	filter := bson.M{"$or": conditions}
+
+	if r.sequenceRepository != nil {
+		err = r.sequenceRepository.DeleteExecutionNumbers(ctx, workflowNames, sequence.ExecutionTypeTestSuite)
+		if err != nil {
+			return
+		}
+	}
 
 	_, err = r.Coll.DeleteMany(ctx, filter)
 	return
@@ -455,4 +542,56 @@ func (r *MongoRepository) GetPreviousFinishedState(ctx context.Context, testWork
 	}
 
 	return *result.Result.Status, nil
+}
+
+// GetNextExecutionNumber gets next execution number by name
+func (r *MongoRepository) GetNextExecutionNumber(ctx context.Context, name string) (number int32, err error) {
+	if r.sequenceRepository == nil {
+		return 0, errors.New("no sequence repository provided")
+	}
+
+	return r.sequenceRepository.GetNextExecutionNumber(ctx, name, sequence.ExecutionTypeTestWorkflow)
+}
+
+func (r *MongoRepository) GetExecutionTags(ctx context.Context, testWorkflowName string) (tags map[string][]string, err error) {
+	query := bson.M{"tags": bson.M{"$exists": true}}
+	if testWorkflowName != "" {
+		query["workflow.name"] = testWorkflowName
+	}
+
+	pipeline := []bson.M{
+		{"$match": query},
+		{"$project": bson.M{
+			"tags": 1,
+		}},
+	}
+
+	opts := options.Aggregate()
+	if r.allowDiskUse {
+		opts.SetAllowDiskUse(r.allowDiskUse)
+	}
+
+	cursor, err := r.Coll.Aggregate(ctx, pipeline, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	var executions []testkube.TestWorkflowExecutionTags
+	err = cursor.All(ctx, &executions)
+	if err != nil {
+		return nil, err
+	}
+
+	for i := range executions {
+		executions[i].UnscapeDots()
+	}
+
+	tags = make(map[string][]string)
+	for _, execution := range executions {
+		for key, value := range execution.Tags {
+			tags[key] = append(tags[key], value)
+		}
+	}
+
+	return tags, nil
 }

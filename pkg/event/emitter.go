@@ -20,14 +20,13 @@ const (
 )
 
 // NewEmitter returns new emitter instance
-func NewEmitter(eventBus bus.Bus, clusterName string, envs map[string]string) *Emitter {
+func NewEmitter(eventBus bus.Bus, clusterName string) *Emitter {
 	return &Emitter{
 		Log:         log.DefaultLogger,
 		Loader:      NewLoader(),
 		Bus:         eventBus,
 		Listeners:   make(common.Listeners, 0),
 		ClusterName: clusterName,
-		Envs:        envs,
 	}
 }
 
@@ -39,7 +38,6 @@ type Emitter struct {
 	mutex       sync.RWMutex
 	Bus         bus.Bus
 	ClusterName string
-	Envs        map[string]string
 }
 
 // Register adds new listener
@@ -126,7 +124,6 @@ func listerersToMap(listeners []common.Listener) map[string]map[string]common.Li
 // Notify notifies emitter with webhook
 func (e *Emitter) Notify(event testkube.Event) {
 	event.ClusterName = e.ClusterName
-	event.Envs = e.Envs
 	err := e.Bus.PublishTopic(event.Topic(), event)
 	if err != nil {
 		e.Log.Errorw("error publishing event", append(event.Log(), "error", err))
@@ -170,15 +167,18 @@ func (e *Emitter) stopListener(name string) {
 	if err != nil {
 		e.Log.Errorw("error while stopping listener", "error", err)
 	}
-	e.Log.Infow("stopped listener", name)
+	e.Log.Info("stopped listener", name)
 }
 
 func (e *Emitter) notifyHandler(l common.Listener) bus.Handler {
 	logger := e.Log.With("listen-on", l.Events(), "queue-group", l.Name(), "selector", l.Selector(), "metadata", l.Metadata())
 	return func(event testkube.Event) error {
-		if event.Valid(l.Selector(), l.Events()) {
-			result := l.Notify(event)
-			log.Tracew(logger, "listener notified", append(event.Log(), "result", result)...)
+		if types, valid := event.Valid(l.Selector(), l.Events()); valid {
+			for i := range types {
+				event.Type_ = &types[i]
+				result := l.Notify(event)
+				log.Tracew(logger, "listener notified", append(event.Log(), "result", result)...)
+			}
 		} else {
 			log.Tracew(logger, "dropping event not matching selector or type", event.Log()...)
 		}
@@ -191,7 +191,7 @@ func (e *Emitter) Reconcile(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			e.Log.Infow("stopping reconciler")
+			e.Log.Info("stopping reconciler")
 			return
 		default:
 			listeners := e.Loader.Reconcile()

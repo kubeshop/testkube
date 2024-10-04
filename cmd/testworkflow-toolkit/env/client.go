@@ -5,6 +5,10 @@ import (
 	"fmt"
 	"math"
 
+	corev1 "k8s.io/api/core/v1"
+
+	"github.com/kubeshop/testkube/pkg/cache"
+
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
@@ -57,8 +61,8 @@ func ImageInspector() imageinspector.Inspector {
 	}
 	return imageinspector.NewInspector(
 		Config().System.DefaultRegistry,
-		imageinspector.NewSkopeoFetcher(),
-		imageinspector.NewSecretFetcher(secretClient),
+		imageinspector.NewCraneFetcher(),
+		imageinspector.NewSecretFetcher(secretClient, cache.NewInMemoryCache[*corev1.Secret](), imageinspector.WithSecretCacheTTL(Config().Images.ImageCredentialsCacheTTL)),
 		inspectorStorages...,
 	)
 }

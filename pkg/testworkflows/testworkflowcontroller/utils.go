@@ -2,13 +2,14 @@ package testworkflowcontroller
 
 import (
 	"regexp"
-	"strconv"
 	"time"
 
-	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 )
 
 const (
@@ -16,11 +17,14 @@ const (
 	KubernetesTimezoneLogTimeFormat = KubernetesLogTimeFormat + "07:00"
 )
 
+var (
+	containerNameRe = regexp.MustCompile(`^spec\.(?:initContainers|containers)\{([^]]+)}`)
+)
+
 func GetEventContainerName(event *corev1.Event) string {
-	regex := regexp.MustCompile(`^spec\.(?:initContainers|containers)\{([^]]+)}`)
 	path := event.InvolvedObject.FieldPath
-	if regex.Match([]byte(path)) {
-		name := regex.ReplaceAllString(event.InvolvedObject.FieldPath, "$1")
+	if containerNameRe.Match([]byte(path)) {
+		name := containerNameRe.ReplaceAllString(event.InvolvedObject.FieldPath, "$1")
 		return name
 	}
 	return ""
@@ -30,46 +34,42 @@ func IsPodDone(pod *corev1.Pod) bool {
 	return (pod.Status.Phase != corev1.PodPending && pod.Status.Phase != corev1.PodRunning) || pod.ObjectMeta.DeletionTimestamp != nil
 }
 
-func IsJobDone(job *batchv1.Job) bool {
-	return (job.Status.Active == 0 && (job.Status.Succeeded > 0 || job.Status.Failed > 0)) || job.ObjectMeta.DeletionTimestamp != nil
+type ContainerResultStep struct {
+	Status     testkube.TestWorkflowStepStatus
+	ExitCode   int
+	Details    string
+	FinishedAt time.Time
 }
 
 type ContainerResult struct {
-	Status     testkube.TestWorkflowStepStatus
+	Steps      []ContainerResultStep
 	Details    string
 	ExitCode   int
 	FinishedAt time.Time
 }
 
-var UnknownContainerResult = ContainerResult{
-	Status:   testkube.ABORTED_TestWorkflowStepStatus,
-	ExitCode: -1,
+func ExtractRefsFromActionList(list actiontypes.ActionList) (started []string, finished []string) {
+	for i := range list {
+		switch list[i].Type() {
+		case lite.ActionTypeSetup:
+			started = append(started, data.InitStepName)
+			finished = append(finished, data.InitStepName)
+		case lite.ActionTypeStart:
+			started = append(started, *list[i].Start)
+		case lite.ActionTypeEnd:
+			finished = append(finished, *list[i].End)
+		}
+	}
+	return
 }
 
-func GetContainerResult(c corev1.ContainerStatus) ContainerResult {
-	if c.State.Waiting != nil {
-		return ContainerResult{Status: testkube.QUEUED_TestWorkflowStepStatus, ExitCode: -1}
+func ExtractRefsFromActionGroup(group actiontypes.ActionGroups) (started [][]string, finished [][]string) {
+	started = make([][]string, len(group))
+	finished = make([][]string, len(group))
+	for i := range group {
+		s, f := ExtractRefsFromActionList(group[i])
+		started[i] = s
+		finished[i] = f
 	}
-	if c.State.Running != nil {
-		return ContainerResult{Status: testkube.RUNNING_TestWorkflowStepStatus, ExitCode: -1}
-	}
-	re := regexp.MustCompile(`^([^,]*),(0|[1-9]\d*)$`)
-
-	// Workaround - GKE sends SIGKILL after the container is already terminated,
-	// and the pod gets stuck then.
-	if c.State.Terminated.Reason != "Completed" {
-		return ContainerResult{Status: testkube.ABORTED_TestWorkflowStepStatus, Details: c.State.Terminated.Reason, ExitCode: -1, FinishedAt: c.State.Terminated.FinishedAt.Time}
-	}
-
-	msg := c.State.Terminated.Message
-	match := re.FindStringSubmatch(msg)
-	if match == nil {
-		return ContainerResult{Status: testkube.ABORTED_TestWorkflowStepStatus, ExitCode: -1, FinishedAt: c.State.Terminated.FinishedAt.Time}
-	}
-	status := testkube.TestWorkflowStepStatus(match[1])
-	exitCode, _ := strconv.Atoi(match[2])
-	if status == "" {
-		status = testkube.PASSED_TestWorkflowStepStatus
-	}
-	return ContainerResult{Status: status, ExitCode: exitCode, FinishedAt: c.State.Terminated.FinishedAt.Time}
+	return
 }

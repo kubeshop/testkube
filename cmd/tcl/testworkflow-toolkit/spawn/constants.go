@@ -8,9 +8,6 @@
 
 package spawn
 
-import "time"
-
 const (
 	DefaultParallelism = 1000
-	ControllerTimeout  = 120 * time.Second
 )

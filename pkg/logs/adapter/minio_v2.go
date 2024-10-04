@@ -15,13 +15,14 @@ import (
 	minioconnecter "github.com/kubeshop/testkube/pkg/storage/minio"
 )
 
-// DefaultDataDir is a default directory where logs are stored (logs-service Dockerfile creates this directory)
-const DefaultDataDir = "/data"
-
 var _ Adapter = &MinioV2Adapter{}
 
 // NewMinioV2Adapter creates new MinioV2Adapter which will send data to local MinIO bucket
 func NewMinioV2Adapter(endpoint, accessKeyID, secretAccessKey, region, token, bucket string, ssl, skipVerify bool, certFile, keyFile, caFile string) (*MinioV2Adapter, error) {
+	dir, err := os.MkdirTemp("", "minio")
+	if err != nil {
+		return nil, err
+	}
 	ctx := context.Background()
 	opts := minioconnecter.GetTLSOptions(ssl, skipVerify, certFile, keyFile, caFile)
 	c := &MinioV2Adapter{
@@ -30,7 +31,7 @@ func NewMinioV2Adapter(endpoint, accessKeyID, secretAccessKey, region, token, bu
 		bucket:         bucket,
 		region:         region,
 		files:          make(map[string]*os.File),
-		path:           DefaultDataDir,
+		path:           dir,
 	}
 	minioClient, err := c.minioConnecter.GetClient()
 	if err != nil {
@@ -109,8 +110,10 @@ func (s *MinioV2Adapter) deleteFile(id string) {
 	delete(s.files, id)
 }
 
-func (s *MinioV2Adapter) WithPath(path string) {
-	s.path = path
+func (s *MinioV2Adapter) WithNonEmptyPath(path string) {
+	if path != "" {
+		s.path = path
+	}
 }
 
 func (s *MinioV2Adapter) Notify(ctx context.Context, id string, e events.Log) error {
