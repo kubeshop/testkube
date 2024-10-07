@@ -7170,8 +7170,6 @@ components:
           $ref: "#/components/schemas/TestWorkflowRunningContextInterface"
         actor:
           $ref: "#/components/schemas/TestWorkflowRunningContextActor"
-        caller:
-          $ref: "#/components/schemas/TestWorkflowRunningContextCaller"
 
     TestWorkflowRunningContextCaller:
       description: running context caller for test workflow execution
@@ -7210,14 +7208,6 @@ components:
         - user
         - testworkflow
         - testworkflowexecution
-
-    TestWorkflowRunningContextCallerResourceType:
-      description: supported caller resource types for test workflow running context
-      type: string
-      enum:
-        - testworkflow
-        - testworkflowexecution
-        - testtrigger
 
     Webhook:
       description: CRD based webhook data
