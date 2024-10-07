@@ -7171,35 +7171,53 @@ components:
         actor:
           $ref: "#/components/schemas/TestWorkflowRunningContextActor"
 
-    TestWorkflowRunningContextCaller:
-      description: running context caller for test workflow execution
+    TestWorkflowRunningContextInterface:
+      description: running context interface for test workflow execution
       type: object
       required:
-        - callerResourceType
-        - callerResourceName
+        - type
       properties:
-        callerResourceType:
-          $ref: "#/components/schemas/TestWorkflowRunningContextCallerResourceType"
-        callerResourceName:
+        name:
           type: string
-          description: caller resource name
-        callerResourceExecutionID:
+          description: interface name
+        type:
+          $ref: "#/components/schemas/TestWorkflowRunningContextInterfaceType"
+
+    TestWorkflowRunningContextActor:
+      description: running context actor for test workflow execution
+      type: object
+      required:
+        - type
+      properties:
+        name:
           type: string
-          description: caller resource execution id
-        fullExecutionPath:
+          description: actor name
+        username:
+          type: string
+          description: actor username
+        email:
+          type: string
+          description: actor email
+        executionId:
+          type: string
+          description: test workflow execution id
+        executionPath:
           type: string
           description: all test workflow execution ids starting from the root
+        type:
+          $ref: "#/components/schemas/TestWorkflowRunningContextActorType"
 
-    TestWorkflowRunningContextInterface:
+    TestWorkflowRunningContextInterfaceType:
       description: supported interfaces for test workflow running context
       type: string
       enum:
         - cli
         - ui
         - api
+        - ci/cd
         - internal
 
-    TestWorkflowRunningContextActor:
+    TestWorkflowRunningContextActorType:
       description: supported actors for test workflow running context
       type: string
       enum:
@@ -7208,6 +7226,7 @@ components:
         - user
         - testworkflow
         - testworkflowexecution
+        - program
 
     Webhook:
       description: CRD based webhook data

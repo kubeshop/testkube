@@ -9,14 +9,17 @@
  */
 package testkube
 
-// TestWorkflowRunningContextActor : supported actors for test workflow running context
-type TestWorkflowRunningContextActor string
-
-// List of TestWorkflowRunningContextActor
-const (
-	CRON_TestWorkflowRunningContextActor                  TestWorkflowRunningContextActor = "cron"
-	TESTRIGGER_TestWorkflowRunningContextActor            TestWorkflowRunningContextActor = "testrigger"
-	USER_TestWorkflowRunningContextActor                  TestWorkflowRunningContextActor = "user"
-	TESTWORKFLOW_TestWorkflowRunningContextActor          TestWorkflowRunningContextActor = "testworkflow"
-	TESTWORKFLOWEXECUTION_TestWorkflowRunningContextActor TestWorkflowRunningContextActor = "testworkflowexecution"
-)
+// running context actor for test workflow execution
+type TestWorkflowRunningContextActor struct {
+	// actor name
+	Name string `json:"name,omitempty"`
+	// actor username
+	Username string `json:"username,omitempty"`
+	// actor email
+	Email string `json:"email,omitempty"`
+	// test workflow execution id
+	ExecutionId string `json:"executionId,omitempty"`
+	// all test workflow execution ids starting from the root
+	ExecutionPath string                               `json:"executionPath,omitempty"`
+	Type_         *TestWorkflowRunningContextActorType `json:"type"`
+}

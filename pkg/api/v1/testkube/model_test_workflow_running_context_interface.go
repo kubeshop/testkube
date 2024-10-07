@@ -9,13 +9,9 @@
  */
 package testkube
 
-// TestWorkflowRunningContextInterface : supported interfaces for test workflow running context
-type TestWorkflowRunningContextInterface string
-
-// List of TestWorkflowRunningContextInterface
-const (
-	CLI_TestWorkflowRunningContextInterface      TestWorkflowRunningContextInterface = "cli"
-	UI_TestWorkflowRunningContextInterface       TestWorkflowRunningContextInterface = "ui"
-	API_TestWorkflowRunningContextInterface      TestWorkflowRunningContextInterface = "api"
-	INTERNAL_TestWorkflowRunningContextInterface TestWorkflowRunningContextInterface = "internal"
-)
+// running context interface for test workflow execution
+type TestWorkflowRunningContextInterface struct {
+	// interface name
+	Name  string                                   `json:"name,omitempty"`
+	Type_ *TestWorkflowRunningContextInterfaceType `json:"type"`
+}

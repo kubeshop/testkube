@@ -13,5 +13,4 @@ package testkube
 type TestWorkflowRunningContext struct {
 	Interface_ *TestWorkflowRunningContextInterface `json:"interface"`
 	Actor      *TestWorkflowRunningContextActor     `json:"actor"`
-	Caller     *TestWorkflowRunningContextCaller    `json:"caller,omitempty"`
 }
