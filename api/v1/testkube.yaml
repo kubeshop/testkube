@@ -8086,10 +8086,7 @@ components:
         tags:
           $ref: "#/components/schemas/TestWorkflowTagValue"
         runningContext:
-          type: array
-          description: running context for the test workflow execution
-          items:
-            $ref: "#/components/schemas/TestWorkflowRunningContext"
+          $ref: "#/components/schemas/TestWorkflowRunningContext"
         parentExecutionIds:
           type: array
           description: parent execution ids
@@ -8189,10 +8186,7 @@ components:
         tags:
           $ref: "#/components/schemas/TestWorkflowTagValue"
         runningContext:
-          type: array
-          description: running context for the test workflow execution
-          items:
-            $ref: "#/components/schemas/TestWorkflowRunningContext"
+          $ref: "#/components/schemas/TestWorkflowRunningContext"
       required:
         - id
         - name
@@ -8228,10 +8222,7 @@ components:
         tags:
           $ref: "#/components/schemas/TestWorkflowTagValue"
         runningContext:
-          type: array
-          description: running context for the test workflow execution
-          items:
-            $ref: "#/components/schemas/TestWorkflowRunningContext"
+          $ref: "#/components/schemas/TestWorkflowRunningContext"
       required:
         - id
         - name
