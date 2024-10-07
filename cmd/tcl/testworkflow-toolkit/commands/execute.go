@@ -174,10 +174,11 @@ func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async 
 		var exec testkube.TestWorkflowExecution
 		for i := 0; i < CreateExecutionRetryOnFailureMaxAttempts; i++ {
 			exec, err = c.ExecuteTestWorkflow(workflow.Name, testkube.TestWorkflowExecutionRequest{
-				Name:            workflow.ExecutionName,
-				Config:          testworkflows.MapConfigValueKubeToAPI(workflow.Config),
-				DisableWebhooks: env.ExecutionDisableWebhooks(),
-				Tags:            tags,
+				Name:               workflow.ExecutionName,
+				Config:             testworkflows.MapConfigValueKubeToAPI(workflow.Config),
+				DisableWebhooks:    env.ExecutionDisableWebhooks(),
+				Tags:               tags,
+				ParentExecutionIds: parentIds,
 			})
 			if err == nil {
 				break
