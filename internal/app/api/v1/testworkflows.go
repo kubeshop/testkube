@@ -373,6 +373,19 @@ func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 		var errs []error
 
 		request.TestWorkflowExecutionName = strings.Clone(c.Query("testWorkflowExecutionName"))
+		if request.RunningContext == nil {
+			request.RunningContext = &testkube.TestWorkflowRunningContext{
+				Interface_: &testkube.TestWorkflowRunningContextInterface{
+					Type_: common.Ptr(testkube.API_TestWorkflowRunningContextInterfaceType),
+				},
+				Actor: &testkube.TestWorkflowRunningContextActor{
+					Name:     "",
+					Username: "",
+					Email:    "",
+					Type_:    common.Ptr(testkube.PROGRAM_TestWorkflowRunningContextActorType),
+				},
+			}
+		}
 		concurrencyLevel := scheduler.DefaultConcurrencyLevel
 		workerpoolService := workerpool.New[testworkflowsv1.TestWorkflow, testkube.TestWorkflowExecutionRequest,
 			testkube.TestWorkflowExecution](concurrencyLevel)
