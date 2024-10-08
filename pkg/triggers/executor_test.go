@@ -202,14 +202,13 @@ func TestWorkflowExecute(t *testing.T) {
 			"WATCHER_EVENT_NAMESPACE":  "",
 			"WATCHER_EVENT_RESOURCE":   "",
 		},
-		RunningContext: []testkube.TestWorkflowRunningContext{
-			{
-				Interface_: common.Ptr(testkube.INTERNAL_TestWorkflowRunningContextInterface),
-				Actor:      common.Ptr(testkube.TESTRIGGER_TestWorkflowRunningContextActor),
-				Caller: &testkube.TestWorkflowRunningContextCaller{
-					CallerResourceType: common.Ptr(testkube.TESTTRIGGER_TestWorkflowRunningContextCallerResourceType),
-					CallerResourceName: "test-trigger-1",
-				},
+		RunningContext: &testkube.TestWorkflowRunningContext{
+			Interface_: &testkube.TestWorkflowRunningContextInterface{
+				Type_: common.Ptr(testkube.INTERNAL_TestWorkflowRunningContextInterfaceType),
+			},
+			Actor: &testkube.TestWorkflowRunningContextActor{
+				Name:  "test-trigger-1",
+				Type_: common.Ptr(testkube.TESTRIGGER_TestWorkflowRunningContextActorType),
 			},
 		},
 	}

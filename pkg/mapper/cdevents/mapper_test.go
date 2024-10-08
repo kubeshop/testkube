@@ -512,9 +512,9 @@ func TestMapTestkubeEventQueuedTestWorkflowTestToCDEvent(t *testing.T) {
 					},
 				},
 			},
-			RunningContext: []testkube.TestWorkflowRunningContext{
-				{
-					Actor: common.Ptr(testkube.CRON_TestWorkflowRunningContextActor),
+			RunningContext: &testkube.TestWorkflowRunningContext{
+				Actor: &testkube.TestWorkflowRunningContextActor{
+					Type_: common.Ptr(testkube.CRON_TestWorkflowRunningContextActorType),
 				},
 			},
 		},
@@ -598,9 +598,9 @@ func TestMapTestkubeEventQueuedTestWorkflowTestSuiteToCDEvent(t *testing.T) {
 					},
 				},
 			},
-			RunningContext: []testkube.TestWorkflowRunningContext{
-				{
-					Actor: common.Ptr(testkube.CRON_TestWorkflowRunningContextActor),
+			RunningContext: &testkube.TestWorkflowRunningContext{
+				Actor: &testkube.TestWorkflowRunningContextActor{
+					Type_: common.Ptr(testkube.CRON_TestWorkflowRunningContextActorType),
 				},
 			},
 		},
@@ -675,9 +675,9 @@ func TestMapTestkubeEventStartTestWorkflowTestToCDEvent(t *testing.T) {
 					},
 				},
 			},
-			RunningContext: []testkube.TestWorkflowRunningContext{
-				{
-					Actor: common.Ptr(testkube.CRON_TestWorkflowRunningContextActor),
+			RunningContext: &testkube.TestWorkflowRunningContext{
+				Actor: &testkube.TestWorkflowRunningContextActor{
+					Type_: common.Ptr(testkube.CRON_TestWorkflowRunningContextActorType),
 				},
 			},
 		},
@@ -762,9 +762,9 @@ func TestMapTestkubeEventStartTestWorkflowTestSuiteToCDEvent(t *testing.T) {
 					},
 				},
 			},
-			RunningContext: []testkube.TestWorkflowRunningContext{
-				{
-					Actor: common.Ptr(testkube.CRON_TestWorkflowRunningContextActor),
+			RunningContext: &testkube.TestWorkflowRunningContext{
+				Actor: &testkube.TestWorkflowRunningContextActor{
+					Type_: common.Ptr(testkube.CRON_TestWorkflowRunningContextActorType),
 				},
 			},
 		},
@@ -848,9 +848,9 @@ func TestMapTestkubeEventFinishTestWorkflowTestToCDEvent(t *testing.T) {
 					},
 				},
 			},
-			RunningContext: []testkube.TestWorkflowRunningContext{
-				{
-					Actor: common.Ptr(testkube.CRON_TestWorkflowRunningContextActor),
+			RunningContext: &testkube.TestWorkflowRunningContext{
+				Actor: &testkube.TestWorkflowRunningContextActor{
+					Type_: common.Ptr(testkube.CRON_TestWorkflowRunningContextActorType),
 				},
 			},
 		},
@@ -953,9 +953,9 @@ func TestMapTestkubeEventFinishTestWorkflowTestSuiteToCDEvent(t *testing.T) {
 					},
 				},
 			},
-			RunningContext: []testkube.TestWorkflowRunningContext{
-				{
-					Actor: common.Ptr(testkube.CRON_TestWorkflowRunningContextActor),
+			RunningContext: &testkube.TestWorkflowRunningContext{
+				Actor: &testkube.TestWorkflowRunningContextActor{
+					Type_: common.Ptr(testkube.CRON_TestWorkflowRunningContextActorType),
 				},
 			},
 		},

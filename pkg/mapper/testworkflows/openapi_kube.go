@@ -1380,24 +1380,29 @@ func MapTestWorkflowSignatureAPIToKube(v testkube.TestWorkflowSignature) testwor
 	}
 }
 
+func MapTestWorkflowRunningContextInterfaceTypeAPIToKube(v testkube.TestWorkflowRunningContextInterfaceType) testworkflowsv1.TestWorkflowRunningContextInterfaceType {
+	return testworkflowsv1.TestWorkflowRunningContextInterfaceType(v)
+}
+
 func MapTestWorkflowRunningContextInterfaceAPIToKube(v testkube.TestWorkflowRunningContextInterface) testworkflowsv1.TestWorkflowRunningContextInterface {
-	return testworkflowsv1.TestWorkflowRunningContextInterface(v)
+	return testworkflowsv1.TestWorkflowRunningContextInterface{
+		Name:  v.Name,
+		Type_: common.MapPtr(v.Type_, MapTestWorkflowRunningContextInterfaceTypeAPIToKube),
+	}
+}
+
+func MapTestWorkflowRunningContextActorTypeAPIToKube(v testkube.TestWorkflowRunningContextActorType) testworkflowsv1.TestWorkflowRunningContextActorType {
+	return testworkflowsv1.TestWorkflowRunningContextActorType(v)
 }
 
 func MapTestWorkflowRunningContextActorAPIToKube(v testkube.TestWorkflowRunningContextActor) testworkflowsv1.TestWorkflowRunningContextActor {
-	return testworkflowsv1.TestWorkflowRunningContextActor(v)
-}
-
-func MapTestWorkflowRunningContextCallerResourceTypeAPIToKube(v testkube.TestWorkflowRunningContextCallerResourceType) testworkflowsv1.TestWorkflowRunningContextCallerResourceType {
-	return testworkflowsv1.TestWorkflowRunningContextCallerResourceType(v)
-}
-
-func MapTestWorkflowRunningContextCallerAPIToKube(v testkube.TestWorkflowRunningContextCaller) testworkflowsv1.TestWorkflowRunningContextCaller {
-	return testworkflowsv1.TestWorkflowRunningContextCaller{
-		CallerResourceType:        common.MapPtr(v.CallerResourceType, MapTestWorkflowRunningContextCallerResourceTypeAPIToKube),
-		CallerResourceName:        v.CallerResourceName,
-		CallerResourceExecutionID: v.CallerResourceExecutionID,
-		FullExecutionPath:         v.FullExecutionPath,
+	return testworkflowsv1.TestWorkflowRunningContextActor{
+		Name:          v.Name,
+		Username:      v.Username,
+		Email:         v.Email,
+		ExecutionId:   v.ExecutionId,
+		ExecutionPath: v.ExecutionPath,
+		Type_:         common.MapPtr(v.Type_, MapTestWorkflowRunningContextActorTypeAPIToKube),
 	}
 }
 
@@ -1405,7 +1410,6 @@ func MapTestWorkflowRunningContextAPIToKube(v testkube.TestWorkflowRunningContex
 	return testworkflowsv1.TestWorkflowRunningContext{
 		Interface_: common.MapPtr(v.Interface_, MapTestWorkflowRunningContextInterfaceAPIToKube),
 		Actor:      common.MapPtr(v.Actor, MapTestWorkflowRunningContextActorAPIToKube),
-		Caller:     common.MapPtr(v.Caller, MapTestWorkflowRunningContextCallerAPIToKube),
 	}
 }
 
@@ -1426,7 +1430,7 @@ func MapTestWorkflowExecutionAPIToKube(v *testkube.TestWorkflowExecution) *testw
 		TestWorkflowExecutionName: v.TestWorkflowExecutionName,
 		DisableWebhooks:           v.DisableWebhooks,
 		Tags:                      v.Tags,
-		RunningContext:            common.MapSlice(v.RunningContext, MapTestWorkflowRunningContextAPIToKube),
+		RunningContext:            common.MapPtr(v.RunningContext, MapTestWorkflowRunningContextAPIToKube),
 	}
 }
 
@@ -1448,7 +1452,7 @@ func MapTestWorkflowExecutionAPIToKubeTestWorkflowStatusSummary(v *testkube.Test
 			Result:         common.MapPtr(v.Result, MapTestWorkflowResultAPIToKubeTestWorkflowResultSummary),
 			Workflow:       common.MapPtr(v.Workflow, MapTestWorkflowAPIToKubeTestWorkflowSummary),
 			Tags:           v.Tags,
-			RunningContext: common.MapSlice(v.RunningContext, MapTestWorkflowRunningContextAPIToKube),
+			RunningContext: common.MapPtr(v.RunningContext, MapTestWorkflowRunningContextAPIToKube),
 		},
 	}
 }

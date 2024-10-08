@@ -63,26 +63,14 @@ func printPrettyOutput(ui *ui.UI, execution testkube.TestWorkflowExecution) {
 			ui.NL()
 			ui.Warn("Tags:                ", testkube.MapToString(execution.Tags))
 		}
-		for _, ctx := range execution.RunningContext {
+		if execution.RunningContext != nil {
 			ui.Warn("Running context:     ")
+			ctx := execution.RunningContext
 			if ctx.Interface_ != nil {
-				ui.Warn("Interface:           ", string(*ctx.Interface_))
+				ui.Warn("Interface:           ", string(*ctx.Interface_.Type_))
 			}
 			if ctx.Actor != nil {
-				ui.Warn("Actor:               ", string(*ctx.Actor))
-			}
-			if ctx.Caller != nil {
-				ui.Warn("Caller:                ")
-				if ctx.Caller.CallerResourceType != nil {
-					ui.Warn("Resource type:       ", string(*ctx.Caller.CallerResourceType))
-				}
-				ui.Warn("Resource name:       ", ctx.Caller.CallerResourceName)
-				if ctx.Caller.CallerResourceExecutionID != "" {
-					ui.Warn("Execution ID:        ", ctx.Caller.CallerResourceExecutionID)
-				}
-				if ctx.Caller.FullExecutionPath != "" {
-					ui.Warn("Full execution path: ", ctx.Caller.FullExecutionPath)
-				}
+				ui.Warn("Actor:               ", string(*ctx.Actor.Type_))
 			}
 		}
 		if execution.Result != nil && execution.Result.Status != nil {

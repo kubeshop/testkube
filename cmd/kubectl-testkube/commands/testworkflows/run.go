@@ -69,10 +69,12 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 				Config:          config,
 				DisableWebhooks: disableWebhooks,
 				Tags:            tags,
-				RunningContext: []testkube.TestWorkflowRunningContext{
-					{
-						Interface_: intcommon.Ptr(testkube.CLI_TestWorkflowRunningContextInterface),
-						Actor:      intcommon.Ptr(testkube.USER_TestWorkflowRunningContextActor),
+				RunningContext: &testkube.TestWorkflowRunningContext{
+					Interface_: &testkube.TestWorkflowRunningContextInterface{
+						Type_: intcommon.Ptr(testkube.CLI_TestWorkflowRunningContextInterfaceType),
+					},
+					Actor: &testkube.TestWorkflowRunningContextActor{
+						Type_: intcommon.Ptr(testkube.USER_TestWorkflowRunningContextActorType),
 					},
 				},
 			})

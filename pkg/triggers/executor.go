@@ -136,14 +136,13 @@ func (s *Service) execute(ctx context.Context, e *watcherEvent, t *testtriggersv
 
 		request := testkube.TestWorkflowExecutionRequest{
 			Config: make(map[string]string, len(variables)),
-			RunningContext: []testkube.TestWorkflowRunningContext{
-				{
-					Interface_: common.Ptr(testkube.INTERNAL_TestWorkflowRunningContextInterface),
-					Actor:      common.Ptr(testkube.TESTRIGGER_TestWorkflowRunningContextActor),
-					Caller: &testkube.TestWorkflowRunningContextCaller{
-						CallerResourceType: common.Ptr(testkube.TESTTRIGGER_TestWorkflowRunningContextCallerResourceType),
-						CallerResourceName: t.Name,
-					},
+			RunningContext: &testkube.TestWorkflowRunningContext{
+				Interface_: &testkube.TestWorkflowRunningContextInterface{
+					Type_: common.Ptr(testkube.INTERNAL_TestWorkflowRunningContextInterfaceType),
+				},
+				Actor: &testkube.TestWorkflowRunningContextActor{
+					Name:  t.Name,
+					Type_: common.Ptr(testkube.TESTRIGGER_TestWorkflowRunningContextActorType),
 				},
 			},
 		}
