@@ -13,6 +13,7 @@ import (
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	mappertcl "github.com/kubeshop/testkube/pkg/tcl/mappertcl/testworkflows"
 )
 
 func MapStringToIntOrString(i string) intstr.IntOrString {
@@ -1380,39 +1381,6 @@ func MapTestWorkflowSignatureAPIToKube(v testkube.TestWorkflowSignature) testwor
 	}
 }
 
-func MapTestWorkflowRunningContextInterfaceTypeAPIToKube(v testkube.TestWorkflowRunningContextInterfaceType) testworkflowsv1.TestWorkflowRunningContextInterfaceType {
-	return testworkflowsv1.TestWorkflowRunningContextInterfaceType(v)
-}
-
-func MapTestWorkflowRunningContextInterfaceAPIToKube(v testkube.TestWorkflowRunningContextInterface) testworkflowsv1.TestWorkflowRunningContextInterface {
-	return testworkflowsv1.TestWorkflowRunningContextInterface{
-		Name:  v.Name,
-		Type_: common.MapPtr(v.Type_, MapTestWorkflowRunningContextInterfaceTypeAPIToKube),
-	}
-}
-
-func MapTestWorkflowRunningContextActorTypeAPIToKube(v testkube.TestWorkflowRunningContextActorType) testworkflowsv1.TestWorkflowRunningContextActorType {
-	return testworkflowsv1.TestWorkflowRunningContextActorType(v)
-}
-
-func MapTestWorkflowRunningContextActorAPIToKube(v testkube.TestWorkflowRunningContextActor) testworkflowsv1.TestWorkflowRunningContextActor {
-	return testworkflowsv1.TestWorkflowRunningContextActor{
-		Name:          v.Name,
-		Username:      v.Username,
-		Email:         v.Email,
-		ExecutionId:   v.ExecutionId,
-		ExecutionPath: v.ExecutionPath,
-		Type_:         common.MapPtr(v.Type_, MapTestWorkflowRunningContextActorTypeAPIToKube),
-	}
-}
-
-func MapTestWorkflowRunningContextAPIToKube(v testkube.TestWorkflowRunningContext) testworkflowsv1.TestWorkflowRunningContext {
-	return testworkflowsv1.TestWorkflowRunningContext{
-		Interface_: common.MapPtr(v.Interface_, MapTestWorkflowRunningContextInterfaceAPIToKube),
-		Actor:      common.MapPtr(v.Actor, MapTestWorkflowRunningContextActorAPIToKube),
-	}
-}
-
 func MapTestWorkflowExecutionAPIToKube(v *testkube.TestWorkflowExecution) *testworkflowsv1.TestWorkflowExecutionDetails {
 	return &testworkflowsv1.TestWorkflowExecutionDetails{
 		Id:                        v.Id,
@@ -1430,7 +1398,8 @@ func MapTestWorkflowExecutionAPIToKube(v *testkube.TestWorkflowExecution) *testw
 		TestWorkflowExecutionName: v.TestWorkflowExecutionName,
 		DisableWebhooks:           v.DisableWebhooks,
 		Tags:                      v.Tags,
-		RunningContext:            common.MapPtr(v.RunningContext, MapTestWorkflowRunningContextAPIToKube),
+		// Pro edition only (tcl protected code)
+		RunningContext: common.MapPtr(v.RunningContext, mappertcl.MapTestWorkflowRunningContextAPIToKube),
 	}
 }
 
@@ -1444,15 +1413,16 @@ func MapTestWorkflowExecutionStatusAPIToKube(v *testkube.TestWorkflowExecution, 
 func MapTestWorkflowExecutionAPIToKubeTestWorkflowStatusSummary(v *testkube.TestWorkflowExecution) testworkflowsv1.TestWorkflowStatusSummary {
 	return testworkflowsv1.TestWorkflowStatusSummary{
 		LatestExecution: &testworkflowsv1.TestWorkflowExecutionSummary{
-			Id:             v.Id,
-			Name:           v.Name,
-			Number:         v.Number,
-			ScheduledAt:    metav1.NewTime(v.ScheduledAt),
-			StatusAt:       metav1.NewTime(v.StatusAt),
-			Result:         common.MapPtr(v.Result, MapTestWorkflowResultAPIToKubeTestWorkflowResultSummary),
-			Workflow:       common.MapPtr(v.Workflow, MapTestWorkflowAPIToKubeTestWorkflowSummary),
-			Tags:           v.Tags,
-			RunningContext: common.MapPtr(v.RunningContext, MapTestWorkflowRunningContextAPIToKube),
+			Id:          v.Id,
+			Name:        v.Name,
+			Number:      v.Number,
+			ScheduledAt: metav1.NewTime(v.ScheduledAt),
+			StatusAt:    metav1.NewTime(v.StatusAt),
+			Result:      common.MapPtr(v.Result, MapTestWorkflowResultAPIToKubeTestWorkflowResultSummary),
+			Workflow:    common.MapPtr(v.Workflow, MapTestWorkflowAPIToKubeTestWorkflowSummary),
+			Tags:        v.Tags,
+			// Pro edition only (tcl protected code)
+			RunningContext: common.MapPtr(v.RunningContext, mappertcl.MapTestWorkflowRunningContextAPIToKube),
 		},
 	}
 }
