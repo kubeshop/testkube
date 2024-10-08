@@ -9654,6 +9654,8 @@ components:
           $ref: "#/components/schemas/BoxedInteger"
         runAsNonRoot:
           $ref: "#/components/schemas/BoxedBoolean"
+        fsGroup:
+          $ref: "#/components/schemas/BoxedInteger"
 
     Toleration:
       type: object
