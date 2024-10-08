@@ -28,10 +28,12 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/artifacts"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/transfer"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/expressions"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
@@ -80,7 +82,7 @@ func NewParallelCmd() *cobra.Command {
 			}
 
 			// Initialize transfer server
-			transferSrv := transfer.NewServer(constants.DefaultTransferDirPath, env.IP(), constants.DefaultTransferPort)
+			transferSrv := transfer.NewServer(constants.DefaultTransferDirPath, config.IP(), constants.DefaultTransferPort)
 
 			// Resolve the params
 			params, err := commontcl.GetParamsSpec(parallel.Matrix, parallel.Shards, parallel.Count, parallel.MaxCount, baseMachine)
@@ -170,7 +172,7 @@ func NewParallelCmd() *cobra.Command {
 
 			// Send initial output
 			for index := range specs {
-				instructions.PrintOutput(env.Ref(), "parallel", ParallelStatus{
+				instructions.PrintOutput(config.Ref(), "parallel", ParallelStatus{
 					Index:       index,
 					Description: descriptions[index],
 				})
@@ -193,7 +195,21 @@ func NewParallelCmd() *cobra.Command {
 			run := func(index int64, spec *testworkflowsv1.TestWorkflowSpec) bool {
 				clientSet := env.Kubernetes()
 				log := spawn.CreateLogger("worker", descriptions[index], index, params.Count)
-				id, machine := spawn.CreateExecutionMachine("", index)
+
+				// Determine the namespace
+				namespace := config.Namespace()
+				if spec.Job != nil && spec.Job.Namespace != "" {
+					namespace = spec.Job.Namespace
+				}
+
+				// Build the configuration
+				cfg := *config.Config()
+				cfg.Resource = spawn.CreateResourceConfig("", index)
+				cfg.Runtime.Namespace = namespace
+				machine := expressions.CombinedMachines(
+					testworkflowconfig.CreateResourceMachine(&cfg.Resource),
+					testworkflowconfig.CreateRuntimeMachine(&cfg.Runtime),
+				)
 
 				// Register that there is some operation queued
 				registry.SetStatus(index, nil)
@@ -203,7 +219,7 @@ func NewParallelCmd() *cobra.Command {
 				// Build the resources bundle
 				scheduledAt := time.Now()
 				bundle, err := presets.NewPro(inspector).
-					Bundle(context.Background(), &testworkflowsv1.TestWorkflow{Spec: *spec}, testworkflowprocessor.BundleOptions{},
+					Bundle(context.Background(), &testworkflowsv1.TestWorkflow{Spec: *spec}, testworkflowprocessor.BundleOptions{Config: cfg},
 						machine, baseMachine, params.MachineAt(index))
 				if err != nil {
 					fmt.Printf("%d: failed to prepare resources: %s\n", index, err.Error())
@@ -213,10 +229,6 @@ func NewParallelCmd() *cobra.Command {
 
 				// Compute the bundle instructions
 				sig := stage.MapSignatureListToInternal(bundle.Signature)
-				namespace := bundle.Job.Namespace
-				if namespace == "" {
-					namespace = env.Namespace()
-				}
 
 				// Deploy the resources
 				err = bundle.Deploy(context.Background(), clientSet, namespace)
@@ -241,7 +253,7 @@ func NewParallelCmd() *cobra.Command {
 					if shouldSaveLogs {
 						logsFilePath, err := spawn.SaveLogsWithController(context.Background(), storage, ctrl, "", index)
 						if err == nil {
-							instructions.PrintOutput(env.Ref(), "parallel", ParallelStatus{Index: int(index), Logs: storage.FullPath(logsFilePath)})
+							instructions.PrintOutput(config.Ref(), "parallel", ParallelStatus{Index: int(index), Logs: storage.FullPath(logsFilePath)})
 							log("saved logs")
 						} else {
 							log("warning", "problem saving the logs", err.Error())
@@ -249,7 +261,7 @@ func NewParallelCmd() *cobra.Command {
 					}
 
 					// Clean up
-					err = testworkflowcontroller.Cleanup(context.Background(), clientSet, namespace, id)
+					err = testworkflowcontroller.Cleanup(context.Background(), clientSet, namespace, cfg.Resource.Id)
 					if err == nil {
 						log("cleaned resources")
 					} else {
@@ -259,11 +271,11 @@ func NewParallelCmd() *cobra.Command {
 				}()
 
 				// Inform about the step structure
-				instructions.PrintOutput(env.Ref(), "parallel", ParallelStatus{Index: int(index), Signature: sig})
+				instructions.PrintOutput(config.Ref(), "parallel", ParallelStatus{Index: int(index), Signature: sig})
 
 				// Control the execution
 				// TODO: Consider aggregated controller to limit number of watchers
-				ctrl, err = testworkflowcontroller.New(context.Background(), clientSet, namespace, id, scheduledAt)
+				ctrl, err = testworkflowcontroller.New(context.Background(), clientSet, namespace, cfg.Resource.Id, scheduledAt)
 				if err != nil {
 					log("error", "failed to connect to the job", err.Error())
 					return false
@@ -303,18 +315,18 @@ func NewParallelCmd() *cobra.Command {
 						prevStatus = v.Status
 
 						if lastResult.IsFinished() {
-							instructions.PrintOutput(env.Ref(), "parallel", ParallelStatus{Index: int(index), Status: v.Status, Result: v.Result})
+							instructions.PrintOutput(config.Ref(), "parallel", ParallelStatus{Index: int(index), Status: v.Status, Result: v.Result})
 							ctxCancel()
 							return v.Result.IsPassed()
 						} else {
-							instructions.PrintOutput(env.Ref(), "parallel", ParallelStatus{Index: int(index), Status: v.Status, Current: v.Current})
+							instructions.PrintOutput(config.Ref(), "parallel", ParallelStatus{Index: int(index), Status: v.Status, Current: v.Current})
 						}
 					}
 				}
 
 				// Fallback in case there is a problem with finishing
 				log("could not determine status of the worker - aborting")
-				instructions.PrintOutput(env.Ref(), "parallel", ParallelStatus{Index: int(index), Status: testkube.ABORTED_TestWorkflowStatus, Result: &lastResult})
+				instructions.PrintOutput(config.Ref(), "parallel", ParallelStatus{Index: int(index), Status: testkube.ABORTED_TestWorkflowStatus, Result: &lastResult})
 				log(string(testkube.ABORTED_TestWorkflowStatus))
 				lastResult.Status = common.Ptr(testkube.ABORTED_TestWorkflowStatus)
 				if lastResult.FinishedAt.IsZero() {

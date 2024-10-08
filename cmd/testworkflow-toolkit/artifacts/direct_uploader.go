@@ -10,6 +10,7 @@ import (
 	minio2 "github.com/minio/minio-go/v7"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -53,7 +54,7 @@ func (d *directUploader) buildOptions(path string, size int64) (options minio2.P
 }
 
 func (d *directUploader) upload(path string, file io.Reader, size int64) {
-	ns := env.ExecutionId()
+	ns := config.ExecutionId()
 	opts := d.buildOptions(path, size)
 	err := d.client.SaveFileDirect(context.Background(), ns, path, file, size, opts)
 

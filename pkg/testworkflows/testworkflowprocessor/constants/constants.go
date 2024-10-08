@@ -9,6 +9,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
 	"github.com/kubeshop/testkube/pkg/version"
 )
 
@@ -23,7 +24,8 @@ const (
 	SignatureAnnotationName         = "testworkflows.testkube.io/signature"
 	SpecAnnotationName              = "testworkflows.testkube.io/spec"
 	SpecAnnotationFieldPath         = "metadata.annotations['" + SpecAnnotationName + "']"
-	RFC3339Millis                   = "2006-01-02T15:04:05.000Z07:00"
+	InternalAnnotationName          = "testworkflows.testkube.io/config"
+	InternalAnnotationFieldPath     = "metadata.annotations['" + InternalAnnotationName + "']"
 	OpenSourceOperationErrorMessage = "operation is not available when running the Testkube Agent in the standalone mode"
 	RootOperationName               = "root"
 )
@@ -51,6 +53,12 @@ var (
 )
 
 func getInitImage() string {
+	// Handle getter in the toolkit
+	if os.Getenv("TK_CFG") != "" {
+		return config.Config().Runtime.InitImage
+	}
+
+	// Handle executor's getter
 	img := os.Getenv("TESTKUBE_TW_INIT_IMAGE")
 	if img == "" {
 		ver := version.Version
@@ -63,6 +71,12 @@ func getInitImage() string {
 }
 
 func getToolkitImage() string {
+	// Handle getter in the toolkit
+	if os.Getenv("TK_CFG") != "" {
+		return config.Config().Runtime.ToolkitImage
+	}
+
+	// Handle executor's getter
 	img := os.Getenv("TESTKUBE_TW_TOOLKIT_IMAGE")
 	if img == "" {
 		ver := version.Version

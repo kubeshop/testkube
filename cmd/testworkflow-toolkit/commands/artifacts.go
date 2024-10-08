@@ -12,6 +12,7 @@ import (
 
 	"google.golang.org/protobuf/types/known/emptypb"
 
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
 	"github.com/kubeshop/testkube/pkg/agent"
 	"github.com/kubeshop/testkube/pkg/capabilities"
 	"github.com/kubeshop/testkube/pkg/cloud"
@@ -39,7 +40,7 @@ var directDisableMultipart = artifacts.WithMinioOptionsEnhancer(func(options *mi
 var directUnpack = artifacts.WithMinioOptionsEnhancer(func(options *minio.PutObjectOptions, path string, size int64) {
 	options.UserMetadata = map[string]string{
 		"X-Amz-Meta-Snowball-Auto-Extract": "true",
-		"X-Amz-Meta-Minio-Snowball-Prefix": env.WorkflowName() + "/" + env.ExecutionId(),
+		"X-Amz-Meta-Minio-Snowball-Prefix": config.WorkflowName() + "/" + config.ExecutionId(),
 	}
 })
 
@@ -98,10 +99,10 @@ func NewArtifactsCmd() *cobra.Command {
 
 			var handlerOpts []artifacts.HandlerOpts
 			// Archive
-			if env.CloudEnabled() {
+			if config.CloudEnabled() {
 				ctx, cancel := context.WithTimeout(cmd.Context(), 30*time.Second)
 				defer cancel()
-				ctx = agent.AddAPIKeyMeta(ctx, env.Config().Cloud.ApiKey)
+				ctx = agent.AddAPIKeyMeta(ctx, config.Config().Runtime.Connection.ApiKey)
 				executor, client := env.Cloud(ctx)
 				proContext, err := client.GetProContext(ctx, &emptypb.Empty{})
 				var supported []*cloud.Capability
@@ -113,8 +114,8 @@ func NewArtifactsCmd() *cobra.Command {
 				}
 				defer executor.Close()
 
-				if env.JUnitParserEnabled() || capabilities.Enabled(supported, capabilities.CapabilityJUnitReports) {
-					junitProcessor := artifacts.NewJUnitPostProcessor(filesystem.NewOSFileSystem(), executor, walker.Root(), env.Config().Execution.FSPrefix)
+				if config.JUnitParserEnabled() || capabilities.Enabled(supported, capabilities.CapabilityJUnitReports) {
+					junitProcessor := artifacts.NewJUnitPostProcessor(filesystem.NewOSFileSystem(), executor, walker.Root(), config.Config().Resource.FsPrefix)
 					handlerOpts = append(handlerOpts, artifacts.WithPostProcessor(junitProcessor))
 				}
 				if compress != "" {
@@ -143,19 +144,19 @@ func NewArtifactsCmd() *cobra.Command {
 			}
 
 			// Isolate the files under specific prefix
-			if env.Config().Execution.FSPrefix != "" {
-				handlerOpts = append(handlerOpts, artifacts.WithPathPrefix(env.Config().Execution.FSPrefix))
+			if config.Config().Resource.FsPrefix != "" {
+				handlerOpts = append(handlerOpts, artifacts.WithPathPrefix(config.Config().Resource.FsPrefix))
 			}
 
-			// Support cd evaents
-			if env.Config().System.CDEventsTarget != "" {
-				handlerOpts = append(handlerOpts, artifacts.WithCDEventsTarget(env.Config().System.CDEventsTarget))
+			// Support cd events
+			if config.Config().ControlPlane.CDEventsTarget != "" {
+				handlerOpts = append(handlerOpts, artifacts.WithCDEventsTarget(config.Config().ControlPlane.CDEventsTarget))
 				handlerOpts = append(handlerOpts, artifacts.WithCDEventsArtifactParameters(cdevents.CDEventsArtifactParameters{
-					Id:           env.Config().Execution.Id,
-					Name:         env.Config().Execution.Name,
-					WorkflowName: env.Config().Execution.WorkflowName,
-					ClusterID:    env.Config().System.ClusterID,
-					DashboardURI: env.Config().System.DashboardUrl,
+					Id:           config.Config().Execution.Id,
+					Name:         config.Config().Execution.Name,
+					WorkflowName: config.Config().Workflow.Name,
+					ClusterID:    config.Config().Runtime.ClusterID,
+					DashboardURI: config.Config().ControlPlane.DashboardUrl,
 				}))
 			}
 

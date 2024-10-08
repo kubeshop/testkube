@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strconv"
 	"sync"
 	"time"
 
@@ -31,6 +30,7 @@ import (
 	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/secretmanager"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
@@ -331,42 +331,114 @@ func (e *executor) Control(ctx context.Context, testWorkflow *testworkflowsv1.Te
 	return nil
 }
 
-func (e *executor) getMachine(workflow *testworkflowsv1.TestWorkflow, namespace string, resourceId, rootResourceId, fsPrefix string) expressions.Machine {
-	// Prepare all the data for resolving Test Workflow
-	storageMachine := createStorageMachine()
-	cloudMachine := createCloudMachine()
-	workflowMachine := createWorkflowMachine(workflow)
-	resourceMachine := createResourceMachine(resourceId, rootResourceId, fsPrefix)
-	restMachine := expressions.NewMachine().
-		RegisterStringMap("internal", map[string]string{
-			"serviceaccount.default": e.serviceAccountNames[namespace],
-
-			"api.url":         e.apiUrl,
-			"namespace":       namespace,
-			"defaultRegistry": e.defaultRegistry,
-			"clusterId":       e.clusterID,
-			"cdeventsTarget":  os.Getenv("CDEVENTS_TARGET"),
-
-			"images.defaultRegistry":     e.defaultRegistry,
-			"images.init":                constants.DefaultInitImage,
-			"images.toolkit":             constants.DefaultToolkitImage,
-			"images.persistence.enabled": strconv.FormatBool(e.enableImageDataPersistentCache),
-			"images.persistence.key":     e.imageDataPersistentCacheKey,
-			"images.cache.ttl":           common.GetOr(os.Getenv("TESTKUBE_IMAGE_CREDENTIALS_CACHE_TTL"), "30m"),
-		})
-	return expressions.CombinedMachines(storageMachine, cloudMachine, workflowMachine, resourceMachine, restMachine)
+func (e *executor) getPreExecutionMachine(workflow *testworkflowsv1.TestWorkflow, orgId, envId string) expressions.Machine {
+	controlPlaneConfig := e.buildControlPlaneConfig(orgId, envId)
+	workflowConfig := e.buildWorkflowConfig(workflow)
+	cloudMachine := testworkflowconfig.CreateCloudMachine(&controlPlaneConfig)
+	workflowMachine := testworkflowconfig.CreateWorkflowMachine(&workflowConfig)
+	return expressions.CombinedMachines(cloudMachine, workflowMachine)
 }
 
-func (e *executor) getExecutionMachine(execution *testkube.TestWorkflowExecution) expressions.Machine {
-	// Build machine with actual execution data
-	return expressions.NewMachine().Register("execution", map[string]interface{}{
-		"id":              execution.Id,
-		"name":            execution.Name,
-		"number":          execution.Number,
-		"scheduledAt":     execution.ScheduledAt.Format(constants.RFC3339Millis),
-		"disableWebhooks": execution.DisableWebhooks,
-		"tags":            execution.Tags,
-	})
+func (e *executor) getPostExecutionMachine(execution *testkube.TestWorkflowExecution, orgId, envId, resourceId, rootResourceId, fsPrefix string) expressions.Machine {
+	executionConfig := e.buildExecutionConfig(execution, orgId, envId)
+	resourceConfig := e.buildResourceConfig(resourceId, rootResourceId, fsPrefix)
+	resourceMachine := testworkflowconfig.CreateResourceMachine(&resourceConfig)
+	executionMachine := testworkflowconfig.CreateExecutionMachine(&executionConfig)
+	return expressions.CombinedMachines(executionMachine, resourceMachine)
+}
+
+func (e *executor) getRuntimeMachine(namespace string) expressions.Machine {
+	runtimeConfig := e.buildRuntimeConfig(namespace)
+	return testworkflowconfig.CreateRuntimeMachine(&runtimeConfig)
+}
+
+func (e *executor) buildExecutionConfig(execution *testkube.TestWorkflowExecution, orgId, envId string) testworkflowconfig.ExecutionConfig {
+	return testworkflowconfig.ExecutionConfig{
+		Id:              execution.Id,
+		Name:            execution.Name,
+		Number:          execution.Number,
+		ScheduledAt:     execution.ScheduledAt,
+		DisableWebhooks: execution.DisableWebhooks,
+		Tags:            execution.Tags,
+		Debug:           false,
+		OrganizationId:  orgId,
+		EnvironmentId:   envId,
+	}
+}
+
+func (e *executor) buildWorkflowConfig(workflow *testworkflowsv1.TestWorkflow) testworkflowconfig.WorkflowConfig {
+	return testworkflowconfig.WorkflowConfig{
+		Name:   workflow.Name,
+		Labels: workflow.Labels,
+	}
+}
+
+func (e *executor) buildResourceConfig(resourceId, rootResourceId, fsPrefix string) testworkflowconfig.ResourceConfig {
+	return testworkflowconfig.ResourceConfig{
+		Id:       resourceId,
+		RootId:   rootResourceId,
+		FsPrefix: fsPrefix,
+	}
+}
+
+func (e *executor) buildRuntimeConfig(namespace string) testworkflowconfig.RuntimeConfig {
+	duration, err := time.ParseDuration(common.GetOr(os.Getenv("TESTKUBE_IMAGE_CREDENTIALS_CACHE_TTL"), "30m"))
+	if err != nil {
+		duration = 30 * time.Minute
+	}
+
+	cloudUrl := common.GetOr(os.Getenv("TESTKUBE_PRO_URL"), os.Getenv("TESTKUBE_CLOUD_URL"))
+	cloudApiKey := common.GetOr(os.Getenv("TESTKUBE_PRO_API_KEY"), os.Getenv("TESTKUBE_CLOUD_API_KEY"))
+	if cloudApiKey == "" {
+		cloudUrl = ""
+	}
+
+	return testworkflowconfig.RuntimeConfig{
+		Namespace:                         namespace,
+		DefaultRegistry:                   e.defaultRegistry,
+		DefaultServiceAccount:             e.serviceAccountNames[namespace],
+		ClusterID:                         e.clusterID,
+		InitImage:                         constants.DefaultInitImage,
+		ToolkitImage:                      constants.DefaultToolkitImage,
+		ImageInspectorPersistenceEnabled:  e.enableImageDataPersistentCache,
+		ImageInspectorPersistenceCacheKey: e.imageDataPersistentCacheKey,
+		ImageInspectorPersistenceCacheTTL: duration,
+
+		Connection: testworkflowconfig.RuntimeConnectionConfig{
+			Url:         cloudUrl,
+			ApiKey:      cloudApiKey,
+			SkipVerify:  common.GetOr(os.Getenv("TESTKUBE_PRO_SKIP_VERIFY"), os.Getenv("TESTKUBE_CLOUD_SKIP_VERIFY"), "false") == "true",
+			TlsInsecure: common.GetOr(os.Getenv("TESTKUBE_PRO_TLS_INSECURE"), os.Getenv("TESTKUBE_CLOUD_TLS_INSECURE"), "false") == "true",
+
+			// TODO: Avoid
+			LocalApiUrl: e.apiUrl,
+			ObjectStorage: testworkflowconfig.ObjectStorageConfig{
+				Endpoint:        os.Getenv("STORAGE_ENDPOINT"),
+				AccessKeyID:     os.Getenv("STORAGE_ACCESSKEYID"),
+				SecretAccessKey: os.Getenv("STORAGE_SECRETACCESSKEY"),
+				Region:          os.Getenv("STORAGE_REGION"),
+				Token:           os.Getenv("STORAGE_TOKEN"),
+				Bucket:          os.Getenv("STORAGE_BUCKET"),
+				Ssl:             common.GetOr(os.Getenv("STORAGE_SSL"), "false") == "true",
+				SkipVerify:      common.GetOr(os.Getenv("STORAGE_SKIP_VERIFY"), "false") == "true",
+				CertFile:        os.Getenv("STORAGE_CERT_FILE"),
+				KeyFile:         os.Getenv("STORAGE_KEY_FILE"),
+				CAFile:          os.Getenv("STORAGE_CA_FILE"),
+			},
+		},
+	}
+}
+
+func (e *executor) buildControlPlaneConfig(orgId, envId string) testworkflowconfig.ControlPlaneConfig {
+	dashboardUrl := e.dashboardURI
+	if orgId != "" && envId != "" && dashboardUrl == "" {
+		cloudUiUrl := common.GetOr(os.Getenv("TESTKUBE_PRO_UI_URL"), os.Getenv("TESTKUBE_CLOUD_UI_URL"))
+		dashboardUrl = fmt.Sprintf("%s/organization/%s/environment/%s/dashboard", cloudUiUrl, orgId, envId)
+	}
+	return testworkflowconfig.ControlPlaneConfig{
+		DashboardUrl:   dashboardUrl,
+		CDEventsTarget: os.Getenv("CDEVENTS_TARGET"),
+	}
 }
 
 func (e *executor) initialize(ctx context.Context, workflow *testworkflowsv1.TestWorkflow, request *testkube.TestWorkflowExecutionRequest) (execution *testkube.TestWorkflowExecution, namespace string, secrets []corev1.Secret, err error) {
@@ -482,14 +554,6 @@ func (e *executor) initialize(ctx context.Context, workflow *testworkflowsv1.Tes
 		return execution, "", nil, err
 	}
 
-	// Apply default service account
-	if workflow.Spec.Pod == nil {
-		workflow.Spec.Pod = &testworkflowsv1.PodConfig{}
-	}
-	if workflow.Spec.Pod.ServiceAccountName == "" {
-		workflow.Spec.Pod.ServiceAccountName = "{{internal.serviceaccount.default}}"
-	}
-
 	// Try to resolve the tags further
 	if workflow.Spec.Execution != nil {
 		execution.Tags = workflow.Spec.Execution.Tags
@@ -500,10 +564,19 @@ func (e *executor) initialize(ctx context.Context, workflow *testworkflowsv1.Tes
 	execution.Namespace = namespace // TODO: DELETE?
 	execution.ResolvedWorkflow = testworkflowmappers.MapKubeToAPI(resolvedWorkflow)
 
-	// Simplify the workflow
-	machine := e.getMachine(workflow, namespace, executionId, executionId, "")
-	executionMachine := e.getExecutionMachine(execution)
-	_ = expressions.Simplify(&workflow, machine, executionMachine)
+	// Determine the organization/environment
+	cloudApiKey := common.GetOr(os.Getenv("TESTKUBE_PRO_API_KEY"), os.Getenv("TESTKUBE_CLOUD_API_KEY"))
+	environmentId := common.GetOr(os.Getenv("TESTKUBE_PRO_ENV_ID"), os.Getenv("TESTKUBE_CLOUD_ENV_ID"))
+	organizationId := common.GetOr(os.Getenv("TESTKUBE_PRO_ORG_ID"), os.Getenv("TESTKUBE_CLOUD_ORG_ID"))
+	if cloudApiKey == "" {
+		organizationId = ""
+		environmentId = ""
+	}
+
+	// Simplify the result
+	preMachine := e.getPreExecutionMachine(workflow, organizationId, environmentId)
+	postMachine := e.getPostExecutionMachine(execution, organizationId, environmentId, executionId, executionId, "")
+	_ = expressions.Simplify(&workflow, preMachine, postMachine)
 
 	// Build the final tags
 	if workflow.Spec.Execution != nil {
@@ -629,6 +702,8 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	}
 	e.emitter.Notify(testkube.NewEventQueueTestWorkflow(execution))
 
+	// TODO: Check if we need to resolve the [control plane] secrets (?)
+
 	// Send events
 	defer e.notifyResult(execution)
 
@@ -639,12 +714,39 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		return *execution, nil
 	}
 
-	// Process and deploy the execution
-	machine := e.getMachine(&workflow, namespace, execution.Id, execution.Id, "")
-	executionMachine := e.getExecutionMachine(execution)
+	// Determine the organization/environment
+	cloudApiKey := common.GetOr(os.Getenv("TESTKUBE_PRO_API_KEY"), os.Getenv("TESTKUBE_CLOUD_API_KEY"))
+	environmentId := common.GetOr(os.Getenv("TESTKUBE_PRO_ENV_ID"), os.Getenv("TESTKUBE_CLOUD_ENV_ID"))
+	organizationId := common.GetOr(os.Getenv("TESTKUBE_PRO_ORG_ID"), os.Getenv("TESTKUBE_CLOUD_ORG_ID"))
+	if cloudApiKey == "" {
+		organizationId = ""
+		environmentId = ""
+	}
+
+	//// Simplify the workflow
+	//preMachine := e.getPreExecutionMachine(&workflow, organizationId, environmentId)
+	//postMachine := e.getPostExecutionMachine(execution, organizationId, environmentId, execution.Id, execution.Id, "")
+	//runtimeMachine := e.getRuntimeMachine(namespace)
+
+	// Apply default service account
+	if workflow.Spec.Pod == nil {
+		workflow.Spec.Pod = &testworkflowsv1.PodConfig{}
+	}
+	if workflow.Spec.Pod.ServiceAccountName == "" {
+		workflow.Spec.Pod.ServiceAccountName = "{{internal.serviceaccount.default}}"
+	}
+
+	// Build the toolkit configuration
+	internalConfig := testworkflowconfig.InternalConfig{
+		Execution:    e.buildExecutionConfig(execution, organizationId, environmentId),
+		Workflow:     e.buildWorkflowConfig(&workflow),
+		Resource:     e.buildResourceConfig(execution.Id, execution.Id, ""),
+		ControlPlane: e.buildControlPlaneConfig(organizationId, environmentId),
+		Runtime:      e.buildRuntimeConfig(namespace),
+	}
 
 	// Process the TestWorkflow
-	bundle, err := e.processor.Bundle(ctx, &workflow, testworkflowprocessor.BundleOptions{Secrets: secrets}, machine, executionMachine)
+	bundle, err := e.processor.Bundle(ctx, &workflow, testworkflowprocessor.BundleOptions{Config: internalConfig, Secrets: secrets})
 	if err != nil {
 		defer e.saveEmptyLogs(execution)
 		execution.InitializationError("Failed to process Test Workflow.", err)

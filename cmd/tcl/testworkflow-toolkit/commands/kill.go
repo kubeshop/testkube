@@ -22,6 +22,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/artifacts"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
@@ -58,7 +59,8 @@ func NewKillCmd() *cobra.Command {
 
 			// Fetch the services when needed
 			if len(logs) > 0 {
-				jobs, err := clientSet.BatchV1().Jobs(env.Namespace()).List(context.Background(), metav1.ListOptions{
+				// TODO: Should take the namespace as argument too
+				jobs, err := clientSet.BatchV1().Jobs(config.Namespace()).List(context.Background(), metav1.ListOptions{
 					LabelSelector: fmt.Sprintf("%s=%s", constants.GroupIdLabelName, groupRef),
 				})
 				ui.ExitOnError("listing service resources", err)
@@ -103,9 +105,9 @@ func NewKillCmd() *cobra.Command {
 					}
 					log := spawn.CreateLogger(service, "", index, count)
 
-					logsFilePath, err := spawn.SaveLogs(context.Background(), clientSet, storage, env.Namespace(), id, service+"/", index)
+					logsFilePath, err := spawn.SaveLogs(context.Background(), clientSet, storage, config.Namespace(), id, service+"/", index)
 					if err == nil {
-						instructions.PrintOutput(env.Ref(), "service", ServiceInfo{Group: groupRef, Name: service, Index: index, Logs: storage.FullPath(logsFilePath)})
+						instructions.PrintOutput(config.Ref(), "service", ServiceInfo{Group: groupRef, Name: service, Index: index, Logs: storage.FullPath(logsFilePath)})
 						log("saved logs")
 					} else {
 						log("warning", "problem saving the logs", err.Error())
@@ -113,7 +115,7 @@ func NewKillCmd() *cobra.Command {
 				}
 			}
 
-			err := testworkflowcontroller.CleanupGroup(context.Background(), clientSet, env.Namespace(), groupRef)
+			err := testworkflowcontroller.CleanupGroup(context.Background(), clientSet, config.Namespace(), groupRef)
 			ui.ExitOnError("cleaning up resources", err)
 		},
 	}
