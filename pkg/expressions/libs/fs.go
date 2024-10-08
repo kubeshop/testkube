@@ -147,6 +147,7 @@ func NewFsMachine(fsys fs.FS, workingDir string) expressions.Machine {
 		workingDir = "/"
 	}
 	return expressions.NewMachine().
+		Register("workingDir", workingDir).
 		RegisterFunction("file", func(values ...expressions.StaticValue) (interface{}, bool, error) {
 			v, err := readFile(fsys, workingDir, values...)
 			return v, true, err
