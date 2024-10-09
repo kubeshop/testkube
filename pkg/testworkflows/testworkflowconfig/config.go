@@ -2,6 +2,14 @@ package testworkflowconfig
 
 import "time"
 
+type InternalConfig struct {
+	Execution    ExecutionConfig    `json:"e,omitempty"`
+	Workflow     WorkflowConfig     `json:"w,omitempty"`
+	Resource     ResourceConfig     `json:"r,omitempty"`
+	ControlPlane ControlPlaneConfig `json:"c,omitempty"`
+	Runtime      RuntimeConfig      `json:"R,omitempty"`
+}
+
 type ExecutionConfig struct {
 	Id              string            `json:"i,omitempty"`
 	Name            string            `json:"n,omitempty"`
@@ -23,6 +31,11 @@ type ResourceConfig struct {
 	Id       string `json:"i,omitempty"`
 	RootId   string `json:"r,omitempty"`
 	FsPrefix string `json:"f,omitempty"`
+}
+
+type ControlPlaneConfig struct {
+	DashboardUrl   string `json:"D,omitempty"` // TODO: Should be in different place?
+	CDEventsTarget string `json:"c,omitempty"`
 }
 
 type RuntimeConfig struct {
@@ -50,6 +63,7 @@ type RuntimeConnectionConfig struct {
 	ObjectStorage ObjectStorageConfig `json:"O,omitempty"` // TODO: Avoid using Object Storage only directly
 }
 
+// TODO: Avoid using Object Storage directly
 type ObjectStorageConfig struct {
 	Endpoint        string `json:"e,omitempty"`
 	AccessKeyID     string `json:"a,omitempty"`
@@ -62,17 +76,4 @@ type ObjectStorageConfig struct {
 	CertFile        string `json:"c,omitempty"`
 	KeyFile         string `json:"k,omitempty"`
 	CAFile          string `json:"C,omitempty"`
-}
-
-type ControlPlaneConfig struct {
-	DashboardUrl   string `json:"D,omitempty"` // TODO: Should be in different place?
-	CDEventsTarget string `json:"c,omitempty"`
-}
-
-type InternalConfig struct {
-	Execution    ExecutionConfig    `json:"e,omitempty"`
-	Workflow     WorkflowConfig     `json:"w,omitempty"`
-	Resource     ResourceConfig     `json:"r,omitempty"`
-	ControlPlane ControlPlaneConfig `json:"c,omitempty"`
-	Runtime      RuntimeConfig      `json:"R,omitempty"`
 }
