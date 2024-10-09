@@ -30,7 +30,7 @@ type WorkflowConfig struct {
 
 type ControlPlaneConfig struct {
 	DashboardUrl   string `json:"D,omitempty"` // TODO: Should be in different place?
-	CDEventsTarget string `json:"c,omitempty"`
+	CDEventsTarget string `json:"c,omitempty"` // TODO: Should it be used by execution directly?
 }
 
 type ResourceConfig struct {
