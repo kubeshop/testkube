@@ -2,7 +2,7 @@
 # Step 1: Use a base image with Docker installed
 FROM docker:20.10.24-dind
 
-# Step 2: Install necessary dependencies (curl, bash, tini)
+# Step 2: Install necessary dependencies (curl, bash, tini, jq)
 RUN apk add --no-cache bash curl tini jq
 
 # Step 3: Install Kind (Kubernetes in Docker)
