@@ -91,6 +91,7 @@ func (s *TestkubeAPI) InfoHandler() fiber.Handler {
 				LogsV2: s.featureFlags.LogsV2,
 			},
 			ExecutionNamespaces: executionNamespaces,
+			DockerImageVersion:  s.dockerImageVersion,
 		})
 	}
 }
