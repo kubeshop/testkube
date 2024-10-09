@@ -86,6 +86,10 @@ func (d *cloudUploader) getContentType(path string, size int64) string {
 func (d *cloudUploader) putObject(url string, path string, file io.Reader, size int64) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
+	if size == 0 {
+		// http.Request won't send Content-Length: 0, if the body is non-nil
+		file = nil
+	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPut, url, file)
 	if err != nil {
 		return err
