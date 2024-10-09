@@ -117,16 +117,16 @@ send_event_to_ga() {
   # Prepare the JSON payload
   local payload=$(cat <<EOF
 {
-  "client_id":            "$machine_id",
-  "user_id":              "$machine_id",
+  "client_id":                 "$machine_id",
+  "user_id":                   "$machine_id",
   "events": [{
-    "name":               "$event",
+    "name":                    "$event",
     "params": {
-      "event_count":      1,
-      "event_category":   "api",
-      "app_version":      "$version",
-      "app_name":         "testkube-api-server",
-      "machine_id":       "$machine_id",
+      "event_count":            1,
+      "event_category":         "api",
+      "app_version":            "$version",
+      "app_name":               "testkube-api-server",
+      "machine_id":             "$machine_id",
       "operating_system":       "$os",
       "architecture":           "$arch",
       "context": {
