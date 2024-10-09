@@ -23,6 +23,7 @@ func CreateExecutionMachine(cfg *ExecutionConfig) expressions.Machine {
 	return expressions.NewMachine().
 		Register("execution", map[string]interface{}{
 			"id":              cfg.Id,
+			"groupId":         cfg.GroupId,
 			"name":            cfg.Name,
 			"number":          cfg.Number,
 			"scheduledAt":     cfg.ScheduledAt,

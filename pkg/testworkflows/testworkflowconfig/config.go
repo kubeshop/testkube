@@ -12,6 +12,7 @@ type InternalConfig struct {
 
 type ExecutionConfig struct {
 	Id              string            `json:"i,omitempty"`
+	GroupId         string            `json:"g,omitempty"`
 	Name            string            `json:"n,omitempty"`
 	Number          int32             `json:"N,omitempty"`
 	ScheduledAt     time.Time         `json:"s,omitempty"`

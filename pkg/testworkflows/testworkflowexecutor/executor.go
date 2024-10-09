@@ -355,6 +355,7 @@ func (e *executor) getWorkerMachine(namespace string) expressions.Machine {
 func (e *executor) buildExecutionConfig(execution *testkube.TestWorkflowExecution, orgId, envId string) testworkflowconfig.ExecutionConfig {
 	return testworkflowconfig.ExecutionConfig{
 		Id:              execution.Id,
+		GroupId:         execution.GroupId,
 		Name:            execution.Name,
 		Number:          execution.Number,
 		ScheduledAt:     execution.ScheduledAt,
