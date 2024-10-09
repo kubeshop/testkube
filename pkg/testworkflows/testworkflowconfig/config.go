@@ -27,15 +27,15 @@ type WorkflowConfig struct {
 	Labels map[string]string `json:"l,omitempty"`
 }
 
+type ControlPlaneConfig struct {
+	DashboardUrl   string `json:"D,omitempty"` // TODO: Should be in different place?
+	CDEventsTarget string `json:"c,omitempty"`
+}
+
 type ResourceConfig struct {
 	Id       string `json:"i,omitempty"`
 	RootId   string `json:"r,omitempty"`
 	FsPrefix string `json:"f,omitempty"`
-}
-
-type ControlPlaneConfig struct {
-	DashboardUrl   string `json:"D,omitempty"` // TODO: Should be in different place?
-	CDEventsTarget string `json:"c,omitempty"`
 }
 
 type RuntimeConfig struct {
