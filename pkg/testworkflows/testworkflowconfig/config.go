@@ -7,7 +7,7 @@ type InternalConfig struct {
 	Workflow     WorkflowConfig     `json:"w,omitempty"`
 	Resource     ResourceConfig     `json:"r,omitempty"`
 	ControlPlane ControlPlaneConfig `json:"c,omitempty"`
-	Runtime      RuntimeConfig      `json:"R,omitempty"`
+	Worker       WorkerConfig       `json:"W,omitempty"`
 }
 
 type ExecutionConfig struct {
@@ -38,7 +38,7 @@ type ResourceConfig struct {
 	FsPrefix string `json:"f,omitempty"`
 }
 
-type RuntimeConfig struct {
+type WorkerConfig struct {
 	Namespace             string `json:"n,omitempty"`
 	DefaultRegistry       string `json:"R,omitempty"`
 	DefaultServiceAccount string `json:"s,omitempty"`
@@ -50,10 +50,10 @@ type RuntimeConfig struct {
 	ImageInspectorPersistenceCacheKey string        `json:"P,omitempty"`
 	ImageInspectorPersistenceCacheTTL time.Duration `json:"T,omitempty"`
 
-	Connection RuntimeConnectionConfig `json:"C,omitempty"`
+	Connection WorkerConnectionConfig `json:"C,omitempty"`
 }
 
-type RuntimeConnectionConfig struct {
+type WorkerConnectionConfig struct {
 	Url         string `json:"C,omitempty"`
 	ApiKey      string `json:"a,omitempty"`
 	SkipVerify  bool   `json:"v,omitempty"`

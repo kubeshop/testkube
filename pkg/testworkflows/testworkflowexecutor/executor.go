@@ -347,9 +347,9 @@ func (e *executor) getPostExecutionMachine(execution *testkube.TestWorkflowExecu
 	return expressions.CombinedMachines(executionMachine, resourceMachine)
 }
 
-func (e *executor) getRuntimeMachine(namespace string) expressions.Machine {
-	runtimeConfig := e.buildRuntimeConfig(namespace)
-	return testworkflowconfig.CreateRuntimeMachine(&runtimeConfig)
+func (e *executor) getWorkerMachine(namespace string) expressions.Machine {
+	runtimeConfig := e.buildWorkerConfig(namespace)
+	return testworkflowconfig.CreateWorkerMachine(&runtimeConfig)
 }
 
 func (e *executor) buildExecutionConfig(execution *testkube.TestWorkflowExecution, orgId, envId string) testworkflowconfig.ExecutionConfig {
@@ -381,7 +381,7 @@ func (e *executor) buildResourceConfig(resourceId, rootResourceId, fsPrefix stri
 	}
 }
 
-func (e *executor) buildRuntimeConfig(namespace string) testworkflowconfig.RuntimeConfig {
+func (e *executor) buildWorkerConfig(namespace string) testworkflowconfig.WorkerConfig {
 	duration, err := time.ParseDuration(common.GetOr(os.Getenv("TESTKUBE_IMAGE_CREDENTIALS_CACHE_TTL"), "30m"))
 	if err != nil {
 		duration = 30 * time.Minute
@@ -393,7 +393,7 @@ func (e *executor) buildRuntimeConfig(namespace string) testworkflowconfig.Runti
 		cloudUrl = ""
 	}
 
-	return testworkflowconfig.RuntimeConfig{
+	return testworkflowconfig.WorkerConfig{
 		Namespace:                         namespace,
 		DefaultRegistry:                   e.defaultRegistry,
 		DefaultServiceAccount:             e.serviceAccountNames[namespace],
@@ -404,7 +404,7 @@ func (e *executor) buildRuntimeConfig(namespace string) testworkflowconfig.Runti
 		ImageInspectorPersistenceCacheKey: e.imageDataPersistentCacheKey,
 		ImageInspectorPersistenceCacheTTL: duration,
 
-		Connection: testworkflowconfig.RuntimeConnectionConfig{
+		Connection: testworkflowconfig.WorkerConnectionConfig{
 			Url:         cloudUrl,
 			ApiKey:      cloudApiKey,
 			SkipVerify:  common.GetOr(os.Getenv("TESTKUBE_PRO_SKIP_VERIFY"), os.Getenv("TESTKUBE_CLOUD_SKIP_VERIFY"), "false") == "true",
@@ -726,7 +726,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	//// Simplify the workflow
 	//preMachine := e.getPreExecutionMachine(&workflow, organizationId, environmentId)
 	//postMachine := e.getPostExecutionMachine(execution, organizationId, environmentId, execution.Id, execution.Id, "")
-	//runtimeMachine := e.getRuntimeMachine(namespace)
+	//runtimeMachine := e.getWorkerMachine(namespace)
 
 	// Apply default service account
 	if workflow.Spec.Pod == nil {
@@ -742,7 +742,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		Workflow:     e.buildWorkflowConfig(&workflow),
 		Resource:     e.buildResourceConfig(execution.Id, execution.Id, ""),
 		ControlPlane: e.buildControlPlaneConfig(organizationId, environmentId),
-		Runtime:      e.buildRuntimeConfig(namespace),
+		Worker:       e.buildWorkerConfig(namespace),
 	}
 
 	// Process the TestWorkflow

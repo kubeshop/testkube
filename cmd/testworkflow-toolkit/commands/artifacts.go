@@ -102,7 +102,7 @@ func NewArtifactsCmd() *cobra.Command {
 			if config.CloudEnabled() {
 				ctx, cancel := context.WithTimeout(cmd.Context(), 30*time.Second)
 				defer cancel()
-				ctx = agent.AddAPIKeyMeta(ctx, config.Config().Runtime.Connection.ApiKey)
+				ctx = agent.AddAPIKeyMeta(ctx, config.Config().Worker.Connection.ApiKey)
 				executor, client := env.Cloud(ctx)
 				proContext, err := client.GetProContext(ctx, &emptypb.Empty{})
 				var supported []*cloud.Capability
@@ -155,7 +155,7 @@ func NewArtifactsCmd() *cobra.Command {
 					Id:           config.Config().Execution.Id,
 					Name:         config.Config().Execution.Name,
 					WorkflowName: config.Config().Workflow.Name,
-					ClusterID:    config.Config().Runtime.ClusterID,
+					ClusterID:    config.Config().Worker.ClusterID,
 					DashboardURI: config.Config().ControlPlane.DashboardUrl,
 				}))
 			}

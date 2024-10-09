@@ -115,7 +115,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	mapEnv := make(map[string]corev1.EnvVarSource)
 	machines = append(machines,
 		createSecretMachine(mapEnv),
-		testworkflowconfig.CreateRuntimeMachine(&options.Config.Runtime),
+		testworkflowconfig.CreateWorkerMachine(&options.Config.Worker),
 		testworkflowconfig.CreateResourceMachine(&options.Config.Resource))
 
 	// Fetch resource root and resource ID

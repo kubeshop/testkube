@@ -69,7 +69,7 @@ func CreateResourceMachine(cfg *ResourceConfig) expressions.Machine {
 	})
 }
 
-func CreateRuntimeMachine(cfg *RuntimeConfig) expressions.Machine {
+func CreateWorkerMachine(cfg *WorkerConfig) expressions.Machine {
 	machine := expressions.NewMachine().
 		RegisterMap("internal", map[string]interface{}{
 			"serviceaccount.default": cfg.DefaultServiceAccount,

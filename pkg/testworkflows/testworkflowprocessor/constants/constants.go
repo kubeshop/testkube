@@ -55,7 +55,7 @@ var (
 func getInitImage() string {
 	// Handle getter in the toolkit
 	if os.Getenv("TK_CFG") != "" {
-		return config.Config().Runtime.InitImage
+		return config.Config().Worker.InitImage
 	}
 
 	// Handle executor's getter
@@ -73,7 +73,7 @@ func getInitImage() string {
 func getToolkitImage() string {
 	// Handle getter in the toolkit
 	if os.Getenv("TK_CFG") != "" {
-		return config.Config().Runtime.ToolkitImage
+		return config.Config().Worker.ToolkitImage
 	}
 
 	// Handle executor's getter

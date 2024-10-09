@@ -55,15 +55,15 @@ func ImageInspector() imageinspector.Inspector {
 	secretClient := &secret.Client{ClientSet: clientSet, Namespace: config2.Namespace(), Log: log.DefaultLogger}
 	configMapClient := &configmap.Client{ClientSet: clientSet, Namespace: config2.Namespace(), Log: log.DefaultLogger}
 	inspectorStorages := []imageinspector.Storage{imageinspector.NewMemoryStorage()}
-	if config2.Config().Runtime.ImageInspectorPersistenceEnabled {
-		configmapStorage := imageinspector.NewConfigMapStorage(configMapClient, config2.Config().Runtime.ImageInspectorPersistenceCacheKey, true)
+	if config2.Config().Worker.ImageInspectorPersistenceEnabled {
+		configmapStorage := imageinspector.NewConfigMapStorage(configMapClient, config2.Config().Worker.ImageInspectorPersistenceCacheKey, true)
 		_ = configmapStorage.CopyTo(context.Background(), inspectorStorages[0].(imageinspector.StorageTransfer))
 		inspectorStorages = append(inspectorStorages, configmapStorage)
 	}
 	return imageinspector.NewInspector(
-		config2.Config().Runtime.DefaultRegistry,
+		config2.Config().Worker.DefaultRegistry,
 		imageinspector.NewCraneFetcher(),
-		imageinspector.NewSecretFetcher(secretClient, cache.NewInMemoryCache[*corev1.Secret](), imageinspector.WithSecretCacheTTL(config2.Config().Runtime.ImageInspectorPersistenceCacheTTL)),
+		imageinspector.NewSecretFetcher(secretClient, cache.NewInMemoryCache[*corev1.Secret](), imageinspector.WithSecretCacheTTL(config2.Config().Worker.ImageInspectorPersistenceCacheTTL)),
 		inspectorStorages...,
 	)
 }
@@ -78,14 +78,14 @@ func Testkube() client.Client {
 }
 
 func ObjectStorageClient() (*minio.Client, error) {
-	cfg := config2.Config().Runtime.Connection.ObjectStorage
+	cfg := config2.Config().Worker.Connection.ObjectStorage
 	opts := minio.GetTLSOptions(cfg.Ssl, cfg.SkipVerify, cfg.CertFile, cfg.KeyFile, cfg.CAFile)
 	c := minio.NewClient(cfg.Endpoint, cfg.AccessKeyID, cfg.SecretAccessKey, cfg.Region, cfg.Token, cfg.Bucket, opts...)
 	return c, c.Connect()
 }
 
 func Cloud(ctx context.Context) (cloudexecutor.Executor, cloud.TestKubeCloudAPIClient) {
-	cfg := config2.Config().Runtime.Connection
+	cfg := config2.Config().Worker.Connection
 	grpcConn, err := agent.NewGRPCConnection(ctx, cfg.TlsInsecure, cfg.SkipVerify, cfg.Url, "", "", "", log.DefaultLogger)
 	if err != nil {
 		ui.Fail(fmt.Errorf("failed to connect with Cloud: %w", err))

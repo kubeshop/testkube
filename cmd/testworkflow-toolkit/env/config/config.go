@@ -51,7 +51,7 @@ func Debug() bool {
 }
 
 func CloudEnabled() bool {
-	return Config().Runtime.Connection.ApiKey != ""
+	return Config().Worker.Connection.ApiKey != ""
 }
 
 func UseProxy() bool {
@@ -63,7 +63,7 @@ func Ref() string {
 }
 
 func Namespace() string {
-	return Config().Runtime.Namespace
+	return Config().Worker.Namespace
 }
 
 func IP() string {

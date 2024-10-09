@@ -205,10 +205,10 @@ func NewParallelCmd() *cobra.Command {
 				// Build the configuration
 				cfg := *config.Config()
 				cfg.Resource = spawn.CreateResourceConfig("", index)
-				cfg.Runtime.Namespace = namespace
+				cfg.Worker.Namespace = namespace
 				machine := expressions.CombinedMachines(
 					testworkflowconfig.CreateResourceMachine(&cfg.Resource),
-					testworkflowconfig.CreateRuntimeMachine(&cfg.Runtime),
+					testworkflowconfig.CreateWorkerMachine(&cfg.Worker),
 				)
 
 				// Register that there is some operation queued

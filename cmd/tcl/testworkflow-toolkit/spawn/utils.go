@@ -174,7 +174,7 @@ func ProcessFetch(transferSrv transfer.Server, fetch []testworkflowsv1.StepParal
 		StepOperations: testworkflowsv1.StepOperations{
 			Run: &testworkflowsv1.StepRun{
 				ContainerConfig: testworkflowsv1.ContainerConfig{
-					Image:           config.Config().Runtime.ToolkitImage,
+					Image:           config.Config().Worker.ToolkitImage,
 					ImagePullPolicy: corev1.PullIfNotPresent,
 					Command:         common.Ptr([]string{constants.DefaultToolkitPath, "transfer"}),
 					Env: []corev1.EnvVar{
