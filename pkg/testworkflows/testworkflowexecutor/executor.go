@@ -34,7 +34,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowresolver"
 )
@@ -345,15 +344,10 @@ func (e *executor) getPreExecutionMachine(workflow *testworkflowsv1.TestWorkflow
 
 func (e *executor) getPostExecutionMachine(execution *testkube.TestWorkflowExecution, orgId, envId, resourceId, rootResourceId, fsPrefix string) expressions.Machine {
 	executionConfig := e.buildExecutionConfig(execution, orgId, envId)
-	resourceConfig := e.buildResourceConfig(resourceId, rootResourceId, fsPrefix)
+	resourceConfig := e.buildResourceConfig(resourceId, rootResourceId, fsPrefix) // TODO: Should it be resolved there?
 	resourceMachine := testworkflowconfig.CreateResourceMachine(&resourceConfig)
 	executionMachine := testworkflowconfig.CreateExecutionMachine(&executionConfig)
 	return expressions.CombinedMachines(executionMachine, resourceMachine)
-}
-
-func (e *executor) getWorkerMachine(namespace string) expressions.Machine {
-	runtimeConfig := e.buildWorkerConfig(namespace)
-	return testworkflowconfig.CreateWorkerMachine(&runtimeConfig)
 }
 
 func (e *executor) buildExecutionConfig(execution *testkube.TestWorkflowExecution, orgId, envId string) testworkflowconfig.ExecutionConfig {
@@ -383,54 +377,6 @@ func (e *executor) buildResourceConfig(resourceId, rootResourceId, fsPrefix stri
 		Id:       resourceId,
 		RootId:   rootResourceId,
 		FsPrefix: fsPrefix,
-	}
-}
-
-func (e *executor) buildWorkerConfig(namespace string) testworkflowconfig.WorkerConfig {
-	duration, err := time.ParseDuration(common.GetOr(os.Getenv("TESTKUBE_IMAGE_CREDENTIALS_CACHE_TTL"), "30m"))
-	if err != nil {
-		duration = 30 * time.Minute
-	}
-
-	cloudUrl := common.GetOr(os.Getenv("TESTKUBE_PRO_URL"), os.Getenv("TESTKUBE_CLOUD_URL"))
-	cloudApiKey := common.GetOr(os.Getenv("TESTKUBE_PRO_API_KEY"), os.Getenv("TESTKUBE_CLOUD_API_KEY"))
-	if cloudApiKey == "" {
-		cloudUrl = ""
-	}
-
-	return testworkflowconfig.WorkerConfig{
-		Namespace:                         namespace,
-		DefaultRegistry:                   e.defaultRegistry,
-		DefaultServiceAccount:             e.serviceAccountNames[namespace],
-		ClusterID:                         e.clusterID,
-		InitImage:                         constants.DefaultInitImage,
-		ToolkitImage:                      constants.DefaultToolkitImage,
-		ImageInspectorPersistenceEnabled:  e.enableImageDataPersistentCache,
-		ImageInspectorPersistenceCacheKey: e.imageDataPersistentCacheKey,
-		ImageInspectorPersistenceCacheTTL: duration,
-
-		Connection: testworkflowconfig.WorkerConnectionConfig{
-			Url:         cloudUrl,
-			ApiKey:      cloudApiKey,
-			SkipVerify:  common.GetOr(os.Getenv("TESTKUBE_PRO_SKIP_VERIFY"), os.Getenv("TESTKUBE_CLOUD_SKIP_VERIFY"), "false") == "true",
-			TlsInsecure: common.GetOr(os.Getenv("TESTKUBE_PRO_TLS_INSECURE"), os.Getenv("TESTKUBE_CLOUD_TLS_INSECURE"), "false") == "true",
-
-			// TODO: Avoid
-			LocalApiUrl: e.apiUrl,
-			ObjectStorage: testworkflowconfig.ObjectStorageConfig{
-				Endpoint:        os.Getenv("STORAGE_ENDPOINT"),
-				AccessKeyID:     os.Getenv("STORAGE_ACCESSKEYID"),
-				SecretAccessKey: os.Getenv("STORAGE_SECRETACCESSKEY"),
-				Region:          os.Getenv("STORAGE_REGION"),
-				Token:           os.Getenv("STORAGE_TOKEN"),
-				Bucket:          os.Getenv("STORAGE_BUCKET"),
-				Ssl:             common.GetOr(os.Getenv("STORAGE_SSL"), "false") == "true",
-				SkipVerify:      common.GetOr(os.Getenv("STORAGE_SKIP_VERIFY"), "false") == "true",
-				CertFile:        os.Getenv("STORAGE_CERT_FILE"),
-				KeyFile:         os.Getenv("STORAGE_KEY_FILE"),
-				CAFile:          os.Getenv("STORAGE_CA_FILE"),
-			},
-		},
 	}
 }
 
