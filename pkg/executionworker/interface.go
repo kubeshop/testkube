@@ -45,6 +45,8 @@ type ExecuteRequest struct {
 type ExecuteResult struct {
 	// Signature for the deployed resource.
 	Signature []testkube.TestWorkflowSignature
+	// Namespace where it has been scheduled.
+	Namespace string
 }
 
 type SignatureResult struct {
@@ -63,6 +65,8 @@ type GetResult struct {
 	Signature []testkube.TestWorkflowSignature
 	// Result keeps the latest recognized status of the execution.
 	Result testkube.TestWorkflowResult
+	// Namespace where it has been deployed to.
+	Namespace string
 }
 
 type ListOptions struct {
@@ -76,6 +80,8 @@ type ListOptions struct {
 	Root *bool
 	// Finished filters based on the execution being finished or still running.
 	Finished *bool
+	// Namespaces to search in specific namespaces.
+	Namespaces []string
 }
 
 type ListResultItem struct {
@@ -85,6 +91,8 @@ type ListResultItem struct {
 	Workflow testworkflowconfig.WorkflowConfig
 	// Resource details.
 	Resource testworkflowconfig.ResourceConfig
+	// Namespace where it has been deployed.
+	Namespace string
 }
 
 type SummaryResult struct {
@@ -100,6 +108,8 @@ type SummaryResult struct {
 	// It may be not precise, i.e. timestamps may be not accurate, or more steps may be finished already.
 	// The statuses of finished steps and the workflow itself are guaranteed to be valid though.
 	EstimatedResult testkube.TestWorkflowResult
+	// Namespace where it has been deployed.
+	Namespace string
 }
 
 type Worker interface {
@@ -107,32 +117,32 @@ type Worker interface {
 	Execute(ctx context.Context, request ExecuteRequest) (*ExecuteResult, error)
 
 	// Notifications stream all the notifications from the resource.
-	Notifications(ctx context.Context, id string) (<-chan testkube.TestWorkflowExecutionNotification, error)
+	Notifications(ctx context.Context, namespace, id string) (<-chan testkube.TestWorkflowExecutionNotification, error)
 
 	// Logs converts all the important notifications (except i.e. output) from the resource into plain logs.
-	Logs(ctx context.Context, id string) (<-chan []byte, error)
+	Logs(ctx context.Context, namespace, id string) (<-chan []byte, error)
 
 	// Get tries to build the latest precise result from the resource execution.
-	Get(ctx context.Context, id string) (*GetResult, error)
+	Get(ctx context.Context, namespace, id string) (*GetResult, error)
 
 	// Finished is a fast method to check if the resource execution has been already finished.
-	Finished(ctx context.Context, id string) (bool, error)
+	Finished(ctx context.Context, namespace, id string) (bool, error)
 
 	// ListIds lists all the IDs of currently deployed resources matching the criteria.
 	ListIds(ctx context.Context, options ListOptions) ([]string, error)
 
 	// Summary gets fast summary about the selected resource.
-	Summary(ctx context.Context, id string) (*SummaryResult, error)
+	Summary(ctx context.Context, namespace, id string) (*SummaryResult, error)
 
 	// List lists all the currently deployed resources matching the criteria.
 	List(ctx context.Context, options ListOptions) ([]ListResultItem, error)
 
 	// Destroy gets rid of all the data for the selected resource.
-	Destroy(ctx context.Context, id string) error
+	Destroy(ctx context.Context, namespace, id string) error
 
 	// Pause sends pause request to the selected resource.
-	Pause(ctx context.Context, id string) error
+	Pause(ctx context.Context, namespace, id string) error
 
 	// Resume sends resuming request to the selected resource.
-	Resume(ctx context.Context, id string) error
+	Resume(ctx context.Context, namespace, id string) error
 }

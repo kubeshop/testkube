@@ -643,21 +643,12 @@ func main() {
 		testWorkflowResultsRepository,
 		testWorkflowOutputRepository,
 		testWorkflowTemplatesClient,
-		testWorkflowProcessor,
-		configMapConfig,
 		testWorkflowExecutionsClient,
 		testWorkflowsClient,
 		metrics,
 		secretManager,
-		serviceAccountNames,
 		cfg.GlobalWorkflowTemplateName,
-		cfg.TestkubeNamespace,
-		"http://"+cfg.APIServerFullname+":"+cfg.APIServerPort,
-		cfg.TestkubeRegistry,
-		cfg.EnableImageDataPersistentCache,
-		cfg.ImageDataPersistentCacheKey,
 		cfg.TestkubeDashboardURI,
-		clusterId,
 	)
 
 	go testWorkflowExecutor.Recover(context.Background())

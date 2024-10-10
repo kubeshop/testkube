@@ -86,30 +86,31 @@ func (w *worker) Execute(ctx context.Context, request ExecuteRequest) (*ExecuteR
 
 	return &ExecuteResult{
 		Signature: stage.MapSignatureListToInternal(bundle.Signature),
+		Namespace: bundle.Job.Namespace,
 	}, nil
 }
 
-func (w *worker) Notifications(ctx context.Context, id string) (<-chan testkube.TestWorkflowExecutionNotification, error) {
+func (w *worker) Notifications(ctx context.Context, namespace, id string) (<-chan testkube.TestWorkflowExecutionNotification, error) {
 	panic("not implemented")
 	return nil, nil
 }
 
-func (w *worker) Logs(ctx context.Context, id string) (<-chan []byte, error) {
+func (w *worker) Logs(ctx context.Context, namespace, id string) (<-chan []byte, error) {
 	panic("not implemented")
 	return nil, nil
 }
 
-func (w *worker) Get(ctx context.Context, id string) (*GetResult, error) {
+func (w *worker) Get(ctx context.Context, namespace, id string) (*GetResult, error) {
 	panic("not implemented")
 	return nil, nil
 }
 
-func (w *worker) Summary(ctx context.Context, id string) (*SummaryResult, error) {
+func (w *worker) Summary(ctx context.Context, namespace, id string) (*SummaryResult, error) {
 	panic("not implemented")
 	return nil, nil
 }
 
-func (w *worker) Finished(ctx context.Context, id string) (bool, error) {
+func (w *worker) Finished(ctx context.Context, namespace, id string) (bool, error) {
 	panic("not implemented")
 	return false, nil
 }
@@ -124,17 +125,17 @@ func (w *worker) List(ctx context.Context, options ListOptions) ([]ListResultIte
 	return nil, nil
 }
 
-func (w *worker) Destroy(ctx context.Context, id string) error {
+func (w *worker) Destroy(ctx context.Context, namespace, id string) error {
 	panic("not implemented")
 	return nil
 }
 
-func (w *worker) Pause(ctx context.Context, id string) error {
+func (w *worker) Pause(ctx context.Context, namespace, id string) error {
 	panic("not implemented")
 	return nil
 }
 
-func (w *worker) Resume(ctx context.Context, id string) error {
+func (w *worker) Resume(ctx context.Context, namespace, id string) error {
 	panic("not implemented")
 	return nil
 }
