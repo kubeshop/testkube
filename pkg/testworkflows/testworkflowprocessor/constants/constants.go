@@ -14,10 +14,11 @@ import (
 )
 
 const (
-	DefaultInternalPath             = "/.tktw"
-	DefaultDataPath                 = "/data"
-	DefaultTerminationLogPath       = "/dev/termination-log"
-	DefaultFsGroup                  = int64(1001)
+	DefaultInternalPath       = "/.tktw"
+	DefaultDataPath           = "/data"
+	DefaultTerminationLogPath = "/dev/termination-log"
+	DefaultFsGroup            = int64(1001)
+	// TODO: move to the execution worker (?)
 	ResourceIdLabelName             = "testkube.io/resource"
 	RootResourceIdLabelName         = "testkube.io/root"
 	GroupIdLabelName                = "testkube.io/group"
