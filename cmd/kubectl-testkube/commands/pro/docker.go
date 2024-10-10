@@ -12,7 +12,7 @@ import (
 
 func NewDockerCmd() *cobra.Command {
 	var noLogin bool // ignore ask for login
-	var containerName string
+	var containerName, dockerImage string
 	var options common.HelmOptions
 
 	cmd := &cobra.Command{
@@ -62,7 +62,7 @@ func NewDockerCmd() *cobra.Command {
 			}
 
 			spinner := ui.NewSpinner("Running Testkube Docker Agent")
-			if cliErr := common.DockerRunTestkubeAgent(options, cfg, containerName); cliErr != nil {
+			if cliErr := common.DockerRunTestkubeAgent(options, cfg, containerName, dockerImage); cliErr != nil {
 				spinner.Fail()
 				sendErrTelemetry(cmd, cfg, "docker_run", cliErr)
 				common.HandleCLIError(cliErr)
@@ -101,6 +101,7 @@ func NewDockerCmd() *cobra.Command {
 
 	cmd.Flags().BoolVarP(&noLogin, "no-login", "", false, "Ignore login prompt, set existing token later by `testkube set context`")
 	cmd.Flags().StringVar(&containerName, "container-name", "testkube-agent", "container name for Testkube Docker Agent")
+	cmd.Flags().StringVar(&dockerImage, "docker-image", "kubeshop/testkube-agent", "docker image for Testkube Docker Agent")
 
 	return cmd
 }

@@ -773,7 +773,7 @@ func RunDockerCommand(args []string) (output string, cliErr *CLIError) {
 	return string(out), nil
 }
 
-func DockerRunTestkubeAgent(options HelmOptions, cfg config.Data, containerName string) *CLIError {
+func DockerRunTestkubeAgent(options HelmOptions, cfg config.Data, containerName, dockerImage string) *CLIError {
 	// use config if set
 	if cfg.CloudContext.AgentKey != "" && options.Master.AgentToken == "" {
 		options.Master.AgentToken = cfg.CloudContext.AgentKey
@@ -787,7 +787,7 @@ func DockerRunTestkubeAgent(options HelmOptions, cfg config.Data, containerName 
 			errors.New("agent key is required"))
 	}
 
-	args := prepareTestkubeProDockerArgs(options, containerName)
+	args := prepareTestkubeProDockerArgs(options, containerName, dockerImage)
 	output, err := RunDockerCommand(args)
 	if err != nil {
 		return err
@@ -802,7 +802,7 @@ func DockerRunTestkubeAgent(options HelmOptions, cfg config.Data, containerName 
 }
 
 // prepareTestkubeProDockerArgs prepares docker arguments for Testkube Pro running.
-func prepareTestkubeProDockerArgs(options HelmOptions, containerName string) []string {
+func prepareTestkubeProDockerArgs(options HelmOptions, containerName, dockerImage string) []string {
 	args := []string{
 		"run",
 		"--name", containerName,
@@ -810,7 +810,7 @@ func prepareTestkubeProDockerArgs(options HelmOptions, containerName string) []s
 		"-d",
 		"-e", "CLOUD_URL=" + options.Master.URIs.Agent,
 		"-e", "AGENT_KEY=" + options.Master.AgentToken,
-		"kubeshop/testkube-agent",
+		dockerImage,
 	}
 
 	return args
