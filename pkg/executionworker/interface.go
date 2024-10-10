@@ -1,0 +1,138 @@
+package executionworker
+
+import (
+	"context"
+	"time"
+
+	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
+)
+
+type NamespaceConfig struct {
+	DefaultServiceAccountName string
+}
+
+type ClusterConfig struct {
+	Id               string
+	DefaultNamespace string
+	DefaultRegistry  string
+	Namespaces       map[string]NamespaceConfig
+}
+
+type ImageInspectorConfig struct {
+	CacheEnabled bool
+	CacheKey     string
+	CacheTTL     time.Duration
+}
+
+type Config struct {
+	Cluster        ClusterConfig
+	ImageInspector ImageInspectorConfig
+	Connection     testworkflowconfig.WorkerConnectionConfig
+}
+
+// TODO: Consider some context data?
+// TODO: Support sub-resources (`parallel` and `services`)?
+type ExecuteRequest struct {
+	Execution testworkflowconfig.ExecutionConfig
+	Secrets   map[string]map[string]string
+	Workflow  testworkflowsv1.TestWorkflow // TODO: Use OpenAPI object
+
+	ControlPlane testworkflowconfig.ControlPlaneConfig // TODO: Think if it's required
+}
+
+type ExecuteResult struct {
+	// Signature for the deployed resource.
+	Signature []testkube.TestWorkflowSignature
+}
+
+type SignatureResult struct {
+	// Signature for the selected resource.
+	Signature []testkube.TestWorkflowSignature
+}
+
+type GetResult struct {
+	// Execution details
+	Execution testworkflowconfig.ExecutionConfig
+	// Workflow basic metadata.
+	Workflow testworkflowconfig.WorkflowConfig
+	// Resource details.
+	Resource testworkflowconfig.ResourceConfig
+	// Signature for the resource.
+	Signature []testkube.TestWorkflowSignature
+	// Result keeps the latest recognized status of the execution.
+	Result testkube.TestWorkflowResult
+}
+
+type ListOptions struct {
+	// RootId filters the root ID the search for the deployed resources.
+	RootId string
+	// OrganizationId filters by organization ID tied to the execution.
+	OrganizationId string
+	// EnvironmentId filters by environment ID tied to the execution.
+	EnvironmentId string
+	// Root filters to only root or non-root resources.
+	Root *bool
+	// Finished filters based on the execution being finished or still running.
+	Finished *bool
+}
+
+type ListResultItem struct {
+	// Execution details.
+	Execution testworkflowconfig.ExecutionConfig
+	// Workflow basic metadata.
+	Workflow testworkflowconfig.WorkflowConfig
+	// Resource details.
+	Resource testworkflowconfig.ResourceConfig
+}
+
+type SummaryResult struct {
+	// Execution details
+	Execution testworkflowconfig.ExecutionConfig
+	// Workflow basic metadata.
+	Workflow testworkflowconfig.WorkflowConfig
+	// Resource details.
+	Resource testworkflowconfig.ResourceConfig
+	// Signature for the resource.
+	Signature []testkube.TestWorkflowSignature
+	// EstimatedResult keeps the best estimated status of the execution.
+	// It may be not precise, i.e. timestamps may be not accurate, or more steps may be finished already.
+	// The statuses of finished steps and the workflow itself are guaranteed to be valid though.
+	EstimatedResult testkube.TestWorkflowResult
+}
+
+type Worker interface {
+	// Execute deploys the resources in the cluster.
+	Execute(ctx context.Context, request ExecuteRequest) (*ExecuteResult, error)
+
+	// Notifications stream all the notifications from the resource.
+	Notifications(ctx context.Context, id string) (<-chan testkube.TestWorkflowExecutionNotification, error)
+
+	// Logs converts all the important notifications (except i.e. output) from the resource into plain logs.
+	Logs(ctx context.Context, id string) (<-chan []byte, error)
+
+	// Get tries to build the latest precise result from the resource execution.
+	Get(ctx context.Context, id string) (*GetResult, error)
+
+	// Finished is a fast method to check if the resource execution has been already finished.
+	Finished(ctx context.Context, id string) (bool, error)
+
+	// ListIds lists all the IDs of currently deployed resources matching the criteria.
+	ListIds(ctx context.Context, options ListOptions) ([]string, error)
+
+	// Summary gets fast summary about the selected resource.
+	Summary(ctx context.Context, id string) (*SummaryResult, error)
+
+	// List lists all the currently deployed resources matching the criteria.
+	List(ctx context.Context, options ListOptions) ([]ListResultItem, error)
+
+	// Destroy gets rid of all the data for the selected resource.
+	Destroy(ctx context.Context, id string) error
+
+	// Pause sends pause request to the selected resource.
+	Pause(ctx context.Context, id string) error
+
+	// Resume sends resuming request to the selected resource.
+	Resume(ctx context.Context, id string) error
+}

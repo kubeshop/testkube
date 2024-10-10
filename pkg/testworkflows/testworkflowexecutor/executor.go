@@ -24,6 +24,7 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event"
+	"github.com/kubeshop/testkube/pkg/executionworker"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/log"
 	testworkflowmappers "github.com/kubeshop/testkube/pkg/mapper/testworkflows"
@@ -442,7 +443,7 @@ func (e *executor) buildControlPlaneConfig(orgId, envId string) testworkflowconf
 	}
 }
 
-func (e *executor) initialize(ctx context.Context, workflow *testworkflowsv1.TestWorkflow, request *testkube.TestWorkflowExecutionRequest) (execution *testkube.TestWorkflowExecution, namespace string, secrets []corev1.Secret, err error) {
+func (e *executor) initialize(ctx context.Context, workflow *testworkflowsv1.TestWorkflow, request *testkube.TestWorkflowExecutionRequest) (execution *testkube.TestWorkflowExecution, secrets []corev1.Secret, err error) {
 	// Delete unnecessary data
 	delete(workflow.Annotations, "kubectl.kubernetes.io/last-applied-configuration")
 
@@ -455,6 +456,7 @@ func (e *executor) initialize(ctx context.Context, workflow *testworkflowsv1.Tes
 	number, err := e.repository.GetNextExecutionNumber(context.Background(), workflow.Name)
 	if err != nil {
 		log.DefaultLogger.Errorw("failed to retrieve TestWorkflow execution number", "id", executionId, "error", err)
+		// TODO: Fatal error
 	}
 	executionName := request.Name
 	if executionName == "" {
@@ -465,7 +467,7 @@ func (e *executor) initialize(ctx context.Context, workflow *testworkflowsv1.Tes
 	// TODO: Consider if we shouldn't make name unique across all TestWorkflows
 	next, _ := e.repository.GetByNameAndTestWorkflow(ctx, executionName, workflow.Name)
 	if next.Name == executionName {
-		return execution, "", nil, errors.Wrap(err, "execution name already exists")
+		return execution, nil, errors.Wrap(err, "execution name already exists")
 	}
 
 	// Initialize the storage for dynamically created secrets
@@ -519,7 +521,7 @@ func (e *executor) initialize(ctx context.Context, workflow *testworkflowsv1.Tes
 	_, err = testworkflowresolver.ApplyWorkflowConfig(workflow, testworkflowmappers.MapConfigValueAPIToKube(request.Config), secretsBatch.Append)
 	if err != nil {
 		execution.InitializationError("Failed to apply configuration.", err)
-		return execution, "", nil, err
+		return execution, nil, err
 	}
 
 	// Fetch all required templates
@@ -529,7 +531,7 @@ func (e *executor) initialize(ctx context.Context, workflow *testworkflowsv1.Tes
 		tpl, err := e.testWorkflowTemplatesClient.Get(tplName)
 		if err != nil {
 			execution.InitializationError(fmt.Sprintf("Failed to fetch '%s' template.", testworkflowresolver.GetDisplayTemplateName(tplName)), err)
-			return execution, "", nil, err
+			return execution, nil, err
 		}
 		tplsMap[tplName] = *tpl
 	}
@@ -538,22 +540,11 @@ func (e *executor) initialize(ctx context.Context, workflow *testworkflowsv1.Tes
 	err = testworkflowresolver.ApplyTemplates(workflow, tplsMap, secretsBatch.Append)
 	if err != nil {
 		execution.InitializationError("Failed to apply templates.", err)
-		return execution, "", nil, err
+		return execution, nil, err
 	}
 
 	// Preserve resolved TestWorkflow
 	resolvedWorkflow := workflow.DeepCopy()
-
-	// Determine execution namespace
-	// TODO: Should not default namespace be on runner?
-	namespace = e.namespace
-	if workflow.Spec.Job != nil && workflow.Spec.Job.Namespace != "" {
-		namespace = workflow.Spec.Job.Namespace
-	}
-	if _, ok := e.serviceAccountNames[namespace]; !ok {
-		execution.InitializationError(fmt.Sprintf("Not supported '%s' execution namespace.", namespace), err)
-		return execution, "", nil, err
-	}
 
 	// Try to resolve the tags further
 	if workflow.Spec.Execution != nil {
@@ -562,7 +553,6 @@ func (e *executor) initialize(ctx context.Context, workflow *testworkflowsv1.Tes
 	execution.Tags = testworkflowresolver.MergeTags(execution.Tags, request.Tags)
 
 	// Apply more resolved data to the execution
-	execution.Namespace = namespace // TODO: DELETE?
 	execution.ResolvedWorkflow = testworkflowmappers.MapKubeToAPI(resolvedWorkflow)
 
 	// Determine the organization/environment
@@ -585,7 +575,7 @@ func (e *executor) initialize(ctx context.Context, workflow *testworkflowsv1.Tes
 	}
 	execution.Tags = testworkflowresolver.MergeTags(execution.Tags, request.Tags)
 
-	return execution, namespace, secretsBatch.Get(), nil
+	return execution, secretsBatch.Get(), nil
 }
 
 func (e *executor) notifyResult(execution *testkube.TestWorkflowExecution) {
@@ -685,7 +675,7 @@ func (e *executor) insert(ctx context.Context, execution *testkube.TestWorkflowE
 
 func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWorkflow, request testkube.TestWorkflowExecutionRequest) (
 	testkube.TestWorkflowExecution, error) {
-	execution, namespace, secrets, err := e.initialize(ctx, &workflow, &request)
+	execution, secrets, err := e.initialize(ctx, &workflow, &request)
 
 	// Handle error without execution built
 	if execution == nil {
@@ -724,11 +714,6 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		environmentId = ""
 	}
 
-	//// Simplify the workflow
-	//preMachine := e.getPreExecutionMachine(&workflow, organizationId, environmentId)
-	//postMachine := e.getPostExecutionMachine(execution, organizationId, environmentId, execution.Id, execution.Id, "")
-	//runtimeMachine := e.getWorkerMachine(namespace)
-
 	// Apply default service account
 	if workflow.Spec.Pod == nil {
 		workflow.Spec.Pod = &testworkflowsv1.PodConfig{}
@@ -737,43 +722,55 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		workflow.Spec.Pod.ServiceAccountName = "{{internal.serviceaccount.default}}"
 	}
 
-	// Build the toolkit configuration
-	internalConfig := testworkflowconfig.InternalConfig{
-		Execution:    e.buildExecutionConfig(execution, organizationId, environmentId),
-		Workflow:     e.buildWorkflowConfig(&workflow),
-		Resource:     e.buildResourceConfig(execution.Id, execution.Id, ""),
-		ControlPlane: e.buildControlPlaneConfig(organizationId, environmentId),
-		Worker:       e.buildWorkerConfig(namespace),
+	// Build one time execution worker
+	workerConfig := e.buildWorkerConfig("")
+	namespacesConfig := map[string]executionworker.NamespaceConfig{}
+	for n, s := range e.serviceAccountNames {
+		namespacesConfig[n] = executionworker.NamespaceConfig{DefaultServiceAccountName: s}
+	}
+	worker := executionworker.New(e.clientSet, e.processor, executionworker.Config{
+		Cluster: executionworker.ClusterConfig{
+			Id:               e.clusterID,
+			DefaultNamespace: e.namespace,
+			DefaultRegistry:  e.defaultRegistry,
+			Namespaces:       namespacesConfig,
+		},
+		ImageInspector: executionworker.ImageInspectorConfig{
+			CacheEnabled: workerConfig.ImageInspectorPersistenceEnabled,
+			CacheKey:     workerConfig.ImageInspectorPersistenceCacheKey,
+			CacheTTL:     workerConfig.ImageInspectorPersistenceCacheTTL,
+		},
+		Connection: workerConfig.Connection,
+	})
+	secretsMap := map[string]map[string]string{}
+	for _, secret := range secrets {
+		secretsMap[secret.Name] = secret.StringData
 	}
 
-	// Process the TestWorkflow
-	bundle, err := e.processor.Bundle(ctx, &workflow, testworkflowprocessor.BundleOptions{Config: internalConfig, Secrets: secrets})
+	// Schedule the execution by the Execution Worker
+	result, err := worker.Execute(context.Background(), executionworker.ExecuteRequest{
+		Execution:    e.buildExecutionConfig(execution, organizationId, environmentId),
+		Secrets:      secretsMap,
+		Workflow:     workflow,
+		ControlPlane: e.buildControlPlaneConfig(organizationId, environmentId),
+	})
 	if err != nil {
 		defer e.saveEmptyLogs(execution)
-		execution.InitializationError("Failed to process Test Workflow.", err)
+		execution.InitializationError("Failed to initialize the execution.", err)
 		return *execution, errors.Wrap(e.update(context.Background(), execution), fmt.Sprintf("processing error: %s: saving", err.Error()))
 	}
 
 	// Apply the signature
-	execution.Signature = stage.MapSignatureListToInternal(bundle.Signature)
-	execution.Result.Steps = stage.MapSignatureListToStepResults(bundle.Signature)
-	// TODO: Consider applying to the TestWorkflowExecution object in Kubernetes
-	updateErr := e.repository.Update(context.Background(), *execution)
-	if updateErr != nil {
+	execution.Signature = result.Signature
+	execution.Result.Steps = stage.MapSignatureListToStepResults(stage.MapSignatureList(result.Signature))
+	err = e.update(context.Background(), execution)
+	if err != nil {
 		e.saveEmptyLogs(execution)
 		return *execution, e.update(context.Background(), execution)
 	}
 
 	// Inform about execution start TODO: Consider
 	//e.emitter.Notify(testkube.NewEventStartTestWorkflow(execution))
-
-	// Deploy required resources
-	err = e.Deploy(context.Background(), bundle)
-	if err != nil {
-		defer e.saveEmptyLogs(execution)
-		execution.InitializationError("Failed to deploy the execution resources.", err)
-		return *execution, errors.Wrap(e.update(context.Background(), execution), fmt.Sprintf("deployment error: %s: saving", err.Error()))
-	}
 
 	// Start to control the results
 	go func() {

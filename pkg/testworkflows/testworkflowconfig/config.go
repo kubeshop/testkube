@@ -41,7 +41,7 @@ type ResourceConfig struct {
 
 type WorkerConfig struct {
 	Namespace             string `json:"n,omitempty"`
-	DefaultRegistry       string `json:"R,omitempty"`
+	DefaultRegistry       string `json:"R,omitempty"` // TODO: think if that shouldn't be Control Plane setup
 	DefaultServiceAccount string `json:"s,omitempty"`
 	ClusterID             string `json:"c,omitempty"`
 
