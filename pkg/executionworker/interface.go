@@ -2,6 +2,7 @@ package executionworker
 
 import (
 	"context"
+	"sync/atomic"
 	"time"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
@@ -112,12 +113,55 @@ type SummaryResult struct {
 	Namespace string
 }
 
+type NotificationsOptions struct {
+	// Signature is optional property to provide known signature for better hinting.
+	Signature []testkube.TestWorkflowSignature
+	// ScheduledAt is optional property to provide known schedule timestamp for better hinting.
+	ScheduledAt *time.Time
+}
+
+type notificationsWatcher struct {
+	ch       chan testkube.TestWorkflowExecutionNotification
+	finished atomic.Bool
+	err      atomic.Value
+}
+
+func newNotificationsWatcher() *notificationsWatcher {
+	return &notificationsWatcher{
+		ch: make(chan testkube.TestWorkflowExecutionNotification),
+	}
+}
+
+func (n *notificationsWatcher) send(notification testkube.TestWorkflowExecutionNotification) {
+	n.ch <- notification
+}
+
+func (n *notificationsWatcher) close(err error) {
+	if n.finished.CompareAndSwap(false, true) {
+		close(n.ch)
+		n.err.Store(err)
+	}
+}
+
+func (n *notificationsWatcher) Channel() <-chan testkube.TestWorkflowExecutionNotification {
+	return n.ch
+}
+
+func (n *notificationsWatcher) Err() error {
+	return n.err.Load().(error)
+}
+
+type NotificationsWatcher interface {
+	Channel() <-chan testkube.TestWorkflowExecutionNotification
+	Err() error
+}
+
 type Worker interface {
 	// Execute deploys the resources in the cluster.
 	Execute(ctx context.Context, request ExecuteRequest) (*ExecuteResult, error)
 
 	// Notifications stream all the notifications from the resource.
-	Notifications(ctx context.Context, namespace, id string) (<-chan testkube.TestWorkflowExecutionNotification, error)
+	Notifications(ctx context.Context, namespace, id string, options NotificationsOptions) NotificationsWatcher
 
 	// Logs converts all the important notifications (except i.e. output) from the resource into plain logs.
 	Logs(ctx context.Context, namespace, id string) (<-chan []byte, error)
