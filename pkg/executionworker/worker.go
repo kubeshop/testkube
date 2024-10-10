@@ -11,6 +11,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
+	lru "github.com/hashicorp/golang-lru/v2"
+
 	initconstants "github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
@@ -27,13 +29,20 @@ type worker struct {
 	inspector        imageinspector.Inspector
 	baseWorkerConfig testworkflowconfig.WorkerConfig
 	config           Config
+	namespacesCache  *lru.Cache[string, string]
+	podIpCache       *lru.Cache[string, string]
 }
 
 func New(clientSet kubernetes.Interface, processor testworkflowprocessor.Processor, config Config) Worker {
+	// TODO: fill it from watchers and parameters too
+	namespacesCache, _ := lru.New[string, string](50)
+	podIpCache, _ := lru.New[string, string](50)
 	return &worker{
-		clientSet: clientSet,
-		processor: processor,
-		config:    config,
+		clientSet:       clientSet,
+		processor:       processor,
+		config:          config,
+		namespacesCache: namespacesCache,
+		podIpCache:      podIpCache,
 		baseWorkerConfig: testworkflowconfig.WorkerConfig{
 			Namespace:                         config.Cluster.DefaultNamespace,
 			DefaultRegistry:                   config.Cluster.DefaultRegistry,
@@ -118,8 +127,12 @@ func (w *worker) hasJobTracesAt(ctx context.Context, id, namespace string) (bool
 	return len(events.Items) > 0, nil
 }
 
-// TODO: Use in-memory cache (LRU?)
 func (w *worker) findNamespace(ctx context.Context, id string) (string, error) {
+	// Fetch from cache
+	if ns, ok := w.namespacesCache.Get(id); ok {
+		return ns, nil
+	}
+
 	// Search firstly for the actual job
 	has, err := w.hasJobAt(ctx, id, w.config.Cluster.DefaultNamespace)
 	if err != nil || has {
@@ -127,6 +140,9 @@ func (w *worker) findNamespace(ctx context.Context, id string) (string, error) {
 	}
 	for ns := range w.config.Cluster.Namespaces {
 		has, err = w.hasJobAt(ctx, id, ns)
+		if err == nil && has {
+			w.namespacesCache.Add(id, ns)
+		}
 		if err != nil || has {
 			return ns, err
 		}
@@ -139,6 +155,9 @@ func (w *worker) findNamespace(ctx context.Context, id string) (string, error) {
 	}
 	for ns := range w.config.Cluster.Namespaces {
 		has, err = w.hasJobTracesAt(ctx, id, ns)
+		if err == nil && has {
+			w.namespacesCache.Add(id, ns)
+		}
 		if err != nil || has {
 			return ns, err
 		}
@@ -278,10 +297,13 @@ func (w *worker) findPodIpAt(ctx context.Context, id, namespace string) (string,
 	} else if len(pods.Items) == 0 {
 		return "", ErrResourceNotFound
 	}
+	if pods.Items[0].Status.PodIP != "" {
+		w.podIpCache.Add(id, pods.Items[0].Status.PodIP)
+		w.namespacesCache.Add(id, namespace)
+	}
 	return pods.Items[0].Status.PodIP, nil
 }
 
-// TODO: Use in-memory cache (LRU?)
 func (w *worker) findPodIp(ctx context.Context, id string) (string, error) {
 	ip, err := w.findPodIpAt(ctx, id, w.config.Cluster.DefaultNamespace)
 	if err != nil {
@@ -299,7 +321,9 @@ func (w *worker) findPodIp(ctx context.Context, id string) (string, error) {
 
 func (w *worker) Pause(ctx context.Context, namespace, id string) (err error) {
 	podIp := ""
-	if namespace == "" {
+	if ip, ok := w.podIpCache.Get(id); ok {
+		podIp = ip
+	} else if namespace == "" {
 		podIp, err = w.findPodIp(ctx, id)
 	} else {
 		podIp, err = w.findPodIpAt(ctx, id, namespace)
@@ -314,7 +338,9 @@ func (w *worker) Pause(ctx context.Context, namespace, id string) (err error) {
 
 func (w *worker) Resume(ctx context.Context, namespace, id string) (err error) {
 	podIp := ""
-	if namespace == "" {
+	if ip, ok := w.podIpCache.Get(id); ok {
+		podIp = ip
+	} else if namespace == "" {
 		podIp, err = w.findPodIp(ctx, id)
 	} else {
 		podIp, err = w.findPodIpAt(ctx, id, namespace)
