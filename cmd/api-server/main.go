@@ -15,11 +15,13 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/kubeshop/testkube/pkg/cache"
-
 	"github.com/nats-io/nats.go"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/emptypb"
+
+	"github.com/kubeshop/testkube/pkg/cache"
+	"github.com/kubeshop/testkube/pkg/executionworker"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
 	cloudtestworkflow "github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
@@ -585,8 +587,58 @@ func main() {
 	if mode == common.ModeAgent {
 		testWorkflowProcessor = presets.NewPro(inspector)
 	}
+
+	// Build internal execution worker
+	namespacesConfig := map[string]executionworker.NamespaceConfig{}
+	for n, s := range serviceAccountNames {
+		namespacesConfig[n] = executionworker.NamespaceConfig{DefaultServiceAccountName: s}
+	}
+	cloudUrl := cfg.TestkubeProURL
+	cloudApiKey := cfg.TestkubeProAPIKey
+	objectStorageConfig := testworkflowconfig.ObjectStorageConfig{}
+	if cloudApiKey == "" {
+		cloudUrl = ""
+		objectStorageConfig = testworkflowconfig.ObjectStorageConfig{
+			Endpoint:        cfg.StorageEndpoint,
+			AccessKeyID:     cfg.StorageAccessKeyID,
+			SecretAccessKey: cfg.StorageSecretAccessKey,
+			Region:          cfg.StorageRegion,
+			Token:           cfg.StorageToken,
+			Bucket:          cfg.StorageBucket,
+			Ssl:             cfg.StorageSSL,
+			SkipVerify:      cfg.StorageSkipVerify,
+			CertFile:        cfg.StorageCertFile,
+			KeyFile:         cfg.StorageKeyFile,
+			CAFile:          cfg.StorageCAFile,
+		}
+	}
+	executionWorker := executionworker.New(clientset, testWorkflowProcessor, executionworker.Config{
+		Cluster: executionworker.ClusterConfig{
+			Id:               clusterId,
+			DefaultNamespace: cfg.TestkubeNamespace,
+			DefaultRegistry:  cfg.TestkubeRegistry,
+			Namespaces:       namespacesConfig,
+		},
+		ImageInspector: executionworker.ImageInspectorConfig{
+			CacheEnabled: cfg.EnableImageDataPersistentCache,
+			CacheKey:     cfg.ImageDataPersistentCacheKey,
+			CacheTTL:     cfg.TestkubeImageCredentialsCacheTTL,
+		},
+		Connection: testworkflowconfig.WorkerConnectionConfig{
+			Url:         cloudUrl,
+			ApiKey:      cloudApiKey,
+			SkipVerify:  cfg.TestkubeProSkipVerify,
+			TlsInsecure: cfg.TestkubeProTLSInsecure,
+
+			// TODO: Avoid
+			LocalApiUrl:   fmt.Sprintf("http://%s:%s", cfg.APIServerFullname, cfg.APIServerPort),
+			ObjectStorage: objectStorageConfig,
+		},
+	})
+
 	testWorkflowExecutor := testworkflowexecutor.New(
 		eventsEmitter,
+		executionWorker,
 		clientset,
 		testWorkflowResultsRepository,
 		testWorkflowOutputRepository,

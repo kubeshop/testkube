@@ -76,9 +76,11 @@ type executor struct {
 	dashboardURI                   string
 	clusterID                      string
 	serviceAccountNames            map[string]string
+	workerClient                   executionworker.Worker
 }
 
 func New(emitter *event.Emitter,
+	workerClient executionworker.Worker,
 	clientSet kubernetes.Interface,
 	repository testworkflow.Repository,
 	output testworkflow.OutputRepository,
@@ -117,6 +119,7 @@ func New(emitter *event.Emitter,
 		imageDataPersistentCacheKey:    imageDataPersistentCacheKey,
 		dashboardURI:                   dashboardURI,
 		clusterID:                      clusterID,
+		workerClient:                   workerClient,
 	}
 }
 
@@ -722,33 +725,14 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		workflow.Spec.Pod.ServiceAccountName = "{{internal.serviceaccount.default}}"
 	}
 
-	// Build one time execution worker
-	workerConfig := e.buildWorkerConfig("")
-	namespacesConfig := map[string]executionworker.NamespaceConfig{}
-	for n, s := range e.serviceAccountNames {
-		namespacesConfig[n] = executionworker.NamespaceConfig{DefaultServiceAccountName: s}
-	}
-	worker := executionworker.New(e.clientSet, e.processor, executionworker.Config{
-		Cluster: executionworker.ClusterConfig{
-			Id:               e.clusterID,
-			DefaultNamespace: e.namespace,
-			DefaultRegistry:  e.defaultRegistry,
-			Namespaces:       namespacesConfig,
-		},
-		ImageInspector: executionworker.ImageInspectorConfig{
-			CacheEnabled: workerConfig.ImageInspectorPersistenceEnabled,
-			CacheKey:     workerConfig.ImageInspectorPersistenceCacheKey,
-			CacheTTL:     workerConfig.ImageInspectorPersistenceCacheTTL,
-		},
-		Connection: workerConfig.Connection,
-	})
+	// Map secrets
 	secretsMap := map[string]map[string]string{}
 	for _, secret := range secrets {
 		secretsMap[secret.Name] = secret.StringData
 	}
 
 	// Schedule the execution by the Execution Worker
-	result, err := worker.Execute(context.Background(), executionworker.ExecuteRequest{
+	result, err := e.workerClient.Execute(context.Background(), executionworker.ExecuteRequest{
 		Execution:    e.buildExecutionConfig(execution, organizationId, environmentId),
 		Secrets:      secretsMap,
 		Workflow:     workflow,
