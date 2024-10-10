@@ -11,6 +11,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
+	initconstants "github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller"
@@ -146,6 +148,7 @@ func (w *worker) findNamespace(ctx context.Context, id string) (string, error) {
 	return "", ErrResourceNotFound
 }
 
+// TODO: Avoid multiple controller copies?
 func (w *worker) Notifications(ctx context.Context, namespace, id string, opts NotificationsOptions) NotificationsWatcher {
 	// When there is no namespace specified, find the designated namespace
 	if namespace == "" {
@@ -184,9 +187,8 @@ func (w *worker) Notifications(ctx context.Context, namespace, id string, opts N
 
 	// Watch the resource
 	watchCtx, watchCtxCancel := context.WithCancel(ctx)
-	ch := ctrl.Watch(watchCtx)
+	ch := ctrl.Watch(watchCtx, opts.NoFollow)
 	go func() {
-		defer watchCtxCancel()
 		for n := range ch {
 			if n.Error != nil {
 				watcher.close(n.Error)
@@ -195,13 +197,38 @@ func (w *worker) Notifications(ctx context.Context, namespace, id string, opts N
 			}
 			watcher.send(n.Value.ToInternal())
 		}
+		watcher.close(nil)
+		watchCtxCancel()
 	}()
 	return watcher
 }
 
-func (w *worker) Logs(ctx context.Context, namespace, id string) (<-chan []byte, error) {
-	panic("not implemented")
-	return nil, nil
+// TODO: Optimize?
+// TODO: Allow fetching temporary logs too?
+func (w *worker) Logs(ctx context.Context, namespace, id string, follow bool) LogsReader {
+	reader := newLogsReader()
+	notifications := w.Notifications(ctx, namespace, id, NotificationsOptions{
+		NoFollow: !follow,
+	})
+	if notifications.Err() != nil {
+		reader.close(notifications.Err())
+		return reader
+	}
+
+	go func() {
+		defer reader.Close()
+		ref := ""
+		for v := range notifications.Channel() {
+			if v.Log != "" && !v.Temporary {
+				if ref != v.Ref && v.Ref != "" {
+					ref = v.Ref
+					_, _ = reader.Write([]byte(instructions.SprintHint(ref, initconstants.InstructionStart)))
+				}
+				_, _ = reader.Write([]byte(v.Log))
+			}
+		}
+	}()
+	return reader
 }
 
 func (w *worker) Get(ctx context.Context, namespace, id string) (*GetResult, error) {

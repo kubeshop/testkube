@@ -141,6 +141,7 @@ func (e *executor) Recover(ctx context.Context) {
 func (e *executor) updateStatus(testWorkflow *testworkflowsv1.TestWorkflow, execution *testkube.TestWorkflowExecution,
 	testWorkflowExecution *testworkflowsv1.TestWorkflowExecution) {
 	if testWorkflow != nil {
+		// FIXME: is invalid: metadata.resourceVersion: Invalid value: 0x0: must be specified for an update
 		testWorkflow.Status = testworkflowmappers.MapTestWorkflowExecutionAPIToKubeTestWorkflowStatusSummary(execution)
 		if err := e.testWorkflowsClient.UpdateStatus(testWorkflow); err != nil {
 			log.DefaultLogger.Errorw("failed to update test workflow status", "error", err)
@@ -156,12 +157,18 @@ func (e *executor) updateStatus(testWorkflow *testworkflowsv1.TestWorkflow, exec
 }
 
 func (e *executor) Control(ctx context.Context, testWorkflow *testworkflowsv1.TestWorkflow, execution *testkube.TestWorkflowExecution) error {
-	ctrl, err := testworkflowcontroller.New(ctx, e.clientSet, execution.Namespace, execution.Id, execution.ScheduledAt)
-	if err != nil {
-		log.DefaultLogger.Errorw("failed to control the TestWorkflow", "id", execution.Id, "error", err)
-		return err
+	ctx, ctxCancel := context.WithCancel(ctx)
+	defer ctxCancel()
+
+	// TODO: retry?
+	notifications := e.workerClient.Notifications(ctx, execution.Namespace, execution.Id, executionworker.NotificationsOptions{
+		Signature:   execution.Signature,
+		ScheduledAt: common.Ptr(execution.ScheduledAt),
+	})
+	if notifications.Err() != nil {
+		log.DefaultLogger.Errorw("failed to control the TestWorkflow", "id", execution.Id, "error", notifications.Err())
+		return notifications.Err()
 	}
-	defer ctrl.StopController()
 
 	// Prepare stream for writing log
 	r, writer := io.Pipe()
@@ -170,6 +177,7 @@ func (e *executor) Control(ctx context.Context, testWorkflow *testworkflowsv1.Te
 
 	var testWorkflowExecution *testworkflowsv1.TestWorkflowExecution
 	if execution.TestWorkflowExecutionName != "" {
+		var err error
 		testWorkflowExecution, err = e.testWorkflowExecutionsClient.Get(execution.TestWorkflowExecutionName)
 		if err != nil {
 			log.DefaultLogger.Errorw("failed to get test workflow execution", "error", err)
@@ -181,17 +189,13 @@ func (e *executor) Control(ctx context.Context, testWorkflow *testworkflowsv1.Te
 	go func() {
 		defer wg.Done()
 
-		for v := range ctrl.Watch(ctx) {
-			if v.Error != nil {
-				log.DefaultLogger.Errorw("error from TestWorkflow watcher", "id", execution.Id, "error", v.Error)
-				continue
-			}
-			if v.Value.Output != nil {
-				if !v.Value.Temporary {
-					execution.Output = append(execution.Output, *testworkflowcontroller.InstructionToInternal(v.Value.Output))
+		for v := range notifications.Channel() {
+			if v.Output != nil {
+				if !v.Temporary {
+					execution.Output = append(execution.Output, *v.Output)
 				}
-			} else if v.Value.Result != nil {
-				execution.Result = v.Value.Result
+			} else if v.Result != nil {
+				execution.Result = v.Result
 				if execution.Result.IsFinished() {
 					execution.StatusAt = execution.Result.FinishedAt
 				}
@@ -209,19 +213,22 @@ func (e *executor) Control(ctx context.Context, testWorkflow *testworkflowsv1.Te
 					wg.Done()
 				}()
 				wg.Wait()
-			} else if !v.Value.Temporary {
-				if ref != v.Value.Ref && v.Value.Ref != "" {
-					ref = v.Value.Ref
+			} else if !v.Temporary {
+				if ref != v.Ref && v.Ref != "" {
+					ref = v.Ref
 					_, err := writer.Write([]byte(instructions.SprintHint(ref, initconstants.InstructionStart)))
 					if err != nil {
 						log.DefaultLogger.Error(errors.Wrap(err, "saving log output signature"))
 					}
 				}
-				_, err := writer.Write([]byte(v.Value.Log))
+				_, err := writer.Write([]byte(v.Log))
 				if err != nil {
 					log.DefaultLogger.Error(errors.Wrap(err, "saving log output content"))
 				}
 			}
+		}
+		if notifications.Err() != nil && !errors.Is(notifications.Err(), context.Canceled) {
+			log.DefaultLogger.Errorw("error from TestWorkflow watcher", "id", execution.Id, "error", notifications.Err())
 		}
 
 		// Try to gracefully handle abort
@@ -238,15 +245,17 @@ func (e *executor) Control(ctx context.Context, testWorkflow *testworkflowsv1.Te
 				e.handleFatalError(execution, testworkflowcontroller.ErrJobAborted, abortedAt)
 			} else {
 				// Handle unknown state
-				ctrl.StopController()
-				ctrl, err = testworkflowcontroller.New(ctx, e.clientSet, execution.Namespace, execution.Id, execution.ScheduledAt)
-				if err == nil {
-					for v := range ctrl.Watch(ctx) {
-						if v.Error != nil || v.Value.Output == nil {
+				notifications = e.workerClient.Notifications(ctx, execution.Namespace, execution.Id, executionworker.NotificationsOptions{
+					Signature:   execution.Signature,
+					ScheduledAt: common.Ptr(execution.ScheduledAt),
+				})
+				if notifications.Err() == nil {
+					for v := range notifications.Channel() {
+						if v.Output == nil {
 							continue
 						}
 
-						execution.Result = v.Value.Result
+						execution.Result = v.Result
 						if execution.Result.IsFinished() {
 							execution.StatusAt = execution.Result.FinishedAt
 						}
@@ -256,7 +265,7 @@ func (e *executor) Control(ctx context.Context, testWorkflow *testworkflowsv1.Te
 						}
 					}
 				} else {
-					e.handleFatalError(execution, err, time.Time{})
+					e.handleFatalError(execution, notifications.Err(), time.Time{})
 				}
 			}
 		}
@@ -282,13 +291,13 @@ func (e *executor) Control(ctx context.Context, testWorkflow *testworkflowsv1.Te
 	}()
 
 	// Stream the log into Minio
-	err = e.output.SaveLog(context.Background(), execution.Id, execution.Workflow.Name, reader)
+	err := e.output.SaveLog(context.Background(), execution.Id, execution.Workflow.Name, reader)
 
 	// Retry saving the logs to Minio if something goes wrong
 	for attempt := 1; err != nil && attempt <= SaveLogsRetryMaxAttempts; attempt++ {
 		log.DefaultLogger.Errorw("retrying save of TestWorkflow log output", "id", execution.Id, "error", err)
 		time.Sleep(SaveLogsRetryBaseDelay * time.Duration(attempt))
-		err = e.output.SaveLog(context.Background(), execution.Id, execution.Workflow.Name, ctrl.Logs(context.Background(), false))
+		err = e.output.SaveLog(context.Background(), execution.Id, execution.Workflow.Name, e.workerClient.Logs(context.Background(), execution.Namespace, execution.Id, false))
 	}
 	if err != nil {
 		log.DefaultLogger.Errorw("failed to save TestWorkflow log output", "id", execution.Id, "error", err)

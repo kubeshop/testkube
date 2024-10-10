@@ -2,6 +2,7 @@ package executionworker
 
 import (
 	"context"
+	"io"
 	"sync/atomic"
 	"time"
 
@@ -118,6 +119,8 @@ type NotificationsOptions struct {
 	Signature []testkube.TestWorkflowSignature
 	// ScheduledAt is optional property to provide known schedule timestamp for better hinting.
 	ScheduledAt *time.Time // TODO: Consider no pointer
+	// NoFollow gives a hint to ignore following the further actions.
+	NoFollow bool
 }
 
 type notificationsWatcher struct {
@@ -138,8 +141,10 @@ func (n *notificationsWatcher) send(notification testkube.TestWorkflowExecutionN
 
 func (n *notificationsWatcher) close(err error) {
 	if n.finished.CompareAndSwap(false, true) {
+		if err != nil {
+			n.err.Store(err)
+		}
 		close(n.ch)
-		n.err.Store(err)
 	}
 }
 
@@ -160,6 +165,43 @@ type NotificationsWatcher interface {
 	Err() error
 }
 
+type logsReader struct {
+	io.WriteCloser
+	io.Reader
+	finished atomic.Bool
+	err      atomic.Value
+}
+
+func newLogsReader() *logsReader {
+	reader, writer := io.Pipe()
+	return &logsReader{
+		Reader:      reader,
+		WriteCloser: writer,
+	}
+}
+
+func (n *logsReader) close(err error) {
+	if n.finished.CompareAndSwap(false, true) {
+		if err != nil {
+			n.err.Store(err)
+		}
+		n.WriteCloser.Close()
+	}
+}
+
+func (n *logsReader) Err() error {
+	err := n.err.Load()
+	if err == nil {
+		return nil
+	}
+	return err.(error)
+}
+
+type LogsReader interface {
+	io.Reader
+	Err() error
+}
+
 type Worker interface {
 	// Execute deploys the resources in the cluster.
 	Execute(ctx context.Context, request ExecuteRequest) (*ExecuteResult, error)
@@ -168,7 +210,7 @@ type Worker interface {
 	Notifications(ctx context.Context, namespace, id string, options NotificationsOptions) NotificationsWatcher
 
 	// Logs converts all the important notifications (except i.e. output) from the resource into plain logs.
-	Logs(ctx context.Context, namespace, id string) (<-chan []byte, error)
+	Logs(ctx context.Context, namespace, id string, follow bool) LogsReader
 
 	// Get tries to build the latest precise result from the resource execution.
 	Get(ctx context.Context, namespace, id string) (*GetResult, error)

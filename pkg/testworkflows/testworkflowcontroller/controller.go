@@ -40,7 +40,7 @@ type Controller interface {
 	Pause(ctx context.Context) error
 	Resume(ctx context.Context) error
 	Cleanup(ctx context.Context) error
-	Watch(ctx context.Context) <-chan ChannelMessage[Notification]
+	Watch(ctx context.Context, disableFollow bool) <-chan ChannelMessage[Notification]
 	WatchLightweight(ctx context.Context) <-chan LightweightNotification
 	Logs(ctx context.Context, follow bool) io.Reader
 	NodeName() (string, error)
@@ -166,8 +166,10 @@ func (c *controller) StopController() {
 	c.ctxCancel()
 }
 
-func (c *controller) Watch(parentCtx context.Context) <-chan ChannelMessage[Notification] {
-	ch, err := WatchInstrumentedPod(parentCtx, c.clientSet, c.signature, c.scheduledAt, c.watcher, WatchInstrumentedPodOptions{})
+func (c *controller) Watch(parentCtx context.Context, disableFollow bool) <-chan ChannelMessage[Notification] {
+	ch, err := WatchInstrumentedPod(parentCtx, c.clientSet, c.signature, c.scheduledAt, c.watcher, WatchInstrumentedPodOptions{
+		DisableFollow: disableFollow,
+	})
 	if err != nil {
 		v := newChannel[Notification](context.Background(), 1)
 		v.Error(err)
@@ -187,7 +189,7 @@ func (c *controller) WatchLightweight(parentCtx context.Context) <-chan Lightwei
 	ch := make(chan LightweightNotification)
 	go func() {
 		defer close(ch)
-		for v := range c.Watch(parentCtx) {
+		for v := range c.Watch(parentCtx, false) {
 			if v.Error != nil {
 				ch <- LightweightNotification{Error: v.Error}
 				continue
