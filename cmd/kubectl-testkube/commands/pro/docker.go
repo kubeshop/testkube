@@ -41,8 +41,8 @@ func NewDockerCmd() *cobra.Command {
 			sendAttemptTelemetry(cmd, cfg)
 
 			if !options.NoConfirm {
-				ui.Warn("This will run Testkube Docker Agent latest version. This may take a few minutes.")
-				ui.Warn("Please be sure you have Docker service running before continuing!")
+				ui.Warn("This will run Testkube Docker Agent latest version. This will take a few minutes.")
+				ui.Warn("Please be sure you have Docker service running before continuing and can run containers in privileged mode!")
 				ui.NL()
 
 				dockerInfo, cliErr := common.RunDockerCommand([]string{"info"})
@@ -61,16 +61,19 @@ func NewDockerCmd() *cobra.Command {
 				}
 			}
 
-			spinner := ui.NewSpinner("Running Testkube Docker Agent")
+			ui.H2("Running Testkube Docker Agent")
 			if cliErr := common.DockerRunTestkubeAgent(options, cfg, containerName, dockerImage); cliErr != nil {
-				spinner.Fail()
 				sendErrTelemetry(cmd, cfg, "docker_run", cliErr)
 				common.HandleCLIError(cliErr)
 			}
 
-			spinner.Success()
+			if cliErr := common.StreamDockerLogs(containerName); cliErr != nil {
+				sendErrTelemetry(cmd, cfg, "docker_logs", cliErr)
+				common.HandleCLIError(cliErr)
+			}
 
 			ui.NL()
+			ui.Success("Testkube Docker Agent is up and running")
 
 			if noLogin {
 				ui.Alert("Saving Testkube CLI Pro context, you need to authorize CLI through `testkube set context` later")
@@ -101,7 +104,7 @@ func NewDockerCmd() *cobra.Command {
 
 	cmd.Flags().BoolVarP(&noLogin, "no-login", "", false, "Ignore login prompt, set existing token later by `testkube set context`")
 	cmd.Flags().StringVar(&containerName, "container-name", "testkube-agent", "container name for Testkube Docker Agent")
-	cmd.Flags().StringVar(&dockerImage, "docker-image", "kubeshop/testkube-agent", "docker image for Testkube Docker Agent")
+	cmd.Flags().StringVar(&dockerImage, "docker-image", "kubeshop/testkube-agent:latest", "docker image for Testkube Docker Agent")
 
 	return cmd
 }

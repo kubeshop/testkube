@@ -27,6 +27,8 @@ const (
 	TKErrConfigInitFailed ErrorCode = "TKERR-1201"
 	// TKErrInvalidInstallConfig is returned when invalid configuration is supplied when installing or upgrading.
 	TKErrInvalidInstallConfig ErrorCode = "TKERR-1202"
+	// TKErrInvalidDockerConfig is returned when docker client configuration is invalid.
+	TKErrInvalidDockerConfig ErrorCode = "TKERR-1203"
 
 	// TKERR-13xx errors are related to install operations.
 
@@ -36,6 +38,12 @@ const (
 	TKErrKubectlCommandFailed ErrorCode = "TKERR-1302"
 	// TKErrDockerCommandFailed is returned when a docker command fails.
 	TKErrDockerCommandFailed ErrorCode = "TKERR-1303"
+	// TKErrDockerLogStreamingFailed is returned when a docker log streaming fails.
+	TKErrDockerLogStreamingFailed ErrorCode = "TKERR-1304"
+	// TKErrDockerLogReadingFailed is returned when a docker log reading fails.
+	TKErrDockerLogReadingFailed ErrorCode = "TKERR-1305"
+	// TKErrDockerInstallationFailed is returned when a docker installation fails.
+	TKErrDockerInstallationFailed ErrorCode = "TKERR-1306"
 
 	// TKErrCleanOldMigrationJobFailed is returned in case of issues with old migration jobs.
 	TKErrCleanOldMigrationJobFailed ErrorCode = "TKERR-1401"

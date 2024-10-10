@@ -1,12 +1,15 @@
 package common
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"os/exec"
 	"strings"
 	"time"
 
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/client"
 	"github.com/pkg/errors"
 	"github.com/skratchdot/open-golang/open"
 	"github.com/spf13/cobra"
@@ -38,8 +41,9 @@ type HelmOptions struct {
 }
 
 const (
-	github = "GitHub"
-	gitlab = "GitLab"
+	github                = "GitHub"
+	gitlab                = "GitLab"
+	dockerDaemonPrefixLen = 8
 )
 
 func (o HelmOptions) GetApiURI() string {
@@ -765,7 +769,7 @@ func RunDockerCommand(args []string) (output string, cliErr *CLIError) {
 	if err != nil {
 		return "", NewCLIError(
 			TKErrDockerCommandFailed,
-			"docker command failed",
+			"Docker command failed",
 			"Check is the Docker service installed and running on your computer by executing 'docker info' ",
 			err,
 		)
@@ -814,4 +818,68 @@ func prepareTestkubeProDockerArgs(options HelmOptions, containerName, dockerImag
 	}
 
 	return args
+}
+
+func StreamDockerLogs(containerName string) *CLIError {
+	// Create a Docker client
+	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	if err != nil {
+		return NewCLIError(
+			TKErrInvalidDockerConfig,
+			"Invalid docker config",
+			"Check your environment variables used to connect to Docker daemon",
+			err)
+	}
+
+	ctx := context.Background()
+	// Set options to stream logs and show both stdout and stderr logs
+	opts := container.LogsOptions{
+		ShowStdout: true,
+		ShowStderr: true,
+		Follow:     true, // Follow logs in real-time
+		Timestamps: false,
+	}
+
+	// Fetch logs from the container
+	logs, err := cli.ContainerLogs(ctx, containerName, opts)
+	if err != nil {
+		return NewCLIError(
+			TKErrDockerLogStreamingFailed,
+			"Docker log streaming failed",
+			"Check that your Testkube Docker Agent container is up and runnning",
+			err)
+	}
+	defer logs.Close()
+
+	// Use a buffered scanner to read the logs line by line
+	scanner := bufio.NewScanner(logs)
+	for scanner.Scan() {
+		line := scanner.Bytes()
+		if len(line) > dockerDaemonPrefixLen {
+			line = line[dockerDaemonPrefixLen:]
+		}
+
+		fmt.Println(string(line)) // Optional: print logs to console
+		if strings.Contains(string(line), "Testkube installation succeed") {
+			break
+		}
+
+		if strings.Contains(string(line), "Testkube installation failed") {
+			return NewCLIError(
+				TKErrDockerInstallationFailed,
+				"Docker installation failed",
+				"Check logs of your Testkube Docker Agent container",
+				errors.New(string(line)))
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return NewCLIError(
+			TKErrDockerLogReadingFailed,
+			"Docker log reading failed",
+			"Check logs of your Testkube Docker Agent container",
+			err)
+	}
+
+	return nil
 }
