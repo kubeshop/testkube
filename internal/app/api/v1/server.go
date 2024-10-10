@@ -17,6 +17,7 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/executionworker"
 	repoConfig "github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/secretmanager"
@@ -89,6 +90,7 @@ func NewTestkubeAPI(
 	executor client.Executor,
 	containerExecutor client.Executor,
 	testWorkflowExecutor testworkflowexecutor.TestWorkflowExecutor,
+	executionWorkerClient executionworker.Worker,
 	metrics metrics.Metrics,
 	scheduler *scheduler.Scheduler,
 	slackLoader *slack.SlackLoader,
@@ -145,6 +147,7 @@ func NewTestkubeAPI(
 		Executor:                    executor,
 		ContainerExecutor:           containerExecutor,
 		TestWorkflowExecutor:        testWorkflowExecutor,
+		ExecutionWorkerClient:       executionWorkerClient,
 		scheduler:                   scheduler,
 		slackLoader:                 slackLoader,
 		graphqlPort:                 graphqlPort,
@@ -174,6 +177,7 @@ type TestkubeAPI struct {
 	Executor                    client.Executor
 	ContainerExecutor           client.Executor
 	TestWorkflowExecutor        testworkflowexecutor.TestWorkflowExecutor
+	ExecutionWorkerClient       executionworker.Worker
 	TestsSuitesClient           *testsuitesclientv3.TestSuitesClient
 	TestsClient                 *testsclientv3.TestsClient
 	ExecutorsClient             *executorsclientv1.ExecutorsClient

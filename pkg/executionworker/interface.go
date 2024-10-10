@@ -117,7 +117,7 @@ type NotificationsOptions struct {
 	// Signature is optional property to provide known signature for better hinting.
 	Signature []testkube.TestWorkflowSignature
 	// ScheduledAt is optional property to provide known schedule timestamp for better hinting.
-	ScheduledAt *time.Time
+	ScheduledAt *time.Time // TODO: Consider no pointer
 }
 
 type notificationsWatcher struct {
@@ -148,7 +148,11 @@ func (n *notificationsWatcher) Channel() <-chan testkube.TestWorkflowExecutionNo
 }
 
 func (n *notificationsWatcher) Err() error {
-	return n.err.Load().(error)
+	err := n.err.Load()
+	if err == nil {
+		return nil
+	}
+	return err.(error)
 }
 
 type NotificationsWatcher interface {

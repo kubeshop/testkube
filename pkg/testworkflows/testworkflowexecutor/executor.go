@@ -28,6 +28,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/log"
 	testworkflowmappers "github.com/kubeshop/testkube/pkg/mapper/testworkflows"
+	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/secretmanager"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
@@ -57,6 +58,7 @@ type executor struct {
 	clientSet                    kubernetes.Interface
 	repository                   testworkflow.Repository
 	output                       testworkflow.OutputRepository
+	configMap                    configRepo.Repository
 	testWorkflowTemplatesClient  testworkflowsclientv1.TestWorkflowTemplatesInterface
 	testWorkflowExecutionsClient testworkflowsclientv1.TestWorkflowExecutionsInterface
 	testWorkflowsClient          testworkflowsclientv1.Interface
@@ -72,6 +74,7 @@ func New(emitter *event.Emitter,
 	clientSet kubernetes.Interface,
 	repository testworkflow.Repository,
 	output testworkflow.OutputRepository,
+	configMap configRepo.Repository,
 	testWorkflowTemplatesClient testworkflowsclientv1.TestWorkflowTemplatesInterface,
 	testWorkflowExecutionsClient testworkflowsclientv1.TestWorkflowExecutionsInterface,
 	testWorkflowsClient testworkflowsclientv1.Interface,
@@ -84,6 +87,7 @@ func New(emitter *event.Emitter,
 		clientSet:                    clientSet,
 		repository:                   repository,
 		output:                       output,
+		configMap:                    configMap,
 		testWorkflowTemplatesClient:  testWorkflowTemplatesClient,
 		testWorkflowExecutionsClient: testWorkflowExecutionsClient,
 		testWorkflowsClient:          testWorkflowsClient,
@@ -106,7 +110,7 @@ func (e *executor) handleFatalError(execution *testkube.TestWorkflowExecution, e
 		log.DefaultLogger.Errorf("failed to save fatal error for execution %s: %v", execution.Id, err)
 	}
 	e.emitter.Notify(testkube.NewEventEndTestWorkflowFailed(execution))
-	go testworkflowcontroller.Cleanup(context.Background(), e.clientSet, execution.Namespace, execution.Id)
+	go e.workerClient.Destroy(context.Background(), execution.Namespace, execution.Id)
 }
 
 func (e *executor) Recover(ctx context.Context) {
@@ -295,7 +299,7 @@ func (e *executor) Control(ctx context.Context, testWorkflow *testworkflowsv1.Te
 	e.metrics.IncAndObserveExecuteTestWorkflow(*execution, e.dashboardURI)
 
 	e.updateStatus(testWorkflow, execution, testWorkflowExecution) // TODO: Consider if it is needed
-	err = testworkflowcontroller.Cleanup(ctx, e.clientSet, execution.Namespace, execution.Id)
+	err = e.workerClient.Destroy(ctx, execution.Namespace, execution.Id)
 	if err != nil {
 		log.DefaultLogger.Errorw("failed to cleanup TestWorkflow resources", "id", execution.Id, "error", err)
 	}
