@@ -32,8 +32,10 @@ const (
 
 	// TKErrHelmCommandFailed is returned when a helm command fails.
 	TKErrHelmCommandFailed ErrorCode = "TKERR-1301"
-	// TKErrKubectlCommandFailed is returned when a kubectl command fail.
+	// TKErrKubectlCommandFailed is returned when a kubectl command fails.
 	TKErrKubectlCommandFailed ErrorCode = "TKERR-1302"
+	// TKErrDockerCommandFailed is returned when a docker command fails.
+	TKErrDockerCommandFailed ErrorCode = "TKERR-1303"
 
 	// TKErrCleanOldMigrationJobFailed is returned in case of issues with old migration jobs.
 	TKErrCleanOldMigrationJobFailed ErrorCode = "TKERR-1401"

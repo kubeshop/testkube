@@ -759,3 +759,59 @@ func UiGetNamespace(cmd *cobra.Command, defaultNamespace string) string {
 
 	return namespace
 }
+
+func RunDockerCommand(args []string) (output string, cliErr *CLIError) {
+	out, err := process.Execute("docker", args...)
+	if err != nil {
+		return "", NewCLIError(
+			TKErrDockerCommandFailed,
+			"docker command failed",
+			"Check is the Docker service installed and running on your computer by executing 'docker info' ",
+			err,
+		)
+	}
+	return string(out), nil
+}
+
+func DockerRunTestkubeAgent(options HelmOptions, cfg config.Data, containerName string) *CLIError {
+	// use config if set
+	if cfg.CloudContext.AgentKey != "" && options.Master.AgentToken == "" {
+		options.Master.AgentToken = cfg.CloudContext.AgentKey
+	}
+
+	if options.Master.AgentToken == "" {
+		return NewCLIError(
+			TKErrInvalidInstallConfig,
+			"Invalid install config",
+			"Provide the agent token by setting the '--agent-token' flag",
+			errors.New("agent key is required"))
+	}
+
+	args := prepareTestkubeProDockerArgs(options, containerName)
+	output, err := RunDockerCommand(args)
+	if err != nil {
+		return err
+	}
+
+	ui.Debug("Docker command output:")
+	ui.Debug("Arguments", args...)
+
+	ui.Debug("Docker run testkube output", output)
+
+	return nil
+}
+
+// prepareTestkubeProDockerArgs prepares docker arguments for Testkube Pro running.
+func prepareTestkubeProDockerArgs(options HelmOptions, containerName string) []string {
+	args := []string{
+		"run",
+		"--name", containerName,
+		"--privileged",
+		"-d",
+		"-e", "CLOUD_URL=" + options.Master.URIs.Agent,
+		"-e", "AGENT_KEY=" + options.Master.AgentToken,
+		"kubeshop/testkube-agent",
+	}
+
+	return args
+}
