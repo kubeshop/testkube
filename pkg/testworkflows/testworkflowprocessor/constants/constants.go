@@ -34,7 +34,7 @@ var (
 	DefaultInitPath        = filepath.Join(DefaultInternalPath, "init")
 	DefaultToolkitPath     = filepath.Join(DefaultInternalPath, "toolkit")
 	DefaultTransferDirPath = filepath.Join(DefaultInternalPath, "transfer")
-	DefaultTmpDirPath      = filepath.Join(DefaultInternalPath, "tmp")
+	DefaultTmpDirPath      = "/tmp"
 	DefaultTransferPort    = 60433
 	DefaultShellHeader     = "set -e\n"
 	DefaultContainerConfig = testworkflowsv1.ContainerConfig{
