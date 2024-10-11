@@ -352,8 +352,7 @@ func (r *TestWorkflowResult) healPredictedStatus(sigSequence []TestWorkflowSigna
 
 	// Determine if there are some steps failed
 	for ref := range r.Steps {
-		optional := isStepOptional(sigSequence, ref)
-		if r.Steps[ref].Status.Aborted() || (!optional && r.Steps[ref].Status.AnyError()) {
+		if r.Steps[ref].Status.Aborted() || (r.Steps[ref].Status.AnyError() && !isStepOptional(sigSequence, ref)) {
 			r.PredictedStatus = common.Ptr(FAILED_TestWorkflowStatus)
 			return
 		}
