@@ -743,6 +743,7 @@ func main() {
 			executor,
 			eventBus,
 			metrics,
+			executionWorker,
 			testWorkflowExecutor,
 			testWorkflowResultsRepository,
 			triggers.WithHostnameIdentifier(),

@@ -21,6 +21,7 @@ import (
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event/bus"
+	"github.com/kubeshop/testkube/pkg/executionworker"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/http"
 	"github.com/kubeshop/testkube/pkg/repository/config"
@@ -76,6 +77,7 @@ type Service struct {
 	testExecutor                  client.Executor
 	eventsBus                     bus.Bus
 	metrics                       metrics.Metrics
+	executionWorkerClient         executionworker.Worker
 	testWorkflowExecutor          testworkflowexecutor.TestWorkflowExecutor
 	testWorkflowResultsRepository testworkflow.Repository
 	testkubeNamespace             string
@@ -101,6 +103,7 @@ func NewService(
 	testExecutor client.Executor,
 	eventsBus bus.Bus,
 	metrics metrics.Metrics,
+	executionWorkerClient executionworker.Worker,
 	testWorkflowExecutor testworkflowexecutor.TestWorkflowExecutor,
 	testWorkflowResultsRepository testworkflow.Repository,
 	opts ...Option,
@@ -131,6 +134,7 @@ func NewService(
 		testExecutor:                  testExecutor,
 		eventsBus:                     eventsBus,
 		metrics:                       metrics,
+		executionWorkerClient:         executionWorkerClient,
 		testWorkflowExecutor:          testWorkflowExecutor,
 		testWorkflowResultsRepository: testWorkflowResultsRepository,
 		httpClient:                    http.NewClient(),
