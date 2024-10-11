@@ -116,6 +116,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 
 		// Iterate over containers
 		lastStarted := data.InitStepName
+		containersReady := watcher.State().ContainersReady()
 		for containerIndex := 0; containerIndex < len(refs); containerIndex++ {
 			aborted := false
 			container := fmt.Sprintf("%d", containerIndex+1)
@@ -161,25 +162,41 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 			isDone := func() bool {
 				return opts.DisableFollow || watcher.State().ContainerFinished(container) || watcher.State().Completed()
 			}
-			for v := range WatchContainerLogs(ctx, clientSet, watcher.State().Namespace(), watcher.State().PodName(), container, 10, isDone, isLastHint) {
-				if v.Error != nil {
-					notifier.Error(v.Error)
-					continue
-				}
+			logsCh := WatchContainerLogs(ctx, clientSet, watcher.State().Namespace(), watcher.State().PodName(), container, 10, isDone, isLastHint)
+			containersReady = watcher.State().ContainersReady()
+		logs:
+			for {
+				select {
+				case <-updatesCh:
+					// Force empty notification on container ready (for services)
+					nextContainersReady := watcher.State().ContainersReady()
+					if containersReady != nextContainersReady {
+						containersReady = nextContainersReady
+						notifier.send(Notification{Ref: lastStarted, Temporary: true}) // TODO: apply timestamp
+					}
+				case v, ok := <-logsCh:
+					if !ok {
+						break logs
+					}
+					if v.Error != nil {
+						notifier.Error(v.Error)
+						continue
+					}
 
-				switch v.Value.Type() {
-				case ContainerLogTypeLog:
-					notifier.Raw(lastStarted, v.Value.Time, string(v.Value.Log), false)
-				case ContainerLogTypeOutput:
-					notifier.Output(v.Value.Output.Ref, v.Value.Time, v.Value.Output)
-				case ContainerLogTypeHint:
-					if v.Value.Hint.Name == constants.InstructionStart {
-						lastStarted = v.Value.Hint.Ref
+					switch v.Value.Type() {
+					case ContainerLogTypeLog:
+						notifier.Raw(lastStarted, v.Value.Time, string(v.Value.Log), false)
+					case ContainerLogTypeOutput:
+						notifier.Output(v.Value.Output.Ref, v.Value.Time, v.Value.Output)
+					case ContainerLogTypeHint:
+						if v.Value.Hint.Name == constants.InstructionStart {
+							lastStarted = v.Value.Hint.Ref
+						}
+						if v.Value.Hint.Name == constants.InstructionEnd && testkube.TestWorkflowStepStatus(v.Value.Hint.Value.(string)) == testkube.ABORTED_TestWorkflowStepStatus {
+							aborted = true
+						}
+						notifier.Instruction(v.Value.Time, *v.Value.Hint)
 					}
-					if v.Value.Hint.Name == constants.InstructionEnd && testkube.TestWorkflowStepStatus(v.Value.Hint.Value.(string)) == testkube.ABORTED_TestWorkflowStepStatus {
-						aborted = true
-					}
-					notifier.Instruction(v.Value.Time, *v.Value.Hint)
 				}
 			}
 

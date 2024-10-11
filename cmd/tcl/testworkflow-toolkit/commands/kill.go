@@ -14,18 +14,15 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	commontcl "github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/common"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/spawn"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/artifacts"
-	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
+	"github.com/kubeshop/testkube/pkg/executionworker"
 	"github.com/kubeshop/testkube/pkg/expressions"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -41,7 +38,6 @@ func NewKillCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			machine := expressions.CombinedMachines(data.AliasMachine, data.GetBaseTestWorkflowMachine())
 			groupRef := args[0]
-			clientSet := env.Kubernetes()
 
 			conditions := make(map[string]expressions.Expression)
 			for _, l := range logs {
@@ -58,18 +54,27 @@ func NewKillCmd() *cobra.Command {
 			}
 
 			// Fetch the services when needed
+			namespace := ""
 			if len(logs) > 0 {
-				// TODO: Use ExecutionWorker instead
-				// TODO: Should take the namespace as argument too
-				jobs, err := clientSet.BatchV1().Jobs(config.Namespace()).List(context.Background(), metav1.ListOptions{
-					LabelSelector: fmt.Sprintf("%s=%s", constants.GroupIdLabelName, groupRef),
+				items, err := spawn.ExecutionWorker().List(context.Background(), executionworker.ListOptions{
+					GroupId: groupRef,
 				})
-				ui.ExitOnError("listing service resources", err)
+				ui.ExitOnError("listing service instances", err)
+
+				if len(items) > 0 {
+					namespace = items[0].Namespace
+					for _, item := range items {
+						if item.Namespace != namespace {
+							namespace = ""
+							break
+						}
+					}
+				}
 
 				services := make(map[string]int64)
 				ids := make([]string, 0)
-				for _, job := range jobs.Items {
-					service, index := spawn.GetServiceByResourceId(job.Name)
+				for _, item := range items {
+					service, index := spawn.GetServiceByResourceId(item.Resource.Id)
 					if _, ok := conditions[service]; !ok {
 						continue
 					}
@@ -87,7 +92,7 @@ func NewKillCmd() *cobra.Command {
 						fmt.Printf("warning: service '%s': could not resolve condition '%s': %s", service, log.String(), err.Error())
 					} else if v, _ := log.BoolValue(); v {
 						services[service]++
-						ids = append(ids, job.Name)
+						ids = append(ids, item.Resource.Id)
 					}
 				}
 
@@ -116,7 +121,7 @@ func NewKillCmd() *cobra.Command {
 				}
 			}
 
-			err := testworkflowcontroller.CleanupGroup(context.Background(), clientSet, config.Namespace(), groupRef)
+			err := spawn.ExecutionWorker().DestroyGroup(context.Background(), namespace, groupRef)
 			ui.ExitOnError("cleaning up resources", err)
 		},
 	}

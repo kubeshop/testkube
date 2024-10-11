@@ -43,7 +43,14 @@ type ExecuteRequest struct {
 
 	// TODO: Think if it should be wrapped differently
 	ResourceId string
+	GroupId    string // TODO: likely it should be part of the resource config
 	FsPrefix   string
+	Service    *ServiceConfig // TODO: Think if service should not be executed by a different command
+}
+
+type ServiceConfig struct {
+	RestartPolicy  string
+	ReadinessProbe *testkube.Probe
 }
 
 type ExecuteResult struct {
@@ -80,7 +87,9 @@ type ListOptions struct {
 	OrganizationId string
 	// EnvironmentId filters by environment ID tied to the execution.
 	EnvironmentId string
-	// Root filters to only root or non-root resources.
+	// GroupId filters by group ID of the resources.
+	GroupId string
+	// Root filters to only root or non-root resources. TODO: Consider root-only as a default?
 	Root *bool
 	// Finished filters based on the execution being finished or still running.
 	Finished *bool
@@ -182,6 +191,9 @@ type Worker interface {
 
 	// Destroy gets rid of all the data for the selected resource.
 	Destroy(ctx context.Context, namespace, id string) error
+
+	// DestroyGroup gets rid of all the data for the selected resources.
+	DestroyGroup(ctx context.Context, namespace, groupId string) error
 
 	// Pause sends pause request to the selected resource.
 	Pause(ctx context.Context, namespace, id string) error

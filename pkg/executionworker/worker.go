@@ -2,16 +2,20 @@ package executionworker
 
 import (
 	"context"
+	"encoding/json"
+	errors2 "errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/pkg/errors"
+	"golang.org/x/exp/maps"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/utils/strings/slices"
 
 	lru "github.com/hashicorp/golang-lru/v2"
 
@@ -22,8 +26,10 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
 	"github.com/kubeshop/testkube/pkg/log"
+	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller/watchers"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
@@ -105,6 +111,33 @@ func (w *worker) Execute(ctx context.Context, request ExecuteRequest) (*ExecuteR
 	bundle, err := w.processor.Bundle(ctx, &request.Workflow, testworkflowprocessor.BundleOptions{Config: cfg, Secrets: secrets})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to process test workflow")
+	}
+
+	// Apply the service setup
+	if request.Service != nil {
+		// TODO: Handle RestartPolicy: Always?
+		if request.Service.RestartPolicy == "Never" {
+			bundle.Job.Spec.BackoffLimit = common.Ptr(int32(0))
+			bundle.Job.Spec.Template.Spec.RestartPolicy = "Never"
+		} else {
+			// TODO: Throw errors from the pod containers? Atm it will just end with "Success"...
+			bundle.Job.Spec.BackoffLimit = nil
+			bundle.Job.Spec.Template.Spec.RestartPolicy = "OnFailure"
+		}
+		if request.Service.ReadinessProbe != nil {
+			bundle.Job.Spec.Template.Spec.Containers[0].ReadinessProbe = common.MapPtr(request.Service.ReadinessProbe, testworkflows.MapProbeAPIToKube)
+		}
+	}
+
+	// Annotate the group ID
+	if request.GroupId != "" {
+		testworkflowprocessor.AnnotateGroupId(&bundle.Job, request.GroupId)
+		for i := range bundle.ConfigMaps {
+			testworkflowprocessor.AnnotateGroupId(&bundle.ConfigMaps[i], request.GroupId)
+		}
+		for i := range bundle.Secrets {
+			testworkflowprocessor.AnnotateGroupId(&bundle.Secrets[i], request.GroupId)
+		}
 	}
 
 	// Deploy required resources
@@ -402,8 +435,60 @@ func (w *worker) ListIds(ctx context.Context, options ListOptions) ([]string, er
 }
 
 func (w *worker) List(ctx context.Context, options ListOptions) ([]ListResultItem, error) {
-	panic("not implemented")
-	return nil, nil
+	namespaces := maps.Keys(w.config.Cluster.Namespaces)
+	if len(options.Namespaces) > 0 {
+		namespaces = slices.Filter(nil, namespaces, func(ns string) bool {
+			return slices.Contains(options.Namespaces, ns)
+		})
+	}
+
+	listOptions := metav1.ListOptions{
+		Limit: 100000,
+	}
+	labelSelectors := make([]string, 0)
+	if options.GroupId != "" {
+		labelSelectors = append(labelSelectors, fmt.Sprintf("%s=%s", constants.GroupIdLabelName, options.GroupId))
+	}
+	if options.RootId != "" {
+		labelSelectors = append(labelSelectors, fmt.Sprintf("%s=%s", constants.RootResourceIdLabelName, options.RootId))
+	}
+
+	// TODO: make concurrent calls
+	list := make([]ListResultItem, 0)
+	for _, ns := range namespaces {
+		// TODO: retry?
+		jobs, err := w.clientSet.BatchV1().Jobs(ns).List(ctx, listOptions)
+		if err != nil {
+			return nil, err
+		}
+		for _, job := range jobs.Items {
+			if options.Finished != nil && *options.Finished != watchers.IsJobFinished(&job) {
+				continue
+			}
+			if options.Root != nil && *options.Root != (job.Labels[constants.RootResourceIdLabelName] == job.Labels[constants.ResourceIdLabelName]) {
+				continue
+			}
+			var cfg testworkflowconfig.InternalConfig
+			err = json.Unmarshal([]byte(job.Spec.Template.Annotations[constants.InternalAnnotationName]), &cfg)
+			if err != nil {
+				log.DefaultLogger.Warnw("detected execution job that have invalid internal configuration", "name", job.Name, "namespace", job.Namespace, "error", err)
+				continue
+			}
+			if options.OrganizationId != "" && options.OrganizationId != cfg.Execution.OrganizationId {
+				continue
+			}
+			if options.EnvironmentId != "" && options.EnvironmentId != cfg.Execution.EnvironmentId {
+				continue
+			}
+			list = append(list, ListResultItem{
+				Execution: cfg.Execution,
+				Workflow:  cfg.Workflow,
+				Resource:  cfg.Resource,
+				Namespace: job.Namespace,
+			})
+		}
+	}
+	return list, nil
 }
 
 func (w *worker) Destroy(ctx context.Context, namespace, id string) (err error) {
@@ -415,6 +500,22 @@ func (w *worker) Destroy(ctx context.Context, namespace, id string) (err error) 
 	}
 	// TODO: Move implementation there
 	return testworkflowcontroller.Cleanup(ctx, w.clientSet, namespace, id)
+}
+
+func (w *worker) DestroyGroup(ctx context.Context, namespace, groupId string) error {
+	if namespace != "" {
+		return testworkflowcontroller.CleanupGroup(ctx, w.clientSet, namespace, groupId)
+	}
+
+	// Delete group resources in all known namespaces
+	errs := make([]error, 0)
+	for ns := range w.config.Cluster.Namespaces {
+		err := w.Destroy(ctx, ns, groupId)
+		if err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return errors2.Join(errs...)
 }
 
 func (w *worker) findPodIpAt(ctx context.Context, id, namespace string) (string, error) {
