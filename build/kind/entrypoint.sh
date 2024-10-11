@@ -69,21 +69,21 @@ send_event_to_segment() {
   # Prepare the JSON payload
   local payload=$(cat <<EOF
 {
-  "userId":          "$machine_id",
-  "event":           "$event",
+  "userId":               "$machine_id",
+  "event":                "$event",
   "properties": {
-    "name":          "testkube-api-server",
-    "version":       "$version",
-    "arch":          "$arch",
-    "os":            "$os",
-    "eventCategory": "api",
-    "containerEnv":  "docker",
-    "contextType":   "agent",
-    "machineId":     "$machine_id",
-    "clusterType":   "kind",
-    "errorType":     "$error_type",
-    "errorCode":     "$error_code",
-    "agentKey":      "$AGENT_KEY"
+    "name":               "testkube-api-server",
+    "version":            "$version",
+    "arch":               "$arch",
+    "os":                 "$os",
+    "eventCategory":      "api",
+    "contextType":        "agent",
+    "machineId":          "$machine_id",
+    "clusterType":        "kind",
+    "errorType":          "$error_type",
+    "errorCode":          "$error_code",
+    "agentKey":           "$AGENT_KEY",
+    "dockerImageVersion": "$DOCKER_IMAGE_VERSION"
   },
   "context": {
     "app": {
@@ -117,26 +117,26 @@ send_event_to_ga() {
   # Prepare the JSON payload
   local payload=$(cat <<EOF
 {
-  "client_id":            "$machine_id",
-  "user_id":              "$machine_id",
+  "client_id":                 "$machine_id",
+  "user_id":                   "$machine_id",
   "events": [{
-    "name":               "$event",
+    "name":                    "$event",
     "params": {
-      "event_count":      1,
-      "event_category":   "api",
-      "app_version":      "$version",
-      "app_name":         "testkube-api-server",
-      "machine_id":       "$machine_id",
-      "operating_system": "$os",
-      "architecture":     "$arch",
+      "event_count":            1,
+      "event_category":         "api",
+      "app_version":            "$version",
+      "app_name":               "testkube-api-server",
+      "machine_id":             "$machine_id",
+      "operating_system":       "$os",
+      "architecture":           "$arch",
       "context": {
-        "container_env":  "docker",
-        "type":           "agent"
+        "docker_image_version": "$DOCKER_IMAGE_VERSION",
+        "type":                 "agent"
       },
-      "cluster_type":     "kind",
-      "error_type":       "$error_type",
-      "error_code":       "$error_code",
-      "agent_key":        "$AGENT_KEY"
+      "cluster_type":           "kind",
+      "error_type":             "$error_type",
+      "error_code":             "$error_code",
+      "agent_key":              "$AGENT_KEY"
     }
   }]
 }
@@ -226,7 +226,7 @@ else
 
   # Step 7: Install Testkube using Helm
   log "Installing Testkube via Helm..."
-  helm install testkube testkube/testkube --namespace testkube --create-namespace  --set testkube-api.cloud.key=$AGENT_KEY --set testkube-api.minio.enabled=false --set mongodb.enabled=false --set testkube-dashboard.enabled=false --set testkube-api.cloud.url=$CLOUD_URL --set testkube-api.containerEnv=docker
+  helm install testkube testkube/testkube --namespace testkube --create-namespace  --set testkube-api.cloud.key=$AGENT_KEY --set testkube-api.minio.enabled=false --set mongodb.enabled=false --set testkube-dashboard.enabled=false --set testkube-api.cloud.url=$CLOUD_URL --set testkube-api.dockerImageVersion=$DOCKER_IMAGE_VERSION
   if [ $? -ne 0 ]; then
     log "Testkube installation failed."
     send_telenetry "docker_installation_failed" "helm_error" "Testkube installation failed"

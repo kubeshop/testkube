@@ -162,6 +162,7 @@ jobs:
             segmentio_key=${{secrets.TESTKUBE_SEGMENTIO_KEY}}
             ga_id=${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_ID}}
             ga_secret=${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_SECRET}}
+            docker_image_version=${{steps.tag.outputs.tag}}
           context: build/kind
           file: build/kind/kind.Dockerfile
           platforms: linux/amd64,linux/arm64/v8
