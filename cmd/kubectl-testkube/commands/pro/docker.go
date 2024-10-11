@@ -3,6 +3,7 @@ package pro
 import (
 	"os"
 
+	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
@@ -61,19 +62,35 @@ func NewDockerCmd() *cobra.Command {
 				}
 			}
 
-			ui.H2("Running Testkube Docker Agent")
+			var spinner *pterm.SpinnerPrinter
+			if ui.IsVerbose() {
+				ui.H2("Running Testkube Docker Agent")
+			} else {
+				spinner = ui.NewSpinner("Running Testkube Docker Agent")
+			}
+
 			if cliErr := common.DockerRunTestkubeAgent(options, cfg, containerName, dockerImage); cliErr != nil {
+				if spinner != nil {
+					spinner.Fail()
+				}
 				sendErrTelemetry(cmd, cfg, "docker_run", cliErr)
 				common.HandleCLIError(cliErr)
 			}
 
 			if cliErr := common.StreamDockerLogs(containerName); cliErr != nil {
+				if spinner != nil {
+					spinner.Fail()
+				}
 				sendErrTelemetry(cmd, cfg, "docker_logs", cliErr)
 				common.HandleCLIError(cliErr)
 			}
 
 			ui.NL()
-			ui.Success("Testkube Docker Agent is up and running")
+			if spinner != nil {
+				spinner.Success()
+			} else {
+				ui.Success("Testkube Docker Agent is up and running")
+			}
 
 			if noLogin {
 				ui.Alert("Saving Testkube CLI Pro context, you need to authorize CLI through `testkube set context` later")

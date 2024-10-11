@@ -859,7 +859,10 @@ func StreamDockerLogs(containerName string) *CLIError {
 			line = line[dockerDaemonPrefixLen:]
 		}
 
-		fmt.Println(string(line)) // Optional: print logs to console
+		if ui.IsVerbose() {
+			fmt.Println(string(line)) // Optional: print logs to console
+		}
+
 		if strings.Contains(string(line), "Testkube installation succeed") {
 			break
 		}
