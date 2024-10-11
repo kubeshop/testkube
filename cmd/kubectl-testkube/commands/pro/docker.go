@@ -1,6 +1,7 @@
 package pro
 
 import (
+	"errors"
 	"os"
 
 	"github.com/pterm/pterm"
@@ -13,7 +14,7 @@ import (
 
 func NewDockerCmd() *cobra.Command {
 	var noLogin bool // ignore ask for login
-	var containerName, dockerImage string
+	var dockerContainerName, dockerImage string
 	var options common.HelmOptions
 
 	cmd := &cobra.Command{
@@ -48,7 +49,7 @@ func NewDockerCmd() *cobra.Command {
 
 				dockerInfo, cliErr := common.RunDockerCommand([]string{"info"})
 				if cliErr != nil {
-					sendErrTelemetry(cmd, cfg, "docker_info", err)
+					sendErrTelemetry(cmd, cfg, "docker_info", cliErr)
 					common.HandleCLIError(cliErr)
 				}
 				ui.Alert("Current docker info:", dockerInfo)
@@ -57,7 +58,7 @@ func NewDockerCmd() *cobra.Command {
 				ok := ui.Confirm("Do you want to continue?")
 				if !ok {
 					ui.Errf("Testkube Docker Agent running cancelled")
-					sendErrTelemetry(cmd, cfg, "user_cancel", err)
+					sendErrTelemetry(cmd, cfg, "user_cancel", errors.New("user cancelled agent running"))
 					return
 				}
 			}
@@ -69,7 +70,7 @@ func NewDockerCmd() *cobra.Command {
 				spinner = ui.NewSpinner("Running Testkube Docker Agent")
 			}
 
-			if cliErr := common.DockerRunTestkubeAgent(options, cfg, containerName, dockerImage); cliErr != nil {
+			if cliErr := common.DockerRunTestkubeAgent(options, cfg, dockerContainerName, dockerImage); cliErr != nil {
 				if spinner != nil {
 					spinner.Fail()
 				}
@@ -77,7 +78,7 @@ func NewDockerCmd() *cobra.Command {
 				common.HandleCLIError(cliErr)
 			}
 
-			if cliErr := common.StreamDockerLogs(containerName); cliErr != nil {
+			if cliErr := common.StreamDockerLogs(dockerContainerName); cliErr != nil {
 				if spinner != nil {
 					spinner.Fail()
 				}
@@ -107,7 +108,7 @@ func NewDockerCmd() *cobra.Command {
 				sendErrTelemetry(cmd, cfg, "login", err)
 				ui.ExitOnError("user login", err)
 			}
-			err = common.PopulateLoginDataToContext(options.Master.OrgId, options.Master.EnvId, token, refreshToken, options, cfg)
+			err = common.PopulateLoginDataToContext(options.Master.OrgId, options.Master.EnvId, token, refreshToken, dockerContainerName, options, cfg)
 			if err != nil {
 				sendErrTelemetry(cmd, cfg, "setting_context", err)
 				ui.ExitOnError("Setting Pro environment context", err)
@@ -120,8 +121,8 @@ func NewDockerCmd() *cobra.Command {
 	common.PopulateMasterFlags(cmd, &options)
 
 	cmd.Flags().BoolVarP(&noLogin, "no-login", "", false, "Ignore login prompt, set existing token later by `testkube set context`")
-	cmd.Flags().StringVar(&containerName, "container-name", "testkube-agent", "container name for Testkube Docker Agent")
-	cmd.Flags().StringVar(&dockerImage, "docker-image", "kubeshop/testkube-agent:latest", "docker image for Testkube Docker Agent")
+	cmd.Flags().StringVar(&dockerContainerName, "docker-container", "testkube-agent", "Docker container name for Testkube Docker Agent")
+	cmd.Flags().StringVar(&dockerImage, "docker-image", "kubeshop/testkube-agent:latest", "Docker image for Testkube Docker Agent")
 
 	return cmd
 }

@@ -296,7 +296,7 @@ func PopulateHelmFlags(cmd *cobra.Command, options *HelmOptions) {
 	cmd.Flags().BoolVar(&options.EmbeddedNATS, "embedded-nats", false, "embedded NATS server in agent")
 }
 
-func PopulateLoginDataToContext(orgID, envID, token, refreshToken string, options HelmOptions, cfg config.Data) error {
+func PopulateLoginDataToContext(orgID, envID, token, refreshToken, dockerContainerName string, options HelmOptions, cfg config.Data) error {
 	if options.Master.AgentToken != "" {
 		cfg.CloudContext.AgentKey = options.Master.AgentToken
 	}
@@ -319,6 +319,7 @@ func PopulateLoginDataToContext(orgID, envID, token, refreshToken string, option
 	if refreshToken != "" {
 		cfg.CloudContext.RefreshToken = refreshToken
 	}
+	cfg.CloudContext.DockerContainerName = dockerContainerName
 
 	cfg, err := PopulateOrgAndEnvNames(cfg, orgID, envID, options.Master.URIs.Api)
 	if err != nil {
@@ -777,7 +778,7 @@ func RunDockerCommand(args []string) (output string, cliErr *CLIError) {
 	return string(out), nil
 }
 
-func DockerRunTestkubeAgent(options HelmOptions, cfg config.Data, containerName, dockerImage string) *CLIError {
+func DockerRunTestkubeAgent(options HelmOptions, cfg config.Data, dockerContainerName, dockerImage string) *CLIError {
 	// use config if set
 	if cfg.CloudContext.AgentKey != "" && options.Master.AgentToken == "" {
 		options.Master.AgentToken = cfg.CloudContext.AgentKey
@@ -791,7 +792,7 @@ func DockerRunTestkubeAgent(options HelmOptions, cfg config.Data, containerName,
 			errors.New("agent key is required"))
 	}
 
-	args := prepareTestkubeProDockerArgs(options, containerName, dockerImage)
+	args := prepareTestkubeProDockerArgs(options, dockerContainerName, dockerImage)
 	output, err := RunDockerCommand(args)
 	if err != nil {
 		return err
@@ -806,10 +807,10 @@ func DockerRunTestkubeAgent(options HelmOptions, cfg config.Data, containerName,
 }
 
 // prepareTestkubeProDockerArgs prepares docker arguments for Testkube Pro running.
-func prepareTestkubeProDockerArgs(options HelmOptions, containerName, dockerImage string) []string {
+func prepareTestkubeProDockerArgs(options HelmOptions, dockerContainerName, dockerImage string) []string {
 	args := []string{
 		"run",
-		"--name", containerName,
+		"--name", dockerContainerName,
 		"--privileged",
 		"-d",
 		"-e", "CLOUD_URL=" + options.Master.URIs.Agent,
@@ -820,7 +821,33 @@ func prepareTestkubeProDockerArgs(options HelmOptions, containerName, dockerImag
 	return args
 }
 
-func StreamDockerLogs(containerName string) *CLIError {
+// prepareTestkubeUpgradeDockerArgs prepares docker arguments for Testkube Upgrade running.
+func prepareTestkubeUpgradeDockerArgs(options HelmOptions, dockerContainerName string) []string {
+	args := []string{
+		"exec",
+		dockerContainerName,
+		"helm",
+		"upgrade",
+		"testkube",
+		"testkube/testkube",
+		"--namespace",
+		"testkube",
+		"--set",
+		"testkube-api.minio.enabled=false",
+		"--set",
+		"mongodb.enabled=false",
+		"--set",
+		"testkube-dashboard.enabled=false",
+		"--set",
+		"testkube-api.cloud.key=" + options.Master.AgentToken,
+		"--set",
+		"testkube-api.cloud.url=" + options.Master.URIs.Agent,
+	}
+
+	return args
+}
+
+func StreamDockerLogs(dockerContainerName string) *CLIError {
 	// Create a Docker client
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
@@ -841,7 +868,7 @@ func StreamDockerLogs(containerName string) *CLIError {
 	}
 
 	// Fetch logs from the container
-	logs, err := cli.ContainerLogs(ctx, containerName, opts)
+	logs, err := cli.ContainerLogs(ctx, dockerContainerName, opts)
 	if err != nil {
 		return NewCLIError(
 			TKErrDockerLogStreamingFailed,
@@ -883,6 +910,34 @@ func StreamDockerLogs(containerName string) *CLIError {
 			"Check logs of your Testkube Docker Agent container",
 			err)
 	}
+
+	return nil
+}
+
+func DockerUpgradeTestkubeAgent(options HelmOptions, cfg config.Data) *CLIError {
+	// use config if set
+	if cfg.CloudContext.AgentKey != "" && options.Master.AgentToken == "" {
+		options.Master.AgentToken = cfg.CloudContext.AgentKey
+	}
+
+	if options.Master.AgentToken == "" {
+		return NewCLIError(
+			TKErrInvalidInstallConfig,
+			"Invalid install config",
+			"Provide the agent token by setting the '--agent-token' flag",
+			errors.New("agent key is required"))
+	}
+
+	args := prepareTestkubeUpgradeDockerArgs(options, cfg.CloudContext.DockerContainerName)
+	output, err := RunDockerCommand(args)
+	if err != nil {
+		return err
+	}
+
+	ui.Debug("Docker command output:")
+	ui.Debug("Arguments", args...)
+
+	ui.Debug("Docker run testkube output", output)
 
 	return nil
 }

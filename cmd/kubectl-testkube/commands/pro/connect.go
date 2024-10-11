@@ -165,7 +165,7 @@ func NewConnectCmd() *cobra.Command {
 				token, refreshToken, err = common.LoginUser(opts.Master.URIs.Auth)
 				ui.ExitOnError("user login", err)
 			}
-			err = common.PopulateLoginDataToContext(opts.Master.OrgId, opts.Master.EnvId, token, refreshToken, opts, cfg)
+			err = common.PopulateLoginDataToContext(opts.Master.OrgId, opts.Master.EnvId, token, refreshToken, "", opts, cfg)
 
 			ui.ExitOnError("Setting Pro environment context", err)
 
