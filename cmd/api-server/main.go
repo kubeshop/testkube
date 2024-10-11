@@ -651,6 +651,7 @@ func main() {
 		subscriptionChecker,
 		serviceAccountNames,
 		envs,
+		cfg.TestkubeDockerImageVersion,
 	)
 
 	if mode == common.ModeAgent {
