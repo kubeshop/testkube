@@ -32,7 +32,7 @@ func TestRun(t *testing.T) {
 			ctx,
 			testkube.Execution{
 				Content: &testkube.TestContent{
-					Uri: "https://testkube-test-page-lipsum.pages.dev/some-non-existing-uri-blablablabl",
+					Uri: "https://testkube.io/some-non-existing-uri-blablablabl",
 				},
 			})
 
