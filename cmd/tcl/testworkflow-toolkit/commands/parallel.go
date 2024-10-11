@@ -23,22 +23,16 @@ import (
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	commontcl "github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/common"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/spawn"
-	constants2 "github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
-	"github.com/kubeshop/testkube/cmd/testworkflow-init/control"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/artifacts"
-	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/transfer"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/executionworker"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/presets"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -117,6 +111,7 @@ func NewParallelCmd() *cobra.Command {
 
 			// Analyze instances to run
 			specs := make([]testworkflowsv1.TestWorkflowSpec, params.Count)
+			namespaces := make([]string, params.Count)
 			descriptions := make([]string, params.Count)
 			logConditions := make([]*string, params.Count)
 			for i := int64(0); i < params.Count; i++ {
@@ -144,8 +139,15 @@ func NewParallelCmd() *cobra.Command {
 					spec.After = append(spec.After, *fetchStep)
 				}
 
+				// Determine the namespace
+				namespace := config.Namespace()
+				if spec.Job != nil && spec.Job.Namespace != "" {
+					namespace = spec.Job.Namespace
+				}
+
 				// Prepare the workflow to run
 				specs[i] = spec.TestWorkflowSpec
+				namespaces[i] = namespace
 				descriptions[i] = spec.Description
 			}
 
@@ -179,7 +181,6 @@ func NewParallelCmd() *cobra.Command {
 			}
 
 			// Load Kubernetes client and image inspector
-			inspector := env.ImageInspector()
 			storage := artifacts.InternalStorage()
 
 			// Prepare runner
@@ -192,53 +193,44 @@ func NewParallelCmd() *cobra.Command {
 			}
 			updates := make(chan Update, 100)
 			registry := spawn.NewRegistry()
-			run := func(index int64, spec *testworkflowsv1.TestWorkflowSpec) bool {
-				clientSet := env.Kubernetes()
+			run := func(index int64, namespace string, spec *testworkflowsv1.TestWorkflowSpec) bool {
 				log := spawn.CreateLogger("worker", descriptions[index], index, params.Count)
-
-				// Determine the namespace
-				namespace := config.Namespace()
-				if spec.Job != nil && spec.Job.Namespace != "" {
-					namespace = spec.Job.Namespace
-				}
 
 				// Build the configuration
 				cfg := *config.Config()
-				cfg.Resource = spawn.CreateResourceConfig("", index)
+				cfg.Resource = spawn.CreateResourceConfig(config.Ref()+"-", index) // TODO: Think if it should be there
 				cfg.Worker.Namespace = namespace
 				machine := expressions.CombinedMachines(
 					testworkflowconfig.CreateResourceMachine(&cfg.Resource),
 					testworkflowconfig.CreateWorkerMachine(&cfg.Worker),
+					baseMachine,
+					params.MachineAt(index),
 				)
+
+				// Simplify the workflow
+				_ = expressions.Simplify(&spec, machine)
 
 				// Register that there is some operation queued
 				registry.SetStatus(index, nil)
 
 				updates <- Update{index: index}
 
-				// Build the resources bundle
+				// Deploy the resource
 				scheduledAt := time.Now()
-				bundle, err := presets.NewPro(inspector).
-					Bundle(context.Background(), &testworkflowsv1.TestWorkflow{Spec: *spec}, testworkflowprocessor.BundleOptions{Config: cfg},
-						machine, baseMachine, params.MachineAt(index))
+				result, err := spawn.ExecutionWorker().Execute(context.Background(), executionworker.ExecuteRequest{
+					Execution:    cfg.Execution,
+					Workflow:     testworkflowsv1.TestWorkflow{Spec: *spec},
+					ControlPlane: cfg.ControlPlane,
+					ResourceId:   cfg.Resource.Id,
+					FsPrefix:     cfg.Resource.FsPrefix,
+				})
 				if err != nil {
 					fmt.Printf("%d: failed to prepare resources: %s\n", index, err.Error())
 					registry.Destroy(index)
 					return false
 				}
 
-				// Compute the bundle instructions
-				sig := stage.MapSignatureListToInternal(bundle.Signature)
-
-				// Deploy the resources
-				err = bundle.Deploy(context.Background(), clientSet, namespace)
-				if err != nil {
-					log("problem deploying", err.Error())
-					return false
-				}
-
 				// Final clean up
-				var ctrl testworkflowcontroller.Controller
 				var lastResult testkube.TestWorkflowResult
 				defer func() {
 					shouldSaveLogs := logConditions[index] == nil
@@ -251,7 +243,7 @@ func NewParallelCmd() *cobra.Command {
 
 					// Save logs
 					if shouldSaveLogs {
-						logsFilePath, err := spawn.SaveLogsWithController(context.Background(), storage, ctrl, "", index)
+						logsFilePath, err := spawn.SaveLogs(context.Background(), storage, namespace, cfg.Resource.Id, "", index)
 						if err == nil {
 							instructions.PrintOutput(config.Ref(), "parallel", ParallelStatus{Index: int(index), Logs: storage.FullPath(logsFilePath)})
 							log("saved logs")
@@ -261,7 +253,7 @@ func NewParallelCmd() *cobra.Command {
 					}
 
 					// Clean up
-					err = testworkflowcontroller.Cleanup(context.Background(), clientSet, namespace, cfg.Resource.Id)
+					err = spawn.ExecutionWorker().Destroy(context.Background(), namespace, cfg.Resource.Id)
 					if err == nil {
 						log("cleaned resources")
 					} else {
@@ -271,57 +263,73 @@ func NewParallelCmd() *cobra.Command {
 				}()
 
 				// Inform about the step structure
-				instructions.PrintOutput(config.Ref(), "parallel", ParallelStatus{Index: int(index), Signature: sig})
+				instructions.PrintOutput(config.Ref(), "parallel", ParallelStatus{Index: int(index), Signature: result.Signature})
 
 				// Control the execution
 				// TODO: Consider aggregated controller to limit number of watchers
-				ctrl, err = testworkflowcontroller.New(context.Background(), clientSet, namespace, cfg.Resource.Id, scheduledAt)
-				if err != nil {
-					log("error", "failed to connect to the job", err.Error())
+				ctx, ctxCancel := context.WithCancel(context.Background())
+				defer ctxCancel()
+
+				// TODO: Use more lightweight notifications
+				notifications := spawn.ExecutionWorker().StatusNotifications(ctx, result.Namespace, cfg.Resource.Id, executionworker.StatusNotificationsOptions{
+					Signature:   result.Signature,
+					ScheduledAt: common.Ptr(scheduledAt),
+				})
+				if notifications.Err() != nil {
+					log("error", "failed to connect to the parallel worker", notifications.Err().Error())
 					return false
 				}
-				registry.Set(index, ctrl)
-				ctx, ctxCancel := context.WithCancel(context.Background())
 				log("created")
 
 				prevStatus := testkube.QUEUED_TestWorkflowStatus
 				prevStep := ""
 				scheduled := false
-				for v := range ctrl.WatchLightweight(ctx) {
-					// Handle error
-					if v.Error != nil {
-						log("error", v.Error.Error())
-						continue
-					}
-
+				ipAssigned := false
+				for v := range notifications.Channel() {
 					// Inform about the node assignment
 					if !scheduled && v.NodeName != "" {
 						scheduled = true
 						log(fmt.Sprintf("assigned to %s node", ui.LightBlue(v.NodeName)))
 					}
 
+					// Inform about the IP assignment
+					if !ipAssigned && v.PodIp != "" {
+						ipAssigned = true
+						registry.SetAddress(index, v.PodIp)
+					}
+
 					// Save the last result
+					step := prevStep
+					status := prevStatus
 					if v.Result != nil {
 						lastResult = *v.Result
+						if lastResult.Status != nil {
+							status = *lastResult.Status
+						} else {
+							status = testkube.QUEUED_TestWorkflowStatus
+						}
+						step = lastResult.Current(result.Signature)
 					}
 
 					// Handle result change
-					if v.Status != prevStatus || v.Current != prevStep {
-						if v.Status != prevStatus {
-							log(string(v.Status))
+					if status != prevStatus || step != prevStep {
+						if status != prevStatus {
+							log(string(status))
 						}
 						updates <- Update{index: index, result: v.Result}
-						prevStep = v.Current
-						prevStatus = v.Status
+						prevStep = step
+						prevStatus = status
 
 						if lastResult.IsFinished() {
-							instructions.PrintOutput(config.Ref(), "parallel", ParallelStatus{Index: int(index), Status: v.Status, Result: v.Result})
-							ctxCancel()
+							instructions.PrintOutput(config.Ref(), "parallel", ParallelStatus{Index: int(index), Status: status, Result: v.Result})
 							return v.Result.IsPassed()
 						} else {
-							instructions.PrintOutput(config.Ref(), "parallel", ParallelStatus{Index: int(index), Status: v.Status, Current: v.Current})
+							instructions.PrintOutput(config.Ref(), "parallel", ParallelStatus{Index: int(index), Status: status, Current: step})
 						}
 					}
+				}
+				if notifications.Err() != nil {
+					log("error", notifications.Err().Error())
 				}
 
 				// Fallback in case there is a problem with finishing
@@ -334,7 +342,6 @@ func NewParallelCmd() *cobra.Command {
 				}
 				updates <- Update{index: index, result: lastResult.Clone()}
 
-				ctxCancel()
 				return false
 			}
 
@@ -353,56 +360,26 @@ func NewParallelCmd() *cobra.Command {
 					// Resume all at once
 					if registry.Count() > 0 && registry.AllPaused() {
 						fmt.Println("resuming all workers")
-						registry.EachAsyncAtOnce(func(index int64, ctrl testworkflowcontroller.Controller, wait func()) {
-							podIp, _ := ctrl.PodIP()
-							if podIp == "" {
-								wait()
-								return
-							}
-
-							client, err := control.NewClient(context.Background(), podIp, constants2.ControlServerPort)
-							wait()
-							defer func() {
-								if client != nil {
-									client.Close()
-								}
-							}()
-
-							// Fast-track: immediate success
-							if err == nil {
-								err = client.Resume()
-								if err == nil {
-									return
-								}
-								spawn.CreateLogger("worker", descriptions[index], index, params.Count)("warning", "failed to resume, retrying...", err.Error())
-							}
-
-							// Retrying mechanism
-							for i := 0; i < 6; i++ {
-								if client != nil {
-									client.Close()
-								}
-								client, err = control.NewClient(context.Background(), podIp, constants2.ControlServerPort)
-								if err == nil {
-									err = client.Resume()
-									if err == nil {
-										return
-									}
-								}
-								spawn.CreateLogger("worker", descriptions[index], index, params.Count)("warning", "failed to resume, retrying...", err.Error())
-								time.Sleep(ResumeRetryOnFailureDelay)
-							}
-
-							// Total failure while retrying
-							spawn.CreateLogger("worker", descriptions[index], index, params.Count)("warning", "failed to resume, maximum retries reached. aborting...", err.Error())
-							_ = ctrl.Abort(context.Background())
+						ids := common.MapSlice(registry.Indexes(), func(index int64) string {
+							return spawn.GetResourceId(config.Ref()+"-", index)
 						})
+
+						errs := spawn.ExecutionWorker().ResumeMany(context.Background(), ids)
+						for _, err := range errs {
+							if err.Id == "" {
+								fmt.Printf("warn: %s\n", err.Error)
+							} else {
+								_, index := spawn.GetServiceByResourceId(err.Id)
+								spawn.CreateLogger("worker", descriptions[index], index, params.Count)("warning", "failed to resume", err.Error.Error())
+								_ = spawn.ExecutionWorker().Destroy(context.Background(), namespaces[index], err.Id)
+							}
+						}
 					}
 				}
 			}()
 
 			// Create channel for execution
-			failed := spawn.ExecuteParallel(run, specs, parallelism)
+			failed := spawn.ExecuteParallel(run, specs, namespaces, parallelism)
 
 			// Wait for the results
 			if failed == 0 {

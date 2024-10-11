@@ -21,20 +21,21 @@ import (
 
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/kubernetes"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	commontcl "github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/common"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/artifacts"
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/transfer"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/executionworker"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/presets"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
 
@@ -42,6 +43,38 @@ const (
 	LogsRetryOnFailureDelay = 300 * time.Millisecond
 	LogsRetryMaxAttempts    = 5
 )
+
+var (
+	executionWorker   executionworker.Worker
+	executionWorkerMu sync.Mutex
+)
+
+func ExecutionWorker() executionworker.Worker {
+	executionWorkerMu.Lock()
+	defer executionWorkerMu.Unlock()
+
+	if executionWorker == nil {
+		cfg := config.Config()
+		executionWorker = executionworker.New(env.Kubernetes(), presets.NewPro(env.ImageInspector()), executionworker.Config{
+			Cluster: executionworker.ClusterConfig{
+				Id:               cfg.Worker.ClusterID,
+				DefaultNamespace: cfg.Worker.Namespace, // TODO: Use current execution namespace?
+				DefaultRegistry:  cfg.Worker.DefaultRegistry,
+				// TODO: Fetch all the namespaces with service accounts?
+				Namespaces: map[string]executionworker.NamespaceConfig{
+					cfg.Worker.Namespace: {DefaultServiceAccountName: cfg.Worker.DefaultServiceAccount},
+				},
+			},
+			ImageInspector: executionworker.ImageInspectorConfig{
+				CacheEnabled: cfg.Worker.ImageInspectorPersistenceEnabled,
+				CacheKey:     cfg.Worker.ImageInspectorPersistenceCacheKey,
+				CacheTTL:     cfg.Worker.ImageInspectorPersistenceCacheTTL,
+			},
+			Connection: cfg.Worker.Connection,
+		})
+	}
+	return executionWorker
+}
 
 func MapDynamicListToStringList(list []interface{}) []string {
 	result := make([]string, len(list))
@@ -190,9 +223,13 @@ func ProcessFetch(transferSrv transfer.Server, fetch []testworkflowsv1.StepParal
 	}, nil
 }
 
+func GetResourceId(prefix string, index int64) string {
+	return fmt.Sprintf("%s-%s%d", config.Config().Resource.Id, prefix, index)
+}
+
 func CreateResourceConfig(prefix string, index int64) testworkflowconfig.ResourceConfig {
 	cfg := config.Config()
-	id := fmt.Sprintf("%s-%s%d", cfg.Resource.Id, prefix, index)
+	id := GetResourceId(prefix, index)
 	fsPrefix := fmt.Sprintf("%s/%s%d", config.Ref(), prefix, index+1)
 	if cfg.Resource.FsPrefix != "" {
 		fsPrefix = fmt.Sprintf("%s/%s", cfg.Resource.FsPrefix, fsPrefix)
@@ -217,7 +254,7 @@ func GetServiceByResourceId(jobName string) (string, int64) {
 	return string(v[1]), index
 }
 
-func ExecuteParallel[T any](run func(int64, *T) bool, items []T, parallelism int64) int64 {
+func ExecuteParallel[T any](run func(int64, string, *T) bool, items []T, namespaces []string, parallelism int64) int64 {
 	var wg sync.WaitGroup
 	wg.Add(len(items))
 	ch := make(chan struct{}, parallelism)
@@ -227,7 +264,7 @@ func ExecuteParallel[T any](run func(int64, *T) bool, items []T, parallelism int
 	for index := range items {
 		ch <- struct{}{}
 		go func(index int) {
-			if run(int64(index), &items[index]) {
+			if run(int64(index), namespaces[index], &items[index]) {
 				success.Add(1)
 			}
 			<-ch
@@ -238,16 +275,17 @@ func ExecuteParallel[T any](run func(int64, *T) bool, items []T, parallelism int
 	return int64(len(items)) - success.Load()
 }
 
-func SaveLogsWithController(parentCtx context.Context, storage artifacts.InternalArtifactStorage, ctrl testworkflowcontroller.Controller, prefix string, index int64) (string, error) {
-	if ctrl == nil {
-		return "", errors.New("cannot control TestWorkflow's execution")
-	}
-
+func SaveLogs(parentCtx context.Context, storage artifacts.InternalArtifactStorage, namespace, id, prefix string, index int64) (string, error) {
 	filePath := fmt.Sprintf("logs/%s%d.log", prefix, index)
+
 	var err error
 	for i := 0; i < LogsRetryMaxAttempts; i++ {
 		ctx, ctxCancel := context.WithCancel(parentCtx)
-		err = storage.SaveStream(filePath, ctrl.Logs(ctx, false))
+		reader := ExecutionWorker().Logs(ctx, namespace, id, false)
+		err = reader.Err()
+		if err == nil {
+			err = storage.SaveStream(filePath, reader)
+		}
 		ctxCancel()
 		if err == nil {
 			break
@@ -256,15 +294,6 @@ func SaveLogsWithController(parentCtx context.Context, storage artifacts.Interna
 	}
 
 	return filePath, err
-}
-
-func SaveLogs(ctx context.Context, clientSet kubernetes.Interface, storage artifacts.InternalArtifactStorage, namespace, id, prefix string, index int64) (string, error) {
-	ctrl, err := testworkflowcontroller.New(ctx, clientSet, namespace, id, time.Time{})
-	if err != nil {
-		return "", err
-	}
-	defer ctrl.StopController()
-	return SaveLogsWithController(ctx, storage, ctrl, prefix, index)
 }
 
 func CreateLogger(name, description string, index, count int64) func(...string) {

@@ -40,6 +40,10 @@ type ExecuteRequest struct {
 	Workflow  testworkflowsv1.TestWorkflow // TODO: Use OpenAPI object
 
 	ControlPlane testworkflowconfig.ControlPlaneConfig // TODO: Think if it's required
+
+	// TODO: Think if it should be wrapped differently
+	ResourceId string
+	FsPrefix   string
 }
 
 type ExecuteResult struct {
@@ -121,12 +125,40 @@ type NotificationsOptions struct {
 	NoFollow bool
 }
 
+type StatusNotificationsOptions struct {
+	// Signature is optional property to provide known signature for better hinting.
+	Signature []testkube.TestWorkflowSignature
+	// ScheduledAt is optional property to provide known schedule timestamp for better hinting.
+	ScheduledAt *time.Time // TODO: Consider no pointer
+	// NoFollow gives a hint to ignore following the further actions.
+	NoFollow bool
+}
+
+type StatusNotification struct {
+	// NodeName is provided when the Pod is scheduled on some node.
+	NodeName string
+	// PodIp is internal IP of the Pod.
+	PodIp string
+	// Ref provides information about current step reference.
+	Ref string
+	// Result stores the latest result change.
+	Result *testkube.TestWorkflowResult
+}
+
+type IdentifiableError struct {
+	Id    string
+	Error error
+}
+
 type Worker interface {
 	// Execute deploys the resources in the cluster.
 	Execute(ctx context.Context, request ExecuteRequest) (*ExecuteResult, error)
 
 	// Notifications stream all the notifications from the resource.
 	Notifications(ctx context.Context, namespace, id string, options NotificationsOptions) NotificationsWatcher
+
+	// StatusNotifications stream lightweight status information.
+	StatusNotifications(ctx context.Context, namespace, id string, options StatusNotificationsOptions) StatusNotificationsWatcher
 
 	// Logs converts all the important notifications (except i.e. output) from the resource into plain logs.
 	Logs(ctx context.Context, namespace, id string, follow bool) LogsReader
@@ -154,4 +186,7 @@ type Worker interface {
 
 	// Resume sends resuming request to the selected resource.
 	Resume(ctx context.Context, namespace, id string) error
+
+	// ResumeMany tries to resume multiple resources at once.
+	ResumeMany(ctx context.Context, ids []string) (errs []IdentifiableError)
 }

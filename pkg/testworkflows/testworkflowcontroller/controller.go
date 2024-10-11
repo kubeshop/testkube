@@ -45,6 +45,7 @@ type Controller interface {
 	Logs(ctx context.Context, follow bool) io.Reader
 	NodeName() (string, error)
 	PodIP() (string, error)
+	Signature() []stage.Signature
 	ResourceID() string
 	StopController()
 }
@@ -110,6 +111,10 @@ type controller struct {
 	ctx         context.Context
 	ctxCancel   context.CancelFunc
 	watcher     watchers.ExecutionWatcher
+}
+
+func (c *controller) Signature() []stage.Signature {
+	return c.signature
 }
 
 func (c *controller) ResourceID() string {

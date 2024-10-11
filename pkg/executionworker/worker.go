@@ -3,6 +3,8 @@ package executionworker
 import (
 	"context"
 	"fmt"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/pkg/errors"
@@ -14,13 +16,21 @@ import (
 	lru "github.com/hashicorp/golang-lru/v2"
 
 	initconstants "github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/control"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
+	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
+	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
+)
+
+const (
+	ResumeRetryOnFailureDelay = 300 * time.Millisecond
 )
 
 type worker struct {
@@ -35,8 +45,9 @@ type worker struct {
 
 func New(clientSet kubernetes.Interface, processor testworkflowprocessor.Processor, config Config) Worker {
 	// TODO: fill it from watchers and parameters too
-	namespacesCache, _ := lru.New[string, string](50)
-	podIpCache, _ := lru.New[string, string](50)
+	// TODO: Increase LRU Cache size
+	namespacesCache, _ := lru.New[string, string](5) // TODO: Check from active controllers too
+	podIpCache, _ := lru.New[string, string](5)      // TODO: Check from active controllers too
 	return &worker{
 		clientSet:       clientSet,
 		processor:       processor,
@@ -59,11 +70,16 @@ func New(clientSet kubernetes.Interface, processor testworkflowprocessor.Process
 }
 
 func (w *worker) Execute(ctx context.Context, request ExecuteRequest) (*ExecuteResult, error) {
+	resourceId := request.ResourceId
+	if resourceId == "" {
+		resourceId = request.Execution.Id
+	}
+
 	// Build internal configuration
 	cfg := testworkflowconfig.InternalConfig{
 		Execution:    request.Execution,
 		Workflow:     testworkflowconfig.WorkflowConfig{Name: request.Workflow.Name, Labels: request.Workflow.Labels},
-		Resource:     testworkflowconfig.ResourceConfig{Id: request.Execution.Id, RootId: request.Execution.Id, FsPrefix: ""}, // TODO: Consider allowing sub-resources
+		Resource:     testworkflowconfig.ResourceConfig{Id: resourceId, RootId: request.Execution.Id, FsPrefix: request.FsPrefix},
 		ControlPlane: request.ControlPlane,
 		Worker:       w.baseWorkerConfig,
 	}
@@ -203,21 +219,128 @@ func (w *worker) Notifications(ctx context.Context, namespace, id string, opts N
 		watcher.close(err)
 		return watcher
 	}
+	w.namespacesCache.Add(id, namespace)
 
 	// Watch the resource
 	watchCtx, watchCtxCancel := context.WithCancel(ctx)
 	ch := ctrl.Watch(watchCtx, opts.NoFollow)
 	go func() {
+		defer watchCtxCancel()
 		for n := range ch {
 			if n.Error != nil {
 				watcher.close(n.Error)
-				watchCtxCancel()
 				return
 			}
 			watcher.send(n.Value.ToInternal())
 		}
 		watcher.close(nil)
-		watchCtxCancel()
+	}()
+	return watcher
+}
+
+// TODO: Avoid multiple controller copies?
+// TODO: Optimize
+func (w *worker) StatusNotifications(ctx context.Context, namespace, id string, opts StatusNotificationsOptions) StatusNotificationsWatcher {
+	// When there is no namespace specified, find the designated namespace
+	if namespace == "" {
+		ns, err := w.findNamespace(ctx, id)
+		if err != nil {
+			watcher := newStatusNotificationsWatcher()
+			watcher.close(err)
+			return watcher
+		}
+		return w.StatusNotifications(ctx, ns, id, opts)
+	}
+
+	// Load the hints
+	scheduledAt := time.Time{}
+	if opts.ScheduledAt != nil {
+		scheduledAt = *opts.ScheduledAt
+	}
+	var signature []stage.Signature
+	if len(opts.Signature) > 0 {
+		signature = stage.MapSignatureList(opts.Signature)
+	}
+
+	// Connect to the resource
+	// TODO: Move the implementation directly there
+	ctrl, err := testworkflowcontroller.New(ctx, w.clientSet, namespace, id, scheduledAt, testworkflowcontroller.ControllerOptions{
+		Signature: signature,
+	})
+	watcher := newStatusNotificationsWatcher()
+	if errors.Is(err, testworkflowcontroller.ErrJobTimeout) {
+		err = ErrResourceNotFound
+	}
+	if err != nil {
+		watcher.close(err)
+		return watcher
+	}
+	w.namespacesCache.Add(id, namespace)
+
+	// Watch the resource
+	watchCtx, watchCtxCancel := context.WithCancel(ctx)
+	sig := stage.MapSignatureListToInternal(ctrl.Signature())
+	ch := ctrl.Watch(watchCtx, opts.NoFollow)
+	go func() {
+		defer watchCtxCancel()
+		prevNodeName := ""
+		prevStep := ""
+		prevIp := ""
+		prevStatus := testkube.QUEUED_TestWorkflowStatus
+		prevStepStatus := testkube.QUEUED_TestWorkflowStepStatus
+		for n := range ch {
+			if n.Error != nil {
+				watcher.close(n.Error)
+				return
+			}
+
+			nodeName, _ := ctrl.NodeName()
+			podIp, _ := ctrl.PodIP()
+			current := prevStep
+			status := prevStatus
+			stepStatus := prevStepStatus
+			if n.Value.Result != nil {
+				if n.Value.Result.Status != nil {
+					status = *n.Value.Result.Status
+				} else {
+					status = testkube.QUEUED_TestWorkflowStatus
+				}
+				current = n.Value.Result.Current(sig)
+				if current == "" {
+					stepStatus = common.ResolvePtr(n.Value.Result.Initialization.Status, testkube.QUEUED_TestWorkflowStepStatus)
+				} else {
+					stepStatus = common.ResolvePtr(n.Value.Result.Steps[current].Status, testkube.QUEUED_TestWorkflowStepStatus)
+				}
+			}
+			if podIp != "" && prevIp == "" {
+				w.podIpCache.Add(id, podIp)
+			}
+			if current != prevStep || status != prevStatus || stepStatus != prevStepStatus {
+				prevNodeName = nodeName
+				prevIp = podIp
+				prevStatus = status
+				prevStepStatus = stepStatus
+				prevStep = current
+				watcher.send(StatusNotification{
+					Ref:      current,
+					NodeName: nodeName,
+					PodIp:    podIp,
+					Result:   n.Value.Result,
+				})
+			} else if nodeName != prevNodeName || podIp != prevIp {
+				prevNodeName = nodeName
+				prevIp = podIp
+				prevStatus = status
+				prevStepStatus = stepStatus
+				prevStep = current
+				watcher.send(StatusNotification{
+					Ref:      current,
+					NodeName: nodeName,
+					PodIp:    podIp,
+				})
+			}
+		}
+		watcher.close(nil)
 	}()
 	return watcher
 }
@@ -297,9 +420,9 @@ func (w *worker) findPodIpAt(ctx context.Context, id, namespace string) (string,
 	} else if len(pods.Items) == 0 {
 		return "", ErrResourceNotFound
 	}
+	w.namespacesCache.Add(id, namespace)
 	if pods.Items[0].Status.PodIP != "" {
 		w.podIpCache.Add(id, pods.Items[0].Status.PodIP)
-		w.namespacesCache.Add(id, namespace)
 	}
 	return pods.Items[0].Status.PodIP, nil
 }
@@ -331,6 +454,9 @@ func (w *worker) Pause(ctx context.Context, namespace, id string) (err error) {
 	if err != nil {
 		return err
 	}
+	if podIp == "" {
+		return ErrPodIpNotAssigned
+	}
 
 	// TODO: Move implementation there
 	return testworkflowcontroller.Pause(ctx, podIp)
@@ -348,7 +474,112 @@ func (w *worker) Resume(ctx context.Context, namespace, id string) (err error) {
 	if err != nil {
 		return err
 	}
+	if podIp == "" {
+		return ErrPodIpNotAssigned
+	}
 
 	// TODO: Move implementation there
 	return testworkflowcontroller.Resume(ctx, podIp)
+}
+
+// TODO: consider status channel (?)
+func (w *worker) ResumeMany(ctx context.Context, ids []string) (errs []IdentifiableError) {
+	ips := make(map[string]string, len(ids))
+	undeterminedIds := make(map[string]struct{}, len(ids))
+
+	// Get immediately available IPs
+	for _, id := range ids {
+		// TODO: Get from active controllers too
+		if ip, ok := w.podIpCache.Get(id); ok {
+			ips[id] = ip
+		} else {
+			undeterminedIds[id] = struct{}{}
+		}
+	}
+
+	// Try to obtain rest of IPs
+	// TODO: concurrent operations (or single list operation)
+	for id := range undeterminedIds {
+		// TODO: Retry?
+		podIp, err := w.findPodIp(ctx, id)
+		if err != nil {
+			errs = append(errs, IdentifiableError{Id: id, Error: err})
+		} else if podIp == "" {
+			errs = append(errs, IdentifiableError{Id: id, Error: ErrPodIpNotAssigned})
+		} else {
+			ips[id] = podIp
+		}
+	}
+
+	// Finish early when there are no IPs
+	if len(ips) == 0 {
+		return errs
+	}
+
+	// Initialize counters and synchronisation for waiting
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	cond := sync.NewCond(&mu)
+	counter := atomic.Int32{}
+	ready := func() {
+		v := counter.Add(1)
+		if v < int32(len(ips)) {
+			cond.Wait()
+		} else {
+			cond.Broadcast()
+		}
+	}
+
+	// Create client connection and send to all of them
+	wg.Add(len(ips))
+	var errsMu sync.Mutex
+	for id, podIp := range ips {
+		go func(id, address string) {
+			cond.L.Lock()
+			defer cond.L.Unlock()
+
+			client, err := control.NewClient(context.Background(), address, initconstants.ControlServerPort)
+			ready()
+			defer func() {
+				if client != nil {
+					client.Close()
+				}
+				wg.Done()
+			}()
+
+			// Fast-track: immediate success
+			if err == nil {
+				err = client.Resume()
+				if err == nil {
+					return
+				}
+				log.DefaultLogger.Warnw("failed to resume, retrying...", "id", id, "address", address, "error", err)
+			}
+
+			// Retrying mechanism
+			for i := 0; i < 6; i++ {
+				if client != nil {
+					client.Close()
+				}
+				client, err = control.NewClient(context.Background(), address, initconstants.ControlServerPort)
+				if err == nil {
+					err = client.Resume()
+					if err == nil {
+						return
+					}
+				}
+				log.DefaultLogger.Warnw("failed to resume, retrying...", "id", id, "address", address, "error", err)
+				time.Sleep(ResumeRetryOnFailureDelay)
+			}
+
+			// Total failure while retrying
+			log.DefaultLogger.Errorw("failed to resume, maximum retries reached.", "id", id, "address", address, "error", err)
+			errsMu.Lock()
+			errs = append(errs, IdentifiableError{Id: id, Error: err})
+			errsMu.Unlock()
+		}(id, podIp)
+	}
+	wg.Wait()
+
+	return errs
 }

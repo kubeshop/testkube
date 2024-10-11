@@ -120,6 +120,7 @@ func NewServicesCmd() *cobra.Command {
 			// Analyze instances to run
 			state := make(map[string][]ServiceState)
 			instances := make([]ServiceInstance, 0)
+			namespaces := make([]string, 0)
 			svcParams := make(map[string]*commontcl.ParamsSpec)
 			for name, svc := range services {
 				// Resolve the params
@@ -137,6 +138,7 @@ func NewServicesCmd() *cobra.Command {
 				fmt.Printf("%s: %s\n", commontcl.ServiceLabel(name), params.String(math.MaxInt64))
 
 				svcInstances := make([]ServiceInstance, params.Count)
+				svcNamespaces := make([]string, params.Count)
 				for index := int64(0); index < params.Count; index++ {
 					machines := []expressions.Machine{baseMachine, params.MachineAt(index)}
 
@@ -175,6 +177,10 @@ func NewServicesCmd() *cobra.Command {
 						ReadinessProbe: svcSpec.ReadinessProbe,
 						Spec:           spec,
 					}
+					svcNamespaces[index] = config.Namespace()
+					if spec.Job != nil && spec.Job.Namespace != "" {
+						svcNamespaces[index] = spec.Job.Namespace
+					}
 
 					// Save the timeout
 					if svcSpec.Timeout != "" {
@@ -186,6 +192,7 @@ func NewServicesCmd() *cobra.Command {
 					}
 				}
 				instances = append(instances, svcInstances...)
+				namespaces = append(namespaces, svcNamespaces...)
 
 				// Update the state
 				state[name] = make([]ServiceState, len(svcInstances))
@@ -227,7 +234,7 @@ func NewServicesCmd() *cobra.Command {
 				ui.SuccessAndExit("nothing to run")
 			}
 
-			run := func(_ int64, instance *ServiceInstance) bool {
+			run := func(_ int64, _ string, instance *ServiceInstance) bool {
 				info := ServiceInfo{
 					Group:       groupRef,
 					Index:       instance.Index,
@@ -396,7 +403,7 @@ func NewServicesCmd() *cobra.Command {
 			}
 
 			// Start all the services
-			failed := spawn.ExecuteParallel(run, instances, int64(len(instances)))
+			failed := spawn.ExecuteParallel(run, instances, namespaces, int64(len(instances)))
 
 			// Inform about the services state
 			for k := range state {

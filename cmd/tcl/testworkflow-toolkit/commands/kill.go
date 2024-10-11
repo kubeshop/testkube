@@ -59,6 +59,7 @@ func NewKillCmd() *cobra.Command {
 
 			// Fetch the services when needed
 			if len(logs) > 0 {
+				// TODO: Use ExecutionWorker instead
 				// TODO: Should take the namespace as argument too
 				jobs, err := clientSet.BatchV1().Jobs(config.Namespace()).List(context.Background(), metav1.ListOptions{
 					LabelSelector: fmt.Sprintf("%s=%s", constants.GroupIdLabelName, groupRef),
@@ -105,7 +106,7 @@ func NewKillCmd() *cobra.Command {
 					}
 					log := spawn.CreateLogger(service, "", index, count)
 
-					logsFilePath, err := spawn.SaveLogs(context.Background(), clientSet, storage, config.Namespace(), id, service+"/", index)
+					logsFilePath, err := spawn.SaveLogs(context.Background(), storage, config.Namespace(), id, service+"/", index)
 					if err == nil {
 						instructions.PrintOutput(config.Ref(), "service", ServiceInfo{Group: groupRef, Name: service, Index: index, Logs: storage.FullPath(logsFilePath)})
 						log("saved logs")

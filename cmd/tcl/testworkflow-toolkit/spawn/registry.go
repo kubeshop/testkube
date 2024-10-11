@@ -15,29 +15,31 @@ import (
 	"golang.org/x/exp/maps"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller"
 )
 
 type registry struct {
-	controllers map[int64]testworkflowcontroller.Controller
-	statuses    map[int64]testkube.TestWorkflowStatus
-	mu          sync.RWMutex
+	addresses map[int64]string
+	statuses  map[int64]testkube.TestWorkflowStatus
+	mu        sync.RWMutex
 }
 
 func NewRegistry() *registry {
 	return &registry{
-		controllers: make(map[int64]testworkflowcontroller.Controller),
-		statuses:    make(map[int64]testkube.TestWorkflowStatus),
+		statuses:  make(map[int64]testkube.TestWorkflowStatus),
+		addresses: make(map[int64]string),
 	}
 }
 
-func (r *registry) Set(index int64, ctrl testworkflowcontroller.Controller) {
+func (r *registry) Indexes() []int64 {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return maps.Keys(r.statuses)
+}
+
+func (r *registry) SetAddress(index int64, address string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if v, ok := r.controllers[index]; ok && v != ctrl {
-		v.StopController()
-	}
-	r.controllers[index] = ctrl
+	r.addresses[index] = address
 }
 
 func (r *registry) SetStatus(index int64, status *testkube.TestWorkflowStatus) {
@@ -65,44 +67,22 @@ func (r *registry) AllPaused() bool {
 	return true
 }
 
-func (r *registry) Get(index int64) testworkflowcontroller.Controller {
+func (r *registry) GetAddress(index int64) string {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	return r.controllers[index]
+	return r.addresses[index]
 }
 
 func (r *registry) Destroy(index int64) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if _, ok := r.controllers[index]; ok {
-		r.controllers[index].StopController()
-		delete(r.controllers, index)
-	}
 	delete(r.statuses, index)
+	delete(r.addresses, index)
 }
 
-func (r *registry) EachAsync(fn func(int64, testworkflowcontroller.Controller)) {
+func (r *registry) EachAsyncAtOnce(fn func(int64, string, func())) {
 	r.mu.RLock()
-	indexes := maps.Keys(r.controllers)
-	r.mu.RUnlock()
-
-	var wg sync.WaitGroup
-	wg.Add(len(indexes))
-	for _, index := range indexes {
-		go func(index int64) {
-			ctrl := r.Get(index)
-			if ctrl != nil {
-				fn(index, ctrl)
-			}
-			wg.Done()
-		}(index)
-	}
-	wg.Wait()
-}
-
-func (r *registry) EachAsyncAtOnce(fn func(int64, testworkflowcontroller.Controller, func())) {
-	r.mu.RLock()
-	indexes := maps.Keys(r.controllers)
+	indexes := maps.Keys(r.statuses)
 	r.mu.RUnlock()
 
 	var wg sync.WaitGroup
@@ -122,12 +102,10 @@ func (r *registry) EachAsyncAtOnce(fn func(int64, testworkflowcontroller.Control
 	wg.Add(len(indexes))
 	for _, index := range indexes {
 		go func(index int64) {
-			ctrl := r.Get(index)
+			address := r.GetAddress(index)
 			cond.L.Lock()
 			defer cond.L.Unlock()
-			if ctrl != nil {
-				fn(index, ctrl, ready)
-			}
+			fn(index, address, ready)
 			wg.Done()
 		}(index)
 	}
