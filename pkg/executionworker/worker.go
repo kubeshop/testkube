@@ -288,14 +288,18 @@ func (w *worker) StatusNotifications(ctx context.Context, namespace, id string, 
 		prevIp := ""
 		prevStatus := testkube.QUEUED_TestWorkflowStatus
 		prevStepStatus := testkube.QUEUED_TestWorkflowStepStatus
+		prevReady := false
 		for n := range ch {
 			if n.Error != nil {
 				watcher.close(n.Error)
 				return
 			}
 
+			// Check the readiness
+
 			nodeName, _ := ctrl.NodeName()
 			podIp, _ := ctrl.PodIP()
+			ready, _ := ctrl.ContainersReady()
 			current := prevStep
 			status := prevStatus
 			stepStatus := prevStepStatus
@@ -318,6 +322,7 @@ func (w *worker) StatusNotifications(ctx context.Context, namespace, id string, 
 			if current != prevStep || status != prevStatus || stepStatus != prevStepStatus {
 				prevNodeName = nodeName
 				prevIp = podIp
+				prevReady = ready
 				prevStatus = status
 				prevStepStatus = stepStatus
 				prevStep = current
@@ -325,11 +330,13 @@ func (w *worker) StatusNotifications(ctx context.Context, namespace, id string, 
 					Ref:      current,
 					NodeName: nodeName,
 					PodIp:    podIp,
+					Ready:    ready,
 					Result:   n.Value.Result,
 				})
-			} else if nodeName != prevNodeName || podIp != prevIp {
+			} else if nodeName != prevNodeName || podIp != prevIp || ready != prevReady {
 				prevNodeName = nodeName
 				prevIp = podIp
+				prevReady = ready
 				prevStatus = status
 				prevStepStatus = stepStatus
 				prevStep = current
@@ -337,6 +344,7 @@ func (w *worker) StatusNotifications(ctx context.Context, namespace, id string, 
 					Ref:      current,
 					NodeName: nodeName,
 					PodIp:    podIp,
+					Ready:    ready,
 				})
 			}
 		}

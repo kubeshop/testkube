@@ -139,6 +139,8 @@ type StatusNotification struct {
 	NodeName string
 	// PodIp is internal IP of the Pod.
 	PodIp string
+	// Ready states for container readiness if expected (services).
+	Ready bool
 	// Ref provides information about current step reference.
 	Ref string
 	// Result stores the latest result change.

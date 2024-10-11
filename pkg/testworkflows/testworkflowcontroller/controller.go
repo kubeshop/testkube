@@ -45,6 +45,7 @@ type Controller interface {
 	Logs(ctx context.Context, follow bool) io.Reader
 	NodeName() (string, error)
 	PodIP() (string, error)
+	ContainersReady() (bool, error)
 	Signature() []stage.Signature
 	ResourceID() string
 	StopController()
@@ -149,6 +150,14 @@ func (c *controller) NodeName() (string, error) {
 		return "", ErrNoNodeAssigned
 	}
 	return nodeName, nil
+}
+
+func (c *controller) ContainersReady() (bool, error) {
+	_, err := c.PodIP()
+	if err != nil {
+		return false, err
+	}
+	return c.watcher.State().ContainersReady(), nil
 }
 
 func (c *controller) Pause(ctx context.Context) error {

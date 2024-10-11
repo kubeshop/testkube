@@ -67,6 +67,8 @@ type ExecutionState interface {
 	JobCreationTimestamp() time.Time
 	EstimatedJobCreationTimestamp() time.Time
 
+	ContainersReady() bool
+
 	PodCreated() bool
 	PodStarted() bool
 	Completed() bool
@@ -129,6 +131,10 @@ func (e *executionState) PodIP() string {
 		return e.pod.IP()
 	}
 	return ""
+}
+
+func (e *executionState) ContainersReady() bool {
+	return e.pod != nil && e.pod.ContainersReady()
 }
 
 func (e *executionState) PodDeletionTimestamp() time.Time {
