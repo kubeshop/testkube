@@ -32,7 +32,7 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/expressions"
-	executionworker2 "github.com/kubeshop/testkube/pkg/testworkflows/executionworker"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/presets"
@@ -45,27 +45,27 @@ const (
 )
 
 var (
-	executionWorker   executionworker2.Worker
+	executionWorker   executionworker.Worker
 	executionWorkerMu sync.Mutex
 )
 
-func ExecutionWorker() executionworker2.Worker {
+func ExecutionWorker() executionworker.Worker {
 	executionWorkerMu.Lock()
 	defer executionWorkerMu.Unlock()
 
 	if executionWorker == nil {
 		cfg := config.Config()
-		executionWorker = executionworker2.New(env.Kubernetes(), presets.NewPro(env.ImageInspector()), executionworker2.Config{
-			Cluster: executionworker2.ClusterConfig{
+		executionWorker = executionworker.New(env.Kubernetes(), presets.NewPro(env.ImageInspector()), executionworker.Config{
+			Cluster: executionworker.ClusterConfig{
 				Id:               cfg.Worker.ClusterID,
 				DefaultNamespace: cfg.Worker.Namespace, // TODO: Use current execution namespace?
 				DefaultRegistry:  cfg.Worker.DefaultRegistry,
 				// TODO: Fetch all the namespaces with service accounts?
-				Namespaces: map[string]executionworker2.NamespaceConfig{
+				Namespaces: map[string]executionworker.NamespaceConfig{
 					cfg.Worker.Namespace: {DefaultServiceAccountName: cfg.Worker.DefaultServiceAccount},
 				},
 			},
-			ImageInspector: executionworker2.ImageInspectorConfig{
+			ImageInspector: executionworker.ImageInspectorConfig{
 				CacheEnabled: cfg.Worker.ImageInspectorPersistenceEnabled,
 				CacheKey:     cfg.Worker.ImageInspectorPersistenceCacheKey,
 				CacheTTL:     cfg.Worker.ImageInspectorPersistenceCacheTTL,
@@ -281,7 +281,12 @@ func SaveLogs(parentCtx context.Context, storage artifacts.InternalArtifactStora
 	var err error
 	for i := 0; i < LogsRetryMaxAttempts; i++ {
 		ctx, ctxCancel := context.WithCancel(parentCtx)
-		reader := ExecutionWorker().Logs(ctx, namespace, id, false)
+		reader := ExecutionWorker().Logs(ctx, id, executionworker.LogsOptions{
+			Hints: executionworker.Hints{
+				Namespace: namespace,
+			},
+			NoFollow: true,
+		})
 		err = reader.Err()
 		if err == nil {
 			err = storage.SaveStream(filePath, reader)

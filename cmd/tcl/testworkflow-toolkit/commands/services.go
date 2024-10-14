@@ -307,9 +307,12 @@ func NewServicesCmd() *cobra.Command {
 				defer ctxCancel()
 
 				// TODO: Use more lightweight notifications
-				notifications := spawn.ExecutionWorker().StatusNotifications(ctx, result.Namespace, cfg.Resource.Id, executionworker.StatusNotificationsOptions{
-					Signature:   result.Signature,
-					ScheduledAt: common.Ptr(scheduledAt),
+				notifications := spawn.ExecutionWorker().StatusNotifications(ctx, cfg.Resource.Id, executionworker.StatusNotificationsOptions{
+					Hints: executionworker.Hints{
+						Namespace:   result.Namespace,
+						Signature:   result.Signature,
+						ScheduledAt: common.Ptr(scheduledAt),
+					},
 				})
 				if notifications.Err() != nil {
 					log("error", "failed to connect to the service", notifications.Err().Error())

@@ -147,14 +147,10 @@ func (w *worker) Execute(ctx context.Context, request ExecuteRequest) (*ExecuteR
 	}, nil
 }
 
-func (w *worker) Notifications(ctx context.Context, namespace, id string, opts NotificationsOptions) NotificationsWatcher {
+func (w *worker) Notifications(ctx context.Context, id string, opts NotificationsOptions) NotificationsWatcher {
 	// Connect to the resource
 	// TODO: Move the implementation directly there
-	ctrl, err, recycle := w.registry.Connect(ctx, id, ResourceHints{
-		Namespace:   namespace,
-		ScheduledAt: opts.ScheduledAt,
-		Signature:   opts.Signature,
-	})
+	ctrl, err, recycle := w.registry.Connect(ctx, id, opts.Hints)
 	watcher := newNotificationsWatcher()
 	if errors.Is(err, controller.ErrJobTimeout) {
 		err = registry.ErrResourceNotFound
@@ -186,14 +182,10 @@ func (w *worker) Notifications(ctx context.Context, namespace, id string, opts N
 
 // TODO: Avoid multiple controller copies?
 // TODO: Optimize
-func (w *worker) StatusNotifications(ctx context.Context, namespace, id string, opts StatusNotificationsOptions) StatusNotificationsWatcher {
+func (w *worker) StatusNotifications(ctx context.Context, id string, opts StatusNotificationsOptions) StatusNotificationsWatcher {
 	// Connect to the resource
 	// TODO: Move the implementation directly there
-	ctrl, err, recycle := w.registry.Connect(ctx, id, ResourceHints{
-		Namespace:   namespace,
-		ScheduledAt: opts.ScheduledAt,
-		Signature:   opts.Signature,
-	})
+	ctrl, err, recycle := w.registry.Connect(ctx, id, opts.Hints)
 	watcher := newStatusNotificationsWatcher()
 	if errors.Is(err, controller.ErrJobTimeout) {
 		err = registry.ErrResourceNotFound
@@ -281,10 +273,11 @@ func (w *worker) StatusNotifications(ctx context.Context, namespace, id string, 
 
 // TODO: Optimize?
 // TODO: Allow fetching temporary logs too?
-func (w *worker) Logs(ctx context.Context, namespace, id string, follow bool) LogsReader {
+func (w *worker) Logs(ctx context.Context, id string, options LogsOptions) LogsReader {
 	reader := newLogsReader()
-	notifications := w.Notifications(ctx, namespace, id, NotificationsOptions{
-		NoFollow: !follow,
+	notifications := w.Notifications(ctx, id, NotificationsOptions{
+		Hints:    options.Hints,
+		NoFollow: options.NoFollow,
 	})
 	if notifications.Err() != nil {
 		reader.close(notifications.Err())

@@ -35,9 +35,12 @@ func (s *TestkubeAPI) StreamTestWorkflowExecutionNotificationsHandler() fiber.Ha
 		}
 
 		// Check for the logs
-		notifications := s.ExecutionWorkerClient.Notifications(ctx, execution.Namespace, execution.Id, executionworker.NotificationsOptions{
-			Signature:   execution.Signature,
-			ScheduledAt: common.Ptr(execution.ScheduledAt),
+		notifications := s.ExecutionWorkerClient.Notifications(ctx, execution.Id, executionworker.NotificationsOptions{
+			Hints: executionworker.Hints{
+				Namespace:   execution.Namespace,
+				ScheduledAt: common.Ptr(execution.ScheduledAt),
+				Signature:   execution.Signature,
+			},
 		})
 		if notifications.Err() != nil {
 			return s.BadRequest(c, errPrefix, "fetching notifications", notifications.Err())
@@ -100,9 +103,12 @@ func (s *TestkubeAPI) StreamTestWorkflowExecutionNotificationsWebSocketHandler()
 		}
 
 		// Check for the logs
-		notifications := s.ExecutionWorkerClient.Notifications(ctx, execution.Namespace, execution.Id, executionworker.NotificationsOptions{
-			Signature:   execution.Signature,
-			ScheduledAt: common.Ptr(execution.ScheduledAt),
+		notifications := s.ExecutionWorkerClient.Notifications(ctx, execution.Id, executionworker.NotificationsOptions{
+			Hints: executionworker.Hints{
+				Namespace:   execution.Namespace,
+				Signature:   execution.Signature,
+				ScheduledAt: common.Ptr(execution.ScheduledAt),
+			},
 		})
 		if notifications.Err() != nil {
 			return
@@ -438,9 +444,12 @@ func (s *TestkubeAPI) GetTestWorkflowNotificationsStream(ctx context.Context, ex
 	}
 
 	// Start streaming the notifications
-	notifications := s.ExecutionWorkerClient.Notifications(ctx, execution.Namespace, execution.Id, executionworker.NotificationsOptions{
-		ScheduledAt: common.Ptr(execution.ScheduledAt),
-		Signature:   execution.Signature,
+	notifications := s.ExecutionWorkerClient.Notifications(ctx, execution.Id, executionworker.NotificationsOptions{
+		Hints: executionworker.Hints{
+			Namespace:   execution.Namespace,
+			Signature:   execution.Signature,
+			ScheduledAt: common.Ptr(execution.ScheduledAt),
+		},
 	})
 
 	// Pass them down

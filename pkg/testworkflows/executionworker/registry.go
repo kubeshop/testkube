@@ -76,7 +76,7 @@ func (r *controllersRegistry) Get(id string) (ctrl controller.Controller, recycl
 	return r.unsafeGet(id)
 }
 
-func (r *controllersRegistry) Connect(ctx context.Context, id string, hints ResourceHints) (ctrl controller.Controller, err error, recycle func()) {
+func (r *controllersRegistry) Connect(ctx context.Context, id string, hints Hints) (ctrl controller.Controller, err error, recycle func()) {
 	for {
 		// Either connect a new controller or use existing one
 		obj, err, _ := r.connectionsGroup.Do(id, func() (interface{}, error) {

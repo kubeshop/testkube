@@ -165,9 +165,12 @@ func (e *executor) Control(ctx context.Context, testWorkflow *testworkflowsv1.Te
 	defer ctxCancel()
 
 	// TODO: retry?
-	notifications := e.workerClient.Notifications(ctx, execution.Namespace, execution.Id, executionworker.NotificationsOptions{
-		Signature:   execution.Signature,
-		ScheduledAt: common.Ptr(execution.ScheduledAt),
+	notifications := e.workerClient.Notifications(ctx, execution.Id, executionworker.NotificationsOptions{
+		Hints: executionworker.Hints{
+			Namespace:   execution.Namespace,
+			Signature:   execution.Signature,
+			ScheduledAt: common.Ptr(execution.ScheduledAt),
+		},
 	})
 	if notifications.Err() != nil {
 		log.DefaultLogger.Errorw("failed to control the TestWorkflow", "id", execution.Id, "error", notifications.Err())
@@ -249,9 +252,12 @@ func (e *executor) Control(ctx context.Context, testWorkflow *testworkflowsv1.Te
 				e.handleFatalError(execution, controller.ErrJobAborted, abortedAt)
 			} else {
 				// Handle unknown state
-				notifications = e.workerClient.Notifications(ctx, execution.Namespace, execution.Id, executionworker.NotificationsOptions{
-					Signature:   execution.Signature,
-					ScheduledAt: common.Ptr(execution.ScheduledAt),
+				notifications = e.workerClient.Notifications(ctx, execution.Id, executionworker.NotificationsOptions{
+					Hints: executionworker.Hints{
+						Namespace:   execution.Namespace,
+						Signature:   execution.Signature,
+						ScheduledAt: common.Ptr(execution.ScheduledAt),
+					},
 				})
 				if notifications.Err() == nil {
 					for v := range notifications.Channel() {
@@ -301,7 +307,14 @@ func (e *executor) Control(ctx context.Context, testWorkflow *testworkflowsv1.Te
 	for attempt := 1; err != nil && attempt <= SaveLogsRetryMaxAttempts; attempt++ {
 		log.DefaultLogger.Errorw("retrying save of TestWorkflow log output", "id", execution.Id, "error", err)
 		time.Sleep(SaveLogsRetryBaseDelay * time.Duration(attempt))
-		err = e.output.SaveLog(context.Background(), execution.Id, execution.Workflow.Name, e.workerClient.Logs(context.Background(), execution.Namespace, execution.Id, false))
+		err = e.output.SaveLog(context.Background(), execution.Id, execution.Workflow.Name, e.workerClient.Logs(context.Background(), execution.Id, executionworker.LogsOptions{
+			NoFollow: true,
+			Hints: executionworker.Hints{
+				Namespace:   execution.Namespace,
+				ScheduledAt: common.Ptr(execution.ScheduledAt),
+				Signature:   execution.Signature,
+			},
+		}))
 	}
 	if err != nil {
 		log.DefaultLogger.Errorw("failed to save TestWorkflow log output", "id", execution.Id, "error", err)

@@ -26,6 +26,11 @@ type ImageInspectorConfig struct {
 	CacheTTL     time.Duration
 }
 
+type ServiceConfig struct {
+	RestartPolicy  string
+	ReadinessProbe *testkube.Probe
+}
+
 type Config struct {
 	Cluster        ClusterConfig
 	ImageInspector ImageInspectorConfig
@@ -48,9 +53,13 @@ type ExecuteRequest struct {
 	Service    *ServiceConfig // TODO: Think if service should not be executed by a different command
 }
 
-type ServiceConfig struct {
-	RestartPolicy  string
-	ReadinessProbe *testkube.Probe
+type Hints struct {
+	// Namespace to search for firstly.
+	Namespace string
+	// ScheduledAt time to align with the execution.
+	ScheduledAt *time.Time // TODO: Consider no pointer
+	// Signature to align with the execution.
+	Signature []testkube.TestWorkflowSignature
 }
 
 type ExecuteResult struct {
@@ -126,19 +135,22 @@ type SummaryResult struct {
 }
 
 type NotificationsOptions struct {
-	// Signature is optional property to provide known signature for better hinting.
-	Signature []testkube.TestWorkflowSignature
-	// ScheduledAt is optional property to provide known schedule timestamp for better hinting.
-	ScheduledAt *time.Time // TODO: Consider no pointer
+	// Hints to help to find item faster and to provide more accurate data.
+	Hints Hints
+	// NoFollow gives a hint to ignore following the further actions.
+	NoFollow bool
+}
+
+type LogsOptions struct {
+	// Hints to help to find item faster and to provide more accurate data.
+	Hints Hints
 	// NoFollow gives a hint to ignore following the further actions.
 	NoFollow bool
 }
 
 type StatusNotificationsOptions struct {
-	// Signature is optional property to provide known signature for better hinting.
-	Signature []testkube.TestWorkflowSignature
-	// ScheduledAt is optional property to provide known schedule timestamp for better hinting.
-	ScheduledAt *time.Time // TODO: Consider no pointer
+	// Hints to help to find item faster and to provide more accurate data.
+	Hints Hints
 	// NoFollow gives a hint to ignore following the further actions.
 	NoFollow bool
 }
@@ -157,14 +169,10 @@ type StatusNotification struct {
 }
 
 type IdentifiableError struct {
-	Id    string
+	// Id is an ID of the resource associated to the error.
+	Id string
+	// Error is the error that happened.
 	Error error
-}
-
-type ResourceHints struct {
-	Namespace   string
-	ScheduledAt *time.Time
-	Signature   []testkube.TestWorkflowSignature
 }
 
 //go:generate mockgen -destination=./mock_worker.go -package=executionworker "github.com/kubeshop/testkube/pkg/testworkflows/executionworker" Worker
@@ -173,25 +181,25 @@ type Worker interface {
 	Execute(ctx context.Context, request ExecuteRequest) (*ExecuteResult, error)
 
 	// Notifications stream all the notifications from the resource.
-	Notifications(ctx context.Context, namespace, id string, options NotificationsOptions) NotificationsWatcher
+	Notifications(ctx context.Context, id string, options NotificationsOptions) NotificationsWatcher
 
 	// StatusNotifications stream lightweight status information.
-	StatusNotifications(ctx context.Context, namespace, id string, options StatusNotificationsOptions) StatusNotificationsWatcher
+	StatusNotifications(ctx context.Context, id string, options StatusNotificationsOptions) StatusNotificationsWatcher
 
 	// Logs converts all the important notifications (except i.e. output) from the resource into plain logs.
-	Logs(ctx context.Context, namespace, id string, follow bool) LogsReader
+	Logs(ctx context.Context, id string, options LogsOptions) LogsReader
 
 	// Get tries to build the latest precise result from the resource execution.
 	Get(ctx context.Context, namespace, id string) (*GetResult, error)
+
+	// Summary gets fast summary about the selected resource.
+	Summary(ctx context.Context, namespace, id string) (*SummaryResult, error)
 
 	// Finished is a fast method to check if the resource execution has been already finished.
 	Finished(ctx context.Context, namespace, id string) (bool, error)
 
 	// ListIds lists all the IDs of currently deployed resources matching the criteria.
 	ListIds(ctx context.Context, options ListOptions) ([]string, error)
-
-	// Summary gets fast summary about the selected resource.
-	Summary(ctx context.Context, namespace, id string) (*SummaryResult, error)
 
 	// List lists all the currently deployed resources matching the criteria.
 	List(ctx context.Context, options ListOptions) ([]ListResultItem, error)
