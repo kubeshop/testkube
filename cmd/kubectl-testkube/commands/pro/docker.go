@@ -125,7 +125,7 @@ func NewDockerCmd() *cobra.Command {
 		},
 	}
 
-	common.PopulateMasterFlags(cmd, &options)
+	common.PopulateMasterFlags(cmd, &options, true)
 
 	cmd.Flags().BoolVarP(&noLogin, "no-login", "", false, "Ignore login prompt, set existing token later by `testkube set context`")
 	cmd.Flags().StringVar(&dockerContainerName, "docker-container", "testkube-agent", "Docker container name for Testkube Docker Agent")

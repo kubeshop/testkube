@@ -59,7 +59,7 @@ func CreateVariables(cmd *cobra.Command, ignoreSecretVariable bool) (vars map[st
 	return
 }
 
-func PopulateMasterFlags(cmd *cobra.Command, opts *HelmOptions) {
+func PopulateMasterFlags(cmd *cobra.Command, opts *HelmOptions, optionalIds bool) {
 	var (
 		apiURIPrefix, uiURIPrefix, agentURIPrefix, cloudRootDomain, proRootDomain string
 		insecure                                                                  bool
@@ -88,8 +88,13 @@ func PopulateMasterFlags(cmd *cobra.Command, opts *HelmOptions) {
 	cmd.Flags().StringVar(&opts.Master.URIs.Agent, "agent-uri", "", "Testkube Pro agent URI [required for centralized mode]")
 	cmd.Flags().StringVar(&opts.Master.URIs.Logs, "logs-uri", "", "Testkube Pro logs URI [required for centralized mode]")
 	cmd.Flags().StringVar(&opts.Master.AgentToken, "agent-token", "", "Testkube Pro agent key [required for centralized mode]")
-	cmd.Flags().StringVar(&opts.Master.OrgId, "org-id", "", "Testkube Pro organization id [required for centralized mode]")
-	cmd.Flags().StringVar(&opts.Master.EnvId, "env-id", "", "Testkube Pro environment id [required for centralized mode]")
+	neededForLogin := ""
+	if optionalIds {
+		neededForLogin = ". It can be skipped for no login mode"
+	}
+
+	cmd.Flags().StringVar(&opts.Master.OrgId, "org-id", "", "Testkube Pro organization id [required for centralized mode]"+neededForLogin)
+	cmd.Flags().StringVar(&opts.Master.EnvId, "env-id", "", "Testkube Pro environment id [required for centralized mode]"+neededForLogin)
 
 	cmd.Flags().BoolVar(&opts.Master.Features.LogsV2, "feature-logs-v2", false, "Logs v2 feature flag")
 }

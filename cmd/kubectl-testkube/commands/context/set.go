@@ -104,6 +104,6 @@ func NewSetContextCmd() *cobra.Command {
 	cmd.Flags().String("logs-uri-override", "", "logs service uri override")
 	cmd.Flags().StringVar(&dockerContainerName, "docker-container", "testkube-agent", "Docker container name for Testkube Docker Agent")
 
-	common.PopulateMasterFlags(cmd, &opts)
+	common.PopulateMasterFlags(cmd, &opts, false)
 	return cmd
 }

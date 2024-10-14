@@ -109,7 +109,7 @@ func NewInitCmd() *cobra.Command {
 	}
 
 	common.PopulateHelmFlags(cmd, &options)
-	common.PopulateMasterFlags(cmd, &options)
+	common.PopulateMasterFlags(cmd, &options, false)
 
 	cmd.Flags().BoolVarP(&noLogin, "no-login", "", false, "Ignore login prompt, set existing token later by `testkube set context`")
 	cmd.Flags().BoolVarP(&export, "export", "", false, "Export the values.yaml")
