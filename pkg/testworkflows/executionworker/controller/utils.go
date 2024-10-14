@@ -1,4 +1,4 @@
-package testworkflowcontroller
+package controller
 
 import (
 	"regexp"

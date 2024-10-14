@@ -10,8 +10,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller"
 	registry2 "github.com/kubeshop/testkube/pkg/testworkflows/executionworker/registry"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
 
@@ -19,7 +19,7 @@ type controllersRegistry struct {
 	clientSet              kubernetes.Interface
 	namespaces             registry2.NamespacesRegistry
 	ips                    registry2.PodIpsRegistry
-	controllers            map[string]testworkflowcontroller.Controller
+	controllers            map[string]controller.Controller
 	controllerReservations map[string]int
 	mu                     sync.RWMutex
 	mus                    map[string]*sync.Mutex
@@ -30,7 +30,7 @@ func newControllersRegistry(clientSet kubernetes.Interface, namespaces registry2
 	r := &controllersRegistry{
 		clientSet:              clientSet,
 		namespaces:             namespaces,
-		controllers:            make(map[string]testworkflowcontroller.Controller),
+		controllers:            make(map[string]controller.Controller),
 		controllerReservations: make(map[string]int),
 	}
 	ipsRegistry := registry2.NewPodIpsRegistry(clientSet, r.GetNamespace, podIpCacheSize)
@@ -38,7 +38,7 @@ func newControllersRegistry(clientSet kubernetes.Interface, namespaces registry2
 	return r
 }
 
-func (r *controllersRegistry) unsafeGet(id string) (ctrl testworkflowcontroller.Controller, recycle func()) {
+func (r *controllersRegistry) unsafeGet(id string) (ctrl controller.Controller, recycle func()) {
 	// Search for active controller
 	ctrl, ok := r.controllers[id]
 	if !ok {
@@ -71,13 +71,13 @@ func (r *controllersRegistry) deregister(id string) {
 	r.mu.Unlock()
 }
 
-func (r *controllersRegistry) Get(id string) (ctrl testworkflowcontroller.Controller, recycle func()) {
+func (r *controllersRegistry) Get(id string) (ctrl controller.Controller, recycle func()) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	return r.unsafeGet(id)
 }
 
-func (r *controllersRegistry) Connect(ctx context.Context, id string, hints ResourceHints) (ctrl testworkflowcontroller.Controller, err error, recycle func()) {
+func (r *controllersRegistry) Connect(ctx context.Context, id string, hints ResourceHints) (ctrl controller.Controller, err error, recycle func()) {
 	for {
 		// Either connect a new controller or use existing one
 		obj, err, _ := r.connectionsGroup.Do(id, func() (interface{}, error) {
@@ -98,7 +98,7 @@ func (r *controllersRegistry) Connect(ctx context.Context, id string, hints Reso
 					}
 				}
 				scheduledAt := common.ResolvePtr(hints.ScheduledAt, time.Time{}) // TODO: consider caching or making it optional
-				nextCtrl, err := testworkflowcontroller.New(ctx, r.clientSet, namespace, id, scheduledAt, testworkflowcontroller.ControllerOptions{
+				nextCtrl, err := controller.New(ctx, r.clientSet, namespace, id, scheduledAt, controller.ControllerOptions{
 					Signature: signature,
 				})
 				if err != nil {
@@ -129,7 +129,7 @@ func (r *controllersRegistry) Connect(ctx context.Context, id string, hints Reso
 		r.mu.Unlock()
 
 		reserved := true
-		return obj.(testworkflowcontroller.Controller), nil, func() {
+		return obj.(controller.Controller), nil, func() {
 			if !reserved {
 				return
 			}

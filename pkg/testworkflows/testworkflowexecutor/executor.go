@@ -31,8 +31,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/secretmanager"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowresolver"
 )
@@ -101,7 +101,7 @@ func New(emitter *event.Emitter,
 
 func (e *executor) handleFatalError(execution *testkube.TestWorkflowExecution, err error, ts time.Time) {
 	// Detect error type
-	isAborted := errors.Is(err, testworkflowcontroller.ErrJobAborted)
+	isAborted := errors.Is(err, controller.ErrJobAborted)
 
 	// Apply the expected result
 	execution.Result.Fatal(err, isAborted, ts)
@@ -242,7 +242,7 @@ func (e *executor) Control(ctx context.Context, testWorkflow *testworkflowsv1.Te
 				}
 			}
 			if !abortedAt.IsZero() {
-				e.handleFatalError(execution, testworkflowcontroller.ErrJobAborted, abortedAt)
+				e.handleFatalError(execution, controller.ErrJobAborted, abortedAt)
 			} else {
 				// Handle unknown state
 				notifications = e.workerClient.Notifications(ctx, execution.Namespace, execution.Id, executionworker.NotificationsOptions{

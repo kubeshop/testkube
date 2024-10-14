@@ -1,4 +1,4 @@
-package testworkflowcontroller
+package controller
 
 import (
 	"context"
@@ -12,7 +12,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller/watchers"
+	watchers2 "github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller/watchers"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
 
@@ -24,7 +24,7 @@ type WatchInstrumentedPodOptions struct {
 	DisableFollow bool
 }
 
-func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interface, signature []stage.Signature, scheduledAt time.Time, watcher watchers.ExecutionWatcher, opts WatchInstrumentedPodOptions) (<-chan ChannelMessage[Notification], error) {
+func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interface, signature []stage.Signature, scheduledAt time.Time, watcher watchers2.ExecutionWatcher, opts WatchInstrumentedPodOptions) (<-chan ChannelMessage[Notification], error) {
 	ctx, ctxCancel := context.WithCancel(parentCtx)
 	notifier := newNotifier(ctx, testkube.TestWorkflowResult{}, scheduledAt)
 	signatureSeq := stage.MapSignatureToSequence(signature)
@@ -54,7 +54,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 				currentJobEventsIndex++
 
 				if ev.Reason != "BackoffLimitExceeded" {
-					notifier.Event("", watchers.GetEventTimestamp(ev), ev.Type, ev.Reason, ev.Message)
+					notifier.Event("", watchers2.GetEventTimestamp(ev), ev.Type, ev.Reason, ev.Message)
 				}
 			}
 			for _, ev := range watcher.State().PodEvents().Original()[currentPodEventsIndex:] {
@@ -63,7 +63,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 				// Display only events that are unrelated to further containers
 				name := GetEventContainerName(ev)
 				if name == "" {
-					notifier.Event("", watchers.GetEventTimestamp(ev), ev.Type, ev.Reason, ev.Message)
+					notifier.Event("", watchers2.GetEventTimestamp(ev), ev.Type, ev.Reason, ev.Message)
 				}
 			}
 
@@ -137,7 +137,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 					// Display only events that are unrelated to further containers
 					name := GetEventContainerName(ev)
 					if name == container && ev.Reason != "Created" && ev.Reason != "Started" {
-						notifier.Event(initialRefs[containerIndex], watchers.GetEventTimestamp(ev), ev.Type, ev.Reason, ev.Message)
+						notifier.Event(initialRefs[containerIndex], watchers2.GetEventTimestamp(ev), ev.Type, ev.Reason, ev.Message)
 					}
 				}
 

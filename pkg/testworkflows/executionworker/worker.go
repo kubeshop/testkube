@@ -24,10 +24,10 @@ import (
 	"github.com/kubeshop/testkube/pkg/imageinspector"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
-	registry2 "github.com/kubeshop/testkube/pkg/testworkflows/executionworker/registry"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller/watchers"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/registry"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller/watchers"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
@@ -47,7 +47,7 @@ type worker struct {
 }
 
 func New(clientSet kubernetes.Interface, processor testworkflowprocessor.Processor, config Config) Worker {
-	namespaces := registry2.NewNamespacesRegistry(clientSet, config.Cluster.DefaultNamespace, maps.Keys(config.Cluster.Namespaces), 50)
+	namespaces := registry.NewNamespacesRegistry(clientSet, config.Cluster.DefaultNamespace, maps.Keys(config.Cluster.Namespaces), 50)
 	return &worker{
 		clientSet: clientSet,
 		processor: processor,
@@ -157,8 +157,8 @@ func (w *worker) Notifications(ctx context.Context, namespace, id string, opts N
 		Signature:   opts.Signature,
 	})
 	watcher := newNotificationsWatcher()
-	if errors.Is(err, testworkflowcontroller.ErrJobTimeout) {
-		err = registry2.ErrResourceNotFound
+	if errors.Is(err, controller.ErrJobTimeout) {
+		err = registry.ErrResourceNotFound
 	}
 	if err != nil {
 		watcher.close(err)
@@ -196,8 +196,8 @@ func (w *worker) StatusNotifications(ctx context.Context, namespace, id string, 
 		Signature:   opts.Signature,
 	})
 	watcher := newStatusNotificationsWatcher()
-	if errors.Is(err, testworkflowcontroller.ErrJobTimeout) {
-		err = registry2.ErrResourceNotFound
+	if errors.Is(err, controller.ErrJobTimeout) {
+		err = registry.ErrResourceNotFound
 	}
 	if err != nil {
 		watcher.close(err)
@@ -393,12 +393,12 @@ func (w *worker) Destroy(ctx context.Context, namespace, id string) (err error) 
 		}
 	}
 	// TODO: Move implementation there
-	return testworkflowcontroller.Cleanup(ctx, w.clientSet, namespace, id)
+	return controller.Cleanup(ctx, w.clientSet, namespace, id)
 }
 
 func (w *worker) DestroyGroup(ctx context.Context, namespace, groupId string) error {
 	if namespace != "" {
-		return testworkflowcontroller.CleanupGroup(ctx, w.clientSet, namespace, groupId)
+		return controller.CleanupGroup(ctx, w.clientSet, namespace, groupId)
 	}
 
 	// Delete group resources in all known namespaces
@@ -417,11 +417,11 @@ func (w *worker) Pause(ctx context.Context, namespace, id string) (err error) {
 	if err != nil {
 		return err
 	} else if podIp == "" {
-		return registry2.ErrPodIpNotAssigned
+		return registry.ErrPodIpNotAssigned
 	}
 
 	// TODO: Move implementation there
-	return testworkflowcontroller.Pause(ctx, podIp)
+	return controller.Pause(ctx, podIp)
 }
 
 func (w *worker) Resume(ctx context.Context, namespace, id string) (err error) {
@@ -429,11 +429,11 @@ func (w *worker) Resume(ctx context.Context, namespace, id string) (err error) {
 	if err != nil {
 		return err
 	} else if podIp == "" {
-		return registry2.ErrPodIpNotAssigned
+		return registry.ErrPodIpNotAssigned
 	}
 
 	// TODO: Move implementation there
-	return testworkflowcontroller.Resume(ctx, podIp)
+	return controller.Resume(ctx, podIp)
 }
 
 // TODO: consider status channel (?)
@@ -447,7 +447,7 @@ func (w *worker) ResumeMany(ctx context.Context, ids []string) (errs []Identifia
 		if err != nil {
 			errs = append(errs, IdentifiableError{Id: id, Error: err})
 		} else if podIp == "" {
-			errs = append(errs, IdentifiableError{Id: id, Error: registry2.ErrPodIpNotAssigned})
+			errs = append(errs, IdentifiableError{Id: id, Error: registry.ErrPodIpNotAssigned})
 		} else {
 			ips[id] = podIp
 		}

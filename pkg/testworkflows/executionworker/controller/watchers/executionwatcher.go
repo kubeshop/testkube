@@ -12,7 +12,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/kubeshop/testkube/internal/common"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller/store"
+	store2 "github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller/store"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
@@ -34,7 +34,7 @@ type executionWatcher struct {
 
 	state       *executionState
 	uncommitted *executionState
-	update      store.Update
+	update      store2.Update
 	mu          sync.RWMutex
 }
 
@@ -151,16 +151,16 @@ func NewExecutionWatcher(parentCtx context.Context, clientSet kubernetes.Interfa
 	watcher := &executionWatcher{
 		state:           NewExecutionState(nil, nil, NewJobEvents(nil), NewPodEvents(nil), &opts).(*executionState),
 		uncommitted:     NewExecutionState(nil, nil, NewJobEvents(nil), NewPodEvents(nil), &opts).(*executionState),
-		update:          store.NewUpdate(),
+		update:          store2.NewUpdate(),
 		podEventsOptsCh: make(chan metav1.ListOptions, 1),
 		initialCommitCh: make(chan struct{}),
 	}
 
-	update := store.NewUpdate()
-	job := store.NewValue[batchv1.Job](ctx, update)
-	pod := store.NewValue[corev1.Pod](ctx, update)
-	jobEvents := store.NewList[corev1.Event](ctx, update)
-	podEvents := store.NewList[corev1.Event](ctx, update)
+	update := store2.NewUpdate()
+	job := store2.NewValue[batchv1.Job](ctx, update)
+	pod := store2.NewValue[corev1.Pod](ctx, update)
+	jobEvents := store2.NewList[corev1.Event](ctx, update)
+	podEvents := store2.NewList[corev1.Event](ctx, update)
 
 	// Optimistically, start watching all the easily reachable resources
 	watcher.jobWatcher = NewJobWatcher(ctx, clientSet.BatchV1().Jobs(namespace), metav1.ListOptions{
