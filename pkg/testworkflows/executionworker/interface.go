@@ -44,10 +44,8 @@ type ExecuteRequest struct {
 	Workflow   testworkflowsv1.TestWorkflow // TODO: Use OpenAPI object
 	Secrets    map[string]map[string]string
 
-	Execution    testworkflowconfig.ExecutionConfig
-	ControlPlane testworkflowconfig.ControlPlaneConfig // TODO: Think if it's required
-
-	// TODO: Think if it should be wrapped differently
+	Execution           testworkflowconfig.ExecutionConfig
+	ControlPlane        testworkflowconfig.ControlPlaneConfig // TODO: Think if it's required
 	ArtifactsPathPrefix string
 }
 
@@ -59,10 +57,8 @@ type ServiceRequest struct {
 	ReadinessProbe *testkube.Probe
 	RestartPolicy  string
 
-	Execution    testworkflowconfig.ExecutionConfig
-	ControlPlane testworkflowconfig.ControlPlaneConfig // TODO: Think if it's required
-
-	// TODO: Think if it should be wrapped differently
+	Execution           testworkflowconfig.ExecutionConfig
+	ControlPlane        testworkflowconfig.ControlPlaneConfig // TODO: Think if it's required
 	ArtifactsPathPrefix string
 }
 
