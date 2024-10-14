@@ -456,20 +456,25 @@ func (s *TestkubeAPI) GetTestWorkflowNotificationsStream(ctx context.Context, ex
 	// Check for the logs
 	ctrl, err := testworkflowcontroller.New(ctx, s.Clientset, execution.GetNamespace(s.Namespace), execution.Id, execution.ScheduledAt)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to create test workflow controller")
 	}
 
+	fmt.Println("GetTestWorkflowNotificationsStream", executionID)
 	// Stream the notifications
 	ch := make(chan testkube.TestWorkflowExecutionNotification)
 	go func() {
 		for n := range ctrl.Watch(ctx) {
 			if n.Error == nil {
 				ch <- n.Value.ToInternal()
+			} else {
+				s.Log.Errorw("failed to watch logs", "error", n.Error)
 			}
 		}
 		ctrl.StopController()
 		close(ch)
 	}()
+	fmt.Println("GetTestWorkflowNotificationsStream done", executionID)
+
 	return ch, nil
 }
 

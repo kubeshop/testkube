@@ -2,6 +2,7 @@ package testworkflowcontroller
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"time"
 
@@ -170,6 +171,8 @@ func (c *controller) Watch(parentCtx context.Context) <-chan ChannelMessage[Noti
 	ch, err := WatchInstrumentedPod(parentCtx, c.clientSet, c.signature, c.scheduledAt, c.watcher, WatchInstrumentedPodOptions{})
 	if err != nil {
 		v := newChannel[Notification](context.Background(), 1)
+
+		fmt.Println("Error in WatchInstrumentedPod", err)
 		v.Error(err)
 		v.Close()
 		return v.Channel()

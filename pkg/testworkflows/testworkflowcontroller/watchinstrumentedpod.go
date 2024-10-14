@@ -74,18 +74,21 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 
 		// Stop immediately after the operation is canceled
 		if ctx.Err() != nil {
+			fmt.Println("Context error 1", ctx.Err(), context.Cause(ctx))
 			return
 		}
 
 		// Handle the case when it has been complete without pod start
 		if !watcher.State().PodStarted() && (watcher.State().Completed() || opts.DisableFollow) {
 			notifier.Align(watcher.State())
+			fmt.Println("Pod has not been started")
 			return
 		}
 
 		// Load the pod information
 		if watcher.State().EstimatedPodStartTimestamp().IsZero() {
 			notifier.Error(fmt.Errorf("cannot estimate Pod start"))
+			fmt.Println("cannot estimate Pod start")
 			return
 		}
 
@@ -95,6 +98,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 		actions, err := watcher.State().ActionGroups()
 		if err != nil {
 			notifier.Error(fmt.Errorf("cannot read execution instructions: %v", err))
+			fmt.Println("cannot read execution instructions", err)
 			return
 		}
 		refs, endRefs := ExtractRefsFromActionGroup(actions)
@@ -148,6 +152,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 
 			// Stop immediately after the operation is canceled
 			if ctx.Err() != nil {
+				fmt.Println("Context error 2", ctx.Err(), context.Cause(ctx))
 				return
 			}
 
@@ -164,6 +169,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 			for v := range WatchContainerLogs(ctx, clientSet, watcher.State().Namespace(), watcher.State().PodName(), container, 10, isDone, isLastHint) {
 				if v.Error != nil {
 					notifier.Error(v.Error)
+					fmt.Println("watch container logs", v.Error)
 					continue
 				}
 
@@ -185,6 +191,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 
 			// Stop immediately after the operation is canceled
 			if ctx.Err() != nil {
+				fmt.Println("Context error 3", ctx.Err(), context.Cause(ctx))
 				return
 			}
 
@@ -192,12 +199,14 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 			for ok := true; ok; _, ok = <-updatesCh {
 				// Determine if the container should be already stopped
 				if watcher.State().ContainerFinished(container) || watcher.State().Completed() || opts.DisableFollow {
+					fmt.Println("Container finished", container)
 					break
 				}
 			}
 
 			// Stop immediately after the operation is canceled
 			if ctx.Err() != nil {
+				fmt.Println("Context error 4", ctx.Err(), context.Cause(ctx))
 				return
 			}
 
@@ -240,6 +249,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 
 		// Stop immediately after the operation is canceled
 		if ctx.Err() != nil {
+			fmt.Println("Context error 5", ctx.Err(), context.Cause(ctx))
 			return
 		}
 

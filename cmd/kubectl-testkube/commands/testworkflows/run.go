@@ -95,9 +95,11 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 			if outputPretty {
 				ui.NL()
 				if watchEnabled {
+					fmt.Println("uiWatch")
 					exitCode = uiWatch(execution, client)
 					ui.NL()
 					if downloadArtifactsEnabled {
+						fmt.Println("downlaod artifact")
 						tests.DownloadTestWorkflowArtifacts(execution.Id, downloadDir, format, masks, client, outputPretty)
 					}
 				} else {
@@ -130,7 +132,9 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 }
 
 func uiWatch(execution testkube.TestWorkflowExecution, client apiclientv1.Client) int {
+	fmt.Println("watch logs")
 	result, err := watchTestWorkflowLogs(execution.Id, execution.Signature, client)
+	fmt.Println("watch logs done", err, result)
 	ui.ExitOnError("reading test workflow execution logs", err)
 
 	// Apply the result in the execution

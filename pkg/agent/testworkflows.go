@@ -7,6 +7,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
@@ -114,6 +115,7 @@ func (ag *Agent) executeWorkflowNotificationsRequest(ctx context.Context, req *c
 		}
 	}
 	if err != nil {
+		ag.logger.Errorf("error executing workflow notifications request: %s", err.Error())
 		message := fmt.Sprintf("cannot get pod logs: %s", err.Error())
 		ag.testWorkflowNotificationsResponseBuffer <- &cloud.TestWorkflowNotificationsResponse{
 			StreamId: req.StreamId,
@@ -139,6 +141,9 @@ func (ag *Agent) executeWorkflowNotificationsRequest(ctx context.Context, req *c
 				Ref:       n.Ref,
 				Type:      t,
 			}
+
+			fmt.Println("Notification", n)
+			spew.Dump(n)
 			if n.Result != nil {
 				m, _ := json.Marshal(n.Result)
 				msg.Message = string(m)
@@ -153,9 +158,11 @@ func (ag *Agent) executeWorkflowNotificationsRequest(ctx context.Context, req *c
 			select {
 			case ag.testWorkflowNotificationsResponseBuffer <- msg:
 			case <-ctx.Done():
+				fmt.Println("Agent Context error ", ctx.Err(), context.Cause(ctx))
 				return ctx.Err()
 			}
 		case <-ctx.Done():
+			fmt.Println("Agent Context error2", ctx.Err(), context.Cause(ctx))
 			return ctx.Err()
 		}
 	}
