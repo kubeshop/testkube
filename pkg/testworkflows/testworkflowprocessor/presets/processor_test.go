@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	batchv1 "k8s.io/api/batch/v1"
@@ -31,6 +32,7 @@ const (
 var (
 	dummyEntrypoint = []string{"/dummy-entrypoint", "entrypoint-arg"}
 	dummyCmd        = []string{"/dummy-cmd", "cmd-arg"}
+	dummyTime       = time.Date(2020, 10, 14, 1, 2, 3, 400, time.UTC)
 )
 
 type dummyInspector struct{}
@@ -120,7 +122,7 @@ func TestProcessBasic(t *testing.T) {
 		},
 	}
 
-	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{Config: testConfig})
+	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{Config: testConfig, ScheduledAt: dummyTime})
 	assert.NoError(t, err)
 
 	sig := res.Signature
@@ -175,9 +177,10 @@ func TestProcessBasic(t *testing.T) {
 						constants.RootResourceIdLabelName: "dummy-id",
 					},
 					Annotations: map[string]string{
-						constants.SignatureAnnotationName: string(sigSerialized),
-						constants.InternalAnnotationName:  string(internalConfigSerialized),
-						constants.SpecAnnotationName:      getSpec(wantActions),
+						constants.SignatureAnnotationName:   string(sigSerialized),
+						constants.InternalAnnotationName:    string(internalConfigSerialized),
+						constants.SpecAnnotationName:        getSpec(wantActions),
+						constants.ScheduledAtAnnotationName: dummyTime.Format(time.RFC3339Nano),
 					},
 				},
 				Spec: corev1.PodSpec{
@@ -238,7 +241,7 @@ func TestProcessShellWithNonStandardImage(t *testing.T) {
 		},
 	}
 
-	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{Config: testConfig})
+	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{Config: testConfig, ScheduledAt: dummyTime})
 	assert.NoError(t, err)
 
 	sig := res.Signature
@@ -294,9 +297,10 @@ func TestProcessShellWithNonStandardImage(t *testing.T) {
 						constants.RootResourceIdLabelName: "dummy-id",
 					},
 					Annotations: map[string]string{
-						constants.SignatureAnnotationName: string(sigSerialized),
-						constants.InternalAnnotationName:  string(internalConfigSerialized),
-						constants.SpecAnnotationName:      getSpec(wantActions),
+						constants.SignatureAnnotationName:   string(sigSerialized),
+						constants.InternalAnnotationName:    string(internalConfigSerialized),
+						constants.SpecAnnotationName:        getSpec(wantActions),
+						constants.ScheduledAtAnnotationName: dummyTime.Format(time.RFC3339Nano),
 					},
 				},
 				Spec: corev1.PodSpec{
