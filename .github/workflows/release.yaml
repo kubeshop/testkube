@@ -138,12 +138,14 @@ jobs:
 
       - name: Preload kind images
         run: |
-          mkdir -p build/kind/images
+          mkdir -p build/kind/images/arm
+          mkdir -p build/kind/images/amd
+
           docker pull --platform linux/arm64 kindest/node:v1.31.0
-          docker save kindest/node:v1.31.0 > build/kind/images/node.tar
+          docker save kindest/node:v1.31.0 > build/kind/images/arm/node.tar
 
           docker pull --platform linux/amd64 kindest/node:v1.31.0
-          docker save kindest/node:v1.31.0 >> build/kind/images/node.tar
+          docker save kindest/node:v1.31.0 > build/kind/images/amd/node.tar
 
       - name: Build and push
         uses: docker/build-push-action@v6

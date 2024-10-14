@@ -189,10 +189,24 @@ while ! docker info; do
   sleep 5
 done
 
+# Set image folder based on architecture
+case "$arch" in
+  x86_64)
+    IMAGE_FOLDER="/images/amd"
+    ;;
+  arm64)
+    IMAGE_FOLDER="/images/arm"
+    ;;
+  *)
+    log "Unsupported architecture: $arch"
+    exit 1
+    ;;
+esac
+
 # Step 3: Import pre-installed images
-for file in /images/*.tar; do
+for file in "$IMAGE_FOLDER"/*.tar; do
   log "Load docker image $file..."
-  docker load <$file
+  docker load < "$file"
 done
 
 # Get the list of kind clusters
