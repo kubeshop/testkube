@@ -30,10 +30,6 @@ func GetEventContainerName(event *corev1.Event) string {
 	return ""
 }
 
-func IsPodDone(pod *corev1.Pod) bool {
-	return (pod.Status.Phase != corev1.PodPending && pod.Status.Phase != corev1.PodRunning) || pod.ObjectMeta.DeletionTimestamp != nil
-}
-
 type ContainerResultStep struct {
 	Status     testkube.TestWorkflowStepStatus
 	ExitCode   int

@@ -195,10 +195,10 @@ func (c *controller) Watch(parentCtx context.Context, disableFollow bool) <-chan
 		DisableFollow: disableFollow,
 	})
 	if err != nil {
-		v := newChannel[Notification](context.Background(), 1)
-		v.Error(err)
-		v.Close()
-		return v.Channel()
+		v := make(chan ChannelMessage[Notification], 1)
+		v <- ChannelMessage[Notification]{Error: err}
+		close(v)
+		return v
 	}
 	return ch
 }

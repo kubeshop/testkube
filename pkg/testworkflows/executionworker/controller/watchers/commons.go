@@ -16,8 +16,6 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 )
 
 const (
@@ -363,53 +361,4 @@ func GetEventContainerName(event *corev1.Event) string {
 		return name
 	}
 	return ""
-}
-
-func CreateJobCompleteCondition(ts time.Time) batchv1.JobCondition {
-	return batchv1.JobCondition{
-		Type:               batchv1.JobComplete,
-		Status:             "True",
-		LastProbeTime:      metav1.Time{Time: ts},
-		LastTransitionTime: metav1.Time{Time: ts},
-	}
-}
-
-func CreateJobFailedCondition(ts time.Time, reason, message string) batchv1.JobCondition {
-	if reason == "" {
-		reason = "Error"
-	}
-	return batchv1.JobCondition{
-		Type:               batchv1.JobFailed,
-		Status:             "True",
-		LastProbeTime:      metav1.Time{Time: ts},
-		LastTransitionTime: metav1.Time{Time: ts},
-		Reason:             reason,
-		Message:            message,
-	}
-}
-
-func ExtractRefsFromActionList(list actiontypes.ActionList) (started []string, finished []string) {
-	for i := range list {
-		switch list[i].Type() {
-		case lite.ActionTypeSetup:
-			started = append(started, data.InitStepName)
-			finished = append(finished, data.InitStepName)
-		case lite.ActionTypeStart:
-			started = append(started, *list[i].Start)
-		case lite.ActionTypeEnd:
-			finished = append(finished, *list[i].End)
-		}
-	}
-	return
-}
-
-func ExtractRefsFromActionGroup(group actiontypes.ActionGroups) (started [][]string, finished [][]string) {
-	started = make([][]string, len(group))
-	finished = make([][]string, len(group))
-	for i := range group {
-		s, f := ExtractRefsFromActionList(group[i])
-		started[i] = s
-		finished[i] = f
-	}
-	return
 }

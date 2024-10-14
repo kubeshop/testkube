@@ -630,7 +630,7 @@ func main() {
 			SkipVerify:  cfg.TestkubeProSkipVerify,
 			TlsInsecure: cfg.TestkubeProTLSInsecure,
 
-			// TODO: Avoid
+			// TODO: Prepare ControlPlane interface for OSS, so we may unify the communication
 			LocalApiUrl:   fmt.Sprintf("http://%s:%s", cfg.APIServerFullname, cfg.APIServerPort),
 			ObjectStorage: objectStorageConfig,
 		},

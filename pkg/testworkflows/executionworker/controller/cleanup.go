@@ -112,17 +112,3 @@ func CleanupGroup(ctx context.Context, clientSet kubernetes.Interface, namespace
 	wg.Wait()
 	return errors.Join(errs...)
 }
-
-func Abort(ctx context.Context, clientSet kubernetes.Interface, namespace, id string) error {
-	// Check if the Job exists
-	jobs, err := clientSet.BatchV1().Jobs(namespace).List(ctx, metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("%s=%s", constants.ResourceIdLabelName, id),
-	})
-	if err != nil {
-		return err
-	}
-	if len(jobs.Items) == 0 {
-		return errors.New("job was already aborted")
-	}
-	return Cleanup(ctx, clientSet, namespace, id)
-}
