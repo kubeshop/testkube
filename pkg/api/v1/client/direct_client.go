@@ -219,6 +219,8 @@ func (t DirectClient[A]) GetLogsV2(uri string, logs chan events.Log) error {
 
 // GetTestWorkflowExecutionNotifications returns logs stream from job pods, based on job pods logs
 func (t DirectClient[A]) GetTestWorkflowExecutionNotifications(uri string, notifications chan testkube.TestWorkflowExecutionNotification) error {
+
+	fmt.Println("get", uri)
 	req, err := http.NewRequest(http.MethodGet, uri, nil)
 	if err != nil {
 		return err
@@ -234,6 +236,7 @@ func (t DirectClient[A]) GetTestWorkflowExecutionNotifications(uri string, notif
 		defer close(notifications)
 		defer resp.Body.Close()
 
+		fmt.Println("StreamToTestWorkflowExecutionNotificationsChannel")
 		StreamToTestWorkflowExecutionNotificationsChannel(resp.Body, notifications)
 	}()
 

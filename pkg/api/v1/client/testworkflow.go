@@ -125,6 +125,7 @@ func (c TestWorkflowClient) ExecuteTestWorkflow(name string, request testkube.Te
 func (c TestWorkflowClient) GetTestWorkflowExecutionNotifications(id string) (notifications chan testkube.TestWorkflowExecutionNotification, err error) {
 	notifications = make(chan testkube.TestWorkflowExecutionNotification)
 	uri := c.testWorkflowTransport.GetURI("/test-workflow-executions/%s/notifications", id)
+	fmt.Println("uri", uri)
 	err = c.testWorkflowTransport.GetTestWorkflowExecutionNotifications(uri, notifications)
 	return notifications, err
 }
