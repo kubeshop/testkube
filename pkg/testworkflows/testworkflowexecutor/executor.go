@@ -359,7 +359,7 @@ func (e *executor) buildWorkflowConfig(workflow *testworkflowsv1.TestWorkflow) t
 func (e *executor) buildControlPlaneConfig(orgId, envId string) testworkflowconfig.ControlPlaneConfig {
 	dashboardUrl := e.dashboardURI
 	if orgId != "" && envId != "" && dashboardUrl == "" {
-		cloudUiUrl := common.GetOr(os.Getenv("TESTKUBE_PRO_UI_URL"), os.Getenv("TESTKUBE_CLOUD_UI_URL"))
+		cloudUiUrl := os.Getenv("TESTKUBE_PRO_UI_URL")
 		dashboardUrl = fmt.Sprintf("%s/organization/%s/environment/%s/dashboard", cloudUiUrl, orgId, envId)
 	}
 	return testworkflowconfig.ControlPlaneConfig{
