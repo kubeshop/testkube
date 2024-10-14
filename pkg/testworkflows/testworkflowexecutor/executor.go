@@ -356,14 +356,6 @@ func (e *executor) buildWorkflowConfig(workflow *testworkflowsv1.TestWorkflow) t
 	}
 }
 
-func (e *executor) buildResourceConfig(resourceId, rootResourceId, fsPrefix string) testworkflowconfig.ResourceConfig {
-	return testworkflowconfig.ResourceConfig{
-		Id:       resourceId,
-		RootId:   rootResourceId,
-		FsPrefix: fsPrefix,
-	}
-}
-
 func (e *executor) buildControlPlaneConfig(orgId, envId string) testworkflowconfig.ControlPlaneConfig {
 	dashboardUrl := e.dashboardURI
 	if orgId != "" && envId != "" && dashboardUrl == "" {
