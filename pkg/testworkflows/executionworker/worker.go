@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	errors2 "errors"
 	"fmt"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -346,6 +347,7 @@ func (w *worker) List(ctx context.Context, options ListOptions) ([]ListResultIte
 	if options.RootId != "" {
 		labelSelectors = append(labelSelectors, fmt.Sprintf("%s=%s", constants.RootResourceIdLabelName, options.RootId))
 	}
+	listOptions.LabelSelector = strings.Join(labelSelectors, ",")
 
 	// TODO: make concurrent calls
 	list := make([]ListResultItem, 0)
