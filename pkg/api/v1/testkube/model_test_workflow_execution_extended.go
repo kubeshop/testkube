@@ -111,3 +111,7 @@ func (e *TestWorkflowExecution) InitializationError(header string, err error) {
 	}
 	e.Result.HealDuration(e.ScheduledAt)
 }
+
+func (e *TestWorkflowExecution) FailedToInitialize() bool {
+	return e.Result.Status != nil && *e.Result.Status == ABORTED_TestWorkflowStatus && e.Result.QueuedAt.IsZero()
+}

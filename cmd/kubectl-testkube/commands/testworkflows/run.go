@@ -94,14 +94,16 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 			var exitCode = 0
 			if outputPretty {
 				ui.NL()
-				if watchEnabled {
-					exitCode = uiWatch(execution, client)
-					ui.NL()
-					if downloadArtifactsEnabled {
-						tests.DownloadTestWorkflowArtifacts(execution.Id, downloadDir, format, masks, client, outputPretty)
+				if !execution.FailedToInitialize() {
+					if watchEnabled {
+						exitCode = uiWatch(execution, client)
+						ui.NL()
+						if downloadArtifactsEnabled {
+							tests.DownloadTestWorkflowArtifacts(execution.Id, downloadDir, format, masks, client, outputPretty)
+						}
+					} else {
+						uiShellWatchExecution(execution.Id)
 					}
-				} else {
-					uiShellWatchExecution(execution.Id)
 				}
 
 				execution, err = client.GetTestWorkflowExecution(execution.Id)
