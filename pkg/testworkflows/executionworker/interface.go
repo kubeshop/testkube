@@ -39,32 +39,31 @@ type Config struct {
 
 // TODO: Consider some context data
 type ExecuteRequest struct {
-	Execution testworkflowconfig.ExecutionConfig
-	Secrets   map[string]map[string]string
-	Workflow  testworkflowsv1.TestWorkflow // TODO: Use OpenAPI object
+	ResourceId string // defaults to execution ID
+	GroupId    string
+	Workflow   testworkflowsv1.TestWorkflow // TODO: Use OpenAPI object
+	Secrets    map[string]map[string]string
 
+	Execution    testworkflowconfig.ExecutionConfig
 	ControlPlane testworkflowconfig.ControlPlaneConfig // TODO: Think if it's required
 
 	// TODO: Think if it should be wrapped differently
-	ResourceId string
-	GroupId    string // TODO: likely it should be part of the resource config
-	FsPrefix   string
+	ArtifactsPathPrefix string
 }
 
 type ServiceRequest struct {
-	Execution testworkflowconfig.ExecutionConfig
-
-	ControlPlane testworkflowconfig.ControlPlaneConfig // TODO: Think if it's required
-
+	ResourceId     string
+	GroupId        string
 	Workflow       testworkflowsv1.TestWorkflow // TODO: Use OpenAPI object
 	Secrets        map[string]map[string]string
 	ReadinessProbe *testkube.Probe
 	RestartPolicy  string
 
+	Execution    testworkflowconfig.ExecutionConfig
+	ControlPlane testworkflowconfig.ControlPlaneConfig // TODO: Think if it's required
+
 	// TODO: Think if it should be wrapped differently
-	ResourceId string
-	GroupId    string // TODO: likely it should be part of the resource config
-	FsPrefix   string
+	ArtifactsPathPrefix string
 }
 
 type Hints struct {

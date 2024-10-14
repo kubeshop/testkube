@@ -21,7 +21,7 @@ const (
 	// TODO: move to the execution worker (?)
 	ResourceIdLabelName             = "testkube.io/resource"
 	RootResourceIdLabelName         = "testkube.io/root"
-	GroupIdLabelName                = "testkube.io/executionGroup"
+	GroupIdLabelName                = "testkube.io/contextGroup"
 	SignatureAnnotationName         = "testkube.io/signature"
 	SpecAnnotationName              = "testkube.io/spec"
 	SpecAnnotationFieldPath         = "metadata.annotations['" + SpecAnnotationName + "']"

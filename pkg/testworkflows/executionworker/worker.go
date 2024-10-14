@@ -99,7 +99,7 @@ func (w *worker) Execute(ctx context.Context, request ExecuteRequest) (*ExecuteR
 	if resourceId == "" {
 		resourceId = request.Execution.Id
 	}
-	cfg := w.buildInternalConfig(resourceId, request.FsPrefix, request.Execution, request.ControlPlane, request.Workflow)
+	cfg := w.buildInternalConfig(resourceId, request.ArtifactsPathPrefix, request.Execution, request.ControlPlane, request.Workflow)
 	secrets := w.buildSecrets(request.Secrets)
 
 	// Ensure the execution namespace is allowed
@@ -139,7 +139,7 @@ func (w *worker) Service(ctx context.Context, request ServiceRequest) (*ServiceR
 	if resourceId == "" {
 		resourceId = request.Execution.Id
 	}
-	cfg := w.buildInternalConfig(resourceId, request.FsPrefix, request.Execution, request.ControlPlane, request.Workflow)
+	cfg := w.buildInternalConfig(resourceId, "", request.Execution, request.ControlPlane, request.Workflow)
 	secrets := w.buildSecrets(request.Secrets)
 
 	// Ensure the execution namespace is allowed
