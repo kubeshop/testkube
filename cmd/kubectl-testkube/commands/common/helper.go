@@ -848,7 +848,7 @@ func prepareTestkubeUpgradeDockerArgs(options HelmOptions, dockerContainerName, 
 		"--set",
 		"testkube-api.cloud.url=" + options.Master.URIs.Agent,
 		"--set",
-		"testkube-api.dockerImageVersion" + latestVersion,
+		"testkube-api.dockerImageVersion=" + latestVersion,
 	}
 
 	return args
