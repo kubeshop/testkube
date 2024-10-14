@@ -79,7 +79,9 @@ func NewUpgradeCmd() *cobra.Command {
 			if cfg.ContextType == config.ContextTypeCloud {
 				ui.Info("Testkube Pro agent upgrade started")
 				if cfg.CloudContext.DockerContainerName != "" {
-					err = common.DockerUpgradeTestkubeAgent(options, cfg)
+					latestVersion, err := common.GetLatestVersion()
+					ui.ExitOnError("Getting latest version", err)
+					err = common.DockerUpgradeTestkubeAgent(options, latestVersion, cfg)
 				} else {
 					err = common.HelmUpgradeOrInstallTestkubeAgent(options, cfg, false)
 				}

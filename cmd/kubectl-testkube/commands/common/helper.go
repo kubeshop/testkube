@@ -3,7 +3,10 @@ package common
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"os/exec"
 	"strings"
 	"time"
@@ -44,6 +47,7 @@ const (
 	github                = "GitHub"
 	gitlab                = "GitLab"
 	dockerDaemonPrefixLen = 8
+	latestReleaseUrl      = "https://api.github.com/repos/kubeshop/testkube/releases/latest"
 )
 
 func (o HelmOptions) GetApiURI() string {
@@ -822,12 +826,13 @@ func prepareTestkubeProDockerArgs(options HelmOptions, dockerContainerName, dock
 }
 
 // prepareTestkubeUpgradeDockerArgs prepares docker arguments for Testkube Upgrade running.
-func prepareTestkubeUpgradeDockerArgs(options HelmOptions, dockerContainerName string) []string {
+func prepareTestkubeUpgradeDockerArgs(options HelmOptions, dockerContainerName, latestVersion string) []string {
 	args := []string{
 		"exec",
 		dockerContainerName,
 		"helm",
 		"upgrade",
+		// These arguments are similar to Docker entrypoint script
 		"testkube",
 		"testkube/testkube",
 		"--namespace",
@@ -842,6 +847,8 @@ func prepareTestkubeUpgradeDockerArgs(options HelmOptions, dockerContainerName s
 		"testkube-api.cloud.key=" + options.Master.AgentToken,
 		"--set",
 		"testkube-api.cloud.url=" + options.Master.URIs.Agent,
+		"--set",
+		"testkube-api.dockerImageVersion" + latestVersion,
 	}
 
 	return args
@@ -914,7 +921,7 @@ func StreamDockerLogs(dockerContainerName string) *CLIError {
 	return nil
 }
 
-func DockerUpgradeTestkubeAgent(options HelmOptions, cfg config.Data) *CLIError {
+func DockerUpgradeTestkubeAgent(options HelmOptions, latestVersion string, cfg config.Data) *CLIError {
 	// use config if set
 	if cfg.CloudContext.AgentKey != "" && options.Master.AgentToken == "" {
 		options.Master.AgentToken = cfg.CloudContext.AgentKey
@@ -928,7 +935,7 @@ func DockerUpgradeTestkubeAgent(options HelmOptions, cfg config.Data) *CLIError 
 			errors.New("agent key is required"))
 	}
 
-	args := prepareTestkubeUpgradeDockerArgs(options, cfg.CloudContext.DockerContainerName)
+	args := prepareTestkubeUpgradeDockerArgs(options, cfg.CloudContext.DockerContainerName, latestVersion)
 	output, err := RunDockerCommand(args)
 	if err != nil {
 		return err
@@ -940,4 +947,28 @@ func DockerUpgradeTestkubeAgent(options HelmOptions, cfg config.Data) *CLIError 
 	ui.Debug("Docker run testkube output", output)
 
 	return nil
+}
+
+type releaseMetadata struct {
+	TagName string `json:"tag_name"`
+}
+
+func GetLatestVersion() (string, error) {
+	resp, err := http.Get(latestReleaseUrl)
+	if err != nil {
+		return "", nil
+	}
+	defer resp.Body.Close()
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", nil
+	}
+
+	var metadata releaseMetadata
+	if err := json.Unmarshal(data, &metadata); err != nil {
+		return "", err
+	}
+
+	return metadata.TagName, nil
 }
