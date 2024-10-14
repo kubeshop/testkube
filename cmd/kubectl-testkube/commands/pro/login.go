@@ -45,7 +45,7 @@ func NewLoginCmd() *cobra.Command {
 		},
 	}
 
-	common.PopulateMasterFlags(cmd, &opts)
+	common.PopulateMasterFlags(cmd, &opts, false)
 
 	return cmd
 }

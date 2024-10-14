@@ -106,7 +106,7 @@ func NewUpgradeCmd() *cobra.Command {
 	}
 
 	common.PopulateHelmFlags(cmd, &options)
-	common.PopulateMasterFlags(cmd, &options)
+	common.PopulateMasterFlags(cmd, &options, false)
 
 	cmd.Flags().StringVar(&dockerContainerName, "docker-container", "testkube-agent", "Docker container name for Testkube Docker Agent")
 
