@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"maps"
 	"path/filepath"
+	"time"
 
 	"github.com/pkg/errors"
 	batchv1 "k8s.io/api/batch/v1"
@@ -408,9 +409,10 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	podAnnotations := make(map[string]string)
 	maps.Copy(podAnnotations, jobSpec.Spec.Template.Annotations)
 	maps.Copy(podAnnotations, map[string]string{
-		constants.SignatureAnnotationName: string(sigSerialized),
-		constants.SpecAnnotationName:      string(actionGroupsSerialized),
-		constants.InternalAnnotationName:  string(internalConfigSerialized),
+		constants.SignatureAnnotationName:   string(sigSerialized),
+		constants.SpecAnnotationName:        string(actionGroupsSerialized),
+		constants.InternalAnnotationName:    string(internalConfigSerialized),
+		constants.ScheduledAtAnnotationName: options.ScheduledAt.UTC().Format(time.RFC3339Nano),
 	})
 	jobSpec.Spec.Template.Annotations = podAnnotations
 

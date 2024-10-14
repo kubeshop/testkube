@@ -53,6 +53,7 @@ type ExecutionState interface {
 	ContainerFailed(name string) bool
 	Signature() ([]stage.Signature, error)
 	ActionGroups() (actiontypes.ActionGroups, error)
+	ScheduledAt() time.Time
 
 	ExecutionError() string
 	JobExecutionError() string
@@ -252,6 +253,22 @@ func (e *executionState) Signature() ([]stage.Signature, error) {
 	return nil, ErrMissingData
 }
 
+func (e *executionState) ScheduledAt() time.Time {
+	if e.job != nil {
+		v, err := e.job.ScheduledAt()
+		if err == nil {
+			return v
+		}
+	}
+	if e.pod != nil {
+		v, err := e.pod.ScheduledAt()
+		if err == nil {
+			return v
+		}
+	}
+	return e.options.ScheduledAt
+}
+
 func (e *executionState) ActionGroups() (actiontypes.ActionGroups, error) {
 	if e.job != nil {
 		return e.job.ActionGroups()
@@ -289,8 +306,8 @@ func (e *executionState) EstimatedJobCreationTimestamp() time.Time {
 	if e.job != nil {
 		return e.job.CreationTimestamp()
 	}
-	if !e.options.ScheduledAt.IsZero() {
-		return e.options.ScheduledAt
+	if !e.ScheduledAt().IsZero() {
+		return e.ScheduledAt()
 	}
 	ts := e.jobEvents.FirstTimestamp()
 	if e.podEvents.FirstTimestamp().Before(ts) {

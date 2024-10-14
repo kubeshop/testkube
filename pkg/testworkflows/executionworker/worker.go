@@ -99,6 +99,12 @@ func (w *worker) Execute(ctx context.Context, request ExecuteRequest) (*ExecuteR
 	if resourceId == "" {
 		resourceId = request.Execution.Id
 	}
+	scheduledAt := time.Now()
+	if request.ScheduledAt != nil {
+		scheduledAt = *request.ScheduledAt
+	} else if resourceId == request.Execution.Id && !request.Execution.ScheduledAt.IsZero() {
+		scheduledAt = request.Execution.ScheduledAt
+	}
 	cfg := w.buildInternalConfig(resourceId, request.ArtifactsPathPrefix, request.Execution, request.ControlPlane, request.Workflow)
 	secrets := w.buildSecrets(request.Secrets)
 
@@ -108,7 +114,7 @@ func (w *worker) Execute(ctx context.Context, request ExecuteRequest) (*ExecuteR
 	}
 
 	// Process the Test Workflow
-	bundle, err := w.processor.Bundle(ctx, &request.Workflow, testworkflowprocessor.BundleOptions{Config: cfg, Secrets: secrets})
+	bundle, err := w.processor.Bundle(ctx, &request.Workflow, testworkflowprocessor.BundleOptions{Config: cfg, Secrets: secrets, ScheduledAt: scheduledAt})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to process test workflow")
 	}
@@ -128,8 +134,9 @@ func (w *worker) Execute(ctx context.Context, request ExecuteRequest) (*ExecuteR
 	}
 
 	return &ExecuteResult{
-		Signature: stage.MapSignatureListToInternal(bundle.Signature),
-		Namespace: bundle.Job.Namespace,
+		Signature:   stage.MapSignatureListToInternal(bundle.Signature),
+		ScheduledAt: scheduledAt,
+		Namespace:   bundle.Job.Namespace,
 	}, nil
 }
 
@@ -138,6 +145,12 @@ func (w *worker) Service(ctx context.Context, request ServiceRequest) (*ServiceR
 	resourceId := request.ResourceId
 	if resourceId == "" {
 		resourceId = request.Execution.Id
+	}
+	scheduledAt := time.Now()
+	if request.ScheduledAt != nil {
+		scheduledAt = *request.ScheduledAt
+	} else if resourceId == request.Execution.Id && !request.Execution.ScheduledAt.IsZero() {
+		scheduledAt = request.Execution.ScheduledAt
 	}
 	cfg := w.buildInternalConfig(resourceId, "", request.Execution, request.ControlPlane, request.Workflow)
 	secrets := w.buildSecrets(request.Secrets)
@@ -148,7 +161,7 @@ func (w *worker) Service(ctx context.Context, request ServiceRequest) (*ServiceR
 	}
 
 	// Process the Test Workflow
-	bundle, err := w.processor.Bundle(ctx, &request.Workflow, testworkflowprocessor.BundleOptions{Config: cfg, Secrets: secrets})
+	bundle, err := w.processor.Bundle(ctx, &request.Workflow, testworkflowprocessor.BundleOptions{Config: cfg, Secrets: secrets, ScheduledAt: scheduledAt})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to process test workflow")
 	}
@@ -182,8 +195,9 @@ func (w *worker) Service(ctx context.Context, request ServiceRequest) (*ServiceR
 	}
 
 	return &ServiceResult{
-		Signature: stage.MapSignatureListToInternal(bundle.Signature),
-		Namespace: bundle.Job.Namespace,
+		Signature:   stage.MapSignatureListToInternal(bundle.Signature),
+		ScheduledAt: scheduledAt,
+		Namespace:   bundle.Job.Namespace,
 	}, nil
 }
 

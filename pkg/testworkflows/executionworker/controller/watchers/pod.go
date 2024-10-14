@@ -30,6 +30,7 @@ type Pod interface {
 	Finished() bool
 	ActionGroups() (actiontypes.ActionGroups, error)
 	Signature() ([]stage.Signature, error)
+	ScheduledAt() (time.Time, error)
 	ContainerStarted(name string) bool
 	ContainerFinished(name string) bool
 	ContainerFailed(name string) bool
@@ -114,6 +115,10 @@ func (p *pod) ActionGroups() (actions actiontypes.ActionGroups, err error) {
 
 func (p *pod) Signature() ([]stage.Signature, error) {
 	return stage.GetSignatureFromJSON([]byte(p.original.Annotations[constants.SignatureAnnotationName]))
+}
+
+func (p *pod) ScheduledAt() (time.Time, error) {
+	return time.Parse(time.RFC3339Nano, p.original.Annotations[constants.ScheduledAtAnnotationName])
 }
 
 func (p *pod) ContainerStarted(name string) bool {

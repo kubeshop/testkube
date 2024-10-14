@@ -3,6 +3,7 @@ package testworkflowprocessor
 import (
 	"context"
 	"encoding/json"
+	"time"
 
 	"github.com/pkg/errors"
 	batchv1 "k8s.io/api/batch/v1"
@@ -18,8 +19,9 @@ import (
 )
 
 type BundleOptions struct {
-	Secrets []corev1.Secret
-	Config  testworkflowconfig.InternalConfig
+	Secrets     []corev1.Secret
+	Config      testworkflowconfig.InternalConfig
+	ScheduledAt time.Time
 }
 
 type Bundle struct {

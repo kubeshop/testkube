@@ -92,6 +92,9 @@ func New(parentCtx context.Context, clientSet kubernetes.Interface, namespace, i
 		return nil, errors.Wrap(err, "invalid job signature")
 	}
 
+	// Obtain the scheduled at timestamp
+	scheduledAt = watcher.State().ScheduledAt()
+
 	// Build accessible controller
 	return &controller{
 		id:          id,

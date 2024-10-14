@@ -218,10 +218,11 @@ func NewParallelCmd() *cobra.Command {
 				// Deploy the resource
 				scheduledAt := time.Now()
 				result, err := spawn.ExecutionWorker().Execute(context.Background(), executionworker.ExecuteRequest{
+					ResourceId:          cfg.Resource.Id,
 					Execution:           cfg.Execution,
 					Workflow:            testworkflowsv1.TestWorkflow{Spec: *spec},
+					ScheduledAt:         &scheduledAt,
 					ControlPlane:        cfg.ControlPlane,
-					ResourceId:          cfg.Resource.Id,
 					ArtifactsPathPrefix: cfg.Resource.FsPrefix,
 				})
 				if err != nil {

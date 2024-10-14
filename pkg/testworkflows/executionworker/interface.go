@@ -39,10 +39,11 @@ type Config struct {
 
 // TODO: Consider some context data
 type ExecuteRequest struct {
-	ResourceId string // defaults to execution ID
-	GroupId    string
-	Workflow   testworkflowsv1.TestWorkflow // TODO: Use OpenAPI object
-	Secrets    map[string]map[string]string
+	ResourceId  string // defaults to execution ID
+	GroupId     string
+	Workflow    testworkflowsv1.TestWorkflow // TODO: Use OpenAPI object
+	Secrets     map[string]map[string]string
+	ScheduledAt *time.Time
 
 	Execution           testworkflowconfig.ExecutionConfig
 	ControlPlane        testworkflowconfig.ControlPlaneConfig // TODO: Think if it's required
@@ -54,6 +55,7 @@ type ServiceRequest struct {
 	GroupId        string
 	Workflow       testworkflowsv1.TestWorkflow // TODO: Use OpenAPI object
 	Secrets        map[string]map[string]string
+	ScheduledAt    *time.Time
 	ReadinessProbe *testkube.Probe
 	RestartPolicy  string
 
@@ -74,6 +76,8 @@ type Hints struct {
 type ExecuteResult struct {
 	// Signature for the deployed resource.
 	Signature []testkube.TestWorkflowSignature
+	// ScheduledAt informs about scheduled time.
+	ScheduledAt time.Time
 	// Namespace where it has been scheduled.
 	Namespace string
 }
@@ -81,6 +85,8 @@ type ExecuteResult struct {
 type ServiceResult struct {
 	// Signature for the deployed resource.
 	Signature []testkube.TestWorkflowSignature
+	// ScheduledAt informs about scheduled time.
+	ScheduledAt time.Time
 	// Namespace where it has been scheduled.
 	Namespace string
 }

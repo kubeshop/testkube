@@ -268,14 +268,15 @@ func NewServicesCmd() *cobra.Command {
 				// Build the resources bundle
 				scheduledAt := time.Now()
 				result, err := spawn.ExecutionWorker().Service(context.Background(), executionworker.ServiceRequest{
-					Execution:           cfg.Execution,
-					Workflow:            testworkflowsv1.TestWorkflow{Spec: instance.Spec},
-					ControlPlane:        cfg.ControlPlane,
-					ResourceId:          cfg.Resource.Id,
-					ArtifactsPathPrefix: cfg.Resource.FsPrefix,
-
+					ResourceId:     cfg.Resource.Id,
+					Execution:      cfg.Execution,
+					Workflow:       testworkflowsv1.TestWorkflow{Spec: instance.Spec},
+					ScheduledAt:    &scheduledAt,
 					RestartPolicy:  string(instance.RestartPolicy),
 					ReadinessProbe: common.MapPtr(instance.ReadinessProbe, testworkflows.MapProbeKubeToAPI),
+
+					ControlPlane:        cfg.ControlPlane,
+					ArtifactsPathPrefix: cfg.Resource.FsPrefix,
 				})
 				if err != nil {
 					fmt.Printf("%d: failed to prepare resources: %s\n", index, err.Error())
