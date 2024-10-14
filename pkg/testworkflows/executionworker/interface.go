@@ -37,8 +37,7 @@ type Config struct {
 	Connection     testworkflowconfig.WorkerConnectionConfig
 }
 
-// TODO: Consider some context data?
-// TODO: Support sub-resources (`parallel` and `services`)?
+// TODO: Consider some context data
 type ExecuteRequest struct {
 	Execution testworkflowconfig.ExecutionConfig
 	Secrets   map[string]map[string]string
@@ -50,7 +49,22 @@ type ExecuteRequest struct {
 	ResourceId string
 	GroupId    string // TODO: likely it should be part of the resource config
 	FsPrefix   string
-	Service    *ServiceConfig // TODO: Think if service should not be executed by a different command
+}
+
+type ServiceRequest struct {
+	Execution testworkflowconfig.ExecutionConfig
+
+	ControlPlane testworkflowconfig.ControlPlaneConfig // TODO: Think if it's required
+
+	Workflow       testworkflowsv1.TestWorkflow // TODO: Use OpenAPI object
+	Secrets        map[string]map[string]string
+	ReadinessProbe *testkube.Probe
+	RestartPolicy  string
+
+	// TODO: Think if it should be wrapped differently
+	ResourceId string
+	GroupId    string // TODO: likely it should be part of the resource config
+	FsPrefix   string
 }
 
 type Hints struct {
@@ -63,6 +77,13 @@ type Hints struct {
 }
 
 type ExecuteResult struct {
+	// Signature for the deployed resource.
+	Signature []testkube.TestWorkflowSignature
+	// Namespace where it has been scheduled.
+	Namespace string
+}
+
+type ServiceResult struct {
 	// Signature for the deployed resource.
 	Signature []testkube.TestWorkflowSignature
 	// Namespace where it has been scheduled.
@@ -98,7 +119,7 @@ type ListOptions struct {
 	EnvironmentId string
 	// GroupId filters by group ID of the resources.
 	GroupId string
-	// Root filters to only root or non-root resources. TODO: Consider root-only as a default?
+	// Root filters to only root or non-root resources.
 	Root *bool
 	// Finished filters based on the execution being finished or still running.
 	Finished *bool
@@ -194,6 +215,9 @@ type IdentifiableError struct {
 type Worker interface {
 	// Execute deploys the resources in the cluster.
 	Execute(ctx context.Context, request ExecuteRequest) (*ExecuteResult, error)
+
+	// Service deploys the resources for a new service in the cluster.
+	Service(ctx context.Context, request ServiceRequest) (*ServiceResult, error)
 
 	// Notifications stream all the notifications from the resource.
 	Notifications(ctx context.Context, id string, options NotificationsOptions) NotificationsWatcher

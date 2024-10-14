@@ -35,7 +35,7 @@ func (m *MockWorker) EXPECT() *MockWorkerMockRecorder {
 }
 
 // Destroy mocks base method.
-func (m *MockWorker) Destroy(arg0 context.Context, arg1, arg2 string) error {
+func (m *MockWorker) Destroy(arg0 context.Context, arg1 string, arg2 DestroyOptions) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Destroy", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
@@ -49,7 +49,7 @@ func (mr *MockWorkerMockRecorder) Destroy(arg0, arg1, arg2 interface{}) *gomock.
 }
 
 // DestroyGroup mocks base method.
-func (m *MockWorker) DestroyGroup(arg0 context.Context, arg1, arg2 string) error {
+func (m *MockWorker) DestroyGroup(arg0 context.Context, arg1 string, arg2 DestroyOptions) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DestroyGroup", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
@@ -78,7 +78,7 @@ func (mr *MockWorkerMockRecorder) Execute(arg0, arg1 interface{}) *gomock.Call {
 }
 
 // Finished mocks base method.
-func (m *MockWorker) Finished(arg0 context.Context, arg1, arg2 string) (bool, error) {
+func (m *MockWorker) Finished(arg0 context.Context, arg1 string, arg2 GetOptions) (bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Finished", arg0, arg1, arg2)
 	ret0, _ := ret[0].(bool)
@@ -93,7 +93,7 @@ func (mr *MockWorkerMockRecorder) Finished(arg0, arg1, arg2 interface{}) *gomock
 }
 
 // Get mocks base method.
-func (m *MockWorker) Get(arg0 context.Context, arg1, arg2 string) (*GetResult, error) {
+func (m *MockWorker) Get(arg0 context.Context, arg1 string, arg2 GetOptions) (*GetResult, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*GetResult)
@@ -122,51 +122,36 @@ func (mr *MockWorkerMockRecorder) List(arg0, arg1 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockWorker)(nil).List), arg0, arg1)
 }
 
-// ListIds mocks base method.
-func (m *MockWorker) ListIds(arg0 context.Context, arg1 ListOptions) ([]string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListIds", arg0, arg1)
-	ret0, _ := ret[0].([]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListIds indicates an expected call of ListIds.
-func (mr *MockWorkerMockRecorder) ListIds(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListIds", reflect.TypeOf((*MockWorker)(nil).ListIds), arg0, arg1)
-}
-
 // Logs mocks base method.
-func (m *MockWorker) Logs(arg0 context.Context, arg1, arg2 string, arg3 bool) LogsReader {
+func (m *MockWorker) Logs(arg0 context.Context, arg1 string, arg2 LogsOptions) LogsReader {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Logs", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "Logs", arg0, arg1, arg2)
 	ret0, _ := ret[0].(LogsReader)
 	return ret0
 }
 
 // Logs indicates an expected call of Logs.
-func (mr *MockWorkerMockRecorder) Logs(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+func (mr *MockWorkerMockRecorder) Logs(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Logs", reflect.TypeOf((*MockWorker)(nil).Logs), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Logs", reflect.TypeOf((*MockWorker)(nil).Logs), arg0, arg1, arg2)
 }
 
 // Notifications mocks base method.
-func (m *MockWorker) Notifications(arg0 context.Context, arg1, arg2 string, arg3 NotificationsOptions) NotificationsWatcher {
+func (m *MockWorker) Notifications(arg0 context.Context, arg1 string, arg2 NotificationsOptions) NotificationsWatcher {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Notifications", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "Notifications", arg0, arg1, arg2)
 	ret0, _ := ret[0].(NotificationsWatcher)
 	return ret0
 }
 
 // Notifications indicates an expected call of Notifications.
-func (mr *MockWorkerMockRecorder) Notifications(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+func (mr *MockWorkerMockRecorder) Notifications(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Notifications", reflect.TypeOf((*MockWorker)(nil).Notifications), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Notifications", reflect.TypeOf((*MockWorker)(nil).Notifications), arg0, arg1, arg2)
 }
 
 // Pause mocks base method.
-func (m *MockWorker) Pause(arg0 context.Context, arg1, arg2 string) error {
+func (m *MockWorker) Pause(arg0 context.Context, arg1 string, arg2 ControlOptions) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Pause", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
@@ -180,7 +165,7 @@ func (mr *MockWorkerMockRecorder) Pause(arg0, arg1, arg2 interface{}) *gomock.Ca
 }
 
 // Resume mocks base method.
-func (m *MockWorker) Resume(arg0 context.Context, arg1, arg2 string) error {
+func (m *MockWorker) Resume(arg0 context.Context, arg1 string, arg2 ControlOptions) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Resume", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
@@ -194,35 +179,50 @@ func (mr *MockWorkerMockRecorder) Resume(arg0, arg1, arg2 interface{}) *gomock.C
 }
 
 // ResumeMany mocks base method.
-func (m *MockWorker) ResumeMany(arg0 context.Context, arg1 []string) []IdentifiableError {
+func (m *MockWorker) ResumeMany(arg0 context.Context, arg1 []string, arg2 ControlOptions) []IdentifiableError {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ResumeMany", arg0, arg1)
+	ret := m.ctrl.Call(m, "ResumeMany", arg0, arg1, arg2)
 	ret0, _ := ret[0].([]IdentifiableError)
 	return ret0
 }
 
 // ResumeMany indicates an expected call of ResumeMany.
-func (mr *MockWorkerMockRecorder) ResumeMany(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockWorkerMockRecorder) ResumeMany(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResumeMany", reflect.TypeOf((*MockWorker)(nil).ResumeMany), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResumeMany", reflect.TypeOf((*MockWorker)(nil).ResumeMany), arg0, arg1, arg2)
+}
+
+// Service mocks base method.
+func (m *MockWorker) Service(arg0 context.Context, arg1 ServiceRequest) (*ServiceResult, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Service", arg0, arg1)
+	ret0, _ := ret[0].(*ServiceResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Service indicates an expected call of Service.
+func (mr *MockWorkerMockRecorder) Service(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Service", reflect.TypeOf((*MockWorker)(nil).Service), arg0, arg1)
 }
 
 // StatusNotifications mocks base method.
-func (m *MockWorker) StatusNotifications(arg0 context.Context, arg1, arg2 string, arg3 StatusNotificationsOptions) StatusNotificationsWatcher {
+func (m *MockWorker) StatusNotifications(arg0 context.Context, arg1 string, arg2 StatusNotificationsOptions) StatusNotificationsWatcher {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StatusNotifications", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "StatusNotifications", arg0, arg1, arg2)
 	ret0, _ := ret[0].(StatusNotificationsWatcher)
 	return ret0
 }
 
 // StatusNotifications indicates an expected call of StatusNotifications.
-func (mr *MockWorkerMockRecorder) StatusNotifications(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+func (mr *MockWorkerMockRecorder) StatusNotifications(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StatusNotifications", reflect.TypeOf((*MockWorker)(nil).StatusNotifications), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StatusNotifications", reflect.TypeOf((*MockWorker)(nil).StatusNotifications), arg0, arg1, arg2)
 }
 
 // Summary mocks base method.
-func (m *MockWorker) Summary(arg0 context.Context, arg1, arg2 string) (*SummaryResult, error) {
+func (m *MockWorker) Summary(arg0 context.Context, arg1 string, arg2 GetOptions) (*SummaryResult, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Summary", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*SummaryResult)

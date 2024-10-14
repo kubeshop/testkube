@@ -105,20 +105,82 @@ func (w *worker) Execute(ctx context.Context, request ExecuteRequest) (*ExecuteR
 		return nil, errors.Wrap(err, "failed to process test workflow")
 	}
 
+	// Annotate the group ID
+	if request.GroupId != "" {
+		testworkflowprocessor.AnnotateGroupId(&bundle.Job, request.GroupId)
+		for i := range bundle.ConfigMaps {
+			testworkflowprocessor.AnnotateGroupId(&bundle.ConfigMaps[i], request.GroupId)
+		}
+		for i := range bundle.Secrets {
+			testworkflowprocessor.AnnotateGroupId(&bundle.Secrets[i], request.GroupId)
+		}
+	}
+
+	// Deploy required resources
+	err = bundle.Deploy(context.Background(), w.clientSet, cfg.Worker.Namespace)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to deploy test workflow")
+	}
+
+	// Register namespace information in the cache
+	w.registry.RegisterNamespace(cfg.Resource.Id, cfg.Worker.Namespace)
+
+	return &ExecuteResult{
+		Signature: stage.MapSignatureListToInternal(bundle.Signature),
+		Namespace: bundle.Job.Namespace,
+	}, nil
+}
+
+func (w *worker) Service(ctx context.Context, request ServiceRequest) (*ServiceResult, error) {
+	resourceId := request.ResourceId
+	if resourceId == "" {
+		resourceId = request.Execution.Id
+	}
+
+	// Build internal configuration
+	cfg := testworkflowconfig.InternalConfig{
+		Execution:    request.Execution,
+		Workflow:     testworkflowconfig.WorkflowConfig{Name: request.Workflow.Name, Labels: request.Workflow.Labels},
+		Resource:     testworkflowconfig.ResourceConfig{Id: resourceId, RootId: request.Execution.Id, FsPrefix: request.FsPrefix},
+		ControlPlane: request.ControlPlane,
+		Worker:       w.baseWorkerConfig,
+	}
+
+	// Build list of secrets to create
+	secrets := make([]corev1.Secret, 0, len(request.Secrets))
+	for name, stringData := range request.Secrets {
+		secrets = append(secrets, corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Name: name},
+			StringData: stringData,
+		})
+	}
+
+	// Determine execution namespace
+	if request.Workflow.Spec.Job != nil && request.Workflow.Spec.Job.Namespace != "" {
+		cfg.Worker.Namespace = request.Workflow.Spec.Job.Namespace
+	}
+	if _, ok := w.config.Cluster.Namespaces[cfg.Worker.Namespace]; !ok {
+		return nil, errors.New(fmt.Sprintf("namespace %s not supported", cfg.Worker.Namespace))
+	}
+
+	// Process the Test Workflow
+	bundle, err := w.processor.Bundle(ctx, &request.Workflow, testworkflowprocessor.BundleOptions{Config: cfg, Secrets: secrets})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to process test workflow")
+	}
+
 	// Apply the service setup
-	if request.Service != nil {
-		// TODO: Handle RestartPolicy: Always?
-		if request.Service.RestartPolicy == "Never" {
-			bundle.Job.Spec.BackoffLimit = common.Ptr(int32(0))
-			bundle.Job.Spec.Template.Spec.RestartPolicy = "Never"
-		} else {
-			// TODO: Throw errors from the pod containers? Atm it will just end with "Success"...
-			bundle.Job.Spec.BackoffLimit = nil
-			bundle.Job.Spec.Template.Spec.RestartPolicy = "OnFailure"
-		}
-		if request.Service.ReadinessProbe != nil {
-			bundle.Job.Spec.Template.Spec.Containers[0].ReadinessProbe = common.MapPtr(request.Service.ReadinessProbe, testworkflows.MapProbeAPIToKube)
-		}
+	// TODO: Handle RestartPolicy: Always?
+	if request.RestartPolicy == "Never" {
+		bundle.Job.Spec.BackoffLimit = common.Ptr(int32(0))
+		bundle.Job.Spec.Template.Spec.RestartPolicy = "Never"
+	} else {
+		// TODO: Throw errors from the pod containers? Atm it will just end with "Success"...
+		bundle.Job.Spec.BackoffLimit = nil
+		bundle.Job.Spec.Template.Spec.RestartPolicy = "OnFailure"
+	}
+	if request.ReadinessProbe != nil {
+		bundle.Job.Spec.Template.Spec.Containers[0].ReadinessProbe = common.MapPtr(request.ReadinessProbe, testworkflows.MapProbeAPIToKube)
 	}
 
 	// Annotate the group ID
@@ -141,7 +203,7 @@ func (w *worker) Execute(ctx context.Context, request ExecuteRequest) (*ExecuteR
 	// Register namespace information in the cache
 	w.registry.RegisterNamespace(cfg.Resource.Id, cfg.Worker.Namespace)
 
-	return &ExecuteResult{
+	return &ServiceResult{
 		Signature: stage.MapSignatureListToInternal(bundle.Signature),
 		Namespace: bundle.Job.Namespace,
 	}, nil
