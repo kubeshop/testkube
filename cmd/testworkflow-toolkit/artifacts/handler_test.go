@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -17,6 +18,9 @@ import (
 )
 
 func TestHandler_CloudUploader(t *testing.T) {
+	// Populate empty internal configuration, as it is required for the Toolkit
+	_ = os.Setenv("TK_CFG", "{}")
+
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
