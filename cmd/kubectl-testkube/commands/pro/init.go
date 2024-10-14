@@ -8,6 +8,7 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
+	commonint "github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -84,7 +85,7 @@ func NewInitCmd() *cobra.Command {
 
 			if noLogin {
 				ui.Alert("Saving Testkube CLI Pro context, you need to authorize CLI through `testkube set context` later")
-				common.PopulateCloudConfig(cfg, "", &options)
+				common.PopulateCloudConfig(cfg, "", commonint.Ptr(""), &options)
 				ui.Info(" Happy Testing! 🚀")
 				ui.NL()
 				return

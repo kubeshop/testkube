@@ -458,7 +458,7 @@ func PopulateOrgAndEnvNames(cfg config.Data, orgId, envId, apiUrl string) (confi
 	return cfg, nil
 }
 
-func PopulateCloudConfig(cfg config.Data, apiKey string, opts *HelmOptions) config.Data {
+func PopulateCloudConfig(cfg config.Data, apiKey string, dockerContainerName *string, opts *HelmOptions) config.Data {
 	if apiKey != "" {
 		cfg.CloudContext.ApiKey = apiKey
 	}
@@ -466,6 +466,9 @@ func PopulateCloudConfig(cfg config.Data, apiKey string, opts *HelmOptions) conf
 	cfg.CloudContext.ApiUri = opts.Master.URIs.Api
 	cfg.CloudContext.UiUri = opts.Master.URIs.Ui
 	cfg.CloudContext.AgentUri = opts.Master.URIs.Agent
+	if dockerContainerName != nil {
+		cfg.CloudContext.DockerContainerName = *dockerContainerName
+	}
 
 	return cfg
 }

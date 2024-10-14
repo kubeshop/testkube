@@ -102,7 +102,7 @@ func NewDockerCmd() *cobra.Command {
 
 			if noLogin {
 				ui.Alert("Saving Testkube CLI Pro context, you need to authorize CLI through `testkube set context` later")
-				common.PopulateCloudConfig(cfg, "", &options)
+				common.PopulateCloudConfig(cfg, "", &dockerContainerName, &options)
 				ui.Info(" Happy Testing! 🚀")
 				ui.NL()
 				return
