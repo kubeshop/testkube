@@ -22,6 +22,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	v1 "github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/expressions"
@@ -67,6 +68,7 @@ type executor struct {
 	globalTemplateName           string
 	dashboardURI                 string
 	workerClient                 executionworker.Worker
+	proContext                   *config.ProContext
 }
 
 func New(emitter *event.Emitter,
@@ -81,7 +83,8 @@ func New(emitter *event.Emitter,
 	metrics v1.Metrics,
 	secretManager secretmanager.SecretManager,
 	globalTemplateName string,
-	dashboardURI string) TestWorkflowExecutor {
+	dashboardURI string,
+	proContext *config.ProContext) TestWorkflowExecutor {
 	return &executor{
 		emitter:                      emitter,
 		clientSet:                    clientSet,
@@ -96,6 +99,7 @@ func New(emitter *event.Emitter,
 		globalTemplateName:           globalTemplateName,
 		dashboardURI:                 dashboardURI,
 		workerClient:                 workerClient,
+		proContext:                   proContext,
 	}
 }
 
@@ -485,10 +489,9 @@ func (e *executor) initialize(ctx context.Context, workflow *testworkflowsv1.Tes
 	execution.ResolvedWorkflow = testworkflowmappers.MapKubeToAPI(resolvedWorkflow)
 
 	// Determine the organization/environment
-	cloudApiKey := common.GetOr(os.Getenv("TESTKUBE_PRO_API_KEY"), os.Getenv("TESTKUBE_CLOUD_API_KEY"))
-	environmentId := common.GetOr(os.Getenv("TESTKUBE_PRO_ENV_ID"), os.Getenv("TESTKUBE_CLOUD_ENV_ID"))
-	organizationId := common.GetOr(os.Getenv("TESTKUBE_PRO_ORG_ID"), os.Getenv("TESTKUBE_CLOUD_ORG_ID"))
-	if cloudApiKey == "" {
+	organizationId := e.proContext.OrgID
+	environmentId := e.proContext.EnvID
+	if e.proContext.APIKey == "" {
 		organizationId = ""
 		environmentId = ""
 	}
