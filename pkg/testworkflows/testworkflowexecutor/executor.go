@@ -376,6 +376,16 @@ func (e *executor) buildControlPlaneConfig(orgId, envId string) testworkflowconf
 	}
 }
 
+// TODO: Consider if we shouldn't make name unique across all TestWorkflows
+func (e *executor) isExecutionNameReserved(ctx context.Context, name, workflowName string) (bool, error) {
+	// TODO: Detect errors other than 404?
+	next, _ := e.repository.GetByNameAndTestWorkflow(ctx, name, workflowName)
+	if next.Name == name {
+		return true, nil
+	}
+	return false, nil
+}
+
 func (e *executor) initialize(ctx context.Context, workflow *testworkflowsv1.TestWorkflow, request *testkube.TestWorkflowExecutionRequest) (execution *testkube.TestWorkflowExecution, secrets []corev1.Secret, err error) {
 	// Delete unnecessary data
 	delete(workflow.Annotations, "kubectl.kubernetes.io/last-applied-configuration")
@@ -384,12 +394,24 @@ func (e *executor) initialize(ctx context.Context, workflow *testworkflowsv1.Tes
 	now := time.Now().UTC()
 	executionId := primitive.NewObjectIDFromTimestamp(now).Hex()
 
+	var nameReserved *bool
+
+	// Early check if the name is already provided (to avoid incrementing sequence number)
+	if request.Name != "" {
+		reserved, err := e.isExecutionNameReserved(ctx, request.Name, workflow.Name)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "checking for unique name")
+		}
+		if reserved {
+			return execution, nil, errors.New("execution name already exists")
+		}
+		nameReserved = &reserved
+	}
+
 	// Load execution identifier data
-	// TODO: if request.Name is provided, consider checking for uniqueness early, and not incrementing the execution number.
 	number, err := e.repository.GetNextExecutionNumber(context.Background(), workflow.Name)
 	if err != nil {
-		log.DefaultLogger.Errorw("failed to retrieve TestWorkflow execution number", "id", executionId, "error", err)
-		// TODO: Fatal error
+		return nil, nil, errors.Wrap(err, "registering next execution sequence number")
 	}
 	executionName := request.Name
 	if executionName == "" {
@@ -397,10 +419,14 @@ func (e *executor) initialize(ctx context.Context, workflow *testworkflowsv1.Tes
 	}
 
 	// Ensure the execution name is unique
-	// TODO: Consider if we shouldn't make name unique across all TestWorkflows
-	next, _ := e.repository.GetByNameAndTestWorkflow(ctx, executionName, workflow.Name)
-	if next.Name == executionName {
-		return execution, nil, errors.Wrap(err, "execution name already exists")
+	if nameReserved == nil {
+		reserved, err := e.isExecutionNameReserved(ctx, executionName, workflow.Name)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "checking for unique name")
+		}
+		if reserved {
+			return execution, nil, errors.New("execution name already exists")
+		}
 	}
 
 	// Initialize the storage for dynamically created secrets
