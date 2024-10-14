@@ -970,5 +970,5 @@ func GetLatestVersion() (string, error) {
 		return "", err
 	}
 
-	return metadata.TagName, nil
+	return strings.TrimPrefix(metadata.TagName, "v"), nil
 }

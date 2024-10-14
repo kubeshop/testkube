@@ -17,6 +17,9 @@ func NewDockerCmd() *cobra.Command {
 	var dockerContainerName, dockerImage string
 	var options common.HelmOptions
 
+	latestVersion, err := common.GetLatestVersion()
+	ui.ExitOnError("Gettong latest version", err)
+
 	cmd := &cobra.Command{
 		Use:     "docker",
 		Short:   "Run Testkube Docker Agent and connect to Testkube Pro environment",
@@ -122,7 +125,7 @@ func NewDockerCmd() *cobra.Command {
 
 	cmd.Flags().BoolVarP(&noLogin, "no-login", "", false, "Ignore login prompt, set existing token later by `testkube set context`")
 	cmd.Flags().StringVar(&dockerContainerName, "docker-container", "testkube-agent", "Docker container name for Testkube Docker Agent")
-	cmd.Flags().StringVar(&dockerImage, "docker-image", "kubeshop/testkube-agent:latest", "Docker image for Testkube Docker Agent")
+	cmd.Flags().StringVar(&dockerImage, "docker-image", "kubeshop/testkube-agent:"+latestVersion, "Docker image for Testkube Docker Agent")
 
 	return cmd
 }
