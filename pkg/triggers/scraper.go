@@ -8,6 +8,7 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event/bus"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker"
 )
 
 func (s *Service) runExecutionScraper(ctx context.Context) {
@@ -179,7 +180,9 @@ func (s *Service) abortRunningTestWorkflowExecutions(ctx context.Context, status
 		if execution.Result != nil && (execution.Result.IsRunning() || execution.Result.IsQueued() || execution.Result.IsPaused()) {
 			// Pro edition only (tcl protected code)
 			// Obtain the controller
-			err = s.executionWorkerClient.Destroy(ctx, s.testkubeNamespace, execution.Id)
+			err = s.executionWorkerClient.Destroy(ctx, execution.Id, executionworker.DestroyOptions{
+				Namespace: s.testkubeNamespace,
+			})
 			if err != nil {
 				s.logger.Errorf("trigger service: execution scraper component: error aborting test workflow execution: %v", err)
 				continue

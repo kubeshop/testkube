@@ -155,6 +155,21 @@ type StatusNotificationsOptions struct {
 	NoFollow bool
 }
 
+type GetOptions struct {
+	// Hints to help to find item faster and to provide more accurate data.
+	Hints Hints
+}
+
+type ControlOptions struct {
+	// Namespace where it has been deployed.
+	Namespace string
+}
+
+type DestroyOptions struct {
+	// Namespace where it has been deployed.
+	Namespace string
+}
+
 type StatusNotification struct {
 	// NodeName is provided when the Pod is scheduled on some node.
 	NodeName string
@@ -190,32 +205,29 @@ type Worker interface {
 	Logs(ctx context.Context, id string, options LogsOptions) LogsReader
 
 	// Get tries to build the latest precise result from the resource execution.
-	Get(ctx context.Context, namespace, id string) (*GetResult, error)
+	Get(ctx context.Context, id string, options GetOptions) (*GetResult, error)
 
 	// Summary gets fast summary about the selected resource.
-	Summary(ctx context.Context, namespace, id string) (*SummaryResult, error)
+	Summary(ctx context.Context, id string, options GetOptions) (*SummaryResult, error)
 
 	// Finished is a fast method to check if the resource execution has been already finished.
-	Finished(ctx context.Context, namespace, id string) (bool, error)
-
-	// ListIds lists all the IDs of currently deployed resources matching the criteria.
-	ListIds(ctx context.Context, options ListOptions) ([]string, error)
+	Finished(ctx context.Context, id string, options GetOptions) (bool, error)
 
 	// List lists all the currently deployed resources matching the criteria.
 	List(ctx context.Context, options ListOptions) ([]ListResultItem, error)
 
 	// Destroy gets rid of all the data for the selected resource.
-	Destroy(ctx context.Context, namespace, id string) error
+	Destroy(ctx context.Context, id string, options DestroyOptions) error
 
 	// DestroyGroup gets rid of all the data for the selected resources.
-	DestroyGroup(ctx context.Context, namespace, groupId string) error
+	DestroyGroup(ctx context.Context, groupId string, options DestroyOptions) error
 
 	// Pause sends pause request to the selected resource.
-	Pause(ctx context.Context, namespace, id string) error
+	Pause(ctx context.Context, id string, options ControlOptions) error
 
 	// Resume sends resuming request to the selected resource.
-	Resume(ctx context.Context, namespace, id string) error
+	Resume(ctx context.Context, id string, options ControlOptions) error
 
 	// ResumeMany tries to resume multiple resources at once.
-	ResumeMany(ctx context.Context, ids []string) (errs []IdentifiableError)
+	ResumeMany(ctx context.Context, ids []string, options ControlOptions) (errs []IdentifiableError)
 }

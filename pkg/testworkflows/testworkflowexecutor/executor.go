@@ -114,7 +114,9 @@ func (e *executor) handleFatalError(execution *testkube.TestWorkflowExecution, e
 		log.DefaultLogger.Errorf("failed to save fatal error for execution %s: %v", execution.Id, err)
 	}
 	e.emitter.Notify(testkube.NewEventEndTestWorkflowFailed(execution))
-	go e.workerClient.Destroy(context.Background(), execution.Namespace, execution.Id)
+	go e.workerClient.Destroy(context.Background(), execution.Id, executionworker.DestroyOptions{
+		Namespace: execution.Namespace,
+	})
 }
 
 func (e *executor) Recover(ctx context.Context) {
@@ -325,7 +327,9 @@ func (e *executor) Control(ctx context.Context, testWorkflow *testworkflowsv1.Te
 	e.metrics.IncAndObserveExecuteTestWorkflow(*execution, e.dashboardURI)
 
 	e.updateStatus(testWorkflow, execution, testWorkflowExecution) // TODO: Consider if it is needed
-	err = e.workerClient.Destroy(ctx, execution.Namespace, execution.Id)
+	err = e.workerClient.Destroy(ctx, execution.Id, executionworker.DestroyOptions{
+		Namespace: execution.Namespace,
+	})
 	if err != nil {
 		log.DefaultLogger.Errorw("failed to cleanup TestWorkflow resources", "id", execution.Id, "error", err)
 	}

@@ -300,19 +300,15 @@ func (w *worker) Logs(ctx context.Context, id string, options LogsOptions) LogsR
 	return reader
 }
 
-func (w *worker) Get(ctx context.Context, namespace, id string) (*GetResult, error) {
+func (w *worker) Get(ctx context.Context, id string, options GetOptions) (*GetResult, error) {
 	panic("not implemented")
 }
 
-func (w *worker) Summary(ctx context.Context, namespace, id string) (*SummaryResult, error) {
+func (w *worker) Summary(ctx context.Context, id string, options GetOptions) (*SummaryResult, error) {
 	panic("not implemented")
 }
 
-func (w *worker) Finished(ctx context.Context, namespace, id string) (bool, error) {
-	panic("not implemented")
-}
-
-func (w *worker) ListIds(ctx context.Context, options ListOptions) ([]string, error) {
+func (w *worker) Finished(ctx context.Context, id string, options GetOptions) (bool, error) {
 	panic("not implemented")
 }
 
@@ -374,26 +370,26 @@ func (w *worker) List(ctx context.Context, options ListOptions) ([]ListResultIte
 	return list, nil
 }
 
-func (w *worker) Destroy(ctx context.Context, namespace, id string) (err error) {
-	if namespace == "" {
-		namespace, err = w.registry.GetNamespace(ctx, id)
+func (w *worker) Destroy(ctx context.Context, id string, options DestroyOptions) (err error) {
+	if options.Namespace == "" {
+		options.Namespace, err = w.registry.GetNamespace(ctx, id)
 		if err != nil {
 			return err
 		}
 	}
 	// TODO: Move implementation there
-	return controller.Cleanup(ctx, w.clientSet, namespace, id)
+	return controller.Cleanup(ctx, w.clientSet, options.Namespace, id)
 }
 
-func (w *worker) DestroyGroup(ctx context.Context, namespace, groupId string) error {
-	if namespace != "" {
-		return controller.CleanupGroup(ctx, w.clientSet, namespace, groupId)
+func (w *worker) DestroyGroup(ctx context.Context, groupId string, options DestroyOptions) error {
+	if options.Namespace != "" {
+		return controller.CleanupGroup(ctx, w.clientSet, options.Namespace, groupId)
 	}
 
 	// Delete group resources in all known namespaces
 	errs := make([]error, 0)
 	for ns := range w.config.Cluster.Namespaces {
-		err := w.Destroy(ctx, ns, groupId)
+		err := w.DestroyGroup(ctx, groupId, DestroyOptions{Namespace: ns})
 		if err != nil {
 			errs = append(errs, err)
 		}
@@ -401,7 +397,7 @@ func (w *worker) DestroyGroup(ctx context.Context, namespace, groupId string) er
 	return errors2.Join(errs...)
 }
 
-func (w *worker) Pause(ctx context.Context, namespace, id string) (err error) {
+func (w *worker) Pause(ctx context.Context, id string, options ControlOptions) (err error) {
 	podIp, err := w.registry.GetPodIP(ctx, id)
 	if err != nil {
 		return err
@@ -413,7 +409,7 @@ func (w *worker) Pause(ctx context.Context, namespace, id string) (err error) {
 	return controller.Pause(ctx, podIp)
 }
 
-func (w *worker) Resume(ctx context.Context, namespace, id string) (err error) {
+func (w *worker) Resume(ctx context.Context, id string, options ControlOptions) (err error) {
 	podIp, err := w.registry.GetPodIP(ctx, id)
 	if err != nil {
 		return err
@@ -426,7 +422,7 @@ func (w *worker) Resume(ctx context.Context, namespace, id string) (err error) {
 }
 
 // TODO: consider status channel (?)
-func (w *worker) ResumeMany(ctx context.Context, ids []string) (errs []IdentifiableError) {
+func (w *worker) ResumeMany(ctx context.Context, ids []string, options ControlOptions) (errs []IdentifiableError) {
 	ips := make(map[string]string, len(ids))
 
 	// Try to obtain IPs

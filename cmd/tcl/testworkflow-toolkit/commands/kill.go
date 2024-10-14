@@ -121,7 +121,9 @@ func NewKillCmd() *cobra.Command {
 				}
 			}
 
-			err := spawn.ExecutionWorker().DestroyGroup(context.Background(), namespace, groupRef)
+			err := spawn.ExecutionWorker().DestroyGroup(context.Background(), groupRef, executionworker.DestroyOptions{
+				Namespace: namespace,
+			})
 			ui.ExitOnError("cleaning up resources", err)
 		},
 	}

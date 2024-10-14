@@ -253,7 +253,9 @@ func NewParallelCmd() *cobra.Command {
 					}
 
 					// Clean up
-					err = spawn.ExecutionWorker().Destroy(context.Background(), namespace, cfg.Resource.Id)
+					err = spawn.ExecutionWorker().Destroy(context.Background(), cfg.Resource.Id, executionworker.DestroyOptions{
+						Namespace: namespace,
+					})
 					if err == nil {
 						log("cleaned resources")
 					} else {
@@ -367,14 +369,16 @@ func NewParallelCmd() *cobra.Command {
 							return spawn.GetResourceId(config.Ref()+"-", index)
 						})
 
-						errs := spawn.ExecutionWorker().ResumeMany(context.Background(), ids)
+						errs := spawn.ExecutionWorker().ResumeMany(context.Background(), ids, executionworker.ControlOptions{})
 						for _, err := range errs {
 							if err.Id == "" {
 								fmt.Printf("warn: %s\n", err.Error)
 							} else {
 								_, index := spawn.GetServiceByResourceId(err.Id)
 								spawn.CreateLogger("worker", descriptions[index], index, params.Count)("warning", "failed to resume", err.Error.Error())
-								_ = spawn.ExecutionWorker().Destroy(context.Background(), namespaces[index], err.Id)
+								_ = spawn.ExecutionWorker().Destroy(context.Background(), err.Id, executionworker.DestroyOptions{
+									Namespace: namespaces[index],
+								})
 							}
 						}
 					}
