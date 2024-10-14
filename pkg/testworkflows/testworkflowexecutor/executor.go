@@ -324,12 +324,10 @@ func (e *executor) getPreExecutionMachine(workflow *testworkflowsv1.TestWorkflow
 	return expressions.CombinedMachines(cloudMachine, workflowMachine)
 }
 
-func (e *executor) getPostExecutionMachine(execution *testkube.TestWorkflowExecution, orgId, envId, resourceId, rootResourceId, fsPrefix string) expressions.Machine {
+func (e *executor) getPostExecutionMachine(execution *testkube.TestWorkflowExecution, orgId, envId string) expressions.Machine {
 	executionConfig := e.buildExecutionConfig(execution, orgId, envId)
-	resourceConfig := e.buildResourceConfig(resourceId, rootResourceId, fsPrefix) // TODO: Should it be resolved there?
-	resourceMachine := testworkflowconfig.CreateResourceMachine(&resourceConfig)
 	executionMachine := testworkflowconfig.CreateExecutionMachine(&executionConfig)
-	return expressions.CombinedMachines(executionMachine, resourceMachine)
+	return expressions.CombinedMachines(executionMachine)
 }
 
 func (e *executor) buildExecutionConfig(execution *testkube.TestWorkflowExecution, orgId, envId string) testworkflowconfig.ExecutionConfig {
@@ -497,7 +495,7 @@ func (e *executor) initialize(ctx context.Context, workflow *testworkflowsv1.Tes
 
 	// Simplify the result
 	preMachine := e.getPreExecutionMachine(workflow, organizationId, environmentId)
-	postMachine := e.getPostExecutionMachine(execution, organizationId, environmentId, executionId, executionId, "")
+	postMachine := e.getPostExecutionMachine(execution, organizationId, environmentId)
 	_ = expressions.Simplify(&workflow, preMachine, postMachine)
 
 	// Build the final tags
