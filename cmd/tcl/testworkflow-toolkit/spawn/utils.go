@@ -31,8 +31,8 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/transfer"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/executionworker"
 	"github.com/kubeshop/testkube/pkg/expressions"
+	executionworker2 "github.com/kubeshop/testkube/pkg/testworkflows/executionworker"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/presets"
@@ -45,27 +45,27 @@ const (
 )
 
 var (
-	executionWorker   executionworker.Worker
+	executionWorker   executionworker2.Worker
 	executionWorkerMu sync.Mutex
 )
 
-func ExecutionWorker() executionworker.Worker {
+func ExecutionWorker() executionworker2.Worker {
 	executionWorkerMu.Lock()
 	defer executionWorkerMu.Unlock()
 
 	if executionWorker == nil {
 		cfg := config.Config()
-		executionWorker = executionworker.New(env.Kubernetes(), presets.NewPro(env.ImageInspector()), executionworker.Config{
-			Cluster: executionworker.ClusterConfig{
+		executionWorker = executionworker2.New(env.Kubernetes(), presets.NewPro(env.ImageInspector()), executionworker2.Config{
+			Cluster: executionworker2.ClusterConfig{
 				Id:               cfg.Worker.ClusterID,
 				DefaultNamespace: cfg.Worker.Namespace, // TODO: Use current execution namespace?
 				DefaultRegistry:  cfg.Worker.DefaultRegistry,
 				// TODO: Fetch all the namespaces with service accounts?
-				Namespaces: map[string]executionworker.NamespaceConfig{
+				Namespaces: map[string]executionworker2.NamespaceConfig{
 					cfg.Worker.Namespace: {DefaultServiceAccountName: cfg.Worker.DefaultServiceAccount},
 				},
 			},
-			ImageInspector: executionworker.ImageInspectorConfig{
+			ImageInspector: executionworker2.ImageInspectorConfig{
 				CacheEnabled: cfg.Worker.ImageInspectorPersistenceEnabled,
 				CacheKey:     cfg.Worker.ImageInspectorPersistenceCacheKey,
 				CacheTTL:     cfg.Worker.ImageInspectorPersistenceCacheTTL,

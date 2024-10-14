@@ -17,10 +17,10 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/executionworker"
 	repoConfig "github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/secretmanager"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 
 	"github.com/kubeshop/testkube/pkg/version"

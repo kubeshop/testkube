@@ -21,8 +21,8 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/artifacts"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
-	"github.com/kubeshop/testkube/pkg/executionworker"
 	"github.com/kubeshop/testkube/pkg/expressions"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 

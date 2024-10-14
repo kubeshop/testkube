@@ -10,15 +10,15 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/kubeshop/testkube/internal/common"
-	"github.com/kubeshop/testkube/pkg/executionworker/registry"
+	registry2 "github.com/kubeshop/testkube/pkg/testworkflows/executionworker/registry"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
 
 type controllersRegistry struct {
 	clientSet              kubernetes.Interface
-	namespaces             registry.NamespacesRegistry
-	ips                    registry.PodIpsRegistry
+	namespaces             registry2.NamespacesRegistry
+	ips                    registry2.PodIpsRegistry
 	controllers            map[string]testworkflowcontroller.Controller
 	controllerReservations map[string]int
 	mu                     sync.RWMutex
@@ -26,14 +26,14 @@ type controllersRegistry struct {
 	connectionsGroup       singleflight.Group
 }
 
-func newControllersRegistry(clientSet kubernetes.Interface, namespaces registry.NamespacesRegistry, podIpCacheSize int) *controllersRegistry {
+func newControllersRegistry(clientSet kubernetes.Interface, namespaces registry2.NamespacesRegistry, podIpCacheSize int) *controllersRegistry {
 	r := &controllersRegistry{
 		clientSet:              clientSet,
 		namespaces:             namespaces,
 		controllers:            make(map[string]testworkflowcontroller.Controller),
 		controllerReservations: make(map[string]int),
 	}
-	ipsRegistry := registry.NewPodIpsRegistry(clientSet, r.GetNamespace, podIpCacheSize)
+	ipsRegistry := registry2.NewPodIpsRegistry(clientSet, r.GetNamespace, podIpCacheSize)
 	r.ips = ipsRegistry
 	return r
 }

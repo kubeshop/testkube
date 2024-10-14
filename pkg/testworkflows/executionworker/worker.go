@@ -21,10 +21,10 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/executionworker/registry"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
+	registry2 "github.com/kubeshop/testkube/pkg/testworkflows/executionworker/registry"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller/watchers"
@@ -47,7 +47,7 @@ type worker struct {
 }
 
 func New(clientSet kubernetes.Interface, processor testworkflowprocessor.Processor, config Config) Worker {
-	namespaces := registry.NewNamespacesRegistry(clientSet, config.Cluster.DefaultNamespace, maps.Keys(config.Cluster.Namespaces), 50)
+	namespaces := registry2.NewNamespacesRegistry(clientSet, config.Cluster.DefaultNamespace, maps.Keys(config.Cluster.Namespaces), 50)
 	return &worker{
 		clientSet: clientSet,
 		processor: processor,
@@ -158,7 +158,7 @@ func (w *worker) Notifications(ctx context.Context, namespace, id string, opts N
 	})
 	watcher := newNotificationsWatcher()
 	if errors.Is(err, testworkflowcontroller.ErrJobTimeout) {
-		err = registry.ErrResourceNotFound
+		err = registry2.ErrResourceNotFound
 	}
 	if err != nil {
 		watcher.close(err)
@@ -197,7 +197,7 @@ func (w *worker) StatusNotifications(ctx context.Context, namespace, id string, 
 	})
 	watcher := newStatusNotificationsWatcher()
 	if errors.Is(err, testworkflowcontroller.ErrJobTimeout) {
-		err = registry.ErrResourceNotFound
+		err = registry2.ErrResourceNotFound
 	}
 	if err != nil {
 		watcher.close(err)
@@ -417,7 +417,7 @@ func (w *worker) Pause(ctx context.Context, namespace, id string) (err error) {
 	if err != nil {
 		return err
 	} else if podIp == "" {
-		return registry.ErrPodIpNotAssigned
+		return registry2.ErrPodIpNotAssigned
 	}
 
 	// TODO: Move implementation there
@@ -429,7 +429,7 @@ func (w *worker) Resume(ctx context.Context, namespace, id string) (err error) {
 	if err != nil {
 		return err
 	} else if podIp == "" {
-		return registry.ErrPodIpNotAssigned
+		return registry2.ErrPodIpNotAssigned
 	}
 
 	// TODO: Move implementation there
@@ -447,7 +447,7 @@ func (w *worker) ResumeMany(ctx context.Context, ids []string) (errs []Identifia
 		if err != nil {
 			errs = append(errs, IdentifiableError{Id: id, Error: err})
 		} else if podIp == "" {
-			errs = append(errs, IdentifiableError{Id: id, Error: registry.ErrPodIpNotAssigned})
+			errs = append(errs, IdentifiableError{Id: id, Error: registry2.ErrPodIpNotAssigned})
 		} else {
 			ips[id] = podIp
 		}

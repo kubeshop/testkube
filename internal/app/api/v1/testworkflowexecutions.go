@@ -18,8 +18,8 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/datefilter"
-	"github.com/kubeshop/testkube/pkg/executionworker"
 	testworkflow2 "github.com/kubeshop/testkube/pkg/repository/testworkflow"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker"
 )
 
 func (s *TestkubeAPI) StreamTestWorkflowExecutionNotificationsHandler() fiber.Handler {

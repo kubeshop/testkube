@@ -20,7 +20,7 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	"github.com/kubeshop/testkube/pkg/cache"
-	"github.com/kubeshop/testkube/pkg/executionworker"
+	executionworker2 "github.com/kubeshop/testkube/pkg/testworkflows/executionworker"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
@@ -589,9 +589,9 @@ func main() {
 	}
 
 	// Build internal execution worker
-	namespacesConfig := map[string]executionworker.NamespaceConfig{}
+	namespacesConfig := map[string]executionworker2.NamespaceConfig{}
 	for n, s := range serviceAccountNames {
-		namespacesConfig[n] = executionworker.NamespaceConfig{DefaultServiceAccountName: s}
+		namespacesConfig[n] = executionworker2.NamespaceConfig{DefaultServiceAccountName: s}
 	}
 	cloudUrl := cfg.TestkubeProURL
 	cloudApiKey := cfg.TestkubeProAPIKey
@@ -612,14 +612,14 @@ func main() {
 			CAFile:          cfg.StorageCAFile,
 		}
 	}
-	executionWorker := executionworker.New(clientset, testWorkflowProcessor, executionworker.Config{
-		Cluster: executionworker.ClusterConfig{
+	executionWorker := executionworker2.New(clientset, testWorkflowProcessor, executionworker2.Config{
+		Cluster: executionworker2.ClusterConfig{
 			Id:               clusterId,
 			DefaultNamespace: cfg.TestkubeNamespace,
 			DefaultRegistry:  cfg.TestkubeRegistry,
 			Namespaces:       namespacesConfig,
 		},
-		ImageInspector: executionworker.ImageInspectorConfig{
+		ImageInspector: executionworker2.ImageInspectorConfig{
 			CacheEnabled: cfg.EnableImageDataPersistentCache,
 			CacheKey:     cfg.ImageDataPersistentCacheKey,
 			CacheTTL:     cfg.TestkubeImageCredentialsCacheTTL,
