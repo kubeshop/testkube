@@ -956,13 +956,13 @@ type releaseMetadata struct {
 func GetLatestVersion() (string, error) {
 	resp, err := http.Get(latestReleaseUrl)
 	if err != nil {
-		return "", nil
+		return "", err
 	}
 	defer resp.Body.Close()
 
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", nil
+		return "", err
 	}
 
 	var metadata releaseMetadata
