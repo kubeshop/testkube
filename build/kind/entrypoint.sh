@@ -168,14 +168,14 @@ send_telenetry "docker_installation_started"
 
 # Check if agent key is provided
 if [ -z "$AGENT_KEY" ]; then
-  log "Please provide AGENT_KEY env var"
+  log "Testkube installation failed. Please provide AGENT_KEY env var"
   send_telenetry "docker_installation_failed" "parameter_not_found" "agent key is empty"
   exit 1
 fi
 
 # Check if cloud url is provided
 if [ -z "$CLOUD_URL" ]; then
-  log "Please provide CLOUD_URL env var"
+  log "Testkube installation failed. Please provide CLOUD_URL env var"
   send_telenetry "docker_installation_failed" "parameter_not_found" "cloud url is empty"
   exit 1
 fi
@@ -219,7 +219,7 @@ else
   log "Creating Kubernetes cluster using Kind (Kubernetes v1.31.0)..."
   kind create cluster --name testkube-cluster --image kindest/node:v1.31.0 --wait 5m
   if [ $? -ne 0 ]; then
-    log "Failed to create Kind cluster."
+    log "Testkube installation failed. Couldn't create Kind cluster."
     send_telenetry "docker_installation_failed" "kind_error" "Kind cluster was not created"
     exit 1
   fi
@@ -228,7 +228,7 @@ else
   log "Verifying cluster is up..."
   kubectl cluster-info
   if [ $? -ne 0 ]; then
-    log "Failed to verify cluster."
+    log "Testkube installation failed. Couldn't verify cluster."
     send_telenetry "docker_installation_failed" "kind_error" "Kind cluster is nor accessible"
     exit 1
   fi
@@ -258,7 +258,7 @@ else
 
     # Check if there are any pods in the Testkube namespace
     if [ -z "$pod_status" ]; then
-      log "No pods found in testkube namespace."
+      log "Testkube installation failed. No pods found in testkube namespace."
       send_telenetry "docker_installation_failed" "tetkube_error" "No pods found in testkube namespace"
       exit 1
     fi
@@ -307,7 +307,7 @@ else
   done
 
   if [ $counter -eq 15 ]; then
-    log "Testkube validation failed."
+    log "Testkube installation failed."
     send_telenetry "docker_installation_failed" "tetkube_error" "Testkube pods are not up and running"
     exit 1
   fi
@@ -317,7 +317,7 @@ else
   log "Creating and running Testkube k6 Test Workflow..."
   kubectl apply -f /examples/k6.yaml -n testkube
 
-  log "Testkube installation successful!"
+  log "Testkube installation succeed!"
   log "You can now use Testkube in your Kind Kubernetes cluster."
   send_telenetry "docker_installation_succeed"
 fi

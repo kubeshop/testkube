@@ -36,7 +36,7 @@ func NewLoginCmd() *cobra.Command {
 				ui.ExitOnError("getting environment", err)
 			}
 
-			err = common.PopulateLoginDataToContext(orgID, envID, token, refreshToken, opts, cfg)
+			err = common.PopulateLoginDataToContext(orgID, envID, token, refreshToken, "", opts, cfg)
 			ui.ExitOnError("saving config file", err)
 
 			ui.Success("Your config was updated with new values")
