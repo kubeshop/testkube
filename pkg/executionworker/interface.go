@@ -161,6 +161,12 @@ type IdentifiableError struct {
 	Error error
 }
 
+type ResourceHints struct {
+	Namespace   string
+	ScheduledAt *time.Time
+	Signature   []testkube.TestWorkflowSignature
+}
+
 type Worker interface {
 	// Execute deploys the resources in the cluster.
 	Execute(ctx context.Context, request ExecuteRequest) (*ExecuteResult, error)

@@ -1,4 +1,4 @@
-package executionworker
+package registry
 
 import "errors"
 

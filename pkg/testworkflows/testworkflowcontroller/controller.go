@@ -47,7 +47,9 @@ type Controller interface {
 	PodIP() (string, error)
 	ContainersReady() (bool, error)
 	Signature() []stage.Signature
+	HasPod() bool
 	ResourceID() string
+	Namespace() string
 	StopController()
 }
 
@@ -118,8 +120,16 @@ func (c *controller) Signature() []stage.Signature {
 	return c.signature
 }
 
+func (c *controller) HasPod() bool {
+	return c.watcher.State().Pod() != nil
+}
+
 func (c *controller) ResourceID() string {
 	return c.id
+}
+
+func (c *controller) Namespace() string {
+	return c.namespace
 }
 
 func (c *controller) Abort(ctx context.Context) error {
