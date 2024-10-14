@@ -85,7 +85,11 @@ func NewInitCmd() *cobra.Command {
 
 			if noLogin {
 				ui.Alert("Saving Testkube CLI Pro context, you need to authorize CLI through `testkube set context` later")
-				common.PopulateCloudConfig(cfg, "", commonint.Ptr(""), &options)
+				cfg = common.PopulateCloudConfig(cfg, "", commonint.Ptr(""), &options)
+
+				err = config.Save(cfg)
+				ui.ExitOnError("saving config file", err)
+
 				ui.Info(" Happy Testing! 🚀")
 				ui.NL()
 				return
