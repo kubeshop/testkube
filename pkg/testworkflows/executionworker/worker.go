@@ -17,6 +17,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/utils/strings/slices"
 
+	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	initconstants "github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/control"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
@@ -67,34 +68,41 @@ func New(clientSet kubernetes.Interface, processor testworkflowprocessor.Process
 	}
 }
 
-func (w *worker) Execute(ctx context.Context, request ExecuteRequest) (*ExecuteResult, error) {
-	resourceId := request.ResourceId
-	if resourceId == "" {
-		resourceId = request.Execution.Id
-	}
-
-	// Build internal configuration
+func (w *worker) buildInternalConfig(resourceId, fsPrefix string, execution testworkflowconfig.ExecutionConfig, controlPlane testworkflowconfig.ControlPlaneConfig, workflow testworkflowsv1.TestWorkflow) testworkflowconfig.InternalConfig {
 	cfg := testworkflowconfig.InternalConfig{
-		Execution:    request.Execution,
-		Workflow:     testworkflowconfig.WorkflowConfig{Name: request.Workflow.Name, Labels: request.Workflow.Labels},
-		Resource:     testworkflowconfig.ResourceConfig{Id: resourceId, RootId: request.Execution.Id, FsPrefix: request.FsPrefix},
-		ControlPlane: request.ControlPlane,
+		Execution:    execution,
+		Workflow:     testworkflowconfig.WorkflowConfig{Name: workflow.Name, Labels: workflow.Labels},
+		Resource:     testworkflowconfig.ResourceConfig{Id: resourceId, RootId: execution.Id, FsPrefix: fsPrefix},
+		ControlPlane: controlPlane,
 		Worker:       w.baseWorkerConfig,
 	}
+	if workflow.Spec.Job != nil && workflow.Spec.Job.Namespace != "" {
+		cfg.Worker.Namespace = workflow.Spec.Job.Namespace
+	}
+	return cfg
+}
 
-	// Build list of secrets to create
-	secrets := make([]corev1.Secret, 0, len(request.Secrets))
-	for name, stringData := range request.Secrets {
+func (w *worker) buildSecrets(maps map[string]map[string]string) []corev1.Secret {
+	secrets := make([]corev1.Secret, 0, len(maps))
+	for name, stringData := range maps {
 		secrets = append(secrets, corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{Name: name},
 			StringData: stringData,
 		})
 	}
+	return secrets
+}
 
-	// Determine execution namespace
-	if request.Workflow.Spec.Job != nil && request.Workflow.Spec.Job.Namespace != "" {
-		cfg.Worker.Namespace = request.Workflow.Spec.Job.Namespace
+func (w *worker) Execute(ctx context.Context, request ExecuteRequest) (*ExecuteResult, error) {
+	// Process the data
+	resourceId := request.ResourceId
+	if resourceId == "" {
+		resourceId = request.Execution.Id
 	}
+	cfg := w.buildInternalConfig(resourceId, request.FsPrefix, request.Execution, request.ControlPlane, request.Workflow)
+	secrets := w.buildSecrets(request.Secrets)
+
+	// Ensure the execution namespace is allowed
 	if _, ok := w.config.Cluster.Namespaces[cfg.Worker.Namespace]; !ok {
 		return nil, errors.New(fmt.Sprintf("namespace %s not supported", cfg.Worker.Namespace))
 	}
@@ -107,23 +115,17 @@ func (w *worker) Execute(ctx context.Context, request ExecuteRequest) (*ExecuteR
 
 	// Annotate the group ID
 	if request.GroupId != "" {
-		testworkflowprocessor.AnnotateGroupId(&bundle.Job, request.GroupId)
-		for i := range bundle.ConfigMaps {
-			testworkflowprocessor.AnnotateGroupId(&bundle.ConfigMaps[i], request.GroupId)
-		}
-		for i := range bundle.Secrets {
-			testworkflowprocessor.AnnotateGroupId(&bundle.Secrets[i], request.GroupId)
-		}
+		bundle.SetGroupId(request.GroupId)
 	}
+
+	// Register namespace information in the cache
+	w.registry.RegisterNamespace(cfg.Resource.Id, cfg.Worker.Namespace)
 
 	// Deploy required resources
 	err = bundle.Deploy(context.Background(), w.clientSet, cfg.Worker.Namespace)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to deploy test workflow")
 	}
-
-	// Register namespace information in the cache
-	w.registry.RegisterNamespace(cfg.Resource.Id, cfg.Worker.Namespace)
 
 	return &ExecuteResult{
 		Signature: stage.MapSignatureListToInternal(bundle.Signature),
@@ -132,33 +134,15 @@ func (w *worker) Execute(ctx context.Context, request ExecuteRequest) (*ExecuteR
 }
 
 func (w *worker) Service(ctx context.Context, request ServiceRequest) (*ServiceResult, error) {
+	// Process the data
 	resourceId := request.ResourceId
 	if resourceId == "" {
 		resourceId = request.Execution.Id
 	}
+	cfg := w.buildInternalConfig(resourceId, request.FsPrefix, request.Execution, request.ControlPlane, request.Workflow)
+	secrets := w.buildSecrets(request.Secrets)
 
-	// Build internal configuration
-	cfg := testworkflowconfig.InternalConfig{
-		Execution:    request.Execution,
-		Workflow:     testworkflowconfig.WorkflowConfig{Name: request.Workflow.Name, Labels: request.Workflow.Labels},
-		Resource:     testworkflowconfig.ResourceConfig{Id: resourceId, RootId: request.Execution.Id, FsPrefix: request.FsPrefix},
-		ControlPlane: request.ControlPlane,
-		Worker:       w.baseWorkerConfig,
-	}
-
-	// Build list of secrets to create
-	secrets := make([]corev1.Secret, 0, len(request.Secrets))
-	for name, stringData := range request.Secrets {
-		secrets = append(secrets, corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{Name: name},
-			StringData: stringData,
-		})
-	}
-
-	// Determine execution namespace
-	if request.Workflow.Spec.Job != nil && request.Workflow.Spec.Job.Namespace != "" {
-		cfg.Worker.Namespace = request.Workflow.Spec.Job.Namespace
-	}
+	// Ensure the execution namespace is allowed
 	if _, ok := w.config.Cluster.Namespaces[cfg.Worker.Namespace]; !ok {
 		return nil, errors.New(fmt.Sprintf("namespace %s not supported", cfg.Worker.Namespace))
 	}
@@ -185,23 +169,17 @@ func (w *worker) Service(ctx context.Context, request ServiceRequest) (*ServiceR
 
 	// Annotate the group ID
 	if request.GroupId != "" {
-		testworkflowprocessor.AnnotateGroupId(&bundle.Job, request.GroupId)
-		for i := range bundle.ConfigMaps {
-			testworkflowprocessor.AnnotateGroupId(&bundle.ConfigMaps[i], request.GroupId)
-		}
-		for i := range bundle.Secrets {
-			testworkflowprocessor.AnnotateGroupId(&bundle.Secrets[i], request.GroupId)
-		}
+		bundle.SetGroupId(request.GroupId)
 	}
+
+	// Register namespace information in the cache
+	w.registry.RegisterNamespace(cfg.Resource.Id, cfg.Worker.Namespace)
 
 	// Deploy required resources
 	err = bundle.Deploy(context.Background(), w.clientSet, cfg.Worker.Namespace)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to deploy test workflow")
 	}
-
-	// Register namespace information in the cache
-	w.registry.RegisterNamespace(cfg.Resource.Id, cfg.Worker.Namespace)
 
 	return &ServiceResult{
 		Signature: stage.MapSignatureListToInternal(bundle.Signature),

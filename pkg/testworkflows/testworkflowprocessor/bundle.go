@@ -40,6 +40,16 @@ func (b *Bundle) LiteActions() (actions lite.LiteActionGroups) {
 	return
 }
 
+func (b *Bundle) SetGroupId(groupId string) {
+	AnnotateGroupId(&b.Job, groupId)
+	for i := range b.ConfigMaps {
+		AnnotateGroupId(&b.ConfigMaps[i], groupId)
+	}
+	for i := range b.Secrets {
+		AnnotateGroupId(&b.Secrets[i], groupId)
+	}
+}
+
 func (b *Bundle) Deploy(ctx context.Context, clientSet kubernetes.Interface, namespace string) (err error) {
 	if b.Job.Namespace != "" {
 		namespace = b.Job.Namespace
