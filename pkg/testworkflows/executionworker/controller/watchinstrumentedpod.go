@@ -116,7 +116,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 
 		// Iterate over containers
 		lastStarted := data.InitStepName
-		containersReady := watcher.State().ContainersReady()
+		containersReady := false
 		for containerIndex := 0; containerIndex < len(refs); containerIndex++ {
 			aborted := false
 			container := fmt.Sprintf("%d", containerIndex+1)

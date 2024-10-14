@@ -22,7 +22,6 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/imageinspector"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller"
@@ -41,7 +40,6 @@ const (
 type worker struct {
 	clientSet        kubernetes.Interface
 	processor        testworkflowprocessor.Processor
-	inspector        imageinspector.Inspector
 	baseWorkerConfig testworkflowconfig.WorkerConfig
 	config           Config
 	registry         *controllersRegistry
@@ -311,22 +309,18 @@ func (w *worker) Logs(ctx context.Context, namespace, id string, follow bool) Lo
 
 func (w *worker) Get(ctx context.Context, namespace, id string) (*GetResult, error) {
 	panic("not implemented")
-	return nil, nil
 }
 
 func (w *worker) Summary(ctx context.Context, namespace, id string) (*SummaryResult, error) {
 	panic("not implemented")
-	return nil, nil
 }
 
 func (w *worker) Finished(ctx context.Context, namespace, id string) (bool, error) {
 	panic("not implemented")
-	return false, nil
 }
 
 func (w *worker) ListIds(ctx context.Context, options ListOptions) ([]string, error) {
 	panic("not implemented")
-	return nil, nil
 }
 
 func (w *worker) List(ctx context.Context, options ListOptions) ([]ListResultItem, error) {

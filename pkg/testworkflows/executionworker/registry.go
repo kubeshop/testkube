@@ -22,7 +22,6 @@ type controllersRegistry struct {
 	controllers            map[string]controller.Controller
 	controllerReservations map[string]int
 	mu                     sync.RWMutex
-	mus                    map[string]*sync.Mutex
 	connectionsGroup       singleflight.Group
 }
 
