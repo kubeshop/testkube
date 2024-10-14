@@ -167,6 +167,7 @@ type ResourceHints struct {
 	Signature   []testkube.TestWorkflowSignature
 }
 
+//go:generate mockgen -destination=./mock_worker.go -package=executionworker "github.com/kubeshop/testkube/pkg/testworkflows/executionworker" Worker
 type Worker interface {
 	// Execute deploys the resources in the cluster.
 	Execute(ctx context.Context, request ExecuteRequest) (*ExecuteResult, error)
