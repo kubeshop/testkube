@@ -668,6 +668,7 @@ func main() {
 			envs,
 			features,
 			proContext,
+			cfg.TestkubeDockerImageVersion,
 		)
 		if err != nil {
 			exitOnError("Starting agent", err)

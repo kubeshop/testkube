@@ -31,13 +31,14 @@ import (
 )
 
 const (
-	timeout            = 10 * time.Second
-	apiKeyMeta         = "api-key"
-	clusterIDMeta      = "cluster-id"
-	cloudMigrateMeta   = "migrate"
-	orgIdMeta          = "environment-id"
-	envIdMeta          = "organization-id"
-	healthcheckCommand = "healthcheck"
+	timeout                = 10 * time.Second
+	apiKeyMeta             = "api-key"
+	clusterIDMeta          = "cluster-id"
+	cloudMigrateMeta       = "migrate"
+	orgIdMeta              = "environment-id"
+	envIdMeta              = "organization-id"
+	healthcheckCommand     = "healthcheck"
+	dockerImageVersionMeta = "docker-image-version"
 )
 
 // buffer up to five messages per worker
@@ -150,10 +151,11 @@ type Agent struct {
 	receiveTimeout      time.Duration
 	healthcheckInterval time.Duration
 
-	clusterID   string
-	clusterName string
-	envs        map[string]string
-	features    featureflags.FeatureFlags
+	clusterID          string
+	clusterName        string
+	envs               map[string]string
+	features           featureflags.FeatureFlags
+	dockerImageVersion string
 
 	proContext config.ProContext
 }
@@ -168,6 +170,7 @@ func NewAgent(logger *zap.SugaredLogger,
 	envs map[string]string,
 	features featureflags.FeatureFlags,
 	proContext config.ProContext,
+	dockerImageVersion string,
 ) (*Agent, error) {
 	return &Agent{
 		handler:                                 handler,
@@ -194,6 +197,7 @@ func NewAgent(logger *zap.SugaredLogger,
 		envs:                                    envs,
 		features:                                features,
 		proContext:                              proContext,
+		dockerImageVersion:                      dockerImageVersion,
 	}, nil
 }
 
@@ -313,6 +317,7 @@ func (ag *Agent) runCommandLoop(ctx context.Context) error {
 	ctx = metadata.AppendToOutgoingContext(ctx, cloudMigrateMeta, ag.proContext.Migrate)
 	ctx = metadata.AppendToOutgoingContext(ctx, envIdMeta, ag.proContext.EnvID)
 	ctx = metadata.AppendToOutgoingContext(ctx, orgIdMeta, ag.proContext.OrgID)
+	ctx = metadata.AppendToOutgoingContext(ctx, dockerImageVersionMeta, ag.dockerImageVersion)
 
 	ag.logger.Infow("initiating streaming connection with control plane")
 	// creates a new Stream from the client side. ctx is used for the lifetime of the stream.
