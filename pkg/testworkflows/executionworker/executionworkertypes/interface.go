@@ -219,6 +219,9 @@ type Worker interface {
 	// List lists all the currently deployed resources matching the criteria.
 	List(ctx context.Context, options ListOptions) ([]ListResultItem, error)
 
+	// Abort may either destroy or just stop the selected resource (so the data can be still accessible)
+	Abort(ctx context.Context, id string, options DestroyOptions) error
+
 	// Destroy gets rid of all the data for the selected resource.
 	Destroy(ctx context.Context, id string, options DestroyOptions) error
 

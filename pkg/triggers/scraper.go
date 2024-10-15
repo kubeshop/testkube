@@ -180,7 +180,7 @@ func (s *Service) abortRunningTestWorkflowExecutions(ctx context.Context, status
 		if execution.Result != nil && (execution.Result.IsRunning() || execution.Result.IsQueued() || execution.Result.IsPaused()) {
 			// Pro edition only (tcl protected code)
 			// Obtain the controller
-			err = s.executionWorkerClient.Destroy(ctx, execution.Id, executionworkertypes.DestroyOptions{
+			err = s.executionWorkerClient.Abort(ctx, execution.Id, executionworkertypes.DestroyOptions{
 				Namespace: s.testkubeNamespace,
 			})
 			if err != nil {

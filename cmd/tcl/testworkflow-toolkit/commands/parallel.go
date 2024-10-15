@@ -377,7 +377,7 @@ func NewParallelCmd() *cobra.Command {
 							} else {
 								_, index := spawn.GetServiceByResourceId(err.Id)
 								spawn.CreateLogger("worker", descriptions[index], index, params.Count)("warning", "failed to resume", err.Error.Error())
-								_ = spawn.ExecutionWorker().Destroy(context.Background(), err.Id, executionworkertypes.DestroyOptions{
+								_ = spawn.ExecutionWorker().Abort(context.Background(), err.Id, executionworkertypes.DestroyOptions{
 									Namespace: namespaces[index],
 								})
 							}

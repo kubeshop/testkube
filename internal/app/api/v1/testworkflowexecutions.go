@@ -249,7 +249,7 @@ func (s *TestkubeAPI) AbortTestWorkflowExecutionHandler() fiber.Handler {
 		}
 
 		// Abort the Test Workflow
-		err = s.ExecutionWorkerClient.Destroy(ctx, execution.Id, executionworkertypes.DestroyOptions{
+		err = s.ExecutionWorkerClient.Abort(ctx, execution.Id, executionworkertypes.DestroyOptions{
 			Namespace: execution.Namespace,
 		})
 		if err != nil {
@@ -353,7 +353,7 @@ func (s *TestkubeAPI) AbortAllTestWorkflowExecutionsHandler() fiber.Handler {
 		}
 
 		for _, execution := range executions {
-			err = s.ExecutionWorkerClient.Destroy(ctx, execution.Id, executionworkertypes.DestroyOptions{
+			err = s.ExecutionWorkerClient.Abort(ctx, execution.Id, executionworkertypes.DestroyOptions{
 				Namespace: execution.Namespace,
 			})
 			if err != nil {

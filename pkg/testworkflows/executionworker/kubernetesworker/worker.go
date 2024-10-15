@@ -426,6 +426,11 @@ func (w *worker) List(ctx context.Context, options executionworkertypes.ListOpti
 	return list, nil
 }
 
+func (w *worker) Abort(ctx context.Context, id string, options executionworkertypes.DestroyOptions) error {
+	// It may safely destroy all the resources - the trace should be still readable.
+	return w.Destroy(ctx, id, options)
+}
+
 func (w *worker) Destroy(ctx context.Context, id string, options executionworkertypes.DestroyOptions) (err error) {
 	if options.Namespace == "" {
 		options.Namespace, err = w.registry.GetNamespace(ctx, id)
