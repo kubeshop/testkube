@@ -26,7 +26,6 @@ RUN chmod +x /usr/local/bin/entrypoint.sh
 
 # Step 7: Example K6 Test Workflow CRD and preload Kind images
 COPY ./images /images
-COPY k6.yaml /examples/k6.yaml
 
 ARG segmentio_key
 ENV SEGMENTIO_KEY=$segmentio_key
