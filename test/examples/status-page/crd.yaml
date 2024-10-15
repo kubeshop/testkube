@@ -32,7 +32,7 @@ spec:
         memory: 32Mi
   steps:
     - name: Run tests
-      shell: curl -f -LI https://docs.testkube.io
+      shell: curl -f -LI https://testkube-test-page-lipsum.pages.dev/
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
