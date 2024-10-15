@@ -19,7 +19,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/datefilter"
 	testworkflow2 "github.com/kubeshop/testkube/pkg/repository/testworkflow"
-	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 )
 
 func (s *TestkubeAPI) StreamTestWorkflowExecutionNotificationsHandler() fiber.Handler {
@@ -35,8 +35,8 @@ func (s *TestkubeAPI) StreamTestWorkflowExecutionNotificationsHandler() fiber.Ha
 		}
 
 		// Check for the logs
-		notifications := s.ExecutionWorkerClient.Notifications(ctx, execution.Id, executionworker.NotificationsOptions{
-			Hints: executionworker.Hints{
+		notifications := s.ExecutionWorkerClient.Notifications(ctx, execution.Id, executionworkertypes.NotificationsOptions{
+			Hints: executionworkertypes.Hints{
 				Namespace:   execution.Namespace,
 				ScheduledAt: common.Ptr(execution.ScheduledAt),
 				Signature:   execution.Signature,
@@ -103,8 +103,8 @@ func (s *TestkubeAPI) StreamTestWorkflowExecutionNotificationsWebSocketHandler()
 		}
 
 		// Check for the logs
-		notifications := s.ExecutionWorkerClient.Notifications(ctx, execution.Id, executionworker.NotificationsOptions{
-			Hints: executionworker.Hints{
+		notifications := s.ExecutionWorkerClient.Notifications(ctx, execution.Id, executionworkertypes.NotificationsOptions{
+			Hints: executionworkertypes.Hints{
 				Namespace:   execution.Namespace,
 				Signature:   execution.Signature,
 				ScheduledAt: common.Ptr(execution.ScheduledAt),
@@ -249,7 +249,7 @@ func (s *TestkubeAPI) AbortTestWorkflowExecutionHandler() fiber.Handler {
 		}
 
 		// Abort the Test Workflow
-		err = s.ExecutionWorkerClient.Destroy(ctx, execution.Id, executionworker.DestroyOptions{
+		err = s.ExecutionWorkerClient.Destroy(ctx, execution.Id, executionworkertypes.DestroyOptions{
 			Namespace: execution.Namespace,
 		})
 		if err != nil {
@@ -286,7 +286,7 @@ func (s *TestkubeAPI) PauseTestWorkflowExecutionHandler() fiber.Handler {
 		}
 
 		// Pausing the execution
-		err = s.ExecutionWorkerClient.Pause(ctx, execution.Id, executionworker.ControlOptions{
+		err = s.ExecutionWorkerClient.Pause(ctx, execution.Id, executionworkertypes.ControlOptions{
 			Namespace: execution.Namespace,
 		})
 		if err != nil {
@@ -322,7 +322,7 @@ func (s *TestkubeAPI) ResumeTestWorkflowExecutionHandler() fiber.Handler {
 		}
 
 		// Resuming the execution
-		err = s.ExecutionWorkerClient.Resume(ctx, execution.Id, executionworker.ControlOptions{
+		err = s.ExecutionWorkerClient.Resume(ctx, execution.Id, executionworkertypes.ControlOptions{
 			Namespace: execution.Namespace,
 		})
 		if err != nil {
@@ -353,7 +353,7 @@ func (s *TestkubeAPI) AbortAllTestWorkflowExecutionsHandler() fiber.Handler {
 		}
 
 		for _, execution := range executions {
-			err = s.ExecutionWorkerClient.Destroy(ctx, execution.Id, executionworker.DestroyOptions{
+			err = s.ExecutionWorkerClient.Destroy(ctx, execution.Id, executionworkertypes.DestroyOptions{
 				Namespace: execution.Namespace,
 			})
 			if err != nil {
@@ -452,8 +452,8 @@ func (s *TestkubeAPI) GetTestWorkflowNotificationsStream(ctx context.Context, ex
 	}
 
 	// Start streaming the notifications
-	notifications := s.ExecutionWorkerClient.Notifications(ctx, execution.Id, executionworker.NotificationsOptions{
-		Hints: executionworker.Hints{
+	notifications := s.ExecutionWorkerClient.Notifications(ctx, execution.Id, executionworkertypes.NotificationsOptions{
+		Hints: executionworkertypes.Hints{
 			Namespace:   execution.Namespace,
 			Signature:   execution.Signature,
 			ScheduledAt: common.Ptr(execution.ScheduledAt),

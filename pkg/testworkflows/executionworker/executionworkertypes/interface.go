@@ -1,4 +1,4 @@
-package executionworker
+package executionworkertypes
 
 import (
 	"context"
@@ -6,35 +6,13 @@ import (
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/utils"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 )
-
-type NamespaceConfig struct {
-	DefaultServiceAccountName string
-}
-
-type ClusterConfig struct {
-	Id               string
-	DefaultNamespace string
-	DefaultRegistry  string
-	Namespaces       map[string]NamespaceConfig
-}
-
-type ImageInspectorConfig struct {
-	CacheEnabled bool
-	CacheKey     string
-	CacheTTL     time.Duration
-}
 
 type ServiceConfig struct {
 	RestartPolicy  string
 	ReadinessProbe *testkube.Probe
-}
-
-type Config struct {
-	Cluster        ClusterConfig
-	ImageInspector ImageInspectorConfig
-	Connection     testworkflowconfig.WorkerConnectionConfig
 }
 
 // TODO: Consider some context data
@@ -227,7 +205,7 @@ type Worker interface {
 	StatusNotifications(ctx context.Context, id string, options StatusNotificationsOptions) StatusNotificationsWatcher
 
 	// Logs converts all the important notifications (except i.e. output) from the resource into plain logs.
-	Logs(ctx context.Context, id string, options LogsOptions) LogsReader
+	Logs(ctx context.Context, id string, options LogsOptions) utils.LogsReader
 
 	// Get tries to build the latest precise result from the resource execution.
 	Get(ctx context.Context, id string, options GetOptions) (*GetResult, error)

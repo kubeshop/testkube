@@ -31,8 +31,8 @@ import (
 	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/secretmanager"
-	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowresolver"
@@ -67,12 +67,12 @@ type executor struct {
 	secretManager                secretmanager.SecretManager
 	globalTemplateName           string
 	dashboardURI                 string
-	workerClient                 executionworker.Worker
+	workerClient                 executionworkertypes.Worker
 	proContext                   *config.ProContext
 }
 
 func New(emitter *event.Emitter,
-	workerClient executionworker.Worker,
+	workerClient executionworkertypes.Worker,
 	clientSet kubernetes.Interface,
 	repository testworkflow.Repository,
 	output testworkflow.OutputRepository,
@@ -114,7 +114,7 @@ func (e *executor) handleFatalError(execution *testkube.TestWorkflowExecution, e
 		log.DefaultLogger.Errorf("failed to save fatal error for execution %s: %v", execution.Id, err)
 	}
 	e.emitter.Notify(testkube.NewEventEndTestWorkflowFailed(execution))
-	go e.workerClient.Destroy(context.Background(), execution.Id, executionworker.DestroyOptions{
+	go e.workerClient.Destroy(context.Background(), execution.Id, executionworkertypes.DestroyOptions{
 		Namespace: execution.Namespace,
 	})
 }
@@ -167,8 +167,8 @@ func (e *executor) Control(ctx context.Context, testWorkflow *testworkflowsv1.Te
 	defer ctxCancel()
 
 	// TODO: retry?
-	notifications := e.workerClient.Notifications(ctx, execution.Id, executionworker.NotificationsOptions{
-		Hints: executionworker.Hints{
+	notifications := e.workerClient.Notifications(ctx, execution.Id, executionworkertypes.NotificationsOptions{
+		Hints: executionworkertypes.Hints{
 			Namespace:   execution.Namespace,
 			Signature:   execution.Signature,
 			ScheduledAt: common.Ptr(execution.ScheduledAt),
@@ -254,8 +254,8 @@ func (e *executor) Control(ctx context.Context, testWorkflow *testworkflowsv1.Te
 				e.handleFatalError(execution, controller.ErrJobAborted, abortedAt)
 			} else {
 				// Handle unknown state
-				notifications = e.workerClient.Notifications(ctx, execution.Id, executionworker.NotificationsOptions{
-					Hints: executionworker.Hints{
+				notifications = e.workerClient.Notifications(ctx, execution.Id, executionworkertypes.NotificationsOptions{
+					Hints: executionworkertypes.Hints{
 						Namespace:   execution.Namespace,
 						Signature:   execution.Signature,
 						ScheduledAt: common.Ptr(execution.ScheduledAt),
@@ -309,9 +309,9 @@ func (e *executor) Control(ctx context.Context, testWorkflow *testworkflowsv1.Te
 	for attempt := 1; err != nil && attempt <= SaveLogsRetryMaxAttempts; attempt++ {
 		log.DefaultLogger.Errorw("retrying save of TestWorkflow log output", "id", execution.Id, "error", err)
 		time.Sleep(SaveLogsRetryBaseDelay * time.Duration(attempt))
-		err = e.output.SaveLog(context.Background(), execution.Id, execution.Workflow.Name, e.workerClient.Logs(context.Background(), execution.Id, executionworker.LogsOptions{
+		err = e.output.SaveLog(context.Background(), execution.Id, execution.Workflow.Name, e.workerClient.Logs(context.Background(), execution.Id, executionworkertypes.LogsOptions{
 			NoFollow: true,
-			Hints: executionworker.Hints{
+			Hints: executionworkertypes.Hints{
 				Namespace:   execution.Namespace,
 				ScheduledAt: common.Ptr(execution.ScheduledAt),
 				Signature:   execution.Signature,
@@ -327,7 +327,7 @@ func (e *executor) Control(ctx context.Context, testWorkflow *testworkflowsv1.Te
 	e.metrics.IncAndObserveExecuteTestWorkflow(*execution, e.dashboardURI)
 
 	e.updateStatus(testWorkflow, execution, testWorkflowExecution) // TODO: Consider if it is needed
-	err = e.workerClient.Destroy(ctx, execution.Id, executionworker.DestroyOptions{
+	err = e.workerClient.Destroy(ctx, execution.Id, executionworkertypes.DestroyOptions{
 		Namespace: execution.Namespace,
 	})
 	if err != nil {
@@ -696,7 +696,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	}
 
 	// Schedule the execution by the Execution Worker
-	result, err := e.workerClient.Execute(context.Background(), executionworker.ExecuteRequest{
+	result, err := e.workerClient.Execute(context.Background(), executionworkertypes.ExecuteRequest{
 		Execution:    e.buildExecutionConfig(execution, organizationId, environmentId),
 		Secrets:      secretsMap,
 		Workflow:     workflow,

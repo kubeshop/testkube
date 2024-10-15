@@ -121,10 +121,10 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 
 	// Fetch resource root and resource ID
 	if options.Config.Resource.Id == "" {
-		return nil, errors.Wrap(err, "could not resolve resource.id")
+		return nil, errors.New("could not resolve resource.id")
 	}
 	if options.Config.Resource.RootId == "" {
-		return nil, errors.Wrap(err, "could not resolve resource.root")
+		return nil, errors.New("could not resolve resource.root")
 	}
 
 	// Process steps

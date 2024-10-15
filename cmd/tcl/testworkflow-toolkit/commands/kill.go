@@ -22,7 +22,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/artifacts"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
 	"github.com/kubeshop/testkube/pkg/expressions"
-	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -56,7 +56,7 @@ func NewKillCmd() *cobra.Command {
 			// Fetch the services when needed
 			namespace := ""
 			if len(logs) > 0 {
-				items, err := spawn.ExecutionWorker().List(context.Background(), executionworker.ListOptions{
+				items, err := spawn.ExecutionWorker().List(context.Background(), executionworkertypes.ListOptions{
 					GroupId: groupRef,
 				})
 				ui.ExitOnError("listing service instances", err)
@@ -121,7 +121,7 @@ func NewKillCmd() *cobra.Command {
 				}
 			}
 
-			err := spawn.ExecutionWorker().DestroyGroup(context.Background(), groupRef, executionworker.DestroyOptions{
+			err := spawn.ExecutionWorker().DestroyGroup(context.Background(), groupRef, executionworkertypes.DestroyOptions{
 				Namespace: namespace,
 			})
 			ui.ExitOnError("cleaning up resources", err)

@@ -293,7 +293,7 @@ func trimTimestamp(line string) string {
 	if strings.Index(line, "T") == 10 {
 		idx := strings.Index(line, " ")
 		if len(line) >= idx {
-			return line[idx:]
+			return line[idx+1:]
 		}
 	}
 	return line

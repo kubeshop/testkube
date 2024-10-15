@@ -33,6 +33,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/kubernetesworker"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/presets"
@@ -45,27 +47,27 @@ const (
 )
 
 var (
-	executionWorker   executionworker.Worker
+	executionWorker   executionworkertypes.Worker
 	executionWorkerMu sync.Mutex
 )
 
-func ExecutionWorker() executionworker.Worker {
+func ExecutionWorker() executionworkertypes.Worker {
 	executionWorkerMu.Lock()
 	defer executionWorkerMu.Unlock()
 
 	if executionWorker == nil {
 		cfg := config.Config()
-		executionWorker = executionworker.New(env.Kubernetes(), presets.NewPro(env.ImageInspector()), executionworker.Config{
-			Cluster: executionworker.ClusterConfig{
+		executionWorker = executionworker.NewKubernetes(env.Kubernetes(), presets.NewPro(env.ImageInspector()), kubernetesworker.Config{
+			Cluster: kubernetesworker.ClusterConfig{
 				Id:               cfg.Worker.ClusterID,
 				DefaultNamespace: cfg.Worker.Namespace, // TODO: Use current execution namespace?
 				DefaultRegistry:  cfg.Worker.DefaultRegistry,
 				// TODO: Fetch all the namespaces with service accounts?
-				Namespaces: map[string]executionworker.NamespaceConfig{
+				Namespaces: map[string]kubernetesworker.NamespaceConfig{
 					cfg.Worker.Namespace: {DefaultServiceAccountName: cfg.Worker.DefaultServiceAccount},
 				},
 			},
-			ImageInspector: executionworker.ImageInspectorConfig{
+			ImageInspector: kubernetesworker.ImageInspectorConfig{
 				CacheEnabled: cfg.Worker.ImageInspectorPersistenceEnabled,
 				CacheKey:     cfg.Worker.ImageInspectorPersistenceCacheKey,
 				CacheTTL:     cfg.Worker.ImageInspectorPersistenceCacheTTL,
@@ -281,8 +283,8 @@ func SaveLogs(parentCtx context.Context, storage artifacts.InternalArtifactStora
 	var err error
 	for i := 0; i < LogsRetryMaxAttempts; i++ {
 		ctx, ctxCancel := context.WithCancel(parentCtx)
-		reader := ExecutionWorker().Logs(ctx, id, executionworker.LogsOptions{
-			Hints: executionworker.Hints{
+		reader := ExecutionWorker().Logs(ctx, id, executionworkertypes.LogsOptions{
+			Hints: executionworkertypes.Hints{
 				Namespace: namespace,
 			},
 			NoFollow: true,

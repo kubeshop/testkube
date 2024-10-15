@@ -1,4 +1,4 @@
-package executionworker
+package executionworkertypes
 
 import (
 	"sync/atomic"
@@ -12,11 +12,11 @@ type channelWatcher[T any] struct {
 	err      atomic.Value
 }
 
-func (n *channelWatcher[T]) send(notification T) {
+func (n *channelWatcher[T]) Send(notification T) {
 	n.ch <- notification
 }
 
-func (n *channelWatcher[T]) close(err error) {
+func (n *channelWatcher[T]) Close(err error) {
 	if n.finished.CompareAndSwap(false, true) {
 		if err != nil {
 			n.err.Store(err)
@@ -41,7 +41,7 @@ func newChannelWatcher[T any]() *channelWatcher[T] {
 	return &channelWatcher[T]{ch: make(chan T)}
 }
 
-func newNotificationsWatcher() *channelWatcher[testkube.TestWorkflowExecutionNotification] {
+func NewNotificationsWatcher() WritableNotificationsWatcher {
 	return newChannelWatcher[testkube.TestWorkflowExecutionNotification]()
 }
 
@@ -50,11 +50,23 @@ type NotificationsWatcher interface {
 	Err() error
 }
 
-func newStatusNotificationsWatcher() *channelWatcher[StatusNotification] {
+type WritableNotificationsWatcher interface {
+	NotificationsWatcher
+	Send(notification testkube.TestWorkflowExecutionNotification)
+	Close(err error)
+}
+
+func NewStatusNotificationsWatcher() WritableStatusNotificationsWatcher {
 	return newChannelWatcher[StatusNotification]()
 }
 
 type StatusNotificationsWatcher interface {
 	Channel() <-chan StatusNotification
 	Err() error
+}
+
+type WritableStatusNotificationsWatcher interface {
+	StatusNotificationsWatcher
+	Send(notification StatusNotification)
+	Close(err error)
 }

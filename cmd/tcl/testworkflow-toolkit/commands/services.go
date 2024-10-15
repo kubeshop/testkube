@@ -31,7 +31,7 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
-	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
@@ -267,7 +267,7 @@ func NewServicesCmd() *cobra.Command {
 
 				// Build the resources bundle
 				scheduledAt := time.Now()
-				result, err := spawn.ExecutionWorker().Service(context.Background(), executionworker.ServiceRequest{
+				result, err := spawn.ExecutionWorker().Service(context.Background(), executionworkertypes.ServiceRequest{
 					ResourceId:     cfg.Resource.Id,
 					Execution:      cfg.Execution,
 					Workflow:       testworkflowsv1.TestWorkflow{Spec: instance.Spec},
@@ -307,8 +307,8 @@ func NewServicesCmd() *cobra.Command {
 				defer ctxCancel()
 
 				// TODO: Use more lightweight notifications
-				notifications := spawn.ExecutionWorker().StatusNotifications(ctx, cfg.Resource.Id, executionworker.StatusNotificationsOptions{
-					Hints: executionworker.Hints{
+				notifications := spawn.ExecutionWorker().StatusNotifications(ctx, cfg.Resource.Id, executionworkertypes.StatusNotificationsOptions{
+					Hints: executionworkertypes.Hints{
 						Namespace:   result.Namespace,
 						Signature:   result.Signature,
 						ScheduledAt: common.Ptr(scheduledAt),

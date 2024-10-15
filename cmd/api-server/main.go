@@ -21,6 +21,7 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/cache"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/kubernetesworker"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
@@ -589,9 +590,9 @@ func main() {
 	}
 
 	// Build internal execution worker
-	namespacesConfig := map[string]executionworker.NamespaceConfig{}
+	namespacesConfig := map[string]kubernetesworker.NamespaceConfig{}
 	for n, s := range serviceAccountNames {
-		namespacesConfig[n] = executionworker.NamespaceConfig{DefaultServiceAccountName: s}
+		namespacesConfig[n] = kubernetesworker.NamespaceConfig{DefaultServiceAccountName: s}
 	}
 	cloudUrl := cfg.TestkubeProURL
 	cloudApiKey := cfg.TestkubeProAPIKey
@@ -612,14 +613,14 @@ func main() {
 			CAFile:          cfg.StorageCAFile,
 		}
 	}
-	executionWorker := executionworker.New(clientset, testWorkflowProcessor, executionworker.Config{
-		Cluster: executionworker.ClusterConfig{
+	executionWorker := executionworker.NewKubernetes(clientset, testWorkflowProcessor, kubernetesworker.Config{
+		Cluster: kubernetesworker.ClusterConfig{
 			Id:               clusterId,
 			DefaultNamespace: cfg.TestkubeNamespace,
 			DefaultRegistry:  cfg.TestkubeRegistry,
 			Namespaces:       namespacesConfig,
 		},
-		ImageInspector: executionworker.ImageInspectorConfig{
+		ImageInspector: kubernetesworker.ImageInspectorConfig{
 			CacheEnabled: cfg.EnableImageDataPersistentCache,
 			CacheKey:     cfg.ImageDataPersistentCacheKey,
 			CacheTTL:     cfg.TestkubeImageCredentialsCacheTTL,

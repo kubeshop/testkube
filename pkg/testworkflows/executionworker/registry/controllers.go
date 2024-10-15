@@ -1,4 +1,4 @@
-package executionworker
+package registry
 
 import (
 	"context"
@@ -11,28 +11,37 @@ import (
 
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller"
-	registry2 "github.com/kubeshop/testkube/pkg/testworkflows/executionworker/registry"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
 
 type controllersRegistry struct {
 	clientSet              kubernetes.Interface
-	namespaces             registry2.NamespacesRegistry
-	ips                    registry2.PodIpsRegistry
+	namespaces             NamespacesRegistry
+	ips                    PodIpsRegistry
 	controllers            map[string]controller.Controller
 	controllerReservations map[string]int
 	mu                     sync.RWMutex
 	connectionsGroup       singleflight.Group
 }
 
-func newControllersRegistry(clientSet kubernetes.Interface, namespaces registry2.NamespacesRegistry, podIpCacheSize int) *controllersRegistry {
+type ControllersRegistry interface {
+	Get(id string) (ctrl controller.Controller, recycle func())
+	Connect(ctx context.Context, id string, hints executionworkertypes.Hints) (ctrl controller.Controller, err error, recycle func())
+	GetPodIP(ctx context.Context, id string) (string, error)
+	GetNamespace(ctx context.Context, id string) (string, error)
+	RegisterNamespace(id, namespace string)
+	RegisterPodIP(id, podIp string)
+}
+
+func NewControllersRegistry(clientSet kubernetes.Interface, namespaces NamespacesRegistry, podIpCacheSize int) ControllersRegistry {
 	r := &controllersRegistry{
 		clientSet:              clientSet,
 		namespaces:             namespaces,
 		controllers:            make(map[string]controller.Controller),
 		controllerReservations: make(map[string]int),
 	}
-	ipsRegistry := registry2.NewPodIpsRegistry(clientSet, r.GetNamespace, podIpCacheSize)
+	ipsRegistry := NewPodIpsRegistry(clientSet, r.GetNamespace, podIpCacheSize)
 	r.ips = ipsRegistry
 	return r
 }
@@ -76,7 +85,7 @@ func (r *controllersRegistry) Get(id string) (ctrl controller.Controller, recycl
 	return r.unsafeGet(id)
 }
 
-func (r *controllersRegistry) Connect(ctx context.Context, id string, hints Hints) (ctrl controller.Controller, err error, recycle func()) {
+func (r *controllersRegistry) Connect(ctx context.Context, id string, hints executionworkertypes.Hints) (ctrl controller.Controller, err error, recycle func()) {
 	for {
 		// Either connect a new controller or use existing one
 		obj, err, _ := r.connectionsGroup.Do(id, func() (interface{}, error) {

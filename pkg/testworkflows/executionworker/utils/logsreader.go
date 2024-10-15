@@ -1,4 +1,4 @@
-package executionworker
+package utils
 
 import (
 	"io"
@@ -12,7 +12,7 @@ type logsReader struct {
 	err      atomic.Value
 }
 
-func newLogsReader() *logsReader {
+func NewLogsReader() LogsReadWriter {
 	reader, writer := io.Pipe()
 	return &logsReader{
 		Reader:      reader,
@@ -20,7 +20,7 @@ func newLogsReader() *logsReader {
 	}
 }
 
-func (n *logsReader) close(err error) {
+func (n *logsReader) End(err error) {
 	if n.finished.CompareAndSwap(false, true) {
 		if err != nil {
 			n.err.Store(err)
@@ -39,5 +39,12 @@ func (n *logsReader) Err() error {
 
 type LogsReader interface {
 	io.Reader
+	Err() error
+}
+
+type LogsReadWriter interface {
+	LogsReader
+	io.WriteCloser
+	End(err error)
 	Err() error
 }

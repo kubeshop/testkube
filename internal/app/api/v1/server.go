@@ -20,7 +20,7 @@ import (
 	repoConfig "github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/secretmanager"
-	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 
 	"github.com/kubeshop/testkube/pkg/version"
@@ -90,7 +90,7 @@ func NewTestkubeAPI(
 	executor client.Executor,
 	containerExecutor client.Executor,
 	testWorkflowExecutor testworkflowexecutor.TestWorkflowExecutor,
-	executionWorkerClient executionworker.Worker,
+	executionWorkerClient executionworkertypes.Worker,
 	metrics metrics.Metrics,
 	scheduler *scheduler.Scheduler,
 	slackLoader *slack.SlackLoader,
@@ -177,7 +177,7 @@ type TestkubeAPI struct {
 	Executor                    client.Executor
 	ContainerExecutor           client.Executor
 	TestWorkflowExecutor        testworkflowexecutor.TestWorkflowExecutor
-	ExecutionWorkerClient       executionworker.Worker
+	ExecutionWorkerClient       executionworkertypes.Worker
 	TestsSuitesClient           *testsuitesclientv3.TestSuitesClient
 	TestsClient                 *testsclientv3.TestsClient
 	ExecutorsClient             *executorsclientv1.ExecutorsClient

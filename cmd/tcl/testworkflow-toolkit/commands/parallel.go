@@ -30,7 +30,7 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/expressions"
-	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -217,7 +217,7 @@ func NewParallelCmd() *cobra.Command {
 
 				// Deploy the resource
 				scheduledAt := time.Now()
-				result, err := spawn.ExecutionWorker().Execute(context.Background(), executionworker.ExecuteRequest{
+				result, err := spawn.ExecutionWorker().Execute(context.Background(), executionworkertypes.ExecuteRequest{
 					ResourceId:          cfg.Resource.Id,
 					Execution:           cfg.Execution,
 					Workflow:            testworkflowsv1.TestWorkflow{Spec: *spec},
@@ -254,7 +254,7 @@ func NewParallelCmd() *cobra.Command {
 					}
 
 					// Clean up
-					err = spawn.ExecutionWorker().Destroy(context.Background(), cfg.Resource.Id, executionworker.DestroyOptions{
+					err = spawn.ExecutionWorker().Destroy(context.Background(), cfg.Resource.Id, executionworkertypes.DestroyOptions{
 						Namespace: namespace,
 					})
 					if err == nil {
@@ -274,8 +274,8 @@ func NewParallelCmd() *cobra.Command {
 				defer ctxCancel()
 
 				// TODO: Use more lightweight notifications
-				notifications := spawn.ExecutionWorker().StatusNotifications(ctx, cfg.Resource.Id, executionworker.StatusNotificationsOptions{
-					Hints: executionworker.Hints{
+				notifications := spawn.ExecutionWorker().StatusNotifications(ctx, cfg.Resource.Id, executionworkertypes.StatusNotificationsOptions{
+					Hints: executionworkertypes.Hints{
 						Namespace:   result.Namespace,
 						Signature:   result.Signature,
 						ScheduledAt: common.Ptr(scheduledAt),
@@ -370,14 +370,14 @@ func NewParallelCmd() *cobra.Command {
 							return spawn.GetResourceId(config.Ref()+"-", index)
 						})
 
-						errs := spawn.ExecutionWorker().ResumeMany(context.Background(), ids, executionworker.ControlOptions{})
+						errs := spawn.ExecutionWorker().ResumeMany(context.Background(), ids, executionworkertypes.ControlOptions{})
 						for _, err := range errs {
 							if err.Id == "" {
 								fmt.Printf("warn: %s\n", err.Error)
 							} else {
 								_, index := spawn.GetServiceByResourceId(err.Id)
 								spawn.CreateLogger("worker", descriptions[index], index, params.Count)("warning", "failed to resume", err.Error.Error())
-								_ = spawn.ExecutionWorker().Destroy(context.Background(), err.Id, executionworker.DestroyOptions{
+								_ = spawn.ExecutionWorker().Destroy(context.Background(), err.Id, executionworkertypes.DestroyOptions{
 									Namespace: namespaces[index],
 								})
 							}

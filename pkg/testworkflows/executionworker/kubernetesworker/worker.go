@@ -1,4 +1,4 @@
-package executionworker
+package kubernetesworker
 
 import (
 	"context"
@@ -27,7 +27,9 @@ import (
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller/watchers"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/registry"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/utils"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
@@ -43,16 +45,16 @@ type worker struct {
 	processor        testworkflowprocessor.Processor
 	baseWorkerConfig testworkflowconfig.WorkerConfig
 	config           Config
-	registry         *controllersRegistry
+	registry         registry.ControllersRegistry
 }
 
-func New(clientSet kubernetes.Interface, processor testworkflowprocessor.Processor, config Config) Worker {
+func NewWorker(clientSet kubernetes.Interface, processor testworkflowprocessor.Processor, config Config) *worker {
 	namespaces := registry.NewNamespacesRegistry(clientSet, config.Cluster.DefaultNamespace, maps.Keys(config.Cluster.Namespaces), 50)
 	return &worker{
 		clientSet: clientSet,
 		processor: processor,
 		config:    config,
-		registry:  newControllersRegistry(clientSet, namespaces, 50),
+		registry:  registry.NewControllersRegistry(clientSet, namespaces, 50),
 		baseWorkerConfig: testworkflowconfig.WorkerConfig{
 			Namespace:                         config.Cluster.DefaultNamespace,
 			DefaultRegistry:                   config.Cluster.DefaultRegistry,
@@ -93,7 +95,7 @@ func (w *worker) buildSecrets(maps map[string]map[string]string) []corev1.Secret
 	return secrets
 }
 
-func (w *worker) Execute(ctx context.Context, request ExecuteRequest) (*ExecuteResult, error) {
+func (w *worker) Execute(ctx context.Context, request executionworkertypes.ExecuteRequest) (*executionworkertypes.ExecuteResult, error) {
 	// Process the data
 	resourceId := request.ResourceId
 	if resourceId == "" {
@@ -133,14 +135,14 @@ func (w *worker) Execute(ctx context.Context, request ExecuteRequest) (*ExecuteR
 		return nil, errors.Wrap(err, "failed to deploy test workflow")
 	}
 
-	return &ExecuteResult{
+	return &executionworkertypes.ExecuteResult{
 		Signature:   stage.MapSignatureListToInternal(bundle.Signature),
 		ScheduledAt: scheduledAt,
 		Namespace:   bundle.Job.Namespace,
 	}, nil
 }
 
-func (w *worker) Service(ctx context.Context, request ServiceRequest) (*ServiceResult, error) {
+func (w *worker) Service(ctx context.Context, request executionworkertypes.ServiceRequest) (*executionworkertypes.ServiceResult, error) {
 	// Process the data
 	resourceId := request.ResourceId
 	if resourceId == "" {
@@ -194,23 +196,23 @@ func (w *worker) Service(ctx context.Context, request ServiceRequest) (*ServiceR
 		return nil, errors.Wrap(err, "failed to deploy test workflow")
 	}
 
-	return &ServiceResult{
+	return &executionworkertypes.ServiceResult{
 		Signature:   stage.MapSignatureListToInternal(bundle.Signature),
 		ScheduledAt: scheduledAt,
 		Namespace:   bundle.Job.Namespace,
 	}, nil
 }
 
-func (w *worker) Notifications(ctx context.Context, id string, opts NotificationsOptions) NotificationsWatcher {
+func (w *worker) Notifications(ctx context.Context, id string, opts executionworkertypes.NotificationsOptions) executionworkertypes.NotificationsWatcher {
 	// Connect to the resource
 	// TODO: Move the implementation directly there
 	ctrl, err, recycle := w.registry.Connect(ctx, id, opts.Hints)
-	watcher := newNotificationsWatcher()
+	watcher := executionworkertypes.NewNotificationsWatcher()
 	if errors.Is(err, controller.ErrJobTimeout) {
 		err = registry.ErrResourceNotFound
 	}
 	if err != nil {
-		watcher.close(err)
+		watcher.Close(err)
 		return watcher
 	}
 
@@ -224,28 +226,28 @@ func (w *worker) Notifications(ctx context.Context, id string, opts Notification
 		}()
 		for n := range ch {
 			if n.Error != nil {
-				watcher.close(n.Error)
+				watcher.Close(n.Error)
 				return
 			}
-			watcher.send(n.Value.ToInternal())
+			watcher.Send(n.Value.ToInternal())
 		}
-		watcher.close(nil)
+		watcher.Close(nil)
 	}()
 	return watcher
 }
 
 // TODO: Avoid multiple controller copies?
 // TODO: Optimize
-func (w *worker) StatusNotifications(ctx context.Context, id string, opts StatusNotificationsOptions) StatusNotificationsWatcher {
+func (w *worker) StatusNotifications(ctx context.Context, id string, opts executionworkertypes.StatusNotificationsOptions) executionworkertypes.StatusNotificationsWatcher {
 	// Connect to the resource
 	// TODO: Move the implementation directly there
 	ctrl, err, recycle := w.registry.Connect(ctx, id, opts.Hints)
-	watcher := newStatusNotificationsWatcher()
+	watcher := executionworkertypes.NewStatusNotificationsWatcher()
 	if errors.Is(err, controller.ErrJobTimeout) {
 		err = registry.ErrResourceNotFound
 	}
 	if err != nil {
-		watcher.close(err)
+		watcher.Close(err)
 		return watcher
 	}
 
@@ -266,7 +268,7 @@ func (w *worker) StatusNotifications(ctx context.Context, id string, opts Status
 		prevReady := false
 		for n := range ch {
 			if n.Error != nil {
-				watcher.close(n.Error)
+				watcher.Close(n.Error)
 				return
 			}
 
@@ -298,7 +300,7 @@ func (w *worker) StatusNotifications(ctx context.Context, id string, opts Status
 				prevStatus = status
 				prevStepStatus = stepStatus
 				prevStep = current
-				watcher.send(StatusNotification{
+				watcher.Send(executionworkertypes.StatusNotification{
 					Ref:      current,
 					NodeName: nodeName,
 					PodIp:    podIp,
@@ -312,7 +314,7 @@ func (w *worker) StatusNotifications(ctx context.Context, id string, opts Status
 				prevStatus = status
 				prevStepStatus = stepStatus
 				prevStep = current
-				watcher.send(StatusNotification{
+				watcher.Send(executionworkertypes.StatusNotification{
 					Ref:      current,
 					NodeName: nodeName,
 					PodIp:    podIp,
@@ -320,21 +322,21 @@ func (w *worker) StatusNotifications(ctx context.Context, id string, opts Status
 				})
 			}
 		}
-		watcher.close(nil)
+		watcher.Close(nil)
 	}()
 	return watcher
 }
 
 // TODO: Optimize?
 // TODO: Allow fetching temporary logs too?
-func (w *worker) Logs(ctx context.Context, id string, options LogsOptions) LogsReader {
-	reader := newLogsReader()
-	notifications := w.Notifications(ctx, id, NotificationsOptions{
+func (w *worker) Logs(ctx context.Context, id string, options executionworkertypes.LogsOptions) utils.LogsReader {
+	reader := utils.NewLogsReader()
+	notifications := w.Notifications(ctx, id, executionworkertypes.NotificationsOptions{
 		Hints:    options.Hints,
 		NoFollow: options.NoFollow,
 	})
 	if notifications.Err() != nil {
-		reader.close(notifications.Err())
+		reader.End(notifications.Err())
 		return reader
 	}
 
@@ -354,19 +356,19 @@ func (w *worker) Logs(ctx context.Context, id string, options LogsOptions) LogsR
 	return reader
 }
 
-func (w *worker) Get(ctx context.Context, id string, options GetOptions) (*GetResult, error) {
+func (w *worker) Get(ctx context.Context, id string, options executionworkertypes.GetOptions) (*executionworkertypes.GetResult, error) {
 	panic("not implemented")
 }
 
-func (w *worker) Summary(ctx context.Context, id string, options GetOptions) (*SummaryResult, error) {
+func (w *worker) Summary(ctx context.Context, id string, options executionworkertypes.GetOptions) (*executionworkertypes.SummaryResult, error) {
 	panic("not implemented")
 }
 
-func (w *worker) Finished(ctx context.Context, id string, options GetOptions) (bool, error) {
+func (w *worker) Finished(ctx context.Context, id string, options executionworkertypes.GetOptions) (bool, error) {
 	panic("not implemented")
 }
 
-func (w *worker) List(ctx context.Context, options ListOptions) ([]ListResultItem, error) {
+func (w *worker) List(ctx context.Context, options executionworkertypes.ListOptions) ([]executionworkertypes.ListResultItem, error) {
 	namespaces := maps.Keys(w.config.Cluster.Namespaces)
 	if len(options.Namespaces) > 0 {
 		namespaces = slices.Filter(nil, namespaces, func(ns string) bool {
@@ -387,7 +389,7 @@ func (w *worker) List(ctx context.Context, options ListOptions) ([]ListResultIte
 	listOptions.LabelSelector = strings.Join(labelSelectors, ",")
 
 	// TODO: make concurrent calls
-	list := make([]ListResultItem, 0)
+	list := make([]executionworkertypes.ListResultItem, 0)
 	for _, ns := range namespaces {
 		// TODO: retry?
 		jobs, err := w.clientSet.BatchV1().Jobs(ns).List(ctx, listOptions)
@@ -413,7 +415,7 @@ func (w *worker) List(ctx context.Context, options ListOptions) ([]ListResultIte
 			if options.EnvironmentId != "" && options.EnvironmentId != cfg.Execution.EnvironmentId {
 				continue
 			}
-			list = append(list, ListResultItem{
+			list = append(list, executionworkertypes.ListResultItem{
 				Execution: cfg.Execution,
 				Workflow:  cfg.Workflow,
 				Resource:  cfg.Resource,
@@ -424,7 +426,7 @@ func (w *worker) List(ctx context.Context, options ListOptions) ([]ListResultIte
 	return list, nil
 }
 
-func (w *worker) Destroy(ctx context.Context, id string, options DestroyOptions) (err error) {
+func (w *worker) Destroy(ctx context.Context, id string, options executionworkertypes.DestroyOptions) (err error) {
 	if options.Namespace == "" {
 		options.Namespace, err = w.registry.GetNamespace(ctx, id)
 		if err != nil {
@@ -435,7 +437,7 @@ func (w *worker) Destroy(ctx context.Context, id string, options DestroyOptions)
 	return controller.Cleanup(ctx, w.clientSet, options.Namespace, id)
 }
 
-func (w *worker) DestroyGroup(ctx context.Context, groupId string, options DestroyOptions) error {
+func (w *worker) DestroyGroup(ctx context.Context, groupId string, options executionworkertypes.DestroyOptions) error {
 	if options.Namespace != "" {
 		return controller.CleanupGroup(ctx, w.clientSet, options.Namespace, groupId)
 	}
@@ -443,7 +445,7 @@ func (w *worker) DestroyGroup(ctx context.Context, groupId string, options Destr
 	// Delete group resources in all known namespaces
 	errs := make([]error, 0)
 	for ns := range w.config.Cluster.Namespaces {
-		err := w.DestroyGroup(ctx, groupId, DestroyOptions{Namespace: ns})
+		err := w.DestroyGroup(ctx, groupId, executionworkertypes.DestroyOptions{Namespace: ns})
 		if err != nil {
 			errs = append(errs, err)
 		}
@@ -451,7 +453,7 @@ func (w *worker) DestroyGroup(ctx context.Context, groupId string, options Destr
 	return errors2.Join(errs...)
 }
 
-func (w *worker) Pause(ctx context.Context, id string, options ControlOptions) (err error) {
+func (w *worker) Pause(ctx context.Context, id string, options executionworkertypes.ControlOptions) (err error) {
 	podIp, err := w.registry.GetPodIP(ctx, id)
 	if err != nil {
 		return err
@@ -463,7 +465,7 @@ func (w *worker) Pause(ctx context.Context, id string, options ControlOptions) (
 	return controller.Pause(ctx, podIp)
 }
 
-func (w *worker) Resume(ctx context.Context, id string, options ControlOptions) (err error) {
+func (w *worker) Resume(ctx context.Context, id string, options executionworkertypes.ControlOptions) (err error) {
 	podIp, err := w.registry.GetPodIP(ctx, id)
 	if err != nil {
 		return err
@@ -476,7 +478,7 @@ func (w *worker) Resume(ctx context.Context, id string, options ControlOptions) 
 }
 
 // TODO: consider status channel (?)
-func (w *worker) ResumeMany(ctx context.Context, ids []string, options ControlOptions) (errs []IdentifiableError) {
+func (w *worker) ResumeMany(ctx context.Context, ids []string, options executionworkertypes.ControlOptions) (errs []executionworkertypes.IdentifiableError) {
 	ips := make(map[string]string, len(ids))
 
 	// Try to obtain IPs
@@ -484,9 +486,9 @@ func (w *worker) ResumeMany(ctx context.Context, ids []string, options ControlOp
 	for _, id := range ids {
 		podIp, err := w.registry.GetPodIP(ctx, id)
 		if err != nil {
-			errs = append(errs, IdentifiableError{Id: id, Error: err})
+			errs = append(errs, executionworkertypes.IdentifiableError{Id: id, Error: err})
 		} else if podIp == "" {
-			errs = append(errs, IdentifiableError{Id: id, Error: registry.ErrPodIpNotAssigned})
+			errs = append(errs, executionworkertypes.IdentifiableError{Id: id, Error: registry.ErrPodIpNotAssigned})
 		} else {
 			ips[id] = podIp
 		}
@@ -556,7 +558,7 @@ func (w *worker) ResumeMany(ctx context.Context, ids []string, options ControlOp
 			// Total failure while retrying
 			log.DefaultLogger.Errorw("failed to resume, maximum retries reached.", "id", id, "address", address, "error", err)
 			errsMu.Lock()
-			errs = append(errs, IdentifiableError{Id: id, Error: err})
+			errs = append(errs, executionworkertypes.IdentifiableError{Id: id, Error: err})
 			errsMu.Unlock()
 		}(id, podIp)
 	}

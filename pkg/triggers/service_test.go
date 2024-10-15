@@ -36,7 +36,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/scheduler"
 	"github.com/kubeshop/testkube/pkg/secret"
-	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/kubernetesworker"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 )
 
@@ -65,7 +65,7 @@ func TestService_Run(t *testing.T) {
 	mockTestWorkflowsClient := testworkflowsclientv1.NewMockInterface(mockCtrl)
 	mockTestWorkflowExecutor := testworkflowexecutor.NewMockTestWorkflowExecutor(mockCtrl)
 	mockTestWorkflowRepository := testworkflow.NewMockRepository(mockCtrl)
-	mockExecutionWorkerClient := executionworker.NewMockWorker(mockCtrl)
+	mockExecutionWorkerClient := kubernetesworker.NewMockWorker(mockCtrl)
 
 	mockExecutor := client.NewMockExecutor(mockCtrl)
 
