@@ -117,7 +117,7 @@ func TestNewExecutorJobSpecWithArgs(t *testing.T) {
 		PvcTemplateExtensions:     "",
 		ImagePullSecrets:          []string{"secret-name"},
 		Command:                   []string{"/bin/curl"},
-		Args:                      []string{"-v", "https://testkube.kubeshop.io"},
+		Args:                      []string{"-v", "https://testkube-test-page-lipsum.pages.dev/"},
 		ActiveDeadlineSeconds:     100,
 		Envs:                      map[string]string{"key": "value"},
 		Variables:                 map[string]testkube.Variable{"aa": {Name: "aa", Value: "bb", Type_: testkube.VariableTypeBasic}},

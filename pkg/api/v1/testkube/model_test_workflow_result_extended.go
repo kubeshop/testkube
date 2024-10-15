@@ -334,7 +334,16 @@ func (r *TestWorkflowResult) HealMissingPauseStatuses() {
 	}
 }
 
-func (r *TestWorkflowResult) healPredictedStatus() {
+func isStepOptional(sigSequence []TestWorkflowSignature, ref string) bool {
+	for i := range sigSequence {
+		if sigSequence[i].Ref == ref {
+			return sigSequence[i].Optional
+		}
+	}
+	return false
+}
+
+func (r *TestWorkflowResult) healPredictedStatus(sigSequence []TestWorkflowSignature) {
 	// Mark as aborted, when any step is aborted
 	if r.IsAnyStepAborted() || r.Initialization.Status.AnyError() {
 		r.PredictedStatus = common.Ptr(ABORTED_TestWorkflowStatus)
@@ -343,7 +352,7 @@ func (r *TestWorkflowResult) healPredictedStatus() {
 
 	// Determine if there are some steps failed
 	for ref := range r.Steps {
-		if r.Steps[ref].Status != nil && r.Steps[ref].Status.AnyError() {
+		if r.Steps[ref].Status.Aborted() || (r.Steps[ref].Status.AnyError() && !isStepOptional(sigSequence, ref)) {
 			r.PredictedStatus = common.Ptr(FAILED_TestWorkflowStatus)
 			return
 		}
@@ -361,8 +370,8 @@ func (r *TestWorkflowResult) healStatus() {
 	}
 }
 
-func (r *TestWorkflowResult) HealStatus() {
-	r.healPredictedStatus()
+func (r *TestWorkflowResult) HealStatus(sigSequence []TestWorkflowSignature) {
+	r.healPredictedStatus(sigSequence)
 	r.healStatus()
 }
 

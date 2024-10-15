@@ -8,6 +8,7 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
+	commonint "github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -84,7 +85,11 @@ func NewInitCmd() *cobra.Command {
 
 			if noLogin {
 				ui.Alert("Saving Testkube CLI Pro context, you need to authorize CLI through `testkube set context` later")
-				common.PopulateCloudConfig(cfg, "", &options)
+				cfg = common.PopulateCloudConfig(cfg, "", commonint.Ptr(""), &options)
+
+				err = config.Save(cfg)
+				ui.ExitOnError("saving config file", err)
+
 				ui.Info(" Happy Testing! 🚀")
 				ui.NL()
 				return
@@ -97,7 +102,7 @@ func NewInitCmd() *cobra.Command {
 				sendErrTelemetry(cmd, cfg, "login", err)
 				ui.ExitOnError("user login", err)
 			}
-			err = common.PopulateLoginDataToContext(options.Master.OrgId, options.Master.EnvId, token, refreshToken, options, cfg)
+			err = common.PopulateLoginDataToContext(options.Master.OrgId, options.Master.EnvId, token, refreshToken, "", options, cfg)
 			if err != nil {
 				sendErrTelemetry(cmd, cfg, "setting_context", err)
 				ui.ExitOnError("Setting Pro environment context", err)
@@ -108,7 +113,7 @@ func NewInitCmd() *cobra.Command {
 	}
 
 	common.PopulateHelmFlags(cmd, &options)
-	common.PopulateMasterFlags(cmd, &options)
+	common.PopulateMasterFlags(cmd, &options, false)
 
 	cmd.Flags().BoolVarP(&noLogin, "no-login", "", false, "Ignore login prompt, set existing token later by `testkube set context`")
 	cmd.Flags().BoolVarP(&export, "export", "", false, "Export the values.yaml")

@@ -11,10 +11,11 @@ import (
 
 func NewSetContextCmd() *cobra.Command {
 	var (
-		org, env, apiKey string
-		kubeconfig       bool
-		namespace        string
-		opts             common.HelmOptions
+		org, env, apiKey    string
+		kubeconfig          bool
+		namespace           string
+		opts                common.HelmOptions
+		dockerContainerName string
 	)
 
 	cmd := &cobra.Command{
@@ -46,7 +47,12 @@ func NewSetContextCmd() *cobra.Command {
 					ui.Errf("Please provide at least one of the following flags: --org-id, --env-id, --api-key, --root-domain")
 				}
 
-				cfg = common.PopulateCloudConfig(cfg, apiKey, &opts)
+				var dcName *string
+				if cmd.Flags().Changed("docker-container") {
+					dcName = &dockerContainerName
+				}
+
+				cfg = common.PopulateCloudConfig(cfg, apiKey, dcName, &opts)
 
 				if cfg.CloudContext.ApiKey != "" {
 					var err error
@@ -96,7 +102,8 @@ func NewSetContextCmd() *cobra.Command {
 	cmd.Flags().String("ui-uri-override", "", "ui uri override")
 	cmd.Flags().String("agent-uri-override", "", "agnet uri override")
 	cmd.Flags().String("logs-uri-override", "", "logs service uri override")
+	cmd.Flags().StringVar(&dockerContainerName, "docker-container", "testkube-agent", "Docker container name for Testkube Docker Agent")
 
-	common.PopulateMasterFlags(cmd, &opts)
+	common.PopulateMasterFlags(cmd, &opts, false)
 	return cmd
 }
