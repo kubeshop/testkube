@@ -2,6 +2,6 @@ const { defineConfig } = require("cypress");
 
 module.exports = defineConfig({
   e2e: {
-    baseUrl: 'https://testkube.kubeshop.io/'
+    baseUrl: "https://testkube-test-page-lipsum.pages.dev/",
   },
 });
