@@ -2,7 +2,7 @@
 // Source: github.com/kubeshop/testkube/pkg/testworkflows/executionworker (interfaces: Worker)
 
 // Package executionworker is a generated GoMock package.
-package kubernetesworker
+package executionworkertypes
 
 import (
 	"context"
@@ -10,7 +10,6 @@ import (
 
 	"github.com/golang/mock/gomock"
 
-	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/utils"
 )
 
@@ -38,7 +37,7 @@ func (m *MockWorker) EXPECT() *MockWorkerMockRecorder {
 }
 
 // Destroy mocks base method.
-func (m *MockWorker) Destroy(arg0 context.Context, arg1 string, arg2 executionworkertypes.DestroyOptions) error {
+func (m *MockWorker) Destroy(arg0 context.Context, arg1 string, arg2 DestroyOptions) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Destroy", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
@@ -52,7 +51,7 @@ func (mr *MockWorkerMockRecorder) Destroy(arg0, arg1, arg2 interface{}) *gomock.
 }
 
 // DestroyGroup mocks base method.
-func (m *MockWorker) DestroyGroup(arg0 context.Context, arg1 string, arg2 executionworkertypes.DestroyOptions) error {
+func (m *MockWorker) DestroyGroup(arg0 context.Context, arg1 string, arg2 DestroyOptions) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DestroyGroup", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
@@ -66,10 +65,10 @@ func (mr *MockWorkerMockRecorder) DestroyGroup(arg0, arg1, arg2 interface{}) *go
 }
 
 // Execute mocks base method.
-func (m *MockWorker) Execute(arg0 context.Context, arg1 executionworkertypes.ExecuteRequest) (*executionworkertypes.ExecuteResult, error) {
+func (m *MockWorker) Execute(arg0 context.Context, arg1 ExecuteRequest) (*ExecuteResult, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Execute", arg0, arg1)
-	ret0, _ := ret[0].(*executionworkertypes.ExecuteResult)
+	ret0, _ := ret[0].(*ExecuteResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -81,7 +80,7 @@ func (mr *MockWorkerMockRecorder) Execute(arg0, arg1 interface{}) *gomock.Call {
 }
 
 // Finished mocks base method.
-func (m *MockWorker) Finished(arg0 context.Context, arg1 string, arg2 executionworkertypes.GetOptions) (bool, error) {
+func (m *MockWorker) Finished(arg0 context.Context, arg1 string, arg2 GetOptions) (bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Finished", arg0, arg1, arg2)
 	ret0, _ := ret[0].(bool)
@@ -96,10 +95,10 @@ func (mr *MockWorkerMockRecorder) Finished(arg0, arg1, arg2 interface{}) *gomock
 }
 
 // Get mocks base method.
-func (m *MockWorker) Get(arg0 context.Context, arg1 string, arg2 executionworkertypes.GetOptions) (*executionworkertypes.GetResult, error) {
+func (m *MockWorker) Get(arg0 context.Context, arg1 string, arg2 GetOptions) (*GetResult, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2)
-	ret0, _ := ret[0].(*executionworkertypes.GetResult)
+	ret0, _ := ret[0].(*GetResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -111,10 +110,10 @@ func (mr *MockWorkerMockRecorder) Get(arg0, arg1, arg2 interface{}) *gomock.Call
 }
 
 // List mocks base method.
-func (m *MockWorker) List(arg0 context.Context, arg1 executionworkertypes.ListOptions) ([]executionworkertypes.ListResultItem, error) {
+func (m *MockWorker) List(arg0 context.Context, arg1 ListOptions) ([]ListResultItem, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "List", arg0, arg1)
-	ret0, _ := ret[0].([]executionworkertypes.ListResultItem)
+	ret0, _ := ret[0].([]ListResultItem)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -126,7 +125,7 @@ func (mr *MockWorkerMockRecorder) List(arg0, arg1 interface{}) *gomock.Call {
 }
 
 // Logs mocks base method.
-func (m *MockWorker) Logs(arg0 context.Context, arg1 string, arg2 executionworkertypes.LogsOptions) utils.LogsReader {
+func (m *MockWorker) Logs(arg0 context.Context, arg1 string, arg2 LogsOptions) utils.LogsReader {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Logs", arg0, arg1, arg2)
 	ret0, _ := ret[0].(utils.LogsReader)
@@ -140,10 +139,10 @@ func (mr *MockWorkerMockRecorder) Logs(arg0, arg1, arg2 interface{}) *gomock.Cal
 }
 
 // Notifications mocks base method.
-func (m *MockWorker) Notifications(arg0 context.Context, arg1 string, arg2 executionworkertypes.NotificationsOptions) executionworkertypes.NotificationsWatcher {
+func (m *MockWorker) Notifications(arg0 context.Context, arg1 string, arg2 NotificationsOptions) NotificationsWatcher {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Notifications", arg0, arg1, arg2)
-	ret0, _ := ret[0].(executionworkertypes.NotificationsWatcher)
+	ret0, _ := ret[0].(NotificationsWatcher)
 	return ret0
 }
 
@@ -154,7 +153,7 @@ func (mr *MockWorkerMockRecorder) Notifications(arg0, arg1, arg2 interface{}) *g
 }
 
 // Pause mocks base method.
-func (m *MockWorker) Pause(arg0 context.Context, arg1 string, arg2 executionworkertypes.ControlOptions) error {
+func (m *MockWorker) Pause(arg0 context.Context, arg1 string, arg2 ControlOptions) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Pause", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
@@ -168,7 +167,7 @@ func (mr *MockWorkerMockRecorder) Pause(arg0, arg1, arg2 interface{}) *gomock.Ca
 }
 
 // Resume mocks base method.
-func (m *MockWorker) Resume(arg0 context.Context, arg1 string, arg2 executionworkertypes.ControlOptions) error {
+func (m *MockWorker) Resume(arg0 context.Context, arg1 string, arg2 ControlOptions) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Resume", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
@@ -182,10 +181,10 @@ func (mr *MockWorkerMockRecorder) Resume(arg0, arg1, arg2 interface{}) *gomock.C
 }
 
 // ResumeMany mocks base method.
-func (m *MockWorker) ResumeMany(arg0 context.Context, arg1 []string, arg2 executionworkertypes.ControlOptions) []executionworkertypes.IdentifiableError {
+func (m *MockWorker) ResumeMany(arg0 context.Context, arg1 []string, arg2 ControlOptions) []IdentifiableError {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ResumeMany", arg0, arg1, arg2)
-	ret0, _ := ret[0].([]executionworkertypes.IdentifiableError)
+	ret0, _ := ret[0].([]IdentifiableError)
 	return ret0
 }
 
@@ -196,10 +195,10 @@ func (mr *MockWorkerMockRecorder) ResumeMany(arg0, arg1, arg2 interface{}) *gomo
 }
 
 // Service mocks base method.
-func (m *MockWorker) Service(arg0 context.Context, arg1 executionworkertypes.ServiceRequest) (*executionworkertypes.ServiceResult, error) {
+func (m *MockWorker) Service(arg0 context.Context, arg1 ServiceRequest) (*ServiceResult, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Service", arg0, arg1)
-	ret0, _ := ret[0].(*executionworkertypes.ServiceResult)
+	ret0, _ := ret[0].(*ServiceResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -211,10 +210,10 @@ func (mr *MockWorkerMockRecorder) Service(arg0, arg1 interface{}) *gomock.Call {
 }
 
 // StatusNotifications mocks base method.
-func (m *MockWorker) StatusNotifications(arg0 context.Context, arg1 string, arg2 executionworkertypes.StatusNotificationsOptions) executionworkertypes.StatusNotificationsWatcher {
+func (m *MockWorker) StatusNotifications(arg0 context.Context, arg1 string, arg2 StatusNotificationsOptions) StatusNotificationsWatcher {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "StatusNotifications", arg0, arg1, arg2)
-	ret0, _ := ret[0].(executionworkertypes.StatusNotificationsWatcher)
+	ret0, _ := ret[0].(StatusNotificationsWatcher)
 	return ret0
 }
 
@@ -225,10 +224,10 @@ func (mr *MockWorkerMockRecorder) StatusNotifications(arg0, arg1, arg2 interface
 }
 
 // Summary mocks base method.
-func (m *MockWorker) Summary(arg0 context.Context, arg1 string, arg2 executionworkertypes.GetOptions) (*executionworkertypes.SummaryResult, error) {
+func (m *MockWorker) Summary(arg0 context.Context, arg1 string, arg2 GetOptions) (*SummaryResult, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Summary", arg0, arg1, arg2)
-	ret0, _ := ret[0].(*executionworkertypes.SummaryResult)
+	ret0, _ := ret[0].(*SummaryResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

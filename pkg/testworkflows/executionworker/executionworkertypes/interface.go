@@ -190,7 +190,7 @@ type IdentifiableError struct {
 	Error error
 }
 
-//go:generate mockgen -destination=./mock_worker.go -package=executionworker "github.com/kubeshop/testkube/pkg/testworkflows/executionworker" Worker
+//go:generate mockgen -destination=./mock_worker.go -package=executionworkertypes "github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes" Worker
 type Worker interface {
 	// Execute deploys the resources in the cluster.
 	Execute(ctx context.Context, request ExecuteRequest) (*ExecuteResult, error)
