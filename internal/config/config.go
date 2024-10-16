@@ -116,7 +116,7 @@ type Config struct {
 	TestkubeDefaultStorageClassName  string        `envconfig:"TESTKUBE_DEFAULT_STORAGE_CLASS_NAME" default:""`
 	GlobalWorkflowTemplateName       string        `envconfig:"TESTKUBE_GLOBAL_WORKFLOW_TEMPLATE_NAME" default:""`
 	EnableK8sEvents                  bool          `envconfig:"ENABLE_K8S_EVENTS" default:"true"`
-	TestkubeDockerImageVersion       string        `envconfig:"TESTKUBE_DOCKER_IMAGE_VERSION" default:""`
+	TestkubeDockerImageVersion       string        `envconfig:"TESTKUBE_DOCKER_IMAGE_VERSION" default:"1.2.3"`
 
 	// DEPRECATED: Use TestkubeProAPIKey instead
 	TestkubeCloudAPIKey string `envconfig:"TESTKUBE_CLOUD_API_KEY" default:""`
