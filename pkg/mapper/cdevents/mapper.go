@@ -9,6 +9,7 @@ import (
 	cdevents "github.com/cdevents/sdk-go/pkg/api"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/mapper"
 )
 
 // MapTestkubeEventToCDEvent maps OpenAPI spec Event to CDEvent CDEventReader
@@ -526,7 +527,8 @@ func MapTestkubeEventQueuedTestWorkflowTestToCDEvent(event testkube.Event, clust
 		if event.TestWorkflowExecution.RunningContext != nil && event.TestWorkflowExecution.RunningContext.Actor != nil &&
 			event.TestWorkflowExecution.RunningContext.Actor.Type_ != nil {
 			ev.SetSubjectTrigger(&cdevents.TestCaseRunQueuedSubjectContentTrigger{
-				Type: MapTestkubeTestWorkflowRunningContextActorToCDEventTiggerType(*event.TestWorkflowExecution.RunningContext.Actor.Type_),
+				// Pro edition only (tcl protected code)
+				Type: mapper.MapTestkubeTestWorkflowRunningContextActorToCDEventTiggerType(*event.TestWorkflowExecution.RunningContext.Actor.Type_),
 			})
 		}
 	}
@@ -572,7 +574,8 @@ func MapTestkubeEventQueuedTestWorkflowTestSuiteToCDEvent(event testkube.Event, 
 		if event.TestWorkflowExecution.RunningContext != nil && event.TestWorkflowExecution.RunningContext.Actor != nil &&
 			event.TestWorkflowExecution.RunningContext.Actor.Type_ != nil {
 			ev.SetSubjectTrigger(&cdevents.TestSuiteRunQueuedSubjectContentTrigger{
-				Type: MapTestkubeTestWorkflowRunningContextActorToCDEventTiggerType(*event.TestWorkflowExecution.RunningContext.Actor.Type_),
+				// Pro edition only (tcl protected code)
+				Type: mapper.MapTestkubeTestWorkflowRunningContextActorToCDEventTiggerType(*event.TestWorkflowExecution.RunningContext.Actor.Type_),
 			})
 		}
 	}
@@ -619,7 +622,8 @@ func MapTestkubeEventStartTestWorkflowTestToCDEvent(event testkube.Event, cluste
 		if event.TestWorkflowExecution.RunningContext != nil && event.TestWorkflowExecution.RunningContext.Actor != nil &&
 			event.TestWorkflowExecution.RunningContext.Actor.Type_ != nil {
 			ev.SetSubjectTrigger(&cdevents.TestCaseRunStartedSubjectContentTrigger{
-				Type: MapTestkubeTestWorkflowRunningContextActorToCDEventTiggerType(*event.TestWorkflowExecution.RunningContext.Actor.Type_),
+				// Pro edition only (tcl protected code)
+				Type: mapper.MapTestkubeTestWorkflowRunningContextActorToCDEventTiggerType(*event.TestWorkflowExecution.RunningContext.Actor.Type_),
 			})
 		}
 	}
@@ -665,7 +669,8 @@ func MapTestkubeEventStartTestWorkflowTestSuiteToCDEvent(event testkube.Event, c
 		if event.TestWorkflowExecution.RunningContext != nil && event.TestWorkflowExecution.RunningContext.Actor != nil &&
 			event.TestWorkflowExecution.RunningContext.Actor.Type_ != nil {
 			ev.SetSubjectTrigger(&cdevents.TestSuiteRunStartedSubjectContentTrigger{
-				Type: MapTestkubeTestWorkflowRunningContextActorToCDEventTiggerType(*event.TestWorkflowExecution.RunningContext.Actor.Type_),
+				// Pro edition only (tcl protected code)
+				Type: mapper.MapTestkubeTestWorkflowRunningContextActorToCDEventTiggerType(*event.TestWorkflowExecution.RunningContext.Actor.Type_),
 			})
 		}
 	}
