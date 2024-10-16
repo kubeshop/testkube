@@ -1,6 +1,10 @@
 package testkube
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/kubeshop/testkube/pkg/utils"
+)
 
 type TestWorkflowTemplates []TestWorkflowTemplate
 
@@ -32,4 +36,47 @@ func (w TestWorkflowTemplate) GetLabels() map[string]string {
 
 func (w TestWorkflowTemplate) GetAnnotations() map[string]string {
 	return w.Annotations
+}
+
+func (w *TestWorkflowTemplate) EscapeDots() *TestWorkflowTemplate {
+	return w.ConvertDots(utils.EscapeDots)
+}
+
+func (w *TestWorkflowTemplate) UnscapeDots() *TestWorkflowTemplate {
+	return w.ConvertDots(utils.UnescapeDots)
+}
+
+func (w *TestWorkflowTemplate) ConvertDots(fn func(string) string) *TestWorkflowTemplate {
+	if w == nil {
+		return w
+	}
+	if w.Labels != nil {
+		w.Labels = convertDotsInMap(w.Labels, fn)
+	}
+	if w.Annotations != nil {
+		w.Annotations = convertDotsInMap(w.Annotations, fn)
+	}
+
+	if w.Spec.Pod != nil {
+		w.Spec.Pod.Labels = convertDotsInMap(w.Spec.Pod.Labels, fn)
+		w.Spec.Pod.Annotations = convertDotsInMap(w.Spec.Pod.Annotations, fn)
+		w.Spec.Pod.NodeSelector = convertDotsInMap(w.Spec.Pod.NodeSelector, fn)
+	}
+	if w.Spec.Job != nil {
+		w.Spec.Job.Labels = convertDotsInMap(w.Spec.Job.Labels, fn)
+		w.Spec.Job.Annotations = convertDotsInMap(w.Spec.Job.Annotations, fn)
+	}
+	if w.Spec.Execution != nil {
+		w.Spec.Execution.Tags = convertDotsInMap(w.Spec.Execution.Tags, fn)
+	}
+
+	for _, ev := range w.Spec.Events {
+		if ev.Cronjob != nil {
+			ev.Cronjob.Annotations = convertDotsInMap(ev.Cronjob.Annotations, fn)
+			ev.Cronjob.Labels = convertDotsInMap(ev.Cronjob.Labels, fn)
+		}
+
+	}
+
+	return w
 }
