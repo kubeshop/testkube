@@ -32,6 +32,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/scheduler"
 	"github.com/kubeshop/testkube/pkg/secret"
+	triggerstcl "github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/triggers"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 )
 
@@ -201,6 +202,8 @@ func TestWorkflowExecute(t *testing.T) {
 			"WATCHER_EVENT_NAMESPACE":  "",
 			"WATCHER_EVENT_RESOURCE":   "",
 		},
+		// Pro edition only (tcl protected code)
+		RunningContext: triggerstcl.GetRunningContext("test-trigger-1"),
 	}
 	mockTestWorkflowExecution := testkube.TestWorkflowExecution{}
 	mockTestWorkflowExecutor.EXPECT().Execute(gomock.Any(), mockTestWorkflow, mockTestWorkflowExecutionRequest).Return(mockTestWorkflowExecution, nil)

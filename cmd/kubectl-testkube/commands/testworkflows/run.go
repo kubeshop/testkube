@@ -16,8 +16,10 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/tests"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testworkflows/renderer"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
+	intcommon "github.com/kubeshop/testkube/internal/common"
 	apiclientv1 "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -63,11 +65,28 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 			ui.ExitOnError("getting client", err)
 
 			name := args[0]
+			runContext := telemetry.GetCliRunContext()
+			interfaceType := testkube.CLI_TestWorkflowRunningContextInterfaceType
+			if runContext == "others|local" {
+				runContext = ""
+				interfaceType = testkube.CICD_TestWorkflowRunningContextInterfaceType
+			}
 			execution, err := client.ExecuteTestWorkflow(name, testkube.TestWorkflowExecutionRequest{
 				Name:            executionName,
 				Config:          config,
 				DisableWebhooks: disableWebhooks,
 				Tags:            tags,
+				RunningContext: &testkube.TestWorkflowRunningContext{
+					Interface_: &testkube.TestWorkflowRunningContextInterface{
+						Name:  runContext,
+						Type_: intcommon.Ptr(interfaceType),
+					},
+					Actor: &testkube.TestWorkflowRunningContextActor{
+						Type_:    intcommon.Ptr(testkube.USER_TestWorkflowRunningContextActorType),
+						Username: "",
+						Email:    "",
+					},
+				},
 			})
 			if err != nil {
 				// User friendly Open Source operation error

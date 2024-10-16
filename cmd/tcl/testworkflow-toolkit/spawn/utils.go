@@ -212,6 +212,7 @@ func CreateExecutionMachine(prefix string, index int64) (string, expressions.Mac
 			"scheduledAt":     env.ExecutionScheduledAt().UTC().Format(constants.RFC3339Millis),
 			"disableWebhooks": env.ExecutionDisableWebhooks(),
 			"tags":            env.ExecutionTags(),
+			"parentIds":       env.Config().Execution.ParentIds,
 		})
 }
 

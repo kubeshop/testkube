@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -493,6 +494,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		"scheduledAt":     now.UTC().Format(constants.RFC3339Millis),
 		"disableWebhooks": request.DisableWebhooks,
 		"tags":            "",
+		"parentIds":       strings.Join(request.ParentExecutionIds, "/"),
 	})
 
 	// Preserve resolved TestWorkflow
@@ -550,6 +552,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		"scheduledAt":     now.UTC().Format(constants.RFC3339Millis),
 		"disableWebhooks": request.DisableWebhooks,
 		"tags":            tagsData,
+		"parentIds":       strings.Join(request.ParentExecutionIds, "/"),
 	})
 
 	// Process the TestWorkflow
@@ -582,6 +585,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		TestWorkflowExecutionName: testWorkflowExecutionName,
 		DisableWebhooks:           request.DisableWebhooks,
 		Tags:                      tags,
+		RunningContext:            request.RunningContext,
 	}
 	err = e.repository.Insert(ctx, execution)
 	if err != nil {

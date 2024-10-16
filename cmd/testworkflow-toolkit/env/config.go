@@ -49,6 +49,7 @@ type envExecutionConfig struct {
 	DisableWebhooks bool   `envconfig:"TK_DWH"`
 	Tags            string `envconfig:"TK_TAG"`
 	Labels          string `envconfig:"TK_LBL"`
+	ParentIds       string `envconfig:"TK_PAR"`
 }
 
 type envSystemConfig struct {
