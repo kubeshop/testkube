@@ -2,7 +2,9 @@
 # Step 1: Use a base image with Docker installed
 FROM docker:20.10.24-dind
 
-# Step 2: Install necessary dependencies (curl, bash, tini)
+ENV TINI_SUBREAPER=true
+
+# Step 2: Install necessary dependencies (curl, bash, tini, jq)
 RUN apk add --no-cache bash curl tini jq
 
 # Step 3: Install Kind (Kubernetes in Docker)
@@ -24,7 +26,6 @@ RUN chmod +x /usr/local/bin/entrypoint.sh
 
 # Step 7: Example K6 Test Workflow CRD and preload Kind images
 COPY ./images /images
-COPY k6.yaml /examples/k6.yaml
 
 ARG segmentio_key
 ENV SEGMENTIO_KEY=$segmentio_key
@@ -32,6 +33,8 @@ ARG ga_id
 ENV GA_ID=$ga_id
 ARG ga_secret
 ENV GA_SECRET=$ga_secret
+ARG docker_image_version
+ENV DOCKER_IMAGE_VERSION=$docker_image_version
 
 # Step 8: Set Docker entry point for DIND (Docker-in-Docker)
 ENTRYPOINT ["tini", "--", "/usr/local/bin/entrypoint.sh"]

@@ -8,12 +8,12 @@ spec:
   type: container-executor-curl/test
   executionRequest:
     args:
-    - $(URL)
+      - $(URL)
     variables:
       URL:
         name: URL
         type: basic
-        value: https://testkube.kubeshop.io/
+        value: https://testkube-test-page-lipsum.pages.dev/
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 32Mi\n              cpu: 32m\n"
     activeDeadlineSeconds: 180
 ---
@@ -27,7 +27,7 @@ spec:
   type: container-executor-curl/test
   executionRequest:
     args:
-    - $(URL)
+      - $(URL)
     variables:
       URL:
         name: URL

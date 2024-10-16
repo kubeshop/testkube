@@ -546,6 +546,7 @@ func MapPodSecurityContextAPIToKube(v testkube.PodSecurityContext) corev1.PodSec
 		RunAsUser:    MapBoxedIntegerToInt64(v.RunAsUser),
 		RunAsGroup:   MapBoxedIntegerToInt64(v.RunAsGroup),
 		RunAsNonRoot: MapBoxedBooleanToBool(v.RunAsNonRoot),
+		FSGroup:      MapBoxedIntegerToInt64(v.FsGroup),
 	}
 }
 

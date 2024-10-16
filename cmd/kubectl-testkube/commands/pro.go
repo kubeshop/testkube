@@ -19,6 +19,7 @@ func NewProCmd() *cobra.Command {
 	cmd.AddCommand(pro.NewDisconnectCmd())
 	cmd.AddCommand(pro.NewInitCmd())
 	cmd.AddCommand(pro.NewLoginCmd())
+	cmd.AddCommand(pro.NewDockerCmd())
 
 	return cmd
 }

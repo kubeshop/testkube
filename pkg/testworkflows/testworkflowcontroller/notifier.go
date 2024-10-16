@@ -358,7 +358,7 @@ func (n *notifier) reconcile() {
 	n.result.HealTimestamps(n.sigSequence, n.scheduledAt, containerStartTs, completionTs, n.ended)
 	n.result.HealDuration()
 	n.result.HealMissingPauseStatuses()
-	n.result.HealStatus()
+	n.result.HealStatus(n.sigSequence)
 }
 
 // TODO: Optimize memory

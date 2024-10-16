@@ -1,12 +1,18 @@
 package common
 
 import (
+	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"os/exec"
 	"strings"
 	"time"
 
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/client"
 	"github.com/pkg/errors"
 	"github.com/skratchdot/open-golang/open"
 	"github.com/spf13/cobra"
@@ -38,8 +44,10 @@ type HelmOptions struct {
 }
 
 const (
-	github = "GitHub"
-	gitlab = "GitLab"
+	github                = "GitHub"
+	gitlab                = "GitLab"
+	dockerDaemonPrefixLen = 8
+	latestReleaseUrl      = "https://api.github.com/repos/kubeshop/testkube/releases/latest"
 )
 
 func (o HelmOptions) GetApiURI() string {
@@ -292,7 +300,7 @@ func PopulateHelmFlags(cmd *cobra.Command, options *HelmOptions) {
 	cmd.Flags().BoolVar(&options.EmbeddedNATS, "embedded-nats", false, "embedded NATS server in agent")
 }
 
-func PopulateLoginDataToContext(orgID, envID, token, refreshToken string, options HelmOptions, cfg config.Data) error {
+func PopulateLoginDataToContext(orgID, envID, token, refreshToken, dockerContainerName string, options HelmOptions, cfg config.Data) error {
 	if options.Master.AgentToken != "" {
 		cfg.CloudContext.AgentKey = options.Master.AgentToken
 	}
@@ -315,6 +323,7 @@ func PopulateLoginDataToContext(orgID, envID, token, refreshToken string, option
 	if refreshToken != "" {
 		cfg.CloudContext.RefreshToken = refreshToken
 	}
+	cfg.CloudContext.DockerContainerName = dockerContainerName
 
 	cfg, err := PopulateOrgAndEnvNames(cfg, orgID, envID, options.Master.URIs.Api)
 	if err != nil {
@@ -449,7 +458,7 @@ func PopulateOrgAndEnvNames(cfg config.Data, orgId, envId, apiUrl string) (confi
 	return cfg, nil
 }
 
-func PopulateCloudConfig(cfg config.Data, apiKey string, opts *HelmOptions) config.Data {
+func PopulateCloudConfig(cfg config.Data, apiKey string, dockerContainerName *string, opts *HelmOptions) config.Data {
 	if apiKey != "" {
 		cfg.CloudContext.ApiKey = apiKey
 	}
@@ -457,6 +466,9 @@ func PopulateCloudConfig(cfg config.Data, apiKey string, opts *HelmOptions) conf
 	cfg.CloudContext.ApiUri = opts.Master.URIs.Api
 	cfg.CloudContext.UiUri = opts.Master.URIs.Ui
 	cfg.CloudContext.AgentUri = opts.Master.URIs.Agent
+	if dockerContainerName != nil {
+		cfg.CloudContext.DockerContainerName = *dockerContainerName
+	}
 
 	return cfg
 }
@@ -758,4 +770,208 @@ func UiGetNamespace(cmd *cobra.Command, defaultNamespace string) string {
 	}
 
 	return namespace
+}
+
+func RunDockerCommand(args []string) (output string, cliErr *CLIError) {
+	out, err := process.Execute("docker", args...)
+	if err != nil {
+		return "", NewCLIError(
+			TKErrDockerCommandFailed,
+			"Docker command failed",
+			"Check is the Docker service installed and running on your computer by executing 'docker info' ",
+			err,
+		)
+	}
+	return string(out), nil
+}
+
+func DockerRunTestkubeAgent(options HelmOptions, cfg config.Data, dockerContainerName, dockerImage string) *CLIError {
+	// use config if set
+	if cfg.CloudContext.AgentKey != "" && options.Master.AgentToken == "" {
+		options.Master.AgentToken = cfg.CloudContext.AgentKey
+	}
+
+	if options.Master.AgentToken == "" {
+		return NewCLIError(
+			TKErrInvalidInstallConfig,
+			"Invalid install config",
+			"Provide the agent token by setting the '--agent-token' flag",
+			errors.New("agent key is required"))
+	}
+
+	args := prepareTestkubeProDockerArgs(options, dockerContainerName, dockerImage)
+	output, err := RunDockerCommand(args)
+	if err != nil {
+		return err
+	}
+
+	ui.Debug("Docker command output:")
+	ui.Debug("Arguments", args...)
+
+	ui.Debug("Docker run testkube output", output)
+
+	return nil
+}
+
+// prepareTestkubeProDockerArgs prepares docker arguments for Testkube Pro running.
+func prepareTestkubeProDockerArgs(options HelmOptions, dockerContainerName, dockerImage string) []string {
+	args := []string{
+		"run",
+		"--name", dockerContainerName,
+		"--privileged",
+		"-d",
+		"-e", "CLOUD_URL=" + options.Master.URIs.Agent,
+		"-e", "AGENT_KEY=" + options.Master.AgentToken,
+		dockerImage,
+	}
+
+	return args
+}
+
+// prepareTestkubeUpgradeDockerArgs prepares docker arguments for Testkube Upgrade running.
+func prepareTestkubeUpgradeDockerArgs(options HelmOptions, dockerContainerName, latestVersion string) []string {
+	args := []string{
+		"exec",
+		dockerContainerName,
+		"helm",
+		"upgrade",
+		// These arguments are similar to Docker entrypoint script
+		"testkube",
+		"testkube/testkube",
+		"--namespace",
+		"testkube",
+		"--set",
+		"testkube-api.minio.enabled=false",
+		"--set",
+		"mongodb.enabled=false",
+		"--set",
+		"testkube-dashboard.enabled=false",
+		"--set",
+		"testkube-api.cloud.key=" + options.Master.AgentToken,
+		"--set",
+		"testkube-api.cloud.url=" + options.Master.URIs.Agent,
+		"--set",
+		"testkube-api.dockerImageVersion=" + latestVersion,
+	}
+
+	return args
+}
+
+func StreamDockerLogs(dockerContainerName string) *CLIError {
+	// Create a Docker client
+	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	if err != nil {
+		return NewCLIError(
+			TKErrInvalidDockerConfig,
+			"Invalid docker config",
+			"Check your environment variables used to connect to Docker daemon",
+			err)
+	}
+
+	ctx := context.Background()
+	// Set options to stream logs and show both stdout and stderr logs
+	opts := container.LogsOptions{
+		ShowStdout: true,
+		ShowStderr: true,
+		Follow:     true, // Follow logs in real-time
+		Timestamps: false,
+	}
+
+	// Fetch logs from the container
+	logs, err := cli.ContainerLogs(ctx, dockerContainerName, opts)
+	if err != nil {
+		return NewCLIError(
+			TKErrDockerLogStreamingFailed,
+			"Docker log streaming failed",
+			"Check that your Testkube Docker Agent container is up and runnning",
+			err)
+	}
+	defer logs.Close()
+
+	// Use a buffered scanner to read the logs line by line
+	scanner := bufio.NewScanner(logs)
+	for scanner.Scan() {
+		line := scanner.Bytes()
+		if len(line) > dockerDaemonPrefixLen {
+			line = line[dockerDaemonPrefixLen:]
+		}
+
+		if ui.IsVerbose() {
+			fmt.Println(string(line)) // Optional: print logs to console
+		}
+
+		if strings.Contains(string(line), "Testkube installation succeed") {
+			break
+		}
+
+		if strings.Contains(string(line), "Testkube installation failed") {
+			return NewCLIError(
+				TKErrDockerInstallationFailed,
+				"Docker installation failed",
+				"Check logs of your Testkube Docker Agent container",
+				errors.New(string(line)))
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return NewCLIError(
+			TKErrDockerLogReadingFailed,
+			"Docker log reading failed",
+			"Check logs of your Testkube Docker Agent container",
+			err)
+	}
+
+	return nil
+}
+
+func DockerUpgradeTestkubeAgent(options HelmOptions, latestVersion string, cfg config.Data) *CLIError {
+	// use config if set
+	if cfg.CloudContext.AgentKey != "" && options.Master.AgentToken == "" {
+		options.Master.AgentToken = cfg.CloudContext.AgentKey
+	}
+
+	if options.Master.AgentToken == "" {
+		return NewCLIError(
+			TKErrInvalidInstallConfig,
+			"Invalid install config",
+			"Provide the agent token by setting the '--agent-token' flag",
+			errors.New("agent key is required"))
+	}
+
+	args := prepareTestkubeUpgradeDockerArgs(options, cfg.CloudContext.DockerContainerName, latestVersion)
+	output, err := RunDockerCommand(args)
+	if err != nil {
+		return err
+	}
+
+	ui.Debug("Docker command output:")
+	ui.Debug("Arguments", args...)
+
+	ui.Debug("Docker run testkube output", output)
+
+	return nil
+}
+
+type releaseMetadata struct {
+	TagName string `json:"tag_name"`
+}
+
+func GetLatestVersion() (string, error) {
+	resp, err := http.Get(latestReleaseUrl)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	var metadata releaseMetadata
+	if err := json.Unmarshal(data, &metadata); err != nil {
+		return "", err
+	}
+
+	return strings.TrimPrefix(metadata.TagName, "v"), nil
 }

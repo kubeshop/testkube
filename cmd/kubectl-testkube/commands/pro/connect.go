@@ -165,7 +165,7 @@ func NewConnectCmd() *cobra.Command {
 				token, refreshToken, err = common.LoginUser(opts.Master.URIs.Auth)
 				ui.ExitOnError("user login", err)
 			}
-			err = common.PopulateLoginDataToContext(opts.Master.OrgId, opts.Master.EnvId, token, refreshToken, opts, cfg)
+			err = common.PopulateLoginDataToContext(opts.Master.OrgId, opts.Master.EnvId, token, refreshToken, "", opts, cfg)
 
 			ui.ExitOnError("Setting Pro environment context", err)
 
@@ -182,7 +182,7 @@ func NewConnectCmd() *cobra.Command {
 	}
 
 	common.PopulateHelmFlags(cmd, &opts)
-	common.PopulateMasterFlags(cmd, &opts)
+	common.PopulateMasterFlags(cmd, &opts, false)
 
 	cmd.Flags().IntVar(&opts.MinioReplicas, "minio-replicas", 0, "MinIO replicas")
 	cmd.Flags().IntVar(&opts.MongoReplicas, "mongo-replicas", 0, "MongoDB replicas")

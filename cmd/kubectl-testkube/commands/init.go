@@ -98,7 +98,7 @@ func NewInitCmdStandalone() *cobra.Command {
 
 	cmd.Flags().BoolVarP(&export, "export", "", false, "Export the values.yaml")
 	common.PopulateHelmFlags(cmd, &options)
-	common.PopulateMasterFlags(cmd, &options)
+	common.PopulateMasterFlags(cmd, &options, false)
 
 	return cmd
 }

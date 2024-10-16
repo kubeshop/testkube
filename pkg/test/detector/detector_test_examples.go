@@ -5,7 +5,7 @@ const (
 
 	exampleArtilleryFilename = "artillery.yaml"
 	exampleArtilleryContent  = `config:
-	target: "https://testkube.kubeshop.io/"
+	target: "https://testkube-test-page-lipsum.pages.dev/"
 	phases:
 	- duration: 1
 	  arrivalRate: 1
@@ -136,7 +136,7 @@ const (
 	}
 	
 	export default function () {
-	  http.get('https://testkube.kubeshop.io/');
+	  http.get('https://testkube-test-page-lipsum.pages.dev/');
 	}`
 
 	exampleSoapUIFilename = "soapui-project.xml"

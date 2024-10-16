@@ -69,21 +69,21 @@ send_event_to_segment() {
   # Prepare the JSON payload
   local payload=$(cat <<EOF
 {
-  "userId":          "$machine_id",
-  "event":           "$event",
+  "userId":               "$machine_id",
+  "event":                "$event",
   "properties": {
-    "name":          "testkube-api-server",
-    "version":       "$version",
-    "arch":          "$arch",
-    "os":            "$os",
-    "eventCategory": "api",
-    "containerEnv":  "docker",
-    "contextType":   "agent",
-    "machineId":     "$machine_id",
-    "clusterType":   "kind",
-    "errorType":     "$error_type",
-    "errorCode":     "$error_code",
-    "agentKey":      "$AGENT_KEY"
+    "name":               "testkube-api-server",
+    "version":            "$version",
+    "arch":               "$arch",
+    "os":                 "$os",
+    "eventCategory":      "api",
+    "contextType":        "agent",
+    "machineId":          "$machine_id",
+    "clusterType":        "kind",
+    "errorType":          "$error_type",
+    "errorCode":          "$error_code",
+    "agentKey":           "$AGENT_KEY",
+    "dockerImageVersion": "$DOCKER_IMAGE_VERSION"
   },
   "context": {
     "app": {
@@ -117,26 +117,26 @@ send_event_to_ga() {
   # Prepare the JSON payload
   local payload=$(cat <<EOF
 {
-  "client_id":            "$machine_id",
-  "user_id":              "$machine_id",
+  "client_id":                 "$machine_id",
+  "user_id":                   "$machine_id",
   "events": [{
-    "name":               "$event",
+    "name":                    "$event",
     "params": {
-      "event_count":      1,
-      "event_category":   "api",
-      "app_version":      "$version",
-      "app_name":         "testkube-api-server",
-      "machine_id":       "$machine_id",
-      "operating_system": "$os",
-      "architecture":     "$arch",
+      "event_count":            1,
+      "event_category":         "api",
+      "app_version":            "$version",
+      "app_name":               "testkube-api-server",
+      "machine_id":             "$machine_id",
+      "operating_system":       "$os",
+      "architecture":           "$arch",
       "context": {
-        "container_env":  "docker",
-        "type":           "agent"
+        "docker_image_version": "$DOCKER_IMAGE_VERSION",
+        "type":                 "agent"
       },
-      "cluster_type":     "kind",
-      "error_type":       "$error_type",
-      "error_code":       "$error_code",
-      "agent_key":        "$AGENT_KEY"
+      "cluster_type":           "kind",
+      "error_type":             "$error_type",
+      "error_code":             "$error_code",
+      "agent_key":              "$AGENT_KEY"
     }
   }]
 }
@@ -168,14 +168,14 @@ send_telenetry "docker_installation_started"
 
 # Check if agent key is provided
 if [ -z "$AGENT_KEY" ]; then
-  log "Please provide AGENT_KEY env var"
+  log "Testkube installation failed. Please provide AGENT_KEY env var"
   send_telenetry "docker_installation_failed" "parameter_not_found" "agent key is empty"
   exit 1
 fi
 
 # Check if cloud url is provided
 if [ -z "$CLOUD_URL" ]; then
-  log "Please provide CLOUD_URL env var"
+  log "Testkube installation failed. Please provide CLOUD_URL env var"
   send_telenetry "docker_installation_failed" "parameter_not_found" "cloud url is empty"
   exit 1
 fi
@@ -189,117 +189,134 @@ while ! docker info; do
   sleep 5
 done
 
+# Set image folder based on architecture
+case "$arch" in
+  x86_64)
+    IMAGE_FOLDER="/images/amd"
+    ;;
+  arm64)
+    IMAGE_FOLDER="/images/arm"
+    ;;
+  *)
+    log "Unsupported architecture: $arch"
+    exit 1
+    ;;
+esac
+
 # Step 3: Import pre-installed images
-for file in /images/*.tar; do
+for file in "$IMAGE_FOLDER"/*.tar; do
   log "Load docker image $file..."
-  docker load <$file
+  docker load < "$file"
 done
 
-# Step 4: Create Kind cluster using a specific Kubernetes version
-log "Creating Kubernetes cluster using Kind (Kubernetes v1.31.0)..."
-kind create cluster --name testkube-cluster --image kindest/node:v1.31.0 --wait 5m
-if [ $? -ne 0 ]; then
-  log "Failed to create Kind cluster."
-  send_telenetry "docker_installation_failed" "kind_error" "Kind cluster was not created"
-  exit 1
-fi
-
-# Step 5: Verify kubectl is connected to the cluster
-log "Verifying cluster is up..."
-kubectl cluster-info
-if [ $? -ne 0 ]; then
-  log "Failed to verify cluster."
-  send_telenetry "docker_installation_failed" "kind_error" "Kind cluster is nor accessible"
-  exit 1
-fi
-
-# Step 6: Add the Testkube Helm repository
-log "Adding Testkube Helm repository..."
-helm repo add testkube https://kubeshop.github.io/helm-charts
-helm repo update
-
-# Step 7: Install Testkube using Helm
-log "Installing Testkube via Helm..."
-helm install testkube testkube/testkube --namespace testkube --create-namespace  --set testkube-api.cloud.key=$AGENT_KEY --set testkube-api.minio.enabled=false --set mongodb.enabled=false --set testkube-dashboard.enabled=false --set testkube-api.cloud.url=$CLOUD_URL --set testkube-api.containerEnv=docker
-if [ $? -ne 0 ]; then
-  log "Testkube installation failed."
-  send_telenetry "docker_installation_failed" "helm_error" "Testkube installation failed"
-  exit 1
-fi
-
-# Step 8: Verify Testkube is installed to the cluster
-log "Verifying Testkube is up..."
-counter=0
-log_pattern="starting Testkube API server"
-while [ $counter -lt 15 ]
-do
-  # Get all pod statuses in the Testkube namespace
-  pod_status=$(kubectl get pods -n testkube --no-headers)
-
-  # Check if there are any pods in the Testkube namespace
-  if [ -z "$pod_status" ]; then
-    log "No pods found in testkube namespace."
-    send_telenetry "docker_installation_failed" "tetkube_error" "No pods found in testkube namespace"
+# Get the list of kind clusters
+EXISTING_CLUSTERS=$(kind get clusters)
+# Check if the testkube-cluster exists in the list
+if echo "$EXISTING_CLUSTERS" | grep -wq "testkube-cluster"; then
+  log "Kind cluster already exists"
+else
+  # Step 4: Create Kind cluster using a specific Kubernetes version
+  log "Creating Kubernetes cluster using Kind (Kubernetes v1.31.0)..."
+  kind create cluster --name testkube-cluster --image kindest/node:v1.31.0 --wait 5m
+  if [ $? -ne 0 ]; then
+    log "Testkube installation failed. Couldn't create Kind cluster."
+    send_telenetry "docker_installation_failed" "kind_error" "Kind cluster was not created"
     exit 1
   fi
 
-  # Iterate through each pod, check status and log pattern
-  all_running=true
-  found_pattern=false
-
-  log "Checking pods in Testkube namespace..."
-  while read -r line; do
-    pod_name=$(echo "$line" | awk '{print $1}')
-    status=$(echo "$line" | awk '{print $3}')
-    
-    if [ "$status" != "Running" ]; then
-      log "Pod $pod_name is not running. Status: $status."
-      all_running=false
-      break
-    else
-      log "Pod $pod_name is running."
-    fi
-
-    if [[ $pod_name == *"testkube-api-server"* ]]; then
-      pod_logs=$(kubectl logs "$pod_name" -n testkube)
-
-      # Check if logs contain the desired pattern
-      if echo "$pod_logs" | grep -q "$log_pattern"; then
-        log "Log pattern found: $log_pattern."
-        found_pattern=true
-      else
-        log "Log pattern not found: $log_pattern."
-        break
-      fi
-    fi
-  done <<< "$pod_status"
-
-  if [ "$all_running" = true ] && [ "$found_pattern" = true ] ; then
-    log "Waiting Testkube API for 30 seconds..."
-    sleep 30
-    break
-  else
-    log "Waiting Testkube for 30 seconds..."
-    sleep 30
+  # Step 5: Verify kubectl is connected to the cluster
+  log "Verifying cluster is up..."
+  kubectl cluster-info
+  if [ $? -ne 0 ]; then
+    log "Testkube installation failed. Couldn't verify cluster."
+    send_telenetry "docker_installation_failed" "kind_error" "Kind cluster is nor accessible"
+    exit 1
   fi
 
-  counter=$(( counter + 1 ))
-done
+  # Step 6: Add the Testkube Helm repository
+  log "Adding Testkube Helm repository..."
+  helm repo add testkube https://kubeshop.github.io/helm-charts
+  helm repo update
 
-if [ $counter -eq 15 ]; then
-  log "Testkube validation failed."
+  # Step 7: Install Testkube using Helm
+  log "Installing Testkube via Helm..."
+  helm install testkube testkube/testkube --namespace testkube --create-namespace  --set testkube-api.cloud.key=$AGENT_KEY --set testkube-api.minio.enabled=false --set mongodb.enabled=false --set testkube-dashboard.enabled=false --set testkube-api.cloud.url=$CLOUD_URL --set testkube-api.dockerImageVersion=$DOCKER_IMAGE_VERSION
+  if [ $? -ne 0 ]; then
+    log "Testkube installation failed."
+    send_telenetry "docker_installation_failed" "helm_error" "Testkube installation failed"
+    exit 1
+  fi
+
+  # Step 8: Verify Testkube is installed to the cluster
+  log "Verifying Testkube is up..."
+  counter=0
+  log_pattern="starting Testkube API server"
+  while [ $counter -lt 15 ]
+  do
+    # Get all pod statuses in the Testkube namespace
+    pod_status=$(kubectl get pods -n testkube --no-headers)
+
+    # Check if there are any pods in the Testkube namespace
+    if [ -z "$pod_status" ]; then
+      log "Testkube installation failed. No pods found in testkube namespace."
+      send_telenetry "docker_installation_failed" "tetkube_error" "No pods found in testkube namespace"
+      exit 1
+    fi
+
+    # Iterate through each pod, check status and log pattern
+    all_running=true
+    found_pattern=false
+
+    log "Checking pods in Testkube namespace..."
+    while read -r line; do
+      pod_name=$(echo "$line" | awk '{print $1}')
+      status=$(echo "$line" | awk '{print $3}')
+      
+      if [ "$status" != "Running" ]; then
+        log "Pod $pod_name is not running. Status: $status."
+        all_running=false
+        break
+      else
+        log "Pod $pod_name is running."
+      fi
+
+      if [[ $pod_name == *"testkube-api-server"* ]]; then
+        pod_logs=$(kubectl logs "$pod_name" -n testkube)
+
+        # Check if logs contain the desired pattern
+        if echo "$pod_logs" | grep -q "$log_pattern"; then
+          log "Log pattern found: $log_pattern."
+          found_pattern=true
+        else
+          log "Log pattern not found: $log_pattern."
+          break
+        fi
+      fi
+    done <<< "$pod_status"
+
+    if [ "$all_running" = true ] && [ "$found_pattern" = true ] ; then
+      log "Waiting Testkube API for 30 seconds..."
+      sleep 30
+      break
+    else
+      log "Waiting Testkube for 30 seconds..."
+      sleep 30
+    fi
+
+    counter=$(( counter + 1 ))
+  done
+
+  if [ $counter -eq 15 ]; then
+    log "Testkube installation failed."
     send_telenetry "docker_installation_failed" "tetkube_error" "Testkube pods are not up and running"
-  exit 1
+    exit 1
+  fi
+  log "Testkube is up and running."
+
+  log "Testkube installation succeed!"
+  log "You can now use Testkube in your Kind Kubernetes cluster."
+  send_telenetry "docker_installation_succeed"
 fi
-log "Testkube is up and running."
 
-# Step 9: Create Testkube k6 Test Workflow 
-log "Creating and running Testkube k6 Test Workflow..."
-kubectl apply -f /examples/k6.yaml -n testkube
-
-log "Testkube installation successful!"
-log "You can now use Testkube in your Kind Kubernetes cluster."
-send_telenetry "docker_installation_succeed"
-
-# Step 10: Bring docker service back to foreground
+# Step 9: Bring docker service back to foreground
 fg %1

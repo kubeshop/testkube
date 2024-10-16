@@ -82,8 +82,8 @@ func NewTestkubeAPI(
 	clientset kubernetes.Interface,
 	testkubeClientset testkubeclientset.Interface,
 	testsourcesClient *testsourcesclientv1.TestSourcesClient,
-	testWorkflowsClient *testworkflowsv1.TestWorkflowsClient,
-	testWorkflowTemplatesClient *testworkflowsv1.TestWorkflowTemplatesClient,
+	testWorkflowsClient testworkflowsv1.Interface,
+	testWorkflowTemplatesClient testworkflowsv1.TestWorkflowTemplatesInterface,
 	configMap repoConfig.Repository,
 	clusterId string,
 	eventsEmitter *event.Emitter,
@@ -108,6 +108,7 @@ func NewTestkubeAPI(
 	subscriptionChecker checktcl.SubscriptionChecker,
 	serviceAccountNames map[string]string,
 	envs map[string]string,
+	dockerImageVersion string,
 ) TestkubeAPI {
 
 	var httpConfig server.Config
@@ -165,6 +166,7 @@ func NewTestkubeAPI(
 		LabelSources:                common.Ptr(make([]LabelSource, 0)),
 		ServiceAccountNames:         serviceAccountNames,
 		Envs:                        envs,
+		dockerImageVersion:          dockerImageVersion,
 	}
 }
 
@@ -214,6 +216,7 @@ type TestkubeAPI struct {
 	LabelSources                *[]LabelSource
 	ServiceAccountNames         map[string]string
 	Envs                        map[string]string
+	dockerImageVersion          string
 }
 
 type storageParams struct {

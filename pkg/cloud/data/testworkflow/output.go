@@ -65,7 +65,14 @@ func (r *CloudOutputRepository) SaveLog(ctx context.Context, id, workflowName st
 	if err != nil {
 		return err
 	}
-	defer buffer.Cleanup()
+	bufferLen := buffer.Len()
+	if bufferLen == 0 {
+		// http.Request won't send Content-Length: 0, if the body is non-nil
+		buffer.Cleanup()
+		buffer = nil
+	} else {
+		defer buffer.Cleanup()
+	}
 	url, err := r.PresignSaveLog(ctx, id, workflowName)
 	if err != nil {
 		return err
@@ -75,7 +82,7 @@ func (r *CloudOutputRepository) SaveLog(ctx context.Context, id, workflowName st
 		return err
 	}
 	req.Header.Add("Content-Type", "application/octet-stream")
-	req.ContentLength = int64(buffer.Len())
+	req.ContentLength = int64(bufferLen)
 	res, err := r.httpClient.Do(req)
 	if err != nil {
 		return errors.Wrap(err, "failed to save file in cloud storage")
