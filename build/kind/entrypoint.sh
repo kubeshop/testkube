@@ -313,14 +313,10 @@ else
   fi
   log "Testkube is up and running."
 
-  # Step 9: Create Testkube k6 Test Workflow 
-  log "Creating and running Testkube k6 Test Workflow..."
-  kubectl apply -f /examples/k6.yaml -n testkube
-
   log "Testkube installation succeed!"
   log "You can now use Testkube in your Kind Kubernetes cluster."
   send_telenetry "docker_installation_succeed"
 fi
 
-# Step 10: Bring docker service back to foreground
+# Step 9: Bring docker service back to foreground
 fg %1
