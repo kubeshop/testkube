@@ -512,6 +512,7 @@ func TestMapTestkubeEventQueuedTestWorkflowTestToCDEvent(t *testing.T) {
 					},
 				},
 			},
+
 			RunningContext: &testkube.TestWorkflowRunningContext{
 				Actor: &testkube.TestWorkflowRunningContextActor{
 					Type_: common.Ptr(testkube.CRON_TestWorkflowRunningContextActorType),
