@@ -33,7 +33,7 @@
         "url": {
           "raw": "https://testkube-test-page-lipsum.pages.dev/",
           "protocol": "https",
-          "host": ["testkube", "kubeshop", "io"],
+          "host": ["testkube-test-page-lipsum", "pages", "dev"],
           "path": [""]
         }
       },
