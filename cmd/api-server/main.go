@@ -245,13 +245,15 @@ func main() {
 		artifactStorage = minio.NewMinIOArtifactClient(storageClient)
 
 		// Init logs storage
-		if cfg.LogsBucket == "" {
-			log.DefaultLogger.Error("LOGS_BUCKET env var is not set")
-		} else if ok, err := storageClient.IsConnectionPossible(ctx); ok && (err == nil) {
-			log.DefaultLogger.Info("setting minio as logs storage")
-			mongoResultsRepository.OutputRepository = result.NewMinioOutputRepository(storageClient, mongoResultsRepository.ResultsColl, cfg.LogsBucket)
-		} else {
-			log.DefaultLogger.Infow("minio is not available, using default logs storage", "error", err)
+		if cfg.LogsStorage == "minio" {
+			if cfg.LogsBucket == "" {
+				log.DefaultLogger.Error("LOGS_BUCKET env var is not set")
+			} else if ok, err := storageClient.IsConnectionPossible(ctx); ok && (err == nil) {
+				log.DefaultLogger.Info("setting minio as logs storage")
+				mongoResultsRepository.OutputRepository = result.NewMinioOutputRepository(storageClient, mongoResultsRepository.ResultsColl, cfg.LogsBucket)
+			} else {
+				log.DefaultLogger.Infow("minio is not available, using default logs storage", "error", err)
+			}
 		}
 
 		// Run DB migrations
