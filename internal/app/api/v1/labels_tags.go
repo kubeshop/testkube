@@ -10,7 +10,7 @@ import (
 func (s TestkubeAPI) ListLabelsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		labels := make(map[string][]string)
-		sources := append(*s.LabelSources, s.TestsClient, s.TestsSuitesClient)
+		sources := append(*s.LabelSources, s.DeprecatedClients.Tests(), s.DeprecatedClients.TestSuites())
 
 		for _, source := range sources {
 			nextLabels, err := source.ListLabels()

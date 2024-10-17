@@ -42,7 +42,7 @@ func (s TestkubeAPI) CreateExecutorHandler() fiber.Handler {
 			executor.Namespace = s.Namespace
 		}
 
-		created, err := s.ExecutorsClient.Create(&executor)
+		created, err := s.DeprecatedClients.Executors().Create(&executor)
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not create executor: %w", errPrefix, err))
 		}
@@ -84,7 +84,7 @@ func (s TestkubeAPI) UpdateExecutorHandler() fiber.Handler {
 		}
 		errPrefix = errPrefix + " " + name
 		// we need to get resource first and load its metadata.ResourceVersion
-		executor, err := s.ExecutorsClient.Get(name)
+		executor, err := s.DeprecatedClients.Executors().Get(name)
 		if err != nil {
 			if errors.IsNotFound(err) {
 				return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: client found no executor: %w", errPrefix, err))
@@ -96,7 +96,7 @@ func (s TestkubeAPI) UpdateExecutorHandler() fiber.Handler {
 		// map update executor but load spec only to not override metadata.ResourceVersion
 		executorSpec := executorsmapper.MapUpdateToSpec(request, executor)
 
-		updatedExecutor, err := s.ExecutorsClient.Update(executorSpec)
+		updatedExecutor, err := s.DeprecatedClients.Executors().Update(executorSpec)
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not update executor: %w", errPrefix, err))
 		}
@@ -114,7 +114,7 @@ func (s TestkubeAPI) UpdateExecutorHandler() fiber.Handler {
 func (s TestkubeAPI) ListExecutorsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to list executors"
-		list, err := s.ExecutorsClient.List(c.Query("selector"))
+		list, err := s.DeprecatedClients.Executors().List(c.Query("selector"))
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not list executors: %w", errPrefix, err))
 		}
@@ -145,7 +145,7 @@ func (s TestkubeAPI) GetExecutorHandler() fiber.Handler {
 		name := c.Params("name")
 		errPrefix := fmt.Sprintf("failed to get executor %s", name)
 
-		item, err := s.ExecutorsClient.Get(name)
+		item, err := s.DeprecatedClients.Executors().Get(name)
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not get executor: %w", errPrefix, err))
 		}
@@ -167,7 +167,7 @@ func (s TestkubeAPI) DeleteExecutorHandler() fiber.Handler {
 		name := c.Params("name")
 		errPrefix := fmt.Sprintf("failed to delete executor %s", name)
 
-		err := s.ExecutorsClient.Delete(name)
+		err := s.DeprecatedClients.Executors().Delete(name)
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not delete executor: %w", errPrefix, err))
 		}
@@ -187,7 +187,7 @@ func (s TestkubeAPI) DeleteExecutorHandler() fiber.Handler {
 func (s TestkubeAPI) DeleteExecutorsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to delete executors"
-		err := s.ExecutorsClient.DeleteByLabels(c.Query("selector"))
+		err := s.DeprecatedClients.Executors().DeleteByLabels(c.Query("selector"))
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not delete executors: %w", errPrefix, err))
 		}
@@ -206,7 +206,7 @@ func (s TestkubeAPI) GetExecutorByTestTypeHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not fine test type", errPrefix))
 		}
 
-		item, err := s.ExecutorsClient.GetByType(testType)
+		item, err := s.DeprecatedClients.Executors().GetByType(testType)
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not get executor: %w", errPrefix, err))
 		}

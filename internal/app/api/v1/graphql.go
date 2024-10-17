@@ -11,7 +11,7 @@ import (
 
 // RunGraphQLServer runs GraphQL server on go net/http server
 func (s *TestkubeAPI) RunGraphQLServer(ctx context.Context, port string) error {
-	srv := graphql.GetServer(s.Events.Bus, s.ExecutorsClient)
+	srv := graphql.GetServer(s.Events.Bus, s.DeprecatedClients.Executors())
 
 	mux := http.NewServeMux()
 	mux.Handle("/graphql", srv)

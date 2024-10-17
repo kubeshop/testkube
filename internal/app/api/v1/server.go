@@ -14,6 +14,7 @@ import (
 	"github.com/pkg/errors"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/pkg/client/testworkflows/v1"
+	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -38,9 +39,6 @@ import (
 
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
 	templatesclientv1 "github.com/kubeshop/testkube-operator/pkg/client/templates/v1"
-	testsclientv3 "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
-	testsourcesclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testsources/v1"
-	testsuitesclientv3 "github.com/kubeshop/testkube-operator/pkg/client/testsuites/v3"
 	testkubeclientset "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/event"
@@ -68,20 +66,16 @@ const (
 )
 
 func NewTestkubeAPI(
+	deprecatedRepositories commons.DeprecatedRepositories,
+	deprecatedClients commons.DeprecatedClients,
 	namespace string,
-	testExecutionResults result.Repository,
-	testSuiteExecutionsResults testresult.Repository,
 	testWorkflowResults testworkflow.Repository,
 	testWorkflowOutput testworkflow.OutputRepository,
-	testsClient testsclientv3.Interface,
-	executorsClient executorsclientv1.Interface,
-	testsuitesClient testsuitesclientv3.Interface,
 	secretClient secret.Interface,
 	secretManager secretmanager.SecretManager,
 	webhookClient *executorsclientv1.WebhooksClient,
 	clientset kubernetes.Interface,
 	testkubeClientset testkubeclientset.Interface,
-	testsourcesClient testsourcesclientv1.Interface,
 	testWorkflowsClient testworkflowsv1.Interface,
 	testWorkflowTemplatesClient testworkflowsv1.TestWorkflowTemplatesInterface,
 	configMap repoConfig.Repository,
@@ -96,7 +90,6 @@ func NewTestkubeAPI(
 	slackLoader *slack.SlackLoader,
 	graphqlPort string,
 	artifactsStorage storage.ArtifactsStorage,
-	templatesClient templatesclientv1.Interface,
 	dashboardURI string,
 	helmchartVersion string,
 	mode string,
@@ -108,6 +101,7 @@ func NewTestkubeAPI(
 	serviceAccountNames map[string]string,
 	envs map[string]string,
 	dockerImageVersion string,
+	proContext *config.ProContext,
 ) TestkubeAPI {
 
 	var httpConfig server.Config
@@ -125,23 +119,19 @@ func NewTestkubeAPI(
 
 	return TestkubeAPI{
 		HTTPServer:                  server.NewServer(httpConfig),
-		TestExecutionResults:        testSuiteExecutionsResults,
-		ExecutionResults:            testExecutionResults,
+		DeprecatedRepositories:      deprecatedRepositories,
+		DeprecatedClients:           deprecatedClients,
 		TestWorkflowResults:         testWorkflowResults,
 		TestWorkflowOutput:          testWorkflowOutput,
-		TestsClient:                 testsClient,
-		ExecutorsClient:             executorsClient,
 		SecretClient:                secretClient,
 		SecretManager:               secretManager,
 		Clientset:                   clientset,
-		TestsSuitesClient:           testsuitesClient,
 		TestKubeClientset:           testkubeClientset,
 		TestWorkflowsClient:         testWorkflowsClient,
 		TestWorkflowTemplatesClient: testWorkflowTemplatesClient,
 		Metrics:                     metrics,
 		Events:                      eventsEmitter,
 		WebhooksClient:              webhookClient,
-		TestSourcesClient:           testsourcesClient,
 		Namespace:                   namespace,
 		ConfigMap:                   configMap,
 		Executor:                    executor,
@@ -152,7 +142,6 @@ func NewTestkubeAPI(
 		slackLoader:                 slackLoader,
 		graphqlPort:                 graphqlPort,
 		ArtifactsStorage:            artifactsStorage,
-		TemplatesClient:             templatesClient,
 		dashboardURI:                dashboardURI,
 		helmchartVersion:            helmchartVersion,
 		mode:                        mode,
@@ -165,27 +154,24 @@ func NewTestkubeAPI(
 		ServiceAccountNames:         serviceAccountNames,
 		Envs:                        envs,
 		dockerImageVersion:          dockerImageVersion,
+		proContext:                  proContext,
 	}
 }
 
 type TestkubeAPI struct {
 	server.HTTPServer
-	ExecutionResults            result.Repository
-	TestExecutionResults        testresult.Repository
 	TestWorkflowResults         testworkflow.Repository
 	TestWorkflowOutput          testworkflow.OutputRepository
 	Executor                    client.Executor
 	ContainerExecutor           client.Executor
 	TestWorkflowExecutor        testworkflowexecutor.TestWorkflowExecutor
 	ExecutionWorkerClient       executionworkertypes.Worker
-	TestsSuitesClient           testsuitesclientv3.Interface
-	TestsClient                 testsclientv3.Interface
-	ExecutorsClient             executorsclientv1.Interface
+	DeprecatedRepositories      commons.DeprecatedRepositories
+	DeprecatedClients           commons.DeprecatedClients
 	SecretClient                secret.Interface
 	SecretManager               secretmanager.SecretManager
 	WebhooksClient              *executorsclientv1.WebhooksClient
 	TestKubeClientset           testkubeclientset.Interface
-	TestSourcesClient           testsourcesclientv1.Interface
 	TestWorkflowsClient         testworkflowsv1.Interface
 	TestWorkflowTemplatesClient testworkflowsv1.TestWorkflowTemplatesInterface
 	Metrics                     metrics.Metrics
@@ -200,7 +186,6 @@ type TestkubeAPI struct {
 	slackLoader                 *slack.SlackLoader
 	graphqlPort                 string
 	ArtifactsStorage            storage.ArtifactsStorage
-	TemplatesClient             templatesclientv1.Interface
 	dashboardURI                string
 	helmchartVersion            string
 	mode                        string
@@ -278,9 +263,9 @@ func (s TestkubeAPI) SendTelemetryStartEvent(ctx context.Context, ch chan struct
 func (s *TestkubeAPI) Init(cdEventsTarget string, enableK8sEvents bool) {
 	s.InitEventListeners(
 		s.WebhooksClient,
-		s.TemplatesClient,
-		s.ExecutionResults,
-		s.TestExecutionResults,
+		s.DeprecatedClients.Templates(),
+		s.DeprecatedRepositories.TestResults(),
+		s.DeprecatedRepositories.TestSuiteResults(),
 		s.TestWorkflowResults,
 		s.Metrics,
 		cdEventsTarget,
@@ -722,10 +707,4 @@ func getFilterFromRequest(c *fiber.Ctx) result.Filter {
 	}
 
 	return filter
-}
-
-// WithProContext sets pro context for the API
-func (s *TestkubeAPI) WithProContext(proContext *config.ProContext) *TestkubeAPI {
-	s.proContext = proContext
-	return s
 }

@@ -90,7 +90,7 @@ func (s TestkubeAPI) CreateTestSuiteHandler() fiber.Handler {
 
 		s.Log.Infow("creating test suite", "testSuite", testSuite)
 
-		created, err := s.TestsSuitesClient.Create(&testSuite, !s.secretConfig.AutoCreate)
+		created, err := s.DeprecatedClients.TestSuites().Create(&testSuite, !s.secretConfig.AutoCreate)
 
 		s.Metrics.IncCreateTestSuite(err)
 
@@ -154,7 +154,7 @@ func (s TestkubeAPI) UpdateTestSuiteHandler() fiber.Handler {
 		errPrefix = errPrefix + " " + name
 
 		// we need to get resource first and load its metadata.ResourceVersion
-		testSuite, err := s.TestsSuitesClient.Get(name)
+		testSuite, err := s.DeprecatedClients.TestSuites().Get(name)
 		if err != nil {
 			if errors.IsNotFound(err) {
 				return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: test suite not found: %w", errPrefix, err))
@@ -169,7 +169,7 @@ func (s TestkubeAPI) UpdateTestSuiteHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, err)
 		}
 
-		updatedTestSuite, err := s.TestsSuitesClient.Update(testSuiteSpec, !s.secretConfig.AutoCreate)
+		updatedTestSuite, err := s.DeprecatedClients.TestSuites().Update(testSuiteSpec, !s.secretConfig.AutoCreate)
 
 		s.Metrics.IncUpdateTestSuite(err)
 
@@ -187,7 +187,7 @@ func (s TestkubeAPI) GetTestSuiteHandler() fiber.Handler {
 		name := c.Params("id")
 		errPrefix := "failed to get test suite " + name
 
-		crTestSuite, err := s.TestsSuitesClient.Get(name)
+		crTestSuite, err := s.DeprecatedClients.TestSuites().Get(name)
 		if err != nil {
 			if errors.IsNotFound(err) {
 				return s.Warn(c, http.StatusNotFound, fmt.Errorf("%s: test suite not found: %w", errPrefix, err))
@@ -212,7 +212,7 @@ func (s TestkubeAPI) GetTestSuiteWithExecutionHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
 		errPrefix := fmt.Sprintf("failed to get test suite %s with execution", name)
-		crTestSuite, err := s.TestsSuitesClient.Get(name)
+		crTestSuite, err := s.DeprecatedClients.TestSuites().Get(name)
 		if err != nil {
 			if errors.IsNotFound(err) {
 				return s.Warn(c, http.StatusNotFound, fmt.Errorf("%s: test suite not found: %w", errPrefix, err))
@@ -229,7 +229,7 @@ func (s TestkubeAPI) GetTestSuiteWithExecutionHandler() fiber.Handler {
 		}
 
 		ctx := c.Context()
-		execution, err := s.TestExecutionResults.GetLatestByTestSuite(ctx, name)
+		execution, err := s.DeprecatedRepositories.TestSuiteResults().GetLatestByTestSuite(ctx, name)
 		if err != nil && err != mongo.ErrNoDocuments {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not get execution: %w", errPrefix, err))
 		}
@@ -248,7 +248,7 @@ func (s TestkubeAPI) DeleteTestSuiteHandler() fiber.Handler {
 		errPrefix := fmt.Sprintf("failed to delete test suite %s", name)
 		skipCRD := c.Query("skipDeleteCRD", "")
 		if skipCRD != "true" {
-			err := s.TestsSuitesClient.Delete(name)
+			err := s.DeprecatedClients.TestSuites().Delete(name)
 			if err != nil {
 				if errors.IsNotFound(err) {
 					return s.Warn(c, http.StatusNotFound, fmt.Errorf("%s: test suite not found: %w", errPrefix, err))
@@ -259,12 +259,12 @@ func (s TestkubeAPI) DeleteTestSuiteHandler() fiber.Handler {
 		}
 
 		// delete executions for test
-		if err := s.ExecutionResults.DeleteByTestSuite(c.Context(), name); err != nil {
+		if err := s.DeprecatedRepositories.TestResults().DeleteByTestSuite(c.Context(), name); err != nil {
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not delete test suite test executions: %w", errPrefix, err))
 		}
 
 		// delete executions for test suite
-		if err := s.TestExecutionResults.DeleteByTestSuite(c.Context(), name); err != nil {
+		if err := s.DeprecatedRepositories.TestSuiteResults().DeleteByTestSuite(c.Context(), name); err != nil {
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not delete test suite executions: %w", errPrefix, err))
 		}
 
@@ -281,10 +281,10 @@ func (s TestkubeAPI) DeleteTestSuitesHandler() fiber.Handler {
 		var testSuiteNames []string
 		selector := c.Query("selector")
 		if selector == "" {
-			err = s.TestsSuitesClient.DeleteAll()
+			err = s.DeprecatedClients.TestSuites().DeleteAll()
 		} else {
 			var testSuiteList *testsuitesv3.TestSuiteList
-			testSuiteList, err = s.TestsSuitesClient.List(selector)
+			testSuiteList, err = s.DeprecatedClients.TestSuites().List(selector)
 			if err != nil {
 				if !errors.IsNotFound(err) {
 					return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not list test suites: %w", errPrefix, err))
@@ -295,7 +295,7 @@ func (s TestkubeAPI) DeleteTestSuitesHandler() fiber.Handler {
 				}
 			}
 
-			err = s.TestsSuitesClient.DeleteByLabels(selector)
+			err = s.DeprecatedClients.TestSuites().DeleteByLabels(selector)
 		}
 
 		if err != nil {
@@ -308,9 +308,9 @@ func (s TestkubeAPI) DeleteTestSuitesHandler() fiber.Handler {
 
 		// delete all executions for tests
 		if selector == "" {
-			err = s.ExecutionResults.DeleteForAllTestSuites(c.Context())
+			err = s.DeprecatedRepositories.TestResults().DeleteForAllTestSuites(c.Context())
 		} else {
-			err = s.ExecutionResults.DeleteByTestSuites(c.Context(), testSuiteNames)
+			err = s.DeprecatedRepositories.TestResults().DeleteByTestSuites(c.Context(), testSuiteNames)
 		}
 
 		if err != nil {
@@ -319,9 +319,9 @@ func (s TestkubeAPI) DeleteTestSuitesHandler() fiber.Handler {
 
 		// delete all executions for test suites
 		if selector == "" {
-			err = s.TestExecutionResults.DeleteAll(c.Context())
+			err = s.DeprecatedRepositories.TestSuiteResults().DeleteAll(c.Context())
 		} else {
-			err = s.TestExecutionResults.DeleteByTestSuites(c.Context(), testSuiteNames)
+			err = s.DeprecatedRepositories.TestSuiteResults().DeleteByTestSuites(c.Context(), testSuiteNames)
 		}
 
 		if err != nil {
@@ -333,7 +333,7 @@ func (s TestkubeAPI) DeleteTestSuitesHandler() fiber.Handler {
 }
 
 func (s TestkubeAPI) getFilteredTestSuitesList(c *fiber.Ctx) (*testsuitesv3.TestSuiteList, error) {
-	crTestSuites, err := s.TestsSuitesClient.List(c.Query("selector"))
+	crTestSuites, err := s.DeprecatedClients.TestSuites().List(c.Query("selector"))
 	if err != nil {
 		return nil, err
 	}
@@ -396,7 +396,7 @@ func (s TestkubeAPI) TestSuiteMetricsHandler() fiber.Handler {
 			last = DefaultLastDays
 		}
 
-		metrics, err := s.TestExecutionResults.GetTestSuiteMetrics(context.Background(), testSuiteName, limit, last)
+		metrics, err := s.DeprecatedRepositories.TestSuiteResults().GetTestSuiteMetrics(context.Background(), testSuiteName, limit, last)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: failed to get metrics from client: %w", errPrefix, err))
 		}
@@ -407,7 +407,7 @@ func (s TestkubeAPI) TestSuiteMetricsHandler() fiber.Handler {
 
 // getLatestTestSuiteExecutions return latest test suite executions either by starttime or endtine for tests
 func (s TestkubeAPI) getLatestTestSuiteExecutions(ctx context.Context, testSuiteNames []string) (map[string]testkube.TestSuiteExecution, error) {
-	executions, err := s.TestExecutionResults.GetLatestByTestSuites(ctx, testSuiteNames)
+	executions, err := s.DeprecatedRepositories.TestSuiteResults().GetLatestByTestSuites(ctx, testSuiteNames)
 	if err != nil && err != mongo.ErrNoDocuments {
 		return nil, err
 	}
@@ -556,7 +556,7 @@ func (s TestkubeAPI) ExecuteTestSuitesHandler() fiber.Handler {
 		var testSuites []testsuitesv3.TestSuite
 		if name != "" {
 			errPrefix = errPrefix + " " + name
-			testSuite, err := s.TestsSuitesClient.Get(name)
+			testSuite, err := s.DeprecatedClients.TestSuites().Get(name)
 			if err != nil {
 				if errors.IsNotFound(err) {
 					return s.Warn(c, http.StatusNotFound, fmt.Errorf("%s: test suite not found: %w", errPrefix, err))
@@ -566,7 +566,7 @@ func (s TestkubeAPI) ExecuteTestSuitesHandler() fiber.Handler {
 			}
 			testSuites = append(testSuites, *testSuite)
 		} else {
-			testSuiteList, err := s.TestsSuitesClient.List(selector)
+			testSuiteList, err := s.DeprecatedClients.TestSuites().List(selector)
 			if err != nil {
 				return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: can't list test suites: %w", errPrefix, err))
 			}
@@ -617,20 +617,20 @@ func (s TestkubeAPI) ListTestSuiteExecutionsHandler() fiber.Handler {
 		filter := getExecutionsFilterFromRequest(c)
 
 		ctx := c.Context()
-		executionsTotals, err := s.TestExecutionResults.GetExecutionsTotals(ctx, filter)
+		executionsTotals, err := s.DeprecatedRepositories.TestSuiteResults().GetExecutionsTotals(ctx, filter)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: client could not get executions totals: %w", errPrefix, err))
 		}
 		l.Debugw("got executions totals", "totals", executionsTotals, "time", time.Since(now))
 		filterAllTotals := *filter.(*testresult.FilterImpl)
 		filterAllTotals.WithPage(0).WithPageSize(math.MaxInt64)
-		allExecutionsTotals, err := s.TestExecutionResults.GetExecutionsTotals(ctx, filterAllTotals)
+		allExecutionsTotals, err := s.DeprecatedRepositories.TestSuiteResults().GetExecutionsTotals(ctx, filterAllTotals)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: client could not get all executions totals: %w", errPrefix, err))
 		}
 		l.Debugw("got all executions totals", "totals", executionsTotals, "time", time.Since(now))
 
-		executions, err := s.TestExecutionResults.GetExecutions(ctx, filter)
+		executions, err := s.DeprecatedRepositories.TestSuiteResults().GetExecutions(ctx, filter)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: client could not get executions: %w", errPrefix, err))
 		}
@@ -649,7 +649,7 @@ func (s TestkubeAPI) GetTestSuiteExecutionHandler() fiber.Handler {
 		id := c.Params("executionID")
 		errPrefix := fmt.Sprintf("failed to get test suite execution %s", id)
 
-		execution, err := s.TestExecutionResults.Get(c.Context(), id)
+		execution, err := s.DeprecatedRepositories.TestSuiteResults().Get(c.Context(), id)
 		if err == mongo.ErrNoDocuments {
 			return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: test suite with execution id/name %s not found", errPrefix, id))
 		}
@@ -661,7 +661,7 @@ func (s TestkubeAPI) GetTestSuiteExecutionHandler() fiber.Handler {
 
 		secretMap := make(map[string]string)
 		if execution.SecretUUID != "" && execution.TestSuite != nil {
-			secretMap, err = s.TestsSuitesClient.GetSecretTestSuiteVars(execution.TestSuite.Name, execution.SecretUUID)
+			secretMap, err = s.DeprecatedClients.TestSuites().GetSecretTestSuiteVars(execution.TestSuite.Name, execution.SecretUUID)
 			if err != nil {
 				return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not get test suite secrets: %w", errPrefix, err))
 			}
@@ -684,7 +684,7 @@ func (s TestkubeAPI) ListTestSuiteArtifactsHandler() fiber.Handler {
 		s.Log.Infow("listing testsuite artifacts", "executionID", c.Params("executionID"))
 		id := c.Params("executionID")
 		errPrefix := fmt.Sprintf("failed to list test suite artifacts %s", id)
-		execution, err := s.TestExecutionResults.Get(c.Context(), id)
+		execution, err := s.DeprecatedRepositories.TestSuiteResults().Get(c.Context(), id)
 		if err == mongo.ErrNoDocuments {
 			return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: test suite with execution id/name %s not found", errPrefix, id))
 		}
@@ -773,7 +773,7 @@ func (s TestkubeAPI) AbortTestSuiteHandler() fiber.Handler {
 		}
 		errPrefix := fmt.Sprintf("failed to abort test suite %s", name)
 		filter := testresult.NewExecutionsFilter().WithName(name).WithStatus(string(testkube.RUNNING_ExecutionStatus))
-		executions, err := s.TestExecutionResults.GetExecutions(ctx, filter)
+		executions, err := s.DeprecatedRepositories.TestSuiteResults().GetExecutions(ctx, filter)
 		if err != nil {
 			if err == mongo.ErrNoDocuments {
 				return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: executions with test syute name %s not found", errPrefix, name))
@@ -802,7 +802,7 @@ func (s TestkubeAPI) AbortTestSuiteExecutionHandler() fiber.Handler {
 		s.Log.Infow("aborting test suite execution", "executionID", c.Params("executionID"))
 		id := c.Params("executionID")
 		errPrefix := fmt.Sprintf("failed to abort test suite execution %s", id)
-		execution, err := s.TestExecutionResults.Get(c.Context(), id)
+		execution, err := s.DeprecatedRepositories.TestSuiteResults().Get(c.Context(), id)
 		if err == mongo.ErrNoDocuments {
 			return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: test suite with execution id/name %s not found", errPrefix, id))
 		}
@@ -829,7 +829,7 @@ func (s TestkubeAPI) ListTestSuiteTestsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
 		errPrefix := fmt.Sprintf("failed to list tests for test suite %s", name)
-		crTestSuite, err := s.TestsSuitesClient.Get(name)
+		crTestSuite, err := s.DeprecatedClients.TestSuites().Get(name)
 		if err != nil {
 			if errors.IsNotFound(err) {
 				return s.Warn(c, http.StatusNotFound, fmt.Errorf("%s: test suite with id/name %s not found", errPrefix, name))
@@ -839,7 +839,7 @@ func (s TestkubeAPI) ListTestSuiteTestsHandler() fiber.Handler {
 		}
 
 		testSuite := testsuitesmapper.MapCRToAPI(*crTestSuite)
-		crTests, err := s.TestsClient.ListByNames(testSuite.GetTestNames())
+		crTests, err := s.DeprecatedClients.Tests().ListByNames(testSuite.GetTestNames())
 		if err != nil {
 			if errors.IsNotFound(err) {
 				return s.Warn(c, http.StatusNotFound, fmt.Errorf("%s: test suite tests with id/name %s not found", errPrefix, testSuite.GetTestNames()))

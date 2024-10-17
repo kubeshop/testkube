@@ -34,7 +34,7 @@ func (s TestkubeAPI) GetTestHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, fmt.Errorf("failed to get test: id cannot be empty"))
 		}
 		errPrefix := fmt.Sprintf("failed to get test %s", name)
-		crTest, err := s.TestsClient.Get(name)
+		crTest, err := s.DeprecatedClients.Tests().Get(name)
 		if err != nil {
 			if errors.IsNotFound(err) {
 				return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: client was unable to find test: %w", errPrefix, err))
@@ -65,7 +65,7 @@ func (s TestkubeAPI) GetTestWithExecutionHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, fmt.Errorf("failed to get test with execution: id cannot be empty"))
 		}
 		errPrefix := fmt.Sprintf("failed to get test %s with execution", name)
-		crTest, err := s.TestsClient.Get(name)
+		crTest, err := s.DeprecatedClients.Tests().Get(name)
 		if err != nil {
 			if errors.IsNotFound(err) {
 				return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: client failed to find test: %w", errPrefix, err))
@@ -85,7 +85,7 @@ func (s TestkubeAPI) GetTestWithExecutionHandler() fiber.Handler {
 		}
 
 		ctx := c.Context()
-		execution, err := s.ExecutionResults.GetLatestByTest(ctx, name)
+		execution, err := s.DeprecatedRepositories.TestResults().GetLatestByTest(ctx, name)
 		if err != nil && err != mongo.ErrNoDocuments {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: failed to get execution: %w", errPrefix, err))
 		}
@@ -99,7 +99,7 @@ func (s TestkubeAPI) GetTestWithExecutionHandler() fiber.Handler {
 
 func (s TestkubeAPI) getFilteredTestList(c *fiber.Ctx) (*testsv3.TestList, error) {
 
-	crTests, err := s.TestsClient.List(c.Query("selector"))
+	crTests, err := s.DeprecatedClients.Tests().List(c.Query("selector"))
 	if err != nil {
 		return nil, fmt.Errorf("client failed to list tests: %w", err)
 	}
@@ -170,7 +170,7 @@ func (s TestkubeAPI) TestMetricsHandler() fiber.Handler {
 			last = DefaultLastDays
 		}
 
-		metrics, err := s.ExecutionResults.GetTestMetrics(context.Background(), testName, limit, last)
+		metrics, err := s.DeprecatedRepositories.TestResults().GetTestMetrics(context.Background(), testName, limit, last)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("failed to get metrics for test %s: %w", testName, err))
 		}
@@ -181,7 +181,7 @@ func (s TestkubeAPI) TestMetricsHandler() fiber.Handler {
 
 // getLatestExecutions return latest executions either by starttime or endtime for tests
 func (s TestkubeAPI) getLatestExecutions(ctx context.Context, testNames []string) (map[string]testkube.Execution, error) {
-	executions, err := s.ExecutionResults.GetLatestByTests(ctx, testNames)
+	executions, err := s.DeprecatedRepositories.TestResults().GetLatestByTests(ctx, testNames)
 	if err != nil && err != mongo.ErrNoDocuments {
 		return nil, fmt.Errorf("could not get latest executions for tests %s sorted by start time: %w", testNames, err)
 	}
@@ -361,7 +361,7 @@ func (s TestkubeAPI) CreateTestHandler() fiber.Handler {
 			}
 		}
 
-		createdTest, err := s.TestsClient.Create(test, !s.secretConfig.AutoCreate, tests.Option{Secrets: secrets})
+		createdTest, err := s.DeprecatedClients.Tests().Create(test, !s.secretConfig.AutoCreate, tests.Option{Secrets: secrets})
 
 		s.Metrics.IncCreateTest(test.Spec.Type_, err)
 
@@ -407,7 +407,7 @@ func (s TestkubeAPI) UpdateTestHandler() fiber.Handler {
 		}
 
 		// we need to get resource first and load its metadata.ResourceVersion
-		test, err := s.TestsClient.Get(name)
+		test, err := s.DeprecatedClients.Tests().Get(name)
 		if err != nil {
 			if errors.IsNotFound(err) {
 				return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: client could not find test: %w", errPrefix, err))
@@ -441,9 +441,9 @@ func (s TestkubeAPI) UpdateTestHandler() fiber.Handler {
 
 		var updatedTest *testsv3.Test
 		if option != nil {
-			updatedTest, err = s.TestsClient.Update(testSpec, !s.secretConfig.AutoCreate, *option)
+			updatedTest, err = s.DeprecatedClients.Tests().Update(testSpec, !s.secretConfig.AutoCreate, *option)
 		} else {
-			updatedTest, err = s.TestsClient.Update(testSpec, !s.secretConfig.AutoCreate)
+			updatedTest, err = s.DeprecatedClients.Tests().Update(testSpec, !s.secretConfig.AutoCreate)
 		}
 
 		s.Metrics.IncUpdateTest(testSpec.Spec.Type_, err)
@@ -477,7 +477,7 @@ func (s TestkubeAPI) DeleteTestHandler() fiber.Handler {
 		errPrefix := fmt.Sprintf("failed to delete test %s", name)
 		skipCRD := c.Query("skipDeleteCRD", "")
 		if skipCRD != "true" {
-			err := s.TestsClient.Delete(name)
+			err := s.DeprecatedClients.Tests().Delete(name)
 			if err != nil {
 				if errors.IsNotFound(err) {
 					return s.Warn(c, http.StatusNotFound, fmt.Errorf("%s: client could not find test: %w", errPrefix, err))
@@ -493,7 +493,7 @@ func (s TestkubeAPI) DeleteTestHandler() fiber.Handler {
 		skipExecutions := c.Query("skipDeleteExecutions", "")
 		if skipExecutions != "true" {
 			// delete executions for test
-			if err := s.ExecutionResults.DeleteByTest(c.Context(), name); err != nil {
+			if err := s.DeprecatedRepositories.TestResults().DeleteByTest(c.Context(), name); err != nil {
 				return s.Warn(c, http.StatusInternalServerError, fmt.Errorf("test %s was deleted but deleting test executions returned error: %w", name, err))
 			}
 		}
@@ -512,7 +512,7 @@ func (s TestkubeAPI) AbortTestHandler() fiber.Handler {
 		}
 		errPrefix := fmt.Sprintf("failed to abort test %s", name)
 		filter := result.NewExecutionsFilter().WithTestName(name).WithStatus(string(testkube.RUNNING_ExecutionStatus))
-		executions, err := s.ExecutionResults.GetExecutions(ctx, filter)
+		executions, err := s.DeprecatedRepositories.TestResults().GetExecutions(ctx, filter)
 		if err != nil {
 			if err == mongo.ErrNoDocuments {
 				return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: executions with name %s not found", errPrefix, name))
@@ -543,10 +543,10 @@ func (s TestkubeAPI) DeleteTestsHandler() fiber.Handler {
 		var testNames []string
 		selector := c.Query("selector")
 		if selector == "" {
-			err = s.TestsClient.DeleteAll()
+			err = s.DeprecatedClients.Tests().DeleteAll()
 		} else {
 			var testList *testsv3.TestList
-			testList, err = s.TestsClient.List(selector)
+			testList, err = s.DeprecatedClients.Tests().List(selector)
 			if err != nil {
 				if !errors.IsNotFound(err) {
 					return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not list tests: %w", errPrefix, err))
@@ -557,7 +557,7 @@ func (s TestkubeAPI) DeleteTestsHandler() fiber.Handler {
 				}
 			}
 
-			err = s.TestsClient.DeleteByLabels(selector)
+			err = s.DeprecatedClients.Tests().DeleteByLabels(selector)
 		}
 
 		if err != nil {
@@ -570,9 +570,9 @@ func (s TestkubeAPI) DeleteTestsHandler() fiber.Handler {
 
 		// delete all executions for tests
 		if selector == "" {
-			err = s.ExecutionResults.DeleteAll(c.Context())
+			err = s.DeprecatedRepositories.TestResults().DeleteAll(c.Context())
 		} else {
-			err = s.ExecutionResults.DeleteByTests(c.Context(), testNames)
+			err = s.DeprecatedRepositories.TestResults().DeleteByTests(c.Context(), testNames)
 		}
 
 		if err != nil {

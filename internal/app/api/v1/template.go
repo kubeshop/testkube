@@ -45,7 +45,7 @@ func (s TestkubeAPI) CreateTemplateHandler() fiber.Handler {
 			template.Namespace = s.Namespace
 		}
 
-		created, err := s.TemplatesClient.Create(&template)
+		created, err := s.DeprecatedClients.Templates().Create(&template)
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not create template: %w", errPrefix, err))
 		}
@@ -81,7 +81,7 @@ func (s TestkubeAPI) UpdateTemplateHandler() fiber.Handler {
 		}
 		errPrefix = errPrefix + " " + name
 		// we need to get resource first and load its metadata.ResourceVersion
-		template, err := s.TemplatesClient.Get(name)
+		template, err := s.DeprecatedClients.Templates().Get(name)
 		if err != nil {
 			if errors.IsNotFound(err) {
 				return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: client found no template: %w", errPrefix, err))
@@ -93,7 +93,7 @@ func (s TestkubeAPI) UpdateTemplateHandler() fiber.Handler {
 		// map update template but load spec only to not override metadata.ResourceVersion
 		templateSpec := templatesmapper.MapUpdateToSpec(request, template)
 
-		updatedTemplate, err := s.TemplatesClient.Update(templateSpec)
+		updatedTemplate, err := s.DeprecatedClients.Templates().Update(templateSpec)
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not update template: %w", errPrefix, err))
 		}
@@ -106,7 +106,7 @@ func (s TestkubeAPI) ListTemplatesHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to list templates"
 
-		list, err := s.TemplatesClient.List(c.Query("selector"))
+		list, err := s.DeprecatedClients.Templates().List(c.Query("selector"))
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not list templates: %w", errPrefix, err))
 		}
@@ -137,7 +137,7 @@ func (s TestkubeAPI) GetTemplateHandler() fiber.Handler {
 		name := c.Params("name")
 		errPrefix := fmt.Sprintf("failed to get template %s", name)
 
-		item, err := s.TemplatesClient.Get(name)
+		item, err := s.DeprecatedClients.Templates().Get(name)
 		if err != nil {
 			if errors.IsNotFound(err) {
 				return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: template not found: %w", errPrefix, err))
@@ -164,7 +164,7 @@ func (s TestkubeAPI) DeleteTemplateHandler() fiber.Handler {
 		name := c.Params("name")
 		errPrefix := fmt.Sprintf("failed to delete template %s", name)
 
-		err := s.TemplatesClient.Delete(name)
+		err := s.DeprecatedClients.Templates().Delete(name)
 		if err != nil {
 			if errors.IsNotFound(err) {
 				return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: template not found: %w", errPrefix, err))
@@ -181,7 +181,7 @@ func (s TestkubeAPI) DeleteTemplatesHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to delete templates"
 
-		err := s.TemplatesClient.DeleteByLabels(c.Query("selector"))
+		err := s.DeprecatedClients.Templates().DeleteByLabels(c.Query("selector"))
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not delete templates: %w", errPrefix, err))
 		}

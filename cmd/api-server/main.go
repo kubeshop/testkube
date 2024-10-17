@@ -15,7 +15,7 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
-	"github.com/kubeshop/testkube/cmd/api-server/internal"
+	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	"github.com/kubeshop/testkube/internal/app/api/debug"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/kubernetesworker"
@@ -102,8 +102,8 @@ func runMongoMigrations(ctx context.Context, db *mongo.Database, _ string) error
 }
 
 func main() {
-	cfg := internal.MustGetConfig()
-	features := internal.MustGetFeatureFlags()
+	cfg := commons.MustGetConfig()
+	features := commons.MustGetFeatureFlags()
 
 	// Determine the running mode
 	mode := common.ModeStandalone
@@ -116,10 +116,10 @@ func main() {
 
 	// Cancel the errgroup context on SIGINT and SIGTERM,
 	// which shuts everything down gracefully.
-	internal.HandleCancelSignal(g, ctx)
+	commons.HandleCancelSignal(g, ctx)
 
-	internal.MustFreePort(cfg.APIServerPort)
-	internal.MustFreePort(cfg.GraphqlPort)
+	commons.MustFreePort(cfg.APIServerPort)
+	commons.MustFreePort(cfg.GraphqlPort)
 
 	kubeClient, err := kubeclient.GetClient()
 	exitOnError("Getting kubernetes client", err)
@@ -151,7 +151,7 @@ func main() {
 	}
 
 	// k8s
-	deprecatedClients := internal.CreateDeprecatedClients(kubeClient, cfg.TestkubeNamespace)
+	deprecatedClients := commons.CreateDeprecatedClients(kubeClient, cfg.TestkubeNamespace)
 	webhooksClient := executorsclientv1.NewWebhooksClient(kubeClient, cfg.TestkubeNamespace)
 	testWorkflowExecutionsClient := testworkflowsclientv1.NewTestWorkflowExecutionsClient(kubeClient, cfg.TestkubeNamespace)
 
@@ -174,18 +174,18 @@ func main() {
 
 	var logGrpcClient logsclient.StreamGetter
 	if features.LogsV2 {
-		logGrpcClient = internal.MustGetLogsV2Client(cfg)
+		logGrpcClient = commons.MustGetLogsV2Client(cfg)
 	}
 
 	// DI
-	var deprecatedRepositories internal.DeprecatedRepositories
+	var deprecatedRepositories commons.DeprecatedRepositories
 	var testWorkflowResultsRepository testworkflow2.Repository
 	var testWorkflowOutputRepository testworkflow2.OutputRepository
 	var triggerLeaseBackend triggers.LeaseBackend
 	var artifactStorage domainstorage.ArtifactsStorage
 	var storageClient domainstorage.Client
 	if mode == common.ModeAgent {
-		deprecatedRepositories = internal.CreateDeprecatedRepositoriesForCloud(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
+		deprecatedRepositories = commons.CreateDeprecatedRepositoriesForCloud(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
 		testWorkflowResultsRepository = cloudtestworkflow.NewCloudRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
 		var opts []cloudtestworkflow.Option
 		if cfg.StorageSkipVerify {
@@ -196,8 +196,8 @@ func main() {
 		artifactStorage = cloudartifacts.NewCloudArtifactsStorage(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
 	} else {
 		// Connect to storages
-		db := internal.MustGetMongoDatabase(cfg, secretClient)
-		storageClient = internal.MustGetMinioClient(cfg)
+		db := commons.MustGetMongoDatabase(cfg, secretClient)
+		storageClient = commons.MustGetMinioClient(cfg)
 
 		// Build repositories
 		sequenceRepository := sequence.NewMongoRepository(db)
@@ -206,7 +206,7 @@ func main() {
 		triggerLeaseBackend = triggers.NewMongoLeaseBackend(db)
 		testWorkflowOutputRepository = testworkflow2.NewMinioOutputRepository(storageClient, db.Collection(testworkflow2.CollectionName), cfg.LogsBucket)
 		artifactStorage = minio.NewMinIOArtifactClient(storageClient)
-		deprecatedRepositories = internal.CreateDeprecatedRepositoriesForMongo(ctx, cfg, db, logGrpcClient, storageClient, features)
+		deprecatedRepositories = commons.CreateDeprecatedRepositoriesForMongo(ctx, cfg, db, logGrpcClient, storageClient, features)
 
 		// Run DB migrations
 		if !cfg.DisableMongoMigrations {
@@ -217,14 +217,14 @@ func main() {
 		}
 	}
 
-	configMapConfig := internal.MustGetConfigMapConfig(ctx, cfg.APIServerConfig, cfg.TestkubeNamespace, cfg.TestkubeAnalyticsEnabled)
+	configMapConfig := commons.MustGetConfigMapConfig(ctx, cfg.APIServerConfig, cfg.TestkubeNamespace, cfg.TestkubeAnalyticsEnabled)
 	clusterId, _ := configMapConfig.GetUniqueClusterId(context.Background())
 	telemetryEnabled, _ := configMapConfig.GetTelemetryEnabled(context.Background())
 
 	apiVersion := version.Version
 
 	// TODO: Check why these are needed at all
-	envs := internal.GetEnvironmentVariables()
+	envs := commons.GetEnvironmentVariables()
 
 	nc, err := newNATSEncodedConnection(cfg)
 	exitOnError("Creating NATS connection", err)
@@ -274,17 +274,15 @@ func main() {
 	jobTemplates, err := parser.ParseJobTemplates(cfg)
 	exitOnError("Creating job templates", err)
 	executor, err := client.NewJobExecutor(
-		deprecatedRepositories.TestResults(),
+		deprecatedRepositories,
+		deprecatedClients,
 		images,
 		jobTemplates,
 		serviceAccountNames,
 		metrics,
 		eventsEmitter,
 		configMapConfig,
-		deprecatedClients.Tests(),
 		clientset,
-		deprecatedClients.TestExecutions(),
-		deprecatedClients.Templates(),
 		cfg.TestkubeRegistry,
 		cfg.TestkubePodStartTimeout,
 		clusterId,
@@ -299,12 +297,13 @@ func main() {
 	)
 	exitOnError("Creating executor client", err)
 
-	inspector := internal.CreateImageInspector(cfg, configMapClient, secretClient)
+	inspector := commons.CreateImageInspector(cfg, configMapClient, secretClient)
 
 	containerTemplates, err := parser.ParseContainerTemplates(cfg)
 	exitOnError("Creating container job templates", err)
 	containerExecutor, err := containerexecutor.NewContainerExecutor(
-		deprecatedRepositories.TestResults(),
+		deprecatedRepositories,
+		deprecatedClients,
 		images,
 		containerTemplates,
 		inspector,
@@ -312,10 +311,6 @@ func main() {
 		metrics,
 		eventsEmitter,
 		configMapConfig,
-		deprecatedClients.Executors(),
-		deprecatedClients.Tests(),
-		deprecatedClients.TestExecutions(),
-		deprecatedClients.Templates(),
 		cfg.TestkubeRegistry,
 		cfg.TestkubePodStartTimeout,
 		clusterId,
@@ -335,18 +330,13 @@ func main() {
 		metrics,
 		executor,
 		containerExecutor,
-		deprecatedRepositories.TestResults(),
-		deprecatedRepositories.TestSuiteResults(),
-		deprecatedClients.Executors(),
-		deprecatedClients.Tests(),
-		deprecatedClients.TestSuites(),
-		deprecatedClients.TestSources(),
+		deprecatedRepositories,
+		deprecatedClients,
 		secretClient,
 		eventsEmitter,
 		log.DefaultLogger,
 		configMapConfig,
 		configMapClient,
-		deprecatedClients.TestSuiteExecutions(),
 		eventBus,
 		cfg.TestkubeDashboardURI,
 		features,
@@ -448,20 +438,16 @@ func main() {
 	exitOnError("Creating slack loader", err)
 
 	api := apiv1.NewTestkubeAPI(
+		deprecatedRepositories,
+		deprecatedClients,
 		cfg.TestkubeNamespace,
-		deprecatedRepositories.TestResults(),
-		deprecatedRepositories.TestSuiteResults(),
 		testWorkflowResultsRepository,
 		testWorkflowOutputRepository,
-		deprecatedClients.Tests(),
-		deprecatedClients.Executors(),
-		deprecatedClients.TestSuites(),
 		secretClient,
 		secretManager,
 		webhooksClient,
 		clientset,
 		testkubeClientset,
-		deprecatedClients.TestSources(),
 		testWorkflowsClient,
 		testWorkflowTemplatesClient,
 		configMapConfig,
@@ -476,7 +462,6 @@ func main() {
 		slackLoader,
 		cfg.GraphqlPort,
 		artifactStorage,
-		deprecatedClients.Templates(),
 		cfg.TestkubeDashboardURI,
 		cfg.TestkubeHelmchartVersion,
 		mode,
@@ -488,11 +473,11 @@ func main() {
 		serviceAccountNames,
 		envs,
 		cfg.TestkubeDockerImageVersion,
+		&proContext,
 	)
 
 	if mode == common.ModeAgent {
 		log.DefaultLogger.Info("starting agent service")
-		api.WithProContext(&proContext)
 		agentHandle, err := agent.NewAgent(
 			log.DefaultLogger,
 			api.Mux.Handler(),
@@ -518,18 +503,15 @@ func main() {
 	api.Init(cfg.CDEventsTarget, cfg.EnableK8sEvents)
 	if !cfg.DisableTestTriggers {
 		triggerService := triggers.NewService(
+			deprecatedRepositories,
+			deprecatedClients,
 			sched,
 			clientset,
 			testkubeClientset,
-			deprecatedClients.TestSuites(),
-			deprecatedClients.Tests(),
 			testWorkflowsClient,
-			deprecatedRepositories.TestResults(),
-			deprecatedRepositories.TestSuiteResults(),
 			triggerLeaseBackend,
 			log.DefaultLogger,
 			configMapConfig,
-			deprecatedClients.Executors(),
 			executor,
 			eventBus,
 			metrics,
@@ -548,11 +530,7 @@ func main() {
 	}
 
 	if !cfg.DisableReconciler {
-		reconcilerClient := reconciler.NewClient(clientset,
-			deprecatedRepositories.TestResults(),
-			deprecatedRepositories.TestSuiteResults(),
-			deprecatedClients.Executors(),
-			log.DefaultLogger)
+		reconcilerClient := reconciler.NewClient(clientset, deprecatedRepositories, deprecatedClients, log.DefaultLogger)
 		g.Go(func() error {
 			return reconcilerClient.Run(ctx)
 		})

@@ -56,7 +56,7 @@ func (s *TestkubeAPI) ExecuteTestsHandler() fiber.Handler {
 
 		var tests []testsv3.Test
 		if id != "" {
-			test, err := s.TestsClient.Get(id)
+			test, err := s.DeprecatedClients.Tests().Get(id)
 			if err != nil {
 				if errors.IsNotFound(err) {
 					return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: client found no test: %w", errPrefix, err))
@@ -66,7 +66,7 @@ func (s *TestkubeAPI) ExecuteTestsHandler() fiber.Handler {
 
 			tests = append(tests, *test)
 		} else {
-			testList, err := s.TestsClient.List(c.Query("selector"))
+			testList, err := s.DeprecatedClients.Tests().List(c.Query("selector"))
 			if err != nil {
 				return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: can't get tests: %w", errPrefix, err))
 			}
@@ -120,7 +120,7 @@ func (s *TestkubeAPI) ListExecutionsHandler() fiber.Handler {
 
 		filter := getFilterFromRequest(c)
 
-		executions, err := s.ExecutionResults.GetExecutions(c.Context(), filter)
+		executions, err := s.DeprecatedRepositories.TestResults().GetExecutions(c.Context(), filter)
 		if err != nil {
 			if err == mongo.ErrNoDocuments {
 				return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: db found no execution results: %w", errPrefix, err))
@@ -128,7 +128,7 @@ func (s *TestkubeAPI) ListExecutionsHandler() fiber.Handler {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: db client failed to get execution results: %w", errPrefix, err))
 		}
 
-		executionTotals, err := s.ExecutionResults.GetExecutionTotals(c.Context(), false, filter)
+		executionTotals, err := s.DeprecatedRepositories.TestResults().GetExecutionTotals(c.Context(), false, filter)
 		if err != nil {
 			if err == mongo.ErrNoDocuments {
 				return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: db client found no total execution results: %w", errPrefix, err))
@@ -136,7 +136,7 @@ func (s *TestkubeAPI) ListExecutionsHandler() fiber.Handler {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: db client failed to get total execution results: %w", errPrefix, err))
 		}
 
-		filteredTotals, err := s.ExecutionResults.GetExecutionTotals(c.Context(), true, filter)
+		filteredTotals, err := s.DeprecatedRepositories.TestResults().GetExecutionTotals(c.Context(), true, filter)
 		if err != nil {
 			if err == mongo.ErrNoDocuments {
 				return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: db found no total filtered execution results: %w", errPrefix, err))
@@ -154,7 +154,7 @@ func (s *TestkubeAPI) ListExecutionsHandler() fiber.Handler {
 }
 
 func (s *TestkubeAPI) GetLogsStream(ctx context.Context, executionID string) (chan output.Output, error) {
-	execution, err := s.ExecutionResults.Get(ctx, executionID)
+	execution, err := s.DeprecatedRepositories.TestResults().Get(ctx, executionID)
 	if err != nil {
 		return nil, fmt.Errorf("can't find execution %s: %w", executionID, err)
 	}
@@ -252,7 +252,7 @@ func (s *TestkubeAPI) ExecutionLogsHandler() fiber.Handler {
 			s.Log.Debug("start streaming logs")
 			_ = w.Flush()
 
-			execution, err := s.ExecutionResults.Get(ctx, executionID)
+			execution, err := s.DeprecatedRepositories.TestResults().Get(ctx, executionID)
 			if err != nil {
 				output.PrintError(os.Stdout, fmt.Errorf("could not get execution result for ID %s: %w", executionID, err))
 				s.Log.Errorw("getting execution error", "error", err)
@@ -323,7 +323,7 @@ func (s *TestkubeAPI) GetExecutionHandler() fiber.Handler {
 		var err error
 
 		if id == "" {
-			execution, err = s.ExecutionResults.Get(ctx, executionID)
+			execution, err = s.DeprecatedRepositories.TestResults().Get(ctx, executionID)
 			if err == mongo.ErrNoDocuments {
 				return s.Error(c, http.StatusNotFound, fmt.Errorf("execution %s not found (test:%s)", executionID, id))
 			}
@@ -331,7 +331,7 @@ func (s *TestkubeAPI) GetExecutionHandler() fiber.Handler {
 				return s.Error(c, http.StatusInternalServerError, fmt.Errorf("db client was unable to get execution %s (test:%s): %w", executionID, id, err))
 			}
 		} else {
-			execution, err = s.ExecutionResults.GetByNameAndTest(ctx, executionID, id)
+			execution, err = s.DeprecatedRepositories.TestResults().GetByNameAndTest(ctx, executionID, id)
 			if err == mongo.ErrNoDocuments {
 				return s.Error(c, http.StatusNotFound, fmt.Errorf("test %s not found for execution %s", id, executionID))
 			}
@@ -344,7 +344,7 @@ func (s *TestkubeAPI) GetExecutionHandler() fiber.Handler {
 
 		testSecretMap := make(map[string]string)
 		if execution.TestSecretUUID != "" {
-			testSecretMap, err = s.TestsClient.GetSecretTestVars(execution.TestName, execution.TestSecretUUID)
+			testSecretMap, err = s.DeprecatedClients.Tests().GetSecretTestVars(execution.TestName, execution.TestSecretUUID)
 			if err != nil {
 				return s.Error(c, http.StatusBadGateway, fmt.Errorf("client was unable to get test secrets: %w", err))
 			}
@@ -352,7 +352,7 @@ func (s *TestkubeAPI) GetExecutionHandler() fiber.Handler {
 
 		testSuiteSecretMap := make(map[string]string)
 		if execution.TestSuiteSecretUUID != "" {
-			testSuiteSecretMap, err = s.TestsSuitesClient.GetSecretTestSuiteVars(execution.TestSuiteName, execution.TestSuiteSecretUUID)
+			testSuiteSecretMap, err = s.DeprecatedClients.TestSuites().GetSecretTestSuiteVars(execution.TestSuiteName, execution.TestSuiteSecretUUID)
 			if err != nil {
 				return s.Error(c, http.StatusBadGateway, fmt.Errorf("client was unable to get test suite secrets: %w", err))
 			}
@@ -383,7 +383,7 @@ func (s *TestkubeAPI) AbortExecutionHandler() fiber.Handler {
 		errPrefix := "failed to abort execution %s"
 
 		s.Log.Debugw("aborting execution", "executionID", executionID)
-		execution, err := s.ExecutionResults.Get(ctx, executionID)
+		execution, err := s.DeprecatedRepositories.TestResults().Get(ctx, executionID)
 		if err != nil {
 			if err == mongo.ErrNoDocuments {
 				return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: test with execution id %s not found", errPrefix, executionID))
@@ -421,7 +421,7 @@ func (s *TestkubeAPI) GetArtifactHandler() fiber.Handler {
 
 		//// quickfix end
 
-		execution, err := s.ExecutionResults.Get(c.Context(), executionID)
+		execution, err := s.DeprecatedRepositories.TestResults().Get(c.Context(), executionID)
 		if err == mongo.ErrNoDocuments {
 			return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: test with execution id/name %s not found", errPrefix, executionID))
 		}
@@ -469,7 +469,7 @@ func (s *TestkubeAPI) GetArtifactArchiveHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not parse query string: %w", errPrefix, err))
 		}
 
-		execution, err := s.ExecutionResults.Get(c.Context(), executionID)
+		execution, err := s.DeprecatedRepositories.TestResults().Get(c.Context(), executionID)
 		if err == mongo.ErrNoDocuments {
 			return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: test with execution id/name %s not found", errPrefix, executionID))
 		}
@@ -512,7 +512,7 @@ func (s *TestkubeAPI) ListArtifactsHandler() fiber.Handler {
 		executionID := c.Params("executionID")
 		errPrefix := fmt.Sprintf("failed to list artifacts for execution %s", executionID)
 
-		execution, err := s.ExecutionResults.Get(c.Context(), executionID)
+		execution, err := s.DeprecatedRepositories.TestResults().Get(c.Context(), executionID)
 		if err == mongo.ErrNoDocuments {
 			return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: test with execution id/name %s not found", errPrefix, executionID))
 		}
@@ -654,7 +654,7 @@ func (s *TestkubeAPI) GetLatestExecutionLogs(ctx context.Context) (map[string][]
 // getNewestExecutions returns the latest Testkube executions
 func (s *TestkubeAPI) getNewestExecutions(ctx context.Context) ([]testkube.Execution, error) {
 	f := result.NewExecutionsFilter().WithPage(1).WithPageSize(latestExecutions)
-	executions, err := s.ExecutionResults.GetExecutions(ctx, f)
+	executions, err := s.DeprecatedRepositories.TestResults().GetExecutions(ctx, f)
 	if err != nil {
 		return []testkube.Execution{}, fmt.Errorf("could not get executions from repo: %w", err)
 	}
@@ -700,7 +700,7 @@ func (s *TestkubeAPI) getExecutionLogs(ctx context.Context, execution testkube.E
 }
 
 func (s *TestkubeAPI) getExecutorByTestType(testType string) (client.Executor, error) {
-	executorCR, err := s.ExecutorsClient.GetByType(testType)
+	executorCR, err := s.DeprecatedClients.Executors().GetByType(testType)
 	if err != nil {
 		return nil, fmt.Errorf("can't get executor spec: %w", err)
 	}

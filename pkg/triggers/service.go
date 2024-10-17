@@ -13,19 +13,15 @@ import (
 	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
 	testsuitev3 "github.com/kubeshop/testkube-operator/api/testsuite/v3"
 	testtriggersv1 "github.com/kubeshop/testkube-operator/api/testtriggers/v1"
-	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
-	testsclientv3 "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
-	testsuitesclientv3 "github.com/kubeshop/testkube-operator/pkg/client/testsuites/v3"
 	testworkflowsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testworkflows/v1"
 	testkubeclientsetv1 "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
+	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/http"
 	"github.com/kubeshop/testkube/pkg/repository/config"
-	"github.com/kubeshop/testkube/pkg/repository/result"
-	"github.com/kubeshop/testkube/pkg/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/scheduler"
 	"github.com/kubeshop/testkube/pkg/telemetry"
@@ -65,14 +61,11 @@ type Service struct {
 	scheduler                     *scheduler.Scheduler
 	clientset                     kubernetes.Interface
 	testKubeClientset             testkubeclientsetv1.Interface
-	testSuitesClient              testsuitesclientv3.Interface
-	testsClient                   testsclientv3.Interface
+	deprecatedRepositories        commons.DeprecatedRepositories
+	deprecatedClients             commons.DeprecatedClients
 	testWorkflowsClient           testworkflowsclientv1.Interface
-	resultRepository              result.Repository
-	testResultRepository          testresult.Repository
 	logger                        *zap.SugaredLogger
 	configMap                     config.Repository
-	executorsClient               executorsclientv1.Interface
 	httpClient                    http.HttpClient
 	testExecutor                  client.Executor
 	eventsBus                     bus.Bus
@@ -88,18 +81,15 @@ type Service struct {
 type Option func(*Service)
 
 func NewService(
+	deprecatedRepositories commons.DeprecatedRepositories,
+	deprecatedClients commons.DeprecatedClients,
 	scheduler *scheduler.Scheduler,
 	clientset kubernetes.Interface,
 	testKubeClientset testkubeclientsetv1.Interface,
-	testSuitesClient testsuitesclientv3.Interface,
-	testsClient testsclientv3.Interface,
 	testWorkflowsClient testworkflowsclientv1.Interface,
-	resultRepository result.Repository,
-	testResultRepository testresult.Repository,
 	leaseBackend LeaseBackend,
 	logger *zap.SugaredLogger,
 	configMap config.Repository,
-	executorsClient executorsclientv1.Interface,
 	testExecutor client.Executor,
 	eventsBus bus.Bus,
 	metrics metrics.Metrics,
@@ -122,15 +112,12 @@ func NewService(
 		scheduler:                     scheduler,
 		clientset:                     clientset,
 		testKubeClientset:             testKubeClientset,
-		testSuitesClient:              testSuitesClient,
+		deprecatedRepositories:        deprecatedRepositories,
+		deprecatedClients:             deprecatedClients,
 		testWorkflowsClient:           testWorkflowsClient,
-		testsClient:                   testsClient,
-		resultRepository:              resultRepository,
-		testResultRepository:          testResultRepository,
 		leaseBackend:                  leaseBackend,
 		logger:                        logger,
 		configMap:                     configMap,
-		executorsClient:               executorsClient,
 		testExecutor:                  testExecutor,
 		eventsBus:                     eventsBus,
 		metrics:                       metrics,
@@ -296,14 +283,14 @@ func (s *Service) addTest(test *testsv3.Test) {
 	}
 
 	test.Labels[testkube.TestLabelTestType] = utils.SanitizeName(test.Spec.Type_)
-	executorCR, err := s.executorsClient.GetByType(test.Spec.Type_)
+	executorCR, err := s.deprecatedClients.Executors().GetByType(test.Spec.Type_)
 	if err == nil {
 		test.Labels[testkube.TestLabelExecutor] = executorCR.Name
 	} else {
 		s.logger.Debugw("can't get executor spec", "error", err)
 	}
 
-	if _, err = s.testsClient.Update(test, s.disableSecretCreation); err != nil {
+	if _, err = s.deprecatedClients.Tests().Update(test, s.disableSecretCreation); err != nil {
 		s.logger.Debugw("can't update test spec", "error", err)
 	}
 }
@@ -320,7 +307,7 @@ func (s *Service) updateTest(test *testsv3.Test) {
 		changed = true
 	}
 
-	executorCR, err := s.executorsClient.GetByType(test.Spec.Type_)
+	executorCR, err := s.deprecatedClients.Executors().GetByType(test.Spec.Type_)
 	if err == nil {
 		if test.Labels[testkube.TestLabelExecutor] != executorCR.Name {
 			test.Labels[testkube.TestLabelExecutor] = executorCR.Name
@@ -331,7 +318,7 @@ func (s *Service) updateTest(test *testsv3.Test) {
 	}
 
 	if changed {
-		if _, err = s.testsClient.Update(test, s.disableSecretCreation); err != nil {
+		if _, err = s.deprecatedClients.Tests().Update(test, s.disableSecretCreation); err != nil {
 			s.logger.Debugw("can't update test spec", "error", err)
 		}
 	}

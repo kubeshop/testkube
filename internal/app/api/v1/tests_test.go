@@ -4,8 +4,11 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/golang/mock/gomock"
+
 	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
 	testsclientv3 "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
+	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/server"
 
@@ -21,12 +24,18 @@ import (
 func TestTestkubeAPI_DeleteTest(t *testing.T) {
 	app := fiber.New()
 
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockDeprecatedClients := commons.NewMockDeprecatedClients(mockCtrl)
+	mockDeprecatedClients.EXPECT().Tests().Return(getMockTestClient()).AnyTimes()
+
 	s := &TestkubeAPI{
 		HTTPServer: server.HTTPServer{
 			Mux: app,
 			Log: log.DefaultLogger,
 		},
-		TestsClient: getMockTestClient(),
+		DeprecatedClients: mockDeprecatedClients,
 	}
 
 	app.Delete("/tests/:id", s.DeleteTestHandler())

@@ -7,9 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kubeshop/testkube/pkg/featureflags"
-	"github.com/kubeshop/testkube/pkg/repository/result"
-
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -17,6 +14,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	"github.com/kubeshop/testkube/cmd/api-server/commons"
+	"github.com/kubeshop/testkube/pkg/featureflags"
+	"github.com/kubeshop/testkube/pkg/repository/result"
 
 	executorv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
@@ -33,14 +34,24 @@ func TestTestkubeAPI_ExecutionLogsHandler(t *testing.T) {
 	app := fiber.New()
 	resultRepo := MockExecutionResultsRepository{}
 	executor := &MockExecutor{}
+
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	mockDeprecatedRepositories := commons.NewMockDeprecatedRepositories(mockCtrl)
+	mockDeprecatedRepositories.EXPECT().TestResults().Return(&resultRepo).AnyTimes()
+
+	mockDeprecatedClients := commons.NewMockDeprecatedClients(mockCtrl)
+	mockDeprecatedClients.EXPECT().Executors().Return(getMockExecutorClient()).AnyTimes()
+
 	s := &TestkubeAPI{
 		HTTPServer: server.HTTPServer{
 			Mux: app,
 			Log: log.DefaultLogger,
 		},
-		ExecutionResults: &resultRepo,
-		ExecutorsClient:  getMockExecutorClient(),
-		Executor:         executor,
+		DeprecatedRepositories: mockDeprecatedRepositories,
+		DeprecatedClients:      mockDeprecatedClients,
+		Executor:               executor,
 	}
 	app.Get("/executions/:executionID/logs", s.ExecutionLogsHandler())
 
