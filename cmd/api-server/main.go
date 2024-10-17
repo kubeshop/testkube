@@ -33,7 +33,6 @@ import (
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
 
 	cloudartifacts "github.com/kubeshop/testkube/pkg/cloud/data/artifact"
 
@@ -197,9 +196,7 @@ func main() {
 
 	var logGrpcClient logsclient.StreamGetter
 	if features.LogsV2 {
-		creds, err := newGRPCTransportCredentials(cfg)
-		exitOnError("Getting log server TLS credentials", err)
-		logGrpcClient = logsclient.NewGrpcClient(cfg.LogServerGrpcAddress, creds)
+		logGrpcClient = internal.MustGetLogsV2Client(cfg)
 	}
 
 	// DI
@@ -242,9 +239,8 @@ func main() {
 			testworkflow2.WithMongoRepositorySequence(sequenceRepository))
 		triggerLeaseBackend = triggers.NewMongoLeaseBackend(db)
 		minioClient := newStorageClient(cfg)
-		if err = minioClient.Connect(); err != nil {
-			exitOnError("Connecting to minio", err)
-		}
+		err = minioClient.Connect()
+		exitOnError("Connecting to minio", err)
 		if expErr := minioClient.SetExpirationPolicy(cfg.StorageExpiration); expErr != nil {
 			log.DefaultLogger.Errorw("Error setting expiration policy", "error", expErr)
 		}
@@ -796,16 +792,6 @@ func getMongoSSLConfig(cfg *config.Config, secretClient *secret.Client) *storage
 		SSLClientCertificateKeyFilePassword: pass,
 		SSLCertificateAuthoritiyFile:        rootCAPath,
 	}
-}
-
-func newGRPCTransportCredentials(cfg *config.Config) (credentials.TransportCredentials, error) {
-	return logsclient.GetGrpcTransportCredentials(logsclient.GrpcConnectionConfig{
-		Secure:     cfg.LogServerSecure,
-		SkipVerify: cfg.LogServerSkipVerify,
-		CertFile:   cfg.LogServerCertFile,
-		KeyFile:    cfg.LogServerKeyFile,
-		CAFile:     cfg.LogServerCAFile,
-	})
 }
 
 func newProContext(cfg *config.Config, grpcClient cloud.TestKubeCloudAPIClient) config.ProContext {

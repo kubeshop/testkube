@@ -14,6 +14,7 @@ import (
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/featureflags"
 	"github.com/kubeshop/testkube/pkg/log"
+	logsclient "github.com/kubeshop/testkube/pkg/logs/client"
 	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
 )
 
@@ -23,6 +24,42 @@ func exitOnError(title string, err error) {
 		os.Exit(1)
 	}
 }
+
+// General
+
+func GetEnvironmentVariables() map[string]string {
+	list := os.Environ()
+	envs := make(map[string]string, len(list))
+	for _, env := range list {
+		pair := strings.SplitN(env, "=", 2)
+		if len(pair) != 2 {
+			continue
+		}
+
+		envs[pair[0]] += pair[1]
+	}
+	return envs
+}
+
+func HandleCancelSignal(g *errgroup.Group, ctx context.Context) {
+	stopSignal := make(chan os.Signal, 1)
+	signal.Notify(stopSignal, syscall.SIGINT, syscall.SIGTERM)
+	g.Go(func() error {
+		select {
+		case <-ctx.Done():
+			return nil
+		case sig := <-stopSignal:
+			go func() {
+				<-stopSignal
+				os.Exit(137)
+			}()
+			// Returning an error cancels the errgroup.
+			return fmt.Errorf("received signal: %v", sig)
+		}
+	})
+}
+
+// Configuration
 
 func MustGetConfig() *config.Config {
 	cfg, err := config.Get()
@@ -60,34 +97,16 @@ func MustGetConfigMapConfig(ctx context.Context, name string, namespace string, 
 	return configMapConfig
 }
 
-func GetEnvironmentVariables() map[string]string {
-	list := os.Environ()
-	envs := make(map[string]string, len(list))
-	for _, env := range list {
-		pair := strings.SplitN(env, "=", 2)
-		if len(pair) != 2 {
-			continue
-		}
+// Legacy resources: Executors, Tests, Test Suites, and Test Sources, Templates
 
-		envs[pair[0]] += pair[1]
-	}
-	return envs
-}
-
-func HandleCancelSignal(g *errgroup.Group, ctx context.Context) {
-	stopSignal := make(chan os.Signal, 1)
-	signal.Notify(stopSignal, syscall.SIGINT, syscall.SIGTERM)
-	g.Go(func() error {
-		select {
-		case <-ctx.Done():
-			return nil
-		case sig := <-stopSignal:
-			go func() {
-				<-stopSignal
-				os.Exit(137)
-			}()
-			// Returning an error cancels the errgroup.
-			return fmt.Errorf("received signal: %v", sig)
-		}
+func MustGetLogsV2Client(cfg *config.Config) logsclient.StreamGetter {
+	creds, err := logsclient.GetGrpcTransportCredentials(logsclient.GrpcConnectionConfig{
+		Secure:     cfg.LogServerSecure,
+		SkipVerify: cfg.LogServerSkipVerify,
+		CertFile:   cfg.LogServerCertFile,
+		KeyFile:    cfg.LogServerKeyFile,
+		CAFile:     cfg.LogServerCAFile,
 	})
+	exitOnError("Getting log server TLS credentials", err)
+	return logsclient.NewGrpcClient(cfg.LogServerGrpcAddress, creds)
 }
