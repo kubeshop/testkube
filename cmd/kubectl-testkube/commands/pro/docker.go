@@ -1,8 +1,7 @@
-package docker
+package pro
 
 import (
 	"errors"
-	"fmt"
 	"os"
 
 	"github.com/pterm/pterm"
@@ -10,11 +9,10 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
-	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
-func NewInitCmd() *cobra.Command {
+func NewDockerCmd() *cobra.Command {
 	var noLogin bool // ignore ask for login
 	var dockerContainerName, dockerImage string
 	var options common.HelmOptions
@@ -27,9 +25,9 @@ func NewInitCmd() *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:     "init",
+		Use:     "docker",
 		Short:   "Run Testkube Docker Agent and connect to Testkube Pro environment",
-		Aliases: []string{"install", "agent"},
+		Aliases: []string{"da", "docker-agent"},
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Info("WELCOME TO")
 			ui.Logo()
@@ -138,29 +136,4 @@ func NewInitCmd() *cobra.Command {
 	cmd.Flags().StringVar(&dockerImage, "docker-image", "kubeshop/testkube-agent"+latestVersion, "Docker image for Testkube Docker Agent")
 
 	return cmd
-}
-
-func sendErrTelemetry(cmd *cobra.Command, clientCfg config.Data, errType string, errorLogs error) {
-	var errorStackTrace string
-	errorStackTrace = fmt.Sprintf("%+v", errorLogs)
-	if clientCfg.TelemetryEnabled {
-		ui.Debug("collecting anonymous telemetry data, you can disable it by calling `kubectl testkube disable telemetry`")
-		out, err := telemetry.SendCmdErrorEvent(cmd, common.Version, errType, errorStackTrace)
-		if ui.Verbose && err != nil {
-			ui.Err(err)
-		}
-
-		ui.Debug("telemetry send event response", out)
-	}
-}
-
-func sendAttemptTelemetry(cmd *cobra.Command, clientCfg config.Data) {
-	if clientCfg.TelemetryEnabled {
-		ui.Debug("collecting anonymous telemetry data, you can disable it by calling `kubectl testkube disable telemetry`")
-		out, err := telemetry.SendCmdAttemptEvent(cmd, common.Version)
-		if ui.Verbose && err != nil {
-			ui.Err(err)
-		}
-		ui.Debug("telemetry send event response", out)
-	}
 }
