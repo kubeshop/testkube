@@ -522,7 +522,7 @@ func main() {
 		eventsEmitter.Loader.Register(agentHandle)
 	}
 
-	api.Init(cfg.CDEventsTarget, cfg.EnableK8sEvents)
+	api.Init()
 	if !cfg.DisableTestTriggers {
 		triggerService := triggers.NewService(
 			deprecatedRepositories,

@@ -257,7 +257,7 @@ func (s TestkubeAPI) SendTelemetryStartEvent(ctx context.Context, ch chan struct
 	}()
 }
 
-func (s *TestkubeAPI) Init(cdEventsTarget string, enableK8sEvents bool) {
+func (s *TestkubeAPI) Init() {
 	s.InitEnvs()
 	s.InitRoutes()
 	s.InitEvents()
