@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"golang.org/x/sync/errgroup"
@@ -57,6 +58,20 @@ func MustGetConfigMapConfig(ctx context.Context, name string, namespace string, 
 		log.DefaultLogger.Warn("error upserting config ConfigMap", "error", err)
 	}
 	return configMapConfig
+}
+
+func GetEnvironmentVariables() map[string]string {
+	list := os.Environ()
+	envs := make(map[string]string, len(list))
+	for _, env := range list {
+		pair := strings.SplitN(env, "=", 2)
+		if len(pair) != 2 {
+			continue
+		}
+
+		envs[pair[0]] += pair[1]
+	}
+	return envs
 }
 
 func HandleCancelSignal(g *errgroup.Group, ctx context.Context) {

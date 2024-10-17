@@ -280,20 +280,11 @@ func main() {
 
 	apiVersion := version.Version
 
-	envs := make(map[string]string)
-	for _, env := range os.Environ() {
-		pair := strings.SplitN(env, "=", 2)
-		if len(pair) != 2 {
-			continue
-		}
-
-		envs[pair[0]] += pair[1]
-	}
+	// TODO: Check why these are needed at all
+	envs := internal.GetEnvironmentVariables()
 
 	nc, err := newNATSEncodedConnection(cfg)
-	if err != nil {
-		exitOnError("Creating NATS connection", err)
-	}
+	exitOnError("Creating NATS connection", err)
 
 	eventBus := bus.NewNATSBus(nc)
 	if cfg.Trace {
