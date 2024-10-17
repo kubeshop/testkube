@@ -167,10 +167,10 @@ func main() {
 	}
 
 	// k8s
-	testsClientV3 := testsclientv3.NewClient(kubeClient, cfg.TestkubeNamespace)
+	testsClient := testsclientv3.NewClient(kubeClient, cfg.TestkubeNamespace)
 	executorsClient := executorsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
 	webhooksClient := executorsclientv1.NewWebhooksClient(kubeClient, cfg.TestkubeNamespace)
-	testsuitesClientV3 := testsuitesclientv3.NewClient(kubeClient, cfg.TestkubeNamespace)
+	testsuitesClient := testsuitesclientv3.NewClient(kubeClient, cfg.TestkubeNamespace)
 	testsourcesClient := testsourcesclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
 	testExecutionsClient := testexecutionsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
 	testsuiteExecutionsClient := testsuiteexecutionsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
@@ -329,7 +329,7 @@ func main() {
 		metrics,
 		eventsEmitter,
 		configMapConfig,
-		testsClientV3,
+		testsClient,
 		clientset,
 		testExecutionsClient,
 		templatesClient,
@@ -372,7 +372,7 @@ func main() {
 		eventsEmitter,
 		configMapConfig,
 		executorsClient,
-		testsClientV3,
+		testsClient,
 		testExecutionsClient,
 		templatesClient,
 		cfg.TestkubeRegistry,
@@ -397,8 +397,8 @@ func main() {
 		resultsRepository,
 		testResultsRepository,
 		executorsClient,
-		testsClientV3,
-		testsuitesClientV3,
+		testsClient,
+		testsuitesClient,
 		testsourcesClient,
 		secretClient,
 		eventsEmitter,
@@ -512,9 +512,9 @@ func main() {
 		testResultsRepository,
 		testWorkflowResultsRepository,
 		testWorkflowOutputRepository,
-		testsClientV3,
+		testsClient,
 		executorsClient,
-		testsuitesClientV3,
+		testsuitesClient,
 		secretClient,
 		secretManager,
 		webhooksClient,
@@ -580,8 +580,8 @@ func main() {
 			sched,
 			clientset,
 			testkubeClientset,
-			testsuitesClientV3,
-			testsClientV3,
+			testsuitesClient,
+			testsClient,
 			testWorkflowsClient,
 			resultsRepository,
 			testResultsRepository,
