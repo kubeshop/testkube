@@ -444,29 +444,6 @@ func (s *TestkubeAPI) GetTestWorkflowArtifactArchiveHandler() fiber.Handler {
 	}
 }
 
-func (s *TestkubeAPI) GetTestWorkflowNotificationsStream(ctx context.Context, executionID string) (<-chan testkube.TestWorkflowExecutionNotification, error) {
-	// Load the execution
-	execution, err := s.TestWorkflowResults.Get(ctx, executionID)
-	if err != nil {
-		return nil, err
-	}
-
-	// Start streaming the notifications
-	notifications := s.ExecutionWorkerClient.Notifications(ctx, execution.Id, executionworkertypes.NotificationsOptions{
-		Hints: executionworkertypes.Hints{
-			Namespace:   execution.Namespace,
-			Signature:   execution.Signature,
-			ScheduledAt: common.Ptr(execution.ScheduledAt),
-		},
-	})
-
-	// Pass them down
-	if notifications.Err() != nil {
-		return nil, notifications.Err()
-	}
-	return notifications.Channel(), nil
-}
-
 func getWorkflowExecutionsFilterFromRequest(c *fiber.Ctx) testworkflow2.Filter {
 	filter := testworkflow2.NewExecutionsFilter()
 	name := c.Params("id", "")

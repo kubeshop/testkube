@@ -22,6 +22,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/event/kind/webhook"
 	ws "github.com/kubeshop/testkube/pkg/event/kind/websocket"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/kubernetesworker"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 
@@ -505,12 +506,29 @@ func main() {
 
 	if mode == common.ModeAgent {
 		log.DefaultLogger.Info("starting agent service")
+		getTestWorkflowNotificationsStream := func(ctx context.Context, executionID string) (<-chan testkube.TestWorkflowExecutionNotification, error) {
+			execution, err := testWorkflowResultsRepository.Get(ctx, executionID)
+			if err != nil {
+				return nil, err
+			}
+			notifications := executionWorker.Notifications(ctx, execution.Id, executionworkertypes.NotificationsOptions{
+				Hints: executionworkertypes.Hints{
+					Namespace:   execution.Namespace,
+					Signature:   execution.Signature,
+					ScheduledAt: common.Ptr(execution.ScheduledAt),
+				},
+			})
+			if notifications.Err() != nil {
+				return nil, notifications.Err()
+			}
+			return notifications.Channel(), nil
+		}
 		agentHandle, err := agent.NewAgent(
 			log.DefaultLogger,
 			api.Mux.Handler(),
 			grpcClient,
 			api.GetLogsStream,
-			api.GetTestWorkflowNotificationsStream,
+			getTestWorkflowNotificationsStream,
 			clusterId,
 			cfg.TestkubeClusterName,
 			envs,
