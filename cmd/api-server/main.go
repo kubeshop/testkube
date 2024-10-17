@@ -17,6 +17,7 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	"github.com/kubeshop/testkube/cmd/api-server/internal"
+	"github.com/kubeshop/testkube/internal/app/api/debug"
 	"github.com/kubeshop/testkube/pkg/cache"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/kubernetesworker"
@@ -61,7 +62,6 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/kubeshop/testkube/internal/app/api/debug"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/agent"
 	"github.com/kubeshop/testkube/pkg/event"
@@ -121,6 +121,12 @@ func main() {
 	cfg := internal.MustGetConfig()
 	features := internal.MustGetFeatureFlags()
 
+	// Determine the running mode
+	mode := common.ModeStandalone
+	if cfg.TestkubeProAPIKey != "" {
+		mode = common.ModeAgent
+	}
+
 	// Run services within an errgroup to propagate errors between services.
 	g, ctx := errgroup.WithContext(context.Background())
 
@@ -139,13 +145,10 @@ func main() {
 
 	configMapClient, err := configmap.NewClient(cfg.TestkubeNamespace)
 	exitOnError("Getting config map client", err)
+
 	// agent
 	var grpcClient cloud.TestKubeCloudAPIClient
 	var grpcConn *grpc.ClientConn
-	mode := common.ModeStandalone
-	if cfg.TestkubeProAPIKey != "" {
-		mode = common.ModeAgent
-	}
 	if mode == common.ModeAgent {
 		grpcConn, err = agent.NewGRPCConnection(
 			ctx,
@@ -163,15 +166,6 @@ func main() {
 		grpcClient = cloud.NewTestKubeCloudAPIClient(grpcConn)
 	}
 
-	if cfg.EnableDebugServer {
-		debugSrv := debug.NewDebugServer(cfg.DebugListenAddr)
-
-		g.Go(func() error {
-			log.DefaultLogger.Infof("starting debug pprof server")
-			return debugSrv.ListenAndServe()
-		})
-	}
-
 	// k8s
 	testsClientV3 := testsclientv3.NewClient(kubeClient, cfg.TestkubeNamespace)
 	executorsClient := executorsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
@@ -180,12 +174,18 @@ func main() {
 	testsourcesClient := testsourcesclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
 	testExecutionsClient := testexecutionsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
 	testsuiteExecutionsClient := testsuiteexecutionsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
-	var testWorkflowsClient testworkflowsclientv1.Interface
-	testWorkflowsClient = testworkflowsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
-	var testWorkflowTemplatesClient testworkflowsclientv1.TestWorkflowTemplatesInterface
-	testWorkflowTemplatesClient = testworkflowsclientv1.NewTestWorkflowTemplatesClient(kubeClient, cfg.TestkubeNamespace)
 	testWorkflowExecutionsClient := testworkflowsclientv1.NewTestWorkflowExecutionsClient(kubeClient, cfg.TestkubeNamespace)
 	templatesClient := templatesclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
+
+	var testWorkflowsClient testworkflowsclientv1.Interface
+	var testWorkflowTemplatesClient testworkflowsclientv1.TestWorkflowTemplatesInterface
+	if mode == common.ModeAgent && cfg.WorkflowStorage == "control-plane" {
+		testWorkflowsClient = cloudtestworkflow.NewCloudTestWorkflowRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
+		testWorkflowTemplatesClient = cloudtestworkflow.NewCloudTestWorkflowTemplateRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
+	} else {
+		testWorkflowsClient = testworkflowsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
+		testWorkflowTemplatesClient = testworkflowsclientv1.NewTestWorkflowTemplatesClient(kubeClient, cfg.TestkubeNamespace)
+	}
 
 	clientset, err := k8sclient.ConnectToK8s()
 	exitOnError("Creating k8s clientset", err)
@@ -211,10 +211,6 @@ func main() {
 		resultsRepository = cloudresult.NewCloudResultRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
 		testResultsRepository = cloudtestresult.NewCloudRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
 
-		if cfg.WorkflowStorage == "control-plane" {
-			testWorkflowsClient = cloudtestworkflow.NewCloudTestWorkflowRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
-			testWorkflowTemplatesClient = cloudtestworkflow.NewCloudTestWorkflowTemplateRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
-		}
 		// Pro edition only (tcl protected code)
 		testWorkflowResultsRepository = cloudtestworkflow.NewCloudRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
 		var opts []cloudtestworkflow.Option
@@ -247,18 +243,15 @@ func main() {
 		storageClient = minioClient
 		testWorkflowOutputRepository = testworkflow2.NewMinioOutputRepository(storageClient, db.Collection(testworkflow2.CollectionName), cfg.LogsBucket)
 		artifactStorage = minio.NewMinIOArtifactClient(storageClient)
-		// init storage
-		isMinioStorage := cfg.LogsStorage == "minio"
-		if isMinioStorage {
-			bucket := cfg.LogsBucket
-			if bucket == "" {
-				log.DefaultLogger.Error("LOGS_BUCKET env var is not set")
-			} else if ok, err := storageClient.IsConnectionPossible(ctx); ok && (err == nil) {
-				log.DefaultLogger.Info("setting minio as logs storage")
-				mongoResultsRepository.OutputRepository = result.NewMinioOutputRepository(storageClient, mongoResultsRepository.ResultsColl, bucket)
-			} else {
-				log.DefaultLogger.Infow("minio is not available, using default logs storage", "error", err)
-			}
+
+		// Init logs storage
+		if cfg.LogsBucket == "" {
+			log.DefaultLogger.Error("LOGS_BUCKET env var is not set")
+		} else if ok, err := storageClient.IsConnectionPossible(ctx); ok && (err == nil) {
+			log.DefaultLogger.Info("setting minio as logs storage")
+			mongoResultsRepository.OutputRepository = result.NewMinioOutputRepository(storageClient, mongoResultsRepository.ResultsColl, cfg.LogsBucket)
+		} else {
+			log.DefaultLogger.Infow("minio is not available, using default logs storage", "error", err)
 		}
 
 		// Run DB migrations
@@ -300,12 +293,8 @@ func main() {
 
 	defaultExecutors, err := parseDefaultExecutors(cfg)
 	exitOnError("Parsing default executors", err)
-
 	images, err := kubeexecutor.SyncDefaultExecutors(executorsClient, cfg.TestkubeNamespace, defaultExecutors, cfg.TestkubeReadonlyExecutors)
 	exitOnError("Sync default executors", err)
-
-	jobTemplates, err := parser.ParseJobTemplates(cfg)
-	exitOnError("Creating job templates", err)
 
 	proContext := newProContext(cfg, grpcClient)
 
@@ -328,6 +317,8 @@ func main() {
 		serviceAccountNames = schedulertcl.GetServiceAccountNamesFromConfig(serviceAccountNames, cfg.TestkubeExecutionNamespaces)
 	}
 
+	jobTemplates, err := parser.ParseJobTemplates(cfg)
+	exitOnError("Creating job templates", err)
 	executor, err := client.NewJobExecutor(
 		resultsRepository,
 		images,
@@ -354,9 +345,6 @@ func main() {
 	)
 	exitOnError("Creating executor client", err)
 
-	containerTemplates, err := parser.ParseContainerTemplates(cfg)
-	exitOnError("Creating container job templates", err)
-
 	inspectorStorages := []imageinspector.Storage{imageinspector.NewMemoryStorage()}
 	if cfg.EnableImageDataPersistentCache {
 		configmapStorage := imageinspector.NewConfigMapStorage(configMapClient, cfg.ImageDataPersistentCacheKey, true)
@@ -370,6 +358,8 @@ func main() {
 		inspectorStorages...,
 	)
 
+	containerTemplates, err := parser.ParseContainerTemplates(cfg)
+	exitOnError("Creating container job templates", err)
 	containerExecutor, err := containerexecutor.NewContainerExecutor(
 		resultsRepository,
 		images,
@@ -425,9 +415,6 @@ func main() {
 	if mode == common.ModeAgent {
 		sched.WithSubscriptionChecker(subscriptionChecker)
 	}
-
-	slackLoader, err := newSlackLoader(cfg, envs)
-	exitOnError("Creating slack loader", err)
 
 	// TODO: Make granular environment variables, yet backwards compatible
 	secretConfig := testkube.SecretConfig{
@@ -513,6 +500,9 @@ func main() {
 	)
 
 	go testWorkflowExecutor.Recover(context.Background())
+
+	slackLoader, err := newSlackLoader(cfg, envs)
+	exitOnError("Creating slack loader", err)
 
 	api := apiv1.NewTestkubeAPI(
 		cfg.TestkubeNamespace,
@@ -641,6 +631,15 @@ func main() {
 		"namespace", cfg.TestkubeNamespace,
 		"version", apiVersion,
 	)
+
+	if cfg.EnableDebugServer {
+		debugSrv := debug.NewDebugServer(cfg.DebugListenAddr)
+
+		g.Go(func() error {
+			log.DefaultLogger.Infof("starting debug pprof server")
+			return debugSrv.ListenAndServe()
+		})
+	}
 
 	g.Go(func() error {
 		return api.Run(ctx)
