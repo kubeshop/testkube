@@ -26,14 +26,15 @@ import (
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/spawn"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
-	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/transfer"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/expressions"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor"
+	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/presets"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -81,8 +82,7 @@ func NewServicesCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, pairs []string) {
 			// Initialize basic adapters
 			baseMachine := spawn.CreateBaseMachine()
-			inspector := env.ImageInspector()
-			transferSrv := transfer.NewServer(constants.DefaultTransferDirPath, env.IP(), constants.DefaultTransferPort)
+			transferSrv := transfer.NewServer(constants.DefaultTransferDirPath, config.IP(), constants.DefaultTransferPort)
 
 			// Validate data
 			if groupRef == "" {
@@ -112,12 +112,13 @@ func NewServicesCmd() *cobra.Command {
 				}
 
 				// Initialize empty array of details for each of the services
-				instructions.PrintHintDetails(env.Ref(), data.ServicesPrefix+name, []ServiceState{})
+				instructions.PrintHintDetails(config.Ref(), data.ServicesPrefix+name, []ServiceState{})
 			}
 
 			// Analyze instances to run
 			state := make(map[string][]ServiceState)
 			instances := make([]ServiceInstance, 0)
+			namespaces := make([]string, 0)
 			svcParams := make(map[string]*commontcl.ParamsSpec)
 			for name, svc := range services {
 				// Resolve the params
@@ -135,6 +136,7 @@ func NewServicesCmd() *cobra.Command {
 				fmt.Printf("%s: %s\n", commontcl.ServiceLabel(name), params.String(math.MaxInt64))
 
 				svcInstances := make([]ServiceInstance, params.Count)
+				svcNamespaces := make([]string, params.Count)
 				for index := int64(0); index < params.Count; index++ {
 					machines := []expressions.Machine{baseMachine, params.MachineAt(index)}
 
@@ -173,6 +175,10 @@ func NewServicesCmd() *cobra.Command {
 						ReadinessProbe: svcSpec.ReadinessProbe,
 						Spec:           spec,
 					}
+					svcNamespaces[index] = config.Namespace()
+					if spec.Job != nil && spec.Job.Namespace != "" {
+						svcNamespaces[index] = spec.Job.Namespace
+					}
 
 					// Save the timeout
 					if svcSpec.Timeout != "" {
@@ -184,18 +190,19 @@ func NewServicesCmd() *cobra.Command {
 					}
 				}
 				instances = append(instances, svcInstances...)
+				namespaces = append(namespaces, svcNamespaces...)
 
 				// Update the state
 				state[name] = make([]ServiceState, len(svcInstances))
 				for i := range svcInstances {
 					state[name][i].Description = svcInstances[i].Description
 				}
-				instructions.PrintHintDetails(env.Ref(), data.ServicesPrefix+name, state)
+				instructions.PrintHintDetails(config.Ref(), data.ServicesPrefix+name, state)
 			}
 
 			// Inform about each service instance
 			for _, instance := range instances {
-				instructions.PrintOutput(env.Ref(), "service", ServiceInfo{
+				instructions.PrintOutput(config.Ref(), "service", ServiceInfo{
 					Group:       groupRef,
 					Index:       instance.Index,
 					Name:        instance.Name,
@@ -225,7 +232,7 @@ func NewServicesCmd() *cobra.Command {
 				ui.SuccessAndExit("nothing to run")
 			}
 
-			run := func(_ int64, instance *ServiceInstance) bool {
+			run := func(_ int64, _ string, instance *ServiceInstance) bool {
 				info := ServiceInfo{
 					Group:       groupRef,
 					Index:       instance.Index,
@@ -234,58 +241,51 @@ func NewServicesCmd() *cobra.Command {
 					Status:      ServiceStatusQueued,
 				}
 				index := instance.Index
-				id, machine := spawn.CreateExecutionMachine(instance.Name+"-", index)
+
+				// Determine the namespace
+				namespace := config.Namespace()
+				if instance.Spec.Job != nil && instance.Spec.Job.Namespace != "" {
+					namespace = instance.Spec.Job.Namespace
+				}
+
 				params := svcParams[instance.Name]
 				log := spawn.CreateLogger(instance.Name, instance.Description, index, params.Count)
-				clientSet := env.Kubernetes()
+
+				// Build the configuration
+				cfg := *config.Config()
+				cfg.Resource = spawn.CreateResourceConfig(instance.Name+"-", index) // TODO: Think if it should be there
+				cfg.Worker.Namespace = namespace
+				machine := expressions.CombinedMachines(
+					testworkflowconfig.CreateResourceMachine(&cfg.Resource),
+					testworkflowconfig.CreateWorkerMachine(&cfg.Worker),
+					baseMachine,
+					params.MachineAt(index),
+				)
+
+				// Simplify the workflow
+				_ = expressions.Simplify(&instance.Spec, machine)
 
 				// Build the resources bundle
 				scheduledAt := time.Now()
-				bundle, err := presets.NewPro(inspector).
-					Bundle(context.Background(), &testworkflowsv1.TestWorkflow{Spec: instance.Spec}, testworkflowprocessor.BundleOptions{},
-						machine, baseMachine, params.MachineAt(index))
+				result, err := spawn.ExecutionWorker().Service(context.Background(), executionworkertypes.ServiceRequest{
+					ResourceId:     cfg.Resource.Id,
+					Execution:      cfg.Execution,
+					Workflow:       testworkflowsv1.TestWorkflow{Spec: instance.Spec},
+					ScheduledAt:    &scheduledAt,
+					RestartPolicy:  string(instance.RestartPolicy),
+					ReadinessProbe: common.MapPtr(instance.ReadinessProbe, testworkflows.MapProbeKubeToAPI),
+
+					ControlPlane:        cfg.ControlPlane,
+					ArtifactsPathPrefix: cfg.Resource.FsPrefix,
+				})
 				if err != nil {
-					log("error", "failed to build the service", err.Error())
+					fmt.Printf("%d: failed to prepare resources: %s\n", index, err.Error())
 					return false
-				}
-				ui.ExitOnError(fmt.Sprintf("%s: %d: failed to prepare resources", commontcl.InstanceLabel(instance.Name, index, params.Count), index), err)
-
-				// Apply the service specific data
-				// TODO: Handle RestartPolicy: Always?
-				if instance.RestartPolicy == "Never" {
-					bundle.Job.Spec.BackoffLimit = common.Ptr(int32(0))
-					bundle.Job.Spec.Template.Spec.RestartPolicy = "Never"
-				} else {
-					// TODO: Throw errors from the pod containers? Atm it will just end with "Success"...
-					bundle.Job.Spec.BackoffLimit = nil
-					bundle.Job.Spec.Template.Spec.RestartPolicy = "OnFailure"
-				}
-				bundle.Job.Spec.Template.Spec.Containers[0].ReadinessProbe = instance.ReadinessProbe
-
-				// Add group recognition
-				testworkflowprocessor.AnnotateGroupId(&bundle.Job, groupRef)
-				for i := range bundle.ConfigMaps {
-					testworkflowprocessor.AnnotateGroupId(&bundle.ConfigMaps[i], groupRef)
-				}
-				for i := range bundle.Secrets {
-					testworkflowprocessor.AnnotateGroupId(&bundle.Secrets[i], groupRef)
 				}
 
 				// Compute the bundle instructions
-				namespace := bundle.Job.Namespace
-				if namespace == "" {
-					namespace = env.Namespace()
-				}
-
-				mainRef := bundle.Actions().GetLastRef()
-
-				// Deploy the resources
-				// TODO: Avoid using Job
-				err = bundle.Deploy(context.Background(), clientSet, namespace)
-				if err != nil {
-					log("problem deploying", err.Error())
-					return false
-				}
+				signatureSeq := stage.MapSignatureToSequence(stage.MapSignatureList(result.Signature))
+				mainRef := signatureSeq[len(signatureSeq)-1].Ref()
 
 				// Handle timeout
 				timeoutCtx, timeoutCtxCancel := context.WithCancel(context.Background())
@@ -305,72 +305,53 @@ func NewServicesCmd() *cobra.Command {
 				// TODO: Consider aggregated controller to limit number of watchers
 				ctx, ctxCancel := context.WithCancel(timeoutCtx)
 				defer ctxCancel()
-				ctrl, err := testworkflowcontroller.New(ctx, clientSet, namespace, id, scheduledAt)
-				if err != nil {
-					log("error", "failed to connect to the job", err.Error())
+
+				// TODO: Use more lightweight notifications
+				notifications := spawn.ExecutionWorker().StatusNotifications(ctx, cfg.Resource.Id, executionworkertypes.StatusNotificationsOptions{
+					Hints: executionworkertypes.Hints{
+						Namespace:   result.Namespace,
+						Signature:   result.Signature,
+						ScheduledAt: common.Ptr(scheduledAt),
+					},
+				})
+				if notifications.Err() != nil {
+					log("error", "failed to connect to the service", notifications.Err().Error())
 					return false
 				}
 				log("created")
+
 				scheduled := false
 				started := false
-				for v := range ctrl.WatchLightweight(ctx) {
-					// Handle error
-					if v.Error != nil {
-						log("error", v.Error.Error())
-						continue
-					}
-
+				ready := instance.ReadinessProbe == nil
+				for v := range notifications.Channel() {
 					// Inform about the node assignment
 					if !scheduled && v.NodeName != "" {
 						scheduled = true
 						log(fmt.Sprintf("assigned to %s node", ui.LightBlue(v.NodeName)))
 					}
 
-					if state[instance.Name][index].Ip == "" && v.PodIP != "" {
-						state[instance.Name][index].Ip = v.PodIP
-						log(fmt.Sprintf("assigned to %s IP", ui.LightBlue(v.PodIP)))
+					if state[instance.Name][index].Ip == "" && v.PodIp != "" {
+						state[instance.Name][index].Ip = v.PodIp
+						log(fmt.Sprintf("assigned to %s IP", ui.LightBlue(v.PodIp)))
 						info.Status = ServiceStatusRunning
-						instructions.PrintOutput(env.Ref(), "service", info)
+						instructions.PrintOutput(config.Ref(), "service", info)
 					}
 
-					if v.Current == mainRef && state[instance.Name][index].Ip != "" {
+					ready = v.Ready
+					if !started && v.Ref == mainRef && state[instance.Name][index].Ip != "" {
 						started = true
 						if instance.ReadinessProbe == nil {
 							log("container started")
 						} else {
 							log("container started, waiting for readiness")
 						}
-						ctxCancel()
+					}
+
+					if started && ready {
 						break
 					}
 				}
-				ctrl.StopController()
-
-				// Fail if the container has not started
-				if !started {
-					info.Status = ServiceStatusFailed
-					log("container failed")
-					instructions.PrintOutput(env.Ref(), "service", info)
-					return false
-				}
-
-				// Watch for container readiness
-				ready := instance.ReadinessProbe == nil
-				if !ready {
-					podWatcher := testworkflowcontroller.WatchMainPod(timeoutCtx, clientSet, namespace, id, 0)
-					for pod := range podWatcher.Channel() {
-						if pod.Error != nil {
-							log("error", pod.Error.Error())
-							continue
-						}
-
-						ready = pod.Value.Status.ContainerStatuses[0].Ready
-						if ready {
-							break
-						}
-					}
-				}
-
+				ctxCancel()
 				if !ready {
 					log("container did not reach readiness")
 					info.Status = ServiceStatusFailed
@@ -378,17 +359,29 @@ func NewServicesCmd() *cobra.Command {
 					log("container ready")
 					info.Status = ServiceStatusReady
 				}
-				instructions.PrintOutput(env.Ref(), "service", info)
+				if notifications.Err() != nil {
+					log("error", notifications.Err().Error())
+				}
+
+				// Fail if the container has not started
+				if !started {
+					info.Status = ServiceStatusFailed
+					log("container failed")
+					instructions.PrintOutput(config.Ref(), "service", info)
+					return false
+				}
+
+				instructions.PrintOutput(config.Ref(), "service", info)
 
 				return ready
 			}
 
 			// Start all the services
-			failed := spawn.ExecuteParallel(run, instances, int64(len(instances)))
+			failed := spawn.ExecuteParallel(run, instances, namespaces, int64(len(instances)))
 
 			// Inform about the services state
 			for k := range state {
-				instructions.PrintHintDetails(env.Ref(), data.ServicesPrefix+k, state[k])
+				instructions.PrintHintDetails(config.Ref(), data.ServicesPrefix+k, state[k])
 			}
 
 			// Notify the results

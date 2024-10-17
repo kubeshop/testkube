@@ -26,6 +26,7 @@ type Job interface {
 	Finished() bool
 	ActionGroups() (actiontypes.ActionGroups, error)
 	Signature() ([]stage.Signature, error)
+	ScheduledAt() (time.Time, error)
 	ExecutionError() string
 }
 
@@ -75,6 +76,10 @@ func (j *job) ActionGroups() (actions actiontypes.ActionGroups, err error) {
 
 func (j *job) Signature() ([]stage.Signature, error) {
 	return stage.GetSignatureFromJSON([]byte(j.original.Spec.Template.Annotations[constants.SignatureAnnotationName]))
+}
+
+func (j *job) ScheduledAt() (time.Time, error) {
+	return time.Parse(time.RFC3339Nano, j.original.Spec.Template.Annotations[constants.ScheduledAtAnnotationName])
 }
 
 func (j *job) ExecutionError() string {

@@ -1,4 +1,4 @@
-package testworkflowcontroller
+package controller
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller/watchers"
+	watchers2 "github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller/watchers"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -25,7 +25,7 @@ const (
 type notifier struct {
 	// Data
 	result      testkube.TestWorkflowResult
-	state       watchers.ExecutionState
+	state       watchers2.ExecutionState
 	scheduledAt time.Time
 
 	// Temporary data to avoid finishing too early
@@ -126,7 +126,7 @@ func (n *notifier) useActionGroups(actions actiontypes.ActionGroups) {
 	_, n.endRefs = ExtractRefsFromActionGroup(actions)
 }
 
-func (n *notifier) Align(state watchers.ExecutionState) {
+func (n *notifier) Align(state watchers2.ExecutionState) {
 	defer n.sendResult()
 	defer n.reconcile()
 
@@ -307,7 +307,7 @@ func (n *notifier) fillGaps(force bool) {
 	}
 
 	// Gather the container results
-	containerResults := make([]watchers.ContainerResult, len(n.actions))
+	containerResults := make([]watchers2.ContainerResult, len(n.actions))
 	for i := range n.actions {
 		containerResults[i] = n.state.Pod().ContainerResult(fmt.Sprintf("%d", i+1), n.state.ExecutionError())
 	}
@@ -356,7 +356,7 @@ func (n *notifier) reconcile() {
 
 	n.fillGaps(false)
 	n.result.HealTimestamps(n.sigSequence, n.scheduledAt, containerStartTs, completionTs, n.ended)
-	n.result.HealDuration()
+	n.result.HealDuration(n.scheduledAt)
 	n.result.HealMissingPauseStatuses()
 	n.result.HealStatus(n.sigSequence)
 }

@@ -15,11 +15,14 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/kubeshop/testkube/pkg/cache"
-
 	"github.com/nats-io/nats.go"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/emptypb"
+
+	"github.com/kubeshop/testkube/pkg/cache"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/kubernetesworker"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
 	cloudtestworkflow "github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
@@ -585,27 +588,70 @@ func main() {
 	if mode == common.ModeAgent {
 		testWorkflowProcessor = presets.NewPro(inspector)
 	}
+
+	// Build internal execution worker
+	namespacesConfig := map[string]kubernetesworker.NamespaceConfig{}
+	for n, s := range serviceAccountNames {
+		namespacesConfig[n] = kubernetesworker.NamespaceConfig{DefaultServiceAccountName: s}
+	}
+	cloudUrl := cfg.TestkubeProURL
+	cloudApiKey := cfg.TestkubeProAPIKey
+	objectStorageConfig := testworkflowconfig.ObjectStorageConfig{}
+	if cloudApiKey == "" {
+		cloudUrl = ""
+		objectStorageConfig = testworkflowconfig.ObjectStorageConfig{
+			Endpoint:        cfg.StorageEndpoint,
+			AccessKeyID:     cfg.StorageAccessKeyID,
+			SecretAccessKey: cfg.StorageSecretAccessKey,
+			Region:          cfg.StorageRegion,
+			Token:           cfg.StorageToken,
+			Bucket:          cfg.StorageBucket,
+			Ssl:             cfg.StorageSSL,
+			SkipVerify:      cfg.StorageSkipVerify,
+			CertFile:        cfg.StorageCertFile,
+			KeyFile:         cfg.StorageKeyFile,
+			CAFile:          cfg.StorageCAFile,
+		}
+	}
+	executionWorker := executionworker.NewKubernetes(clientset, testWorkflowProcessor, kubernetesworker.Config{
+		Cluster: kubernetesworker.ClusterConfig{
+			Id:               clusterId,
+			DefaultNamespace: cfg.TestkubeNamespace,
+			DefaultRegistry:  cfg.TestkubeRegistry,
+			Namespaces:       namespacesConfig,
+		},
+		ImageInspector: kubernetesworker.ImageInspectorConfig{
+			CacheEnabled: cfg.EnableImageDataPersistentCache,
+			CacheKey:     cfg.ImageDataPersistentCacheKey,
+			CacheTTL:     cfg.TestkubeImageCredentialsCacheTTL,
+		},
+		Connection: testworkflowconfig.WorkerConnectionConfig{
+			Url:         cloudUrl,
+			ApiKey:      cloudApiKey,
+			SkipVerify:  cfg.TestkubeProSkipVerify,
+			TlsInsecure: cfg.TestkubeProTLSInsecure,
+
+			// TODO: Prepare ControlPlane interface for OSS, so we may unify the communication
+			LocalApiUrl:   fmt.Sprintf("http://%s:%s", cfg.APIServerFullname, cfg.APIServerPort),
+			ObjectStorage: objectStorageConfig,
+		},
+	})
+
 	testWorkflowExecutor := testworkflowexecutor.New(
 		eventsEmitter,
+		executionWorker,
 		clientset,
 		testWorkflowResultsRepository,
 		testWorkflowOutputRepository,
-		testWorkflowTemplatesClient,
-		testWorkflowProcessor,
 		configMapConfig,
+		testWorkflowTemplatesClient,
 		testWorkflowExecutionsClient,
 		testWorkflowsClient,
 		metrics,
 		secretManager,
-		serviceAccountNames,
 		cfg.GlobalWorkflowTemplateName,
-		cfg.TestkubeNamespace,
-		"http://"+cfg.APIServerFullname+":"+cfg.APIServerPort,
-		cfg.TestkubeRegistry,
-		cfg.EnableImageDataPersistentCache,
-		cfg.ImageDataPersistentCacheKey,
 		cfg.TestkubeDashboardURI,
-		clusterId,
+		&proContext,
 	)
 
 	go testWorkflowExecutor.Recover(context.Background())
@@ -633,10 +679,10 @@ func main() {
 		executor,
 		containerExecutor,
 		testWorkflowExecutor,
+		executionWorker,
 		metrics,
 		sched,
 		slackLoader,
-		storageClient,
 		cfg.GraphqlPort,
 		artifactStorage,
 		templatesClient,
@@ -648,7 +694,6 @@ func main() {
 		features,
 		logsStream,
 		logGrpcClient,
-		subscriptionChecker,
 		serviceAccountNames,
 		envs,
 		cfg.TestkubeDockerImageVersion,
@@ -701,6 +746,7 @@ func main() {
 			executor,
 			eventBus,
 			metrics,
+			executionWorker,
 			testWorkflowExecutor,
 			testWorkflowResultsRepository,
 			triggers.WithHostnameIdentifier(),

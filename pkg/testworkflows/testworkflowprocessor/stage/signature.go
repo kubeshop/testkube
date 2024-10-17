@@ -86,6 +86,21 @@ func MapSignatureListToInternal(v []Signature) []testkube.TestWorkflowSignature 
 	return r
 }
 
+func MapSignatureList(v []testkube.TestWorkflowSignature) []Signature {
+	r := make([]Signature, len(v))
+	for i := range v {
+		r[i] = Signature(&signature{
+			RefValue:      v[i].Ref,
+			NameValue:     v[i].Name,
+			CategoryValue: v[i].Category,
+			OptionalValue: v[i].Optional,
+			NegativeValue: v[i].Negative,
+			ChildrenValue: MapSignatureList(v[i].Children),
+		})
+	}
+	return r
+}
+
 func MapSignatureListToStepResults(v []Signature) map[string]testkube.TestWorkflowStepResult {
 	r := map[string]testkube.TestWorkflowStepResult{}
 	for _, s := range v {

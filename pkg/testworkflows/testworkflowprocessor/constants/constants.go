@@ -9,21 +9,25 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
 	"github.com/kubeshop/testkube/pkg/version"
 )
 
 const (
-	DefaultInternalPath             = "/.tktw"
-	DefaultDataPath                 = "/data"
-	DefaultTerminationLogPath       = "/dev/termination-log"
-	DefaultFsGroup                  = int64(1001)
-	ResourceIdLabelName             = "testworkflowid"
-	RootResourceIdLabelName         = "testworkflowid-root"
-	GroupIdLabelName                = "testworkflowid-group"
-	SignatureAnnotationName         = "testworkflows.testkube.io/signature"
-	SpecAnnotationName              = "testworkflows.testkube.io/spec"
+	DefaultInternalPath       = "/.tktw"
+	DefaultDataPath           = "/data"
+	DefaultTerminationLogPath = "/dev/termination-log"
+	DefaultFsGroup            = int64(1001)
+	// TODO: move to the execution worker (?)
+	ResourceIdLabelName             = "testkube.io/resource"
+	RootResourceIdLabelName         = "testkube.io/root"
+	GroupIdLabelName                = "testkube.io/contextGroup"
+	SignatureAnnotationName         = "testkube.io/signature"
+	ScheduledAtAnnotationName       = "testkube.io/at"
+	SpecAnnotationName              = "testkube.io/spec"
 	SpecAnnotationFieldPath         = "metadata.annotations['" + SpecAnnotationName + "']"
-	RFC3339Millis                   = "2006-01-02T15:04:05.000Z07:00"
+	InternalAnnotationName          = "testkube.io/config"
+	InternalAnnotationFieldPath     = "metadata.annotations['" + InternalAnnotationName + "']"
 	OpenSourceOperationErrorMessage = "operation is not available when running the Testkube Agent in the standalone mode"
 	RootOperationName               = "root"
 )
@@ -51,6 +55,12 @@ var (
 )
 
 func getInitImage() string {
+	// Handle getter in the toolkit
+	if os.Getenv("TK_CFG") != "" {
+		return config.Config().Worker.InitImage
+	}
+
+	// Handle executor's getter
 	img := os.Getenv("TESTKUBE_TW_INIT_IMAGE")
 	if img == "" {
 		ver := version.Version
@@ -63,6 +73,12 @@ func getInitImage() string {
 }
 
 func getToolkitImage() string {
+	// Handle getter in the toolkit
+	if os.Getenv("TK_CFG") != "" {
+		return config.Config().Worker.ToolkitImage
+	}
+
+	// Handle executor's getter
 	img := os.Getenv("TESTKUBE_TW_TOOLKIT_IMAGE")
 	if img == "" {
 		ver := version.Version

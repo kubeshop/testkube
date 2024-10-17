@@ -1,4 +1,4 @@
-package testworkflowcontroller
+package controller
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	initconstants "github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller/watchers"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller/watchers"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
 
@@ -40,12 +40,16 @@ type Controller interface {
 	Pause(ctx context.Context) error
 	Resume(ctx context.Context) error
 	Cleanup(ctx context.Context) error
-	Watch(ctx context.Context) <-chan ChannelMessage[Notification]
+	Watch(ctx context.Context, disableFollow bool) <-chan ChannelMessage[Notification]
 	WatchLightweight(ctx context.Context) <-chan LightweightNotification
 	Logs(ctx context.Context, follow bool) io.Reader
 	NodeName() (string, error)
 	PodIP() (string, error)
+	ContainersReady() (bool, error)
+	Signature() []stage.Signature
+	HasPod() bool
 	ResourceID() string
+	Namespace() string
 	StopController()
 }
 
@@ -88,6 +92,9 @@ func New(parentCtx context.Context, clientSet kubernetes.Interface, namespace, i
 		return nil, errors.Wrap(err, "invalid job signature")
 	}
 
+	// Obtain the scheduled at timestamp
+	scheduledAt = watcher.State().ScheduledAt()
+
 	// Build accessible controller
 	return &controller{
 		id:          id,
@@ -112,8 +119,20 @@ type controller struct {
 	watcher     watchers.ExecutionWatcher
 }
 
+func (c *controller) Signature() []stage.Signature {
+	return c.signature
+}
+
+func (c *controller) HasPod() bool {
+	return c.watcher.State().Pod() != nil
+}
+
 func (c *controller) ResourceID() string {
 	return c.id
+}
+
+func (c *controller) Namespace() string {
+	return c.namespace
 }
 
 func (c *controller) Abort(ctx context.Context) error {
@@ -146,6 +165,14 @@ func (c *controller) NodeName() (string, error) {
 	return nodeName, nil
 }
 
+func (c *controller) ContainersReady() (bool, error) {
+	_, err := c.PodIP()
+	if err != nil {
+		return false, err
+	}
+	return c.watcher.State().ContainersReady(), nil
+}
+
 func (c *controller) Pause(ctx context.Context) error {
 	podIP, err := c.PodIP()
 	if err != nil {
@@ -166,13 +193,15 @@ func (c *controller) StopController() {
 	c.ctxCancel()
 }
 
-func (c *controller) Watch(parentCtx context.Context) <-chan ChannelMessage[Notification] {
-	ch, err := WatchInstrumentedPod(parentCtx, c.clientSet, c.signature, c.scheduledAt, c.watcher, WatchInstrumentedPodOptions{})
+func (c *controller) Watch(parentCtx context.Context, disableFollow bool) <-chan ChannelMessage[Notification] {
+	ch, err := WatchInstrumentedPod(parentCtx, c.clientSet, c.signature, c.scheduledAt, c.watcher, WatchInstrumentedPodOptions{
+		DisableFollow: disableFollow,
+	})
 	if err != nil {
-		v := newChannel[Notification](context.Background(), 1)
-		v.Error(err)
-		v.Close()
-		return v.Channel()
+		v := make(chan ChannelMessage[Notification], 1)
+		v <- ChannelMessage[Notification]{Error: err}
+		close(v)
+		return v
 	}
 	return ch
 }
@@ -187,7 +216,7 @@ func (c *controller) WatchLightweight(parentCtx context.Context) <-chan Lightwei
 	ch := make(chan LightweightNotification)
 	go func() {
 		defer close(ch)
-		for v := range c.Watch(parentCtx) {
+		for v := range c.Watch(parentCtx, false) {
 			if v.Error != nil {
 				ch <- LightweightNotification{Error: v.Error}
 				continue

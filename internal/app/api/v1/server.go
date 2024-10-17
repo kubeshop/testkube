@@ -20,7 +20,7 @@ import (
 	repoConfig "github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/secretmanager"
-	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 
 	"github.com/kubeshop/testkube/pkg/version"
@@ -90,10 +90,10 @@ func NewTestkubeAPI(
 	executor client.Executor,
 	containerExecutor client.Executor,
 	testWorkflowExecutor testworkflowexecutor.TestWorkflowExecutor,
+	executionWorkerClient executionworkertypes.Worker,
 	metrics metrics.Metrics,
 	scheduler *scheduler.Scheduler,
 	slackLoader *slack.SlackLoader,
-	storage storage.Client,
 	graphqlPort string,
 	artifactsStorage storage.ArtifactsStorage,
 	templatesClient *templatesclientv1.TemplatesClient,
@@ -105,7 +105,6 @@ func NewTestkubeAPI(
 	ff featureflags.FeatureFlags,
 	logsStream logsclient.Stream,
 	logGrpcClient logsclient.StreamGetter,
-	subscriptionChecker checktcl.SubscriptionChecker,
 	serviceAccountNames map[string]string,
 	envs map[string]string,
 	dockerImageVersion string,
@@ -148,9 +147,9 @@ func NewTestkubeAPI(
 		Executor:                    executor,
 		ContainerExecutor:           containerExecutor,
 		TestWorkflowExecutor:        testWorkflowExecutor,
+		ExecutionWorkerClient:       executionWorkerClient,
 		scheduler:                   scheduler,
 		slackLoader:                 slackLoader,
-		Storage:                     storage,
 		graphqlPort:                 graphqlPort,
 		ArtifactsStorage:            artifactsStorage,
 		TemplatesClient:             templatesClient,
@@ -162,7 +161,6 @@ func NewTestkubeAPI(
 		featureFlags:                ff,
 		logsStream:                  logsStream,
 		logGrpcClient:               logGrpcClient,
-		SubscriptionChecker:         subscriptionChecker,
 		LabelSources:                common.Ptr(make([]LabelSource, 0)),
 		ServiceAccountNames:         serviceAccountNames,
 		Envs:                        envs,
@@ -179,6 +177,7 @@ type TestkubeAPI struct {
 	Executor                    client.Executor
 	ContainerExecutor           client.Executor
 	TestWorkflowExecutor        testworkflowexecutor.TestWorkflowExecutor
+	ExecutionWorkerClient       executionworkertypes.Worker
 	TestsSuitesClient           *testsuitesclientv3.TestSuitesClient
 	TestsClient                 *testsclientv3.TestsClient
 	ExecutorsClient             *executorsclientv1.ExecutorsClient
@@ -190,7 +189,6 @@ type TestkubeAPI struct {
 	TestWorkflowsClient         testworkflowsv1.Interface
 	TestWorkflowTemplatesClient testworkflowsv1.TestWorkflowTemplatesInterface
 	Metrics                     metrics.Metrics
-	Storage                     storage.Client
 	storageParams               storageParams
 	Namespace                   string
 	oauthParams                 oauthParams
@@ -212,7 +210,6 @@ type TestkubeAPI struct {
 	logsStream                  logsclient.Stream
 	logGrpcClient               logsclient.StreamGetter
 	proContext                  *config.ProContext
-	SubscriptionChecker         checktcl.SubscriptionChecker
 	LabelSources                *[]LabelSource
 	ServiceAccountNames         map[string]string
 	Envs                        map[string]string
@@ -732,12 +729,5 @@ func getFilterFromRequest(c *fiber.Ctx) result.Filter {
 // WithProContext sets pro context for the API
 func (s *TestkubeAPI) WithProContext(proContext *config.ProContext) *TestkubeAPI {
 	s.proContext = proContext
-	return s
-}
-
-// WithSubscriptionChecker sets subscription checker for the API
-// This is used to check if Pro/Enterprise subscription is valid
-func (s *TestkubeAPI) WithSubscriptionChecker(subscriptionChecker checktcl.SubscriptionChecker) *TestkubeAPI {
-	s.SubscriptionChecker = subscriptionChecker
 	return s
 }

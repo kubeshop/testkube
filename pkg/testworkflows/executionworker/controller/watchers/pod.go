@@ -30,12 +30,14 @@ type Pod interface {
 	Finished() bool
 	ActionGroups() (actiontypes.ActionGroups, error)
 	Signature() ([]stage.Signature, error)
+	ScheduledAt() (time.Time, error)
 	ContainerStarted(name string) bool
 	ContainerFinished(name string) bool
 	ContainerFailed(name string) bool
 	ContainerStartTimestamp(name string) time.Time
 	ContainerFinishTimestamp(name string) time.Time
 	ContainerResult(name string, executionError string) ContainerResult
+	ContainersReady() bool
 	ContainerError() string
 	ExecutionError() string
 }
@@ -115,6 +117,10 @@ func (p *pod) Signature() ([]stage.Signature, error) {
 	return stage.GetSignatureFromJSON([]byte(p.original.Annotations[constants.SignatureAnnotationName]))
 }
 
+func (p *pod) ScheduledAt() (time.Time, error) {
+	return time.Parse(time.RFC3339Nano, p.original.Annotations[constants.ScheduledAtAnnotationName])
+}
+
 func (p *pod) ContainerStarted(name string) bool {
 	return IsContainerStarted(p.original, name)
 }
@@ -180,6 +186,31 @@ func (p *pod) ContainerError() string {
 	}
 
 	return ""
+}
+
+func (p *pod) ContainersReady() bool {
+	// Check for the init containers (active one needs to be ready)
+	for _, c := range p.original.Spec.InitContainers {
+		if c.ReadinessProbe != nil {
+			status := GetContainerStatus(p.original, c.Name)
+			if status == nil {
+				return false
+			} else if status.State.Running != nil || status.State.Waiting != nil {
+				return status.Ready
+			}
+		}
+	}
+
+	// Check for the actual containers (all with the readiness probe needs to be ready)
+	for _, c := range p.original.Spec.Containers {
+		if c.ReadinessProbe != nil {
+			status := GetContainerStatus(p.original, c.Name)
+			if status == nil || !status.Ready {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 func (p *pod) ExecutionError() string {

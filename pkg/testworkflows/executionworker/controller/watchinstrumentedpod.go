@@ -1,4 +1,4 @@
-package testworkflowcontroller
+package controller
 
 import (
 	"context"
@@ -12,7 +12,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller/watchers"
+	watchers2 "github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller/watchers"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
 
@@ -24,7 +24,7 @@ type WatchInstrumentedPodOptions struct {
 	DisableFollow bool
 }
 
-func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interface, signature []stage.Signature, scheduledAt time.Time, watcher watchers.ExecutionWatcher, opts WatchInstrumentedPodOptions) (<-chan ChannelMessage[Notification], error) {
+func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interface, signature []stage.Signature, scheduledAt time.Time, watcher watchers2.ExecutionWatcher, opts WatchInstrumentedPodOptions) (<-chan ChannelMessage[Notification], error) {
 	ctx, ctxCancel := context.WithCancel(parentCtx)
 	notifier := newNotifier(ctx, testkube.TestWorkflowResult{}, scheduledAt)
 	signatureSeq := stage.MapSignatureToSequence(signature)
@@ -54,7 +54,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 				currentJobEventsIndex++
 
 				if ev.Reason != "BackoffLimitExceeded" {
-					notifier.Event("", watchers.GetEventTimestamp(ev), ev.Type, ev.Reason, ev.Message)
+					notifier.Event("", watchers2.GetEventTimestamp(ev), ev.Type, ev.Reason, ev.Message)
 				}
 			}
 			for _, ev := range watcher.State().PodEvents().Original()[currentPodEventsIndex:] {
@@ -63,7 +63,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 				// Display only events that are unrelated to further containers
 				name := GetEventContainerName(ev)
 				if name == "" {
-					notifier.Event("", watchers.GetEventTimestamp(ev), ev.Type, ev.Reason, ev.Message)
+					notifier.Event("", watchers2.GetEventTimestamp(ev), ev.Type, ev.Reason, ev.Message)
 				}
 			}
 
@@ -116,6 +116,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 
 		// Iterate over containers
 		lastStarted := data.InitStepName
+		containersReady := false
 		for containerIndex := 0; containerIndex < len(refs); containerIndex++ {
 			aborted := false
 			container := fmt.Sprintf("%d", containerIndex+1)
@@ -136,7 +137,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 					// Display only events that are unrelated to further containers
 					name := GetEventContainerName(ev)
 					if name == container && ev.Reason != "Created" && ev.Reason != "Started" {
-						notifier.Event(initialRefs[containerIndex], watchers.GetEventTimestamp(ev), ev.Type, ev.Reason, ev.Message)
+						notifier.Event(initialRefs[containerIndex], watchers2.GetEventTimestamp(ev), ev.Type, ev.Reason, ev.Message)
 					}
 				}
 
@@ -161,25 +162,42 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 			isDone := func() bool {
 				return opts.DisableFollow || watcher.State().ContainerFinished(container) || watcher.State().Completed()
 			}
-			for v := range WatchContainerLogs(ctx, clientSet, watcher.State().Namespace(), watcher.State().PodName(), container, 10, isDone, isLastHint) {
-				if v.Error != nil {
-					notifier.Error(v.Error)
-					continue
-				}
+			logsCh := WatchContainerLogs(ctx, clientSet, watcher.State().Namespace(), watcher.State().PodName(), container, 10, isDone, isLastHint)
+			containersReady = watcher.State().ContainersReady()
+		logs:
+			for {
+				select {
+				case <-updatesCh:
+					// Force empty notification on container ready (for services)
+					nextContainersReady := watcher.State().ContainersReady()
+					if containersReady != nextContainersReady {
+						containersReady = nextContainersReady
+						notifier.send(Notification{Ref: lastStarted, Temporary: true}) // TODO: apply timestamp
+					}
+				case v, ok := <-logsCh:
+					if !ok {
+						break logs
+					}
+					if v.Error != nil {
+						ts := time.Now() // TODO: get latest timestamp instead?
+						notifier.Raw(lastRef, ts, fmt.Sprintf("%s error while fetching container logs: %s\n", ts.Format(KubernetesLogTimeFormat), v.Error.Error()), false)
+						continue
+					}
 
-				switch v.Value.Type() {
-				case ContainerLogTypeLog:
-					notifier.Raw(lastStarted, v.Value.Time, string(v.Value.Log), false)
-				case ContainerLogTypeOutput:
-					notifier.Output(v.Value.Output.Ref, v.Value.Time, v.Value.Output)
-				case ContainerLogTypeHint:
-					if v.Value.Hint.Name == constants.InstructionStart {
-						lastStarted = v.Value.Hint.Ref
+					switch v.Value.Type() {
+					case ContainerLogTypeLog:
+						notifier.Raw(lastStarted, v.Value.Time, string(v.Value.Log), false)
+					case ContainerLogTypeOutput:
+						notifier.Output(v.Value.Output.Ref, v.Value.Time, v.Value.Output)
+					case ContainerLogTypeHint:
+						if v.Value.Hint.Name == constants.InstructionStart {
+							lastStarted = v.Value.Hint.Ref
+						}
+						if v.Value.Hint.Name == constants.InstructionEnd && testkube.TestWorkflowStepStatus(v.Value.Hint.Value.(string)) == testkube.ABORTED_TestWorkflowStepStatus {
+							aborted = true
+						}
+						notifier.Instruction(v.Value.Time, *v.Value.Hint)
 					}
-					if v.Value.Hint.Name == constants.InstructionEnd && testkube.TestWorkflowStepStatus(v.Value.Hint.Value.(string)) == testkube.ABORTED_TestWorkflowStepStatus {
-						aborted = true
-					}
-					notifier.Instruction(v.Value.Time, *v.Value.Hint)
 				}
 			}
 

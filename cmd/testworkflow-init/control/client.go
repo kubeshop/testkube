@@ -15,9 +15,9 @@ type client struct {
 	mu     sync.Mutex
 }
 
-func NewClient(ctx context.Context, ip string, port int) (*client, error) {
+func NewClient(ctx context.Context, address string, port int) (*client, error) {
 	dialCtx, cancel := context.WithCancel(ctx)
-	conn, err := (&net.Dialer{}).DialContext(dialCtx, "tcp", fmt.Sprintf("%s:%d", ip, port))
+	conn, err := (&net.Dialer{}).DialContext(dialCtx, "tcp", fmt.Sprintf("%s:%d", address, port))
 	if err != nil {
 		cancel()
 		return nil, err

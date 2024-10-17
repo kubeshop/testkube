@@ -7,10 +7,11 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/kubeshop/testkube/pkg/cache"
-
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+
+	config2 "github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
+	"github.com/kubeshop/testkube/pkg/cache"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/agent"
@@ -51,25 +52,25 @@ func Kubernetes() *kubernetes.Clientset {
 
 func ImageInspector() imageinspector.Inspector {
 	clientSet := Kubernetes()
-	secretClient := &secret.Client{ClientSet: clientSet, Namespace: Namespace(), Log: log.DefaultLogger}
-	configMapClient := &configmap.Client{ClientSet: clientSet, Namespace: Namespace(), Log: log.DefaultLogger}
+	secretClient := &secret.Client{ClientSet: clientSet, Namespace: config2.Namespace(), Log: log.DefaultLogger}
+	configMapClient := &configmap.Client{ClientSet: clientSet, Namespace: config2.Namespace(), Log: log.DefaultLogger}
 	inspectorStorages := []imageinspector.Storage{imageinspector.NewMemoryStorage()}
-	if Config().Images.InspectorPersistenceEnabled {
-		configmapStorage := imageinspector.NewConfigMapStorage(configMapClient, Config().Images.InspectorPersistenceCacheKey, true)
+	if config2.Config().Worker.ImageInspectorPersistenceEnabled {
+		configmapStorage := imageinspector.NewConfigMapStorage(configMapClient, config2.Config().Worker.ImageInspectorPersistenceCacheKey, true)
 		_ = configmapStorage.CopyTo(context.Background(), inspectorStorages[0].(imageinspector.StorageTransfer))
 		inspectorStorages = append(inspectorStorages, configmapStorage)
 	}
 	return imageinspector.NewInspector(
-		Config().System.DefaultRegistry,
+		config2.Config().Worker.DefaultRegistry,
 		imageinspector.NewCraneFetcher(),
-		imageinspector.NewSecretFetcher(secretClient, cache.NewInMemoryCache[*corev1.Secret](), imageinspector.WithSecretCacheTTL(Config().Images.ImageCredentialsCacheTTL)),
+		imageinspector.NewSecretFetcher(secretClient, cache.NewInMemoryCache[*corev1.Secret](), imageinspector.WithSecretCacheTTL(config2.Config().Worker.ImageInspectorPersistenceCacheTTL)),
 		inspectorStorages...,
 	)
 }
 
 func Testkube() client.Client {
-	if UseProxy() {
-		return client.NewProxyAPIClient(Kubernetes(), client.NewAPIConfig(Namespace(), config.APIServerName, config.APIServerPort))
+	if config2.UseProxy() {
+		return client.NewProxyAPIClient(Kubernetes(), client.NewAPIConfig(config2.Namespace(), config.APIServerName, config.APIServerPort))
 	}
 	httpClient := phttp.NewClient(true)
 	sseClient := phttp.NewSSEClient(true)
@@ -77,14 +78,14 @@ func Testkube() client.Client {
 }
 
 func ObjectStorageClient() (*minio.Client, error) {
-	cfg := Config().ObjectStorage
+	cfg := config2.Config().Worker.Connection.ObjectStorage
 	opts := minio.GetTLSOptions(cfg.Ssl, cfg.SkipVerify, cfg.CertFile, cfg.KeyFile, cfg.CAFile)
 	c := minio.NewClient(cfg.Endpoint, cfg.AccessKeyID, cfg.SecretAccessKey, cfg.Region, cfg.Token, cfg.Bucket, opts...)
 	return c, c.Connect()
 }
 
 func Cloud(ctx context.Context) (cloudexecutor.Executor, cloud.TestKubeCloudAPIClient) {
-	cfg := Config().Cloud
+	cfg := config2.Config().Worker.Connection
 	grpcConn, err := agent.NewGRPCConnection(ctx, cfg.TlsInsecure, cfg.SkipVerify, cfg.Url, "", "", "", log.DefaultLogger)
 	if err != nil {
 		ui.Fail(fmt.Errorf("failed to connect with Cloud: %w", err))

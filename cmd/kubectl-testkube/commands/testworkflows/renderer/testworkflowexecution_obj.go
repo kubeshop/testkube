@@ -73,7 +73,7 @@ func printPrettyOutput(ui *ui.UI, execution testkube.TestWorkflowExecution) {
 			}
 			if !execution.Result.FinishedAt.IsZero() {
 				ui.Warn("Finished at:         ", execution.Result.FinishedAt.String())
-				ui.Warn("Duration:            ", execution.Result.FinishedAt.Sub(execution.Result.QueuedAt).String())
+				ui.Warn("Duration:            ", execution.Result.Duration)
 			}
 		}
 	}
