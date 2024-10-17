@@ -47,11 +47,10 @@ import (
 
 	"golang.org/x/sync/errgroup"
 
+	"github.com/pkg/errors"
+
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/repository/sequence"
-	"github.com/kubeshop/testkube/pkg/repository/storage"
-
-	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/agent"
@@ -196,19 +195,9 @@ func main() {
 		triggerLeaseBackend = triggers.NewAcquireAlwaysLeaseBackend()
 		artifactStorage = cloudartifacts.NewCloudArtifactsStorage(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
 	} else {
-		// Connect to MongoDB
-		mongoSSLConfig := getMongoSSLConfig(cfg, secretClient)
-		db, err := storage.GetMongoDatabase(cfg.APIMongoDSN, cfg.APIMongoDB, cfg.APIMongoDBType, cfg.APIMongoAllowTLS, mongoSSLConfig)
-		exitOnError("Getting mongo database", err)
-
-		// Connect to Minio
-		minioClient := newStorageClient(cfg)
-		err = minioClient.Connect()
-		exitOnError("Connecting to minio", err)
-		if expErr := minioClient.SetExpirationPolicy(cfg.StorageExpiration); expErr != nil {
-			log.DefaultLogger.Errorw("Error setting expiration policy", "error", expErr)
-		}
-		storageClient = minioClient
+		// Connect to storages
+		db := internal.MustGetMongoDatabase(cfg, secretClient)
+		storageClient = internal.MustGetMinioClient(cfg)
 
 		// Build repositories
 		sequenceRepository := sequence.NewMongoRepository(db)
@@ -708,43 +697,6 @@ func newSlackLoader(cfg *config.Config, envs map[string]string) (*slack.SlackLoa
 
 	return slack.NewSlackLoader(slackTemplate, slackConfig, cfg.TestkubeClusterName, cfg.TestkubeDashboardURI,
 		testkube.AllEventTypes, envs), nil
-}
-
-// getMongoSSLConfig builds the necessary SSL connection info from the settings in the environment variables
-// and the given secret reference
-func getMongoSSLConfig(cfg *config.Config, secretClient *secret.Client) *storage.MongoSSLConfig {
-	if cfg.APIMongoSSLCert == "" {
-		return nil
-	}
-
-	clientCertPath := "/tmp/mongodb.pem"
-	rootCAPath := "/tmp/mongodb-root-ca.pem"
-	mongoSSLSecret, err := secretClient.Get(cfg.APIMongoSSLCert)
-	exitOnError(fmt.Sprintf("Could not get secret %s for MongoDB connection", cfg.APIMongoSSLCert), err)
-
-	var keyFile, caFile, pass string
-	var ok bool
-	if keyFile, ok = mongoSSLSecret[cfg.APIMongoSSLClientFileKey]; !ok {
-		log.DefaultLogger.Warnf("Could not find sslClientCertificateKeyFile with key %s in secret %s", cfg.APIMongoSSLClientFileKey, cfg.APIMongoSSLCert)
-	}
-	if caFile, ok = mongoSSLSecret[cfg.APIMongoSSLCAFileKey]; !ok {
-		log.DefaultLogger.Warnf("Could not find sslCertificateAuthorityFile with key %s in secret %s", cfg.APIMongoSSLCAFileKey, cfg.APIMongoSSLCert)
-	}
-	if pass, ok = mongoSSLSecret[cfg.APIMongoSSLClientFilePass]; !ok {
-		log.DefaultLogger.Warnf("Could not find sslClientCertificateKeyFilePassword with key %s in secret %s", cfg.APIMongoSSLClientFilePass, cfg.APIMongoSSLCert)
-	}
-
-	err = os.WriteFile(clientCertPath, []byte(keyFile), 0644)
-	exitOnError("Could not place mongodb certificate key file", err)
-
-	err = os.WriteFile(rootCAPath, []byte(caFile), 0644)
-	exitOnError("Could not place mongodb ssl ca file: %s", err)
-
-	return &storage.MongoSSLConfig{
-		SSLClientCertificateKeyFile:         clientCertPath,
-		SSLClientCertificateKeyFilePassword: pass,
-		SSLCertificateAuthoritiyFile:        rootCAPath,
-	}
 }
 
 func newProContext(cfg *config.Config, grpcClient cloud.TestKubeCloudAPIClient) config.ProContext {

@@ -9,6 +9,7 @@ import (
 	"strings"
 	"syscall"
 
+	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
 
@@ -19,7 +20,10 @@ import (
 	"github.com/kubeshop/testkube/pkg/imageinspector"
 	"github.com/kubeshop/testkube/pkg/log"
 	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
+	"github.com/kubeshop/testkube/pkg/repository/storage"
 	"github.com/kubeshop/testkube/pkg/secret"
+	domainstorage "github.com/kubeshop/testkube/pkg/storage"
+	"github.com/kubeshop/testkube/pkg/storage/minio"
 )
 
 func exitOnError(title string, err error) {
@@ -99,6 +103,69 @@ func MustGetConfigMapConfig(ctx context.Context, name string, namespace string, 
 		log.DefaultLogger.Warn("error upserting config ConfigMap", "error", err)
 	}
 	return configMapConfig
+}
+
+func MustGetMinioClient(cfg *config.Config) domainstorage.Client {
+	opts := minio.GetTLSOptions(cfg.StorageSSL, cfg.StorageSkipVerify, cfg.StorageCertFile, cfg.StorageKeyFile, cfg.StorageCAFile)
+	minioClient := minio.NewClient(
+		cfg.StorageEndpoint,
+		cfg.StorageAccessKeyID,
+		cfg.StorageSecretAccessKey,
+		cfg.StorageRegion,
+		cfg.StorageToken,
+		cfg.StorageBucket,
+		opts...,
+	)
+	err := minioClient.Connect()
+	exitOnError("Connecting to minio", err)
+	if expErr := minioClient.SetExpirationPolicy(cfg.StorageExpiration); expErr != nil {
+		log.DefaultLogger.Errorw("Error setting expiration policy", "error", expErr)
+	}
+	return minioClient
+}
+
+func MustGetMongoDatabase(cfg *config.Config, secretClient secret.Interface) *mongo.Database {
+	mongoSSLConfig := getMongoSSLConfig(cfg, secretClient)
+	db, err := storage.GetMongoDatabase(cfg.APIMongoDSN, cfg.APIMongoDB, cfg.APIMongoDBType, cfg.APIMongoAllowTLS, mongoSSLConfig)
+	exitOnError("Getting mongo database", err)
+	return db
+}
+
+// getMongoSSLConfig builds the necessary SSL connection info from the settings in the environment variables
+// and the given secret reference
+func getMongoSSLConfig(cfg *config.Config, secretClient secret.Interface) *storage.MongoSSLConfig {
+	if cfg.APIMongoSSLCert == "" {
+		return nil
+	}
+
+	clientCertPath := "/tmp/mongodb.pem"
+	rootCAPath := "/tmp/mongodb-root-ca.pem"
+	mongoSSLSecret, err := secretClient.Get(cfg.APIMongoSSLCert)
+	exitOnError(fmt.Sprintf("Could not get secret %s for MongoDB connection", cfg.APIMongoSSLCert), err)
+
+	var keyFile, caFile, pass string
+	var ok bool
+	if keyFile, ok = mongoSSLSecret[cfg.APIMongoSSLClientFileKey]; !ok {
+		log.DefaultLogger.Warnf("Could not find sslClientCertificateKeyFile with key %s in secret %s", cfg.APIMongoSSLClientFileKey, cfg.APIMongoSSLCert)
+	}
+	if caFile, ok = mongoSSLSecret[cfg.APIMongoSSLCAFileKey]; !ok {
+		log.DefaultLogger.Warnf("Could not find sslCertificateAuthorityFile with key %s in secret %s", cfg.APIMongoSSLCAFileKey, cfg.APIMongoSSLCert)
+	}
+	if pass, ok = mongoSSLSecret[cfg.APIMongoSSLClientFilePass]; !ok {
+		log.DefaultLogger.Warnf("Could not find sslClientCertificateKeyFilePassword with key %s in secret %s", cfg.APIMongoSSLClientFilePass, cfg.APIMongoSSLCert)
+	}
+
+	err = os.WriteFile(clientCertPath, []byte(keyFile), 0644)
+	exitOnError("Could not place mongodb certificate key file", err)
+
+	err = os.WriteFile(rootCAPath, []byte(caFile), 0644)
+	exitOnError("Could not place mongodb ssl ca file: %s", err)
+
+	return &storage.MongoSSLConfig{
+		SSLClientCertificateKeyFile:         clientCertPath,
+		SSLClientCertificateKeyFilePassword: pass,
+		SSLCertificateAuthoritiyFile:        rootCAPath,
+	}
 }
 
 // Components
