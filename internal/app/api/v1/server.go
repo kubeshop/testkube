@@ -15,7 +15,6 @@ import (
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/pkg/client/testworkflows/v1"
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
-	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	repoConfig "github.com/kubeshop/testkube/pkg/repository/config"
@@ -147,7 +146,6 @@ func NewTestkubeAPI(
 		featureFlags:                ff,
 		logsStream:                  logsStream,
 		logGrpcClient:               logGrpcClient,
-		LabelSources:                common.Ptr(make([]LabelSource, 0)),
 		ServiceAccountNames:         serviceAccountNames,
 		Envs:                        envs,
 		dockerImageVersion:          dockerImageVersion,
@@ -192,7 +190,6 @@ type TestkubeAPI struct {
 	logsStream                  logsclient.Stream
 	logGrpcClient               logsclient.StreamGetter
 	proContext                  *config.ProContext
-	LabelSources                *[]LabelSource
 	ServiceAccountNames         map[string]string
 	Envs                        map[string]string
 	dockerImageVersion          string
@@ -217,19 +214,6 @@ type oauthParams struct {
 	ClientSecret string
 	Provider     oauth.ProviderType
 	Scopes       string
-}
-
-func (s *TestkubeAPI) WithFeatureFlags(ff featureflags.FeatureFlags) *TestkubeAPI {
-	s.featureFlags = ff
-	return s
-}
-
-type LabelSource interface {
-	ListLabels() (map[string][]string, error)
-}
-
-func (s *TestkubeAPI) WithLabelSources(l ...LabelSource) {
-	*s.LabelSources = append(*s.LabelSources, l...)
 }
 
 // SendTelemetryStartEvent sends anonymous start event to telemetry trackers
@@ -470,9 +454,6 @@ func (s *TestkubeAPI) InitRoutes() {
 
 	files := root.Group("/uploads")
 	files.Post("/", s.UploadFiles())
-
-	// Register TestWorkflows as additional source for labels
-	s.WithLabelSources(s.TestWorkflowsClient, s.TestWorkflowTemplatesClient)
 
 	secrets := root.Group("/secrets")
 	secrets.Get("/", s.ListSecretsHandler())
