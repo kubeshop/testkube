@@ -17,6 +17,10 @@ import (
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	"github.com/kubeshop/testkube/internal/app/api/debug"
+	"github.com/kubeshop/testkube/pkg/event/kind/cdevent"
+	"github.com/kubeshop/testkube/pkg/event/kind/k8sevent"
+	"github.com/kubeshop/testkube/pkg/event/kind/webhook"
+	ws "github.com/kubeshop/testkube/pkg/event/kind/websocket"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/kubernetesworker"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
@@ -437,6 +441,23 @@ func main() {
 	slackLoader, err := newSlackLoader(cfg, envs)
 	exitOnError("Creating slack loader", err)
 
+	// Initialize event handlers
+	websocketLoader := ws.NewWebsocketLoader()
+	eventsEmitter.Loader.Register(webhook.NewWebhookLoader(log.DefaultLogger, webhooksClient, deprecatedClients.Templates(), deprecatedRepositories.TestResults(), deprecatedRepositories.TestSuiteResults(), testWorkflowResultsRepository, metrics, &proContext, envs))
+	eventsEmitter.Loader.Register(websocketLoader)
+	eventsEmitter.Loader.Register(slackLoader)
+	if cfg.CDEventsTarget != "" {
+		cdeventLoader, err := cdevent.NewCDEventLoader(cfg.CDEventsTarget, clusterId, cfg.TestkubeNamespace, cfg.TestkubeDashboardURI, testkube.AllEventTypes)
+		if err == nil {
+			eventsEmitter.Loader.Register(cdeventLoader)
+		} else {
+			log.DefaultLogger.Debugw("cdevents init error", "error", err.Error())
+		}
+	}
+	if cfg.EnableK8sEvents {
+		eventsEmitter.Loader.Register(k8sevent.NewK8sEventLoader(clientset, cfg.TestkubeNamespace, testkube.AllEventTypes))
+	}
+
 	api := apiv1.NewTestkubeAPI(
 		deprecatedRepositories,
 		deprecatedClients,
@@ -452,7 +473,7 @@ func main() {
 		testWorkflowTemplatesClient,
 		configMapConfig,
 		clusterId,
-		eventsEmitter,
+		websocketLoader,
 		executor,
 		containerExecutor,
 		testWorkflowExecutor,

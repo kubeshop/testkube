@@ -26,11 +26,10 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/version"
 
+	"k8s.io/client-go/kubernetes"
+
 	"github.com/kubeshop/testkube/pkg/datefilter"
 	"github.com/kubeshop/testkube/pkg/repository/result"
-	"github.com/kubeshop/testkube/pkg/repository/testresult"
-
-	"k8s.io/client-go/kubernetes"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -38,15 +37,11 @@ import (
 	"github.com/kelseyhightower/envconfig"
 
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
-	templatesclientv1 "github.com/kubeshop/testkube-operator/pkg/client/templates/v1"
 	testkubeclientset "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/event/bus"
-	"github.com/kubeshop/testkube/pkg/event/kind/cdevent"
-	"github.com/kubeshop/testkube/pkg/event/kind/k8sevent"
 	"github.com/kubeshop/testkube/pkg/event/kind/slack"
-	"github.com/kubeshop/testkube/pkg/event/kind/webhook"
 	ws "github.com/kubeshop/testkube/pkg/event/kind/websocket"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/featureflags"
@@ -80,7 +75,7 @@ func NewTestkubeAPI(
 	testWorkflowTemplatesClient testworkflowsv1.TestWorkflowTemplatesInterface,
 	configMap repoConfig.Repository,
 	clusterId string,
-	eventsEmitter *event.Emitter,
+	websocketLoader *ws.WebsocketLoader,
 	executor client.Executor,
 	containerExecutor client.Executor,
 	testWorkflowExecutor testworkflowexecutor.TestWorkflowExecutor,
@@ -130,7 +125,7 @@ func NewTestkubeAPI(
 		TestWorkflowsClient:         testWorkflowsClient,
 		TestWorkflowTemplatesClient: testWorkflowTemplatesClient,
 		Metrics:                     metrics,
-		Events:                      eventsEmitter,
+		WebsocketLoader:             websocketLoader,
 		WebhooksClient:              webhookClient,
 		Namespace:                   namespace,
 		ConfigMap:                   configMap,
@@ -261,20 +256,6 @@ func (s TestkubeAPI) SendTelemetryStartEvent(ctx context.Context, ch chan struct
 }
 
 func (s *TestkubeAPI) Init(cdEventsTarget string, enableK8sEvents bool) {
-	s.InitEventListeners(
-		s.WebhooksClient,
-		s.DeprecatedClients.Templates(),
-		s.DeprecatedRepositories.TestResults(),
-		s.DeprecatedRepositories.TestSuiteResults(),
-		s.TestWorkflowResults,
-		s.Metrics,
-		cdEventsTarget,
-		s.Config.ClusterID,
-		s.Namespace,
-		s.dashboardURI,
-		enableK8sEvents,
-		s.Clientset,
-	)
 	s.InitEnvs()
 	s.InitRoutes()
 	s.InitEvents()
@@ -577,43 +558,6 @@ func (s *TestkubeAPI) InitRoutes() {
 		})
 		return nil
 	})
-}
-
-func (s *TestkubeAPI) InitEventListeners(
-	webhookClient *executorsclientv1.WebhooksClient,
-	templatesClient templatesclientv1.Interface,
-	testExecutionResults result.Repository,
-	testSuiteExecutionsResults testresult.Repository,
-	testWorkflowResults testworkflow.Repository,
-	metrics metrics.Metrics,
-	cdeventsTarget string,
-	clusterId string,
-	namespace string,
-	dashboardURI string,
-	enableK8sEvents bool,
-	clientset kubernetes.Interface,
-) {
-	// will be reused in websockets handler
-	s.WebsocketLoader = ws.NewWebsocketLoader()
-
-	s.Events.Loader.Register(webhook.NewWebhookLoader(
-		s.Log, webhookClient, templatesClient, testExecutionResults, testSuiteExecutionsResults,
-		testWorkflowResults, metrics, s.proContext, s.Envs))
-	s.Events.Loader.Register(s.WebsocketLoader)
-	s.Events.Loader.Register(s.slackLoader)
-
-	if cdeventsTarget != "" {
-		cdeventLoader, err := cdevent.NewCDEventLoader(cdeventsTarget, clusterId, namespace, dashboardURI, testkube.AllEventTypes)
-		if err == nil {
-			s.Events.Loader.Register(cdeventLoader)
-		} else {
-			s.Log.Debug("cdevents init error", "error", err.Error())
-		}
-	}
-
-	if enableK8sEvents {
-		s.Events.Loader.Register(k8sevent.NewK8sEventLoader(clientset, namespace, testkube.AllEventTypes))
-	}
 }
 
 func (s TestkubeAPI) StartTelemetryHeartbeats(ctx context.Context, ch chan struct{}) {
