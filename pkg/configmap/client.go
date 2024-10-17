@@ -23,7 +23,7 @@ type Interface interface {
 
 // Client provide methods to manage configmaps
 type Client struct {
-	ClientSet *kubernetes.Clientset
+	ClientSet kubernetes.Interface
 	Log       *zap.SugaredLogger
 	Namespace string
 }

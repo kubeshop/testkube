@@ -73,15 +73,15 @@ func NewTestkubeAPI(
 	testSuiteExecutionsResults testresult.Repository,
 	testWorkflowResults testworkflow.Repository,
 	testWorkflowOutput testworkflow.OutputRepository,
-	testsClient *testsclientv3.TestsClient,
-	executorsClient *executorsclientv1.ExecutorsClient,
-	testsuitesClient *testsuitesclientv3.TestSuitesClient,
-	secretClient *secret.Client,
+	testsClient testsclientv3.Interface,
+	executorsClient executorsclientv1.Interface,
+	testsuitesClient testsuitesclientv3.Interface,
+	secretClient secret.Interface,
 	secretManager secretmanager.SecretManager,
 	webhookClient *executorsclientv1.WebhooksClient,
 	clientset kubernetes.Interface,
 	testkubeClientset testkubeclientset.Interface,
-	testsourcesClient *testsourcesclientv1.TestSourcesClient,
+	testsourcesClient testsourcesclientv1.Interface,
 	testWorkflowsClient testworkflowsv1.Interface,
 	testWorkflowTemplatesClient testworkflowsv1.TestWorkflowTemplatesInterface,
 	configMap repoConfig.Repository,
@@ -96,7 +96,7 @@ func NewTestkubeAPI(
 	slackLoader *slack.SlackLoader,
 	graphqlPort string,
 	artifactsStorage storage.ArtifactsStorage,
-	templatesClient *templatesclientv1.TemplatesClient,
+	templatesClient templatesclientv1.Interface,
 	dashboardURI string,
 	helmchartVersion string,
 	mode string,
@@ -178,14 +178,14 @@ type TestkubeAPI struct {
 	ContainerExecutor           client.Executor
 	TestWorkflowExecutor        testworkflowexecutor.TestWorkflowExecutor
 	ExecutionWorkerClient       executionworkertypes.Worker
-	TestsSuitesClient           *testsuitesclientv3.TestSuitesClient
-	TestsClient                 *testsclientv3.TestsClient
-	ExecutorsClient             *executorsclientv1.ExecutorsClient
-	SecretClient                *secret.Client
+	TestsSuitesClient           testsuitesclientv3.Interface
+	TestsClient                 testsclientv3.Interface
+	ExecutorsClient             executorsclientv1.Interface
+	SecretClient                secret.Interface
 	SecretManager               secretmanager.SecretManager
 	WebhooksClient              *executorsclientv1.WebhooksClient
 	TestKubeClientset           testkubeclientset.Interface
-	TestSourcesClient           *testsourcesclientv1.TestSourcesClient
+	TestSourcesClient           testsourcesclientv1.Interface
 	TestWorkflowsClient         testworkflowsv1.Interface
 	TestWorkflowTemplatesClient testworkflowsv1.TestWorkflowTemplatesInterface
 	Metrics                     metrics.Metrics
@@ -200,7 +200,7 @@ type TestkubeAPI struct {
 	slackLoader                 *slack.SlackLoader
 	graphqlPort                 string
 	ArtifactsStorage            storage.ArtifactsStorage
-	TemplatesClient             *templatesclientv1.TemplatesClient
+	TemplatesClient             templatesclientv1.Interface
 	dashboardURI                string
 	helmchartVersion            string
 	mode                        string
@@ -596,7 +596,7 @@ func (s *TestkubeAPI) InitRoutes() {
 
 func (s *TestkubeAPI) InitEventListeners(
 	webhookClient *executorsclientv1.WebhooksClient,
-	templatesClient *templatesclientv1.TemplatesClient,
+	templatesClient templatesclientv1.Interface,
 	testExecutionResults result.Repository,
 	testSuiteExecutionsResults testresult.Repository,
 	testWorkflowResults testworkflow.Repository,

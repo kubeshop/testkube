@@ -30,7 +30,7 @@ type Interface interface {
 
 // Client provide methods to manage secrets
 type Client struct {
-	ClientSet *kubernetes.Clientset
+	ClientSet kubernetes.Interface
 	Log       *zap.SugaredLogger
 	Namespace string
 }

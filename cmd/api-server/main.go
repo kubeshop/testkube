@@ -10,22 +10,18 @@ import (
 	"strings"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
-
 	"github.com/nats-io/nats.go"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/emptypb"
 
+	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
 	"github.com/kubeshop/testkube/cmd/api-server/internal"
 	"github.com/kubeshop/testkube/internal/app/api/debug"
-	"github.com/kubeshop/testkube/pkg/cache"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/kubernetesworker"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 
-	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
 	cloudtestworkflow "github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
-	"github.com/kubeshop/testkube/pkg/imageinspector"
 	testworkflow2 "github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/secretmanager"
 	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
@@ -43,22 +39,17 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event/kind/slack"
 
-	cloudresult "github.com/kubeshop/testkube/pkg/cloud/data/result"
-	cloudtestresult "github.com/kubeshop/testkube/pkg/cloud/data/testresult"
-
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/internal/config"
 	dbmigrations "github.com/kubeshop/testkube/internal/db-migrations"
 	parser "github.com/kubeshop/testkube/internal/template"
 	"github.com/kubeshop/testkube/pkg/version"
 
+	"golang.org/x/sync/errgroup"
+
 	"github.com/kubeshop/testkube/pkg/cloud"
-	"github.com/kubeshop/testkube/pkg/repository/result"
 	"github.com/kubeshop/testkube/pkg/repository/sequence"
 	"github.com/kubeshop/testkube/pkg/repository/storage"
-	"github.com/kubeshop/testkube/pkg/repository/testresult"
-
-	"golang.org/x/sync/errgroup"
 
 	"github.com/pkg/errors"
 
@@ -77,12 +68,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/triggers"
 
 	kubeclient "github.com/kubeshop/testkube-operator/pkg/client"
-	templatesclientv1 "github.com/kubeshop/testkube-operator/pkg/client/templates/v1"
-	testexecutionsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testexecutions/v1"
-	testsclientv3 "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
-	testsourcesclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testsources/v1"
-	testsuiteexecutionsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testsuiteexecutions/v1"
-	testsuitesclientv3 "github.com/kubeshop/testkube-operator/pkg/client/testsuites/v3"
 	testworkflowsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testworkflows/v1"
 	apiv1 "github.com/kubeshop/testkube/internal/app/api/v1"
 	"github.com/kubeshop/testkube/pkg/configmap"
@@ -167,15 +152,9 @@ func main() {
 	}
 
 	// k8s
-	testsClient := testsclientv3.NewClient(kubeClient, cfg.TestkubeNamespace)
-	executorsClient := executorsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
+	deprecatedClients := internal.CreateDeprecatedClients(kubeClient, cfg.TestkubeNamespace)
 	webhooksClient := executorsclientv1.NewWebhooksClient(kubeClient, cfg.TestkubeNamespace)
-	testsuitesClient := testsuitesclientv3.NewClient(kubeClient, cfg.TestkubeNamespace)
-	testsourcesClient := testsourcesclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
-	testExecutionsClient := testexecutionsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
-	testsuiteExecutionsClient := testsuiteexecutionsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
 	testWorkflowExecutionsClient := testworkflowsclientv1.NewTestWorkflowExecutionsClient(kubeClient, cfg.TestkubeNamespace)
-	templatesClient := templatesclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
 
 	var testWorkflowsClient testworkflowsclientv1.Interface
 	var testWorkflowTemplatesClient testworkflowsclientv1.TestWorkflowTemplatesInterface
@@ -200,18 +179,14 @@ func main() {
 	}
 
 	// DI
-	var resultsRepository result.Repository
-	var testResultsRepository testresult.Repository
+	var deprecatedRepositories internal.DeprecatedRepositories
 	var testWorkflowResultsRepository testworkflow2.Repository
 	var testWorkflowOutputRepository testworkflow2.OutputRepository
 	var triggerLeaseBackend triggers.LeaseBackend
 	var artifactStorage domainstorage.ArtifactsStorage
 	var storageClient domainstorage.Client
 	if mode == common.ModeAgent {
-		resultsRepository = cloudresult.NewCloudResultRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
-		testResultsRepository = cloudtestresult.NewCloudRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
-
-		// Pro edition only (tcl protected code)
+		deprecatedRepositories = internal.CreateDeprecatedRepositoriesForCloud(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
 		testWorkflowResultsRepository = cloudtestworkflow.NewCloudRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
 		var opts []cloudtestworkflow.Option
 		if cfg.StorageSkipVerify {
@@ -221,19 +196,12 @@ func main() {
 		triggerLeaseBackend = triggers.NewAcquireAlwaysLeaseBackend()
 		artifactStorage = cloudartifacts.NewCloudArtifactsStorage(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
 	} else {
+		// Connect to MongoDB
 		mongoSSLConfig := getMongoSSLConfig(cfg, secretClient)
 		db, err := storage.GetMongoDatabase(cfg.APIMongoDSN, cfg.APIMongoDB, cfg.APIMongoDBType, cfg.APIMongoAllowTLS, mongoSSLConfig)
 		exitOnError("Getting mongo database", err)
-		isDocDb := cfg.APIMongoDBType == storage.TypeDocDB
-		sequenceRepository := sequence.NewMongoRepository(db)
-		mongoResultsRepository := result.NewMongoRepository(db, cfg.APIMongoAllowDiskUse, isDocDb, result.WithFeatureFlags(features),
-			result.WithLogsClient(logGrpcClient), result.WithMongoRepositorySequence(sequenceRepository))
-		resultsRepository = mongoResultsRepository
-		testResultsRepository = testresult.NewMongoRepository(db, cfg.APIMongoAllowDiskUse, isDocDb,
-			testresult.WithMongoRepositorySequence(sequenceRepository))
-		testWorkflowResultsRepository = testworkflow2.NewMongoRepository(db, cfg.APIMongoAllowDiskUse,
-			testworkflow2.WithMongoRepositorySequence(sequenceRepository))
-		triggerLeaseBackend = triggers.NewMongoLeaseBackend(db)
+
+		// Connect to Minio
 		minioClient := newStorageClient(cfg)
 		err = minioClient.Connect()
 		exitOnError("Connecting to minio", err)
@@ -241,20 +209,15 @@ func main() {
 			log.DefaultLogger.Errorw("Error setting expiration policy", "error", expErr)
 		}
 		storageClient = minioClient
+
+		// Build repositories
+		sequenceRepository := sequence.NewMongoRepository(db)
+		testWorkflowResultsRepository = testworkflow2.NewMongoRepository(db, cfg.APIMongoAllowDiskUse,
+			testworkflow2.WithMongoRepositorySequence(sequenceRepository))
+		triggerLeaseBackend = triggers.NewMongoLeaseBackend(db)
 		testWorkflowOutputRepository = testworkflow2.NewMinioOutputRepository(storageClient, db.Collection(testworkflow2.CollectionName), cfg.LogsBucket)
 		artifactStorage = minio.NewMinIOArtifactClient(storageClient)
-
-		// Init logs storage
-		if cfg.LogsStorage == "minio" {
-			if cfg.LogsBucket == "" {
-				log.DefaultLogger.Error("LOGS_BUCKET env var is not set")
-			} else if ok, err := storageClient.IsConnectionPossible(ctx); ok && (err == nil) {
-				log.DefaultLogger.Info("setting minio as logs storage")
-				mongoResultsRepository.OutputRepository = result.NewMinioOutputRepository(storageClient, mongoResultsRepository.ResultsColl, cfg.LogsBucket)
-			} else {
-				log.DefaultLogger.Infow("minio is not available, using default logs storage", "error", err)
-			}
-		}
+		deprecatedRepositories = internal.CreateDeprecatedRepositoriesForMongo(ctx, cfg, db, logGrpcClient, storageClient, features)
 
 		// Run DB migrations
 		if !cfg.DisableMongoMigrations {
@@ -295,7 +258,7 @@ func main() {
 
 	defaultExecutors, err := parseDefaultExecutors(cfg)
 	exitOnError("Parsing default executors", err)
-	images, err := kubeexecutor.SyncDefaultExecutors(executorsClient, cfg.TestkubeNamespace, defaultExecutors, cfg.TestkubeReadonlyExecutors)
+	images, err := kubeexecutor.SyncDefaultExecutors(deprecatedClients.Executors(), cfg.TestkubeNamespace, defaultExecutors, cfg.TestkubeReadonlyExecutors)
 	exitOnError("Sync default executors", err)
 
 	proContext := newProContext(cfg, grpcClient)
@@ -322,17 +285,17 @@ func main() {
 	jobTemplates, err := parser.ParseJobTemplates(cfg)
 	exitOnError("Creating job templates", err)
 	executor, err := client.NewJobExecutor(
-		resultsRepository,
+		deprecatedRepositories.TestResults(),
 		images,
 		jobTemplates,
 		serviceAccountNames,
 		metrics,
 		eventsEmitter,
 		configMapConfig,
-		testsClient,
+		deprecatedClients.Tests(),
 		clientset,
-		testExecutionsClient,
-		templatesClient,
+		deprecatedClients.TestExecutions(),
+		deprecatedClients.Templates(),
 		cfg.TestkubeRegistry,
 		cfg.TestkubePodStartTimeout,
 		clusterId,
@@ -347,23 +310,12 @@ func main() {
 	)
 	exitOnError("Creating executor client", err)
 
-	inspectorStorages := []imageinspector.Storage{imageinspector.NewMemoryStorage()}
-	if cfg.EnableImageDataPersistentCache {
-		configmapStorage := imageinspector.NewConfigMapStorage(configMapClient, cfg.ImageDataPersistentCacheKey, true)
-		_ = configmapStorage.CopyTo(context.Background(), inspectorStorages[0].(imageinspector.StorageTransfer))
-		inspectorStorages = append(inspectorStorages, configmapStorage)
-	}
-	inspector := imageinspector.NewInspector(
-		cfg.TestkubeRegistry,
-		imageinspector.NewCraneFetcher(),
-		imageinspector.NewSecretFetcher(secretClient, cache.NewInMemoryCache[*corev1.Secret](), imageinspector.WithSecretCacheTTL(cfg.TestkubeImageCredentialsCacheTTL)),
-		inspectorStorages...,
-	)
+	inspector := internal.CreateImageInspector(cfg, configMapClient, secretClient)
 
 	containerTemplates, err := parser.ParseContainerTemplates(cfg)
 	exitOnError("Creating container job templates", err)
 	containerExecutor, err := containerexecutor.NewContainerExecutor(
-		resultsRepository,
+		deprecatedRepositories.TestResults(),
 		images,
 		containerTemplates,
 		inspector,
@@ -371,10 +323,10 @@ func main() {
 		metrics,
 		eventsEmitter,
 		configMapConfig,
-		executorsClient,
-		testsClient,
-		testExecutionsClient,
-		templatesClient,
+		deprecatedClients.Executors(),
+		deprecatedClients.Tests(),
+		deprecatedClients.TestExecutions(),
+		deprecatedClients.Templates(),
 		cfg.TestkubeRegistry,
 		cfg.TestkubePodStartTimeout,
 		clusterId,
@@ -394,18 +346,18 @@ func main() {
 		metrics,
 		executor,
 		containerExecutor,
-		resultsRepository,
-		testResultsRepository,
-		executorsClient,
-		testsClient,
-		testsuitesClient,
-		testsourcesClient,
+		deprecatedRepositories.TestResults(),
+		deprecatedRepositories.TestSuiteResults(),
+		deprecatedClients.Executors(),
+		deprecatedClients.Tests(),
+		deprecatedClients.TestSuites(),
+		deprecatedClients.TestSources(),
 		secretClient,
 		eventsEmitter,
 		log.DefaultLogger,
 		configMapConfig,
 		configMapClient,
-		testsuiteExecutionsClient,
+		deprecatedClients.TestSuiteExecutions(),
 		eventBus,
 		cfg.TestkubeDashboardURI,
 		features,
@@ -508,19 +460,19 @@ func main() {
 
 	api := apiv1.NewTestkubeAPI(
 		cfg.TestkubeNamespace,
-		resultsRepository,
-		testResultsRepository,
+		deprecatedRepositories.TestResults(),
+		deprecatedRepositories.TestSuiteResults(),
 		testWorkflowResultsRepository,
 		testWorkflowOutputRepository,
-		testsClient,
-		executorsClient,
-		testsuitesClient,
+		deprecatedClients.Tests(),
+		deprecatedClients.Executors(),
+		deprecatedClients.TestSuites(),
 		secretClient,
 		secretManager,
 		webhooksClient,
 		clientset,
 		testkubeClientset,
-		testsourcesClient,
+		deprecatedClients.TestSources(),
 		testWorkflowsClient,
 		testWorkflowTemplatesClient,
 		configMapConfig,
@@ -535,7 +487,7 @@ func main() {
 		slackLoader,
 		cfg.GraphqlPort,
 		artifactStorage,
-		templatesClient,
+		deprecatedClients.Templates(),
 		cfg.TestkubeDashboardURI,
 		cfg.TestkubeHelmchartVersion,
 		mode,
@@ -580,15 +532,15 @@ func main() {
 			sched,
 			clientset,
 			testkubeClientset,
-			testsuitesClient,
-			testsClient,
+			deprecatedClients.TestSuites(),
+			deprecatedClients.Tests(),
 			testWorkflowsClient,
-			resultsRepository,
-			testResultsRepository,
+			deprecatedRepositories.TestResults(),
+			deprecatedRepositories.TestSuiteResults(),
 			triggerLeaseBackend,
 			log.DefaultLogger,
 			configMapConfig,
-			executorsClient,
+			deprecatedClients.Executors(),
 			executor,
 			eventBus,
 			metrics,
@@ -608,9 +560,9 @@ func main() {
 
 	if !cfg.DisableReconciler {
 		reconcilerClient := reconciler.NewClient(clientset,
-			resultsRepository,
-			testResultsRepository,
-			executorsClient,
+			deprecatedRepositories.TestResults(),
+			deprecatedRepositories.TestSuiteResults(),
+			deprecatedClients.Executors(),
 			log.DefaultLogger)
 		g.Go(func() error {
 			return reconcilerClient.Run(ctx)

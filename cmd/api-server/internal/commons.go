@@ -10,12 +10,16 @@ import (
 	"syscall"
 
 	"golang.org/x/sync/errgroup"
+	corev1 "k8s.io/api/core/v1"
 
 	"github.com/kubeshop/testkube/internal/config"
+	"github.com/kubeshop/testkube/pkg/cache"
+	"github.com/kubeshop/testkube/pkg/configmap"
 	"github.com/kubeshop/testkube/pkg/featureflags"
+	"github.com/kubeshop/testkube/pkg/imageinspector"
 	"github.com/kubeshop/testkube/pkg/log"
-	logsclient "github.com/kubeshop/testkube/pkg/logs/client"
 	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
+	"github.com/kubeshop/testkube/pkg/secret"
 )
 
 func exitOnError(title string, err error) {
@@ -97,16 +101,19 @@ func MustGetConfigMapConfig(ctx context.Context, name string, namespace string, 
 	return configMapConfig
 }
 
-// Legacy resources: Executors, Tests, Test Suites, and Test Sources, Templates
+// Components
 
-func MustGetLogsV2Client(cfg *config.Config) logsclient.StreamGetter {
-	creds, err := logsclient.GetGrpcTransportCredentials(logsclient.GrpcConnectionConfig{
-		Secure:     cfg.LogServerSecure,
-		SkipVerify: cfg.LogServerSkipVerify,
-		CertFile:   cfg.LogServerCertFile,
-		KeyFile:    cfg.LogServerKeyFile,
-		CAFile:     cfg.LogServerCAFile,
-	})
-	exitOnError("Getting log server TLS credentials", err)
-	return logsclient.NewGrpcClient(cfg.LogServerGrpcAddress, creds)
+func CreateImageInspector(cfg *config.Config, configMapClient configmap.Interface, secretClient secret.Interface) imageinspector.Inspector {
+	inspectorStorages := []imageinspector.Storage{imageinspector.NewMemoryStorage()}
+	if cfg.EnableImageDataPersistentCache {
+		configmapStorage := imageinspector.NewConfigMapStorage(configMapClient, cfg.ImageDataPersistentCacheKey, true)
+		_ = configmapStorage.CopyTo(context.Background(), inspectorStorages[0].(imageinspector.StorageTransfer))
+		inspectorStorages = append(inspectorStorages, configmapStorage)
+	}
+	return imageinspector.NewInspector(
+		cfg.TestkubeRegistry,
+		imageinspector.NewCraneFetcher(),
+		imageinspector.NewSecretFetcher(secretClient, cache.NewInMemoryCache[*corev1.Secret](), imageinspector.WithSecretCacheTTL(cfg.TestkubeImageCredentialsCacheTTL)),
+		inspectorStorages...,
+	)
 }

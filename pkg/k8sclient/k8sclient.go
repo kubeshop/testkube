@@ -36,7 +36,7 @@ const (
 )
 
 // ConnectToK8s establishes a connection to the k8s and returns a *kubernetes.Clientset
-func ConnectToK8s() (*kubernetes.Clientset, error) {
+func ConnectToK8s() (kubernetes.Interface, error) {
 	config, err := GetK8sClientConfig()
 	if err != nil {
 		return nil, err

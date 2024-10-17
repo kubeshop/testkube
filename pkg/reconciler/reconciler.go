@@ -33,12 +33,12 @@ type Client struct {
 	k8sclient            kubernetes.Interface
 	resultRepository     result.Repository
 	testResultRepository testresult.Repository
-	executorsClient      *executorsclientv1.ExecutorsClient
+	executorsClient      executorsclientv1.Interface
 	logger               *zap.SugaredLogger
 }
 
 func NewClient(k8sclient kubernetes.Interface, resultRepository result.Repository, testResultRepository testresult.Repository,
-	executorsClient *executorsclientv1.ExecutorsClient, logger *zap.SugaredLogger) *Client {
+	executorsClient executorsclientv1.Interface, logger *zap.SugaredLogger) *Client {
 	return &Client{
 		k8sclient:            k8sclient,
 		resultRepository:     resultRepository,
