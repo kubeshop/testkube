@@ -457,6 +457,11 @@ func main() {
 	if cfg.EnableK8sEvents {
 		eventsEmitter.Loader.Register(k8sevent.NewK8sEventLoader(clientset, cfg.TestkubeNamespace, testkube.AllEventTypes))
 	}
+	g.Go(func() error {
+		eventsEmitter.Reconcile(ctx)
+		return nil
+	})
+	eventsEmitter.Listen(ctx)
 
 	api := apiv1.NewTestkubeAPI(
 		deprecatedRepositories,

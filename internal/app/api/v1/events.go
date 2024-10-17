@@ -1,7 +1,6 @@
 package v1
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 
@@ -10,15 +9,6 @@ import (
 
 	events "github.com/fluxcd/pkg/apis/event/v1beta1"
 )
-
-// InitEvents is a handler to emit logs
-func (s TestkubeAPI) InitEvents() {
-	// run reconciller loop
-	go s.Events.Reconcile(context.Background())
-
-	// run workers
-	s.Events.Listen(context.Background())
-}
 
 func (s TestkubeAPI) EventsStreamHandler() fiber.Handler {
 	return websocket.New(func(c *websocket.Conn) {

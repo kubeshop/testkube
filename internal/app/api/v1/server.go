@@ -260,7 +260,6 @@ func (s TestkubeAPI) SendTelemetryStartEvent(ctx context.Context, ch chan struct
 func (s *TestkubeAPI) Init() {
 	s.InitEnvs()
 	s.InitRoutes()
-	s.InitEvents()
 }
 
 // InitEnvs initializes api server settings
