@@ -473,6 +473,7 @@ func main() {
 		testWorkflowTemplatesClient,
 		configMapConfig,
 		clusterId,
+		eventsEmitter,
 		websocketLoader,
 		executor,
 		containerExecutor,
