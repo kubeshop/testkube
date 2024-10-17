@@ -228,12 +228,9 @@ func main() {
 	}
 
 	// k8s
-	scriptsClient := scriptsclient.NewClient(kubeClient, cfg.TestkubeNamespace)
-	testsClientV1 := testsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
 	testsClientV3 := testsclientv3.NewClient(kubeClient, cfg.TestkubeNamespace)
 	executorsClient := executorsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
 	webhooksClient := executorsclientv1.NewWebhooksClient(kubeClient, cfg.TestkubeNamespace)
-	testsuitesClientV2 := testsuitesclientv2.NewClient(kubeClient, cfg.TestkubeNamespace)
 	testsuitesClientV3 := testsuitesclientv3.NewClient(kubeClient, cfg.TestkubeNamespace)
 	testsourcesClient := testsourcesclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
 	testExecutionsClient := testexecutionsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
@@ -384,12 +381,6 @@ func main() {
 	}
 
 	log.DefaultLogger.Debugw("Getting unique clusterId", "clusterId", clusterId, "error", err)
-
-	// TODO check if this version exists somewhere in stats (probably could be removed)
-	migrations.Migrator.Add(migrations.NewVersion_0_9_2(scriptsClient, testsClientV1, testsClientV3, testsuitesClientV2))
-	if err := runMigrations(); err != nil {
-		exitOnError("Running server migrations", err)
-	}
 
 	apiVersion := version.Version
 
