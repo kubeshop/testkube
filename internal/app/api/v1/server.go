@@ -277,7 +277,6 @@ func (s TestkubeAPI) SendTelemetryStartEvent(ctx context.Context, ch chan struct
 
 func (s *TestkubeAPI) Init(cdEventsTarget string, enableK8sEvents bool) {
 	s.InitEventListeners(
-		s.proContext,
 		s.WebhooksClient,
 		s.TemplatesClient,
 		s.ExecutionResults,
@@ -596,7 +595,6 @@ func (s *TestkubeAPI) InitRoutes() {
 }
 
 func (s *TestkubeAPI) InitEventListeners(
-	proContext *config.ProContext,
 	webhookClient *executorsclientv1.WebhooksClient,
 	templatesClient *templatesclientv1.TemplatesClient,
 	testExecutionResults result.Repository,
