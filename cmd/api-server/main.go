@@ -671,19 +671,6 @@ func newNATSEncodedConnection(cfg *config.Config) (*nats.EncodedConn, error) {
 	})
 }
 
-func newStorageClient(cfg *config.Config) *minio.Client {
-	opts := minio.GetTLSOptions(cfg.StorageSSL, cfg.StorageSkipVerify, cfg.StorageCertFile, cfg.StorageKeyFile, cfg.StorageCAFile)
-	return minio.NewClient(
-		cfg.StorageEndpoint,
-		cfg.StorageAccessKeyID,
-		cfg.StorageSecretAccessKey,
-		cfg.StorageRegion,
-		cfg.StorageToken,
-		cfg.StorageBucket,
-		opts...,
-	)
-}
-
 func newSlackLoader(cfg *config.Config, envs map[string]string) (*slack.SlackLoader, error) {
 	slackTemplate, err := parser.LoadConfigFromStringOrFile(
 		cfg.SlackTemplate,
