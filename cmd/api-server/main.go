@@ -5,12 +5,9 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"net"
 	"os"
-	"os/signal"
 	"path/filepath"
 	"strings"
-	"syscall"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -19,6 +16,7 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/emptypb"
 
+	"github.com/kubeshop/testkube/cmd/api-server/internal"
 	"github.com/kubeshop/testkube/pkg/cache"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/kubernetesworker"
@@ -45,8 +43,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event/kind/slack"
 
-	cloudconfig "github.com/kubeshop/testkube/pkg/cloud/data/config"
-
 	cloudresult "github.com/kubeshop/testkube/pkg/cloud/data/result"
 	cloudtestresult "github.com/kubeshop/testkube/pkg/cloud/data/testresult"
 
@@ -54,11 +50,9 @@ import (
 	"github.com/kubeshop/testkube/internal/config"
 	dbmigrations "github.com/kubeshop/testkube/internal/db-migrations"
 	parser "github.com/kubeshop/testkube/internal/template"
-	"github.com/kubeshop/testkube/pkg/featureflags"
 	"github.com/kubeshop/testkube/pkg/version"
 
 	"github.com/kubeshop/testkube/pkg/cloud"
-	configrepository "github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/result"
 	"github.com/kubeshop/testkube/pkg/repository/sequence"
 	"github.com/kubeshop/testkube/pkg/repository/storage"
@@ -104,22 +98,6 @@ func init() {
 	flag.Parse()
 }
 
-func runMigrations() (err error) {
-	results := migrations.Migrator.GetValidMigrations(version.Version, migrator.MigrationTypeServer)
-	if len(results) == 0 {
-		log.DefaultLogger.Debugw("No migrations available for Testkube", "apiVersion", version.Version)
-		return nil
-	}
-
-	var migrationInfo []string
-	for _, migration := range results {
-		migrationInfo = append(migrationInfo, fmt.Sprintf("%+v - %s", migration.Version(), migration.Info()))
-	}
-	log.DefaultLogger.Infow("Available migrations for Testkube", "apiVersion", version.Version, "migrations", migrationInfo)
-
-	return migrations.Migrator.Run(version.Version, migrator.MigrationTypeServer)
-}
-
 func runMongoMigrations(ctx context.Context, db *mongo.Database, _ string) error {
 	migrationsCollectionName := "__migrations"
 	activeMigrations, err := dbmigrator.GetDbMigrationsFromFs(dbmigrations.MongoMigrationsFs)
@@ -141,45 +119,18 @@ func runMongoMigrations(ctx context.Context, db *mongo.Database, _ string) error
 }
 
 func main() {
-	cfg, err := config.Get()
-	cfg.CleanLegacyVars()
-	exitOnError("error getting application config", err)
-
-	features, err := featureflags.Get()
-	exitOnError("error getting application feature flags", err)
-
-	log.DefaultLogger.Infow("Feature flags configured", "ff", features)
+	cfg := internal.MustGetConfig()
+	features := internal.MustGetFeatureFlags()
 
 	// Run services within an errgroup to propagate errors between services.
 	g, ctx := errgroup.WithContext(context.Background())
 
 	// Cancel the errgroup context on SIGINT and SIGTERM,
 	// which shuts everything down gracefully.
-	stopSignal := make(chan os.Signal, 1)
-	signal.Notify(stopSignal, syscall.SIGINT, syscall.SIGTERM)
-	g.Go(func() error {
-		select {
-		case <-ctx.Done():
-			return nil
-		case sig := <-stopSignal:
-			go func() {
-				<-stopSignal
-				os.Exit(137)
-			}()
-			// Returning an error cancels the errgroup.
-			return errors.Errorf("received signal: %v", sig)
-		}
-	})
+	internal.HandleCancelSignal(g, ctx)
 
-	ln, err := net.Listen("tcp", ":"+cfg.APIServerPort)
-	exitOnError("Checking if port "+cfg.APIServerPort+"is free", err)
-	_ = ln.Close()
-	log.DefaultLogger.Debugw("TCP Port is available", "port", cfg.APIServerPort)
-
-	ln, err = net.Listen("tcp", ":"+cfg.GraphqlPort)
-	exitOnError("Checking if port "+cfg.GraphqlPort+"is free", err)
-	_ = ln.Close()
-	log.DefaultLogger.Debugw("TCP Port is available", "port", cfg.GraphqlPort)
+	internal.MustFreePort(cfg.APIServerPort)
+	internal.MustFreePort(cfg.GraphqlPort)
 
 	kubeClient, err := kubeclient.GetClient()
 	exitOnError("Getting kubernetes client", err)
@@ -238,18 +189,11 @@ func main() {
 	templatesClient := templatesclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
 
 	clientset, err := k8sclient.ConnectToK8s()
-	if err != nil {
-		exitOnError("Creating k8s clientset", err)
-	}
-
+	exitOnError("Creating k8s clientset", err)
 	k8sCfg, err := k8sclient.GetK8sClientConfig()
-	if err != nil {
-		exitOnError("Getting k8s client config", err)
-	}
+	exitOnError("Getting k8s client config", err)
 	testkubeClientset, err := testkubeclientset.NewForConfig(k8sCfg)
-	if err != nil {
-		exitOnError("Creating TestKube Clientset", err)
-	}
+	exitOnError("Creating TestKube Clientset", err)
 
 	var logGrpcClient logsclient.StreamGetter
 	if features.LogsV2 {
@@ -263,14 +207,12 @@ func main() {
 	var testResultsRepository testresult.Repository
 	var testWorkflowResultsRepository testworkflow2.Repository
 	var testWorkflowOutputRepository testworkflow2.OutputRepository
-	var configRepository configrepository.Repository
 	var triggerLeaseBackend triggers.LeaseBackend
 	var artifactStorage domainstorage.ArtifactsStorage
 	var storageClient domainstorage.Client
 	if mode == common.ModeAgent {
 		resultsRepository = cloudresult.NewCloudResultRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
 		testResultsRepository = cloudtestresult.NewCloudRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
-		configRepository = cloudconfig.NewCloudResultRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
 
 		if cfg.WorkflowStorage == "control-plane" {
 			testWorkflowsClient = cloudtestworkflow.NewCloudTestWorkflowRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
@@ -298,7 +240,6 @@ func main() {
 			testresult.WithMongoRepositorySequence(sequenceRepository))
 		testWorkflowResultsRepository = testworkflow2.NewMongoRepository(db, cfg.APIMongoAllowDiskUse,
 			testworkflow2.WithMongoRepositorySequence(sequenceRepository))
-		configRepository = configrepository.NewMongoRepository(db)
 		triggerLeaseBackend = triggers.NewMongoLeaseBackend(db)
 		minioClient := newStorageClient(cfg)
 		if err = minioClient.Connect(); err != nil {
@@ -333,49 +274,9 @@ func main() {
 		}
 	}
 
-	configName := fmt.Sprintf("testkube-api-server-config-%s", cfg.TestkubeNamespace)
-	if cfg.APIServerConfig != "" {
-		configName = cfg.APIServerConfig
-	}
-
-	configMapConfig, err := configrepository.NewConfigMapConfig(configName, cfg.TestkubeNamespace)
-	exitOnError("Getting config map config", err)
-
-	// try to load from mongo based config first
-	telemetryEnabled, err := configMapConfig.GetTelemetryEnabled(ctx)
-	if err != nil {
-		// fallback to envs in case of failure (no record yet, or other error)
-		telemetryEnabled = cfg.TestkubeAnalyticsEnabled
-	}
-
-	var clusterId string
-	cmConfig, err := configMapConfig.Get(ctx)
-	if cmConfig.ClusterId != "" {
-		clusterId = cmConfig.ClusterId
-	}
-
-	if clusterId == "" {
-		cmConfig, err = configRepository.Get(ctx)
-		if err != nil {
-			log.DefaultLogger.Warnw("error fetching config ConfigMap", "error", err)
-		}
-		cmConfig.EnableTelemetry = telemetryEnabled
-		if cmConfig.ClusterId == "" {
-			cmConfig.ClusterId, err = configMapConfig.GetUniqueClusterId(ctx)
-			if err != nil {
-				log.DefaultLogger.Warnw("error getting unique clusterId", "error", err)
-			}
-		}
-
-		clusterId = cmConfig.ClusterId
-		_, err = configMapConfig.Upsert(ctx, cmConfig)
-		if err != nil {
-			log.DefaultLogger.Warn("error upserting config ConfigMap", "error", err)
-		}
-
-	}
-
-	log.DefaultLogger.Debugw("Getting unique clusterId", "clusterId", clusterId, "error", err)
+	configMapConfig := internal.MustGetConfigMapConfig(ctx, cfg.APIServerConfig, cfg.TestkubeNamespace, cfg.TestkubeAnalyticsEnabled)
+	clusterId, _ := configMapConfig.GetUniqueClusterId(context.Background())
+	telemetryEnabled, _ := configMapConfig.GetTelemetryEnabled(context.Background())
 
 	apiVersion := version.Version
 
@@ -405,27 +306,19 @@ func main() {
 
 	if features.LogsV2 {
 		logsStream, err = logsclient.NewNatsLogStream(nc.Conn)
-		if err != nil {
-			exitOnError("Creating logs streaming client", err)
-		}
+		exitOnError("Creating logs streaming client", err)
 	}
 
 	metrics := metrics.NewMetrics()
 
 	defaultExecutors, err := parseDefaultExecutors(cfg)
-	if err != nil {
-		exitOnError("Parsing default executors", err)
-	}
+	exitOnError("Parsing default executors", err)
 
 	images, err := kubeexecutor.SyncDefaultExecutors(executorsClient, cfg.TestkubeNamespace, defaultExecutors, cfg.TestkubeReadonlyExecutors)
-	if err != nil {
-		exitOnError("Sync default executors", err)
-	}
+	exitOnError("Sync default executors", err)
 
 	jobTemplates, err := parser.ParseJobTemplates(cfg)
-	if err != nil {
-		exitOnError("Creating job templates", err)
-	}
+	exitOnError("Creating job templates", err)
 
 	proContext := newProContext(cfg, grpcClient)
 
@@ -472,14 +365,10 @@ func main() {
 		cfg.TestkubeDefaultStorageClassName,
 		cfg.WhitelistedContainers,
 	)
-	if err != nil {
-		exitOnError("Creating executor client", err)
-	}
+	exitOnError("Creating executor client", err)
 
 	containerTemplates, err := parser.ParseContainerTemplates(cfg)
-	if err != nil {
-		exitOnError("Creating container job templates", err)
-	}
+	exitOnError("Creating container job templates", err)
 
 	inspectorStorages := []imageinspector.Storage{imageinspector.NewMemoryStorage()}
 	if cfg.EnableImageDataPersistentCache {
@@ -520,9 +409,7 @@ func main() {
 		cfg.WhitelistedContainers,
 		cfg.TestkubeImageCredentialsCacheTTL,
 	)
-	if err != nil {
-		exitOnError("Creating container executor", err)
-	}
+	exitOnError("Creating container executor", err)
 
 	sched := scheduler.NewScheduler(
 		metrics,
@@ -553,9 +440,7 @@ func main() {
 	}
 
 	slackLoader, err := newSlackLoader(cfg, envs)
-	if err != nil {
-		exitOnError("Creating slack loader", err)
-	}
+	exitOnError("Creating slack loader", err)
 
 	// TODO: Make granular environment variables, yet backwards compatible
 	secretConfig := testkube.SecretConfig{
@@ -701,14 +586,10 @@ func main() {
 			proContext,
 			cfg.TestkubeDockerImageVersion,
 		)
-		if err != nil {
-			exitOnError("Starting agent", err)
-		}
+		exitOnError("Starting agent", err)
 		g.Go(func() error {
 			err = agentHandle.Run(ctx)
-			if err != nil {
-				exitOnError("Running agent", err)
-			}
+			exitOnError("Running agent", err)
 			return nil
 		})
 		eventsEmitter.Loader.Register(agentHandle)
