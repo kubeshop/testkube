@@ -198,7 +198,8 @@ func main() {
 		serviceAccountNames = schedulertcl.GetServiceAccountNamesFromConfig(serviceAccountNames, cfg.TestkubeExecutionNamespaces)
 	}
 
-	if mode == common.ModeAgent && cfg.WorkflowStorage == "control-plane" {
+	// TODO:
+	if mode == common.ModeAgent && cfg.WorkflowStorage == "crd" {
 		testWorkflowsClient = cloudtestworkflow.NewCloudTestWorkflowRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
 		testWorkflowTemplatesClient = cloudtestworkflow.NewCloudTestWorkflowTemplateRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
 	} else {
