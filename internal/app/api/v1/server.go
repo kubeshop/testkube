@@ -135,6 +135,8 @@ func NewTestkubeAPI(
 		ContainerExecutor:           containerExecutor,
 		TestWorkflowExecutor:        testWorkflowExecutor,
 		ExecutionWorkerClient:       executionWorkerClient,
+		storageParams:               storageParams,
+		oauthParams:                 oauthParams,
 		scheduler:                   scheduler,
 		slackLoader:                 slackLoader,
 		graphqlPort:                 graphqlPort,
