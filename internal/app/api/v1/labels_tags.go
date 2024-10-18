@@ -11,7 +11,7 @@ type LabelSource interface {
 	ListLabels() (map[string][]string, error)
 }
 
-func (s TestkubeAPI) ListLabelsHandler() fiber.Handler {
+func (s *TestkubeAPI) ListLabelsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		labels := make(map[string][]string)
 		sources := []LabelSource{s.TestWorkflowsClient, s.TestWorkflowTemplatesClient, s.DeprecatedClients.Tests(), s.DeprecatedClients.TestSuites()}

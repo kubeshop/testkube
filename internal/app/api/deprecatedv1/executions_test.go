@@ -1,4 +1,4 @@
-package v1
+package deprecatedv1
 
 import (
 	"context"
@@ -27,10 +27,9 @@ import (
 	"github.com/kubeshop/testkube/pkg/log"
 	logclient "github.com/kubeshop/testkube/pkg/logs/client"
 	"github.com/kubeshop/testkube/pkg/logs/events"
-	"github.com/kubeshop/testkube/pkg/server"
 )
 
-func TestTestkubeAPI_ExecutionLogsHandler(t *testing.T) {
+func TestDeprecatedTestkubeAPI_ExecutionLogsHandler(t *testing.T) {
 	app := fiber.New()
 	resultRepo := MockExecutionResultsRepository{}
 	executor := &MockExecutor{}
@@ -44,11 +43,8 @@ func TestTestkubeAPI_ExecutionLogsHandler(t *testing.T) {
 	mockDeprecatedClients := commons.NewMockDeprecatedClients(mockCtrl)
 	mockDeprecatedClients.EXPECT().Executors().Return(getMockExecutorClient()).AnyTimes()
 
-	s := &TestkubeAPI{
-		HTTPServer: server.HTTPServer{
-			Mux: app,
-			Log: log.DefaultLogger,
-		},
+	s := &DeprecatedTestkubeAPI{
+		Log:                    log.DefaultLogger,
 		DeprecatedRepositories: mockDeprecatedRepositories,
 		DeprecatedClients:      mockDeprecatedClients,
 		Executor:               executor,
@@ -135,7 +131,7 @@ func TestTestkubeAPI_ExecutionLogsHandler(t *testing.T) {
 	}
 }
 
-func TestTestkubeAPI_ExecutionLogsHandlerV2(t *testing.T) {
+func TestDeprecatedTestkubeAPI_ExecutionLogsHandlerV2(t *testing.T) {
 	app := fiber.New()
 
 	mockCtrl := gomock.NewController(t)
@@ -159,11 +155,8 @@ func TestTestkubeAPI_ExecutionLogsHandlerV2(t *testing.T) {
 	}()
 
 	grpcClient.EXPECT().Get(gomock.Any(), "test-execution-1").Return(out, nil)
-	s := &TestkubeAPI{
-		HTTPServer: server.HTTPServer{
-			Mux: app,
-			Log: log.DefaultLogger,
-		},
+	s := &DeprecatedTestkubeAPI{
+		Log:           log.DefaultLogger,
 		featureFlags:  featureflags.FeatureFlags{LogsV2: true},
 		logGrpcClient: grpcClient,
 	}

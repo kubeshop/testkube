@@ -1,4 +1,4 @@
-package v1
+package deprecatedv1
 
 import (
 	"bufio"
@@ -14,6 +14,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/errors"
 
+	"github.com/kubeshop/testkube/pkg/datefilter"
 	"github.com/kubeshop/testkube/pkg/logs/events"
 	"github.com/kubeshop/testkube/pkg/repository/result"
 
@@ -41,7 +42,7 @@ const (
 )
 
 // ExecuteTestsHandler calls particular executor based on execution request content and type
-func (s *TestkubeAPI) ExecuteTestsHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) ExecuteTestsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := c.Context()
 		errPrefix := "failed to execute test"
@@ -110,7 +111,7 @@ func (s *TestkubeAPI) ExecuteTestsHandler() fiber.Handler {
 }
 
 // ListExecutionsHandler returns array of available test executions
-func (s *TestkubeAPI) ListExecutionsHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) ListExecutionsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to list executions"
 		// TODO refactor into some Services (based on some abstraction for CRDs at least / CRUD)
@@ -153,7 +154,7 @@ func (s *TestkubeAPI) ListExecutionsHandler() fiber.Handler {
 	}
 }
 
-func (s *TestkubeAPI) GetLogsStream(ctx context.Context, executionID string) (chan output.Output, error) {
+func (s *DeprecatedTestkubeAPI) GetLogsStream(ctx context.Context, executionID string) (chan output.Output, error) {
 	execution, err := s.DeprecatedRepositories.TestResults().Get(ctx, executionID)
 	if err != nil {
 		return nil, fmt.Errorf("can't find execution %s: %w", executionID, err)
@@ -171,7 +172,7 @@ func (s *TestkubeAPI) GetLogsStream(ctx context.Context, executionID string) (ch
 	return logs, nil
 }
 
-func (s *TestkubeAPI) ExecutionLogsStreamHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) ExecutionLogsStreamHandler() fiber.Handler {
 	return websocket.New(func(c *websocket.Conn) {
 		if s.featureFlags.LogsV2 {
 			return
@@ -196,7 +197,7 @@ func (s *TestkubeAPI) ExecutionLogsStreamHandler() fiber.Handler {
 	})
 }
 
-func (s *TestkubeAPI) ExecutionLogsStreamHandlerV2() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) ExecutionLogsStreamHandlerV2() fiber.Handler {
 	return websocket.New(func(c *websocket.Conn) {
 		if !s.featureFlags.LogsV2 {
 			return
@@ -231,7 +232,7 @@ func (s *TestkubeAPI) ExecutionLogsStreamHandlerV2() fiber.Handler {
 }
 
 // ExecutionLogsHandler streams the logs from a test execution
-func (s *TestkubeAPI) ExecutionLogsHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) ExecutionLogsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		if s.featureFlags.LogsV2 {
 			return nil
@@ -278,7 +279,7 @@ func (s *TestkubeAPI) ExecutionLogsHandler() fiber.Handler {
 }
 
 // ExecutionLogsHandlerV2 streams the logs from a test execution version 2
-func (s *TestkubeAPI) ExecutionLogsHandlerV2() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) ExecutionLogsHandlerV2() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		if !s.featureFlags.LogsV2 {
 			return nil
@@ -313,7 +314,7 @@ func (s *TestkubeAPI) ExecutionLogsHandlerV2() fiber.Handler {
 }
 
 // GetExecutionHandler returns test execution object for given test and execution id/name
-func (s *TestkubeAPI) GetExecutionHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) GetExecutionHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := c.Context()
 		id := c.Params("id", "")
@@ -376,7 +377,7 @@ func (s *TestkubeAPI) GetExecutionHandler() fiber.Handler {
 	}
 }
 
-func (s *TestkubeAPI) AbortExecutionHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) AbortExecutionHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := c.Context()
 		executionID := c.Params("executionID")
@@ -401,7 +402,7 @@ func (s *TestkubeAPI) AbortExecutionHandler() fiber.Handler {
 	}
 }
 
-func (s *TestkubeAPI) GetArtifactHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) GetArtifactHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		executionID := c.Params("executionID")
 		fileName := c.Params("filename")
@@ -458,7 +459,7 @@ func (s *TestkubeAPI) GetArtifactHandler() fiber.Handler {
 }
 
 // GetArtifactArchiveHandler returns artifact archive
-func (s *TestkubeAPI) GetArtifactArchiveHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) GetArtifactArchiveHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		executionID := c.Params("executionID")
 		query := c.Request().URI().QueryString()
@@ -506,7 +507,7 @@ func (s *TestkubeAPI) GetArtifactArchiveHandler() fiber.Handler {
 }
 
 // ListArtifactsHandler returns list of files in the given bucket
-func (s *TestkubeAPI) ListArtifactsHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) ListArtifactsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
 		executionID := c.Params("executionID")
@@ -548,7 +549,7 @@ func (s *TestkubeAPI) ListArtifactsHandler() fiber.Handler {
 }
 
 // streamLogsFromResult writes logs from the output of executionResult to the writer
-func (s *TestkubeAPI) streamLogsFromResult(executionResult *testkube.ExecutionResult, w *bufio.Writer) error {
+func (s *DeprecatedTestkubeAPI) streamLogsFromResult(executionResult *testkube.ExecutionResult, w *bufio.Writer) error {
 	enc := json.NewEncoder(w)
 	_, _ = fmt.Fprintf(w, "data: ")
 	s.Log.Debug("using logs from result")
@@ -573,7 +574,7 @@ func (s *TestkubeAPI) streamLogsFromResult(executionResult *testkube.ExecutionRe
 }
 
 // streamLogsFromJob streams logs in chunks to writer from the running execution
-func (s *TestkubeAPI) streamLogsFromJob(ctx context.Context, executionID, testType, namespace string, w *bufio.Writer) {
+func (s *DeprecatedTestkubeAPI) streamLogsFromJob(ctx context.Context, executionID, testType, namespace string, w *bufio.Writer) {
 	enc := json.NewEncoder(w)
 	s.Log.Debugw("getting logs from Kubernetes job")
 
@@ -633,7 +634,7 @@ func mapExecutionsToExecutionSummary(executions []testkube.Execution) []testkube
 }
 
 // GetLatestExecutionLogs returns the latest executions' logs
-func (s *TestkubeAPI) GetLatestExecutionLogs(ctx context.Context) (map[string][]string, error) {
+func (s *DeprecatedTestkubeAPI) GetLatestExecutionLogs(ctx context.Context) (map[string][]string, error) {
 	latestExecutions, err := s.getNewestExecutions(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not list executions: %w", err)
@@ -652,7 +653,7 @@ func (s *TestkubeAPI) GetLatestExecutionLogs(ctx context.Context) (map[string][]
 }
 
 // getNewestExecutions returns the latest Testkube executions
-func (s *TestkubeAPI) getNewestExecutions(ctx context.Context) ([]testkube.Execution, error) {
+func (s *DeprecatedTestkubeAPI) getNewestExecutions(ctx context.Context) ([]testkube.Execution, error) {
 	f := result.NewExecutionsFilter().WithPage(1).WithPageSize(latestExecutions)
 	executions, err := s.DeprecatedRepositories.TestResults().GetExecutions(ctx, f)
 	if err != nil {
@@ -662,7 +663,7 @@ func (s *TestkubeAPI) getNewestExecutions(ctx context.Context) ([]testkube.Execu
 }
 
 // getExecutionLogs returns logs from an execution
-func (s *TestkubeAPI) getExecutionLogs(ctx context.Context, execution testkube.Execution) ([]string, error) {
+func (s *DeprecatedTestkubeAPI) getExecutionLogs(ctx context.Context, execution testkube.Execution) ([]string, error) {
 	var res []string
 
 	if s.featureFlags.LogsV2 {
@@ -699,7 +700,7 @@ func (s *TestkubeAPI) getExecutionLogs(ctx context.Context, execution testkube.E
 	return res, nil
 }
 
-func (s *TestkubeAPI) getExecutorByTestType(testType string) (client.Executor, error) {
+func (s *DeprecatedTestkubeAPI) getExecutorByTestType(testType string) (client.Executor, error) {
 	executorCR, err := s.DeprecatedClients.Executors().GetByType(testType)
 	if err != nil {
 		return nil, fmt.Errorf("can't get executor spec: %w", err)
@@ -712,7 +713,7 @@ func (s *TestkubeAPI) getExecutorByTestType(testType string) (client.Executor, e
 	}
 }
 
-func (s *TestkubeAPI) getArtifactStorage(bucket string) (storage.ArtifactsStorage, error) {
+func (s *DeprecatedTestkubeAPI) getArtifactStorage(bucket string) (storage.ArtifactsStorage, error) {
 	if s.mode == common.ModeAgent {
 		return s.ArtifactsStorage, nil
 	}
@@ -735,7 +736,7 @@ func (s *TestkubeAPI) getArtifactStorage(bucket string) (storage.ArtifactsStorag
 }
 
 // streamLogsFromLogServer writes logs from the output of log server to the writer
-func (s *TestkubeAPI) streamLogsFromLogServer(logs chan events.LogResponse, w *bufio.Writer) {
+func (s *DeprecatedTestkubeAPI) streamLogsFromLogServer(logs chan events.LogResponse, w *bufio.Writer) {
 	enc := json.NewEncoder(w)
 	s.Log.Debugw("looping through logs channel")
 	// loop through grpc server log lines - it's blocking channel
@@ -758,4 +759,68 @@ func (s *TestkubeAPI) streamLogsFromLogServer(logs chan events.LogResponse, w *b
 	}
 
 	s.Log.Debugw("logs streaming stopped")
+}
+
+// TODO should we use single generic filter for all list based resources ?
+// currently filters for e.g. tests are done "by hand"
+func getFilterFromRequest(c *fiber.Ctx) result.Filter {
+
+	filter := result.NewExecutionsFilter()
+
+	// id for /tests/ID/executions
+	testName := c.Params("id", "")
+	if testName == "" {
+		// query param for /executions?testName
+		testName = c.Query("testName", "")
+	}
+
+	if testName != "" {
+		filter = filter.WithTestName(testName)
+	}
+
+	textSearch := c.Query("textSearch", "")
+	if textSearch != "" {
+		filter = filter.WithTextSearch(textSearch)
+	}
+
+	page, err := strconv.Atoi(c.Query("page", ""))
+	if err == nil {
+		filter = filter.WithPage(page)
+	}
+
+	pageSize, err := strconv.Atoi(c.Query("pageSize", ""))
+	if err == nil && pageSize != 0 {
+		filter = filter.WithPageSize(pageSize)
+	}
+
+	status := c.Query("status", "")
+	if status != "" {
+		filter = filter.WithStatus(status)
+	}
+
+	objectType := c.Query("type", "")
+	if objectType != "" {
+		filter = filter.WithType(objectType)
+	}
+
+	last, err := strconv.Atoi(c.Query("last", "0"))
+	if err == nil && last != 0 {
+		filter = filter.WithLastNDays(last)
+	}
+
+	dFilter := datefilter.NewDateFilter(c.Query("startDate", ""), c.Query("endDate", ""))
+	if dFilter.IsStartValid {
+		filter = filter.WithStartDate(dFilter.Start)
+	}
+
+	if dFilter.IsEndValid {
+		filter = filter.WithEndDate(dFilter.End)
+	}
+
+	selector := c.Query("selector")
+	if selector != "" {
+		filter = filter.WithSelector(selector)
+	}
+
+	return filter
 }

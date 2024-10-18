@@ -15,6 +15,7 @@ import (
 	"github.com/gofiber/websocket/v2"
 	"github.com/pkg/errors"
 
+	"github.com/kubeshop/testkube/internal/app/api/apiutils"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/datefilter"
@@ -345,7 +346,7 @@ func (s *TestkubeAPI) AbortAllTestWorkflowExecutionsHandler() fiber.Handler {
 		filter := testworkflow2.NewExecutionsFilter().WithName(name).WithStatus(string(testkube.RUNNING_TestWorkflowStatus))
 		executions, err := s.TestWorkflowResults.GetExecutions(ctx, filter)
 		if err != nil {
-			if IsNotFound(err) {
+			if apiutils.IsNotFound(err) {
 				c.Status(http.StatusNoContent)
 				return nil
 			}

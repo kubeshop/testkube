@@ -1,16 +1,10 @@
-package v1
+package deprecatedv1
 
 import (
 	"net/http/httptest"
 	"testing"
 
 	"github.com/golang/mock/gomock"
-
-	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
-	testsclientv3 "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
-	"github.com/kubeshop/testkube/cmd/api-server/commons"
-	"github.com/kubeshop/testkube/pkg/log"
-	"github.com/kubeshop/testkube/pkg/server"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
@@ -19,9 +13,14 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
+	testsclientv3 "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
+	"github.com/kubeshop/testkube/cmd/api-server/commons"
+	"github.com/kubeshop/testkube/pkg/log"
 )
 
-func TestTestkubeAPI_DeleteTest(t *testing.T) {
+func TestDeprecatedTestkubeAPI_DeleteTest(t *testing.T) {
 	app := fiber.New()
 
 	mockCtrl := gomock.NewController(t)
@@ -30,11 +29,8 @@ func TestTestkubeAPI_DeleteTest(t *testing.T) {
 	mockDeprecatedClients := commons.NewMockDeprecatedClients(mockCtrl)
 	mockDeprecatedClients.EXPECT().Tests().Return(getMockTestClient()).AnyTimes()
 
-	s := &TestkubeAPI{
-		HTTPServer: server.HTTPServer{
-			Mux: app,
-			Log: log.DefaultLogger,
-		},
+	s := &DeprecatedTestkubeAPI{
+		Log:               log.DefaultLogger,
 		DeprecatedClients: mockDeprecatedClients,
 	}
 

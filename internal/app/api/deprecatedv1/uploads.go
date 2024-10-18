@@ -1,4 +1,4 @@
-package v1
+package deprecatedv1
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 )
 
 // UploadFiles uploads files into the object store and uses them during execution
-func (s TestkubeAPI) UploadFiles() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) UploadFiles() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to upload file"
 

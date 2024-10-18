@@ -1,4 +1,4 @@
-package v1
+package deprecatedv1
 
 import (
 	"bytes"
@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/yaml"
 
 	testsuitesv3 "github.com/kubeshop/testkube-operator/api/testsuite/v3"
+	"github.com/kubeshop/testkube/internal/app/api/apiutils"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/datefilter"
@@ -33,7 +34,7 @@ import (
 )
 
 // CreateTestSuiteHandler for getting test object
-func (s TestkubeAPI) CreateTestSuiteHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) CreateTestSuiteHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to create test suite"
 		var testSuite testsuitesv3.TestSuite
@@ -77,7 +78,7 @@ func (s TestkubeAPI) CreateTestSuiteHandler() fiber.Handler {
 			if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
 				request.QuoteTestSuiteTextFields()
 				data, err := crd.GenerateYAML(crd.TemplateTestSuite, []testkube.TestSuiteUpsertRequest{request})
-				return s.getCRDs(c, data, err)
+				return apiutils.SendLegacyCRDs(c, data, err)
 			}
 
 			testSuite, err = testsuitesmapper.MapTestSuiteUpsertRequestToTestCRD(request)
@@ -104,7 +105,7 @@ func (s TestkubeAPI) CreateTestSuiteHandler() fiber.Handler {
 }
 
 // UpdateTestSuiteHandler updates an existing TestSuite CR based on TestSuite content
-func (s TestkubeAPI) UpdateTestSuiteHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) UpdateTestSuiteHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to update test suite"
 		var request testkube.TestSuiteUpdateRequest
@@ -182,7 +183,7 @@ func (s TestkubeAPI) UpdateTestSuiteHandler() fiber.Handler {
 }
 
 // GetTestSuiteHandler for getting TestSuite object
-func (s TestkubeAPI) GetTestSuiteHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) GetTestSuiteHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
 		errPrefix := "failed to get test suite " + name
@@ -200,7 +201,7 @@ func (s TestkubeAPI) GetTestSuiteHandler() fiber.Handler {
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
 			testSuite.QuoteTestSuiteTextFields()
 			data, err := crd.GenerateYAML(crd.TemplateTestSuite, []testkube.TestSuite{testSuite})
-			return s.getCRDs(c, data, err)
+			return apiutils.SendLegacyCRDs(c, data, err)
 		}
 
 		return c.JSON(testSuite)
@@ -208,7 +209,7 @@ func (s TestkubeAPI) GetTestSuiteHandler() fiber.Handler {
 }
 
 // GetTestSuiteWithExecutionHandler for getting TestSuite object with execution
-func (s TestkubeAPI) GetTestSuiteWithExecutionHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) GetTestSuiteWithExecutionHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
 		errPrefix := fmt.Sprintf("failed to get test suite %s with execution", name)
@@ -225,7 +226,7 @@ func (s TestkubeAPI) GetTestSuiteWithExecutionHandler() fiber.Handler {
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
 			testSuite.QuoteTestSuiteTextFields()
 			data, err := crd.GenerateYAML(crd.TemplateTestSuite, []testkube.TestSuite{testSuite})
-			return s.getCRDs(c, data, err)
+			return apiutils.SendLegacyCRDs(c, data, err)
 		}
 
 		ctx := c.Context()
@@ -242,7 +243,7 @@ func (s TestkubeAPI) GetTestSuiteWithExecutionHandler() fiber.Handler {
 }
 
 // DeleteTestSuiteHandler for deleting a TestSuite with id
-func (s TestkubeAPI) DeleteTestSuiteHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) DeleteTestSuiteHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
 		errPrefix := fmt.Sprintf("failed to delete test suite %s", name)
@@ -273,7 +274,7 @@ func (s TestkubeAPI) DeleteTestSuiteHandler() fiber.Handler {
 }
 
 // DeleteTestSuitesHandler for deleting all TestSuites
-func (s TestkubeAPI) DeleteTestSuitesHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) DeleteTestSuitesHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to delete test suites"
 
@@ -332,7 +333,7 @@ func (s TestkubeAPI) DeleteTestSuitesHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) getFilteredTestSuitesList(c *fiber.Ctx) (*testsuitesv3.TestSuiteList, error) {
+func (s *DeprecatedTestkubeAPI) getFilteredTestSuitesList(c *fiber.Ctx) (*testsuitesv3.TestSuiteList, error) {
 	crTestSuites, err := s.DeprecatedClients.TestSuites().List(c.Query("selector"))
 	if err != nil {
 		return nil, err
@@ -352,7 +353,7 @@ func (s TestkubeAPI) getFilteredTestSuitesList(c *fiber.Ctx) (*testsuitesv3.Test
 }
 
 // ListTestSuitesHandler for getting list of all available TestSuites
-func (s TestkubeAPI) ListTestSuitesHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) ListTestSuitesHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to list test suites"
 
@@ -368,7 +369,7 @@ func (s TestkubeAPI) ListTestSuitesHandler() fiber.Handler {
 			}
 
 			data, err := crd.GenerateYAML(crd.TemplateTestSuite, testSuites)
-			return s.getCRDs(c, data, err)
+			return apiutils.SendLegacyCRDs(c, data, err)
 		}
 
 		return c.JSON(testSuites)
@@ -376,7 +377,7 @@ func (s TestkubeAPI) ListTestSuitesHandler() fiber.Handler {
 }
 
 // TestSuiteMetricsHandler returns basic metrics for given testsuite
-func (s TestkubeAPI) TestSuiteMetricsHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) TestSuiteMetricsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to get test suite metrics"
 		const (
@@ -406,7 +407,7 @@ func (s TestkubeAPI) TestSuiteMetricsHandler() fiber.Handler {
 }
 
 // getLatestTestSuiteExecutions return latest test suite executions either by starttime or endtine for tests
-func (s TestkubeAPI) getLatestTestSuiteExecutions(ctx context.Context, testSuiteNames []string) (map[string]testkube.TestSuiteExecution, error) {
+func (s *DeprecatedTestkubeAPI) getLatestTestSuiteExecutions(ctx context.Context, testSuiteNames []string) (map[string]testkube.TestSuiteExecution, error) {
 	executions, err := s.DeprecatedRepositories.TestSuiteResults().GetLatestByTestSuites(ctx, testSuiteNames)
 	if err != nil && err != mongo.ErrNoDocuments {
 		return nil, err
@@ -423,7 +424,7 @@ func (s TestkubeAPI) getLatestTestSuiteExecutions(ctx context.Context, testSuite
 }
 
 // ListTestSuiteWithExecutionsHandler for getting list of all available TestSuite with latest executions
-func (s TestkubeAPI) ListTestSuiteWithExecutionsHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) ListTestSuiteWithExecutionsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to list test suites with executions"
 
@@ -439,7 +440,7 @@ func (s TestkubeAPI) ListTestSuiteWithExecutionsHandler() fiber.Handler {
 			}
 
 			data, err := crd.GenerateYAML(crd.TemplateTestSuite, testSuites)
-			return s.getCRDs(c, data, err)
+			return apiutils.SendLegacyCRDs(c, data, err)
 		}
 
 		results := make([]testkube.TestSuiteWithExecutionSummary, 0, len(testSuites))
@@ -540,7 +541,7 @@ func (s TestkubeAPI) ListTestSuiteWithExecutionsHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) ExecuteTestSuitesHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) ExecuteTestSuitesHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to execute test suite"
 		var request testkube.TestSuiteExecutionRequest
@@ -607,7 +608,7 @@ func (s TestkubeAPI) ExecuteTestSuitesHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) ListTestSuiteExecutionsHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) ListTestSuiteExecutionsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
 		now := time.Now()
@@ -644,7 +645,7 @@ func (s TestkubeAPI) ListTestSuiteExecutionsHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) GetTestSuiteExecutionHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) GetTestSuiteExecutionHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		id := c.Params("executionID")
 		errPrefix := fmt.Sprintf("failed to get test suite execution %s", id)
@@ -679,7 +680,7 @@ func (s TestkubeAPI) GetTestSuiteExecutionHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) ListTestSuiteArtifactsHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) ListTestSuiteArtifactsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		s.Log.Infow("listing testsuite artifacts", "executionID", c.Params("executionID"))
 		id := c.Params("executionID")
@@ -725,7 +726,7 @@ func (s TestkubeAPI) ListTestSuiteArtifactsHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) getExecutionArtfacts(ctx context.Context, execution *testkube.Execution,
+func (s *DeprecatedTestkubeAPI) getExecutionArtfacts(ctx context.Context, execution *testkube.Execution,
 	artifacts []testkube.Artifact) ([]testkube.Artifact, error) {
 	var stepArtifacts []testkube.Artifact
 	var bucket string
@@ -764,7 +765,7 @@ func (s TestkubeAPI) getExecutionArtfacts(ctx context.Context, execution *testku
 }
 
 // AbortTestSuiteHandler for aborting a TestSuite with id
-func (s TestkubeAPI) AbortTestSuiteHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) AbortTestSuiteHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := c.Context()
 		name := c.Params("id")
@@ -797,7 +798,7 @@ func (s TestkubeAPI) AbortTestSuiteHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) AbortTestSuiteExecutionHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) AbortTestSuiteExecutionHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		s.Log.Infow("aborting test suite execution", "executionID", c.Params("executionID"))
 		id := c.Params("executionID")
@@ -825,7 +826,7 @@ func (s TestkubeAPI) AbortTestSuiteExecutionHandler() fiber.Handler {
 }
 
 // ListTestSuiteTestsHandler for getting list of all available Tests for TestSuites
-func (s TestkubeAPI) ListTestSuiteTestsHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) ListTestSuiteTestsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
 		errPrefix := fmt.Sprintf("failed to list tests for test suite %s", name)

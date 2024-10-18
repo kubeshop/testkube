@@ -12,6 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/yaml"
 
 	testtriggersv1 "github.com/kubeshop/testkube-operator/api/testtriggers/v1"
+	"github.com/kubeshop/testkube/internal/app/api/apiutils"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/keymap/triggers"
@@ -52,7 +53,7 @@ func (s *TestkubeAPI) CreateTestTriggerHandler() fiber.Handler {
 
 			if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
 				data, err := crd.GenerateYAML(crd.TemplateTestTrigger, []testkube.TestTrigger{testtriggersmapper.MapCRDToAPI(&testTrigger)})
-				return s.getCRDs(c, data, err)
+				return apiutils.SendLegacyCRDs(c, data, err)
 			}
 		}
 
@@ -205,7 +206,7 @@ func (s *TestkubeAPI) GetTestTriggerHandler() fiber.Handler {
 
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
 			data, err := crd.GenerateYAML(crd.TemplateTestTrigger, []testkube.TestTrigger{apiTestTrigger})
-			return s.getCRDs(c, data, err)
+			return apiutils.SendLegacyCRDs(c, data, err)
 		}
 
 		return c.JSON(apiTestTrigger)
@@ -288,7 +289,7 @@ func (s *TestkubeAPI) ListTestTriggersHandler() fiber.Handler {
 
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
 			data, err := crd.GenerateYAML(crd.TemplateTestTrigger, apiTestTriggers)
-			return s.getCRDs(c, data, err)
+			return apiutils.SendLegacyCRDs(c, data, err)
 		}
 
 		return c.JSON(apiTestTriggers)

@@ -1,4 +1,4 @@
-package v1
+package deprecatedv1
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 )
 
 // RunGraphQLServer runs GraphQL server on go net/http server
-func (s *TestkubeAPI) RunGraphQLServer(ctx context.Context, port int) error {
+func (s *DeprecatedTestkubeAPI) RunGraphQLServer(ctx context.Context, port int) error {
 	srv := graphql.GetServer(s.Events.Bus, s.DeprecatedClients.Executors())
 
 	mux := http.NewServeMux()

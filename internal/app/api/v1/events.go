@@ -10,7 +10,7 @@ import (
 	events "github.com/fluxcd/pkg/apis/event/v1beta1"
 )
 
-func (s TestkubeAPI) EventsStreamHandler() fiber.Handler {
+func (s *TestkubeAPI) EventsStreamHandler() fiber.Handler {
 	return websocket.New(func(c *websocket.Conn) {
 		s.Log.Debugw("handling websocket connection", "id", c.Params("id"), "remoteAddr", c.RemoteAddr(), "localAddr", c.LocalAddr())
 
@@ -23,7 +23,7 @@ func (s TestkubeAPI) EventsStreamHandler() fiber.Handler {
 }
 
 // GetTestHandler is method for getting an existing test
-func (s TestkubeAPI) FluxEventHandler() fiber.Handler {
+func (s *TestkubeAPI) FluxEventHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		body := c.Body()
 

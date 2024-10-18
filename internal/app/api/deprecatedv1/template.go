@@ -1,4 +1,4 @@
-package v1
+package deprecatedv1
 
 import (
 	"bytes"
@@ -10,12 +10,13 @@ import (
 	"k8s.io/apimachinery/pkg/util/yaml"
 
 	templatev1 "github.com/kubeshop/testkube-operator/api/template/v1"
+	"github.com/kubeshop/testkube/internal/app/api/apiutils"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
 	templatesmapper "github.com/kubeshop/testkube/pkg/mapper/templates"
 )
 
-func (s TestkubeAPI) CreateTemplateHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) CreateTemplateHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to create template"
 		var template templatev1.Template
@@ -38,7 +39,7 @@ func (s TestkubeAPI) CreateTemplateHandler() fiber.Handler {
 				}
 
 				data, err := crd.GenerateYAML(crd.TemplateTemplate, []testkube.TemplateCreateRequest{request})
-				return s.getCRDs(c, data, err)
+				return apiutils.SendLegacyCRDs(c, data, err)
 			}
 
 			template = templatesmapper.MapAPIToCRD(request)
@@ -55,7 +56,7 @@ func (s TestkubeAPI) CreateTemplateHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) UpdateTemplateHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) UpdateTemplateHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to update template"
 		var request testkube.TemplateUpdateRequest
@@ -102,7 +103,7 @@ func (s TestkubeAPI) UpdateTemplateHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) ListTemplatesHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) ListTemplatesHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to list templates"
 
@@ -125,14 +126,14 @@ func (s TestkubeAPI) ListTemplatesHandler() fiber.Handler {
 			}
 
 			data, err := crd.GenerateYAML(crd.TemplateTemplate, results)
-			return s.getCRDs(c, data, err)
+			return apiutils.SendLegacyCRDs(c, data, err)
 		}
 
 		return c.JSON(results)
 	}
 }
 
-func (s TestkubeAPI) GetTemplateHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) GetTemplateHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("name")
 		errPrefix := fmt.Sprintf("failed to get template %s", name)
@@ -152,14 +153,14 @@ func (s TestkubeAPI) GetTemplateHandler() fiber.Handler {
 			}
 
 			data, err := crd.GenerateYAML(crd.TemplateTemplate, []testkube.Template{result})
-			return s.getCRDs(c, data, err)
+			return apiutils.SendLegacyCRDs(c, data, err)
 		}
 
 		return c.JSON(result)
 	}
 }
 
-func (s TestkubeAPI) DeleteTemplateHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) DeleteTemplateHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("name")
 		errPrefix := fmt.Sprintf("failed to delete template %s", name)
@@ -177,7 +178,7 @@ func (s TestkubeAPI) DeleteTemplateHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) DeleteTemplatesHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) DeleteTemplatesHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to delete templates"
 

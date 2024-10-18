@@ -1,4 +1,4 @@
-package v1
+package deprecatedv1
 
 import (
 	"fmt"
@@ -14,6 +14,7 @@ import (
 	testtriggersclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testtriggers/v1"
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/pkg/client/testworkflows/v1"
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
+	v1 "github.com/kubeshop/testkube/internal/app/api/v1"
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/log"
@@ -42,7 +43,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/storage"
 )
 
-func NewTestkubeAPI(
+func NewDeprecatedTestkubeAPI(
 	clusterId string,
 	deprecatedRepositories commons.DeprecatedRepositories,
 	deprecatedClients commons.DeprecatedClients,
@@ -79,10 +80,10 @@ func NewTestkubeAPI(
 	serviceAccountNames map[string]string,
 	dockerImageVersion string,
 	proContext *config.ProContext,
-	storageParams StorageParams,
-) TestkubeAPI {
+	storageParams v1.StorageParams,
+) DeprecatedTestkubeAPI {
 
-	return TestkubeAPI{
+	return DeprecatedTestkubeAPI{
 		ClusterID:                   clusterId,
 		Log:                         log.DefaultLogger,
 		DeprecatedRepositories:      deprecatedRepositories,
@@ -124,7 +125,7 @@ func NewTestkubeAPI(
 	}
 }
 
-type TestkubeAPI struct {
+type DeprecatedTestkubeAPI struct {
 	ClusterID                   string
 	Log                         *zap.SugaredLogger
 	TestWorkflowResults         testworkflow.Repository
@@ -142,7 +143,7 @@ type TestkubeAPI struct {
 	TestWorkflowsClient         testworkflowsv1.Interface
 	TestWorkflowTemplatesClient testworkflowsv1.TestWorkflowTemplatesInterface
 	Metrics                     metrics.Metrics
-	storageParams               StorageParams
+	storageParams               v1.StorageParams
 	Namespace                   string
 	WebsocketLoader             *ws.WebsocketLoader
 	Events                      *event.Emitter
@@ -165,120 +166,111 @@ type TestkubeAPI struct {
 	dockerImageVersion          string
 }
 
-type StorageParams struct {
-	SSL             bool   `envconfig:"STORAGE_SSL" default:"false"`
-	SkipVerify      bool   `envconfig:"STORAGE_SKIP_VERIFY" default:"false"`
-	CertFile        string `envconfig:"STORAGE_CERT_FILE"`
-	KeyFile         string `envconfig:"STORAGE_KEY_FILE"`
-	CAFile          string `envconfig:"STORAGE_CA_FILE"`
-	Endpoint        string
-	AccessKeyId     string
-	SecretAccessKey string
-	Region          string
-	Token           string
-	Bucket          string
-}
-
-func (s *TestkubeAPI) Init(server server.HTTPServer) {
-	// TODO: Consider extracting outside?
-	server.Routes.Get("/info", s.InfoHandler())
-	server.Routes.Get("/debug", s.DebugHandler())
-
+func (s *DeprecatedTestkubeAPI) Init(server server.HTTPServer) {
 	root := server.Routes
 
-	webhooks := root.Group("/webhooks")
+	executors := root.Group("/executors")
 
-	webhooks.Post("/", s.CreateWebhookHandler())
-	webhooks.Patch("/:name", s.UpdateWebhookHandler())
-	webhooks.Get("/", s.ListWebhooksHandler())
-	webhooks.Get("/:name", s.GetWebhookHandler())
-	webhooks.Delete("/:name", s.DeleteWebhookHandler())
-	webhooks.Delete("/", s.DeleteWebhooksHandler())
+	executors.Post("/", s.CreateExecutorHandler())
+	executors.Get("/", s.ListExecutorsHandler())
+	executors.Get("/:name", s.GetExecutorHandler())
+	executors.Patch("/:name", s.UpdateExecutorHandler())
+	executors.Delete("/:name", s.DeleteExecutorHandler())
+	executors.Delete("/", s.DeleteExecutorsHandler())
 
-	testWorkflows := root.Group("/test-workflows")
-	testWorkflows.Get("/", s.ListTestWorkflowsHandler())
-	testWorkflows.Post("/", s.CreateTestWorkflowHandler())
-	testWorkflows.Delete("/", s.DeleteTestWorkflowsHandler())
-	testWorkflows.Get("/:id", s.GetTestWorkflowHandler())
-	testWorkflows.Put("/:id", s.UpdateTestWorkflowHandler())
-	testWorkflows.Delete("/:id", s.DeleteTestWorkflowHandler())
-	testWorkflows.Get("/:id/executions", s.ListTestWorkflowExecutionsHandler())
-	testWorkflows.Post("/:id/executions", s.ExecuteTestWorkflowHandler())
-	testWorkflows.Get("/:id/tags", s.ListTagsHandler())
-	testWorkflows.Get("/:id/metrics", s.GetTestWorkflowMetricsHandler())
-	testWorkflows.Get("/:id/executions/:executionID", s.GetTestWorkflowExecutionHandler())
-	testWorkflows.Post("/:id/abort", s.AbortAllTestWorkflowExecutionsHandler())
-	testWorkflows.Post("/:id/executions/:executionID/abort", s.AbortTestWorkflowExecutionHandler())
-	testWorkflows.Post("/:id/executions/:executionID/pause", s.PauseTestWorkflowExecutionHandler())
-	testWorkflows.Post("/:id/executions/:executionID/resume", s.ResumeTestWorkflowExecutionHandler())
-	testWorkflows.Get("/:id/executions/:executionID/logs", s.GetTestWorkflowExecutionLogsHandler())
+	executorByTypes := root.Group("/executor-by-types")
+	executorByTypes.Get("/", s.GetExecutorByTestTypeHandler())
 
-	testWorkflowExecutions := root.Group("/test-workflow-executions")
-	testWorkflowExecutions.Get("/", s.ListTestWorkflowExecutionsHandler())
-	testWorkflowExecutions.Get("/:executionID", s.GetTestWorkflowExecutionHandler())
-	testWorkflowExecutions.Get("/:executionID/notifications", s.StreamTestWorkflowExecutionNotificationsHandler())
-	testWorkflowExecutions.Get("/:executionID/notifications/stream", s.StreamTestWorkflowExecutionNotificationsWebSocketHandler())
-	testWorkflowExecutions.Post("/:executionID/abort", s.AbortTestWorkflowExecutionHandler())
-	testWorkflowExecutions.Post("/:executionID/pause", s.PauseTestWorkflowExecutionHandler())
-	testWorkflowExecutions.Post("/:executionID/resume", s.ResumeTestWorkflowExecutionHandler())
-	testWorkflowExecutions.Get("/:executionID/logs", s.GetTestWorkflowExecutionLogsHandler())
-	testWorkflowExecutions.Get("/:executionID/artifacts", s.ListTestWorkflowExecutionArtifactsHandler())
-	testWorkflowExecutions.Get("/:executionID/artifacts/:filename", s.GetTestWorkflowArtifactHandler())
-	testWorkflowExecutions.Get("/:executionID/artifact-archive", s.GetTestWorkflowArtifactArchiveHandler())
+	executions := root.Group("/executions")
 
-	testWorkflowWithExecutions := root.Group("/test-workflow-with-executions")
-	testWorkflowWithExecutions.Get("/", s.ListTestWorkflowWithExecutionsHandler())
-	testWorkflowWithExecutions.Get("/:id", s.GetTestWorkflowWithExecutionHandler())
-	testWorkflowWithExecutions.Get("/:id/tags", s.ListTagsHandler())
+	executions.Get("/", s.ListExecutionsHandler())
+	executions.Post("/", s.ExecuteTestsHandler())
+	executions.Get("/:executionID", s.GetExecutionHandler())
+	executions.Get("/:executionID/artifacts", s.ListArtifactsHandler())
+	executions.Get("/:executionID/logs", s.ExecutionLogsHandler())
+	executions.Get("/:executionID/logs/stream", s.ExecutionLogsStreamHandler())
+	executions.Get("/:executionID/logs/v2", s.ExecutionLogsHandlerV2())
+	executions.Get("/:executionID/logs/stream/v2", s.ExecutionLogsStreamHandlerV2())
+	executions.Get("/:executionID/artifacts/:filename", s.GetArtifactHandler())
+	executions.Get("/:executionID/artifact-archive", s.GetArtifactArchiveHandler())
 
-	root.Post("/preview-test-workflow", s.PreviewTestWorkflowHandler())
+	tests := root.Group("/tests")
 
-	testWorkflowTemplates := root.Group("/test-workflow-templates")
-	testWorkflowTemplates.Get("/", s.ListTestWorkflowTemplatesHandler())
-	testWorkflowTemplates.Post("/", s.CreateTestWorkflowTemplateHandler())
-	testWorkflowTemplates.Delete("/", s.DeleteTestWorkflowTemplatesHandler())
-	testWorkflowTemplates.Get("/:id", s.GetTestWorkflowTemplateHandler())
-	testWorkflowTemplates.Put("/:id", s.UpdateTestWorkflowTemplateHandler())
-	testWorkflowTemplates.Delete("/:id", s.DeleteTestWorkflowTemplateHandler())
+	tests.Get("/", s.ListTestsHandler())
+	tests.Post("/", s.CreateTestHandler())
+	tests.Patch("/:id", s.UpdateTestHandler())
+	tests.Delete("/", s.DeleteTestsHandler())
 
-	testTriggers := root.Group("/triggers")
-	testTriggers.Get("/", s.ListTestTriggersHandler())
-	testTriggers.Post("/", s.CreateTestTriggerHandler())
-	testTriggers.Patch("/", s.BulkUpdateTestTriggersHandler())
-	testTriggers.Delete("/", s.DeleteTestTriggersHandler())
-	testTriggers.Get("/:id", s.GetTestTriggerHandler())
-	testTriggers.Patch("/:id", s.UpdateTestTriggerHandler())
-	testTriggers.Delete("/:id", s.DeleteTestTriggerHandler())
+	tests.Get("/:id", s.GetTestHandler())
+	tests.Delete("/:id", s.DeleteTestHandler())
+	tests.Post("/:id/abort", s.AbortTestHandler())
 
-	keymap := root.Group("/keymap")
-	keymap.Get("/triggers", s.GetTestTriggerKeyMapHandler())
+	tests.Get("/:id/metrics", s.TestMetricsHandler())
 
-	labels := root.Group("/labels")
-	labels.Get("/", s.ListLabelsHandler())
+	tests.Post("/:id/executions", s.ExecuteTestsHandler())
 
-	tags := root.Group("/tags")
-	tags.Get("/", s.ListTagsHandler())
+	tests.Get("/:id/executions", s.ListExecutionsHandler())
+	tests.Get("/:id/executions/:executionID", s.GetExecutionHandler())
+	tests.Patch("/:id/executions/:executionID", s.AbortExecutionHandler())
 
-	events := root.Group("/events")
-	events.Post("/flux", s.FluxEventHandler())
-	events.Get("/stream", s.EventsStreamHandler())
+	testWithExecutions := server.Routes.Group("/test-with-executions")
+	testWithExecutions.Get("/", s.ListTestWithExecutionsHandler())
+	testWithExecutions.Get("/:id", s.GetTestWithExecutionHandler())
 
-	configs := root.Group("/config")
-	configs.Get("/", s.GetConfigsHandler())
-	configs.Patch("/", s.UpdateConfigsHandler())
+	testsuites := root.Group("/test-suites")
 
-	debug := root.Group("/debug")
-	debug.Get("/listeners", s.GetDebugListenersHandler())
+	testsuites.Post("/", s.CreateTestSuiteHandler())
+	testsuites.Patch("/:id", s.UpdateTestSuiteHandler())
+	testsuites.Get("/", s.ListTestSuitesHandler())
+	testsuites.Delete("/", s.DeleteTestSuitesHandler())
+	testsuites.Get("/:id", s.GetTestSuiteHandler())
+	testsuites.Delete("/:id", s.DeleteTestSuiteHandler())
+	testsuites.Post("/:id/abort", s.AbortTestSuiteHandler())
 
-	secrets := root.Group("/secrets")
-	secrets.Get("/", s.ListSecretsHandler())
-	secrets.Post("/", s.CreateSecretHandler())
-	secrets.Get("/:id", s.GetSecretHandler())
-	secrets.Delete("/:id", s.DeleteSecretHandler())
-	secrets.Patch("/:id", s.UpdateSecretHandler())
+	testsuites.Post("/:id/executions", s.ExecuteTestSuitesHandler())
+	testsuites.Get("/:id/executions", s.ListTestSuiteExecutionsHandler())
+	testsuites.Get("/:id/executions/:executionID", s.GetTestSuiteExecutionHandler())
+	testsuites.Get("/:id/executions/:executionID/artifacts", s.ListTestSuiteArtifactsHandler())
+	testsuites.Patch("/:id/executions/:executionID", s.AbortTestSuiteExecutionHandler())
 
-	repositories := root.Group("/repositories")
-	repositories.Post("/", s.ValidateRepositoryHandler())
+	testsuites.Get("/:id/tests", s.ListTestSuiteTestsHandler())
+
+	testsuites.Get("/:id/metrics", s.TestSuiteMetricsHandler())
+
+	testSuiteExecutions := root.Group("/test-suite-executions")
+	testSuiteExecutions.Get("/", s.ListTestSuiteExecutionsHandler())
+	testSuiteExecutions.Post("/", s.ExecuteTestSuitesHandler())
+	testSuiteExecutions.Get("/:executionID", s.GetTestSuiteExecutionHandler())
+	testSuiteExecutions.Get("/:executionID/artifacts", s.ListTestSuiteArtifactsHandler())
+	testSuiteExecutions.Patch("/:executionID", s.AbortTestSuiteExecutionHandler())
+
+	testSuiteWithExecutions := root.Group("/test-suite-with-executions")
+	testSuiteWithExecutions.Get("/", s.ListTestSuiteWithExecutionsHandler())
+	testSuiteWithExecutions.Get("/:id", s.GetTestSuiteWithExecutionHandler())
+
+	testsources := root.Group("/test-sources")
+	testsources.Post("/", s.CreateTestSourceHandler())
+	testsources.Get("/", s.ListTestSourcesHandler())
+	testsources.Patch("/", s.ProcessTestSourceBatchHandler())
+	testsources.Get("/:name", s.GetTestSourceHandler())
+	testsources.Patch("/:name", s.UpdateTestSourceHandler())
+	testsources.Delete("/:name", s.DeleteTestSourceHandler())
+	testsources.Delete("/", s.DeleteTestSourcesHandler())
+
+	templates := root.Group("/templates")
+
+	templates.Post("/", s.CreateTemplateHandler())
+	templates.Patch("/:name", s.UpdateTemplateHandler())
+	templates.Get("/", s.ListTemplatesHandler())
+	templates.Get("/:name", s.GetTemplateHandler())
+	templates.Delete("/:name", s.DeleteTemplateHandler())
+	templates.Delete("/", s.DeleteTemplatesHandler())
+
+	slack := root.Group("/slack")
+	slack.Get("/", s.OauthHandler())
+
+	files := root.Group("/uploads")
+	files.Post("/", s.UploadFiles())
 
 	// set up proxy for the internal GraphQL server
 	server.Mux.All("/graphql", func(c *fiber.Ctx) error {

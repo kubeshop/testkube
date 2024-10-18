@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/nats-io/nats.go"
 	"google.golang.org/grpc/metadata"
@@ -20,6 +21,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	"github.com/kubeshop/testkube/cmd/api-server/services"
 	"github.com/kubeshop/testkube/internal/app/api/debug"
+	"github.com/kubeshop/testkube/internal/app/api/oauth"
 	cloudtestworkflow "github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
 	"github.com/kubeshop/testkube/pkg/event/kind/cdevent"
 	"github.com/kubeshop/testkube/pkg/event/kind/k8sevent"
@@ -75,6 +77,7 @@ import (
 	kubeclient "github.com/kubeshop/testkube-operator/pkg/client"
 	testtriggersclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testtriggers/v1"
 	testworkflowsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testworkflows/v1"
+	deprecatedapiv1 "github.com/kubeshop/testkube/internal/app/api/deprecatedv1"
 	apiv1 "github.com/kubeshop/testkube/internal/app/api/v1"
 	"github.com/kubeshop/testkube/pkg/configmap"
 	"github.com/kubeshop/testkube/pkg/dbmigrator"
@@ -425,23 +428,67 @@ func main() {
 	eventsEmitter.Listen(ctx)
 
 	var storageParams apiv1.StorageParams
-	var oauthParams apiv1.OauthParams
 	if err := envconfig.Process("STORAGE", &storageParams); err != nil {
 		log.DefaultLogger.Debugw("Processing STORAGE environment config", err)
 	}
 
-	if err := envconfig.Process("TESTKUBE_OAUTH", &oauthParams); err != nil {
-		log.DefaultLogger.Debugw("Processing TESTKUBE_OAUTH environment config", err)
-	}
-
+	// Create HTTP server
 	var httpConfig server.Config
 	err = envconfig.Process("APISERVER", &httpConfig)
 	// Do we want to panic here or just ignore the error
 	if err != nil {
 		panic(err)
 	}
-
 	httpServer := server.NewServer(server.Config{Port: cfg.APIServerPort})
+	httpServer.Routes.Static("/api-docs", "./api/v1")
+	httpServer.Routes.Use(cors.New())
+
+	// Handle OAuth TODO: deprecated?
+	var oauthParams oauth.OauthParams
+	if err := envconfig.Process("TESTKUBE_OAUTH", &oauthParams); err != nil {
+		log.DefaultLogger.Debugw("Processing TESTKUBE_OAUTH environment config", err)
+	}
+	httpServer.Routes.Use(oauth.CreateOAuthHandler(oauthParams))
+
+	deprecatedApi := deprecatedapiv1.NewDeprecatedTestkubeAPI(
+		clusterId,
+		deprecatedRepositories,
+		deprecatedClients,
+		cfg.TestkubeNamespace,
+		testWorkflowResultsRepository,
+		testWorkflowOutputRepository,
+		secretClient,
+		secretManager,
+		webhooksClient,
+		clientset,
+		testTriggersClient,
+		testWorkflowsClient,
+		testWorkflowTemplatesClient,
+		configMapConfig,
+		eventsEmitter,
+		websocketLoader,
+		executor,
+		containerExecutor,
+		testWorkflowExecutor,
+		executionWorker,
+		metrics,
+		sched,
+		slackLoader,
+		cfg.GraphqlPort,
+		artifactStorage,
+		cfg.TestkubeDashboardURI,
+		cfg.TestkubeHelmchartVersion,
+		mode,
+		eventBus,
+		secretConfig,
+		features,
+		logsStream,
+		logGrpcClient,
+		serviceAccountNames,
+		cfg.TestkubeDockerImageVersion,
+		&proContext,
+		storageParams,
+	)
 	api := apiv1.NewTestkubeAPI(
 		clusterId,
 		deprecatedRepositories,
@@ -480,7 +527,6 @@ func main() {
 		cfg.TestkubeDockerImageVersion,
 		&proContext,
 		storageParams,
-		oauthParams,
 	)
 
 	if mode == common.ModeAgent {
@@ -506,7 +552,7 @@ func main() {
 			log.DefaultLogger,
 			httpServer.Mux.Handler(),
 			grpcClient,
-			api.GetLogsStream,
+			deprecatedApi.GetLogsStream,
 			getTestWorkflowNotificationsStream,
 			clusterId,
 			cfg.TestkubeClusterName,
@@ -523,7 +569,9 @@ func main() {
 		eventsEmitter.Loader.Register(agentHandle)
 	}
 
+	deprecatedApi.Init(httpServer)
 	api.Init(httpServer)
+
 	if !cfg.DisableTestTriggers {
 		k8sCfg, err := k8sclient.GetK8sClientConfig()
 		exitOnError("Getting k8s client config", err)
@@ -622,7 +670,7 @@ func main() {
 	})
 
 	g.Go(func() error {
-		return api.RunGraphQLServer(ctx, cfg.GraphqlPort)
+		return deprecatedApi.RunGraphQLServer(ctx, cfg.GraphqlPort)
 	})
 
 	if err := g.Wait(); err != nil {

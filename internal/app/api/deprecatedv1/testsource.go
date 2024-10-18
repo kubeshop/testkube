@@ -1,4 +1,4 @@
-package v1
+package deprecatedv1
 
 import (
 	"bytes"
@@ -12,13 +12,14 @@ import (
 	testsourcev1 "github.com/kubeshop/testkube-operator/api/testsource/v1"
 	"github.com/kubeshop/testkube-operator/pkg/client/testsources/v1"
 	"github.com/kubeshop/testkube-operator/pkg/secret"
+	"github.com/kubeshop/testkube/internal/app/api/apiutils"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	testsourcesmapper "github.com/kubeshop/testkube/pkg/mapper/testsources"
 )
 
-func (s TestkubeAPI) CreateTestSourceHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) CreateTestSourceHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to create test source"
 		var testSource testsourcev1.TestSource
@@ -42,7 +43,7 @@ func (s TestkubeAPI) CreateTestSourceHandler() fiber.Handler {
 				}
 
 				data, err := crd.GenerateYAML(crd.TemplateTestSource, []testkube.TestSourceUpsertRequest{request})
-				return s.getCRDs(c, data, err)
+				return apiutils.SendLegacyCRDs(c, data, err)
 			}
 
 			testSource = testsourcesmapper.MapAPIToCRD(request)
@@ -62,7 +63,7 @@ func (s TestkubeAPI) CreateTestSourceHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) UpdateTestSourceHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) UpdateTestSourceHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to update test source"
 		var request testkube.TestSourceUpdateRequest
@@ -129,7 +130,7 @@ func (s TestkubeAPI) UpdateTestSourceHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) ListTestSourcesHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) ListTestSourcesHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to list test sources"
 
@@ -151,14 +152,14 @@ func (s TestkubeAPI) ListTestSourcesHandler() fiber.Handler {
 			}
 
 			data, err := crd.GenerateYAML(crd.TemplateTestSource, results)
-			return s.getCRDs(c, data, err)
+			return apiutils.SendLegacyCRDs(c, data, err)
 		}
 
 		return c.JSON(results)
 	}
 }
 
-func (s TestkubeAPI) GetTestSourceHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) GetTestSourceHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("name")
 		errPrefix := "failed to get test source" + name
@@ -178,14 +179,14 @@ func (s TestkubeAPI) GetTestSourceHandler() fiber.Handler {
 			}
 
 			data, err := crd.GenerateYAML(crd.TemplateTestSource, []testkube.TestSource{result})
-			return s.getCRDs(c, data, err)
+			return apiutils.SendLegacyCRDs(c, data, err)
 		}
 
 		return c.JSON(result)
 	}
 }
 
-func (s TestkubeAPI) DeleteTestSourceHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) DeleteTestSourceHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("name")
 		errPrefix := "failed to delete test source" + name
@@ -200,7 +201,7 @@ func (s TestkubeAPI) DeleteTestSourceHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) DeleteTestSourcesHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) DeleteTestSourcesHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to delete test sources"
 		err := s.DeprecatedClients.TestSources().DeleteByLabels(c.Query("selector"))
@@ -213,7 +214,7 @@ func (s TestkubeAPI) DeleteTestSourcesHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) ProcessTestSourceBatchHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) ProcessTestSourceBatchHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to batch process test sources"
 

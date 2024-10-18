@@ -9,6 +9,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 
+	"github.com/kubeshop/testkube/internal/app/api/apiutils"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	testworkflowmappers "github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/repository/result"
@@ -30,7 +31,7 @@ func (s *TestkubeAPI) GetTestWorkflowWithExecutionHandler() fiber.Handler {
 
 		ctx := c.Context()
 		execution, err := s.TestWorkflowResults.GetLatestByTestWorkflow(ctx, name)
-		if err != nil && !IsNotFound(err) {
+		if err != nil && !apiutils.IsNotFound(err) {
 			return s.ClientError(c, errPrefix, err)
 		}
 

@@ -1,4 +1,4 @@
-package v1
+package deprecatedv1
 
 import (
 	"bytes"
@@ -18,6 +18,7 @@ import (
 	"github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
 	testsclientv3 "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
 	"github.com/kubeshop/testkube-operator/pkg/secret"
+	"github.com/kubeshop/testkube/internal/app/api/apiutils"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/executor/client"
@@ -27,7 +28,7 @@ import (
 )
 
 // GetTestHandler is method for getting an existing test
-func (s TestkubeAPI) GetTestHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) GetTestHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
 		if name == "" {
@@ -50,7 +51,7 @@ func (s TestkubeAPI) GetTestHandler() fiber.Handler {
 			if err != nil {
 				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not build CRD: %w", errPrefix, err))
 			}
-			return s.getCRDs(c, data, err)
+			return apiutils.SendLegacyCRDs(c, data, err)
 		}
 
 		return c.JSON(test)
@@ -58,7 +59,7 @@ func (s TestkubeAPI) GetTestHandler() fiber.Handler {
 }
 
 // GetTestWithExecutionHandler is method for getting an existing test with execution
-func (s TestkubeAPI) GetTestWithExecutionHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) GetTestWithExecutionHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
 		if name == "" {
@@ -81,7 +82,7 @@ func (s TestkubeAPI) GetTestWithExecutionHandler() fiber.Handler {
 			if err != nil {
 				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not build CRD: %w", errPrefix, err))
 			}
-			return s.getCRDs(c, data, err)
+			return apiutils.SendLegacyCRDs(c, data, err)
 		}
 
 		ctx := c.Context()
@@ -97,7 +98,7 @@ func (s TestkubeAPI) GetTestWithExecutionHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) getFilteredTestList(c *fiber.Ctx) (*testsv3.TestList, error) {
+func (s *DeprecatedTestkubeAPI) getFilteredTestList(c *fiber.Ctx) (*testsv3.TestList, error) {
 
 	crTests, err := s.DeprecatedClients.Tests().List(c.Query("selector"))
 	if err != nil {
@@ -128,7 +129,7 @@ func (s TestkubeAPI) getFilteredTestList(c *fiber.Ctx) (*testsv3.TestList, error
 }
 
 // ListTestsHandler is a method for getting list of all available tests
-func (s TestkubeAPI) ListTestsHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) ListTestsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to list tests"
 		crTests, err := s.getFilteredTestList(c)
@@ -146,7 +147,7 @@ func (s TestkubeAPI) ListTestsHandler() fiber.Handler {
 			if err != nil {
 				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not build CRD: %w", errPrefix, err))
 			}
-			return s.getCRDs(c, data, err)
+			return apiutils.SendLegacyCRDs(c, data, err)
 		}
 
 		return c.JSON(tests)
@@ -154,7 +155,7 @@ func (s TestkubeAPI) ListTestsHandler() fiber.Handler {
 }
 
 // ListTestsHandler is a method for getting list of all available tests
-func (s TestkubeAPI) TestMetricsHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) TestMetricsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		testName := c.Params("id")
 
@@ -180,7 +181,7 @@ func (s TestkubeAPI) TestMetricsHandler() fiber.Handler {
 }
 
 // getLatestExecutions return latest executions either by starttime or endtime for tests
-func (s TestkubeAPI) getLatestExecutions(ctx context.Context, testNames []string) (map[string]testkube.Execution, error) {
+func (s *DeprecatedTestkubeAPI) getLatestExecutions(ctx context.Context, testNames []string) (map[string]testkube.Execution, error) {
 	executions, err := s.DeprecatedRepositories.TestResults().GetLatestByTests(ctx, testNames)
 	if err != nil && err != mongo.ErrNoDocuments {
 		return nil, fmt.Errorf("could not get latest executions for tests %s sorted by start time: %w", testNames, err)
@@ -194,7 +195,7 @@ func (s TestkubeAPI) getLatestExecutions(ctx context.Context, testNames []string
 }
 
 // ListTestWithExecutionsHandler is a method for getting list of all available test with latest executions
-func (s TestkubeAPI) ListTestWithExecutionsHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) ListTestWithExecutionsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to list tests with executions"
 		crTests, err := s.getFilteredTestList(c)
@@ -212,7 +213,7 @@ func (s TestkubeAPI) ListTestWithExecutionsHandler() fiber.Handler {
 			if err != nil {
 				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not build CRD: %w", errPrefix, err))
 			}
-			return s.getCRDs(c, data, err)
+			return apiutils.SendLegacyCRDs(c, data, err)
 		}
 
 		ctx := c.Context()
@@ -315,7 +316,7 @@ func (s TestkubeAPI) ListTestWithExecutionsHandler() fiber.Handler {
 }
 
 // CreateTestHandler creates new test CR based on test content
-func (s TestkubeAPI) CreateTestHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) CreateTestHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to create test"
 		var test *testsv3.Test
@@ -349,7 +350,7 @@ func (s TestkubeAPI) CreateTestHandler() fiber.Handler {
 					return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not build CRD: %w", errPrefix, err))
 				}
 
-				return s.getCRDs(c, data, err)
+				return apiutils.SendLegacyCRDs(c, data, err)
 			}
 
 			s.Log.Infow("creating test", "request", request)
@@ -375,7 +376,7 @@ func (s TestkubeAPI) CreateTestHandler() fiber.Handler {
 }
 
 // UpdateTestHandler updates an existing test CR based on test content
-func (s TestkubeAPI) UpdateTestHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) UpdateTestHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to update test"
 		var request testkube.TestUpdateRequest
@@ -468,7 +469,7 @@ func isRepositoryEmpty(s testsv3.TestSpec) bool {
 }
 
 // DeleteTestHandler is a method for deleting a test with id
-func (s TestkubeAPI) DeleteTestHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) DeleteTestHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("id")
 		if name == "" {
@@ -503,7 +504,7 @@ func (s TestkubeAPI) DeleteTestHandler() fiber.Handler {
 }
 
 // AbortTestHandler is a method for aborting a executions of a test with id
-func (s TestkubeAPI) AbortTestHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) AbortTestHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := c.Context()
 		name := c.Params("id")
@@ -536,7 +537,7 @@ func (s TestkubeAPI) AbortTestHandler() fiber.Handler {
 }
 
 // DeleteTestsHandler for deleting all tests
-func (s TestkubeAPI) DeleteTestsHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) DeleteTestsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to delete tests"
 		var err error
