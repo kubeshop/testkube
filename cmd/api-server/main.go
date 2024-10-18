@@ -199,7 +199,6 @@ func main() {
 			log.DefaultLogger,
 		)
 		commons.ExitOnError("error creating gRPC connection", err)
-		defer grpcConn.Close()
 
 		grpcClient = cloud.NewTestKubeCloudAPIClient(grpcConn)
 	}
