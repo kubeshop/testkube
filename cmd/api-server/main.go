@@ -15,6 +15,9 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/emptypb"
 
+	"go.mongodb.org/mongo-driver/mongo"
+	"google.golang.org/grpc"
+
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
 	testkubeclientset "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
@@ -27,6 +30,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/event/kind/webhook"
 	ws "github.com/kubeshop/testkube/pkg/event/kind/websocket"
 	oauth2 "github.com/kubeshop/testkube/pkg/oauth"
+	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
 	testworkflow2 "github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/secretmanager"
 	"github.com/kubeshop/testkube/pkg/server"
@@ -36,9 +40,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/presets"
 	"github.com/kubeshop/testkube/pkg/utils/text"
-
-	"go.mongodb.org/mongo-driver/mongo"
-	"google.golang.org/grpc"
 
 	cloudartifacts "github.com/kubeshop/testkube/pkg/cloud/data/artifact"
 
@@ -136,10 +137,10 @@ func main() {
 	commons.MustFreePort(cfg.GraphqlPort)
 
 	kubeClient, err := kubeclient.GetClient()
-	exitOnError("Getting kubernetes client", err)
+	commons.ExitOnError("Getting kubernetes client", err)
 
 	clientset, err := k8sclient.ConnectToK8s()
-	exitOnError("Creating k8s clientset", err)
+	commons.ExitOnError("Creating k8s clientset", err)
 
 	// k8s
 	secretClient := secret.NewClientFor(clientset, cfg.TestkubeNamespace)
@@ -162,7 +163,7 @@ func main() {
 	secretManager := secretmanager.New(clientset, secretConfig)
 
 	nc, err := newNATSEncodedConnection(cfg)
-	exitOnError("Creating NATS connection", err)
+	commons.ExitOnError("Creating NATS connection", err)
 	eventBus := bus.NewNATSBus(nc)
 	if cfg.Trace {
 		eventBus.TraceEvents()
@@ -174,7 +175,7 @@ func main() {
 	if features.LogsV2 {
 		logGrpcClient = commons.MustGetLogsV2Client(cfg)
 		logsStream, err = logsclient.NewNatsLogStream(nc.Conn)
-		exitOnError("Creating logs streaming client", err)
+		commons.ExitOnError("Creating logs streaming client", err)
 	}
 
 	configMapConfig := commons.MustGetConfigMapConfig(ctx, cfg.APIServerConfig, cfg.TestkubeNamespace, cfg.TestkubeAnalyticsEnabled)
@@ -188,20 +189,20 @@ func main() {
 	metrics := metrics.NewMetrics()
 
 	defaultExecutors, images, err := parseDefaultExecutors(cfg)
-	exitOnError("Parsing default executors", err)
+	commons.ExitOnError("Parsing default executors", err)
 	if !cfg.TestkubeReadonlyExecutors {
 		err := kubeexecutor.SyncDefaultExecutors(deprecatedClients.Executors(), cfg.TestkubeNamespace, defaultExecutors)
-		exitOnError("Sync default executors", err)
+		commons.ExitOnError("Sync default executors", err)
 	}
 	jobTemplates, err := parser.ParseJobTemplates(cfg)
-	exitOnError("Creating job templates", err)
+	commons.ExitOnError("Creating job templates", err)
 	containerTemplates, err := parser.ParseContainerTemplates(cfg)
-	exitOnError("Creating container job templates", err)
+	commons.ExitOnError("Creating container job templates", err)
 
 	inspector := commons.CreateImageInspector(cfg, configMapClient, secretClient)
 
 	slackLoader, err := newSlackLoader(cfg, envs)
-	exitOnError("Creating slack loader", err)
+	commons.ExitOnError("Creating slack loader", err)
 
 	var deprecatedRepositories commons.DeprecatedRepositories
 	var testWorkflowResultsRepository testworkflow2.Repository
@@ -225,7 +226,7 @@ func main() {
 			cfg.TestkubeProCAFile, //nolint
 			log.DefaultLogger,
 		)
-		exitOnError("error creating gRPC connection", err)
+		commons.ExitOnError("error creating gRPC connection", err)
 		defer grpcConn.Close()
 
 		grpcClient = cloud.NewTestKubeCloudAPIClient(grpcConn)
@@ -237,7 +238,7 @@ func main() {
 	var subscriptionChecker checktcl.SubscriptionChecker
 	if mode == common.ModeAgent {
 		subscriptionChecker, err = checktcl.NewSubscriptionChecker(ctx, proContext, grpcClient, grpcConn)
-		exitOnError("Failed creating subscription checker", err)
+		commons.ExitOnError("Failed creating subscription checker", err)
 	}
 
 	serviceAccountNames := map[string]string{
@@ -246,7 +247,7 @@ func main() {
 	// Pro edition only (tcl protected code)
 	if cfg.TestkubeExecutionNamespaces != "" {
 		err = subscriptionChecker.IsActiveOrgPlanEnterpriseForFeature("execution namespace")
-		exitOnError("Subscription checking", err)
+		commons.ExitOnError("Subscription checking", err)
 		serviceAccountNames = schedulertcl.GetServiceAccountNamesFromConfig(serviceAccountNames, cfg.TestkubeExecutionNamespaces)
 	}
 
@@ -313,7 +314,7 @@ func main() {
 		cfg.TestkubeDefaultStorageClassName,
 		cfg.WhitelistedContainers,
 	)
-	exitOnError("Creating executor client", err)
+	commons.ExitOnError("Creating executor client", err)
 
 	containerExecutor, err := containerexecutor.NewContainerExecutor(
 		deprecatedRepositories,
@@ -338,7 +339,7 @@ func main() {
 		cfg.WhitelistedContainers,
 		cfg.TestkubeImageCredentialsCacheTTL,
 	)
-	exitOnError("Creating container executor", err)
+	commons.ExitOnError("Creating container executor", err)
 
 	sched := scheduler.NewScheduler(
 		metrics,
@@ -518,10 +519,10 @@ func main() {
 			&proContext,
 			cfg.TestkubeDockerImageVersion,
 		)
-		exitOnError("Starting agent", err)
+		commons.ExitOnError("Starting agent", err)
 		g.Go(func() error {
 			err = agentHandle.Run(ctx)
-			exitOnError("Running agent", err)
+			commons.ExitOnError("Running agent", err)
 			return nil
 		})
 		eventsEmitter.Loader.Register(agentHandle)
@@ -568,36 +569,10 @@ func main() {
 	}
 
 	// telemetry based functions
-	go func() {
-		telemetryEnabled, _ := configMapConfig.GetTelemetryEnabled(ctx)
-		if telemetryEnabled {
-			out, err := telemetry.SendServerStartEvent(clusterId, version.Version)
-			if err != nil {
-				log.DefaultLogger.Debug("telemetry send error", "error", err.Error())
-			} else {
-				log.DefaultLogger.Debugw("sending telemetry server start event", "output", out)
-			}
-		}
-
-		ticker := time.NewTicker(HeartbeatInterval)
-		for {
-			telemetryEnabled, _ = configMapConfig.GetTelemetryEnabled(ctx)
-			if telemetryEnabled {
-				l := log.DefaultLogger.With("measurmentId", telemetry.TestkubeMeasurementID, "secret", text.Obfuscate(telemetry.TestkubeMeasurementSecret))
-				host, err := os.Hostname()
-				if err != nil {
-					l.Debugw("getting hostname error", "hostname", host, "error", err)
-				}
-				out, err := telemetry.SendHeartbeatEvent(host, version.Version, clusterId)
-				if err != nil {
-					l.Debugw("sending heartbeat telemetry event error", "error", err)
-				} else {
-					l.Debugw("sending heartbeat telemetry event", "output", out)
-				}
-			}
-			<-ticker.C
-		}
-	}()
+	g.Go(func() error {
+		sendHeartbeatTelemetry(ctx, clusterId, configMapConfig)
+		return nil
+	})
 
 	log.DefaultLogger.Infow(
 		"starting Testkube API server",
@@ -626,6 +601,37 @@ func main() {
 
 	if err := g.Wait(); err != nil {
 		log.DefaultLogger.Fatalf("Testkube is shutting down: %v", err)
+	}
+}
+
+func sendHeartbeatTelemetry(ctx context.Context, clusterId string, configMapConfig *configRepo.ConfigMapConfig) {
+	telemetryEnabled, _ := configMapConfig.GetTelemetryEnabled(ctx)
+	if telemetryEnabled {
+		out, err := telemetry.SendServerStartEvent(clusterId, version.Version)
+		if err != nil {
+			log.DefaultLogger.Debug("telemetry send error", "error", err.Error())
+		} else {
+			log.DefaultLogger.Debugw("sending telemetry server start event", "output", out)
+		}
+	}
+
+	ticker := time.NewTicker(HeartbeatInterval)
+	for {
+		telemetryEnabled, _ = configMapConfig.GetTelemetryEnabled(ctx)
+		if telemetryEnabled {
+			l := log.DefaultLogger.With("measurmentId", telemetry.TestkubeMeasurementID, "secret", text.Obfuscate(telemetry.TestkubeMeasurementSecret))
+			host, err := os.Hostname()
+			if err != nil {
+				l.Debugw("getting hostname error", "hostname", host, "error", err)
+			}
+			out, err := telemetry.SendHeartbeatEvent(host, version.Version, clusterId)
+			if err != nil {
+				l.Debugw("sending heartbeat telemetry event error", "error", err)
+			} else {
+				l.Debugw("sending heartbeat telemetry event", "output", out)
+			}
+		}
+		<-ticker.C
 	}
 }
 
@@ -783,11 +789,4 @@ func newProContext(cfg *config.Config, grpcClient cloud.TestKubeCloudAPIClient) 
 	}
 
 	return proContext
-}
-
-func exitOnError(title string, err error) {
-	if err != nil {
-		log.DefaultLogger.Errorw(title, "error", err)
-		os.Exit(1)
-	}
 }
