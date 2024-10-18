@@ -10,7 +10,6 @@ import (
 	"syscall"
 
 	"go.mongodb.org/mongo-driver/mongo"
-	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/kubeshop/testkube/internal/config"
@@ -49,10 +48,10 @@ func GetEnvironmentVariables() map[string]string {
 	return envs
 }
 
-func HandleCancelSignal(g *errgroup.Group, ctx context.Context) {
+func HandleCancelSignal(ctx context.Context) func() error {
 	stopSignal := make(chan os.Signal, 1)
 	signal.Notify(stopSignal, syscall.SIGINT, syscall.SIGTERM)
-	g.Go(func() error {
+	return func() error {
 		select {
 		case <-ctx.Done():
 			return nil
@@ -64,7 +63,7 @@ func HandleCancelSignal(g *errgroup.Group, ctx context.Context) {
 			// Returning an error cancels the errgroup.
 			return fmt.Errorf("received signal: %v", sig)
 		}
-	})
+	}
 }
 
 // Configuration

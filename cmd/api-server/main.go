@@ -130,7 +130,7 @@ func main() {
 
 	// Cancel the errgroup context on SIGINT and SIGTERM,
 	// which shuts everything down gracefully.
-	commons.HandleCancelSignal(g, ctx)
+	g.Go(commons.HandleCancelSignal(ctx))
 
 	commons.MustFreePort(cfg.APIServerPort)
 	commons.MustFreePort(cfg.GraphqlPort)
@@ -577,38 +577,36 @@ func main() {
 	}
 
 	// telemetry based functions
-	if telemetryEnabled {
-		go func() {
+	go func() {
+		telemetryEnabled, _ := configMapConfig.GetTelemetryEnabled(ctx)
+		if telemetryEnabled {
 			out, err := telemetry.SendServerStartEvent(clusterId, version.Version)
 			if err != nil {
 				log.DefaultLogger.Debug("telemetry send error", "error", err.Error())
 			} else {
 				log.DefaultLogger.Debugw("sending telemetry server start event", "output", out)
 			}
+		}
 
-			ticker := time.NewTicker(HeartbeatInterval)
-			for {
-				telemetryEnabled, err := configMapConfig.GetTelemetryEnabled(ctx)
+		ticker := time.NewTicker(HeartbeatInterval)
+		for {
+			telemetryEnabled, _ = configMapConfig.GetTelemetryEnabled(ctx)
+			if telemetryEnabled {
+				l := log.DefaultLogger.With("measurmentId", telemetry.TestkubeMeasurementID, "secret", text.Obfuscate(telemetry.TestkubeMeasurementSecret))
+				host, err := os.Hostname()
 				if err != nil {
-					log.DefaultLogger.Errorw("error getting config map", "error", err)
+					l.Debugw("getting hostname error", "hostname", host, "error", err)
 				}
-				if telemetryEnabled {
-					l := log.DefaultLogger.With("measurmentId", telemetry.TestkubeMeasurementID, "secret", text.Obfuscate(telemetry.TestkubeMeasurementSecret))
-					host, err := os.Hostname()
-					if err != nil {
-						l.Debugw("getting hostname error", "hostname", host, "error", err)
-					}
-					out, err := telemetry.SendHeartbeatEvent(host, version.Version, clusterId)
-					if err != nil {
-						l.Debugw("sending heartbeat telemetry event error", "error", err)
-					} else {
-						l.Debugw("sending heartbeat telemetry event", "output", out)
-					}
+				out, err := telemetry.SendHeartbeatEvent(host, version.Version, clusterId)
+				if err != nil {
+					l.Debugw("sending heartbeat telemetry event error", "error", err)
+				} else {
+					l.Debugw("sending heartbeat telemetry event", "output", out)
 				}
-				<-ticker.C
 			}
-		}()
-	}
+			<-ticker.C
+		}
+	}()
 
 	log.DefaultLogger.Infow(
 		"starting Testkube API server",
