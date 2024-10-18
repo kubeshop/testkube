@@ -531,7 +531,7 @@ func main() {
 			return reconcilerClient.Run(ctx)
 		})
 	} else {
-		log.DefaultLogger.Info("reconclier is disabled")
+		log.DefaultLogger.Info("reconciler is disabled")
 	}
 
 	// telemetry based functions
