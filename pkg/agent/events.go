@@ -88,6 +88,8 @@ func (ag *Agent) runEventLoop(ctx context.Context) error {
 				return err
 			}
 
+			ag.resetTimoutTimer()
+
 		case ev := <-ag.events:
 			b, err := json.Marshal(ev)
 			if err != nil {
