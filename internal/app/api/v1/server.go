@@ -32,7 +32,7 @@ func NewTestkubeAPI(
 	testWorkflowResults testworkflow.Repository,
 	testWorkflowOutput testworkflow.OutputRepository,
 	artifactsStorage storage.ArtifactsStorage,
-	webhookClient *executorsclientv1.WebhooksClient,
+	webhookClient executorsclientv1.WebhooksInterface,
 	testTriggersClient testtriggersclientv1.Interface,
 	testWorkflowsClient testworkflowsv1.Interface,
 	testWorkflowTemplatesClient testworkflowsv1.TestWorkflowTemplatesInterface,
@@ -92,7 +92,7 @@ type TestkubeAPI struct {
 	ExecutionWorkerClient       executionworkertypes.Worker
 	DeprecatedClients           commons.DeprecatedClients
 	SecretManager               secretmanager.SecretManager
-	WebhooksClient              *executorsclientv1.WebhooksClient
+	WebhooksClient              executorsclientv1.WebhooksInterface
 	TestTriggersClient          testtriggersclientv1.Interface
 	TestWorkflowsClient         testworkflowsv1.Interface
 	TestWorkflowTemplatesClient testworkflowsv1.TestWorkflowTemplatesInterface
