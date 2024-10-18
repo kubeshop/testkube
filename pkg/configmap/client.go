@@ -34,12 +34,16 @@ func NewClient(namespace string) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
+	return NewClientFor(clientSet, namespace), nil
+}
 
+// NewClientFor is a method to create new configmap client using existing clientSet
+func NewClientFor(clientSet kubernetes.Interface, namespace string) *Client {
 	return &Client{
 		ClientSet: clientSet,
 		Log:       log.DefaultLogger,
 		Namespace: namespace,
-	}, nil
+	}
 }
 
 // Create is a method to create new configmap

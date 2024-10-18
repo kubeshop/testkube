@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"go.uber.org/zap"
@@ -212,11 +213,21 @@ func WithDisableSecretCreation(disableSecretCreation bool) Option {
 func (s *Service) Run(ctx context.Context) {
 	leaseChan := make(chan bool)
 
-	go s.runLeaseChecker(ctx, leaseChan)
-
-	go s.runWatcher(ctx, leaseChan)
-
-	go s.runExecutionScraper(ctx)
+	wg := sync.WaitGroup{}
+	wg.Add(3)
+	go func() {
+		s.runLeaseChecker(ctx, leaseChan)
+		wg.Done()
+	}()
+	go func() {
+		s.runWatcher(ctx, leaseChan)
+		wg.Done()
+	}()
+	go func() {
+		s.runExecutionScraper(ctx)
+		wg.Done()
+	}()
+	wg.Wait()
 }
 
 func (s *Service) addTrigger(t *testtriggersv1.TestTrigger) {
