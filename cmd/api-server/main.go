@@ -16,21 +16,18 @@ import (
 
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
+	"github.com/kubeshop/testkube/cmd/api-server/services"
 	"github.com/kubeshop/testkube/internal/app/api/debug"
+	cloudtestworkflow "github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
 	"github.com/kubeshop/testkube/pkg/event/kind/cdevent"
 	"github.com/kubeshop/testkube/pkg/event/kind/k8sevent"
 	"github.com/kubeshop/testkube/pkg/event/kind/webhook"
 	ws "github.com/kubeshop/testkube/pkg/event/kind/websocket"
-	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker"
-	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
-	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/kubernetesworker"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
-
-	cloudtestworkflow "github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
 	testworkflow2 "github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/secretmanager"
 	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
 	"github.com/kubeshop/testkube/pkg/tcl/schedulertcl"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/presets"
 
 	"go.mongodb.org/mongo-driver/mongo"
@@ -373,52 +370,7 @@ func main() {
 	}
 
 	// Build internal execution worker
-	namespacesConfig := map[string]kubernetesworker.NamespaceConfig{}
-	for n, s := range serviceAccountNames {
-		namespacesConfig[n] = kubernetesworker.NamespaceConfig{DefaultServiceAccountName: s}
-	}
-	cloudUrl := cfg.TestkubeProURL
-	cloudApiKey := cfg.TestkubeProAPIKey
-	objectStorageConfig := testworkflowconfig.ObjectStorageConfig{}
-	if cloudApiKey == "" {
-		cloudUrl = ""
-		objectStorageConfig = testworkflowconfig.ObjectStorageConfig{
-			Endpoint:        cfg.StorageEndpoint,
-			AccessKeyID:     cfg.StorageAccessKeyID,
-			SecretAccessKey: cfg.StorageSecretAccessKey,
-			Region:          cfg.StorageRegion,
-			Token:           cfg.StorageToken,
-			Bucket:          cfg.StorageBucket,
-			Ssl:             cfg.StorageSSL,
-			SkipVerify:      cfg.StorageSkipVerify,
-			CertFile:        cfg.StorageCertFile,
-			KeyFile:         cfg.StorageKeyFile,
-			CAFile:          cfg.StorageCAFile,
-		}
-	}
-	executionWorker := executionworker.NewKubernetes(clientset, testWorkflowProcessor, kubernetesworker.Config{
-		Cluster: kubernetesworker.ClusterConfig{
-			Id:               clusterId,
-			DefaultNamespace: cfg.TestkubeNamespace,
-			DefaultRegistry:  cfg.TestkubeRegistry,
-			Namespaces:       namespacesConfig,
-		},
-		ImageInspector: kubernetesworker.ImageInspectorConfig{
-			CacheEnabled: cfg.EnableImageDataPersistentCache,
-			CacheKey:     cfg.ImageDataPersistentCacheKey,
-			CacheTTL:     cfg.TestkubeImageCredentialsCacheTTL,
-		},
-		Connection: testworkflowconfig.WorkerConnectionConfig{
-			Url:         cloudUrl,
-			ApiKey:      cloudApiKey,
-			SkipVerify:  cfg.TestkubeProSkipVerify,
-			TlsInsecure: cfg.TestkubeProTLSInsecure,
-
-			// TODO: Prepare ControlPlane interface for OSS, so we may unify the communication
-			LocalApiUrl:   fmt.Sprintf("http://%s:%s", cfg.APIServerFullname, cfg.APIServerPort),
-			ObjectStorage: objectStorageConfig,
-		},
-	})
+	executionWorker := services.CreateExecutionWorker(clientset, cfg, clusterId, serviceAccountNames, testWorkflowProcessor)
 
 	testWorkflowExecutor := testworkflowexecutor.New(
 		eventsEmitter,
@@ -531,9 +483,8 @@ func main() {
 			getTestWorkflowNotificationsStream,
 			clusterId,
 			cfg.TestkubeClusterName,
-			envs,
 			features,
-			proContext,
+			&proContext,
 			cfg.TestkubeDockerImageVersion,
 		)
 		exitOnError("Starting agent", err)

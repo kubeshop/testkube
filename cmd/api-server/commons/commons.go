@@ -26,7 +26,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/storage/minio"
 )
 
-func exitOnError(title string, err error) {
+func ExitOnError(title string, err error) {
 	if err != nil {
 		log.DefaultLogger.Errorw(title, "error", err)
 		os.Exit(1)
@@ -71,21 +71,21 @@ func HandleCancelSignal(g *errgroup.Group, ctx context.Context) {
 
 func MustGetConfig() *config.Config {
 	cfg, err := config.Get()
-	exitOnError("error getting application config", err)
+	ExitOnError("error getting application config", err)
 	cfg.CleanLegacyVars()
 	return cfg
 }
 
 func MustGetFeatureFlags() featureflags.FeatureFlags {
 	features, err := featureflags.Get()
-	exitOnError("error getting application feature flags", err)
+	ExitOnError("error getting application feature flags", err)
 	log.DefaultLogger.Infow("Feature flags configured", "ff", features)
 	return features
 }
 
 func MustFreePort(port string) {
 	ln, err := net.Listen("tcp", ":"+port)
-	exitOnError("Checking if port "+port+" is free", err)
+	ExitOnError("Checking if port "+port+" is free", err)
 	_ = ln.Close()
 	log.DefaultLogger.Debugw("TCP Port is available", "port", port)
 }
@@ -95,7 +95,7 @@ func MustGetConfigMapConfig(ctx context.Context, name string, namespace string, 
 		name = fmt.Sprintf("testkube-api-server-config-%s", namespace)
 	}
 	configMapConfig, err := configRepo.NewConfigMapConfig(name, namespace)
-	exitOnError("Getting config map config", err)
+	ExitOnError("Getting config map config", err)
 
 	// Load the initial data
 	err = configMapConfig.Load(ctx, defaultTelemetryEnabled)
@@ -117,7 +117,7 @@ func MustGetMinioClient(cfg *config.Config) domainstorage.Client {
 		opts...,
 	)
 	err := minioClient.Connect()
-	exitOnError("Connecting to minio", err)
+	ExitOnError("Connecting to minio", err)
 	if expErr := minioClient.SetExpirationPolicy(cfg.StorageExpiration); expErr != nil {
 		log.DefaultLogger.Errorw("Error setting expiration policy", "error", expErr)
 	}
@@ -127,7 +127,7 @@ func MustGetMinioClient(cfg *config.Config) domainstorage.Client {
 func MustGetMongoDatabase(cfg *config.Config, secretClient secret.Interface) *mongo.Database {
 	mongoSSLConfig := getMongoSSLConfig(cfg, secretClient)
 	db, err := storage.GetMongoDatabase(cfg.APIMongoDSN, cfg.APIMongoDB, cfg.APIMongoDBType, cfg.APIMongoAllowTLS, mongoSSLConfig)
-	exitOnError("Getting mongo database", err)
+	ExitOnError("Getting mongo database", err)
 	return db
 }
 
@@ -141,7 +141,7 @@ func getMongoSSLConfig(cfg *config.Config, secretClient secret.Interface) *stora
 	clientCertPath := "/tmp/mongodb.pem"
 	rootCAPath := "/tmp/mongodb-root-ca.pem"
 	mongoSSLSecret, err := secretClient.Get(cfg.APIMongoSSLCert)
-	exitOnError(fmt.Sprintf("Could not get secret %s for MongoDB connection", cfg.APIMongoSSLCert), err)
+	ExitOnError(fmt.Sprintf("Could not get secret %s for MongoDB connection", cfg.APIMongoSSLCert), err)
 
 	var keyFile, caFile, pass string
 	var ok bool
@@ -156,10 +156,10 @@ func getMongoSSLConfig(cfg *config.Config, secretClient secret.Interface) *stora
 	}
 
 	err = os.WriteFile(clientCertPath, []byte(keyFile), 0644)
-	exitOnError("Could not place mongodb certificate key file", err)
+	ExitOnError("Could not place mongodb certificate key file", err)
 
 	err = os.WriteFile(rootCAPath, []byte(caFile), 0644)
-	exitOnError("Could not place mongodb ssl ca file: %s", err)
+	ExitOnError("Could not place mongodb ssl ca file: %s", err)
 
 	return &storage.MongoSSLConfig{
 		SSLClientCertificateKeyFile:         clientCertPath,
