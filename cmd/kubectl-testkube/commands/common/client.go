@@ -15,6 +15,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/cloudlogin"
 )
 
+const UserAgentCLI = "testkube-cli"
+
 // GetClient returns api client
 func GetClient(cmd *cobra.Command) (client.Client, string, error) {
 	clientType := cmd.Flag("client").Value.String()
@@ -34,6 +36,11 @@ func GetClient(cmd *cobra.Command) (client.Client, string, error) {
 	if err != nil {
 		return nil, "", fmt.Errorf("parsing flag value %w", err)
 	}
+
+	if headers == nil {
+		headers = make(map[string]string)
+	}
+	headers["User-Agent"] = UserAgentCLI
 
 	options := client.Options{
 		Namespace: namespace,
