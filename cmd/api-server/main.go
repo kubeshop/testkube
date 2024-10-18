@@ -433,12 +433,6 @@ func main() {
 	}
 
 	// Create HTTP server
-	var httpConfig server.Config
-	err = envconfig.Process("APISERVER", &httpConfig)
-	// Do we want to panic here or just ignore the error
-	if err != nil {
-		panic(err)
-	}
 	httpServer := server.NewServer(server.Config{Port: cfg.APIServerPort})
 	httpServer.Routes.Static("/api-docs", "./api/v1")
 	httpServer.Routes.Use(cors.New())
