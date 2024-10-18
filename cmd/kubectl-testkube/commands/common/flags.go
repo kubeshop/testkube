@@ -59,7 +59,7 @@ func CreateVariables(cmd *cobra.Command, ignoreSecretVariable bool) (vars map[st
 	return
 }
 
-func PopulateMasterFlags(cmd *cobra.Command, opts *HelmOptions, optionalIds bool) {
+func PopulateMasterFlags(cmd *cobra.Command, opts *HelmOptions, isDockerCmd bool) {
 	var (
 		apiURIPrefix, uiURIPrefix, agentURIPrefix, cloudRootDomain, proRootDomain string
 		insecure                                                                  bool
@@ -85,11 +85,16 @@ func PopulateMasterFlags(cmd *cobra.Command, opts *HelmOptions, optionalIds bool
 	cmd.Flags().StringVar(&opts.Master.UiUrlPrefix, "ui-prefix", defaultUiPrefix, "usually don't need to be changed [required for custom cloud mode]")
 	cmd.Flags().StringVar(&opts.Master.RootDomain, "root-domain", defaultRootDomain, "usually don't need to be changed [required for custom cloud mode]")
 
-	cmd.Flags().StringVar(&opts.Master.URIs.Agent, "agent-uri", "", "Testkube Pro agent URI [required for centralized mode]")
+	agentURI := ""
+	if isDockerCmd {
+		agentURI = "agent.testkube.io:443"
+	}
+
+	cmd.Flags().StringVar(&opts.Master.URIs.Agent, "agent-uri", agentURI, "Testkube Pro agent URI [required for centralized mode]")
 	cmd.Flags().StringVar(&opts.Master.URIs.Logs, "logs-uri", "", "Testkube Pro logs URI [required for centralized mode]")
 	cmd.Flags().StringVar(&opts.Master.AgentToken, "agent-token", "", "Testkube Pro agent key [required for centralized mode]")
 	neededForLogin := ""
-	if optionalIds {
+	if isDockerCmd {
 		neededForLogin = ". It can be skipped for no login mode"
 	}
 

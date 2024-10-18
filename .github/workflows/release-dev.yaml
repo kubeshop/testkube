@@ -124,6 +124,9 @@ jobs:
   build_agent_image:
     name: Build a Docker image for Testkube Agent
     runs-on: ubuntu-latest
+    env:
+      TESTKUBE_CLOUD_URL: "agent.testkube.io:443"
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -163,6 +166,7 @@ jobs:
             ga_id=${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_ID}}
             ga_secret=${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_SECRET}}
             docker_image_version=${{steps.tag.outputs.tag}}
+            cloud_url=${{ env.TESTKUBE_CLOUD_URL }}
           context: build/kind
           file: build/kind/kind.Dockerfile
           platforms: linux/amd64,linux/arm64/v8

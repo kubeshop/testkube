@@ -35,6 +35,8 @@ ARG ga_secret
 ENV GA_SECRET=$ga_secret
 ARG docker_image_version
 ENV DOCKER_IMAGE_VERSION=$docker_image_version
+ARG cloud_url
+ENV CLOUD_URL=$cloud_url
 
 # Step 8: Set Docker entry point for DIND (Docker-in-Docker)
 ENTRYPOINT ["tini", "--", "/usr/local/bin/entrypoint.sh"]
