@@ -1,7 +1,6 @@
 package v1
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"net"
@@ -10,22 +9,21 @@ import (
 	"strconv"
 	"sync"
 	"syscall"
-	"time"
 
 	"github.com/pkg/errors"
+	"go.uber.org/zap"
 
 	testtriggersclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testtriggers/v1"
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/pkg/client/testworkflows/v1"
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/log"
 	repoConfig "github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/secretmanager"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
-
-	"github.com/kubeshop/testkube/pkg/version"
 
 	"k8s.io/client-go/kubernetes"
 
@@ -50,16 +48,10 @@ import (
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/server"
 	"github.com/kubeshop/testkube/pkg/storage"
-	"github.com/kubeshop/testkube/pkg/telemetry"
-	"github.com/kubeshop/testkube/pkg/utils/text"
-)
-
-const (
-	HeartbeatInterval = time.Hour
 )
 
 func NewTestkubeAPI(
-	httpConfig server.Config,
+	clusterId string,
 	deprecatedRepositories commons.DeprecatedRepositories,
 	deprecatedClients commons.DeprecatedClients,
 	namespace string,
@@ -100,7 +92,8 @@ func NewTestkubeAPI(
 ) TestkubeAPI {
 
 	return TestkubeAPI{
-		HTTPServer:                  server.NewServer(httpConfig),
+		ClusterID:                   clusterId,
+		Log:                         log.DefaultLogger,
 		DeprecatedRepositories:      deprecatedRepositories,
 		DeprecatedClients:           deprecatedClients,
 		TestWorkflowResults:         testWorkflowResults,
@@ -142,7 +135,8 @@ func NewTestkubeAPI(
 }
 
 type TestkubeAPI struct {
-	server.HTTPServer
+	ClusterID                   string
+	Log                         *zap.SugaredLogger
 	TestWorkflowResults         testworkflow.Repository
 	TestWorkflowOutput          testworkflow.OutputRepository
 	Executor                    client.Executor
@@ -203,45 +197,15 @@ type OauthParams struct {
 	Scopes       string
 }
 
-// SendTelemetryStartEvent sends anonymous start event to telemetry trackers
-func (s TestkubeAPI) SendTelemetryStartEvent(ctx context.Context, ch chan struct{}) {
-	go func() {
-		defer func() {
-			ch <- struct{}{}
-		}()
+func (s *TestkubeAPI) Init(server server.HTTPServer) {
+	server.Routes.Static("/api-docs", "./api/v1")
+	server.Routes.Use(cors.New())
+	server.Routes.Use(s.AuthHandler())
 
-		telemetryEnabled, err := s.ConfigMap.GetTelemetryEnabled(ctx)
-		if err != nil {
-			s.Log.Errorw("error getting config map", "error", err)
-		}
+	server.Routes.Get("/info", s.InfoHandler())
+	server.Routes.Get("/debug", s.DebugHandler())
 
-		if !telemetryEnabled {
-			return
-		}
-
-		out, err := telemetry.SendServerStartEvent(s.Config.ClusterID, version.Version)
-		if err != nil {
-			s.Log.Debug("telemetry send error", "error", err.Error())
-		} else {
-			s.Log.Debugw("sending telemetry server start event", "output", out)
-		}
-	}()
-}
-
-func (s *TestkubeAPI) Init() {
-	s.InitRoutes()
-}
-
-func (s *TestkubeAPI) InitRoutes() {
-	s.Routes.Static("/api-docs", "./api/v1")
-	s.Routes.Use(cors.New())
-	s.Routes.Use(s.AuthHandler())
-
-	s.Routes.Get("/info", s.InfoHandler())
-	s.Routes.Get("/routes", s.RoutesHandler())
-	s.Routes.Get("/debug", s.DebugHandler())
-
-	root := s.Routes
+	root := server.Routes
 
 	executors := root.Group("/executors")
 
@@ -296,7 +260,7 @@ func (s *TestkubeAPI) InitRoutes() {
 	tests.Get("/:id/executions/:executionID", s.GetExecutionHandler())
 	tests.Patch("/:id/executions/:executionID", s.AbortExecutionHandler())
 
-	testWithExecutions := s.Routes.Group("/test-with-executions")
+	testWithExecutions := server.Routes.Group("/test-with-executions")
 	testWithExecutions.Get("/", s.ListTestWithExecutionsHandler())
 	testWithExecutions.Get("/:id", s.GetTestWithExecutionHandler())
 
@@ -446,10 +410,10 @@ func (s *TestkubeAPI) InitRoutes() {
 		dashboardURI = "http://testkube-dashboard"
 	}
 	s.Log.Infow("dashboard uri", "uri", dashboardURI)
-	s.Mux.All("/", proxy.Forward(dashboardURI))
+	server.Mux.All("/", proxy.Forward(dashboardURI))
 
 	// set up proxy for the internal GraphQL server
-	s.Mux.All("/graphql", func(c *fiber.Ctx) error {
+	server.Mux.All("/graphql", func(c *fiber.Ctx) error {
 		// Connect to server
 		serverConn, err := net.Dial("tcp", fmt.Sprintf(":%d", s.graphqlPort))
 		if err != nil {
@@ -515,35 +479,6 @@ func (s *TestkubeAPI) InitRoutes() {
 		})
 		return nil
 	})
-}
-
-func (s TestkubeAPI) StartTelemetryHeartbeats(ctx context.Context, ch chan struct{}) {
-	go func() {
-		<-ch
-
-		ticker := time.NewTicker(HeartbeatInterval)
-		for {
-			telemetryEnabled, err := s.ConfigMap.GetTelemetryEnabled(ctx)
-			if err != nil {
-				s.Log.Errorw("error getting config map", "error", err)
-			}
-			if telemetryEnabled {
-				l := s.Log.With("measurmentId", telemetry.TestkubeMeasurementID, "secret", text.Obfuscate(telemetry.TestkubeMeasurementSecret))
-				host, err := os.Hostname()
-				if err != nil {
-					l.Debugw("getting hostname error", "hostname", host, "error", err)
-				}
-				out, err := telemetry.SendHeartbeatEvent(host, version.Version, s.Config.ClusterID)
-				if err != nil {
-					l.Debugw("sending heartbeat telemetry event error", "error", err)
-				} else {
-					l.Debugw("sending heartbeat telemetry event", "output", out)
-				}
-
-			}
-			<-ticker.C
-		}
-	}()
 }
 
 // TODO should we use single generic filter for all list based resources ?

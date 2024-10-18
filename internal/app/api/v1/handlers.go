@@ -79,7 +79,7 @@ func (s *TestkubeAPI) InfoHandler() fiber.Handler {
 			Version:               version.Version,
 			Namespace:             s.Namespace,
 			Context:               apiContext,
-			ClusterId:             s.Config.ClusterID,
+			ClusterId:             s.ClusterID,
 			EnvId:                 envID,
 			OrgId:                 orgID,
 			HelmchartVersion:      s.helmchartVersion,
@@ -93,23 +93,6 @@ func (s *TestkubeAPI) InfoHandler() fiber.Handler {
 			ExecutionNamespaces: executionNamespaces,
 			DockerImageVersion:  s.dockerImageVersion,
 		})
-	}
-}
-
-// RoutesHandler is a handler to get existing routes
-func (s *TestkubeAPI) RoutesHandler() fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		var routes []fiber.Route
-
-		stack := s.Mux.Stack()
-		for _, e := range stack {
-			for _, s := range e {
-				route := *s
-				routes = append(routes, route)
-			}
-		}
-
-		return c.JSON(routes)
 	}
 }
 

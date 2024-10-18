@@ -8,9 +8,8 @@ import (
 
 // Config for HTTP server
 type Config struct {
-	Port      int
-	ClusterID string
-	Http      fiber.Config
+	Port int
+	Http fiber.Config
 }
 
 // Addr returns port based address

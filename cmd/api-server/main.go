@@ -30,8 +30,10 @@ import (
 	"github.com/kubeshop/testkube/pkg/server"
 	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
 	"github.com/kubeshop/testkube/pkg/tcl/schedulertcl"
+	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/presets"
+	"github.com/kubeshop/testkube/pkg/utils/text"
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"google.golang.org/grpc"
@@ -80,6 +82,10 @@ import (
 	"github.com/kubeshop/testkube/pkg/reconciler"
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
+)
+
+const (
+	HeartbeatInterval = time.Hour
 )
 
 func init() {
@@ -435,8 +441,9 @@ func main() {
 		panic(err)
 	}
 
+	httpServer := server.NewServer(server.Config{Port: cfg.APIServerPort})
 	api := apiv1.NewTestkubeAPI(
-		server.Config{Port: cfg.APIServerPort},
+		clusterId,
 		deprecatedRepositories,
 		deprecatedClients,
 		cfg.TestkubeNamespace,
@@ -497,7 +504,7 @@ func main() {
 		}
 		agentHandle, err := agent.NewAgent(
 			log.DefaultLogger,
-			api.Mux.Handler(),
+			httpServer.Mux.Handler(),
 			grpcClient,
 			api.GetLogsStream,
 			getTestWorkflowNotificationsStream,
@@ -516,7 +523,7 @@ func main() {
 		eventsEmitter.Loader.Register(agentHandle)
 	}
 
-	api.Init()
+	api.Init(httpServer)
 	if !cfg.DisableTestTriggers {
 		k8sCfg, err := k8sclient.GetK8sClientConfig()
 		exitOnError("Getting k8s client config", err)
@@ -560,11 +567,38 @@ func main() {
 	}
 
 	// telemetry based functions
-	telemetryCh := make(chan struct{})
-	defer close(telemetryCh)
+	if telemetryEnabled {
+		go func() {
+			out, err := telemetry.SendServerStartEvent(clusterId, version.Version)
+			if err != nil {
+				log.DefaultLogger.Debug("telemetry send error", "error", err.Error())
+			} else {
+				log.DefaultLogger.Debugw("sending telemetry server start event", "output", out)
+			}
 
-	api.SendTelemetryStartEvent(ctx, telemetryCh)
-	api.StartTelemetryHeartbeats(ctx, telemetryCh)
+			ticker := time.NewTicker(HeartbeatInterval)
+			for {
+				telemetryEnabled, err := configMapConfig.GetTelemetryEnabled(ctx)
+				if err != nil {
+					log.DefaultLogger.Errorw("error getting config map", "error", err)
+				}
+				if telemetryEnabled {
+					l := log.DefaultLogger.With("measurmentId", telemetry.TestkubeMeasurementID, "secret", text.Obfuscate(telemetry.TestkubeMeasurementSecret))
+					host, err := os.Hostname()
+					if err != nil {
+						l.Debugw("getting hostname error", "hostname", host, "error", err)
+					}
+					out, err := telemetry.SendHeartbeatEvent(host, version.Version, clusterId)
+					if err != nil {
+						l.Debugw("sending heartbeat telemetry event error", "error", err)
+					} else {
+						l.Debugw("sending heartbeat telemetry event", "output", out)
+					}
+				}
+				<-ticker.C
+			}
+		}()
+	}
 
 	log.DefaultLogger.Infow(
 		"starting Testkube API server",
@@ -584,7 +618,7 @@ func main() {
 	}
 
 	g.Go(func() error {
-		return api.Run(ctx)
+		return httpServer.Run(ctx)
 	})
 
 	g.Go(func() error {
