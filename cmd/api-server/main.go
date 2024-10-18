@@ -27,6 +27,7 @@ import (
 	ws "github.com/kubeshop/testkube/pkg/event/kind/websocket"
 	testworkflow2 "github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/secretmanager"
+	"github.com/kubeshop/testkube/pkg/server"
 	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
 	"github.com/kubeshop/testkube/pkg/tcl/schedulertcl"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
@@ -427,7 +428,20 @@ func main() {
 		log.DefaultLogger.Debugw("Processing TESTKUBE_OAUTH environment config", err)
 	}
 
+	var httpConfig server.Config
+	err = envconfig.Process("APISERVER", &httpConfig)
+	// Do we want to panic here or just ignore the error
+	if err != nil {
+		panic(err)
+	}
+	httpConfig.ClusterID = clusterId
+	httpConfig.Http.BodyLimit = httpConfig.HttpBodyLimit
+	if httpConfig.HttpBodyLimit == 0 {
+		httpConfig.Http.BodyLimit = apiv1.DefaultHttpBodyLimit
+	}
+
 	api := apiv1.NewTestkubeAPI(
+		httpConfig,
 		deprecatedRepositories,
 		deprecatedClients,
 		cfg.TestkubeNamespace,
@@ -441,7 +455,6 @@ func main() {
 		testWorkflowsClient,
 		testWorkflowTemplatesClient,
 		configMapConfig,
-		clusterId,
 		eventsEmitter,
 		websocketLoader,
 		executor,

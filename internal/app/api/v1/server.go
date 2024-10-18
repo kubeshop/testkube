@@ -34,7 +34,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/proxy"
-	"github.com/kelseyhightower/envconfig"
 
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
@@ -60,6 +59,7 @@ const (
 )
 
 func NewTestkubeAPI(
+	httpConfig server.Config,
 	deprecatedRepositories commons.DeprecatedRepositories,
 	deprecatedClients commons.DeprecatedClients,
 	namespace string,
@@ -73,7 +73,6 @@ func NewTestkubeAPI(
 	testWorkflowsClient testworkflowsv1.Interface,
 	testWorkflowTemplatesClient testworkflowsv1.TestWorkflowTemplatesInterface,
 	configMap repoConfig.Repository,
-	clusterId string,
 	eventsEmitter *event.Emitter,
 	websocketLoader *ws.WebsocketLoader,
 	executor client.Executor,
@@ -99,19 +98,6 @@ func NewTestkubeAPI(
 	storageParams StorageParams,
 	oauthParams OauthParams,
 ) TestkubeAPI {
-
-	var httpConfig server.Config
-	err := envconfig.Process("APISERVER", &httpConfig)
-	// Do we want to panic here or just ignore the error
-	if err != nil {
-		panic(err)
-	}
-
-	httpConfig.ClusterID = clusterId
-	httpConfig.Http.BodyLimit = httpConfig.HttpBodyLimit
-	if httpConfig.HttpBodyLimit == 0 {
-		httpConfig.Http.BodyLimit = DefaultHttpBodyLimit
-	}
 
 	return TestkubeAPI{
 		HTTPServer:                  server.NewServer(httpConfig),
