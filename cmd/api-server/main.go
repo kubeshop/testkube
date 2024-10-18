@@ -247,10 +247,12 @@ func main() {
 
 	metrics := metrics.NewMetrics()
 
-	defaultExecutors, err := parseDefaultExecutors(cfg)
+	defaultExecutors, images, err := parseDefaultExecutors(cfg)
 	exitOnError("Parsing default executors", err)
-	images, err := kubeexecutor.SyncDefaultExecutors(deprecatedClients.Executors(), cfg.TestkubeNamespace, defaultExecutors, cfg.TestkubeReadonlyExecutors)
-	exitOnError("Sync default executors", err)
+	if !cfg.TestkubeReadonlyExecutors {
+		err := kubeexecutor.SyncDefaultExecutors(deprecatedClients.Executors(), cfg.TestkubeNamespace, defaultExecutors)
+		exitOnError("Sync default executors", err)
+	}
 
 	proContext := newProContext(cfg, grpcClient)
 
@@ -571,7 +573,7 @@ func main() {
 	}
 }
 
-func parseDefaultExecutors(cfg *config.Config) (executors []testkube.ExecutorDetails, err error) {
+func parseDefaultExecutors(cfg *config.Config) (executors []testkube.ExecutorDetails, images kubeexecutor.Images, err error) {
 	rawExecutors, err := parser.LoadConfigFromStringOrFile(
 		cfg.TestkubeDefaultExecutors,
 		cfg.TestkubeConfigDir,
@@ -579,11 +581,11 @@ func parseDefaultExecutors(cfg *config.Config) (executors []testkube.ExecutorDet
 		"executors",
 	)
 	if err != nil {
-		return nil, err
+		return nil, images, err
 	}
 
 	if err = json.Unmarshal([]byte(rawExecutors), &executors); err != nil {
-		return nil, err
+		return nil, images, err
 	}
 
 	enabledExecutors, err := parser.LoadConfigFromStringOrFile(
@@ -593,27 +595,53 @@ func parseDefaultExecutors(cfg *config.Config) (executors []testkube.ExecutorDet
 		"enabled executors",
 	)
 	if err != nil {
-		return nil, err
+		return nil, images, err
 	}
 
+	// Load internal images
+	next := make([]testkube.ExecutorDetails, 0)
+	for i := range executors {
+		if executors[i].Name == "logs-sidecar" {
+			images.LogSidecar = executors[i].Executor.Image
+			continue
+		}
+		if executors[i].Name == "init-executor" {
+			images.Init = executors[i].Executor.Image
+			continue
+		}
+		if executors[i].Name == "scraper-executor" {
+			images.Scraper = executors[i].Executor.Image
+			continue
+		}
+		if executors[i].Executor == nil {
+			continue
+		}
+		next = append(next, executors[i])
+	}
+	executors = next
+
+	// When there is no executors selected, enable all
+	if enabledExecutors == "" {
+		return executors, images, nil
+	}
+
+	// Filter enabled executors
 	specifiedExecutors := make(map[string]struct{})
-	if enabledExecutors != "" {
-		for _, executor := range strings.Split(enabledExecutors, ",") {
-			if strings.TrimSpace(executor) == "" {
-				continue
-			}
-
-			specifiedExecutors[strings.TrimSpace(executor)] = struct{}{}
+	for _, executor := range strings.Split(enabledExecutors, ",") {
+		if strings.TrimSpace(executor) == "" {
+			continue
 		}
+		specifiedExecutors[strings.TrimSpace(executor)] = struct{}{}
+	}
 
-		for i := len(executors) - 1; i >= 0; i-- {
-			if _, ok := specifiedExecutors[executors[i].Name]; !ok {
-				executors = append(executors[:i], executors[i+1:]...)
-			}
+	next = make([]testkube.ExecutorDetails, 0)
+	for i := range executors {
+		if _, ok := specifiedExecutors[executors[i].Name]; ok {
+			next = append(next, executors[i])
 		}
 	}
 
-	return executors, nil
+	return next, images, nil
 }
 
 func newNATSEncodedConnection(cfg *config.Config) (*nats.EncodedConn, error) {
