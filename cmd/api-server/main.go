@@ -465,6 +465,7 @@ func main() {
 		&proContext,
 		storageParams,
 	)
+	deprecatedApi.Init(httpServer)
 	api := apiv1.NewTestkubeAPI(
 		deprecatedClients,
 		clusterId,
@@ -491,6 +492,7 @@ func main() {
 		serviceAccountNames,
 		cfg.TestkubeDockerImageVersion,
 	)
+	api.Init(httpServer)
 
 	if mode == common.ModeAgent {
 		log.DefaultLogger.Info("starting agent service")
@@ -531,9 +533,6 @@ func main() {
 		})
 		eventsEmitter.Loader.Register(agentHandle)
 	}
-
-	deprecatedApi.Init(httpServer)
-	api.Init(httpServer)
 
 	if !cfg.DisableTestTriggers {
 		k8sCfg, err := k8sclient.GetK8sClientConfig()
