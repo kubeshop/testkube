@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"os"
 	"reflect"
 	"strconv"
 	"sync"
@@ -32,7 +31,6 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
-	"github.com/gofiber/fiber/v2/middleware/proxy"
 
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
@@ -403,14 +401,6 @@ func (s *TestkubeAPI) Init(server server.HTTPServer) {
 
 	repositories := root.Group("/repositories")
 	repositories.Post("/", s.ValidateRepositoryHandler())
-
-	// mount dashboard on /ui
-	dashboardURI := os.Getenv("TESTKUBE_DASHBOARD_URI")
-	if dashboardURI == "" {
-		dashboardURI = "http://testkube-dashboard"
-	}
-	s.Log.Infow("dashboard uri", "uri", dashboardURI)
-	server.Mux.All("/", proxy.Forward(dashboardURI))
 
 	// set up proxy for the internal GraphQL server
 	server.Mux.All("/graphql", func(c *fiber.Ctx) error {
