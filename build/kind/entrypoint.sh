@@ -173,13 +173,6 @@ if [ -z "$AGENT_KEY" ]; then
   exit 1
 fi
 
-# Check if cloud url is provided
-if [ -z "$CLOUD_URL" ]; then
-  log "Testkube installation failed. Please provide CLOUD_URL env var"
-  send_telenetry "docker_installation_failed" "parameter_not_found" "cloud url is empty"
-  exit 1
-fi
-
 # Step 1: Start docker service in background
 /usr/local/bin/dockerd-entrypoint.sh &
 
