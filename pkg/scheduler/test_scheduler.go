@@ -60,14 +60,14 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 	}
 
 	// test name + test execution name should be unique
-	execution, _ = s.testResults.GetByNameAndTest(ctx, request.Name, test.Name)
+	execution, _ = s.deprecatedRepositories.TestResults().GetByNameAndTest(ctx, request.Name, test.Name)
 
 	if execution.Name == request.Name {
 		err := errors.Errorf("test execution with name %s already exists", request.Name)
 		return s.handleExecutionError(ctx, execution, "duplicate execution: %w", err)
 	}
 
-	secretUUID, err := s.testsClient.GetCurrentSecretUUID(test.Name)
+	secretUUID, err := s.deprecatedClients.Tests().GetCurrentSecretUUID(test.Name)
 	if err != nil {
 		return s.handleExecutionError(ctx, execution, "can't get current secret uuid: %w", err)
 	}
@@ -93,7 +93,7 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 		return s.handleExecutionError(ctx, execution, "can't create secret variables `Secret` references: %w", err)
 	}
 
-	err = s.testResults.Insert(ctx, execution)
+	err = s.deprecatedRepositories.TestResults().Insert(ctx, execution)
 	if err != nil {
 		return s.handleExecutionError(ctx, execution, "can't create new test execution, can't insert into storage: %w", err)
 	}
@@ -103,7 +103,7 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 	execution.Start()
 
 	// update storage with current execution status
-	err = s.testResults.StartExecution(ctx, execution.Id, execution.StartTime)
+	err = s.deprecatedRepositories.TestResults().StartExecution(ctx, execution.Id, execution.StartTime)
 	if err != nil {
 		return s.handleExecutionError(ctx, execution, "can't execute test, can't insert into storage error: %w", err)
 	}
@@ -115,7 +115,7 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 	execution.ExecutionResult = result
 
 	// update storage with current execution status
-	if uerr := s.testResults.UpdateResult(ctx, execution.Id, execution); uerr != nil {
+	if uerr := s.deprecatedRepositories.TestResults().UpdateResult(ctx, execution.Id, execution); uerr != nil {
 		return s.handleExecutionError(ctx, execution, "update execution error: %w", err)
 	}
 
@@ -172,13 +172,13 @@ func (s *Scheduler) startTestExecution(ctx context.Context, options client.Execu
 }
 
 func (s *Scheduler) getExecutor(testName string) client.Executor {
-	testCR, err := s.testsClient.Get(testName)
+	testCR, err := s.deprecatedClients.Tests().Get(testName)
 	if err != nil {
 		s.logger.Errorw("can't get test", "test", testName, "error", err)
 		return s.executor
 	}
 
-	executorCR, err := s.executorsClient.GetByType(testCR.Spec.Type_)
+	executorCR, err := s.deprecatedClients.Executors().GetByType(testCR.Spec.Type_)
 	if err != nil {
 		s.logger.Errorw("can't get executor", "test", testName, "error", err)
 		return s.executor
@@ -193,7 +193,7 @@ func (s *Scheduler) getExecutor(testName string) client.Executor {
 }
 
 func (s *Scheduler) getNextTestExecutionNumber(testName string) int32 {
-	number, err := s.testResults.GetNextExecutionNumber(context.Background(), testName)
+	number, err := s.deprecatedRepositories.TestResults().GetNextExecutionNumber(context.Background(), testName)
 	if err != nil {
 		s.logger.Errorw("retrieving latest execution", "error", err)
 		return number
@@ -203,7 +203,7 @@ func (s *Scheduler) getNextTestExecutionNumber(testName string) int32 {
 }
 
 func (s *Scheduler) getNextTestSuiteExecutionNumber(testSuiteName string) int32 {
-	number, err := s.testsuiteResults.GetNextExecutionNumber(context.Background(), testSuiteName)
+	number, err := s.deprecatedRepositories.TestSuiteResults().GetNextExecutionNumber(context.Background(), testSuiteName)
 	if err != nil {
 		s.logger.Errorw("retrieving latest execution", "error", err)
 		return number
@@ -331,13 +331,13 @@ func newExecutionFromExecutionOptions(subscriptionChecker checktcl.SubscriptionC
 
 func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.ExecutionRequest) (options client.ExecuteOptions, err error) {
 	// get test content from kubernetes CRs
-	testCR, err := s.testsClient.Get(id)
+	testCR, err := s.deprecatedClients.Tests().Get(id)
 	if err != nil {
 		return options, errors.Errorf("can't get test custom resource %v", err)
 	}
 
 	if testCR.Spec.Source != "" {
-		testSourceCR, err := s.testSourcesClient.Get(testCR.Spec.Source)
+		testSourceCR, err := s.deprecatedClients.TestSources().Get(testCR.Spec.Source)
 		if err != nil {
 			return options, errors.Errorf("cannot get test source custom resource: %v", err)
 		}
@@ -470,7 +470,7 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 	}
 
 	// get executor from kubernetes CRs
-	executorCR, err := s.executorsClient.GetByType(testCR.Spec.Type_)
+	executorCR, err := s.deprecatedClients.Executors().GetByType(testCR.Spec.Type_)
 	if err != nil {
 		return options, errors.Errorf("can't get executor spec: %v", err)
 	}

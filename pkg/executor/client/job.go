@@ -14,14 +14,13 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	"github.com/kubeshop/testkube/pkg/featureflags"
 	"github.com/kubeshop/testkube/pkg/repository/config"
 
 	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/pkg/version"
-
-	"github.com/kubeshop/testkube/pkg/repository/result"
 
 	"go.uber.org/zap"
 	batchv1 "k8s.io/api/batch/v1"
@@ -36,8 +35,6 @@ import (
 
 	executorv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
 	templatesv1 "github.com/kubeshop/testkube-operator/pkg/client/templates/v1"
-	testexecutionsv1 "github.com/kubeshop/testkube-operator/pkg/client/testexecutions/v1"
-	testsv3 "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/executor"
@@ -79,17 +76,15 @@ const (
 
 // NewJobExecutor creates new job executor
 func NewJobExecutor(
-	repo result.Repository,
+	deprecatedRepositories commons.DeprecatedRepositories,
+	deprecatedClients commons.DeprecatedClients,
 	images executor.Images,
 	templates executor.Templates,
 	serviceAccountNames map[string]string,
 	metrics ExecutionMetric,
 	emiter *event.Emitter,
 	configMap config.Repository,
-	testsClient testsv3.Interface,
 	clientset kubernetes.Interface,
-	testExecutionsClient testexecutionsv1.Interface,
-	templatesClient templatesv1.Interface,
 	registry string,
 	podStartTimeout time.Duration,
 	clusterID string,
@@ -108,7 +103,8 @@ func NewJobExecutor(
 
 	return &JobExecutor{
 		ClientSet:               clientset,
-		Repository:              repo,
+		deprecatedRepositories:  deprecatedRepositories,
+		deprecatedClients:       deprecatedClients,
 		Log:                     log.DefaultLogger,
 		images:                  images,
 		templates:               templates,
@@ -116,9 +112,6 @@ func NewJobExecutor(
 		metrics:                 metrics,
 		Emitter:                 emiter,
 		configMap:               configMap,
-		testsClient:             testsClient,
-		testExecutionsClient:    testExecutionsClient,
-		templatesClient:         templatesClient,
 		registry:                registry,
 		podStartTimeout:         podStartTimeout,
 		clusterID:               clusterID,
@@ -139,7 +132,8 @@ type ExecutionMetric interface {
 
 // JobExecutor is container for managing job executor dependencies
 type JobExecutor struct {
-	Repository              result.Repository
+	deprecatedRepositories  commons.DeprecatedRepositories
+	deprecatedClients       commons.DeprecatedClients
 	Log                     *zap.SugaredLogger
 	ClientSet               kubernetes.Interface
 	Cmd                     string
@@ -149,9 +143,6 @@ type JobExecutor struct {
 	metrics                 ExecutionMetric
 	Emitter                 *event.Emitter
 	configMap               config.Repository
-	testsClient             testsv3.Interface
-	testExecutionsClient    testexecutionsv1.Interface
-	templatesClient         templatesv1.Interface
 	registry                string
 	podStartTimeout         time.Duration
 	clusterID               string
@@ -339,7 +330,7 @@ func (c *JobExecutor) MonitorJobForTimeout(ctx context.Context, jobName, namespa
 // CreateJob creates new Kubernetes job based on execution and execute options
 func (c *JobExecutor) CreateJob(ctx context.Context, execution testkube.Execution, options ExecuteOptions) error {
 	jobs := c.ClientSet.BatchV1().Jobs(execution.TestNamespace)
-	jobOptions, err := NewJobOptions(c.Log, c.templatesClient, c.images, c.templates,
+	jobOptions, err := NewJobOptions(c.Log, c.deprecatedClients.Templates(), c.images, c.templates,
 		c.serviceAccountNames, c.registry, c.clusterID, c.apiURI, execution, options, c.natsURI, c.debug)
 	if err != nil {
 		return err
@@ -455,7 +446,7 @@ func (c *JobExecutor) updateResultsFromPod(ctx context.Context, pod corev1.Pod, 
 }
 
 func (c *JobExecutor) stopExecution(ctx context.Context, l *zap.SugaredLogger, execution *testkube.Execution, result *testkube.ExecutionResult, isNegativeTest bool) error {
-	savedExecution, err := c.Repository.Get(ctx, execution.Id)
+	savedExecution, err := c.deprecatedRepositories.TestResults().Get(ctx, execution.Id)
 	if err != nil {
 		l.Errorw("get execution error", "error", err)
 		return err
@@ -491,7 +482,7 @@ func (c *JobExecutor) stopExecution(ctx context.Context, l *zap.SugaredLogger, e
 		result.ErrorMessage = execution.ExecutionResult.ErrorMessage
 	}
 
-	err = c.Repository.EndExecution(ctx, *execution)
+	err = c.deprecatedRepositories.TestResults().EndExecution(ctx, *execution)
 	if err != nil {
 		l.Errorw("Update execution result error", "error", err)
 		return err
@@ -511,32 +502,32 @@ func (c *JobExecutor) stopExecution(ctx context.Context, l *zap.SugaredLogger, e
 	// metrics increase
 	execution.ExecutionResult = result
 	l.Infow("execution ended, saving result", "executionId", execution.Id, "status", result.Status)
-	if err = c.Repository.UpdateResult(ctx, execution.Id, *execution); err != nil {
+	if err = c.deprecatedRepositories.TestResults().UpdateResult(ctx, execution.Id, *execution); err != nil {
 		l.Errorw("Update execution result error", "error", err)
 		return err
 	}
 
-	test, err := c.testsClient.Get(execution.TestName)
+	test, err := c.deprecatedClients.Tests().Get(execution.TestName)
 	if err != nil {
 		l.Errorw("getting test error", "error", err)
 		return err
 	}
 
 	test.Status = testsmapper.MapExecutionToTestStatus(execution)
-	if err = c.testsClient.UpdateStatus(test); err != nil {
+	if err = c.deprecatedClients.Tests().UpdateStatus(test); err != nil {
 		l.Errorw("updating test error", "error", err)
 		return err
 	}
 
 	if execution.TestExecutionName != "" {
-		testExecution, err := c.testExecutionsClient.Get(execution.TestExecutionName)
+		testExecution, err := c.deprecatedClients.TestExecutions().Get(execution.TestExecutionName)
 		if err != nil {
 			l.Errorw("getting test execution error", "error", err)
 			return err
 		}
 
 		testExecution.Status = testexecutionsmapper.MapAPIToCRD(execution, testExecution.Generation)
-		if err = c.testExecutionsClient.UpdateStatus(testExecution); err != nil {
+		if err = c.deprecatedClients.TestExecutions().UpdateStatus(testExecution); err != nil {
 			l.Errorw("updating test execution error", "error", err)
 			return err
 		}
@@ -800,7 +791,7 @@ func (c *JobExecutor) Abort(ctx context.Context, execution *testkube.Execution) 
 func (c *JobExecutor) Timeout(ctx context.Context, jobName string) (result *testkube.ExecutionResult) {
 	l := c.Log.With("jobName", jobName)
 	l.Infow("job timeout")
-	execution, err := c.Repository.Get(ctx, jobName)
+	execution, err := c.deprecatedRepositories.TestResults().Get(ctx, jobName)
 	if err != nil {
 		l.Errorw("error getting execution", "error", err)
 		return

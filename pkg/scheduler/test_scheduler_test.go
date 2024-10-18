@@ -12,6 +12,7 @@ import (
 	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
 	testsclientv3 "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
+	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/configmap"
 	"github.com/kubeshop/testkube/pkg/executor/client"
@@ -70,12 +71,15 @@ func TestGetExecuteOptions(t *testing.T) {
 	mockSecretClient := secret.NewMockInterface(mockCtrl)
 	mockConfigMapClient := configmap.NewMockInterface(mockCtrl)
 
+	mockDeprecatedClients := commons.NewMockDeprecatedClients(mockCtrl)
+	mockDeprecatedClients.EXPECT().Executors().Return(mockExecutorsClient).AnyTimes()
+	mockDeprecatedClients.EXPECT().Tests().Return(mockTestsClient).AnyTimes()
+
 	sc := Scheduler{
-		testsClient:     mockTestsClient,
-		executorsClient: mockExecutorsClient,
-		logger:          log.DefaultLogger,
-		secretClient:    mockSecretClient,
-		configMapClient: mockConfigMapClient,
+		deprecatedClients: mockDeprecatedClients,
+		logger:            log.DefaultLogger,
+		secretClient:      mockSecretClient,
+		configMapClient:   mockConfigMapClient,
 	}
 
 	mockTest := testsv3.Test{

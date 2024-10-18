@@ -8,20 +8,16 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 
-	"github.com/kubeshop/testkube/pkg/log"
-	"github.com/kubeshop/testkube/pkg/server"
-
 	"github.com/stretchr/testify/assert"
+
+	"github.com/kubeshop/testkube/pkg/log"
 )
 
 func TestTestkubeAPI_FluxEventHandler(t *testing.T) {
 	// bootstrap api server fiber app
 	app := fiber.New()
 	s := &TestkubeAPI{
-		HTTPServer: server.HTTPServer{
-			Mux: app,
-			Log: log.DefaultLogger,
-		},
+		Log: log.DefaultLogger,
 	}
 	app.Post("/events/flux", s.FluxEventHandler())
 

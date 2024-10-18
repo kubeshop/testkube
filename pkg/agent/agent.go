@@ -153,11 +153,10 @@ type Agent struct {
 
 	clusterID          string
 	clusterName        string
-	envs               map[string]string
 	features           featureflags.FeatureFlags
 	dockerImageVersion string
 
-	proContext config.ProContext
+	proContext *config.ProContext
 }
 
 func NewAgent(logger *zap.SugaredLogger,
@@ -167,9 +166,8 @@ func NewAgent(logger *zap.SugaredLogger,
 	workflowNotificationsFunc func(ctx context.Context, executionID string) (<-chan testkube.TestWorkflowExecutionNotification, error),
 	clusterID string,
 	clusterName string,
-	envs map[string]string,
 	features featureflags.FeatureFlags,
-	proContext config.ProContext,
+	proContext *config.ProContext,
 	dockerImageVersion string,
 ) (*Agent, error) {
 	return &Agent{
@@ -194,7 +192,6 @@ func NewAgent(logger *zap.SugaredLogger,
 		testWorkflowNotificationsFunc:           workflowNotificationsFunc,
 		clusterID:                               clusterID,
 		clusterName:                             clusterName,
-		envs:                                    envs,
 		features:                                features,
 		proContext:                              proContext,
 		dockerImageVersion:                      dockerImageVersion,

@@ -11,7 +11,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	executorv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
-	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
+	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor"
 	cexecutor "github.com/kubeshop/testkube/pkg/executor/containerexecutor"
@@ -30,21 +30,18 @@ var (
 )
 
 type Client struct {
-	k8sclient            kubernetes.Interface
-	resultRepository     result.Repository
-	testResultRepository testresult.Repository
-	executorsClient      *executorsclientv1.ExecutorsClient
-	logger               *zap.SugaredLogger
+	k8sclient              kubernetes.Interface
+	deprecatedRepositories commons.DeprecatedRepositories
+	deprecatedClients      commons.DeprecatedClients
+	logger                 *zap.SugaredLogger
 }
 
-func NewClient(k8sclient kubernetes.Interface, resultRepository result.Repository, testResultRepository testresult.Repository,
-	executorsClient *executorsclientv1.ExecutorsClient, logger *zap.SugaredLogger) *Client {
+func NewClient(k8sclient kubernetes.Interface, deprecatedRepositories commons.DeprecatedRepositories, deprecatedClients commons.DeprecatedClients, logger *zap.SugaredLogger) *Client {
 	return &Client{
-		k8sclient:            k8sclient,
-		resultRepository:     resultRepository,
-		testResultRepository: testResultRepository,
-		executorsClient:      executorsClient,
-		logger:               logger,
+		k8sclient:              k8sclient,
+		deprecatedRepositories: deprecatedRepositories,
+		deprecatedClients:      deprecatedClients,
+		logger:                 logger,
 	}
 }
 
@@ -75,7 +72,7 @@ func (client *Client) Run(ctx context.Context) error {
 }
 
 func (client *Client) ProcessTests(ctx context.Context) error {
-	executions, err := client.resultRepository.GetExecutions(ctx,
+	executions, err := client.deprecatedRepositories.TestResults().GetExecutions(ctx,
 		result.NewExecutionsFilter().WithStatus(string(*testkube.ExecutionStatusRunning)))
 	if err != nil {
 		return err
@@ -87,7 +84,7 @@ OuterLoop:
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
-			exec, err := client.executorsClient.GetByType(execution.TestType)
+			exec, err := client.deprecatedClients.Executors().GetByType(execution.TestType)
 			if err != nil {
 				client.logger.Errorw("error getting executor by test type", "error", err)
 			}
@@ -142,7 +139,7 @@ OuterLoop:
 				Status:       testkube.ExecutionStatusFailed,
 				ErrorMessage: errMessage,
 			}
-			if err = client.resultRepository.Update(ctx, execution); err != nil {
+			if err = client.deprecatedRepositories.TestResults().Update(ctx, execution); err != nil {
 				return err
 			}
 		}
@@ -152,7 +149,7 @@ OuterLoop:
 }
 
 func (client *Client) ProcessTestSuites(ctx context.Context) error {
-	executions, err := client.testResultRepository.GetExecutions(ctx,
+	executions, err := client.deprecatedRepositories.TestSuiteResults().GetExecutions(ctx,
 		testresult.NewExecutionsFilter().WithStatus(string(*testkube.TestSuiteExecutionStatusRunning)))
 	if err != nil {
 		return err
@@ -175,7 +172,7 @@ OuterLoop:
 				for _, execute := range step.Execute {
 					if execute.Step != nil {
 						if execute.Step.Type() == testkube.TestSuiteStepTypeExecuteTest && execute.Execution != nil {
-							exec, err := client.resultRepository.Get(ctx, execute.Execution.Id)
+							exec, err := client.deprecatedRepositories.TestResults().Get(ctx, execute.Execution.Id)
 							if err != nil && err != mongo.ErrNoDocuments {
 								return err
 							}
@@ -237,7 +234,7 @@ OuterLoop:
 					}
 				}
 			}
-			if err = client.testResultRepository.Update(ctx, execution); err != nil {
+			if err = client.deprecatedRepositories.TestSuiteResults().Update(ctx, execution); err != nil {
 				return err
 			}
 		}

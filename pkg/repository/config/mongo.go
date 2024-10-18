@@ -15,6 +15,7 @@ import (
 const CollectionName = "config"
 const Id = "api"
 
+// TODO: Delete, as it's no longer used (may be need to kept for backwards compatibility [?])
 func NewMongoRepository(db *mongo.Database, opts ...Opt) *MongoRepository {
 	r := &MongoRepository{
 		Coll: db.Collection(CollectionName),

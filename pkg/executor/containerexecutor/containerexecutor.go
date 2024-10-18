@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	"github.com/kubeshop/testkube/pkg/cache"
 
 	"github.com/pkg/errors"
@@ -16,8 +17,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/utils"
 
-	"github.com/kubeshop/testkube/pkg/repository/result"
-
 	"github.com/kubeshop/testkube/pkg/version"
 
 	"go.uber.org/zap"
@@ -27,10 +26,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	executorv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
-	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
-	templatesv1 "github.com/kubeshop/testkube-operator/pkg/client/templates/v1"
-	testexecutionsv1 "github.com/kubeshop/testkube-operator/pkg/client/testexecutions/v1"
-	testsv3 "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/client"
@@ -64,7 +59,8 @@ type EventEmitter interface {
 
 // NewContainerExecutor creates new job executor
 func NewContainerExecutor(
-	repo result.Repository,
+	deprecatedRepositories commons.DeprecatedRepositories,
+	deprecatedClients commons.DeprecatedClients,
 	images executor.Images,
 	templates executor.Templates,
 	imageInspector imageinspector.Inspector,
@@ -72,10 +68,6 @@ func NewContainerExecutor(
 	metrics ExecutionMetric,
 	emiter EventEmitter,
 	configMap config.Repository,
-	executorsClient executorsclientv1.Interface,
-	testsClient testsv3.Interface,
-	testExecutionsClient testexecutionsv1.Interface,
-	templatesClient templatesv1.Interface,
 	registry string,
 	podStartTimeout time.Duration,
 	clusterID string,
@@ -100,7 +92,8 @@ func NewContainerExecutor(
 
 	return &ContainerExecutor{
 		clientSet:                clientSet,
-		repository:               repo,
+		deprecatedRepositories:   deprecatedRepositories,
+		deprecatedClients:        deprecatedClients,
 		log:                      log.DefaultLogger,
 		images:                   images,
 		templates:                templates,
@@ -109,10 +102,6 @@ func NewContainerExecutor(
 		serviceAccountNames:      serviceAccountNames,
 		metrics:                  metrics,
 		emitter:                  emiter,
-		testsClient:              testsClient,
-		executorsClient:          executorsClient,
-		testExecutionsClient:     testExecutionsClient,
-		templatesClient:          templatesClient,
 		registry:                 registry,
 		podStartTimeout:          podStartTimeout,
 		clusterID:                clusterID,
@@ -134,7 +123,8 @@ type ExecutionMetric interface {
 
 // ContainerExecutor is container for managing job executor dependencies
 type ContainerExecutor struct {
-	repository              result.Repository
+	deprecatedRepositories  commons.DeprecatedRepositories
+	deprecatedClients       commons.DeprecatedClients
 	log                     *zap.SugaredLogger
 	clientSet               kubernetes.Interface
 	images                  executor.Images
@@ -144,10 +134,6 @@ type ContainerExecutor struct {
 	emitter                 EventEmitter
 	configMap               config.Repository
 	serviceAccountNames     map[string]string
-	testsClient             testsv3.Interface
-	executorsClient         executorsclientv1.Interface
-	testExecutionsClient    testexecutionsv1.Interface
-	templatesClient         templatesv1.Interface
 	registry                string
 	podStartTimeout         time.Duration
 	clusterID               string
@@ -221,13 +207,13 @@ func (c *ContainerExecutor) Logs(ctx context.Context, id, namespace string) (out
 			close(out)
 		}()
 
-		execution, err := c.repository.Get(ctx, id)
+		execution, err := c.deprecatedRepositories.TestResults().Get(ctx, id)
 		if err != nil {
 			out <- output.NewOutputError(err)
 			return
 		}
 
-		exec, err := c.executorsClient.GetByType(execution.TestType)
+		exec, err := c.deprecatedClients.Executors().GetByType(execution.TestType)
 		if err != nil {
 			out <- output.NewOutputError(err)
 			return
@@ -336,7 +322,7 @@ func (c *ContainerExecutor) createJob(ctx context.Context, execution testkube.Ex
 		)
 	}
 
-	jobOptions, err := NewJobOptions(c.log, c.templatesClient, c.images, c.templates, inspector,
+	jobOptions, err := NewJobOptions(c.log, c.deprecatedClients.Templates(), c.images, c.templates, inspector,
 		c.serviceAccountNames, c.registry, c.clusterID, c.apiURI, execution, options, c.natsURI, c.debug)
 	if err != nil {
 		return nil, err
@@ -501,7 +487,7 @@ func (c *ContainerExecutor) updateResultsFromPod(
 			l.Errorw("parse output error", "error", err)
 			execution.ExecutionResult.Output = output
 			execution.ExecutionResult.Err(err)
-			err = c.repository.UpdateResult(ctx, execution.Id, *execution)
+			err = c.deprecatedRepositories.TestResults().UpdateResult(ctx, execution.Id, *execution)
 			if err != nil {
 				l.Errorw("Update result error", "error", err)
 			}
@@ -529,7 +515,7 @@ func (c *ContainerExecutor) updateResultsFromPod(
 	}
 
 	l.Infow("container execution completed saving result", "executionId", execution.Id, "status", execution.ExecutionResult.Status)
-	err = c.repository.UpdateResult(ctx, execution.Id, *execution)
+	err = c.deprecatedRepositories.TestResults().UpdateResult(ctx, execution.Id, *execution)
 	if err != nil {
 		l.Errorw("Update execution result error", "error", err)
 	}
@@ -559,13 +545,13 @@ func (c *ContainerExecutor) stopExecution(ctx context.Context,
 
 		result.Status = execution.ExecutionResult.Status
 		result.ErrorMessage = execution.ExecutionResult.ErrorMessage
-		err := c.repository.UpdateResult(ctx, execution.Id, *execution)
+		err := c.deprecatedRepositories.TestResults().UpdateResult(ctx, execution.Id, *execution)
 		if err != nil {
 			c.log.Errorw("Update execution result error", "error", err)
 		}
 	}
 
-	err := c.repository.EndExecution(ctx, *execution)
+	err := c.deprecatedRepositories.TestResults().EndExecution(ctx, *execution)
 	if err != nil {
 		c.log.Errorw("Update execution result error", "error", err)
 	}
@@ -574,27 +560,27 @@ func (c *ContainerExecutor) stopExecution(ctx context.Context,
 	execution.ExecutionResult = result
 	c.metrics.IncAndObserveExecuteTest(*execution, c.dashboardURI)
 
-	test, err := c.testsClient.Get(execution.TestName)
+	test, err := c.deprecatedClients.Tests().Get(execution.TestName)
 	if err != nil {
 		c.log.Errorw("getting test error", "error", err)
 	}
 
 	if test != nil {
 		test.Status = testsmapper.MapExecutionToTestStatus(execution)
-		if err = c.testsClient.UpdateStatus(test); err != nil {
+		if err = c.deprecatedClients.Tests().UpdateStatus(test); err != nil {
 			c.log.Errorw("updating test error", "error", err)
 		}
 	}
 
 	if execution.TestExecutionName != "" {
-		testExecution, err := c.testExecutionsClient.Get(execution.TestExecutionName)
+		testExecution, err := c.deprecatedClients.TestExecutions().Get(execution.TestExecutionName)
 		if err != nil {
 			c.log.Errorw("getting test execution error", "error", err)
 		}
 
 		if testExecution != nil {
 			testExecution.Status = testexecutionsmapper.MapAPIToCRD(execution, testExecution.Generation)
-			if err = c.testExecutionsClient.UpdateStatus(testExecution); err != nil {
+			if err = c.deprecatedClients.TestExecutions().UpdateStatus(testExecution); err != nil {
 				c.log.Errorw("updating test execution error", "error", err)
 			}
 		}

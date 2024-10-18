@@ -8,20 +8,10 @@ import (
 	"go.uber.org/zap"
 
 	executorsv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
+	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
 	templatesclientv1 "github.com/kubeshop/testkube-operator/pkg/client/templates/v1"
 	v1 "github.com/kubeshop/testkube/internal/app/api/metrics"
 )
-
-type DummyLoader struct {
-}
-
-func (l DummyLoader) List(selector string) (*executorsv1.WebhookList, error) {
-	return &executorsv1.WebhookList{
-		Items: []executorsv1.Webhook{
-			{Spec: executorsv1.WebhookSpec{Uri: "http://localhost:3333", Events: []executorsv1.EventType{"start-test"}, PayloadObjectField: "text", PayloadTemplate: "{{ .Id }}", Headers: map[string]string{"Content-Type": "application/xml"}}},
-		},
-	}, nil
-}
 
 func TestWebhookLoader(t *testing.T) {
 	t.Parallel()
@@ -30,7 +20,14 @@ func TestWebhookLoader(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	mockTemplatesClient := templatesclientv1.NewMockInterface(mockCtrl)
-	webhooksLoader := NewWebhookLoader(zap.NewNop().Sugar(), &DummyLoader{}, mockTemplatesClient, nil, nil, nil, v1.NewMetrics(), nil, nil)
+	mockWebhooksClient := executorsclientv1.NewMockWebhooksInterface(mockCtrl)
+	mockWebhooksClient.EXPECT().List(gomock.Any()).Return(&executorsv1.WebhookList{
+		Items: []executorsv1.Webhook{
+			{Spec: executorsv1.WebhookSpec{Uri: "http://localhost:3333", Events: []executorsv1.EventType{"start-test"}, PayloadObjectField: "text", PayloadTemplate: "{{ .Id }}", Headers: map[string]string{"Content-Type": "application/xml"}}},
+		},
+	}, nil).AnyTimes()
+
+	webhooksLoader := NewWebhookLoader(zap.NewNop().Sugar(), mockWebhooksClient, mockTemplatesClient, nil, nil, nil, v1.NewMetrics(), nil, nil)
 	listeners, err := webhooksLoader.Load()
 
 	assert.Equal(t, 1, len(listeners))

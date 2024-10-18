@@ -41,7 +41,7 @@ func (s *Service) checkForRunningTestExecutions(ctx context.Context, status *tri
 	testExecutionIDs := status.getExecutionIDs()
 
 	for _, id := range testExecutionIDs {
-		execution, err := s.resultRepository.Get(ctx, id)
+		execution, err := s.deprecatedRepositories.TestResults().Get(ctx, id)
 		if err == mongo.ErrNoDocuments {
 			s.logger.Warnf("trigger service: execution scraper component: no test execution found for id %s", id)
 			status.removeExecutionID(id)
@@ -61,7 +61,7 @@ func (s *Service) checkForRunningTestSuiteExecutions(ctx context.Context, status
 	testSuiteExecutionIDs := status.getTestSuiteExecutionIDs()
 
 	for _, id := range testSuiteExecutionIDs {
-		execution, err := s.testResultRepository.Get(ctx, id)
+		execution, err := s.deprecatedRepositories.TestSuiteResults().Get(ctx, id)
 		if err == mongo.ErrNoDocuments {
 			s.logger.Warnf("trigger service: execution scraper component: no testsuite execution found for id %s", id)
 			status.removeTestSuiteExecutionID(id)
@@ -113,7 +113,7 @@ func (s *Service) abortRunningTestExecutions(ctx context.Context, status *trigge
 	testExecutionIDs := status.getExecutionIDs()
 
 	for _, id := range testExecutionIDs {
-		execution, err := s.resultRepository.Get(ctx, id)
+		execution, err := s.deprecatedRepositories.TestResults().Get(ctx, id)
 		if err == mongo.ErrNoDocuments {
 			s.logger.Warnf("trigger service: execution scraper component: no test execution found for id %s", id)
 			status.removeExecutionID(id)
@@ -140,7 +140,7 @@ func (s *Service) abortRunningTestSuiteExecutions(ctx context.Context, status *t
 	testSuiteExecutionIDs := status.getTestSuiteExecutionIDs()
 
 	for _, id := range testSuiteExecutionIDs {
-		execution, err := s.testResultRepository.Get(ctx, id)
+		execution, err := s.deprecatedRepositories.TestSuiteResults().Get(ctx, id)
 		if err == mongo.ErrNoDocuments {
 			s.logger.Warnf("trigger service: execution scraper component: no testsuite execution found for id %s", id)
 			status.removeTestSuiteExecutionID(id)

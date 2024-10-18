@@ -16,10 +16,10 @@ type ExecutorsService interface {
 
 type executorsService struct {
 	ServiceBase
-	client *executorsclientv1.ExecutorsClient
+	client executorsclientv1.Interface
 }
 
-func NewExecutorsService(service Service, client *executorsclientv1.ExecutorsClient) ExecutorsService {
+func NewExecutorsService(service Service, client executorsclientv1.Interface) ExecutorsService {
 	return &executorsService{ServiceBase: ServiceBase{Service: service}, client: client}
 }
 

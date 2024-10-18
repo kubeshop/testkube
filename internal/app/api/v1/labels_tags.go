@@ -7,10 +7,17 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func (s TestkubeAPI) ListLabelsHandler() fiber.Handler {
+type LabelSource interface {
+	ListLabels() (map[string][]string, error)
+}
+
+func (s *TestkubeAPI) ListLabelsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		labels := make(map[string][]string)
-		sources := append(*s.LabelSources, s.TestsClient, s.TestsSuitesClient)
+		sources := []LabelSource{s.TestWorkflowsClient, s.TestWorkflowTemplatesClient}
+		if s.DeprecatedClients != nil {
+			sources = append(sources, s.DeprecatedClients.Tests(), s.DeprecatedClients.TestSuites())
+		}
 
 		for _, source := range sources {
 			nextLabels, err := source.ListLabels()

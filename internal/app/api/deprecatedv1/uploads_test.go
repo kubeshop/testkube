@@ -1,4 +1,4 @@
-package v1
+package deprecatedv1
 
 import (
 	"bytes"
@@ -17,10 +17,9 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/kubeshop/testkube/pkg/log"
-	"github.com/kubeshop/testkube/pkg/server"
 )
 
-func TestTestkubeAPI_UploadCopyFiles(t *testing.T) {
+func TestDeprecatedTestkubeAPI_UploadCopyFiles(t *testing.T) {
 	t.Parallel()
 
 	mockCtrl := gomock.NewController(t)
@@ -29,11 +28,8 @@ func TestTestkubeAPI_UploadCopyFiles(t *testing.T) {
 	mockArtifactsStorage := storage.NewMockArtifactsStorage(mockCtrl)
 
 	app := fiber.New()
-	s := &TestkubeAPI{
-		HTTPServer: server.HTTPServer{
-			Mux: app,
-			Log: log.DefaultLogger,
-		},
+	s := &DeprecatedTestkubeAPI{
+		Log:              log.DefaultLogger,
 		ArtifactsStorage: mockArtifactsStorage,
 	}
 	route := "/uploads"

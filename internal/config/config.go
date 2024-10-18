@@ -7,7 +7,7 @@ import (
 )
 
 type Config struct {
-	APIServerPort             string `envconfig:"APISERVER_PORT" default:"8088"`
+	APIServerPort             int    `envconfig:"APISERVER_PORT" default:"8088"`
 	APIServerConfig           string `envconfig:"APISERVER_CONFIG" default:""`
 	APIServerFullname         string `envconfig:"APISERVER_FULLNAME" default:"testkube-api-server"`
 	APIMongoDSN               string `envconfig:"API_MONGO_DSN" default:"mongodb://localhost:27017"`
@@ -88,7 +88,7 @@ type Config struct {
 	// TestkubeImageCredentialsCacheTTL is the duration for which the image pull credentials should be cached provided as a Go duration string.
 	// If set to 0, the cache is disabled.
 	TestkubeImageCredentialsCacheTTL time.Duration `envconfig:"TESTKUBE_IMAGE_CREDENTIALS_CACHE_TTL" default:"30m"`
-	GraphqlPort                      string        `envconfig:"TESTKUBE_GRAPHQL_PORT" default:"8070"`
+	GraphqlPort                      int           `envconfig:"TESTKUBE_GRAPHQL_PORT" default:"8070"`
 	CDEventsTarget                   string        `envconfig:"CDEVENTS_TARGET" default:""`
 	TestkubeDashboardURI             string        `envconfig:"TESTKUBE_DASHBOARD_URI" default:""`
 	DisableReconciler                bool          `envconfig:"DISABLE_RECONCILER" default:"false"`

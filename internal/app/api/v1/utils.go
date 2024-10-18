@@ -2,15 +2,9 @@ package v1
 
 import (
 	"github.com/gofiber/fiber/v2"
-	"github.com/pkg/errors"
-	"go.mongodb.org/mongo-driver/mongo"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/kubeshop/testkube/internal/common"
-	"github.com/kubeshop/testkube/pkg/secretmanager"
 )
 
 func ExpectsYAML(c *fiber.Ctx) bool {
@@ -53,17 +47,4 @@ func SendCRDs[T interface{}](c *fiber.Ctx, kind string, groupVersion schema.Grou
 	}
 	c.Context().SetContentType(mediaTypeYAML)
 	return c.Send(b)
-}
-
-func IsNotFound(err error) bool {
-	if err == nil {
-		return false
-	}
-	if errors.Is(err, mongo.ErrNoDocuments) || k8serrors.IsNotFound(err) || errors.Is(err, secretmanager.ErrNotFound) {
-		return true
-	}
-	if e, ok := status.FromError(err); ok {
-		return e.Code() == codes.NotFound
-	}
-	return false
 }

@@ -1,4 +1,4 @@
-package v1
+package deprecatedv1
 
 import (
 	"encoding/json"
@@ -37,7 +37,7 @@ type oauthResponse struct {
 }
 
 // OauthHandler creates a handler for slack authentication
-func (s TestkubeAPI) OauthHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) OauthHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 
 		errStr := c.Query("error", "")
