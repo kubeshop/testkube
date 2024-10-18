@@ -6,7 +6,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -15,7 +14,6 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/emptypb"
 
-	"go.mongodb.org/mongo-driver/mongo"
 	"google.golang.org/grpc"
 
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
@@ -51,13 +49,10 @@ import (
 
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/internal/config"
-	dbmigrations "github.com/kubeshop/testkube/internal/db-migrations"
 	parser "github.com/kubeshop/testkube/internal/template"
 	"github.com/kubeshop/testkube/pkg/version"
 
 	"golang.org/x/sync/errgroup"
-
-	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/repository/sequence"
@@ -81,7 +76,6 @@ import (
 	deprecatedapiv1 "github.com/kubeshop/testkube/internal/app/api/deprecatedv1"
 	apiv1 "github.com/kubeshop/testkube/internal/app/api/v1"
 	"github.com/kubeshop/testkube/pkg/configmap"
-	"github.com/kubeshop/testkube/pkg/dbmigrator"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/reconciler"
 	"github.com/kubeshop/testkube/pkg/secret"
@@ -94,26 +88,6 @@ const (
 
 func init() {
 	flag.Parse()
-}
-
-func runMongoMigrations(ctx context.Context, db *mongo.Database, _ string) error {
-	migrationsCollectionName := "__migrations"
-	activeMigrations, err := dbmigrator.GetDbMigrationsFromFs(dbmigrations.MongoMigrationsFs)
-	if err != nil {
-		return errors.Wrap(err, "failed to obtain MongoDB migrations from disk")
-	}
-	dbMigrator := dbmigrator.NewDbMigrator(dbmigrator.NewDatabase(db, migrationsCollectionName), activeMigrations)
-	plan, err := dbMigrator.Plan(ctx)
-	if err != nil {
-		return errors.Wrap(err, "failed to plan MongoDB migrations")
-	}
-	if plan.Total == 0 {
-		log.DefaultLogger.Info("No MongoDB migrations to apply.")
-	} else {
-		log.DefaultLogger.Info(fmt.Sprintf("Applying MongoDB migrations: %d rollbacks and %d ups.", len(plan.Downs), len(plan.Ups)))
-	}
-	err = dbMigrator.Apply(ctx)
-	return errors.Wrap(err, "failed to apply MongoDB migrations")
 }
 
 func main() {
@@ -233,11 +207,8 @@ func main() {
 	proContext := newProContext(cfg, grpcClient)
 
 	// Check Pro/Enterprise subscription
-	var subscriptionChecker checktcl.SubscriptionChecker
-	if mode == common.ModeAgent {
-		subscriptionChecker, err = checktcl.NewSubscriptionChecker(ctx, proContext, grpcClient, grpcConn)
-		commons.ExitOnError("Failed creating subscription checker", err)
-	}
+	subscriptionChecker, err := checktcl.NewSubscriptionChecker(ctx, proContext, grpcClient, grpcConn)
+	commons.ExitOnError("Failed creating subscription checker", err)
 
 	serviceAccountNames := map[string]string{
 		cfg.TestkubeNamespace: cfg.JobServiceAccountName,
@@ -269,7 +240,7 @@ func main() {
 		artifactStorage = cloudartifacts.NewCloudArtifactsStorage(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
 	} else {
 		// Connect to storages
-		db := commons.MustGetMongoDatabase(cfg, secretClient)
+		db := commons.MustGetMongoDatabase(ctx, cfg, secretClient, !cfg.DisableMongoMigrations)
 		storageClient = commons.MustGetMinioClient(cfg)
 
 		// Build repositories
@@ -280,14 +251,6 @@ func main() {
 		testWorkflowOutputRepository = testworkflow2.NewMinioOutputRepository(storageClient, db.Collection(testworkflow2.CollectionName), cfg.LogsBucket)
 		artifactStorage = minio.NewMinIOArtifactClient(storageClient)
 		deprecatedRepositories = commons.CreateDeprecatedRepositoriesForMongo(ctx, cfg, db, logGrpcClient, storageClient, features)
-
-		// Run DB migrations
-		if !cfg.DisableMongoMigrations {
-			err := runMongoMigrations(ctx, db, filepath.Join(cfg.TestkubeConfigDir, "db-migrations"))
-			if err != nil {
-				log.DefaultLogger.Warnf("failed to apply MongoDB migrations: %v", err)
-			}
-		}
 	}
 
 	executor, err := client.NewJobExecutor(
@@ -772,18 +735,18 @@ func newProContext(cfg *config.Config, grpcClient cloud.TestKubeCloudAPIClient) 
 	md := metadata.Pairs("api-key", cfg.TestkubeProAPIKey)
 	ctx = metadata.NewOutgoingContext(ctx, md)
 	defer cancel()
-	getProContext, err := grpcClient.GetProContext(ctx, &emptypb.Empty{})
+	foundProContext, err := grpcClient.GetProContext(ctx, &emptypb.Empty{})
 	if err != nil {
 		log.DefaultLogger.Warnf("cannot fetch pro-context from cloud: %s", err)
 		return proContext
 	}
 
 	if proContext.EnvID == "" {
-		proContext.EnvID = getProContext.EnvId
+		proContext.EnvID = foundProContext.EnvId
 	}
 
 	if proContext.OrgID == "" {
-		proContext.OrgID = getProContext.OrgId
+		proContext.OrgID = foundProContext.OrgId
 	}
 
 	return proContext

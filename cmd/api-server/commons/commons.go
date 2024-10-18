@@ -9,12 +9,15 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/mongo"
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/kubeshop/testkube/internal/config"
+	dbmigrations "github.com/kubeshop/testkube/internal/db-migrations"
 	"github.com/kubeshop/testkube/pkg/cache"
 	"github.com/kubeshop/testkube/pkg/configmap"
+	"github.com/kubeshop/testkube/pkg/dbmigrator"
 	"github.com/kubeshop/testkube/pkg/featureflags"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
 	"github.com/kubeshop/testkube/pkg/log"
@@ -123,10 +126,35 @@ func MustGetMinioClient(cfg *config.Config) domainstorage.Client {
 	return minioClient
 }
 
-func MustGetMongoDatabase(cfg *config.Config, secretClient secret.Interface) *mongo.Database {
+func runMongoMigrations(ctx context.Context, db *mongo.Database) error {
+	migrationsCollectionName := "__migrations"
+	activeMigrations, err := dbmigrator.GetDbMigrationsFromFs(dbmigrations.MongoMigrationsFs)
+	if err != nil {
+		return errors.Wrap(err, "failed to obtain MongoDB migrations from disk")
+	}
+	dbMigrator := dbmigrator.NewDbMigrator(dbmigrator.NewDatabase(db, migrationsCollectionName), activeMigrations)
+	plan, err := dbMigrator.Plan(ctx)
+	if err != nil {
+		return errors.Wrap(err, "failed to plan MongoDB migrations")
+	}
+	if plan.Total == 0 {
+		log.DefaultLogger.Info("No MongoDB migrations to apply.")
+	} else {
+		log.DefaultLogger.Info(fmt.Sprintf("Applying MongoDB migrations: %d rollbacks and %d ups.", len(plan.Downs), len(plan.Ups)))
+	}
+	err = dbMigrator.Apply(ctx)
+	return errors.Wrap(err, "failed to apply MongoDB migrations")
+}
+
+func MustGetMongoDatabase(ctx context.Context, cfg *config.Config, secretClient secret.Interface, migrate bool) *mongo.Database {
 	mongoSSLConfig := getMongoSSLConfig(cfg, secretClient)
 	db, err := storage.GetMongoDatabase(cfg.APIMongoDSN, cfg.APIMongoDB, cfg.APIMongoDBType, cfg.APIMongoAllowTLS, mongoSSLConfig)
 	ExitOnError("Getting mongo database", err)
+	if migrate {
+		if err = runMongoMigrations(ctx, db); err != nil {
+			log.DefaultLogger.Warnf("failed to apply MongoDB migrations: %v", err)
+		}
+	}
 	return db
 }
 
