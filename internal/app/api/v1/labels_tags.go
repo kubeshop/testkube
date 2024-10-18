@@ -14,7 +14,10 @@ type LabelSource interface {
 func (s *TestkubeAPI) ListLabelsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		labels := make(map[string][]string)
-		sources := []LabelSource{s.TestWorkflowsClient, s.TestWorkflowTemplatesClient, s.DeprecatedClients.Tests(), s.DeprecatedClients.TestSuites()}
+		sources := []LabelSource{s.TestWorkflowsClient, s.TestWorkflowTemplatesClient}
+		if s.DeprecatedClients != nil {
+			sources = append(sources, s.DeprecatedClients.Tests(), s.DeprecatedClients.TestSuites())
+		}
 
 		for _, source := range sources {
 			nextLabels, err := source.ListLabels()

@@ -179,10 +179,8 @@ func main() {
 	}
 
 	configMapConfig := commons.MustGetConfigMapConfig(ctx, cfg.APIServerConfig, cfg.TestkubeNamespace, cfg.TestkubeAnalyticsEnabled)
-	clusterId, _ := configMapConfig.GetUniqueClusterId(context.Background())
-	telemetryEnabled, _ := configMapConfig.GetTelemetryEnabled(context.Background())
-
-	apiVersion := version.Version
+	clusterId, _ := configMapConfig.GetUniqueClusterId(ctx)
+	telemetryEnabled, _ := configMapConfig.GetTelemetryEnabled(ctx)
 
 	envs := commons.GetEnvironmentVariables()
 
@@ -579,7 +577,7 @@ func main() {
 		"telemetryEnabled", telemetryEnabled,
 		"clusterId", clusterId,
 		"namespace", cfg.TestkubeNamespace,
-		"version", apiVersion,
+		"version", version.Version,
 	)
 
 	if cfg.EnableDebugServer {
