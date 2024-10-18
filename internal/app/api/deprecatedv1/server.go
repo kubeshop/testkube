@@ -11,28 +11,16 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 
-	testtriggersclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testtriggers/v1"
-	testworkflowsv1 "github.com/kubeshop/testkube-operator/pkg/client/testworkflows/v1"
+	"github.com/gofiber/fiber/v2"
+
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/log"
-	repoConfig "github.com/kubeshop/testkube/pkg/repository/config"
-	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
-	"github.com/kubeshop/testkube/pkg/secretmanager"
-	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 
-	"k8s.io/client-go/kubernetes"
-
-	"github.com/gofiber/fiber/v2"
-
-	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/event/bus"
-	"github.com/kubeshop/testkube/pkg/event/kind/slack"
-	ws "github.com/kubeshop/testkube/pkg/event/kind/websocket"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/featureflags"
 	logsclient "github.com/kubeshop/testkube/pkg/logs/client"
@@ -43,126 +31,71 @@ import (
 )
 
 func NewDeprecatedTestkubeAPI(
-	clusterId string,
 	deprecatedRepositories commons.DeprecatedRepositories,
 	deprecatedClients commons.DeprecatedClients,
 	namespace string,
-	testWorkflowResults testworkflow.Repository,
-	testWorkflowOutput testworkflow.OutputRepository,
 	secretClient secret.Interface,
-	secretManager secretmanager.SecretManager,
-	webhookClient *executorsclientv1.WebhooksClient,
-	clientset kubernetes.Interface,
-	testTriggersClient testtriggersclientv1.Interface,
-	testWorkflowsClient testworkflowsv1.Interface,
-	testWorkflowTemplatesClient testworkflowsv1.TestWorkflowTemplatesInterface,
-	configMap repoConfig.Repository,
 	eventsEmitter *event.Emitter,
-	websocketLoader *ws.WebsocketLoader,
 	executor client.Executor,
 	containerExecutor client.Executor,
-	testWorkflowExecutor testworkflowexecutor.TestWorkflowExecutor,
-	executionWorkerClient executionworkertypes.Worker,
 	metrics metrics.Metrics,
 	scheduler *scheduler.Scheduler,
-	slackLoader *slack.SlackLoader,
 	graphqlPort int,
 	artifactsStorage storage.ArtifactsStorage,
-	dashboardURI string,
-	helmchartVersion string,
 	mode string,
 	eventsBus bus.Bus,
 	secretConfig testkube.SecretConfig,
 	ff featureflags.FeatureFlags,
 	logsStream logsclient.Stream,
 	logGrpcClient logsclient.StreamGetter,
-	serviceAccountNames map[string]string,
-	dockerImageVersion string,
 	proContext *config.ProContext,
 	storageParams StorageParams,
 ) DeprecatedTestkubeAPI {
-
 	return DeprecatedTestkubeAPI{
-		ClusterID:                   clusterId,
-		Log:                         log.DefaultLogger,
-		DeprecatedRepositories:      deprecatedRepositories,
-		DeprecatedClients:           deprecatedClients,
-		TestWorkflowResults:         testWorkflowResults,
-		TestWorkflowOutput:          testWorkflowOutput,
-		SecretClient:                secretClient,
-		SecretManager:               secretManager,
-		Clientset:                   clientset,
-		TestTriggersClient:          testTriggersClient,
-		TestWorkflowsClient:         testWorkflowsClient,
-		TestWorkflowTemplatesClient: testWorkflowTemplatesClient,
-		Metrics:                     metrics,
-		WebsocketLoader:             websocketLoader,
-		Events:                      eventsEmitter,
-		WebhooksClient:              webhookClient,
-		Namespace:                   namespace,
-		ConfigMap:                   configMap,
-		Executor:                    executor,
-		ContainerExecutor:           containerExecutor,
-		TestWorkflowExecutor:        testWorkflowExecutor,
-		ExecutionWorkerClient:       executionWorkerClient,
-		storageParams:               storageParams,
-		scheduler:                   scheduler,
-		slackLoader:                 slackLoader,
-		graphqlPort:                 graphqlPort,
-		ArtifactsStorage:            artifactsStorage,
-		dashboardURI:                dashboardURI,
-		helmchartVersion:            helmchartVersion,
-		mode:                        mode,
-		eventsBus:                   eventsBus,
-		secretConfig:                secretConfig,
-		featureFlags:                ff,
-		logsStream:                  logsStream,
-		logGrpcClient:               logGrpcClient,
-		ServiceAccountNames:         serviceAccountNames,
-		dockerImageVersion:          dockerImageVersion,
-		proContext:                  proContext,
+		Log:                    log.DefaultLogger,
+		DeprecatedRepositories: deprecatedRepositories,
+		DeprecatedClients:      deprecatedClients,
+		SecretClient:           secretClient,
+		Metrics:                metrics,
+		Events:                 eventsEmitter,
+		Namespace:              namespace,
+		Executor:               executor,
+		ContainerExecutor:      containerExecutor,
+		storageParams:          storageParams,
+		scheduler:              scheduler,
+		graphqlPort:            graphqlPort,
+		ArtifactsStorage:       artifactsStorage,
+		mode:                   mode,
+		eventsBus:              eventsBus,
+		secretConfig:           secretConfig,
+		featureFlags:           ff,
+		logsStream:             logsStream,
+		logGrpcClient:          logGrpcClient,
+		proContext:             proContext,
 	}
 }
 
 type DeprecatedTestkubeAPI struct {
-	ClusterID                   string
-	Log                         *zap.SugaredLogger
-	TestWorkflowResults         testworkflow.Repository
-	TestWorkflowOutput          testworkflow.OutputRepository
-	Executor                    client.Executor
-	ContainerExecutor           client.Executor
-	TestWorkflowExecutor        testworkflowexecutor.TestWorkflowExecutor
-	ExecutionWorkerClient       executionworkertypes.Worker
-	DeprecatedRepositories      commons.DeprecatedRepositories
-	DeprecatedClients           commons.DeprecatedClients
-	SecretClient                secret.Interface
-	SecretManager               secretmanager.SecretManager
-	WebhooksClient              *executorsclientv1.WebhooksClient
-	TestTriggersClient          testtriggersclientv1.Interface
-	TestWorkflowsClient         testworkflowsv1.Interface
-	TestWorkflowTemplatesClient testworkflowsv1.TestWorkflowTemplatesInterface
-	Metrics                     metrics.Metrics
-	storageParams               StorageParams
-	Namespace                   string
-	WebsocketLoader             *ws.WebsocketLoader
-	Events                      *event.Emitter
-	ConfigMap                   repoConfig.Repository
-	scheduler                   *scheduler.Scheduler
-	Clientset                   kubernetes.Interface
-	slackLoader                 *slack.SlackLoader
-	graphqlPort                 int
-	ArtifactsStorage            storage.ArtifactsStorage
-	dashboardURI                string
-	helmchartVersion            string
-	mode                        string
-	eventsBus                   bus.Bus
-	secretConfig                testkube.SecretConfig
-	featureFlags                featureflags.FeatureFlags
-	logsStream                  logsclient.Stream
-	logGrpcClient               logsclient.StreamGetter
-	proContext                  *config.ProContext
-	ServiceAccountNames         map[string]string
-	dockerImageVersion          string
+	Log                    *zap.SugaredLogger
+	Executor               client.Executor
+	ContainerExecutor      client.Executor
+	DeprecatedRepositories commons.DeprecatedRepositories
+	DeprecatedClients      commons.DeprecatedClients
+	SecretClient           secret.Interface
+	Metrics                metrics.Metrics
+	storageParams          StorageParams
+	Namespace              string
+	Events                 *event.Emitter
+	scheduler              *scheduler.Scheduler
+	graphqlPort            int
+	ArtifactsStorage       storage.ArtifactsStorage
+	mode                   string
+	eventsBus              bus.Bus
+	secretConfig           testkube.SecretConfig
+	featureFlags           featureflags.FeatureFlags
+	logsStream             logsclient.Stream
+	logGrpcClient          logsclient.StreamGetter
+	proContext             *config.ProContext
 }
 
 type StorageParams struct {
