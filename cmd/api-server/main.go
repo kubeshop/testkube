@@ -427,7 +427,7 @@ func main() {
 	})
 	eventsEmitter.Listen(ctx)
 
-	var storageParams apiv1.StorageParams
+	var storageParams deprecatedapiv1.StorageParams
 	if err := envconfig.Process("STORAGE", &storageParams); err != nil {
 		log.DefaultLogger.Debugw("Processing STORAGE environment config", err)
 	}
@@ -490,43 +490,30 @@ func main() {
 		storageParams,
 	)
 	api := apiv1.NewTestkubeAPI(
-		clusterId,
-		deprecatedRepositories,
 		deprecatedClients,
+		clusterId,
 		cfg.TestkubeNamespace,
 		testWorkflowResultsRepository,
 		testWorkflowOutputRepository,
-		secretClient,
-		secretManager,
+		artifactStorage,
 		webhooksClient,
-		clientset,
 		testTriggersClient,
 		testWorkflowsClient,
 		testWorkflowTemplatesClient,
 		configMapConfig,
-		eventsEmitter,
-		websocketLoader,
-		executor,
-		containerExecutor,
+		secretManager,
+		secretConfig,
 		testWorkflowExecutor,
 		executionWorker,
+		eventsEmitter,
+		websocketLoader,
 		metrics,
-		sched,
-		slackLoader,
-		cfg.GraphqlPort,
-		artifactStorage,
+		&proContext,
+		features,
 		cfg.TestkubeDashboardURI,
 		cfg.TestkubeHelmchartVersion,
-		mode,
-		eventBus,
-		secretConfig,
-		features,
-		logsStream,
-		logGrpcClient,
 		serviceAccountNames,
 		cfg.TestkubeDockerImageVersion,
-		&proContext,
-		storageParams,
 	)
 
 	if mode == common.ModeAgent {

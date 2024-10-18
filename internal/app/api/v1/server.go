@@ -1,14 +1,6 @@
 package v1
 
 import (
-	"fmt"
-	"io"
-	"net"
-	"reflect"
-	"sync"
-	"syscall"
-
-	"github.com/pkg/errors"
 	"go.uber.org/zap"
 
 	testtriggersclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testtriggers/v1"
@@ -23,75 +15,50 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 
-	"k8s.io/client-go/kubernetes"
-
-	"github.com/gofiber/fiber/v2"
-
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/event"
-	"github.com/kubeshop/testkube/pkg/event/bus"
-	"github.com/kubeshop/testkube/pkg/event/kind/slack"
 	ws "github.com/kubeshop/testkube/pkg/event/kind/websocket"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/featureflags"
-	logsclient "github.com/kubeshop/testkube/pkg/logs/client"
-	"github.com/kubeshop/testkube/pkg/scheduler"
-	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/server"
 	"github.com/kubeshop/testkube/pkg/storage"
 )
 
 func NewTestkubeAPI(
-	clusterId string,
-	deprecatedRepositories commons.DeprecatedRepositories,
 	deprecatedClients commons.DeprecatedClients,
+	clusterId string,
 	namespace string,
 	testWorkflowResults testworkflow.Repository,
 	testWorkflowOutput testworkflow.OutputRepository,
-	secretClient secret.Interface,
-	secretManager secretmanager.SecretManager,
+	artifactsStorage storage.ArtifactsStorage,
 	webhookClient *executorsclientv1.WebhooksClient,
-	clientset kubernetes.Interface,
 	testTriggersClient testtriggersclientv1.Interface,
 	testWorkflowsClient testworkflowsv1.Interface,
 	testWorkflowTemplatesClient testworkflowsv1.TestWorkflowTemplatesInterface,
 	configMap repoConfig.Repository,
-	eventsEmitter *event.Emitter,
-	websocketLoader *ws.WebsocketLoader,
-	executor client.Executor,
-	containerExecutor client.Executor,
+	secretManager secretmanager.SecretManager,
+	secretConfig testkube.SecretConfig,
 	testWorkflowExecutor testworkflowexecutor.TestWorkflowExecutor,
 	executionWorkerClient executionworkertypes.Worker,
+	eventsEmitter *event.Emitter,
+	websocketLoader *ws.WebsocketLoader,
 	metrics metrics.Metrics,
-	scheduler *scheduler.Scheduler,
-	slackLoader *slack.SlackLoader,
-	graphqlPort int,
-	artifactsStorage storage.ArtifactsStorage,
+	proContext *config.ProContext,
+	ff featureflags.FeatureFlags,
 	dashboardURI string,
 	helmchartVersion string,
-	mode string,
-	eventsBus bus.Bus,
-	secretConfig testkube.SecretConfig,
-	ff featureflags.FeatureFlags,
-	logsStream logsclient.Stream,
-	logGrpcClient logsclient.StreamGetter,
 	serviceAccountNames map[string]string,
 	dockerImageVersion string,
-	proContext *config.ProContext,
-	storageParams StorageParams,
 ) TestkubeAPI {
 
 	return TestkubeAPI{
 		ClusterID:                   clusterId,
 		Log:                         log.DefaultLogger,
-		DeprecatedRepositories:      deprecatedRepositories,
 		DeprecatedClients:           deprecatedClients,
 		TestWorkflowResults:         testWorkflowResults,
 		TestWorkflowOutput:          testWorkflowOutput,
-		SecretClient:                secretClient,
 		SecretManager:               secretManager,
-		Clientset:                   clientset,
 		TestTriggersClient:          testTriggersClient,
 		TestWorkflowsClient:         testWorkflowsClient,
 		TestWorkflowTemplatesClient: testWorkflowTemplatesClient,
@@ -101,23 +68,13 @@ func NewTestkubeAPI(
 		WebhooksClient:              webhookClient,
 		Namespace:                   namespace,
 		ConfigMap:                   configMap,
-		Executor:                    executor,
-		ContainerExecutor:           containerExecutor,
 		TestWorkflowExecutor:        testWorkflowExecutor,
 		ExecutionWorkerClient:       executionWorkerClient,
-		storageParams:               storageParams,
-		scheduler:                   scheduler,
-		slackLoader:                 slackLoader,
-		graphqlPort:                 graphqlPort,
 		ArtifactsStorage:            artifactsStorage,
 		dashboardURI:                dashboardURI,
 		helmchartVersion:            helmchartVersion,
-		mode:                        mode,
-		eventsBus:                   eventsBus,
 		secretConfig:                secretConfig,
 		featureFlags:                ff,
-		logsStream:                  logsStream,
-		logGrpcClient:               logGrpcClient,
 		ServiceAccountNames:         serviceAccountNames,
 		dockerImageVersion:          dockerImageVersion,
 		proContext:                  proContext,
@@ -133,50 +90,25 @@ type TestkubeAPI struct {
 	ContainerExecutor           client.Executor
 	TestWorkflowExecutor        testworkflowexecutor.TestWorkflowExecutor
 	ExecutionWorkerClient       executionworkertypes.Worker
-	DeprecatedRepositories      commons.DeprecatedRepositories
 	DeprecatedClients           commons.DeprecatedClients
-	SecretClient                secret.Interface
 	SecretManager               secretmanager.SecretManager
 	WebhooksClient              *executorsclientv1.WebhooksClient
 	TestTriggersClient          testtriggersclientv1.Interface
 	TestWorkflowsClient         testworkflowsv1.Interface
 	TestWorkflowTemplatesClient testworkflowsv1.TestWorkflowTemplatesInterface
 	Metrics                     metrics.Metrics
-	storageParams               StorageParams
 	Namespace                   string
 	WebsocketLoader             *ws.WebsocketLoader
 	Events                      *event.Emitter
 	ConfigMap                   repoConfig.Repository
-	scheduler                   *scheduler.Scheduler
-	Clientset                   kubernetes.Interface
-	slackLoader                 *slack.SlackLoader
-	graphqlPort                 int
 	ArtifactsStorage            storage.ArtifactsStorage
 	dashboardURI                string
 	helmchartVersion            string
-	mode                        string
-	eventsBus                   bus.Bus
 	secretConfig                testkube.SecretConfig
 	featureFlags                featureflags.FeatureFlags
-	logsStream                  logsclient.Stream
-	logGrpcClient               logsclient.StreamGetter
 	proContext                  *config.ProContext
 	ServiceAccountNames         map[string]string
 	dockerImageVersion          string
-}
-
-type StorageParams struct {
-	SSL             bool   `envconfig:"STORAGE_SSL" default:"false"`
-	SkipVerify      bool   `envconfig:"STORAGE_SKIP_VERIFY" default:"false"`
-	CertFile        string `envconfig:"STORAGE_CERT_FILE"`
-	KeyFile         string `envconfig:"STORAGE_KEY_FILE"`
-	CAFile          string `envconfig:"STORAGE_CA_FILE"`
-	Endpoint        string
-	AccessKeyId     string
-	SecretAccessKey string
-	Region          string
-	Token           string
-	Bucket          string
 }
 
 func (s *TestkubeAPI) Init(server server.HTTPServer) {
@@ -279,72 +211,4 @@ func (s *TestkubeAPI) Init(server server.HTTPServer) {
 
 	repositories := root.Group("/repositories")
 	repositories.Post("/", s.ValidateRepositoryHandler())
-
-	// set up proxy for the internal GraphQL server
-	server.Mux.All("/graphql", func(c *fiber.Ctx) error {
-		// Connect to server
-		serverConn, err := net.Dial("tcp", fmt.Sprintf(":%d", s.graphqlPort))
-		if err != nil {
-			s.Log.Errorw("could not connect to GraphQL server as a proxy", "error", err)
-			return err
-		}
-
-		// Resend headers to the server
-		_, err = serverConn.Write(c.Request().Header.Header())
-		if err != nil {
-			serverConn.Close()
-			s.Log.Errorw("error while sending headers to GraphQL server", "error", err)
-			return err
-		}
-
-		// Resend body to the server
-		_, err = serverConn.Write(c.Body())
-		if err != nil && err != io.EOF {
-			serverConn.Close()
-			s.Log.Errorw("error while reading GraphQL client data", "error", err)
-			return err
-		}
-
-		// Handle optional WebSocket connection
-		c.Context().HijackSetNoResponse(true)
-		c.Context().Hijack(func(clientConn net.Conn) {
-			// Close the connection afterward
-			defer serverConn.Close()
-			defer clientConn.Close()
-
-			// Extract Unix connection
-			serverSock, ok := serverConn.(*net.TCPConn)
-			if !ok {
-				s.Log.Errorw("error while building TCPConn out ouf serverConn", "error", err)
-				return
-			}
-			clientSock, ok := reflect.Indirect(reflect.ValueOf(clientConn)).FieldByName("Conn").Interface().(*net.TCPConn)
-			if !ok {
-				s.Log.Errorw("error while building TCPConn out of hijacked connection", "error", err)
-				return
-			}
-
-			// Duplex communication between client and GraphQL server
-			var wg sync.WaitGroup
-			wg.Add(2)
-			go func() {
-				defer wg.Done()
-				_, err := io.Copy(clientSock, serverSock)
-				if err != nil && err != io.EOF && !errors.Is(err, syscall.ECONNRESET) && !errors.Is(err, syscall.EPIPE) {
-					s.Log.Errorw("error while reading GraphQL client data", "error", err)
-				}
-				serverSock.CloseWrite()
-			}()
-			go func() {
-				defer wg.Done()
-				_, err = io.Copy(serverSock, clientSock)
-				if err != nil && err != io.EOF {
-					s.Log.Errorw("error while reading GraphQL server data", "error", err)
-				}
-				clientSock.CloseWrite()
-			}()
-			wg.Wait()
-		})
-		return nil
-	})
 }

@@ -14,7 +14,6 @@ import (
 	testtriggersclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testtriggers/v1"
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/pkg/client/testworkflows/v1"
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
-	v1 "github.com/kubeshop/testkube/internal/app/api/v1"
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/log"
@@ -80,7 +79,7 @@ func NewDeprecatedTestkubeAPI(
 	serviceAccountNames map[string]string,
 	dockerImageVersion string,
 	proContext *config.ProContext,
-	storageParams v1.StorageParams,
+	storageParams StorageParams,
 ) DeprecatedTestkubeAPI {
 
 	return DeprecatedTestkubeAPI{
@@ -143,7 +142,7 @@ type DeprecatedTestkubeAPI struct {
 	TestWorkflowsClient         testworkflowsv1.Interface
 	TestWorkflowTemplatesClient testworkflowsv1.TestWorkflowTemplatesInterface
 	Metrics                     metrics.Metrics
-	storageParams               v1.StorageParams
+	storageParams               StorageParams
 	Namespace                   string
 	WebsocketLoader             *ws.WebsocketLoader
 	Events                      *event.Emitter
@@ -164,6 +163,20 @@ type DeprecatedTestkubeAPI struct {
 	proContext                  *config.ProContext
 	ServiceAccountNames         map[string]string
 	dockerImageVersion          string
+}
+
+type StorageParams struct {
+	SSL             bool   `envconfig:"STORAGE_SSL" default:"false"`
+	SkipVerify      bool   `envconfig:"STORAGE_SKIP_VERIFY" default:"false"`
+	CertFile        string `envconfig:"STORAGE_CERT_FILE"`
+	KeyFile         string `envconfig:"STORAGE_KEY_FILE"`
+	CAFile          string `envconfig:"STORAGE_CA_FILE"`
+	Endpoint        string
+	AccessKeyId     string
+	SecretAccessKey string
+	Region          string
+	Token           string
+	Bucket          string
 }
 
 func (s *DeprecatedTestkubeAPI) Init(server server.HTTPServer) {
