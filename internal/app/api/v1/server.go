@@ -13,6 +13,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	testtriggersclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testtriggers/v1"
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/pkg/client/testworkflows/v1"
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	"github.com/kubeshop/testkube/internal/config"
@@ -36,7 +37,6 @@ import (
 	"github.com/kelseyhightower/envconfig"
 
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
-	testkubeclientset "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/event/bus"
@@ -69,7 +69,7 @@ func NewTestkubeAPI(
 	secretManager secretmanager.SecretManager,
 	webhookClient *executorsclientv1.WebhooksClient,
 	clientset kubernetes.Interface,
-	testkubeClientset testkubeclientset.Interface,
+	testTriggersClient testtriggersclientv1.Interface,
 	testWorkflowsClient testworkflowsv1.Interface,
 	testWorkflowTemplatesClient testworkflowsv1.TestWorkflowTemplatesInterface,
 	configMap repoConfig.Repository,
@@ -121,7 +121,7 @@ func NewTestkubeAPI(
 		SecretClient:                secretClient,
 		SecretManager:               secretManager,
 		Clientset:                   clientset,
-		TestKubeClientset:           testkubeClientset,
+		TestTriggersClient:          testTriggersClient,
 		TestWorkflowsClient:         testWorkflowsClient,
 		TestWorkflowTemplatesClient: testWorkflowTemplatesClient,
 		Metrics:                     metrics,
@@ -166,7 +166,7 @@ type TestkubeAPI struct {
 	SecretClient                secret.Interface
 	SecretManager               secretmanager.SecretManager
 	WebhooksClient              *executorsclientv1.WebhooksClient
-	TestKubeClientset           testkubeclientset.Interface
+	TestTriggersClient          testtriggersclientv1.Interface
 	TestWorkflowsClient         testworkflowsv1.Interface
 	TestWorkflowTemplatesClient testworkflowsv1.TestWorkflowTemplatesInterface
 	Metrics                     metrics.Metrics

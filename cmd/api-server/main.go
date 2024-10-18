@@ -15,6 +15,7 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
+	testkubeclientset "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	"github.com/kubeshop/testkube/cmd/api-server/services"
 	"github.com/kubeshop/testkube/internal/app/api/debug"
@@ -64,11 +65,11 @@ import (
 	logsclient "github.com/kubeshop/testkube/pkg/logs/client"
 	"github.com/kubeshop/testkube/pkg/scheduler"
 
-	testkubeclientset "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/triggers"
 
 	kubeclient "github.com/kubeshop/testkube-operator/pkg/client"
+	testtriggersclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testtriggers/v1"
 	testworkflowsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testworkflows/v1"
 	apiv1 "github.com/kubeshop/testkube/internal/app/api/v1"
 	"github.com/kubeshop/testkube/pkg/configmap"
@@ -155,6 +156,7 @@ func main() {
 	// k8s
 	deprecatedClients := commons.CreateDeprecatedClients(kubeClient, cfg.TestkubeNamespace)
 	webhooksClient := executorsclientv1.NewWebhooksClient(kubeClient, cfg.TestkubeNamespace)
+	testTriggersClient := testtriggersclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
 	testWorkflowExecutionsClient := testworkflowsclientv1.NewTestWorkflowExecutionsClient(kubeClient, cfg.TestkubeNamespace)
 
 	var testWorkflowsClient testworkflowsclientv1.Interface
@@ -169,10 +171,6 @@ func main() {
 
 	clientset, err := k8sclient.ConnectToK8s()
 	exitOnError("Creating k8s clientset", err)
-	k8sCfg, err := k8sclient.GetK8sClientConfig()
-	exitOnError("Getting k8s client config", err)
-	testkubeClientset, err := testkubeclientset.NewForConfig(k8sCfg)
-	exitOnError("Creating TestKube Clientset", err)
 
 	var logGrpcClient logsclient.StreamGetter
 	if features.LogsV2 {
@@ -428,7 +426,7 @@ func main() {
 		secretManager,
 		webhooksClient,
 		clientset,
-		testkubeClientset,
+		testTriggersClient,
 		testWorkflowsClient,
 		testWorkflowTemplatesClient,
 		configMapConfig,
@@ -500,6 +498,11 @@ func main() {
 
 	api.Init()
 	if !cfg.DisableTestTriggers {
+		k8sCfg, err := k8sclient.GetK8sClientConfig()
+		exitOnError("Getting k8s client config", err)
+		testkubeClientset, err := testkubeclientset.NewForConfig(k8sCfg)
+		exitOnError("Creating TestKube Clientset", err)
+
 		triggerService := triggers.NewService(
 			deprecatedRepositories,
 			deprecatedClients,
