@@ -203,7 +203,7 @@ func main() {
 		grpcClient = cloud.NewTestKubeCloudAPIClient(grpcConn)
 	}
 
-	proContext := newProContext(cfg, grpcClient)
+	proContext := newProContext(ctx, cfg, grpcClient)
 
 	// Check Pro/Enterprise subscription
 	subscriptionChecker, err := checktcl.NewSubscriptionChecker(ctx, proContext, grpcClient, grpcConn)
@@ -710,7 +710,7 @@ func newSlackLoader(cfg *config.Config, envs map[string]string) (*slack.SlackLoa
 		testkube.AllEventTypes, envs), nil
 }
 
-func newProContext(cfg *config.Config, grpcClient cloud.TestKubeCloudAPIClient) config.ProContext {
+func newProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.TestKubeCloudAPIClient) config.ProContext {
 	proContext := config.ProContext{
 		APIKey:                           cfg.TestkubeProAPIKey,
 		URL:                              cfg.TestkubeProURL,
@@ -730,7 +730,7 @@ func newProContext(cfg *config.Config, grpcClient cloud.TestKubeCloudAPIClient) 
 		return proContext
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	ctx, cancel := context.WithTimeout(ctx, time.Second*3)
 	md := metadata.Pairs("api-key", cfg.TestkubeProAPIKey)
 	ctx = metadata.NewOutgoingContext(ctx, md)
 	defer cancel()
