@@ -150,6 +150,6 @@ func MustGetLogsV2Client(cfg *config.Config) logsclient.StreamGetter {
 		KeyFile:    cfg.LogServerKeyFile,
 		CAFile:     cfg.LogServerCAFile,
 	})
-	exitOnError("Getting log server TLS credentials", err)
+	ExitOnError("Getting log server TLS credentials", err)
 	return logsclient.NewGrpcClient(cfg.LogServerGrpcAddress, creds)
 }
