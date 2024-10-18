@@ -2,6 +2,7 @@ package v1
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net"
 	"os"
@@ -54,8 +55,7 @@ import (
 )
 
 const (
-	HeartbeatInterval    = time.Hour
-	DefaultHttpBodyLimit = 1 * 1024 * 1024 * 1024 // 1GB - needed for file uploads
+	HeartbeatInterval = time.Hour
 )
 
 func NewTestkubeAPI(
@@ -82,7 +82,7 @@ func NewTestkubeAPI(
 	metrics metrics.Metrics,
 	scheduler *scheduler.Scheduler,
 	slackLoader *slack.SlackLoader,
-	graphqlPort string,
+	graphqlPort int,
 	artifactsStorage storage.ArtifactsStorage,
 	dashboardURI string,
 	helmchartVersion string,
@@ -167,7 +167,7 @@ type TestkubeAPI struct {
 	scheduler                   *scheduler.Scheduler
 	Clientset                   kubernetes.Interface
 	slackLoader                 *slack.SlackLoader
-	graphqlPort                 string
+	graphqlPort                 int
 	ArtifactsStorage            storage.ArtifactsStorage
 	dashboardURI                string
 	helmchartVersion            string
@@ -451,7 +451,7 @@ func (s *TestkubeAPI) InitRoutes() {
 	// set up proxy for the internal GraphQL server
 	s.Mux.All("/graphql", func(c *fiber.Ctx) error {
 		// Connect to server
-		serverConn, err := net.Dial("tcp", ":"+s.graphqlPort)
+		serverConn, err := net.Dial("tcp", fmt.Sprintf(":%d", s.graphqlPort))
 		if err != nil {
 			s.Log.Errorw("could not connect to GraphQL server as a proxy", "error", err)
 			return err

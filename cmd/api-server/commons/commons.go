@@ -83,9 +83,9 @@ func MustGetFeatureFlags() featureflags.FeatureFlags {
 	return features
 }
 
-func MustFreePort(port string) {
-	ln, err := net.Listen("tcp", ":"+port)
-	ExitOnError("Checking if port "+port+" is free", err)
+func MustFreePort(port int) {
+	ln, err := net.Listen("tcp", fmt.Sprintf("%d", port))
+	ExitOnError(fmt.Sprintf("Checking if port %d is free", port), err)
 	_ = ln.Close()
 	log.DefaultLogger.Debugw("TCP Port is available", "port", port)
 }

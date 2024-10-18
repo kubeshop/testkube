@@ -2,6 +2,7 @@ package v1
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"net/http"
 
@@ -10,7 +11,7 @@ import (
 )
 
 // RunGraphQLServer runs GraphQL server on go net/http server
-func (s *TestkubeAPI) RunGraphQLServer(ctx context.Context, port string) error {
+func (s *TestkubeAPI) RunGraphQLServer(ctx context.Context, port int) error {
 	srv := graphql.GetServer(s.Events.Bus, s.DeprecatedClients.Executors())
 
 	mux := http.NewServeMux()
@@ -19,7 +20,7 @@ func (s *TestkubeAPI) RunGraphQLServer(ctx context.Context, port string) error {
 
 	log.DefaultLogger.Infow("running GraphQL server", "port", port)
 
-	l, err := net.Listen("tcp", ":"+port)
+	l, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		return err
 	}

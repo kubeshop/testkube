@@ -291,7 +291,7 @@ func main() {
 		cfg.TestkubePodStartTimeout,
 		clusterId,
 		cfg.TestkubeDashboardURI,
-		"http://"+cfg.APIServerFullname+":"+cfg.APIServerPort,
+		fmt.Sprintf("http://%s:%d", cfg.APIServerFullname, cfg.APIServerPort),
 		cfg.NatsURI,
 		cfg.Debug,
 		logsStream,
@@ -319,7 +319,7 @@ func main() {
 		cfg.TestkubePodStartTimeout,
 		clusterId,
 		cfg.TestkubeDashboardURI,
-		"http://"+cfg.APIServerFullname+":"+cfg.APIServerPort,
+		fmt.Sprintf("http://%s:%d", cfg.APIServerFullname, cfg.APIServerPort),
 		cfg.NatsURI,
 		cfg.Debug,
 		logsStream,
@@ -434,14 +434,9 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	httpConfig.ClusterID = clusterId
-	httpConfig.Http.BodyLimit = httpConfig.HttpBodyLimit
-	if httpConfig.HttpBodyLimit == 0 {
-		httpConfig.Http.BodyLimit = apiv1.DefaultHttpBodyLimit
-	}
 
 	api := apiv1.NewTestkubeAPI(
-		httpConfig,
+		server.Config{Port: cfg.APIServerPort},
 		deprecatedRepositories,
 		deprecatedClients,
 		cfg.TestkubeNamespace,
