@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"runtime"
 	"strconv"
 
 	"github.com/spf13/cobra"
@@ -14,6 +15,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/cloudlogin"
 )
+
+const UserAgentCLI = "Testkube-CLI"
 
 // GetClient returns api client
 func GetClient(cmd *cobra.Command) (client.Client, string, error) {
@@ -34,6 +37,11 @@ func GetClient(cmd *cobra.Command) (client.Client, string, error) {
 	if err != nil {
 		return nil, "", fmt.Errorf("parsing flag value %w", err)
 	}
+
+	if headers == nil {
+		headers = make(map[string]string)
+	}
+	headers["User-Agent"] = userAgent()
 
 	options := client.Options{
 		Namespace: namespace,
@@ -115,4 +123,8 @@ func GetClient(cmd *cobra.Command) (client.Client, string, error) {
 	}
 
 	return c, namespace, nil
+}
+
+func userAgent() string {
+	return fmt.Sprintf("%s/%s (%s; %s) Go/%s", UserAgentCLI, Version, runtime.GOOS, runtime.GOARCH, runtime.Version())
 }
