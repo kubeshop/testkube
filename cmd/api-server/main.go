@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/kelseyhightower/envconfig"
 	"github.com/nats-io/nats.go"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -416,6 +417,16 @@ func main() {
 	})
 	eventsEmitter.Listen(ctx)
 
+	var storageParams apiv1.StorageParams
+	var oauthParams apiv1.OauthParams
+	if err := envconfig.Process("STORAGE", &storageParams); err != nil {
+		log.DefaultLogger.Debugw("Processing STORAGE environment config", err)
+	}
+
+	if err := envconfig.Process("TESTKUBE_OAUTH", &oauthParams); err != nil {
+		log.DefaultLogger.Debugw("Processing TESTKUBE_OAUTH environment config", err)
+	}
+
 	api := apiv1.NewTestkubeAPI(
 		deprecatedRepositories,
 		deprecatedClients,
@@ -451,9 +462,10 @@ func main() {
 		logsStream,
 		logGrpcClient,
 		serviceAccountNames,
-		envs,
 		cfg.TestkubeDockerImageVersion,
 		&proContext,
+		storageParams,
+		oauthParams,
 	)
 
 	if mode == common.ModeAgent {

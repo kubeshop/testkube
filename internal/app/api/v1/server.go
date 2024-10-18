@@ -94,9 +94,10 @@ func NewTestkubeAPI(
 	logsStream logsclient.Stream,
 	logGrpcClient logsclient.StreamGetter,
 	serviceAccountNames map[string]string,
-	envs map[string]string,
 	dockerImageVersion string,
 	proContext *config.ProContext,
+	storageParams StorageParams,
+	oauthParams OauthParams,
 ) TestkubeAPI {
 
 	var httpConfig server.Config
@@ -147,7 +148,6 @@ func NewTestkubeAPI(
 		logsStream:                  logsStream,
 		logGrpcClient:               logGrpcClient,
 		ServiceAccountNames:         serviceAccountNames,
-		Envs:                        envs,
 		dockerImageVersion:          dockerImageVersion,
 		proContext:                  proContext,
 	}
@@ -170,9 +170,9 @@ type TestkubeAPI struct {
 	TestWorkflowsClient         testworkflowsv1.Interface
 	TestWorkflowTemplatesClient testworkflowsv1.TestWorkflowTemplatesInterface
 	Metrics                     metrics.Metrics
-	storageParams               storageParams
+	storageParams               StorageParams
 	Namespace                   string
-	oauthParams                 oauthParams
+	oauthParams                 OauthParams
 	WebsocketLoader             *ws.WebsocketLoader
 	Events                      *event.Emitter
 	ConfigMap                   repoConfig.Repository
@@ -191,11 +191,10 @@ type TestkubeAPI struct {
 	logGrpcClient               logsclient.StreamGetter
 	proContext                  *config.ProContext
 	ServiceAccountNames         map[string]string
-	Envs                        map[string]string
 	dockerImageVersion          string
 }
 
-type storageParams struct {
+type StorageParams struct {
 	SSL             bool   `envconfig:"STORAGE_SSL" default:"false"`
 	SkipVerify      bool   `envconfig:"STORAGE_SKIP_VERIFY" default:"false"`
 	CertFile        string `envconfig:"STORAGE_CERT_FILE"`
@@ -209,7 +208,7 @@ type storageParams struct {
 	Bucket          string
 }
 
-type oauthParams struct {
+type OauthParams struct {
 	ClientID     string
 	ClientSecret string
 	Provider     oauth.ProviderType
@@ -242,19 +241,7 @@ func (s TestkubeAPI) SendTelemetryStartEvent(ctx context.Context, ch chan struct
 }
 
 func (s *TestkubeAPI) Init() {
-	s.InitEnvs()
 	s.InitRoutes()
-}
-
-// InitEnvs initializes api server settings
-func (s *TestkubeAPI) InitEnvs() {
-	if err := envconfig.Process("STORAGE", &s.storageParams); err != nil {
-		s.Log.Debugw("Processing STORAGE environment config", err)
-	}
-
-	if err := envconfig.Process("TESTKUBE_OAUTH", &s.oauthParams); err != nil {
-		s.Log.Debugw("Processing TESTKUBE_OAUTH environment config", err)
-	}
 }
 
 func (s *TestkubeAPI) InitRoutes() {
