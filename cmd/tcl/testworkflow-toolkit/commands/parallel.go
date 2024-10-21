@@ -19,6 +19,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	commontcl "github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/common"
@@ -220,10 +221,10 @@ func NewParallelCmd() *cobra.Command {
 				result, err := spawn.ExecutionWorker().Execute(context.Background(), executionworkertypes.ExecuteRequest{
 					ResourceId:          cfg.Resource.Id,
 					Execution:           cfg.Execution,
-					Workflow:            testworkflowsv1.TestWorkflow{Spec: *spec},
+					Workflow:            testworkflowsv1.TestWorkflow{ObjectMeta: metav1.ObjectMeta{Name: cfg.Workflow.Name, Labels: cfg.Workflow.Labels}, Spec: *spec},
 					ScheduledAt:         &scheduledAt,
 					ControlPlane:        cfg.ControlPlane,
-					ArtifactsPathPrefix: cfg.Resource.FsPrefix,
+					ArtifactsPathPrefix: spawn.CreateResourceConfig("", index).FsPrefix, // Omit duplicated reference for FS prefix
 				})
 				if err != nil {
 					fmt.Printf("%d: failed to prepare resources: %s\n", index, err.Error())
