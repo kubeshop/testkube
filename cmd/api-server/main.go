@@ -468,12 +468,19 @@ func main() {
 	}
 
 	if !cfg.DisableTestTriggers {
+		k8sCfg, err := k8sclient.GetK8sClientConfig()
+		commons.ExitOnError("Getting k8s client config", err)
+		testkubeClientset, err := testkubeclientset.NewForConfig(k8sCfg)
+		commons.ExitOnError("Creating TestKube Clientset", err)
+		// TODO: Check why this simpler options is not working
+		//testkubeClientset := testkubeclientset.New(clientset.RESTClient())
+
 		triggerService := triggers.NewService(
 			deprecatedRepositories,
 			deprecatedClients,
 			sched,
 			clientset,
-			testkubeclientset.New(clientset.RESTClient()),
+			testkubeClientset,
 			testWorkflowsClient,
 			triggerLeaseBackend,
 			log.DefaultLogger,
