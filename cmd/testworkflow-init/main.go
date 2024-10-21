@@ -240,6 +240,10 @@ func main() {
 			}
 
 		case lite.ActionTypeExecute:
+			// Ensure the latest state before each execute,
+			// as it may refer to the state file (Toolkit).
+			data.SaveState()
+
 			// Ignore running when the step is already resolved (= skipped)
 			step := state.GetStep(action.Execute.Ref)
 			if step.IsFinished() {
