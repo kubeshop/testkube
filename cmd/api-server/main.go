@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -22,24 +21,20 @@ import (
 	"github.com/kubeshop/testkube/cmd/api-server/services"
 	"github.com/kubeshop/testkube/internal/app/api/debug"
 	"github.com/kubeshop/testkube/internal/app/api/oauth"
+	cloudartifacts "github.com/kubeshop/testkube/pkg/cloud/data/artifact"
 	cloudtestworkflow "github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
 	"github.com/kubeshop/testkube/pkg/event/kind/cdevent"
 	"github.com/kubeshop/testkube/pkg/event/kind/k8sevent"
 	"github.com/kubeshop/testkube/pkg/event/kind/webhook"
 	ws "github.com/kubeshop/testkube/pkg/event/kind/websocket"
 	oauth2 "github.com/kubeshop/testkube/pkg/oauth"
-	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
 	testworkflow2 "github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/secretmanager"
 	"github.com/kubeshop/testkube/pkg/server"
 	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
 	"github.com/kubeshop/testkube/pkg/tcl/schedulertcl"
-	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/presets"
-	"github.com/kubeshop/testkube/pkg/utils/text"
-
-	cloudartifacts "github.com/kubeshop/testkube/pkg/cloud/data/artifact"
 
 	domainstorage "github.com/kubeshop/testkube/pkg/storage"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
@@ -80,10 +75,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/reconciler"
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
-)
-
-const (
-	HeartbeatInterval = time.Hour
 )
 
 func init() {
@@ -530,7 +521,7 @@ func main() {
 
 	// telemetry based functions
 	g.Go(func() error {
-		sendHeartbeatTelemetry(ctx, clusterId, configMapConfig)
+		services.HandleTelemetryHeartbeat(ctx, clusterId, configMapConfig)
 		return nil
 	})
 
@@ -561,37 +552,6 @@ func main() {
 
 	if err := g.Wait(); err != nil {
 		log.DefaultLogger.Fatalf("Testkube is shutting down: %v", err)
-	}
-}
-
-func sendHeartbeatTelemetry(ctx context.Context, clusterId string, configMapConfig *configRepo.ConfigMapConfig) {
-	telemetryEnabled, _ := configMapConfig.GetTelemetryEnabled(ctx)
-	if telemetryEnabled {
-		out, err := telemetry.SendServerStartEvent(clusterId, version.Version)
-		if err != nil {
-			log.DefaultLogger.Debug("telemetry send error", "error", err.Error())
-		} else {
-			log.DefaultLogger.Debugw("sending telemetry server start event", "output", out)
-		}
-	}
-
-	ticker := time.NewTicker(HeartbeatInterval)
-	for {
-		telemetryEnabled, _ = configMapConfig.GetTelemetryEnabled(ctx)
-		if telemetryEnabled {
-			l := log.DefaultLogger.With("measurmentId", telemetry.TestkubeMeasurementID, "secret", text.Obfuscate(telemetry.TestkubeMeasurementSecret))
-			host, err := os.Hostname()
-			if err != nil {
-				l.Debugw("getting hostname error", "hostname", host, "error", err)
-			}
-			out, err := telemetry.SendHeartbeatEvent(host, version.Version, clusterId)
-			if err != nil {
-				l.Debugw("sending heartbeat telemetry event error", "error", err)
-			} else {
-				l.Debugw("sending heartbeat telemetry event", "output", out)
-			}
-		}
-		<-ticker.C
 	}
 }
 
