@@ -33,6 +33,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/scheduler"
 	"github.com/kubeshop/testkube/pkg/secret"
+	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 )
 
@@ -139,6 +140,7 @@ func TestExecute(t *testing.T) {
 		"",
 		"",
 		"",
+		checktcl.SubscriptionChecker{},
 	)
 	s := &Service{
 		triggerStatus:          make(map[statusKey]*triggerStatus),
