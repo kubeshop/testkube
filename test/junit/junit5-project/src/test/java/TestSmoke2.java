@@ -38,4 +38,9 @@ public class TestSmoke2 {
     public void testDdd() {
         assertEquals(1, 1);
     }
+
+    @Test
+    public void testEee() {
+        assertEquals(1, 1);
+    }
 }
