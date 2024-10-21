@@ -2,6 +2,7 @@ package commons
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net"
 	"os"
@@ -15,9 +16,12 @@ import (
 
 	"github.com/kubeshop/testkube/internal/config"
 	dbmigrations "github.com/kubeshop/testkube/internal/db-migrations"
+	parser "github.com/kubeshop/testkube/internal/template"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cache"
 	"github.com/kubeshop/testkube/pkg/configmap"
 	"github.com/kubeshop/testkube/pkg/dbmigrator"
+	kubeexecutor "github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/featureflags"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
 	"github.com/kubeshop/testkube/pkg/log"
@@ -193,6 +197,79 @@ func getMongoSSLConfig(cfg *config.Config, secretClient secret.Interface) *stora
 		SSLClientCertificateKeyFilePassword: pass,
 		SSLCertificateAuthoritiyFile:        rootCAPath,
 	}
+}
+
+// Actions
+
+func ReadDefaultExecutors(cfg *config.Config) (executors []testkube.ExecutorDetails, images kubeexecutor.Images, err error) {
+	rawExecutors, err := parser.LoadConfigFromStringOrFile(
+		cfg.TestkubeDefaultExecutors,
+		cfg.TestkubeConfigDir,
+		"executors.json",
+		"executors",
+	)
+	if err != nil {
+		return nil, images, err
+	}
+
+	if err = json.Unmarshal([]byte(rawExecutors), &executors); err != nil {
+		return nil, images, err
+	}
+
+	enabledExecutors, err := parser.LoadConfigFromStringOrFile(
+		cfg.TestkubeEnabledExecutors,
+		cfg.TestkubeConfigDir,
+		"enabledExecutors",
+		"enabled executors",
+	)
+	if err != nil {
+		return nil, images, err
+	}
+
+	// Load internal images
+	next := make([]testkube.ExecutorDetails, 0)
+	for i := range executors {
+		if executors[i].Name == "logs-sidecar" {
+			images.LogSidecar = executors[i].Executor.Image
+			continue
+		}
+		if executors[i].Name == "init-executor" {
+			images.Init = executors[i].Executor.Image
+			continue
+		}
+		if executors[i].Name == "scraper-executor" {
+			images.Scraper = executors[i].Executor.Image
+			continue
+		}
+		if executors[i].Executor == nil {
+			continue
+		}
+		next = append(next, executors[i])
+	}
+	executors = next
+
+	// When there is no executors selected, enable all
+	if enabledExecutors == "" {
+		return executors, images, nil
+	}
+
+	// Filter enabled executors
+	specifiedExecutors := make(map[string]struct{})
+	for _, executor := range strings.Split(enabledExecutors, ",") {
+		if strings.TrimSpace(executor) == "" {
+			continue
+		}
+		specifiedExecutors[strings.TrimSpace(executor)] = struct{}{}
+	}
+
+	next = make([]testkube.ExecutorDetails, 0)
+	for i := range executors {
+		if _, ok := specifiedExecutors[executors[i].Name]; ok {
+			next = append(next, executors[i])
+		}
+	}
+
+	return next, images, nil
 }
 
 // Components

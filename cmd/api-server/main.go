@@ -2,10 +2,8 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"flag"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -151,7 +149,7 @@ func main() {
 
 	metrics := metrics.NewMetrics()
 
-	defaultExecutors, images, err := parseDefaultExecutors(cfg)
+	defaultExecutors, images, err := commons.ReadDefaultExecutors(cfg)
 	commons.ExitOnError("Parsing default executors", err)
 	if !cfg.TestkubeReadonlyExecutors {
 		err := kubeexecutor.SyncDefaultExecutors(deprecatedClients.Executors(), cfg.TestkubeNamespace, defaultExecutors)
@@ -553,77 +551,6 @@ func main() {
 	if err := g.Wait(); err != nil {
 		log.DefaultLogger.Fatalf("Testkube is shutting down: %v", err)
 	}
-}
-
-func parseDefaultExecutors(cfg *config.Config) (executors []testkube.ExecutorDetails, images kubeexecutor.Images, err error) {
-	rawExecutors, err := parser.LoadConfigFromStringOrFile(
-		cfg.TestkubeDefaultExecutors,
-		cfg.TestkubeConfigDir,
-		"executors.json",
-		"executors",
-	)
-	if err != nil {
-		return nil, images, err
-	}
-
-	if err = json.Unmarshal([]byte(rawExecutors), &executors); err != nil {
-		return nil, images, err
-	}
-
-	enabledExecutors, err := parser.LoadConfigFromStringOrFile(
-		cfg.TestkubeEnabledExecutors,
-		cfg.TestkubeConfigDir,
-		"enabledExecutors",
-		"enabled executors",
-	)
-	if err != nil {
-		return nil, images, err
-	}
-
-	// Load internal images
-	next := make([]testkube.ExecutorDetails, 0)
-	for i := range executors {
-		if executors[i].Name == "logs-sidecar" {
-			images.LogSidecar = executors[i].Executor.Image
-			continue
-		}
-		if executors[i].Name == "init-executor" {
-			images.Init = executors[i].Executor.Image
-			continue
-		}
-		if executors[i].Name == "scraper-executor" {
-			images.Scraper = executors[i].Executor.Image
-			continue
-		}
-		if executors[i].Executor == nil {
-			continue
-		}
-		next = append(next, executors[i])
-	}
-	executors = next
-
-	// When there is no executors selected, enable all
-	if enabledExecutors == "" {
-		return executors, images, nil
-	}
-
-	// Filter enabled executors
-	specifiedExecutors := make(map[string]struct{})
-	for _, executor := range strings.Split(enabledExecutors, ",") {
-		if strings.TrimSpace(executor) == "" {
-			continue
-		}
-		specifiedExecutors[strings.TrimSpace(executor)] = struct{}{}
-	}
-
-	next = make([]testkube.ExecutorDetails, 0)
-	for i := range executors {
-		if _, ok := specifiedExecutors[executors[i].Name]; ok {
-			next = append(next, executors[i])
-		}
-	}
-
-	return next, images, nil
 }
 
 func newNATSEncodedConnection(cfg *config.Config) (*nats.EncodedConn, error) {
