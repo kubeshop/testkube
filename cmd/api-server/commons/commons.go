@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/nats-io/nats.go"
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/mongo"
 	"google.golang.org/grpc/metadata"
@@ -25,6 +26,9 @@ import (
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/configmap"
 	"github.com/kubeshop/testkube/pkg/dbmigrator"
+	"github.com/kubeshop/testkube/pkg/event"
+	"github.com/kubeshop/testkube/pkg/event/bus"
+	"github.com/kubeshop/testkube/pkg/event/kind/slack"
 	kubeexecutor "github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/featureflags"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
@@ -315,6 +319,48 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 	}
 
 	return proContext
+}
+
+func MustCreateSlackLoader(cfg *config.Config, envs map[string]string) *slack.SlackLoader {
+	slackTemplate, err := parser.LoadConfigFromStringOrFile(
+		cfg.SlackTemplate,
+		cfg.TestkubeConfigDir,
+		"slack-template.json",
+		"slack template",
+	)
+	ExitOnError("Creating slack loader", err)
+
+	slackConfig, err := parser.LoadConfigFromStringOrFile(cfg.SlackConfig, cfg.TestkubeConfigDir, "slack-config.json", "slack config")
+	ExitOnError("Creating slack loader", err)
+
+	return slack.NewSlackLoader(slackTemplate, slackConfig, cfg.TestkubeClusterName, cfg.TestkubeDashboardURI,
+		testkube.AllEventTypes, envs)
+}
+
+func MustCreateNATSConnection(cfg *config.Config) *nats.EncodedConn {
+	// if embedded NATS server is enabled, we'll replace connection with one to the embedded server
+	if cfg.NatsEmbedded {
+		_, nc, err := event.ServerWithConnection(cfg.NatsEmbeddedStoreDir)
+		ExitOnError("Creating NATS connection", err)
+
+		log.DefaultLogger.Info("Started embedded NATS server")
+
+		conn, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER)
+		ExitOnError("Creating NATS connection", err)
+		return conn
+	}
+
+	conn, err := bus.NewNATSEncodedConnection(bus.ConnectionConfig{
+		NatsURI:            cfg.NatsURI,
+		NatsSecure:         cfg.NatsSecure,
+		NatsSkipVerify:     cfg.NatsSkipVerify,
+		NatsCertFile:       cfg.NatsCertFile,
+		NatsKeyFile:        cfg.NatsKeyFile,
+		NatsCAFile:         cfg.NatsCAFile,
+		NatsConnectTimeout: cfg.NatsConnectTimeout,
+	})
+	ExitOnError("Creating NATS connection", err)
+	return conn
 }
 
 // Components

@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/gofiber/fiber/v2/middleware/cors"
-	"github.com/nats-io/nats.go"
 	"google.golang.org/grpc"
 
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
@@ -33,12 +32,9 @@ import (
 	domainstorage "github.com/kubeshop/testkube/pkg/storage"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
 
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/event/kind/slack"
-
 	"github.com/kubeshop/testkube/internal/common"
-	"github.com/kubeshop/testkube/internal/config"
 	parser "github.com/kubeshop/testkube/internal/template"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/version"
 
 	"golang.org/x/sync/errgroup"
@@ -121,8 +117,7 @@ func main() {
 	}
 	secretManager := secretmanager.New(clientset, secretConfig)
 
-	nc, err := newNATSEncodedConnection(cfg)
-	commons.ExitOnError("Creating NATS connection", err)
+	nc := commons.MustCreateNATSConnection(cfg)
 	eventBus := bus.NewNATSBus(nc)
 	if cfg.Trace {
 		eventBus.TraceEvents()
@@ -158,8 +153,7 @@ func main() {
 
 	inspector := commons.CreateImageInspector(cfg, configMapClient, secretClient)
 
-	slackLoader, err := newSlackLoader(cfg, envs)
-	commons.ExitOnError("Creating slack loader", err)
+	slackLoader := commons.MustCreateSlackLoader(cfg, envs)
 
 	var deprecatedRepositories commons.DeprecatedRepositories
 	var testWorkflowResultsRepository testworkflow2.Repository
@@ -547,48 +541,4 @@ func main() {
 	if err := g.Wait(); err != nil {
 		log.DefaultLogger.Fatalf("Testkube is shutting down: %v", err)
 	}
-}
-
-func newNATSEncodedConnection(cfg *config.Config) (*nats.EncodedConn, error) {
-	// if embedded NATS server is enabled, we'll replace connection with one to the embedded server
-	if cfg.NatsEmbedded {
-		_, nc, err := event.ServerWithConnection(cfg.NatsEmbeddedStoreDir)
-		if err != nil {
-			return nil, err
-		}
-
-		log.DefaultLogger.Info("Started embedded NATS server")
-
-		return nats.NewEncodedConn(nc, nats.JSON_ENCODER)
-	}
-
-	return bus.NewNATSEncodedConnection(bus.ConnectionConfig{
-		NatsURI:            cfg.NatsURI,
-		NatsSecure:         cfg.NatsSecure,
-		NatsSkipVerify:     cfg.NatsSkipVerify,
-		NatsCertFile:       cfg.NatsCertFile,
-		NatsKeyFile:        cfg.NatsKeyFile,
-		NatsCAFile:         cfg.NatsCAFile,
-		NatsConnectTimeout: cfg.NatsConnectTimeout,
-	})
-}
-
-func newSlackLoader(cfg *config.Config, envs map[string]string) (*slack.SlackLoader, error) {
-	slackTemplate, err := parser.LoadConfigFromStringOrFile(
-		cfg.SlackTemplate,
-		cfg.TestkubeConfigDir,
-		"slack-template.json",
-		"slack template",
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	slackConfig, err := parser.LoadConfigFromStringOrFile(cfg.SlackConfig, cfg.TestkubeConfigDir, "slack-config.json", "slack config")
-	if err != nil {
-		return nil, err
-	}
-
-	return slack.NewSlackLoader(slackTemplate, slackConfig, cfg.TestkubeClusterName, cfg.TestkubeDashboardURI,
-		testkube.AllEventTypes, envs), nil
 }
