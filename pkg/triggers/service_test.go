@@ -192,7 +192,7 @@ func TestService_Run(t *testing.T) {
 		WithLeaseCheckerInterval(50*time.Millisecond),
 	)
 
-	s.Run(ctx)
+	go s.Run(ctx)
 
 	time.Sleep(100 * time.Millisecond)
 
