@@ -16,9 +16,9 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/tests"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testworkflows/renderer"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
-	intcommon "github.com/kubeshop/testkube/internal/common"
 	apiclientv1 "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	tclcmd "github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/cmd"
 	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -76,18 +76,10 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 				Config:          config,
 				DisableWebhooks: disableWebhooks,
 				Tags:            tags,
-				RunningContext: &testkube.TestWorkflowRunningContext{
-					Interface_: &testkube.TestWorkflowRunningContextInterface{
-						Name:  runContext,
-						Type_: intcommon.Ptr(interfaceType),
-					},
-					Actor: &testkube.TestWorkflowRunningContextActor{
-						Type_:    intcommon.Ptr(testkube.USER_TestWorkflowRunningContextActorType),
-						Username: "",
-						Email:    "",
-					},
-				},
-			})
+				// Pro edition only (tcl protected code)
+				RunningContext: tclcmd.GetRunningContext(runContext, "", "", interfaceType),
+			},
+			)
 			if err != nil {
 				// User friendly Open Source operation error
 				errMessage := err.Error()

@@ -16,6 +16,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/scheduler"
+	"github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/api"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowresolver"
 	"github.com/kubeshop/testkube/pkg/workerpool"
 )
@@ -374,17 +375,8 @@ func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 
 		request.TestWorkflowExecutionName = strings.Clone(c.Query("testWorkflowExecutionName"))
 		if request.RunningContext == nil {
-			request.RunningContext = &testkube.TestWorkflowRunningContext{
-				Interface_: &testkube.TestWorkflowRunningContextInterface{
-					Type_: common.Ptr(testkube.API_TestWorkflowRunningContextInterfaceType),
-				},
-				Actor: &testkube.TestWorkflowRunningContextActor{
-					Name:     "",
-					Username: "",
-					Email:    "",
-					Type_:    common.Ptr(testkube.PROGRAM_TestWorkflowRunningContextActorType),
-				},
-			}
+			// Pro edition only (tcl protected code)
+			request.RunningContext = api.GetRunningContext("", "", "")
 		}
 		concurrencyLevel := scheduler.DefaultConcurrencyLevel
 		workerpoolService := workerpool.New[testworkflowsv1.TestWorkflow, testkube.TestWorkflowExecutionRequest,

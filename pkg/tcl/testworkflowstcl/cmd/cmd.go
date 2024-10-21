@@ -6,21 +6,23 @@
 //
 //	https://github.com/kubeshop/testkube/blob/main/licenses/TCL.txt
 
-package triggers
+package cmd
 
 import (
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
-func GetRunningContext(name string) *testkube.TestWorkflowRunningContext {
+func GetRunningContext(runContext, username, email string, interfaceType testkube.TestWorkflowRunningContextInterfaceType) *testkube.TestWorkflowRunningContext {
 	return &testkube.TestWorkflowRunningContext{
 		Interface_: &testkube.TestWorkflowRunningContextInterface{
-			Type_: common.Ptr(testkube.INTERNAL_TestWorkflowRunningContextInterfaceType),
+			Name:  runContext,
+			Type_: common.Ptr(interfaceType),
 		},
 		Actor: &testkube.TestWorkflowRunningContextActor{
-			Name:  name,
-			Type_: common.Ptr(testkube.TESTRIGGER_TestWorkflowRunningContextActorType),
+			Type_:    common.Ptr(testkube.USER_TestWorkflowRunningContextActorType),
+			Username: username,
+			Email:    email,
 		},
 	}
 }
