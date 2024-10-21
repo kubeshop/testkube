@@ -9,11 +9,30 @@
 package cmd
 
 import (
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
+	"strings"
+
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
-func GetRunningContext(runContext, username, email string, interfaceType testkube.TestWorkflowRunningContextInterfaceType) *testkube.TestWorkflowRunningContext {
+func GetRunningContext(runContext, token string, interfaceType testkube.TestWorkflowRunningContextInterfaceType) *testkube.TestWorkflowRunningContext {
+	var username, email string
+	if token != "" {
+		payload, err := getJWTPayload(token)
+		if err == nil {
+			if value, ok := payload["userame"]; ok {
+				username = fmt.Sprint(value)
+			}
+
+			if value, ok := payload["email"]; ok {
+				email = fmt.Sprint(value)
+			}
+		}
+	}
+
 	return &testkube.TestWorkflowRunningContext{
 		Interface_: &testkube.TestWorkflowRunningContextInterface{
 			Name:  runContext,
@@ -25,4 +44,33 @@ func GetRunningContext(runContext, username, email string, interfaceType testkub
 			Email:    email,
 		},
 	}
+}
+
+func base64Decode(encoded string) (string, error) {
+	decoded, err := base64.RawURLEncoding.DecodeString(encoded)
+	if err != nil {
+		return "", err
+	}
+	return string(decoded), nil
+}
+
+func getJWTPayload(token string) (map[string]interface{}, error) {
+	parts := strings.Split(token, ".")
+	if len(parts) != 3 {
+		return nil, fmt.Errorf("invalid token format")
+	}
+
+	// Decode the payload
+	payloadJSON, err := base64Decode(parts[1])
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode payload: %v", err)
+	}
+
+	// Unmarshal the payload into maps
+	var payload map[string]interface{}
+	if err := json.Unmarshal([]byte(payloadJSON), &payload); err != nil {
+		return nil, fmt.Errorf("failed to parse payload JSON: %v", err)
+	}
+
+	return payload, nil
 }

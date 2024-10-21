@@ -15,6 +15,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/render"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/tests"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testworkflows/renderer"
+	testkubecfg "github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	apiclientv1 "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -71,13 +72,18 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 				runContext = ""
 				interfaceType = testkube.CICD_TestWorkflowRunningContextInterfaceType
 			}
+
+			cfg, err := testkubecfg.Load()
+			ui.ExitOnError("loading config file", err)
+			ui.NL()
+
 			execution, err := client.ExecuteTestWorkflow(name, testkube.TestWorkflowExecutionRequest{
 				Name:            executionName,
 				Config:          config,
 				DisableWebhooks: disableWebhooks,
 				Tags:            tags,
 				// Pro edition only (tcl protected code)
-				RunningContext: tclcmd.GetRunningContext(runContext, "", "", interfaceType),
+				RunningContext: tclcmd.GetRunningContext(runContext, cfg.CloudContext.ApiKey, interfaceType),
 			},
 			)
 			if err != nil {
