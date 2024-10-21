@@ -269,6 +269,7 @@ func NewServicesCmd() *cobra.Command {
 				scheduledAt := time.Now()
 				result, err := spawn.ExecutionWorker().Service(context.Background(), executionworkertypes.ServiceRequest{
 					ResourceId:     cfg.Resource.Id,
+					GroupId:        groupRef,
 					Execution:      cfg.Execution,
 					Workflow:       testworkflowsv1.TestWorkflow{Spec: instance.Spec},
 					ScheduledAt:    &scheduledAt,
