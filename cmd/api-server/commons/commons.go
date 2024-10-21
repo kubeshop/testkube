@@ -9,9 +9,12 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/mongo"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/protobuf/types/known/emptypb"
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/kubeshop/testkube/internal/config"
@@ -19,6 +22,7 @@ import (
 	parser "github.com/kubeshop/testkube/internal/template"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cache"
+	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/configmap"
 	"github.com/kubeshop/testkube/pkg/dbmigrator"
 	kubeexecutor "github.com/kubeshop/testkube/pkg/executor"
@@ -270,6 +274,47 @@ func ReadDefaultExecutors(cfg *config.Config) (executors []testkube.ExecutorDeta
 	}
 
 	return next, images, nil
+}
+
+func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.TestKubeCloudAPIClient) config.ProContext {
+	proContext := config.ProContext{
+		APIKey:                           cfg.TestkubeProAPIKey,
+		URL:                              cfg.TestkubeProURL,
+		TLSInsecure:                      cfg.TestkubeProTLSInsecure,
+		WorkerCount:                      cfg.TestkubeProWorkerCount,
+		LogStreamWorkerCount:             cfg.TestkubeProLogStreamWorkerCount,
+		WorkflowNotificationsWorkerCount: cfg.TestkubeProWorkflowNotificationsWorkerCount,
+		SkipVerify:                       cfg.TestkubeProSkipVerify,
+		EnvID:                            cfg.TestkubeProEnvID,
+		OrgID:                            cfg.TestkubeProOrgID,
+		Migrate:                          cfg.TestkubeProMigrate,
+		ConnectionTimeout:                cfg.TestkubeProConnectionTimeout,
+		DashboardURI:                     cfg.TestkubeDashboardURI,
+	}
+
+	if grpcClient == nil {
+		return proContext
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, time.Second*3)
+	md := metadata.Pairs("api-key", cfg.TestkubeProAPIKey)
+	ctx = metadata.NewOutgoingContext(ctx, md)
+	defer cancel()
+	foundProContext, err := grpcClient.GetProContext(ctx, &emptypb.Empty{})
+	if err != nil {
+		log.DefaultLogger.Warnf("cannot fetch pro-context from cloud: %s", err)
+		return proContext
+	}
+
+	if proContext.EnvID == "" {
+		proContext.EnvID = foundProContext.EnvId
+	}
+
+	if proContext.OrgID == "" {
+		proContext.OrgID = foundProContext.OrgId
+	}
+
+	return proContext
 }
 
 // Components

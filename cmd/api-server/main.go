@@ -4,13 +4,9 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"time"
 
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/nats-io/nats.go"
-	"google.golang.org/grpc/metadata"
-	"google.golang.org/protobuf/types/known/emptypb"
-
 	"google.golang.org/grpc"
 
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
@@ -192,7 +188,7 @@ func main() {
 		grpcClient = cloud.NewTestKubeCloudAPIClient(grpcConn)
 	}
 
-	proContext := newProContext(ctx, cfg, grpcClient)
+	proContext := commons.ReadProContext(ctx, cfg, grpcClient)
 
 	// Check Pro/Enterprise subscription
 	subscriptionChecker, err := checktcl.NewSubscriptionChecker(ctx, proContext, grpcClient, grpcConn)
@@ -595,45 +591,4 @@ func newSlackLoader(cfg *config.Config, envs map[string]string) (*slack.SlackLoa
 
 	return slack.NewSlackLoader(slackTemplate, slackConfig, cfg.TestkubeClusterName, cfg.TestkubeDashboardURI,
 		testkube.AllEventTypes, envs), nil
-}
-
-func newProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.TestKubeCloudAPIClient) config.ProContext {
-	proContext := config.ProContext{
-		APIKey:                           cfg.TestkubeProAPIKey,
-		URL:                              cfg.TestkubeProURL,
-		TLSInsecure:                      cfg.TestkubeProTLSInsecure,
-		WorkerCount:                      cfg.TestkubeProWorkerCount,
-		LogStreamWorkerCount:             cfg.TestkubeProLogStreamWorkerCount,
-		WorkflowNotificationsWorkerCount: cfg.TestkubeProWorkflowNotificationsWorkerCount,
-		SkipVerify:                       cfg.TestkubeProSkipVerify,
-		EnvID:                            cfg.TestkubeProEnvID,
-		OrgID:                            cfg.TestkubeProOrgID,
-		Migrate:                          cfg.TestkubeProMigrate,
-		ConnectionTimeout:                cfg.TestkubeProConnectionTimeout,
-		DashboardURI:                     cfg.TestkubeDashboardURI,
-	}
-
-	if grpcClient == nil {
-		return proContext
-	}
-
-	ctx, cancel := context.WithTimeout(ctx, time.Second*3)
-	md := metadata.Pairs("api-key", cfg.TestkubeProAPIKey)
-	ctx = metadata.NewOutgoingContext(ctx, md)
-	defer cancel()
-	foundProContext, err := grpcClient.GetProContext(ctx, &emptypb.Empty{})
-	if err != nil {
-		log.DefaultLogger.Warnf("cannot fetch pro-context from cloud: %s", err)
-		return proContext
-	}
-
-	if proContext.EnvID == "" {
-		proContext.EnvID = foundProContext.EnvId
-	}
-
-	if proContext.OrgID == "" {
-		proContext.OrgID = foundProContext.OrgId
-	}
-
-	return proContext
 }
