@@ -20,6 +20,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	commontcl "github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/common"
@@ -271,7 +272,7 @@ func NewServicesCmd() *cobra.Command {
 					ResourceId:     cfg.Resource.Id,
 					GroupId:        groupRef,
 					Execution:      cfg.Execution,
-					Workflow:       testworkflowsv1.TestWorkflow{Spec: instance.Spec},
+					Workflow:       testworkflowsv1.TestWorkflow{ObjectMeta: metav1.ObjectMeta{Name: cfg.Workflow.Name, Labels: cfg.Workflow.Labels}, Spec: instance.Spec},
 					ScheduledAt:    &scheduledAt,
 					RestartPolicy:  string(instance.RestartPolicy),
 					ReadinessProbe: common.MapPtr(instance.ReadinessProbe, testworkflows.MapProbeKubeToAPI),

@@ -67,7 +67,10 @@ func (r *controllersRegistry) unsafeGet(id string) (ctrl controller.Controller, 
 func (r *controllersRegistry) deregister(id string) {
 	r.mu.Lock()
 	r.controllerReservations[id]--
-	if r.controllerReservations[id] == 0 {
+	if r.controllerReservations[id] < 0 {
+		r.controllerReservations[id] = 0
+	}
+	if r.controllerReservations[id] == 0 && r.controllers[id] != nil {
 		podIp, err := r.controllers[id].PodIP()
 		if err == nil && podIp != "" {
 			r.ips.Register(id, podIp)
