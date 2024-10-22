@@ -136,8 +136,11 @@ func (s *Service) execute(ctx context.Context, e *watcherEvent, t *testtriggersv
 
 		request := testkube.TestWorkflowExecutionRequest{
 			Config: make(map[string]string, len(variables)),
-			// Pro edition only (tcl protected code)
-			RunningContext: triggerstcl.GetRunningContext(t.Name),
+		}
+
+		// Pro edition only (tcl protected code)
+		if s.proContext != nil && s.proContext.APIKey != "" {
+			request.RunningContext = triggerstcl.GetRunningContext(t.Name)
 		}
 
 		for _, variable := range variables {
