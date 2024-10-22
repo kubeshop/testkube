@@ -95,38 +95,22 @@ func main() {
 	clientset, err := k8sclient.ConnectToK8s()
 	commons.ExitOnError("Creating k8s clientset", err)
 
-	nc := commons.MustCreateNATSConnection(cfg)
-	eventBus := bus.NewNATSBus(nc)
-	if cfg.Trace {
-		eventBus.TraceEvents()
-	}
-	eventsEmitter := event.NewEmitter(eventBus, cfg.TestkubeClusterName)
-
-	var logGrpcClient logsclient.StreamGetter
-	var logsStream logsclient.Stream
-	if features.LogsV2 {
-		logGrpcClient = commons.MustGetLogsV2Client(cfg)
-		logsStream, err = logsclient.NewNatsLogStream(nc.Conn)
-		commons.ExitOnError("Creating logs streaming client", err)
-	}
-
 	configMapConfig := commons.MustGetConfigMapConfig(ctx, cfg.APIServerConfig, cfg.TestkubeNamespace, cfg.TestkubeAnalyticsEnabled)
-	clusterId, _ := configMapConfig.GetUniqueClusterId(ctx)
-	telemetryEnabled, _ := configMapConfig.GetTelemetryEnabled(ctx)
 
 	// Start local Control Plane
 	if mode == common.ModeStandalone {
-		controlPlane := services.CreateControlPlane(ctx, cfg, features, configMapConfig)
+		controlPlane := services.CreateControlPlane(ctx, cfg, features, configMapConfig, true)
 		g.Go(func() error {
 			return controlPlane.Run(ctx)
 		})
 
 		// Rewire connection
-		// TODO: Avoid dummy values
-		// TODO: Rename configuration variables
 		cfg.TestkubeProURL = fmt.Sprintf("%s:%d", cfg.APIServerFullname, cfg.GRPCServerPort)
 		cfg.TestkubeProTLSInsecure = true
 	}
+
+	clusterId, _ := configMapConfig.GetUniqueClusterId(ctx)
+	telemetryEnabled, _ := configMapConfig.GetTelemetryEnabled(ctx)
 
 	// k8s
 	secretClient := secret.NewClientFor(clientset, cfg.TestkubeNamespace)
@@ -149,8 +133,6 @@ func main() {
 	secretManager := secretmanager.New(clientset, secretConfig)
 
 	envs := commons.GetEnvironmentVariables()
-
-	metrics := metrics.NewMetrics()
 
 	defaultExecutors, images, err := commons.ReadDefaultExecutors(cfg)
 	commons.ExitOnError("Parsing default executors", err)
@@ -178,15 +160,15 @@ func main() {
 	var grpcClient cloud.TestKubeCloudAPIClient
 	var grpcConn *grpc.ClientConn
 	// Use local network for local access
-	url := cfg.TestkubeProURL
-	if strings.HasPrefix(url, fmt.Sprintf("%s:%d", cfg.APIServerFullname, cfg.GRPCServerPort)) {
-		url = fmt.Sprintf("127.0.0.1:%d", cfg.GRPCServerPort)
+	controlPlaneUrl := cfg.TestkubeProURL
+	if strings.HasPrefix(controlPlaneUrl, fmt.Sprintf("%s:%d", cfg.APIServerFullname, cfg.GRPCServerPort)) {
+		controlPlaneUrl = fmt.Sprintf("127.0.0.1:%d", cfg.GRPCServerPort)
 	}
 	grpcConn, err = agent.NewGRPCConnection(
 		ctx,
 		cfg.TestkubeProTLSInsecure,
 		cfg.TestkubeProSkipVerify,
-		url,
+		controlPlaneUrl,
 		cfg.TestkubeProCertFile,
 		cfg.TestkubeProKeyFile,
 		cfg.TestkubeProCAFile, //nolint
@@ -195,22 +177,6 @@ func main() {
 	commons.ExitOnError("error creating gRPC connection", err)
 
 	grpcClient = cloud.NewTestKubeCloudAPIClient(grpcConn)
-
-	proContext := commons.ReadProContext(ctx, cfg, grpcClient)
-
-	// Check Pro/Enterprise subscription
-	subscriptionChecker, err := checktcl.NewSubscriptionChecker(ctx, proContext, grpcClient, grpcConn)
-	commons.ExitOnError("Failed creating subscription checker", err)
-
-	serviceAccountNames := map[string]string{
-		cfg.TestkubeNamespace: cfg.JobServiceAccountName,
-	}
-	// Pro edition only (tcl protected code)
-	if cfg.TestkubeExecutionNamespaces != "" {
-		err = subscriptionChecker.IsActiveOrgPlanEnterpriseForFeature("execution namespace")
-		commons.ExitOnError("Subscription checking", err)
-		serviceAccountNames = schedulertcl.GetServiceAccountNamesFromConfig(serviceAccountNames, cfg.TestkubeExecutionNamespaces)
-	}
 
 	if mode == common.ModeAgent && cfg.WorkflowStorage == "control-plane" {
 		testWorkflowsClient = cloudtestworkflow.NewCloudTestWorkflowRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
@@ -229,6 +195,38 @@ func main() {
 	testWorkflowOutputRepository = cloudtestworkflow.NewCloudOutputRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey, opts...)
 	triggerLeaseBackend = triggers.NewAcquireAlwaysLeaseBackend()
 	artifactStorage = cloudartifacts.NewCloudArtifactsStorage(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
+
+	nc := commons.MustCreateNATSConnection(cfg)
+	eventBus := bus.NewNATSBus(nc)
+	if cfg.Trace {
+		eventBus.TraceEvents()
+	}
+	eventsEmitter := event.NewEmitter(eventBus, cfg.TestkubeClusterName)
+
+	var logGrpcClient logsclient.StreamGetter
+	var logsStream logsclient.Stream
+	if features.LogsV2 {
+		logGrpcClient = commons.MustGetLogsV2Client(cfg)
+		logsStream, err = logsclient.NewNatsLogStream(nc.Conn)
+		commons.ExitOnError("Creating logs streaming client", err)
+	}
+
+	// Check Pro/Enterprise subscription
+	proContext := commons.ReadProContext(ctx, cfg, grpcClient)
+	subscriptionChecker, err := checktcl.NewSubscriptionChecker(ctx, proContext, grpcClient, grpcConn)
+	commons.ExitOnError("Failed creating subscription checker", err)
+
+	serviceAccountNames := map[string]string{
+		cfg.TestkubeNamespace: cfg.JobServiceAccountName,
+	}
+	// Pro edition only (tcl protected code)
+	if cfg.TestkubeExecutionNamespaces != "" {
+		err = subscriptionChecker.IsActiveOrgPlanEnterpriseForFeature("execution namespace")
+		commons.ExitOnError("Subscription checking", err)
+		serviceAccountNames = schedulertcl.GetServiceAccountNamesFromConfig(serviceAccountNames, cfg.TestkubeExecutionNamespaces)
+	}
+
+	metrics := metrics.NewMetrics()
 
 	executor, err := client.NewJobExecutor(
 		deprecatedRepositories,
