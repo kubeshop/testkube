@@ -152,7 +152,7 @@ func TestProcessBasic(t *testing.T) {
 					Args:    cmdShell("shell-test"),
 				}).
 				Start(sig[0].Ref()).
-				Execute(sig[0].Ref(), false).
+				Execute(sig[0].Ref(), false, false).
 				End(sig[0].Ref()).
 				End(constants.RootOperationName).
 				End("")
@@ -272,7 +272,7 @@ func TestProcessShellWithNonStandardImage(t *testing.T) {
 					Args:    cmdShell("shell-test"),
 				}).
 				Start(sig[0].Ref()).
-				Execute(sig[0].Ref(), false).
+				Execute(sig[0].Ref(), false, false).
 				End(sig[0].Ref()).
 				End(constants.RootOperationName).
 				End("")
@@ -406,7 +406,7 @@ func TestProcessBasicEnvReference(t *testing.T) {
 					Args:    cmdShell("shell-test"),
 				}).
 				Start(sig[0].Ref()).
-				Execute(sig[0].Ref(), false).
+				Execute(sig[0].Ref(), false, false).
 				End(sig[0].Ref()).
 				End(constants.RootOperationName).
 				End("")
@@ -489,7 +489,7 @@ func TestProcessMultipleSteps(t *testing.T) {
 					Args:    cmdShell("shell-test"),
 				}).
 				Start(sig[0].Ref()).
-				Execute(sig[0].Ref(), false).
+				Execute(sig[0].Ref(), false, false).
 				End(sig[0].Ref()).
 				CurrentStatus(and(sig[0].Ref(), constants.RootOperationName))
 		}).
@@ -500,7 +500,7 @@ func TestProcessMultipleSteps(t *testing.T) {
 					Args:    cmdShell("shell-test-2"),
 				}).
 				Start(sig[1].Ref()).
-				Execute(sig[1].Ref(), false).
+				Execute(sig[1].Ref(), false, false).
 				End(sig[1].Ref()).
 				End(constants.RootOperationName).
 				End("")
@@ -603,7 +603,7 @@ func TestProcessNestedSteps(t *testing.T) {
 					Args:    cmdShell("shell-test"),
 				}).
 				Start(sig[0].Ref()).
-				Execute(sig[0].Ref(), false).
+				Execute(sig[0].Ref(), false, false).
 				End(sig[0].Ref()).
 				CurrentStatus(and(sig[0].Ref(), constants.RootOperationName)).
 				Start(sig[1].Ref()).
@@ -616,7 +616,7 @@ func TestProcessNestedSteps(t *testing.T) {
 					Args:    cmdShell("shell-test-2"),
 				}).
 				Start(sig[1].Children()[0].Ref()).
-				Execute(sig[1].Children()[0].Ref(), false).
+				Execute(sig[1].Children()[0].Ref(), false, false).
 				End(sig[1].Children()[0].Ref()).
 				CurrentStatus(and(sig[1].Children()[0].Ref(), sig[1].Ref(), sig[0].Ref(), constants.RootOperationName))
 		}).
@@ -627,7 +627,7 @@ func TestProcessNestedSteps(t *testing.T) {
 					Args:    cmdShell("shell-test-3"),
 				}).
 				Start(sig[1].Children()[1].Ref()).
-				Execute(sig[1].Children()[1].Ref(), false).
+				Execute(sig[1].Children()[1].Ref(), false, false).
 				End(sig[1].Children()[1].Ref()).
 				End(sig[1].Ref()).
 				CurrentStatus(and(sig[1].Ref(), sig[0].Ref(), constants.RootOperationName))
@@ -639,7 +639,7 @@ func TestProcessNestedSteps(t *testing.T) {
 					Args:    cmdShell("shell-test-4"),
 				}).
 				Start(sig[2].Ref()).
-				Execute(sig[2].Ref(), false).
+				Execute(sig[2].Ref(), false, false).
 				End(sig[2].Ref()).
 				End(constants.RootOperationName).
 				End("")
@@ -936,7 +936,7 @@ func TestProcessShell(t *testing.T) {
 					Args:    cmdShell("shell-test"),
 				}).
 				Start(sig[0].Ref()).
-				Execute(sig[0].Ref(), false).
+				Execute(sig[0].Ref(), false, false).
 				End(sig[0].Ref()).
 				End(constants.RootOperationName).
 				End("")
@@ -984,7 +984,7 @@ func TestProcessConsecutiveAlways(t *testing.T) {
 				Args:    cmdShell("shell-test"),
 			}).
 			Start(sig[0].Ref()).
-			Execute(sig[0].Ref(), false).
+			Execute(sig[0].Ref(), false, false).
 			End(sig[0].Ref()).
 			CurrentStatus(and(sig[0].Ref(), constants.RootOperationName))
 	}).Append(func(list lite.LiteActionList) lite.LiteActionList {
@@ -994,7 +994,7 @@ func TestProcessConsecutiveAlways(t *testing.T) {
 				Args:    cmdShell("shell-test"),
 			}).
 			Start(sig[1].Ref()).
-			Execute(sig[1].Ref(), false).
+			Execute(sig[1].Ref(), false, false).
 			End(sig[1].Ref()).
 			End(constants.RootOperationName).
 			End("")
@@ -1044,7 +1044,7 @@ func TestProcessNestedCondition(t *testing.T) {
 				Args:    cmdShell("shell-test"),
 			}).
 			Start(sig[0].Ref()).
-			Execute(sig[0].Ref(), false).
+			Execute(sig[0].Ref(), false, false).
 			End(sig[0].Ref()).
 			CurrentStatus(and(sig[0].Ref(), constants.RootOperationName))
 	}).Append(func(list lite.LiteActionList) lite.LiteActionList {
@@ -1054,7 +1054,7 @@ func TestProcessNestedCondition(t *testing.T) {
 				Args:    cmdShell("shell-test"),
 			}).
 			Start(sig[1].Ref()).
-			Execute(sig[1].Ref(), false).
+			Execute(sig[1].Ref(), false, false).
 			End(sig[1].Ref()).
 			End(constants.RootOperationName).
 			End("")
@@ -1109,7 +1109,7 @@ func TestProcessConditionWithMultipleOperations(t *testing.T) {
 				Args:    cmdShell("shell-test"),
 			}).
 			Start(sig[0].Ref()).
-			Execute(sig[0].Ref(), false).
+			Execute(sig[0].Ref(), false, false).
 			End(sig[0].Ref()).
 			CurrentStatus(and(sig[0].Ref(), constants.RootOperationName)).
 			Start(virtual.Ref()).
@@ -1121,7 +1121,7 @@ func TestProcessConditionWithMultipleOperations(t *testing.T) {
 				Args:    cmdShell("shell-test"),
 			}).
 			Start(sig[1].Ref()).
-			Execute(sig[1].Ref(), false).
+			Execute(sig[1].Ref(), false, false).
 			End(sig[1].Ref()).
 			CurrentStatus(and(sig[1].Ref(), virtual.Ref(), sig[0].Ref(), constants.RootOperationName))
 
@@ -1132,7 +1132,7 @@ func TestProcessConditionWithMultipleOperations(t *testing.T) {
 				Args:    cmdShell("shell-test-2"),
 			}).
 			Start(sig[2].Ref()).
-			Execute(sig[2].Ref(), false).
+			Execute(sig[2].Ref(), false, false).
 			End(sig[2].Ref()).
 			End(virtual.Ref()).
 			End(constants.RootOperationName).
@@ -1249,7 +1249,7 @@ func TestProcess_ConditionAlways(t *testing.T) {
 					Args:    cmdShell("test-command-1"),
 				}).
 				Start(sig[0].Ref()).
-				Execute(sig[0].Ref(), false).
+				Execute(sig[0].Ref(), false, false).
 				End(sig[0].Ref()).
 				CurrentStatus(and(sig[0].Ref(), constants.RootOperationName))
 		}).
@@ -1260,7 +1260,72 @@ func TestProcess_ConditionAlways(t *testing.T) {
 					Args:    cmdShell("echo $result"),
 				}).
 				Start(sig[1].Ref()).
-				Execute(sig[1].Ref(), false).
+				Execute(sig[1].Ref(), false, false).
+				End(sig[1].Ref()).
+				End(constants.RootOperationName).
+				End("")
+		})
+
+	assert.NoError(t, err)
+	assert.Equal(t, want, res.LiteActions())
+}
+
+func TestProcess_PureShellAtTheEnd(t *testing.T) {
+	wf := &testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			Steps: []testworkflowsv1.Step{
+				{
+					StepMeta: testworkflowsv1.StepMeta{Pure: common.Ptr(true)},
+					StepDefaults: testworkflowsv1.StepDefaults{Container: &testworkflowsv1.ContainerConfig{
+						Image: "custom-image:1.2.3",
+					}},
+					StepOperations: testworkflowsv1.StepOperations{Shell: "test-command-1"},
+				},
+				{
+					StepMeta:       testworkflowsv1.StepMeta{Pure: common.Ptr(true)},
+					StepOperations: testworkflowsv1.StepOperations{Shell: "test-command-2"},
+				},
+			},
+		},
+	}
+
+	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{Config: testConfig})
+	sig := res.Signature
+
+	want := lite.NewLiteActionGroups().
+		Append(func(list lite.LiteActionList) lite.LiteActionList {
+			return list.
+				// configure
+				Setup(true, false, true).
+				Declare(constants.RootOperationName, "true").
+				Declare(sig[0].Ref(), "true", constants.RootOperationName).
+				Declare(sig[1].Ref(), sig[0].Ref(), constants.RootOperationName).
+				Result(constants.RootOperationName, and(sig[0].Ref(), sig[1].Ref())).
+				Result("", constants.RootOperationName).
+
+				// initialize
+				Start("").
+				CurrentStatus("true").
+				Start(constants.RootOperationName).
+				CurrentStatus(constants.RootOperationName)
+		}).
+		Append(func(list lite.LiteActionList) lite.LiteActionList {
+			return list.
+				// start first container
+				MutateContainer(lite.LiteContainerConfig{
+					Command: cmd("/.tktw/bin/sh"),
+					Args:    cmdShell("test-command-1"),
+				}).
+				Start(sig[0].Ref()).
+				Execute(sig[0].Ref(), false, true).
+				End(sig[0].Ref()).
+				CurrentStatus(and(sig[0].Ref(), constants.RootOperationName)).
+				MutateContainer(lite.LiteContainerConfig{
+					Command: cmd("/.tktw/bin/sh"),
+					Args:    cmdShell("test-command-2"),
+				}).
+				Start(sig[1].Ref()).
+				Execute(sig[1].Ref(), false, true).
 				End(sig[1].Ref()).
 				End(constants.RootOperationName).
 				End("")
