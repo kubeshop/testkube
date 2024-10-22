@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2/log"
-	grpcmiddleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpczap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	grpcrecovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpcctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
@@ -216,8 +215,8 @@ func (s *Server) Run(ctx context.Context) error {
 	opts = append(opts,
 		grpc.Creds(creds),
 		grpc.MaxRecvMsgSize(math.MaxInt32),
-		grpcmiddleware.WithUnaryServerChain(grpcrecovery.UnaryServerInterceptor()),
-		grpcmiddleware.WithStreamServerChain(grpcrecovery.StreamServerInterceptor()),
+		grpc.ChainUnaryInterceptor(grpcrecovery.UnaryServerInterceptor()),
+		grpc.ChainStreamInterceptor(grpcrecovery.StreamServerInterceptor()),
 	)
 	if s.cfg.Verbose {
 		// Shared options for the logger, with a custom gRPC code to log level function.
@@ -225,14 +224,14 @@ func (s *Server) Run(ctx context.Context) error {
 		grpczap.ReplaceGrpcLoggerV2(logger)
 		opts = append(
 			opts,
-			grpcmiddleware.WithUnaryServerChain(
+			grpc.ChainUnaryInterceptor(
 				grpcctxtags.UnaryServerInterceptor(grpcctxtags.WithFieldExtractor(grpcctxtags.CodeGenRequestFieldExtractor)),
 				grpczap.UnaryServerInterceptor(logger),
 			),
 		)
 		opts = append(
 			opts,
-			grpcmiddleware.WithStreamServerChain(
+			grpc.ChainStreamInterceptor(
 				grpcctxtags.StreamServerInterceptor(grpcctxtags.WithFieldExtractor(grpcctxtags.CodeGenRequestFieldExtractor)),
 				grpczap.StreamServerInterceptor(logger),
 			),
