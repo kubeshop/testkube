@@ -16,6 +16,7 @@ import (
 
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 func GetRunningContext(runContext, token string, interfaceType testkube.TestWorkflowRunningContextInterfaceType) *testkube.TestWorkflowRunningContext {
@@ -73,4 +74,28 @@ func getJWTPayload(token string) (map[string]interface{}, error) {
 	}
 
 	return payload, nil
+}
+
+func PrintRunningContext(ui *ui.UI, execution testkube.TestWorkflowExecution) {
+	if execution.RunningContext != nil {
+		ui.Warn("Running context:     ")
+		ctx := execution.RunningContext
+		if ctx.Interface_ != nil {
+			ui.Warn("Interface:           ")
+			ui.Warn("  Name: ", ctx.Interface_.Name)
+			if ctx.Interface_.Type_ != nil {
+				ui.Warn("  Type: ", string(*ctx.Interface_.Type_))
+			}
+		}
+		if ctx.Actor != nil {
+			ui.Warn("Actor:               ")
+			ui.Warn("  Name:           ", ctx.Actor.Name)
+			ui.Warn("  Email:          ", ctx.Actor.Email)
+			ui.Warn("  Execution id:   ", ctx.Actor.ExecutionId)
+			ui.Warn("  Execution path: ", ctx.Actor.ExecutionPath)
+			if ctx.Actor.Type_ != nil {
+				ui.Warn("  Type:           ", string(*ctx.Actor.Type_))
+			}
+		}
+	}
 }
