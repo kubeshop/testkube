@@ -124,11 +124,8 @@ func main() {
 		// Rewire connection
 		// TODO: Avoid dummy values
 		// TODO: Rename configuration variables
-		cfg.TestkubeProAPIKey = "dummy"
 		cfg.TestkubeProURL = fmt.Sprintf("%s:%d", cfg.APIServerFullname, cfg.GRPCServerPort)
 		cfg.TestkubeProTLSInsecure = true
-		cfg.TestkubeProEnvID = "dummy"
-		cfg.TestkubeProOrgID = "dummy"
 	}
 
 	// k8s
