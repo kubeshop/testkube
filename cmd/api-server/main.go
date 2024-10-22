@@ -22,9 +22,10 @@ import (
 	"github.com/kubeshop/testkube/pkg/event/kind/webhook"
 	ws "github.com/kubeshop/testkube/pkg/event/kind/websocket"
 	oauth2 "github.com/kubeshop/testkube/pkg/oauth"
-	testworkflow2 "github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/secretmanager"
 	"github.com/kubeshop/testkube/pkg/server"
+	"github.com/kubeshop/testkube/pkg/storage"
+	"github.com/kubeshop/testkube/pkg/storage/minio"
 	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
 	"github.com/kubeshop/testkube/pkg/tcl/schedulertcl"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
@@ -33,7 +34,6 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	parser "github.com/kubeshop/testkube/internal/template"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	domainstorage "github.com/kubeshop/testkube/pkg/storage"
 	"github.com/kubeshop/testkube/pkg/version"
 
 	"golang.org/x/sync/errgroup"
@@ -149,11 +149,6 @@ func main() {
 
 	slackLoader := commons.MustCreateSlackLoader(cfg, envs)
 
-	var deprecatedRepositories commons.DeprecatedRepositories
-	var testWorkflowResultsRepository testworkflow2.Repository
-	var testWorkflowOutputRepository testworkflow2.OutputRepository
-	var triggerLeaseBackend triggers.LeaseBackend
-	var artifactStorage domainstorage.ArtifactsStorage
 	var testWorkflowsClient testworkflowsclientv1.Interface
 	var testWorkflowTemplatesClient testworkflowsclientv1.TestWorkflowTemplatesInterface
 
@@ -186,15 +181,15 @@ func main() {
 		testWorkflowTemplatesClient = testworkflowsclientv1.NewTestWorkflowTemplatesClient(kubeClient, cfg.TestkubeNamespace)
 	}
 
-	deprecatedRepositories = commons.CreateDeprecatedRepositoriesForCloud(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
-	testWorkflowResultsRepository = cloudtestworkflow.NewCloudRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
+	deprecatedRepositories := commons.CreateDeprecatedRepositoriesForCloud(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
+	testWorkflowResultsRepository := cloudtestworkflow.NewCloudRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
 	var opts []cloudtestworkflow.Option
 	if cfg.StorageSkipVerify {
 		opts = append(opts, cloudtestworkflow.WithSkipVerify())
 	}
-	testWorkflowOutputRepository = cloudtestworkflow.NewCloudOutputRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey, opts...)
-	triggerLeaseBackend = triggers.NewAcquireAlwaysLeaseBackend()
-	artifactStorage = cloudartifacts.NewCloudArtifactsStorage(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
+	testWorkflowOutputRepository := cloudtestworkflow.NewCloudOutputRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey, opts...)
+	triggerLeaseBackend := triggers.NewAcquireAlwaysLeaseBackend()
+	artifactStorage := cloudartifacts.NewCloudArtifactsStorage(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
 
 	nc := commons.MustCreateNATSConnection(cfg)
 	eventBus := bus.NewNATSBus(nc)
@@ -373,6 +368,11 @@ func main() {
 		Token:           cfg.StorageToken,
 		Bucket:          cfg.StorageBucket,
 	}
+	// Use direct MinIO artifact storage for deprecated API for backwards compatibility
+	deprecatedArtifactStorage := storage.ArtifactsStorage(artifactStorage)
+	if mode == common.ModeStandalone {
+		deprecatedArtifactStorage = minio.NewMinIOArtifactClient(commons.MustGetMinioClient(cfg))
+	}
 	deprecatedApi := deprecatedapiv1.NewDeprecatedTestkubeAPI(
 		deprecatedRepositories,
 		deprecatedClients,
@@ -384,7 +384,7 @@ func main() {
 		metrics,
 		sched,
 		cfg.GraphqlPort,
-		artifactStorage,
+		deprecatedArtifactStorage,
 		mode,
 		eventBus,
 		secretConfig,
