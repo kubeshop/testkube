@@ -11,12 +11,14 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
 	"github.com/kubeshop/testkube/pkg/expressions"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 )
 
 type state struct {
-	Actions           [][]lite.LiteAction `json:"a,omitempty"`
-	CurrentGroupIndex int                 `json:"g,omitempty"`
+	Actions           [][]lite.LiteAction               `json:"a,omitempty"`
+	InternalConfig    testworkflowconfig.InternalConfig `json:"C,omitempty"`
+	CurrentGroupIndex int                               `json:"g,omitempty"`
 
 	CurrentRef    string               `json:"c,omitempty"`
 	CurrentStatus string               `json:"s,omitempty"`

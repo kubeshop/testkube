@@ -111,14 +111,16 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 			var exitCode = 0
 			if outputPretty {
 				ui.NL()
-				if watchEnabled {
-					exitCode = uiWatch(execution, client)
-					ui.NL()
-					if downloadArtifactsEnabled {
-						tests.DownloadTestWorkflowArtifacts(execution.Id, downloadDir, format, masks, client, outputPretty)
+				if !execution.FailedToInitialize() {
+					if watchEnabled {
+						exitCode = uiWatch(execution, client)
+						ui.NL()
+						if downloadArtifactsEnabled {
+							tests.DownloadTestWorkflowArtifacts(execution.Id, downloadDir, format, masks, client, outputPretty)
+						}
+					} else {
+						uiShellWatchExecution(execution.Id)
 					}
-				} else {
-					uiShellWatchExecution(execution.Id)
 				}
 
 				execution, err = client.GetTestWorkflowExecution(execution.Id)
@@ -308,7 +310,7 @@ func trimTimestamp(line string) string {
 	if strings.Index(line, "T") == 10 {
 		idx := strings.Index(line, " ")
 		if len(line) >= idx {
-			return line[idx:]
+			return line[idx+1:]
 		}
 	}
 	return line

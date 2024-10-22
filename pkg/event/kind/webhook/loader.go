@@ -5,7 +5,7 @@ import (
 
 	"go.uber.org/zap"
 
-	executorsv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
+	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
 	templatesclientv1 "github.com/kubeshop/testkube-operator/pkg/client/templates/v1"
 	v1 "github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/internal/config"
@@ -19,12 +19,7 @@ import (
 
 var _ common.ListenerLoader = (*WebhooksLoader)(nil)
 
-// WebhooksLister loads webhooks from kubernetes
-type WebhooksLister interface {
-	List(selector string) (*executorsv1.WebhookList, error)
-}
-
-func NewWebhookLoader(log *zap.SugaredLogger, webhooksClient WebhooksLister, templatesClient templatesclientv1.Interface,
+func NewWebhookLoader(log *zap.SugaredLogger, webhooksClient executorsclientv1.WebhooksInterface, templatesClient templatesclientv1.Interface,
 	testExecutionResults result.Repository, testSuiteExecutionResults testresult.Repository, testWorkflowExecutionResults testworkflow.Repository,
 	metrics v1.Metrics, proContext *config.ProContext, envs map[string]string,
 ) *WebhooksLoader {
@@ -43,7 +38,7 @@ func NewWebhookLoader(log *zap.SugaredLogger, webhooksClient WebhooksLister, tem
 
 type WebhooksLoader struct {
 	log                          *zap.SugaredLogger
-	WebhooksClient               WebhooksLister
+	WebhooksClient               executorsclientv1.WebhooksInterface
 	templatesClient              templatesclientv1.Interface
 	testExecutionResults         result.Repository
 	testSuiteExecutionResults    testresult.Repository

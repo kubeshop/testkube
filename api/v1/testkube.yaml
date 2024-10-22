@@ -7483,13 +7483,6 @@ components:
           items:
             type: string
           example: ["logline1", "logline2", "logline3"]
-        executionLogs:
-          type: object
-          additionalProperties:
-            type: array
-            items:
-              type: string
-            example: ["logline1", "logline2", "logline3"]
 
     Features:
       type: object
@@ -8136,6 +8129,11 @@ components:
         id:
           type: string
           description: unique execution identifier
+          format: bson objectId
+          example: "62f395e004109209b50edfc1"
+        groupId:
+          type: string
+          description: identifier for group of correlated executions
           format: bson objectId
           example: "62f395e004109209b50edfc1"
         name:

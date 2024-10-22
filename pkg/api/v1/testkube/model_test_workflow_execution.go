@@ -16,6 +16,8 @@ import (
 type TestWorkflowExecution struct {
 	// unique execution identifier
 	Id string `json:"id"`
+	// identifier for group of correlated executions
+	GroupId string `json:"groupId,omitempty"`
 	// execution name
 	Name string `json:"name"`
 	// execution namespace

@@ -62,6 +62,7 @@ func init() {
 	RootCmd.AddCommand(NewAgentCmd())
 	RootCmd.AddCommand(NewCloudCmd())
 	RootCmd.AddCommand(NewProCmd())
+	RootCmd.AddCommand(NewDockerCmd())
 	RootCmd.AddCommand(pro.NewLoginCmd())
 
 	RootCmd.SetHelpCommand(NewHelpCmd())

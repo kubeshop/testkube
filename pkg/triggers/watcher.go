@@ -310,7 +310,7 @@ func (s *Service) checkExecutionPodStatus(ctx context.Context, executionID strin
 		return nil
 	}
 
-	execution, err := s.resultRepository.Get(ctx, executionID)
+	execution, err := s.deprecatedRepositories.TestResults().Get(ctx, executionID)
 	if err != nil {
 		s.logger.Errorf("get execution returned an error %v while looking for execution id: %s", err, executionID)
 		return err
@@ -333,7 +333,7 @@ func (s *Service) checkExecutionPodStatus(ctx context.Context, executionID strin
 			}
 
 			execution.ExecutionResult.ErrorMessage += errorMessage
-			test, err := s.testsClient.Get(execution.TestName)
+			test, err := s.deprecatedClients.Tests().Get(execution.TestName)
 			if err != nil {
 				s.logger.Errorf("get test returned an error %v while looking for test name: %s", err, execution.TestName)
 				return err
@@ -345,7 +345,7 @@ func (s *Service) checkExecutionPodStatus(ctx context.Context, executionID strin
 				execution.ExecutionResult.ErrorMessage = ""
 			}
 
-			err = s.resultRepository.UpdateResult(ctx, executionID, execution)
+			err = s.deprecatedRepositories.TestResults().UpdateResult(ctx, executionID, execution)
 			if err != nil {
 				s.logger.Errorf("update execution result returned an error %v while storing for execution id: %s", err, executionID)
 				return err

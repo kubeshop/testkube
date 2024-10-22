@@ -11,9 +11,9 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
 	"github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
 
-	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
 	cloudexecutor "github.com/kubeshop/testkube/pkg/cloud/data/executor"
 	"github.com/kubeshop/testkube/pkg/filesystem"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -91,9 +91,9 @@ func (p *JUnitPostProcessor) sendJUnitReport(path string, report []byte) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 	_, err := p.client.Execute(ctx, testworkflow.CmdTestWorkflowExecutionAddReport, &testworkflow.ExecutionsAddReportRequest{
-		ID:           env.ExecutionId(),
-		WorkflowName: env.WorkflowName(),
-		WorkflowStep: env.Ref(), // TODO: think if it's valid for the parallel steps that have independent refs
+		ID:           config.ExecutionId(),
+		WorkflowName: config.WorkflowName(),
+		WorkflowStep: config.Ref(), // TODO: think if it's valid for the parallel steps that have independent refs
 		Filepath:     path,
 		Report:       report,
 	})

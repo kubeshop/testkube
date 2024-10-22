@@ -144,7 +144,7 @@ type Agent struct {
 	testWorkflowNotificationsWorkerCount    int
 	testWorkflowNotificationsRequestBuffer  chan *cloud.TestWorkflowNotificationsRequest
 	testWorkflowNotificationsResponseBuffer chan *cloud.TestWorkflowNotificationsResponse
-	testWorkflowNotificationsFunc           func(ctx context.Context, executionID string) (chan testkube.TestWorkflowExecutionNotification, error)
+	testWorkflowNotificationsFunc           func(ctx context.Context, executionID string) (<-chan testkube.TestWorkflowExecutionNotification, error)
 
 	events              chan testkube.Event
 	sendTimeout         time.Duration
@@ -153,23 +153,21 @@ type Agent struct {
 
 	clusterID          string
 	clusterName        string
-	envs               map[string]string
 	features           featureflags.FeatureFlags
 	dockerImageVersion string
 
-	proContext config.ProContext
+	proContext *config.ProContext
 }
 
 func NewAgent(logger *zap.SugaredLogger,
 	handler fasthttp.RequestHandler,
 	client cloud.TestKubeCloudAPIClient,
 	logStreamFunc func(ctx context.Context, executionID string) (chan output.Output, error),
-	workflowNotificationsFunc func(ctx context.Context, executionID string) (chan testkube.TestWorkflowExecutionNotification, error),
+	workflowNotificationsFunc func(ctx context.Context, executionID string) (<-chan testkube.TestWorkflowExecutionNotification, error),
 	clusterID string,
 	clusterName string,
-	envs map[string]string,
 	features featureflags.FeatureFlags,
-	proContext config.ProContext,
+	proContext *config.ProContext,
 	dockerImageVersion string,
 ) (*Agent, error) {
 	return &Agent{
@@ -194,7 +192,6 @@ func NewAgent(logger *zap.SugaredLogger,
 		testWorkflowNotificationsFunc:           workflowNotificationsFunc,
 		clusterID:                               clusterID,
 		clusterName:                             clusterName,
-		envs:                                    envs,
 		features:                                features,
 		proContext:                              proContext,
 		dockerImageVersion:                      dockerImageVersion,

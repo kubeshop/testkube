@@ -280,6 +280,9 @@ func (r *MongoRepository) Insert(ctx context.Context, result testkube.TestWorkfl
 
 func (r *MongoRepository) Update(ctx context.Context, result testkube.TestWorkflowExecution) (err error) {
 	result.EscapeDots()
+	if result.Reports == nil {
+		result.Reports = []testkube.TestWorkflowReport{}
+	}
 	_, err = r.Coll.ReplaceOne(ctx, bson.M{"id": result.Id}, result)
 	return
 }

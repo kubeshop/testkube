@@ -25,6 +25,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/transfer"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
@@ -33,7 +34,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/ui"
-	"github.com/kubeshop/testkube/pkg/utils"
 )
 
 const (
@@ -74,7 +74,7 @@ func buildTestExecution(test testworkflowsv1.StepExecuteTest, async bool) (func(
 		exec, err := c.ExecuteTest(test.Name, test.ExecutionRequest.Name, client.ExecuteTestOptions{
 			RunningContext: &testkube.RunningContext{
 				Type_:   string(testkube.RunningContextTypeTestWorkflow),
-				Context: fmt.Sprintf("%s/executions/%s", env.WorkflowName(), env.ExecutionId()),
+				Context: fmt.Sprintf("%s/executions/%s", config.WorkflowName(), config.ExecutionId()),
 			},
 			IsVariablesFileUploaded:            test.ExecutionRequest.IsVariablesFileUploaded,
 			ExecutionLabels:                    test.ExecutionRequest.ExecutionLabels,
@@ -95,7 +95,7 @@ func buildTestExecution(test testworkflowsv1.StepExecuteTest, async bool) (func(
 			EnvConfigMaps:                      common.MapSlice(test.ExecutionRequest.EnvConfigMaps, testworkflows.MapTestEnvReferenceKubeToAPI),
 			EnvSecrets:                         common.MapSlice(test.ExecutionRequest.EnvSecrets, testworkflows.MapTestEnvReferenceKubeToAPI),
 			ExecutionNamespace:                 test.ExecutionRequest.ExecutionNamespace,
-			DisableWebhooks:                    env.ExecutionDisableWebhooks(),
+			DisableWebhooks:                    config.ExecutionDisableWebhooks(),
 		})
 		execName := exec.Name
 		if err != nil {
@@ -103,7 +103,7 @@ func buildTestExecution(test testworkflowsv1.StepExecuteTest, async bool) (func(
 			return
 		}
 
-		instructions.PrintOutput(env.Ref(), "test-start", &testExecutionDetails{
+		instructions.PrintOutput(config.Ref(), "test-start", &testExecutionDetails{
 			Id:          exec.Id,
 			Name:        exec.Name,
 			TestName:    exec.TestName,
@@ -137,7 +137,7 @@ func buildTestExecution(test testworkflowsv1.StepExecuteTest, async bool) (func(
 					break loop
 				}
 				if prevStatus != status {
-					instructions.PrintOutput(env.Ref(), "test-status", &executionResult{Id: exec.Id, Status: string(status)})
+					instructions.PrintOutput(config.Ref(), "test-status", &executionResult{Id: exec.Id, Status: string(status)})
 				}
 				prevStatus = status
 			}
@@ -151,7 +151,7 @@ func buildTestExecution(test testworkflowsv1.StepExecuteTest, async bool) (func(
 			color = ui.Red
 		}
 
-		instructions.PrintOutput(env.Ref(), "test-end", &executionResult{Id: exec.Id, Status: string(status)})
+		instructions.PrintOutput(config.Ref(), "test-end", &executionResult{Id: exec.Id, Status: string(status)})
 		fmt.Printf("%s • %s\n", color(execName), string(status))
 		return
 	}, nil
@@ -161,14 +161,11 @@ func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async 
 	return func() (err error) {
 		c := env.Testkube()
 
-		tags, err := utils.DecodeEnvVarToStringMap(env.ExecutionTags())
-		if err != nil {
-			ui.Errf("failed to decode tags: %s: %s", workflow.Name, err.Error())
-		}
+		tags := config.ExecutionTags()
 
-		parentIds := []string{env.ExecutionId()}
-		if env.Config().Execution.ParentIds != "" {
-			parentIds = append(strings.Split(env.Config().Execution.ParentIds, "/"), parentIds...)
+		parentIds := []string{config.ExecutionId()}
+		if config.Config().Execution.ParentIds != "" {
+			parentIds = append(strings.Split(config.Config().Execution.ParentIds, "/"), parentIds...)
 		}
 
 		var exec testkube.TestWorkflowExecution
@@ -176,7 +173,7 @@ func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async 
 			exec, err = c.ExecuteTestWorkflow(workflow.Name, testkube.TestWorkflowExecutionRequest{
 				Name:            workflow.ExecutionName,
 				Config:          testworkflows.MapConfigValueKubeToAPI(workflow.Config),
-				DisableWebhooks: env.ExecutionDisableWebhooks(),
+				DisableWebhooks: config.ExecutionDisableWebhooks(),
 				Tags:            tags,
 				RunningContext: &testkube.TestWorkflowRunningContext{
 					Interface_: &testkube.TestWorkflowRunningContextInterface{
@@ -184,7 +181,7 @@ func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async 
 					},
 					Actor: &testkube.TestWorkflowRunningContextActor{
 						Name:          workflow.Name,
-						ExecutionId:   env.ExecutionId(),
+						ExecutionId:   config.ExecutionId(),
 						ExecutionPath: strings.Join(parentIds, "/"),
 						Type_:         common.Ptr(testkube.TESTWORKFLOW_TestWorkflowRunningContextActorType),
 					},
@@ -206,7 +203,7 @@ func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async 
 		}
 		execName := exec.Name
 
-		instructions.PrintOutput(env.Ref(), "testworkflow-start", &testWorkflowExecutionDetails{
+		instructions.PrintOutput(config.Ref(), "testworkflow-start", &testWorkflowExecutionDetails{
 			Id:               exec.Id,
 			Name:             exec.Name,
 			TestWorkflowName: exec.Workflow.Name,
@@ -251,7 +248,7 @@ func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async 
 					break loop
 				}
 				if prevStatus != status {
-					instructions.PrintOutput(env.Ref(), "testworkflow-status", &executionResult{Id: exec.Id, Status: string(status)})
+					instructions.PrintOutput(config.Ref(), "testworkflow-status", &executionResult{Id: exec.Id, Status: string(status)})
 				}
 				prevStatus = status
 			}
@@ -265,7 +262,7 @@ func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async 
 			color = ui.Red
 		}
 
-		instructions.PrintOutput(env.Ref(), "testworkflow-end", &executionResult{Id: exec.Id, Status: string(status)})
+		instructions.PrintOutput(config.Ref(), "testworkflow-end", &executionResult{Id: exec.Id, Status: string(status)})
 		fmt.Printf("%s • %s\n", color(execName), string(status))
 		return
 	}, nil
@@ -329,7 +326,7 @@ func NewExecuteCmd() *cobra.Command {
 			baseMachine := data.GetBaseTestWorkflowMachine()
 
 			// Initialize transfer server
-			transferSrv := transfer.NewServer(constants.DefaultTransferDirPath, env.IP(), constants.DefaultTransferPort)
+			transferSrv := transfer.NewServer(constants.DefaultTransferDirPath, config.IP(), constants.DefaultTransferPort)
 
 			// Build operations to run
 			operations := make([]func() error, 0)

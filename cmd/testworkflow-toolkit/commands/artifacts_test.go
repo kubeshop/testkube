@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
@@ -26,6 +27,9 @@ var testDataFixtures embed.FS
 
 func TestRun_Integration(t *testing.T) {
 	test.IntegrationTest(t)
+
+	// Populate empty internal configuration, as it is required for the Toolkit
+	_ = os.Setenv("TK_CFG", "{}")
 
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()

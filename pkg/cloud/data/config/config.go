@@ -18,6 +18,7 @@ type CloudRepository struct {
 	executor executor.Executor
 }
 
+// TODO: Delete, as it's no longer used (may be need to kept for backwards compatibility [?])
 func NewCloudResultRepository(cloudClient cloud.TestKubeCloudAPIClient, grpcConn *grpc.ClientConn, apiKey string) *CloudRepository {
 	return &CloudRepository{executor: executor.NewCloudGRPCExecutor(cloudClient, grpcConn, apiKey)}
 }

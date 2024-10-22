@@ -18,10 +18,8 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
-	"github.com/kubeshop/testkube/internal/migrations"
 	cloudclient "github.com/kubeshop/testkube/pkg/cloud/client"
 	"github.com/kubeshop/testkube/pkg/cloudlogin"
-	"github.com/kubeshop/testkube/pkg/migrator"
 	"github.com/kubeshop/testkube/pkg/process"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -401,31 +399,6 @@ func UpdateTokens(cfg config.Data, token, refreshToken string) error {
 	}
 
 	return nil
-}
-
-func RunAgentMigrations(cmd *cobra.Command) (hasMigrations bool, err error) {
-	client, _, err := GetClient(cmd)
-	ui.ExitOnError("getting client", err)
-
-	info, err := client.GetServerInfo()
-	ui.ExitOnError("getting server info", err)
-
-	if info.Version == "" {
-		ui.Failf("Can't detect cluster version")
-	}
-
-	ui.Info("Available agent migrations for", info.Version)
-	results := migrations.Migrator.GetValidMigrations(info.Version, migrator.MigrationTypeClient)
-	if len(results) == 0 {
-		ui.Warn("No agent migrations available for", info.Version)
-		return false, nil
-	}
-
-	for _, migration := range results {
-		fmt.Printf("- %+v - %s\n", migration.Version(), migration.Info())
-	}
-
-	return true, migrations.Migrator.Run(info.Version, migrator.MigrationTypeClient)
 }
 
 func PopulateOrgAndEnvNames(cfg config.Data, orgId, envId, apiUrl string) (config.Data, error) {
@@ -844,8 +817,6 @@ func prepareTestkubeUpgradeDockerArgs(options HelmOptions, dockerContainerName, 
 		"testkube-api.minio.enabled=false",
 		"--set",
 		"mongodb.enabled=false",
-		"--set",
-		"testkube-dashboard.enabled=false",
 		"--set",
 		"testkube-api.cloud.key=" + options.Master.AgentToken,
 		"--set",
