@@ -19,12 +19,12 @@ import (
 )
 
 func GetRunningContext(runContext, token string, interfaceType testkube.TestWorkflowRunningContextInterfaceType) *testkube.TestWorkflowRunningContext {
-	var username, email string
+	var name, email string
 	if token != "" {
 		payload, err := getJWTPayload(token)
 		if err == nil {
 			if value, ok := payload["userame"]; ok {
-				username = fmt.Sprint(value)
+				name = fmt.Sprint(value)
 			}
 
 			if value, ok := payload["email"]; ok {
@@ -39,9 +39,9 @@ func GetRunningContext(runContext, token string, interfaceType testkube.TestWork
 			Type_: common.Ptr(interfaceType),
 		},
 		Actor: &testkube.TestWorkflowRunningContextActor{
-			Type_:    common.Ptr(testkube.USER_TestWorkflowRunningContextActorType),
-			Username: username,
-			Email:    email,
+			Type_: common.Ptr(testkube.USER_TestWorkflowRunningContextActorType),
+			Name:  name,
+			Email: email,
 		},
 	}
 }

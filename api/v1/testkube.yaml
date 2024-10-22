@@ -7196,9 +7196,6 @@ components:
         name:
           type: string
           description: actor name
-        username:
-          type: string
-          description: actor username
         email:
           type: string
           description: actor email

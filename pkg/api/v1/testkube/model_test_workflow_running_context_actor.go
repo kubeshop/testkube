@@ -13,8 +13,6 @@ package testkube
 type TestWorkflowRunningContextActor struct {
 	// actor name
 	Name string `json:"name,omitempty"`
-	// actor username
-	Username string `json:"username,omitempty"`
 	// actor email
 	Email string `json:"email,omitempty"`
 	// test workflow execution id

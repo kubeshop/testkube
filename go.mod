@@ -30,12 +30,13 @@ require (
 	github.com/gookit/color v1.5.4
 	github.com/gorilla/websocket v1.5.0
 	github.com/h2non/filetype v1.1.3
+	github.com/hashicorp/golang-lru/v2 v2.0.1
 	github.com/itchyny/gojq v0.12.14
 	github.com/joshdk/go-junit v1.0.0
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/kubepug/kubepug v1.7.1
-	github.com/kubeshop/testkube-operator v1.17.55-0.20241022090637-302d75229fb0
+	github.com/kubeshop/testkube-operator v1.17.55-0.20241022123644-9de69044548e
 	github.com/minio/minio-go/v7 v7.0.47
 	github.com/montanaflynn/stats v0.6.6
 	github.com/moogar0880/problems v0.1.1
@@ -73,6 +74,7 @@ require (
 	k8s.io/api v0.28.4
 	k8s.io/apimachinery v0.28.4
 	k8s.io/client-go v0.28.4
+	k8s.io/utils v0.0.0-20230726121419-3b25d923346b
 	sigs.k8s.io/controller-runtime v0.16.3
 	sigs.k8s.io/kustomize/kyaml v0.15.0
 )
@@ -133,7 +135,6 @@ require (
 	github.com/google/pprof v0.0.0-20210720184732-4bb14d4b1be1 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/gorilla/css v1.0.0 // indirect
-	github.com/hashicorp/golang-lru/v2 v2.0.1 // indirect
 	github.com/henvic/httpretty v0.0.6 // indirect
 	github.com/imdario/mergo v0.3.16 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
@@ -226,7 +227,6 @@ require (
 	k8s.io/component-base v0.28.3 // indirect
 	k8s.io/klog/v2 v2.100.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20230918164632-68afd615200d // indirect
-	k8s.io/utils v0.0.0-20230726121419-3b25d923346b // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.3.0 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
