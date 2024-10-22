@@ -89,12 +89,6 @@ func main() {
 	commons.MustFreePort(cfg.GraphqlPort)
 	commons.MustFreePort(cfg.GRPCServerPort)
 
-	kubeClient, err := kubeclient.GetClient()
-	commons.ExitOnError("Getting kubernetes client", err)
-
-	clientset, err := k8sclient.ConnectToK8s()
-	commons.ExitOnError("Creating k8s clientset", err)
-
 	configMapConfig := commons.MustGetConfigMapConfig(ctx, cfg.APIServerConfig, cfg.TestkubeNamespace, cfg.TestkubeAnalyticsEnabled)
 
 	// Start local Control Plane
@@ -113,6 +107,12 @@ func main() {
 	telemetryEnabled, _ := configMapConfig.GetTelemetryEnabled(ctx)
 
 	// k8s
+	kubeClient, err := kubeclient.GetClient()
+	commons.ExitOnError("Getting kubernetes client", err)
+	clientset, err := k8sclient.ConnectToK8s()
+	commons.ExitOnError("Creating k8s clientset", err)
+
+	// k8s clients
 	secretClient := secret.NewClientFor(clientset, cfg.TestkubeNamespace)
 	configMapClient := configmap.NewClientFor(clientset, cfg.TestkubeNamespace)
 	deprecatedClients := commons.CreateDeprecatedClients(kubeClient, cfg.TestkubeNamespace)
