@@ -49,6 +49,7 @@ var (
 	}
 	DefaultInitImage                             = getInitImage()
 	DefaultToolkitImage                          = getToolkitImage()
+	DefaultInitImageBusyboxBinaryPath            = "/.tktw-bin"
 	ErrOpenSourceExecuteOperationIsNotAvailable  = errors.New(`"execute" ` + OpenSourceOperationErrorMessage)
 	ErrOpenSourceParallelOperationIsNotAvailable = errors.New(`"parallel" ` + OpenSourceOperationErrorMessage)
 	ErrOpenSourceServicesOperationIsNotAvailable = errors.New(`"services" ` + OpenSourceOperationErrorMessage)

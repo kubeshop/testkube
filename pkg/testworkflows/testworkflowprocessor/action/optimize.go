@@ -29,8 +29,8 @@ func optimize(actions actiontypes.ActionList) (actiontypes.ActionList, error) {
 	actions = actions.Skip(skipped)
 
 	// Avoid using /.tktw/bin/sh when it is internal image used, with direct binaries
-	actions = actions.RewireCommandDirectory(constants.DefaultInitImage, constants.InternalBinPath, "/.tktw-bin")
-	actions = actions.RewireCommandDirectory(constants.DefaultToolkitImage, constants.InternalBinPath, "/.tktw-bin")
+	actions = actions.RewireCommandDirectory(constants.DefaultInitImage, constants.InternalBinPath, constants.DefaultInitImageBusyboxBinaryPath)
+	actions = actions.RewireCommandDirectory(constants.DefaultToolkitImage, constants.InternalBinPath, constants.DefaultInitImageBusyboxBinaryPath)
 
 	return actions, nil
 }
