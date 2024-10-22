@@ -2,6 +2,7 @@ package triggers
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -48,11 +49,16 @@ type k8sInformers struct {
 	configMapInformers    []coreinformerv1.ConfigMapInformer
 
 	testTriggerInformer testkubeinformerv1.TestTriggerInformer
-	testSuiteInformer   testkubeinformerv3.TestSuiteInformer
-	testInformer        testkubeinformerv3.TestInformer
-	executorInformer    testkubeexecutorinformerv1.ExecutorInformer
 	webhookInformer     testkubeexecutorinformerv1.WebhookInformer
-	testSourceInformer  testkubeinformerv1.TestSourceInformer
+
+	deprecated deprecatedK8sInformers
+}
+
+type deprecatedK8sInformers struct {
+	testSuiteInformer  testkubeinformerv3.TestSuiteInformer
+	testInformer       testkubeinformerv3.TestInformer
+	executorInformer   testkubeexecutorinformerv1.ExecutorInformer
+	testSourceInformer testkubeinformerv1.TestSourceInformer
 }
 
 func newK8sInformers(clientset kubernetes.Interface, testKubeClientset versioned.Interface,
@@ -77,11 +83,12 @@ func newK8sInformers(clientset kubernetes.Interface, testKubeClientset versioned
 	testkubeInformerFactory := externalversions.NewSharedInformerFactoryWithOptions(
 		testKubeClientset, 0, externalversions.WithNamespace(testkubeNamespace))
 	k8sInformers.testTriggerInformer = testkubeInformerFactory.Tests().V1().TestTriggers()
-	k8sInformers.testSuiteInformer = testkubeInformerFactory.Tests().V3().TestSuites()
-	k8sInformers.testInformer = testkubeInformerFactory.Tests().V3().Tests()
-	k8sInformers.executorInformer = testkubeInformerFactory.Executor().V1().Executor()
 	k8sInformers.webhookInformer = testkubeInformerFactory.Executor().V1().Webhook()
-	k8sInformers.testSourceInformer = testkubeInformerFactory.Tests().V1().TestSource()
+
+	k8sInformers.deprecated.testSuiteInformer = testkubeInformerFactory.Tests().V3().TestSuites()
+	k8sInformers.deprecated.testInformer = testkubeInformerFactory.Tests().V3().Tests()
+	k8sInformers.deprecated.executorInformer = testkubeInformerFactory.Executor().V1().Executor()
+	k8sInformers.deprecated.testSourceInformer = testkubeInformerFactory.Tests().V1().TestSource()
 
 	return &k8sInformers
 }
@@ -158,11 +165,7 @@ func (s *Service) runInformers(ctx context.Context, stop <-chan struct{}) {
 	}
 
 	s.informers.testTriggerInformer.Informer().AddEventHandler(s.testTriggerEventHandler())
-	s.informers.testSuiteInformer.Informer().AddEventHandler(s.testSuiteEventHandler())
-	s.informers.testInformer.Informer().AddEventHandler(s.testEventHandler())
-	s.informers.executorInformer.Informer().AddEventHandler(s.executorEventHandler())
 	s.informers.webhookInformer.Informer().AddEventHandler(s.webhookEventHandler())
-	s.informers.testSourceInformer.Informer().AddEventHandler(s.testSourceEventHandler())
 
 	s.logger.Debugf("trigger service: starting pod informers")
 	for i := range s.informers.podInformers {
@@ -206,16 +209,24 @@ func (s *Service) runInformers(ctx context.Context, stop <-chan struct{}) {
 
 	s.logger.Debugf("trigger service: starting test trigger informer")
 	go s.informers.testTriggerInformer.Informer().Run(stop)
-	s.logger.Debugf("trigger service: starting test suite informer")
-	go s.informers.testSuiteInformer.Informer().Run(stop)
-	s.logger.Debugf("trigger service: starting test informer")
-	go s.informers.testInformer.Informer().Run(stop)
-	s.logger.Debugf("trigger service: starting executor informer")
-	go s.informers.executorInformer.Informer().Run(stop)
 	s.logger.Debugf("trigger service: starting webhook informer")
 	go s.informers.webhookInformer.Informer().Run(stop)
-	s.logger.Debugf("trigger service: starting test source informer")
-	go s.informers.testSourceInformer.Informer().Run(stop)
+
+	if s.deprecatedSystem != nil {
+		s.informers.deprecated.testSuiteInformer.Informer().AddEventHandler(s.testSuiteEventHandler())
+		s.informers.deprecated.testInformer.Informer().AddEventHandler(s.testEventHandler())
+		s.informers.deprecated.executorInformer.Informer().AddEventHandler(s.executorEventHandler())
+		s.informers.deprecated.testSourceInformer.Informer().AddEventHandler(s.testSourceEventHandler())
+
+		s.logger.Debugf("trigger service: starting test suite informer")
+		go s.informers.deprecated.testSuiteInformer.Informer().Run(stop)
+		s.logger.Debugf("trigger service: starting test informer")
+		go s.informers.deprecated.testInformer.Informer().Run(stop)
+		s.logger.Debugf("trigger service: starting executor informer")
+		go s.informers.deprecated.executorInformer.Informer().Run(stop)
+		s.logger.Debugf("trigger service: starting test source informer")
+		go s.informers.deprecated.testSourceInformer.Informer().Run(stop)
+	}
 }
 
 func (s *Service) podEventHandler(ctx context.Context) cache.ResourceEventHandlerFuncs {
@@ -224,7 +235,7 @@ func (s *Service) podEventHandler(ctx context.Context) cache.ResourceEventHandle
 			return getPodConditions(ctx, s.clientset, object)
 		}
 	}
-	getAddrress := func(object metav1.Object) func(c context.Context, delay time.Duration) (string, error) {
+	getAddress := func(object metav1.Object) func(c context.Context, delay time.Duration) (string, error) {
 		return func(c context.Context, delay time.Duration) (string, error) {
 			return getPodAdress(c, s.clientset, object, delay)
 		}
@@ -245,12 +256,29 @@ func (s *Service) podEventHandler(ctx context.Context) cache.ResourceEventHandle
 			}
 			s.logger.Debugf("trigger service: watcher component: emiting event: pod %s/%s created", pod.Namespace, pod.Name)
 			event := newWatcherEvent(testtrigger.EventCreated, pod, testtrigger.ResourcePod,
-				withConditionsGetter(getConditions(pod)), withAddressGetter(getAddrress(pod)))
+				withConditionsGetter(getConditions(pod)), withAddressGetter(getAddress(pod)))
 			if err := s.match(ctx, event); err != nil {
 				s.logger.Errorf("event matcher returned an error while matching create pod event: %v", err)
 			}
-
 		},
+		DeleteFunc: func(obj interface{}) {
+			pod, ok := obj.(*corev1.Pod)
+			if !ok {
+				s.logger.Errorf("failed to process delete pod event due to it being an unexpected type, received type %+v", obj)
+				return
+			}
+			s.logger.Debugf("trigger service: watcher component: emiting event: pod %s/%s deleted", pod.Namespace, pod.Name)
+			event := newWatcherEvent(testtrigger.EventDeleted, pod, testtrigger.ResourcePod,
+				withConditionsGetter(getConditions(pod)), withAddressGetter(getAddress(pod)))
+			if err := s.match(ctx, event); err != nil {
+				s.logger.Errorf("event matcher returned an error while matching delete pod event: %v", err)
+			}
+		},
+	}
+}
+
+func (s *Service) deprecatedPodEventHandler(ctx context.Context) cache.ResourceEventHandlerFuncs {
+	return cache.ResourceEventHandlerFuncs{
 		UpdateFunc: func(oldObj, newObj any) {
 			oldPod, ok := oldObj.(*corev1.Pod)
 			if !ok {
@@ -282,35 +310,29 @@ func (s *Service) podEventHandler(ctx context.Context) cache.ResourceEventHandle
 				!(strings.HasSuffix(oldPod.Name, cexecutor.ScraperPodSuffix) || strings.HasSuffix(newPod.Name, cexecutor.ScraperPodSuffix)) &&
 				oldPod.Labels["job-name"] == newPod.Labels["job-name"] {
 				s.metrics.IncTestTriggerEventCount("", string(testtrigger.ResourcePod), string(testtrigger.CauseEventUpdated), nil)
-				s.checkExecutionPodStatus(ctx, oldPod.Labels["job-name"], []*corev1.Pod{oldPod, newPod})
+				s.deprecatedCheckExecutionPodStatus(ctx, oldPod.Labels["job-name"], []*corev1.Pod{oldPod, newPod})
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
 			pod, ok := obj.(*corev1.Pod)
 			if !ok {
-				s.logger.Errorf("failed to process delete pod event due to it being an unexpected type, received type %+v", obj)
 				return
 			}
-			s.logger.Debugf("trigger service: watcher component: emiting event: pod %s/%s deleted", pod.Namespace, pod.Name)
 			if pod.Namespace == s.testkubeNamespace && pod.Labels["job-name"] != "" && !strings.HasSuffix(pod.Name, cexecutor.ScraperPodSuffix) &&
 				pod.Labels[testkube.TestLabelTestName] != "" {
-				s.checkExecutionPodStatus(ctx, pod.Labels["job-name"], []*corev1.Pod{pod})
-			}
-			event := newWatcherEvent(testtrigger.EventDeleted, pod, testtrigger.ResourcePod,
-				withConditionsGetter(getConditions(pod)), withAddressGetter(getAddrress(pod)))
-			if err := s.match(ctx, event); err != nil {
-				s.logger.Errorf("event matcher returned an error while matching delete pod event: %v", err)
+				s.deprecatedCheckExecutionPodStatus(ctx, pod.Labels["job-name"], []*corev1.Pod{pod})
 			}
 		},
 	}
 }
 
-func (s *Service) checkExecutionPodStatus(ctx context.Context, executionID string, pods []*corev1.Pod) error {
+func (s *Service) deprecatedCheckExecutionPodStatus(ctx context.Context, executionID string, pods []*corev1.Pod) error {
+	fmt.Println("CHECK EXECUTION POD STATUS")
 	if len(pods) > 0 && pods[0].Labels[constants.ResourceIdLabelName] != "" {
 		return nil
 	}
 
-	execution, err := s.deprecatedRepositories.TestResults().Get(ctx, executionID)
+	execution, err := s.deprecatedSystem.Repositories.TestResults().Get(ctx, executionID)
 	if err != nil {
 		s.logger.Errorf("get execution returned an error %v while looking for execution id: %s", err, executionID)
 		return err
@@ -333,7 +355,7 @@ func (s *Service) checkExecutionPodStatus(ctx context.Context, executionID strin
 			}
 
 			execution.ExecutionResult.ErrorMessage += errorMessage
-			test, err := s.deprecatedClients.Tests().Get(execution.TestName)
+			test, err := s.deprecatedSystem.Clients.Tests().Get(execution.TestName)
 			if err != nil {
 				s.logger.Errorf("get test returned an error %v while looking for test name: %s", err, execution.TestName)
 				return err
@@ -345,7 +367,7 @@ func (s *Service) checkExecutionPodStatus(ctx context.Context, executionID strin
 				execution.ExecutionResult.ErrorMessage = ""
 			}
 
-			err = s.deprecatedRepositories.TestResults().UpdateResult(ctx, executionID, execution)
+			err = s.deprecatedSystem.Repositories.TestResults().UpdateResult(ctx, executionID, execution)
 			if err != nil {
 				s.logger.Errorf("update execution result returned an error %v while storing for execution id: %s", err, executionID)
 				return err

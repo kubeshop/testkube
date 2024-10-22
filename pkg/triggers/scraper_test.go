@@ -10,6 +10,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
+	"github.com/kubeshop/testkube/cmd/api-server/services"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/repository/result"
@@ -57,8 +58,10 @@ func TestService_runExecutionScraper(t *testing.T) {
 			statusKey3: triggerStatus3,
 		}
 		s := &Service{
-			triggerStatus:                 triggerStatusMap,
-			deprecatedRepositories:        mockDeprecatedRepositories,
+			triggerStatus: triggerStatusMap,
+			deprecatedSystem: &services.DeprecatedSystem{
+				Repositories: mockDeprecatedRepositories,
+			},
 			testWorkflowResultsRepository: mockTestWorkflowResultsRepository,
 			scraperInterval:               100 * time.Millisecond,
 			logger:                        log.DefaultLogger,
@@ -104,8 +107,10 @@ func TestService_runExecutionScraper(t *testing.T) {
 			statusKey2: triggerStatus2,
 		}
 		s := &Service{
-			triggerStatus:                 triggerStatusMap,
-			deprecatedRepositories:        mockDeprecatedRepositories,
+			triggerStatus: triggerStatusMap,
+			deprecatedSystem: &services.DeprecatedSystem{
+				Repositories: mockDeprecatedRepositories,
+			},
 			testWorkflowResultsRepository: mockTestWorkflowResultsRepository,
 			scraperInterval:               100 * time.Millisecond,
 			logger:                        log.DefaultLogger,
