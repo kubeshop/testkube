@@ -295,6 +295,7 @@ func main() {
 
 	// Build internal execution worker
 	testWorkflowProcessor := presets.NewOpenSource(inspector)
+	// Pro edition only (tcl protected code)
 	if mode == common.ModeAgent {
 		testWorkflowProcessor = presets.NewPro(inspector)
 	}
