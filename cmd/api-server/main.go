@@ -147,8 +147,6 @@ func main() {
 
 	inspector := commons.CreateImageInspector(cfg, configMapClient, secretClient)
 
-	slackLoader := commons.MustCreateSlackLoader(cfg, envs)
-
 	var testWorkflowsClient testworkflowsclientv1.Interface
 	var testWorkflowTemplatesClient testworkflowsclientv1.TestWorkflowTemplatesInterface
 
@@ -326,7 +324,7 @@ func main() {
 	websocketLoader := ws.NewWebsocketLoader()
 	eventsEmitter.Loader.Register(webhook.NewWebhookLoader(log.DefaultLogger, webhooksClient, deprecatedClients.Templates(), deprecatedRepositories.TestResults(), deprecatedRepositories.TestSuiteResults(), testWorkflowResultsRepository, metrics, &proContext, envs))
 	eventsEmitter.Loader.Register(websocketLoader)
-	eventsEmitter.Loader.Register(slackLoader)
+	eventsEmitter.Loader.Register(commons.MustCreateSlackLoader(cfg, envs))
 	if cfg.CDEventsTarget != "" {
 		cdeventLoader, err := cdevent.NewCDEventLoader(cfg.CDEventsTarget, clusterId, cfg.TestkubeNamespace, cfg.TestkubeDashboardURI, testkube.AllEventTypes)
 		if err == nil {
