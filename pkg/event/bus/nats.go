@@ -6,11 +6,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/avast/retry-go/v4"
 	"github.com/nats-io/nats.go"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
 	"github.com/kubeshop/testkube/pkg/log"
+	"github.com/kubeshop/testkube/pkg/utils"
 )
 
 var (
@@ -80,7 +82,15 @@ func NewNATSEncodedConnection(cfg ConnectionConfig, opts ...nats.Option) (*nats.
 func NewNATSConnection(cfg ConnectionConfig, opts ...nats.Option) (*nats.Conn, error) {
 	opts = append(opts, optsFromConfig(cfg)...)
 
-	nc, err := nats.Connect(cfg.NatsURI, opts...)
+	log.DefaultLogger.Infoln("Connecting to NATS")
+	nc, err := retry.DoWithData(
+		func() (*nats.Conn, error) {
+			return nats.Connect(cfg.NatsURI, opts...)
+		},
+		retry.DelayType(retry.FixedDelay),
+		retry.Delay(utils.DefaultRetryDelay),
+		retry.Attempts(20),
+	)
 	if err != nil {
 		log.DefaultLogger.Fatalw("error connecting to nats", "error", err)
 		return nil, err
