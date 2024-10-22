@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"strings"
 
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"google.golang.org/grpc"
@@ -29,21 +30,17 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/presets"
 
-	domainstorage "github.com/kubeshop/testkube/pkg/storage"
-	"github.com/kubeshop/testkube/pkg/storage/minio"
-
 	"github.com/kubeshop/testkube/internal/common"
 	parser "github.com/kubeshop/testkube/internal/template"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	domainstorage "github.com/kubeshop/testkube/pkg/storage"
 	"github.com/kubeshop/testkube/pkg/version"
 
 	"golang.org/x/sync/errgroup"
 
-	"github.com/kubeshop/testkube/pkg/cloud"
-	"github.com/kubeshop/testkube/pkg/repository/sequence"
-
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/agent"
+	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	kubeexecutor "github.com/kubeshop/testkube/pkg/executor"
@@ -90,12 +87,49 @@ func main() {
 
 	commons.MustFreePort(cfg.APIServerPort)
 	commons.MustFreePort(cfg.GraphqlPort)
+	commons.MustFreePort(cfg.GRPCServerPort)
 
 	kubeClient, err := kubeclient.GetClient()
 	commons.ExitOnError("Getting kubernetes client", err)
 
 	clientset, err := k8sclient.ConnectToK8s()
 	commons.ExitOnError("Creating k8s clientset", err)
+
+	nc := commons.MustCreateNATSConnection(cfg)
+	eventBus := bus.NewNATSBus(nc)
+	if cfg.Trace {
+		eventBus.TraceEvents()
+	}
+	eventsEmitter := event.NewEmitter(eventBus, cfg.TestkubeClusterName)
+
+	var logGrpcClient logsclient.StreamGetter
+	var logsStream logsclient.Stream
+	if features.LogsV2 {
+		logGrpcClient = commons.MustGetLogsV2Client(cfg)
+		logsStream, err = logsclient.NewNatsLogStream(nc.Conn)
+		commons.ExitOnError("Creating logs streaming client", err)
+	}
+
+	configMapConfig := commons.MustGetConfigMapConfig(ctx, cfg.APIServerConfig, cfg.TestkubeNamespace, cfg.TestkubeAnalyticsEnabled)
+	clusterId, _ := configMapConfig.GetUniqueClusterId(ctx)
+	telemetryEnabled, _ := configMapConfig.GetTelemetryEnabled(ctx)
+
+	// Start local Control Plane
+	if mode == common.ModeStandalone {
+		controlPlane := services.CreateControlPlane(ctx, cfg, features, configMapConfig)
+		g.Go(func() error {
+			return controlPlane.Run(ctx)
+		})
+
+		// Rewire connection
+		// TODO: Avoid dummy values
+		// TODO: Rename configuration variables
+		cfg.TestkubeProAPIKey = "dummy"
+		cfg.TestkubeProURL = fmt.Sprintf("%s:%d", cfg.APIServerFullname, cfg.GRPCServerPort)
+		cfg.TestkubeProTLSInsecure = true
+		cfg.TestkubeProEnvID = "dummy"
+		cfg.TestkubeProOrgID = "dummy"
+	}
 
 	// k8s
 	secretClient := secret.NewClientFor(clientset, cfg.TestkubeNamespace)
@@ -116,25 +150,6 @@ func main() {
 		AutoCreate: !cfg.DisableSecretCreation,
 	}
 	secretManager := secretmanager.New(clientset, secretConfig)
-
-	nc := commons.MustCreateNATSConnection(cfg)
-	eventBus := bus.NewNATSBus(nc)
-	if cfg.Trace {
-		eventBus.TraceEvents()
-	}
-	eventsEmitter := event.NewEmitter(eventBus, cfg.TestkubeClusterName)
-
-	var logGrpcClient logsclient.StreamGetter
-	var logsStream logsclient.Stream
-	if features.LogsV2 {
-		logGrpcClient = commons.MustGetLogsV2Client(cfg)
-		logsStream, err = logsclient.NewNatsLogStream(nc.Conn)
-		commons.ExitOnError("Creating logs streaming client", err)
-	}
-
-	configMapConfig := commons.MustGetConfigMapConfig(ctx, cfg.APIServerConfig, cfg.TestkubeNamespace, cfg.TestkubeAnalyticsEnabled)
-	clusterId, _ := configMapConfig.GetUniqueClusterId(ctx)
-	telemetryEnabled, _ := configMapConfig.GetTelemetryEnabled(ctx)
 
 	envs := commons.GetEnvironmentVariables()
 
@@ -160,27 +175,29 @@ func main() {
 	var testWorkflowOutputRepository testworkflow2.OutputRepository
 	var triggerLeaseBackend triggers.LeaseBackend
 	var artifactStorage domainstorage.ArtifactsStorage
-	var storageClient domainstorage.Client
 	var testWorkflowsClient testworkflowsclientv1.Interface
 	var testWorkflowTemplatesClient testworkflowsclientv1.TestWorkflowTemplatesInterface
 
 	var grpcClient cloud.TestKubeCloudAPIClient
 	var grpcConn *grpc.ClientConn
-	if mode == common.ModeAgent {
-		grpcConn, err = agent.NewGRPCConnection(
-			ctx,
-			cfg.TestkubeProTLSInsecure,
-			cfg.TestkubeProSkipVerify,
-			cfg.TestkubeProURL,
-			cfg.TestkubeProCertFile,
-			cfg.TestkubeProKeyFile,
-			cfg.TestkubeProCAFile, //nolint
-			log.DefaultLogger,
-		)
-		commons.ExitOnError("error creating gRPC connection", err)
-
-		grpcClient = cloud.NewTestKubeCloudAPIClient(grpcConn)
+	// Use local network for local access
+	url := cfg.TestkubeProURL
+	if strings.HasPrefix(url, fmt.Sprintf("%s:%d", cfg.APIServerFullname, cfg.GRPCServerPort)) {
+		url = fmt.Sprintf("127.0.0.1:%d", cfg.GRPCServerPort)
 	}
+	grpcConn, err = agent.NewGRPCConnection(
+		ctx,
+		cfg.TestkubeProTLSInsecure,
+		cfg.TestkubeProSkipVerify,
+		url,
+		cfg.TestkubeProCertFile,
+		cfg.TestkubeProKeyFile,
+		cfg.TestkubeProCAFile, //nolint
+		log.DefaultLogger,
+	)
+	commons.ExitOnError("error creating gRPC connection", err)
+
+	grpcClient = cloud.NewTestKubeCloudAPIClient(grpcConn)
 
 	proContext := commons.ReadProContext(ctx, cfg, grpcClient)
 
@@ -206,30 +223,15 @@ func main() {
 		testWorkflowTemplatesClient = testworkflowsclientv1.NewTestWorkflowTemplatesClient(kubeClient, cfg.TestkubeNamespace)
 	}
 
-	if mode == common.ModeAgent {
-		deprecatedRepositories = commons.CreateDeprecatedRepositoriesForCloud(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
-		testWorkflowResultsRepository = cloudtestworkflow.NewCloudRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
-		var opts []cloudtestworkflow.Option
-		if cfg.StorageSkipVerify {
-			opts = append(opts, cloudtestworkflow.WithSkipVerify())
-		}
-		testWorkflowOutputRepository = cloudtestworkflow.NewCloudOutputRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey, opts...)
-		triggerLeaseBackend = triggers.NewAcquireAlwaysLeaseBackend()
-		artifactStorage = cloudartifacts.NewCloudArtifactsStorage(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
-	} else {
-		// Connect to storages
-		db := commons.MustGetMongoDatabase(ctx, cfg, secretClient, !cfg.DisableMongoMigrations)
-		storageClient = commons.MustGetMinioClient(cfg)
-
-		// Build repositories
-		sequenceRepository := sequence.NewMongoRepository(db)
-		testWorkflowResultsRepository = testworkflow2.NewMongoRepository(db, cfg.APIMongoAllowDiskUse,
-			testworkflow2.WithMongoRepositorySequence(sequenceRepository))
-		triggerLeaseBackend = triggers.NewMongoLeaseBackend(db)
-		testWorkflowOutputRepository = testworkflow2.NewMinioOutputRepository(storageClient, db.Collection(testworkflow2.CollectionName), cfg.LogsBucket)
-		artifactStorage = minio.NewMinIOArtifactClient(storageClient)
-		deprecatedRepositories = commons.CreateDeprecatedRepositoriesForMongo(ctx, cfg, db, logGrpcClient, storageClient, features)
+	deprecatedRepositories = commons.CreateDeprecatedRepositoriesForCloud(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
+	testWorkflowResultsRepository = cloudtestworkflow.NewCloudRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
+	var opts []cloudtestworkflow.Option
+	if cfg.StorageSkipVerify {
+		opts = append(opts, cloudtestworkflow.WithSkipVerify())
 	}
+	testWorkflowOutputRepository = cloudtestworkflow.NewCloudOutputRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey, opts...)
+	triggerLeaseBackend = triggers.NewAcquireAlwaysLeaseBackend()
+	artifactStorage = cloudartifacts.NewCloudArtifactsStorage(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
 
 	executor, err := client.NewJobExecutor(
 		deprecatedRepositories,
@@ -427,45 +429,43 @@ func main() {
 	)
 	api.Init(httpServer)
 
-	if mode == common.ModeAgent {
-		log.DefaultLogger.Info("starting agent service")
-		getTestWorkflowNotificationsStream := func(ctx context.Context, executionID string) (<-chan testkube.TestWorkflowExecutionNotification, error) {
-			execution, err := testWorkflowResultsRepository.Get(ctx, executionID)
-			if err != nil {
-				return nil, err
-			}
-			notifications := executionWorker.Notifications(ctx, execution.Id, executionworkertypes.NotificationsOptions{
-				Hints: executionworkertypes.Hints{
-					Namespace:   execution.Namespace,
-					Signature:   execution.Signature,
-					ScheduledAt: common.Ptr(execution.ScheduledAt),
-				},
-			})
-			if notifications.Err() != nil {
-				return nil, notifications.Err()
-			}
-			return notifications.Channel(), nil
+	log.DefaultLogger.Info("starting agent service")
+	getTestWorkflowNotificationsStream := func(ctx context.Context, executionID string) (<-chan testkube.TestWorkflowExecutionNotification, error) {
+		execution, err := testWorkflowResultsRepository.Get(ctx, executionID)
+		if err != nil {
+			return nil, err
 		}
-		agentHandle, err := agent.NewAgent(
-			log.DefaultLogger,
-			httpServer.Mux.Handler(),
-			grpcClient,
-			deprecatedApi.GetLogsStream,
-			getTestWorkflowNotificationsStream,
-			clusterId,
-			cfg.TestkubeClusterName,
-			features,
-			&proContext,
-			cfg.TestkubeDockerImageVersion,
-		)
-		commons.ExitOnError("Starting agent", err)
-		g.Go(func() error {
-			err = agentHandle.Run(ctx)
-			commons.ExitOnError("Running agent", err)
-			return nil
+		notifications := executionWorker.Notifications(ctx, execution.Id, executionworkertypes.NotificationsOptions{
+			Hints: executionworkertypes.Hints{
+				Namespace:   execution.Namespace,
+				Signature:   execution.Signature,
+				ScheduledAt: common.Ptr(execution.ScheduledAt),
+			},
 		})
-		eventsEmitter.Loader.Register(agentHandle)
+		if notifications.Err() != nil {
+			return nil, notifications.Err()
+		}
+		return notifications.Channel(), nil
 	}
+	agentHandle, err := agent.NewAgent(
+		log.DefaultLogger,
+		httpServer.Mux.Handler(),
+		grpcClient,
+		deprecatedApi.GetLogsStream,
+		getTestWorkflowNotificationsStream,
+		clusterId,
+		cfg.TestkubeClusterName,
+		features,
+		&proContext,
+		cfg.TestkubeDockerImageVersion,
+	)
+	commons.ExitOnError("Starting agent", err)
+	g.Go(func() error {
+		err = agentHandle.Run(ctx)
+		commons.ExitOnError("Running agent", err)
+		return nil
+	})
+	eventsEmitter.Loader.Register(agentHandle)
 
 	if !cfg.DisableTestTriggers {
 		k8sCfg, err := k8sclient.GetK8sClientConfig()

@@ -8,6 +8,7 @@ import (
 
 type Config struct {
 	APIServerPort             int    `envconfig:"APISERVER_PORT" default:"8088"`
+	GRPCServerPort            int    `envconfig:"APISERVER_GRPCPORT" default:"8089"`
 	APIServerConfig           string `envconfig:"APISERVER_CONFIG" default:""`
 	APIServerFullname         string `envconfig:"APISERVER_FULLNAME" default:"testkube-api-server"`
 	APIMongoDSN               string `envconfig:"API_MONGO_DSN" default:"mongodb://localhost:27017"`
