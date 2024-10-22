@@ -77,13 +77,18 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 			ui.ExitOnError("loading config file", err)
 			ui.NL()
 
+			var runningContext *testkube.TestWorkflowRunningContext
+			// Pro edition only (tcl protected code)
+			if cfg.ContextType == testkubecfg.ContextTypeCloud {
+				runningContext = tclcmd.GetRunningContext(runContext, cfg.CloudContext.ApiKey, interfaceType)
+			}
+
 			execution, err := client.ExecuteTestWorkflow(name, testkube.TestWorkflowExecutionRequest{
 				Name:            executionName,
 				Config:          config,
 				DisableWebhooks: disableWebhooks,
 				Tags:            tags,
-				// Pro edition only (tcl protected code)
-				RunningContext: tclcmd.GetRunningContext(runContext, cfg.CloudContext.ApiKey, interfaceType),
+				RunningContext:  runningContext,
 			},
 			)
 			if err != nil {
