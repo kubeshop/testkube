@@ -50,10 +50,6 @@ func Debug() bool {
 	return Config().Execution.Debug || os.Getenv("DEBUG") == "1"
 }
 
-func CloudEnabled() bool {
-	return Config().Worker.Connection.ApiKey != ""
-}
-
 func UseProxy() bool {
 	return UseProxyValue
 }
