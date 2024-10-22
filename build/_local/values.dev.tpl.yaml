@@ -1,0 +1,12 @@
+testkube-dashboard:
+  enabled: false
+mongodb:
+  enabled: false
+testkube-api:
+  cloud:
+    url: testkube-enterprise-api:8089
+    tls:
+      enabled: false
+    existingSecret:
+      name: testkube-default-agent-token
+      key: agent-token

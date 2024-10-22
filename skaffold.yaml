@@ -1,0 +1,36 @@
+apiVersion: skaffold/v4beta11
+kind: Config
+metadata:
+  name: testkube-agent
+build:
+  artifacts:
+    - image: docker.io/testkube-agent-server
+      context: .
+      custom:
+        buildCommand: GOCACHE="$(go env GOCACHE)" GOMODCACHE="$(go env GOMODCACHE)" docker buildx bake --set agent-server.tags="$IMAGE" --set agent-server.target="debug" agent-server
+        dependencies:
+          dockerfile:
+            path: build/_local/agent-server.Dockerfile
+deploy:
+  helm:
+    # see https://skaffold.dev/docs/renderers/helm/#skaffoldyaml-configuration
+    releases:
+      - name: testkube-agent
+        repo: https://kubeshop.github.io/helm-charts
+        remoteChart: testkube
+        # Alternative: Local chart - useful for when you are actively making changes to the chart.
+#        chartPath: /Users/you/code/helm-charts/charts/testkube-api
+        upgradeOnChange: true
+        skipBuildDependencies: true # This implies that you need to build dependencies yourself when you make local chart changes!
+        namespace: tk-dev
+        wait: true
+        createNamespace: true
+        valuesFiles: ['build/_local/values.dev.yaml'] # IMPORTANT: You will have to copy the values.dev.tpl.yaml template to get started!
+        setValueTemplates:
+          testkube-api.image.registry: '{{.IMAGE_DOMAIN_docker_io_testkube_agent_server}}'
+          testkube-api.image.repository: '{{.IMAGE_REPO_NO_DOMAIN_docker_io_testkube_agent_server}}'
+          testkube-api.image.tag: '{{.IMAGE_TAG_docker_io_testkube_agent_server}}@{{.IMAGE_DIGEST_docker_io_testkube_agent_server}}'
+    flags:
+      upgrade: ["--no-hooks"]
+  statusCheckDeadlineSeconds: 300
+  tolerateFailuresUntilDeadline: true
