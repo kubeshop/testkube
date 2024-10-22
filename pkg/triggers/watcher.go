@@ -2,7 +2,6 @@ package triggers
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"time"
 
@@ -134,6 +133,9 @@ func (s *Service) runInformers(ctx context.Context, stop <-chan struct{}) {
 
 	for i := range s.informers.podInformers {
 		s.informers.podInformers[i].Informer().AddEventHandler(s.podEventHandler(ctx))
+		if s.deprecatedSystem != nil {
+			s.informers.podInformers[i].Informer().AddEventHandler(s.deprecatedPodEventHandler(ctx))
+		}
 	}
 
 	for i := range s.informers.deploymentInformers {
@@ -327,7 +329,6 @@ func (s *Service) deprecatedPodEventHandler(ctx context.Context) cache.ResourceE
 }
 
 func (s *Service) deprecatedCheckExecutionPodStatus(ctx context.Context, executionID string, pods []*corev1.Pod) error {
-	fmt.Println("CHECK EXECUTION POD STATUS")
 	if len(pods) > 0 && pods[0].Labels[constants.ResourceIdLabelName] != "" {
 		return nil
 	}
