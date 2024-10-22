@@ -89,8 +89,7 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 				DisableWebhooks: disableWebhooks,
 				Tags:            tags,
 				RunningContext:  runningContext,
-			},
-			)
+			})
 			if err != nil {
 				// User friendly Open Source operation error
 				errMessage := err.Error()
