@@ -18,6 +18,7 @@ import (
 	testsuiteexecutionsv1 "github.com/kubeshop/testkube-operator/pkg/client/testsuiteexecutions/v1"
 	testsuitesv3 "github.com/kubeshop/testkube-operator/pkg/client/testsuites/v3"
 	testworkflowsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testworkflows/v1"
+	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/configmap"
@@ -32,6 +33,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/scheduler"
 	"github.com/kubeshop/testkube/pkg/secret"
+	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 )
 
@@ -56,6 +58,17 @@ func TestExecute(t *testing.T) {
 	configMapConfig := config.NewMockRepository(mockCtrl)
 	mockConfigMapClient := configmap.NewMockInterface(mockCtrl)
 	mockTestSuiteExecutionsClient := testsuiteexecutionsv1.NewMockInterface(mockCtrl)
+
+	mockDeprecatedClients := commons.NewMockDeprecatedClients(mockCtrl)
+	mockDeprecatedClients.EXPECT().Executors().Return(mockExecutorsClient).AnyTimes()
+	mockDeprecatedClients.EXPECT().Tests().Return(mockTestsClient).AnyTimes()
+	mockDeprecatedClients.EXPECT().TestSuites().Return(mockTestSuitesClient).AnyTimes()
+	mockDeprecatedClients.EXPECT().TestSources().Return(mockTestSourcesClient).AnyTimes()
+	mockDeprecatedClients.EXPECT().TestSuiteExecutions().Return(mockTestSuiteExecutionsClient).AnyTimes()
+
+	mockDeprecatedRepositories := commons.NewMockDeprecatedRepositories(mockCtrl)
+	mockDeprecatedRepositories.EXPECT().TestResults().Return(mockResultRepository).AnyTimes()
+	mockDeprecatedRepositories.EXPECT().TestSuiteResults().Return(mockTestResultRepository).AnyTimes()
 
 	mockExecutor := client.NewMockExecutor(mockCtrl)
 
@@ -113,18 +126,13 @@ func TestExecute(t *testing.T) {
 		metricsHandle,
 		mockExecutor,
 		mockExecutor,
-		mockResultRepository,
-		mockTestResultRepository,
-		mockExecutorsClient,
-		mockTestsClient,
-		mockTestSuitesClient,
-		mockTestSourcesClient,
+		mockDeprecatedRepositories,
+		mockDeprecatedClients,
 		mockSecretClient,
 		mockEventEmitter,
 		log.DefaultLogger,
 		configMapConfig,
 		mockConfigMapClient,
-		mockTestSuiteExecutionsClient,
 		mockBus,
 		"",
 		featureflags.FeatureFlags{},
@@ -132,13 +140,14 @@ func TestExecute(t *testing.T) {
 		"",
 		"",
 		"",
+		checktcl.SubscriptionChecker{},
 	)
 	s := &Service{
-		triggerStatus:    make(map[statusKey]*triggerStatus),
-		scheduler:        sched,
-		testsClient:      mockTestsClient,
-		testSuitesClient: mockTestSuitesClient,
-		logger:           log.DefaultLogger,
+		triggerStatus:          make(map[statusKey]*triggerStatus),
+		scheduler:              sched,
+		deprecatedRepositories: mockDeprecatedRepositories,
+		deprecatedClients:      mockDeprecatedClients,
+		logger:                 log.DefaultLogger,
 	}
 
 	status := testtriggersv1.TRUE_TestTriggerConditionStatuses

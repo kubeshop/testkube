@@ -27,10 +27,6 @@ func TestBuildTicket(t *testing.T) {
 				ClusterVersion: "v2.test",
 				ApiLogs:        []string{"api logline1", "api logline2"},
 				OperatorLogs:   []string{"operator logline1", "operator logline2", "operator logline3"},
-				ExecutionLogs: map[string][]string{
-					"execution1": {"execution logline1"},
-					"execution2": {"execution logline1", "execution logline2"},
-				},
 			},
 			wantTitle: "New bug report",
 			wantBody: `

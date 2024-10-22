@@ -1,4 +1,4 @@
-package v1
+package deprecatedv1
 
 import (
 	"bytes"
@@ -10,12 +10,13 @@ import (
 	"k8s.io/apimachinery/pkg/util/yaml"
 
 	executorv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
+	"github.com/kubeshop/testkube/internal/app/api/apiutils"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
 	executorsmapper "github.com/kubeshop/testkube/pkg/mapper/executors"
 )
 
-func (s TestkubeAPI) CreateExecutorHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) CreateExecutorHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to create executor"
 		var executor executorv1.Executor
@@ -35,14 +36,14 @@ func (s TestkubeAPI) CreateExecutorHandler() fiber.Handler {
 			if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
 				request.QuoteExecutorTextFields()
 				data, err := crd.GenerateYAML(crd.TemplateExecutor, []testkube.ExecutorUpsertRequest{request})
-				return s.getCRDs(c, data, err)
+				return apiutils.SendLegacyCRDs(c, data, err)
 			}
 
 			executor = executorsmapper.MapAPIToCRD(request)
 			executor.Namespace = s.Namespace
 		}
 
-		created, err := s.ExecutorsClient.Create(&executor)
+		created, err := s.DeprecatedClients.Executors().Create(&executor)
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not create executor: %w", errPrefix, err))
 		}
@@ -58,7 +59,7 @@ func (s TestkubeAPI) CreateExecutorHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) UpdateExecutorHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) UpdateExecutorHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to update executor"
 		var request testkube.ExecutorUpdateRequest
@@ -84,7 +85,7 @@ func (s TestkubeAPI) UpdateExecutorHandler() fiber.Handler {
 		}
 		errPrefix = errPrefix + " " + name
 		// we need to get resource first and load its metadata.ResourceVersion
-		executor, err := s.ExecutorsClient.Get(name)
+		executor, err := s.DeprecatedClients.Executors().Get(name)
 		if err != nil {
 			if errors.IsNotFound(err) {
 				return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: client found no executor: %w", errPrefix, err))
@@ -96,7 +97,7 @@ func (s TestkubeAPI) UpdateExecutorHandler() fiber.Handler {
 		// map update executor but load spec only to not override metadata.ResourceVersion
 		executorSpec := executorsmapper.MapUpdateToSpec(request, executor)
 
-		updatedExecutor, err := s.ExecutorsClient.Update(executorSpec)
+		updatedExecutor, err := s.DeprecatedClients.Executors().Update(executorSpec)
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not update executor: %w", errPrefix, err))
 		}
@@ -111,10 +112,10 @@ func (s TestkubeAPI) UpdateExecutorHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) ListExecutorsHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) ListExecutorsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to list executors"
-		list, err := s.ExecutorsClient.List(c.Query("selector"))
+		list, err := s.DeprecatedClients.Executors().List(c.Query("selector"))
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not list executors: %w", errPrefix, err))
 		}
@@ -128,7 +129,7 @@ func (s TestkubeAPI) ListExecutorsHandler() fiber.Handler {
 			}
 
 			data, err := crd.GenerateYAML(crd.TemplateExecutor, results)
-			return s.getCRDs(c, data, err)
+			return apiutils.SendLegacyCRDs(c, data, err)
 		}
 
 		results := []testkube.ExecutorDetails{}
@@ -140,12 +141,12 @@ func (s TestkubeAPI) ListExecutorsHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) GetExecutorHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) GetExecutorHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("name")
 		errPrefix := fmt.Sprintf("failed to get executor %s", name)
 
-		item, err := s.ExecutorsClient.Get(name)
+		item, err := s.DeprecatedClients.Executors().Get(name)
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not get executor: %w", errPrefix, err))
 		}
@@ -154,7 +155,7 @@ func (s TestkubeAPI) GetExecutorHandler() fiber.Handler {
 			result := executorsmapper.MapCRDToAPI(*item)
 			result.QuoteExecutorTextFields()
 			data, err := crd.GenerateYAML(crd.TemplateExecutor, []testkube.ExecutorUpsertRequest{result})
-			return s.getCRDs(c, data, err)
+			return apiutils.SendLegacyCRDs(c, data, err)
 		}
 
 		result := executorsmapper.MapExecutorCRDToExecutorDetails(*item)
@@ -162,12 +163,12 @@ func (s TestkubeAPI) GetExecutorHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) DeleteExecutorHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) DeleteExecutorHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("name")
 		errPrefix := fmt.Sprintf("failed to delete executor %s", name)
 
-		err := s.ExecutorsClient.Delete(name)
+		err := s.DeprecatedClients.Executors().Delete(name)
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not delete executor: %w", errPrefix, err))
 		}
@@ -184,10 +185,10 @@ func (s TestkubeAPI) DeleteExecutorHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) DeleteExecutorsHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) DeleteExecutorsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to delete executors"
-		err := s.ExecutorsClient.DeleteByLabels(c.Query("selector"))
+		err := s.DeprecatedClients.Executors().DeleteByLabels(c.Query("selector"))
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not delete executors: %w", errPrefix, err))
 		}
@@ -197,7 +198,7 @@ func (s TestkubeAPI) DeleteExecutorsHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) GetExecutorByTestTypeHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) GetExecutorByTestTypeHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to get executor by test type"
 
@@ -206,7 +207,7 @@ func (s TestkubeAPI) GetExecutorByTestTypeHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: could not fine test type", errPrefix))
 		}
 
-		item, err := s.ExecutorsClient.GetByType(testType)
+		item, err := s.DeprecatedClients.Executors().GetByType(testType)
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not get executor: %w", errPrefix, err))
 		}
@@ -215,7 +216,7 @@ func (s TestkubeAPI) GetExecutorByTestTypeHandler() fiber.Handler {
 			result := executorsmapper.MapCRDToAPI(*item)
 			result.QuoteExecutorTextFields()
 			data, err := crd.GenerateYAML(crd.TemplateExecutor, []testkube.ExecutorUpsertRequest{result})
-			return s.getCRDs(c, data, err)
+			return apiutils.SendLegacyCRDs(c, data, err)
 		}
 
 		result := executorsmapper.MapExecutorCRDToExecutorDetails(*item)

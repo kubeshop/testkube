@@ -1,7 +1,8 @@
-package v1
+package deprecatedv1
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"net/http"
 
@@ -10,16 +11,16 @@ import (
 )
 
 // RunGraphQLServer runs GraphQL server on go net/http server
-func (s *TestkubeAPI) RunGraphQLServer(ctx context.Context, port string) error {
-	srv := graphql.GetServer(s.Events.Bus, s.ExecutorsClient)
+func (s *DeprecatedTestkubeAPI) RunGraphQLServer(ctx context.Context) error {
+	srv := graphql.GetServer(s.Events.Bus, s.DeprecatedClients.Executors())
 
 	mux := http.NewServeMux()
 	mux.Handle("/graphql", srv)
 	httpSrv := &http.Server{Handler: mux}
 
-	log.DefaultLogger.Infow("running GraphQL server", "port", port)
+	log.DefaultLogger.Infow("running GraphQL server", "port", s.graphqlPort)
 
-	l, err := net.Listen("tcp", ":"+port)
+	l, err := net.Listen("tcp", fmt.Sprintf(":%d", s.graphqlPort))
 	if err != nil {
 		return err
 	}

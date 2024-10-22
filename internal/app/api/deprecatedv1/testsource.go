@@ -1,4 +1,4 @@
-package v1
+package deprecatedv1
 
 import (
 	"bytes"
@@ -12,13 +12,14 @@ import (
 	testsourcev1 "github.com/kubeshop/testkube-operator/api/testsource/v1"
 	"github.com/kubeshop/testkube-operator/pkg/client/testsources/v1"
 	"github.com/kubeshop/testkube-operator/pkg/secret"
+	"github.com/kubeshop/testkube/internal/app/api/apiutils"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	testsourcesmapper "github.com/kubeshop/testkube/pkg/mapper/testsources"
 )
 
-func (s TestkubeAPI) CreateTestSourceHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) CreateTestSourceHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to create test source"
 		var testSource testsourcev1.TestSource
@@ -42,7 +43,7 @@ func (s TestkubeAPI) CreateTestSourceHandler() fiber.Handler {
 				}
 
 				data, err := crd.GenerateYAML(crd.TemplateTestSource, []testkube.TestSourceUpsertRequest{request})
-				return s.getCRDs(c, data, err)
+				return apiutils.SendLegacyCRDs(c, data, err)
 			}
 
 			testSource = testsourcesmapper.MapAPIToCRD(request)
@@ -52,7 +53,7 @@ func (s TestkubeAPI) CreateTestSourceHandler() fiber.Handler {
 			}
 		}
 
-		created, err := s.TestSourcesClient.Create(&testSource, testsources.Option{Secrets: secrets})
+		created, err := s.DeprecatedClients.TestSources().Create(&testSource, testsources.Option{Secrets: secrets})
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not create test source: %w", errPrefix, err))
 		}
@@ -62,7 +63,7 @@ func (s TestkubeAPI) CreateTestSourceHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) UpdateTestSourceHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) UpdateTestSourceHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to update test source"
 		var request testkube.TestSourceUpdateRequest
@@ -88,7 +89,7 @@ func (s TestkubeAPI) UpdateTestSourceHandler() fiber.Handler {
 		}
 		errPrefix = errPrefix + " " + name
 		// we need to get resource first and load its metadata.ResourceVersion
-		testSource, err := s.TestSourcesClient.Get(name)
+		testSource, err := s.DeprecatedClients.TestSources().Get(name)
 		if err != nil {
 			if errors.IsNotFound(err) {
 				return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: test source not found: %w", errPrefix, err))
@@ -116,9 +117,9 @@ func (s TestkubeAPI) UpdateTestSourceHandler() fiber.Handler {
 
 		var updatedTestSource *testsourcev1.TestSource
 		if option != nil {
-			updatedTestSource, err = s.TestSourcesClient.Update(testSourceSpec, *option)
+			updatedTestSource, err = s.DeprecatedClients.TestSources().Update(testSourceSpec, *option)
 		} else {
-			updatedTestSource, err = s.TestSourcesClient.Update(testSourceSpec)
+			updatedTestSource, err = s.DeprecatedClients.TestSources().Update(testSourceSpec)
 		}
 
 		if err != nil {
@@ -129,11 +130,11 @@ func (s TestkubeAPI) UpdateTestSourceHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) ListTestSourcesHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) ListTestSourcesHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to list test sources"
 
-		list, err := s.TestSourcesClient.List(c.Query("selector"))
+		list, err := s.DeprecatedClients.TestSources().List(c.Query("selector"))
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not list test sources: %s", errPrefix, err))
 		}
@@ -151,19 +152,19 @@ func (s TestkubeAPI) ListTestSourcesHandler() fiber.Handler {
 			}
 
 			data, err := crd.GenerateYAML(crd.TemplateTestSource, results)
-			return s.getCRDs(c, data, err)
+			return apiutils.SendLegacyCRDs(c, data, err)
 		}
 
 		return c.JSON(results)
 	}
 }
 
-func (s TestkubeAPI) GetTestSourceHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) GetTestSourceHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("name")
 		errPrefix := "failed to get test source" + name
 
-		item, err := s.TestSourcesClient.Get(name)
+		item, err := s.DeprecatedClients.TestSources().Get(name)
 		if err != nil {
 			if errors.IsNotFound(err) {
 				return s.Error(c, http.StatusNotFound, fmt.Errorf("%s: client could not find test source: %w", errPrefix, err))
@@ -178,19 +179,19 @@ func (s TestkubeAPI) GetTestSourceHandler() fiber.Handler {
 			}
 
 			data, err := crd.GenerateYAML(crd.TemplateTestSource, []testkube.TestSource{result})
-			return s.getCRDs(c, data, err)
+			return apiutils.SendLegacyCRDs(c, data, err)
 		}
 
 		return c.JSON(result)
 	}
 }
 
-func (s TestkubeAPI) DeleteTestSourceHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) DeleteTestSourceHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("name")
 		errPrefix := "failed to delete test source" + name
 
-		err := s.TestSourcesClient.Delete(name)
+		err := s.DeprecatedClients.TestSources().Delete(name)
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not delete test source: %w", errPrefix, err))
 		}
@@ -200,10 +201,10 @@ func (s TestkubeAPI) DeleteTestSourceHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) DeleteTestSourcesHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) DeleteTestSourcesHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to delete test sources"
-		err := s.TestSourcesClient.DeleteByLabels(c.Query("selector"))
+		err := s.DeprecatedClients.TestSources().DeleteByLabels(c.Query("selector"))
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not delete test sources: %w", errPrefix, err))
 		}
@@ -213,7 +214,7 @@ func (s TestkubeAPI) DeleteTestSourcesHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) ProcessTestSourceBatchHandler() fiber.Handler {
+func (s *DeprecatedTestkubeAPI) ProcessTestSourceBatchHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to batch process test sources"
 
@@ -232,7 +233,7 @@ func (s TestkubeAPI) ProcessTestSourceBatchHandler() fiber.Handler {
 			testSourceBatch[item.Name] = item
 		}
 
-		list, err := s.TestSourcesClient.List("")
+		list, err := s.DeprecatedClients.TestSources().List("")
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not list test sources: %w", errPrefix, err))
 		}
@@ -254,7 +255,7 @@ func (s TestkubeAPI) ProcessTestSourceBatchHandler() fiber.Handler {
 			if existed, ok := testSourceMap[name]; !ok {
 				testSource.Namespace = s.Namespace
 
-				created, err := s.TestSourcesClient.Create(&testSource, testsources.Option{Secrets: getTestSourceSecretsData(username, token)})
+				created, err := s.DeprecatedClients.TestSources().Create(&testSource, testsources.Option{Secrets: getTestSourceSecretsData(username, token)})
 				if err != nil {
 					return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not create test source %s: %w", errPrefix, testSource.Name, err))
 				}
@@ -264,7 +265,7 @@ func (s TestkubeAPI) ProcessTestSourceBatchHandler() fiber.Handler {
 				existed.Spec = testSource.Spec
 				existed.Labels = item.Labels
 
-				updated, err := s.TestSourcesClient.Update(&existed, testsources.Option{Secrets: getTestSourceSecretsData(username, token)})
+				updated, err := s.DeprecatedClients.TestSources().Update(&existed, testsources.Option{Secrets: getTestSourceSecretsData(username, token)})
 				if err != nil {
 					return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not update test source %s: %w", errPrefix, testSource.Name, err))
 				}
@@ -275,7 +276,7 @@ func (s TestkubeAPI) ProcessTestSourceBatchHandler() fiber.Handler {
 
 		for name := range testSourceMap {
 			if _, ok := testSourceBatch[name]; !ok {
-				err := s.TestSourcesClient.Delete(name)
+				err := s.DeprecatedClients.TestSources().Delete(name)
 				if err != nil {
 					return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not delete test source %s: %w", errPrefix, name, err))
 				}

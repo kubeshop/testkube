@@ -15,6 +15,7 @@ import (
 	"github.com/gofiber/websocket/v2"
 	"github.com/pkg/errors"
 
+	"github.com/kubeshop/testkube/internal/app/api/apiutils"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/datefilter"
@@ -345,7 +346,7 @@ func (s *TestkubeAPI) AbortAllTestWorkflowExecutionsHandler() fiber.Handler {
 		filter := testworkflow2.NewExecutionsFilter().WithName(name).WithStatus(string(testkube.RUNNING_TestWorkflowStatus))
 		executions, err := s.TestWorkflowResults.GetExecutions(ctx, filter)
 		if err != nil {
-			if IsNotFound(err) {
+			if apiutils.IsNotFound(err) {
 				c.Status(http.StatusNoContent)
 				return nil
 			}
@@ -442,29 +443,6 @@ func (s *TestkubeAPI) GetTestWorkflowArtifactArchiveHandler() fiber.Handler {
 
 		return c.SendStream(archive)
 	}
-}
-
-func (s *TestkubeAPI) GetTestWorkflowNotificationsStream(ctx context.Context, executionID string) (<-chan testkube.TestWorkflowExecutionNotification, error) {
-	// Load the execution
-	execution, err := s.TestWorkflowResults.Get(ctx, executionID)
-	if err != nil {
-		return nil, err
-	}
-
-	// Start streaming the notifications
-	notifications := s.ExecutionWorkerClient.Notifications(ctx, execution.Id, executionworkertypes.NotificationsOptions{
-		Hints: executionworkertypes.Hints{
-			Namespace:   execution.Namespace,
-			Signature:   execution.Signature,
-			ScheduledAt: common.Ptr(execution.ScheduledAt),
-		},
-	})
-
-	// Pass them down
-	if notifications.Err() != nil {
-		return nil, notifications.Err()
-	}
-	return notifications.Channel(), nil
 }
 
 func getWorkflowExecutionsFilterFromRequest(c *fiber.Ctx) testworkflow2.Filter {
