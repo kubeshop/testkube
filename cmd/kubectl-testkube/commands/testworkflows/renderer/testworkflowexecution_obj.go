@@ -76,7 +76,6 @@ func printPrettyOutput(ui *ui.UI, execution testkube.TestWorkflowExecution) {
 			if ctx.Actor != nil {
 				ui.Warn("Actor:               ")
 				ui.Warn("  Name:           ", ctx.Actor.Name)
-				ui.Warn("  Username:       ", ctx.Actor.Username)
 				ui.Warn("  Email:          ", ctx.Actor.Email)
 				ui.Warn("  Execution id:   ", ctx.Actor.ExecutionId)
 				ui.Warn("  Execution path: ", ctx.Actor.ExecutionPath)

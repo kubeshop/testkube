@@ -32,7 +32,6 @@ func MapTestWorkflowRunningContextActorTypeAPIToKube(v testkube.TestWorkflowRunn
 func MapTestWorkflowRunningContextActorAPIToKube(v testkube.TestWorkflowRunningContextActor) testworkflowsv1.TestWorkflowRunningContextActor {
 	return testworkflowsv1.TestWorkflowRunningContextActor{
 		Name:          v.Name,
-		Username:      v.Username,
 		Email:         v.Email,
 		ExecutionId:   v.ExecutionId,
 		ExecutionPath: v.ExecutionPath,
