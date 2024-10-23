@@ -296,7 +296,7 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 		DashboardURI:                     cfg.TestkubeDashboardURI,
 	}
 
-	if grpcClient == nil {
+	if cfg.TestkubeProAPIKey == "" || grpcClient == nil {
 		return proContext
 	}
 
