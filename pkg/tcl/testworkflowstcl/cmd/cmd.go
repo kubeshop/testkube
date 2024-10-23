@@ -47,14 +47,6 @@ func GetRunningContext(runContext, token string, interfaceType testkube.TestWork
 	}
 }
 
-func base64Decode(encoded string) (string, error) {
-	decoded, err := base64.RawURLEncoding.DecodeString(encoded)
-	if err != nil {
-		return "", err
-	}
-	return string(decoded), nil
-}
-
 func getJWTPayload(token string) (map[string]interface{}, error) {
 	parts := strings.Split(token, ".")
 	if len(parts) != 3 {
@@ -62,7 +54,7 @@ func getJWTPayload(token string) (map[string]interface{}, error) {
 	}
 
 	// Decode the payload
-	payloadJSON, err := base64Decode(parts[1])
+	payloadJSON, err := base64.RawURLEncoding.DecodeString((parts[1]))
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode payload: %v", err)
 	}
