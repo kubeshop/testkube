@@ -420,6 +420,14 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 		query["$or"] = subquery
 	}
 
+	if filter.ActorNameDefined() {
+		query["runningContext.actor.name"] = filter.ActorName()
+	}
+
+	if filter.ActorTypeDefined() {
+		query["runningContext.actor.type"] = filter.ActorType()
+	}
+
 	opts.SetSkip(int64(filter.Page() * filter.PageSize()))
 	opts.SetLimit(int64(filter.PageSize()))
 	opts.SetSort(bson.D{{Key: "scheduledat", Value: -1}})

@@ -3806,6 +3806,8 @@ paths:
       parameters:
         - $ref: "#/components/parameters/ID"
         - $ref: "#/components/parameters/TagSelector"
+        - $ref: "#/components/parameters/ActorName"
+        - $ref: "#/components/parameters/ActorType"
       summary: List test workflow executions
       description: List test workflow executions
       operationId: listTestWorkflowExecutionsByTestWorkflow
@@ -4071,6 +4073,8 @@ paths:
       parameters:
         - $ref: "#/components/parameters/ID"
         - $ref: "#/components/parameters/TagSelector"
+        - $ref: "#/components/parameters/ActorName"
+        - $ref: "#/components/parameters/ActorType"
       summary: List test workflow executions
       description: List test workflow executions
       operationId: listTestWorkflowExecutions
@@ -7223,7 +7227,7 @@ components:
       type: string
       enum:
         - cron
-        - testrigger
+        - testtrigger
         - user
         - testworkflow
         - testworkflowexecution
@@ -10753,6 +10757,19 @@ components:
       schema:
         type: string
         description: Test workflow execution tags
+    ActorName:
+      in: query
+      name: actorName
+      schema:
+        type: string
+        description: Test workflow running conntext actor name
+    ActorType:
+      in: query
+      name: actorType
+      schema:
+        type: string
+        description: Test workflow running conntext actor type
+
   requestBodies:
     UploadsBody:
       description: "Upload files request body data"

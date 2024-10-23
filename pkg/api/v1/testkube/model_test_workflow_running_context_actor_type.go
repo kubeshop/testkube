@@ -15,7 +15,7 @@ type TestWorkflowRunningContextActorType string
 // List of TestWorkflowRunningContextActorType
 const (
 	CRON_TestWorkflowRunningContextActorType                  TestWorkflowRunningContextActorType = "cron"
-	TESTRIGGER_TestWorkflowRunningContextActorType            TestWorkflowRunningContextActorType = "testrigger"
+	TESTTRIGGER_TestWorkflowRunningContextActorType           TestWorkflowRunningContextActorType = "testtrigger"
 	USER_TestWorkflowRunningContextActorType                  TestWorkflowRunningContextActorType = "user"
 	TESTWORKFLOW_TestWorkflowRunningContextActorType          TestWorkflowRunningContextActorType = "testworkflow"
 	TESTWORKFLOWEXECUTION_TestWorkflowRunningContextActorType TestWorkflowRunningContextActorType = "testworkflowexecution"

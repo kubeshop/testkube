@@ -16,7 +16,7 @@ func MapTestkubeTestWorkflowRunningContextActorToCDEventTiggerType(actor testkub
 	case testkube.USER_TestWorkflowRunningContextActorType, testkube.PROGRAM_TestWorkflowRunningContextActorType:
 		return "manual"
 	case testkube.TESTWORKFLOW_TestWorkflowRunningContextActorType, testkube.TESTWORKFLOWEXECUTION_TestWorkflowRunningContextActorType,
-		testkube.TESTRIGGER_TestWorkflowRunningContextActorType:
+		testkube.TESTTRIGGER_TestWorkflowRunningContextActorType:
 		return "event"
 	case testkube.CRON_TestWorkflowRunningContextActorType:
 		return "schedule"

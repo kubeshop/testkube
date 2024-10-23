@@ -20,7 +20,7 @@ func GetRunningContext(name string) *testkube.TestWorkflowRunningContext {
 		},
 		Actor: &testkube.TestWorkflowRunningContextActor{
 			Name:  name,
-			Type_: common.Ptr(testkube.TESTRIGGER_TestWorkflowRunningContextActorType),
+			Type_: common.Ptr(testkube.TESTTRIGGER_TestWorkflowRunningContextActorType),
 		},
 	}
 }
