@@ -385,6 +385,7 @@ func TestNewMongoRepository_GetExecutions_Actor_Integration(t *testing.T) {
 	}
 
 	assert.Len(t, res, 2)
+	assert.Equal(t, "test-name-1", res)
 
 	actorName := "user-1"
 	res, err = repo.GetExecutions(ctx, NewExecutionsFilter().WithActorName(actorName))
