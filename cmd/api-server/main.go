@@ -84,7 +84,7 @@ func main() {
 
 	// Start local Control Plane
 	if mode == common.ModeStandalone {
-		controlPlane := services.CreateControlPlane(ctx, cfg, features, configMapConfig, true)
+		controlPlane := services.CreateControlPlane(ctx, cfg, features, configMapConfig)
 		g.Go(func() error {
 			return controlPlane.Run(ctx)
 		})
@@ -191,23 +191,26 @@ func main() {
 
 	metrics := metrics.NewMetrics()
 
-	deprecatedSystem := services.CreateDeprecatedSystem(
-		ctx,
-		mode,
-		cfg,
-		features,
-		metrics,
-		configMapConfig,
-		secretConfig,
-		grpcClient,
-		grpcConn,
-		nc,
-		eventsEmitter,
-		eventBus,
-		inspector,
-		subscriptionChecker,
-		&proContext,
-	)
+	var deprecatedSystem *services.DeprecatedSystem
+	if !cfg.DisableDeprecatedTests {
+		deprecatedSystem = services.CreateDeprecatedSystem(
+			ctx,
+			mode,
+			cfg,
+			features,
+			metrics,
+			configMapConfig,
+			secretConfig,
+			grpcClient,
+			grpcConn,
+			nc,
+			eventsEmitter,
+			eventBus,
+			inspector,
+			subscriptionChecker,
+			&proContext,
+		)
+	}
 
 	// Build internal execution worker
 	testWorkflowProcessor := presets.NewOpenSource(inspector)

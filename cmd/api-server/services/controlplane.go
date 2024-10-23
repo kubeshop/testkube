@@ -54,7 +54,7 @@ func mapTestSuiteFilters(s []*testresult.FilterImpl) []testresult.Filter {
 	return v
 }
 
-func CreateControlPlane(ctx context.Context, cfg *config.Config, features featureflags.FeatureFlags, configMapClient configRepo.Repository, useDeprecated bool) *controlplane.Server {
+func CreateControlPlane(ctx context.Context, cfg *config.Config, features featureflags.FeatureFlags, configMapClient configRepo.Repository) *controlplane.Server {
 	// Connect to the cluster
 	clientset, err := k8sclient.ConnectToK8s()
 	commons.ExitOnError("Creating k8s clientset", err)
@@ -65,7 +65,7 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 	storageClient := commons.MustGetMinioClient(cfg)
 
 	var logGrpcClient logsclient.StreamGetter
-	if useDeprecated && features.LogsV2 {
+	if !cfg.DisableDeprecatedTests && features.LogsV2 {
 		logGrpcClient = commons.MustGetLogsV2Client(cfg)
 		commons.ExitOnError("Creating logs streaming client", err)
 	}
@@ -355,7 +355,7 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 
 	// Select commands to use
 	commands := []controlplane.CommandHandlers{configCommands, testWorkflowExecutionsCommands, testWorkflowsOutputCommands, artifactsCommands}
-	if useDeprecated {
+	if !cfg.DisableDeprecatedTests {
 		commands = append(commands, deprecatedTestExecutionsCommands, deprecatedTestSuiteExecutionsCommands)
 	}
 
