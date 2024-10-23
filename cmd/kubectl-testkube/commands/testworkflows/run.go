@@ -67,10 +67,10 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 
 			name := args[0]
 			runContext := telemetry.GetCliRunContext()
-			interfaceType := testkube.CLI_TestWorkflowRunningContextInterfaceType
+			interfaceType := testkube.CICD_TestWorkflowRunningContextInterfaceType
 			if runContext == "others|local" {
 				runContext = ""
-				interfaceType = testkube.CICD_TestWorkflowRunningContextInterfaceType
+				interfaceType = testkube.CLI_TestWorkflowRunningContextInterfaceType
 			}
 
 			cfg, err := testkubecfg.Load()
