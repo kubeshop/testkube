@@ -33,7 +33,7 @@ func TestGroup_Basic(t *testing.T) {
 			Command: common.Ptr([]string{"c", "d"}),
 		}).
 		Start("step2").
-		Execute("step2", false).
+		Execute("step2", false, false).
 		End("step2").
 		CurrentStatus("init").
 
@@ -43,7 +43,7 @@ func TestGroup_Basic(t *testing.T) {
 			Command: common.Ptr([]string{"c", "d"}),
 		}).
 		Start("step3").
-		Execute("step3", false).
+		Execute("step3", false, false).
 		End("step3").
 		End("init").
 		End("")

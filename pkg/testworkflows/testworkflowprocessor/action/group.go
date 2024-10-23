@@ -169,5 +169,15 @@ merging:
 		i++
 	}
 
+	// Fix the auto-merged internal images
+	for i := range groups {
+		image := groups[i].Image()
+		// Re-use /.tktw/bin/sh when the internal image has been merged into different container
+		if image != constants.DefaultToolkitImage && image != constants.DefaultInitImage {
+			groups[i] = groups[i].RewireCommandDirectory(constants.DefaultInitImage, constants.DefaultInitImageBusyboxBinaryPath, constants.InternalBinPath)
+			groups[i] = groups[i].RewireCommandDirectory(constants.DefaultToolkitImage, constants.DefaultInitImageBusyboxBinaryPath, constants.InternalBinPath)
+		}
+	}
+
 	return groups
 }
