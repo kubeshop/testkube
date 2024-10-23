@@ -119,6 +119,7 @@ type Config struct {
 	EnableK8sEvents                  bool          `envconfig:"ENABLE_K8S_EVENTS" default:"true"`
 	TestkubeDockerImageVersion       string        `envconfig:"TESTKUBE_DOCKER_IMAGE_VERSION" default:""`
 	DisableDeprecatedTests           bool          `envconfig:"DISABLE_DEPRECATED_TESTS" default:"false"`
+	DisableWebhooks                  bool          `envconfig:"DISABLE_WEBHOOKS" default:"false"`
 
 	// DEPRECATED: Use TestkubeProAPIKey instead
 	TestkubeCloudAPIKey string `envconfig:"TESTKUBE_CLOUD_API_KEY" default:""`
