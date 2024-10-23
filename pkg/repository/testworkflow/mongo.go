@@ -425,7 +425,7 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 	}
 
 	if filter.ActorTypeDefined() {
-		query["runningcontext.actor.type"] = filter.ActorType()
+		query["runningcontext.actor.type_"] = filter.ActorType()
 	}
 
 	opts.SetSkip(int64(filter.Page() * filter.PageSize()))
