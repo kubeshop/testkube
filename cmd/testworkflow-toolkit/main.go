@@ -11,6 +11,7 @@ import (
 func main() {
 	// Set verbosity
 	ui.SetVerbose(config.Debug())
+	ui.Info("Starting testworkflow-toolkit WITO HAS GONE AWAY")
 
 	// Validate provided data
 	if config.Namespace() == "" || config.Ref() == "" {

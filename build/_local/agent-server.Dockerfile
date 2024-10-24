@@ -40,7 +40,7 @@ FROM scratch AS dist
 
 COPY LICENSE /testkube/
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
-COPY --from=builder /app/build/_local/cloud-api /testkube/
+COPY --from=builder /app/build/_local/agent-server /testkube/
 
 EXPOSE 8080
 ENTRYPOINT ["/testkube/agent-server"]
