@@ -13,6 +13,7 @@ import (
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	mappertcl "github.com/kubeshop/testkube/pkg/tcl/mappertcl/testworkflows"
 )
 
 func MapStringToIntOrString(i string) intstr.IntOrString {
@@ -370,6 +371,7 @@ func MapCronJobConfigAPIToKube(v testkube.TestWorkflowCronJobConfig) testworkflo
 		Annotations: v.Annotations,
 	}
 }
+
 func MapHostPathVolumeSourceAPIToKube(v testkube.HostPathVolumeSource) corev1.HostPathVolumeSource {
 	return corev1.HostPathVolumeSource{
 		Path: v.Path,
@@ -1368,6 +1370,7 @@ func MapTestWorkflowResultAPIToKube(v testkube.TestWorkflowResult) testworkflows
 		Steps:           common.MapMap(v.Steps, MapTestWorkflowStepResultAPIToKube),
 	}
 }
+
 func MapTestWorkflowSignatureAPIToKube(v testkube.TestWorkflowSignature) testworkflowsv1.TestWorkflowSignature {
 	return testworkflowsv1.TestWorkflowSignature{
 		Ref:      v.Ref,
@@ -1396,6 +1399,8 @@ func MapTestWorkflowExecutionAPIToKube(v *testkube.TestWorkflowExecution) *testw
 		TestWorkflowExecutionName: v.TestWorkflowExecutionName,
 		DisableWebhooks:           v.DisableWebhooks,
 		Tags:                      v.Tags,
+		// Pro edition only (tcl protected code)
+		RunningContext: common.MapPtr(v.RunningContext, mappertcl.MapTestWorkflowRunningContextAPIToKube),
 	}
 }
 
@@ -1417,6 +1422,8 @@ func MapTestWorkflowExecutionAPIToKubeTestWorkflowStatusSummary(v *testkube.Test
 			Result:      common.MapPtr(v.Result, MapTestWorkflowResultAPIToKubeTestWorkflowResultSummary),
 			Workflow:    common.MapPtr(v.Workflow, MapTestWorkflowAPIToKubeTestWorkflowSummary),
 			Tags:        v.Tags,
+			// Pro edition only (tcl protected code)
+			RunningContext: common.MapPtr(v.RunningContext, mappertcl.MapTestWorkflowRunningContextAPIToKube),
 		},
 	}
 }

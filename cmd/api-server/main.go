@@ -495,6 +495,7 @@ func main() {
 			triggers.WithTestkubeNamespace(cfg.TestkubeNamespace),
 			triggers.WithWatcherNamespaces(cfg.TestkubeWatcherNamespaces),
 			triggers.WithDisableSecretCreation(!secretConfig.AutoCreate),
+			triggers.WithProContext(&proContext),
 		)
 		log.DefaultLogger.Info("starting trigger service")
 		g.Go(func() error {

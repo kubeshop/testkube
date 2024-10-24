@@ -496,5 +496,15 @@ func getWorkflowExecutionsFilterFromRequest(c *fiber.Ctx) testworkflow2.Filter {
 		filter = filter.WithTagSelector(tagSelector)
 	}
 
+	actorName := c.Query("actorName")
+	if actorName != "" {
+		filter = filter.WithActorName(actorName)
+	}
+
+	actorType := c.Query("actorType")
+	if actorType != "" {
+		filter = filter.WithActorType(testkube.TestWorkflowRunningContextActorType(actorType))
+	}
+
 	return filter
 }
