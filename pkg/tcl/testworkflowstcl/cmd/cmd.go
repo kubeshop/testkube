@@ -75,10 +75,10 @@ func PrintRunningContext(ui *ui.UI, execution testkube.TestWorkflowExecution) {
 		if ctx.Interface_ != nil {
 			ui.Warn("Interface:           ")
 			if ctx.Interface_.Name != "" {
-				ui.Warn("  Name: ", ctx.Interface_.Name)
+				ui.Warn("  Name:              ", ctx.Interface_.Name)
 			}
 			if ctx.Interface_.Type_ != nil {
-				ui.Warn("  Type: ", string(*ctx.Interface_.Type_))
+				ui.Warn("  Type:              ", string(*ctx.Interface_.Type_))
 			}
 		}
 		if ctx.Actor != nil {
@@ -88,19 +88,19 @@ func PrintRunningContext(ui *ui.UI, execution testkube.TestWorkflowExecution) {
 				value string
 			}{
 				{
-					"  Name:           ",
+					"  Name:              ",
 					ctx.Actor.Name,
 				},
 				{
-					"  Email:          ",
+					"  Email:             ",
 					ctx.Actor.Email,
 				},
 				{
-					"  Execution id:   ",
+					"  Execution id:      ",
 					ctx.Actor.ExecutionId,
 				},
 				{
-					"  Execution path: ",
+					"  Execution path:    ",
 					ctx.Actor.ExecutionPath,
 				},
 			}
@@ -111,7 +111,7 @@ func PrintRunningContext(ui *ui.UI, execution testkube.TestWorkflowExecution) {
 				}
 			}
 			if ctx.Actor.Type_ != nil {
-				ui.Warn("  Type:           ", string(*ctx.Actor.Type_))
+				ui.Warn("  Type:              ", string(*ctx.Actor.Type_))
 			}
 		}
 	}
