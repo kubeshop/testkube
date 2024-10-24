@@ -1,7 +1,7 @@
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: curl-workflow-suite
+  name: junit-workflow-suite
   labels:
     core-tests: workflows-suite
 spec:
@@ -9,6 +9,4 @@ spec:
   - execute:
       parallelism: 2
       workflows:
-      - name: curl-workflow-smoke
-      - name: curl-workflow-smoke-matrix
-
+      - name: junit5-workflow-smoke
