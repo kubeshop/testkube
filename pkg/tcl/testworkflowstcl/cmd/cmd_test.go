@@ -23,15 +23,15 @@ func TestCmd_GetJWTPayload(t *testing.T) {
 		t.Parallel()
 
 		header := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"HS256","typ":"JWT"}`))
-		payload := base64.RawURLEncoding.EncodeToString([]byte(`{"sub":"1234567890","username":"John Doe","email":"fake@email.com"}`))
+		payload := base64.RawURLEncoding.EncodeToString([]byte(`{"sub":"1234567890","name":"John Doe","email":"fake@email.com"}`))
 		signature := "signature"
 
 		token := fmt.Sprintf("%s.%s.%s", header, payload, signature)
 
 		expectedPayload := map[string]interface{}{
-			"sub":      "1234567890",
-			"username": "John Doe",
-			"email":    "fake@email.com",
+			"sub":   "1234567890",
+			"name":  "John Doe",
+			"email": "fake@email.com",
 		}
 
 		result, err := getJWTPayload(token)

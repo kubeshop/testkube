@@ -24,7 +24,7 @@ func GetRunningContext(runContext, token string, interfaceType testkube.TestWork
 	if token != "" {
 		payload, err := getJWTPayload(token)
 		if err == nil {
-			if value, ok := payload["userame"]; ok {
+			if value, ok := payload["name"]; ok {
 				name = fmt.Sprint(value)
 			}
 
