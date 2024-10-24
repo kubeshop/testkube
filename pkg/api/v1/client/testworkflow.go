@@ -145,8 +145,8 @@ func (c TestWorkflowClient) ListTestWorkflowExecutions(id string, limit int, opt
 		"selector":    options.Selector,
 		"pageSize":    fmt.Sprintf("%d", limit),
 		"tagSelector": options.TagSelector,
-		"actionName":  options.ActorName,
-		"actionType":  string(options.ActorType),
+		"actorName":   options.ActorName,
+		"actorType":   string(options.ActorType),
 	}
 	return c.testWorkflowExecutionsResultTransport.Execute(http.MethodGet, uri, nil, params)
 }

@@ -97,8 +97,8 @@ func NewGetTestWorkflowExecutionsCmd() *cobra.Command {
 	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label key value pair: --label key1=value1")
 	cmd.Flags().BoolVar(&logsOnly, "logs-only", false, "show only execution logs")
 	cmd.Flags().StringSliceVarP(&tags, "tag", "", nil, "tag key value pair: --tag key1=value1")
-	cmd.Flags().StringVarP(&actorName, "actorName", "", "", "test workflow running context actor name")
-	cmd.Flags().StringVarP(&actorType, "actorType", "", "", "test workflow running context actor type one of cron|testtrigger|user|testworkfow|testworkflowexecution|program")
+	cmd.Flags().StringVarP(&actorName, "actor-name", "", "", "test workflow running context actor name")
+	cmd.Flags().StringVarP(&actorType, "actor-type", "", "", "test workflow running context actor type one of cron|testtrigger|user|testworkfow|testworkflowexecution|program")
 
 	return cmd
 }
