@@ -113,6 +113,9 @@ type EndExecutionRequest struct {
 type EndExecutionResponse struct {
 }
 
+type GetLabelsRequest struct {
+}
+
 type GetLabelsResponse struct {
 	Labels map[string][]string `json:"labels"`
 }
@@ -146,6 +149,9 @@ type DeleteByTestSuitesRequest struct {
 }
 
 type DeleteByTestSuitesResponse struct{}
+
+type DeleteForAllTestSuitesRequest struct {
+}
 
 type DeleteForAllTestSuitesResponse struct {
 }

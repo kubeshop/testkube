@@ -12,14 +12,13 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 
+	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	v1 "github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
 	thttp "github.com/kubeshop/testkube/pkg/http"
 	"github.com/kubeshop/testkube/pkg/log"
-	"github.com/kubeshop/testkube/pkg/repository/result"
-	"github.com/kubeshop/testkube/pkg/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/utils"
 	"github.com/kubeshop/testkube/pkg/utils/text"
@@ -29,8 +28,7 @@ var _ common.Listener = (*WebhookListener)(nil)
 
 func NewWebhookListener(name, uri, selector string, events []testkube.EventType,
 	payloadObjectField, payloadTemplate string, headers map[string]string, disabled bool,
-	testExecutionResults result.Repository,
-	testSuiteExecutionResults testresult.Repository,
+	deprecatedRepositories commons.DeprecatedRepositories,
 	testWorkflowExecutionResults testworkflow.Repository,
 	metrics v1.Metrics,
 	proContext *config.ProContext,
@@ -47,8 +45,7 @@ func NewWebhookListener(name, uri, selector string, events []testkube.EventType,
 		payloadTemplate:              payloadTemplate,
 		headers:                      headers,
 		disabled:                     disabled,
-		testExecutionResults:         testExecutionResults,
-		testSuiteExecutionResults:    testSuiteExecutionResults,
+		deprecatedRepositories:       deprecatedRepositories,
 		testWorkflowExecutionResults: testWorkflowExecutionResults,
 		metrics:                      metrics,
 		proContext:                   proContext,
@@ -67,8 +64,7 @@ type WebhookListener struct {
 	payloadTemplate              string
 	headers                      map[string]string
 	disabled                     bool
-	testExecutionResults         result.Repository
-	testSuiteExecutionResults    testresult.Repository
+	deprecatedRepositories       commons.DeprecatedRepositories
 	testWorkflowExecutionResults testworkflow.Repository
 	metrics                      v1.Metrics
 	proContext                   *config.ProContext
@@ -282,8 +278,8 @@ func (l *WebhookListener) processTemplate(field, body string, event testkube.Eve
 func (l *WebhookListener) hasBecomeState(event testkube.Event) (bool, error) {
 	log := l.Log.With(event.Log()...)
 
-	if event.TestExecution != nil && event.Type_ != nil {
-		prevStatus, err := l.testExecutionResults.GetPreviousFinishedState(context.Background(), event.TestExecution.TestName, event.TestExecution.EndTime)
+	if l.deprecatedRepositories != nil && event.TestExecution != nil && event.Type_ != nil {
+		prevStatus, err := l.deprecatedRepositories.TestResults().GetPreviousFinishedState(context.Background(), event.TestExecution.TestName, event.TestExecution.EndTime)
 		if err != nil {
 			return false, err
 		}
@@ -296,8 +292,8 @@ func (l *WebhookListener) hasBecomeState(event testkube.Event) (bool, error) {
 		return event.Type_.IsBecomeExecutionStatus(prevStatus), nil
 	}
 
-	if event.TestSuiteExecution != nil && event.TestSuiteExecution.TestSuite != nil && event.Type_ != nil {
-		prevStatus, err := l.testSuiteExecutionResults.GetPreviousFinishedState(context.Background(), event.TestSuiteExecution.TestSuite.Name, event.TestSuiteExecution.EndTime)
+	if l.deprecatedRepositories != nil && event.TestSuiteExecution != nil && event.TestSuiteExecution.TestSuite != nil && event.Type_ != nil {
+		prevStatus, err := l.deprecatedRepositories.TestSuiteResults().GetPreviousFinishedState(context.Background(), event.TestSuiteExecution.TestSuite.Name, event.TestSuiteExecution.EndTime)
 		if err != nil {
 			return false, err
 		}

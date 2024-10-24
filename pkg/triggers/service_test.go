@@ -22,6 +22,7 @@ import (
 	testworkflowsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testworkflows/v1"
 	faketestkube "github.com/kubeshop/testkube-operator/pkg/clientset/versioned/fake"
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
+	"github.com/kubeshop/testkube/cmd/api-server/services"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/configmap"
@@ -166,21 +167,25 @@ func TestService_Run(t *testing.T) {
 	testIdentifier := "test-host-1"
 	mockLeaseBackend.EXPECT().TryAcquire(gomock.Any(), testIdentifier, testClusterID).Return(true, nil).AnyTimes()
 
+	mockDeprecatedSystem := services.DeprecatedSystem{
+		Clients:      mockDeprecatedClients,
+		Repositories: mockDeprecatedRepositories,
+		JobExecutor:  mockExecutor,
+		Scheduler:    sched,
+	}
+
 	fakeTestkubeClientset := faketestkube.NewSimpleClientset()
 	fakeClientset := fake.NewSimpleClientset()
 	eventBus := bus.NewEventBusMock()
 	metrics := metrics.NewMetrics()
 	s := NewService(
-		mockDeprecatedRepositories,
-		mockDeprecatedClients,
-		sched,
+		&mockDeprecatedSystem,
 		fakeClientset,
 		fakeTestkubeClientset,
 		mockTestWorkflowsClient,
 		mockLeaseBackend,
 		testLogger,
 		configMapConfig,
-		mockExecutor,
 		eventBus,
 		metrics,
 		mockExecutionWorkerClient,

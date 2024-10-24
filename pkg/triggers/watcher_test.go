@@ -12,6 +12,7 @@ import (
 
 	testtriggersv1 "github.com/kubeshop/testkube-operator/api/testtriggers/v1"
 	faketestkube "github.com/kubeshop/testkube-operator/pkg/clientset/versioned/fake"
+	"github.com/kubeshop/testkube/cmd/api-server/services"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/log"
@@ -30,6 +31,7 @@ func TestService_runWatcher_lease(t *testing.T) {
 		defer cancel()
 
 		s := &Service{
+			deprecatedSystem:  &services.DeprecatedSystem{},
 			triggerStatus:     make(map[statusKey]*triggerStatus),
 			clientset:         clientset,
 			testKubeClientset: testKubeClientset,
@@ -87,6 +89,7 @@ func TestService_runWatcher_lease(t *testing.T) {
 			return nil
 		}
 		s := &Service{
+			deprecatedSystem:  &services.DeprecatedSystem{},
 			triggerExecutor:   testExecutorF,
 			identifier:        "testkube-api",
 			clusterID:         "testkube",
@@ -152,6 +155,7 @@ func TestService_runWatcher_noLease(t *testing.T) {
 		defer cancel()
 
 		s := &Service{
+			deprecatedSystem:  &services.DeprecatedSystem{},
 			triggerStatus:     make(map[statusKey]*triggerStatus),
 			identifier:        "testkube-api",
 			clusterID:         "testkube",
@@ -194,6 +198,7 @@ func TestService_runWatcher_noLease(t *testing.T) {
 		defer cancel()
 
 		s := &Service{
+			deprecatedSystem:  &services.DeprecatedSystem{},
 			triggerStatus:     make(map[statusKey]*triggerStatus),
 			identifier:        "testkube-api",
 			clusterID:         "testkube",
@@ -238,6 +243,7 @@ func TestService_runWatcher_noLease(t *testing.T) {
 		defer cancel()
 
 		s := &Service{
+			deprecatedSystem:  &services.DeprecatedSystem{},
 			triggerStatus:     make(map[statusKey]*triggerStatus),
 			identifier:        "testkube-api",
 			clusterID:         "testkube",

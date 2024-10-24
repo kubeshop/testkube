@@ -2,23 +2,6 @@ package testworkflowconfig
 
 import "github.com/kubeshop/testkube/pkg/expressions"
 
-func CreateStorageMachine(cfg *ObjectStorageConfig) expressions.Machine {
-	return expressions.NewMachine().
-		RegisterMap("internal", map[string]interface{}{
-			"storage.url":        cfg.Endpoint,
-			"storage.accessKey":  cfg.AccessKeyID,
-			"storage.secretKey":  cfg.SecretAccessKey,
-			"storage.region":     cfg.Region,
-			"storage.bucket":     cfg.Bucket,
-			"storage.token":      cfg.Token,
-			"storage.ssl":        cfg.Ssl,
-			"storage.skipVerify": cfg.SkipVerify,
-			"storage.certFile":   cfg.CertFile,
-			"storage.keyFile":    cfg.KeyFile,
-			"storage.caFile":     cfg.CAFile,
-		})
-}
-
 func CreateExecutionMachine(cfg *ExecutionConfig) expressions.Machine {
 	return expressions.NewMachine().
 		Register("execution", map[string]interface{}{
@@ -92,5 +75,5 @@ func CreateWorkerMachine(cfg *WorkerConfig) expressions.Machine {
 
 			"api.url": cfg.Connection.LocalApiUrl, // TODO: Delete
 		})
-	return expressions.CombinedMachines(machine, CreateStorageMachine(&cfg.Connection.ObjectStorage))
+	return expressions.CombinedMachines(machine)
 }

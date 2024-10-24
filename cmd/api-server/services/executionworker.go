@@ -24,25 +24,6 @@ func CreateExecutionWorker(
 	for n, s := range serviceAccountNames {
 		namespacesConfig[n] = kubernetesworker.NamespaceConfig{DefaultServiceAccountName: s}
 	}
-	cloudUrl := cfg.TestkubeProURL
-	cloudApiKey := cfg.TestkubeProAPIKey
-	objectStorageConfig := testworkflowconfig.ObjectStorageConfig{}
-	if cloudApiKey == "" {
-		cloudUrl = ""
-		objectStorageConfig = testworkflowconfig.ObjectStorageConfig{
-			Endpoint:        cfg.StorageEndpoint,
-			AccessKeyID:     cfg.StorageAccessKeyID,
-			SecretAccessKey: cfg.StorageSecretAccessKey,
-			Region:          cfg.StorageRegion,
-			Token:           cfg.StorageToken,
-			Bucket:          cfg.StorageBucket,
-			Ssl:             cfg.StorageSSL,
-			SkipVerify:      cfg.StorageSkipVerify,
-			CertFile:        cfg.StorageCertFile,
-			KeyFile:         cfg.StorageKeyFile,
-			CAFile:          cfg.StorageCAFile,
-		}
-	}
 	return executionworker.NewKubernetes(clientSet, processor, kubernetesworker.Config{
 		Cluster: kubernetesworker.ClusterConfig{
 			Id:               clusterId,
@@ -56,14 +37,13 @@ func CreateExecutionWorker(
 			CacheTTL:     cfg.TestkubeImageCredentialsCacheTTL,
 		},
 		Connection: testworkflowconfig.WorkerConnectionConfig{
-			Url:         cloudUrl,
-			ApiKey:      cloudApiKey,
+			Url:         cfg.TestkubeProURL,
+			ApiKey:      cfg.TestkubeProAPIKey,
 			SkipVerify:  cfg.TestkubeProSkipVerify,
 			TlsInsecure: cfg.TestkubeProTLSInsecure,
 
 			// TODO: Prepare ControlPlane interface for OSS, so we may unify the communication
-			LocalApiUrl:   fmt.Sprintf("http://%s:%d", cfg.APIServerFullname, cfg.APIServerPort),
-			ObjectStorage: objectStorageConfig,
+			LocalApiUrl: fmt.Sprintf("http://%s:%d", cfg.APIServerFullname, cfg.APIServerPort),
 		},
 	})
 }

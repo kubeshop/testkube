@@ -112,3 +112,32 @@ func (c RESTClient[T]) Create(entity T, overridePath ...string) (e T, err error)
 
 	return e, nil
 }
+
+func (c RESTClient[T]) Delete(id string, overridePath ...string) (err error) {
+	path := c.Path + "/" + id
+	if len(overridePath) == 1 {
+		path = overridePath[0]
+	}
+
+	r, err := nethttp.NewRequest("DELETE", c.BaseUrl+path, nil)
+	if err != nil {
+		return err
+	}
+	r.Header.Add("Content-type", "application/json")
+	r.Header.Add("Authorization", "Bearer "+c.Token)
+
+	resp, err := c.Client.Do(r)
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode >= 400 {
+		d, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return fmt.Errorf("error deleting %s: can't read response: %s", c.Path, err)
+		}
+		return fmt.Errorf("error creating %s: %s", c.Path, d)
+	}
+
+	return nil
+}

@@ -308,7 +308,9 @@ func (ag *Agent) receiveCommand(ctx context.Context, stream cloud.TestKubeCloudA
 }
 
 func (ag *Agent) runCommandLoop(ctx context.Context) error {
-	ctx = AddAPIKeyMeta(ctx, ag.proContext.APIKey)
+	if ag.proContext.APIKey != "" {
+		ctx = AddAPIKeyMeta(ctx, ag.proContext.APIKey)
+	}
 
 	ctx = metadata.AppendToOutgoingContext(ctx, clusterIDMeta, ag.clusterID)
 	ctx = metadata.AppendToOutgoingContext(ctx, cloudMigrateMeta, ag.proContext.Migrate)
