@@ -74,17 +74,42 @@ func PrintRunningContext(ui *ui.UI, execution testkube.TestWorkflowExecution) {
 		ctx := execution.RunningContext
 		if ctx.Interface_ != nil {
 			ui.Warn("Interface:           ")
-			ui.Warn("  Name: ", ctx.Interface_.Name)
+			if ctx.Interface_.Name != "" {
+				ui.Warn("  Name: ", ctx.Interface_.Name)
+			}
 			if ctx.Interface_.Type_ != nil {
 				ui.Warn("  Type: ", string(*ctx.Interface_.Type_))
 			}
 		}
 		if ctx.Actor != nil {
 			ui.Warn("Actor:               ")
-			ui.Warn("  Name:           ", ctx.Actor.Name)
-			ui.Warn("  Email:          ", ctx.Actor.Email)
-			ui.Warn("  Execution id:   ", ctx.Actor.ExecutionId)
-			ui.Warn("  Execution path: ", ctx.Actor.ExecutionPath)
+			fields := []struct {
+				name  string
+				value string
+			}{
+				{
+					"  Name:           ",
+					ctx.Actor.Name,
+				},
+				{
+					"  Email:          ",
+					ctx.Actor.Email,
+				},
+				{
+					"  Execution id:   ",
+					ctx.Actor.ExecutionId,
+				},
+				{
+					"  Execution path: ",
+					ctx.Actor.ExecutionPath,
+				},
+			}
+
+			for _, field := range fields {
+				if field.value != "" {
+					ui.Warn(field.name, field.value)
+				}
+			}
 			if ctx.Actor.Type_ != nil {
 				ui.Warn("  Type:           ", string(*ctx.Actor.Type_))
 			}
