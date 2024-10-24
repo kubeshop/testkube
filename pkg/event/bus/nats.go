@@ -17,6 +17,8 @@ import (
 
 var (
 	_ Bus = (*NATSBus)(nil)
+
+	NATS_RETRY_ATTEMPTS uint = 20
 )
 
 const (
@@ -89,7 +91,7 @@ func NewNATSConnection(cfg ConnectionConfig, opts ...nats.Option) (*nats.Conn, e
 		},
 		retry.DelayType(retry.FixedDelay),
 		retry.Delay(utils.DefaultRetryDelay),
-		retry.Attempts(20),
+		retry.Attempts(NATS_RETRY_ATTEMPTS),
 	)
 	if err != nil {
 		log.DefaultLogger.Fatalw("error connecting to nats", "error", err)
