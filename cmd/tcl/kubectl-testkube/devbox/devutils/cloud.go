@@ -6,15 +6,21 @@
 //
 //	https://github.com/kubeshop/testkube/blob/main/licenses/TCL.txt
 
-package devbox
+package devutils
 
 import (
 	"errors"
 	"fmt"
 	"regexp"
 	"strings"
+	"sync"
+	"time"
 
+	"github.com/spf13/cobra"
+
+	common2 "github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
+	client2 "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/cloud/client"
 )
 
@@ -22,9 +28,15 @@ type cloudObj struct {
 	cfg       config.CloudContext
 	envClient *client.EnvironmentsClient
 	list      []client.Environment
+
+	clientMu sync.Mutex
+	client   client2.Client
+	clientTs time.Time
+
+	cmd *cobra.Command
 }
 
-func NewCloud(cfg config.CloudContext) (*cloudObj, error) {
+func NewCloud(cfg config.CloudContext, cmd *cobra.Command) (*cloudObj, error) {
 	if cfg.ApiKey == "" || cfg.OrganizationId == "" || cfg.OrganizationName == "" {
 		return nil, errors.New("login to the organization first")
 	}
@@ -47,6 +59,7 @@ func NewCloud(cfg config.CloudContext) (*cloudObj, error) {
 	obj := &cloudObj{
 		cfg:       cfg,
 		envClient: envClient,
+		cmd:       cmd,
 	}
 
 	err := obj.UpdateList()
@@ -83,6 +96,29 @@ func (c *cloudObj) UpdateList() error {
 	}
 	c.list = result
 	return nil
+}
+
+func (c *cloudObj) Client(environmentId string) (client2.Client, error) {
+	c.clientMu.Lock()
+	defer c.clientMu.Unlock()
+
+	if c.client == nil || c.clientTs.Add(5*time.Minute).Before(time.Now()) {
+		common2.GetClient(c.cmd) // refresh token
+		var err error
+		c.client, err = client2.GetClient(client2.ClientCloud, client2.Options{
+			Insecure:           c.AgentInsecure(),
+			ApiUri:             c.ApiURI(),
+			CloudApiKey:        c.ApiKey(),
+			CloudOrganization:  c.cfg.OrganizationId,
+			CloudEnvironment:   environmentId,
+			CloudApiPathPrefix: fmt.Sprintf("/organizations/%s/environments/%s/agent", c.cfg.OrganizationId, environmentId),
+		})
+		if err != nil {
+			return nil, err
+		}
+		c.clientTs = time.Now()
+	}
+	return c.client, nil
 }
 
 func (c *cloudObj) AgentURI() string {
@@ -124,12 +160,4 @@ func (c *cloudObj) CreateEnvironment(name string) (*client.Environment, error) {
 
 func (c *cloudObj) DeleteEnvironment(id string) error {
 	return c.envClient.Delete(id)
-}
-
-func (c *cloudObj) Debug() {
-	PrintHeader("Control Plane")
-	PrintItem("Organization", c.cfg.OrganizationName, c.cfg.OrganizationId)
-	PrintItem("API URL", c.cfg.ApiUri, "")
-	PrintItem("UI URL", c.cfg.UiUri, "")
-	PrintItem("Agent Server", c.cfg.AgentUri, "")
 }

@@ -89,7 +89,7 @@ func main() {
 			script := `
 				set -e
 				/usr/bin/mc config host add minio "http://devbox-storage:9000" "minioadmin" "minioadmin"
-				/usr/bin/mc cp minio/devbox/binaries/testworkflow-init /.tk-devbox/init
+				/usr/bin/mc cp --disable-multipart minio/devbox/bin/init /.tk-devbox/init
 				chmod 777 /.tk-devbox/init
 				chmod +x /.tk-devbox/init
 				ls -lah /.tk-devbox`
@@ -97,8 +97,8 @@ func main() {
 				script = `
 					set -e
 					/usr/bin/mc config host add minio "http://devbox-storage:9000" "minioadmin" "minioadmin"
-					/usr/bin/mc cp minio/devbox/binaries/testworkflow-init /.tk-devbox/init
-					/usr/bin/mc cp minio/devbox/binaries/testworkflow-toolkit /.tk-devbox/toolkit
+					/usr/bin/mc cp --disable-multipart minio/devbox/bin/init /.tk-devbox/init
+					/usr/bin/mc cp --disable-multipart minio/devbox/bin/toolkit /.tk-devbox/toolkit
 					chmod 777 /.tk-devbox/init
 					chmod 777 /.tk-devbox/toolkit
 					chmod +x /.tk-devbox/init
@@ -107,10 +107,11 @@ func main() {
 			}
 
 			pod.Spec.InitContainers = append([]corev1.Container{{
-				Name:    "devbox-init",
-				Image:   "minio/mc:latest",
-				Command: []string{"/bin/sh", "-c"},
-				Args:    []string{script},
+				Name:            "devbox-init",
+				Image:           "minio/mc:latest",
+				ImagePullPolicy: corev1.PullIfNotPresent,
+				Command:         []string{"/bin/sh", "-c"},
+				Args:            []string{script},
 			}}, pod.Spec.InitContainers...)
 
 			// TODO: Handle it better, to not be ambiguous

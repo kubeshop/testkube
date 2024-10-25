@@ -6,7 +6,7 @@
 //
 //	https://github.com/kubeshop/testkube/blob/main/licenses/TCL.txt
 
-package devbox
+package devutils
 
 import (
 	"context"
@@ -18,37 +18,60 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"github.com/kubeshop/testkube/pkg/tmp"
 )
 
-type binaryObj struct {
-	lastHash     string
-	outputPath   string
-	mainFilePath string
-	os           string
-	arch         string
-	mu           sync.Mutex
+type Binary struct {
+	mainPath         string
+	outputPath       string
+	operatingSystem  string
+	procArchitecture string
+
+	hash    string
+	buildMu sync.RWMutex
 }
 
-func NewBinary(mainFilePath, outputPath, os, arch string) *binaryObj {
-	return &binaryObj{
-		mainFilePath: mainFilePath,
-		outputPath:   outputPath,
-		os:           os,
-		arch:         arch,
+func NewBinary(mainPath, operatingSystem, procArchitecture string) *Binary {
+	return &Binary{
+		mainPath:         mainPath,
+		outputPath:       tmp.Name(),
+		operatingSystem:  operatingSystem,
+		procArchitecture: procArchitecture,
 	}
 }
 
-func (b *binaryObj) Hash() string {
-	return b.lastHash
+func (b *Binary) updateHash() error {
+	f, err := os.Open(b.outputPath)
+	if err != nil {
+		return fmt.Errorf("failed to get hash: reading binary: %s", err.Error())
+	}
+	defer f.Close()
+
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return fmt.Errorf("failed to get hash: %s", err.Error())
+	}
+
+	b.hash = fmt.Sprintf("%x", h.Sum(nil))
+	return nil
 }
 
-func (b *binaryObj) Path() string {
+func (b *Binary) Hash() string {
+	b.buildMu.RLock()
+	defer b.buildMu.RUnlock()
+	return b.hash
+}
+
+func (b *Binary) Path() string {
+	b.buildMu.RLock()
+	defer b.buildMu.RUnlock()
 	return b.outputPath
 }
 
-func (b *binaryObj) Build(ctx context.Context) (hash string, err error) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
+func (b *Binary) Build(ctx context.Context) (string, error) {
+	b.buildMu.Lock()
+	defer b.buildMu.Unlock()
 
 	cmd := exec.Command(
 		"go", "build",
@@ -58,15 +81,15 @@ func (b *binaryObj) Build(ctx context.Context) (hash string, err error) {
 			"-X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientSecret=",
 			"-X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementID=",
 			"-X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementSecret=",
-			"-X github.com/kubeshop/testkube/internal/pkg/api.Version=dev",
+			"-X github.com/kubeshop/testkube/internal/pkg/api.Version=devbox",
 			"-X github.com/kubeshop/testkube/internal/pkg/api.Commit=000000000",
 		}, " ")),
 		"./main.go",
 	)
-	cmd.Dir = filepath.Dir(b.mainFilePath)
+	cmd.Dir = filepath.Dir(b.mainPath)
 	cmd.Env = append(os.Environ(),
-		fmt.Sprintf("GOOS=%s", b.os),
-		fmt.Sprintf("GOARCH=%s", b.arch),
+		fmt.Sprintf("GOOS=%s", b.operatingSystem),
+		fmt.Sprintf("GOARCH=%s", b.procArchitecture),
 	)
 	r, w := io.Pipe()
 	cmd.Stdout = w
@@ -86,13 +109,16 @@ func (b *binaryObj) Build(ctx context.Context) (hash string, err error) {
 		}
 	}()
 
-	if err = cmd.Run(); err != nil {
-		w.Close()
+	err := cmd.Run()
+	w.Close()
+	if err != nil {
 		bufMu.Lock()
 		defer bufMu.Unlock()
+		if ctx.Err() != nil {
+			return "", ctx.Err()
+		}
 		return "", fmt.Errorf("failed to build: %s: %s", err.Error(), string(buf))
 	}
-	w.Close()
 
 	f, err := os.Open(b.outputPath)
 	if err != nil {
@@ -105,6 +131,9 @@ func (b *binaryObj) Build(ctx context.Context) (hash string, err error) {
 		return "", fmt.Errorf("failed to get hash: %s", err.Error())
 	}
 
-	b.lastHash = fmt.Sprintf("%x", h.Sum(nil))
-	return b.lastHash, nil
+	err = b.updateHash()
+	if err != nil {
+		return "", err
+	}
+	return b.hash, err
 }

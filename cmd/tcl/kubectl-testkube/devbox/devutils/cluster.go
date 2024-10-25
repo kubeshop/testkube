@@ -6,7 +6,7 @@
 //
 //	https://github.com/kubeshop/testkube/blob/main/licenses/TCL.txt
 
-package devbox
+package devutils
 
 import (
 	"strings"
@@ -19,13 +19,13 @@ import (
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 )
 
-type clusterObj struct {
+type ClusterObject struct {
 	cfg         *rest.Config
 	clientSet   *kubernetes.Clientset
 	versionInfo *version.Info
 }
 
-func NewCluster() (*clusterObj, error) {
+func NewCluster() (*ClusterObject, error) {
 	config, err := rest.InClusterConfig()
 	if err != nil {
 		config, err = k8sclient.GetK8sClientConfig()
@@ -42,48 +42,33 @@ func NewCluster() (*clusterObj, error) {
 		return nil, errors.Wrap(err, "failed to get Kubernetes cluster details")
 	}
 
-	return &clusterObj{
+	return &ClusterObject{
 		clientSet:   clientSet,
 		versionInfo: info,
 		cfg:         config,
 	}, nil
 }
 
-func (c *clusterObj) Debug() {
-	PrintHeader("Cluster")
-	PrintItem("Address", c.cfg.Host, "")
-	PrintItem("Platform", c.versionInfo.Platform, "")
-	PrintItem("Version", c.versionInfo.GitVersion, "")
-}
-
-func (c *clusterObj) ClientSet() *kubernetes.Clientset {
+func (c *ClusterObject) ClientSet() *kubernetes.Clientset {
 	return c.clientSet
 }
 
-func (c *clusterObj) Config() *rest.Config {
+func (c *ClusterObject) Config() *rest.Config {
 	return c.cfg
 }
 
-func (c *clusterObj) Namespace(name string) *namespaceObj {
-	return NewNamespace(c.clientSet, name)
+func (c *ClusterObject) Namespace(name string) *NamespaceObject {
+	return NewNamespace(c.clientSet, c.cfg, name)
 }
 
-func (c *clusterObj) ImageRegistry(namespace string) *imageRegistryObj {
-	return NewImageRegistry(c.clientSet, c.cfg, namespace)
+func (c *ClusterObject) Host() string {
+	return c.cfg.Host
 }
 
-func (c *clusterObj) ObjectStorage(namespace string) *objectStorageObj {
-	return NewObjectStorage(c.clientSet, c.cfg, namespace)
-}
-
-func (c *clusterObj) PodInterceptor(namespace string) *podInterceptorObj {
-	return NewPodInterceptor(c.clientSet, c.cfg, namespace)
-}
-
-func (c *clusterObj) OperatingSystem() string {
+func (c *ClusterObject) OperatingSystem() string {
 	return strings.Split(c.versionInfo.Platform, "/")[0]
 }
 
-func (c *clusterObj) Architecture() string {
+func (c *ClusterObject) Architecture() string {
 	return strings.Split(c.versionInfo.Platform, "/")[1]
 }

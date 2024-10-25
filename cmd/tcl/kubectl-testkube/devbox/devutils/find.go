@@ -6,25 +6,29 @@
 //
 //	https://github.com/kubeshop/testkube/blob/main/licenses/TCL.txt
 
-package devbox
+package devutils
 
 import (
 	"os"
 	"path/filepath"
 )
 
-func findFile(path string) string {
+func FindDirContaining(paths ...string) string {
 	cwd, _ := os.Getwd()
 
 	// Find near in the tree
-	current := filepath.Clean(filepath.Join(cwd, "testkube"))
+	current := filepath.Clean(filepath.Join(cwd, "testkube", "dummy"))
+loop:
 	for current != filepath.Clean(filepath.Join(cwd, "..")) {
-		expected := filepath.Clean(filepath.Join(current, path))
-		_, err := os.Stat(expected)
-		if err == nil {
-			return expected
-		}
 		current = filepath.Dir(current)
+		for _, path := range paths {
+			expected := filepath.Clean(filepath.Join(current, path))
+			_, err := os.Stat(expected)
+			if err != nil {
+				continue loop
+			}
+		}
+		return current
 	}
 	return ""
 }
