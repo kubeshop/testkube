@@ -231,12 +231,7 @@ func NewDevBoxCommand() *cobra.Command {
 			fmt.Println("Uploading binaries...")
 			g.Go(func() error {
 				its := time.Now()
-				file, err := os.Open(agentBin.Path())
-				if err != nil {
-					return err
-				}
-				defer file.Close()
-				err = objectStorage.Upload(ctx, "bin/testkube-api-server", file, agentBin.Hash())
+				err = objectStorage.Upload(ctx, "bin/testkube-api-server", agentBin.Path(), agentBin.Hash())
 				if err != nil {
 					fmt.Printf("Agent: upload finished in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
 				} else {
@@ -246,12 +241,7 @@ func NewDevBoxCommand() *cobra.Command {
 			})
 			g.Go(func() error {
 				its := time.Now()
-				file, err := os.Open(toolkitBin.Path())
-				if err != nil {
-					return err
-				}
-				defer file.Close()
-				err = objectStorage.Upload(ctx, "bin/toolkit", file, toolkitBin.Hash())
+				err = objectStorage.Upload(ctx, "bin/toolkit", toolkitBin.Path(), toolkitBin.Hash())
 				if err != nil {
 					fmt.Printf("Toolkit: upload finished in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
 				} else {
@@ -261,12 +251,7 @@ func NewDevBoxCommand() *cobra.Command {
 			})
 			g.Go(func() error {
 				its := time.Now()
-				file, err := os.Open(initProcessBin.Path())
-				if err != nil {
-					return err
-				}
-				defer file.Close()
-				err = objectStorage.Upload(ctx, "bin/init", file, initProcessBin.Hash())
+				err = objectStorage.Upload(ctx, "bin/init", initProcessBin.Path(), initProcessBin.Hash())
 				if err != nil {
 					fmt.Printf("Init Process: upload finished in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
 				} else {
@@ -410,12 +395,7 @@ func NewDevBoxCommand() *cobra.Command {
 					fmt.Printf("Agent: build finished in %s.\n", time.Since(its).Truncate(time.Millisecond))
 
 					its = time.Now()
-					file, err := os.Open(agentBin.Path())
-					if err != nil {
-						return err
-					}
-					defer file.Close()
-					err = objectStorage.Upload(ctx, "bin/testkube-api-server", file, agentBin.Hash())
+					err = objectStorage.Upload(ctx, "bin/testkube-api-server", agentBin.Path(), agentBin.Hash())
 					if err != nil {
 						fmt.Printf("Agent: upload finished in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
 						return err
@@ -453,12 +433,7 @@ func NewDevBoxCommand() *cobra.Command {
 					fmt.Printf("Toolkit: build finished in %s.\n", time.Since(its).Truncate(time.Millisecond))
 
 					its = time.Now()
-					file, err := os.Open(toolkitBin.Path())
-					if err != nil {
-						return err
-					}
-					defer file.Close()
-					err = objectStorage.Upload(ctx, "bin/toolkit", file, toolkitBin.Hash())
+					err = objectStorage.Upload(ctx, "bin/toolkit", toolkitBin.Path(), toolkitBin.Hash())
 					if err != nil {
 						fmt.Printf("Toolkit: upload finished in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
 						return err
@@ -476,12 +451,7 @@ func NewDevBoxCommand() *cobra.Command {
 					fmt.Printf("Init Process: build finished in %s.\n", time.Since(its).Truncate(time.Millisecond))
 
 					its = time.Now()
-					file, err := os.Open(initProcessBin.Path())
-					if err != nil {
-						return err
-					}
-					defer file.Close()
-					err = objectStorage.Upload(ctx, "bin/init", file, initProcessBin.Hash())
+					err = objectStorage.Upload(ctx, "bin/init", initProcessBin.Path(), initProcessBin.Hash())
 					if err != nil {
 						fmt.Printf("Init Process: upload finished in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
 						return err

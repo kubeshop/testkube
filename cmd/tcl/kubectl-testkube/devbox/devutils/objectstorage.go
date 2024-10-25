@@ -15,6 +15,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -23,6 +25,7 @@ import (
 
 	minio2 "github.com/minio/minio-go/v7"
 
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/artifacts"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
@@ -154,7 +157,7 @@ func (r *ObjectStorage) WaitForReady(ctx context.Context) error {
 }
 
 // TODO: Compress on-fly
-func (r *ObjectStorage) Upload(ctx context.Context, path string, reader io.Reader, hash string) error {
+func (r *ObjectStorage) Upload(ctx context.Context, path string, fsPath string, hash string) error {
 	c, err := r.Client()
 	if err != nil {
 		return err
@@ -162,21 +165,45 @@ func (r *ObjectStorage) Upload(ctx context.Context, path string, reader io.Reade
 	if hash != "" && r.Is(path, hash) {
 		return nil
 	}
-	putUrl, err := c.PresignedPutObject(ctx, "devbox", path, 15*time.Minute)
+	//putUrl, err := c.PresignedPutObject(ctx, "devbox", path, 15*time.Minute)
+	putUrl, err := c.PresignHeader(ctx, "PUT", "devbox", path, 15*time.Minute, nil, http.Header{
+		"X-Amz-Meta-Snowball-Auto-Extract": {"true"},
+		"X-Amz-Meta-Minio-Snowball-Prefix": {filepath.Dir(path)},
+		"Content-Type":                     {"application/gzip"},
+		"Content-Encoding":                 {"gzip"},
+	})
 	if err != nil {
 		return err
 	}
+
+	file, err := os.Open(fsPath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	stat, err := file.Stat()
+	if err != nil {
+		return err
+	}
+
 	buf := new(bytes.Buffer)
-	//g := gzip.NewWriter(buf)
-	io.Copy(buf, reader)
+	tarStream := artifacts.NewTarStream()
+	go func() {
+		tarStream.Add(filepath.Base(path), file, stat)
+		tarStream.Close()
+	}()
+	io.Copy(buf, tarStream)
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodPut, putUrl.String(), buf)
 	if err != nil {
 		return err
 	}
 	req.ContentLength = int64(buf.Len())
+	req.Header.Set("X-Amz-Meta-Snowball-Auto-Extract", "true")
+	req.Header.Set("X-Amz-Meta-Minio-Snowball-Prefix", filepath.Dir(path))
+	req.Header.Set("Content-Type", "application/gzip")
+	req.Header.Set("Content-Encoding", "gzip")
 
-	req.Header.Set("Content-Type", "application/octet-stream")
-	//req.Header.Set("Content-Encoding", "gzip")
 	tr := http.DefaultTransport.(*http.Transport).Clone()
 	tr.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	client := &http.Client{Transport: tr}
