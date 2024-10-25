@@ -29,6 +29,7 @@ const (
 	KeepAliveTime       = 10 * time.Second
 	KeepAliveTimeout    = 5 * time.Second
 	HealthCheckInterval = 60 * time.Second
+	SendPingInterval    = HealthCheckInterval / 2
 )
 
 type Server struct {
@@ -105,7 +106,7 @@ func (s *Server) GetTestWorkflowNotificationsStream(srv cloud.TestKubeCloudAPI_G
 	defer cancel()
 	g, _ := errgroup.WithContext(ctx)
 
-	ticker := time.NewTicker(30 * time.Second)
+	ticker := time.NewTicker(SendPingInterval)
 	defer ticker.Stop()
 
 	g.Go(func() error {
@@ -161,7 +162,7 @@ func (s *Server) GetLogsStream(srv cloud.TestKubeCloudAPI_GetLogsStreamServer) e
 	defer cancel()
 	g, _ := errgroup.WithContext(ctx)
 
-	ticker := time.NewTicker(30 * time.Second)
+	ticker := time.NewTicker(SendPingInterval)
 	defer ticker.Stop()
 
 	g.Go(func() error {
