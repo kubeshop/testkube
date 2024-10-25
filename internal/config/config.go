@@ -10,6 +10,7 @@ type Config struct {
 	APIServerPort             int    `envconfig:"APISERVER_PORT" default:"8088"`
 	APIServerConfig           string `envconfig:"APISERVER_CONFIG" default:""`
 	APIServerFullname         string `envconfig:"APISERVER_FULLNAME" default:"testkube-api-server"`
+	GRPCServerPort            int    `envconfig:"GRPCSERVER_PORT" default:"8089"`
 	APIMongoDSN               string `envconfig:"API_MONGO_DSN" default:"mongodb://localhost:27017"`
 	APIMongoAllowTLS          bool   `envconfig:"API_MONGO_ALLOW_TLS" default:"false"`
 	APIMongoSSLCert           string `envconfig:"API_MONGO_SSL_CERT" default:""`
@@ -117,6 +118,8 @@ type Config struct {
 	GlobalWorkflowTemplateName       string        `envconfig:"TESTKUBE_GLOBAL_WORKFLOW_TEMPLATE_NAME" default:""`
 	EnableK8sEvents                  bool          `envconfig:"ENABLE_K8S_EVENTS" default:"true"`
 	TestkubeDockerImageVersion       string        `envconfig:"TESTKUBE_DOCKER_IMAGE_VERSION" default:""`
+	DisableDeprecatedTests           bool          `envconfig:"DISABLE_DEPRECATED_TESTS" default:"false"`
+	DisableWebhooks                  bool          `envconfig:"DISABLE_WEBHOOKS" default:"false"`
 
 	// DEPRECATED: Use TestkubeProAPIKey instead
 	TestkubeCloudAPIKey string `envconfig:"TESTKUBE_CLOUD_API_KEY" default:""`

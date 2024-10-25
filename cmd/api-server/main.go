@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
+	"strings"
 
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"google.golang.org/grpc"
@@ -20,8 +22,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/event/kind/k8sevent"
 	"github.com/kubeshop/testkube/pkg/event/kind/webhook"
 	ws "github.com/kubeshop/testkube/pkg/event/kind/websocket"
+	"github.com/kubeshop/testkube/pkg/executor/output"
 	oauth2 "github.com/kubeshop/testkube/pkg/oauth"
-	testworkflow2 "github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/secretmanager"
 	"github.com/kubeshop/testkube/pkg/server"
 	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
@@ -29,40 +31,26 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/presets"
 
-	domainstorage "github.com/kubeshop/testkube/pkg/storage"
-	"github.com/kubeshop/testkube/pkg/storage/minio"
-
 	"github.com/kubeshop/testkube/internal/common"
-	parser "github.com/kubeshop/testkube/internal/template"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/version"
 
 	"golang.org/x/sync/errgroup"
 
-	"github.com/kubeshop/testkube/pkg/cloud"
-	"github.com/kubeshop/testkube/pkg/repository/sequence"
-
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/agent"
+	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/event/bus"
-	kubeexecutor "github.com/kubeshop/testkube/pkg/executor"
-	"github.com/kubeshop/testkube/pkg/executor/client"
-	"github.com/kubeshop/testkube/pkg/executor/containerexecutor"
-	logsclient "github.com/kubeshop/testkube/pkg/logs/client"
-	"github.com/kubeshop/testkube/pkg/scheduler"
-
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/triggers"
 
 	kubeclient "github.com/kubeshop/testkube-operator/pkg/client"
 	testtriggersclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testtriggers/v1"
 	testworkflowsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testworkflows/v1"
-	deprecatedapiv1 "github.com/kubeshop/testkube/internal/app/api/deprecatedv1"
 	apiv1 "github.com/kubeshop/testkube/internal/app/api/v1"
 	"github.com/kubeshop/testkube/pkg/configmap"
 	"github.com/kubeshop/testkube/pkg/log"
-	"github.com/kubeshop/testkube/pkg/reconciler"
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 )
@@ -90,17 +78,34 @@ func main() {
 
 	commons.MustFreePort(cfg.APIServerPort)
 	commons.MustFreePort(cfg.GraphqlPort)
+	commons.MustFreePort(cfg.GRPCServerPort)
 
+	configMapConfig := commons.MustGetConfigMapConfig(ctx, cfg.APIServerConfig, cfg.TestkubeNamespace, cfg.TestkubeAnalyticsEnabled)
+
+	// Start local Control Plane
+	if mode == common.ModeStandalone {
+		controlPlane := services.CreateControlPlane(ctx, cfg, features, configMapConfig)
+		g.Go(func() error {
+			return controlPlane.Run(ctx)
+		})
+
+		// Rewire connection
+		cfg.TestkubeProURL = fmt.Sprintf("%s:%d", cfg.APIServerFullname, cfg.GRPCServerPort)
+		cfg.TestkubeProTLSInsecure = true
+	}
+
+	clusterId, _ := configMapConfig.GetUniqueClusterId(ctx)
+	telemetryEnabled, _ := configMapConfig.GetTelemetryEnabled(ctx)
+
+	// k8s
 	kubeClient, err := kubeclient.GetClient()
 	commons.ExitOnError("Getting kubernetes client", err)
-
 	clientset, err := k8sclient.ConnectToK8s()
 	commons.ExitOnError("Creating k8s clientset", err)
 
-	// k8s
+	// k8s clients
 	secretClient := secret.NewClientFor(clientset, cfg.TestkubeNamespace)
 	configMapClient := configmap.NewClientFor(clientset, cfg.TestkubeNamespace)
-	deprecatedClients := commons.CreateDeprecatedClients(kubeClient, cfg.TestkubeNamespace)
 	webhooksClient := executorsclientv1.NewWebhooksClient(kubeClient, cfg.TestkubeNamespace)
 	testTriggersClient := testtriggersclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
 	testWorkflowExecutionsClient := testworkflowsclientv1.NewTestWorkflowExecutionsClient(kubeClient, cfg.TestkubeNamespace)
@@ -117,6 +122,51 @@ func main() {
 	}
 	secretManager := secretmanager.New(clientset, secretConfig)
 
+	envs := commons.GetEnvironmentVariables()
+
+	inspector := commons.CreateImageInspector(cfg, configMapClient, secretClient)
+
+	var testWorkflowsClient testworkflowsclientv1.Interface
+	var testWorkflowTemplatesClient testworkflowsclientv1.TestWorkflowTemplatesInterface
+
+	var grpcClient cloud.TestKubeCloudAPIClient
+	var grpcConn *grpc.ClientConn
+	// Use local network for local access
+	controlPlaneUrl := cfg.TestkubeProURL
+	if strings.HasPrefix(controlPlaneUrl, fmt.Sprintf("%s:%d", cfg.APIServerFullname, cfg.GRPCServerPort)) {
+		controlPlaneUrl = fmt.Sprintf("127.0.0.1:%d", cfg.GRPCServerPort)
+	}
+	grpcConn, err = agent.NewGRPCConnection(
+		ctx,
+		cfg.TestkubeProTLSInsecure,
+		cfg.TestkubeProSkipVerify,
+		controlPlaneUrl,
+		cfg.TestkubeProCertFile,
+		cfg.TestkubeProKeyFile,
+		cfg.TestkubeProCAFile, //nolint
+		log.DefaultLogger,
+	)
+	commons.ExitOnError("error creating gRPC connection", err)
+
+	grpcClient = cloud.NewTestKubeCloudAPIClient(grpcConn)
+
+	if mode == common.ModeAgent && cfg.WorkflowStorage == "control-plane" {
+		testWorkflowsClient = cloudtestworkflow.NewCloudTestWorkflowRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
+		testWorkflowTemplatesClient = cloudtestworkflow.NewCloudTestWorkflowTemplateRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
+	} else {
+		testWorkflowsClient = testworkflowsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
+		testWorkflowTemplatesClient = testworkflowsclientv1.NewTestWorkflowTemplatesClient(kubeClient, cfg.TestkubeNamespace)
+	}
+
+	testWorkflowResultsRepository := cloudtestworkflow.NewCloudRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
+	var opts []cloudtestworkflow.Option
+	if cfg.StorageSkipVerify {
+		opts = append(opts, cloudtestworkflow.WithSkipVerify())
+	}
+	testWorkflowOutputRepository := cloudtestworkflow.NewCloudOutputRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey, opts...)
+	triggerLeaseBackend := triggers.NewAcquireAlwaysLeaseBackend()
+	artifactStorage := cloudartifacts.NewCloudArtifactsStorage(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
+
 	nc := commons.MustCreateNATSConnection(cfg)
 	eventBus := bus.NewNATSBus(nc)
 	if cfg.Trace {
@@ -124,67 +174,8 @@ func main() {
 	}
 	eventsEmitter := event.NewEmitter(eventBus, cfg.TestkubeClusterName)
 
-	var logGrpcClient logsclient.StreamGetter
-	var logsStream logsclient.Stream
-	if features.LogsV2 {
-		logGrpcClient = commons.MustGetLogsV2Client(cfg)
-		logsStream, err = logsclient.NewNatsLogStream(nc.Conn)
-		commons.ExitOnError("Creating logs streaming client", err)
-	}
-
-	configMapConfig := commons.MustGetConfigMapConfig(ctx, cfg.APIServerConfig, cfg.TestkubeNamespace, cfg.TestkubeAnalyticsEnabled)
-	clusterId, _ := configMapConfig.GetUniqueClusterId(ctx)
-	telemetryEnabled, _ := configMapConfig.GetTelemetryEnabled(ctx)
-
-	envs := commons.GetEnvironmentVariables()
-
-	metrics := metrics.NewMetrics()
-
-	defaultExecutors, images, err := commons.ReadDefaultExecutors(cfg)
-	commons.ExitOnError("Parsing default executors", err)
-	if !cfg.TestkubeReadonlyExecutors {
-		err := kubeexecutor.SyncDefaultExecutors(deprecatedClients.Executors(), cfg.TestkubeNamespace, defaultExecutors)
-		commons.ExitOnError("Sync default executors", err)
-	}
-	jobTemplates, err := parser.ParseJobTemplates(cfg)
-	commons.ExitOnError("Creating job templates", err)
-	containerTemplates, err := parser.ParseContainerTemplates(cfg)
-	commons.ExitOnError("Creating container job templates", err)
-
-	inspector := commons.CreateImageInspector(cfg, configMapClient, secretClient)
-
-	slackLoader := commons.MustCreateSlackLoader(cfg, envs)
-
-	var deprecatedRepositories commons.DeprecatedRepositories
-	var testWorkflowResultsRepository testworkflow2.Repository
-	var testWorkflowOutputRepository testworkflow2.OutputRepository
-	var triggerLeaseBackend triggers.LeaseBackend
-	var artifactStorage domainstorage.ArtifactsStorage
-	var storageClient domainstorage.Client
-	var testWorkflowsClient testworkflowsclientv1.Interface
-	var testWorkflowTemplatesClient testworkflowsclientv1.TestWorkflowTemplatesInterface
-
-	var grpcClient cloud.TestKubeCloudAPIClient
-	var grpcConn *grpc.ClientConn
-	if mode == common.ModeAgent {
-		grpcConn, err = agent.NewGRPCConnection(
-			ctx,
-			cfg.TestkubeProTLSInsecure,
-			cfg.TestkubeProSkipVerify,
-			cfg.TestkubeProURL,
-			cfg.TestkubeProCertFile,
-			cfg.TestkubeProKeyFile,
-			cfg.TestkubeProCAFile, //nolint
-			log.DefaultLogger,
-		)
-		commons.ExitOnError("error creating gRPC connection", err)
-
-		grpcClient = cloud.NewTestKubeCloudAPIClient(grpcConn)
-	}
-
-	proContext := commons.ReadProContext(ctx, cfg, grpcClient)
-
 	// Check Pro/Enterprise subscription
+	proContext := commons.ReadProContext(ctx, cfg, grpcClient)
 	subscriptionChecker, err := checktcl.NewSubscriptionChecker(ctx, proContext, grpcClient, grpcConn)
 	commons.ExitOnError("Failed creating subscription checker", err)
 
@@ -198,111 +189,32 @@ func main() {
 		serviceAccountNames = schedulertcl.GetServiceAccountNamesFromConfig(serviceAccountNames, cfg.TestkubeExecutionNamespaces)
 	}
 
-	if mode == common.ModeAgent && cfg.WorkflowStorage == "control-plane" {
-		testWorkflowsClient = cloudtestworkflow.NewCloudTestWorkflowRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
-		testWorkflowTemplatesClient = cloudtestworkflow.NewCloudTestWorkflowTemplateRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
-	} else {
-		testWorkflowsClient = testworkflowsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
-		testWorkflowTemplatesClient = testworkflowsclientv1.NewTestWorkflowTemplatesClient(kubeClient, cfg.TestkubeNamespace)
+	metrics := metrics.NewMetrics()
+
+	var deprecatedSystem *services.DeprecatedSystem
+	if !cfg.DisableDeprecatedTests {
+		deprecatedSystem = services.CreateDeprecatedSystem(
+			ctx,
+			mode,
+			cfg,
+			features,
+			metrics,
+			configMapConfig,
+			secretConfig,
+			grpcClient,
+			grpcConn,
+			nc,
+			eventsEmitter,
+			eventBus,
+			inspector,
+			subscriptionChecker,
+			&proContext,
+		)
 	}
-
-	if mode == common.ModeAgent {
-		deprecatedRepositories = commons.CreateDeprecatedRepositoriesForCloud(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
-		testWorkflowResultsRepository = cloudtestworkflow.NewCloudRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
-		var opts []cloudtestworkflow.Option
-		if cfg.StorageSkipVerify {
-			opts = append(opts, cloudtestworkflow.WithSkipVerify())
-		}
-		testWorkflowOutputRepository = cloudtestworkflow.NewCloudOutputRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey, opts...)
-		triggerLeaseBackend = triggers.NewAcquireAlwaysLeaseBackend()
-		artifactStorage = cloudartifacts.NewCloudArtifactsStorage(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
-	} else {
-		// Connect to storages
-		db := commons.MustGetMongoDatabase(ctx, cfg, secretClient, !cfg.DisableMongoMigrations)
-		storageClient = commons.MustGetMinioClient(cfg)
-
-		// Build repositories
-		sequenceRepository := sequence.NewMongoRepository(db)
-		testWorkflowResultsRepository = testworkflow2.NewMongoRepository(db, cfg.APIMongoAllowDiskUse,
-			testworkflow2.WithMongoRepositorySequence(sequenceRepository))
-		triggerLeaseBackend = triggers.NewMongoLeaseBackend(db)
-		testWorkflowOutputRepository = testworkflow2.NewMinioOutputRepository(storageClient, db.Collection(testworkflow2.CollectionName), cfg.LogsBucket)
-		artifactStorage = minio.NewMinIOArtifactClient(storageClient)
-		deprecatedRepositories = commons.CreateDeprecatedRepositoriesForMongo(ctx, cfg, db, logGrpcClient, storageClient, features)
-	}
-
-	executor, err := client.NewJobExecutor(
-		deprecatedRepositories,
-		deprecatedClients,
-		images,
-		jobTemplates,
-		serviceAccountNames,
-		metrics,
-		eventsEmitter,
-		configMapConfig,
-		clientset,
-		cfg.TestkubeRegistry,
-		cfg.TestkubePodStartTimeout,
-		clusterId,
-		cfg.TestkubeDashboardURI,
-		fmt.Sprintf("http://%s:%d", cfg.APIServerFullname, cfg.APIServerPort),
-		cfg.NatsURI,
-		cfg.Debug,
-		logsStream,
-		features,
-		cfg.TestkubeDefaultStorageClassName,
-		cfg.WhitelistedContainers,
-	)
-	commons.ExitOnError("Creating executor client", err)
-
-	containerExecutor, err := containerexecutor.NewContainerExecutor(
-		deprecatedRepositories,
-		deprecatedClients,
-		images,
-		containerTemplates,
-		inspector,
-		serviceAccountNames,
-		metrics,
-		eventsEmitter,
-		configMapConfig,
-		cfg.TestkubeRegistry,
-		cfg.TestkubePodStartTimeout,
-		clusterId,
-		cfg.TestkubeDashboardURI,
-		fmt.Sprintf("http://%s:%d", cfg.APIServerFullname, cfg.APIServerPort),
-		cfg.NatsURI,
-		cfg.Debug,
-		logsStream,
-		features,
-		cfg.TestkubeDefaultStorageClassName,
-		cfg.WhitelistedContainers,
-		cfg.TestkubeImageCredentialsCacheTTL,
-	)
-	commons.ExitOnError("Creating container executor", err)
-
-	sched := scheduler.NewScheduler(
-		metrics,
-		executor,
-		containerExecutor,
-		deprecatedRepositories,
-		deprecatedClients,
-		secretClient,
-		eventsEmitter,
-		log.DefaultLogger,
-		configMapConfig,
-		configMapClient,
-		eventBus,
-		cfg.TestkubeDashboardURI,
-		features,
-		logsStream,
-		cfg.TestkubeNamespace,
-		cfg.TestkubeProTLSSecret,
-		cfg.TestkubeProRunnerCustomCASecret,
-		subscriptionChecker,
-	)
 
 	// Build internal execution worker
 	testWorkflowProcessor := presets.NewOpenSource(inspector)
+	// Pro edition only (tcl protected code)
 	if mode == common.ModeAgent {
 		testWorkflowProcessor = presets.NewPro(inspector)
 	}
@@ -329,11 +241,20 @@ func main() {
 		return nil
 	})
 
+	var deprecatedClients commons.DeprecatedClients
+	var deprecatedRepositories commons.DeprecatedRepositories
+	if deprecatedSystem != nil {
+		deprecatedClients = deprecatedSystem.Clients
+		deprecatedRepositories = deprecatedSystem.Repositories
+	}
+
 	// Initialize event handlers
 	websocketLoader := ws.NewWebsocketLoader()
-	eventsEmitter.Loader.Register(webhook.NewWebhookLoader(log.DefaultLogger, webhooksClient, deprecatedClients.Templates(), deprecatedRepositories.TestResults(), deprecatedRepositories.TestSuiteResults(), testWorkflowResultsRepository, metrics, &proContext, envs))
+	if !cfg.DisableWebhooks {
+		eventsEmitter.Loader.Register(webhook.NewWebhookLoader(log.DefaultLogger, webhooksClient, deprecatedClients, deprecatedRepositories, testWorkflowResultsRepository, metrics, &proContext, envs))
+	}
 	eventsEmitter.Loader.Register(websocketLoader)
-	eventsEmitter.Loader.Register(slackLoader)
+	eventsEmitter.Loader.Register(commons.MustCreateSlackLoader(cfg, envs))
 	if cfg.CDEventsTarget != "" {
 		cdeventLoader, err := cdevent.NewCDEventLoader(cfg.CDEventsTarget, clusterId, cfg.TestkubeNamespace, cfg.TestkubeDashboardURI, testkube.AllEventTypes)
 		if err == nil {
@@ -363,41 +284,9 @@ func main() {
 		Scopes:       cfg.TestkubeOAuthScopes,
 	}))
 
-	storageParams := deprecatedapiv1.StorageParams{
-		SSL:             cfg.StorageSSL,
-		SkipVerify:      cfg.StorageSkipVerify,
-		CertFile:        cfg.StorageCertFile,
-		KeyFile:         cfg.StorageKeyFile,
-		CAFile:          cfg.StorageCAFile,
-		Endpoint:        cfg.StorageEndpoint,
-		AccessKeyId:     cfg.StorageAccessKeyID,
-		SecretAccessKey: cfg.StorageSecretAccessKey,
-		Region:          cfg.StorageRegion,
-		Token:           cfg.StorageToken,
-		Bucket:          cfg.StorageBucket,
+	if deprecatedSystem != nil && deprecatedSystem.API != nil {
+		deprecatedSystem.API.Init(httpServer)
 	}
-	deprecatedApi := deprecatedapiv1.NewDeprecatedTestkubeAPI(
-		deprecatedRepositories,
-		deprecatedClients,
-		cfg.TestkubeNamespace,
-		secretClient,
-		eventsEmitter,
-		executor,
-		containerExecutor,
-		metrics,
-		sched,
-		cfg.GraphqlPort,
-		artifactStorage,
-		mode,
-		eventBus,
-		secretConfig,
-		features,
-		logsStream,
-		logGrpcClient,
-		&proContext,
-		storageParams,
-	)
-	deprecatedApi.Init(httpServer)
 
 	api := apiv1.NewTestkubeAPI(
 		deprecatedClients,
@@ -427,45 +316,49 @@ func main() {
 	)
 	api.Init(httpServer)
 
-	if mode == common.ModeAgent {
-		log.DefaultLogger.Info("starting agent service")
-		getTestWorkflowNotificationsStream := func(ctx context.Context, executionID string) (<-chan testkube.TestWorkflowExecutionNotification, error) {
-			execution, err := testWorkflowResultsRepository.Get(ctx, executionID)
-			if err != nil {
-				return nil, err
-			}
-			notifications := executionWorker.Notifications(ctx, execution.Id, executionworkertypes.NotificationsOptions{
-				Hints: executionworkertypes.Hints{
-					Namespace:   execution.Namespace,
-					Signature:   execution.Signature,
-					ScheduledAt: common.Ptr(execution.ScheduledAt),
-				},
-			})
-			if notifications.Err() != nil {
-				return nil, notifications.Err()
-			}
-			return notifications.Channel(), nil
+	log.DefaultLogger.Info("starting agent service")
+	getTestWorkflowNotificationsStream := func(ctx context.Context, executionID string) (<-chan testkube.TestWorkflowExecutionNotification, error) {
+		execution, err := testWorkflowResultsRepository.Get(ctx, executionID)
+		if err != nil {
+			return nil, err
 		}
-		agentHandle, err := agent.NewAgent(
-			log.DefaultLogger,
-			httpServer.Mux.Handler(),
-			grpcClient,
-			deprecatedApi.GetLogsStream,
-			getTestWorkflowNotificationsStream,
-			clusterId,
-			cfg.TestkubeClusterName,
-			features,
-			&proContext,
-			cfg.TestkubeDockerImageVersion,
-		)
-		commons.ExitOnError("Starting agent", err)
-		g.Go(func() error {
-			err = agentHandle.Run(ctx)
-			commons.ExitOnError("Running agent", err)
-			return nil
+		notifications := executionWorker.Notifications(ctx, execution.Id, executionworkertypes.NotificationsOptions{
+			Hints: executionworkertypes.Hints{
+				Namespace:   execution.Namespace,
+				Signature:   execution.Signature,
+				ScheduledAt: common.Ptr(execution.ScheduledAt),
+			},
 		})
-		eventsEmitter.Loader.Register(agentHandle)
+		if notifications.Err() != nil {
+			return nil, notifications.Err()
+		}
+		return notifications.Channel(), nil
 	}
+	getDeprecatedLogStream := func(ctx context.Context, executionID string) (chan output.Output, error) {
+		return nil, errors.New("deprecated features have been disabled")
+	}
+	if deprecatedSystem != nil && deprecatedSystem.StreamLogs != nil {
+		getDeprecatedLogStream = deprecatedSystem.StreamLogs
+	}
+	agentHandle, err := agent.NewAgent(
+		log.DefaultLogger,
+		httpServer.Mux.Handler(),
+		grpcClient,
+		getDeprecatedLogStream,
+		getTestWorkflowNotificationsStream,
+		clusterId,
+		cfg.TestkubeClusterName,
+		features,
+		&proContext,
+		cfg.TestkubeDockerImageVersion,
+	)
+	commons.ExitOnError("Starting agent", err)
+	g.Go(func() error {
+		err = agentHandle.Run(ctx)
+		commons.ExitOnError("Running agent", err)
+		return nil
+	})
+	eventsEmitter.Loader.Register(agentHandle)
 
 	if !cfg.DisableTestTriggers {
 		k8sCfg, err := k8sclient.GetK8sClientConfig()
@@ -476,16 +369,13 @@ func main() {
 		//testkubeClientset := testkubeclientset.New(clientset.RESTClient())
 
 		triggerService := triggers.NewService(
-			deprecatedRepositories,
-			deprecatedClients,
-			sched,
+			deprecatedSystem,
 			clientset,
 			testkubeClientset,
 			testWorkflowsClient,
 			triggerLeaseBackend,
 			log.DefaultLogger,
 			configMapConfig,
-			executor,
 			eventBus,
 			metrics,
 			executionWorker,
@@ -503,15 +393,6 @@ func main() {
 		})
 	} else {
 		log.DefaultLogger.Info("test triggers are disabled")
-	}
-
-	if !cfg.DisableReconciler {
-		reconcilerClient := reconciler.NewClient(clientset, deprecatedRepositories, deprecatedClients, log.DefaultLogger)
-		g.Go(func() error {
-			return reconcilerClient.Run(ctx)
-		})
-	} else {
-		log.DefaultLogger.Info("reconciler is disabled")
 	}
 
 	// telemetry based functions
@@ -541,9 +422,19 @@ func main() {
 		return httpServer.Run(ctx)
 	})
 
-	g.Go(func() error {
-		return deprecatedApi.RunGraphQLServer(ctx)
-	})
+	if deprecatedSystem != nil {
+		if deprecatedSystem.Reconciler != nil {
+			g.Go(func() error {
+				return deprecatedSystem.Reconciler.Run(ctx)
+			})
+		}
+
+		if deprecatedSystem.API != nil {
+			g.Go(func() error {
+				return deprecatedSystem.API.RunGraphQLServer(ctx)
+			})
+		}
+	}
 
 	if err := g.Wait(); err != nil {
 		log.DefaultLogger.Fatalf("Testkube is shutting down: %v", err)

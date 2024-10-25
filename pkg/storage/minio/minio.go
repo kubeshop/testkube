@@ -100,6 +100,14 @@ func (c *Client) CreateBucket(ctx context.Context, bucket string) error {
 	return nil
 }
 
+// BucketExists checks if the bucket exists
+func (c *Client) BucketExists(ctx context.Context, bucket string) (bool, error) {
+	if err := c.Connect(); err != nil {
+		return false, err
+	}
+	return c.minioClient.BucketExists(ctx, bucket)
+}
+
 // DeleteBucket deletes bucket by name
 func (c *Client) DeleteBucket(ctx context.Context, bucket string, force bool) error {
 	if err := c.Connect(); err != nil {
@@ -648,7 +656,7 @@ func (c *Client) PresignDownloadFileFromBucket(ctx context.Context, bucket, buck
 		file = strings.Trim(bucketFolder, "/") + "/" + file
 	}
 	c.Log.Debugw("presigning get object from minio", "file", file, "bucket", bucket)
-	url, err := c.minioClient.PresignedPutObject(ctx, bucket, file, expires)
+	url, err := c.minioClient.PresignedGetObject(ctx, bucket, file, expires, nil)
 	if err != nil {
 		return "", err
 	}

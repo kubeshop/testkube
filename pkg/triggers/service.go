@@ -16,15 +16,13 @@ import (
 	testtriggersv1 "github.com/kubeshop/testkube-operator/api/testtriggers/v1"
 	testworkflowsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testworkflows/v1"
 	testkubeclientsetv1 "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
-	"github.com/kubeshop/testkube/cmd/api-server/commons"
+	"github.com/kubeshop/testkube/cmd/api-server/services"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event/bus"
-	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/http"
 	"github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
-	"github.com/kubeshop/testkube/pkg/scheduler"
 	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
@@ -59,16 +57,12 @@ type Service struct {
 	defaultProbesCheckBackoff     time.Duration
 	watchFromDate                 time.Time
 	triggerStatus                 map[statusKey]*triggerStatus
-	scheduler                     *scheduler.Scheduler
 	clientset                     kubernetes.Interface
 	testKubeClientset             testkubeclientsetv1.Interface
-	deprecatedRepositories        commons.DeprecatedRepositories
-	deprecatedClients             commons.DeprecatedClients
 	testWorkflowsClient           testworkflowsclientv1.Interface
 	logger                        *zap.SugaredLogger
 	configMap                     config.Repository
 	httpClient                    http.HttpClient
-	testExecutor                  client.Executor
 	eventsBus                     bus.Bus
 	metrics                       metrics.Metrics
 	executionWorkerClient         executionworkertypes.Worker
@@ -77,21 +71,19 @@ type Service struct {
 	testkubeNamespace             string
 	watcherNamespaces             []string
 	disableSecretCreation         bool
+	deprecatedSystem              *services.DeprecatedSystem
 }
 
 type Option func(*Service)
 
 func NewService(
-	deprecatedRepositories commons.DeprecatedRepositories,
-	deprecatedClients commons.DeprecatedClients,
-	scheduler *scheduler.Scheduler,
+	deprecatedSystem *services.DeprecatedSystem,
 	clientset kubernetes.Interface,
 	testKubeClientset testkubeclientsetv1.Interface,
 	testWorkflowsClient testworkflowsclientv1.Interface,
 	leaseBackend LeaseBackend,
 	logger *zap.SugaredLogger,
 	configMap config.Repository,
-	testExecutor client.Executor,
 	eventsBus bus.Bus,
 	metrics metrics.Metrics,
 	executionWorkerClient executionworkertypes.Worker,
@@ -110,16 +102,12 @@ func NewService(
 		defaultConditionsCheckBackoff: defaultConditionsCheckBackoff,
 		defaultProbesCheckTimeout:     defaultProbesCheckTimeout,
 		defaultProbesCheckBackoff:     defaultProbesCheckBackoff,
-		scheduler:                     scheduler,
 		clientset:                     clientset,
 		testKubeClientset:             testKubeClientset,
-		deprecatedRepositories:        deprecatedRepositories,
-		deprecatedClients:             deprecatedClients,
 		testWorkflowsClient:           testWorkflowsClient,
 		leaseBackend:                  leaseBackend,
 		logger:                        logger,
 		configMap:                     configMap,
-		testExecutor:                  testExecutor,
 		eventsBus:                     eventsBus,
 		metrics:                       metrics,
 		executionWorkerClient:         executionWorkerClient,
@@ -128,6 +116,7 @@ func NewService(
 		httpClient:                    http.NewClient(),
 		watchFromDate:                 time.Now(),
 		triggerStatus:                 make(map[statusKey]*triggerStatus),
+		deprecatedSystem:              deprecatedSystem,
 	}
 	if s.triggerExecutor == nil {
 		s.triggerExecutor = s.execute
@@ -294,14 +283,14 @@ func (s *Service) addTest(test *testsv3.Test) {
 	}
 
 	test.Labels[testkube.TestLabelTestType] = utils.SanitizeName(test.Spec.Type_)
-	executorCR, err := s.deprecatedClients.Executors().GetByType(test.Spec.Type_)
+	executorCR, err := s.deprecatedSystem.Clients.Executors().GetByType(test.Spec.Type_)
 	if err == nil {
 		test.Labels[testkube.TestLabelExecutor] = executorCR.Name
 	} else {
 		s.logger.Debugw("can't get executor spec", "error", err)
 	}
 
-	if _, err = s.deprecatedClients.Tests().Update(test, s.disableSecretCreation); err != nil {
+	if _, err = s.deprecatedSystem.Clients.Tests().Update(test, s.disableSecretCreation); err != nil {
 		s.logger.Debugw("can't update test spec", "error", err)
 	}
 }
@@ -318,7 +307,7 @@ func (s *Service) updateTest(test *testsv3.Test) {
 		changed = true
 	}
 
-	executorCR, err := s.deprecatedClients.Executors().GetByType(test.Spec.Type_)
+	executorCR, err := s.deprecatedSystem.Clients.Executors().GetByType(test.Spec.Type_)
 	if err == nil {
 		if test.Labels[testkube.TestLabelExecutor] != executorCR.Name {
 			test.Labels[testkube.TestLabelExecutor] = executorCR.Name
@@ -329,7 +318,7 @@ func (s *Service) updateTest(test *testsv3.Test) {
 	}
 
 	if changed {
-		if _, err = s.deprecatedClients.Tests().Update(test, s.disableSecretCreation); err != nil {
+		if _, err = s.deprecatedSystem.Clients.Tests().Update(test, s.disableSecretCreation); err != nil {
 			s.logger.Debugw("can't update test spec", "error", err)
 		}
 	}

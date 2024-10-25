@@ -34,6 +34,7 @@ type ClientImplicitBucket interface {
 type ClientBucket interface {
 	CreateBucket(ctx context.Context, bucket string) error
 	DeleteBucket(ctx context.Context, bucket string, force bool) error
+	BucketExists(ctx context.Context, bucket string) (bool, error)
 	ListBuckets(ctx context.Context) ([]string, error)
 	DownloadFileFromBucket(ctx context.Context, bucket, bucketFolder, file string) (io.Reader, minio.ObjectInfo, error)
 	DownloadArchiveFromBucket(ctx context.Context, bucket, bucketFolder string, masks []string) (io.Reader, error)
