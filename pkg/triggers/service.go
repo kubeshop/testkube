@@ -18,6 +18,7 @@ import (
 	testkubeclientsetv1 "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
 	"github.com/kubeshop/testkube/cmd/api-server/services"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
+	intconfig "github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/http"
@@ -72,6 +73,7 @@ type Service struct {
 	watcherNamespaces             []string
 	disableSecretCreation         bool
 	deprecatedSystem              *services.DeprecatedSystem
+	proContext                    *intconfig.ProContext
 }
 
 type Option func(*Service)
@@ -196,6 +198,12 @@ func WithWatcherNamespaces(namespaces string) Option {
 func WithDisableSecretCreation(disableSecretCreation bool) Option {
 	return func(s *Service) {
 		s.disableSecretCreation = disableSecretCreation
+	}
+}
+
+func WithProContext(proContext *intconfig.ProContext) Option {
+	return func(s *Service) {
+		s.proContext = proContext
 	}
 }
 

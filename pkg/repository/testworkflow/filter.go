@@ -19,6 +19,8 @@ type FilterImpl struct {
 	FSelector      string
 	FTagSelector   string
 	FLabelSelector *LabelSelector
+	FActorName     string
+	FActorType     testkube.TestWorkflowRunningContextActorType
 }
 
 func NewExecutionsFilter() *FilterImpl {
@@ -81,6 +83,16 @@ func (f *FilterImpl) WithSelector(selector string) *FilterImpl {
 
 func (f *FilterImpl) WithTagSelector(tagSelector string) *FilterImpl {
 	f.FTagSelector = tagSelector
+	return f
+}
+
+func (f *FilterImpl) WithActorName(actorName string) *FilterImpl {
+	f.FActorName = actorName
+	return f
+}
+
+func (f *FilterImpl) WithActorType(actorType testkube.TestWorkflowRunningContextActorType) *FilterImpl {
+	f.FActorType = actorType
 	return f
 }
 
@@ -163,4 +175,20 @@ func (f FilterImpl) TagSelector() string {
 
 func (f FilterImpl) LabelSelector() *LabelSelector {
 	return f.FLabelSelector
+}
+
+func (f FilterImpl) ActorName() string {
+	return f.FActorName
+}
+
+func (f FilterImpl) ActorType() testkube.TestWorkflowRunningContextActorType {
+	return f.FActorType
+}
+
+func (f FilterImpl) ActorNameDefined() bool {
+	return f.FActorName != ""
+}
+
+func (f FilterImpl) ActorTypeDefined() bool {
+	return f.FActorType != ""
 }

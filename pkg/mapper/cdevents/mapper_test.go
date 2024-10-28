@@ -7,6 +7,7 @@ import (
 	cdevents "github.com/cdevents/sdk-go/pkg/api"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
@@ -511,6 +512,12 @@ func TestMapTestkubeEventQueuedTestWorkflowTestToCDEvent(t *testing.T) {
 					},
 				},
 			},
+
+			RunningContext: &testkube.TestWorkflowRunningContext{
+				Actor: &testkube.TestWorkflowRunningContextActor{
+					Type_: common.Ptr(testkube.CRON_TestWorkflowRunningContextActorType),
+				},
+			},
 		},
 	}
 	clusterID := "cluster-1"
@@ -592,6 +599,11 @@ func TestMapTestkubeEventQueuedTestWorkflowTestSuiteToCDEvent(t *testing.T) {
 					},
 				},
 			},
+			RunningContext: &testkube.TestWorkflowRunningContext{
+				Actor: &testkube.TestWorkflowRunningContextActor{
+					Type_: common.Ptr(testkube.CRON_TestWorkflowRunningContextActorType),
+				},
+			},
 		},
 	}
 	clusterID := "cluster-1"
@@ -662,6 +674,11 @@ func TestMapTestkubeEventStartTestWorkflowTestToCDEvent(t *testing.T) {
 							},
 						},
 					},
+				},
+			},
+			RunningContext: &testkube.TestWorkflowRunningContext{
+				Actor: &testkube.TestWorkflowRunningContextActor{
+					Type_: common.Ptr(testkube.CRON_TestWorkflowRunningContextActorType),
 				},
 			},
 		},
@@ -746,6 +763,11 @@ func TestMapTestkubeEventStartTestWorkflowTestSuiteToCDEvent(t *testing.T) {
 					},
 				},
 			},
+			RunningContext: &testkube.TestWorkflowRunningContext{
+				Actor: &testkube.TestWorkflowRunningContextActor{
+					Type_: common.Ptr(testkube.CRON_TestWorkflowRunningContextActorType),
+				},
+			},
 		},
 	}
 	clusterID := "cluster-1"
@@ -825,6 +847,11 @@ func TestMapTestkubeEventFinishTestWorkflowTestToCDEvent(t *testing.T) {
 					"first": {
 						ErrorMessage: "fake",
 					},
+				},
+			},
+			RunningContext: &testkube.TestWorkflowRunningContext{
+				Actor: &testkube.TestWorkflowRunningContextActor{
+					Type_: common.Ptr(testkube.CRON_TestWorkflowRunningContextActorType),
 				},
 			},
 		},
@@ -925,6 +952,11 @@ func TestMapTestkubeEventFinishTestWorkflowTestSuiteToCDEvent(t *testing.T) {
 					"first": {
 						ErrorMessage: "fake",
 					},
+				},
+			},
+			RunningContext: &testkube.TestWorkflowRunningContext{
+				Actor: &testkube.TestWorkflowRunningContextActor{
+					Type_: common.Ptr(testkube.CRON_TestWorkflowRunningContextActorType),
 				},
 			},
 		},

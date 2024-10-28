@@ -15,9 +15,12 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/render"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/tests"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testworkflows/renderer"
+	testkubecfg "github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	apiclientv1 "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	tclcmd "github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/cmd"
+	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -63,11 +66,29 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 			ui.ExitOnError("getting client", err)
 
 			name := args[0]
+			runContext := telemetry.GetCliRunContext()
+			interfaceType := testkube.CICD_TestWorkflowRunningContextInterfaceType
+			if runContext == "others|local" {
+				runContext = ""
+				interfaceType = testkube.CLI_TestWorkflowRunningContextInterfaceType
+			}
+
+			cfg, err := testkubecfg.Load()
+			ui.ExitOnError("loading config file", err)
+			ui.NL()
+
+			var runningContext *testkube.TestWorkflowRunningContext
+			// Pro edition only (tcl protected code)
+			if cfg.ContextType == testkubecfg.ContextTypeCloud {
+				runningContext = tclcmd.GetRunningContext(runContext, cfg.CloudContext.ApiKey, interfaceType)
+			}
+
 			execution, err := client.ExecuteTestWorkflow(name, testkube.TestWorkflowExecutionRequest{
 				Name:            executionName,
 				Config:          config,
 				DisableWebhooks: disableWebhooks,
 				Tags:            tags,
+				RunningContext:  runningContext,
 			})
 			if err != nil {
 				// User friendly Open Source operation error

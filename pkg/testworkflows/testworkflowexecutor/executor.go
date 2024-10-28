@@ -470,6 +470,7 @@ func (e *executor) initialize(ctx context.Context, workflow *testworkflowsv1.Tes
 		TestWorkflowExecutionName: request.TestWorkflowExecutionName,
 		DisableWebhooks:           request.DisableWebhooks,
 		Tags:                      map[string]string{},
+		RunningContext:            request.RunningContext,
 	}
 
 	// Try to resolve tags initially

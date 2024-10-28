@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -72,7 +73,7 @@ func buildTestExecution(test testworkflowsv1.StepExecuteTest, async bool) (func(
 
 		exec, err := c.ExecuteTest(test.Name, test.ExecutionRequest.Name, client.ExecuteTestOptions{
 			RunningContext: &testkube.RunningContext{
-				Type_:   "testworkflow",
+				Type_:   string(testkube.RunningContextTypeTestWorkflow),
 				Context: fmt.Sprintf("%s/executions/%s", config.WorkflowName(), config.ExecutionId()),
 			},
 			IsVariablesFileUploaded:            test.ExecutionRequest.IsVariablesFileUploaded,
@@ -162,6 +163,11 @@ func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async 
 
 		tags := config.ExecutionTags()
 
+		parentIds := []string{config.ExecutionId()}
+		if config.Config().Execution.ParentIds != "" {
+			parentIds = append(strings.Split(config.Config().Execution.ParentIds, "/"), parentIds...)
+		}
+
 		var exec testkube.TestWorkflowExecution
 		for i := 0; i < CreateExecutionRetryOnFailureMaxAttempts; i++ {
 			exec, err = c.ExecuteTestWorkflow(workflow.Name, testkube.TestWorkflowExecutionRequest{
@@ -169,6 +175,18 @@ func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async 
 				Config:          testworkflows.MapConfigValueKubeToAPI(workflow.Config),
 				DisableWebhooks: config.ExecutionDisableWebhooks(),
 				Tags:            tags,
+				RunningContext: &testkube.TestWorkflowRunningContext{
+					Interface_: &testkube.TestWorkflowRunningContextInterface{
+						Type_: common.Ptr(testkube.API_TestWorkflowRunningContextInterfaceType),
+					},
+					Actor: &testkube.TestWorkflowRunningContextActor{
+						Name:          workflow.Name,
+						ExecutionId:   config.ExecutionId(),
+						ExecutionPath: strings.Join(parentIds, "/"),
+						Type_:         common.Ptr(testkube.TESTWORKFLOW_TestWorkflowRunningContextActorType),
+					},
+				},
+				ParentExecutionIds: parentIds,
 			})
 			if err == nil {
 				break
