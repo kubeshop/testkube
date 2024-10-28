@@ -208,7 +208,7 @@ func (p *PodObject) CreateService(ctx context.Context, ports ...corev1.ServicePo
 	svc, err := p.clientSet.CoreV1().Services(p.namespace).Create(ctx, request, metav1.CreateOptions{})
 	if errors.IsAlreadyExists(err) {
 		err = p.clientSet.CoreV1().Services(p.namespace).Delete(ctx, request.Name, metav1.DeleteOptions{})
-		if err != nil {
+		if err != nil && !errors.IsNotFound(err) {
 			return errors2.Wrap(err, "failed to delete existing service")
 		}
 		svc, err = p.clientSet.CoreV1().Services(p.namespace).Create(ctx, request, metav1.CreateOptions{})
