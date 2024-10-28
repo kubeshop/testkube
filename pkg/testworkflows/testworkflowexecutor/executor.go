@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -337,13 +338,13 @@ func (e *executor) getPreExecutionMachine(workflow *testworkflowsv1.TestWorkflow
 	return expressions.CombinedMachines(cloudMachine, workflowMachine)
 }
 
-func (e *executor) getPostExecutionMachine(execution *testkube.TestWorkflowExecution, orgId, envId string) expressions.Machine {
-	executionConfig := e.buildExecutionConfig(execution, orgId, envId)
+func (e *executor) getPostExecutionMachine(execution *testkube.TestWorkflowExecution, orgId, envId, parentIds string) expressions.Machine {
+	executionConfig := e.buildExecutionConfig(execution, orgId, envId, parentIds)
 	executionMachine := testworkflowconfig.CreateExecutionMachine(&executionConfig)
 	return expressions.CombinedMachines(executionMachine)
 }
 
-func (e *executor) buildExecutionConfig(execution *testkube.TestWorkflowExecution, orgId, envId string) testworkflowconfig.ExecutionConfig {
+func (e *executor) buildExecutionConfig(execution *testkube.TestWorkflowExecution, orgId, envId, parentIds string) testworkflowconfig.ExecutionConfig {
 	return testworkflowconfig.ExecutionConfig{
 		Id:              execution.Id,
 		GroupId:         execution.GroupId,
@@ -355,6 +356,7 @@ func (e *executor) buildExecutionConfig(execution *testkube.TestWorkflowExecutio
 		Debug:           false,
 		OrganizationId:  orgId,
 		EnvironmentId:   envId,
+		ParentIds:       parentIds,
 	}
 }
 
@@ -526,7 +528,7 @@ func (e *executor) initialize(ctx context.Context, workflow *testworkflowsv1.Tes
 
 	// Simplify the result
 	preMachine := e.getPreExecutionMachine(workflow, organizationId, environmentId)
-	postMachine := e.getPostExecutionMachine(execution, organizationId, environmentId)
+	postMachine := e.getPostExecutionMachine(execution, organizationId, environmentId, strings.Join(request.ParentExecutionIds, "/"))
 	_ = expressions.Simplify(&workflow, preMachine, postMachine)
 
 	// Build the final tags
@@ -690,7 +692,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 
 	// Schedule the execution by the Execution Worker
 	result, err := e.workerClient.Execute(context.Background(), executionworkertypes.ExecuteRequest{
-		Execution:    e.buildExecutionConfig(execution, organizationId, environmentId),
+		Execution:    e.buildExecutionConfig(execution, organizationId, environmentId, strings.Join(request.ParentExecutionIds, "/")),
 		Secrets:      secretsMap,
 		Workflow:     workflow,
 		ControlPlane: e.buildControlPlaneConfig(organizationId, environmentId),
