@@ -19,6 +19,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/dustin/go-humanize"
+
 	"github.com/kubeshop/testkube/pkg/tmp"
 )
 
@@ -69,6 +71,16 @@ func (b *Binary) Path() string {
 	return b.outputPath
 }
 
+func (b *Binary) Size() string {
+	b.buildMu.RLock()
+	defer b.buildMu.RUnlock()
+	stat, err := os.Stat(b.outputPath)
+	if err != nil {
+		return "<unknown>"
+	}
+	return humanize.Bytes(uint64(stat.Size()))
+}
+
 func (b *Binary) Build(ctx context.Context) (string, error) {
 	b.buildMu.Lock()
 	defer b.buildMu.Unlock()
@@ -83,6 +95,9 @@ func (b *Binary) Build(ctx context.Context) (string, error) {
 			"-X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementSecret=",
 			"-X github.com/kubeshop/testkube/internal/pkg/api.Version=devbox",
 			"-X github.com/kubeshop/testkube/internal/pkg/api.Commit=000000000",
+			"-s",
+			"-w",
+			"-v",
 		}, " ")),
 		"./main.go",
 	)

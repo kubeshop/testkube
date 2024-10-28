@@ -436,7 +436,7 @@ func NewDevBoxCommand() *cobra.Command {
 						fmt.Printf("  Agent: build finished in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
 						return err
 					}
-					fmt.Printf("  Agent: build finished in %s.\n", time.Since(its).Truncate(time.Millisecond))
+					fmt.Printf("  Agent: build finished in %s (size: %s).\n", time.Since(its).Truncate(time.Millisecond), agentBin.Size())
 
 					its = time.Now()
 					cached, err := objectStorage.Upload(ctx, "bin/testkube-api-server", agentBin.Path(), agentBin.Hash())
@@ -476,7 +476,7 @@ func NewDevBoxCommand() *cobra.Command {
 						fmt.Printf("  Toolkit: build finished in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
 						return err
 					}
-					fmt.Printf("  Toolkit: build finished in %s.\n", time.Since(its).Truncate(time.Millisecond))
+					fmt.Printf("  Toolkit: build finished in %s (size: %s).\n", time.Since(its).Truncate(time.Millisecond), toolkitBin.Size())
 
 					its = time.Now()
 					cached, err := objectStorage.Upload(ctx, "bin/toolkit", toolkitBin.Path(), toolkitBin.Hash())
@@ -498,7 +498,7 @@ func NewDevBoxCommand() *cobra.Command {
 						fmt.Printf("  Init Process: build finished in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
 						return err
 					}
-					fmt.Printf("  Init Process: build finished in %s.\n", time.Since(its).Truncate(time.Millisecond))
+					fmt.Printf("  Init Process: build finished in %s (size: %s).\n", time.Since(its).Truncate(time.Millisecond), initProcessBin.Size())
 
 					its = time.Now()
 					cached, err := objectStorage.Upload(ctx, "bin/init", initProcessBin.Path(), initProcessBin.Hash())
