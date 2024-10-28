@@ -9,11 +9,11 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
-	"time"
 
 	"github.com/nats-io/nats.go"
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/mongo"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/emptypb"
 	corev1 "k8s.io/api/core/v1"
@@ -21,6 +21,7 @@ import (
 	"github.com/kubeshop/testkube/internal/config"
 	dbmigrations "github.com/kubeshop/testkube/internal/db-migrations"
 	parser "github.com/kubeshop/testkube/internal/template"
+	"github.com/kubeshop/testkube/pkg/agent"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cache"
 	"github.com/kubeshop/testkube/pkg/cloud"
@@ -43,7 +44,7 @@ import (
 func ExitOnError(title string, err error) {
 	if err != nil {
 		log.DefaultLogger.Errorw(title, "error", err)
-		os.Exit(1)
+		panic(err)
 	}
 }
 
@@ -280,7 +281,7 @@ func ReadDefaultExecutors(cfg *config.Config) (executors []testkube.ExecutorDeta
 	return next, images, nil
 }
 
-func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.TestKubeCloudAPIClient) config.ProContext {
+func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.TestKubeCloudAPIClient) (config.ProContext, error) {
 	proContext := config.ProContext{
 		APIKey:                           cfg.TestkubeProAPIKey,
 		URL:                              cfg.TestkubeProURL,
@@ -297,17 +298,16 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 	}
 
 	if cfg.TestkubeProAPIKey == "" || grpcClient == nil {
-		return proContext
+		return proContext, nil
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, time.Second*3)
+	ctx, cancel := context.WithTimeout(ctx, agent.InitialTimeout)
 	md := metadata.Pairs("api-key", cfg.TestkubeProAPIKey)
 	ctx = metadata.NewOutgoingContext(ctx, md)
 	defer cancel()
-	foundProContext, err := grpcClient.GetProContext(ctx, &emptypb.Empty{})
+	foundProContext, err := grpcClient.GetProContext(ctx, &emptypb.Empty{}, grpc.WaitForReady(true))
 	if err != nil {
-		log.DefaultLogger.Warnf("cannot fetch pro-context from cloud: %s", err)
-		return proContext
+		return proContext, err
 	}
 
 	if proContext.EnvID == "" {
@@ -318,7 +318,7 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 		proContext.OrgID = foundProContext.OrgId
 	}
 
-	return proContext
+	return proContext, nil
 }
 
 func MustCreateSlackLoader(cfg *config.Config, envs map[string]string) *slack.SlackLoader {

@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/gofiber/fiber/v2/middleware/cors"
-	"google.golang.org/grpc"
 
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
 	testkubeclientset "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
@@ -16,6 +15,8 @@ import (
 	"github.com/kubeshop/testkube/cmd/api-server/services"
 	"github.com/kubeshop/testkube/internal/app/api/debug"
 	"github.com/kubeshop/testkube/internal/app/api/oauth"
+	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	cloudartifacts "github.com/kubeshop/testkube/pkg/cloud/data/artifact"
 	cloudtestworkflow "github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
 	"github.com/kubeshop/testkube/pkg/event/kind/cdevent"
@@ -30,9 +31,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/tcl/schedulertcl"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/presets"
-
-	"github.com/kubeshop/testkube/internal/common"
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/version"
 
 	"golang.org/x/sync/errgroup"
@@ -126,16 +124,32 @@ func main() {
 
 	inspector := commons.CreateImageInspector(cfg, configMapClient, secretClient)
 
+	// Connect to NATS
+	nc := commons.MustCreateNATSConnection(cfg)
+	eventBus := bus.NewNATSBus(nc)
+	if cfg.Trace {
+		eventBus.TraceEvents()
+	}
+	eventsEmitter := event.NewEmitter(eventBus, cfg.TestkubeClusterName)
+
 	var testWorkflowsClient testworkflowsclientv1.Interface
 	var testWorkflowTemplatesClient testworkflowsclientv1.TestWorkflowTemplatesInterface
 
-	var grpcClient cloud.TestKubeCloudAPIClient
-	var grpcConn *grpc.ClientConn
 	// Use local network for local access
 	controlPlaneUrl := cfg.TestkubeProURL
 	if strings.HasPrefix(controlPlaneUrl, fmt.Sprintf("%s:%d", cfg.APIServerFullname, cfg.GRPCServerPort)) {
 		controlPlaneUrl = fmt.Sprintf("127.0.0.1:%d", cfg.GRPCServerPort)
 	}
+
+	log.DefaultLogger.Infow("Connecting to control plane", "server", controlPlaneUrl, "insecure", cfg.TestkubeProTLSInsecure, "skipVerify", cfg.TestkubeProSkipVerify, "certFile", cfg.TestkubeProCertFile, "keyFile", cfg.TestkubeProKeyFile, "caFile", cfg.TestkubeProCAFile)
+	grpcConn, err := agent.NewClient(controlPlaneUrl, cfg.TestkubeProTLSInsecure, cfg.TestkubeProSkipVerify, cfg.TestkubeProCertFile, cfg.TestkubeProKeyFile, cfg.TestkubeProCAFile)
+	grpcClient := cloud.NewTestKubeCloudAPIClient(grpcConn)
+	defer grpcConn.Close()
+
+	// First request will 'wait for ready' with a timeout of agent.InitialTimeout.
+	proContext, err := commons.ReadProContext(ctx, cfg, grpcClient)
+	commons.ExitOnError("cannot retrieve pro context from control plane", err)
+
 	grpcConn, err = agent.NewGRPCConnection(
 		ctx,
 		cfg.TestkubeProTLSInsecure,
@@ -147,8 +161,6 @@ func main() {
 		log.DefaultLogger,
 	)
 	commons.ExitOnError("error creating gRPC connection", err)
-
-	grpcClient = cloud.NewTestKubeCloudAPIClient(grpcConn)
 
 	if mode == common.ModeAgent && cfg.WorkflowStorage == "control-plane" {
 		testWorkflowsClient = cloudtestworkflow.NewCloudTestWorkflowRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
@@ -167,15 +179,7 @@ func main() {
 	triggerLeaseBackend := triggers.NewAcquireAlwaysLeaseBackend()
 	artifactStorage := cloudartifacts.NewCloudArtifactsStorage(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
 
-	nc := commons.MustCreateNATSConnection(cfg)
-	eventBus := bus.NewNATSBus(nc)
-	if cfg.Trace {
-		eventBus.TraceEvents()
-	}
-	eventsEmitter := event.NewEmitter(eventBus, cfg.TestkubeClusterName)
-
 	// Check Pro/Enterprise subscription
-	proContext := commons.ReadProContext(ctx, cfg, grpcClient)
 	subscriptionChecker, err := checktcl.NewSubscriptionChecker(ctx, proContext, grpcClient, grpcConn)
 	commons.ExitOnError("Failed creating subscription checker", err)
 

@@ -31,7 +31,8 @@ import (
 )
 
 const (
-	timeout                = 10 * time.Second
+	InitialTimeout         = 30 * time.Second
+	Timeout                = 10 * time.Second
 	apiKeyMeta             = "api-key"
 	clusterIDMeta          = "cluster-id"
 	cloudMigrateMeta       = "migrate"
@@ -44,6 +45,50 @@ const (
 // buffer up to five messages per worker
 const bufferSizePerWorker = 5
 
+func NewClient(server string, isInsecure, skipVerify bool,
+	certFile, keyFile, caFile string) (*grpc.ClientConn, error) {
+	creds, err := newTransportCredentials(isInsecure, skipVerify, certFile, keyFile, caFile)
+	if err != nil {
+		return nil, err
+	}
+
+	userAgentStr := version.Version + "/" + version.Commit
+	keepAlive := keepalive.ClientParameters{
+		Time:                10 * time.Second,
+		Timeout:             5 * time.Second,
+		PermitWithoutStream: true,
+	}
+
+	return grpc.NewClient(server, grpc.WithUserAgent(userAgentStr), grpc.WithKeepaliveParams(keepAlive), grpc.WithTransportCredentials(creds))
+}
+
+func newTransportCredentials(
+	isInsecure, skipVerify bool,
+	certFile, keyFile, caFile string,
+) (credentials.TransportCredentials, error) {
+	if isInsecure {
+		return insecure.NewCredentials(), nil
+	}
+
+	tlsConfig := &tls.Config{MinVersion: tls.VersionTLS12}
+	if skipVerify {
+		tlsConfig = &tls.Config{InsecureSkipVerify: true}
+		return credentials.NewTLS(tlsConfig), nil
+	}
+
+	if certFile != "" && keyFile != "" {
+		if err := clientCert(tlsConfig, certFile, keyFile); err != nil {
+			return nil, err
+		}
+	}
+	if caFile != "" {
+		if err := rootCAs(tlsConfig, caFile); err != nil {
+			return nil, err
+		}
+	}
+	return credentials.NewTLS(tlsConfig), nil
+}
+
 func NewGRPCConnection(
 	ctx context.Context,
 	isInsecure bool,
@@ -52,7 +97,7 @@ func NewGRPCConnection(
 	certFile, keyFile, caFile string,
 	logger *zap.SugaredLogger,
 ) (*grpc.ClientConn, error) {
-	ctx, cancel := context.WithTimeout(ctx, timeout)
+	ctx, cancel := context.WithTimeout(ctx, Timeout)
 	defer cancel()
 	tlsConfig := &tls.Config{MinVersion: tls.VersionTLS12}
 	if skipVerify {
