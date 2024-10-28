@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"os"
 	"os/signal"
 	"slices"
@@ -181,7 +180,6 @@ func main() {
 			currentContainer = *action.Container
 
 		case lite.ActionTypeCurrentStatus:
-			fmt.Println("jeeee")
 			state.SetCurrentStatus(*action.CurrentStatus)
 
 		case lite.ActionTypeStart:
