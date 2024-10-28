@@ -158,7 +158,7 @@ type TestWorkflowAPI interface {
 // TestWorkflowExecutionAPI describes test workflow api methods
 type TestWorkflowExecutionAPI interface {
 	GetTestWorkflowExecution(executionID string) (execution testkube.TestWorkflowExecution, err error)
-	ListTestWorkflowExecutions(id string, limit int, selector, tagSelector string) (executions testkube.TestWorkflowExecutionsResult, err error)
+	ListTestWorkflowExecutions(id string, limit int, options FilterTestWorkflowExecutionOptions) (executions testkube.TestWorkflowExecutionsResult, err error)
 	AbortTestWorkflowExecution(workflow string, id string) error
 	AbortTestWorkflowExecutions(workflow string) error
 	GetTestWorkflowExecutionArtifacts(executionID string) (artifacts testkube.Artifacts, err error)
@@ -284,6 +284,14 @@ type ExecuteTestSuiteOptions struct {
 	PvcTemplate              string
 	PvcTemplateReference     string
 	DisableWebhooks          bool
+}
+
+// FilterTestWorkflowExecutionOptions contains filter test workflow execution options
+type FilterTestWorkflowExecutionOptions struct {
+	Selector    string
+	TagSelector string
+	ActorName   string
+	ActorType   testkube.TestWorkflowRunningContextActorType
 }
 
 // Gettable is an interface of gettable objects

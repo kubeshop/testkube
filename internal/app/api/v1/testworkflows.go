@@ -361,6 +361,13 @@ func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 			return s.BadRequest(c, errPrefix, "invalid body", err)
 		}
 
+		// Pro edition only (tcl protected code)
+		if request.RunningContext != nil {
+			if s.proContext == nil || s.proContext.APIKey == "" {
+				request.RunningContext = nil
+			}
+		}
+
 		var results []testkube.TestWorkflowExecution
 		var errs []error
 

@@ -3806,6 +3806,8 @@ paths:
       parameters:
         - $ref: "#/components/parameters/ID"
         - $ref: "#/components/parameters/TagSelector"
+        - $ref: "#/components/parameters/ActorName"
+        - $ref: "#/components/parameters/ActorType"
       summary: List test workflow executions
       description: List test workflow executions
       operationId: listTestWorkflowExecutionsByTestWorkflow
@@ -4071,6 +4073,8 @@ paths:
       parameters:
         - $ref: "#/components/parameters/ID"
         - $ref: "#/components/parameters/TagSelector"
+        - $ref: "#/components/parameters/ActorName"
+        - $ref: "#/components/parameters/ActorType"
       summary: List test workflow executions
       description: List test workflow executions
       operationId: listTestWorkflowExecutions
@@ -7158,9 +7162,76 @@ components:
             - testsuite
             - testtrigger
             - scheduler
+            - testworkflow
         context:
           type: string
           description: Context value depending from its type
+
+    TestWorkflowRunningContext:
+      description: running context for test workflow execution
+      type: object
+      required:
+        - interface
+        - actor
+      properties:
+        interface:
+          $ref: "#/components/schemas/TestWorkflowRunningContextInterface"
+        actor:
+          $ref: "#/components/schemas/TestWorkflowRunningContextActor"
+
+    TestWorkflowRunningContextInterface:
+      description: running context interface for test workflow execution
+      type: object
+      required:
+        - type
+      properties:
+        name:
+          type: string
+          description: interface name
+        type:
+          $ref: "#/components/schemas/TestWorkflowRunningContextInterfaceType"
+
+    TestWorkflowRunningContextActor:
+      description: running context actor for test workflow execution
+      type: object
+      required:
+        - type
+      properties:
+        name:
+          type: string
+          description: actor name
+        email:
+          type: string
+          description: actor email
+        executionId:
+          type: string
+          description: test workflow execution id
+        executionPath:
+          type: string
+          description: all test workflow execution ids starting from the root
+        type:
+          $ref: "#/components/schemas/TestWorkflowRunningContextActorType"
+
+    TestWorkflowRunningContextInterfaceType:
+      description: supported interfaces for test workflow running context
+      type: string
+      enum:
+        - cli
+        - ui
+        - api
+        - ci/cd
+        - internal
+
+    TestWorkflowRunningContextActorType:
+      description: supported actors for test workflow running context
+      type: string
+      enum:
+        - cron
+        - testtrigger
+        - user
+        - testworkflow
+        - testworkflowexecution
+        - program
 
     Webhook:
       description: CRD based webhook data
@@ -8012,6 +8083,14 @@ components:
           default: false
         tags:
           $ref: "#/components/schemas/TestWorkflowTagValue"
+        runningContext:
+          description: running context for the test workflow execution (Pro edition only)
+          $ref: "#/components/schemas/TestWorkflowRunningContext"
+        parentExecutionIds:
+          type: array
+          description: parent execution ids
+          items:
+            type: string          
 
     TestWorkflowWithExecution:
       type: object
@@ -8110,6 +8189,9 @@ components:
             - false
         tags:
           $ref: "#/components/schemas/TestWorkflowTagValue"
+        runningContext:
+          description: running context for the test workflow execution (Pro edition only)
+          $ref: "#/components/schemas/TestWorkflowRunningContext"
       required:
         - id
         - name
@@ -8144,6 +8226,9 @@ components:
           $ref: "#/components/schemas/TestWorkflowSummary"
         tags:
           $ref: "#/components/schemas/TestWorkflowTagValue"
+        runningContext:
+          description: running context for the test workflow execution (Pro edition only)
+          $ref: "#/components/schemas/TestWorkflowRunningContext"
       required:
         - id
         - name
@@ -10674,6 +10759,19 @@ components:
       schema:
         type: string
         description: Test workflow execution tags
+    ActorName:
+      in: query
+      name: actorName
+      schema:
+        type: string
+        description: Test workflow running conntext actor name
+    ActorType:
+      in: query
+      name: actorType
+      schema:
+        type: string
+        description: Test workflow running conntext actor type
+
   requestBodies:
     UploadsBody:
       description: "Upload files request body data"

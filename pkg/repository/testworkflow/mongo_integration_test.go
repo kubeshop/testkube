@@ -11,6 +11,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
+	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
@@ -324,4 +325,109 @@ func TestNewMongoRepository_GetExecutions_Tags_Integration(t *testing.T) {
 	}
 
 	assert.Len(t, res, 2)
+}
+
+func TestNewMongoRepository_GetExecutions_Actor_Integration(t *testing.T) {
+	test.IntegrationTest(t)
+
+	ctx := context.Background()
+
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(cfg.APIMongoDSN))
+	if err != nil {
+		t.Fatalf("error connecting to mongo: %v", err)
+	}
+	db := client.Database("testworkflow-executions-actor-mongo-repository-test")
+	t.Cleanup(func() {
+		db.Drop(ctx)
+	})
+
+	repo := NewMongoRepository(db, false)
+
+	execution := testkube.TestWorkflowExecution{
+		Id:   "test-id-1",
+		Name: "test-name-1",
+		Workflow: &testkube.TestWorkflow{
+			Name: "test-name-1",
+			Spec: &testkube.TestWorkflowSpec{},
+		},
+		RunningContext: &testkube.TestWorkflowRunningContext{
+			Actor: &testkube.TestWorkflowRunningContextActor{
+				Name:  "user-1",
+				Type_: common.Ptr(testkube.USER_TestWorkflowRunningContextActorType),
+			},
+		},
+	}
+	if err := repo.Insert(ctx, execution); err != nil {
+		t.Fatalf("error inserting execution: %v", err)
+	}
+
+	execution = testkube.TestWorkflowExecution{
+		Id:   "test-id-2",
+		Name: "test-name-2",
+		Workflow: &testkube.TestWorkflow{
+			Name: "test-name-2",
+			Spec: &testkube.TestWorkflowSpec{},
+		},
+		RunningContext: &testkube.TestWorkflowRunningContext{
+			Actor: &testkube.TestWorkflowRunningContextActor{
+				Name:  "user-2",
+				Type_: common.Ptr(testkube.USER_TestWorkflowRunningContextActorType),
+			},
+		},
+	}
+	if err := repo.Insert(ctx, execution); err != nil {
+		t.Fatalf("error inserting execution: %v", err)
+	}
+
+	res, err := repo.GetExecutions(ctx, NewExecutionsFilter())
+	if err != nil {
+		t.Fatalf("error getting executions: %v", err)
+	}
+
+	assert.Len(t, res, 2)
+
+	actorName := "user-1"
+	res, err = repo.GetExecutions(ctx, NewExecutionsFilter().WithActorName(actorName))
+	if err != nil {
+		t.Fatalf("error getting executions: %v", err)
+	}
+
+	assert.Len(t, res, 1)
+	assert.Equal(t, "test-name-1", res[0].Name)
+
+	actorType := testkube.USER_TestWorkflowRunningContextActorType
+	res, err = repo.GetExecutions(ctx, NewExecutionsFilter().WithActorType(actorType))
+	if err != nil {
+		t.Fatalf("error getting executions: %v", err)
+	}
+
+	assert.Len(t, res, 2)
+
+	actorName = "user-1"
+	actorType = testkube.USER_TestWorkflowRunningContextActorType
+	res, err = repo.GetExecutions(ctx, NewExecutionsFilter().WithActorName(actorName).WithActorType(actorType))
+	if err != nil {
+		t.Fatalf("error getting executions: %v", err)
+	}
+
+	assert.Len(t, res, 1)
+	assert.Equal(t, "test-name-1", res[0].Name)
+
+	actorName = "user-1"
+	actorType = testkube.PROGRAM_TestWorkflowRunningContextActorType
+	res, err = repo.GetExecutions(ctx, NewExecutionsFilter().WithActorName(actorName).WithActorType(actorType))
+	if err != nil {
+		t.Fatalf("error getting executions: %v", err)
+	}
+
+	assert.Len(t, res, 0)
+
+	actorName = "user-3"
+	actorType = testkube.USER_TestWorkflowRunningContextActorType
+	res, err = repo.GetExecutions(ctx, NewExecutionsFilter().WithActorName(actorName).WithActorType(actorType))
+	if err != nil {
+		t.Fatalf("error getting executions: %v", err)
+	}
+
+	assert.Len(t, res, 0)
 }

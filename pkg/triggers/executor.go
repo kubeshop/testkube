@@ -15,6 +15,7 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/scheduler"
+	triggerstcl "github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/triggers"
 	"github.com/kubeshop/testkube/pkg/workerpool"
 )
 
@@ -135,6 +136,11 @@ func (s *Service) execute(ctx context.Context, e *watcherEvent, t *testtriggersv
 
 		request := testkube.TestWorkflowExecutionRequest{
 			Config: make(map[string]string, len(variables)),
+		}
+
+		// Pro edition only (tcl protected code)
+		if s.proContext != nil && s.proContext.APIKey != "" {
+			request.RunningContext = triggerstcl.GetRunningContext(t.Name)
 		}
 
 		for _, variable := range variables {

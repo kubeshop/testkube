@@ -21,6 +21,7 @@ type ExecutionConfig struct {
 	Debug           bool              `json:"d,omitempty"`
 	OrganizationId  string            `json:"o,omitempty"`
 	EnvironmentId   string            `json:"e,omitempty"`
+	ParentIds       string            `json:"p,omitempty"`
 }
 
 type WorkflowConfig struct {
