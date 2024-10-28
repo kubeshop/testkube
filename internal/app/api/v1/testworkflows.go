@@ -78,65 +78,6 @@ func (s *TestkubeAPI) DeleteTestWorkflowHandler() fiber.Handler {
 	}
 }
 
-func (s *TestkubeAPI) DeleteTestWorkflowsHandler() fiber.Handler {
-	errPrefix := "failed to delete test workflows"
-	return func(c *fiber.Ctx) error {
-		selector := c.Query("selector")
-
-		var (
-			workflows *testworkflowsv1.TestWorkflowList
-			err       error
-		)
-		testWorkflowNames := c.Query("testWorkflowNames")
-		if testWorkflowNames != "" {
-			names := strings.Split(testWorkflowNames, ",")
-			workflows = &testworkflowsv1.TestWorkflowList{}
-			for _, name := range names {
-				workflow, err := s.TestWorkflowsClient.Get(name)
-				if err != nil {
-					return s.ClientError(c, errPrefix, err)
-				}
-				workflows.Items = append(workflows.Items, *workflow)
-			}
-		} else {
-			workflows, err = s.TestWorkflowsClient.List(selector)
-			if err != nil {
-				return s.BadGateway(c, errPrefix, "client problem", err)
-			}
-		}
-
-		// Delete
-		err = s.TestWorkflowsClient.DeleteByLabels(selector)
-		if err != nil {
-			return s.ClientError(c, errPrefix, err)
-		}
-
-		// Mark as deleted
-		for range workflows.Items {
-			s.Metrics.IncDeleteTestWorkflow(err)
-		}
-
-		// Delete the executions
-		skipExecutions := c.Query("skipDeleteExecutions", "")
-		if skipExecutions != "true" {
-			names := common.MapSlice(workflows.Items, func(t testworkflowsv1.TestWorkflow) string {
-				return t.Name
-			})
-
-			err = s.TestWorkflowOutput.DeleteOutputForTestWorkflows(context.Background(), names)
-			if err != nil {
-				return s.ClientError(c, "deleting executions output", err)
-			}
-			err = s.TestWorkflowResults.DeleteByTestWorkflows(context.Background(), names)
-			if err != nil {
-				return s.ClientError(c, "deleting executions", err)
-			}
-		}
-
-		return c.SendStatus(http.StatusNoContent)
-	}
-}
-
 func (s *TestkubeAPI) CreateTestWorkflowHandler() fiber.Handler {
 	errPrefix := "failed to create test workflow"
 	return func(c *fiber.Ctx) (err error) {

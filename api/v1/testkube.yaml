@@ -3577,44 +3577,6 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
-    delete:
-      tags:
-        - test-workflows
-        - api
-        - pro
-      parameters:
-        - $ref: "#/components/parameters/Selector"
-        - $ref: "#/components/parameters/TestWorkflowNames"
-      summary: Delete test workflows
-      description: Delete test workflows from the kubernetes cluster
-      operationId: deleteTestWorkflows
-      responses:
-        204:
-          description: no content
-        400:
-          description: "problem with selector parsing - probably some bad input occurs"
-          content:
-            application/problem+json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Problem"
-        402:
-          description: "missing Pro subscription for a commercial feature"
-          content:
-            application/problem+json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Problem"
-        502:
-          description: problem communicating with kubernetes cluster
-          content:
-            application/problem+json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Problem"
     post:
       tags:
         - test-workflows
@@ -4594,43 +4556,6 @@ paths:
             text/yaml:
               schema:
                 type: string
-        400:
-          description: "problem with selector parsing - probably some bad input occurs"
-          content:
-            application/problem+json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Problem"
-        402:
-          description: "missing Pro subscription for a commercial feature"
-          content:
-            application/problem+json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Problem"
-        502:
-          description: problem communicating with kubernetes cluster
-          content:
-            application/problem+json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Problem"
-    delete:
-      tags:
-        - test-workflows
-        - api
-        - pro
-      parameters:
-        - $ref: "#/components/parameters/Selector"
-      summary: Delete test workflow templates
-      description: Delete test workflow templates from the kubernetes cluster
-      operationId: deleteTestWorkflowTemplates
-      responses:
-        204:
-          description: no content
         400:
           description: "problem with selector parsing - probably some bad input occurs"
           content:
