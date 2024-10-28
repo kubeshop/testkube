@@ -156,16 +156,14 @@ func (r *ObjectStorage) WaitForReady(ctx context.Context) error {
 	return r.pod.WaitForReady(ctx)
 }
 
-// TODO: Compress on-fly
-func (r *ObjectStorage) Upload(ctx context.Context, path string, fsPath string, hash string) error {
+func (r *ObjectStorage) Upload(ctx context.Context, path string, fsPath string, hash string) (bool, error) {
 	c, err := r.Client()
 	if err != nil {
-		return err
+		return false, err
 	}
 	if hash != "" && r.Is(path, hash) {
-		return nil
+		return true, nil
 	}
-	//putUrl, err := c.PresignedPutObject(ctx, "devbox", path, 15*time.Minute)
 	putUrl, err := c.PresignHeader(ctx, "PUT", "devbox", path, 15*time.Minute, nil, http.Header{
 		"X-Amz-Meta-Snowball-Auto-Extract": {"true"},
 		"X-Amz-Meta-Minio-Snowball-Prefix": {filepath.Dir(path)},
@@ -173,17 +171,17 @@ func (r *ObjectStorage) Upload(ctx context.Context, path string, fsPath string, 
 		"Content-Encoding":                 {"gzip"},
 	})
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	file, err := os.Open(fsPath)
 	if err != nil {
-		return err
+		return false, err
 	}
 	defer file.Close()
 	stat, err := file.Stat()
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	buf := new(bytes.Buffer)
@@ -196,7 +194,7 @@ func (r *ObjectStorage) Upload(ctx context.Context, path string, fsPath string, 
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPut, putUrl.String(), buf)
 	if err != nil {
-		return err
+		return false, err
 	}
 	req.ContentLength = int64(buf.Len())
 	req.Header.Set("X-Amz-Meta-Snowball-Auto-Extract", "true")
@@ -209,12 +207,12 @@ func (r *ObjectStorage) Upload(ctx context.Context, path string, fsPath string, 
 	client := &http.Client{Transport: tr}
 	res, err := client.Do(req)
 	if err != nil {
-		return err
+		return false, err
 	}
 	if res.StatusCode != http.StatusOK {
 		b, _ := io.ReadAll(res.Body)
-		return fmt.Errorf("failed saving file: status code: %d / message: %s", res.StatusCode, string(b))
+		return false, fmt.Errorf("failed saving file: status code: %d / message: %s", res.StatusCode, string(b))
 	}
 	r.SetHash(path, hash)
-	return nil
+	return false, nil
 }

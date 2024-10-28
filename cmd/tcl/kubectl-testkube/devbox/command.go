@@ -222,7 +222,7 @@ func NewDevBoxCommand() *cobra.Command {
 				<-objectStorageReadiness
 				fmt.Println("[Agent] Uploading...")
 				its = time.Now()
-				err = objectStorage.Upload(ctx, "bin/testkube-api-server", agentBin.Path(), agentBin.Hash())
+				_, err = objectStorage.Upload(ctx, "bin/testkube-api-server", agentBin.Path(), agentBin.Hash())
 				if err != nil {
 					fmt.Printf("[Agent] Upload failed in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
 				} else {
@@ -253,7 +253,7 @@ func NewDevBoxCommand() *cobra.Command {
 				<-objectStorageReadiness
 				fmt.Println("[Toolkit] Uploading...")
 				its = time.Now()
-				err = objectStorage.Upload(ctx, "bin/toolkit", toolkitBin.Path(), toolkitBin.Hash())
+				_, err = objectStorage.Upload(ctx, "bin/toolkit", toolkitBin.Path(), toolkitBin.Hash())
 				if err != nil {
 					fmt.Printf("[Toolkit] Upload failed in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
 				} else {
@@ -275,7 +275,7 @@ func NewDevBoxCommand() *cobra.Command {
 				<-objectStorageReadiness
 				fmt.Println("[Init Process] Uploading...")
 				its = time.Now()
-				err = objectStorage.Upload(ctx, "bin/init", initProcessBin.Path(), initProcessBin.Hash())
+				_, err = objectStorage.Upload(ctx, "bin/init", initProcessBin.Path(), initProcessBin.Hash())
 				if err != nil {
 					fmt.Printf("[Init Process] Upload failed in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
 				} else {
@@ -327,7 +327,7 @@ func NewDevBoxCommand() *cobra.Command {
 					if !termlink.SupportsHyperlinks() {
 						return name
 					}
-					return name + " " + termlink.ColorLink("(open)", cloud.DashboardUrl(env.Slug, fmt.Sprintf("dashboard/test-workflows/%s", name)), "green")
+					return name + " " + termlink.ColorLink("(open)", cloud.DashboardUrl(env.Slug, fmt.Sprintf("dashboard/test-workflows/%s", name)), "magenta")
 				}
 
 				templateLabel := func(name string) string {
@@ -428,7 +428,7 @@ func NewDevBoxCommand() *cobra.Command {
 			rebuild := func(ctx context.Context) {
 				g, _ := errgroup.WithContext(ctx)
 				ts := time.Now()
-				fmt.Println("Rebuilding applications...")
+				fmt.Println(color.Yellow.Render("Rebuilding applications..."))
 				g.Go(func() error {
 					its := time.Now()
 					_, err := agentBin.Build(ctx)
@@ -439,15 +439,17 @@ func NewDevBoxCommand() *cobra.Command {
 					fmt.Printf("  Agent: build finished in %s.\n", time.Since(its).Truncate(time.Millisecond))
 
 					its = time.Now()
-					err = objectStorage.Upload(ctx, "bin/testkube-api-server", agentBin.Path(), agentBin.Hash())
+					cached, err := objectStorage.Upload(ctx, "bin/testkube-api-server", agentBin.Path(), agentBin.Hash())
 					if err != nil {
 						fmt.Printf("  Agent: upload finished in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
 						return err
 					}
-					fmt.Printf("  Agent: upload finished in %s.\n", time.Since(its).Truncate(time.Millisecond))
+					if cached {
+						fmt.Printf("  Agent: no changes.\n")
+					} else {
+						fmt.Printf("  Agent: upload finished in %s.\n", time.Since(its).Truncate(time.Millisecond))
 
-					// Restart only if it has changes - TODO: do in a nicer way
-					if time.Since(its).Truncate(time.Millisecond).String() != "0s" {
+						// Restart only if it has changes
 						err := agentPod.Restart(ctx)
 						if err == nil {
 							fmt.Printf("  Agent: restarted. Waiting for readiness...\n")
@@ -477,12 +479,16 @@ func NewDevBoxCommand() *cobra.Command {
 					fmt.Printf("  Toolkit: build finished in %s.\n", time.Since(its).Truncate(time.Millisecond))
 
 					its = time.Now()
-					err = objectStorage.Upload(ctx, "bin/toolkit", toolkitBin.Path(), toolkitBin.Hash())
+					cached, err := objectStorage.Upload(ctx, "bin/toolkit", toolkitBin.Path(), toolkitBin.Hash())
 					if err != nil {
 						fmt.Printf("  Toolkit: upload finished in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
 						return err
 					}
-					fmt.Printf("  Toolkit: upload finished in %s.\n", time.Since(its).Truncate(time.Millisecond))
+					if cached {
+						fmt.Printf("  Toolkit: no changes.\n")
+					} else {
+						fmt.Printf("  Toolkit: upload finished in %s.\n", time.Since(its).Truncate(time.Millisecond))
+					}
 					return nil
 				})
 				g.Go(func() error {
@@ -495,17 +501,21 @@ func NewDevBoxCommand() *cobra.Command {
 					fmt.Printf("  Init Process: build finished in %s.\n", time.Since(its).Truncate(time.Millisecond))
 
 					its = time.Now()
-					err = objectStorage.Upload(ctx, "bin/init", initProcessBin.Path(), initProcessBin.Hash())
+					cached, err := objectStorage.Upload(ctx, "bin/init", initProcessBin.Path(), initProcessBin.Hash())
 					if err != nil {
 						fmt.Printf("  Init Process: upload finished in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
 						return err
 					}
-					fmt.Printf("  Init Process: upload finished in %s.\n", time.Since(its).Truncate(time.Millisecond))
+					if cached {
+						fmt.Printf("  Init Process: no changes.\n")
+					} else {
+						fmt.Printf("  Init Process: upload finished in %s.\n", time.Since(its).Truncate(time.Millisecond))
+					}
 					return nil
 				})
 				err = g.Wait()
-				if ctx.Err() != nil {
-					fmt.Println("Applications synchronised in", time.Since(ts))
+				if ctx.Err() == nil {
+					fmt.Println(color.Green.Render(fmt.Sprintf("Applications updated in %s", time.Since(ts))))
 				}
 			}
 
