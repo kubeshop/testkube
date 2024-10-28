@@ -515,11 +515,11 @@ func NewDevBoxCommand() *cobra.Command {
 				})
 				err = g.Wait()
 				if ctx.Err() == nil {
-					fmt.Println(color.Green.Render(fmt.Sprintf("Applications updated in %s", time.Since(ts))))
+					fmt.Println(color.Green.Render(fmt.Sprintf("Applications updated in %s", time.Since(ts).Truncate(time.Millisecond))))
 				}
 			}
 
-			fmt.Printf(color.Green.Render("Development box is ready. Took %s\n"), time.Since(startTs))
+			fmt.Printf(color.Green.Render("Development box is ready. Took %s\n"), time.Since(startTs).Truncate(time.Millisecond))
 			if termlink.SupportsHyperlinks() {
 				fmt.Println("Dashboard:", termlink.Link(cloud.DashboardUrl(env.Slug, "dashboard/test-workflows"), cloud.DashboardUrl(env.Slug, "dashboard/test-workflows")))
 			} else {
