@@ -103,6 +103,7 @@ func (c *cloudObj) Client(environmentId string) (client2.Client, error) {
 	defer c.clientMu.Unlock()
 
 	if c.client == nil || c.clientTs.Add(5*time.Minute).Before(time.Now()) {
+		fmt.Println("Creating new Cloud client")
 		common2.GetClient(c.cmd) // refresh token
 		var err error
 		c.client, err = client2.GetClient(client2.ClientCloud, client2.Options{
@@ -154,7 +155,25 @@ func (c *cloudObj) CreateEnvironment(name string) (*client.Environment, error) {
 	if err != nil {
 		return nil, err
 	}
-	c.list = append(c.list, env)
+	// TODO: POST request is not returning slug - if it will, delete the fallback path
+	if env.Slug != "" {
+		c.list = append(c.list, env)
+	} else {
+		err = c.UpdateList()
+		if err != nil {
+			return nil, err
+		}
+		for i := range c.list {
+			if c.list[i].Id == env.Id {
+				env = c.list[i]
+				break
+			}
+		}
+	}
+	// Hack to build proper URLs even when slug is missing
+	if env.Slug == "" {
+		env.Slug = env.Id
+	}
 	return &env, nil
 }
 

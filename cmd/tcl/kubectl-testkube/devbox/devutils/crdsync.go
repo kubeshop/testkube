@@ -169,6 +169,8 @@ func (c *CRDSync) loadFile(path string) error {
 		return nil
 	}
 
+	defer c.emitter.Emit()
+
 	// Parse the YAML file
 	file, err := os.Open(path)
 	if err != nil {
@@ -176,6 +178,7 @@ func (c *CRDSync) loadFile(path string) error {
 		return nil
 	}
 
+	// TODO: Handle deleted entries
 	decoder := yaml.NewDecoder(file)
 	for {
 		var obj map[string]interface{}

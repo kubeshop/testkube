@@ -29,6 +29,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/cloud/client"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/ui"
+
+	"github.com/savioxavier/termlink"
 )
 
 const (
@@ -303,6 +305,9 @@ func NewDevBoxCommand() *cobra.Command {
 							break
 						}
 						file, err := yamlWatcher.Next(ctx)
+						if !strings.HasSuffix(file, ".yml") && !strings.HasSuffix(file, ".yaml") {
+							continue
+						}
 						if err == nil {
 							_ = sync.Load(file)
 						}
@@ -311,15 +316,8 @@ func NewDevBoxCommand() *cobra.Command {
 
 				// Propagate changes from CRDSync to Cloud
 				go func() {
-					parallel := make(chan struct{}, 30)
-					for {
-						if ctx.Err() != nil {
-							break
-						}
-						update, err := sync.Next(ctx)
-						if err != nil {
-							continue
-						}
+					parallel := make(chan struct{}, 10)
+					process := func(update *devutils.CRDSyncUpdate) {
 						parallel <- struct{}{}
 						switch update.Op {
 						case devutils.CRDSyncUpdateOpCreate:
@@ -331,13 +329,17 @@ func NewDevBoxCommand() *cobra.Command {
 								update.Template.Spec.Events = nil // ignore Cronjobs
 								_, err := client.CreateTestWorkflowTemplate(*testworkflows.MapTemplateKubeToAPI(update.Template))
 								if err != nil {
-									fmt.Printf("Failed to create Test Workflow Template: %s: %s\n", update.Template.Name, err.Error())
+									fmt.Printf("CRD Sync: creating template: %s: error: %s\n", update.Template.Name, err.Error())
+								} else {
+									fmt.Println("CRD Sync: created template:", update.Template.Name)
 								}
 							} else {
 								update.Workflow.Spec.Events = nil // ignore Cronjobs
 								_, err := client.CreateTestWorkflow(*testworkflows.MapKubeToAPI(update.Workflow))
 								if err != nil {
-									fmt.Printf("Failed to create Test Workflow: %s: %s\n", update.Workflow.Name, err.Error())
+									fmt.Printf("CRD Sync: creating workflow: %s: error: %s\n", update.Workflow.Name, err.Error())
+								} else {
+									fmt.Println("CRD Sync: created workflow:", update.Workflow.Name)
 								}
 							}
 						case devutils.CRDSyncUpdateOpUpdate:
@@ -349,13 +351,17 @@ func NewDevBoxCommand() *cobra.Command {
 								update.Template.Spec.Events = nil // ignore Cronjobs
 								_, err := client.UpdateTestWorkflowTemplate(*testworkflows.MapTemplateKubeToAPI(update.Template))
 								if err != nil {
-									fmt.Printf("Failed to update Test Workflow Template: %s: %s\n", update.Template.Name, err.Error())
+									fmt.Printf("CRD Sync: updating template: %s: error: %s\n", update.Template.Name, err.Error())
+								} else {
+									fmt.Println("CRD Sync: updated template:", update.Template.Name)
 								}
 							} else {
 								update.Workflow.Spec.Events = nil
 								_, err := client.UpdateTestWorkflow(*testworkflows.MapKubeToAPI(update.Workflow))
 								if err != nil {
-									fmt.Printf("Failed to update Test Workflow: %s: %s\n", update.Workflow.Name, err.Error())
+									fmt.Printf("CRD Sync: updating workflow: %s: error: %s\n", update.Workflow.Name, err.Error())
+								} else {
+									fmt.Println("CRD Sync: updated workflow:", update.Workflow.Name)
 								}
 							}
 						case devutils.CRDSyncUpdateOpDelete:
@@ -366,16 +372,30 @@ func NewDevBoxCommand() *cobra.Command {
 							if update.Template != nil {
 								err := client.DeleteTestWorkflowTemplate(update.Template.Name)
 								if err != nil {
-									fmt.Printf("Failed to delete Test Workflow Template: %s: %s\n", update.Template.Name, err.Error())
+									fmt.Printf("CRD Sync: deleting template: %s: error: %s\n", update.Template.Name, err.Error())
+								} else {
+									fmt.Println("CRD Sync: deleted template:", update.Template.Name)
 								}
 							} else {
 								err := client.DeleteTestWorkflow(update.Workflow.Name)
 								if err != nil {
-									fmt.Printf("Failed to delete Test Workflow: %s: %s\n", update.Workflow.Name, err.Error())
+									fmt.Printf("CRD Sync: deleting workflow: %s: error: %s\n", update.Workflow.Name, err.Error())
+								} else {
+									fmt.Println("CRD Sync: deleted workflow:", update.Workflow.Name)
 								}
 							}
 						}
 						<-parallel
+					}
+					for {
+						if ctx.Err() != nil {
+							break
+						}
+						update, err := sync.Next(ctx)
+						if err != nil {
+							continue
+						}
+						go process(update)
 					}
 				}()
 			}
@@ -384,41 +404,42 @@ func NewDevBoxCommand() *cobra.Command {
 
 			rebuild := func(ctx context.Context) {
 				g, _ := errgroup.WithContext(ctx)
-				fmt.Println("Rebuilding binaries...")
+				ts := time.Now()
+				fmt.Println("Rebuilding applications...")
 				g.Go(func() error {
 					its := time.Now()
 					_, err := agentBin.Build(ctx)
 					if err != nil {
-						fmt.Printf("Agent: build finished in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
+						fmt.Printf("  Agent: build finished in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
 						return err
 					}
-					fmt.Printf("Agent: build finished in %s.\n", time.Since(its).Truncate(time.Millisecond))
+					fmt.Printf("  Agent: build finished in %s.\n", time.Since(its).Truncate(time.Millisecond))
 
 					its = time.Now()
 					err = objectStorage.Upload(ctx, "bin/testkube-api-server", agentBin.Path(), agentBin.Hash())
 					if err != nil {
-						fmt.Printf("Agent: upload finished in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
+						fmt.Printf("  Agent: upload finished in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
 						return err
 					}
-					fmt.Printf("Agent: upload finished in %s.\n", time.Since(its).Truncate(time.Millisecond))
+					fmt.Printf("  Agent: upload finished in %s.\n", time.Since(its).Truncate(time.Millisecond))
 
-					// TODO: Restart only if it has changes
+					// Restart only if it has changes - TODO: do in a nicer way
 					if time.Since(its).Truncate(time.Millisecond).String() != "0s" {
 						err := agentPod.Restart(ctx)
 						if err == nil {
-							fmt.Printf("Agent: restarted. Waiting for readiness...\n")
+							fmt.Printf("  Agent: restarted. Waiting for readiness...\n")
 							_ = agentPod.RefreshData(ctx)
 							err = agentPod.WaitForReady(ctx)
 							if ctx.Err() != nil {
 								return nil
 							}
 							if err == nil {
-								fmt.Printf("Agent: ready again\n")
+								fmt.Printf("  Agent: ready again\n")
 							} else {
 								fail(errors.Wrap(err, "failed to wait for agent pod readiness"))
 							}
 						} else {
-							fmt.Printf("Agent: restart failed: %s\n", err.Error())
+							fmt.Printf("  Agent: restart failed: %s\n", err.Error())
 						}
 					}
 					return nil
@@ -427,39 +448,48 @@ func NewDevBoxCommand() *cobra.Command {
 					its := time.Now()
 					_, err := toolkitBin.Build(ctx)
 					if err != nil {
-						fmt.Printf("Toolkit: build finished in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
+						fmt.Printf("  Toolkit: build finished in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
 						return err
 					}
-					fmt.Printf("Toolkit: build finished in %s.\n", time.Since(its).Truncate(time.Millisecond))
+					fmt.Printf("  Toolkit: build finished in %s.\n", time.Since(its).Truncate(time.Millisecond))
 
 					its = time.Now()
 					err = objectStorage.Upload(ctx, "bin/toolkit", toolkitBin.Path(), toolkitBin.Hash())
 					if err != nil {
-						fmt.Printf("Toolkit: upload finished in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
+						fmt.Printf("  Toolkit: upload finished in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
 						return err
 					}
-					fmt.Printf("Toolkit: upload finished in %s.\n", time.Since(its).Truncate(time.Millisecond))
+					fmt.Printf("  Toolkit: upload finished in %s.\n", time.Since(its).Truncate(time.Millisecond))
 					return nil
 				})
 				g.Go(func() error {
 					its := time.Now()
 					_, err := initProcessBin.Build(ctx)
 					if err != nil {
-						fmt.Printf("Init Process: build finished in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
+						fmt.Printf("  Init Process: build finished in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
 						return err
 					}
-					fmt.Printf("Init Process: build finished in %s.\n", time.Since(its).Truncate(time.Millisecond))
+					fmt.Printf("  Init Process: build finished in %s.\n", time.Since(its).Truncate(time.Millisecond))
 
 					its = time.Now()
 					err = objectStorage.Upload(ctx, "bin/init", initProcessBin.Path(), initProcessBin.Hash())
 					if err != nil {
-						fmt.Printf("Init Process: upload finished in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
+						fmt.Printf("  Init Process: upload finished in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
 						return err
 					}
-					fmt.Printf("Init Process: upload finished in %s.\n", time.Since(its).Truncate(time.Millisecond))
+					fmt.Printf("  Init Process: upload finished in %s.\n", time.Since(its).Truncate(time.Millisecond))
 					return nil
 				})
 				err = g.Wait()
+				if ctx.Err() != nil {
+					fmt.Println("Applications synchronised in", time.Since(ts))
+				}
+			}
+
+			if termlink.SupportsHyperlinks() {
+				fmt.Println("Dashboard:", termlink.Link(cloud.DashboardUrl(env.Slug, "dashboard/test-workflows"), cloud.DashboardUrl(env.Slug, "dashboard/test-workflows")))
+			} else {
+				fmt.Println("Dashboard:", cloud.DashboardUrl(env.Slug, "dashboard/test-workflows"))
 			}
 
 			rebuildCtx, rebuildCtxCancel := context.WithCancel(ctx)

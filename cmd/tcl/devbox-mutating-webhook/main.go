@@ -89,7 +89,7 @@ func main() {
 			script := `
 				set -e
 				/usr/bin/mc config host add minio "http://devbox-storage:9000" "minioadmin" "minioadmin"
-				/usr/bin/mc cp --disable-multipart minio/devbox/bin/init /.tk-devbox/init
+				/usr/bin/mc cp --disable-multipart minio/devbox/bin/init /.tk-devbox/init || exit 1
 				chmod 777 /.tk-devbox/init
 				chmod +x /.tk-devbox/init
 				ls -lah /.tk-devbox`
@@ -97,8 +97,8 @@ func main() {
 				script = `
 					set -e
 					/usr/bin/mc config host add minio "http://devbox-storage:9000" "minioadmin" "minioadmin"
-					/usr/bin/mc cp --disable-multipart minio/devbox/bin/init /.tk-devbox/init
-					/usr/bin/mc cp --disable-multipart minio/devbox/bin/toolkit /.tk-devbox/toolkit
+					/usr/bin/mc cp --disable-multipart minio/devbox/bin/init /.tk-devbox/init || exit 1
+					/usr/bin/mc cp --disable-multipart minio/devbox/bin/toolkit /.tk-devbox/toolkit || exit 1
 					chmod 777 /.tk-devbox/init
 					chmod 777 /.tk-devbox/toolkit
 					chmod +x /.tk-devbox/init

@@ -57,9 +57,8 @@ func (r *Agent) Create(ctx context.Context, env *client.Environment) error {
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/bin/sh", "-c"},
 				Args: []string{`
-				set -e
 				/usr/bin/mc config host add minio "http://devbox-storage:9000" "minioadmin" "minioadmin"
-				/usr/bin/mc cp --disable-multipart minio/devbox/bin/testkube-api-server /.tk-devbox/testkube-api-server
+				/usr/bin/mc cp --disable-multipart minio/devbox/bin/testkube-api-server /.tk-devbox/testkube-api-server || exit 1
 				chmod 777 /.tk-devbox/testkube-api-server
 				chmod +x /.tk-devbox/testkube-api-server
 				ls -lah /.tk-devbox`},

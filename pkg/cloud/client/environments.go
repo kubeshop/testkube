@@ -18,6 +18,7 @@ func NewEnvironmentsClient(baseUrl, token, orgID string) *EnvironmentsClient {
 type Environment struct {
 	Name              string `json:"name"`
 	Id                string `json:"id"`
+	Slug              string `json:"slug"`
 	Connected         bool   `json:"connected"`
 	Owner             string `json:"owner"`
 	InstallCommand    string `json:"installCommand,omitempty"`
