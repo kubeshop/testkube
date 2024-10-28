@@ -97,7 +97,7 @@ func (p *PodObject) create(ctx context.Context, request *corev1.Pod) error {
 			GracePeriodSeconds: common.Ptr(int64(0)),
 			PropagationPolicy:  common.Ptr(metav1.DeletePropagationForeground),
 		})
-		if err != nil {
+		if err != nil && !errors.IsNotFound(err) {
 			return errors2.Wrap(err, "failed to delete existing pod")
 		}
 		pod, err = p.clientSet.CoreV1().Pods(p.namespace).Create(context.Background(), request, metav1.CreateOptions{})
