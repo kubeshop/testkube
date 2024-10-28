@@ -432,6 +432,9 @@ func NewDevBoxCommand() *cobra.Command {
 				g.Go(func() error {
 					its := time.Now()
 					_, err := agentBin.Build(ctx)
+					if ctx.Err() != nil {
+						return nil
+					}
 					if err != nil {
 						fmt.Printf("  Agent: build finished in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
 						return err
@@ -440,6 +443,9 @@ func NewDevBoxCommand() *cobra.Command {
 
 					its = time.Now()
 					cached, err := objectStorage.Upload(ctx, "bin/testkube-api-server", agentBin.Path(), agentBin.Hash())
+					if ctx.Err() != nil {
+						return nil
+					}
 					if err != nil {
 						fmt.Printf("  Agent: upload finished in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
 						return err
@@ -451,6 +457,9 @@ func NewDevBoxCommand() *cobra.Command {
 
 						// Restart only if it has changes
 						err := agentPod.Restart(ctx)
+						if ctx.Err() != nil {
+							return nil
+						}
 						if err == nil {
 							fmt.Printf("  Agent: restarted. Waiting for readiness...\n")
 							_ = agentPod.RefreshData(ctx)
@@ -472,6 +481,9 @@ func NewDevBoxCommand() *cobra.Command {
 				g.Go(func() error {
 					its := time.Now()
 					_, err := toolkitBin.Build(ctx)
+					if ctx.Err() != nil {
+						return nil
+					}
 					if err != nil {
 						fmt.Printf("  Toolkit: build finished in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
 						return err
@@ -480,6 +492,9 @@ func NewDevBoxCommand() *cobra.Command {
 
 					its = time.Now()
 					cached, err := objectStorage.Upload(ctx, "bin/toolkit", toolkitBin.Path(), toolkitBin.Hash())
+					if ctx.Err() != nil {
+						return nil
+					}
 					if err != nil {
 						fmt.Printf("  Toolkit: upload finished in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
 						return err
@@ -494,6 +509,9 @@ func NewDevBoxCommand() *cobra.Command {
 				g.Go(func() error {
 					its := time.Now()
 					_, err := initProcessBin.Build(ctx)
+					if ctx.Err() != nil {
+						return nil
+					}
 					if err != nil {
 						fmt.Printf("  Init Process: build finished in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
 						return err
@@ -502,6 +520,9 @@ func NewDevBoxCommand() *cobra.Command {
 
 					its = time.Now()
 					cached, err := objectStorage.Upload(ctx, "bin/init", initProcessBin.Path(), initProcessBin.Hash())
+					if ctx.Err() != nil {
+						return nil
+					}
 					if err != nil {
 						fmt.Printf("  Init Process: upload finished in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
 						return err
