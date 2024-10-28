@@ -20,7 +20,6 @@ import (
 
 type Agent struct {
 	pod              *PodObject
-	localPort        int
 	cloud            *cloudObj
 	agentImage       string
 	initProcessImage string

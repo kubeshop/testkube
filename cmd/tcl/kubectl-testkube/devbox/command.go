@@ -515,18 +515,18 @@ func NewDevBoxCommand() *cobra.Command {
 				})
 				err = g.Wait()
 				if ctx.Err() == nil {
-					fmt.Println(color.Green.Render(fmt.Sprintf("Applications updated in %s", time.Since(ts).Truncate(time.Millisecond))))
+					color.Green.Println("Applications updated in", time.Since(ts).Truncate(time.Millisecond))
 				}
 			}
 
-			fmt.Printf(color.Green.Render("Development box is ready. Took %s\n"), time.Since(startTs).Truncate(time.Millisecond))
+			color.Green.Println("Development box is ready. Took", time.Since(startTs).Truncate(time.Millisecond))
 			if termlink.SupportsHyperlinks() {
 				fmt.Println("Dashboard:", termlink.Link(cloud.DashboardUrl(env.Slug, "dashboard/test-workflows"), cloud.DashboardUrl(env.Slug, "dashboard/test-workflows")))
 			} else {
 				fmt.Println("Dashboard:", cloud.DashboardUrl(env.Slug, "dashboard/test-workflows"))
 			}
 
-			rebuildCtx, rebuildCtxCancel := context.WithCancel(ctx)
+			_, rebuildCtxCancel := context.WithCancel(ctx)
 			for {
 				if ctx.Err() != nil {
 					break
@@ -541,10 +541,12 @@ func NewDevBoxCommand() *cobra.Command {
 					}
 					fmt.Printf("%s changed\n", relPath)
 					rebuildCtxCancel()
+					var rebuildCtx context.Context
 					rebuildCtx, rebuildCtxCancel = context.WithCancel(ctx)
 					go rebuild(rebuildCtx)
 				}
 			}
+			rebuildCtxCancel()
 
 			<-cleanupCh
 		},

@@ -123,6 +123,9 @@ func (r *Interceptor) Create(ctx context.Context) error {
 			},
 		},
 	})
+	if err != nil {
+		return err
+	}
 
 	// Wait for the container to be started
 	err = r.pod.WaitForContainerStarted(ctx)
@@ -199,7 +202,7 @@ func (r *Interceptor) Create(ctx context.Context) error {
 		defer bufMu.Unlock()
 		buf, _ = io.ReadAll(reader)
 	}()
-	err = exec.Stream(remotecommand.StreamOptions{
+	err = exec.StreamWithContext(ctx, remotecommand.StreamOptions{
 		Stdin:  tarStream,
 		Stdout: writer,
 		Stderr: writer,

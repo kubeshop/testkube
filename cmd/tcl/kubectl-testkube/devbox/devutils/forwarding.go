@@ -48,7 +48,7 @@ func ForwardPod(config *rest.Config, namespace, podName string, clusterPort, loc
 		return err
 	}
 	path := fmt.Sprintf("/api/v1/namespaces/%s/pods/%s/portforward", namespace, podName)
-	hostIP := strings.TrimLeft(config.Host, "https://")
+	hostIP := strings.TrimPrefix(strings.TrimPrefix(config.Host, "http://"), "https://")
 	serverURL := url.URL{Scheme: "https", Path: path, Host: hostIP}
 	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: transport}, http.MethodPost, &serverURL)
 	stopChan, readyChan := make(chan struct{}, 1), make(chan struct{}, 1)
