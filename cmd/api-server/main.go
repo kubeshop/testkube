@@ -150,7 +150,7 @@ func main() {
 
 	grpcClient = cloud.NewTestKubeCloudAPIClient(grpcConn)
 
-	if mode == common.ModeAgent && cfg.WorkflowStorage == "control-plane" {
+	if mode == common.ModeAgent && cfg.WorkflowStorage == "crd" {
 		testWorkflowsClient = cloudtestworkflow.NewCloudTestWorkflowRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
 		testWorkflowTemplatesClient = cloudtestworkflow.NewCloudTestWorkflowTemplateRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
 	} else {
