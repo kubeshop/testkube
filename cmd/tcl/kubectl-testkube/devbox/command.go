@@ -19,6 +19,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/gookit/color"
 	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
@@ -62,6 +63,8 @@ func NewDevBoxCommand() *cobra.Command {
 				<-stopSignal
 				ctxCancel()
 			}()
+
+			startTs := time.Now()
 
 			// Find repository root
 			rootDir := devutils.FindDirContaining(InterceptorMainPath, AgentMainPath, ToolkitMainPath, InitProcessMainPath)
@@ -118,52 +121,6 @@ func NewDevBoxCommand() *cobra.Command {
 			interceptor := devutils.NewInterceptor(interceptorPod, baseInitImage, baseToolkitImage, interceptorBin)
 			agent := devutils.NewAgent(agentPod, cloud, baseAgentImage, baseInitImage, baseToolkitImage)
 			objectStorage := devutils.NewObjectStorage(objectStoragePod)
-
-			// Build initial binaries
-			g, _ := errgroup.WithContext(ctx)
-			fmt.Println("Building initial binaries...")
-			g.Go(func() error {
-				its := time.Now()
-				_, err := interceptorBin.Build(ctx)
-				if err != nil {
-					fmt.Printf("Interceptor: build finished in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
-				} else {
-					fmt.Printf("Interceptor: build finished in %s.\n", time.Since(its).Truncate(time.Millisecond))
-				}
-				return err
-			})
-			g.Go(func() error {
-				its := time.Now()
-				_, err := agentBin.Build(ctx)
-				if err != nil {
-					fmt.Printf("Agent: build finished in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
-				} else {
-					fmt.Printf("Agent: build finished in %s.\n", time.Since(its).Truncate(time.Millisecond))
-				}
-				return err
-			})
-			g.Go(func() error {
-				its := time.Now()
-				_, err := toolkitBin.Build(ctx)
-				if err != nil {
-					fmt.Printf("Toolkit: build finished in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
-				} else {
-					fmt.Printf("Toolkit: build finished in %s.\n", time.Since(its).Truncate(time.Millisecond))
-				}
-				return err
-			})
-			g.Go(func() error {
-				its := time.Now()
-				_, err := initProcessBin.Build(ctx)
-				if err != nil {
-					fmt.Printf("Init Process: build finished in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
-				} else {
-					fmt.Printf("Init Process: build finished in %s.\n", time.Since(its).Truncate(time.Millisecond))
-				}
-				return err
-			})
-			err = g.Wait()
-
 			var env *client.Environment
 
 			// Cleanup
@@ -208,76 +165,128 @@ func NewDevBoxCommand() *cobra.Command {
 				fail(errors.Wrap(err, "failed to create namespace"))
 			}
 
+			g, _ := errgroup.WithContext(ctx)
+			objectStorageReadiness := make(chan struct{})
+
 			// Deploy object storage
-			fmt.Println("Creating object storage...")
-			if err = objectStorage.Create(ctx); err != nil {
-				fail(errors.Wrap(err, "failed to create object storage"))
-			}
-			fmt.Println("Waiting for object storage readiness...")
-			if err = objectStorage.WaitForReady(ctx); err != nil {
-				fail(errors.Wrap(err, "failed to wait for readiness"))
-			}
+			g.Go(func() error {
+				fmt.Println("[Object Storage] Creating...")
+				if err = objectStorage.Create(ctx); err != nil {
+					fail(errors.Wrap(err, "failed to create object storage"))
+				}
+				fmt.Println("[Object Storage] Waiting for readiness...")
+				if err = objectStorage.WaitForReady(ctx); err != nil {
+					fail(errors.Wrap(err, "failed to wait for readiness"))
+				}
+				fmt.Println("[Object Storage] Ready")
+				close(objectStorageReadiness)
+				return nil
+			})
 
 			// Deploying interceptor
-			fmt.Println("Deploying interceptor...")
-			if err = interceptor.Create(ctx); err != nil {
-				fail(errors.Wrap(err, "failed to create interceptor"))
-			}
-			fmt.Println("Waiting for interceptor readiness...")
-			if err = interceptor.WaitForReady(ctx); err != nil {
-				fail(errors.Wrap(err, "failed to create interceptor"))
-			}
-
-			// Uploading binaries
-			g, _ = errgroup.WithContext(ctx)
-			fmt.Println("Uploading binaries...")
 			g.Go(func() error {
+				fmt.Println("[Interceptor] Building...")
 				its := time.Now()
+				_, err := interceptorBin.Build(ctx)
+				if err != nil {
+					fmt.Printf("[Interceptor] Build failed in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
+				} else {
+					fmt.Printf("[Interceptor] Built in %s.\n", time.Since(its).Truncate(time.Millisecond))
+				}
+				fmt.Println("[Interceptor] Deploying...")
+				if err = interceptor.Create(ctx); err != nil {
+					fail(errors.Wrap(err, "failed to create interceptor"))
+				}
+				fmt.Println("[Interceptor] Waiting for readiness...")
+				if err = interceptor.WaitForReady(ctx); err != nil {
+					fail(errors.Wrap(err, "failed to create interceptor"))
+				}
+				fmt.Println("[Interceptor] Enabling...")
+				if err = interceptor.Enable(ctx); err != nil {
+					fail(errors.Wrap(err, "failed to enable interceptor"))
+				}
+				fmt.Println("[Interceptor] Ready")
+				return nil
+			})
+
+			// Deploying the Agent
+			g.Go(func() error {
+				fmt.Println("[Agent] Building...")
+				its := time.Now()
+				_, err := agentBin.Build(ctx)
+				if err != nil {
+					fmt.Printf("[Agent] Build failed in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
+				} else {
+					fmt.Printf("[Agent] Built in %s.\n", time.Since(its).Truncate(time.Millisecond))
+				}
+				<-objectStorageReadiness
+				fmt.Println("[Agent] Uploading...")
+				its = time.Now()
 				err = objectStorage.Upload(ctx, "bin/testkube-api-server", agentBin.Path(), agentBin.Hash())
 				if err != nil {
-					fmt.Printf("Agent: upload finished in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
+					fmt.Printf("[Agent] Upload failed in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
 				} else {
-					fmt.Printf("Agent: upload finished in %s.\n", time.Since(its).Truncate(time.Millisecond))
+					fmt.Printf("[Agent] Uploaded in %s.\n", time.Since(its).Truncate(time.Millisecond))
 				}
-				return err
+				fmt.Println("[Agent] Deploying...")
+				if err = agent.Create(ctx, env); err != nil {
+					fail(errors.Wrap(err, "failed to create agent"))
+				}
+				fmt.Println("[Agent] Waiting for readiness...")
+				if err = agent.WaitForReady(ctx); err != nil {
+					fail(errors.Wrap(err, "failed to create agent"))
+				}
+				fmt.Println("[Agent] Ready...")
+				return nil
 			})
+
+			// Building Toolkit
 			g.Go(func() error {
+				fmt.Println("[Toolkit] Building...")
 				its := time.Now()
+				_, err := toolkitBin.Build(ctx)
+				if err != nil {
+					fmt.Printf("[Toolkit] Build failed in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
+				} else {
+					fmt.Printf("[Toolkit] Built in %s.\n", time.Since(its).Truncate(time.Millisecond))
+				}
+				<-objectStorageReadiness
+				fmt.Println("[Toolkit] Uploading...")
+				its = time.Now()
 				err = objectStorage.Upload(ctx, "bin/toolkit", toolkitBin.Path(), toolkitBin.Hash())
 				if err != nil {
-					fmt.Printf("Toolkit: upload finished in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
+					fmt.Printf("[Toolkit] Upload failed in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
 				} else {
-					fmt.Printf("Toolkit: upload finished in %s.\n", time.Since(its).Truncate(time.Millisecond))
+					fmt.Printf("[Toolkit] Uploaded in %s.\n", time.Since(its).Truncate(time.Millisecond))
 				}
-				return err
+				return nil
 			})
+
+			// Building Init Process
 			g.Go(func() error {
+				fmt.Println("[Init Process] Building...")
 				its := time.Now()
+				_, err := initProcessBin.Build(ctx)
+				if err != nil {
+					fmt.Printf("[Init Process] Build failed in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
+				} else {
+					fmt.Printf("[Init Process] Built in %s.\n", time.Since(its).Truncate(time.Millisecond))
+				}
+				<-objectStorageReadiness
+				fmt.Println("[Init Process] Uploading...")
+				its = time.Now()
 				err = objectStorage.Upload(ctx, "bin/init", initProcessBin.Path(), initProcessBin.Hash())
 				if err != nil {
-					fmt.Printf("Init Process: upload finished in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
+					fmt.Printf("[Init Process] Upload failed in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
 				} else {
-					fmt.Printf("Init Process: upload finished in %s.\n", time.Since(its).Truncate(time.Millisecond))
+					fmt.Printf("[Init Process] Uploaded in %s.\n", time.Since(its).Truncate(time.Millisecond))
 				}
-				return err
+				return nil
 			})
-			err = g.Wait()
 
-			// Enabling Pod interceptor
-			fmt.Println("Enabling interceptor...")
-			if err = interceptor.Enable(ctx); err != nil {
-				fail(errors.Wrap(err, "failed to enable interceptor"))
-			}
+			g.Wait()
 
-			// Deploying agent
-			fmt.Println("Deploying agent...")
-			if err = agent.Create(ctx, env); err != nil {
-				fail(errors.Wrap(err, "failed to create agent"))
-			}
-			fmt.Println("Waiting for agent readiness...")
-			if err = agent.WaitForReady(ctx); err != nil {
-				fail(errors.Wrap(err, "failed to create agent"))
-			}
+			// Live synchronisation
 			fmt.Println("Creating file system watcher...")
 			goWatcher, err := devutils.NewFsWatcher(rootDir)
 			if err != nil {
@@ -486,6 +495,7 @@ func NewDevBoxCommand() *cobra.Command {
 				}
 			}
 
+			fmt.Printf(color.Green.Render("Development box is ready. Took %s\n"), time.Since(startTs))
 			if termlink.SupportsHyperlinks() {
 				fmt.Println("Dashboard:", termlink.Link(cloud.DashboardUrl(env.Slug, "dashboard/test-workflows"), cloud.DashboardUrl(env.Slug, "dashboard/test-workflows")))
 			} else {
