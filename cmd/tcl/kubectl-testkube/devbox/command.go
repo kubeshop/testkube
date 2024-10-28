@@ -323,6 +323,20 @@ func NewDevBoxCommand() *cobra.Command {
 					}
 				}()
 
+				workflowLabel := func(name string) string {
+					if !termlink.SupportsHyperlinks() {
+						return name
+					}
+					return name + " " + termlink.ColorLink("(open)", cloud.DashboardUrl(env.Slug, fmt.Sprintf("dashboard/test-workflows/%s", name)), "green")
+				}
+
+				templateLabel := func(name string) string {
+					if !termlink.SupportsHyperlinks() {
+						return name
+					}
+					return termlink.Link(name, cloud.DashboardUrl(env.Slug, fmt.Sprintf("dashboard/test-workflow-templates/%s", name)))
+				}
+
 				// Propagate changes from CRDSync to Cloud
 				go func() {
 					parallel := make(chan struct{}, 10)
@@ -338,17 +352,17 @@ func NewDevBoxCommand() *cobra.Command {
 								update.Template.Spec.Events = nil // ignore Cronjobs
 								_, err := client.CreateTestWorkflowTemplate(*testworkflows.MapTemplateKubeToAPI(update.Template))
 								if err != nil {
-									fmt.Printf("CRD Sync: creating template: %s: error: %s\n", update.Template.Name, err.Error())
+									fmt.Printf("CRD Sync: creating template: %s: error: %s\n", templateLabel(update.Template.Name), err.Error())
 								} else {
-									fmt.Println("CRD Sync: created template:", update.Template.Name)
+									fmt.Println("CRD Sync: created template:", templateLabel(update.Template.Name))
 								}
 							} else {
 								update.Workflow.Spec.Events = nil // ignore Cronjobs
 								_, err := client.CreateTestWorkflow(*testworkflows.MapKubeToAPI(update.Workflow))
 								if err != nil {
-									fmt.Printf("CRD Sync: creating workflow: %s: error: %s\n", update.Workflow.Name, err.Error())
+									fmt.Printf("CRD Sync: creating workflow: %s: error: %s\n", workflowLabel(update.Workflow.Name), err.Error())
 								} else {
-									fmt.Println("CRD Sync: created workflow:", update.Workflow.Name)
+									fmt.Println("CRD Sync: created workflow:", workflowLabel(update.Workflow.Name))
 								}
 							}
 						case devutils.CRDSyncUpdateOpUpdate:
@@ -360,17 +374,17 @@ func NewDevBoxCommand() *cobra.Command {
 								update.Template.Spec.Events = nil // ignore Cronjobs
 								_, err := client.UpdateTestWorkflowTemplate(*testworkflows.MapTemplateKubeToAPI(update.Template))
 								if err != nil {
-									fmt.Printf("CRD Sync: updating template: %s: error: %s\n", update.Template.Name, err.Error())
+									fmt.Printf("CRD Sync: updating template: %s: error: %s\n", templateLabel(update.Template.Name), err.Error())
 								} else {
-									fmt.Println("CRD Sync: updated template:", update.Template.Name)
+									fmt.Println("CRD Sync: updated template:", templateLabel(update.Template.Name))
 								}
 							} else {
 								update.Workflow.Spec.Events = nil
 								_, err := client.UpdateTestWorkflow(*testworkflows.MapKubeToAPI(update.Workflow))
 								if err != nil {
-									fmt.Printf("CRD Sync: updating workflow: %s: error: %s\n", update.Workflow.Name, err.Error())
+									fmt.Printf("CRD Sync: updating workflow: %s: error: %s\n", workflowLabel(update.Workflow.Name), err.Error())
 								} else {
-									fmt.Println("CRD Sync: updated workflow:", update.Workflow.Name)
+									fmt.Println("CRD Sync: updated workflow:", workflowLabel(update.Workflow.Name))
 								}
 							}
 						case devutils.CRDSyncUpdateOpDelete:
@@ -381,16 +395,16 @@ func NewDevBoxCommand() *cobra.Command {
 							if update.Template != nil {
 								err := client.DeleteTestWorkflowTemplate(update.Template.Name)
 								if err != nil {
-									fmt.Printf("CRD Sync: deleting template: %s: error: %s\n", update.Template.Name, err.Error())
+									fmt.Printf("CRD Sync: deleting template: %s: error: %s\n", templateLabel(update.Template.Name), err.Error())
 								} else {
-									fmt.Println("CRD Sync: deleted template:", update.Template.Name)
+									fmt.Println("CRD Sync: deleted template:", templateLabel(update.Template.Name))
 								}
 							} else {
 								err := client.DeleteTestWorkflow(update.Workflow.Name)
 								if err != nil {
-									fmt.Printf("CRD Sync: deleting workflow: %s: error: %s\n", update.Workflow.Name, err.Error())
+									fmt.Printf("CRD Sync: deleting workflow: %s: error: %s\n", workflowLabel(update.Workflow.Name), err.Error())
 								} else {
-									fmt.Println("CRD Sync: deleted workflow:", update.Workflow.Name)
+									fmt.Println("CRD Sync: deleted workflow:", workflowLabel(update.Workflow.Name))
 								}
 							}
 						}
