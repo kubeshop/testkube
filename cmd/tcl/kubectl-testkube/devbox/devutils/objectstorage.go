@@ -114,7 +114,7 @@ func (r *ObjectStorage) Create(ctx context.Context) error {
 
 	// Handle a case when port forwarder is not ready
 	for i := 0; i < 10; i++ {
-		makeBucketCtx, ctxCancel := context.WithTimeout(ctx, 2*time.Second)
+		makeBucketCtx, ctxCancel := context.WithTimeout(ctx, 5*time.Second)
 		err = c.MakeBucket(makeBucketCtx, "devbox", minio2.MakeBucketOptions{})
 		if err == nil {
 			ctxCancel()
