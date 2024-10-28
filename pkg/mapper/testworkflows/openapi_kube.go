@@ -366,6 +366,7 @@ func MapEventAPIToKube(v testkube.TestWorkflowEvent) testworkflowsv1.Event {
 func MapCronJobConfigAPIToKube(v testkube.TestWorkflowCronJobConfig) testworkflowsv1.CronJobConfig {
 	return testworkflowsv1.CronJobConfig{
 		Cron:        v.Cron,
+		Config:      MapConfigValueAPIToKube(v.Config),
 		Labels:      v.Labels,
 		Annotations: v.Annotations,
 	}
