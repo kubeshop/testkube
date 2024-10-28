@@ -22,6 +22,8 @@ import (
 	"github.com/gookit/color"
 	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
+	"github.com/savioxavier/termlink"
+	openurl "github.com/skratchdot/open-golang/open"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
 
@@ -30,8 +32,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/cloud/client"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/ui"
-
-	"github.com/savioxavier/termlink"
 )
 
 const (
@@ -44,7 +44,7 @@ const (
 func NewDevBoxCommand() *cobra.Command {
 	var (
 		rawDevboxName    string
-		autoAccept       bool
+		open             bool
 		baseAgentImage   string
 		baseInitImage    string
 		baseToolkitImage string
@@ -525,6 +525,9 @@ func NewDevBoxCommand() *cobra.Command {
 			} else {
 				fmt.Println("Dashboard:", cloud.DashboardUrl(env.Slug, "dashboard/test-workflows"))
 			}
+			if open {
+				openurl.Run(cloud.DashboardUrl(env.Slug, "dashboard/test-workflows"))
+			}
 
 			_, rebuildCtxCancel := context.WithCancel(ctx)
 			for {
@@ -554,10 +557,10 @@ func NewDevBoxCommand() *cobra.Command {
 
 	cmd.Flags().StringVarP(&rawDevboxName, "name", "n", fmt.Sprintf("%d", time.Now().UnixNano()), "devbox name")
 	cmd.Flags().StringSliceVarP(&syncResources, "sync", "s", nil, "synchronise resources at paths")
+	cmd.Flags().BoolVarP(&open, "open", "o", false, "open dashboard in browser")
 	cmd.Flags().StringVar(&baseInitImage, "init-image", "kubeshop/testkube-tw-init:latest", "base init image")
 	cmd.Flags().StringVar(&baseToolkitImage, "toolkit-image", "kubeshop/testkube-tw-toolkit:latest", "base toolkit image")
 	cmd.Flags().StringVar(&baseAgentImage, "agent-image", "kubeshop/testkube-api-server:latest", "base agent image")
-	cmd.Flags().BoolVarP(&autoAccept, "yes", "y", false, "auto accept without asking for confirmation")
 
 	return cmd
 }

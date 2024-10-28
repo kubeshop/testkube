@@ -48,7 +48,7 @@ Flags:
   -n, --name string            devbox name (default "1730107481990508000")
   -s, --sync strings           synchronise resources at paths
       --toolkit-image string   base toolkit image (default "kubeshop/testkube-tw-toolkit:latest")
-  -y, --yes                    auto accept without asking for confirmation
+  -o, --open                   open dashboard in browser
 ```
 
 ## Example
