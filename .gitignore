@@ -45,3 +45,5 @@ movie.mp4
 /dist
 .vscode
 
+
+build/_local/values.dev.yaml

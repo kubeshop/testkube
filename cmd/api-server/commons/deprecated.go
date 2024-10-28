@@ -77,6 +77,7 @@ func (d *deprecatedClients) Templates() templatesclientv1.Interface {
 	return d.templates
 }
 
+// TODO: Move Templates() out of Deprecation, as it's used by Webhook Payload (?)
 func CreateDeprecatedClients(kubeClient client.Client, namespace string) DeprecatedClients {
 	return &deprecatedClients{
 		executors:           executorsclientv1.NewClient(kubeClient, namespace),

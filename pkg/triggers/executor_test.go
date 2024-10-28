@@ -19,6 +19,7 @@ import (
 	testsuitesv3 "github.com/kubeshop/testkube-operator/pkg/client/testsuites/v3"
 	testworkflowsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testworkflows/v1"
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
+	"github.com/kubeshop/testkube/cmd/api-server/services"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/configmap"
@@ -143,11 +144,13 @@ func TestExecute(t *testing.T) {
 		checktcl.SubscriptionChecker{},
 	)
 	s := &Service{
-		triggerStatus:          make(map[statusKey]*triggerStatus),
-		scheduler:              sched,
-		deprecatedRepositories: mockDeprecatedRepositories,
-		deprecatedClients:      mockDeprecatedClients,
-		logger:                 log.DefaultLogger,
+		triggerStatus: make(map[statusKey]*triggerStatus),
+		deprecatedSystem: &services.DeprecatedSystem{
+			Scheduler:    sched,
+			Repositories: mockDeprecatedRepositories,
+			Clients:      mockDeprecatedClients,
+		},
+		logger: log.DefaultLogger,
 	}
 
 	status := testtriggersv1.TRUE_TestTriggerConditionStatuses

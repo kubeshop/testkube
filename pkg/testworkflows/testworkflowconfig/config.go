@@ -61,21 +61,5 @@ type WorkerConnectionConfig struct {
 	SkipVerify  bool   `json:"v,omitempty"`
 	TlsInsecure bool   `json:"i,omitempty"`
 
-	LocalApiUrl   string              `json:"A,omitempty"` // TODO: Avoid using internal API with Control Plane
-	ObjectStorage ObjectStorageConfig `json:"O,omitempty"` // TODO: Avoid using Object Storage only directly
-}
-
-// TODO: Avoid using Object Storage directly
-type ObjectStorageConfig struct {
-	Endpoint        string `json:"e,omitempty"`
-	AccessKeyID     string `json:"a,omitempty"`
-	SecretAccessKey string `json:"s,omitempty"`
-	Region          string `json:"r,omitempty"`
-	Token           string `json:"t,omitempty"`
-	Bucket          string `json:"b,omitempty"`
-	Ssl             bool   `json:"S,omitempty"`
-	SkipVerify      bool   `json:"v,omitempty"`
-	CertFile        string `json:"c,omitempty"`
-	KeyFile         string `json:"k,omitempty"`
-	CAFile          string `json:"C,omitempty"`
+	LocalApiUrl string `json:"A,omitempty"` // TODO: Avoid using internal API with Control Plane
 }

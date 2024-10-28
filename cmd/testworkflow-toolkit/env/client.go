@@ -24,7 +24,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/secret"
-	"github.com/kubeshop/testkube/pkg/storage/minio"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -75,13 +74,6 @@ func Testkube() client.Client {
 	httpClient := phttp.NewClient(true)
 	sseClient := phttp.NewSSEClient(true)
 	return client.NewDirectAPIClient(httpClient, sseClient, fmt.Sprintf("http://%s:%d", config.APIServerName, config.APIServerPort), "")
-}
-
-func ObjectStorageClient() (*minio.Client, error) {
-	cfg := config2.Config().Worker.Connection.ObjectStorage
-	opts := minio.GetTLSOptions(cfg.Ssl, cfg.SkipVerify, cfg.CertFile, cfg.KeyFile, cfg.CAFile)
-	c := minio.NewClient(cfg.Endpoint, cfg.AccessKeyID, cfg.SecretAccessKey, cfg.Region, cfg.Token, cfg.Bucket, opts...)
-	return c, c.Connect()
 }
 
 func Cloud(ctx context.Context) (cloudexecutor.Executor, cloud.TestKubeCloudAPIClient) {

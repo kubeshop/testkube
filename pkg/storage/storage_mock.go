@@ -38,6 +38,21 @@ func (m *MockClient) EXPECT() *MockClientMockRecorder {
 	return m.recorder
 }
 
+// BucketExists mocks base method.
+func (m *MockClient) BucketExists(arg0 context.Context, arg1 string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BucketExists", arg0, arg1)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// BucketExists indicates an expected call of BucketExists.
+func (mr *MockClientMockRecorder) BucketExists(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BucketExists", reflect.TypeOf((*MockClient)(nil).BucketExists), arg0, arg1)
+}
+
 // CreateBucket mocks base method.
 func (m *MockClient) CreateBucket(arg0 context.Context, arg1 string) error {
 	m.ctrl.T.Helper()
