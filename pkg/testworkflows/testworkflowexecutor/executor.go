@@ -144,16 +144,8 @@ func (e *executor) Recover(ctx context.Context) {
 	}
 }
 
-func (e *executor) updateStatus(testWorkflow *testworkflowsv1.TestWorkflow, execution *testkube.TestWorkflowExecution,
+func (e *executor) updateStatus(execution *testkube.TestWorkflowExecution,
 	testWorkflowExecution *testworkflowsv1.TestWorkflowExecution) {
-	if testWorkflow != nil {
-		// FIXME: is invalid: metadata.resourceVersion: Invalid value: 0x0: must be specified for an update
-		testWorkflow.Status = testworkflowmappers.MapTestWorkflowExecutionAPIToKubeTestWorkflowStatusSummary(execution)
-		if err := e.testWorkflowsClient.UpdateStatus(testWorkflow); err != nil {
-			log.DefaultLogger.Errorw("failed to update test workflow status", "error", err)
-		}
-	}
-
 	if testWorkflowExecution != nil {
 		testWorkflowExecution.Status = testworkflowmappers.MapTestWorkflowExecutionStatusAPIToKube(execution, testWorkflowExecution.Generation)
 		if err := e.testWorkflowExecutionsClient.UpdateStatus(testWorkflowExecution); err != nil {
@@ -211,7 +203,7 @@ func (e *executor) Control(ctx context.Context, testWorkflow *testworkflowsv1.Te
 				var wg sync.WaitGroup
 				wg.Add(2)
 				go func() {
-					e.updateStatus(testWorkflow, execution, testWorkflowExecution)
+					e.updateStatus(execution, testWorkflowExecution)
 					wg.Done()
 				}()
 				go func() {
@@ -326,7 +318,7 @@ func (e *executor) Control(ctx context.Context, testWorkflow *testworkflowsv1.Te
 
 	e.metrics.IncAndObserveExecuteTestWorkflow(*execution, e.dashboardURI)
 
-	e.updateStatus(testWorkflow, execution, testWorkflowExecution) // TODO: Consider if it is needed
+	e.updateStatus(execution, testWorkflowExecution) // TODO: Consider if it is needed
 	err = e.workerClient.Destroy(ctx, execution.Id, executionworkertypes.DestroyOptions{
 		Namespace: execution.Namespace,
 	})
