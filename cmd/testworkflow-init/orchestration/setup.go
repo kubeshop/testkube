@@ -8,6 +8,8 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/pkg/errors"
+
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
@@ -168,7 +170,7 @@ func (c *setup) GetInternalConfig() (config testworkflowconfig.InternalConfig) {
 	return config
 }
 
-func (c *setup) UseEnv(group string) {
+func (c *setup) UseEnv(group string) error {
 	c.UseBaseEnv()
 	c.envSelectedGroup = group
 
@@ -226,20 +228,21 @@ func (c *setup) UseEnv(group string) {
 	for name, expr := range envTemplates {
 		value, err := expressions.CompileAndResolveTemplate(expr, localEnvMachine, addonMachine, expressions.FinalizerFail)
 		if err != nil {
-			output.ExitErrorf(data.CodeInputError, "failed to compute '%s' environment variable: %s", name, err.Error())
+			return errors.Wrapf(err, "failed to compute '%s' environment variable", name)
 		}
 		str, _ := value.Static().StringValue()
 		os.Setenv(name, str)
 	}
+	return nil
 }
 
-func (c *setup) UseCurrentEnv() {
-	c.UseEnv(fmt.Sprintf("%d", c.envCurrentGroup))
+func (c *setup) UseCurrentEnv() error {
+	return c.UseEnv(fmt.Sprintf("%d", c.envCurrentGroup))
 }
 
-func (c *setup) AdvanceEnv() {
+func (c *setup) AdvanceEnv() error {
 	c.envCurrentGroup++
-	c.UseCurrentEnv()
+	return c.UseCurrentEnv()
 }
 
 func (c *setup) SetWorkingDir(workingDir string) {

@@ -150,7 +150,8 @@ func main() {
 	delayedPauses := make([]string, 0)
 
 	// Interpret the operations
-	for _, action := range state.GetActions(int(groupIndex)) {
+	actions := state.GetActions(int(groupIndex))
+	for i, action := range actions {
 		switch action.Type() {
 		case lite.ActionTypeDeclare:
 			state.GetStep(action.Declare.Ref).
@@ -175,7 +176,19 @@ func main() {
 
 		case lite.ActionTypeContainerTransition:
 			orchestration.Setup.SetConfig(action.Container.Config)
-			orchestration.Setup.AdvanceEnv()
+			err := orchestration.Setup.AdvanceEnv()
+			// Attach the error to the next consecutive step
+			if err != nil {
+				for _, next := range actions[i:] {
+					if next.Type() != lite.ActionTypeStart || *next.Start == "" {
+						continue
+					}
+					step := state.GetStep(*next.Start)
+					orchestration.Start(step)
+					break
+				}
+				output.ExitErrorf(data.CodeInputError, err.Error())
+			}
 			stdout.SetSensitiveWords(orchestration.Setup.GetSensitiveWords())
 			currentContainer = *action.Container
 
@@ -225,10 +238,13 @@ func main() {
 			orchestration.End(step)
 
 		case lite.ActionTypeSetup:
-			orchestration.Setup.UseEnv(constants.EnvGroupDebug)
+			err := orchestration.Setup.UseEnv(constants.EnvGroupDebug)
+			if err != nil {
+				output.ExitErrorf(data.CodeInputError, err.Error())
+			}
 			stdout.SetSensitiveWords(orchestration.Setup.GetSensitiveWords())
 			step := state.GetStep(data.InitStepName)
-			err := commands.Setup(*action.Setup)
+			err = commands.Setup(*action.Setup)
 			if err == nil {
 				step.SetStatus(data.StepStatusPassed)
 			} else {
@@ -257,7 +273,10 @@ func main() {
 			}
 
 			// Configure the environment
-			orchestration.Setup.UseCurrentEnv()
+			err := orchestration.Setup.UseCurrentEnv()
+			if err != nil {
+				output.ExitErrorf(data.CodeInputError, err.Error())
+			}
 			if action.Execute.Toolkit {
 				serialized, _ := json.Marshal(state.InternalConfig)
 				_ = os.Setenv("TK_CFG", string(serialized))
