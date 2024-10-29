@@ -180,7 +180,7 @@ func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async 
 						Type_: common.Ptr(testkube.API_TestWorkflowRunningContextInterfaceType),
 					},
 					Actor: &testkube.TestWorkflowRunningContextActor{
-						Name:          workflow.Name,
+						Name:          config.WorkflowName(),
 						ExecutionId:   config.ExecutionId(),
 						ExecutionPath: strings.Join(parentIds, "/"),
 						Type_:         common.Ptr(testkube.TESTWORKFLOW_TestWorkflowRunningContextActorType),

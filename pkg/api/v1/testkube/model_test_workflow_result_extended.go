@@ -536,6 +536,7 @@ func (r *TestWorkflowResult) HealAborted(sigSequence []TestWorkflowSignature, er
 		} else if anyAborted {
 			step.Status = common.Ptr(ABORTED_TestWorkflowStepStatus)
 		}
+		r.Steps[ref] = step
 	}
 
 	// The rest of steps is unrecognized, so just mark them as aborted with information about faulty state

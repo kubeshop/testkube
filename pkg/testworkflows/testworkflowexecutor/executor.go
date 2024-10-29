@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -144,16 +145,8 @@ func (e *executor) Recover(ctx context.Context) {
 	}
 }
 
-func (e *executor) updateStatus(testWorkflow *testworkflowsv1.TestWorkflow, execution *testkube.TestWorkflowExecution,
+func (e *executor) updateStatus(execution *testkube.TestWorkflowExecution,
 	testWorkflowExecution *testworkflowsv1.TestWorkflowExecution) {
-	if testWorkflow != nil {
-		// FIXME: is invalid: metadata.resourceVersion: Invalid value: 0x0: must be specified for an update
-		testWorkflow.Status = testworkflowmappers.MapTestWorkflowExecutionAPIToKubeTestWorkflowStatusSummary(execution)
-		if err := e.testWorkflowsClient.UpdateStatus(testWorkflow); err != nil {
-			log.DefaultLogger.Errorw("failed to update test workflow status", "error", err)
-		}
-	}
-
 	if testWorkflowExecution != nil {
 		testWorkflowExecution.Status = testworkflowmappers.MapTestWorkflowExecutionStatusAPIToKube(execution, testWorkflowExecution.Generation)
 		if err := e.testWorkflowExecutionsClient.UpdateStatus(testWorkflowExecution); err != nil {
@@ -211,7 +204,7 @@ func (e *executor) Control(ctx context.Context, testWorkflow *testworkflowsv1.Te
 				var wg sync.WaitGroup
 				wg.Add(2)
 				go func() {
-					e.updateStatus(testWorkflow, execution, testWorkflowExecution)
+					e.updateStatus(execution, testWorkflowExecution)
 					wg.Done()
 				}()
 				go func() {
@@ -326,7 +319,7 @@ func (e *executor) Control(ctx context.Context, testWorkflow *testworkflowsv1.Te
 
 	e.metrics.IncAndObserveExecuteTestWorkflow(*execution, e.dashboardURI)
 
-	e.updateStatus(testWorkflow, execution, testWorkflowExecution) // TODO: Consider if it is needed
+	e.updateStatus(execution, testWorkflowExecution) // TODO: Consider if it is needed
 	err = e.workerClient.Destroy(ctx, execution.Id, executionworkertypes.DestroyOptions{
 		Namespace: execution.Namespace,
 	})
@@ -345,13 +338,13 @@ func (e *executor) getPreExecutionMachine(workflow *testworkflowsv1.TestWorkflow
 	return expressions.CombinedMachines(cloudMachine, workflowMachine)
 }
 
-func (e *executor) getPostExecutionMachine(execution *testkube.TestWorkflowExecution, orgId, envId string) expressions.Machine {
-	executionConfig := e.buildExecutionConfig(execution, orgId, envId)
+func (e *executor) getPostExecutionMachine(execution *testkube.TestWorkflowExecution, orgId, envId, parentIds string) expressions.Machine {
+	executionConfig := e.buildExecutionConfig(execution, orgId, envId, parentIds)
 	executionMachine := testworkflowconfig.CreateExecutionMachine(&executionConfig)
 	return expressions.CombinedMachines(executionMachine)
 }
 
-func (e *executor) buildExecutionConfig(execution *testkube.TestWorkflowExecution, orgId, envId string) testworkflowconfig.ExecutionConfig {
+func (e *executor) buildExecutionConfig(execution *testkube.TestWorkflowExecution, orgId, envId, parentIds string) testworkflowconfig.ExecutionConfig {
 	return testworkflowconfig.ExecutionConfig{
 		Id:              execution.Id,
 		GroupId:         execution.GroupId,
@@ -363,6 +356,7 @@ func (e *executor) buildExecutionConfig(execution *testkube.TestWorkflowExecutio
 		Debug:           false,
 		OrganizationId:  orgId,
 		EnvironmentId:   envId,
+		ParentIds:       parentIds,
 	}
 }
 
@@ -534,7 +528,7 @@ func (e *executor) initialize(ctx context.Context, workflow *testworkflowsv1.Tes
 
 	// Simplify the result
 	preMachine := e.getPreExecutionMachine(workflow, organizationId, environmentId)
-	postMachine := e.getPostExecutionMachine(execution, organizationId, environmentId)
+	postMachine := e.getPostExecutionMachine(execution, organizationId, environmentId, strings.Join(request.ParentExecutionIds, "/"))
 	_ = expressions.Simplify(&workflow, preMachine, postMachine)
 
 	// Build the final tags
@@ -698,7 +692,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 
 	// Schedule the execution by the Execution Worker
 	result, err := e.workerClient.Execute(context.Background(), executionworkertypes.ExecuteRequest{
-		Execution:    e.buildExecutionConfig(execution, organizationId, environmentId),
+		Execution:    e.buildExecutionConfig(execution, organizationId, environmentId, strings.Join(request.ParentExecutionIds, "/")),
 		Secrets:      secretsMap,
 		Workflow:     workflow,
 		ControlPlane: e.buildControlPlaneConfig(organizationId, environmentId),
