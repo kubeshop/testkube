@@ -330,6 +330,7 @@ func printStructuredLogLines(logs string, _ *bool) {
 func printRawLogLines(logs []byte, steps []testkube.TestWorkflowSignature, results map[string]testkube.TestWorkflowStepResult) {
 	currentRef := ""
 	i := -1
+	fmt.Println("logs", string(logs))
 	printStatusHeader(-1, len(steps), "Initializing")
 	// Strip timestamp + space for all new lines in the log
 	for len(logs) > 0 {
@@ -340,7 +341,7 @@ func printRawLogLines(logs []byte, steps []testkube.TestWorkflowSignature, resul
 			logs = nil
 		} else {
 			line = string(logs[:newLineIndex])
-			logs = logs[newLineIndex+1:]
+			logs = logs[newLineIndex+len(NL):]
 		}
 
 		line = trimTimestamp(line)
@@ -354,28 +355,34 @@ func printRawLogLines(logs []byte, steps []testkube.TestWorkflowSignature, resul
 
 		nextRef := start[1]
 
-		for i == -1 || steps[i].Ref != nextRef {
+		for i == -1 || (i < len(steps) && steps[i].Ref != nextRef) {
 			if ps, ok := results[currentRef]; ok && ps.Status != nil {
 				took := ps.FinishedAt.Sub(ps.QueuedAt).Round(time.Millisecond)
-				printStatus(steps[i], *ps.Status, took, i, len(steps), steps[i].Label())
+				if i != -1 {
+					printStatus(steps[i], *ps.Status, took, i, len(steps), steps[i].Label())
+				}
 			}
 
 			i++
-			currentRef = steps[i].Ref
-			printStatusHeader(i, len(steps), steps[i].Label())
+			if i < len(steps) {
+				currentRef = steps[i].Ref
+				printStatusHeader(i, len(steps), steps[i].Label())
+			}
 		}
 	}
 
-	for _, step := range steps[i:] {
-		if ps, ok := results[currentRef]; ok && ps.Status != nil {
-			took := ps.FinishedAt.Sub(ps.QueuedAt).Round(time.Millisecond)
-			printStatus(step, *ps.Status, took, i, len(steps), steps[i].Label())
-		}
+	if i != -1 && i < len(steps) {
+		for _, step := range steps[i:] {
+			if ps, ok := results[currentRef]; ok && ps.Status != nil {
+				took := ps.FinishedAt.Sub(ps.QueuedAt).Round(time.Millisecond)
+				printStatus(step, *ps.Status, took, i, len(steps), steps[i].Label())
+			}
 
-		i++
-		currentRef = step.Ref
-		if i < len(steps) {
-			printStatusHeader(i, len(steps), steps[i].Label())
+			i++
+			currentRef = step.Ref
+			if i < len(steps) {
+				printStatusHeader(i, len(steps), steps[i].Label())
+			}
 		}
 	}
 }
