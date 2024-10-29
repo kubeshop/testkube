@@ -156,13 +156,13 @@ func (r *ObjectStorage) WaitForReady(ctx context.Context) error {
 	return r.pod.WaitForReady(ctx)
 }
 
-func (r *ObjectStorage) Upload(ctx context.Context, path string, fsPath string, hash string) (bool, error) {
+func (r *ObjectStorage) Upload(ctx context.Context, path string, fsPath string, hash string) (cached bool, transferred int, err error) {
 	c, err := r.Client()
 	if err != nil {
-		return false, err
+		return false, 0, err
 	}
 	if hash != "" && r.Is(path, hash) {
-		return true, nil
+		return true, 0, nil
 	}
 	putUrl, err := c.PresignHeader(ctx, "PUT", "devbox", path, 15*time.Minute, nil, http.Header{
 		"X-Amz-Meta-Snowball-Auto-Extract": {"true"},
@@ -171,17 +171,17 @@ func (r *ObjectStorage) Upload(ctx context.Context, path string, fsPath string, 
 		"Content-Encoding":                 {"gzip"},
 	})
 	if err != nil {
-		return false, err
+		return false, 0, err
 	}
 
 	file, err := os.Open(fsPath)
 	if err != nil {
-		return false, err
+		return false, 0, err
 	}
 	defer file.Close()
 	stat, err := file.Stat()
 	if err != nil {
-		return false, err
+		return false, 0, err
 	}
 
 	buf := new(bytes.Buffer)
@@ -191,12 +191,13 @@ func (r *ObjectStorage) Upload(ctx context.Context, path string, fsPath string, 
 		tarStream.Close()
 	}()
 	io.Copy(buf, tarStream)
+	bufLen := buf.Len()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPut, putUrl.String(), buf)
 	if err != nil {
-		return false, err
+		return false, bufLen, err
 	}
-	req.ContentLength = int64(buf.Len())
+	req.ContentLength = int64(bufLen)
 	req.Header.Set("X-Amz-Meta-Snowball-Auto-Extract", "true")
 	req.Header.Set("X-Amz-Meta-Minio-Snowball-Prefix", filepath.Dir(path))
 	req.Header.Set("Content-Type", "application/gzip")
@@ -207,12 +208,12 @@ func (r *ObjectStorage) Upload(ctx context.Context, path string, fsPath string, 
 	client := &http.Client{Transport: tr}
 	res, err := client.Do(req)
 	if err != nil {
-		return false, err
+		return false, bufLen, err
 	}
 	if res.StatusCode != http.StatusOK {
 		b, _ := io.ReadAll(res.Body)
-		return false, fmt.Errorf("failed saving file: status code: %d / message: %s", res.StatusCode, string(b))
+		return false, bufLen, fmt.Errorf("failed saving file: status code: %d / message: %s", res.StatusCode, string(b))
 	}
 	r.SetHash(path, hash)
-	return false, nil
+	return false, bufLen, nil
 }

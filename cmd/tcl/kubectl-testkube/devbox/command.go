@@ -19,6 +19,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/dustin/go-humanize"
 	"github.com/gookit/color"
 	"github.com/pkg/errors"
 	"github.com/pterm/pterm"
@@ -189,7 +190,7 @@ func NewDevBoxCommand() *cobra.Command {
 				its := time.Now()
 				_, err := interceptorBin.Build(ctx)
 				if err != nil {
-					fmt.Printf("[Interceptor] Build failed in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
+					color.Red.Printf("[Interceptor] Build failed in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
 				} else {
 					fmt.Printf("[Interceptor] Built in %s.\n", time.Since(its).Truncate(time.Millisecond))
 				}
@@ -215,18 +216,18 @@ func NewDevBoxCommand() *cobra.Command {
 				its := time.Now()
 				_, err := agentBin.Build(ctx)
 				if err != nil {
-					fmt.Printf("[Agent] Build failed in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
+					color.Red.Printf("[Agent] Build failed in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
 				} else {
-					fmt.Printf("[Agent] Built in %s.\n", time.Since(its).Truncate(time.Millisecond))
+					fmt.Printf("[Agent] Built in %s (size: %s).\n", time.Since(its).Truncate(time.Millisecond), agentBin.Size())
 				}
 				<-objectStorageReadiness
 				fmt.Println("[Agent] Uploading...")
 				its = time.Now()
-				_, err = objectStorage.Upload(ctx, "bin/testkube-api-server", agentBin.Path(), agentBin.Hash())
+				_, size, err := objectStorage.Upload(ctx, "bin/testkube-api-server", agentBin.Path(), agentBin.Hash())
 				if err != nil {
-					fmt.Printf("[Agent] Upload failed in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
+					color.Red.Printf("[Agent] Upload failed in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
 				} else {
-					fmt.Printf("[Agent] Uploaded in %s.\n", time.Since(its).Truncate(time.Millisecond))
+					fmt.Printf("[Agent] Uploaded %s in %s.\n", humanize.Bytes(uint64(size)), time.Since(its).Truncate(time.Millisecond))
 				}
 				fmt.Println("[Agent] Deploying...")
 				if err = agent.Create(ctx, env); err != nil {
@@ -246,18 +247,18 @@ func NewDevBoxCommand() *cobra.Command {
 				its := time.Now()
 				_, err := toolkitBin.Build(ctx)
 				if err != nil {
-					fmt.Printf("[Toolkit] Build failed in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
+					color.Red.Printf("[Toolkit] Build failed in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
 				} else {
 					fmt.Printf("[Toolkit] Built in %s.\n", time.Since(its).Truncate(time.Millisecond))
 				}
 				<-objectStorageReadiness
 				fmt.Println("[Toolkit] Uploading...")
 				its = time.Now()
-				_, err = objectStorage.Upload(ctx, "bin/toolkit", toolkitBin.Path(), toolkitBin.Hash())
+				_, size, err := objectStorage.Upload(ctx, "bin/toolkit", toolkitBin.Path(), toolkitBin.Hash())
 				if err != nil {
-					fmt.Printf("[Toolkit] Upload failed in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
+					color.Red.Printf("[Toolkit] Upload failed in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
 				} else {
-					fmt.Printf("[Toolkit] Uploaded in %s.\n", time.Since(its).Truncate(time.Millisecond))
+					fmt.Printf("[Toolkit] Uploaded %s in %s.\n", humanize.Bytes(uint64(size)), time.Since(its).Truncate(time.Millisecond))
 				}
 				return nil
 			})
@@ -268,18 +269,18 @@ func NewDevBoxCommand() *cobra.Command {
 				its := time.Now()
 				_, err := initProcessBin.Build(ctx)
 				if err != nil {
-					fmt.Printf("[Init Process] Build failed in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
+					color.Red.Printf("[Init Process] Build failed in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
 				} else {
 					fmt.Printf("[Init Process] Built in %s.\n", time.Since(its).Truncate(time.Millisecond))
 				}
 				<-objectStorageReadiness
 				fmt.Println("[Init Process] Uploading...")
 				its = time.Now()
-				_, err = objectStorage.Upload(ctx, "bin/init", initProcessBin.Path(), initProcessBin.Hash())
+				_, size, err := objectStorage.Upload(ctx, "bin/init", initProcessBin.Path(), initProcessBin.Hash())
 				if err != nil {
-					fmt.Printf("[Init Process] Upload failed in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
+					color.Red.Printf("[Init Process] Upload failed in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
 				} else {
-					fmt.Printf("[Init Process] Uploaded in %s.\n", time.Since(its).Truncate(time.Millisecond))
+					fmt.Printf("[Init Process] Uploaded %s in %s.\n", humanize.Bytes(uint64(size)), time.Since(its).Truncate(time.Millisecond))
 				}
 				return nil
 			})
@@ -436,24 +437,24 @@ func NewDevBoxCommand() *cobra.Command {
 						return nil
 					}
 					if err != nil {
-						fmt.Printf("  Agent: build finished in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
+						color.Red.Printf("  Agent: build failed in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
 						return err
 					}
-					fmt.Printf("  Agent: build finished in %s (size: %s).\n", time.Since(its).Truncate(time.Millisecond), agentBin.Size())
+					fmt.Printf("  Agent: built in %s (size: %s).\n", time.Since(its).Truncate(time.Millisecond), agentBin.Size())
 
 					its = time.Now()
-					cached, err := objectStorage.Upload(ctx, "bin/testkube-api-server", agentBin.Path(), agentBin.Hash())
+					cached, size, err := objectStorage.Upload(ctx, "bin/testkube-api-server", agentBin.Path(), agentBin.Hash())
 					if ctx.Err() != nil {
 						return nil
 					}
 					if err != nil {
-						fmt.Printf("  Agent: upload finished in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
+						color.Red.Printf("  Agent: upload failed in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
 						return err
 					}
 					if cached {
 						fmt.Printf("  Agent: no changes.\n")
 					} else {
-						fmt.Printf("  Agent: upload finished in %s.\n", time.Since(its).Truncate(time.Millisecond))
+						fmt.Printf("  Agent: uploaded %s in %s.\n", humanize.Bytes(uint64(size)), time.Since(its).Truncate(time.Millisecond))
 
 						// Restart only if it has changes
 						err := agentPod.Restart(ctx)
@@ -485,24 +486,24 @@ func NewDevBoxCommand() *cobra.Command {
 						return nil
 					}
 					if err != nil {
-						fmt.Printf("  Toolkit: build finished in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
+						color.Red.Printf("  Toolkit: build failed in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
 						return err
 					}
-					fmt.Printf("  Toolkit: build finished in %s (size: %s).\n", time.Since(its).Truncate(time.Millisecond), toolkitBin.Size())
+					fmt.Printf("  Toolkit: built in %s (size: %s).\n", time.Since(its).Truncate(time.Millisecond), toolkitBin.Size())
 
 					its = time.Now()
-					cached, err := objectStorage.Upload(ctx, "bin/toolkit", toolkitBin.Path(), toolkitBin.Hash())
+					cached, size, err := objectStorage.Upload(ctx, "bin/toolkit", toolkitBin.Path(), toolkitBin.Hash())
 					if ctx.Err() != nil {
 						return nil
 					}
 					if err != nil {
-						fmt.Printf("  Toolkit: upload finished in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
+						color.Red.Printf("  Toolkit: upload failed in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
 						return err
 					}
 					if cached {
 						fmt.Printf("  Toolkit: no changes.\n")
 					} else {
-						fmt.Printf("  Toolkit: upload finished in %s.\n", time.Since(its).Truncate(time.Millisecond))
+						fmt.Printf("  Toolkit: uploaded %s in %s.\n", humanize.Bytes(uint64(size)), time.Since(its).Truncate(time.Millisecond))
 					}
 					return nil
 				})
@@ -513,24 +514,24 @@ func NewDevBoxCommand() *cobra.Command {
 						return nil
 					}
 					if err != nil {
-						fmt.Printf("  Init Process: build finished in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
+						color.Red.Printf("  Init Process: build failed in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
 						return err
 					}
-					fmt.Printf("  Init Process: build finished in %s (size: %s).\n", time.Since(its).Truncate(time.Millisecond), initProcessBin.Size())
+					fmt.Printf("  Init Process: built in %s (size: %s).\n", time.Since(its).Truncate(time.Millisecond), initProcessBin.Size())
 
 					its = time.Now()
-					cached, err := objectStorage.Upload(ctx, "bin/init", initProcessBin.Path(), initProcessBin.Hash())
+					cached, size, err := objectStorage.Upload(ctx, "bin/init", initProcessBin.Path(), initProcessBin.Hash())
 					if ctx.Err() != nil {
 						return nil
 					}
 					if err != nil {
-						fmt.Printf("  Init Process: upload finished in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
+						color.Red.Printf("  Init Process: upload failed in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
 						return err
 					}
 					if cached {
 						fmt.Printf("  Init Process: no changes.\n")
 					} else {
-						fmt.Printf("  Init Process: upload finished in %s.\n", time.Since(its).Truncate(time.Millisecond))
+						fmt.Printf("  Init Process: uploaded %s in %s.\n", humanize.Bytes(uint64(size)), time.Since(its).Truncate(time.Millisecond))
 					}
 					return nil
 				})
