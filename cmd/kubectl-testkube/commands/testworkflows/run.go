@@ -330,7 +330,6 @@ func printStructuredLogLines(logs string, _ *bool) {
 func printRawLogLines(logs []byte, steps []testkube.TestWorkflowSignature, results map[string]testkube.TestWorkflowStepResult) {
 	currentRef := ""
 	i := -1
-	fmt.Println("logs", string(logs))
 	printStatusHeader(-1, len(steps), "Initializing")
 	// Strip timestamp + space for all new lines in the log
 	for len(logs) > 0 {
