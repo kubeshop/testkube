@@ -3,7 +3,7 @@ name: Release kubectl-testkube
 on:
   push:
     tags:
-      - "v[0-9]+.[0-9]+.[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]+-*"
 
 permissions:
   id-token: write # needed for keyless signing
@@ -267,6 +267,25 @@ jobs:
         env:
           P12_CERT: ${{ steps.write_file.outputs.filePath }}
           P12_PASSWORD: ${{ secrets.CERT_MSFT_KUBESHOP_P12_PASSWORD }}
+
+      - name: Sign Artifact with CodeSignTool
+        uses: sslcom/esigner-codesign@develop
+        with:
+          # Sign and timestamp code object.
+          command: sign
+          # SSL.com account username
+          username: ${{ secrets.ES_USERNAME }}
+          # SSL.com account password.
+          password: ${{ secrets.ES_PASSWORD }}
+          # Credential ID for signing certificate.
+          # OAuth TOTP Secret (https://www.ssl.com/how-to/automate-esigner-ev-code-signing)
+          totp_secret: ${{ secrets.ES_TOTP_SECRET }}
+          # Path of code object to be signed. (DLL, JAR, EXE, MSI files vb... )
+          file_path: testkube.msi
+          # Directory where signed code object(s) will be written.
+          # Scan code before sign
+          malware_block: false
+          # Environment Name, For Production 'PROD' or For Staging 'TEST'
 
       - name: Get tag
         id: tag
