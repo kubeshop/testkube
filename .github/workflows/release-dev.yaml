@@ -255,14 +255,6 @@ jobs:
           name: testkube_windows
           path: windows
 
-      - name: Get MSFT Cert
-        id: write_file
-        uses: timheuer/base64-to-file@v1.2
-        with:
-          fileName: "kubeshop_msft.p12"
-          fileDir: "./temp/"
-          encodedString: ${{ secrets.CERT_MSFT_KUBESHOP_P12_B64 }}
-
       - name: Create and Sign MSI
         run: |
           Copy-Item 'windows\testkube_windows_386\kubectl-testkube.exe' '.\kubectl-testkube.exe'
@@ -283,11 +275,12 @@ jobs:
           output_path: ${GITHUB_WORKSPACE}\artifacts
           malware_block: false
 
-      - name: Get release
-        id: get_release
-        uses: bruceadams/get-release@v1.3.2
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
+      - name: Get tag
+        id: tag
+        uses: dawidd6/action-get-tag@v1
+        with:
+          # Optionally strip `v` prefix
+          strip_v: true
 
       - name: Calculate Checksum
         id: checksum
