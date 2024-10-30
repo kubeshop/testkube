@@ -293,9 +293,10 @@ jobs:
         id: checksum
         run: |
           Get-ChildItem -Path "D:\a\testkube\testkube" -File
+          Get-ChildItem -Path "D:\a\testkube\testkube\artifacts" -File
 
           $installer_name = $env:MSI_NAME
-          $hash=Get-FileHash D:\a\testkube\testkube\testkube.msi
+          $hash=Get-FileHash D:\a\testkube\testkube\artifacts\testkube.msi
           $hash.Hash + "  " + $installer_name + ".msi" >> msi_checksum.txt
           echo "::set-output name=INSTALLER_NAME::${installer_name}"
 
