@@ -9580,6 +9580,8 @@ components:
           description: annotations to attach to the cron job
           additionalProperties:
             type: string
+        config:
+          $ref: "#/components/schemas/TestWorkflowConfigValue"
 
     TestWorkflowExecutionCR:
       type: object
