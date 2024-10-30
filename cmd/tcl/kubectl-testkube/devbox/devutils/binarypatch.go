@@ -34,6 +34,7 @@ const (
 // It's working nicely for incremental builds though.
 type BinaryPatch struct {
 	buf       *bytes.Buffer
+	uintTmp   []byte
 	lastOp    int
 	lastCount int
 }
@@ -45,7 +46,8 @@ type BinaryPatchThreshold struct {
 
 func NewBinaryPatch() *BinaryPatch {
 	return &BinaryPatch{
-		buf: bytes.NewBuffer(nil),
+		buf:     bytes.NewBuffer(nil),
+		uintTmp: make([]byte, 4),
 	}
 }
 
@@ -73,6 +75,9 @@ func (p *BinaryPatch) Read(originalFile, currentFile []byte, maxDuration time.Du
 	skew := int32(30)
 	minReuse := int32(12)
 	step := skew / 2
+
+	binary.LittleEndian.PutUint32(p.uintTmp, uint32(len(currentFile)))
+	p.buf.Write(p.uintTmp)
 
 	ts := time.Now()
 
@@ -184,11 +189,10 @@ func (p *BinaryPatch) Original(index, bytesCount int) {
 	}
 	p.lastOp = BinaryPatchOriginalOp
 	p.buf.WriteByte(BinaryPatchOriginalOp)
-	num := make([]byte, 4)
-	binary.LittleEndian.PutUint32(num, uint32(index))
-	p.buf.Write(num)
-	binary.LittleEndian.PutUint32(num, uint32(bytesCount))
-	p.buf.Write(num)
+	binary.LittleEndian.PutUint32(p.uintTmp, uint32(index))
+	p.buf.Write(p.uintTmp)
+	binary.LittleEndian.PutUint32(p.uintTmp, uint32(bytesCount))
+	p.buf.Write(p.uintTmp)
 }
 
 func (p *BinaryPatch) Delete(bytesCount int) {
@@ -204,9 +208,8 @@ func (p *BinaryPatch) Delete(bytesCount int) {
 	p.lastOp = BinaryPatchDeleteOp
 	p.lastCount = bytesCount
 	p.buf.WriteByte(BinaryPatchDeleteOp)
-	num := make([]byte, 4)
-	binary.LittleEndian.PutUint32(num, uint32(bytesCount))
-	p.buf.Write(num)
+	binary.LittleEndian.PutUint32(p.uintTmp, uint32(bytesCount))
+	p.buf.Write(p.uintTmp)
 }
 
 func (p *BinaryPatch) Add(bytesArr []byte) {
@@ -224,9 +227,8 @@ func (p *BinaryPatch) Add(bytesArr []byte) {
 	p.lastOp = BinaryPatchAddOp
 	p.lastCount = len(bytesArr)
 	p.buf.WriteByte(BinaryPatchAddOp)
-	num := make([]byte, 4)
-	binary.LittleEndian.PutUint32(num, uint32(len(bytesArr)))
-	p.buf.Write(num)
+	binary.LittleEndian.PutUint32(p.uintTmp, uint32(len(bytesArr)))
+	p.buf.Write(p.uintTmp)
 	p.buf.Write(bytesArr)
 }
 
@@ -236,21 +238,23 @@ func (p *BinaryPatch) Repeat(count int, b byte) {
 	}
 	p.lastOp = BinaryPatchRepeatOp
 	p.buf.WriteByte(BinaryPatchRepeatOp)
-	num := make([]byte, 4)
-	binary.LittleEndian.PutUint32(num, uint32(count))
-	p.buf.Write(num)
+	binary.LittleEndian.PutUint32(p.uintTmp, uint32(count))
+	p.buf.Write(p.uintTmp)
 	p.buf.WriteByte(b)
 }
 
 func (p *BinaryPatch) Apply(original []byte) []byte {
-	result := make([]byte, 0)
 	patch := p.buf.Bytes()
-	for i := 0; i < len(patch); {
+	size := binary.LittleEndian.Uint32(patch[0:4])
+	result := make([]byte, size)
+	resultIndex := uint32(0)
+	for i := 4; i < len(patch); {
 		switch patch[i] {
 		case BinaryPatchOriginalOp:
 			index := binary.LittleEndian.Uint32(patch[i+1 : i+5])
 			count := binary.LittleEndian.Uint32(patch[i+5 : i+9])
-			result = append(result, original[index:index+count]...)
+			copy(result[resultIndex:], original[index:index+count])
+			resultIndex += count
 			i += 9
 		case BinaryPatchRepeatOp:
 			count := binary.LittleEndian.Uint32(patch[i+1 : i+5])
@@ -262,8 +266,9 @@ func (p *BinaryPatch) Apply(original []byte) []byte {
 			i += 6
 		case BinaryPatchAddOp:
 			count := binary.LittleEndian.Uint32(patch[i+1 : i+5])
-			result = append(result, patch[i+5:i+5+int(count)]...)
+			copy(result[resultIndex:], patch[i+5:i+5+int(count)])
 			i += 5 + int(count)
+			resultIndex += count
 		}
 	}
 	return result
