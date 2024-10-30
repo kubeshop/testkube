@@ -293,19 +293,21 @@ jobs:
         id: checksum
         run: |
           $installer_name = $env:MSI_NAME
-          $Env:MSI_PATH = "D:\a\testkube\testkube\artifacts\testkube.msi"
-          $hash=Get-FileHash $MSI_PATH
+          $installer_path = $env:MSI_PATH
+          $hash=Get-FileHash $installer_path
           $hash.Hash + "  " + $installer_name + ".msi" >> msi_checksum.txt
           echo "::set-output name=INSTALLER_NAME::${installer_name}"
+          echo "::set-output name=INSTALLER_PATH::${installer_path}"
 
           #export MSI hash to environment
           $hashsum = $hash.Hash
           echo "::set-output name=CHECKSUM::${hashsum}"
 
           #copy MSI to choco directory to build a nuget package
-          Copy-Item -Path "$MSI_PATH" -Destination ".\choco\tools\$env:MSI_NAME.msi"
+          Copy-Item -Path "$installer_path" -Destination ".\choco\tools\$env:MSI_NAME.msi"
         env:
           MSI_NAME: testkube_${{steps.tag.outputs.tag}}_Windows_i386
+          MSI_PATH: D:\a\testkube\testkube\artifacts\testkube.msi
 
       - name: Upload release binary
         uses: actions/upload-release-asset@v1.0.2
@@ -313,7 +315,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         with:
           upload_url: ${{ steps.get_release.outputs.upload_url }}
-          asset_path: D:\a\testkube\testkube\artifacts\testkube.msi
+          asset_path: ${{steps.checksum.outputs.INSTALLER_PATH}}
           asset_name: ${{steps.checksum.outputs.INSTALLER_NAME}}.msi
           asset_content_type: application/octet-stream
 
