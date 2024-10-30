@@ -70,8 +70,8 @@ func (p *BinaryPatch) Load(data []byte) {
 }
 
 func (p *BinaryPatch) Read(originalFile, currentFile []byte, maxDuration time.Duration) {
-	skew := int32(60)
-	minReuse := int32(20)
+	skew := int32(30)
+	minReuse := int32(12)
 	step := skew / 2
 
 	ts := time.Now()
