@@ -37,7 +37,7 @@ public class Tests
     [Test]
     public void Test5()
     {
-        System.Threading.Thread.Sleep(2000);
+        System.Threading.Thread.Sleep(6000);
         Assert.Pass();
     }
 
