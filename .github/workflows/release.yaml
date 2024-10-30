@@ -270,7 +270,7 @@ jobs:
           totp_secret: ${{ secrets.ES_TOTP_SECRET }}
           # Path of code object to be signed. (DLL, JAR, EXE, MSI files vb... )
           file_path: testkube.msi
-          output_path: ${GITHUB_WORKSPACE}/artifacts
+          output_path: artifacts
           # Directory where signed code object(s) will be written.
           # Scan code before sign
           malware_block: false
@@ -292,8 +292,10 @@ jobs:
       - name: Calculate Checksum
         id: checksum
         run: |
+          Set-Location D:\
+          Get-ChildItem -Directory -Recurse
           $installer_name = $env:MSI_NAME
-          $hash=Get-FileHash ${GITHUB_WORKSPACE}/artifacts/testkube.msi
+          $hash=Get-FileHash D:\a\testkube\artifacts\testkube.msi
           $hash.Hash + "  " + $installer_name + ".msi" >> msi_checksum.txt
           echo "::set-output name=INSTALLER_NAME::${installer_name}"
 
