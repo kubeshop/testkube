@@ -52,12 +52,11 @@ func (r *Agent) Create(ctx context.Context, env *client.Environment) error {
 			ServiceAccountName: "devbox-account",
 			InitContainers: []corev1.Container{{
 				Name:            "devbox-init",
-				Image:           "minio/mc:latest",
+				Image:           "busybox:1.36.1-musl",
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/bin/sh", "-c"},
 				Args: []string{`
-				/usr/bin/mc config host add minio "http://devbox-storage:9000" "minioadmin" "minioadmin"
-				/usr/bin/mc cp --disable-multipart minio/devbox/bin/testkube-api-server /.tk-devbox/testkube-api-server || exit 1
+				/bin/wget -O /.tk-devbox/testkube-api-server http://devbox-binary:8080/testkube-api-server || exit 1
 				chmod 777 /.tk-devbox/testkube-api-server
 				chmod +x /.tk-devbox/testkube-api-server
 				ls -lah /.tk-devbox`},

@@ -18,6 +18,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/dustin/go-humanize"
 
@@ -25,21 +26,24 @@ import (
 )
 
 type Binary struct {
-	mainPath         string
-	outputPath       string
-	operatingSystem  string
-	procArchitecture string
+	mainPath              string
+	outputPath            string
+	alternatingOutputPath string
+	operatingSystem       string
+	procArchitecture      string
 
-	hash    string
-	buildMu sync.RWMutex
+	prevHash string
+	hash     string
+	buildMu  sync.RWMutex
 }
 
 func NewBinary(mainPath, operatingSystem, procArchitecture string) *Binary {
 	return &Binary{
-		mainPath:         mainPath,
-		outputPath:       tmp.Name(),
-		operatingSystem:  operatingSystem,
-		procArchitecture: procArchitecture,
+		mainPath:              mainPath,
+		outputPath:            tmp.Name(),
+		alternatingOutputPath: tmp.Name(),
+		operatingSystem:       operatingSystem,
+		procArchitecture:      procArchitecture,
 	}
 }
 
@@ -55,6 +59,7 @@ func (b *Binary) updateHash() error {
 		return fmt.Errorf("failed to get hash: %s", err.Error())
 	}
 
+	b.prevHash = b.hash
 	b.hash = fmt.Sprintf("%x", h.Sum(nil))
 	return nil
 }
@@ -81,13 +86,26 @@ func (b *Binary) Size() string {
 	return humanize.Bytes(uint64(stat.Size()))
 }
 
+func (b *Binary) patch() ([]byte, error) {
+	prevFile, prevErr := os.ReadFile(b.alternatingOutputPath)
+	if prevErr != nil {
+		return nil, prevErr
+	}
+	currentFile, currentErr := os.ReadFile(b.outputPath)
+	if currentErr != nil {
+		return nil, currentErr
+	}
+	// In 1.5 second either it will optimize, or just pass it down
+	return NewBinaryPatchFor(prevFile, currentFile, 1500*time.Millisecond).Bytes(), nil
+}
+
 func (b *Binary) Build(ctx context.Context) (string, error) {
 	b.buildMu.Lock()
 	defer b.buildMu.Unlock()
 
 	cmd := exec.Command(
 		"go", "build",
-		"-o", b.outputPath,
+		"-o", b.alternatingOutputPath,
 		fmt.Sprintf("-ldflags=%s", strings.Join([]string{
 			"-X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientID=",
 			"-X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientSecret=",
@@ -135,20 +153,19 @@ func (b *Binary) Build(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("failed to build: %s: %s", err.Error(), string(buf))
 	}
 
-	f, err := os.Open(b.outputPath)
-	if err != nil {
-		return "", fmt.Errorf("failed to get hash: reading binary: %s", err.Error())
-	}
-	defer f.Close()
-
-	h := sha256.New()
-	if _, err := io.Copy(h, f); err != nil {
-		return "", fmt.Errorf("failed to get hash: %s", err.Error())
-	}
+	// Switch paths
+	p := b.alternatingOutputPath
+	b.alternatingOutputPath = b.outputPath
+	b.outputPath = p
 
 	err = b.updateHash()
 	if err != nil {
 		return "", err
 	}
 	return b.hash, err
+}
+
+func (b *Binary) Close() {
+	os.Remove(b.outputPath)
+	os.Remove(b.alternatingOutputPath)
 }

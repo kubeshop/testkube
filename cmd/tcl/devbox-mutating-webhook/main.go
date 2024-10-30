@@ -88,17 +88,15 @@ func main() {
 
 			script := `
 				set -e
-				/usr/bin/mc config host add minio "http://devbox-storage:9000" "minioadmin" "minioadmin"
-				/usr/bin/mc cp --disable-multipart minio/devbox/bin/init /.tk-devbox/init || exit 1
+				/.tktw-bin/wget -O /.tk-devbox/init http://devbox-binary:8080/init || exit 1
 				chmod 777 /.tk-devbox/init
 				chmod +x /.tk-devbox/init
 				ls -lah /.tk-devbox`
 			if usesToolkit {
 				script = `
 					set -e
-					/usr/bin/mc config host add minio "http://devbox-storage:9000" "minioadmin" "minioadmin"
-					/usr/bin/mc cp --disable-multipart minio/devbox/bin/init /.tk-devbox/init || exit 1
-					/usr/bin/mc cp --disable-multipart minio/devbox/bin/toolkit /.tk-devbox/toolkit || exit 1
+					/.tktw-bin/wget -O /.tk-devbox/init http://devbox-binary:8080/init || exit 1
+					/.tktw-bin/wget -O /.tk-devbox/toolkit http://devbox-binary:8080/toolkit || exit 1
 					chmod 777 /.tk-devbox/init
 					chmod 777 /.tk-devbox/toolkit
 					chmod +x /.tk-devbox/init
@@ -108,7 +106,7 @@ func main() {
 
 			pod.Spec.InitContainers = append([]corev1.Container{{
 				Name:            "devbox-init",
-				Image:           "minio/mc:latest",
+				Image:           initImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/bin/sh", "-c"},
 				Args:            []string{script},

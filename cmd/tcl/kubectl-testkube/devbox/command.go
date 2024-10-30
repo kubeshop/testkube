@@ -36,10 +36,11 @@ import (
 )
 
 const (
-	InterceptorMainPath = "cmd/tcl/devbox-mutating-webhook/main.go"
-	AgentMainPath       = "cmd/api-server/main.go"
-	ToolkitMainPath     = "cmd/testworkflow-toolkit/main.go"
-	InitProcessMainPath = "cmd/testworkflow-init/main.go"
+	InterceptorMainPath   = "cmd/tcl/devbox-mutating-webhook/main.go"
+	BinaryStorageMainPath = "cmd/tcl/devbox-binary-storage/main.go"
+	AgentMainPath         = "cmd/api-server/main.go"
+	ToolkitMainPath       = "cmd/testworkflow-toolkit/main.go"
+	InitProcessMainPath   = "cmd/testworkflow-init/main.go"
 )
 
 func NewDevBoxCommand() *cobra.Command {
@@ -108,20 +109,28 @@ func NewDevBoxCommand() *cobra.Command {
 
 			// Initialize bare cluster resources
 			namespace := cluster.Namespace(fmt.Sprintf("devbox-%s", rawDevboxName))
-			objectStoragePod := namespace.Pod("devbox-storage")
 			interceptorPod := namespace.Pod("devbox-interceptor")
 			agentPod := namespace.Pod("devbox-agent")
+			binaryStoragePod := namespace.Pod("devbox-binary")
 
 			// Initialize binaries
 			interceptorBin := devutils.NewBinary(InterceptorMainPath, cluster.OperatingSystem(), cluster.Architecture())
+			binaryStorageBin := devutils.NewBinary(BinaryStorageMainPath, cluster.OperatingSystem(), cluster.Architecture())
 			agentBin := devutils.NewBinary(AgentMainPath, cluster.OperatingSystem(), cluster.Architecture())
 			toolkitBin := devutils.NewBinary(ToolkitMainPath, cluster.OperatingSystem(), cluster.Architecture())
 			initProcessBin := devutils.NewBinary(InitProcessMainPath, cluster.OperatingSystem(), cluster.Architecture())
 
+			// Initialize clean up
+			defer interceptorBin.Close()
+			defer binaryStorageBin.Close()
+			defer agentBin.Close()
+			defer toolkitBin.Close()
+			defer initProcessBin.Close()
+
 			// Initialize wrappers over cluster resources
 			interceptor := devutils.NewInterceptor(interceptorPod, baseInitImage, baseToolkitImage, interceptorBin)
 			agent := devutils.NewAgent(agentPod, cloud, baseAgentImage, baseInitImage, baseToolkitImage)
-			objectStorage := devutils.NewObjectStorage(objectStoragePod)
+			binaryStorage := devutils.NewBinaryStorage(binaryStoragePod, binaryStorageBin)
 			var env *client.Environment
 
 			// Cleanup
@@ -129,6 +138,12 @@ func NewDevBoxCommand() *cobra.Command {
 			var cleanupMu sync.Mutex
 			cleanup := func() {
 				cleanupMu.Lock()
+
+				interceptorBin.Close()
+				binaryStorageBin.Close()
+				agentBin.Close()
+				toolkitBin.Close()
+				initProcessBin.Close()
 
 				fmt.Println("Deleting namespace...")
 				if err := namespace.Destroy(); err != nil {
@@ -167,22 +182,7 @@ func NewDevBoxCommand() *cobra.Command {
 			}
 
 			g, _ := errgroup.WithContext(ctx)
-			objectStorageReadiness := make(chan struct{})
-
-			// Deploy object storage
-			g.Go(func() error {
-				fmt.Println("[Object Storage] Creating...")
-				if err = objectStorage.Create(ctx); err != nil {
-					fail(errors.Wrap(err, "failed to create object storage"))
-				}
-				fmt.Println("[Object Storage] Waiting for readiness...")
-				if err = objectStorage.WaitForReady(ctx); err != nil {
-					fail(errors.Wrap(err, "failed to wait for readiness"))
-				}
-				fmt.Println("[Object Storage] Ready")
-				close(objectStorageReadiness)
-				return nil
-			})
+			binaryStorageReadiness := make(chan struct{})
 
 			// Deploying interceptor
 			g.Go(func() error {
@@ -210,6 +210,29 @@ func NewDevBoxCommand() *cobra.Command {
 				return nil
 			})
 
+			// Deploying binary storage
+			g.Go(func() error {
+				fmt.Println("[Binary Storage] Building...")
+				its := time.Now()
+				_, err := binaryStorageBin.Build(ctx)
+				if err != nil {
+					color.Red.Printf("[Binary Storage] Build failed in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
+				} else {
+					fmt.Printf("[Binary Storage] Built in %s.\n", time.Since(its).Truncate(time.Millisecond))
+				}
+				fmt.Println("[Binary Storage] Deploying...")
+				if err = binaryStorage.Create(ctx); err != nil {
+					fail(errors.Wrap(err, "failed to create binary storage"))
+				}
+				fmt.Println("[Binary Storage] Waiting for readiness...")
+				if err = binaryStorage.WaitForReady(ctx); err != nil {
+					fail(errors.Wrap(err, "failed to create binary storage"))
+				}
+				fmt.Println("[Binary Storage] Ready")
+				close(binaryStorageReadiness)
+				return nil
+			})
+
 			// Deploying the Agent
 			g.Go(func() error {
 				fmt.Println("[Agent] Building...")
@@ -220,10 +243,10 @@ func NewDevBoxCommand() *cobra.Command {
 				} else {
 					fmt.Printf("[Agent] Built in %s (size: %s).\n", time.Since(its).Truncate(time.Millisecond), agentBin.Size())
 				}
-				<-objectStorageReadiness
+				<-binaryStorageReadiness
 				fmt.Println("[Agent] Uploading...")
 				its = time.Now()
-				_, size, err := objectStorage.Upload(ctx, "bin/testkube-api-server", agentBin.Path(), agentBin.Hash())
+				_, size, err := binaryStorage.Upload(ctx, "testkube-api-server", agentBin)
 				if err != nil {
 					color.Red.Printf("[Agent] Upload failed in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
 				} else {
@@ -249,12 +272,12 @@ func NewDevBoxCommand() *cobra.Command {
 				if err != nil {
 					color.Red.Printf("[Toolkit] Build failed in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
 				} else {
-					fmt.Printf("[Toolkit] Built in %s.\n", time.Since(its).Truncate(time.Millisecond))
+					fmt.Printf("[Toolkit] Built in %s (size: %s).\n", time.Since(its).Truncate(time.Millisecond), toolkitBin.Size())
 				}
-				<-objectStorageReadiness
+				<-binaryStorageReadiness
 				fmt.Println("[Toolkit] Uploading...")
 				its = time.Now()
-				_, size, err := objectStorage.Upload(ctx, "bin/toolkit", toolkitBin.Path(), toolkitBin.Hash())
+				_, size, err := binaryStorage.Upload(ctx, "toolkit", toolkitBin)
 				if err != nil {
 					color.Red.Printf("[Toolkit] Upload failed in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
 				} else {
@@ -271,12 +294,12 @@ func NewDevBoxCommand() *cobra.Command {
 				if err != nil {
 					color.Red.Printf("[Init Process] Build failed in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
 				} else {
-					fmt.Printf("[Init Process] Built in %s.\n", time.Since(its).Truncate(time.Millisecond))
+					fmt.Printf("[Init Process] Built in %s (size: %s).\n", time.Since(its).Truncate(time.Millisecond), initProcessBin.Size())
 				}
-				<-objectStorageReadiness
+				<-binaryStorageReadiness
 				fmt.Println("[Init Process] Uploading...")
 				its = time.Now()
-				_, size, err := objectStorage.Upload(ctx, "bin/init", initProcessBin.Path(), initProcessBin.Hash())
+				_, size, err := binaryStorage.Upload(ctx, "init", initProcessBin)
 				if err != nil {
 					color.Red.Printf("[Init Process] Upload failed in %s. Error: %s\n", time.Since(its).Truncate(time.Millisecond), err)
 				} else {
@@ -443,7 +466,7 @@ func NewDevBoxCommand() *cobra.Command {
 					fmt.Printf("  Agent: built in %s (size: %s).\n", time.Since(its).Truncate(time.Millisecond), agentBin.Size())
 
 					its = time.Now()
-					cached, size, err := objectStorage.Upload(ctx, "bin/testkube-api-server", agentBin.Path(), agentBin.Hash())
+					cached, size, err := binaryStorage.Upload(ctx, "testkube-api-server", agentBin)
 					if ctx.Err() != nil {
 						return nil
 					}
@@ -492,7 +515,7 @@ func NewDevBoxCommand() *cobra.Command {
 					fmt.Printf("  Toolkit: built in %s (size: %s).\n", time.Since(its).Truncate(time.Millisecond), toolkitBin.Size())
 
 					its = time.Now()
-					cached, size, err := objectStorage.Upload(ctx, "bin/toolkit", toolkitBin.Path(), toolkitBin.Hash())
+					cached, size, err := binaryStorage.Upload(ctx, "toolkit", toolkitBin)
 					if ctx.Err() != nil {
 						return nil
 					}
@@ -520,7 +543,7 @@ func NewDevBoxCommand() *cobra.Command {
 					fmt.Printf("  Init Process: built in %s (size: %s).\n", time.Since(its).Truncate(time.Millisecond), initProcessBin.Size())
 
 					its = time.Now()
-					cached, size, err := objectStorage.Upload(ctx, "bin/init", initProcessBin.Path(), initProcessBin.Hash())
+					cached, size, err := binaryStorage.Upload(ctx, "init", initProcessBin)
 					if ctx.Err() != nil {
 						return nil
 					}

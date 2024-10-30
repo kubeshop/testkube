@@ -10,8 +10,9 @@ This utility is used to help with development of the Agent features (like Test W
   * Webhooks are disabled
   * Legacy Tests and Test Suites are disabled
   * It's not using Helm Chart, so default templates are not available
-* For live changes, it deploys Interceptor and Object Storage into the current cluster
-  * Object Storage stores latest binaries for the Agent, Toolkit and Init Process
+* For live changes, it deploys Interceptor and Binary Storage into the current cluster
+  * Binary Storage stores latest binaries for the Agent, Toolkit and Init Process
+  * Binary Storage is optimized for patching binaries with incremental builds (to avoid sending the whole binary, when only small part is changed)
   * Interceptor loads the Toolkit and Init Process from the Object Storage into every Test Workflow Execution pod
 
 ## Usage
