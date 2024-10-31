@@ -50,26 +50,16 @@ func (r *Agent) Create(ctx context.Context, env *client.Environment) error {
 				{Name: "devbox", VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}}},
 			},
 			ServiceAccountName: "devbox-account",
-			InitContainers: []corev1.Container{{
-				Name:            "devbox-init",
-				Image:           "busybox:1.36.1-musl",
-				ImagePullPolicy: corev1.PullIfNotPresent,
-				Command:         []string{"/bin/sh", "-c"},
-				Args: []string{`
-				/bin/wget -O /.tk-devbox/testkube-api-server http://devbox-binary:8080/testkube-api-server || exit 1
-				chmod 777 /.tk-devbox/testkube-api-server
-				chmod +x /.tk-devbox/testkube-api-server
-				ls -lah /.tk-devbox`},
-				VolumeMounts: []corev1.VolumeMount{
-					{Name: "devbox", MountPath: "/.tk-devbox"},
-				},
-			}},
 			Containers: []corev1.Container{
 				{
 					Name:            "server",
 					Image:           r.agentImage,
 					ImagePullPolicy: corev1.PullIfNotPresent,
-					Command:         []string{"/.tk-devbox/testkube-api-server"},
+					Command:         []string{"/bin/sh", "-c"},
+					Args: []string{`
+						wget -O /.tk-devbox/testkube-api-server http://devbox-binary:8080/testkube-api-server || exit 1
+						chmod 777 /.tk-devbox/testkube-api-server
+						exec /.tk-devbox/testkube-api-server`},
 					Env: []corev1.EnvVar{
 						{Name: "NATS_EMBEDDED", Value: "true"},
 						{Name: "APISERVER_PORT", Value: "8088"},

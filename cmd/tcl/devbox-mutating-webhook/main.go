@@ -90,7 +90,6 @@ func main() {
 				set -e
 				/.tktw-bin/wget -O /.tk-devbox/init http://devbox-binary:8080/init || exit 1
 				chmod 777 /.tk-devbox/init
-				chmod +x /.tk-devbox/init
 				ls -lah /.tk-devbox`
 			if usesToolkit {
 				script = `
@@ -99,8 +98,6 @@ func main() {
 					/.tktw-bin/wget -O /.tk-devbox/toolkit http://devbox-binary:8080/toolkit || exit 1
 					chmod 777 /.tk-devbox/init
 					chmod 777 /.tk-devbox/toolkit
-					chmod +x /.tk-devbox/init
-					chmod +x /.tk-devbox/toolkit
 					ls -lah /.tk-devbox`
 			}
 
