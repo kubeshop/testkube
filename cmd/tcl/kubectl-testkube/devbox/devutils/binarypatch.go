@@ -16,16 +16,11 @@ import (
 	"time"
 )
 
-const (
-	BinaryPatchAddOp      = 1
-	BinaryPatchOriginalOp = 2
-	BinaryPatchDeleteOp   = 3
-	BinaryPatchRepeatOp   = 4
+type BinaryPatchOpType = byte
 
-	BinaryBatchBlockSize      = 100
-	BinaryBatchBlockFactor    = 8
-	BinaryBatchBlockFactorMax = 50
-	BinaryPatchMinCommonSize  = 8
+const (
+	BinaryPatchAddOpType      BinaryPatchOpType = 1
+	BinaryPatchOriginalOpType BinaryPatchOpType = 2
 )
 
 // BinaryPatch is helper to avoid sending the whole binaries.
@@ -35,7 +30,7 @@ const (
 type BinaryPatch struct {
 	buf       *bytes.Buffer
 	uintTmp   []byte
-	lastOp    int
+	lastOp    BinaryPatchOpType
 	lastCount int
 }
 
@@ -72,175 +67,169 @@ func (p *BinaryPatch) Load(data []byte) {
 }
 
 func (p *BinaryPatch) Read(originalFile, currentFile []byte, maxDuration time.Duration) {
-	skew := int32(30)
-	minReuse := int32(12)
+	skew := uint32(50)
+	minReuse := uint32(20)
+	reasonableReuse := uint32(128)
 	step := skew / 2
 
-	binary.LittleEndian.PutUint32(p.uintTmp, uint32(len(currentFile)))
-	p.buf.Write(p.uintTmp)
+	ops := &BinaryPatchOpList{}
 
 	ts := time.Now()
 
-	originalMarkers := make([][]int32, math.MaxUint16+1)
-	originalIterations := int32(len(originalFile)) - skew
-	for i := skew; i < originalIterations; i++ {
+	originalMarkers := make([][]uint32, math.MaxUint16+1)
+	originalIterations := uint32(len(originalFile)) - skew
+
+	for i := skew; i < originalIterations; {
 		if originalFile[i] == 0 {
+			i++
 			continue
 		}
 		// Approximate the marker
 		marker := uint16((int(originalFile[i-(skew/4)])+int(originalFile[i-(skew/2)]))/2) | uint16((int(originalFile[i+(skew/4)])+int(originalFile[i+(skew/2)]))/2)<<8
 		originalMarkers[marker] = append(originalMarkers[marker], i)
+		i++
 	}
 
 	// Delete most popular characters to avoid problems with too many iterations
-	lenSum := 0
-	for i := uint16(0); i < math.MaxUint16; i++ {
-		lenSum += len(originalMarkers[i])
+	sizes := make([]int, len(originalMarkers))
+	for i := 0; i < len(originalMarkers); i++ {
+		sizes[i] = len(originalMarkers[i])
 	}
-	lenAvg := lenSum / len(originalMarkers)
-	for i := uint16(0); i < math.MaxUint16; i++ {
-		if len(originalMarkers[i]) > lenAvg {
-			originalMarkers[i] = nil
+	slices.Sort(sizes)
+	total := 0
+	for i := range originalMarkers {
+		total += len(originalMarkers[i])
+	}
+	current := total
+	clearTopMarkers := func(percentage int) {
+		percentage = max(100-max(0, percentage), 0)
+		keep := total * percentage / 100
+		i := 0
+		for ; i < len(sizes) && keep > 0; i++ {
+			keep -= sizes[i]
+		}
+		if i == len(sizes) {
+			i--
+		}
+		maxMarkersCount := sizes[i]
+		for j := i + 1; j < len(sizes); j++ {
+			sizes[j] = 0
+		}
+
+		for i := uint16(0); i < math.MaxUint16; i++ {
+			if len(originalMarkers[i]) > maxMarkersCount {
+				current -= len(originalMarkers[i])
+				originalMarkers[i] = nil
+			}
 		}
 	}
+	clearTopMarkers(10)
 
-	// Sort all the markers
-	for i := uint16(0); i < math.MaxUint16; i++ {
-		slices.Sort(originalMarkers[i])
-	}
+	ciMax := uint32(len(currentFile) - 1)
+	oiMax := uint32(len(originalFile) - 1)
 
-	ciMax := int32(len(currentFile) - 1)
-	oiMax := int32(len(originalFile) - 1)
+	lastCi := uint32(0)
+	iterations := uint32(0)
+	speedUps := 0
 
-	lastOi := int32(0)
-	lastCi := int32(0)
-	totalSaved := 0
-	iterations := 0
-
-	maxIndex := int32(len(currentFile)) - skew
+	maxIndex := uint32(len(currentFile)) - skew
+	tt := time.Now().Add(200 * time.Millisecond)
 loop:
-	for ci := skew; ci < maxIndex; {
-		iterations++
+	for ci := skew / 2; ci < maxIndex; {
 		if currentFile[ci] == 0 {
-			ci += step
+			ci++
 			continue
 		}
+
+		// Find most unique marker in current step
 		marker := uint16((int(currentFile[ci-(skew/4)])+int(currentFile[ci-(skew/2)]))/2) | uint16((int(currentFile[ci+(skew/4)])+int(currentFile[ci+(skew/2)]))/2)<<8
+		bestCi := ci
+		markerLen := len(originalMarkers[marker])
+		for i := uint32(0); i < step && ci+i <= maxIndex; i++ {
+			if currentFile[ci+i] == 0 {
+				continue
+			}
+			currentMarker := uint16((int(currentFile[ci+i-(skew/4)])+int(currentFile[ci+i-(skew/2)]))/2) | uint16((int(currentFile[ci+i+(skew/4)])+int(currentFile[ci+i+(skew/2)]))/2)<<8
+			currentMarkerLen := len(originalMarkers[currentMarker])
+			if currentMarkerLen != 0 && currentMarkerLen < markerLen {
+				marker = currentMarker
+				markerLen = currentMarkerLen
+				bestCi = ci + i
+			}
+		}
+		ci = bestCi
+
+		iterations++
 
 		if maxDuration != 0 && iterations%1000 == 0 && time.Since(ts) > maxDuration {
 			break
 		}
 
-		if iterations%50000 == 0 {
-			step = step * 7 / 6
-			continue
+		if time.Since(tt) > 30*time.Millisecond {
+			speedUps++
+			if speedUps == 2 {
+				step = skew * 3 / 4
+			}
+			if speedUps == 5 {
+				step = skew
+			}
+			clearTopMarkers(20 + speedUps*5)
+			tt = time.Now()
 		}
 
-		nextCL := 0
-		nextCR := 0
-		nextOL := 0
+		lastOR := uint32(0)
+		nextCL := uint32(0)
+		nextCR := uint32(0)
+		nextOL := uint32(0)
 		for _, oi := range originalMarkers[marker] {
-			if currentFile[ci] != originalFile[oi] ||
+			if lastOR >= oi ||
+				currentFile[ci] != originalFile[oi] ||
 				currentFile[ci+1] != originalFile[oi+1] ||
-				currentFile[ci-1] != originalFile[oi-1] ||
 				currentFile[ci-skew/2] != originalFile[oi-skew/2] ||
 				currentFile[ci+skew/2] != originalFile[oi+skew/2] {
 				continue
 			}
 			// Validate exact range
-			l, r := int32(0), int32(0)
-			for ; ci-l > lastCi && oi-l > lastOi && originalFile[oi-l-1] == currentFile[ci-l-1]; l++ {
-			}
+			l, r := uint32(0), uint32(0)
 			for ; oi+r < oiMax && ci+r < ciMax && originalFile[oi+r+1] == currentFile[ci+r+1]; r++ {
 			}
-			// Determine if it's nice
-			if l+r+1 >= minReuse && nextCR-nextCL < int(r+l) {
-				nextCL = int(ci - l)
-				nextCR = int(ci + r)
-				nextOL = int(oi - l)
+			for ; ci-l > 0 && oi-l > 0 && originalFile[oi-l-1] == currentFile[ci-l-1]; l++ {
 			}
-			if l+r > skew {
+			lastOR = oi + r
+			// Determine if it's nice
+			if l+r+1 >= minReuse && nextCR-nextCL < r+l {
+				nextCL = ci - l
+				nextCR = ci + r
+				nextOL = oi - l
+			}
+			if l+r > reasonableReuse {
 				break
 			}
 		}
 
 		if nextCL != 0 || nextCR != 0 {
-			totalSaved += (nextCR - nextCL) + 1
-			p.Add(currentFile[lastCi:nextCL])
-			lastCi = int32(nextCR + 1)
-			p.Original(nextOL, (nextCR-nextCL)+1)
-			ci = lastCi + 1
+			addLength := int32(nextCL) - int32(lastCi)
+			if addLength < 0 {
+				ops.Cut(uint32(-addLength))
+			} else {
+				ops.Add(currentFile[lastCi:nextCL])
+			}
+			lastCi = nextCR + 1
+			ops.Original(nextOL, nextCR-nextCL+1)
+			ci = lastCi + step
 			continue loop
 		}
 
 		ci += step
 	}
 
-	p.Add(currentFile[lastCi:])
+	ops.Add(currentFile[lastCi:])
+
+	p.buf = bytes.NewBuffer(ops.Bytes())
 }
 
 func (p *BinaryPatch) Len() int {
 	return p.buf.Len()
-}
-
-func (p *BinaryPatch) Original(index, bytesCount int) {
-	if bytesCount == 0 {
-		return
-	}
-	p.lastOp = BinaryPatchOriginalOp
-	p.buf.WriteByte(BinaryPatchOriginalOp)
-	binary.LittleEndian.PutUint32(p.uintTmp, uint32(index))
-	p.buf.Write(p.uintTmp)
-	binary.LittleEndian.PutUint32(p.uintTmp, uint32(bytesCount))
-	p.buf.Write(p.uintTmp)
-}
-
-func (p *BinaryPatch) Delete(bytesCount int) {
-	if bytesCount == 0 {
-		return
-	}
-	if p.lastOp == BinaryPatchDeleteOp {
-		p.lastCount += bytesCount
-		b := p.buf.Bytes()
-		binary.LittleEndian.PutUint32(b[len(b)-4:], uint32(p.lastCount))
-		return
-	}
-	p.lastOp = BinaryPatchDeleteOp
-	p.lastCount = bytesCount
-	p.buf.WriteByte(BinaryPatchDeleteOp)
-	binary.LittleEndian.PutUint32(p.uintTmp, uint32(bytesCount))
-	p.buf.Write(p.uintTmp)
-}
-
-func (p *BinaryPatch) Add(bytesArr []byte) {
-	if len(bytesArr) == 0 {
-		return
-	}
-	if p.lastOp == BinaryPatchAddOp {
-		b := p.buf.Bytes()
-		nextCount := p.lastCount + len(bytesArr)
-		binary.LittleEndian.PutUint32(b[len(b)-p.lastCount-4:], uint32(nextCount))
-		p.buf.Write(bytesArr)
-		p.lastCount = nextCount
-		return
-	}
-	p.lastOp = BinaryPatchAddOp
-	p.lastCount = len(bytesArr)
-	p.buf.WriteByte(BinaryPatchAddOp)
-	binary.LittleEndian.PutUint32(p.uintTmp, uint32(len(bytesArr)))
-	p.buf.Write(p.uintTmp)
-	p.buf.Write(bytesArr)
-}
-
-func (p *BinaryPatch) Repeat(count int, b byte) {
-	if count == 0 {
-		return
-	}
-	p.lastOp = BinaryPatchRepeatOp
-	p.buf.WriteByte(BinaryPatchRepeatOp)
-	binary.LittleEndian.PutUint32(p.uintTmp, uint32(count))
-	p.buf.Write(p.uintTmp)
-	p.buf.WriteByte(b)
 }
 
 func (p *BinaryPatch) Apply(original []byte) []byte {
@@ -250,21 +239,13 @@ func (p *BinaryPatch) Apply(original []byte) []byte {
 	resultIndex := uint32(0)
 	for i := 4; i < len(patch); {
 		switch patch[i] {
-		case BinaryPatchOriginalOp:
+		case BinaryPatchOriginalOpType:
 			index := binary.LittleEndian.Uint32(patch[i+1 : i+5])
 			count := binary.LittleEndian.Uint32(patch[i+5 : i+9])
 			copy(result[resultIndex:], original[index:index+count])
 			resultIndex += count
 			i += 9
-		case BinaryPatchRepeatOp:
-			count := binary.LittleEndian.Uint32(patch[i+1 : i+5])
-			buf := make([]byte, count)
-			for j := 0; j < int(count); j++ {
-				buf[j] = patch[i+5]
-			}
-			result = append(result, buf...)
-			i += 6
-		case BinaryPatchAddOp:
+		case BinaryPatchAddOpType:
 			count := binary.LittleEndian.Uint32(patch[i+1 : i+5])
 			copy(result[resultIndex:], patch[i+5:i+5+int(count)])
 			i += 5 + int(count)
@@ -272,4 +253,137 @@ func (p *BinaryPatch) Apply(original []byte) []byte {
 		}
 	}
 	return result
+}
+
+type BinaryPatchOp struct {
+	op      BinaryPatchOpType
+	val1    uint32
+	val2    uint32
+	content []byte
+}
+
+func (b *BinaryPatchOp) Cut(bytesCount uint32) (nextOp *BinaryPatchOp, left uint32) {
+	if bytesCount == 0 {
+		return b, 0
+	}
+	switch b.op {
+	case BinaryPatchOriginalOpType:
+		if bytesCount >= b.val2 {
+			return nil, bytesCount - b.val2
+		}
+		b.val2 -= bytesCount
+		return b, 0
+	case BinaryPatchAddOpType:
+		size := uint32(len(b.content))
+		if bytesCount >= size {
+			return nil, bytesCount - size
+		}
+		b.content = b.content[0 : size-bytesCount]
+		return b, 0
+	}
+	return nil, bytesCount
+}
+
+func (b *BinaryPatchOp) TargetSize() uint32 {
+	switch b.op {
+	case BinaryPatchOriginalOpType:
+		return b.val2
+	case BinaryPatchAddOpType:
+		return uint32(len(b.content))
+	}
+	return 0
+}
+
+func (b *BinaryPatchOp) PatchSize() uint32 {
+	switch b.op {
+	case BinaryPatchOriginalOpType:
+		return 9 // byte + uint32 + uint32
+	case BinaryPatchAddOpType:
+		return 5 + uint32(len(b.content)) // byte + uint32 + []byte(content)
+	}
+	return 0
+}
+
+type BinaryPatchOpList struct {
+	ops   []BinaryPatchOp
+	count int
+}
+
+func (b *BinaryPatchOpList) TargetSize() uint32 {
+	total := uint32(0)
+	for i := 0; i < b.count; i++ {
+		total += b.ops[i].TargetSize()
+	}
+	return total
+}
+
+func (b *BinaryPatchOpList) PatchSize() uint32 {
+	total := uint32(4) // uint32 for file size
+	for i := 0; i < b.count; i++ {
+		total += b.ops[i].PatchSize()
+	}
+	return total
+}
+
+func (b *BinaryPatchOpList) Cut(bytesCount uint32) uint32 {
+	var next *BinaryPatchOp
+	for i := b.count - 1; bytesCount > 0 && i >= 0; i-- {
+		next, bytesCount = b.ops[i].Cut(bytesCount)
+		if next == nil {
+			b.count--
+			b.ops[i] = BinaryPatchOp{}
+		}
+	}
+	return bytesCount
+}
+
+func (b *BinaryPatchOpList) Bytes() []byte {
+	targetSize := b.TargetSize()
+
+	// Prepare buffer for the patch
+	result := make([]byte, b.PatchSize())
+	binary.LittleEndian.PutUint32(result, targetSize)
+	resultIndex := 4
+
+	// Include all patches
+	for i := 0; i < b.count; i++ {
+		switch b.ops[i].op {
+		case BinaryPatchOriginalOpType:
+			result[resultIndex] = BinaryPatchOriginalOpType
+			binary.LittleEndian.PutUint32(result[resultIndex+1:], b.ops[i].val1)
+			binary.LittleEndian.PutUint32(result[resultIndex+5:], b.ops[i].val2)
+			resultIndex += 9
+		case BinaryPatchAddOpType:
+			result[resultIndex] = BinaryPatchAddOpType
+			binary.LittleEndian.PutUint32(result[resultIndex+1:], uint32(len(b.ops[i].content)))
+			copy(result[resultIndex+5:], b.ops[i].content)
+			resultIndex += 5 + len(b.ops[i].content)
+		}
+	}
+	return result
+}
+
+func (b *BinaryPatchOpList) Original(index, bytesCount uint32) {
+	if bytesCount == 0 {
+		return
+	}
+
+	b.append(BinaryPatchOp{op: BinaryPatchOriginalOpType, val1: index, val2: bytesCount})
+}
+
+func (b *BinaryPatchOpList) Add(bytesArr []byte) {
+	if len(bytesArr) == 0 {
+		return
+	}
+
+	b.append(BinaryPatchOp{op: BinaryPatchAddOpType, content: bytesArr})
+}
+
+func (b *BinaryPatchOpList) append(op BinaryPatchOp) {
+	// Grow if needed
+	if len(b.ops) <= b.count {
+		b.ops = append(b.ops, make([]BinaryPatchOp, 100)...)
+	}
+	b.ops[b.count] = op
+	b.count++
 }
