@@ -28,10 +28,7 @@ const (
 // so the resulting patch may be bigger than it's needed.
 // It's working nicely for incremental builds though.
 type BinaryPatch struct {
-	buf       *bytes.Buffer
-	uintTmp   []byte
-	lastOp    BinaryPatchOpType
-	lastCount int
+	buf *bytes.Buffer
 }
 
 type BinaryPatchThreshold struct {
@@ -41,8 +38,7 @@ type BinaryPatchThreshold struct {
 
 func NewBinaryPatch() *BinaryPatch {
 	return &BinaryPatch{
-		buf:     bytes.NewBuffer(nil),
-		uintTmp: make([]byte, 4),
+		buf: bytes.NewBuffer(nil),
 	}
 }
 

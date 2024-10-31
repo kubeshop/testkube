@@ -238,33 +238,35 @@ func (r *BinaryStorage) upload(ctx context.Context, name string, binary *Binary)
 
 	if binary.hash != "" && binary.prevHash != "" && r.Is(name, binary.prevHash) {
 		contents, err := binary.patch()
-		gzipContents := bytes.NewBuffer(nil)
-		gz := gzip.NewWriter(gzipContents)
-		io.Copy(gz, bytes.NewBuffer(contents))
-		gz.Flush()
-		gz.Close()
+		if err == nil {
+			gzipContents := bytes.NewBuffer(nil)
+			gz := gzip.NewWriter(gzipContents)
+			io.Copy(gz, bytes.NewBuffer(contents))
+			gz.Flush()
+			gz.Close()
 
-		gzipContentsLen := gzipContents.Len()
-		req, err := http.NewRequestWithContext(ctx, http.MethodPatch, fmt.Sprintf("http://localhost:%d/%s", r.localPort, name), gzipContents)
-		if err != nil {
-			if ctx.Err() != nil {
-				return 0, err
-			}
-			fmt.Printf("error while sending %s patch, fallback to full stream: %s\n", name, err)
-		} else {
-			req.ContentLength = int64(gzipContentsLen)
-			req.Header.Set("Content-Encoding", "gzip")
-			req.Header.Set("X-Prev-Hash", binary.prevHash)
-			req.Header.Set("X-Hash", binary.hash)
-			res, err := client.Do(req)
+			gzipContentsLen := gzipContents.Len()
+			req, err := http.NewRequestWithContext(ctx, http.MethodPatch, fmt.Sprintf("http://localhost:%d/%s", r.localPort, name), gzipContents)
 			if err != nil {
+				if ctx.Err() != nil {
+					return 0, err
+				}
 				fmt.Printf("error while sending %s patch, fallback to full stream: %s\n", name, err)
-			} else if res.StatusCode != http.StatusOK {
-				b, _ := io.ReadAll(res.Body)
-				fmt.Printf("error while sending %s patch, fallback to full stream: status code: %s, message: %s\n", name, res.Status, string(b))
 			} else {
-				r.SetHash(name, binary.hash)
-				return gzipContentsLen, nil
+				req.ContentLength = int64(gzipContentsLen)
+				req.Header.Set("Content-Encoding", "gzip")
+				req.Header.Set("X-Prev-Hash", binary.prevHash)
+				req.Header.Set("X-Hash", binary.hash)
+				res, err := client.Do(req)
+				if err != nil {
+					fmt.Printf("error while sending %s patch, fallback to full stream: %s\n", name, err)
+				} else if res.StatusCode != http.StatusOK {
+					b, _ := io.ReadAll(res.Body)
+					fmt.Printf("error while sending %s patch, fallback to full stream: status code: %s, message: %s\n", name, res.Status, string(b))
+				} else {
+					r.SetHash(name, binary.hash)
+					return gzipContentsLen, nil
+				}
 			}
 		}
 	}
