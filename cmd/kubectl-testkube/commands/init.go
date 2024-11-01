@@ -61,6 +61,7 @@ func NewInitCmd() *cobra.Command {
 func NewInitCmdStandalone() *cobra.Command {
 	var export bool
 	var options common.HelmOptions
+	var setOptions map[string]string
 
 	cmd := &cobra.Command{
 		Use:     standaloneAgentProfile,
@@ -81,7 +82,7 @@ func NewInitCmdStandalone() *cobra.Command {
 			}
 
 			common.ProcessMasterFlags(cmd, &options, nil)
-
+			options.SetOptions = setOptions
 			common.HandleCLIError(common.HelmUpgradeOrInstallTestkube(options))
 
 			ui.Info(`To help improve the quality of Testkube, we collect anonymous basic telemetry data. Head out to https://docs.testkube.io/articles/telemetry to read our policy or feel free to:`)
@@ -97,6 +98,7 @@ func NewInitCmdStandalone() *cobra.Command {
 	}
 
 	cmd.Flags().BoolVarP(&export, "export", "", false, "Export the values.yaml")
+	cmd.Flags().StringToStringVarP(&setOptions, "set", "", nil, "helm option in form of key=value")
 	common.PopulateHelmFlags(cmd, &options)
 	common.PopulateMasterFlags(cmd, &options, false)
 
@@ -106,6 +108,7 @@ func NewInitCmdStandalone() *cobra.Command {
 func NewInitCmdDemo() *cobra.Command {
 	var noConfirm, dryRun, export bool
 	var license, namespace string
+	var setOptions map[string]string
 
 	cmd := &cobra.Command{
 		Use:     demoProfile,
@@ -225,6 +228,7 @@ func NewInitCmdDemo() *cobra.Command {
 				common.HandleCLIError(cliErr)
 			}
 
+			options.SetOptions = setOptions
 			cliErr = common.HelmUpgradeOrInstallTestkubeOnPremDemo(options)
 			if cliErr != nil {
 				spinner.Fail("Failed to install Testkube On-Prem Demo")
@@ -273,6 +277,7 @@ func NewInitCmdDemo() *cobra.Command {
 	cmd.Flags().StringVarP(&license, "license", "l", "", "License key")
 	cmd.Flags().BoolVarP(&dryRun, "dry-run", "", false, "Dry run")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "Namespace to install "+demoInstallationName)
+	cmd.Flags().StringToStringVarP(&setOptions, "set", "", nil, "helm option in form of key=value")
 
 	return cmd
 }

@@ -28,6 +28,7 @@ type HelmOptions struct {
 	Name, Namespace, Chart, Values string
 	NoMinio, NoMongo, NoConfirm    bool
 	MinioReplicas, MongoReplicas   int
+	SetOptions                     map[string]string
 
 	// On-prem
 	LicenseKey    string
@@ -251,6 +252,10 @@ func prepareTestkubeHelmArgs(options HelmOptions) []string {
 		args = append(args, "--set", "testkube-api.logs.storage=mongo")
 	} else {
 		args = append(args, "--set", "testkube-api.logs.storage=minio")
+	}
+
+	for key, value := range options.SetOptions {
+		args = append(args, "--set", fmt.Sprintf("%s=%s", key, value))
 	}
 
 	return args

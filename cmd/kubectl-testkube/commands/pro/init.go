@@ -16,6 +16,8 @@ import (
 func NewInitCmd() *cobra.Command {
 	var export bool
 	var noLogin bool // ignore ask for login
+	var setOptions map[string]string
+
 	options := common.HelmOptions{
 		NoMinio: true,
 		NoMongo: true,
@@ -73,6 +75,7 @@ func NewInitCmd() *cobra.Command {
 			}
 
 			spinner := ui.NewSpinner("Installing Testkube")
+			options.SetOptions = setOptions
 			if cliErr := common.HelmUpgradeOrInstallTestkubeAgent(options, cfg, false); cliErr != nil {
 				spinner.Fail()
 				sendErrTelemetry(cmd, cfg, "helm_install", cliErr)
@@ -119,6 +122,7 @@ func NewInitCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&export, "export", "", false, "Export the values.yaml")
 	cmd.Flags().BoolVar(&options.MultiNamespace, "multi-namespace", false, "multi namespace mode")
 	cmd.Flags().BoolVar(&options.NoOperator, "no-operator", false, "should operator be installed (for more instances in multi namespace mode it should be set to true)")
+	cmd.Flags().StringToStringVarP(&setOptions, "set", "", nil, "helm option in form of key=value")
 
 	return cmd
 }
