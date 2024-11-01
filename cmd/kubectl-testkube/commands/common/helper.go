@@ -101,15 +101,10 @@ func HelmUpgradeOrInstallTestkubeAgent(options HelmOptions, cfg config.Data, isM
 	}
 
 	args := prepareTestkubeProHelmArgs(options, isMigration)
-	output, err := runHelmCommand(helmPath, args, options.DryRun)
+	_, err := runHelmCommand(helmPath, args, options.DryRun)
 	if err != nil {
 		return err
 	}
-
-	ui.Debug("Helm command output:")
-	ui.Debug(helmPath, args...)
-
-	ui.Debug("Helm install testkube output", output)
 
 	return nil
 }
@@ -147,7 +142,7 @@ func lookupHelmPath() (string, *CLIError) {
 	return helmPath, nil
 }
 
-func updateHelmRepo(helmPath string, dryRun bool, isOnPrem bool) *CLIError {
+func updateHelmRepo(helmPath string, dryRun, isOnPrem bool) *CLIError {
 	registryURL := "https://kubeshop.github.io/helm-charts"
 	registryName := "kubeshop"
 	if isOnPrem {
@@ -193,7 +188,10 @@ func CleanExistingCompletedMigrationJobs(namespace string) (cliErr *CLIError) {
 }
 
 func runHelmCommand(helmPath string, args []string, dryRun bool) (commandOutput string, cliErr *CLIError) {
+	ui.Debug("\nHelm command:\n" + strings.Join(append([]string{helmPath}, args...), " "))
+
 	output, err := process.ExecuteWithOptions(process.Options{Command: helmPath, Args: args, DryRun: dryRun})
+	ui.Debug("\nHelm output:\n" + string(output))
 	if err != nil {
 		return "", NewCLIError(
 			TKErrHelmCommandFailed,
@@ -719,7 +717,9 @@ func lookupKubectlPath() (string, *CLIError) {
 }
 
 func runKubectlCommand(kubectlPath string, args []string) (output string, cliErr *CLIError) {
+	ui.Debug("\nKubectl command:\n" + strings.Join(append([]string{kubectlPath}, args...), " "))
 	out, err := process.Execute(kubectlPath, args...)
+	ui.Debug("\nKubectl output:\n" + string(out))
 	if err != nil {
 		return "", NewCLIError(
 			TKErrKubectlCommandFailed,
