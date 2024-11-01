@@ -453,6 +453,7 @@ func LoginUser(authUri string) (string, string, error) {
 	ui.H1("Login")
 	connectorID := ui.Select("Choose your login method", []string{github, gitlab})
 
+	ui.Debug("Logging into cloud with parameters", authUri, connectorID)
 	authUrl, tokenChan, err := cloudlogin.CloudLogin(context.Background(), authUri, strings.ToLower(connectorID))
 	if err != nil {
 		return "", "", fmt.Errorf("cloud login: %w", err)
@@ -467,6 +468,7 @@ func LoginUser(authUri string) (string, string, error) {
 		return "", "", fmt.Errorf("login cancelled")
 	}
 
+	ui.Debug("Opening login page in browser to get a token", authUrl)
 	// open browser with login page and redirect to localhost
 	open.Run(authUrl)
 
