@@ -172,16 +172,18 @@ func CleanExistingCompletedMigrationJobs(namespace string) (cliErr *CLIError) {
 	}
 
 	// Clean the job only when it's found and it's state is successful - ignore pending migrations.
-	succeeded, _ := runKubectlCommand(kubectlPath, []string{"get", "job", "testkube-enterprise-api-migrations", "-n", namespace, "-o", "jsonpath={.status.succeeded}"})
+	cmd := []string{"get", "job", "testkube-enterprise-api-migrations", "-n", namespace, "-o", "jsonpath={.status.succeeded}"}
+	succeeded, _ := runKubectlCommand(kubectlPath, cmd)
 	if succeeded == "1" {
-		_, err := runKubectlCommand(kubectlPath, []string{"delete", "job", "testkube-enterprise-api-migrations", "--namespace", namespace})
+		cmd = []string{"delete", "job", "testkube-enterprise-api-migrations", "--namespace", namespace}
+		_, err := runKubectlCommand(kubectlPath, cmd)
 		if err != nil {
 			return NewCLIError(
 				TKErrCleanOldMigrationJobFailed,
 				"Can't clean old migrations job",
 				"Migration job can't be deleted from some reason, check for errors in installation namespace, check execution. As a workaround try to delete job manually and retry installation/upgrade process",
 				err,
-			)
+			).WithExecutedCommand(strings.Join(cmd, " "))
 		}
 	}
 
@@ -189,7 +191,8 @@ func CleanExistingCompletedMigrationJobs(namespace string) (cliErr *CLIError) {
 }
 
 func runHelmCommand(helmPath string, args []string, dryRun bool) (commandOutput string, cliErr *CLIError) {
-	ui.Debug("\nHelm command:\n" + strings.Join(append([]string{helmPath}, args...), " "))
+	cmd := strings.Join(append([]string{helmPath}, args...), " ")
+	ui.Debug("\nHelm command:\n" + cmd)
 
 	output, err := process.ExecuteWithOptions(process.Options{Command: helmPath, Args: args, DryRun: dryRun})
 	ui.Debug("\nHelm output:\n" + string(output))
@@ -199,7 +202,7 @@ func runHelmCommand(helmPath string, args []string, dryRun bool) (commandOutput 
 			"Helm command failed",
 			"Retry the command with a bigger timeout by setting --timeout 30m, if the error still persists, reach out to Testkube support",
 			err,
-		)
+		).WithExecutedCommand(cmd)
 	}
 	return string(output), nil
 }
@@ -724,7 +727,8 @@ func lookupKubectlPath() (string, *CLIError) {
 }
 
 func runKubectlCommand(kubectlPath string, args []string) (output string, cliErr *CLIError) {
-	ui.Debug("\nKubectl command:\n" + strings.Join(append([]string{kubectlPath}, args...), " "))
+	cmd := strings.Join(append([]string{kubectlPath}, args...), " ")
+	ui.Debug("\nKubectl command:\n" + cmd)
 	out, err := process.Execute(kubectlPath, args...)
 	ui.Debug("\nKubectl output:\n" + string(out))
 	if err != nil {
@@ -733,7 +737,7 @@ func runKubectlCommand(kubectlPath string, args []string) (output string, cliErr
 			"Kubectl command failed",
 			"Check does the kubeconfig file (~/.kube/config) exist and has correct permissions and is the Kubernetes cluster reachable and has Ready nodes by running 'kubectl get nodes' ",
 			err,
-		)
+		).WithExecutedCommand(cmd)
 	}
 	return string(out), nil
 }
@@ -760,7 +764,7 @@ func RunDockerCommand(args []string) (output string, cliErr *CLIError) {
 			"Docker command failed",
 			"Check is the Docker service installed and running on your computer by executing 'docker info' ",
 			err,
-		)
+		).WithExecutedCommand(strings.Join(append([]string{"docker"}, args...), " "))
 	}
 	return string(out), nil
 }

@@ -52,13 +52,14 @@ const (
 const helpUrl = "https://testkubeworkspace.slack.com"
 
 type CLIError struct {
-	Code        ErrorCode
-	Title       string
-	Description string
-	ActualError error
-	StackTrace  string
-	MoreInfo    string
-	Telemetry   *ErrorTelemetry
+	Code            ErrorCode
+	Title           string
+	Description     string
+	ActualError     error
+	StackTrace      string
+	MoreInfo        string
+	ExecutedCommand string
+	Telemetry       *ErrorTelemetry
 }
 
 type ErrorTelemetry struct {
@@ -86,6 +87,10 @@ func (e *CLIError) Print() {
 
 	pterm.DefaultSection.Println("Error Details")
 
+	if e.ExecutedCommand != "" {
+		pterm.Printfln("Executed command: %s", e.ExecutedCommand)
+	}
+
 	items := []pterm.BulletListItem{
 		{Level: 0, Text: pterm.Sprintf("[%s]: %s", e.Code, e.Title), TextStyle: pterm.NewStyle(pterm.FgRed)},
 		{Level: 0, Text: pterm.Sprintf("%s", e.Description), TextStyle: pterm.NewStyle(pterm.FgLightWhite)},
@@ -109,6 +114,11 @@ func NewCLIError(code ErrorCode, title, moreInfoURL string, err error) *CLIError
 		MoreInfo:    moreInfoURL,
 		StackTrace:  fmt.Sprintf("%+v", err),
 	}
+}
+
+func (err *CLIError) WithExecutedCommand(executedCommand string) *CLIError {
+	err.ExecutedCommand = executedCommand
+	return err
 }
 
 // HandleCLIError checks does the error exist, and if it does, prints the error and exits the program.
