@@ -30,6 +30,7 @@ type CloudContext struct {
 	UiUri               string `json:"uiUri,omitempty"`
 	TokenType           string `json:"tokenType,omitempty"`
 	DockerContainerName string `json:"dockerContainerName,omitempty"`
+	CustomAuth          bool   `json:"customConnector,omitempty"`
 }
 
 type Data struct {
