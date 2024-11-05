@@ -17,8 +17,7 @@ import (
 )
 
 const (
-	RFC3339Millis  = "2006-01-02T15:04:05.000Z07:00"
-	InternalFnCall = "__internal__fn__call__"
+	RFC3339Millis = "2006-01-02T15:04:05.000Z07:00"
 )
 
 type StdFunction struct {

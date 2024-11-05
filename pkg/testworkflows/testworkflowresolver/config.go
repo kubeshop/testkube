@@ -83,7 +83,7 @@ func getSecretCallExpression(expr expressions.Expression, k string, externalize 
 		return nil, errors.Wrap(err, "config."+k)
 	}
 	if envVar.SecretKeyRef != nil {
-		expr = expressions.NewValue(fmt.Sprintf("{{%ssecret(\"%s\", \"%s\", true)}}", expressions.InternalFnCall,
+		return expressions.Compile(fmt.Sprintf("secret(\"%s\", \"%s\", true)",
 			envVar.SecretKeyRef.Name, envVar.SecretKeyRef.Key))
 	}
 
