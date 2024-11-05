@@ -204,7 +204,7 @@ func runHelmCommand(helmPath string, args []string, dryRun bool) (commandOutput 
 		return "", NewCLIError(
 			TKErrHelmCommandFailed,
 			"Helm command failed",
-			"Retry the command with a bigger timeout by setting --timeout 30m, if the error still persists, reach out to Testkube support",
+			"Retry the command with a bigger timeout by setting --helm-arg timeout=30m, if the error still persists, reach out to Testkube support",
 			err,
 		).WithExecutedCommand(cmd)
 	}
