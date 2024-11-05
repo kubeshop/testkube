@@ -3,6 +3,7 @@ package common
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -87,8 +88,13 @@ func (e *CLIError) Print() {
 
 	pterm.DefaultSection.Println("Error Details")
 
+	cmd := ""
 	if e.ExecutedCommand != "" {
 		pterm.Printfln("Executed command: %s", e.ExecutedCommand)
+		params := strings.Split(e.ExecutedCommand, " ")
+		if len(params) > 0 {
+			cmd = params[0]
+		}
 	}
 
 	items := []pterm.BulletListItem{
@@ -99,6 +105,9 @@ func (e *CLIError) Print() {
 		items = append(items, pterm.BulletListItem{Level: 0, Text: pterm.Sprintf("%s", e.MoreInfo), TextStyle: pterm.NewStyle(pterm.FgGray)})
 	}
 	pterm.DefaultBulletList.WithItems(items).Render()
+	if cmd != "" {
+		pterm.DefaultBox.Printfln("Error description is provided in context of binary execution %s", cmd)
+	}
 
 	pterm.Println()
 	pterm.Println("Let us help you!")

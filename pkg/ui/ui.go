@@ -61,6 +61,7 @@ func WarnOnErrorAndOutputPretty(item string, outputPretty bool, errors ...error)
 func Logo()                                         { ui.Logo() }
 func LogoNoColor()                                  { ui.LogoNoColor() }
 func NL(amount ...int)                              { ui.NL(amount...) }
+func DebugNL(amount ...int)                         { ui.DebugNL(amount...) }
 func H1(message string)                             { ui.H1(message) }
 func H2(message string)                             { ui.H2(message) }
 func Paragraph(message string)                      { ui.Paragraph(message) }

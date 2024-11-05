@@ -37,6 +37,13 @@ func (ui *UI) NL(amount ...int) {
 	fmt.Fprintln(ui.Writer)
 }
 
+func (ui *UI) DebugNL(amount ...int) {
+	if !ui.Verbose {
+		return
+	}
+	ui.NL(amount...)
+}
+
 // Success shows success in terminal
 func (ui *UI) Success(message string, subMessages ...string) {
 	fmt.Fprintf(ui.Writer, "%s", LightYellow(message))

@@ -192,10 +192,14 @@ func CleanExistingCompletedMigrationJobs(namespace string) (cliErr *CLIError) {
 
 func runHelmCommand(helmPath string, args []string, dryRun bool) (commandOutput string, cliErr *CLIError) {
 	cmd := strings.Join(append([]string{helmPath}, args...), " ")
-	ui.Debug("\nHelm command:\n" + cmd)
+	ui.DebugNL()
+	ui.Debug("Helm command:")
+	ui.Debug(cmd)
 
 	output, err := process.ExecuteWithOptions(process.Options{Command: helmPath, Args: args, DryRun: dryRun})
-	ui.Debug("\nHelm output:\n" + string(output))
+	ui.DebugNL()
+	ui.Debug("Helm output:")
+	ui.Debug(string(output))
 	if err != nil {
 		return "", NewCLIError(
 			TKErrHelmCommandFailed,
@@ -208,40 +212,65 @@ func runHelmCommand(helmPath string, args []string, dryRun bool) (commandOutput 
 }
 
 func prepareTestkubeOnPremDemoArgs(options HelmOptions) []string {
-	return []string{
+	args := []string{
 		"upgrade", "--install",
 		"--create-namespace",
 		"--namespace", options.Namespace,
-		"--set", "global.enterpriseLicenseKey=" + options.LicenseKey,
-		"--values", options.DemoValuesURL,
+	}
+
+	settings := map[string]string{
+		"global.enterpriseLicenseKey": options.LicenseKey,
+	}
+
+	for key, value := range settings {
+		if _, ok := options.SetOptions[key]; !ok {
+			args = append(args, "--set", fmt.Sprintf("%s=%s", key, value))
+		}
+	}
+
+	for key, value := range options.SetOptions {
+		args = append(args, "--set", fmt.Sprintf("%s=%s", key, value))
+	}
+
+	args = append(args, "--values", options.DemoValuesURL,
 		"--wait",
-		"testkube", "testkubeenterprise/testkube-enterprise"}
+		"testkube", "testkubeenterprise/testkube-enterprise")
+
+	return args
 }
 
 // prepareTestkubeProHelmArgs prepares Helm arguments for Testkube Pro installation.
 func prepareTestkubeProHelmArgs(options HelmOptions, isMigration bool) []string {
-	args := prepareCommonHelmArgs(options)
+	args, settings := prepareCommonHelmArgs(options)
 
-	args = append(args,
-		"--set", "testkube-api.cloud.url="+options.Master.URIs.Agent,
-		"--set", "testkube-api.cloud.key="+options.Master.AgentToken,
-		"--set", "testkube-api.cloud.uiURL="+options.Master.URIs.Ui,
-		"--set", "testkube-logs.pro.url="+options.Master.URIs.Logs,
-		"--set", "testkube-logs.pro.key="+options.Master.AgentToken,
-	)
+	settings["testkube-api.cloud.url"] = options.Master.URIs.Agent
+	settings["testkube-api.cloud.key"] = options.Master.AgentToken
+	settings["testkube-api.cloud.uiURL"] = options.Master.URIs.Ui
+	settings["testkube-logs.pro.url"] = options.Master.URIs.Logs
+	settings["testkube-logs.pro.key"] = options.Master.AgentToken
 
 	if isMigration {
-		args = append(args, "--set", "testkube-api.cloud.migrate=true")
+		settings["testkube-api.cloud.migrate"] = "true"
 	}
 
 	if options.Master.EnvId != "" {
-		args = append(args, "--set", fmt.Sprintf("testkube-api.cloud.envId=%s", options.Master.EnvId))
-		args = append(args, "--set", fmt.Sprintf("testkube-logs.pro.envId=%s", options.Master.EnvId))
+		settings["testkube-api.cloud.envId"] = options.Master.EnvId
+		settings["testkube-logs.pro.envId"] = options.Master.EnvId
 	}
 
 	if options.Master.OrgId != "" {
-		args = append(args, "--set", fmt.Sprintf("testkube-api.cloud.orgId=%s", options.Master.OrgId))
-		args = append(args, "--set", fmt.Sprintf("testkube-logs.pro.orgId=%s", options.Master.OrgId))
+		settings["testkube-api.cloud.orgId"] = options.Master.OrgId
+		settings["testkube-logs.pro.orgId"] = options.Master.OrgId
+	}
+
+	for key, value := range settings {
+		if _, ok := options.SetOptions[key]; !ok {
+			args = append(args, "--set", fmt.Sprintf("%s=%s", key, value))
+		}
+	}
+
+	for key, value := range options.SetOptions {
+		args = append(args, "--set", fmt.Sprintf("%s=%s", key, value))
 	}
 
 	return args
@@ -249,12 +278,18 @@ func prepareTestkubeProHelmArgs(options HelmOptions, isMigration bool) []string 
 
 // prepareTestkubeHelmArgs prepares Helm arguments for Testkube OS installation.
 func prepareTestkubeHelmArgs(options HelmOptions) []string {
-	args := prepareCommonHelmArgs(options)
+	args, settings := prepareCommonHelmArgs(options)
 
 	if options.NoMinio {
-		args = append(args, "--set", "testkube-api.logs.storage=mongo")
+		settings["testkube-api.logs.storage"] = "mongo"
 	} else {
-		args = append(args, "--set", "testkube-api.logs.storage=minio")
+		settings["testkube-api.logs.storage"] = "minio"
+	}
+
+	for key, value := range settings {
+		if _, ok := options.SetOptions[key]; !ok {
+			args = append(args, "--set", fmt.Sprintf("%s=%s", key, value))
+		}
 	}
 
 	for key, value := range options.SetOptions {
@@ -265,16 +300,20 @@ func prepareTestkubeHelmArgs(options HelmOptions) []string {
 }
 
 // prepareCommonHelmArgs prepares common Helm arguments for both OS and Pro installation.
-func prepareCommonHelmArgs(options HelmOptions) []string {
+func prepareCommonHelmArgs(options HelmOptions) ([]string, map[string]string) {
 	args := []string{
 		"upgrade", "--install", "--create-namespace",
 		"--namespace", options.Namespace,
-		"--set", fmt.Sprintf("global.features.logsV2=%v", options.Master.Features.LogsV2),
-		"--set", fmt.Sprintf("testkube-api.multinamespace.enabled=%t", options.MultiNamespace),
-		"--set", fmt.Sprintf("testkube-api.minio.enabled=%t", !options.NoMinio),
-		"--set", fmt.Sprintf("testkube-api.minio.replicas=%d", options.MinioReplicas), "--set", fmt.Sprintf("testkube-operator.enabled=%t", !options.NoOperator),
-		"--set", fmt.Sprintf("mongodb.enabled=%t", !options.NoMongo),
-		"--set", fmt.Sprintf("mongodb.replicas=%d", options.MongoReplicas),
+	}
+
+	settings := map[string]string{
+		"global.features.logsV2":              fmt.Sprintf("%v", options.Master.Features.LogsV2),
+		"testkube-api.multinamespace.enabled": fmt.Sprintf("%t", options.MultiNamespace),
+		"testkube-api.minio.enabled":          fmt.Sprintf("%t", !options.NoMinio),
+		"testkube-api.minio.replicas":         fmt.Sprintf("%d", options.MinioReplicas),
+		"testkube-operator.enabled":           fmt.Sprintf("%t", !options.NoOperator),
+		"mongodb.enabled":                     fmt.Sprintf("%t", !options.NoMongo),
+		"mongodb.replicas":                    fmt.Sprintf("%d", options.MongoReplicas),
 	}
 
 	if options.Values != "" {
@@ -283,12 +322,12 @@ func prepareCommonHelmArgs(options HelmOptions) []string {
 
 	// if embedded nats is enabled disable nats chart
 	if options.EmbeddedNATS {
-		args = append(args, "--set", "testkube-api.nats.enabled=false")
-		args = append(args, "--set", "testkube-api.nats.embedded=true")
+		settings["testkube-api.nats.enabled"] = "false"
+		settings["testkube-api.nats.embedded"] = "true"
 	}
 
 	args = append(args, options.Name, options.Chart)
-	return args
+	return args, settings
 }
 
 func PopulateHelmFlags(cmd *cobra.Command, options *HelmOptions) {
@@ -728,9 +767,13 @@ func lookupKubectlPath() (string, *CLIError) {
 
 func runKubectlCommand(kubectlPath string, args []string) (output string, cliErr *CLIError) {
 	cmd := strings.Join(append([]string{kubectlPath}, args...), " ")
-	ui.Debug("\nKubectl command:\n" + cmd)
+	ui.DebugNL()
+	ui.Debug("Kubectl command:")
+	ui.Debug(cmd)
 	out, err := process.Execute(kubectlPath, args...)
-	ui.Debug("\nKubectl output:\n" + string(out))
+	ui.DebugNL()
+	ui.Debug("Kubectl output:")
+	ui.Debug(string(out))
 	if err != nil {
 		return "", NewCLIError(
 			TKErrKubectlCommandFailed,
