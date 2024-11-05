@@ -223,7 +223,10 @@ func appendHelmArgs(args []string, options HelmOptions, settings map[string]stri
 	}
 
 	for key, value := range options.ArgOptions {
-		args = append(args, fmt.Sprintf("--%s %s", key, value))
+		args = append(args, fmt.Sprintf("--%s", key))
+		if value != "" {
+			args = append(args, value)
+		}
 	}
 
 	return args
