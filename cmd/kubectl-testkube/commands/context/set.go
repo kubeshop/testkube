@@ -98,10 +98,6 @@ func NewSetContextCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&apiKey, "api-key", "k", "", "API Key for Testkube Pro")
 
 	// allow to override default values of all URIs
-	cmd.Flags().String("api-uri-override", "", "api uri override")
-	cmd.Flags().String("ui-uri-override", "", "ui uri override")
-	cmd.Flags().String("agent-uri-override", "", "agnet uri override")
-	cmd.Flags().String("logs-uri-override", "", "logs service uri override")
 	cmd.Flags().StringVar(&dockerContainerName, "docker-container", "testkube-agent", "Docker container name for Testkube Docker Agent")
 
 	common.PopulateMasterFlags(cmd, &opts, false)

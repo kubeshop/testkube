@@ -16,6 +16,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/pro"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
+	"github.com/kubeshop/testkube/cmd/tcl/kubectl-testkube/devbox"
 	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -64,6 +65,8 @@ func init() {
 	RootCmd.AddCommand(NewProCmd())
 	RootCmd.AddCommand(NewDockerCmd())
 	RootCmd.AddCommand(pro.NewLoginCmd())
+
+	RootCmd.AddCommand(devbox.NewDevBoxCommand())
 
 	RootCmd.SetHelpCommand(NewHelpCmd())
 }

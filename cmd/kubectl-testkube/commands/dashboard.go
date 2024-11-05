@@ -34,8 +34,8 @@ func NewDashboardCmd() *cobra.Command {
 			cfg, err := config.Load()
 			ui.ExitOnError("loading config file", err)
 
-			if namespace == "" {
-				namespace = cfg.Namespace
+			if namespace != "" {
+				cfg.Namespace = namespace
 			}
 
 			if cfg.ContextType != config.ContextTypeCloud {
@@ -43,7 +43,7 @@ func NewDashboardCmd() *cobra.Command {
 				if isDashboardRunning {
 					openOnPremDashboard(cmd, cfg, verbose, skipBrowser, "")
 				} else {
-					ui.Warn("No dashboard found. Is it running in the " + namespace + " namespace?")
+					ui.Warn("No dashboard found. Is it running in the " + cfg.Namespace + " namespace?")
 				}
 			} else {
 				openCloudDashboard(cfg)

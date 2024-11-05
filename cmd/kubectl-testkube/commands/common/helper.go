@@ -482,9 +482,12 @@ func PopulateCloudConfig(cfg config.Data, apiKey string, dockerContainerName *st
 	return cfg
 }
 
-func LoginUser(authUri string) (string, string, error) {
+func LoginUser(authUri string, customConnector bool) (string, string, error) {
 	ui.H1("Login")
-	connectorID := ui.Select("Choose your login method", []string{github, gitlab})
+	connectorID := ""
+	if !customConnector {
+		connectorID = ui.Select("Choose your login method", []string{github, gitlab})
+	}
 
 	ui.Debug("Logging into cloud with parameters", authUri, connectorID)
 	authUrl, tokenChan, err := cloudlogin.CloudLogin(context.Background(), authUri, strings.ToLower(connectorID))

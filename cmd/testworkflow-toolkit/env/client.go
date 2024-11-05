@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"net/url"
+	"strconv"
 
 	corev1 "k8s.io/api/core/v1"
 
@@ -68,12 +70,20 @@ func ImageInspector() imageinspector.Inspector {
 }
 
 func Testkube() client.Client {
+	uri, err := url.Parse(config2.Config().Worker.Connection.LocalApiUrl)
+	host := config.APIServerName
+	port := config.APIServerPort
+	if err == nil {
+		host = uri.Hostname()
+		portStr, _ := strconv.ParseInt(uri.Port(), 10, 32)
+		port = int(portStr)
+	}
 	if config2.UseProxy() {
-		return client.NewProxyAPIClient(Kubernetes(), client.NewAPIConfig(config2.Namespace(), config.APIServerName, config.APIServerPort))
+		return client.NewProxyAPIClient(Kubernetes(), client.NewAPIConfig(config2.Namespace(), host, port))
 	}
 	httpClient := phttp.NewClient(true)
 	sseClient := phttp.NewSSEClient(true)
-	return client.NewDirectAPIClient(httpClient, sseClient, fmt.Sprintf("http://%s:%d", config.APIServerName, config.APIServerPort), "")
+	return client.NewDirectAPIClient(httpClient, sseClient, fmt.Sprintf("http://%s:%d", host, port), "")
 }
 
 func Cloud(ctx context.Context) (cloudexecutor.Executor, cloud.TestKubeCloudAPIClient) {
