@@ -90,7 +90,7 @@ func (e *CLIError) Print() {
 
 	cmd := ""
 	if e.ExecutedCommand != "" {
-		pterm.Printfln("Executed command: %s", e.ExecutedCommand)
+		pterm.FgDarkGray.Printfln("Executed command: %s", e.ExecutedCommand)
 		params := strings.Split(e.ExecutedCommand, " ")
 		if len(params) > 0 {
 			cmd = params[0]

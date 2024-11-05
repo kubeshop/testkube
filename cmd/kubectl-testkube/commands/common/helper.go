@@ -28,7 +28,7 @@ type HelmOptions struct {
 	Name, Namespace, Chart, Values string
 	NoMinio, NoMongo, NoConfirm    bool
 	MinioReplicas, MongoReplicas   int
-	SetOptions                     map[string]string
+	SetOptions, ArgOptions         map[string]string
 
 	// On-prem
 	LicenseKey    string
@@ -211,6 +211,24 @@ func runHelmCommand(helmPath string, args []string, dryRun bool) (commandOutput 
 	return string(output), nil
 }
 
+func appendHelmArgs(args []string, options HelmOptions, settings map[string]string) []string {
+	for key, value := range settings {
+		if _, ok := options.SetOptions[key]; !ok {
+			args = append(args, "--set", fmt.Sprintf("%s=%s", key, value))
+		}
+	}
+
+	for key, value := range options.SetOptions {
+		args = append(args, "--set", fmt.Sprintf("%s=%s", key, value))
+	}
+
+	for key, value := range options.ArgOptions {
+		args = append(args, fmt.Sprintf("--%s %s", key, value))
+	}
+
+	return args
+}
+
 func prepareTestkubeOnPremDemoArgs(options HelmOptions) []string {
 	args := []string{
 		"upgrade", "--install",
@@ -222,17 +240,7 @@ func prepareTestkubeOnPremDemoArgs(options HelmOptions) []string {
 		"global.enterpriseLicenseKey": options.LicenseKey,
 	}
 
-	for key, value := range settings {
-		if _, ok := options.SetOptions[key]; !ok {
-			args = append(args, "--set", fmt.Sprintf("%s=%s", key, value))
-		}
-	}
-
-	for key, value := range options.SetOptions {
-		args = append(args, "--set", fmt.Sprintf("%s=%s", key, value))
-	}
-
-	args = append(args, "--values", options.DemoValuesURL,
+	args = append(appendHelmArgs(args, options, settings), "--values", options.DemoValuesURL,
 		"--wait",
 		"testkube", "testkubeenterprise/testkube-enterprise")
 
@@ -263,17 +271,7 @@ func prepareTestkubeProHelmArgs(options HelmOptions, isMigration bool) []string 
 		settings["testkube-logs.pro.orgId"] = options.Master.OrgId
 	}
 
-	for key, value := range settings {
-		if _, ok := options.SetOptions[key]; !ok {
-			args = append(args, "--set", fmt.Sprintf("%s=%s", key, value))
-		}
-	}
-
-	for key, value := range options.SetOptions {
-		args = append(args, "--set", fmt.Sprintf("%s=%s", key, value))
-	}
-
-	return args
+	return appendHelmArgs(args, options, settings)
 }
 
 // prepareTestkubeHelmArgs prepares Helm arguments for Testkube OS installation.
@@ -286,17 +284,7 @@ func prepareTestkubeHelmArgs(options HelmOptions) []string {
 		settings["testkube-api.logs.storage"] = "minio"
 	}
 
-	for key, value := range settings {
-		if _, ok := options.SetOptions[key]; !ok {
-			args = append(args, "--set", fmt.Sprintf("%s=%s", key, value))
-		}
-	}
-
-	for key, value := range options.SetOptions {
-		args = append(args, "--set", fmt.Sprintf("%s=%s", key, value))
-	}
-
-	return args
+	return appendHelmArgs(args, options, settings)
 }
 
 // prepareCommonHelmArgs prepares common Helm arguments for both OS and Pro installation.
