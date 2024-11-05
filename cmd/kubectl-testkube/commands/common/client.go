@@ -100,7 +100,7 @@ func GetClient(cmd *cobra.Command) (client.Client, string, error) {
 			token, refreshToken, err = cloudlogin.CheckAndRefreshToken(context.Background(), authURI, cfg.CloudContext.ApiKey, cfg.CloudContext.RefreshToken)
 			if err != nil {
 				// Error: failed refreshing, go thru login flow
-				token, refreshToken, err = LoginUser(authURI)
+				token, refreshToken, err = LoginUser(authURI, cfg.CloudContext.CustomAuth)
 				if err != nil {
 					return nil, "", fmt.Errorf("error logging in: %w", err)
 				}
