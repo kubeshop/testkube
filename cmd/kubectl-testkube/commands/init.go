@@ -83,6 +83,10 @@ func NewInitCmdStandalone() *cobra.Command {
 
 			common.ProcessMasterFlags(cmd, &options, nil)
 			options.SetOptions = setOptions
+
+			ui.NL()
+			ui.Info("Running Helm command...")
+			ui.NL()
 			common.HandleCLIError(common.HelmUpgradeOrInstallTestkube(options))
 
 			ui.Info(`To help improve the quality of Testkube, we collect anonymous basic telemetry data. Head out to https://docs.testkube.io/articles/telemetry to read our policy or feel free to:`)
@@ -135,6 +139,9 @@ func NewInitCmdDemo() *cobra.Command {
 
 			sendTelemetry(cmd, cfg, license, "installation launched")
 
+			ui.NL()
+			ui.Info("Running Kubectl command...")
+			ui.NL()
 			kubecontext, cliErr := common.GetCurrentKubernetesContext()
 			if cliErr != nil {
 				if cfg.TelemetryEnabled {
@@ -218,6 +225,7 @@ func NewInitCmdDemo() *cobra.Command {
 				DryRun:        dryRun,
 			}
 
+			spinner.Info("Running Kubectl command...")
 			cliErr = common.CleanExistingCompletedMigrationJobs(options.Namespace)
 			if cliErr != nil {
 				spinner.Fail("Failed to install Testkube On-Prem Demo")
@@ -229,6 +237,7 @@ func NewInitCmdDemo() *cobra.Command {
 			}
 
 			options.SetOptions = setOptions
+			spinner.Info("Running Helm command...")
 			cliErr = common.HelmUpgradeOrInstallTestkubeOnPremDemo(options)
 			if cliErr != nil {
 				spinner.Fail("Failed to install Testkube On-Prem Demo")
@@ -268,6 +277,10 @@ func NewInitCmdDemo() *cobra.Command {
 			sendTelemetry(cmd, cfg, license, "opening dashboard")
 			cfg, err = config.Load()
 			ui.ExitOnError("Cannot open dashboard", err)
+
+			ui.NL()
+			ui.Info("Launching web browser...")
+			ui.NL()
 			openOnPremDashboard(cmd, cfg, false, false, license)
 		},
 	}

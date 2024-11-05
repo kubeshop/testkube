@@ -58,6 +58,9 @@ func NewInitCmd() *cobra.Command {
 				ui.Warn("Please be sure you're on valid kubectl context before continuing!")
 				ui.NL()
 
+				ui.NL()
+				ui.Info("Running Kubectl command...")
+				ui.NL()
 				currentContext, cliErr := common.GetCurrentKubernetesContext()
 				if cliErr != nil {
 					sendErrTelemetry(cmd, cfg, "k8s_context", err)
@@ -76,6 +79,7 @@ func NewInitCmd() *cobra.Command {
 
 			spinner := ui.NewSpinner("Installing Testkube")
 			options.SetOptions = setOptions
+			spinner.Info("Running Helm command...")
 			if cliErr := common.HelmUpgradeOrInstallTestkubeAgent(options, cfg, false); cliErr != nil {
 				spinner.Fail()
 				sendErrTelemetry(cmd, cfg, "helm_install", cliErr)
@@ -101,6 +105,9 @@ func NewInitCmd() *cobra.Command {
 			ui.H2("Saving Testkube CLI Pro context")
 			var token, refreshToken string
 			if !common.IsUserLoggedIn(cfg, options) {
+				ui.NL()
+				ui.Info("Launching web browser...")
+				ui.NL()
 				token, refreshToken, err = common.LoginUser(options.Master.URIs.Auth)
 				sendErrTelemetry(cmd, cfg, "login", err)
 				ui.ExitOnError("user login", err)
