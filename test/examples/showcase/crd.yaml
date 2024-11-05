@@ -500,5 +500,4 @@ spec:
 # **ShowCase 7: Passing data between steps. (testsuite like)**
 
 # **ShowCase 9: Running Tests Across Multiple Environments**
-
-# e.g., that example we created for Coreweave where there could be a Test Worklfow triggering Workflows in other environments in parallel
+# TODO: testkube org
