@@ -499,5 +499,33 @@ spec:
         - '**/*'
 # **ShowCase 7: Passing data between steps. (testsuite like)**
 
+---
 # **ShowCase 9: Running Tests Across Multiple Environments**
-# TODO: testkube org
+kind: TestWorkflowTemplate
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: template-trigger-remote-workflow
+spec:
+  config:
+    apiToken:
+      type: string
+      sensitive: true
+    environmentId:
+      type: string
+    organizationId:
+      type: string
+    rootDomain:
+      type: string
+      default: testkube.io
+    workflowToRun:
+      type: string
+  steps:
+  - run:
+      image: kubeshop/testkube-cli:latest
+      shell: |
+        testkube set context \
+          --api-key {{ shellquote(config.apiToken) }} \
+          --root-domain {{ shellquote(config.rootDomain) }} \
+          --org-id {{ shellquote(config.organizationId) }} \
+          --env-id {{ shellquote(config.environmentId) }}
+        testkube run tw {{ shellquote(config.workflowToRun) }} -f
