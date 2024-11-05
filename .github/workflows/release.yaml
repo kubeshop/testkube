@@ -74,7 +74,7 @@ jobs:
         uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser-pro
-          version: latest
+          version: 'v2.3.2' # 2.4.4 fails with "no such file or directory"
           args: release -f ${{ matrix.path }} --skip=publish
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
@@ -214,7 +214,7 @@ jobs:
         uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser-pro
-          version: latest
+          version: 'v2.3.2' # 2.4.4 fails with "no such file or directory"
           args: release -f .goreleaser.yml
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
