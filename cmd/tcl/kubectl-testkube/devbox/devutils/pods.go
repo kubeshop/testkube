@@ -191,10 +191,10 @@ func (p *PodObject) ClusterAddress() string {
 	return fmt.Sprintf("%s.%s.svc", p.service.Name, p.service.Namespace)
 }
 
-func (p *PodObject) CreateService(ctx context.Context, ports ...corev1.ServicePort) error {
+func (p *PodObject) CreateNamedService(ctx context.Context, name string, ports ...corev1.ServicePort) error {
 	request := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: p.name,
+			Name: name,
 		},
 		Spec: corev1.ServiceSpec{
 			Type: corev1.ServiceTypeClusterIP,
@@ -218,6 +218,10 @@ func (p *PodObject) CreateService(ctx context.Context, ports ...corev1.ServicePo
 	}
 	p.service = svc
 	return nil
+}
+
+func (p *PodObject) CreateService(ctx context.Context, ports ...corev1.ServicePort) error {
+	return p.CreateNamedService(ctx, p.name, ports...)
 }
 
 func (p *PodObject) Forward(_ context.Context, clusterPort, localPort int, ping bool) error {

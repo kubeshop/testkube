@@ -45,6 +45,7 @@ const (
 
 func NewDevBoxCommand() *cobra.Command {
 	var (
+		oss              bool
 		rawDevboxName    string
 		open             bool
 		baseAgentImage   string
@@ -74,6 +75,8 @@ func NewDevBoxCommand() *cobra.Command {
 				ui.Fail(errors.New("testkube repository not found"))
 			}
 
+			var err error
+
 			// Connect to cluster
 			cluster, err := devutils.NewCluster()
 			if err != nil {
@@ -86,26 +89,30 @@ func NewDevBoxCommand() *cobra.Command {
 				pterm.Error.Printfln("Failed to load config file: %s", err.Error())
 				return
 			}
-			cfg.CloudContext.AgentUri = "https://agent-dev.testkube.dev"
-			cloud, err := devutils.NewCloud(cfg.CloudContext, cmd)
-			if err != nil {
-				pterm.Error.Printfln("Failed to connect to Cloud: %s", err.Error())
-				return
+			var cloud *devutils.CloudObject
+			if !oss {
+				cloud, err = devutils.NewCloud(cfg.CloudContext, cmd)
+				if err != nil {
+					pterm.Error.Printfln("Failed to connect to Cloud: %s", err.Error())
+					return
+				}
 			}
 
 			// Detect obsolete devbox environments
-			if obsolete := cloud.ListObsolete(); len(obsolete) > 0 {
-				count := 0
-				for _, env := range obsolete {
-					err := cloud.DeleteEnvironment(env.Id)
-					if err != nil {
-						fmt.Printf("Failed to delete obsolete devbox environment (%s): %s\n", env.Name, err.Error())
-						continue
+			if !oss {
+				if obsolete := cloud.ListObsolete(); len(obsolete) > 0 {
+					count := 0
+					for _, env := range obsolete {
+						err := cloud.DeleteEnvironment(env.Id)
+						if err != nil {
+							fmt.Printf("Failed to delete obsolete devbox environment (%s): %s\n", env.Name, err.Error())
+							continue
+						}
+						cluster.Namespace(env.Name).Destroy()
+						count++
 					}
-					cluster.Namespace(env.Name).Destroy()
-					count++
+					fmt.Printf("Deleted %d/%d obsolete devbox environments\n", count, len(obsolete))
 				}
-				fmt.Printf("Deleted %d/%d obsolete devbox environments\n", count, len(obsolete))
 			}
 
 			// Initialize bare cluster resources
@@ -113,6 +120,8 @@ func NewDevBoxCommand() *cobra.Command {
 			interceptorPod := namespace.Pod("devbox-interceptor")
 			agentPod := namespace.Pod("devbox-agent")
 			binaryStoragePod := namespace.Pod("devbox-binary")
+			mongoPod := namespace.Pod("devbox-mongodb")
+			minioPod := namespace.Pod("devbox-minio")
 
 			// Initialize binaries
 			interceptorBin := devutils.NewBinary(InterceptorMainPath, cluster.OperatingSystem(), cluster.Architecture())
@@ -132,6 +141,8 @@ func NewDevBoxCommand() *cobra.Command {
 			interceptor := devutils.NewInterceptor(interceptorPod, baseInitImage, baseToolkitImage, interceptorBin)
 			agent := devutils.NewAgent(agentPod, cloud, baseAgentImage, baseInitImage, baseToolkitImage)
 			binaryStorage := devutils.NewBinaryStorage(binaryStoragePod, binaryStorageBin)
+			mongo := devutils.NewMongo(mongoPod)
+			minio := devutils.NewMinio(minioPod)
 			var env *client.Environment
 
 			// Cleanup
@@ -170,16 +181,30 @@ func NewDevBoxCommand() *cobra.Command {
 			}
 
 			// Create environment in the Cloud
-			fmt.Println("Creating environment in Cloud...")
-			env, err = cloud.CreateEnvironment(namespace.Name())
-			if err != nil {
-				fail(errors.Wrap(err, "failed to create Cloud environment"))
+			if !oss {
+				fmt.Println("Creating environment in Cloud...")
+				env, err = cloud.CreateEnvironment(namespace.Name())
+				if err != nil {
+					fail(errors.Wrap(err, "failed to create Cloud environment"))
+				}
 			}
 
 			// Create namespace
 			fmt.Println("Creating namespace...")
 			if err = namespace.Create(); err != nil {
 				fail(errors.Wrap(err, "failed to create namespace"))
+			}
+
+			// Create resources accessor
+			var resources devutils.ResourcesClient
+			if oss {
+				resources = devutils.NewDirectResourcesClient(cluster.KubeClient(), namespace.Name())
+			} else {
+				client, err := cloud.Client(env.Id)
+				if err != nil {
+					fail(errors.Wrap(err, "failed to create cloud client"))
+				}
+				resources = client
 			}
 
 			g, _ := errgroup.WithContext(ctx)
@@ -233,6 +258,36 @@ func NewDevBoxCommand() *cobra.Command {
 				close(binaryStorageReadiness)
 				return nil
 			})
+
+			if oss {
+				// Deploying Minio
+				g.Go(func() error {
+					fmt.Println("[Minio] Deploying...")
+					if err = minio.Create(ctx); err != nil {
+						fail(errors.Wrap(err, "failed to create Minio service"))
+					}
+					fmt.Println("[Minio] Waiting for readiness...")
+					if err = minio.WaitForReady(ctx); err != nil {
+						fail(errors.Wrap(err, "failed to create Minio service"))
+					}
+					fmt.Println("[Minio] Ready")
+					return nil
+				})
+
+				// Deploying Mongo
+				g.Go(func() error {
+					fmt.Println("[Mongo] Deploying...")
+					if err = mongo.Create(ctx); err != nil {
+						fail(errors.Wrap(err, "failed to create Mongo service"))
+					}
+					fmt.Println("[Mongo] Waiting for readiness...")
+					if err = mongo.WaitForReady(ctx); err != nil {
+						fail(errors.Wrap(err, "failed to create Mongo service"))
+					}
+					fmt.Println("[Mongo] Ready")
+					return nil
+				})
+			}
 
 			// Deploying the Agent
 			g.Go(func() error {
@@ -349,14 +404,14 @@ func NewDevBoxCommand() *cobra.Command {
 				}()
 
 				workflowLabel := func(name string) string {
-					if !termlink.SupportsHyperlinks() {
+					if !termlink.SupportsHyperlinks() || oss {
 						return name
 					}
 					return name + " " + termlink.ColorLink("(open)", cloud.DashboardUrl(env.Slug, fmt.Sprintf("dashboard/test-workflows/%s", name)), "magenta")
 				}
 
 				templateLabel := func(name string) string {
-					if !termlink.SupportsHyperlinks() {
+					if !termlink.SupportsHyperlinks() || oss {
 						return name
 					}
 					return name + " " + termlink.ColorLink("(open)", cloud.DashboardUrl(env.Slug, fmt.Sprintf("dashboard/test-workflow-templates/%s", name)), "magenta")
@@ -369,13 +424,9 @@ func NewDevBoxCommand() *cobra.Command {
 						parallel <- struct{}{}
 						switch update.Op {
 						case devutils.CRDSyncUpdateOpCreate:
-							client, err := cloud.Client(env.Id)
-							if err != nil {
-								fail(errors.Wrap(err, "failed to create cloud client"))
-							}
 							if update.Template != nil {
 								update.Template.Spec.Events = nil // ignore Cronjobs
-								_, err := client.CreateTestWorkflowTemplate(*testworkflows.MapTemplateKubeToAPI(update.Template))
+								_, err := resources.CreateTestWorkflowTemplate(*testworkflows.MapTemplateKubeToAPI(update.Template))
 								if err != nil {
 									fmt.Printf("CRD Sync: creating template: %s: error: %s\n", templateLabel(update.Template.Name), err.Error())
 								} else {
@@ -383,7 +434,7 @@ func NewDevBoxCommand() *cobra.Command {
 								}
 							} else {
 								update.Workflow.Spec.Events = nil // ignore Cronjobs
-								_, err := client.CreateTestWorkflow(*testworkflows.MapKubeToAPI(update.Workflow))
+								_, err := resources.CreateTestWorkflow(*testworkflows.MapKubeToAPI(update.Workflow))
 								if err != nil {
 									fmt.Printf("CRD Sync: creating workflow: %s: error: %s\n", workflowLabel(update.Workflow.Name), err.Error())
 								} else {
@@ -391,13 +442,9 @@ func NewDevBoxCommand() *cobra.Command {
 								}
 							}
 						case devutils.CRDSyncUpdateOpUpdate:
-							client, err := cloud.Client(env.Id)
-							if err != nil {
-								fail(errors.Wrap(err, "failed to create cloud client"))
-							}
 							if update.Template != nil {
 								update.Template.Spec.Events = nil // ignore Cronjobs
-								_, err := client.UpdateTestWorkflowTemplate(*testworkflows.MapTemplateKubeToAPI(update.Template))
+								_, err := resources.UpdateTestWorkflowTemplate(*testworkflows.MapTemplateKubeToAPI(update.Template))
 								if err != nil {
 									fmt.Printf("CRD Sync: updating template: %s: error: %s\n", templateLabel(update.Template.Name), err.Error())
 								} else {
@@ -405,7 +452,7 @@ func NewDevBoxCommand() *cobra.Command {
 								}
 							} else {
 								update.Workflow.Spec.Events = nil
-								_, err := client.UpdateTestWorkflow(*testworkflows.MapKubeToAPI(update.Workflow))
+								_, err := resources.UpdateTestWorkflow(*testworkflows.MapKubeToAPI(update.Workflow))
 								if err != nil {
 									fmt.Printf("CRD Sync: updating workflow: %s: error: %s\n", workflowLabel(update.Workflow.Name), err.Error())
 								} else {
@@ -413,19 +460,15 @@ func NewDevBoxCommand() *cobra.Command {
 								}
 							}
 						case devutils.CRDSyncUpdateOpDelete:
-							client, err := cloud.Client(env.Id)
-							if err != nil {
-								fail(errors.Wrap(err, "failed to create cloud client"))
-							}
 							if update.Template != nil {
-								err := client.DeleteTestWorkflowTemplate(update.Template.Name)
+								err := resources.DeleteTestWorkflowTemplate(update.Template.Name)
 								if err != nil {
 									fmt.Printf("CRD Sync: deleting template: %s: error: %s\n", templateLabel(update.Template.Name), err.Error())
 								} else {
 									fmt.Println("CRD Sync: deleted template:", templateLabel(update.Template.Name))
 								}
 							} else {
-								err := client.DeleteTestWorkflow(update.Workflow.Name)
+								err := resources.DeleteTestWorkflow(update.Workflow.Name)
 								if err != nil {
 									fmt.Printf("CRD Sync: deleting workflow: %s: error: %s\n", workflowLabel(update.Workflow.Name), err.Error())
 								} else {
@@ -571,10 +614,13 @@ func NewDevBoxCommand() *cobra.Command {
 			}
 
 			color.Green.Println("Development box is ready. Took", time.Since(startTs).Truncate(time.Millisecond))
-			if termlink.SupportsHyperlinks() {
-				fmt.Println("Dashboard:", termlink.Link(cloud.DashboardUrl(env.Slug, "dashboard/test-workflows"), cloud.DashboardUrl(env.Slug, "dashboard/test-workflows")))
-			} else {
-				fmt.Println("Dashboard:", cloud.DashboardUrl(env.Slug, "dashboard/test-workflows"))
+			fmt.Println("Namespace:", namespace.Name())
+			if !oss {
+				if termlink.SupportsHyperlinks() {
+					fmt.Println("Dashboard:", termlink.Link(cloud.DashboardUrl(env.Slug, "dashboard/test-workflows"), cloud.DashboardUrl(env.Slug, "dashboard/test-workflows")))
+				} else {
+					fmt.Println("Dashboard:", cloud.DashboardUrl(env.Slug, "dashboard/test-workflows"))
+				}
 			}
 			if open {
 				openurl.Run(cloud.DashboardUrl(env.Slug, "dashboard/test-workflows"))
@@ -609,6 +655,7 @@ func NewDevBoxCommand() *cobra.Command {
 	cmd.Flags().StringVarP(&rawDevboxName, "name", "n", fmt.Sprintf("%d", time.Now().UnixNano()), "devbox name")
 	cmd.Flags().StringSliceVarP(&syncResources, "sync", "s", nil, "synchronise resources at paths")
 	cmd.Flags().BoolVarP(&open, "open", "o", false, "open dashboard in browser")
+	cmd.Flags().BoolVarP(&oss, "oss", "O", false, "run open source version")
 	cmd.Flags().StringVar(&baseInitImage, "init-image", "kubeshop/testkube-tw-init:latest", "base init image")
 	cmd.Flags().StringVar(&baseToolkitImage, "toolkit-image", "kubeshop/testkube-tw-toolkit:latest", "base toolkit image")
 	cmd.Flags().StringVar(&baseAgentImage, "agent-image", "kubeshop/testkube-api-server:latest", "base agent image")

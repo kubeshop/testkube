@@ -372,7 +372,7 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 		}
 	}
 	if cfg.LogsBucket != "" {
-		exists, err := storageClient.BucketExists(ctx, cfg.StorageBucket)
+		exists, err := storageClient.BucketExists(ctx, cfg.LogsBucket)
 		if err != nil {
 			log.DefaultLogger.Errorw("Failed to check if the storage bucket exists", "error", err)
 		} else if !exists {

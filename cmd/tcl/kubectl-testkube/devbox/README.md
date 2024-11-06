@@ -21,6 +21,7 @@ This utility is used to help with development of the Agent features (like Test W
   * For local development Testkube Enterprise (Skaffold), consider `testkube login --api-uri-override=http://localhost:8099 --agent-uri-override=http://testkube-enterprise-api.tk-dev.svc.local:8089 --auth-uri-override=http://localhost:5556 --custom-auth`
   * It's worth to create alias for that in own `.bashrc` or `.bash_profile`
   * It's worth to pass a devbox name, like `-n dawid`, so it's not using random name
+* For OSS version - run with `--oss` parameter
 
 The CLI will print a dashboard link for the selected environment.
 
@@ -44,12 +45,13 @@ Aliases:
   devbox, dev
 
 Flags:
-      --agent-image string     base agent image (default "kubeshop/testkube-api-server:latest")
-      --init-image string      base init image (default "kubeshop/testkube-tw-init:latest")
   -n, --name string            devbox name (default "1730107481990508000")
   -s, --sync strings           synchronise resources at paths
-      --toolkit-image string   base toolkit image (default "kubeshop/testkube-tw-toolkit:latest")
   -o, --open                   open dashboard in browser
+  -O, --oss                    run open source version
+      --agent-image string     base agent image (default "kubeshop/testkube-api-server:latest")
+      --init-image string      base init image (default "kubeshop/testkube-tw-init:latest")
+      --toolkit-image string   base toolkit image (default "kubeshop/testkube-tw-toolkit:latest")
 ```
 
 ## Example
