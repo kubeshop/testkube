@@ -451,6 +451,11 @@ func NewDevBoxCommand() *cobra.Command {
 			fmt.Println("Waiting for file changes...")
 
 			rebuild := func(ctx context.Context) {
+				select {
+				case <-ctx.Done():
+					return
+				case <-time.After(100 * time.Millisecond):
+				}
 				g, _ := errgroup.WithContext(ctx)
 				ts := time.Now()
 				fmt.Println(color.Yellow.Render("Rebuilding applications..."))
