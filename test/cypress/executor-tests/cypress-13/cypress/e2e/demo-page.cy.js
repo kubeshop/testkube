@@ -2,7 +2,7 @@ describe('Log in', () => {
   it(`Log in with valid credentials`, () => {
     const userData = {
       username: "AdminUser",
-      password: "SomeVerryLongPassword123456",
+      password: "SomeVeryLongPassword123456",
     }
 
     cy.visit("https://testkube-test-page-login.pages.dev/")
