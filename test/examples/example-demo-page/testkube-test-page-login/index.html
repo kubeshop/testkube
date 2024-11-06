@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Demo page - Login</title>
+    <style>
+        .center {
+        margin: auto;
+        width: 50%;
+        border: 1px solid grey;
+        padding: 10px;
+        }
+        .double-line {
+        line-height: 2;
+        }
+    </style>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.0/jquery.min.js"></script>
+    <script>
+        function delay(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+        async function logIn() {
+          $('.login-button').prepend('<i class="fa fa-spinner fa-spin" /> ')
+          await delay(1500);
+          window.location.href='demo.html'
+        }
+    </script>
+  </head>
+  <body>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+    <div class="center">
+        <h1>Demo page - Login</h1>
+            <div class="double-line">
+            <label for="username">Username</label>
+            <input type="text" placeholder="Username" name="username" data-testid="username" required>
+            <br />
+            <label for="password">Password</label>
+            <input type="password" placeholder="Password" name="password" data-testid="password"required>
+            <br />
+            <input type="checkbox" id="remember_me" name="remember_me" data-testid="remember_me">
+            <label for="remember_me">Remember me</label><br />
+            <button onclick="logIn()" data-testid="login-button" class="login-button">Login</button>
+        </div>
+      </div>
+  </body>
+</html>
