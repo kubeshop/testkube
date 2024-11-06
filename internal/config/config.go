@@ -64,10 +64,6 @@ type Config struct {
 	TestkubeAnalyticsEnabled                    bool          `envconfig:"TESTKUBE_ANALYTICS_ENABLED" default:"false"`
 	TestkubeReadonlyExecutors                   bool          `envconfig:"TESTKUBE_READONLY_EXECUTORS" default:"false"`
 	TestkubeNamespace                           string        `envconfig:"TESTKUBE_NAMESPACE" default:"testkube"`
-	TestkubeOAuthClientID                       string        `envconfig:"TESTKUBE_OAUTH_CLIENTID" default:""`
-	TestkubeOAuthClientSecret                   string        `envconfig:"TESTKUBE_OAUTH_CLIENTSECRET" default:""`
-	TestkubeOAuthProvider                       string        `envconfig:"TESTKUBE_OAUTH_PROVIDER" default:""`
-	TestkubeOAuthScopes                         string        `envconfig:"TESTKUBE_OAUTH_SCOPES" default:""`
 	TestkubeProAPIKey                           string        `envconfig:"TESTKUBE_PRO_API_KEY" default:""`
 	TestkubeProURL                              string        `envconfig:"TESTKUBE_PRO_URL" default:""`
 	TestkubeProTLSInsecure                      bool          `envconfig:"TESTKUBE_PRO_TLS_INSECURE" default:"false"`

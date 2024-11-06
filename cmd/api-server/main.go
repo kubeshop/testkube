@@ -15,7 +15,6 @@ import (
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	"github.com/kubeshop/testkube/cmd/api-server/services"
 	"github.com/kubeshop/testkube/internal/app/api/debug"
-	"github.com/kubeshop/testkube/internal/app/api/oauth"
 	cloudartifacts "github.com/kubeshop/testkube/pkg/cloud/data/artifact"
 	cloudtestworkflow "github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
 	"github.com/kubeshop/testkube/pkg/event/kind/cdevent"
@@ -23,7 +22,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/event/kind/webhook"
 	ws "github.com/kubeshop/testkube/pkg/event/kind/websocket"
 	"github.com/kubeshop/testkube/pkg/executor/output"
-	oauth2 "github.com/kubeshop/testkube/pkg/oauth"
 	"github.com/kubeshop/testkube/pkg/secretmanager"
 	"github.com/kubeshop/testkube/pkg/server"
 	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
@@ -275,14 +273,6 @@ func main() {
 	// Create HTTP server
 	httpServer := server.NewServer(server.Config{Port: cfg.APIServerPort})
 	httpServer.Routes.Use(cors.New())
-
-	// Handle OAuth TODO: deprecated?
-	httpServer.Routes.Use(oauth.CreateOAuthHandler(oauth.OauthParams{
-		ClientID:     cfg.TestkubeOAuthClientID,
-		ClientSecret: cfg.TestkubeOAuthClientSecret,
-		Provider:     oauth2.ProviderType(cfg.TestkubeOAuthProvider),
-		Scopes:       cfg.TestkubeOAuthScopes,
-	}))
 
 	if deprecatedSystem != nil && deprecatedSystem.API != nil {
 		deprecatedSystem.API.Init(httpServer)
