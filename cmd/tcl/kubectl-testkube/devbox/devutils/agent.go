@@ -20,13 +20,13 @@ import (
 
 type Agent struct {
 	pod              *PodObject
-	cloud            *cloudObj
+	cloud            *CloudObject
 	agentImage       string
 	initProcessImage string
 	toolkitImage     string
 }
 
-func NewAgent(pod *PodObject, cloud *cloudObj, agentImage, initProcessImage, toolkitImage string) *Agent {
+func NewAgent(pod *PodObject, cloud *CloudObject, agentImage, initProcessImage, toolkitImage string) *Agent {
 	return &Agent{
 		pod:              pod,
 		cloud:            cloud,
@@ -37,9 +37,45 @@ func NewAgent(pod *PodObject, cloud *cloudObj, agentImage, initProcessImage, too
 }
 
 func (r *Agent) Create(ctx context.Context, env *client.Environment) error {
-	tlsInsecure := "false"
-	if r.cloud.AgentInsecure() {
-		tlsInsecure = "true"
+	envVariables := []corev1.EnvVar{
+		{Name: "NATS_EMBEDDED", Value: "true"},
+		{Name: "APISERVER_PORT", Value: "8088"},
+		{Name: "GRPC_PORT", Value: "8089"},
+		{Name: "APISERVER_FULLNAME", Value: "devbox-agent"},
+		{Name: "DISABLE_TEST_TRIGGERS", Value: "true"},
+		{Name: "DISABLE_WEBHOOKS", Value: "true"},
+		{Name: "DISABLE_DEPRECATED_TESTS", Value: "true"},
+		{Name: "TESTKUBE_ANALYTICS_ENABLED", Value: "false"},
+		{Name: "TESTKUBE_NAMESPACE", Value: r.pod.Namespace()},
+		{Name: "JOB_SERVICE_ACCOUNT_NAME", Value: "devbox-account"},
+		{Name: "TESTKUBE_ENABLE_IMAGE_DATA_PERSISTENT_CACHE", Value: "true"},
+		{Name: "TESTKUBE_IMAGE_DATA_PERSISTENT_CACHE_KEY", Value: "testkube-image-cache"},
+		{Name: "TESTKUBE_TW_TOOLKIT_IMAGE", Value: r.toolkitImage},
+		{Name: "TESTKUBE_TW_INIT_IMAGE", Value: r.initProcessImage},
+	}
+	if env != nil {
+		tlsInsecure := "false"
+		if r.cloud.AgentInsecure() {
+			tlsInsecure = "true"
+		}
+		envVariables = append(envVariables, []corev1.EnvVar{
+			{Name: "TESTKUBE_PRO_API_KEY", Value: env.AgentToken},
+			{Name: "TESTKUBE_PRO_ORG_ID", Value: env.OrganizationId},
+			{Name: "TESTKUBE_PRO_ENV_ID", Value: env.Id},
+			{Name: "TESTKUBE_PRO_URL", Value: r.cloud.AgentURI()},
+			{Name: "TESTKUBE_PRO_TLS_INSECURE", Value: tlsInsecure},
+			{Name: "TESTKUBE_PRO_TLS_SKIP_VERIFY", Value: "true"},
+		}...)
+	} else {
+		envVariables = append(envVariables, []corev1.EnvVar{
+			{Name: "API_MONGO_DSN", Value: "mongodb://devbox-mongodb:27017"},
+			{Name: "API_MONGO_ALLOW_DISK_USE", Value: "true"},
+			{Name: "STORAGE_ENDPOINT", Value: "devbox-minio:9000"},
+			{Name: "STORAGE_BUCKET", Value: "testkube-artifacts"},
+			{Name: "STORAGE_ACCESSKEYID", Value: "minioadmin"},
+			{Name: "STORAGE_SECRETACCESSKEY", Value: "minioadmin"},
+			{Name: "LOGS_BUCKET", Value: "testkube-logs"},
+		}...)
 	}
 	err := r.pod.Create(ctx, &corev1.Pod{
 		Spec: corev1.PodSpec{
@@ -60,27 +96,7 @@ func (r *Agent) Create(ctx context.Context, env *client.Environment) error {
 						wget -O /.tk-devbox/testkube-api-server http://devbox-binary:8080/testkube-api-server || exit 1
 						chmod 777 /.tk-devbox/testkube-api-server
 						exec /.tk-devbox/testkube-api-server`},
-					Env: []corev1.EnvVar{
-						{Name: "NATS_EMBEDDED", Value: "true"},
-						{Name: "APISERVER_PORT", Value: "8088"},
-						{Name: "APISERVER_FULLNAME", Value: "devbox-agent"},
-						{Name: "DISABLE_TEST_TRIGGERS", Value: "true"},
-						{Name: "DISABLE_WEBHOOKS", Value: "true"},
-						{Name: "DISABLE_DEPRECATED_TESTS", Value: "true"},
-						{Name: "TESTKUBE_ANALYTICS_ENABLED", Value: "false"},
-						{Name: "TESTKUBE_NAMESPACE", Value: r.pod.Namespace()},
-						{Name: "JOB_SERVICE_ACCOUNT_NAME", Value: "devbox-account"},
-						{Name: "TESTKUBE_ENABLE_IMAGE_DATA_PERSISTENT_CACHE", Value: "true"},
-						{Name: "TESTKUBE_IMAGE_DATA_PERSISTENT_CACHE_KEY", Value: "testkube-image-cache"},
-						{Name: "TESTKUBE_TW_TOOLKIT_IMAGE", Value: r.toolkitImage},
-						{Name: "TESTKUBE_TW_INIT_IMAGE", Value: r.initProcessImage},
-						{Name: "TESTKUBE_PRO_API_KEY", Value: env.AgentToken},
-						{Name: "TESTKUBE_PRO_ORG_ID", Value: env.OrganizationId},
-						{Name: "TESTKUBE_PRO_ENV_ID", Value: env.Id},
-						{Name: "TESTKUBE_PRO_URL", Value: r.cloud.AgentURI()},
-						{Name: "TESTKUBE_PRO_TLS_INSECURE", Value: tlsInsecure},
-						{Name: "TESTKUBE_PRO_TLS_SKIP_VERIFY", Value: "true"},
-					},
+					Env: envVariables,
 					VolumeMounts: []corev1.VolumeMount{
 						{Name: "tmp", MountPath: "/tmp"},
 						{Name: "nats", MountPath: "/app/nats"},
@@ -107,11 +123,25 @@ func (r *Agent) Create(ctx context.Context, env *client.Environment) error {
 	if err != nil {
 		return err
 	}
+	err = r.pod.CreateNamedService(ctx, "testkube-api-server", corev1.ServicePort{
+		Name:       "api",
+		Protocol:   "TCP",
+		Port:       8088,
+		TargetPort: intstr.FromInt32(8088),
+	})
+	if err != nil {
+		return err
+	}
 	return r.pod.CreateService(ctx, corev1.ServicePort{
 		Name:       "api",
 		Protocol:   "TCP",
 		Port:       8088,
 		TargetPort: intstr.FromInt32(8088),
+	}, corev1.ServicePort{
+		Name:       "grpc",
+		Protocol:   "TCP",
+		Port:       8089,
+		TargetPort: intstr.FromInt32(8089),
 	})
 }
 

@@ -88,7 +88,7 @@ func NewArtifactsCmd() *cobra.Command {
 			executor, client := env.Cloud(ctx)
 			proContext, err := client.GetProContext(ctx, &emptypb.Empty{})
 			var supported []*cloud.Capability
-			if err != nil {
+			if err != nil && !strings.Contains(err.Error(), "not supported") {
 				fmt.Printf("Warning: couldn't get capabilities: %s\n", err.Error())
 			}
 			if proContext != nil {

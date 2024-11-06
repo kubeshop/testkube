@@ -15,13 +15,16 @@ import (
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	kubeclient "github.com/kubeshop/testkube-operator/pkg/client"
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 )
 
 type ClusterObject struct {
 	cfg         *rest.Config
 	clientSet   *kubernetes.Clientset
+	kubeClient  client.Client
 	versionInfo *version.Info
 }
 
@@ -41,9 +44,14 @@ func NewCluster() (*ClusterObject, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get Kubernetes cluster details")
 	}
+	kubeClient, err := kubeclient.GetClient()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create Kubernetes client wrapper")
+	}
 
 	return &ClusterObject{
 		clientSet:   clientSet,
+		kubeClient:  kubeClient,
 		versionInfo: info,
 		cfg:         config,
 	}, nil
@@ -51,6 +59,10 @@ func NewCluster() (*ClusterObject, error) {
 
 func (c *ClusterObject) ClientSet() *kubernetes.Clientset {
 	return c.clientSet
+}
+
+func (c *ClusterObject) KubeClient() client.Client {
+	return c.kubeClient
 }
 
 func (c *ClusterObject) Config() *rest.Config {
