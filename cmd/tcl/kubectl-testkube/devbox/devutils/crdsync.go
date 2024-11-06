@@ -11,7 +11,6 @@ package devutils
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"io"
 	"io/fs"
 	"os"
@@ -106,8 +105,18 @@ func (c *CRDSync) Next(ctx context.Context) (*CRDSyncUpdate, error) {
 func (c *CRDSync) processWorkflow(sourcePath string, workflow testworkflowsv1.TestWorkflow) error {
 	for i := range c.workflows {
 		if c.workflows[i].Workflow.Name == workflow.Name {
-			v1, _ := json.Marshal(c.workflows[i].Workflow)
-			v2, _ := json.Marshal(workflow)
+			v1, _ := common.SerializeCRD(c.workflows[i].Workflow, common.SerializeOptions{
+				OmitCreationTimestamp: true,
+				CleanMeta:             true,
+				Kind:                  "TestWorkflow",
+				GroupVersion:          &testworkflowsv1.GroupVersion,
+			})
+			v2, _ := common.SerializeCRD(workflow, common.SerializeOptions{
+				OmitCreationTimestamp: true,
+				CleanMeta:             true,
+				Kind:                  "TestWorkflow",
+				GroupVersion:          &testworkflowsv1.GroupVersion,
+			})
 			c.workflows[i].SourcePath = sourcePath
 			if !bytes.Equal(v1, v2) {
 				c.workflows[i].Workflow = workflow
@@ -124,10 +133,20 @@ func (c *CRDSync) processWorkflow(sourcePath string, workflow testworkflowsv1.Te
 func (c *CRDSync) processTemplate(sourcePath string, template testworkflowsv1.TestWorkflowTemplate) error {
 	for i := range c.templates {
 		if c.templates[i].Template.Name == template.Name {
-			v1, _ := json.Marshal(c.templates[i].Template)
-			v2, _ := json.Marshal(template)
+			v1, _ := common.SerializeCRD(c.templates[i].Template, common.SerializeOptions{
+				OmitCreationTimestamp: true,
+				CleanMeta:             true,
+				Kind:                  "TestWorkflowTemplate",
+				GroupVersion:          &testworkflowsv1.GroupVersion,
+			})
+			v2, _ := common.SerializeCRD(template, common.SerializeOptions{
+				OmitCreationTimestamp: true,
+				CleanMeta:             true,
+				Kind:                  "TestWorkflowTemplate",
+				GroupVersion:          &testworkflowsv1.GroupVersion,
+			})
+			c.templates[i].SourcePath = sourcePath
 			if !bytes.Equal(v1, v2) {
-				c.templates[i].SourcePath = sourcePath
 				c.templates[i].Template = template
 				c.updates = append(c.updates, CRDSyncUpdate{Template: &template, Op: CRDSyncUpdateOpUpdate})
 				return nil
@@ -137,6 +156,34 @@ func (c *CRDSync) processTemplate(sourcePath string, template testworkflowsv1.Te
 	c.templates = append(c.templates, CRDSyncTemplate{SourcePath: sourcePath, Template: template})
 	c.updates = append(c.updates, CRDSyncUpdate{Template: &template, Op: CRDSyncUpdateOpCreate})
 	return nil
+}
+
+func (c *CRDSync) deleteTemplate(name string) {
+	for i := 0; i < len(c.templates); i++ {
+		if c.templates[i].Template.Name == name {
+			c.updates = append(c.updates, CRDSyncUpdate{
+				Template: &testworkflowsv1.TestWorkflowTemplate{ObjectMeta: metav1.ObjectMeta{Name: c.templates[i].Template.Name}},
+				Op:       CRDSyncUpdateOpDelete,
+			})
+			c.templates = append(c.templates[:i], c.templates[i+1:]...)
+			i--
+			return
+		}
+	}
+}
+
+func (c *CRDSync) deleteWorkflow(name string) {
+	for i := 0; i < len(c.workflows); i++ {
+		if c.workflows[i].Workflow.Name == name {
+			c.updates = append(c.updates, CRDSyncUpdate{
+				Workflow: &testworkflowsv1.TestWorkflow{ObjectMeta: metav1.ObjectMeta{Name: c.workflows[i].Workflow.Name}},
+				Op:       CRDSyncUpdateOpDelete,
+			})
+			c.workflows = append(c.workflows[:i], c.workflows[i+1:]...)
+			i--
+			return
+		}
+	}
 }
 
 func (c *CRDSync) deleteFile(path string) error {
@@ -153,7 +200,7 @@ func (c *CRDSync) deleteFile(path string) error {
 	for i := 0; i < len(c.workflows); i++ {
 		if c.workflows[i].SourcePath == path {
 			c.updates = append(c.updates, CRDSyncUpdate{
-				Template: &testworkflowsv1.TestWorkflowTemplate{ObjectMeta: metav1.ObjectMeta{Name: c.templates[i].Template.Name}},
+				Workflow: &testworkflowsv1.TestWorkflow{ObjectMeta: metav1.ObjectMeta{Name: c.workflows[i].Workflow.Name}},
 				Op:       CRDSyncUpdateOpDelete,
 			})
 			c.workflows = append(c.workflows[:i], c.workflows[i+1:]...)
@@ -176,6 +223,19 @@ func (c *CRDSync) loadFile(path string) error {
 	if err != nil {
 		c.deleteFile(path)
 		return nil
+	}
+
+	prevTemplates := map[string]struct{}{}
+	for i := range c.templates {
+		if c.templates[i].SourcePath == path {
+			prevTemplates[c.templates[i].Template.Name] = struct{}{}
+		}
+	}
+	prevWorkflows := map[string]struct{}{}
+	for i := range c.workflows {
+		if c.workflows[i].SourcePath == path {
+			prevWorkflows[c.workflows[i].Workflow.Name] = struct{}{}
+		}
 	}
 
 	// TODO: Handle deleted entries
@@ -204,6 +264,7 @@ func (c *CRDSync) loadFile(path string) error {
 			if err != nil {
 				continue
 			}
+			delete(prevWorkflows, tw.Name)
 			c.processWorkflow(path, tw)
 		} else if obj["kind"].(string) == "TestWorkflowTemplate" {
 			bytes, _ := yaml.Marshal(obj)
@@ -215,10 +276,19 @@ func (c *CRDSync) loadFile(path string) error {
 			if err != nil {
 				continue
 			}
+			delete(prevTemplates, tw.Name)
 			c.processTemplate(path, tw)
 		}
 	}
 	file.Close()
+
+	for t := range prevTemplates {
+		c.deleteTemplate(t)
+	}
+	for t := range prevWorkflows {
+		c.deleteWorkflow(t)
+	}
+
 	return nil
 }
 
