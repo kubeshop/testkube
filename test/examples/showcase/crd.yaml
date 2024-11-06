@@ -500,11 +500,12 @@ spec:
 # **ShowCase 7: Passing data between steps. (testsuite like)**
 
 ---
-# **ShowCase 9: Running Tests Across Multiple Environments**
 kind: TestWorkflowTemplate
 apiVersion: testworkflows.testkube.io/v1
 metadata:
   name: template-trigger-remote-workflow
+  labels:
+    demo: showcase-9
 spec:
   config:
     apiToken:
@@ -524,8 +525,25 @@ spec:
       image: kubeshop/testkube-cli:latest
       shell: |
         testkube set context \
-          --api-key {{ shellquote(config.apiToken) }} \
+          --api-key {{ config.apiToken }} \
           --root-domain {{ shellquote(config.rootDomain) }} \
-          --org-id {{ shellquote(config.organizationId) }} \
-          --env-id {{ shellquote(config.environmentId) }}
-        testkube run tw {{ shellquote(config.workflowToRun) }} -f
+          --org-id {{ config.organizationId }} \
+          --env-id {{ config.environmentId }}
+        testkube run tw {{ config.workflowToRun }} -f
+---
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: trigger-remote-workflow-with-template
+  labels:
+    demo: showcase-9
+spec:
+  steps:
+  - name: Run tests
+    template:
+      name: template-trigger-remote-workflow
+      config:
+        workflowToRun: 'postman-workflow-smoke'
+        apiToken: '{{ secret("paris-demo-testkube-cloud-basic-access-key", "key") }}'
+        organizationId: 'tkcorg_539cb664a4446f37'
+        environmentId: 'tkcenv_84019fff03aac934'
