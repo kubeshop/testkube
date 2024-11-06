@@ -86,6 +86,7 @@ func NewDevBoxCommand() *cobra.Command {
 				pterm.Error.Printfln("Failed to load config file: %s", err.Error())
 				return
 			}
+			cfg.CloudContext.AgentUri = "https://agent-dev.testkube.dev"
 			cloud, err := devutils.NewCloud(cfg.CloudContext, cmd)
 			if err != nil {
 				pterm.Error.Printfln("Failed to connect to Cloud: %s", err.Error())
@@ -358,7 +359,7 @@ func NewDevBoxCommand() *cobra.Command {
 					if !termlink.SupportsHyperlinks() {
 						return name
 					}
-					return termlink.Link(name, cloud.DashboardUrl(env.Slug, fmt.Sprintf("dashboard/test-workflow-templates/%s", name)))
+					return name + " " + termlink.ColorLink("(open)", cloud.DashboardUrl(env.Slug, fmt.Sprintf("dashboard/test-workflow-templates/%s", name)), "magenta")
 				}
 
 				// Propagate changes from CRDSync to Cloud
