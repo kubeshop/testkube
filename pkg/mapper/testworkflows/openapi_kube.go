@@ -476,6 +476,16 @@ func MapAzureDiskVolumeSourceAPIToKube(v testkube.AzureDiskVolumeSource) corev1.
 	}
 }
 
+func MapCSIVolumeSourceAPIToKube(v testkube.CsiVolumeSource) corev1.CSIVolumeSource {
+	return corev1.CSIVolumeSource{
+		Driver:               v.Driver,
+		ReadOnly:             MapBoxedBooleanToBool(v.ReadOnly),
+		FSType:               MapBoxedStringToString(v.FsType),
+		VolumeAttributes:     v.VolumeAttributes,
+		NodePublishSecretRef: common.MapPtr(v.NodePublishSecretRef, MapLocalObjectReferenceAPIToKube),
+	}
+}
+
 func MapVolumeAPIToKube(v testkube.Volume) corev1.Volume {
 	// TODO: Add rest of VolumeSource types in future,
 	//       so they will be recognized by JSON API and persisted with Execution.
@@ -493,6 +503,7 @@ func MapVolumeAPIToKube(v testkube.Volume) corev1.Volume {
 			AzureFile:             common.MapPtr(v.AzureFile, MapAzureFileVolumeSourceAPIToKube),
 			ConfigMap:             common.MapPtr(v.ConfigMap, MapConfigMapVolumeSourceAPIToKube),
 			AzureDisk:             common.MapPtr(v.AzureDisk, MapAzureDiskVolumeSourceAPIToKube),
+			CSI:                   common.MapPtr(v.Csi, MapCSIVolumeSourceAPIToKube),
 		},
 	}
 }
