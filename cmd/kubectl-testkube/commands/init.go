@@ -217,7 +217,7 @@ func NewInitCmdDemo() *cobra.Command {
 				}
 			}
 
-			spinner := ui.NewSpinner("Installing Testkube On-Prem Demo...")
+			spinner := ui.NewSpinner("Running Kubectl command...")
 			sendTelemetry(cmd, cfg, license, "installing started")
 			options := common.HelmOptions{
 				Namespace:     namespace,
@@ -226,7 +226,6 @@ func NewInitCmdDemo() *cobra.Command {
 				DryRun:        dryRun,
 			}
 
-			spinner.Warning("Running Kubectl command...")
 			cliErr = common.CleanExistingCompletedMigrationJobs(options.Namespace)
 			if cliErr != nil {
 				spinner.Fail("Failed to install Testkube On-Prem Demo")
@@ -237,9 +236,10 @@ func NewInitCmdDemo() *cobra.Command {
 				common.HandleCLIError(cliErr)
 			}
 
+			spinner.Success()
+			spinner = ui.NewSpinner("Running Helm command...")
 			options.SetOptions = setOptions
 			options.ArgOptions = argOptions
-			spinner.Warning("Running Helm command...")
 			cliErr = common.HelmUpgradeOrInstallTestkubeOnPremDemo(options)
 			if cliErr != nil {
 				spinner.Fail("Failed to install Testkube On-Prem Demo")

@@ -77,10 +77,9 @@ func NewInitCmd() *cobra.Command {
 				}
 			}
 
-			spinner := ui.NewSpinner("Installing Testkube")
+			spinner := ui.NewSpinner("Running Helm command...")
 			options.SetOptions = setOptions
 			options.ArgOptions = argOptions
-			spinner.Warning("Running Helm command...")
 			if cliErr := common.HelmUpgradeOrInstallTestkubeAgent(options, cfg, false); cliErr != nil {
 				spinner.Fail()
 				sendErrTelemetry(cmd, cfg, "helm_install", cliErr)
