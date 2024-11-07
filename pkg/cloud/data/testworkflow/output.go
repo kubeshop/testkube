@@ -23,19 +23,11 @@ type CloudOutputRepository struct {
 	httpClient *http.Client
 }
 
-type Option func(*CloudOutputRepository)
-
-func WithSkipVerify() Option {
-	return func(r *CloudOutputRepository) {
+func NewCloudOutputRepository(client cloud.TestKubeCloudAPIClient, grpcConn *grpc.ClientConn, apiKey string, skipVerify bool) *CloudOutputRepository {
+	r := &CloudOutputRepository{executor: executor.NewCloudGRPCExecutor(client, grpcConn, apiKey), httpClient: http.DefaultClient}
+	if skipVerify {
 		transport := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
 		r.httpClient.Transport = transport
-	}
-}
-
-func NewCloudOutputRepository(client cloud.TestKubeCloudAPIClient, grpcConn *grpc.ClientConn, apiKey string, opts ...Option) *CloudOutputRepository {
-	r := &CloudOutputRepository{executor: executor.NewCloudGRPCExecutor(client, grpcConn, apiKey), httpClient: http.DefaultClient}
-	for _, opt := range opts {
-		opt(r)
 	}
 	return r
 }
