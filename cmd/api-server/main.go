@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"google.golang.org/grpc"
@@ -21,6 +23,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/event/kind/k8sevent"
 	"github.com/kubeshop/testkube/pkg/event/kind/webhook"
 	ws "github.com/kubeshop/testkube/pkg/event/kind/websocket"
+	"github.com/kubeshop/testkube/pkg/executor/output"
+	runner2 "github.com/kubeshop/testkube/pkg/runner"
 	"github.com/kubeshop/testkube/pkg/secretmanager"
 	"github.com/kubeshop/testkube/pkg/server"
 	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
@@ -216,9 +220,47 @@ func main() {
 	}
 	executionWorker := services.CreateExecutionWorker(clientset, cfg, clusterId, serviceAccountNames, testWorkflowProcessor)
 
+	// Build the runner
+	runner := runner2.New(
+		executionWorker,
+		testWorkflowOutputRepository,
+		testWorkflowResultsRepository,
+		configMapConfig,
+		eventsEmitter,
+		metrics,
+		cfg.TestkubeDashboardURI,
+		cfg.StorageSkipVerify,
+	)
+
+	// Recover control
+	func() {
+		var list []testkube.TestWorkflowExecution
+		for {
+			// TODO: it should get running only in the context of current runner (worker.List?)
+			list, err = testWorkflowResultsRepository.GetRunning(ctx)
+			if err != nil {
+				log.DefaultLogger.Errorw("failed to fetch running executions to recover", "error", err)
+				<-time.After(time.Second)
+				continue
+			}
+			break
+		}
+
+		for i := range list {
+			// TODO: Should it throw error at all?
+			// TODO: Pass hints (namespace, signature, scheduledAt)
+			go func(e *testkube.TestWorkflowExecution) {
+				err := runner.Monitor(ctx, e.Id)
+				if err != nil {
+					log.DefaultLogger.Errorw("failed to monitor execution", "id", e.Id, "error", err)
+				}
+			}(&list[i])
+		}
+	}()
+
 	testWorkflowExecutor := testworkflowexecutor.New(
 		eventsEmitter,
-		executionWorker,
+		runner,
 		clientset,
 		testWorkflowResultsRepository,
 		testWorkflowOutputRepository,
@@ -232,10 +274,6 @@ func main() {
 		cfg.TestkubeDashboardURI,
 		&proContext,
 	)
-	g.Go(func() error {
-		testWorkflowExecutor.Recover(ctx)
-		return nil
-	})
 
 	var deprecatedClients commons.DeprecatedClients
 	var deprecatedRepositories commons.DeprecatedRepositories

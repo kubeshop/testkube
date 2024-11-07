@@ -6,7 +6,6 @@ import (
 	"context"
 	errors2 "errors"
 	"fmt"
-	"io"
 	"os"
 	"strings"
 	"sync"
@@ -19,8 +18,6 @@ import (
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	testworkflowsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testworkflows/v1"
-	initconstants "github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
-	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	v1 "github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/internal/config"
@@ -31,6 +28,7 @@ import (
 	testworkflowmappers "github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
+	"github.com/kubeshop/testkube/pkg/runner"
 	"github.com/kubeshop/testkube/pkg/secretmanager"
 	"github.com/kubeshop/testkube/pkg/testworkflows"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller"
@@ -45,7 +43,6 @@ const (
 	SaveResultRetryBaseDelay   = 300 * time.Millisecond
 
 	SaveLogsRetryMaxAttempts = 10
-	SaveLogsRetryBaseDelay   = 300 * time.Millisecond
 
 	ConfigSizeLimit = 3 * 1024 * 1024
 )
@@ -53,7 +50,6 @@ const (
 //go:generate mockgen -destination=./mock_executor.go -package=testworkflowexecutor "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor" TestWorkflowExecutor
 type TestWorkflowExecutor interface {
 	Control(ctx context.Context, testWorkflow *testworkflowsv1.TestWorkflow, execution *testkube.TestWorkflowExecution) error
-	Recover(ctx context.Context)
 	Execute(ctx context.Context, workflow testworkflowsv1.TestWorkflow, request testkube.TestWorkflowExecutionRequest) (
 		execution testkube.TestWorkflowExecution, err error)
 }
@@ -71,12 +67,12 @@ type executor struct {
 	secretManager                secretmanager.SecretManager
 	globalTemplateName           string
 	dashboardURI                 string
-	workerClient                 executionworkertypes.Worker
+	runner                       runner.Runner
 	proContext                   *config.ProContext
 }
 
 func New(emitter *event.Emitter,
-	workerClient executionworkertypes.Worker,
+	runner runner.Runner,
 	clientSet kubernetes.Interface,
 	repository testworkflow.Repository,
 	output testworkflow.OutputRepository,
@@ -102,235 +98,13 @@ func New(emitter *event.Emitter,
 		secretManager:                secretManager,
 		globalTemplateName:           globalTemplateName,
 		dashboardURI:                 dashboardURI,
-		workerClient:                 workerClient,
+		runner:                       runner,
 		proContext:                   proContext,
 	}
 }
 
-func (e *executor) handleFatalError(execution *testkube.TestWorkflowExecution, err error, ts time.Time) {
-	// Detect error type
-	isAborted := errors.Is(err, controller.ErrJobAborted)
-
-	// Apply the expected result
-	execution.Result.Fatal(err, isAborted, ts)
-	err = e.repository.UpdateResult(context.Background(), execution.Id, execution.Result)
-	if err != nil {
-		log.DefaultLogger.Errorf("failed to save fatal error for execution %s: %v", execution.Id, err)
-	}
-	e.emitter.Notify(testkube.NewEventEndTestWorkflowFailed(execution))
-	go e.workerClient.Destroy(context.Background(), execution.Id, executionworkertypes.DestroyOptions{
-		Namespace: execution.Namespace,
-	})
-}
-
-func (e *executor) Recover(ctx context.Context) {
-	list, err := e.repository.GetRunning(ctx)
-	if err != nil {
-		return
-	}
-	for i := range list {
-		go func(execution *testkube.TestWorkflowExecution) {
-			var testWorkflow *testworkflowsv1.TestWorkflow
-			var err error
-			if execution.Workflow != nil {
-				testWorkflow, err = e.testWorkflowsClient.Get(execution.Workflow.Name)
-				if err != nil {
-					e.handleFatalError(execution, err, time.Time{})
-					return
-				}
-			}
-
-			err = e.Control(context.Background(), testWorkflow, execution)
-			if err != nil {
-				e.handleFatalError(execution, err, time.Time{})
-			}
-		}(&list[i])
-	}
-}
-
-func (e *executor) updateStatus(execution *testkube.TestWorkflowExecution,
-	testWorkflowExecution *testworkflowsv1.TestWorkflowExecution) {
-	if testWorkflowExecution != nil {
-		testWorkflowExecution.Status = testworkflowmappers.MapTestWorkflowExecutionStatusAPIToKube(execution, testWorkflowExecution.Generation)
-		if err := e.testWorkflowExecutionsClient.UpdateStatus(testWorkflowExecution); err != nil {
-			log.DefaultLogger.Errorw("failed to update test workflow execution", "error", err)
-		}
-	}
-}
-
 func (e *executor) Control(ctx context.Context, testWorkflow *testworkflowsv1.TestWorkflow, execution *testkube.TestWorkflowExecution) error {
-	ctx, ctxCancel := context.WithCancel(ctx)
-	defer ctxCancel()
-
-	// TODO: retry?
-	notifications := e.workerClient.Notifications(ctx, execution.Id, executionworkertypes.NotificationsOptions{
-		Hints: executionworkertypes.Hints{
-			Namespace:   execution.Namespace,
-			Signature:   execution.Signature,
-			ScheduledAt: common.Ptr(execution.ScheduledAt),
-		},
-	})
-	if notifications.Err() != nil {
-		log.DefaultLogger.Errorw("failed to control the TestWorkflow", "id", execution.Id, "error", notifications.Err())
-		return notifications.Err()
-	}
-
-	// Prepare stream for writing log
-	r, writer := io.Pipe()
-	reader := bufio.NewReader(r)
-	ref := ""
-
-	var testWorkflowExecution *testworkflowsv1.TestWorkflowExecution
-	if execution.TestWorkflowExecutionName != "" {
-		var err error
-		testWorkflowExecution, err = e.testWorkflowExecutionsClient.Get(execution.TestWorkflowExecutionName)
-		if err != nil {
-			log.DefaultLogger.Errorw("failed to get test workflow execution", "error", err)
-		}
-	}
-
-	wg := sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-
-		for v := range notifications.Channel() {
-			if v.Output != nil {
-				if !v.Temporary {
-					execution.Output = append(execution.Output, *v.Output)
-				}
-			} else if v.Result != nil {
-				execution.Result = v.Result
-				if execution.Result.IsFinished() {
-					execution.StatusAt = execution.Result.FinishedAt
-				}
-				var wg sync.WaitGroup
-				wg.Add(2)
-				go func() {
-					e.updateStatus(execution, testWorkflowExecution)
-					wg.Done()
-				}()
-				go func() {
-					err := e.repository.UpdateResult(ctx, execution.Id, execution.Result)
-					if err != nil {
-						log.DefaultLogger.Error(errors.Wrap(err, "error saving test workflow execution result"))
-					}
-					wg.Done()
-				}()
-				wg.Wait()
-			} else if !v.Temporary {
-				if ref != v.Ref && v.Ref != "" {
-					ref = v.Ref
-					_, err := writer.Write([]byte(instructions.SprintHint(ref, initconstants.InstructionStart)))
-					if err != nil {
-						log.DefaultLogger.Error(errors.Wrap(err, "saving log output signature"))
-					}
-				}
-				_, err := writer.Write([]byte(v.Log))
-				if err != nil {
-					log.DefaultLogger.Error(errors.Wrap(err, "saving log output content"))
-				}
-			}
-		}
-		if notifications.Err() != nil && !errors.Is(notifications.Err(), context.Canceled) {
-			log.DefaultLogger.Errorw("error from TestWorkflow watcher", "id", execution.Id, "error", notifications.Err())
-		}
-
-		// Try to gracefully handle abort
-		if execution.Result.FinishedAt.IsZero() {
-			// Handle container failure
-			abortedAt := time.Time{}
-			for _, v := range execution.Result.Steps {
-				if v.Status != nil && *v.Status == testkube.ABORTED_TestWorkflowStepStatus {
-					abortedAt = v.FinishedAt
-					break
-				}
-			}
-			if !abortedAt.IsZero() {
-				e.handleFatalError(execution, controller.ErrJobAborted, abortedAt)
-			} else {
-				// Handle unknown state
-				notifications = e.workerClient.Notifications(ctx, execution.Id, executionworkertypes.NotificationsOptions{
-					Hints: executionworkertypes.Hints{
-						Namespace:   execution.Namespace,
-						Signature:   execution.Signature,
-						ScheduledAt: common.Ptr(execution.ScheduledAt),
-					},
-				})
-				if notifications.Err() == nil {
-					for v := range notifications.Channel() {
-						if v.Output == nil {
-							continue
-						}
-
-						execution.Result = v.Result
-						if execution.Result.IsFinished() {
-							execution.StatusAt = execution.Result.FinishedAt
-						}
-						err := e.repository.UpdateResult(ctx, execution.Id, execution.Result)
-						if err != nil {
-							log.DefaultLogger.Error(errors.Wrap(err, "error saving test workflow execution result"))
-						}
-					}
-				} else {
-					e.handleFatalError(execution, notifications.Err(), time.Time{})
-				}
-			}
-		}
-
-		err := writer.Close()
-		if err != nil {
-			log.DefaultLogger.Errorw("failed to close TestWorkflow log output stream", "id", execution.Id, "error", err)
-		}
-
-		// TODO: Consider AppendOutput ($push) instead
-		_ = e.repository.UpdateOutput(ctx, execution.Id, execution.Output)
-		if execution.Result.IsFinished() {
-			e.sendRunWorkflowTelemetry(ctx, testWorkflow, execution)
-
-			if execution.Result.IsPassed() {
-				e.emitter.Notify(testkube.NewEventEndTestWorkflowSuccess(execution))
-			} else if execution.Result.IsAborted() {
-				e.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(execution))
-			} else {
-				e.emitter.Notify(testkube.NewEventEndTestWorkflowFailed(execution))
-			}
-		}
-	}()
-
-	// Stream the log into Minio
-	err := e.output.SaveLog(context.Background(), execution.Id, execution.Workflow.Name, reader)
-
-	// Retry saving the logs to Minio if something goes wrong
-	for attempt := 1; err != nil && attempt <= SaveLogsRetryMaxAttempts; attempt++ {
-		log.DefaultLogger.Errorw("retrying save of TestWorkflow log output", "id", execution.Id, "error", err)
-		time.Sleep(SaveLogsRetryBaseDelay * time.Duration(attempt))
-		err = e.output.SaveLog(context.Background(), execution.Id, execution.Workflow.Name, e.workerClient.Logs(context.Background(), execution.Id, executionworkertypes.LogsOptions{
-			NoFollow: true,
-			Hints: executionworkertypes.Hints{
-				Namespace:   execution.Namespace,
-				ScheduledAt: common.Ptr(execution.ScheduledAt),
-				Signature:   execution.Signature,
-			},
-		}))
-	}
-	if err != nil {
-		log.DefaultLogger.Errorw("failed to save TestWorkflow log output", "id", execution.Id, "error", err)
-	}
-
-	wg.Wait()
-
-	e.metrics.IncAndObserveExecuteTestWorkflow(*execution, e.dashboardURI)
-
-	e.updateStatus(execution, testWorkflowExecution) // TODO: Consider if it is needed
-	err = e.workerClient.Destroy(ctx, execution.Id, executionworkertypes.DestroyOptions{
-		Namespace: execution.Namespace,
-	})
-	if err != nil {
-		log.DefaultLogger.Errorw("failed to cleanup TestWorkflow resources", "id", execution.Id, "error", err)
-	}
-
-	return nil
+	return e.runner.Monitor(ctx, execution.Id)
 }
 
 func (e *executor) getPreExecutionMachine(workflow *testworkflowsv1.TestWorkflow, orgId, envId string) expressions.Machine {
@@ -487,7 +261,7 @@ func (e *executor) initialize(ctx context.Context, workflow *testworkflowsv1.Tes
 		}
 	}
 
-	// Try to resolve tags initialily
+	// Try to resolve tags initially
 	if workflow.Spec.Execution != nil {
 		execution.Tags = workflow.Spec.Execution.Tags
 	}
@@ -711,7 +485,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 	}
 
 	// Schedule the execution by the Execution Worker
-	result, err := e.workerClient.Execute(context.Background(), executionworkertypes.ExecuteRequest{
+	result, err := e.runner.Execute(executionworkertypes.ExecuteRequest{
 		Execution:    e.buildExecutionConfig(execution, organizationId, environmentId, strings.Join(request.ParentExecutionIds, "/")),
 		Secrets:      secretsMap,
 		Workflow:     workflow,
@@ -741,7 +515,8 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		// TODO: Use OpenAPI objects only
 		err = e.Control(context.Background(), testworkflowmappers.MapAPIToKube(execution.Workflow), execution)
 		if err != nil {
-			e.handleFatalError(execution, err, time.Time{})
+			// TODO: Handle fatal error
+			//e.handleFatalError(execution, err, time.Time{})
 			return
 		}
 	}()
