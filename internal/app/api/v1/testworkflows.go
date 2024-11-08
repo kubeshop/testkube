@@ -9,6 +9,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/pkg/errors"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
@@ -346,12 +347,31 @@ func (s *TestkubeAPI) PreviewTestWorkflowHandler() fiber.Handler {
 // TODO: Add metrics
 func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 	return func(c *fiber.Ctx) (err error) {
-		ctx := c.Context()
 		name := c.Params("id")
-		errPrefix := fmt.Sprintf("failed to execute test workflow '%s'", name)
-		workflow, err := s.TestWorkflowsClient.Get(name)
-		if err != nil {
-			return s.ClientError(c, errPrefix, err)
+		selector := c.Query("selector")
+		s.Log.Debugw("getting test suite", "name", name, "selector", selector)
+
+		errPrefix := "failed to execute test workflow"
+
+		var testWorkflows []testworkflowsv1.TestWorkflow
+		if name != "" {
+			errPrefix = errPrefix + " " + name
+			testWorkflow, err := s.TestWorkflowsClient.Get(name)
+			if err != nil {
+				if k8serrors.IsNotFound(err) {
+					return s.Warn(c, http.StatusNotFound, fmt.Errorf("%s: test workflow not found: %w", errPrefix, err))
+				}
+
+				return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could get test workflow: %w", errPrefix, err))
+			}
+			testWorkflows = append(testWorkflows, *testWorkflow)
+		} else {
+			testWorkflowList, err := s.TestWorkflowsClient.List(selector)
+			if err != nil {
+				return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: can't list test workflows: %w", errPrefix, err))
+			}
+
+			testWorkflows = append(testWorkflows, testWorkflowList.Items...)
 		}
 
 		// Load the execution request
@@ -371,25 +391,23 @@ func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 		var results []testkube.TestWorkflowExecution
 		var errs []error
 
-		request.TestWorkflowExecutionName = strings.Clone(c.Query("testWorkflowExecutionName"))
-		concurrencyLevel := scheduler.DefaultConcurrencyLevel
-		workerpoolService := workerpool.New[testworkflowsv1.TestWorkflow, testkube.TestWorkflowExecutionRequest,
-			testkube.TestWorkflowExecution](concurrencyLevel)
-		requests := []workerpool.Request[testworkflowsv1.TestWorkflow, testkube.TestWorkflowExecutionRequest, testkube.TestWorkflowExecution]{
-			{
-				Object:  *workflow,
-				Options: request,
-				ExecFn:  s.TestWorkflowExecutor.Execute,
-			},
-		}
+		if len(testWorkflows) != 0 {
+			request.TestWorkflowExecutionName = strings.Clone(c.Query("testWorkflowExecutionName"))
+			parallelism, err := strconv.Atoi(c.Query("parallelism", strconv.Itoa(scheduler.DefaultConcurrencyLevel)))
+			if err != nil {
+				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: can't detect parallelism: %w", errPrefix, err))
+			}
 
-		go workerpoolService.SendRequests(requests)
-		go workerpoolService.Run(ctx)
+			workerpoolService := workerpool.New[testworkflowsv1.TestWorkflow, testkube.TestWorkflowExecutionRequest, testkube.TestWorkflowExecution](parallelism)
 
-		for r := range workerpoolService.GetResponses() {
-			results = append(results, r.Result)
-			if r.Err != nil {
-				errs = append(errs, r.Err)
+			go workerpoolService.SendRequests(s.prepareTestWorkflowRequests(testWorkflows, request))
+			go workerpoolService.Run(c.Context())
+
+			for r := range workerpoolService.GetResponses() {
+				results = append(results, r.Result)
+				if r.Err != nil {
+					errs = append(errs, r.Err)
+				}
 			}
 		}
 
@@ -397,8 +415,13 @@ func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 			return s.InternalError(c, errPrefix, "execution error", errs[0])
 		}
 
+		s.Log.Debugw("executing test workflow", "name", name, "selector", selector)
 		if len(results) != 0 {
-			return c.JSON(results[0])
+			if name != "" {
+				return c.JSON(results[0])
+			}
+
+			return c.JSON(results)
 		}
 
 		return s.InternalError(c, errPrefix, "error", errors.New("no execution results"))
@@ -422,4 +445,21 @@ func (s *TestkubeAPI) getFilteredTestWorkflowList(c *fiber.Ctx) (*testworkflowsv
 	}
 
 	return crWorkflows, nil
+}
+
+func (s *TestkubeAPI) prepareTestWorkflowRequests(work []testworkflowsv1.TestWorkflow, request testkube.TestWorkflowExecutionRequest) []workerpool.Request[
+	testworkflowsv1.TestWorkflow,
+	testkube.TestWorkflowExecutionRequest,
+	testkube.TestWorkflowExecution,
+] {
+	requests := make([]workerpool.Request[testworkflowsv1.TestWorkflow, testkube.TestWorkflowExecutionRequest, testkube.TestWorkflowExecution], len(work))
+	for i := range work {
+		requests[i] = workerpool.Request[testworkflowsv1.TestWorkflow, testkube.TestWorkflowExecutionRequest, testkube.TestWorkflowExecution]{
+			Object:  work[i],
+			Options: request,
+			ExecFn:  s.TestWorkflowExecutor.Execute,
+		}
+	}
+
+	return requests
 }

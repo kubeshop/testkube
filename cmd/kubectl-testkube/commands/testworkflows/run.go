@@ -3,6 +3,7 @@ package testworkflows
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -45,12 +46,13 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 		format                   string
 		masks                    []string
 		tags                     map[string]string
+		selectors                []string
+		parallelism              int
 	)
 
 	cmd := &cobra.Command{
 		Use:     "testworkflow [name]",
 		Aliases: []string{"testworkflows", "tw"},
-		Args:    cobra.ExactArgs(1),
 		Short:   "Starts test workflow execution",
 
 		Run: func(cmd *cobra.Command, args []string) {
@@ -65,7 +67,6 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 			client, _, err := common.GetClient(cmd)
 			ui.ExitOnError("getting client", err)
 
-			name := args[0]
 			runContext := telemetry.GetCliRunContext()
 			interfaceType := testkube.CICD_TestWorkflowRunningContextInterfaceType
 			if runContext == "others|local" {
@@ -83,13 +84,29 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 				runningContext = tclcmd.GetRunningContext(runContext, cfg.CloudContext.ApiKey, interfaceType)
 			}
 
-			execution, err := client.ExecuteTestWorkflow(name, testkube.TestWorkflowExecutionRequest{
+			request := testkube.TestWorkflowExecutionRequest{
 				Name:            executionName,
 				Config:          config,
 				DisableWebhooks: disableWebhooks,
 				Tags:            tags,
 				RunningContext:  runningContext,
-			})
+			}
+
+			var executions []testkube.TestWorkflowExecution
+			switch {
+			case len(args) > 0:
+				name := args[0]
+
+				var execution testkube.TestWorkflowExecution
+				execution, err = client.ExecuteTestWorkflow(name, request)
+				executions = append(executions, execution)
+			case len(selectors) != 0:
+				selector := strings.Join(selectors, ",")
+				executions, err = client.ExecuteTestWorkflows(selector, parallelism, request)
+			default:
+				ui.Failf("Pass Test workflow name or labels to run by labels ")
+			}
+
 			if err != nil {
 				// User friendly Open Source operation error
 				errMessage := err.Error()
@@ -108,33 +125,47 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 				}
 			}
 
-			ui.ExitOnError("execute test workflow "+name+" from namespace "+namespace, err)
-			err = renderer.PrintTestWorkflowExecution(cmd, os.Stdout, execution)
-			ui.ExitOnError("render test workflow execution", err)
-
-			var exitCode = 0
-			if outputPretty {
-				ui.NL()
-				if !execution.FailedToInitialize() {
-					if watchEnabled {
-						exitCode = uiWatch(execution, client)
-						ui.NL()
-						if downloadArtifactsEnabled {
-							tests.DownloadTestWorkflowArtifacts(execution.Id, downloadDir, format, masks, client, outputPretty)
-						}
-					} else {
-						uiShellWatchExecution(execution.Id)
-					}
-				}
-
-				execution, err = client.GetTestWorkflowExecution(execution.Id)
-				ui.ExitOnError("get execution failed", err)
-
-				render.PrintTestWorkflowExecutionURIs(&execution)
-				uiShellGetExecution(execution.Id)
+			if len(args) > 0 {
+				ui.ExitOnError("execute test workflow "+args[0]+" from namespace "+namespace, err)
+			} else {
+				ui.ExitOnError("execute test workflows "+strings.Join(selectors, ",")+" from namespace "+namespace, err)
 			}
 
-			os.Exit(exitCode)
+			go func() {
+				<-cmd.Context().Done()
+				if errors.Is(cmd.Context().Err(), context.Canceled) {
+					os.Exit(0)
+				}
+			}()
+
+			for _, execution := range executions {
+				err = renderer.PrintTestWorkflowExecution(cmd, os.Stdout, execution)
+				ui.ExitOnError("render test workflow execution", err)
+
+				var exitCode = 0
+				if outputPretty {
+					ui.NL()
+					if !execution.FailedToInitialize() {
+						if watchEnabled && len(args) > 0 {
+							exitCode = uiWatch(execution, client)
+							ui.NL()
+							if downloadArtifactsEnabled {
+								tests.DownloadTestWorkflowArtifacts(execution.Id, downloadDir, format, masks, client, outputPretty)
+							}
+						} else {
+							uiShellWatchExecution(execution.Id)
+						}
+					}
+
+					execution, err = client.GetTestWorkflowExecution(execution.Id)
+					ui.ExitOnError("get execution failed", err)
+
+					render.PrintTestWorkflowExecutionURIs(&execution)
+					uiShellGetExecution(execution.Id)
+				}
+
+				os.Exit(exitCode)
+			}
 		},
 	}
 
@@ -148,6 +179,8 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 	cmd.Flags().StringVar(&format, "format", "folder", "data format for storing files, one of folder|archive")
 	cmd.Flags().StringArrayVarP(&masks, "mask", "", []string{}, "regexp to filter downloaded files, single or comma separated, like report/.* or .*\\.json,.*\\.js$")
 	cmd.Flags().StringToStringVarP(&tags, "tag", "", map[string]string{}, "execution tags in a form of name1=val1 passed to executor")
+	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label key value pair: --label key1=value1")
+	cmd.Flags().IntVar(&parallelism, "parallelism", 10, "parallelism for multiple test workflow execution")
 
 	return cmd
 }

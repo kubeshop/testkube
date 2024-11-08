@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
@@ -119,6 +120,24 @@ func (c TestWorkflowClient) ExecuteTestWorkflow(name string, request testkube.Te
 	}
 
 	return c.testWorkflowExecutionTransport.Execute(http.MethodPost, uri, body, nil)
+}
+
+// ExecuteTestWorkflows starts new external test workflow executions, reads data and returns IDs
+// Executions are started asynchronously client can check later for results
+func (c TestWorkflowClient) ExecuteTestWorkflows(selector string, parallelism int, request testkube.TestWorkflowExecutionRequest) (executions []testkube.TestWorkflowExecution, err error) {
+	uri := c.testWorkflowExecutionTransport.GetURI("/test-workflow-executions")
+
+	body, err := json.Marshal(request)
+	if err != nil {
+		return executions, err
+	}
+
+	params := map[string]string{
+		"selector":    selector,
+		"parallelism": strconv.Itoa(parallelism),
+	}
+
+	return c.testWorkflowExecutionTransport.ExecuteMultiple(http.MethodPost, uri, body, params)
 }
 
 // GetTestWorkflowExecutionNotifications returns events stream from job pods, based on job pods logs
