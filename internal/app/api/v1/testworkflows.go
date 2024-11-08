@@ -349,7 +349,7 @@ func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 	return func(c *fiber.Ctx) (err error) {
 		name := c.Params("id")
 		selector := c.Query("selector")
-		s.Log.Debugw("getting test suite", "name", name, "selector", selector)
+		s.Log.Debugw("getting test workflow", "name", name, "selector", selector)
 
 		errPrefix := "failed to execute test workflow"
 
