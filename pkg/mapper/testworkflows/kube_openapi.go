@@ -806,6 +806,21 @@ func MapStepExecuteTestKubeToAPI(v testworkflowsv1.StepExecuteTest) testkube.Tes
 	}
 }
 
+func MapLabelSelectorRequirementToAPI(v metav1.LabelSelectorRequirement) testkube.IoK8sApimachineryPkgApisMetaV1LabelSelectorRequirement {
+	return testkube.IoK8sApimachineryPkgApisMetaV1LabelSelectorRequirement{
+		Key:      v.Key,
+		Operator: string(v.Operator),
+		Values:   v.Values,
+	}
+}
+
+func MapSelectorToAPI(v metav1.LabelSelector) testkube.IoK8sApimachineryPkgApisMetaV1LabelSelector {
+	return testkube.IoK8sApimachineryPkgApisMetaV1LabelSelector{
+		MatchLabels:      v.MatchLabels,
+		MatchExpressions: common.MapSlice(v.MatchExpressions, MapLabelSelectorRequirementToAPI),
+	}
+}
+
 func MapStepExecuteTestWorkflowKubeToAPI(v testworkflowsv1.StepExecuteWorkflow) testkube.TestWorkflowStepExecuteTestWorkflowRef {
 	return testkube.TestWorkflowStepExecuteTestWorkflowRef{
 		Name:          v.Name,
@@ -817,6 +832,7 @@ func MapStepExecuteTestWorkflowKubeToAPI(v testworkflowsv1.StepExecuteWorkflow) 
 		MaxCount:      MapIntOrStringToBoxedString(v.MaxCount),
 		Matrix:        MapDynamicListMapKubeToAPI(v.Matrix),
 		Shards:        MapDynamicListMapKubeToAPI(v.Shards),
+		Selector:      common.MapPtr(v.Selector, MapSelectorToAPI),
 	}
 }
 

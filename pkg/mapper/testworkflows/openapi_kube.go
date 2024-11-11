@@ -846,6 +846,21 @@ func MapStepExecuteTestAPIToKube(v testkube.TestWorkflowStepExecuteTestRef) test
 	}
 }
 
+func MapLabelSelectorRequirementToCRD(v testkube.IoK8sApimachineryPkgApisMetaV1LabelSelectorRequirement) metav1.LabelSelectorRequirement {
+	return metav1.LabelSelectorRequirement{
+		Key:      v.Key,
+		Operator: metav1.LabelSelectorOperator(v.Operator),
+		Values:   v.Values,
+	}
+}
+
+func MapSelectorToCRD(v testkube.IoK8sApimachineryPkgApisMetaV1LabelSelector) metav1.LabelSelector {
+	return metav1.LabelSelector{
+		MatchLabels:      v.MatchLabels,
+		MatchExpressions: common.MapSlice(v.MatchExpressions, MapLabelSelectorRequirementToCRD),
+	}
+}
+
 func MapStepExecuteTestWorkflowAPIToKube(v testkube.TestWorkflowStepExecuteTestWorkflowRef) testworkflowsv1.StepExecuteWorkflow {
 	return testworkflowsv1.StepExecuteWorkflow{
 		Name:          v.Name,
@@ -859,6 +874,7 @@ func MapStepExecuteTestWorkflowAPIToKube(v testkube.TestWorkflowStepExecuteTestW
 			Matrix:   MapDynamicListMapAPIToKube(v.Matrix),
 			Shards:   MapDynamicListMapAPIToKube(v.Shards),
 		},
+		Selector: common.MapPtr(v.Selector, MapSelectorToCRD),
 	}
 }
 
