@@ -164,7 +164,9 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 					uiShellGetExecution(execution.Id)
 				}
 
-				os.Exit(exitCode)
+				if exitCode != 0 {
+					os.Exit(exitCode)
+				}
 			}
 		},
 	}
