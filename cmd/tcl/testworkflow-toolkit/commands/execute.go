@@ -18,6 +18,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	commontcl "github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/common"
@@ -368,6 +369,8 @@ func NewExecuteCmd() *cobra.Command {
 					operations = append(operations, fn)
 				}
 			}
+
+			c := env.Testkube()
 			for _, s := range workflows {
 				var w testworkflowsv1.StepExecuteWorkflow
 				err := json.Unmarshal([]byte(s), &w)
@@ -375,35 +378,56 @@ func NewExecuteCmd() *cobra.Command {
 					ui.Fail(errors.Wrap(err, "unmarshal workflow definition"))
 				}
 
-				// Resolve the params
-				params, err := commontcl.GetParamsSpec(w.Matrix, w.Shards, w.Count, w.MaxCount, baseMachine)
-				if err != nil {
-					ui.Fail(errors.Wrap(err, "matrix and sharding"))
+				testWorkflowNames := []string{w.Name}
+				if w.Selector != nil {
+					selector, err := metav1.LabelSelectorAsSelector(w.Selector)
+					if err != nil {
+						ui.Fail(errors.Wrap(err, "error creating selector from test workflow selector"))
+					}
+
+					stringifiedSelector := selector.String()
+					testWorkflowsList, err := c.ListTestWorkflows(stringifiedSelector)
+					if err != nil {
+						ui.Fail(errors.Wrap(err, "error listing test workflows using selector"))
+					}
+
+					for _, item := range testWorkflowsList {
+						testWorkflowNames = append(testWorkflowNames, item.Name)
+					}
 				}
-				fmt.Printf("%s: %s\n", commontcl.ServiceLabel(w.Name), params.Humanize())
 
-				// Create operations for each expected execution
-				for i := int64(0); i < params.Count; i++ {
-					// Clone the spec
-					spec := w.DeepCopy()
+				for _, testWorkflowName := range testWorkflowNames {
+					// Resolve the params
+					params, err := commontcl.GetParamsSpec(w.Matrix, w.Shards, w.Count, w.MaxCount, baseMachine)
+					if err != nil {
+						ui.Fail(errors.Wrap(err, "matrix and sharding"))
+					}
+					fmt.Printf("%s: %s\n", commontcl.ServiceLabel(testWorkflowName), params.Humanize())
 
-					// Build files for transfer
-					tarballMachine, err := registerTransfer(transferSrv, spec.Tarball, baseMachine, params.MachineAt(i))
-					if err != nil {
-						ui.Fail(errors.Wrapf(err, "'%s' workflow", spec.Name))
-					}
-					spec.Tarball = nil
+					// Create operations for each expected execution
+					for i := int64(0); i < params.Count; i++ {
+						// Clone the spec
+						spec := w.DeepCopy()
+						spec.Name = testWorkflowName
 
-					// Prepare the operation to run
-					err = expressions.Finalize(&spec, baseMachine, tarballMachine, params.MachineAt(i))
-					if err != nil {
-						ui.Fail(errors.Wrapf(err, "'%s' workflow: computing execution", spec.Name))
+						// Build files for transfer
+						tarballMachine, err := registerTransfer(transferSrv, spec.Tarball, baseMachine, params.MachineAt(i))
+						if err != nil {
+							ui.Fail(errors.Wrapf(err, "'%s' workflow", spec.Name))
+						}
+						spec.Tarball = nil
+
+						// Prepare the operation to run
+						err = expressions.Finalize(&spec, baseMachine, tarballMachine, params.MachineAt(i))
+						if err != nil {
+							ui.Fail(errors.Wrapf(err, "'%s' workflow: computing execution", spec.Name))
+						}
+						fn, err := buildWorkflowExecution(*spec, async)
+						if err != nil {
+							ui.Fail(err)
+						}
+						operations = append(operations, fn)
 					}
-					fn, err := buildWorkflowExecution(*spec, async)
-					if err != nil {
-						ui.Fail(err)
-					}
-					operations = append(operations, fn)
 				}
 			}
 
