@@ -378,7 +378,11 @@ func NewExecuteCmd() *cobra.Command {
 					ui.Fail(errors.Wrap(err, "unmarshal workflow definition"))
 				}
 
-				testWorkflowNames := []string{w.Name}
+				var testWorkflowNames []string
+				if w.Name != "" {
+					testWorkflowNames = []string{w.Name}
+				}
+
 				if w.Selector != nil {
 					selector, err := metav1.LabelSelectorAsSelector(w.Selector)
 					if err != nil {
