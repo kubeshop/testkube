@@ -400,12 +400,13 @@ func NewExecuteCmd() *cobra.Command {
 					}
 				}
 
+				// Resolve the params
+				params, err := commontcl.GetParamsSpec(w.Matrix, w.Shards, w.Count, w.MaxCount, baseMachine)
+				if err != nil {
+					ui.Fail(errors.Wrap(err, "matrix and sharding"))
+				}
+
 				for _, testWorkflowName := range testWorkflowNames {
-					// Resolve the params
-					params, err := commontcl.GetParamsSpec(w.Matrix, w.Shards, w.Count, w.MaxCount, baseMachine)
-					if err != nil {
-						ui.Fail(errors.Wrap(err, "matrix and sharding"))
-					}
 					fmt.Printf("%s: %s\n", commontcl.ServiceLabel(testWorkflowName), params.Humanize())
 
 					// Create operations for each expected execution
