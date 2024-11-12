@@ -2,13 +2,13 @@ package v1
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
@@ -409,7 +409,7 @@ func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 		}
 
 		if len(errs) != 0 {
-			return s.InternalError(c, errPrefix, "execution error", errs[0])
+			return s.InternalError(c, errPrefix, "execution error", errors.Join(errs...))
 		}
 
 		s.Log.Debugw("executing test workflow", "name", name, "selector", selector)
