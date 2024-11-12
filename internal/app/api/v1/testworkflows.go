@@ -392,7 +392,7 @@ func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 			request.TestWorkflowExecutionName = strings.Clone(c.Query("testWorkflowExecutionName"))
 			parallelism, err := strconv.Atoi(c.Query("parallelism", strconv.Itoa(scheduler.DefaultConcurrencyLevel)))
 			if err != nil {
-				return s.BadRequest(c, errPrefix, "can't detect parallelism:", err)
+				return s.BadRequest(c, errPrefix, "can't detect parallelism", err)
 			}
 
 			workerpoolService := workerpool.New[testworkflowsv1.TestWorkflow, testkube.TestWorkflowExecutionRequest, testkube.TestWorkflowExecution](parallelism)
