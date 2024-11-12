@@ -9,7 +9,6 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/pkg/errors"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
@@ -347,6 +346,7 @@ func (s *TestkubeAPI) PreviewTestWorkflowHandler() fiber.Handler {
 // TODO: Add metrics
 func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 	return func(c *fiber.Ctx) (err error) {
+		ctx := c.Context()
 		name := c.Params("id")
 		selector := c.Query("selector")
 		s.Log.Debugw("getting test workflow", "name", name, "selector", selector)
@@ -358,17 +358,14 @@ func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 			errPrefix = errPrefix + " " + name
 			testWorkflow, err := s.TestWorkflowsClient.Get(name)
 			if err != nil {
-				if k8serrors.IsNotFound(err) {
-					return s.Warn(c, http.StatusNotFound, fmt.Errorf("%s: test workflow not found: %w", errPrefix, err))
-				}
-
-				return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could get test workflow: %w", errPrefix, err))
+				return s.ClientError(c, errPrefix, err)
 			}
+
 			testWorkflows = append(testWorkflows, *testWorkflow)
 		} else {
 			testWorkflowList, err := s.TestWorkflowsClient.List(selector)
 			if err != nil {
-				return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: can't list test workflows: %w", errPrefix, err))
+				return s.ClientError(c, errPrefix, err)
 			}
 
 			testWorkflows = append(testWorkflows, testWorkflowList.Items...)
@@ -395,13 +392,13 @@ func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 			request.TestWorkflowExecutionName = strings.Clone(c.Query("testWorkflowExecutionName"))
 			parallelism, err := strconv.Atoi(c.Query("parallelism", strconv.Itoa(scheduler.DefaultConcurrencyLevel)))
 			if err != nil {
-				return s.Error(c, http.StatusBadRequest, fmt.Errorf("%s: can't detect parallelism: %w", errPrefix, err))
+				return s.BadRequest(c, errPrefix, "can't detect parallelism:", err)
 			}
 
 			workerpoolService := workerpool.New[testworkflowsv1.TestWorkflow, testkube.TestWorkflowExecutionRequest, testkube.TestWorkflowExecution](parallelism)
 
 			go workerpoolService.SendRequests(s.prepareTestWorkflowRequests(testWorkflows, request))
-			go workerpoolService.Run(c.Context())
+			go workerpoolService.Run(ctx)
 
 			for r := range workerpoolService.GetResponses() {
 				results = append(results, r.Result)
