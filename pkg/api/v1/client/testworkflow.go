@@ -124,7 +124,7 @@ func (c TestWorkflowClient) ExecuteTestWorkflow(name string, request testkube.Te
 
 // ExecuteTestWorkflows starts new external test workflow executions, reads data and returns IDs
 // Executions are started asynchronously client can check later for results
-func (c TestWorkflowClient) ExecuteTestWorkflows(selector string, parallelism int, request testkube.TestWorkflowExecutionRequest) (executions []testkube.TestWorkflowExecution, err error) {
+func (c TestWorkflowClient) ExecuteTestWorkflows(selector string, concurrencyLevel int, request testkube.TestWorkflowExecutionRequest) (executions []testkube.TestWorkflowExecution, err error) {
 	uri := c.testWorkflowExecutionTransport.GetURI("/test-workflow-executions")
 
 	body, err := json.Marshal(request)
@@ -134,7 +134,7 @@ func (c TestWorkflowClient) ExecuteTestWorkflows(selector string, parallelism in
 
 	params := map[string]string{
 		"selector":    selector,
-		"parallelism": strconv.Itoa(parallelism),
+		"concurrency": strconv.Itoa(concurrencyLevel),
 	}
 
 	return c.testWorkflowExecutionTransport.ExecuteMultiple(http.MethodPost, uri, body, params)

@@ -151,7 +151,7 @@ type TestWorkflowAPI interface {
 	UpdateTestWorkflow(workflow testkube.TestWorkflow) (testkube.TestWorkflow, error)
 	DeleteTestWorkflow(name string) error
 	ExecuteTestWorkflow(name string, request testkube.TestWorkflowExecutionRequest) (testkube.TestWorkflowExecution, error)
-	ExecuteTestWorkflows(sselector string, parallelism int, request testkube.TestWorkflowExecutionRequest) ([]testkube.TestWorkflowExecution, error)
+	ExecuteTestWorkflows(sselector string, concurrencyLevel int, request testkube.TestWorkflowExecutionRequest) ([]testkube.TestWorkflowExecution, error)
 	GetTestWorkflowExecutionNotifications(id string) (chan testkube.TestWorkflowExecutionNotification, error)
 	GetTestWorkflowExecutionLogs(id string) ([]byte, error)
 }
