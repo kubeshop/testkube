@@ -182,7 +182,7 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 	cmd.Flags().StringArrayVarP(&masks, "mask", "", []string{}, "regexp to filter downloaded files, single or comma separated, like report/.* or .*\\.json,.*\\.js$")
 	cmd.Flags().StringToStringVarP(&tags, "tag", "", map[string]string{}, "execution tags in a form of name1=val1 passed to executor")
 	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label key value pair: --label key1=value1 or label expression")
-	cmd.Flags().IntVar(&concurrencyLevel, "concurrency", 10, "concurrency level for multiple test workflow execution")
+	cmd.Flags().IntVar(&concurrencyLevel, "concurrency", 10, "concurrency level for multiple test workflow executions")
 
 	return cmd
 }
