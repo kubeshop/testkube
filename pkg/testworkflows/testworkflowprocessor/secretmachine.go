@@ -48,8 +48,8 @@ func createSecretMachine(mapEnvs map[string]corev1.EnvVarSource) expressions.Mac
 					Key: keyName,
 				},
 			}
-
-			return expressions.NewValue(fmt.Sprintf("{{%senv.%s}}", expressions.InternalFnCall, envName)), true, nil
+			v, err := expressions.Compile("env." + envName)
+			return v, true, err
 		})
 
 }

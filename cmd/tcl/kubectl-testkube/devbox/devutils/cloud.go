@@ -24,7 +24,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/cloud/client"
 )
 
-type cloudObj struct {
+type CloudObject struct {
 	cfg       config.CloudContext
 	envClient *client.EnvironmentsClient
 	list      []client.Environment
@@ -36,7 +36,7 @@ type cloudObj struct {
 	cmd *cobra.Command
 }
 
-func NewCloud(cfg config.CloudContext, cmd *cobra.Command) (*cloudObj, error) {
+func NewCloud(cfg config.CloudContext, cmd *cobra.Command) (*CloudObject, error) {
 	if cfg.ApiKey == "" || cfg.OrganizationId == "" || cfg.OrganizationName == "" {
 		return nil, errors.New("login to the organization first")
 	}
@@ -56,7 +56,7 @@ func NewCloud(cfg config.CloudContext, cmd *cobra.Command) (*cloudObj, error) {
 		cfg.AgentUri = "agent." + strings.TrimPrefix(cfg.AgentUri, "api.")
 	}
 	envClient := client.NewEnvironmentsClient(cfg.ApiUri, cfg.ApiKey, cfg.OrganizationId)
-	obj := &cloudObj{
+	obj := &CloudObject{
 		cfg:       cfg,
 		envClient: envClient,
 		cmd:       cmd,
@@ -69,11 +69,11 @@ func NewCloud(cfg config.CloudContext, cmd *cobra.Command) (*cloudObj, error) {
 	return obj, nil
 }
 
-func (c *cloudObj) List() []client.Environment {
+func (c *CloudObject) List() []client.Environment {
 	return c.list
 }
 
-func (c *cloudObj) ListObsolete() []client.Environment {
+func (c *CloudObject) ListObsolete() []client.Environment {
 	obsolete := make([]client.Environment, 0)
 	for _, env := range c.list {
 		if !env.Connected {
@@ -83,7 +83,7 @@ func (c *cloudObj) ListObsolete() []client.Environment {
 	return obsolete
 }
 
-func (c *cloudObj) UpdateList() error {
+func (c *CloudObject) UpdateList() error {
 	list, err := c.envClient.List()
 	if err != nil {
 		return err
@@ -98,7 +98,7 @@ func (c *cloudObj) UpdateList() error {
 	return nil
 }
 
-func (c *cloudObj) Client(environmentId string) (client2.Client, error) {
+func (c *CloudObject) Client(environmentId string) (client2.Client, error) {
 	c.clientMu.Lock()
 	defer c.clientMu.Unlock()
 
@@ -121,31 +121,31 @@ func (c *cloudObj) Client(environmentId string) (client2.Client, error) {
 	return c.client, nil
 }
 
-func (c *cloudObj) AgentURI() string {
+func (c *CloudObject) AgentURI() string {
 	return c.cfg.AgentUri
 }
 
-func (c *cloudObj) AgentInsecure() bool {
+func (c *CloudObject) AgentInsecure() bool {
 	return strings.HasPrefix(c.cfg.ApiUri, "http://")
 }
 
-func (c *cloudObj) ApiURI() string {
+func (c *CloudObject) ApiURI() string {
 	return c.cfg.ApiUri
 }
 
-func (c *cloudObj) ApiKey() string {
+func (c *CloudObject) ApiKey() string {
 	return c.cfg.ApiKey
 }
 
-func (c *cloudObj) ApiInsecure() bool {
+func (c *CloudObject) ApiInsecure() bool {
 	return strings.HasPrefix(c.cfg.ApiUri, "http://")
 }
 
-func (c *cloudObj) DashboardUrl(id, path string) string {
+func (c *CloudObject) DashboardUrl(id, path string) string {
 	return strings.TrimSuffix(fmt.Sprintf("%s/organization/%s/environment/%s/", c.cfg.UiUri, c.cfg.OrganizationId, id)+strings.TrimPrefix(path, "/"), "/")
 }
 
-func (c *cloudObj) CreateEnvironment(name string) (*client.Environment, error) {
+func (c *CloudObject) CreateEnvironment(name string) (*client.Environment, error) {
 	env, err := c.envClient.Create(client.Environment{
 		Name:           name,
 		Owner:          c.cfg.OrganizationId,
@@ -176,6 +176,6 @@ func (c *cloudObj) CreateEnvironment(name string) (*client.Environment, error) {
 	return &env, nil
 }
 
-func (c *cloudObj) DeleteEnvironment(id string) error {
+func (c *CloudObject) DeleteEnvironment(id string) error {
 	return c.envClient.Delete(id)
 }

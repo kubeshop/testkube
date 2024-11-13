@@ -212,11 +212,6 @@ func resolve(v reflect.Value, t tagData, m []Machine, force bool, finalize bool)
 				vv, _ = expr2.Static().StringValue()
 			} else {
 				vv = expr.Template()
-				if t.value == "template" && !IsTemplateStringWithoutExpressions(str) {
-					if IsTemplateStringWithInternalFnCall(vv) {
-						vv = CleanTemplateStringInternalFnCall(vv)
-					}
-				}
 			}
 			changed = vv != str
 			if ptr.Kind() == reflect.String {

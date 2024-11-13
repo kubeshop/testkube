@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
@@ -14,17 +15,14 @@ import (
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
+const (
+	StableReleasePlaceholder = "<latest-stable-release>"
+)
+
 func NewInitCmd() *cobra.Command {
 	var noLogin bool // ignore ask for login
 	var dockerContainerName, dockerImage string
 	var options common.HelmOptions
-
-	latestVersion, err := common.GetLatestVersion()
-	ui.ExitOnError("Gettong latest version", err)
-
-	if latestVersion != "" {
-		latestVersion = ":" + latestVersion
-	}
 
 	cmd := &cobra.Command{
 		Use:     "init",
@@ -33,6 +31,12 @@ func NewInitCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			ui.Info("WELCOME TO")
 			ui.Logo()
+
+			if strings.Contains(dockerImage, StableReleasePlaceholder) {
+				latestVersion, err := common.GetLatestVersion()
+				ui.ExitOnError("Getting latest version", err)
+				dockerImage = strings.ReplaceAll(dockerImage, StableReleasePlaceholder, latestVersion)
+			}
 
 			cfg, err := config.Load()
 			if err != nil {
@@ -135,7 +139,7 @@ func NewInitCmd() *cobra.Command {
 
 	cmd.Flags().BoolVarP(&noLogin, "no-login", "", false, "Ignore login prompt, set existing token later by `testkube set context`")
 	cmd.Flags().StringVar(&dockerContainerName, "docker-container", "testkube-agent", "Docker container name for Testkube Docker Agent")
-	cmd.Flags().StringVar(&dockerImage, "docker-image", "kubeshop/testkube-agent"+latestVersion, "Docker image for Testkube Docker Agent")
+	cmd.Flags().StringVar(&dockerImage, "docker-image", "kubeshop/testkube-agent:"+StableReleasePlaceholder, "Docker image for Testkube Docker Agent")
 
 	return cmd
 }

@@ -10394,6 +10394,26 @@ components:
         - diskURI
       type: object
 
+    CSIVolumeSource:
+      type: object
+      description: Represents a source location of a volume to mount, managed by an external CSI driver
+      properties:
+        driver:
+          type: string
+          description: driver is the name of the CSI driver that handles this volume.
+        readOnly:
+          $ref: "#/components/schemas/BoxedBoolean"
+        fsType:
+          $ref: "#/components/schemas/BoxedString"
+        volumeAttributes:
+          type: object
+          description: volumeAttributes stores driver-specific properties that are passed to the CSI driver.
+            Consult your driver's documentation for supported values.
+          additionalProperties:
+            type: string
+        nodePublishSecretRef:
+          $ref: "#/components/schemas/LocalObjectReference"
+
     Volume:
       type: object
       description: Volume represents a named volume in a pod that
@@ -10423,6 +10443,8 @@ components:
           $ref: "#/components/schemas/AzureDiskVolumeSource"
         configMap:
           $ref: "#/components/schemas/ConfigMapVolumeSource"
+        csi:
+          $ref: "#/components/schemas/CSIVolumeSource"
       required:
         - name
 

@@ -166,7 +166,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	secrets := append(layer.Secrets(), options.Secrets...)
 	for i := range secrets {
 		AnnotateControlledBy(&secrets[i], options.Config.Resource.RootId, options.Config.Resource.Id)
-		err = expressions.FinalizeForce(&secrets[i], machines...)
+		err = expressions.SimplifyForce(&secrets[i], machines...)
 		if err != nil {
 			return nil, errors.Wrap(err, "finalizing Secret")
 		}
@@ -212,7 +212,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 
 	// Load the image details when necessary
 	hasPodSecurityContextGroup := podConfig.SecurityContext != nil && podConfig.SecurityContext.RunAsGroup != nil
-	imageNames := root.GetImages(hasPodSecurityContextGroup)
+	imageNames := root.GetImages(!hasPodSecurityContextGroup)
 	images := make(map[string]*imageinspector.Info)
 	imageNameResolutions := map[string]string{}
 	for image, needsMetadata := range imageNames {

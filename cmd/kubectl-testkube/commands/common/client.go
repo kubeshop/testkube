@@ -2,14 +2,11 @@ package common
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"os"
 	"runtime"
 	"strconv"
 
 	"github.com/spf13/cobra"
-	"golang.org/x/oauth2"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
@@ -23,10 +20,6 @@ func GetClient(cmd *cobra.Command) (client.Client, string, error) {
 	clientType := cmd.Flag("client").Value.String()
 	namespace := cmd.Flag("namespace").Value.String()
 	apiURI := cmd.Flag("api-uri").Value.String()
-	oauthEnabled, err := strconv.ParseBool(cmd.Flag("oauth-enabled").Value.String())
-	if err != nil {
-		return nil, "", fmt.Errorf("parsing flag value %w", err)
-	}
 
 	insecure, err := strconv.ParseBool(cmd.Flag("insecure").Value.String())
 	if err != nil {
@@ -71,32 +64,15 @@ func GetClient(cmd *cobra.Command) (client.Client, string, error) {
 	options.APIServerName = cfg.APIServerName
 	options.APIServerPort = cfg.APIServerPort
 
-	switch cfg.ContextType {
-	case config.ContextTypeKubeconfig:
-		if oauthEnabled {
-			options.Provider = cfg.OAuth2Data.Provider
-			options.ClientID = cfg.OAuth2Data.ClientID
-			options.ClientSecret = cfg.OAuth2Data.ClientSecret
-			options.Scopes = cfg.OAuth2Data.Scopes
-			options.Token = cfg.OAuth2Data.Token
-
-			if os.Getenv("TESTKUBE_OAUTH_ACCESS_TOKEN") != "" {
-				options.Token = &oauth2.Token{
-					AccessToken: os.Getenv("TESTKUBE_OAUTH_ACCESS_TOKEN"),
-				}
-			}
-
-			if options.Token == nil {
-				return nil, "", errors.New("oauth token is empty, please configure your oauth settings first")
-			}
-		}
-	case config.ContextTypeCloud:
-
+	if cfg.ContextType == config.ContextTypeCloud {
 		token := cfg.CloudContext.ApiKey
 
-		if cfg.CloudContext.ApiKey != "" && cfg.CloudContext.RefreshToken != "" && cfg.OAuth2Data.Enabled {
+		if cfg.CloudContext.ApiKey != "" && cfg.CloudContext.RefreshToken != "" {
 			var refreshToken string
-			authURI := fmt.Sprintf("%s/idp", cfg.CloudContext.ApiUri)
+			authURI := cfg.CloudContext.AuthUri
+			if cfg.CloudContext.AuthUri == "" {
+				authURI = fmt.Sprintf("%s/idp", cfg.CloudContext.ApiUri)
+			}
 			token, refreshToken, err = cloudlogin.CheckAndRefreshToken(context.Background(), authURI, cfg.CloudContext.ApiKey, cfg.CloudContext.RefreshToken)
 			if err != nil {
 				// Error: failed refreshing, go thru login flow

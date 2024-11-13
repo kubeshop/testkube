@@ -255,11 +255,3 @@ func CompileAndResolveTemplate(tpl string, m ...Machine) (Expression, error) {
 func IsTemplateStringWithoutExpressions(tpl string) bool {
 	return !strings.Contains(tpl, "{{")
 }
-
-func IsTemplateStringWithInternalFnCall(tpl string) bool {
-	return strings.Contains(tpl, "{{\"{{\"}}"+InternalFnCall)
-}
-
-func CleanTemplateStringInternalFnCall(tpl string) string {
-	return strings.ReplaceAll(tpl, "{{\"{{\"}}"+InternalFnCall, "{{")
-}
