@@ -50,8 +50,14 @@ func (r *ossResourcesClient) CreateTestWorkflow(workflow testkube.TestWorkflow) 
 }
 
 func (r *ossResourcesClient) UpdateTestWorkflow(workflow testkube.TestWorkflow) (result testkube.TestWorkflow, err error) {
-	workflow.Namespace = r.namespace
-	v, err := r.testWorkflows.Update(testworkflows.MapAPIToKube(&workflow))
+	prev, err := r.testWorkflows.Get(workflow.Name)
+	if err != nil {
+		return r.CreateTestWorkflow(workflow)
+	}
+	cr := testworkflows.MapAPIToKube(&workflow)
+	cr.Namespace = r.namespace
+	cr.ResourceVersion = prev.ResourceVersion
+	v, err := r.testWorkflows.Update(cr)
 	if err != nil {
 		return
 	}
@@ -72,8 +78,14 @@ func (r *ossResourcesClient) CreateTestWorkflowTemplate(template testkube.TestWo
 }
 
 func (r *ossResourcesClient) UpdateTestWorkflowTemplate(template testkube.TestWorkflowTemplate) (result testkube.TestWorkflowTemplate, err error) {
-	template.Namespace = r.namespace
-	v, err := r.testWorkflowTemplates.Update(testworkflows.MapTemplateAPIToKube(&template))
+	prev, err := r.testWorkflowTemplates.Get(template.Name)
+	if err != nil {
+		return r.CreateTestWorkflowTemplate(template)
+	}
+	cr := testworkflows.MapTemplateAPIToKube(&template)
+	cr.Namespace = r.namespace
+	cr.ResourceVersion = prev.ResourceVersion
+	v, err := r.testWorkflowTemplates.Update(cr)
 	if err != nil {
 		return
 	}

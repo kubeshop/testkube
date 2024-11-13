@@ -149,8 +149,8 @@ func (c *CRDSync) processTemplate(sourcePath string, template testworkflowsv1.Te
 			if !bytes.Equal(v1, v2) {
 				c.templates[i].Template = template
 				c.updates = append(c.updates, CRDSyncUpdate{Template: &template, Op: CRDSyncUpdateOpUpdate})
-				return nil
 			}
+			return nil
 		}
 	}
 	c.templates = append(c.templates, CRDSyncTemplate{SourcePath: sourcePath, Template: template})
