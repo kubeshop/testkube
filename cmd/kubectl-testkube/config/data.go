@@ -22,6 +22,7 @@ type CloudContext struct {
 	AgentUri            string `json:"agentUri,omitempty"`
 	RootDomain          string `json:"rootDomain,omitempty"`
 	UiUri               string `json:"uiUri,omitempty"`
+	AuthUri             string `json:"authUri,omitempty"`
 	TokenType           string `json:"tokenType,omitempty"`
 	DockerContainerName string `json:"dockerContainerName,omitempty"`
 	CustomAuth          bool   `json:"customConnector,omitempty"`

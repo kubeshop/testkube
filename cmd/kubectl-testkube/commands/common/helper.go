@@ -311,6 +311,9 @@ func PopulateLoginDataToContext(orgID, envID, token, refreshToken, dockerContain
 	if options.Master.URIs.Api != "" {
 		cfg.CloudContext.ApiUri = options.Master.URIs.Api
 	}
+	if options.Master.URIs.Auth != "" {
+		cfg.CloudContext.AuthUri = options.Master.URIs.Auth
+	}
 	cfg.ContextType = config.ContextTypeCloud
 	cfg.CloudContext.OrganizationId = orgID
 	cfg.CloudContext.EnvironmentId = envID
@@ -347,6 +350,10 @@ func PopulateAgentDataToContext(options HelmOptions, cfg config.Data) error {
 	}
 	if options.Master.URIs.Api != "" {
 		cfg.CloudContext.ApiUri = options.Master.URIs.Api
+		updated = true
+	}
+	if options.Master.URIs.Auth != "" {
+		cfg.CloudContext.AuthUri = options.Master.URIs.Auth
 		updated = true
 	}
 	if options.Master.IdToken != "" {
