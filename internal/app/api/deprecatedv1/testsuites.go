@@ -624,8 +624,8 @@ func (s *DeprecatedTestkubeAPI) ListTestSuiteExecutionsHandler() fiber.Handler {
 		}
 		l.Debugw("got executions totals", "totals", executionsTotals, "time", time.Since(now))
 		filterAllTotals := *filter.(*testresult.FilterImpl)
-		filterAllTotals.WithPage(0).WithPageSize(math.MaxInt64)
-		allExecutionsTotals, err := s.DeprecatedRepositories.TestSuiteResults().GetExecutionsTotals(ctx, filterAllTotals)
+		filterAllTotals.WithPage(0).WithPageSize(math.MaxInt32)
+		allExecutionsTotals, err := s.DeprecatedRepositories.TestSuiteResults().GetExecutionsTotals(ctx, &filterAllTotals)
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: client could not get all executions totals: %w", errPrefix, err))
 		}
