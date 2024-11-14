@@ -390,12 +390,7 @@ func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 
 		if len(testWorkflows) != 0 {
 			request.TestWorkflowExecutionName = strings.Clone(c.Query("testWorkflowExecutionName"))
-			concurrencyLevel, err := strconv.Atoi(c.Query("concurrency", strconv.Itoa(scheduler.DefaultConcurrencyLevel)))
-			if err != nil {
-				return s.BadRequest(c, errPrefix, "can't detect concurrency level", err)
-			}
-
-			workerpoolService := workerpool.New[testworkflowsv1.TestWorkflow, testkube.TestWorkflowExecutionRequest, testkube.TestWorkflowExecution](concurrencyLevel)
+			workerpoolService := workerpool.New[testworkflowsv1.TestWorkflow, testkube.TestWorkflowExecutionRequest, testkube.TestWorkflowExecution](scheduler.DefaultConcurrencyLevel)
 
 			go workerpoolService.SendRequests(s.prepareTestWorkflowRequests(testWorkflows, request))
 			go workerpoolService.Run(ctx)
