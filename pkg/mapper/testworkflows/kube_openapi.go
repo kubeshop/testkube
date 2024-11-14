@@ -806,16 +806,16 @@ func MapStepExecuteTestKubeToAPI(v testworkflowsv1.StepExecuteTest) testkube.Tes
 	}
 }
 
-func MapLabelSelectorRequirementToAPI(v metav1.LabelSelectorRequirement) testkube.IoK8sApimachineryPkgApisMetaV1LabelSelectorRequirement {
-	return testkube.IoK8sApimachineryPkgApisMetaV1LabelSelectorRequirement{
+func MapLabelSelectorRequirementToAPI(v metav1.LabelSelectorRequirement) testkube.LabelSelectorRequirement {
+	return testkube.LabelSelectorRequirement{
 		Key:      v.Key,
 		Operator: string(v.Operator),
 		Values:   v.Values,
 	}
 }
 
-func MapSelectorToAPI(v metav1.LabelSelector) testkube.IoK8sApimachineryPkgApisMetaV1LabelSelector {
-	return testkube.IoK8sApimachineryPkgApisMetaV1LabelSelector{
+func MapSelectorToAPI(v metav1.LabelSelector) testkube.LabelSelector {
+	return testkube.LabelSelector{
 		MatchLabels:      v.MatchLabels,
 		MatchExpressions: common.MapSlice(v.MatchExpressions, MapLabelSelectorRequirementToAPI),
 	}

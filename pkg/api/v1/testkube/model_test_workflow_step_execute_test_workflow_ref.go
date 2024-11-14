@@ -23,6 +23,6 @@ type TestWorkflowStepExecuteTestWorkflowRef struct {
 	// matrix of parameters to spawn instances
 	Matrix map[string]interface{} `json:"matrix,omitempty"`
 	// parameters that should be distributed across sharded instances
-	Shards   map[string]interface{}                       `json:"shards,omitempty"`
-	Selector *IoK8sApimachineryPkgApisMetaV1LabelSelector `json:"selector,omitempty"`
+	Shards   map[string]interface{} `json:"shards,omitempty"`
+	Selector *LabelSelector         `json:"selector,omitempty"`
 }

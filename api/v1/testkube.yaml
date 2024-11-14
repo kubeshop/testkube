@@ -9042,7 +9042,7 @@ components:
           config:
             $ref: "#/components/schemas/TestWorkflowConfigValue"
           selector:
-            $ref: "https://raw.githubusercontent.com/garethr/kubernetes-json-schema/master/v1.7.8/_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.LabelSelector"
+            $ref: "#/components/schemas/LabelSelector"
             description: label selector for test workflow
 
     TestWorkflowStepExecuteTestRef:

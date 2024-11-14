@@ -846,7 +846,7 @@ func MapStepExecuteTestAPIToKube(v testkube.TestWorkflowStepExecuteTestRef) test
 	}
 }
 
-func MapLabelSelectorRequirementToCRD(v testkube.IoK8sApimachineryPkgApisMetaV1LabelSelectorRequirement) metav1.LabelSelectorRequirement {
+func MapLabelSelectorRequirementToCRD(v testkube.LabelSelectorRequirement) metav1.LabelSelectorRequirement {
 	return metav1.LabelSelectorRequirement{
 		Key:      v.Key,
 		Operator: metav1.LabelSelectorOperator(v.Operator),
@@ -854,7 +854,7 @@ func MapLabelSelectorRequirementToCRD(v testkube.IoK8sApimachineryPkgApisMetaV1L
 	}
 }
 
-func MapSelectorToCRD(v testkube.IoK8sApimachineryPkgApisMetaV1LabelSelector) metav1.LabelSelector {
+func MapSelectorToCRD(v testkube.LabelSelector) metav1.LabelSelector {
 	return metav1.LabelSelector{
 		MatchLabels:      v.MatchLabels,
 		MatchExpressions: common.MapSlice(v.MatchExpressions, MapLabelSelectorRequirementToCRD),
