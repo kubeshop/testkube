@@ -378,6 +378,10 @@ func NewExecuteCmd() *cobra.Command {
 					ui.Fail(errors.Wrap(err, "unmarshal workflow definition"))
 				}
 
+				if w.Name == "" && w.Selector == nil {
+					ui.Fail(errors.New("either workflow name or selector should be specified"))
+				}
+
 				var testWorkflowNames []string
 				if w.Name != "" {
 					testWorkflowNames = []string{w.Name}
