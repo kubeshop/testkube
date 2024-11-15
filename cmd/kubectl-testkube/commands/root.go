@@ -58,6 +58,7 @@ func init() {
 
 	RootCmd.AddCommand(NewConfigCmd())
 	RootCmd.AddCommand(NewDebugCmd())
+	RootCmd.AddCommand(NewDiagnosticsCmd())
 	RootCmd.AddCommand(NewCreateTicketCmd())
 
 	RootCmd.AddCommand(NewAgentCmd())
