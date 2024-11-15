@@ -14,6 +14,7 @@ type Master struct {
 	ApiUrlPrefix   string                    `json:"apiUrlPrefix,omitempty"`
 	RootDomain     string                    `json:"rootDomain,omitempty"`
 	CustomAuth     bool                      `json:"customAuth,omitempty"`
+	CallbackPort   int                       `json:"callbackPort,omitempty"`
 	Features       featureflags.FeatureFlags `json:"features,omitempty"`
 
 	URIs MasterURIs `json:"uris,omitempty"`

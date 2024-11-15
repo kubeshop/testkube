@@ -15,7 +15,6 @@ import (
 )
 
 const (
-	listenAddr      = "127.0.0.1:8090"
 	docsUrl         = "https://docs.testkube.io/testkube-pro/intro"
 	tokenQueryParam = "token"
 )
@@ -80,7 +79,7 @@ func NewConnectCmd() *cobra.Command {
 			)
 			// if no agent is passed create new environment and get its token
 			if opts.Master.AgentToken == "" && opts.Master.OrgId == "" && opts.Master.EnvId == "" {
-				token, refreshToken, err = common.LoginUser(opts.Master.URIs.Auth, opts.Master.CustomAuth)
+				token, refreshToken, err = common.LoginUser(opts.Master.URIs.Auth, opts.Master.CustomAuth, opts.Master.CallbackPort)
 				ui.ExitOnError("login", err)
 
 				orgId, orgName, err := common.UiGetOrganizationId(opts.Master.URIs.Api, token)
@@ -162,7 +161,7 @@ func NewConnectCmd() *cobra.Command {
 
 			ui.H2("Saving Testkube CLI Pro context")
 			if token == "" && !common.IsUserLoggedIn(cfg, opts) {
-				token, refreshToken, err = common.LoginUser(opts.Master.URIs.Auth, opts.Master.CustomAuth)
+				token, refreshToken, err = common.LoginUser(opts.Master.URIs.Auth, opts.Master.CustomAuth, opts.Master.CallbackPort)
 				ui.ExitOnError("user login", err)
 			}
 			err = common.PopulateLoginDataToContext(opts.Master.OrgId, opts.Master.EnvId, token, refreshToken, "", opts, cfg)
