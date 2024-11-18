@@ -42,22 +42,22 @@ func main() {
 	orchestration.Setup.SetSensitiveWordMinimumLength(SensitiveMinimumLength)
 
 	// Prepare empty state file if it doesn't exist
-	_, err := os.Stat(data.StatePath)
+	_, err := os.Stat(constants.StatePath)
 	if errors.Is(err, os.ErrNotExist) {
-		stdout.Hint(data.InitStepName, constants.InstructionStart)
+		stdout.Hint(constants.InitStepName, constants.InstructionStart)
 		stdoutUnsafe.Print("Creating state...")
-		err := os.WriteFile(data.StatePath, nil, 0777)
+		err := os.WriteFile(constants.StatePath, nil, 0777)
 		if err != nil {
 			stdoutUnsafe.Error(" error\n")
-			output.ExitErrorf(data.CodeInternal, "failed to create state file: %s", err.Error())
+			output.ExitErrorf(constants.CodeInternal, "failed to create state file: %s", err.Error())
 		}
-		os.Chmod(data.StatePath, 0777)
+		os.Chmod(constants.StatePath, 0777)
 		stdoutUnsafe.Print(" done\n")
 	} else if err != nil {
-		stdout.Hint(data.InitStepName, constants.InstructionStart)
+		stdout.Hint(constants.InitStepName, constants.InstructionStart)
 		stdoutUnsafe.Print("Accessing state...")
 		stdoutUnsafe.Error(" error\n")
-		output.ExitErrorf(data.CodeInternal, "cannot access state file: %s", err.Error())
+		output.ExitErrorf(constants.CodeInternal, "cannot access state file: %s", err.Error())
 	}
 
 	// Store the instructions in the state if they are provided
@@ -80,13 +80,13 @@ func main() {
 
 	// Ensure there is a group index provided
 	if len(os.Args) != 2 {
-		output.ExitErrorf(data.CodeInternal, "invalid arguments provided - expected only one")
+		output.ExitErrorf(constants.CodeInternal, "invalid arguments provided - expected only one")
 	}
 
 	// Determine group index to run
 	groupIndex, err := strconv.ParseInt(os.Args[1], 10, 32)
 	if err != nil {
-		output.ExitErrorf(data.CodeInputError, "invalid run group passed: %s", err.Error())
+		output.ExitErrorf(constants.CodeInputError, "invalid run group passed: %s", err.Error())
 	}
 
 	// Handle aborting
@@ -143,7 +143,7 @@ func main() {
 	})
 	_, err = controlSrv.Listen()
 	if err != nil {
-		output.ExitErrorf(data.CodeInternal, "Failed to start control server at port %d: %s\n", constants.ControlServerPort, err.Error())
+		output.ExitErrorf(constants.CodeInternal, "Failed to start control server at port %d: %s\n", constants.ControlServerPort, err.Error())
 	}
 
 	// Keep a list of paused steps for execution
@@ -187,7 +187,7 @@ func main() {
 					orchestration.Start(step)
 					break
 				}
-				output.ExitErrorf(data.CodeInputError, err.Error())
+				output.ExitErrorf(constants.CodeInputError, err.Error())
 			}
 			stdout.SetSensitiveWords(orchestration.Setup.GetSensitiveWords())
 			currentContainer = *action.Container
@@ -205,15 +205,15 @@ func main() {
 			// Determine if the step should be skipped
 			executable, err := step.ResolveCondition()
 			if err != nil {
-				output.ExitErrorf(data.CodeInternal, "failed to determine condition of '%s' step: %s: %v", *action.Start, step.Condition, err.Error())
+				output.ExitErrorf(constants.CodeInternal, "failed to determine condition of '%s' step: %s: %v", *action.Start, step.Condition, err.Error())
 			}
 			if !executable {
-				step.SetStatus(data.StepStatusSkipped)
+				step.SetStatus(constants.StepStatusSkipped)
 
 				// Skip all the children
 				for _, v := range state.Steps {
 					if slices.Contains(v.Parents, step.Ref) {
-						v.SetStatus(data.StepStatusSkipped)
+						v.SetStatus(constants.StepStatusSkipped)
 					}
 				}
 			}
@@ -231,7 +231,7 @@ func main() {
 			if step.Status == nil {
 				status, err := step.ResolveResult()
 				if err != nil {
-					output.ExitErrorf(data.CodeInternal, "failed to determine result of '%s' step: %s: %v", *action.End, step.Result, err.Error())
+					output.ExitErrorf(constants.CodeInternal, "failed to determine result of '%s' step: %s: %v", *action.End, step.Result, err.Error())
 				}
 				step.SetStatus(status)
 			}
@@ -240,15 +240,15 @@ func main() {
 		case lite.ActionTypeSetup:
 			err := orchestration.Setup.UseEnv(constants.EnvGroupDebug)
 			if err != nil {
-				output.ExitErrorf(data.CodeInputError, err.Error())
+				output.ExitErrorf(constants.CodeInputError, err.Error())
 			}
 			stdout.SetSensitiveWords(orchestration.Setup.GetSensitiveWords())
-			step := state.GetStep(data.InitStepName)
+			step := state.GetStep(constants.InitStepName)
 			err = commands.Setup(*action.Setup)
 			if err == nil {
-				step.SetStatus(data.StepStatusPassed)
+				step.SetStatus(constants.StepStatusPassed)
 			} else {
-				step.SetStatus(data.StepStatusFailed)
+				step.SetStatus(constants.StepStatusFailed)
 			}
 			orchestration.End(step)
 			if err != nil {
@@ -268,14 +268,14 @@ func main() {
 
 			// Ignore when it is aborted
 			if orchestration.Executions.IsAborted() {
-				step.SetStatus(data.StepStatusAborted)
+				step.SetStatus(constants.StepStatusAborted)
 				continue
 			}
 
 			// Configure the environment
 			err := orchestration.Setup.UseCurrentEnv()
 			if err != nil {
-				output.ExitErrorf(data.CodeInputError, err.Error())
+				output.ExitErrorf(constants.CodeInputError, err.Error())
 			}
 			if action.Execute.Toolkit {
 				serialized, _ := json.Marshal(state.InternalConfig)
@@ -318,16 +318,16 @@ func main() {
 
 				// Iterate over timed out step
 				for _, r := range timedOut {
-					r.SetStatus(data.StepStatusTimeout)
+					r.SetStatus(constants.StepStatusTimeout)
 					sub := state.GetSubSteps(r.Ref)
 					for i := range sub {
 						if sub[i].IsFinished() {
 							continue
 						}
 						if sub[i].IsStarted() {
-							sub[i].SetStatus(data.StepStatusTimeout)
+							sub[i].SetStatus(constants.StepStatusTimeout)
 						} else {
-							sub[i].SetStatus(data.StepStatusSkipped)
+							sub[i].SetStatus(constants.StepStatusSkipped)
 						}
 					}
 					stdoutUnsafe.Println("Timed out.")
@@ -352,7 +352,7 @@ func main() {
 
 				// Ignore when it is aborted
 				if orchestration.Executions.IsAborted() {
-					step.SetStatus(data.StepStatusAborted)
+					step.SetStatus(constants.StepStatusAborted)
 					break
 				}
 
@@ -406,7 +406,7 @@ func main() {
 	// Stop the container after all the instructions are interpret
 	_ = orchestration.Executions.Kill()
 	if orchestration.Executions.IsAborted() {
-		os.Exit(int(data.CodeAborted))
+		os.Exit(int(constants.CodeAborted))
 	} else {
 		os.Exit(0)
 	}

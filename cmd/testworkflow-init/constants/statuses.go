@@ -1,19 +1,4 @@
-package data
-
-import "path/filepath"
-
-const (
-	InitStepName       = "tktw-init"
-	InternalPath       = "/.tktw"
-	TerminationLogPath = "/dev/termination-log"
-)
-
-var (
-	InternalBinPath = filepath.Join(InternalPath, "bin")
-	InitPath        = filepath.Join(InternalPath, "init")
-	ToolkitPath     = filepath.Join(InternalPath, "toolkit")
-	StatePath       = filepath.Join(InternalPath, "state")
-)
+package constants
 
 type StepStatus string
 
@@ -47,9 +32,3 @@ func StepStatusFromCode(code string) StepStatus {
 	}
 	return StepStatusAborted
 }
-
-const (
-	CodeAborted    uint8 = 137
-	CodeInputError uint8 = 155
-	CodeInternal   uint8 = 190
-)

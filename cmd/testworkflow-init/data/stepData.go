@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
 )
 
@@ -15,17 +16,17 @@ type RetryPolicy struct {
 }
 
 type StepData struct {
-	Ref           string         `json:"_,omitempty"`
-	ExitCode      uint8          `json:"e,omitempty"`
-	Status        *StepStatus    `json:"s,omitempty"`
-	StartedAt     *time.Time     `json:"S,omitempty"`
-	Condition     string         `json:"c,omitempty"`
-	Parents       []string       `json:"p,omitempty"`
-	Timeout       *time.Duration `json:"t,omitempty"`
-	PausedOnStart bool           `json:"P,omitempty"`
-	Retry         RetryPolicy    `json:"r,omitempty"`
-	Result        string         `json:"R,omitempty"`
-	Iteration     int32          `json:"i,omitempty"`
+	Ref           string                `json:"_,omitempty"`
+	ExitCode      uint8                 `json:"e,omitempty"`
+	Status        *constants.StepStatus `json:"s,omitempty"`
+	StartedAt     *time.Time            `json:"S,omitempty"`
+	Condition     string                `json:"c,omitempty"`
+	Parents       []string              `json:"p,omitempty"`
+	Timeout       *time.Duration        `json:"t,omitempty"`
+	PausedOnStart bool                  `json:"P,omitempty"`
+	Retry         RetryPolicy           `json:"r,omitempty"`
+	Result        string                `json:"R,omitempty"`
+	Iteration     int32                 `json:"i,omitempty"`
 
 	// Pausing
 	PausedNs    int64      `json:"n,omitempty"`
@@ -53,22 +54,22 @@ func (s *StepData) ResolveCondition() (bool, error) {
 	return expr.Static().BoolValue()
 }
 
-func (s *StepData) ResolveResult() (StepStatus, error) {
+func (s *StepData) ResolveResult() (constants.StepStatus, error) {
 	if s.Result == "" {
-		return StepStatusAborted, errors.New("missing result expression")
+		return constants.StepStatusAborted, errors.New("missing result expression")
 	}
 	expr, err := Expression(s.Result, RefSuccessMachine)
 	if err != nil {
-		return StepStatusAborted, err
+		return constants.StepStatusAborted, err
 	}
 	success, err := expr.Static().BoolValue()
 	if err != nil {
-		return StepStatusAborted, err
+		return constants.StepStatusAborted, err
 	}
 	if success {
-		return StepStatusPassed, nil
+		return constants.StepStatusPassed, nil
 	}
-	return StepStatusFailed, nil
+	return constants.StepStatusFailed, nil
 }
 
 func (s *StepData) SetExitCode(exitCode uint8) *StepData {
@@ -99,7 +100,7 @@ func (s *StepData) SetTimeout(timeout string) *StepData {
 	}
 	duration, err := time.ParseDuration(timeout)
 	if err != nil {
-		output.ExitErrorf(CodeInputError, "invalid timeout duration: %s: %s", timeout, err.Error())
+		output.ExitErrorf(constants.CodeInputError, "invalid timeout duration: %s: %s", timeout, err.Error())
 	}
 	s.Timeout = &duration
 	return s
@@ -115,7 +116,7 @@ func (s *StepData) SetRetryPolicy(policy RetryPolicy) *StepData {
 	return s
 }
 
-func (s *StepData) SetStatus(status StepStatus) *StepData {
+func (s *StepData) SetStatus(status constants.StepStatus) *StepData {
 	s.Status = &status
 	return s
 }

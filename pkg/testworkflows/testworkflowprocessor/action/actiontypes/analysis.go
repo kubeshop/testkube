@@ -1,7 +1,7 @@
 package actiontypes
 
 import (
-	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 )
@@ -14,7 +14,7 @@ func (a ActionList) GetLastRef() string {
 		case lite.ActionTypeStart:
 			return *a[i].Start
 		case lite.ActionTypeSetup:
-			return data.InitStepName
+			return constants.InitStepName
 		}
 	}
 	return ""

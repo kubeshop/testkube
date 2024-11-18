@@ -32,14 +32,14 @@ func Run(run lite.ActionExecute, container lite.LiteActionContainer) {
 
 	// Ensure the command is not empty
 	if len(command) == 0 {
-		output.ExitErrorf(data.CodeInputError, "command is required")
+		output.ExitErrorf(constants.CodeInputError, "command is required")
 	}
 
 	// Resolve the command to run
 	for i := range command {
 		value, err := expressions.CompileAndResolveTemplate(command[i], machine, expressions.FinalizerFail)
 		if err != nil {
-			output.ExitErrorf(data.CodeInternal, "failed to compute argument '%d': %s", i, err.Error())
+			output.ExitErrorf(constants.CodeInternal, "failed to compute argument '%d': %s", i, err.Error())
 		}
 		command[i], _ = value.Static().StringValue()
 	}
@@ -48,11 +48,11 @@ func Run(run lite.ActionExecute, container lite.LiteActionContainer) {
 	execution := orchestration.Executions.Create(command[0], command[1:])
 	result, err := execution.Run()
 	if err != nil {
-		output.ExitErrorf(data.CodeInternal, "failed to execute: %v", err)
+		output.ExitErrorf(constants.CodeInternal, "failed to execute: %v", err)
 	}
 
 	// Initialize local state
-	var status data.StepStatus
+	var status constants.StepStatus
 
 	success := result.ExitCode == 0
 
@@ -61,11 +61,11 @@ func Run(run lite.ActionExecute, container lite.LiteActionContainer) {
 		success = !success
 	}
 	if result.Aborted {
-		status = data.StepStatusAborted
+		status = constants.StepStatusAborted
 	} else if success {
-		status = data.StepStatusPassed
+		status = constants.StepStatusPassed
 	} else {
-		status = data.StepStatusFailed
+		status = constants.StepStatusFailed
 	}
 
 	// Abandon saving execution data if the step has been finished before

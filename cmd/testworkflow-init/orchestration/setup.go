@@ -201,9 +201,9 @@ func (c *setup) UseEnv(group string) error {
 
 	// Ensure the built-in binaries are available
 	if os.Getenv("PATH") == "" {
-		os.Setenv("PATH", data.InternalBinPath)
+		os.Setenv("PATH", constants.InternalBinPath)
 	} else {
-		os.Setenv("PATH", fmt.Sprintf("%s:%s", os.Getenv("PATH"), data.InternalBinPath))
+		os.Setenv("PATH", fmt.Sprintf("%s:%s", os.Getenv("PATH"), constants.InternalBinPath))
 	}
 
 	// Compute dynamic environment variables

@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
 	"github.com/kubeshop/testkube/pkg/expressions"
 )
@@ -68,12 +69,12 @@ var StateMachine = expressions.NewMachine().
 			currentStatus := GetState().CurrentStatus
 			expr, err := expressions.EvalExpression(currentStatus, RefNotFailedMachine, AliasMachine)
 			if err != nil {
-				output.ExitErrorf(CodeInternal, "current status is invalid: %s: %v\n", currentStatus, err.Error())
+				output.ExitErrorf(constants.CodeInternal, "current status is invalid: %s: %v\n", currentStatus, err.Error())
 			}
 			if passed, _ := expr.BoolValue(); passed {
-				return string(StepStatusPassed), true
+				return string(constants.StepStatusPassed), true
 			}
-			return string(StepStatusFailed), true
+			return string(constants.StepStatusFailed), true
 		} else if name == "self.status" {
 			state := GetState()
 			step := state.GetStep(state.CurrentRef)
@@ -123,7 +124,7 @@ var RefSuccessMachine = expressions.NewMachine().
 		if s.Status == nil {
 			return nil, false
 		}
-		return *s.Status == StepStatusPassed || *s.Status == StepStatusSkipped, true
+		return *s.Status == constants.StepStatusPassed || *s.Status == constants.StepStatusSkipped, true
 	})
 
 var RefNotFailedMachine = expressions.NewMachine().
@@ -135,8 +136,25 @@ var RefNotFailedMachine = expressions.NewMachine().
 				return exp, true
 			}
 		}
-		return s.Status == nil || *s.Status == StepStatusPassed || *s.Status == StepStatusSkipped, true
+		return s.Status == nil || *s.Status == constants.StepStatusPassed || *s.Status == constants.StepStatusSkipped, true
 	})
+
+//var CredentialMachine = expressions.NewMachine().RegisterFunction("credential", func(values ...expressions.StaticValue) (interface{}, bool, error) {
+//	computed := false
+//	if len(values) == 2 {
+//		if values[1].IsBool() {
+//			computed, _ = values[1].BoolValue()
+//		} else {
+//			return nil, true, fmt.Errorf(`"credential" function expects 2nd argument to be boolean, %s provided`, values[1].String())
+//		}
+//	} else if len(values) != 1 {
+//		return nil, true, fmt.Errorf(`"credential" function expects 1-2 arguments, %d provided`, len(values))
+//	}
+//
+//	name, _ := values[0].StringValue()
+//	value := "dummy"
+//	return
+//})
 
 func Expression(expr string, m ...expressions.Machine) (expressions.StaticValue, error) {
 	m = append(m, AliasMachine, GetBaseTestWorkflowMachine())

@@ -14,7 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
 
-	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
@@ -325,7 +325,7 @@ func ReadContainerResult(status *corev1.ContainerStatus, errorFallback string) C
 			}
 
 			// Gather information
-			stepStatus := testkube.TestWorkflowStepStatus(data.StepStatusFromCode(match[1]))
+			stepStatus := testkube.TestWorkflowStepStatus(constants.StepStatusFromCode(match[1]))
 			exitCode, _ := strconv.Atoi(match[2])
 
 			// Don't trust after there is `aborted` status detected
