@@ -2,19 +2,31 @@ package log
 
 import (
 	"log"
+	"os"
+	"strconv"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-
-	"github.com/kubeshop/testkube/pkg/envs"
 )
+
+func IsTrue(name string) (is bool) {
+	var err error
+	if val, ok := os.LookupEnv(name); ok {
+		is, err = strconv.ParseBool(val)
+		if err != nil {
+			return false
+		}
+	}
+
+	return is
+}
 
 // New returns new logger instance
 func New() *zap.SugaredLogger {
 	atomicLevel := zap.NewAtomicLevel()
 
 	atomicLevel.SetLevel(zap.InfoLevel)
-	if envs.IsTrue("DEBUG") {
+	if IsTrue("DEBUG") {
 		atomicLevel.SetLevel(zap.DebugLevel)
 	}
 
@@ -34,7 +46,7 @@ func NewSilent() *zap.SugaredLogger {
 	atomicLevel := zap.NewAtomicLevel()
 
 	atomicLevel.SetLevel(zap.WarnLevel)
-	if envs.IsTrue("DEBUG") {
+	if IsTrue("DEBUG") {
 		atomicLevel.SetLevel(zap.DebugLevel)
 	}
 

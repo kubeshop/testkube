@@ -14,10 +14,10 @@ import (
 	"k8s.io/client-go/rest"
 
 	config2 "github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
+	client2 "github.com/kubeshop/testkube/pkg/agent/client"
 	"github.com/kubeshop/testkube/pkg/cache"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
-	"github.com/kubeshop/testkube/pkg/agent"
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	cloudexecutor "github.com/kubeshop/testkube/pkg/cloud/data/executor"
@@ -100,7 +100,7 @@ func Cloud(ctx context.Context) (cloudexecutor.Executor, cloud.TestKubeCloudAPIC
 	if cloudExecutor == nil {
 		cfg := config2.Config().Worker.Connection
 		logger := log.NewSilent()
-		grpcConn, err := agent.NewGRPCConnection(ctx, cfg.TlsInsecure, cfg.SkipVerify, cfg.Url, "", "", "", logger)
+		grpcConn, err := client2.NewGRPCConnection(ctx, cfg.TlsInsecure, cfg.SkipVerify, cfg.Url, "", "", "", logger)
 		if err != nil {
 			ui.Fail(fmt.Errorf("failed to connect with Cloud: %w", err))
 		}
