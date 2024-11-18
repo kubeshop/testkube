@@ -34,6 +34,9 @@ func (s *Service) match(ctx context.Context, e *watcherEvent) error {
 		if t.Spec.Disabled {
 			continue
 		}
+		if s.deprecatedSystem == nil && (t.Spec.Execution == ExecutionTest || t.Spec.Execution == ExecutionTestSuite) {
+			continue
+		}
 
 		if t.Spec.Resource != testtriggersv1.TestTriggerResource(e.resource) {
 			continue

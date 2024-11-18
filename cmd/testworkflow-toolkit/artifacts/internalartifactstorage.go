@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
 	"github.com/kubeshop/testkube/pkg/bufferedstream"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 )
@@ -30,18 +31,15 @@ type internalArtifactStorage struct {
 }
 
 func newArtifactUploader() Uploader {
-	if env.CloudEnabled() {
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
-		client, _ := env.Cloud(ctx)
-		return NewCloudUploader(client, WithParallelismCloud(30), CloudDetectMimetype)
-	}
-	return NewDirectUploader(WithParallelism(30), DirectDetectMimetype)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	client, _ := env.Cloud(ctx)
+	return NewCloudUploader(client, WithParallelismCloud(30), CloudDetectMimetype)
 }
 
 func InternalStorage() InternalArtifactStorage {
 	return &internalArtifactStorage{
-		prefix:   filepath.Join(".testkube", env.Ref()),
+		prefix:   filepath.Join(".testkube", config.Ref()),
 		uploader: newArtifactUploader(),
 	}
 }

@@ -200,6 +200,15 @@ func MapAzureDiskVolumeSourceKubeToAPI(v corev1.AzureDiskVolumeSource) testkube.
 	}
 }
 
+func MapCSIVolumeSourceKubeToAPI(v corev1.CSIVolumeSource) testkube.CsiVolumeSource {
+	return testkube.CsiVolumeSource{
+		Driver:               v.Driver,
+		ReadOnly:             MapBoolToBoxedBoolean(v.ReadOnly),
+		FsType:               MapStringToBoxedString(v.FSType),
+		VolumeAttributes:     v.VolumeAttributes,
+		NodePublishSecretRef: common.MapPtr(v.NodePublishSecretRef, MapLocalObjectReferenceKubeToAPI),
+	}
+}
 func MapVolumeKubeToAPI(v corev1.Volume) testkube.Volume {
 	// TODO: Add rest of VolumeSource types in future,
 	//       so they will be recognized by JSON API and persisted with Execution.
@@ -216,6 +225,7 @@ func MapVolumeKubeToAPI(v corev1.Volume) testkube.Volume {
 		AzureFile:             common.MapPtr(v.AzureFile, MapAzureFileVolumeSourceKubeToAPI),
 		ConfigMap:             common.MapPtr(v.ConfigMap, MapConfigMapVolumeSourceKubeToAPI),
 		AzureDisk:             common.MapPtr(v.AzureDisk, MapAzureDiskVolumeSourceKubeToAPI),
+		Csi:                   common.MapPtr(v.CSI, MapCSIVolumeSourceKubeToAPI),
 	}
 }
 
@@ -462,6 +472,7 @@ func MapEventKubeToAPI(v testworkflowsv1.Event) testkube.TestWorkflowEvent {
 func MapCronJobConfigKubeToAPI(v testworkflowsv1.CronJobConfig) testkube.TestWorkflowCronJobConfig {
 	return testkube.TestWorkflowCronJobConfig{
 		Cron:        v.Cron,
+		Config:      MapConfigValueKubeToAPI(v.Config),
 		Labels:      v.Labels,
 		Annotations: v.Annotations,
 	}

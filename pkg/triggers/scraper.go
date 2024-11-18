@@ -8,7 +8,7 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event/bus"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 )
 
 func (s *Service) runExecutionScraper(ctx context.Context) {
@@ -24,8 +24,10 @@ func (s *Service) runExecutionScraper(ctx context.Context) {
 			s.logger.Debugf("trigger service: execution scraper component: starting new ticker iteration")
 			for triggerName, status := range s.triggerStatus {
 				if status.hasActiveTests() {
-					s.checkForRunningTestExecutions(ctx, status)
-					s.checkForRunningTestSuiteExecutions(ctx, status)
+					if s.deprecatedSystem != nil {
+						s.checkForRunningTestExecutions(ctx, status)
+						s.checkForRunningTestSuiteExecutions(ctx, status)
+					}
 					s.checkForRunningTestWorkflowExecutions(ctx, status)
 					if !status.hasActiveTests() {
 						s.logger.Debugf("marking status as finished for testtrigger %s", triggerName)
@@ -41,7 +43,7 @@ func (s *Service) checkForRunningTestExecutions(ctx context.Context, status *tri
 	testExecutionIDs := status.getExecutionIDs()
 
 	for _, id := range testExecutionIDs {
-		execution, err := s.resultRepository.Get(ctx, id)
+		execution, err := s.deprecatedSystem.Repositories.TestResults().Get(ctx, id)
 		if err == mongo.ErrNoDocuments {
 			s.logger.Warnf("trigger service: execution scraper component: no test execution found for id %s", id)
 			status.removeExecutionID(id)
@@ -61,7 +63,7 @@ func (s *Service) checkForRunningTestSuiteExecutions(ctx context.Context, status
 	testSuiteExecutionIDs := status.getTestSuiteExecutionIDs()
 
 	for _, id := range testSuiteExecutionIDs {
-		execution, err := s.testResultRepository.Get(ctx, id)
+		execution, err := s.deprecatedSystem.Repositories.TestSuiteResults().Get(ctx, id)
 		if err == mongo.ErrNoDocuments {
 			s.logger.Warnf("trigger service: execution scraper component: no testsuite execution found for id %s", id)
 			status.removeTestSuiteExecutionID(id)
@@ -100,8 +102,10 @@ func (s *Service) checkForRunningTestWorkflowExecutions(ctx context.Context, sta
 
 func (s *Service) abortExecutions(ctx context.Context, testTriggerName string, status *triggerStatus) {
 	s.logger.Debugf("trigger service: abort executions")
-	s.abortRunningTestExecutions(ctx, status)
-	s.abortRunningTestSuiteExecutions(ctx, status)
+	if s.deprecatedSystem != nil {
+		s.abortRunningTestExecutions(ctx, status)
+		s.abortRunningTestSuiteExecutions(ctx, status)
+	}
 	s.abortRunningTestWorkflowExecutions(ctx, status)
 	if !status.hasActiveTests() {
 		s.logger.Debugf("marking status as finished for testtrigger %s", testTriggerName)
@@ -113,7 +117,7 @@ func (s *Service) abortRunningTestExecutions(ctx context.Context, status *trigge
 	testExecutionIDs := status.getExecutionIDs()
 
 	for _, id := range testExecutionIDs {
-		execution, err := s.resultRepository.Get(ctx, id)
+		execution, err := s.deprecatedSystem.Repositories.TestResults().Get(ctx, id)
 		if err == mongo.ErrNoDocuments {
 			s.logger.Warnf("trigger service: execution scraper component: no test execution found for id %s", id)
 			status.removeExecutionID(id)
@@ -123,7 +127,7 @@ func (s *Service) abortRunningTestExecutions(ctx context.Context, status *trigge
 			continue
 		}
 		if execution.IsRunning() || execution.IsQueued() {
-			res, err := s.testExecutor.Abort(ctx, &execution)
+			res, err := s.deprecatedSystem.JobExecutor.Abort(ctx, &execution)
 			if err != nil {
 				s.logger.Errorf("trigger service: execution scraper component: error aborting test execution: %v", err)
 				continue
@@ -140,7 +144,7 @@ func (s *Service) abortRunningTestSuiteExecutions(ctx context.Context, status *t
 	testSuiteExecutionIDs := status.getTestSuiteExecutionIDs()
 
 	for _, id := range testSuiteExecutionIDs {
-		execution, err := s.testResultRepository.Get(ctx, id)
+		execution, err := s.deprecatedSystem.Repositories.TestSuiteResults().Get(ctx, id)
 		if err == mongo.ErrNoDocuments {
 			s.logger.Warnf("trigger service: execution scraper component: no testsuite execution found for id %s", id)
 			status.removeTestSuiteExecutionID(id)
@@ -180,16 +184,9 @@ func (s *Service) abortRunningTestWorkflowExecutions(ctx context.Context, status
 		if execution.Result != nil && (execution.Result.IsRunning() || execution.Result.IsQueued() || execution.Result.IsPaused()) {
 			// Pro edition only (tcl protected code)
 			// Obtain the controller
-			ctrl, err := testworkflowcontroller.New(ctx, s.clientset, s.testkubeNamespace, execution.Id, execution.ScheduledAt)
-			if err != nil {
-				s.logger.Errorf("trigger service: execution scraper component: error obtaining test workflow controller: %v", err)
-				continue
-			}
-
-			// Pro edition only (tcl protected code)
-			// Abort the execution
-			err = ctrl.Abort(context.Background())
-			ctrl.StopController()
+			err = s.executionWorkerClient.Abort(ctx, execution.Id, executionworkertypes.DestroyOptions{
+				Namespace: s.testkubeNamespace,
+			})
 			if err != nil {
 				s.logger.Errorf("trigger service: execution scraper component: error aborting test workflow execution: %v", err)
 				continue

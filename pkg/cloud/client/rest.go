@@ -26,7 +26,8 @@ type RESTClient[T All] struct {
 }
 
 func (c RESTClient[T]) List() ([]T, error) {
-	r, err := nethttp.NewRequest("GET", c.BaseUrl+c.Path, nil)
+	path := c.Path
+	r, err := nethttp.NewRequest("GET", c.BaseUrl+path, nil)
 	r.Header.Add("Authorization", "Bearer "+c.Token)
 	if err != nil {
 		return nil, err
@@ -34,6 +35,14 @@ func (c RESTClient[T]) List() ([]T, error) {
 	resp, err := c.Client.Do(r)
 	if err != nil {
 		return nil, err
+	}
+
+	if resp.StatusCode >= 400 {
+		d, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("error getting %s: can't read response: %s", c.Path, err)
+		}
+		return nil, fmt.Errorf("error getting %s: %s", path, d)
 	}
 
 	var orgsResponse ListResponse[T]
@@ -56,7 +65,7 @@ func (c RESTClient[T]) Get(id string) (e T, err error) {
 	if resp.StatusCode > 299 {
 		d, err := io.ReadAll(resp.Body)
 		if err != nil {
-			return e, fmt.Errorf("error creating %s: can't read response: %s", c.Path, err)
+			return e, fmt.Errorf("error getting %s: can't read response: %s", c.Path, err)
 		}
 		return e, fmt.Errorf("error getting %s: %s", path, d)
 	}
@@ -102,4 +111,33 @@ func (c RESTClient[T]) Create(entity T, overridePath ...string) (e T, err error)
 	}
 
 	return e, nil
+}
+
+func (c RESTClient[T]) Delete(id string, overridePath ...string) (err error) {
+	path := c.Path + "/" + id
+	if len(overridePath) == 1 {
+		path = overridePath[0]
+	}
+
+	r, err := nethttp.NewRequest("DELETE", c.BaseUrl+path, nil)
+	if err != nil {
+		return err
+	}
+	r.Header.Add("Content-type", "application/json")
+	r.Header.Add("Authorization", "Bearer "+c.Token)
+
+	resp, err := c.Client.Do(r)
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode >= 400 {
+		d, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return fmt.Errorf("error deleting %s: can't read response: %s", c.Path, err)
+		}
+		return fmt.Errorf("error creating %s: %s", c.Path, d)
+	}
+
+	return nil
 }

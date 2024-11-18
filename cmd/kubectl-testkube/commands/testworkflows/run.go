@@ -15,9 +15,12 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/render"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/tests"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testworkflows/renderer"
+	testkubecfg "github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	apiclientv1 "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	tclcmd "github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/cmd"
+	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -63,11 +66,29 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 			ui.ExitOnError("getting client", err)
 
 			name := args[0]
+			runContext := telemetry.GetCliRunContext()
+			interfaceType := testkube.CICD_TestWorkflowRunningContextInterfaceType
+			if runContext == "others|local" {
+				runContext = ""
+				interfaceType = testkube.CLI_TestWorkflowRunningContextInterfaceType
+			}
+
+			cfg, err := testkubecfg.Load()
+			ui.ExitOnError("loading config file", err)
+			ui.NL()
+
+			var runningContext *testkube.TestWorkflowRunningContext
+			// Pro edition only (tcl protected code)
+			if cfg.ContextType == testkubecfg.ContextTypeCloud {
+				runningContext = tclcmd.GetRunningContext(runContext, cfg.CloudContext.ApiKey, interfaceType)
+			}
+
 			execution, err := client.ExecuteTestWorkflow(name, testkube.TestWorkflowExecutionRequest{
 				Name:            executionName,
 				Config:          config,
 				DisableWebhooks: disableWebhooks,
 				Tags:            tags,
+				RunningContext:  runningContext,
 			})
 			if err != nil {
 				// User friendly Open Source operation error
@@ -94,14 +115,16 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 			var exitCode = 0
 			if outputPretty {
 				ui.NL()
-				if watchEnabled {
-					exitCode = uiWatch(execution, client)
-					ui.NL()
-					if downloadArtifactsEnabled {
-						tests.DownloadTestWorkflowArtifacts(execution.Id, downloadDir, format, masks, client, outputPretty)
+				if !execution.FailedToInitialize() {
+					if watchEnabled {
+						exitCode = uiWatch(execution, client)
+						ui.NL()
+						if downloadArtifactsEnabled {
+							tests.DownloadTestWorkflowArtifacts(execution.Id, downloadDir, format, masks, client, outputPretty)
+						}
+					} else {
+						uiShellWatchExecution(execution.Id)
 					}
-				} else {
-					uiShellWatchExecution(execution.Id)
 				}
 
 				execution, err = client.GetTestWorkflowExecution(execution.Id)
@@ -291,7 +314,7 @@ func trimTimestamp(line string) string {
 	if strings.Index(line, "T") == 10 {
 		idx := strings.Index(line, " ")
 		if len(line) >= idx {
-			return line[idx:]
+			return line[idx+1:]
 		}
 	}
 	return line
@@ -317,7 +340,7 @@ func printRawLogLines(logs []byte, steps []testkube.TestWorkflowSignature, resul
 			logs = nil
 		} else {
 			line = string(logs[:newLineIndex])
-			logs = logs[newLineIndex+1:]
+			logs = logs[newLineIndex+len(NL):]
 		}
 
 		line = trimTimestamp(line)
@@ -331,28 +354,34 @@ func printRawLogLines(logs []byte, steps []testkube.TestWorkflowSignature, resul
 
 		nextRef := start[1]
 
-		for i == -1 || steps[i].Ref != nextRef {
+		for i == -1 || (i < len(steps) && steps[i].Ref != nextRef) {
 			if ps, ok := results[currentRef]; ok && ps.Status != nil {
 				took := ps.FinishedAt.Sub(ps.QueuedAt).Round(time.Millisecond)
-				printStatus(steps[i], *ps.Status, took, i, len(steps), steps[i].Label())
+				if i != -1 {
+					printStatus(steps[i], *ps.Status, took, i, len(steps), steps[i].Label())
+				}
 			}
 
 			i++
-			currentRef = steps[i].Ref
-			printStatusHeader(i, len(steps), steps[i].Label())
+			if i < len(steps) {
+				currentRef = steps[i].Ref
+				printStatusHeader(i, len(steps), steps[i].Label())
+			}
 		}
 	}
 
-	for _, step := range steps[i:] {
-		if ps, ok := results[currentRef]; ok && ps.Status != nil {
-			took := ps.FinishedAt.Sub(ps.QueuedAt).Round(time.Millisecond)
-			printStatus(step, *ps.Status, took, i, len(steps), steps[i].Label())
-		}
+	if i != -1 && i < len(steps) {
+		for _, step := range steps[i:] {
+			if ps, ok := results[currentRef]; ok && ps.Status != nil {
+				took := ps.FinishedAt.Sub(ps.QueuedAt).Round(time.Millisecond)
+				printStatus(step, *ps.Status, took, i, len(steps), steps[i].Label())
+			}
 
-		i++
-		currentRef = step.Ref
-		if i < len(steps) {
-			printStatusHeader(i, len(steps), steps[i].Label())
+			i++
+			currentRef = step.Ref
+			if i < len(steps) {
+				printStatusHeader(i, len(steps), steps[i].Label())
+			}
 		}
 	}
 }

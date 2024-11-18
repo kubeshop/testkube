@@ -41,6 +41,10 @@ type Filter interface {
 	Selector() string
 	TagSelector() string
 	LabelSelector() *LabelSelector
+	ActorName() string
+	ActorNameDefined() bool
+	ActorType() testkube.TestWorkflowRunningContextActorType
+	ActorTypeDefined() bool
 }
 
 //go:generate mockgen -destination=./mock_repository.go -package=testworkflow "github.com/kubeshop/testkube/pkg/repository/testworkflow" Repository

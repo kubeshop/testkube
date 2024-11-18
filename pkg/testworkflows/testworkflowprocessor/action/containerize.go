@@ -39,11 +39,15 @@ func CreateContainer(groupId int, defaultContainer stage2.Container, actions []a
 	// Find the highest priority container configuration
 	var bestContainerConfig *actiontypes.Action
 	var bestIsToolkit = false
+	var bestIsDefaultImage = true
 	for i := range containerConfigs {
 		if executable[containerConfigs[i].Container.Ref] {
-			if bestContainerConfig == nil || bestIsToolkit {
+			image := containerConfigs[i].Container.Config.Image
+			isDefaultImage := image == "" || image == constants.DefaultInitImage || image == constants.DefaultToolkitImage
+			if bestContainerConfig == nil || bestIsToolkit || (bestIsDefaultImage && !isDefaultImage) {
 				bestContainerConfig = containerConfigs[i]
 				bestIsToolkit = toolkit[bestContainerConfig.Container.Ref]
+				bestIsDefaultImage = isDefaultImage
 			}
 		}
 	}
@@ -129,6 +133,9 @@ func CreateContainer(groupId int, defaultContainer stage2.Container, actions []a
 			}},
 			corev1.EnvVar{Name: fmt.Sprintf("_%s_%s", constants2.EnvGroupActions, constants2.EnvActions), ValueFrom: &corev1.EnvVarSource{
 				FieldRef: &corev1.ObjectFieldSelector{FieldPath: constants.SpecAnnotationFieldPath},
+			}},
+			corev1.EnvVar{Name: fmt.Sprintf("_%s_%s", constants2.EnvGroupInternal, constants2.EnvInternalConfig), ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{FieldPath: constants.InternalAnnotationFieldPath},
 			}})
 	}
 

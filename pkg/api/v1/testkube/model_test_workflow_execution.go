@@ -16,6 +16,8 @@ import (
 type TestWorkflowExecution struct {
 	// unique execution identifier
 	Id string `json:"id"`
+	// identifier for group of correlated executions
+	GroupId string `json:"groupId,omitempty"`
 	// execution name
 	Name string `json:"name"`
 	// execution namespace
@@ -38,6 +40,7 @@ type TestWorkflowExecution struct {
 	// test workflow execution name started the test workflow execution
 	TestWorkflowExecutionName string `json:"testWorkflowExecutionName,omitempty"`
 	// whether webhooks on the execution of this test workflow are disabled
-	DisableWebhooks bool              `json:"disableWebhooks,omitempty"`
-	Tags            map[string]string `json:"tags,omitempty"`
+	DisableWebhooks bool                        `json:"disableWebhooks,omitempty"`
+	Tags            map[string]string           `json:"tags,omitempty"`
+	RunningContext  *TestWorkflowRunningContext `json:"runningContext,omitempty"`
 }

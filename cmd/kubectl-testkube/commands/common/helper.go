@@ -18,10 +18,8 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
-	"github.com/kubeshop/testkube/internal/migrations"
 	cloudclient "github.com/kubeshop/testkube/pkg/cloud/client"
 	"github.com/kubeshop/testkube/pkg/cloudlogin"
-	"github.com/kubeshop/testkube/pkg/migrator"
 	"github.com/kubeshop/testkube/pkg/process"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -304,14 +302,20 @@ func PopulateLoginDataToContext(orgID, envID, token, refreshToken, dockerContain
 	if options.Master.AgentToken != "" {
 		cfg.CloudContext.AgentKey = options.Master.AgentToken
 	}
-	if options.Master.URIs.Api != "" {
-		cfg.CloudContext.AgentUri = options.Master.URIs.Api
+	if options.Master.URIs.Agent != "" {
+		cfg.CloudContext.AgentUri = options.Master.URIs.Agent
 	}
 	if options.Master.URIs.Ui != "" {
 		cfg.CloudContext.UiUri = options.Master.URIs.Ui
 	}
 	if options.Master.URIs.Api != "" {
 		cfg.CloudContext.ApiUri = options.Master.URIs.Api
+		if options.Master.URIs.Agent == "" {
+			cfg.CloudContext.AgentUri = options.Master.URIs.Api
+		}
+	}
+	if options.Master.URIs.Auth != "" {
+		cfg.CloudContext.AuthUri = options.Master.URIs.Auth
 	}
 	cfg.ContextType = config.ContextTypeCloud
 	cfg.CloudContext.OrganizationId = orgID
@@ -349,6 +353,10 @@ func PopulateAgentDataToContext(options HelmOptions, cfg config.Data) error {
 	}
 	if options.Master.URIs.Api != "" {
 		cfg.CloudContext.ApiUri = options.Master.URIs.Api
+		updated = true
+	}
+	if options.Master.URIs.Auth != "" {
+		cfg.CloudContext.AuthUri = options.Master.URIs.Auth
 		updated = true
 	}
 	if options.Master.IdToken != "" {
@@ -403,31 +411,6 @@ func UpdateTokens(cfg config.Data, token, refreshToken string) error {
 	return nil
 }
 
-func RunAgentMigrations(cmd *cobra.Command) (hasMigrations bool, err error) {
-	client, _, err := GetClient(cmd)
-	ui.ExitOnError("getting client", err)
-
-	info, err := client.GetServerInfo()
-	ui.ExitOnError("getting server info", err)
-
-	if info.Version == "" {
-		ui.Failf("Can't detect cluster version")
-	}
-
-	ui.Info("Available agent migrations for", info.Version)
-	results := migrations.Migrator.GetValidMigrations(info.Version, migrator.MigrationTypeClient)
-	if len(results) == 0 {
-		ui.Warn("No agent migrations available for", info.Version)
-		return false, nil
-	}
-
-	for _, migration := range results {
-		fmt.Printf("- %+v - %s\n", migration.Version(), migration.Info())
-	}
-
-	return true, migrations.Migrator.Run(info.Version, migrator.MigrationTypeClient)
-}
-
 func PopulateOrgAndEnvNames(cfg config.Data, orgId, envId, apiUrl string) (config.Data, error) {
 	if orgId != "" {
 		cfg.CloudContext.OrganizationId = orgId
@@ -473,9 +456,12 @@ func PopulateCloudConfig(cfg config.Data, apiKey string, dockerContainerName *st
 	return cfg
 }
 
-func LoginUser(authUri string) (string, string, error) {
+func LoginUser(authUri string, customConnector bool) (string, string, error) {
 	ui.H1("Login")
-	connectorID := ui.Select("Choose your login method", []string{github, gitlab})
+	connectorID := ""
+	if !customConnector {
+		connectorID = ui.Select("Choose your login method", []string{github, gitlab})
+	}
 
 	authUrl, tokenChan, err := cloudlogin.CloudLogin(context.Background(), authUri, strings.ToLower(connectorID))
 	if err != nil {
@@ -844,8 +830,6 @@ func prepareTestkubeUpgradeDockerArgs(options HelmOptions, dockerContainerName, 
 		"testkube-api.minio.enabled=false",
 		"--set",
 		"mongodb.enabled=false",
-		"--set",
-		"testkube-dashboard.enabled=false",
 		"--set",
 		"testkube-api.cloud.key=" + options.Master.AgentToken,
 		"--set",

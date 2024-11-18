@@ -12,6 +12,11 @@ import (
 	"github.com/kubeshop/testkube/pkg/version"
 )
 
+// Moved from testworkflowprocessor/constants to reduce init process size
+const (
+	defaultInitImageBusyboxBinaryPath = "/.tktw-bin"
+)
+
 func Setup(config lite.ActionSetup) error {
 	stdout := output.Std
 	stdoutUnsafe := stdout.Direct()
@@ -49,7 +54,7 @@ func Setup(config lite.ActionSetup) error {
 	if config.CopyBinaries {
 		// Use `cp` on the whole directory, as it has plenty of files, which lead to the same FS block.
 		// Copying individual files will lead to high FS usage
-		err := exec.Command("cp", "-rf", "/.tktw-bin", data.InternalBinPath).Run()
+		err := exec.Command("cp", "-rf", defaultInitImageBusyboxBinaryPath, data.InternalBinPath).Run()
 		if err != nil {
 			stdoutUnsafe.Error(" error\n")
 			stdoutUnsafe.Errorf("  failed to copy the binaries: %s\n", err.Error())

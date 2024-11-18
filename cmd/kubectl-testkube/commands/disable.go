@@ -3,7 +3,6 @@ package commands
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/oauth"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/telemetry"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -20,7 +19,6 @@ func NewDisableCmd() *cobra.Command {
 	}
 
 	cmd.AddCommand(telemetry.NewDisableTelemetryCmd())
-	cmd.AddCommand(oauth.NewDisableOAuthCmd())
 
 	return cmd
 }

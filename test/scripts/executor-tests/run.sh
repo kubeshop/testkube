@@ -495,6 +495,15 @@ workflow-maven-smoke() {
   common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file"
 }
 
+workflow-nunit-smoke() {
+  name="Test Workflow - NUnit"
+  workflow_crd_file="test/nunit/crd-workflow/crd.yaml"
+  workflow_suite_name="nunit-workflow-suite"
+  workflow_suite_file="test/suites/test-workflows/nunit-workflow.yaml"
+
+  common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file"
+}
+
 workflow-playwright-smoke() {
   name="Test Workflow - Playwright"
   workflow_crd_file="test/playwright/executor-tests/crd-workflow/smoke.yaml"
@@ -573,6 +582,7 @@ main() {
       workflow-junit-smoke
       workflow-k6-smoke
       workflow-maven-smoke
+      workflow-nunit-smoke
       workflow-playwright-smoke
       workflow-postman-smoke
       workflow-pytest-smoke
@@ -608,6 +618,7 @@ main() {
       workflow-junit-smoke
       workflow-k6-smoke
       workflow-maven-smoke
+      workflow-nunit-smoke
       workflow-playwright-smoke
       workflow-postman-smoke
       workflow-pytest-smoke
@@ -628,6 +639,7 @@ main() {
       workflow-junit-smoke
       workflow-k6-smoke
       workflow-maven-smoke
+      workflow-nunit-smoke
       workflow-playwright-smoke
       workflow-postman-smoke
       workflow-pytest-smoke

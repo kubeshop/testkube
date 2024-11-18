@@ -14,7 +14,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
 	"github.com/kubeshop/testkube/pkg/cloud/data/artifact"
 	cloudexecutor "github.com/kubeshop/testkube/pkg/cloud/data/executor"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -54,8 +54,8 @@ func (d *cloudUploader) getSignedURL(name, contentType string) (string, error) {
 	defer cancel()
 	response, err := d.client.Execute(ctx, artifact.CmdScraperPutObjectSignedURL, &artifact.PutObjectSignedURLRequest{
 		Object:           name,
-		ExecutionID:      env.ExecutionId(),
-		TestWorkflowName: env.WorkflowName(),
+		ExecutionID:      config.ExecutionId(),
+		TestWorkflowName: config.WorkflowName(),
 		ContentType:      contentType,
 	})
 	if err != nil {

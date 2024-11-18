@@ -218,7 +218,7 @@ func (r *TestWorkflowResult) Fatal(err error, aborted bool, ts time.Time) {
 			r.Steps[i] = s
 		}
 	}
-	r.HealDuration()
+	r.HealDuration(r.QueuedAt)
 }
 
 func (r *TestWorkflowResult) Clone() *TestWorkflowResult {
@@ -246,7 +246,7 @@ func (r *TestWorkflowResult) Clone() *TestWorkflowResult {
 	}
 }
 
-func (r *TestWorkflowResult) HealDuration() {
+func (r *TestWorkflowResult) HealDuration(scheduledAt time.Time) {
 	if !r.FinishedAt.IsZero() {
 		r.PausedMs = 0
 
@@ -309,7 +309,11 @@ func (r *TestWorkflowResult) HealDuration() {
 			}
 		}
 
-		totalDuration := r.FinishedAt.Sub(r.QueuedAt)
+		queuedAt := r.QueuedAt
+		if queuedAt.IsZero() {
+			queuedAt = scheduledAt
+		}
+		totalDuration := r.FinishedAt.Sub(scheduledAt)
 		duration := totalDuration - time.Duration(1e3*r.PausedMs)
 		if totalDuration < 0 {
 			totalDuration = time.Duration(0)
@@ -532,6 +536,7 @@ func (r *TestWorkflowResult) HealAborted(sigSequence []TestWorkflowSignature, er
 		} else if anyAborted {
 			step.Status = common.Ptr(ABORTED_TestWorkflowStepStatus)
 		}
+		r.Steps[ref] = step
 	}
 
 	// The rest of steps is unrecognized, so just mark them as aborted with information about faulty state

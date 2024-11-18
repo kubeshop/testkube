@@ -17,6 +17,7 @@ spec:
       - name: junit-workflow-suite
       - name: k6-workflow-suite
       - name: maven-workflow-suite
+      - name: nunit-workflow-suite
       - name: playwright-workflow-suite
       - name: postman-workflow-suite
       - name: pytest-workflow-suite

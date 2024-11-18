@@ -32,14 +32,8 @@ const (
 	// VolumeDir is volume dir
 	VolumeDir            = "/data"
 	defaultLogLinesCount = 100
-	// GitUsernameSecretName is git username secret name
-	GitUsernameSecretName = "git-username"
-	// GitTokenSecretName is git token secret name
-	GitTokenSecretName = "git-token"
 	// SlavesConfigsEnv is slave configs for creating slaves in executor
 	SlavesConfigsEnv = "RUNNER_SLAVES_CONFIGS"
-
-	SidecarImage = "kubeshop/testkube-logs-sidecar:v0-3" // TODO - change it to valid image name after deployment will be ready
 )
 
 var RunnerEnvVars = []corev1.EnvVar{
@@ -462,40 +456,12 @@ func SyncDefaultExecutors(
 	executorsClient executorsclientv1.Interface,
 	namespace string,
 	executors []testkube.ExecutorDetails,
-	readOnlyExecutors bool,
-) (images Images, err error) {
+) error {
 	if len(executors) == 0 {
-		return images, nil
+		return nil
 	}
 
-	// TODO - remove it after merging helm templates fully
-	images.LogSidecar = SidecarImage
-
 	for _, executor := range executors {
-
-		if executor.Executor == nil {
-			continue
-		}
-
-		if executor.Name == "logs-sidecar" {
-			images.LogSidecar = executor.Executor.Image
-			continue
-		}
-
-		if executor.Name == "init-executor" {
-			images.Init = executor.Executor.Image
-			continue
-		}
-
-		if executor.Name == "scraper-executor" {
-			images.Scraper = executor.Executor.Image
-			continue
-		}
-
-		if readOnlyExecutors {
-			continue
-		}
-
 		obj := &executorv1.Executor{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      executor.Name,
@@ -516,11 +482,11 @@ func SyncDefaultExecutors(
 
 		result, err := executorsClient.Get(executor.Name)
 		if err != nil && !k8serrors.IsNotFound(err) {
-			return images, err
+			return err
 		}
 		if err != nil {
 			if _, err = executorsClient.Create(obj); err != nil {
-				return images, err
+				return err
 			}
 		} else {
 			obj.Spec.JobTemplate = result.Spec.JobTemplate
@@ -528,12 +494,12 @@ func SyncDefaultExecutors(
 			obj.Spec.UseDataDirAsWorkingDir = result.Spec.UseDataDirAsWorkingDir
 			result.Spec = obj.Spec
 			if _, err = executorsClient.Update(result); err != nil {
-				return images, err
+				return err
 			}
 		}
 	}
 
-	return images, nil
+	return nil
 }
 
 // GetPodErrorMessage returns pod error message

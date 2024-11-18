@@ -31,13 +31,14 @@ import (
 )
 
 const (
-	timeout            = 10 * time.Second
-	apiKeyMeta         = "api-key"
-	clusterIDMeta      = "cluster-id"
-	cloudMigrateMeta   = "migrate"
-	orgIdMeta          = "environment-id"
-	envIdMeta          = "organization-id"
-	healthcheckCommand = "healthcheck"
+	timeout                = 10 * time.Second
+	apiKeyMeta             = "api-key"
+	clusterIDMeta          = "cluster-id"
+	cloudMigrateMeta       = "migrate"
+	orgIdMeta              = "environment-id"
+	envIdMeta              = "organization-id"
+	healthcheckCommand     = "healthcheck"
+	dockerImageVersionMeta = "docker-image-version"
 )
 
 // buffer up to five messages per worker
@@ -143,31 +144,31 @@ type Agent struct {
 	testWorkflowNotificationsWorkerCount    int
 	testWorkflowNotificationsRequestBuffer  chan *cloud.TestWorkflowNotificationsRequest
 	testWorkflowNotificationsResponseBuffer chan *cloud.TestWorkflowNotificationsResponse
-	testWorkflowNotificationsFunc           func(ctx context.Context, executionID string) (chan testkube.TestWorkflowExecutionNotification, error)
+	testWorkflowNotificationsFunc           func(ctx context.Context, executionID string) (<-chan testkube.TestWorkflowExecutionNotification, error)
 
 	events              chan testkube.Event
 	sendTimeout         time.Duration
 	receiveTimeout      time.Duration
 	healthcheckInterval time.Duration
 
-	clusterID   string
-	clusterName string
-	envs        map[string]string
-	features    featureflags.FeatureFlags
+	clusterID          string
+	clusterName        string
+	features           featureflags.FeatureFlags
+	dockerImageVersion string
 
-	proContext config.ProContext
+	proContext *config.ProContext
 }
 
 func NewAgent(logger *zap.SugaredLogger,
 	handler fasthttp.RequestHandler,
 	client cloud.TestKubeCloudAPIClient,
 	logStreamFunc func(ctx context.Context, executionID string) (chan output.Output, error),
-	workflowNotificationsFunc func(ctx context.Context, executionID string) (chan testkube.TestWorkflowExecutionNotification, error),
+	workflowNotificationsFunc func(ctx context.Context, executionID string) (<-chan testkube.TestWorkflowExecutionNotification, error),
 	clusterID string,
 	clusterName string,
-	envs map[string]string,
 	features featureflags.FeatureFlags,
-	proContext config.ProContext,
+	proContext *config.ProContext,
+	dockerImageVersion string,
 ) (*Agent, error) {
 	return &Agent{
 		handler:                                 handler,
@@ -191,9 +192,9 @@ func NewAgent(logger *zap.SugaredLogger,
 		testWorkflowNotificationsFunc:           workflowNotificationsFunc,
 		clusterID:                               clusterID,
 		clusterName:                             clusterName,
-		envs:                                    envs,
 		features:                                features,
 		proContext:                              proContext,
+		dockerImageVersion:                      dockerImageVersion,
 	}, nil
 }
 
@@ -307,12 +308,15 @@ func (ag *Agent) receiveCommand(ctx context.Context, stream cloud.TestKubeCloudA
 }
 
 func (ag *Agent) runCommandLoop(ctx context.Context) error {
-	ctx = AddAPIKeyMeta(ctx, ag.proContext.APIKey)
+	if ag.proContext.APIKey != "" {
+		ctx = AddAPIKeyMeta(ctx, ag.proContext.APIKey)
+	}
 
 	ctx = metadata.AppendToOutgoingContext(ctx, clusterIDMeta, ag.clusterID)
 	ctx = metadata.AppendToOutgoingContext(ctx, cloudMigrateMeta, ag.proContext.Migrate)
 	ctx = metadata.AppendToOutgoingContext(ctx, envIdMeta, ag.proContext.EnvID)
 	ctx = metadata.AppendToOutgoingContext(ctx, orgIdMeta, ag.proContext.OrgID)
+	ctx = metadata.AppendToOutgoingContext(ctx, dockerImageVersionMeta, ag.dockerImageVersion)
 
 	ag.logger.Infow("initiating streaming connection with control plane")
 	// creates a new Stream from the client side. ctx is used for the lifetime of the stream.

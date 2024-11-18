@@ -7,9 +7,10 @@ import (
 )
 
 type Config struct {
-	APIServerPort             string `envconfig:"APISERVER_PORT" default:"8088"`
+	APIServerPort             int    `envconfig:"APISERVER_PORT" default:"8088"`
 	APIServerConfig           string `envconfig:"APISERVER_CONFIG" default:""`
 	APIServerFullname         string `envconfig:"APISERVER_FULLNAME" default:"testkube-api-server"`
+	GRPCServerPort            int    `envconfig:"GRPCSERVER_PORT" default:"8089"`
 	APIMongoDSN               string `envconfig:"API_MONGO_DSN" default:"mongodb://localhost:27017"`
 	APIMongoAllowTLS          bool   `envconfig:"API_MONGO_ALLOW_TLS" default:"false"`
 	APIMongoSSLCert           string `envconfig:"API_MONGO_SSL_CERT" default:""`
@@ -63,10 +64,6 @@ type Config struct {
 	TestkubeAnalyticsEnabled                    bool          `envconfig:"TESTKUBE_ANALYTICS_ENABLED" default:"false"`
 	TestkubeReadonlyExecutors                   bool          `envconfig:"TESTKUBE_READONLY_EXECUTORS" default:"false"`
 	TestkubeNamespace                           string        `envconfig:"TESTKUBE_NAMESPACE" default:"testkube"`
-	TestkubeOAuthClientID                       string        `envconfig:"TESTKUBE_OAUTH_CLIENTID" default:""`
-	TestkubeOAuthClientSecret                   string        `envconfig:"TESTKUBE_OAUTH_CLIENTSECRET" default:""`
-	TestkubeOAuthProvider                       string        `envconfig:"TESTKUBE_OAUTH_PROVIDER" default:""`
-	TestkubeOAuthScopes                         string        `envconfig:"TESTKUBE_OAUTH_SCOPES" default:""`
 	TestkubeProAPIKey                           string        `envconfig:"TESTKUBE_PRO_API_KEY" default:""`
 	TestkubeProURL                              string        `envconfig:"TESTKUBE_PRO_URL" default:""`
 	TestkubeProTLSInsecure                      bool          `envconfig:"TESTKUBE_PRO_TLS_INSECURE" default:"false"`
@@ -88,7 +85,7 @@ type Config struct {
 	// TestkubeImageCredentialsCacheTTL is the duration for which the image pull credentials should be cached provided as a Go duration string.
 	// If set to 0, the cache is disabled.
 	TestkubeImageCredentialsCacheTTL time.Duration `envconfig:"TESTKUBE_IMAGE_CREDENTIALS_CACHE_TTL" default:"30m"`
-	GraphqlPort                      string        `envconfig:"TESTKUBE_GRAPHQL_PORT" default:"8070"`
+	GraphqlPort                      int           `envconfig:"TESTKUBE_GRAPHQL_PORT" default:"8070"`
 	CDEventsTarget                   string        `envconfig:"CDEVENTS_TARGET" default:""`
 	TestkubeDashboardURI             string        `envconfig:"TESTKUBE_DASHBOARD_URI" default:""`
 	DisableReconciler                bool          `envconfig:"DISABLE_RECONCILER" default:"false"`
@@ -117,6 +114,8 @@ type Config struct {
 	GlobalWorkflowTemplateName       string        `envconfig:"TESTKUBE_GLOBAL_WORKFLOW_TEMPLATE_NAME" default:""`
 	EnableK8sEvents                  bool          `envconfig:"ENABLE_K8S_EVENTS" default:"true"`
 	TestkubeDockerImageVersion       string        `envconfig:"TESTKUBE_DOCKER_IMAGE_VERSION" default:""`
+	DisableDeprecatedTests           bool          `envconfig:"DISABLE_DEPRECATED_TESTS" default:"false"`
+	DisableWebhooks                  bool          `envconfig:"DISABLE_WEBHOOKS" default:"false"`
 
 	// DEPRECATED: Use TestkubeProAPIKey instead
 	TestkubeCloudAPIKey string `envconfig:"TESTKUBE_CLOUD_API_KEY" default:""`

@@ -8,16 +8,19 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/pkg/errors"
+
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/expressions/libs"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 )
 
 var (
-	scopedRegex              = regexp.MustCompile(`^_(00|01|02|\d|[1-9]\d*)(C)?(S?)_`)
+	scopedRegex              = regexp.MustCompile(`^_(00|01|02|03|\d|[1-9]\d*)(C)?(S?)_`)
 	Setup                    = newSetup()
 	defaultWorkingDir        = getWorkingDir()
 	commonSensitiveVariables = []string{
@@ -155,7 +158,19 @@ func (c *setup) GetActionGroups() (actions [][]lite.LiteAction) {
 	return actions
 }
 
-func (c *setup) UseEnv(group string) {
+func (c *setup) GetInternalConfig() (config testworkflowconfig.InternalConfig) {
+	serialized := c.envGroups[constants.EnvGroupInternal][constants.EnvInternalConfig]
+	if serialized == "" {
+		return
+	}
+	err := json.Unmarshal([]byte(serialized), &config)
+	if err != nil {
+		panic(fmt.Sprintf("failed to read the internal config from Pod: %s", err.Error()))
+	}
+	return config
+}
+
+func (c *setup) UseEnv(group string) error {
 	c.UseBaseEnv()
 	c.envSelectedGroup = group
 
@@ -213,20 +228,21 @@ func (c *setup) UseEnv(group string) {
 	for name, expr := range envTemplates {
 		value, err := expressions.CompileAndResolveTemplate(expr, localEnvMachine, addonMachine, expressions.FinalizerFail)
 		if err != nil {
-			output.ExitErrorf(data.CodeInputError, "failed to compute '%s' environment variable: %s", name, err.Error())
+			return errors.Wrapf(err, "failed to compute '%s' environment variable", name)
 		}
 		str, _ := value.Static().StringValue()
 		os.Setenv(name, str)
 	}
+	return nil
 }
 
-func (c *setup) UseCurrentEnv() {
-	c.UseEnv(fmt.Sprintf("%d", c.envCurrentGroup))
+func (c *setup) UseCurrentEnv() error {
+	return c.UseEnv(fmt.Sprintf("%d", c.envCurrentGroup))
 }
 
-func (c *setup) AdvanceEnv() {
+func (c *setup) AdvanceEnv() error {
 	c.envCurrentGroup++
-	c.UseCurrentEnv()
+	return c.UseCurrentEnv()
 }
 
 func (c *setup) SetWorkingDir(workingDir string) {

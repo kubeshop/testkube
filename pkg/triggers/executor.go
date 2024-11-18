@@ -15,6 +15,7 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/scheduler"
+	triggerstcl "github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/triggers"
 	"github.com/kubeshop/testkube/pkg/workerpool"
 )
 
@@ -84,7 +85,7 @@ func (s *Service) execute(ctx context.Context, e *watcherEvent, t *testtriggersv
 				"trigger service: executor component: scheduling test executions for trigger %s/%s",
 				t.Namespace, t.Name,
 			)
-			go wp.SendRequests(s.scheduler.PrepareTestRequests(tests, request))
+			go wp.SendRequests(s.deprecatedSystem.Scheduler.PrepareTestRequests(tests, request))
 			go wp.Run(ctx)
 		}()
 
@@ -119,7 +120,7 @@ func (s *Service) execute(ctx context.Context, e *watcherEvent, t *testtriggersv
 				"trigger service: executor component: scheduling testsuite executions for trigger %s/%s",
 				t.Namespace, t.Name,
 			)
-			go wp.SendRequests(s.scheduler.PrepareTestSuiteRequests(testSuites, request))
+			go wp.SendRequests(s.deprecatedSystem.Scheduler.PrepareTestSuiteRequests(testSuites, request))
 			go wp.Run(ctx)
 		}()
 
@@ -135,6 +136,11 @@ func (s *Service) execute(ctx context.Context, e *watcherEvent, t *testtriggersv
 
 		request := testkube.TestWorkflowExecutionRequest{
 			Config: make(map[string]string, len(variables)),
+		}
+
+		// Pro edition only (tcl protected code)
+		if s.proContext != nil && s.proContext.APIKey != "" {
+			request.RunningContext = triggerstcl.GetRunningContext(t.Name)
 		}
 
 		for _, variable := range variables {
@@ -190,7 +196,7 @@ func (s *Service) getTests(t *testtriggersv1.TestTrigger) ([]testsv3.Test, error
 	var tests []testsv3.Test
 	if t.Spec.TestSelector.Name != "" {
 		s.logger.Debugf("trigger service: executor component: fetching testsv3.Test with name %s", t.Spec.TestSelector.Name)
-		test, err := s.testsClient.Get(t.Spec.TestSelector.Name)
+		test, err := s.deprecatedSystem.Clients.Tests().Get(t.Spec.TestSelector.Name)
 		if err != nil {
 			return nil, err
 		}
@@ -199,7 +205,7 @@ func (s *Service) getTests(t *testtriggersv1.TestTrigger) ([]testsv3.Test, error
 
 	if t.Spec.TestSelector.NameRegex != "" {
 		s.logger.Debugf("trigger service: executor component: fetching testsv3.Test with name regex %s", t.Spec.TestSelector.NameRegex)
-		testList, err := s.testsClient.List("")
+		testList, err := s.deprecatedSystem.Clients.Tests().List("")
 		if err != nil {
 			return nil, err
 		}
@@ -223,7 +229,7 @@ func (s *Service) getTests(t *testtriggersv1.TestTrigger) ([]testsv3.Test, error
 		}
 		stringifiedSelector := selector.String()
 		s.logger.Debugf("trigger service: executor component: fetching testsv3.Test with labels %s", stringifiedSelector)
-		testList, err := s.testsClient.List(stringifiedSelector)
+		testList, err := s.deprecatedSystem.Clients.Tests().List(stringifiedSelector)
 		if err != nil {
 			return nil, err
 		}
@@ -236,7 +242,7 @@ func (s *Service) getTestSuites(t *testtriggersv1.TestTrigger) ([]testsuitesv3.T
 	var testSuites []testsuitesv3.TestSuite
 	if t.Spec.TestSelector.Name != "" {
 		s.logger.Debugf("trigger service: executor component: fetching testsuitesv3.TestSuite with name %s", t.Spec.TestSelector.Name)
-		testSuite, err := s.testSuitesClient.Get(t.Spec.TestSelector.Name)
+		testSuite, err := s.deprecatedSystem.Clients.TestSuites().Get(t.Spec.TestSelector.Name)
 		if err != nil {
 			return nil, err
 		}
@@ -245,7 +251,7 @@ func (s *Service) getTestSuites(t *testtriggersv1.TestTrigger) ([]testsuitesv3.T
 
 	if t.Spec.TestSelector.NameRegex != "" {
 		s.logger.Debugf("trigger service: executor component: fetching testsuitesv3.TestSuite with name regex %s", t.Spec.TestSelector.NameRegex)
-		testSuitesList, err := s.testSuitesClient.List("")
+		testSuitesList, err := s.deprecatedSystem.Clients.TestSuites().List("")
 		if err != nil {
 			return nil, err
 		}
@@ -269,7 +275,7 @@ func (s *Service) getTestSuites(t *testtriggersv1.TestTrigger) ([]testsuitesv3.T
 		}
 		stringifiedSelector := selector.String()
 		s.logger.Debugf("trigger service: executor component: fetching testsuitesv3.TestSuite with label %s", stringifiedSelector)
-		testSuitesList, err := s.testSuitesClient.List(stringifiedSelector)
+		testSuitesList, err := s.deprecatedSystem.Clients.TestSuites().List(stringifiedSelector)
 		if err != nil {
 			return nil, err
 		}

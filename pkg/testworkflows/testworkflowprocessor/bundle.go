@@ -3,6 +3,7 @@ package testworkflowprocessor
 import (
 	"context"
 	"encoding/json"
+	"time"
 
 	"github.com/pkg/errors"
 	batchv1 "k8s.io/api/batch/v1"
@@ -10,6 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
@@ -17,7 +19,9 @@ import (
 )
 
 type BundleOptions struct {
-	Secrets []corev1.Secret
+	Secrets     []corev1.Secret
+	Config      testworkflowconfig.InternalConfig
+	ScheduledAt time.Time
 }
 
 type Bundle struct {
@@ -36,6 +40,16 @@ func (b *Bundle) Actions() (actions actiontypes.ActionGroups) {
 func (b *Bundle) LiteActions() (actions lite.LiteActionGroups) {
 	_ = json.Unmarshal([]byte(b.Job.Spec.Template.Annotations[constants.SpecAnnotationName]), &actions)
 	return
+}
+
+func (b *Bundle) SetGroupId(groupId string) {
+	AnnotateGroupId(&b.Job, groupId)
+	for i := range b.ConfigMaps {
+		AnnotateGroupId(&b.ConfigMaps[i], groupId)
+	}
+	for i := range b.Secrets {
+		AnnotateGroupId(&b.Secrets[i], groupId)
+	}
 }
 
 func (b *Bundle) Deploy(ctx context.Context, clientSet kubernetes.Interface, namespace string) (err error) {

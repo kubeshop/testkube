@@ -280,6 +280,9 @@ func (r *MongoRepository) Insert(ctx context.Context, result testkube.TestWorkfl
 
 func (r *MongoRepository) Update(ctx context.Context, result testkube.TestWorkflowExecution) (err error) {
 	result.EscapeDots()
+	if result.Reports == nil {
+		result.Reports = []testkube.TestWorkflowReport{}
+	}
 	_, err = r.Coll.ReplaceOne(ctx, bson.M{"id": result.Id}, result)
 	return
 }
@@ -415,6 +418,14 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 			}
 		}
 		query["$or"] = subquery
+	}
+
+	if filter.ActorNameDefined() {
+		query["runningcontext.actor.name"] = filter.ActorName()
+	}
+
+	if filter.ActorTypeDefined() {
+		query["runningcontext.actor.type_"] = filter.ActorType()
 	}
 
 	opts.SetSkip(int64(filter.Page() * filter.PageSize()))

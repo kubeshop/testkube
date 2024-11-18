@@ -173,13 +173,6 @@ if [ -z "$AGENT_KEY" ]; then
   exit 1
 fi
 
-# Check if cloud url is provided
-if [ -z "$CLOUD_URL" ]; then
-  log "Testkube installation failed. Please provide CLOUD_URL env var"
-  send_telenetry "docker_installation_failed" "parameter_not_found" "cloud url is empty"
-  exit 1
-fi
-
 # Step 1: Start docker service in background
 /usr/local/bin/dockerd-entrypoint.sh &
 
@@ -313,14 +306,10 @@ else
   fi
   log "Testkube is up and running."
 
-  # Step 9: Create Testkube k6 Test Workflow 
-  log "Creating and running Testkube k6 Test Workflow..."
-  kubectl apply -f /examples/k6.yaml -n testkube
-
   log "Testkube installation succeed!"
   log "You can now use Testkube in your Kind Kubernetes cluster."
   send_telenetry "docker_installation_succeed"
 fi
 
-# Step 10: Bring docker service back to foreground
+# Step 9: Bring docker service back to foreground
 fg %1

@@ -12,13 +12,13 @@ import (
 
 	"google.golang.org/protobuf/types/known/emptypb"
 
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
 	"github.com/kubeshop/testkube/pkg/agent"
 	"github.com/kubeshop/testkube/pkg/capabilities"
 	"github.com/kubeshop/testkube/pkg/cloud"
 
 	"github.com/kubeshop/testkube/pkg/filesystem"
 
-	"github.com/minio/minio-go/v7"
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/artifacts"
@@ -26,22 +26,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/mapper/cdevents"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
-
-var directAddGzipEncoding = artifacts.WithMinioOptionsEnhancer(func(options *minio.PutObjectOptions, path string, size int64) {
-	options.ContentType = "application/gzip"
-	options.ContentEncoding = "gzip"
-})
-
-var directDisableMultipart = artifacts.WithMinioOptionsEnhancer(func(options *minio.PutObjectOptions, path string, size int64) {
-	options.DisableMultipart = true
-})
-
-var directUnpack = artifacts.WithMinioOptionsEnhancer(func(options *minio.PutObjectOptions, path string, size int64) {
-	options.UserMetadata = map[string]string{
-		"X-Amz-Meta-Snowball-Auto-Extract": "true",
-		"X-Amz-Meta-Minio-Snowball-Prefix": env.WorkflowName() + "/" + env.ExecutionId(),
-	}
-})
 
 var cloudAddGzipEncoding = artifacts.WithRequestEnhancerCloud(func(req *http.Request, path string, size int64) {
 	req.Header.Set("Content-Type", "application/gzip")
@@ -98,64 +82,50 @@ func NewArtifactsCmd() *cobra.Command {
 
 			var handlerOpts []artifacts.HandlerOpts
 			// Archive
-			if env.CloudEnabled() {
-				ctx, cancel := context.WithTimeout(cmd.Context(), 30*time.Second)
-				defer cancel()
-				ctx = agent.AddAPIKeyMeta(ctx, env.Config().Cloud.ApiKey)
-				executor, client := env.Cloud(ctx)
-				proContext, err := client.GetProContext(ctx, &emptypb.Empty{})
-				var supported []*cloud.Capability
-				if err != nil {
-					fmt.Printf("Warning: couldn't get capabilities: %s\n", err.Error())
-				}
-				if proContext != nil {
-					supported = proContext.Capabilities
-				}
-				defer executor.Close()
+			ctx, cancel := context.WithTimeout(cmd.Context(), 30*time.Second)
+			defer cancel()
+			ctx = agent.AddAPIKeyMeta(ctx, config.Config().Worker.Connection.ApiKey)
+			executor, client := env.Cloud(ctx)
+			proContext, err := client.GetProContext(ctx, &emptypb.Empty{})
+			var supported []*cloud.Capability
+			if err != nil && !strings.Contains(err.Error(), "not supported") {
+				fmt.Printf("Warning: couldn't get capabilities: %s\n", err.Error())
+			}
+			if proContext != nil {
+				supported = proContext.Capabilities
+			}
+			defer executor.Close()
 
-				if env.JUnitParserEnabled() || capabilities.Enabled(supported, capabilities.CapabilityJUnitReports) {
-					junitProcessor := artifacts.NewJUnitPostProcessor(filesystem.NewOSFileSystem(), executor, walker.Root(), env.Config().Execution.FSPrefix)
-					handlerOpts = append(handlerOpts, artifacts.WithPostProcessor(junitProcessor))
-				}
-				if compress != "" {
-					processor = artifacts.NewTarCachedProcessor(compress, compressCachePath)
-					opts := []artifacts.CloudUploaderOpt{cloudAddGzipEncoding}
-					if unpack {
-						opts = append(opts, cloudUnpack)
-					}
-					uploader = artifacts.NewCloudUploader(executor, opts...)
-				} else {
-					processor = artifacts.NewDirectProcessor()
-					uploader = artifacts.NewCloudUploader(executor, artifacts.WithParallelismCloud(30), artifacts.CloudDetectMimetype)
-				}
-			} else if compress != "" && unpack {
+			if config.JUnitParserEnabled() || capabilities.Enabled(supported, capabilities.CapabilityJUnitReports) {
+				junitProcessor := artifacts.NewJUnitPostProcessor(filesystem.NewOSFileSystem(), executor, walker.Root(), config.Config().Resource.FsPrefix)
+				handlerOpts = append(handlerOpts, artifacts.WithPostProcessor(junitProcessor))
+			}
+			if compress != "" {
 				processor = artifacts.NewTarCachedProcessor(compress, compressCachePath)
-				uploader = artifacts.NewDirectUploader(directAddGzipEncoding, directDisableMultipart, directUnpack)
-			} else if compress != "" && compressCachePath != "" {
-				processor = artifacts.NewTarCachedProcessor(compress, compressCachePath)
-				uploader = artifacts.NewDirectUploader(directAddGzipEncoding, directDisableMultipart)
-			} else if compress != "" {
-				processor = artifacts.NewTarProcessor(compress)
-				uploader = artifacts.NewDirectUploader(directAddGzipEncoding)
+				opts := []artifacts.CloudUploaderOpt{cloudAddGzipEncoding}
+				if unpack {
+					opts = append(opts, cloudUnpack)
+				}
+				uploader = artifacts.NewCloudUploader(executor, opts...)
 			} else {
 				processor = artifacts.NewDirectProcessor()
-				uploader = artifacts.NewDirectUploader(artifacts.WithParallelism(30), artifacts.DirectDetectMimetype)
+				uploader = artifacts.NewCloudUploader(executor, artifacts.WithParallelismCloud(30), artifacts.CloudDetectMimetype)
 			}
 
 			// Isolate the files under specific prefix
-			if env.Config().Execution.FSPrefix != "" {
-				handlerOpts = append(handlerOpts, artifacts.WithPathPrefix(env.Config().Execution.FSPrefix))
+			if config.Config().Resource.FsPrefix != "" {
+				handlerOpts = append(handlerOpts, artifacts.WithPathPrefix(config.Config().Resource.FsPrefix))
 			}
 
-			// Support cd evaents
-			if env.Config().System.CDEventsTarget != "" {
-				handlerOpts = append(handlerOpts, artifacts.WithCDEventsTarget(env.Config().System.CDEventsTarget))
+			// Support cd events
+			if config.Config().ControlPlane.CDEventsTarget != "" {
+				handlerOpts = append(handlerOpts, artifacts.WithCDEventsTarget(config.Config().ControlPlane.CDEventsTarget))
 				handlerOpts = append(handlerOpts, artifacts.WithCDEventsArtifactParameters(cdevents.CDEventsArtifactParameters{
-					Id:           env.Config().Execution.Id,
-					Name:         env.Config().Execution.Name,
-					WorkflowName: env.Config().Execution.WorkflowName,
-					ClusterID:    env.Config().System.ClusterID,
-					DashboardURI: env.Config().System.DashboardUrl,
+					Id:           config.Config().Execution.Id,
+					Name:         config.Config().Execution.Name,
+					WorkflowName: config.Config().Workflow.Name,
+					ClusterID:    config.Config().Worker.ClusterID,
+					DashboardURI: config.Config().ControlPlane.DashboardUrl,
 				}))
 			}
 
