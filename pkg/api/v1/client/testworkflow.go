@@ -121,6 +121,23 @@ func (c TestWorkflowClient) ExecuteTestWorkflow(name string, request testkube.Te
 	return c.testWorkflowExecutionTransport.Execute(http.MethodPost, uri, body, nil)
 }
 
+// ExecuteTestWorkflows starts new external test workflow executions, reads data and returns IDs
+// Executions are started asynchronously client can check later for results
+func (c TestWorkflowClient) ExecuteTestWorkflows(selector string, request testkube.TestWorkflowExecutionRequest) (executions []testkube.TestWorkflowExecution, err error) {
+	uri := c.testWorkflowExecutionTransport.GetURI("/test-workflow-executions")
+
+	body, err := json.Marshal(request)
+	if err != nil {
+		return executions, err
+	}
+
+	params := map[string]string{
+		"selector": selector,
+	}
+
+	return c.testWorkflowExecutionTransport.ExecuteMultiple(http.MethodPost, uri, body, params)
+}
+
 // GetTestWorkflowExecutionNotifications returns events stream from job pods, based on job pods logs
 func (c TestWorkflowClient) GetTestWorkflowExecutionNotifications(id string) (notifications chan testkube.TestWorkflowExecutionNotification, err error) {
 	notifications = make(chan testkube.TestWorkflowExecutionNotification)

@@ -40,7 +40,7 @@ require (
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/kubepug/kubepug v1.7.1
-	github.com/kubeshop/testkube-operator v1.17.55-0.20241030092155-2a57f6e797e9
+	github.com/kubeshop/testkube-operator v1.17.55-0.20241118133003-70462ac10f4a
 	github.com/minio/minio-go/v7 v7.0.47
 	github.com/montanaflynn/stats v0.6.6
 	github.com/moogar0880/problems v0.1.1
@@ -55,6 +55,7 @@ require (
 	github.com/prometheus/client_golang v1.18.0
 	github.com/pterm/pterm v0.12.79
 	github.com/robfig/cron v1.2.0
+	github.com/savioxavier/termlink v1.4.1
 	github.com/segmentio/analytics-go/v3 v3.2.1
 	github.com/shirou/gopsutil/v3 v3.24.3
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
@@ -185,7 +186,6 @@ require (
 	github.com/rs/xid v1.4.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/santhosh-tekuri/jsonschema/v5 v5.0.0 // indirect
-	github.com/savioxavier/termlink v1.4.1 // indirect
 	github.com/savsgio/gotils v0.0.0-20211223103454-d0aaa54c5899 // indirect
 	github.com/segmentio/backo-go v1.0.0 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect

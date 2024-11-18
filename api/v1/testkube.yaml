@@ -4065,6 +4065,57 @@ paths:
                 items:
                   $ref: "#/components/schemas/Problem"
   /test-workflow-executions:
+    post:
+      parameters:
+        - $ref: "#/components/parameters/Selector"
+        - $ref: "#/components/parameters/ConcurrencyLevel"
+      tags:
+        - api
+        - test-workflows
+        - pro
+      summary: "Execute test workflows"
+      description: "Execute test workflows in the kubernetes cluster"
+      operationId: executeTestWorkflows
+      requestBody:
+        description: test workflow execution request
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TestWorkflowExecutionRequest"
+      responses:
+        200:
+          description: successful execution
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TestWorkflowExecution"
+        400:
+          description: "problem with body parsing - probably some bad input occurs"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        402:
+          description: "missing Pro subscription for a commercial feature"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: problem communicating with kubernetes cluster
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
     get:
       tags:
         - test-workflows
@@ -8990,6 +9041,9 @@ components:
               $ref: "#/components/schemas/TestWorkflowTarballRequest"
           config:
             $ref: "#/components/schemas/TestWorkflowConfigValue"
+          selector:
+            $ref: "#/components/schemas/LabelSelector"
+            description: label selector for test workflow
 
     TestWorkflowStepExecuteTestRef:
       type: object
