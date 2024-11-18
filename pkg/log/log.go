@@ -30,6 +30,26 @@ func New() *zap.SugaredLogger {
 	return logger
 }
 
+func NewSilent() *zap.SugaredLogger {
+	atomicLevel := zap.NewAtomicLevel()
+
+	atomicLevel.SetLevel(zap.WarnLevel)
+	if envs.IsTrue("DEBUG") {
+		atomicLevel.SetLevel(zap.DebugLevel)
+	}
+
+	zapCfg := zap.NewProductionConfig()
+	zapCfg.Level = atomicLevel
+	zapCfg.EncoderConfig.EncodeTime = zapcore.RFC3339TimeEncoder
+
+	z, err := zapCfg.Build()
+	if err != nil {
+		log.Fatalf("can't initialize zap logger: %v", err)
+	}
+	logger := z.Sugar()
+	return logger
+}
+
 // DefaultLogger initialized default logger
 var DefaultLogger *zap.SugaredLogger
 
