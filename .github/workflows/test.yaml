@@ -53,7 +53,7 @@ jobs:
 
       - name: Send coverage report to Codecov
         if: always()
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           file: ./coverage.out
           flags: unittests
@@ -181,7 +181,7 @@ jobs:
 
       - name: Send coverage report to Codecov
         if: always()
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           file: ./coverage.out
           flags: integrationtests
