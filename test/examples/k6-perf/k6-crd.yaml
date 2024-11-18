@@ -7,7 +7,7 @@ spec:
   content:
     git:
       uri: https://github.com/kubeshop/testkube
-      revision: perf-test-example # TODO: update before merge
+      revision: main
       paths:
       - test/k6/executor-tests/k6-perf-test.js
   container:
@@ -50,7 +50,7 @@ spec:
   content:
     git:
       uri: https://github.com/kubeshop/testkube
-      revision: perf-test-example # TODO: update before merge
+      revision: main
       paths:
       - test/k6/executor-tests/k6-perf-test.js
   steps:
@@ -97,7 +97,7 @@ spec:
   content:
     git:
       uri: https://github.com/kubeshop/testkube
-      revision: perf-test-example # TODO: update before merge
+      revision: main
       paths:
       - test/k6/executor-tests/k6-perf-test.js
   steps:
