@@ -364,6 +364,9 @@ func PopulateLoginDataToContext(orgID, envID, token, refreshToken, dockerContain
 		cfg.CloudContext.RefreshToken = refreshToken
 	}
 	cfg.CloudContext.DockerContainerName = dockerContainerName
+	if options.Master.CallbackPort != 0 {
+		cfg.CloudContext.CallbackPort = options.Master.CallbackPort
+	}
 
 	cfg, err := PopulateOrgAndEnvNames(cfg, orgID, envID, options.Master.URIs.Api)
 	if err != nil {
@@ -405,6 +408,10 @@ func PopulateAgentDataToContext(options HelmOptions, cfg config.Data) error {
 	}
 	if options.Master.OrgId != "" {
 		cfg.CloudContext.OrganizationId = options.Master.OrgId
+		updated = true
+	}
+	if options.Master.CallbackPort != 0 {
+		cfg.CloudContext.CallbackPort = options.Master.CallbackPort
 		updated = true
 	}
 
@@ -488,6 +495,7 @@ func PopulateCloudConfig(cfg config.Data, apiKey string, dockerContainerName *st
 	if dockerContainerName != nil {
 		cfg.CloudContext.DockerContainerName = *dockerContainerName
 	}
+	cfg.CloudContext.CallbackPort = opts.Master.CallbackPort
 
 	return cfg
 }

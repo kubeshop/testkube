@@ -13,7 +13,10 @@ import (
 	"github.com/kubeshop/testkube/pkg/cloudlogin"
 )
 
-const UserAgentCLI = "Testkube-CLI"
+const (
+	UserAgentCLI = "Testkube-CLI"
+	callbackPort = 38090
+)
 
 // GetClient returns api client
 func GetClient(cmd *cobra.Command) (client.Client, string, error) {
@@ -76,7 +79,12 @@ func GetClient(cmd *cobra.Command) (client.Client, string, error) {
 			token, refreshToken, err = cloudlogin.CheckAndRefreshToken(context.Background(), authURI, cfg.CloudContext.ApiKey, cfg.CloudContext.RefreshToken)
 			if err != nil {
 				// Error: failed refreshing, go thru login flow
-				token, refreshToken, err = LoginUser(authURI, cfg.CloudContext.CustomAuth, cfg.CloudContext.CallbackPort)
+				port := callbackPort
+				if cfg.CloudContext.CallbackPort != 0 {
+					port = cfg.CloudContext.CallbackPort
+				}
+
+				token, refreshToken, err = LoginUser(authURI, cfg.CloudContext.CustomAuth, port)
 				if err != nil {
 					return nil, "", fmt.Errorf("error logging in: %w", err)
 				}
