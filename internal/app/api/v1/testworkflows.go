@@ -2,13 +2,13 @@ package v1
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
@@ -348,10 +348,27 @@ func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 	return func(c *fiber.Ctx) (err error) {
 		ctx := c.Context()
 		name := c.Params("id")
-		errPrefix := fmt.Sprintf("failed to execute test workflow '%s'", name)
-		workflow, err := s.TestWorkflowsClient.Get(name)
-		if err != nil {
-			return s.ClientError(c, errPrefix, err)
+		selector := c.Query("selector")
+		s.Log.Debugw("getting test workflow", "name", name, "selector", selector)
+
+		errPrefix := "failed to execute test workflow"
+
+		var testWorkflows []testworkflowsv1.TestWorkflow
+		if name != "" {
+			errPrefix = errPrefix + " " + name
+			testWorkflow, err := s.TestWorkflowsClient.Get(name)
+			if err != nil {
+				return s.ClientError(c, errPrefix, err)
+			}
+
+			testWorkflows = append(testWorkflows, *testWorkflow)
+		} else {
+			testWorkflowList, err := s.TestWorkflowsClient.List(selector)
+			if err != nil {
+				return s.ClientError(c, errPrefix, err)
+			}
+
+			testWorkflows = append(testWorkflows, testWorkflowList.Items...)
 		}
 
 		// Load the execution request
@@ -371,34 +388,32 @@ func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 		var results []testkube.TestWorkflowExecution
 		var errs []error
 
-		request.TestWorkflowExecutionName = strings.Clone(c.Query("testWorkflowExecutionName"))
-		concurrencyLevel := scheduler.DefaultConcurrencyLevel
-		workerpoolService := workerpool.New[testworkflowsv1.TestWorkflow, testkube.TestWorkflowExecutionRequest,
-			testkube.TestWorkflowExecution](concurrencyLevel)
-		requests := []workerpool.Request[testworkflowsv1.TestWorkflow, testkube.TestWorkflowExecutionRequest, testkube.TestWorkflowExecution]{
-			{
-				Object:  *workflow,
-				Options: request,
-				ExecFn:  s.TestWorkflowExecutor.Execute,
-			},
-		}
+		if len(testWorkflows) != 0 {
+			request.TestWorkflowExecutionName = strings.Clone(c.Query("testWorkflowExecutionName"))
+			workerpoolService := workerpool.New[testworkflowsv1.TestWorkflow, testkube.TestWorkflowExecutionRequest, testkube.TestWorkflowExecution](scheduler.DefaultConcurrencyLevel)
 
-		go workerpoolService.SendRequests(requests)
-		go workerpoolService.Run(ctx)
+			go workerpoolService.SendRequests(s.prepareTestWorkflowRequests(testWorkflows, request))
+			go workerpoolService.Run(ctx)
 
-		for r := range workerpoolService.GetResponses() {
-			results = append(results, r.Result)
-			if r.Err != nil {
-				errs = append(errs, r.Err)
+			for r := range workerpoolService.GetResponses() {
+				results = append(results, r.Result)
+				if r.Err != nil {
+					errs = append(errs, r.Err)
+				}
 			}
 		}
 
 		if len(errs) != 0 {
-			return s.InternalError(c, errPrefix, "execution error", errs[0])
+			return s.InternalError(c, errPrefix, "execution error", errors.Join(errs...))
 		}
 
+		s.Log.Debugw("executing test workflow", "name", name, "selector", selector)
 		if len(results) != 0 {
-			return c.JSON(results[0])
+			if name != "" {
+				return c.JSON(results[0])
+			}
+
+			return c.JSON(results)
 		}
 
 		return s.InternalError(c, errPrefix, "error", errors.New("no execution results"))
@@ -422,4 +437,21 @@ func (s *TestkubeAPI) getFilteredTestWorkflowList(c *fiber.Ctx) (*testworkflowsv
 	}
 
 	return crWorkflows, nil
+}
+
+func (s *TestkubeAPI) prepareTestWorkflowRequests(work []testworkflowsv1.TestWorkflow, request testkube.TestWorkflowExecutionRequest) []workerpool.Request[
+	testworkflowsv1.TestWorkflow,
+	testkube.TestWorkflowExecutionRequest,
+	testkube.TestWorkflowExecution,
+] {
+	requests := make([]workerpool.Request[testworkflowsv1.TestWorkflow, testkube.TestWorkflowExecutionRequest, testkube.TestWorkflowExecution], len(work))
+	for i := range work {
+		requests[i] = workerpool.Request[testworkflowsv1.TestWorkflow, testkube.TestWorkflowExecutionRequest, testkube.TestWorkflowExecution]{
+			Object:  work[i],
+			Options: request,
+			ExecFn:  s.TestWorkflowExecutor.Execute,
+		}
+	}
+
+	return requests
 }

@@ -147,6 +147,7 @@ func (s *TestkubeAPI) Init(server server.HTTPServer) {
 
 	testWorkflowExecutions := root.Group("/test-workflow-executions")
 	testWorkflowExecutions.Get("/", s.ListTestWorkflowExecutionsHandler())
+	testWorkflowExecutions.Post("/", s.ExecuteTestWorkflowHandler())
 	testWorkflowExecutions.Get("/:executionID", s.GetTestWorkflowExecutionHandler())
 	testWorkflowExecutions.Get("/:executionID/notifications", s.StreamTestWorkflowExecutionNotificationsHandler())
 	testWorkflowExecutions.Get("/:executionID/notifications/stream", s.StreamTestWorkflowExecutionNotificationsWebSocketHandler())

@@ -3,6 +3,7 @@ package common
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -52,13 +53,14 @@ const (
 const helpUrl = "https://testkubeworkspace.slack.com"
 
 type CLIError struct {
-	Code        ErrorCode
-	Title       string
-	Description string
-	ActualError error
-	StackTrace  string
-	MoreInfo    string
-	Telemetry   *ErrorTelemetry
+	Code            ErrorCode
+	Title           string
+	Description     string
+	ActualError     error
+	StackTrace      string
+	MoreInfo        string
+	ExecutedCommand string
+	Telemetry       *ErrorTelemetry
 }
 
 type ErrorTelemetry struct {
@@ -86,6 +88,15 @@ func (e *CLIError) Print() {
 
 	pterm.DefaultSection.Println("Error Details")
 
+	cmd := ""
+	if e.ExecutedCommand != "" {
+		pterm.FgDarkGray.Printfln("Executed command: %s", e.ExecutedCommand)
+		params := strings.Split(e.ExecutedCommand, " ")
+		if len(params) > 0 {
+			cmd = params[0]
+		}
+	}
+
 	items := []pterm.BulletListItem{
 		{Level: 0, Text: pterm.Sprintf("[%s]: %s", e.Code, e.Title), TextStyle: pterm.NewStyle(pterm.FgRed)},
 		{Level: 0, Text: pterm.Sprintf("%s", e.Description), TextStyle: pterm.NewStyle(pterm.FgLightWhite)},
@@ -94,6 +105,9 @@ func (e *CLIError) Print() {
 		items = append(items, pterm.BulletListItem{Level: 0, Text: pterm.Sprintf("%s", e.MoreInfo), TextStyle: pterm.NewStyle(pterm.FgGray)})
 	}
 	pterm.DefaultBulletList.WithItems(items).Render()
+	if cmd != "" {
+		pterm.DefaultBox.Printfln("Error description is provided in context of binary execution %s", cmd)
+	}
 
 	pterm.Println()
 	pterm.Println("Let us help you!")
@@ -109,6 +123,11 @@ func NewCLIError(code ErrorCode, title, moreInfoURL string, err error) *CLIError
 		MoreInfo:    moreInfoURL,
 		StackTrace:  fmt.Sprintf("%+v", err),
 	}
+}
+
+func (err *CLIError) WithExecutedCommand(executedCommand string) *CLIError {
+	err.ExecutedCommand = executedCommand
+	return err
 }
 
 // HandleCLIError checks does the error exist, and if it does, prints the error and exits the program.

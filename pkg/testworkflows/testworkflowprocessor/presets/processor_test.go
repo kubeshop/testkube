@@ -1334,3 +1334,67 @@ func TestProcess_PureShellAtTheEnd(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, want, res.LiteActions())
 }
+
+func TestProcess_MergingActions(t *testing.T) {
+	wf := &testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			Steps: []testworkflowsv1.Step{
+				{
+					StepOperations: testworkflowsv1.StepOperations{Delay: "1s"},
+				},
+				{
+					StepDefaults: testworkflowsv1.StepDefaults{Container: &testworkflowsv1.ContainerConfig{
+						Image: "custom-image:1.2.3",
+					}},
+					StepOperations: testworkflowsv1.StepOperations{Shell: "test-command"},
+				},
+			},
+		},
+	}
+
+	res, err := proc.Bundle(context.Background(), wf, testworkflowprocessor.BundleOptions{Config: testConfig})
+	sig := res.Signature
+
+	wantActions := lite.NewLiteActionGroups().
+		Append(func(list lite.LiteActionList) lite.LiteActionList {
+			return list.
+				// configure
+				Setup(true, false, true).
+				Declare(constants.RootOperationName, "true").
+				Declare(sig[0].Ref(), "true", constants.RootOperationName).
+				Declare(sig[1].Ref(), sig[0].Ref(), constants.RootOperationName).
+				Result(constants.RootOperationName, and(sig[0].Ref(), sig[1].Ref())).
+				Result("", constants.RootOperationName).
+
+				// initialize
+				Start("").
+				CurrentStatus("true").
+				Start(constants.RootOperationName).
+				CurrentStatus(constants.RootOperationName)
+		}).
+		Append(func(list lite.LiteActionList) lite.LiteActionList {
+			return list.
+				// start first container
+				MutateContainer(lite.LiteContainerConfig{
+					Command: cmd("sleep"),
+					Args:    cmd("1"),
+				}).
+				Start(sig[0].Ref()).
+				Execute(sig[0].Ref(), false, true).
+				End(sig[0].Ref()).
+				CurrentStatus(and(sig[0].Ref(), constants.RootOperationName)).
+				MutateContainer(lite.LiteContainerConfig{
+					Command: cmd("/.tktw/bin/sh"),
+					Args:    cmdShell("test-command"),
+				}).
+				Start(sig[1].Ref()).
+				Execute(sig[1].Ref(), false, false).
+				End(sig[1].Ref()).
+				End(constants.RootOperationName).
+				End("")
+		})
+
+	assert.NoError(t, err)
+	assert.Equal(t, wantActions, res.LiteActions())
+	assert.Equal(t, res.Job.Spec.Template.Spec.Containers[0].Image, "custom-image:1.2.3")
+}
