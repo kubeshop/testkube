@@ -17,18 +17,19 @@ type CredentialRepository interface {
 }
 
 type credentialRepository struct {
-	client cloud.TestKubeCloudAPIClient
-	apiKey string
+	client      cloud.TestKubeCloudAPIClient
+	apiKey      string
+	executionId string
 }
 
-func NewCredentialRepository(client cloud.TestKubeCloudAPIClient, apiKey string) CredentialRepository {
-	return &credentialRepository{client: client, apiKey: apiKey}
+func NewCredentialRepository(client cloud.TestKubeCloudAPIClient, apiKey, executionId string) CredentialRepository {
+	return &credentialRepository{client: client, apiKey: apiKey, executionId: executionId}
 }
 
 func (c *credentialRepository) Get(ctx context.Context, name string) ([]byte, error) {
 	ctx = client.AddAPIKeyMeta(context.Background(), c.apiKey)
 	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
-	result, err := c.client.GetCredential(ctx, &cloud.CredentialRequest{Name: name}, opts...)
+	result, err := c.client.GetCredential(ctx, &cloud.CredentialRequest{Name: name, ExecutionId: c.executionId}, opts...)
 	if err != nil {
 		return nil, err
 	}
