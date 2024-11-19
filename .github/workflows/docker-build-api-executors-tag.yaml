@@ -19,7 +19,7 @@ jobs:
         uses: actions/checkout@v4
 
       - uses: sigstore/cosign-installer@v3.7.0
-      - uses: anchore/sbom-action/download-syft@v0.17.6
+      - uses: anchore/sbom-action/download-syft@v0.17.7
 
       - name: Set up Docker Buildx
         id: buildx
@@ -94,7 +94,7 @@ jobs:
         uses: actions/checkout@v4
 
       - uses: sigstore/cosign-installer@v3.7.0
-      - uses: anchore/sbom-action/download-syft@v0.17.6
+      - uses: anchore/sbom-action/download-syft@v0.17.7
 
       - name: Set up Docker Buildx
         id: buildx
@@ -178,7 +178,7 @@ jobs:
         uses: actions/checkout@v4
 
       - uses: sigstore/cosign-installer@v3.7.0
-      - uses: anchore/sbom-action/download-syft@v0.17.6
+      - uses: anchore/sbom-action/download-syft@v0.17.7
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -249,7 +249,7 @@ jobs:
         uses: actions/checkout@v4
 
       - uses: sigstore/cosign-installer@v3.7.0
-      - uses: anchore/sbom-action/download-syft@v0.17.6
+      - uses: anchore/sbom-action/download-syft@v0.17.7
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -317,7 +317,7 @@ jobs:
         uses: actions/checkout@v4
 
       - uses: sigstore/cosign-installer@v3.7.0
-      - uses: anchore/sbom-action/download-syft@v0.17.6
+      - uses: anchore/sbom-action/download-syft@v0.17.7
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -442,7 +442,7 @@ jobs:
         uses: actions/checkout@v4
 
       - uses: sigstore/cosign-installer@v3.7.0
-      - uses: anchore/sbom-action/download-syft@v0.17.6
+      - uses: anchore/sbom-action/download-syft@v0.17.7
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -510,7 +510,7 @@ jobs:
         uses: actions/checkout@v4
 
       - uses: sigstore/cosign-installer@v3.7.0
-      - uses: anchore/sbom-action/download-syft@v0.17.6
+      - uses: anchore/sbom-action/download-syft@v0.17.7
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -669,7 +669,7 @@ jobs:
         uses: actions/checkout@v4
 
       - uses: sigstore/cosign-installer@v3.7.0
-      - uses: anchore/sbom-action/download-syft@v0.17.6
+      - uses: anchore/sbom-action/download-syft@v0.17.7
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -741,7 +741,7 @@ jobs:
         uses: docker/setup-qemu-action@v3
 
       - uses: sigstore/cosign-installer@v3.7.0
-      - uses: anchore/sbom-action/download-syft@v0.17.6
+      - uses: anchore/sbom-action/download-syft@v0.17.7
 
       - name: Set up Docker Buildx
         id: buildx
@@ -790,7 +790,7 @@ jobs:
         uses: actions/checkout@v4
 
       - uses: sigstore/cosign-installer@v3.7.0
-      - uses: anchore/sbom-action/download-syft@v0.17.6
+      - uses: anchore/sbom-action/download-syft@v0.17.7
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -863,7 +863,7 @@ jobs:
           fetch-depth: 0
 
       - uses: sigstore/cosign-installer@v3.7.0
-      - uses: anchore/sbom-action/download-syft@v0.17.6
+      - uses: anchore/sbom-action/download-syft@v0.17.7
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -942,25 +942,10 @@ jobs:
         with:
           strip_v: false
 
-      - name: Editing helm-release repo with version based on a Tag pushed.
-        run: |
-
-          # Setting up Git:
-          git clone https://kubeshop-bot:$GH_TOKEN@github.com/kubeshop/helm-charts
-          cd ./helm-charts
-          git config user.name "kubeshop-bot"
-          git config user.email "kubeshop-bot@kubeshop.io"
-
-          export GH_TOKEN
-          export RELEASE_VERSION
-          export SERVICE
-
-          git fetch origin main
-          git checkout main
-          cd ./scripts
-          ./chart_releaser.sh --helm-chart-folder testkube-$SERVICE
-
-        env:
-          SERVICE: api
-          GH_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
-          RELEASE_VERSION: ${{ steps.tag.outputs.tag }}
+      - name: Repository Dispatch
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.CI_BOT_TOKEN }}
+          repository: kubeshop/helm-charts
+          event-type: release-testkube-api-charts
+          client-payload: '{"RELEASE_VERSION": "${{ steps.tag.outputs.tag }}", "SERVICE": "api"}'

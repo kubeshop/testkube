@@ -71,22 +71,26 @@ func openOnPremDashboard(cmd *cobra.Command, cfg config.Data, verbose, skipBrows
 	uri := fmt.Sprintf("http://localhost:%d", uiLocalPort)
 
 	ctx, cancel := context.WithCancel(context.Background())
+
+	ui.Debug("Port forwarding for api", config.EnterpriseApiName)
 	err = k8sclient.PortForward(ctx, cfg.Namespace, config.EnterpriseApiName, config.EnterpriseApiPort, config.EnterpriseApiForwardingPort, verbose)
 	if err != nil {
 		sendErrTelemetry(cmd, cfg, "port_forward", license, "port forwarding api", err)
 	}
 	ui.ExitOnError("port forwarding api", err)
+	ui.Debug("Port forwarding for ui", config.EnterpriseUiName)
 	err = k8sclient.PortForward(ctx, cfg.Namespace, config.EnterpriseUiName, config.EnterpriseUiPort, uiLocalPort, verbose)
 	if err != nil {
 		sendErrTelemetry(cmd, cfg, "port_forward", license, "port forwarding ui", err)
 	}
 	ui.ExitOnError("port forwarding ui", err)
+	ui.Debug("Port forwarding for dex", config.EnterpriseDexName)
 	err = k8sclient.PortForward(ctx, cfg.Namespace, config.EnterpriseDexName, config.EnterpriseDexPort, config.EnterpriseDexForwardingPort, verbose)
 	if err != nil {
 		sendErrTelemetry(cmd, cfg, "port_forward", license, "port forwarding dex", err)
 	}
 	ui.ExitOnError("port forwarding dex", err)
-
+	ui.Debug("Port forwarding for minio", config.EnterpriseMinioName)
 	err = k8sclient.PortForward(ctx, cfg.Namespace, config.EnterpriseMinioName, config.EnterpriseMinioPort, config.EnterpriseMinioPortFrwardingPort, verbose)
 	if err != nil {
 		sendTelemetry(cmd, cfg, license, "port forwarding minio")
@@ -94,6 +98,7 @@ func openOnPremDashboard(cmd *cobra.Command, cfg config.Data, verbose, skipBrows
 	ui.ExitOnError("port forwarding minio", err)
 
 	if !skipBrowser {
+		ui.Debug("Opening dashboard in browser", uri)
 		err = open.Run(uri)
 		if err != nil {
 			sendErrTelemetry(cmd, cfg, "open_dashboard", license, "opening dashboard", err)
