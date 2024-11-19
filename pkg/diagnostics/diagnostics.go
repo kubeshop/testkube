@@ -2,6 +2,7 @@ package diagnostics
 
 import (
 	"errors"
+	"sync"
 
 	"github.com/kubeshop/testkube/pkg/diagnostics/renderer"
 	"github.com/kubeshop/testkube/pkg/diagnostics/validators"
@@ -30,34 +31,54 @@ type Diagnostics struct {
 	Groups   map[string]*validators.ValidatorGroup
 }
 
-// TODO make it parallel
+// TODO make it parallel?
 // Run executes all validators in all groups and renders the results
 func (d Diagnostics) Run() error {
+
+	// for now we'll make validators concurrent
 	for groupName, _ := range d.Groups {
-		if err := d.RunGroup(groupName); err != nil {
+		ch, err := d.RunGroup(groupName)
+		if err != nil {
 			return err
 		}
-	}
-	return nil
-}
 
-func (d Diagnostics) runValidator(v validators.Validator, subject any) {
-	res := v.Validate(subject)
-	d.Renderer.RenderResult(res)
-}
-
-func (d Diagnostics) RunGroup(group string) error {
-	g, ok := d.Groups[group]
-	if !ok {
-		return ErrGroupNotFound
-	}
-	if len(g.Validators) > 0 {
-		d.Renderer.RenderGroupStart(group)
-		for _, v := range g.Validators {
-			d.runValidator(v, g.Subject)
+		d.Renderer.RenderGroupStart(groupName)
+		for r := range ch {
+			d.Renderer.RenderResult(r)
+			if r.BreakValidationChain {
+				break
+			}
 		}
 	}
+
 	return nil
+}
+
+func (d Diagnostics) RunGroup(group string) (chan validators.ValidationResult, error) {
+	ch := make(chan validators.ValidationResult)
+	g, ok := d.Groups[group]
+	if !ok {
+		return ch, ErrGroupNotFound
+	}
+
+	go func() {
+		var wg sync.WaitGroup
+
+		defer close(ch)
+
+		if len(g.Validators) > 0 {
+			for _, v := range g.Validators {
+				wg.Add(1)
+				go func(v validators.Validator) {
+					defer wg.Done()
+					ch <- v.Validate(g.Subject)
+				}(v)
+			}
+			wg.Wait()
+		}
+	}()
+
+	return ch, nil
 }
 
 func (d *Diagnostics) AddValidatorGroup(group string, subject any) *validators.ValidatorGroup {

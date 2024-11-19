@@ -7,6 +7,8 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/diagnostics"
 	"github.com/kubeshop/testkube/pkg/diagnostics/validators/license"
+	"github.com/kubeshop/testkube/pkg/diagnostics/validators/mock"
+	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 // NewDebugCmd creates the 'testkube debug' command
@@ -49,7 +51,6 @@ func NewRunDiagnosticsCmdFunc(key string, commands, groups *common.CommaList) fu
 		licenseKeyGroup := d.AddValidatorGroup("license.key", key)
 		if offlineActivation {
 			licenseKeyGroup.AddValidator(license.NewOfflineLicenseKeyValidator())
-
 		} else {
 			licenseKeyGroup.AddValidator(license.NewOnlineLicenseKeyValidator())
 		}
@@ -59,6 +60,12 @@ func NewRunDiagnosticsCmdFunc(key string, commands, groups *common.CommaList) fu
 		licenseFileGroup := d.AddValidatorGroup("license.file", file)
 		licenseFileGroup.AddValidator(license.NewFileValidator())
 
+		licenseFileGroup.AddValidator(mock.AlwaysValidValidator{Name: "Key presence"})
+		licenseFileGroup.AddValidator(mock.AlwaysValidValidator{Name: "Date occurance"})
+		licenseFileGroup.AddValidator(mock.AlwaysValidValidator{Name: "Date range"})
+		licenseFileGroup.AddValidator(mock.AlwaysInvalidMultiValidator{Name: "aaa1"})
+		licenseFileGroup.AddValidator(mock.AlwaysInvalidValidator{Name: "aaa2"})
+
 		// Run single "diagnostic"
 
 		// Run multiple
@@ -66,7 +73,8 @@ func NewRunDiagnosticsCmdFunc(key string, commands, groups *common.CommaList) fu
 		// Run predefined group
 
 		// Run all
-		d.Run()
+		err := d.Run()
+		ui.ExitOnError("Running validations", err)
 
 	}
 }

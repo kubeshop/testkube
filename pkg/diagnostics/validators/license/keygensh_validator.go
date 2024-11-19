@@ -1,8 +1,6 @@
 package license
 
 import (
-	"fmt"
-
 	"github.com/kubeshop/testkube/pkg/diagnostics/validators"
 )
 
@@ -10,8 +8,7 @@ var (
 
 	// Errors
 	ErrInvalidLicenseFormat = validators.ValidationResult{
-		Status:  validators.StatusInvalid,
-		Message: "Invalid license format",
+		Status: validators.StatusInvalid,
 		Errors: []validators.Error{
 			ErrLicenseKeyInvalidFormat,
 		},
@@ -28,7 +25,8 @@ type KeygenShValidator struct {
 	Client *Client
 }
 
-func (v KeygenShValidator) Validate(subject any) validators.ValidationResult {
+func (v KeygenShValidator) Validate(subject any) (r validators.ValidationResult) {
+	r = r.WithValidator("License online check")
 	// get key
 	key, ok := subject.(string)
 	if !ok {
@@ -41,18 +39,19 @@ func (v KeygenShValidator) Validate(subject any) validators.ValidationResult {
 		return validators.NewErrorResponse(err)
 	}
 
+	return mapResponseToValidatonResult(resp)
+
+}
+
+func mapResponseToValidatonResult(resp *LicenseResponse) (r validators.ValidationResult) {
 	if resp.Valid {
-		return validators.NewValidResponse()
+		return r.WithValidStatus()
 	}
 
 	return validators.ValidationResult{
-		Status:  validators.StatusInvalid,
-		Message: fmt.Sprintf("License key is not valid: '%s'", key),
+		Status: validators.StatusInvalid,
 		Errors: []validators.Error{
-			{
-				Message: resp.Message,
-				DocsURI: "https://docs.testkube.io/articles/migrate-from-oss#license",
-			},
+			ErrKeygenShValidation.WithDetails(resp.Message),
 		},
 	}
 }

@@ -15,8 +15,7 @@ func NewResult() ValidationResult {
 
 func NewErrorResponse(err error) ValidationResult {
 	return ValidationResult{
-		Status:  StatusInvalid,
-		Message: err.Error(),
+		Status: StatusInvalid,
 		Errors: []Error{
 			{
 				Message: err.Error(),
@@ -40,12 +39,22 @@ type ValidationResult struct {
 
 	Validator string
 	Status    Status
-	Message   string
+
 	// Errors
 	Errors []Error
 
 	// Logs
 	Logs map[string]string
+}
+
+func (r ValidationResult) WithValidator(v string) ValidationResult {
+	r.Validator = v
+	return r
+}
+
+func (r ValidationResult) WithBreak() ValidationResult {
+	r.BreakValidationChain = true
+	return r
 }
 
 func (r ValidationResult) WithValidStatus() ValidationResult {
@@ -61,5 +70,11 @@ func (r ValidationResult) WithInvalidStatus() ValidationResult {
 func (r ValidationResult) WithError(err Error) ValidationResult {
 	r.Status = StatusInvalid
 	r.Errors = append(r.Errors, err)
+	return r
+}
+
+func (r ValidationResult) WithStdError(err error) ValidationResult {
+	r.Status = StatusInvalid
+	r.Errors = append(r.Errors, Error{Kind: ErrorKindCustom, Message: err.Error()})
 	return r
 }

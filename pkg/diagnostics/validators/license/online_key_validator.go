@@ -17,7 +17,8 @@ type LocalLicenseKeyValidator struct {
 
 // Validate validates a given license key for format / length correctness without calling external services
 func (v LocalLicenseKeyValidator) Validate(subject any) validators.ValidationResult {
-	r := validators.NewResult()
+	r := validators.NewResult().WithValidator("License key")
+
 	// get key
 	key, ok := subject.(string)
 	if !ok {
@@ -25,27 +26,19 @@ func (v LocalLicenseKeyValidator) Validate(subject any) validators.ValidationRes
 	}
 
 	if key == "" {
-		return r.WithError(ErrLicenseFileNotFound)
+		return r.WithError(ErrLicenseKeyNotFound)
 	}
 
 	// Check if the license key is the correct length and validate
 	if len(key) != 29 {
-		return r.WithError(ErrLicenseKeyInvalidLength)
+		return r.WithError(ErrOnlineLicenseKeyInvalidLength)
 	}
 
-	if len(key) == 29 {
-		// Check if the license key matches the expected format
-		match, _ := regexp.MatchString(`^[A-Z0-9]{6}-[A-Z0-9]{6}-[A-Z0-9]{6}-[A-Z0-9]{6}-[A-Z0-9]{6}-[A-Z0-9]{1-2}$`, key)
-		if !match {
-			println(match)
-			return r.WithError(ErrLicenseKeyInvalidFormat)
-			return validators.ValidationResult{
-				Status: validators.StatusInvalid,
-				Errors: []validators.Error{
-					ErrLicenseKeyInvalidFormat,
-				},
-			}
-		}
+	// Check if the license key matches the expected format
+	match, _ := regexp.MatchString(`^[A-Z0-9]{6}-[A-Z0-9]{6}-[A-Z0-9]{6}-[A-Z0-9]{6}-[A-Z0-9]{6}-[A-Z0-9]{1-2}$`, key)
+	if !match {
+		println(match)
+		return r.WithError(ErrLicenseKeyInvalidFormat)
 	}
 
 	return validators.NewValidResponse()

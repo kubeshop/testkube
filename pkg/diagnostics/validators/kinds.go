@@ -1,6 +1,7 @@
 package validators
 
 const (
+	ErrorKindCustom             ErrorKind = "custom"
 	ErrorKindFileNotFound       ErrorKind = "file not found"
 	ErrorKindKeyNotFound        ErrorKind = "key not found"
 	ErrorKindInvalidFileContent ErrorKind = "invalid file content"

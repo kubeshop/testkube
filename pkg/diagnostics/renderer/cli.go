@@ -17,8 +17,9 @@ type CLIRenderer struct {
 }
 
 func (r CLIRenderer) RenderGroupStart(message string) {
-	message = strings.Replace(message, ".", " ", 1)
-	ui.H2(message)
+	message = strings.Replace(message, ".", " ", -1)
+	lines := strings.Repeat("=", len(message))
+	ui.Printf("%s\n%s\n\n", ui.Green(message), ui.Yellow(lines))
 }
 
 func (r CLIRenderer) RenderProgress(message string) {
@@ -26,26 +27,32 @@ func (r CLIRenderer) RenderProgress(message string) {
 }
 
 func (r CLIRenderer) RenderResult(res validators.ValidationResult) {
-	if res.Message != "" {
-		ui.Warn(res.Validator + " validator status: " + res.Message)
-	}
+
+	ui.Printf("  %s %s: ", ui.Green(">"), res.Validator)
 
 	if len(res.Errors) > 0 {
+		ui.Printf("%s\n", ui.IconCross)
+
 		for _, err := range res.Errors {
 			ui.NL()
-			ui.Errf(err.Message)
-			ui.NL()
-			ui.Info("Consider following suggestions before proceeding: ")
-			for _, s := range err.Suggestions {
-				ui.Printf("* %s", ui.LightBlue(s))
+			ui.Printf("    %s %s\n", ui.IconError, err.Message)
+			if err.Details != "" {
+				ui.Printf("      %s\n", err.Details)
 			}
-			ui.NL()
+			if len(err.Suggestions) > 0 {
+				ui.Info(ui.LightGray("    Consider following suggestions/fixes before proceeding: "))
+				for _, s := range err.Suggestions {
+					ui.Printf("        * %s\n", ui.LightBlue(s))
+				}
+				ui.NL()
+			}
 			if err.DocsURI != "" {
-				ui.Printf("For more details follow docs: [%s]", ui.Yellow(err.DocsURI))
+				ui.Printf("      For more details follow docs: [%s]\n", ui.Yellow(err.DocsURI))
 			}
 		}
 	} else {
-		ui.Success("ok")
+		ui.Printf("%s", ui.IconCheckMark)
 	}
+	ui.NL()
 
 }

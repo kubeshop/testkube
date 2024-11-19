@@ -17,10 +17,10 @@ var (
 
 	ErrLicenseKeyInvalidFormat = v.Err("license key invalid format", v.ErrorKindInvalidKeyContent)
 
-	ErrLicenseKeyInvalidLength = v.Err("license key invalid length", v.ErrorKindInvalidKeyContent).
-					WithDetails("License key should be in form XXXXXX-XXXXXX-XXXXXX-XXXXXX-XXXXXX-XX - 29 chars in length").
-					WithSuggestion("Make sure license key is in valid format").
-					WithSuggestion("Make sure there is no whitespaces on the begining and the end of the key")
+	ErrOnlineLicenseKeyInvalidLength = v.Err("license key invalid length", v.ErrorKindInvalidKeyContent).
+						WithDetails("License key should be in form XXXXXX-XXXXXX-XXXXXX-XXXXXX-XXXXXX-XX - 29 chars in length").
+						WithSuggestion("Make sure license key is in valid format").
+						WithSuggestion("Make sure there is no whitespaces on the begining and the end of the key")
 
 	ErrOfflineLicenseKeyInvalidPrefix = v.Err("license key has invalid prefix", v.ErrorKindInvalidKeyContent).
 						WithDetails("License key should start with 'key/' string").
@@ -29,4 +29,7 @@ var (
 
 	ErrWhitespacesAdded = v.Err("license key contains additional whitespaces", v.ErrorKindBadWhitespaces).
 				WithSuggestion("Make sure there is no whitespaces on the begining and the end of the key")
+
+	ErrKeygenShValidation = v.Err("license is invalid", v.ErrorKindInvalidKeyContent).
+				WithSuggestion("Follow error message instructions to fix the license")
 )
