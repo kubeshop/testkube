@@ -2,7 +2,6 @@ package license
 
 import (
 	"regexp"
-	"strings"
 
 	"github.com/kubeshop/testkube/pkg/diagnostics/validators"
 )
@@ -18,47 +17,35 @@ type LocalLicenseKeyValidator struct {
 
 // Validate validates a given license key for format / length correctness without calling external services
 func (v LocalLicenseKeyValidator) Validate(subject any) validators.ValidationResult {
+	r := validators.NewResult()
 	// get key
 	key, ok := subject.(string)
 	if !ok {
-		return ErrInvalidLicenseFormat
+		return r.WithError(ErrLicenseKeyInvalidFormat)
 	}
 
 	if key == "" {
-		return validators.ValidationResult{
-			Status: validators.StatusInvalid,
-			Errors: []validators.ErrorWithSuggesstion{
-				{
-					Error:       ErrLicenseKeyNotFound,
-					Suggestions: Suggestions[ErrLicenseKeyNotFound],
-				},
-			},
-		}
-
+		return r.WithError(ErrLicenseFileNotFound)
 	}
 
 	// Check if the license key is the correct length and validate
+	if len(key) != 29 {
+		return r.WithError(ErrLicenseKeyInvalidLength)
+	}
+
 	if len(key) == 29 {
 		// Check if the license key matches the expected format
 		match, _ := regexp.MatchString(`^[A-Z0-9]{6}-[A-Z0-9]{6}-[A-Z0-9]{6}-[A-Z0-9]{6}-[A-Z0-9]{6}-[A-Z0-9]{1-2}$`, key)
 		if !match {
 			println(match)
+			return r.WithError(ErrLicenseKeyInvalidFormat)
 			return validators.ValidationResult{
 				Status: validators.StatusInvalid,
-				Errors: []validators.ErrorWithSuggesstion{
-					{
-						Error:       ErrLicenseKeyInvalidFormat,
-						Suggestions: Suggestions[ErrLicenseKeyInvalidFormat],
-					},
+				Errors: []validators.Error{
+					ErrLicenseKeyInvalidFormat,
 				},
 			}
 		}
-	}
-
-	// key can be in enrypted format
-	if strings.HasPrefix(key, "key/") {
-		// TODO validate air gapped key
-
 	}
 
 	return validators.NewValidResponse()

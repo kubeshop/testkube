@@ -14,7 +14,7 @@ func NewDiagnosticsCmd() *cobra.Command {
 
 	var validators common.CommaList
 	var groups common.CommaList
-	var key string
+	var key, file string
 
 	cmd := &cobra.Command{
 		Use:     "diagnostics",
@@ -30,6 +30,7 @@ func NewDiagnosticsCmd() *cobra.Command {
 	cmd.Flags().VarP(&groups, "groups", "g", "Comma-separated list of groups, one of: "+allGroupsStr+", defaults to all")
 
 	cmd.Flags().StringVarP(&key, "key", "k", "", "License key")
+	cmd.Flags().StringVarP(&file, "file", "f", "", "License file")
 
 	return cmd
 }
@@ -40,6 +41,23 @@ func NewRunDiagnosticsCmdFunc(key string, commands, groups *common.CommaList) fu
 		// Fetch current setup:
 		offlineActivation := true
 		key := cmd.Flag("key").Value.String()
+		file := cmd.Flag("file").Value.String()
+
+		// Compose diagnostics validators
+		d := diagnostics.New()
+
+		licenseKeyGroup := d.AddValidatorGroup("license.key", key)
+		if offlineActivation {
+			licenseKeyGroup.AddValidator(license.NewOfflineLicenseKeyValidator())
+
+		} else {
+			licenseKeyGroup.AddValidator(license.NewOnlineLicenseKeyValidator())
+		}
+		// common validator for both keys
+		licenseKeyGroup.AddValidator(license.NewKeygenShValidator())
+
+		licenseFileGroup := d.AddValidatorGroup("license.file", file)
+		licenseFileGroup.AddValidator(license.NewFileValidator())
 
 		// Run single "diagnostic"
 
@@ -48,16 +66,6 @@ func NewRunDiagnosticsCmdFunc(key string, commands, groups *common.CommaList) fu
 		// Run predefined group
 
 		// Run all
-
-		d := diagnostics.New()
-
-		licenseKeyGroup := d.AddValidatorGroup("license.key", key)
-		if offlineActivation {
-
-		}
-		licenseKeyGroup.AddValidator(license.NewOnlineLicenseKeyValidator())
-		licenseKeyGroup.AddValidator(license.NewKeygenShValidator())
-
 		d.Run()
 
 	}
