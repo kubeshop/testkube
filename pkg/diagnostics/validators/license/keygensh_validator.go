@@ -26,7 +26,7 @@ type KeygenShValidator struct {
 }
 
 func (v KeygenShValidator) Validate(subject any) (r validators.ValidationResult) {
-	r = r.WithValidator("License online check")
+	r = r.WithValidator("License key correctness online check")
 	// get key
 	key, ok := subject.(string)
 	if !ok {
@@ -39,11 +39,11 @@ func (v KeygenShValidator) Validate(subject any) (r validators.ValidationResult)
 		return r.WithStdError(err)
 	}
 
-	return mapResponseToValidatonResult(resp)
+	return mapResponseToValidatonResult(r, resp)
 
 }
 
-func mapResponseToValidatonResult(resp *LicenseResponse) (r validators.ValidationResult) {
+func mapResponseToValidatonResult(r validators.ValidationResult, resp *LicenseResponse) validators.ValidationResult {
 	if resp.Valid {
 		return r.WithValidStatus()
 	}

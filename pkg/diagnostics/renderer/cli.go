@@ -19,7 +19,7 @@ type CLIRenderer struct {
 func (r CLIRenderer) RenderGroupStart(message string) {
 	message = strings.Replace(message, ".", " ", -1)
 	lines := strings.Repeat("=", len(message))
-	ui.Printf("%s\n%s\n\n", ui.Green(message), ui.Yellow(lines))
+	ui.Printf("\n%s\n%s\n\n", ui.Green(message), ui.Yellow(lines))
 }
 
 func (r CLIRenderer) RenderProgress(message string) {

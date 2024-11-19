@@ -36,7 +36,7 @@ func (v OnlineLicenseKeyValidator) Validate(subject any) validators.ValidationRe
 	match, _ := regexp.MatchString(`^[A-Z0-9]{6}-[A-Z0-9]{6}-[A-Z0-9]{6}-[A-Z0-9]{6}-[A-Z0-9]{6}-[A-Z0-9]{1-2}$`, key)
 	if !match {
 		println(match)
-		return r.WithError(ErrLicenseKeyInvalidFormat)
+		return r.WithError(ErrOnlineLicenseKeyInvalidLength)
 	}
 
 	return validators.NewValidResponse()

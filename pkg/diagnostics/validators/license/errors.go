@@ -21,6 +21,7 @@ var (
 	ErrOfflineLicenseKeyInvalidPrefix = v.Err("license key has invalid prefix", v.ErrorKindInvalidKeyContent).
 						WithDetails("License key should start with 'key/' string").
 						WithSuggestion("Make sure license key is in valid format").
+						WithSuggestion("Make sure you're using offline keys").
 						WithSuggestion("Make sure there is no whitespaces on the begining and the end of the key")
 
 	ErrWhitespacesAdded = v.Err("license key contains additional whitespaces", v.ErrorKindBadWhitespaces).

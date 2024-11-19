@@ -6,8 +6,8 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 
 	"github.com/kubeshop/testkube/pkg/diagnostics"
+	"github.com/kubeshop/testkube/pkg/diagnostics/validators/deps"
 	"github.com/kubeshop/testkube/pkg/diagnostics/validators/license"
-	"github.com/kubeshop/testkube/pkg/diagnostics/validators/mock"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -48,24 +48,31 @@ func NewRunDiagnosticsCmdFunc(key string, commands, groups *common.CommaList) fu
 		// Compose diagnostics validators
 		d := diagnostics.New()
 
+		depsGroup := d.AddValidatorGroup("install.dependencies", file)
+		depsGroup.AddValidator(deps.NewKubectlDependencyValidator())
+		depsGroup.AddValidator(deps.NewHelmDependencyValidator())
+
+		// License validator
 		licenseKeyGroup := d.AddValidatorGroup("license.key", key)
 		if offlineActivation {
 			licenseKeyGroup.AddValidator(license.NewOfflineLicenseKeyValidator())
+
+			// for offline license also add license file validator
+			licenseFileGroup := d.AddValidatorGroup("license.file", file)
+			licenseFileGroup.AddValidator(license.NewFileValidator())
 		} else {
 			licenseKeyGroup.AddValidator(license.NewOnlineLicenseKeyValidator())
 		}
-		// common validator for both keys
+		// common validator for both key types
 		licenseKeyGroup.AddValidator(license.NewKeygenShValidator())
-		licenseKeyGroup.AddValidator(mock.AlwaysValidValidator{Name: "Key presence"})
-		licenseKeyGroup.AddValidator(mock.AlwaysInvalidMultiValidator{Name: "aaa1"})
 
-		licenseFileGroup := d.AddValidatorGroup("license.file", file)
-		licenseFileGroup.AddValidator(license.NewFileValidator())
+		// licenseKeyGroup.AddValidator(mock.AlwaysValidValidator{Name: "Key presence"})
+		// licenseKeyGroup.AddValidator(mock.AlwaysInvalidMultiValidator{Name: "multiple license key validation error"})
 
-		licenseFileGroup.AddValidator(mock.AlwaysValidValidator{Name: "Date occurance"})
-		licenseFileGroup.AddValidator(mock.AlwaysValidValidator{Name: "Date range"})
-		licenseFileGroup.AddValidator(mock.AlwaysInvalidMultiValidator{Name: "aaa1"})
-		licenseFileGroup.AddValidator(mock.AlwaysInvalidValidator{Name: "aaa2"})
+		// licenseFileGroup.AddValidator(mock.AlwaysValidValidator{Name: "Date occurance"})
+		// licenseFileGroup.AddValidator(mock.AlwaysValidValidator{Name: "Date range"})
+		// licenseFileGroup.AddValidator(mock.AlwaysInvalidMultiValidator{Name: "multiple errors in validator"})
+		// licenseFileGroup.AddValidator(mock.AlwaysInvalidValidator{Name: "aaa2"})
 
 		// Run single "diagnostic"
 
@@ -77,5 +84,6 @@ func NewRunDiagnosticsCmdFunc(key string, commands, groups *common.CommaList) fu
 		err := d.Run()
 		ui.ExitOnError("Running validations", err)
 
+		ui.NL(2)
 	}
 }

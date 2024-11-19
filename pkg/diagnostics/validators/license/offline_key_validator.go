@@ -28,7 +28,7 @@ func (v OfflineLicenseKeyValidator) Validate(subject any) (r validators.Validati
 
 	// key can be in enrypted format
 	if !strings.HasPrefix(key, "key/") {
-		return r.WithError(ErrOnlineLicenseKeyInvalidLength)
+		return r.WithError(ErrOfflineLicenseKeyInvalidPrefix)
 
 	}
 
