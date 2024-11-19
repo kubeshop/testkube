@@ -155,7 +155,7 @@ func (e *Emitter) Listen(ctx context.Context) {
 }
 
 func (e *Emitter) startListener(l common.Listener) {
-	err := e.Bus.SubscribeTopic("events.>", l.Name(), e.notifyHandler(l))
+	err := e.Bus.SubscribeTopic("agentevents.>", l.Name(), e.notifyHandler(l))
 	if err != nil {
 		e.Log.Errorw("error while starting listener", "error", err)
 	}

@@ -23,7 +23,7 @@ var (
 
 const (
 	SubscribeBuffer        = 1
-	SubscriptionName       = "events"
+	SubscriptionName       = "agentevents"
 	InternalPublishTopic   = "internal.all"
 	InternalSubscribeTopic = "internal.>"
 )
