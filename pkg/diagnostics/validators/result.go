@@ -7,6 +7,27 @@ const (
 	StatusInvalid Status = "invalid"
 )
 
+func NewErrorResponse(err error) ValidationResult {
+	return ValidationResult{
+		Status:  StatusInvalid,
+		Message: err.Error(),
+		Errors: []ErrorWithSuggesstion{
+			{
+				Error: err,
+				Suggestions: []string{
+					"got unexpected error, please contact Testkube team",
+				},
+			},
+		},
+	}
+}
+
+func NewValidResponse() ValidationResult {
+	return ValidationResult{
+		Status: StatusValid,
+	}
+}
+
 type ValidationResult struct {
 	Validator string
 	Status    Status
@@ -16,6 +37,4 @@ type ValidationResult struct {
 
 	// Logs
 	Logs map[string]string
-
-	DocsURI string
 }

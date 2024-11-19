@@ -7,6 +7,10 @@ import (
 	"github.com/kubeshop/testkube/pkg/diagnostics/validators"
 )
 
+const (
+	DefaultValidatorGroupName = "default "
+)
+
 var (
 	ErrGroupNotFound = errors.New("group not found")
 )
@@ -14,15 +18,20 @@ var (
 func New() Diagnostics {
 	return Diagnostics{
 		Renderer: renderer.NewCLIRenderer(),
-		Groups:   map[string]validators.ValidatorGroup{},
+		Groups: map[string]*validators.ValidatorGroup{
+			DefaultValidatorGroupName: &validators.ValidatorGroup{},
+		},
 	}
 }
 
+// Diagnostics Top level diagnostics service to organize validators in groups
 type Diagnostics struct {
 	Renderer renderer.Renderer
-	Groups   map[string]validators.ValidatorGroup
+	Groups   map[string]*validators.ValidatorGroup
 }
 
+// TODO make it parallel
+// Run executes all validators in all groups and renders the results
 func (d Diagnostics) Run() error {
 	for groupName, _ := range d.Groups {
 		if err := d.RunGroup(groupName); err != nil {
@@ -32,8 +41,8 @@ func (d Diagnostics) Run() error {
 	return nil
 }
 
-func (d Diagnostics) runValidator(v validators.Validator) {
-	res := v.Validate()
+func (d Diagnostics) runValidator(v validators.Validator, subject any) {
+	res := v.Validate(subject)
 	d.Renderer.RenderResult(res)
 }
 
@@ -42,23 +51,19 @@ func (d Diagnostics) RunGroup(group string) error {
 	if !ok {
 		return ErrGroupNotFound
 	}
-	d.Renderer.RenderGroupStart(group)
-	for _, v := range g.Validators {
-		d.runValidator(v)
+	if len(g.Validators) > 0 {
+		d.Renderer.RenderGroupStart(group)
+		for _, v := range g.Validators {
+			d.runValidator(v, g.Subject)
+		}
 	}
 	return nil
 }
 
-func (d *Diagnostics) AddValidator(v validators.Validator, optGroup ...string) {
-	group := "default"
-	if len(optGroup) > 0 {
-		group = optGroup[0]
+func (d *Diagnostics) AddValidatorGroup(group string, subject any) *validators.ValidatorGroup {
+	d.Groups[group] = &validators.ValidatorGroup{
+		Subject: subject,
+		Name:    group,
 	}
-
-	g, ok := d.Groups[group]
-	if !ok {
-		d.Groups[group] = validators.ValidatorGroup{}
-	}
-	g.Validators = append(g.Validators, v)
-	d.Groups[group] = g
+	return d.Groups[group]
 }

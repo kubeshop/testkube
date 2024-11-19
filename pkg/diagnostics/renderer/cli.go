@@ -23,7 +23,7 @@ func (r CLIRenderer) RenderProgress(message string) {
 }
 
 func (r CLIRenderer) RenderResult(res validators.ValidationResult) {
-	ui.Info(res.Validator + " validator status:")
+	ui.Print(res.Validator + " validator status: " + res.Message)
 
 	if len(res.Errors) > 0 {
 		for _, err := range res.Errors {
@@ -35,7 +35,9 @@ func (r CLIRenderer) RenderResult(res validators.ValidationResult) {
 				ui.Printf("* %s", ui.LightBlue(s))
 			}
 			ui.NL()
-			ui.Printf("For more details follow docs: [%s]", ui.Yellow(err.DocsURI))
+			if err.DocsURI != "" {
+				ui.Printf("For more details follow docs: [%s]", ui.Yellow(err.DocsURI))
+			}
 		}
 	} else {
 		ui.Success("ok")
