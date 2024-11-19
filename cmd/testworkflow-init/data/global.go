@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/kubeshop/testkube/pkg/credentials"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/expressions/libs"
 )
@@ -20,5 +21,7 @@ func GetBaseTestWorkflowMachine() expressions.Machine {
 }
 
 func GetInternalTestWorkflowMachine() expressions.Machine {
-	return expressions.CombinedMachines(RefSuccessMachine, AliasMachine, GetBaseTestWorkflowMachine())
+	return expressions.CombinedMachines(RefSuccessMachine, AliasMachine,
+		GetBaseTestWorkflowMachine(),
+		credentials.NewCredentialMachine(Credentials()))
 }

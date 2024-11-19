@@ -139,23 +139,6 @@ var RefNotFailedMachine = expressions.NewMachine().
 		return s.Status == nil || *s.Status == constants.StepStatusPassed || *s.Status == constants.StepStatusSkipped, true
 	})
 
-//var CredentialMachine = expressions.NewMachine().RegisterFunction("credential", func(values ...expressions.StaticValue) (interface{}, bool, error) {
-//	computed := false
-//	if len(values) == 2 {
-//		if values[1].IsBool() {
-//			computed, _ = values[1].BoolValue()
-//		} else {
-//			return nil, true, fmt.Errorf(`"credential" function expects 2nd argument to be boolean, %s provided`, values[1].String())
-//		}
-//	} else if len(values) != 1 {
-//		return nil, true, fmt.Errorf(`"credential" function expects 1-2 arguments, %d provided`, len(values))
-//	}
-//
-//	name, _ := values[0].StringValue()
-//	value := "dummy"
-//	return
-//})
-
 func Expression(expr string, m ...expressions.Machine) (expressions.StaticValue, error) {
 	m = append(m, AliasMachine, GetBaseTestWorkflowMachine())
 	return expressions.EvalExpression(expr, m...)

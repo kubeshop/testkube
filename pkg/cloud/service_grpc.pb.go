@@ -8,7 +8,6 @@ package cloud
 
 import (
 	context "context"
-
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -33,6 +32,7 @@ type TestKubeCloudAPIClient interface {
 	GetLogsStream(ctx context.Context, opts ...grpc.CallOption) (TestKubeCloudAPI_GetLogsStreamClient, error)
 	GetTestWorkflowNotificationsStream(ctx context.Context, opts ...grpc.CallOption) (TestKubeCloudAPI_GetTestWorkflowNotificationsStreamClient, error)
 	GetProContext(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ProContextResponse, error)
+	GetCredential(ctx context.Context, in *CredentialRequest, opts ...grpc.CallOption) (*CredentialResponse, error)
 }
 
 type testKubeCloudAPIClient struct {
@@ -219,6 +219,15 @@ func (c *testKubeCloudAPIClient) GetProContext(ctx context.Context, in *emptypb.
 	return out, nil
 }
 
+func (c *testKubeCloudAPIClient) GetCredential(ctx context.Context, in *CredentialRequest, opts ...grpc.CallOption) (*CredentialResponse, error) {
+	out := new(CredentialResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/GetCredential", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // TestKubeCloudAPIServer is the server API for TestKubeCloudAPI service.
 // All implementations must embed UnimplementedTestKubeCloudAPIServer
 // for forward compatibility
@@ -232,6 +241,7 @@ type TestKubeCloudAPIServer interface {
 	GetLogsStream(TestKubeCloudAPI_GetLogsStreamServer) error
 	GetTestWorkflowNotificationsStream(TestKubeCloudAPI_GetTestWorkflowNotificationsStreamServer) error
 	GetProContext(context.Context, *emptypb.Empty) (*ProContextResponse, error)
+	GetCredential(context.Context, *CredentialRequest) (*CredentialResponse, error)
 	mustEmbedUnimplementedTestKubeCloudAPIServer()
 }
 
@@ -259,6 +269,9 @@ func (UnimplementedTestKubeCloudAPIServer) GetTestWorkflowNotificationsStream(Te
 }
 func (UnimplementedTestKubeCloudAPIServer) GetProContext(context.Context, *emptypb.Empty) (*ProContextResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetProContext not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) GetCredential(context.Context, *CredentialRequest) (*CredentialResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetCredential not implemented")
 }
 func (UnimplementedTestKubeCloudAPIServer) mustEmbedUnimplementedTestKubeCloudAPIServer() {}
 
@@ -439,6 +452,24 @@ func _TestKubeCloudAPI_GetProContext_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _TestKubeCloudAPI_GetCredential_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CredentialRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).GetCredential(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/GetCredential",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).GetCredential(ctx, req.(*CredentialRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // TestKubeCloudAPI_ServiceDesc is the grpc.ServiceDesc for TestKubeCloudAPI service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -453,6 +484,10 @@ var TestKubeCloudAPI_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetProContext",
 			Handler:    _TestKubeCloudAPI_GetProContext_Handler,
+		},
+		{
+			MethodName: "GetCredential",
+			Handler:    _TestKubeCloudAPI_GetCredential_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
