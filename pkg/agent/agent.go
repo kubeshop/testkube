@@ -14,6 +14,7 @@ import (
 	"google.golang.org/grpc/encoding/gzip"
 	"google.golang.org/grpc/metadata"
 
+	"github.com/kubeshop/testkube/pkg/agent/client"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 
 	"github.com/kubeshop/testkube/internal/config"
@@ -23,7 +24,6 @@ import (
 )
 
 const (
-	apiKeyMeta             = "api-key"
 	clusterIDMeta          = "cluster-id"
 	cloudMigrateMeta       = "migrate"
 	orgIdMeta              = "environment-id"
@@ -218,7 +218,7 @@ func (ag *Agent) receiveCommand(ctx context.Context, stream cloud.TestKubeCloudA
 
 func (ag *Agent) runCommandLoop(ctx context.Context) error {
 	if ag.proContext.APIKey != "" {
-		ctx = AddAPIKeyMeta(ctx, ag.proContext.APIKey)
+		ctx = client.AddAPIKeyMeta(ctx, ag.proContext.APIKey)
 	}
 
 	ctx = metadata.AppendToOutgoingContext(ctx, clusterIDMeta, ag.clusterID)
@@ -336,11 +336,6 @@ func (ag *Agent) executeCommand(_ context.Context, cmd *cloud.ExecuteRequest) *c
 
 		return resp
 	}
-}
-
-func AddAPIKeyMeta(ctx context.Context, apiKey string) context.Context {
-	md := metadata.Pairs(apiKeyMeta, apiKey)
-	return metadata.NewOutgoingContext(ctx, md)
 }
 
 type cloudResponse struct {

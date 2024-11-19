@@ -13,12 +13,14 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/keepalive"
+	"google.golang.org/grpc/metadata"
 
 	"github.com/kubeshop/testkube/pkg/version"
 )
 
 const (
-	timeout = 10 * time.Second
+	timeout    = 10 * time.Second
+	apiKeyMeta = "api-key"
 )
 
 func NewGRPCConnection(
@@ -101,4 +103,9 @@ func clientCert(tlsConfig *tls.Config, certFile, keyFile string) error {
 	}
 	tlsConfig.Certificates = []tls.Certificate{cert}
 	return nil
+}
+
+func AddAPIKeyMeta(ctx context.Context, apiKey string) context.Context {
+	md := metadata.Pairs(apiKeyMeta, apiKey)
+	return metadata.NewOutgoingContext(ctx, md)
 }
