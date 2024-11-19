@@ -6,10 +6,6 @@ import (
 
 // Errors definitions for license based logic
 var (
-	ErrLicenseFileNotFound = v.Err("license file not found", v.ErrorKindFileNotFound).
-				WithSuggestion("Make sure license key was correctly provided in for the testkube-cloud-api deployment").
-				WithSuggestion("You can grab deployment detail with kubectl command - `kubectl get deployment testkube-cloud-api -n testkube`, check for ENTERPRISE_LICENSE_FILE value")
-
 	ErrLicenseKeyNotFound = v.Err("license key not found", v.ErrorKindKeyNotFound).
 				WithSuggestion("Make sure license key was correctly provided in for the testkube-cloud-api deployment").
 				WithSuggestion("You can grab deployment detail with kubectl command - `kubectl get deployment testkube-cloud-api -n testkube`, check for ENTERPRISE_LICENSE_KEY value").
@@ -29,6 +25,10 @@ var (
 
 	ErrWhitespacesAdded = v.Err("license key contains additional whitespaces", v.ErrorKindBadWhitespaces).
 				WithSuggestion("Make sure there is no whitespaces on the begining and the end of the key")
+
+	ErrLicenseFileNotFound = v.Err("license file not found", v.ErrorKindFileNotFound).
+				WithSuggestion("Make sure license key was correctly provided in for the testkube-cloud-api deployment").
+				WithSuggestion("You can grab deployment detail with kubectl command - `kubectl get deployment testkube-cloud-api -n testkube`, check for ENTERPRISE_LICENSE_FILE value")
 
 	ErrKeygenShValidation = v.Err("license is invalid", v.ErrorKindInvalidKeyContent).
 				WithSuggestion("Follow error message instructions to fix the license")

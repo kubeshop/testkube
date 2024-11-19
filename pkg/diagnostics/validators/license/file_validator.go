@@ -1,6 +1,8 @@
 package license
 
 import (
+	"strings"
+
 	"github.com/kubeshop/testkube/pkg/diagnostics/validators"
 )
 
@@ -26,6 +28,12 @@ func (v FileValidator) Validate(subject any) (r validators.ValidationResult) {
 
 	if file == "" {
 		return r.WithError(ErrLicenseFileNotFound)
+	}
+
+	// check if file doesn't contain invalid spaces
+	cleaned := strings.TrimSpace(file)
+	if file != cleaned {
+		return r.WithError(ErrWhitespacesAdded)
 	}
 
 	// TODO use checks for file format validation

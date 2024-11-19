@@ -29,7 +29,7 @@ func NewHelpCmd() *cobra.Command {
 			ui.Print(RootCmd.Short)
 			ui.NL()
 			ui.Print(ui.LightGray("Usage"))
-			ui.Printf(fmt.Sprintf("%s %s\n", ui.White(RootCmd.Use), ui.LightGray("[flags]")))
+			ui.Printf("%s %s\n", ui.White(RootCmd.Use), ui.LightGray("[flags]"))
 			ui.Printf("%s %s\n", ui.White(RootCmd.Use), ui.LightGray("[command]"))
 			ui.NL()
 			usage := helpMessageByGroups(RootCmd)

@@ -6,17 +6,15 @@ import (
 	"github.com/kubeshop/testkube/pkg/diagnostics/validators"
 )
 
-const exampleLicense = "AB24F3-405E39-C3F657-94D113-F06C13-V3"
-
-func NewOnlineLicenseKeyValidator() LocalLicenseKeyValidator {
-	return LocalLicenseKeyValidator{}
+func NewOnlineLicenseKeyValidator() OnlineLicenseKeyValidator {
+	return OnlineLicenseKeyValidator{}
 }
 
-type LocalLicenseKeyValidator struct {
+type OnlineLicenseKeyValidator struct {
 }
 
 // Validate validates a given license key for format / length correctness without calling external services
-func (v LocalLicenseKeyValidator) Validate(subject any) validators.ValidationResult {
+func (v OnlineLicenseKeyValidator) Validate(subject any) validators.ValidationResult {
 	r := validators.NewResult().WithValidator("License key")
 
 	// get key

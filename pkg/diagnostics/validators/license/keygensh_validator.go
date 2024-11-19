@@ -30,13 +30,13 @@ func (v KeygenShValidator) Validate(subject any) (r validators.ValidationResult)
 	// get key
 	key, ok := subject.(string)
 	if !ok {
-		return ErrInvalidLicenseFormat
+		return r.WithError(ErrLicenseKeyInvalidFormat)
 	}
 
 	// validate
 	resp, err := v.Client.ValidateLicense(LicenseRequest{License: key})
 	if err != nil {
-		return validators.NewErrorResponse(err)
+		return r.WithStdError(err)
 	}
 
 	return mapResponseToValidatonResult(resp)
