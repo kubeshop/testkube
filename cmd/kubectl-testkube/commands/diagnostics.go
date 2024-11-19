@@ -56,11 +56,12 @@ func NewRunDiagnosticsCmdFunc(key string, commands, groups *common.CommaList) fu
 		}
 		// common validator for both keys
 		licenseKeyGroup.AddValidator(license.NewKeygenShValidator())
+		licenseKeyGroup.AddValidator(mock.AlwaysValidValidator{Name: "Key presence"})
+		licenseKeyGroup.AddValidator(mock.AlwaysInvalidMultiValidator{Name: "aaa1"})
 
 		licenseFileGroup := d.AddValidatorGroup("license.file", file)
 		licenseFileGroup.AddValidator(license.NewFileValidator())
 
-		licenseFileGroup.AddValidator(mock.AlwaysValidValidator{Name: "Key presence"})
 		licenseFileGroup.AddValidator(mock.AlwaysValidValidator{Name: "Date occurance"})
 		licenseFileGroup.AddValidator(mock.AlwaysValidValidator{Name: "Date range"})
 		licenseFileGroup.AddValidator(mock.AlwaysInvalidMultiValidator{Name: "aaa1"})
