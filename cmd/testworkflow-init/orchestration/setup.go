@@ -47,6 +47,7 @@ type setup struct {
 	envGroups              map[string]map[string]string
 	envGroupsComputed      map[string]map[string]struct{}
 	envGroupsSensitive     map[string]map[string]struct{}
+	envAdditionalSensitive map[string]struct{}
 	envCurrentGroup        int
 	envSelectedGroup       string
 	minSensitiveWordLength int
@@ -58,6 +59,7 @@ func newSetup() *setup {
 		envGroups:              map[string]map[string]string{},
 		envGroupsComputed:      map[string]map[string]struct{}{},
 		envGroupsSensitive:     map[string]map[string]struct{}{},
+		envAdditionalSensitive: map[string]struct{}{},
 		envCurrentGroup:        -1,
 		minSensitiveWordLength: 1,
 	}
@@ -106,8 +108,17 @@ func (c *setup) SetSensitiveWordMinimumLength(length int) {
 	}
 }
 
+func (c *setup) AddSensitiveWords(words ...string) {
+	for i := range words {
+		c.envAdditionalSensitive[words[i]] = struct{}{}
+	}
+}
+
 func (c *setup) GetSensitiveWords() []string {
-	words := make([]string, 0)
+	words := make([]string, 0, len(c.envAdditionalSensitive))
+	for value := range c.envAdditionalSensitive {
+		words = append(words, value)
+	}
 	for _, name := range commonSensitiveVariables {
 		value := os.Getenv(name)
 		if len(value) < c.minSensitiveWordLength {

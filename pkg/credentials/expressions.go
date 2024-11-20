@@ -7,7 +7,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/expressions"
 )
 
-func NewCredentialMachine(repository CredentialRepository) expressions.Machine {
+func NewCredentialMachine(repository CredentialRepository, observers ...func(name string, value string)) expressions.Machine {
 	return expressions.NewMachine().RegisterFunction("credential", func(values ...expressions.StaticValue) (interface{}, bool, error) {
 		computed := false
 		if len(values) == 2 {
@@ -29,6 +29,10 @@ func NewCredentialMachine(repository CredentialRepository) expressions.Machine {
 			expr, err := expressions.CompileAndResolveTemplate(string(value))
 			return expr, true, err
 		}
-		return string(value), true, nil
+		valueStr := string(value)
+		for i := range observers {
+			observers[i](name, valueStr)
+		}
+		return valueStr, true, nil
 	})
 }

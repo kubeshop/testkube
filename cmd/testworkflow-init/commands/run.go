@@ -7,12 +7,13 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/orchestration"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/runtime"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 )
 
 func Run(run lite.ActionExecute, container lite.LiteActionContainer) {
-	machine := data.GetInternalTestWorkflowMachine()
+	machine := runtime.GetInternalTestWorkflowMachine()
 	state := data.GetState()
 	step := state.GetStep(run.Ref)
 

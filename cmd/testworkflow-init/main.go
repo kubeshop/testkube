@@ -19,6 +19,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/obfuscator"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/orchestration"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/runtime"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 )
@@ -379,7 +380,7 @@ func main() {
 				if until == "" {
 					until = "passed"
 				}
-				expr, err := expressions.CompileAndResolve(until, data.LocalMachine, data.GetInternalTestWorkflowMachine(), expressions.FinalizerFail)
+				expr, err := expressions.CompileAndResolve(until, data.LocalMachine, runtime.GetInternalTestWorkflowMachine(), expressions.FinalizerFail)
 				if err != nil {
 					stdout.Printf("failed to execute retry condition: %s: %s\n", until, err.Error())
 					break
