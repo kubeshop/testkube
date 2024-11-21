@@ -329,7 +329,7 @@ func (s *TestkubeAPI) PreviewTestWorkflowHandler() fiber.Handler {
 
 			// Resolve the TestWorkflow
 			secrets := s.SecretManager.Batch("tw-", obj.Name)
-			err = testworkflowresolver.ApplyTemplates(obj, tplsMap, secrets.Append)
+			err = testworkflowresolver.ApplyTemplates(obj, tplsMap, testworkflowresolver.EnvVarSourceToSecretExpression(secrets.Append))
 			if err != nil {
 				return s.BadRequest(c, errPrefix, "resolving error", err)
 			}
