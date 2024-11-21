@@ -14,9 +14,13 @@ func NewOnlineLicenseKeyValidator() OnlineLicenseKeyValidator {
 type OnlineLicenseKeyValidator struct {
 }
 
+func (v OnlineLicenseKeyValidator) Name() string {
+	return "License key format check"
+}
+
 // Validate validates a given license key for format / length correctness without calling external services
 func (v OnlineLicenseKeyValidator) Validate(subject any) validators.ValidationResult {
-	r := validators.NewResult().WithValidator("License key format")
+	r := validators.NewResult()
 
 	// get key
 	key, ok := subject.(string)

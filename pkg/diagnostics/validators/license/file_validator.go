@@ -13,13 +13,13 @@ func NewFileValidator() FileValidator {
 type FileValidator struct {
 }
 
-func (v FileValidator) Requireds() bool {
-	return true
+func (v FileValidator) Name() string {
+	return "License file check"
 }
 
 // Validate validates a given license file for format / length correctness without calling external services
 func (v FileValidator) Validate(subject any) (r validators.ValidationResult) {
-	r = r.WithValidator("License file")
+	r = r.WithValidator("License file check")
 	// get file
 	file, ok := subject.(string)
 	if !ok {
@@ -38,5 +38,5 @@ func (v FileValidator) Validate(subject any) (r validators.ValidationResult) {
 
 	// TODO use checks for file format validation
 
-	return validators.NewValidResponse()
+	return r.WithValidStatus()
 }

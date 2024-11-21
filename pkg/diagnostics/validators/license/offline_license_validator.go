@@ -34,6 +34,10 @@ type OfflineLicenseValidator struct {
 	LicenseKey  string
 }
 
+func (v OfflineLicenseValidator) Name() string {
+	return "Offline license validation/signing check"
+}
+
 // Validate validates a given license key for format / length correctness without calling external services
 func (v OfflineLicenseValidator) Validate(_ any) (r validators.ValidationResult) {
 	l, err := v.ValidateOfflineLicenseCert(v.LicenseKey, v.LicenseFile)

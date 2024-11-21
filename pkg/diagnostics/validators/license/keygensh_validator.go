@@ -27,8 +27,11 @@ type KeygenShValidator struct {
 	Client *Client
 }
 
+func (v KeygenShValidator) Name() string {
+	return "License key correctness online check"
+}
+
 func (v KeygenShValidator) Validate(subject any) (r validators.ValidationResult) {
-	r = r.WithValidator("License key correctness online check")
 	// get key
 	key, ok := subject.(string)
 	if !ok {

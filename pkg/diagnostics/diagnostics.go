@@ -19,9 +19,7 @@ var (
 func New() Diagnostics {
 	return Diagnostics{
 		Renderer: renderer.NewCLIRenderer(),
-		Groups: map[string]*validators.ValidatorGroup{
-			DefaultValidatorGroupName: &validators.ValidatorGroup{},
-		},
+		Groups:   map[string]*validators.ValidatorGroup{},
 	}
 }
 
@@ -71,7 +69,7 @@ func (d Diagnostics) RunGroup(group string) (chan validators.ValidationResult, e
 				wg.Add(1)
 				go func(v validators.Validator) {
 					defer wg.Done()
-					ch <- v.Validate(g.Subject)
+					ch <- v.Validate(g.Subject).WithValidator(v.Name())
 				}(v)
 			}
 			wg.Wait()

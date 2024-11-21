@@ -4,4 +4,5 @@ package validators
 type Validator interface {
 	// Validate runs validation logic against subject
 	Validate(subject any) ValidationResult
+	Name() string
 }

@@ -641,6 +641,11 @@ func KubectlVersion() (client string, server string, err error) {
 		"-o", "json",
 	}
 
+	if ui.IsVerbose() {
+		ui.ShellCommand(kubectl, args...)
+		ui.NL()
+	}
+
 	out, eerr := process.Execute(kubectl, args...)
 	if eerr != nil {
 		return "", "", eerr
@@ -657,7 +662,10 @@ func KubectlVersion() (client string, server string, err error) {
 
 	var v Version
 
-	out = bytes.Trim(out, "'")
+	out, err = extractJSONObject(out)
+	if err != nil {
+		return "", "", err
+	}
 
 	err = json.Unmarshal(out, &v)
 	if err != nil {
@@ -679,8 +687,10 @@ func KubectlDescribePods(namespace string) error {
 		"-n", namespace,
 	}
 
-	ui.ShellCommand(kubectl, args...)
-	ui.NL()
+	if ui.IsVerbose() {
+		ui.ShellCommand(kubectl, args...)
+		ui.NL()
+	}
 
 	return process.ExecuteAndStreamOutput(kubectl, args...)
 }
@@ -698,8 +708,10 @@ func KubectlPrintPods(namespace string) error {
 		"--show-labels",
 	}
 
-	ui.ShellCommand(kubectl, args...)
-	ui.NL()
+	if ui.IsVerbose() {
+		ui.ShellCommand(kubectl, args...)
+		ui.NL()
+	}
 
 	return process.ExecuteAndStreamOutput(kubectl, args...)
 }
@@ -715,8 +727,10 @@ func KubectlGetStorageClass(namespace string) error {
 		"storageclass",
 	}
 
-	ui.ShellCommand(kubectl, args...)
-	ui.NL()
+	if ui.IsVerbose() {
+		ui.ShellCommand(kubectl, args...)
+		ui.NL()
+	}
 
 	return process.ExecuteAndStreamOutput(kubectl, args...)
 }
@@ -733,8 +747,10 @@ func KubectlGetServices(namespace string) error {
 		"-n", namespace,
 	}
 
-	ui.ShellCommand(kubectl, args...)
-	ui.NL()
+	if ui.IsVerbose() {
+		ui.ShellCommand(kubectl, args...)
+		ui.NL()
+	}
 
 	return process.ExecuteAndStreamOutput(kubectl, args...)
 }
@@ -752,8 +768,10 @@ func KubectlDescribeServices(namespace string) error {
 		"-o", "yaml",
 	}
 
-	ui.ShellCommand(kubectl, args...)
-	ui.NL()
+	if ui.IsVerbose() {
+		ui.ShellCommand(kubectl, args...)
+		ui.NL()
+	}
 
 	return process.ExecuteAndStreamOutput(kubectl, args...)
 }
@@ -809,8 +827,10 @@ func KubectlGetPodEnvs(selector, namespace string) (map[string]string, error) {
 		"-o", `jsonpath='{range .items[*].spec.containers[*]}{"\nContainer: "}{.name}{"\n"}{range .env[*]}{.name}={.value}{"\n"}{end}{end}'`,
 	}
 
-	ui.ShellCommand(kubectl, args...)
-	ui.NL()
+	if ui.IsVerbose() {
+		ui.ShellCommand(kubectl, args...)
+		ui.NL()
+	}
 
 	out, err := process.Execute(kubectl, args...)
 	if err != nil {
@@ -834,8 +854,10 @@ func KubectlGetSecret(selector, namespace string) (map[string]string, error) {
 		"-o", `jsonpath='{.data}'`,
 	}
 
-	ui.ShellCommand(kubectl, args...)
-	ui.NL()
+	if ui.IsVerbose() {
+		ui.ShellCommand(kubectl, args...)
+		ui.NL()
+	}
 
 	out, err := process.Execute(kubectl, args...)
 	if err != nil {
@@ -1139,4 +1161,25 @@ func secretsJSONToMap(in string) (map[string]string, error) {
 	}
 
 	return res, err
+}
+
+// extractJSONObject extracts JSON from any string
+func extractJSONObject(input []byte) ([]byte, error) {
+	// Find the first '{' and last '}' to extract JSON object
+	start := bytes.Index(input, []byte("{"))
+	end := bytes.LastIndex(input, []byte("}"))
+
+	if start == -1 || end == -1 || start > end {
+		return []byte(""), fmt.Errorf("invalid JSON format")
+	}
+
+	jsonStr := input[start : end+1]
+
+	// Validate JSON
+	var prettyJSON bytes.Buffer
+	if err := json.Indent(&prettyJSON, []byte(jsonStr), "", "  "); err != nil {
+		return []byte(""), err
+	}
+
+	return prettyJSON.Bytes(), nil
 }

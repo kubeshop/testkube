@@ -28,8 +28,10 @@ func NewDiagnosticsCmd() *cobra.Command {
 
 func NewRunDiagnosticsCmdFunc() func(cmd *cobra.Command, args []string) {
 	return func(cmd *cobra.Command, args []string) {
-		// Run all
 		d := diagnostics.New()
+		commands.RegisterInstallValidators(cmd, d)
+		commands.RegisterLicenseValidators(cmd, d)
+
 		err := d.Run()
 		ui.ExitOnError("Running validations", err)
 		ui.NL(2)

@@ -8,8 +8,11 @@ import (
 
 type HelmDependencyValidator struct{}
 
+func (v HelmDependencyValidator) Name() string {
+	return "helm check"
+}
+
 func (v HelmDependencyValidator) Validate(subject any) (r validators.ValidationResult) {
-	r = r.WithValidator("helm check")
 
 	if !checkFileExists("helm") {
 		return r.WithStdError(errors.New("helm not found"))

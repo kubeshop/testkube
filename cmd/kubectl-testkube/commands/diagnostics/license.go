@@ -25,22 +25,15 @@ func RegisterLicenseValidators(cmd *cobra.Command, d diagnostics.Diagnostics) {
 	}
 
 	// License validator
-	licenseKeyGroup := d.AddValidatorGroup("license.key", l.EnterpriseLicenseKey)
+	licenseGroup := d.AddValidatorGroup("license", l.EnterpriseLicenseKey)
 	if l.EnterpriseOfflineActivation {
-		licenseKeyGroup.AddValidator(license.NewOfflineLicenseKeyValidator())
-
-		// for offline license also add license file validator
-		licenseFileGroup := d.AddValidatorGroup("license.file", l.EnterpriseLicenseFile)
-		licenseFileGroup.AddValidator(license.NewFileValidator())
-
-		offlineLicenseGroup := d.AddValidatorGroup("license.offline.check", l.EnterpriseLicenseFile)
-		offlineLicenseGroup.AddValidator(license.NewOfflineLicenseValidator(l.EnterpriseLicenseKey, l.EnterpriseLicenseFile))
+		licenseGroup.AddValidator(license.NewFileValidator())
+		licenseGroup.AddValidator(license.NewOfflineLicenseKeyValidator())
+		licenseGroup.AddValidator(license.NewOfflineLicenseValidator(l.EnterpriseLicenseKey, l.EnterpriseLicenseFile))
 	} else {
-		licenseKeyGroup.AddValidator(license.NewOnlineLicenseKeyValidator())
+		licenseGroup.AddValidator(license.NewOnlineLicenseKeyValidator())
+		licenseGroup.AddValidator(license.NewKeygenShValidator())
 	}
-
-	// common validator for both key types
-	licenseKeyGroup.AddValidator(license.NewKeygenShValidator())
 }
 
 func NewLicenseCheckCmd() *cobra.Command {
@@ -64,5 +57,6 @@ func RunLicenseCheckFunc() func(cmd *cobra.Command, args []string) {
 
 		err := d.Run()
 		ui.ExitOnError("Running validations", err)
+		ui.NL(2)
 	}
 }

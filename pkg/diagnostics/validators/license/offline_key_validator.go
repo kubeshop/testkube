@@ -13,9 +13,12 @@ func NewOfflineLicenseKeyValidator() OfflineLicenseKeyValidator {
 type OfflineLicenseKeyValidator struct {
 }
 
+func (v OfflineLicenseKeyValidator) Name() string {
+	return "Offline license key check"
+}
+
 // Validate validates a given license key for format / length correctness without calling external services
 func (v OfflineLicenseKeyValidator) Validate(subject any) (r validators.ValidationResult) {
-	r = r.WithValidator("Offline license key")
 	// get key
 	key, ok := subject.(string)
 	if !ok {
@@ -32,5 +35,5 @@ func (v OfflineLicenseKeyValidator) Validate(subject any) (r validators.Validati
 
 	}
 
-	return validators.NewValidResponse()
+	return r.WithValidStatus()
 }

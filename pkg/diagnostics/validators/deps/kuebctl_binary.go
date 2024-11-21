@@ -8,15 +8,23 @@ import (
 	"github.com/kubeshop/testkube/pkg/semver"
 )
 
-const MinimalKubectlVersion = "v1."
+func NewKubectlDependencyValidator() KubectlDependencyValidator {
+	return KubectlDependencyValidator{
+		RequiredKubectlVersion:    validators.RequiredKubectlVersion,
+		RequiredKubernetesVersion: validators.RequiredKubernetesVersion,
+	}
+}
 
 type KubectlDependencyValidator struct {
 	RequiredKubectlVersion    string
 	RequiredKubernetesVersion string
 }
 
+func (v KubectlDependencyValidator) Name() string {
+	return "Kubernetes check"
+}
+
 func (v KubectlDependencyValidator) Validate(subject any) (r validators.ValidationResult) {
-	r = r.WithValidator("kubectl check")
 
 	if !checkFileExists("kubectl") {
 		return r.WithError(ErrKubectlFileNotFound)
@@ -44,11 +52,4 @@ func (v KubectlDependencyValidator) Validate(subject any) (r validators.Validati
 	}
 
 	return r.WithValidStatus()
-}
-
-func NewKubectlDependencyValidator() KubectlDependencyValidator {
-	return KubectlDependencyValidator{
-		RequiredKubectlVersion:    validators.RequiredKubectlVersion,
-		RequiredKubernetesVersion: validators.RequiredKubernetesVersion,
-	}
 }
