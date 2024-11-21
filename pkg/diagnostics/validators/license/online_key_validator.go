@@ -1,6 +1,7 @@
 package license
 
 import (
+	"fmt"
 	"regexp"
 
 	"github.com/kubeshop/testkube/pkg/diagnostics/validators"
@@ -15,7 +16,7 @@ type OnlineLicenseKeyValidator struct {
 
 // Validate validates a given license key for format / length correctness without calling external services
 func (v OnlineLicenseKeyValidator) Validate(subject any) validators.ValidationResult {
-	r := validators.NewResult().WithValidator("License key")
+	r := validators.NewResult().WithValidator("License key format")
 
 	// get key
 	key, ok := subject.(string)
@@ -28,16 +29,15 @@ func (v OnlineLicenseKeyValidator) Validate(subject any) validators.ValidationRe
 	}
 
 	// Check if the license key is the correct length and validate
-	if len(key) != 29 {
-		return r.WithError(ErrOnlineLicenseKeyInvalidLength)
+	if len(key) != 37 {
+		return r.WithError(ErrOnlineLicenseKeyInvalidLength.WithDetails(fmt.Sprintf("Passed license key length is %d and should be 37", len(key))))
 	}
 
 	// Check if the license key matches the expected format
-	match, _ := regexp.MatchString(`^[A-Z0-9]{6}-[A-Z0-9]{6}-[A-Z0-9]{6}-[A-Z0-9]{6}-[A-Z0-9]{6}-[A-Z0-9]{1-2}$`, key)
+	match, _ := regexp.MatchString(`^([A-Z0-9_]{6}-){5}[^-]{2}$`, key)
 	if !match {
-		println(match)
 		return r.WithError(ErrOnlineLicenseKeyInvalidLength)
 	}
 
-	return validators.NewValidResponse()
+	return r.WithValidStatus()
 }

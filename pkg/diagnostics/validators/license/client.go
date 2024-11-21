@@ -11,6 +11,10 @@ type LicenseResponse struct {
 	Valid   bool   `json:"valid,omitempty"`
 	Code    string `json:"code,omitempty"`
 	Message string `json:"message,omitempty"`
+	License struct {
+		Expiry string `json:"expiry,omitempty"`
+		Name   string `json:"name,omitempty"`
+	} `json:"license,omitempty"`
 }
 
 type LicenseRequest struct {

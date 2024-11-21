@@ -31,7 +31,6 @@ type Diagnostics struct {
 	Groups   map[string]*validators.ValidatorGroup
 }
 
-// TODO make it parallel?
 // Run executes all validators in all groups and renders the results
 func (d Diagnostics) Run() error {
 
@@ -54,6 +53,7 @@ func (d Diagnostics) Run() error {
 	return nil
 }
 
+// RunGroup tries to locate group and run it
 func (d Diagnostics) RunGroup(group string) (chan validators.ValidationResult, error) {
 	ch := make(chan validators.ValidationResult)
 	g, ok := d.Groups[group]

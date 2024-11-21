@@ -1,12 +1,16 @@
 package validators
 
 const (
-	ErrorKindCustom             ErrorKind = "custom"
-	ErrorKindFileNotFound       ErrorKind = "file not found"
-	ErrorKindKeyNotFound        ErrorKind = "key not found"
+	ErrorKindCustom       ErrorKind = "custom"
+	ErrorKindFileNotFound ErrorKind = "file not found"
+	ErrorKindKeyNotFound  ErrorKind = "key not found"
+
 	ErrorKindInvalidFileContent ErrorKind = "invalid file content"
 	ErrorKindInvalidKeyContent  ErrorKind = "invalid key content"
 	ErrorKindBadWhitespaces     ErrorKind = "bad whitespaces"
+
+	ErrorKindLicenseInvalid ErrorKind = "license invalid"
+	ErrorKindLicenseExpired ErrorKind = "license expired"
 )
 
 var (

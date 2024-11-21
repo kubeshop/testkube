@@ -37,10 +37,10 @@ func (r CLIRenderer) RenderResult(res validators.ValidationResult) {
 			ui.NL()
 			ui.Printf("    %s %s\n", ui.IconError, err.Message)
 			if err.Details != "" {
-				ui.Printf("      %s\n", err.Details)
+				ui.Printf("      %s\n", ui.LightCyan(err.Details))
 			}
 			if len(err.Suggestions) > 0 {
-				ui.Info(ui.LightGray("    Consider following suggestions/fixes before proceeding: "))
+				ui.Info(ui.LightGray("      Consider following suggestions/fixes before proceeding: "))
 				for _, s := range err.Suggestions {
 					ui.Printf("        * %s\n", ui.LightBlue(s))
 				}

@@ -1,6 +1,8 @@
 package license
 
 import (
+	"fmt"
+
 	"github.com/kubeshop/testkube/pkg/diagnostics/validators"
 )
 
@@ -48,10 +50,11 @@ func mapResponseToValidatonResult(r validators.ValidationResult, resp *LicenseRe
 		return r.WithValidStatus()
 	}
 
-	return validators.ValidationResult{
-		Status: validators.StatusInvalid,
-		Errors: []validators.Error{
-			ErrKeygenShValidation.WithDetails(resp.Message),
-		},
+	switch resp.Code {
+	case "EXPIRED":
+		return r.WithError(ErrKeygenShValidationExpired.
+			WithDetails(fmt.Sprintf("Looks like your license '%s' has expired at '%s'", resp.License.Name, resp.License.Expiry)))
 	}
+
+	return r.WithError(ErrKeygenShValidation.WithDetails(resp.Message + resp.Code))
 }

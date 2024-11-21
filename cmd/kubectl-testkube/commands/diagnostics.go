@@ -6,6 +6,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 
 	"github.com/kubeshop/testkube/pkg/diagnostics"
+	"github.com/kubeshop/testkube/pkg/diagnostics/loader"
 	"github.com/kubeshop/testkube/pkg/diagnostics/validators/deps"
 	"github.com/kubeshop/testkube/pkg/diagnostics/validators/license"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -20,7 +21,7 @@ func NewDiagnosticsCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:     "diagnostics",
-		Aliases: []string{"diag", "di"},
+		Aliases: []string{"diagnose", "diag", "di"},
 		Short:   "Diagnoze testkube issues with ease",
 		Run:     NewRunDiagnosticsCmdFunc(key, &validators, &groups),
 	}
@@ -31,8 +32,8 @@ func NewDiagnosticsCmd() *cobra.Command {
 	cmd.Flags().VarP(&validators, "commands", "s", "Comma-separated list of validators: "+allValidatorStr+", defaults to all")
 	cmd.Flags().VarP(&groups, "groups", "g", "Comma-separated list of groups, one of: "+allGroupsStr+", defaults to all")
 
-	cmd.Flags().StringVarP(&key, "key", "k", "", "License key")
-	cmd.Flags().StringVarP(&file, "file", "f", "", "License file")
+	cmd.Flags().StringVarP(&key, "key-override", "k", "", "Pass License key manually (we will not try to locate it automatically)")
+	cmd.Flags().StringVarP(&file, "file-override", "f", "", "Pass License file manually (we will not try to locate it automatically)")
 
 	return cmd
 }
@@ -41,38 +42,47 @@ func NewRunDiagnosticsCmdFunc(key string, commands, groups *common.CommaList) fu
 	return func(cmd *cobra.Command, args []string) {
 
 		// Fetch current setup:
-		offlineActivation := true
-		key := cmd.Flag("key").Value.String()
-		file := cmd.Flag("file").Value.String()
+		namespace := cmd.Flag("namespace").Value.String()
+
+		keyOverride := cmd.Flag("key-override").Value.String()
+		fileOverride := cmd.Flag("file-override").Value.String()
+
+		l, err := loader.GetLicenseConfig(namespace)
+		ui.ExitOnError("loading license data", err)
+
+		if keyOverride != "" {
+			l.EnterpriseLicenseKey = keyOverride
+		}
+		if fileOverride != "" {
+			l.EnterpriseLicenseFile = fileOverride
+		}
 
 		// Compose diagnostics validators
 		d := diagnostics.New()
 
-		depsGroup := d.AddValidatorGroup("install.dependencies", file)
+		depsGroup := d.AddValidatorGroup("install.dependencies", nil)
 		depsGroup.AddValidator(deps.NewKubectlDependencyValidator())
 		depsGroup.AddValidator(deps.NewHelmDependencyValidator())
 
 		// License validator
 		licenseKeyGroup := d.AddValidatorGroup("license.key", key)
-		if offlineActivation {
+		if l.EnterpriseOfflineActivation {
 			licenseKeyGroup.AddValidator(license.NewOfflineLicenseKeyValidator())
 
 			// for offline license also add license file validator
-			licenseFileGroup := d.AddValidatorGroup("license.file", file)
+			licenseFileGroup := d.AddValidatorGroup("license.file", l.EnterpriseLicenseFile)
 			licenseFileGroup.AddValidator(license.NewFileValidator())
+
+			offlineLicenseGroup := d.AddValidatorGroup("license.offline.check", l.EnterpriseLicenseFile)
+			offlineLicenseGroup.AddValidator(license.NewOfflineLicenseValidator(l.EnterpriseLicenseKey, l.EnterpriseLicenseFile))
 		} else {
 			licenseKeyGroup.AddValidator(license.NewOnlineLicenseKeyValidator())
 		}
+
 		// common validator for both key types
 		licenseKeyGroup.AddValidator(license.NewKeygenShValidator())
 
-		// licenseKeyGroup.AddValidator(mock.AlwaysValidValidator{Name: "Key presence"})
-		// licenseKeyGroup.AddValidator(mock.AlwaysInvalidMultiValidator{Name: "multiple license key validation error"})
-
-		// licenseFileGroup.AddValidator(mock.AlwaysValidValidator{Name: "Date occurance"})
-		// licenseFileGroup.AddValidator(mock.AlwaysValidValidator{Name: "Date range"})
-		// licenseFileGroup.AddValidator(mock.AlwaysInvalidMultiValidator{Name: "multiple errors in validator"})
-		// licenseFileGroup.AddValidator(mock.AlwaysInvalidValidator{Name: "aaa2"})
+		// TODO allow to run partially
 
 		// Run single "diagnostic"
 
@@ -81,7 +91,7 @@ func NewRunDiagnosticsCmdFunc(key string, commands, groups *common.CommaList) fu
 		// Run predefined group
 
 		// Run all
-		err := d.Run()
+		err = d.Run()
 		ui.ExitOnError("Running validations", err)
 
 		ui.NL(2)

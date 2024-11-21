@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestValidateLicense(t *testing.T) {
@@ -29,16 +31,10 @@ func TestValidateLicense(t *testing.T) {
 
 		client := NewClient().WithURL(mockServer.URL)
 
-		response, err := client.ValidateLicense(LicenseRequest{License: "valid-license"})
-		if err != nil {
-			t.Fatalf("Expected no error, got %v", err)
-		}
-		if !response.Valid {
-			t.Errorf("Expected license to be valid, got %v", response.Valid)
-		}
-		if response.Message != "License is valid" {
-			t.Errorf("Expected message 'License is valid', got %s", response.Message)
-		}
+		resp, err := client.ValidateLicense(LicenseRequest{License: "valid-license"})
+		assert.NoError(t, err)
+		assert.True(t, resp.Valid)
+		assert.Equal(t, "License is valid", resp.Message)
 	})
 
 	// Test for failure due to invalid request
@@ -50,10 +46,9 @@ func TestValidateLicense(t *testing.T) {
 
 		client := NewClient().WithURL(mockServer.URL)
 
-		_, err := client.ValidateLicense(LicenseRequest{License: "invalid-license"})
-		if err == nil {
-			t.Errorf("Expected error due to invalid request, got none")
-		}
+		resp, err := client.ValidateLicense(LicenseRequest{License: "invalid-license"})
+		assert.NoError(t, err)
+		assert.False(t, resp.Valid)
 	})
 
 	t.Run("RealValidation license valid", func(t *testing.T) {

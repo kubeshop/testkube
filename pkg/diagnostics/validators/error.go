@@ -22,6 +22,13 @@ type Error struct {
 }
 
 func (e Error) Error() string {
+	s := ""
+	if e.Message != "" {
+		s += e.Message
+	}
+	if e.Details != "" {
+		s += " " + e.Details
+	}
 	return e.Message
 }
 
