@@ -122,6 +122,8 @@ func NewDevBoxCommand() *cobra.Command {
 			binaryStoragePod := namespace.Pod("devbox-binary")
 			mongoPod := namespace.Pod("devbox-mongodb")
 			minioPod := namespace.Pod("devbox-minio")
+			prometheusPod := namespace.Pod("devbox-prometheus")
+			grafanaPod := namespace.Pod("devbox-grafana")
 
 			// Initialize binaries
 			interceptorBin := devutils.NewBinary(InterceptorMainPath, cluster.OperatingSystem(), cluster.Architecture())
@@ -143,6 +145,8 @@ func NewDevBoxCommand() *cobra.Command {
 			binaryStorage := devutils.NewBinaryStorage(binaryStoragePod, binaryStorageBin)
 			mongo := devutils.NewMongo(mongoPod)
 			minio := devutils.NewMinio(minioPod)
+			prometheus := devutils.NewPrometheus(prometheusPod)
+			grafana := devutils.NewGrafana(grafanaPod)
 			var env *client.Environment
 
 			// Cleanup
@@ -233,6 +237,34 @@ func NewDevBoxCommand() *cobra.Command {
 					fail(errors.Wrap(err, "failed to enable interceptor"))
 				}
 				fmt.Println("[Interceptor] Ready")
+				return nil
+			})
+
+			// Deploying Prometheus
+			g.Go(func() error {
+				fmt.Println("[Prometheus] Deploying...")
+				if err = prometheus.Create(ctx); err != nil {
+					fail(errors.Wrap(err, "failed to create prometheus instance"))
+				}
+				fmt.Println("[Prometheus] Waiting for readiness...")
+				if err = prometheus.WaitForReady(ctx); err != nil {
+					fail(errors.Wrap(err, "failed to create prometheus instance"))
+				}
+				fmt.Println("[Prometheus] Ready")
+				return nil
+			})
+
+			// Deploying Grafana
+			g.Go(func() error {
+				fmt.Println("[Grafana] Deploying...")
+				if err = grafana.Create(ctx); err != nil {
+					fail(errors.Wrap(err, "failed to create grafana instance"))
+				}
+				fmt.Println("[Grafana] Waiting for readiness...")
+				if err = grafana.WaitForReady(ctx); err != nil {
+					fail(errors.Wrap(err, "failed to create grafana instance"))
+				}
+				fmt.Printf("[Grafana] Ready at %s\n", grafana.LocalAddress())
 				return nil
 			})
 
@@ -615,6 +647,11 @@ func NewDevBoxCommand() *cobra.Command {
 
 			color.Green.Println("Development box is ready. Took", time.Since(startTs).Truncate(time.Millisecond))
 			fmt.Println("Namespace:", namespace.Name())
+			if termlink.SupportsHyperlinks() {
+				fmt.Println("Grafana:", termlink.Link(grafana.LocalAddress(), grafana.LocalAddress()))
+			} else {
+				fmt.Println("Grafana:", grafana.LocalAddress())
+			}
 			if !oss {
 				if termlink.SupportsHyperlinks() {
 					fmt.Println("Dashboard:", termlink.Link(cloud.DashboardUrl(env.Slug, "dashboard/test-workflows"), cloud.DashboardUrl(env.Slug, "dashboard/test-workflows")))
