@@ -1,5 +1,7 @@
 package validators
 
+import "fmt"
+
 type Status string
 
 const (
@@ -45,6 +47,8 @@ type ValidationResult struct {
 
 	// Logs
 	Logs map[string]string
+
+	AdditionalInfo string
 }
 
 func (r ValidationResult) WithValidator(v string) ValidationResult {
@@ -67,6 +71,11 @@ func (r ValidationResult) WithInvalidStatus() ValidationResult {
 	return r
 }
 
+func (r ValidationResult) WithAdditionalInfo(i string) ValidationResult {
+	r.AdditionalInfo = i
+	return r
+}
+
 func (r ValidationResult) WithError(err Error) ValidationResult {
 	r.Status = StatusInvalid
 	r.Errors = append(r.Errors, err)
@@ -74,6 +83,11 @@ func (r ValidationResult) WithError(err Error) ValidationResult {
 }
 
 func (r ValidationResult) WithStdError(err error) ValidationResult {
+	if err == nil {
+		panic("AAAAAAAAAAAAA")
+	}
+	fmt.Printf(">>>>>>>>>>>%+v\n", err)
+
 	r.Status = StatusInvalid
 	r.Errors = append(r.Errors, Error{Kind: ErrorKindCustom, Message: err.Error()})
 	return r

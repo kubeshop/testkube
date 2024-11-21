@@ -15,7 +15,13 @@ type License struct {
 	EnterpriseLicenseName           string `envconfig:"ENTERPRISE_LICENSE_NAME"`
 }
 
-func GetLicenseConfig(namespace string) (l License, err error) {
+const DefaultSecretName = "testkube-enterprise-license"
+
+func GetLicenseConfig(namespace, secretName string) (l License, err error) {
+	if secretName == "" {
+		secretName = DefaultSecretName
+	}
+
 	// get control plane api pod envs
 	envs, err := common.KubectlGetPodEnvs("-l app.kubernetes.io/name=testkube-cloud-api", namespace)
 	if err != nil {
@@ -25,6 +31,10 @@ func GetLicenseConfig(namespace string) (l License, err error) {
 
 	if offlineActivation, ok := envs["ENTERPRISE_OFFLINE_ACTIVATION"]; ok && offlineActivation == "true" {
 		l.EnterpriseOfflineActivation = true
+	}
+
+	if f, ok := envs["ENTERPRISE_LICENSE_FILE"]; ok && f != "" {
+		l.EnterpriseLicenseFile = f
 	}
 
 	if k, ok := envs["ENTERPRISE_LICENSE_KEY_PATH"]; ok && k != "" {
@@ -37,12 +47,29 @@ func GetLicenseConfig(namespace string) (l License, err error) {
 
 	if k, ok := envs["ENTERPRISE_LICENSE_KEY"]; ok && k != "" {
 		l.EnterpriseLicenseKey = k
-	} else {
+	}
+
+	// try to load from secret - there is no easy way of just stream the key content
+	secrets, err := common.KubectlGetSecret(secretName, namespace)
+	ui.WarnOnError("getting secrets from pods", err)
+
+	const (
+		keySecretKeyName  = "LICENSE_KEY"
+		fileSecretKeyName = "license.lic"
+	)
+
+	// If no direct key value provided try to figure out it from secret mapped as file
+	if l.EnterpriseLicenseKey == "" {
 		// try to load from secret - there is no easy way of just stream the key content
-		secrets, err := common.KubectlGetSecret("testkube-enterprise-license", namespace)
-		ui.ExitOnError("getting secrets from pods", err)
-		if k, ok := secrets["LICENSE_KEY"]; ok {
+		if k, ok := secrets[keySecretKeyName]; ok {
 			l.EnterpriseLicenseKey = k
+		}
+	}
+
+	// If no direct file value provided try to figure out it from secret mapped as file
+	if l.EnterpriseLicenseFile == "" {
+		if k, ok := secrets[fileSecretKeyName]; ok {
+			l.EnterpriseLicenseFile = k
 		}
 	}
 

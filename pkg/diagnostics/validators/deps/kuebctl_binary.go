@@ -11,7 +11,8 @@ import (
 const MinimalKubectlVersion = "v1."
 
 type KubectlDependencyValidator struct {
-	MinimalKubectlVersion string
+	RequiredKubectlVersion    string
+	RequiredKubernetesVersion string
 }
 
 func (v KubectlDependencyValidator) Validate(subject any) (r validators.ValidationResult) {
@@ -21,20 +22,25 @@ func (v KubectlDependencyValidator) Validate(subject any) (r validators.Validati
 		return r.WithError(ErrKubectlFileNotFound)
 	}
 
-	clientVersion, _, err := common.KubectlVersion()
+	clientVersion, kubernetesVersion, err := common.KubectlVersion()
 	if err != nil {
 		return r.WithStdError(err)
 	}
 
-	fmt.Printf("%+v\n", clientVersion)
-
-	ok, err := semver.Lt(clientVersion, v.MinimalKubectlVersion)
+	ok, err := semver.Lte(v.RequiredKubectlVersion, clientVersion)
 	if err != nil {
 		return r.WithStdError(err)
 	}
-
 	if !ok {
-		return r.WithError(ErrKubectlInvalidVersion.WithDetails(fmt.Sprintf("We need version %s but your is %s, consider upgrading", clientVersion, v.MinimalKubectlVersion)))
+		return r.WithError(ErrKubectlInvalidVersion.WithDetails(fmt.Sprintf("We need at least version %s, but your is %s, please consider upgrading", v.RequiredKubectlVersion, clientVersion)))
+	}
+
+	ok, err = semver.Lte(v.RequiredKubernetesVersion, kubernetesVersion)
+	if err != nil {
+		return r.WithStdError(err)
+	}
+	if !ok {
+		return r.WithError(ErrKubernetesInvalidVersion.WithDetails(fmt.Sprintf("We need at least version %s, but your is %s, please consider upgrading", v.RequiredKubectlVersion, kubernetesVersion)))
 	}
 
 	return r.WithValidStatus()
@@ -42,6 +48,7 @@ func (v KubectlDependencyValidator) Validate(subject any) (r validators.Validati
 
 func NewKubectlDependencyValidator() KubectlDependencyValidator {
 	return KubectlDependencyValidator{
-		MinimalKubectlVersion: "1.31.3",
+		RequiredKubectlVersion:    validators.RequiredKubectlVersion,
+		RequiredKubernetesVersion: validators.RequiredKubernetesVersion,
 	}
 }

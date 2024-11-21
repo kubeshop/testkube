@@ -27,9 +27,9 @@ func (e Error) Error() string {
 		s += e.Message
 	}
 	if e.Details != "" {
-		s += " " + e.Details
+		s += " - " + e.Details
 	}
-	return e.Message
+	return s
 }
 
 func (e Error) WithSuggestion(s string) Error {

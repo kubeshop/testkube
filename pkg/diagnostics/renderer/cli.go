@@ -44,7 +44,6 @@ func (r CLIRenderer) RenderResult(res validators.ValidationResult) {
 				for _, s := range err.Suggestions {
 					ui.Printf("        * %s\n", ui.LightBlue(s))
 				}
-				ui.NL()
 			}
 			if err.DocsURI != "" {
 				ui.Printf("      For more details follow docs: [%s]\n", ui.Yellow(err.DocsURI))

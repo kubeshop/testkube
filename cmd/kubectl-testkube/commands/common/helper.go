@@ -631,7 +631,7 @@ func KubectlPrintEvents(namespace string) error {
 }
 
 func KubectlVersion() (client string, server string, err error) {
-	kubectl, err := lookupKubectlPath()
+	kubectl, err := exec.LookPath("kubectl")
 	if err != nil {
 		return "", "", err
 	}
@@ -640,9 +640,6 @@ func KubectlVersion() (client string, server string, err error) {
 		"version",
 		"-o", "json",
 	}
-
-	ui.ShellCommand(kubectl, args...)
-	ui.NL()
 
 	out, eerr := process.Execute(kubectl, args...)
 	if eerr != nil {
@@ -845,7 +842,7 @@ func KubectlGetSecret(selector, namespace string) (map[string]string, error) {
 		return nil, err
 	}
 
-	return convertJSONStringToMap(string(out))
+	return secretsJSONToMap(string(out))
 }
 
 func lookupKubectlPath() (string, *CLIError) {
@@ -1125,7 +1122,7 @@ func convertEnvToMap(input string) map[string]string {
 	return result
 }
 
-func convertJSONStringToMap(in string) (map[string]string, error) {
+func secretsJSONToMap(in string) (map[string]string, error) {
 	res := map[string]string{}
 	in = strings.TrimLeft(in, "'")
 	in = strings.TrimRight(in, "'")

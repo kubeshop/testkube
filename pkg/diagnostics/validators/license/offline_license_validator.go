@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -12,7 +13,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/diagnostics/validators"
 )
 
-const keygenOfflinePublicKey = "adfe762551bf19d5d43641a7e297d5c82fe46d6d1ea15e3cb9be79f8047e19c6"
+// keygenOfflinePublicKey will be set through build process when changed
+var keygenOfflinePublicKey = "adfe762551bf19d5d43641a7e297d5c82fe46d6d1ea15e3cb9be79f8047e19c6"
 
 type License struct {
 	License      *keygen.License
@@ -40,10 +42,12 @@ func (v OfflineLicenseValidator) Validate(_ any) (r validators.ValidationResult)
 	}
 
 	if l.License.Expiry.Before(time.Now()) {
-		return
+		return r.WithError(ErrOfflineLicenseExpired.
+			WithDetails(fmt.Sprintf("Your license file expired in %s, please renew your license", l.License.Expiry)))
 	}
 
-	return r.WithValidStatus()
+	left := l.License.Expiry.Sub(time.Now())
+	return r.WithValidStatus().WithAdditionalInfo(fmt.Sprintf("license is still valid %d days", int(left.Hours())/24))
 }
 
 func (v *OfflineLicenseValidator) ValidateOfflineLicenseCert(key string, file string) (l *License, e validators.Error) {
