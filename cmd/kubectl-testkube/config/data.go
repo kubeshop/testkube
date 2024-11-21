@@ -9,7 +9,7 @@ const (
 	TokenTypeOIDC = "oidc"
 	TokenTypeAPI  = "api"
 
-	CallbackPort = 38090
+	CallbackPort = 8090
 )
 
 type CloudContext struct {
