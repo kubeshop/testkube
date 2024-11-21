@@ -395,6 +395,7 @@ func (e *executor) isExecutionNameReserved(ctx context.Context, name, workflowNa
 func (e *executor) initialize(ctx context.Context, workflow *testworkflowsv1.TestWorkflow, request *testkube.TestWorkflowExecutionRequest) (execution *testkube.TestWorkflowExecution, secrets []corev1.Secret, err error) {
 	// Delete unnecessary data
 	delete(workflow.Annotations, "kubectl.kubernetes.io/last-applied-configuration")
+	workflow.ManagedFields = nil
 
 	// Build the initial execution entity
 	now := time.Now().UTC()
