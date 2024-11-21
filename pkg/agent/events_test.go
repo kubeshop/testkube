@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kubeshop/testkube/pkg/agent/client"
+	agentclient "github.com/kubeshop/testkube/pkg/agent/client"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -48,7 +48,7 @@ func TestEventLoop(t *testing.T) {
 
 	logger, _ := zap.NewDevelopment()
 
-	grpcConn, err := client.NewGRPCConnection(context.Background(), true, false, url, "", "", "", log.DefaultLogger)
+	grpcConn, err := agentclient.NewGRPCConnection(context.Background(), true, false, url, "", "", "", log.DefaultLogger)
 	ui.ExitOnError("error creating gRPC connection", err)
 	defer grpcConn.Close()
 

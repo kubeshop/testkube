@@ -6,7 +6,7 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
-	"github.com/kubeshop/testkube/pkg/agent/client"
+	agentclient "github.com/kubeshop/testkube/pkg/agent/client"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/credentials"
 	"github.com/kubeshop/testkube/pkg/log"
@@ -24,7 +24,7 @@ func CloudClient() cloud.TestKubeCloudAPIClient {
 	if cloudClient == nil {
 		cfg := GetState().InternalConfig.Worker.Connection
 		logger := log.NewSilent()
-		grpcConn, err := client.NewGRPCConnection(context.Background(), cfg.TlsInsecure, cfg.SkipVerify, cfg.Url, "", "", "", logger)
+		grpcConn, err := agentclient.NewGRPCConnection(context.Background(), cfg.TlsInsecure, cfg.SkipVerify, cfg.Url, "", "", "", logger)
 		if err != nil {
 			output.ExitErrorf(constants.CodeInternal, "failed to connect with the Control Plane: %s", err.Error())
 		}

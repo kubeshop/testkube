@@ -9,7 +9,7 @@ import (
 
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/agent"
-	"github.com/kubeshop/testkube/pkg/agent/client"
+	agentclient "github.com/kubeshop/testkube/pkg/agent/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/executor/output"
@@ -47,7 +47,7 @@ func TestLogStream(t *testing.T) {
 		fmt.Fprintf(ctx, "Hi there! RequestURI is %q", ctx.RequestURI())
 	}
 
-	grpcConn, err := client.NewGRPCConnection(context.Background(), true, false, url, "", "", "", log.DefaultLogger)
+	grpcConn, err := agentclient.NewGRPCConnection(context.Background(), true, false, url, "", "", "", log.DefaultLogger)
 	ui.ExitOnError("error creating gRPC connection", err)
 	defer grpcConn.Close()
 

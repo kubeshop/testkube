@@ -13,7 +13,7 @@ import (
 	"google.golang.org/grpc/credentials"
 
 	"github.com/kubeshop/testkube/internal/common"
-	client2 "github.com/kubeshop/testkube/pkg/agent/client"
+	agentclient "github.com/kubeshop/testkube/pkg/agent/client"
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/logs"
@@ -105,7 +105,7 @@ func main() {
 	switch mode {
 
 	case common.ModeAgent:
-		grpcConn, err := client2.NewGRPCConnection(
+		grpcConn, err := agentclient.NewGRPCConnection(
 			ctx,
 			cfg.TestkubeProTLSInsecure,
 			cfg.TestkubeProSkipVerify,

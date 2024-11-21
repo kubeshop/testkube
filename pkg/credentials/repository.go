@@ -7,7 +7,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/encoding/gzip"
 
-	"github.com/kubeshop/testkube/pkg/agent/client"
+	agentclient "github.com/kubeshop/testkube/pkg/agent/client"
 	"github.com/kubeshop/testkube/pkg/cloud"
 )
 
@@ -27,7 +27,7 @@ func NewCredentialRepository(client cloud.TestKubeCloudAPIClient, apiKey, execut
 }
 
 func (c *credentialRepository) Get(ctx context.Context, name string) ([]byte, error) {
-	ctx = client.AddAPIKeyMeta(ctx, c.apiKey)
+	ctx = agentclient.AddAPIKeyMeta(ctx, c.apiKey)
 	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
 	result, err := c.client.GetCredential(ctx, &cloud.CredentialRequest{Name: name, ExecutionId: c.executionId}, opts...)
 	if err != nil {

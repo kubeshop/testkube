@@ -8,7 +8,7 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/pkg/errors"
 
-	"github.com/kubeshop/testkube/pkg/agent/client"
+	agentclient "github.com/kubeshop/testkube/pkg/agent/client"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	cloudscraper "github.com/kubeshop/testkube/pkg/cloud/data/artifact"
 	cloudexecutor "github.com/kubeshop/testkube/pkg/cloud/data/executor"
@@ -102,7 +102,7 @@ func getRemoteStorageUploader(ctx context.Context, params envs.Params) (uploader
 	output.PrintLogf(
 		"%s Uploading artifacts using Remote Storage Uploader (timeout:%ds, agentInsecure:%v, agentSkipVerify: %v, url: %s, scraperSkipVerify: %v)",
 		ui.IconCheckMark, params.ProConnectionTimeoutSec, params.ProAPITLSInsecure, params.ProAPISkipVerify, params.ProAPIURL, params.SkipVerify)
-	grpcConn, err := client.NewGRPCConnection(
+	grpcConn, err := agentclient.NewGRPCConnection(
 		ctxTimeout,
 		params.ProAPITLSInsecure,
 		params.ProAPISkipVerify,

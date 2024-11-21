@@ -14,7 +14,7 @@ import (
 	"google.golang.org/grpc/encoding/gzip"
 	"google.golang.org/grpc/metadata"
 
-	"github.com/kubeshop/testkube/pkg/agent/client"
+	agentclient "github.com/kubeshop/testkube/pkg/agent/client"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 
 	"github.com/kubeshop/testkube/internal/config"
@@ -218,7 +218,7 @@ func (ag *Agent) receiveCommand(ctx context.Context, stream cloud.TestKubeCloudA
 
 func (ag *Agent) runCommandLoop(ctx context.Context) error {
 	if ag.proContext.APIKey != "" {
-		ctx = client.AddAPIKeyMeta(ctx, ag.proContext.APIKey)
+		ctx = agentclient.AddAPIKeyMeta(ctx, ag.proContext.APIKey)
 	}
 
 	ctx = metadata.AppendToOutgoingContext(ctx, clusterIDMeta, ag.clusterID)

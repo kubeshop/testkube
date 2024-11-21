@@ -12,7 +12,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/encoding/gzip"
 
-	"github.com/kubeshop/testkube/pkg/agent/client"
+	agentclient "github.com/kubeshop/testkube/pkg/agent/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller"
@@ -30,7 +30,7 @@ func getTestWorkflowNotificationType(n testkube.TestWorkflowExecutionNotificatio
 }
 
 func (ag *Agent) runTestWorkflowNotificationsLoop(ctx context.Context) error {
-	ctx = client.AddAPIKeyMeta(ctx, ag.apiKey)
+	ctx = agentclient.AddAPIKeyMeta(ctx, ag.apiKey)
 
 	ag.logger.Infow("initiating workflow notifications streaming connection with Cloud API")
 	// creates a new Stream from the client side. ctx is used for the lifetime of the stream.
