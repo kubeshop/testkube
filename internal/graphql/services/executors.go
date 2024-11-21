@@ -32,7 +32,7 @@ func (s *executorsService) List(selector string) ([]testkube.ExecutorDetails, er
 }
 
 func (s *executorsService) SubscribeList(ctx context.Context, selector string) (<-chan []testkube.ExecutorDetails, error) {
-	return HandleSubscription(ctx, "events.executor.>", s, func() ([]testkube.ExecutorDetails, error) {
+	return HandleSubscription(ctx, "agentevents.executor.>", s, func() ([]testkube.ExecutorDetails, error) {
 		return s.List(selector)
 	})
 }

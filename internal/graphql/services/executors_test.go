@@ -169,7 +169,7 @@ func TestExecutorsService_SubscribeList(t *testing.T) {
 		assert.NoError(t, err)
 		<-ch
 		client.Client = getMockExecutorClient(k8sObjects2).Client
-		assert.NoError(t, srvMock.BusMock().PublishTopic("events.executor.create", testkube.Event{
+		assert.NoError(t, srvMock.BusMock().PublishTopic("agentevents.executor.create", testkube.Event{
 			Type_:    testkube.EventCreated,
 			Resource: testkube.EventResourceExecutor,
 		}))
