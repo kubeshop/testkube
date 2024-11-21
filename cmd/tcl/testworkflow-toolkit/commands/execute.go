@@ -399,9 +399,20 @@ func NewExecuteCmd() *cobra.Command {
 						ui.Fail(errors.Wrap(err, "error listing test workflows using selector"))
 					}
 
+					if len(testWorkflowsList) > 0 {
+						ui.Info("List of test workflows found for selector specification:")
+					} else {
+						ui.Warn("No test workflows found for selector specification")
+					}
+
 					for _, item := range testWorkflowsList {
 						testWorkflowNames = append(testWorkflowNames, item.Name)
+						ui.Info("- " + item.Name)
 					}
+				}
+
+				if len((testWorkflowNames)) == 0 {
+					ui.Fail(errors.New("no test workflows to run"))
 				}
 
 				// Resolve the params
