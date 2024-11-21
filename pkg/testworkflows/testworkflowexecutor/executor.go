@@ -275,7 +275,7 @@ func (e *executor) initialize(ctx context.Context, workflow *testworkflowsv1.Tes
 	}
 
 	// Apply the configuration
-	_, err = testworkflowresolver.ApplyWorkflowConfig(workflow, testworkflowmappers.MapConfigValueAPIToKube(request.Config), secretsBatch.Append)
+	_, err = testworkflowresolver.ApplyWorkflowConfig(workflow, testworkflowmappers.MapConfigValueAPIToKube(request.Config), testworkflowresolver.EnvVarSourceToSecretExpression(secretsBatch.Append))
 	if err != nil {
 		execution.InitializationError("Failed to apply configuration.", err)
 		return execution, nil, err
@@ -294,7 +294,7 @@ func (e *executor) initialize(ctx context.Context, workflow *testworkflowsv1.Tes
 	}
 
 	// Resolve the TestWorkflow
-	err = testworkflowresolver.ApplyTemplates(workflow, tplsMap, secretsBatch.Append)
+	err = testworkflowresolver.ApplyTemplates(workflow, tplsMap, testworkflowresolver.EnvVarSourceToSecretExpression(secretsBatch.Append))
 	if err != nil {
 		execution.InitializationError("Failed to apply templates.", err)
 		return execution, nil, err

@@ -13,7 +13,6 @@ import (
 	"reflect"
 
 	"github.com/pkg/errors"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
@@ -23,7 +22,7 @@ import (
 )
 
 func buildTemplate(template testworkflowsv1.TestWorkflowTemplate, cfg map[string]intstr.IntOrString,
-	externalize func(key, value string) (*corev1.EnvVarSource, error)) (testworkflowsv1.TestWorkflowTemplate, error) {
+	externalize func(key, value string) (expressions.Expression, error)) (testworkflowsv1.TestWorkflowTemplate, error) {
 	v, err := ApplyWorkflowTemplateConfig(template.DeepCopy(), cfg, externalize)
 	if err != nil {
 		return template, err
@@ -46,7 +45,7 @@ func getTemplate(name string, templates map[string]testworkflowsv1.TestWorkflowT
 }
 
 func getConfiguredTemplate(name string, cfg map[string]intstr.IntOrString, templates map[string]testworkflowsv1.TestWorkflowTemplate,
-	externalize func(key, value string) (*corev1.EnvVarSource, error)) (tpl testworkflowsv1.TestWorkflowTemplate, err error) {
+	externalize func(key, value string) (expressions.Expression, error)) (tpl testworkflowsv1.TestWorkflowTemplate, err error) {
 	tpl, err = getTemplate(name, templates)
 	if err != nil {
 		return tpl, err
@@ -129,7 +128,7 @@ func InjectServiceTemplate(svc *testworkflowsv1.ServiceSpec, template testworkfl
 }
 
 func applyTemplatesToStep(step testworkflowsv1.Step, templates map[string]testworkflowsv1.TestWorkflowTemplate,
-	externalize func(key, value string) (*corev1.EnvVarSource, error)) (testworkflowsv1.Step, error) {
+	externalize func(key, value string) (expressions.Expression, error)) (testworkflowsv1.Step, error) {
 	// Apply regular templates
 	for i, ref := range step.Use {
 		tpl, err := getConfiguredTemplate(ref.Name, ref.Config, templates, externalize)
@@ -252,7 +251,7 @@ func FlattenStepList(steps []testworkflowsv1.Step) []testworkflowsv1.Step {
 }
 
 func applyTemplatesToSpec(spec *testworkflowsv1.TestWorkflowSpec, templates map[string]testworkflowsv1.TestWorkflowTemplate,
-	externalize func(key, value string) (*corev1.EnvVarSource, error)) error {
+	externalize func(key, value string) (expressions.Expression, error)) error {
 	if spec == nil {
 		return nil
 	}
@@ -329,7 +328,7 @@ func applyTemplatesToSpec(spec *testworkflowsv1.TestWorkflowSpec, templates map[
 }
 
 func ApplyTemplates(workflow *testworkflowsv1.TestWorkflow, templates map[string]testworkflowsv1.TestWorkflowTemplate,
-	externalize func(key, value string) (*corev1.EnvVarSource, error)) error {
+	externalize func(key, value string) (expressions.Expression, error)) error {
 	if workflow == nil {
 		return nil
 	}
