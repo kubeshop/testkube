@@ -42,7 +42,6 @@ require (
 	github.com/keygen-sh/jsonapi-go v1.2.1
 	github.com/keygen-sh/keygen-go/v3 v3.2.0
 	github.com/kubepug/kubepug v1.7.1
-	github.com/kubeshop/testkube-cloud-api v1.16.16
 	github.com/kubeshop/testkube-operator v1.17.55-0.20241118133003-70462ac10f4a
 	github.com/minio/minio-go/v7 v7.0.66
 	github.com/montanaflynn/stats v0.7.1
@@ -128,11 +127,7 @@ require (
 	github.com/evanphx/json-patch/v5 v5.9.0 // indirect
 	github.com/fatih/color v1.16.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
-	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/go-errors/errors v1.5.1 // indirect
-	github.com/go-faster/errors v0.7.1 // indirect
-	github.com/go-faster/jx v1.1.0 // indirect
-	github.com/go-faster/yaml v0.4.6 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
@@ -160,7 +155,6 @@ require (
 	github.com/itchyny/timefmt-go v0.1.5 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/keygen-sh/go-update v1.0.0 // indirect
-	github.com/keygen-sh/keygen-go/v2 v2.4.1 // indirect
 	github.com/klauspost/compress v1.17.8 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.6 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
@@ -190,7 +184,6 @@ require (
 	github.com/nats-io/nkeys v0.4.7 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/oasisprotocol/curve25519-voi v0.0.0-20230110094441-db37f07504ce // indirect
-	github.com/ogen-go/ogen v0.76.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0-rc5 // indirect
 	github.com/package-url/packageurl-go v0.1.2 // indirect
@@ -205,7 +198,6 @@ require (
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1 // indirect
 	github.com/savsgio/gotils v0.0.0-20211223103454-d0aaa54c5899 // indirect
-	github.com/segmentio/asm v1.2.0 // indirect
 	github.com/segmentio/backo-go v1.0.1 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
 	github.com/shurcooL/githubv4 v0.0.0-20240120211514-18a1ae0e79dc // indirect
