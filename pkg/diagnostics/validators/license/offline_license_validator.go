@@ -5,16 +5,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/keygen-sh/jsonapi-go"
 	"github.com/keygen-sh/keygen-go/v3"
+
 	"github.com/kubeshop/testkube/pkg/diagnostics/validators"
 )
 
-// keygenOfflinePublicKey will be set through build process when changed
-var keygenOfflinePublicKey = "adfe762551bf19d5d43641a7e297d5c82fe46d6d1ea15e3cb9be79f8047e19c6"
+// KeygenOfflinePublicKey will be set through build process when changed
+var KeygenOfflinePublicKey = ""
 
 type License struct {
 	License      *keygen.License
@@ -55,7 +57,13 @@ func (v OfflineLicenseValidator) Validate(_ any) (r validators.ValidationResult)
 }
 
 func (v *OfflineLicenseValidator) ValidateOfflineLicenseCert(key string, file string) (l *License, e validators.Error) {
-	keygen.PublicKey = keygenOfflinePublicKey
+	if KeygenOfflinePublicKey == "" {
+		key, ok := os.LookupEnv("KEYGEN_PUBLIC_KEY")
+		if ok {
+			KeygenOfflinePublicKey = key
+		}
+	}
+	keygen.PublicKey = KeygenOfflinePublicKey
 	keygen.LicenseKey = key
 
 	// Verify the license file's signature

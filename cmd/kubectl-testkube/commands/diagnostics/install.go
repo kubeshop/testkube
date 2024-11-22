@@ -1,10 +1,11 @@
 package diagnostics
 
 import (
+	"github.com/spf13/cobra"
+
 	"github.com/kubeshop/testkube/pkg/diagnostics"
 	"github.com/kubeshop/testkube/pkg/diagnostics/validators/deps"
 	"github.com/kubeshop/testkube/pkg/ui"
-	"github.com/spf13/cobra"
 )
 
 func RegisterInstallValidators(_ *cobra.Command, d diagnostics.Diagnostics) {

@@ -1,11 +1,12 @@
 package diagnostics
 
 import (
+	"github.com/spf13/cobra"
+
 	"github.com/kubeshop/testkube/pkg/diagnostics"
 	"github.com/kubeshop/testkube/pkg/diagnostics/loader"
 	"github.com/kubeshop/testkube/pkg/diagnostics/validators/license"
 	"github.com/kubeshop/testkube/pkg/ui"
-	"github.com/spf13/cobra"
 )
 
 func RegisterLicenseValidators(cmd *cobra.Command, d diagnostics.Diagnostics) {

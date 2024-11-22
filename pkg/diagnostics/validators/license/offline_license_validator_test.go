@@ -4,8 +4,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/kubeshop/testkube/pkg/diagnostics/validators"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/kubeshop/testkube/pkg/diagnostics/validators"
 )
 
 // Test_Licenses basic test when licenses files are provided
