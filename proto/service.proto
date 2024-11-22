@@ -17,6 +17,7 @@ service TestKubeCloudAPI {
     rpc GetLogsStream(stream LogsStreamResponse) returns (stream LogsStreamRequest);
     rpc GetTestWorkflowNotificationsStream(stream TestWorkflowNotificationsResponse) returns (stream TestWorkflowNotificationsRequest);
     rpc GetProContext(google.protobuf.Empty) returns (ProContextResponse);
+    rpc GetCredential(CredentialRequest) returns (CredentialResponse);
 }
 
 enum LogsStreamRequestType {
@@ -113,4 +114,13 @@ enum Opcode {
 message WebsocketData {
     Opcode opcode = 1;
     bytes body    = 2;
+}
+
+message CredentialRequest {
+  string name = 1;
+  string execution_id = 2;
+}
+
+message CredentialResponse {
+  bytes content = 1;
 }

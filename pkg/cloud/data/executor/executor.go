@@ -9,7 +9,7 @@ import (
 	"google.golang.org/grpc/encoding/gzip"
 	"google.golang.org/protobuf/types/known/structpb"
 
-	"github.com/kubeshop/testkube/pkg/agent"
+	agentclient "github.com/kubeshop/testkube/pkg/agent/client"
 	"github.com/kubeshop/testkube/pkg/cloud"
 )
 
@@ -44,7 +44,7 @@ func (e *CloudGRPCExecutor) Execute(ctx context.Context, command Command, payloa
 		Command: string(command),
 		Payload: &s,
 	}
-	ctx = agent.AddAPIKeyMeta(ctx, e.apiKey)
+	ctx = agentclient.AddAPIKeyMeta(ctx, e.apiKey)
 	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
 	cmdResponse, err := e.client.Call(ctx, &req, opts...)
 	if err != nil {

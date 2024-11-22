@@ -19,7 +19,7 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
-	"github.com/kubeshop/testkube/pkg/agent"
+	agentclient "github.com/kubeshop/testkube/pkg/agent/client"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/logs/events"
 	"github.com/kubeshop/testkube/pkg/logs/pb"
@@ -38,7 +38,7 @@ func TestCloudAdapter(t *testing.T) {
 		id := "id1"
 
 		// and connection
-		grpcConn, err := agent.NewGRPCConnection(ctx, true, true, ts.Url, "", "", "", log.DefaultLogger)
+		grpcConn, err := agentclient.NewGRPCConnection(ctx, true, true, ts.Url, "", "", "", log.DefaultLogger)
 		assert.NoError(t, err)
 		defer grpcConn.Close()
 
@@ -80,7 +80,7 @@ func TestCloudAdapter(t *testing.T) {
 		id3 := "id3"
 
 		// and connection
-		grpcConn, err := agent.NewGRPCConnection(ctx, true, true, ts.Url, "", "", "", log.DefaultLogger)
+		grpcConn, err := agentclient.NewGRPCConnection(ctx, true, true, ts.Url, "", "", "", log.DefaultLogger)
 		assert.NoError(t, err)
 		defer grpcConn.Close()
 		grpcClient := pb.NewCloudLogsServiceClient(grpcConn)
@@ -129,7 +129,7 @@ func TestCloudAdapter(t *testing.T) {
 		id := "id1M"
 
 		// and grpc connetion to the server
-		grpcConn, err := agent.NewGRPCConnection(ctx, true, true, ts.Url, "", "", "", log.DefaultLogger)
+		grpcConn, err := agentclient.NewGRPCConnection(ctx, true, true, ts.Url, "", "", "", log.DefaultLogger)
 		assert.NoError(t, err)
 		defer grpcConn.Close()
 
@@ -163,7 +163,7 @@ func TestCloudAdapter(t *testing.T) {
 		ctx := context.Background()
 
 		// and grpc connetion to the server
-		grpcConn, err := agent.NewGRPCConnection(ctx, true, true, ts.Url, "", "", "", log.DefaultLogger)
+		grpcConn, err := agentclient.NewGRPCConnection(ctx, true, true, ts.Url, "", "", "", log.DefaultLogger)
 		assert.NoError(t, err)
 		defer grpcConn.Close()
 

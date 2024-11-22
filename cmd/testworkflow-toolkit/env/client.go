@@ -6,6 +6,7 @@ import (
 	"math"
 	"net/url"
 	"strconv"
+	"sync"
 
 	corev1 "k8s.io/api/core/v1"
 
@@ -13,10 +14,10 @@ import (
 	"k8s.io/client-go/rest"
 
 	config2 "github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
+	agentclient "github.com/kubeshop/testkube/pkg/agent/client"
 	"github.com/kubeshop/testkube/pkg/cache"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
-	"github.com/kubeshop/testkube/pkg/agent"
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	cloudexecutor "github.com/kubeshop/testkube/pkg/cloud/data/executor"
@@ -86,12 +87,26 @@ func Testkube() client.Client {
 	return client.NewDirectAPIClient(httpClient, sseClient, fmt.Sprintf("http://%s:%d", host, port), "")
 }
 
+var (
+	cloudMu       sync.Mutex
+	cloudExecutor cloudexecutor.Executor
+	cloudClient   cloud.TestKubeCloudAPIClient
+)
+
 func Cloud(ctx context.Context) (cloudexecutor.Executor, cloud.TestKubeCloudAPIClient) {
-	cfg := config2.Config().Worker.Connection
-	grpcConn, err := agent.NewGRPCConnection(ctx, cfg.TlsInsecure, cfg.SkipVerify, cfg.Url, "", "", "", log.DefaultLogger)
-	if err != nil {
-		ui.Fail(fmt.Errorf("failed to connect with Cloud: %w", err))
+	cloudMu.Lock()
+	defer cloudMu.Unlock()
+
+	if cloudExecutor == nil {
+		cfg := config2.Config().Worker.Connection
+		logger := log.NewSilent()
+		grpcConn, err := agentclient.NewGRPCConnection(ctx, cfg.TlsInsecure, cfg.SkipVerify, cfg.Url, "", "", "", logger)
+		if err != nil {
+			ui.Fail(fmt.Errorf("failed to connect with Cloud: %w", err))
+		}
+		cloudClient = cloud.NewTestKubeCloudAPIClient(grpcConn)
+		cloudExecutor = cloudexecutor.NewCloudGRPCExecutor(cloudClient, grpcConn, cfg.ApiKey)
 	}
-	grpcClient := cloud.NewTestKubeCloudAPIClient(grpcConn)
-	return cloudexecutor.NewCloudGRPCExecutor(grpcClient, grpcConn, cfg.ApiKey), grpcClient
+
+	return cloudExecutor, cloudClient
 }

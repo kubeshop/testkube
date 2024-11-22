@@ -10,6 +10,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/encoding/gzip"
 
+	agentclient "github.com/kubeshop/testkube/pkg/agent/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
@@ -62,7 +63,7 @@ func (ag *Agent) Notify(event testkube.Event) (result testkube.EventResult) {
 func (ag *Agent) runEventLoop(ctx context.Context) error {
 	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name)}
 	if ag.apiKey != "" {
-		ctx = AddAPIKeyMeta(ctx, ag.apiKey)
+		ctx = agentclient.AddAPIKeyMeta(ctx, ag.apiKey)
 	}
 
 	stream, err := ag.client.Send(ctx, opts...)

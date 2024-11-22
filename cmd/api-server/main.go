@@ -15,6 +15,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	"github.com/kubeshop/testkube/cmd/api-server/services"
 	"github.com/kubeshop/testkube/internal/app/api/debug"
+	agentclient "github.com/kubeshop/testkube/pkg/agent/client"
 	cloudartifacts "github.com/kubeshop/testkube/pkg/cloud/data/artifact"
 	cloudtestworkflow "github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
 	"github.com/kubeshop/testkube/pkg/event/kind/cdevent"
@@ -134,7 +135,7 @@ func main() {
 	if strings.HasPrefix(controlPlaneUrl, fmt.Sprintf("%s:%d", cfg.APIServerFullname, cfg.GRPCServerPort)) {
 		controlPlaneUrl = fmt.Sprintf("127.0.0.1:%d", cfg.GRPCServerPort)
 	}
-	grpcConn, err = agent.NewGRPCConnection(
+	grpcConn, err = agentclient.NewGRPCConnection(
 		ctx,
 		cfg.TestkubeProTLSInsecure,
 		cfg.TestkubeProSkipVerify,

@@ -13,7 +13,7 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
-	"github.com/kubeshop/testkube/pkg/agent"
+	agentclient "github.com/kubeshop/testkube/pkg/agent/client"
 	"github.com/kubeshop/testkube/pkg/capabilities"
 	"github.com/kubeshop/testkube/pkg/cloud"
 
@@ -84,7 +84,7 @@ func NewArtifactsCmd() *cobra.Command {
 			// Archive
 			ctx, cancel := context.WithTimeout(cmd.Context(), 30*time.Second)
 			defer cancel()
-			ctx = agent.AddAPIKeyMeta(ctx, config.Config().Worker.Connection.ApiKey)
+			ctx = agentclient.AddAPIKeyMeta(ctx, config.Config().Worker.Connection.ApiKey)
 			executor, client := env.Cloud(ctx)
 			proContext, err := client.GetProContext(ctx, &emptypb.Empty{})
 			var supported []*cloud.Capability

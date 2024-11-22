@@ -62,6 +62,10 @@ func (s *Server) GetProContext(_ context.Context, _ *emptypb.Empty) (*cloud.ProC
 	return nil, status.Error(codes.Unimplemented, "not supported in the standalone version")
 }
 
+func (s *Server) GetCredential(_ context.Context, _ *cloud.CredentialRequest) (*cloud.CredentialResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not supported in the standalone version")
+}
+
 func (s *Server) ExecuteAsync(srv cloud.TestKubeCloudAPI_ExecuteAsyncServer) error {
 	ctx, cancel := context.WithCancel(srv.Context())
 	g, _ := errgroup.WithContext(ctx)

@@ -10,6 +10,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
 )
@@ -150,7 +151,7 @@ type execution struct {
 func (e *execution) Run() (*executionResult, error) {
 	// Immediately fail when aborted
 	if e.group.aborted.Load() {
-		return &executionResult{Aborted: true, ExitCode: data.CodeAborted}, nil
+		return &executionResult{Aborted: true, ExitCode: constants.CodeAborted}, nil
 	}
 
 	// Ensure it's not paused
@@ -163,7 +164,7 @@ func (e *execution) Run() (*executionResult, error) {
 	if e.group.aborted.Load() {
 		e.group.pauseMu.Unlock()
 		e.cmdMu.Unlock()
-		return &executionResult{Aborted: true, ExitCode: data.CodeAborted}, nil
+		return &executionResult{Aborted: true, ExitCode: constants.CodeAborted}, nil
 	}
 
 	// Initialize local state
@@ -208,7 +209,7 @@ func (e *execution) Run() (*executionResult, error) {
 
 	// Fail when aborted
 	if e.group.aborted.Load() {
-		return &executionResult{Aborted: true, ExitCode: data.CodeAborted}, nil
+		return &executionResult{Aborted: true, ExitCode: constants.CodeAborted}, nil
 	}
 
 	return &executionResult{ExitCode: uint8(exitCode)}, nil
