@@ -14,6 +14,7 @@ func RegisterLicenseValidators(cmd *cobra.Command, d diagnostics.Diagnostics) {
 	namespace := cmd.Flag("namespace").Value.String()
 	keyOverride := cmd.Flag("key-override").Value.String()
 	fileOverride := cmd.Flag("file-override").Value.String()
+	isOfflineOverride := cmd.Flag("file-override").Changed && cmd.Flag("file-override").Value.String() == "true"
 
 	var err error
 	l := loader.License{}
@@ -28,19 +29,23 @@ func RegisterLicenseValidators(cmd *cobra.Command, d diagnostics.Diagnostics) {
 	if fileOverride != "" && keyOverride != "" {
 		l.EnterpriseOfflineActivation = true
 	}
+	if isOfflineOverride {
+		l.EnterpriseOfflineActivation = isOfflineOverride
+	}
 
-	if fileOverride == "" || keyOverride == "" {
+	if keyOverride == "" || (l.EnterpriseOfflineActivation && fileOverride == "") {
 		l, err = loader.GetLicenseConfig(namespace, "")
 		ui.ExitOnError("loading license data", err)
 	}
 
 	// License validator
-	licenseGroup := d.AddValidatorGroup("license.validation", l.EnterpriseLicenseKey)
 	if l.EnterpriseOfflineActivation {
+		licenseGroup := d.AddValidatorGroup("offline.license.validation", l.EnterpriseLicenseKey)
 		licenseGroup.AddValidator(license.NewFileValidator())
 		licenseGroup.AddValidator(license.NewOfflineLicenseKeyValidator())
 		licenseGroup.AddValidator(license.NewOfflineLicenseValidator(l.EnterpriseLicenseKey, l.EnterpriseLicenseFile))
 	} else {
+		licenseGroup := d.AddValidatorGroup("online.license.validation", l.EnterpriseLicenseKey)
 		licenseGroup.AddValidator(license.NewOnlineLicenseKeyValidator())
 		licenseGroup.AddValidator(license.NewKeygenShValidator())
 	}

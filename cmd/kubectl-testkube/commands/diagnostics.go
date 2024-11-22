@@ -17,6 +17,7 @@ func NewDiagnosticsCmd() *cobra.Command {
 		Run:     NewRunDiagnosticsCmdFunc(),
 	}
 
+	cmd.Flags().Bool("is-offline-override", false, "Pass License key manually (we will not try to locate it automatically)")
 	cmd.Flags().StringP("key-override", "k", "", "Pass License key manually (we will not try to locate it automatically)")
 	cmd.Flags().StringP("file-override", "f", "", "Pass License file manually (we will not try to locate it automatically)")
 
