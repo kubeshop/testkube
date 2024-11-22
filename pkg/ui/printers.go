@@ -106,7 +106,6 @@ func (ui *UI) Print(message string, subMessages ...string) {
 
 func (ui *UI) Printf(format string, data ...any) {
 	fmt.Fprintf(ui.Writer, format, data...)
-	fmt.Fprintln(ui.Writer)
 }
 
 func (ui *UI) PrintDot() {

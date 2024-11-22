@@ -2,7 +2,9 @@ package common
 
 import (
 	"bufio"
+	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -628,6 +630,51 @@ func KubectlPrintEvents(namespace string) error {
 	return process.ExecuteAndStreamOutput(kubectl, args...)
 }
 
+func KubectlVersion() (client string, server string, err error) {
+	kubectl, err := exec.LookPath("kubectl")
+	if err != nil {
+		return "", "", err
+	}
+
+	args := []string{
+		"version",
+		"-o", "json",
+	}
+
+	if ui.IsVerbose() {
+		ui.ShellCommand(kubectl, args...)
+		ui.NL()
+	}
+
+	out, eerr := process.Execute(kubectl, args...)
+	if eerr != nil {
+		return "", "", eerr
+	}
+
+	type Version struct {
+		ClientVersion struct {
+			Version string `json:"gitVersion,omitempty"`
+		} `json:"clientVersion,omitempty"`
+		ServerVersion struct {
+			Version string `json:"gitVersion,omitempty"`
+		} `json:"serverVersion,omitempty"`
+	}
+
+	var v Version
+
+	out, err = extractJSONObject(out)
+	if err != nil {
+		return "", "", err
+	}
+
+	err = json.Unmarshal(out, &v)
+	if err != nil {
+		return "", "", err
+	}
+
+	return strings.TrimLeft(v.ClientVersion.Version, "v"), strings.TrimLeft(v.ServerVersion.Version, "v"), nil
+}
+
 func KubectlDescribePods(namespace string) error {
 	kubectl, err := lookupKubectlPath()
 	if err != nil {
@@ -640,8 +687,10 @@ func KubectlDescribePods(namespace string) error {
 		"-n", namespace,
 	}
 
-	ui.ShellCommand(kubectl, args...)
-	ui.NL()
+	if ui.IsVerbose() {
+		ui.ShellCommand(kubectl, args...)
+		ui.NL()
+	}
 
 	return process.ExecuteAndStreamOutput(kubectl, args...)
 }
@@ -659,8 +708,10 @@ func KubectlPrintPods(namespace string) error {
 		"--show-labels",
 	}
 
-	ui.ShellCommand(kubectl, args...)
-	ui.NL()
+	if ui.IsVerbose() {
+		ui.ShellCommand(kubectl, args...)
+		ui.NL()
+	}
 
 	return process.ExecuteAndStreamOutput(kubectl, args...)
 }
@@ -676,8 +727,10 @@ func KubectlGetStorageClass(namespace string) error {
 		"storageclass",
 	}
 
-	ui.ShellCommand(kubectl, args...)
-	ui.NL()
+	if ui.IsVerbose() {
+		ui.ShellCommand(kubectl, args...)
+		ui.NL()
+	}
 
 	return process.ExecuteAndStreamOutput(kubectl, args...)
 }
@@ -694,8 +747,10 @@ func KubectlGetServices(namespace string) error {
 		"-n", namespace,
 	}
 
-	ui.ShellCommand(kubectl, args...)
-	ui.NL()
+	if ui.IsVerbose() {
+		ui.ShellCommand(kubectl, args...)
+		ui.NL()
+	}
 
 	return process.ExecuteAndStreamOutput(kubectl, args...)
 }
@@ -713,8 +768,10 @@ func KubectlDescribeServices(namespace string) error {
 		"-o", "yaml",
 	}
 
-	ui.ShellCommand(kubectl, args...)
-	ui.NL()
+	if ui.IsVerbose() {
+		ui.ShellCommand(kubectl, args...)
+		ui.NL()
+	}
 
 	return process.ExecuteAndStreamOutput(kubectl, args...)
 }
@@ -754,6 +811,60 @@ func KubectlDescribeIngresses(namespace string) error {
 	ui.NL()
 
 	return process.ExecuteAndStreamOutput(kubectl, args...)
+}
+
+func KubectlGetPodEnvs(selector, namespace string) (map[string]string, error) {
+	kubectl, clierr := lookupKubectlPath()
+	if clierr != nil {
+		return nil, clierr.ActualError
+	}
+
+	args := []string{
+		"get",
+		"pod",
+		selector,
+		"-n", namespace,
+		"-o", `jsonpath='{range .items[*].spec.containers[*]}{"\nContainer: "}{.name}{"\n"}{range .env[*]}{.name}={.value}{"\n"}{end}{end}'`,
+	}
+
+	if ui.IsVerbose() {
+		ui.ShellCommand(kubectl, args...)
+		ui.NL()
+	}
+
+	out, err := process.Execute(kubectl, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	return convertEnvToMap(string(out)), nil
+}
+
+func KubectlGetSecret(selector, namespace string) (map[string]string, error) {
+	kubectl, clierr := lookupKubectlPath()
+	if clierr != nil {
+		return nil, clierr.ActualError
+	}
+
+	args := []string{
+		"get",
+		"secret",
+		selector,
+		"-n", namespace,
+		"-o", `jsonpath='{.data}'`,
+	}
+
+	if ui.IsVerbose() {
+		ui.ShellCommand(kubectl, args...)
+		ui.NL()
+	}
+
+	out, err := process.Execute(kubectl, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	return secretsJSONToMap(string(out))
 }
 
 func lookupKubectlPath() (string, *CLIError) {
@@ -1003,4 +1114,72 @@ func GetLatestVersion() (string, error) {
 	}
 
 	return strings.TrimPrefix(metadata.TagName, "v"), nil
+}
+
+func convertEnvToMap(input string) map[string]string {
+	result := make(map[string]string)
+	scanner := bufio.NewScanner(strings.NewReader(input))
+
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+
+		// Skip empty lines
+		if line == "" {
+			continue
+		}
+
+		// Split on first = only
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) != 2 {
+			continue // Skip invalid lines
+		}
+
+		key := strings.TrimSpace(parts[0])
+		value := strings.TrimSpace(parts[1])
+
+		// Store in map
+		result[key] = value
+	}
+
+	return result
+}
+
+func secretsJSONToMap(in string) (map[string]string, error) {
+	res := map[string]string{}
+	in = strings.TrimLeft(in, "'")
+	in = strings.TrimRight(in, "'")
+	err := json.Unmarshal([]byte(in), &res)
+
+	if len(res) > 0 {
+		for k := range res {
+			decoded, err := base64.StdEncoding.DecodeString(res[k])
+			if err != nil {
+				return nil, err
+			}
+			res[k] = string(decoded)
+		}
+	}
+
+	return res, err
+}
+
+// extractJSONObject extracts JSON from any string
+func extractJSONObject(input []byte) ([]byte, error) {
+	// Find the first '{' and last '}' to extract JSON object
+	start := bytes.Index(input, []byte("{"))
+	end := bytes.LastIndex(input, []byte("}"))
+
+	if start == -1 || end == -1 || start > end {
+		return []byte(""), fmt.Errorf("invalid JSON format")
+	}
+
+	jsonStr := input[start : end+1]
+
+	// Validate JSON
+	var prettyJSON bytes.Buffer
+	if err := json.Indent(&prettyJSON, []byte(jsonStr), "", "  "); err != nil {
+		return []byte(""), err
+	}
+
+	return prettyJSON.Bytes(), nil
 }
