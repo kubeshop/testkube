@@ -3,6 +3,7 @@ package diagnostics
 import (
 	"github.com/spf13/cobra"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/pkg/diagnostics"
 	"github.com/kubeshop/testkube/pkg/diagnostics/loader"
 	"github.com/kubeshop/testkube/pkg/diagnostics/validators/license"
@@ -14,7 +15,23 @@ func RegisterLicenseValidators(cmd *cobra.Command, d diagnostics.Diagnostics) {
 	namespace := cmd.Flag("namespace").Value.String()
 	keyOverride := cmd.Flag("key-override").Value.String()
 	fileOverride := cmd.Flag("file-override").Value.String()
-	isOfflineOverride := cmd.Flag("file-override").Changed && cmd.Flag("file-override").Value.String() == "true"
+	isOfflineOverride := cmd.Flag("offline-override").Changed && cmd.Flag("offline-override").Value.String() == "true"
+
+	// if not namespace provided load all namespaces having license file secret
+	if !cmd.Flag("namespace").Changed {
+		namespaces, err := common.KubectlGetNamespacesHavingSecrets("testkube-enterprise-license")
+		if err != nil {
+			ui.Errf("Can't check for namespaces, make sure you have valid access rights to list resources in Kubernetes")
+			ui.ExitOnError("error:", err)
+			return
+		}
+
+		if len(namespaces) == 0 {
+			ui.Failf("Can't locate any Testkube installations please pass `--namespace` parameter")
+		}
+
+		namespace = ui.Select("Choose namespace to check license", namespaces)
+	}
 
 	var err error
 	l := loader.License{}
@@ -59,6 +76,7 @@ func NewLicenseCheckCmd() *cobra.Command {
 		Run:     RunLicenseCheckFunc(),
 	}
 
+	cmd.Flags().Bool("offline-override", false, "Pass License key manually (we will not try to locate it automatically)")
 	cmd.Flags().StringP("key-override", "k", "", "Pass License key manually (we will not try to locate it automatically)")
 	cmd.Flags().StringP("file-override", "f", "", "Pass License file manually (we will not try to locate it automatically)")
 
@@ -67,6 +85,8 @@ func NewLicenseCheckCmd() *cobra.Command {
 
 func RunLicenseCheckFunc() func(cmd *cobra.Command, args []string) {
 	return func(cmd *cobra.Command, args []string) {
+		ui.H1("Check licensing issues")
+
 		d := diagnostics.New()
 		RegisterLicenseValidators(cmd, d)
 
