@@ -26,11 +26,14 @@ func RegisterLicenseValidators(cmd *cobra.Command, d diagnostics.Diagnostics) {
 			return
 		}
 
-		if len(namespaces) == 0 {
+		switch true {
+		case len(namespaces) == 0:
 			ui.Failf("Can't locate any Testkube installations please pass `--namespace` parameter")
+		case len(namespaces) == 1:
+			namespace = namespaces[0]
+		case len(namespaces) > 1:
+			namespace = ui.Select("Choose namespace to check license", namespaces)
 		}
-
-		namespace = ui.Select("Choose namespace to check license", namespaces)
 	}
 
 	var err error
