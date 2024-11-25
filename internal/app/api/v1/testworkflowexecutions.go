@@ -14,6 +14,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/websocket/v2"
 	"github.com/pkg/errors"
+	"github.com/valyala/fasthttp"
 
 	"github.com/kubeshop/testkube/internal/app/api/apiutils"
 	"github.com/kubeshop/testkube/internal/common"
@@ -22,6 +23,41 @@ import (
 	testworkflow2 "github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 )
+
+func (s *TestkubeAPI) streamNotifications(ctx *fasthttp.RequestCtx, id string, notifications executionworkertypes.NotificationsWatcher) {
+	// Initiate processing event stream
+	ctx.SetContentType("text/event-stream")
+	ctx.Response.Header.Set("Cache-Control", "no-cache")
+	ctx.Response.Header.Set("Connection", "keep-alive")
+	ctx.Response.Header.Set("Transfer-Encoding", "chunked")
+
+	// Stream the notifications
+	ctx.SetBodyStreamWriter(func(w *bufio.Writer) {
+		err := w.Flush()
+		if err != nil {
+			s.Log.Errorw("could not flush stream body", "error", err, "id", id)
+		}
+
+		enc := json.NewEncoder(w)
+
+		for n := range notifications.Channel() {
+			err := enc.Encode(n)
+			if err != nil {
+				s.Log.Errorw("could not encode value", "error", err, "id", id)
+			}
+
+			_, err = fmt.Fprintf(w, "\n")
+			if err != nil {
+				s.Log.Errorw("could not print new line", "error", err, "id", id)
+			}
+
+			err = w.Flush()
+			if err != nil {
+				s.Log.Errorw("could not flush stream body", "error", err, "id", id)
+			}
+		}
+	})
+}
 
 func (s *TestkubeAPI) StreamTestWorkflowExecutionNotificationsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
@@ -47,39 +83,40 @@ func (s *TestkubeAPI) StreamTestWorkflowExecutionNotificationsHandler() fiber.Ha
 			return s.BadRequest(c, errPrefix, "fetching notifications", notifications.Err())
 		}
 
-		// Initiate processing event stream
-		ctx.SetContentType("text/event-stream")
-		ctx.Response.Header.Set("Cache-Control", "no-cache")
-		ctx.Response.Header.Set("Connection", "keep-alive")
-		ctx.Response.Header.Set("Transfer-Encoding", "chunked")
+		s.streamNotifications(ctx, id, notifications)
+		return nil
+	}
+}
 
-		// Stream the notifications
-		ctx.SetBodyStreamWriter(func(w *bufio.Writer) {
-			err := w.Flush()
-			if err != nil {
-				s.Log.Errorw("could not flush stream body", "error", err, "id", id)
-			}
+func (s *TestkubeAPI) StreamTestWorkflowExecutionServiceNotificationsHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		ctx := c.Context()
+		executionID := c.Params("executionID")
+		serviceName := c.Params("serviceName")
+		serviceIndex := c.Params("serviceIndex")
+		errPrefix := fmt.Sprintf("failed to stream test workflow execution service '%s' instance '%s' notifications '%s'",
+			serviceName, serviceIndex, executionID)
 
-			enc := json.NewEncoder(w)
+		// Fetch execution from database
+		execution, err := s.TestWorkflowResults.Get(ctx, executionID)
+		if err != nil {
+			return s.ClientError(c, errPrefix, err)
+		}
 
-			for n := range notifications.Channel() {
-				err := enc.Encode(n)
-				if err != nil {
-					s.Log.Errorw("could not encode value", "error", err, "id", id)
-				}
-
-				_, err = fmt.Fprintf(w, "\n")
-				if err != nil {
-					s.Log.Errorw("could not print new line", "error", err, "id", id)
-				}
-
-				err = w.Flush()
-				if err != nil {
-					s.Log.Errorw("could not flush stream body", "error", err, "id", id)
-				}
-			}
+		// Check for the logs
+		id := fmt.Sprintf("%s-%s-%s", execution.Id, serviceName, serviceIndex)
+		notifications := s.ExecutionWorkerClient.Notifications(ctx, id, executionworkertypes.NotificationsOptions{
+			Hints: executionworkertypes.Hints{
+				Namespace:   execution.Namespace,
+				ScheduledAt: common.Ptr(execution.ScheduledAt),
+				Signature:   execution.Signature,
+			},
 		})
+		if notifications.Err() != nil {
+			return s.BadRequest(c, errPrefix, "fetching notifications", notifications.Err())
+		}
 
+		s.streamNotifications(ctx, id, notifications)
 		return nil
 	}
 }
@@ -105,6 +142,46 @@ func (s *TestkubeAPI) StreamTestWorkflowExecutionNotificationsWebSocketHandler()
 
 		// Check for the logs
 		notifications := s.ExecutionWorkerClient.Notifications(ctx, execution.Id, executionworkertypes.NotificationsOptions{
+			Hints: executionworkertypes.Hints{
+				Namespace:   execution.Namespace,
+				Signature:   execution.Signature,
+				ScheduledAt: common.Ptr(execution.ScheduledAt),
+			},
+		})
+		if notifications.Err() != nil {
+			return
+		}
+
+		for n := range notifications.Channel() {
+			_ = c.WriteJSON(n)
+		}
+	})
+}
+
+func (s *TestkubeAPI) StreamTestWorkflowExecutionServiceNotificationsWebSocketHandler() fiber.Handler {
+	return websocket.New(func(c *websocket.Conn) {
+		ctx, ctxCancel := context.WithCancel(context.Background())
+		executionID := c.Params("executionID")
+		serviceName := c.Params("serviceName")
+		serviceIndex := c.Params("serviceIndex")
+
+		// Stop reading when the WebSocket connection is already closed
+		originalClose := c.CloseHandler()
+		c.SetCloseHandler(func(code int, text string) error {
+			ctxCancel()
+			return originalClose(code, text)
+		})
+		defer c.Conn.Close()
+
+		// Fetch execution from database
+		execution, err := s.TestWorkflowResults.Get(ctx, executionID)
+		if err != nil {
+			return
+		}
+
+		// Check for the logs
+		id := fmt.Sprintf("%s-%s-%s", execution.Id, serviceName, serviceIndex)
+		notifications := s.ExecutionWorkerClient.Notifications(ctx, id, executionworkertypes.NotificationsOptions{
 			Hints: executionworkertypes.Hints{
 				Namespace:   execution.Namespace,
 				Signature:   execution.Signature,
