@@ -13,6 +13,11 @@ import (
 )
 
 func NewWatchTestWorkflowExecutionCmd() *cobra.Command {
+	var (
+		serviceName  string
+		serviceIndex int
+	)
+
 	cmd := &cobra.Command{
 		Use:     "testworkflowexecution <executionName>",
 		Aliases: []string{"testworkflowexecutions", "twe", "tw"},
@@ -31,7 +36,7 @@ func NewWatchTestWorkflowExecutionCmd() *cobra.Command {
 			ui.ExitOnError("render test workflow execution", err)
 
 			ui.NL()
-			exitCode := uiWatch(execution, client)
+			exitCode := uiWatch(execution, serviceName, serviceIndex, client)
 			ui.NL()
 
 			execution, err = client.GetTestWorkflowExecution(execution.Id)
@@ -42,6 +47,9 @@ func NewWatchTestWorkflowExecutionCmd() *cobra.Command {
 			os.Exit(exitCode)
 		},
 	}
+
+	cmd.Flags().StringVar(&serviceName, "service-name", "", "test workflow service name")
+	cmd.Flags().IntVar(&serviceIndex, "service-index", 0, "test workflow service index")
 
 	return cmd
 }

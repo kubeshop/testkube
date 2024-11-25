@@ -47,6 +47,8 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 		masks                    []string
 		tags                     map[string]string
 		selectors                []string
+		serviceName              string
+		serviceIndex             int
 	)
 
 	cmd := &cobra.Command{
@@ -146,7 +148,7 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 					ui.NL()
 					if !execution.FailedToInitialize() {
 						if watchEnabled && len(args) > 0 {
-							exitCode = uiWatch(execution, client)
+							exitCode = uiWatch(execution, serviceName, serviceIndex, client)
 							ui.NL()
 							if downloadArtifactsEnabled {
 								tests.DownloadTestWorkflowArtifacts(execution.Id, downloadDir, format, masks, client, outputPretty)
@@ -181,12 +183,21 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 	cmd.Flags().StringArrayVarP(&masks, "mask", "", []string{}, "regexp to filter downloaded files, single or comma separated, like report/.* or .*\\.json,.*\\.js$")
 	cmd.Flags().StringToStringVarP(&tags, "tag", "", map[string]string{}, "execution tags in a form of name1=val1 passed to executor")
 	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label key value pair: --label key1=value1 or label expression")
+	cmd.Flags().StringVar(&serviceName, "service-name", "", "test workflow service name")
+	cmd.Flags().IntVar(&serviceIndex, "service-index", 0, "test workflow service index")
 
 	return cmd
 }
 
-func uiWatch(execution testkube.TestWorkflowExecution, client apiclientv1.Client) int {
-	result, err := watchTestWorkflowLogs(execution.Id, execution.Signature, client)
+func uiWatch(execution testkube.TestWorkflowExecution, serviceName string, serviceIndex int, client apiclientv1.Client) int {
+	var result *testkube.TestWorkflowResult
+	var err error
+
+	if serviceName == "" {
+		result, err = watchTestWorkflowLogs(execution.Id, execution.Signature, client)
+	} else {
+		result, err = watchTestWorkflowServiceLogs(execution.Id, serviceName, serviceIndex, execution.Signature, client)
+	}
 	ui.ExitOnError("reading test workflow execution logs", err)
 
 	// Apply the result in the execution
@@ -287,6 +298,36 @@ func watchTestWorkflowLogs(id string, signature []testkube.TestWorkflowSignature
 	ui.Info("Getting logs from test workflow job", id)
 
 	notifications, err := client.GetTestWorkflowExecutionNotifications(id)
+	ui.ExitOnError("getting logs from executor", err)
+
+	steps := flattenSignatures(signature)
+
+	var result *testkube.TestWorkflowResult
+	var isLineBeginning = true
+	for l := range notifications {
+		if l.Output != nil {
+			continue
+		}
+		if l.Result != nil {
+			if printResultDifference(result, l.Result, steps) {
+				isLineBeginning = true
+			}
+			result = l.Result
+			continue
+		}
+
+		printStructuredLogLines(l.Log, &isLineBeginning)
+	}
+
+	ui.NL()
+
+	return result, err
+}
+
+func watchTestWorkflowServiceLogs(id, serviceName string, serviceIndex int, signature []testkube.TestWorkflowSignature, client apiclientv1.Client) (*testkube.TestWorkflowResult, error) {
+	ui.Info("Getting logs from test workflow service pod", fmt.Sprintf("%s-%s-%d", id, serviceName, serviceIndex))
+
+	notifications, err := client.GetTestWorkflowExecutionServiceNotifications(id, serviceName, serviceIndex)
 	ui.ExitOnError("getting logs from executor", err)
 
 	steps := flattenSignatures(signature)

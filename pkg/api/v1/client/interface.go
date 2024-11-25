@@ -154,6 +154,7 @@ type TestWorkflowAPI interface {
 	ExecuteTestWorkflows(selector string, request testkube.TestWorkflowExecutionRequest) ([]testkube.TestWorkflowExecution, error)
 	GetTestWorkflowExecutionNotifications(id string) (chan testkube.TestWorkflowExecutionNotification, error)
 	GetTestWorkflowExecutionLogs(id string) ([]byte, error)
+	GetTestWorkflowExecutionServiceNotifications(id, serviceName string, serviceIndex int) (chan testkube.TestWorkflowExecutionNotification, error)
 }
 
 // TestWorkflowExecutionAPI describes test workflow api methods
