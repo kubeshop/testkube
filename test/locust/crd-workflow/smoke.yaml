@@ -1,0 +1,27 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: locust-workflow-smoke
+  labels:
+    core-tests: workflows
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: locust-example # TODO: replace before merge
+      paths:
+      - test/locust/locust-project
+  container:
+    image: locustio/locust
+    # resources:
+    #   requests:
+    #     cpu: 256m
+    #     memory: 256Mi
+    workingDir: /data/repo/test/locust/locust-project
+  steps:
+  - name: Run test
+    shell: |
+      locust --host https://testkube-test-page-lipsum.pages.dev/ --headless --users 6 --spawn-rate 3 --run-time 10s --html=/data/artifacts/report.html
+    artifacts:
+      paths:
+      - "/data/artifacts/**"
