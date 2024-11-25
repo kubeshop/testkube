@@ -298,7 +298,7 @@ func watchTestWorkflowLogs(id string, signature []testkube.TestWorkflowSignature
 	ui.Info("Getting logs from test workflow job", id)
 
 	notifications, err := client.GetTestWorkflowExecutionNotifications(id)
-	ui.ExitOnError("getting logs from executor", err)
+	ui.ExitOnError("getting logs from test workflow", err)
 
 	steps := flattenSignatures(signature)
 
@@ -328,7 +328,7 @@ func watchTestWorkflowServiceLogs(id, serviceName string, serviceIndex int, sign
 	ui.Info("Getting logs from test workflow service pod", fmt.Sprintf("%s-%s-%d", id, serviceName, serviceIndex))
 
 	notifications, err := client.GetTestWorkflowExecutionServiceNotifications(id, serviceName, serviceIndex)
-	ui.ExitOnError("getting logs from executor", err)
+	ui.ExitOnError("getting logs from service", err)
 
 	steps := flattenSignatures(signature)
 
