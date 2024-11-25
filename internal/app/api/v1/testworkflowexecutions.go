@@ -107,9 +107,9 @@ func (s *TestkubeAPI) StreamTestWorkflowExecutionServiceNotificationsHandler() f
 		id := fmt.Sprintf("%s-%s-%s", execution.Id, serviceName, serviceIndex)
 		notifications := s.ExecutionWorkerClient.Notifications(ctx, id, executionworkertypes.NotificationsOptions{
 			Hints: executionworkertypes.Hints{
-				Namespace:   execution.Namespace,
-				ScheduledAt: common.Ptr(execution.ScheduledAt),
-				Signature:   execution.Signature,
+				Namespace: execution.Namespace,
+				//				ScheduledAt: common.Ptr(execution.ScheduledAt),
+				//				Signature:   execution.Signature,
 			},
 		})
 		if notifications.Err() != nil {
@@ -183,9 +183,9 @@ func (s *TestkubeAPI) StreamTestWorkflowExecutionServiceNotificationsWebSocketHa
 		id := fmt.Sprintf("%s-%s-%s", execution.Id, serviceName, serviceIndex)
 		notifications := s.ExecutionWorkerClient.Notifications(ctx, id, executionworkertypes.NotificationsOptions{
 			Hints: executionworkertypes.Hints{
-				Namespace:   execution.Namespace,
-				Signature:   execution.Signature,
-				ScheduledAt: common.Ptr(execution.ScheduledAt),
+				Namespace: execution.Namespace,
+				//				Signature:   execution.Signature,
+				//				ScheduledAt: common.Ptr(execution.ScheduledAt),
 			},
 		})
 		if notifications.Err() != nil {
