@@ -15,7 +15,6 @@ import (
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event"
-	testworkflowmappers "github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/runner"
@@ -26,14 +25,11 @@ const (
 	SaveResultRetryMaxAttempts = 100
 	SaveResultRetryBaseDelay   = 300 * time.Millisecond
 
-	SaveLogsRetryMaxAttempts = 10
-
 	ConfigSizeLimit = 3 * 1024 * 1024
 )
 
 //go:generate mockgen -destination=./mock_executor.go -package=testworkflowexecutor "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor" TestWorkflowExecutor
 type TestWorkflowExecutor interface {
-	Control(ctx context.Context, testWorkflow *testworkflowsv1.TestWorkflow, execution *testkube.TestWorkflowExecution) error
 	Execute(ctx context.Context, workflow testworkflowsv1.TestWorkflow, request testkube.TestWorkflowExecutionRequest) (
 		execution testkube.TestWorkflowExecution, err error)
 }
@@ -99,10 +95,6 @@ func New(emitter *event.Emitter,
 	}
 }
 
-func (e *executor) Control(ctx context.Context, testWorkflow *testworkflowsv1.TestWorkflow, execution *testkube.TestWorkflowExecution) error {
-	return e.runner.Monitor(ctx, execution.Id)
-}
-
 func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWorkflow, request testkube.TestWorkflowExecutionRequest) (
 	testkube.TestWorkflowExecution, error) {
 	// Determine the organization/environment
@@ -129,7 +121,7 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 		// Start to control the results
 		go func() {
 			// TODO: Use OpenAPI objects only
-			err = e.Control(context.Background(), testworkflowmappers.MapAPIToKube(executions[i].Workflow), &executions[i])
+			err = e.runner.Monitor(context.Background(), executions[i].Id)
 			if err != nil {
 				// TODO: Handle fatal error
 				//e.handleFatalError(execution, err, time.Time{})
