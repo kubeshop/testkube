@@ -110,6 +110,16 @@ func (w *worker) Execute(ctx context.Context, request executionworkertypes.Execu
 	cfg := w.buildInternalConfig(resourceId, request.ArtifactsPathPrefix, request.Execution, request.ControlPlane, request.Workflow)
 	secrets := w.buildSecrets(request.Secrets)
 
+	// Configure default service account
+	if request.Workflow.Spec.Pod == nil {
+		request.Workflow.Spec.Pod = &testworkflowsv1.PodConfig{
+			ServiceAccountName: cfg.Worker.DefaultServiceAccount,
+		}
+	} else if cfg.Worker.DefaultServiceAccount == "" {
+		request.Workflow.Spec.Pod = request.Workflow.Spec.Pod.DeepCopy()
+		request.Workflow.Spec.Pod.ServiceAccountName = cfg.Worker.DefaultServiceAccount
+	}
+
 	// Ensure the execution namespace is allowed
 	if _, ok := w.config.Cluster.Namespaces[cfg.Worker.Namespace]; !ok {
 		return nil, errors.New(fmt.Sprintf("namespace %s not supported", cfg.Worker.Namespace))
