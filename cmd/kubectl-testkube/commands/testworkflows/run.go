@@ -27,8 +27,9 @@ import (
 )
 
 const (
-	LogTimestampLength = 30 // time.RFC3339Nano without 00:00 timezone
-	apiErrorMessage    = "processing error:"
+	LogTimestampLength    = 30 // time.RFC3339Nano without 00:00 timezone
+	apiErrorMessage       = "processing error:"
+	serviceLogsCheckDelay = 100 * time.Millisecond
 )
 
 var (
@@ -298,7 +299,9 @@ func watchTestWorkflowLogs(id string, signature []testkube.TestWorkflowSignature
 	ui.Info("Getting logs from test workflow job", id)
 
 	notifications, err := client.GetTestWorkflowExecutionNotifications(id)
-	ui.ExitOnError("getting logs from test workflow", err)
+	if err != nil {
+		return nil, err
+	}
 
 	steps := flattenSignatures(signature)
 
@@ -321,14 +324,38 @@ func watchTestWorkflowLogs(id string, signature []testkube.TestWorkflowSignature
 
 	ui.NL()
 
-	return result, err
+	return result, nil
 }
 
-func watchTestWorkflowServiceLogs(id, serviceName string, serviceIndex int, signature []testkube.TestWorkflowSignature, client apiclientv1.Client) (*testkube.TestWorkflowResult, error) {
+func watchTestWorkflowServiceLogs(id, serviceName string, serviceIndex int,
+	signature []testkube.TestWorkflowSignature, client apiclientv1.Client) (*testkube.TestWorkflowResult, error) {
 	ui.Info("Getting logs from test workflow service pod", fmt.Sprintf("%s-%s-%d", id, serviceName, serviceIndex))
 
-	notifications, err := client.GetTestWorkflowExecutionServiceNotifications(id, serviceName, serviceIndex)
-	ui.ExitOnError("getting logs from service", err)
+	var (
+		notifications chan testkube.TestWorkflowExecutionNotification
+		err           error
+	)
+
+	for {
+		notifications, err = client.GetTestWorkflowExecutionServiceNotifications(id, serviceName, serviceIndex)
+		if err != nil {
+			execution, err := client.GetTestWorkflowExecution(id)
+			if err != nil {
+				return nil, err
+			}
+
+			if execution.Result != nil && !execution.Result.IsFinished() {
+				time.Sleep(serviceLogsCheckDelay)
+				continue
+			}
+		}
+
+		if err != nil {
+			return nil, err
+		}
+
+		break
+	}
 
 	steps := flattenSignatures(signature)
 
@@ -351,7 +378,7 @@ func watchTestWorkflowServiceLogs(id, serviceName string, serviceIndex int, sign
 
 	ui.NL()
 
-	return result, err
+	return result, nil
 }
 
 func printStatusHeader(i, n int, name string) {
