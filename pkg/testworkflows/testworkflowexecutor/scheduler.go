@@ -37,7 +37,7 @@ const (
 	localCredentialFnName = "localUserCredentials" // TODO: Random
 )
 
-type scheduler struct {
+type ExecutionScheduler struct {
 	testWorkflowsClient          testworkflowsv1client.Interface
 	testWorkflowTemplatesClient  testworkflowsv1client.TestWorkflowTemplatesInterface
 	testWorkflowExecutionsClient testworkflowsv1client.TestWorkflowExecutionsInterface
@@ -73,7 +73,7 @@ type PreparedExecution struct {
 	SensitiveData map[string]string
 }
 
-func newScheduler(
+func NewExecutionScheduler(
 	testWorkflowsClient testworkflowsv1client.Interface,
 	testWorkflowTemplatesClient testworkflowsv1client.TestWorkflowTemplatesInterface,
 	testWorkflowExecutionsClient testworkflowsv1client.TestWorkflowExecutionsInterface,
@@ -83,8 +83,8 @@ func newScheduler(
 	runner runner2.Runner,
 	globalTemplateName string,
 	emitter *event.Emitter,
-) *scheduler {
-	return &scheduler{
+) *ExecutionScheduler {
+	return &ExecutionScheduler{
 		testWorkflowsClient:          testWorkflowsClient,
 		testWorkflowTemplatesClient:  testWorkflowTemplatesClient,
 		testWorkflowExecutionsClient: testWorkflowExecutionsClient,
@@ -98,7 +98,7 @@ func newScheduler(
 }
 
 // TODO: Consider if we shouldn't make name unique across all TestWorkflows
-func (s *scheduler) isExecutionNameReserved(ctx context.Context, name, workflowName string) (bool, error) {
+func (s *ExecutionScheduler) isExecutionNameReserved(ctx context.Context, name, workflowName string) (bool, error) {
 	// TODO: Detect errors other than 404?
 	next, _ := s.repository.GetByNameAndTestWorkflow(ctx, name, workflowName)
 	if next.Name == name {
@@ -107,7 +107,7 @@ func (s *scheduler) isExecutionNameReserved(ctx context.Context, name, workflowN
 	return false, nil
 }
 
-func (s *scheduler) PrepareExecutionBase(ctx context.Context, data ScheduleRequest) (*PreparedExecution, error) {
+func (s *ExecutionScheduler) PrepareExecutionBase(ctx context.Context, data ScheduleRequest) (*PreparedExecution, error) {
 	// -----=====[ 01 ]=====[ Build initial data ]=====-------
 	now := time.Now().UTC()
 	groupId := primitive.NewObjectIDFromTimestamp(now).Hex()
@@ -244,7 +244,7 @@ func (s *scheduler) PrepareExecutionBase(ctx context.Context, data ScheduleReque
 	return &PreparedExecution{SensitiveData: sensitiveData, Execution: *base}, nil
 }
 
-func (s *scheduler) PrepareExecutions(ctx context.Context, base *PreparedExecution, organizationId, environmentId string, data ScheduleRequest) ([]PreparedExecution, error) {
+func (s *ExecutionScheduler) PrepareExecutions(ctx context.Context, base *PreparedExecution, organizationId, environmentId string, data ScheduleRequest) ([]PreparedExecution, error) {
 	baseWorkflow := testworkflowmappers.MapTestWorkflowAPIToKube(*base.Execution.ResolvedWorkflow)
 	workflowMachine := testworkflowconfig.CreateWorkflowMachine(&testworkflowconfig.WorkflowConfig{Name: baseWorkflow.Name, Labels: baseWorkflow.Labels})
 
@@ -365,7 +365,7 @@ func retry(count int, delayBase time.Duration, fn func() error) (err error) {
 	return err
 }
 
-func (s *scheduler) saveEmptyLogs(execution *testkube.TestWorkflowExecution) {
+func (s *ExecutionScheduler) saveEmptyLogs(execution *testkube.TestWorkflowExecution) {
 	err := retry(SaveResultRetryMaxAttempts, SaveResultRetryBaseDelay, func() error {
 		return s.outputRepository.SaveLog(context.Background(), execution.Id, execution.Workflow.Name, bytes.NewReader(nil))
 	})
@@ -374,7 +374,7 @@ func (s *scheduler) saveEmptyLogs(execution *testkube.TestWorkflowExecution) {
 	}
 }
 
-func (s *scheduler) saveExecutionInKubernetes(execution *testkube.TestWorkflowExecution) error {
+func (s *ExecutionScheduler) saveExecutionInKubernetes(execution *testkube.TestWorkflowExecution) error {
 	// TODO: retry?
 	// TODO: Move it as a side effect in the Agent (CRD Sync)
 	if execution.TestWorkflowExecutionName != "" {
@@ -392,7 +392,7 @@ func (s *scheduler) saveExecutionInKubernetes(execution *testkube.TestWorkflowEx
 	return nil
 }
 
-func (s *scheduler) insert(execution *testkube.TestWorkflowExecution) error {
+func (s *ExecutionScheduler) insert(execution *testkube.TestWorkflowExecution) error {
 	var g errgroup.Group
 	g.Go(func() error {
 		return retry(SaveResultRetryMaxAttempts, SaveResultRetryBaseDelay, func() error {
@@ -407,7 +407,7 @@ func (s *scheduler) insert(execution *testkube.TestWorkflowExecution) error {
 	return g.Wait()
 }
 
-func (s *scheduler) update(execution *testkube.TestWorkflowExecution) error {
+func (s *ExecutionScheduler) update(execution *testkube.TestWorkflowExecution) error {
 	var g errgroup.Group
 	g.Go(func() error {
 		return retry(SaveResultRetryMaxAttempts, SaveResultRetryBaseDelay, func() error {
@@ -422,7 +422,7 @@ func (s *scheduler) update(execution *testkube.TestWorkflowExecution) error {
 	return g.Wait()
 }
 
-func (s *scheduler) DoOne(controlPlaneConfig testworkflowconfig.ControlPlaneConfig, organizationId, environmentId string, parentExecutionIds []string, exec PreparedExecution) (testkube.TestWorkflowExecution, error) {
+func (s *ExecutionScheduler) DoOne(controlPlaneConfig testworkflowconfig.ControlPlaneConfig, organizationId, environmentId string, parentExecutionIds []string, exec PreparedExecution) (testkube.TestWorkflowExecution, error) {
 	// Prepare the sensitive data TODO: Use Credentials when possible
 	secretsBatch := s.secretManager.Batch("twe-", exec.Execution.Id).ForceEnable()
 	credentialExpressions := map[string]expressions.Expression{}
@@ -554,7 +554,7 @@ func (s *scheduler) DoOne(controlPlaneConfig testworkflowconfig.ControlPlaneConf
 
 // TODO: Ensure there are no metrics required and deleted
 // TODO: Should it return channel instead (?)
-func (s *scheduler) Do(ctx context.Context, dashboardURI, organizationId, environmentId string, data ScheduleRequest) (executions []testkube.TestWorkflowExecution, err error) {
+func (s *ExecutionScheduler) Do(ctx context.Context, dashboardURI, organizationId, environmentId string, data ScheduleRequest) (executions []testkube.TestWorkflowExecution, err error) {
 	base, err := s.PrepareExecutionBase(ctx, data)
 	if err != nil {
 		return nil, err

@@ -49,7 +49,7 @@ type executor struct {
 	dashboardURI                 string
 	runner                       runner.Runner
 	proContext                   *config.ProContext
-	scheduler                    *scheduler
+	scheduler                    *ExecutionScheduler
 }
 
 func New(emitter *event.Emitter,
@@ -81,7 +81,7 @@ func New(emitter *event.Emitter,
 		dashboardURI:                 dashboardURI,
 		runner:                       runner,
 		proContext:                   proContext,
-		scheduler: newScheduler(
+		scheduler: NewExecutionScheduler(
 			testWorkflowsClient,
 			testWorkflowTemplatesClient,
 			testWorkflowExecutionsClient,
