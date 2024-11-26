@@ -81,6 +81,9 @@ func (w *worker) buildInternalConfig(resourceId, fsPrefix string, execution test
 	if workflow.Spec.Job != nil && workflow.Spec.Job.Namespace != "" {
 		cfg.Worker.Namespace = workflow.Spec.Job.Namespace
 	}
+	if ns, ok := w.config.Cluster.Namespaces[cfg.Worker.Namespace]; ok && ns.DefaultServiceAccountName != "" {
+		cfg.Worker.DefaultServiceAccount = ns.DefaultServiceAccountName
+	}
 	return cfg
 }
 
@@ -110,6 +113,11 @@ func (w *worker) Execute(ctx context.Context, request executionworkertypes.Execu
 	cfg := w.buildInternalConfig(resourceId, request.ArtifactsPathPrefix, request.Execution, request.ControlPlane, request.Workflow)
 	secrets := w.buildSecrets(request.Secrets)
 
+	// Ensure the execution namespace is allowed
+	if _, ok := w.config.Cluster.Namespaces[cfg.Worker.Namespace]; !ok {
+		return nil, errors.New(fmt.Sprintf("namespace %s not supported", cfg.Worker.Namespace))
+	}
+
 	// Configure default service account
 	if request.Workflow.Spec.Pod == nil {
 		request.Workflow.Spec.Pod = &testworkflowsv1.PodConfig{
@@ -118,11 +126,6 @@ func (w *worker) Execute(ctx context.Context, request executionworkertypes.Execu
 	} else if cfg.Worker.DefaultServiceAccount == "" {
 		request.Workflow.Spec.Pod = request.Workflow.Spec.Pod.DeepCopy()
 		request.Workflow.Spec.Pod.ServiceAccountName = cfg.Worker.DefaultServiceAccount
-	}
-
-	// Ensure the execution namespace is allowed
-	if _, ok := w.config.Cluster.Namespaces[cfg.Worker.Namespace]; !ok {
-		return nil, errors.New(fmt.Sprintf("namespace %s not supported", cfg.Worker.Namespace))
 	}
 
 	// Process the Test Workflow
