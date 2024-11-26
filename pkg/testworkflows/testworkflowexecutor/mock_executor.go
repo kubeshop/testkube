@@ -36,20 +36,6 @@ func (m *MockTestWorkflowExecutor) EXPECT() *MockTestWorkflowExecutorMockRecorde
 	return m.recorder
 }
 
-// Control mocks base method.
-func (m *MockTestWorkflowExecutor) Control(arg0 context.Context, arg1 *v1.TestWorkflow, arg2 *testkube.TestWorkflowExecution) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Control", arg0, arg1, arg2)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Control indicates an expected call of Control.
-func (mr *MockTestWorkflowExecutorMockRecorder) Control(arg0, arg1, arg2 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Control", reflect.TypeOf((*MockTestWorkflowExecutor)(nil).Control), arg0, arg1, arg2)
-}
-
 // Execute mocks base method.
 func (m *MockTestWorkflowExecutor) Execute(arg0 context.Context, arg1 v1.TestWorkflow, arg2 testkube.TestWorkflowExecutionRequest) (testkube.TestWorkflowExecution, error) {
 	m.ctrl.T.Helper()
@@ -63,16 +49,4 @@ func (m *MockTestWorkflowExecutor) Execute(arg0 context.Context, arg1 v1.TestWor
 func (mr *MockTestWorkflowExecutorMockRecorder) Execute(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Execute", reflect.TypeOf((*MockTestWorkflowExecutor)(nil).Execute), arg0, arg1, arg2)
-}
-
-// Recover mocks base method.
-func (m *MockTestWorkflowExecutor) Recover(arg0 context.Context) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Recover", arg0)
-}
-
-// Recover indicates an expected call of Recover.
-func (mr *MockTestWorkflowExecutorMockRecorder) Recover(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Recover", reflect.TypeOf((*MockTestWorkflowExecutor)(nil).Recover), arg0)
 }
