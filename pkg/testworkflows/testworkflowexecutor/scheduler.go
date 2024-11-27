@@ -179,13 +179,6 @@ func (s *ExecutionScheduler) PrepareExecutionBase(ctx context.Context, data Sche
 		}
 	}
 
-	// -----=====[ 06 ]=====[ Auto-inject the global template ]=====-------
-	if s.globalTemplateName != "" {
-		testworkflowresolver.AddGlobalTemplateRef(workflow, testworkflowsv1.TemplateRef{
-			Name: testworkflowresolver.GetDisplayTemplateName(s.globalTemplateName),
-		})
-	}
-
 	// -----=====[ 09 ]=====[ Simplify the Test Workflow initially ]=====-------
 	err = expressions.Simplify(&workflow, workflowMachine)
 	if err != nil {
@@ -200,6 +193,13 @@ func (s *ExecutionScheduler) PrepareExecutionBase(ctx context.Context, data Sche
 		base.ResolvedWorkflow = common.Ptr(testworkflowmappers.MapTestWorkflowKubeToAPI(*workflow))
 		base.InitializationError("Cannot inline Test Workflow configuration", err)
 		return &PreparedExecution{SensitiveData: sensitiveData, Execution: *base}, nil
+	}
+
+	// -----=====[ 06 ]=====[ Auto-inject the global template ]=====-------
+	if s.globalTemplateName != "" {
+		testworkflowresolver.AddGlobalTemplateRef(workflow, testworkflowsv1.TemplateRef{
+			Name: testworkflowresolver.GetDisplayTemplateName(s.globalTemplateName),
+		})
 	}
 
 	base.ResolvedWorkflow = common.Ptr(testworkflowmappers.MapTestWorkflowKubeToAPI(*workflow))
