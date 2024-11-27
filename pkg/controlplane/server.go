@@ -371,6 +371,14 @@ func (s *Server) ScheduleExecution(req *cloud.ScheduleRequest, srv cloud.TestKub
 		}
 	}
 
+	// Resolve the execution bases further
+	for i := range bases {
+		err := s.scheduler.ResolveExecutionBase(ctx, bases[i])
+		if err != nil {
+			return err
+		}
+	}
+
 	// Prepare actual executions
 	preparedExecutions := make([]testworkflowexecutor.PreparedExecution, 0)
 	for i := range bases {

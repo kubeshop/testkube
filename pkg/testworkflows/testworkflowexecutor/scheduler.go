@@ -184,15 +184,41 @@ func (s *ExecutionScheduler) PrepareExecutionBase(ctx context.Context, data Sche
 	}
 
 	// -----=====[ 09 ]=====[ Simplify the Test Workflow initially ]=====-------
-	err = expressions.Simplify(&workflow)
+	err = expressions.Simplify(&workflow, workflowMachine)
 	if err != nil {
 		base.ResolvedWorkflow = common.Ptr(testworkflowmappers.MapTestWorkflowKubeToAPI(*workflow))
 		base.InitializationError("Cannot process Test Workflow specification", err)
 		return &PreparedExecution{SensitiveData: sensitiveData, Execution: *base}, nil
 	}
 
-	// -----=====[ 10 ]=====[ Fetch all required templates ]=====-------
+	// -----=====[ 10 ]=====[ Inline the Test Workflow configuration ]=====-------
+	_, err = testworkflowresolver.ApplyWorkflowConfig(workflow, testworkflowmappers.MapConfigValueAPIToKube(config), sensitiveDataAppend)
+	if err != nil {
+		base.ResolvedWorkflow = common.Ptr(testworkflowmappers.MapTestWorkflowKubeToAPI(*workflow))
+		base.InitializationError("Cannot inline Test Workflow configuration", err)
+		return &PreparedExecution{SensitiveData: sensitiveData, Execution: *base}, nil
+	}
+
+	base.ResolvedWorkflow = common.Ptr(testworkflowmappers.MapTestWorkflowKubeToAPI(*workflow))
+	return &PreparedExecution{SensitiveData: sensitiveData, Execution: *base}, nil
+}
+
+func (s *ExecutionScheduler) ResolveExecutionBase(ctx context.Context, base *PreparedExecution) error {
+	workflow := testworkflowmappers.MapAPIToKube(base.Execution.ResolvedWorkflow)
+	workflowMachine := testworkflowconfig.CreateWorkflowMachine(&testworkflowconfig.WorkflowConfig{Name: workflow.Name, Labels: workflow.Labels})
+
 	tpls := testworkflowresolver.ListTemplates(workflow)
+
+	// -----=====[ 03 ]=====[ Prepare store for the sensitive data ]=====-------
+	now := time.Now()
+	sensitiveDataAppend := func(key, value string) (expressions.Expression, error) {
+		sensitiveId := primitive.NewObjectIDFromTimestamp(now).Hex()
+		base.SensitiveData[sensitiveId] = value
+		return expressions.Compile(fmt.Sprintf(`%s("%s")`, localCredentialFnName, sensitiveId))
+	}
+
+	// -----=====[ 11 ]=====[ Fetch all required templates ]=====-------
+	// TODO: Use cache
 	tplsMap := make(map[string]testworkflowsv1.TestWorkflowTemplate, len(tpls))
 	var tplsMu sync.Mutex
 	var g errgroup.Group
@@ -210,40 +236,33 @@ func (s *ExecutionScheduler) PrepareExecutionBase(ctx context.Context, data Sche
 			})
 		}(tplName)
 	}
-	err = g.Wait()
-	if err != nil {
-		base.ResolvedWorkflow = common.Ptr(testworkflowmappers.MapTestWorkflowKubeToAPI(*workflow))
-		base.InitializationError("Cannot fetch required Test Workflow Templates", err)
-		return &PreparedExecution{SensitiveData: sensitiveData, Execution: *base}, nil
-	}
+	err := g.Wait()
 
-	// -----=====[ 11 ]=====[ Inline the Test Workflow configuration ]=====-------
-	_, err = testworkflowresolver.ApplyWorkflowConfig(workflow, testworkflowmappers.MapConfigValueAPIToKube(config), sensitiveDataAppend)
 	if err != nil {
-		base.ResolvedWorkflow = common.Ptr(testworkflowmappers.MapTestWorkflowKubeToAPI(*workflow))
-		base.InitializationError("Cannot inline Test Workflow configuration", err)
-		return &PreparedExecution{SensitiveData: sensitiveData, Execution: *base}, nil
+		(&base.Execution).ResolvedWorkflow = common.Ptr(testworkflowmappers.MapTestWorkflowKubeToAPI(*workflow))
+		(&base.Execution).InitializationError("Cannot fetch required Test Workflow Templates", err)
+		return nil
 	}
 
 	// -----=====[ 12 ]=====[ Resolve the Test Workflow with templates ]=====-------
 	err = testworkflowresolver.ApplyTemplates(workflow, tplsMap, sensitiveDataAppend)
 	if err != nil {
-		base.ResolvedWorkflow = common.Ptr(testworkflowmappers.MapTestWorkflowKubeToAPI(*workflow))
-		base.InitializationError("Cannot inline Test Workflow templates", err)
-		return &PreparedExecution{SensitiveData: sensitiveData, Execution: *base}, nil
+		(&base.Execution).ResolvedWorkflow = common.Ptr(testworkflowmappers.MapTestWorkflowKubeToAPI(*workflow))
+		(&base.Execution).InitializationError("Cannot inline Test Workflow templates", err)
+		return nil
 	}
 
 	// -----=====[ 13 ]=====[ Resolve common values ]=====-------
 	err = expressions.Simplify(&workflow, workflowMachine)
 	if err != nil {
-		base.ResolvedWorkflow = common.Ptr(testworkflowmappers.MapTestWorkflowKubeToAPI(*workflow))
-		base.InitializationError("Cannot inline Test Workflow templates", err)
-		return &PreparedExecution{SensitiveData: sensitiveData, Execution: *base}, nil
+		(&base.Execution).ResolvedWorkflow = common.Ptr(testworkflowmappers.MapTestWorkflowKubeToAPI(*workflow))
+		(&base.Execution).InitializationError("Cannot inline Test Workflow templates", err)
+		return nil
 	}
 
-	base.ResolvedWorkflow = common.Ptr(testworkflowmappers.MapTestWorkflowKubeToAPI(*workflow))
+	(&base.Execution).ResolvedWorkflow = common.Ptr(testworkflowmappers.MapTestWorkflowKubeToAPI(*workflow))
 
-	return &PreparedExecution{SensitiveData: sensitiveData, Execution: *base}, nil
+	return nil
 }
 
 func (s *ExecutionScheduler) PrepareExecutions(ctx context.Context, base *PreparedExecution, organizationId, environmentId string, data ScheduleRequest) ([]PreparedExecution, error) {
