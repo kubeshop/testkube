@@ -31,6 +31,7 @@ type TestKubeCloudAPIClient interface {
 	ExecuteAsync(ctx context.Context, opts ...grpc.CallOption) (TestKubeCloudAPI_ExecuteAsyncClient, error)
 	GetLogsStream(ctx context.Context, opts ...grpc.CallOption) (TestKubeCloudAPI_GetLogsStreamClient, error)
 	GetTestWorkflowNotificationsStream(ctx context.Context, opts ...grpc.CallOption) (TestKubeCloudAPI_GetTestWorkflowNotificationsStreamClient, error)
+	GetTestWorkflowServiceNotificationsStream(ctx context.Context, opts ...grpc.CallOption) (TestKubeCloudAPI_GetTestWorkflowServiceNotificationsStreamClient, error)
 	GetProContext(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ProContextResponse, error)
 	GetCredential(ctx context.Context, in *CredentialRequest, opts ...grpc.CallOption) (*CredentialResponse, error)
 }
@@ -210,6 +211,37 @@ func (x *testKubeCloudAPIGetTestWorkflowNotificationsStreamClient) Recv() (*Test
 	return m, nil
 }
 
+func (c *testKubeCloudAPIClient) GetTestWorkflowServiceNotificationsStream(ctx context.Context, opts ...grpc.CallOption) (TestKubeCloudAPI_GetTestWorkflowServiceNotificationsStreamClient, error) {
+	stream, err := c.cc.NewStream(ctx, &TestKubeCloudAPI_ServiceDesc.Streams[5], "/cloud.TestKubeCloudAPI/GetTestWorkflowServiceNotificationsStream", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &testKubeCloudAPIGetTestWorkflowServiceNotificationsStreamClient{stream}
+	return x, nil
+}
+
+type TestKubeCloudAPI_GetTestWorkflowServiceNotificationsStreamClient interface {
+	Send(*TestWorkflowServiceNotificationsResponse) error
+	Recv() (*TestWorkflowServiceNotificationsRequest, error)
+	grpc.ClientStream
+}
+
+type testKubeCloudAPIGetTestWorkflowServiceNotificationsStreamClient struct {
+	grpc.ClientStream
+}
+
+func (x *testKubeCloudAPIGetTestWorkflowServiceNotificationsStreamClient) Send(m *TestWorkflowServiceNotificationsResponse) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *testKubeCloudAPIGetTestWorkflowServiceNotificationsStreamClient) Recv() (*TestWorkflowServiceNotificationsRequest, error) {
+	m := new(TestWorkflowServiceNotificationsRequest)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 func (c *testKubeCloudAPIClient) GetProContext(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ProContextResponse, error) {
 	out := new(ProContextResponse)
 	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/GetProContext", in, out, opts...)
@@ -240,6 +272,7 @@ type TestKubeCloudAPIServer interface {
 	ExecuteAsync(TestKubeCloudAPI_ExecuteAsyncServer) error
 	GetLogsStream(TestKubeCloudAPI_GetLogsStreamServer) error
 	GetTestWorkflowNotificationsStream(TestKubeCloudAPI_GetTestWorkflowNotificationsStreamServer) error
+	GetTestWorkflowServiceNotificationsStream(TestKubeCloudAPI_GetTestWorkflowServiceNotificationsStreamServer) error
 	GetProContext(context.Context, *emptypb.Empty) (*ProContextResponse, error)
 	GetCredential(context.Context, *CredentialRequest) (*CredentialResponse, error)
 	mustEmbedUnimplementedTestKubeCloudAPIServer()
@@ -266,6 +299,9 @@ func (UnimplementedTestKubeCloudAPIServer) GetLogsStream(TestKubeCloudAPI_GetLog
 }
 func (UnimplementedTestKubeCloudAPIServer) GetTestWorkflowNotificationsStream(TestKubeCloudAPI_GetTestWorkflowNotificationsStreamServer) error {
 	return status.Errorf(codes.Unimplemented, "method GetTestWorkflowNotificationsStream not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) GetTestWorkflowServiceNotificationsStream(TestKubeCloudAPI_GetTestWorkflowServiceNotificationsStreamServer) error {
+	return status.Errorf(codes.Unimplemented, "method GetTestWorkflowServiceNotificationsStream not implemented")
 }
 func (UnimplementedTestKubeCloudAPIServer) GetProContext(context.Context, *emptypb.Empty) (*ProContextResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetProContext not implemented")
@@ -434,6 +470,32 @@ func (x *testKubeCloudAPIGetTestWorkflowNotificationsStreamServer) Recv() (*Test
 	return m, nil
 }
 
+func _TestKubeCloudAPI_GetTestWorkflowServiceNotificationsStream_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(TestKubeCloudAPIServer).GetTestWorkflowServiceNotificationsStream(&testKubeCloudAPIGetTestWorkflowServiceNotificationsStreamServer{stream})
+}
+
+type TestKubeCloudAPI_GetTestWorkflowServiceNotificationsStreamServer interface {
+	Send(*TestWorkflowServiceNotificationsRequest) error
+	Recv() (*TestWorkflowServiceNotificationsResponse, error)
+	grpc.ServerStream
+}
+
+type testKubeCloudAPIGetTestWorkflowServiceNotificationsStreamServer struct {
+	grpc.ServerStream
+}
+
+func (x *testKubeCloudAPIGetTestWorkflowServiceNotificationsStreamServer) Send(m *TestWorkflowServiceNotificationsRequest) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *testKubeCloudAPIGetTestWorkflowServiceNotificationsStreamServer) Recv() (*TestWorkflowServiceNotificationsResponse, error) {
+	m := new(TestWorkflowServiceNotificationsResponse)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 func _TestKubeCloudAPI_GetProContext_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(emptypb.Empty)
 	if err := dec(in); err != nil {
@@ -517,6 +579,12 @@ var TestKubeCloudAPI_ServiceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "GetTestWorkflowNotificationsStream",
 			Handler:       _TestKubeCloudAPI_GetTestWorkflowNotificationsStream_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
+		},
+		{
+			StreamName:    "GetTestWorkflowServiceNotificationsStream",
+			Handler:       _TestKubeCloudAPI_GetTestWorkflowServiceNotificationsStream_Handler,
 			ServerStreams: true,
 			ClientStreams: true,
 		},
