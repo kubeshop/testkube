@@ -108,6 +108,9 @@ func (s *ExecutionScheduler) isExecutionNameReserved(ctx context.Context, name, 
 }
 
 func (s *ExecutionScheduler) PrepareExecutionBase(ctx context.Context, data ScheduleRequest) (*PreparedExecution, error) {
+	// s.testWorkflowsClient
+	// s.globalTemplateName
+
 	// -----=====[ 01 ]=====[ Build initial data ]=====-------
 	now := time.Now().UTC()
 	groupId := primitive.NewObjectIDFromTimestamp(now).Hex()
@@ -204,6 +207,8 @@ func (s *ExecutionScheduler) PrepareExecutionBase(ctx context.Context, data Sche
 }
 
 func (s *ExecutionScheduler) ResolveExecutionBase(ctx context.Context, base *PreparedExecution) error {
+	// s.testWorkflowTemplatesClient
+
 	workflow := testworkflowmappers.MapAPIToKube(base.Execution.ResolvedWorkflow)
 	workflowMachine := testworkflowconfig.CreateWorkflowMachine(&testworkflowconfig.WorkflowConfig{Name: workflow.Name, Labels: workflow.Labels})
 
@@ -266,6 +271,9 @@ func (s *ExecutionScheduler) ResolveExecutionBase(ctx context.Context, base *Pre
 }
 
 func (s *ExecutionScheduler) PrepareExecutions(ctx context.Context, base *PreparedExecution, organizationId, environmentId string, data ScheduleRequest) ([]PreparedExecution, error) {
+	// s.isExecutionNameReserved -> s.repository
+	// s.repository
+
 	baseWorkflow := testworkflowmappers.MapTestWorkflowAPIToKube(*base.Execution.ResolvedWorkflow)
 	workflowMachine := testworkflowconfig.CreateWorkflowMachine(&testworkflowconfig.WorkflowConfig{Name: baseWorkflow.Name, Labels: baseWorkflow.Labels})
 
@@ -443,6 +451,13 @@ func (s *ExecutionScheduler) update(execution *testkube.TestWorkflowExecution) e
 }
 
 func (s *ExecutionScheduler) DoOne(controlPlaneConfig testworkflowconfig.ControlPlaneConfig, organizationId, environmentId string, parentExecutionIds []string, exec PreparedExecution) (testkube.TestWorkflowExecution, error) {
+	// s.secretManager
+	// s.getEmitter
+	// s.insert -> s.repository + s.testWorkflowExecutionsClient
+	// s.saveEmptyLogs -> s.outputRepository
+	// s.repository
+	// s.testWorkflowExecutionsClient
+
 	// Prepare the sensitive data TODO: Use Credentials when possible
 	secretsBatch := s.secretManager.Batch("twe-", exec.Execution.Id).ForceEnable()
 	credentialExpressions := map[string]expressions.Expression{}
