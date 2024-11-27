@@ -348,11 +348,13 @@ func watchTestWorkflowServiceLogs(id, serviceName string, serviceIndex int,
 		nErr          error
 	)
 
+	spinner := ui.NewSpinner("Waiting for service logs")
 	for {
 		notifications, nErr = client.GetTestWorkflowExecutionServiceNotifications(id, serviceName, serviceIndex)
 		if nErr != nil {
 			execution, cErr := client.GetTestWorkflowExecution(id)
 			if cErr != nil {
+				spinner.Fail()
 				return nil, cErr
 			}
 
@@ -367,12 +369,14 @@ func watchTestWorkflowServiceLogs(id, serviceName string, serviceIndex int,
 		}
 
 		if nErr != nil {
+			spinner.Fail()
 			return nil, nErr
 		}
 
 		break
 	}
 
+	spinner.Success()
 	return printTestWorkflowLogs(signature, notifications), nil
 }
 
