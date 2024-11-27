@@ -336,8 +336,7 @@ func watchTestWorkflowLogs(id string, signature []testkube.TestWorkflowSignature
 		return nil, err
 	}
 
-	result := printTestWorkflowLogs(signature, notifications)
-	return result, nil
+	return printTestWorkflowLogs(signature, notifications), nil
 }
 
 func watchTestWorkflowServiceLogs(id, serviceName string, serviceIndex int,
@@ -370,8 +369,7 @@ func watchTestWorkflowServiceLogs(id, serviceName string, serviceIndex int,
 		break
 	}
 
-	result := printTestWorkflowLogs(signature, notifications)
-	return result, nil
+	return printTestWorkflowLogs(signature, notifications), nil
 }
 
 func printStatusHeader(i, n int, name string) {
