@@ -103,13 +103,21 @@ func (s *TestkubeAPI) StreamTestWorkflowExecutionServiceNotificationsHandler() f
 			return s.ClientError(c, errPrefix, err)
 		}
 
+		found := false
+		if execution.Workflow != nil && execution.Workflow.Spec != nil {
+			_, found = execution.Workflow.Spec.Services[serviceName]
+		}
+
+		if !found {
+			return s.ClientError(c, errPrefix, errors.New("unknown service for test workflow execution"))
+		}
+
 		// Check for the logs
 		id := fmt.Sprintf("%s-%s-%s", execution.Id, serviceName, serviceIndex)
 		notifications := s.ExecutionWorkerClient.Notifications(ctx, id, executionworkertypes.NotificationsOptions{
 			Hints: executionworkertypes.Hints{
-				Namespace: execution.Namespace,
-				//				ScheduledAt: common.Ptr(execution.ScheduledAt),
-				//				Signature:   execution.Signature,
+				Namespace:   execution.Namespace,
+				ScheduledAt: common.Ptr(execution.ScheduledAt),
 			},
 		})
 		if notifications.Err() != nil {
@@ -179,13 +187,21 @@ func (s *TestkubeAPI) StreamTestWorkflowExecutionServiceNotificationsWebSocketHa
 			return
 		}
 
+		found := false
+		if execution.Workflow != nil && execution.Workflow.Spec != nil {
+			_, found = execution.Workflow.Spec.Services[serviceName]
+		}
+
+		if !found {
+			return
+		}
+
 		// Check for the logs
 		id := fmt.Sprintf("%s-%s-%s", execution.Id, serviceName, serviceIndex)
 		notifications := s.ExecutionWorkerClient.Notifications(ctx, id, executionworkertypes.NotificationsOptions{
 			Hints: executionworkertypes.Hints{
-				Namespace: execution.Namespace,
-				//				Signature:   execution.Signature,
-				//				ScheduledAt: common.Ptr(execution.ScheduledAt),
+				Namespace:   execution.Namespace,
+				ScheduledAt: common.Ptr(execution.ScheduledAt),
 			},
 		})
 		if notifications.Err() != nil {
