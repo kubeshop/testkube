@@ -3,26 +3,25 @@ package v1
 import (
 	"go.uber.org/zap"
 
+	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
 	testtriggersclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testtriggers/v1"
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/pkg/client/testworkflows/v1"
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
+	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/log"
-	repoConfig "github.com/kubeshop/testkube/pkg/repository/config"
-	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
-	"github.com/kubeshop/testkube/pkg/secretmanager"
-	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
-
-	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
-	"github.com/kubeshop/testkube/internal/app/api/metrics"
+	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/event"
 	ws "github.com/kubeshop/testkube/pkg/event/kind/websocket"
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/featureflags"
+	"github.com/kubeshop/testkube/pkg/log"
+	repoConfig "github.com/kubeshop/testkube/pkg/repository/config"
+	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
+	"github.com/kubeshop/testkube/pkg/secretmanager"
 	"github.com/kubeshop/testkube/pkg/server"
 	"github.com/kubeshop/testkube/pkg/storage"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 )
 
 func NewTestkubeAPI(
@@ -39,7 +38,6 @@ func NewTestkubeAPI(
 	configMap repoConfig.Repository,
 	secretManager secretmanager.SecretManager,
 	secretConfig testkube.SecretConfig,
-	testWorkflowExecutor testworkflowexecutor.TestWorkflowExecutor,
 	executionWorkerClient executionworkertypes.Worker,
 	eventsEmitter *event.Emitter,
 	websocketLoader *ws.WebsocketLoader,
@@ -50,6 +48,7 @@ func NewTestkubeAPI(
 	helmchartVersion string,
 	serviceAccountNames map[string]string,
 	dockerImageVersion string,
+	grpcClient cloud.TestKubeCloudAPIClient,
 ) TestkubeAPI {
 
 	return TestkubeAPI{
@@ -68,7 +67,6 @@ func NewTestkubeAPI(
 		WebhooksClient:              webhookClient,
 		Namespace:                   namespace,
 		ConfigMap:                   configMap,
-		TestWorkflowExecutor:        testWorkflowExecutor,
 		ExecutionWorkerClient:       executionWorkerClient,
 		ArtifactsStorage:            artifactsStorage,
 		dashboardURI:                dashboardURI,
@@ -78,6 +76,7 @@ func NewTestkubeAPI(
 		ServiceAccountNames:         serviceAccountNames,
 		dockerImageVersion:          dockerImageVersion,
 		proContext:                  proContext,
+		grpcClient:                  grpcClient,
 	}
 }
 
@@ -88,7 +87,6 @@ type TestkubeAPI struct {
 	TestWorkflowOutput          testworkflow.OutputRepository
 	Executor                    client.Executor
 	ContainerExecutor           client.Executor
-	TestWorkflowExecutor        testworkflowexecutor.TestWorkflowExecutor
 	ExecutionWorkerClient       executionworkertypes.Worker
 	DeprecatedClients           commons.DeprecatedClients
 	SecretManager               secretmanager.SecretManager
@@ -109,6 +107,7 @@ type TestkubeAPI struct {
 	proContext                  *config.ProContext
 	ServiceAccountNames         map[string]string
 	dockerImageVersion          string
+	grpcClient                  cloud.TestKubeCloudAPIClient
 }
 
 func (s *TestkubeAPI) Init(server server.HTTPServer) {

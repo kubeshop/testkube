@@ -53,7 +53,7 @@ type executor struct {
 }
 
 func New(emitter *event.Emitter,
-	runner runner.Runner,
+	rnr runner.Runner,
 	clientSet kubernetes.Interface,
 	repository testworkflow.Repository,
 	output testworkflow.OutputRepository,
@@ -79,7 +79,7 @@ func New(emitter *event.Emitter,
 		secretManager:                secretManager,
 		globalTemplateName:           globalTemplateName,
 		dashboardURI:                 dashboardURI,
-		runner:                       runner,
+		runner:                       rnr,
 		proContext:                   proContext,
 		scheduler: NewExecutionScheduler(
 			testWorkflowsClient,
@@ -88,9 +88,9 @@ func New(emitter *event.Emitter,
 			secretManager,
 			repository,
 			output,
-			runner,
+			func() runner.Runner { return rnr },
 			globalTemplateName,
-			emitter,
+			func() *event.Emitter { return emitter },
 		),
 	}
 }
@@ -119,15 +119,15 @@ func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWor
 
 	for i := range executions {
 		// Start to control the results
-		go func() {
+		go func(id string) {
 			// TODO: Use OpenAPI objects only
-			err = e.runner.Monitor(context.Background(), executions[i].Id)
+			err = e.runner.Monitor(context.Background(), id)
 			if err != nil {
 				// TODO: Handle fatal error
 				//e.handleFatalError(execution, err, time.Time{})
 				return
 			}
-		}()
+		}(executions[i].Id)
 	}
 
 	if len(executions) > 0 {

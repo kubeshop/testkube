@@ -44,9 +44,9 @@ type ExecutionScheduler struct {
 	secretManager                secretmanager.SecretManager
 	repository                   testworkflow2.Repository
 	outputRepository             testworkflow2.OutputRepository
-	runner                       runner2.Runner
 	globalTemplateName           string
-	emitter                      *event.Emitter
+	getRunner                    func() runner2.Runner
+	getEmitter                   func() *event.Emitter
 }
 
 type ScheduleRequest struct {
@@ -80,9 +80,9 @@ func NewExecutionScheduler(
 	secretManager secretmanager.SecretManager,
 	repository testworkflow2.Repository,
 	outputRepository testworkflow2.OutputRepository,
-	runner runner2.Runner,
+	getRunner func() runner2.Runner,
 	globalTemplateName string,
-	emitter *event.Emitter,
+	getEmitter func() *event.Emitter,
 ) *ExecutionScheduler {
 	return &ExecutionScheduler{
 		testWorkflowsClient:          testWorkflowsClient,
@@ -91,9 +91,9 @@ func NewExecutionScheduler(
 		secretManager:                secretManager,
 		repository:                   repository,
 		outputRepository:             outputRepository,
-		runner:                       runner,
+		getRunner:                    getRunner,
 		globalTemplateName:           globalTemplateName,
-		emitter:                      emitter,
+		getEmitter:                   getEmitter,
 	}
 }
 
@@ -142,6 +142,7 @@ func (s *ExecutionScheduler) PrepareExecutionBase(ctx context.Context, data Sche
 		GroupId:     groupId,
 		ScheduledAt: now,
 		StatusAt:    now,
+		Name:        data.ExecutionName,
 		Signature:   []testkube.TestWorkflowSignature{},
 		Result: &testkube.TestWorkflowResult{
 			Status:          common.Ptr(testkube.QUEUED_TestWorkflowStatus),
@@ -159,6 +160,7 @@ func (s *ExecutionScheduler) PrepareExecutionBase(ctx context.Context, data Sche
 		Tags:                      map[string]string{},
 		RunningContext:            data.RunningContext,
 	}
+	maps.Copy(base.Tags, data.Tags)
 
 	// Inject configuration
 	if testworkflows.CountMapBytes(data.Config) < ConfigSizeLimit {
@@ -344,7 +346,6 @@ func (s *ExecutionScheduler) PrepareExecutions(ctx context.Context, base *Prepar
 
 	// Load tags for the execution
 	for i := range executions {
-		executions[i].Execution.Tags = map[string]string{}
 		if executions[i].Execution.ResolvedWorkflow.Spec.Execution != nil {
 			maps.Copy(executions[i].Execution.Tags, executions[i].Execution.ResolvedWorkflow.Spec.Execution.Tags)
 		}
@@ -466,24 +467,24 @@ func (s *ExecutionScheduler) DoOne(controlPlaneConfig testworkflowconfig.Control
 		// TODO: don't fail immediately (try creating other executions too)
 		return exec.Execution, errors.Wrapf(err, "cannot insert execution '%s' result for workflow '%s'", exec.Execution.Id, exec.Execution.Workflow.Name)
 	}
-	s.emitter.Notify(testkube.NewEventQueueTestWorkflow(&exec.Execution))
+	s.getEmitter().Notify(testkube.NewEventQueueTestWorkflow(&exec.Execution))
 
 	// Finish early if it's immediately known to finish
 	if exec.Execution.Result.IsFinished() {
-		//s.emitter.Notify(testkube.NewEventStartTestWorkflow(&exec.Execution)) // TODO: Consider
+		//s.getEmitter().Notify(testkube.NewEventStartTestWorkflow(&exec.Execution)) // TODO: Consider
 		if exec.Execution.Result.IsAborted() {
-			s.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(&exec.Execution))
+			s.getEmitter().Notify(testkube.NewEventEndTestWorkflowAborted(&exec.Execution))
 		} else if exec.Execution.Result.IsFailed() {
-			s.emitter.Notify(testkube.NewEventEndTestWorkflowFailed(&exec.Execution))
+			s.getEmitter().Notify(testkube.NewEventEndTestWorkflowFailed(&exec.Execution))
 		} else {
-			s.emitter.Notify(testkube.NewEventEndTestWorkflowSuccess(&exec.Execution))
+			s.getEmitter().Notify(testkube.NewEventEndTestWorkflowSuccess(&exec.Execution))
 		}
 		s.saveEmptyLogs(&exec.Execution)
 		return exec.Execution, nil
 	}
 
 	// Start the execution
-	result, err := s.runner.Execute(executionworkertypes.ExecuteRequest{
+	result, err := s.getRunner().Execute(executionworkertypes.ExecuteRequest{
 		Execution: testworkflowconfig.ExecutionConfig{
 			Id:              exec.Execution.Id,
 			GroupId:         exec.Execution.GroupId,
@@ -525,15 +526,15 @@ func (s *ExecutionScheduler) DoOne(controlPlaneConfig testworkflowconfig.Control
 			return exec.Execution, errors.Wrap(err, "failed to update the execution")
 		}
 
-		//s.emitter.Notify(testkube.NewEventStartTestWorkflow(&exec.Execution)) // TODO: Consider
-		s.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(&exec.Execution))
+		//s.getEmitter().Notify(testkube.NewEventStartTestWorkflow(&exec.Execution)) // TODO: Consider
+		s.getEmitter().Notify(testkube.NewEventEndTestWorkflowAborted(&exec.Execution))
 		s.saveEmptyLogs(&exec.Execution)
 
 		return exec.Execution, nil
 	}
 
 	// Inform about execution start TODO: Consider
-	//s.emitter.Notify(testkube.NewEventStartTestWorkflow(&exec.Execution))
+	//s.getEmitter().Notify(testkube.NewEventStartTestWorkflow(&exec.Execution))
 
 	// Apply the signature
 	// TODO: it should be likely scheduled from the Runner,
@@ -584,4 +585,9 @@ func (s *ExecutionScheduler) Do(ctx context.Context, dashboardURI, organizationI
 	}
 
 	return executions, nil
+}
+
+// FIXME: delete
+func (s *ExecutionScheduler) TestWorkflowClient() testworkflowsv1client.Interface {
+	return s.testWorkflowsClient
 }

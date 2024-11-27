@@ -2,22 +2,27 @@ package v1
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/encoding/gzip"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
+	agentclient "github.com/kubeshop/testkube/pkg/agent/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
-	"github.com/kubeshop/testkube/pkg/scheduler"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowresolver"
-	"github.com/kubeshop/testkube/pkg/workerpool"
 )
 
 func (s *TestkubeAPI) ListTestWorkflowsHandler() fiber.Handler {
@@ -353,24 +358,6 @@ func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 
 		errPrefix := "failed to execute test workflow"
 
-		var testWorkflows []testworkflowsv1.TestWorkflow
-		if name != "" {
-			errPrefix = errPrefix + " " + name
-			testWorkflow, err := s.TestWorkflowsClient.Get(name)
-			if err != nil {
-				return s.ClientError(c, errPrefix, err)
-			}
-
-			testWorkflows = append(testWorkflows, *testWorkflow)
-		} else {
-			testWorkflowList, err := s.TestWorkflowsClient.List(selector)
-			if err != nil {
-				return s.ClientError(c, errPrefix, err)
-			}
-
-			testWorkflows = append(testWorkflows, testWorkflowList.Items...)
-		}
-
 		// Load the execution request
 		var request testkube.TestWorkflowExecutionRequest
 		err = c.BodyParser(&request)
@@ -379,28 +366,84 @@ func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 		}
 
 		// Pro edition only (tcl protected code)
+		var runningContext *cloud.RunningContext
 		if request.RunningContext != nil {
-			if s.proContext == nil || s.proContext.APIKey == "" {
-				request.RunningContext = nil
+			if request.RunningContext.Actor != nil && request.RunningContext.Actor.Type_ != nil {
+				switch *request.RunningContext.Actor.Type_ {
+				case testkube.CRON_TestWorkflowRunningContextActorType:
+					runningContext = &cloud.RunningContext{Type: cloud.RunningContextType_CRON, Name: request.RunningContext.Actor.Name}
+				case testkube.TESTTRIGGER_TestWorkflowRunningContextActorType:
+					runningContext = &cloud.RunningContext{Type: cloud.RunningContextType_TESTTRIGGER, Name: request.RunningContext.Actor.Name}
+				case testkube.TESTWORKFLOWEXECUTION_TestWorkflowRunningContextActorType:
+					runningContext = &cloud.RunningContext{Type: cloud.RunningContextType_KUBERNETESOBJECT, Name: request.RunningContext.Actor.Name}
+				case testkube.TESTWORKFLOW_TestWorkflowRunningContextActorType:
+					if len(request.ParentExecutionIds) > 0 {
+						runningContext = &cloud.RunningContext{Type: cloud.RunningContextType_EXECUTION, Name: request.ParentExecutionIds[len(request.ParentExecutionIds)-1]}
+					}
+				}
+			}
+			if runningContext == nil && request.RunningContext.Interface_ != nil && request.RunningContext.Interface_.Type_ != nil {
+				switch *request.RunningContext.Interface_.Type_ {
+				case testkube.CLI_TestWorkflowRunningContextInterfaceType:
+					runningContext = &cloud.RunningContext{Type: cloud.RunningContextType_CLI, Name: request.RunningContext.Interface_.Name}
+				case testkube.UI_TestWorkflowRunningContextInterfaceType:
+					runningContext = &cloud.RunningContext{Type: cloud.RunningContextType_UI, Name: request.RunningContext.Interface_.Name}
+				case testkube.CICD_TestWorkflowRunningContextInterfaceType:
+					runningContext = &cloud.RunningContext{Type: cloud.RunningContextType_CICD, Name: request.RunningContext.Interface_.Name}
+				}
 			}
 		}
+
+		var scheduleSelector cloud.ScheduleSelector
+		if name != "" {
+			scheduleSelector.Name = name
+		} else if selector != "" {
+			sel, err := metav1.ParseToLabelSelector(selector)
+			if err != nil {
+				return s.InternalError(c, errPrefix, "invalid selector", err)
+			}
+			if len(sel.MatchExpressions) > 0 {
+				return s.InternalError(c, errPrefix, "invalid selector", errors.New("only simple selectors are allowed"))
+			}
+			scheduleSelector.LabelSelector = sel.MatchLabels
+		}
+
+		scheduleCtx := agentclient.AddAPIKeyMeta(ctx, "DUMMY_API_KEY") // TODO: Support Cloud API Key
+		opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
+		resp, err := s.grpcClient.ScheduleExecution(scheduleCtx, &cloud.ScheduleRequest{
+			EnvironmentId:        "DUMMY_ENV_ID", // TODO: Support Cloud environment ID
+			Selectors:            []*cloud.ScheduleSelector{&scheduleSelector},
+			DisableWebhooks:      request.DisableWebhooks,
+			Tags:                 request.Tags,
+			RunningContext:       runningContext,
+			ParentExecutionIds:   request.ParentExecutionIds,
+			KubernetesObjectName: request.TestWorkflowExecutionName,
+		}, opts...)
+
+		if err != nil {
+			return s.InternalError(c, errPrefix, "execution error", err)
+		}
+		defer resp.CloseSend()
 
 		var results []testkube.TestWorkflowExecution
 		var errs []error
 
-		if len(testWorkflows) != 0 {
-			request.TestWorkflowExecutionName = strings.Clone(c.Query("testWorkflowExecutionName"))
-			workerpoolService := workerpool.New[testworkflowsv1.TestWorkflow, testkube.TestWorkflowExecutionRequest, testkube.TestWorkflowExecution](scheduler.DefaultConcurrencyLevel)
-
-			go workerpoolService.SendRequests(s.prepareTestWorkflowRequests(testWorkflows, request))
-			go workerpoolService.Run(ctx)
-
-			for r := range workerpoolService.GetResponses() {
-				results = append(results, r.Result)
-				if r.Err != nil {
-					errs = append(errs, r.Err)
+		var item *cloud.ScheduleResponse
+		for {
+			item, err = resp.Recv()
+			if err != nil {
+				if !errors.Is(err, io.EOF) {
+					errs = append(errs, err)
 				}
+				break
 			}
+			var r testkube.TestWorkflowExecution
+			err = json.Unmarshal(item.Execution, &r)
+			if err != nil {
+				errs = append(errs, err)
+				break
+			}
+			results = append(results, r)
 		}
 
 		if len(errs) != 0 {
@@ -437,21 +480,4 @@ func (s *TestkubeAPI) getFilteredTestWorkflowList(c *fiber.Ctx) (*testworkflowsv
 	}
 
 	return crWorkflows, nil
-}
-
-func (s *TestkubeAPI) prepareTestWorkflowRequests(work []testworkflowsv1.TestWorkflow, request testkube.TestWorkflowExecutionRequest) []workerpool.Request[
-	testworkflowsv1.TestWorkflow,
-	testkube.TestWorkflowExecutionRequest,
-	testkube.TestWorkflowExecution,
-] {
-	requests := make([]workerpool.Request[testworkflowsv1.TestWorkflow, testkube.TestWorkflowExecutionRequest, testkube.TestWorkflowExecution], len(work))
-	for i := range work {
-		requests[i] = workerpool.Request[testworkflowsv1.TestWorkflow, testkube.TestWorkflowExecutionRequest, testkube.TestWorkflowExecution]{
-			Object:  work[i],
-			Options: request,
-			ExecFn:  s.TestWorkflowExecutor.Execute,
-		}
-	}
-
-	return requests
 }

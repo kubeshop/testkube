@@ -18,6 +18,7 @@ service TestKubeCloudAPI {
     rpc GetTestWorkflowNotificationsStream(stream TestWorkflowNotificationsResponse) returns (stream TestWorkflowNotificationsRequest);
     rpc GetProContext(google.protobuf.Empty) returns (ProContextResponse);
     rpc GetCredential(CredentialRequest) returns (CredentialResponse);
+    rpc ScheduleExecution(ScheduleRequest) returns (stream ScheduleResponse);
 }
 
 enum LogsStreamRequestType {
@@ -123,4 +124,51 @@ message CredentialRequest {
 
 message CredentialResponse {
   bytes content = 1;
+}
+
+message ScheduleSelector {
+  string name = 1;
+  map<string, string> labelSelector = 2;
+  map<string, string> config = 3;
+  string execution_name = 4;
+  map<string, string> tags = 5;
+}
+
+enum RunningContextType {
+  UNKNOWN = 0;
+  UI = 1;
+  CLI = 2;
+  CICD = 3;
+  CRON = 4;
+  TESTTRIGGER = 5;
+  KUBERNETESOBJECT = 6;
+  EXECUTION = 7;
+}
+
+message RunningContext {
+  string name = 1;
+  RunningContextType type = 2;
+}
+
+message ScheduleRequest {
+  // Target
+  string environment_id = 1;
+
+  // Test Workflow details
+  repeated ScheduleSelector selectors = 2;
+
+  // Execution details
+  bool disable_webhooks = 3;
+  map<string, string> tags = 4;
+
+  // Running metadata
+  RunningContext running_context = 5;
+  repeated string parent_execution_ids = 7;
+
+  // Kubernetes resource TODO: is it required?
+  string kubernetes_object_name = 8;
+}
+
+message ScheduleResponse {
+  bytes execution = 1; // TestWorkflowExecution
 }

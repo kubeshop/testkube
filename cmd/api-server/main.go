@@ -83,33 +83,17 @@ func main() {
 
 	configMapConfig := commons.MustGetConfigMapConfig(ctx, cfg.APIServerConfig, cfg.TestkubeNamespace, cfg.TestkubeAnalyticsEnabled)
 
-	// Start local Control Plane
-	if mode == common.ModeStandalone {
-		controlPlane := services.CreateControlPlane(ctx, cfg, features, configMapConfig)
-		g.Go(func() error {
-			return controlPlane.Run(ctx)
-		})
-
-		// Rewire connection
-		cfg.TestkubeProURL = fmt.Sprintf("%s:%d", cfg.APIServerFullname, cfg.GRPCServerPort)
-		cfg.TestkubeProTLSInsecure = true
-	}
-
-	clusterId, _ := configMapConfig.GetUniqueClusterId(ctx)
-	telemetryEnabled, _ := configMapConfig.GetTelemetryEnabled(ctx)
-
 	// k8s
 	kubeClient, err := kubeclient.GetClient()
 	commons.ExitOnError("Getting kubernetes client", err)
 	clientset, err := k8sclient.ConnectToK8s()
 	commons.ExitOnError("Creating k8s clientset", err)
 
-	// k8s clients
-	secretClient := secret.NewClientFor(clientset, cfg.TestkubeNamespace)
-	configMapClient := configmap.NewClientFor(clientset, cfg.TestkubeNamespace)
-	webhooksClient := executorsclientv1.NewWebhooksClient(kubeClient, cfg.TestkubeNamespace)
-	testTriggersClient := testtriggersclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
-	testWorkflowExecutionsClient := testworkflowsclientv1.NewTestWorkflowExecutionsClient(kubeClient, cfg.TestkubeNamespace)
+	var runner runner2.Runner
+	getRunner := func() runner2.Runner { return runner }
+
+	var eventsEmitter *event.Emitter
+	getEmitter := func() *event.Emitter { return eventsEmitter }
 
 	// TODO: Make granular environment variables, yet backwards compatible
 	secretConfig := testkube.SecretConfig{
@@ -122,6 +106,28 @@ func main() {
 		AutoCreate: !cfg.DisableSecretCreation,
 	}
 	secretManager := secretmanager.New(clientset, secretConfig)
+
+	// Start local Control Plane
+	if mode == common.ModeStandalone {
+		controlPlane := services.CreateControlPlane(ctx, cfg, features, configMapConfig, secretManager, getRunner, getEmitter)
+		g.Go(func() error {
+			return controlPlane.Run(ctx)
+		})
+
+		// Rewire connection
+		cfg.TestkubeProURL = fmt.Sprintf("%s:%d", cfg.APIServerFullname, cfg.GRPCServerPort)
+		cfg.TestkubeProTLSInsecure = true
+	}
+
+	clusterId, _ := configMapConfig.GetUniqueClusterId(ctx)
+	telemetryEnabled, _ := configMapConfig.GetTelemetryEnabled(ctx)
+
+	// k8s clients
+	secretClient := secret.NewClientFor(clientset, cfg.TestkubeNamespace)
+	configMapClient := configmap.NewClientFor(clientset, cfg.TestkubeNamespace)
+	webhooksClient := executorsclientv1.NewWebhooksClient(kubeClient, cfg.TestkubeNamespace)
+	testTriggersClient := testtriggersclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
+	testWorkflowExecutionsClient := testworkflowsclientv1.NewTestWorkflowExecutionsClient(kubeClient, cfg.TestkubeNamespace)
 
 	envs := commons.GetEnvironmentVariables()
 
@@ -169,7 +175,7 @@ func main() {
 	if cfg.Trace {
 		eventBus.TraceEvents()
 	}
-	eventsEmitter := event.NewEmitter(eventBus, cfg.TestkubeClusterName)
+	eventsEmitter = event.NewEmitter(eventBus, cfg.TestkubeClusterName)
 
 	// Check Pro/Enterprise subscription
 	proContext := commons.ReadProContext(ctx, cfg, grpcClient)
@@ -218,7 +224,7 @@ func main() {
 	executionWorker := services.CreateExecutionWorker(clientset, cfg, clusterId, serviceAccountNames, testWorkflowProcessor)
 
 	// Build the runner
-	runner := runner2.New(
+	runner = runner2.New(
 		executionWorker,
 		testWorkflowOutputRepository,
 		testWorkflowResultsRepository,
@@ -325,7 +331,6 @@ func main() {
 		configMapConfig,
 		secretManager,
 		secretConfig,
-		testWorkflowExecutor,
 		executionWorker,
 		eventsEmitter,
 		websocketLoader,
@@ -336,6 +341,7 @@ func main() {
 		cfg.TestkubeHelmchartVersion,
 		serviceAccountNames,
 		cfg.TestkubeDockerImageVersion,
+		grpcClient,
 	)
 	api.Init(httpServer)
 
