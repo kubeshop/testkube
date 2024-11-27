@@ -197,6 +197,15 @@ func uiWatch(execution testkube.TestWorkflowExecution, serviceName string, servi
 	if serviceName == "" {
 		result, err = watchTestWorkflowLogs(execution.Id, execution.Signature, client)
 	} else {
+		found := false
+		if execution.Workflow != nil && execution.Workflow.Spec != nil {
+			_, found = execution.Workflow.Spec.Services[serviceName]
+		}
+
+		if !found {
+			ui.Failf("unknown service '%s' for test workflow execution %s", serviceName, execution.Id)
+		}
+
 		result, err = watchTestWorkflowServiceLogs(execution.Id, serviceName, serviceIndex, execution.Signature, client)
 	}
 	ui.ExitOnError("reading test workflow execution logs", err)
@@ -295,17 +304,10 @@ func getTimestampLength(line string) int {
 	return 0
 }
 
-func watchTestWorkflowLogs(id string, signature []testkube.TestWorkflowSignature, client apiclientv1.Client) (*testkube.TestWorkflowResult, error) {
-	ui.Info("Getting logs from test workflow job", id)
-
-	notifications, err := client.GetTestWorkflowExecutionNotifications(id)
-	if err != nil {
-		return nil, err
-	}
-
+func printTestWorkflowLogs(signature []testkube.TestWorkflowSignature,
+	notifications chan testkube.TestWorkflowExecutionNotification) (result *testkube.TestWorkflowResult) {
 	steps := flattenSignatures(signature)
 
-	var result *testkube.TestWorkflowResult
 	var isLineBeginning = true
 	for l := range notifications {
 		if l.Output != nil {
@@ -323,7 +325,18 @@ func watchTestWorkflowLogs(id string, signature []testkube.TestWorkflowSignature
 	}
 
 	ui.NL()
+	return result
+}
 
+func watchTestWorkflowLogs(id string, signature []testkube.TestWorkflowSignature, client apiclientv1.Client) (*testkube.TestWorkflowResult, error) {
+	ui.Info("Getting logs from test workflow job", id)
+
+	notifications, err := client.GetTestWorkflowExecutionNotifications(id)
+	if err != nil {
+		return nil, err
+	}
+
+	result := printTestWorkflowLogs(signature, notifications)
 	return result, nil
 }
 
@@ -357,27 +370,7 @@ func watchTestWorkflowServiceLogs(id, serviceName string, serviceIndex int,
 		break
 	}
 
-	steps := flattenSignatures(signature)
-
-	var result *testkube.TestWorkflowResult
-	var isLineBeginning = true
-	for l := range notifications {
-		if l.Output != nil {
-			continue
-		}
-		if l.Result != nil {
-			if printResultDifference(result, l.Result, steps) {
-				isLineBeginning = true
-			}
-			result = l.Result
-			continue
-		}
-
-		printStructuredLogLines(l.Log, &isLineBeginning)
-	}
-
-	ui.NL()
-
+	result := printTestWorkflowLogs(signature, notifications)
 	return result, nil
 }
 
