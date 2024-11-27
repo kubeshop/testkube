@@ -8258,6 +8258,11 @@ components:
           description: unique execution identifier
           format: bson objectId
           example: "62f395e004109209b50edfc1"
+        groupId:
+          type: string
+          description: identifier for group of correlated executions
+          format: bson objectId
+          example: "62f395e004109209b50edfc1"
         name:
           type: string
           description: execution name

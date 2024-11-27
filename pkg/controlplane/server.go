@@ -2,9 +2,13 @@ package controlplane
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"maps"
 	"math"
 	"net"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2/log"
@@ -12,6 +16,7 @@ import (
 	grpcrecovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpcctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
 	"github.com/pkg/errors"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
@@ -21,8 +26,11 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/cloud/data/executor"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 )
 
 const (
@@ -34,9 +42,11 @@ const (
 
 type Server struct {
 	cloud.UnimplementedTestKubeCloudAPIServer
-	cfg      Config
-	server   *grpc.Server
-	commands map[executor.Command]CommandHandler
+	cfg          Config
+	server       *grpc.Server
+	scheduler    *testworkflowexecutor.ExecutionScheduler
+	dashboardUri string
+	commands     map[executor.Command]CommandHandler
 }
 
 type Config struct {
@@ -45,7 +55,12 @@ type Config struct {
 	Logger  *zap.SugaredLogger
 }
 
-func New(cfg Config, commandGroups ...CommandHandlers) *Server {
+func New(
+	cfg Config,
+	executionScheduler *testworkflowexecutor.ExecutionScheduler,
+	dashboardUri string,
+	commandGroups ...CommandHandlers,
+) *Server {
 	commands := make(map[executor.Command]CommandHandler)
 	for _, group := range commandGroups {
 		for cmd, handler := range group {
@@ -53,8 +68,9 @@ func New(cfg Config, commandGroups ...CommandHandlers) *Server {
 		}
 	}
 	return &Server{
-		cfg:      cfg,
-		commands: commands,
+		cfg:       cfg,
+		scheduler: executionScheduler,
+		commands:  commands,
 	}
 }
 
@@ -257,6 +273,145 @@ func (s *Server) Run(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "grpc server error")
 	}
+	return nil
+}
+
+// TODO: Limit selectors or maximum executions to avoid huge load?
+func (s *Server) ScheduleExecution(req *cloud.ScheduleRequest, srv cloud.TestKubeCloudAPI_ScheduleExecutionServer) error {
+	ctx, cancel := context.WithCancel(srv.Context())
+	defer cancel()
+
+	// -----=====[ 01 ]=====[ Build initial data ]=====-------
+	now := time.Now().UTC()
+	groupId := primitive.NewObjectIDFromTimestamp(now).Hex()
+
+	// Validate if there is anything to run
+	if len(req.Selectors) == 0 {
+		return nil
+	}
+
+	// Validate if the selectors have exclusively name or label selector
+	nameSelectorsCount := 0
+	labelSelectorsCount := 0
+	for i := range req.Selectors {
+		if req.Selectors[i] == nil {
+			return errors.New("invalid selector provided")
+		}
+		if req.Selectors[i].Name != "" && len(req.Selectors[i].LabelSelector) > 0 {
+			return errors.New("invalid selector provided")
+		}
+		if req.Selectors[i].Name == "" && len(req.Selectors[i].LabelSelector) == 0 {
+			return errors.New("invalid selector provided")
+		}
+		if req.Selectors[i].Name != "" {
+			nameSelectorsCount++
+		} else {
+			labelSelectorsCount++
+		}
+	}
+
+	// Validate if that could be Kubernetes object
+	if req.KubernetesObjectName != "" && (nameSelectorsCount != 1 || labelSelectorsCount != 0) {
+		return errors.New("kubernetes object can trigger only execution of a single named TestWorkflow")
+	}
+
+	// TODO: translate to the old format
+	var runningContext *testkube.TestWorkflowRunningContext
+
+	// Prepare execution base
+	bases := make([]*testworkflowexecutor.PreparedExecution, 0, len(req.Selectors))
+	for _, v := range req.Selectors {
+		tags := make(map[string]string)
+		maps.Copy(tags, req.Tags)
+		maps.Copy(tags, v.Tags)
+		if v.Name != "" {
+			base, err := s.scheduler.PrepareExecutionBase(ctx, testworkflowexecutor.ScheduleRequest{
+				Name:                            v.Name,
+				Config:                          v.Config,
+				ExecutionName:                   v.ExecutionName,
+				Tags:                            tags,
+				DisableWebhooks:                 req.DisableWebhooks,
+				TestWorkflowExecutionObjectName: req.KubernetesObjectName,
+				RunningContext:                  runningContext,
+				ParentExecutionIds:              req.ParentExecutionIds,
+			})
+			if err != nil {
+				return err
+			}
+			base.Execution.GroupId = groupId
+			bases = append(bases, base)
+		} else {
+			selectors := make([]string, 0, len(v.LabelSelector))
+			for k := range v.LabelSelector {
+				selectors = append(selectors, fmt.Sprintf("%s=%s", k, v.LabelSelector[k]))
+			}
+			workflows, err := s.scheduler.TestWorkflowClient().List(strings.Join(selectors, ","))
+			if err != nil {
+				return err
+			}
+
+			// TODO: avoid downloading the Test Workflows 2nd time
+			for _, w := range workflows.Items {
+				base, err := s.scheduler.PrepareExecutionBase(ctx, testworkflowexecutor.ScheduleRequest{
+					Name:                            w.Name,
+					Config:                          v.Config,
+					ExecutionName:                   v.ExecutionName,
+					Tags:                            tags,
+					DisableWebhooks:                 req.DisableWebhooks,
+					TestWorkflowExecutionObjectName: req.KubernetesObjectName,
+					RunningContext:                  runningContext,
+					ParentExecutionIds:              req.ParentExecutionIds,
+				})
+				if err != nil {
+					return err
+				}
+				base.Execution.GroupId = groupId
+				bases = append(bases, base)
+			}
+		}
+	}
+
+	// Prepare actual executions
+	preparedExecutions := make([]testworkflowexecutor.PreparedExecution, 0)
+	for i := range bases {
+		exs, err := s.scheduler.PrepareExecutions(ctx, bases[i], "", "", testworkflowexecutor.ScheduleRequest{
+			ExecutionName:      bases[i].Execution.Name,
+			Tags:               bases[i].Execution.Tags,
+			ParentExecutionIds: req.ParentExecutionIds,
+		})
+		if err != nil {
+			return err
+		}
+		preparedExecutions = append(preparedExecutions, exs...)
+	}
+
+	// Make group ID same as execution ID, in case only one execution is meant to be started.
+	// Thanks to that, it will be simpler to identify executions that are grouped.
+	if len(preparedExecutions) == 1 {
+		preparedExecutions[0].Execution.GroupId = preparedExecutions[0].Execution.Id
+	}
+
+	controlPlaneConfig := testworkflowconfig.ControlPlaneConfig{
+		DashboardUrl:   s.dashboardUri,
+		CDEventsTarget: os.Getenv("CDEVENTS_TARGET"),
+	}
+
+	// TODO: Parallelize
+	for i := range preparedExecutions {
+		exec, err := s.scheduler.DoOne(controlPlaneConfig, "", "", req.ParentExecutionIds, preparedExecutions[i])
+		if err != nil && exec.Result != nil && !exec.Result.IsFinished() {
+			// TODO: apply internal error to the execution
+		}
+		v, err := json.Marshal(exec)
+		if err != nil {
+			return err
+		}
+		err = srv.Send(&cloud.ScheduleResponse{Execution: v})
+		if err != nil {
+			// TODO: retry?
+		}
+	}
+
 	return nil
 }
 

@@ -35,6 +35,7 @@ type TestKubeCloudAPIClient interface {
 	GetTestWorkflowParallelStepNotificationsStream(ctx context.Context, opts ...grpc.CallOption) (TestKubeCloudAPI_GetTestWorkflowParallelStepNotificationsStreamClient, error)
 	GetProContext(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ProContextResponse, error)
 	GetCredential(ctx context.Context, in *CredentialRequest, opts ...grpc.CallOption) (*CredentialResponse, error)
+	ScheduleExecution(ctx context.Context, in *ScheduleRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_ScheduleExecutionClient, error)
 }
 
 type testKubeCloudAPIClient struct {
@@ -292,6 +293,38 @@ func (c *testKubeCloudAPIClient) GetCredential(ctx context.Context, in *Credenti
 	return out, nil
 }
 
+func (c *testKubeCloudAPIClient) ScheduleExecution(ctx context.Context, in *ScheduleRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_ScheduleExecutionClient, error) {
+	stream, err := c.cc.NewStream(ctx, &TestKubeCloudAPI_ServiceDesc.Streams[7], "/cloud.TestKubeCloudAPI/ScheduleExecution", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &testKubeCloudAPIScheduleExecutionClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type TestKubeCloudAPI_ScheduleExecutionClient interface {
+	Recv() (*ScheduleResponse, error)
+	grpc.ClientStream
+}
+
+type testKubeCloudAPIScheduleExecutionClient struct {
+	grpc.ClientStream
+}
+
+func (x *testKubeCloudAPIScheduleExecutionClient) Recv() (*ScheduleResponse, error) {
+	m := new(ScheduleResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // TestKubeCloudAPIServer is the server API for TestKubeCloudAPI service.
 // All implementations must embed UnimplementedTestKubeCloudAPIServer
 // for forward compatibility
@@ -308,6 +341,7 @@ type TestKubeCloudAPIServer interface {
 	GetTestWorkflowParallelStepNotificationsStream(TestKubeCloudAPI_GetTestWorkflowParallelStepNotificationsStreamServer) error
 	GetProContext(context.Context, *emptypb.Empty) (*ProContextResponse, error)
 	GetCredential(context.Context, *CredentialRequest) (*CredentialResponse, error)
+	ScheduleExecution(*ScheduleRequest, TestKubeCloudAPI_ScheduleExecutionServer) error
 	mustEmbedUnimplementedTestKubeCloudAPIServer()
 }
 
@@ -344,6 +378,9 @@ func (UnimplementedTestKubeCloudAPIServer) GetProContext(context.Context, *empty
 }
 func (UnimplementedTestKubeCloudAPIServer) GetCredential(context.Context, *CredentialRequest) (*CredentialResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetCredential not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) ScheduleExecution(*ScheduleRequest, TestKubeCloudAPI_ScheduleExecutionServer) error {
+	return status.Errorf(codes.Unimplemented, "method ScheduleExecution not implemented")
 }
 func (UnimplementedTestKubeCloudAPIServer) mustEmbedUnimplementedTestKubeCloudAPIServer() {}
 
@@ -594,6 +631,27 @@ func _TestKubeCloudAPI_GetCredential_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _TestKubeCloudAPI_ScheduleExecution_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(ScheduleRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(TestKubeCloudAPIServer).ScheduleExecution(m, &testKubeCloudAPIScheduleExecutionServer{stream})
+}
+
+type TestKubeCloudAPI_ScheduleExecutionServer interface {
+	Send(*ScheduleResponse) error
+	grpc.ServerStream
+}
+
+type testKubeCloudAPIScheduleExecutionServer struct {
+	grpc.ServerStream
+}
+
+func (x *testKubeCloudAPIScheduleExecutionServer) Send(m *ScheduleResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
 // TestKubeCloudAPI_ServiceDesc is the grpc.ServiceDesc for TestKubeCloudAPI service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -655,6 +713,11 @@ var TestKubeCloudAPI_ServiceDesc = grpc.ServiceDesc{
 			Handler:       _TestKubeCloudAPI_GetTestWorkflowParallelStepNotificationsStream_Handler,
 			ServerStreams: true,
 			ClientStreams: true,
+		},
+		{
+			StreamName:    "ScheduleExecution",
+			Handler:       _TestKubeCloudAPI_ScheduleExecution_Handler,
+			ServerStreams: true,
 		},
 	},
 	Metadata: "proto/service.proto",
