@@ -6,7 +6,7 @@ import { check } from 'k6';
 // };
 
 export default function () {
-  const res = http.get('https://testkube-test-page-lipsum.pages.dev/');
+  const res = http.get('https://storage.googleapis.com/perf-test-static-page-bucket/testkube-test-page-lorem-ipsum/index.html');
   check(res, { 'status was 200': (r) => r.status == 200 });
   check(res, {
     'verify partial text': (r) =>
