@@ -345,25 +345,29 @@ func watchTestWorkflowServiceLogs(id, serviceName string, serviceIndex int,
 
 	var (
 		notifications chan testkube.TestWorkflowExecutionNotification
-		err           error
+		nErr          error
 	)
 
 	for {
-		notifications, err = client.GetTestWorkflowExecutionServiceNotifications(id, serviceName, serviceIndex)
-		if err != nil {
-			execution, err := client.GetTestWorkflowExecution(id)
-			if err != nil {
-				return nil, err
+		notifications, nErr = client.GetTestWorkflowExecutionServiceNotifications(id, serviceName, serviceIndex)
+		if nErr != nil {
+			execution, cErr := client.GetTestWorkflowExecution(id)
+			if cErr != nil {
+				return nil, cErr
 			}
 
-			if execution.Result != nil && !execution.Result.IsFinished() {
-				time.Sleep(serviceLogsCheckDelay)
-				continue
+			if execution.Result != nil {
+				if execution.Result.IsFinished() {
+					nErr = errors.New("test workflow execution is finished")
+				} else {
+					time.Sleep(serviceLogsCheckDelay)
+					continue
+				}
 			}
 		}
 
-		if err != nil {
-			return nil, err
+		if nErr != nil {
+			return nil, nErr
 		}
 
 		break
