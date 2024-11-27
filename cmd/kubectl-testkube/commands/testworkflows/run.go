@@ -341,7 +341,7 @@ func watchTestWorkflowLogs(id string, signature []testkube.TestWorkflowSignature
 
 func watchTestWorkflowServiceLogs(id, serviceName string, serviceIndex int,
 	signature []testkube.TestWorkflowSignature, client apiclientv1.Client) (*testkube.TestWorkflowResult, error) {
-	ui.Info("Getting logs from test workflow service pod", fmt.Sprintf("%s-%s-%d", id, serviceName, serviceIndex))
+	ui.Info("Getting logs from test workflow service job", fmt.Sprintf("%s-%s-%d", id, serviceName, serviceIndex))
 
 	var (
 		notifications chan testkube.TestWorkflowExecutionNotification
