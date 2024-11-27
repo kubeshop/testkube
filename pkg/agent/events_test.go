@@ -56,9 +56,10 @@ func TestEventLoop(t *testing.T) {
 
 	var logStreamFunc func(ctx context.Context, executionID string) (chan output.Output, error)
 	var workflowNotificationsStreamFunc func(ctx context.Context, executionID string) (<-chan testkube.TestWorkflowExecutionNotification, error)
+	var workflowServiceNotificationsStreamFunc func(ctx context.Context, executionID, serviceName string, serviceIndex int) (<-chan testkube.TestWorkflowExecutionNotification, error)
 
 	proContext := config.ProContext{APIKey: "api-key", WorkerCount: 5, LogStreamWorkerCount: 5, WorkflowNotificationsWorkerCount: 5}
-	agent, err := agent.NewAgent(logger.Sugar(), nil, grpcClient, logStreamFunc, workflowNotificationsStreamFunc, "", "", featureflags.FeatureFlags{}, &proContext, "")
+	agent, err := agent.NewAgent(logger.Sugar(), nil, grpcClient, logStreamFunc, workflowNotificationsStreamFunc, workflowServiceNotificationsStreamFunc, "", "", featureflags.FeatureFlags{}, &proContext, "")
 	assert.NoError(t, err)
 	go func() {
 		l, err := agent.Load()
@@ -105,6 +106,12 @@ func (cws *CloudEventServer) GetLogsStream(srv cloud.TestKubeCloudAPI_GetLogsStr
 }
 
 func (cws *CloudEventServer) GetTestWorkflowNotificationsStream(srv cloud.TestKubeCloudAPI_GetTestWorkflowNotificationsStreamServer) error {
+	<-cws.ctx.Done()
+
+	return nil
+}
+
+func (cws *CloudEventServer) GetTestWorkflowServiceNotificationsStream(srv cloud.TestKubeCloudAPI_GetTestWorkflowServiceNotificationsStreamServer) error {
 	<-cws.ctx.Done()
 
 	return nil

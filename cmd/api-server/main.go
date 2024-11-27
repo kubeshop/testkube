@@ -325,6 +325,22 @@ func main() {
 		}
 		return notifications.Channel(), nil
 	}
+	getTestWorkflowServiceNotificationsStream := func(ctx context.Context, executionID, serviceName string, serviceIndex int) (<-chan testkube.TestWorkflowExecutionNotification, error) {
+		execution, err := testWorkflowResultsRepository.Get(ctx, executionID)
+		if err != nil {
+			return nil, err
+		}
+		notifications := executionWorker.Notifications(ctx, fmt.Sprintf("%s-%s-%d", execution.Id, serviceName, serviceIndex), executionworkertypes.NotificationsOptions{
+			Hints: executionworkertypes.Hints{
+				Namespace:   execution.Namespace,
+				ScheduledAt: common.Ptr(execution.ScheduledAt),
+			},
+		})
+		if notifications.Err() != nil {
+			return nil, notifications.Err()
+		}
+		return notifications.Channel(), nil
+	}
 	getDeprecatedLogStream := func(ctx context.Context, executionID string) (chan output.Output, error) {
 		return nil, errors.New("deprecated features have been disabled")
 	}
@@ -337,6 +353,7 @@ func main() {
 		grpcClient,
 		getDeprecatedLogStream,
 		getTestWorkflowNotificationsStream,
+		getTestWorkflowServiceNotificationsStream,
 		clusterId,
 		cfg.TestkubeClusterName,
 		features,
