@@ -243,12 +243,12 @@ func (ag *Agent) executeWorkflowServiceNotificationsRequest(ctx context.Context,
 			// Cloud sometimes slow to insert execution or test
 			// while WorkflowNotifications request from websockets comes in faster
 			// so we retry up to testWorkflowNotificationsRetryCount times.
-			time.Sleep(100 * time.Millisecond)
+			time.Sleep(time.Second)
 			notificationsCh, err = ag.testWorkflowServiceNotificationsFunc(ctx, req.ExecutionId, req.ServiceName, int(req.ServiceIndex))
 		}
 	}
 	if err != nil {
-		message := fmt.Sprintf("cannot get pod logs: %s", err.Error())
+		message := fmt.Sprintf("cannot get service pod logs: %s", err.Error())
 		ag.testWorkflowServiceNotificationsResponseBuffer <- &cloud.TestWorkflowServiceNotificationsResponse{
 			StreamId: req.StreamId,
 			SeqNo:    0,
