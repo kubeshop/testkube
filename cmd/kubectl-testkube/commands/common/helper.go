@@ -813,7 +813,7 @@ func KubectlDescribeIngresses(namespace string) error {
 	return process.ExecuteAndStreamOutput(kubectl, args...)
 }
 
-func KubectlGetNamespacesHavingSecrets(selector string) ([]string, error) {
+func KubectlGetNamespacesHavingSecrets(secretName string) ([]string, error) {
 	kubectl, clierr := lookupKubectlPath()
 	if clierr != nil {
 		return nil, clierr.ActualError
@@ -835,7 +835,7 @@ func KubectlGetNamespacesHavingSecrets(selector string) ([]string, error) {
 		return nil, err
 	}
 
-	nss := extractUniqueNamespaces(string(out), "testkube-enterprise-license")
+	nss := extractUniqueNamespaces(string(out), secretName)
 	return nss, nil
 }
 
