@@ -248,7 +248,7 @@ func (ag *Agent) executeWorkflowServiceNotificationsRequest(ctx context.Context,
 
 	for {
 		notificationsCh, err = ag.testWorkflowServiceNotificationsFunc(ctx, req.ExecutionId, req.ServiceName, int(req.ServiceIndex))
-		if errors.Is(err, ErrGetTestWorkflowExecution) || errors.Is(ErrFinishedTestWorkflowExecution) {
+		if errors.Is(err, ErrGetTestWorkflowExecution) || errors.Is(err, ErrFinishedTestWorkflowExecution) {
 			break
 		}
 
