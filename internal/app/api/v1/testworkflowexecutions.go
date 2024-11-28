@@ -104,8 +104,8 @@ func (s *TestkubeAPI) StreamTestWorkflowExecutionServiceNotificationsHandler() f
 		}
 
 		found := false
-		if execution.Workflow != nil && execution.Workflow.Spec != nil {
-			_, found = execution.Workflow.Spec.Services[serviceName]
+		if execution.Workflow != nil {
+			found = execution.Workflow.HasService(serviceName)
 		}
 
 		if !found {
@@ -189,7 +189,7 @@ func (s *TestkubeAPI) StreamTestWorkflowExecutionServiceNotificationsWebSocketHa
 
 		found := false
 		if execution.Workflow != nil && execution.Workflow.Spec != nil {
-			_, found = execution.Workflow.Spec.Services[serviceName]
+			found = execution.Workflow.HasService(serviceName)
 		}
 
 		if !found {

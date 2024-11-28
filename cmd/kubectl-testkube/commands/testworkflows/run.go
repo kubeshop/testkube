@@ -198,8 +198,8 @@ func uiWatch(execution testkube.TestWorkflowExecution, serviceName string, servi
 		result, err = watchTestWorkflowLogs(execution.Id, execution.Signature, client)
 	} else {
 		found := false
-		if execution.Workflow != nil && execution.Workflow.Spec != nil {
-			_, found = execution.Workflow.Spec.Services[serviceName]
+		if execution.Workflow != nil {
+			found = execution.Workflow.HasService(serviceName)
 		}
 
 		if !found {

@@ -65,3 +65,24 @@ func (w *TestWorkflowStep) GetTemplateRefs() []TestWorkflowTemplateRef {
 
 	return templateRefs
 }
+
+func (w *TestWorkflowStep) HasService(name string) bool {
+	steps := append(w.Setup, w.Steps...)
+	if w.Parallel != nil {
+		steps = append(steps, w.Parallel.Setup...)
+		steps = append(steps, w.Parallel.Steps...)
+		steps = append(steps, w.Parallel.After...)
+	}
+
+	for _, step := range steps {
+		if step.HasService(name) {
+			return true
+		}
+	}
+
+	if _, ok := w.Services[name]; ok {
+		return true
+	}
+
+	return false
+}
