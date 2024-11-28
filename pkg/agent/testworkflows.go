@@ -16,14 +16,10 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/registry"
 )
 
 const testWorkflowNotificationsRetryCount = 10
-
-var (
-	ErrGetTestWorkflowExecution      = errors.New("can't get test workflow execution")
-	ErrFinishedTestWorkflowExecution = errors.New("test workflow execution is finished")
-)
 
 func getTestWorkflowNotificationType(n testkube.TestWorkflowExecutionNotification) cloud.TestWorkflowNotificationType {
 	if n.Result != nil {
@@ -248,11 +244,7 @@ func (ag *Agent) executeWorkflowServiceNotificationsRequest(ctx context.Context,
 
 	for {
 		notificationsCh, err = ag.testWorkflowServiceNotificationsFunc(ctx, req.ExecutionId, req.ServiceName, int(req.ServiceIndex))
-		if errors.Is(err, ErrGetTestWorkflowExecution) || errors.Is(err, ErrFinishedTestWorkflowExecution) {
-			break
-		}
-
-		if err != nil {
+		if errors.Is(err, registry.ErrResourceNotFound) {
 			// We have a race condition here
 			// Cloud sometimes slow to start service
 			// while WorkflowNotifications request from websockets comes in faster
