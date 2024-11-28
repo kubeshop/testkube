@@ -20,6 +20,11 @@ import (
 
 const testWorkflowNotificationsRetryCount = 10
 
+var (
+	ErrGetTestWorkflowExecution      = errors.New("can't get test workflow execution")
+	ErrFinishedTestWorkflowExecution = errors.New("test workflow execution is finished")
+)
+
 func getTestWorkflowNotificationType(n testkube.TestWorkflowExecutionNotification) cloud.TestWorkflowNotificationType {
 	if n.Result != nil {
 		return cloud.TestWorkflowNotificationType_WORKFLOW_STREAM_RESULT
@@ -236,17 +241,29 @@ func (ag *Agent) executeWorkflowNotificationsRequest(ctx context.Context, req *c
 }
 
 func (ag *Agent) executeWorkflowServiceNotificationsRequest(ctx context.Context, req *cloud.TestWorkflowServiceNotificationsRequest) error {
-	notificationsCh, err := ag.testWorkflowServiceNotificationsFunc(ctx, req.ExecutionId, req.ServiceName, int(req.ServiceIndex))
-	for i := 0; i < testWorkflowNotificationsRetryCount; i++ {
+	var (
+		notificationsCh <-chan testkube.TestWorkflowExecutionNotification
+		err             error
+	)
+
+	for {
+		notificationsCh, err = ag.testWorkflowServiceNotificationsFunc(ctx, req.ExecutionId, req.ServiceName, int(req.ServiceIndex))
+		if errors.Is(err, ErrGetTestWorkflowExecution) || errors.Is(ErrFinishedTestWorkflowExecution) {
+			break
+		}
+
 		if err != nil {
 			// We have a race condition here
-			// Cloud sometimes slow to insert execution or test
+			// Cloud sometimes slow to start service
 			// while WorkflowNotifications request from websockets comes in faster
-			// so we retry up to testWorkflowNotificationsRetryCount times.
-			time.Sleep(time.Second)
-			notificationsCh, err = ag.testWorkflowServiceNotificationsFunc(ctx, req.ExecutionId, req.ServiceName, int(req.ServiceIndex))
+			// so we retry up to wait till service pod is uo or execution is finished.
+			time.Sleep(100 * time.Millisecond)
+			continue
 		}
+
+		break
 	}
+
 	if err != nil {
 		message := fmt.Sprintf("cannot get service pod logs: %s", err.Error())
 		ag.testWorkflowServiceNotificationsResponseBuffer <- &cloud.TestWorkflowServiceNotificationsResponse{

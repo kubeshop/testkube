@@ -328,8 +328,13 @@ func main() {
 	getTestWorkflowServiceNotificationsStream := func(ctx context.Context, executionID, serviceName string, serviceIndex int) (<-chan testkube.TestWorkflowExecutionNotification, error) {
 		execution, err := testWorkflowResultsRepository.Get(ctx, executionID)
 		if err != nil {
-			return nil, err
+			return nil, errors.Join(err, agent.ErrGetTestWorkflowExecution)
 		}
+
+		if execution.Result != nil && execution.Result.IsFinished() {
+			return nil, agent.ErrFinishedTestWorkflowExecution
+		}
+
 		notifications := executionWorker.Notifications(ctx, fmt.Sprintf("%s-%s-%d", execution.Id, serviceName, serviceIndex), executionworkertypes.NotificationsOptions{
 			Hints: executionworkertypes.Hints{
 				Namespace:   execution.Namespace,
