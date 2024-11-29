@@ -23,8 +23,8 @@ import (
 const testWorkflowNotificationsRetryCount = 10
 
 var (
-	retryDelay  = 100 * time.Millisecond
-	waitTimeout = 24 * time.Hour
+	logRetryDelay      = 100 * time.Millisecond
+	serviceWaitTimeout = 24 * time.Hour
 )
 
 func getTestWorkflowNotificationType(n testkube.TestWorkflowExecutionNotification) cloud.TestWorkflowNotificationType {
@@ -190,7 +190,7 @@ func (ag *Agent) executeWorkflowNotificationsRequest(ctx context.Context, req *c
 			// Cloud sometimes slow to insert execution or test
 			// while WorkflowNotifications request from websockets comes in faster
 			// so we retry up to testWorkflowNotificationsRetryCount times.
-			time.Sleep(retryDelay)
+			time.Sleep(logRetryDelay)
 			notificationsCh, err = ag.testWorkflowNotificationsFunc(ctx, req.ExecutionId)
 		}
 	}
@@ -243,7 +243,7 @@ func (ag *Agent) executeWorkflowNotificationsRequest(ctx context.Context, req *c
 }
 
 func (ag *Agent) executeWorkflowServiceNotificationsRequest(ctx context.Context, req *cloud.TestWorkflowServiceNotificationsRequest) error {
-	timeoutCtx, cancel := context.WithTimeout(ctx, waitTimeout)
+	timeoutCtx, cancel := context.WithTimeout(ctx, serviceWaitTimeout)
 	defer cancel()
 
 	notificationsCh, err := retry.DoWithData(
@@ -255,7 +255,7 @@ func (ag *Agent) executeWorkflowServiceNotificationsRequest(ctx context.Context,
 			return ag.testWorkflowServiceNotificationsFunc(ctx, req.ExecutionId, req.ServiceName, int(req.ServiceIndex))
 		},
 		retry.DelayType(retry.FixedDelay),
-		retry.Delay(retryDelay),
+		retry.Delay(logRetryDelay),
 		retry.Context(timeoutCtx),
 		retry.RetryIf(func(err error) bool {
 			return errors.Is(err, registry.ErrResourceNotFound)
