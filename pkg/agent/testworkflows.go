@@ -260,7 +260,7 @@ func (ag *Agent) executeWorkflowServiceNotificationsRequest(ctx context.Context,
 		retry.RetryIf(func(err error) bool {
 			return errors.Is(err, registry.ErrResourceNotFound)
 		}),
-		retry.Attempts(0),
+		retry.UntilSucceeded(),
 	)
 
 	if err != nil {
