@@ -243,9 +243,6 @@ func (ag *Agent) executeWorkflowNotificationsRequest(ctx context.Context, req *c
 }
 
 func (ag *Agent) executeWorkflowServiceNotificationsRequest(ctx context.Context, req *cloud.TestWorkflowServiceNotificationsRequest) error {
-	timeoutCtx, cancel := context.WithTimeout(ctx, serviceWaitTimeout)
-	defer cancel()
-
 	notificationsCh, err := retry.DoWithData(
 		func() (<-chan testkube.TestWorkflowExecutionNotification, error) {
 			// We have a race condition here
@@ -256,7 +253,6 @@ func (ag *Agent) executeWorkflowServiceNotificationsRequest(ctx context.Context,
 		},
 		retry.DelayType(retry.FixedDelay),
 		retry.Delay(logRetryDelay),
-		retry.Context(timeoutCtx),
 		retry.RetryIf(func(err error) bool {
 			return errors.Is(err, registry.ErrResourceNotFound)
 		}),
