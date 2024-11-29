@@ -49,7 +49,7 @@ func NewWatchTestWorkflowExecutionCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&serviceName, "service-name", "", "test workflow service name")
-	cmd.Flags().IntVar(&serviceIndex, "service-index", 0, "test workflow service index")
+	cmd.Flags().IntVar(&serviceIndex, "service-index", 0, "test workflow service index starting from 0")
 
 	return cmd
 }

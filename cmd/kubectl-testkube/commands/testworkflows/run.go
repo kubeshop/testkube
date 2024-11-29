@@ -185,7 +185,7 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 	cmd.Flags().StringToStringVarP(&tags, "tag", "", map[string]string{}, "execution tags in a form of name1=val1 passed to executor")
 	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label key value pair: --label key1=value1 or label expression")
 	cmd.Flags().StringVar(&serviceName, "service-name", "", "test workflow service name")
-	cmd.Flags().IntVar(&serviceIndex, "service-index", 0, "test workflow service index")
+	cmd.Flags().IntVar(&serviceIndex, "service-index", 0, "test workflow service index starting from 0")
 
 	return cmd
 }
