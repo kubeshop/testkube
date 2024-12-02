@@ -289,12 +289,13 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 		LogStreamWorkerCount:                    cfg.TestkubeProLogStreamWorkerCount,
 		WorkflowNotificationsWorkerCount:        cfg.TestkubeProWorkflowNotificationsWorkerCount,
 		WorkflowServiceNotificationsWorkerCount: cfg.TestkubeProWorkflowServiceNotificationsWorkerCount,
-		SkipVerify:                              cfg.TestkubeProSkipVerify,
-		EnvID:                                   cfg.TestkubeProEnvID,
-		OrgID:                                   cfg.TestkubeProOrgID,
-		Migrate:                                 cfg.TestkubeProMigrate,
-		ConnectionTimeout:                       cfg.TestkubeProConnectionTimeout,
-		DashboardURI:                            cfg.TestkubeDashboardURI,
+		WorkflowParallelStepNotificationsWorkerCount: cfg.TestkubeProWorkflowParallelStepNotificationsWorkerCount,
+		SkipVerify:        cfg.TestkubeProSkipVerify,
+		EnvID:             cfg.TestkubeProEnvID,
+		OrgID:             cfg.TestkubeProOrgID,
+		Migrate:           cfg.TestkubeProMigrate,
+		ConnectionTimeout: cfg.TestkubeProConnectionTimeout,
+		DashboardURI:      cfg.TestkubeDashboardURI,
 	}
 
 	if cfg.TestkubeProAPIKey == "" || grpcClient == nil {

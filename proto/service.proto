@@ -17,6 +17,7 @@ service TestKubeCloudAPI {
     rpc GetLogsStream(stream LogsStreamResponse) returns (stream LogsStreamRequest);
     rpc GetTestWorkflowNotificationsStream(stream TestWorkflowNotificationsResponse) returns (stream TestWorkflowNotificationsRequest);
     rpc GetTestWorkflowServiceNotificationsStream(stream TestWorkflowServiceNotificationsResponse) returns (stream TestWorkflowServiceNotificationsRequest);
+    rpc GetTestWorkflowParallelStepNotificationsStream(stream TestWorkflowParallelStepNotificationsResponse) returns (stream TestWorkflowParallelStepNotificationsRequest);    
     rpc GetProContext(google.protobuf.Empty) returns (ProContextResponse);
     rpc GetCredential(CredentialRequest) returns (CredentialResponse);
 }
@@ -135,6 +136,23 @@ message TestWorkflowServiceNotificationsRequest {
 }
 
 message TestWorkflowServiceNotificationsResponse {
+  string stream_id = 1;
+  uint32 seq_no = 2;
+  string timestamp = 3;
+  string ref = 4;
+  TestWorkflowNotificationType type = 5;
+  string message = 6; // based on type: log/error = inline, others = serialized to JSON
+}
+
+message TestWorkflowParallelStepNotificationsRequest {
+  string stream_id = 1;
+  string execution_id = 2;
+  string ref = 3;
+  int32 parallel_step_index = 4; 
+  TestWorkflowNotificationsRequestType request_type = 5;
+}
+
+message TestWorkflowParallelStepNotificationsResponse {
   string stream_id = 1;
   uint32 seq_no = 2;
   string timestamp = 3;

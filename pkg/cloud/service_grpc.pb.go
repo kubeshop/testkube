@@ -32,6 +32,7 @@ type TestKubeCloudAPIClient interface {
 	GetLogsStream(ctx context.Context, opts ...grpc.CallOption) (TestKubeCloudAPI_GetLogsStreamClient, error)
 	GetTestWorkflowNotificationsStream(ctx context.Context, opts ...grpc.CallOption) (TestKubeCloudAPI_GetTestWorkflowNotificationsStreamClient, error)
 	GetTestWorkflowServiceNotificationsStream(ctx context.Context, opts ...grpc.CallOption) (TestKubeCloudAPI_GetTestWorkflowServiceNotificationsStreamClient, error)
+	GetTestWorkflowParallelStepNotificationsStream(ctx context.Context, opts ...grpc.CallOption) (TestKubeCloudAPI_GetTestWorkflowParallelStepNotificationsStreamClient, error)
 	GetProContext(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ProContextResponse, error)
 	GetCredential(ctx context.Context, in *CredentialRequest, opts ...grpc.CallOption) (*CredentialResponse, error)
 }
@@ -242,6 +243,37 @@ func (x *testKubeCloudAPIGetTestWorkflowServiceNotificationsStreamClient) Recv()
 	return m, nil
 }
 
+func (c *testKubeCloudAPIClient) GetTestWorkflowParallelStepNotificationsStream(ctx context.Context, opts ...grpc.CallOption) (TestKubeCloudAPI_GetTestWorkflowParallelStepNotificationsStreamClient, error) {
+	stream, err := c.cc.NewStream(ctx, &TestKubeCloudAPI_ServiceDesc.Streams[6], "/cloud.TestKubeCloudAPI/GetTestWorkflowParallelStepNotificationsStream", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &testKubeCloudAPIGetTestWorkflowParallelStepNotificationsStreamClient{stream}
+	return x, nil
+}
+
+type TestKubeCloudAPI_GetTestWorkflowParallelStepNotificationsStreamClient interface {
+	Send(*TestWorkflowParallelStepNotificationsResponse) error
+	Recv() (*TestWorkflowParallelStepNotificationsRequest, error)
+	grpc.ClientStream
+}
+
+type testKubeCloudAPIGetTestWorkflowParallelStepNotificationsStreamClient struct {
+	grpc.ClientStream
+}
+
+func (x *testKubeCloudAPIGetTestWorkflowParallelStepNotificationsStreamClient) Send(m *TestWorkflowParallelStepNotificationsResponse) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *testKubeCloudAPIGetTestWorkflowParallelStepNotificationsStreamClient) Recv() (*TestWorkflowParallelStepNotificationsRequest, error) {
+	m := new(TestWorkflowParallelStepNotificationsRequest)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 func (c *testKubeCloudAPIClient) GetProContext(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ProContextResponse, error) {
 	out := new(ProContextResponse)
 	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/GetProContext", in, out, opts...)
@@ -273,6 +305,7 @@ type TestKubeCloudAPIServer interface {
 	GetLogsStream(TestKubeCloudAPI_GetLogsStreamServer) error
 	GetTestWorkflowNotificationsStream(TestKubeCloudAPI_GetTestWorkflowNotificationsStreamServer) error
 	GetTestWorkflowServiceNotificationsStream(TestKubeCloudAPI_GetTestWorkflowServiceNotificationsStreamServer) error
+	GetTestWorkflowParallelStepNotificationsStream(TestKubeCloudAPI_GetTestWorkflowParallelStepNotificationsStreamServer) error
 	GetProContext(context.Context, *emptypb.Empty) (*ProContextResponse, error)
 	GetCredential(context.Context, *CredentialRequest) (*CredentialResponse, error)
 	mustEmbedUnimplementedTestKubeCloudAPIServer()
@@ -302,6 +335,9 @@ func (UnimplementedTestKubeCloudAPIServer) GetTestWorkflowNotificationsStream(Te
 }
 func (UnimplementedTestKubeCloudAPIServer) GetTestWorkflowServiceNotificationsStream(TestKubeCloudAPI_GetTestWorkflowServiceNotificationsStreamServer) error {
 	return status.Errorf(codes.Unimplemented, "method GetTestWorkflowServiceNotificationsStream not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) GetTestWorkflowParallelStepNotificationsStream(TestKubeCloudAPI_GetTestWorkflowParallelStepNotificationsStreamServer) error {
+	return status.Errorf(codes.Unimplemented, "method GetTestWorkflowParallelStepNotificationsStream not implemented")
 }
 func (UnimplementedTestKubeCloudAPIServer) GetProContext(context.Context, *emptypb.Empty) (*ProContextResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetProContext not implemented")
@@ -496,6 +532,32 @@ func (x *testKubeCloudAPIGetTestWorkflowServiceNotificationsStreamServer) Recv()
 	return m, nil
 }
 
+func _TestKubeCloudAPI_GetTestWorkflowParallelStepNotificationsStream_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(TestKubeCloudAPIServer).GetTestWorkflowParallelStepNotificationsStream(&testKubeCloudAPIGetTestWorkflowParallelStepNotificationsStreamServer{stream})
+}
+
+type TestKubeCloudAPI_GetTestWorkflowParallelStepNotificationsStreamServer interface {
+	Send(*TestWorkflowParallelStepNotificationsRequest) error
+	Recv() (*TestWorkflowParallelStepNotificationsResponse, error)
+	grpc.ServerStream
+}
+
+type testKubeCloudAPIGetTestWorkflowParallelStepNotificationsStreamServer struct {
+	grpc.ServerStream
+}
+
+func (x *testKubeCloudAPIGetTestWorkflowParallelStepNotificationsStreamServer) Send(m *TestWorkflowParallelStepNotificationsRequest) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *testKubeCloudAPIGetTestWorkflowParallelStepNotificationsStreamServer) Recv() (*TestWorkflowParallelStepNotificationsResponse, error) {
+	m := new(TestWorkflowParallelStepNotificationsResponse)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 func _TestKubeCloudAPI_GetProContext_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(emptypb.Empty)
 	if err := dec(in); err != nil {
@@ -585,6 +647,12 @@ var TestKubeCloudAPI_ServiceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "GetTestWorkflowServiceNotificationsStream",
 			Handler:       _TestKubeCloudAPI_GetTestWorkflowServiceNotificationsStream_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
+		},
+		{
+			StreamName:    "GetTestWorkflowParallelStepNotificationsStream",
+			Handler:       _TestKubeCloudAPI_GetTestWorkflowParallelStepNotificationsStream_Handler,
 			ServerStreams: true,
 			ClientStreams: true,
 		},

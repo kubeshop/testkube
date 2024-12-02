@@ -60,6 +60,11 @@ type Agent struct {
 	testWorkflowServiceNotificationsResponseBuffer chan *cloud.TestWorkflowServiceNotificationsResponse
 	testWorkflowServiceNotificationsFunc           func(ctx context.Context, executionID, serviceName string, serviceIndex int) (<-chan testkube.TestWorkflowExecutionNotification, error)
 
+	testWorkflowParallelStepNotificationsWorkerCount    int
+	testWorkflowParallelStepNotificationsRequestBuffer  chan *cloud.TestWorkflowParallelStepNotificationsRequest
+	testWorkflowParallelStepNotificationsResponseBuffer chan *cloud.TestWorkflowParallelStepNotificationsResponse
+	testWorkflowParallelStepNotificationsFunc           func(ctx context.Context, executionID, ref string, parallelStepIndexIndex int) (<-chan testkube.TestWorkflowExecutionNotification, error)
+
 	events              chan testkube.Event
 	sendTimeout         time.Duration
 	receiveTimeout      time.Duration
@@ -79,6 +84,7 @@ func NewAgent(logger *zap.SugaredLogger,
 	logStreamFunc func(ctx context.Context, executionID string) (chan output.Output, error),
 	workflowNotificationsFunc func(ctx context.Context, executionID string) (<-chan testkube.TestWorkflowExecutionNotification, error),
 	workflowServiceNotificationsFunc func(ctx context.Context, executionID, serviceName string, serviceIndex int) (<-chan testkube.TestWorkflowExecutionNotification, error),
+	workflowParallelStepNotificationsFunc func(ctx context.Context, executionID, ref string, parallelStepIndex int) (<-chan testkube.TestWorkflowExecutionNotification, error),
 	clusterID string,
 	clusterName string,
 	features featureflags.FeatureFlags,
