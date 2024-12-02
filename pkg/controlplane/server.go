@@ -1,10 +1,11 @@
 package controlplane
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	errors2 "errors"
 	"fmt"
-	"maps"
 	"math"
 	"net"
 	"os"
@@ -26,11 +27,18 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 
+	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/cloud/data/executor"
+	"github.com/kubeshop/testkube/pkg/expressions"
+	log2 "github.com/kubeshop/testkube/pkg/log"
+	testworkflowmappers "github.com/kubeshop/testkube/pkg/mapper/testworkflows"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowresolver"
 )
 
 const (
@@ -276,15 +284,19 @@ func (s *Server) Run(ctx context.Context) error {
 	return nil
 }
 
+func retry(count int, delayBase time.Duration, fn func() error) (err error) {
+	for i := 0; i < count; i++ {
+		err = fn()
+		if err == nil {
+			return nil
+		}
+		time.Sleep(time.Duration(i) * delayBase)
+	}
+	return err
+}
+
 // TODO: Limit selectors or maximum executions to avoid huge load?
 func (s *Server) ScheduleExecution(req *cloud.ScheduleRequest, srv cloud.TestKubeCloudAPI_ScheduleExecutionServer) error {
-	ctx, cancel := context.WithCancel(srv.Context())
-	defer cancel()
-
-	// -----=====[ 01 ]=====[ Build initial data ]=====-------
-	now := time.Now().UTC()
-	groupId := primitive.NewObjectIDFromTimestamp(now).Hex()
-
 	// Validate if there is anything to run
 	if len(req.Selectors) == 0 {
 		return nil
@@ -315,88 +327,250 @@ func (s *Server) ScheduleExecution(req *cloud.ScheduleRequest, srv cloud.TestKub
 		return errors.New("kubernetes object can trigger only execution of a single named TestWorkflow")
 	}
 
+	// Get dependencies
+	// TODO: IntermediateExecutionSet
+	testWorkflowsClient := s.scheduler.TestWorkflowsClient()
+	testWorkflowTemplatesClient := s.scheduler.TestWorkflowsTemplatesClient()
+	resultsRepository := s.scheduler.Repository()
+	outputRepository := s.scheduler.OutputRepository()
+	emitter := s.scheduler.Emitter()
+	runner := s.scheduler.Runner()
+	secretManager := s.scheduler.SecretManager()
+	globalTemplateName := s.scheduler.GlobalTemplateName()
+
+	// Prepare multi-get
+	testWorkflowCache := make(map[string]*testworkflowsv1.TestWorkflow)
+	testWorkflowTemplateCache := make(map[string]testworkflowsv1.TestWorkflowTemplate)
+	getTestWorkflow := func(name string) (*testworkflowsv1.TestWorkflow, error) {
+		if v, ok := testWorkflowCache[name]; ok {
+			return v.DeepCopy(), nil
+		}
+		workflow, err := testWorkflowsClient.Get(name)
+		if err != nil {
+			return nil, err
+		}
+		testWorkflowCache[name] = workflow.DeepCopy()
+		return workflow, nil
+	}
+	getTestWorkflows := func(labels map[string]string) ([]testworkflowsv1.TestWorkflow, error) {
+		selectors := make([]string, 0, len(labels))
+		for k := range labels {
+			selectors = append(selectors, fmt.Sprintf("%s=%s", k, labels[k]))
+		}
+		workflows, err := testWorkflowsClient.List(strings.Join(selectors, ","))
+		if err != nil {
+			return nil, err
+		}
+		for i := range workflows.Items {
+			testWorkflowCache[workflows.Items[i].Name] = &workflows.Items[i]
+		}
+		return workflows.Items, nil
+	}
+	getTestWorkflowTemplates := func(names map[string]struct{}) (map[string]testworkflowsv1.TestWorkflowTemplate, error) {
+		left := make(map[string]struct{})
+		result := make(map[string]testworkflowsv1.TestWorkflowTemplate)
+
+		// Get from cache
+		for name := range names {
+			if v, ok := testWorkflowTemplateCache[name]; ok {
+				result[name] = v
+			} else {
+				left[name] = struct{}{}
+			}
+		}
+
+		// Load missing TODO: parallel
+		for name := range left {
+			tpl, err := testWorkflowTemplatesClient.Get(name)
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed to get test workflow template '%s'", testworkflowresolver.GetDisplayTemplateName(name))
+			}
+			testWorkflowTemplateCache[name] = *tpl
+			result[name] = *tpl
+		}
+		return result, nil
+	}
+	isExecutionNameReserved := func(ctx context.Context, name, workflowName string) (bool, error) {
+		// TODO: Detect errors other than 404?
+		next, _ := resultsRepository.GetByNameAndTestWorkflow(ctx, name, workflowName)
+		if next.Name == name {
+			return true, nil
+		}
+		return false, nil
+	}
+	insert := func(ctx context.Context, execution *testkube.TestWorkflowExecution) error {
+		return retry(testworkflowexecutor.SaveResultRetryMaxAttempts, testworkflowexecutor.SaveResultRetryBaseDelay, func() error {
+			return resultsRepository.Insert(context.Background(), *execution)
+		})
+	}
+	update := func(ctx context.Context, execution *testkube.TestWorkflowExecution) error {
+		return retry(testworkflowexecutor.SaveResultRetryMaxAttempts, testworkflowexecutor.SaveResultRetryBaseDelay, func() error {
+			return resultsRepository.Update(context.Background(), *execution)
+		})
+	}
+	saveEmptyLogs := func(execution *testkube.TestWorkflowExecution) {
+		err := retry(testworkflowexecutor.SaveResultRetryMaxAttempts, testworkflowexecutor.SaveResultRetryBaseDelay, func() error {
+			return outputRepository.SaveLog(context.Background(), execution.Id, execution.Workflow.Name, bytes.NewReader(nil))
+		})
+		if err != nil {
+			log2.DefaultLogger.Errorw("failed to save empty log", "executionId", execution.Id, "error", err)
+		}
+	}
+
+	// Set up context
+	ctx, cancel := context.WithCancel(srv.Context())
+	defer cancel()
+
+	// Set up basic data
+	now := time.Now().UTC()
+	groupId := primitive.NewObjectIDFromTimestamp(now).Hex()
+
 	// TODO: translate to the old format
 	var runningContext *testkube.TestWorkflowRunningContext
 
-	// Prepare execution base
-	bases := make([]*testworkflowexecutor.PreparedExecution, 0, len(req.Selectors))
-	for _, v := range req.Selectors {
-		tags := make(map[string]string)
-		maps.Copy(tags, req.Tags)
-		maps.Copy(tags, v.Tags)
-		if v.Name != "" {
-			base, err := s.scheduler.PrepareExecutionBase(ctx, testworkflowexecutor.ScheduleRequest{
-				Name:                            v.Name,
-				Config:                          v.Config,
-				ExecutionName:                   v.ExecutionName,
-				Tags:                            tags,
-				DisableWebhooks:                 req.DisableWebhooks,
-				TestWorkflowExecutionObjectName: req.KubernetesObjectName,
-				RunningContext:                  runningContext,
-				ParentExecutionIds:              req.ParentExecutionIds,
-			})
+	// Initialize execution template
+	base := testworkflowexecutor.NewIntermediateExecution().
+		SetGroupID(groupId).
+		SetScheduledAt(now).
+		AppendTags(req.Tags).
+		SetDisabledWebhooks(req.DisableWebhooks).
+		SetKubernetesObjectName(req.KubernetesObjectName).
+		SetRunningContext(runningContext).
+		PrependTemplate(globalTemplateName)
+
+	// Load the required Test Workflows and build the basic selector
+	nameSelectors := make([]*cloud.ScheduleSelector, 0, len(req.Selectors))
+	for i := range req.Selectors {
+		if req.Selectors[i].Name != "" {
+			// Get the Test Workflow from the storage
+			_, err := getTestWorkflow(req.Selectors[i].Name)
 			if err != nil {
-				return err
+				return errors.Wrapf(err, "cannot get workflow '%s'", req.Selectors[i].Name)
 			}
-			base.Execution.GroupId = groupId
-			bases = append(bases, base)
+
+			// Add a selector back
+			nameSelectors = append(nameSelectors, req.Selectors[i])
 		} else {
-			selectors := make([]string, 0, len(v.LabelSelector))
-			for k := range v.LabelSelector {
-				selectors = append(selectors, fmt.Sprintf("%s=%s", k, v.LabelSelector[k]))
-			}
-			workflows, err := s.scheduler.TestWorkflowClient().List(strings.Join(selectors, ","))
+			// Get the matching Test Workflows from the storage
+			workflows, err := getTestWorkflows(req.Selectors[i].LabelSelector)
 			if err != nil {
-				return err
+				return errors.Wrapf(err, "cannot get workflow for selector '%v'", req.Selectors[i].LabelSelector)
 			}
 
-			// TODO: avoid downloading the Test Workflows 2nd time
-			for _, w := range workflows.Items {
-				base, err := s.scheduler.PrepareExecutionBase(ctx, testworkflowexecutor.ScheduleRequest{
-					Name:                            w.Name,
-					Config:                          v.Config,
-					ExecutionName:                   v.ExecutionName,
-					Tags:                            tags,
-					DisableWebhooks:                 req.DisableWebhooks,
-					TestWorkflowExecutionObjectName: req.KubernetesObjectName,
-					RunningContext:                  runningContext,
-					ParentExecutionIds:              req.ParentExecutionIds,
+			// Add a selector for each of the found Test Workflows
+			for j := range workflows {
+				nameSelectors = append(nameSelectors, &cloud.ScheduleSelector{
+					Name:          workflows[j].Name,
+					Config:        req.Selectors[i].Config,
+					ExecutionName: req.Selectors[i].ExecutionName, // TODO: what to do when execution name is configured, but multiple requested?
+					Tags:          req.Selectors[i].Tags,
 				})
-				if err != nil {
-					return err
-				}
-				base.Execution.GroupId = groupId
-				bases = append(bases, base)
 			}
 		}
 	}
 
-	// Resolve the execution bases further
-	for i := range bases {
-		err := s.scheduler.ResolveExecutionBase(ctx, bases[i])
+	// Resolve executions for each selector
+	intermediate := make([]*testworkflowexecutor.IntermediateExecution, 0, len(req.Selectors))
+	for _, v := range req.Selectors {
+		current := base.Clone().
+			AutoGenerateID().
+			SetName(v.ExecutionName).
+			AppendTags(v.Tags).
+			SetWorkflow(testWorkflowCache[v.Name])
+		intermediate = append(intermediate, current)
+
+		// Apply the configuration
+		if err := current.ApplyConfig(v.Config); err != nil {
+			current.SetError("Cannot inline Test Workflow configuration", err)
+			continue
+		}
+
+		// List the Test Workflow Templates to fetch
+		tpls, err := getTestWorkflowTemplates(current.TemplateNames())
 		if err != nil {
-			return err
+			current.SetError("Cannot fetch required Test Workflow Templates", err)
+			continue
+		}
+
+		// Apply the Test Workflow Templates
+		if err = current.ApplyTemplates(tpls); err != nil {
+			current.SetError("Cannot inline Test Workflow Templates", err)
+			continue
 		}
 	}
 
-	// Prepare actual executions
-	preparedExecutions := make([]testworkflowexecutor.PreparedExecution, 0)
-	for i := range bases {
-		exs, err := s.scheduler.PrepareExecutions(ctx, bases[i], "", "", testworkflowexecutor.ScheduleRequest{
-			ExecutionName:      bases[i].Execution.Name,
-			Tags:               bases[i].Execution.Tags,
-			ParentExecutionIds: req.ParentExecutionIds,
-		})
-		if err != nil {
-			return err
-		}
-		preparedExecutions = append(preparedExecutions, exs...)
+	// Simplify group ID in case of single execution
+	if len(intermediate) == 1 {
+		intermediate[0].SetGroupID(intermediate[0].ID())
 	}
 
-	// Make group ID same as execution ID, in case only one execution is meant to be started.
-	// Thanks to that, it will be simpler to identify executions that are grouped.
-	if len(preparedExecutions) == 1 {
-		preparedExecutions[0].Execution.GroupId = preparedExecutions[0].Execution.Id
+	// Validate if there are no duplicated execution names in the set
+	type namePair struct {
+		Workflow  string
+		Execution string
+	}
+	localDuplicatesCheck := make(map[namePair]struct{})
+	for i := range intermediate {
+		if intermediate[i].Name() == "" {
+			continue
+		}
+		key := namePair{Workflow: intermediate[i].WorkflowName(), Execution: intermediate[i].Name()}
+		if _, ok := localDuplicatesCheck[key]; ok {
+			return fmt.Errorf("duplicated execution name: '%s' for workflow '%s'", intermediate[i].Name(), intermediate[i].WorkflowName())
+		}
+		localDuplicatesCheck[key] = struct{}{}
+	}
+
+	// Validate if the static execution names are not reserved in the database already
+	for i := range intermediate {
+		if intermediate[i].Name() == "" {
+			continue
+		}
+		reserved, err := isExecutionNameReserved(ctx, intermediate[i].Name(), intermediate[i].WorkflowName())
+		if err != nil {
+			return errors.Wrapf(err, "checking for unique name: '%s' for workflow '%s'", intermediate[i].Name(), intermediate[i].WorkflowName())
+		}
+		if reserved {
+			return fmt.Errorf("execution name already exists: '%s' for workflow '%s'", intermediate[i].Name(), intermediate[i].WorkflowName())
+		}
+	}
+
+	// Generate execution names and sequence numbers for each execution
+	for i := range intermediate {
+		// Load execution identifier data
+		number, err := resultsRepository.GetNextExecutionNumber(context.Background(), intermediate[i].WorkflowName())
+		if err != nil {
+			return errors.Wrap(err, "registering next execution sequence number")
+		}
+		intermediate[i].SetSequenceNumber(number)
+
+		// Generating the execution name
+		if intermediate[i].Name() == "" {
+			name := fmt.Sprintf("%s-%d", intermediate[i].WorkflowName(), number)
+			intermediate[i].SetName(name)
+
+			// Edge case: Check for local duplicates, if there is no clash between static and auto-generated one
+			key := namePair{Workflow: intermediate[i].WorkflowName(), Execution: intermediate[i].Name()}
+			if _, ok := localDuplicatesCheck[key]; ok {
+				return fmt.Errorf("duplicated execution name: '%s' for workflow '%s'", intermediate[i].Name(), intermediate[i].WorkflowName())
+			}
+
+			// Ensure the execution name is unique
+			reserved, err := isExecutionNameReserved(ctx, intermediate[i].Name(), intermediate[i].WorkflowName())
+			if err != nil {
+				return errors.Wrapf(err, "checking for unique name: '%s' for workflow '%s'", intermediate[i].Name(), intermediate[i].WorkflowName())
+			}
+			if reserved {
+				return fmt.Errorf("execution name already exists: '%s' for workflow '%s'", intermediate[i].Name(), intermediate[i].WorkflowName())
+			}
+		}
+
+		// Resolve it finally
+		err = intermediate[i].Resolve("", "", req.ParentExecutionIds, false)
+		if err != nil {
+			intermediate[i].SetError("Cannot process Test Workflow specification", err)
+			continue
+		}
 	}
 
 	controlPlaneConfig := testworkflowconfig.ControlPlaneConfig{
@@ -404,12 +578,53 @@ func (s *Server) ScheduleExecution(req *cloud.ScheduleRequest, srv cloud.TestKub
 		CDEventsTarget: os.Getenv("CDEVENTS_TARGET"),
 	}
 
-	// TODO: Parallelize
-	for i := range preparedExecutions {
-		exec, err := s.scheduler.DoOne(controlPlaneConfig, "", "", req.ParentExecutionIds, preparedExecutions[i])
-		if err != nil && exec.Result != nil && !exec.Result.IsFinished() {
-			// TODO: apply internal error to the execution
+	// Ensure the rest of operations won't be stopped if stated
+	if ctx.Err() != nil {
+		return context.Canceled
+	}
+	cancel()
+	ctx = context.Background()
+
+	// Store in the database
+	for i := range intermediate {
+		// OSS: Prepare the sensitive data
+		// TODO: Do it with actual credentials instead
+		secretsBatch := secretManager.Batch("twe-", intermediate[i].ID()).ForceEnable()
+		credentialExpressions := map[string]expressions.Expression{}
+		for k, v := range intermediate[i].SensitiveData() {
+			envVarSource, err := secretsBatch.Append(k, v)
+			if err != nil {
+				intermediate[i].SetError("Cannot store the sensitive data", err)
+			}
+			credentialExpressions[k] = expressions.MustCompile(fmt.Sprintf(`secret("%s","%s",true)`, envVarSource.SecretKeyRef.Name, envVarSource.SecretKeyRef.Key))
 		}
+		secrets := secretsBatch.Get()
+		secretsMap := make(map[string]map[string]string, len(secrets))
+		for j := range secrets {
+			secretsMap[secrets[j].Name] = secrets[j].StringData
+		}
+		err := intermediate[i].RewriteSensitiveDataCall(func(name string) (expressions.Expression, error) {
+			if expr, ok := credentialExpressions[name]; ok {
+				return expr, nil
+			}
+			return nil, fmt.Errorf(`unknown sensitive data: '%s'`, name)
+		})
+		if err != nil {
+			intermediate[i].SetError("Cannot access the sensitive data", err)
+		}
+
+		// Insert the execution
+		// TODO: SIDE EFFECT: update TestWorkflowExecution object in the Kubernetes
+		err = insert(ctx, intermediate[i].Execution())
+		if err != nil {
+			// TODO: delete the credentials left-overs
+			// TODO: don't fail immediately (try creating other executions too)
+			return errors.Wrapf(err, "failed to insert execution '%s' in workflow '%s'", intermediate[i].ID(), intermediate[i].WorkflowName())
+		}
+		exec := intermediate[i].Execution()
+		emitter.Notify(testkube.NewEventQueueTestWorkflow(exec))
+
+		// Send the data
 		v, err := json.Marshal(exec)
 		if err != nil {
 			return err
@@ -418,6 +633,82 @@ func (s *Server) ScheduleExecution(req *cloud.ScheduleRequest, srv cloud.TestKub
 		if err != nil {
 			// TODO: retry?
 		}
+
+		// Finish early if it's immediately known to finish
+		if intermediate[i].Finished() {
+			//emitter.Notify(testkube.NewEventStartTestWorkflow(exec)) // TODO: Consider
+			if exec.Result.IsAborted() {
+				emitter.Notify(testkube.NewEventEndTestWorkflowAborted(exec))
+			} else if exec.Result.IsFailed() {
+				emitter.Notify(testkube.NewEventEndTestWorkflowFailed(exec))
+			} else {
+				emitter.Notify(testkube.NewEventEndTestWorkflowSuccess(exec))
+			}
+			saveEmptyLogs(exec)
+			continue
+		}
+
+		// Start the execution
+		result, err := runner.Execute(executionworkertypes.ExecuteRequest{
+			Execution: testworkflowconfig.ExecutionConfig{
+				Id:              exec.Id,
+				GroupId:         exec.GroupId,
+				Name:            exec.Name,
+				Number:          exec.Number,
+				ScheduledAt:     exec.ScheduledAt,
+				DisableWebhooks: exec.DisableWebhooks,
+				Debug:           false,
+				OrganizationId:  "",
+				EnvironmentId:   "",
+				ParentIds:       strings.Join(req.ParentExecutionIds, "/"),
+			},
+			Secrets:      secretsMap,
+			Workflow:     testworkflowmappers.MapTestWorkflowAPIToKube(*exec.ResolvedWorkflow),
+			ControlPlane: controlPlaneConfig,
+		})
+
+		// TODO: define "revoke" error by runner (?)
+		if err != nil {
+			exec.InitializationError("Failed to run execution", err)
+			err2 := update(ctx, exec)
+			err = errors2.Join(err, err2)
+			//var g errgroup.Group
+			//g.Go(func() error {
+			//	return retry(SaveResultRetryMaxAttempts, SaveResultRetryBaseDelay, func() error {
+			//		return s.repository.Update(context.Background(), exec.Execution)
+			//	})
+			//})
+			//// TODO:
+			//if exec.TestWorkflowExecutionName != "" {
+			//	// TODO: Move it as a side effect in the Agent
+			//	g.Go(func() error {
+			//		cr, err := s.testWorkflowExecutionsClient.Get(exec.Execution.TestWorkflowExecutionName)
+			//		if err != nil {
+			//			return err
+			//		}
+			//		cr.Status = testworkflowmappers.MapTestWorkflowExecutionStatusAPIToKube(&exec.Execution, cr.Generation)
+			//		return s.testWorkflowExecutionsClient.UpdateStatus(cr)
+			//	})
+			//}
+			if err != nil {
+				log2.DefaultLogger.Errorw("failed to run and update execution", "executionId", exec.Id, "error", err)
+			}
+
+			//emitter.Notify(testkube.NewEventStartTestWorkflow(exec)) // TODO: Consider
+			emitter.Notify(testkube.NewEventEndTestWorkflowAborted(exec))
+			saveEmptyLogs(exec)
+			continue
+		}
+
+		// Inform about execution start TODO: Consider
+		//s.getEmitter().Notify(testkube.NewEventStartTestWorkflow(&exec.Execution))
+
+		// Apply the known data to temporary object.
+		// Don't save it in the database as that may be a race condition with Runner.
+		// TODO: Consider alternative function for non-conflicting update?
+		exec.Namespace = result.Namespace
+		exec.Signature = result.Signature
+		exec.Result.Steps = stage.MapSignatureListToStepResults(stage.MapSignatureList(result.Signature))
 	}
 
 	return nil

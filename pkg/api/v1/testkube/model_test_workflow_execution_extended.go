@@ -115,3 +115,7 @@ func (e *TestWorkflowExecution) InitializationError(header string, err error) {
 func (e *TestWorkflowExecution) FailedToInitialize() bool {
 	return e.Result.Status != nil && *e.Result.Status == ABORTED_TestWorkflowStatus && e.Result.QueuedAt.IsZero()
 }
+
+func (e *TestWorkflowExecution) Assigned() bool {
+	return e.Result.IsFinished() || len(e.Signature) > 0
+}

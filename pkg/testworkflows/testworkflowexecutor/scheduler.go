@@ -622,6 +622,41 @@ func (s *ExecutionScheduler) Do(ctx context.Context, dashboardURI, organizationI
 }
 
 // FIXME: delete
-func (s *ExecutionScheduler) TestWorkflowClient() testworkflowsv1client.Interface {
+func (s *ExecutionScheduler) TestWorkflowsClient() testworkflowsv1client.Interface {
 	return s.testWorkflowsClient
+}
+
+// FIXME: delete
+func (s *ExecutionScheduler) TestWorkflowsTemplatesClient() testworkflowsv1client.TestWorkflowTemplatesInterface {
+	return s.testWorkflowTemplatesClient
+}
+
+// FIXME: delete
+func (s *ExecutionScheduler) Repository() testworkflow2.Repository {
+	return s.repository
+}
+
+// FIXME: delete
+func (s *ExecutionScheduler) OutputRepository() testworkflow2.OutputRepository {
+	return s.outputRepository
+}
+
+// FIXME: delete
+func (s *ExecutionScheduler) GlobalTemplateName() string {
+	return s.globalTemplateName
+}
+
+// FIXME: delete
+func (s *ExecutionScheduler) SecretManager() secretmanager.SecretManager {
+	return s.secretManager
+}
+
+// FIXME: delete
+func (s *ExecutionScheduler) Emitter() *event.Emitter {
+	return s.getEmitter()
+}
+
+// FIXME: delete
+func (s *ExecutionScheduler) Runner() runner2.Runner {
+	return s.getRunner()
 }

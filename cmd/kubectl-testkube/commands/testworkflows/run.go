@@ -185,7 +185,28 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 	return cmd
 }
 
+func getIterationDelay(iteration int) time.Duration {
+	if iteration < 5 {
+		return 500 * time.Millisecond
+	} else if iteration < 100 {
+		return 1 * time.Second
+	}
+	return 5 * time.Second
+}
+
 func uiWatch(execution testkube.TestWorkflowExecution, client apiclientv1.Client) int {
+	// Wait until the execution will be assigned to some runner
+	iteration := 0
+	for !execution.Assigned() {
+		var err error
+		iteration++
+		time.Sleep(getIterationDelay(iteration))
+		execution, err = client.GetTestWorkflowExecution(execution.Id)
+		if err != nil {
+			ui.Failf("get execution failed: %v", err)
+		}
+	}
+
 	result, err := watchTestWorkflowLogs(execution.Id, execution.Signature, client)
 	ui.ExitOnError("reading test workflow execution logs", err)
 
