@@ -129,6 +129,43 @@ func (s *TestkubeAPI) StreamTestWorkflowExecutionServiceNotificationsHandler() f
 	}
 }
 
+func (s *TestkubeAPI) StreamTestWorkflowExecutionParallelStepNotificationsHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		ctx := c.Context()
+		executionID := c.Params("executionID")
+		parallelStepName := c.Params("parallelStepName")
+		parallelStepIndex := c.Params("parallelStepIndex")
+		errPrefix := fmt.Sprintf("failed to stream test workflow execution parallel step '%s' instance '%s' notifications '%s'",
+			parallelStepName, parallelStepIndex, executionID)
+
+		// Fetch execution from database
+		execution, err := s.TestWorkflowResults.Get(ctx, executionID)
+		if err != nil {
+			return s.ClientError(c, errPrefix, err)
+		}
+
+		ref := execution.GetParallelStepReference(parallelStepName)
+		if ref == "" {
+			return s.ClientError(c, errPrefix, errors.New("unknown parallel step for test workflow execution"))
+		}
+
+		// Check for the logs
+		id := fmt.Sprintf("%s-%s-%s", execution.Id, ref, parallelStepIndex)
+		notifications := s.ExecutionWorkerClient.Notifications(ctx, id, executionworkertypes.NotificationsOptions{
+			Hints: executionworkertypes.Hints{
+				Namespace:   execution.Namespace,
+				ScheduledAt: common.Ptr(execution.ScheduledAt),
+			},
+		})
+		if notifications.Err() != nil {
+			return s.BadRequest(c, errPrefix, "fetching notifications", notifications.Err())
+		}
+
+		s.streamNotifications(ctx, id, notifications)
+		return nil
+	}
+}
+
 func (s *TestkubeAPI) StreamTestWorkflowExecutionNotificationsWebSocketHandler() fiber.Handler {
 	return websocket.New(func(c *websocket.Conn) {
 		ctx, ctxCancel := context.WithCancel(context.Background())
@@ -198,6 +235,50 @@ func (s *TestkubeAPI) StreamTestWorkflowExecutionServiceNotificationsWebSocketHa
 
 		// Check for the logs
 		id := fmt.Sprintf("%s-%s-%s", execution.Id, serviceName, serviceIndex)
+		notifications := s.ExecutionWorkerClient.Notifications(ctx, id, executionworkertypes.NotificationsOptions{
+			Hints: executionworkertypes.Hints{
+				Namespace:   execution.Namespace,
+				ScheduledAt: common.Ptr(execution.ScheduledAt),
+			},
+		})
+		if notifications.Err() != nil {
+			return
+		}
+
+		for n := range notifications.Channel() {
+			_ = c.WriteJSON(n)
+		}
+	})
+}
+
+func (s *TestkubeAPI) StreamTestWorkflowExecutionParallelStepNotificationsWebSocketHandler() fiber.Handler {
+	return websocket.New(func(c *websocket.Conn) {
+		ctx, ctxCancel := context.WithCancel(context.Background())
+		executionID := c.Params("executionID")
+		parallelStepName := c.Params("parallelStepName")
+		parallelStepIndex := c.Params("parallelStepIndex")
+
+		// Stop reading when the WebSocket connection is already closed
+		originalClose := c.CloseHandler()
+		c.SetCloseHandler(func(code int, text string) error {
+			ctxCancel()
+			return originalClose(code, text)
+		})
+		defer c.Conn.Close()
+
+		// Fetch execution from database
+		execution, err := s.TestWorkflowResults.Get(ctx, executionID)
+		if err != nil {
+			return
+		}
+
+		ref := execution.GetParallelStepReference(parallelStepName)
+		if ref == "" {
+			return
+		}
+
+		// Check for the logs
+		id := fmt.Sprintf("%s-%s-%s", execution.Id, ref, parallelStepIndex)
 		notifications := s.ExecutionWorkerClient.Notifications(ctx, id, executionworkertypes.NotificationsOptions{
 			Hints: executionworkertypes.Hints{
 				Namespace:   execution.Namespace,
