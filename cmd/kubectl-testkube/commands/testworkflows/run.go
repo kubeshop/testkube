@@ -151,7 +151,15 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 					ui.NL()
 					if !execution.FailedToInitialize() {
 						if watchEnabled && len(args) > 0 {
-							exitCode = uiWatch(execution, serviceName, serviceIndex, parallelStepName, parallelStepIndex, client)
+							var pServiceName, pParallelStepName *string
+							if cmd.Flag("service-name").Changed || cmd.Flag("service-index").Changed {
+								pServiceName = &serviceName
+							}
+							if cmd.Flag("parallel-step-name").Changed || cmd.Flag("parallel-step-index").Changed {
+								pParallelStepName = &parallelStepName
+							}
+
+							exitCode = uiWatch(execution, pServiceName, serviceIndex, pParallelStepName, parallelStepIndex, client)
 							ui.NL()
 							if downloadArtifactsEnabled {
 								tests.DownloadTestWorkflowArtifacts(execution.Id, downloadDir, format, masks, client, outputPretty)
@@ -194,27 +202,27 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 	return cmd
 }
 
-func uiWatch(execution testkube.TestWorkflowExecution, serviceName string, serviceIndex int,
-	parallelStepName string, parallelStepIndex int, client apiclientv1.Client) int {
+func uiWatch(execution testkube.TestWorkflowExecution, serviceName *string, serviceIndex int,
+	parallelStepName *string, parallelStepIndex int, client apiclientv1.Client) int {
 	var result *testkube.TestWorkflowResult
 	var err error
 
 	switch {
-	case serviceName != "":
+	case serviceName != nil:
 		found := false
 		if execution.Workflow != nil {
-			found = execution.Workflow.HasService(serviceName)
+			found = execution.Workflow.HasService(*serviceName)
 		}
 
 		if !found {
-			ui.Failf("unknown service '%s' for test workflow execution %s", serviceName, execution.Id)
+			ui.Failf("unknown service '%s' for test workflow execution %s", *serviceName, execution.Id)
 		}
 
-		result, err = watchTestWorkflowServiceLogs(execution.Id, serviceName, serviceIndex, execution.Signature, client)
-	case parallelStepName != "":
-		ref := execution.GetParallelStepReference(parallelStepName)
+		result, err = watchTestWorkflowServiceLogs(execution.Id, *serviceName, serviceIndex, execution.Signature, client)
+	case parallelStepName != nil:
+		ref := execution.GetParallelStepReference(*parallelStepName)
 		if ref == "" {
-			ui.Failf("unknown parallel step '%s' for test workflow execution %s", parallelStepName, execution.Id)
+			ui.Failf("unknown parallel step '%s' for test workflow execution %s", *parallelStepName, execution.Id)
 		}
 
 		result, err = watchTestWorkflowParallelStepLogs(execution.Id, ref, parallelStepIndex, execution.Signature, client)

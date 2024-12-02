@@ -38,7 +38,15 @@ func NewWatchTestWorkflowExecutionCmd() *cobra.Command {
 			ui.ExitOnError("render test workflow execution", err)
 
 			ui.NL()
-			exitCode := uiWatch(execution, serviceName, serviceIndex, parallelStepName, parallelStepIndex, client)
+			var pServiceName, pParallelStepName *string
+			if cmd.Flag("service-name").Changed || cmd.Flag("service-index").Changed {
+				pServiceName = &serviceName
+			}
+			if cmd.Flag("parallel-step-name").Changed || cmd.Flag("parallel-step-index").Changed {
+				pParallelStepName = &parallelStepName
+			}
+
+			exitCode := uiWatch(execution, pServiceName, serviceIndex, pParallelStepName, parallelStepIndex, client)
 			ui.NL()
 
 			execution, err = client.GetTestWorkflowExecution(execution.Id)
