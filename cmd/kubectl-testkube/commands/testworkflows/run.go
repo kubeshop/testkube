@@ -27,9 +27,9 @@ import (
 )
 
 const (
-	LogTimestampLength    = 30 // time.RFC3339Nano without 00:00 timezone
-	apiErrorMessage       = "processing error:"
-	serviceLogsCheckDelay = 100 * time.Millisecond
+	LogTimestampLength = 30 // time.RFC3339Nano without 00:00 timezone
+	apiErrorMessage    = "processing error:"
+	logsCheckDelay     = 100 * time.Millisecond
 )
 
 var (
@@ -49,7 +49,9 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 		tags                     map[string]string
 		selectors                []string
 		serviceName              string
+		parallelStepName         string
 		serviceIndex             int
+		parallelStepIndex        int
 	)
 
 	cmd := &cobra.Command{
@@ -149,7 +151,7 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 					ui.NL()
 					if !execution.FailedToInitialize() {
 						if watchEnabled && len(args) > 0 {
-							exitCode = uiWatch(execution, serviceName, serviceIndex, client)
+							exitCode = uiWatch(execution, serviceName, serviceIndex, parallelStepName, parallelStepIndex, client)
 							ui.NL()
 							if downloadArtifactsEnabled {
 								tests.DownloadTestWorkflowArtifacts(execution.Id, downloadDir, format, masks, client, outputPretty)
@@ -186,17 +188,19 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label key value pair: --label key1=value1 or label expression")
 	cmd.Flags().StringVar(&serviceName, "service-name", "", "test workflow service name")
 	cmd.Flags().IntVar(&serviceIndex, "service-index", 0, "test workflow service index starting from 0")
+	cmd.Flags().StringVar(&parallelStepName, "parallel-step-name", "", "test workflow parallel step name or reference")
+	cmd.Flags().IntVar(&parallelStepIndex, "parallel-step-index", 0, "test workflow parallel step index starting from 0")
 
 	return cmd
 }
 
-func uiWatch(execution testkube.TestWorkflowExecution, serviceName string, serviceIndex int, client apiclientv1.Client) int {
+func uiWatch(execution testkube.TestWorkflowExecution, serviceName string, serviceIndex int,
+	parallelStepName string, parallelStepIndex int, client apiclientv1.Client) int {
 	var result *testkube.TestWorkflowResult
 	var err error
 
-	if serviceName == "" {
-		result, err = watchTestWorkflowLogs(execution.Id, execution.Signature, client)
-	} else {
+	switch {
+	case serviceName != "":
 		found := false
 		if execution.Workflow != nil {
 			found = execution.Workflow.HasService(serviceName)
@@ -207,6 +211,16 @@ func uiWatch(execution testkube.TestWorkflowExecution, serviceName string, servi
 		}
 
 		result, err = watchTestWorkflowServiceLogs(execution.Id, serviceName, serviceIndex, execution.Signature, client)
+	case parallelStepName != "":
+		ref := execution.GetParallelStepReference(parallelStepName)
+		if ref == "" {
+			ui.Failf("unknown parallel step '%s' for test workflow execution %s", parallelStepName, execution.Id)
+		}
+
+		result, err = watchTestWorkflowParallelStepLogs(execution.Id, parallelStepName, parallelStepIndex, execution.Signature, client)
+	default:
+		result, err = watchTestWorkflowLogs(execution.Id, execution.Signature, client)
+
 	}
 	ui.ExitOnError("reading test workflow execution logs", err)
 
@@ -362,7 +376,48 @@ func watchTestWorkflowServiceLogs(id, serviceName string, serviceIndex int,
 				if execution.Result.IsFinished() {
 					nErr = errors.New("test workflow execution is finished")
 				} else {
-					time.Sleep(serviceLogsCheckDelay)
+					time.Sleep(logsCheckDelay)
+					continue
+				}
+			}
+		}
+
+		if nErr != nil {
+			spinner.Fail()
+			return nil, nErr
+		}
+
+		break
+	}
+
+	spinner.Success()
+	return printTestWorkflowLogs(signature, notifications), nil
+}
+
+func watchTestWorkflowParallelStepLogs(id, parallelStepName string, parallelStepIndex int,
+	signature []testkube.TestWorkflowSignature, client apiclientv1.Client) (*testkube.TestWorkflowResult, error) {
+	ui.Info("Getting logs from test workflow parallel step job", fmt.Sprintf("%s-%s-%d", id, parallelStepName, parallelStepIndex))
+
+	var (
+		notifications chan testkube.TestWorkflowExecutionNotification
+		nErr          error
+	)
+
+	spinner := ui.NewSpinner("Waiting for parallel step logs")
+	for {
+		notifications, nErr = client.GetTestWorkflowExecutionParallelStepNotifications(id, parallelStepName, parallelStepIndex)
+		if nErr != nil {
+			execution, cErr := client.GetTestWorkflowExecution(id)
+			if cErr != nil {
+				spinner.Fail()
+				return nil, cErr
+			}
+
+			if execution.Result != nil {
+				if execution.Result.IsFinished() {
+					nErr = errors.New("test workflow execution is finished")
+				} else {
+					time.Sleep(logsCheckDelay)
 					continue
 				}
 			}

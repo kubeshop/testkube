@@ -14,3 +14,24 @@ func (s *TestWorkflowSignature) Sequence() []TestWorkflowSignature {
 	}
 	return result
 }
+
+func (s *TestWorkflowSignature) GetParallelStepReference(nameOrReference string) string {
+	if s.Category == "Run in parallel" {
+		if nameOrReference == "" {
+			return s.Ref
+		}
+
+		if s.Name == nameOrReference || s.Ref == nameOrReference {
+			return s.Ref
+		}
+	}
+
+	for _, child := range s.Children {
+		ref := child.GetParallelStepReference(nameOrReference)
+		if ref != "" {
+			return ref
+		}
+	}
+
+	return ""
+}

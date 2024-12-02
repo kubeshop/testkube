@@ -154,6 +154,14 @@ func (c TestWorkflowClient) GetTestWorkflowExecutionServiceNotifications(id, ser
 	return notifications, err
 }
 
+// GetTestWorkflowExecutionParallelStepNotifications returns events stream from job pods, based on job pods logs
+func (c TestWorkflowClient) GetTestWorkflowExecutionParallelStepNotifications(id, parallelStepName string, parallelStepIndex int) (notifications chan testkube.TestWorkflowExecutionNotification, err error) {
+	notifications = make(chan testkube.TestWorkflowExecutionNotification)
+	uri := c.testWorkflowTransport.GetURI("/test-workflow-executions/%s/notifications/%s/%d", id, parallelStepName, parallelStepIndex)
+	err = c.testWorkflowTransport.GetTestWorkflowExecutionNotifications(uri, notifications)
+	return notifications, err
+}
+
 // GetTestWorkflowExecution returns single test workflow execution by id
 func (c TestWorkflowClient) GetTestWorkflowExecution(id string) (testkube.TestWorkflowExecution, error) {
 	uri := c.testWorkflowExecutionTransport.GetURI("/test-workflow-executions/%s", id)

@@ -23,8 +23,7 @@ import (
 const testWorkflowNotificationsRetryCount = 10
 
 var (
-	logRetryDelay      = 100 * time.Millisecond
-	serviceWaitTimeout = 24 * time.Hour
+	logRetryDelay = 100 * time.Millisecond
 )
 
 func getTestWorkflowNotificationType(n testkube.TestWorkflowExecutionNotification) cloud.TestWorkflowNotificationType {

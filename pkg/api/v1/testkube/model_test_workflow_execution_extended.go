@@ -115,3 +115,18 @@ func (e *TestWorkflowExecution) InitializationError(header string, err error) {
 func (e *TestWorkflowExecution) FailedToInitialize() bool {
 	return e.Result.Status != nil && *e.Result.Status == ABORTED_TestWorkflowStatus && e.Result.QueuedAt.IsZero()
 }
+
+func (e *TestWorkflowExecution) GetParallelStepReference(nameOrReference string) string {
+	if e == nil {
+		return ""
+	}
+
+	for _, signature := range e.Signature {
+		ref := signature.GetParallelStepReference(nameOrReference)
+		if ref != "" {
+			return ref
+		}
+	}
+
+	return ""
+}
