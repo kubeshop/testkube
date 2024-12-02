@@ -35,5 +35,5 @@ func CloudClient() cloud.TestKubeCloudAPIClient {
 
 func Credentials() credentials.CredentialRepository {
 	cfg := GetState().InternalConfig
-	return credentials.NewCredentialRepository(CloudClient(), cfg.Worker.Connection.ApiKey, cfg.Execution.Id)
+	return credentials.NewCredentialRepository(CloudClient, cfg.Worker.Connection.ApiKey, cfg.Execution.Id)
 }
