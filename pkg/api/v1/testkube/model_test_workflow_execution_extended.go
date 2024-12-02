@@ -130,3 +130,7 @@ func (e *TestWorkflowExecution) GetParallelStepReference(nameOrReference string)
 
 	return ""
 }
+
+func (e *TestWorkflowExecution) Assigned() bool {
+	return e.Result.IsFinished() || len(e.Signature) > 0
+}

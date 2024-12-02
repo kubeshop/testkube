@@ -202,8 +202,29 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 	return cmd
 }
 
+func getIterationDelay(iteration int) time.Duration {
+	if iteration < 5 {
+		return 500 * time.Millisecond
+	} else if iteration < 100 {
+		return 1 * time.Second
+	}
+	return 5 * time.Second
+}
+
 func uiWatch(execution testkube.TestWorkflowExecution, serviceName *string, serviceIndex int,
 	parallelStepName *string, parallelStepIndex int, client apiclientv1.Client) int {
+	// Wait until the execution will be assigned to some runner
+	iteration := 0
+	for !execution.Assigned() {
+		var err error
+		iteration++
+		time.Sleep(getIterationDelay(iteration))
+		execution, err = client.GetTestWorkflowExecution(execution.Id)
+		if err != nil {
+			ui.Failf("get execution failed: %v", err)
+		}
+	}
+
 	var result *testkube.TestWorkflowResult
 	var err error
 
@@ -330,8 +351,12 @@ func getTimestampLength(line string) int {
 	return 0
 }
 
-func printTestWorkflowLogs(signature []testkube.TestWorkflowSignature,
-	notifications chan testkube.TestWorkflowExecutionNotification) (result *testkube.TestWorkflowResult) {
+func watchTestWorkflowLogs(id string, signature []testkube.TestWorkflowSignature, client apiclientv1.Client) (result *testkube.TestWorkflowResult, err error) {
+	ui.Info("Getting logs from test workflow job", id)
+
+	notifications, err := client.GetTestWorkflowExecutionNotifications(id)
+	ui.ExitOnError("getting logs from executor", err)
+
 	steps := flattenSignatures(signature)
 
 	var isLineBeginning = true
@@ -351,7 +376,7 @@ func printTestWorkflowLogs(signature []testkube.TestWorkflowSignature,
 	}
 
 	ui.NL()
-	return result
+	return result, err
 }
 
 func watchTestWorkflowLogs(id string, signature []testkube.TestWorkflowSignature, client apiclientv1.Client) (*testkube.TestWorkflowResult, error) {

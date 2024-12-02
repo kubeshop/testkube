@@ -20,6 +20,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/registry"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 	"github.com/kubeshop/testkube/pkg/version"
 )
 
@@ -71,6 +72,25 @@ func New(
 // TODO: Update TestWorkflowExecution object in Kubernetes
 func (r *runner) monitor(ctx context.Context, execution testkube.TestWorkflowExecution) error {
 	defer r.watching.Delete(execution.Id)
+
+	// Try to apply the initial data if they are missing
+	// TODO: avoid fetching when we know these data beforehand (happy path after Execute())
+	if !execution.Assigned() {
+		res, err := r.worker.Summary(context.Background(), execution.Id, executionworkertypes.GetOptions{})
+		if err == nil {
+			execution.Namespace = res.Namespace
+			execution.Signature = res.Signature
+			execution.Result.Steps = stage.MapSignatureListToStepResults(stage.MapSignatureList(res.Signature))
+			err = r.executionsRepository.Update(context.Background(), execution)
+			if err != nil {
+				// TODO: retry
+				log.DefaultLogger.Errorw("failed to include the signature in the execution object", "id", execution.Id)
+			}
+		} else {
+			// TODO: retry
+			log.DefaultLogger.Errorw("failed to load execution details", "id", execution.Id)
+		}
+	}
 
 	var notifications executionworkertypes.NotificationsWatcher
 	for i := 0; i < 10; i++ {
@@ -226,7 +246,12 @@ func (r *runner) Notifications(ctx context.Context, id string) executionworkerty
 }
 
 func (r *runner) Execute(request executionworkertypes.ExecuteRequest) (*executionworkertypes.ExecuteResult, error) {
-	return r.worker.Execute(context.Background(), request)
+	res, err := r.worker.Execute(context.Background(), request)
+	if err == nil {
+		// TODO: consider retry?
+		go r.Monitor(context.Background(), request.Execution.Id)
+	}
+	return res, err
 }
 
 func (r *runner) Pause(id string) error {
