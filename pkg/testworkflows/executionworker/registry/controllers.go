@@ -15,6 +15,10 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
 
+const (
+	DeregisterDelay = 1 * time.Second
+)
+
 type controllersRegistry struct {
 	clientSet              kubernetes.Interface
 	namespaces             NamespacesRegistry
@@ -76,8 +80,17 @@ func (r *controllersRegistry) deregister(id string) {
 			r.ips.Register(id, podIp)
 		}
 		r.namespaces.Register(id, r.controllers[id].Namespace())
-		r.controllers[id].StopController()
-		delete(r.controllers, id)
+
+		// Wait a moment to deregister - common case is that something may want to read it immediately afterwards
+		go func() {
+			time.Sleep(DeregisterDelay)
+			r.mu.Lock()
+			defer r.mu.Unlock()
+			if r.controllerReservations[id] == 0 && r.controllers[id] != nil {
+				r.controllers[id].StopController()
+				delete(r.controllers, id)
+			}
+		}()
 	}
 	r.mu.Unlock()
 }
