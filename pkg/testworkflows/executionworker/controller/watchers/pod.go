@@ -7,6 +7,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
@@ -30,6 +31,7 @@ type Pod interface {
 	Finished() bool
 	ActionGroups() (actiontypes.ActionGroups, error)
 	Signature() ([]stage.Signature, error)
+	InternalConfig() (testworkflowconfig.InternalConfig, error)
 	ScheduledAt() (time.Time, error)
 	ContainerStarted(name string) bool
 	ContainerFinished(name string) bool
@@ -115,6 +117,11 @@ func (p *pod) ActionGroups() (actions actiontypes.ActionGroups, err error) {
 
 func (p *pod) Signature() ([]stage.Signature, error) {
 	return stage.GetSignatureFromJSON([]byte(p.original.Annotations[constants.SignatureAnnotationName]))
+}
+
+func (p *pod) InternalConfig() (cfg testworkflowconfig.InternalConfig, err error) {
+	err = json.Unmarshal([]byte(p.original.Annotations[constants.InternalAnnotationName]), &cfg)
+	return
 }
 
 func (p *pod) ScheduledAt() (time.Time, error) {

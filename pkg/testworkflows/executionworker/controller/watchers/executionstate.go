@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
@@ -53,6 +54,7 @@ type ExecutionState interface {
 	ContainerFailed(name string) bool
 	Signature() ([]stage.Signature, error)
 	ActionGroups() (actiontypes.ActionGroups, error)
+	InternalConfig() (testworkflowconfig.InternalConfig, error)
 	ScheduledAt() time.Time
 
 	ExecutionError() string
@@ -251,6 +253,16 @@ func (e *executionState) Signature() ([]stage.Signature, error) {
 		return e.options.Signature, nil
 	}
 	return nil, ErrMissingData
+}
+
+func (e *executionState) InternalConfig() (testworkflowconfig.InternalConfig, error) {
+	if e.job != nil {
+		return e.job.InternalConfig()
+	}
+	if e.pod != nil {
+		return e.pod.InternalConfig()
+	}
+	return testworkflowconfig.InternalConfig{}, ErrMissingData
 }
 
 func (e *executionState) ScheduledAt() time.Time {
