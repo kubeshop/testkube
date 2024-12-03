@@ -346,7 +346,7 @@ func main() {
 		}
 		return notifications.Channel(), nil
 	}
-	getTestWorkflowParallelStepNotificationsStream := func(ctx context.Context, executionID, parallelStepName string, parallelStepIndex int) (<-chan testkube.TestWorkflowExecutionNotification, error) {
+	getTestWorkflowParallelStepNotificationsStream := func(ctx context.Context, executionID, ref string, workerIndex int) (<-chan testkube.TestWorkflowExecutionNotification, error) {
 		execution, err := testWorkflowResultsRepository.Get(ctx, executionID)
 		if err != nil {
 			return nil, err
@@ -356,12 +356,7 @@ func main() {
 			return nil, errors.New("test workflow execution is finished")
 		}
 
-		ref := execution.GetParallelStepReference(parallelStepName)
-		if ref == "" {
-			return nil, fmt.Errorf("unknown parallel step '%s' for test workflow execution %s", parallelStepName, execution.Id)
-		}
-
-		notifications := executionWorker.Notifications(ctx, fmt.Sprintf("%s-%s-%d", execution.Id, ref, parallelStepIndex), executionworkertypes.NotificationsOptions{
+		notifications := executionWorker.Notifications(ctx, fmt.Sprintf("%s-%s-%d", execution.Id, ref, workerIndex), executionworkertypes.NotificationsOptions{
 			Hints: executionworkertypes.Hints{
 				Namespace:   execution.Namespace,
 				ScheduledAt: common.Ptr(execution.ScheduledAt),

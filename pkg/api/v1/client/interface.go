@@ -155,7 +155,7 @@ type TestWorkflowAPI interface {
 	GetTestWorkflowExecutionNotifications(id string) (chan testkube.TestWorkflowExecutionNotification, error)
 	GetTestWorkflowExecutionLogs(id string) ([]byte, error)
 	GetTestWorkflowExecutionServiceNotifications(id, serviceName string, serviceIndex int) (chan testkube.TestWorkflowExecutionNotification, error)
-	GetTestWorkflowExecutionParallelStepNotifications(id, parallelStepName string, parallelStepIndex int) (chan testkube.TestWorkflowExecutionNotification, error)
+	GetTestWorkflowExecutionParallelStepNotifications(id, ref string, workerIndex int) (chan testkube.TestWorkflowExecutionNotification, error)
 }
 
 // TestWorkflowExecutionAPI describes test workflow api methods

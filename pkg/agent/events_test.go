@@ -57,7 +57,7 @@ func TestEventLoop(t *testing.T) {
 	var logStreamFunc func(ctx context.Context, executionID string) (chan output.Output, error)
 	var workflowNotificationsStreamFunc func(ctx context.Context, executionID string) (<-chan testkube.TestWorkflowExecutionNotification, error)
 	var workflowServiceNotificationsStreamFunc func(ctx context.Context, executionID, serviceName string, serviceIndex int) (<-chan testkube.TestWorkflowExecutionNotification, error)
-	var workflowParallelStepNotificationsStreamFunc func(ctx context.Context, executionID, ref string, parallelStepIndexIndex int) (<-chan testkube.TestWorkflowExecutionNotification, error)
+	var workflowParallelStepNotificationsStreamFunc func(ctx context.Context, executionID, ref string, workerIndex int) (<-chan testkube.TestWorkflowExecutionNotification, error)
 
 	proContext := config.ProContext{APIKey: "api-key", WorkerCount: 5, LogStreamWorkerCount: 5, WorkflowNotificationsWorkerCount: 5}
 	agent, err := agent.NewAgent(logger.Sugar(), nil, grpcClient, logStreamFunc, workflowNotificationsStreamFunc,

@@ -67,7 +67,7 @@ func TestLogStream(t *testing.T) {
 	}
 	var workflowNotificationsStreamFunc func(ctx context.Context, executionID string) (<-chan testkube.TestWorkflowExecutionNotification, error)
 	var workflowServiceNotificationsStreamFunc func(ctx context.Context, executionID, serviceName string, serviceIndex int) (<-chan testkube.TestWorkflowExecutionNotification, error)
-	var workflowParallelStepNotificationsStreamFunc func(ctx context.Context, executionID, ref string, parallelStepIndexIndex int) (<-chan testkube.TestWorkflowExecutionNotification, error)
+	var workflowParallelStepNotificationsStreamFunc func(ctx context.Context, executionID, ref string, workerIndex int) (<-chan testkube.TestWorkflowExecutionNotification, error)
 
 	logger, _ := zap.NewDevelopment()
 	proContext := config.ProContext{APIKey: "api-key", WorkerCount: 5, LogStreamWorkerCount: 5, WorkflowNotificationsWorkerCount: 5}

@@ -133,10 +133,10 @@ func (s *TestkubeAPI) StreamTestWorkflowExecutionParallelStepNotificationsHandle
 	return func(c *fiber.Ctx) error {
 		ctx := c.Context()
 		executionID := c.Params("executionID")
-		parallelStepName := c.Params("parallelStepName")
-		parallelStepIndex := c.Params("parallelStepIndex")
+		ref := c.Params("ref")
+		workerIndex := c.Params("workerIndex")
 		errPrefix := fmt.Sprintf("failed to stream test workflow execution parallel step '%s' instance '%s' notifications '%s'",
-			parallelStepName, parallelStepIndex, executionID)
+			ref, workerIndex, executionID)
 
 		// Fetch execution from database
 		execution, err := s.TestWorkflowResults.Get(ctx, executionID)
@@ -144,13 +144,13 @@ func (s *TestkubeAPI) StreamTestWorkflowExecutionParallelStepNotificationsHandle
 			return s.ClientError(c, errPrefix, err)
 		}
 
-		ref := execution.GetParallelStepReference(parallelStepName)
-		if ref == "" {
+		reference := execution.GetParallelStepReference(ref)
+		if reference == "" {
 			return s.ClientError(c, errPrefix, errors.New("unknown parallel step for test workflow execution"))
 		}
 
 		// Check for the logs
-		id := fmt.Sprintf("%s-%s-%s", execution.Id, ref, parallelStepIndex)
+		id := fmt.Sprintf("%s-%s-%s", execution.Id, reference, workerIndex)
 		notifications := s.ExecutionWorkerClient.Notifications(ctx, id, executionworkertypes.NotificationsOptions{
 			Hints: executionworkertypes.Hints{
 				Namespace:   execution.Namespace,
@@ -255,8 +255,8 @@ func (s *TestkubeAPI) StreamTestWorkflowExecutionParallelStepNotificationsWebSoc
 	return websocket.New(func(c *websocket.Conn) {
 		ctx, ctxCancel := context.WithCancel(context.Background())
 		executionID := c.Params("executionID")
-		parallelStepName := c.Params("parallelStepName")
-		parallelStepIndex := c.Params("parallelStepIndex")
+		ref := c.Params("ref")
+		workerIndex := c.Params("workerIndex")
 
 		// Stop reading when the WebSocket connection is already closed
 		originalClose := c.CloseHandler()
@@ -272,13 +272,13 @@ func (s *TestkubeAPI) StreamTestWorkflowExecutionParallelStepNotificationsWebSoc
 			return
 		}
 
-		ref := execution.GetParallelStepReference(parallelStepName)
-		if ref == "" {
+		reference := execution.GetParallelStepReference(ref)
+		if reference == "" {
 			return
 		}
 
 		// Check for the logs
-		id := fmt.Sprintf("%s-%s-%s", execution.Id, ref, parallelStepIndex)
+		id := fmt.Sprintf("%s-%s-%s", execution.Id, reference, workerIndex)
 		notifications := s.ExecutionWorkerClient.Notifications(ctx, id, executionworkertypes.NotificationsOptions{
 			Hints: executionworkertypes.Hints{
 				Namespace:   execution.Namespace,

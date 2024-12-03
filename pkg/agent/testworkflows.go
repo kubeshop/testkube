@@ -386,7 +386,7 @@ func (ag *Agent) executeWorkflowParallelStepNotificationsRequest(ctx context.Con
 			// Cloud sometimes slow to start parallel step
 			// while WorkflowNotifications request from websockets comes in faster
 			// so we retry up to wait till parallel step pod is uo or execution is finished.
-			return ag.testWorkflowParallelStepNotificationsFunc(ctx, req.ExecutionId, req.ParallelStepName, int(req.ParallelStepIndex))
+			return ag.testWorkflowParallelStepNotificationsFunc(ctx, req.ExecutionId, req.Ref, int(req.WorkerIndex))
 		},
 		retry.DelayType(retry.FixedDelay),
 		retry.Delay(logRetryDelay),

@@ -402,9 +402,9 @@ func watchTestWorkflowServiceLogs(id, serviceName string, serviceIndex int,
 	return printTestWorkflowLogs(signature, notifications), nil
 }
 
-func watchTestWorkflowParallelStepLogs(id, parallelStepName string, parallelStepIndex int,
+func watchTestWorkflowParallelStepLogs(id, ref string, workerIndex int,
 	signature []testkube.TestWorkflowSignature, client apiclientv1.Client) (*testkube.TestWorkflowResult, error) {
-	ui.Info("Getting logs from test workflow parallel step job", fmt.Sprintf("%s-%s-%d", id, parallelStepName, parallelStepIndex))
+	ui.Info("Getting logs from test workflow parallel step job", fmt.Sprintf("%s-%s-%d", id, ref, workerIndex))
 
 	var (
 		notifications chan testkube.TestWorkflowExecutionNotification
@@ -413,7 +413,7 @@ func watchTestWorkflowParallelStepLogs(id, parallelStepName string, parallelStep
 
 	spinner := ui.NewSpinner("Waiting for parallel step logs")
 	for {
-		notifications, nErr = client.GetTestWorkflowExecutionParallelStepNotifications(id, parallelStepName, parallelStepIndex)
+		notifications, nErr = client.GetTestWorkflowExecutionParallelStepNotifications(id, ref, workerIndex)
 		if nErr != nil {
 			execution, cErr := client.GetTestWorkflowExecution(id)
 			if cErr != nil {
