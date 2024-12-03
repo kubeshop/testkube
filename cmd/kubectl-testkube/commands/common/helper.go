@@ -813,6 +813,58 @@ func KubectlDescribeIngresses(namespace string) error {
 	return process.ExecuteAndStreamOutput(kubectl, args...)
 }
 
+func KubectlGetNamespacesHavingSecrets(secretName string) ([]string, error) {
+	kubectl, clierr := lookupKubectlPath()
+	if clierr != nil {
+		return nil, clierr.ActualError
+	}
+
+	args := []string{
+		"get",
+		"secret",
+		"-A",
+	}
+
+	if ui.IsVerbose() {
+		ui.ShellCommand(kubectl, args...)
+		ui.NL()
+	}
+
+	out, err := process.Execute(kubectl, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	nss := extractUniqueNamespaces(string(out), secretName)
+	return nss, nil
+}
+
+func extractUniqueNamespaces(data string, secretName string) []string {
+	// Split the data into lines
+	lines := strings.Split(data, "\n")
+
+	// Map to store unique namespaces
+	uniq := make(map[string]bool)
+
+	for _, line := range lines {
+		parts := strings.Fields(line)
+		if len(parts) < 2 {
+			continue
+		}
+		if parts[1] == secretName {
+			uniq[parts[0]] = true
+		}
+	}
+
+	// Convert map keys (namespaces) to a slice of strings
+	list := make([]string, 0, len(uniq))
+	for namespace := range uniq {
+		list = append(list, namespace)
+	}
+
+	return list
+}
+
 func KubectlGetPodEnvs(selector, namespace string) (map[string]string, error) {
 	kubectl, clierr := lookupKubectlPath()
 	if clierr != nil {
@@ -821,7 +873,7 @@ func KubectlGetPodEnvs(selector, namespace string) (map[string]string, error) {
 
 	args := []string{
 		"get",
-		"pod",
+		"secret",
 		selector,
 		"-n", namespace,
 		"-o", `jsonpath='{range .items[*].spec.containers[*]}{"\nContainer: "}{.name}{"\n"}{range .env[*]}{.name}={.value}{"\n"}{end}{end}'`,

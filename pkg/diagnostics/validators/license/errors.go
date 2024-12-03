@@ -14,7 +14,7 @@ var (
 	ErrLicenseKeyInvalidFormat = v.Err("license key invalid format", v.ErrorKindInvalidKeyContent)
 
 	ErrOnlineLicenseKeyInvalidLength = v.Err("license key invalid length", v.ErrorKindInvalidKeyContent).
-						WithDetails("License key should be in form XXXXXX-XXXXXX-XXXXXX-XXXXXX-XXXXXX-XX - 37 chars in length").
+						WithSuggestion("License key should be in form XXXXXX-XXXXXX-XXXXXX-XXXXXX-XXXXXX-XX - 37 chars in length").
 						WithSuggestion("Make sure license key is in valid format").
 						WithSuggestion("Make sure there is no whitespaces on the begining and the end of the key")
 
@@ -34,7 +34,7 @@ var (
 	ErrOfflineLicenseKeyInvalidPrefix = v.Err("license key has invalid prefix", v.ErrorKindInvalidKeyContent).
 						WithDetails("License key should start with 'key/' string").
 						WithSuggestion("Make sure license key is in valid format").
-						WithSuggestion("Make sure you're NOT using offline keys for air-gapped (offline) installations").
+						WithSuggestion("Make sure you're NOT using 'online' keys for air-gapped ('offline') installations").
 						WithSuggestion("Make sure there is no whitespaces on the begining and the end of the key")
 
 	ErrOfflineLicensePublicKeyMissing        = v.Err("public key is missing", v.ErrorKindLicenseInvalid)
