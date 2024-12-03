@@ -68,7 +68,6 @@ func New(
 	}
 }
 
-// TODO: Update TestWorkflowExecution object in Kubernetes
 func (r *runner) monitor(ctx context.Context, execution testkube.TestWorkflowExecution) error {
 	defer r.watching.Delete(execution.Id)
 
