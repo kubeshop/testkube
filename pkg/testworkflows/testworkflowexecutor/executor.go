@@ -35,21 +35,20 @@ type TestWorkflowExecutor interface {
 }
 
 type executor struct {
-	emitter                      *event.Emitter
-	clientSet                    kubernetes.Interface
-	repository                   testworkflow.Repository
-	output                       testworkflow.OutputRepository
-	configMap                    configRepo.Repository
-	testWorkflowTemplatesClient  testworkflowsclientv1.TestWorkflowTemplatesInterface
-	testWorkflowExecutionsClient testworkflowsclientv1.TestWorkflowExecutionsInterface
-	testWorkflowsClient          testworkflowsclientv1.Interface
-	metrics                      v1.Metrics
-	secretManager                secretmanager.SecretManager
-	globalTemplateName           string
-	dashboardURI                 string
-	runner                       runner.Runner
-	proContext                   *config.ProContext
-	scheduler                    *ExecutionScheduler
+	emitter                     *event.Emitter
+	clientSet                   kubernetes.Interface
+	repository                  testworkflow.Repository
+	output                      testworkflow.OutputRepository
+	configMap                   configRepo.Repository
+	testWorkflowTemplatesClient testworkflowsclientv1.TestWorkflowTemplatesInterface
+	testWorkflowsClient         testworkflowsclientv1.Interface
+	metrics                     v1.Metrics
+	secretManager               secretmanager.SecretManager
+	globalTemplateName          string
+	dashboardURI                string
+	runner                      runner.Runner
+	proContext                  *config.ProContext
+	scheduler                   *ExecutionScheduler
 }
 
 func New(emitter *event.Emitter,
@@ -59,7 +58,6 @@ func New(emitter *event.Emitter,
 	output testworkflow.OutputRepository,
 	configMap configRepo.Repository,
 	testWorkflowTemplatesClient testworkflowsclientv1.TestWorkflowTemplatesInterface,
-	testWorkflowExecutionsClient testworkflowsclientv1.TestWorkflowExecutionsInterface,
 	testWorkflowsClient testworkflowsclientv1.Interface,
 	metrics v1.Metrics,
 	secretManager secretmanager.SecretManager,
@@ -67,24 +65,22 @@ func New(emitter *event.Emitter,
 	dashboardURI string,
 	proContext *config.ProContext) TestWorkflowExecutor {
 	return &executor{
-		emitter:                      emitter,
-		clientSet:                    clientSet,
-		repository:                   repository,
-		output:                       output,
-		configMap:                    configMap,
-		testWorkflowTemplatesClient:  testWorkflowTemplatesClient,
-		testWorkflowExecutionsClient: testWorkflowExecutionsClient,
-		testWorkflowsClient:          testWorkflowsClient,
-		metrics:                      metrics,
-		secretManager:                secretManager,
-		globalTemplateName:           globalTemplateName,
-		dashboardURI:                 dashboardURI,
-		runner:                       rnr,
-		proContext:                   proContext,
+		emitter:                     emitter,
+		clientSet:                   clientSet,
+		repository:                  repository,
+		output:                      output,
+		configMap:                   configMap,
+		testWorkflowTemplatesClient: testWorkflowTemplatesClient,
+		testWorkflowsClient:         testWorkflowsClient,
+		metrics:                     metrics,
+		secretManager:               secretManager,
+		globalTemplateName:          globalTemplateName,
+		dashboardURI:                dashboardURI,
+		runner:                      rnr,
+		proContext:                  proContext,
 		scheduler: NewExecutionScheduler(
 			testWorkflowsClient,
 			testWorkflowTemplatesClient,
-			testWorkflowExecutionsClient,
 			secretManager,
 			repository,
 			output,

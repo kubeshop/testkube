@@ -13,7 +13,6 @@ import (
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"golang.org/x/sync/errgroup"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	testworkflowsv1client "github.com/kubeshop/testkube-operator/pkg/client/testworkflows/v1"
@@ -38,15 +37,14 @@ const (
 )
 
 type ExecutionScheduler struct {
-	testWorkflowsClient          testworkflowsv1client.Interface
-	testWorkflowTemplatesClient  testworkflowsv1client.TestWorkflowTemplatesInterface
-	testWorkflowExecutionsClient testworkflowsv1client.TestWorkflowExecutionsInterface
-	secretManager                secretmanager.SecretManager
-	repository                   testworkflow2.Repository
-	outputRepository             testworkflow2.OutputRepository
-	globalTemplateName           string
-	getRunner                    func() runner2.Runner
-	getEmitter                   func() *event.Emitter
+	testWorkflowsClient         testworkflowsv1client.Interface
+	testWorkflowTemplatesClient testworkflowsv1client.TestWorkflowTemplatesInterface
+	secretManager               secretmanager.SecretManager
+	repository                  testworkflow2.Repository
+	outputRepository            testworkflow2.OutputRepository
+	globalTemplateName          string
+	getRunner                   func() runner2.Runner
+	getEmitter                  func() *event.Emitter
 }
 
 type ScheduleRequest struct {
@@ -76,7 +74,6 @@ type PreparedExecution struct {
 func NewExecutionScheduler(
 	testWorkflowsClient testworkflowsv1client.Interface,
 	testWorkflowTemplatesClient testworkflowsv1client.TestWorkflowTemplatesInterface,
-	testWorkflowExecutionsClient testworkflowsv1client.TestWorkflowExecutionsInterface,
 	secretManager secretmanager.SecretManager,
 	repository testworkflow2.Repository,
 	outputRepository testworkflow2.OutputRepository,
@@ -85,15 +82,14 @@ func NewExecutionScheduler(
 	getEmitter func() *event.Emitter,
 ) *ExecutionScheduler {
 	return &ExecutionScheduler{
-		testWorkflowsClient:          testWorkflowsClient,
-		testWorkflowTemplatesClient:  testWorkflowTemplatesClient,
-		testWorkflowExecutionsClient: testWorkflowExecutionsClient,
-		secretManager:                secretManager,
-		repository:                   repository,
-		outputRepository:             outputRepository,
-		getRunner:                    getRunner,
-		globalTemplateName:           globalTemplateName,
-		getEmitter:                   getEmitter,
+		testWorkflowsClient:         testWorkflowsClient,
+		testWorkflowTemplatesClient: testWorkflowTemplatesClient,
+		secretManager:               secretManager,
+		repository:                  repository,
+		outputRepository:            outputRepository,
+		getRunner:                   getRunner,
+		globalTemplateName:          globalTemplateName,
+		getEmitter:                  getEmitter,
 	}
 }
 
@@ -402,61 +398,24 @@ func (s *ExecutionScheduler) saveEmptyLogs(execution *testkube.TestWorkflowExecu
 	}
 }
 
-func (s *ExecutionScheduler) saveExecutionInKubernetes(execution *testkube.TestWorkflowExecution) error {
-	// TODO: retry?
-	// TODO: Move it as a side effect in the Agent (CRD Sync)
-	if execution.TestWorkflowExecutionName != "" {
-		cr, err := s.testWorkflowExecutionsClient.Get(execution.TestWorkflowExecutionName)
-		if k8serrors.IsNotFound(err) {
-			// TODO: think if it should be inserted?
-			return nil
-		}
-		if err != nil {
-			return err
-		}
-		cr.Status = testworkflowmappers.MapTestWorkflowExecutionStatusAPIToKube(execution, cr.Generation)
-		return s.testWorkflowExecutionsClient.UpdateStatus(cr)
-	}
-	return nil
-}
-
 func (s *ExecutionScheduler) insert(execution *testkube.TestWorkflowExecution) error {
-	var g errgroup.Group
-	g.Go(func() error {
-		return retry(SaveResultRetryMaxAttempts, SaveResultRetryBaseDelay, func() error {
-			return s.repository.Insert(context.Background(), *execution)
-		})
+	return retry(SaveResultRetryMaxAttempts, SaveResultRetryBaseDelay, func() error {
+		return s.repository.Insert(context.Background(), *execution)
 	})
-	if execution.TestWorkflowExecutionName != "" {
-		g.Go(func() error {
-			return s.saveExecutionInKubernetes(execution)
-		})
-	}
-	return g.Wait()
 }
 
 func (s *ExecutionScheduler) update(execution *testkube.TestWorkflowExecution) error {
-	var g errgroup.Group
-	g.Go(func() error {
-		return retry(SaveResultRetryMaxAttempts, SaveResultRetryBaseDelay, func() error {
-			return s.repository.Insert(context.Background(), *execution)
-		})
+	return retry(SaveResultRetryMaxAttempts, SaveResultRetryBaseDelay, func() error {
+		return s.repository.Insert(context.Background(), *execution)
 	})
-	if execution.TestWorkflowExecutionName != "" {
-		g.Go(func() error {
-			return s.saveExecutionInKubernetes(execution)
-		})
-	}
-	return g.Wait()
 }
 
 func (s *ExecutionScheduler) DoOne(controlPlaneConfig testworkflowconfig.ControlPlaneConfig, organizationId, environmentId string, parentExecutionIds []string, exec PreparedExecution) (testkube.TestWorkflowExecution, error) {
 	// s.secretManager
 	// s.getEmitter
-	// s.insert -> s.repository + s.testWorkflowExecutionsClient
+	// s.insert -> s.repository
 	// s.saveEmptyLogs -> s.outputRepository
 	// s.repository
-	// s.testWorkflowExecutionsClient
 
 	// Prepare the sensitive data TODO: Use Credentials when possible
 	secretsBatch := s.secretManager.Batch("twe-", exec.Execution.Id).ForceEnable()
@@ -545,17 +504,6 @@ func (s *ExecutionScheduler) DoOne(controlPlaneConfig testworkflowconfig.Control
 				return s.repository.Update(context.Background(), exec.Execution)
 			})
 		})
-		if exec.Execution.TestWorkflowExecutionName != "" {
-			// TODO: Move it as a side effect in the Agent
-			g.Go(func() error {
-				cr, err := s.testWorkflowExecutionsClient.Get(exec.Execution.TestWorkflowExecutionName)
-				if err != nil {
-					return err
-				}
-				cr.Status = testworkflowmappers.MapTestWorkflowExecutionStatusAPIToKube(&exec.Execution, cr.Generation)
-				return s.testWorkflowExecutionsClient.UpdateStatus(cr)
-			})
-		}
 		if err != nil {
 			return exec.Execution, errors.Wrap(err, "failed to update the execution")
 		}
