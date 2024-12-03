@@ -263,6 +263,20 @@ func (mr *MockRepositoryMockRecorder) GetTestWorkflowMetrics(arg0, arg1, arg2, a
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTestWorkflowMetrics", reflect.TypeOf((*MockRepository)(nil).GetTestWorkflowMetrics), arg0, arg1, arg2, arg3)
 }
 
+// Init mocks base method.
+func (m *MockRepository) Init(arg0 context.Context, arg1 string, arg2 InitData) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Init", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Init indicates an expected call of Init.
+func (mr *MockRepositoryMockRecorder) Init(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockRepository)(nil).Init), arg0, arg1, arg2)
+}
+
 // Insert mocks base method.
 func (m *MockRepository) Insert(arg0 context.Context, arg1 testkube.TestWorkflowExecution) error {
 	m.ctrl.T.Helper()

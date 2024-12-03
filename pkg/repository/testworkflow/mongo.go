@@ -606,3 +606,12 @@ func (r *MongoRepository) GetExecutionTags(ctx context.Context, testWorkflowName
 
 	return tags, nil
 }
+
+func (r *MongoRepository) Init(ctx context.Context, id string, data InitData) error {
+	_, err := r.Coll.UpdateOne(ctx, bson.M{"id": id}, bson.M{"$set": map[string]interface{}{
+		"namespace": data.Namespace,
+		"signature": data.Signature,
+		"runnerId":  data.RunnerID,
+	}})
+	return err
+}

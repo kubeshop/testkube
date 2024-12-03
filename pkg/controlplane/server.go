@@ -34,6 +34,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/expressions"
 	log2 "github.com/kubeshop/testkube/pkg/log"
 	testworkflowmappers "github.com/kubeshop/testkube/pkg/mapper/testworkflows"
+	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
@@ -408,6 +409,15 @@ func (s *Server) ScheduleExecution(req *cloud.ScheduleRequest, srv cloud.TestKub
 			return resultsRepository.Update(context.Background(), *execution)
 		})
 	}
+	init := func(ctx context.Context, execution *testkube.TestWorkflowExecution) error {
+		return retry(testworkflowexecutor.SaveResultRetryMaxAttempts, testworkflowexecutor.SaveResultRetryBaseDelay, func() error {
+			return resultsRepository.Init(context.Background(), execution.Id, testworkflow.InitData{
+				RunnerID:  execution.RunnerId,
+				Namespace: execution.Namespace,
+				Signature: execution.Signature,
+			})
+		})
+	}
 	saveEmptyLogs := func(execution *testkube.TestWorkflowExecution) {
 		err := retry(testworkflowexecutor.SaveResultRetryMaxAttempts, testworkflowexecutor.SaveResultRetryBaseDelay, func() error {
 			return outputRepository.SaveLog(context.Background(), execution.Id, execution.Workflow.Name, bytes.NewReader(nil))
@@ -687,10 +697,12 @@ func (s *Server) ScheduleExecution(req *cloud.ScheduleRequest, srv cloud.TestKub
 
 		// Apply the known data to temporary object.
 		// Don't save it in the database as that may be a race condition with Runner.
-		// TODO: Consider alternative function for non-conflicting update?
 		exec.Namespace = result.Namespace
 		exec.Signature = result.Signature
 		exec.Result.Steps = stage.MapSignatureListToStepResults(stage.MapSignatureList(result.Signature))
+		if err = init(ctx, exec); err != nil {
+			log2.DefaultLogger.Errorw("failed to mark execution as initialized", "executionId", exec.Id, "error", err)
+		}
 	}
 
 	return nil

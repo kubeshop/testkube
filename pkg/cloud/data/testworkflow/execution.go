@@ -177,3 +177,8 @@ func (r *CloudRepository) GetExecutionTags(ctx context.Context, testWorkflowName
 	}
 	return pass(r.executor, ctx, req, process)
 }
+
+// Init sets the initialization data from the runner
+func (r *CloudRepository) Init(_ context.Context, _ string, _ testworkflow2.InitData) (err error) {
+	panic("not a remote command")
+}
