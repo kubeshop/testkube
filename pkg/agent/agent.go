@@ -178,6 +178,13 @@ func (ag *Agent) run(ctx context.Context) (err error) {
 		return ag.runTestWorkflowServiceNotificationsWorker(groupCtx, ag.testWorkflowServiceNotificationsWorkerCount)
 	})
 
+	g.Go(func() error {
+		return ag.runTestWorkflowParallelStepNotificationsLoop(groupCtx)
+	})
+	g.Go(func() error {
+		return ag.runTestWorkflowParallelStepNotificationsWorker(groupCtx, ag.testWorkflowParallelStepNotificationsWorkerCount)
+	})
+
 	err = g.Wait()
 
 	return err
