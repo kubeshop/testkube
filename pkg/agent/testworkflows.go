@@ -383,9 +383,9 @@ func (ag *Agent) executeWorkflowParallelStepNotificationsRequest(ctx context.Con
 	notificationsCh, err := retry.DoWithData(
 		func() (<-chan testkube.TestWorkflowExecutionNotification, error) {
 			// We have a race condition here
-			// Cloud sometimes slow to start service
+			// Cloud sometimes slow to start parallel step
 			// while WorkflowNotifications request from websockets comes in faster
-			// so we retry up to wait till service pod is uo or execution is finished.
+			// so we retry up to wait till parallel step pod is uo or execution is finished.
 			return ag.testWorkflowServiceNotificationsFunc(ctx, req.ExecutionId, req.Ref, int(req.ParallelStepIndex))
 		},
 		retry.DelayType(retry.FixedDelay),
