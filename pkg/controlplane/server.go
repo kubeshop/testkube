@@ -705,7 +705,6 @@ func (s *Server) ScheduleExecution(req *cloud.ScheduleRequest, srv cloud.TestKub
 		}
 
 		// Insert the execution
-		// TODO: SIDE EFFECT: update TestWorkflowExecution object in the Kubernetes
 		err = insert(ctx, intermediate[i].Execution())
 		if err != nil {
 			// TODO: delete the credentials left-overs
