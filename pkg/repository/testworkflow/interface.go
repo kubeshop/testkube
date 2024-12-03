@@ -19,6 +19,12 @@ type LabelSelector struct {
 	Or []Label
 }
 
+type InitData struct {
+	RunnerID  string
+	Namespace string
+	Signature []testkube.TestWorkflowSignature
+}
+
 const PageDefaultLimit int = 100
 
 type Filter interface {
@@ -88,6 +94,8 @@ type Repository interface {
 	GetTestWorkflowMetrics(ctx context.Context, name string, limit, last int) (metrics testkube.ExecutionsMetrics, err error)
 	// GetExecutionTags gets execution tags
 	GetExecutionTags(ctx context.Context, testWorkflowName string) (map[string][]string, error)
+	// Init sets the initialization data from the runner
+	Init(ctx context.Context, id string, data InitData) error
 }
 
 type Sequences interface {
