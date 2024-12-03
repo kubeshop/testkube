@@ -672,24 +672,6 @@ func (s *Server) ScheduleExecution(req *cloud.ScheduleRequest, srv cloud.TestKub
 			exec.InitializationError("Failed to run execution", err)
 			err2 := update(ctx, exec)
 			err = errors2.Join(err, err2)
-			//var g errgroup.Group
-			//g.Go(func() error {
-			//	return retry(SaveResultRetryMaxAttempts, SaveResultRetryBaseDelay, func() error {
-			//		return s.repository.Update(context.Background(), exec.Execution)
-			//	})
-			//})
-			//// TODO:
-			//if exec.TestWorkflowExecutionName != "" {
-			//	// TODO: Move it as a side effect in the Agent
-			//	g.Go(func() error {
-			//		cr, err := s.testWorkflowExecutionsClient.Get(exec.Execution.TestWorkflowExecutionName)
-			//		if err != nil {
-			//			return err
-			//		}
-			//		cr.Status = testworkflowmappers.MapTestWorkflowExecutionStatusAPIToKube(&exec.Execution, cr.Generation)
-			//		return s.testWorkflowExecutionsClient.UpdateStatus(cr)
-			//	})
-			//}
 			if err != nil {
 				log2.DefaultLogger.Errorw("failed to run and update execution", "executionId", exec.Id, "error", err)
 			}

@@ -74,7 +74,6 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 
 	testWorkflowsClient := testworkflowsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
 	testWorkflowTemplatesClient := testworkflowsclientv1.NewTestWorkflowTemplatesClient(kubeClient, cfg.TestkubeNamespace)
-	testWorkflowExecutionsClient := testworkflowsclientv1.NewTestWorkflowExecutionsClient(kubeClient, cfg.TestkubeNamespace)
 
 	var logGrpcClient logsclient.StreamGetter
 	if !cfg.DisableDeprecatedTests && features.LogsV2 {
@@ -398,7 +397,6 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 	executionScheduler := testworkflowexecutor.NewExecutionScheduler(
 		testWorkflowsClient,
 		testWorkflowTemplatesClient,
-		testWorkflowExecutionsClient,
 		secretManager,
 		testWorkflowResultsRepository,
 		testWorkflowOutputRepository,
