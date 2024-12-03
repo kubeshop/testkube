@@ -646,7 +646,7 @@ func (s *Server) ScheduleExecution(req *cloud.ScheduleRequest, srv cloud.TestKub
 
 		// Finish early if it's immediately known to finish
 		if intermediate[i].Finished() {
-			//emitter.Notify(testkube.NewEventStartTestWorkflow(exec)) // TODO: Consider
+			emitter.Notify(testkube.NewEventStartTestWorkflow(exec))
 			if exec.Result.IsAborted() {
 				emitter.Notify(testkube.NewEventEndTestWorkflowAborted(exec))
 			} else if exec.Result.IsFailed() {
@@ -686,17 +686,16 @@ func (s *Server) ScheduleExecution(req *cloud.ScheduleRequest, srv cloud.TestKub
 				log2.DefaultLogger.Errorw("failed to run and update execution", "executionId", exec.Id, "error", err)
 			}
 
-			//emitter.Notify(testkube.NewEventStartTestWorkflow(exec)) // TODO: Consider
+			emitter.Notify(testkube.NewEventStartTestWorkflow(exec))
 			emitter.Notify(testkube.NewEventEndTestWorkflowAborted(exec))
 			saveEmptyLogs(exec)
 			continue
 		}
 
-		// Inform about execution start TODO: Consider
-		//s.getEmitter().Notify(testkube.NewEventStartTestWorkflow(&exec.Execution))
+		// Inform about execution start
+		emitter.Notify(testkube.NewEventStartTestWorkflow(exec))
 
 		// Apply the known data to temporary object.
-		// Don't save it in the database as that may be a race condition with Runner.
 		exec.Namespace = result.Namespace
 		exec.Signature = result.Signature
 		exec.Result.Steps = stage.MapSignatureListToStepResults(stage.MapSignatureList(result.Signature))
