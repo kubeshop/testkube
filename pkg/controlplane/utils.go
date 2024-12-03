@@ -155,3 +155,33 @@ func GetLegacyRunningContext(req *cloud.ScheduleRequest) (runningContext *testku
 	}
 	return nil
 }
+
+// TODO: Limit selectors or maximum executions to avoid huge load?
+func ValidateExecutionRequest(req *cloud.ScheduleRequest) error {
+	// Validate if the selectors have exclusively name or label selector
+	nameSelectorsCount := 0
+	labelSelectorsCount := 0
+	for i := range req.Selectors {
+		if req.Selectors[i] == nil {
+			return errors.New("invalid selector provided")
+		}
+		if req.Selectors[i].Name != "" && len(req.Selectors[i].LabelSelector) > 0 {
+			return errors.New("invalid selector provided")
+		}
+		if req.Selectors[i].Name == "" && len(req.Selectors[i].LabelSelector) == 0 {
+			return errors.New("invalid selector provided")
+		}
+		if req.Selectors[i].Name != "" {
+			nameSelectorsCount++
+		} else {
+			labelSelectorsCount++
+		}
+	}
+
+	// Validate if that could be Kubernetes object
+	if req.KubernetesObjectName != "" && (nameSelectorsCount != 1 || labelSelectorsCount != 0) {
+		return errors.New("kubernetes object can trigger only execution of a single named TestWorkflow")
+	}
+
+	return nil
+}

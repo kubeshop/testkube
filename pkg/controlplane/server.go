@@ -296,36 +296,15 @@ func retry(count int, delayBase time.Duration, fn func() error) (err error) {
 	return err
 }
 
-// TODO: Limit selectors or maximum executions to avoid huge load?
 func (s *Server) ScheduleExecution(req *cloud.ScheduleRequest, srv cloud.TestKubeCloudAPI_ScheduleExecutionServer) error {
-	// Validate if there is anything to run
+	// Validate the execution request
+	if err := ValidateExecutionRequest(req); err != nil {
+		return err
+	}
+
+	// Check if there is anything to run
 	if len(req.Selectors) == 0 {
 		return nil
-	}
-
-	// Validate if the selectors have exclusively name or label selector
-	nameSelectorsCount := 0
-	labelSelectorsCount := 0
-	for i := range req.Selectors {
-		if req.Selectors[i] == nil {
-			return errors.New("invalid selector provided")
-		}
-		if req.Selectors[i].Name != "" && len(req.Selectors[i].LabelSelector) > 0 {
-			return errors.New("invalid selector provided")
-		}
-		if req.Selectors[i].Name == "" && len(req.Selectors[i].LabelSelector) == 0 {
-			return errors.New("invalid selector provided")
-		}
-		if req.Selectors[i].Name != "" {
-			nameSelectorsCount++
-		} else {
-			labelSelectorsCount++
-		}
-	}
-
-	// Validate if that could be Kubernetes object
-	if req.KubernetesObjectName != "" && (nameSelectorsCount != 1 || labelSelectorsCount != 0) {
-		return errors.New("kubernetes object can trigger only execution of a single named TestWorkflow")
 	}
 
 	// Get dependencies
