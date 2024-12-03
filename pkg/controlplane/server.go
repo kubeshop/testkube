@@ -28,6 +28,7 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/cloud/data/executor"
@@ -435,8 +436,88 @@ func (s *Server) ScheduleExecution(req *cloud.ScheduleRequest, srv cloud.TestKub
 	now := time.Now().UTC()
 	groupId := primitive.NewObjectIDFromTimestamp(now).Hex()
 
-	// TODO: translate to the old format
+	// Translate to the old format
 	var runningContext *testkube.TestWorkflowRunningContext
+	if req.RunningContext != nil {
+		switch req.RunningContext.Type {
+		case cloud.RunningContextType_UI:
+			runningContext = &testkube.TestWorkflowRunningContext{
+				Actor: &testkube.TestWorkflowRunningContextActor{
+					Type_: common.Ptr(testkube.USER_TestWorkflowRunningContextActorType),
+				},
+				Interface_: &testkube.TestWorkflowRunningContextInterface{
+					Name:  req.RunningContext.Name,
+					Type_: common.Ptr(testkube.UI_TestWorkflowRunningContextInterfaceType),
+				},
+			}
+
+		case cloud.RunningContextType_CLI:
+			runningContext = &testkube.TestWorkflowRunningContext{
+				Actor: &testkube.TestWorkflowRunningContextActor{
+					Type_: common.Ptr(testkube.USER_TestWorkflowRunningContextActorType),
+				},
+				Interface_: &testkube.TestWorkflowRunningContextInterface{
+					Name:  req.RunningContext.Name,
+					Type_: common.Ptr(testkube.CLI_TestWorkflowRunningContextInterfaceType),
+				},
+			}
+		case cloud.RunningContextType_CICD:
+			runningContext = &testkube.TestWorkflowRunningContext{
+				Actor: &testkube.TestWorkflowRunningContextActor{
+					Type_: common.Ptr(testkube.USER_TestWorkflowRunningContextActorType),
+				},
+				Interface_: &testkube.TestWorkflowRunningContextInterface{
+					Name:  req.RunningContext.Name,
+					Type_: common.Ptr(testkube.CICD_TestWorkflowRunningContextInterfaceType),
+				},
+			}
+		case cloud.RunningContextType_CRON:
+			runningContext = &testkube.TestWorkflowRunningContext{
+				Actor: &testkube.TestWorkflowRunningContextActor{
+					Type_: common.Ptr(testkube.CRON_TestWorkflowRunningContextActorType),
+				},
+				Interface_: &testkube.TestWorkflowRunningContextInterface{
+					Name:  req.RunningContext.Name,
+					Type_: common.Ptr(testkube.INTERNAL_TestWorkflowRunningContextInterfaceType),
+				},
+			}
+		case cloud.RunningContextType_TESTTRIGGER:
+			runningContext = &testkube.TestWorkflowRunningContext{
+				Actor: &testkube.TestWorkflowRunningContextActor{
+					Type_: common.Ptr(testkube.TESTTRIGGER_TestWorkflowRunningContextActorType),
+				},
+				Interface_: &testkube.TestWorkflowRunningContextInterface{
+					Name:  req.RunningContext.Name,
+					Type_: common.Ptr(testkube.INTERNAL_TestWorkflowRunningContextInterfaceType),
+				},
+			}
+		case cloud.RunningContextType_KUBERNETESOBJECT:
+			runningContext = &testkube.TestWorkflowRunningContext{
+				Actor: &testkube.TestWorkflowRunningContextActor{
+					Type_: common.Ptr(testkube.TESTWORKFLOWEXECUTION_TestWorkflowRunningContextActorType),
+				},
+				Interface_: &testkube.TestWorkflowRunningContextInterface{
+					Name:  req.RunningContext.Name,
+					Type_: common.Ptr(testkube.INTERNAL_TestWorkflowRunningContextInterfaceType),
+				},
+			}
+		case cloud.RunningContextType_EXECUTION:
+			if len(req.ParentExecutionIds) == 0 {
+				break
+			}
+			runningContext = &testkube.TestWorkflowRunningContext{
+				Actor: &testkube.TestWorkflowRunningContextActor{
+					ExecutionId:   req.ParentExecutionIds[len(req.ParentExecutionIds)-1],
+					ExecutionPath: strings.Join(req.ParentExecutionIds, "/"),
+					Type_:         common.Ptr(testkube.TESTWORKFLOW_TestWorkflowRunningContextActorType),
+				},
+				Interface_: &testkube.TestWorkflowRunningContextInterface{
+					Name:  req.ParentExecutionIds[len(req.ParentExecutionIds)-1],
+					Type_: common.Ptr(testkube.INTERNAL_TestWorkflowRunningContextInterfaceType),
+				},
+			}
+		}
+	}
 
 	// Initialize execution template
 	base := testworkflowexecutor.NewIntermediateExecution().
