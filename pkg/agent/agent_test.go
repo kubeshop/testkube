@@ -106,6 +106,12 @@ func (cs *CloudServer) GetTestWorkflowServiceNotificationsStream(srv cloud.TestK
 	return nil
 }
 
+func (cs *CloudServer) GetTestWorkflowParallelStepNotificationsStream(srv cloud.TestKubeCloudAPI_GetTestWorkflowParallelStepNotificationsStreamServer) error {
+	<-cs.ctx.Done()
+
+	return nil
+}
+
 func (cs *CloudServer) ExecuteAsync(srv cloud.TestKubeCloudAPI_ExecuteAsyncServer) error {
 	md, ok := metadata.FromIncomingContext(srv.Context())
 	if !ok {
