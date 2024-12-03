@@ -397,7 +397,7 @@ func (ag *Agent) executeWorkflowParallelStepNotificationsRequest(ctx context.Con
 	)
 
 	if err != nil {
-		message := fmt.Sprintf("cannot get service pod logs: %s", err.Error())
+		message := fmt.Sprintf("cannot get parallel step pod logs: %s", err.Error())
 		ag.testWorkflowParallelStepNotificationsResponseBuffer <- &cloud.TestWorkflowParallelStepNotificationsResponse{
 			StreamId: req.StreamId,
 			SeqNo:    0,
