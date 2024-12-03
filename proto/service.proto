@@ -147,7 +147,7 @@ message TestWorkflowServiceNotificationsResponse {
 message TestWorkflowParallelStepNotificationsRequest {
   string stream_id = 1;
   string execution_id = 2;
-  string ref = 3;
+  string parallel_step_name = 3;
   int32 parallel_step_index = 4; 
   TestWorkflowNotificationsRequestType request_type = 5;
 }

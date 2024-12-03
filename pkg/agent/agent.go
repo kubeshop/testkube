@@ -63,7 +63,7 @@ type Agent struct {
 	testWorkflowParallelStepNotificationsWorkerCount    int
 	testWorkflowParallelStepNotificationsRequestBuffer  chan *cloud.TestWorkflowParallelStepNotificationsRequest
 	testWorkflowParallelStepNotificationsResponseBuffer chan *cloud.TestWorkflowParallelStepNotificationsResponse
-	testWorkflowParallelStepNotificationsFunc           func(ctx context.Context, executionID, ref string, parallelStepIndexIndex int) (<-chan testkube.TestWorkflowExecutionNotification, error)
+	testWorkflowParallelStepNotificationsFunc           func(ctx context.Context, executionID, parallelStepName string, parallelStepIndexIndex int) (<-chan testkube.TestWorkflowExecutionNotification, error)
 
 	events              chan testkube.Event
 	sendTimeout         time.Duration
