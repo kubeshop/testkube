@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	jsoniter "github.com/json-iterator/go"
 	"github.com/pkg/errors"
@@ -12,6 +13,8 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/structpb"
 
+	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/cloud/data/executor"
 	"github.com/kubeshop/testkube/pkg/log"
@@ -67,4 +70,88 @@ func toJSON(src any) (json.RawMessage, error) {
 
 func fromJSON(msg json.RawMessage, tgt any) error {
 	return jsoniter.Unmarshal(msg, tgt)
+}
+
+func GetLegacyRunningContext(req *cloud.ScheduleRequest) (runningContext *testkube.TestWorkflowRunningContext) {
+	if req.RunningContext == nil {
+		return nil
+	}
+	switch req.RunningContext.Type {
+	case cloud.RunningContextType_UI:
+		return &testkube.TestWorkflowRunningContext{
+			Actor: &testkube.TestWorkflowRunningContextActor{
+				Type_: common.Ptr(testkube.USER_TestWorkflowRunningContextActorType),
+			},
+			Interface_: &testkube.TestWorkflowRunningContextInterface{
+				Name:  req.RunningContext.Name,
+				Type_: common.Ptr(testkube.UI_TestWorkflowRunningContextInterfaceType),
+			},
+		}
+	case cloud.RunningContextType_CLI:
+		return &testkube.TestWorkflowRunningContext{
+			Actor: &testkube.TestWorkflowRunningContextActor{
+				Type_: common.Ptr(testkube.USER_TestWorkflowRunningContextActorType),
+			},
+			Interface_: &testkube.TestWorkflowRunningContextInterface{
+				Name:  req.RunningContext.Name,
+				Type_: common.Ptr(testkube.CLI_TestWorkflowRunningContextInterfaceType),
+			},
+		}
+	case cloud.RunningContextType_CICD:
+		return &testkube.TestWorkflowRunningContext{
+			Actor: &testkube.TestWorkflowRunningContextActor{
+				Type_: common.Ptr(testkube.USER_TestWorkflowRunningContextActorType),
+			},
+			Interface_: &testkube.TestWorkflowRunningContextInterface{
+				Name:  req.RunningContext.Name,
+				Type_: common.Ptr(testkube.CICD_TestWorkflowRunningContextInterfaceType),
+			},
+		}
+	case cloud.RunningContextType_CRON:
+		return &testkube.TestWorkflowRunningContext{
+			Actor: &testkube.TestWorkflowRunningContextActor{
+				Type_: common.Ptr(testkube.CRON_TestWorkflowRunningContextActorType),
+			},
+			Interface_: &testkube.TestWorkflowRunningContextInterface{
+				Name:  req.RunningContext.Name,
+				Type_: common.Ptr(testkube.INTERNAL_TestWorkflowRunningContextInterfaceType),
+			},
+		}
+	case cloud.RunningContextType_TESTTRIGGER:
+		return &testkube.TestWorkflowRunningContext{
+			Actor: &testkube.TestWorkflowRunningContextActor{
+				Type_: common.Ptr(testkube.TESTTRIGGER_TestWorkflowRunningContextActorType),
+			},
+			Interface_: &testkube.TestWorkflowRunningContextInterface{
+				Name:  req.RunningContext.Name,
+				Type_: common.Ptr(testkube.INTERNAL_TestWorkflowRunningContextInterfaceType),
+			},
+		}
+	case cloud.RunningContextType_KUBERNETESOBJECT:
+		return &testkube.TestWorkflowRunningContext{
+			Actor: &testkube.TestWorkflowRunningContextActor{
+				Type_: common.Ptr(testkube.TESTWORKFLOWEXECUTION_TestWorkflowRunningContextActorType),
+			},
+			Interface_: &testkube.TestWorkflowRunningContextInterface{
+				Name:  req.RunningContext.Name,
+				Type_: common.Ptr(testkube.INTERNAL_TestWorkflowRunningContextInterfaceType),
+			},
+		}
+	case cloud.RunningContextType_EXECUTION:
+		if len(req.ParentExecutionIds) == 0 {
+			break
+		}
+		return &testkube.TestWorkflowRunningContext{
+			Actor: &testkube.TestWorkflowRunningContextActor{
+				ExecutionId:   req.ParentExecutionIds[len(req.ParentExecutionIds)-1],
+				ExecutionPath: strings.Join(req.ParentExecutionIds, "/"),
+				Type_:         common.Ptr(testkube.TESTWORKFLOW_TestWorkflowRunningContextActorType),
+			},
+			Interface_: &testkube.TestWorkflowRunningContextInterface{
+				Name:  req.ParentExecutionIds[len(req.ParentExecutionIds)-1],
+				Type_: common.Ptr(testkube.INTERNAL_TestWorkflowRunningContextInterfaceType),
+			},
+		}
+	}
+	return nil
 }
