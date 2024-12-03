@@ -7,7 +7,7 @@ spec:
   content:
     git:
       uri: https://github.com/kubeshop/testkube
-      main
+      revision: main
       paths:
       - test/k6/executor-tests/k6-perf-test.js
   container:
@@ -47,7 +47,7 @@ spec:
   content:
     git:
       uri: https://github.com/kubeshop/testkube
-      main
+      revision: main
       paths:
       - test/k6/executor-tests/k6-perf-test-gcp.js
   container:
@@ -90,7 +90,7 @@ spec:
   content:
     git:
       uri: https://github.com/kubeshop/testkube
-      main
+      revision: main
       paths:
       - test/k6/executor-tests/k6-perf-test.js
   steps:
@@ -135,7 +135,7 @@ spec:
   content:
     git:
       uri: https://github.com/kubeshop/testkube
-      main
+      revision: main
       paths:
       - test/k6/executor-tests/k6-perf-test-gcp.js
   steps:
@@ -180,7 +180,7 @@ spec:
   content:
     git:
       uri: https://github.com/kubeshop/testkube
-      main
+      revision: main
       paths:
       - test/k6/executor-tests/k6-perf-test-gcp-discard-response-bodies.js
   steps:
@@ -225,7 +225,7 @@ spec:
   content:
     git:
       uri: https://github.com/kubeshop/testkube
-      main
+      revision: main
       paths:
       - test/k6/executor-tests/k6-perf-test.js
   steps:
@@ -276,7 +276,7 @@ spec:
   content:
     git:
       uri: https://github.com/kubeshop/testkube
-      main
+      revision: main
       paths:
       - test/k6/executor-tests/k6-perf-test-gcp.js
   steps:
