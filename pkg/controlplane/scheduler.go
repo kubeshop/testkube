@@ -53,15 +53,6 @@ func NewScheduler(
 	}
 }
 
-func (s *scheduler) isExecutionNameReserved(ctx context.Context, name, workflowName string) (bool, error) {
-	// TODO: Detect errors other than 404?
-	next, _ := s.resultsRepository.GetByNameAndTestWorkflow(ctx, name, workflowName)
-	if next.Name == name {
-		return true, nil
-	}
-	return false, nil
-}
-
 func (s *scheduler) insert(ctx context.Context, execution *testkube.TestWorkflowExecution) error {
 	err := retry(SaveResultRetryMaxAttempts, SaveResultRetryBaseDelay, func() error {
 		err := s.resultsRepository.Insert(ctx, *execution)
