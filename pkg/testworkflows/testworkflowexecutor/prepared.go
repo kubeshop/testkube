@@ -324,7 +324,7 @@ func (e *IntermediateExecution) Clone() *IntermediateExecution {
 	return &IntermediateExecution{
 		cr:            e.cr.DeepCopy(),
 		tags:          maps.Clone(e.tags),
-		execution:     e.execution,
+		execution:     e.execution.Clone(),
 		prepended:     e.prepended,
 		sensitiveData: e.sensitiveData.Clone(),
 	}
