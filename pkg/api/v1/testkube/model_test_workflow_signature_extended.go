@@ -1,5 +1,7 @@
 package testkube
 
+const parallelCategory = "Run in parallel"
+
 func (s *TestWorkflowSignature) Label() string {
 	if s.Name != "" {
 		return s.Name
@@ -16,7 +18,7 @@ func (s *TestWorkflowSignature) Sequence() []TestWorkflowSignature {
 }
 
 func (s *TestWorkflowSignature) GetParallelStepReference(nameOrReference string) string {
-	if s.Category == "Run in parallel" && (nameOrReference == "" || s.Ref == nameOrReference) {
+	if s.Category == parallelCategory && (nameOrReference == "" || s.Ref == nameOrReference) {
 		return s.Ref
 	}
 
