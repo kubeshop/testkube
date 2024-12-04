@@ -220,7 +220,7 @@ func (s *ExecutionScheduler) ResolveExecutionBase(ctx context.Context, base *Pre
 
 	// -----=====[ 11 ]=====[ Fetch all required templates ]=====-------
 	// TODO: Use cache
-	tplsMap := make(map[string]testworkflowsv1.TestWorkflowTemplate, len(tpls))
+	tplsMap := make(map[string]*testworkflowsv1.TestWorkflowTemplate, len(tpls))
 	var tplsMu sync.Mutex
 	var g errgroup.Group
 	for tplName := range tpls {
@@ -232,7 +232,7 @@ func (s *ExecutionScheduler) ResolveExecutionBase(ctx context.Context, base *Pre
 				}
 				tplsMu.Lock()
 				defer tplsMu.Unlock()
-				tplsMap[tplName] = *tpl
+				tplsMap[tplName] = tpl
 				return nil
 			})
 		}(tplName)

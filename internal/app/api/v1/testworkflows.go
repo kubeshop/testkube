@@ -323,13 +323,13 @@ func (s *TestkubeAPI) PreviewTestWorkflowHandler() fiber.Handler {
 		if inline {
 			// Fetch the templates
 			tpls := testworkflowresolver.ListTemplates(obj)
-			tplsMap := make(map[string]testworkflowsv1.TestWorkflowTemplate, len(tpls))
+			tplsMap := make(map[string]*testworkflowsv1.TestWorkflowTemplate, len(tpls))
 			for name := range tpls {
 				tpl, err := s.TestWorkflowTemplatesClient.Get(name)
 				if err != nil {
 					return s.BadRequest(c, errPrefix, "fetching error", err)
 				}
-				tplsMap[name] = *tpl
+				tplsMap[name] = tpl
 			}
 
 			// Resolve the TestWorkflow

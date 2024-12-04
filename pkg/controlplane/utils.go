@@ -12,12 +12,16 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/structpb"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/cloud/data/executor"
 	"github.com/kubeshop/testkube/pkg/log"
+	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
+	"github.com/kubeshop/testkube/pkg/secretmanager"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 )
 
 type grpcstatus interface {
@@ -183,5 +187,51 @@ func ValidateExecutionRequest(req *cloud.ScheduleRequest) error {
 		return errors.New("kubernetes object can trigger only execution of a single named TestWorkflow")
 	}
 
+	return nil
+}
+
+func ValidateExecutionNameDuplicates(intermediate []*testworkflowexecutor.IntermediateExecution) error {
+	type namePair struct {
+		Workflow  string
+		Execution string
+	}
+	localDuplicatesCheck := make(map[namePair]struct{})
+	for i := range intermediate {
+		if intermediate[i].Name() == "" {
+			continue
+		}
+		key := namePair{Workflow: intermediate[i].WorkflowName(), Execution: intermediate[i].Name()}
+		if _, ok := localDuplicatesCheck[key]; ok {
+			return fmt.Errorf("duplicated execution name: '%s' for workflow '%s'", intermediate[i].Name(), intermediate[i].WorkflowName())
+		}
+		localDuplicatesCheck[key] = struct{}{}
+	}
+	return nil
+}
+
+func IsNotFound(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, mongo.ErrNoDocuments) || k8serrors.IsNotFound(err) || errors.Is(err, secretmanager.ErrNotFound) {
+		return true
+	}
+	if e, ok := status.FromError(err); ok {
+		return e.Code() == codes.NotFound
+	}
+	return false
+}
+
+func ValidateExecutionNameRemoteDuplicate(ctx context.Context, resultsRepository testworkflow.Repository, intermediate *testworkflowexecutor.IntermediateExecution) error {
+	next, err := resultsRepository.GetByNameAndTestWorkflow(ctx, intermediate.Name(), intermediate.WorkflowName())
+	if IsNotFound(err) {
+		return nil
+	}
+	if err != nil {
+		return errors.Wrapf(err, "failed to verify unique name: '%s' in '%s' workflow", intermediate.Name(), intermediate.WorkflowName())
+	}
+	if next.Name == intermediate.Name() {
+		return fmt.Errorf("execution name already exists: '%s' for workflow '%s'", intermediate.Name(), intermediate.WorkflowName())
+	}
 	return nil
 }

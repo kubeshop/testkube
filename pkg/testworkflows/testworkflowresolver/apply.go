@@ -21,16 +21,16 @@ import (
 	"github.com/kubeshop/testkube/pkg/rand"
 )
 
-func buildTemplate(template testworkflowsv1.TestWorkflowTemplate, cfg map[string]intstr.IntOrString,
-	externalize func(key, value string) (expressions.Expression, error)) (testworkflowsv1.TestWorkflowTemplate, error) {
+func buildTemplate(template *testworkflowsv1.TestWorkflowTemplate, cfg map[string]intstr.IntOrString,
+	externalize func(key, value string) (expressions.Expression, error)) (*testworkflowsv1.TestWorkflowTemplate, error) {
 	v, err := ApplyWorkflowTemplateConfig(template.DeepCopy(), cfg, externalize)
 	if err != nil {
 		return template, err
 	}
-	return *v, err
+	return v, err
 }
 
-func getTemplate(name string, templates map[string]testworkflowsv1.TestWorkflowTemplate) (tpl testworkflowsv1.TestWorkflowTemplate, err error) {
+func getTemplate(name string, templates map[string]*testworkflowsv1.TestWorkflowTemplate) (tpl *testworkflowsv1.TestWorkflowTemplate, err error) {
 	key := GetInternalTemplateName(name)
 	tpl, ok := templates[key]
 	if ok {
@@ -44,8 +44,8 @@ func getTemplate(name string, templates map[string]testworkflowsv1.TestWorkflowT
 	return tpl, fmt.Errorf(`template "%s" not found`, name)
 }
 
-func getConfiguredTemplate(name string, cfg map[string]intstr.IntOrString, templates map[string]testworkflowsv1.TestWorkflowTemplate,
-	externalize func(key, value string) (expressions.Expression, error)) (tpl testworkflowsv1.TestWorkflowTemplate, err error) {
+func getConfiguredTemplate(name string, cfg map[string]intstr.IntOrString, templates map[string]*testworkflowsv1.TestWorkflowTemplate,
+	externalize func(key, value string) (expressions.Expression, error)) (tpl *testworkflowsv1.TestWorkflowTemplate, err error) {
 	tpl, err = getTemplate(name, templates)
 	if err != nil {
 		return tpl, err
@@ -53,7 +53,7 @@ func getConfiguredTemplate(name string, cfg map[string]intstr.IntOrString, templ
 	return buildTemplate(tpl, cfg, externalize)
 }
 
-func injectTemplateToSpec(spec *testworkflowsv1.TestWorkflowSpec, template testworkflowsv1.TestWorkflowTemplate) error {
+func injectTemplateToSpec(spec *testworkflowsv1.TestWorkflowSpec, template *testworkflowsv1.TestWorkflowTemplate) error {
 	if spec == nil {
 		return nil
 	}
@@ -79,14 +79,7 @@ func injectTemplateToSpec(spec *testworkflowsv1.TestWorkflowSpec, template testw
 	return nil
 }
 
-func InjectTemplate(workflow *testworkflowsv1.TestWorkflow, template testworkflowsv1.TestWorkflowTemplate) error {
-	if workflow == nil {
-		return nil
-	}
-	return injectTemplateToSpec(&workflow.Spec, template)
-}
-
-func InjectStepTemplate(step *testworkflowsv1.Step, template testworkflowsv1.TestWorkflowTemplate) error {
+func InjectStepTemplate(step *testworkflowsv1.Step, template *testworkflowsv1.TestWorkflowTemplate) error {
 	if step == nil {
 		return nil
 	}
@@ -117,7 +110,7 @@ func InjectStepTemplate(step *testworkflowsv1.Step, template testworkflowsv1.Tes
 	return nil
 }
 
-func InjectServiceTemplate(svc *testworkflowsv1.ServiceSpec, template testworkflowsv1.TestWorkflowTemplate) error {
+func InjectServiceTemplate(svc *testworkflowsv1.ServiceSpec, template *testworkflowsv1.TestWorkflowTemplate) error {
 	if svc == nil {
 		return nil
 	}
@@ -127,7 +120,7 @@ func InjectServiceTemplate(svc *testworkflowsv1.ServiceSpec, template testworkfl
 	return nil
 }
 
-func applyTemplatesToStep(step testworkflowsv1.Step, templates map[string]testworkflowsv1.TestWorkflowTemplate,
+func applyTemplatesToStep(step testworkflowsv1.Step, templates map[string]*testworkflowsv1.TestWorkflowTemplate,
 	externalize func(key, value string) (expressions.Expression, error)) (testworkflowsv1.Step, error) {
 	// Apply regular templates
 	for i, ref := range step.Use {
@@ -250,7 +243,7 @@ func FlattenStepList(steps []testworkflowsv1.Step) []testworkflowsv1.Step {
 	return result
 }
 
-func applyTemplatesToSpec(spec *testworkflowsv1.TestWorkflowSpec, templates map[string]testworkflowsv1.TestWorkflowTemplate,
+func applyTemplatesToSpec(spec *testworkflowsv1.TestWorkflowSpec, templates map[string]*testworkflowsv1.TestWorkflowTemplate,
 	externalize func(key, value string) (expressions.Expression, error)) error {
 	if spec == nil {
 		return nil
@@ -327,7 +320,7 @@ func applyTemplatesToSpec(spec *testworkflowsv1.TestWorkflowSpec, templates map[
 	return nil
 }
 
-func ApplyTemplates(workflow *testworkflowsv1.TestWorkflow, templates map[string]testworkflowsv1.TestWorkflowTemplate,
+func ApplyTemplates(workflow *testworkflowsv1.TestWorkflow, templates map[string]*testworkflowsv1.TestWorkflowTemplate,
 	externalize func(key, value string) (expressions.Expression, error)) error {
 	if workflow == nil {
 		return nil

@@ -103,6 +103,10 @@ func (e *IntermediateExecution) ID() string {
 	return e.execution.Id
 }
 
+func (e *IntermediateExecution) GroupID() string {
+	return e.execution.GroupId
+}
+
 func (e *IntermediateExecution) SetName(name string) *IntermediateExecution {
 	e.execution.Name = name
 	return e
@@ -217,7 +221,7 @@ func (e *IntermediateExecution) ApplyConfig(config map[string]string) error {
 	return e.ApplyDynamicConfig(dynamicConfig)
 }
 
-func (e *IntermediateExecution) ApplyTemplates(templates map[string]testworkflowsv1.TestWorkflowTemplate) error {
+func (e *IntermediateExecution) ApplyTemplates(templates map[string]*testworkflowsv1.TestWorkflowTemplate) error {
 	if e.cr == nil {
 		panic("workflow not set yet")
 	}
