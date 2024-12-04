@@ -228,8 +228,12 @@ func uiWatch(execution testkube.TestWorkflowExecution, serviceName *string, serv
 		result, err = watchTestWorkflowParallelStepLogs(execution.Id, ref, parallelStepIndex, execution.Signature, client)
 	default:
 		result, err = watchTestWorkflowLogs(execution.Id, execution.Signature, client)
-
 	}
+
+	if result == nil && err == nil {
+		err = errors.New("no result found")
+	}
+
 	ui.ExitOnError("reading test workflow execution logs", err)
 
 	// Apply the result in the execution
