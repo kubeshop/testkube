@@ -8,7 +8,6 @@ import (
 	"math"
 	"net"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2/log"
@@ -353,6 +352,10 @@ func (s *Server) ScheduleExecution(req *cloud.ScheduleRequest, srv cloud.TestKub
 
 		// Start the execution
 		// TODO: Make it another gRPC operation
+		parentIds := ""
+		if execution.RunningContext != nil && execution.RunningContext.Actor != nil {
+			parentIds = execution.RunningContext.Actor.ExecutionPath
+		}
 		result, err := runner.Execute(executionworkertypes.ExecuteRequest{
 			Execution: testworkflowconfig.ExecutionConfig{
 				Id:              execution.Id,
@@ -364,7 +367,7 @@ func (s *Server) ScheduleExecution(req *cloud.ScheduleRequest, srv cloud.TestKub
 				Debug:           false,
 				OrganizationId:  "",
 				EnvironmentId:   "",
-				ParentIds:       strings.Join(req.ParentExecutionIds, "/"),
+				ParentIds:       parentIds,
 			},
 			Secrets:      sensitiveDataHandler.Get(execution.Id),
 			Workflow:     testworkflowmappers.MapTestWorkflowAPIToKube(*execution.ResolvedWorkflow),
