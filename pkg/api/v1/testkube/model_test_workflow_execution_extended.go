@@ -1,6 +1,7 @@
 package testkube
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/gookit/color"
@@ -118,4 +119,14 @@ func (e *TestWorkflowExecution) FailedToInitialize() bool {
 
 func (e *TestWorkflowExecution) Assigned() bool {
 	return e.Result.IsFinished() || len(e.Signature) > 0
+}
+
+func (e *TestWorkflowExecution) Clone() *TestWorkflowExecution {
+	if e == nil {
+		return nil
+	}
+	v, _ := json.Marshal(e)
+	result := TestWorkflowExecution{}
+	_ = json.Unmarshal(v, &result)
+	return &result
 }
