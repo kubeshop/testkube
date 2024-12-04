@@ -59,10 +59,13 @@ func TestCommandExecution(t *testing.T) {
 
 	var logStreamFunc func(ctx context.Context, executionID string) (chan output.Output, error)
 	var workflowNotificationsStreamFunc func(ctx context.Context, executionID string) (<-chan testkube.TestWorkflowExecutionNotification, error)
+	var workflowServiceNotificationsStreamFunc func(ctx context.Context, executionID, serviceName string, serviceIndex int) (<-chan testkube.TestWorkflowExecutionNotification, error)
+	var workflowParallelStepNotificationsStreamFunc func(ctx context.Context, executionID, ref string, workerIndex int) (<-chan testkube.TestWorkflowExecutionNotification, error)
 
 	logger, _ := zap.NewDevelopment()
 	proContext := config.ProContext{APIKey: "api-key", WorkerCount: 5, LogStreamWorkerCount: 5, WorkflowNotificationsWorkerCount: 5}
-	agent, err := agent.NewAgent(logger.Sugar(), m, grpcClient, logStreamFunc, workflowNotificationsStreamFunc, "", "", featureflags.FeatureFlags{}, &proContext, "")
+	agent, err := agent.NewAgent(logger.Sugar(), m, grpcClient, logStreamFunc, workflowNotificationsStreamFunc,
+		workflowServiceNotificationsStreamFunc, workflowParallelStepNotificationsStreamFunc, "", "", featureflags.FeatureFlags{}, &proContext, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -92,6 +95,18 @@ func (cs *CloudServer) GetLogsStream(srv cloud.TestKubeCloudAPI_GetLogsStreamSer
 }
 
 func (cs *CloudServer) GetTestWorkflowNotificationsStream(srv cloud.TestKubeCloudAPI_GetTestWorkflowNotificationsStreamServer) error {
+	<-cs.ctx.Done()
+
+	return nil
+}
+
+func (cs *CloudServer) GetTestWorkflowServiceNotificationsStream(srv cloud.TestKubeCloudAPI_GetTestWorkflowServiceNotificationsStreamServer) error {
+	<-cs.ctx.Done()
+
+	return nil
+}
+
+func (cs *CloudServer) GetTestWorkflowParallelStepNotificationsStream(srv cloud.TestKubeCloudAPI_GetTestWorkflowParallelStepNotificationsStreamServer) error {
 	<-cs.ctx.Done()
 
 	return nil

@@ -325,6 +325,48 @@ func main() {
 		}
 		return notifications.Channel(), nil
 	}
+	getTestWorkflowServiceNotificationsStream := func(ctx context.Context, executionID, serviceName string, serviceIndex int) (<-chan testkube.TestWorkflowExecutionNotification, error) {
+		execution, err := testWorkflowResultsRepository.Get(ctx, executionID)
+		if err != nil {
+			return nil, err
+		}
+
+		if execution.Result != nil && execution.Result.IsFinished() {
+			return nil, errors.New("test workflow execution is finished")
+		}
+
+		notifications := executionWorker.Notifications(ctx, fmt.Sprintf("%s-%s-%d", execution.Id, serviceName, serviceIndex), executionworkertypes.NotificationsOptions{
+			Hints: executionworkertypes.Hints{
+				Namespace:   execution.Namespace,
+				ScheduledAt: common.Ptr(execution.ScheduledAt),
+			},
+		})
+		if notifications.Err() != nil {
+			return nil, notifications.Err()
+		}
+		return notifications.Channel(), nil
+	}
+	getTestWorkflowParallelStepNotificationsStream := func(ctx context.Context, executionID, ref string, workerIndex int) (<-chan testkube.TestWorkflowExecutionNotification, error) {
+		execution, err := testWorkflowResultsRepository.Get(ctx, executionID)
+		if err != nil {
+			return nil, err
+		}
+
+		if execution.Result != nil && execution.Result.IsFinished() {
+			return nil, errors.New("test workflow execution is finished")
+		}
+
+		notifications := executionWorker.Notifications(ctx, fmt.Sprintf("%s-%s-%d", execution.Id, ref, workerIndex), executionworkertypes.NotificationsOptions{
+			Hints: executionworkertypes.Hints{
+				Namespace:   execution.Namespace,
+				ScheduledAt: common.Ptr(execution.ScheduledAt),
+			},
+		})
+		if notifications.Err() != nil {
+			return nil, notifications.Err()
+		}
+		return notifications.Channel(), nil
+	}
 	getDeprecatedLogStream := func(ctx context.Context, executionID string) (chan output.Output, error) {
 		return nil, errors.New("deprecated features have been disabled")
 	}
@@ -337,6 +379,8 @@ func main() {
 		grpcClient,
 		getDeprecatedLogStream,
 		getTestWorkflowNotificationsStream,
+		getTestWorkflowServiceNotificationsStream,
+		getTestWorkflowParallelStepNotificationsStream,
 		clusterId,
 		cfg.TestkubeClusterName,
 		features,
