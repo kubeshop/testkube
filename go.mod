@@ -9,7 +9,7 @@ require (
 	github.com/avast/retry-go/v4 v4.6.0
 	github.com/bmatcuk/doublestar/v4 v4.6.1
 	github.com/cdevents/sdk-go v0.3.0
-	github.com/cli/cli/v2 v2.62.0
+	github.com/cli/cli/v2 v2.63.1
 	github.com/cloudevents/sdk-go/v2 v2.15.2
 	github.com/coreos/go-oidc v2.2.1+incompatible
 	github.com/creasty/defaults v1.7.0
@@ -20,7 +20,7 @@ require (
 	github.com/fasthttp/websocket v1.5.0
 	github.com/fluxcd/pkg/apis/event v0.2.0
 	github.com/fsnotify/fsnotify v1.7.0
-	github.com/gabriel-vasile/mimetype v1.4.6
+	github.com/gabriel-vasile/mimetype v1.4.7
 	github.com/go-task/slim-sprig v2.20.0+incompatible
 	github.com/gofiber/adaptor/v2 v2.1.29
 	github.com/gofiber/fiber/v2 v2.52.5
@@ -72,8 +72,8 @@ require (
 	go.uber.org/zap v1.27.0
 	golang.org/x/exp v0.0.0-20240416160154-fe59bbe5cc7f
 	golang.org/x/oauth2 v0.22.0
-	golang.org/x/sync v0.8.0
-	golang.org/x/text v0.19.0
+	golang.org/x/sync v0.9.0
+	golang.org/x/text v0.20.0
 	google.golang.org/appengine v1.6.8
 	google.golang.org/grpc v1.67.1
 	google.golang.org/protobuf v1.35.1
@@ -107,7 +107,7 @@ require (
 	github.com/charmbracelet/lipgloss v0.10.1-0.20240413172830-d0be07ea6b9c // indirect
 	github.com/charmbracelet/x/exp/term v0.0.0-20240425164147-ba2a9512b05f // indirect
 	github.com/cli/browser v1.3.0 // indirect
-	github.com/cli/go-gh/v2 v2.11.0 // indirect
+	github.com/cli/go-gh/v2 v2.11.1 // indirect
 	github.com/cli/safeexec v1.0.1 // indirect
 	github.com/cli/shurcooL-graphql v0.0.4 // indirect
 	github.com/containerd/console v1.0.4 // indirect
@@ -231,11 +231,11 @@ require (
 	go.opentelemetry.io/otel/sdk v1.31.0 // indirect
 	go.opentelemetry.io/otel/trace v1.31.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/crypto v0.28.0 // indirect
+	golang.org/x/crypto v0.29.0 // indirect
 	golang.org/x/mod v0.21.0 // indirect
-	golang.org/x/net v0.30.0 // indirect
-	golang.org/x/sys v0.26.0 // indirect
-	golang.org/x/term v0.25.0 // indirect
+	golang.org/x/net v0.31.0 // indirect
+	golang.org/x/sys v0.27.0 // indirect
+	golang.org/x/term v0.26.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	golang.org/x/tools v0.26.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
