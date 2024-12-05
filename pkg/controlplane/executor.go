@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	errors2 "errors"
 	"io"
-	"os"
 	"sync"
 	"time"
 
@@ -27,15 +26,16 @@ import (
 )
 
 type executor struct {
-	direct        *bool
-	directMu      sync.Mutex
-	scheduler     *scheduler
-	eventEmitter  event.Interface
-	runner        runner.Runner
-	client        cloud.TestKubeCloudAPIClient
-	secretManager secretmanager.SecretManager
-	apiKey        string
-	dashboardURI  string
+	direct         *bool
+	directMu       sync.Mutex
+	scheduler      *scheduler
+	eventEmitter   event.Interface
+	runner         runner.Runner
+	client         cloud.TestKubeCloudAPIClient
+	secretManager  secretmanager.SecretManager
+	apiKey         string
+	dashboardURI   string
+	cdEventsTarget string
 }
 
 func NewExecutor(
@@ -46,15 +46,17 @@ func NewExecutor(
 	secretManager secretmanager.SecretManager,
 	apiKey string,
 	dashboardURI string,
+	cdEventsTarget string,
 ) *executor {
 	return &executor{
-		scheduler:     scheduler,
-		client:        client,
-		apiKey:        apiKey,
-		eventEmitter:  eventEmitter,
-		secretManager: secretManager,
-		runner:        runner,
-		dashboardURI:  dashboardURI,
+		scheduler:      scheduler,
+		client:         client,
+		apiKey:         apiKey,
+		eventEmitter:   eventEmitter,
+		secretManager:  secretManager,
+		runner:         runner,
+		dashboardURI:   dashboardURI,
+		cdEventsTarget: cdEventsTarget,
 	}
 }
 
@@ -78,12 +80,10 @@ func (e *executor) isDirect() bool {
 }
 
 func (e *executor) Execute(ctx context.Context, req *cloud.ScheduleRequest) (<-chan *testkube.TestWorkflowExecution, error) {
-	// Connect to the Control Plane if it supports scheduling execution
-	if !e.isDirect() {
-		return e.execute(ctx, req)
+	if e.isDirect() {
+		return e.executeDirect(ctx, req)
 	}
-	// Otherwise, use direct Control Plane methods, to schedule from the Agent level
-	return e.executeDirect(ctx, req)
+	return e.execute(ctx, req)
 }
 
 func (e *executor) execute(ctx context.Context, req *cloud.ScheduleRequest) (<-chan *testkube.TestWorkflowExecution, error) {
@@ -128,7 +128,7 @@ func (e *executor) executeDirect(ctx context.Context, req *cloud.ScheduleRequest
 
 	controlPlaneConfig := testworkflowconfig.ControlPlaneConfig{
 		DashboardUrl:   e.dashboardURI,
-		CDEventsTarget: os.Getenv("CDEVENTS_TARGET"),
+		CDEventsTarget: e.cdEventsTarget,
 	}
 
 	ch2 := make(chan *testkube.TestWorkflowExecution, 1)

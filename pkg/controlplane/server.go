@@ -24,7 +24,6 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/cloud"
 	cloudexecutor "github.com/kubeshop/testkube/pkg/cloud/data/executor"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 )
 
 const (
@@ -50,8 +49,7 @@ type Config struct {
 
 func New(
 	cfg Config,
-	executionScheduler *testworkflowexecutor.ExecutionScheduler,
-	dashboardUri string,
+	executor *executor,
 	commandGroups ...CommandHandlers,
 ) *Server {
 	commands := make(map[cloudexecutor.Command]CommandHandler)
@@ -61,23 +59,8 @@ func New(
 		}
 	}
 	return &Server{
-		cfg: cfg,
-		executor: NewExecutor(
-			NewScheduler(
-				executionScheduler.TestWorkflowsClient(),
-				executionScheduler.TestWorkflowsTemplatesClient(),
-				executionScheduler.Repository(),
-				executionScheduler.OutputRepository(),
-				executionScheduler.GlobalTemplateName(),
-				"",
-			),
-			nil,
-			executionScheduler.Emitter(),
-			executionScheduler.Runner(),
-			executionScheduler.SecretManager(),
-			"",
-			dashboardUri,
-		),
+		cfg:      cfg,
+		executor: executor,
 		commands: commands,
 	}
 }
