@@ -33,7 +33,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/secretmanager"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
 	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 )
 
 func mapTestWorkflowFilters(s []*testworkflow.FilterImpl) []testworkflow.Filter {
@@ -394,20 +393,27 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 		}
 	}
 
-	executionScheduler := testworkflowexecutor.NewExecutionScheduler(
-		testWorkflowsClient,
-		testWorkflowTemplatesClient,
-		secretManager,
-		testWorkflowResultsRepository,
-		testWorkflowOutputRepository,
-		runner,
-		cfg.GlobalWorkflowTemplateName,
+	executor := controlplane.NewExecutor(
+		controlplane.NewScheduler(
+			testWorkflowsClient,
+			testWorkflowTemplatesClient,
+			testWorkflowResultsRepository,
+			testWorkflowOutputRepository,
+			cfg.GlobalWorkflowTemplateName,
+			"",
+		),
+		nil,
 		emitter,
+		runner,
+		secretManager,
+		"",
+		cfg.TestkubeDashboardURI,
+		cfg.CDEventsTarget,
 	)
 
 	return controlplane.New(controlplane.Config{
 		Port:    cfg.GRPCServerPort,
 		Logger:  log.DefaultLogger,
 		Verbose: false,
-	}, executionScheduler, cfg.TestkubeDashboardURI, commands...)
+	}, executor, commands...)
 }
