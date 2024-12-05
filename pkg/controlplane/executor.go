@@ -25,7 +25,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 )
 
-type executor struct {
+type Executor struct {
 	direct         *bool
 	directMu       sync.Mutex
 	scheduler      *scheduler
@@ -47,8 +47,8 @@ func NewExecutor(
 	apiKey string,
 	dashboardURI string,
 	cdEventsTarget string,
-) *executor {
-	return &executor{
+) *Executor {
+	return &Executor{
 		scheduler:      scheduler,
 		client:         client,
 		apiKey:         apiKey,
@@ -60,7 +60,7 @@ func NewExecutor(
 	}
 }
 
-func (e *executor) isDirect() bool {
+func (e *Executor) isDirect() bool {
 	e.directMu.Lock()
 	defer e.directMu.Unlock()
 	if e.direct == nil {
@@ -79,14 +79,14 @@ func (e *executor) isDirect() bool {
 	return *e.direct
 }
 
-func (e *executor) Execute(ctx context.Context, req *cloud.ScheduleRequest) (<-chan *testkube.TestWorkflowExecution, error) {
+func (e *Executor) Execute(ctx context.Context, req *cloud.ScheduleRequest) (<-chan *testkube.TestWorkflowExecution, error) {
 	if e.isDirect() {
 		return e.executeDirect(ctx, req)
 	}
 	return e.execute(ctx, req)
 }
 
-func (e *executor) execute(ctx context.Context, req *cloud.ScheduleRequest) (<-chan *testkube.TestWorkflowExecution, error) {
+func (e *Executor) execute(ctx context.Context, req *cloud.ScheduleRequest) (<-chan *testkube.TestWorkflowExecution, error) {
 	ch := make(chan *testkube.TestWorkflowExecution)
 	resp, err := e.client.ScheduleExecution(ctx, req)
 	if err != nil {
@@ -116,7 +116,7 @@ func (e *executor) execute(ctx context.Context, req *cloud.ScheduleRequest) (<-c
 	return ch, nil
 }
 
-func (e *executor) executeDirect(ctx context.Context, req *cloud.ScheduleRequest) (<-chan *testkube.TestWorkflowExecution, error) {
+func (e *Executor) executeDirect(ctx context.Context, req *cloud.ScheduleRequest) (<-chan *testkube.TestWorkflowExecution, error) {
 	// Prepare dependencies
 	sensitiveDataHandler := NewSecretHandler(e.secretManager)
 

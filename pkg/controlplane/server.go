@@ -38,7 +38,7 @@ type Server struct {
 	cfg      Config
 	server   *grpc.Server
 	commands map[cloudexecutor.Command]CommandHandler
-	executor *executor
+	executor *Executor
 }
 
 type Config struct {
@@ -47,11 +47,7 @@ type Config struct {
 	Logger  *zap.SugaredLogger
 }
 
-func New(
-	cfg Config,
-	executor *executor,
-	commandGroups ...CommandHandlers,
-) *Server {
+func New(cfg Config, executor *Executor, commandGroups ...CommandHandlers) *Server {
 	commands := make(map[cloudexecutor.Command]CommandHandler)
 	for _, group := range commandGroups {
 		for cmd, handler := range group {
