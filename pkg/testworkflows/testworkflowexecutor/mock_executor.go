@@ -11,6 +11,7 @@ import (
 	gomock "github.com/golang/mock/gomock"
 	v1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	testkube "github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	cloud "github.com/kubeshop/testkube/pkg/cloud"
 )
 
 // MockTestWorkflowExecutor is a mock of TestWorkflowExecutor interface.
@@ -34,6 +35,21 @@ func NewMockTestWorkflowExecutor(ctrl *gomock.Controller) *MockTestWorkflowExecu
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockTestWorkflowExecutor) EXPECT() *MockTestWorkflowExecutorMockRecorder {
 	return m.recorder
+}
+
+// Execute mocks base method.
+func (m *MockTestWorkflowExecutor) Execute(arg0 context.Context, arg1 *cloud.ScheduleRequest) (<-chan *testkube.TestWorkflowExecution, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Execute", arg0, arg1)
+	ret0, _ := ret[0].(<-chan *testkube.TestWorkflowExecution)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Execute indicates an expected call of Execute.
+func (mr *MockTestWorkflowExecutorMockRecorder) Execute(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Execute", reflect.TypeOf((*MockTestWorkflowExecutor)(nil).Execute), arg0, arg1)
 }
 
 // LegacyExecute mocks base method.

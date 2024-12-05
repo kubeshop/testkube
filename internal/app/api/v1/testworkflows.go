@@ -2,26 +2,21 @@ package v1
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"math"
 	"net/http"
 	"strconv"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/encoding/gzip"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
-	agentclient "github.com/kubeshop/testkube/pkg/agent/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowresolver"
 )
 
@@ -366,33 +361,7 @@ func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 		}
 
 		// Pro edition only (tcl protected code)
-		var runningContext *cloud.RunningContext
-		if request.RunningContext != nil {
-			if request.RunningContext.Actor != nil && request.RunningContext.Actor.Type_ != nil {
-				switch *request.RunningContext.Actor.Type_ {
-				case testkube.CRON_TestWorkflowRunningContextActorType:
-					runningContext = &cloud.RunningContext{Type: cloud.RunningContextType_CRON, Name: request.RunningContext.Actor.Name}
-				case testkube.TESTTRIGGER_TestWorkflowRunningContextActorType:
-					runningContext = &cloud.RunningContext{Type: cloud.RunningContextType_TESTTRIGGER, Name: request.RunningContext.Actor.Name}
-				case testkube.TESTWORKFLOWEXECUTION_TestWorkflowRunningContextActorType:
-					runningContext = &cloud.RunningContext{Type: cloud.RunningContextType_KUBERNETESOBJECT, Name: request.RunningContext.Actor.Name}
-				case testkube.TESTWORKFLOW_TestWorkflowRunningContextActorType:
-					if len(request.ParentExecutionIds) > 0 {
-						runningContext = &cloud.RunningContext{Type: cloud.RunningContextType_EXECUTION, Name: request.ParentExecutionIds[len(request.ParentExecutionIds)-1]}
-					}
-				}
-			}
-			if runningContext == nil && request.RunningContext.Interface_ != nil && request.RunningContext.Interface_.Type_ != nil {
-				switch *request.RunningContext.Interface_.Type_ {
-				case testkube.CLI_TestWorkflowRunningContextInterfaceType:
-					runningContext = &cloud.RunningContext{Type: cloud.RunningContextType_CLI, Name: request.RunningContext.Interface_.Name}
-				case testkube.UI_TestWorkflowRunningContextInterfaceType:
-					runningContext = &cloud.RunningContext{Type: cloud.RunningContextType_UI, Name: request.RunningContext.Interface_.Name}
-				case testkube.CICD_TestWorkflowRunningContextInterfaceType:
-					runningContext = &cloud.RunningContext{Type: cloud.RunningContextType_CICD, Name: request.RunningContext.Interface_.Name}
-				}
-			}
-		}
+		runningContext := testworkflowexecutor.GetNewRunningContext(request.RunningContext, request.ParentExecutionIds)
 
 		var scheduleSelector cloud.ScheduleSelector
 		if name != "" {
@@ -408,46 +377,24 @@ func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 			scheduleSelector.LabelSelector = sel.MatchLabels
 		}
 
-		scheduleCtx := agentclient.AddAPIKeyMeta(ctx, "DUMMY_API_KEY") // TODO: Support Cloud API Key
-		opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
-		resp, err := s.grpcClient.ScheduleExecution(scheduleCtx, &cloud.ScheduleRequest{
-			EnvironmentId:        "DUMMY_ENV_ID", // TODO: Support Cloud environment ID
+		ch, err := s.testWorkflowExecutor.Execute(ctx, &cloud.ScheduleRequest{
+			// TODO: Support Cloud environment ID
+			EnvironmentId:        "",
 			Selectors:            []*cloud.ScheduleSelector{&scheduleSelector},
 			DisableWebhooks:      request.DisableWebhooks,
 			Tags:                 request.Tags,
 			RunningContext:       runningContext,
 			ParentExecutionIds:   request.ParentExecutionIds,
 			KubernetesObjectName: request.TestWorkflowExecutionName,
-		}, opts...)
+		})
 
 		if err != nil {
 			return s.InternalError(c, errPrefix, "execution error", err)
 		}
-		defer resp.CloseSend()
 
-		var results []testkube.TestWorkflowExecution
-		var errs []error
-
-		var item *cloud.ScheduleResponse
-		for {
-			item, err = resp.Recv()
-			if err != nil {
-				if !errors.Is(err, io.EOF) {
-					errs = append(errs, err)
-				}
-				break
-			}
-			var r testkube.TestWorkflowExecution
-			err = json.Unmarshal(item.Execution, &r)
-			if err != nil {
-				errs = append(errs, err)
-				break
-			}
-			results = append(results, r)
-		}
-
-		if len(errs) != 0 {
-			return s.InternalError(c, errPrefix, "execution error", errors.Join(errs...))
+		results := make([]testkube.TestWorkflowExecution, 0)
+		for v := range ch {
+			results = append(results, *v)
 		}
 
 		s.Log.Debugw("executing test workflow", "name", name, "selector", selector)
