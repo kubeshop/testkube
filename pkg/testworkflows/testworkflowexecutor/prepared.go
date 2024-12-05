@@ -316,6 +316,11 @@ func (e *IntermediateExecution) RewriteSensitiveDataCall(handler func(name strin
 	}))
 }
 
+func (e *IntermediateExecution) StoreConfig(config map[string]string) *IntermediateExecution {
+	e.execution.Config = config
+	return e
+}
+
 func (e *IntermediateExecution) Finished() bool {
 	return e.execution.Result.IsFinished()
 }

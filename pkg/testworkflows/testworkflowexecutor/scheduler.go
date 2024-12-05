@@ -4,607 +4,317 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"maps"
-	"os"
-	"strings"
-	"sync"
 	"time"
 
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"golang.org/x/sync/errgroup"
+	"go.uber.org/zap"
 
-	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
-	testworkflowsv1client "github.com/kubeshop/testkube-operator/pkg/client/testworkflows/v1"
-	"github.com/kubeshop/testkube/internal/common"
+	testworkflowsv1 "github.com/kubeshop/testkube-operator/pkg/client/testworkflows/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/event"
-	"github.com/kubeshop/testkube/pkg/expressions"
+	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/log"
-	testworkflowmappers "github.com/kubeshop/testkube/pkg/mapper/testworkflows"
-	testworkflow2 "github.com/kubeshop/testkube/pkg/repository/testworkflow"
-	runner2 "github.com/kubeshop/testkube/pkg/runner"
-	"github.com/kubeshop/testkube/pkg/secretmanager"
+	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/testworkflows"
-	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowresolver"
 )
 
 const (
-	localCredentialFnName = "localUserCredentials" // TODO: Random
+	SaveResultRetryMaxAttempts = 100
+	SaveResultRetryBaseDelay   = 300 * time.Millisecond
 )
 
-type ExecutionScheduler struct {
-	testWorkflowsClient         testworkflowsv1client.Interface
-	testWorkflowTemplatesClient testworkflowsv1client.TestWorkflowTemplatesInterface
-	secretManager               secretmanager.SecretManager
-	repository                  testworkflow2.Repository
-	outputRepository            testworkflow2.OutputRepository
+type scheduler struct {
+	logger                      *zap.SugaredLogger
+	testWorkflowsClient         testworkflowsv1.Interface
+	testWorkflowTemplatesClient testworkflowsv1.TestWorkflowTemplatesInterface
+	resultsRepository           testworkflow.Repository
+	outputRepository            testworkflow.OutputRepository
 	globalTemplateName          string
-	runner                      runner2.Runner
-	emitter                     event.Interface
+	organizationId              string
 }
 
-type ScheduleRequest struct {
-	// Test Workflow details
-	Name   string            `json:"name,omitempty"`
-	Config map[string]string `json:"config,omitempty"`
-
-	// Execution details
-	ExecutionName   string            `json:"executionName,omitempty"`
-	Tags            map[string]string `json:"tags,omitempty"`
-	DisableWebhooks bool              `json:"disableWebhooks,omitempty"`
-
-	// Kubernetes resource
-	TestWorkflowExecutionObjectName string `json:"testWorkflowExecutionObjectName,omitempty"`
-
-	// Deprecated
-	RunningContext *testkube.TestWorkflowRunningContext `json:"runningContext,omitempty"`
-	// Deprecated
-	ParentExecutionIds []string `json:"parentExecutionIds,omitempty"`
-}
-
-type PreparedExecution struct {
-	Execution     testkube.TestWorkflowExecution
-	SensitiveData map[string]string
-}
-
-func NewExecutionScheduler(
-	testWorkflowsClient testworkflowsv1client.Interface,
-	testWorkflowTemplatesClient testworkflowsv1client.TestWorkflowTemplatesInterface,
-	secretManager secretmanager.SecretManager,
-	repository testworkflow2.Repository,
-	outputRepository testworkflow2.OutputRepository,
-	runner runner2.Runner,
+func NewScheduler(
+	testWorkflowsClient testworkflowsv1.Interface,
+	testWorkflowTemplatesClient testworkflowsv1.TestWorkflowTemplatesInterface,
+	resultsRepository testworkflow.Repository,
+	outputRepository testworkflow.OutputRepository,
 	globalTemplateName string,
-	emitter event.Interface,
-) *ExecutionScheduler {
-	return &ExecutionScheduler{
+	organizationId string,
+) *scheduler {
+	return &scheduler{
+		logger:                      log.DefaultLogger,
 		testWorkflowsClient:         testWorkflowsClient,
 		testWorkflowTemplatesClient: testWorkflowTemplatesClient,
-		secretManager:               secretManager,
-		repository:                  repository,
+		resultsRepository:           resultsRepository,
 		outputRepository:            outputRepository,
-		runner:                      runner,
 		globalTemplateName:          globalTemplateName,
-		emitter:                     emitter,
+		organizationId:              organizationId,
 	}
 }
 
-// TODO: Consider if we shouldn't make name unique across all TestWorkflows
-func (s *ExecutionScheduler) isExecutionNameReserved(ctx context.Context, name, workflowName string) (bool, error) {
-	// TODO: Detect errors other than 404?
-	next, _ := s.repository.GetByNameAndTestWorkflow(ctx, name, workflowName)
-	if next.Name == name {
-		return true, nil
-	}
-	return false, nil
-}
-
-func (s *ExecutionScheduler) PrepareExecutionBase(ctx context.Context, data ScheduleRequest) (*PreparedExecution, error) {
-	// s.testWorkflowsClient
-	// s.globalTemplateName
-
-	// -----=====[ 01 ]=====[ Build initial data ]=====-------
-	now := time.Now().UTC()
-	groupId := primitive.NewObjectIDFromTimestamp(now).Hex()
-
-	// -----=====[ 02 ]=====[ Treat config provided by user as literal ]=====------- TODO: should be this way?
-	config := make(map[string]string)
-	for k, v := range data.Config {
-		config[k] = expressions.NewStringValue(v).Template()
-	}
-
-	// -----=====[ 03 ]=====[ Prepare store for the sensitive data ]=====-------
-	sensitiveData := make(map[string]string)
-	sensitiveDataAppend := func(key, value string) (expressions.Expression, error) {
-		sensitiveId := primitive.NewObjectIDFromTimestamp(now).Hex()
-		sensitiveData[sensitiveId] = value
-		return expressions.Compile(fmt.Sprintf(`%s("%s")`, localCredentialFnName, sensitiveId))
-	}
-
-	// -----=====[ 04 ]=====[ Get the TestWorkflow from the storage ]=====-------
-	workflow, err := s.testWorkflowsClient.Get(data.Name)
-	if err != nil {
-		return nil, errors.Wrapf(err, "cannot get workflow '%s'", data.Name)
-	}
-
-	// -----=====[ 05 ]=====[ Keep the initial workflow spec ]=====-------
-	initialWorkflow := workflow.DeepCopy()
-	initialWorkflowApi := testworkflowmappers.MapKubeToAPI(initialWorkflow)
-	workflowMachine := testworkflowconfig.CreateWorkflowMachine(&testworkflowconfig.WorkflowConfig{Name: workflow.Name, Labels: workflow.Labels})
-
-	// -----=====[ XX ]=====[ Instantiate the execution base ]=====-------
-	base := &testkube.TestWorkflowExecution{
-		GroupId:     groupId,
-		ScheduledAt: now,
-		StatusAt:    now,
-		Name:        data.ExecutionName,
-		Signature:   []testkube.TestWorkflowSignature{},
-		Result: &testkube.TestWorkflowResult{
-			Status:          common.Ptr(testkube.QUEUED_TestWorkflowStatus),
-			PredictedStatus: common.Ptr(testkube.PASSED_TestWorkflowStatus),
-			Initialization: &testkube.TestWorkflowStepResult{
-				Status: common.Ptr(testkube.QUEUED_TestWorkflowStepStatus),
-			},
-			Steps: map[string]testkube.TestWorkflowStepResult{},
-		},
-		Output:                    []testkube.TestWorkflowOutput{},
-		Workflow:                  initialWorkflowApi,
-		ResolvedWorkflow:          initialWorkflowApi,
-		TestWorkflowExecutionName: data.TestWorkflowExecutionObjectName,
-		DisableWebhooks:           data.DisableWebhooks,
-		Tags:                      map[string]string{},
-		RunningContext:            data.RunningContext,
-	}
-	maps.Copy(base.Tags, data.Tags)
-
-	// Inject configuration
-	if testworkflows.CountMapBytes(data.Config) < ConfigSizeLimit {
-		storeConfig := true
-		schema := workflow.Spec.Config
-		for k := range data.Config {
-			if s, ok := schema[k]; ok && s.Sensitive {
-				storeConfig = false
-			}
-		}
-		if storeConfig {
-			base.Config = data.Config
-		}
-	}
-
-	// -----=====[ 09 ]=====[ Simplify the Test Workflow initially ]=====-------
-	err = expressions.Simplify(&workflow, workflowMachine)
-	if err != nil {
-		base.ResolvedWorkflow = common.Ptr(testworkflowmappers.MapTestWorkflowKubeToAPI(*workflow))
-		base.InitializationError("Cannot process Test Workflow specification", err)
-		return &PreparedExecution{SensitiveData: sensitiveData, Execution: *base}, nil
-	}
-
-	// -----=====[ 10 ]=====[ Inline the Test Workflow configuration ]=====-------
-	_, err = testworkflowresolver.ApplyWorkflowConfig(workflow, testworkflowmappers.MapConfigValueAPIToKube(config), sensitiveDataAppend)
-	if err != nil {
-		base.ResolvedWorkflow = common.Ptr(testworkflowmappers.MapTestWorkflowKubeToAPI(*workflow))
-		base.InitializationError("Cannot inline Test Workflow configuration", err)
-		return &PreparedExecution{SensitiveData: sensitiveData, Execution: *base}, nil
-	}
-
-	// -----=====[ 06 ]=====[ Auto-inject the global template ]=====-------
-	if s.globalTemplateName != "" {
-		testworkflowresolver.AddGlobalTemplateRef(workflow, testworkflowsv1.TemplateRef{
-			Name: testworkflowresolver.GetDisplayTemplateName(s.globalTemplateName),
-		})
-	}
-
-	base.ResolvedWorkflow = common.Ptr(testworkflowmappers.MapTestWorkflowKubeToAPI(*workflow))
-	return &PreparedExecution{SensitiveData: sensitiveData, Execution: *base}, nil
-}
-
-func (s *ExecutionScheduler) ResolveExecutionBase(ctx context.Context, base *PreparedExecution) error {
-	// s.testWorkflowTemplatesClient
-
-	workflow := testworkflowmappers.MapAPIToKube(base.Execution.ResolvedWorkflow)
-	workflowMachine := testworkflowconfig.CreateWorkflowMachine(&testworkflowconfig.WorkflowConfig{Name: workflow.Name, Labels: workflow.Labels})
-
-	tpls := testworkflowresolver.ListTemplates(workflow)
-
-	// -----=====[ 03 ]=====[ Prepare store for the sensitive data ]=====-------
-	now := time.Now()
-	sensitiveDataAppend := func(key, value string) (expressions.Expression, error) {
-		sensitiveId := primitive.NewObjectIDFromTimestamp(now).Hex()
-		base.SensitiveData[sensitiveId] = value
-		return expressions.Compile(fmt.Sprintf(`%s("%s")`, localCredentialFnName, sensitiveId))
-	}
-
-	// -----=====[ 11 ]=====[ Fetch all required templates ]=====-------
-	// TODO: Use cache
-	tplsMap := make(map[string]*testworkflowsv1.TestWorkflowTemplate, len(tpls))
-	var tplsMu sync.Mutex
-	var g errgroup.Group
-	for tplName := range tpls {
-		func(tplName string) {
-			g.Go(func() error {
-				tpl, err := s.testWorkflowTemplatesClient.Get(tplName)
-				if err != nil {
-					return errors.Wrap(err, testworkflowresolver.GetDisplayTemplateName(tplName))
-				}
-				tplsMu.Lock()
-				defer tplsMu.Unlock()
-				tplsMap[tplName] = tpl
-				return nil
-			})
-		}(tplName)
-	}
-	err := g.Wait()
-
-	if err != nil {
-		(&base.Execution).ResolvedWorkflow = common.Ptr(testworkflowmappers.MapTestWorkflowKubeToAPI(*workflow))
-		(&base.Execution).InitializationError("Cannot fetch required Test Workflow Templates", err)
-		return nil
-	}
-
-	// -----=====[ 12 ]=====[ Resolve the Test Workflow with templates ]=====-------
-	err = testworkflowresolver.ApplyTemplates(workflow, tplsMap, sensitiveDataAppend)
-	if err != nil {
-		(&base.Execution).ResolvedWorkflow = common.Ptr(testworkflowmappers.MapTestWorkflowKubeToAPI(*workflow))
-		(&base.Execution).InitializationError("Cannot inline Test Workflow templates", err)
-		return nil
-	}
-
-	// -----=====[ 13 ]=====[ Resolve common values ]=====-------
-	err = expressions.Simplify(&workflow, workflowMachine)
-	if err != nil {
-		(&base.Execution).ResolvedWorkflow = common.Ptr(testworkflowmappers.MapTestWorkflowKubeToAPI(*workflow))
-		(&base.Execution).InitializationError("Cannot inline Test Workflow templates", err)
-		return nil
-	}
-
-	(&base.Execution).ResolvedWorkflow = common.Ptr(testworkflowmappers.MapTestWorkflowKubeToAPI(*workflow))
-
-	return nil
-}
-
-func (s *ExecutionScheduler) PrepareExecutions(ctx context.Context, base *PreparedExecution, organizationId, environmentId string, data ScheduleRequest) ([]PreparedExecution, error) {
-	// s.isExecutionNameReserved -> s.repository
-	// s.repository
-
-	baseWorkflow := testworkflowmappers.MapTestWorkflowAPIToKube(*base.Execution.ResolvedWorkflow)
-	workflowMachine := testworkflowconfig.CreateWorkflowMachine(&testworkflowconfig.WorkflowConfig{Name: baseWorkflow.Name, Labels: baseWorkflow.Labels})
-
-	// TODO: when multiple executions will be scheduled with ExecutionName,
-	//       fail immediately or add "-<N>" suffix by default.
-
-	// -----=====[ 07 ]=====[ Reserve the execution ]=====-------
-	executionId := primitive.NewObjectIDFromTimestamp(time.Now()).Hex()
-	executionName := data.ExecutionName
-
-	var nameReserved *bool
-
-	// Early check if the name is already provided (to avoid incrementing sequence number when we won't succeed anyway)
-	if executionName != "" {
-		reserved, err := s.isExecutionNameReserved(ctx, executionName, baseWorkflow.Name)
+func (s *scheduler) insert(ctx context.Context, execution *testkube.TestWorkflowExecution) error {
+	err := retry(SaveResultRetryMaxAttempts, SaveResultRetryBaseDelay, func() error {
+		err := s.resultsRepository.Insert(ctx, *execution)
 		if err != nil {
-			return nil, errors.Wrap(err, "checking for unique name")
+			s.logger.Warnw("failed to update the TestWorkflow execution in database", "recoverable", true, "executionId", execution.Id, "error", err)
 		}
-		if reserved {
-			return nil, errors.New("execution name already exists")
-		}
-		nameReserved = &reserved
-	}
-
-	// Load execution identifier data
-	executionNumber, err := s.repository.GetNextExecutionNumber(context.Background(), baseWorkflow.Name)
+		return err
+	})
 	if err != nil {
-		return nil, errors.Wrap(err, "registering next execution sequence number")
-	}
-	if executionName == "" {
-		executionName = fmt.Sprintf("%s-%d", baseWorkflow.Name, executionNumber)
-	}
-
-	// Ensure the execution name is unique
-	if nameReserved == nil {
-		reserved, err := s.isExecutionNameReserved(ctx, executionName, baseWorkflow.Name)
-		if err != nil {
-			return nil, errors.Wrap(err, "checking for unique name")
-		}
-		if reserved {
-			return nil, errors.New("execution name already exists")
-		}
-	}
-
-	// -----=====[ 08 ]=====[ Build the list of executions ]=====-------
-	executionOne := base.Execution
-	executionOne.Id = executionId
-	executionOne.Name = executionName
-	executionOne.Number = executionNumber
-	executions := []PreparedExecution{{Execution: executionOne}}
-
-	// -----=====[ 14 ]=====[ Resolve and Queue all the executions ]=====-------
-	for i := range executions {
-		// Ignore if it's already considered finished
-		if executions[i].Execution.Result.IsFinished() {
-			continue
-		}
-
-		// Resolve execution-specific values
-		executionWorkflow := baseWorkflow.DeepCopy()
-		executionMachine := testworkflowconfig.CreateExecutionMachine(&testworkflowconfig.ExecutionConfig{
-			Id:              executions[i].Execution.Id,
-			GroupId:         executions[i].Execution.GroupId,
-			Name:            executions[i].Execution.Name,
-			Number:          executions[i].Execution.Number,
-			ScheduledAt:     executions[i].Execution.ScheduledAt,
-			DisableWebhooks: executions[i].Execution.DisableWebhooks,
-			Debug:           false,
-			OrganizationId:  organizationId,
-			EnvironmentId:   environmentId,
-			ParentIds:       strings.Join(data.ParentExecutionIds, "/"),
-		})
-		resourceMachine := testworkflowconfig.CreateResourceMachine(&testworkflowconfig.ResourceConfig{
-			Id:     executions[i].Execution.Id,
-			RootId: executions[i].Execution.Id,
-		})
-
-		// Apply the execution-specific data
-		err = expressions.Simplify(&executionWorkflow, workflowMachine, executionMachine, resourceMachine)
-		if err != nil {
-			(&executions[i].Execution).InitializationError("Cannot process Test Workflow specification", err)
-			continue
-		}
-		executions[i].Execution.ResolvedWorkflow = testworkflowmappers.MapKubeToAPI(executionWorkflow)
-
-		// Resolve sensitive data
-		executions[i].SensitiveData = make(map[string]string, len(base.SensitiveData))
-		for k := range base.SensitiveData {
-			expr, err := expressions.CompileAndResolveTemplate(base.SensitiveData[k], workflowMachine, executionMachine, resourceMachine)
-			if err != nil {
-				(&executions[i].Execution).InitializationError("Cannot process Test Workflow sensitive data", err)
-				continue
-			}
-			executions[i].SensitiveData[k] = expr.Template()
-		}
-	}
-
-	// Load tags for the execution
-	for i := range executions {
-		if executions[i].Execution.ResolvedWorkflow.Spec.Execution != nil {
-			maps.Copy(executions[i].Execution.Tags, executions[i].Execution.ResolvedWorkflow.Spec.Execution.Tags)
-		}
-		maps.Copy(executions[i].Execution.Tags, data.Tags)
-	}
-
-	return executions, nil
-}
-
-func retry(count int, delayBase time.Duration, fn func() error) (err error) {
-	for i := 0; i < count; i++ {
-		err = fn()
-		if err == nil {
-			return nil
-		}
-		time.Sleep(time.Duration(i) * delayBase)
+		s.logger.Errorw("failed to update the TestWorkflow execution in database", "recoverable", false, "executionId", execution.Id, "error", err)
 	}
 	return err
 }
 
-func (s *ExecutionScheduler) saveEmptyLogs(execution *testkube.TestWorkflowExecution) {
+func (s *scheduler) update(ctx context.Context, execution *testkube.TestWorkflowExecution) error {
 	err := retry(SaveResultRetryMaxAttempts, SaveResultRetryBaseDelay, func() error {
-		return s.outputRepository.SaveLog(context.Background(), execution.Id, execution.Workflow.Name, bytes.NewReader(nil))
-	})
-	if err != nil {
-		log.DefaultLogger.Errorw("failed to save empty log", "executionId", execution.Id, "error", err)
-	}
-}
-
-func (s *ExecutionScheduler) insert(execution *testkube.TestWorkflowExecution) error {
-	return retry(SaveResultRetryMaxAttempts, SaveResultRetryBaseDelay, func() error {
-		return s.repository.Insert(context.Background(), *execution)
-	})
-}
-
-func (s *ExecutionScheduler) update(execution *testkube.TestWorkflowExecution) error {
-	return retry(SaveResultRetryMaxAttempts, SaveResultRetryBaseDelay, func() error {
-		return s.repository.Insert(context.Background(), *execution)
-	})
-}
-
-func (s *ExecutionScheduler) DoOne(controlPlaneConfig testworkflowconfig.ControlPlaneConfig, organizationId, environmentId string, parentExecutionIds []string, exec PreparedExecution) (testkube.TestWorkflowExecution, error) {
-	// s.secretManager
-	// s.getEmitter
-	// s.insert -> s.repository
-	// s.saveEmptyLogs -> s.outputRepository
-	// s.repository
-
-	// Prepare the sensitive data TODO: Use Credentials when possible
-	secretsBatch := s.secretManager.Batch("twe-", exec.Execution.Id).ForceEnable()
-	credentialExpressions := map[string]expressions.Expression{}
-	for k, v := range exec.SensitiveData {
-		envVarSource, err := secretsBatch.Append(k, v)
+		err := s.resultsRepository.Update(ctx, *execution)
 		if err != nil {
-			return exec.Execution, errors.Wrapf(err, "cannot resolve workflow '%s'", exec.Execution.Workflow.Name)
+			s.logger.Warnw("failed to update the TestWorkflow execution in database", "recoverable", true, "executionId", execution.Id, "error", err)
 		}
-		credentialExpressions[k] = expressions.MustCompile(fmt.Sprintf(`secret("%s","%s",true)`, envVarSource.SecretKeyRef.Name, envVarSource.SecretKeyRef.Key))
-	}
-	secrets := secretsBatch.Get()
-	//for j := range secrets {
-	//	testworkflowprocessor.AnnotateControlledBy(&secrets[j], exec.Execution.Id, exec.Execution.Id)
-	//}
-	err := expressions.Simplify(&exec.Execution.ResolvedWorkflow, expressions.NewMachine().RegisterFunction(localCredentialFnName, func(values ...expressions.StaticValue) (interface{}, bool, error) {
-		if len(values) != 1 {
-			return nil, true, fmt.Errorf(`"%s" function expects 1 argument, %d provided`, localCredentialFnName, len(values))
-		}
-		localCredentialName, _ := values[0].StringValue()
-		if expr, ok := credentialExpressions[localCredentialName]; ok {
-			return expr, true, nil
-		}
-		return nil, true, fmt.Errorf(`"%s" local credential not found`, localCredentialName)
-	}))
-	if err != nil {
-		// TODO: delete the credentials left-overs
-		// TODO(init): fail only this execution
-		return exec.Execution, errors.Wrapf(err, "cannot resolve workflow '%s'", exec.Execution.Workflow.Name)
-	}
-
-	// Store the sensitive data in the cluster TODO: Use credentials when possible
-	secretsMap := make(map[string]map[string]string, len(secrets))
-	for j := range secrets {
-		secretsMap[secrets[j].Name] = secrets[j].StringData
-	}
-
-	// Insert the execution
-	err = s.insert(&exec.Execution)
-	if err != nil {
-		// TODO: delete the credentials left-overs
-		// TODO: don't fail immediately (try creating other executions too)
-		return exec.Execution, errors.Wrapf(err, "cannot insert execution '%s' result for workflow '%s'", exec.Execution.Id, exec.Execution.Workflow.Name)
-	}
-	s.emitter.Notify(testkube.NewEventQueueTestWorkflow(&exec.Execution))
-
-	// Finish early if it's immediately known to finish
-	if exec.Execution.Result.IsFinished() {
-		//semitter.Notify(testkube.NewEventStartTestWorkflow(&exec.Execution)) // TODO: Consider
-		if exec.Execution.Result.IsAborted() {
-			s.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(&exec.Execution))
-		} else if exec.Execution.Result.IsFailed() {
-			s.emitter.Notify(testkube.NewEventEndTestWorkflowFailed(&exec.Execution))
-		} else {
-			s.emitter.Notify(testkube.NewEventEndTestWorkflowSuccess(&exec.Execution))
-		}
-		s.saveEmptyLogs(&exec.Execution)
-		return exec.Execution, nil
-	}
-
-	// Start the execution
-	result, err := s.runner.Execute(executionworkertypes.ExecuteRequest{
-		Execution: testworkflowconfig.ExecutionConfig{
-			Id:              exec.Execution.Id,
-			GroupId:         exec.Execution.GroupId,
-			Name:            exec.Execution.Name,
-			Number:          exec.Execution.Number,
-			ScheduledAt:     exec.Execution.ScheduledAt,
-			DisableWebhooks: exec.Execution.DisableWebhooks,
-			Debug:           false,
-			OrganizationId:  organizationId,
-			EnvironmentId:   environmentId,
-			ParentIds:       strings.Join(parentExecutionIds, "/"),
-		},
-		Secrets:      secretsMap,
-		Workflow:     testworkflowmappers.MapTestWorkflowAPIToKube(*exec.Execution.ResolvedWorkflow),
-		ControlPlane: controlPlaneConfig,
+		return err
 	})
-
-	// TODO: define "revoke" error by runner (?)
 	if err != nil {
-		exec.Execution.InitializationError("Failed to run execution", err)
-		var g errgroup.Group
-		g.Go(func() error {
-			return retry(SaveResultRetryMaxAttempts, SaveResultRetryBaseDelay, func() error {
-				return s.repository.Update(context.Background(), exec.Execution)
-			})
+		s.logger.Errorw("failed to update the TestWorkflow execution in database", "recoverable", false, "executionId", execution.Id, "error", err)
+	}
+	return err
+}
+
+func (s *scheduler) init(ctx context.Context, execution *testkube.TestWorkflowExecution) error {
+	err := retry(SaveResultRetryMaxAttempts, SaveResultRetryBaseDelay, func() error {
+		err := s.resultsRepository.Init(ctx, execution.Id, testworkflow.InitData{
+			RunnerID:  execution.RunnerId,
+			Namespace: execution.Namespace,
+			Signature: execution.Signature,
 		})
 		if err != nil {
-			return exec.Execution, errors.Wrap(err, "failed to update the execution")
+			s.logger.Warnw("failed to initialize the TestWorkflow execution in database", "recoverable", true, "executionId", execution.Id, "error", err)
 		}
-
-		//semitter.Notify(testkube.NewEventStartTestWorkflow(&exec.Execution)) // TODO: Consider
-		s.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(&exec.Execution))
-		s.saveEmptyLogs(&exec.Execution)
-
-		return exec.Execution, nil
-	}
-
-	// Inform about execution start TODO: Consider
-	//semitter.Notify(testkube.NewEventStartTestWorkflow(&exec.Execution))
-
-	// Apply the signature
-	// TODO: it should be likely scheduled from the Runner,
-	//       otherwise there may be race condition between Runner and that Scheduler.
-	//       Alternatively, it could check for `signature` existence in the DB.
-	exec.Execution.Namespace = result.Namespace
-	exec.Execution.Signature = result.Signature
-	exec.Execution.Result.Steps = stage.MapSignatureListToStepResults(stage.MapSignatureList(result.Signature))
-	err = retry(SaveResultRetryMaxAttempts, SaveResultRetryBaseDelay, func() error {
-		return s.repository.Update(context.Background(), exec.Execution)
+		return err
 	})
 	if err != nil {
-		return exec.Execution, errors.Wrap(err, "failed to save the signature")
+		s.logger.Errorw("failed to initialize the TestWorkflow execution in database", "recoverable", false, "executionId", execution.Id, "error", err)
 	}
-
-	return exec.Execution, nil
+	return err
 }
 
-// TODO: Ensure there are no metrics required and deleted
-// TODO: Should it return channel instead (?)
-func (s *ExecutionScheduler) Do(ctx context.Context, dashboardURI, organizationId, environmentId string, data ScheduleRequest) (executions []testkube.TestWorkflowExecution, err error) {
-	base, err := s.PrepareExecutionBase(ctx, data)
+func (s *scheduler) saveEmptyLogs(ctx context.Context, execution *testkube.TestWorkflowExecution) error {
+	err := retry(SaveResultRetryMaxAttempts, SaveResultRetryBaseDelay, func() error {
+		return s.outputRepository.SaveLog(ctx, execution.Id, execution.Workflow.Name, bytes.NewReader(nil))
+	})
 	if err != nil {
-		return nil, err
+		s.logger.Errorw("failed to save empty log", "executionId", execution.Id, "error", err)
+	}
+	return err
+}
+
+func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler SensitiveDataHandler, req *cloud.ScheduleRequest) (<-chan *testkube.TestWorkflowExecution, error) {
+	// Prepare the channel
+	ch := make(chan *testkube.TestWorkflowExecution, 1)
+
+	// Set up context
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	// Validate the execution request
+	if err := ValidateExecutionRequest(req); err != nil {
+		close(ch)
+		return ch, err
 	}
 
-	preparedExecutions, err := s.PrepareExecutions(ctx, base, organizationId, environmentId, data)
+	// Check if there is anything to run
+	if len(req.Selectors) == 0 {
+		close(ch)
+		return ch, nil
+	}
+
+	// Initialize execution template
+	now := time.Now().UTC()
+	base := NewIntermediateExecution().
+		SetGroupID(primitive.NewObjectIDFromTimestamp(now).Hex()).
+		SetScheduledAt(now).
+		AppendTags(req.Tags).
+		SetDisabledWebhooks(req.DisableWebhooks).
+		SetKubernetesObjectName(req.KubernetesObjectName).
+		SetRunningContext(GetLegacyRunningContext(req)).
+		PrependTemplate(s.globalTemplateName)
+
+	// Initialize fetchers
+	testWorkflows := NewTestWorkflowFetcher(s.testWorkflowsClient)
+	testWorkflowTemplates := NewTestWorkflowTemplateFetcher(s.testWorkflowTemplatesClient)
+
+	// Prefetch all the Test Workflows
+	err := testWorkflows.PrefetchMany(req.Selectors)
 	if err != nil {
-		return nil, err
+		close(ch)
+		return ch, err
 	}
 
-	// TODO: Delete it, as it won't happen for OSS
-	if organizationId != "" && environmentId != "" && dashboardURI == "" {
-		cloudUiUrl := os.Getenv("TESTKUBE_PRO_UI_URL")
-		dashboardURI = fmt.Sprintf("%s/organization/%s/environment/%s/dashboard", cloudUiUrl, organizationId, environmentId)
+	// Prefetch all the Test Workflow Templates.
+	// Don't fail immediately - it should be execution's error message if it's missing.
+	tplNames := testWorkflows.TemplateNames()
+	if s.globalTemplateName != "" {
+		tplNames[testworkflowresolver.GetInternalTemplateName(s.globalTemplateName)] = struct{}{}
 	}
-	controlPlaneConfig := testworkflowconfig.ControlPlaneConfig{
-		DashboardUrl:   dashboardURI,
-		CDEventsTarget: os.Getenv("CDEVENTS_TARGET"),
-	}
+	_ = testWorkflowTemplates.PrefetchMany(tplNames)
 
-	executions = make([]testkube.TestWorkflowExecution, len(preparedExecutions))
-	for i := range preparedExecutions {
-		executions[i], err = s.DoOne(controlPlaneConfig, organizationId, environmentId, data.ParentExecutionIds, preparedExecutions[i])
-		if err != nil && !executions[i].Result.IsFinished() {
-			// TODO: apply internal error to the execution
+	// Flatten selectors
+	selectors := make([]*cloud.ScheduleSelector, 0, len(req.Selectors))
+	for i := range req.Selectors {
+		list, _ := testWorkflows.Get(req.Selectors[i])
+		for _, w := range list {
+			selectors = append(selectors, &cloud.ScheduleSelector{
+				Name:          w.Name,
+				Config:        req.Selectors[i].Config,
+				ExecutionName: req.Selectors[i].ExecutionName, // TODO: what to do when execution name is configured, but multiple requested?
+				Tags:          req.Selectors[i].Tags,
+			})
 		}
 	}
 
-	return executions, nil
+	// Resolve executions for each selector
+	intermediate := make([]*IntermediateExecution, 0, len(req.Selectors))
+	for _, v := range selectors {
+		workflow, _ := testWorkflows.GetByName(v.Name)
+		current := base.Clone().
+			AutoGenerateID().
+			SetName(v.ExecutionName).
+			AppendTags(v.Tags).
+			SetWorkflow(workflow)
+		intermediate = append(intermediate, current)
+
+		// Inject configuration
+		storeConfig := true
+		schema := workflow.Spec.Config
+		for k := range v.Config {
+			if s, ok := schema[k]; ok && s.Sensitive {
+				storeConfig = false
+			}
+		}
+		if storeConfig && testworkflows.CountMapBytes(v.Config) < ConfigSizeLimit {
+			current.StoreConfig(v.Config)
+		}
+
+		// Apply the configuration
+		if err := current.ApplyConfig(v.Config); err != nil {
+			current.SetError("Cannot inline Test Workflow configuration", err)
+			continue
+		}
+
+		// Load the required Test Workflow Templates
+		tpls, err := testWorkflowTemplates.GetMany(current.TemplateNames())
+		if err != nil {
+			current.SetError("Cannot fetch required Test Workflow Templates", err)
+			continue
+		}
+
+		// Apply the Test Workflow Templates
+		if err = current.ApplyTemplates(tpls); err != nil {
+			current.SetError("Cannot inline Test Workflow Templates", err)
+			continue
+		}
+	}
+
+	// Simplify group ID in case of single execution
+	if len(intermediate) == 1 {
+		intermediate[0].SetGroupID(intermediate[0].ID())
+	}
+
+	// Validate if there are no execution name duplicates initially
+	if err = ValidateExecutionNameDuplicates(intermediate); err != nil {
+		close(ch)
+		return ch, err
+	}
+
+	// Validate if the static execution names are not reserved in the database already
+	for i := range intermediate {
+		if intermediate[i].Name() == "" {
+			continue
+		}
+		if err = ValidateExecutionNameRemoteDuplicate(ctx, s.resultsRepository, intermediate[i]); err != nil {
+			close(ch)
+			return ch, err
+		}
+	}
+
+	// Ensure the rest of operations won't be stopped if started
+	if ctx.Err() != nil {
+		close(ch)
+		return ch, ctx.Err()
+	}
+	cancel()
+	ctx = context.Background()
+
+	// Generate execution names and sequence numbers
+	for i := range intermediate {
+		// Load execution identifier data
+		number, err := s.resultsRepository.GetNextExecutionNumber(context.Background(), intermediate[i].WorkflowName())
+		if err != nil {
+			close(ch)
+			return ch, errors.Wrap(err, "registering next execution sequence number")
+		}
+		intermediate[i].SetSequenceNumber(number)
+
+		// Generating the execution name
+		if intermediate[i].Name() == "" {
+			name := fmt.Sprintf("%s-%d", intermediate[i].WorkflowName(), number)
+			intermediate[i].SetName(name)
+
+			// Edge case: Check for local duplicates, if there is no clash between static and auto-generated one
+			if err = ValidateExecutionNameDuplicates(intermediate); err != nil {
+				return ch, err
+			}
+
+			// Ensure the execution name is unique
+			if err = ValidateExecutionNameRemoteDuplicate(context.Background(), s.resultsRepository, intermediate[i]); err != nil {
+				close(ch)
+				return ch, err
+			}
+		}
+
+		// Resolve it finally
+		err = intermediate[i].Resolve(s.organizationId, req.EnvironmentId, req.ParentExecutionIds, false)
+		if err != nil {
+			intermediate[i].SetError("Cannot process Test Workflow specification", err)
+			continue
+		}
+	}
+
+	go func() {
+		defer close(ch)
+		for i := range intermediate {
+			// Prepare sensitive data
+			if err = sensitiveDataHandler.Process(intermediate[i]); err != nil {
+				intermediate[i].SetError("Cannot store the sensitive data", err)
+			}
+
+			// Save empty logs if the execution is already finished
+			if intermediate[i].Finished() {
+				_ = s.saveEmptyLogs(context.Background(), intermediate[i].Execution())
+			}
+
+			// Insert the execution
+			if err = s.insert(context.Background(), intermediate[i].Execution()); err != nil {
+				sensitiveDataHandler.Rollback(intermediate[i].ID())
+				// TODO: notify API about problem (?)
+				continue
+			}
+
+			// Inform about the next execution
+			ch <- intermediate[i].Execution()
+		}
+	}()
+
+	return ch, nil
 }
 
-// FIXME: delete
-func (s *ExecutionScheduler) TestWorkflowsClient() testworkflowsv1client.Interface {
-	return s.testWorkflowsClient
+func (s *scheduler) CriticalError(execution *testkube.TestWorkflowExecution, name string, err error) error {
+	execution.InitializationError(name, err)
+	_ = s.saveEmptyLogs(context.Background(), execution)
+	return s.update(context.Background(), execution)
 }
 
-// FIXME: delete
-func (s *ExecutionScheduler) TestWorkflowsTemplatesClient() testworkflowsv1client.TestWorkflowTemplatesInterface {
-	return s.testWorkflowTemplatesClient
-}
-
-// FIXME: delete
-func (s *ExecutionScheduler) Repository() testworkflow2.Repository {
-	return s.repository
-}
-
-// FIXME: delete
-func (s *ExecutionScheduler) OutputRepository() testworkflow2.OutputRepository {
-	return s.outputRepository
-}
-
-// FIXME: delete
-func (s *ExecutionScheduler) GlobalTemplateName() string {
-	return s.globalTemplateName
-}
-
-// FIXME: delete
-func (s *ExecutionScheduler) SecretManager() secretmanager.SecretManager {
-	return s.secretManager
-}
-
-// FIXME: delete
-func (s *ExecutionScheduler) Emitter() event.Interface {
-	return s.emitter
-}
-
-// FIXME: delete
-func (s *ExecutionScheduler) Runner() runner2.Runner {
-	return s.runner
+func (s *scheduler) Start(execution *testkube.TestWorkflowExecution) error {
+	return s.init(context.Background(), execution)
 }

@@ -22,6 +22,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/server"
 	"github.com/kubeshop/testkube/pkg/storage"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 )
 
 func NewTestkubeAPI(
@@ -48,7 +49,7 @@ func NewTestkubeAPI(
 	helmchartVersion string,
 	serviceAccountNames map[string]string,
 	dockerImageVersion string,
-	grpcClient cloud.TestKubeCloudAPIClient,
+	testWorkflowExecutor testworkflowexecutor.TestWorkflowExecutor,
 ) TestkubeAPI {
 
 	return TestkubeAPI{
@@ -76,7 +77,7 @@ func NewTestkubeAPI(
 		ServiceAccountNames:         serviceAccountNames,
 		dockerImageVersion:          dockerImageVersion,
 		proContext:                  proContext,
-		grpcClient:                  grpcClient,
+		testWorkflowExecutor:        testWorkflowExecutor,
 	}
 }
 
@@ -108,6 +109,7 @@ type TestkubeAPI struct {
 	ServiceAccountNames         map[string]string
 	dockerImageVersion          string
 	grpcClient                  cloud.TestKubeCloudAPIClient
+	testWorkflowExecutor        testworkflowexecutor.TestWorkflowExecutor
 }
 
 func (s *TestkubeAPI) Init(server server.HTTPServer) {

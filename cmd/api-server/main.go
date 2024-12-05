@@ -107,9 +107,11 @@ func main() {
 	}
 	secretManager := secretmanager.New(clientset, secretConfig)
 
+	metrics := metrics.NewMetrics()
+
 	// Start local Control Plane
 	if mode == common.ModeStandalone {
-		controlPlane := services.CreateControlPlane(ctx, cfg, features, configMapConfig, secretManager, lazyRunner, lazyEmitter)
+		controlPlane := services.CreateControlPlane(ctx, cfg, features, configMapConfig, secretManager, metrics, lazyRunner, lazyEmitter)
 		g.Go(func() error {
 			return controlPlane.Run(ctx)
 		})
@@ -191,8 +193,6 @@ func main() {
 		serviceAccountNames = schedulertcl.GetServiceAccountNamesFromConfig(serviceAccountNames, cfg.TestkubeExecutionNamespaces)
 	}
 
-	metrics := metrics.NewMetrics()
-
 	var deprecatedSystem *services.DeprecatedSystem
 	if !cfg.DisableDeprecatedTests {
 		deprecatedSystem = services.CreateDeprecatedSystem(
@@ -261,19 +261,20 @@ func main() {
 	}()
 
 	testWorkflowExecutor := testworkflowexecutor.New(
+		grpcClient,
+		cfg.TestkubeProAPIKey,
+		cfg.CDEventsTarget,
 		eventsEmitter,
 		runner,
-		clientset,
 		testWorkflowResultsRepository,
 		testWorkflowOutputRepository,
-		configMapConfig,
 		testWorkflowTemplatesClient,
 		testWorkflowsClient,
 		metrics,
 		secretManager,
 		cfg.GlobalWorkflowTemplateName,
 		cfg.TestkubeDashboardURI,
-		&proContext,
+		proContext.OrgID,
 	)
 
 	var deprecatedClients commons.DeprecatedClients
@@ -340,7 +341,7 @@ func main() {
 		cfg.TestkubeHelmchartVersion,
 		serviceAccountNames,
 		cfg.TestkubeDockerImageVersion,
-		grpcClient,
+		testWorkflowExecutor,
 	)
 	api.Init(httpServer)
 

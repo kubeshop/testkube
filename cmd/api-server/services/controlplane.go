@@ -11,6 +11,7 @@ import (
 	kubeclient "github.com/kubeshop/testkube-operator/pkg/client"
 	testworkflowsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testworkflows/v1"
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
+	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/internal/config"
 	cloudartifacts "github.com/kubeshop/testkube/pkg/cloud/data/artifact"
 	cloudconfig "github.com/kubeshop/testkube/pkg/cloud/data/config"
@@ -33,6 +34,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/secretmanager"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
 	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 )
 
 func mapTestWorkflowFilters(s []*testworkflow.FilterImpl) []testworkflow.Filter {
@@ -59,7 +61,7 @@ func mapTestSuiteFilters(s []*testresult.FilterImpl) []testresult.Filter {
 	return v
 }
 
-func CreateControlPlane(ctx context.Context, cfg *config.Config, features featureflags.FeatureFlags, configMapClient configRepo.Repository, secretManager secretmanager.SecretManager, runner runner2.Runner, emitter event.Interface) *controlplane.Server {
+func CreateControlPlane(ctx context.Context, cfg *config.Config, features featureflags.FeatureFlags, configMapClient configRepo.Repository, secretManager secretmanager.SecretManager, metrics metrics.Metrics, runner runner2.Runner, emitter event.Interface) *controlplane.Server {
 	// Connect to the cluster
 	clientset, err := k8sclient.ConnectToK8s()
 	commons.ExitOnError("Creating k8s clientset", err)
@@ -393,22 +395,21 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 		}
 	}
 
-	executor := controlplane.NewExecutor(
-		controlplane.NewScheduler(
-			testWorkflowsClient,
-			testWorkflowTemplatesClient,
-			testWorkflowResultsRepository,
-			testWorkflowOutputRepository,
-			cfg.GlobalWorkflowTemplateName,
-			"",
-		),
+	executor := testworkflowexecutor.New(
 		nil,
+		"",
+		cfg.CDEventsTarget,
 		emitter,
 		runner,
+		testWorkflowResultsRepository,
+		testWorkflowOutputRepository,
+		testWorkflowTemplatesClient,
+		testWorkflowsClient,
+		metrics,
 		secretManager,
-		"",
+		cfg.GlobalWorkflowTemplateName,
 		cfg.TestkubeDashboardURI,
-		cfg.CDEventsTarget,
+		"",
 	)
 
 	return controlplane.New(controlplane.Config{

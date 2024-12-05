@@ -1,11 +1,10 @@
-package controlplane
+package testworkflowexecutor
 
 import (
 	"fmt"
 
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/secretmanager"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 )
 
 type executionID = string
@@ -13,7 +12,7 @@ type secretName = string
 type secretData = map[string]string
 
 type SensitiveDataHandler interface {
-	Process(execution *testworkflowexecutor.IntermediateExecution) error
+	Process(execution *IntermediateExecution) error
 	Rollback(id string) error
 }
 
@@ -29,7 +28,7 @@ func NewSecretHandler(manager secretmanager.SecretManager) *secretHandler {
 	}
 }
 
-func (s *secretHandler) Process(intermediate *testworkflowexecutor.IntermediateExecution) error {
+func (s *secretHandler) Process(intermediate *IntermediateExecution) error {
 	id := intermediate.ID()
 
 	// Pack the sensitive data into a secrets set

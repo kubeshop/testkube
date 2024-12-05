@@ -22,8 +22,10 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 
+	"github.com/kubeshop/testkube/pkg/capabilities"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	cloudexecutor "github.com/kubeshop/testkube/pkg/cloud/data/executor"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 )
 
 const (
@@ -38,7 +40,7 @@ type Server struct {
 	cfg      Config
 	server   *grpc.Server
 	commands map[cloudexecutor.Command]CommandHandler
-	executor *Executor
+	executor testworkflowexecutor.TestWorkflowExecutor
 }
 
 type Config struct {
@@ -47,7 +49,7 @@ type Config struct {
 	Logger  *zap.SugaredLogger
 }
 
-func New(cfg Config, executor *Executor, commandGroups ...CommandHandlers) *Server {
+func New(cfg Config, executor testworkflowexecutor.TestWorkflowExecutor, commandGroups ...CommandHandlers) *Server {
 	commands := make(map[cloudexecutor.Command]CommandHandler)
 	for _, group := range commandGroups {
 		for cmd, handler := range group {
@@ -62,7 +64,9 @@ func New(cfg Config, executor *Executor, commandGroups ...CommandHandlers) *Serv
 }
 
 func (s *Server) GetProContext(_ context.Context, _ *emptypb.Empty) (*cloud.ProContextResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "not supported in the standalone version")
+	return &cloud.ProContextResponse{
+		Capabilities: []*cloud.Capability{{Name: string(capabilities.CapabilityNewExecutions), Enabled: true}},
+	}, nil
 }
 
 func (s *Server) GetCredential(_ context.Context, _ *cloud.CredentialRequest) (*cloud.CredentialResponse, error) {
@@ -263,18 +267,8 @@ func (s *Server) Run(ctx context.Context) error {
 	return nil
 }
 
-func retry(count int, delayBase time.Duration, fn func() error) (err error) {
-	for i := 0; i < count; i++ {
-		err = fn()
-		if err == nil {
-			return nil
-		}
-		time.Sleep(time.Duration(i) * delayBase)
-	}
-	return err
-}
-
 func (s *Server) ScheduleExecution(req *cloud.ScheduleRequest, srv cloud.TestKubeCloudAPI_ScheduleExecutionServer) error {
+	fmt.Println("HELLO THERE!")
 	ch, err := s.executor.Execute(srv.Context(), req)
 	if err != nil {
 		return err
