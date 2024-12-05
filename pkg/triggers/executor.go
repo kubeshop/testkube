@@ -170,7 +170,7 @@ func (s *Service) execute(ctx context.Context, e *watcherEvent, t *testtriggersv
 					Object:  testWorkflows[i],
 					Options: request,
 					// Pro edition only (tcl protected code)
-					ExecFn: s.testWorkflowExecutor.Execute,
+					ExecFn: s.testWorkflowExecutor.LegacyExecute,
 				}
 			}
 

@@ -30,7 +30,7 @@ const (
 
 //go:generate mockgen -destination=./mock_executor.go -package=testworkflowexecutor "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor" TestWorkflowExecutor
 type TestWorkflowExecutor interface {
-	Execute(ctx context.Context, workflow testworkflowsv1.TestWorkflow, request testkube.TestWorkflowExecutionRequest) (
+	LegacyExecute(ctx context.Context, workflow testworkflowsv1.TestWorkflow, request testkube.TestWorkflowExecutionRequest) (
 		execution testkube.TestWorkflowExecution, err error)
 }
 
@@ -91,7 +91,7 @@ func New(emitter *event.Emitter,
 	}
 }
 
-func (e *executor) Execute(ctx context.Context, workflow testworkflowsv1.TestWorkflow, request testkube.TestWorkflowExecutionRequest) (
+func (e *executor) LegacyExecute(ctx context.Context, workflow testworkflowsv1.TestWorkflow, request testkube.TestWorkflowExecutionRequest) (
 	testkube.TestWorkflowExecution, error) {
 	// Determine the organization/environment
 	cloudApiKey := common.GetOr(os.Getenv("TESTKUBE_PRO_API_KEY"), os.Getenv("TESTKUBE_CLOUD_API_KEY"))
