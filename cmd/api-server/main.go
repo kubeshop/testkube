@@ -275,6 +275,7 @@ func main() {
 		cfg.GlobalWorkflowTemplateName,
 		cfg.TestkubeDashboardURI,
 		proContext.OrgID,
+		proContext.EnvID,
 	)
 
 	var deprecatedClients commons.DeprecatedClients

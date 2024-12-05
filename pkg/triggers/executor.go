@@ -2,6 +2,7 @@ package triggers
 
 import (
 	"context"
+	"fmt"
 	"regexp"
 	"time"
 
@@ -12,6 +13,10 @@ import (
 	testsuitesv3 "github.com/kubeshop/testkube-operator/api/testsuite/v3"
 	testtriggersv1 "github.com/kubeshop/testkube-operator/api/testtriggers/v1"
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/pkg/cloud"
+	"github.com/kubeshop/testkube/pkg/log"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/scheduler"
@@ -134,52 +139,44 @@ func (s *Service) execute(ctx context.Context, e *watcherEvent, t *testtriggersv
 			return err
 		}
 
-		request := testkube.TestWorkflowExecutionRequest{
-			Config: make(map[string]string, len(variables)),
+		request := &cloud.ScheduleRequest{
+			Selectors: common.MapSlice(testWorkflows, func(w testworkflowsv1.TestWorkflow) *cloud.ScheduleSelector {
+				selector := &cloud.ScheduleSelector{
+					Name:   w.Name,
+					Config: make(map[string]string, len(variables)),
+				}
+				for _, variable := range variables {
+					selector.Config[variable.Name] = variable.Value
+				}
+				return selector
+			}),
 		}
 
 		// Pro edition only (tcl protected code)
 		if s.proContext != nil && s.proContext.APIKey != "" {
-			request.RunningContext = triggerstcl.GetRunningContext(t.Name)
+			request.RunningContext = testworkflowexecutor.GetNewRunningContext(triggerstcl.GetRunningContext(t.Name), nil)
 		}
 
-		for _, variable := range variables {
-			request.Config[variable.Name] = variable.Value
-		}
-
-		wp := workerpool.New[testworkflowsv1.TestWorkflow, testkube.TestWorkflowExecutionRequest, testkube.TestWorkflowExecution](concurrencyLevel)
-		go func() {
-			isDelayDefined := t.Spec.Delay != nil
-			if isDelayDefined {
-				s.logger.Infof(
-					"trigger service: executor component: trigger %s/%s has delayed testworkflow execution configured for %f seconds",
-					t.Namespace, t.Name, t.Spec.Delay.Seconds(),
-				)
-				time.Sleep(t.Spec.Delay.Duration)
-			}
+		isDelayDefined := t.Spec.Delay != nil
+		if isDelayDefined {
 			s.logger.Infof(
-				"trigger service: executor component: scheduling testworkflow executions for trigger %s/%s",
-				t.Namespace, t.Name,
+				"trigger service: executor component: trigger %s/%s has delayed testworkflow execution configured for %f seconds",
+				t.Namespace, t.Name, t.Spec.Delay.Seconds(),
 			)
+			time.Sleep(t.Spec.Delay.Duration)
+		}
+		s.logger.Infof(
+			"trigger service: executor component: scheduling testworkflow executions for trigger %s/%s",
+			t.Namespace, t.Name,
+		)
 
-			requests := make([]workerpool.Request[testworkflowsv1.TestWorkflow, testkube.TestWorkflowExecutionRequest,
-				testkube.TestWorkflowExecution], len(testWorkflows))
-			for i := range testWorkflows {
-				requests[i] = workerpool.Request[testworkflowsv1.TestWorkflow, testkube.TestWorkflowExecutionRequest,
-					testkube.TestWorkflowExecution]{
-					Object:  testWorkflows[i],
-					Options: request,
-					// Pro edition only (tcl protected code)
-					ExecFn: s.testWorkflowExecutor.LegacyExecute,
-				}
-			}
-
-			go wp.SendRequests(requests)
-			go wp.Run(ctx)
-		}()
-
-		for r := range wp.GetResponses() {
-			status.addTestWorkflowExecutionID(r.Result.Id)
+		ch, err := s.testWorkflowExecutor.Execute(ctx, &cloud.ScheduleRequest{})
+		if err != nil {
+			log.DefaultLogger.Errorw(fmt.Sprintf("trigger service: error executing testworkflow for trigger %s/%s", t.Namespace, t.Name), "error", err)
+			return nil
+		}
+		for exec := range ch {
+			status.addTestWorkflowExecutionID(exec.Id)
 		}
 
 	default:

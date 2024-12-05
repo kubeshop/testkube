@@ -32,6 +32,7 @@ type scheduler struct {
 	outputRepository            testworkflow.OutputRepository
 	globalTemplateName          string
 	organizationId              string
+	defaultEnvironmentId        string
 }
 
 func NewScheduler(
@@ -41,6 +42,7 @@ func NewScheduler(
 	outputRepository testworkflow.OutputRepository,
 	globalTemplateName string,
 	organizationId string,
+	defaultEnvironmentId string,
 ) *scheduler {
 	return &scheduler{
 		logger:                      log.DefaultLogger,
@@ -50,6 +52,7 @@ func NewScheduler(
 		outputRepository:            outputRepository,
 		globalTemplateName:          globalTemplateName,
 		organizationId:              organizationId,
+		defaultEnvironmentId:        defaultEnvironmentId,
 	}
 }
 
@@ -274,7 +277,11 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 		}
 
 		// Resolve it finally
-		err = intermediate[i].Resolve(s.organizationId, req.EnvironmentId, req.ParentExecutionIds, false)
+		environmentId := req.EnvironmentId
+		if environmentId == "" {
+			environmentId = s.defaultEnvironmentId
+		}
+		err = intermediate[i].Resolve(s.organizationId, environmentId, req.ParentExecutionIds, false)
 		if err != nil {
 			intermediate[i].SetError("Cannot process Test Workflow specification", err)
 			continue

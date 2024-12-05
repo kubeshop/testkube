@@ -410,6 +410,7 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 		cfg.GlobalWorkflowTemplateName,
 		cfg.TestkubeDashboardURI,
 		"",
+		"",
 	)
 
 	return controlplane.New(controlplane.Config{
