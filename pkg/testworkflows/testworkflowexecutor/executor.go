@@ -84,9 +84,9 @@ func New(emitter *event.Emitter,
 			secretManager,
 			repository,
 			output,
-			func() runner.Runner { return rnr },
+			rnr,
 			globalTemplateName,
-			func() *event.Emitter { return emitter },
+			emitter,
 		),
 	}
 }

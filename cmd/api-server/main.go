@@ -90,10 +90,10 @@ func main() {
 	commons.ExitOnError("Creating k8s clientset", err)
 
 	var runner runner2.Runner
-	getRunner := func() runner2.Runner { return runner }
+	lazyRunner := runner2.Lazy(&runner)
 
 	var eventsEmitter *event.Emitter
-	getEmitter := func() *event.Emitter { return eventsEmitter }
+	lazyEmitter := event.Lazy(&eventsEmitter)
 
 	// TODO: Make granular environment variables, yet backwards compatible
 	secretConfig := testkube.SecretConfig{
@@ -109,7 +109,7 @@ func main() {
 
 	// Start local Control Plane
 	if mode == common.ModeStandalone {
-		controlPlane := services.CreateControlPlane(ctx, cfg, features, configMapConfig, secretManager, getRunner, getEmitter)
+		controlPlane := services.CreateControlPlane(ctx, cfg, features, configMapConfig, secretManager, lazyRunner, lazyEmitter)
 		g.Go(func() error {
 			return controlPlane.Run(ctx)
 		})

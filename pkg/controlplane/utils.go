@@ -17,7 +17,7 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
-	"github.com/kubeshop/testkube/pkg/cloud/data/executor"
+	cloudexecutor "github.com/kubeshop/testkube/pkg/cloud/data/executor"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/secretmanager"
@@ -29,7 +29,7 @@ type grpcstatus interface {
 }
 
 type CommandHandler func(ctx context.Context, req *cloud.CommandRequest) (*cloud.CommandResponse, error)
-type CommandHandlers map[executor.Command]CommandHandler
+type CommandHandlers map[cloudexecutor.Command]CommandHandler
 
 func Handler[T any, U any](fn func(ctx context.Context, payload T) (U, error)) func(ctx context.Context, req *cloud.CommandRequest) (*cloud.CommandResponse, error) {
 	return func(ctx context.Context, req *cloud.CommandRequest) (*cloud.CommandResponse, error) {

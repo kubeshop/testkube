@@ -3,11 +3,9 @@ package controlplane
 import (
 	"context"
 	"encoding/json"
-	errors2 "errors"
 	"fmt"
 	"math"
 	"net"
-	"os"
 	"time"
 
 	"github.com/gofiber/fiber/v2/log"
@@ -24,15 +22,8 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
-	"github.com/kubeshop/testkube/pkg/cloud/data/executor"
-	log2 "github.com/kubeshop/testkube/pkg/log"
-	testworkflowmappers "github.com/kubeshop/testkube/pkg/mapper/testworkflows"
-	"github.com/kubeshop/testkube/pkg/runner"
-	"github.com/kubeshop/testkube/pkg/secretmanager"
-	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
+	cloudexecutor "github.com/kubeshop/testkube/pkg/cloud/data/executor"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 )
 
@@ -43,20 +34,12 @@ const (
 	SendPingInterval    = HealthCheckInterval / 2
 )
 
-type EventEmitter interface {
-	Notify(event testkube.Event)
-}
-
 type Server struct {
 	cloud.UnimplementedTestKubeCloudAPIServer
-	cfg             Config
-	server          *grpc.Server
-	getEventEmitter func() EventEmitter
-	getRunner       func() runner.Runner
-	secretManager   secretmanager.SecretManager
-	scheduler       *scheduler
-	dashboardUri    string
-	commands        map[executor.Command]CommandHandler
+	cfg      Config
+	server   *grpc.Server
+	commands map[cloudexecutor.Command]CommandHandler
+	executor *executor
 }
 
 type Config struct {
@@ -71,25 +54,29 @@ func New(
 	dashboardUri string,
 	commandGroups ...CommandHandlers,
 ) *Server {
-	commands := make(map[executor.Command]CommandHandler)
+	commands := make(map[cloudexecutor.Command]CommandHandler)
 	for _, group := range commandGroups {
 		for cmd, handler := range group {
 			commands[cmd] = handler
 		}
 	}
 	return &Server{
-		cfg:             cfg,
-		dashboardUri:    dashboardUri,
-		secretManager:   executionScheduler.SecretManager(),
-		getEventEmitter: func() EventEmitter { return executionScheduler.Emitter() },
-		getRunner:       executionScheduler.Runner,
-		scheduler: NewScheduler(
-			executionScheduler.TestWorkflowsClient(),
-			executionScheduler.TestWorkflowsTemplatesClient(),
-			executionScheduler.Repository(),
-			executionScheduler.OutputRepository(),
-			executionScheduler.GlobalTemplateName(),
+		cfg: cfg,
+		executor: NewExecutor(
+			NewScheduler(
+				executionScheduler.TestWorkflowsClient(),
+				executionScheduler.TestWorkflowsTemplatesClient(),
+				executionScheduler.Repository(),
+				executionScheduler.OutputRepository(),
+				executionScheduler.GlobalTemplateName(),
+				"",
+			),
+			nil,
+			executionScheduler.Emitter(),
+			executionScheduler.Runner(),
+			executionScheduler.SecretManager(),
 			"",
+			dashboardUri,
 		),
 		commands: commands,
 	}
@@ -237,7 +224,7 @@ func (s *Server) GetLogsStream(srv cloud.TestKubeCloudAPI_GetLogsStreamServer) e
 }
 
 func (s *Server) Call(ctx context.Context, request *cloud.CommandRequest) (*cloud.CommandResponse, error) {
-	if cmd, ok := s.commands[executor.Command(request.Command)]; ok {
+	if cmd, ok := s.commands[cloudexecutor.Command(request.Command)]; ok {
 		return cmd(ctx, request)
 	}
 	return nil, errors.Errorf("command not implemented: %s", request.Command)
@@ -309,95 +296,22 @@ func retry(count int, delayBase time.Duration, fn func() error) (err error) {
 }
 
 func (s *Server) ScheduleExecution(req *cloud.ScheduleRequest, srv cloud.TestKubeCloudAPI_ScheduleExecutionServer) error {
-	// Prepare dependencies
-	eventEmitter := s.getEventEmitter()
-	runner := s.getRunner()
-	sensitiveDataHandler := NewSecretHandler(s.secretManager)
-
-	// Schedule execution
-	ch, err := s.scheduler.Schedule(srv.Context(), sensitiveDataHandler, req)
+	ch, err := s.executor.Execute(srv.Context(), req)
 	if err != nil {
 		return err
 	}
-
-	controlPlaneConfig := testworkflowconfig.ControlPlaneConfig{
-		DashboardUrl:   s.dashboardUri,
-		CDEventsTarget: os.Getenv("CDEVENTS_TARGET"),
-	}
-
 	for execution := range ch {
-		eventEmitter.Notify(testkube.NewEventQueueTestWorkflow(execution))
-
 		// Send the data
+		// TODO: Use protobuf struct?
 		v, err := json.Marshal(execution)
 		if err != nil {
 			return err
 		}
 		if err = srv.Send(&cloud.ScheduleResponse{Execution: v}); err != nil {
 			// TODO: retry?
-		}
-
-		// Finish early if it's immediately known to finish
-		if execution.Result.IsFinished() {
-			eventEmitter.Notify(testkube.NewEventStartTestWorkflow(execution))
-			if execution.Result.IsAborted() {
-				eventEmitter.Notify(testkube.NewEventEndTestWorkflowAborted(execution))
-			} else if execution.Result.IsFailed() {
-				eventEmitter.Notify(testkube.NewEventEndTestWorkflowFailed(execution))
-			} else {
-				eventEmitter.Notify(testkube.NewEventEndTestWorkflowSuccess(execution))
-			}
-			continue
-		}
-
-		// Start the execution
-		// TODO: Make it another gRPC operation
-		parentIds := ""
-		if execution.RunningContext != nil && execution.RunningContext.Actor != nil {
-			parentIds = execution.RunningContext.Actor.ExecutionPath
-		}
-		result, err := runner.Execute(executionworkertypes.ExecuteRequest{
-			Execution: testworkflowconfig.ExecutionConfig{
-				Id:              execution.Id,
-				GroupId:         execution.GroupId,
-				Name:            execution.Name,
-				Number:          execution.Number,
-				ScheduledAt:     execution.ScheduledAt,
-				DisableWebhooks: execution.DisableWebhooks,
-				Debug:           false,
-				OrganizationId:  "",
-				EnvironmentId:   "",
-				ParentIds:       parentIds,
-			},
-			Secrets:      sensitiveDataHandler.Get(execution.Id),
-			Workflow:     testworkflowmappers.MapTestWorkflowAPIToKube(*execution.ResolvedWorkflow),
-			ControlPlane: controlPlaneConfig,
-		})
-
-		// TODO: define "revoke" error by runner (?)
-		if err != nil {
-			err2 := s.scheduler.CriticalError(execution, "Failed to run execution", err)
-			err = errors2.Join(err, err2)
-			if err != nil {
-				log2.DefaultLogger.Errorw("failed to run and update execution", "executionId", execution.Id, "error", err)
-			}
-			eventEmitter.Notify(testkube.NewEventStartTestWorkflow(execution))
-			eventEmitter.Notify(testkube.NewEventEndTestWorkflowAborted(execution))
-			continue
-		}
-
-		// Inform about execution start
-		eventEmitter.Notify(testkube.NewEventStartTestWorkflow(execution))
-
-		// Apply the known data to temporary object.
-		execution.Namespace = result.Namespace
-		execution.Signature = result.Signature
-		execution.RunnerId = ""
-		if err = s.scheduler.Start(execution); err != nil {
-			log2.DefaultLogger.Errorw("failed to mark execution as initialized", "executionId", execution.Id, "error", err)
+			return err
 		}
 	}
-
 	return nil
 }
 

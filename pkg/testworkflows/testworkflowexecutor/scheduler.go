@@ -43,8 +43,8 @@ type ExecutionScheduler struct {
 	repository                  testworkflow2.Repository
 	outputRepository            testworkflow2.OutputRepository
 	globalTemplateName          string
-	getRunner                   func() runner2.Runner
-	getEmitter                  func() *event.Emitter
+	runner                      runner2.Runner
+	emitter                     event.Interface
 }
 
 type ScheduleRequest struct {
@@ -77,9 +77,9 @@ func NewExecutionScheduler(
 	secretManager secretmanager.SecretManager,
 	repository testworkflow2.Repository,
 	outputRepository testworkflow2.OutputRepository,
-	getRunner func() runner2.Runner,
+	runner runner2.Runner,
 	globalTemplateName string,
-	getEmitter func() *event.Emitter,
+	emitter event.Interface,
 ) *ExecutionScheduler {
 	return &ExecutionScheduler{
 		testWorkflowsClient:         testWorkflowsClient,
@@ -87,9 +87,9 @@ func NewExecutionScheduler(
 		secretManager:               secretManager,
 		repository:                  repository,
 		outputRepository:            outputRepository,
-		getRunner:                   getRunner,
+		runner:                      runner,
 		globalTemplateName:          globalTemplateName,
-		getEmitter:                  getEmitter,
+		emitter:                     emitter,
 	}
 }
 
@@ -460,24 +460,24 @@ func (s *ExecutionScheduler) DoOne(controlPlaneConfig testworkflowconfig.Control
 		// TODO: don't fail immediately (try creating other executions too)
 		return exec.Execution, errors.Wrapf(err, "cannot insert execution '%s' result for workflow '%s'", exec.Execution.Id, exec.Execution.Workflow.Name)
 	}
-	s.getEmitter().Notify(testkube.NewEventQueueTestWorkflow(&exec.Execution))
+	s.emitter.Notify(testkube.NewEventQueueTestWorkflow(&exec.Execution))
 
 	// Finish early if it's immediately known to finish
 	if exec.Execution.Result.IsFinished() {
-		//s.getEmitter().Notify(testkube.NewEventStartTestWorkflow(&exec.Execution)) // TODO: Consider
+		//semitter.Notify(testkube.NewEventStartTestWorkflow(&exec.Execution)) // TODO: Consider
 		if exec.Execution.Result.IsAborted() {
-			s.getEmitter().Notify(testkube.NewEventEndTestWorkflowAborted(&exec.Execution))
+			s.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(&exec.Execution))
 		} else if exec.Execution.Result.IsFailed() {
-			s.getEmitter().Notify(testkube.NewEventEndTestWorkflowFailed(&exec.Execution))
+			s.emitter.Notify(testkube.NewEventEndTestWorkflowFailed(&exec.Execution))
 		} else {
-			s.getEmitter().Notify(testkube.NewEventEndTestWorkflowSuccess(&exec.Execution))
+			s.emitter.Notify(testkube.NewEventEndTestWorkflowSuccess(&exec.Execution))
 		}
 		s.saveEmptyLogs(&exec.Execution)
 		return exec.Execution, nil
 	}
 
 	// Start the execution
-	result, err := s.getRunner().Execute(executionworkertypes.ExecuteRequest{
+	result, err := s.runner.Execute(executionworkertypes.ExecuteRequest{
 		Execution: testworkflowconfig.ExecutionConfig{
 			Id:              exec.Execution.Id,
 			GroupId:         exec.Execution.GroupId,
@@ -508,15 +508,15 @@ func (s *ExecutionScheduler) DoOne(controlPlaneConfig testworkflowconfig.Control
 			return exec.Execution, errors.Wrap(err, "failed to update the execution")
 		}
 
-		//s.getEmitter().Notify(testkube.NewEventStartTestWorkflow(&exec.Execution)) // TODO: Consider
-		s.getEmitter().Notify(testkube.NewEventEndTestWorkflowAborted(&exec.Execution))
+		//semitter.Notify(testkube.NewEventStartTestWorkflow(&exec.Execution)) // TODO: Consider
+		s.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(&exec.Execution))
 		s.saveEmptyLogs(&exec.Execution)
 
 		return exec.Execution, nil
 	}
 
 	// Inform about execution start TODO: Consider
-	//s.getEmitter().Notify(testkube.NewEventStartTestWorkflow(&exec.Execution))
+	//semitter.Notify(testkube.NewEventStartTestWorkflow(&exec.Execution))
 
 	// Apply the signature
 	// TODO: it should be likely scheduled from the Runner,
@@ -600,11 +600,11 @@ func (s *ExecutionScheduler) SecretManager() secretmanager.SecretManager {
 }
 
 // FIXME: delete
-func (s *ExecutionScheduler) Emitter() *event.Emitter {
-	return s.getEmitter()
+func (s *ExecutionScheduler) Emitter() event.Interface {
+	return s.emitter
 }
 
 // FIXME: delete
 func (s *ExecutionScheduler) Runner() runner2.Runner {
-	return s.getRunner()
+	return s.runner
 }
