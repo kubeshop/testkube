@@ -9,7 +9,6 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	v1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	testkube "github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	cloud "github.com/kubeshop/testkube/pkg/cloud"
 )
@@ -50,19 +49,4 @@ func (m *MockTestWorkflowExecutor) Execute(arg0 context.Context, arg1 *cloud.Sch
 func (mr *MockTestWorkflowExecutorMockRecorder) Execute(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Execute", reflect.TypeOf((*MockTestWorkflowExecutor)(nil).Execute), arg0, arg1)
-}
-
-// LegacyExecute mocks base method.
-func (m *MockTestWorkflowExecutor) LegacyExecute(arg0 context.Context, arg1 v1.TestWorkflow, arg2 testkube.TestWorkflowExecutionRequest) (testkube.TestWorkflowExecution, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "LegacyExecute", arg0, arg1, arg2)
-	ret0, _ := ret[0].(testkube.TestWorkflowExecution)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// LegacyExecute indicates an expected call of LegacyExecute.
-func (mr *MockTestWorkflowExecutorMockRecorder) LegacyExecute(arg0, arg1, arg2 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LegacyExecute", reflect.TypeOf((*MockTestWorkflowExecutor)(nil).LegacyExecute), arg0, arg1, arg2)
 }

@@ -6,7 +6,6 @@ import (
 	errors2 "errors"
 	"io"
 	"math"
-	"os"
 	"sync"
 	"time"
 
@@ -15,7 +14,6 @@ import (
 	"google.golang.org/grpc/encoding/gzip"
 	"google.golang.org/protobuf/types/known/emptypb"
 
-	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	testworkflowsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testworkflows/v1"
 	v1 "github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/internal/common"
@@ -41,8 +39,6 @@ const (
 //go:generate mockgen -destination=./mock_executor.go -package=testworkflowexecutor "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor" TestWorkflowExecutor
 type TestWorkflowExecutor interface {
 	Execute(ctx context.Context, req *cloud.ScheduleRequest) (<-chan *testkube.TestWorkflowExecution, error)
-	LegacyExecute(ctx context.Context, workflow testworkflowsv1.TestWorkflow, request testkube.TestWorkflowExecutionRequest) (
-		execution testkube.TestWorkflowExecution, err error)
 }
 
 type executor struct {
@@ -75,7 +71,8 @@ func New(
 	secretManager secretmanager.SecretManager,
 	globalTemplateName string,
 	dashboardURI string,
-	organizationId string) TestWorkflowExecutor {
+	organizationId string,
+	defaultEnvironmentId string) TestWorkflowExecutor {
 	return &executor{
 		grpcClient:     grpClient,
 		apiKey:         apiKey,
@@ -92,6 +89,7 @@ func New(
 			output,
 			globalTemplateName,
 			organizationId,
+			defaultEnvironmentId,
 		),
 	}
 }
@@ -243,34 +241,4 @@ func (e *executor) executeDirect(ctx context.Context, req *cloud.ScheduleRequest
 	}()
 
 	return ch2, nil
-}
-
-func (e *executor) LegacyExecute(ctx context.Context, _ testworkflowsv1.TestWorkflow, request testkube.TestWorkflowExecutionRequest) (
-	testkube.TestWorkflowExecution, error) {
-	// Determine the organization/environment
-	cloudApiKey := common.GetOr(os.Getenv("TESTKUBE_PRO_API_KEY"), os.Getenv("TESTKUBE_CLOUD_API_KEY"))
-	environmentId := common.GetOr(os.Getenv("TESTKUBE_PRO_ENV_ID"), os.Getenv("TESTKUBE_CLOUD_ENV_ID"))
-	if cloudApiKey == "" {
-		environmentId = ""
-	}
-
-	// Execute
-	ch, err := e.Execute(ctx, &cloud.ScheduleRequest{
-		EnvironmentId:        environmentId,
-		Selectors:            []*cloud.ScheduleSelector{{Name: request.Name}},
-		DisableWebhooks:      request.DisableWebhooks,
-		Tags:                 request.Tags,
-		RunningContext:       GetNewRunningContext(request.RunningContext, request.ParentExecutionIds),
-		ParentExecutionIds:   request.ParentExecutionIds,
-		KubernetesObjectName: request.TestWorkflowExecutionName,
-	})
-	if err != nil {
-		return testkube.TestWorkflowExecution{}, err
-	}
-	executions := readAll(ch)
-
-	if len(executions) > 0 {
-		return *executions[0], nil
-	}
-	return testkube.TestWorkflowExecution{}, errors.New("failed to build the execution")
 }
