@@ -1,0 +1,72 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: locust-workflow-smoke
+  labels:
+    core-tests: workflows
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/locust/locust-project
+  container:
+    workingDir: /data/repo/test/locust/locust-project
+  steps:
+  - name: Run test
+    run:
+      image: locustio/locust:2.32.3
+      shell: |
+        mkdir /data/artifacts
+        locust -f locust_test.py --host https://testkube-test-page-lipsum.pages.dev/ --headless --users 6 --spawn-rate 3 --run-time 10s --html=/data/artifacts/report.html
+    artifacts:
+      paths:
+      - "/data/artifacts/**"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: distributed-locust-workflow-smoke
+  labels:
+    core-tests: workflows
+spec:
+  config:
+    workers: {type: integer, default: 2}
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/locust/locust-project
+  services:
+    master:
+      transfer:
+      - from: /data/repo/test/locust/locust-project
+      count: 1
+      timeout: 30s # initialization timeout
+      logs: 'always'
+      image: locustio/locust:2.32.3
+      shell: | 
+        mkdir /data/artifacts
+        cd /data/repo/test/locust/locust-project
+        locust --master -f locust_test.py --host https://testkube-test-page-lipsum.pages.dev/ --headless \
+        --users 20 --spawn-rate 10 --run-time 60s --stop-timeout 180 --html=/data/artifacts/report.html
+      readinessProbe:
+        tcpSocket:
+          port: 5557
+        periodSeconds: 1
+  steps:
+  - name: Run test
+    parallel:
+      count: 'config.workers'
+      transfer:
+      - from: /data/repo
+      use:
+      - name: distribute/evenly
+      container:
+        workingDir: /data/repo/test/locust/locust-project
+      paused: true # synchronize running all workers - optional
+      run:
+        image: locustio/locust:2.32.3
+        shell: locust -f - --worker --master-host {{ services.master.0.ip }} --processes {{ config.workers }}
