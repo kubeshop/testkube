@@ -291,7 +291,7 @@ func printSingleResultDifference(r1 testkube.TestWorkflowStepResult, r2 testkube
 	}
 	took := r2.FinishedAt.Sub(r2.QueuedAt).Round(time.Millisecond)
 
-	printStatus(signature, r2Status, took, index, steps, name)
+	printStatus(signature, r2Status, took, index, steps, name, r2.ErrorMessage)
 	return true
 }
 
@@ -356,7 +356,10 @@ func printStatusHeader(i, n int, name string) {
 }
 
 func printStatus(s testkube.TestWorkflowSignature, rStatus testkube.TestWorkflowStepStatus, took time.Duration,
-	i, n int, name string) {
+	i, n int, name string, errorMessage string) {
+	if len(errorMessage) > 0 {
+		fmt.Printf("\n%s", ui.Red(errorMessage))
+	}
 	switch rStatus {
 	case testkube.RUNNING_TestWorkflowStepStatus:
 		printStatusHeader(i, n, name)
@@ -444,7 +447,7 @@ func printRawLogLines(logs []byte, steps []testkube.TestWorkflowSignature, execu
 			if ps, ok := results[currentRef]; ok && ps.Status != nil {
 				took := ps.FinishedAt.Sub(ps.QueuedAt).Round(time.Millisecond)
 				if i != -1 {
-					printStatus(steps[i], *ps.Status, took, i, len(steps), steps[i].Label())
+					printStatus(steps[i], *ps.Status, took, i, len(steps), steps[i].Label(), ps.ErrorMessage)
 				}
 			}
 
@@ -458,9 +461,9 @@ func printRawLogLines(logs []byte, steps []testkube.TestWorkflowSignature, execu
 
 	if i != -1 && i < len(steps) {
 		for _, step := range steps[i:] {
-			if ps, ok := results[currentRef]; ok && ps.Status != nil {
+			if ps, ok := results[step.Ref]; ok && ps.Status != nil {
 				took := ps.FinishedAt.Sub(ps.QueuedAt).Round(time.Millisecond)
-				printStatus(step, *ps.Status, took, i, len(steps), steps[i].Label())
+				printStatus(step, *ps.Status, took, i, len(steps), steps[i].Label(), ps.ErrorMessage)
 			}
 
 			i++
