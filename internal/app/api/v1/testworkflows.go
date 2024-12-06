@@ -378,8 +378,7 @@ func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 		}
 
 		ch, err := s.testWorkflowExecutor.Execute(ctx, &cloud.ScheduleRequest{
-			// TODO: Support Cloud environment ID
-			EnvironmentId:        "",
+			EnvironmentId:        "", // use default
 			Selectors:            []*cloud.ScheduleSelector{&scheduleSelector},
 			DisableWebhooks:      request.DisableWebhooks,
 			Tags:                 request.Tags,
