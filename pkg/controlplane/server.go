@@ -268,7 +268,6 @@ func (s *Server) Run(ctx context.Context) error {
 }
 
 func (s *Server) ScheduleExecution(req *cloud.ScheduleRequest, srv cloud.TestKubeCloudAPI_ScheduleExecutionServer) error {
-	fmt.Println("HELLO THERE!")
 	ch, err := s.executor.Execute(srv.Context(), req)
 	if err != nil {
 		return err

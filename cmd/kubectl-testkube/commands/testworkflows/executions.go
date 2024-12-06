@@ -79,12 +79,7 @@ func NewGetTestWorkflowExecutionsCmd() *cobra.Command {
 
 				sigs := flattenSignatures(execution.Signature)
 
-				var results map[string]testkube.TestWorkflowStepResult
-				if execution.Result != nil {
-					results = execution.Result.Steps
-				}
-
-				printRawLogLines(logs, sigs, results)
+				printRawLogLines(logs, sigs, execution)
 				if !logsOnly {
 					render.PrintTestWorkflowExecutionURIs(&execution)
 				}

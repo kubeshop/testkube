@@ -225,6 +225,19 @@ func uiWatch(execution testkube.TestWorkflowExecution, serviceName *string, serv
 		}
 	}
 
+	// Print final logs in case execution is already finished
+	if execution.Result.IsFinished() {
+		ui.Info("Getting logs for test workflow execution", execution.Id)
+
+		logs, err := client.GetTestWorkflowExecutionLogs(execution.Id)
+		ui.ExitOnError("getting logs from executor", err)
+
+		sigs := flattenSignatures(execution.Signature)
+
+		printRawLogLines(logs, sigs, execution)
+		return 0
+	}
+
 	var result *testkube.TestWorkflowResult
 	var err error
 
@@ -519,10 +532,29 @@ func printStructuredLogLines(logs string, _ *bool) {
 	}
 }
 
-func printRawLogLines(logs []byte, steps []testkube.TestWorkflowSignature, results map[string]testkube.TestWorkflowStepResult) {
+func printRawLogLines(logs []byte, steps []testkube.TestWorkflowSignature, execution testkube.TestWorkflowExecution) {
 	currentRef := ""
 	i := -1
+
+	// Process the results
+	results := make(map[string]testkube.TestWorkflowStepResult)
+	if execution.Result != nil {
+		if execution.Result.Steps != nil {
+			results = execution.Result.Steps
+		}
+		if execution.Result.Initialization != nil {
+			results[""] = *execution.Result.Initialization
+		}
+	}
+
+	// Print error message if that's the only available thing
+	if len(results) < 2 && len(logs) == 0 && len(results[""].ErrorMessage) > 0 {
+		fmt.Printf("\n%s\n", ui.Red(results[""].ErrorMessage))
+		return
+	}
+
 	printStatusHeader(-1, len(steps), "Initializing")
+
 	// Strip timestamp + space for all new lines in the log
 	for len(logs) > 0 {
 		newLineIndex := bytes.Index(logs, NL)
