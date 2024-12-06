@@ -385,7 +385,7 @@ func watchTestWorkflowLogs(id string, signature []testkube.TestWorkflowSignature
 			continue
 		}
 
-		printStructuredLogLines(l.Log, &isLineBeginning)
+		isLineBeginning = printStructuredLogLines(l.Log, isLineBeginning)
 	}
 
 	ui.NL()
@@ -528,11 +528,24 @@ func trimTimestamp(line string) string {
 	return line
 }
 
-func printStructuredLogLines(logs string, _ *bool) {
-	scanner := bufio.NewScanner(strings.NewReader(logs))
-	for scanner.Scan() {
-		fmt.Println(trimTimestamp(scanner.Text()))
+func printStructuredLogLines(logs string, isLineBeginning bool) bool {
+	if len(logs) == 0 {
+		return isLineBeginning
 	}
+	willBeLineBeginning := logs[len(logs)-1] == '\n'
+	scanner := bufio.NewScanner(strings.NewReader(logs))
+	next := false
+	for scanner.Scan() {
+		if next {
+			fmt.Print("\n")
+		}
+		fmt.Print(trimTimestamp(scanner.Text()))
+		next = true
+	}
+	if isLineBeginning {
+		fmt.Print("\n")
+	}
+	return willBeLineBeginning
 }
 
 func printRawLogLines(logs []byte, steps []testkube.TestWorkflowSignature, execution testkube.TestWorkflowExecution) {
