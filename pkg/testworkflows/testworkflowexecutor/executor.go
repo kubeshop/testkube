@@ -112,6 +112,8 @@ func (e *executor) isDirect() bool {
 		proContext, _ := e.grpcClient.GetProContext(ctx, &emptypb.Empty{})
 		if proContext != nil {
 			e.direct = common.Ptr(!capabilities.Enabled(proContext.Capabilities, capabilities.CapabilityNewExecutions))
+		} else {
+			e.direct = common.Ptr(true)
 		}
 	}
 	return *e.direct
