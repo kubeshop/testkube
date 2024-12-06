@@ -42,11 +42,13 @@ type TestWorkflowExecutor interface {
 }
 
 type executor struct {
-	direct         *bool
-	directMu       sync.Mutex
-	grpcClient     cloud.TestKubeCloudAPIClient
-	apiKey         string
-	cdEventsTarget string
+	direct               *bool
+	directMu             sync.Mutex
+	grpcClient           cloud.TestKubeCloudAPIClient
+	apiKey               string
+	cdEventsTarget       string
+	organizationId       string
+	defaultEnvironmentId string
 
 	emitter       event.Interface
 	metrics       v1.Metrics
@@ -74,14 +76,16 @@ func New(
 	organizationId string,
 	defaultEnvironmentId string) TestWorkflowExecutor {
 	return &executor{
-		grpcClient:     grpClient,
-		apiKey:         apiKey,
-		cdEventsTarget: cdEventsTarget,
-		emitter:        emitter,
-		metrics:        metrics,
-		secretManager:  secretManager,
-		dashboardURI:   dashboardURI,
-		runner:         runner,
+		grpcClient:           grpClient,
+		apiKey:               apiKey,
+		cdEventsTarget:       cdEventsTarget,
+		emitter:              emitter,
+		metrics:              metrics,
+		secretManager:        secretManager,
+		dashboardURI:         dashboardURI,
+		runner:               runner,
+		organizationId:       organizationId,
+		defaultEnvironmentId: defaultEnvironmentId,
 		scheduler: NewScheduler(
 			testWorkflowsClient,
 			testWorkflowTemplatesClient,
@@ -165,6 +169,12 @@ func (e *executor) executeDirect(ctx context.Context, req *cloud.ScheduleRequest
 		return ch, err
 	}
 
+	// Analyze the environment ID
+	environmentId := req.EnvironmentId
+	if environmentId == "" {
+		environmentId = e.defaultEnvironmentId
+	}
+
 	controlPlaneConfig := testworkflowconfig.ControlPlaneConfig{
 		DashboardUrl:   e.dashboardURI,
 		CDEventsTarget: e.cdEventsTarget,
@@ -206,8 +216,8 @@ func (e *executor) executeDirect(ctx context.Context, req *cloud.ScheduleRequest
 					ScheduledAt:     execution.ScheduledAt,
 					DisableWebhooks: execution.DisableWebhooks,
 					Debug:           false,
-					OrganizationId:  "",
-					EnvironmentId:   "",
+					OrganizationId:  e.organizationId,
+					EnvironmentId:   environmentId,
 					ParentIds:       parentIds,
 				},
 				Secrets:      sensitiveDataHandler.Get(execution.Id),
