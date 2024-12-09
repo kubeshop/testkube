@@ -4,9 +4,9 @@ import (
 	"context"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	"github.com/kubeshop/testkube/pkg/event/kind/testworkflowexecutiontelemetry"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/telemetry"
-	"github.com/kubeshop/testkube/pkg/testworkflows"
 	"github.com/kubeshop/testkube/pkg/version"
 )
 
@@ -26,17 +26,17 @@ func (s *TestkubeAPI) sendCreateWorkflowTelemetry(ctx context.Context, workflow 
 	out, err := telemetry.SendCreateWorkflowEvent("testkube_api_create_test_workflow", telemetry.CreateWorkflowParams{
 		CreateParams: telemetry.CreateParams{
 			AppVersion: version.Version,
-			DataSource: testworkflows.GetDataSource(workflow.Spec.Content),
-			Host:       testworkflows.GetHostname(),
-			ClusterID:  testworkflows.GetClusterID(ctx, s.ConfigMap),
+			DataSource: testworkflowexecutiontelemetry.GetDataSource(workflow.Spec.Content),
+			Host:       testworkflowexecutiontelemetry.GetHostname(),
+			ClusterID:  testworkflowexecutiontelemetry.GetClusterID(ctx, s.ConfigMap),
 		},
 		WorkflowParams: telemetry.WorkflowParams{
 			TestWorkflowSteps:        int32(len(workflow.Spec.Setup) + len(workflow.Spec.Steps) + len(workflow.Spec.After)),
 			TestWorkflowTemplateUsed: len(workflow.Spec.Use) != 0,
-			TestWorkflowImage:        testworkflows.GetImage(workflow.Spec.Container),
-			TestWorkflowArtifactUsed: testworkflows.HasWorkflowStepLike(workflow.Spec, testworkflows.HasArtifacts),
-			TestWorkflowKubeshopGitURI: testworkflows.IsKubeshopGitURI(workflow.Spec.Content) ||
-				testworkflows.HasWorkflowStepLike(workflow.Spec, testworkflows.HasKubeshopGitURI),
+			TestWorkflowImage:        testworkflowexecutiontelemetry.GetImage(workflow.Spec.Container),
+			TestWorkflowArtifactUsed: testworkflowexecutiontelemetry.HasWorkflowStepLike(workflow.Spec, testworkflowexecutiontelemetry.HasArtifacts),
+			TestWorkflowKubeshopGitURI: testworkflowexecutiontelemetry.IsKubeshopGitURI(workflow.Spec.Content) ||
+				testworkflowexecutiontelemetry.HasWorkflowStepLike(workflow.Spec, testworkflowexecutiontelemetry.HasKubeshopGitURI),
 		},
 	})
 	if err != nil {
@@ -62,16 +62,16 @@ func (s *TestkubeAPI) sendCreateWorkflowTemplateTelemetry(ctx context.Context, t
 	out, err := telemetry.SendCreateWorkflowEvent("testkube_api_create_test_workflow_template", telemetry.CreateWorkflowParams{
 		CreateParams: telemetry.CreateParams{
 			AppVersion: version.Version,
-			DataSource: testworkflows.GetDataSource(template.Spec.Content),
-			Host:       testworkflows.GetHostname(),
-			ClusterID:  testworkflows.GetClusterID(ctx, s.ConfigMap),
+			DataSource: testworkflowexecutiontelemetry.GetDataSource(template.Spec.Content),
+			Host:       testworkflowexecutiontelemetry.GetHostname(),
+			ClusterID:  testworkflowexecutiontelemetry.GetClusterID(ctx, s.ConfigMap),
 		},
 		WorkflowParams: telemetry.WorkflowParams{
 			TestWorkflowSteps:        int32(len(template.Spec.Setup) + len(template.Spec.Steps) + len(template.Spec.After)),
-			TestWorkflowImage:        testworkflows.GetImage(template.Spec.Container),
-			TestWorkflowArtifactUsed: testworkflows.HasTemplateStepLike(template.Spec, testworkflows.HasTemplateArtifacts),
-			TestWorkflowKubeshopGitURI: testworkflows.IsKubeshopGitURI(template.Spec.Content) ||
-				testworkflows.HasTemplateStepLike(template.Spec, testworkflows.HasTemplateKubeshopGitURI),
+			TestWorkflowImage:        testworkflowexecutiontelemetry.GetImage(template.Spec.Container),
+			TestWorkflowArtifactUsed: testworkflowexecutiontelemetry.HasTemplateStepLike(template.Spec, testworkflowexecutiontelemetry.HasTemplateArtifacts),
+			TestWorkflowKubeshopGitURI: testworkflowexecutiontelemetry.IsKubeshopGitURI(template.Spec.Content) ||
+				testworkflowexecutiontelemetry.HasTemplateStepLike(template.Spec, testworkflowexecutiontelemetry.HasTemplateKubeshopGitURI),
 		},
 	})
 	if err != nil {
