@@ -111,6 +111,12 @@ func (s *Server) ExecuteAsync(srv cloud.TestKubeCloudAPI_ExecuteAsyncServer) err
 	return g.Wait()
 }
 
+func (s *Server) GetEventStream(_ *cloud.EventStreamRequest, srv cloud.TestKubeCloudAPI_GetEventStreamServer) error {
+	// Do nothing - it doesn't need to pass events down
+	<-srv.Context().Done()
+	return nil
+}
+
 // TODO: Consider deleting that
 func (s *Server) GetTestWorkflowNotificationsStream(srv cloud.TestKubeCloudAPI_GetTestWorkflowNotificationsStreamServer) error {
 	ctx, cancel := context.WithCancel(srv.Context())

@@ -30,13 +30,6 @@ func retry(count int, delayBase time.Duration, fn func() error) (err error) {
 	return err
 }
 
-func readAll[T any](ch <-chan T) (result []T) {
-	for v := range ch {
-		result = append(result, v)
-	}
-	return result
-}
-
 func GetNewRunningContext(legacy *testkube.TestWorkflowRunningContext, parentExecutionIds []string) (runningContext *cloud.RunningContext) {
 	if legacy != nil {
 		if legacy.Actor != nil && legacy.Actor.Type_ != nil {

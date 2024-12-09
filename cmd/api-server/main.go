@@ -394,6 +394,7 @@ func main() {
 		features,
 		&proContext,
 		cfg.TestkubeDockerImageVersion,
+		eventsEmitter,
 	)
 	commons.ExitOnError("Starting agent", err)
 	g.Go(func() error {
