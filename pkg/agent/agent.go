@@ -26,8 +26,8 @@ import (
 const (
 	clusterIDMeta          = "cluster-id"
 	cloudMigrateMeta       = "migrate"
-	orgIdMeta              = "environment-id"
-	envIdMeta              = "organization-id"
+	orgIdMeta              = "organization-id"
+	envIdMeta              = "environment-id"
 	healthcheckCommand     = "healthcheck"
 	dockerImageVersionMeta = "docker-image-version"
 )
@@ -55,6 +55,16 @@ type Agent struct {
 	testWorkflowNotificationsResponseBuffer chan *cloud.TestWorkflowNotificationsResponse
 	testWorkflowNotificationsFunc           func(ctx context.Context, executionID string) (<-chan testkube.TestWorkflowExecutionNotification, error)
 
+	testWorkflowServiceNotificationsWorkerCount    int
+	testWorkflowServiceNotificationsRequestBuffer  chan *cloud.TestWorkflowServiceNotificationsRequest
+	testWorkflowServiceNotificationsResponseBuffer chan *cloud.TestWorkflowServiceNotificationsResponse
+	testWorkflowServiceNotificationsFunc           func(ctx context.Context, executionID, serviceName string, serviceIndex int) (<-chan testkube.TestWorkflowExecutionNotification, error)
+
+	testWorkflowParallelStepNotificationsWorkerCount    int
+	testWorkflowParallelStepNotificationsRequestBuffer  chan *cloud.TestWorkflowParallelStepNotificationsRequest
+	testWorkflowParallelStepNotificationsResponseBuffer chan *cloud.TestWorkflowParallelStepNotificationsResponse
+	testWorkflowParallelStepNotificationsFunc           func(ctx context.Context, executionID, ref string, workerIndex int) (<-chan testkube.TestWorkflowExecutionNotification, error)
+
 	events              chan testkube.Event
 	sendTimeout         time.Duration
 	receiveTimeout      time.Duration
@@ -73,6 +83,8 @@ func NewAgent(logger *zap.SugaredLogger,
 	client cloud.TestKubeCloudAPIClient,
 	logStreamFunc func(ctx context.Context, executionID string) (chan output.Output, error),
 	workflowNotificationsFunc func(ctx context.Context, executionID string) (<-chan testkube.TestWorkflowExecutionNotification, error),
+	workflowServiceNotificationsFunc func(ctx context.Context, executionID, serviceName string, serviceIndex int) (<-chan testkube.TestWorkflowExecutionNotification, error),
+	workflowParallelStepNotificationsFunc func(ctx context.Context, executionID, ref string, workerIndex int) (<-chan testkube.TestWorkflowExecutionNotification, error),
 	clusterID string,
 	clusterName string,
 	features featureflags.FeatureFlags,
@@ -99,11 +111,19 @@ func NewAgent(logger *zap.SugaredLogger,
 		testWorkflowNotificationsRequestBuffer:  make(chan *cloud.TestWorkflowNotificationsRequest, bufferSizePerWorker*proContext.WorkflowNotificationsWorkerCount),
 		testWorkflowNotificationsResponseBuffer: make(chan *cloud.TestWorkflowNotificationsResponse, bufferSizePerWorker*proContext.WorkflowNotificationsWorkerCount),
 		testWorkflowNotificationsFunc:           workflowNotificationsFunc,
-		clusterID:                               clusterID,
-		clusterName:                             clusterName,
-		features:                                features,
-		proContext:                              proContext,
-		dockerImageVersion:                      dockerImageVersion,
+		testWorkflowServiceNotificationsWorkerCount:         proContext.WorkflowServiceNotificationsWorkerCount,
+		testWorkflowServiceNotificationsRequestBuffer:       make(chan *cloud.TestWorkflowServiceNotificationsRequest, bufferSizePerWorker*proContext.WorkflowServiceNotificationsWorkerCount),
+		testWorkflowServiceNotificationsResponseBuffer:      make(chan *cloud.TestWorkflowServiceNotificationsResponse, bufferSizePerWorker*proContext.WorkflowServiceNotificationsWorkerCount),
+		testWorkflowServiceNotificationsFunc:                workflowServiceNotificationsFunc,
+		testWorkflowParallelStepNotificationsWorkerCount:    proContext.WorkflowParallelStepNotificationsWorkerCount,
+		testWorkflowParallelStepNotificationsRequestBuffer:  make(chan *cloud.TestWorkflowParallelStepNotificationsRequest, bufferSizePerWorker*proContext.WorkflowParallelStepNotificationsWorkerCount),
+		testWorkflowParallelStepNotificationsResponseBuffer: make(chan *cloud.TestWorkflowParallelStepNotificationsResponse, bufferSizePerWorker*proContext.WorkflowParallelStepNotificationsWorkerCount),
+		testWorkflowParallelStepNotificationsFunc:           workflowParallelStepNotificationsFunc,
+		clusterID:          clusterID,
+		clusterName:        clusterName,
+		features:           features,
+		proContext:         proContext,
+		dockerImageVersion: dockerImageVersion,
 	}, nil
 }
 
@@ -149,6 +169,20 @@ func (ag *Agent) run(ctx context.Context) (err error) {
 	})
 	g.Go(func() error {
 		return ag.runTestWorkflowNotificationsWorker(groupCtx, ag.testWorkflowNotificationsWorkerCount)
+	})
+
+	g.Go(func() error {
+		return ag.runTestWorkflowServiceNotificationsLoop(groupCtx)
+	})
+	g.Go(func() error {
+		return ag.runTestWorkflowServiceNotificationsWorker(groupCtx, ag.testWorkflowServiceNotificationsWorkerCount)
+	})
+
+	g.Go(func() error {
+		return ag.runTestWorkflowParallelStepNotificationsLoop(groupCtx)
+	})
+	g.Go(func() error {
+		return ag.runTestWorkflowParallelStepNotificationsWorker(groupCtx, ag.testWorkflowParallelStepNotificationsWorkerCount)
 	})
 
 	err = g.Wait()

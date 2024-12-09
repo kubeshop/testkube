@@ -96,3 +96,22 @@ func (w TestWorkflow) GetLabels() map[string]string {
 func (w TestWorkflow) GetAnnotations() map[string]string {
 	return w.Annotations
 }
+
+func (w TestWorkflow) HasService(name string) bool {
+	if w.Spec == nil {
+		return false
+	}
+
+	steps := append(w.Spec.Setup, append(w.Spec.Steps, w.Spec.After...)...)
+	for _, step := range steps {
+		if step.HasService(name) {
+			return true
+		}
+	}
+
+	if _, ok := w.Spec.Services[name]; ok {
+		return true
+	}
+
+	return false
+}

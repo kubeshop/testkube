@@ -13,6 +13,13 @@ import (
 )
 
 func NewWatchTestWorkflowExecutionCmd() *cobra.Command {
+	var (
+		serviceName       string
+		parallelStepName  string
+		serviceIndex      int
+		parallelStepIndex int
+	)
+
 	cmd := &cobra.Command{
 		Use:     "testworkflowexecution <executionName>",
 		Aliases: []string{"testworkflowexecutions", "twe", "tw"},
@@ -31,7 +38,15 @@ func NewWatchTestWorkflowExecutionCmd() *cobra.Command {
 			ui.ExitOnError("render test workflow execution", err)
 
 			ui.NL()
-			exitCode := uiWatch(execution, client)
+			var pServiceName, pParallelStepName *string
+			if cmd.Flag("service-name").Changed || cmd.Flag("service-index").Changed {
+				pServiceName = &serviceName
+			}
+			if cmd.Flag("parallel-step-name").Changed || cmd.Flag("parallel-step-index").Changed {
+				pParallelStepName = &parallelStepName
+			}
+
+			exitCode := uiWatch(execution, pServiceName, serviceIndex, pParallelStepName, parallelStepIndex, client)
 			ui.NL()
 
 			execution, err = client.GetTestWorkflowExecution(execution.Id)
@@ -42,6 +57,11 @@ func NewWatchTestWorkflowExecutionCmd() *cobra.Command {
 			os.Exit(exitCode)
 		},
 	}
+
+	cmd.Flags().StringVar(&serviceName, "service-name", "", "test workflow service name")
+	cmd.Flags().IntVar(&serviceIndex, "service-index", 0, "test workflow service index starting from 0")
+	cmd.Flags().StringVar(&parallelStepName, "parallel-step-name", "", "test workflow parallel step name or reference")
+	cmd.Flags().IntVar(&parallelStepIndex, "parallel-step-index", 0, "test workflow parallel step index starting from 0")
 
 	return cmd
 }

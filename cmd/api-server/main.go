@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"fmt"
 	"strings"
@@ -22,12 +21,10 @@ import (
 	"github.com/kubeshop/testkube/pkg/event/kind/k8sevent"
 	"github.com/kubeshop/testkube/pkg/event/kind/webhook"
 	ws "github.com/kubeshop/testkube/pkg/event/kind/websocket"
-	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/secretmanager"
 	"github.com/kubeshop/testkube/pkg/server"
 	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
 	"github.com/kubeshop/testkube/pkg/tcl/schedulertcl"
-	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/presets"
 
 	"github.com/kubeshop/testkube/internal/common"
@@ -308,26 +305,8 @@ func main() {
 	api.Init(httpServer)
 
 	log.DefaultLogger.Info("starting agent service")
-	getTestWorkflowNotificationsStream := func(ctx context.Context, executionID string) (<-chan testkube.TestWorkflowExecutionNotification, error) {
-		execution, err := testWorkflowResultsRepository.Get(ctx, executionID)
-		if err != nil {
-			return nil, err
-		}
-		notifications := executionWorker.Notifications(ctx, execution.Id, executionworkertypes.NotificationsOptions{
-			Hints: executionworkertypes.Hints{
-				Namespace:   execution.Namespace,
-				Signature:   execution.Signature,
-				ScheduledAt: common.Ptr(execution.ScheduledAt),
-			},
-		})
-		if notifications.Err() != nil {
-			return nil, notifications.Err()
-		}
-		return notifications.Channel(), nil
-	}
-	getDeprecatedLogStream := func(ctx context.Context, executionID string) (chan output.Output, error) {
-		return nil, errors.New("deprecated features have been disabled")
-	}
+
+	getDeprecatedLogStream := agent.GetDeprecatedLogStream
 	if deprecatedSystem != nil && deprecatedSystem.StreamLogs != nil {
 		getDeprecatedLogStream = deprecatedSystem.StreamLogs
 	}
@@ -336,7 +315,9 @@ func main() {
 		httpServer.Mux.Handler(),
 		grpcClient,
 		getDeprecatedLogStream,
-		getTestWorkflowNotificationsStream,
+		agent.GetTestWorkflowNotificationsStream(testWorkflowResultsRepository, executionWorker),
+		agent.GetTestWorkflowServiceNotificationsStream(testWorkflowResultsRepository, executionWorker),
+		agent.GetTestWorkflowParallelStepNotificationsStream(testWorkflowResultsRepository, executionWorker),
 		clusterId,
 		cfg.TestkubeClusterName,
 		features,
