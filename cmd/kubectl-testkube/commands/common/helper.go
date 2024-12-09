@@ -366,6 +366,9 @@ func PopulateLoginDataToContext(orgID, envID, token, refreshToken, dockerContain
 		cfg.CloudContext.RefreshToken = refreshToken
 	}
 	cfg.CloudContext.DockerContainerName = dockerContainerName
+	if options.Master.CallbackPort != 0 {
+		cfg.CloudContext.CallbackPort = options.Master.CallbackPort
+	}
 
 	cfg, err := PopulateOrgAndEnvNames(cfg, orgID, envID, options.Master.URIs.Api)
 	if err != nil {
@@ -407,6 +410,10 @@ func PopulateAgentDataToContext(options HelmOptions, cfg config.Data) error {
 	}
 	if options.Master.OrgId != "" {
 		cfg.CloudContext.OrganizationId = options.Master.OrgId
+		updated = true
+	}
+	if options.Master.CallbackPort != 0 {
+		cfg.CloudContext.CallbackPort = options.Master.CallbackPort
 		updated = true
 	}
 
@@ -490,11 +497,12 @@ func PopulateCloudConfig(cfg config.Data, apiKey string, dockerContainerName *st
 	if dockerContainerName != nil {
 		cfg.CloudContext.DockerContainerName = *dockerContainerName
 	}
+	cfg.CloudContext.CallbackPort = opts.Master.CallbackPort
 
 	return cfg
 }
 
-func LoginUser(authUri string, customConnector bool) (string, string, error) {
+func LoginUser(authUri string, customConnector bool, port int) (string, string, error) {
 	ui.H1("Login")
 	connectorID := ""
 	if !customConnector {
@@ -502,7 +510,7 @@ func LoginUser(authUri string, customConnector bool) (string, string, error) {
 	}
 
 	ui.Debug("Logging into cloud with parameters", authUri, connectorID)
-	authUrl, tokenChan, err := cloudlogin.CloudLogin(context.Background(), authUri, strings.ToLower(connectorID))
+	authUrl, tokenChan, err := cloudlogin.CloudLogin(context.Background(), authUri, strings.ToLower(connectorID), port)
 	if err != nil {
 		return "", "", fmt.Errorf("cloud login: %w", err)
 	}
