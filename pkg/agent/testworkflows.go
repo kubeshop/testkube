@@ -12,6 +12,7 @@ import (
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/encoding/gzip"
+	"google.golang.org/grpc/metadata"
 
 	"github.com/kubeshop/testkube/internal/common"
 	agentclient "github.com/kubeshop/testkube/pkg/agent/client"
@@ -86,6 +87,8 @@ func (ag *Agent) runTestWorkflowNotificationsLoop(ctx context.Context) error {
 
 func (ag *Agent) runTestWorkflowServiceNotificationsLoop(ctx context.Context) error {
 	ctx = agentclient.AddAPIKeyMeta(ctx, ag.apiKey)
+	ctx = metadata.AppendToOutgoingContext(ctx, envIdMeta, ag.proContext.EnvID)
+	ctx = metadata.AppendToOutgoingContext(ctx, orgIdMeta, ag.proContext.OrgID)
 
 	ag.logger.Infow("initiating workflow service notifications streaming connection with Cloud API")
 	// creates a new Stream from the client side. ctx is used for the lifetime of the stream.
@@ -131,6 +134,8 @@ func (ag *Agent) runTestWorkflowServiceNotificationsLoop(ctx context.Context) er
 
 func (ag *Agent) runTestWorkflowParallelStepNotificationsLoop(ctx context.Context) error {
 	ctx = agentclient.AddAPIKeyMeta(ctx, ag.apiKey)
+	ctx = metadata.AppendToOutgoingContext(ctx, envIdMeta, ag.proContext.EnvID)
+	ctx = metadata.AppendToOutgoingContext(ctx, orgIdMeta, ag.proContext.OrgID)
 
 	ag.logger.Infow("initiating workflow parallel step notifications streaming connection with Cloud API")
 	// creates a new Stream from the client side. ctx is used for the lifetime of the stream.

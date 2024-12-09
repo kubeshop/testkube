@@ -26,8 +26,8 @@ import (
 const (
 	clusterIDMeta          = "cluster-id"
 	cloudMigrateMeta       = "migrate"
-	orgIdMeta              = "environment-id"
-	envIdMeta              = "organization-id"
+	orgIdMeta              = "organization-id"
+	envIdMeta              = "environment-id"
 	healthcheckCommand     = "healthcheck"
 	dockerImageVersionMeta = "docker-image-version"
 )
