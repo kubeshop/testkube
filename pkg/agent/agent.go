@@ -30,6 +30,7 @@ const (
 	envIdMeta              = "environment-id"
 	healthcheckCommand     = "healthcheck"
 	dockerImageVersionMeta = "docker-image-version"
+	newExecutionsMeta      = "exec"
 )
 
 // buffer up to five messages per worker
@@ -260,6 +261,7 @@ func (ag *Agent) runCommandLoop(ctx context.Context) error {
 	ctx = metadata.AppendToOutgoingContext(ctx, envIdMeta, ag.proContext.EnvID)
 	ctx = metadata.AppendToOutgoingContext(ctx, orgIdMeta, ag.proContext.OrgID)
 	ctx = metadata.AppendToOutgoingContext(ctx, dockerImageVersionMeta, ag.dockerImageVersion)
+	ctx = metadata.AppendToOutgoingContext(ctx, newExecutionsMeta, "true")
 
 	ag.logger.Infow("initiating streaming connection with control plane")
 	// creates a new Stream from the client side. ctx is used for the lifetime of the stream.
