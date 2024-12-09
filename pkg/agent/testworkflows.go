@@ -13,10 +13,14 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/encoding/gzip"
 
+	"github.com/kubeshop/testkube/internal/common"
 	agentclient "github.com/kubeshop/testkube/pkg/agent/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
+	"github.com/kubeshop/testkube/pkg/executor/output"
+	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/registry"
 )
 
@@ -604,4 +608,79 @@ func (ag *Agent) sendTestWorkflowParallelStepNotificationsResponse(ctx context.C
 	case <-t.C:
 		return errors.New("send response too slow")
 	}
+}
+
+func GetTestWorkflowNotificationsStream(testWorkflowResultsRepository testworkflow.Repository, executionWorker executionworkertypes.Worker) func(
+	ctx context.Context, executionID string) (<-chan testkube.TestWorkflowExecutionNotification, error) {
+	return func(ctx context.Context, executionID string) (<-chan testkube.TestWorkflowExecutionNotification, error) {
+		execution, err := testWorkflowResultsRepository.Get(ctx, executionID)
+		if err != nil {
+			return nil, err
+		}
+		notifications := executionWorker.Notifications(ctx, execution.Id, executionworkertypes.NotificationsOptions{
+			Hints: executionworkertypes.Hints{
+				Namespace:   execution.Namespace,
+				Signature:   execution.Signature,
+				ScheduledAt: common.Ptr(execution.ScheduledAt),
+			},
+		})
+		if notifications.Err() != nil {
+			return nil, notifications.Err()
+		}
+		return notifications.Channel(), nil
+	}
+}
+
+func GetTestWorkflowServiceNotificationsStream(testWorkflowResultsRepository testworkflow.Repository, executionWorker executionworkertypes.Worker) func(
+	ctx context.Context, executionID, serviceName string, serviceIndex int) (<-chan testkube.TestWorkflowExecutionNotification, error) {
+	return func(ctx context.Context, executionID, serviceName string, serviceIndex int) (<-chan testkube.TestWorkflowExecutionNotification, error) {
+		execution, err := testWorkflowResultsRepository.Get(ctx, executionID)
+		if err != nil {
+			return nil, err
+		}
+
+		if execution.Result != nil && execution.Result.IsFinished() {
+			return nil, errors.New("test workflow execution is finished")
+		}
+
+		notifications := executionWorker.Notifications(ctx, fmt.Sprintf("%s-%s-%d", execution.Id, serviceName, serviceIndex), executionworkertypes.NotificationsOptions{
+			Hints: executionworkertypes.Hints{
+				Namespace:   execution.Namespace,
+				ScheduledAt: common.Ptr(execution.ScheduledAt),
+			},
+		})
+		if notifications.Err() != nil {
+			return nil, notifications.Err()
+		}
+		return notifications.Channel(), nil
+	}
+}
+
+func GetTestWorkflowParallelStepNotificationsStream(testWorkflowResultsRepository testworkflow.Repository, executionWorker executionworkertypes.Worker) func(
+	ctx context.Context, executionID, ref string, workerIndex int) (<-chan testkube.TestWorkflowExecutionNotification, error) {
+	return func(ctx context.Context, executionID, ref string, workerIndex int) (<-chan testkube.TestWorkflowExecutionNotification, error) {
+		execution, err := testWorkflowResultsRepository.Get(ctx, executionID)
+		if err != nil {
+			return nil, err
+		}
+
+		if execution.Result != nil && execution.Result.IsFinished() {
+			return nil, errors.New("test workflow execution is finished")
+		}
+
+		notifications := executionWorker.Notifications(ctx, fmt.Sprintf("%s-%s-%d", execution.Id, ref, workerIndex), executionworkertypes.NotificationsOptions{
+			Hints: executionworkertypes.Hints{
+				Namespace:   execution.Namespace,
+				ScheduledAt: common.Ptr(execution.ScheduledAt),
+			},
+		})
+		if notifications.Err() != nil {
+			return nil, notifications.Err()
+		}
+		return notifications.Channel(), nil
+	}
+}
+
+func GetDeprecatedLogStream(ctx context.Context, executionID string) (chan output.Output, error) {
+	return nil, errors.New("deprecated features have been disabled")
 }
