@@ -40,8 +40,6 @@ func (l *testWorkflowExecutionMetricsListener) Kind() string {
 
 func (l *testWorkflowExecutionMetricsListener) Events() []testkube.EventType {
 	return []testkube.EventType{
-		testkube.QUEUE_TESTWORKFLOW_EventType,
-		testkube.START_TESTWORKFLOW_EventType,
 		testkube.END_TESTWORKFLOW_SUCCESS_EventType,
 		testkube.END_TESTWORKFLOW_FAILED_EventType,
 		testkube.END_TESTWORKFLOW_ABORTED_EventType,
