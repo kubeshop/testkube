@@ -7,10 +7,16 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/encoding/gzip"
+	"google.golang.org/grpc/status"
 
 	agentclient "github.com/kubeshop/testkube/pkg/agent/client"
 	"github.com/kubeshop/testkube/pkg/cloud"
+	"github.com/kubeshop/testkube/pkg/log"
 )
+
+type grpcstatus interface {
+	GRPCStatus() *status.Status
+}
 
 const (
 	GetCredentialRetryCount = 30
@@ -50,6 +56,11 @@ func (c *credentialRepository) Get(ctx context.Context, name string) ([]byte, er
 		if err == nil {
 			return result.Content, nil
 		}
+		if _, ok := err.(grpcstatus); ok {
+			return nil, err
+		}
+		// Try to get credentials again if it may be recoverable error
+		log.DefaultLogger.Warnw("failed to get credential", "error", err)
 		time.Sleep(getIterationDelay(i))
 	}
 	return nil, err
