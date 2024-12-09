@@ -2,25 +2,19 @@ package runner
 
 import (
 	"context"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/pkg/errors"
 
-	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/log"
-	testworkflows2 "github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
-	"github.com/kubeshop/testkube/pkg/telemetry"
-	"github.com/kubeshop/testkube/pkg/testworkflows"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/registry"
-	"github.com/kubeshop/testkube/pkg/version"
 )
 
 //go:generate mockgen -destination=./mock_runner.go -package=runner "github.com/kubeshop/testkube/pkg/runner" Runner
@@ -182,8 +176,6 @@ func (r *runner) monitor(ctx context.Context, execution testkube.TestWorkflowExe
 	execution.StatusAt = lastResult.FinishedAt
 
 	// Emit data
-	r.metrics.IncAndObserveExecuteTestWorkflow(execution, r.dashboardURI)
-	r.sendRunWorkflowTelemetry(ctx, testworkflows2.MapAPIToKube(execution.ResolvedWorkflow), &execution)
 	if lastResult.IsPassed() {
 		r.emitter.Notify(testkube.NewEventEndTestWorkflowSuccess(&execution))
 	} else if lastResult.IsAborted() {
@@ -243,107 +235,4 @@ func (r *runner) Resume(id string) error {
 
 func (r *runner) Abort(id string) error {
 	return r.worker.Abort(context.Background(), id, executionworkertypes.DestroyOptions{})
-}
-
-func (r *runner) sendRunWorkflowTelemetry(ctx context.Context, workflow *testworkflowsv1.TestWorkflow, execution *testkube.TestWorkflowExecution) {
-	if workflow == nil {
-		log.DefaultLogger.Debug("empty workflow passed to telemetry event")
-		return
-	}
-	telemetryEnabled, err := r.configRepository.GetTelemetryEnabled(ctx)
-	if err != nil {
-		log.DefaultLogger.Debugf("getting telemetry enabled error", "error", err)
-	}
-	if !telemetryEnabled {
-		return
-	}
-
-	properties := make(map[string]any)
-	properties["name"] = workflow.Name
-	stats := stepStats{
-		imagesUsed:    make(map[string]struct{}),
-		templatesUsed: make(map[string]struct{}),
-	}
-
-	var isSample bool
-	if workflow.Labels != nil && workflow.Labels["docs"] == "example" && strings.HasSuffix(workflow.Name, "-sample") {
-		isSample = true
-	} else {
-		isSample = false
-	}
-
-	spec := workflow.Spec
-	for _, step := range spec.Steps {
-		stats.Merge(getStepInfo(step))
-	}
-	if spec.Container != nil {
-		stats.imagesUsed[spec.Container.Image] = struct{}{}
-	}
-	if len(spec.Services) != 0 {
-		stats.hasServices = true
-	}
-	if len(spec.Use) > 0 {
-		stats.hasTemplate = true
-		for _, tmpl := range spec.Use {
-			stats.templatesUsed[tmpl.Name] = struct{}{}
-		}
-	}
-
-	var images []string
-	for image := range stats.imagesUsed {
-		if image == "" {
-			continue
-		}
-		images = append(images, image)
-	}
-
-	var templates []string
-	for t := range stats.templatesUsed {
-		if t == "" {
-			continue
-		}
-		templates = append(templates, t)
-	}
-	var (
-		status     string
-		durationMs int32
-	)
-	if execution.Result != nil {
-		if execution.Result.Status != nil {
-			status = string(*execution.Result.Status)
-		}
-		durationMs = execution.Result.DurationMs
-	}
-
-	out, err := telemetry.SendRunWorkflowEvent("testkube_api_run_test_workflow", telemetry.RunWorkflowParams{
-		RunParams: telemetry.RunParams{
-			AppVersion: version.Version,
-			DataSource: testworkflows.GetDataSource(workflow.Spec.Content),
-			Host:       testworkflows.GetHostname(),
-			ClusterID:  testworkflows.GetClusterID(ctx, r.configRepository),
-			DurationMs: durationMs,
-			Status:     status,
-		},
-		WorkflowParams: telemetry.WorkflowParams{
-			TestWorkflowSteps:        int32(stats.numSteps),
-			TestWorkflowExecuteCount: int32(stats.numExecute),
-			TestWorkflowImage:        testworkflows.GetImage(workflow.Spec.Container),
-			TestWorkflowArtifactUsed: stats.hasArtifacts,
-			TestWorkflowParallelUsed: stats.hasParallel,
-			TestWorkflowMatrixUsed:   stats.hasMatrix,
-			TestWorkflowServicesUsed: stats.hasServices,
-			TestWorkflowTemplateUsed: stats.hasTemplate,
-			TestWorkflowIsSample:     isSample,
-			TestWorkflowTemplates:    templates,
-			TestWorkflowImages:       images,
-			TestWorkflowKubeshopGitURI: testworkflows.IsKubeshopGitURI(workflow.Spec.Content) ||
-				testworkflows.HasWorkflowStepLike(workflow.Spec, testworkflows.HasKubeshopGitURI),
-		},
-	})
-
-	if err != nil {
-		log.DefaultLogger.Debugw("sending run test workflow telemetry event error", "error", err)
-	} else {
-		log.DefaultLogger.Debugw("sending run test workflow telemetry event", "output", out)
-	}
 }

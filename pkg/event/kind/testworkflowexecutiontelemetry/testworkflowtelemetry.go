@@ -1,4 +1,4 @@
-package runner
+package testworkflowexecutiontelemetry
 
 import (
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
