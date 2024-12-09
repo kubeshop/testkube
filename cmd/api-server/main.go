@@ -313,6 +313,7 @@ func main() {
 	eventsEmitter.Loader.Register(testworkflowexecutionmetrics.NewLoader(ctx, metrics, cfg.TestkubeDashboardURI))
 
 	// Send the telemetry data regarding the Test Workflow Execution
+	// TODO: Disable it if Control Plane does that
 	eventsEmitter.Loader.Register(testworkflowexecutiontelemetry.NewLoader(ctx, configMapConfig))
 
 	eventsEmitter.Listen(ctx)
