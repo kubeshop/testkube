@@ -55,7 +55,7 @@ func (l *testWorkflowExecutionMetricsListener) Metadata() map[string]string {
 }
 
 func (l *testWorkflowExecutionMetricsListener) Notify(event testkube.Event) testkube.EventResult {
-	if event.TestWorkflowExecution == nil || event.TestWorkflowExecution.TestWorkflowExecutionName == "" {
+	if event.TestWorkflowExecution == nil {
 		return testkube.NewSuccessEventResult(event.Id, "ignored")
 	}
 	l.metrics.IncAndObserveExecuteTestWorkflow(*event.TestWorkflowExecution, l.dashboardURI)
