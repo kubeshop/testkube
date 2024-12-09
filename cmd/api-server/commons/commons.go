@@ -23,6 +23,7 @@ import (
 	parser "github.com/kubeshop/testkube/internal/template"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cache"
+	"github.com/kubeshop/testkube/pkg/capabilities"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/configmap"
 	"github.com/kubeshop/testkube/pkg/dbmigrator"
@@ -296,6 +297,7 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 		Migrate:           cfg.TestkubeProMigrate,
 		ConnectionTimeout: cfg.TestkubeProConnectionTimeout,
 		DashboardURI:      cfg.TestkubeDashboardURI,
+		NewExecutions:     grpcClient == nil,
 	}
 
 	if cfg.TestkubeProAPIKey == "" || grpcClient == nil {
@@ -318,6 +320,10 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 
 	if proContext.OrgID == "" {
 		proContext.OrgID = foundProContext.OrgId
+	}
+
+	if capabilities.Enabled(foundProContext.Capabilities, capabilities.CapabilityNewExecutions) {
+		proContext.NewExecutions = true
 	}
 
 	return proContext

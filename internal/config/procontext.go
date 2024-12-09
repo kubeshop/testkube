@@ -15,4 +15,5 @@ type ProContext struct {
 	Migrate                                      string
 	ConnectionTimeout                            int
 	DashboardURI                                 string
+	NewExecutions                                bool
 }

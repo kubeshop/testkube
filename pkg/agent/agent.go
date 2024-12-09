@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math"
 	"time"
@@ -11,10 +12,14 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/encoding/gzip"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 
+	"github.com/kubeshop/testkube/internal/common"
 	agentclient "github.com/kubeshop/testkube/pkg/agent/client"
+	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 
 	"github.com/kubeshop/testkube/internal/config"
@@ -77,6 +82,8 @@ type Agent struct {
 	dockerImageVersion string
 
 	proContext *config.ProContext
+
+	eventEmitter event.Interface
 }
 
 func NewAgent(logger *zap.SugaredLogger,
@@ -91,6 +98,7 @@ func NewAgent(logger *zap.SugaredLogger,
 	features featureflags.FeatureFlags,
 	proContext *config.ProContext,
 	dockerImageVersion string,
+	eventEmitter event.Interface,
 ) (*Agent, error) {
 	return &Agent{
 		handler:                                 handler,
@@ -125,6 +133,7 @@ func NewAgent(logger *zap.SugaredLogger,
 		features:           features,
 		proContext:         proContext,
 		dockerImageVersion: dockerImageVersion,
+		eventEmitter:       eventEmitter,
 	}, nil
 }
 
@@ -186,9 +195,69 @@ func (ag *Agent) run(ctx context.Context) (err error) {
 		return ag.runTestWorkflowParallelStepNotificationsWorker(groupCtx, ag.testWorkflowParallelStepNotificationsWorkerCount)
 	})
 
+	g.Go(func() error {
+		return ag.runEventsReaderLoop(groupCtx)
+	})
+
 	err = g.Wait()
 
 	return err
+}
+
+func (ag *Agent) runEventsReaderLoop(ctx context.Context) (err error) {
+	// Ignore when Control Plane doesn't support new executions
+	if !ag.proContext.NewExecutions {
+		return nil
+	}
+
+	if ag.proContext.APIKey != "" {
+		ctx = agentclient.AddAPIKeyMeta(ctx, ag.proContext.APIKey)
+	}
+
+	ctx = metadata.AppendToOutgoingContext(ctx, clusterIDMeta, ag.clusterID)
+	ctx = metadata.AppendToOutgoingContext(ctx, cloudMigrateMeta, ag.proContext.Migrate)
+	ctx = metadata.AppendToOutgoingContext(ctx, envIdMeta, ag.proContext.EnvID)
+	ctx = metadata.AppendToOutgoingContext(ctx, orgIdMeta, ag.proContext.OrgID)
+
+	// creates a new Stream from the client side. ctx is used for the lifetime of the stream.
+	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
+	stream, err := ag.client.GetEventStream(ctx, &cloud.EventStreamRequest{Accept: []*cloud.EventResource{{Id: "*", Type: "*"}}}, opts...)
+	if err != nil {
+		ag.logger.Errorf("failed to read events stream from Control Plane: %w", err)
+		return errors.Wrap(err, "failed to setup events stream")
+	}
+
+	for {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		ev, err := stream.Recv()
+		if err != nil {
+			// Ignore if it's not implemented in the Control Plane
+			if e, ok := err.(interface{ GRPCStatus() *status.Status }); ok && e.GRPCStatus().Code() == codes.Unimplemented {
+				return nil
+			}
+			return err
+		}
+		if ev.Resource == nil {
+			ev.Resource = &cloud.EventResource{}
+		}
+		tkEvent := testkube.Event{
+			Id:                    ev.Id,
+			Resource:              common.Ptr(testkube.EventResource(ev.Resource.Type)),
+			ResourceId:            ev.Resource.Id,
+			Type_:                 common.Ptr(testkube.EventType(ev.Type)),
+			TestWorkflowExecution: nil,
+			External:              true,
+		}
+		if ev.Resource.Type == string(testkube.TESTWORKFLOWEXECUTION_EventResource) {
+			var v testkube.TestWorkflowExecution
+			if err = json.Unmarshal(ev.Data, &v); err == nil {
+				tkEvent.TestWorkflowExecution = &v
+			}
+		}
+		ag.eventEmitter.Notify(tkEvent)
+	}
 }
 
 func (ag *Agent) sendResponse(ctx context.Context, stream cloud.TestKubeCloudAPI_ExecuteClient, resp *cloud.ExecuteResponse) error {

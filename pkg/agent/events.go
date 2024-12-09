@@ -50,6 +50,11 @@ func (ag *Agent) Metadata() map[string]string {
 }
 
 func (ag *Agent) Notify(event testkube.Event) (result testkube.EventResult) {
+	// Avoid re-delivering Control Plane's event back to Control Plane
+	if event.External {
+		return testkube.NewSuccessEventResult(event.Id, "ignored external event")
+	}
+
 	event.ClusterName = ag.clusterName
 	// Non blocking send
 	select {

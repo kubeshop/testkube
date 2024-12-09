@@ -7385,6 +7385,8 @@ components:
             type: string
           example:
             WEBHOOK_PARAMETER: "any value"
+        external:
+          type: boolean
 
     EventResource:
       type: string

@@ -20,6 +20,7 @@ service TestKubeCloudAPI {
     rpc GetTestWorkflowParallelStepNotificationsStream(stream TestWorkflowParallelStepNotificationsResponse) returns (stream TestWorkflowParallelStepNotificationsRequest);
     rpc GetProContext(google.protobuf.Empty) returns (ProContextResponse);
     rpc GetCredential(CredentialRequest) returns (CredentialResponse);
+    rpc GetEventStream(EventStreamRequest) returns (stream Event);
     rpc ScheduleExecution(ScheduleRequest) returns (stream ScheduleResponse);
 }
 
@@ -207,4 +208,20 @@ message ScheduleRequest {
 
 message ScheduleResponse {
   bytes execution = 1; // TestWorkflowExecution
+}
+
+message EventResource {
+  string type = 1;
+  string id = 2;
+}
+
+message EventStreamRequest {
+  repeated EventResource accept = 2;
+}
+
+message Event {
+  string id = 1;
+  EventResource resource = 2;
+  string type = 4;
+  bytes data = 5;
 }
