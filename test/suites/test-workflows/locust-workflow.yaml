@@ -1,0 +1,13 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: locust-workflow-suite
+  labels:
+    core-tests: workflows-suite
+spec:
+  steps:
+  - execute:
+      parallelism: 2
+      workflows:
+      - name: locust-workflow-smoke
+      - name: distributed-locust-workflow-smoke
