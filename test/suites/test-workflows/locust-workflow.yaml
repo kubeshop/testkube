@@ -9,5 +9,5 @@ spec:
   - execute:
       parallelism: 2
       workflows:
-      - name: klocust-workflow-smoke
+      - name: locust-workflow-smoke
       - name: distributed-locust-workflow-smoke
