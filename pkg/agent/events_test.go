@@ -61,7 +61,7 @@ func TestEventLoop(t *testing.T) {
 
 	proContext := config.ProContext{APIKey: "api-key", WorkerCount: 5, LogStreamWorkerCount: 5, WorkflowNotificationsWorkerCount: 5}
 	agent, err := agent.NewAgent(logger.Sugar(), nil, grpcClient, logStreamFunc, workflowNotificationsStreamFunc,
-		workflowServiceNotificationsStreamFunc, workflowParallelStepNotificationsStreamFunc, "", "", featureflags.FeatureFlags{}, &proContext, "")
+		workflowServiceNotificationsStreamFunc, workflowParallelStepNotificationsStreamFunc, "", "", featureflags.FeatureFlags{}, &proContext, "", nil)
 	assert.NoError(t, err)
 	go func() {
 		l, err := agent.Load()
