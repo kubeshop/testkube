@@ -10,7 +10,7 @@
 package testkube
 
 type TestWorkflowPvcConfig struct {
-	// Specify whether the PVC should be shared between test workflow pods
+	// Specify whether the pvc should be shared between test workflow pods
 	Shared bool `json:"shared,omitempty"`
 	// Access mode for claim storage. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes
 	AccessModes []string `json:"accessModes,omitempty"`

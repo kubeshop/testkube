@@ -8800,7 +8800,7 @@ components:
         pvcs:
           type: object
           additionalProperties:
-            $ref: "#/components/schemas/TestWorkflowPVCConfig"
+            $ref: "#/components/schemas/TestWorkflowPvcConfig"
 
     TestWorkflowTemplateSpec:
       type: object
@@ -8842,7 +8842,7 @@ components:
         pvcs:
           type: object
           additionalProperties:
-            $ref: "#/components/schemas/TestWorkflowPVCConfig"
+            $ref: "#/components/schemas/TestWorkflowPvcConfig"
 
     TestWorkflowStepControl:
       type: object
@@ -10596,11 +10596,11 @@ components:
                 must be defined
               type: boolean
 
-    TestWorkflowPVCConfig:
+    TestWorkflowPvcConfig:
       type: object
       properties:
         shared:
-          description: Specify whether the PVC should be shared between test workflow pods
+          description: Specify whether the pvc should be shared between test workflow pods
           type: boolean
         accessModes:
           description: 'Access mode for claim storage. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes'
@@ -10612,7 +10612,7 @@ components:
             More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes/#volume-mode'
           type: string
         resources:
-          description: 'Resources required for PVC'
+          description: 'Resources required for pvc'
           $ref: "#/components/schemas/TestWorkflowResources"
         storageClassName:
           description: 'Storage class name specifies the name of a StorageClass. More info: https://kubernetes.io/docs/concepts/storage/storage-classes/'
