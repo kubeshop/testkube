@@ -136,6 +136,7 @@ func (e *executor) execute(ctx context.Context, req *cloud.ScheduleRequest) Test
 	resultStream := newStream(ch)
 	if err != nil {
 		close(ch)
+		resultStream.addError(err)
 		return resultStream
 	}
 	go func() {
@@ -167,8 +168,9 @@ func (e *executor) executeDirect(ctx context.Context, req *cloud.ScheduleRequest
 
 	// Schedule execution
 	ch, err := e.scheduler.Schedule(ctx, sensitiveDataHandler, req)
-	resultStream := newStream(ch)
 	if err != nil {
+		resultStream := newStream(ch)
+		resultStream.addError(err)
 		return resultStream
 	}
 
@@ -184,6 +186,7 @@ func (e *executor) executeDirect(ctx context.Context, req *cloud.ScheduleRequest
 	}
 
 	ch2 := make(chan *testkube.TestWorkflowExecution, 1)
+	resultStream := newStream(ch2)
 	go func() {
 		defer close(ch2)
 		for execution := range ch {
