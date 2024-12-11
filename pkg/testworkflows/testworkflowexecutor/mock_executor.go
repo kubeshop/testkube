@@ -9,7 +9,6 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	testkube "github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	cloud "github.com/kubeshop/testkube/pkg/cloud"
 )
 
@@ -37,12 +36,11 @@ func (m *MockTestWorkflowExecutor) EXPECT() *MockTestWorkflowExecutorMockRecorde
 }
 
 // Execute mocks base method.
-func (m *MockTestWorkflowExecutor) Execute(arg0 context.Context, arg1 *cloud.ScheduleRequest) (<-chan *testkube.TestWorkflowExecution, error) {
+func (m *MockTestWorkflowExecutor) Execute(arg0 context.Context, arg1 *cloud.ScheduleRequest) TestWorkflowExecutionStream {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Execute", arg0, arg1)
-	ret0, _ := ret[0].(<-chan *testkube.TestWorkflowExecution)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret0, _ := ret[0].(TestWorkflowExecutionStream)
+	return ret0
 }
 
 // Execute indicates an expected call of Execute.

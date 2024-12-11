@@ -377,7 +377,7 @@ func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 			scheduleSelector.LabelSelector = sel.MatchLabels
 		}
 
-		ch, err := s.testWorkflowExecutor.Execute(ctx, &cloud.ScheduleRequest{
+		resp := s.testWorkflowExecutor.Execute(ctx, &cloud.ScheduleRequest{
 			EnvironmentId:        "", // use default
 			Selectors:            []*cloud.ScheduleSelector{&scheduleSelector},
 			DisableWebhooks:      request.DisableWebhooks,
@@ -387,13 +387,13 @@ func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 			KubernetesObjectName: request.TestWorkflowExecutionName,
 		})
 
-		if err != nil {
-			return s.InternalError(c, errPrefix, "execution error", err)
+		results := make([]testkube.TestWorkflowExecution, 0)
+		for v := range resp.Channel() {
+			results = append(results, *v)
 		}
 
-		results := make([]testkube.TestWorkflowExecution, 0)
-		for v := range ch {
-			results = append(results, *v)
+		if resp.Error() != nil {
+			return s.InternalError(c, errPrefix, "execution error", resp.Error())
 		}
 
 		s.Log.Debugw("executing test workflow", "name", name, "selector", selector)

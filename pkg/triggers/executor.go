@@ -170,13 +170,13 @@ func (s *Service) execute(ctx context.Context, e *watcherEvent, t *testtriggersv
 			t.Namespace, t.Name,
 		)
 
-		ch, err := s.testWorkflowExecutor.Execute(ctx, &cloud.ScheduleRequest{})
-		if err != nil {
-			log.DefaultLogger.Errorw(fmt.Sprintf("trigger service: error executing testworkflow for trigger %s/%s", t.Namespace, t.Name), "error", err)
-			return nil
-		}
-		for exec := range ch {
+		resp := s.testWorkflowExecutor.Execute(ctx, &cloud.ScheduleRequest{})
+		for exec := range resp.Channel() {
 			status.addTestWorkflowExecutionID(exec.Id)
+		}
+		if resp.Error() != nil {
+			log.DefaultLogger.Errorw(fmt.Sprintf("trigger service: error executing testworkflow for trigger %s/%s", t.Namespace, t.Name), "error", resp.Error())
+			return nil
 		}
 
 	default:

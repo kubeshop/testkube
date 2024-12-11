@@ -36,9 +36,11 @@ const (
 	ConfigSizeLimit = 3 * 1024 * 1024
 )
 
+type TestWorkflowExecutionStream Stream[*testkube.TestWorkflowExecution]
+
 //go:generate mockgen -destination=./mock_executor.go -package=testworkflowexecutor "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor" TestWorkflowExecutor
 type TestWorkflowExecutor interface {
-	Execute(ctx context.Context, req *cloud.ScheduleRequest) (<-chan *testkube.TestWorkflowExecution, error)
+	Execute(ctx context.Context, req *cloud.ScheduleRequest) TestWorkflowExecutionStream
 }
 
 type executor struct {
@@ -119,56 +121,55 @@ func (e *executor) isDirect() bool {
 	return *e.direct
 }
 
-func (e *executor) Execute(ctx context.Context, req *cloud.ScheduleRequest) (<-chan *testkube.TestWorkflowExecution, error) {
+func (e *executor) Execute(ctx context.Context, req *cloud.ScheduleRequest) TestWorkflowExecutionStream {
 	if e.isDirect() {
 		return e.executeDirect(ctx, req)
 	}
 	return e.execute(ctx, req)
 }
 
-func (e *executor) execute(ctx context.Context, req *cloud.ScheduleRequest) (<-chan *testkube.TestWorkflowExecution, error) {
+func (e *executor) execute(ctx context.Context, req *cloud.ScheduleRequest) TestWorkflowExecutionStream {
 	ch := make(chan *testkube.TestWorkflowExecution)
 	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
 	ctx = agentclient.AddAPIKeyMeta(ctx, e.apiKey)
 	resp, err := e.grpcClient.ScheduleExecution(ctx, req, opts...)
+	resultStream := newStream(ch)
 	if err != nil {
 		close(ch)
-		return ch, err
+		return resultStream
 	}
 	go func() {
 		defer close(ch)
-		errs := make([]error, 0)
 		var item *cloud.ScheduleResponse
 		for {
 			item, err = resp.Recv()
 			if err != nil {
 				if !errors.Is(err, io.EOF) {
-					// TODO: What to do with this error?
-					errs = append(errs, err)
+					resultStream.addError(err)
 				}
 				break
 			}
 			var r testkube.TestWorkflowExecution
 			err = json.Unmarshal(item.Execution, &r)
 			if err != nil {
-				// TODO: What to do with this error?
-				errs = append(errs, err)
+				resultStream.addError(err)
 				break
 			}
 			ch <- &r
 		}
 	}()
-	return ch, nil
+	return resultStream
 }
 
-func (e *executor) executeDirect(ctx context.Context, req *cloud.ScheduleRequest) (<-chan *testkube.TestWorkflowExecution, error) {
+func (e *executor) executeDirect(ctx context.Context, req *cloud.ScheduleRequest) TestWorkflowExecutionStream {
 	// Prepare dependencies
 	sensitiveDataHandler := NewSecretHandler(e.secretManager)
 
 	// Schedule execution
 	ch, err := e.scheduler.Schedule(ctx, sensitiveDataHandler, req)
+	resultStream := newStream(ch)
 	if err != nil {
-		return ch, err
+		return resultStream
 	}
 
 	// Analyze the environment ID
@@ -252,5 +253,5 @@ func (e *executor) executeDirect(ctx context.Context, req *cloud.ScheduleRequest
 		}
 	}()
 
-	return ch2, nil
+	return resultStream
 }

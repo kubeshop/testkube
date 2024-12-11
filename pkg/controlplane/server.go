@@ -274,11 +274,8 @@ func (s *Server) Run(ctx context.Context) error {
 }
 
 func (s *Server) ScheduleExecution(req *cloud.ScheduleRequest, srv cloud.TestKubeCloudAPI_ScheduleExecutionServer) error {
-	ch, err := s.executor.Execute(srv.Context(), req)
-	if err != nil {
-		return err
-	}
-	for execution := range ch {
+	resp := s.executor.Execute(srv.Context(), req)
+	for execution := range resp.Channel() {
 		// Send the data
 		// TODO: Use protobuf struct?
 		v, err := json.Marshal(execution)
@@ -289,6 +286,9 @@ func (s *Server) ScheduleExecution(req *cloud.ScheduleRequest, srv cloud.TestKub
 			// TODO: retry?
 			return err
 		}
+	}
+	if resp.Error() != nil {
+		return resp.Error()
 	}
 	return nil
 }

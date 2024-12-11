@@ -2,8 +2,10 @@ package testworkflowexecutor
 
 import (
 	"context"
+	errors2 "errors"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/pkg/errors"
@@ -18,6 +20,37 @@ import (
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/secretmanager"
 )
+
+type Stream[T any] interface {
+	Error() error
+	Channel() <-chan T
+}
+
+type stream[T any] struct {
+	errs []error
+	ch   <-chan T
+	mu   sync.RWMutex
+}
+
+func newStream[T any](ch <-chan T) *stream[T] {
+	return &stream[T]{ch: ch}
+}
+
+func (s *stream[T]) addError(err error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.errs = append(s.errs, err)
+}
+
+func (s *stream[T]) Error() error {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return errors2.Join(s.errs...)
+}
+
+func (s *stream[T]) Channel() <-chan T {
+	return s.ch
+}
 
 func retry(count int, delayBase time.Duration, fn func() error) (err error) {
 	for i := 0; i < count; i++ {
