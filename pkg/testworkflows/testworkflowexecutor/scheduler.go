@@ -10,7 +10,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.uber.org/zap"
 
-	testworkflowsv1 "github.com/kubeshop/testkube-operator/pkg/client/testworkflows/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/log"
@@ -33,8 +32,8 @@ type Scheduler interface {
 
 type scheduler struct {
 	logger                      *zap.SugaredLogger
-	testWorkflowsClient         testworkflowsv1.Interface
-	testWorkflowTemplatesClient testworkflowsv1.TestWorkflowTemplatesInterface
+	testWorkflowsClient         TestWorkflowFetcherClient
+	testWorkflowTemplatesClient TestWorkflowTemplateFetcherClient
 	resultsRepository           testworkflow.Repository
 	outputRepository            testworkflow.OutputRepository
 	globalTemplateName          string
@@ -43,8 +42,8 @@ type scheduler struct {
 }
 
 func NewScheduler(
-	testWorkflowsClient testworkflowsv1.Interface,
-	testWorkflowTemplatesClient testworkflowsv1.TestWorkflowTemplatesInterface,
+	testWorkflowsClient TestWorkflowFetcherClient,
+	testWorkflowTemplatesClient TestWorkflowTemplateFetcherClient,
 	resultsRepository testworkflow.Repository,
 	outputRepository testworkflow.OutputRepository,
 	globalTemplateName string,

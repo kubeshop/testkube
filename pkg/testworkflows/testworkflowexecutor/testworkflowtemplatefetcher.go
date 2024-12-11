@@ -7,18 +7,24 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
-	testworkflowsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testworkflows/v1"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowresolver"
 )
 
+// TODO: use testkube.* objects instead?
+// TODO: Unify interface better
+type TestWorkflowTemplateFetcherClient interface {
+	List(selector string) (*testworkflowsv1.TestWorkflowTemplateList, error)
+	Get(name string) (*testworkflowsv1.TestWorkflowTemplate, error)
+}
+
 type testWorkflowTemplateFetcher struct {
-	client           testworkflowsclientv1.TestWorkflowTemplatesInterface
+	client           TestWorkflowTemplateFetcherClient
 	cache            map[string]*testworkflowsv1.TestWorkflowTemplate
 	prefetchedLabels []map[string]string
 }
 
 func NewTestWorkflowTemplateFetcher(
-	client testworkflowsclientv1.TestWorkflowTemplatesInterface,
+	client TestWorkflowTemplateFetcherClient,
 ) *testWorkflowTemplateFetcher {
 	return &testWorkflowTemplateFetcher{
 		client: client,
