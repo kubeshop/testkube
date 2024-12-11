@@ -951,6 +951,7 @@ func MapStepParallelAPIToKube(v testkube.TestWorkflowStepParallel) testworkflows
 			Setup: common.MapSlice(v.Setup, MapStepAPIToKube),
 			Steps: common.MapSlice(v.Steps, MapStepAPIToKube),
 			After: common.MapSlice(v.After, MapStepAPIToKube),
+			Pvcs:  common.MapMap(v.Pvcs, MapPvcConfigAPIToKube),
 		},
 		StepControl: testworkflowsv1.StepControl{
 			Paused:   v.Paused,
@@ -995,6 +996,7 @@ func MapIndependentStepParallelAPIToKube(v testkube.TestWorkflowIndependentStepP
 			Setup: common.MapSlice(v.Setup, MapIndependentStepAPIToKube),
 			Steps: common.MapSlice(v.Steps, MapIndependentStepAPIToKube),
 			After: common.MapSlice(v.After, MapIndependentStepAPIToKube),
+			Pvcs:  common.MapMap(v.Pvcs, MapPvcConfigAPIToKube),
 		},
 		StepControl: testworkflowsv1.StepControl{
 			Paused:   v.Paused,
@@ -1234,6 +1236,7 @@ func MapSpecAPIToKube(v testkube.TestWorkflowSpec) testworkflowsv1.TestWorkflowS
 		Setup:    common.MapSlice(v.Setup, MapStepAPIToKube),
 		Steps:    common.MapSlice(v.Steps, MapStepAPIToKube),
 		After:    common.MapSlice(v.After, MapStepAPIToKube),
+		Pvcs:     common.MapMap(v.Pvcs, MapPvcConfigAPIToKube),
 	}
 }
 
@@ -1253,6 +1256,7 @@ func MapTemplateSpecAPIToKube(v testkube.TestWorkflowTemplateSpec) testworkflows
 		Setup:    common.MapSlice(v.Setup, MapIndependentStepAPIToKube),
 		Steps:    common.MapSlice(v.Steps, MapIndependentStepAPIToKube),
 		After:    common.MapSlice(v.After, MapIndependentStepAPIToKube),
+		Pvcs:     common.MapMap(v.Pvcs, MapPvcConfigAPIToKube),
 	}
 }
 
@@ -1483,5 +1487,16 @@ func MapTestWorkflowAPIToKubeTestWorkflowSummary(v testkube.TestWorkflow) testwo
 func MapTestWorkflowTagSchemaAPIToKube(v testkube.TestWorkflowTagSchema) testworkflowsv1.TestWorkflowTagSchema {
 	return testworkflowsv1.TestWorkflowTagSchema{
 		Tags: v.Tags,
+	}
+}
+
+func MapPvcConfigAPIToKube(v testkube.TestWorkflowPvcConfig) testworkflowsv1.TestWorkflowPvcConfig {
+	return testworkflowsv1.TestWorkflowPvcConfig{
+		Shared:           v.Shared,
+		AccessModes:      v.AccessModes,
+		VolumeMode:       v.VolumeMode,
+		Resources:        common.MapPtr(v.Resources, MapResourcesAPIToKube),
+		StorageClassName: v.StorageClassName,
+		Selector:         common.MapPtr(v.Selector, MapLabelSelectorAPIToKube),
 	}
 }
