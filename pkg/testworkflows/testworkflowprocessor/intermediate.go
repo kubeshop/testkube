@@ -21,6 +21,7 @@ type Intermediate interface {
 	ConfigMaps() []corev1.ConfigMap
 	Secrets() []corev1.Secret
 	Volumes() []corev1.Volume
+	Pvcs() []corev1.PersistentVolumeClaim
 
 	AppendJobConfig(cfg *testworkflowsv1.JobConfig) Intermediate
 	AppendPodConfig(cfg *testworkflowsv1.PodConfig) Intermediate
@@ -28,6 +29,7 @@ type Intermediate interface {
 	AddConfigMap(configMap corev1.ConfigMap) Intermediate
 	AddSecret(secret corev1.Secret) Intermediate
 	AddVolume(volume corev1.Volume) Intermediate
+	AddPvc(pvc corev1.PersistentVolumeClaim) Intermediate
 
 	AddEmptyDirVolume(source *corev1.EmptyDirVolumeSource, mountPath string) corev1.VolumeMount
 
@@ -47,8 +49,9 @@ type intermediate struct {
 	Job testworkflowsv1.JobConfig `expr:"include"`
 
 	// Actual Kubernetes resources to use
-	Secs []corev1.Secret    `expr:"force"`
-	Cfgs []corev1.ConfigMap `expr:"force"`
+	Secs []corev1.Secret                `expr:"force"`
+	Cfgs []corev1.ConfigMap             `expr:"force"`
+	Ps   []corev1.PersistentVolumeClaim `expr:"force"`
 
 	// Storing files
 	Files ConfigMapFiles `expr:"include"`
@@ -87,6 +90,10 @@ func (s *intermediate) Volumes() []corev1.Volume {
 	return append(s.Pod.Volumes, s.Files.Volumes()...)
 }
 
+func (s *intermediate) Pvcs() []corev1.PersistentVolumeClaim {
+	return s.Ps
+}
+
 func (s *intermediate) AppendJobConfig(cfg *testworkflowsv1.JobConfig) Intermediate {
 	s.Job = *testworkflowresolver.MergeJobConfig(&s.Job, cfg)
 	return s
@@ -99,6 +106,11 @@ func (s *intermediate) AppendPodConfig(cfg *testworkflowsv1.PodConfig) Intermedi
 
 func (s *intermediate) AddVolume(volume corev1.Volume) Intermediate {
 	s.Pod.Volumes = append(s.Pod.Volumes, volume)
+	return s
+}
+
+func (s *intermediate) AddPvc(pvc corev1.PersistentVolumeClaim) Intermediate {
+	s.Ps = append(s.Ps, pvc)
 	return s
 }
 

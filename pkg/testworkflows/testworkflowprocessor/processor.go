@@ -162,6 +162,16 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		}
 	}
 
+	// Finalize Pvcs
+	pvcs := layer.Pvcs()
+	for i := range pvcs {
+		AnnotateControlledBy(&pvcs[i], options.Config.Resource.RootId, options.Config.Resource.Id)
+		err = expressions.FinalizeForce(&pvcs[i], machines...)
+		if err != nil {
+			return nil, errors.Wrap(err, "finalizing Pvc")
+		}
+	}
+
 	// Finalize Secrets
 	secrets := append(layer.Secrets(), options.Secrets...)
 	for i := range secrets {
@@ -420,6 +430,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	bundle = &Bundle{
 		ConfigMaps:    configMaps,
 		Secrets:       secrets,
+		Pvcs:          pvcs,
 		Job:           jobSpec,
 		Signature:     sig,
 		FullSignature: fullSig,

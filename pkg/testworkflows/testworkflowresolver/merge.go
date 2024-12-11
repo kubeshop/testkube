@@ -12,6 +12,7 @@ import (
 	"maps"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
@@ -412,5 +413,37 @@ func MergeTags(dst, src map[string]string) map[string]string {
 		maps.Copy(dst, src)
 	}
 
+	return dst
+}
+
+func MergePvcConfig(dst, include *testworkflowsv1.TestWorkflowPvcConfig) *testworkflowsv1.TestWorkflowPvcConfig {
+	if dst == nil {
+		return include
+	} else if include == nil {
+		return dst
+	}
+	if include.Shared {
+		dst.Shared = include.Shared
+	}
+	dst.AccessModes = append(dst.AccessModes, include.AccessModes...)
+	if include.VolumeMode != "" {
+		dst.VolumeMode = include.VolumeMode
+	}
+	dst.Resources = MergeResources(dst.Resources, include.Resources)
+	if include.StorageClassName != "" {
+		dst.StorageClassName = include.StorageClassName
+	}
+	dst.Selector = MergeLabelSelector(dst.Selector, include.Selector)
+	return dst
+}
+
+func MergeLabelSelector(dst, include *metav1.LabelSelector) *metav1.LabelSelector {
+	if dst == nil {
+		return include
+	} else if include == nil {
+		return dst
+	}
+	dst.MatchLabels = common.MergeMaps(dst.MatchLabels, include.MatchLabels)
+	dst.MatchExpressions = append(dst.MatchExpressions, include.MatchExpressions...)
 	return dst
 }
