@@ -915,6 +915,7 @@ func MapStepParallelKubeToAPI(v testworkflowsv1.StepParallel) testkube.TestWorkf
 		Run:         common.MapPtr(v.Run, MapStepRunKubeToAPI),
 		Execute:     common.MapPtr(v.Execute, MapStepExecuteKubeToAPI),
 		Artifacts:   common.MapPtr(v.Artifacts, MapStepArtifactsKubeToAPI),
+		Pvcs:        common.MapMap(v.Pvcs, MapPvcConfigKubeToAPI),
 	}
 }
 
@@ -948,6 +949,7 @@ func MapIndependentStepParallelKubeToAPI(v testworkflowsv1.IndependentStepParall
 		Run:         common.MapPtr(v.Run, MapStepRunKubeToAPI),
 		Execute:     common.MapPtr(v.Execute, MapStepExecuteKubeToAPI),
 		Artifacts:   common.MapPtr(v.Artifacts, MapStepArtifactsKubeToAPI),
+		Pvcs:        common.MapMap(v.Pvcs, MapPvcConfigKubeToAPI),
 	}
 }
 
@@ -1134,6 +1136,7 @@ func MapSpecKubeToAPI(v testworkflowsv1.TestWorkflowSpec) testkube.TestWorkflowS
 		After:     common.MapSlice(v.After, MapStepKubeToAPI),
 		Events:    common.MapSlice(v.Events, MapEventKubeToAPI),
 		Execution: common.MapPtr(v.Execution, MapTestWorkflowTagSchemaKubeToAPI),
+		Pvcs:      common.MapMap(v.Pvcs, MapPvcConfigKubeToAPI),
 	}
 }
 
@@ -1150,6 +1153,7 @@ func MapTemplateSpecKubeToAPI(v testworkflowsv1.TestWorkflowTemplateSpec) testku
 		After:     common.MapSlice(v.After, MapIndependentStepKubeToAPI),
 		Events:    common.MapSlice(v.Events, MapEventKubeToAPI),
 		Execution: common.MapPtr(v.Execution, MapTestWorkflowTagSchemaKubeToAPI),
+		Pvcs:      common.MapMap(v.Pvcs, MapPvcConfigKubeToAPI),
 	}
 }
 
@@ -1204,5 +1208,16 @@ func MapTemplateListKubeToAPI(v *testworkflowsv1.TestWorkflowTemplateList) []tes
 func MapTestWorkflowTagSchemaKubeToAPI(v testworkflowsv1.TestWorkflowTagSchema) testkube.TestWorkflowTagSchema {
 	return testkube.TestWorkflowTagSchema{
 		Tags: v.Tags,
+	}
+}
+
+func MapPvcConfigKubeToAPI(v testworkflowsv1.TestWorkflowPvcConfig) testkube.TestWorkflowPvcConfig {
+	return testkube.TestWorkflowPvcConfig{
+		Shared:           v.Shared,
+		AccessModes:      v.AccessModes,
+		VolumeMode:       v.VolumeMode,
+		Resources:        common.MapPtr(v.Resources, MapResourcesKubeToAPI),
+		StorageClassName: v.StorageClassName,
+		Selector:         common.MapPtr(v.Selector, MapSelectorToAPI),
 	}
 }
