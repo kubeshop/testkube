@@ -364,12 +364,7 @@ func getTimestampLength(line string) int {
 	return 0
 }
 
-func watchTestWorkflowLogs(id string, signature []testkube.TestWorkflowSignature, client apiclientv1.Client) (result *testkube.TestWorkflowResult, err error) {
-	ui.Info("Getting logs from test workflow job", id)
-
-	notifications, err := client.GetTestWorkflowExecutionNotifications(id)
-	ui.ExitOnError("getting logs from executor", err)
-
+func printTestWorkflowLogs(signature []testkube.TestWorkflowSignature, notifications chan testkube.TestWorkflowExecutionNotification) (result *testkube.TestWorkflowResult) {
 	steps := flattenSignatures(signature)
 
 	var isLineBeginning = true
@@ -389,7 +384,7 @@ func watchTestWorkflowLogs(id string, signature []testkube.TestWorkflowSignature
 	}
 
 	ui.NL()
-	return result, err
+	return result
 }
 
 func watchTestWorkflowLogs(id string, signature []testkube.TestWorkflowSignature, client apiclientv1.Client) (*testkube.TestWorkflowResult, error) {
