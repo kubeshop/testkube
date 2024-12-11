@@ -24,6 +24,13 @@ const (
 	SaveResultRetryBaseDelay   = 300 * time.Millisecond
 )
 
+//go:generate mockgen -destination=./mock_scheduler.go -package=testworkflowexecutor "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor" Scheduler
+type Scheduler interface {
+	Schedule(ctx context.Context, sensitiveDataHandler SensitiveDataHandler, req *cloud.ScheduleRequest) (<-chan *testkube.TestWorkflowExecution, error)
+	CriticalError(execution *testkube.TestWorkflowExecution, name string, err error) error
+	Start(execution *testkube.TestWorkflowExecution) error
+}
+
 type scheduler struct {
 	logger                      *zap.SugaredLogger
 	testWorkflowsClient         testworkflowsv1.Interface
@@ -43,7 +50,7 @@ func NewScheduler(
 	globalTemplateName string,
 	organizationId string,
 	defaultEnvironmentId string,
-) *scheduler {
+) Scheduler {
 	return &scheduler{
 		logger:                      log.DefaultLogger,
 		testWorkflowsClient:         testWorkflowsClient,

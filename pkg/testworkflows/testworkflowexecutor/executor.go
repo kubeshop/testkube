@@ -58,7 +58,7 @@ type executor struct {
 	dashboardURI  string
 	runner        runner.Runner
 	proContext    *config.ProContext
-	scheduler     *scheduler
+	scheduler     Scheduler
 }
 
 func New(
@@ -122,6 +122,12 @@ func (e *executor) isDirect() bool {
 }
 
 func (e *executor) Execute(ctx context.Context, req *cloud.ScheduleRequest) TestWorkflowExecutionStream {
+	if req != nil {
+		req = common.Ptr(*req)
+		if req.EnvironmentId == "" {
+			req.EnvironmentId = e.defaultEnvironmentId
+		}
+	}
 	if e.isDirect() {
 		return e.executeDirect(ctx, req)
 	}
@@ -174,12 +180,6 @@ func (e *executor) executeDirect(ctx context.Context, req *cloud.ScheduleRequest
 		return resultStream
 	}
 
-	// Analyze the environment ID
-	environmentId := req.EnvironmentId
-	if environmentId == "" {
-		environmentId = e.defaultEnvironmentId
-	}
-
 	controlPlaneConfig := testworkflowconfig.ControlPlaneConfig{
 		DashboardUrl:   e.dashboardURI,
 		CDEventsTarget: e.cdEventsTarget,
@@ -223,7 +223,7 @@ func (e *executor) executeDirect(ctx context.Context, req *cloud.ScheduleRequest
 					DisableWebhooks: execution.DisableWebhooks,
 					Debug:           false,
 					OrganizationId:  e.organizationId,
-					EnvironmentId:   environmentId,
+					EnvironmentId:   req.EnvironmentId,
 					ParentIds:       parentIds,
 				},
 				Secrets:      sensitiveDataHandler.Get(execution.Id),
