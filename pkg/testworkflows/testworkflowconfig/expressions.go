@@ -1,6 +1,12 @@
 package testworkflowconfig
 
-import "github.com/kubeshop/testkube/pkg/expressions"
+import (
+	"strings"
+
+	corev1 "k8s.io/api/core/v1"
+
+	"github.com/kubeshop/testkube/pkg/expressions"
+)
 
 func CreateExecutionMachine(cfg *ExecutionConfig) expressions.Machine {
 	return expressions.NewMachine().
@@ -76,4 +82,18 @@ func CreateWorkerMachine(cfg *WorkerConfig) expressions.Machine {
 			"api.url": cfg.Connection.LocalApiUrl, // TODO: Delete
 		})
 	return expressions.CombinedMachines(machine)
+}
+
+func CreatePvcMachine(pvcs []corev1.PersistentVolumeClaim) expressions.Machine {
+	pvcMap := make(map[string]string)
+	for _, pvc := range pvcs {
+		name := pvc.Name
+		if index := strings.LastIndex(name, "-"); index != -1 {
+			name = name[:index]
+		}
+
+		pvcMap[name+".name"] = pvc.Name
+	}
+
+	return expressions.NewMachine().RegisterStringMap("pvcs", pvcMap)
 }

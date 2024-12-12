@@ -119,7 +119,8 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	machines = append(machines,
 		createSecretMachine(mapEnv),
 		testworkflowconfig.CreateWorkerMachine(&options.Config.Worker),
-		testworkflowconfig.CreateResourceMachine(&options.Config.Resource))
+		testworkflowconfig.CreateResourceMachine(&options.Config.Resource),
+		testworkflowconfig.CreatePvcMachine(layer.Pvcs()))
 
 	// Fetch resource root and resource ID
 	if options.Config.Resource.Id == "" {
