@@ -8678,6 +8678,10 @@ components:
             type: string
           readinessProbe:
             $ref: "#/components/schemas/Probe"
+          pvcs:
+            type: object
+            additionalProperties:
+              $ref: "#/components/schemas/TestWorkflowPvcConfig"
 
     TestWorkflowServiceSpec:
       type: object
@@ -10599,9 +10603,6 @@ components:
     TestWorkflowPvcConfig:
       type: object
       properties:
-        shared:
-          description: Specify whether the pvc should be shared between test workflow pods
-          type: boolean
         accessModes:
           description: 'Access mode for claim storage. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes'
           type: array
