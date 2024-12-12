@@ -373,6 +373,7 @@ func ConvertIndependentStepParallelToStepParallel(step testworkflowsv1.Independe
 			Setup:                common.MapSlice(step.TestWorkflowTemplateSpec.Setup, ConvertIndependentStepToStep),
 			Steps:                common.MapSlice(step.TestWorkflowTemplateSpec.Steps, ConvertIndependentStepToStep),
 			After:                common.MapSlice(step.TestWorkflowTemplateSpec.After, ConvertIndependentStepToStep),
+			Pvcs:                 step.TestWorkflowTemplateSpec.Pvcs,
 		},
 		StepControl:    step.StepControl,
 		StepOperations: step.StepOperations,
@@ -413,4 +414,16 @@ func MergeTags(dst, src map[string]string) map[string]string {
 	}
 
 	return dst
+}
+
+func ConvertTestWorkflowPvcConfigToPersistentVolumeClaimSpec(pvc testworkflowsv1.TestWorkflowPvcConfig) corev1.PersistentVolumeClaimSpec {
+	return corev1.PersistentVolumeClaimSpec{
+		AccessModes: common.MapSlice(pvc.AccessModes, func(s string) corev1.PersistentVolumeAccessMode {
+			return corev1.PersistentVolumeAccessMode(s)
+		}),
+		Selector: pvc.Selector,
+		//			Resources: pvc.Resources.Limits,
+		StorageClassName: &pvc.StorageClassName,
+		VolumeMode:       (*corev1.PersistentVolumeMode)(&pvc.VolumeMode),
+	}
 }

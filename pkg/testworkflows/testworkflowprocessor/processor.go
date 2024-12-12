@@ -23,6 +23,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowresolver"
 )
 
 //go:generate mockgen -destination=./mock_processor.go -package=testworkflowprocessor "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor" Processor
@@ -106,7 +107,8 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	// Initialize intermediate layer
 	layer := NewIntermediate().
 		AppendPodConfig(workflow.Spec.Pod).
-		AppendJobConfig(workflow.Spec.Job)
+		AppendJobConfig(workflow.Spec.Job).
+		AppendPvc(common.MapMap(workflow.Spec.Pvcs, testworkflowresolver.ConvertTestWorkflowPvcConfigToPersistentVolumeClaimSpec))
 	layer.ContainerDefaults().
 		ApplyCR(constants.DefaultContainerConfig.DeepCopy()).
 		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, constants.DefaultInternalPath)).
@@ -159,6 +161,16 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		err = expressions.FinalizeForce(&configMaps[i], machines...)
 		if err != nil {
 			return nil, errors.Wrap(err, "finalizing ConfigMap")
+		}
+	}
+
+	// Finalize Pvcs
+	pvcs := layer.Pvcs()
+	for i := range pvcs {
+		AnnotateControlledBy(&pvcs[i], options.Config.Resource.RootId, options.Config.Resource.Id)
+		err = expressions.FinalizeForce(&pvcs[i], machines...)
+		if err != nil {
+			return nil, errors.Wrap(err, "finalizing Pvc")
 		}
 	}
 
@@ -420,6 +432,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	bundle = &Bundle{
 		ConfigMaps:    configMaps,
 		Secrets:       secrets,
+		Pvcs:          pvcs,
 		Job:           jobSpec,
 		Signature:     sig,
 		FullSignature: fullSig,

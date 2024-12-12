@@ -156,6 +156,7 @@ func NewServicesCmd() *cobra.Command {
 						Steps: []testworkflowsv1.Step{
 							{StepOperations: testworkflowsv1.StepOperations{Run: common.Ptr(svcSpec.StepRun)}},
 						},
+						Pvcs: svcSpec.Pvcs,
 					}
 					spec.Steps[0].Run.ContainerConfig = testworkflowsv1.ContainerConfig{}
 

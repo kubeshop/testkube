@@ -42,5 +42,6 @@ type TestWorkflowServiceSpec struct {
 	// matrix of parameters to spawn instances
 	Matrix map[string]interface{} `json:"matrix,omitempty"`
 	// parameters that should be distributed across sharded instances
-	Shards map[string]interface{} `json:"shards,omitempty"`
+	Shards map[string]interface{}           `json:"shards,omitempty"`
+	Pvcs   map[string]TestWorkflowPvcConfig `json:"pvcs,omitempty"`
 }

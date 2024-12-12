@@ -27,6 +27,7 @@ type BundleOptions struct {
 type Bundle struct {
 	Secrets       []corev1.Secret
 	ConfigMaps    []corev1.ConfigMap
+	Pvcs          []corev1.PersistentVolumeClaim
 	Job           batchv1.Job
 	Signature     []stage.Signature
 	FullSignature []stage.Signature
@@ -50,6 +51,9 @@ func (b *Bundle) SetGroupId(groupId string) {
 	for i := range b.Secrets {
 		AnnotateGroupId(&b.Secrets[i], groupId)
 	}
+	for i := range b.Pvcs {
+		AnnotateGroupId(&b.Pvcs[i], groupId)
+	}
 }
 
 func (b *Bundle) Deploy(ctx context.Context, clientSet kubernetes.Interface, namespace string) (err error) {
@@ -68,6 +72,13 @@ func (b *Bundle) Deploy(ctx context.Context, clientSet kubernetes.Interface, nam
 			return errors.Wrap(err, "failed to deploy config maps")
 		}
 	}
+	for _, item := range b.Pvcs {
+		_, err = clientSet.CoreV1().PersistentVolumeClaims(namespace).Create(ctx, &item, metav1.CreateOptions{})
+		if err != nil {
+			return errors.Wrap(err, "failed to deploy pvcs")
+		}
+	}
+
 	_, err = clientSet.BatchV1().Jobs(namespace).Create(ctx, &b.Job, metav1.CreateOptions{})
 	return errors.Wrap(err, "failed to deploy job")
 }

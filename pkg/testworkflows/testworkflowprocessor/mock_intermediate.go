@@ -150,6 +150,20 @@ func (mr *MockIntermediateMockRecorder) AppendPodConfig(arg0 interface{}) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AppendPodConfig", reflect.TypeOf((*MockIntermediate)(nil).AppendPodConfig), arg0)
 }
 
+// AppendPvc mocks base method.
+func (m *MockIntermediate) AppendPvc(arg0 map[string]v10.PersistentVolumeClaimSpec) Intermediate {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AppendPvc", arg0)
+	ret0, _ := ret[0].(Intermediate)
+	return ret0
+}
+
+// AppendPvc indicates an expected call of AppendPvc.
+func (mr *MockIntermediateMockRecorder) AppendPvc(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AppendPvc", reflect.TypeOf((*MockIntermediate)(nil).AppendPvc), arg0)
+}
+
 // ConfigMaps mocks base method.
 func (m *MockIntermediate) ConfigMaps() []v10.ConfigMap {
 	m.ctrl.T.Helper()
@@ -218,6 +232,20 @@ func (m *MockIntermediate) PodConfig() v1.PodConfig {
 func (mr *MockIntermediateMockRecorder) PodConfig() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PodConfig", reflect.TypeOf((*MockIntermediate)(nil).PodConfig))
+}
+
+// Pvcs mocks base method.
+func (m *MockIntermediate) Pvcs() []v10.PersistentVolumeClaim {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Pvcs")
+	ret0, _ := ret[0].([]v10.PersistentVolumeClaim)
+	return ret0
+}
+
+// Pvcs indicates an expected call of Pvcs.
+func (mr *MockIntermediateMockRecorder) Pvcs() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Pvcs", reflect.TypeOf((*MockIntermediate)(nil).Pvcs))
 }
 
 // Secrets mocks base method.
