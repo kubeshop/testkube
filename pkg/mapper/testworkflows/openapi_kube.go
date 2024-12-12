@@ -1100,6 +1100,7 @@ func MapIndependentServiceSpecAPIToKube(v testkube.TestWorkflowIndependentServic
 		Logs:           MapBoxedStringToString(v.Logs),
 		RestartPolicy:  testworkflowsv1.ServiceRestartPolicy(v.RestartPolicy),
 		ReadinessProbe: common.MapPtr(v.ReadinessProbe, MapProbeAPIToKube),
+		Pvcs:           common.MapMap(v.Pvcs, MapPvcConfigAPIToKube),
 	}
 }
 
@@ -1136,6 +1137,7 @@ func MapServiceSpecAPIToKube(v testkube.TestWorkflowServiceSpec) testworkflowsv1
 			Logs:           MapBoxedStringToString(v.Logs),
 			RestartPolicy:  testworkflowsv1.ServiceRestartPolicy(v.RestartPolicy),
 			ReadinessProbe: common.MapPtr(v.ReadinessProbe, MapProbeAPIToKube),
+			Pvcs:           common.MapMap(v.Pvcs, MapPvcConfigAPIToKube),
 		},
 	}
 }
@@ -1492,7 +1494,6 @@ func MapTestWorkflowTagSchemaAPIToKube(v testkube.TestWorkflowTagSchema) testwor
 
 func MapPvcConfigAPIToKube(v testkube.TestWorkflowPvcConfig) testworkflowsv1.TestWorkflowPvcConfig {
 	return testworkflowsv1.TestWorkflowPvcConfig{
-		Shared:           v.Shared,
 		AccessModes:      v.AccessModes,
 		VolumeMode:       v.VolumeMode,
 		Resources:        common.MapPtr(v.Resources, MapResourcesAPIToKube),
