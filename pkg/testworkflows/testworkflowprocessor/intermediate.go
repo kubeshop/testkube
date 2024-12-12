@@ -106,8 +106,14 @@ func (s *intermediate) AppendPodConfig(cfg *testworkflowsv1.PodConfig) Intermedi
 }
 
 func (s *intermediate) AppendPvc(cfg map[string]corev1.PersistentVolumeClaimSpec) Intermediate {
+	ref := s.NextRef()
 	for name, spec := range cfg {
-		s.Ps = append(s.Ps, corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: name}, Spec: spec})
+		s.Ps = append(s.Ps, corev1.PersistentVolumeClaim{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: fmt.Sprintf("%s-%s", name, ref),
+			},
+			Spec: spec,
+		})
 	}
 	return s
 }
