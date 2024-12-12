@@ -126,6 +126,7 @@ func InjectServiceTemplate(svc *testworkflowsv1.ServiceSpec, template testworkfl
 	svc.Pod = MergePodConfig(template.Spec.Pod, svc.Pod)
 	svc.Content = MergeContent(template.Spec.Content, svc.Content)
 	svc.ContainerConfig = *MergeContainerConfig(template.Spec.Container, &svc.ContainerConfig)
+	svc.Pvcs = MergeMap(template.Spec.Pvcs, svc.Pvcs)
 	return nil
 }
 

@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
@@ -25,11 +26,11 @@ type Intermediate interface {
 
 	AppendJobConfig(cfg *testworkflowsv1.JobConfig) Intermediate
 	AppendPodConfig(cfg *testworkflowsv1.PodConfig) Intermediate
+	AppendPvc(cfg map[string]corev1.PersistentVolumeClaimSpec) Intermediate
 
 	AddConfigMap(configMap corev1.ConfigMap) Intermediate
 	AddSecret(secret corev1.Secret) Intermediate
 	AddVolume(volume corev1.Volume) Intermediate
-	AddPvc(pvc corev1.PersistentVolumeClaim) Intermediate
 
 	AddEmptyDirVolume(source *corev1.EmptyDirVolumeSource, mountPath string) corev1.VolumeMount
 
@@ -104,13 +105,15 @@ func (s *intermediate) AppendPodConfig(cfg *testworkflowsv1.PodConfig) Intermedi
 	return s
 }
 
-func (s *intermediate) AddVolume(volume corev1.Volume) Intermediate {
-	s.Pod.Volumes = append(s.Pod.Volumes, volume)
+func (s *intermediate) AppendPvc(cfg map[string]corev1.PersistentVolumeClaimSpec) Intermediate {
+	for name, spec := range cfg {
+		s.Ps = append(s.Ps, corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: name}, Spec: spec})
+	}
 	return s
 }
 
-func (s *intermediate) AddPvc(pvc corev1.PersistentVolumeClaim) Intermediate {
-	s.Ps = append(s.Ps, pvc)
+func (s *intermediate) AddVolume(volume corev1.Volume) Intermediate {
+	s.Pod.Volumes = append(s.Pod.Volumes, volume)
 	return s
 }
 
