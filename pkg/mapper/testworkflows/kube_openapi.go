@@ -1216,9 +1216,9 @@ func MapTestWorkflowTagSchemaKubeToAPI(v testworkflowsv1.TestWorkflowTagSchema) 
 func MapPvcConfigKubeToAPI(v testworkflowsv1.TestWorkflowPvcConfig) testkube.TestWorkflowPvcConfig {
 	return testkube.TestWorkflowPvcConfig{
 		AccessModes:      v.AccessModes,
-		VolumeMode:       v.VolumeMode,
+		VolumeMode:       MapStringToBoxedString(v.VolumeMode),
 		Resources:        common.MapPtr(v.Resources, MapResourcesKubeToAPI),
-		StorageClassName: v.StorageClassName,
+		StorageClassName: MapStringToBoxedString(v.StorageClassName),
 		VolumeName:       v.VolumeName,
 		Selector:         common.MapPtr(v.Selector, MapSelectorToAPI),
 	}

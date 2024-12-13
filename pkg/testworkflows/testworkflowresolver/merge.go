@@ -426,8 +426,8 @@ func ConvertTestWorkflowPvcConfigToPersistentVolumeClaimSpec(pvc testworkflowsv1
 		Selector:         pvc.Selector,
 		Resources:        ConvertResourcesToVolumeResourceRequirements(pvc.Resources),
 		VolumeName:       pvc.VolumeName,
-		StorageClassName: &pvc.StorageClassName,
-		VolumeMode:       (*corev1.PersistentVolumeMode)(&pvc.VolumeMode),
+		StorageClassName: pvc.StorageClassName,
+		VolumeMode:       (*corev1.PersistentVolumeMode)(pvc.VolumeMode),
 	}
 }
 
