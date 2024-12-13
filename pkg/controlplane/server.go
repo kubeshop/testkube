@@ -117,6 +117,16 @@ func (s *Server) GetEventStream(_ *cloud.EventStreamRequest, srv cloud.TestKubeC
 	return nil
 }
 
+func (s *Server) GetRunnerRequests(srv cloud.TestKubeCloudAPI_GetRunnerRequestsServer) error {
+	// Do nothing - it doesn't need to send runner requests
+	<-srv.Context().Done()
+	return nil
+}
+
+func (s *Server) ObtainExecution(_ context.Context, req *cloud.ObtainExecutionRequest) (*cloud.ObtainExecutionResponse, error) {
+	return &cloud.ObtainExecutionResponse{Id: req.Id, EnvironmentId: req.EnvironmentId, Success: true}, nil
+}
+
 // TODO: Consider deleting that
 func (s *Server) GetTestWorkflowNotificationsStream(srv cloud.TestKubeCloudAPI_GetTestWorkflowNotificationsStreamServer) error {
 	ctx, cancel := context.WithCancel(srv.Context())

@@ -71,6 +71,8 @@ type Agent struct {
 	testWorkflowParallelStepNotificationsResponseBuffer chan *cloud.TestWorkflowParallelStepNotificationsResponse
 	testWorkflowParallelStepNotificationsFunc           func(ctx context.Context, executionID, ref string, workerIndex int) (<-chan testkube.TestWorkflowExecutionNotification, error)
 
+	runTestWorkflow func(environmentId, executionId string) error
+
 	events              chan testkube.Event
 	sendTimeout         time.Duration
 	receiveTimeout      time.Duration
@@ -99,6 +101,7 @@ func NewAgent(logger *zap.SugaredLogger,
 	proContext *config.ProContext,
 	dockerImageVersion string,
 	eventEmitter event.Interface,
+	runTestWorkflow func(environmentId, executionId string) error,
 ) (*Agent, error) {
 	return &Agent{
 		handler:                                 handler,
@@ -134,6 +137,7 @@ func NewAgent(logger *zap.SugaredLogger,
 		proContext:         proContext,
 		dockerImageVersion: dockerImageVersion,
 		eventEmitter:       eventEmitter,
+		runTestWorkflow:    runTestWorkflow,
 	}, nil
 }
 
@@ -204,6 +208,61 @@ func (ag *Agent) run(ctx context.Context) (err error) {
 	return err
 }
 
+// TODO: Move to another Agent instance (RunnerAgent)
+func (ag *Agent) runRunnerRequestsLoop(ctx context.Context) (err error) {
+	// Ignore when Control Plane doesn't support new executions
+	if !ag.proContext.NewExecutions {
+		return nil
+	}
+
+	if ag.proContext.APIKey != "" {
+		ctx = agentclient.AddAPIKeyMeta(ctx, ag.proContext.APIKey)
+	}
+
+	ctx = metadata.AppendToOutgoingContext(ctx, orgIdMeta, ag.proContext.OrgID)
+
+	// creates a new Stream from the client side. ctx is used for the lifetime of the stream.
+	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
+	stream, err := ag.client.GetRunnerRequests(ctx, opts...)
+	if err != nil {
+		ag.logger.Errorf("failed to read runner requests stream from Control Plane: %w", err)
+		return errors.Wrap(err, "failed to setup runner requests stream")
+	}
+
+	for {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		req, err := stream.Recv()
+		if err != nil {
+			// Ignore if it's not implemented in the Control Plane
+			if e, ok := err.(interface{ GRPCStatus() *status.Status }); ok && e.GRPCStatus().Code() == codes.Unimplemented {
+				return nil
+			}
+			return err
+		}
+
+		// Lock the execution for itself
+		resp, err := ag.client.ObtainExecution(ctx, &cloud.ObtainExecutionRequest{Id: req.Id}, opts...)
+		if err != nil {
+			ag.logger.Errorf("failed to obtain execution '%s/%s', from Control Plane: %w", req.EnvironmentId, req.Id, err)
+			continue
+		}
+
+		// Ignore if the resource has been locked before
+		if !resp.Success {
+			continue
+		}
+
+		// Continue
+		err = ag.runTestWorkflow(req.EnvironmentId, req.Id)
+		if err != nil {
+			ag.logger.Errorf("failed to run execution '%s/%s' from Control Plane: %w", req.EnvironmentId, req.Id, err)
+			continue
+		}
+	}
+}
+
 func (ag *Agent) runEventsReaderLoop(ctx context.Context) (err error) {
 	// Ignore when Control Plane doesn't support new executions
 	if !ag.proContext.NewExecutions {
@@ -221,7 +280,10 @@ func (ag *Agent) runEventsReaderLoop(ctx context.Context) (err error) {
 
 	// creates a new Stream from the client side. ctx is used for the lifetime of the stream.
 	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
-	stream, err := ag.client.GetEventStream(ctx, &cloud.EventStreamRequest{Accept: []*cloud.EventResource{{Id: "*", Type: "*"}}}, opts...)
+	stream, err := ag.client.GetEventStream(ctx, &cloud.EventStreamRequest{
+		EnvironmentId: ag.proContext.EnvID,
+		Accept:        []*cloud.EventResource{{Id: "*", Type: "*"}},
+	}, opts...)
 	if err != nil {
 		ag.logger.Errorf("failed to read events stream from Control Plane: %w", err)
 		return errors.Wrap(err, "failed to setup events stream")

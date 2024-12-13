@@ -22,6 +22,8 @@ service TestKubeCloudAPI {
     rpc GetCredential(CredentialRequest) returns (CredentialResponse);
     rpc GetEventStream(EventStreamRequest) returns (stream Event);
     rpc ScheduleExecution(ScheduleRequest) returns (stream ScheduleResponse);
+    rpc GetRunnerRequests(stream RunnerResponse) returns (stream RunnerRequest);
+    rpc ObtainExecution(ObtainExecutionRequest) returns (ObtainExecutionResponse);
 }
 
 enum LogsStreamRequestType {
@@ -216,12 +218,36 @@ message EventResource {
 }
 
 message EventStreamRequest {
+  string environment_id = 1;
   repeated EventResource accept = 2;
 }
 
 message Event {
   string id = 1;
-  EventResource resource = 2;
+  EventResource resource = 3;
   string type = 4;
   bytes data = 5;
+}
+
+message RunnerRequest {
+  string id = 1;
+  string environment_id = 2;
+}
+
+message RunnerResponse {
+  string id = 1;
+  string environment_id = 2;
+  bool obtained = 3;
+  optional string error = 4;
+}
+
+message ObtainExecutionRequest {
+  string id = 1;
+  string environment_id = 2;
+}
+
+message ObtainExecutionResponse {
+  string id = 1;
+  string environment_id = 2;
+  bool success = 3;
 }

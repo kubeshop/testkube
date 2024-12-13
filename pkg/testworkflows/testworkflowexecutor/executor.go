@@ -41,6 +41,7 @@ type TestWorkflowExecutionStream Stream[*testkube.TestWorkflowExecution]
 //go:generate mockgen -destination=./mock_executor.go -package=testworkflowexecutor "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor" TestWorkflowExecutor
 type TestWorkflowExecutor interface {
 	Execute(ctx context.Context, req *cloud.ScheduleRequest) TestWorkflowExecutionStream
+	Start(environmentId string, execution *testkube.TestWorkflowExecution, secrets map[string]map[string]string) error
 }
 
 type executor struct {
@@ -180,11 +181,6 @@ func (e *executor) executeDirect(ctx context.Context, req *cloud.ScheduleRequest
 		return resultStream
 	}
 
-	controlPlaneConfig := testworkflowconfig.ControlPlaneConfig{
-		DashboardUrl:   e.dashboardURI,
-		CDEventsTarget: e.cdEventsTarget,
-	}
-
 	ch2 := make(chan *testkube.TestWorkflowExecution, 1)
 	resultStream := newStream(ch2)
 	go func() {
@@ -208,53 +204,68 @@ func (e *executor) executeDirect(ctx context.Context, req *cloud.ScheduleRequest
 				continue
 			}
 
+			// Set the runner execution to environment ID as it's a legacy Agent
+			execution.RunnerId = req.EnvironmentId
+			if req.EnvironmentId == "" {
+				execution.RunnerId = "oss"
+			}
+
 			// Start the execution
-			parentIds := ""
-			if execution.RunningContext != nil && execution.RunningContext.Actor != nil {
-				parentIds = execution.RunningContext.Actor.ExecutionPath
-			}
-			result, err := e.runner.Execute(executionworkertypes.ExecuteRequest{
-				Execution: testworkflowconfig.ExecutionConfig{
-					Id:              execution.Id,
-					GroupId:         execution.GroupId,
-					Name:            execution.Name,
-					Number:          execution.Number,
-					ScheduledAt:     execution.ScheduledAt,
-					DisableWebhooks: execution.DisableWebhooks,
-					Debug:           false,
-					OrganizationId:  e.organizationId,
-					EnvironmentId:   req.EnvironmentId,
-					ParentIds:       parentIds,
-				},
-				Secrets:      sensitiveDataHandler.Get(execution.Id),
-				Workflow:     testworkflowmappers.MapTestWorkflowAPIToKube(*execution.ResolvedWorkflow),
-				ControlPlane: controlPlaneConfig,
-			})
-
-			// TODO: define "revoke" error by runner (?)
-			if err != nil {
-				err2 := e.scheduler.CriticalError(execution, "Failed to run execution", err)
-				err = errors2.Join(err, err2)
-				if err != nil {
-					log2.DefaultLogger.Errorw("failed to run and update execution", "executionId", execution.Id, "error", err)
-				}
-				e.emitter.Notify(testkube.NewEventStartTestWorkflow(execution))
-				e.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(execution))
-				continue
-			}
-
-			// Inform about execution start
-			e.emitter.Notify(testkube.NewEventStartTestWorkflow(execution))
-
-			// Apply the known data to temporary object.
-			execution.Namespace = result.Namespace
-			execution.Signature = result.Signature
-			execution.RunnerId = ""
-			if err = e.scheduler.Start(execution); err != nil {
-				log2.DefaultLogger.Errorw("failed to mark execution as initialized", "executionId", execution.Id, "error", err)
-			}
+			_ = e.Start(req.EnvironmentId, execution, sensitiveDataHandler.Get(execution.Id))
 		}
 	}()
 
 	return resultStream
+}
+
+func (e *executor) Start(environmentId string, execution *testkube.TestWorkflowExecution, secrets map[string]map[string]string) error {
+	controlPlaneConfig := testworkflowconfig.ControlPlaneConfig{
+		DashboardUrl:   e.dashboardURI,
+		CDEventsTarget: e.cdEventsTarget,
+	}
+
+	parentIds := ""
+	if execution.RunningContext != nil && execution.RunningContext.Actor != nil {
+		parentIds = execution.RunningContext.Actor.ExecutionPath
+	}
+	result, err := e.runner.Execute(executionworkertypes.ExecuteRequest{
+		Execution: testworkflowconfig.ExecutionConfig{
+			Id:              execution.Id,
+			GroupId:         execution.GroupId,
+			Name:            execution.Name,
+			Number:          execution.Number,
+			ScheduledAt:     execution.ScheduledAt,
+			DisableWebhooks: execution.DisableWebhooks,
+			Debug:           false,
+			OrganizationId:  e.organizationId,
+			EnvironmentId:   environmentId,
+			ParentIds:       parentIds,
+		},
+		Secrets:      secrets,
+		Workflow:     testworkflowmappers.MapTestWorkflowAPIToKube(*execution.ResolvedWorkflow),
+		ControlPlane: controlPlaneConfig,
+	})
+
+	// TODO: define "revoke" error by runner (?)
+	if err != nil {
+		err2 := e.scheduler.CriticalError(execution, "Failed to run execution", err)
+		err = errors2.Join(err, err2)
+		if err != nil {
+			log2.DefaultLogger.Errorw("failed to run and update execution", "executionId", execution.Id, "error", err)
+		}
+		e.emitter.Notify(testkube.NewEventStartTestWorkflow(execution))
+		e.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(execution))
+		return nil
+	}
+
+	// Inform about execution start
+	e.emitter.Notify(testkube.NewEventStartTestWorkflow(execution))
+
+	// Apply the known data to temporary object.
+	execution.Namespace = result.Namespace
+	execution.Signature = result.Signature
+	if err = e.scheduler.Start(execution); err != nil {
+		log2.DefaultLogger.Errorw("failed to mark execution as initialized", "executionId", execution.Id, "error", err)
+	}
+	return nil
 }

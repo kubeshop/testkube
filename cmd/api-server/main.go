@@ -376,6 +376,13 @@ func main() {
 		&proContext,
 		cfg.TestkubeDockerImageVersion,
 		eventsEmitter,
+		func(environmentId, executionId string) error {
+			execution, err := testWorkflowResultsRepository.Get(context.Background(), executionId)
+			if err != nil {
+				return err
+			}
+			return testWorkflowExecutor.Start(environmentId, &execution, nil)
+		},
 	)
 	commons.ExitOnError("Starting agent", err)
 	g.Go(func() error {

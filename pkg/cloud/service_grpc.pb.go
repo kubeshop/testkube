@@ -37,6 +37,8 @@ type TestKubeCloudAPIClient interface {
 	GetCredential(ctx context.Context, in *CredentialRequest, opts ...grpc.CallOption) (*CredentialResponse, error)
 	GetEventStream(ctx context.Context, in *EventStreamRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_GetEventStreamClient, error)
 	ScheduleExecution(ctx context.Context, in *ScheduleRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_ScheduleExecutionClient, error)
+	GetRunnerRequests(ctx context.Context, opts ...grpc.CallOption) (TestKubeCloudAPI_GetRunnerRequestsClient, error)
+	ObtainExecution(ctx context.Context, in *ObtainExecutionRequest, opts ...grpc.CallOption) (*ObtainExecutionResponse, error)
 }
 
 type testKubeCloudAPIClient struct {
@@ -358,6 +360,46 @@ func (x *testKubeCloudAPIScheduleExecutionClient) Recv() (*ScheduleResponse, err
 	return m, nil
 }
 
+func (c *testKubeCloudAPIClient) GetRunnerRequests(ctx context.Context, opts ...grpc.CallOption) (TestKubeCloudAPI_GetRunnerRequestsClient, error) {
+	stream, err := c.cc.NewStream(ctx, &TestKubeCloudAPI_ServiceDesc.Streams[9], "/cloud.TestKubeCloudAPI/GetRunnerRequests", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &testKubeCloudAPIGetRunnerRequestsClient{stream}
+	return x, nil
+}
+
+type TestKubeCloudAPI_GetRunnerRequestsClient interface {
+	Send(*RunnerResponse) error
+	Recv() (*RunnerRequest, error)
+	grpc.ClientStream
+}
+
+type testKubeCloudAPIGetRunnerRequestsClient struct {
+	grpc.ClientStream
+}
+
+func (x *testKubeCloudAPIGetRunnerRequestsClient) Send(m *RunnerResponse) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *testKubeCloudAPIGetRunnerRequestsClient) Recv() (*RunnerRequest, error) {
+	m := new(RunnerRequest)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *testKubeCloudAPIClient) ObtainExecution(ctx context.Context, in *ObtainExecutionRequest, opts ...grpc.CallOption) (*ObtainExecutionResponse, error) {
+	out := new(ObtainExecutionResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/ObtainExecution", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // TestKubeCloudAPIServer is the server API for TestKubeCloudAPI service.
 // All implementations must embed UnimplementedTestKubeCloudAPIServer
 // for forward compatibility
@@ -376,6 +418,8 @@ type TestKubeCloudAPIServer interface {
 	GetCredential(context.Context, *CredentialRequest) (*CredentialResponse, error)
 	GetEventStream(*EventStreamRequest, TestKubeCloudAPI_GetEventStreamServer) error
 	ScheduleExecution(*ScheduleRequest, TestKubeCloudAPI_ScheduleExecutionServer) error
+	GetRunnerRequests(TestKubeCloudAPI_GetRunnerRequestsServer) error
+	ObtainExecution(context.Context, *ObtainExecutionRequest) (*ObtainExecutionResponse, error)
 	mustEmbedUnimplementedTestKubeCloudAPIServer()
 }
 
@@ -418,6 +462,12 @@ func (UnimplementedTestKubeCloudAPIServer) GetEventStream(*EventStreamRequest, T
 }
 func (UnimplementedTestKubeCloudAPIServer) ScheduleExecution(*ScheduleRequest, TestKubeCloudAPI_ScheduleExecutionServer) error {
 	return status.Errorf(codes.Unimplemented, "method ScheduleExecution not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) GetRunnerRequests(TestKubeCloudAPI_GetRunnerRequestsServer) error {
+	return status.Errorf(codes.Unimplemented, "method GetRunnerRequests not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) ObtainExecution(context.Context, *ObtainExecutionRequest) (*ObtainExecutionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ObtainExecution not implemented")
 }
 func (UnimplementedTestKubeCloudAPIServer) mustEmbedUnimplementedTestKubeCloudAPIServer() {}
 
@@ -710,6 +760,50 @@ func (x *testKubeCloudAPIScheduleExecutionServer) Send(m *ScheduleResponse) erro
 	return x.ServerStream.SendMsg(m)
 }
 
+func _TestKubeCloudAPI_GetRunnerRequests_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(TestKubeCloudAPIServer).GetRunnerRequests(&testKubeCloudAPIGetRunnerRequestsServer{stream})
+}
+
+type TestKubeCloudAPI_GetRunnerRequestsServer interface {
+	Send(*RunnerRequest) error
+	Recv() (*RunnerResponse, error)
+	grpc.ServerStream
+}
+
+type testKubeCloudAPIGetRunnerRequestsServer struct {
+	grpc.ServerStream
+}
+
+func (x *testKubeCloudAPIGetRunnerRequestsServer) Send(m *RunnerRequest) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *testKubeCloudAPIGetRunnerRequestsServer) Recv() (*RunnerResponse, error) {
+	m := new(RunnerResponse)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func _TestKubeCloudAPI_ObtainExecution_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ObtainExecutionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).ObtainExecution(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/ObtainExecution",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).ObtainExecution(ctx, req.(*ObtainExecutionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // TestKubeCloudAPI_ServiceDesc is the grpc.ServiceDesc for TestKubeCloudAPI service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -728,6 +822,10 @@ var TestKubeCloudAPI_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetCredential",
 			Handler:    _TestKubeCloudAPI_GetCredential_Handler,
+		},
+		{
+			MethodName: "ObtainExecution",
+			Handler:    _TestKubeCloudAPI_ObtainExecution_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
@@ -781,6 +879,12 @@ var TestKubeCloudAPI_ServiceDesc = grpc.ServiceDesc{
 			StreamName:    "ScheduleExecution",
 			Handler:       _TestKubeCloudAPI_ScheduleExecution_Handler,
 			ServerStreams: true,
+		},
+		{
+			StreamName:    "GetRunnerRequests",
+			Handler:       _TestKubeCloudAPI_GetRunnerRequests_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
 		},
 	},
 	Metadata: "proto/service.proto",
