@@ -149,7 +149,7 @@ spec:
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: expected-fail-timeout
+  name: expected-fail-timeout-activedeadlineseconds
   labels:
     core-tests: expected-fail
 spec:
@@ -179,6 +179,38 @@ spec:
       env:
       - name: K6_SYSTEM_ENV
         value: K6_SYSTEM_ENV_value
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-timeout-step
+  labels:
+    core-tests: workflows
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/playwright/executor-tests/playwright-project
+  container:
+    image: mcr.microsoft.com/playwright:v1.32.3-focal
+    resources:
+      requests:
+        cpu: 2
+        memory: 2Gi
+    workingDir: /data/repo/test/playwright/executor-tests/playwright-project
+  steps:
+  - name: Install dependencies
+    shell: "npm ci"
+  - name: Run tests
+    timeout: 1s
+    shell: "npx playwright test"
+  - name: Save artifacts
+    workingDir: /data/repo/test/playwright/executor-tests/playwright-project
+    artifacts:
+      paths:
+      - playwright-report/**/*
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow

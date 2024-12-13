@@ -52,10 +52,11 @@ spec:
   - name: Install dependencies
     shell: "npm ci"
   - name: Run tests
-    shell: "npx playwright test --output /data/artifacts"
-    env:
-    - name: PLAYWRIGHT_HTML_REPORT
-      value: /data/artifacts/playwright-report
+    run:
+      shell: "npx playwright test --output /data/artifacts"
+      env:
+      - name: PLAYWRIGHT_HTML_REPORT
+        value: /data/artifacts/playwright-report
     steps:
     - name: Save artifacts
       workingDir: /data/artifacts
