@@ -10618,6 +10618,9 @@ components:
         storageClassName:
           description: 'Storage class name specifies the name of a StorageClass. More info: https://kubernetes.io/docs/concepts/storage/storage-classes/'
           type: string
+        volumeName:
+          description: 'Volume name is used to identify the volume'
+          type: string
         selector:
           description: Only the volumes whose labels match the selector can be bound to the claim
           $ref: "#/components/schemas/LabelSelector"

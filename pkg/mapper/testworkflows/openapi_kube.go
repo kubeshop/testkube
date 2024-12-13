@@ -1498,6 +1498,7 @@ func MapPvcConfigAPIToKube(v testkube.TestWorkflowPvcConfig) testworkflowsv1.Tes
 		VolumeMode:       v.VolumeMode,
 		Resources:        common.MapPtr(v.Resources, MapResourcesAPIToKube),
 		StorageClassName: v.StorageClassName,
+		VolumeName:       v.VolumeName,
 		Selector:         common.MapPtr(v.Selector, MapLabelSelectorAPIToKube),
 	}
 }
