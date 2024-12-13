@@ -11,12 +11,10 @@ package testkube
 
 type TestWorkflowPvcConfig struct {
 	// Access mode for claim storage. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes
-	AccessModes []string `json:"accessModes,omitempty"`
-	// Volume mode indicates the consumption of the volume as either a filesystem or block device. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes/#volume-mode
-	VolumeMode string                 `json:"volumeMode,omitempty"`
-	Resources  *TestWorkflowResources `json:"resources,omitempty"`
-	// Storage class name specifies the name of a StorageClass. More info: https://kubernetes.io/docs/concepts/storage/storage-classes/
-	StorageClassName string `json:"storageClassName,omitempty"`
+	AccessModes      []string               `json:"accessModes,omitempty"`
+	VolumeMode       *BoxedString           `json:"volumeMode,omitempty"`
+	Resources        *TestWorkflowResources `json:"resources,omitempty"`
+	StorageClassName *BoxedString           `json:"storageClassName,omitempty"`
 	// Volume name is used to identify the volume
 	VolumeName string         `json:"volumeName,omitempty"`
 	Selector   *LabelSelector `json:"selector,omitempty"`

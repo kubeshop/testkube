@@ -10611,13 +10611,13 @@ components:
         volumeMode:
           description: 'Volume mode indicates the consumption of the volume as either a filesystem or block device.
             More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes/#volume-mode'
-          type: string
+          $ref: "#/components/schemas/BoxedString"
         resources:
           description: 'Resources required for pvc'
           $ref: "#/components/schemas/TestWorkflowResources"
         storageClassName:
           description: 'Storage class name specifies the name of a StorageClass. More info: https://kubernetes.io/docs/concepts/storage/storage-classes/'
-          type: string
+          $ref: "#/components/schemas/BoxedString"
         volumeName:
           description: 'Volume name is used to identify the volume'
           type: string
