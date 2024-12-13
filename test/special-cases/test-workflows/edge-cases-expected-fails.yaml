@@ -185,7 +185,7 @@ kind: TestWorkflow
 metadata:
   name: expected-fail-timeout-step
   labels:
-    core-tests: workflows
+    core-tests: expected-fail
 spec:
   content:
     git:
