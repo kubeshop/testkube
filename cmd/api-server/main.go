@@ -25,6 +25,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/event/kind/testworkflowexecutiontelemetry"
 	"github.com/kubeshop/testkube/pkg/event/kind/webhook"
 	ws "github.com/kubeshop/testkube/pkg/event/kind/websocket"
+	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	runner2 "github.com/kubeshop/testkube/pkg/runner"
 	"github.com/kubeshop/testkube/pkg/secretmanager"
 	"github.com/kubeshop/testkube/pkg/server"
@@ -134,7 +135,7 @@ func main() {
 
 	inspector := commons.CreateImageInspector(cfg, configMapClient, secretClient)
 
-	var testWorkflowsClient testworkflowsclientv1.Interface
+	var testWorkflowsClient testworkflowclient.TestWorkflowClient
 	var testWorkflowTemplatesClient testworkflowsclientv1.TestWorkflowTemplatesInterface
 
 	var grpcClient cloud.TestKubeCloudAPIClient
@@ -164,10 +165,10 @@ func main() {
 	artifactStorage := cloudartifacts.NewCloudArtifactsStorage(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
 
 	if mode == common.ModeAgent && cfg.WorkflowStorage == "control-plane" {
-		testWorkflowsClient = cloudtestworkflow.NewCloudTestWorkflowRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
+		testWorkflowsClient = testworkflowclient.NewCloudTestWorkflowClient(grpcConn, cfg.TestkubeProAPIKey)
 		testWorkflowTemplatesClient = cloudtestworkflow.NewCloudTestWorkflowTemplateRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
 	} else {
-		testWorkflowsClient = testworkflowsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
+		testWorkflowsClient = testworkflowclient.NewKubernetesTestWorkflowClient(kubeClient, cfg.TestkubeNamespace)
 		testWorkflowTemplatesClient = testworkflowsclientv1.NewTestWorkflowTemplatesClient(kubeClient, cfg.TestkubeNamespace)
 	}
 
@@ -342,6 +343,7 @@ func main() {
 		webhooksClient,
 		testTriggersClient,
 		testWorkflowsClient,
+		testworkflowsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace),
 		testWorkflowTemplatesClient,
 		configMapConfig,
 		secretManager,

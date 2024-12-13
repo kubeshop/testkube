@@ -16,6 +16,7 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/log"
+	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -281,20 +282,27 @@ func (s *Service) getTestSuites(t *testtriggersv1.TestTrigger) ([]testsuitesv3.T
 	return testSuites, nil
 }
 
+func (s *Service) getEnvironmentId() string {
+	if s.proContext != nil {
+		return s.proContext.EnvID
+	}
+	return ""
+}
+
 func (s *Service) getTestWorkflows(t *testtriggersv1.TestTrigger) ([]testworkflowsv1.TestWorkflow, error) {
 	var testWorkflows []testworkflowsv1.TestWorkflow
 	if t.Spec.TestSelector.Name != "" {
 		s.logger.Debugf("trigger service: executor component: fetching testworkflowsv3.TestWorkflow with name %s", t.Spec.TestSelector.Name)
-		testWorkflow, err := s.testWorkflowsClient.Get(t.Spec.TestSelector.Name)
+		testWorkflow, err := s.testWorkflowsClient.Get(context.Background(), s.getEnvironmentId(), t.Spec.TestSelector.Name)
 		if err != nil {
 			return nil, err
 		}
-		testWorkflows = append(testWorkflows, *testWorkflow)
+		testWorkflows = append(testWorkflows, *testworkflows.MapAPIToKube(testWorkflow))
 	}
 
 	if t.Spec.TestSelector.NameRegex != "" {
 		s.logger.Debugf("trigger service: executor component: fetching testworkflosv1.TestWorkflow with name regex %s", t.Spec.TestSelector.NameRegex)
-		testWorkflowsList, err := s.testWorkflowsClient.List("")
+		testWorkflowsList, err := s.testWorkflowsClient.List(context.Background(), s.getEnvironmentId(), nil)
 		if err != nil {
 			return nil, err
 		}
@@ -304,25 +312,25 @@ func (s *Service) getTestWorkflows(t *testtriggersv1.TestTrigger) ([]testworkflo
 			return nil, err
 		}
 
-		for i := range testWorkflowsList.Items {
-			if re.MatchString(testWorkflowsList.Items[i].Name) {
-				testWorkflows = append(testWorkflows, testWorkflowsList.Items[i])
+		for i := range testWorkflowsList {
+			if re.MatchString(testWorkflowsList[i].Name) {
+				testWorkflows = append(testWorkflows, *testworkflows.MapAPIToKube(&testWorkflowsList[i]))
 			}
 		}
 	}
 
 	if t.Spec.TestSelector.LabelSelector != nil {
-		selector, err := metav1.LabelSelectorAsSelector(t.Spec.TestSelector.LabelSelector)
-		if err != nil {
-			return nil, errors.WithMessagef(err, "error creating selector from test resource label selector")
+		if len(t.Spec.TestSelector.LabelSelector.MatchExpressions) > 0 {
+			return nil, errors.New("error creating selector from test resource label selector: MatchExpressions not supported")
 		}
-		stringifiedSelector := selector.String()
-		s.logger.Debugf("trigger service: executor component: fetching testworkflowsv1.TestWorkflow with label %s", stringifiedSelector)
-		testWorkflowsList, err := s.testWorkflowsClient.List(stringifiedSelector)
+		s.logger.Debugf("trigger service: executor component: fetching testworkflowsv1.TestWorkflow with label %s", t.Spec.TestSelector.LabelSelector.MatchLabels)
+		testWorkflowsList, err := s.testWorkflowsClient.List(context.Background(), s.getEnvironmentId(), t.Spec.TestSelector.LabelSelector.MatchLabels)
 		if err != nil {
 			return nil, err
 		}
-		testWorkflows = append(testWorkflows, testWorkflowsList.Items...)
+		for i := range testWorkflowsList {
+			testWorkflows = append(testWorkflows, *testworkflows.MapAPIToKube(&testWorkflowsList[i]))
+		}
 	}
 	return testWorkflows, nil
 }

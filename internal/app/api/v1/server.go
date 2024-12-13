@@ -16,6 +16,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/featureflags"
 	"github.com/kubeshop/testkube/pkg/log"
+	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	repoConfig "github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/secretmanager"
@@ -34,7 +35,8 @@ func NewTestkubeAPI(
 	artifactsStorage storage.ArtifactsStorage,
 	webhookClient executorsclientv1.WebhooksInterface,
 	testTriggersClient testtriggersclientv1.Interface,
-	testWorkflowsClient testworkflowsv1.Interface,
+	testWorkflowsClient testworkflowclient.TestWorkflowClient,
+	testWorkflowsK8SClient testworkflowsv1.Interface,
 	testWorkflowTemplatesClient testworkflowsv1.TestWorkflowTemplatesInterface,
 	configMap repoConfig.Repository,
 	secretManager secretmanager.SecretManager,
@@ -62,6 +64,7 @@ func NewTestkubeAPI(
 		TestTriggersClient:          testTriggersClient,
 		TestWorkflowsClient:         testWorkflowsClient,
 		TestWorkflowTemplatesClient: testWorkflowTemplatesClient,
+		TestWorkflowsK8SClient:      testWorkflowsK8SClient,
 		Metrics:                     metrics,
 		WebsocketLoader:             websocketLoader,
 		Events:                      eventsEmitter,
@@ -93,8 +96,9 @@ type TestkubeAPI struct {
 	SecretManager               secretmanager.SecretManager
 	WebhooksClient              executorsclientv1.WebhooksInterface
 	TestTriggersClient          testtriggersclientv1.Interface
-	TestWorkflowsClient         testworkflowsv1.Interface
+	TestWorkflowsClient         testworkflowclient.TestWorkflowClient
 	TestWorkflowTemplatesClient testworkflowsv1.TestWorkflowTemplatesInterface
+	TestWorkflowsK8SClient      testworkflowsv1.Interface
 	Metrics                     metrics.Metrics
 	Namespace                   string
 	WebsocketLoader             *ws.WebsocketLoader

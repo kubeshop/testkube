@@ -11,25 +11,24 @@ import (
 
 	"github.com/kubeshop/testkube/internal/app/api/apiutils"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	testworkflowmappers "github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/repository/result"
 )
 
 func (s *TestkubeAPI) GetTestWorkflowWithExecutionHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		ctx := c.Context()
+		environmentId := s.getEnvironmentId()
+
 		name := c.Params("id")
 		errPrefix := fmt.Sprintf("failed to get test workflow '%s' with execution", name)
 		if name == "" {
 			return s.Error(c, http.StatusBadRequest, errors.New(errPrefix+": id cannot be empty"))
 		}
-		crWorkflow, err := s.TestWorkflowsClient.Get(name)
+		workflow, err := s.TestWorkflowsClient.Get(ctx, environmentId, name)
 		if err != nil {
 			return s.ClientError(c, errPrefix, err)
 		}
 
-		workflow := testworkflowmappers.MapKubeToAPI(crWorkflow)
-
-		ctx := c.Context()
 		execution, err := s.TestWorkflowResults.GetLatestByTestWorkflow(ctx, name)
 		if err != nil && !apiutils.IsNotFound(err) {
 			return s.ClientError(c, errPrefix, err)
@@ -45,12 +44,11 @@ func (s *TestkubeAPI) GetTestWorkflowWithExecutionHandler() fiber.Handler {
 func (s *TestkubeAPI) ListTestWorkflowWithExecutionsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to list test workflows with executions"
-		crWorkflows, err := s.getFilteredTestWorkflowList(c)
+		workflows, err := s.getFilteredTestWorkflowList(c)
 		if err != nil {
 			return s.ClientError(c, errPrefix+": get filtered workflows", err)
 		}
 
-		workflows := testworkflowmappers.MapListKubeToAPI(crWorkflows)
 		ctx := c.Context()
 		results := make([]testkube.TestWorkflowWithExecutionSummary, 0, len(workflows))
 		workflowNames := make([]string, len(workflows))

@@ -25,6 +25,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/event"
 	log2 "github.com/kubeshop/testkube/pkg/log"
 	testworkflowmappers "github.com/kubeshop/testkube/pkg/mapper/testworkflows"
+	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/runner"
 	"github.com/kubeshop/testkube/pkg/secretmanager"
@@ -71,7 +72,7 @@ func New(
 	repository testworkflow.Repository,
 	output testworkflow.OutputRepository,
 	testWorkflowTemplatesClient testworkflowsclientv1.TestWorkflowTemplatesInterface,
-	testWorkflowsClient testworkflowsclientv1.Interface,
+	testWorkflowsClient testworkflowclient.TestWorkflowClient,
 	metrics v1.Metrics,
 	secretManager secretmanager.SecretManager,
 	globalTemplateName string,

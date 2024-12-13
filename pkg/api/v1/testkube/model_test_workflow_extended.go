@@ -1,6 +1,11 @@
 package testkube
 
-import "github.com/kubeshop/testkube/pkg/utils"
+import (
+	"encoding/json"
+	"fmt"
+
+	"github.com/kubeshop/testkube/pkg/utils"
+)
 
 type TestWorkflows []TestWorkflow
 
@@ -114,4 +119,20 @@ func (w TestWorkflow) HasService(name string) bool {
 	}
 
 	return false
+}
+
+func (w *TestWorkflow) DeepCopy() *TestWorkflow {
+	if w == nil {
+		return nil
+	}
+	v, err := json.Marshal(w)
+	if err != nil {
+		panic(fmt.Sprintf("cannot deep copy testkube.TestWorkflow: %v", err))
+	}
+	var result TestWorkflow
+	err = json.Unmarshal(v, &result)
+	if err != nil {
+		panic(fmt.Sprintf("cannot deep copy testkube.TestWorkflow: %v", err))
+	}
+	return &result
 }

@@ -1,35 +1,31 @@
 package testworkflowexecutor
 
 import (
-	"fmt"
+	"context"
 	"maps"
-	"strings"
 
 	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
 
-	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
+	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
+	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowresolver"
 )
 
-// TODO: use testkube.* objects instead?
-// TODO: Unify interface better
-type TestWorkflowFetcherClient interface {
-	List(selector string) (*testworkflowsv1.TestWorkflowList, error)
-	Get(name string) (*testworkflowsv1.TestWorkflow, error)
-}
-
 type testWorkflowFetcher struct {
-	client           TestWorkflowFetcherClient
-	cache            map[string]*testworkflowsv1.TestWorkflow
+	client           testworkflowclient.TestWorkflowClient
+	environmentId    string
+	cache            map[string]*testkube.TestWorkflow
 	prefetchedLabels []map[string]string
 }
 
-func NewTestWorkflowFetcher(client TestWorkflowFetcherClient) *testWorkflowFetcher {
+func NewTestWorkflowFetcher(client testworkflowclient.TestWorkflowClient, environmentId string) *testWorkflowFetcher {
 	return &testWorkflowFetcher{
-		client: client,
-		cache:  make(map[string]*testworkflowsv1.TestWorkflow),
+		client:        client,
+		environmentId: environmentId,
+		cache:         make(map[string]*testkube.TestWorkflow),
 	}
 }
 
@@ -37,16 +33,12 @@ func (r *testWorkflowFetcher) PrefetchByLabelSelector(labels map[string]string) 
 	if containsSameMap(r.prefetchedLabels, labels) {
 		return nil
 	}
-	selectors := make([]string, 0, len(labels))
-	for k := range labels {
-		selectors = append(selectors, fmt.Sprintf("%s=%s", k, labels[k]))
-	}
-	workflows, err := r.client.List(strings.Join(selectors, ","))
+	workflows, err := r.client.List(context.Background(), r.environmentId, labels)
 	if err != nil {
 		return errors.Wrapf(err, "cannot fetch Test Workflows by label selector: %v", labels)
 	}
-	for i := range workflows.Items {
-		r.cache[workflows.Items[i].Name] = &workflows.Items[i]
+	for i := range workflows {
+		r.cache[workflows[i].Name] = &workflows[i]
 	}
 	r.prefetchedLabels = append(r.prefetchedLabels, labels)
 	return nil
@@ -56,7 +48,7 @@ func (r *testWorkflowFetcher) PrefetchByName(name string) error {
 	if _, ok := r.cache[name]; ok {
 		return nil
 	}
-	workflow, err := r.client.Get(name)
+	workflow, err := r.client.Get(context.Background(), r.environmentId, name)
 	if err != nil {
 		return errors.Wrapf(err, "cannot fetch Test Workflow by name: %s", name)
 	}
@@ -106,7 +98,7 @@ func (r *testWorkflowFetcher) PrefetchMany(selectors []*cloud.ScheduleSelector) 
 	return g.Wait()
 }
 
-func (r *testWorkflowFetcher) GetByName(name string) (*testworkflowsv1.TestWorkflow, error) {
+func (r *testWorkflowFetcher) GetByName(name string) (*testkube.TestWorkflow, error) {
 	if r.cache[name] == nil {
 		err := r.PrefetchByName(name)
 		if err != nil {
@@ -116,14 +108,14 @@ func (r *testWorkflowFetcher) GetByName(name string) (*testworkflowsv1.TestWorkf
 	return r.cache[name], nil
 }
 
-func (r *testWorkflowFetcher) GetByLabelSelector(labels map[string]string) ([]*testworkflowsv1.TestWorkflow, error) {
+func (r *testWorkflowFetcher) GetByLabelSelector(labels map[string]string) ([]*testkube.TestWorkflow, error) {
 	if !containsSameMap(r.prefetchedLabels, labels) {
 		err := r.PrefetchByLabelSelector(labels)
 		if err != nil {
 			return nil, err
 		}
 	}
-	result := make([]*testworkflowsv1.TestWorkflow, 0)
+	result := make([]*testkube.TestWorkflow, 0)
 loop:
 	for name := range r.cache {
 		for k := range labels {
@@ -136,7 +128,7 @@ loop:
 	return result, nil
 }
 
-func (r *testWorkflowFetcher) Get(selector *cloud.ScheduleSelector) ([]*testworkflowsv1.TestWorkflow, error) {
+func (r *testWorkflowFetcher) Get(selector *cloud.ScheduleSelector) ([]*testkube.TestWorkflow, error) {
 	if selector.Name == "" {
 		return r.GetByLabelSelector(selector.LabelSelector)
 	}
@@ -144,7 +136,7 @@ func (r *testWorkflowFetcher) Get(selector *cloud.ScheduleSelector) ([]*testwork
 	if err != nil {
 		return nil, err
 	}
-	return []*testworkflowsv1.TestWorkflow{v}, nil
+	return []*testkube.TestWorkflow{v}, nil
 }
 
 func (r *testWorkflowFetcher) Names() []string {
@@ -158,7 +150,8 @@ func (r *testWorkflowFetcher) Names() []string {
 func (r *testWorkflowFetcher) TemplateNames() map[string]struct{} {
 	result := make(map[string]struct{})
 	for k := range r.cache {
-		maps.Copy(result, testworkflowresolver.ListTemplates(r.cache[k]))
+		// TODO: avoid converting to CRD
+		maps.Copy(result, testworkflowresolver.ListTemplates(testworkflows.MapAPIToKube(r.cache[k])))
 	}
 	return result
 }

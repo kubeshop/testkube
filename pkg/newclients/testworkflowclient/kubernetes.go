@@ -1,0 +1,128 @@
+package testworkflowclient
+
+import (
+	"context"
+	"slices"
+
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	labels2 "k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
+)
+
+var _ TestWorkflowClient = &k8sTestWorkflowClient{}
+
+type k8sTestWorkflowClient struct {
+	client    client.Client
+	namespace string
+}
+
+func NewKubernetesTestWorkflowClient(client client.Client, namespace string) TestWorkflowClient {
+	return &k8sTestWorkflowClient{
+		client:    client,
+		namespace: namespace,
+	}
+}
+
+func (c *k8sTestWorkflowClient) get(ctx context.Context, name string) (*testworkflowsv1.TestWorkflow, error) {
+	workflow := testworkflowsv1.TestWorkflow{}
+	opts := client.ObjectKey{Namespace: c.namespace, Name: name}
+	if err := c.client.Get(ctx, opts, &workflow); err != nil {
+		return nil, err
+	}
+	return &workflow, nil
+}
+
+func (c *k8sTestWorkflowClient) Get(ctx context.Context, environmentId string, name string) (*testkube.TestWorkflow, error) {
+	workflow, err := c.get(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	return testworkflows.MapKubeToAPI(workflow), nil
+}
+
+func (c *k8sTestWorkflowClient) List(ctx context.Context, environmentId string, labels map[string]string) ([]testkube.TestWorkflow, error) {
+	labelSelector := labels2.NewSelector()
+	for k, v := range labels {
+		req, _ := labels2.NewRequirement(k, selection.Equals, []string{v})
+		labelSelector = labelSelector.Add(*req)
+	}
+
+	list := &testworkflowsv1.TestWorkflowList{}
+	opts := &client.ListOptions{Namespace: c.namespace, LabelSelector: labelSelector}
+	if err := c.client.List(context.Background(), list, opts); err != nil {
+		return nil, err
+	}
+
+	result := make([]testkube.TestWorkflow, len(list.Items))
+	for i := range list.Items {
+		result[i] = *testworkflows.MapKubeToAPI(&list.Items[i])
+	}
+	return result, nil
+}
+
+func (c *k8sTestWorkflowClient) ListLabels(ctx context.Context, environmentId string) (map[string][]string, error) {
+	labels := map[string][]string{}
+	list := &testworkflowsv1.TestWorkflowList{}
+	err := c.client.List(ctx, list, &client.ListOptions{Namespace: c.namespace})
+	if err != nil {
+		return labels, err
+	}
+
+	for _, workflow := range list.Items {
+		for key, value := range workflow.Labels {
+			if !slices.Contains(labels[key], value) {
+				labels[key] = append(labels[key], value)
+			}
+		}
+	}
+
+	return labels, nil
+}
+
+func (c *k8sTestWorkflowClient) Update(ctx context.Context, environmentId string, workflow testkube.TestWorkflow) error {
+	original, err := c.get(ctx, workflow.Name)
+	if err != nil {
+		return err
+	}
+	next := testworkflows.MapAPIToKube(&workflow)
+	next.Name = original.Name
+	next.Namespace = c.namespace
+	next.ResourceVersion = original.ResourceVersion
+	return c.client.Update(ctx, next)
+}
+
+func (c *k8sTestWorkflowClient) Create(ctx context.Context, environmentId string, workflow testkube.TestWorkflow) error {
+	next := testworkflows.MapAPIToKube(&workflow)
+	next.Namespace = c.namespace
+	return c.client.Create(ctx, next)
+}
+
+func (c *k8sTestWorkflowClient) Delete(ctx context.Context, environmentId string, name string) error {
+	original, err := c.get(ctx, name)
+	if err != nil {
+		return err
+	}
+	original.Namespace = c.namespace
+	return c.client.Delete(ctx, original)
+}
+
+func (c *k8sTestWorkflowClient) DeleteByLabels(ctx context.Context, environmentId string, labels map[string]string) error {
+	labelSelector := labels2.NewSelector()
+	for k, v := range labels {
+		req, _ := labels2.NewRequirement(k, selection.Equals, []string{v})
+		labelSelector = labelSelector.Add(*req)
+	}
+
+	u := &unstructured.Unstructured{}
+	u.SetKind("TestWorkflow")
+	u.SetAPIVersion(testworkflowsv1.GroupVersion.String())
+	err := c.client.DeleteAllOf(ctx, u,
+		client.InNamespace(c.namespace),
+		client.MatchingLabelsSelector{Selector: labelSelector})
+	return err
+}

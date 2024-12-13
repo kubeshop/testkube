@@ -24,6 +24,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/log"
 	logsclient "github.com/kubeshop/testkube/pkg/logs/client"
+	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/result"
 	"github.com/kubeshop/testkube/pkg/repository/sequence"
@@ -73,7 +74,7 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 	db := commons.MustGetMongoDatabase(ctx, cfg, secretClient, !cfg.DisableMongoMigrations)
 	storageClient := commons.MustGetMinioClient(cfg)
 
-	testWorkflowsClient := testworkflowsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
+	testWorkflowsClient := testworkflowclient.NewKubernetesTestWorkflowClient(kubeClient, cfg.TestkubeNamespace)
 	testWorkflowTemplatesClient := testworkflowsclientv1.NewTestWorkflowTemplatesClient(kubeClient, cfg.TestkubeNamespace)
 
 	var logGrpcClient logsclient.StreamGetter
