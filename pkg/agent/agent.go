@@ -203,6 +203,10 @@ func (ag *Agent) run(ctx context.Context) (err error) {
 		return ag.runEventsReaderLoop(groupCtx)
 	})
 
+	g.Go(func() error {
+		return ag.runRunnerRequestsLoop(groupCtx)
+	})
+
 	err = g.Wait()
 
 	return err
@@ -243,9 +247,9 @@ func (ag *Agent) runRunnerRequestsLoop(ctx context.Context) (err error) {
 		}
 
 		// Lock the execution for itself
-		resp, err := ag.client.ObtainExecution(ctx, &cloud.ObtainExecutionRequest{Id: req.Id}, opts...)
+		resp, err := ag.client.ObtainExecution(ctx, &cloud.ObtainExecutionRequest{Id: req.Id, EnvironmentId: req.EnvironmentId}, opts...)
 		if err != nil {
-			ag.logger.Errorf("failed to obtain execution '%s/%s', from Control Plane: %w", req.EnvironmentId, req.Id, err)
+			ag.logger.Errorf("failed to obtain execution '%s/%s', from Control Plane: %v", req.EnvironmentId, req.Id, err)
 			continue
 		}
 
@@ -257,7 +261,7 @@ func (ag *Agent) runRunnerRequestsLoop(ctx context.Context) (err error) {
 		// Continue
 		err = ag.runTestWorkflow(req.EnvironmentId, req.Id)
 		if err != nil {
-			ag.logger.Errorf("failed to run execution '%s/%s' from Control Plane: %w", req.EnvironmentId, req.Id, err)
+			ag.logger.Errorf("failed to run execution '%s/%s' from Control Plane: %v", req.EnvironmentId, req.Id, err)
 			continue
 		}
 	}

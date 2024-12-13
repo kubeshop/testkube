@@ -249,6 +249,10 @@ func main() {
 		}
 
 		for i := range list {
+			if (list[i].RunnerId == "" && len(list[i].Signature) == 0) || (list[i].RunnerId != "" && list[i].RunnerId != proContext.EnvID) {
+				continue
+			}
+
 			// TODO: Should it throw error at all?
 			// TODO: Pass hints (namespace, signature, scheduledAt)
 			go func(e *testkube.TestWorkflowExecution) {
