@@ -278,14 +278,9 @@ spec:
     - run:
         args:
         - run
-        - k6-smoke-test.js
-        env:
-        - name: K6_WEB_DASHBOARD
-          value: "true"
-        - name: K6_WEB_DASHBOARD_EXPORT
-          value: "/data/artifacts/k6-test-report.html"
+        - some-incorrect-file-name.js
       steps:
-      - name: Saving artifacts
+      - name: Saving artifacts # should be run despite step failure
         condition: always
         workingDir: /data/artifacts
         artifacts:
