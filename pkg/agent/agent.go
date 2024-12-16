@@ -207,9 +207,11 @@ func (ag *Agent) run(ctx context.Context) (err error) {
 		return ag.runEventsReaderLoop(groupCtx)
 	})
 
-	g.Go(func() error {
-		return ag.runRunnerRequestsLoop(groupCtx)
-	})
+	if ag.featureNewExecutionsEnabled {
+		g.Go(func() error {
+			return ag.runRunnerRequestsLoop(groupCtx)
+		})
+	}
 
 	err = g.Wait()
 
