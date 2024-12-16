@@ -39,7 +39,10 @@ func (s *TestkubeAPI) getEnvironmentId() string {
 func (s *TestkubeAPI) ListLabelsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		labels := make(map[string][]string)
-		sources := []LabelSource{getClientLabelSource(s.TestWorkflowsClient, s.getEnvironmentId()), s.TestWorkflowTemplatesClient}
+		sources := []LabelSource{
+			getClientLabelSource(s.TestWorkflowsClient, s.getEnvironmentId()),
+			getClientLabelSource(s.TestWorkflowTemplatesClient, s.getEnvironmentId()),
+		}
 		if s.DeprecatedClients != nil {
 			sources = append(sources, s.DeprecatedClients.Tests(), s.DeprecatedClients.TestSuites())
 		}

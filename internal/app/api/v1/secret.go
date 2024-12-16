@@ -200,7 +200,7 @@ func (s *TestkubeAPI) fetchOwnerReference(kind, name string) (metav1.OwnerRefere
 		}
 		return metav1.OwnerReference{APIVersion: obj.GroupVersionKind().String(), Kind: obj.Kind, Name: obj.Name, UID: obj.UID}, nil
 	} else if kind == testworkflowsv1.ResourceTemplate {
-		obj, err := s.TestWorkflowTemplatesClient.Get(name)
+		obj, err := s.TestWorkflowTemplatesK8SClient.Get(name)
 		if err != nil {
 			return metav1.OwnerReference{}, errors.Wrap(err, "fetching owner")
 		}

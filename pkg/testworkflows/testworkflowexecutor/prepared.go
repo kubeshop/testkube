@@ -221,12 +221,17 @@ func (e *IntermediateExecution) ApplyConfig(config map[string]string) error {
 	return e.ApplyDynamicConfig(dynamicConfig)
 }
 
-func (e *IntermediateExecution) ApplyTemplates(templates map[string]*testworkflowsv1.TestWorkflowTemplate) error {
+func (e *IntermediateExecution) ApplyTemplates(templates map[string]*testkube.TestWorkflowTemplate) error {
 	if e.cr == nil {
 		panic("workflow not set yet")
 	}
 	e.dirty = true
-	err := testworkflowresolver.ApplyTemplates(e.cr, templates, e.sensitiveData.Append)
+	// TODO: apply CRDs directly?
+	crTemplates := make(map[string]*testworkflowsv1.TestWorkflowTemplate, len(templates))
+	for k, v := range templates {
+		crTemplates[k] = testworkflowmappers.MapTemplateAPIToKube(v)
+	}
+	err := testworkflowresolver.ApplyTemplates(e.cr, crTemplates, e.sensitiveData.Append)
 	if err != nil {
 		return err
 	}

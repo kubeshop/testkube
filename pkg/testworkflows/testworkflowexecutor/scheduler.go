@@ -15,6 +15,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/log"
 	testworkflows2 "github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
+	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/testworkflows"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowresolver"
@@ -35,7 +36,7 @@ type Scheduler interface {
 type scheduler struct {
 	logger                      *zap.SugaredLogger
 	testWorkflowsClient         testworkflowclient.TestWorkflowClient
-	testWorkflowTemplatesClient TestWorkflowTemplateFetcherClient
+	testWorkflowTemplatesClient testworkflowtemplateclient.TestWorkflowTemplateClient
 	resultsRepository           testworkflow.Repository
 	outputRepository            testworkflow.OutputRepository
 	globalTemplateName          string
@@ -45,7 +46,7 @@ type scheduler struct {
 
 func NewScheduler(
 	testWorkflowsClient testworkflowclient.TestWorkflowClient,
-	testWorkflowTemplatesClient TestWorkflowTemplateFetcherClient,
+	testWorkflowTemplatesClient testworkflowtemplateclient.TestWorkflowTemplateClient,
 	resultsRepository testworkflow.Repository,
 	outputRepository testworkflow.OutputRepository,
 	globalTemplateName string,
@@ -153,7 +154,7 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 
 	// Initialize fetchers
 	testWorkflows := NewTestWorkflowFetcher(s.testWorkflowsClient, req.EnvironmentId)
-	testWorkflowTemplates := NewTestWorkflowTemplateFetcher(s.testWorkflowTemplatesClient)
+	testWorkflowTemplates := NewTestWorkflowTemplateFetcher(s.testWorkflowTemplatesClient, req.EnvironmentId)
 
 	// Prefetch all the Test Workflows
 	err := testWorkflows.PrefetchMany(req.Selectors)

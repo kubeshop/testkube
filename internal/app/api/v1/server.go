@@ -17,6 +17,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/featureflags"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
+	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
 	repoConfig "github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/secretmanager"
@@ -37,7 +38,8 @@ func NewTestkubeAPI(
 	testTriggersClient testtriggersclientv1.Interface,
 	testWorkflowsClient testworkflowclient.TestWorkflowClient,
 	testWorkflowsK8SClient testworkflowsv1.Interface,
-	testWorkflowTemplatesClient testworkflowsv1.TestWorkflowTemplatesInterface,
+	testWorkflowTemplatesClient testworkflowtemplateclient.TestWorkflowTemplateClient,
+	testWorkflowTemplatesK8SClient testworkflowsv1.TestWorkflowTemplatesInterface,
 	configMap repoConfig.Repository,
 	secretManager secretmanager.SecretManager,
 	secretConfig testkube.SecretConfig,
@@ -55,65 +57,67 @@ func NewTestkubeAPI(
 ) TestkubeAPI {
 
 	return TestkubeAPI{
-		ClusterID:                   clusterId,
-		Log:                         log.DefaultLogger,
-		DeprecatedClients:           deprecatedClients,
-		TestWorkflowResults:         testWorkflowResults,
-		TestWorkflowOutput:          testWorkflowOutput,
-		SecretManager:               secretManager,
-		TestTriggersClient:          testTriggersClient,
-		TestWorkflowsClient:         testWorkflowsClient,
-		TestWorkflowTemplatesClient: testWorkflowTemplatesClient,
-		TestWorkflowsK8SClient:      testWorkflowsK8SClient,
-		Metrics:                     metrics,
-		WebsocketLoader:             websocketLoader,
-		Events:                      eventsEmitter,
-		WebhooksClient:              webhookClient,
-		Namespace:                   namespace,
-		ConfigMap:                   configMap,
-		ExecutionWorkerClient:       executionWorkerClient,
-		ArtifactsStorage:            artifactsStorage,
-		dashboardURI:                dashboardURI,
-		helmchartVersion:            helmchartVersion,
-		secretConfig:                secretConfig,
-		featureFlags:                ff,
-		ServiceAccountNames:         serviceAccountNames,
-		dockerImageVersion:          dockerImageVersion,
-		proContext:                  proContext,
-		testWorkflowExecutor:        testWorkflowExecutor,
+		ClusterID:                      clusterId,
+		Log:                            log.DefaultLogger,
+		DeprecatedClients:              deprecatedClients,
+		TestWorkflowResults:            testWorkflowResults,
+		TestWorkflowOutput:             testWorkflowOutput,
+		SecretManager:                  secretManager,
+		TestTriggersClient:             testTriggersClient,
+		TestWorkflowsClient:            testWorkflowsClient,
+		TestWorkflowTemplatesClient:    testWorkflowTemplatesClient,
+		TestWorkflowsK8SClient:         testWorkflowsK8SClient,
+		TestWorkflowTemplatesK8SClient: testWorkflowTemplatesK8SClient,
+		Metrics:                        metrics,
+		WebsocketLoader:                websocketLoader,
+		Events:                         eventsEmitter,
+		WebhooksClient:                 webhookClient,
+		Namespace:                      namespace,
+		ConfigMap:                      configMap,
+		ExecutionWorkerClient:          executionWorkerClient,
+		ArtifactsStorage:               artifactsStorage,
+		dashboardURI:                   dashboardURI,
+		helmchartVersion:               helmchartVersion,
+		secretConfig:                   secretConfig,
+		featureFlags:                   ff,
+		ServiceAccountNames:            serviceAccountNames,
+		dockerImageVersion:             dockerImageVersion,
+		proContext:                     proContext,
+		testWorkflowExecutor:           testWorkflowExecutor,
 	}
 }
 
 type TestkubeAPI struct {
-	ClusterID                   string
-	Log                         *zap.SugaredLogger
-	TestWorkflowResults         testworkflow.Repository
-	TestWorkflowOutput          testworkflow.OutputRepository
-	Executor                    client.Executor
-	ContainerExecutor           client.Executor
-	ExecutionWorkerClient       executionworkertypes.Worker
-	DeprecatedClients           commons.DeprecatedClients
-	SecretManager               secretmanager.SecretManager
-	WebhooksClient              executorsclientv1.WebhooksInterface
-	TestTriggersClient          testtriggersclientv1.Interface
-	TestWorkflowsClient         testworkflowclient.TestWorkflowClient
-	TestWorkflowTemplatesClient testworkflowsv1.TestWorkflowTemplatesInterface
-	TestWorkflowsK8SClient      testworkflowsv1.Interface
-	Metrics                     metrics.Metrics
-	Namespace                   string
-	WebsocketLoader             *ws.WebsocketLoader
-	Events                      *event.Emitter
-	ConfigMap                   repoConfig.Repository
-	ArtifactsStorage            storage.ArtifactsStorage
-	dashboardURI                string
-	helmchartVersion            string
-	secretConfig                testkube.SecretConfig
-	featureFlags                featureflags.FeatureFlags
-	proContext                  *config.ProContext
-	ServiceAccountNames         map[string]string
-	dockerImageVersion          string
-	grpcClient                  cloud.TestKubeCloudAPIClient
-	testWorkflowExecutor        testworkflowexecutor.TestWorkflowExecutor
+	ClusterID                      string
+	Log                            *zap.SugaredLogger
+	TestWorkflowResults            testworkflow.Repository
+	TestWorkflowOutput             testworkflow.OutputRepository
+	Executor                       client.Executor
+	ContainerExecutor              client.Executor
+	ExecutionWorkerClient          executionworkertypes.Worker
+	DeprecatedClients              commons.DeprecatedClients
+	SecretManager                  secretmanager.SecretManager
+	WebhooksClient                 executorsclientv1.WebhooksInterface
+	TestTriggersClient             testtriggersclientv1.Interface
+	TestWorkflowsClient            testworkflowclient.TestWorkflowClient
+	TestWorkflowTemplatesClient    testworkflowtemplateclient.TestWorkflowTemplateClient
+	TestWorkflowsK8SClient         testworkflowsv1.Interface
+	TestWorkflowTemplatesK8SClient testworkflowsv1.TestWorkflowTemplatesInterface
+	Metrics                        metrics.Metrics
+	Namespace                      string
+	WebsocketLoader                *ws.WebsocketLoader
+	Events                         *event.Emitter
+	ConfigMap                      repoConfig.Repository
+	ArtifactsStorage               storage.ArtifactsStorage
+	dashboardURI                   string
+	helmchartVersion               string
+	secretConfig                   testkube.SecretConfig
+	featureFlags                   featureflags.FeatureFlags
+	proContext                     *config.ProContext
+	ServiceAccountNames            map[string]string
+	dockerImageVersion             string
+	grpcClient                     cloud.TestKubeCloudAPIClient
+	testWorkflowExecutor           testworkflowexecutor.TestWorkflowExecutor
 }
 
 func (s *TestkubeAPI) Init(server server.HTTPServer) {

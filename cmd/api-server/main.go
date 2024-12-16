@@ -26,6 +26,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/event/kind/webhook"
 	ws "github.com/kubeshop/testkube/pkg/event/kind/websocket"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
+	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
 	runner2 "github.com/kubeshop/testkube/pkg/runner"
 	"github.com/kubeshop/testkube/pkg/secretmanager"
 	"github.com/kubeshop/testkube/pkg/server"
@@ -136,7 +137,7 @@ func main() {
 	inspector := commons.CreateImageInspector(cfg, configMapClient, secretClient)
 
 	var testWorkflowsClient testworkflowclient.TestWorkflowClient
-	var testWorkflowTemplatesClient testworkflowsclientv1.TestWorkflowTemplatesInterface
+	var testWorkflowTemplatesClient testworkflowtemplateclient.TestWorkflowTemplateClient
 
 	var grpcClient cloud.TestKubeCloudAPIClient
 	var grpcConn *grpc.ClientConn
@@ -166,10 +167,10 @@ func main() {
 
 	if mode == common.ModeAgent && cfg.WorkflowStorage == "control-plane" {
 		testWorkflowsClient = testworkflowclient.NewCloudTestWorkflowClient(grpcConn, cfg.TestkubeProAPIKey)
-		testWorkflowTemplatesClient = cloudtestworkflow.NewCloudTestWorkflowTemplateRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
+		testWorkflowTemplatesClient = testworkflowtemplateclient.NewCloudTestWorkflowTemplateClient(grpcConn, cfg.TestkubeProAPIKey)
 	} else {
 		testWorkflowsClient = testworkflowclient.NewKubernetesTestWorkflowClient(kubeClient, cfg.TestkubeNamespace)
-		testWorkflowTemplatesClient = testworkflowsclientv1.NewTestWorkflowTemplatesClient(kubeClient, cfg.TestkubeNamespace)
+		testWorkflowTemplatesClient = testworkflowtemplateclient.NewKubernetesTestWorkflowTemplateClient(kubeClient, cfg.TestkubeNamespace)
 	}
 
 	nc := commons.MustCreateNATSConnection(cfg)
@@ -345,6 +346,7 @@ func main() {
 		testWorkflowsClient,
 		testworkflowsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace),
 		testWorkflowTemplatesClient,
+		testworkflowsclientv1.NewTestWorkflowTemplatesClient(kubeClient, cfg.TestkubeNamespace),
 		configMapConfig,
 		secretManager,
 		secretConfig,

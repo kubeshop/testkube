@@ -1,34 +1,32 @@
 package testworkflowexecutor
 
 import (
+	"context"
 	"sync"
 
 	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
 
-	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowresolver"
 )
 
-// TODO: use testkube.* objects instead?
-// TODO: Unify interface better
-type TestWorkflowTemplateFetcherClient interface {
-	List(selector string) (*testworkflowsv1.TestWorkflowTemplateList, error)
-	Get(name string) (*testworkflowsv1.TestWorkflowTemplate, error)
-}
-
 type testWorkflowTemplateFetcher struct {
-	client           TestWorkflowTemplateFetcherClient
-	cache            map[string]*testworkflowsv1.TestWorkflowTemplate
+	client           testworkflowtemplateclient.TestWorkflowTemplateClient
+	environmentId    string
+	cache            map[string]*testkube.TestWorkflowTemplate
 	prefetchedLabels []map[string]string
 }
 
 func NewTestWorkflowTemplateFetcher(
-	client TestWorkflowTemplateFetcherClient,
+	client testworkflowtemplateclient.TestWorkflowTemplateClient,
+	environmentId string,
 ) *testWorkflowTemplateFetcher {
 	return &testWorkflowTemplateFetcher{
-		client: client,
-		cache:  make(map[string]*testworkflowsv1.TestWorkflowTemplate),
+		client:        client,
+		environmentId: environmentId,
+		cache:         make(map[string]*testkube.TestWorkflowTemplate),
 	}
 }
 
@@ -37,7 +35,7 @@ func (r *testWorkflowTemplateFetcher) Prefetch(name string) error {
 	if _, ok := r.cache[name]; ok {
 		return nil
 	}
-	workflow, err := r.client.Get(name)
+	workflow, err := r.client.Get(context.Background(), r.environmentId, name)
 	if err != nil {
 		return errors.Wrapf(err, "cannot fetch Test Workflow Template by name: %s", name)
 	}
@@ -65,7 +63,7 @@ func (r *testWorkflowTemplateFetcher) PrefetchMany(namesSet map[string]struct{})
 	return g.Wait()
 }
 
-func (r *testWorkflowTemplateFetcher) Get(name string) (*testworkflowsv1.TestWorkflowTemplate, error) {
+func (r *testWorkflowTemplateFetcher) Get(name string) (*testkube.TestWorkflowTemplate, error) {
 	if r.cache[name] == nil {
 		err := r.Prefetch(name)
 		if err != nil {
@@ -75,8 +73,8 @@ func (r *testWorkflowTemplateFetcher) Get(name string) (*testworkflowsv1.TestWor
 	return r.cache[name], nil
 }
 
-func (r *testWorkflowTemplateFetcher) GetMany(names map[string]struct{}) (map[string]*testworkflowsv1.TestWorkflowTemplate, error) {
-	results := make(map[string]*testworkflowsv1.TestWorkflowTemplate, len(names))
+func (r *testWorkflowTemplateFetcher) GetMany(names map[string]struct{}) (map[string]*testkube.TestWorkflowTemplate, error) {
+	results := make(map[string]*testkube.TestWorkflowTemplate, len(names))
 	resultsMu := &sync.Mutex{}
 
 	// Fetch all the requested templates

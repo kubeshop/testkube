@@ -307,6 +307,9 @@ func (s *TestkubeAPI) UpdateTestWorkflowHandler() fiber.Handler {
 func (s *TestkubeAPI) PreviewTestWorkflowHandler() fiber.Handler {
 	errPrefix := "failed to resolve test workflow"
 	return func(c *fiber.Ctx) (err error) {
+		ctx := c.Context()
+		environmentId := s.getEnvironmentId()
+
 		// Check if it should inline templates
 		inline, _ := strconv.ParseBool(c.Query("inline"))
 
@@ -337,11 +340,11 @@ func (s *TestkubeAPI) PreviewTestWorkflowHandler() fiber.Handler {
 			tpls := testworkflowresolver.ListTemplates(obj)
 			tplsMap := make(map[string]*testworkflowsv1.TestWorkflowTemplate, len(tpls))
 			for name := range tpls {
-				tpl, err := s.TestWorkflowTemplatesClient.Get(name)
+				tpl, err := s.TestWorkflowTemplatesClient.Get(ctx, environmentId, name)
 				if err != nil {
 					return s.BadRequest(c, errPrefix, "fetching error", err)
 				}
-				tplsMap[name] = tpl
+				tplsMap[name] = testworkflows.MapTemplateAPIToKube(tpl)
 			}
 
 			// Resolve the TestWorkflow

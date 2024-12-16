@@ -1,6 +1,8 @@
 package testkube
 
 import (
+	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/kubeshop/testkube/pkg/utils"
@@ -79,4 +81,20 @@ func (w *TestWorkflowTemplate) ConvertDots(fn func(string) string) *TestWorkflow
 	}
 
 	return w
+}
+
+func (w *TestWorkflowTemplate) DeepCopy() *TestWorkflowTemplate {
+	if w == nil {
+		return nil
+	}
+	v, err := json.Marshal(w)
+	if err != nil {
+		panic(fmt.Sprintf("cannot deep copy testkube.TestWorkflowTemplate: %v", err))
+	}
+	var result TestWorkflowTemplate
+	err = json.Unmarshal(v, &result)
+	if err != nil {
+		panic(fmt.Sprintf("cannot deep copy testkube.TestWorkflowTemplate: %v", err))
+	}
+	return &result
 }

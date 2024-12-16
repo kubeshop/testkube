@@ -14,7 +14,6 @@ import (
 	"google.golang.org/grpc/encoding/gzip"
 	"google.golang.org/protobuf/types/known/emptypb"
 
-	testworkflowsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testworkflows/v1"
 	v1 "github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/internal/config"
@@ -26,6 +25,7 @@ import (
 	log2 "github.com/kubeshop/testkube/pkg/log"
 	testworkflowmappers "github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
+	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/runner"
 	"github.com/kubeshop/testkube/pkg/secretmanager"
@@ -71,7 +71,7 @@ func New(
 	runner runner.Runner,
 	repository testworkflow.Repository,
 	output testworkflow.OutputRepository,
-	testWorkflowTemplatesClient testworkflowsclientv1.TestWorkflowTemplatesInterface,
+	testWorkflowTemplatesClient testworkflowtemplateclient.TestWorkflowTemplateClient,
 	testWorkflowsClient testworkflowclient.TestWorkflowClient,
 	metrics v1.Metrics,
 	secretManager secretmanager.SecretManager,

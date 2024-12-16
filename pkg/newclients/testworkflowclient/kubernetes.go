@@ -54,7 +54,7 @@ func (c *k8sTestWorkflowClient) List(ctx context.Context, environmentId string, 
 
 	list := &testworkflowsv1.TestWorkflowList{}
 	opts := &client.ListOptions{Namespace: c.namespace, LabelSelector: labelSelector}
-	if err := c.client.List(context.Background(), list, opts); err != nil {
+	if err := c.client.List(ctx, list, opts); err != nil {
 		return nil, err
 	}
 
