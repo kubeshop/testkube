@@ -65,7 +65,7 @@ func TestCommandExecution(t *testing.T) {
 	logger, _ := zap.NewDevelopment()
 	proContext := config.ProContext{APIKey: "api-key", WorkerCount: 5, LogStreamWorkerCount: 5, WorkflowNotificationsWorkerCount: 5}
 	agent, err := agent.NewAgent(logger.Sugar(), m, grpcClient, logStreamFunc, workflowNotificationsStreamFunc,
-		workflowServiceNotificationsStreamFunc, workflowParallelStepNotificationsStreamFunc, "", "", featureflags.FeatureFlags{}, &proContext, "", nil)
+		workflowServiceNotificationsStreamFunc, workflowParallelStepNotificationsStreamFunc, "", "", featureflags.FeatureFlags{}, &proContext, "", nil, nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -54,13 +54,14 @@ type executor struct {
 	organizationId       string
 	defaultEnvironmentId string
 
-	emitter       event.Interface
-	metrics       v1.Metrics
-	secretManager secretmanager.SecretManager
-	dashboardURI  string
-	runner        runner.Runner
-	proContext    *config.ProContext
-	scheduler     Scheduler
+	emitter                     event.Interface
+	metrics                     v1.Metrics
+	secretManager               secretmanager.SecretManager
+	dashboardURI                string
+	runner                      runner.Runner
+	proContext                  *config.ProContext
+	scheduler                   Scheduler
+	featureNewExecutionsEnabled bool
 }
 
 func New(
@@ -78,18 +79,20 @@ func New(
 	globalTemplateName string,
 	dashboardURI string,
 	organizationId string,
-	defaultEnvironmentId string) TestWorkflowExecutor {
+	defaultEnvironmentId string,
+	featureNewExecutionsEnabled bool) TestWorkflowExecutor {
 	return &executor{
-		grpcClient:           grpClient,
-		apiKey:               apiKey,
-		cdEventsTarget:       cdEventsTarget,
-		emitter:              emitter,
-		metrics:              metrics,
-		secretManager:        secretManager,
-		dashboardURI:         dashboardURI,
-		runner:               runner,
-		organizationId:       organizationId,
-		defaultEnvironmentId: defaultEnvironmentId,
+		grpcClient:                  grpClient,
+		apiKey:                      apiKey,
+		cdEventsTarget:              cdEventsTarget,
+		emitter:                     emitter,
+		metrics:                     metrics,
+		secretManager:               secretManager,
+		dashboardURI:                dashboardURI,
+		runner:                      runner,
+		organizationId:              organizationId,
+		defaultEnvironmentId:        defaultEnvironmentId,
+		featureNewExecutionsEnabled: featureNewExecutionsEnabled,
 		scheduler: NewScheduler(
 			testWorkflowsClient,
 			testWorkflowTemplatesClient,
@@ -106,6 +109,10 @@ func (e *executor) isDirect() bool {
 	e.directMu.Lock()
 	defer e.directMu.Unlock()
 	if e.direct == nil {
+		if !e.featureNewExecutionsEnabled {
+			e.direct = common.Ptr(true)
+			return true
+		}
 		if e.grpcClient == nil {
 			e.direct = common.Ptr(true)
 			return true

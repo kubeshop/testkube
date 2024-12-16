@@ -44,9 +44,10 @@ type Server struct {
 }
 
 type Config struct {
-	Port    int
-	Verbose bool
-	Logger  *zap.SugaredLogger
+	Port                        int
+	Verbose                     bool
+	Logger                      *zap.SugaredLogger
+	FeatureNewExecutionsEnabled bool
 }
 
 func New(cfg Config, executor testworkflowexecutor.TestWorkflowExecutor, commandGroups ...CommandHandlers) *Server {
@@ -64,9 +65,11 @@ func New(cfg Config, executor testworkflowexecutor.TestWorkflowExecutor, command
 }
 
 func (s *Server) GetProContext(_ context.Context, _ *emptypb.Empty) (*cloud.ProContextResponse, error) {
-	return &cloud.ProContextResponse{
-		Capabilities: []*cloud.Capability{{Name: string(capabilities.CapabilityNewExecutions), Enabled: true}},
-	}, nil
+	caps := make([]*cloud.Capability, 0)
+	if s.cfg.FeatureNewExecutionsEnabled {
+		caps = append(caps, &cloud.Capability{Name: string(capabilities.CapabilityNewExecutions), Enabled: true})
+	}
+	return &cloud.ProContextResponse{Capabilities: caps}, nil
 }
 
 func (s *Server) GetCredential(_ context.Context, _ *cloud.CredentialRequest) (*cloud.CredentialResponse, error) {

@@ -86,6 +86,8 @@ type Agent struct {
 	proContext *config.ProContext
 
 	eventEmitter event.Interface
+
+	featureNewExecutionsEnabled bool
 }
 
 func NewAgent(logger *zap.SugaredLogger,
@@ -102,6 +104,7 @@ func NewAgent(logger *zap.SugaredLogger,
 	dockerImageVersion string,
 	eventEmitter event.Interface,
 	runTestWorkflow func(environmentId, executionId string) error,
+	featureNewExecutionsEnabled bool,
 ) (*Agent, error) {
 	return &Agent{
 		handler:                                 handler,
@@ -131,13 +134,14 @@ func NewAgent(logger *zap.SugaredLogger,
 		testWorkflowParallelStepNotificationsRequestBuffer:  make(chan *cloud.TestWorkflowParallelStepNotificationsRequest, bufferSizePerWorker*proContext.WorkflowParallelStepNotificationsWorkerCount),
 		testWorkflowParallelStepNotificationsResponseBuffer: make(chan *cloud.TestWorkflowParallelStepNotificationsResponse, bufferSizePerWorker*proContext.WorkflowParallelStepNotificationsWorkerCount),
 		testWorkflowParallelStepNotificationsFunc:           workflowParallelStepNotificationsFunc,
-		clusterID:          clusterID,
-		clusterName:        clusterName,
-		features:           features,
-		proContext:         proContext,
-		dockerImageVersion: dockerImageVersion,
-		eventEmitter:       eventEmitter,
-		runTestWorkflow:    runTestWorkflow,
+		clusterID:                   clusterID,
+		clusterName:                 clusterName,
+		features:                    features,
+		proContext:                  proContext,
+		dockerImageVersion:          dockerImageVersion,
+		eventEmitter:                eventEmitter,
+		runTestWorkflow:             runTestWorkflow,
+		featureNewExecutionsEnabled: featureNewExecutionsEnabled,
 	}, nil
 }
 
@@ -396,7 +400,10 @@ func (ag *Agent) runCommandLoop(ctx context.Context) error {
 	ctx = metadata.AppendToOutgoingContext(ctx, envIdMeta, ag.proContext.EnvID)
 	ctx = metadata.AppendToOutgoingContext(ctx, orgIdMeta, ag.proContext.OrgID)
 	ctx = metadata.AppendToOutgoingContext(ctx, dockerImageVersionMeta, ag.dockerImageVersion)
-	ctx = metadata.AppendToOutgoingContext(ctx, newExecutionsMeta, "true")
+
+	if ag.featureNewExecutionsEnabled {
+		ctx = metadata.AppendToOutgoingContext(ctx, newExecutionsMeta, "true")
+	}
 
 	ag.logger.Infow("initiating streaming connection with control plane")
 	// creates a new Stream from the client side. ctx is used for the lifetime of the stream.

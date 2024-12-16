@@ -66,6 +66,7 @@ func NewWorker(clientSet kubernetes.Interface, processor testworkflowprocessor.P
 			ImageInspectorPersistenceCacheKey: config.ImageInspector.CacheKey,
 			ImageInspectorPersistenceCacheTTL: config.ImageInspector.CacheTTL,
 			Connection:                        config.Connection,
+			FeatureFlags:                      config.FeatureFlags,
 		},
 	}
 }

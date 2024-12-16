@@ -72,7 +72,8 @@ func ExecutionWorker() executionworkertypes.Worker {
 				CacheKey:     cfg.Worker.ImageInspectorPersistenceCacheKey,
 				CacheTTL:     cfg.Worker.ImageInspectorPersistenceCacheTTL,
 			},
-			Connection: cfg.Worker.Connection,
+			Connection:   cfg.Worker.Connection,
+			FeatureFlags: cfg.Worker.FeatureFlags,
 		})
 	}
 	return executionWorker

@@ -30,6 +30,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/capabilities"
 	"github.com/kubeshop/testkube/pkg/cloud"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 )
 
 var (
@@ -43,6 +44,10 @@ func isGrpcExecute() bool {
 
 	if isGrpcCache == nil {
 		cfg := config.Config()
+		if cfg.Worker.FeatureFlags[testworkflowconfig.FeatureFlagNewExecutions] != "true" {
+			isGrpcCache = common.Ptr(false)
+			return *isGrpcCache
+		}
 		ctx := agentclient.AddAPIKeyMeta(context.Background(), cfg.Worker.Connection.ApiKey)
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()

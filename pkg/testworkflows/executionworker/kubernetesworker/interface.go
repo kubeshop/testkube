@@ -27,4 +27,5 @@ type Config struct {
 	Cluster        ClusterConfig
 	ImageInspector ImageInspectorConfig
 	Connection     testworkflowconfig.WorkerConnectionConfig
+	FeatureFlags   map[string]string
 }

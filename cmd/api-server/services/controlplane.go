@@ -412,11 +412,13 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 		cfg.TestkubeDashboardURI,
 		"",
 		"",
+		cfg.FeatureNewExecutionsEnabled,
 	)
 
 	return controlplane.New(controlplane.Config{
-		Port:    cfg.GRPCServerPort,
-		Logger:  log.DefaultLogger,
-		Verbose: false,
+		Port:                        cfg.GRPCServerPort,
+		Logger:                      log.DefaultLogger,
+		Verbose:                     false,
+		FeatureNewExecutionsEnabled: cfg.FeatureNewExecutionsEnabled,
 	}, executor, commands...)
 }

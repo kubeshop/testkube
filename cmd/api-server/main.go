@@ -32,6 +32,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/server"
 	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
 	"github.com/kubeshop/testkube/pkg/tcl/schedulertcl"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/presets"
 
 	"github.com/kubeshop/testkube/internal/common"
@@ -222,7 +223,9 @@ func main() {
 	if mode == common.ModeAgent {
 		testWorkflowProcessor = presets.NewPro(inspector)
 	}
-	executionWorker := services.CreateExecutionWorker(clientset, cfg, clusterId, serviceAccountNames, testWorkflowProcessor)
+	executionWorker := services.CreateExecutionWorker(clientset, cfg, clusterId, serviceAccountNames, testWorkflowProcessor, map[string]string{
+		testworkflowconfig.FeatureFlagNewExecutions: fmt.Sprintf("%v", cfg.FeatureNewExecutionsEnabled),
+	})
 
 	// Build the runner
 	runner = runner2.New(
@@ -282,6 +285,7 @@ func main() {
 		cfg.TestkubeDashboardURI,
 		proContext.OrgID,
 		proContext.EnvID,
+		cfg.FeatureNewExecutionsEnabled,
 	)
 
 	var deprecatedClients commons.DeprecatedClients
@@ -391,6 +395,7 @@ func main() {
 			}
 			return testWorkflowExecutor.Start(environmentId, &execution, nil)
 		},
+		cfg.FeatureNewExecutionsEnabled,
 	)
 	commons.ExitOnError("Starting agent", err)
 	g.Go(func() error {
