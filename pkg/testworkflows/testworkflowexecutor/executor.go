@@ -474,15 +474,25 @@ func (e *executor) initialize(ctx context.Context, workflow *testworkflowsv1.Tes
 	if testworkflows.CountMapBytes(request.Config) < ConfigSizeLimit {
 		storeConfig := true
 		schema := workflow.Spec.Config
-
-		for k, _ := range request.Config {
-			if s, ok := schema[k]; ok && s.Sensitive {
+		config := make(map[string]string)
+		for k, v := range schema {
+			if v.Sensitive {
 				storeConfig = false
+				break
+			}
+			if v.Default != nil {
+				config[k] = v.Default.String()
+			}
+		}
+
+		for k, v := range request.Config {
+			if _, ok := schema[k]; ok {
+				config[k] = v
 			}
 		}
 
 		if storeConfig {
-			execution.Config = request.Config
+			execution.Config = config
 		}
 	}
 
