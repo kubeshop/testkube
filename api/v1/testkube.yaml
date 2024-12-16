@@ -10624,6 +10624,41 @@ components:
         selector:
           description: Only the volumes whose labels match the selector can be bound to the claim
           $ref: "#/components/schemas/LabelSelector"
+        dataSource:
+          description: 'Data source field can be used to specify either:
+	          * An existing VolumeSnapshot object (snapshot.storage.k8s.io/VolumeSnapshot)
+            * An existing PVC (PersistentVolumeClaim)'
+          $ref: "#/components/schemas/TypedLocalObjectReference"
+        dataSourceRef:
+          description: 'Data source reference specifies the object from which to populate the volume with data, if a non-empty volume is desired'
+          $ref: "#/components/schemas/TypedObjectReference"
+        volumeAttributesClassName:
+          description: 'Volume attributes class name may be used to set the VolumeAttributesClass used by this claim. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#volumeattributesclass'
+          $ref: "#/components/schemas/BoxedString"
+
+    TypedLocalObjectReference:
+      description: TypedLocalObjectReference contains enough information to let you locate the typed referenced object inside the same namespace
+      type: object
+      properties:
+        apiGroup:
+          description: api group is the group for the resource being referenced
+          $ref: "#/components/schemas/BoxedString"
+        kind:
+          description: kind is the type of resource being referenced
+          type: string
+        name:
+          description: name is the name of resource being referenced
+          type: string
+
+    TypedObjectReference:
+      description: TypedObjectReference contains enough information to let you locate the typed referenced object inside the specified namespace
+      type: object
+      allOf:
+      - $ref: "#/components/schemas/TypedLocalObjectReference"     
+      properties:
+        namespace:
+          description: Namespace is the namespace of resource being referenced
+          $ref: "#/components/schemas/BoxedString"
 
     #
     # Errors

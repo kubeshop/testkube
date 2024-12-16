@@ -23,7 +23,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowresolver"
 )
 
 //go:generate mockgen -destination=./mock_processor.go -package=testworkflowprocessor "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor" Processor
@@ -108,7 +107,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	layer := NewIntermediate().
 		AppendPodConfig(workflow.Spec.Pod).
 		AppendJobConfig(workflow.Spec.Job).
-		AppendPvc(common.MapMap(workflow.Spec.Pvcs, testworkflowresolver.ConvertTestWorkflowPvcConfigToPersistentVolumeClaimSpec))
+		AppendPvc(workflow.Spec.Pvcs)
 	layer.ContainerDefaults().
 		ApplyCR(constants.DefaultContainerConfig.DeepCopy()).
 		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, constants.DefaultInternalPath)).

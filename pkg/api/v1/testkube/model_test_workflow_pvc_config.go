@@ -16,6 +16,9 @@ type TestWorkflowPvcConfig struct {
 	Resources        *TestWorkflowResources `json:"resources,omitempty"`
 	StorageClassName *BoxedString           `json:"storageClassName,omitempty"`
 	// Volume name is used to identify the volume
-	VolumeName string         `json:"volumeName,omitempty"`
-	Selector   *LabelSelector `json:"selector,omitempty"`
+	VolumeName                string                     `json:"volumeName,omitempty"`
+	Selector                  *LabelSelector             `json:"selector,omitempty"`
+	DataSource                *TypedLocalObjectReference `json:"dataSource,omitempty"`
+	DataSourceRef             *TypedObjectReference      `json:"dataSourceRef,omitempty"`
+	VolumeAttributesClassName *BoxedString               `json:"volumeAttributesClassName,omitempty"`
 }

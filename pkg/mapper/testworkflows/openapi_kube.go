@@ -1492,11 +1492,11 @@ func MapTestWorkflowTagSchemaAPIToKube(v testkube.TestWorkflowTagSchema) testwor
 	}
 }
 
-func MapPvcConfigAPIToKube(v testkube.TestWorkflowPvcConfig) testworkflowsv1.TestWorkflowPvcConfig {
-	return testworkflowsv1.TestWorkflowPvcConfig{
-		AccessModes:      v.AccessModes,
-		VolumeMode:       MapBoxedStringToString(v.VolumeMode),
-		Resources:        common.MapPtr(v.Resources, MapResourcesAPIToKube),
+func MapPvcConfigAPIToKube(v testkube.TestWorkflowPvcConfig) corev1.PersistentVolumeClaimSpec {
+	return corev1.PersistentVolumeClaimSpec{
+		//		AccessModes:      v.AccessModes,
+		//		VolumeMode:       MapBoxedStringToString(v.VolumeMode),
+		//		Resources:        common.MapPtr(v.Resources, MapResourcesAPIToKube),
 		StorageClassName: MapBoxedStringToString(v.StorageClassName),
 		VolumeName:       v.VolumeName,
 		Selector:         common.MapPtr(v.Selector, MapLabelSelectorAPIToKube),

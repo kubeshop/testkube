@@ -12,8 +12,6 @@ import (
 	"maps"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/apimachinery/pkg/util/intstr"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
@@ -416,61 +414,4 @@ func MergeTags(dst, src map[string]string) map[string]string {
 	}
 
 	return dst
-}
-
-func ConvertTestWorkflowPvcConfigToPersistentVolumeClaimSpec(pvc testworkflowsv1.TestWorkflowPvcConfig) corev1.PersistentVolumeClaimSpec {
-	return corev1.PersistentVolumeClaimSpec{
-		AccessModes: common.MapSlice(pvc.AccessModes, func(s string) corev1.PersistentVolumeAccessMode {
-			return corev1.PersistentVolumeAccessMode(s)
-		}),
-		Selector:         pvc.Selector,
-		Resources:        ConvertResourcesToVolumeResourceRequirements(pvc.Resources),
-		VolumeName:       pvc.VolumeName,
-		StorageClassName: pvc.StorageClassName,
-		VolumeMode:       (*corev1.PersistentVolumeMode)(pvc.VolumeMode),
-	}
-}
-
-func ConvertResourcesToVolumeResourceRequirements(r *testworkflowsv1.Resources) corev1.VolumeResourceRequirements {
-	var limits, requests corev1.ResourceList
-	if r != nil {
-		if len(r.Limits) != 0 {
-			limits = make(corev1.ResourceList)
-		}
-
-		if len(r.Requests) != 0 {
-			requests = make(corev1.ResourceList)
-		}
-
-		for key, value := range r.Limits {
-			var quantity resource.Quantity
-			if value.Type == intstr.Int {
-				quantity = *resource.NewQuantity(int64(value.IntVal), resource.BinarySI)
-			}
-
-			if value.Type == intstr.String {
-				quantity, _ = resource.ParseQuantity(value.String())
-			}
-
-			limits[key] = quantity
-		}
-
-		for key, value := range r.Requests {
-			var quantity resource.Quantity
-			if value.Type == intstr.Int {
-				quantity = *resource.NewQuantity(int64(value.IntVal), resource.BinarySI)
-			}
-
-			if value.Type == intstr.String {
-				quantity, _ = resource.ParseQuantity(value.String())
-			}
-
-			requests[key] = quantity
-		}
-	}
-
-	return corev1.VolumeResourceRequirements{
-		Limits:   limits,
-		Requests: requests,
-	}
 }
