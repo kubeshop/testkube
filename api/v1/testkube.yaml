@@ -8282,6 +8282,8 @@ components:
         runningContext:
           description: running context for the test workflow execution (Pro edition only)
           $ref: "#/components/schemas/TestWorkflowRunningContext"
+        config:
+          $ref: "#/components/schemas/TestWorkflowConfigValue"
       required:
         - id
         - name
