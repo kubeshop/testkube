@@ -616,6 +616,7 @@ func (r *MongoRepository) Init(ctx context.Context, id string, data InitData) er
 	return err
 }
 
+// TODO: Return IDs only
 func (r *MongoRepository) GetUnassigned(ctx context.Context) (result []testkube.TestWorkflowExecution, err error) {
 	result = make([]testkube.TestWorkflowExecution, 0)
 	opts := &options.FindOptions{}
