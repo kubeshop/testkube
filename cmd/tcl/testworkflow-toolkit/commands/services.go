@@ -261,6 +261,7 @@ func NewServicesCmd() *cobra.Command {
 					testworkflowconfig.CreateResourceMachine(&cfg.Resource),
 					testworkflowconfig.CreateWorkerMachine(&cfg.Worker),
 					baseMachine,
+					testworkflowconfig.CreatePvcMachine(cfg.Execution.Pvcs),
 					params.MachineAt(index),
 				)
 

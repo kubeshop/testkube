@@ -120,7 +120,9 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		createSecretMachine(mapEnv),
 		testworkflowconfig.CreateWorkerMachine(&options.Config.Worker),
 		testworkflowconfig.CreateResourceMachine(&options.Config.Resource),
-		testworkflowconfig.CreatePvcMachine(layer.Pvcs()))
+		testworkflowconfig.CreatePvcMachine(
+			common.MapSlice(layer.Pvcs(), func(p corev1.PersistentVolumeClaim) string { return p.Name })),
+	)
 
 	// Fetch resource root and resource ID
 	if options.Config.Resource.Id == "" {
@@ -174,6 +176,8 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 			return nil, errors.Wrap(err, "finalizing Pvc")
 		}
 	}
+	pvcNames := common.MapSlice(pvcs, func(p corev1.PersistentVolumeClaim) string { return p.Name })
+	options.Config.Execution.PvcNames = pvcNames
 
 	// Finalize Secrets
 	secrets := append(layer.Secrets(), options.Secrets...)
