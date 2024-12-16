@@ -386,6 +386,7 @@ func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 		var scheduleSelector cloud.ScheduleSelector
 		if name != "" {
 			scheduleSelector.Name = name
+			scheduleSelector.Config = request.Config
 		} else if selector != "" {
 			sel, err := metav1.ParseToLabelSelector(selector)
 			if err != nil {
@@ -395,6 +396,7 @@ func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 				return s.InternalError(c, errPrefix, "invalid selector", errors.New("only simple selectors are allowed"))
 			}
 			scheduleSelector.LabelSelector = sel.MatchLabels
+			scheduleSelector.Config = request.Config
 		}
 
 		resp := s.testWorkflowExecutor.Execute(ctx, &cloud.ScheduleRequest{

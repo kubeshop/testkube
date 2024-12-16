@@ -51,7 +51,7 @@ func createConfigMachine(cfg map[string]intstr.IntOrString, schema map[string]te
 			return nil, errors.Wrap(err, "config."+k)
 		}
 		if schema[k].Sensitive && externalize != nil {
-			expr, err = externalize(expr.Template(), k)
+			expr, err = externalize(k, expr.Template())
 			if err != nil {
 				return nil, err
 			}
@@ -65,7 +65,7 @@ func createConfigMachine(cfg map[string]intstr.IntOrString, schema map[string]te
 				return nil, errors.Wrap(err, "config."+k)
 			}
 			if schema[k].Sensitive && externalize != nil {
-				expr, err = externalize(expr.Template(), k)
+				expr, err = externalize(k, expr.Template())
 				if err != nil {
 					return nil, err
 				}
