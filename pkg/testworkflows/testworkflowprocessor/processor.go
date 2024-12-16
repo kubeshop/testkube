@@ -176,8 +176,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 			return nil, errors.Wrap(err, "finalizing Pvc")
 		}
 	}
-	pvcNames := common.MapSlice(pvcs, func(p corev1.PersistentVolumeClaim) string { return p.Name })
-	options.Config.Execution.PvcNames = pvcNames
+	options.Config.Execution.PvcNames = common.MapSlice(pvcs, func(p corev1.PersistentVolumeClaim) string { return p.Name })
 
 	// Finalize Secrets
 	secrets := append(layer.Secrets(), options.Secrets...)
