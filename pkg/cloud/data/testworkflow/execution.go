@@ -3,6 +3,7 @@ package testworkflow
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"time"
 
 	"google.golang.org/grpc"
@@ -190,4 +191,8 @@ func (r *CloudRepository) Init(ctx context.Context, id string, data testworkflow
 	execution.Signature = data.Signature
 	execution.RunnerId = data.RunnerID
 	return r.Update(ctx, execution)
+}
+
+func (r *CloudRepository) GetUnassigned(ctx context.Context) (result []testkube.TestWorkflowExecution, err error) {
+	return nil, errors.New("not supported")
 }

@@ -64,6 +64,8 @@ type Repository interface {
 	GetLatestByTestWorkflow(ctx context.Context, workflowName string) (*testkube.TestWorkflowExecution, error)
 	// GetRunning get list of executions that are still running
 	GetRunning(ctx context.Context) ([]testkube.TestWorkflowExecution, error)
+	// GetUnassigned get list of executions that is waiting to be executed
+	GetUnassigned(ctx context.Context) ([]testkube.TestWorkflowExecution, error)
 	// GetLatestByTestWorkflows gets latest execution results by workflow names
 	GetLatestByTestWorkflows(ctx context.Context, workflowNames []string) (executions []testkube.TestWorkflowExecutionSummary, err error)
 	// GetExecutionsTotals gets executions total stats using a filter, use filter with no data for all

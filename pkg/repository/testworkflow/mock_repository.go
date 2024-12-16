@@ -233,6 +233,21 @@ func (mr *MockRepositoryMockRecorder) GetPreviousFinishedState(arg0, arg1, arg2 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPreviousFinishedState", reflect.TypeOf((*MockRepository)(nil).GetPreviousFinishedState), arg0, arg1, arg2)
 }
 
+// GetUnassigned mocks base method.
+func (m *MockRepository) GetUnassigned(arg0 context.Context) ([]testkube.TestWorkflowExecution, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetUnassigned", arg0)
+	ret0, _ := ret[0].([]testkube.TestWorkflowExecution)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetUnassigned indicates an expected call of GetUnassigned.
+func (mr *MockRepositoryMockRecorder) GetUnassigned(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUnassigned", reflect.TypeOf((*MockRepository)(nil).GetUnassigned), arg0)
+}
+
 // GetRunning mocks base method.
 func (m *MockRepository) GetRunning(arg0 context.Context) ([]testkube.TestWorkflowExecution, error) {
 	m.ctrl.T.Helper()

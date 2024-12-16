@@ -615,3 +615,26 @@ func (r *MongoRepository) Init(ctx context.Context, id string, data InitData) er
 	}})
 	return err
 }
+
+func (r *MongoRepository) GetUnassigned(ctx context.Context) (result []testkube.TestWorkflowExecution, err error) {
+	result = make([]testkube.TestWorkflowExecution, 0)
+	opts := &options.FindOptions{}
+	opts.SetSort(bson.D{{Key: "_id", Value: -1}})
+	if r.allowDiskUse {
+		opts.SetAllowDiskUse(r.allowDiskUse)
+	}
+
+	cursor, err := r.Coll.Find(ctx, bson.M{
+		"result.status":   testkube.QUEUED_TestWorkflowStatus,
+		"result.runnerId": "",
+	}, opts)
+	if err != nil {
+		return result, err
+	}
+	err = cursor.All(ctx, &result)
+
+	for i := range result {
+		result[i].UnscapeDots()
+	}
+	return
+}
