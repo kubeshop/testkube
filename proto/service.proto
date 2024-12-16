@@ -189,6 +189,11 @@ message RunningContext {
   RunningContextType type = 2;
 }
 
+message UserSignature {
+  string name = 1;
+  string email = 2;
+}
+
 message ScheduleRequest {
   // Target
   string environment_id = 1;
@@ -203,9 +208,10 @@ message ScheduleRequest {
   // Running metadata
   RunningContext running_context = 5;
   repeated string parent_execution_ids = 7;
+  optional UserSignature untrusted_user = 8;
 
   // Kubernetes resource TODO: is it required?
-  string kubernetes_object_name = 8;
+  string kubernetes_object_name = 9;
 }
 
 message ScheduleResponse {

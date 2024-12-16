@@ -155,7 +155,7 @@ func (s *Service) execute(ctx context.Context, e *watcherEvent, t *testtriggersv
 
 		// Pro edition only (tcl protected code)
 		if s.proContext != nil && s.proContext.APIKey != "" {
-			request.RunningContext = testworkflowexecutor.GetNewRunningContext(triggerstcl.GetRunningContext(t.Name), nil)
+			request.RunningContext, _ = testworkflowexecutor.GetNewRunningContext(triggerstcl.GetRunningContext(t.Name), nil)
 		}
 
 		isDelayDefined := t.Spec.Delay != nil

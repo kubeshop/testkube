@@ -1606,6 +1606,61 @@ func (x *RunningContext) GetType() RunningContextType {
 	return RunningContextType_UNKNOWN
 }
 
+type UserSignature struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Name  string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Email string `protobuf:"bytes,2,opt,name=email,proto3" json:"email,omitempty"`
+}
+
+func (x *UserSignature) Reset() {
+	*x = UserSignature{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_proto_service_proto_msgTypes[20]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *UserSignature) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UserSignature) ProtoMessage() {}
+
+func (x *UserSignature) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_service_proto_msgTypes[20]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UserSignature.ProtoReflect.Descriptor instead.
+func (*UserSignature) Descriptor() ([]byte, []int) {
+	return file_proto_service_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *UserSignature) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *UserSignature) GetEmail() string {
+	if x != nil {
+		return x.Email
+	}
+	return ""
+}
+
 type ScheduleRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -1621,14 +1676,15 @@ type ScheduleRequest struct {
 	// Running metadata
 	RunningContext     *RunningContext `protobuf:"bytes,5,opt,name=running_context,json=runningContext,proto3" json:"running_context,omitempty"`
 	ParentExecutionIds []string        `protobuf:"bytes,7,rep,name=parent_execution_ids,json=parentExecutionIds,proto3" json:"parent_execution_ids,omitempty"`
+	UntrustedUser      *UserSignature  `protobuf:"bytes,8,opt,name=untrusted_user,json=untrustedUser,proto3,oneof" json:"untrusted_user,omitempty"`
 	// Kubernetes resource TODO: is it required?
-	KubernetesObjectName string `protobuf:"bytes,8,opt,name=kubernetes_object_name,json=kubernetesObjectName,proto3" json:"kubernetes_object_name,omitempty"`
+	KubernetesObjectName string `protobuf:"bytes,9,opt,name=kubernetes_object_name,json=kubernetesObjectName,proto3" json:"kubernetes_object_name,omitempty"`
 }
 
 func (x *ScheduleRequest) Reset() {
 	*x = ScheduleRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_service_proto_msgTypes[20]
+		mi := &file_proto_service_proto_msgTypes[21]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1641,7 +1697,7 @@ func (x *ScheduleRequest) String() string {
 func (*ScheduleRequest) ProtoMessage() {}
 
 func (x *ScheduleRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_service_proto_msgTypes[20]
+	mi := &file_proto_service_proto_msgTypes[21]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1654,7 +1710,7 @@ func (x *ScheduleRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ScheduleRequest.ProtoReflect.Descriptor instead.
 func (*ScheduleRequest) Descriptor() ([]byte, []int) {
-	return file_proto_service_proto_rawDescGZIP(), []int{20}
+	return file_proto_service_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *ScheduleRequest) GetEnvironmentId() string {
@@ -1699,6 +1755,13 @@ func (x *ScheduleRequest) GetParentExecutionIds() []string {
 	return nil
 }
 
+func (x *ScheduleRequest) GetUntrustedUser() *UserSignature {
+	if x != nil {
+		return x.UntrustedUser
+	}
+	return nil
+}
+
 func (x *ScheduleRequest) GetKubernetesObjectName() string {
 	if x != nil {
 		return x.KubernetesObjectName
@@ -1717,7 +1780,7 @@ type ScheduleResponse struct {
 func (x *ScheduleResponse) Reset() {
 	*x = ScheduleResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_service_proto_msgTypes[21]
+		mi := &file_proto_service_proto_msgTypes[22]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1730,7 +1793,7 @@ func (x *ScheduleResponse) String() string {
 func (*ScheduleResponse) ProtoMessage() {}
 
 func (x *ScheduleResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_service_proto_msgTypes[21]
+	mi := &file_proto_service_proto_msgTypes[22]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1743,7 +1806,7 @@ func (x *ScheduleResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ScheduleResponse.ProtoReflect.Descriptor instead.
 func (*ScheduleResponse) Descriptor() ([]byte, []int) {
-	return file_proto_service_proto_rawDescGZIP(), []int{21}
+	return file_proto_service_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *ScheduleResponse) GetExecution() []byte {
@@ -1765,7 +1828,7 @@ type EventResource struct {
 func (x *EventResource) Reset() {
 	*x = EventResource{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_service_proto_msgTypes[22]
+		mi := &file_proto_service_proto_msgTypes[23]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1778,7 +1841,7 @@ func (x *EventResource) String() string {
 func (*EventResource) ProtoMessage() {}
 
 func (x *EventResource) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_service_proto_msgTypes[22]
+	mi := &file_proto_service_proto_msgTypes[23]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1791,7 +1854,7 @@ func (x *EventResource) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EventResource.ProtoReflect.Descriptor instead.
 func (*EventResource) Descriptor() ([]byte, []int) {
-	return file_proto_service_proto_rawDescGZIP(), []int{22}
+	return file_proto_service_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *EventResource) GetType() string {
@@ -1820,7 +1883,7 @@ type EventStreamRequest struct {
 func (x *EventStreamRequest) Reset() {
 	*x = EventStreamRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_service_proto_msgTypes[23]
+		mi := &file_proto_service_proto_msgTypes[24]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1833,7 +1896,7 @@ func (x *EventStreamRequest) String() string {
 func (*EventStreamRequest) ProtoMessage() {}
 
 func (x *EventStreamRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_service_proto_msgTypes[23]
+	mi := &file_proto_service_proto_msgTypes[24]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1846,7 +1909,7 @@ func (x *EventStreamRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EventStreamRequest.ProtoReflect.Descriptor instead.
 func (*EventStreamRequest) Descriptor() ([]byte, []int) {
-	return file_proto_service_proto_rawDescGZIP(), []int{23}
+	return file_proto_service_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *EventStreamRequest) GetEnvironmentId() string {
@@ -1877,7 +1940,7 @@ type Event struct {
 func (x *Event) Reset() {
 	*x = Event{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_service_proto_msgTypes[24]
+		mi := &file_proto_service_proto_msgTypes[25]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1890,7 +1953,7 @@ func (x *Event) String() string {
 func (*Event) ProtoMessage() {}
 
 func (x *Event) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_service_proto_msgTypes[24]
+	mi := &file_proto_service_proto_msgTypes[25]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1903,7 +1966,7 @@ func (x *Event) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Event.ProtoReflect.Descriptor instead.
 func (*Event) Descriptor() ([]byte, []int) {
-	return file_proto_service_proto_rawDescGZIP(), []int{24}
+	return file_proto_service_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *Event) GetId() string {
@@ -1946,7 +2009,7 @@ type RunnerRequest struct {
 func (x *RunnerRequest) Reset() {
 	*x = RunnerRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_service_proto_msgTypes[25]
+		mi := &file_proto_service_proto_msgTypes[26]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1959,7 +2022,7 @@ func (x *RunnerRequest) String() string {
 func (*RunnerRequest) ProtoMessage() {}
 
 func (x *RunnerRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_service_proto_msgTypes[25]
+	mi := &file_proto_service_proto_msgTypes[26]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1972,7 +2035,7 @@ func (x *RunnerRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RunnerRequest.ProtoReflect.Descriptor instead.
 func (*RunnerRequest) Descriptor() ([]byte, []int) {
-	return file_proto_service_proto_rawDescGZIP(), []int{25}
+	return file_proto_service_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *RunnerRequest) GetId() string {
@@ -2003,7 +2066,7 @@ type RunnerResponse struct {
 func (x *RunnerResponse) Reset() {
 	*x = RunnerResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_service_proto_msgTypes[26]
+		mi := &file_proto_service_proto_msgTypes[27]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2016,7 +2079,7 @@ func (x *RunnerResponse) String() string {
 func (*RunnerResponse) ProtoMessage() {}
 
 func (x *RunnerResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_service_proto_msgTypes[26]
+	mi := &file_proto_service_proto_msgTypes[27]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2029,7 +2092,7 @@ func (x *RunnerResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RunnerResponse.ProtoReflect.Descriptor instead.
 func (*RunnerResponse) Descriptor() ([]byte, []int) {
-	return file_proto_service_proto_rawDescGZIP(), []int{26}
+	return file_proto_service_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *RunnerResponse) GetId() string {
@@ -2072,7 +2135,7 @@ type ObtainExecutionRequest struct {
 func (x *ObtainExecutionRequest) Reset() {
 	*x = ObtainExecutionRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_service_proto_msgTypes[27]
+		mi := &file_proto_service_proto_msgTypes[28]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2085,7 +2148,7 @@ func (x *ObtainExecutionRequest) String() string {
 func (*ObtainExecutionRequest) ProtoMessage() {}
 
 func (x *ObtainExecutionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_service_proto_msgTypes[27]
+	mi := &file_proto_service_proto_msgTypes[28]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2098,7 +2161,7 @@ func (x *ObtainExecutionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ObtainExecutionRequest.ProtoReflect.Descriptor instead.
 func (*ObtainExecutionRequest) Descriptor() ([]byte, []int) {
-	return file_proto_service_proto_rawDescGZIP(), []int{27}
+	return file_proto_service_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *ObtainExecutionRequest) GetId() string {
@@ -2128,7 +2191,7 @@ type ObtainExecutionResponse struct {
 func (x *ObtainExecutionResponse) Reset() {
 	*x = ObtainExecutionResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_service_proto_msgTypes[28]
+		mi := &file_proto_service_proto_msgTypes[29]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2141,7 +2204,7 @@ func (x *ObtainExecutionResponse) String() string {
 func (*ObtainExecutionResponse) ProtoMessage() {}
 
 func (x *ObtainExecutionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_service_proto_msgTypes[28]
+	mi := &file_proto_service_proto_msgTypes[29]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2154,7 +2217,7 @@ func (x *ObtainExecutionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ObtainExecutionResponse.ProtoReflect.Descriptor instead.
 func (*ObtainExecutionResponse) Descriptor() ([]byte, []int) {
-	return file_proto_service_proto_rawDescGZIP(), []int{28}
+	return file_proto_service_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *ObtainExecutionResponse) GetId() string {
@@ -2390,34 +2453,43 @@ var file_proto_service_proto_rawDesc = []byte{
 	0x12, 0x2d, 0x0a, 0x04, 0x74, 0x79, 0x70, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0e, 0x32, 0x19,
 	0x2e, 0x63, 0x6c, 0x6f, 0x75, 0x64, 0x2e, 0x52, 0x75, 0x6e, 0x6e, 0x69, 0x6e, 0x67, 0x43, 0x6f,
 	0x6e, 0x74, 0x65, 0x78, 0x74, 0x54, 0x79, 0x70, 0x65, 0x52, 0x04, 0x74, 0x79, 0x70, 0x65, 0x22,
-	0xb1, 0x03, 0x0a, 0x0f, 0x53, 0x63, 0x68, 0x65, 0x64, 0x75, 0x6c, 0x65, 0x52, 0x65, 0x71, 0x75,
-	0x65, 0x73, 0x74, 0x12, 0x25, 0x0a, 0x0e, 0x65, 0x6e, 0x76, 0x69, 0x72, 0x6f, 0x6e, 0x6d, 0x65,
-	0x6e, 0x74, 0x5f, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0d, 0x65, 0x6e, 0x76,
-	0x69, 0x72, 0x6f, 0x6e, 0x6d, 0x65, 0x6e, 0x74, 0x49, 0x64, 0x12, 0x35, 0x0a, 0x09, 0x73, 0x65,
-	0x6c, 0x65, 0x63, 0x74, 0x6f, 0x72, 0x73, 0x18, 0x02, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x17, 0x2e,
-	0x63, 0x6c, 0x6f, 0x75, 0x64, 0x2e, 0x53, 0x63, 0x68, 0x65, 0x64, 0x75, 0x6c, 0x65, 0x53, 0x65,
-	0x6c, 0x65, 0x63, 0x74, 0x6f, 0x72, 0x52, 0x09, 0x73, 0x65, 0x6c, 0x65, 0x63, 0x74, 0x6f, 0x72,
-	0x73, 0x12, 0x29, 0x0a, 0x10, 0x64, 0x69, 0x73, 0x61, 0x62, 0x6c, 0x65, 0x5f, 0x77, 0x65, 0x62,
-	0x68, 0x6f, 0x6f, 0x6b, 0x73, 0x18, 0x03, 0x20, 0x01, 0x28, 0x08, 0x52, 0x0f, 0x64, 0x69, 0x73,
-	0x61, 0x62, 0x6c, 0x65, 0x57, 0x65, 0x62, 0x68, 0x6f, 0x6f, 0x6b, 0x73, 0x12, 0x34, 0x0a, 0x04,
-	0x74, 0x61, 0x67, 0x73, 0x18, 0x04, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x20, 0x2e, 0x63, 0x6c, 0x6f,
-	0x75, 0x64, 0x2e, 0x53, 0x63, 0x68, 0x65, 0x64, 0x75, 0x6c, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65,
-	0x73, 0x74, 0x2e, 0x54, 0x61, 0x67, 0x73, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x52, 0x04, 0x74, 0x61,
-	0x67, 0x73, 0x12, 0x3e, 0x0a, 0x0f, 0x72, 0x75, 0x6e, 0x6e, 0x69, 0x6e, 0x67, 0x5f, 0x63, 0x6f,
-	0x6e, 0x74, 0x65, 0x78, 0x74, 0x18, 0x05, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x15, 0x2e, 0x63, 0x6c,
-	0x6f, 0x75, 0x64, 0x2e, 0x52, 0x75, 0x6e, 0x6e, 0x69, 0x6e, 0x67, 0x43, 0x6f, 0x6e, 0x74, 0x65,
-	0x78, 0x74, 0x52, 0x0e, 0x72, 0x75, 0x6e, 0x6e, 0x69, 0x6e, 0x67, 0x43, 0x6f, 0x6e, 0x74, 0x65,
-	0x78, 0x74, 0x12, 0x30, 0x0a, 0x14, 0x70, 0x61, 0x72, 0x65, 0x6e, 0x74, 0x5f, 0x65, 0x78, 0x65,
-	0x63, 0x75, 0x74, 0x69, 0x6f, 0x6e, 0x5f, 0x69, 0x64, 0x73, 0x18, 0x07, 0x20, 0x03, 0x28, 0x09,
-	0x52, 0x12, 0x70, 0x61, 0x72, 0x65, 0x6e, 0x74, 0x45, 0x78, 0x65, 0x63, 0x75, 0x74, 0x69, 0x6f,
-	0x6e, 0x49, 0x64, 0x73, 0x12, 0x34, 0x0a, 0x16, 0x6b, 0x75, 0x62, 0x65, 0x72, 0x6e, 0x65, 0x74,
-	0x65, 0x73, 0x5f, 0x6f, 0x62, 0x6a, 0x65, 0x63, 0x74, 0x5f, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x08,
-	0x20, 0x01, 0x28, 0x09, 0x52, 0x14, 0x6b, 0x75, 0x62, 0x65, 0x72, 0x6e, 0x65, 0x74, 0x65, 0x73,
-	0x4f, 0x62, 0x6a, 0x65, 0x63, 0x74, 0x4e, 0x61, 0x6d, 0x65, 0x1a, 0x37, 0x0a, 0x09, 0x54, 0x61,
-	0x67, 0x73, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x12, 0x10, 0x0a, 0x03, 0x6b, 0x65, 0x79, 0x18, 0x01,
-	0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x6b, 0x65, 0x79, 0x12, 0x14, 0x0a, 0x05, 0x76, 0x61, 0x6c,
-	0x75, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x3a,
-	0x02, 0x38, 0x01, 0x22, 0x30, 0x0a, 0x10, 0x53, 0x63, 0x68, 0x65, 0x64, 0x75, 0x6c, 0x65, 0x52,
+	0x39, 0x0a, 0x0d, 0x55, 0x73, 0x65, 0x72, 0x53, 0x69, 0x67, 0x6e, 0x61, 0x74, 0x75, 0x72, 0x65,
+	0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04,
+	0x6e, 0x61, 0x6d, 0x65, 0x12, 0x14, 0x0a, 0x05, 0x65, 0x6d, 0x61, 0x69, 0x6c, 0x18, 0x02, 0x20,
+	0x01, 0x28, 0x09, 0x52, 0x05, 0x65, 0x6d, 0x61, 0x69, 0x6c, 0x22, 0x86, 0x04, 0x0a, 0x0f, 0x53,
+	0x63, 0x68, 0x65, 0x64, 0x75, 0x6c, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x25,
+	0x0a, 0x0e, 0x65, 0x6e, 0x76, 0x69, 0x72, 0x6f, 0x6e, 0x6d, 0x65, 0x6e, 0x74, 0x5f, 0x69, 0x64,
+	0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0d, 0x65, 0x6e, 0x76, 0x69, 0x72, 0x6f, 0x6e, 0x6d,
+	0x65, 0x6e, 0x74, 0x49, 0x64, 0x12, 0x35, 0x0a, 0x09, 0x73, 0x65, 0x6c, 0x65, 0x63, 0x74, 0x6f,
+	0x72, 0x73, 0x18, 0x02, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x17, 0x2e, 0x63, 0x6c, 0x6f, 0x75, 0x64,
+	0x2e, 0x53, 0x63, 0x68, 0x65, 0x64, 0x75, 0x6c, 0x65, 0x53, 0x65, 0x6c, 0x65, 0x63, 0x74, 0x6f,
+	0x72, 0x52, 0x09, 0x73, 0x65, 0x6c, 0x65, 0x63, 0x74, 0x6f, 0x72, 0x73, 0x12, 0x29, 0x0a, 0x10,
+	0x64, 0x69, 0x73, 0x61, 0x62, 0x6c, 0x65, 0x5f, 0x77, 0x65, 0x62, 0x68, 0x6f, 0x6f, 0x6b, 0x73,
+	0x18, 0x03, 0x20, 0x01, 0x28, 0x08, 0x52, 0x0f, 0x64, 0x69, 0x73, 0x61, 0x62, 0x6c, 0x65, 0x57,
+	0x65, 0x62, 0x68, 0x6f, 0x6f, 0x6b, 0x73, 0x12, 0x34, 0x0a, 0x04, 0x74, 0x61, 0x67, 0x73, 0x18,
+	0x04, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x20, 0x2e, 0x63, 0x6c, 0x6f, 0x75, 0x64, 0x2e, 0x53, 0x63,
+	0x68, 0x65, 0x64, 0x75, 0x6c, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x2e, 0x54, 0x61,
+	0x67, 0x73, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x52, 0x04, 0x74, 0x61, 0x67, 0x73, 0x12, 0x3e, 0x0a,
+	0x0f, 0x72, 0x75, 0x6e, 0x6e, 0x69, 0x6e, 0x67, 0x5f, 0x63, 0x6f, 0x6e, 0x74, 0x65, 0x78, 0x74,
+	0x18, 0x05, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x15, 0x2e, 0x63, 0x6c, 0x6f, 0x75, 0x64, 0x2e, 0x52,
+	0x75, 0x6e, 0x6e, 0x69, 0x6e, 0x67, 0x43, 0x6f, 0x6e, 0x74, 0x65, 0x78, 0x74, 0x52, 0x0e, 0x72,
+	0x75, 0x6e, 0x6e, 0x69, 0x6e, 0x67, 0x43, 0x6f, 0x6e, 0x74, 0x65, 0x78, 0x74, 0x12, 0x30, 0x0a,
+	0x14, 0x70, 0x61, 0x72, 0x65, 0x6e, 0x74, 0x5f, 0x65, 0x78, 0x65, 0x63, 0x75, 0x74, 0x69, 0x6f,
+	0x6e, 0x5f, 0x69, 0x64, 0x73, 0x18, 0x07, 0x20, 0x03, 0x28, 0x09, 0x52, 0x12, 0x70, 0x61, 0x72,
+	0x65, 0x6e, 0x74, 0x45, 0x78, 0x65, 0x63, 0x75, 0x74, 0x69, 0x6f, 0x6e, 0x49, 0x64, 0x73, 0x12,
+	0x40, 0x0a, 0x0e, 0x75, 0x6e, 0x74, 0x72, 0x75, 0x73, 0x74, 0x65, 0x64, 0x5f, 0x75, 0x73, 0x65,
+	0x72, 0x18, 0x08, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x14, 0x2e, 0x63, 0x6c, 0x6f, 0x75, 0x64, 0x2e,
+	0x55, 0x73, 0x65, 0x72, 0x53, 0x69, 0x67, 0x6e, 0x61, 0x74, 0x75, 0x72, 0x65, 0x48, 0x00, 0x52,
+	0x0d, 0x75, 0x6e, 0x74, 0x72, 0x75, 0x73, 0x74, 0x65, 0x64, 0x55, 0x73, 0x65, 0x72, 0x88, 0x01,
+	0x01, 0x12, 0x34, 0x0a, 0x16, 0x6b, 0x75, 0x62, 0x65, 0x72, 0x6e, 0x65, 0x74, 0x65, 0x73, 0x5f,
+	0x6f, 0x62, 0x6a, 0x65, 0x63, 0x74, 0x5f, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x09, 0x20, 0x01, 0x28,
+	0x09, 0x52, 0x14, 0x6b, 0x75, 0x62, 0x65, 0x72, 0x6e, 0x65, 0x74, 0x65, 0x73, 0x4f, 0x62, 0x6a,
+	0x65, 0x63, 0x74, 0x4e, 0x61, 0x6d, 0x65, 0x1a, 0x37, 0x0a, 0x09, 0x54, 0x61, 0x67, 0x73, 0x45,
+	0x6e, 0x74, 0x72, 0x79, 0x12, 0x10, 0x0a, 0x03, 0x6b, 0x65, 0x79, 0x18, 0x01, 0x20, 0x01, 0x28,
+	0x09, 0x52, 0x03, 0x6b, 0x65, 0x79, 0x12, 0x14, 0x0a, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x18,
+	0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x3a, 0x02, 0x38, 0x01,
+	0x42, 0x11, 0x0a, 0x0f, 0x5f, 0x75, 0x6e, 0x74, 0x72, 0x75, 0x73, 0x74, 0x65, 0x64, 0x5f, 0x75,
+	0x73, 0x65, 0x72, 0x22, 0x30, 0x0a, 0x10, 0x53, 0x63, 0x68, 0x65, 0x64, 0x75, 0x6c, 0x65, 0x52,
 	0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x1c, 0x0a, 0x09, 0x65, 0x78, 0x65, 0x63, 0x75,
 	0x74, 0x69, 0x6f, 0x6e, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x09, 0x65, 0x78, 0x65, 0x63,
 	0x75, 0x74, 0x69, 0x6f, 0x6e, 0x22, 0x33, 0x0a, 0x0d, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x52, 0x65,
@@ -2587,7 +2659,7 @@ func file_proto_service_proto_rawDescGZIP() []byte {
 }
 
 var file_proto_service_proto_enumTypes = make([]protoimpl.EnumInfo, 5)
-var file_proto_service_proto_msgTypes = make([]protoimpl.MessageInfo, 35)
+var file_proto_service_proto_msgTypes = make([]protoimpl.MessageInfo, 36)
 var file_proto_service_proto_goTypes = []interface{}{
 	(LogsStreamRequestType)(0),                            // 0: cloud.LogsStreamRequestType
 	(TestWorkflowNotificationsRequestType)(0),             // 1: cloud.TestWorkflowNotificationsRequestType
@@ -2614,81 +2686,83 @@ var file_proto_service_proto_goTypes = []interface{}{
 	(*TestWorkflowParallelStepNotificationsResponse)(nil), // 22: cloud.TestWorkflowParallelStepNotificationsResponse
 	(*ScheduleSelector)(nil),                              // 23: cloud.ScheduleSelector
 	(*RunningContext)(nil),                                // 24: cloud.RunningContext
-	(*ScheduleRequest)(nil),                               // 25: cloud.ScheduleRequest
-	(*ScheduleResponse)(nil),                              // 26: cloud.ScheduleResponse
-	(*EventResource)(nil),                                 // 27: cloud.EventResource
-	(*EventStreamRequest)(nil),                            // 28: cloud.EventStreamRequest
-	(*Event)(nil),                                         // 29: cloud.Event
-	(*RunnerRequest)(nil),                                 // 30: cloud.RunnerRequest
-	(*RunnerResponse)(nil),                                // 31: cloud.RunnerResponse
-	(*ObtainExecutionRequest)(nil),                        // 32: cloud.ObtainExecutionRequest
-	(*ObtainExecutionResponse)(nil),                       // 33: cloud.ObtainExecutionResponse
-	nil,                                                   // 34: cloud.ExecuteRequest.HeadersEntry
-	nil,                                                   // 35: cloud.ExecuteResponse.HeadersEntry
-	nil,                                                   // 36: cloud.ScheduleSelector.LabelSelectorEntry
-	nil,                                                   // 37: cloud.ScheduleSelector.ConfigEntry
-	nil,                                                   // 38: cloud.ScheduleSelector.TagsEntry
-	nil,                                                   // 39: cloud.ScheduleRequest.TagsEntry
-	(*structpb.Struct)(nil),                               // 40: google.protobuf.Struct
-	(*emptypb.Empty)(nil),                                 // 41: google.protobuf.Empty
+	(*UserSignature)(nil),                                 // 25: cloud.UserSignature
+	(*ScheduleRequest)(nil),                               // 26: cloud.ScheduleRequest
+	(*ScheduleResponse)(nil),                              // 27: cloud.ScheduleResponse
+	(*EventResource)(nil),                                 // 28: cloud.EventResource
+	(*EventStreamRequest)(nil),                            // 29: cloud.EventStreamRequest
+	(*Event)(nil),                                         // 30: cloud.Event
+	(*RunnerRequest)(nil),                                 // 31: cloud.RunnerRequest
+	(*RunnerResponse)(nil),                                // 32: cloud.RunnerResponse
+	(*ObtainExecutionRequest)(nil),                        // 33: cloud.ObtainExecutionRequest
+	(*ObtainExecutionResponse)(nil),                       // 34: cloud.ObtainExecutionResponse
+	nil,                                                   // 35: cloud.ExecuteRequest.HeadersEntry
+	nil,                                                   // 36: cloud.ExecuteResponse.HeadersEntry
+	nil,                                                   // 37: cloud.ScheduleSelector.LabelSelectorEntry
+	nil,                                                   // 38: cloud.ScheduleSelector.ConfigEntry
+	nil,                                                   // 39: cloud.ScheduleSelector.TagsEntry
+	nil,                                                   // 40: cloud.ScheduleRequest.TagsEntry
+	(*structpb.Struct)(nil),                               // 41: google.protobuf.Struct
+	(*emptypb.Empty)(nil),                                 // 42: google.protobuf.Empty
 }
 var file_proto_service_proto_depIdxs = []int32{
 	0,  // 0: cloud.LogsStreamRequest.request_type:type_name -> cloud.LogsStreamRequestType
-	40, // 1: cloud.CommandRequest.payload:type_name -> google.protobuf.Struct
-	34, // 2: cloud.ExecuteRequest.headers:type_name -> cloud.ExecuteRequest.HeadersEntry
+	41, // 1: cloud.CommandRequest.payload:type_name -> google.protobuf.Struct
+	35, // 2: cloud.ExecuteRequest.headers:type_name -> cloud.ExecuteRequest.HeadersEntry
 	1,  // 3: cloud.TestWorkflowNotificationsRequest.request_type:type_name -> cloud.TestWorkflowNotificationsRequestType
 	2,  // 4: cloud.TestWorkflowNotificationsResponse.type:type_name -> cloud.TestWorkflowNotificationType
 	13, // 5: cloud.ProContextResponse.capabilities:type_name -> cloud.Capability
-	35, // 6: cloud.ExecuteResponse.headers:type_name -> cloud.ExecuteResponse.HeadersEntry
+	36, // 6: cloud.ExecuteResponse.headers:type_name -> cloud.ExecuteResponse.HeadersEntry
 	3,  // 7: cloud.WebsocketData.opcode:type_name -> cloud.Opcode
 	1,  // 8: cloud.TestWorkflowServiceNotificationsRequest.request_type:type_name -> cloud.TestWorkflowNotificationsRequestType
 	2,  // 9: cloud.TestWorkflowServiceNotificationsResponse.type:type_name -> cloud.TestWorkflowNotificationType
 	1,  // 10: cloud.TestWorkflowParallelStepNotificationsRequest.request_type:type_name -> cloud.TestWorkflowNotificationsRequestType
 	2,  // 11: cloud.TestWorkflowParallelStepNotificationsResponse.type:type_name -> cloud.TestWorkflowNotificationType
-	36, // 12: cloud.ScheduleSelector.labelSelector:type_name -> cloud.ScheduleSelector.LabelSelectorEntry
-	37, // 13: cloud.ScheduleSelector.config:type_name -> cloud.ScheduleSelector.ConfigEntry
-	38, // 14: cloud.ScheduleSelector.tags:type_name -> cloud.ScheduleSelector.TagsEntry
+	37, // 12: cloud.ScheduleSelector.labelSelector:type_name -> cloud.ScheduleSelector.LabelSelectorEntry
+	38, // 13: cloud.ScheduleSelector.config:type_name -> cloud.ScheduleSelector.ConfigEntry
+	39, // 14: cloud.ScheduleSelector.tags:type_name -> cloud.ScheduleSelector.TagsEntry
 	4,  // 15: cloud.RunningContext.type:type_name -> cloud.RunningContextType
 	23, // 16: cloud.ScheduleRequest.selectors:type_name -> cloud.ScheduleSelector
-	39, // 17: cloud.ScheduleRequest.tags:type_name -> cloud.ScheduleRequest.TagsEntry
+	40, // 17: cloud.ScheduleRequest.tags:type_name -> cloud.ScheduleRequest.TagsEntry
 	24, // 18: cloud.ScheduleRequest.running_context:type_name -> cloud.RunningContext
-	27, // 19: cloud.EventStreamRequest.accept:type_name -> cloud.EventResource
-	27, // 20: cloud.Event.resource:type_name -> cloud.EventResource
-	14, // 21: cloud.ExecuteRequest.HeadersEntry.value:type_name -> cloud.HeaderValue
-	14, // 22: cloud.ExecuteResponse.HeadersEntry.value:type_name -> cloud.HeaderValue
-	15, // 23: cloud.TestKubeCloudAPI.Execute:input_type -> cloud.ExecuteResponse
-	16, // 24: cloud.TestKubeCloudAPI.Send:input_type -> cloud.WebsocketData
-	7,  // 25: cloud.TestKubeCloudAPI.Call:input_type -> cloud.CommandRequest
-	15, // 26: cloud.TestKubeCloudAPI.ExecuteAsync:input_type -> cloud.ExecuteResponse
-	6,  // 27: cloud.TestKubeCloudAPI.GetLogsStream:input_type -> cloud.LogsStreamResponse
-	11, // 28: cloud.TestKubeCloudAPI.GetTestWorkflowNotificationsStream:input_type -> cloud.TestWorkflowNotificationsResponse
-	20, // 29: cloud.TestKubeCloudAPI.GetTestWorkflowServiceNotificationsStream:input_type -> cloud.TestWorkflowServiceNotificationsResponse
-	22, // 30: cloud.TestKubeCloudAPI.GetTestWorkflowParallelStepNotificationsStream:input_type -> cloud.TestWorkflowParallelStepNotificationsResponse
-	41, // 31: cloud.TestKubeCloudAPI.GetProContext:input_type -> google.protobuf.Empty
-	17, // 32: cloud.TestKubeCloudAPI.GetCredential:input_type -> cloud.CredentialRequest
-	28, // 33: cloud.TestKubeCloudAPI.GetEventStream:input_type -> cloud.EventStreamRequest
-	25, // 34: cloud.TestKubeCloudAPI.ScheduleExecution:input_type -> cloud.ScheduleRequest
-	31, // 35: cloud.TestKubeCloudAPI.GetRunnerRequests:input_type -> cloud.RunnerResponse
-	32, // 36: cloud.TestKubeCloudAPI.ObtainExecution:input_type -> cloud.ObtainExecutionRequest
-	9,  // 37: cloud.TestKubeCloudAPI.Execute:output_type -> cloud.ExecuteRequest
-	41, // 38: cloud.TestKubeCloudAPI.Send:output_type -> google.protobuf.Empty
-	8,  // 39: cloud.TestKubeCloudAPI.Call:output_type -> cloud.CommandResponse
-	9,  // 40: cloud.TestKubeCloudAPI.ExecuteAsync:output_type -> cloud.ExecuteRequest
-	5,  // 41: cloud.TestKubeCloudAPI.GetLogsStream:output_type -> cloud.LogsStreamRequest
-	10, // 42: cloud.TestKubeCloudAPI.GetTestWorkflowNotificationsStream:output_type -> cloud.TestWorkflowNotificationsRequest
-	19, // 43: cloud.TestKubeCloudAPI.GetTestWorkflowServiceNotificationsStream:output_type -> cloud.TestWorkflowServiceNotificationsRequest
-	21, // 44: cloud.TestKubeCloudAPI.GetTestWorkflowParallelStepNotificationsStream:output_type -> cloud.TestWorkflowParallelStepNotificationsRequest
-	12, // 45: cloud.TestKubeCloudAPI.GetProContext:output_type -> cloud.ProContextResponse
-	18, // 46: cloud.TestKubeCloudAPI.GetCredential:output_type -> cloud.CredentialResponse
-	29, // 47: cloud.TestKubeCloudAPI.GetEventStream:output_type -> cloud.Event
-	26, // 48: cloud.TestKubeCloudAPI.ScheduleExecution:output_type -> cloud.ScheduleResponse
-	30, // 49: cloud.TestKubeCloudAPI.GetRunnerRequests:output_type -> cloud.RunnerRequest
-	33, // 50: cloud.TestKubeCloudAPI.ObtainExecution:output_type -> cloud.ObtainExecutionResponse
-	37, // [37:51] is the sub-list for method output_type
-	23, // [23:37] is the sub-list for method input_type
-	23, // [23:23] is the sub-list for extension type_name
-	23, // [23:23] is the sub-list for extension extendee
-	0,  // [0:23] is the sub-list for field type_name
+	25, // 19: cloud.ScheduleRequest.untrusted_user:type_name -> cloud.UserSignature
+	28, // 20: cloud.EventStreamRequest.accept:type_name -> cloud.EventResource
+	28, // 21: cloud.Event.resource:type_name -> cloud.EventResource
+	14, // 22: cloud.ExecuteRequest.HeadersEntry.value:type_name -> cloud.HeaderValue
+	14, // 23: cloud.ExecuteResponse.HeadersEntry.value:type_name -> cloud.HeaderValue
+	15, // 24: cloud.TestKubeCloudAPI.Execute:input_type -> cloud.ExecuteResponse
+	16, // 25: cloud.TestKubeCloudAPI.Send:input_type -> cloud.WebsocketData
+	7,  // 26: cloud.TestKubeCloudAPI.Call:input_type -> cloud.CommandRequest
+	15, // 27: cloud.TestKubeCloudAPI.ExecuteAsync:input_type -> cloud.ExecuteResponse
+	6,  // 28: cloud.TestKubeCloudAPI.GetLogsStream:input_type -> cloud.LogsStreamResponse
+	11, // 29: cloud.TestKubeCloudAPI.GetTestWorkflowNotificationsStream:input_type -> cloud.TestWorkflowNotificationsResponse
+	20, // 30: cloud.TestKubeCloudAPI.GetTestWorkflowServiceNotificationsStream:input_type -> cloud.TestWorkflowServiceNotificationsResponse
+	22, // 31: cloud.TestKubeCloudAPI.GetTestWorkflowParallelStepNotificationsStream:input_type -> cloud.TestWorkflowParallelStepNotificationsResponse
+	42, // 32: cloud.TestKubeCloudAPI.GetProContext:input_type -> google.protobuf.Empty
+	17, // 33: cloud.TestKubeCloudAPI.GetCredential:input_type -> cloud.CredentialRequest
+	29, // 34: cloud.TestKubeCloudAPI.GetEventStream:input_type -> cloud.EventStreamRequest
+	26, // 35: cloud.TestKubeCloudAPI.ScheduleExecution:input_type -> cloud.ScheduleRequest
+	32, // 36: cloud.TestKubeCloudAPI.GetRunnerRequests:input_type -> cloud.RunnerResponse
+	33, // 37: cloud.TestKubeCloudAPI.ObtainExecution:input_type -> cloud.ObtainExecutionRequest
+	9,  // 38: cloud.TestKubeCloudAPI.Execute:output_type -> cloud.ExecuteRequest
+	42, // 39: cloud.TestKubeCloudAPI.Send:output_type -> google.protobuf.Empty
+	8,  // 40: cloud.TestKubeCloudAPI.Call:output_type -> cloud.CommandResponse
+	9,  // 41: cloud.TestKubeCloudAPI.ExecuteAsync:output_type -> cloud.ExecuteRequest
+	5,  // 42: cloud.TestKubeCloudAPI.GetLogsStream:output_type -> cloud.LogsStreamRequest
+	10, // 43: cloud.TestKubeCloudAPI.GetTestWorkflowNotificationsStream:output_type -> cloud.TestWorkflowNotificationsRequest
+	19, // 44: cloud.TestKubeCloudAPI.GetTestWorkflowServiceNotificationsStream:output_type -> cloud.TestWorkflowServiceNotificationsRequest
+	21, // 45: cloud.TestKubeCloudAPI.GetTestWorkflowParallelStepNotificationsStream:output_type -> cloud.TestWorkflowParallelStepNotificationsRequest
+	12, // 46: cloud.TestKubeCloudAPI.GetProContext:output_type -> cloud.ProContextResponse
+	18, // 47: cloud.TestKubeCloudAPI.GetCredential:output_type -> cloud.CredentialResponse
+	30, // 48: cloud.TestKubeCloudAPI.GetEventStream:output_type -> cloud.Event
+	27, // 49: cloud.TestKubeCloudAPI.ScheduleExecution:output_type -> cloud.ScheduleResponse
+	31, // 50: cloud.TestKubeCloudAPI.GetRunnerRequests:output_type -> cloud.RunnerRequest
+	34, // 51: cloud.TestKubeCloudAPI.ObtainExecution:output_type -> cloud.ObtainExecutionResponse
+	38, // [38:52] is the sub-list for method output_type
+	24, // [24:38] is the sub-list for method input_type
+	24, // [24:24] is the sub-list for extension type_name
+	24, // [24:24] is the sub-list for extension extendee
+	0,  // [0:24] is the sub-list for field type_name
 }
 
 func init() { file_proto_service_proto_init() }
@@ -2938,7 +3012,7 @@ func file_proto_service_proto_init() {
 			}
 		}
 		file_proto_service_proto_msgTypes[20].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ScheduleRequest); i {
+			switch v := v.(*UserSignature); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -2950,7 +3024,7 @@ func file_proto_service_proto_init() {
 			}
 		}
 		file_proto_service_proto_msgTypes[21].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ScheduleResponse); i {
+			switch v := v.(*ScheduleRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -2962,7 +3036,7 @@ func file_proto_service_proto_init() {
 			}
 		}
 		file_proto_service_proto_msgTypes[22].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*EventResource); i {
+			switch v := v.(*ScheduleResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -2974,7 +3048,7 @@ func file_proto_service_proto_init() {
 			}
 		}
 		file_proto_service_proto_msgTypes[23].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*EventStreamRequest); i {
+			switch v := v.(*EventResource); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -2986,7 +3060,7 @@ func file_proto_service_proto_init() {
 			}
 		}
 		file_proto_service_proto_msgTypes[24].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Event); i {
+			switch v := v.(*EventStreamRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -2998,7 +3072,7 @@ func file_proto_service_proto_init() {
 			}
 		}
 		file_proto_service_proto_msgTypes[25].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*RunnerRequest); i {
+			switch v := v.(*Event); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3010,7 +3084,7 @@ func file_proto_service_proto_init() {
 			}
 		}
 		file_proto_service_proto_msgTypes[26].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*RunnerResponse); i {
+			switch v := v.(*RunnerRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3022,7 +3096,7 @@ func file_proto_service_proto_init() {
 			}
 		}
 		file_proto_service_proto_msgTypes[27].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ObtainExecutionRequest); i {
+			switch v := v.(*RunnerResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3034,6 +3108,18 @@ func file_proto_service_proto_init() {
 			}
 		}
 		file_proto_service_proto_msgTypes[28].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ObtainExecutionRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_proto_service_proto_msgTypes[29].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ObtainExecutionResponse); i {
 			case 0:
 				return &v.state
@@ -3046,14 +3132,15 @@ func file_proto_service_proto_init() {
 			}
 		}
 	}
-	file_proto_service_proto_msgTypes[26].OneofWrappers = []interface{}{}
+	file_proto_service_proto_msgTypes[21].OneofWrappers = []interface{}{}
+	file_proto_service_proto_msgTypes[27].OneofWrappers = []interface{}{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_proto_service_proto_rawDesc,
 			NumEnums:      5,
-			NumMessages:   35,
+			NumMessages:   36,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -381,7 +381,7 @@ func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 		}
 
 		// Pro edition only (tcl protected code)
-		runningContext := testworkflowexecutor.GetNewRunningContext(request.RunningContext, request.ParentExecutionIds)
+		runningContext, untrustedUser := testworkflowexecutor.GetNewRunningContext(request.RunningContext, request.ParentExecutionIds)
 
 		var scheduleSelector cloud.ScheduleSelector
 		if name != "" {
@@ -407,6 +407,7 @@ func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 			RunningContext:       runningContext,
 			ParentExecutionIds:   request.ParentExecutionIds,
 			KubernetesObjectName: request.TestWorkflowExecutionName,
+			UntrustedUser:        untrustedUser,
 		})
 
 		results := make([]testkube.TestWorkflowExecution, 0)
