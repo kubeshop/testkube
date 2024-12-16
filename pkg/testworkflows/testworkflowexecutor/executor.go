@@ -54,14 +54,14 @@ type executor struct {
 	organizationId       string
 	defaultEnvironmentId string
 
-	emitter                     event.Interface
-	metrics                     v1.Metrics
-	secretManager               secretmanager.SecretManager
-	dashboardURI                string
-	runner                      runner.Runner
-	proContext                  *config.ProContext
-	scheduler                   Scheduler
-	featureNewExecutionsEnabled bool
+	emitter              event.Interface
+	metrics              v1.Metrics
+	secretManager        secretmanager.SecretManager
+	dashboardURI         string
+	runner               runner.Runner
+	proContext           *config.ProContext
+	scheduler            Scheduler
+	featureNewExecutions bool
 }
 
 func New(
@@ -80,19 +80,19 @@ func New(
 	dashboardURI string,
 	organizationId string,
 	defaultEnvironmentId string,
-	featureNewExecutionsEnabled bool) TestWorkflowExecutor {
+	featureNewExecutions bool) TestWorkflowExecutor {
 	return &executor{
-		grpcClient:                  grpClient,
-		apiKey:                      apiKey,
-		cdEventsTarget:              cdEventsTarget,
-		emitter:                     emitter,
-		metrics:                     metrics,
-		secretManager:               secretManager,
-		dashboardURI:                dashboardURI,
-		runner:                      runner,
-		organizationId:              organizationId,
-		defaultEnvironmentId:        defaultEnvironmentId,
-		featureNewExecutionsEnabled: featureNewExecutionsEnabled,
+		grpcClient:           grpClient,
+		apiKey:               apiKey,
+		cdEventsTarget:       cdEventsTarget,
+		emitter:              emitter,
+		metrics:              metrics,
+		secretManager:        secretManager,
+		dashboardURI:         dashboardURI,
+		runner:               runner,
+		organizationId:       organizationId,
+		defaultEnvironmentId: defaultEnvironmentId,
+		featureNewExecutions: featureNewExecutions,
 		scheduler: NewScheduler(
 			testWorkflowsClient,
 			testWorkflowTemplatesClient,
@@ -109,7 +109,7 @@ func (e *executor) isDirect() bool {
 	e.directMu.Lock()
 	defer e.directMu.Unlock()
 	if e.direct == nil {
-		if !e.featureNewExecutionsEnabled {
+		if !e.featureNewExecutions {
 			e.direct = common.Ptr(true)
 			return true
 		}

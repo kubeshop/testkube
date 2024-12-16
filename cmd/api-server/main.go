@@ -224,7 +224,7 @@ func main() {
 		testWorkflowProcessor = presets.NewPro(inspector)
 	}
 	executionWorker := services.CreateExecutionWorker(clientset, cfg, clusterId, serviceAccountNames, testWorkflowProcessor, map[string]string{
-		testworkflowconfig.FeatureFlagNewExecutions: fmt.Sprintf("%v", cfg.FeatureNewExecutionsEnabled),
+		testworkflowconfig.FeatureFlagNewExecutions: fmt.Sprintf("%v", cfg.FeatureNewExecutions),
 	})
 
 	// Build the runner
@@ -285,7 +285,7 @@ func main() {
 		cfg.TestkubeDashboardURI,
 		proContext.OrgID,
 		proContext.EnvID,
-		cfg.FeatureNewExecutionsEnabled,
+		cfg.FeatureNewExecutions,
 	)
 
 	var deprecatedClients commons.DeprecatedClients
@@ -395,7 +395,7 @@ func main() {
 			}
 			return testWorkflowExecutor.Start(environmentId, &execution, nil)
 		},
-		cfg.FeatureNewExecutionsEnabled,
+		cfg.FeatureNewExecutions,
 	)
 	commons.ExitOnError("Starting agent", err)
 	g.Go(func() error {

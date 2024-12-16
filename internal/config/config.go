@@ -119,7 +119,7 @@ type Config struct {
 	DisableDeprecatedTests           bool          `envconfig:"DISABLE_DEPRECATED_TESTS" default:"false"`
 	DisableWebhooks                  bool          `envconfig:"DISABLE_WEBHOOKS" default:"false"`
 
-	FeatureNewExecutionsEnabled bool `envconfig:"FEATURE_NEW_EXECUTIONS_ENABLED" default:"false"`
+	FeatureNewExecutions bool `envconfig:"FEATURE_NEW_EXECUTIONS" default:"false"`
 
 	// DEPRECATED: Use TestkubeProAPIKey instead
 	TestkubeCloudAPIKey string `envconfig:"TESTKUBE_CLOUD_API_KEY" default:""`

@@ -19,8 +19,7 @@ type envConfig struct {
 	Ip  string `envconfig:"TK_IP"`
 	Ref string `envconfig:"TK_REF"`
 
-	EnableJUnitParser   bool `envconfig:"TK_FF_JUNIT_REPORT" default:"false"`
-	EnableNewExecutions bool `envconfig:"TK_FF_NEW_EXECUTIONS" default:"false"`
+	EnableJUnitParser bool `envconfig:"TK_FF_JUNIT_REPORT" default:"false"`
 }
 
 var cfg testworkflowconfig.InternalConfig

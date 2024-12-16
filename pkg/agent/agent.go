@@ -18,13 +18,12 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/kubeshop/testkube/internal/common"
-	agentclient "github.com/kubeshop/testkube/pkg/agent/client"
-	"github.com/kubeshop/testkube/pkg/event"
-	"github.com/kubeshop/testkube/pkg/executor/output"
-
 	"github.com/kubeshop/testkube/internal/config"
+	agentclient "github.com/kubeshop/testkube/pkg/agent/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
+	"github.com/kubeshop/testkube/pkg/event"
+	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/featureflags"
 )
 
@@ -87,7 +86,7 @@ type Agent struct {
 
 	eventEmitter event.Interface
 
-	featureNewExecutionsEnabled bool
+	featureNewExecutions bool
 }
 
 func NewAgent(logger *zap.SugaredLogger,
@@ -104,7 +103,7 @@ func NewAgent(logger *zap.SugaredLogger,
 	dockerImageVersion string,
 	eventEmitter event.Interface,
 	runTestWorkflow func(environmentId, executionId string) error,
-	featureNewExecutionsEnabled bool,
+	featureNewExecutions bool,
 ) (*Agent, error) {
 	return &Agent{
 		handler:                                 handler,
@@ -134,14 +133,14 @@ func NewAgent(logger *zap.SugaredLogger,
 		testWorkflowParallelStepNotificationsRequestBuffer:  make(chan *cloud.TestWorkflowParallelStepNotificationsRequest, bufferSizePerWorker*proContext.WorkflowParallelStepNotificationsWorkerCount),
 		testWorkflowParallelStepNotificationsResponseBuffer: make(chan *cloud.TestWorkflowParallelStepNotificationsResponse, bufferSizePerWorker*proContext.WorkflowParallelStepNotificationsWorkerCount),
 		testWorkflowParallelStepNotificationsFunc:           workflowParallelStepNotificationsFunc,
-		clusterID:                   clusterID,
-		clusterName:                 clusterName,
-		features:                    features,
-		proContext:                  proContext,
-		dockerImageVersion:          dockerImageVersion,
-		eventEmitter:                eventEmitter,
-		runTestWorkflow:             runTestWorkflow,
-		featureNewExecutionsEnabled: featureNewExecutionsEnabled,
+		clusterID:            clusterID,
+		clusterName:          clusterName,
+		features:             features,
+		proContext:           proContext,
+		dockerImageVersion:   dockerImageVersion,
+		eventEmitter:         eventEmitter,
+		runTestWorkflow:      runTestWorkflow,
+		featureNewExecutions: featureNewExecutions,
 	}, nil
 }
 
@@ -207,7 +206,7 @@ func (ag *Agent) run(ctx context.Context) (err error) {
 		return ag.runEventsReaderLoop(groupCtx)
 	})
 
-	if ag.featureNewExecutionsEnabled {
+	if ag.featureNewExecutions {
 		g.Go(func() error {
 			return ag.runRunnerRequestsLoop(groupCtx)
 		})
@@ -403,7 +402,7 @@ func (ag *Agent) runCommandLoop(ctx context.Context) error {
 	ctx = metadata.AppendToOutgoingContext(ctx, orgIdMeta, ag.proContext.OrgID)
 	ctx = metadata.AppendToOutgoingContext(ctx, dockerImageVersionMeta, ag.dockerImageVersion)
 
-	if ag.featureNewExecutionsEnabled {
+	if ag.featureNewExecutions {
 		ctx = metadata.AppendToOutgoingContext(ctx, newExecutionsMeta, "true")
 	}
 

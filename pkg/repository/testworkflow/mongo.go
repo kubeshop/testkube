@@ -625,8 +625,8 @@ func (r *MongoRepository) GetUnassigned(ctx context.Context) (result []testkube.
 	}
 
 	cursor, err := r.Coll.Find(ctx, bson.M{
-		"result.status":   testkube.QUEUED_TestWorkflowStatus,
-		"result.runnerId": "",
+		"result.status": testkube.QUEUED_TestWorkflowStatus,
+		"runnerId":      "",
 	}, opts)
 	if err != nil {
 		return result, err
