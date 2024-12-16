@@ -151,7 +151,6 @@ func Get() (*Config, error) {
 	if err := envconfig.Process("config", &config); err != nil {
 		return nil, err
 	}
-	config.FeatureNewExecutionsEnabled = false
 	return &config, nil
 }
 
