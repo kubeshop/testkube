@@ -8243,7 +8243,7 @@ components:
         runningContext:
           description: running context for the test workflow execution (Pro edition only)
           $ref: "#/components/schemas/TestWorkflowRunningContext"
-        config:
+        configParams:
           $ref: "#/components/schemas/TestWorkflowExecutionConfig"
       required:
         - id
@@ -8282,7 +8282,7 @@ components:
         runningContext:
           description: running context for the test workflow execution (Pro edition only)
           $ref: "#/components/schemas/TestWorkflowRunningContext"
-        config:
+        configParams:
           $ref: "#/components/schemas/TestWorkflowExecutionConfig"
       required:
         - id

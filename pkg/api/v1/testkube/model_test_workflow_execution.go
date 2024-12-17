@@ -43,5 +43,5 @@ type TestWorkflowExecution struct {
 	DisableWebhooks bool                                        `json:"disableWebhooks,omitempty"`
 	Tags            map[string]string                           `json:"tags,omitempty"`
 	RunningContext  *TestWorkflowRunningContext                 `json:"runningContext,omitempty"`
-	Config          map[string]TestWorkflowExecutionConfigValue `json:"config,omitempty"`
+	ConfigParams    map[string]TestWorkflowExecutionConfigValue `json:"configParams,omitempty"`
 }
