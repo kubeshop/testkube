@@ -1,0 +1,47 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: enterprise-installation-test
+  labels:
+    core-tests: installation
+spec:
+  steps:
+  - name: gcloud
+          # service_account_key: ${{ secrets.GH_SA }}
+          # credentials: ${{ secrets.GH_SA }}
+    run:
+      image: gcr.io/google.com/cloudsdktool/google-cloud-cli:latest # contains gcloud, gke-gcloud-auth-plugin and kubectl
+      shell: |
+        cd /data && echo "asdfasdfasdf" > kubeconfig
+        gcloud container clusters get-credentials testkube-cloud-edge --region us-east1 --project testkube-328312
+        testkube init demo ..................
+
+  - name: testkube
+    run:
+      image: alpine/helm:3
+      shell: |
+        apk add kubectl
+        kubectl get pods -ntestkube
+
+
+
+# apiToken: '{{ secret("paris-demo-testkube-cloud-basic-access-key", "key") }}'
+  # - name: gcloud
+  #   # container:
+  #   #   env:
+  #   #   - name: MY_SUPER_SECRET
+  #   #     valueFrom:
+  #   #       secretKeyRef:
+  #   #         name: your-secret-name
+  #   #         key: key-in-the-secret
+  #         # service_account_key: ${{ secrets.GH_SA }}
+  #         # project_id: ${{ secrets.GKE_PROJECT }}
+  #         # cluster_name: ${{ matrix.environment.cluster_name }}
+  #         # location: ${{ matrix.environment.location }}
+  #         # credentials: ${{ secrets.GH_SA }}
+  #   run:
+  #     image: gcr.io/google.com/cloudsdktool/google-cloud-cli:latest # contains gcloud, gke-gcloud-auth-plugin and kubectl
+  #     shell: |
+  #       kubectl get pods -ntestkube-agent
+  #       # cd /data && echo "asdfasdfasdf" > kubeconfig
+  #       # gcloud container clusters get-credentials asdfasdfsda --region asdfasdf --project asdfasdfds
