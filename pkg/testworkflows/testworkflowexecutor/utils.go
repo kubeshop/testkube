@@ -32,7 +32,7 @@ type stream[T any] struct {
 	mu   sync.RWMutex
 }
 
-func newStream[T any](ch <-chan T) *stream[T] {
+func NewStream[T any](ch <-chan T) *stream[T] {
 	return &stream[T]{ch: ch}
 }
 

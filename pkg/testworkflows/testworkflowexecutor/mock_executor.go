@@ -9,6 +9,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
+	testkube "github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	cloud "github.com/kubeshop/testkube/pkg/cloud"
 )
 
@@ -47,4 +48,18 @@ func (m *MockTestWorkflowExecutor) Execute(arg0 context.Context, arg1 *cloud.Sch
 func (mr *MockTestWorkflowExecutorMockRecorder) Execute(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Execute", reflect.TypeOf((*MockTestWorkflowExecutor)(nil).Execute), arg0, arg1)
+}
+
+// Start mocks base method.
+func (m *MockTestWorkflowExecutor) Start(arg0 string, arg1 *testkube.TestWorkflowExecution, arg2 map[string]map[string]string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Start", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Start indicates an expected call of Start.
+func (mr *MockTestWorkflowExecutorMockRecorder) Start(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockTestWorkflowExecutor)(nil).Start), arg0, arg1, arg2)
 }

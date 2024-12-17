@@ -148,7 +148,7 @@ func (e *executor) execute(ctx context.Context, req *cloud.ScheduleRequest) Test
 	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
 	ctx = agentclient.AddAPIKeyMeta(ctx, e.apiKey)
 	resp, err := e.grpcClient.ScheduleExecution(ctx, req, opts...)
-	resultStream := newStream(ch)
+	resultStream := NewStream(ch)
 	if err != nil {
 		close(ch)
 		resultStream.addError(err)
@@ -184,13 +184,13 @@ func (e *executor) executeDirect(ctx context.Context, req *cloud.ScheduleRequest
 	// Schedule execution
 	ch, err := e.scheduler.Schedule(ctx, sensitiveDataHandler, req)
 	if err != nil {
-		resultStream := newStream(ch)
+		resultStream := NewStream(ch)
 		resultStream.addError(err)
 		return resultStream
 	}
 
 	ch2 := make(chan *testkube.TestWorkflowExecution, 1)
-	resultStream := newStream(ch2)
+	resultStream := NewStream(ch2)
 	go func() {
 		defer close(ch2)
 		for execution := range ch {

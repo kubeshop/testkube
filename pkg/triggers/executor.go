@@ -171,7 +171,7 @@ func (s *Service) execute(ctx context.Context, e *watcherEvent, t *testtriggersv
 			t.Namespace, t.Name,
 		)
 
-		resp := s.testWorkflowExecutor.Execute(ctx, &cloud.ScheduleRequest{})
+		resp := s.testWorkflowExecutor.Execute(ctx, request)
 		for exec := range resp.Channel() {
 			status.addTestWorkflowExecutionID(exec.Id)
 		}
