@@ -474,20 +474,19 @@ func (e *executor) initialize(ctx context.Context, workflow *testworkflowsv1.Tes
 	if testworkflows.CountMapBytes(request.Config) < ConfigSizeLimit {
 		storeConfig := true
 		schema := workflow.Spec.Config
-		config := make(map[string]string)
-		for k, v := range schema {
+		config := make(map[string]testkube.TestWorkflowExecutionConfigValue)
+		for _, v := range schema {
 			if v.Sensitive {
 				storeConfig = false
 				break
-			}
-			if v.Default != nil {
-				config[k] = v.Default.String()
 			}
 		}
 
 		for k, v := range request.Config {
 			if _, ok := schema[k]; ok {
-				config[k] = v
+				config[k] = testkube.TestWorkflowExecutionConfigValue{
+					Value: v,
+				}
 			}
 		}
 
