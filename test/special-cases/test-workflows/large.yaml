@@ -3,7 +3,7 @@ kind: TestWorkflow
 metadata:
   name: large-logs-1mb-no-delay
   labels:
-    core-tests: edge-cases-large
+    core-tests: large
 description: "Logs: 1 MB"
 spec:
   steps:
@@ -20,7 +20,7 @@ kind: TestWorkflow
 metadata:
   name: large-logs-1mb-1s
   labels:
-    core-tests: edge-cases-large
+    core-tests: large
 description: "Logs: 1 MB"
 spec:
   steps:
@@ -30,14 +30,14 @@ spec:
       command: 
         - bash
         - -c
-        - for iteration in {1..100}; do printf "\niteration $iteration\n"; for sets in {1..20}; do printf "LINE_BEGINNING_"; printf "abc DEFghi JKL ASDF BBB CCC%.0s" {1..20}; printf "_LINE_END"; printf "\n"; done; done # 100 iterations - about 1.1MB
+        - for iteration in {1..100}; do sleep 1; printf "\niteration $iteration\n"; for sets in {1..20}; do printf "LINE_BEGINNING_"; printf "abc DEFghi JKL ASDF BBB CCC%.0s" {1..20}; printf "_LINE_END"; printf "\n"; done; done # 100 iterations - about 1.1MB
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
   name: large-logs-11mb-no-delay
   labels:
-    core-tests: edge-cases-large
+    core-tests: large
 description: "Logs: 11 MB"
 spec:
   steps:
@@ -54,7 +54,7 @@ kind: TestWorkflow
 metadata:
   name: large-logs-11mb-1s
   labels:
-    core-tests: edge-cases-large
+    core-tests: large
 description: "Logs: 11 MB"
 spec:
   steps:
@@ -71,7 +71,7 @@ kind: TestWorkflow
 metadata:
   name: large-logs-22mb-2s
   labels:
-    core-tests: edge-cases-large
+    core-tests: large
 description: "Logs: 22 MB"
 spec:
   steps:
