@@ -322,7 +322,13 @@ func (e *IntermediateExecution) RewriteSensitiveDataCall(handler func(name strin
 }
 
 func (e *IntermediateExecution) StoreConfig(config map[string]string) *IntermediateExecution {
-	e.execution.Config = config
+	params := make(map[string]testkube.TestWorkflowExecutionConfigValue)
+	for k, v := range config {
+		if _, ok := e.cr.Spec.Config[k]; ok {
+			params[k] = testkube.TestWorkflowExecutionConfigValue{Value: v}
+		}
+	}
+	e.execution.ConfigParams = params
 	return e
 }
 

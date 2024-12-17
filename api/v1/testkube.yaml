@@ -8248,8 +8248,8 @@ components:
         runningContext:
           description: running context for the test workflow execution (Pro edition only)
           $ref: "#/components/schemas/TestWorkflowRunningContext"
-        config:
-          $ref: "#/components/schemas/TestWorkflowConfigValue"
+        configParams:
+          $ref: "#/components/schemas/TestWorkflowExecutionConfig"
       required:
         - id
         - name
@@ -8292,6 +8292,8 @@ components:
         runningContext:
           description: running context for the test workflow execution (Pro edition only)
           $ref: "#/components/schemas/TestWorkflowRunningContext"
+        configParams:
+          $ref: "#/components/schemas/TestWorkflowExecutionConfig"
       required:
         - id
         - name
@@ -9525,6 +9527,24 @@ components:
           description: volumes to mount to the container
           items:
             $ref: "#/components/schemas/VolumeMount"
+
+    TestWorkflowExecutionConfig:
+      type: object
+      description: map of configuration values used in the test workflow execution
+      additionalProperties:
+        $ref: "#/components/schemas/TestWorkflowExecutionConfigValue"
+
+    TestWorkflowExecutionConfigValue:
+      type: object
+      description: configuration values used in the test workflow execution   
+      properties:
+        value:
+          type: string
+          description: configuration value
+        defaultValue:
+          type: string
+          description: configuration value default
+
 
     TestWorkflowConfigValue:
       type: object
