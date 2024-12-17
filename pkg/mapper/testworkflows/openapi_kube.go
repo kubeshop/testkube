@@ -1492,13 +1492,65 @@ func MapTestWorkflowTagSchemaAPIToKube(v testkube.TestWorkflowTagSchema) testwor
 	}
 }
 
+func MapTypeLocalObjectReferenceAPIToKube(v testkube.TypedLocalObjectReference) corev1.TypedLocalObjectReference {
+	return corev1.TypedLocalObjectReference{
+		APIGroup: MapBoxedStringToString(v.ApiGroup),
+		Kind:     v.Kind,
+		Name:     v.Name,
+	}
+}
+
+func MapTypeObjectReferenceAPIToKube(v testkube.TypedObjectReference) corev1.TypedObjectReference {
+	return corev1.TypedObjectReference{
+		APIGroup:  MapBoxedStringToString(v.ApiGroup),
+		Kind:      v.Kind,
+		Name:      v.Name,
+		Namespace: MapBoxedStringToString(v.Namespace),
+	}
+}
+
+func MapVolumeResourceRequirementsAPIToKube(v *testkube.TestWorkflowResources) corev1.VolumeResourceRequirements {
+	if v == nil {
+		return corev1.VolumeResourceRequirements{}
+	}
+
+	return corev1.VolumeResourceRequirements{
+		Limits:   MapResourcesListAPIToKubeCore(v.Limits),
+		Requests: MapResourcesListAPIToKubeCore(v.Requests),
+	}
+}
+
+func MapResourcesListAPIToKubeCore(v *testkube.TestWorkflowResourcesList) corev1.ResourceList {
+	if v == nil {
+		return nil
+	}
+	res := make(map[corev1.ResourceName]resource.Quantity)
+	if v.Cpu != "" {
+		res[corev1.ResourceCPU], _ = resource.ParseQuantity(v.Cpu)
+	}
+	if v.Memory != "" {
+		res[corev1.ResourceMemory], _ = resource.ParseQuantity(v.Memory)
+	}
+	if v.Storage != "" {
+		res[corev1.ResourceStorage], _ = resource.ParseQuantity(v.Storage)
+	}
+	if v.EphemeralStorage != "" {
+		res[corev1.ResourceEphemeralStorage], _ = resource.ParseQuantity(v.EphemeralStorage)
+	}
+	return res
+}
+
 func MapPvcConfigAPIToKube(v testkube.TestWorkflowPvcConfig) corev1.PersistentVolumeClaimSpec {
 	return corev1.PersistentVolumeClaimSpec{
-		//		AccessModes:      v.AccessModes,
-		//		VolumeMode:       MapBoxedStringToString(v.VolumeMode),
-		//		Resources:        common.MapPtr(v.Resources, MapResourcesAPIToKube),
-		StorageClassName: MapBoxedStringToString(v.StorageClassName),
-		VolumeName:       v.VolumeName,
-		Selector:         common.MapPtr(v.Selector, MapLabelSelectorAPIToKube),
+		AccessModes: common.MapSlice(v.AccessModes,
+			func(v string) corev1.PersistentVolumeAccessMode { return (corev1.PersistentVolumeAccessMode)(v) }),
+		VolumeMode:                (*corev1.PersistentVolumeMode)(MapBoxedStringToString(v.VolumeMode)),
+		Resources:                 MapVolumeResourceRequirementsAPIToKube(v.Resources),
+		StorageClassName:          MapBoxedStringToString(v.StorageClassName),
+		VolumeName:                v.VolumeName,
+		Selector:                  common.MapPtr(v.Selector, MapLabelSelectorAPIToKube),
+		DataSource:                common.MapPtr(v.DataSource, MapTypeLocalObjectReferenceAPIToKube),
+		DataSourceRef:             common.MapPtr(v.DataSourceRef, MapTypeObjectReferenceAPIToKube),
+		VolumeAttributesClassName: MapBoxedStringToString(v.VolumeAttributesClassName),
 	}
 }
