@@ -491,7 +491,7 @@ func (e *executor) initialize(ctx context.Context, workflow *testworkflowsv1.Tes
 		}
 
 		if storeConfig {
-			execution.Config = config
+			execution.ConfigParams = config
 		}
 	}
 
