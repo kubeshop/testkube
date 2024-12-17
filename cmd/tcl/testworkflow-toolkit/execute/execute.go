@@ -49,7 +49,7 @@ func isGrpcExecute() bool {
 			return *isGrpcCache
 		}
 		ctx := agentclient.AddAPIKeyMeta(context.Background(), cfg.Worker.Connection.ApiKey)
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 		defer cancel()
 		_, client := env.Cloud(ctx)
 		proContext, _ := client.GetProContext(ctx, &emptypb.Empty{})
