@@ -64,11 +64,12 @@ func (mr *MockTestWorkflowTemplateClientMockRecorder) Delete(arg0, arg1, arg2 in
 }
 
 // DeleteByLabels mocks base method.
-func (m *MockTestWorkflowTemplateClient) DeleteByLabels(arg0 context.Context, arg1 string, arg2 map[string]string) error {
+func (m *MockTestWorkflowTemplateClient) DeleteByLabels(arg0 context.Context, arg1 string, arg2 map[string]string) (uint32, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeleteByLabels", arg0, arg1, arg2)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(uint32)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // DeleteByLabels indicates an expected call of DeleteByLabels.
@@ -93,7 +94,7 @@ func (mr *MockTestWorkflowTemplateClientMockRecorder) Get(arg0, arg1, arg2 inter
 }
 
 // List mocks base method.
-func (m *MockTestWorkflowTemplateClient) List(arg0 context.Context, arg1 string, arg2 map[string]string) ([]testkube.TestWorkflowTemplate, error) {
+func (m *MockTestWorkflowTemplateClient) List(arg0 context.Context, arg1 string, arg2 ListOptions) ([]testkube.TestWorkflowTemplate, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "List", arg0, arg1, arg2)
 	ret0, _ := ret[0].([]testkube.TestWorkflowTemplate)

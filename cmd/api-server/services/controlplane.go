@@ -420,5 +420,5 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 		Logger:               log.DefaultLogger,
 		Verbose:              false,
 		FeatureNewExecutions: cfg.FeatureNewExecutions,
-	}, executor, commands...)
+	}, executor, testWorkflowsClient, testWorkflowTemplatesClient, commands...)
 }

@@ -22,8 +22,28 @@ service TestKubeCloudAPI {
     rpc GetCredential(CredentialRequest) returns (CredentialResponse);
     rpc GetEventStream(EventStreamRequest) returns (stream Event);
     rpc ScheduleExecution(ScheduleRequest) returns (stream ScheduleResponse);
+
+    // Runner
     rpc GetRunnerRequests(stream RunnerResponse) returns (stream RunnerRequest);
     rpc ObtainExecution(ObtainExecutionRequest) returns (ObtainExecutionResponse);
+
+    // CRD Synchronisation
+    // -- Test Workflows
+    rpc GetTestWorkflow(GetTestWorkflowRequest) returns (GetTestWorkflowResponse);
+    rpc ListTestWorkflows(ListTestWorkflowsRequest) returns (stream TestWorkflowListItem);
+    rpc ListTestWorkflowLabels(ListTestWorkflowLabelsRequest) returns (ListTestWorkflowLabelsResponse);
+    rpc CreateTestWorkflow(CreateTestWorkflowRequest) returns (CreateTestWorkflowResponse);
+    rpc UpdateTestWorkflow(UpdateTestWorkflowRequest) returns (UpdateTestWorkflowResponse);
+    rpc DeleteTestWorkflow(DeleteTestWorkflowRequest) returns (DeleteTestWorkflowResponse);
+    rpc DeleteTestWorkflowsByLabels(DeleteTestWorkflowsByLabelsRequest) returns (DeleteTestWorkflowsByLabelsResponse);
+    // -- Test Workflow Templates
+    rpc GetTestWorkflowTemplate(GetTestWorkflowTemplateRequest) returns (GetTestWorkflowTemplateResponse);
+    rpc ListTestWorkflowTemplates(ListTestWorkflowTemplatesRequest) returns (stream TestWorkflowTemplateListItem);
+    rpc ListTestWorkflowTemplateLabels(ListTestWorkflowTemplateLabelsRequest) returns (ListTestWorkflowTemplateLabelsResponse);
+    rpc CreateTestWorkflowTemplate(CreateTestWorkflowTemplateRequest) returns (CreateTestWorkflowTemplateResponse);
+    rpc UpdateTestWorkflowTemplate(UpdateTestWorkflowTemplateRequest) returns (UpdateTestWorkflowTemplateResponse);
+    rpc DeleteTestWorkflowTemplate(DeleteTestWorkflowTemplateRequest) returns (DeleteTestWorkflowTemplateResponse);
+    rpc DeleteTestWorkflowTemplatesByLabels(DeleteTestWorkflowTemplatesByLabelsRequest) returns (DeleteTestWorkflowTemplatesByLabelsResponse);
 }
 
 enum LogsStreamRequestType {
@@ -236,24 +256,151 @@ message Event {
 }
 
 message RunnerRequest {
-  string id = 1;
-  string environment_id = 2;
+  string environment_id = 1;
+  string id = 2;
 }
 
 message RunnerResponse {
-  string id = 1;
-  string environment_id = 2;
+  string environment_id = 1;
+  string id = 2;
   bool obtained = 3;
   optional string error = 4;
 }
 
 message ObtainExecutionRequest {
-  string id = 1;
-  string environment_id = 2;
+  string environment_id = 1;
+  string id = 2;
 }
 
 message ObtainExecutionResponse {
-  string id = 1;
-  string environment_id = 2;
+  string environment_id = 1;
+  string id = 2;
   bool success = 3;
+}
+
+// CRD Synchronisation -- Test Workflows
+
+message GetTestWorkflowRequest {
+  string environment_id = 1;
+  string name = 2;
+}
+
+message GetTestWorkflowResponse {
+  bytes workflow = 1;
+}
+
+message ListTestWorkflowsRequest {
+  string environment_id = 1;
+  uint32 offset = 2;
+  uint32 limit = 3;
+  map<string, string> labels = 4;
+  string textSearch = 5;
+}
+
+message TestWorkflowListItem {
+  bytes workflow = 1;
+}
+
+message LabelListItem {
+  string name = 1;
+  repeated string value = 2;
+}
+
+message ListTestWorkflowLabelsRequest {
+  string environment_id = 1;
+}
+
+message ListTestWorkflowLabelsResponse {
+  repeated LabelListItem labels = 1;
+}
+
+message CreateTestWorkflowRequest {
+  string environment_id = 1;
+  bytes workflow = 2;
+}
+
+message CreateTestWorkflowResponse {}
+
+message UpdateTestWorkflowRequest {
+  string environment_id = 1;
+  bytes workflow = 2;
+}
+
+message UpdateTestWorkflowResponse {}
+
+message DeleteTestWorkflowRequest {
+  string environment_id = 1;
+  string name = 2;
+}
+
+message DeleteTestWorkflowResponse {}
+
+message DeleteTestWorkflowsByLabelsRequest {
+  string environment_id = 1;
+  map<string, string> labels = 2;
+}
+
+message DeleteTestWorkflowsByLabelsResponse {
+  uint32 count = 1;
+}
+
+// CRD Synchronisation -- Test Workflow Templates
+
+message GetTestWorkflowTemplateRequest {
+  string environment_id = 1;
+  string name = 2;
+}
+
+message GetTestWorkflowTemplateResponse {
+  bytes template = 1;
+}
+
+message ListTestWorkflowTemplatesRequest {
+  string environment_id = 1;
+  uint32 offset = 2;
+  uint32 limit = 3;
+  map<string, string> labels = 4;
+  string textSearch = 5;
+}
+
+message TestWorkflowTemplateListItem {
+  bytes template = 1;
+}
+
+message ListTestWorkflowTemplateLabelsRequest {
+  string environment_id = 1;
+}
+
+message ListTestWorkflowTemplateLabelsResponse {
+  repeated LabelListItem labels = 1;
+}
+
+message CreateTestWorkflowTemplateRequest {
+  string environment_id = 1;
+  bytes template = 2;
+}
+
+message CreateTestWorkflowTemplateResponse {}
+
+message UpdateTestWorkflowTemplateRequest {
+  string environment_id = 1;
+  bytes template = 2;
+}
+
+message UpdateTestWorkflowTemplateResponse {}
+
+message DeleteTestWorkflowTemplateRequest {
+  string environment_id = 1;
+  string name = 2;
+}
+
+message DeleteTestWorkflowTemplateResponse {}
+
+message DeleteTestWorkflowTemplatesByLabelsRequest {
+  string environment_id = 1;
+  map<string, string> labels = 2;
+}
+
+message DeleteTestWorkflowTemplatesByLabelsResponse {
+  uint32 count = 1;
 }

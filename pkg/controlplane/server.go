@@ -22,9 +22,12 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/capabilities"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	cloudexecutor "github.com/kubeshop/testkube/pkg/cloud/data/executor"
+	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
+	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 )
 
@@ -37,10 +40,12 @@ const (
 
 type Server struct {
 	cloud.UnimplementedTestKubeCloudAPIServer
-	cfg      Config
-	server   *grpc.Server
-	commands map[cloudexecutor.Command]CommandHandler
-	executor testworkflowexecutor.TestWorkflowExecutor
+	cfg                         Config
+	server                      *grpc.Server
+	commands                    map[cloudexecutor.Command]CommandHandler
+	executor                    testworkflowexecutor.TestWorkflowExecutor
+	testWorkflowsClient         testworkflowclient.TestWorkflowClient
+	testWorkflowTemplatesClient testworkflowtemplateclient.TestWorkflowTemplateClient
 }
 
 type Config struct {
@@ -50,7 +55,13 @@ type Config struct {
 	FeatureNewExecutions bool
 }
 
-func New(cfg Config, executor testworkflowexecutor.TestWorkflowExecutor, commandGroups ...CommandHandlers) *Server {
+func New(
+	cfg Config,
+	executor testworkflowexecutor.TestWorkflowExecutor,
+	testWorkflowsClient testworkflowclient.TestWorkflowClient,
+	testWorkflowTemplatesClient testworkflowtemplateclient.TestWorkflowTemplateClient,
+	commandGroups ...CommandHandlers,
+) *Server {
 	commands := make(map[cloudexecutor.Command]CommandHandler)
 	for _, group := range commandGroups {
 		for cmd, handler := range group {
@@ -58,9 +69,11 @@ func New(cfg Config, executor testworkflowexecutor.TestWorkflowExecutor, command
 		}
 	}
 	return &Server{
-		cfg:      cfg,
-		executor: executor,
-		commands: commands,
+		cfg:                         cfg,
+		executor:                    executor,
+		commands:                    commands,
+		testWorkflowsClient:         testWorkflowsClient,
+		testWorkflowTemplatesClient: testWorkflowTemplatesClient,
 	}
 }
 
@@ -387,4 +400,184 @@ func (s *Server) Shutdown() {
 	if s.server != nil {
 		s.server.GracefulStop()
 	}
+}
+
+func (s *Server) GetTestWorkflow(ctx context.Context, req *cloud.GetTestWorkflowRequest) (*cloud.GetTestWorkflowResponse, error) {
+	workflow, err := s.testWorkflowsClient.Get(ctx, "", req.Name)
+	if err != nil {
+		return nil, err
+	}
+	workflowBytes, err := json.Marshal(workflow)
+	if err != nil {
+		return nil, err
+	}
+	return &cloud.GetTestWorkflowResponse{Workflow: workflowBytes}, nil
+}
+
+func (s *Server) ListTestWorkflows(req *cloud.ListTestWorkflowsRequest, srv cloud.TestKubeCloudAPI_ListTestWorkflowsServer) error {
+	workflows, err := s.testWorkflowsClient.List(srv.Context(), "", testworkflowclient.ListOptions{
+		Labels:     req.Labels,
+		TextSearch: req.TextSearch,
+		Offset:     req.Offset,
+		Limit:      req.Limit,
+	})
+	if err != nil {
+		return err
+	}
+	workflowBytes := make([]byte, 0)
+	for _, workflow := range workflows {
+		workflowBytes, err = json.Marshal(workflow)
+		if err != nil {
+			return err
+		}
+		err = srv.Send(&cloud.TestWorkflowListItem{Workflow: workflowBytes})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *Server) ListTestWorkflowLabels(ctx context.Context, req *cloud.ListTestWorkflowLabelsRequest) (*cloud.ListTestWorkflowLabelsResponse, error) {
+	labels, err := s.testWorkflowsClient.ListLabels(ctx, "")
+	if err != nil {
+		return nil, err
+	}
+	res := &cloud.ListTestWorkflowLabelsResponse{Labels: make([]*cloud.LabelListItem, 0, len(labels))}
+	for k, v := range labels {
+		res.Labels = append(res.Labels, &cloud.LabelListItem{Name: k, Value: v})
+	}
+	return res, nil
+}
+
+func (s *Server) CreateTestWorkflow(ctx context.Context, req *cloud.CreateTestWorkflowRequest) (*cloud.CreateTestWorkflowResponse, error) {
+	var workflow testkube.TestWorkflow
+	err := json.Unmarshal(req.Workflow, &workflow)
+	if err != nil {
+		return nil, err
+	}
+	err = s.testWorkflowsClient.Create(ctx, "", workflow)
+	if err != nil {
+		return nil, err
+	}
+	return &cloud.CreateTestWorkflowResponse{}, nil
+}
+
+func (s *Server) UpdateTestWorkflow(ctx context.Context, req *cloud.UpdateTestWorkflowRequest) (*cloud.UpdateTestWorkflowResponse, error) {
+	var workflow testkube.TestWorkflow
+	err := json.Unmarshal(req.Workflow, &workflow)
+	if err != nil {
+		return nil, err
+	}
+	err = s.testWorkflowsClient.Update(ctx, "", workflow)
+	if err != nil {
+		return nil, err
+	}
+	return &cloud.UpdateTestWorkflowResponse{}, nil
+}
+
+func (s *Server) DeleteTestWorkflow(ctx context.Context, req *cloud.DeleteTestWorkflowRequest) (*cloud.DeleteTestWorkflowResponse, error) {
+	err := s.testWorkflowsClient.Delete(ctx, "", req.Name)
+	if err != nil {
+		return nil, err
+	}
+	return &cloud.DeleteTestWorkflowResponse{}, nil
+}
+
+func (s *Server) DeleteTestWorkflowsByLabels(ctx context.Context, req *cloud.DeleteTestWorkflowsByLabelsRequest) (*cloud.DeleteTestWorkflowsByLabelsResponse, error) {
+	count, err := s.testWorkflowsClient.DeleteByLabels(ctx, "", req.Labels)
+	if err != nil {
+		return nil, err
+	}
+	return &cloud.DeleteTestWorkflowsByLabelsResponse{Count: count}, nil
+}
+
+func (s *Server) GetTestWorkflowTemplate(ctx context.Context, req *cloud.GetTestWorkflowTemplateRequest) (*cloud.GetTestWorkflowTemplateResponse, error) {
+	template, err := s.testWorkflowTemplatesClient.Get(ctx, "", req.Name)
+	if err != nil {
+		return nil, err
+	}
+	templateBytes, err := json.Marshal(template)
+	if err != nil {
+		return nil, err
+	}
+	return &cloud.GetTestWorkflowTemplateResponse{Template: templateBytes}, nil
+}
+
+func (s *Server) ListTestWorkflowTemplates(req *cloud.ListTestWorkflowTemplatesRequest, srv cloud.TestKubeCloudAPI_ListTestWorkflowTemplatesServer) error {
+	templates, err := s.testWorkflowTemplatesClient.List(srv.Context(), "", testworkflowtemplateclient.ListOptions{
+		Labels:     req.Labels,
+		TextSearch: req.TextSearch,
+		Offset:     req.Offset,
+		Limit:      req.Limit,
+	})
+	if err != nil {
+		return err
+	}
+	templateBytes := make([]byte, 0)
+	for _, template := range templates {
+		templateBytes, err = json.Marshal(template)
+		if err != nil {
+			return err
+		}
+		err = srv.Send(&cloud.TestWorkflowTemplateListItem{Template: templateBytes})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *Server) ListTestWorkflowTemplateLabels(ctx context.Context, req *cloud.ListTestWorkflowTemplateLabelsRequest) (*cloud.ListTestWorkflowTemplateLabelsResponse, error) {
+	labels, err := s.testWorkflowTemplatesClient.ListLabels(ctx, "")
+	if err != nil {
+		return nil, err
+	}
+	res := &cloud.ListTestWorkflowTemplateLabelsResponse{Labels: make([]*cloud.LabelListItem, 0, len(labels))}
+	for k, v := range labels {
+		res.Labels = append(res.Labels, &cloud.LabelListItem{Name: k, Value: v})
+	}
+	return res, nil
+}
+
+func (s *Server) CreateTestWorkflowTemplate(ctx context.Context, req *cloud.CreateTestWorkflowTemplateRequest) (*cloud.CreateTestWorkflowTemplateResponse, error) {
+	var template testkube.TestWorkflowTemplate
+	err := json.Unmarshal(req.Template, &template)
+	if err != nil {
+		return nil, err
+	}
+	err = s.testWorkflowTemplatesClient.Create(ctx, "", template)
+	if err != nil {
+		return nil, err
+	}
+	return &cloud.CreateTestWorkflowTemplateResponse{}, nil
+}
+
+func (s *Server) UpdateTestWorkflowTemplate(ctx context.Context, req *cloud.UpdateTestWorkflowTemplateRequest) (*cloud.UpdateTestWorkflowTemplateResponse, error) {
+	var template testkube.TestWorkflowTemplate
+	err := json.Unmarshal(req.Template, &template)
+	if err != nil {
+		return nil, err
+	}
+	err = s.testWorkflowTemplatesClient.Update(ctx, "", template)
+	if err != nil {
+		return nil, err
+	}
+	return &cloud.UpdateTestWorkflowTemplateResponse{}, nil
+}
+
+func (s *Server) DeleteTestWorkflowTemplate(ctx context.Context, req *cloud.DeleteTestWorkflowTemplateRequest) (*cloud.DeleteTestWorkflowTemplateResponse, error) {
+	err := s.testWorkflowTemplatesClient.Delete(ctx, "", req.Name)
+	if err != nil {
+		return nil, err
+	}
+	return &cloud.DeleteTestWorkflowTemplateResponse{}, nil
+}
+
+func (s *Server) DeleteTestWorkflowTemplatesByLabels(ctx context.Context, req *cloud.DeleteTestWorkflowTemplatesByLabelsRequest) (*cloud.DeleteTestWorkflowTemplatesByLabelsResponse, error) {
+	count, err := s.testWorkflowTemplatesClient.DeleteByLabels(ctx, "", req.Labels)
+	if err != nil {
+		return nil, err
+	}
+	return &cloud.DeleteTestWorkflowTemplatesByLabelsResponse{Count: count}, nil
 }

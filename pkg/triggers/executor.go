@@ -17,6 +17,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
+	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -302,7 +303,7 @@ func (s *Service) getTestWorkflows(t *testtriggersv1.TestTrigger) ([]testworkflo
 
 	if t.Spec.TestSelector.NameRegex != "" {
 		s.logger.Debugf("trigger service: executor component: fetching testworkflosv1.TestWorkflow with name regex %s", t.Spec.TestSelector.NameRegex)
-		testWorkflowsList, err := s.testWorkflowsClient.List(context.Background(), s.getEnvironmentId(), nil)
+		testWorkflowsList, err := s.testWorkflowsClient.List(context.Background(), s.getEnvironmentId(), testworkflowclient.ListOptions{})
 		if err != nil {
 			return nil, err
 		}
@@ -324,7 +325,9 @@ func (s *Service) getTestWorkflows(t *testtriggersv1.TestTrigger) ([]testworkflo
 			return nil, errors.New("error creating selector from test resource label selector: MatchExpressions not supported")
 		}
 		s.logger.Debugf("trigger service: executor component: fetching testworkflowsv1.TestWorkflow with label %s", t.Spec.TestSelector.LabelSelector.MatchLabels)
-		testWorkflowsList, err := s.testWorkflowsClient.List(context.Background(), s.getEnvironmentId(), t.Spec.TestSelector.LabelSelector.MatchLabels)
+		testWorkflowsList, err := s.testWorkflowsClient.List(context.Background(), s.getEnvironmentId(), testworkflowclient.ListOptions{
+			Labels: t.Spec.TestSelector.LabelSelector.MatchLabels,
+		})
 		if err != nil {
 			return nil, err
 		}

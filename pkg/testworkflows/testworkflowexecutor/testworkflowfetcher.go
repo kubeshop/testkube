@@ -33,7 +33,7 @@ func (r *testWorkflowFetcher) PrefetchByLabelSelector(labels map[string]string) 
 	if containsSameMap(r.prefetchedLabels, labels) {
 		return nil
 	}
-	workflows, err := r.client.List(context.Background(), r.environmentId, labels)
+	workflows, err := r.client.List(context.Background(), r.environmentId, testworkflowclient.ListOptions{Labels: labels})
 	if err != nil {
 		return errors.Wrapf(err, "cannot fetch Test Workflows by label selector: %v", labels)
 	}

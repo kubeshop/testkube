@@ -3,17 +3,12 @@ package testworkflowclient
 import (
 	"context"
 	"encoding/json"
-	"errors"
-	"math"
 
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/encoding/gzip"
 	"google.golang.org/grpc/metadata"
-	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
-	cloudtestworkflow "github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
 )
 
 var _ TestWorkflowClient = &cloudTestWorkflowClient{}
@@ -32,66 +27,125 @@ func NewCloudTestWorkflowClient(conn *grpc.ClientConn, apiKey string) TestWorkfl
 	}
 }
 
-// TODO: Prepare separate Control Plane function for that
 func (c *cloudTestWorkflowClient) Get(ctx context.Context, environmentId string, name string) (*testkube.TestWorkflow, error) {
 	// Pass the additional information
-	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("api-key", c.apiKey, "environment-id", environmentId))
+	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("api-key", c.apiKey))
 
-	// Build the request
-	jsonPayload, err := json.Marshal(cloudtestworkflow.TestWorkflowGetRequest{Name: name})
-	if err != nil {
-		return nil, err
-	}
-	s := structpb.Struct{}
-	if err := s.UnmarshalJSON(jsonPayload); err != nil {
-		return nil, err
-	}
-	req := cloud.CommandRequest{
-		Command: string(cloudtestworkflow.CmdTestWorkflowGet),
-		Payload: &s,
-	}
-
-	// Call the gRPC API
-	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
-	cmdResponse, err := c.client.Call(ctx, &req, opts...)
+	resp, err := c.client.GetTestWorkflow(ctx, &cloud.GetTestWorkflowRequest{
+		EnvironmentId: environmentId,
+		Name:          name,
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	// Retrieve the response
-	var commandResponse cloudtestworkflow.TestWorkflowGetResponse
-	if err := json.Unmarshal(cmdResponse.Response, &commandResponse); err != nil {
+	var workflow testkube.TestWorkflow
+	if err = json.Unmarshal(resp.Workflow, &workflow); err != nil {
 		return nil, err
 	}
-	return &commandResponse.TestWorkflow, nil
+	return &workflow, nil
 }
 
-// TODO:
-func (c *cloudTestWorkflowClient) List(ctx context.Context, environmentId string, labels map[string]string) ([]testkube.TestWorkflow, error) {
-	return nil, errors.New("not implemented yet")
+func (c *cloudTestWorkflowClient) List(ctx context.Context, environmentId string, options ListOptions) ([]testkube.TestWorkflow, error) {
+	// Pass the additional information
+	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("api-key", c.apiKey))
+
+	resp, err := c.client.ListTestWorkflows(ctx, &cloud.ListTestWorkflowsRequest{
+		EnvironmentId: environmentId,
+		Offset:        options.Offset,
+		Limit:         options.Limit,
+		Labels:        options.Labels,
+		TextSearch:    options.TextSearch,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]testkube.TestWorkflow, 0)
+	var item *cloud.TestWorkflowListItem
+	for {
+		item, err = resp.Recv()
+		if err != nil {
+			break
+		}
+		var workflow testkube.TestWorkflow
+		err = json.Unmarshal(item.Workflow, &workflow)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, workflow)
+	}
+	return result, err
 }
 
-// TODO:
 func (c *cloudTestWorkflowClient) ListLabels(ctx context.Context, environmentId string) (map[string][]string, error) {
-	return nil, errors.New("not implemented yet")
+	// Pass the additional information
+	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("api-key", c.apiKey))
+
+	resp, err := c.client.ListTestWorkflowLabels(ctx, &cloud.ListTestWorkflowLabelsRequest{
+		EnvironmentId: environmentId,
+	})
+	if err != nil {
+		return nil, err
+	}
+	result := make(map[string][]string, len(resp.Labels))
+	for _, label := range resp.Labels {
+		result[label.Name] = label.Value
+	}
+	return result, nil
 }
 
-// TODO:
 func (c *cloudTestWorkflowClient) Update(ctx context.Context, environmentId string, workflow testkube.TestWorkflow) error {
-	return errors.New("not implemented yet")
+	// Pass the additional information
+	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("api-key", c.apiKey))
+
+	workflowBytes, err := json.Marshal(workflow)
+	if err != nil {
+		return err
+	}
+	_, err = c.client.UpdateTestWorkflow(ctx, &cloud.UpdateTestWorkflowRequest{
+		EnvironmentId: environmentId,
+		Workflow:      workflowBytes,
+	})
+	return err
 }
 
-// TODO:
 func (c *cloudTestWorkflowClient) Create(ctx context.Context, environmentId string, workflow testkube.TestWorkflow) error {
-	return errors.New("not implemented yet")
+	// Pass the additional information
+	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("api-key", c.apiKey))
+
+	workflowBytes, err := json.Marshal(workflow)
+	if err != nil {
+		return err
+	}
+	_, err = c.client.CreateTestWorkflow(ctx, &cloud.CreateTestWorkflowRequest{
+		EnvironmentId: environmentId,
+		Workflow:      workflowBytes,
+	})
+	return err
 }
 
-// TODO:
 func (c *cloudTestWorkflowClient) Delete(ctx context.Context, environmentId string, name string) error {
-	return errors.New("not implemented yet")
+	// Pass the additional information
+	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("api-key", c.apiKey))
+
+	_, err := c.client.DeleteTestWorkflow(ctx, &cloud.DeleteTestWorkflowRequest{
+		EnvironmentId: environmentId,
+		Name:          name,
+	})
+	return err
 }
 
-// TODO:
-func (c *cloudTestWorkflowClient) DeleteByLabels(ctx context.Context, environmentId string, labels map[string]string) error {
-	return errors.New("not implemented yet")
+func (c *cloudTestWorkflowClient) DeleteByLabels(ctx context.Context, environmentId string, labels map[string]string) (uint32, error) {
+	// Pass the additional information
+	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("api-key", c.apiKey))
+
+	resp, err := c.client.DeleteTestWorkflowsByLabels(ctx, &cloud.DeleteTestWorkflowsByLabelsRequest{
+		EnvironmentId: environmentId,
+		Labels:        labels,
+	})
+	if err != nil {
+		return 0, err
+	}
+	return resp.Count, nil
 }

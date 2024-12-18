@@ -2,7 +2,9 @@ package testworkflowtemplateclient
 
 import (
 	"context"
+	"math"
 	"slices"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	labels2 "k8s.io/apimachinery/pkg/labels"
@@ -42,22 +44,43 @@ func (c *k8sTestWorkflowTemplateClient) Get(ctx context.Context, environmentId s
 	return testworkflows.MapTemplateKubeToAPI(template), nil
 }
 
-func (c *k8sTestWorkflowTemplateClient) List(ctx context.Context, environmentId string, labels map[string]string) ([]testkube.TestWorkflowTemplate, error) {
+func (c *k8sTestWorkflowTemplateClient) List(ctx context.Context, environmentId string, options ListOptions) ([]testkube.TestWorkflowTemplate, error) {
 	labelSelector := labels2.NewSelector()
-	for k, v := range labels {
+	for k, v := range options.Labels {
 		req, _ := labels2.NewRequirement(k, selection.Equals, []string{v})
 		labelSelector = labelSelector.Add(*req)
 	}
 
 	list := &testworkflowsv1.TestWorkflowTemplateList{}
 	opts := &client.ListOptions{Namespace: c.namespace, LabelSelector: labelSelector}
+	if options.Limit != 0 && options.TextSearch == "" {
+		opts.Limit = int64(options.Offset + options.Limit)
+	}
 	if err := c.client.List(ctx, list, opts); err != nil {
 		return nil, err
 	}
 
-	result := make([]testkube.TestWorkflowTemplate, len(list.Items))
+	offset := options.Offset
+	limit := options.Limit
+	if limit == 0 {
+		limit = math.MaxUint32
+	}
+	options.TextSearch = strings.ToLower(options.TextSearch)
+
+	result := make([]testkube.TestWorkflowTemplate, 0)
 	for i := range list.Items {
-		result[i] = *testworkflows.MapTemplateKubeToAPI(&list.Items[i])
+		if options.TextSearch != "" && !strings.Contains(strings.ToLower(list.Items[i].Name), options.TextSearch) {
+			continue
+		}
+		if offset > 0 {
+			offset--
+			continue
+		}
+		result = append(result, *testworkflows.MapTemplateKubeToAPI(&list.Items[i]))
+		limit--
+		if limit == 0 {
+			break
+		}
 	}
 	return result, nil
 }
@@ -108,7 +131,7 @@ func (c *k8sTestWorkflowTemplateClient) Delete(ctx context.Context, environmentI
 	return c.client.Delete(ctx, original)
 }
 
-func (c *k8sTestWorkflowTemplateClient) DeleteByLabels(ctx context.Context, environmentId string, labels map[string]string) error {
+func (c *k8sTestWorkflowTemplateClient) DeleteByLabels(ctx context.Context, environmentId string, labels map[string]string) (uint32, error) {
 	labelSelector := labels2.NewSelector()
 	for k, v := range labels {
 		req, _ := labels2.NewRequirement(k, selection.Equals, []string{v})
@@ -121,5 +144,6 @@ func (c *k8sTestWorkflowTemplateClient) DeleteByLabels(ctx context.Context, envi
 	err := c.client.DeleteAllOf(ctx, u,
 		client.InNamespace(c.namespace),
 		client.MatchingLabelsSelector{Selector: labelSelector})
-	return err
+	// TODO: Consider if it's possible to return count
+	return math.MaxInt32, err
 }

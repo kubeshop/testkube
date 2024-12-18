@@ -16,6 +16,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
+	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowresolver"
 )
@@ -111,14 +112,16 @@ func (s *TestkubeAPI) DeleteTestWorkflowsHandler() fiber.Handler {
 				workflows = append(workflows, *workflow)
 			}
 		} else {
-			workflows, err = s.TestWorkflowsClient.List(ctx, environmentId, labelSelector.MatchLabels)
+			workflows, err = s.TestWorkflowsClient.List(ctx, environmentId, testworkflowclient.ListOptions{
+				Labels: labelSelector.MatchLabels,
+			})
 			if err != nil {
 				return s.BadGateway(c, errPrefix, "client problem", err)
 			}
 		}
 
 		// Delete
-		err = s.TestWorkflowsClient.DeleteByLabels(ctx, environmentId, labelSelector.MatchLabels)
+		_, err = s.TestWorkflowsClient.DeleteByLabels(ctx, environmentId, labelSelector.MatchLabels)
 		if err != nil {
 			return s.ClientError(c, errPrefix, err)
 		}
@@ -445,7 +448,9 @@ func (s *TestkubeAPI) getFilteredTestWorkflowList(c *fiber.Ctx) ([]testkube.Test
 		return nil, errors.New("MatchExpressions are not supported")
 	}
 
-	workflows, err := s.TestWorkflowsClient.List(ctx, environmentId, labelSelector.MatchLabels)
+	workflows, err := s.TestWorkflowsClient.List(ctx, environmentId, testworkflowclient.ListOptions{
+		Labels: labelSelector.MatchLabels,
+	})
 	if err != nil {
 		return nil, err
 	}

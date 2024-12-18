@@ -13,6 +13,7 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
+	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowresolver"
 )
 
@@ -85,7 +86,7 @@ func (s *TestkubeAPI) DeleteTestWorkflowTemplatesHandler() fiber.Handler {
 			return s.ClientError(c, errPrefix, errors.New("matchExpressions are not supported"))
 		}
 
-		err = s.TestWorkflowTemplatesClient.DeleteByLabels(ctx, environmentId, labelSelector.MatchLabels)
+		_, err = s.TestWorkflowTemplatesClient.DeleteByLabels(ctx, environmentId, labelSelector.MatchLabels)
 		if err != nil {
 			return s.ClientError(c, errPrefix, err)
 		}
@@ -259,7 +260,9 @@ func (s *TestkubeAPI) getFilteredTestWorkflowTemplateList(c *fiber.Ctx) ([]testk
 		return nil, errors.New("MatchExpressions are not supported")
 	}
 
-	templates, err := s.TestWorkflowTemplatesClient.List(ctx, environmentId, labelSelector.MatchLabels)
+	templates, err := s.TestWorkflowTemplatesClient.List(ctx, environmentId, testworkflowtemplateclient.ListOptions{
+		Labels: labelSelector.MatchLabels,
+	})
 	if err != nil {
 		return nil, err
 	}
