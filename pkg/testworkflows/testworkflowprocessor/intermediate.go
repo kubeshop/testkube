@@ -26,7 +26,7 @@ type Intermediate interface {
 
 	AppendJobConfig(cfg *testworkflowsv1.JobConfig) Intermediate
 	AppendPodConfig(cfg *testworkflowsv1.PodConfig) Intermediate
-	AppendPvc(cfg map[string]corev1.PersistentVolumeClaimSpec) Intermediate
+	AppendPvcs(cfg map[string]corev1.PersistentVolumeClaimSpec) Intermediate
 
 	AddConfigMap(configMap corev1.ConfigMap) Intermediate
 	AddSecret(secret corev1.Secret) Intermediate
@@ -107,12 +107,11 @@ func (s *intermediate) AppendPodConfig(cfg *testworkflowsv1.PodConfig) Intermedi
 	return s
 }
 
-func (s *intermediate) AppendPvc(cfg map[string]corev1.PersistentVolumeClaimSpec) Intermediate {
-	ref := s.NextRef()
+func (s *intermediate) AppendPvcs(cfg map[string]corev1.PersistentVolumeClaimSpec) Intermediate {
 	for name, spec := range cfg {
 		s.Ps[name] = corev1.PersistentVolumeClaim{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: ref,
+				Name: s.NextRef(),
 			},
 			Spec: spec,
 		}

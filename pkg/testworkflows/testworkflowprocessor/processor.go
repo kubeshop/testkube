@@ -107,7 +107,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	layer := NewIntermediate().
 		AppendPodConfig(workflow.Spec.Pod).
 		AppendJobConfig(workflow.Spec.Job).
-		AppendPvc(workflow.Spec.Pvcs)
+		AppendPvcs(workflow.Spec.Pvcs)
 	layer.ContainerDefaults().
 		ApplyCR(constants.DefaultContainerConfig.DeepCopy()).
 		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, constants.DefaultInternalPath)).
