@@ -10626,14 +10626,15 @@ components:
           $ref: "#/components/schemas/LabelSelector"
         dataSource:
           description: 'Data source field can be used to specify either:
-	          * An existing VolumeSnapshot object (snapshot.storage.k8s.io/VolumeSnapshot)
+            * An existing VolumeSnapshot object (snapshot.storage.k8s.io/VolumeSnapshot)
             * An existing PVC (PersistentVolumeClaim)'
           $ref: "#/components/schemas/TypedLocalObjectReference"
         dataSourceRef:
           description: 'Data source reference specifies the object from which to populate the volume with data, if a non-empty volume is desired'
           $ref: "#/components/schemas/TypedObjectReference"
         volumeAttributesClassName:
-          description: 'Volume attributes class name may be used to set the VolumeAttributesClass used by this claim. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#volumeattributesclass'
+          description: 'Volume attributes class name may be used to set the VolumeAttributesClass used by this claim.
+            More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#volumeattributesclass'
           $ref: "#/components/schemas/BoxedString"
 
     TypedLocalObjectReference:
