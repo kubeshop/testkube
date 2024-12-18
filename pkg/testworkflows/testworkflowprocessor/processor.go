@@ -188,7 +188,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 			pvcs[i].Name = pvcs[i].Name[index+1:]
 		}
 	}
-	options.Config.Execution.PvcNames = mapPvc
+	options.Config.Execution.PvcNames = common.MergeMaps(options.Config.Execution.PvcNames, mapPvc)
 
 	// Finalize Secrets
 	secrets := append(layer.Secrets(), options.Secrets...)
