@@ -22,7 +22,7 @@ type Intermediate interface {
 	ConfigMaps() []corev1.ConfigMap
 	Secrets() []corev1.Secret
 	Volumes() []corev1.Volume
-	Pvcs() []corev1.PersistentVolumeClaim
+	Pvcs() map[string]corev1.PersistentVolumeClaim
 
 	AppendJobConfig(cfg *testworkflowsv1.JobConfig) Intermediate
 	AppendPodConfig(cfg *testworkflowsv1.PodConfig) Intermediate
@@ -50,9 +50,9 @@ type intermediate struct {
 	Job testworkflowsv1.JobConfig `expr:"include"`
 
 	// Actual Kubernetes resources to use
-	Secs []corev1.Secret                `expr:"force"`
-	Cfgs []corev1.ConfigMap             `expr:"force"`
-	Ps   []corev1.PersistentVolumeClaim `expr:"force"`
+	Secs []corev1.Secret                         `expr:"force"`
+	Cfgs []corev1.ConfigMap                      `expr:"force"`
+	Ps   map[string]corev1.PersistentVolumeClaim `expr:"force"`
 
 	// Storing files
 	Files ConfigMapFiles `expr:"include"`
@@ -64,7 +64,9 @@ func NewIntermediate() Intermediate {
 		RefCounter: ref,
 		Root:       stage.NewGroupStage("", true),
 		Container:  stage.NewContainer(),
-		Files:      NewConfigMapFiles(fmt.Sprintf("{{resource.id}}-%s", ref.NextRef()), nil)}
+		Files:      NewConfigMapFiles(fmt.Sprintf("{{resource.id}}-%s", ref.NextRef()), nil),
+		Ps:         make(map[string]corev1.PersistentVolumeClaim),
+	}
 }
 
 func (s *intermediate) ContainerDefaults() stage.Container {
@@ -91,7 +93,7 @@ func (s *intermediate) Volumes() []corev1.Volume {
 	return append(s.Pod.Volumes, s.Files.Volumes()...)
 }
 
-func (s *intermediate) Pvcs() []corev1.PersistentVolumeClaim {
+func (s *intermediate) Pvcs() map[string]corev1.PersistentVolumeClaim {
 	return s.Ps
 }
 
@@ -108,12 +110,12 @@ func (s *intermediate) AppendPodConfig(cfg *testworkflowsv1.PodConfig) Intermedi
 func (s *intermediate) AppendPvc(cfg map[string]corev1.PersistentVolumeClaimSpec) Intermediate {
 	ref := s.NextRef()
 	for name, spec := range cfg {
-		s.Ps = append(s.Ps, corev1.PersistentVolumeClaim{
+		s.Ps[name] = corev1.PersistentVolumeClaim{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: fmt.Sprintf("%s-%s", name, ref),
+				Name: ref,
 			},
 			Spec: spec,
-		})
+		}
 	}
 	return s
 }
