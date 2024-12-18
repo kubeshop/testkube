@@ -111,7 +111,7 @@ func (s *intermediate) AppendPvcs(cfg map[string]corev1.PersistentVolumeClaimSpe
 	for name, spec := range cfg {
 		s.Ps[name] = corev1.PersistentVolumeClaim{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: fmt.Sprintf("{{resource.id}}-%s", s.NextRef()),
+				Name: fmt.Sprintf("{{resource.root}}-%s", s.NextRef()),
 			},
 			Spec: spec,
 		}
