@@ -9544,6 +9544,9 @@ components:
         defaultValue:
           type: string
           description: configuration value default
+        truncated:
+          type: boolean
+          description: indicates if the value is truncated
 
 
     TestWorkflowConfigValue:
