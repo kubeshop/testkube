@@ -20,11 +20,11 @@ service TestKubeCloudAPI {
     rpc GetTestWorkflowParallelStepNotificationsStream(stream TestWorkflowParallelStepNotificationsResponse) returns (stream TestWorkflowParallelStepNotificationsRequest);
     rpc GetProContext(google.protobuf.Empty) returns (ProContextResponse);
     rpc GetCredential(CredentialRequest) returns (CredentialResponse);
-    rpc GetEventStream(EventStreamRequest) returns (stream Event);
+    rpc GetEventStream(EventStreamRequest) returns (stream Event); // TODO: Healthcheck (?)
     rpc ScheduleExecution(ScheduleRequest) returns (stream ScheduleResponse);
 
     // Runner
-    rpc GetRunnerRequests(stream RunnerResponse) returns (stream RunnerRequest);
+    rpc GetRunnerRequests(stream RunnerResponse) returns (stream RunnerRequest); // TODO: Healthcheck (?)
     rpc ObtainExecution(ObtainExecutionRequest) returns (ObtainExecutionResponse);
 
     // CRD Synchronisation
