@@ -468,30 +468,29 @@ func (e *executor) initialize(ctx context.Context, workflow *testworkflowsv1.Tes
 		DisableWebhooks:           request.DisableWebhooks,
 		Tags:                      map[string]string{},
 		RunningContext:            request.RunningContext,
+		ConfigParams:              make(map[string]testkube.TestWorkflowExecutionConfigValue),
 	}
 
 	// Store the configuration if it is small and not sensitive
 	if testworkflows.CountMapBytes(request.Config) < ConfigSizeLimit {
 		storeConfig := true
 		schema := workflow.Spec.Config
-		config := make(map[string]testkube.TestWorkflowExecutionConfigValue)
 		for _, v := range schema {
 			if v.Sensitive {
 				storeConfig = false
+				execution.ConfigParams = nil
 				break
 			}
 		}
 
-		for k, v := range request.Config {
-			if _, ok := schema[k]; ok {
-				config[k] = testkube.TestWorkflowExecutionConfigValue{
-					Value: v,
+		if storeConfig {
+			for k, v := range request.Config {
+				if _, ok := schema[k]; ok {
+					execution.ConfigParams[k] = testkube.TestWorkflowExecutionConfigValue{
+						Value: v,
+					}
 				}
 			}
-		}
-
-		if storeConfig {
-			execution.ConfigParams = config
 		}
 	}
 
