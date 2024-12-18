@@ -15,4 +15,6 @@ type TestWorkflowExecutionConfigValue struct {
 	Value string `json:"value,omitempty"`
 	// configuration value default
 	DefaultValue string `json:"defaultValue,omitempty"`
+	// indicates if the value is truncated
+	Truncated bool `json:"truncated,omitempty"`
 }
