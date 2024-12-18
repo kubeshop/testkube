@@ -1,8 +1,6 @@
 package testworkflowconfig
 
 import (
-	"strings"
-
 	"github.com/kubeshop/testkube/pkg/expressions"
 )
 
@@ -82,14 +80,9 @@ func CreateWorkerMachine(cfg *WorkerConfig) expressions.Machine {
 	return expressions.CombinedMachines(machine)
 }
 
-func CreatePvcMachine(pvcNames []string) expressions.Machine {
+func CreatePvcMachine(pvcNames map[string]string) expressions.Machine {
 	pvcMap := make(map[string]string)
-	for _, pvcName := range pvcNames {
-		name := pvcName
-		if index := strings.LastIndex(name, "-"); index != -1 {
-			name = name[:index]
-		}
-
+	for name, pvcName := range pvcNames {
 		pvcMap[name+".name"] = pvcName
 	}
 

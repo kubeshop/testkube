@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"maps"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -115,12 +116,18 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, constants.DefaultDataPath))
 
 	mapEnv := make(map[string]corev1.EnvVarSource)
+	mapPvc := make(map[string]string)
+	for _, pvc := range layer.Pvcs() {
+		if index := strings.LastIndex(pvc.Name, "-"); index != -1 {
+			mapPvc[pvc.Name[:index]] = pvc.Name[index+1:]
+		}
+	}
+
 	machines = append(machines,
 		createSecretMachine(mapEnv),
 		testworkflowconfig.CreateWorkerMachine(&options.Config.Worker),
 		testworkflowconfig.CreateResourceMachine(&options.Config.Resource),
-		testworkflowconfig.CreatePvcMachine(
-			common.MapSlice(layer.Pvcs(), func(p corev1.PersistentVolumeClaim) string { return p.Name })),
+		testworkflowconfig.CreatePvcMachine(mapPvc),
 	)
 
 	// Fetch resource root and resource ID
@@ -168,14 +175,20 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 
 	// Finalize Pvcs
 	pvcs := layer.Pvcs()
+	mapPvc = make(map[string]string)
 	for i := range pvcs {
 		AnnotateControlledBy(&pvcs[i], options.Config.Resource.RootId, options.Config.Resource.Id)
 		err = expressions.FinalizeForce(&pvcs[i], machines...)
 		if err != nil {
 			return nil, errors.Wrap(err, "finalizing Pvc")
 		}
+
+		if index := strings.LastIndex(pvcs[i].Name, "-"); index != -1 {
+			mapPvc[pvcs[i].Name[:index]] = pvcs[i].Name[index+1:]
+			pvcs[i].Name = pvcs[i].Name[index+1:]
+		}
 	}
-	options.Config.Execution.PvcNames = common.MapSlice(pvcs, func(p corev1.PersistentVolumeClaim) string { return p.Name })
+	options.Config.Execution.PvcNames = mapPvc
 
 	// Finalize Secrets
 	secrets := append(layer.Secrets(), options.Secrets...)
