@@ -1246,15 +1246,19 @@ func MapResourcesListKubeCoreToAPI(v corev1.ResourceList) *testkube.TestWorkflow
 	if q, ok := v[corev1.ResourceCPU]; ok {
 		res.Cpu = q.String()
 	}
+
 	if q, ok := v[corev1.ResourceMemory]; ok {
 		res.Memory = q.String()
 	}
+
 	if q, ok := v[corev1.ResourceStorage]; ok {
 		res.Storage = q.String()
 	}
+
 	if q, ok := v[corev1.ResourceEphemeralStorage]; ok {
 		res.EphemeralStorage = q.String()
 	}
+
 	return res
 }
 

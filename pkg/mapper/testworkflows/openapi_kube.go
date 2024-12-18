@@ -1524,19 +1524,24 @@ func MapResourcesListAPIToKubeCore(v *testkube.TestWorkflowResourcesList) corev1
 	if v == nil {
 		return nil
 	}
+
 	res := make(map[corev1.ResourceName]resource.Quantity)
 	if v.Cpu != "" {
 		res[corev1.ResourceCPU], _ = resource.ParseQuantity(v.Cpu)
 	}
+
 	if v.Memory != "" {
 		res[corev1.ResourceMemory], _ = resource.ParseQuantity(v.Memory)
 	}
+
 	if v.Storage != "" {
 		res[corev1.ResourceStorage], _ = resource.ParseQuantity(v.Storage)
 	}
+
 	if v.EphemeralStorage != "" {
 		res[corev1.ResourceEphemeralStorage], _ = resource.ParseQuantity(v.EphemeralStorage)
 	}
+
 	return res
 }
 
