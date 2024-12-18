@@ -38,7 +38,6 @@ type Config struct {
 	ScrapperEnabled           bool   `envconfig:"SCRAPPERENABLED" default:"false"`
 	LogsBucket                string `envconfig:"LOGS_BUCKET" default:""`
 	LogsStorage               string `envconfig:"LOGS_STORAGE" default:""`
-	WorkflowStorage           string `envconfig:"WORKFLOW_STORAGE" default:"crd"`
 	// WhitelistedContainers is a list of containers from which logs should be collected.
 	WhitelistedContainers                                   []string      `envconfig:"WHITELISTED_CONTAINERS" default:"init,logs,scraper"`
 	NatsEmbedded                                            bool          `envconfig:"NATS_EMBEDDED" default:"false"`
@@ -119,7 +118,10 @@ type Config struct {
 	DisableDeprecatedTests           bool          `envconfig:"DISABLE_DEPRECATED_TESTS" default:"false"`
 	DisableWebhooks                  bool          `envconfig:"DISABLE_WEBHOOKS" default:"false"`
 
-	FeatureNewExecutions bool `envconfig:"FEATURE_NEW_EXECUTIONS" default:"false"`
+	FeatureNewExecutions            bool `envconfig:"FEATURE_NEW_EXECUTIONS" default:"false"`
+	FeatureTestWorkflowCloudStorage bool `envconfig:"FEATURE_TESTWORKFLOW_CLOUD_STORAGE" default:"false"`
+	// DEPRECATED: Use FeatureTestWorkflowCloudStorage instead
+	WorkflowStorage string `envconfig:"WORKFLOW_STORAGE" default:"crd"`
 
 	// DEPRECATED: Use TestkubeProAPIKey instead
 	TestkubeCloudAPIKey string `envconfig:"TESTKUBE_CLOUD_API_KEY" default:""`

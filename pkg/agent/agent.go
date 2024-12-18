@@ -28,13 +28,14 @@ import (
 )
 
 const (
-	clusterIDMeta          = "cluster-id"
-	cloudMigrateMeta       = "migrate"
-	orgIdMeta              = "organization-id"
-	envIdMeta              = "environment-id"
-	healthcheckCommand     = "healthcheck"
-	dockerImageVersionMeta = "docker-image-version"
-	newExecutionsMeta      = "exec"
+	clusterIDMeta           = "cluster-id"
+	cloudMigrateMeta        = "migrate"
+	orgIdMeta               = "organization-id"
+	envIdMeta               = "environment-id"
+	healthcheckCommand      = "healthcheck"
+	dockerImageVersionMeta  = "docker-image-version"
+	newExecutionsMeta       = "exec"
+	testWorkflowStorageMeta = "tw-storage"
 )
 
 // buffer up to five messages per worker
@@ -86,7 +87,8 @@ type Agent struct {
 
 	eventEmitter event.Interface
 
-	featureNewExecutions bool
+	featureNewExecutions            bool
+	featureTestWorkflowCloudStorage bool
 }
 
 func NewAgent(logger *zap.SugaredLogger,
@@ -104,6 +106,7 @@ func NewAgent(logger *zap.SugaredLogger,
 	eventEmitter event.Interface,
 	runTestWorkflow func(environmentId, executionId string) error,
 	featureNewExecutions bool,
+	featureTestWorkflowCloudStorage bool,
 ) (*Agent, error) {
 	return &Agent{
 		handler:                                 handler,
@@ -133,14 +136,15 @@ func NewAgent(logger *zap.SugaredLogger,
 		testWorkflowParallelStepNotificationsRequestBuffer:  make(chan *cloud.TestWorkflowParallelStepNotificationsRequest, bufferSizePerWorker*proContext.WorkflowParallelStepNotificationsWorkerCount),
 		testWorkflowParallelStepNotificationsResponseBuffer: make(chan *cloud.TestWorkflowParallelStepNotificationsResponse, bufferSizePerWorker*proContext.WorkflowParallelStepNotificationsWorkerCount),
 		testWorkflowParallelStepNotificationsFunc:           workflowParallelStepNotificationsFunc,
-		clusterID:            clusterID,
-		clusterName:          clusterName,
-		features:             features,
-		proContext:           proContext,
-		dockerImageVersion:   dockerImageVersion,
-		eventEmitter:         eventEmitter,
-		runTestWorkflow:      runTestWorkflow,
-		featureNewExecutions: featureNewExecutions,
+		clusterID:                       clusterID,
+		clusterName:                     clusterName,
+		features:                        features,
+		proContext:                      proContext,
+		dockerImageVersion:              dockerImageVersion,
+		eventEmitter:                    eventEmitter,
+		runTestWorkflow:                 runTestWorkflow,
+		featureNewExecutions:            featureNewExecutions,
+		featureTestWorkflowCloudStorage: featureTestWorkflowCloudStorage,
 	}, nil
 }
 
@@ -404,6 +408,9 @@ func (ag *Agent) runCommandLoop(ctx context.Context) error {
 
 	if ag.featureNewExecutions {
 		ctx = metadata.AppendToOutgoingContext(ctx, newExecutionsMeta, "true")
+	}
+	if ag.featureTestWorkflowCloudStorage {
+		ctx = metadata.AppendToOutgoingContext(ctx, testWorkflowStorageMeta, "true")
 	}
 
 	ag.logger.Infow("initiating streaming connection with control plane")

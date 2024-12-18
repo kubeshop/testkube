@@ -30,36 +30,61 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/capabilities"
 	"github.com/kubeshop/testkube/pkg/cloud"
+	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 )
 
 var (
-	isGrpcExecuteMu sync.Mutex
-	isGrpcCache     *bool
+	isGrpcMu           sync.Mutex
+	isGrpcExecuteCache *bool
+	isGrpcListCache    *bool
 )
 
-func isGrpcExecute() bool {
-	isGrpcExecuteMu.Lock()
-	defer isGrpcExecuteMu.Unlock()
+func loadCapabilities() {
+	isGrpcMu.Lock()
+	defer isGrpcMu.Unlock()
 
-	if isGrpcCache == nil {
-		cfg := config.Config()
-		if cfg.Worker.FeatureFlags[testworkflowconfig.FeatureFlagNewExecutions] != "true" {
-			isGrpcCache = common.Ptr(false)
-			return *isGrpcCache
-		}
-		ctx := agentclient.AddAPIKeyMeta(context.Background(), cfg.Worker.Connection.ApiKey)
-		ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
-		defer cancel()
-		_, client := env.Cloud(ctx)
-		proContext, _ := client.GetProContext(ctx, &emptypb.Empty{})
-		if proContext != nil {
-			isGrpcCache = common.Ptr(capabilities.Enabled(proContext.Capabilities, capabilities.CapabilityNewExecutions))
-		} else {
-			isGrpcCache = common.Ptr(false)
-		}
+	// Block if the instance doesn't support that
+	cfg := config.Config()
+	if isGrpcExecuteCache == nil && cfg.Worker.FeatureFlags[testworkflowconfig.FeatureFlagNewExecutions] != "true" {
+		isGrpcExecuteCache = common.Ptr(false)
 	}
-	return *isGrpcCache
+	if isGrpcListCache == nil && cfg.Worker.FeatureFlags[testworkflowconfig.FeatureFlagTestWorkflowCloudStorage] != "true" {
+		isGrpcListCache = common.Ptr(false)
+	}
+
+	// Do not check Cloud support if its already predefined
+	if isGrpcExecuteCache != nil && isGrpcListCache != nil {
+		return
+	}
+
+	// Check support in the cloud
+	ctx := agentclient.AddAPIKeyMeta(context.Background(), cfg.Worker.Connection.ApiKey)
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	_, _, client := env.Cloud(ctx)
+	proContext, _ := client.GetProContext(ctx, &emptypb.Empty{})
+	if proContext != nil {
+		if isGrpcExecuteCache == nil {
+			isGrpcExecuteCache = common.Ptr(capabilities.Enabled(proContext.Capabilities, capabilities.CapabilityNewExecutions))
+		}
+		if isGrpcListCache == nil {
+			isGrpcListCache = common.Ptr(capabilities.Enabled(proContext.Capabilities, capabilities.CapabilityTestWorkflowStorage))
+		}
+	} else {
+		isGrpcExecuteCache = common.Ptr(false)
+		isGrpcListCache = common.Ptr(false)
+	}
+}
+
+func isGrpcExecute() bool {
+	loadCapabilities()
+	return *isGrpcExecuteCache
+}
+
+func isGrpcList() bool {
+	loadCapabilities()
+	return *isGrpcListCache
 }
 
 func ExecuteTestWorkflow(workflowName string, request testkube.TestWorkflowExecutionRequest) ([]testkube.TestWorkflowExecution, error) {
@@ -101,7 +126,7 @@ func executeTestWorkflowApi(workflowName string, request testkube.TestWorkflowEx
 func executeTestWorkflowGrpc(workflowName string, request testkube.TestWorkflowExecutionRequest) ([]testkube.TestWorkflowExecution, error) {
 	cfg := config.Config()
 	ctx := agentclient.AddAPIKeyMeta(context.Background(), cfg.Worker.Connection.ApiKey)
-	_, client := env.Cloud(ctx)
+	_, _, client := env.Cloud(ctx)
 
 	parentIds := make([]string, 0)
 	if cfg.Execution.ParentIds != "" {
@@ -146,4 +171,27 @@ func executeTestWorkflowGrpc(workflowName string, request testkube.TestWorkflowE
 	}
 
 	return result, nil
+}
+
+func ListTestWorkflows(labels map[string]string) ([]testkube.TestWorkflow, error) {
+	if isGrpcList() {
+		return listTestWorkflowsGrpc(labels)
+	}
+	return listTestWorkflowsApi(labels)
+}
+
+func listTestWorkflowsApi(labels map[string]string) ([]testkube.TestWorkflow, error) {
+	client := env.Testkube()
+	selectors := make([]string, 0, len(labels))
+	for k, v := range labels {
+		selectors = append(selectors, fmt.Sprintf("%s=%s", k, v))
+	}
+	return client.ListTestWorkflows(strings.Join(selectors, ","))
+}
+
+func listTestWorkflowsGrpc(labels map[string]string) ([]testkube.TestWorkflow, error) {
+	cfg := config.Config()
+	conn, _, _ := env.Cloud(context.Background())
+	client := testworkflowclient.NewCloudTestWorkflowClient(conn, cfg.Worker.Connection.ApiKey)
+	return client.List(context.Background(), cfg.Execution.EnvironmentId, testworkflowclient.ListOptions{Labels: labels})
 }

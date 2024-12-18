@@ -16,4 +16,5 @@ type ProContext struct {
 	ConnectionTimeout                            int
 	DashboardURI                                 string
 	NewExecutions                                bool
+	TestWorkflowStorage                          bool
 }

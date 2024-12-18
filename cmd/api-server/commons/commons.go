@@ -291,13 +291,14 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 		WorkflowNotificationsWorkerCount:        cfg.TestkubeProWorkflowNotificationsWorkerCount,
 		WorkflowServiceNotificationsWorkerCount: cfg.TestkubeProWorkflowServiceNotificationsWorkerCount,
 		WorkflowParallelStepNotificationsWorkerCount: cfg.TestkubeProWorkflowParallelStepNotificationsWorkerCount,
-		SkipVerify:        cfg.TestkubeProSkipVerify,
-		EnvID:             cfg.TestkubeProEnvID,
-		OrgID:             cfg.TestkubeProOrgID,
-		Migrate:           cfg.TestkubeProMigrate,
-		ConnectionTimeout: cfg.TestkubeProConnectionTimeout,
-		DashboardURI:      cfg.TestkubeDashboardURI,
-		NewExecutions:     grpcClient == nil,
+		SkipVerify:          cfg.TestkubeProSkipVerify,
+		EnvID:               cfg.TestkubeProEnvID,
+		OrgID:               cfg.TestkubeProOrgID,
+		Migrate:             cfg.TestkubeProMigrate,
+		ConnectionTimeout:   cfg.TestkubeProConnectionTimeout,
+		DashboardURI:        cfg.TestkubeDashboardURI,
+		NewExecutions:       grpcClient == nil,
+		TestWorkflowStorage: grpcClient == nil,
 	}
 
 	if cfg.TestkubeProAPIKey == "" || grpcClient == nil {
@@ -324,6 +325,10 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 
 	if capabilities.Enabled(foundProContext.Capabilities, capabilities.CapabilityNewExecutions) {
 		proContext.NewExecutions = true
+	}
+
+	if capabilities.Enabled(foundProContext.Capabilities, capabilities.CapabilityTestWorkflowStorage) {
+		proContext.TestWorkflowStorage = true
 	}
 
 	return proContext

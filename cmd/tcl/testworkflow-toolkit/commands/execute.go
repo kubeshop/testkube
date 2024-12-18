@@ -18,7 +18,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	commontcl "github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/common"
@@ -162,7 +161,7 @@ func buildTestExecution(test testworkflowsv1.StepExecuteTest, async bool) (func(
 
 func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async bool) (func() error, error) {
 	return func() (err error) {
-		c, _ := env.Cloud(context.Background())
+		_, c, _ := env.Cloud(context.Background())
 
 		tags := config.ExecutionTags()
 
@@ -374,7 +373,6 @@ func NewExecuteCmd() *cobra.Command {
 				}
 			}
 
-			c := env.Testkube()
 			for _, s := range workflows {
 				var w testworkflowsv1.StepExecuteWorkflow
 				err := json.Unmarshal([]byte(s), &w)
@@ -392,13 +390,10 @@ func NewExecuteCmd() *cobra.Command {
 				}
 
 				if w.Selector != nil {
-					selector, err := metav1.LabelSelectorAsSelector(w.Selector)
-					if err != nil {
-						ui.Fail(errors.Wrap(err, "error creating selector from test workflow selector"))
+					if len(w.Selector.MatchExpressions) > 0 {
+						ui.Fail(errors.New("error creating selector from test workflow selector: matchExpressions is not supported"))
 					}
-
-					stringifiedSelector := selector.String()
-					testWorkflowsList, err := c.ListTestWorkflows(stringifiedSelector)
+					testWorkflowsList, err := execute.ListTestWorkflows(w.Selector.MatchLabels)
 					if err != nil {
 						ui.Fail(errors.Wrap(err, "error listing test workflows using selector"))
 					}

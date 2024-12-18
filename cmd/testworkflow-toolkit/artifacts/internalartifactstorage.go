@@ -33,7 +33,7 @@ type internalArtifactStorage struct {
 func newArtifactUploader() Uploader {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	client, _ := env.Cloud(ctx)
+	_, client, _ := env.Cloud(ctx)
 	return NewCloudUploader(client, WithParallelismCloud(30), CloudDetectMimetype)
 }
 

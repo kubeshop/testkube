@@ -49,10 +49,11 @@ type Server struct {
 }
 
 type Config struct {
-	Port                 int
-	Verbose              bool
-	Logger               *zap.SugaredLogger
-	FeatureNewExecutions bool
+	Port                             int
+	Verbose                          bool
+	Logger                           *zap.SugaredLogger
+	FeatureNewExecutions             bool
+	FeatureTestWorkflowsCloudStorage bool
 }
 
 func New(
@@ -81,6 +82,9 @@ func (s *Server) GetProContext(_ context.Context, _ *emptypb.Empty) (*cloud.ProC
 	caps := make([]*cloud.Capability, 0)
 	if s.cfg.FeatureNewExecutions {
 		caps = append(caps, &cloud.Capability{Name: string(capabilities.CapabilityNewExecutions), Enabled: true})
+	}
+	if s.cfg.FeatureTestWorkflowsCloudStorage {
+		caps = append(caps, &cloud.Capability{Name: string(capabilities.CapabilityTestWorkflowStorage), Enabled: true})
 	}
 	return &cloud.ProContextResponse{Capabilities: caps}, nil
 }

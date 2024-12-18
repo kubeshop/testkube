@@ -166,14 +166,6 @@ func main() {
 	triggerLeaseBackend := triggers.NewAcquireAlwaysLeaseBackend()
 	artifactStorage := cloudartifacts.NewCloudArtifactsStorage(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
 
-	if mode == common.ModeAgent && cfg.WorkflowStorage == "control-plane" {
-		testWorkflowsClient = testworkflowclient.NewCloudTestWorkflowClient(grpcConn, cfg.TestkubeProAPIKey)
-		testWorkflowTemplatesClient = testworkflowtemplateclient.NewCloudTestWorkflowTemplateClient(grpcConn, cfg.TestkubeProAPIKey)
-	} else {
-		testWorkflowsClient = testworkflowclient.NewKubernetesTestWorkflowClient(kubeClient, cfg.TestkubeNamespace)
-		testWorkflowTemplatesClient = testworkflowtemplateclient.NewKubernetesTestWorkflowTemplateClient(kubeClient, cfg.TestkubeNamespace)
-	}
-
 	nc := commons.MustCreateNATSConnection(cfg)
 	eventBus := bus.NewNATSBus(nc)
 	if cfg.Trace {
@@ -185,6 +177,14 @@ func main() {
 	proContext := commons.ReadProContext(ctx, cfg, grpcClient)
 	subscriptionChecker, err := checktcl.NewSubscriptionChecker(ctx, proContext, grpcClient, grpcConn)
 	commons.ExitOnError("Failed creating subscription checker", err)
+
+	if proContext.TestWorkflowStorage && cfg.FeatureTestWorkflowCloudStorage {
+		testWorkflowsClient = testworkflowclient.NewCloudTestWorkflowClient(grpcConn, cfg.TestkubeProAPIKey)
+		testWorkflowTemplatesClient = testworkflowtemplateclient.NewCloudTestWorkflowTemplateClient(grpcConn, cfg.TestkubeProAPIKey)
+	} else {
+		testWorkflowsClient = testworkflowclient.NewKubernetesTestWorkflowClient(kubeClient, cfg.TestkubeNamespace)
+		testWorkflowTemplatesClient = testworkflowtemplateclient.NewKubernetesTestWorkflowTemplateClient(kubeClient, cfg.TestkubeNamespace)
+	}
 
 	serviceAccountNames := map[string]string{
 		cfg.TestkubeNamespace: cfg.JobServiceAccountName,
@@ -224,7 +224,8 @@ func main() {
 		testWorkflowProcessor = presets.NewPro(inspector)
 	}
 	executionWorker := services.CreateExecutionWorker(clientset, cfg, clusterId, serviceAccountNames, testWorkflowProcessor, map[string]string{
-		testworkflowconfig.FeatureFlagNewExecutions: fmt.Sprintf("%v", cfg.FeatureNewExecutions),
+		testworkflowconfig.FeatureFlagNewExecutions:            fmt.Sprintf("%v", cfg.FeatureNewExecutions),
+		testworkflowconfig.FeatureFlagTestWorkflowCloudStorage: fmt.Sprintf("%v", cfg.FeatureTestWorkflowCloudStorage),
 	})
 
 	// Build the runner
@@ -396,6 +397,7 @@ func main() {
 			return testWorkflowExecutor.Start(environmentId, &execution, nil)
 		},
 		cfg.FeatureNewExecutions,
+		cfg.FeatureTestWorkflowCloudStorage,
 	)
 	commons.ExitOnError("Starting agent", err)
 	g.Go(func() error {
