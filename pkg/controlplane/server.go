@@ -428,7 +428,7 @@ func (s *Server) ListTestWorkflows(req *cloud.ListTestWorkflowsRequest, srv clou
 	if err != nil {
 		return err
 	}
-	workflowBytes := make([]byte, 0)
+	var workflowBytes []byte
 	for _, workflow := range workflows {
 		workflowBytes, err = json.Marshal(workflow)
 		if err != nil {
@@ -518,7 +518,7 @@ func (s *Server) ListTestWorkflowTemplates(req *cloud.ListTestWorkflowTemplatesR
 	if err != nil {
 		return err
 	}
-	templateBytes := make([]byte, 0)
+	var templateBytes []byte
 	for _, template := range templates {
 		templateBytes, err = json.Marshal(template)
 		if err != nil {

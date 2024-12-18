@@ -6,20 +6,16 @@ import (
 	errors2 "errors"
 	"io"
 	"math"
-	"sync"
-	"time"
 
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/encoding/gzip"
-	"google.golang.org/protobuf/types/known/emptypb"
 
 	v1 "github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/internal/config"
 	agentclient "github.com/kubeshop/testkube/pkg/agent/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/capabilities"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/event"
 	log2 "github.com/kubeshop/testkube/pkg/log"
@@ -46,8 +42,6 @@ type TestWorkflowExecutor interface {
 }
 
 type executor struct {
-	direct               *bool
-	directMu             sync.Mutex
 	grpcClient           cloud.TestKubeCloudAPIClient
 	apiKey               string
 	cdEventsTarget       string
@@ -106,33 +100,12 @@ func New(
 }
 
 func (e *executor) isDirect() bool {
-	e.directMu.Lock()
-	defer e.directMu.Unlock()
-	if e.direct == nil {
-		if !e.featureNewExecutions {
-			e.direct = common.Ptr(true)
-			return true
-		}
-		if e.grpcClient == nil {
-			e.direct = common.Ptr(true)
-			return true
-		}
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
-		ctx = agentclient.AddAPIKeyMeta(ctx, e.apiKey)
-		proContext, _ := e.grpcClient.GetProContext(ctx, &emptypb.Empty{})
-		if proContext != nil {
-			e.direct = common.Ptr(!capabilities.Enabled(proContext.Capabilities, capabilities.CapabilityNewExecutions))
-		} else {
-			e.direct = common.Ptr(true)
-		}
-	}
-	return *e.direct
+	return e.proContext == nil || !e.proContext.NewExecutions
 }
 
 func (e *executor) Execute(ctx context.Context, req *cloud.ScheduleRequest) TestWorkflowExecutionStream {
 	if req != nil {
-		req = common.Ptr(*req)
+		req = common.Ptr(*req) // nolint:govet
 		if req.EnvironmentId == "" {
 			req.EnvironmentId = e.defaultEnvironmentId
 		}

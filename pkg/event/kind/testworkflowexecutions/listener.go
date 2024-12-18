@@ -11,7 +11,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
-	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 )
 
 var _ common.Listener = (*testWorkflowExecutionListener)(nil)
@@ -26,10 +25,9 @@ func NewListener(ctx context.Context, namespace string, kubeClient client.Client
 }
 
 type testWorkflowExecutionListener struct {
-	ctx                           context.Context
-	namespace                     string
-	kubeClient                    client.Client
-	testWorkflowResultsRepository testworkflow.Repository
+	ctx        context.Context
+	namespace  string
+	kubeClient client.Client
 }
 
 func (l *testWorkflowExecutionListener) Name() string {

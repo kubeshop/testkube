@@ -13,10 +13,9 @@ import (
 )
 
 type testWorkflowTemplateFetcher struct {
-	client           testworkflowtemplateclient.TestWorkflowTemplateClient
-	environmentId    string
-	cache            map[string]*testkube.TestWorkflowTemplate
-	prefetchedLabels []map[string]string
+	client        testworkflowtemplateclient.TestWorkflowTemplateClient
+	environmentId string
+	cache         map[string]*testkube.TestWorkflowTemplate
 }
 
 func NewTestWorkflowTemplateFetcher(

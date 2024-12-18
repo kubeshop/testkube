@@ -10,7 +10,6 @@ import (
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/event"
 	ws "github.com/kubeshop/testkube/pkg/event/kind/websocket"
 	"github.com/kubeshop/testkube/pkg/executor/client"
@@ -116,7 +115,6 @@ type TestkubeAPI struct {
 	proContext                     *config.ProContext
 	ServiceAccountNames            map[string]string
 	dockerImageVersion             string
-	grpcClient                     cloud.TestKubeCloudAPIClient
 	testWorkflowExecutor           testworkflowexecutor.TestWorkflowExecutor
 }
 

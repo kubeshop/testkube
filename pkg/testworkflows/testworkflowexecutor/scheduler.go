@@ -256,7 +256,6 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 		return ch, ctx.Err()
 	}
 	cancel()
-	ctx = context.Background()
 
 	// Generate execution names and sequence numbers
 	for i := range intermediate {
