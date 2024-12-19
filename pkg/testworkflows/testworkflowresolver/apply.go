@@ -63,6 +63,7 @@ func injectTemplateToSpec(spec *testworkflowsv1.TestWorkflowSpec, template testw
 	spec.Job = MergeJobConfig(template.Spec.Job, spec.Job)
 	spec.Events = append(template.Spec.Events, spec.Events...)
 	spec.Execution = MergeExecution(template.Spec.Execution, spec.Execution)
+	spec.Pvcs = MergeMap(template.Spec.Pvcs, spec.Pvcs)
 
 	// Apply basic configuration
 	spec.Content = MergeContent(template.Spec.Content, spec.Content)
@@ -125,6 +126,7 @@ func InjectServiceTemplate(svc *testworkflowsv1.ServiceSpec, template testworkfl
 	svc.Pod = MergePodConfig(template.Spec.Pod, svc.Pod)
 	svc.Content = MergeContent(template.Spec.Content, svc.Content)
 	svc.ContainerConfig = *MergeContainerConfig(template.Spec.Container, &svc.ContainerConfig)
+	svc.Pvcs = MergeMap(template.Spec.Pvcs, svc.Pvcs)
 	return nil
 }
 

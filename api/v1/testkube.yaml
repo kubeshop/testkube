@@ -8680,6 +8680,10 @@ components:
             type: string
           readinessProbe:
             $ref: "#/components/schemas/Probe"
+          pvcs:
+            type: object
+            additionalProperties:
+              $ref: "#/components/schemas/TestWorkflowPvcConfig"
 
     TestWorkflowServiceSpec:
       type: object
@@ -8799,6 +8803,10 @@ components:
             $ref: "#/components/schemas/TestWorkflowEvent"
         execution:
           $ref: "#/components/schemas/TestWorkflowTagSchema"
+        pvcs:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/TestWorkflowPvcConfig"
 
     TestWorkflowTemplateSpec:
       type: object
@@ -8837,6 +8845,10 @@ components:
             $ref: "#/components/schemas/TestWorkflowEvent"
         execution:
           $ref: "#/components/schemas/TestWorkflowTagSchema"
+        pvcs:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/TestWorkflowPvcConfig"
 
     TestWorkflowStepControl:
       type: object
@@ -10610,6 +10622,67 @@ components:
               description: Specify whether the Secret or its key
                 must be defined
               type: boolean
+
+    TestWorkflowPvcConfig:
+      type: object
+      properties:
+        accessModes:
+          description: 'Access mode for claim storage. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes'
+          type: array
+          items:
+            type: string
+        volumeMode:
+          description: 'Volume mode indicates the consumption of the volume as either a filesystem or block device.
+            More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes/#volume-mode'
+          $ref: "#/components/schemas/BoxedString"
+        resources:
+          description: 'Resources required for pvc'
+          $ref: "#/components/schemas/TestWorkflowResources"
+        storageClassName:
+          description: 'Storage class name specifies the name of a StorageClass. More info: https://kubernetes.io/docs/concepts/storage/storage-classes/'
+          $ref: "#/components/schemas/BoxedString"
+        volumeName:
+          description: 'Volume name is used to identify the volume'
+          type: string
+        selector:
+          description: Only the volumes whose labels match the selector can be bound to the claim
+          $ref: "#/components/schemas/LabelSelector"
+        dataSource:
+          description: 'Data source field can be used to specify either:
+            * An existing VolumeSnapshot object (snapshot.storage.k8s.io/VolumeSnapshot)
+            * An existing PVC (PersistentVolumeClaim)'
+          $ref: "#/components/schemas/TypedLocalObjectReference"
+        dataSourceRef:
+          description: 'Data source reference specifies the object from which to populate the volume with data, if a non-empty volume is desired'
+          $ref: "#/components/schemas/TypedObjectReference"
+        volumeAttributesClassName:
+          description: 'Volume attributes class name may be used to set the VolumeAttributesClass used by this claim.
+            More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#volumeattributesclass'
+          $ref: "#/components/schemas/BoxedString"
+
+    TypedLocalObjectReference:
+      description: TypedLocalObjectReference contains enough information to let you locate the typed referenced object inside the same namespace
+      type: object
+      properties:
+        apiGroup:
+          description: api group is the group for the resource being referenced
+          $ref: "#/components/schemas/BoxedString"
+        kind:
+          description: kind is the type of resource being referenced
+          type: string
+        name:
+          description: name is the name of resource being referenced
+          type: string
+
+    TypedObjectReference:
+      description: TypedObjectReference contains enough information to let you locate the typed referenced object inside the specified namespace
+      type: object
+      allOf:
+      - $ref: "#/components/schemas/TypedLocalObjectReference"     
+      properties:
+        namespace:
+          description: Namespace is the namespace of resource being referenced
+          $ref: "#/components/schemas/BoxedString"
 
     #
     # Errors

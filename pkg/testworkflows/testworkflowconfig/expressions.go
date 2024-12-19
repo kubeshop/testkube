@@ -1,6 +1,8 @@
 package testworkflowconfig
 
-import "github.com/kubeshop/testkube/pkg/expressions"
+import (
+	"github.com/kubeshop/testkube/pkg/expressions"
+)
 
 func CreateExecutionMachine(cfg *ExecutionConfig) expressions.Machine {
 	return expressions.NewMachine().
@@ -76,4 +78,13 @@ func CreateWorkerMachine(cfg *WorkerConfig) expressions.Machine {
 			"api.url": cfg.Connection.LocalApiUrl, // TODO: Delete
 		})
 	return expressions.CombinedMachines(machine)
+}
+
+func CreatePvcMachine(pvcNames map[string]string) expressions.Machine {
+	pvcMap := make(map[string]string)
+	for name, pvcName := range pvcNames {
+		pvcMap[name+".name"] = pvcName
+	}
+
+	return expressions.NewMachine().RegisterStringMap("pvcs", pvcMap)
 }
