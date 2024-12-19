@@ -17,6 +17,14 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/registry"
 )
 
+const (
+	GetNotificationsRetryCount = 10
+	GetNotificationsRetryDelay = 500 * time.Millisecond
+
+	SaveEndResultRetryCount     = 100
+	SaveEndResultRetryBaseDelay = 500 * time.Millisecond
+)
+
 //go:generate mockgen -destination=./mock_runner.go -package=runner "github.com/kubeshop/testkube/pkg/runner" Runner
 type Runner interface {
 	Monitor(ctx context.Context, id string) error
@@ -66,7 +74,7 @@ func (r *runner) monitor(ctx context.Context, execution testkube.TestWorkflowExe
 	defer r.watching.Delete(execution.Id)
 
 	var notifications executionworkertypes.NotificationsWatcher
-	for i := 0; i < 10; i++ {
+	for i := 0; i < GetNotificationsRetryCount; i++ {
 		notifications = r.worker.Notifications(ctx, execution.Id, executionworkertypes.NotificationsOptions{})
 		if notifications.Err() == nil {
 			break
@@ -75,7 +83,7 @@ func (r *runner) monitor(ctx context.Context, execution testkube.TestWorkflowExe
 			// TODO: should it mark as job was aborted then?
 			return registry.ErrResourceNotFound
 		}
-		time.Sleep(500 * time.Millisecond)
+		time.Sleep(GetNotificationsRetryDelay)
 	}
 	if notifications.Err() != nil {
 		return errors.Wrapf(notifications.Err(), "failed to listen for '%s' execution notifications", execution.Id)
@@ -112,14 +120,14 @@ func (r *runner) monitor(ctx context.Context, execution testkube.TestWorkflowExe
 				currentRef = n.Ref
 				err = logs.WriteStart(n.Ref)
 				if err != nil {
-					// FIXME: what to do then?
-					panic("logs write ref error")
+					log.DefaultLogger.Errorw("failed to write start logs", "id", execution.Id, "ref", n.Ref)
+					continue
 				}
 			}
 			_, err = logs.Write([]byte(n.Log))
 			if err != nil {
-				// FIXME: what to do then?
-				panic("logs write error")
+				log.DefaultLogger.Errorw("failed to write logs", "id", execution.Id, "ref", n.Ref)
+				continue
 			}
 		}
 	}
@@ -155,13 +163,13 @@ func (r *runner) monitor(ctx context.Context, execution testkube.TestWorkflowExe
 		}
 	}
 
-	for i := 0; i < 100; i++ {
+	for i := 0; i < SaveEndResultRetryCount; i++ {
 		err = saver.End(ctx, *lastResult)
 		if err == nil {
 			break
 		}
 		log.DefaultLogger.Warnw("failed to save execution data", "id", execution.Id, "error", err)
-		time.Sleep(time.Duration(i/10) * 500 * time.Millisecond)
+		time.Sleep(time.Duration(i/10) * SaveEndResultRetryBaseDelay)
 	}
 
 	// Handle fatal error

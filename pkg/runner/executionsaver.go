@@ -13,6 +13,11 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller/store"
 )
 
+const (
+	ExecutionSaverUpdateRetryCount = 10
+	ExecutionSaverUpdateRetryDelay = 300 * time.Millisecond
+)
+
 //go:generate mockgen -destination=./mock_executionsaver.go -package=runner "github.com/kubeshop/testkube/pkg/runner" ExecutionSaver
 type ExecutionSaver interface {
 	UpdateResult(result testkube.TestWorkflowResult)
@@ -67,7 +72,7 @@ func (s *executionSaver) watchResultUpdates() {
 			if !ok {
 				return
 			}
-			for i := 0; i < 10; i++ {
+			for i := 0; i < ExecutionSaverUpdateRetryCount; i++ {
 				s.resultMu.Lock()
 				next := s.result
 				s.resultMu.Unlock()
@@ -81,7 +86,7 @@ func (s *executionSaver) watchResultUpdates() {
 				select {
 				case <-s.ctx.Done():
 					return
-				case <-time.After(300 * time.Millisecond):
+				case <-time.After(ExecutionSaverUpdateRetryDelay):
 				}
 			}
 		}

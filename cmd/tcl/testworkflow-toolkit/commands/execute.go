@@ -44,6 +44,8 @@ const (
 
 	GetExecutionRetryOnFailureMaxAttempts = 30
 	GetExecutionRetryOnFailureDelay       = 500 * time.Millisecond
+
+	ExecutionResultPollingTime = 200 * time.Millisecond
 )
 
 type testExecutionDetails struct {
@@ -218,7 +220,7 @@ func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async 
 			loop:
 				for {
 					// TODO: Consider real-time Notifications without logs instead
-					time.Sleep(200 * time.Millisecond)
+					time.Sleep(ExecutionResultPollingTime)
 					for i := 0; i < GetExecutionRetryOnFailureMaxAttempts; i++ {
 						var resp []byte
 						resp, err = c.Execute(context.Background(), testworkflow.CmdTestWorkflowExecutionGet, testworkflow.ExecutionGetRequest{ID: exec.Id})
