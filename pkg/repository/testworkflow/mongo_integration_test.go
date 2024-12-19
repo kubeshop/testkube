@@ -562,4 +562,76 @@ func TestNewMongoRepository_Get_Integration(t *testing.T) {
 	assert.Equal(t, "default", result.ConfigParams["param1"].DefaultValue)
 	assert.Equal(t, false, result.ConfigParams["param1"].Truncated)
 
+	execution2 := testkube.TestWorkflowExecution{
+		Id:   "test-id-2",
+		Name: "test-name-2",
+		Workflow: &testkube.TestWorkflow{
+			Name: "test-workflow-2",
+			Spec: &testkube.TestWorkflowSpec{},
+		},
+		ResolvedWorkflow: &testkube.TestWorkflow{
+			Name: "test-workflow-2",
+			Spec: &testkube.TestWorkflowSpec{
+				Config: map[string]testkube.TestWorkflowParameterSchema{
+					"param2": {
+						Default_: &testkube.BoxedString{
+							Value: "default",
+						},
+					},
+					"param1": {
+						Default_: &testkube.BoxedString{
+							Value: "default",
+						},
+						Sensitive: true,
+					},
+				},
+			},
+		},
+	}
+	err = repo.Insert(ctx, execution2)
+	assert.NoError(t, err)
+
+	result, err = repo.Get(ctx, "test-id-2")
+	assert.NoError(t, err)
+
+	assert.Equal(t, execution2.Id, result.Id)
+	assert.Equal(t, execution2.Name, result.Name)
+	assert.Nil(t, result.ConfigParams)
+
+	execution3 := testkube.TestWorkflowExecution{
+		Id:   "test-id-3",
+		Name: "test-name-3",
+		Workflow: &testkube.TestWorkflow{
+			Name: "test-workflow-3",
+			Spec: &testkube.TestWorkflowSpec{},
+		},
+		ResolvedWorkflow: &testkube.TestWorkflow{
+			Name: "test-workflow-2",
+			Spec: &testkube.TestWorkflowSpec{
+				Config: map[string]testkube.TestWorkflowParameterSchema{
+					"param2": {
+						Default_: &testkube.BoxedString{
+							Value: "default",
+						},
+					},
+					"param1": {
+						Default_: &testkube.BoxedString{
+							Value: "default",
+						},
+						Sensitive: true,
+					},
+				},
+			},
+		},
+		ConfigParams: map[string]testkube.TestWorkflowExecutionConfigValue{},
+	}
+	err = repo.Insert(ctx, execution3)
+	assert.NoError(t, err)
+
+	result, err = repo.Get(ctx, "test-id-3")
+	assert.NoError(t, err)
+
+	assert.Equal(t, execution3.Id, result.Id)
+	assert.Equal(t, execution3.Name, result.Name)
+	assert.Nil(t, result.ConfigParams)
 }
