@@ -2,7 +2,6 @@ package testkube
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/kubeshop/testkube/pkg/utils"
 )
@@ -125,14 +124,8 @@ func (w *TestWorkflow) DeepCopy() *TestWorkflow {
 	if w == nil {
 		return nil
 	}
-	v, err := json.Marshal(w)
-	if err != nil {
-		panic(fmt.Sprintf("cannot deep copy testkube.TestWorkflow: %v", err))
-	}
+	v, _ := json.Marshal(w)
 	var result TestWorkflow
-	err = json.Unmarshal(v, &result)
-	if err != nil {
-		panic(fmt.Sprintf("cannot deep copy testkube.TestWorkflow: %v", err))
-	}
+	_ = json.Unmarshal(v, &result)
 	return &result
 }
