@@ -64,15 +64,22 @@ type MongoRepositoryOpt func(*MongoRepository)
 func (r *MongoRepository) Get(ctx context.Context, id string) (result testkube.TestWorkflowExecution, err error) {
 	err = r.Coll.FindOne(ctx, bson.M{"$or": bson.A{bson.M{"id": id}, bson.M{"name": id}}}).Decode(&result)
 
-	if result.ResolvedWorkflow != nil && result.ResolvedWorkflow.Spec != nil && result.ConfigParams != nil {
-		r.populateConfigParams(result.ResolvedWorkflow, result.ConfigParams)
+	if result.ResolvedWorkflow != nil && result.ResolvedWorkflow.Spec != nil {
+		result.ConfigParams = populateConfigParams(result.ResolvedWorkflow, result.ConfigParams)
 	}
 
 	return *result.UnscapeDots(), err
 }
 
-func (r *MongoRepository) populateConfigParams(resolvedWorkflow *testkube.TestWorkflow, configParams map[string]testkube.TestWorkflowExecutionConfigValue) {
+func populateConfigParams(resolvedWorkflow *testkube.TestWorkflow, configParams map[string]testkube.TestWorkflowExecutionConfigValue) map[string]testkube.TestWorkflowExecutionConfigValue {
+	if configParams == nil {
+		configParams = make(map[string]testkube.TestWorkflowExecutionConfigValue)
+	}
+
 	for k, v := range resolvedWorkflow.Spec.Config {
+		if v.Sensitive {
+			return nil
+		}
 		if v.Default_ != nil {
 			if _, ok := configParams[k]; !ok {
 				configParams[k] = testkube.TestWorkflowExecutionConfigValue{
@@ -93,7 +100,8 @@ func (r *MongoRepository) populateConfigParams(resolvedWorkflow *testkube.TestWo
 			}
 		}
 	}
-	return
+
+	return configParams
 }
 
 func (r *MongoRepository) GetByNameAndTestWorkflow(ctx context.Context, name, workflowName string) (result testkube.TestWorkflowExecution, err error) {
@@ -303,8 +311,8 @@ func (r *MongoRepository) GetExecutionsSummary(ctx context.Context, filter Filte
 	for i := range executions {
 		executions[i].UnscapeDots()
 
-		if executions[i].ResolvedWorkflow != nil && executions[i].ResolvedWorkflow.Spec != nil && executions[i].ConfigParams != nil {
-			r.populateConfigParams(executions[i].ResolvedWorkflow, executions[i].ConfigParams)
+		if executions[i].ResolvedWorkflow != nil && executions[i].ResolvedWorkflow.Spec != nil {
+			executions[i].ConfigParams = populateConfigParams(executions[i].ResolvedWorkflow, executions[i].ConfigParams)
 		}
 		result[i] = executions[i].TestWorkflowExecutionSummary
 	}
