@@ -9307,6 +9307,9 @@ components:
         mountPath:
           type: string
           description: where to mount the fetched repository contents (defaults to "repo" directory in the data volume)
+        cone:
+          type: boolean
+          description: enable cone mode for sparse checkout with paths
         paths:
           type: array
           description: paths to fetch for the sparse checkout
