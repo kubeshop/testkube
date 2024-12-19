@@ -14,7 +14,6 @@ import (
 	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
 	testsuitev3 "github.com/kubeshop/testkube-operator/api/testsuite/v3"
 	testtriggersv1 "github.com/kubeshop/testkube-operator/api/testtriggers/v1"
-	testworkflowsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testworkflows/v1"
 	testkubeclientsetv1 "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
 	"github.com/kubeshop/testkube/cmd/api-server/services"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
@@ -22,6 +21,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/http"
+	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/telemetry"
@@ -60,7 +60,7 @@ type Service struct {
 	triggerStatus                 map[statusKey]*triggerStatus
 	clientset                     kubernetes.Interface
 	testKubeClientset             testkubeclientsetv1.Interface
-	testWorkflowsClient           testworkflowsclientv1.Interface
+	testWorkflowsClient           testworkflowclient.TestWorkflowClient
 	logger                        *zap.SugaredLogger
 	configMap                     config.Repository
 	httpClient                    http.HttpClient
@@ -82,7 +82,7 @@ func NewService(
 	deprecatedSystem *services.DeprecatedSystem,
 	clientset kubernetes.Interface,
 	testKubeClientset testkubeclientsetv1.Interface,
-	testWorkflowsClient testworkflowsclientv1.Interface,
+	testWorkflowsClient testworkflowclient.TestWorkflowClient,
 	leaseBackend LeaseBackend,
 	logger *zap.SugaredLogger,
 	configMap config.Repository,

@@ -2,6 +2,11 @@ package testworkflowconfig
 
 import "time"
 
+const (
+	FeatureFlagNewExecutions            = "exec"
+	FeatureFlagTestWorkflowCloudStorage = "tw-storage"
+)
+
 type InternalConfig struct {
 	Execution    ExecutionConfig    `json:"e,omitempty"`
 	Workflow     WorkflowConfig     `json:"w,omitempty"`
@@ -53,7 +58,8 @@ type WorkerConfig struct {
 	ImageInspectorPersistenceCacheKey string        `json:"P,omitempty"`
 	ImageInspectorPersistenceCacheTTL time.Duration `json:"T,omitempty"`
 
-	Connection WorkerConnectionConfig `json:"C,omitempty"`
+	Connection   WorkerConnectionConfig `json:"C,omitempty"`
+	FeatureFlags map[string]string      `json:"f,omitempty"`
 }
 
 type WorkerConnectionConfig struct {

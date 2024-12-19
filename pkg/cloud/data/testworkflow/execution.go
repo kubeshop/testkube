@@ -3,6 +3,7 @@ package testworkflow
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"time"
 
 	"google.golang.org/grpc"
@@ -176,4 +177,22 @@ func (r *CloudRepository) GetExecutionTags(ctx context.Context, testWorkflowName
 		return v.Tags
 	}
 	return pass(r.executor, ctx, req, process)
+}
+
+// Init sets the initialization data from the runner
+// Prefer scheduling directly with TestKubeCloudAPI/ScheduleExecution operation.
+// This one is a workaround for older Control Planes. It's not recommended, as it may cause race conditions.
+func (r *CloudRepository) Init(ctx context.Context, id string, data testworkflow2.InitData) (err error) {
+	execution, err := r.Get(ctx, id)
+	if err != nil {
+		return
+	}
+	execution.Namespace = data.Namespace
+	execution.Signature = data.Signature
+	execution.RunnerId = data.RunnerID
+	return r.Update(ctx, execution)
+}
+
+func (r *CloudRepository) GetUnassigned(ctx context.Context) (result []testkube.TestWorkflowExecution, err error) {
+	return nil, errors.New("not supported")
 }

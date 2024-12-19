@@ -25,5 +25,6 @@ type Event struct {
 	// cluster name of event
 	ClusterName string `json:"clusterName,omitempty"`
 	// environment variables
-	Envs map[string]string `json:"envs,omitempty"`
+	Envs     map[string]string `json:"envs,omitempty"`
+	External bool              `json:"external,omitempty"`
 }

@@ -27,6 +27,13 @@ func NewCredentialMachine(repository CredentialRepository, observers ...func(nam
 		}
 		if computed {
 			expr, err := expressions.CompileAndResolveTemplate(string(value))
+			// TODO: consider obfuscating each static part, if it's not finalized yet
+			if expr.Static() != nil {
+				strValue, _ := expr.Static().StringValue()
+				for i := range observers {
+					observers[i](name, strValue)
+				}
+			}
 			return expr, true, err
 		}
 		valueStr := string(value)

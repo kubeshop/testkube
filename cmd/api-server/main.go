@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"google.golang.org/grpc"
@@ -19,12 +20,19 @@ import (
 	cloudtestworkflow "github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
 	"github.com/kubeshop/testkube/pkg/event/kind/cdevent"
 	"github.com/kubeshop/testkube/pkg/event/kind/k8sevent"
+	"github.com/kubeshop/testkube/pkg/event/kind/testworkflowexecutionmetrics"
+	"github.com/kubeshop/testkube/pkg/event/kind/testworkflowexecutions"
+	"github.com/kubeshop/testkube/pkg/event/kind/testworkflowexecutiontelemetry"
 	"github.com/kubeshop/testkube/pkg/event/kind/webhook"
 	ws "github.com/kubeshop/testkube/pkg/event/kind/websocket"
+	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
+	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
+	runner2 "github.com/kubeshop/testkube/pkg/runner"
 	"github.com/kubeshop/testkube/pkg/secretmanager"
 	"github.com/kubeshop/testkube/pkg/server"
 	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
 	"github.com/kubeshop/testkube/pkg/tcl/schedulertcl"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/presets"
 
 	"github.com/kubeshop/testkube/internal/common"
@@ -78,33 +86,17 @@ func main() {
 
 	configMapConfig := commons.MustGetConfigMapConfig(ctx, cfg.APIServerConfig, cfg.TestkubeNamespace, cfg.TestkubeAnalyticsEnabled)
 
-	// Start local Control Plane
-	if mode == common.ModeStandalone {
-		controlPlane := services.CreateControlPlane(ctx, cfg, features, configMapConfig)
-		g.Go(func() error {
-			return controlPlane.Run(ctx)
-		})
-
-		// Rewire connection
-		cfg.TestkubeProURL = fmt.Sprintf("%s:%d", cfg.APIServerFullname, cfg.GRPCServerPort)
-		cfg.TestkubeProTLSInsecure = true
-	}
-
-	clusterId, _ := configMapConfig.GetUniqueClusterId(ctx)
-	telemetryEnabled, _ := configMapConfig.GetTelemetryEnabled(ctx)
-
 	// k8s
 	kubeClient, err := kubeclient.GetClient()
 	commons.ExitOnError("Getting kubernetes client", err)
 	clientset, err := k8sclient.ConnectToK8s()
 	commons.ExitOnError("Creating k8s clientset", err)
 
-	// k8s clients
-	secretClient := secret.NewClientFor(clientset, cfg.TestkubeNamespace)
-	configMapClient := configmap.NewClientFor(clientset, cfg.TestkubeNamespace)
-	webhooksClient := executorsclientv1.NewWebhooksClient(kubeClient, cfg.TestkubeNamespace)
-	testTriggersClient := testtriggersclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
-	testWorkflowExecutionsClient := testworkflowsclientv1.NewTestWorkflowExecutionsClient(kubeClient, cfg.TestkubeNamespace)
+	var runner runner2.Runner
+	lazyRunner := runner2.Lazy(&runner)
+
+	var eventsEmitter *event.Emitter
+	lazyEmitter := event.Lazy(&eventsEmitter)
 
 	// TODO: Make granular environment variables, yet backwards compatible
 	secretConfig := testkube.SecretConfig{
@@ -118,12 +110,35 @@ func main() {
 	}
 	secretManager := secretmanager.New(clientset, secretConfig)
 
+	metrics := metrics.NewMetrics()
+
+	// Start local Control Plane
+	if mode == common.ModeStandalone {
+		controlPlane := services.CreateControlPlane(ctx, cfg, features, configMapConfig, secretManager, metrics, lazyRunner, lazyEmitter)
+		g.Go(func() error {
+			return controlPlane.Run(ctx)
+		})
+
+		// Rewire connection
+		cfg.TestkubeProURL = fmt.Sprintf("%s:%d", cfg.APIServerFullname, cfg.GRPCServerPort)
+		cfg.TestkubeProTLSInsecure = true
+	}
+
+	clusterId, _ := configMapConfig.GetUniqueClusterId(ctx)
+	telemetryEnabled, _ := configMapConfig.GetTelemetryEnabled(ctx)
+
+	// k8s clients
+	secretClient := secret.NewClientFor(clientset, cfg.TestkubeNamespace)
+	configMapClient := configmap.NewClientFor(clientset, cfg.TestkubeNamespace)
+	webhooksClient := executorsclientv1.NewWebhooksClient(kubeClient, cfg.TestkubeNamespace)
+	testTriggersClient := testtriggersclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
+
 	envs := commons.GetEnvironmentVariables()
 
 	inspector := commons.CreateImageInspector(cfg, configMapClient, secretClient)
 
-	var testWorkflowsClient testworkflowsclientv1.Interface
-	var testWorkflowTemplatesClient testworkflowsclientv1.TestWorkflowTemplatesInterface
+	var testWorkflowsClient testworkflowclient.TestWorkflowClient
+	var testWorkflowTemplatesClient testworkflowtemplateclient.TestWorkflowTemplateClient
 
 	var grpcClient cloud.TestKubeCloudAPIClient
 	var grpcConn *grpc.ClientConn
@@ -146,20 +161,8 @@ func main() {
 
 	grpcClient = cloud.NewTestKubeCloudAPIClient(grpcConn)
 
-	if mode == common.ModeAgent && cfg.WorkflowStorage == "control-plane" {
-		testWorkflowsClient = cloudtestworkflow.NewCloudTestWorkflowRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
-		testWorkflowTemplatesClient = cloudtestworkflow.NewCloudTestWorkflowTemplateRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
-	} else {
-		testWorkflowsClient = testworkflowsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
-		testWorkflowTemplatesClient = testworkflowsclientv1.NewTestWorkflowTemplatesClient(kubeClient, cfg.TestkubeNamespace)
-	}
-
 	testWorkflowResultsRepository := cloudtestworkflow.NewCloudRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
-	var opts []cloudtestworkflow.Option
-	if cfg.StorageSkipVerify {
-		opts = append(opts, cloudtestworkflow.WithSkipVerify())
-	}
-	testWorkflowOutputRepository := cloudtestworkflow.NewCloudOutputRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey, opts...)
+	testWorkflowOutputRepository := cloudtestworkflow.NewCloudOutputRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey, cfg.StorageSkipVerify)
 	triggerLeaseBackend := triggers.NewAcquireAlwaysLeaseBackend()
 	artifactStorage := cloudartifacts.NewCloudArtifactsStorage(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
 
@@ -168,12 +171,20 @@ func main() {
 	if cfg.Trace {
 		eventBus.TraceEvents()
 	}
-	eventsEmitter := event.NewEmitter(eventBus, cfg.TestkubeClusterName)
+	eventsEmitter = event.NewEmitter(eventBus, cfg.TestkubeClusterName)
 
 	// Check Pro/Enterprise subscription
 	proContext := commons.ReadProContext(ctx, cfg, grpcClient)
 	subscriptionChecker, err := checktcl.NewSubscriptionChecker(ctx, proContext, grpcClient, grpcConn)
 	commons.ExitOnError("Failed creating subscription checker", err)
+
+	if proContext.TestWorkflowStorage && cfg.FeatureTestWorkflowCloudStorage {
+		testWorkflowsClient = testworkflowclient.NewCloudTestWorkflowClient(grpcConn, cfg.TestkubeProAPIKey)
+		testWorkflowTemplatesClient = testworkflowtemplateclient.NewCloudTestWorkflowTemplateClient(grpcConn, cfg.TestkubeProAPIKey)
+	} else {
+		testWorkflowsClient = testworkflowclient.NewKubernetesTestWorkflowClient(kubeClient, cfg.TestkubeNamespace)
+		testWorkflowTemplatesClient = testworkflowtemplateclient.NewKubernetesTestWorkflowTemplateClient(kubeClient, cfg.TestkubeNamespace)
+	}
 
 	serviceAccountNames := map[string]string{
 		cfg.TestkubeNamespace: cfg.JobServiceAccountName,
@@ -184,8 +195,6 @@ func main() {
 		commons.ExitOnError("Subscription checking", err)
 		serviceAccountNames = schedulertcl.GetServiceAccountNamesFromConfig(serviceAccountNames, cfg.TestkubeExecutionNamespaces)
 	}
-
-	metrics := metrics.NewMetrics()
 
 	var deprecatedSystem *services.DeprecatedSystem
 	if !cfg.DisableDeprecatedTests {
@@ -214,28 +223,71 @@ func main() {
 	if mode == common.ModeAgent {
 		testWorkflowProcessor = presets.NewPro(inspector)
 	}
-	executionWorker := services.CreateExecutionWorker(clientset, cfg, clusterId, serviceAccountNames, testWorkflowProcessor)
+	executionWorker := services.CreateExecutionWorker(clientset, cfg, clusterId, serviceAccountNames, testWorkflowProcessor, map[string]string{
+		testworkflowconfig.FeatureFlagNewExecutions:            fmt.Sprintf("%v", cfg.FeatureNewExecutions),
+		testworkflowconfig.FeatureFlagTestWorkflowCloudStorage: fmt.Sprintf("%v", cfg.FeatureTestWorkflowCloudStorage),
+	})
+
+	// Build the runner
+	runner = runner2.New(
+		executionWorker,
+		testWorkflowOutputRepository,
+		testWorkflowResultsRepository,
+		configMapConfig,
+		eventsEmitter,
+		metrics,
+		cfg.TestkubeDashboardURI,
+		cfg.StorageSkipVerify,
+	)
+
+	// Recover control
+	func() {
+		var list []testkube.TestWorkflowExecution
+		for {
+			// TODO: it should get running only in the context of current runner (worker.List?)
+			list, err = testWorkflowResultsRepository.GetRunning(ctx)
+			if err != nil {
+				log.DefaultLogger.Errorw("failed to fetch running executions to recover", "error", err)
+				<-time.After(time.Second)
+				continue
+			}
+			break
+		}
+
+		for i := range list {
+			if (list[i].RunnerId == "" && len(list[i].Signature) == 0) || (list[i].RunnerId != "" && list[i].RunnerId != proContext.EnvID) {
+				continue
+			}
+
+			// TODO: Should it throw error at all?
+			// TODO: Pass hints (namespace, signature, scheduledAt)
+			go func(e *testkube.TestWorkflowExecution) {
+				err := runner.Monitor(ctx, e.Id)
+				if err != nil {
+					log.DefaultLogger.Errorw("failed to monitor execution", "id", e.Id, "error", err)
+				}
+			}(&list[i])
+		}
+	}()
 
 	testWorkflowExecutor := testworkflowexecutor.New(
+		grpcClient,
+		cfg.TestkubeProAPIKey,
+		cfg.CDEventsTarget,
 		eventsEmitter,
-		executionWorker,
-		clientset,
+		runner,
 		testWorkflowResultsRepository,
 		testWorkflowOutputRepository,
-		configMapConfig,
 		testWorkflowTemplatesClient,
-		testWorkflowExecutionsClient,
 		testWorkflowsClient,
 		metrics,
 		secretManager,
 		cfg.GlobalWorkflowTemplateName,
 		cfg.TestkubeDashboardURI,
-		&proContext,
+		proContext.OrgID,
+		proContext.EnvID,
+		cfg.FeatureNewExecutions,
 	)
-	g.Go(func() error {
-		testWorkflowExecutor.Recover(ctx)
-		return nil
-	})
 
 	var deprecatedClients commons.DeprecatedClients
 	var deprecatedRepositories commons.DeprecatedRepositories
@@ -262,6 +314,17 @@ func main() {
 	if cfg.EnableK8sEvents {
 		eventsEmitter.Loader.Register(k8sevent.NewK8sEventLoader(clientset, cfg.TestkubeNamespace, testkube.AllEventTypes))
 	}
+
+	// Update TestWorkflowExecution Kubernetes resource objects on status change
+	eventsEmitter.Loader.Register(testworkflowexecutions.NewLoader(ctx, cfg.TestkubeNamespace, kubeClient))
+
+	// Update the Prometheus metrics regarding the Test Workflow Execution
+	eventsEmitter.Loader.Register(testworkflowexecutionmetrics.NewLoader(ctx, metrics, cfg.TestkubeDashboardURI))
+
+	// Send the telemetry data regarding the Test Workflow Execution
+	// TODO: Disable it if Control Plane does that
+	eventsEmitter.Loader.Register(testworkflowexecutiontelemetry.NewLoader(ctx, configMapConfig))
+
 	eventsEmitter.Listen(ctx)
 	g.Go(func() error {
 		eventsEmitter.Reconcile(ctx)
@@ -286,11 +349,12 @@ func main() {
 		webhooksClient,
 		testTriggersClient,
 		testWorkflowsClient,
+		testworkflowsclientv1.NewClient(kubeClient, cfg.TestkubeNamespace),
 		testWorkflowTemplatesClient,
+		testworkflowsclientv1.NewTestWorkflowTemplatesClient(kubeClient, cfg.TestkubeNamespace),
 		configMapConfig,
 		secretManager,
 		secretConfig,
-		testWorkflowExecutor,
 		executionWorker,
 		eventsEmitter,
 		websocketLoader,
@@ -301,6 +365,7 @@ func main() {
 		cfg.TestkubeHelmchartVersion,
 		serviceAccountNames,
 		cfg.TestkubeDockerImageVersion,
+		testWorkflowExecutor,
 	)
 	api.Init(httpServer)
 
@@ -323,6 +388,16 @@ func main() {
 		features,
 		&proContext,
 		cfg.TestkubeDockerImageVersion,
+		eventsEmitter,
+		func(environmentId, executionId string) error {
+			execution, err := testWorkflowResultsRepository.Get(context.Background(), executionId)
+			if err != nil {
+				return err
+			}
+			return testWorkflowExecutor.Start(environmentId, &execution, nil)
+		},
+		cfg.FeatureNewExecutions,
+		cfg.FeatureTestWorkflowCloudStorage,
 	)
 	commons.ExitOnError("Starting agent", err)
 	g.Go(func() error {
