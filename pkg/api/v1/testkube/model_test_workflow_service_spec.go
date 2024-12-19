@@ -36,12 +36,12 @@ type TestWorkflowServiceSpec struct {
 	Logs           *BoxedString                       `json:"logs,omitempty"`
 	RestartPolicy  string                             `json:"restartPolicy,omitempty"`
 	ReadinessProbe *Probe                             `json:"readinessProbe,omitempty"`
+	Pvcs           map[string]TestWorkflowPvcConfig   `json:"pvcs,omitempty"`
 	Use            []TestWorkflowTemplateRef          `json:"use,omitempty"`
 	Count          *BoxedString                       `json:"count,omitempty"`
 	MaxCount       *BoxedString                       `json:"maxCount,omitempty"`
 	// matrix of parameters to spawn instances
 	Matrix map[string]interface{} `json:"matrix,omitempty"`
 	// parameters that should be distributed across sharded instances
-	Shards map[string]interface{}           `json:"shards,omitempty"`
-	Pvcs   map[string]TestWorkflowPvcConfig `json:"pvcs,omitempty"`
+	Shards map[string]interface{} `json:"shards,omitempty"`
 }

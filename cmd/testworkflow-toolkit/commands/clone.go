@@ -35,6 +35,7 @@ func NewCloneCmd() *cobra.Command {
 		sshKey   string
 		authType string
 		revision string
+		cone     bool
 	)
 
 	cmd := &cobra.Command{
@@ -59,6 +60,10 @@ func NewCloneCmd() *cobra.Command {
 			paths := make([]string, 0)
 			for _, p := range rawPaths {
 				p = filepath.Clean(p)
+				if cone && p != "/" && strings.HasPrefix(p, "/") {
+					// Delete leading '/' for cone
+					p = p[1:]
+				}
 				if p != "" && p != "." {
 					paths = append(paths, p)
 				}
@@ -114,7 +119,11 @@ func NewCloneCmd() *cobra.Command {
 				ui.Debug("sparse checkout")
 				err = RunWithRetry(CloneRetryOnFailureMaxAttempts, CloneRetryOnFailureBaseDelay, "git", "clone", configArgs, authArgs, "--filter=blob:none", "--no-checkout", "--sparse", "--depth", 1, "--verbose", uri.String(), outputPath)
 				ui.ExitOnError("cloning repository", err)
-				err = RunWithRetry(CloneRetryOnFailureMaxAttempts, CloneRetryOnFailureBaseDelay, "git", "-C", outputPath, configArgs, "sparse-checkout", "set", "--no-cone", paths)
+				coneArgs := []string{"--no-cone"}
+				if cone {
+					coneArgs = nil
+				}
+				err = RunWithRetry(CloneRetryOnFailureMaxAttempts, CloneRetryOnFailureBaseDelay, "git", "-C", outputPath, configArgs, "sparse-checkout", "set", coneArgs, paths)
 				ui.ExitOnError("sparse checkout repository", err)
 				if revision != "" {
 					err = RunWithRetry(CloneRetryOnFailureMaxAttempts, CloneRetryOnFailureBaseDelay, "git", "-C", outputPath, configArgs, "fetch", authArgs, "--depth", 1, "origin", revision)
@@ -168,6 +177,7 @@ func NewCloneCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&sshKey, "sshKey", "s", "", "")
 	cmd.Flags().StringVarP(&authType, "authType", "a", "basic", "allowed: basic, header")
 	cmd.Flags().StringVarP(&revision, "revision", "r", "", "commit hash, branch name or tag")
+	cmd.Flags().BoolVar(&cone, "cone", false, "should enable cone mode for sparse checkout")
 
 	return cmd
 }

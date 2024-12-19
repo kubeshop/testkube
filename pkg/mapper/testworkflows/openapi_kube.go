@@ -293,6 +293,7 @@ func MapContentGitAPIToKube(v testkube.TestWorkflowContentGit) testworkflowsv1.C
 		SshKeyFrom:   common.MapPtr(v.SshKeyFrom, MapEnvVarSourceAPIToKube),
 		AuthType:     MapGitAuthTypeAPIToKube(v.AuthType),
 		MountPath:    v.MountPath,
+		Cone:         v.Cone,
 		Paths:        v.Paths,
 	}
 }
