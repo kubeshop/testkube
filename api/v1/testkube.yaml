@@ -7346,6 +7346,10 @@ components:
           example:
             - true
             - false
+        webhookConfig:
+          $ref: "#/components/schemas/WebhookConfigSchema"
+        webhookTemplateRef:
+          $ref: "#/components/schemas/WebhookTemplateRef"
 
     Event:
       description: Event data
@@ -10686,6 +10690,60 @@ components:
         namespace:
           description: Namespace is the namespace of resource being referenced
           $ref: "#/components/schemas/BoxedString"
+
+    WebhookParameterSchema:
+      type: object
+      properties:
+        description:
+          description: description for the property
+          type: string
+        required:
+          description: whether parameter is required
+          type: boolean
+          default: false
+        example:
+          description: example value for the parameter
+          type: string
+        default:
+          $ref: "#/components/schemas/BoxedString"
+        pattern:
+          type: string
+          description: "regular expression to match"
+
+    WebhookConfigSchema:
+      type: object
+      description: configuration definition
+      additionalProperties:
+        $ref: "#/components/schemas/WebhookParameterSchema"
+
+    WebhookConfigValue:
+      type: object
+      description: configuration value
+      properties:
+        public:
+          description: public value to use in webhook template
+          type: string
+        private:
+          description: private value stored in secret to use in webhook template
+          $ref: "#/components/schemas/SecretRef"
+
+    WebhookConfig:
+      type: object
+      description: configuration values to pass to the webhook template
+      additionalProperties:
+        $ref: "#/components/schemas/WebhookConfigValue"
+
+    WebhookTemplateRef:
+      type: object
+      properties:
+        name:
+          description: webhook template name to include
+          type: string
+        config:
+          description: webhook config to use in webhook template
+          $ref: "#/components/schemas/WebhookConfig"
+      required:
+        - name
 
     #
     # Errors
