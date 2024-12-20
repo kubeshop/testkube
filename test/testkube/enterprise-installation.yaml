@@ -5,43 +5,34 @@ metadata:
   labels:
     core-tests: installation
 spec:
+  system:
+    pureByDefault: true
+  content:
+    files:
+    - path: /root/edge-cluster-sa-key.json
+      contentFrom:
+        secretKeyRef:
+          name: sa-key
+          key: json-sa-key
+  container:
+    image: gcr.io/google.com/cloudsdktool/google-cloud-cli:latest # contains gcloud, gke-gcloud-auth-plugin and kubectl
   steps:
-  - name: gcloud
-          # service_account_key: ${{ secrets.GH_SA }}
-          # credentials: ${{ secrets.GH_SA }}
-    run:
-      image: gcr.io/google.com/cloudsdktool/google-cloud-cli:latest # contains gcloud, gke-gcloud-auth-plugin and kubectl
-      shell: |
-        cd /data && echo "asdfasdfasdf" > kubeconfig
-        gcloud container clusters get-credentials testkube-cloud-edge --region us-east1 --project testkube-328312
-        testkube init demo ..................
-
-  - name: testkube
-    run:
-      image: alpine/helm:3
-      shell: |
-        apk add kubectl
-        kubectl get pods -ntestkube
-
-
-
-# apiToken: '{{ secret("paris-demo-testkube-cloud-basic-access-key", "key") }}'
-  # - name: gcloud
-  #   # container:
-  #   #   env:
-  #   #   - name: MY_SUPER_SECRET
-  #   #     valueFrom:
-  #   #       secretKeyRef:
-  #   #         name: your-secret-name
-  #   #         key: key-in-the-secret
-  #         # service_account_key: ${{ secrets.GH_SA }}
-  #         # project_id: ${{ secrets.GKE_PROJECT }}
-  #         # cluster_name: ${{ matrix.environment.cluster_name }}
-  #         # location: ${{ matrix.environment.location }}
-  #         # credentials: ${{ secrets.GH_SA }}
-  #   run:
-  #     image: gcr.io/google.com/cloudsdktool/google-cloud-cli:latest # contains gcloud, gke-gcloud-auth-plugin and kubectl
-  #     shell: |
-  #       kubectl get pods -ntestkube-agent
-  #       # cd /data && echo "asdfasdfasdf" > kubeconfig
-  #       # gcloud container clusters get-credentials asdfasdfsda --region asdfasdf --project asdfasdfds
+  - name: Install Helm
+    shell: |
+      # Install helm
+      curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+      helm version
+  - name: Install Testkube CLI
+    shell: |
+      wget -qO - https://repo.testkube.io/key.pub | apt-key add -
+      echo "deb https://repo.testkube.io/linux linux main" | tee -a /etc/apt/sources.list
+      apt-get update && apt-get install -y testkube
+  - name: gcloud auth
+    shell: |
+      gcloud auth activate-service-account gh-actions-deploy@testkube-328312.iam.gserviceaccount.com --key-file=/root/edge-cluster-sa-key.json
+      gcloud container clusters get-credentials testkube-cloud-edge --region us-east1 --project testkube-328312
+  - name: Test
+    shell: |
+      helm version
+      # TODO: secret
+      testkube init demo --namespace testkube-enterprise-installation-test --no-confirm --license AAAAAAAAAAAAAAAAAAAAAAAAAAAA --helm-set testkube-agent.testkube-api.multinamespace.enabled=true --helm-set testkube-agent.testkube-operator.enabled=false --helm-set dex.rbac.createClusterScoped=false
