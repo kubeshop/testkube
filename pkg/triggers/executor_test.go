@@ -207,8 +207,8 @@ func TestWorkflowExecute(t *testing.T) {
 	mockTestWorkflow := testkube.TestWorkflow{Namespace: "testkube", Name: "some-test"}
 	mockTestWorkflowsClient.EXPECT().Get(gomock.Any(), gomock.Any(), "some-test").Return(&mockTestWorkflow, nil).AnyTimes()
 	mockTestWorkflowExecutionRequest := &cloud.ScheduleRequest{
-		Selectors: []*cloud.ScheduleSelector{
-			{Name: mockTestWorkflow.Name, Config: map[string]string{
+		Executions: []*cloud.ScheduleExecution{
+			{Selector: &cloud.ScheduleResourceSelector{Name: mockTestWorkflow.Name}, Config: map[string]string{
 				"WATCHER_EVENT_EVENT_TYPE": "",
 				"WATCHER_EVENT_NAME":       "",
 				"WATCHER_EVENT_NAMESPACE":  "",
