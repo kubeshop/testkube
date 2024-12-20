@@ -1,6 +1,10 @@
 package testkube
 
-import "github.com/kubeshop/testkube/pkg/utils"
+import (
+	"encoding/json"
+
+	"github.com/kubeshop/testkube/pkg/utils"
+)
 
 type TestWorkflows []TestWorkflow
 
@@ -114,4 +118,14 @@ func (w TestWorkflow) HasService(name string) bool {
 	}
 
 	return false
+}
+
+func (w *TestWorkflow) DeepCopy() *TestWorkflow {
+	if w == nil {
+		return nil
+	}
+	v, _ := json.Marshal(w)
+	var result TestWorkflow
+	_ = json.Unmarshal(v, &result)
+	return &result
 }

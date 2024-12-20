@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 
@@ -11,10 +12,37 @@ type LabelSource interface {
 	ListLabels() (map[string][]string, error)
 }
 
+type extendedLabelSource interface {
+	ListLabels(ctx context.Context, environmentId string) (map[string][]string, error)
+}
+
+type simpleLabelSource struct {
+	source        extendedLabelSource
+	environmentId string
+}
+
+func (s simpleLabelSource) ListLabels() (map[string][]string, error) {
+	return s.source.ListLabels(context.Background(), s.environmentId)
+}
+
+func getClientLabelSource(source extendedLabelSource, environmentId string) LabelSource {
+	return &simpleLabelSource{source: source, environmentId: environmentId}
+}
+
+func (s *TestkubeAPI) getEnvironmentId() string {
+	if s.proContext != nil {
+		return s.proContext.EnvID
+	}
+	return ""
+}
+
 func (s *TestkubeAPI) ListLabelsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		labels := make(map[string][]string)
-		sources := []LabelSource{s.TestWorkflowsClient, s.TestWorkflowTemplatesClient}
+		sources := []LabelSource{
+			getClientLabelSource(s.TestWorkflowsClient, s.getEnvironmentId()),
+			getClientLabelSource(s.TestWorkflowTemplatesClient, s.getEnvironmentId()),
+		}
 		if s.DeprecatedClients != nil {
 			sources = append(sources, s.DeprecatedClients.Tests(), s.DeprecatedClients.TestSuites())
 		}

@@ -25,6 +25,7 @@ type Client interface {
 	TestWorkflowExecutionAPI
 	TestWorkflowTemplateAPI
 	TestTriggerAPI
+	SharedAPI
 }
 
 // TestAPI describes test api methods
@@ -138,6 +139,10 @@ type TestSourceAPI interface {
 	ListTestSources(selector string) (testSources testkube.TestSources, err error)
 	DeleteTestSource(name string) (err error)
 	DeleteTestSources(selector string) (err error)
+}
+
+type SharedAPI interface {
+	ListLabels() (labels map[string][]string, err error)
 }
 
 // TestWorkflowAPI describes test workflow api methods
@@ -304,7 +309,7 @@ type Gettable interface {
 		testkube.TestSuiteWithExecutionSummary | testkube.Artifact | testkube.ServerInfo | testkube.Config | testkube.DebugInfo |
 		testkube.TestSource | testkube.Template |
 		testkube.TestWorkflow | testkube.TestWorkflowWithExecution | testkube.TestWorkflowTemplate | testkube.TestWorkflowExecution |
-		testkube.TestTrigger
+		testkube.TestTrigger | map[string][]string
 }
 
 // Executable is an interface of executable objects

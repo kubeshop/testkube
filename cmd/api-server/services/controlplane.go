@@ -8,7 +8,9 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	kubeclient "github.com/kubeshop/testkube-operator/pkg/client"
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
+	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/internal/config"
 	cloudartifacts "github.com/kubeshop/testkube/pkg/cloud/data/artifact"
 	cloudconfig "github.com/kubeshop/testkube/pkg/cloud/data/config"
@@ -16,18 +18,24 @@ import (
 	cloudtestresult "github.com/kubeshop/testkube/pkg/cloud/data/testresult"
 	cloudtestworkflow "github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
 	"github.com/kubeshop/testkube/pkg/controlplane"
+	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/featureflags"
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/log"
 	logsclient "github.com/kubeshop/testkube/pkg/logs/client"
+	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
+	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
 	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/result"
 	"github.com/kubeshop/testkube/pkg/repository/sequence"
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
+	runner2 "github.com/kubeshop/testkube/pkg/runner"
 	"github.com/kubeshop/testkube/pkg/secret"
+	"github.com/kubeshop/testkube/pkg/secretmanager"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
 	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 )
 
 func mapTestWorkflowFilters(s []*testworkflow.FilterImpl) []testworkflow.Filter {
@@ -54,15 +62,20 @@ func mapTestSuiteFilters(s []*testresult.FilterImpl) []testresult.Filter {
 	return v
 }
 
-func CreateControlPlane(ctx context.Context, cfg *config.Config, features featureflags.FeatureFlags, configMapClient configRepo.Repository) *controlplane.Server {
+func CreateControlPlane(ctx context.Context, cfg *config.Config, features featureflags.FeatureFlags, configMapClient configRepo.Repository, secretManager secretmanager.SecretManager, metrics metrics.Metrics, runner runner2.Runner, emitter event.Interface) *controlplane.Server {
 	// Connect to the cluster
 	clientset, err := k8sclient.ConnectToK8s()
 	commons.ExitOnError("Creating k8s clientset", err)
+	kubeClient, err := kubeclient.GetClient()
+	commons.ExitOnError("Getting kubernetes client", err)
 
 	// Connect to storages
 	secretClient := secret.NewClientFor(clientset, cfg.TestkubeNamespace)
 	db := commons.MustGetMongoDatabase(ctx, cfg, secretClient, !cfg.DisableMongoMigrations)
 	storageClient := commons.MustGetMinioClient(cfg)
+
+	testWorkflowsClient := testworkflowclient.NewKubernetesTestWorkflowClient(kubeClient, cfg.TestkubeNamespace)
+	testWorkflowTemplatesClient := testworkflowtemplateclient.NewKubernetesTestWorkflowTemplateClient(kubeClient, cfg.TestkubeNamespace)
 
 	var logGrpcClient logsclient.StreamGetter
 	if !cfg.DisableDeprecatedTests && features.LogsV2 {
@@ -383,9 +396,30 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 		}
 	}
 
+	executor := testworkflowexecutor.New(
+		nil,
+		"",
+		cfg.CDEventsTarget,
+		emitter,
+		runner,
+		testWorkflowResultsRepository,
+		testWorkflowOutputRepository,
+		testWorkflowTemplatesClient,
+		testWorkflowsClient,
+		metrics,
+		secretManager,
+		cfg.GlobalWorkflowTemplateName,
+		cfg.TestkubeDashboardURI,
+		"",
+		"",
+		cfg.FeatureNewExecutions,
+	)
+
 	return controlplane.New(controlplane.Config{
-		Port:    cfg.GRPCServerPort,
-		Logger:  log.DefaultLogger,
-		Verbose: false,
-	}, commands...)
+		Port:                             cfg.GRPCServerPort,
+		Logger:                           log.DefaultLogger,
+		Verbose:                          false,
+		FeatureNewExecutions:             cfg.FeatureNewExecutions,
+		FeatureTestWorkflowsCloudStorage: cfg.FeatureTestWorkflowCloudStorage,
+	}, executor, testWorkflowsClient, testWorkflowTemplatesClient, commands...)
 }

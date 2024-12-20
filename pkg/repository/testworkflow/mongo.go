@@ -656,3 +656,39 @@ func (r *MongoRepository) GetExecutionTags(ctx context.Context, testWorkflowName
 
 	return tags, nil
 }
+
+func (r *MongoRepository) Init(ctx context.Context, id string, data InitData) error {
+	_, err := r.Coll.UpdateOne(ctx, bson.M{"id": id}, bson.M{"$set": map[string]interface{}{
+		"namespace": data.Namespace,
+		"signature": data.Signature,
+		"runnerId":  data.RunnerID,
+	}})
+	return err
+}
+
+// TODO: Return IDs only
+// TODO: Add indexes
+func (r *MongoRepository) GetUnassigned(ctx context.Context) (result []testkube.TestWorkflowExecution, err error) {
+	result = make([]testkube.TestWorkflowExecution, 0)
+	opts := &options.FindOptions{}
+	opts.SetSort(bson.D{{Key: "_id", Value: -1}})
+	if r.allowDiskUse {
+		opts.SetAllowDiskUse(r.allowDiskUse)
+	}
+
+	cursor, err := r.Coll.Find(ctx, bson.M{
+		"$and": []bson.M{
+			{"result.status": testkube.QUEUED_TestWorkflowStatus},
+			{"$or": []bson.M{{"runnerId": ""}, {"runnerId": nil}}},
+		},
+	}, opts)
+	if err != nil {
+		return result, err
+	}
+	err = cursor.All(ctx, &result)
+
+	for i := range result {
+		result[i].UnscapeDots()
+	}
+	return
+}

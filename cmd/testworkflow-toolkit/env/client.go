@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"sync"
 
+	"google.golang.org/grpc"
 	corev1 "k8s.io/api/core/v1"
 
 	"k8s.io/client-go/kubernetes"
@@ -91,22 +92,24 @@ var (
 	cloudMu       sync.Mutex
 	cloudExecutor cloudexecutor.Executor
 	cloudClient   cloud.TestKubeCloudAPIClient
+	cloudConn     *grpc.ClientConn
 )
 
-func Cloud(ctx context.Context) (cloudexecutor.Executor, cloud.TestKubeCloudAPIClient) {
+func Cloud(ctx context.Context) (*grpc.ClientConn, cloudexecutor.Executor, cloud.TestKubeCloudAPIClient) {
 	cloudMu.Lock()
 	defer cloudMu.Unlock()
 
+	var err error
 	if cloudExecutor == nil {
 		cfg := config2.Config().Worker.Connection
 		logger := log.NewSilent()
-		grpcConn, err := agentclient.NewGRPCConnection(ctx, cfg.TlsInsecure, cfg.SkipVerify, cfg.Url, "", "", "", logger)
+		cloudConn, err = agentclient.NewGRPCConnection(ctx, cfg.TlsInsecure, cfg.SkipVerify, cfg.Url, "", "", "", logger)
 		if err != nil {
 			ui.Fail(fmt.Errorf("failed to connect with Cloud: %w", err))
 		}
-		cloudClient = cloud.NewTestKubeCloudAPIClient(grpcConn)
-		cloudExecutor = cloudexecutor.NewCloudGRPCExecutor(cloudClient, grpcConn, cfg.ApiKey)
+		cloudClient = cloud.NewTestKubeCloudAPIClient(cloudConn)
+		cloudExecutor = cloudexecutor.NewCloudGRPCExecutor(cloudClient, cloudConn, cfg.ApiKey)
 	}
 
-	return cloudExecutor, cloudClient
+	return cloudConn, cloudExecutor, cloudClient
 }

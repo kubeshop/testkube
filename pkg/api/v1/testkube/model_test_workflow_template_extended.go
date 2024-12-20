@@ -1,6 +1,7 @@
 package testkube
 
 import (
+	"encoding/json"
 	"strings"
 
 	"github.com/kubeshop/testkube/pkg/utils"
@@ -79,4 +80,14 @@ func (w *TestWorkflowTemplate) ConvertDots(fn func(string) string) *TestWorkflow
 	}
 
 	return w
+}
+
+func (w *TestWorkflowTemplate) DeepCopy() *TestWorkflowTemplate {
+	if w == nil {
+		return nil
+	}
+	v, _ := json.Marshal(w)
+	var result TestWorkflowTemplate
+	_ = json.Unmarshal(v, &result)
+	return &result
 }
