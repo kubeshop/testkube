@@ -185,12 +185,16 @@ message TestWorkflowParallelStepNotificationsResponse {
   string message = 6; // based on type: log/error = inline, others = serialized to JSON
 }
 
-message ScheduleSelector {
+message ScheduleResourceSelector {
   string name = 1;
-  map<string, string> labelSelector = 2;
-  map<string, string> config = 3;
-  string execution_name = 4;
-  map<string, string> tags = 5;
+  map<string, string> labels = 2;
+}
+
+message ScheduleExecution {
+  ScheduleResourceSelector selector = 1;
+  map<string, string> config = 2;
+  string execution_name = 3;
+  map<string, string> tags = 4;
 }
 
 enum RunningContextType {
@@ -219,7 +223,7 @@ message ScheduleRequest {
   string environment_id = 1;
 
   // Test Workflow details
-  repeated ScheduleSelector selectors = 2;
+  repeated ScheduleExecution executions = 2;
 
   // Execution details
   bool disable_webhooks = 3;
@@ -228,7 +232,7 @@ message ScheduleRequest {
   // Running metadata
   RunningContext running_context = 5;
   repeated string parent_execution_ids = 7;
-  optional UserSignature untrusted_user = 8;
+  optional UserSignature user = 8; // keep in mind that it should not be trusted
 
   // Kubernetes resource TODO: is it required?
   string kubernetes_object_name = 9;

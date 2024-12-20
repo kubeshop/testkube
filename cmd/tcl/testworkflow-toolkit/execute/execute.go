@@ -137,7 +137,7 @@ func executeTestWorkflowGrpc(workflowName string, request testkube.TestWorkflowE
 	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
 	resp, err := client.ScheduleExecution(ctx, &cloud.ScheduleRequest{
 		EnvironmentId:   cfg.Execution.EnvironmentId,
-		Selectors:       []*cloud.ScheduleSelector{{Name: workflowName, Config: request.Config}},
+		Executions:      []*cloud.ScheduleExecution{{Selector: &cloud.ScheduleResourceSelector{Name: workflowName}, Config: request.Config}},
 		DisableWebhooks: cfg.Execution.DisableWebhooks,
 		Tags:            request.Tags,
 		RunningContext: &cloud.RunningContext{

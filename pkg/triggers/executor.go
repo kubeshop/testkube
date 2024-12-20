@@ -142,15 +142,15 @@ func (s *Service) execute(ctx context.Context, e *watcherEvent, t *testtriggersv
 		}
 
 		request := &cloud.ScheduleRequest{
-			Selectors: common.MapSlice(testWorkflows, func(w testworkflowsv1.TestWorkflow) *cloud.ScheduleSelector {
-				selector := &cloud.ScheduleSelector{
-					Name:   w.Name,
-					Config: make(map[string]string, len(variables)),
+			Executions: common.MapSlice(testWorkflows, func(w testworkflowsv1.TestWorkflow) *cloud.ScheduleExecution {
+				execution := &cloud.ScheduleExecution{
+					Selector: &cloud.ScheduleResourceSelector{Name: w.Name},
+					Config:   make(map[string]string, len(variables)),
 				}
 				for _, variable := range variables {
-					selector.Config[variable.Name] = variable.Value
+					execution.Config[variable.Name] = variable.Value
 				}
-				return selector
+				return execution
 			}),
 		}
 

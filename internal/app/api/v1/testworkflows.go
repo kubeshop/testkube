@@ -383,13 +383,12 @@ func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 			return s.BadRequest(c, errPrefix, "invalid body", err)
 		}
 
-		// Pro edition only (tcl protected code)
-		runningContext, untrustedUser := testworkflowexecutor.GetNewRunningContext(request.RunningContext, request.ParentExecutionIds)
+		runningContext, user := testworkflowexecutor.GetNewRunningContext(request.RunningContext, request.ParentExecutionIds)
 
-		var scheduleSelector cloud.ScheduleSelector
+		var scheduleExecution cloud.ScheduleExecution
 		if name != "" {
-			scheduleSelector.Name = name
-			scheduleSelector.Config = request.Config
+			scheduleExecution.Selector = &cloud.ScheduleResourceSelector{Name: name}
+			scheduleExecution.Config = request.Config
 		} else if selector != "" {
 			sel, err := metav1.ParseToLabelSelector(selector)
 			if err != nil {
@@ -398,19 +397,19 @@ func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 			if len(sel.MatchExpressions) > 0 {
 				return s.InternalError(c, errPrefix, "invalid selector", errors.New("only simple selectors are allowed"))
 			}
-			scheduleSelector.LabelSelector = sel.MatchLabels
-			scheduleSelector.Config = request.Config
+			scheduleExecution.Selector = &cloud.ScheduleResourceSelector{Labels: sel.MatchLabels}
+			scheduleExecution.Config = request.Config
 		}
 
 		resp := s.testWorkflowExecutor.Execute(ctx, &cloud.ScheduleRequest{
 			EnvironmentId:        "", // use default
-			Selectors:            []*cloud.ScheduleSelector{&scheduleSelector},
+			Executions:           []*cloud.ScheduleExecution{&scheduleExecution},
 			DisableWebhooks:      request.DisableWebhooks,
 			Tags:                 request.Tags,
 			RunningContext:       runningContext,
 			ParentExecutionIds:   request.ParentExecutionIds,
 			KubernetesObjectName: request.TestWorkflowExecutionName,
-			UntrustedUser:        untrustedUser,
+			User:                 user,
 		})
 
 		results := make([]testkube.TestWorkflowExecution, 0)

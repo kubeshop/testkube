@@ -105,9 +105,9 @@ func GetLegacyRunningContext(req *cloud.ScheduleRequest) (runningContext *testku
 	userActor := &testkube.TestWorkflowRunningContextActor{
 		Type_: common.Ptr(testkube.USER_TestWorkflowRunningContextActorType),
 	}
-	if req.UntrustedUser != nil {
-		userActor.Name = req.UntrustedUser.Name
-		userActor.Email = req.UntrustedUser.Email
+	if req.User != nil {
+		userActor.Name = req.User.Name
+		userActor.Email = req.User.Email
 	}
 
 	switch req.RunningContext.Type {
@@ -189,17 +189,17 @@ func ValidateExecutionRequest(req *cloud.ScheduleRequest) error {
 	// Validate if the selectors have exclusively name or label selector
 	nameSelectorsCount := 0
 	labelSelectorsCount := 0
-	for i := range req.Selectors {
-		if req.Selectors[i] == nil {
+	for i := range req.Executions {
+		if req.Executions[i] == nil {
 			return errors.New("invalid selector provided")
 		}
-		if req.Selectors[i].Name != "" && len(req.Selectors[i].LabelSelector) > 0 {
+		if req.Executions[i].Selector.Name != "" && len(req.Executions[i].Selector.Labels) > 0 {
 			return errors.New("invalid selector provided")
 		}
-		if req.Selectors[i].Name == "" && len(req.Selectors[i].LabelSelector) == 0 {
+		if req.Executions[i].Selector.Name == "" && len(req.Executions[i].Selector.Labels) == 0 {
 			return errors.New("invalid selector provided")
 		}
-		if req.Selectors[i].Name != "" {
+		if req.Executions[i].Selector.Name != "" {
 			nameSelectorsCount++
 		} else {
 			labelSelectorsCount++

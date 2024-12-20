@@ -56,14 +56,14 @@ func (r *testWorkflowFetcher) PrefetchByName(name string) error {
 	return nil
 }
 
-func (r *testWorkflowFetcher) PrefetchMany(selectors []*cloud.ScheduleSelector) error {
+func (r *testWorkflowFetcher) PrefetchMany(selectors []*cloud.ScheduleResourceSelector) error {
 	// Categorize selectors
 	names := make(map[string]struct{})
 	labels := make([]map[string]string, 0)
 	for i := range selectors {
 		if selectors[i].Name == "" {
-			if !containsSameMap(labels, selectors[i].LabelSelector) {
-				labels = append(labels, selectors[i].LabelSelector)
+			if !containsSameMap(labels, selectors[i].Labels) {
+				labels = append(labels, selectors[i].Labels)
 			}
 		} else {
 			names[selectors[i].Name] = struct{}{}
@@ -128,9 +128,9 @@ loop:
 	return result, nil
 }
 
-func (r *testWorkflowFetcher) Get(selector *cloud.ScheduleSelector) ([]*testkube.TestWorkflow, error) {
+func (r *testWorkflowFetcher) Get(selector *cloud.ScheduleResourceSelector) ([]*testkube.TestWorkflow, error) {
 	if selector.Name == "" {
-		return r.GetByLabelSelector(selector.LabelSelector)
+		return r.GetByLabelSelector(selector.Labels)
 	}
 	v, err := r.GetByName(selector.Name)
 	if err != nil {

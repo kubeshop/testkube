@@ -10,6 +10,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.uber.org/zap"
 
+	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/log"
@@ -136,7 +137,7 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 	}
 
 	// Check if there is anything to run
-	if len(req.Selectors) == 0 {
+	if len(req.Executions) == 0 {
 		close(ch)
 		return ch, nil
 	}
@@ -157,7 +158,9 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 	testWorkflowTemplates := NewTestWorkflowTemplateFetcher(s.testWorkflowTemplatesClient, req.EnvironmentId)
 
 	// Prefetch all the Test Workflows
-	err := testWorkflows.PrefetchMany(req.Selectors)
+	err := testWorkflows.PrefetchMany(common.MapSlice(req.Executions, func(t *cloud.ScheduleExecution) *cloud.ScheduleResourceSelector {
+		return t.Selector
+	}))
 	if err != nil {
 		close(ch)
 		return ch, err
@@ -172,23 +175,23 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 	_ = testWorkflowTemplates.PrefetchMany(tplNames)
 
 	// Flatten selectors
-	selectors := make([]*cloud.ScheduleSelector, 0, len(req.Selectors))
-	for i := range req.Selectors {
-		list, _ := testWorkflows.Get(req.Selectors[i])
+	selectors := make([]*cloud.ScheduleExecution, 0, len(req.Executions))
+	for i := range req.Executions {
+		list, _ := testWorkflows.Get(req.Executions[i].Selector)
 		for _, w := range list {
-			selectors = append(selectors, &cloud.ScheduleSelector{
-				Name:          w.Name,
-				Config:        req.Selectors[i].Config,
-				ExecutionName: req.Selectors[i].ExecutionName, // TODO: what to do when execution name is configured, but multiple requested?
-				Tags:          req.Selectors[i].Tags,
+			selectors = append(selectors, &cloud.ScheduleExecution{
+				Selector:      &cloud.ScheduleResourceSelector{Name: w.Name},
+				Config:        req.Executions[i].Config,
+				ExecutionName: req.Executions[i].ExecutionName, // TODO: what to do when execution name is configured, but multiple requested?
+				Tags:          req.Executions[i].Tags,
 			})
 		}
 	}
 
 	// Resolve executions for each selector
-	intermediate := make([]*IntermediateExecution, 0, len(req.Selectors))
+	intermediate := make([]*IntermediateExecution, 0, len(selectors))
 	for _, v := range selectors {
-		workflow, _ := testWorkflows.GetByName(v.Name)
+		workflow, _ := testWorkflows.GetByName(v.Selector.Name)
 		current := base.Clone().
 			AutoGenerateID().
 			SetName(v.ExecutionName).
