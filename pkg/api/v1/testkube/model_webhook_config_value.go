@@ -11,7 +11,6 @@ package testkube
 
 // configuration value
 type WebhookConfigValue struct {
-	// public value to use in webhook template
-	Public  string     `json:"public,omitempty"`
-	Private *SecretRef `json:"private,omitempty"`
+	Public  *BoxedString `json:"public,omitempty"`
+	Private *SecretRef   `json:"private,omitempty"`
 }
