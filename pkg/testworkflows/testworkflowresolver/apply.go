@@ -125,7 +125,8 @@ func InjectServiceTemplate(svc *testworkflowsv1.ServiceSpec, template *testworkf
 func applyTemplatesToStep(step testworkflowsv1.Step, templates map[string]*testworkflowsv1.TestWorkflowTemplate,
 	externalize func(key, value string) (expressions.Expression, error)) (testworkflowsv1.Step, error) {
 	// Apply regular templates
-	for i, ref := range step.Use {
+	for i := len(step.Use) - 1; i >= 0; i-- {
+		ref := step.Use[i]
 		tpl, err := getConfiguredTemplate(ref.Name, ref.Config, templates, externalize)
 		if err != nil {
 			return step, errors.Wrap(err, fmt.Sprintf(".use[%d]: resolving template", i))
@@ -162,7 +163,8 @@ func applyTemplatesToStep(step testworkflowsv1.Step, templates map[string]*testw
 
 	// Apply templates to the services
 	for name, svc := range step.Services {
-		for i, ref := range svc.Use {
+		for i := len(svc.Use) - 1; i >= 0; i-- {
+			ref := svc.Use[i]
 			tpl, err := getConfiguredTemplate(ref.Name, ref.Config, templates, externalize)
 			if err != nil {
 				return step, errors.Wrap(err, fmt.Sprintf("services[%s].use[%d]: resolving template", name, i))
@@ -260,7 +262,8 @@ func applyTemplatesToSpec(spec *testworkflowsv1.TestWorkflowSpec, templates map[
 	defer expressions.Simplify(spec, expressions.ReplacePrefixMachine(random+".", "config."))
 
 	// Apply top-level templates
-	for i, ref := range spec.Use {
+	for i := len(spec.Use) - 1; i >= 0; i-- {
+		ref := spec.Use[i]
 		tpl, err := getConfiguredTemplate(ref.Name, ref.Config, templates, externalize)
 		if err != nil {
 			return errors.Wrap(err, fmt.Sprintf("spec.use[%d]: resolving template", i))
@@ -274,7 +277,8 @@ func applyTemplatesToSpec(spec *testworkflowsv1.TestWorkflowSpec, templates map[
 
 	// Apply templates to the services
 	for name, svc := range spec.Services {
-		for i, ref := range svc.Use {
+		for i := len(svc.Use) - 1; i >= 0; i-- {
+			ref := svc.Use[i]
 			tpl, err := getConfiguredTemplate(ref.Name, ref.Config, templates, externalize)
 			if err != nil {
 				return errors.Wrap(err, fmt.Sprintf("services[%s].use[%d]: resolving template", name, i))
