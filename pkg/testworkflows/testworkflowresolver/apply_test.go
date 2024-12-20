@@ -675,7 +675,7 @@ func TestApplyTemplates_ConditionAlways(t *testing.T) {
 }
 
 func TestApplyTemplates_MergePodValues(t *testing.T) {
-	tpls := map[string]testworkflowsv1.TestWorkflowTemplate{
+	tpls := map[string]*testworkflowsv1.TestWorkflowTemplate{
 		"top": {
 			Spec: testworkflowsv1.TestWorkflowTemplateSpec{
 				TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
