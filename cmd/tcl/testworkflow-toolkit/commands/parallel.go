@@ -205,6 +205,7 @@ func NewParallelCmd() *cobra.Command {
 					testworkflowconfig.CreateResourceMachine(&cfg.Resource),
 					testworkflowconfig.CreateWorkerMachine(&cfg.Worker),
 					baseMachine,
+					testworkflowconfig.CreatePvcMachine(cfg.Execution.PvcNames),
 					params.MachineAt(index),
 				)
 

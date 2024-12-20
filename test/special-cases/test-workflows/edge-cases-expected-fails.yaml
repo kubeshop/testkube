@@ -149,6 +149,72 @@ spec:
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
+  name: expected-fail-timeout-activedeadlineseconds
+  labels:
+    core-tests: expected-fail
+spec:
+  job:
+    activeDeadlineSeconds: 1
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/k6/executor-tests/k6-smoke-test.js
+  container:
+    resources:
+      requests:
+        cpu: 128m
+        memory: 128Mi
+    workingDir: /data/repo/test/k6/executor-tests
+  steps:
+  - name: Run test
+    run:
+      image: grafana/k6:0.43.1
+      args:
+      - run
+      - k6-smoke-test.js
+      - -e
+      - K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value
+      env:
+      - name: K6_SYSTEM_ENV
+        value: K6_SYSTEM_ENV_value
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-timeout-step
+  labels:
+    core-tests: expected-fail
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/playwright/executor-tests/playwright-project
+  container:
+    image: mcr.microsoft.com/playwright:v1.32.3-focal
+    resources:
+      requests:
+        cpu: 2
+        memory: 2Gi
+    workingDir: /data/repo/test/playwright/executor-tests/playwright-project
+  steps:
+  - name: Install dependencies
+    shell: "npm ci"
+  - name: Run tests
+    timeout: 1s
+    shell: "npx playwright test"
+  - name: Save artifacts
+    workingDir: /data/repo/test/playwright/executor-tests/playwright-project
+    artifacts:
+      paths:
+      - playwright-report/**/*
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
   name: expected-fail-cypress-artifacts-condition-always-with-artifacts
   labels:
     core-tests: expected-fail
@@ -212,14 +278,9 @@ spec:
     - run:
         args:
         - run
-        - k6-smoke-test.js
-        env:
-        - name: K6_WEB_DASHBOARD
-          value: "true"
-        - name: K6_WEB_DASHBOARD_EXPORT
-          value: "/data/artifacts/k6-test-report.html"
+        - some-incorrect-file-name.js
       steps:
-      - name: Saving artifacts
+      - name: Saving artifacts # should be run despite step failure
         condition: always
         workingDir: /data/artifacts
         artifacts:

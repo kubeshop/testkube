@@ -36,6 +36,7 @@ type TestWorkflowIndependentServiceSpec struct {
 	Logs           *BoxedString                       `json:"logs,omitempty"`
 	RestartPolicy  string                             `json:"restartPolicy,omitempty"`
 	ReadinessProbe *Probe                             `json:"readinessProbe,omitempty"`
+	Pvcs           map[string]TestWorkflowPvcConfig   `json:"pvcs,omitempty"`
 	Count          *BoxedString                       `json:"count,omitempty"`
 	MaxCount       *BoxedString                       `json:"maxCount,omitempty"`
 	// matrix of parameters to spawn instances

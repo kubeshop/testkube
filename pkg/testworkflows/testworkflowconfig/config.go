@@ -27,6 +27,7 @@ type ExecutionConfig struct {
 	OrganizationId  string            `json:"o,omitempty"`
 	EnvironmentId   string            `json:"e,omitempty"`
 	ParentIds       string            `json:"p,omitempty"`
+	PvcNames        map[string]string `json:"c,omitempty"`
 }
 
 type WorkflowConfig struct {
