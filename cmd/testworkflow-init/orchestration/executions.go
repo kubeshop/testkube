@@ -34,6 +34,8 @@ type executionGroup struct {
 
 	paused  atomic.Bool
 	pauseMu sync.Mutex
+
+	softKillProgress atomic.Bool
 }
 
 func newExecutionGroup(outStream io.Writer, errStream io.Writer) *executionGroup {
@@ -142,6 +144,10 @@ func (e *executionGroup) IsAborted() bool {
 	return e.aborted.Load()
 }
 
+func (e *executionGroup) ClearAbortedStatus() {
+	e.aborted.Store(false)
+}
+
 type execution struct {
 	cmd   *exec.Cmd
 	cmdMu sync.Mutex
@@ -203,7 +209,7 @@ func (e *execution) Run() (*executionResult, error) {
 
 	// Mark the execution group as aborted when this process was aborted.
 	// In Kubernetes, when that child process is killed, it may mean OOM Kill.
-	if aborted && !e.group.aborted.Load() {
+	if aborted && !e.group.aborted.Load() && !e.group.softKillProgress.Load() {
 		e.group.Abort()
 	}
 
