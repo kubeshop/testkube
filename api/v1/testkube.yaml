@@ -10737,7 +10737,7 @@ components:
       type: object
       properties:
         name:
-          description: webhook template name to include
+          description: webhook template name to use
           type: string
         config:
           description: webhook config to use in webhook template
