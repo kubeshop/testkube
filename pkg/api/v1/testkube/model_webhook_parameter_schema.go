@@ -9,6 +9,7 @@
  */
 package testkube
 
+// parameter definition
 type WebhookParameterSchema struct {
 	// description for the property
 	Description string `json:"description,omitempty"`

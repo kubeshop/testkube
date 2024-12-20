@@ -7346,8 +7346,10 @@ components:
           example:
             - true
             - false
-        webhookConfig:
-          $ref: "#/components/schemas/WebhookConfigSchema"
+        config:
+          $ref: "#/components/schemas/WebhookConfig"
+        parameters:
+          $ref: "#/components/schemas/WebhookSchema"
         webhookTemplateRef:
           $ref: "#/components/schemas/WebhookTemplateRef"
 
@@ -10693,6 +10695,7 @@ components:
 
     WebhookParameterSchema:
       type: object
+      description: parameter definition
       properties:
         description:
           description: description for the property
@@ -10710,7 +10713,7 @@ components:
           type: string
           description: "regular expression to match"
 
-    WebhookConfigSchema:
+    WebhookSchema:
       type: object
       description: configuration definition
       additionalProperties:
@@ -10729,7 +10732,7 @@ components:
 
     WebhookConfig:
       type: object
-      description: configuration values to pass to the webhook template
+      description: configuration values
       additionalProperties:
         $ref: "#/components/schemas/WebhookConfigValue"
 
@@ -10739,9 +10742,6 @@ components:
         name:
           description: webhook template name to use
           type: string
-        config:
-          description: webhook config to use in webhook template
-          $ref: "#/components/schemas/WebhookConfig"
       required:
         - name
 

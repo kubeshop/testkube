@@ -11,6 +11,5 @@ package testkube
 
 type WebhookTemplateRef struct {
 	// webhook template name to use
-	Name   string                        `json:"name"`
-	Config map[string]WebhookConfigValue `json:"config,omitempty"`
+	Name string `json:"name"`
 }
