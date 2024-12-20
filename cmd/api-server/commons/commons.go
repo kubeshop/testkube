@@ -87,7 +87,6 @@ func HandleCancelSignal(ctx context.Context) func() error {
 func MustGetConfig() *config.Config {
 	cfg, err := config.Get()
 	ExitOnError("error getting application config", err)
-	cfg.CleanLegacyVars()
 	return cfg
 }
 
