@@ -296,23 +296,23 @@ func TestApplyTemplatesMergeMultipleTopLevelSteps(t *testing.T) {
 
 	want := workflowSteps.DeepCopy()
 	want.Spec.Setup = []testworkflowsv1.Step{
-		ConvertIndependentStepToStep(tplStepsConfig.Spec.Setup[0]),
 		ConvertIndependentStepToStep(tplSteps.Spec.Setup[0]),
+		ConvertIndependentStepToStep(tplStepsConfig.Spec.Setup[0]),
 		want.Spec.Setup[0],
 	}
-	want.Spec.Setup[0].Name = "setup-tpl-test-20"
+	want.Spec.Setup[1].Name = "setup-tpl-test-20"
 	want.Spec.Steps = []testworkflowsv1.Step{
-		ConvertIndependentStepToStep(tplStepsConfig.Spec.Steps[0]),
 		ConvertIndependentStepToStep(tplSteps.Spec.Steps[0]),
+		ConvertIndependentStepToStep(tplStepsConfig.Spec.Steps[0]),
 		want.Spec.Steps[0],
 	}
-	want.Spec.Steps[0].Name = "steps-tpl-test-20"
+	want.Spec.Steps[1].Name = "steps-tpl-test-20"
 	want.Spec.After = []testworkflowsv1.Step{
 		want.Spec.After[0],
-		ConvertIndependentStepToStep(tplSteps.Spec.After[0]),
 		ConvertIndependentStepToStep(tplStepsConfig.Spec.After[0]),
+		ConvertIndependentStepToStep(tplSteps.Spec.After[0]),
 	}
-	want.Spec.After[2].Name = "after-tpl-test-20"
+	want.Spec.After[1].Name = "after-tpl-test-20"
 
 	assert.NoError(t, err)
 	assert.Equal(t, want, wf)
@@ -329,22 +329,22 @@ func TestApplyTemplatesMergeMultipleConfigurable(t *testing.T) {
 		ConvertIndependentStepToStep(tplStepsConfig.Spec.Setup[0]),
 		want.Spec.Setup[0],
 	}
-	want.Spec.Setup[0].Name = "setup-tpl-test-20"
-	want.Spec.Setup[1].Name = "setup-tpl-test-10"
+	want.Spec.Setup[0].Name = "setup-tpl-test-10"
+	want.Spec.Setup[1].Name = "setup-tpl-test-20"
 	want.Spec.Steps = []testworkflowsv1.Step{
 		ConvertIndependentStepToStep(tplStepsConfig.Spec.Steps[0]),
 		ConvertIndependentStepToStep(tplStepsConfig.Spec.Steps[0]),
 		want.Spec.Steps[0],
 	}
-	want.Spec.Steps[0].Name = "steps-tpl-test-20"
-	want.Spec.Steps[1].Name = "steps-tpl-test-10"
+	want.Spec.Steps[0].Name = "steps-tpl-test-10"
+	want.Spec.Steps[1].Name = "steps-tpl-test-20"
 	want.Spec.After = []testworkflowsv1.Step{
 		want.Spec.After[0],
 		ConvertIndependentStepToStep(tplStepsConfig.Spec.After[0]),
 		ConvertIndependentStepToStep(tplStepsConfig.Spec.After[0]),
 	}
-	want.Spec.After[1].Name = "after-tpl-test-10"
-	want.Spec.After[2].Name = "after-tpl-test-20"
+	want.Spec.After[1].Name = "after-tpl-test-20"
+	want.Spec.After[2].Name = "after-tpl-test-10"
 
 	assert.NoError(t, err)
 	assert.Equal(t, want, wf)
@@ -449,19 +449,19 @@ func TestApplyTemplatesStepBasicMultipleSteps(t *testing.T) {
 
 	want := *basicStep.DeepCopy()
 	want.Setup = []testworkflowsv1.Step{
-		ConvertIndependentStepToStep(tplStepsConfig.Spec.Setup[0]),
 		ConvertIndependentStepToStep(tplSteps.Spec.Setup[0]),
+		ConvertIndependentStepToStep(tplStepsConfig.Spec.Setup[0]),
 	}
 	want.Steps = append([]testworkflowsv1.Step{
-		ConvertIndependentStepToStep(tplStepsConfig.Spec.Steps[0]),
 		ConvertIndependentStepToStep(tplSteps.Spec.Steps[0]),
+		ConvertIndependentStepToStep(tplStepsConfig.Spec.Steps[0]),
 	}, append(want.Steps, []testworkflowsv1.Step{
-		ConvertIndependentStepToStep(tplSteps.Spec.After[0]),
 		ConvertIndependentStepToStep(tplStepsConfig.Spec.After[0]),
+		ConvertIndependentStepToStep(tplSteps.Spec.After[0]),
 	}...)...)
-	want.Setup[0].Name = "setup-tpl-test-20"
-	want.Steps[0].Name = "steps-tpl-test-20"
-	want.Steps[3].Name = "after-tpl-test-20"
+	want.Setup[1].Name = "setup-tpl-test-20"
+	want.Steps[1].Name = "steps-tpl-test-20"
+	want.Steps[2].Name = "after-tpl-test-20"
 
 	assert.NoError(t, err)
 	assert.Equal(t, want, s)
@@ -569,19 +569,19 @@ func TestApplyTemplatesStepAdvancedMultipleSteps(t *testing.T) {
 
 	want := *advancedStep.DeepCopy()
 	want.Setup = []testworkflowsv1.Step{
-		ConvertIndependentStepToStep(tplStepsConfig.Spec.Setup[0]),
 		ConvertIndependentStepToStep(tplSteps.Spec.Setup[0]),
+		ConvertIndependentStepToStep(tplStepsConfig.Spec.Setup[0]),
 	}
 	want.Steps = append([]testworkflowsv1.Step{
-		ConvertIndependentStepToStep(tplStepsConfig.Spec.Steps[0]),
 		ConvertIndependentStepToStep(tplSteps.Spec.Steps[0]),
+		ConvertIndependentStepToStep(tplStepsConfig.Spec.Steps[0]),
 	}, append(want.Steps, []testworkflowsv1.Step{
-		ConvertIndependentStepToStep(tplSteps.Spec.After[0]),
 		ConvertIndependentStepToStep(tplStepsConfig.Spec.After[0]),
+		ConvertIndependentStepToStep(tplSteps.Spec.After[0]),
 	}...)...)
-	want.Setup[0].Name = "setup-tpl-test-20"
-	want.Steps[0].Name = "steps-tpl-test-20"
-	want.Steps[4].Name = "after-tpl-test-20"
+	want.Setup[1].Name = "setup-tpl-test-20"
+	want.Steps[1].Name = "steps-tpl-test-20"
+	want.Steps[3].Name = "after-tpl-test-20"
 
 	assert.NoError(t, err)
 	assert.Equal(t, want, s)
@@ -666,6 +666,75 @@ func TestApplyTemplates_ConditionAlways(t *testing.T) {
 						},
 					},
 				},
+			},
+		},
+	}
+
+	assert.NoError(t, err)
+	assert.Equal(t, want, wf)
+}
+
+func TestApplyTemplates_MergePodValues(t *testing.T) {
+	tpls := map[string]testworkflowsv1.TestWorkflowTemplate{
+		"top": {
+			Spec: testworkflowsv1.TestWorkflowTemplateSpec{
+				TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+					Pod: &testworkflowsv1.PodConfig{
+						Labels: map[string]string{
+							"label1": "topvalue",
+							"label2": "topvalue",
+							"label3": "topvalue",
+						},
+					},
+				},
+			},
+		},
+		"middle": {
+			Spec: testworkflowsv1.TestWorkflowTemplateSpec{
+				TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+					Pod: &testworkflowsv1.PodConfig{
+						Labels: map[string]string{
+							"label1": "middlevalue",
+							"label2": "middlevalue",
+						},
+					},
+				},
+			},
+		},
+	}
+	wf := &testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+				Pod: &testworkflowsv1.PodConfig{
+					Labels: map[string]string{
+						"label1": "workflowvalue",
+					},
+				},
+			},
+			Use: []testworkflowsv1.TemplateRef{
+				{Name: "top"},
+				{Name: "middle"},
+			},
+			Steps: []testworkflowsv1.Step{
+				{StepOperations: testworkflowsv1.StepOperations{Shell: "exit 0"}},
+			},
+		},
+	}
+	err := ApplyTemplates(wf, tpls, nil)
+
+	want := &testworkflowsv1.TestWorkflow{
+		Spec: testworkflowsv1.TestWorkflowSpec{
+			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
+				Pod: &testworkflowsv1.PodConfig{
+					Labels: map[string]string{
+						"label1": "workflowvalue",
+						"label2": "middlevalue",
+						"label3": "topvalue",
+					},
+				},
+			},
+			Steps: []testworkflowsv1.Step{
+				{StepOperations: testworkflowsv1.StepOperations{Shell: "exit 0"}},
 			},
 		},
 	}
