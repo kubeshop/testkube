@@ -33,5 +33,5 @@ type WebhookUpdateRequest struct {
 	Disabled           *bool                              `json:"disabled,omitempty"`
 	Config             *map[string]WebhookConfigValue     `json:"config,omitempty"`
 	Parameters         *map[string]WebhookParameterSchema `json:"parameters,omitempty"`
-	WebhookTemplateRef *WebhookTemplateRef                `json:"webhookTemplateRef,omitempty"`
+	WebhookTemplateRef **WebhookTemplateRef               `json:"webhookTemplateRef,omitempty"`
 }
