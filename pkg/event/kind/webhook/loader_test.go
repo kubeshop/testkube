@@ -30,7 +30,7 @@ func TestWebhookLoader(t *testing.T) {
 	mockDeprecatedClients := commons.NewMockDeprecatedClients(mockCtrl)
 	mockDeprecatedClients.EXPECT().Templates().Return(mockTemplatesClient).AnyTimes()
 
-	webhooksLoader := NewWebhookLoader(zap.NewNop().Sugar(), mockWebhooksClient, mockDeprecatedClients, nil, nil, v1.NewMetrics(), nil, nil)
+	webhooksLoader := NewWebhookLoader(zap.NewNop().Sugar(), mockWebhooksClient, mockDeprecatedClients, nil, nil, nil, v1.NewMetrics(), nil, nil)
 	listeners, err := webhooksLoader.Load()
 
 	assert.Equal(t, 1, len(listeners))

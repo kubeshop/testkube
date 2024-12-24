@@ -14,13 +14,14 @@ import (
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
 	"github.com/kubeshop/testkube/pkg/mapper/webhooks"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
+	"github.com/kubeshop/testkube/pkg/secret"
 )
 
 var _ common.ListenerLoader = (*WebhooksLoader)(nil)
 
 func NewWebhookLoader(log *zap.SugaredLogger, webhooksClient executorsclientv1.WebhooksInterface, deprecatedClients commons.DeprecatedClients,
 	deprecatedRepositories commons.DeprecatedRepositories, testWorkflowExecutionResults testworkflow.Repository,
-	metrics v1.Metrics, proContext *config.ProContext, envs map[string]string,
+	secretClient secret.Interface, metrics v1.Metrics, proContext *config.ProContext, envs map[string]string,
 ) *WebhooksLoader {
 	return &WebhooksLoader{
 		log:                          log,
@@ -28,6 +29,7 @@ func NewWebhookLoader(log *zap.SugaredLogger, webhooksClient executorsclientv1.W
 		deprecatedClients:            deprecatedClients,
 		deprecatedRepositories:       deprecatedRepositories,
 		testWorkflowExecutionResults: testWorkflowExecutionResults,
+		secretClient:                 secretClient,
 		metrics:                      metrics,
 		proContext:                   proContext,
 		envs:                         envs,
@@ -40,6 +42,7 @@ type WebhooksLoader struct {
 	deprecatedClients            commons.DeprecatedClients
 	deprecatedRepositories       commons.DeprecatedRepositories
 	testWorkflowExecutionResults testworkflow.Repository
+	secretClient                 secret.Interface
 	metrics                      v1.Metrics
 	proContext                   *config.ProContext
 	envs                         map[string]string
@@ -92,13 +95,49 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 
 		types := webhooks.MapEventArrayToCRDEvents(webhook.Spec.Events)
 		name := fmt.Sprintf("%s.%s", webhook.ObjectMeta.Namespace, webhook.ObjectMeta.Name)
+		vars := make(map[string]string)
+		for key, value := range webhook.Spec.Config {
+			data := ""
+			if value.Public != nil {
+				data = *value.Public
+			}
+
+			if value.Private != nil {
+				var ns []string
+				if value.Private.Namespace != "" {
+					ns = append(ns, value.Private.Namespace)
+				}
+
+				elements, err := r.secretClient.Get(value.Private.Name, ns...)
+				if err != nil {
+					r.log.Errorw("error secret loading", "error", err, "name", value.Private.Name)
+					continue
+				}
+
+				if element, ok := elements[value.Private.Key]; ok {
+					data = element
+				} else {
+					r.log.Errorw("error secret key finding loading", "name", value.Private.Name, "key", value.Private.Key)
+					continue
+				}
+			}
+
+			vars[key] = data
+		}
+
+		for key, value := range webhook.Spec.Parameters {
+			if _, ok := vars[key]; !ok && value.Default_ != nil {
+				vars[key] = *value.Default_
+			}
+		}
+
 		listeners = append(
 			listeners,
 			NewWebhookListener(
 				name, webhook.Spec.Uri, webhook.Spec.Selector, types,
 				webhook.Spec.PayloadObjectField, payloadTemplate, webhook.Spec.Headers, webhook.Spec.Disabled,
 				r.deprecatedRepositories, r.testWorkflowExecutionResults,
-				r.metrics, r.proContext, r.envs, nil,
+				r.metrics, r.proContext, r.envs, vars,
 			),
 		)
 	}
