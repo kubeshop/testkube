@@ -2,6 +2,7 @@ package webhook
 
 import (
 	"fmt"
+	"regexp"
 
 	"go.uber.org/zap"
 
@@ -60,6 +61,7 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 	}
 
 	// and create listeners for each webhook spec
+OuterLoop:
 	for _, webhook := range webhookList.Items {
 		if webhook.Spec.WebhookTemplateRef != nil && webhook.Spec.WebhookTemplateRef.Name != "" {
 			webhookTemplate, err := r.WebhooksClient.Get(webhook.Spec.WebhookTemplateRef.Name)
@@ -126,8 +128,24 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 		}
 
 		for key, value := range webhook.Spec.Parameters {
-			if _, ok := vars[key]; !ok && value.Default_ != nil {
-				vars[key] = *value.Default_
+			if data, ok := vars[key]; !ok {
+				if value.Default_ != nil {
+					vars[key] = *value.Default_
+				} else if value.Required {
+					r.log.Errorw("error missing required parameter", "name", key)
+					continue OuterLoop
+				}
+			} else if value.Pattern != "" {
+				re, err := regexp.Compile(value.Pattern)
+				if err != nil {
+					r.log.Errorw("error compiling pattern", "error", err, "name", key, "pattern", value.Pattern)
+					continue OuterLoop
+				}
+
+				if !re.MatchString(data) {
+					r.log.Errorw("error matching pattern", "error", err, "name", key, "pattern", value.Pattern)
+					continue OuterLoop
+				}
 			}
 		}
 
