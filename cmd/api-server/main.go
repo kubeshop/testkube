@@ -247,7 +247,8 @@ func main() {
 	// Initialize event handlers
 	websocketLoader := ws.NewWebsocketLoader()
 	if !cfg.DisableWebhooks {
-		eventsEmitter.Loader.Register(webhook.NewWebhookLoader(log.DefaultLogger, webhooksClient, deprecatedClients, deprecatedRepositories, testWorkflowResultsRepository, metrics, &proContext, envs))
+		eventsEmitter.Loader.Register(webhook.NewWebhookLoader(log.DefaultLogger, webhooksClient, deprecatedClients, deprecatedRepositories,
+			testWorkflowResultsRepository, secretClient, metrics, &proContext, envs))
 	}
 	eventsEmitter.Loader.Register(websocketLoader)
 	eventsEmitter.Loader.Register(commons.MustCreateSlackLoader(cfg, envs))

@@ -12,7 +12,7 @@ func TestGenerateYAML(t *testing.T) {
 
 	t.Run("generate single CRD yaml", func(t *testing.T) {
 		// given
-		expected := "apiVersion: executor.testkube.io/v1\nkind: Webhook\nmetadata:\n  name: name1\n  namespace: namespace1\n  labels:\n    key1: value1\nspec:\n  events:\n  - start-test\n  uri: http://localhost\n  selector: app=backend\n  payloadObjectField: text\n  payloadTemplate: {{ .Id }}\n  payloadTemplateReference: ref\n  headers:\n    Content-Type: appication/xml\n"
+		expected := "apiVersion: executor.testkube.io/v1\nkind: Webhook\nmetadata:\n  name: name1\n  namespace: namespace1\n  labels:\n    key1: value1\n  annotations:\n    key2: value2  \nspec:\n  events:\n  - start-test\n  uri: http://localhost\n  selector: app=backend\n  payloadObjectField: text\n  payloadTemplate: {{ .Id }}\n  payloadTemplateReference: ref\n  headers:\n    Content-Type: appication/xml\n  disabled: true\n  config:\n    var1:\n      public: pb\n    var2:\n      private:\n        namespace: ns\n        name: secret\n        key: pr\n  parameters:\n    var3:\n      description: descr\n      required: true\n      example: 12345\n      default: 0\n      pattern: [0-9]*\n  webhookTemplateRef:\n    name: tmpl\n"
 		webhooks := []testkube.Webhook{
 			{
 				Name:                     "name1",
@@ -21,10 +21,29 @@ func TestGenerateYAML(t *testing.T) {
 				Events:                   []testkube.EventType{*testkube.EventStartTest},
 				Selector:                 "app=backend",
 				Labels:                   map[string]string{"key1": "value1"},
+				Annotations:              map[string]string{"key2": "value2"},
 				PayloadObjectField:       "text",
 				PayloadTemplate:          "{{ .Id }}",
 				Headers:                  map[string]string{"Content-Type": "appication/xml"},
 				PayloadTemplateReference: "ref",
+				Disabled:                 true,
+				Config: map[string]testkube.WebhookConfigValue{
+					"var1": {Public: &testkube.BoxedString{Value: "pb"}},
+					"var2": {Private: &testkube.SecretRef{Namespace: "ns", Name: "secret", Key: "pr"}}},
+				Parameters: map[string]testkube.WebhookParameterSchema{
+					"var3": {
+						Description: "descr",
+						Required:    true,
+						Example:     "12345",
+						Default_: &testkube.BoxedString{
+							Value: "0",
+						},
+						Pattern: "[0-9]*",
+					},
+				},
+				WebhookTemplateRef: &testkube.WebhookTemplateRef{
+					Name: "tmpl",
+				},
 			},
 		}
 
@@ -38,7 +57,7 @@ func TestGenerateYAML(t *testing.T) {
 
 	t.Run("generate multiple CRDs yaml", func(t *testing.T) {
 		// given
-		expected := "apiVersion: executor.testkube.io/v1\nkind: Webhook\nmetadata:\n  name: name1\n  namespace: namespace1\n  labels:\n    key1: value1\nspec:\n  events:\n  - start-test\n  uri: http://localhost\n  selector: app=backend\n  payloadObjectField: text\n  payloadTemplate: {{ .Id }}\n  payloadTemplateReference: ref\n  headers:\n    Content-Type: appication/xml\n\n---\napiVersion: executor.testkube.io/v1\nkind: Webhook\nmetadata:\n  name: name2\n  namespace: namespace2\n  labels:\n    key2: value2\nspec:\n  events:\n  - end-test-success\n  uri: http://localhost\n  selector: app=backend\n  payloadObjectField: text\n  payloadTemplate: {{ .Id }}\n  payloadTemplateReference: ref\n  headers:\n    Content-Type: appication/xml\n"
+		expected := "apiVersion: executor.testkube.io/v1\nkind: Webhook\nmetadata:\n  name: name1\n  namespace: namespace1\n  labels:\n    key1: value1\n  annotations:\n    key3: value3  \nspec:\n  events:\n  - start-test\n  uri: http://localhost\n  selector: app=backend\n  payloadObjectField: text\n  payloadTemplate: {{ .Id }}\n  payloadTemplateReference: ref\n  headers:\n    Content-Type: appication/xml\n  disabled: true\n  config:\n    var1:\n      public: pb\n    var2:\n      private:\n        namespace: ns\n        name: secret\n        key: pr\n  parameters:\n    var3:\n      description: descr\n      required: true\n      example: 12345\n      default: 0\n      pattern: [0-9]*\n  webhookTemplateRef:\n    name: tmpl\n\n---\napiVersion: executor.testkube.io/v1\nkind: Webhook\nmetadata:\n  name: name2\n  namespace: namespace2\n  labels:\n    key2: value2\n  annotations:\n    key4: value4  \nspec:\n  events:\n  - end-test-success\n  uri: http://localhost\n  selector: app=backend\n  payloadObjectField: text\n  payloadTemplate: {{ .Id }}\n  payloadTemplateReference: ref\n  headers:\n    Content-Type: appication/xml\n  disabled: true\n  config:\n    var1:\n      public: pb\n    var2:\n      private:\n        namespace: ns\n        name: secret\n        key: pr\n  parameters:\n    var3:\n      description: descr\n      required: true\n      example: 12345\n      default: 0\n      pattern: [0-9]*\n  webhookTemplateRef:\n    name: tmpl\n"
 		webhooks := []testkube.Webhook{
 			{
 				Name:                     "name1",
@@ -47,10 +66,29 @@ func TestGenerateYAML(t *testing.T) {
 				Events:                   []testkube.EventType{*testkube.EventStartTest},
 				Selector:                 "app=backend",
 				Labels:                   map[string]string{"key1": "value1"},
+				Annotations:              map[string]string{"key3": "value3"},
 				PayloadObjectField:       "text",
 				PayloadTemplate:          "{{ .Id }}",
 				Headers:                  map[string]string{"Content-Type": "appication/xml"},
 				PayloadTemplateReference: "ref",
+				Disabled:                 true,
+				Config: map[string]testkube.WebhookConfigValue{
+					"var1": {Public: &testkube.BoxedString{Value: "pb"}},
+					"var2": {Private: &testkube.SecretRef{Namespace: "ns", Name: "secret", Key: "pr"}}},
+				Parameters: map[string]testkube.WebhookParameterSchema{
+					"var3": {
+						Description: "descr",
+						Required:    true,
+						Example:     "12345",
+						Default_: &testkube.BoxedString{
+							Value: "0",
+						},
+						Pattern: "[0-9]*",
+					},
+				},
+				WebhookTemplateRef: &testkube.WebhookTemplateRef{
+					Name: "tmpl",
+				},
 			},
 			{
 				Name:                     "name2",
@@ -59,10 +97,29 @@ func TestGenerateYAML(t *testing.T) {
 				Events:                   []testkube.EventType{*testkube.EventEndTestSuccess},
 				Selector:                 "app=backend",
 				Labels:                   map[string]string{"key2": "value2"},
+				Annotations:              map[string]string{"key4": "value4"},
 				PayloadObjectField:       "text",
 				PayloadTemplate:          "{{ .Id }}",
 				Headers:                  map[string]string{"Content-Type": "appication/xml"},
 				PayloadTemplateReference: "ref",
+				Disabled:                 true,
+				Config: map[string]testkube.WebhookConfigValue{
+					"var1": {Public: &testkube.BoxedString{Value: "pb"}},
+					"var2": {Private: &testkube.SecretRef{Namespace: "ns", Name: "secret", Key: "pr"}}},
+				Parameters: map[string]testkube.WebhookParameterSchema{
+					"var3": {
+						Description: "descr",
+						Required:    true,
+						Example:     "12345",
+						Default_: &testkube.BoxedString{
+							Value: "0",
+						},
+						Pattern: "[0-9]*",
+					},
+				},
+				WebhookTemplateRef: &testkube.WebhookTemplateRef{
+					Name: "tmpl",
+				},
 			},
 		}
 
