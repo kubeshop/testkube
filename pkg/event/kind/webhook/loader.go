@@ -171,7 +171,21 @@ func mergeWebhooks(dst, src executorv1.Webhook) executorv1.Webhook {
 		}
 	}
 
-	// events
+	srcEventTypes := make(map[executorv1.EventType]struct{})
+	for _, eventType := range src.Spec.Events {
+		srcEventTypes[eventType] = struct{}{}
+	}
+
+	dstEventTypes := make(map[executorv1.EventType]struct{})
+	for _, eventType := range dst.Spec.Events {
+		dstEventTypes[eventType] = struct{}{}
+	}
+
+	for evenType := range srcEventTypes {
+		if _, ok := dstEventTypes[evenType]; !ok {
+			dst.Spec.Events = append(dst.Spec.Events, evenType)
+		}
+	}
 
 	if !dst.Spec.Disabled && src.Spec.Disabled {
 		dst.Spec.Disabled = src.Spec.Disabled
