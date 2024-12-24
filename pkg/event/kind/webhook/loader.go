@@ -98,7 +98,7 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 				name, webhook.Spec.Uri, webhook.Spec.Selector, types,
 				webhook.Spec.PayloadObjectField, payloadTemplate, webhook.Spec.Headers, webhook.Spec.Disabled,
 				r.deprecatedRepositories, r.testWorkflowExecutionResults,
-				r.metrics, r.proContext, r.envs,
+				r.metrics, r.proContext, r.envs, nil,
 			),
 		)
 	}

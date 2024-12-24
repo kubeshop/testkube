@@ -33,6 +33,7 @@ func NewWebhookListener(name, uri, selector string, events []testkube.EventType,
 	metrics v1.Metrics,
 	proContext *config.ProContext,
 	envs map[string]string,
+	config map[string]string,
 ) *WebhookListener {
 	return &WebhookListener{
 		name:                         name,
@@ -50,6 +51,7 @@ func NewWebhookListener(name, uri, selector string, events []testkube.EventType,
 		metrics:                      metrics,
 		proContext:                   proContext,
 		envs:                         envs,
+		config:                       config,
 	}
 }
 
@@ -69,6 +71,7 @@ type WebhookListener struct {
 	metrics                      v1.Metrics
 	proContext                   *config.ProContext
 	envs                         map[string]string
+	config                       map[string]string
 }
 
 func (l *WebhookListener) Name() string {
@@ -267,7 +270,7 @@ func (l *WebhookListener) processTemplate(field, body string, event testkube.Eve
 	}
 
 	var buffer bytes.Buffer
-	if err = tmpl.ExecuteTemplate(&buffer, field, NewTemplateVars(event, l.proContext)); err != nil {
+	if err = tmpl.ExecuteTemplate(&buffer, field, NewTemplateVars(event, l.proContext, l.config)); err != nil {
 		log.Errorw(fmt.Sprintf("executing webhook %s error", field), "error", err)
 		return nil, err
 	}
