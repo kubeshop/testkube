@@ -236,6 +236,7 @@ func main() {
 		testWorkflowResultsRepository,
 		configMapConfig,
 		grpcConn,
+		cfg.TestkubeProAPIKey,
 		eventsEmitter,
 		metrics,
 		cfg.TestkubeDashboardURI,
@@ -265,7 +266,7 @@ func main() {
 			// TODO: Should it throw error at all?
 			// TODO: Pass hints (namespace, signature, scheduledAt)
 			go func(e *testkube.TestWorkflowExecution) {
-				err := runner.Monitor(ctx, proContext.EnvID, e.Id)
+				err := runner.Monitor(ctx, proContext.OrgID, proContext.EnvID, e.Id)
 				if err != nil {
 					log.DefaultLogger.Errorw("failed to monitor execution", "id", e.Id, "error", err)
 				}

@@ -286,7 +286,7 @@ message ObtainExecutionResponse {
 message FinishExecutionRequest {
   string environment_id = 1;
   string id = 2;
-  bytes result = 3; // TestWorkflowExecutionResult
+  bytes result = 3; // TestWorkflowResult
 }
 
 message FinishExecutionResponse {

@@ -14,8 +14,8 @@ func Lazy(accessor *Runner) Runner {
 	return &lazyRunner{accessor: accessor}
 }
 
-func (r *lazyRunner) Monitor(ctx context.Context, environmentId, id string) error {
-	return (*r.accessor).Monitor(ctx, environmentId, id)
+func (r *lazyRunner) Monitor(ctx context.Context, organizationId, environmentId, id string) error {
+	return (*r.accessor).Monitor(ctx, organizationId, environmentId, id)
 }
 
 func (r *lazyRunner) Notifications(ctx context.Context, id string) executionworkertypes.NotificationsWatcher {

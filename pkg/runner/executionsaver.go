@@ -4,12 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"math"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/encoding/gzip"
+	"google.golang.org/grpc/metadata"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
@@ -22,6 +25,11 @@ const (
 	ExecutionSaverUpdateRetryDelay = 300 * time.Millisecond
 )
 
+const (
+	apiKeyMeta = "api-key"
+	orgIdMeta  = "organization-id"
+)
+
 //go:generate mockgen -destination=./mock_executionsaver.go -package=runner "github.com/kubeshop/testkube/pkg/runner" ExecutionSaver
 type ExecutionSaver interface {
 	UpdateResult(result testkube.TestWorkflowResult)
@@ -31,9 +39,11 @@ type ExecutionSaver interface {
 
 type executionSaver struct {
 	id                   string
+	organizationId       string
 	environmentId        string
 	executionsRepository testworkflow.Repository
 	client               cloud.TestKubeCloudAPIClient
+	grpcApiToken         string
 	logs                 ExecutionLogsWriter
 	newExecutionsEnabled bool
 
@@ -53,7 +63,9 @@ func NewExecutionSaver(
 	ctx context.Context,
 	executionsRepository testworkflow.Repository,
 	grpcConn *grpc.ClientConn,
+	grpcApiToken string,
 	id string,
+	organizationId string,
 	environmentId string,
 	logs ExecutionLogsWriter,
 	newExecutionsEnabled bool,
@@ -63,9 +75,11 @@ func NewExecutionSaver(
 	outputSaved.Store(true)
 	saver := &executionSaver{
 		id:                   id,
+		organizationId:       organizationId,
 		environmentId:        environmentId,
 		executionsRepository: executionsRepository,
 		client:               cloud.NewTestKubeCloudAPIClient(grpcConn),
+		grpcApiToken:         grpcApiToken,
 		logs:                 logs,
 		newExecutionsEnabled: newExecutionsEnabled,
 		resultUpdate:         store.NewUpdate(),
@@ -165,11 +179,18 @@ func (s *executionSaver) saveFinalResult(ctx context.Context, result *testkube.T
 	if result == nil {
 		return errors.New("missing result")
 	}
+
 	resultBytes, err := json.Marshal(result)
-	_, err = s.client.FinishExecution(ctx, &cloud.FinishExecutionRequest{
+	if err != nil {
+		return err
+	}
+
+	md := metadata.MD{apiKeyMeta: []string{s.grpcApiToken}, orgIdMeta: []string{s.organizationId}}
+	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
+	_, err = s.client.FinishExecution(metadata.NewOutgoingContext(ctx, md), &cloud.FinishExecutionRequest{
 		EnvironmentId: s.environmentId,
 		Id:            s.id,
 		Result:        resultBytes,
-	})
+	}, opts...)
 	return err
 }

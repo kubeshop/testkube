@@ -28,7 +28,7 @@ const (
 
 //go:generate mockgen -destination=./mock_runner.go -package=runner "github.com/kubeshop/testkube/pkg/runner" Runner
 type Runner interface {
-	Monitor(ctx context.Context, environmentId, id string) error
+	Monitor(ctx context.Context, organizationId, environmentId, id string) error
 	Notifications(ctx context.Context, id string) executionworkertypes.NotificationsWatcher
 	Execute(request executionworkertypes.ExecuteRequest) (*executionworkertypes.ExecuteResult, error)
 	Pause(id string) error
@@ -41,6 +41,7 @@ type runner struct {
 	outputRepository     testworkflow.OutputRepository
 	executionsRepository testworkflow.Repository
 	grpcConn             *grpc.ClientConn
+	grpcApiToken         string
 	configRepository     configRepo.Repository
 	emitter              event.Interface
 	metrics              metrics.Metrics
@@ -57,6 +58,7 @@ func New(
 	executionsRepository testworkflow.Repository,
 	configRepository configRepo.Repository,
 	grpcConn *grpc.ClientConn,
+	grpcApiToken string,
 	emitter event.Interface,
 	metrics metrics.Metrics,
 	dashboardURI string,
@@ -69,6 +71,7 @@ func New(
 		executionsRepository: executionsRepository,
 		configRepository:     configRepository,
 		grpcConn:             grpcConn,
+		grpcApiToken:         grpcApiToken,
 		emitter:              emitter,
 		metrics:              metrics,
 		dashboardURI:         dashboardURI,
@@ -77,7 +80,7 @@ func New(
 	}
 }
 
-func (r *runner) monitor(ctx context.Context, environmentId string, execution testkube.TestWorkflowExecution) error {
+func (r *runner) monitor(ctx context.Context, organizationId string, environmentId string, execution testkube.TestWorkflowExecution) error {
 	defer r.watching.Delete(execution.Id)
 
 	var notifications executionworkertypes.NotificationsWatcher
@@ -100,7 +103,7 @@ func (r *runner) monitor(ctx context.Context, environmentId string, execution te
 	if err != nil {
 		return err
 	}
-	saver, err := NewExecutionSaver(ctx, r.executionsRepository, r.grpcConn, execution.Id, environmentId, logs, r.newExecutionsEnabled)
+	saver, err := NewExecutionSaver(ctx, r.executionsRepository, r.grpcConn, r.grpcApiToken, execution.Id, organizationId, environmentId, logs, r.newExecutionsEnabled)
 	if err != nil {
 		return err
 	}
@@ -210,7 +213,7 @@ func (r *runner) monitor(ctx context.Context, environmentId string, execution te
 	return nil
 }
 
-func (r *runner) Monitor(ctx context.Context, environmentId string, id string) error {
+func (r *runner) Monitor(ctx context.Context, organizationId string, environmentId string, id string) error {
 	ctx, ctxCancel := context.WithCancel(ctx)
 	defer ctxCancel()
 
@@ -226,7 +229,7 @@ func (r *runner) Monitor(ctx context.Context, environmentId string, id string) e
 		return err
 	}
 
-	return r.monitor(ctx, environmentId, execution)
+	return r.monitor(ctx, organizationId, environmentId, execution)
 }
 
 func (r *runner) Notifications(ctx context.Context, id string) executionworkertypes.NotificationsWatcher {
@@ -237,7 +240,7 @@ func (r *runner) Execute(request executionworkertypes.ExecuteRequest) (*executio
 	res, err := r.worker.Execute(context.Background(), request)
 	if err == nil {
 		// TODO: consider retry?
-		go r.Monitor(context.Background(), request.Execution.EnvironmentId, request.Execution.Id)
+		go r.Monitor(context.Background(), request.Execution.OrganizationId, request.Execution.EnvironmentId, request.Execution.Id)
 	}
 	return res, err
 }

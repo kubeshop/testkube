@@ -244,34 +244,19 @@ func (a *agentLoop) updateExecution(ctx context.Context, environmentId string, e
 }
 
 func (a *agentLoop) _finishExecution(ctx context.Context, environmentId string, execution *testkube.TestWorkflowExecution) error {
-	// FIXME
-	// FIXME
-	// FIXME
-	// FIXME
-	// FIXME
-	// FIXME
-	// FIXME
-	// FIXME
-	// FIXME
-	// FIXME
-	// FIXME
-	// FIXME
 	ctx = a.buildContext(ctx, environmentId)
 
-	jsonPayload, err := json.Marshal(testworkflow.ExecutionUpdateRequest{WorkflowExecution: *execution})
+	resultBytes, err := json.Marshal(execution.Result)
 	if err != nil {
 		return err
 	}
-	s := structpb.Struct{}
-	if err := s.UnmarshalJSON(jsonPayload); err != nil {
-		return err
-	}
-	cmdReq := cloud.CommandRequest{
-		Command: string(testworkflow.CmdTestWorkflowExecutionUpdate),
-		Payload: &s,
-	}
+
 	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
-	_, err = a.client.Call(ctx, &cmdReq, opts...)
+	_, err = a.client.FinishExecution(ctx, &cloud.FinishExecutionRequest{
+		EnvironmentId: environmentId,
+		Id:            execution.Id,
+		Result:        resultBytes,
+	}, opts...)
 	return err
 }
 
@@ -303,6 +288,28 @@ func (a *agentLoop) finishExecution(ctx context.Context, environmentId string, e
 	})
 	if err != nil {
 		a.logger.Errorw("failed to finish the TestWorkflow execution in database", "recoverable", false, "executionId", execution.Id, "error", err)
+	}
+	return err
+}
+
+func (a *agentLoop) init(ctx context.Context, environmentId string, execution *testkube.TestWorkflowExecution) error {
+	// TODO: Make it non-conflict
+	err := retry(saveResultRetryMaxAttempts, saveResultRetryBaseDelay, func() error {
+		prevExecution, err := a.getExecution(ctx, environmentId, execution.Id)
+		if err != nil {
+			return err
+		}
+		prevExecution.RunnerId = a.runnerId
+		prevExecution.Namespace = execution.Namespace
+		prevExecution.Signature = execution.Signature
+		err = a._updateExecution(ctx, environmentId, prevExecution)
+		if err != nil {
+			a.logger.Warnw("failed to initialize the TestWorkflow execution in database", "recoverable", true, "executionId", execution.Id, "error", err)
+		}
+		return err
+	})
+	if err != nil {
+		a.logger.Errorw("failed to initialize the TestWorkflow execution in database", "recoverable", false, "executionId", execution.Id, "error", err)
 	}
 	return err
 }
@@ -645,7 +652,7 @@ func (a *agentLoop) runTestWorkflow(environmentId string, executionId string) er
 	if execution.RunningContext != nil && execution.RunningContext.Actor != nil {
 		parentIds = execution.RunningContext.Actor.ExecutionPath
 	}
-	_, err = a.runner.Execute(executionworkertypes.ExecuteRequest{
+	result, err := a.runner.Execute(executionworkertypes.ExecuteRequest{
 		Execution: testworkflowconfig.ExecutionConfig{
 			Id:              execution.Id,
 			GroupId:         execution.GroupId,
@@ -677,14 +684,13 @@ func (a *agentLoop) runTestWorkflow(environmentId string, executionId string) er
 	// Inform about execution start
 	//e.emitter.Notify(testkube.NewEventStartTestWorkflow(execution)) // TODO: delete - sent from Cloud
 
-	//// TODO: Is it needed?
-	//// Apply the known data to temporary object.
-	//execution.Namespace = result.Namespace
-	//execution.Signature = result.Signature
-	//execution.RunnerId = a.runnerId
-	//if err = e.scheduler.Start(execution); err != nil {
-	//	logger.Errorw("failed to mark execution as initialized", "error", err)
-	//}
+	// Apply the known data to temporary object.
+	execution.Namespace = result.Namespace
+	execution.Signature = result.Signature
+	execution.RunnerId = a.runnerId
+	if err = a.init(context.Background(), environmentId, execution); err != nil {
+		logger.Errorw("failed to mark execution as initialized", "error", err)
+	}
 
 	return nil
 }
