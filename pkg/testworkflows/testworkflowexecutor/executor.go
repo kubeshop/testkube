@@ -172,9 +172,11 @@ func (e *executor) executeDirect(ctx context.Context, req *cloud.ScheduleRequest
 			// Send the data
 			ch2 <- execution.Clone()
 
+			// Send information about start
+			e.emitter.Notify(testkube.NewEventStartTestWorkflow(execution))
+
 			// Finish early if it's immediately known to finish
 			if execution.Result.IsFinished() {
-				e.emitter.Notify(testkube.NewEventStartTestWorkflow(execution))
 				if execution.Result.IsAborted() {
 					e.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(execution))
 				} else if execution.Result.IsFailed() {
@@ -234,15 +236,15 @@ func (e *executor) Start(environmentId string, execution *testkube.TestWorkflowE
 		if err != nil {
 			log2.DefaultLogger.Errorw("failed to run and update execution", "executionId", execution.Id, "error", err)
 		}
-		e.emitter.Notify(testkube.NewEventStartTestWorkflow(execution))
+		//e.emitter.Notify(testkube.NewEventStartTestWorkflow(execution)) // TODO: delete - sent from Cloud
 		e.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(execution))
 		return nil
 	}
 
 	// Inform about execution start
-	e.emitter.Notify(testkube.NewEventStartTestWorkflow(execution))
+	//e.emitter.Notify(testkube.NewEventStartTestWorkflow(execution)) // TODO: delete - sent from Cloud
 
-	// Apply the known data to temporary object.
+	// Apply the known d ata to temporary object.
 	execution.Namespace = result.Namespace
 	execution.Signature = result.Signature
 	if err = e.scheduler.Start(execution); err != nil {

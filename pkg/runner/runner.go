@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"google.golang.org/grpc"
 
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -27,7 +28,7 @@ const (
 
 //go:generate mockgen -destination=./mock_runner.go -package=runner "github.com/kubeshop/testkube/pkg/runner" Runner
 type Runner interface {
-	Monitor(ctx context.Context, id string) error
+	Monitor(ctx context.Context, environmentId, id string) error
 	Notifications(ctx context.Context, id string) executionworkertypes.NotificationsWatcher
 	Execute(request executionworkertypes.ExecuteRequest) (*executionworkertypes.ExecuteResult, error)
 	Pause(id string) error
@@ -39,11 +40,13 @@ type runner struct {
 	worker               executionworkertypes.Worker
 	outputRepository     testworkflow.OutputRepository
 	executionsRepository testworkflow.Repository
+	grpcConn             *grpc.ClientConn
 	configRepository     configRepo.Repository
-	emitter              *event.Emitter
+	emitter              event.Interface
 	metrics              metrics.Metrics
 	dashboardURI         string
 	storageSkipVerify    bool
+	newExecutionsEnabled bool // TODO: ag.featureNewExecutions && ag.proContext.NewExecutions
 
 	watching sync.Map
 }
@@ -53,24 +56,28 @@ func New(
 	outputRepository testworkflow.OutputRepository,
 	executionsRepository testworkflow.Repository,
 	configRepository configRepo.Repository,
-	emitter *event.Emitter,
+	grpcConn *grpc.ClientConn,
+	emitter event.Interface,
 	metrics metrics.Metrics,
 	dashboardURI string,
 	storageSkipVerify bool,
+	newExecutionsEnabled bool,
 ) Runner {
 	return &runner{
 		worker:               worker,
 		outputRepository:     outputRepository,
 		executionsRepository: executionsRepository,
 		configRepository:     configRepository,
+		grpcConn:             grpcConn,
 		emitter:              emitter,
 		metrics:              metrics,
 		dashboardURI:         dashboardURI,
 		storageSkipVerify:    storageSkipVerify,
+		newExecutionsEnabled: newExecutionsEnabled,
 	}
 }
 
-func (r *runner) monitor(ctx context.Context, execution testkube.TestWorkflowExecution) error {
+func (r *runner) monitor(ctx context.Context, environmentId string, execution testkube.TestWorkflowExecution) error {
 	defer r.watching.Delete(execution.Id)
 
 	var notifications executionworkertypes.NotificationsWatcher
@@ -93,7 +100,7 @@ func (r *runner) monitor(ctx context.Context, execution testkube.TestWorkflowExe
 	if err != nil {
 		return err
 	}
-	saver, err := NewExecutionSaver(ctx, r.executionsRepository, execution.Id, logs)
+	saver, err := NewExecutionSaver(ctx, r.executionsRepository, r.grpcConn, execution.Id, environmentId, logs, r.newExecutionsEnabled)
 	if err != nil {
 		return err
 	}
@@ -183,13 +190,15 @@ func (r *runner) monitor(ctx context.Context, execution testkube.TestWorkflowExe
 	execution.Result = lastResult
 	execution.StatusAt = lastResult.FinishedAt
 
-	// Emit data
-	if lastResult.IsPassed() {
-		r.emitter.Notify(testkube.NewEventEndTestWorkflowSuccess(&execution))
-	} else if lastResult.IsAborted() {
-		r.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(&execution))
-	} else {
-		r.emitter.Notify(testkube.NewEventEndTestWorkflowFailed(&execution))
+	// Emit data, if the Control Plane doesn't support informing about status by itself
+	if !r.newExecutionsEnabled {
+		if lastResult.IsPassed() {
+			r.emitter.Notify(testkube.NewEventEndTestWorkflowSuccess(&execution))
+		} else if lastResult.IsAborted() {
+			r.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(&execution))
+		} else {
+			r.emitter.Notify(testkube.NewEventEndTestWorkflowFailed(&execution))
+		}
 	}
 
 	err = r.worker.Destroy(context.Background(), execution.Id, executionworkertypes.DestroyOptions{})
@@ -201,7 +210,7 @@ func (r *runner) monitor(ctx context.Context, execution testkube.TestWorkflowExe
 	return nil
 }
 
-func (r *runner) Monitor(ctx context.Context, id string) error {
+func (r *runner) Monitor(ctx context.Context, environmentId string, id string) error {
 	ctx, ctxCancel := context.WithCancel(ctx)
 	defer ctxCancel()
 
@@ -217,7 +226,7 @@ func (r *runner) Monitor(ctx context.Context, id string) error {
 		return err
 	}
 
-	return r.monitor(ctx, execution)
+	return r.monitor(ctx, environmentId, execution)
 }
 
 func (r *runner) Notifications(ctx context.Context, id string) executionworkertypes.NotificationsWatcher {
@@ -228,7 +237,7 @@ func (r *runner) Execute(request executionworkertypes.ExecuteRequest) (*executio
 	res, err := r.worker.Execute(context.Background(), request)
 	if err == nil {
 		// TODO: consider retry?
-		go r.Monitor(context.Background(), request.Execution.Id)
+		go r.Monitor(context.Background(), request.Execution.EnvironmentId, request.Execution.Id)
 	}
 	return res, err
 }

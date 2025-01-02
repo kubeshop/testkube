@@ -12,6 +12,7 @@ import (
 
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
 	testkubeclientset "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
+	runner3 "github.com/kubeshop/testkube/cmd/api-server/apps/runner"
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	"github.com/kubeshop/testkube/cmd/api-server/services"
 	"github.com/kubeshop/testkube/internal/app/api/debug"
@@ -234,10 +235,12 @@ func main() {
 		testWorkflowOutputRepository,
 		testWorkflowResultsRepository,
 		configMapConfig,
+		grpcConn,
 		eventsEmitter,
 		metrics,
 		cfg.TestkubeDashboardURI,
 		cfg.StorageSkipVerify,
+		proContext.NewExecutions && cfg.FeatureNewExecutions,
 	)
 
 	// Recover control
@@ -262,7 +265,7 @@ func main() {
 			// TODO: Should it throw error at all?
 			// TODO: Pass hints (namespace, signature, scheduledAt)
 			go func(e *testkube.TestWorkflowExecution) {
-				err := runner.Monitor(ctx, e.Id)
+				err := runner.Monitor(ctx, proContext.EnvID, e.Id)
 				if err != nil {
 					log.DefaultLogger.Errorw("failed to monitor execution", "id", e.Id, "error", err)
 				}
@@ -375,27 +378,34 @@ func main() {
 	if deprecatedSystem != nil && deprecatedSystem.StreamLogs != nil {
 		getDeprecatedLogStream = deprecatedSystem.StreamLogs
 	}
+	runnerAgentHandle := runner3.NewAgentLoop(
+		runner,
+		executionWorker,
+		log.DefaultLogger,
+		eventsEmitter,
+		grpcConn,
+		cfg.TestkubeProAPIKey,
+		proContext.EnvID, // TODO: Use runner ID
+		proContext.OrgID,
+		proContext.EnvID,
+		cfg.FeatureNewExecutions,
+	)
+	g.Go(func() error {
+		err = runnerAgentHandle.Run(ctx)
+		commons.ExitOnError("Running runner agent", err)
+		return nil
+	})
 	agentHandle, err := agent.NewAgent(
 		log.DefaultLogger,
 		httpServer.Mux.Handler(),
 		grpcClient,
 		getDeprecatedLogStream,
-		agent.GetTestWorkflowNotificationsStream(testWorkflowResultsRepository, executionWorker),
-		agent.GetTestWorkflowServiceNotificationsStream(testWorkflowResultsRepository, executionWorker),
-		agent.GetTestWorkflowParallelStepNotificationsStream(testWorkflowResultsRepository, executionWorker),
 		clusterId,
 		cfg.TestkubeClusterName,
 		features,
 		&proContext,
 		cfg.TestkubeDockerImageVersion,
 		eventsEmitter,
-		func(environmentId, executionId string) error {
-			execution, err := testWorkflowResultsRepository.Get(context.Background(), executionId)
-			if err != nil {
-				return err
-			}
-			return testWorkflowExecutor.Start(environmentId, &execution, nil)
-		},
 		cfg.FeatureNewExecutions,
 		cfg.FeatureTestWorkflowCloudStorage,
 	)

@@ -40,6 +40,7 @@ type TestKubeCloudAPIClient interface {
 	// Runner
 	GetRunnerRequests(ctx context.Context, opts ...grpc.CallOption) (TestKubeCloudAPI_GetRunnerRequestsClient, error)
 	ObtainExecution(ctx context.Context, in *ObtainExecutionRequest, opts ...grpc.CallOption) (*ObtainExecutionResponse, error)
+	FinishExecution(ctx context.Context, in *FinishExecutionRequest, opts ...grpc.CallOption) (*FinishExecutionResponse, error)
 	// CRD Synchronisation
 	// -- Test Workflows
 	GetTestWorkflow(ctx context.Context, in *GetTestWorkflowRequest, opts ...grpc.CallOption) (*GetTestWorkflowResponse, error)
@@ -418,6 +419,15 @@ func (c *testKubeCloudAPIClient) ObtainExecution(ctx context.Context, in *Obtain
 	return out, nil
 }
 
+func (c *testKubeCloudAPIClient) FinishExecution(ctx context.Context, in *FinishExecutionRequest, opts ...grpc.CallOption) (*FinishExecutionResponse, error) {
+	out := new(FinishExecutionResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/FinishExecution", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *testKubeCloudAPIClient) GetTestWorkflow(ctx context.Context, in *GetTestWorkflowRequest, opts ...grpc.CallOption) (*GetTestWorkflowResponse, error) {
 	out := new(GetTestWorkflowResponse)
 	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/GetTestWorkflow", in, out, opts...)
@@ -611,6 +621,7 @@ type TestKubeCloudAPIServer interface {
 	// Runner
 	GetRunnerRequests(TestKubeCloudAPI_GetRunnerRequestsServer) error
 	ObtainExecution(context.Context, *ObtainExecutionRequest) (*ObtainExecutionResponse, error)
+	FinishExecution(context.Context, *FinishExecutionRequest) (*FinishExecutionResponse, error)
 	// CRD Synchronisation
 	// -- Test Workflows
 	GetTestWorkflow(context.Context, *GetTestWorkflowRequest) (*GetTestWorkflowResponse, error)
@@ -676,6 +687,9 @@ func (UnimplementedTestKubeCloudAPIServer) GetRunnerRequests(TestKubeCloudAPI_Ge
 }
 func (UnimplementedTestKubeCloudAPIServer) ObtainExecution(context.Context, *ObtainExecutionRequest) (*ObtainExecutionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ObtainExecution not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) FinishExecution(context.Context, *FinishExecutionRequest) (*FinishExecutionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method FinishExecution not implemented")
 }
 func (UnimplementedTestKubeCloudAPIServer) GetTestWorkflow(context.Context, *GetTestWorkflowRequest) (*GetTestWorkflowResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetTestWorkflow not implemented")
@@ -1054,6 +1068,24 @@ func _TestKubeCloudAPI_ObtainExecution_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _TestKubeCloudAPI_FinishExecution_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FinishExecutionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).FinishExecution(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/FinishExecution",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).FinishExecution(ctx, req.(*FinishExecutionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _TestKubeCloudAPI_GetTestWorkflow_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetTestWorkflowRequest)
 	if err := dec(in); err != nil {
@@ -1334,6 +1366,10 @@ var TestKubeCloudAPI_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ObtainExecution",
 			Handler:    _TestKubeCloudAPI_ObtainExecution_Handler,
+		},
+		{
+			MethodName: "FinishExecution",
+			Handler:    _TestKubeCloudAPI_FinishExecution_Handler,
 		},
 		{
 			MethodName: "GetTestWorkflow",

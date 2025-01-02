@@ -2,13 +2,17 @@ package runner
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller/store"
 )
@@ -27,8 +31,11 @@ type ExecutionSaver interface {
 
 type executionSaver struct {
 	id                   string
+	environmentId        string
 	executionsRepository testworkflow.Repository
+	client               cloud.TestKubeCloudAPIClient
 	logs                 ExecutionLogsWriter
+	newExecutionsEnabled bool
 
 	// Intermediate data
 	output       []testkube.TestWorkflowOutput
@@ -42,14 +49,25 @@ type executionSaver struct {
 	ctxCancel context.CancelFunc
 }
 
-func NewExecutionSaver(ctx context.Context, executionsRepository testworkflow.Repository, id string, logs ExecutionLogsWriter) (ExecutionSaver, error) {
+func NewExecutionSaver(
+	ctx context.Context,
+	executionsRepository testworkflow.Repository,
+	grpcConn *grpc.ClientConn,
+	id string,
+	environmentId string,
+	logs ExecutionLogsWriter,
+	newExecutionsEnabled bool,
+) (ExecutionSaver, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	outputSaved := atomic.Bool{}
 	outputSaved.Store(true)
 	saver := &executionSaver{
 		id:                   id,
+		environmentId:        environmentId,
 		executionsRepository: executionsRepository,
+		client:               cloud.NewTestKubeCloudAPIClient(grpcConn),
 		logs:                 logs,
+		newExecutionsEnabled: newExecutionsEnabled,
 		resultUpdate:         store.NewUpdate(),
 		outputSaved:          &outputSaved,
 		ctx:                  ctx,
@@ -131,10 +149,27 @@ func (s *executionSaver) End(ctx context.Context, result testkube.TestWorkflowRe
 	}
 
 	// Save the final result
-	err = s.executionsRepository.UpdateResult(ctx, s.id, &result)
+	if s.newExecutionsEnabled {
+		err = s.saveFinalResult(ctx, &result)
+	} else {
+		err = s.executionsRepository.UpdateResult(ctx, s.id, &result)
+	}
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func (s *executionSaver) saveFinalResult(ctx context.Context, result *testkube.TestWorkflowResult) error {
+	if result == nil {
+		return errors.New("missing result")
+	}
+	resultBytes, err := json.Marshal(result)
+	_, err = s.client.FinishExecution(ctx, &cloud.FinishExecutionRequest{
+		EnvironmentId: s.environmentId,
+		Id:            s.id,
+		Result:        resultBytes,
+	})
+	return err
 }

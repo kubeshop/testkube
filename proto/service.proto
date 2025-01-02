@@ -26,6 +26,7 @@ service TestKubeCloudAPI {
     // Runner
     rpc GetRunnerRequests(stream RunnerResponse) returns (stream RunnerRequest); // TODO: Healthcheck (?)
     rpc ObtainExecution(ObtainExecutionRequest) returns (ObtainExecutionResponse);
+    rpc FinishExecution(FinishExecutionRequest) returns (FinishExecutionResponse);
 
     // CRD Synchronisation
     // -- Test Workflows
@@ -280,6 +281,15 @@ message ObtainExecutionResponse {
   string environment_id = 1;
   string id = 2;
   bool success = 3;
+}
+
+message FinishExecutionRequest {
+  string environment_id = 1;
+  string id = 2;
+  bytes result = 3; // TestWorkflowExecutionResult
+}
+
+message FinishExecutionResponse {
 }
 
 // CRD Synchronisation -- Test Workflows

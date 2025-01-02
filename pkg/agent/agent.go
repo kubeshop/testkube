@@ -56,23 +56,6 @@ type Agent struct {
 	logStreamResponseBuffer chan *cloud.LogsStreamResponse
 	logStreamFunc           func(ctx context.Context, executionID string) (chan output.Output, error)
 
-	testWorkflowNotificationsWorkerCount    int
-	testWorkflowNotificationsRequestBuffer  chan *cloud.TestWorkflowNotificationsRequest
-	testWorkflowNotificationsResponseBuffer chan *cloud.TestWorkflowNotificationsResponse
-	testWorkflowNotificationsFunc           func(ctx context.Context, executionID string) (<-chan testkube.TestWorkflowExecutionNotification, error)
-
-	testWorkflowServiceNotificationsWorkerCount    int
-	testWorkflowServiceNotificationsRequestBuffer  chan *cloud.TestWorkflowServiceNotificationsRequest
-	testWorkflowServiceNotificationsResponseBuffer chan *cloud.TestWorkflowServiceNotificationsResponse
-	testWorkflowServiceNotificationsFunc           func(ctx context.Context, executionID, serviceName string, serviceIndex int) (<-chan testkube.TestWorkflowExecutionNotification, error)
-
-	testWorkflowParallelStepNotificationsWorkerCount    int
-	testWorkflowParallelStepNotificationsRequestBuffer  chan *cloud.TestWorkflowParallelStepNotificationsRequest
-	testWorkflowParallelStepNotificationsResponseBuffer chan *cloud.TestWorkflowParallelStepNotificationsResponse
-	testWorkflowParallelStepNotificationsFunc           func(ctx context.Context, executionID, ref string, workerIndex int) (<-chan testkube.TestWorkflowExecutionNotification, error)
-
-	runTestWorkflow func(environmentId, executionId string) error
-
 	events              chan testkube.Event
 	sendTimeout         time.Duration
 	receiveTimeout      time.Duration
@@ -95,54 +78,37 @@ func NewAgent(logger *zap.SugaredLogger,
 	handler fasthttp.RequestHandler,
 	client cloud.TestKubeCloudAPIClient,
 	logStreamFunc func(ctx context.Context, executionID string) (chan output.Output, error),
-	workflowNotificationsFunc func(ctx context.Context, executionID string) (<-chan testkube.TestWorkflowExecutionNotification, error),
-	workflowServiceNotificationsFunc func(ctx context.Context, executionID, serviceName string, serviceIndex int) (<-chan testkube.TestWorkflowExecutionNotification, error),
-	workflowParallelStepNotificationsFunc func(ctx context.Context, executionID, ref string, workerIndex int) (<-chan testkube.TestWorkflowExecutionNotification, error),
 	clusterID string,
 	clusterName string,
 	features featureflags.FeatureFlags,
 	proContext *config.ProContext,
 	dockerImageVersion string,
 	eventEmitter event.Interface,
-	runTestWorkflow func(environmentId, executionId string) error,
 	featureNewExecutions bool,
 	featureTestWorkflowCloudStorage bool,
 ) (*Agent, error) {
 	return &Agent{
-		handler:                                 handler,
-		logger:                                  logger.With("service", "Agent", "environmentId", proContext.EnvID),
-		apiKey:                                  proContext.APIKey,
-		client:                                  client,
-		events:                                  make(chan testkube.Event),
-		workerCount:                             proContext.WorkerCount,
-		requestBuffer:                           make(chan *cloud.ExecuteRequest, bufferSizePerWorker*proContext.WorkerCount),
-		responseBuffer:                          make(chan *cloud.ExecuteResponse, bufferSizePerWorker*proContext.WorkerCount),
-		receiveTimeout:                          5 * time.Minute,
-		sendTimeout:                             30 * time.Second,
-		healthcheckInterval:                     30 * time.Second,
-		logStreamWorkerCount:                    proContext.LogStreamWorkerCount,
-		logStreamRequestBuffer:                  make(chan *cloud.LogsStreamRequest, bufferSizePerWorker*proContext.LogStreamWorkerCount),
-		logStreamResponseBuffer:                 make(chan *cloud.LogsStreamResponse, bufferSizePerWorker*proContext.LogStreamWorkerCount),
-		logStreamFunc:                           logStreamFunc,
-		testWorkflowNotificationsWorkerCount:    proContext.WorkflowNotificationsWorkerCount,
-		testWorkflowNotificationsRequestBuffer:  make(chan *cloud.TestWorkflowNotificationsRequest, bufferSizePerWorker*proContext.WorkflowNotificationsWorkerCount),
-		testWorkflowNotificationsResponseBuffer: make(chan *cloud.TestWorkflowNotificationsResponse, bufferSizePerWorker*proContext.WorkflowNotificationsWorkerCount),
-		testWorkflowNotificationsFunc:           workflowNotificationsFunc,
-		testWorkflowServiceNotificationsWorkerCount:         proContext.WorkflowServiceNotificationsWorkerCount,
-		testWorkflowServiceNotificationsRequestBuffer:       make(chan *cloud.TestWorkflowServiceNotificationsRequest, bufferSizePerWorker*proContext.WorkflowServiceNotificationsWorkerCount),
-		testWorkflowServiceNotificationsResponseBuffer:      make(chan *cloud.TestWorkflowServiceNotificationsResponse, bufferSizePerWorker*proContext.WorkflowServiceNotificationsWorkerCount),
-		testWorkflowServiceNotificationsFunc:                workflowServiceNotificationsFunc,
-		testWorkflowParallelStepNotificationsWorkerCount:    proContext.WorkflowParallelStepNotificationsWorkerCount,
-		testWorkflowParallelStepNotificationsRequestBuffer:  make(chan *cloud.TestWorkflowParallelStepNotificationsRequest, bufferSizePerWorker*proContext.WorkflowParallelStepNotificationsWorkerCount),
-		testWorkflowParallelStepNotificationsResponseBuffer: make(chan *cloud.TestWorkflowParallelStepNotificationsResponse, bufferSizePerWorker*proContext.WorkflowParallelStepNotificationsWorkerCount),
-		testWorkflowParallelStepNotificationsFunc:           workflowParallelStepNotificationsFunc,
+		handler:                         handler,
+		logger:                          logger.With("service", "Agent", "environmentId", proContext.EnvID),
+		apiKey:                          proContext.APIKey,
+		client:                          client,
+		events:                          make(chan testkube.Event),
+		workerCount:                     proContext.WorkerCount,
+		requestBuffer:                   make(chan *cloud.ExecuteRequest, bufferSizePerWorker*proContext.WorkerCount),
+		responseBuffer:                  make(chan *cloud.ExecuteResponse, bufferSizePerWorker*proContext.WorkerCount),
+		receiveTimeout:                  5 * time.Minute,
+		sendTimeout:                     30 * time.Second,
+		healthcheckInterval:             30 * time.Second,
+		logStreamWorkerCount:            proContext.LogStreamWorkerCount,
+		logStreamRequestBuffer:          make(chan *cloud.LogsStreamRequest, bufferSizePerWorker*proContext.LogStreamWorkerCount),
+		logStreamResponseBuffer:         make(chan *cloud.LogsStreamResponse, bufferSizePerWorker*proContext.LogStreamWorkerCount),
+		logStreamFunc:                   logStreamFunc,
 		clusterID:                       clusterID,
 		clusterName:                     clusterName,
 		features:                        features,
 		proContext:                      proContext,
 		dockerImageVersion:              dockerImageVersion,
 		eventEmitter:                    eventEmitter,
-		runTestWorkflow:                 runTestWorkflow,
 		featureNewExecutions:            featureNewExecutions,
 		featureTestWorkflowCloudStorage: featureTestWorkflowCloudStorage,
 	}, nil
@@ -186,94 +152,12 @@ func (ag *Agent) run(ctx context.Context) (err error) {
 	}
 
 	g.Go(func() error {
-		return ag.runTestWorkflowNotificationsLoop(groupCtx)
-	})
-	g.Go(func() error {
-		return ag.runTestWorkflowNotificationsWorker(groupCtx, ag.testWorkflowNotificationsWorkerCount)
-	})
-
-	g.Go(func() error {
-		return ag.runTestWorkflowServiceNotificationsLoop(groupCtx)
-	})
-	g.Go(func() error {
-		return ag.runTestWorkflowServiceNotificationsWorker(groupCtx, ag.testWorkflowServiceNotificationsWorkerCount)
-	})
-
-	g.Go(func() error {
-		return ag.runTestWorkflowParallelStepNotificationsLoop(groupCtx)
-	})
-	g.Go(func() error {
-		return ag.runTestWorkflowParallelStepNotificationsWorker(groupCtx, ag.testWorkflowParallelStepNotificationsWorkerCount)
-	})
-
-	g.Go(func() error {
 		return ag.runEventsReaderLoop(groupCtx)
 	})
-
-	if ag.featureNewExecutions {
-		g.Go(func() error {
-			return ag.runRunnerRequestsLoop(groupCtx)
-		})
-	}
 
 	err = g.Wait()
 
 	return err
-}
-
-// TODO: Move to another Agent instance (RunnerAgent)
-func (ag *Agent) runRunnerRequestsLoop(ctx context.Context) (err error) {
-	// Ignore when Control Plane doesn't support new executions
-	if !ag.proContext.NewExecutions {
-		return nil
-	}
-
-	if ag.proContext.APIKey != "" {
-		ctx = agentclient.AddAPIKeyMeta(ctx, ag.proContext.APIKey)
-	}
-
-	ctx = metadata.AppendToOutgoingContext(ctx, orgIdMeta, ag.proContext.OrgID)
-
-	// creates a new Stream from the client side. ctx is used for the lifetime of the stream.
-	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
-	stream, err := ag.client.GetRunnerRequests(ctx, opts...)
-	if err != nil {
-		ag.logger.Errorf("failed to read runner requests stream from Control Plane: %w", err)
-		return errors.Wrap(err, "failed to setup runner requests stream")
-	}
-
-	for {
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
-		req, err := stream.Recv()
-		if err != nil {
-			// Ignore if it's not implemented in the Control Plane
-			if e, ok := err.(interface{ GRPCStatus() *status.Status }); ok && e.GRPCStatus().Code() == codes.Unimplemented {
-				return nil
-			}
-			return err
-		}
-
-		// Lock the execution for itself
-		resp, err := ag.client.ObtainExecution(ctx, &cloud.ObtainExecutionRequest{Id: req.Id, EnvironmentId: req.EnvironmentId}, opts...)
-		if err != nil {
-			ag.logger.Errorf("failed to obtain execution '%s/%s', from Control Plane: %v", req.EnvironmentId, req.Id, err)
-			continue
-		}
-
-		// Ignore if the resource has been locked before
-		if !resp.Success {
-			continue
-		}
-
-		// Continue
-		err = ag.runTestWorkflow(req.EnvironmentId, req.Id)
-		if err != nil {
-			ag.logger.Errorf("failed to run execution '%s/%s' from Control Plane: %v", req.EnvironmentId, req.Id, err)
-			continue
-		}
-	}
 }
 
 func (ag *Agent) runEventsReaderLoop(ctx context.Context) (err error) {
