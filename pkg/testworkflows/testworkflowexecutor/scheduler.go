@@ -330,6 +330,7 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 func (s *scheduler) CriticalError(execution *testkube.TestWorkflowExecution, name string, err error) error {
 	execution.InitializationError(name, err)
 	_ = s.saveEmptyLogs(context.Background(), execution)
+	// FIXME: use FinishExecution
 	return s.update(context.Background(), execution)
 }
 

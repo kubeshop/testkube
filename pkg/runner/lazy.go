@@ -37,3 +37,15 @@ func (r *lazyRunner) Resume(id string) error {
 func (r *lazyRunner) Abort(id string) error {
 	return (*r.accessor).Abort(id)
 }
+
+type lazyRunnerExecute struct {
+	accessor *RunnerExecute
+}
+
+func LazyExecute(accessor *RunnerExecute) RunnerExecute {
+	return &lazyRunnerExecute{accessor: accessor}
+}
+
+func (r *lazyRunnerExecute) Execute(request executionworkertypes.ExecuteRequest) (*executionworkertypes.ExecuteResult, error) {
+	return (*r.accessor).Execute(request)
+}

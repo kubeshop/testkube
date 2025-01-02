@@ -52,7 +52,7 @@ type executor struct {
 	metrics              v1.Metrics
 	secretManager        secretmanager.SecretManager
 	dashboardURI         string
-	runner               runner.Runner
+	runner               runner.RunnerExecute
 	proContext           *config.ProContext
 	scheduler            Scheduler
 	featureNewExecutions bool
@@ -63,7 +63,7 @@ func New(
 	apiKey string,
 	cdEventsTarget string,
 	emitter event.Interface,
-	runner runner.Runner,
+	runner runner.RunnerExecute,
 	repository testworkflow.Repository,
 	output testworkflow.OutputRepository,
 	testWorkflowTemplatesClient testworkflowtemplateclient.TestWorkflowTemplateClient,
@@ -201,6 +201,7 @@ func (e *executor) executeDirect(ctx context.Context, req *cloud.ScheduleRequest
 	return resultStream
 }
 
+// TODO: Delete?
 func (e *executor) Start(environmentId string, execution *testkube.TestWorkflowExecution, secrets map[string]map[string]string) error {
 	controlPlaneConfig := testworkflowconfig.ControlPlaneConfig{
 		DashboardUrl:   e.dashboardURI,
@@ -236,6 +237,7 @@ func (e *executor) Start(environmentId string, execution *testkube.TestWorkflowE
 		if err != nil {
 			log2.DefaultLogger.Errorw("failed to run and update execution", "executionId", execution.Id, "error", err)
 		}
+		// TODO: Don't emit?
 		//e.emitter.Notify(testkube.NewEventStartTestWorkflow(execution)) // TODO: delete - sent from Cloud
 		e.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(execution))
 		return nil
@@ -247,6 +249,7 @@ func (e *executor) Start(environmentId string, execution *testkube.TestWorkflowE
 	// Apply the known d ata to temporary object.
 	execution.Namespace = result.Namespace
 	execution.Signature = result.Signature
+	// TODO: Don't emit?
 	if err = e.scheduler.Start(execution); err != nil {
 		log2.DefaultLogger.Errorw("failed to mark execution as initialized", "executionId", execution.Id, "error", err)
 	}

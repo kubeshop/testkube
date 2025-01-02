@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"google.golang.org/grpc"
@@ -93,9 +92,6 @@ func main() {
 	clientset, err := k8sclient.ConnectToK8s()
 	commons.ExitOnError("Creating k8s clientset", err)
 
-	var runner runner2.Runner
-	lazyRunner := runner2.Lazy(&runner)
-
 	var eventsEmitter *event.Emitter
 	lazyEmitter := event.Lazy(&eventsEmitter)
 
@@ -113,9 +109,12 @@ func main() {
 
 	metrics := metrics.NewMetrics()
 
+	var runnerExecutePtr *runner2.RunnerExecute
+	runnerExecute := runner2.LazyExecute(runnerExecutePtr)
+
 	// Start local Control Plane
 	if mode == common.ModeStandalone {
-		controlPlane := services.CreateControlPlane(ctx, cfg, features, configMapConfig, secretManager, metrics, lazyRunner, lazyEmitter)
+		controlPlane := services.CreateControlPlane(ctx, cfg, features, configMapConfig, secretManager, metrics, runnerExecute, lazyEmitter)
 		g.Go(func() error {
 			return controlPlane.Run(ctx)
 		})
@@ -229,57 +228,39 @@ func main() {
 		testworkflowconfig.FeatureFlagTestWorkflowCloudStorage: fmt.Sprintf("%v", cfg.FeatureTestWorkflowCloudStorage),
 	})
 
-	// Build the runner
-	runner = runner2.New(
-		executionWorker,
-		testWorkflowOutputRepository,
-		testWorkflowResultsRepository,
+	runnerId := proContext.EnvID // TODO: Use runner ID
+	runnerService := runner3.NewService(
+		runnerId,
+		log.DefaultLogger,
+		eventsEmitter,
+		metrics,
 		configMapConfig,
 		grpcConn,
 		cfg.TestkubeProAPIKey,
-		eventsEmitter,
-		metrics,
-		cfg.TestkubeDashboardURI,
-		cfg.StorageSkipVerify,
-		proContext.NewExecutions && cfg.FeatureNewExecutions,
+		proContext,
+		executionWorker,
+		runner3.Options{
+			ClusterID:                  clusterId,
+			DashboardURI:               cfg.TestkubeDashboardURI,
+			DefaultNamespace:           cfg.TestkubeNamespace,
+			ServiceAccountNames:        serviceAccountNames,
+			StorageSkipVerify:          cfg.StorageSkipVerify,
+			ControlPlaneStorageEnabled: proContext.TestWorkflowStorage && cfg.FeatureTestWorkflowCloudStorage,
+			NewExecutionsEnabled:       proContext.NewExecutions && cfg.FeatureNewExecutions,
+		},
 	)
-
-	// Recover control
-	func() {
-		var list []testkube.TestWorkflowExecution
-		for {
-			// TODO: it should get running only in the context of current runner (worker.List?)
-			list, err = testWorkflowResultsRepository.GetRunning(ctx)
-			if err != nil {
-				log.DefaultLogger.Errorw("failed to fetch running executions to recover", "error", err)
-				<-time.After(time.Second)
-				continue
-			}
-			break
-		}
-
-		for i := range list {
-			if (list[i].RunnerId == "" && len(list[i].Signature) == 0) || (list[i].RunnerId != "" && list[i].RunnerId != proContext.EnvID) {
-				continue
-			}
-
-			// TODO: Should it throw error at all?
-			// TODO: Pass hints (namespace, signature, scheduledAt)
-			go func(e *testkube.TestWorkflowExecution) {
-				err := runner.Monitor(ctx, proContext.OrgID, proContext.EnvID, e.Id)
-				if err != nil {
-					log.DefaultLogger.Errorw("failed to monitor execution", "id", e.Id, "error", err)
-				}
-			}(&list[i])
-		}
-	}()
+	commons.ExitOnError("starting the runner service", err)
+	g.Go(func() error {
+		return runnerService.Run(ctx)
+	})
+	runnerExecutePtr = common.Ptr(runnerService.(runner2.RunnerExecute))
 
 	testWorkflowExecutor := testworkflowexecutor.New(
 		grpcClient,
 		cfg.TestkubeProAPIKey,
 		cfg.CDEventsTarget,
 		eventsEmitter,
-		runner,
+		runnerService,
 		testWorkflowResultsRepository,
 		testWorkflowOutputRepository,
 		testWorkflowTemplatesClient,
@@ -379,23 +360,6 @@ func main() {
 	if deprecatedSystem != nil && deprecatedSystem.StreamLogs != nil {
 		getDeprecatedLogStream = deprecatedSystem.StreamLogs
 	}
-	runnerAgentHandle := runner3.NewAgentLoop(
-		runner,
-		executionWorker,
-		log.DefaultLogger,
-		eventsEmitter,
-		grpcConn,
-		cfg.TestkubeProAPIKey,
-		proContext.EnvID, // TODO: Use runner ID
-		proContext.OrgID,
-		proContext.EnvID,
-		cfg.FeatureNewExecutions,
-	)
-	g.Go(func() error {
-		err = runnerAgentHandle.Run(ctx)
-		commons.ExitOnError("Running runner agent", err)
-		return nil
-	})
 	agentHandle, err := agent.NewAgent(
 		log.DefaultLogger,
 		httpServer.Mux.Handler(),

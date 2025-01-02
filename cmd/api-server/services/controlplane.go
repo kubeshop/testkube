@@ -62,7 +62,7 @@ func mapTestSuiteFilters(s []*testresult.FilterImpl) []testresult.Filter {
 	return v
 }
 
-func CreateControlPlane(ctx context.Context, cfg *config.Config, features featureflags.FeatureFlags, configMapClient configRepo.Repository, secretManager secretmanager.SecretManager, metrics metrics.Metrics, runner runner2.Runner, emitter event.Interface) *controlplane.Server {
+func CreateControlPlane(ctx context.Context, cfg *config.Config, features featureflags.FeatureFlags, configMapClient configRepo.Repository, secretManager secretmanager.SecretManager, metrics metrics.Metrics, runner runner2.RunnerExecute, emitter event.Interface) *controlplane.Server {
 	// Connect to the cluster
 	clientset, err := k8sclient.ConnectToK8s()
 	commons.ExitOnError("Creating k8s clientset", err)
