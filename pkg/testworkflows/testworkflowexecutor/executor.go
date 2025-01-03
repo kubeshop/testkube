@@ -231,6 +231,7 @@ func (e *executor) Start(environmentId string, execution *testkube.TestWorkflowE
 	})
 
 	// TODO: define "revoke" error by runner (?)
+	// TODO: CriticalError should use Finish if possible
 	if err != nil {
 		err2 := e.scheduler.CriticalError(execution, "Failed to run execution", err)
 		err = errors2.Join(err, err2)
