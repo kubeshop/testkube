@@ -96,14 +96,6 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 		cloudconfig.CmdConfigGetOrganizationPlan: controlplane.Handler(func(ctx context.Context, data checktcl.GetOrganizationPlanRequest) (r checktcl.GetOrganizationPlanResponse, err error) {
 			return
 		}),
-		cloudconfig.CmdConfigGetUniqueClusterId: controlplane.Handler(func(ctx context.Context, data cloudconfig.GetUniqueClusterIdRequest) (r cloudconfig.GetUniqueClusterIdResponse, err error) {
-			r.ClusterID, err = configMapClient.GetUniqueClusterId(ctx)
-			return
-		}),
-		cloudconfig.CmdConfigGetTelemetryEnabled: controlplane.Handler(func(ctx context.Context, data cloudconfig.GetTelemetryEnabledRequest) (r cloudconfig.GetTelemetryEnabledResponse, err error) {
-			r.Enabled, err = configMapClient.GetTelemetryEnabled(ctx)
-			return
-		}),
 	}
 
 	// Set up "Tests - Executions" commands
