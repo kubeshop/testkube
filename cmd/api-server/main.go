@@ -127,14 +127,12 @@ func main() {
 	telemetryEnabled, _ := configMapConfig.GetTelemetryEnabled(ctx)
 
 	// k8s clients
-	secretClient := secret.NewClientFor(clientset, cfg.TestkubeNamespace)
-	configMapClient := configmap.NewClientFor(clientset, cfg.TestkubeNamespace)
 	webhooksClient := executorsclientv1.NewWebhooksClient(kubeClient, cfg.TestkubeNamespace)
 	testTriggersClient := testtriggersclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
 
 	envs := commons.GetEnvironmentVariables()
 
-	inspector := commons.CreateImageInspector(cfg, configMapClient, secretClient)
+	inspector := commons.CreateImageInspector(cfg, configmap.NewClientFor(clientset, cfg.TestkubeNamespace), secret.NewClientFor(clientset, cfg.TestkubeNamespace))
 
 	var testWorkflowsClient testworkflowclient.TestWorkflowClient
 	var testWorkflowTemplatesClient testworkflowtemplateclient.TestWorkflowTemplateClient
