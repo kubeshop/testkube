@@ -53,14 +53,14 @@ type agentLoop struct {
 	organizationId      string
 	legacyEnvironmentId string
 
-	newExecutionsEnabled bool // TODO: ag.featureNewExecutions && ag.proContext.NewExecutions
+	newExecutionsEnabled bool
 }
 
 type AgentLoop interface {
-	Run(ctx context.Context) error
+	Start(ctx context.Context) error
 }
 
-func NewAgentLoop(
+func newAgentLoop(
 	runner runner.Runner,
 	worker executionworkertypes.Worker,
 	logger *zap.SugaredLogger,
@@ -87,7 +87,7 @@ func NewAgentLoop(
 	}
 }
 
-func (a *agentLoop) Run(ctx context.Context) error {
+func (a *agentLoop) Start(ctx context.Context) error {
 	for {
 		if ctx.Err() != nil {
 			return ctx.Err()

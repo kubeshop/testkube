@@ -49,7 +49,7 @@ type service struct {
 
 type Service interface {
 	Execute(request executionworkertypes.ExecuteRequest) (*executionworkertypes.ExecuteResult, error)
-	Run(ctx context.Context) error
+	Start(ctx context.Context) error
 }
 
 func NewService(
@@ -126,7 +126,7 @@ func (s *service) recover(ctx context.Context) (err error) {
 }
 
 func (s *service) start(ctx context.Context) (err error) {
-	return NewAgentLoop(
+	return newAgentLoop(
 		s.runner,
 		s.worker,
 		s.logger,
@@ -137,10 +137,10 @@ func (s *service) start(ctx context.Context) (err error) {
 		s.proContext.OrgID,
 		s.proContext.EnvID,
 		s.opts.NewExecutionsEnabled,
-	).Run(ctx)
+	).Start(ctx)
 }
 
-func (s *service) Run(ctx context.Context) error {
+func (s *service) Start(ctx context.Context) error {
 	g, ctx := errgroup.WithContext(ctx)
 
 	g.Go(func() error {
