@@ -69,6 +69,9 @@ func main() {
 	mode := common.ModeStandalone
 	if cfg.TestkubeProAPIKey != "" {
 		mode = common.ModeAgent
+	} else {
+		cfg.TestkubeProURL = fmt.Sprintf("%s:%d", cfg.APIServerFullname, cfg.GRPCServerPort)
+		cfg.TestkubeProTLSInsecure = true
 	}
 
 	// Run services within an errgroup to propagate errors between services.
@@ -117,11 +120,7 @@ func main() {
 		g.Go(func() error {
 			return controlPlane.Start(ctx)
 		})
-
-		// Rewire connection
 		grpcConn, err = agentclient.NewGRPCConnection(ctx, true, true, fmt.Sprintf("127.0.0.1:%d", cfg.GRPCServerPort), "", "", "", log.DefaultLogger)
-		cfg.TestkubeProURL = fmt.Sprintf("%s:%d", cfg.APIServerFullname, cfg.GRPCServerPort)
-		cfg.TestkubeProTLSInsecure = true
 	} else {
 		grpcConn, err = agentclient.NewGRPCConnection(
 			ctx,
