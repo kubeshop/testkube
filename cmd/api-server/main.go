@@ -263,7 +263,7 @@ func main() {
 		cfg.TestkubeDashboardURI,
 		proContext.OrgID,
 		proContext.EnvID,
-		cfg.FeatureNewExecutions,
+		proContext.NewExecutions && cfg.FeatureNewExecutions,
 	)
 
 	var deprecatedClients commons.DeprecatedClients
