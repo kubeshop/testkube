@@ -112,7 +112,7 @@ func main() {
 
 	// Start local Control Plane
 	if mode == common.ModeStandalone {
-		controlPlane := services.CreateControlPlane(ctx, cfg, features, configMapConfig, secretManager, metrics, lazyRunner, lazyEmitter)
+		controlPlane := services.CreateControlPlane(ctx, cfg, features, secretManager, metrics, lazyRunner, lazyEmitter)
 		g.Go(func() error {
 			return controlPlane.Run(ctx)
 		})

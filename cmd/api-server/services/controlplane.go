@@ -25,7 +25,6 @@ import (
 	logsclient "github.com/kubeshop/testkube/pkg/logs/client"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
-	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/result"
 	"github.com/kubeshop/testkube/pkg/repository/sequence"
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
@@ -62,7 +61,7 @@ func mapTestSuiteFilters(s []*testresult.FilterImpl) []testresult.Filter {
 	return v
 }
 
-func CreateControlPlane(ctx context.Context, cfg *config.Config, features featureflags.FeatureFlags, configMapClient configRepo.Repository, secretManager secretmanager.SecretManager, metrics metrics.Metrics, runner runner2.RunnerExecute, emitter event.Interface) *controlplane.Server {
+func CreateControlPlane(ctx context.Context, cfg *config.Config, features featureflags.FeatureFlags, secretManager secretmanager.SecretManager, metrics metrics.Metrics, runner runner2.RunnerExecute, emitter event.Interface) *controlplane.Server {
 	// Connect to the cluster
 	clientset, err := k8sclient.ConnectToK8s()
 	commons.ExitOnError("Creating k8s clientset", err)
