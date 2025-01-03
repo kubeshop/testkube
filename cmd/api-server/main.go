@@ -108,11 +108,11 @@ func main() {
 	metrics := metrics.NewMetrics()
 
 	var runnerExecutePtr *runner2.RunnerExecute
-	runnerExecute := runner2.LazyExecute(runnerExecutePtr)
+	lazyRunner := runner2.LazyExecute(runnerExecutePtr)
 
 	// Start local Control Plane
 	if mode == common.ModeStandalone {
-		controlPlane := services.CreateControlPlane(ctx, cfg, features, configMapConfig, secretManager, metrics, runnerExecute, lazyEmitter)
+		controlPlane := services.CreateControlPlane(ctx, cfg, features, configMapConfig, secretManager, metrics, lazyRunner, lazyEmitter)
 		g.Go(func() error {
 			return controlPlane.Run(ctx)
 		})
