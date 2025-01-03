@@ -132,7 +132,7 @@ func main() {
 
 	envs := commons.GetEnvironmentVariables()
 
-	inspector := commons.CreateImageInspector(cfg, configmap.NewClientFor(clientset, cfg.TestkubeNamespace), secret.NewClientFor(clientset, cfg.TestkubeNamespace))
+	inspector := commons.CreateImageInspector(&cfg.ImageInspectorConfig, configmap.NewClientFor(clientset, cfg.TestkubeNamespace), secret.NewClientFor(clientset, cfg.TestkubeNamespace))
 
 	var testWorkflowsClient testworkflowclient.TestWorkflowClient
 	var testWorkflowTemplatesClient testworkflowtemplateclient.TestWorkflowTemplateClient

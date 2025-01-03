@@ -148,12 +148,16 @@ type SecretManagementConfig struct {
 	SecretCreationPrefix    string `envconfig:"SECRET_CREATION_PREFIX" default:"testkube-"`
 }
 
-type RunnerConfig struct {
+type ImageInspectorConfig struct {
+	TestkubeRegistry string `envconfig:"TESTKUBE_REGISTRY" default:""`
 	// TestkubeImageCredentialsCacheTTL is the duration for which the image pull credentials should be cached provided as a Go duration string.
 	// If set to 0, the cache is disabled.
 	TestkubeImageCredentialsCacheTTL time.Duration `envconfig:"TESTKUBE_IMAGE_CREDENTIALS_CACHE_TTL" default:"30m"`
 	EnableImageDataPersistentCache   bool          `envconfig:"TESTKUBE_ENABLE_IMAGE_DATA_PERSISTENT_CACHE" default:"false"`
 	ImageDataPersistentCacheKey      string        `envconfig:"TESTKUBE_IMAGE_DATA_PERSISTENT_CACHE_KEY" default:"testkube-image-cache"`
+}
+
+type RunnerConfig struct {
 }
 
 type Config struct {
@@ -167,32 +171,29 @@ type Config struct {
 	SlackIntegrationConfig
 	SecretManagementConfig
 	RunnerConfig
-	TestkubeConfigDir                                       string `envconfig:"TESTKUBE_CONFIG_DIR" default:"config"`
-	TestkubeAnalyticsEnabled                                bool   `envconfig:"TESTKUBE_ANALYTICS_ENABLED" default:"false"`
-	TestkubeNamespace                                       string `envconfig:"TESTKUBE_NAMESPACE" default:"testkube"`
-	TestkubeProWorkerCount                                  int    `envconfig:"TESTKUBE_PRO_WORKER_COUNT" default:"50"`
-	TestkubeProLogStreamWorkerCount                         int    `envconfig:"TESTKUBE_PRO_LOG_STREAM_WORKER_COUNT" default:"25"`
-	TestkubeProWorkflowNotificationsWorkerCount             int    `envconfig:"TESTKUBE_PRO_WORKFLOW_NOTIFICATIONS_STREAM_WORKER_COUNT" default:"25"`
-	TestkubeProWorkflowServiceNotificationsWorkerCount      int    `envconfig:"TESTKUBE_PRO_WORKFLOW_SERVICE_NOTIFICATIONS_STREAM_WORKER_COUNT" default:"25"`
-	TestkubeProWorkflowParallelStepNotificationsWorkerCount int    `envconfig:"TESTKUBE_PRO_WORKFLOW_PARALLEL_STEP_NOTIFICATIONS_STREAM_WORKER_COUNT" default:"25"`
-	TestkubeProMigrate                                      string `envconfig:"TESTKUBE_PRO_MIGRATE" default:"false"`
-	TestkubeProRunnerCustomCASecret                         string `envconfig:"TESTKUBE_PRO_RUNNER_CUSTOM_CA_SECRET" default:""`
-	TestkubeRegistry                                        string `envconfig:"TESTKUBE_REGISTRY" default:""`
-	CDEventsTarget                                          string `envconfig:"CDEVENTS_TARGET" default:""`
-	TestkubeDashboardURI                                    string `envconfig:"TESTKUBE_DASHBOARD_URI" default:""`
-	TestkubeClusterName                                     string `envconfig:"TESTKUBE_CLUSTER_NAME" default:""`
-	TestkubeHelmchartVersion                                string `envconfig:"TESTKUBE_HELMCHART_VERSION" default:""`
-	DebugListenAddr                                         string `envconfig:"DEBUG_LISTEN_ADDR" default:"0.0.0.0:1337"`
-	EnableDebugServer                                       bool   `envconfig:"ENABLE_DEBUG_SERVER" default:"false"`
-	Debug                                                   bool   `envconfig:"DEBUG" default:"false"`
-	Trace                                                   bool   `envconfig:"TRACE" default:"false"`
-	DisableSecretCreation                                   bool   `envconfig:"DISABLE_SECRET_CREATION" default:"false"`
-	TestkubeExecutionNamespaces                             string `envconfig:"TESTKUBE_EXECUTION_NAMESPACES" default:""`
-	GlobalWorkflowTemplateName                              string `envconfig:"TESTKUBE_GLOBAL_WORKFLOW_TEMPLATE_NAME" default:""`
-	EnableK8sEvents                                         bool   `envconfig:"ENABLE_K8S_EVENTS" default:"true"`
-	TestkubeDockerImageVersion                              string `envconfig:"TESTKUBE_DOCKER_IMAGE_VERSION" default:""`
-	DisableDeprecatedTests                                  bool   `envconfig:"DISABLE_DEPRECATED_TESTS" default:"false"`
-	DisableWebhooks                                         bool   `envconfig:"DISABLE_WEBHOOKS" default:"false"`
+	ImageInspectorConfig
+	TestkubeConfigDir               string `envconfig:"TESTKUBE_CONFIG_DIR" default:"config"`
+	TestkubeAnalyticsEnabled        bool   `envconfig:"TESTKUBE_ANALYTICS_ENABLED" default:"false"`
+	TestkubeNamespace               string `envconfig:"TESTKUBE_NAMESPACE" default:"testkube"`
+	TestkubeProWorkerCount          int    `envconfig:"TESTKUBE_PRO_WORKER_COUNT" default:"50"`
+	TestkubeProLogStreamWorkerCount int    `envconfig:"TESTKUBE_PRO_LOG_STREAM_WORKER_COUNT" default:"25"`
+	TestkubeProMigrate              string `envconfig:"TESTKUBE_PRO_MIGRATE" default:"false"`
+	TestkubeProRunnerCustomCASecret string `envconfig:"TESTKUBE_PRO_RUNNER_CUSTOM_CA_SECRET" default:""`
+	CDEventsTarget                  string `envconfig:"CDEVENTS_TARGET" default:""`
+	TestkubeDashboardURI            string `envconfig:"TESTKUBE_DASHBOARD_URI" default:""`
+	TestkubeClusterName             string `envconfig:"TESTKUBE_CLUSTER_NAME" default:""`
+	TestkubeHelmchartVersion        string `envconfig:"TESTKUBE_HELMCHART_VERSION" default:""`
+	DebugListenAddr                 string `envconfig:"DEBUG_LISTEN_ADDR" default:"0.0.0.0:1337"`
+	EnableDebugServer               bool   `envconfig:"ENABLE_DEBUG_SERVER" default:"false"`
+	Debug                           bool   `envconfig:"DEBUG" default:"false"`
+	Trace                           bool   `envconfig:"TRACE" default:"false"`
+	DisableSecretCreation           bool   `envconfig:"DISABLE_SECRET_CREATION" default:"false"`
+	TestkubeExecutionNamespaces     string `envconfig:"TESTKUBE_EXECUTION_NAMESPACES" default:""`
+	GlobalWorkflowTemplateName      string `envconfig:"TESTKUBE_GLOBAL_WORKFLOW_TEMPLATE_NAME" default:""`
+	EnableK8sEvents                 bool   `envconfig:"ENABLE_K8S_EVENTS" default:"true"`
+	TestkubeDockerImageVersion      string `envconfig:"TESTKUBE_DOCKER_IMAGE_VERSION" default:""`
+	DisableDeprecatedTests          bool   `envconfig:"DISABLE_DEPRECATED_TESTS" default:"false"`
+	DisableWebhooks                 bool   `envconfig:"DISABLE_WEBHOOKS" default:"false"`
 
 	FeatureNewExecutions            bool `envconfig:"FEATURE_NEW_EXECUTIONS" default:"false"`
 	FeatureTestWorkflowCloudStorage bool `envconfig:"FEATURE_TESTWORKFLOW_CLOUD_STORAGE" default:"false"`

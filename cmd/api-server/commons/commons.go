@@ -282,22 +282,19 @@ func ReadDefaultExecutors(cfg *config.Config) (executors []testkube.ExecutorDeta
 
 func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.TestKubeCloudAPIClient) config.ProContext {
 	proContext := config.ProContext{
-		APIKey:                                  cfg.TestkubeProAPIKey,
-		URL:                                     cfg.TestkubeProURL,
-		TLSInsecure:                             cfg.TestkubeProTLSInsecure,
-		WorkerCount:                             cfg.TestkubeProWorkerCount,
-		LogStreamWorkerCount:                    cfg.TestkubeProLogStreamWorkerCount,
-		WorkflowNotificationsWorkerCount:        cfg.TestkubeProWorkflowNotificationsWorkerCount,
-		WorkflowServiceNotificationsWorkerCount: cfg.TestkubeProWorkflowServiceNotificationsWorkerCount,
-		WorkflowParallelStepNotificationsWorkerCount: cfg.TestkubeProWorkflowParallelStepNotificationsWorkerCount,
-		SkipVerify:          cfg.TestkubeProSkipVerify,
-		EnvID:               cfg.TestkubeProEnvID,
-		OrgID:               cfg.TestkubeProOrgID,
-		Migrate:             cfg.TestkubeProMigrate,
-		ConnectionTimeout:   cfg.TestkubeProConnectionTimeout,
-		DashboardURI:        cfg.TestkubeDashboardURI,
-		NewExecutions:       grpcClient == nil,
-		TestWorkflowStorage: grpcClient == nil,
+		APIKey:               cfg.TestkubeProAPIKey,
+		URL:                  cfg.TestkubeProURL,
+		TLSInsecure:          cfg.TestkubeProTLSInsecure,
+		WorkerCount:          cfg.TestkubeProWorkerCount,
+		LogStreamWorkerCount: cfg.TestkubeProLogStreamWorkerCount,
+		SkipVerify:           cfg.TestkubeProSkipVerify,
+		EnvID:                cfg.TestkubeProEnvID,
+		OrgID:                cfg.TestkubeProOrgID,
+		Migrate:              cfg.TestkubeProMigrate,
+		ConnectionTimeout:    cfg.TestkubeProConnectionTimeout,
+		DashboardURI:         cfg.TestkubeDashboardURI,
+		NewExecutions:        grpcClient == nil,
+		TestWorkflowStorage:  grpcClient == nil,
 	}
 
 	if cfg.TestkubeProAPIKey == "" || grpcClient == nil {
@@ -377,7 +374,7 @@ func MustCreateNATSConnection(cfg *config.Config) *nats.EncodedConn {
 
 // Components
 
-func CreateImageInspector(cfg *config.Config, configMapClient configmap.Interface, secretClient secret.Interface) imageinspector.Inspector {
+func CreateImageInspector(cfg *config.ImageInspectorConfig, configMapClient configmap.Interface, secretClient secret.Interface) imageinspector.Inspector {
 	inspectorStorages := []imageinspector.Storage{imageinspector.NewMemoryStorage()}
 	if cfg.EnableImageDataPersistentCache {
 		configmapStorage := imageinspector.NewConfigMapStorage(configMapClient, cfg.ImageDataPersistentCacheKey, true)
