@@ -6,10 +6,10 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"google.golang.org/grpc"
 
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/log"
 	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
@@ -44,7 +44,7 @@ type runner struct {
 	worker               executionworkertypes.Worker
 	outputRepository     testworkflow.OutputRepository
 	executionsRepository testworkflow.Repository
-	grpcConn             *grpc.ClientConn
+	grpcClient           cloud.TestKubeCloudAPIClient
 	grpcApiToken         string
 	configRepository     configRepo.Repository
 	emitter              event.Interface
@@ -61,7 +61,7 @@ func New(
 	outputRepository testworkflow.OutputRepository,
 	executionsRepository testworkflow.Repository,
 	configRepository configRepo.Repository,
-	grpcConn *grpc.ClientConn,
+	grpcClient cloud.TestKubeCloudAPIClient,
 	grpcApiToken string,
 	emitter event.Interface,
 	metrics metrics.Metrics,
@@ -74,7 +74,7 @@ func New(
 		outputRepository:     outputRepository,
 		executionsRepository: executionsRepository,
 		configRepository:     configRepository,
-		grpcConn:             grpcConn,
+		grpcClient:           grpcClient,
 		grpcApiToken:         grpcApiToken,
 		emitter:              emitter,
 		metrics:              metrics,
@@ -107,7 +107,7 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 	if err != nil {
 		return err
 	}
-	saver, err := NewExecutionSaver(ctx, r.executionsRepository, r.grpcConn, r.grpcApiToken, execution.Id, organizationId, environmentId, logs, r.newExecutionsEnabled)
+	saver, err := NewExecutionSaver(ctx, r.executionsRepository, r.grpcClient, r.grpcApiToken, execution.Id, organizationId, environmentId, logs, r.newExecutionsEnabled)
 	if err != nil {
 		return err
 	}

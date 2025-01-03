@@ -14,7 +14,6 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"google.golang.org/grpc"
 
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/cloud"
@@ -27,12 +26,12 @@ type SubscriptionChecker struct {
 }
 
 // NewSubscriptionChecker creates a new subscription checker using the agent token
-func NewSubscriptionChecker(ctx context.Context, proContext config.ProContext, cloudClient cloud.TestKubeCloudAPIClient, grpcConn *grpc.ClientConn) (SubscriptionChecker, error) {
-	if cloudClient == nil || grpcConn == nil {
+func NewSubscriptionChecker(ctx context.Context, proContext config.ProContext, cloudClient cloud.TestKubeCloudAPIClient) (SubscriptionChecker, error) {
+	if cloudClient == nil {
 		return SubscriptionChecker{}, nil
 	}
 
-	executor := executor.NewCloudGRPCExecutor(cloudClient, grpcConn, proContext.APIKey)
+	executor := executor.NewCloudGRPCExecutor(cloudClient, proContext.APIKey)
 
 	req := GetOrganizationPlanRequest{}
 	response, err := executor.Execute(ctx, cloudconfig.CmdConfigGetOrganizationPlan, req)

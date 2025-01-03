@@ -95,7 +95,7 @@ var (
 	cloudConn     *grpc.ClientConn
 )
 
-func Cloud(ctx context.Context) (*grpc.ClientConn, cloudexecutor.Executor, cloud.TestKubeCloudAPIClient) {
+func Cloud(ctx context.Context) (cloudexecutor.Executor, cloud.TestKubeCloudAPIClient) {
 	cloudMu.Lock()
 	defer cloudMu.Unlock()
 
@@ -108,8 +108,8 @@ func Cloud(ctx context.Context) (*grpc.ClientConn, cloudexecutor.Executor, cloud
 			ui.Fail(fmt.Errorf("failed to connect with Cloud: %w", err))
 		}
 		cloudClient = cloud.NewTestKubeCloudAPIClient(cloudConn)
-		cloudExecutor = cloudexecutor.NewCloudGRPCExecutor(cloudClient, cloudConn, cfg.ApiKey)
+		cloudExecutor = cloudexecutor.NewCloudGRPCExecutor(cloudClient, cfg.ApiKey)
 	}
 
-	return cloudConn, cloudExecutor, cloudClient
+	return cloudExecutor, cloudClient
 }

@@ -45,7 +45,6 @@ type agentLoop struct {
 	worker              executionworkertypes.Worker
 	logger              *zap.SugaredLogger
 	emitter             event.Interface
-	conn                *grpc.ClientConn
 	client              cloud.TestKubeCloudAPIClient
 	grpcApiToken        string
 	runnerId            string
@@ -64,7 +63,7 @@ func newAgentLoop(
 	worker executionworkertypes.Worker,
 	logger *zap.SugaredLogger,
 	emitter event.Interface,
-	grpcConn *grpc.ClientConn,
+	grpcClient cloud.TestKubeCloudAPIClient,
 	grpcApiToken string,
 	runnerId string,
 	organizationId string,
@@ -76,8 +75,7 @@ func newAgentLoop(
 		worker:               worker,
 		logger:               logger,
 		emitter:              emitter,
-		conn:                 grpcConn,
-		client:               cloud.NewTestKubeCloudAPIClient(grpcConn),
+		client:               grpcClient,
 		grpcApiToken:         grpcApiToken,
 		runnerId:             runnerId,
 		organizationId:       organizationId,

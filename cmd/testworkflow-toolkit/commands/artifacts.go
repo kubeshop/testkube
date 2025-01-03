@@ -85,7 +85,7 @@ func NewArtifactsCmd() *cobra.Command {
 			ctx, cancel := context.WithTimeout(cmd.Context(), 30*time.Second)
 			defer cancel()
 			ctx = agentclient.AddAPIKeyMeta(ctx, config.Config().Worker.Connection.ApiKey)
-			_, executor, client := env.Cloud(ctx)
+			executor, client := env.Cloud(ctx)
 			proContext, err := client.GetProContext(ctx, &emptypb.Empty{})
 			var supported []*cloud.Capability
 			if err != nil && !strings.Contains(err.Error(), "not supported") {
@@ -94,7 +94,6 @@ func NewArtifactsCmd() *cobra.Command {
 			if proContext != nil {
 				supported = proContext.Capabilities
 			}
-			defer executor.Close()
 
 			if config.JUnitParserEnabled() || capabilities.Enabled(supported, capabilities.CapabilityJUnitReports) {
 				junitProcessor := artifacts.NewJUnitPostProcessor(filesystem.NewOSFileSystem(), executor, walker.Root(), config.Config().Resource.FsPrefix)

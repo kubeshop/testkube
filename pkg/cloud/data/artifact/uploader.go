@@ -88,7 +88,7 @@ func (u *CloudUploader) putObject(ctx context.Context, url string, object *scrap
 }
 
 func (u *CloudUploader) Close() error {
-	return u.executor.Close()
+	return nil
 }
 
 func getContentType(filePath string) string {

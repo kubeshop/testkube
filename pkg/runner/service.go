@@ -6,7 +6,6 @@ import (
 
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
-	"google.golang.org/grpc"
 
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/internal/config"
@@ -36,7 +35,6 @@ type service struct {
 	logger            *zap.SugaredLogger
 	eventsEmitter     event.Interface
 	configClient      configrepo.Repository
-	grpcConn          *grpc.ClientConn
 	grpcApiToken      string
 	grpcClient        cloud.TestKubeCloudAPIClient
 	proContext        config.ProContext
@@ -57,20 +55,18 @@ func NewService(
 	eventsEmitter event.Interface,
 	metricsClient metrics.Metrics,
 	configClient configrepo.Repository,
-	grpcConn *grpc.ClientConn,
+	grpcClient cloud.TestKubeCloudAPIClient,
 	grpcApiToken string,
 	proContext config.ProContext,
 	executionWorker executionworkertypes.Worker,
 	opts Options,
 ) Service {
-	grpcClient := cloud.NewTestKubeCloudAPIClient(grpcConn)
-	resultsRepository := cloudtestworkflow.NewCloudRepository(grpcClient, grpcConn, grpcApiToken)
+	resultsRepository := cloudtestworkflow.NewCloudRepository(grpcClient, grpcApiToken)
 
 	return &service{
 		runnerId:          runnerId,
 		logger:            logger,
 		eventsEmitter:     eventsEmitter,
-		grpcConn:          grpcConn,
 		grpcApiToken:      grpcApiToken,
 		grpcClient:        grpcClient,
 		proContext:        proContext,
@@ -79,10 +75,10 @@ func NewService(
 		opts:              opts,
 		runner: New(
 			executionWorker,
-			cloudtestworkflow.NewCloudOutputRepository(grpcClient, grpcConn, grpcApiToken, opts.StorageSkipVerify),
+			cloudtestworkflow.NewCloudOutputRepository(grpcClient, grpcApiToken, opts.StorageSkipVerify),
 			resultsRepository,
 			configClient,
-			grpcConn,
+			grpcClient,
 			grpcApiToken,
 			eventsEmitter,
 			metricsClient,
@@ -130,7 +126,7 @@ func (s *service) start(ctx context.Context) (err error) {
 		s.worker,
 		s.logger,
 		s.eventsEmitter,
-		s.grpcConn,
+		s.grpcClient,
 		s.grpcApiToken,
 		s.runnerId,
 		s.proContext.OrgID,

@@ -154,11 +154,12 @@ func main() {
 		log.DefaultLogger,
 	)
 	commons.ExitOnError("error creating gRPC connection", err)
+	grpcClient := cloud.NewTestKubeCloudAPIClient(grpcConn)
 
-	testWorkflowResultsRepository := cloudtestworkflow.NewCloudRepository(cloud.NewTestKubeCloudAPIClient(grpcConn), grpcConn, cfg.TestkubeProAPIKey)
-	testWorkflowOutputRepository := cloudtestworkflow.NewCloudOutputRepository(cloud.NewTestKubeCloudAPIClient(grpcConn), grpcConn, cfg.TestkubeProAPIKey, cfg.StorageSkipVerify)
+	testWorkflowResultsRepository := cloudtestworkflow.NewCloudRepository(grpcClient, cfg.TestkubeProAPIKey)
+	testWorkflowOutputRepository := cloudtestworkflow.NewCloudOutputRepository(grpcClient, cfg.TestkubeProAPIKey, cfg.StorageSkipVerify)
 	triggerLeaseBackend := triggers.NewAcquireAlwaysLeaseBackend()
-	artifactStorage := cloudartifacts.NewCloudArtifactsStorage(cloud.NewTestKubeCloudAPIClient(grpcConn), grpcConn, cfg.TestkubeProAPIKey)
+	artifactStorage := cloudartifacts.NewCloudArtifactsStorage(grpcClient, cfg.TestkubeProAPIKey)
 
 	nc := commons.MustCreateNATSConnection(cfg)
 	eventBus := bus.NewNATSBus(nc)
@@ -168,13 +169,13 @@ func main() {
 	eventsEmitter = event.NewEmitter(eventBus, cfg.TestkubeClusterName)
 
 	// Check Pro/Enterprise subscription
-	proContext := commons.ReadProContext(ctx, cfg, cloud.NewTestKubeCloudAPIClient(grpcConn))
-	subscriptionChecker, err := checktcl.NewSubscriptionChecker(ctx, proContext, cloud.NewTestKubeCloudAPIClient(grpcConn), grpcConn)
+	proContext := commons.ReadProContext(ctx, cfg, grpcClient)
+	subscriptionChecker, err := checktcl.NewSubscriptionChecker(ctx, proContext, grpcClient)
 	commons.ExitOnError("Failed creating subscription checker", err)
 
 	if proContext.TestWorkflowStorage && cfg.FeatureTestWorkflowCloudStorage {
-		testWorkflowsClient = testworkflowclient.NewCloudTestWorkflowClient(grpcConn, cfg.TestkubeProAPIKey)
-		testWorkflowTemplatesClient = testworkflowtemplateclient.NewCloudTestWorkflowTemplateClient(grpcConn, cfg.TestkubeProAPIKey)
+		testWorkflowsClient = testworkflowclient.NewCloudTestWorkflowClient(grpcClient, cfg.TestkubeProAPIKey)
+		testWorkflowTemplatesClient = testworkflowtemplateclient.NewCloudTestWorkflowTemplateClient(grpcClient, cfg.TestkubeProAPIKey)
 	} else {
 		testWorkflowsClient = testworkflowclient.NewKubernetesTestWorkflowClient(kubeClient, cfg.TestkubeNamespace)
 		testWorkflowTemplatesClient = testworkflowtemplateclient.NewKubernetesTestWorkflowTemplateClient(kubeClient, cfg.TestkubeNamespace)
@@ -200,7 +201,7 @@ func main() {
 			metrics,
 			configMapConfig,
 			secretConfig,
-			grpcConn,
+			grpcClient,
 			nc,
 			eventsEmitter,
 			eventBus,
@@ -228,7 +229,7 @@ func main() {
 		eventsEmitter,
 		metrics,
 		configMapConfig,
-		grpcConn,
+		grpcClient,
 		cfg.TestkubeProAPIKey,
 		proContext,
 		executionWorker,
@@ -248,7 +249,7 @@ func main() {
 	runnerExecutePtr = common.Ptr(runnerService.(runner2.RunnerExecute))
 
 	testWorkflowExecutor := testworkflowexecutor.New(
-		cloud.NewTestKubeCloudAPIClient(grpcConn),
+		grpcClient,
 		cfg.TestkubeProAPIKey,
 		cfg.CDEventsTarget,
 		eventsEmitter,
@@ -355,7 +356,7 @@ func main() {
 	agentHandle, err := agent.NewAgent(
 		log.DefaultLogger,
 		httpServer.Mux.Handler(),
-		cloud.NewTestKubeCloudAPIClient(grpcConn),
+		grpcClient,
 		getDeprecatedLogStream,
 		clusterId,
 		cfg.TestkubeClusterName,

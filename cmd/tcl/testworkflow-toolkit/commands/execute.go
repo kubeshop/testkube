@@ -163,7 +163,7 @@ func buildTestExecution(test testworkflowsv1.StepExecuteTest, async bool) (func(
 
 func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async bool) (func() error, error) {
 	return func() (err error) {
-		_, c, _ := env.Cloud(context.Background())
+		c, _ := env.Cloud(context.Background())
 
 		tags := config.ExecutionTags()
 

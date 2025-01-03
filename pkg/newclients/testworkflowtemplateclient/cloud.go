@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -14,15 +13,13 @@ import (
 var _ TestWorkflowTemplateClient = &cloudTestWorkflowTemplateClient{}
 
 type cloudTestWorkflowTemplateClient struct {
-	conn   *grpc.ClientConn
 	client cloud.TestKubeCloudAPIClient
 	apiKey string
 }
 
-func NewCloudTestWorkflowTemplateClient(conn *grpc.ClientConn, apiKey string) TestWorkflowTemplateClient {
+func NewCloudTestWorkflowTemplateClient(client cloud.TestKubeCloudAPIClient, apiKey string) TestWorkflowTemplateClient {
 	return &cloudTestWorkflowTemplateClient{
-		conn:   conn,
-		client: cloud.NewTestKubeCloudAPIClient(conn),
+		client: client,
 		apiKey: apiKey,
 	}
 }

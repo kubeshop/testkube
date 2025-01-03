@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"github.com/pkg/errors"
-	"google.golang.org/grpc"
 
 	"github.com/kubeshop/testkube/pkg/bufferedstream"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
@@ -23,8 +22,8 @@ type CloudOutputRepository struct {
 	httpClient *http.Client
 }
 
-func NewCloudOutputRepository(client cloud.TestKubeCloudAPIClient, grpcConn *grpc.ClientConn, apiKey string, skipVerify bool) *CloudOutputRepository {
-	r := &CloudOutputRepository{executor: executor.NewCloudGRPCExecutor(client, grpcConn, apiKey), httpClient: http.DefaultClient}
+func NewCloudOutputRepository(client cloud.TestKubeCloudAPIClient, apiKey string, skipVerify bool) *CloudOutputRepository {
+	r := &CloudOutputRepository{executor: executor.NewCloudGRPCExecutor(client, apiKey), httpClient: http.DefaultClient}
 	if skipVerify {
 		transport := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
 		r.httpClient.Transport = transport

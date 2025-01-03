@@ -6,8 +6,6 @@ import (
 	"errors"
 	"time"
 
-	"google.golang.org/grpc"
-
 	testworkflow2 "github.com/kubeshop/testkube/pkg/repository/testworkflow"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -21,8 +19,8 @@ type CloudRepository struct {
 	executor executor.Executor
 }
 
-func NewCloudRepository(client cloud.TestKubeCloudAPIClient, grpcConn *grpc.ClientConn, apiKey string) *CloudRepository {
-	return &CloudRepository{executor: executor.NewCloudGRPCExecutor(client, grpcConn, apiKey)}
+func NewCloudRepository(client cloud.TestKubeCloudAPIClient, apiKey string) *CloudRepository {
+	return &CloudRepository{executor: executor.NewCloudGRPCExecutor(client, apiKey)}
 }
 
 func (r *CloudRepository) Get(ctx context.Context, id string) (testkube.TestWorkflowExecution, error) {

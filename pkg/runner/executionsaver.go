@@ -57,7 +57,7 @@ type executionSaver struct {
 func NewExecutionSaver(
 	ctx context.Context,
 	executionsRepository testworkflow.Repository,
-	grpcConn *grpc.ClientConn,
+	grpcClient cloud.TestKubeCloudAPIClient,
 	grpcApiToken string,
 	id string,
 	organizationId string,
@@ -73,7 +73,7 @@ func NewExecutionSaver(
 		organizationId:       organizationId,
 		environmentId:        environmentId,
 		executionsRepository: executionsRepository,
-		client:               cloud.NewTestKubeCloudAPIClient(grpcConn),
+		client:               grpcClient,
 		grpcApiToken:         grpcApiToken,
 		logs:                 logs,
 		newExecutionsEnabled: newExecutionsEnabled,

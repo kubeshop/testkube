@@ -62,7 +62,7 @@ func loadCapabilities() {
 	ctx := agentclient.AddAPIKeyMeta(context.Background(), cfg.Worker.Connection.ApiKey)
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-	_, _, client := env.Cloud(ctx)
+	_, client := env.Cloud(ctx)
 	proContext, _ := client.GetProContext(ctx, &emptypb.Empty{})
 	if proContext != nil {
 		if isGrpcExecuteCache == nil {
@@ -126,7 +126,7 @@ func executeTestWorkflowApi(workflowName string, request testkube.TestWorkflowEx
 func executeTestWorkflowGrpc(workflowName string, request testkube.TestWorkflowExecutionRequest) ([]testkube.TestWorkflowExecution, error) {
 	cfg := config.Config()
 	ctx := agentclient.AddAPIKeyMeta(context.Background(), cfg.Worker.Connection.ApiKey)
-	_, _, client := env.Cloud(ctx)
+	_, client := env.Cloud(ctx)
 
 	parentIds := make([]string, 0)
 	if cfg.Execution.ParentIds != "" {
@@ -191,7 +191,7 @@ func listTestWorkflowsApi(labels map[string]string) ([]testkube.TestWorkflow, er
 
 func listTestWorkflowsGrpc(labels map[string]string) ([]testkube.TestWorkflow, error) {
 	cfg := config.Config()
-	conn, _, _ := env.Cloud(context.Background())
-	client := testworkflowclient.NewCloudTestWorkflowClient(conn, cfg.Worker.Connection.ApiKey)
+	_, grpcClient := env.Cloud(context.Background())
+	client := testworkflowclient.NewCloudTestWorkflowClient(grpcClient, cfg.Worker.Connection.ApiKey)
 	return client.List(context.Background(), cfg.Execution.EnvironmentId, testworkflowclient.ListOptions{Labels: labels})
 }
