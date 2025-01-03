@@ -282,16 +282,16 @@ func ReadDefaultExecutors(cfg *config.Config) (executors []testkube.ExecutorDeta
 
 func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.TestKubeCloudAPIClient) config.ProContext {
 	proContext := config.ProContext{
-		APIKey:               cfg.TestkubeProAPIKey,
-		URL:                  cfg.TestkubeProURL,
-		TLSInsecure:          cfg.TestkubeProTLSInsecure,
+		APIKey:               cfg.ControlPlaneConfig.TestkubeProAPIKey,
+		URL:                  cfg.ControlPlaneConfig.TestkubeProURL,
+		TLSInsecure:          cfg.ControlPlaneConfig.TestkubeProTLSInsecure,
+		SkipVerify:           cfg.ControlPlaneConfig.TestkubeProSkipVerify,
+		EnvID:                cfg.ControlPlaneConfig.TestkubeProEnvID,
+		OrgID:                cfg.ControlPlaneConfig.TestkubeProOrgID,
+		ConnectionTimeout:    cfg.ControlPlaneConfig.TestkubeProConnectionTimeout,
 		WorkerCount:          cfg.TestkubeProWorkerCount,
 		LogStreamWorkerCount: cfg.TestkubeProLogStreamWorkerCount,
-		SkipVerify:           cfg.TestkubeProSkipVerify,
-		EnvID:                cfg.TestkubeProEnvID,
-		OrgID:                cfg.TestkubeProOrgID,
 		Migrate:              cfg.TestkubeProMigrate,
-		ConnectionTimeout:    cfg.TestkubeProConnectionTimeout,
 		DashboardURI:         cfg.TestkubeDashboardURI,
 		NewExecutions:        grpcClient == nil,
 		TestWorkflowStorage:  grpcClient == nil,

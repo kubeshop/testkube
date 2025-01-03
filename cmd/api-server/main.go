@@ -4,7 +4,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"strings"
 
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"google.golang.org/grpc"
@@ -111,36 +110,18 @@ func main() {
 	var runnerExecutePtr *runner2.RunnerExecute
 	lazyRunner := runner2.LazyExecute(runnerExecutePtr)
 
-	// Start local Control Plane
+	// Connect to the Control Plane
+	var grpcConn *grpc.ClientConn
 	if mode == common.ModeStandalone {
 		controlPlane := services.CreateControlPlane(ctx, cfg, features, secretManager, metrics, lazyRunner, lazyEmitter)
 		g.Go(func() error {
-			return controlPlane.Run(ctx)
+			return controlPlane.Start(ctx)
 		})
 
 		// Rewire connection
+		grpcConn, err = agentclient.NewGRPCConnection(ctx, true, true, fmt.Sprintf("127.0.0.1:%d", cfg.GRPCServerPort), "", "", "", log.DefaultLogger)
 		cfg.TestkubeProURL = fmt.Sprintf("%s:%d", cfg.APIServerFullname, cfg.GRPCServerPort)
 		cfg.TestkubeProTLSInsecure = true
-	}
-
-	clusterId, _ := configMapConfig.GetUniqueClusterId(ctx)
-	telemetryEnabled, _ := configMapConfig.GetTelemetryEnabled(ctx)
-
-	// k8s clients
-	webhooksClient := executorsclientv1.NewWebhooksClient(kubeClient, cfg.TestkubeNamespace)
-	testTriggersClient := testtriggersclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
-
-	envs := commons.GetEnvironmentVariables()
-
-	inspector := commons.CreateImageInspector(&cfg.ImageInspectorConfig, configmap.NewClientFor(clientset, cfg.TestkubeNamespace), secret.NewClientFor(clientset, cfg.TestkubeNamespace))
-
-	var testWorkflowsClient testworkflowclient.TestWorkflowClient
-	var testWorkflowTemplatesClient testworkflowtemplateclient.TestWorkflowTemplateClient
-
-	// Use local network for local access
-	var grpcConn *grpc.ClientConn
-	if strings.HasPrefix(cfg.TestkubeProURL, fmt.Sprintf("%s:%d", cfg.APIServerFullname, cfg.GRPCServerPort)) {
-		grpcConn, err = agentclient.NewGRPCConnection(ctx, true, true, fmt.Sprintf("127.0.0.1:%d", cfg.GRPCServerPort), "", "", "", log.DefaultLogger)
 	} else {
 		grpcConn, err = agentclient.NewGRPCConnection(
 			ctx,
@@ -155,6 +136,20 @@ func main() {
 	}
 	commons.ExitOnError("error creating gRPC connection", err)
 	grpcClient := cloud.NewTestKubeCloudAPIClient(grpcConn)
+
+	clusterId, _ := configMapConfig.GetUniqueClusterId(ctx)
+	telemetryEnabled, _ := configMapConfig.GetTelemetryEnabled(ctx)
+
+	// k8s clients
+	webhooksClient := executorsclientv1.NewWebhooksClient(kubeClient, cfg.TestkubeNamespace)
+	testTriggersClient := testtriggersclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
+
+	envs := commons.GetEnvironmentVariables()
+
+	inspector := commons.CreateImageInspector(&cfg.ImageInspectorConfig, configmap.NewClientFor(clientset, cfg.TestkubeNamespace), secret.NewClientFor(clientset, cfg.TestkubeNamespace))
+
+	var testWorkflowsClient testworkflowclient.TestWorkflowClient
+	var testWorkflowTemplatesClient testworkflowtemplateclient.TestWorkflowTemplateClient
 
 	testWorkflowResultsRepository := cloudtestworkflow.NewCloudRepository(grpcClient, cfg.TestkubeProAPIKey)
 	testWorkflowOutputRepository := cloudtestworkflow.NewCloudOutputRepository(grpcClient, cfg.TestkubeProAPIKey, cfg.StorageSkipVerify)

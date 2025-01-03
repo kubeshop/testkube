@@ -325,7 +325,7 @@ func (s *Server) Call(ctx context.Context, request *cloud.CommandRequest) (*clou
 	return nil, errors.Errorf("command not implemented: %s", request.Command)
 }
 
-func (s *Server) Run(ctx context.Context) error {
+func (s *Server) Start(ctx context.Context) error {
 	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", s.cfg.Port))
 	if err != nil {
 		return errors.Errorf("failed to listen for GraphQL server: %v", err)
