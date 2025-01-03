@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/gofiber/fiber/v2/middleware/cors"
-	"google.golang.org/grpc"
 
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
 	testkubeclientset "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
@@ -140,14 +139,12 @@ func main() {
 	var testWorkflowsClient testworkflowclient.TestWorkflowClient
 	var testWorkflowTemplatesClient testworkflowtemplateclient.TestWorkflowTemplateClient
 
-	var grpcClient cloud.TestKubeCloudAPIClient
-	var grpcConn *grpc.ClientConn
 	// Use local network for local access
 	controlPlaneUrl := cfg.TestkubeProURL
 	if strings.HasPrefix(controlPlaneUrl, fmt.Sprintf("%s:%d", cfg.APIServerFullname, cfg.GRPCServerPort)) {
 		controlPlaneUrl = fmt.Sprintf("127.0.0.1:%d", cfg.GRPCServerPort)
 	}
-	grpcConn, err = agentclient.NewGRPCConnection(
+	grpcConn, err := agentclient.NewGRPCConnection(
 		ctx,
 		cfg.TestkubeProTLSInsecure,
 		cfg.TestkubeProSkipVerify,
@@ -159,12 +156,10 @@ func main() {
 	)
 	commons.ExitOnError("error creating gRPC connection", err)
 
-	grpcClient = cloud.NewTestKubeCloudAPIClient(grpcConn)
-
-	testWorkflowResultsRepository := cloudtestworkflow.NewCloudRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
-	testWorkflowOutputRepository := cloudtestworkflow.NewCloudOutputRepository(grpcClient, grpcConn, cfg.TestkubeProAPIKey, cfg.StorageSkipVerify)
+	testWorkflowResultsRepository := cloudtestworkflow.NewCloudRepository(cloud.NewTestKubeCloudAPIClient(grpcConn), grpcConn, cfg.TestkubeProAPIKey)
+	testWorkflowOutputRepository := cloudtestworkflow.NewCloudOutputRepository(cloud.NewTestKubeCloudAPIClient(grpcConn), grpcConn, cfg.TestkubeProAPIKey, cfg.StorageSkipVerify)
 	triggerLeaseBackend := triggers.NewAcquireAlwaysLeaseBackend()
-	artifactStorage := cloudartifacts.NewCloudArtifactsStorage(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
+	artifactStorage := cloudartifacts.NewCloudArtifactsStorage(cloud.NewTestKubeCloudAPIClient(grpcConn), grpcConn, cfg.TestkubeProAPIKey)
 
 	nc := commons.MustCreateNATSConnection(cfg)
 	eventBus := bus.NewNATSBus(nc)
@@ -174,8 +169,8 @@ func main() {
 	eventsEmitter = event.NewEmitter(eventBus, cfg.TestkubeClusterName)
 
 	// Check Pro/Enterprise subscription
-	proContext := commons.ReadProContext(ctx, cfg, grpcClient)
-	subscriptionChecker, err := checktcl.NewSubscriptionChecker(ctx, proContext, grpcClient, grpcConn)
+	proContext := commons.ReadProContext(ctx, cfg, cloud.NewTestKubeCloudAPIClient(grpcConn))
+	subscriptionChecker, err := checktcl.NewSubscriptionChecker(ctx, proContext, cloud.NewTestKubeCloudAPIClient(grpcConn), grpcConn)
 	commons.ExitOnError("Failed creating subscription checker", err)
 
 	if proContext.TestWorkflowStorage && cfg.FeatureTestWorkflowCloudStorage {
@@ -206,7 +201,6 @@ func main() {
 			metrics,
 			configMapConfig,
 			secretConfig,
-			grpcClient,
 			grpcConn,
 			nc,
 			eventsEmitter,
@@ -249,14 +243,13 @@ func main() {
 			NewExecutionsEnabled:       proContext.NewExecutions && cfg.FeatureNewExecutions,
 		},
 	)
-	commons.ExitOnError("starting the runner service", err)
 	g.Go(func() error {
 		return runnerService.Run(ctx)
 	})
 	runnerExecutePtr = common.Ptr(runnerService.(runner2.RunnerExecute))
 
 	testWorkflowExecutor := testworkflowexecutor.New(
-		grpcClient,
+		cloud.NewTestKubeCloudAPIClient(grpcConn),
 		cfg.TestkubeProAPIKey,
 		cfg.CDEventsTarget,
 		eventsEmitter,
@@ -363,7 +356,7 @@ func main() {
 	agentHandle, err := agent.NewAgent(
 		log.DefaultLogger,
 		httpServer.Mux.Handler(),
-		grpcClient,
+		cloud.NewTestKubeCloudAPIClient(grpcConn),
 		getDeprecatedLogStream,
 		clusterId,
 		cfg.TestkubeClusterName,

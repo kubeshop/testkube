@@ -57,7 +57,6 @@ func CreateDeprecatedSystem(
 	metrics metrics.Metrics,
 	configMapConfig configRepo.Repository,
 	secretConfig testkube.SecretConfig,
-	grpcClient cloud.TestKubeCloudAPIClient,
 	grpcConn *grpc.ClientConn,
 	natsConn *nats.EncodedConn,
 	eventsEmitter *event.Emitter,
@@ -70,6 +69,8 @@ func CreateDeprecatedSystem(
 	commons.ExitOnError("Getting kubernetes client", err)
 	clientset, err := k8sclient.ConnectToK8s()
 	commons.ExitOnError("Creating k8s clientset", err)
+
+	grpcClient := cloud.NewTestKubeCloudAPIClient(grpcConn)
 
 	secretClient := secret.NewClientFor(clientset, cfg.TestkubeNamespace)
 	configMapClient := configmap.NewClientFor(clientset, cfg.TestkubeNamespace)
