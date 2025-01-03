@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	"google.golang.org/grpc"
 
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
 	testkubeclientset "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
@@ -139,20 +140,21 @@ func main() {
 	var testWorkflowTemplatesClient testworkflowtemplateclient.TestWorkflowTemplateClient
 
 	// Use local network for local access
-	controlPlaneUrl := cfg.TestkubeProURL
-	if strings.HasPrefix(controlPlaneUrl, fmt.Sprintf("%s:%d", cfg.APIServerFullname, cfg.GRPCServerPort)) {
-		controlPlaneUrl = fmt.Sprintf("127.0.0.1:%d", cfg.GRPCServerPort)
+	var grpcConn *grpc.ClientConn
+	if strings.HasPrefix(cfg.TestkubeProURL, fmt.Sprintf("%s:%d", cfg.APIServerFullname, cfg.GRPCServerPort)) {
+		grpcConn, err = agentclient.NewGRPCConnection(ctx, true, true, fmt.Sprintf("127.0.0.1:%d", cfg.GRPCServerPort), "", "", "", log.DefaultLogger)
+	} else {
+		grpcConn, err = agentclient.NewGRPCConnection(
+			ctx,
+			cfg.TestkubeProTLSInsecure,
+			cfg.TestkubeProSkipVerify,
+			cfg.TestkubeProURL,
+			cfg.TestkubeProCertFile,
+			cfg.TestkubeProKeyFile,
+			cfg.TestkubeProCAFile, //nolint
+			log.DefaultLogger,
+		)
 	}
-	grpcConn, err := agentclient.NewGRPCConnection(
-		ctx,
-		cfg.TestkubeProTLSInsecure,
-		cfg.TestkubeProSkipVerify,
-		controlPlaneUrl,
-		cfg.TestkubeProCertFile,
-		cfg.TestkubeProKeyFile,
-		cfg.TestkubeProCAFile, //nolint
-		log.DefaultLogger,
-	)
 	commons.ExitOnError("error creating gRPC connection", err)
 	grpcClient := cloud.NewTestKubeCloudAPIClient(grpcConn)
 
