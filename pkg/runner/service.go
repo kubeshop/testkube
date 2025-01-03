@@ -16,7 +16,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/event"
 	configrepo "github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
-	"github.com/kubeshop/testkube/pkg/runner"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 )
 
@@ -42,7 +41,7 @@ type service struct {
 	grpcClient        cloud.TestKubeCloudAPIClient
 	proContext        config.ProContext
 	worker            executionworkertypes.Worker
-	runner            runner.Runner
+	runner            Runner
 	resultsRepository testworkflow.Repository
 	opts              Options
 }
@@ -78,7 +77,7 @@ func NewService(
 		resultsRepository: resultsRepository,
 		worker:            executionWorker,
 		opts:              opts,
-		runner: runner.New(
+		runner: New(
 			executionWorker,
 			cloudtestworkflow.NewCloudOutputRepository(grpcClient, grpcConn, grpcApiToken, opts.StorageSkipVerify),
 			resultsRepository,

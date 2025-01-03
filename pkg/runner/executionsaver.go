@@ -25,11 +25,6 @@ const (
 	ExecutionSaverUpdateRetryDelay = 300 * time.Millisecond
 )
 
-const (
-	apiKeyMeta = "api-key"
-	orgIdMeta  = "organization-id"
-)
-
 //go:generate mockgen -destination=./mock_executionsaver.go -package=runner "github.com/kubeshop/testkube/pkg/runner" ExecutionSaver
 type ExecutionSaver interface {
 	UpdateResult(result testkube.TestWorkflowResult)

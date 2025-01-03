@@ -10,7 +10,6 @@ import (
 
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
 	testkubeclientset "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
-	runner3 "github.com/kubeshop/testkube/cmd/api-server/apps/runner"
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	"github.com/kubeshop/testkube/cmd/api-server/services"
 	"github.com/kubeshop/testkube/internal/app/api/debug"
@@ -223,7 +222,7 @@ func main() {
 	})
 
 	runnerId := proContext.EnvID // TODO: Use runner ID
-	runnerService := runner3.NewService(
+	runnerService := runner2.NewService(
 		runnerId,
 		log.DefaultLogger,
 		eventsEmitter,
@@ -233,7 +232,7 @@ func main() {
 		cfg.TestkubeProAPIKey,
 		proContext,
 		executionWorker,
-		runner3.Options{
+		runner2.Options{
 			ClusterID:                  clusterId,
 			DashboardURI:               cfg.TestkubeDashboardURI,
 			DefaultNamespace:           cfg.TestkubeNamespace,
@@ -244,7 +243,7 @@ func main() {
 		},
 	)
 	g.Go(func() error {
-		return runnerService.Run(ctx)
+		return runnerService.Start(ctx)
 	})
 	runnerExecutePtr = common.Ptr(runnerService.(runner2.RunnerExecute))
 

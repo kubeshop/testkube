@@ -25,7 +25,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
 	"github.com/kubeshop/testkube/pkg/event"
 	testworkflowmappers "github.com/kubeshop/testkube/pkg/mapper/testworkflows"
-	"github.com/kubeshop/testkube/pkg/runner"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 )
@@ -42,7 +41,7 @@ const (
 )
 
 type agentLoop struct {
-	runner              runner.Runner
+	runner              Runner
 	worker              executionworkertypes.Worker
 	logger              *zap.SugaredLogger
 	emitter             event.Interface
@@ -61,7 +60,7 @@ type AgentLoop interface {
 }
 
 func newAgentLoop(
-	runner runner.Runner,
+	runner Runner,
 	worker executionworkertypes.Worker,
 	logger *zap.SugaredLogger,
 	emitter event.Interface,
