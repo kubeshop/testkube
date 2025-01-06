@@ -1,6 +1,7 @@
 package expressions
 
 import (
+	"bytes"
 	"encoding/json"
 	"strings"
 )
@@ -69,7 +70,39 @@ func (s *static) Template() string {
 		return ""
 	}
 	v, _ := s.StringValue()
-	return strings.ReplaceAll(strings.ReplaceAll(v, "{{", "{{\"{{\"}}"), "{", "{{\"{\"}}")
+	oldValue := strings.ReplaceAll(v, "{{", "{{\"{{\"}}")
+	newValue := oldValue
+	replacement := "{{\"{\"}}"
+	offset := 0
+	extension := 0
+	for index := strings.Index(oldValue[offset:], "{"); index != -1; index = strings.Index(oldValue[offset:], "{") {
+		if offset+index > 0 && string(oldValue[offset+index-1:offset+index]) == "{" {
+			offset += index + 1
+			continue
+		}
+
+		if offset+index < len(oldValue)-1 && string(oldValue[offset+index+1:offset+index+2]) == "{" {
+			offset += index + 1
+			continue
+		}
+
+		var value bytes.Buffer
+		if index+offset+extension > 0 {
+			value.WriteString(newValue[:index+offset+extension])
+		}
+
+		value.WriteString(replacement)
+
+		if index+offset+extension < len(newValue)-1 {
+			value.WriteString(newValue[index+offset+extension+1:])
+		}
+
+		newValue = value.String()
+		extension += len(replacement) - 1
+		offset += index + 1
+	}
+
+	return newValue
 }
 
 func (s *static) SafeResolve(_ ...Machine) (Expression, bool, error) {
