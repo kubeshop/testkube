@@ -211,7 +211,7 @@ func TestCompileEscapeTemplate(t *testing.T) {
 }
 
 func TestCompileEscapeBrace(t *testing.T) {
-	assert.Equal(t, `foo{{"{"}}barbaz{{"{"}}`, MustCompileTemplate(`foo{{"__{bar"}}baz{{"__{"}}`).Template())
+	assert.Equal(t, `foo{{"{"}}barbaz{{"{"}}`, MustCompileTemplate(`foo{{"{bar"}}baz{{"{"}}`).Template())
 }
 
 func TestCompileStandardLib(t *testing.T) {

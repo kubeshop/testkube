@@ -69,7 +69,7 @@ func (s *static) Template() string {
 		return ""
 	}
 	v, _ := s.StringValue()
-	return strings.ReplaceAll(strings.ReplaceAll(v, "{{", "{{\"{{\"}}"), "__{", "{{\"{\"}}")
+	return strings.ReplaceAll(strings.ReplaceAll(v, "{{", "{{\"{{\"}}"), "{", "{{\"{\"}}")
 }
 
 func (s *static) SafeResolve(_ ...Machine) (Expression, bool, error) {
