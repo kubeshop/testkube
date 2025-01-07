@@ -70,17 +70,21 @@ func (s *static) Template() string {
 		return ""
 	}
 	v, _ := s.StringValue()
+	// Escape double braces
 	oldValue := strings.ReplaceAll(v, "{{", "{{\"{{\"}}")
+
+	// Escape single brace
 	newValue := oldValue
 	replacement := "{{\"{\"}}"
 	offset := 0
 	extension := 0
 	for index := strings.Index(oldValue[offset:], "{"); index != -1; index = strings.Index(oldValue[offset:], "{") {
+		// make sure no other brace before
 		if offset+index > 0 && string(oldValue[offset+index-1:offset+index]) == "{" {
 			offset += index + 1
 			continue
 		}
-
+		// make sure no other brace after
 		if offset+index < len(oldValue)-1 && string(oldValue[offset+index+1:offset+index+2]) == "{" {
 			offset += index + 1
 			continue
