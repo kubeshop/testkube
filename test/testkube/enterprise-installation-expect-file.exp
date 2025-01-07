@@ -3,8 +3,8 @@ log_user 1 ;# enable logging of all process output
 set timeout -1 ;# disable the default 10s timeout
 
 spawn {*}$env(TESTKUBE_INIT_COMMAND)
-expect -re "Do you want to continue\\?.*"
+expect "Do you want to continue?"
 send "y\r"
-expect -re "Do you want to open the dashboard\\?.*"
+expect "Do you want to open the dashboard?"
 send "n\r"
 expect eof
