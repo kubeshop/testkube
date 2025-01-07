@@ -7352,6 +7352,10 @@ components:
           $ref: "#/components/schemas/WebhookSchema"
         webhookTemplateRef:
           $ref: "#/components/schemas/WebhookTemplateRef"
+        isTemplate:
+          type: boolean
+          description: whether webhook is used as a template
+          default: false
 
     Event:
       description: Event data

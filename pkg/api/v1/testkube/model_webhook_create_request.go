@@ -34,4 +34,6 @@ type WebhookCreateRequest struct {
 	Config             map[string]WebhookConfigValue     `json:"config,omitempty"`
 	Parameters         map[string]WebhookParameterSchema `json:"parameters,omitempty"`
 	WebhookTemplateRef *WebhookTemplateRef               `json:"webhookTemplateRef,omitempty"`
+	// whether webhook is used as a template
+	IsTemplate bool `json:"isTemplate,omitempty"`
 }

@@ -63,10 +63,24 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 	// and create listeners for each webhook spec
 OuterLoop:
 	for _, webhook := range webhookList.Items {
+		if webhook.Spec.IsTemplate {
+			continue
+		}
+
 		if webhook.Spec.WebhookTemplateRef != nil && webhook.Spec.WebhookTemplateRef.Name != "" {
 			webhookTemplate, err := r.WebhooksClient.Get(webhook.Spec.WebhookTemplateRef.Name)
 			if err != nil {
 				r.log.Errorw("error webhook template loading", "error", err, "name", webhook.Name, "template", webhook.Spec.WebhookTemplateRef.Name)
+				continue
+			}
+
+			if !webhookTemplate.Spec.IsTemplate {
+				r.log.Errorw("error webhook ref is not a template", "name", webhook.Name, "template", webhook.Spec.WebhookTemplateRef.Name)
+				continue
+			}
+
+			if webhookTemplate.Spec.Disabled {
+				r.log.Errorw("error webhook template is disabled", "name", webhook.Name, "template", webhook.Spec.WebhookTemplateRef.Name)
 				continue
 			}
 
@@ -242,10 +256,6 @@ func mergeWebhooks(dst, src executorv1.Webhook) executorv1.Webhook {
 		if _, ok := dstEventTypes[evenType]; !ok {
 			dst.Spec.Events = append(dst.Spec.Events, evenType)
 		}
-	}
-
-	if !dst.Spec.Disabled && src.Spec.Disabled {
-		dst.Spec.Disabled = src.Spec.Disabled
 	}
 
 	if src.Spec.Config != nil {

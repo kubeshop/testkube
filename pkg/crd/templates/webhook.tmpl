@@ -85,4 +85,7 @@ spec:
   webhookTemplateRef:
     name: {{ .WebhookTemplateRef.Name }}
   {{- end }}
+  {{- if .IsTemplate }}
+  isTemplate: {{ .IsTemplate }}
+  {{- end }}
   {{- end }}

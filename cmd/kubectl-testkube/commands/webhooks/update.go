@@ -21,6 +21,7 @@ func UpdateWebhookCmd() *cobra.Command {
 		config                   map[string]string
 		parameters               map[string]string
 		webhookTemplateReference string
+		isTemplate               bool
 	)
 
 	cmd := &cobra.Command{
@@ -64,6 +65,7 @@ func UpdateWebhookCmd() *cobra.Command {
 	cmd.Flags().StringToStringVarP(&parameters, "parameter", "", nil, "webhook parameter variable with csv coluums (description,required,example,default,pattern): --parameter var3=descr,true,12345,0,[0-9]*")
 	cmd.Flags().StringVar(&webhookTemplateReference, "webhook-template-reference", "", "reference to webhook to use as template for the webhook")
 	cmd.Flags().BoolVar(&disable, "disable", false, "disable webhook")
+	cmd.Flags().BoolVar(&isTemplate, "is-template", false, "use webhook as a template")
 	cmd.Flags().MarkDeprecated("enable", "enable webhook is depecated")
 
 	return cmd

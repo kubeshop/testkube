@@ -86,6 +86,11 @@ func NewCreateWebhookOptionsFromFlags(cmd *cobra.Command) (options apiv1.CreateW
 		}
 	}
 
+	isTemplate, err := cmd.Flags().GetBool("is-template")
+	if err != nil {
+		return options, err
+	}
+
 	options = apiv1.CreateWebhookOptions{
 		Name:                     name,
 		Namespace:                namespace,
@@ -101,6 +106,7 @@ func NewCreateWebhookOptionsFromFlags(cmd *cobra.Command) (options apiv1.CreateW
 		Config:                   config,
 		Parameters:               parameter,
 		WebhookTemplateRef:       webhookTemplateReference,
+		IsTemplate:               isTemplate,
 	}
 
 	return options, nil
@@ -222,6 +228,14 @@ func NewUpdateWebhookOptionsFromFlags(cmd *cobra.Command) (options apiv1.UpdateW
 		options.WebhookTemplateRef = common.Ptr(&testkube.WebhookTemplateRef{
 			Name: cmd.Flag("webhook-template-reference").Value.String(),
 		})
+	}
+
+	if cmd.Flag("is-template").Changed {
+		isTemplate, err := cmd.Flags().GetBool("is-template")
+		if err != nil {
+			return options, err
+		}
+		options.IsTemplate = &isTemplate
 	}
 
 	return options, nil
