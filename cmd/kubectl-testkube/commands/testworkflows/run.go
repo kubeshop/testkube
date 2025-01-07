@@ -193,7 +193,7 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 	cmd.Flags().StringVar(&format, "format", "folder", "data format for storing files, one of folder|archive")
 	cmd.Flags().StringArrayVarP(&masks, "mask", "", []string{}, "regexp to filter downloaded files, single or comma separated, like report/.* or .*\\.json,.*\\.js$")
 	cmd.Flags().StringToStringVarP(&tags, "tag", "", map[string]string{}, "execution tag adds a tag to execution in form of name1=val1 passed to executor")
-	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label expression to select test workflows to run using key value pair: --label key1=value1")
+	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label is used to select test workflows to run using key value pair: --label key1=value1 or label expression")
 	cmd.Flags().StringVar(&serviceName, "service-name", "", "test workflow service name")
 	cmd.Flags().IntVar(&serviceIndex, "service-index", 0, "test workflow service index starting from 0")
 	cmd.Flags().StringVar(&parallelStepName, "parallel-step-name", "", "test workflow parallel step name or reference")

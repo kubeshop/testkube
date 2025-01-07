@@ -422,7 +422,7 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&downloadArtifactsEnabled, "download-artifacts", "d", false, "download artifacts automatically")
 	cmd.Flags().StringToStringVarP(&envs, "env", "", map[string]string{}, "envs in a form of name1=val1 passed to executor")
 	cmd.Flags().StringToStringVarP(&secretEnvs, "secret", "", map[string]string{}, "secret envs in a form of secret_key1=secret_name1 passed to executor")
-	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label expression to select tests to run using key value pair: --label key1=value1")
+	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label is used to select tests to run using key value pair: --label key1=value1 or label expression")
 	cmd.Flags().IntVar(&concurrencyLevel, "concurrency", 10, "concurrency level for multiple test execution")
 	cmd.Flags().IntVar(&iterations, "iterations", 1, "how many times to run the test")
 	cmd.Flags().StringVar(&httpProxy, "http-proxy", "", "http proxy for executor containers")
