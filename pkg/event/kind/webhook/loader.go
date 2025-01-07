@@ -112,28 +112,28 @@ OuterLoop:
 		types := webhooks.MapEventArrayToCRDEvents(webhook.Spec.Events)
 		name := fmt.Sprintf("%s.%s", webhook.ObjectMeta.Namespace, webhook.ObjectMeta.Name)
 		vars := make(map[string]string)
-		for key, value := range webhook.Spec.Config {
+		for key, val := range webhook.Spec.Config {
 			data := ""
-			if value.Public != nil {
-				data = *value.Public
+			if val.Value != nil {
+				data = *val.Value
 			}
 
-			if value.Private != nil {
+			if val.Secret != nil {
 				var ns []string
-				if value.Private.Namespace != "" {
-					ns = append(ns, value.Private.Namespace)
+				if val.Secret.Namespace != "" {
+					ns = append(ns, val.Secret.Namespace)
 				}
 
-				elements, err := r.secretClient.Get(value.Private.Name, ns...)
+				elements, err := r.secretClient.Get(val.Secret.Name, ns...)
 				if err != nil {
-					r.log.Errorw("error secret loading", "error", err, "name", value.Private.Name)
+					r.log.Errorw("error secret loading", "error", err, "name", val.Secret.Name)
 					continue
 				}
 
-				if element, ok := elements[value.Private.Key]; ok {
+				if element, ok := elements[val.Secret.Key]; ok {
 					data = element
 				} else {
-					r.log.Errorw("error secret key finding loading", "name", value.Private.Name, "key", value.Private.Key)
+					r.log.Errorw("error secret key finding loading", "name", val.Secret.Name, "key", val.Secret.Key)
 					continue
 				}
 			}

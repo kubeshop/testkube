@@ -10727,10 +10727,10 @@ components:
       type: object
       description: configuration value
       properties:
-        public:
+        value:
           description: public value to use in webhook template
           $ref: "#/components/schemas/BoxedString"
-        private:
+        secret:
           description: private value stored in secret to use in webhook template
           $ref: "#/components/schemas/SecretRef"
 

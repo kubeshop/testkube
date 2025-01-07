@@ -245,12 +245,12 @@ func getWebhookConfig(configs map[string]string) (map[string]testkube.WebhookCon
 	config := map[string]testkube.WebhookConfigValue{}
 	for key, value := range configs {
 		switch {
-		case strings.HasPrefix(value, "public="):
+		case strings.HasPrefix(value, "value="):
 			config[key] = testkube.WebhookConfigValue{
-				Public: &testkube.BoxedString{Value: strings.TrimPrefix(value, "public=")},
+				Value: &testkube.BoxedString{Value: strings.TrimPrefix(value, "value=")},
 			}
-		case strings.HasPrefix(value, "private="):
-			data := strings.TrimPrefix(value, "private=")
+		case strings.HasPrefix(value, "secret="):
+			data := strings.TrimPrefix(value, "secret=")
 			r := csv.NewReader(strings.NewReader(data))
 			r.Comma = ','
 			r.LazyQuotes = true
@@ -270,7 +270,7 @@ func getWebhookConfig(configs map[string]string) (map[string]testkube.WebhookCon
 			}
 
 			config[key] = testkube.WebhookConfigValue{
-				Private: &testkube.SecretRef{
+				Secret: &testkube.SecretRef{
 					Namespace: records[0][0],
 					Name:      records[0][1],
 					Key:       records[0][2],

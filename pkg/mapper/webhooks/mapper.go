@@ -49,8 +49,8 @@ func MapSecretRefCRDToAPI(v executorv1.SecretRef) testkube.SecretRef {
 // MapConigValueCRDToAPI maps config value to OpenAPI spec
 func MapConfigValueCRDToAPI(v executorv1.WebhookConfigValue) testkube.WebhookConfigValue {
 	return testkube.WebhookConfigValue{
-		Public:  MapStringToBoxedString(v.Public),
-		Private: common.MapPtr(v.Private, MapSecretRefCRDToAPI),
+		Value:  MapStringToBoxedString(v.Value),
+		Secret: common.MapPtr(v.Secret, MapSecretRefCRDToAPI),
 	}
 }
 
@@ -133,8 +133,8 @@ func MapSecretRefAPIToCRD(v testkube.SecretRef) executorv1.SecretRef {
 // MapConigValueAPIToCRD maps config value to CRD spec
 func MapConfigValueAPIToCRD(v testkube.WebhookConfigValue) executorv1.WebhookConfigValue {
 	return executorv1.WebhookConfigValue{
-		Public:  MapBoxedStringToString(v.Public),
-		Private: common.MapPtr(v.Private, MapSecretRefAPIToCRD),
+		Value:  MapBoxedStringToString(v.Value),
+		Secret: common.MapPtr(v.Secret, MapSecretRefAPIToCRD),
 	}
 }
 

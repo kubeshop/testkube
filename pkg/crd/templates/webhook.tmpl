@@ -47,16 +47,16 @@ spec:
   {{- end }}
   {{- if ne (len .Config) 0 }}
   config:
-  {{- range $key, $value := .Config }}
+  {{- range $key, $val := .Config }}
     {{ $key }}:
-    {{- if $value.Public }}
-      public: {{ $value.Public.Value }}
+    {{- if $val.Value }}
+      value: {{ $val.Value.Value }}
     {{- end }}
-    {{- if $value.Private }}
-      private:
-        namespace: {{ $value.Private.Namespace }}
-        name: {{ $value.Private.Name }}
-        key: {{ $value.Private.Key }}
+    {{- if $val.Secret }}
+      secret:
+        namespace: {{ $val.Secret.Namespace }}
+        name: {{ $val.Secret.Name }}
+        key: {{ $val.Secret.Key }}
     {{- end }}
   {{- end }}
   {{- end }}

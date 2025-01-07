@@ -51,11 +51,11 @@ func (w *Webhook) QuoteTextFields() {
 		w.PayloadTemplate = fmt.Sprintf("%q", w.PayloadTemplate)
 	}
 
-	for key, value := range w.Config {
-		if value.Public != nil && value.Public.Value != "" {
-			value.Public.Value = fmt.Sprintf("%q", value.Public.Value)
+	for key, val := range w.Config {
+		if val.Value != nil && val.Value.Value != "" {
+			val.Value.Value = fmt.Sprintf("%q", val.Value.Value)
 		}
-		w.Config[key] = value
+		w.Config[key] = val
 	}
 
 	for key, value := range w.Parameters {
