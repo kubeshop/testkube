@@ -350,27 +350,29 @@ func main() {
 	if deprecatedSystem != nil && deprecatedSystem.StreamLogs != nil {
 		getDeprecatedLogStream = deprecatedSystem.StreamLogs
 	}
-	agentHandle, err := agent.NewAgent(
-		log.DefaultLogger,
-		httpServer.Mux.Handler(),
-		grpcClient,
-		getDeprecatedLogStream,
-		clusterId,
-		cfg.TestkubeClusterName,
-		features,
-		&proContext,
-		cfg.TestkubeDockerImageVersion,
-		eventsEmitter,
-		cfg.FeatureNewExecutions,
-		cfg.FeatureTestWorkflowCloudStorage,
-	)
-	commons.ExitOnError("Starting agent", err)
-	g.Go(func() error {
-		err = agentHandle.Run(ctx)
-		commons.ExitOnError("Running agent", err)
-		return nil
-	})
-	eventsEmitter.Loader.Register(agentHandle)
+	if !cfg.DisableDefaultAgent {
+		agentHandle, err := agent.NewAgent(
+			log.DefaultLogger,
+			httpServer.Mux.Handler(),
+			grpcClient,
+			getDeprecatedLogStream,
+			clusterId,
+			cfg.TestkubeClusterName,
+			features,
+			&proContext,
+			cfg.TestkubeDockerImageVersion,
+			eventsEmitter,
+			cfg.FeatureNewExecutions,
+			cfg.FeatureTestWorkflowCloudStorage,
+		)
+		commons.ExitOnError("Starting agent", err)
+		g.Go(func() error {
+			err = agentHandle.Run(ctx)
+			commons.ExitOnError("Running agent", err)
+			return nil
+		})
+		eventsEmitter.Loader.Register(agentHandle)
+	}
 
 	if !cfg.DisableTestTriggers {
 		k8sCfg, err := k8sclient.GetK8sClientConfig()

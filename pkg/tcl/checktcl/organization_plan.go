@@ -19,13 +19,15 @@ const (
 	OrganizationPlanTestkubeModePro OrganizationPlanTestkubeMode = "cloud"
 )
 
+type OrganizationPlanStatus = config.ProContextStatus
+
 // Ref: #/components/schemas/OrganizationPlan
 type OrganizationPlan struct {
 	// Enterprise / Pro mode.
 	TestkubeMode OrganizationPlanTestkubeMode `json:"testkubeMode"`
 	// Is current plan trial.
-	IsTrial    bool                    `json:"isTrial"`
-	PlanStatus config.ProContextStatus `json:"planStatus"`
+	IsTrial    bool                   `json:"isTrial"`
+	PlanStatus OrganizationPlanStatus `json:"planStatus"`
 }
 
 func (p OrganizationPlan) IsEnterprise() bool {
