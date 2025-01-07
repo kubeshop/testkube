@@ -1,9 +1,12 @@
 #!/usr/bin/expect -f
-log_user 1 ;# enable logging of all process output
+# Notes:
+# No return key on choices
+# Default timeout disabled
+
 set timeout -1 ;# disable the default 10s timeout
 
 # unbuffer to strip colors
-spawn unbuffer {*}$env(TESTKUBE_INIT_COMMAND)
+spawn {*}$env(TESTKUBE_INIT_COMMAND)
 expect "Do you want to continue?"
 send "y"
 expect "Do you want to open the dashboard?"
