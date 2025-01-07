@@ -1,5 +1,5 @@
 #!/usr/bin/expect -f
-spawn $TESTKUBE_INIT_COMMAND
+spawn {*}$env(TESTKUBE_INIT_COMMAND)
 expect "Do you want to continue?"
 send "y\r"
 expect "Do you want to open the dashboard?"
