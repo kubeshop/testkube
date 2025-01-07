@@ -24,6 +24,7 @@ service TestKubeCloudAPI {
     rpc ScheduleExecution(ScheduleRequest) returns (stream ScheduleResponse);
 
     // Runner
+    rpc GetUnfinishedExecutions(google.protobuf.Empty) returns (stream UnfinishedExecution);
     rpc GetRunnerRequests(stream RunnerResponse) returns (stream RunnerRequest); // TODO: Healthcheck (?)
     rpc ObtainExecution(ObtainExecutionRequest) returns (ObtainExecutionResponse);
     rpc FinishExecution(FinishExecutionRequest) returns (FinishExecutionResponse);
@@ -291,6 +292,11 @@ message RunnerResponse {
   string id = 2;
   bool obtained = 3;
   optional string error = 4;
+}
+
+message UnfinishedExecution {
+  string environment_id = 1;
+  string id = 2;
 }
 
 message ObtainExecutionRequest {

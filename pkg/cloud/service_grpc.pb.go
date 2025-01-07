@@ -38,6 +38,7 @@ type TestKubeCloudAPIClient interface {
 	GetEventStream(ctx context.Context, in *EventStreamRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_GetEventStreamClient, error)
 	ScheduleExecution(ctx context.Context, in *ScheduleRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_ScheduleExecutionClient, error)
 	// Runner
+	GetUnfinishedExecutions(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (TestKubeCloudAPI_GetUnfinishedExecutionsClient, error)
 	GetRunnerRequests(ctx context.Context, opts ...grpc.CallOption) (TestKubeCloudAPI_GetRunnerRequestsClient, error)
 	ObtainExecution(ctx context.Context, in *ObtainExecutionRequest, opts ...grpc.CallOption) (*ObtainExecutionResponse, error)
 	FinishExecution(ctx context.Context, in *FinishExecutionRequest, opts ...grpc.CallOption) (*FinishExecutionResponse, error)
@@ -379,8 +380,40 @@ func (x *testKubeCloudAPIScheduleExecutionClient) Recv() (*ScheduleResponse, err
 	return m, nil
 }
 
+func (c *testKubeCloudAPIClient) GetUnfinishedExecutions(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (TestKubeCloudAPI_GetUnfinishedExecutionsClient, error) {
+	stream, err := c.cc.NewStream(ctx, &TestKubeCloudAPI_ServiceDesc.Streams[9], "/cloud.TestKubeCloudAPI/GetUnfinishedExecutions", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &testKubeCloudAPIGetUnfinishedExecutionsClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type TestKubeCloudAPI_GetUnfinishedExecutionsClient interface {
+	Recv() (*UnfinishedExecution, error)
+	grpc.ClientStream
+}
+
+type testKubeCloudAPIGetUnfinishedExecutionsClient struct {
+	grpc.ClientStream
+}
+
+func (x *testKubeCloudAPIGetUnfinishedExecutionsClient) Recv() (*UnfinishedExecution, error) {
+	m := new(UnfinishedExecution)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 func (c *testKubeCloudAPIClient) GetRunnerRequests(ctx context.Context, opts ...grpc.CallOption) (TestKubeCloudAPI_GetRunnerRequestsClient, error) {
-	stream, err := c.cc.NewStream(ctx, &TestKubeCloudAPI_ServiceDesc.Streams[9], "/cloud.TestKubeCloudAPI/GetRunnerRequests", opts...)
+	stream, err := c.cc.NewStream(ctx, &TestKubeCloudAPI_ServiceDesc.Streams[10], "/cloud.TestKubeCloudAPI/GetRunnerRequests", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -438,7 +471,7 @@ func (c *testKubeCloudAPIClient) GetTestWorkflow(ctx context.Context, in *GetTes
 }
 
 func (c *testKubeCloudAPIClient) ListTestWorkflows(ctx context.Context, in *ListTestWorkflowsRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_ListTestWorkflowsClient, error) {
-	stream, err := c.cc.NewStream(ctx, &TestKubeCloudAPI_ServiceDesc.Streams[10], "/cloud.TestKubeCloudAPI/ListTestWorkflows", opts...)
+	stream, err := c.cc.NewStream(ctx, &TestKubeCloudAPI_ServiceDesc.Streams[11], "/cloud.TestKubeCloudAPI/ListTestWorkflows", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -524,7 +557,7 @@ func (c *testKubeCloudAPIClient) GetTestWorkflowTemplate(ctx context.Context, in
 }
 
 func (c *testKubeCloudAPIClient) ListTestWorkflowTemplates(ctx context.Context, in *ListTestWorkflowTemplatesRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_ListTestWorkflowTemplatesClient, error) {
-	stream, err := c.cc.NewStream(ctx, &TestKubeCloudAPI_ServiceDesc.Streams[11], "/cloud.TestKubeCloudAPI/ListTestWorkflowTemplates", opts...)
+	stream, err := c.cc.NewStream(ctx, &TestKubeCloudAPI_ServiceDesc.Streams[12], "/cloud.TestKubeCloudAPI/ListTestWorkflowTemplates", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -619,6 +652,7 @@ type TestKubeCloudAPIServer interface {
 	GetEventStream(*EventStreamRequest, TestKubeCloudAPI_GetEventStreamServer) error
 	ScheduleExecution(*ScheduleRequest, TestKubeCloudAPI_ScheduleExecutionServer) error
 	// Runner
+	GetUnfinishedExecutions(*emptypb.Empty, TestKubeCloudAPI_GetUnfinishedExecutionsServer) error
 	GetRunnerRequests(TestKubeCloudAPI_GetRunnerRequestsServer) error
 	ObtainExecution(context.Context, *ObtainExecutionRequest) (*ObtainExecutionResponse, error)
 	FinishExecution(context.Context, *FinishExecutionRequest) (*FinishExecutionResponse, error)
@@ -681,6 +715,9 @@ func (UnimplementedTestKubeCloudAPIServer) GetEventStream(*EventStreamRequest, T
 }
 func (UnimplementedTestKubeCloudAPIServer) ScheduleExecution(*ScheduleRequest, TestKubeCloudAPI_ScheduleExecutionServer) error {
 	return status.Errorf(codes.Unimplemented, "method ScheduleExecution not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) GetUnfinishedExecutions(*emptypb.Empty, TestKubeCloudAPI_GetUnfinishedExecutionsServer) error {
+	return status.Errorf(codes.Unimplemented, "method GetUnfinishedExecutions not implemented")
 }
 func (UnimplementedTestKubeCloudAPIServer) GetRunnerRequests(TestKubeCloudAPI_GetRunnerRequestsServer) error {
 	return status.Errorf(codes.Unimplemented, "method GetRunnerRequests not implemented")
@@ -1021,6 +1058,27 @@ type testKubeCloudAPIScheduleExecutionServer struct {
 }
 
 func (x *testKubeCloudAPIScheduleExecutionServer) Send(m *ScheduleResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func _TestKubeCloudAPI_GetUnfinishedExecutions_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(emptypb.Empty)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(TestKubeCloudAPIServer).GetUnfinishedExecutions(m, &testKubeCloudAPIGetUnfinishedExecutionsServer{stream})
+}
+
+type TestKubeCloudAPI_GetUnfinishedExecutionsServer interface {
+	Send(*UnfinishedExecution) error
+	grpc.ServerStream
+}
+
+type testKubeCloudAPIGetUnfinishedExecutionsServer struct {
+	grpc.ServerStream
+}
+
+func (x *testKubeCloudAPIGetUnfinishedExecutionsServer) Send(m *UnfinishedExecution) error {
 	return x.ServerStream.SendMsg(m)
 }
 
@@ -1470,6 +1528,11 @@ var TestKubeCloudAPI_ServiceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "ScheduleExecution",
 			Handler:       _TestKubeCloudAPI_ScheduleExecution_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "GetUnfinishedExecutions",
+			Handler:       _TestKubeCloudAPI_GetUnfinishedExecutions_Handler,
 			ServerStreams: true,
 		},
 		{

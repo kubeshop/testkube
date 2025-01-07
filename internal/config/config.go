@@ -175,6 +175,7 @@ type Config struct {
 	SecretManagementConfig
 	RunnerConfig
 	ImageInspectorConfig
+	DisableDefaultAgent             bool   `envconfig:"TESTKUBE_DISABLE_DEFAULT_AGENT" default:"false"`
 	TestkubeConfigDir               string `envconfig:"TESTKUBE_CONFIG_DIR" default:"config"`
 	TestkubeAnalyticsEnabled        bool   `envconfig:"TESTKUBE_ANALYTICS_ENABLED" default:"false"`
 	TestkubeNamespace               string `envconfig:"TESTKUBE_NAMESPACE" default:"testkube"`

@@ -10,6 +10,7 @@ const (
 	ProContextModePro ProContextMode = "cloud"
 )
 
+// Ref: #/components/schemas/PlanStatus
 type ProContextStatus string
 
 const (

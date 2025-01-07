@@ -335,12 +335,12 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 
 	if string(foundProContext.Mode) != "" {
 		proContext.IsTrial = foundProContext.Trial
-		proContext.Mode = config.ProContextMode(foundProContext.Mode)
-		proContext.Status = config.ProContextStatus(foundProContext.Status)
+		proContext.Mode = config.ProContextMode(foundProContext.Mode.String())
+		proContext.Status = config.ProContextStatus(foundProContext.Status.String())
 	} else {
-		executor := executor.NewCloudGRPCExecutor(grpcClient, proContext.APIKey)
 		req := checktcl.GetOrganizationPlanRequest{}
-		response, err := executor.Execute(ctx, cloudconfig.CmdConfigGetOrganizationPlan, req)
+		response, err := executor.NewCloudGRPCExecutor(grpcClient, proContext.APIKey).
+			Execute(ctx, cloudconfig.CmdConfigGetOrganizationPlan, req)
 		if err != nil {
 			return proContext
 		}

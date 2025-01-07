@@ -8,6 +8,8 @@
 
 package checktcl
 
+import "github.com/kubeshop/testkube/internal/config"
+
 // Enterprise / Pro mode.
 type OrganizationPlanTestkubeMode string
 
@@ -17,29 +19,13 @@ const (
 	OrganizationPlanTestkubeModePro OrganizationPlanTestkubeMode = "cloud"
 )
 
-// Ref: #/components/schemas/PlanStatus
-type PlanStatus string
-
-const (
-	PlanStatusActive            PlanStatus = "Active"
-	PlanStatusCanceled          PlanStatus = "Canceled"
-	PlanStatusIncomplete        PlanStatus = "Incomplete"
-	PlanStatusIncompleteExpired PlanStatus = "IncompleteExpired"
-	PlanStatusPastDue           PlanStatus = "PastDue"
-	PlanStatusTrailing          PlanStatus = "Trailing"
-	PlanStatusUnpaid            PlanStatus = "Unpaid"
-	PlanStatusDeleted           PlanStatus = "Deleted"
-	PlanStatusLocked            PlanStatus = "Locked"
-	PlanStatusBlocked           PlanStatus = "Blocked"
-)
-
 // Ref: #/components/schemas/OrganizationPlan
 type OrganizationPlan struct {
 	// Enterprise / Pro mode.
 	TestkubeMode OrganizationPlanTestkubeMode `json:"testkubeMode"`
 	// Is current plan trial.
-	IsTrial    bool       `json:"isTrial"`
-	PlanStatus PlanStatus `json:"planStatus"`
+	IsTrial    bool                    `json:"isTrial"`
+	PlanStatus config.ProContextStatus `json:"planStatus"`
 }
 
 func (p OrganizationPlan) IsEnterprise() bool {
@@ -51,7 +37,7 @@ func (p OrganizationPlan) IsPro() bool {
 }
 
 func (p OrganizationPlan) IsActive() bool {
-	return p.PlanStatus == PlanStatusActive
+	return p.PlanStatus == config.ProContextStatusActive
 }
 
 func (p OrganizationPlan) IsEmpty() bool {

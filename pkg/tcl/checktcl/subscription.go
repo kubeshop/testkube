@@ -30,7 +30,7 @@ func NewSubscriptionChecker(ctx context.Context, proContext config.ProContext, c
 	subscription := OrganizationPlan{
 		TestkubeMode: OrganizationPlanTestkubeMode(proContext.Mode),
 		IsTrial:      proContext.IsTrial,
-		PlanStatus:   PlanStatus(proContext.Status),
+		PlanStatus:   proContext.Status,
 	}
 	return SubscriptionChecker{orgPlan: subscription}, nil
 }

@@ -2,10 +2,17 @@ package runner
 
 import (
 	"context"
+	"io"
+	"math"
 	"time"
 
+	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/encoding/gzip"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/protobuf/types/known/emptypb"
 
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/internal/config"
@@ -90,6 +97,47 @@ func NewService(
 }
 
 func (s *service) recover(ctx context.Context) (err error) {
+	if !s.opts.NewExecutionsEnabled {
+		return s.recoverLegacy(ctx)
+	}
+
+	md := metadata.MD{apiKeyMeta: []string{s.grpcApiToken}, orgIdMeta: []string{s.proContext.OrgID}}
+	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
+	executions, err := s.grpcClient.GetUnfinishedExecutions(metadata.NewOutgoingContext(ctx, md), &emptypb.Empty{}, opts...)
+	for {
+		// Take the context error if possible
+		if err == nil && ctx.Err() != nil {
+			err = ctx.Err()
+		}
+
+		// End when it's done
+		if errors.Is(err, io.EOF) {
+			return nil
+		}
+
+		// Handle the error
+		if err != nil {
+			return err
+		}
+
+		// Get the next execution to monitor
+		var exec *cloud.UnfinishedExecution
+		exec, err = executions.Recv()
+		if err != nil {
+			continue
+		}
+
+		// TODO: Pass hints (namespace, signature, scheduledAt)
+		go func(environmentId string, executionId string) {
+			err := s.runner.Monitor(ctx, s.proContext.OrgID, environmentId, executionId)
+			if err != nil {
+				s.logger.Errorw("failed to monitor execution", "id", executionId, "error", err)
+			}
+		}(exec.EnvironmentId, exec.Id)
+	}
+}
+
+func (s *service) recoverLegacy(ctx context.Context) (err error) {
 	var list []testkube.TestWorkflowExecution
 	for {
 		// TODO: it should get running only in the context of current runner (worker.List?)
