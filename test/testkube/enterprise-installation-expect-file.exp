@@ -1,4 +1,6 @@
 #!/usr/bin/expect -f
+log_user 1 # enable logging of all process output
+
 spawn {*}$env(TESTKUBE_INIT_COMMAND)
 expect "Do you want to continue?"
 send "y\r"
