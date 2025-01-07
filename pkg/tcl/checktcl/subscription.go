@@ -10,15 +10,12 @@ package checktcl
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/cloud"
-	cloudconfig "github.com/kubeshop/testkube/pkg/cloud/data/config"
-	"github.com/kubeshop/testkube/pkg/cloud/data/executor"
 )
 
 type SubscriptionChecker struct {
@@ -30,26 +27,11 @@ func NewSubscriptionChecker(ctx context.Context, proContext config.ProContext, c
 	if cloudClient == nil {
 		return SubscriptionChecker{}, nil
 	}
-
-	executor := executor.NewCloudGRPCExecutor(cloudClient, proContext.APIKey)
-
-	req := GetOrganizationPlanRequest{}
-	response, err := executor.Execute(ctx, cloudconfig.CmdConfigGetOrganizationPlan, req)
-	if err != nil {
-		return SubscriptionChecker{}, err
-	}
-
-	var commandResponse GetOrganizationPlanResponse
-	if err := json.Unmarshal(response, &commandResponse); err != nil {
-		return SubscriptionChecker{}, err
-	}
-
 	subscription := OrganizationPlan{
-		TestkubeMode: OrganizationPlanTestkubeMode(commandResponse.TestkubeMode),
-		IsTrial:      commandResponse.IsTrial,
-		PlanStatus:   PlanStatus(commandResponse.PlanStatus),
+		TestkubeMode: OrganizationPlanTestkubeMode(proContext.Mode),
+		IsTrial:      proContext.IsTrial,
+		PlanStatus:   PlanStatus(proContext.Status),
 	}
-
 	return SubscriptionChecker{orgPlan: subscription}, nil
 }
 

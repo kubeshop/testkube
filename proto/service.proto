@@ -109,10 +109,31 @@ message TestWorkflowNotificationsResponse {
   string message = 6; // based on type: log/error = inline, others = serialized to JSON
 }
 
+enum TestkubeMode {
+  Enterprise = 0;
+  Pro = 1;
+}
+
+enum PlanStatus {
+    Active             = 0;
+    Canceled           = 1;
+    Incomplete         = 2;
+    IncompleteExpired  = 3;
+    PastDue            = 4;
+    Trailing           = 5;
+    Unpaid             = 6;
+    Deleted            = 7;
+    Locked             = 8;
+    Blocked            = 9;
+}
+
 message ProContextResponse {
   string org_id = 1;
   string env_id = 2;
   repeated Capability capabilities = 3;
+  bool trial = 4;
+  TestkubeMode mode = 5;
+  PlanStatus status = 6;
 }
 
 message Capability {

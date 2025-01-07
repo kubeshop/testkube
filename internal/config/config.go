@@ -100,6 +100,7 @@ type LogServerConfig struct {
 type ControlPlaneConfig struct {
 	TestkubeProEnvID             string `envconfig:"TESTKUBE_PRO_ENV_ID" default:""`
 	TestkubeProOrgID             string `envconfig:"TESTKUBE_PRO_ORG_ID" default:""`
+	TestkubeProAgentID           string `envconfig:"TESTKUBE_PRO_AGENT_ID" default:""`
 	TestkubeProAPIKey            string `envconfig:"TESTKUBE_PRO_API_KEY" default:""`
 	TestkubeProURL               string `envconfig:"TESTKUBE_PRO_URL" default:""`
 	TestkubeProTLSInsecure       bool   `envconfig:"TESTKUBE_PRO_TLS_INSECURE" default:"false"`
