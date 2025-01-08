@@ -14,6 +14,7 @@ import (
 	"google.golang.org/grpc/encoding/gzip"
 	"google.golang.org/grpc/metadata"
 
+	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
@@ -36,6 +37,7 @@ type executionSaver struct {
 	id                   string
 	organizationId       string
 	environmentId        string
+	runnerId             string
 	executionsRepository testworkflow.Repository
 	client               cloud.TestKubeCloudAPIClient
 	grpcApiToken         string
@@ -62,6 +64,7 @@ func NewExecutionSaver(
 	id string,
 	organizationId string,
 	environmentId string,
+	runnerId string,
 	logs ExecutionLogsWriter,
 	newExecutionsEnabled bool,
 ) (ExecutionSaver, error) {
@@ -72,6 +75,7 @@ func NewExecutionSaver(
 		id:                   id,
 		organizationId:       organizationId,
 		environmentId:        environmentId,
+		runnerId:             runnerId,
 		executionsRepository: executionsRepository,
 		client:               grpcClient,
 		grpcApiToken:         grpcApiToken,
@@ -106,7 +110,7 @@ func (s *executionSaver) watchResultUpdates() {
 				if prev == next {
 					break
 				}
-				err := s.executionsRepository.UpdateResult(s.ctx, s.id, next)
+				err := s.saveResult(s.ctx, next)
 				if err == nil {
 					break
 				}
@@ -132,6 +136,49 @@ func (s *executionSaver) AppendOutput(output ...testkube.TestWorkflowOutput) {
 	s.outputSaved.Store(false)
 }
 
+func (s *executionSaver) saveOutput(ctx context.Context) error {
+	// TODO: Consider AppendOutput ($push) instead
+	if !s.newExecutionsEnabled {
+		return s.executionsRepository.UpdateOutput(ctx, s.id, s.output)
+	}
+
+	output := common.MapSlice(s.output, func(t testkube.TestWorkflowOutput) *cloud.ExecutionOutput {
+		v, _ := json.Marshal(t)
+		return &cloud.ExecutionOutput{
+			Ref:   t.Ref,
+			Name:  t.Name,
+			Value: v,
+		}
+	})
+	md := metadata.New(map[string]string{apiKeyMeta: s.grpcApiToken, orgIdMeta: s.organizationId, agentIdMeta: s.runnerId})
+	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
+	_, err := s.client.UpdateExecutionOutput(metadata.NewOutgoingContext(ctx, md), &cloud.UpdateExecutionOutputRequest{
+		EnvironmentId: s.environmentId,
+		Id:            s.id,
+		Output:        output,
+	}, opts...)
+	return err
+}
+
+func (s *executionSaver) saveResult(ctx context.Context, result *testkube.TestWorkflowResult) error {
+	if !s.newExecutionsEnabled {
+		return s.executionsRepository.UpdateResult(ctx, s.id, result)
+	}
+
+	resultBytes, err := json.Marshal(result)
+	if err != nil {
+		return err
+	}
+	md := metadata.New(map[string]string{apiKeyMeta: s.grpcApiToken, orgIdMeta: s.organizationId, agentIdMeta: s.runnerId})
+	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
+	_, err = s.client.UpdateExecutionResult(metadata.NewOutgoingContext(ctx, md), &cloud.UpdateExecutionResultRequest{
+		EnvironmentId: s.environmentId,
+		Id:            s.id,
+		Result:        resultBytes,
+	}, opts...)
+	return err
+}
+
 func (s *executionSaver) End(ctx context.Context, result testkube.TestWorkflowResult) error {
 	s.ctxCancel()
 	s.resultMu.Lock()
@@ -143,8 +190,7 @@ func (s *executionSaver) End(ctx context.Context, result testkube.TestWorkflowRe
 		if s.outputSaved.Load() {
 			return nil
 		}
-		// TODO: Consider AppendOutput ($push) instead
-		return s.executionsRepository.UpdateOutput(ctx, s.id, s.output)
+		return s.saveOutput(ctx)
 	})
 	g.Go(func() error {
 		if s.logs.Saved() {
@@ -161,7 +207,7 @@ func (s *executionSaver) End(ctx context.Context, result testkube.TestWorkflowRe
 	if s.newExecutionsEnabled {
 		err = s.saveFinalResult(ctx, &result)
 	} else {
-		err = s.executionsRepository.UpdateResult(ctx, s.id, &result)
+		err = s.saveResult(ctx, &result)
 	}
 	if err != nil {
 		return err
@@ -180,7 +226,7 @@ func (s *executionSaver) saveFinalResult(ctx context.Context, result *testkube.T
 		return err
 	}
 
-	md := metadata.MD{apiKeyMeta: []string{s.grpcApiToken}, orgIdMeta: []string{s.organizationId}}
+	md := metadata.New(map[string]string{apiKeyMeta: s.grpcApiToken, orgIdMeta: s.organizationId, agentIdMeta: s.runnerId})
 	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
 	_, err = s.client.FinishExecution(metadata.NewOutgoingContext(ctx, md), &cloud.FinishExecutionRequest{
 		EnvironmentId: s.environmentId,

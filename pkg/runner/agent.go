@@ -163,24 +163,37 @@ func (a *agentLoop) getExecutionLegacy(ctx context.Context, environmentId, id st
 	return &response.WorkflowExecution, err
 }
 
-// TODO: Add proper gRPC method for that
-func (a *agentLoop) _saveEmptyLogs(ctx context.Context, environmentId string, execution *testkube.TestWorkflowExecution) error {
-	ctx = a.buildContext(ctx, environmentId)
+func (a *agentLoop) presignLogs(ctx context.Context, environmentId string, execution *testkube.TestWorkflowExecution) (string, error) {
+	if !a.newExecutionsEnabled {
+		return a.presignLogsLegacy(ctx, environmentId, execution)
+	}
 
+	md := metadata.New(map[string]string{apiKeyMeta: a.grpcApiToken, orgIdMeta: a.organizationId, agentIdMeta: a.runnerId})
+	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
+	res, err := a.client.SaveExecutionLogsPresigned(metadata.NewOutgoingContext(ctx, md), &cloud.SaveExecutionLogsPresignedRequest{
+		EnvironmentId: environmentId,
+		Id:            execution.Id,
+	}, opts...)
+	if err != nil {
+		return "", err
+	}
+	return res.Url, nil
+}
+
+func (a *agentLoop) presignLogsLegacy(ctx context.Context, environmentId string, execution *testkube.TestWorkflowExecution) (string, error) {
 	// Extracting the test workflow name
 	workflowName := ""
 	if execution.Workflow != nil {
 		workflowName = execution.Workflow.Name
 	}
 
-	// Presigning the log
 	jsonPayload, err := json.Marshal(testworkflow.OutputPresignSaveLogRequest{ID: execution.Id, WorkflowName: workflowName})
 	if err != nil {
-		return err
+		return "", err
 	}
 	s := structpb.Struct{}
-	if err := s.UnmarshalJSON(jsonPayload); err != nil {
-		return err
+	if err = s.UnmarshalJSON(jsonPayload); err != nil {
+		return "", err
 	}
 	cmdReq := cloud.CommandRequest{
 		Command: string(testworkflow.CmdTestWorkflowOutputPresignSaveLog),
@@ -189,16 +202,28 @@ func (a *agentLoop) _saveEmptyLogs(ctx context.Context, environmentId string, ex
 	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
 	cmdResponse, err := a.client.Call(ctx, &cmdReq, opts...)
 	if err != nil {
-		return err
+		return "", err
 	}
 	var response testworkflow.OutputPresignSaveLogResponse
 	err = json.Unmarshal(cmdResponse.Response, &response)
+	if err != nil {
+		return "", err
+	}
+	return response.URL, nil
+}
+
+// TODO: Add proper gRPC method for that
+func (a *agentLoop) _saveEmptyLogs(ctx context.Context, environmentId string, execution *testkube.TestWorkflowExecution) error {
+	ctx = a.buildContext(ctx, environmentId)
+
+	// Presigning the log
+	url, err := a.presignLogs(ctx, environmentId, execution)
 	if err != nil {
 		return err
 	}
 
 	// Saving empty logs
-	req, err := http.NewRequestWithContext(ctx, http.MethodPut, response.URL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, url, nil)
 	if err != nil {
 		return err
 	}

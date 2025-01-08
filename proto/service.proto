@@ -27,6 +27,9 @@ service TestKubeCloudAPI {
     rpc GetUnfinishedExecutions(google.protobuf.Empty) returns (stream UnfinishedExecution);
     rpc GetRunnerRequests(stream RunnerResponse) returns (stream RunnerRequest); // TODO: Healthcheck (?)
     rpc GetExecution(GetExecutionRequest) returns (GetExecutionResponse);
+    rpc UpdateExecutionResult(UpdateExecutionResultRequest) returns (UpdateExecutionResultResponse);
+    rpc UpdateExecutionOutput(UpdateExecutionOutputRequest) returns (UpdateExecutionOutputResponse); // TODO: Replace with AppendOutput
+    rpc SaveExecutionLogsPresigned(SaveExecutionLogsPresignedRequest) returns (SaveExecutionLogsPresignedResponse);
     rpc ObtainExecution(ObtainExecutionRequest) returns (ObtainExecutionResponse);
     rpc FinishExecution(FinishExecutionRequest) returns (FinishExecutionResponse);
 
@@ -319,6 +322,39 @@ message GetExecutionRequest {
 
 message GetExecutionResponse {
   bytes execution = 1; // TestWorkflowExecution
+}
+
+message UpdateExecutionResultRequest {
+  string environment_id = 1;
+  string id = 2;
+  bytes result = 3; // TestWorkflowResult
+}
+
+message UpdateExecutionResultResponse {
+}
+
+message ExecutionOutput {
+  string ref = 1;
+  string name = 2;
+  bytes value = 3;
+}
+
+message UpdateExecutionOutputRequest {
+  string environment_id = 1;
+  string id = 2;
+  repeated ExecutionOutput output = 3;
+}
+
+message UpdateExecutionOutputResponse {
+}
+
+message SaveExecutionLogsPresignedRequest {
+  string environment_id = 1;
+  string id = 2;
+}
+
+message SaveExecutionLogsPresignedResponse {
+  string url = 3;
 }
 
 message FinishExecutionRequest {

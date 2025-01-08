@@ -41,6 +41,9 @@ type TestKubeCloudAPIClient interface {
 	GetUnfinishedExecutions(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (TestKubeCloudAPI_GetUnfinishedExecutionsClient, error)
 	GetRunnerRequests(ctx context.Context, opts ...grpc.CallOption) (TestKubeCloudAPI_GetRunnerRequestsClient, error)
 	GetExecution(ctx context.Context, in *GetExecutionRequest, opts ...grpc.CallOption) (*GetExecutionResponse, error)
+	UpdateExecutionResult(ctx context.Context, in *UpdateExecutionResultRequest, opts ...grpc.CallOption) (*UpdateExecutionResultResponse, error)
+	UpdateExecutionOutput(ctx context.Context, in *UpdateExecutionOutputRequest, opts ...grpc.CallOption) (*UpdateExecutionOutputResponse, error)
+	SaveExecutionLogsPresigned(ctx context.Context, in *SaveExecutionLogsPresignedRequest, opts ...grpc.CallOption) (*SaveExecutionLogsPresignedResponse, error)
 	ObtainExecution(ctx context.Context, in *ObtainExecutionRequest, opts ...grpc.CallOption) (*ObtainExecutionResponse, error)
 	FinishExecution(ctx context.Context, in *FinishExecutionRequest, opts ...grpc.CallOption) (*FinishExecutionResponse, error)
 	// CRD Synchronisation
@@ -453,6 +456,33 @@ func (c *testKubeCloudAPIClient) GetExecution(ctx context.Context, in *GetExecut
 	return out, nil
 }
 
+func (c *testKubeCloudAPIClient) UpdateExecutionResult(ctx context.Context, in *UpdateExecutionResultRequest, opts ...grpc.CallOption) (*UpdateExecutionResultResponse, error) {
+	out := new(UpdateExecutionResultResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/UpdateExecutionResult", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *testKubeCloudAPIClient) UpdateExecutionOutput(ctx context.Context, in *UpdateExecutionOutputRequest, opts ...grpc.CallOption) (*UpdateExecutionOutputResponse, error) {
+	out := new(UpdateExecutionOutputResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/UpdateExecutionOutput", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *testKubeCloudAPIClient) SaveExecutionLogsPresigned(ctx context.Context, in *SaveExecutionLogsPresignedRequest, opts ...grpc.CallOption) (*SaveExecutionLogsPresignedResponse, error) {
+	out := new(SaveExecutionLogsPresignedResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/SaveExecutionLogsPresigned", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *testKubeCloudAPIClient) ObtainExecution(ctx context.Context, in *ObtainExecutionRequest, opts ...grpc.CallOption) (*ObtainExecutionResponse, error) {
 	out := new(ObtainExecutionResponse)
 	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/ObtainExecution", in, out, opts...)
@@ -665,6 +695,9 @@ type TestKubeCloudAPIServer interface {
 	GetUnfinishedExecutions(*emptypb.Empty, TestKubeCloudAPI_GetUnfinishedExecutionsServer) error
 	GetRunnerRequests(TestKubeCloudAPI_GetRunnerRequestsServer) error
 	GetExecution(context.Context, *GetExecutionRequest) (*GetExecutionResponse, error)
+	UpdateExecutionResult(context.Context, *UpdateExecutionResultRequest) (*UpdateExecutionResultResponse, error)
+	UpdateExecutionOutput(context.Context, *UpdateExecutionOutputRequest) (*UpdateExecutionOutputResponse, error)
+	SaveExecutionLogsPresigned(context.Context, *SaveExecutionLogsPresignedRequest) (*SaveExecutionLogsPresignedResponse, error)
 	ObtainExecution(context.Context, *ObtainExecutionRequest) (*ObtainExecutionResponse, error)
 	FinishExecution(context.Context, *FinishExecutionRequest) (*FinishExecutionResponse, error)
 	// CRD Synchronisation
@@ -735,6 +768,15 @@ func (UnimplementedTestKubeCloudAPIServer) GetRunnerRequests(TestKubeCloudAPI_Ge
 }
 func (UnimplementedTestKubeCloudAPIServer) GetExecution(context.Context, *GetExecutionRequest) (*GetExecutionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetExecution not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) UpdateExecutionResult(context.Context, *UpdateExecutionResultRequest) (*UpdateExecutionResultResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateExecutionResult not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) UpdateExecutionOutput(context.Context, *UpdateExecutionOutputRequest) (*UpdateExecutionOutputResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateExecutionOutput not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) SaveExecutionLogsPresigned(context.Context, *SaveExecutionLogsPresignedRequest) (*SaveExecutionLogsPresignedResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SaveExecutionLogsPresigned not implemented")
 }
 func (UnimplementedTestKubeCloudAPIServer) ObtainExecution(context.Context, *ObtainExecutionRequest) (*ObtainExecutionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ObtainExecution not implemented")
@@ -1140,6 +1182,60 @@ func _TestKubeCloudAPI_GetExecution_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _TestKubeCloudAPI_UpdateExecutionResult_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateExecutionResultRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).UpdateExecutionResult(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/UpdateExecutionResult",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).UpdateExecutionResult(ctx, req.(*UpdateExecutionResultRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TestKubeCloudAPI_UpdateExecutionOutput_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateExecutionOutputRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).UpdateExecutionOutput(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/UpdateExecutionOutput",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).UpdateExecutionOutput(ctx, req.(*UpdateExecutionOutputRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TestKubeCloudAPI_SaveExecutionLogsPresigned_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SaveExecutionLogsPresignedRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).SaveExecutionLogsPresigned(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/SaveExecutionLogsPresigned",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).SaveExecutionLogsPresigned(ctx, req.(*SaveExecutionLogsPresignedRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _TestKubeCloudAPI_ObtainExecution_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ObtainExecutionRequest)
 	if err := dec(in); err != nil {
@@ -1456,6 +1552,18 @@ var TestKubeCloudAPI_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetExecution",
 			Handler:    _TestKubeCloudAPI_GetExecution_Handler,
+		},
+		{
+			MethodName: "UpdateExecutionResult",
+			Handler:    _TestKubeCloudAPI_UpdateExecutionResult_Handler,
+		},
+		{
+			MethodName: "UpdateExecutionOutput",
+			Handler:    _TestKubeCloudAPI_UpdateExecutionOutput_Handler,
+		},
+		{
+			MethodName: "SaveExecutionLogsPresigned",
+			Handler:    _TestKubeCloudAPI_SaveExecutionLogsPresigned_Handler,
 		},
 		{
 			MethodName: "ObtainExecution",

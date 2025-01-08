@@ -2,6 +2,7 @@ package runner
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"math"
 	"time"
@@ -20,9 +21,11 @@ import (
 	"github.com/kubeshop/testkube/pkg/cloud"
 	cloudtestworkflow "github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
 	"github.com/kubeshop/testkube/pkg/event"
+	"github.com/kubeshop/testkube/pkg/log"
 	configrepo "github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
+	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 type Options struct {
@@ -81,6 +84,7 @@ func NewService(
 		worker:            executionWorker,
 		opts:              opts,
 		runner: New(
+			runnerId,
 			executionWorker,
 			cloudtestworkflow.NewCloudOutputRepository(grpcClient, grpcApiToken, opts.StorageSkipVerify),
 			resultsRepository,
@@ -89,6 +93,7 @@ func NewService(
 			grpcApiToken,
 			eventsEmitter,
 			metricsClient,
+			proContext,
 			opts.DashboardURI,
 			opts.StorageSkipVerify,
 			opts.NewExecutionsEnabled,
@@ -98,10 +103,11 @@ func NewService(
 
 func (s *service) recover(ctx context.Context) (err error) {
 	if !s.opts.NewExecutionsEnabled {
+		fmt.Println(ui.Green("recover legacy"))
 		return s.recoverLegacy(ctx)
 	}
 
-	md := metadata.MD{apiKeyMeta: []string{s.grpcApiToken}, orgIdMeta: []string{s.proContext.OrgID}}
+	md := metadata.New(map[string]string{apiKeyMeta: s.grpcApiToken, orgIdMeta: s.proContext.OrgID, agentIdMeta: s.runnerId})
 	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
 	executions, err := s.grpcClient.GetUnfinishedExecutions(metadata.NewOutgoingContext(ctx, md), &emptypb.Empty{}, opts...)
 	for {
@@ -117,6 +123,7 @@ func (s *service) recover(ctx context.Context) (err error) {
 
 		// Handle the error
 		if err != nil {
+			log.DefaultLogger.Errorw("failed to get runner executions", "error", err)
 			return err
 		}
 
@@ -126,6 +133,7 @@ func (s *service) recover(ctx context.Context) (err error) {
 		if err != nil {
 			continue
 		}
+		fmt.Println(ui.Green("exec2"), exec)
 
 		// TODO: Pass hints (namespace, signature, scheduledAt)
 		go func(environmentId string, executionId string) {
@@ -184,7 +192,7 @@ func (s *service) start(ctx context.Context) (err error) {
 }
 
 func (s *service) Start(ctx context.Context) error {
-	g, _ := errgroup.WithContext(ctx)
+	g, ctx := errgroup.WithContext(ctx)
 
 	g.Go(func() error {
 		return s.recover(ctx)
