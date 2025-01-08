@@ -42,6 +42,7 @@ spec:
   {{- range $key, $value := .Headers }}
     {{ $key }}: {{ $value }}
   {{- end }}
+  {{- end }}
   {{- if .Disabled }}
   disabled: {{ .Disabled }}
   {{- end }}
@@ -87,5 +88,4 @@ spec:
   {{- end }}
   {{- if .IsTemplate }}
   isTemplate: {{ .IsTemplate }}
-  {{- end }}
   {{- end }}

@@ -252,7 +252,7 @@ func getWebhookConfig(configs map[string]string) (map[string]testkube.WebhookCon
 		case strings.HasPrefix(value, "secret="):
 			data := strings.TrimPrefix(value, "secret=")
 			r := csv.NewReader(strings.NewReader(data))
-			r.Comma = ','
+			r.Comma = ';'
 			r.LazyQuotes = true
 			r.TrimLeadingSpace = true
 
@@ -288,7 +288,7 @@ func getWebhookParameters(parameters map[string]string) (map[string]testkube.Web
 	parameter := map[string]testkube.WebhookParameterSchema{}
 	for key, value := range parameters {
 		r := csv.NewReader(strings.NewReader(value))
-		r.Comma = ','
+		r.Comma = ';'
 		r.LazyQuotes = true
 		r.TrimLeadingSpace = true
 
