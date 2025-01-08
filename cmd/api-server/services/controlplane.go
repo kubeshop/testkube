@@ -412,5 +412,5 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 		Verbose:                          false,
 		FeatureNewExecutions:             cfg.FeatureNewExecutions,
 		FeatureTestWorkflowsCloudStorage: cfg.FeatureTestWorkflowCloudStorage,
-	}, executor, testWorkflowsClient, testWorkflowTemplatesClient, commands...)
+	}, executor, testWorkflowsClient, testWorkflowTemplatesClient, testWorkflowResultsRepository, testWorkflowOutputRepository, commands...)
 }

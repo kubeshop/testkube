@@ -28,6 +28,7 @@ import (
 	cloudexecutor "github.com/kubeshop/testkube/pkg/cloud/data/executor"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
+	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 )
 
@@ -46,6 +47,8 @@ type Server struct {
 	executor                    testworkflowexecutor.TestWorkflowExecutor
 	testWorkflowsClient         testworkflowclient.TestWorkflowClient
 	testWorkflowTemplatesClient testworkflowtemplateclient.TestWorkflowTemplateClient
+	resultsRepository           testworkflow.Repository
+	outputRepository            testworkflow.OutputRepository
 }
 
 type Config struct {
@@ -56,11 +59,14 @@ type Config struct {
 	FeatureTestWorkflowsCloudStorage bool
 }
 
+// TODO: Check if runner works fine
 func New(
 	cfg Config,
 	executor testworkflowexecutor.TestWorkflowExecutor,
 	testWorkflowsClient testworkflowclient.TestWorkflowClient,
 	testWorkflowTemplatesClient testworkflowtemplateclient.TestWorkflowTemplateClient,
+	resultsRepository testworkflow.Repository,
+	outputRepository testworkflow.OutputRepository,
 	commandGroups ...CommandHandlers,
 ) *Server {
 	commands := make(map[cloudexecutor.Command]CommandHandler)
@@ -75,6 +81,8 @@ func New(
 		commands:                    commands,
 		testWorkflowsClient:         testWorkflowsClient,
 		testWorkflowTemplatesClient: testWorkflowTemplatesClient,
+		resultsRepository:           resultsRepository,
+		outputRepository:            outputRepository,
 	}
 }
 
@@ -143,8 +151,8 @@ func (s *Server) GetRunnerRequests(srv cloud.TestKubeCloudAPI_GetRunnerRequestsS
 	return nil
 }
 
-func (s *Server) ObtainExecution(_ context.Context, req *cloud.ObtainExecutionRequest) (*cloud.ObtainExecutionResponse, error) {
-	return &cloud.ObtainExecutionResponse{Id: req.Id, EnvironmentId: req.EnvironmentId, Success: true}, nil
+func (s *Server) ObtainExecution(_ context.Context, _ *cloud.ObtainExecutionRequest) (*cloud.ObtainExecutionResponse, error) {
+	return &cloud.ObtainExecutionResponse{Success: true}, nil
 }
 
 // TODO: Consider deleting that
@@ -584,4 +592,29 @@ func (s *Server) DeleteTestWorkflowTemplatesByLabels(ctx context.Context, req *c
 		return nil, err
 	}
 	return &cloud.DeleteTestWorkflowTemplatesByLabelsResponse{Count: count}, nil
+}
+
+func (s *Server) FinishExecution(ctx context.Context, req *cloud.FinishExecutionRequest) (*cloud.FinishExecutionResponse, error) {
+	var result testkube.TestWorkflowResult
+	err := json.Unmarshal(req.Result, &result)
+	if err != nil {
+		return nil, err
+	}
+	err = s.resultsRepository.UpdateResult(ctx, req.Id, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &cloud.FinishExecutionResponse{}, nil
+}
+
+func (s *Server) GetExecution(ctx context.Context, req *cloud.GetExecutionRequest) (*cloud.GetExecutionResponse, error) {
+	execution, err := s.resultsRepository.Get(ctx, req.Id)
+	if err != nil {
+		return nil, err
+	}
+	executionBytes, err := json.Marshal(execution)
+	if err != nil {
+		return nil, err
+	}
+	return &cloud.GetExecutionResponse{Execution: executionBytes}, nil
 }

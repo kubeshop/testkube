@@ -40,6 +40,7 @@ type TestKubeCloudAPIClient interface {
 	// Runner
 	GetUnfinishedExecutions(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (TestKubeCloudAPI_GetUnfinishedExecutionsClient, error)
 	GetRunnerRequests(ctx context.Context, opts ...grpc.CallOption) (TestKubeCloudAPI_GetRunnerRequestsClient, error)
+	GetExecution(ctx context.Context, in *GetExecutionRequest, opts ...grpc.CallOption) (*GetExecutionResponse, error)
 	ObtainExecution(ctx context.Context, in *ObtainExecutionRequest, opts ...grpc.CallOption) (*ObtainExecutionResponse, error)
 	FinishExecution(ctx context.Context, in *FinishExecutionRequest, opts ...grpc.CallOption) (*FinishExecutionResponse, error)
 	// CRD Synchronisation
@@ -443,6 +444,15 @@ func (x *testKubeCloudAPIGetRunnerRequestsClient) Recv() (*RunnerRequest, error)
 	return m, nil
 }
 
+func (c *testKubeCloudAPIClient) GetExecution(ctx context.Context, in *GetExecutionRequest, opts ...grpc.CallOption) (*GetExecutionResponse, error) {
+	out := new(GetExecutionResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/GetExecution", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *testKubeCloudAPIClient) ObtainExecution(ctx context.Context, in *ObtainExecutionRequest, opts ...grpc.CallOption) (*ObtainExecutionResponse, error) {
 	out := new(ObtainExecutionResponse)
 	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/ObtainExecution", in, out, opts...)
@@ -654,6 +664,7 @@ type TestKubeCloudAPIServer interface {
 	// Runner
 	GetUnfinishedExecutions(*emptypb.Empty, TestKubeCloudAPI_GetUnfinishedExecutionsServer) error
 	GetRunnerRequests(TestKubeCloudAPI_GetRunnerRequestsServer) error
+	GetExecution(context.Context, *GetExecutionRequest) (*GetExecutionResponse, error)
 	ObtainExecution(context.Context, *ObtainExecutionRequest) (*ObtainExecutionResponse, error)
 	FinishExecution(context.Context, *FinishExecutionRequest) (*FinishExecutionResponse, error)
 	// CRD Synchronisation
@@ -721,6 +732,9 @@ func (UnimplementedTestKubeCloudAPIServer) GetUnfinishedExecutions(*emptypb.Empt
 }
 func (UnimplementedTestKubeCloudAPIServer) GetRunnerRequests(TestKubeCloudAPI_GetRunnerRequestsServer) error {
 	return status.Errorf(codes.Unimplemented, "method GetRunnerRequests not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) GetExecution(context.Context, *GetExecutionRequest) (*GetExecutionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetExecution not implemented")
 }
 func (UnimplementedTestKubeCloudAPIServer) ObtainExecution(context.Context, *ObtainExecutionRequest) (*ObtainExecutionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ObtainExecution not implemented")
@@ -1108,6 +1122,24 @@ func (x *testKubeCloudAPIGetRunnerRequestsServer) Recv() (*RunnerResponse, error
 	return m, nil
 }
 
+func _TestKubeCloudAPI_GetExecution_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetExecutionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).GetExecution(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/GetExecution",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).GetExecution(ctx, req.(*GetExecutionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _TestKubeCloudAPI_ObtainExecution_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ObtainExecutionRequest)
 	if err := dec(in); err != nil {
@@ -1420,6 +1452,10 @@ var TestKubeCloudAPI_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetCredential",
 			Handler:    _TestKubeCloudAPI_GetCredential_Handler,
+		},
+		{
+			MethodName: "GetExecution",
+			Handler:    _TestKubeCloudAPI_GetExecution_Handler,
 		},
 		{
 			MethodName: "ObtainExecution",

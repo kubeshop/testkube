@@ -159,8 +159,7 @@ type ImageInspectorConfig struct {
 }
 
 type RunnerConfig struct {
-	RunnerID      string `envconfig:"TESTKUBE_RUNNER_ID" default:""`
-	DisableRunner bool   `envconfig:"TESTKUBE_DISABLE_RUNNER" default:"false"`
+	DisableRunner bool `envconfig:"TESTKUBE_DISABLE_RUNNER" default:"false"`
 }
 
 type Config struct {

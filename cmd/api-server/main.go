@@ -216,7 +216,7 @@ func main() {
 		testworkflowconfig.FeatureFlagTestWorkflowCloudStorage: fmt.Sprintf("%v", cfg.FeatureTestWorkflowCloudStorage),
 	})
 
-	runnerId := cfg.RunnerID
+	runnerId := cfg.TestkubeProAgentID
 	if runnerId == "" {
 		runnerId = proContext.EnvID
 	}

@@ -120,10 +120,27 @@ func (a *agentLoop) buildContext(ctx context.Context, environmentId string) cont
 	return metadata.NewOutgoingContext(ctx, md)
 }
 
-// TODO: Add proper gRPC method for that
 func (a *agentLoop) getExecution(ctx context.Context, environmentId, id string) (*testkube.TestWorkflowExecution, error) {
+	if !a.newExecutionsEnabled {
+		return a.getExecutionLegacy(ctx, environmentId, id)
+	}
 	ctx = a.buildContext(ctx, environmentId)
+	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
+	req := cloud.GetExecutionRequest{EnvironmentId: environmentId, Id: id}
+	response, err := a.client.GetExecution(ctx, &req, opts...)
+	if err != nil {
+		return nil, err
+	}
+	var execution testkube.TestWorkflowExecution
+	err = json.Unmarshal(response.Execution, &execution)
+	if err != nil {
+		return nil, err
+	}
+	return &execution, nil
+}
 
+func (a *agentLoop) getExecutionLegacy(ctx context.Context, environmentId, id string) (*testkube.TestWorkflowExecution, error) {
+	ctx = a.buildContext(ctx, environmentId)
 	jsonPayload, err := json.Marshal(testworkflow.ExecutionGetRequest{ID: id})
 	if err != nil {
 		return nil, err
