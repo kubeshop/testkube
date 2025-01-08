@@ -335,17 +335,38 @@ func (a *agentLoop) finishExecution(ctx context.Context, environmentId string, e
 	return err
 }
 
+func (a *agentLoop) _init(ctx context.Context, environmentId string, execution *testkube.TestWorkflowExecution) error {
+	ctx = a.buildContext(ctx, environmentId)
+
+	signatureBytes, err := json.Marshal(execution.Signature)
+	if err != nil {
+		return err
+	}
+
+	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
+	_, err = a.client.InitExecution(ctx, &cloud.InitExecutionRequest{
+		EnvironmentId: environmentId,
+		Id:            execution.Id,
+		Namespace:     execution.Namespace,
+		Signature:     signatureBytes,
+	}, opts...)
+	return err
+}
+
 func (a *agentLoop) init(ctx context.Context, environmentId string, execution *testkube.TestWorkflowExecution) error {
-	// TODO: Make it non-conflict
-	err := retry(saveResultRetryMaxAttempts, saveResultRetryBaseDelay, func() error {
-		prevExecution, err := a.getExecution(ctx, environmentId, execution.Id)
-		if err != nil {
-			return err
+	err := retry(saveResultRetryMaxAttempts, saveResultRetryBaseDelay, func() (err error) {
+		if a.newExecutionsEnabled {
+			err = a._init(ctx, environmentId, execution)
+		} else {
+			var prevExecution *testkube.TestWorkflowExecution
+			prevExecution, err = a.getExecution(ctx, environmentId, execution.Id)
+			if err == nil {
+				prevExecution.RunnerId = a.runnerId
+				prevExecution.Namespace = execution.Namespace
+				prevExecution.Signature = execution.Signature
+				err = a._updateExecution(ctx, environmentId, prevExecution)
+			}
 		}
-		prevExecution.RunnerId = a.runnerId
-		prevExecution.Namespace = execution.Namespace
-		prevExecution.Signature = execution.Signature
-		err = a._updateExecution(ctx, environmentId, prevExecution)
 		if err != nil {
 			a.logger.Warnw("failed to initialize the TestWorkflow execution in database", "recoverable", true, "executionId", execution.Id, "error", err)
 		}

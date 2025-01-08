@@ -666,6 +666,16 @@ func (r *MongoRepository) Init(ctx context.Context, id string, data InitData) er
 	return err
 }
 
+func (r *MongoRepository) Assign(ctx context.Context, id string, prevRunnerId string, newRunnerId string) (bool, error) {
+	res, err := r.Coll.UpdateOne(ctx, bson.M{"id": id, "runnerId": prevRunnerId}, bson.M{"$set": map[string]interface{}{
+		"runnerId": newRunnerId,
+	}})
+	if err != nil {
+		return false, err
+	}
+	return res.ModifiedCount > 0, nil
+}
+
 // TODO: Return IDs only
 // TODO: Add indexes
 func (r *MongoRepository) GetUnassigned(ctx context.Context) (result []testkube.TestWorkflowExecution, err error) {

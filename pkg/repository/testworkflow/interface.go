@@ -98,6 +98,8 @@ type Repository interface {
 	GetExecutionTags(ctx context.Context, testWorkflowName string) (map[string][]string, error)
 	// Init sets the initialization data from the runner
 	Init(ctx context.Context, id string, data InitData) error
+	// Assign execution to selected runner
+	Assign(ctx context.Context, id string, prevRunnerId string, newRunnerId string) (bool, error)
 }
 
 type Sequences interface {

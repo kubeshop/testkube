@@ -191,6 +191,10 @@ func (r *CloudRepository) Init(ctx context.Context, id string, data testworkflow
 	return r.Update(ctx, execution)
 }
 
+func (r *CloudRepository) Assign(ctx context.Context, id string, prevRunnerId string, newRunnerId string) (bool, error) {
+	return false, errors.New("not supported")
+}
+
 func (r *CloudRepository) GetUnassigned(ctx context.Context) (result []testkube.TestWorkflowExecution, err error) {
 	return nil, errors.New("not supported")
 }
