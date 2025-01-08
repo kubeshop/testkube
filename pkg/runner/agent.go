@@ -27,6 +27,7 @@ import (
 	testworkflowmappers "github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
+	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 const (
@@ -674,6 +675,11 @@ func (a *agentLoop) loopRunnerRequests(ctx context.Context) error {
 		// Lock the execution for itself
 		var resp *cloud.ObtainExecutionResponse
 		resp, err = a.client.ObtainExecution(ctx, &cloud.ObtainExecutionRequest{Id: req.Id, EnvironmentId: req.EnvironmentId}, opts...)
+		success := false
+		if resp != nil {
+			success = resp.Success
+		}
+		fmt.Printf("%s %v %s\n", ui.Green("Obtain execution"), success, err)
 		if err != nil {
 			a.logger.Errorf("failed to obtain execution '%s/%s', from Control Plane: %v", req.EnvironmentId, req.Id, err)
 			continue

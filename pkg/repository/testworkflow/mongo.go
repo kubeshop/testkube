@@ -667,7 +667,12 @@ func (r *MongoRepository) Init(ctx context.Context, id string, data InitData) er
 }
 
 func (r *MongoRepository) Assign(ctx context.Context, id string, prevRunnerId string, newRunnerId string) (bool, error) {
-	res, err := r.Coll.UpdateOne(ctx, bson.M{"id": id, "runnerId": prevRunnerId}, bson.M{"$set": map[string]interface{}{
+	res, err := r.Coll.UpdateOne(ctx, bson.M{
+		"$and": []bson.M{
+			{"id": id},
+			{"$or": []bson.M{{"runnerId": prevRunnerId}, {"runnerId": newRunnerId}, {"runnerId": nil}}},
+		},
+	}, bson.M{"$set": map[string]interface{}{
 		"runnerId": newRunnerId,
 	}})
 	if err != nil {
