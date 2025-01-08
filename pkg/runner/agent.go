@@ -30,9 +30,10 @@ import (
 )
 
 const (
-	apiKeyMeta = "api-key"
-	orgIdMeta  = "organization-id"
-	envIdMeta  = "environment-id"
+	apiKeyMeta  = "api-key"
+	agentIdMeta = "agent-id"
+	orgIdMeta   = "organization-id"
+	envIdMeta   = "environment-id"
 )
 
 const (
@@ -100,6 +101,9 @@ func (a *agentLoop) Start(ctx context.Context) error {
 
 func (a *agentLoop) buildContext(ctx context.Context, environmentId string) context.Context {
 	md := metadata.MD{}
+	if a.runnerId != "" {
+		md[agentIdMeta] = []string{a.runnerId}
+	}
 	if a.grpcApiToken != "" {
 		md[apiKeyMeta] = []string{a.grpcApiToken}
 	}
@@ -318,19 +322,19 @@ func (a *agentLoop) run(ctx context.Context) error {
 	// Handle the new mechanism for runners
 	if a.newExecutionsEnabled {
 		g.Go(func() error {
-			return a.loopRunnerRequests(ctx)
+			return errors2.Wrap(a.loopRunnerRequests(ctx), "runners loop")
 		})
 	}
 
 	// Handle Test Workflow notifications of all kinds
 	g.Go(func() error {
-		return a.loopNotifications(ctx)
+		return errors2.Wrap(a.loopNotifications(ctx), "notifications loop")
 	})
 	g.Go(func() error {
-		return a.loopServiceNotifications(ctx)
+		return errors2.Wrap(a.loopServiceNotifications(ctx), "service notifications loop")
 	})
 	g.Go(func() error {
-		return a.loopParallelStepNotifications(ctx)
+		return errors2.Wrap(a.loopParallelStepNotifications(ctx), "parallel steps notifications loop")
 	})
 
 	return g.Wait()

@@ -98,6 +98,7 @@ message ExecuteRequest {
 message TestWorkflowNotificationsRequest {
   string stream_id = 1;
   string execution_id = 2;
+  string environment_id = 4;
   TestWorkflowNotificationsRequestType request_type = 3;
 }
 
@@ -177,6 +178,7 @@ message CredentialResponse {
 message TestWorkflowServiceNotificationsRequest {
   string stream_id = 1;
   string execution_id = 2;
+  string environment_id = 6;
   string service_name = 3;
   int32 service_index = 4;
   TestWorkflowNotificationsRequestType request_type = 5;
@@ -194,6 +196,7 @@ message TestWorkflowServiceNotificationsResponse {
 message TestWorkflowParallelStepNotificationsRequest {
   string stream_id = 1;
   string execution_id = 2;
+  string environment_id = 6;
   string ref = 3;
   int32  worker_index = 4;
   TestWorkflowNotificationsRequestType request_type = 5;

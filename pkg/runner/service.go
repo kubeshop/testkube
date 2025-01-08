@@ -184,7 +184,7 @@ func (s *service) start(ctx context.Context) (err error) {
 }
 
 func (s *service) Start(ctx context.Context) error {
-	g, ctx := errgroup.WithContext(ctx)
+	g, _ := errgroup.WithContext(ctx)
 
 	g.Go(func() error {
 		return s.recover(ctx)
