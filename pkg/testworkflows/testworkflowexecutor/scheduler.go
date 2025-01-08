@@ -3,12 +3,17 @@ package testworkflowexecutor
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/encoding/gzip"
+	"google.golang.org/grpc/metadata"
 
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -43,6 +48,11 @@ type scheduler struct {
 	globalTemplateName          string
 	organizationId              string
 	defaultEnvironmentId        string
+
+	agentId              string
+	grpcClient           cloud.TestKubeCloudAPIClient
+	grpcApiToken         string
+	newExecutionsEnabled bool
 }
 
 func NewScheduler(
@@ -53,6 +63,11 @@ func NewScheduler(
 	globalTemplateName string,
 	organizationId string,
 	defaultEnvironmentId string,
+
+	agentId string,
+	grpcClient cloud.TestKubeCloudAPIClient,
+	grpcApiToken string,
+	newExecutionsEnabled bool,
 ) Scheduler {
 	return &scheduler{
 		logger:                      log.DefaultLogger,
@@ -63,6 +78,11 @@ func NewScheduler(
 		globalTemplateName:          globalTemplateName,
 		organizationId:              organizationId,
 		defaultEnvironmentId:        defaultEnvironmentId,
+
+		agentId:              agentId,
+		grpcClient:           grpcClient,
+		grpcApiToken:         grpcApiToken,
+		newExecutionsEnabled: newExecutionsEnabled,
 	}
 }
 
@@ -330,10 +350,66 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 func (s *scheduler) CriticalError(execution *testkube.TestWorkflowExecution, name string, err error) error {
 	execution.InitializationError(name, err)
 	_ = s.saveEmptyLogs(context.Background(), execution)
-	// FIXME: use FinishExecution
-	return s.update(context.Background(), execution)
+	return s.finish(context.Background(), execution)
+}
+
+func (s *scheduler) finish(ctx context.Context, execution *testkube.TestWorkflowExecution) error {
+	if !s.newExecutionsEnabled {
+		return s.update(ctx, execution)
+	}
+
+	md := metadata.New(map[string]string{"api-key": s.grpcApiToken, "organization-id": s.organizationId, "agent-id": s.agentId})
+	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
+	resultBytes, err := json.Marshal(execution)
+	if err != nil {
+		return err
+	}
+	err = retry(SaveResultRetryMaxAttempts, SaveResultRetryBaseDelay, func() error {
+		_, err := s.grpcClient.FinishExecution(metadata.NewOutgoingContext(ctx, md), &cloud.FinishExecutionRequest{
+			EnvironmentId: s.defaultEnvironmentId,
+			Id:            execution.Id,
+			Result:        resultBytes,
+		}, opts...)
+		if err != nil {
+			s.logger.Warnw("failed to finish the TestWorkflow execution in database", "recoverable", true, "executionId", execution.Id, "error", err)
+		}
+		return err
+	})
+	if err != nil {
+		s.logger.Errorw("failed to finish the TestWorkflow execution in database", "recoverable", false, "executionId", execution.Id, "error", err)
+	}
+	return err
+}
+
+func (s *scheduler) start(ctx context.Context, execution *testkube.TestWorkflowExecution) error {
+	if !s.newExecutionsEnabled {
+		return s.init(ctx, execution)
+	}
+
+	md := metadata.New(map[string]string{"api-key": s.grpcApiToken, "organization-id": s.organizationId, "agent-id": s.agentId})
+	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
+	signatureBytes, err := json.Marshal(execution.Signature)
+	if err != nil {
+		return err
+	}
+	err = retry(SaveResultRetryMaxAttempts, SaveResultRetryBaseDelay, func() error {
+		_, err := s.grpcClient.InitExecution(metadata.NewOutgoingContext(ctx, md), &cloud.InitExecutionRequest{
+			EnvironmentId: s.defaultEnvironmentId,
+			Id:            execution.Id,
+			Namespace:     execution.Namespace,
+			Signature:     signatureBytes,
+		}, opts...)
+		if err != nil {
+			s.logger.Warnw("failed to init the TestWorkflow execution in database", "recoverable", true, "executionId", execution.Id, "error", err)
+		}
+		return err
+	})
+	if err != nil {
+		s.logger.Errorw("failed to init the TestWorkflow execution in database", "recoverable", false, "executionId", execution.Id, "error", err)
+	}
+	return err
 }
 
 func (s *scheduler) Start(execution *testkube.TestWorkflowExecution) error {
-	return s.init(context.Background(), execution)
+	return s.start(context.Background(), execution)
 }

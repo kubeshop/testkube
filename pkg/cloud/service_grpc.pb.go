@@ -40,6 +40,7 @@ type TestKubeCloudAPIClient interface {
 	// Runner
 	GetUnfinishedExecutions(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (TestKubeCloudAPI_GetUnfinishedExecutionsClient, error)
 	GetRunnerRequests(ctx context.Context, opts ...grpc.CallOption) (TestKubeCloudAPI_GetRunnerRequestsClient, error)
+	InitExecution(ctx context.Context, in *InitExecutionRequest, opts ...grpc.CallOption) (*InitExecutionResponse, error)
 	GetExecution(ctx context.Context, in *GetExecutionRequest, opts ...grpc.CallOption) (*GetExecutionResponse, error)
 	UpdateExecutionResult(ctx context.Context, in *UpdateExecutionResultRequest, opts ...grpc.CallOption) (*UpdateExecutionResultResponse, error)
 	UpdateExecutionOutput(ctx context.Context, in *UpdateExecutionOutputRequest, opts ...grpc.CallOption) (*UpdateExecutionOutputResponse, error)
@@ -447,6 +448,15 @@ func (x *testKubeCloudAPIGetRunnerRequestsClient) Recv() (*RunnerRequest, error)
 	return m, nil
 }
 
+func (c *testKubeCloudAPIClient) InitExecution(ctx context.Context, in *InitExecutionRequest, opts ...grpc.CallOption) (*InitExecutionResponse, error) {
+	out := new(InitExecutionResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/InitExecution", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *testKubeCloudAPIClient) GetExecution(ctx context.Context, in *GetExecutionRequest, opts ...grpc.CallOption) (*GetExecutionResponse, error) {
 	out := new(GetExecutionResponse)
 	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/GetExecution", in, out, opts...)
@@ -694,6 +704,7 @@ type TestKubeCloudAPIServer interface {
 	// Runner
 	GetUnfinishedExecutions(*emptypb.Empty, TestKubeCloudAPI_GetUnfinishedExecutionsServer) error
 	GetRunnerRequests(TestKubeCloudAPI_GetRunnerRequestsServer) error
+	InitExecution(context.Context, *InitExecutionRequest) (*InitExecutionResponse, error)
 	GetExecution(context.Context, *GetExecutionRequest) (*GetExecutionResponse, error)
 	UpdateExecutionResult(context.Context, *UpdateExecutionResultRequest) (*UpdateExecutionResultResponse, error)
 	UpdateExecutionOutput(context.Context, *UpdateExecutionOutputRequest) (*UpdateExecutionOutputResponse, error)
@@ -765,6 +776,9 @@ func (UnimplementedTestKubeCloudAPIServer) GetUnfinishedExecutions(*emptypb.Empt
 }
 func (UnimplementedTestKubeCloudAPIServer) GetRunnerRequests(TestKubeCloudAPI_GetRunnerRequestsServer) error {
 	return status.Errorf(codes.Unimplemented, "method GetRunnerRequests not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) InitExecution(context.Context, *InitExecutionRequest) (*InitExecutionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method InitExecution not implemented")
 }
 func (UnimplementedTestKubeCloudAPIServer) GetExecution(context.Context, *GetExecutionRequest) (*GetExecutionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetExecution not implemented")
@@ -1164,6 +1178,24 @@ func (x *testKubeCloudAPIGetRunnerRequestsServer) Recv() (*RunnerResponse, error
 	return m, nil
 }
 
+func _TestKubeCloudAPI_InitExecution_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(InitExecutionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).InitExecution(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/InitExecution",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).InitExecution(ctx, req.(*InitExecutionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _TestKubeCloudAPI_GetExecution_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetExecutionRequest)
 	if err := dec(in); err != nil {
@@ -1548,6 +1580,10 @@ var TestKubeCloudAPI_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetCredential",
 			Handler:    _TestKubeCloudAPI_GetCredential_Handler,
+		},
+		{
+			MethodName: "InitExecution",
+			Handler:    _TestKubeCloudAPI_InitExecution_Handler,
 		},
 		{
 			MethodName: "GetExecution",

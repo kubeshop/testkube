@@ -403,6 +403,7 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 		cfg.TestkubeDashboardURI,
 		"",
 		"",
+		"",
 		cfg.FeatureNewExecutions,
 	)
 

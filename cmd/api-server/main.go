@@ -216,12 +216,12 @@ func main() {
 		testworkflowconfig.FeatureFlagTestWorkflowCloudStorage: fmt.Sprintf("%v", cfg.FeatureTestWorkflowCloudStorage),
 	})
 
-	runnerId := cfg.TestkubeProAgentID
-	if runnerId == "" {
-		runnerId = proContext.EnvID
+	agentId := cfg.TestkubeProAgentID
+	if agentId == "" {
+		agentId = proContext.EnvID
 	}
 	runnerService := runner2.NewService(
-		runnerId,
+		agentId,
 		log.DefaultLogger,
 		eventsEmitter,
 		metrics,
@@ -261,6 +261,7 @@ func main() {
 		cfg.TestkubeDashboardURI,
 		proContext.OrgID,
 		proContext.EnvID,
+		agentId,
 		proContext.NewExecutions && cfg.FeatureNewExecutions,
 	)
 

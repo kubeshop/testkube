@@ -47,6 +47,7 @@ type executor struct {
 	cdEventsTarget       string
 	organizationId       string
 	defaultEnvironmentId string
+	agentId              string
 
 	emitter              event.Interface
 	metrics              v1.Metrics
@@ -59,7 +60,7 @@ type executor struct {
 }
 
 func New(
-	grpClient cloud.TestKubeCloudAPIClient,
+	grpcClient cloud.TestKubeCloudAPIClient,
 	apiKey string,
 	cdEventsTarget string,
 	emitter event.Interface,
@@ -74,9 +75,11 @@ func New(
 	dashboardURI string,
 	organizationId string,
 	defaultEnvironmentId string,
+	agentId string,
 	featureNewExecutions bool) TestWorkflowExecutor {
 	return &executor{
-		grpcClient:           grpClient,
+		agentId:              agentId,
+		grpcClient:           grpcClient,
 		apiKey:               apiKey,
 		cdEventsTarget:       cdEventsTarget,
 		emitter:              emitter,
@@ -95,6 +98,10 @@ func New(
 			globalTemplateName,
 			organizationId,
 			defaultEnvironmentId,
+			agentId,
+			grpcClient,
+			apiKey,
+			featureNewExecutions,
 		),
 	}
 }
@@ -188,7 +195,7 @@ func (e *executor) executeDirect(ctx context.Context, req *cloud.ScheduleRequest
 			}
 
 			// Set the runner execution to environment ID as it's a legacy Agent
-			execution.RunnerId = req.EnvironmentId
+			execution.RunnerId = e.agentId
 			if req.EnvironmentId == "" {
 				execution.RunnerId = "oss"
 			}
