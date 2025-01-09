@@ -25,9 +25,10 @@ import (
 )
 
 type CloudObject struct {
-	cfg       config.CloudContext
-	envClient *client.EnvironmentsClient
-	list      []client.Environment
+	cfg         config.CloudContext
+	envClient   *client.EnvironmentsClient
+	agentClient *client.AgentsClient
+	list        []client.Environment
 
 	clientMu sync.Mutex
 	client   client2.Client
@@ -56,10 +57,12 @@ func NewCloud(cfg config.CloudContext, cmd *cobra.Command) (*CloudObject, error)
 		cfg.AgentUri = "agent." + strings.TrimPrefix(cfg.AgentUri, "api.")
 	}
 	envClient := client.NewEnvironmentsClient(cfg.ApiUri, cfg.ApiKey, cfg.OrganizationId)
+	agentClient := client.NewAgentsClient(cfg.ApiUri, cfg.ApiKey, cfg.OrganizationId)
 	obj := &CloudObject{
-		cfg:       cfg,
-		envClient: envClient,
-		cmd:       cmd,
+		cfg:         cfg,
+		envClient:   envClient,
+		agentClient: agentClient,
+		cmd:         cmd,
 	}
 
 	err := obj.UpdateList()
@@ -178,4 +181,12 @@ func (c *CloudObject) CreateEnvironment(name string) (*client.Environment, error
 
 func (c *CloudObject) DeleteEnvironment(id string) error {
 	return c.envClient.Delete(id)
+}
+
+func (c *CloudObject) CreateRunner(environmentId string) (*client.Agent, error) {
+	runner, err := c.agentClient.CreateRunner(environmentId)
+	if err != nil {
+		return nil, err
+	}
+	return &runner, nil
 }

@@ -45,13 +45,15 @@ const (
 
 func NewDevBoxCommand() *cobra.Command {
 	var (
-		oss              bool
-		rawDevboxName    string
-		open             bool
-		baseAgentImage   string
-		baseInitImage    string
-		baseToolkitImage string
-		syncResources    []string
+		oss                 bool
+		rawDevboxName       string
+		open                bool
+		baseAgentImage      string
+		baseInitImage       string
+		baseToolkitImage    string
+		syncResources       []string
+		runnersCount        uint16
+		disableDefaultAgent bool
 	)
 
 	cmd := &cobra.Command{
@@ -191,6 +193,30 @@ func NewDevBoxCommand() *cobra.Command {
 				if err != nil {
 					fail(errors.Wrap(err, "failed to create Cloud environment"))
 				}
+			}
+
+			// Create runners
+			runnersData := make([]client.Agent, 0)
+			if !oss {
+				fmt.Println("Creating additional runner agents in Cloud...")
+				for i := uint16(0); i < runnersCount; i++ {
+					runner, err := cloud.CreateRunner(env.Id)
+					if err != nil {
+						fail(errors.Wrap(err, "failed to create runner agent"))
+					}
+					fmt.Printf("    %s %s\n", runner.Name, color.Gray.Render(fmt.Sprintf("(%s)", runner.SecretKey)))
+					runnersData = append(runnersData, *runner)
+				}
+			}
+
+			// Initialize runner objects
+			runnerPods := make([]*devutils.PodObject, len(runnersData))
+			for i := range runnersData {
+				runnerPods[i] = namespace.Pod(fmt.Sprintf("runner-%d", i+1)).SetKind("runner")
+			}
+			runners := make([]*devutils.Runner, len(runnersData))
+			for i := range runnersData {
+				runners[i] = devutils.NewRunner(runnerPods[i], cloud, baseAgentImage, baseInitImage, baseToolkitImage)
 			}
 
 			// Create namespace
@@ -340,16 +366,44 @@ func NewDevBoxCommand() *cobra.Command {
 				} else {
 					fmt.Printf("[Agent] Uploaded %s in %s.\n", humanize.Bytes(uint64(size)), time.Since(its).Truncate(time.Millisecond))
 				}
-				fmt.Println("[Agent] Deploying...")
-				if err = agent.Create(ctx, env); err != nil {
-					fail(errors.Wrap(err, "failed to create agent"))
+
+				rg, _ := errgroup.WithContext(ctx)
+
+				if !disableDefaultAgent {
+					rg.Go(func() error {
+						fmt.Println("[Agent] Deploying...")
+						if err = agent.Create(ctx, env); err != nil {
+							fail(errors.Wrap(err, "failed to create agent"))
+						}
+						fmt.Println("[Agent] Waiting for readiness...")
+						if err = agent.WaitForReady(ctx); err != nil {
+							fail(errors.Wrap(err, "failed to create agent"))
+						}
+						fmt.Println("[Agent] Ready...")
+						return nil
+					})
+				} else {
+					fmt.Println("[Agent] Skipping deployment as it's disabled")
 				}
-				fmt.Println("[Agent] Waiting for readiness...")
-				if err = agent.WaitForReady(ctx); err != nil {
-					fail(errors.Wrap(err, "failed to create agent"))
+
+				for i := range runners {
+					rg.Go(func(index int, runner *devutils.Runner) func() error {
+						return func() error {
+							fmt.Printf("[Runner #%d] Deploying...\n", index+1)
+							if err = runner.Create(ctx, env, &runnersData[index]); err != nil {
+								fail(errors.Wrapf(err, "failed to create runner #%d", index+1))
+							}
+							fmt.Printf("[Runner #%d] Waiting for readiness...\n", index+1)
+							if err = runnerPods[index].WaitForReady(ctx); err != nil {
+								fail(errors.Wrapf(err, "failed to create runner #%d", index+1))
+							}
+							fmt.Printf("[Runner #%d] Ready...\n", index+1)
+							return nil
+						}
+					}(i, runners[i]))
 				}
-				fmt.Println("[Agent] Ready...")
-				return nil
+
+				return rg.Wait()
 			})
 
 			// Building Toolkit
@@ -560,26 +614,63 @@ func NewDevBoxCommand() *cobra.Command {
 					} else {
 						fmt.Printf("  Agent: uploaded %s in %s.\n", humanize.Bytes(uint64(size)), time.Since(its).Truncate(time.Millisecond))
 
-						// Restart only if it has changes
-						err := agentPod.Restart(ctx)
-						if ctx.Err() != nil {
-							return nil
-						}
-						if err == nil {
-							fmt.Printf("  Agent: restarted. Waiting for readiness...\n")
-							_ = agentPod.RefreshData(ctx)
-							err = agentPod.WaitForReady(ctx)
-							if ctx.Err() != nil {
+						rg, _ := errgroup.WithContext(ctx)
+
+						if !disableDefaultAgent {
+							rg.Go(func() error {
+								// Restart only if it has changes
+								err := agentPod.Restart(ctx)
+								if ctx.Err() != nil {
+									return nil
+								}
+								if err == nil {
+									fmt.Printf("  Agent: restarted. Waiting for readiness...\n")
+									_ = agentPod.RefreshData(ctx)
+									err = agentPod.WaitForReady(ctx)
+									if ctx.Err() != nil {
+										return nil
+									}
+									if err == nil {
+										fmt.Printf("  Agent: ready again\n")
+									} else {
+										fail(errors.Wrap(err, "failed to wait for agent pod readiness"))
+									}
+								} else {
+									fmt.Printf("  Agent: restart failed: %s\n", err.Error())
+								}
 								return nil
-							}
-							if err == nil {
-								fmt.Printf("  Agent: ready again\n")
-							} else {
-								fail(errors.Wrap(err, "failed to wait for agent pod readiness"))
-							}
-						} else {
-							fmt.Printf("  Agent: restart failed: %s\n", err.Error())
+							})
 						}
+
+						for i := range runners {
+							rg.Go(func(index int, runner *devutils.Runner) func() error {
+								return func() error {
+									// Restart only if it has changes
+									err := runnerPods[index].Restart(ctx)
+									if ctx.Err() != nil {
+										return nil
+									}
+									if err == nil {
+										fmt.Printf("  Runner #%d: restarted. Waiting for readiness...\n", index+1)
+										_ = runnerPods[index].RefreshData(ctx)
+										err = runnerPods[index].WaitForReady(ctx)
+										if ctx.Err() != nil {
+											return nil
+										}
+										if err == nil {
+											fmt.Printf("  Runner #%d: ready again\n", index+1)
+										} else {
+											fail(errors.Wrapf(err, "failed to wait for runner#%d pod readiness", index+1))
+										}
+									} else {
+										fmt.Printf("  Runner #%d: restart failed: %s\n", index+1, err.Error())
+									}
+									return nil
+								}
+							}(i, runners[i]))
+						}
+
+						return rg.Wait()
 					}
 					return nil
 				})
@@ -696,6 +787,8 @@ func NewDevBoxCommand() *cobra.Command {
 	cmd.Flags().StringVar(&baseInitImage, "init-image", "kubeshop/testkube-tw-init:latest", "base init image")
 	cmd.Flags().StringVar(&baseToolkitImage, "toolkit-image", "kubeshop/testkube-tw-toolkit:latest", "base toolkit image")
 	cmd.Flags().StringVar(&baseAgentImage, "agent-image", "kubeshop/testkube-api-server:latest", "base agent image")
+	cmd.Flags().Uint16Var(&runnersCount, "runners", 0, "additional runners count")
+	cmd.Flags().BoolVar(&disableDefaultAgent, "disable-agent", false, "should disable default agent")
 
 	return cmd
 }
