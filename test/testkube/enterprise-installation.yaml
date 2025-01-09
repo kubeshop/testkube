@@ -7,6 +7,9 @@ metadata:
 spec:
   system:
     pureByDefault: true
+  events:
+  - cronjob:
+      cron: "20 */4 * * *" # every 4 hours
   content:
     files:
     - path: /root/edge-cluster-sa-key.json
