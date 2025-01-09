@@ -34,9 +34,16 @@ spec:
       echo "deb https://repo.testkube.io/linux linux main" | tee -a /etc/apt/sources.list
       apt-get update && apt-get install -y testkube expect
   - name: gcloud auth
-    shell: |
-      gcloud auth activate-service-account gh-actions-deploy@testkube-328312.iam.gserviceaccount.com --key-file=/root/edge-cluster-sa-key.json
-      gcloud container clusters get-credentials testkube-cloud-edge --region us-east1 --project testkube-328312
+    run:
+      env:
+      - name: SA_NAME
+        valueFrom:
+          secretKeyRef:
+            name: enterprise-installation-test-sa-name
+            key: sa-name
+      shell: |
+        gcloud auth activate-service-account {{ env.SA_NAME }} --key-file=/root/edge-cluster-sa-key.json
+        gcloud container clusters get-credentials testkube-cloud-edge --region us-east1 --project testkube-328312
   - name: Cleanup before installation
     shell: kubectl delete namespace testkube-enterprise-installation-test --ignore-not-found
   - name: Test
