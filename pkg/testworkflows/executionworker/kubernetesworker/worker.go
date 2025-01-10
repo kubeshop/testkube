@@ -124,7 +124,7 @@ func (w *worker) Execute(ctx context.Context, request executionworkertypes.Execu
 		request.Workflow.Spec.Pod = &testworkflowsv1.PodConfig{
 			ServiceAccountName: cfg.Worker.DefaultServiceAccount,
 		}
-	} else if cfg.Worker.DefaultServiceAccount == "" {
+	} else if request.Workflow.Spec.Pod.ServiceAccountName == "" {
 		request.Workflow.Spec.Pod = request.Workflow.Spec.Pod.DeepCopy()
 		request.Workflow.Spec.Pod.ServiceAccountName = cfg.Worker.DefaultServiceAccount
 	}
