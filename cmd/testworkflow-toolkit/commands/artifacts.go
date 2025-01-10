@@ -10,13 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"google.golang.org/protobuf/types/known/emptypb"
-
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
 	agentclient "github.com/kubeshop/testkube/pkg/agent/client"
-	"github.com/kubeshop/testkube/pkg/capabilities"
-	"github.com/kubeshop/testkube/pkg/cloud"
-
 	"github.com/kubeshop/testkube/pkg/filesystem"
 
 	"github.com/spf13/cobra"
@@ -84,19 +79,12 @@ func NewArtifactsCmd() *cobra.Command {
 			// Archive
 			ctx, cancel := context.WithTimeout(cmd.Context(), 30*time.Second)
 			defer cancel()
-			ctx = agentclient.AddAPIKeyMeta(ctx, config.Config().Worker.Connection.ApiKey)
-			executor, client := env.Cloud(ctx)
-			proContext, err := client.GetProContext(ctx, &emptypb.Empty{})
-			var supported []*cloud.Capability
-			if err != nil && !strings.Contains(err.Error(), "not supported") {
-				fmt.Printf("Warning: couldn't get capabilities: %s\n", err.Error())
-			}
-			if proContext != nil {
-				supported = proContext.Capabilities
-			}
+			cfg := config.Config()
+			ctx = agentclient.AddAPIKeyMeta(ctx, cfg.Worker.Connection.ApiKey)
+			_, client := env.Cloud(ctx)
 
-			if config.JUnitParserEnabled() || capabilities.Enabled(supported, capabilities.CapabilityJUnitReports) {
-				junitProcessor := artifacts.NewJUnitPostProcessor(filesystem.NewOSFileSystem(), executor, walker.Root(), config.Config().Resource.FsPrefix)
+			if env.HasJunitSupport() {
+				junitProcessor := artifacts.NewJUnitPostProcessor(filesystem.NewOSFileSystem(), client, cfg.Worker.Connection.ApiKey, walker.Root(), cfg.Resource.FsPrefix)
 				handlerOpts = append(handlerOpts, artifacts.WithPostProcessor(junitProcessor))
 			}
 			if compress != "" {
@@ -105,26 +93,26 @@ func NewArtifactsCmd() *cobra.Command {
 				if unpack {
 					opts = append(opts, cloudUnpack)
 				}
-				uploader = artifacts.NewCloudUploader(executor, opts...)
+				uploader = artifacts.NewCloudUploader(client, cfg.Worker.Connection.ApiKey, opts...)
 			} else {
 				processor = artifacts.NewDirectProcessor()
-				uploader = artifacts.NewCloudUploader(executor, artifacts.WithParallelismCloud(30), artifacts.CloudDetectMimetype)
+				uploader = artifacts.NewCloudUploader(client, cfg.Worker.Connection.ApiKey, artifacts.WithParallelismCloud(30), artifacts.CloudDetectMimetype)
 			}
 
 			// Isolate the files under specific prefix
-			if config.Config().Resource.FsPrefix != "" {
-				handlerOpts = append(handlerOpts, artifacts.WithPathPrefix(config.Config().Resource.FsPrefix))
+			if cfg.Resource.FsPrefix != "" {
+				handlerOpts = append(handlerOpts, artifacts.WithPathPrefix(cfg.Resource.FsPrefix))
 			}
 
 			// Support cd events
-			if config.Config().ControlPlane.CDEventsTarget != "" {
-				handlerOpts = append(handlerOpts, artifacts.WithCDEventsTarget(config.Config().ControlPlane.CDEventsTarget))
+			if cfg.ControlPlane.CDEventsTarget != "" {
+				handlerOpts = append(handlerOpts, artifacts.WithCDEventsTarget(cfg.ControlPlane.CDEventsTarget))
 				handlerOpts = append(handlerOpts, artifacts.WithCDEventsArtifactParameters(cdevents.CDEventsArtifactParameters{
-					Id:           config.Config().Execution.Id,
-					Name:         config.Config().Execution.Name,
-					WorkflowName: config.Config().Workflow.Name,
-					ClusterID:    config.Config().Worker.ClusterID,
-					DashboardURI: config.Config().ControlPlane.DashboardUrl,
+					Id:           cfg.Execution.Id,
+					Name:         cfg.Execution.Name,
+					WorkflowName: cfg.Workflow.Name,
+					ClusterID:    cfg.Worker.ClusterID,
+					DashboardURI: cfg.ControlPlane.DashboardUrl,
 				}))
 			}
 

@@ -34,6 +34,10 @@ service TestKubeCloudAPI {
     rpc ObtainExecution(ObtainExecutionRequest) returns (ObtainExecutionResponse);
     rpc FinishExecution(FinishExecutionRequest) returns (FinishExecutionResponse);
 
+    // Execution
+    rpc SaveExecutionArtifactPresigned(SaveExecutionArtifactPresignedRequest) returns (SaveExecutionArtifactPresignedResponse);
+    rpc AppendExecutionReport(AppendExecutionReportRequest) returns (AppendExecutionReportResponse);
+
     // CRD Synchronisation
     // -- Test Workflows
     rpc GetTestWorkflow(GetTestWorkflowRequest) returns (GetTestWorkflowResponse);
@@ -375,6 +379,32 @@ message FinishExecutionRequest {
 }
 
 message FinishExecutionResponse {
+}
+
+// Execution
+
+message SaveExecutionArtifactPresignedRequest {
+  string environment_id = 1;
+  string id = 2;
+  string step = 3;
+  string file_path = 4;
+  string content_type = 5;
+}
+
+message SaveExecutionArtifactPresignedResponse {
+  string url = 1;
+}
+
+message AppendExecutionReportRequest {
+  string environment_id = 1;
+  string id = 2;
+  string step = 3;
+  string file_path = 4;
+  bytes report = 5; // TODO: avoid sending report - it could be fetched directly from the artifact instead
+}
+
+message AppendExecutionReportResponse {
+
 }
 
 // CRD Synchronisation -- Test Workflows

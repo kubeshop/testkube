@@ -15,80 +15,22 @@ import (
 	"io"
 	"math"
 	"strings"
-	"sync"
-	"time"
 
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/encoding/gzip"
-	"google.golang.org/protobuf/types/known/emptypb"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
 	"github.com/kubeshop/testkube/internal/common"
 	agentclient "github.com/kubeshop/testkube/pkg/agent/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/capabilities"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 )
-
-var (
-	isGrpcMu           sync.Mutex
-	isGrpcExecuteCache *bool
-	isGrpcListCache    *bool
-)
-
-func loadCapabilities() {
-	isGrpcMu.Lock()
-	defer isGrpcMu.Unlock()
-
-	// Block if the instance doesn't support that
-	cfg := config.Config()
-	if isGrpcExecuteCache == nil && cfg.Worker.FeatureFlags[testworkflowconfig.FeatureFlagNewExecutions] != "true" {
-		isGrpcExecuteCache = common.Ptr(false)
-	}
-	if isGrpcListCache == nil && cfg.Worker.FeatureFlags[testworkflowconfig.FeatureFlagTestWorkflowCloudStorage] != "true" {
-		isGrpcListCache = common.Ptr(false)
-	}
-
-	// Do not check Cloud support if its already predefined
-	if isGrpcExecuteCache != nil && isGrpcListCache != nil {
-		return
-	}
-
-	// Check support in the cloud
-	ctx := agentclient.AddAPIKeyMeta(context.Background(), cfg.Worker.Connection.ApiKey)
-	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
-	defer cancel()
-	_, client := env.Cloud(ctx)
-	proContext, _ := client.GetProContext(ctx, &emptypb.Empty{})
-	if proContext != nil {
-		if isGrpcExecuteCache == nil {
-			isGrpcExecuteCache = common.Ptr(capabilities.Enabled(proContext.Capabilities, capabilities.CapabilityNewExecutions))
-		}
-		if isGrpcListCache == nil {
-			isGrpcListCache = common.Ptr(capabilities.Enabled(proContext.Capabilities, capabilities.CapabilityTestWorkflowStorage))
-		}
-	} else {
-		isGrpcExecuteCache = common.Ptr(false)
-		isGrpcListCache = common.Ptr(false)
-	}
-}
-
-func isGrpcExecute() bool {
-	loadCapabilities()
-	return *isGrpcExecuteCache
-}
-
-func isGrpcList() bool {
-	loadCapabilities()
-	return *isGrpcListCache
-}
 
 func ExecuteTestWorkflow(workflowName string, request testkube.TestWorkflowExecutionRequest) ([]testkube.TestWorkflowExecution, error) {
-	if isGrpcExecute() {
+	if env.IsNewExecutions() {
 		return executeTestWorkflowGrpc(workflowName, request)
 	}
 	return executeTestWorkflowApi(workflowName, request)
@@ -174,7 +116,7 @@ func executeTestWorkflowGrpc(workflowName string, request testkube.TestWorkflowE
 }
 
 func ListTestWorkflows(labels map[string]string) ([]testkube.TestWorkflow, error) {
-	if isGrpcList() {
+	if env.IsExternalStorage() {
 		return listTestWorkflowsGrpc(labels)
 	}
 	return listTestWorkflowsApi(labels)

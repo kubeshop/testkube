@@ -7,14 +7,20 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/pkg/errors"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/encoding/gzip"
+	"google.golang.org/grpc/metadata"
 
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
+	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/cloud/data/artifact"
 	cloudexecutor "github.com/kubeshop/testkube/pkg/cloud/data/executor"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -22,9 +28,10 @@ import (
 
 type CloudUploaderRequestEnhancer = func(req *http.Request, path string, size int64)
 
-func NewCloudUploader(client cloudexecutor.Executor, opts ...CloudUploaderOpt) Uploader {
+func NewCloudUploader(client cloud.TestKubeCloudAPIClient, apiKey string, opts ...CloudUploaderOpt) Uploader {
 	uploader := &cloudUploader{
 		client:       client,
+		apiKey:       apiKey,
 		parallelism:  1,
 		reqEnhancers: make([]CloudUploaderRequestEnhancer, 0),
 	}
@@ -35,7 +42,8 @@ func NewCloudUploader(client cloudexecutor.Executor, opts ...CloudUploaderOpt) U
 }
 
 type cloudUploader struct {
-	client       cloudexecutor.Executor
+	client       cloud.TestKubeCloudAPIClient
+	apiKey       string
 	wg           sync.WaitGroup
 	sema         chan struct{}
 	parallelism  int
@@ -50,9 +58,29 @@ func (d *cloudUploader) Start() (err error) {
 }
 
 func (d *cloudUploader) getSignedURL(name, contentType string) (string, error) {
+	if !env.IsNewExecutions() {
+		return d.getSignedURLLegacy(name, contentType)
+	}
+
+	cfg := config.Config()
+	md := metadata.New(map[string]string{"api-key": d.apiKey, "organization-id": cfg.Execution.OrganizationId, "agent-id": cfg.Worker.Connection.AgentID})
+	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
+	resp, err := d.client.SaveExecutionArtifactPresigned(metadata.NewOutgoingContext(context.Background(), md), &cloud.SaveExecutionArtifactPresignedRequest{
+		EnvironmentId: cfg.Execution.EnvironmentId,
+		Id:            cfg.Execution.Id,
+		Step:          config.Ref(), // TODO: think if it's valid for the parallel steps that have independent refs
+		ContentType:   contentType,
+		FilePath:      name,
+	}, opts...)
+	if err != nil {
+		return "", err
+	}
+	return resp.Url, err
+}
+func (d *cloudUploader) getSignedURLLegacy(name, contentType string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	response, err := d.client.Execute(ctx, artifact.CmdScraperPutObjectSignedURL, &artifact.PutObjectSignedURLRequest{
+	response, err := cloudexecutor.NewCloudGRPCExecutor(d.client, d.apiKey).Execute(ctx, artifact.CmdScraperPutObjectSignedURL, &artifact.PutObjectSignedURLRequest{
 		Object:           name,
 		ExecutionID:      config.ExecutionId(),
 		TestWorkflowName: config.WorkflowName(),

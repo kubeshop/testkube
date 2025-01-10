@@ -47,6 +47,9 @@ type TestKubeCloudAPIClient interface {
 	SaveExecutionLogsPresigned(ctx context.Context, in *SaveExecutionLogsPresignedRequest, opts ...grpc.CallOption) (*SaveExecutionLogsPresignedResponse, error)
 	ObtainExecution(ctx context.Context, in *ObtainExecutionRequest, opts ...grpc.CallOption) (*ObtainExecutionResponse, error)
 	FinishExecution(ctx context.Context, in *FinishExecutionRequest, opts ...grpc.CallOption) (*FinishExecutionResponse, error)
+	// Execution
+	SaveExecutionArtifactPresigned(ctx context.Context, in *SaveExecutionArtifactPresignedRequest, opts ...grpc.CallOption) (*SaveExecutionArtifactPresignedResponse, error)
+	AppendExecutionReport(ctx context.Context, in *AppendExecutionReportRequest, opts ...grpc.CallOption) (*AppendExecutionReportResponse, error)
 	// CRD Synchronisation
 	// -- Test Workflows
 	GetTestWorkflow(ctx context.Context, in *GetTestWorkflowRequest, opts ...grpc.CallOption) (*GetTestWorkflowResponse, error)
@@ -511,6 +514,24 @@ func (c *testKubeCloudAPIClient) FinishExecution(ctx context.Context, in *Finish
 	return out, nil
 }
 
+func (c *testKubeCloudAPIClient) SaveExecutionArtifactPresigned(ctx context.Context, in *SaveExecutionArtifactPresignedRequest, opts ...grpc.CallOption) (*SaveExecutionArtifactPresignedResponse, error) {
+	out := new(SaveExecutionArtifactPresignedResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/SaveExecutionArtifactPresigned", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *testKubeCloudAPIClient) AppendExecutionReport(ctx context.Context, in *AppendExecutionReportRequest, opts ...grpc.CallOption) (*AppendExecutionReportResponse, error) {
+	out := new(AppendExecutionReportResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/AppendExecutionReport", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *testKubeCloudAPIClient) GetTestWorkflow(ctx context.Context, in *GetTestWorkflowRequest, opts ...grpc.CallOption) (*GetTestWorkflowResponse, error) {
 	out := new(GetTestWorkflowResponse)
 	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/GetTestWorkflow", in, out, opts...)
@@ -711,6 +732,9 @@ type TestKubeCloudAPIServer interface {
 	SaveExecutionLogsPresigned(context.Context, *SaveExecutionLogsPresignedRequest) (*SaveExecutionLogsPresignedResponse, error)
 	ObtainExecution(context.Context, *ObtainExecutionRequest) (*ObtainExecutionResponse, error)
 	FinishExecution(context.Context, *FinishExecutionRequest) (*FinishExecutionResponse, error)
+	// Execution
+	SaveExecutionArtifactPresigned(context.Context, *SaveExecutionArtifactPresignedRequest) (*SaveExecutionArtifactPresignedResponse, error)
+	AppendExecutionReport(context.Context, *AppendExecutionReportRequest) (*AppendExecutionReportResponse, error)
 	// CRD Synchronisation
 	// -- Test Workflows
 	GetTestWorkflow(context.Context, *GetTestWorkflowRequest) (*GetTestWorkflowResponse, error)
@@ -797,6 +821,12 @@ func (UnimplementedTestKubeCloudAPIServer) ObtainExecution(context.Context, *Obt
 }
 func (UnimplementedTestKubeCloudAPIServer) FinishExecution(context.Context, *FinishExecutionRequest) (*FinishExecutionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method FinishExecution not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) SaveExecutionArtifactPresigned(context.Context, *SaveExecutionArtifactPresignedRequest) (*SaveExecutionArtifactPresignedResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SaveExecutionArtifactPresigned not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) AppendExecutionReport(context.Context, *AppendExecutionReportRequest) (*AppendExecutionReportResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AppendExecutionReport not implemented")
 }
 func (UnimplementedTestKubeCloudAPIServer) GetTestWorkflow(context.Context, *GetTestWorkflowRequest) (*GetTestWorkflowResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetTestWorkflow not implemented")
@@ -1304,6 +1334,42 @@ func _TestKubeCloudAPI_FinishExecution_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _TestKubeCloudAPI_SaveExecutionArtifactPresigned_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SaveExecutionArtifactPresignedRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).SaveExecutionArtifactPresigned(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/SaveExecutionArtifactPresigned",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).SaveExecutionArtifactPresigned(ctx, req.(*SaveExecutionArtifactPresignedRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TestKubeCloudAPI_AppendExecutionReport_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AppendExecutionReportRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).AppendExecutionReport(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/AppendExecutionReport",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).AppendExecutionReport(ctx, req.(*AppendExecutionReportRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _TestKubeCloudAPI_GetTestWorkflow_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetTestWorkflowRequest)
 	if err := dec(in); err != nil {
@@ -1608,6 +1674,14 @@ var TestKubeCloudAPI_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "FinishExecution",
 			Handler:    _TestKubeCloudAPI_FinishExecution_Handler,
+		},
+		{
+			MethodName: "SaveExecutionArtifactPresigned",
+			Handler:    _TestKubeCloudAPI_SaveExecutionArtifactPresigned_Handler,
+		},
+		{
+			MethodName: "AppendExecutionReport",
+			Handler:    _TestKubeCloudAPI_AppendExecutionReport_Handler,
 		},
 		{
 			MethodName: "GetTestWorkflow",

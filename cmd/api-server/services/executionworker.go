@@ -39,6 +39,7 @@ func CreateExecutionWorker(
 		},
 		Connection: testworkflowconfig.WorkerConnectionConfig{
 			Url:         cfg.TestkubeProURL,
+			AgentID:     cfg.TestkubeProAgentID,
 			ApiKey:      cfg.TestkubeProAPIKey,
 			SkipVerify:  cfg.TestkubeProSkipVerify,
 			TlsInsecure: cfg.TestkubeProTLSInsecure,

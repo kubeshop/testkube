@@ -7,16 +7,21 @@ import (
 	"net/url"
 	"strconv"
 	"sync"
+	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/emptypb"
 	corev1 "k8s.io/api/core/v1"
 
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
 	config2 "github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
+	"github.com/kubeshop/testkube/internal/common"
 	agentclient "github.com/kubeshop/testkube/pkg/agent/client"
 	"github.com/kubeshop/testkube/pkg/cache"
+	"github.com/kubeshop/testkube/pkg/capabilities"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
@@ -30,6 +35,76 @@ import (
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
+
+var (
+	capabilitiesMu         sync.Mutex
+	proContext             *cloud.ProContextResponse
+	proContextLoaded       bool
+	isNewExecutionsCache   *bool
+	isExternalStorageCache *bool
+)
+
+func loadCapabilities() {
+	capabilitiesMu.Lock()
+	defer capabilitiesMu.Unlock()
+
+	// Block if the instance doesn't support that
+	cfg := config2.Config()
+	if isNewExecutionsCache == nil && cfg.Worker.FeatureFlags[testworkflowconfig.FeatureFlagNewExecutions] != "true" {
+		isNewExecutionsCache = common.Ptr(false)
+	}
+	if isExternalStorageCache == nil && cfg.Worker.FeatureFlags[testworkflowconfig.FeatureFlagTestWorkflowCloudStorage] != "true" {
+		isExternalStorageCache = common.Ptr(false)
+	}
+
+	// Do not check Cloud support if its already predefined
+	if isNewExecutionsCache != nil && isExternalStorageCache != nil {
+		return
+	}
+
+	// Check support in the cloud
+	ctx := agentclient.AddAPIKeyMeta(context.Background(), cfg.Worker.Connection.ApiKey)
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	if !proContextLoaded {
+		_, client := Cloud(ctx)
+		proContext, _ = client.GetProContext(ctx, &emptypb.Empty{})
+		proContextLoaded = true
+	}
+	if proContext != nil {
+		if isNewExecutionsCache == nil {
+			isNewExecutionsCache = common.Ptr(capabilities.Enabled(proContext.Capabilities, capabilities.CapabilityNewExecutions))
+		}
+		if isExternalStorageCache == nil {
+			isExternalStorageCache = common.Ptr(capabilities.Enabled(proContext.Capabilities, capabilities.CapabilityTestWorkflowStorage))
+		}
+	} else {
+		isNewExecutionsCache = common.Ptr(false)
+		isExternalStorageCache = common.Ptr(false)
+	}
+}
+
+func IsNewExecutions() bool {
+	loadCapabilities()
+	return *isNewExecutionsCache
+}
+
+func IsExternalStorage() bool {
+	loadCapabilities()
+	return *isExternalStorageCache
+}
+
+func GetCapabilities() []*cloud.Capability {
+	loadCapabilities()
+	if proContext == nil {
+		return nil
+	}
+	return proContext.Capabilities
+}
+
+func HasJunitSupport() bool {
+	return config2.JUnitParserEnabled() || capabilities.Enabled(GetCapabilities(), capabilities.CapabilityJUnitReports)
+}
 
 func KubernetesConfig() *rest.Config {
 	c, err := rest.InClusterConfig()

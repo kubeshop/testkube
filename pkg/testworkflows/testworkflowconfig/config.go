@@ -65,6 +65,7 @@ type WorkerConfig struct {
 type WorkerConnectionConfig struct {
 	Url         string `json:"C,omitempty"`
 	ApiKey      string `json:"a,omitempty"`
+	AgentID     string `json:"I,omitempty"`
 	SkipVerify  bool   `json:"v,omitempty"`
 	TlsInsecure bool   `json:"i,omitempty"`
 

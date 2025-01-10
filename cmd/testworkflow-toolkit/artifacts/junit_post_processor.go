@@ -5,13 +5,19 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"math"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/pkg/errors"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/encoding/gzip"
+	"google.golang.org/grpc/metadata"
 
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
+	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
 
 	cloudexecutor "github.com/kubeshop/testkube/pkg/cloud/data/executor"
@@ -22,13 +28,14 @@ import (
 // JUnitPostProcessor is a post-processor that checks XML files for JUnit reports and sends them to the cloud.
 type JUnitPostProcessor struct {
 	fs         filesystem.FileSystem
-	client     cloudexecutor.Executor
+	client     cloud.TestKubeCloudAPIClient
+	apiKey     string
 	root       string
 	pathPrefix string
 }
 
-func NewJUnitPostProcessor(fs filesystem.FileSystem, client cloudexecutor.Executor, root, pathPrefix string) *JUnitPostProcessor {
-	return &JUnitPostProcessor{fs: fs, client: client, root: root, pathPrefix: pathPrefix}
+func NewJUnitPostProcessor(fs filesystem.FileSystem, client cloud.TestKubeCloudAPIClient, apiKey string, root, pathPrefix string) *JUnitPostProcessor {
+	return &JUnitPostProcessor{fs: fs, client: client, apiKey: apiKey, root: root, pathPrefix: pathPrefix}
 }
 
 func (p *JUnitPostProcessor) Start() error {
@@ -88,9 +95,26 @@ func (p *JUnitPostProcessor) Add(path string) error {
 
 // sendJUnitReport sends the JUnit report to the Agent gRPC API.
 func (p *JUnitPostProcessor) sendJUnitReport(path string, report []byte) error {
+	if !env.IsNewExecutions() {
+		return p.sendJUnitReportLegacy(path, report)
+	}
+	cfg := config.Config()
+	md := metadata.New(map[string]string{"api-key": p.apiKey, "organization-id": cfg.Execution.OrganizationId, "agent-id": cfg.Worker.Connection.AgentID})
+	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
+	_, err := p.client.AppendExecutionReport(metadata.NewOutgoingContext(context.Background(), md), &cloud.AppendExecutionReportRequest{
+		EnvironmentId: cfg.Execution.EnvironmentId,
+		Id:            cfg.Execution.Id,
+		Step:          config.Ref(), // TODO: think if it's valid for the parallel steps that have independent refs
+		FilePath:      path,
+		Report:        report,
+	}, opts...)
+	return err
+}
+
+func (p *JUnitPostProcessor) sendJUnitReportLegacy(path string, report []byte) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
-	_, err := p.client.Execute(ctx, testworkflow.CmdTestWorkflowExecutionAddReport, &testworkflow.ExecutionsAddReportRequest{
+	_, err := cloudexecutor.NewCloudGRPCExecutor(p.client, p.apiKey).Execute(ctx, testworkflow.CmdTestWorkflowExecutionAddReport, &testworkflow.ExecutionsAddReportRequest{
 		ID:           config.ExecutionId(),
 		WorkflowName: config.WorkflowName(),
 		WorkflowStep: config.Ref(), // TODO: think if it's valid for the parallel steps that have independent refs
