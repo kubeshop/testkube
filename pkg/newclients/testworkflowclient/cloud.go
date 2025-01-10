@@ -26,6 +26,7 @@ func NewCloudTestWorkflowClient(client cloud.TestKubeCloudAPIClient, apiKey stri
 
 func (c *cloudTestWorkflowClient) Get(ctx context.Context, environmentId string, name string) (*testkube.TestWorkflow, error) {
 	// Pass the additional information
+	// FIXME: Needs agent-id
 	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("api-key", c.apiKey))
 
 	resp, err := c.client.GetTestWorkflow(ctx, &cloud.GetTestWorkflowRequest{

@@ -9,7 +9,6 @@
 package commands
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -31,7 +30,6 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
@@ -163,8 +161,6 @@ func buildTestExecution(test testworkflowsv1.StepExecuteTest, async bool) (func(
 
 func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async bool) (func() error, error) {
 	return func() (err error) {
-		c, _ := env.Cloud(context.Background())
-
 		tags := config.ExecutionTags()
 
 		// Schedule execution
@@ -222,14 +218,10 @@ func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async 
 					// TODO: Consider real-time Notifications without logs instead
 					time.Sleep(ExecutionResultPollingTime)
 					for i := 0; i < GetExecutionRetryOnFailureMaxAttempts; i++ {
-						var resp []byte
-						resp, err = c.Execute(context.Background(), testworkflow.CmdTestWorkflowExecutionGet, testworkflow.ExecutionGetRequest{ID: exec.Id})
+						var next *testkube.TestWorkflowExecution
+						next, err = execute.GetExecution(exec.Id)
 						if err == nil {
-							var v testworkflow.ExecutionGetResponse
-							err = json.Unmarshal(resp, &v)
-							if err == nil {
-								exec = v.WorkflowExecution
-							}
+							exec = *next
 							break
 						}
 						if i+1 < GetExecutionRetryOnFailureMaxAttempts {
