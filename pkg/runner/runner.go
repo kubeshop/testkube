@@ -66,6 +66,7 @@ type runner struct {
 	watching sync.Map
 }
 
+// TODO: ABORT/RESUME/PAUSE ETC CALLS
 func New(
 	id string,
 	worker executionworkertypes.Worker,

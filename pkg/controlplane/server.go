@@ -618,3 +618,28 @@ func (s *Server) GetExecution(ctx context.Context, req *cloud.GetExecutionReques
 	}
 	return &cloud.GetExecutionResponse{Execution: executionBytes}, nil
 }
+
+// TODO
+func (s *Server) UpdateExecutionResult(context.Context, *cloud.UpdateExecutionResultRequest) (*cloud.UpdateExecutionResultResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateExecutionResult not implemented")
+}
+
+// TODO
+func (s *Server) UpdateExecutionOutput(context.Context, *cloud.UpdateExecutionOutputRequest) (*cloud.UpdateExecutionOutputResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateExecutionOutput not implemented")
+}
+
+// TODO
+func (s *Server) SaveExecutionLogsPresigned(context.Context, *cloud.SaveExecutionLogsPresignedRequest) (*cloud.SaveExecutionLogsPresignedResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SaveExecutionLogsPresigned not implemented")
+}
+
+// TODO
+func (s *Server) SaveExecutionArtifactPresigned(context.Context, *cloud.SaveExecutionArtifactPresignedRequest) (*cloud.SaveExecutionArtifactPresignedResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SaveExecutionArtifactPresigned not implemented")
+}
+
+// TODO
+func (s *Server) AppendExecutionReport(context.Context, *cloud.AppendExecutionReportRequest) (*cloud.AppendExecutionReportResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AppendExecutionReport not implemented")
+}
