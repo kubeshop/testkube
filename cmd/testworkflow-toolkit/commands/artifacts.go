@@ -81,7 +81,7 @@ func NewArtifactsCmd() *cobra.Command {
 			defer cancel()
 			cfg := config.Config()
 			ctx = agentclient.AddAPIKeyMeta(ctx, cfg.Worker.Connection.ApiKey)
-			_, client := env.Cloud(ctx)
+			client := env.Cloud()
 
 			if env.HasJunitSupport() {
 				junitProcessor := artifacts.NewJUnitPostProcessor(filesystem.NewOSFileSystem(), client, cfg.Worker.Connection.ApiKey, walker.Root(), cfg.Resource.FsPrefix)
@@ -93,10 +93,10 @@ func NewArtifactsCmd() *cobra.Command {
 				if unpack {
 					opts = append(opts, cloudUnpack)
 				}
-				uploader = artifacts.NewCloudUploader(client, cfg.Worker.Connection.ApiKey, opts...)
+				uploader = artifacts.NewCloudUploader(client, opts...)
 			} else {
 				processor = artifacts.NewDirectProcessor()
-				uploader = artifacts.NewCloudUploader(client, cfg.Worker.Connection.ApiKey, artifacts.WithParallelismCloud(30), artifacts.CloudDetectMimetype)
+				uploader = artifacts.NewCloudUploader(client, artifacts.WithParallelismCloud(30), artifacts.CloudDetectMimetype)
 			}
 
 			// Isolate the files under specific prefix

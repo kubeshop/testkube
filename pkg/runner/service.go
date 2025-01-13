@@ -133,7 +133,6 @@ func (s *service) recover(ctx context.Context) (err error) {
 		if err != nil {
 			continue
 		}
-		fmt.Println(ui.Green("exec2"), exec)
 
 		// TODO: Pass hints (namespace, signature, scheduledAt)
 		go func(environmentId string, executionId string) {

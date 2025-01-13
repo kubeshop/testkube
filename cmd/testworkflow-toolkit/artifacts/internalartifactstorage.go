@@ -1,11 +1,9 @@
 package artifacts
 
 import (
-	"context"
 	"io"
 	"path/filepath"
 	"sync"
-	"time"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
@@ -31,11 +29,7 @@ type internalArtifactStorage struct {
 }
 
 func newArtifactUploader() Uploader {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-	_, client := env.Cloud(ctx)
-	apiKey := config.Config().Worker.Connection.ApiKey
-	return NewCloudUploader(client, apiKey, WithParallelismCloud(30), CloudDetectMimetype)
+	return NewCloudUploader(env.Cloud(), WithParallelismCloud(30), CloudDetectMimetype)
 }
 
 func InternalStorage() InternalArtifactStorage {

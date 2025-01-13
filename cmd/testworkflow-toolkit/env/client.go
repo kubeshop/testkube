@@ -6,6 +6,7 @@ import (
 	"math"
 	"net/url"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -19,15 +20,16 @@ import (
 
 	config2 "github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
 	"github.com/kubeshop/testkube/internal/common"
+	config3 "github.com/kubeshop/testkube/internal/config"
 	agentclient "github.com/kubeshop/testkube/pkg/agent/client"
 	"github.com/kubeshop/testkube/pkg/cache"
 	"github.com/kubeshop/testkube/pkg/capabilities"
+	"github.com/kubeshop/testkube/pkg/controlplaneclient"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/cloud"
-	cloudexecutor "github.com/kubeshop/testkube/pkg/cloud/data/executor"
 	"github.com/kubeshop/testkube/pkg/configmap"
 	phttp "github.com/kubeshop/testkube/pkg/http"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
@@ -39,15 +41,38 @@ import (
 
 var (
 	capabilitiesMu         sync.Mutex
+	internalProContext     config3.ProContext
 	proContext             *cloud.ProContextResponse
 	proContextLoaded       bool
 	isNewExecutionsCache   *bool
 	isExternalStorageCache *bool
 )
 
-func loadCapabilities() {
+func loadDefaultProContext() {
+	cfg := config2.Config()
+	internalProContext = config3.ProContext{
+		APIKey:              cfg.Worker.Connection.ApiKey,
+		URL:                 cfg.Worker.Connection.Url,
+		TLSInsecure:         cfg.Worker.Connection.TlsInsecure,
+		SkipVerify:          cfg.Worker.Connection.SkipVerify,
+		EnvID:               cfg.Execution.EnvironmentId,
+		OrgID:               cfg.Execution.OrganizationId,
+		DashboardURI:        cfg.ControlPlane.DashboardUrl,
+		NewExecutions:       false,
+		TestWorkflowStorage: false,
+	}
+}
+
+// FIXME: avoid loading if not necessary (lazy load in client)
+func loadProContext() {
 	capabilitiesMu.Lock()
 	defer capabilitiesMu.Unlock()
+
+	defer func() {
+		loadDefaultProContext()
+		internalProContext.NewExecutions = *isNewExecutionsCache
+		internalProContext.TestWorkflowStorage = *isExternalStorageCache
+	}()
 
 	// Block if the instance doesn't support that
 	cfg := config2.Config()
@@ -64,13 +89,17 @@ func loadCapabilities() {
 	}
 
 	// Check support in the cloud
-	md := metadata.New(map[string]string{"api-key": cfg.Worker.Connection.ApiKey, "organization-id": cfg.Execution.OrganizationId, "agent-id": cfg.Worker.Connection.AgentID})
-	ctx := metadata.NewOutgoingContext(context.Background(), md)
+	ctx := metadata.NewOutgoingContext(context.Background(), metadata.New(map[string]string{
+		"api-key":         cfg.Worker.Connection.ApiKey,
+		"organization-id": cfg.Execution.OrganizationId,
+		"environment-id":  cfg.Execution.EnvironmentId,
+		"execution-id":    cfg.Execution.Id,
+		"agent-id":        cfg.Worker.Connection.AgentID,
+	}))
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 	if !proContextLoaded {
-		_, client := Cloud(ctx)
-		proContext, _ = client.GetProContext(ctx, &emptypb.Empty{})
+		proContext, _ = CloudInternal().GetProContext(ctx, &emptypb.Empty{})
 		proContextLoaded = true
 	}
 	if proContext != nil {
@@ -87,17 +116,17 @@ func loadCapabilities() {
 }
 
 func IsNewExecutions() bool {
-	loadCapabilities()
+	loadProContext()
 	return *isNewExecutionsCache
 }
 
 func IsExternalStorage() bool {
-	loadCapabilities()
+	loadProContext()
 	return *isExternalStorageCache
 }
 
 func GetCapabilities() []*cloud.Capability {
-	loadCapabilities()
+	loadProContext()
 	if proContext == nil {
 		return nil
 	}
@@ -166,27 +195,35 @@ func Testkube() client.Client {
 }
 
 var (
-	cloudMu       sync.Mutex
-	cloudExecutor cloudexecutor.Executor
-	cloudClient   cloud.TestKubeCloudAPIClient
-	cloudConn     *grpc.ClientConn
+	cloudMu     sync.Mutex
+	cloudClient cloud.TestKubeCloudAPIClient
+	cloudConn   *grpc.ClientConn
 )
 
-func Cloud(ctx context.Context) (cloudexecutor.Executor, cloud.TestKubeCloudAPIClient) {
+func CloudInternal() cloud.TestKubeCloudAPIClient {
 	cloudMu.Lock()
 	defer cloudMu.Unlock()
 
 	var err error
-	if cloudExecutor == nil {
+	if cloudClient == nil {
 		cfg := config2.Config().Worker.Connection
 		logger := log.NewSilent()
-		cloudConn, err = agentclient.NewGRPCConnection(ctx, cfg.TlsInsecure, cfg.SkipVerify, cfg.Url, "", "", "", logger)
+		cloudConn, err = agentclient.NewGRPCConnection(context.Background(), cfg.TlsInsecure, cfg.SkipVerify, cfg.Url, "", "", "", logger)
 		if err != nil {
 			ui.Fail(fmt.Errorf("failed to connect with Cloud: %w", err))
 		}
 		cloudClient = cloud.NewTestKubeCloudAPIClient(cloudConn)
-		cloudExecutor = cloudexecutor.NewCloudGRPCExecutor(cloudClient, cfg.ApiKey)
 	}
+	return cloudClient
+}
 
-	return cloudExecutor, cloudClient
+func Cloud() controlplaneclient.ExecutionSelfClient {
+	cfg := config2.Config()
+	grpcClient := CloudInternal()
+	loadProContext() // FIXME: do it lazily
+	return controlplaneclient.New(grpcClient, internalProContext, cfg.Worker.Connection.AgentID, cfg.Worker.Connection.ApiKey, controlplaneclient.ClientOptions{
+		StorageSkipVerify:  true, // FIXME?
+		ExecutionID:        cfg.Execution.Id,
+		ParentExecutionIDs: strings.Split(cfg.Execution.ParentIds, "/"),
+	})
 }

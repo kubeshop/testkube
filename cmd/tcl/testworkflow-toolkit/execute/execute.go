@@ -10,23 +10,14 @@ package execute
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
-	"math"
 	"strings"
-
-	"github.com/pkg/errors"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/encoding/gzip"
-	"google.golang.org/grpc/metadata"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
-	"github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 )
 
@@ -68,53 +59,13 @@ func executeTestWorkflowApi(workflowName string, request testkube.TestWorkflowEx
 
 func executeTestWorkflowGrpc(workflowName string, request testkube.TestWorkflowExecutionRequest) ([]testkube.TestWorkflowExecution, error) {
 	cfg := config.Config()
-	md := metadata.New(map[string]string{"api-key": cfg.Worker.Connection.ApiKey, "organization-id": cfg.Execution.OrganizationId, "agent-id": cfg.Worker.Connection.AgentID})
-	ctx := metadata.NewOutgoingContext(context.Background(), md)
-	_, client := env.Cloud(ctx)
+	client := env.Cloud()
 
-	parentIds := make([]string, 0)
-	if cfg.Execution.ParentIds != "" {
-		parentIds = strings.Split(cfg.Execution.ParentIds, "/")
-	}
-	parentIds = append(parentIds, cfg.Execution.Id)
-
-	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
-	resp, err := client.ScheduleExecution(ctx, &cloud.ScheduleRequest{
-		EnvironmentId:   cfg.Execution.EnvironmentId,
+	return client.ScheduleExecution(context.Background(), cfg.Execution.EnvironmentId, &cloud.ScheduleRequest{
 		Executions:      []*cloud.ScheduleExecution{{Selector: &cloud.ScheduleResourceSelector{Name: workflowName}, Config: request.Config}},
 		DisableWebhooks: cfg.Execution.DisableWebhooks,
 		Tags:            request.Tags,
-		RunningContext: &cloud.RunningContext{
-			Name: cfg.Execution.Id,
-			Type: cloud.RunningContextType_EXECUTION,
-		},
-		ParentExecutionIds: parentIds,
-	}, opts...)
-
-	if err != nil {
-		return nil, err
-	}
-
-	result := make([]testkube.TestWorkflowExecution, 0)
-	var item *cloud.ScheduleResponse
-	for {
-		item, err = resp.Recv()
-		if err != nil {
-			if !errors.Is(err, io.EOF) {
-				fmt.Printf("warn: %s\n", err)
-			}
-			break
-		}
-		var execution testkube.TestWorkflowExecution
-		err = json.Unmarshal(item.Execution, &execution)
-		if err != nil {
-			fmt.Printf("warn: %s\n", err)
-			break
-		}
-		result = append(result, execution)
-	}
-
-	return result, nil
+	})
 }
 
 func ListTestWorkflows(labels map[string]string) ([]testkube.TestWorkflow, error) {
@@ -135,53 +86,12 @@ func listTestWorkflowsApi(labels map[string]string) ([]testkube.TestWorkflow, er
 
 func listTestWorkflowsGrpc(labels map[string]string) ([]testkube.TestWorkflow, error) {
 	cfg := config.Config()
-	_, grpcClient := env.Cloud(context.Background())
+	grpcClient := env.CloudInternal() // TODO: Avoid Internal
 	client := testworkflowclient.NewCloudTestWorkflowClient(grpcClient, cfg.Worker.Connection.ApiKey)
 	return client.List(context.Background(), cfg.Execution.EnvironmentId, testworkflowclient.ListOptions{Labels: labels})
 }
 
 func GetExecution(id string) (*testkube.TestWorkflowExecution, error) {
-	if env.IsNewExecutions() {
-		return getExecution(id)
-	}
-	return getExecutionLegacy(id)
-}
-
-func getExecution(id string) (*testkube.TestWorkflowExecution, error) {
 	cfg := config.Config()
-	md := metadata.New(map[string]string{"api-key": cfg.Worker.Connection.ApiKey, "organization-id": cfg.Execution.OrganizationId, "agent-id": cfg.Worker.Connection.AgentID})
-	ctx := metadata.NewOutgoingContext(context.Background(), md)
-	_, client := env.Cloud(ctx)
-
-	parentIds := make([]string, 0)
-	if cfg.Execution.ParentIds != "" {
-		parentIds = strings.Split(cfg.Execution.ParentIds, "/")
-	}
-	parentIds = append(parentIds, cfg.Execution.Id)
-
-	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
-	resp, err := client.GetExecution(ctx, &cloud.GetExecutionRequest{EnvironmentId: cfg.Execution.EnvironmentId, Id: id}, opts...)
-	if err != nil {
-		return nil, err
-	}
-	var v testkube.TestWorkflowExecution
-	err = json.Unmarshal(resp.Execution, &v)
-	if err != nil {
-		return nil, err
-	}
-	return &v, nil
-}
-
-func getExecutionLegacy(id string) (*testkube.TestWorkflowExecution, error) {
-	c, _ := env.Cloud(context.Background())
-	resp, err := c.Execute(context.Background(), testworkflow.CmdTestWorkflowExecutionGet, testworkflow.ExecutionGetRequest{ID: id})
-	if err != nil {
-		return nil, err
-	}
-	var v testworkflow.ExecutionGetResponse
-	err = json.Unmarshal(resp, &v)
-	if err != nil {
-		return nil, err
-	}
-	return &v.WorkflowExecution, nil
+	return env.Cloud().GetExecution(context.Background(), cfg.Execution.EnvironmentId, id)
 }
