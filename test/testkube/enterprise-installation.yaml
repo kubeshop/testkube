@@ -19,7 +19,7 @@ spec:
           key: json-sa-key
     git:
       uri: https://github.com/kubeshop/testkube
-      revision: enterprise-installation-workflow
+      revision: main
       paths:
       - test/testkube/enterprise-installation-expect-file.exp # expect file to finalize installation (user choices required): TKC-3026
   container:
