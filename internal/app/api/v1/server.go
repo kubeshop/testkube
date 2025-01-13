@@ -33,6 +33,7 @@ func NewTestkubeAPI(
 	testWorkflowOutput testworkflow.OutputRepository,
 	artifactsStorage storage.ArtifactsStorage,
 	webhookClient executorsclientv1.WebhooksInterface,
+	webhookTemplateClient executorsclientv1.WebhookTemplatesInterface,
 	testTriggersClient testtriggersclientv1.Interface,
 	testWorkflowsClient testworkflowsv1.Interface,
 	testWorkflowTemplatesClient testworkflowsv1.TestWorkflowTemplatesInterface,
@@ -66,6 +67,7 @@ func NewTestkubeAPI(
 		WebsocketLoader:             websocketLoader,
 		Events:                      eventsEmitter,
 		WebhooksClient:              webhookClient,
+		WebhookTemplatesClient:      webhookTemplateClient,
 		Namespace:                   namespace,
 		ConfigMap:                   configMap,
 		TestWorkflowExecutor:        testWorkflowExecutor,
@@ -93,6 +95,7 @@ type TestkubeAPI struct {
 	DeprecatedClients           commons.DeprecatedClients
 	SecretManager               secretmanager.SecretManager
 	WebhooksClient              executorsclientv1.WebhooksInterface
+	WebhookTemplatesClient      executorsclientv1.WebhookTemplatesInterface
 	TestTriggersClient          testtriggersclientv1.Interface
 	TestWorkflowsClient         testworkflowsv1.Interface
 	TestWorkflowTemplatesClient testworkflowsv1.TestWorkflowTemplatesInterface
@@ -126,6 +129,15 @@ func (s *TestkubeAPI) Init(server server.HTTPServer) {
 	webhooks.Get("/:name", s.GetWebhookHandler())
 	webhooks.Delete("/:name", s.DeleteWebhookHandler())
 	webhooks.Delete("/", s.DeleteWebhooksHandler())
+
+	webhookTemplates := root.Group("/webhook-templates")
+
+	webhookTemplates.Post("/", s.CreateWebhookTemplateHandler())
+	webhookTemplates.Patch("/:name", s.UpdateWebhookTemplateHandler())
+	webhookTemplates.Get("/", s.ListWebhookTemplatesHandler())
+	webhookTemplates.Get("/:name", s.GetWebhookTemplateHandler())
+	webhookTemplates.Delete("/:name", s.DeleteWebhookTemplateHandler())
+	webhookTemplates.Delete("/", s.DeleteWebhookTemplatesHandler())
 
 	testWorkflows := root.Group("/test-workflows")
 	testWorkflows.Get("/", s.ListTestWorkflowsHandler())

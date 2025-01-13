@@ -103,6 +103,7 @@ func main() {
 	secretClient := secret.NewClientFor(clientset, cfg.TestkubeNamespace)
 	configMapClient := configmap.NewClientFor(clientset, cfg.TestkubeNamespace)
 	webhooksClient := executorsclientv1.NewWebhooksClient(kubeClient, cfg.TestkubeNamespace)
+	webhookTemplatesClient := executorsclientv1.NewWebhookTemplatesClient(kubeClient, cfg.TestkubeNamespace)
 	testTriggersClient := testtriggersclientv1.NewClient(kubeClient, cfg.TestkubeNamespace)
 	testWorkflowExecutionsClient := testworkflowsclientv1.NewTestWorkflowExecutionsClient(kubeClient, cfg.TestkubeNamespace)
 
@@ -247,7 +248,7 @@ func main() {
 	// Initialize event handlers
 	websocketLoader := ws.NewWebsocketLoader()
 	if !cfg.DisableWebhooks {
-		eventsEmitter.Loader.Register(webhook.NewWebhookLoader(log.DefaultLogger, webhooksClient, deprecatedClients, deprecatedRepositories,
+		eventsEmitter.Loader.Register(webhook.NewWebhookLoader(log.DefaultLogger, webhooksClient, webhookTemplatesClient, deprecatedClients, deprecatedRepositories,
 			testWorkflowResultsRepository, secretClient, metrics, &proContext, envs))
 	}
 	eventsEmitter.Loader.Register(websocketLoader)
@@ -285,6 +286,7 @@ func main() {
 		testWorkflowOutputRepository,
 		artifactStorage,
 		webhooksClient,
+		webhookTemplatesClient,
 		testTriggersClient,
 		testWorkflowsClient,
 		testWorkflowTemplatesClient,

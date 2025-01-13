@@ -20,13 +20,15 @@ import (
 
 var _ common.ListenerLoader = (*WebhooksLoader)(nil)
 
-func NewWebhookLoader(log *zap.SugaredLogger, webhooksClient executorsclientv1.WebhooksInterface, deprecatedClients commons.DeprecatedClients,
+func NewWebhookLoader(log *zap.SugaredLogger, webhooksClient executorsclientv1.WebhooksInterface,
+	webhookTemplatesClient executorsclientv1.WebhookTemplatesInterface, deprecatedClients commons.DeprecatedClients,
 	deprecatedRepositories commons.DeprecatedRepositories, testWorkflowExecutionResults testworkflow.Repository,
 	secretClient secret.Interface, metrics v1.Metrics, proContext *config.ProContext, envs map[string]string,
 ) *WebhooksLoader {
 	return &WebhooksLoader{
 		log:                          log,
 		WebhooksClient:               webhooksClient,
+		WebhookTemplatesClient:       webhookTemplatesClient,
 		deprecatedClients:            deprecatedClients,
 		deprecatedRepositories:       deprecatedRepositories,
 		testWorkflowExecutionResults: testWorkflowExecutionResults,
@@ -40,6 +42,7 @@ func NewWebhookLoader(log *zap.SugaredLogger, webhooksClient executorsclientv1.W
 type WebhooksLoader struct {
 	log                          *zap.SugaredLogger
 	WebhooksClient               executorsclientv1.WebhooksInterface
+	WebhookTemplatesClient       executorsclientv1.WebhookTemplatesInterface
 	deprecatedClients            commons.DeprecatedClients
 	deprecatedRepositories       commons.DeprecatedRepositories
 	testWorkflowExecutionResults testworkflow.Repository
@@ -63,19 +66,10 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 	// and create listeners for each webhook spec
 OuterLoop:
 	for _, webhook := range webhookList.Items {
-		if webhook.Spec.IsTemplate {
-			continue
-		}
-
 		if webhook.Spec.WebhookTemplateRef != nil && webhook.Spec.WebhookTemplateRef.Name != "" {
-			webhookTemplate, err := r.WebhooksClient.Get(webhook.Spec.WebhookTemplateRef.Name)
+			webhookTemplate, err := r.WebhookTemplatesClient.Get(webhook.Spec.WebhookTemplateRef.Name)
 			if err != nil {
 				r.log.Errorw("error webhook template loading", "error", err, "name", webhook.Name, "template", webhook.Spec.WebhookTemplateRef.Name)
-				continue
-			}
-
-			if !webhookTemplate.Spec.IsTemplate {
-				r.log.Errorw("error webhook ref is not a template", "name", webhook.Name, "template", webhook.Spec.WebhookTemplateRef.Name)
 				continue
 			}
 
@@ -177,7 +171,7 @@ OuterLoop:
 	return listeners, nil
 }
 
-func mergeWebhooks(dst, src executorv1.Webhook) executorv1.Webhook {
+func mergeWebhooks(dst executorv1.Webhook, src executorv1.WebhookTemplate) executorv1.Webhook {
 	var maps = []struct {
 		d *map[string]string
 		s *map[string]string

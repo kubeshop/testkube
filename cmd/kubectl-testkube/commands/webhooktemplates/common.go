@@ -1,4 +1,4 @@
-package webhooks
+package webhooktemplates
 
 import (
 	"encoding/csv"
@@ -10,15 +10,14 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/kubeshop/testkube/internal/common"
 	apiv1 "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	webhooksmapper "github.com/kubeshop/testkube/pkg/mapper/webhooks"
+	webhooktemplatesmapper "github.com/kubeshop/testkube/pkg/mapper/webhooktemplates"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
-// NewCreateWebhookOptionsFromFlags creates create webhook options from command flags
-func NewCreateWebhookOptionsFromFlags(cmd *cobra.Command) (options apiv1.CreateWebhookOptions, err error) {
+// NewCreateWebhookTemplateOptionsFromFlags creates create webhook template options from command flags
+func NewCreateWebhookTemplateOptionsFromFlags(cmd *cobra.Command) (options apiv1.CreateWebhookTemplateOptions, err error) {
 	name := cmd.Flag("name").Value.String()
 	namespace := cmd.Flag("namespace").Value.String()
 	events, err := cmd.Flags().GetStringArray("events")
@@ -60,7 +59,7 @@ func NewCreateWebhookOptionsFromFlags(cmd *cobra.Command) (options apiv1.CreateW
 	}
 
 	if len(configs) != 0 {
-		config, err = getWebhookConfig(configs)
+		config, err = getWebhookTemplateConfig(configs)
 		if err != nil {
 			return options, err
 		}
@@ -73,23 +72,16 @@ func NewCreateWebhookOptionsFromFlags(cmd *cobra.Command) (options apiv1.CreateW
 	}
 
 	if len(parameters) != 0 {
-		parameter, err = getWebhookParameters(parameters)
+		parameter, err = getWebhookTemplateParameters(parameters)
 		if err != nil {
 			return options, err
 		}
 	}
 
-	var webhookTemplateReference *testkube.WebhookTemplateRef
-	if cmd.Flag("webhook-template-reference").Changed {
-		webhookTemplateReference = &testkube.WebhookTemplateRef{
-			Name: cmd.Flag("webhook-template-reference").Value.String(),
-		}
-	}
-
-	options = apiv1.CreateWebhookOptions{
+	options = apiv1.CreateWebhookTemplateOptions{
 		Name:                     name,
 		Namespace:                namespace,
-		Events:                   webhooksmapper.MapStringArrayToCRDEvents(events),
+		Events:                   webhooktemplatesmapper.MapStringArrayToCRDEvents(events),
 		Uri:                      uri,
 		Selector:                 selector,
 		Labels:                   labels,
@@ -100,14 +92,13 @@ func NewCreateWebhookOptionsFromFlags(cmd *cobra.Command) (options apiv1.CreateW
 		Disabled:                 disabled,
 		Config:                   config,
 		Parameters:               parameter,
-		WebhookTemplateRef:       webhookTemplateReference,
 	}
 
 	return options, nil
 }
 
-// NewUpdateWebhookOptionsFromFlags creates update webhook options from command flags
-func NewUpdateWebhookOptionsFromFlags(cmd *cobra.Command) (options apiv1.UpdateWebhookOptions, err error) {
+// NewUpdateWebhookTemplateOptionsFromFlags creates update webhook template options from command flags
+func NewUpdateWebhookTemplateOptionsFromFlags(cmd *cobra.Command) (options apiv1.UpdateWebhookTemplateOptions, err error) {
 	var fields = []struct {
 		name        string
 		destination **string
@@ -198,7 +189,7 @@ func NewUpdateWebhookOptionsFromFlags(cmd *cobra.Command) (options apiv1.UpdateW
 			return options, err
 		}
 
-		values, err := getWebhookConfig(configs)
+		values, err := getWebhookTemplateConfig(configs)
 		if err != nil {
 			return options, err
 		}
@@ -211,23 +202,17 @@ func NewUpdateWebhookOptionsFromFlags(cmd *cobra.Command) (options apiv1.UpdateW
 			return options, err
 		}
 
-		values, err := getWebhookParameters(parameters)
+		values, err := getWebhookTemplateParameters(parameters)
 		if err != nil {
 			return options, err
 		}
 		options.Parameters = &values
 	}
 
-	if cmd.Flag("webhook-template-reference").Changed {
-		options.WebhookTemplateRef = common.Ptr(&testkube.WebhookTemplateRef{
-			Name: cmd.Flag("webhook-template-reference").Value.String(),
-		})
-	}
-
 	return options, nil
 }
 
-func getWebhookConfig(configs map[string]string) (map[string]testkube.WebhookConfigValue, error) {
+func getWebhookTemplateConfig(configs map[string]string) (map[string]testkube.WebhookConfigValue, error) {
 	config := map[string]testkube.WebhookConfigValue{}
 	for key, value := range configs {
 		switch {
@@ -270,7 +255,7 @@ func getWebhookConfig(configs map[string]string) (map[string]testkube.WebhookCon
 	return config, nil
 }
 
-func getWebhookParameters(parameters map[string]string) (map[string]testkube.WebhookParameterSchema, error) {
+func getWebhookTemplateParameters(parameters map[string]string) (map[string]testkube.WebhookParameterSchema, error) {
 	parameter := map[string]testkube.WebhookParameterSchema{}
 	for key, value := range parameters {
 		r := csv.NewReader(strings.NewReader(value))

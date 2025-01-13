@@ -11,10 +11,10 @@ package testkube
 
 // CRD based webhook data
 type Webhook struct {
-	Name      string      `json:"name,omitempty"`
+	Name      string      `json:"name"`
 	Namespace string      `json:"namespace,omitempty"`
-	Uri       string      `json:"uri"`
-	Events    []EventType `json:"events"`
+	Uri       string      `json:"uri,omitempty"`
+	Events    []EventType `json:"events,omitempty"`
 	// Labels to filter for tests and test suites
 	Selector string `json:"selector,omitempty"`
 	// will load the generated payload for notification inside the object
@@ -34,6 +34,4 @@ type Webhook struct {
 	Config             map[string]WebhookConfigValue     `json:"config,omitempty"`
 	Parameters         map[string]WebhookParameterSchema `json:"parameters,omitempty"`
 	WebhookTemplateRef *WebhookTemplateRef               `json:"webhookTemplateRef,omitempty"`
-	// whether webhook is used as a template
-	IsTemplate bool `json:"isTemplate,omitempty"`
 }
