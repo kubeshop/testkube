@@ -71,13 +71,16 @@ func NewWorker(clientSet kubernetes.Interface, processor testworkflowprocessor.P
 	}
 }
 
-func (w *worker) buildInternalConfig(resourceId, fsPrefix string, execution testworkflowconfig.ExecutionConfig, controlPlane testworkflowconfig.ControlPlaneConfig, workflow testworkflowsv1.TestWorkflow) testworkflowconfig.InternalConfig {
+func (w *worker) buildInternalConfig(resourceId, fsPrefix string, execution testworkflowconfig.ExecutionConfig, controlPlane testworkflowconfig.ControlPlaneConfig, workflow testworkflowsv1.TestWorkflow, executionToken string) testworkflowconfig.InternalConfig {
 	cfg := testworkflowconfig.InternalConfig{
 		Execution:    execution,
 		Workflow:     testworkflowconfig.WorkflowConfig{Name: workflow.Name, Labels: workflow.Labels},
 		Resource:     testworkflowconfig.ResourceConfig{Id: resourceId, RootId: execution.Id, FsPrefix: fsPrefix},
 		ControlPlane: controlPlane,
 		Worker:       w.baseWorkerConfig,
+	}
+	if executionToken != "" {
+		cfg.Worker.Connection.ApiKey = executionToken
 	}
 	if workflow.Spec.Job != nil && workflow.Spec.Job.Namespace != "" {
 		cfg.Worker.Namespace = workflow.Spec.Job.Namespace
@@ -111,7 +114,7 @@ func (w *worker) Execute(ctx context.Context, request executionworkertypes.Execu
 	} else if resourceId == request.Execution.Id && !request.Execution.ScheduledAt.IsZero() {
 		scheduledAt = request.Execution.ScheduledAt
 	}
-	cfg := w.buildInternalConfig(resourceId, request.ArtifactsPathPrefix, request.Execution, request.ControlPlane, request.Workflow)
+	cfg := w.buildInternalConfig(resourceId, request.ArtifactsPathPrefix, request.Execution, request.ControlPlane, request.Workflow, request.Token)
 	secrets := w.buildSecrets(request.Secrets)
 
 	// Ensure the execution namespace is allowed
@@ -168,7 +171,7 @@ func (w *worker) Service(ctx context.Context, request executionworkertypes.Servi
 	} else if resourceId == request.Execution.Id && !request.Execution.ScheduledAt.IsZero() {
 		scheduledAt = request.Execution.ScheduledAt
 	}
-	cfg := w.buildInternalConfig(resourceId, "", request.Execution, request.ControlPlane, request.Workflow)
+	cfg := w.buildInternalConfig(resourceId, "", request.Execution, request.ControlPlane, request.Workflow, request.Token)
 	secrets := w.buildSecrets(request.Secrets)
 
 	// Ensure the execution namespace is allowed

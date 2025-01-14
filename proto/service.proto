@@ -313,7 +313,7 @@ message ObtainExecutionRequest {
 
 message ObtainExecutionResponse {
   bool success = 1;
-  string token = 2; // TODO: consider it being based on runner' secret with hashing function? do we need salt?
+  string token = 2;
 }
 
 message GetExecutionRequest {

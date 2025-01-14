@@ -239,7 +239,7 @@ func (a *agentLoop) loopRunnerRequests(ctx context.Context) error {
 		}
 
 		// Continue
-		err = a.runTestWorkflow(req.EnvironmentId, req.Id)
+		err = a.runTestWorkflow(req.EnvironmentId, req.Id, resp.Token)
 		if err != nil {
 			a.logger.Errorf("failed to run execution '%s/%s' from Control Plane: %v", req.EnvironmentId, req.Id, err)
 			continue
@@ -248,7 +248,7 @@ func (a *agentLoop) loopRunnerRequests(ctx context.Context) error {
 	return watcher.Err()
 }
 
-func (a *agentLoop) runTestWorkflow(environmentId string, executionId string) error {
+func (a *agentLoop) runTestWorkflow(environmentId string, executionId string, executionToken string) error {
 	ctx := context.Background()
 	logger := a.logger.With("environmentId", environmentId, "executionId", executionId)
 
@@ -270,6 +270,7 @@ func (a *agentLoop) runTestWorkflow(environmentId string, executionId string) er
 		parentIds = execution.RunningContext.Actor.ExecutionPath
 	}
 	result, err := a.runner.Execute(executionworkertypes.ExecuteRequest{
+		Token: executionToken,
 		Execution: testworkflowconfig.ExecutionConfig{
 			Id:              execution.Id,
 			GroupId:         execution.GroupId,
