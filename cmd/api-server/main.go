@@ -16,6 +16,7 @@ import (
 	agentclient "github.com/kubeshop/testkube/pkg/agent/client"
 	cloudartifacts "github.com/kubeshop/testkube/pkg/cloud/data/artifact"
 	cloudtestworkflow "github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
+	"github.com/kubeshop/testkube/pkg/controlplaneclient"
 	"github.com/kubeshop/testkube/pkg/event/kind/cdevent"
 	"github.com/kubeshop/testkube/pkg/event/kind/k8sevent"
 	"github.com/kubeshop/testkube/pkg/event/kind/testworkflowexecutionmetrics"
@@ -185,6 +186,15 @@ func main() {
 		serviceAccountNames = schedulertcl.GetServiceAccountNamesFromConfig(serviceAccountNames, cfg.TestkubeExecutionNamespaces)
 	}
 
+	// Build new client
+	agentId := cfg.TestkubeProAgentID
+	if agentId == "" {
+		agentId = proContext.EnvID
+	}
+	client := controlplaneclient.New(grpcClient, proContext, agentId, cfg.TestkubeProAPIKey, controlplaneclient.ClientOptions{
+		StorageSkipVerify: cfg.StorageSkipVerify,
+	})
+
 	var deprecatedSystem *services.DeprecatedSystem
 	if !cfg.DisableDeprecatedTests {
 		deprecatedSystem = services.CreateDeprecatedSystem(
@@ -216,18 +226,13 @@ func main() {
 		testworkflowconfig.FeatureFlagTestWorkflowCloudStorage: fmt.Sprintf("%v", cfg.FeatureTestWorkflowCloudStorage),
 	})
 
-	agentId := cfg.TestkubeProAgentID
-	if agentId == "" {
-		agentId = proContext.EnvID
-	}
 	runnerService := runner2.NewService(
 		agentId,
 		log.DefaultLogger,
 		eventsEmitter,
 		metrics,
 		configMapConfig,
-		grpcClient,
-		cfg.TestkubeProAPIKey,
+		client,
 		proContext,
 		executionWorker,
 		runner2.Options{

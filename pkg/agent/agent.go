@@ -178,8 +178,7 @@ func (ag *Agent) runEventsReaderLoop(ctx context.Context) (err error) {
 	// creates a new Stream from the client side. ctx is used for the lifetime of the stream.
 	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
 	stream, err := ag.client.GetEventStream(ctx, &cloud.EventStreamRequest{
-		EnvironmentId: ag.proContext.EnvID,
-		Accept:        []*cloud.EventResource{{Id: "*", Type: "*"}},
+		Accept: []*cloud.EventResource{{Id: "*", Type: "*"}},
 	}, opts...)
 	if err != nil {
 		ag.logger.Errorf("failed to read events stream from Control Plane: %w", err)

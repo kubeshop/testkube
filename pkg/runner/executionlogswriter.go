@@ -12,6 +12,7 @@ import (
 	initconstants "github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/pkg/bufferedstream"
+	"github.com/kubeshop/testkube/pkg/controlplaneclient"
 )
 
 type LogPresigner interface {
@@ -28,22 +29,24 @@ type ExecutionLogsWriter interface {
 }
 
 type executionLogsWriter struct {
-	presigner    LogPresigner
-	id           string
-	workflowName string
-	skipVerify   bool
+	client        controlplaneclient.Client
+	environmentId string
+	id            string
+	workflowName  string
+	skipVerify    bool
 
 	writer *io.PipeWriter
 	buffer bufferedstream.BufferedStream
 	mu     sync.Mutex
 }
 
-func NewExecutionLogsWriter(presigner LogPresigner, id string, workflowName string, skipVerify bool) (ExecutionLogsWriter, error) {
+func NewExecutionLogsWriter(client controlplaneclient.Client, environmentId, id string, workflowName string, skipVerify bool) (ExecutionLogsWriter, error) {
 	e := &executionLogsWriter{
-		presigner:    presigner,
-		id:           id,
-		workflowName: workflowName,
-		skipVerify:   skipVerify,
+		client:        client,
+		environmentId: environmentId,
+		id:            id,
+		workflowName:  workflowName,
+		skipVerify:    skipVerify,
 	}
 	err := e.Reset()
 	if err != nil {
@@ -71,7 +74,7 @@ func (e *executionLogsWriter) Save(ctx context.Context) error {
 
 	e.writer.Close()
 
-	url, err := e.presigner.PresignSaveLog(ctx, e.id, e.workflowName)
+	url, err := e.client.SaveExecutionLogsGetPresignedURL(ctx, e.environmentId, e.id, e.workflowName)
 	if err != nil {
 		return err
 	}

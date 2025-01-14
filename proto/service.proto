@@ -187,7 +187,6 @@ message CredentialResponse {
 message TestWorkflowServiceNotificationsRequest {
   string stream_id = 1;
   string execution_id = 2;
-  string environment_id = 6;
   string service_name = 3;
   int32 service_index = 4;
   TestWorkflowNotificationsRequestType request_type = 5;
@@ -205,7 +204,6 @@ message TestWorkflowServiceNotificationsResponse {
 message TestWorkflowParallelStepNotificationsRequest {
   string stream_id = 1;
   string execution_id = 2;
-  string environment_id = 6;
   string ref = 3;
   int32  worker_index = 4;
   TestWorkflowNotificationsRequestType request_type = 5;
@@ -254,9 +252,6 @@ message UserSignature {
 }
 
 message ScheduleRequest {
-  // Target
-  string environment_id = 1;
-
   // Test Workflow details
   repeated ScheduleExecution executions = 2;
 
@@ -283,8 +278,7 @@ message EventResource {
 }
 
 message EventStreamRequest {
-  string environment_id = 1;
-  repeated EventResource accept = 2;
+  repeated EventResource accept = 1;
 }
 
 message Event {
@@ -312,17 +306,16 @@ message UnfinishedExecution {
 }
 
 message ObtainExecutionRequest {
-  string environment_id = 1;
-  string id = 2;
+  string id = 1;
 }
 
 message ObtainExecutionResponse {
   bool success = 1;
+  string token = 2; // TODO: consider it being based on runner' secret with hashing function? do we need salt?
 }
 
 message GetExecutionRequest {
-  string environment_id = 1;
-  string id = 2;
+  string id = 1;
 }
 
 message GetExecutionResponse {
@@ -330,19 +323,17 @@ message GetExecutionResponse {
 }
 
 message InitExecutionRequest {
-  string environment_id = 1;
-  string id = 2;
-  string namespace = 3;
-  bytes signature = 4; // []TestWorkflowSignature
+  string id = 1;
+  string namespace = 2;
+  bytes signature = 3; // []TestWorkflowSignature
 }
 
 message InitExecutionResponse {
 }
 
 message UpdateExecutionResultRequest {
-  string environment_id = 1;
-  string id = 2;
-  bytes result = 3; // TestWorkflowResult
+  string id = 1;
+  bytes result = 2; // TestWorkflowResult
 }
 
 message UpdateExecutionResultResponse {
@@ -355,27 +346,24 @@ message ExecutionOutput {
 }
 
 message UpdateExecutionOutputRequest {
-  string environment_id = 1;
-  string id = 2;
-  repeated ExecutionOutput output = 3;
+  string id = 1;
+  repeated ExecutionOutput output = 2;
 }
 
 message UpdateExecutionOutputResponse {
 }
 
 message SaveExecutionLogsPresignedRequest {
-  string environment_id = 1;
-  string id = 2;
+  string id = 1;
 }
 
 message SaveExecutionLogsPresignedResponse {
-  string url = 3;
+  string url = 1;
 }
 
 message FinishExecutionRequest {
-  string environment_id = 1;
-  string id = 2;
-  bytes result = 3; // TestWorkflowResult
+  string id = 1;
+  bytes result = 2; // TestWorkflowResult
 }
 
 message FinishExecutionResponse {
@@ -384,11 +372,10 @@ message FinishExecutionResponse {
 // Execution
 
 message SaveExecutionArtifactPresignedRequest {
-  string environment_id = 1;
-  string id = 2;
-  string step = 3;
-  string file_path = 4;
-  string content_type = 5;
+  string id = 1;
+  string step = 2;
+  string file_path = 3;
+  string content_type = 4;
 }
 
 message SaveExecutionArtifactPresignedResponse {
@@ -396,11 +383,10 @@ message SaveExecutionArtifactPresignedResponse {
 }
 
 message AppendExecutionReportRequest {
-  string environment_id = 1;
-  string id = 2;
-  string step = 3;
-  string file_path = 4;
-  bytes report = 5; // TODO: avoid sending report - it could be fetched directly from the artifact instead
+  string id = 1;
+  string step = 2;
+  string file_path = 3;
+  bytes report = 4; // TODO: avoid sending report - it could be fetched directly from the artifact instead
 }
 
 message AppendExecutionReportResponse {
@@ -410,8 +396,7 @@ message AppendExecutionReportResponse {
 // CRD Synchronisation -- Test Workflows
 
 message GetTestWorkflowRequest {
-  string environment_id = 1;
-  string name = 2;
+  string name = 1;
 }
 
 message GetTestWorkflowResponse {
@@ -419,11 +404,10 @@ message GetTestWorkflowResponse {
 }
 
 message ListTestWorkflowsRequest {
-  string environment_id = 1;
-  uint32 offset = 2;
-  uint32 limit = 3;
-  map<string, string> labels = 4;
-  string textSearch = 5;
+  uint32 offset = 1;
+  uint32 limit = 2;
+  map<string, string> labels = 3;
+  string textSearch = 4;
 }
 
 message TestWorkflowListItem {
@@ -436,7 +420,6 @@ message LabelListItem {
 }
 
 message ListTestWorkflowLabelsRequest {
-  string environment_id = 1;
 }
 
 message ListTestWorkflowLabelsResponse {
@@ -444,29 +427,25 @@ message ListTestWorkflowLabelsResponse {
 }
 
 message CreateTestWorkflowRequest {
-  string environment_id = 1;
-  bytes workflow = 2;
+  bytes workflow = 1;
 }
 
 message CreateTestWorkflowResponse {}
 
 message UpdateTestWorkflowRequest {
-  string environment_id = 1;
-  bytes workflow = 2;
+  bytes workflow = 1;
 }
 
 message UpdateTestWorkflowResponse {}
 
 message DeleteTestWorkflowRequest {
-  string environment_id = 1;
-  string name = 2;
+  string name = 1;
 }
 
 message DeleteTestWorkflowResponse {}
 
 message DeleteTestWorkflowsByLabelsRequest {
-  string environment_id = 1;
-  map<string, string> labels = 2;
+  map<string, string> labels = 1;
 }
 
 message DeleteTestWorkflowsByLabelsResponse {
@@ -476,8 +455,7 @@ message DeleteTestWorkflowsByLabelsResponse {
 // CRD Synchronisation -- Test Workflow Templates
 
 message GetTestWorkflowTemplateRequest {
-  string environment_id = 1;
-  string name = 2;
+  string name = 1;
 }
 
 message GetTestWorkflowTemplateResponse {
@@ -485,11 +463,10 @@ message GetTestWorkflowTemplateResponse {
 }
 
 message ListTestWorkflowTemplatesRequest {
-  string environment_id = 1;
-  uint32 offset = 2;
-  uint32 limit = 3;
-  map<string, string> labels = 4;
-  string textSearch = 5;
+  uint32 offset = 1;
+  uint32 limit = 2;
+  map<string, string> labels = 3;
+  string textSearch = 4;
 }
 
 message TestWorkflowTemplateListItem {
@@ -497,7 +474,6 @@ message TestWorkflowTemplateListItem {
 }
 
 message ListTestWorkflowTemplateLabelsRequest {
-  string environment_id = 1;
 }
 
 message ListTestWorkflowTemplateLabelsResponse {
@@ -505,29 +481,25 @@ message ListTestWorkflowTemplateLabelsResponse {
 }
 
 message CreateTestWorkflowTemplateRequest {
-  string environment_id = 1;
-  bytes template = 2;
+  bytes template = 1;
 }
 
 message CreateTestWorkflowTemplateResponse {}
 
 message UpdateTestWorkflowTemplateRequest {
-  string environment_id = 1;
-  bytes template = 2;
+  bytes template = 1;
 }
 
 message UpdateTestWorkflowTemplateResponse {}
 
 message DeleteTestWorkflowTemplateRequest {
-  string environment_id = 1;
-  string name = 2;
+  string name = 1;
 }
 
 message DeleteTestWorkflowTemplateResponse {}
 
 message DeleteTestWorkflowTemplatesByLabelsRequest {
-  string environment_id = 1;
-  map<string, string> labels = 2;
+  map<string, string> labels = 1;
 }
 
 message DeleteTestWorkflowTemplatesByLabelsResponse {

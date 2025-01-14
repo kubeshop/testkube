@@ -2,26 +2,18 @@ package runner
 
 import (
 	"context"
-	"encoding/json"
-	"math"
 	"sync"
 	"time"
 
 	"github.com/pkg/errors"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/encoding/gzip"
-	"google.golang.org/grpc/metadata"
-	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/cloud"
-	testworkflow2 "github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
+	"github.com/kubeshop/testkube/pkg/controlplaneclient"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/log"
 	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
-	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/registry"
 )
@@ -51,10 +43,7 @@ type Runner interface {
 type runner struct {
 	id                   string
 	worker               executionworkertypes.Worker
-	outputRepository     testworkflow.OutputRepository
-	executionsRepository testworkflow.Repository
-	grpcClient           cloud.TestKubeCloudAPIClient
-	grpcApiToken         string
+	client               controlplaneclient.Client
 	configRepository     configRepo.Repository
 	emitter              event.Interface
 	metrics              metrics.Metrics
@@ -70,11 +59,8 @@ type runner struct {
 func New(
 	id string,
 	worker executionworkertypes.Worker,
-	outputRepository testworkflow.OutputRepository,
-	executionsRepository testworkflow.Repository,
 	configRepository configRepo.Repository,
-	grpcClient cloud.TestKubeCloudAPIClient,
-	grpcApiToken string,
+	client controlplaneclient.Client,
 	emitter event.Interface,
 	metrics metrics.Metrics,
 	proContext config.ProContext,
@@ -85,11 +71,8 @@ func New(
 	return &runner{
 		id:                   id,
 		worker:               worker,
-		outputRepository:     outputRepository,
-		executionsRepository: executionsRepository,
 		configRepository:     configRepository,
-		grpcClient:           grpcClient,
-		grpcApiToken:         grpcApiToken,
+		client:               client,
 		emitter:              emitter,
 		metrics:              metrics,
 		proContext:           proContext,
@@ -97,19 +80,6 @@ func New(
 		storageSkipVerify:    storageSkipVerify,
 		newExecutionsEnabled: newExecutionsEnabled,
 	}
-}
-
-func (r *runner) getLogPresigner(environmentId string) LogPresigner {
-	if r.newExecutionsEnabled {
-		return &newLogPresigner{
-			organizationId: r.proContext.OrgID,
-			environmentId:  environmentId,
-			agentId:        r.id,
-			grpcClient:     r.grpcClient,
-			grpcApiToken:   r.grpcApiToken,
-		}
-	}
-	return r.outputRepository
 }
 
 func (r *runner) monitor(ctx context.Context, organizationId string, environmentId string, execution testkube.TestWorkflowExecution) error {
@@ -131,11 +101,11 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 		return errors.Wrapf(notifications.Err(), "failed to listen for '%s' execution notifications", execution.Id)
 	}
 
-	logs, err := NewExecutionLogsWriter(r.getLogPresigner(environmentId), execution.Id, execution.Workflow.Name, r.storageSkipVerify)
+	logs, err := NewExecutionLogsWriter(r.client, environmentId, execution.Id, execution.Workflow.Name, r.storageSkipVerify)
 	if err != nil {
 		return err
 	}
-	saver, err := NewExecutionSaver(ctx, r.executionsRepository, r.grpcClient, r.grpcApiToken, execution.Id, organizationId, environmentId, r.id, logs, r.newExecutionsEnabled)
+	saver, err := NewExecutionSaver(ctx, r.client, execution.Id, organizationId, environmentId, r.id, logs, r.newExecutionsEnabled)
 	if err != nil {
 		return err
 	}
@@ -244,48 +214,6 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 
 	return nil
 }
-func (r *runner) getExecution(ctx context.Context, environmentId, id string) (*testkube.TestWorkflowExecution, error) {
-	if !r.newExecutionsEnabled {
-		return r.getExecutionLegacy(ctx, environmentId, id)
-	}
-	md := metadata.New(map[string]string{apiKeyMeta: r.grpcApiToken, orgIdMeta: r.proContext.OrgID, agentIdMeta: r.id})
-	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
-	req := cloud.GetExecutionRequest{EnvironmentId: environmentId, Id: id}
-	response, err := r.grpcClient.GetExecution(metadata.NewOutgoingContext(ctx, md), &req, opts...)
-	if err != nil {
-		return nil, err
-	}
-	var execution testkube.TestWorkflowExecution
-	err = json.Unmarshal(response.Execution, &execution)
-	if err != nil {
-		return nil, err
-	}
-	return &execution, nil
-}
-
-func (r *runner) getExecutionLegacy(ctx context.Context, environmentId, id string) (*testkube.TestWorkflowExecution, error) {
-	md := metadata.New(map[string]string{apiKeyMeta: r.grpcApiToken, orgIdMeta: r.proContext.OrgID, agentIdMeta: r.id, envIdMeta: environmentId})
-	jsonPayload, err := json.Marshal(testworkflow2.ExecutionGetRequest{ID: id})
-	if err != nil {
-		return nil, err
-	}
-	s := structpb.Struct{}
-	if err := s.UnmarshalJSON(jsonPayload); err != nil {
-		return nil, err
-	}
-	req := cloud.CommandRequest{
-		Command: string(testworkflow2.CmdTestWorkflowExecutionGet),
-		Payload: &s,
-	}
-	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
-	cmdResponse, err := r.grpcClient.Call(metadata.NewOutgoingContext(ctx, md), &req, opts...)
-	if err != nil {
-		return nil, err
-	}
-	var response testworkflow2.ExecutionGetResponse
-	err = json.Unmarshal(cmdResponse.Response, &response)
-	return &response.WorkflowExecution, err
-}
 
 func (r *runner) Monitor(ctx context.Context, organizationId string, environmentId string, id string) error {
 	ctx, ctxCancel := context.WithCancel(ctx)
@@ -298,7 +226,7 @@ func (r *runner) Monitor(ctx context.Context, organizationId string, environment
 	}
 
 	// Load the execution TODO: retry?
-	execution, err := r.getExecution(ctx, environmentId, id)
+	execution, err := r.client.GetExecution(ctx, environmentId, id)
 	if err != nil {
 		log.DefaultLogger.Errorw("failed to get execution", "id", id, "error", err)
 		return err

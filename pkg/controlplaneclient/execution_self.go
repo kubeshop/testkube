@@ -27,13 +27,12 @@ func (c *client) AppendExecutionReport(ctx context.Context, environmentId, execu
 		return c.legacyAppendExecutionReport(ctx, environmentId, executionId, legacyWorkflowName, stepRef, filePath, report)
 	}
 	req := cloud.AppendExecutionReportRequest{
-		EnvironmentId: environmentId,
-		Id:            executionId,
-		Step:          stepRef,
-		FilePath:      filePath,
-		Report:        report,
+		Id:       executionId,
+		Step:     stepRef,
+		FilePath: filePath,
+		Report:   report,
 	}
-	_, err := call(ctx, c.metadata().GRPC(), c.client.AppendExecutionReport, &req)
+	_, err := call(ctx, c.metadata().SetEnvironmentID(environmentId).GRPC(), c.client.AppendExecutionReport, &req)
 	return err
 }
 
@@ -66,13 +65,12 @@ func (c *client) SaveExecutionArtifactGetPresignedURL(ctx context.Context, envir
 		return c.legacySaveExecutionArtifactGetPresignedURL(ctx, environmentId, executionId, legacyWorkflowName, stepRef, filePath, contentType)
 	}
 	req := cloud.SaveExecutionArtifactPresignedRequest{
-		EnvironmentId: environmentId,
-		Id:            executionId,
-		Step:          stepRef,
-		FilePath:      filePath,
-		ContentType:   contentType,
+		Id:          executionId,
+		Step:        stepRef,
+		FilePath:    filePath,
+		ContentType: contentType,
 	}
-	res, err := call(ctx, c.metadata().GRPC(), c.client.SaveExecutionArtifactPresigned, &req)
+	res, err := call(ctx, c.metadata().SetEnvironmentID(environmentId).GRPC(), c.client.SaveExecutionArtifactPresigned, &req)
 	if err != nil {
 		return "", err
 	}
@@ -111,7 +109,6 @@ func (c *client) ScheduleExecution(ctx context.Context, environmentId string, re
 	if c.IsLegacy() {
 		return nil, ErrNotSupported
 	}
-	request.EnvironmentId = environmentId
 	if c.opts.ExecutionID != "" {
 		request.RunningContext = &cloud.RunningContext{
 			Name: c.opts.ExecutionID,
@@ -120,7 +117,7 @@ func (c *client) ScheduleExecution(ctx context.Context, environmentId string, re
 		request.ParentExecutionIds = append(c.opts.ParentExecutionIDs, c.opts.ExecutionID)
 	}
 
-	res, err := call(ctx, c.metadata().GRPC(), c.client.ScheduleExecution, request)
+	res, err := call(ctx, c.metadata().SetEnvironmentID(environmentId).GRPC(), c.client.ScheduleExecution, request)
 	if err != nil {
 		return nil, err
 	}

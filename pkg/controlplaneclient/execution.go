@@ -24,17 +24,16 @@ type ExecutionClient interface {
 	UpdateExecutionOutput(ctx context.Context, environmentId, executionId string, output []testkube.TestWorkflowOutput) error
 	UpdateExecutionResult(ctx context.Context, environmentId, executionId string, result *testkube.TestWorkflowResult) error
 	FinishExecutionResult(ctx context.Context, environmentId, executionId string, result *testkube.TestWorkflowResult) error
+	InitExecution(ctx context.Context, environmentId, executionId string, signature []testkube.TestWorkflowSignature, namespace string) error
+	ObtainExecution(ctx context.Context, environmentId, executionId string) (*cloud.ObtainExecutionResponse, error)
 }
 
 func (c *client) GetExecution(ctx context.Context, environmentId, executionId string) (*testkube.TestWorkflowExecution, error) {
 	if c.IsLegacy() {
 		return c.legacyGetExecution(ctx, environmentId, executionId)
 	}
-	req := &cloud.GetExecutionRequest{
-		EnvironmentId: environmentId,
-		Id:            executionId,
-	}
-	res, err := call(ctx, c.metadata().GRPC(), c.client.GetExecution, req)
+	req := &cloud.GetExecutionRequest{Id: executionId}
+	res, err := call(ctx, c.metadata().SetEnvironmentID(environmentId).GRPC(), c.client.GetExecution, req)
 	if err != nil {
 		return nil, err
 	}
@@ -73,11 +72,8 @@ func (c *client) SaveExecutionLogsGetPresignedURL(ctx context.Context, environme
 	if c.IsLegacy() {
 		return c.legacySaveExecutionLogsGetPresignedURL(ctx, environmentId, executionId, legacyWorkflowName)
 	}
-	req := &cloud.SaveExecutionLogsPresignedRequest{
-		EnvironmentId: environmentId,
-		Id:            executionId,
-	}
-	res, err := call(ctx, c.metadata().GRPC(), c.client.SaveExecutionLogsPresigned, req)
+	req := &cloud.SaveExecutionLogsPresignedRequest{Id: executionId}
+	res, err := call(ctx, c.metadata().SetEnvironmentID(environmentId).GRPC(), c.client.SaveExecutionLogsPresigned, req)
 	if err != nil {
 		return "", err
 	}
@@ -152,14 +148,13 @@ func (c *client) SaveExecutionLogs(ctx context.Context, environmentId, execution
 // TODO: Create AppendExecutionOutput (and maybe ResetExecutionOutput?) instead
 func (c *client) UpdateExecutionOutput(ctx context.Context, environmentId, executionId string, output []testkube.TestWorkflowOutput) error {
 	req := &cloud.UpdateExecutionOutputRequest{
-		EnvironmentId: environmentId,
-		Id:            executionId,
+		Id: executionId,
 		Output: common.MapSlice(output, func(t testkube.TestWorkflowOutput) *cloud.ExecutionOutput {
 			v, _ := json.Marshal(t)
 			return &cloud.ExecutionOutput{Ref: t.Ref, Name: t.Name, Value: v}
 		}),
 	}
-	_, err := call(ctx, c.metadata().GRPC(), c.client.UpdateExecutionOutput, req)
+	_, err := call(ctx, c.metadata().SetEnvironmentID(environmentId).GRPC(), c.client.UpdateExecutionOutput, req)
 	return err
 }
 
@@ -172,11 +167,10 @@ func (c *client) UpdateExecutionResult(ctx context.Context, environmentId, execu
 		return err
 	}
 	req := &cloud.UpdateExecutionResultRequest{
-		EnvironmentId: environmentId,
-		Id:            executionId,
-		Result:        resultBytes,
+		Id:     executionId,
+		Result: resultBytes,
 	}
-	_, err = call(ctx, c.metadata().GRPC(), c.client.UpdateExecutionResult, req)
+	_, err = call(ctx, c.metadata().SetEnvironmentID(environmentId).GRPC(), c.client.UpdateExecutionResult, req)
 	return err
 }
 
@@ -210,10 +204,59 @@ func (c *client) FinishExecutionResult(ctx context.Context, environmentId, execu
 		return err
 	}
 	req := &cloud.FinishExecutionRequest{
-		EnvironmentId: environmentId,
-		Id:            executionId,
-		Result:        resultBytes,
+		Id:     executionId,
+		Result: resultBytes,
 	}
-	_, err = call(ctx, c.metadata().GRPC(), c.client.FinishExecution, req)
+	_, err = call(ctx, c.metadata().SetEnvironmentID(environmentId).GRPC(), c.client.FinishExecution, req)
 	return err
+}
+
+func (c *client) InitExecution(ctx context.Context, environmentId, executionId string, signature []testkube.TestWorkflowSignature, namespace string) error {
+	if c.IsLegacy() {
+		return c.legacyInitExecution(ctx, environmentId, executionId, signature, namespace)
+	}
+
+	signatureBytes, err := json.Marshal(signature)
+	if err != nil {
+		return err
+	}
+	req := &cloud.InitExecutionRequest{
+		Id:        executionId,
+		Namespace: namespace,
+		Signature: signatureBytes,
+	}
+	_, err = call(ctx, c.metadata().SetEnvironmentID(environmentId).GRPC(), c.client.InitExecution, req)
+	return err
+}
+
+// Deprecated
+func (c *client) legacyInitExecution(ctx context.Context, environmentId, executionId string, signature []testkube.TestWorkflowSignature, namespace string) error {
+	execution, err := c.GetExecution(ctx, environmentId, executionId)
+	if err != nil {
+		return err
+	}
+	execution.RunnerId = c.agentID
+	execution.Namespace = namespace
+	execution.Signature = signature
+	jsonPayload, err := json.Marshal(cloudtestworkflow.ExecutionUpdateRequest{
+		WorkflowExecution: *execution,
+	})
+	if err != nil {
+		return err
+	}
+	s := structpb.Struct{}
+	if err := s.UnmarshalJSON(jsonPayload); err != nil {
+		return err
+	}
+	req := cloud.CommandRequest{
+		Command: string(cloudtestworkflow.CmdTestWorkflowExecutionUpdate),
+		Payload: &s,
+	}
+	_, err = call(ctx, c.metadata().SetEnvironmentID(environmentId).GRPC(), c.client.Call, &req)
+	return err
+}
+
+func (c *client) ObtainExecution(ctx context.Context, environmentId, executionId string) (*cloud.ObtainExecutionResponse, error) {
+	req := &cloud.ObtainExecutionRequest{Id: executionId}
+	return call(ctx, c.metadata().SetEnvironmentID(environmentId).GRPC(), c.client.ObtainExecution, req)
 }

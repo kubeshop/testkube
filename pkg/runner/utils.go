@@ -5,9 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller"
@@ -22,16 +19,6 @@ func retry(count int, delayBase time.Duration, fn func() error) (err error) {
 		time.Sleep(time.Duration(i) * delayBase)
 	}
 	return err
-}
-
-func getGrpcErrorCode(err error) codes.Code {
-	if err == nil {
-		return codes.Unknown
-	}
-	if e, ok := err.(interface{ GRPCStatus() *status.Status }); ok {
-		return e.GRPCStatus().Code()
-	}
-	return codes.Unknown
 }
 
 func buildCloudNotification(streamId string, seqNo uint32, notification testkube.TestWorkflowExecutionNotification) *cloud.TestWorkflowNotificationsResponse {

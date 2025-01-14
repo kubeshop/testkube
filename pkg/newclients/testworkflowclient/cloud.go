@@ -27,11 +27,10 @@ func NewCloudTestWorkflowClient(client cloud.TestKubeCloudAPIClient, apiKey stri
 func (c *cloudTestWorkflowClient) Get(ctx context.Context, environmentId string, name string) (*testkube.TestWorkflow, error) {
 	// Pass the additional information
 	// FIXME: Needs agent-id
-	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("api-key", c.apiKey))
+	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("api-key", c.apiKey, "environment-id", environmentId))
 
 	resp, err := c.client.GetTestWorkflow(ctx, &cloud.GetTestWorkflowRequest{
-		EnvironmentId: environmentId,
-		Name:          name,
+		Name: name,
 	})
 	if err != nil {
 		return nil, err
@@ -46,14 +45,13 @@ func (c *cloudTestWorkflowClient) Get(ctx context.Context, environmentId string,
 
 func (c *cloudTestWorkflowClient) List(ctx context.Context, environmentId string, options ListOptions) ([]testkube.TestWorkflow, error) {
 	// Pass the additional information
-	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("api-key", c.apiKey))
+	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("api-key", c.apiKey, "environment-id", environmentId))
 
 	resp, err := c.client.ListTestWorkflows(ctx, &cloud.ListTestWorkflowsRequest{
-		EnvironmentId: environmentId,
-		Offset:        options.Offset,
-		Limit:         options.Limit,
-		Labels:        options.Labels,
-		TextSearch:    options.TextSearch,
+		Offset:     options.Offset,
+		Limit:      options.Limit,
+		Labels:     options.Labels,
+		TextSearch: options.TextSearch,
 	})
 	if err != nil {
 		return nil, err
@@ -78,11 +76,9 @@ func (c *cloudTestWorkflowClient) List(ctx context.Context, environmentId string
 
 func (c *cloudTestWorkflowClient) ListLabels(ctx context.Context, environmentId string) (map[string][]string, error) {
 	// Pass the additional information
-	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("api-key", c.apiKey))
+	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("api-key", c.apiKey, "environment-id", environmentId))
 
-	resp, err := c.client.ListTestWorkflowLabels(ctx, &cloud.ListTestWorkflowLabelsRequest{
-		EnvironmentId: environmentId,
-	})
+	resp, err := c.client.ListTestWorkflowLabels(ctx, &cloud.ListTestWorkflowLabelsRequest{})
 	if err != nil {
 		return nil, err
 	}
@@ -95,52 +91,48 @@ func (c *cloudTestWorkflowClient) ListLabels(ctx context.Context, environmentId 
 
 func (c *cloudTestWorkflowClient) Update(ctx context.Context, environmentId string, workflow testkube.TestWorkflow) error {
 	// Pass the additional information
-	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("api-key", c.apiKey))
+	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("api-key", c.apiKey, "environment-id", environmentId))
 
 	workflowBytes, err := json.Marshal(workflow)
 	if err != nil {
 		return err
 	}
 	_, err = c.client.UpdateTestWorkflow(ctx, &cloud.UpdateTestWorkflowRequest{
-		EnvironmentId: environmentId,
-		Workflow:      workflowBytes,
+		Workflow: workflowBytes,
 	})
 	return err
 }
 
 func (c *cloudTestWorkflowClient) Create(ctx context.Context, environmentId string, workflow testkube.TestWorkflow) error {
 	// Pass the additional information
-	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("api-key", c.apiKey))
+	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("api-key", c.apiKey, "environment-id", environmentId))
 
 	workflowBytes, err := json.Marshal(workflow)
 	if err != nil {
 		return err
 	}
 	_, err = c.client.CreateTestWorkflow(ctx, &cloud.CreateTestWorkflowRequest{
-		EnvironmentId: environmentId,
-		Workflow:      workflowBytes,
+		Workflow: workflowBytes,
 	})
 	return err
 }
 
 func (c *cloudTestWorkflowClient) Delete(ctx context.Context, environmentId string, name string) error {
 	// Pass the additional information
-	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("api-key", c.apiKey))
+	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("api-key", c.apiKey, "environment-id", environmentId))
 
 	_, err := c.client.DeleteTestWorkflow(ctx, &cloud.DeleteTestWorkflowRequest{
-		EnvironmentId: environmentId,
-		Name:          name,
+		Name: name,
 	})
 	return err
 }
 
 func (c *cloudTestWorkflowClient) DeleteByLabels(ctx context.Context, environmentId string, labels map[string]string) (uint32, error) {
 	// Pass the additional information
-	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("api-key", c.apiKey))
+	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("api-key", c.apiKey, "environment-id", environmentId))
 
 	resp, err := c.client.DeleteTestWorkflowsByLabels(ctx, &cloud.DeleteTestWorkflowsByLabelsRequest{
-		EnvironmentId: environmentId,
-		Labels:        labels,
+		Labels: labels,
 	})
 	if err != nil {
 		return 0, err

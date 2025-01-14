@@ -243,7 +243,7 @@ func (w *worker) Notifications(ctx context.Context, id string, opts executionwor
 				watcher.Close(n.Error)
 				return
 			}
-			watcher.Send(n.Value.ToInternal())
+			watcher.Send(common.Ptr(n.Value.ToInternal()))
 		}
 		watcher.Close(nil)
 	}()

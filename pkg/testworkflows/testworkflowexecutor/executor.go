@@ -10,9 +10,9 @@ import (
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/encoding/gzip"
+	"google.golang.org/grpc/metadata"
 
 	v1 "github.com/kubeshop/testkube/internal/app/api/metrics"
-	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/internal/config"
 	agentclient "github.com/kubeshop/testkube/pkg/agent/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -37,7 +37,7 @@ type TestWorkflowExecutionStream Stream[*testkube.TestWorkflowExecution]
 
 //go:generate mockgen -destination=./mock_executor.go -package=testworkflowexecutor "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor" TestWorkflowExecutor
 type TestWorkflowExecutor interface {
-	Execute(ctx context.Context, req *cloud.ScheduleRequest) TestWorkflowExecutionStream
+	Execute(ctx context.Context, environmentId string, req *cloud.ScheduleRequest) TestWorkflowExecutionStream
 	Start(environmentId string, execution *testkube.TestWorkflowExecution, secrets map[string]map[string]string) error
 }
 
@@ -110,23 +110,21 @@ func (e *executor) isDirect() bool {
 	return e.proContext == nil || !e.proContext.NewExecutions
 }
 
-func (e *executor) Execute(ctx context.Context, req *cloud.ScheduleRequest) TestWorkflowExecutionStream {
-	if req != nil {
-		req = common.Ptr(*req) // nolint:govet
-		if req.EnvironmentId == "" {
-			req.EnvironmentId = e.defaultEnvironmentId
-		}
+func (e *executor) Execute(ctx context.Context, environmentId string, req *cloud.ScheduleRequest) TestWorkflowExecutionStream {
+	if environmentId == "" {
+		environmentId = e.defaultEnvironmentId
 	}
 	if e.isDirect() {
-		return e.executeDirect(ctx, req)
+		return e.executeDirect(ctx, environmentId, req)
 	}
-	return e.execute(ctx, req)
+	return e.execute(ctx, environmentId, req)
 }
 
-func (e *executor) execute(ctx context.Context, req *cloud.ScheduleRequest) TestWorkflowExecutionStream {
+func (e *executor) execute(ctx context.Context, environmentId string, req *cloud.ScheduleRequest) TestWorkflowExecutionStream {
 	ch := make(chan *testkube.TestWorkflowExecution)
 	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
 	ctx = agentclient.AddAPIKeyMeta(ctx, e.apiKey)
+	ctx = metadata.AppendToOutgoingContext(ctx, "environment-id", environmentId)
 	resp, err := e.grpcClient.ScheduleExecution(ctx, req, opts...)
 	resultStream := NewStream(ch)
 	if err != nil {
@@ -157,12 +155,12 @@ func (e *executor) execute(ctx context.Context, req *cloud.ScheduleRequest) Test
 	return resultStream
 }
 
-func (e *executor) executeDirect(ctx context.Context, req *cloud.ScheduleRequest) TestWorkflowExecutionStream {
+func (e *executor) executeDirect(ctx context.Context, environmentId string, req *cloud.ScheduleRequest) TestWorkflowExecutionStream {
 	// Prepare dependencies
 	sensitiveDataHandler := NewSecretHandler(e.secretManager)
 
 	// Schedule execution
-	ch, err := e.scheduler.Schedule(ctx, sensitiveDataHandler, req)
+	ch, err := e.scheduler.Schedule(ctx, sensitiveDataHandler, environmentId, req)
 	if err != nil {
 		resultStream := NewStream(ch)
 		resultStream.addError(err)
@@ -196,12 +194,12 @@ func (e *executor) executeDirect(ctx context.Context, req *cloud.ScheduleRequest
 
 			// Set the runner execution to environment ID as it's a legacy Agent
 			execution.RunnerId = e.agentId
-			if req.EnvironmentId == "" {
+			if environmentId == "" {
 				execution.RunnerId = "oss"
 			}
 
 			// Start the execution
-			_ = e.Start(req.EnvironmentId, execution, sensitiveDataHandler.Get(execution.Id))
+			_ = e.Start(environmentId, execution, sensitiveDataHandler.Get(execution.Id))
 		}
 	}()
 

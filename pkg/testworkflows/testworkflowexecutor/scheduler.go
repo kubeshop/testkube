@@ -34,7 +34,7 @@ const (
 
 //go:generate mockgen -destination=./mock_scheduler.go -package=testworkflowexecutor "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor" Scheduler
 type Scheduler interface {
-	Schedule(ctx context.Context, sensitiveDataHandler SensitiveDataHandler, req *cloud.ScheduleRequest) (<-chan *testkube.TestWorkflowExecution, error)
+	Schedule(ctx context.Context, sensitiveDataHandler SensitiveDataHandler, environmentId string, req *cloud.ScheduleRequest) (<-chan *testkube.TestWorkflowExecution, error)
 	CriticalError(execution *testkube.TestWorkflowExecution, name string, err error) error
 	Start(execution *testkube.TestWorkflowExecution) error
 }
@@ -142,13 +142,18 @@ func (s *scheduler) saveEmptyLogs(ctx context.Context, execution *testkube.TestW
 	return err
 }
 
-func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler SensitiveDataHandler, req *cloud.ScheduleRequest) (<-chan *testkube.TestWorkflowExecution, error) {
+func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler SensitiveDataHandler, environmentId string, req *cloud.ScheduleRequest) (<-chan *testkube.TestWorkflowExecution, error) {
 	// Prepare the channel
 	ch := make(chan *testkube.TestWorkflowExecution, 1)
 
 	// Set up context
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
+
+	// Ensure environment ID
+	if environmentId == "" {
+		environmentId = s.defaultEnvironmentId
+	}
 
 	// Validate the execution request
 	if err := ValidateExecutionRequest(req); err != nil {
@@ -174,8 +179,8 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 		PrependTemplate(s.globalTemplateName)
 
 	// Initialize fetchers
-	testWorkflows := NewTestWorkflowFetcher(s.testWorkflowsClient, req.EnvironmentId)
-	testWorkflowTemplates := NewTestWorkflowTemplateFetcher(s.testWorkflowTemplatesClient, req.EnvironmentId)
+	testWorkflows := NewTestWorkflowFetcher(s.testWorkflowsClient, environmentId)
+	testWorkflowTemplates := NewTestWorkflowTemplateFetcher(s.testWorkflowTemplatesClient, environmentId)
 
 	// Prefetch all the Test Workflows
 	err := testWorkflows.PrefetchMany(common.MapSlice(req.Executions, func(t *cloud.ScheduleExecution) *cloud.ScheduleResourceSelector {
@@ -308,10 +313,6 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 		}
 
 		// Resolve it finally
-		environmentId := req.EnvironmentId
-		if environmentId == "" {
-			environmentId = s.defaultEnvironmentId
-		}
 		err = intermediate[i].Resolve(s.organizationId, environmentId, req.ParentExecutionIds, false)
 		if err != nil {
 			intermediate[i].SetError("Cannot process Test Workflow specification", err)
@@ -358,7 +359,12 @@ func (s *scheduler) finish(ctx context.Context, execution *testkube.TestWorkflow
 		return s.update(ctx, execution)
 	}
 
-	md := metadata.New(map[string]string{"api-key": s.grpcApiToken, "organization-id": s.organizationId, "agent-id": s.agentId})
+	md := metadata.New(map[string]string{
+		"api-key":         s.grpcApiToken,
+		"organization-id": s.organizationId,
+		"agent-id":        s.agentId,
+		"environment-id":  s.defaultEnvironmentId,
+	})
 	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
 	resultBytes, err := json.Marshal(execution)
 	if err != nil {
@@ -366,9 +372,8 @@ func (s *scheduler) finish(ctx context.Context, execution *testkube.TestWorkflow
 	}
 	err = retry(SaveResultRetryMaxAttempts, SaveResultRetryBaseDelay, func() error {
 		_, err := s.grpcClient.FinishExecution(metadata.NewOutgoingContext(ctx, md), &cloud.FinishExecutionRequest{
-			EnvironmentId: s.defaultEnvironmentId,
-			Id:            execution.Id,
-			Result:        resultBytes,
+			Id:     execution.Id,
+			Result: resultBytes,
 		}, opts...)
 		if err != nil {
 			s.logger.Warnw("failed to finish the TestWorkflow execution in database", "recoverable", true, "executionId", execution.Id, "error", err)
@@ -386,7 +391,12 @@ func (s *scheduler) start(ctx context.Context, execution *testkube.TestWorkflowE
 		return s.init(ctx, execution)
 	}
 
-	md := metadata.New(map[string]string{"api-key": s.grpcApiToken, "organization-id": s.organizationId, "agent-id": s.agentId})
+	md := metadata.New(map[string]string{
+		"api-key":         s.grpcApiToken,
+		"organization-id": s.organizationId,
+		"agent-id":        s.agentId,
+		"environment-id":  s.defaultEnvironmentId,
+	})
 	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
 	signatureBytes, err := json.Marshal(execution.Signature)
 	if err != nil {
@@ -394,10 +404,9 @@ func (s *scheduler) start(ctx context.Context, execution *testkube.TestWorkflowE
 	}
 	err = retry(SaveResultRetryMaxAttempts, SaveResultRetryBaseDelay, func() error {
 		_, err := s.grpcClient.InitExecution(metadata.NewOutgoingContext(ctx, md), &cloud.InitExecutionRequest{
-			EnvironmentId: s.defaultEnvironmentId,
-			Id:            execution.Id,
-			Namespace:     execution.Namespace,
-			Signature:     signatureBytes,
+			Id:        execution.Id,
+			Namespace: execution.Namespace,
+			Signature: signatureBytes,
 		}, opts...)
 		if err != nil {
 			s.logger.Warnw("failed to init the TestWorkflow execution in database", "recoverable", true, "executionId", execution.Id, "error", err)

@@ -401,8 +401,7 @@ func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 			scheduleExecution.Config = request.Config
 		}
 
-		resp := s.testWorkflowExecutor.Execute(ctx, &cloud.ScheduleRequest{
-			EnvironmentId:        "", // use default
+		resp := s.testWorkflowExecutor.Execute(ctx, "", &cloud.ScheduleRequest{
 			Executions:           []*cloud.ScheduleExecution{&scheduleExecution},
 			DisableWebhooks:      request.DisableWebhooks,
 			Tags:                 request.Tags,

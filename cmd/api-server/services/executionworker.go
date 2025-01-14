@@ -40,7 +40,7 @@ func CreateExecutionWorker(
 		Connection: testworkflowconfig.WorkerConnectionConfig{
 			Url:         cfg.TestkubeProURL,
 			AgentID:     cfg.TestkubeProAgentID,
-			ApiKey:      cfg.TestkubeProAPIKey,
+			ApiKey:      cfg.TestkubeProAPIKey, // TODO: Build hash with the runner's API Key?
 			SkipVerify:  cfg.TestkubeProSkipVerify,
 			TlsInsecure: cfg.TestkubeProTLSInsecure,
 

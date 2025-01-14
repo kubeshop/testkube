@@ -388,7 +388,7 @@ func (s *Server) Start(ctx context.Context) error {
 }
 
 func (s *Server) ScheduleExecution(req *cloud.ScheduleRequest, srv cloud.TestKubeCloudAPI_ScheduleExecutionServer) error {
-	resp := s.executor.Execute(srv.Context(), req)
+	resp := s.executor.Execute(srv.Context(), "", req)
 	for execution := range resp.Channel() {
 		// Send the data
 		// TODO: Use protobuf struct?

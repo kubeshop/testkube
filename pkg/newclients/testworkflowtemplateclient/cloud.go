@@ -26,11 +26,10 @@ func NewCloudTestWorkflowTemplateClient(client cloud.TestKubeCloudAPIClient, api
 
 func (c *cloudTestWorkflowTemplateClient) Get(ctx context.Context, environmentId string, name string) (*testkube.TestWorkflowTemplate, error) {
 	// Pass the additional information
-	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("api-key", c.apiKey))
+	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("api-key", c.apiKey, "environment-id", environmentId))
 
 	resp, err := c.client.GetTestWorkflowTemplate(ctx, &cloud.GetTestWorkflowTemplateRequest{
-		EnvironmentId: environmentId,
-		Name:          name,
+		Name: name,
 	})
 	if err != nil {
 		return nil, err
@@ -45,14 +44,13 @@ func (c *cloudTestWorkflowTemplateClient) Get(ctx context.Context, environmentId
 
 func (c *cloudTestWorkflowTemplateClient) List(ctx context.Context, environmentId string, options ListOptions) ([]testkube.TestWorkflowTemplate, error) {
 	// Pass the additional information
-	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("api-key", c.apiKey))
+	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("api-key", c.apiKey, "environment-id", environmentId))
 
 	resp, err := c.client.ListTestWorkflowTemplates(ctx, &cloud.ListTestWorkflowTemplatesRequest{
-		EnvironmentId: environmentId,
-		Offset:        options.Offset,
-		Limit:         options.Limit,
-		Labels:        options.Labels,
-		TextSearch:    options.TextSearch,
+		Offset:     options.Offset,
+		Limit:      options.Limit,
+		Labels:     options.Labels,
+		TextSearch: options.TextSearch,
 	})
 	if err != nil {
 		return nil, err
@@ -77,11 +75,9 @@ func (c *cloudTestWorkflowTemplateClient) List(ctx context.Context, environmentI
 
 func (c *cloudTestWorkflowTemplateClient) ListLabels(ctx context.Context, environmentId string) (map[string][]string, error) {
 	// Pass the additional information
-	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("api-key", c.apiKey))
+	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("api-key", c.apiKey, "environment-id", environmentId))
 
-	resp, err := c.client.ListTestWorkflowTemplateLabels(ctx, &cloud.ListTestWorkflowTemplateLabelsRequest{
-		EnvironmentId: environmentId,
-	})
+	resp, err := c.client.ListTestWorkflowTemplateLabels(ctx, &cloud.ListTestWorkflowTemplateLabelsRequest{})
 	if err != nil {
 		return nil, err
 	}
@@ -94,52 +90,48 @@ func (c *cloudTestWorkflowTemplateClient) ListLabels(ctx context.Context, enviro
 
 func (c *cloudTestWorkflowTemplateClient) Update(ctx context.Context, environmentId string, template testkube.TestWorkflowTemplate) error {
 	// Pass the additional information
-	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("api-key", c.apiKey))
+	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("api-key", c.apiKey, "environment-id", environmentId))
 
 	templateBytes, err := json.Marshal(template)
 	if err != nil {
 		return err
 	}
 	_, err = c.client.UpdateTestWorkflowTemplate(ctx, &cloud.UpdateTestWorkflowTemplateRequest{
-		EnvironmentId: environmentId,
-		Template:      templateBytes,
+		Template: templateBytes,
 	})
 	return err
 }
 
 func (c *cloudTestWorkflowTemplateClient) Create(ctx context.Context, environmentId string, template testkube.TestWorkflowTemplate) error {
 	// Pass the additional information
-	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("api-key", c.apiKey))
+	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("api-key", c.apiKey, "environment-id", environmentId))
 
 	templateBytes, err := json.Marshal(template)
 	if err != nil {
 		return err
 	}
 	_, err = c.client.CreateTestWorkflowTemplate(ctx, &cloud.CreateTestWorkflowTemplateRequest{
-		EnvironmentId: environmentId,
-		Template:      templateBytes,
+		Template: templateBytes,
 	})
 	return err
 }
 
 func (c *cloudTestWorkflowTemplateClient) Delete(ctx context.Context, environmentId string, name string) error {
 	// Pass the additional information
-	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("api-key", c.apiKey))
+	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("api-key", c.apiKey, "environment-id", environmentId))
 
 	_, err := c.client.DeleteTestWorkflowTemplate(ctx, &cloud.DeleteTestWorkflowTemplateRequest{
-		EnvironmentId: environmentId,
-		Name:          name,
+		Name: name,
 	})
 	return err
 }
 
 func (c *cloudTestWorkflowTemplateClient) DeleteByLabels(ctx context.Context, environmentId string, labels map[string]string) (uint32, error) {
 	// Pass the additional information
-	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("api-key", c.apiKey))
+	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("api-key", c.apiKey, "environment-id", environmentId))
 
 	resp, err := c.client.DeleteTestWorkflowTemplatesByLabels(ctx, &cloud.DeleteTestWorkflowTemplatesByLabelsRequest{
-		EnvironmentId: environmentId,
-		Labels:        labels,
+		Labels: labels,
 	})
 	if err != nil {
 		return 0, err

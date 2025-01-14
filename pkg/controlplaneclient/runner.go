@@ -6,20 +6,27 @@ import (
 	"io"
 
 	"github.com/pkg/errors"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/structpb"
 
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	cloudtestworkflow "github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
+	"github.com/kubeshop/testkube/pkg/repository/channels"
 )
 
 type RunnerClient interface {
-	GetUnfinishedExecutions(ctx context.Context) ([]*cloud.UnfinishedExecution, error)
+	GetRunnerOngoingExecutions(ctx context.Context) ([]*cloud.UnfinishedExecution, error)
+	WatchRunnerRequests(ctx context.Context) channels.Watcher[*cloud.RunnerRequest]
+	ProcessExecutionNotificationRequests(ctx context.Context, process func(ctx context.Context, req *cloud.TestWorkflowNotificationsRequest) channels.Watcher[*testkube.TestWorkflowExecutionNotification]) error
+	ProcessExecutionParallelWorkerNotificationRequests(ctx context.Context, process func(ctx context.Context, req *cloud.TestWorkflowParallelStepNotificationsRequest) channels.Watcher[*testkube.TestWorkflowExecutionNotification]) error
+	ProcessExecutionServiceNotificationRequests(ctx context.Context, process func(ctx context.Context, req *cloud.TestWorkflowServiceNotificationsRequest) channels.Watcher[*testkube.TestWorkflowExecutionNotification]) error
 }
 
-func (c *client) GetUnfinishedExecutions(ctx context.Context) ([]*cloud.UnfinishedExecution, error) {
+func (c *client) GetRunnerOngoingExecutions(ctx context.Context) ([]*cloud.UnfinishedExecution, error) {
 	if c.IsLegacy() {
-		return c.legacyGetUnfinishedExecutions(ctx)
+		return c.legacyGetRunnerOngoingExecutions(ctx)
 	}
 	res, err := call(ctx, c.metadata().GRPC(), c.client.GetUnfinishedExecutions, &emptypb.Empty{})
 	if err != nil {
@@ -54,7 +61,7 @@ func (c *client) GetUnfinishedExecutions(ctx context.Context) ([]*cloud.Unfinish
 }
 
 // Deprecated
-func (c *client) legacyGetUnfinishedExecutions(ctx context.Context) ([]*cloud.UnfinishedExecution, error) {
+func (c *client) legacyGetRunnerOngoingExecutions(ctx context.Context) ([]*cloud.UnfinishedExecution, error) {
 	jsonPayload, err := json.Marshal(cloudtestworkflow.ExecutionGetRunningRequest{})
 	if err != nil {
 		return nil, err
@@ -91,4 +98,77 @@ func (c *client) legacyGetUnfinishedExecutions(ctx context.Context) ([]*cloud.Un
 		result = append(result, &cloud.UnfinishedExecution{EnvironmentId: c.proContext.EnvID, Id: response.WorkflowExecutions[i].Id})
 	}
 	return result, err
+}
+
+func (c *client) WatchRunnerRequests(ctx context.Context) channels.Watcher[*cloud.RunnerRequest] {
+	stream, err := watch(ctx, c.metadata().GRPC(), c.client.GetRunnerRequests)
+	if err != nil {
+		return channels.NewError[*cloud.RunnerRequest](err)
+	}
+	watcher := channels.NewWatcher[*cloud.RunnerRequest]()
+	go func() {
+		defer watcher.Close(err)
+		for {
+			// Ignore if it's not implemented in the Control Plane
+			if getGrpcErrorCode(err) == codes.Unimplemented {
+				return
+			}
+
+			// Take the context error if possible
+			if errors.Is(err, context.Canceled) && ctx.Err() != nil {
+				err = context.Cause(ctx)
+			}
+
+			// Handle the error
+			if err != nil {
+				return
+			}
+
+			// Get the next runner request
+			var req *cloud.RunnerRequest
+			req, err = stream.Recv()
+			if err != nil {
+				continue
+			}
+
+			watcher.Send(req)
+		}
+	}()
+	return watcher
+}
+
+func (c *client) ProcessExecutionNotificationRequests(ctx context.Context, process func(ctx context.Context, req *cloud.TestWorkflowNotificationsRequest) channels.Watcher[*testkube.TestWorkflowExecutionNotification]) error {
+	return processNotifications(
+		ctx,
+		c.metadata().GRPC(),
+		c.client.GetTestWorkflowNotificationsStream,
+		buildPongNotification,
+		buildCloudNotification,
+		buildCloudError,
+		process,
+	)
+}
+
+func (c *client) ProcessExecutionParallelWorkerNotificationRequests(ctx context.Context, process func(ctx context.Context, req *cloud.TestWorkflowParallelStepNotificationsRequest) channels.Watcher[*testkube.TestWorkflowExecutionNotification]) error {
+	return processNotifications(
+		ctx,
+		c.metadata().GRPC(),
+		c.client.GetTestWorkflowParallelStepNotificationsStream,
+		buildParallelStepPongNotification,
+		buildParallelStepCloudNotification,
+		buildParallelStepCloudError,
+		process,
+	)
+}
+
+func (c *client) ProcessExecutionServiceNotificationRequests(ctx context.Context, process func(ctx context.Context, req *cloud.TestWorkflowServiceNotificationsRequest) channels.Watcher[*testkube.TestWorkflowExecutionNotification]) error {
+	return processNotifications(
+		ctx,
+		c.metadata().GRPC(),
+		c.client.GetTestWorkflowServiceNotificationsStream,
+		buildServicePongNotification,
+		buildServiceCloudNotification,
+		buildServiceCloudError,
+		process,
+	)
 }

@@ -2,29 +2,22 @@ package runner
 
 import (
 	"context"
-	"crypto/tls"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"math"
-	"net/http"
 	"time"
 
 	errors2 "github.com/pkg/errors"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/encoding/gzip"
-	"google.golang.org/grpc/metadata"
-	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
-	"github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
+	"github.com/kubeshop/testkube/pkg/controlplaneclient"
 	"github.com/kubeshop/testkube/pkg/event"
 	testworkflowmappers "github.com/kubeshop/testkube/pkg/mapper/testworkflows"
+	"github.com/kubeshop/testkube/pkg/repository/channels"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 )
@@ -46,9 +39,9 @@ type agentLoop struct {
 	worker              executionworkertypes.Worker
 	logger              *zap.SugaredLogger
 	emitter             event.Interface
-	client              cloud.TestKubeCloudAPIClient
-	grpcApiToken        string
-	runnerId            string
+	client              controlplaneclient.Client
+	proContext          config.ProContext
+	agentId             string
 	organizationId      string
 	legacyEnvironmentId string
 
@@ -64,9 +57,9 @@ func newAgentLoop(
 	worker executionworkertypes.Worker,
 	logger *zap.SugaredLogger,
 	emitter event.Interface,
-	grpcClient cloud.TestKubeCloudAPIClient,
-	grpcApiToken string,
-	runnerId string,
+	client controlplaneclient.Client,
+	proContext config.ProContext,
+	agentId string,
 	organizationId string,
 	legacyEnvironmentId string,
 	newExecutionsEnabled bool,
@@ -76,9 +69,9 @@ func newAgentLoop(
 		worker:               worker,
 		logger:               logger,
 		emitter:              emitter,
-		client:               grpcClient,
-		grpcApiToken:         grpcApiToken,
-		runnerId:             runnerId,
+		client:               client,
+		proContext:           proContext,
+		agentId:              agentId,
 		organizationId:       organizationId,
 		legacyEnvironmentId:  legacyEnvironmentId,
 		newExecutionsEnabled: newExecutionsEnabled,
@@ -99,146 +92,12 @@ func (a *agentLoop) Start(ctx context.Context) error {
 	}
 }
 
-func (a *agentLoop) buildContext(ctx context.Context, environmentId string) context.Context {
-	md := metadata.MD{}
-	if a.runnerId != "" {
-		md[agentIdMeta] = []string{a.runnerId}
-	}
-	if a.grpcApiToken != "" {
-		md[apiKeyMeta] = []string{a.grpcApiToken}
-	}
-	if a.organizationId != "" {
-		md[orgIdMeta] = []string{a.organizationId}
-	}
-	if a.legacyEnvironmentId != "" {
-		// TODO: delete, as [1] the runner is decoupled out of it, and [2] the Control Plane has this information anyway
-		md[envIdMeta] = []string{a.legacyEnvironmentId}
-	}
-	if environmentId != "" {
-		md[envIdMeta] = []string{environmentId}
-	}
-	return metadata.NewOutgoingContext(ctx, md)
-}
-
-func (a *agentLoop) getExecution(ctx context.Context, environmentId, id string) (*testkube.TestWorkflowExecution, error) {
-	if !a.newExecutionsEnabled {
-		return a.getExecutionLegacy(ctx, environmentId, id)
-	}
-	ctx = a.buildContext(ctx, environmentId)
-	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
-	req := cloud.GetExecutionRequest{EnvironmentId: environmentId, Id: id}
-	response, err := a.client.GetExecution(ctx, &req, opts...)
-	if err != nil {
-		return nil, err
-	}
-	var execution testkube.TestWorkflowExecution
-	err = json.Unmarshal(response.Execution, &execution)
-	if err != nil {
-		return nil, err
-	}
-	return &execution, nil
-}
-
-func (a *agentLoop) getExecutionLegacy(ctx context.Context, environmentId, id string) (*testkube.TestWorkflowExecution, error) {
-	ctx = a.buildContext(ctx, environmentId)
-	jsonPayload, err := json.Marshal(testworkflow.ExecutionGetRequest{ID: id})
-	if err != nil {
-		return nil, err
-	}
-	s := structpb.Struct{}
-	if err := s.UnmarshalJSON(jsonPayload); err != nil {
-		return nil, err
-	}
-	req := cloud.CommandRequest{
-		Command: string(testworkflow.CmdTestWorkflowExecutionGet),
-		Payload: &s,
-	}
-	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
-	cmdResponse, err := a.client.Call(ctx, &req, opts...)
-	if err != nil {
-		return nil, err
-	}
-	var response testworkflow.ExecutionGetResponse
-	err = json.Unmarshal(cmdResponse.Response, &response)
-	return &response.WorkflowExecution, err
-}
-
-func (a *agentLoop) presignLogs(ctx context.Context, environmentId string, execution *testkube.TestWorkflowExecution) (string, error) {
-	if !a.newExecutionsEnabled {
-		return a.presignLogsLegacy(ctx, environmentId, execution)
-	}
-
-	md := metadata.New(map[string]string{apiKeyMeta: a.grpcApiToken, orgIdMeta: a.organizationId, agentIdMeta: a.runnerId})
-	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
-	res, err := a.client.SaveExecutionLogsPresigned(metadata.NewOutgoingContext(ctx, md), &cloud.SaveExecutionLogsPresignedRequest{
-		EnvironmentId: environmentId,
-		Id:            execution.Id,
-	}, opts...)
-	if err != nil {
-		return "", err
-	}
-	return res.Url, nil
-}
-
-func (a *agentLoop) presignLogsLegacy(ctx context.Context, environmentId string, execution *testkube.TestWorkflowExecution) (string, error) {
-	// Extracting the test workflow name
+func (a *agentLoop) _saveEmptyLogs(ctx context.Context, environmentId string, execution *testkube.TestWorkflowExecution) error {
 	workflowName := ""
 	if execution.Workflow != nil {
 		workflowName = execution.Workflow.Name
 	}
-
-	jsonPayload, err := json.Marshal(testworkflow.OutputPresignSaveLogRequest{ID: execution.Id, WorkflowName: workflowName})
-	if err != nil {
-		return "", err
-	}
-	s := structpb.Struct{}
-	if err = s.UnmarshalJSON(jsonPayload); err != nil {
-		return "", err
-	}
-	cmdReq := cloud.CommandRequest{
-		Command: string(testworkflow.CmdTestWorkflowOutputPresignSaveLog),
-		Payload: &s,
-	}
-	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
-	cmdResponse, err := a.client.Call(ctx, &cmdReq, opts...)
-	if err != nil {
-		return "", err
-	}
-	var response testworkflow.OutputPresignSaveLogResponse
-	err = json.Unmarshal(cmdResponse.Response, &response)
-	if err != nil {
-		return "", err
-	}
-	return response.URL, nil
-}
-
-// TODO: Add proper gRPC method for that
-func (a *agentLoop) _saveEmptyLogs(ctx context.Context, environmentId string, execution *testkube.TestWorkflowExecution) error {
-	ctx = a.buildContext(ctx, environmentId)
-
-	// Presigning the log
-	url, err := a.presignLogs(ctx, environmentId, execution)
-	if err != nil {
-		return err
-	}
-
-	// Saving empty logs
-	req, err := http.NewRequestWithContext(ctx, http.MethodPut, url, nil)
-	if err != nil {
-		return err
-	}
-	req.Header.Add("Content-Type", "application/octet-stream")
-	httpClient := http.DefaultClient
-	httpClient.Transport = &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
-	res, err := httpClient.Do(req)
-	if err != nil {
-		return errors2.Wrap(err, "failed to save empty logs in the storage")
-	}
-	if res.StatusCode != http.StatusOK {
-		return errors2.Errorf("error saving file with presigned url: expected 200 OK response code, got %d", res.StatusCode)
-	}
-
-	return err
+	return a.client.SaveExecutionLogs(ctx, environmentId, execution.Id, workflowName, nil)
 }
 
 func (a *agentLoop) saveEmptyLogs(ctx context.Context, environmentId string, execution *testkube.TestWorkflowExecution) error {
@@ -251,83 +110,25 @@ func (a *agentLoop) saveEmptyLogs(ctx context.Context, environmentId string, exe
 	return err
 }
 
-// TODO: Add proper gRPC method for that
-func (a *agentLoop) _updateExecution(ctx context.Context, environmentId string, execution *testkube.TestWorkflowExecution) error {
-	ctx = a.buildContext(ctx, environmentId)
-
-	jsonPayload, err := json.Marshal(testworkflow.ExecutionUpdateRequest{WorkflowExecution: *execution})
-	if err != nil {
-		return err
-	}
-	s := structpb.Struct{}
-	if err := s.UnmarshalJSON(jsonPayload); err != nil {
-		return err
-	}
-	cmdReq := cloud.CommandRequest{
-		Command: string(testworkflow.CmdTestWorkflowExecutionUpdate),
-		Payload: &s,
-	}
-	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
-	_, err = a.client.Call(ctx, &cmdReq, opts...)
-	return err
-}
-
-func (a *agentLoop) updateExecution(ctx context.Context, environmentId string, execution *testkube.TestWorkflowExecution) error {
-	err := retry(saveResultRetryMaxAttempts, saveResultRetryBaseDelay, func() error {
-		err := a._updateExecution(ctx, environmentId, execution)
-		if err != nil {
-			a.logger.Warnw("failed to update the TestWorkflow execution in database", "recoverable", true, "executionId", execution.Id, "error", err)
-		}
-		return err
-	})
-	if err != nil {
-		a.logger.Errorw("failed to update the TestWorkflow execution in database", "recoverable", false, "executionId", execution.Id, "error", err)
-	}
-	return err
-}
-
-func (a *agentLoop) _finishExecution(ctx context.Context, environmentId string, execution *testkube.TestWorkflowExecution) error {
-	ctx = a.buildContext(ctx, environmentId)
-
-	resultBytes, err := json.Marshal(execution.Result)
-	if err != nil {
-		return err
-	}
-
-	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
-	_, err = a.client.FinishExecution(ctx, &cloud.FinishExecutionRequest{
-		EnvironmentId: environmentId,
-		Id:            execution.Id,
-		Result:        resultBytes,
-	}, opts...)
-	return err
-}
-
 func (a *agentLoop) finishExecution(ctx context.Context, environmentId string, execution *testkube.TestWorkflowExecution) error {
-	if !a.newExecutionsEnabled {
-		err := a.updateExecution(ctx, environmentId, execution)
-		if err != nil {
-			return err
-		}
-
-		// Emit events locally if the Control Plane doesn't support that
-		//a.emitter.Notify(testkube.NewEventStartTestWorkflow(execution)) // TODO: delete - sent from Cloud
-		if execution.Result.IsPassed() {
-			a.emitter.Notify(testkube.NewEventEndTestWorkflowSuccess(execution))
-		} else if execution.Result.IsAborted() {
-			a.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(execution))
-		} else {
-			a.emitter.Notify(testkube.NewEventEndTestWorkflowFailed(execution))
-		}
-		return nil
-	}
-
 	err := retry(saveResultRetryMaxAttempts, saveResultRetryBaseDelay, func() error {
-		err := a._finishExecution(ctx, environmentId, execution)
+		err := a.client.FinishExecutionResult(ctx, environmentId, execution.Id, execution.Result)
 		if err != nil {
 			a.logger.Warnw("failed to finish the TestWorkflow execution in database", "recoverable", true, "executionId", execution.Id, "error", err)
+			return err
 		}
-		return err
+		if !a.newExecutionsEnabled {
+			// Emit events locally if the Control Plane doesn't support that
+			//a.emitter.Notify(testkube.NewEventStartTestWorkflow(execution)) // TODO: delete - sent from Cloud
+			if execution.Result.IsPassed() {
+				a.emitter.Notify(testkube.NewEventEndTestWorkflowSuccess(execution))
+			} else if execution.Result.IsAborted() {
+				a.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(execution))
+			} else {
+				a.emitter.Notify(testkube.NewEventEndTestWorkflowFailed(execution))
+			}
+		}
+		return nil
 	})
 	if err != nil {
 		a.logger.Errorw("failed to finish the TestWorkflow execution in database", "recoverable", false, "executionId", execution.Id, "error", err)
@@ -335,38 +136,9 @@ func (a *agentLoop) finishExecution(ctx context.Context, environmentId string, e
 	return err
 }
 
-func (a *agentLoop) _init(ctx context.Context, environmentId string, execution *testkube.TestWorkflowExecution) error {
-	ctx = a.buildContext(ctx, environmentId)
-
-	signatureBytes, err := json.Marshal(execution.Signature)
-	if err != nil {
-		return err
-	}
-
-	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
-	_, err = a.client.InitExecution(ctx, &cloud.InitExecutionRequest{
-		EnvironmentId: environmentId,
-		Id:            execution.Id,
-		Namespace:     execution.Namespace,
-		Signature:     signatureBytes,
-	}, opts...)
-	return err
-}
-
 func (a *agentLoop) init(ctx context.Context, environmentId string, execution *testkube.TestWorkflowExecution) error {
 	err := retry(saveResultRetryMaxAttempts, saveResultRetryBaseDelay, func() (err error) {
-		if a.newExecutionsEnabled {
-			err = a._init(ctx, environmentId, execution)
-		} else {
-			var prevExecution *testkube.TestWorkflowExecution
-			prevExecution, err = a.getExecution(ctx, environmentId, execution.Id)
-			if err == nil {
-				prevExecution.RunnerId = a.runnerId
-				prevExecution.Namespace = execution.Namespace
-				prevExecution.Signature = execution.Signature
-				err = a._updateExecution(ctx, environmentId, prevExecution)
-			}
-		}
+		err = a.client.InitExecution(ctx, environmentId, execution.Id, execution.Signature, execution.Namespace)
 		if err != nil {
 			a.logger.Warnw("failed to initialize the TestWorkflow execution in database", "recoverable", true, "executionId", execution.Id, "error", err)
 		}
@@ -380,7 +152,6 @@ func (a *agentLoop) init(ctx context.Context, environmentId string, execution *t
 
 func (a *agentLoop) run(ctx context.Context) error {
 	g, ctx := errgroup.WithContext(ctx)
-	ctx = a.buildContext(ctx, a.legacyEnvironmentId)
 
 	// Handle the new mechanism for runners
 	if a.newExecutionsEnabled {
@@ -404,276 +175,59 @@ func (a *agentLoop) run(ctx context.Context) error {
 }
 
 func (a *agentLoop) loopNotifications(ctx context.Context) error {
-	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
-	stream, err := a.client.GetTestWorkflowNotificationsStream(ctx, opts...)
-
-	g, ctx := errgroup.WithContext(ctx)
-	responses := make(chan *cloud.TestWorkflowNotificationsResponse, 5)
-
-	// Send responses in sequence
-	// GRPC stream have special requirements for concurrency on SendMsg, and RecvMsg calls.
-	// Please check https://github.com/grpc/grpc-go/blob/master/Documentation/concurrency.md
-	g.Go(func() error {
-		for msg := range responses {
-			if err := stream.Send(msg); err != nil {
-				return err
-			}
+	return a.client.ProcessExecutionNotificationRequests(ctx, func(ctx context.Context, req *cloud.TestWorkflowNotificationsRequest) channels.Watcher[*testkube.TestWorkflowExecutionNotification] {
+		// Read the initial status TODO: consider getting from the database
+		status, err := a.worker.Summary(ctx, req.ExecutionId, executionworkertypes.GetOptions{})
+		if err != nil {
+			return channels.NewError[*testkube.TestWorkflowExecutionNotification](err)
 		}
-		return nil
-	})
 
-	// Process the requests
-	g.Go(func() error {
-		defer close(responses)
-		for {
-			// Take the context error if possible
-			if err == nil && ctx.Err() != nil {
-				err = ctx.Err()
-			}
-
-			// Handle the error
-			if err != nil {
-				return err
-			}
-
-			// Get the next request
-			var req *cloud.TestWorkflowNotificationsRequest
-			req, err = stream.Recv()
-			if err != nil {
-				continue
-			}
-
-			// Send PONG to the PING message
-			if req.RequestType == cloud.TestWorkflowNotificationsRequestType_WORKFLOW_STREAM_HEALTH_CHECK {
-				responses <- &cloud.TestWorkflowNotificationsResponse{StreamId: req.StreamId, SeqNo: 0}
-				continue
-			}
-
-			// Start reading the notifications
-			g.Go(func(req *cloud.TestWorkflowNotificationsRequest) func() error {
-				seqNo := uint32(0)
-				return func() error {
-					// Read the initial status TODO: consider getting from the database
-					status, err := a.worker.Summary(ctx, req.ExecutionId, executionworkertypes.GetOptions{})
-					if err != nil {
-						responses <- buildCloudError(req.StreamId, fmt.Sprintf("failed to fetch real-time notifications: failed to read execution summary: %s", err.Error()))
-						return nil
-					}
-
-					// Fail fast when it's already finished
-					if status.EstimatedResult.IsFinished() {
-						responses <- buildCloudError(req.StreamId, fmt.Sprintf("failed to fetch real-time notifications: execution is already finished"))
-						return nil
-					}
-
-					// Start reading the notifications
-					// TODO: allow stopping that - it will require different gRPC API though
-					notifications := a.worker.Notifications(ctx, status.Resource.Id, executionworkertypes.NotificationsOptions{
-						Hints: executionworkertypes.Hints{
-							Namespace:   status.Namespace,
-							Signature:   status.Signature,
-							ScheduledAt: common.Ptr(status.Execution.ScheduledAt),
-						},
-					})
-
-					// Process the notifications
-					for notification := range notifications.Channel() {
-						responses <- buildCloudNotification(req.StreamId, seqNo, notification)
-						seqNo++
-					}
-					if notifications.Err() != nil {
-						responses <- buildCloudError(req.StreamId, fmt.Sprintf("failed to fetch real-time notifications: %s", err.Error()))
-					}
-					return nil
-				}
-			}(req))
+		// Fail fast when it's already finished
+		if status.EstimatedResult.IsFinished() {
+			return channels.NewError[*testkube.TestWorkflowExecutionNotification](fmt.Errorf("failed to fetch real-time notifications: execution is already finished"))
 		}
-	})
 
-	return g.Wait()
+		// Start reading the notifications
+		return a.worker.Notifications(ctx, status.Resource.Id, executionworkertypes.NotificationsOptions{
+			Hints: executionworkertypes.Hints{
+				Namespace:   status.Namespace,
+				Signature:   status.Signature,
+				ScheduledAt: common.Ptr(status.Execution.ScheduledAt),
+			},
+		})
+	})
 }
 
 func (a *agentLoop) loopServiceNotifications(ctx context.Context) error {
-	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
-	stream, err := a.client.GetTestWorkflowServiceNotificationsStream(ctx, opts...)
+	return a.client.ProcessExecutionServiceNotificationRequests(ctx, func(ctx context.Context, req *cloud.TestWorkflowServiceNotificationsRequest) channels.Watcher[*testkube.TestWorkflowExecutionNotification] {
+		// Build the internal resource name
+		resourceId := fmt.Sprintf("%s-%s-%d", req.ExecutionId, req.ServiceName, req.ServiceIndex)
 
-	g, ctx := errgroup.WithContext(ctx)
-	responses := make(chan *cloud.TestWorkflowServiceNotificationsResponse, 5)
-
-	// Send responses in sequence
-	// GRPC stream have special requirements for concurrency on SendMsg, and RecvMsg calls.
-	// Please check https://github.com/grpc/grpc-go/blob/master/Documentation/concurrency.md
-	g.Go(func() error {
-		for msg := range responses {
-			if err := stream.Send(msg); err != nil {
-				return err
-			}
-		}
-		return nil
+		// Start reading the notifications
+		return a.worker.Notifications(ctx, resourceId, executionworkertypes.NotificationsOptions{
+			Hints: executionworkertypes.Hints{},
+		})
 	})
-
-	// Process the requests
-	g.Go(func() error {
-		defer close(responses)
-		for {
-			// Take the context error if possible
-			if err == nil && ctx.Err() != nil {
-				err = ctx.Err()
-			}
-
-			// Handle the error
-			if err != nil {
-				return err
-			}
-
-			// Get the next request
-			var req *cloud.TestWorkflowServiceNotificationsRequest
-			req, err = stream.Recv()
-			if err != nil {
-				continue
-			}
-
-			// Send PONG to the PING message
-			if req.RequestType == cloud.TestWorkflowNotificationsRequestType_WORKFLOW_STREAM_HEALTH_CHECK {
-				responses <- &cloud.TestWorkflowServiceNotificationsResponse{StreamId: req.StreamId, SeqNo: 0}
-				continue
-			}
-
-			// Start reading the notifications
-			g.Go(func(req *cloud.TestWorkflowServiceNotificationsRequest) func() error {
-				seqNo := uint32(0)
-				return func() error {
-					// Build the internal resource name
-					resourceId := fmt.Sprintf("%s-%s-%d", req.ExecutionId, req.ServiceName, req.ServiceIndex)
-
-					// Start reading the notifications
-					// TODO: allow stopping that - it will require different gRPC API though
-					notifications := a.worker.Notifications(ctx, resourceId, executionworkertypes.NotificationsOptions{
-						Hints: executionworkertypes.Hints{},
-					})
-
-					// Process the notifications
-					for notification := range notifications.Channel() {
-						responses <- buildServiceCloudNotification(req.StreamId, seqNo, notification)
-						seqNo++
-					}
-					if notifications.Err() != nil {
-						responses <- buildServiceCloudError(req.StreamId, fmt.Sprintf("failed to fetch real-time notifications: %s", err.Error()))
-					}
-					return nil
-				}
-			}(req))
-		}
-	})
-
-	return g.Wait()
 }
 
 func (a *agentLoop) loopParallelStepNotifications(ctx context.Context) error {
-	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
-	stream, err := a.client.GetTestWorkflowParallelStepNotificationsStream(ctx, opts...)
+	return a.client.ProcessExecutionParallelWorkerNotificationRequests(ctx, func(ctx context.Context, req *cloud.TestWorkflowParallelStepNotificationsRequest) channels.Watcher[*testkube.TestWorkflowExecutionNotification] {
+		// Build the internal resource name
+		resourceId := fmt.Sprintf("%s-%s-%d", req.ExecutionId, req.Ref, req.WorkerIndex)
 
-	g, ctx := errgroup.WithContext(ctx)
-	responses := make(chan *cloud.TestWorkflowParallelStepNotificationsResponse, 5)
-
-	// Send responses in sequence
-	// GRPC stream have special requirements for concurrency on SendMsg, and RecvMsg calls.
-	// Please check https://github.com/grpc/grpc-go/blob/master/Documentation/concurrency.md
-	g.Go(func() error {
-		for msg := range responses {
-			if err := stream.Send(msg); err != nil {
-				return err
-			}
-		}
-		return nil
+		// Start reading the notifications
+		return a.worker.Notifications(ctx, resourceId, executionworkertypes.NotificationsOptions{
+			Hints: executionworkertypes.Hints{},
+		})
 	})
-
-	// Process the requests
-	g.Go(func() error {
-		defer close(responses)
-		for {
-			// Take the context error if possible
-			if err == nil && ctx.Err() != nil {
-				err = ctx.Err()
-			}
-
-			// Handle the error
-			if err != nil {
-				return err
-			}
-
-			// Get the next request
-			var req *cloud.TestWorkflowParallelStepNotificationsRequest
-			req, err = stream.Recv()
-			if err != nil {
-				continue
-			}
-
-			// Send PONG to the PING message
-			if req.RequestType == cloud.TestWorkflowNotificationsRequestType_WORKFLOW_STREAM_HEALTH_CHECK {
-				responses <- &cloud.TestWorkflowParallelStepNotificationsResponse{StreamId: req.StreamId, SeqNo: 0}
-				continue
-			}
-
-			// Start reading the notifications
-			g.Go(func(req *cloud.TestWorkflowParallelStepNotificationsRequest) func() error {
-				seqNo := uint32(0)
-				return func() error {
-					// Build the internal resource name
-					resourceId := fmt.Sprintf("%s-%s-%d", req.ExecutionId, req.Ref, req.WorkerIndex)
-
-					// Start reading the notifications
-					// TODO: allow stopping that - it will require different gRPC API though
-					notifications := a.worker.Notifications(ctx, resourceId, executionworkertypes.NotificationsOptions{
-						Hints: executionworkertypes.Hints{},
-					})
-
-					// Process the notifications
-					for notification := range notifications.Channel() {
-						responses <- buildParallelStepCloudNotification(req.StreamId, seqNo, notification)
-						seqNo++
-					}
-					if notifications.Err() != nil {
-						responses <- buildParallelStepCloudError(req.StreamId, fmt.Sprintf("failed to fetch real-time notifications: %s", err.Error()))
-					}
-					return nil
-				}
-			}(req))
-		}
-	})
-
-	return g.Wait()
 }
 
 func (a *agentLoop) loopRunnerRequests(ctx context.Context) error {
-	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
-	stream, err := a.client.GetRunnerRequests(ctx, opts...)
-	for {
-		// Ignore if it's not implemented in the Control Plane
-		if getGrpcErrorCode(err) == codes.Unimplemented {
-			return nil
-		}
-
-		// Take the context error if possible
-		if err == nil && ctx.Err() != nil {
-			err = ctx.Err()
-		}
-
-		// Handle the error
-		if err != nil {
-			return err
-		}
-
-		// Get the next runner request
-		var req *cloud.RunnerRequest
-		req, err = stream.Recv()
-		if err != nil {
-			continue
-		}
-
+	watcher := a.client.WatchRunnerRequests(ctx)
+	for req := range watcher.Channel() {
 		// Lock the execution for itself
 		var resp *cloud.ObtainExecutionResponse
-		resp, err = a.client.ObtainExecution(ctx, &cloud.ObtainExecutionRequest{Id: req.Id, EnvironmentId: req.EnvironmentId}, opts...)
+		resp, err := a.client.ObtainExecution(ctx, req.EnvironmentId, req.Id)
 		if err != nil {
 			a.logger.Errorf("failed to obtain execution '%s/%s', from Control Plane: %v", req.EnvironmentId, req.Id, err)
 			continue
@@ -691,8 +245,7 @@ func (a *agentLoop) loopRunnerRequests(ctx context.Context) error {
 			continue
 		}
 	}
-
-	return nil
+	return watcher.Err()
 }
 
 func (a *agentLoop) runTestWorkflow(environmentId string, executionId string) error {
@@ -700,7 +253,7 @@ func (a *agentLoop) runTestWorkflow(environmentId string, executionId string) er
 	logger := a.logger.With("environmentId", environmentId, "executionId", executionId)
 
 	// Get the execution details
-	execution, err := a.getExecution(ctx, environmentId, executionId)
+	execution, err := a.client.GetExecution(ctx, environmentId, executionId)
 	if err != nil {
 		return errors2.Wrapf(err, "failed to get execution details '%s/%s' from Control Plane", environmentId, executionId)
 	}
@@ -751,7 +304,7 @@ func (a *agentLoop) runTestWorkflow(environmentId string, executionId string) er
 	// Apply the known data to temporary object.
 	execution.Namespace = result.Namespace
 	execution.Signature = result.Signature
-	execution.RunnerId = a.runnerId
+	execution.RunnerId = a.agentId
 	if err = a.init(context.Background(), environmentId, execution); err != nil {
 		logger.Errorw("failed to mark execution as initialized", "error", err)
 	}
