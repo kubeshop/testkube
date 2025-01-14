@@ -186,6 +186,7 @@ message CredentialResponse {
 
 message TestWorkflowServiceNotificationsRequest {
   string stream_id = 1;
+  string environment_id = 6;
   string execution_id = 2;
   string service_name = 3;
   int32 service_index = 4;
@@ -203,6 +204,7 @@ message TestWorkflowServiceNotificationsResponse {
 
 message TestWorkflowParallelStepNotificationsRequest {
   string stream_id = 1;
+  string environment_id = 6;
   string execution_id = 2;
   string ref = 3;
   int32  worker_index = 4;
