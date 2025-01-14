@@ -112,16 +112,18 @@ func processNotifications[Request notificationRequest, Response any, Srv notific
 
 			// Start reading the notifications
 			g.Go(func(req Request) func() error {
-				seqNo := uint32(0)
-				watcher := process(gCtx, req) // TODO: Make ctx per request, so the stream could be stopped
-				for notification := range watcher.Channel() {
-					responses <- buildNotification(req.GetStreamId(), seqNo, notification)
-					seqNo++
+				return func() error {
+					seqNo := uint32(0)
+					watcher := process(gCtx, req) // TODO: Make ctx per request, so the stream could be stopped
+					for notification := range watcher.Channel() {
+						responses <- buildNotification(req.GetStreamId(), seqNo, notification)
+						seqNo++
+					}
+					if watcher.Err() != nil {
+						responses <- buildError(req.GetStreamId(), watcher.Err().Error())
+					}
+					return nil
 				}
-				if watcher.Err() != nil {
-					responses <- buildError(req.GetStreamId(), watcher.Err().Error())
-				}
-				return nil
 			}(req))
 		}
 	})
