@@ -1,15 +1,12 @@
 package webhooktemplates
 
 import (
-	"encoding/csv"
-	"errors"
 	"fmt"
 	"os"
-	"strconv"
-	"strings"
 
 	"github.com/spf13/cobra"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	apiv1 "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	webhooktemplatesmapper "github.com/kubeshop/testkube/pkg/mapper/webhooktemplates"
@@ -59,7 +56,7 @@ func NewCreateWebhookTemplateOptionsFromFlags(cmd *cobra.Command) (options apiv1
 	}
 
 	if len(configs) != 0 {
-		config, err = getWebhookTemplateConfig(configs)
+		config, err = common.GetWebhookConfig(configs)
 		if err != nil {
 			return options, err
 		}
@@ -72,7 +69,7 @@ func NewCreateWebhookTemplateOptionsFromFlags(cmd *cobra.Command) (options apiv1
 	}
 
 	if len(parameters) != 0 {
-		parameter, err = getWebhookTemplateParameters(parameters)
+		parameter, err = common.GetWebhookParameters(parameters)
 		if err != nil {
 			return options, err
 		}
@@ -189,7 +186,7 @@ func NewUpdateWebhookTemplateOptionsFromFlags(cmd *cobra.Command) (options apiv1
 			return options, err
 		}
 
-		values, err := getWebhookTemplateConfig(configs)
+		values, err := common.GetWebhookConfig(configs)
 		if err != nil {
 			return options, err
 		}
@@ -202,7 +199,7 @@ func NewUpdateWebhookTemplateOptionsFromFlags(cmd *cobra.Command) (options apiv1
 			return options, err
 		}
 
-		values, err := getWebhookTemplateParameters(parameters)
+		values, err := common.GetWebhookParameters(parameters)
 		if err != nil {
 			return options, err
 		}
@@ -210,88 +207,4 @@ func NewUpdateWebhookTemplateOptionsFromFlags(cmd *cobra.Command) (options apiv1
 	}
 
 	return options, nil
-}
-
-func getWebhookTemplateConfig(configs map[string]string) (map[string]testkube.WebhookConfigValue, error) {
-	config := map[string]testkube.WebhookConfigValue{}
-	for key, value := range configs {
-		switch {
-		case strings.HasPrefix(value, "value="):
-			config[key] = testkube.WebhookConfigValue{
-				Value: &testkube.BoxedString{Value: strings.TrimPrefix(value, "value=")},
-			}
-		case strings.HasPrefix(value, "secret="):
-			data := strings.TrimPrefix(value, "secret=")
-			r := csv.NewReader(strings.NewReader(data))
-			r.Comma = ';'
-			r.LazyQuotes = true
-			r.TrimLeadingSpace = true
-
-			records, err := r.ReadAll()
-			if err != nil {
-				return nil, err
-			}
-
-			if len(records) != 1 {
-				return nil, errors.New("single string expected")
-			}
-
-			if len(records[0]) != 3 {
-				return nil, errors.New("3 fields expected")
-			}
-
-			config[key] = testkube.WebhookConfigValue{
-				Secret: &testkube.SecretRef{
-					Namespace: records[0][0],
-					Name:      records[0][1],
-					Key:       records[0][2],
-				},
-			}
-		default:
-			continue
-		}
-	}
-
-	return config, nil
-}
-
-func getWebhookTemplateParameters(parameters map[string]string) (map[string]testkube.WebhookParameterSchema, error) {
-	parameter := map[string]testkube.WebhookParameterSchema{}
-	for key, value := range parameters {
-		r := csv.NewReader(strings.NewReader(value))
-		r.Comma = ';'
-		r.LazyQuotes = true
-		r.TrimLeadingSpace = true
-
-		records, err := r.ReadAll()
-		if err != nil {
-			return nil, err
-		}
-
-		if len(records) != 1 {
-			return nil, errors.New("single string expected")
-		}
-
-		if len(records[0]) != 5 {
-			return nil, errors.New("5 fields expected")
-		}
-
-		var required bool
-		required, err = strconv.ParseBool(records[0][1])
-		if err != nil {
-			return nil, err
-		}
-
-		parameter[key] = testkube.WebhookParameterSchema{
-			Description: records[0][0],
-			Required:    required,
-			Example:     records[0][2],
-			Default_: &testkube.BoxedString{
-				Value: records[0][3],
-			},
-			Pattern: records[0][4],
-		}
-	}
-
-	return parameter, nil
 }
