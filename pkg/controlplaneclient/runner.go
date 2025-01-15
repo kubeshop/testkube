@@ -136,6 +136,7 @@ func (c *client) WatchRunnerRequests(ctx context.Context) channels.Watcher[*clou
 				if err != nil {
 					return
 				}
+				continue
 			}
 
 			watcher.Send(req.Request)
