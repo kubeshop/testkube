@@ -150,7 +150,7 @@ func (c *client) UpdateExecutionOutput(ctx context.Context, environmentId, execu
 	req := &cloud.UpdateExecutionOutputRequest{
 		Id: executionId,
 		Output: common.MapSlice(output, func(t testkube.TestWorkflowOutput) *cloud.ExecutionOutput {
-			v, _ := json.Marshal(t)
+			v, _ := json.Marshal(t.Value)
 			return &cloud.ExecutionOutput{Ref: t.Ref, Name: t.Name, Value: v}
 		}),
 	}
