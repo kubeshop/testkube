@@ -230,6 +230,13 @@ message ScheduleExecution {
   map<string, string> config = 2;
   string execution_name = 3;
   map<string, string> tags = 4;
+  repeated ExecutionTarget targets = 5;
+}
+
+message ExecutionTarget {
+  map<string, string> match = 1; // runner labels to filter by
+  map<string, string> not_match = 2; // runner labels to filter by (negative)
+  repeated string replicateBy = 3; // runner labels to replicate by
 }
 
 enum RunningContextType {

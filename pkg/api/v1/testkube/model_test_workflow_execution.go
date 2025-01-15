@@ -19,7 +19,9 @@ type TestWorkflowExecution struct {
 	// identifier for group of correlated executions
 	GroupId string `json:"groupId,omitempty"`
 	// identifier of the runner where it has been executed
-	RunnerId string `json:"runnerId,omitempty"`
+	RunnerId             string           `json:"runnerId,omitempty"`
+	RunnerTarget         *ExecutionTarget `json:"runnerTarget,omitempty"`
+	RunnerOriginalTarget *ExecutionTarget `json:"runnerOriginalTarget,omitempty"`
 	// execution name
 	Name string `json:"name"`
 	// execution namespace

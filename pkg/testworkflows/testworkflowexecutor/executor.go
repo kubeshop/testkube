@@ -95,6 +95,9 @@ func New(
 			testWorkflowTemplatesClient,
 			repository,
 			output,
+			func(_ string, _ *cloud.ExecutionTarget) ([]map[string]string, error) {
+				return nil, nil
+			},
 			globalTemplateName,
 			organizationId,
 			defaultEnvironmentId,

@@ -296,6 +296,16 @@ func (e *IntermediateExecution) SetWorkflow(workflow *testworkflowsv1.TestWorkfl
 	return e
 }
 
+func (e *IntermediateExecution) SetTarget(target testkube.ExecutionTarget) *IntermediateExecution {
+	e.execution.RunnerTarget = &target
+	return e
+}
+
+func (e *IntermediateExecution) SetOriginalTarget(target testkube.ExecutionTarget) *IntermediateExecution {
+	e.execution.RunnerOriginalTarget = &target
+	return e
+}
+
 func (e *IntermediateExecution) SetSequenceNumber(number int32) *IntermediateExecution {
 	e.execution.Number = number
 	return e

@@ -8136,6 +8136,8 @@ components:
           default: false
         tags:
           $ref: "#/components/schemas/TestWorkflowTagValue"
+        target:
+          $ref: "#/components/schemas/ExecutionTarget"
         runningContext:
           description: running context for the test workflow execution (Pro edition only)
           $ref: "#/components/schemas/TestWorkflowRunningContext"
@@ -8143,7 +8145,26 @@ components:
           type: array
           description: parent execution ids
           items:
-            type: string          
+            type: string
+
+    ExecutionTarget:
+      type: object
+      properties:
+        match:
+          type: object
+          description: runner tags to match
+          additionalProperties:
+            type: string
+        notMatch:
+          type: object
+          description: runner tags to NOT match
+          additionalProperties:
+            type: string
+        replicateBy:
+          type: array
+          description: list of runner tags to depend on
+          items:
+            type: string
 
     TestWorkflowWithExecution:
       type: object
@@ -8193,6 +8214,10 @@ components:
         runnerId:
           type: string
           description: identifier of the runner where it has been executed
+        runnerTarget:
+          $ref: "#/components/schemas/ExecutionTarget"
+        runnerOriginalTarget:
+          $ref: "#/components/schemas/ExecutionTarget"
         name:
           type: string
           description: execution name

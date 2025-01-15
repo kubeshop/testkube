@@ -386,6 +386,13 @@ func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 		runningContext, user := testworkflowexecutor.GetNewRunningContext(request.RunningContext, request.ParentExecutionIds)
 
 		var scheduleExecution cloud.ScheduleExecution
+		if request.Target != nil {
+			scheduleExecution.Targets = []*cloud.ExecutionTarget{{
+				Match:       request.Target.Match,
+				NotMatch:    request.Target.NotMatch,
+				ReplicateBy: request.Target.ReplicateBy,
+			}}
+		}
 		if name != "" {
 			scheduleExecution.Selector = &cloud.ScheduleResourceSelector{Name: name}
 			scheduleExecution.Config = request.Config

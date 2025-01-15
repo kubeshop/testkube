@@ -5,7 +5,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"math"
+	"slices"
 	"time"
 
 	"github.com/pkg/errors"
@@ -45,6 +47,7 @@ type scheduler struct {
 	testWorkflowTemplatesClient testworkflowtemplateclient.TestWorkflowTemplateClient
 	resultsRepository           testworkflow.Repository
 	outputRepository            testworkflow.OutputRepository
+	getRunners                  func(environmentId string, target *cloud.ExecutionTarget) ([]map[string]string, error)
 	globalTemplateName          string
 	organizationId              string
 	defaultEnvironmentId        string
@@ -60,6 +63,7 @@ func NewScheduler(
 	testWorkflowTemplatesClient testworkflowtemplateclient.TestWorkflowTemplateClient,
 	resultsRepository testworkflow.Repository,
 	outputRepository testworkflow.OutputRepository,
+	getRunners func(environmentId string, target *cloud.ExecutionTarget) ([]map[string]string, error),
 	globalTemplateName string,
 	organizationId string,
 	defaultEnvironmentId string,
@@ -75,6 +79,7 @@ func NewScheduler(
 		testWorkflowTemplatesClient: testWorkflowTemplatesClient,
 		resultsRepository:           resultsRepository,
 		outputRepository:            outputRepository,
+		getRunners:                  getRunners,
 		globalTemplateName:          globalTemplateName,
 		organizationId:              organizationId,
 		defaultEnvironmentId:        defaultEnvironmentId,
@@ -200,28 +205,128 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 	_ = testWorkflowTemplates.PrefetchMany(tplNames)
 
 	// Flatten selectors
-	selectors := make([]*cloud.ScheduleExecution, 0, len(req.Executions))
-	for i := range req.Executions {
-		list, _ := testWorkflows.Get(req.Executions[i].Selector)
+	intermediateSelectors := make([]*cloud.ScheduleExecution, 0, len(req.Executions))
+	for _, execution := range req.Executions {
+		list, _ := testWorkflows.Get(execution.Selector)
 		for _, w := range list {
-			selectors = append(selectors, &cloud.ScheduleExecution{
+			intermediateSelectors = append(intermediateSelectors, &cloud.ScheduleExecution{
 				Selector:      &cloud.ScheduleResourceSelector{Name: w.Name},
-				Config:        req.Executions[i].Config,
-				ExecutionName: req.Executions[i].ExecutionName, // TODO: what to do when execution name is configured, but multiple requested?
-				Tags:          req.Executions[i].Tags,
+				Targets:       execution.Targets,
+				Config:        execution.Config,
+				ExecutionName: execution.ExecutionName, // TODO: what to do when execution name is configured, but multiple requested?
+				Tags:          execution.Tags,
 			})
 		}
 	}
 
+	// Flatten target replicas
+	originalTargets := make([]*cloud.ExecutionTarget, 0, len(intermediateSelectors))
+	selectors := make([]*cloud.ScheduleExecution, 0, len(intermediateSelectors))
+	for _, execution := range intermediateSelectors {
+		// Ignore when no specific targets are passed
+		if len(execution.Targets) == 0 {
+			selectors = append(selectors, execution)
+			originalTargets = append(originalTargets, &cloud.ExecutionTarget{})
+			continue
+		}
+
+		for _, target := range execution.Targets {
+			// Optimize repeating target - if there is filter on label, avoid doing the repeat
+			replicateBy := make([]string, 0)
+			for i := 0; i < len(target.ReplicateBy); i++ {
+				if _, ok := target.Match[target.ReplicateBy[i]]; ok {
+					continue
+				}
+				if _, ok := target.NotMatch[target.ReplicateBy[i]]; ok {
+					continue
+				}
+				replicateBy = append(replicateBy, target.ReplicateBy[i])
+			}
+
+			// Do not replicate if it's not expected
+			if len(replicateBy) == 0 {
+				selectors = append(selectors, &cloud.ScheduleExecution{
+					Selector:      execution.Selector,
+					Targets:       []*cloud.ExecutionTarget{{Match: target.Match, NotMatch: target.NotMatch}},
+					Config:        execution.Config,
+					ExecutionName: execution.ExecutionName, // TODO: what to do when execution name is configured, but multiple requested?
+					Tags:          execution.Tags,
+				})
+				originalTargets = append(originalTargets, target)
+				continue
+			}
+
+			runners, err := s.getRunners(environmentId, &cloud.ExecutionTarget{
+				Match:       target.Match,
+				NotMatch:    target.NotMatch,
+				ReplicateBy: replicateBy,
+			})
+			if err != nil {
+				return nil, errors.Wrap(err, "detecting runners for repeating the executions")
+			}
+
+			// Fallback to any runner matching the initial filters
+			if len(runners) == 0 {
+				selectors = append(selectors, &cloud.ScheduleExecution{
+					Selector:      execution.Selector,
+					Targets:       []*cloud.ExecutionTarget{{Match: target.Match, NotMatch: target.NotMatch}},
+					Config:        execution.Config,
+					ExecutionName: execution.ExecutionName, // TODO: what to do when execution name is configured, but multiple requested?
+					Tags:          execution.Tags,
+				})
+				originalTargets = append(originalTargets, target)
+				continue
+			}
+
+			// Build execution for each combination
+			added := make([]map[string]string, 0)
+			for _, labels := range runners {
+				if slices.ContainsFunc(added, func(m map[string]string) bool {
+					return maps.Equal(m, labels)
+				}) {
+					continue
+				}
+				matcher := make(map[string]string)
+				maps.Copy(matcher, target.Match)
+				maps.Copy(matcher, labels)
+				selectors = append(selectors, &cloud.ScheduleExecution{
+					Selector:      execution.Selector,
+					Targets:       []*cloud.ExecutionTarget{{Match: matcher, NotMatch: target.NotMatch}},
+					Config:        execution.Config,
+					ExecutionName: execution.ExecutionName, // TODO: what to do when execution name is configured, but multiple requested?
+					Tags:          execution.Tags,
+				})
+				originalTargets = append(originalTargets, target)
+				continue
+			}
+		}
+	}
+	intermediateSelectors = nil
+
 	// Resolve executions for each selector
 	intermediate := make([]*IntermediateExecution, 0, len(selectors))
-	for _, v := range selectors {
+	for i, v := range selectors {
 		workflow, _ := testWorkflows.GetByName(v.Selector.Name)
+		originalTarget := testkube.ExecutionTarget{
+			Match:       originalTargets[i].Match,
+			NotMatch:    originalTargets[i].NotMatch,
+			ReplicateBy: originalTargets[i].ReplicateBy,
+		}
+		target := originalTarget
+		if len(v.Targets) == 1 {
+			target = testkube.ExecutionTarget{
+				Match:       v.Targets[0].Match,
+				NotMatch:    v.Targets[0].NotMatch,
+				ReplicateBy: v.Targets[0].ReplicateBy,
+			}
+		}
 		current := base.Clone().
 			AutoGenerateID().
 			SetName(v.ExecutionName).
 			AppendTags(v.Tags).
-			SetWorkflow(testworkflows2.MapAPIToKube(workflow))
+			SetWorkflow(testworkflows2.MapAPIToKube(workflow)).
+			SetTarget(target).
+			SetOriginalTarget(originalTarget)
 		intermediate = append(intermediate, current)
 
 		// Inject configuration
