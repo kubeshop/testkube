@@ -8,6 +8,7 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	apiv1 "github.com/kubeshop/testkube/pkg/api/v1/client"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -24,6 +25,9 @@ func NewCreateWebhookCmd() *cobra.Command {
 		payloadTemplateReference string
 		update                   bool
 		disable                  bool
+		config                   map[string]string
+		parameters               map[string]string
+		webhookTemplateReference string
 	)
 
 	cmd := &cobra.Command{
@@ -78,9 +82,7 @@ func NewCreateWebhookCmd() *cobra.Command {
 
 				ui.Success("Webhook created", name)
 			} else {
-				if options.PayloadTemplate != "" {
-					options.PayloadTemplate = fmt.Sprintf("%q", options.PayloadTemplate)
-				}
+				(*testkube.WebhookCreateRequest)(&options).QuoteTextFields()
 
 				data, err := crd.ExecuteTemplate(crd.TemplateWebhook, options)
 				ui.ExitOnError("executing crd template", err)
@@ -93,12 +95,15 @@ func NewCreateWebhookCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&name, "name", "n", "", "unique webhook name - mandatory")
 	cmd.Flags().StringArrayVarP(&events, "events", "e", []string{}, "event types handled by webhook e.g. start-test|end-test")
 	cmd.Flags().StringVarP(&uri, "uri", "u", "", "URI which should be called when given event occurs (golang template supported)")
-	cmd.Flags().StringVarP(&selector, "selector", "", "", "expression to select tests and test suites for webhook events: --selector app=backend")
+	cmd.Flags().StringVarP(&selector, "selector", "", "", "expression to select tests, test suites, test workflows for webhook events: --selector app=backend")
 	cmd.Flags().StringToStringVarP(&labels, "label", "l", nil, "label key value pair: --label key1=value1")
 	cmd.Flags().StringVarP(&payloadObjectField, "payload-field", "", "", "field to use for notification object payload")
 	cmd.Flags().StringVarP(&payloadTemplate, "payload-template", "", "", "if webhook needs to send a custom notification, then a path to template file should be provided")
 	cmd.Flags().StringToStringVarP(&headers, "header", "", nil, "webhook header value pair (golang template supported): --header Content-Type=application/xml")
 	cmd.Flags().StringVar(&payloadTemplateReference, "payload-template-reference", "", "reference to payload template to use for the webhook")
+	cmd.Flags().StringToStringVarP(&config, "config", "", nil, "webhook config variable with csv coluums (value=data or secret=namespace;name;key): --config var1=\"value=data\" or --config var2=\"secret=ns1;name1;key1\"")
+	cmd.Flags().StringToStringVarP(&parameters, "parameter", "", nil, "webhook parameter variable with csv coluums (description;required;example;default;pattern): --parameter var3=\"descr;true;12345;0;[0-9]*\"")
+	cmd.Flags().StringVar(&webhookTemplateReference, "webhook-template-reference", "", "reference to webhook to use as template for the webhook")
 	cmd.Flags().BoolVar(&update, "update", false, "update, if webhook already exists")
 	cmd.Flags().BoolVar(&disable, "disable", false, "disable webhook")
 	cmd.Flags().MarkDeprecated("enable", "enable webhook is deprecated")
