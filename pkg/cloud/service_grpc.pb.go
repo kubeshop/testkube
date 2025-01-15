@@ -340,7 +340,7 @@ func (c *testKubeCloudAPIClient) GetEventStream(ctx context.Context, in *EventSt
 }
 
 type TestKubeCloudAPI_GetEventStreamClient interface {
-	Recv() (*Event, error)
+	Recv() (*EventStreamData, error)
 	grpc.ClientStream
 }
 
@@ -348,8 +348,8 @@ type testKubeCloudAPIGetEventStreamClient struct {
 	grpc.ClientStream
 }
 
-func (x *testKubeCloudAPIGetEventStreamClient) Recv() (*Event, error) {
-	m := new(Event)
+func (x *testKubeCloudAPIGetEventStreamClient) Recv() (*EventStreamData, error) {
+	m := new(EventStreamData)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -430,8 +430,8 @@ func (c *testKubeCloudAPIClient) GetRunnerRequests(ctx context.Context, opts ...
 }
 
 type TestKubeCloudAPI_GetRunnerRequestsClient interface {
-	Send(*RunnerResponse) error
-	Recv() (*RunnerRequest, error)
+	Send(*RunnerResponseData) error
+	Recv() (*RunnerRequestData, error)
 	grpc.ClientStream
 }
 
@@ -439,12 +439,12 @@ type testKubeCloudAPIGetRunnerRequestsClient struct {
 	grpc.ClientStream
 }
 
-func (x *testKubeCloudAPIGetRunnerRequestsClient) Send(m *RunnerResponse) error {
+func (x *testKubeCloudAPIGetRunnerRequestsClient) Send(m *RunnerResponseData) error {
 	return x.ClientStream.SendMsg(m)
 }
 
-func (x *testKubeCloudAPIGetRunnerRequestsClient) Recv() (*RunnerRequest, error) {
-	m := new(RunnerRequest)
+func (x *testKubeCloudAPIGetRunnerRequestsClient) Recv() (*RunnerRequestData, error) {
+	m := new(RunnerRequestData)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -1128,7 +1128,7 @@ func _TestKubeCloudAPI_GetEventStream_Handler(srv interface{}, stream grpc.Serve
 }
 
 type TestKubeCloudAPI_GetEventStreamServer interface {
-	Send(*Event) error
+	Send(*EventStreamData) error
 	grpc.ServerStream
 }
 
@@ -1136,7 +1136,7 @@ type testKubeCloudAPIGetEventStreamServer struct {
 	grpc.ServerStream
 }
 
-func (x *testKubeCloudAPIGetEventStreamServer) Send(m *Event) error {
+func (x *testKubeCloudAPIGetEventStreamServer) Send(m *EventStreamData) error {
 	return x.ServerStream.SendMsg(m)
 }
 
@@ -1187,8 +1187,8 @@ func _TestKubeCloudAPI_GetRunnerRequests_Handler(srv interface{}, stream grpc.Se
 }
 
 type TestKubeCloudAPI_GetRunnerRequestsServer interface {
-	Send(*RunnerRequest) error
-	Recv() (*RunnerResponse, error)
+	Send(*RunnerRequestData) error
+	Recv() (*RunnerResponseData, error)
 	grpc.ServerStream
 }
 
@@ -1196,12 +1196,12 @@ type testKubeCloudAPIGetRunnerRequestsServer struct {
 	grpc.ServerStream
 }
 
-func (x *testKubeCloudAPIGetRunnerRequestsServer) Send(m *RunnerRequest) error {
+func (x *testKubeCloudAPIGetRunnerRequestsServer) Send(m *RunnerRequestData) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func (x *testKubeCloudAPIGetRunnerRequestsServer) Recv() (*RunnerResponse, error) {
-	m := new(RunnerResponse)
+func (x *testKubeCloudAPIGetRunnerRequestsServer) Recv() (*RunnerResponseData, error) {
+	m := new(RunnerResponseData)
 	if err := x.ServerStream.RecvMsg(m); err != nil {
 		return nil, err
 	}

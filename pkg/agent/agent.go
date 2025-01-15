@@ -189,7 +189,7 @@ func (ag *Agent) runEventsReaderLoop(ctx context.Context) (err error) {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
-		ev, err := stream.Recv()
+		msg, err := stream.Recv()
 		if err != nil {
 			// Ignore if it's not implemented in the Control Plane
 			if e, ok := err.(interface{ GRPCStatus() *status.Status }); ok && e.GRPCStatus().Code() == codes.Unimplemented {
@@ -197,6 +197,10 @@ func (ag *Agent) runEventsReaderLoop(ctx context.Context) (err error) {
 			}
 			return err
 		}
+		if msg.Ping {
+			continue
+		}
+		ev := msg.Event
 		if ev.Resource == nil {
 			ev.Resource = &cloud.EventResource{}
 		}

@@ -20,12 +20,12 @@ service TestKubeCloudAPI {
     rpc GetTestWorkflowParallelStepNotificationsStream(stream TestWorkflowParallelStepNotificationsResponse) returns (stream TestWorkflowParallelStepNotificationsRequest);
     rpc GetProContext(google.protobuf.Empty) returns (ProContextResponse);
     rpc GetCredential(CredentialRequest) returns (CredentialResponse);
-    rpc GetEventStream(EventStreamRequest) returns (stream Event); // TODO: Healthcheck (?)
+    rpc GetEventStream(EventStreamRequest) returns (stream EventStreamData);
     rpc ScheduleExecution(ScheduleRequest) returns (stream ScheduleResponse);
 
     // Runner
     rpc GetUnfinishedExecutions(google.protobuf.Empty) returns (stream UnfinishedExecution);
-    rpc GetRunnerRequests(stream RunnerResponse) returns (stream RunnerRequest); // TODO: Healthcheck (?)
+    rpc GetRunnerRequests(stream RunnerResponseData) returns (stream RunnerRequestData);
     rpc InitExecution(InitExecutionRequest) returns (InitExecutionResponse);
     rpc GetExecution(GetExecutionRequest) returns (GetExecutionResponse);
     rpc UpdateExecutionResult(UpdateExecutionResultRequest) returns (UpdateExecutionResultResponse);
@@ -283,6 +283,11 @@ message EventStreamRequest {
   repeated EventResource accept = 1;
 }
 
+message EventStreamData {
+  bool ping = 1;
+  optional Event event = 2;
+}
+
 message Event {
   string id = 1;
   EventResource resource = 3;
@@ -290,9 +295,19 @@ message Event {
   bytes data = 5;
 }
 
+message RunnerRequestData {
+  bool ping = 1;
+  optional RunnerRequest request = 2;
+}
+
 message RunnerRequest {
   string environment_id = 1;
   string id = 2;
+}
+
+message RunnerResponseData {
+  bool ping = 1;
+  optional RunnerResponse response = 2;
 }
 
 message RunnerResponse {

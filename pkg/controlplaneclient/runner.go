@@ -125,13 +125,20 @@ func (c *client) WatchRunnerRequests(ctx context.Context) channels.Watcher[*clou
 			}
 
 			// Get the next runner request
-			var req *cloud.RunnerRequest
+			var req *cloud.RunnerRequestData
 			req, err = stream.Recv()
 			if err != nil {
 				continue
 			}
 
-			watcher.Send(req)
+			if req.Ping {
+				err = stream.Send(&cloud.RunnerResponseData{Ping: true})
+				if err != nil {
+					return
+				}
+			}
+
+			watcher.Send(req.Request)
 		}
 	}()
 	return watcher
