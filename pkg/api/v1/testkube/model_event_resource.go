@@ -18,6 +18,7 @@ const (
 	EXECUTOR_EventResource              EventResource = "executor"
 	TRIGGER_EventResource               EventResource = "trigger"
 	WEBHOOK_EventResource               EventResource = "webhook"
+	WEBHOOKTEMPLATE_EventResource       EventResource = "webhooktemplate"
 	TESTEXECUTION_EventResource         EventResource = "testexecution"
 	TESTSUITEEXECUTION_EventResource    EventResource = "testsuiteexecution"
 	TESTSOURCE_EventResource            EventResource = "testsource"

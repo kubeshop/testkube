@@ -373,6 +373,7 @@ func ConvertIndependentStepParallelToStepParallel(step testworkflowsv1.Independe
 			Setup:                common.MapSlice(step.TestWorkflowTemplateSpec.Setup, ConvertIndependentStepToStep),
 			Steps:                common.MapSlice(step.TestWorkflowTemplateSpec.Steps, ConvertIndependentStepToStep),
 			After:                common.MapSlice(step.TestWorkflowTemplateSpec.After, ConvertIndependentStepToStep),
+			Pvcs:                 step.TestWorkflowTemplateSpec.Pvcs,
 		},
 		StepControl:    step.StepControl,
 		StepOperations: step.StepOperations,

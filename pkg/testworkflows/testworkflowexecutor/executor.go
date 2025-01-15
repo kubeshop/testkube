@@ -32,6 +32,7 @@ import (
 	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/secretmanager"
+	"github.com/kubeshop/testkube/pkg/testworkflows"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
@@ -45,6 +46,8 @@ const (
 
 	SaveLogsRetryMaxAttempts = 10
 	SaveLogsRetryBaseDelay   = 300 * time.Millisecond
+
+	ConfigSizeLimit = 3 * 1024 * 1024
 )
 
 //go:generate mockgen -destination=./mock_executor.go -package=testworkflowexecutor "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor" TestWorkflowExecutor
@@ -465,9 +468,33 @@ func (e *executor) initialize(ctx context.Context, workflow *testworkflowsv1.Tes
 		DisableWebhooks:           request.DisableWebhooks,
 		Tags:                      map[string]string{},
 		RunningContext:            request.RunningContext,
+		ConfigParams:              make(map[string]testkube.TestWorkflowExecutionConfigValue),
 	}
 
-	// Try to resolve tags initially
+	// Store the configuration if it is small and not sensitive
+	if testworkflows.CountMapBytes(request.Config) < ConfigSizeLimit {
+		storeConfig := true
+		schema := workflow.Spec.Config
+		for _, v := range schema {
+			if v.Sensitive {
+				storeConfig = false
+				execution.ConfigParams = nil
+				break
+			}
+		}
+
+		if storeConfig {
+			for k, v := range request.Config {
+				if _, ok := schema[k]; ok {
+					execution.ConfigParams[k] = testkube.TestWorkflowExecutionConfigValue{
+						Value: v,
+					}
+				}
+			}
+		}
+	}
+
+	// Try to resolve tags initialily
 	if workflow.Spec.Execution != nil {
 		execution.Tags = workflow.Spec.Execution.Tags
 	}

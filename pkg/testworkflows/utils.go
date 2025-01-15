@@ -108,3 +108,12 @@ func GetClusterID(ctx context.Context, configMap configRepo.Repository) string {
 	}
 	return clusterID
 }
+
+// CountMapBytes returns the total bytes of the map
+func CountMapBytes(m map[string]string) int {
+	totalBytes := 0
+	for k, v := range m {
+		totalBytes += len(k) + len(v)
+	}
+	return totalBytes
+}

@@ -1,0 +1,84 @@
+apiVersion: executor.testkube.io/v1
+kind: WebhookTemplate
+metadata:
+  name: {{ .Name }}
+  namespace: {{ .Namespace }}
+  {{- if ne (len .Labels) 0 }}
+  labels:
+  {{- range $key, $value := .Labels }}
+    {{ $key }}: {{ $value }}
+  {{- end }}
+  {{- end }}
+  {{- if ne (len .Annotations) 0 }}
+  annotations:
+  {{- range $key, $value := .Annotations }}
+    {{ $key }}: {{ $value }}
+  {{- end }}
+  {{- end }}  
+spec:
+  {{- if ne (len .Events) 0 }}
+  events:
+  {{- range .Events }}
+  - {{ . }}
+  {{- end }}
+  {{- end }}
+  {{- if .Uri }}
+  uri: {{ .Uri }}
+  {{- end }}
+  {{- if .Selector }}
+  selector: {{ .Selector }}
+  {{- end }}
+  {{- if .PayloadObjectField }}
+  payloadObjectField: {{ .PayloadObjectField }}
+  {{- end }}
+  {{- if .PayloadTemplate }}
+  payloadTemplate: {{ .PayloadTemplate }}
+  {{- end }}
+  {{- if .PayloadTemplateReference }}
+  payloadTemplateReference: {{ .PayloadTemplateReference }}
+  {{- end }}  
+  {{- if ne (len .Headers) 0 }}
+  headers:
+  {{- range $key, $value := .Headers }}
+    {{ $key }}: {{ $value }}
+  {{- end }}
+  {{- end }}
+  {{- if .Disabled }}
+  disabled: {{ .Disabled }}
+  {{- end }}
+  {{- if ne (len .Config) 0 }}
+  config:
+  {{- range $key, $val := .Config }}
+    {{ $key }}:
+    {{- if $val.Value }}
+      value: {{ $val.Value.Value }}
+    {{- end }}
+    {{- if $val.Secret }}
+      secret:
+        namespace: {{ $val.Secret.Namespace }}
+        name: {{ $val.Secret.Name }}
+        key: {{ $val.Secret.Key }}
+    {{- end }}
+  {{- end }}
+  {{- end }}
+  {{- if ne (len .Parameters) 0 }}
+  parameters:
+  {{- range $key, $value := .Parameters }}
+    {{ $key }}:
+    {{- if $value.Description }}
+      description: {{ $value.Description }}
+    {{- end }}
+    {{- if $value.Required }}
+      required: {{ $value.Required }}
+    {{- end }}
+    {{- if $value.Example }}
+      example: {{ $value.Example }}
+    {{- end }}
+    {{- if $value.Default_ }}
+      default: {{ $value.Default_.Value }}
+    {{- end }}
+    {{- if $value.Pattern }}
+      pattern: {{ $value.Pattern }}
+    {{- end }}
+  {{- end }}
+  {{- end }}

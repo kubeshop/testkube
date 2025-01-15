@@ -16,6 +16,7 @@ spec:
       - name: jmeter-workflow-suite
       - name: junit-workflow-suite
       - name: k6-workflow-suite
+      - name: locust-workflow-suite
       - name: maven-workflow-suite
       - name: nunit-workflow-suite
       - name: playwright-workflow-suite

@@ -486,6 +486,15 @@ workflow-k6-smoke() {
   common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file"
 }
 
+workflow-locust-smoke() {
+  name="Test Workflow - Locust"
+  workflow_crd_file="test/locust/crd-workflow/smoke.yaml"
+  workflow_suite_name="locust-workflow-suite"
+  workflow_suite_file="test/suites/test-workflows/locust-workflow.yaml"
+
+  common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file"
+}
+
 workflow-maven-smoke() {
   name="Test Workflow - Maven"
   workflow_crd_file="test/maven/executor-smoke/crd-workflow/smoke.yaml"
@@ -581,6 +590,7 @@ main() {
       workflow-jmeter-smoke
       workflow-junit-smoke
       workflow-k6-smoke
+      workflow-locust-smoke
       workflow-maven-smoke
       workflow-nunit-smoke
       workflow-playwright-smoke
@@ -617,6 +627,7 @@ main() {
       workflow-jmeter-smoke
       workflow-junit-smoke
       workflow-k6-smoke
+      workflow-locust-smoke
       workflow-maven-smoke
       workflow-nunit-smoke
       workflow-playwright-smoke
@@ -638,6 +649,7 @@ main() {
       workflow-jmeter-smoke
       workflow-junit-smoke
       workflow-k6-smoke
+      workflow-locust-smoke
       workflow-maven-smoke
       workflow-nunit-smoke
       workflow-playwright-smoke

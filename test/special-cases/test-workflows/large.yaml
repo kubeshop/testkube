@@ -1,0 +1,84 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: large-logs-1mb-no-delay
+  labels:
+    core-tests: large
+description: "Logs: 1 MB"
+spec:
+  steps:
+  - name: Run test
+    run:
+      image: bash:alpine3.21
+      command: 
+        - bash
+        - -c
+        - 'for iteration in {1..100}; do printf "\niteration $iteration\n"; for sets in {1..20}; do printf "LINE_BEGINNING_"; printf "abc DEFghi JKL ASDF BBB CCC%.0s" {1..20}; printf "_LINE_END"; printf "\n"; done; done' # 100 iterations - about 1.1MB
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: large-logs-1mb-1s
+  labels:
+    core-tests: large
+description: "Logs: 1 MB"
+spec:
+  steps:
+  - name: Run test
+    run:
+      image: bash:alpine3.21
+      command: 
+        - bash
+        - -c
+        - for iteration in {1..100}; do sleep 1; printf "\niteration $iteration\n"; for sets in {1..20}; do printf "LINE_BEGINNING_"; printf "abc DEFghi JKL ASDF BBB CCC%.0s" {1..20}; printf "_LINE_END"; printf "\n"; done; done # 100 iterations - about 1.1MB
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: large-logs-11mb-no-delay
+  labels:
+    core-tests: large
+description: "Logs: 11 MB"
+spec:
+  steps:
+  - name: Run test
+    run:
+      image: bash:alpine3.21
+      command: 
+        - bash
+        - -c
+        - for iteration in {1..1000}; printf "\niteration $iteration\n"; for sets in {1..20}; do printf "LINE_BEGINNING_"; printf "abc DEFghi JKL ASDF BBB CCC%.0s" {1..20}; printf "_LINE_END"; printf "\n"; done; done # 1k iterations - about 11MB
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: large-logs-11mb-1s
+  labels:
+    core-tests: large
+description: "Logs: 11 MB"
+spec:
+  steps:
+  - name: Run test
+    run:
+      image: bash:alpine3.21
+      command: 
+        - bash
+        - -c
+        - for iteration in {1..1000}; do sleep 1; printf "\niteration $iteration\n"; for sets in {1..20}; do printf "LINE_BEGINNING_"; printf "abc DEFghi JKL ASDF BBB CCC%.0s" {1..20}; printf "_LINE_END"; printf "\n"; done; done # 1k iterations - about 11MB
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: large-logs-22mb-2s
+  labels:
+    core-tests: large
+description: "Logs: 22 MB"
+spec:
+  steps:
+  - name: Run test
+    run:
+      image: bash:alpine3.21
+      command: 
+        - bash
+        - -c
+        - for iteration in {1..2000}; do sleep 2; printf "\niteration $iteration\n"; for sets in {1..20}; do printf "LINE_BEGINNING_"; printf "abc DEFghi JKL ASDF BBB CCC%.0s" {1..20}; printf "_LINE_END"; printf "\n"; done; done # 1k iterations - about 11MB

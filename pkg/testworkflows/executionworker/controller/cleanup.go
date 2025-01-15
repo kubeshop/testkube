@@ -57,6 +57,17 @@ func cleanupJobs(labelName string) func(ctx context.Context, clientSet kubernete
 	}
 }
 
+func cleanupPvcs(labelName string) func(ctx context.Context, clientSet kubernetes.Interface, namespace, id string) error {
+	return func(ctx context.Context, clientSet kubernetes.Interface, namespace, id string) error {
+		return clientSet.CoreV1().PersistentVolumeClaims(namespace).DeleteCollection(ctx, metav1.DeleteOptions{
+			GracePeriodSeconds: common.Ptr(int64(0)),
+			PropagationPolicy:  common.Ptr(metav1.DeletePropagationBackground),
+		}, metav1.ListOptions{
+			LabelSelector: fmt.Sprintf("%s=%s", labelName, id),
+		})
+	}
+}
+
 func Cleanup(ctx context.Context, clientSet kubernetes.Interface, namespace, id string) error {
 	var errs []error
 	var errsMu sync.Mutex
@@ -70,6 +81,8 @@ func Cleanup(ctx context.Context, clientSet kubernetes.Interface, namespace, id 
 		cleanupConfigMaps(constants.ResourceIdLabelName),
 		cleanupSecrets(constants.RootResourceIdLabelName),
 		cleanupSecrets(constants.ResourceIdLabelName),
+		cleanupPvcs(constants.RootResourceIdLabelName),
+		cleanupPvcs(constants.ResourceIdLabelName),
 	}
 	wg.Add(len(ops))
 	for _, op := range ops {
@@ -96,6 +109,7 @@ func CleanupGroup(ctx context.Context, clientSet kubernetes.Interface, namespace
 		cleanupPods(constants.GroupIdLabelName),
 		cleanupConfigMaps(constants.GroupIdLabelName),
 		cleanupSecrets(constants.GroupIdLabelName),
+		cleanupPvcs(constants.GroupIdLabelName),
 	}
 	wg.Add(len(ops))
 	for _, op := range ops {

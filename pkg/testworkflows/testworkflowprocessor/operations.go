@@ -181,10 +181,15 @@ func ProcessContentGit(_ InternalProcessor, layer Intermediate, container stage.
 		SetWorkingDir("/").
 		SetImage(constants.DefaultToolkitImage).
 		SetImagePullPolicy(corev1.PullIfNotPresent).
-		SetCommand("/toolkit", "clone", step.Content.Git.Uri).
+		SetCommand("/toolkit", "clone").
 		EnableToolkit(stage.Ref())
 
-	args := []string{mountPath}
+	args := []string{step.Content.Git.Uri, mountPath}
+
+	// Enable cone mode if expected
+	if step.Content.Git.Cone {
+		args = append([]string{"--cone"}, args...)
+	}
 
 	// Provide Git username
 	if step.Content.Git.UsernameFrom != nil {

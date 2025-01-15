@@ -293,6 +293,7 @@ func MapContentGitAPIToKube(v testkube.TestWorkflowContentGit) testworkflowsv1.C
 		SshKeyFrom:   common.MapPtr(v.SshKeyFrom, MapEnvVarSourceAPIToKube),
 		AuthType:     MapGitAuthTypeAPIToKube(v.AuthType),
 		MountPath:    v.MountPath,
+		Cone:         v.Cone,
 		Paths:        v.Paths,
 	}
 }
@@ -951,6 +952,7 @@ func MapStepParallelAPIToKube(v testkube.TestWorkflowStepParallel) testworkflows
 			Setup: common.MapSlice(v.Setup, MapStepAPIToKube),
 			Steps: common.MapSlice(v.Steps, MapStepAPIToKube),
 			After: common.MapSlice(v.After, MapStepAPIToKube),
+			Pvcs:  common.MapMap(v.Pvcs, MapPvcConfigAPIToKube),
 		},
 		StepControl: testworkflowsv1.StepControl{
 			Paused:   v.Paused,
@@ -995,6 +997,7 @@ func MapIndependentStepParallelAPIToKube(v testkube.TestWorkflowIndependentStepP
 			Setup: common.MapSlice(v.Setup, MapIndependentStepAPIToKube),
 			Steps: common.MapSlice(v.Steps, MapIndependentStepAPIToKube),
 			After: common.MapSlice(v.After, MapIndependentStepAPIToKube),
+			Pvcs:  common.MapMap(v.Pvcs, MapPvcConfigAPIToKube),
 		},
 		StepControl: testworkflowsv1.StepControl{
 			Paused:   v.Paused,
@@ -1098,6 +1101,7 @@ func MapIndependentServiceSpecAPIToKube(v testkube.TestWorkflowIndependentServic
 		Logs:           MapBoxedStringToString(v.Logs),
 		RestartPolicy:  testworkflowsv1.ServiceRestartPolicy(v.RestartPolicy),
 		ReadinessProbe: common.MapPtr(v.ReadinessProbe, MapProbeAPIToKube),
+		Pvcs:           common.MapMap(v.Pvcs, MapPvcConfigAPIToKube),
 	}
 }
 
@@ -1134,6 +1138,7 @@ func MapServiceSpecAPIToKube(v testkube.TestWorkflowServiceSpec) testworkflowsv1
 			Logs:           MapBoxedStringToString(v.Logs),
 			RestartPolicy:  testworkflowsv1.ServiceRestartPolicy(v.RestartPolicy),
 			ReadinessProbe: common.MapPtr(v.ReadinessProbe, MapProbeAPIToKube),
+			Pvcs:           common.MapMap(v.Pvcs, MapPvcConfigAPIToKube),
 		},
 	}
 }
@@ -1234,6 +1239,7 @@ func MapSpecAPIToKube(v testkube.TestWorkflowSpec) testworkflowsv1.TestWorkflowS
 		Setup:    common.MapSlice(v.Setup, MapStepAPIToKube),
 		Steps:    common.MapSlice(v.Steps, MapStepAPIToKube),
 		After:    common.MapSlice(v.After, MapStepAPIToKube),
+		Pvcs:     common.MapMap(v.Pvcs, MapPvcConfigAPIToKube),
 	}
 }
 
@@ -1253,6 +1259,7 @@ func MapTemplateSpecAPIToKube(v testkube.TestWorkflowTemplateSpec) testworkflows
 		Setup:    common.MapSlice(v.Setup, MapIndependentStepAPIToKube),
 		Steps:    common.MapSlice(v.Steps, MapIndependentStepAPIToKube),
 		After:    common.MapSlice(v.After, MapIndependentStepAPIToKube),
+		Pvcs:     common.MapMap(v.Pvcs, MapPvcConfigAPIToKube),
 	}
 }
 
@@ -1483,5 +1490,73 @@ func MapTestWorkflowAPIToKubeTestWorkflowSummary(v testkube.TestWorkflow) testwo
 func MapTestWorkflowTagSchemaAPIToKube(v testkube.TestWorkflowTagSchema) testworkflowsv1.TestWorkflowTagSchema {
 	return testworkflowsv1.TestWorkflowTagSchema{
 		Tags: v.Tags,
+	}
+}
+
+func MapTypeLocalObjectReferenceAPIToKube(v testkube.TypedLocalObjectReference) corev1.TypedLocalObjectReference {
+	return corev1.TypedLocalObjectReference{
+		APIGroup: MapBoxedStringToString(v.ApiGroup),
+		Kind:     v.Kind,
+		Name:     v.Name,
+	}
+}
+
+func MapTypeObjectReferenceAPIToKube(v testkube.TypedObjectReference) corev1.TypedObjectReference {
+	return corev1.TypedObjectReference{
+		APIGroup:  MapBoxedStringToString(v.ApiGroup),
+		Kind:      v.Kind,
+		Name:      v.Name,
+		Namespace: MapBoxedStringToString(v.Namespace),
+	}
+}
+
+func MapVolumeResourceRequirementsAPIToKube(v *testkube.TestWorkflowResources) corev1.VolumeResourceRequirements {
+	if v == nil {
+		return corev1.VolumeResourceRequirements{}
+	}
+
+	return corev1.VolumeResourceRequirements{
+		Limits:   MapResourcesListAPIToKubeCore(v.Limits),
+		Requests: MapResourcesListAPIToKubeCore(v.Requests),
+	}
+}
+
+func MapResourcesListAPIToKubeCore(v *testkube.TestWorkflowResourcesList) corev1.ResourceList {
+	if v == nil {
+		return nil
+	}
+
+	res := make(map[corev1.ResourceName]resource.Quantity)
+	if v.Cpu != "" {
+		res[corev1.ResourceCPU], _ = resource.ParseQuantity(v.Cpu)
+	}
+
+	if v.Memory != "" {
+		res[corev1.ResourceMemory], _ = resource.ParseQuantity(v.Memory)
+	}
+
+	if v.Storage != "" {
+		res[corev1.ResourceStorage], _ = resource.ParseQuantity(v.Storage)
+	}
+
+	if v.EphemeralStorage != "" {
+		res[corev1.ResourceEphemeralStorage], _ = resource.ParseQuantity(v.EphemeralStorage)
+	}
+
+	return res
+}
+
+func MapPvcConfigAPIToKube(v testkube.TestWorkflowPvcConfig) corev1.PersistentVolumeClaimSpec {
+	return corev1.PersistentVolumeClaimSpec{
+		AccessModes: common.MapSlice(v.AccessModes,
+			func(v string) corev1.PersistentVolumeAccessMode { return (corev1.PersistentVolumeAccessMode)(v) }),
+		VolumeMode:                (*corev1.PersistentVolumeMode)(MapBoxedStringToString(v.VolumeMode)),
+		Resources:                 MapVolumeResourceRequirementsAPIToKube(v.Resources),
+		StorageClassName:          MapBoxedStringToString(v.StorageClassName),
+		VolumeName:                v.VolumeName,
+		Selector:                  common.MapPtr(v.Selector, MapLabelSelectorAPIToKube),
+		DataSource:                common.MapPtr(v.DataSource, MapTypeLocalObjectReferenceAPIToKube),
+		DataSourceRef:             common.MapPtr(v.DataSourceRef, MapTypeObjectReferenceAPIToKube),
+		VolumeAttributesClassName: MapBoxedStringToString(v.VolumeAttributesClassName),
 	}
 }

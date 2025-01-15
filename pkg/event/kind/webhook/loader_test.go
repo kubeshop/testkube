@@ -22,6 +22,7 @@ func TestWebhookLoader(t *testing.T) {
 
 	mockTemplatesClient := templatesclientv1.NewMockInterface(mockCtrl)
 	mockWebhooksClient := executorsclientv1.NewMockWebhooksInterface(mockCtrl)
+	mockWebhookTemplatesClient := executorsclientv1.NewMockWebhookTemplatesInterface(mockCtrl)
 	mockWebhooksClient.EXPECT().List(gomock.Any()).Return(&executorsv1.WebhookList{
 		Items: []executorsv1.Webhook{
 			{Spec: executorsv1.WebhookSpec{Uri: "http://localhost:3333", Events: []executorsv1.EventType{"start-test"}, PayloadObjectField: "text", PayloadTemplate: "{{ .Id }}", Headers: map[string]string{"Content-Type": "application/xml"}}},
@@ -30,7 +31,7 @@ func TestWebhookLoader(t *testing.T) {
 	mockDeprecatedClients := commons.NewMockDeprecatedClients(mockCtrl)
 	mockDeprecatedClients.EXPECT().Templates().Return(mockTemplatesClient).AnyTimes()
 
-	webhooksLoader := NewWebhookLoader(zap.NewNop().Sugar(), mockWebhooksClient, mockDeprecatedClients, nil, nil, v1.NewMetrics(), nil, nil)
+	webhooksLoader := NewWebhookLoader(zap.NewNop().Sugar(), mockWebhooksClient, mockWebhookTemplatesClient, mockDeprecatedClients, nil, nil, nil, v1.NewMetrics(), nil, nil)
 	listeners, err := webhooksLoader.Load()
 
 	assert.Equal(t, 1, len(listeners))
