@@ -8,6 +8,7 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	apiv1 "github.com/kubeshop/testkube/pkg/api/v1/client"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -80,9 +81,7 @@ func NewCreateWebhookTemplateCmd() *cobra.Command {
 
 				ui.Success("Webhook template created", name)
 			} else {
-				if options.PayloadTemplate != "" {
-					options.PayloadTemplate = fmt.Sprintf("%q", options.PayloadTemplate)
-				}
+				(*testkube.WebhookTemplateCreateRequest)(&options).QuoteTextFields()
 
 				data, err := crd.ExecuteTemplate(crd.TemplateWebhookTemplate, options)
 				ui.ExitOnError("executing crd template", err)
