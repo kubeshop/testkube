@@ -237,9 +237,6 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 				if _, ok := target.Match[target.ReplicateBy[i]]; ok {
 					continue
 				}
-				if _, ok := target.NotMatch[target.ReplicateBy[i]]; ok {
-					continue
-				}
 				replicateBy = append(replicateBy, target.ReplicateBy[i])
 			}
 
@@ -286,6 +283,7 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 				}) {
 					continue
 				}
+				added = append(added, labels)
 				matcher := make(map[string]string)
 				maps.Copy(matcher, target.Match)
 				maps.Copy(matcher, labels)
