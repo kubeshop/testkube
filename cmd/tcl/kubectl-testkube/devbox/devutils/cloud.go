@@ -183,8 +183,8 @@ func (c *CloudObject) DeleteEnvironment(id string) error {
 	return c.envClient.Delete(id)
 }
 
-func (c *CloudObject) CreateRunner(environmentId string) (*client.Agent, error) {
-	runner, err := c.agentClient.CreateRunner(environmentId)
+func (c *CloudObject) CreateRunner(environmentId string, labels map[string]string) (*client.Agent, error) {
+	runner, err := c.agentClient.CreateRunner(environmentId, labels)
 	if err != nil {
 		return nil, err
 	}

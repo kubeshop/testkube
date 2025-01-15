@@ -33,11 +33,11 @@ type AgentsClient struct {
 	RESTClient[Agent]
 }
 
-func (c AgentsClient) CreateRunner(envId string) (Agent, error) {
+func (c AgentsClient) CreateRunner(envId string, labels map[string]string) (Agent, error) {
 	agent := Agent{
 		EnvironmentIDs: []string{envId},
 		Type:           "run",
-		Labels:         map[string]string{},
+		Labels:         labels,
 	}
 	return c.RESTClient.Create(agent)
 }
