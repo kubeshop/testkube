@@ -274,11 +274,21 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 				runners = append(runners, intermediateRunners[i])
 			}
 
-			// Fallback to any runner matching the initial filters
+			// Wait for new runner matching the initial filters and having the expected replication fields
 			if len(runners) == 0 {
+				nextNot := make(map[string]*cloud.ExecutionTargetLabels)
+				maps.Copy(nextNot, target.Not)
+				for _, k := range replicate {
+					if nextNot[k] == nil {
+						nextNot[k] = &cloud.ExecutionTargetLabels{}
+					}
+					if !slices.Contains(nextNot[k].Labels, "") {
+						nextNot[k].Labels = append(nextNot[k].Labels, "")
+					}
+				}
 				selectors = append(selectors, &cloud.ScheduleExecution{
 					Selector:      execution.Selector,
-					Targets:       []*cloud.ExecutionTarget{{Match: target.Match, Not: target.Not}},
+					Targets:       []*cloud.ExecutionTarget{{Match: target.Match, Not: nextNot}},
 					Config:        execution.Config,
 					ExecutionName: execution.ExecutionName, // TODO: what to do when execution name is configured, but multiple requested?
 					Tags:          execution.Tags,
