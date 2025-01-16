@@ -8154,12 +8154,18 @@ components:
           type: object
           description: runner tags to match
           additionalProperties:
-            type: string
-        notMatch:
-          type: object
-          description: runner tags to NOT match
-          additionalProperties:
-            type: string
+            type: object
+            properties:
+              oneOf:
+                type: array
+                description: accepted values to match
+                items:
+                  type: string
+              notOneOf:
+                type: array
+                description: not accepted values to match
+                items:
+                  type: string
         replicateBy:
           type: array
           description: list of runner tags to depend on

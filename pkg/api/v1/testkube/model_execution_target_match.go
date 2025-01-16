@@ -9,9 +9,9 @@
  */
 package testkube
 
-type ExecutionTarget struct {
-	// runner tags to match
-	Match map[string]ExecutionTargetMatch `json:"match,omitempty"`
-	// list of runner tags to depend on
-	ReplicateBy []string `json:"replicateBy,omitempty"`
+type ExecutionTargetMatch struct {
+	// accepted values to match
+	OneOf []string `json:"oneOf,omitempty"`
+	// not accepted values to match
+	NotOneOf []string `json:"notOneOf,omitempty"`
 }
