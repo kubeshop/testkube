@@ -7600,7 +7600,9 @@ components:
         config:
           $ref: "#/components/schemas/WebhookConfig"
         parameters:
-          $ref: "#/components/schemas/WebhookSchema"
+          type: array
+          items:
+            $ref: "#/components/schemas/WebhookParameterSchema"
         webhookTemplateRef:
           $ref: "#/components/schemas/WebhookTemplateRef"
 
@@ -7668,7 +7670,9 @@ components:
         config:
           $ref: "#/components/schemas/WebhookConfig"
         parameters:
-          $ref: "#/components/schemas/WebhookSchema"
+          type: array
+          items:
+            $ref: "#/components/schemas/WebhookParameterSchema"
 
     Event:
       description: Event data
@@ -7717,6 +7721,7 @@ components:
         - executor
         - trigger
         - webhook
+        - webhooktemplate
         - testexecution
         - testsuiteexecution
         - testsource
@@ -11014,8 +11019,11 @@ components:
       type: object
       description: parameter definition
       properties:
+        name:
+          description: unique parameter name
+          type: string
         description:
-          description: description for the property
+          description: description for the parameter
           type: string
         required:
           description: whether parameter is required
@@ -11029,12 +11037,8 @@ components:
         pattern:
           type: string
           description: "regular expression to match"
-
-    WebhookSchema:
-      type: object
-      description: configuration definition
-      additionalProperties:
-        $ref: "#/components/schemas/WebhookParameterSchema"
+      required:
+        - name
 
     WebhookConfigValue:
       type: object

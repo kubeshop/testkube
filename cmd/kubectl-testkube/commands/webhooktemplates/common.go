@@ -62,7 +62,7 @@ func NewCreateWebhookTemplateOptionsFromFlags(cmd *cobra.Command) (options apiv1
 		}
 	}
 
-	var parameter map[string]testkube.WebhookParameterSchema
+	var parameter []testkube.WebhookParameterSchema
 	parameters, err := cmd.Flags().GetStringToString("parameter")
 	if err != nil {
 		return options, err

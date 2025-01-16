@@ -63,22 +63,24 @@ spec:
   {{- end }}
   {{- if ne (len .Parameters) 0 }}
   parameters:
-  {{- range $key, $value := .Parameters }}
-    {{ $key }}:
-    {{- if $value.Description }}
-      description: {{ $value.Description }}
+  {{- range $parameter := .Parameters }}
+    {{- if $parameter.Name }}
+      name: {{ $parameter.Name }}
     {{- end }}
-    {{- if $value.Required }}
-      required: {{ $value.Required }}
+    {{- if $parameter.Description }}
+      description: {{ $parameter.Description }}
     {{- end }}
-    {{- if $value.Example }}
-      example: {{ $value.Example }}
+    {{- if $parameter.Required }}
+      required: {{ $parameter.Required }}
     {{- end }}
-    {{- if $value.Default_ }}
-      default: {{ $value.Default_.Value }}
+    {{- if $parameter.Example }}
+      example: {{ $parameter.Example }}
     {{- end }}
-    {{- if $value.Pattern }}
-      pattern: {{ $value.Pattern }}
+    {{- if $parameter.Default_ }}
+      default: {{ $parameter.Default_.Value }}
+    {{- end }}
+    {{- if $parameter.Pattern }}
+      pattern: {{ $parameter.Pattern }}
     {{- end }}
   {{- end }}
   {{- end }}

@@ -11,7 +11,9 @@ package testkube
 
 // parameter definition
 type WebhookParameterSchema struct {
-	// description for the property
+	// unique parameter name
+	Name string `json:"name"`
+	// description for the parameter
 	Description string `json:"description,omitempty"`
 	// whether parameter is required
 	Required bool `json:"required,omitempty"`
