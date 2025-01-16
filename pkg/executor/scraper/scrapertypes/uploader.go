@@ -1,4 +1,4 @@
-package scraper
+package scrapertypes
 
 import (
 	"context"

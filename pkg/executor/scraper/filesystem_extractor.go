@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/kubeshop/testkube/pkg/archive"
+	"github.com/kubeshop/testkube/pkg/executor/scraper/scrapertypes"
 	"github.com/kubeshop/testkube/pkg/log"
 
 	"github.com/kubeshop/testkube/pkg/filesystem"
@@ -46,7 +47,7 @@ func GenerateTarballMetaFile() ArchiveFilesystemExtractorOpts {
 	}
 }
 
-func (e *ArchiveFilesystemExtractor) Extract(ctx context.Context, paths, masks []string, process ProcessFn, notify NotifyFn) error {
+func (e *ArchiveFilesystemExtractor) Extract(ctx context.Context, paths, masks []string, process scrapertypes.ProcessFn, notify scrapertypes.NotifyFn) error {
 	var archiveFiles []*archive.File
 	for _, dir := range paths {
 		log.DefaultLogger.Infof("scraping artifacts in directory: %v", dir)
@@ -124,11 +125,11 @@ func (e *ArchiveFilesystemExtractor) Extract(ctx context.Context, paths, masks [
 		return errors.Wrapf(err, "error creating tarball")
 	}
 
-	object := &Object{
+	object := &scrapertypes.Object{
 		Name:     defaultTarballName,
 		Size:     int64(artifactsTarball.Len()),
 		Data:     &artifactsTarball,
-		DataType: DataTypeTarball,
+		DataType: scrapertypes.DataTypeTarball,
 	}
 	if err := process(ctx, object); err != nil {
 		return errors.Wrapf(err, "error processing object %s", object.Name)
@@ -147,17 +148,17 @@ func (e *ArchiveFilesystemExtractor) Extract(ctx context.Context, paths, masks [
 	return nil
 }
 
-func (e *ArchiveFilesystemExtractor) newTarballMeta(files []*archive.File) (*Object, error) {
-	var stats []*FileStat
+func (e *ArchiveFilesystemExtractor) newTarballMeta(files []*archive.File) (*scrapertypes.Object, error) {
+	var stats []*scrapertypes.FileStat
 	for _, f := range files {
-		stats = append(stats, &FileStat{
+		stats = append(stats, &scrapertypes.FileStat{
 			Name: f.Name,
 			Size: f.Size,
 		})
 	}
-	meta := &FilesMeta{
+	meta := &scrapertypes.FilesMeta{
 		Files:    stats,
-		DataType: DataTypeTarball,
+		DataType: scrapertypes.DataTypeTarball,
 		Archive:  defaultTarballName,
 	}
 	jsonMeta, err := json.Marshal(meta)
@@ -165,11 +166,11 @@ func (e *ArchiveFilesystemExtractor) newTarballMeta(files []*archive.File) (*Obj
 		return nil, err
 	}
 
-	return &Object{
+	return &scrapertypes.Object{
 		Name:     defaultTarballMetaName,
 		Size:     int64(len(jsonMeta)),
 		Data:     bytes.NewReader(jsonMeta),
-		DataType: DataTypeRaw,
+		DataType: scrapertypes.DataTypeRaw,
 	}, nil
 }
 
@@ -211,7 +212,7 @@ func (e *ArchiveFilesystemExtractor) newArchiveFile(baseDir string, path string)
 	return &archiveFile, nil
 }
 
-var _ Extractor = (*ArchiveFilesystemExtractor)(nil)
+var _ scrapertypes.Extractor = (*ArchiveFilesystemExtractor)(nil)
 
 type RecursiveFilesystemExtractor struct {
 	fs filesystem.FileSystem
@@ -221,7 +222,7 @@ func NewRecursiveFilesystemExtractor(fs filesystem.FileSystem) *RecursiveFilesys
 	return &RecursiveFilesystemExtractor{fs: fs}
 }
 
-func (e *RecursiveFilesystemExtractor) Extract(ctx context.Context, paths, masks []string, process ProcessFn, notify NotifyFn) error {
+func (e *RecursiveFilesystemExtractor) Extract(ctx context.Context, paths, masks []string, process scrapertypes.ProcessFn, notify scrapertypes.NotifyFn) error {
 	for _, dir := range paths {
 		log.DefaultLogger.Infof("scraping artifacts in directory: %v", dir)
 
@@ -283,11 +284,11 @@ func (e *RecursiveFilesystemExtractor) Extract(ctx context.Context, paths, masks
 				if relpath == "." {
 					relpath = fileInfo.Name()
 				}
-				object := &Object{
+				object := &scrapertypes.Object{
 					Name:     relpath,
 					Size:     fileInfo.Size(),
 					Data:     reader,
-					DataType: DataTypeRaw,
+					DataType: scrapertypes.DataTypeRaw,
 				}
 				log.DefaultLogger.Infof("filesystem extractor is sending file to be processed: %v", object.Name)
 				if err := process(ctx, object); err != nil {
@@ -304,4 +305,4 @@ func (e *RecursiveFilesystemExtractor) Extract(ctx context.Context, paths, masks
 	return nil
 }
 
-var _ Extractor = (*RecursiveFilesystemExtractor)(nil)
+var _ scrapertypes.Extractor = (*RecursiveFilesystemExtractor)(nil)

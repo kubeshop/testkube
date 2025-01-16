@@ -14,10 +14,10 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/repository/channels"
-	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller"
 )
 
 var (
@@ -160,7 +160,7 @@ func buildCloudError(streamId string, message string) *cloud.TestWorkflowNotific
 		SeqNo:     0,
 		Timestamp: ts.Format(time.RFC3339Nano),
 		Type:      cloud.TestWorkflowNotificationType_WORKFLOW_STREAM_ERROR,
-		Message:   fmt.Sprintf("%s %s", ts.Format(controller.KubernetesLogTimeFormat), message),
+		Message:   fmt.Sprintf("%s %s", ts.Format(constants.PreciseTimeFormat), message),
 	}
 }
 

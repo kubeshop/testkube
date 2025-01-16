@@ -13,6 +13,7 @@ import (
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/internal/crdcommon"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
@@ -161,7 +162,7 @@ func (s *TestkubeAPI) CreateTestWorkflowHandler() fiber.Handler {
 		// Deserialize resource
 		obj := new(testworkflowsv1.TestWorkflow)
 		if HasYAML(c) {
-			err = common.DeserializeCRD(obj, c.Body())
+			err = crdcommon.DeserializeCRD(obj, c.Body())
 			if err != nil {
 				return s.BadRequest(c, errPrefix, "invalid body", err)
 			}
@@ -235,7 +236,7 @@ func (s *TestkubeAPI) UpdateTestWorkflowHandler() fiber.Handler {
 		// Deserialize resource
 		obj := new(testworkflowsv1.TestWorkflow)
 		if HasYAML(c) {
-			err = common.DeserializeCRD(obj, c.Body())
+			err = crdcommon.DeserializeCRD(obj, c.Body())
 			if err != nil {
 				return s.BadRequest(c, errPrefix, "invalid body", err)
 			}
@@ -319,7 +320,7 @@ func (s *TestkubeAPI) PreviewTestWorkflowHandler() fiber.Handler {
 		// Deserialize resource
 		obj := new(testworkflowsv1.TestWorkflow)
 		if HasYAML(c) {
-			err = common.DeserializeCRD(obj, c.Body())
+			err = crdcommon.DeserializeCRD(obj, c.Body())
 			if err != nil {
 				return s.BadRequest(c, errPrefix, "invalid body", err)
 			}

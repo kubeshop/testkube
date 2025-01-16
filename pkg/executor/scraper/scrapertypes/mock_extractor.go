@@ -2,13 +2,13 @@
 // Source: github.com/kubeshop/testkube/pkg/executor/scraper (interfaces: Extractor)
 
 // Package scraper is a generated GoMock package.
-package scraper
+package scrapertypes
 
 import (
-	context "context"
-	reflect "reflect"
+	"context"
+	"reflect"
 
-	gomock "github.com/golang/mock/gomock"
+	"github.com/golang/mock/gomock"
 )
 
 // MockExtractor is a mock of Extractor interface.

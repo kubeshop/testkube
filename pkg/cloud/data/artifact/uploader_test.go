@@ -8,15 +8,15 @@ import (
 	"testing"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/executor/scraper/scrapertypes"
 
 	"github.com/stretchr/testify/assert"
 
-	cloudscraper "github.com/kubeshop/testkube/pkg/cloud/data/artifact"
-	"github.com/kubeshop/testkube/pkg/cloud/data/executor"
-	"github.com/kubeshop/testkube/pkg/executor/scraper"
-
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
+
+	cloudscraper "github.com/kubeshop/testkube/pkg/cloud/data/artifact"
+	"github.com/kubeshop/testkube/pkg/cloud/data/executor"
 )
 
 func TestCloudLoader_Load(t *testing.T) {
@@ -96,7 +96,7 @@ func TestCloudLoader_Load(t *testing.T) {
 			ctx := context.Background()
 
 			cloudLoader := tt.setup()
-			object := &scraper.Object{
+			object := &scrapertypes.Object{
 				Name: "my-object",
 				Data: tt.data,
 			}

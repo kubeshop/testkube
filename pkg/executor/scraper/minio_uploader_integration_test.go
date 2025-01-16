@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kubeshop/testkube/pkg/executor/scraper/scrapertypes"
 	"github.com/kubeshop/testkube/pkg/utils/test"
 
 	"github.com/stretchr/testify/assert"
@@ -51,11 +52,11 @@ func TestMinIOUploader_Upload_Tarball_Integration(t *testing.T) {
 
 	size := int64(buf.Len())
 	// Create a test object to save to MinIO
-	testObject := &scraper.Object{
+	testObject := &scrapertypes.Object{
 		Name:     "artifacts.tar.gz",
 		Data:     &buf,
 		Size:     size,
-		DataType: scraper.DataTypeTarball,
+		DataType: scrapertypes.DataTypeTarball,
 	}
 
 	execution := testkube.Execution{Id: "test-execution-id"}
@@ -110,11 +111,11 @@ func TestMinIOUploader_Upload_Raw_Integration(t *testing.T) {
 
 	// Create a test object to save to MinIO
 	size := int64(len("test data"))
-	testObject := &scraper.Object{
+	testObject := &scrapertypes.Object{
 		Name:     "test-file.txt",
 		Data:     strings.NewReader("test data"),
 		Size:     size,
-		DataType: scraper.DataTypeRaw,
+		DataType: scrapertypes.DataTypeRaw,
 	}
 
 	execution := testkube.Execution{Id: "test-execution-id"}

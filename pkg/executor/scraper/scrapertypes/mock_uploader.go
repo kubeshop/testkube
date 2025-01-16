@@ -2,14 +2,15 @@
 // Source: github.com/kubeshop/testkube/pkg/executor/scraper (interfaces: Uploader)
 
 // Package scraper is a generated GoMock package.
-package scraper
+package scrapertypes
 
 import (
-	context "context"
-	reflect "reflect"
+	"context"
+	"reflect"
 
-	gomock "github.com/golang/mock/gomock"
-	testkube "github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/golang/mock/gomock"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 // MockUploader is a mock of Uploader interface.

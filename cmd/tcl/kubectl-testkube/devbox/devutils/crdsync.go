@@ -23,7 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
-	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/internal/crdcommon"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller/store"
 )
 
@@ -105,13 +105,13 @@ func (c *CRDSync) Next(ctx context.Context) (*CRDSyncUpdate, error) {
 func (c *CRDSync) processWorkflow(sourcePath string, workflow testworkflowsv1.TestWorkflow) error {
 	for i := range c.workflows {
 		if c.workflows[i].Workflow.Name == workflow.Name {
-			v1, _ := common.SerializeCRD(c.workflows[i].Workflow, common.SerializeOptions{
+			v1, _ := crdcommon.SerializeCRD(c.workflows[i].Workflow, crdcommon.SerializeOptions{
 				OmitCreationTimestamp: true,
 				CleanMeta:             true,
 				Kind:                  "TestWorkflow",
 				GroupVersion:          &testworkflowsv1.GroupVersion,
 			})
-			v2, _ := common.SerializeCRD(workflow, common.SerializeOptions{
+			v2, _ := crdcommon.SerializeCRD(workflow, crdcommon.SerializeOptions{
 				OmitCreationTimestamp: true,
 				CleanMeta:             true,
 				Kind:                  "TestWorkflow",
@@ -133,13 +133,13 @@ func (c *CRDSync) processWorkflow(sourcePath string, workflow testworkflowsv1.Te
 func (c *CRDSync) processTemplate(sourcePath string, template testworkflowsv1.TestWorkflowTemplate) error {
 	for i := range c.templates {
 		if c.templates[i].Template.Name == template.Name {
-			v1, _ := common.SerializeCRD(c.templates[i].Template, common.SerializeOptions{
+			v1, _ := crdcommon.SerializeCRD(c.templates[i].Template, crdcommon.SerializeOptions{
 				OmitCreationTimestamp: true,
 				CleanMeta:             true,
 				Kind:                  "TestWorkflowTemplate",
 				GroupVersion:          &testworkflowsv1.GroupVersion,
 			})
-			v2, _ := common.SerializeCRD(template, common.SerializeOptions{
+			v2, _ := crdcommon.SerializeCRD(template, crdcommon.SerializeOptions{
 				OmitCreationTimestamp: true,
 				CleanMeta:             true,
 				Kind:                  "TestWorkflowTemplate",
@@ -257,7 +257,7 @@ func (c *CRDSync) loadFile(path string) error {
 		if obj["kind"].(string) == "TestWorkflow" {
 			bytes, _ := yaml.Marshal(obj)
 			tw := testworkflowsv1.TestWorkflow{}
-			err := common.DeserializeCRD(&tw, bytes)
+			err := crdcommon.DeserializeCRD(&tw, bytes)
 			if tw.Name == "" {
 				continue
 			}
@@ -269,7 +269,7 @@ func (c *CRDSync) loadFile(path string) error {
 		} else if obj["kind"].(string) == "TestWorkflowTemplate" {
 			bytes, _ := yaml.Marshal(obj)
 			tw := testworkflowsv1.TestWorkflowTemplate{}
-			err := common.DeserializeCRD(&tw, bytes)
+			err := crdcommon.DeserializeCRD(&tw, bytes)
 			if tw.Name == "" {
 				continue
 			}

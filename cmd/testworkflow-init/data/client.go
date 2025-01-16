@@ -2,38 +2,53 @@ package data
 
 import (
 	"context"
+	"strings"
 	"sync"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
+	"github.com/kubeshop/testkube/internal/config"
 	agentclient "github.com/kubeshop/testkube/pkg/agent/client"
 	"github.com/kubeshop/testkube/pkg/cloud"
+	"github.com/kubeshop/testkube/pkg/controlplaneclient"
 	"github.com/kubeshop/testkube/pkg/credentials"
 	"github.com/kubeshop/testkube/pkg/log"
 )
 
 var (
 	cloudMu     sync.Mutex
-	cloudClient cloud.TestKubeCloudAPIClient
+	cloudClient controlplaneclient.Client
 )
 
-func CloudClient() cloud.TestKubeCloudAPIClient {
+func CloudClient() controlplaneclient.Client {
 	cloudMu.Lock()
 	defer cloudMu.Unlock()
 
 	if cloudClient == nil {
-		cfg := GetState().InternalConfig.Worker.Connection
+		cfg := GetState().InternalConfig
+		conn := cfg.Worker.Connection
 		logger := log.NewSilent()
-		grpcConn, err := agentclient.NewGRPCConnection(context.Background(), cfg.TlsInsecure, cfg.SkipVerify, cfg.Url, "", "", "", logger)
+		grpcConn, err := agentclient.NewGRPCConnection(context.Background(), conn.TlsInsecure, conn.SkipVerify, conn.Url, "", "", "", logger)
 		if err != nil {
 			output.ExitErrorf(constants.CodeInternal, "failed to connect with the Control Plane: %s", err.Error())
 		}
-		cloudClient = cloud.NewTestKubeCloudAPIClient(grpcConn)
+		cloudClient = controlplaneclient.New(cloud.NewTestKubeCloudAPIClient(grpcConn), config.ProContext{
+			APIKey:      conn.ApiKey,
+			URL:         conn.Url,
+			TLSInsecure: conn.TlsInsecure,
+			SkipVerify:  conn.SkipVerify,
+			EnvID:       cfg.Execution.EnvironmentId,
+			OrgID:       cfg.Execution.OrganizationId,
+		}, conn.AgentID, conn.ApiKey, controlplaneclient.ClientOptions{
+			StorageSkipVerify:  true,
+			ExecutionID:        cfg.Execution.Id,
+			ParentExecutionIDs: strings.Split(cfg.Execution.ParentIds, "/"),
+		})
 	}
 	return cloudClient
 }
 
 func Credentials() credentials.CredentialRepository {
 	cfg := GetState().InternalConfig
-	return credentials.NewCredentialRepository(CloudClient, cfg.Worker.Connection.ApiKey, cfg.Execution.Id)
+	return credentials.NewCredentialRepository(CloudClient, cfg.Execution.EnvironmentId, cfg.Execution.Id)
 }

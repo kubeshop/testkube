@@ -2,15 +2,11 @@ package credentials
 
 import (
 	"context"
-	"math"
 	"time"
 
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/encoding/gzip"
 	"google.golang.org/grpc/status"
 
-	agentclient "github.com/kubeshop/testkube/pkg/agent/client"
-	"github.com/kubeshop/testkube/pkg/cloud"
+	"github.com/kubeshop/testkube/pkg/controlplaneclient"
 	"github.com/kubeshop/testkube/pkg/log"
 )
 
@@ -37,24 +33,22 @@ type CredentialRepository interface {
 }
 
 type credentialRepository struct {
-	getClient   func() cloud.TestKubeCloudAPIClient
-	apiKey      string
-	executionId string
+	getClient     func() controlplaneclient.Client
+	environmentId string
+	executionId   string
 }
 
-func NewCredentialRepository(getClient func() cloud.TestKubeCloudAPIClient, apiKey, executionId string) CredentialRepository {
-	return &credentialRepository{getClient: getClient, apiKey: apiKey, executionId: executionId}
+func NewCredentialRepository(getClient func() controlplaneclient.Client, environmentId string, executionId string) CredentialRepository {
+	return &credentialRepository{getClient: getClient, environmentId: environmentId, executionId: executionId}
 }
 
 func (c *credentialRepository) Get(ctx context.Context, name string) ([]byte, error) {
-	ctx = agentclient.AddAPIKeyMeta(ctx, c.apiKey)
-	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
 	var err error
-	var result *cloud.CredentialResponse
+	var result []byte
 	for i := 0; i < GetCredentialRetryCount; i++ {
-		result, err = c.getClient().GetCredential(ctx, &cloud.CredentialRequest{Name: name, ExecutionId: c.executionId}, opts...)
+		result, err = c.getClient().GetCredential(ctx, c.environmentId, c.executionId, name)
 		if err == nil {
-			return result.Content, nil
+			return result, nil
 		}
 		if _, ok := err.(grpcstatus); ok {
 			return nil, err
