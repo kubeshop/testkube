@@ -9,6 +9,14 @@ group "default" {
   targets = ["agent-server", "testworkflow-init", "testworkflow-toolkit"]
 }
 
+target "api-meta" {}
+target "api" {
+  inherits = ["api-meta"]
+  context="."
+  dockerfile = "build/api-server/Dockerfile"
+  platforms = ["linux/arm64", "linux/amd64"]
+}
+
 target "agent-server-meta" {}
 target "agent-server" {
   inherits = ["agent-server-meta"]
