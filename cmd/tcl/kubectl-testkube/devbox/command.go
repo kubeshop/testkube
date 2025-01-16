@@ -200,16 +200,16 @@ func NewDevBoxCommand() *cobra.Command {
 			if !oss {
 				fmt.Println("Creating additional runner agents in Cloud...")
 				for i := uint16(0); i < runnersCount; i++ {
-					runner, err := cloud.CreateRunner(env.Id, map[string]string{
+					runner, err := cloud.CreateRunner(env.Id, fmt.Sprintf("runner-%d", i+1), map[string]string{
 						"each":    "one",
-						"even":    fmt.Sprintf("%v", i%2 == 0),
-						"odd":     fmt.Sprintf("%v", i%2 == 1),
-						"modulo3": fmt.Sprintf("%d", i%3),
+						"even":    fmt.Sprintf("%v", (i+1)%2 == 0),
+						"odd":     fmt.Sprintf("%v", (i+1)%2 == 1),
+						"modulo3": fmt.Sprintf("%d", (i+1)%3),
 					})
 					if err != nil {
 						fail(errors.Wrap(err, "failed to create runner agent"))
 					}
-					fmt.Printf("    %s %s\n", runner.Name, color.Gray.Render(fmt.Sprintf("(%s)", runner.SecretKey)))
+					fmt.Printf("    %s %s\n", runner.Name, color.Gray.Render(fmt.Sprintf("(%s / %s)", runner.ID, runner.SecretKey)))
 					runnersData = append(runnersData, *runner)
 				}
 			}

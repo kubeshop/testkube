@@ -64,7 +64,7 @@ func (r *Runner) Create(ctx context.Context, env *client.Environment, runner *cl
 	}
 	envVariables = append(envVariables, []corev1.EnvVar{
 		{Name: "TESTKUBE_DISABLE_DEFAULT_AGENT", Value: "true"},
-		{Name: "TESTKUBE_PRO_AGENT_ID", Value: runner.Name},
+		{Name: "TESTKUBE_PRO_AGENT_ID", Value: runner.ID},
 		{Name: "TESTKUBE_PRO_API_KEY", Value: runner.SecretKey},
 		{Name: "TESTKUBE_PRO_ORG_ID", Value: env.OrganizationId},
 		{Name: "TESTKUBE_PRO_ENV_ID", Value: env.Id},

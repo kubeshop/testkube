@@ -18,6 +18,7 @@ func NewAgentsClient(baseUrl, token, orgID string) *AgentsClient {
 }
 
 type Agent struct {
+	ID             string            `json:"id"`
 	Name           string            `json:"name"`
 	Disabled       bool              `json:"disabled,omitempty"`
 	Labels         map[string]string `json:"labels"`
@@ -33,9 +34,10 @@ type AgentsClient struct {
 	RESTClient[Agent]
 }
 
-func (c AgentsClient) CreateRunner(envId string, labels map[string]string) (Agent, error) {
+func (c AgentsClient) CreateRunner(envId string, name string, labels map[string]string) (Agent, error) {
 	agent := Agent{
 		EnvironmentIDs: []string{envId},
+		Name:           name,
 		Type:           "run",
 		Labels:         labels,
 	}
