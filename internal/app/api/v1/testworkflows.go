@@ -387,11 +387,17 @@ func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 
 		var scheduleExecution cloud.ScheduleExecution
 		if request.Target != nil {
-			target := &cloud.ExecutionTarget{ReplicateBy: request.Target.ReplicateBy}
+			target := &cloud.ExecutionTarget{Replicate: request.Target.Replicate}
 			if request.Target.Match != nil {
-				target.Match = make(map[string]*cloud.ExecutionTargetMatch)
+				target.Match = make(map[string]*cloud.ExecutionTargetLabels)
 				for k, v := range request.Target.Match {
-					target.Match[k] = &cloud.ExecutionTargetMatch{OneOf: v.OneOf, NotOneOf: v.NotOneOf}
+					target.Match[k] = &cloud.ExecutionTargetLabels{Labels: v}
+				}
+			}
+			if request.Target.Not != nil {
+				target.Not = make(map[string]*cloud.ExecutionTargetLabels)
+				for k, v := range request.Target.Not {
+					target.Not[k] = &cloud.ExecutionTargetLabels{Labels: v}
 				}
 			}
 			scheduleExecution.Targets = []*cloud.ExecutionTarget{target}

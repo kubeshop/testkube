@@ -10,8 +10,10 @@
 package testkube
 
 type ExecutionTarget struct {
-	// runner tags to match
-	Match map[string]ExecutionTargetMatch `json:"match,omitempty"`
-	// list of runner tags to depend on
-	ReplicateBy []string `json:"replicateBy,omitempty"`
+	// runner labels to match
+	Match map[string][]string `json:"match,omitempty"`
+	// runner labels to NOT match
+	Not map[string][]string `json:"not,omitempty"`
+	// list of runner labels to replicate the executions
+	Replicate []string `json:"replicate,omitempty"`
 }

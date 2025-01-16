@@ -8152,23 +8152,21 @@ components:
       properties:
         match:
           type: object
-          description: runner tags to match
+          description: runner labels to match
           additionalProperties:
-            type: object
-            properties:
-              oneOf:
-                type: array
-                description: accepted values to match
-                items:
-                  type: string
-              notOneOf:
-                type: array
-                description: not accepted values to match
-                items:
-                  type: string
-        replicateBy:
+            type: array
+            items:
+              type: string
+        not:
+          type: object
+          description: runner labels to NOT match
+          additionalProperties:
+            type: array
+            items:
+              type: string
+        replicate:
           type: array
-          description: list of runner tags to depend on
+          description: list of runner labels to replicate the executions
           items:
             type: string
 

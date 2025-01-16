@@ -232,19 +232,19 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 
 		for _, target := range execution.Targets {
 			// Optimize repeating target - if there is filter on label, avoid doing the repeat
-			replicateBy := make([]string, 0)
-			for i := 0; i < len(target.ReplicateBy); i++ {
-				if _, ok := target.Match[target.ReplicateBy[i]]; ok {
+			replicate := make([]string, 0)
+			for i := 0; i < len(target.Replicate); i++ {
+				if _, ok := target.Match[target.Replicate[i]]; ok {
 					continue
 				}
-				replicateBy = append(replicateBy, target.ReplicateBy[i])
+				replicate = append(replicate, target.Replicate[i])
 			}
 
 			// Do not replicate if it's not expected
-			if len(replicateBy) == 0 {
+			if len(replicate) == 0 {
 				selectors = append(selectors, &cloud.ScheduleExecution{
 					Selector:      execution.Selector,
-					Targets:       []*cloud.ExecutionTarget{{Match: target.Match}},
+					Targets:       []*cloud.ExecutionTarget{{Match: target.Match, Not: target.Not}},
 					Config:        execution.Config,
 					ExecutionName: execution.ExecutionName, // TODO: what to do when execution name is configured, but multiple requested?
 					Tags:          execution.Tags,
@@ -253,19 +253,32 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 				continue
 			}
 
-			runners, err := s.getRunners(environmentId, &cloud.ExecutionTarget{
-				Match:       target.Match,
-				ReplicateBy: replicateBy,
+			intermediateRunners, err := s.getRunners(environmentId, &cloud.ExecutionTarget{
+				Match:     target.Match,
+				Not:       target.Not,
+				Replicate: replicate,
 			})
 			if err != nil {
 				return nil, errors.Wrap(err, "detecting runners for repeating the executions")
+			}
+
+			// Filter the runners to ignore labels without values
+			runners := make([]map[string]string, 0)
+		loop:
+			for i := range intermediateRunners {
+				for _, k := range replicate {
+					if intermediateRunners[i][k] == "" && (target.Match[k] == nil || !slices.Contains(target.Match[k].Labels, "")) {
+						continue loop
+					}
+				}
+				runners = append(runners, intermediateRunners[i])
 			}
 
 			// Fallback to any runner matching the initial filters
 			if len(runners) == 0 {
 				selectors = append(selectors, &cloud.ScheduleExecution{
 					Selector:      execution.Selector,
-					Targets:       []*cloud.ExecutionTarget{{Match: target.Match}},
+					Targets:       []*cloud.ExecutionTarget{{Match: target.Match, Not: target.Not}},
 					Config:        execution.Config,
 					ExecutionName: execution.ExecutionName, // TODO: what to do when execution name is configured, but multiple requested?
 					Tags:          execution.Tags,
@@ -283,18 +296,17 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 					continue
 				}
 				added = append(added, labels)
-				matcher := make(map[string]*cloud.ExecutionTargetMatch)
+				matcher := make(map[string]*cloud.ExecutionTargetLabels)
 				maps.Copy(matcher, target.Match)
 				for k, v := range labels {
 					if matcher[k] == nil {
-						matcher[k] = &cloud.ExecutionTargetMatch{OneOf: []string{v}}
-					} else {
-						matcher[k] = &cloud.ExecutionTargetMatch{OneOf: append(matcher[k].OneOf, v), NotOneOf: matcher[k].NotOneOf}
+						matcher[k] = &cloud.ExecutionTargetLabels{}
 					}
+					matcher[k] = &cloud.ExecutionTargetLabels{Labels: append(matcher[k].Labels, v)}
 				}
 				selectors = append(selectors, &cloud.ScheduleExecution{
 					Selector:      execution.Selector,
-					Targets:       []*cloud.ExecutionTarget{{Match: matcher}},
+					Targets:       []*cloud.ExecutionTarget{{Match: matcher, Not: target.Not}},
 					Config:        execution.Config,
 					ExecutionName: execution.ExecutionName, // TODO: what to do when execution name is configured, but multiple requested?
 					Tags:          execution.Tags,
@@ -311,18 +323,24 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 	for i, v := range selectors {
 		workflow, _ := testWorkflows.GetByName(v.Selector.Name)
 		originalTarget := testkube.ExecutionTarget{
-			Match: common.MapMap(originalTargets[i].Match, func(t *cloud.ExecutionTargetMatch) testkube.ExecutionTargetMatch {
-				return testkube.ExecutionTargetMatch{OneOf: t.OneOf, NotOneOf: t.NotOneOf}
+			Match: common.MapMap(originalTargets[i].Match, func(t *cloud.ExecutionTargetLabels) []string {
+				return t.Labels
 			}),
-			ReplicateBy: originalTargets[i].ReplicateBy,
+			Not: common.MapMap(originalTargets[i].Not, func(t *cloud.ExecutionTargetLabels) []string {
+				return t.Labels
+			}),
+			Replicate: originalTargets[i].Replicate,
 		}
 		target := originalTarget
 		if len(v.Targets) == 1 {
 			target = testkube.ExecutionTarget{
-				Match: common.MapMap(originalTargets[i].Match, func(t *cloud.ExecutionTargetMatch) testkube.ExecutionTargetMatch {
-					return testkube.ExecutionTargetMatch{OneOf: t.OneOf, NotOneOf: t.NotOneOf}
+				Match: common.MapMap(v.Targets[0].Match, func(t *cloud.ExecutionTargetLabels) []string {
+					return t.Labels
 				}),
-				ReplicateBy: v.Targets[0].ReplicateBy,
+				Not: common.MapMap(v.Targets[0].Not, func(t *cloud.ExecutionTargetLabels) []string {
+					return t.Labels
+				}),
+				Replicate: v.Targets[0].Replicate,
 			}
 		}
 		current := base.Clone().

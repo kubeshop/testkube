@@ -233,14 +233,15 @@ message ScheduleExecution {
   repeated ExecutionTarget targets = 5;
 }
 
-message ExecutionTargetMatch {
-  repeated string oneOf = 1;
-  repeated string notOneOf = 2;
+// map<string, []string> is not supported in protobuf
+message ExecutionTargetLabels {
+  repeated string labels = 1;
 }
 
 message ExecutionTarget {
-  map<string, ExecutionTargetMatch> match = 1; // runner labels to filter by
-  repeated string replicateBy = 2; // runner labels to replicate by
+  map<string, ExecutionTargetLabels> match = 1; // runner labels to filter by
+  map<string, ExecutionTargetLabels> not = 2; // runner labels to filter against
+  repeated string replicate = 3; // runner labels to replicate by
 }
 
 enum RunningContextType {
