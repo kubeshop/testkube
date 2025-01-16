@@ -225,25 +225,26 @@ func (a *agentLoop) loopParallelStepNotifications(ctx context.Context) error {
 func (a *agentLoop) loopRunnerRequests(ctx context.Context) error {
 	watcher := a.client.WatchRunnerRequests(ctx)
 	for req := range watcher.Channel() {
-		// Lock the execution for itself
-		var resp *cloud.ObtainExecutionResponse
-		resp, err := a.client.ObtainExecution(ctx, req.EnvironmentId, req.Id)
-		if err != nil {
-			a.logger.Errorf("failed to obtain execution '%s/%s', from Control Plane: %v", req.EnvironmentId, req.Id, err)
-			continue
-		}
+		go func(req *cloud.RunnerRequest) {
+			// Lock the execution for itself
+			var resp *cloud.ObtainExecutionResponse
+			resp, err := a.client.ObtainExecution(ctx, req.EnvironmentId, req.Id)
+			if err != nil {
+				a.logger.Errorf("failed to obtain execution '%s/%s', from Control Plane: %v", req.EnvironmentId, req.Id, err)
+				return
+			}
 
-		// Ignore if the resource has been locked before
-		if !resp.Success {
-			continue
-		}
+			// Ignore if the resource has been locked before
+			if !resp.Success {
+				return
+			}
 
-		// Continue
-		err = a.runTestWorkflow(req.EnvironmentId, req.Id, resp.Token)
-		if err != nil {
-			a.logger.Errorf("failed to run execution '%s/%s' from Control Plane: %v", req.EnvironmentId, req.Id, err)
-			continue
-		}
+			// Continue
+			err = a.runTestWorkflow(req.EnvironmentId, req.Id, resp.Token)
+			if err != nil {
+				a.logger.Errorf("failed to run execution '%s/%s' from Control Plane: %v", req.EnvironmentId, req.Id, err)
+			}
+		}(req)
 	}
 	return watcher.Err()
 }
