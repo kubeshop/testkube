@@ -1,8 +1,8 @@
 name: Docker images building and pushing for API and executors
 on:
   push:
-    tags:
-      - "v[0-9]+.[0-9]+.[0-9]+-"
+#    tags:
+#      - "v[0-9]+.[0-9]+.[0-9]+-"
     branches:
       - ci/add-builds-to-depot
 
