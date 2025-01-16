@@ -34,7 +34,7 @@ jobs:
         with:
           bake-target: 'api-meta'
           images: |
-            kubeshop/testkube
+            kubeshop/testkube-api-server
           tags: |
             type=ref,event=branch
 #            type=semver,pattern={{version}}
