@@ -24,8 +24,8 @@ FROM ${BUSYBOX_IMAGE} AS busybox
 FROM ${ALPINE_IMAGE}
 RUN apk --no-cache add ca-certificates libssl3 git openssh-client
 COPY --from=busybox /bin /.tktw-bin
-COPY --from=build testworkflow-toolkit /toolkit
-COPY --from=build testworkflow-init /init
+COPY --from=build /app/testworkflow-toolkit /toolkit
+COPY --from=build /app/testworkflow-init /init
 RUN adduser --disabled-password --home / --no-create-home --uid 1001 default
 USER 1001
 ENTRYPOINT ["/toolkit"]
