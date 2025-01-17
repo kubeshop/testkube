@@ -31,7 +31,6 @@ type service struct {
 	runnerId      string
 	logger        *zap.SugaredLogger
 	eventsEmitter event.Interface
-	configClient  configrepo.Repository
 	client        controlplaneclient.Client
 	proContext    config.ProContext
 	worker        executionworkertypes.Worker

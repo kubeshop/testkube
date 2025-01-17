@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"context"
 	"fmt"
 	"io/fs"
 	"net/http"
@@ -11,7 +10,6 @@ import (
 	"time"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
-	agentclient "github.com/kubeshop/testkube/pkg/agent/client"
 	"github.com/kubeshop/testkube/pkg/filesystem"
 
 	"github.com/spf13/cobra"
@@ -77,10 +75,7 @@ func NewArtifactsCmd() *cobra.Command {
 
 			var handlerOpts []artifacts.HandlerOpts
 			// Archive
-			ctx, cancel := context.WithTimeout(cmd.Context(), 30*time.Second)
-			defer cancel()
 			cfg := config.Config()
-			ctx = agentclient.AddAPIKeyMeta(ctx, cfg.Worker.Connection.ApiKey)
 			client := env.Cloud()
 
 			if env.HasJunitSupport() {

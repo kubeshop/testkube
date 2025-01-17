@@ -111,8 +111,7 @@ func main() {
 
 	metrics := metrics.NewMetrics()
 
-	var runnerExecutePtr *runner2.RunnerExecute
-	lazyRunner := runner2.LazyExecute(runnerExecutePtr)
+	lazyRunner := runner2.LazyExecute()
 
 	// Connect to the Control Plane
 	var grpcConn *grpc.ClientConn
@@ -248,7 +247,7 @@ func main() {
 	g.Go(func() error {
 		return runnerService.Start(ctx)
 	})
-	runnerExecutePtr = common.Ptr(runnerService.(runner2.RunnerExecute))
+	lazyRunner.Set(runnerService)
 
 	testWorkflowExecutor := testworkflowexecutor.New(
 		grpcClient,

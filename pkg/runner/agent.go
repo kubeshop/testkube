@@ -23,13 +23,6 @@ import (
 )
 
 const (
-	apiKeyMeta  = "api-key"
-	agentIdMeta = "agent-id"
-	orgIdMeta   = "organization-id"
-	envIdMeta   = "environment-id"
-)
-
-const (
 	saveResultRetryMaxAttempts = 100
 	saveResultRetryBaseDelay   = 300 * time.Millisecond
 )

@@ -10,8 +10,12 @@ type lazyRunner struct {
 	accessor *Runner
 }
 
-func Lazy(accessor *Runner) Runner {
+func Lazy(accessor *Runner) *lazyRunner {
 	return &lazyRunner{accessor: accessor}
+}
+
+func (r *lazyRunner) Set(v Runner) {
+	r.accessor = &v
 }
 
 func (r *lazyRunner) Monitor(ctx context.Context, organizationId, environmentId, id string) error {
@@ -42,8 +46,12 @@ type lazyRunnerExecute struct {
 	accessor *RunnerExecute
 }
 
-func LazyExecute(accessor *RunnerExecute) RunnerExecute {
-	return &lazyRunnerExecute{accessor: accessor}
+func LazyExecute() *lazyRunnerExecute {
+	return &lazyRunnerExecute{}
+}
+
+func (r *lazyRunnerExecute) Set(v RunnerExecute) {
+	r.accessor = &v
 }
 
 func (r *lazyRunnerExecute) Execute(request executionworkertypes.ExecuteRequest) (*executionworkertypes.ExecuteResult, error) {
