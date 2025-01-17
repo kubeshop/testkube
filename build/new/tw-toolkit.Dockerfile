@@ -10,7 +10,7 @@ RUN cd cmd/testworkflow-toolkit; \
     GOOS=$TARGETOS GOARCH=$TARGETARCH CGO_ENABLED=0 go build -ldflags \
     "-X github.com/kubeshop/testkube/pkg/version.Version=${VERSION} \
      -X github.com/kubeshop/testkube/pkg/version.Commit=${GIT_SHA} \
-     -s -w"
+     -s -w" \
      -o /app/testworkflow-toolkit -mod mod -a .
 
 RUN cd cmd/testworkflow-init; \
