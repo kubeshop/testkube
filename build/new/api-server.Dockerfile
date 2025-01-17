@@ -1,5 +1,7 @@
-FROM --platform=$BUILDPLATFORM golang:1.23-alpine AS build
+# this arg has to be defined before the first FROM otherwise the value will be empty
+ARG ALPINE_IMAGE
 
+FROM --platform=$BUILDPLATFORM golang:1.23-alpine AS build
 ARG TARGETOS
 ARG TARGETARCH
 
@@ -29,10 +31,8 @@ RUN cd cmd/api-server; \
       -X github.com/kubeshop/testkube/pkg/telemetry.CloudSegmentioKey=${BUSYBOX_IMAGE}" \
     -o /app -mod mod -a .
 
-
-ARG ALPINE_IMAGE
 FROM ${ALPINE_IMAGE}
-RUN apk --no-cache add ca-certificates=20241121-r1 tzdata=2024b-r1
+RUN apk --no-cache add ca-certificates libssl3 git
 WORKDIR /root/
 COPY --from=build /app /bin/app
 USER 1001
