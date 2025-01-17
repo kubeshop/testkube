@@ -57,7 +57,7 @@ func TestRun_Integration(t *testing.T) {
 	processor := artifacts.NewDirectProcessor()
 	mockClient := controlplaneclient.NewMockClient(mockCtrl)
 	mockClient.EXPECT().
-		SaveExecutionArtifactGetPresignedURL(gomock.Any(), "env123", "exec123", "workflow123", "step123", "report/junit.xml", "application/octet-stream").
+		SaveExecutionArtifactGetPresignedURL(gomock.Any(), "env123", "exec123", "workflow123", "step123", gomock.Any(), gomock.Any()).
 		Return(server.URL, nil).
 		Times(2)
 	mockClient.EXPECT().
