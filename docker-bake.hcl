@@ -15,6 +15,10 @@ target "api" {
   context="."
   dockerfile = "build/new/api-server.Dockerfile"
   platforms = ["linux/arm64", "linux/amd64"]
+  args = {
+    BUSYBOX_IMAGE = "${BUSYBOX_IMAGE}"
+    ALPINE_IMAGE = "${ALPINE_IMAGE}"
+  }
 }
 
 target "agent-server-meta" {}
