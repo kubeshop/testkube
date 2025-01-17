@@ -19,7 +19,7 @@ target "api-meta" {}
 target "api" {
   inherits = ["api-meta"]
   context="."
-  dockerfile = "build/_local/agent-server.Dockerfile"
+  dockerfile = "build/new/api-server.Dockerfile"
   platforms = ["linux/arm64", "linux/amd64"]
   args = {
     BUSYBOX_IMAGE = "${BUSYBOX_IMAGE}"

@@ -37,7 +37,7 @@ jobs:
             kubeshop/testkube-api-server
           tags: |
             type=ref,event=branch
-#            type=semver,pattern={{version}}
+            type=semver,pattern={{version}}
 
       - name: Build
         uses: depot/bake-action@v1
@@ -50,10 +50,12 @@ jobs:
           push: false
           sbom: true
         env:
-          ANALYTICS_TRACKING_ID: ${{secrets.TESTKUBE_API_GA_MEASUREMENT_ID}}
-          ANALYTICS_API_KEY: ${{secrets.TESTKUBE_API_GA_MEASUREMENT_SECRET}}
+          VERSION: ${{ fromJSON(steps.api-meta.outputs.json).labels['org.opencontainers.image.version'] }}
+          GIT_SHA: ${{ fromJSON(steps.api-meta.outputs.json).labels['org.opencontainers.image.revision'] }}
           SLACK_BOT_CLIENT_ID: ${{secrets.TESTKUBE_SLACK_BOT_CLIENT_ID}}
           SLACK_BOT_CLIENT_SECRET: ${{secrets.TESTKUBE_SLACK_BOT_CLIENT_SECRET}}
+          ANALYTICS_TRACKING_ID: ${{secrets.TESTKUBE_API_GA_MEASUREMENT_ID}}
+          ANALYTICS_API_KEY: ${{secrets.TESTKUBE_API_GA_MEASUREMENT_SECRET}}
           SEGMENTIO_KEY: ${{secrets.TESTKUBE_API_SEGMENTIO_KEY}}
           CLOUD_SEGMENTIO_KEY: ${{secrets.TESTKUBE_API_CLOUD_SEGMENTIO_KEY}}
 
