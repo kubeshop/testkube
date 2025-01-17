@@ -27,8 +27,7 @@ RUN cd cmd/api-server; \
       -X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementID=${ANALYTICS_TRACKING_ID} \
       -X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementSecret=${ANALYTICS_API_KEY} \
       -X github.com/kubeshop/testkube/pkg/telemetry.SegmentioKey=${SEGMENTIO_KEY} \
-      -X github.com/kubeshop/testkube/pkg/telemetry.CloudSegmentioKey=${CLOUD_SEGMENTIO_KEY} \
-      -X github.com/kubeshop/testkube/pkg/telemetry.CloudSegmentioKey=${BUSYBOX_IMAGE}" \
+      -X github.com/kubeshop/testkube/pkg/telemetry.CloudSegmentioKey=${CLOUD_SEGMENTIO_KEY}" \
     -o /app -mod mod -a .
 
 FROM ${ALPINE_IMAGE}

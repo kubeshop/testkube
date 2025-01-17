@@ -42,19 +42,41 @@ jobs:
             type=ref,event=branch
             type=semver,pattern={{version}}
 
+      - name: Create Docker tags and metadata for tw-init
+        id: tw-init
+        uses: docker/metadata-action@v5
+        with:
+          bake-target: 'tw-init'
+          images: |
+            kubeshop/testkube-tw-init
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+
+      - name: Create Docker tags and metadata for tw-toolkit
+        id: tw-toolkit
+        uses: docker/metadata-action@v5
+        with:
+          bake-target: 'tw-toolkit'
+          images: |
+            kubeshop/testkube-tw-toolkit
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+
       - name: Build
         uses: depot/bake-action@v1
         with:
           files: |
             ./docker-bake.hcl
             ${{ steps.api-meta.outputs.bake-file }}
-          targets: api
+            ${{ steps.tw-toolkit.outputs.bake-file }}
+            ${{ steps.tw-init.outputs.bake-file }}
+          targets: api,tw-toolkit,tw-init
           provenance: mode=max
           push: false
           sbom: true
         env:
-          ALPINE_IMAGE: ${{ env.ALPINE_IMAGE }}
-          BUSYBOX_IMAGE: ${{ env.BUSYBOX_IMAGE }}
           VERSION: ${{ fromJSON(steps.api-meta.outputs.json).labels['org.opencontainers.image.version'] }}
           GIT_SHA: ${{ fromJSON(steps.api-meta.outputs.json).labels['org.opencontainers.image.revision'] }}
           SLACK_BOT_CLIENT_ID: ${{secrets.TESTKUBE_SLACK_BOT_CLIENT_ID}}
