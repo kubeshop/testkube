@@ -13,18 +13,28 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
 	"github.com/kubeshop/testkube/pkg/controlplaneclient"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 type CloudUploaderRequestEnhancer = func(req *http.Request, path string, size int64)
 
-func NewCloudUploader(client controlplaneclient.ExecutionSelfClient, opts ...CloudUploaderOpt) Uploader {
+func NewCloudUploader(
+	client controlplaneclient.ExecutionSelfClient,
+	environmentId string,
+	executionId string,
+	workflowName string,
+	stepRef string,
+	opts ...CloudUploaderOpt,
+) Uploader {
 	uploader := &cloudUploader{
-		client:       client,
-		parallelism:  1,
-		reqEnhancers: make([]CloudUploaderRequestEnhancer, 0),
+		client:        client,
+		parallelism:   1,
+		reqEnhancers:  make([]CloudUploaderRequestEnhancer, 0),
+		environmentId: environmentId,
+		executionId:   executionId,
+		workflowName:  workflowName,
+		stepRef:       stepRef,
 	}
 	for _, opt := range opts {
 		opt(uploader)
@@ -33,13 +43,17 @@ func NewCloudUploader(client controlplaneclient.ExecutionSelfClient, opts ...Clo
 }
 
 type cloudUploader struct {
-	client       controlplaneclient.ExecutionSelfClient
-	wg           sync.WaitGroup
-	sema         chan struct{}
-	parallelism  int
-	error        atomic.Bool
-	reqEnhancers []CloudUploaderRequestEnhancer
-	waitMu       sync.Mutex
+	client        controlplaneclient.ExecutionSelfClient
+	wg            sync.WaitGroup
+	sema          chan struct{}
+	parallelism   int
+	error         atomic.Bool
+	reqEnhancers  []CloudUploaderRequestEnhancer
+	waitMu        sync.Mutex
+	environmentId string
+	executionId   string
+	workflowName  string
+	stepRef       string
 }
 
 func (d *cloudUploader) Start() (err error) {
@@ -48,13 +62,12 @@ func (d *cloudUploader) Start() (err error) {
 }
 
 func (d *cloudUploader) getSignedURL(name, contentType string) (string, error) {
-	cfg := config.Config()
 	return d.client.SaveExecutionArtifactGetPresignedURL(
 		context.Background(),
-		cfg.Execution.EnvironmentId,
-		cfg.Execution.Id,
-		cfg.Workflow.Name,
-		config.Ref(),
+		d.environmentId,
+		d.executionId,
+		d.workflowName,
+		d.stepRef,
 		name,
 		contentType,
 	)

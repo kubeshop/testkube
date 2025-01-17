@@ -220,7 +220,7 @@ func TestWorkflowExecute(t *testing.T) {
 	executionsCh <- &testkube.TestWorkflowExecution{}
 	close(executionsCh)
 	executionsStream := testworkflowexecutor.NewStream(executionsCh)
-	mockTestWorkflowExecutor.EXPECT().Execute(gomock.Any(), mockTestWorkflowExecutionRequest).Return(executionsStream)
+	mockTestWorkflowExecutor.EXPECT().Execute(gomock.Any(), gomock.Any(), mockTestWorkflowExecutionRequest).Return(executionsStream)
 
 	s := &Service{
 		triggerStatus:        make(map[statusKey]*triggerStatus),

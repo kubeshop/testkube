@@ -119,7 +119,7 @@ func getRemoteStorageUploader(ctx context.Context, params envs.Params) (uploader
 	output.PrintLogf("%s Connected to Agent API", ui.IconCheckMark)
 
 	grpcClient := cloud.NewTestKubeCloudAPIClient(grpcConn)
-	cloudExecutor := cloudexecutor.NewCloudGRPCExecutor(grpcClient, grpcConn, params.ProAPIKey)
+	cloudExecutor := cloudexecutor.NewCloudGRPCExecutor(grpcClient, params.ProAPIKey)
 	return cloudscraper.NewCloudUploader(cloudExecutor, params.SkipVerify), nil
 }
 

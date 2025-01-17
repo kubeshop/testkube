@@ -29,7 +29,8 @@ type internalArtifactStorage struct {
 }
 
 func newArtifactUploader() Uploader {
-	return NewCloudUploader(env.Cloud(), WithParallelismCloud(30), CloudDetectMimetype)
+	cfg := config.Config()
+	return NewCloudUploader(env.Cloud(), cfg.Execution.EnvironmentId, cfg.Execution.Id, cfg.Workflow.Name, config.Ref(), WithParallelismCloud(30), CloudDetectMimetype)
 }
 
 func InternalStorage() InternalArtifactStorage {

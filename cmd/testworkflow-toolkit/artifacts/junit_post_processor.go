@@ -10,7 +10,6 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
 	"github.com/kubeshop/testkube/pkg/controlplaneclient"
 
 	"github.com/kubeshop/testkube/pkg/filesystem"
@@ -19,15 +18,35 @@ import (
 
 // JUnitPostProcessor is a post-processor that checks XML files for JUnit reports and sends them to the cloud.
 type JUnitPostProcessor struct {
-	fs         filesystem.FileSystem
-	client     controlplaneclient.ExecutionSelfClient
-	apiKey     string
-	root       string
-	pathPrefix string
+	fs            filesystem.FileSystem
+	client        controlplaneclient.ExecutionSelfClient
+	root          string
+	pathPrefix    string
+	environmentId string
+	executionId   string
+	workflowName  string
+	stepRef       string
 }
 
-func NewJUnitPostProcessor(fs filesystem.FileSystem, client controlplaneclient.ExecutionSelfClient, apiKey string, root, pathPrefix string) *JUnitPostProcessor {
-	return &JUnitPostProcessor{fs: fs, client: client, apiKey: apiKey, root: root, pathPrefix: pathPrefix}
+func NewJUnitPostProcessor(
+	fs filesystem.FileSystem,
+	client controlplaneclient.ExecutionSelfClient,
+	environmentId string,
+	executionId string,
+	workflowName string,
+	stepRef string,
+	root, pathPrefix string,
+) *JUnitPostProcessor {
+	return &JUnitPostProcessor{
+		fs:            fs,
+		client:        client,
+		environmentId: environmentId,
+		executionId:   executionId,
+		workflowName:  workflowName,
+		stepRef:       stepRef,
+		root:          root,
+		pathPrefix:    pathPrefix,
+	}
 }
 
 func (p *JUnitPostProcessor) Start() error {
@@ -87,9 +106,8 @@ func (p *JUnitPostProcessor) Add(path string) error {
 
 // sendJUnitReport sends the JUnit report to the Agent gRPC API.
 func (p *JUnitPostProcessor) sendJUnitReport(path string, report []byte) error {
-	cfg := config.Config()
 	// TODO: think if it's valid for the parallel steps that have independent refs
-	return p.client.AppendExecutionReport(context.Background(), cfg.Execution.EnvironmentId, cfg.Execution.Id, cfg.Workflow.Name, config.Ref(), path, report)
+	return p.client.AppendExecutionReport(context.Background(), p.environmentId, p.executionId, p.workflowName, p.stepRef, path, report)
 }
 
 // isXMLFile checks if the file is an XML file based on the extension.
