@@ -4,12 +4,6 @@ variable "GOCACHE" {
 variable "GOMODCACHE" {
   default = "/root/.cache/go-build"
 }
-variable "ALPINE_IMAGE" {
-  default = "alpine:3.20.3"
-}
-variable "BUSYBOX_IMAGE" {
-  default = "busybox:1.36.1-musl"
-}
 
 group "default" {
   targets = ["agent-server", "testworkflow-init", "testworkflow-toolkit"]
@@ -21,10 +15,6 @@ target "api" {
   context="."
   dockerfile = "build/new/api-server.Dockerfile"
   platforms = ["linux/arm64", "linux/amd64"]
-  args = {
-    BUSYBOX_IMAGE = "${BUSYBOX_IMAGE}"
-    ALPINE_IMAGE = "${ALPINE_IMAGE}"
-  }
 }
 
 target "agent-server-meta" {}
