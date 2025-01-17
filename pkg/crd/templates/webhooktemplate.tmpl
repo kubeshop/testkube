@@ -64,9 +64,7 @@ spec:
   {{- if ne (len .Parameters) 0 }}
   parameters:
   {{- range $parameter := .Parameters }}
-    {{- if $parameter.Name }}
-      name: {{ $parameter.Name }}
-    {{- end }}
+    - name: {{ $parameter.Name }}
     {{- if $parameter.Description }}
       description: {{ $parameter.Description }}
     {{- end }}
