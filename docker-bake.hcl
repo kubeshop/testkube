@@ -4,6 +4,12 @@ variable "GOCACHE" {
 variable "GOMODCACHE" {
   default = "/root/.cache/go-build"
 }
+variable "BUSYBOX_IMAGE" {
+  default = "busybox:1.36.1-musl"
+}
+variable "ALPINE_IMAGE" {
+  default = "alpine:3.20.3"
+}
 
 group "default" {
   targets = ["agent-server", "testworkflow-init", "testworkflow-toolkit"]
