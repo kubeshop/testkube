@@ -51,18 +51,18 @@ func (mr *MockSchedulerMockRecorder) CriticalError(arg0, arg1, arg2 interface{})
 }
 
 // Schedule mocks base method.
-func (m *MockScheduler) Schedule(arg0 context.Context, arg1 SensitiveDataHandler, arg2 *cloud.ScheduleRequest) (<-chan *testkube.TestWorkflowExecution, error) {
+func (m *MockScheduler) Schedule(arg0 context.Context, arg1 SensitiveDataHandler, arg2 string, arg3 *cloud.ScheduleRequest) (<-chan *testkube.TestWorkflowExecution, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Schedule", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "Schedule", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(<-chan *testkube.TestWorkflowExecution)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Schedule indicates an expected call of Schedule.
-func (mr *MockSchedulerMockRecorder) Schedule(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockSchedulerMockRecorder) Schedule(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Schedule", reflect.TypeOf((*MockScheduler)(nil).Schedule), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Schedule", reflect.TypeOf((*MockScheduler)(nil).Schedule), arg0, arg1, arg2, arg3)
 }
 
 // Start mocks base method.

@@ -175,7 +175,7 @@ func (a *agentLoop) run(ctx context.Context) error {
 }
 
 func (a *agentLoop) loopNotifications(ctx context.Context) error {
-	return a.client.ProcessExecutionNotificationRequests(ctx, func(ctx context.Context, req *cloud.TestWorkflowNotificationsRequest) channels.Watcher[*testkube.TestWorkflowExecutionNotification] {
+	return a.client.ProcessExecutionNotificationRequests(ctx, func(ctx context.Context, req *cloud.TestWorkflowNotificationsRequest) controlplaneclient.NotificationWatcher {
 		// Read the initial status TODO: consider getting from the database
 		status, err := a.worker.Summary(ctx, req.ExecutionId, executionworkertypes.GetOptions{})
 		if err != nil {
@@ -199,7 +199,7 @@ func (a *agentLoop) loopNotifications(ctx context.Context) error {
 }
 
 func (a *agentLoop) loopServiceNotifications(ctx context.Context) error {
-	return a.client.ProcessExecutionServiceNotificationRequests(ctx, func(ctx context.Context, req *cloud.TestWorkflowServiceNotificationsRequest) channels.Watcher[*testkube.TestWorkflowExecutionNotification] {
+	return a.client.ProcessExecutionServiceNotificationRequests(ctx, func(ctx context.Context, req *cloud.TestWorkflowServiceNotificationsRequest) controlplaneclient.NotificationWatcher {
 		// Build the internal resource name
 		resourceId := fmt.Sprintf("%s-%s-%d", req.ExecutionId, req.ServiceName, req.ServiceIndex)
 
@@ -211,7 +211,7 @@ func (a *agentLoop) loopServiceNotifications(ctx context.Context) error {
 }
 
 func (a *agentLoop) loopParallelStepNotifications(ctx context.Context) error {
-	return a.client.ProcessExecutionParallelWorkerNotificationRequests(ctx, func(ctx context.Context, req *cloud.TestWorkflowParallelStepNotificationsRequest) channels.Watcher[*testkube.TestWorkflowExecutionNotification] {
+	return a.client.ProcessExecutionParallelWorkerNotificationRequests(ctx, func(ctx context.Context, req *cloud.TestWorkflowParallelStepNotificationsRequest) controlplaneclient.NotificationWatcher {
 		// Build the internal resource name
 		resourceId := fmt.Sprintf("%s-%s-%d", req.ExecutionId, req.Ref, req.WorkerIndex)
 

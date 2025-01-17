@@ -16,12 +16,15 @@ import (
 	"github.com/kubeshop/testkube/pkg/repository/channels"
 )
 
+type RunnerRequestsWatcher channels.Watcher[*cloud.RunnerRequest]
+type NotificationWatcher channels.Watcher[*testkube.TestWorkflowExecutionNotification]
+
 type RunnerClient interface {
 	GetRunnerOngoingExecutions(ctx context.Context) ([]*cloud.UnfinishedExecution, error)
-	WatchRunnerRequests(ctx context.Context) channels.Watcher[*cloud.RunnerRequest]
-	ProcessExecutionNotificationRequests(ctx context.Context, process func(ctx context.Context, req *cloud.TestWorkflowNotificationsRequest) channels.Watcher[*testkube.TestWorkflowExecutionNotification]) error
-	ProcessExecutionParallelWorkerNotificationRequests(ctx context.Context, process func(ctx context.Context, req *cloud.TestWorkflowParallelStepNotificationsRequest) channels.Watcher[*testkube.TestWorkflowExecutionNotification]) error
-	ProcessExecutionServiceNotificationRequests(ctx context.Context, process func(ctx context.Context, req *cloud.TestWorkflowServiceNotificationsRequest) channels.Watcher[*testkube.TestWorkflowExecutionNotification]) error
+	WatchRunnerRequests(ctx context.Context) RunnerRequestsWatcher
+	ProcessExecutionNotificationRequests(ctx context.Context, process func(ctx context.Context, req *cloud.TestWorkflowNotificationsRequest) NotificationWatcher) error
+	ProcessExecutionParallelWorkerNotificationRequests(ctx context.Context, process func(ctx context.Context, req *cloud.TestWorkflowParallelStepNotificationsRequest) NotificationWatcher) error
+	ProcessExecutionServiceNotificationRequests(ctx context.Context, process func(ctx context.Context, req *cloud.TestWorkflowServiceNotificationsRequest) NotificationWatcher) error
 }
 
 func (c *client) GetRunnerOngoingExecutions(ctx context.Context) ([]*cloud.UnfinishedExecution, error) {
@@ -100,7 +103,7 @@ func (c *client) legacyGetRunnerOngoingExecutions(ctx context.Context) ([]*cloud
 	return result, err
 }
 
-func (c *client) WatchRunnerRequests(ctx context.Context) channels.Watcher[*cloud.RunnerRequest] {
+func (c *client) WatchRunnerRequests(ctx context.Context) RunnerRequestsWatcher {
 	stream, err := watch(ctx, c.metadata().GRPC(), c.client.GetRunnerRequests)
 	if err != nil {
 		return channels.NewError[*cloud.RunnerRequest](err)
@@ -145,7 +148,7 @@ func (c *client) WatchRunnerRequests(ctx context.Context) channels.Watcher[*clou
 	return watcher
 }
 
-func (c *client) ProcessExecutionNotificationRequests(ctx context.Context, process func(ctx context.Context, req *cloud.TestWorkflowNotificationsRequest) channels.Watcher[*testkube.TestWorkflowExecutionNotification]) error {
+func (c *client) ProcessExecutionNotificationRequests(ctx context.Context, process func(ctx context.Context, req *cloud.TestWorkflowNotificationsRequest) NotificationWatcher) error {
 	return processNotifications(
 		ctx,
 		c.metadata().GRPC(),
@@ -157,7 +160,7 @@ func (c *client) ProcessExecutionNotificationRequests(ctx context.Context, proce
 	)
 }
 
-func (c *client) ProcessExecutionParallelWorkerNotificationRequests(ctx context.Context, process func(ctx context.Context, req *cloud.TestWorkflowParallelStepNotificationsRequest) channels.Watcher[*testkube.TestWorkflowExecutionNotification]) error {
+func (c *client) ProcessExecutionParallelWorkerNotificationRequests(ctx context.Context, process func(ctx context.Context, req *cloud.TestWorkflowParallelStepNotificationsRequest) NotificationWatcher) error {
 	return processNotifications(
 		ctx,
 		c.metadata().GRPC(),
@@ -169,7 +172,7 @@ func (c *client) ProcessExecutionParallelWorkerNotificationRequests(ctx context.
 	)
 }
 
-func (c *client) ProcessExecutionServiceNotificationRequests(ctx context.Context, process func(ctx context.Context, req *cloud.TestWorkflowServiceNotificationsRequest) channels.Watcher[*testkube.TestWorkflowExecutionNotification]) error {
+func (c *client) ProcessExecutionServiceNotificationRequests(ctx context.Context, process func(ctx context.Context, req *cloud.TestWorkflowServiceNotificationsRequest) NotificationWatcher) error {
 	return processNotifications(
 		ctx,
 		c.metadata().GRPC(),

@@ -21,6 +21,7 @@ require (
 	github.com/fluxcd/pkg/apis/event v0.2.0
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/gabriel-vasile/mimetype v1.4.6
+	github.com/go-errors/errors v1.5.1
 	github.com/go-task/slim-sprig v2.20.0+incompatible
 	github.com/gofiber/adaptor/v2 v2.1.29
 	github.com/gofiber/fiber/v2 v2.52.5
@@ -127,7 +128,6 @@ require (
 	github.com/evanphx/json-patch/v5 v5.9.0 // indirect
 	github.com/fatih/color v1.16.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
-	github.com/go-errors/errors v1.5.1 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect

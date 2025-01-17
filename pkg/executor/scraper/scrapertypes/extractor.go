@@ -14,7 +14,7 @@ const (
 	DataTypeTarball DataType = "tarball"
 )
 
-//go:generate mockgen -destination=./mock_extractor.go -package=scrapertypes "github.com/kubeshop/testkube/pkg/executor/scrapertypes" Extractor
+//go:generate mockgen -destination=./mock_extractor.go -package=scrapertypes "github.com/kubeshop/testkube/pkg/executor/scraper/scrapertypes" Extractor
 type Extractor interface {
 	Extract(ctx context.Context, paths, masks []string, process ProcessFn, notify NotifyFn) error
 }

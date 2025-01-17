@@ -37,17 +37,17 @@ func (m *MockTestWorkflowExecutor) EXPECT() *MockTestWorkflowExecutorMockRecorde
 }
 
 // Execute mocks base method.
-func (m *MockTestWorkflowExecutor) Execute(arg0 context.Context, arg1 *cloud.ScheduleRequest) TestWorkflowExecutionStream {
+func (m *MockTestWorkflowExecutor) Execute(arg0 context.Context, arg1 string, arg2 *cloud.ScheduleRequest) TestWorkflowExecutionStream {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Execute", arg0, arg1)
+	ret := m.ctrl.Call(m, "Execute", arg0, arg1, arg2)
 	ret0, _ := ret[0].(TestWorkflowExecutionStream)
 	return ret0
 }
 
 // Execute indicates an expected call of Execute.
-func (mr *MockTestWorkflowExecutorMockRecorder) Execute(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockTestWorkflowExecutorMockRecorder) Execute(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Execute", reflect.TypeOf((*MockTestWorkflowExecutor)(nil).Execute), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Execute", reflect.TypeOf((*MockTestWorkflowExecutor)(nil).Execute), arg0, arg1, arg2)
 }
 
 // Start mocks base method.

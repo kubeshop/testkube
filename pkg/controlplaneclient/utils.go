@@ -17,7 +17,6 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
-	"github.com/kubeshop/testkube/pkg/repository/channels"
 )
 
 var (
@@ -61,7 +60,7 @@ func processNotifications[Request notificationRequest, Response any, Srv notific
 	buildPongNotification func(streamId string) Response,
 	buildNotification func(streamId string, seqNo uint32, notification *testkube.TestWorkflowExecutionNotification) Response,
 	buildError func(streamId string, message string) Response,
-	process func(ctx context.Context, req Request) channels.Watcher[*testkube.TestWorkflowExecutionNotification],
+	process func(ctx context.Context, req Request) NotificationWatcher,
 ) error {
 	stream, err := watch(ctx, md, fn)
 	if err != nil {

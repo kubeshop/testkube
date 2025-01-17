@@ -65,6 +65,21 @@ func (mr *MockClientMockRecorder) FinishExecutionResult(arg0, arg1, arg2, arg3 i
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FinishExecutionResult", reflect.TypeOf((*MockClient)(nil).FinishExecutionResult), arg0, arg1, arg2, arg3)
 }
 
+// GetCredential mocks base method.
+func (m *MockClient) GetCredential(arg0 context.Context, arg1, arg2, arg3 string) ([]byte, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCredential", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetCredential indicates an expected call of GetCredential.
+func (mr *MockClientMockRecorder) GetCredential(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCredential", reflect.TypeOf((*MockClient)(nil).GetCredential), arg0, arg1, arg2, arg3)
+}
+
 // GetExecution mocks base method.
 func (m *MockClient) GetExecution(arg0 context.Context, arg1, arg2 string) (*testkube.TestWorkflowExecution, error) {
 	m.ctrl.T.Helper()
@@ -80,19 +95,33 @@ func (mr *MockClientMockRecorder) GetExecution(arg0, arg1, arg2 interface{}) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExecution", reflect.TypeOf((*MockClient)(nil).GetExecution), arg0, arg1, arg2)
 }
 
-// GetUnfinishedExecutions mocks base method.
-func (m *MockClient) GetUnfinishedExecutions(arg0 context.Context) ([]*cloud.UnfinishedExecution, error) {
+// GetRunnerOngoingExecutions mocks base method.
+func (m *MockClient) GetRunnerOngoingExecutions(arg0 context.Context) ([]*cloud.UnfinishedExecution, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetUnfinishedExecutions", arg0)
+	ret := m.ctrl.Call(m, "GetRunnerOngoingExecutions", arg0)
 	ret0, _ := ret[0].([]*cloud.UnfinishedExecution)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetUnfinishedExecutions indicates an expected call of GetUnfinishedExecutions.
-func (mr *MockClientMockRecorder) GetUnfinishedExecutions(arg0 interface{}) *gomock.Call {
+// GetRunnerOngoingExecutions indicates an expected call of GetRunnerOngoingExecutions.
+func (mr *MockClientMockRecorder) GetRunnerOngoingExecutions(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUnfinishedExecutions", reflect.TypeOf((*MockClient)(nil).GetUnfinishedExecutions), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRunnerOngoingExecutions", reflect.TypeOf((*MockClient)(nil).GetRunnerOngoingExecutions), arg0)
+}
+
+// InitExecution mocks base method.
+func (m *MockClient) InitExecution(arg0 context.Context, arg1, arg2 string, arg3 []testkube.TestWorkflowSignature, arg4 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InitExecution", arg0, arg1, arg2, arg3, arg4)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// InitExecution indicates an expected call of InitExecution.
+func (mr *MockClientMockRecorder) InitExecution(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InitExecution", reflect.TypeOf((*MockClient)(nil).InitExecution), arg0, arg1, arg2, arg3, arg4)
 }
 
 // IsLegacy mocks base method.
@@ -137,12 +166,70 @@ func (mr *MockClientMockRecorder) IsSuperAgent() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsSuperAgent", reflect.TypeOf((*MockClient)(nil).IsSuperAgent))
 }
 
-// SaveExecutionArtifactGetPresignedURL mocks base method.
-func (m *MockClient) SaveExecutionArtifactGetPresignedURL(arg0 context.Context, arg1, arg2, arg3, arg4, arg5, arg6 string) error {
+// ObtainExecution mocks base method.
+func (m *MockClient) ObtainExecution(arg0 context.Context, arg1, arg2 string) (*cloud.ObtainExecutionResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SaveExecutionArtifactGetPresignedURL", arg0, arg1, arg2, arg3, arg4, arg5, arg6)
+	ret := m.ctrl.Call(m, "ObtainExecution", arg0, arg1, arg2)
+	ret0, _ := ret[0].(*cloud.ObtainExecutionResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ObtainExecution indicates an expected call of ObtainExecution.
+func (mr *MockClientMockRecorder) ObtainExecution(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ObtainExecution", reflect.TypeOf((*MockClient)(nil).ObtainExecution), arg0, arg1, arg2)
+}
+
+// ProcessExecutionNotificationRequests mocks base method.
+func (m *MockClient) ProcessExecutionNotificationRequests(arg0 context.Context, arg1 func(context.Context, *cloud.TestWorkflowNotificationsRequest) NotificationWatcher) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ProcessExecutionNotificationRequests", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
+}
+
+// ProcessExecutionNotificationRequests indicates an expected call of ProcessExecutionNotificationRequests.
+func (mr *MockClientMockRecorder) ProcessExecutionNotificationRequests(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProcessExecutionNotificationRequests", reflect.TypeOf((*MockClient)(nil).ProcessExecutionNotificationRequests), arg0, arg1)
+}
+
+// ProcessExecutionParallelWorkerNotificationRequests mocks base method.
+func (m *MockClient) ProcessExecutionParallelWorkerNotificationRequests(arg0 context.Context, arg1 func(context.Context, *cloud.TestWorkflowParallelStepNotificationsRequest) NotificationWatcher) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ProcessExecutionParallelWorkerNotificationRequests", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ProcessExecutionParallelWorkerNotificationRequests indicates an expected call of ProcessExecutionParallelWorkerNotificationRequests.
+func (mr *MockClientMockRecorder) ProcessExecutionParallelWorkerNotificationRequests(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProcessExecutionParallelWorkerNotificationRequests", reflect.TypeOf((*MockClient)(nil).ProcessExecutionParallelWorkerNotificationRequests), arg0, arg1)
+}
+
+// ProcessExecutionServiceNotificationRequests mocks base method.
+func (m *MockClient) ProcessExecutionServiceNotificationRequests(arg0 context.Context, arg1 func(context.Context, *cloud.TestWorkflowServiceNotificationsRequest) NotificationWatcher) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ProcessExecutionServiceNotificationRequests", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ProcessExecutionServiceNotificationRequests indicates an expected call of ProcessExecutionServiceNotificationRequests.
+func (mr *MockClientMockRecorder) ProcessExecutionServiceNotificationRequests(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProcessExecutionServiceNotificationRequests", reflect.TypeOf((*MockClient)(nil).ProcessExecutionServiceNotificationRequests), arg0, arg1)
+}
+
+// SaveExecutionArtifactGetPresignedURL mocks base method.
+func (m *MockClient) SaveExecutionArtifactGetPresignedURL(arg0 context.Context, arg1, arg2, arg3, arg4, arg5, arg6 string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SaveExecutionArtifactGetPresignedURL", arg0, arg1, arg2, arg3, arg4, arg5, arg6)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // SaveExecutionArtifactGetPresignedURL indicates an expected call of SaveExecutionArtifactGetPresignedURL.
@@ -221,4 +308,18 @@ func (m *MockClient) UpdateExecutionResult(arg0 context.Context, arg1, arg2 stri
 func (mr *MockClientMockRecorder) UpdateExecutionResult(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateExecutionResult", reflect.TypeOf((*MockClient)(nil).UpdateExecutionResult), arg0, arg1, arg2, arg3)
+}
+
+// WatchRunnerRequests mocks base method.
+func (m *MockClient) WatchRunnerRequests(arg0 context.Context) RunnerRequestsWatcher {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WatchRunnerRequests", arg0)
+	ret0, _ := ret[0].(RunnerRequestsWatcher)
+	return ret0
+}
+
+// WatchRunnerRequests indicates an expected call of WatchRunnerRequests.
+func (mr *MockClientMockRecorder) WatchRunnerRequests(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WatchRunnerRequests", reflect.TypeOf((*MockClient)(nil).WatchRunnerRequests), arg0)
 }
