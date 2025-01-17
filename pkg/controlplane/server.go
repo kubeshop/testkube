@@ -22,6 +22,7 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 
+	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/capabilities"
 	"github.com/kubeshop/testkube/pkg/cloud"
@@ -29,6 +30,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
+	domainstorage "github.com/kubeshop/testkube/pkg/storage"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 )
 
@@ -45,6 +47,7 @@ type Server struct {
 	server                      *grpc.Server
 	commands                    map[cloudexecutor.Command]CommandHandler
 	executor                    testworkflowexecutor.TestWorkflowExecutor
+	storageClient               domainstorage.Client
 	testWorkflowsClient         testworkflowclient.TestWorkflowClient
 	testWorkflowTemplatesClient testworkflowtemplateclient.TestWorkflowTemplateClient
 	resultsRepository           testworkflow.Repository
@@ -55,6 +58,7 @@ type Config struct {
 	Port                             int
 	Verbose                          bool
 	Logger                           *zap.SugaredLogger
+	StorageBucket                    string
 	FeatureNewExecutions             bool
 	FeatureTestWorkflowsCloudStorage bool
 }
@@ -63,6 +67,7 @@ type Config struct {
 func New(
 	cfg Config,
 	executor testworkflowexecutor.TestWorkflowExecutor,
+	storageClient domainstorage.Client,
 	testWorkflowsClient testworkflowclient.TestWorkflowClient,
 	testWorkflowTemplatesClient testworkflowtemplateclient.TestWorkflowTemplateClient,
 	resultsRepository testworkflow.Repository,
@@ -79,6 +84,7 @@ func New(
 		cfg:                         cfg,
 		executor:                    executor,
 		commands:                    commands,
+		storageClient:               storageClient,
 		testWorkflowsClient:         testWorkflowsClient,
 		testWorkflowTemplatesClient: testWorkflowTemplatesClient,
 		resultsRepository:           resultsRepository,
@@ -153,6 +159,19 @@ func (s *Server) GetRunnerRequests(srv cloud.TestKubeCloudAPI_GetRunnerRequestsS
 
 func (s *Server) ObtainExecution(_ context.Context, _ *cloud.ObtainExecutionRequest) (*cloud.ObtainExecutionResponse, error) {
 	return &cloud.ObtainExecutionResponse{Success: true}, nil
+}
+
+func (s *Server) InitExecution(ctx context.Context, req *cloud.InitExecutionRequest) (*cloud.InitExecutionResponse, error) {
+	var signature []testkube.TestWorkflowSignature
+	err := json.Unmarshal(req.Signature, &signature)
+	if err != nil {
+		return nil, err
+	}
+	err = s.resultsRepository.Init(ctx, req.Id, testworkflow.InitData{RunnerID: "oss", Namespace: req.Namespace, Signature: signature})
+	if err != nil {
+		return nil, err
+	}
+	return &cloud.InitExecutionResponse{}, nil
 }
 
 // TODO: Consider deleting that
@@ -619,27 +638,60 @@ func (s *Server) GetExecution(ctx context.Context, req *cloud.GetExecutionReques
 	return &cloud.GetExecutionResponse{Execution: executionBytes}, nil
 }
 
-// TODO
-func (s *Server) UpdateExecutionResult(context.Context, *cloud.UpdateExecutionResultRequest) (*cloud.UpdateExecutionResultResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpdateExecutionResult not implemented")
+func (s *Server) GetUnfinishedExecutions(_ *emptypb.Empty, srv cloud.TestKubeCloudAPI_GetUnfinishedExecutionsServer) error {
+	executions, err := s.resultsRepository.GetExecutions(srv.Context(), testworkflow.FilterImpl{
+		FStatuses: []testkube.TestWorkflowStatus{testkube.PAUSED_TestWorkflowStatus, testkube.QUEUED_TestWorkflowStatus, testkube.RUNNING_TestWorkflowStatus},
+		FPageSize: math.MaxInt32,
+	})
+	if err != nil {
+		return err
+	}
+	for _, execution := range executions {
+		err = srv.Send(&cloud.UnfinishedExecution{Id: execution.Id})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-// TODO
-func (s *Server) UpdateExecutionOutput(context.Context, *cloud.UpdateExecutionOutputRequest) (*cloud.UpdateExecutionOutputResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpdateExecutionOutput not implemented")
+func (s *Server) UpdateExecutionResult(ctx context.Context, req *cloud.UpdateExecutionResultRequest) (*cloud.UpdateExecutionResultResponse, error) {
+	var result testkube.TestWorkflowResult
+	err := json.Unmarshal(req.Result, &result)
+	if err != nil {
+		return nil, err
+	}
+	err = s.resultsRepository.UpdateResult(ctx, req.Id, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &cloud.UpdateExecutionResultResponse{}, nil
 }
 
-// TODO
-func (s *Server) SaveExecutionLogsPresigned(context.Context, *cloud.SaveExecutionLogsPresignedRequest) (*cloud.SaveExecutionLogsPresignedResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SaveExecutionLogsPresigned not implemented")
+func (s *Server) UpdateExecutionOutput(ctx context.Context, req *cloud.UpdateExecutionOutputRequest) (*cloud.UpdateExecutionOutputResponse, error) {
+	err := s.resultsRepository.UpdateOutput(ctx, req.Id, common.MapSlice(req.Output, func(t *cloud.ExecutionOutput) testkube.TestWorkflowOutput {
+		var v map[string]interface{}
+		_ = json.Unmarshal(t.Value, &v)
+		return testkube.TestWorkflowOutput{Ref: t.Ref, Name: t.Name, Value: v}
+	}))
+	if err != nil {
+		return nil, err
+	}
+	return &cloud.UpdateExecutionOutputResponse{}, nil
 }
 
-// TODO
-func (s *Server) SaveExecutionArtifactPresigned(context.Context, *cloud.SaveExecutionArtifactPresignedRequest) (*cloud.SaveExecutionArtifactPresignedResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SaveExecutionArtifactPresigned not implemented")
+func (s *Server) SaveExecutionLogsPresigned(ctx context.Context, req *cloud.SaveExecutionLogsPresignedRequest) (*cloud.SaveExecutionLogsPresignedResponse, error) {
+	url, err := s.outputRepository.PresignSaveLog(ctx, req.Id, "")
+	if err != nil {
+		return nil, err
+	}
+	return &cloud.SaveExecutionLogsPresignedResponse{Url: url}, nil
 }
 
-// TODO
-func (s *Server) AppendExecutionReport(context.Context, *cloud.AppendExecutionReportRequest) (*cloud.AppendExecutionReportResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method AppendExecutionReport not implemented")
+func (s *Server) SaveExecutionArtifactPresigned(ctx context.Context, req *cloud.SaveExecutionArtifactPresignedRequest) (*cloud.SaveExecutionArtifactPresignedResponse, error) {
+	url, err := s.storageClient.PresignUploadFileToBucket(ctx, s.cfg.StorageBucket, req.Id, req.FilePath, 15*time.Minute)
+	if err != nil {
+		return nil, err
+	}
+	return &cloud.SaveExecutionArtifactPresignedResponse{Url: url}, nil
 }

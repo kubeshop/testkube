@@ -411,7 +411,8 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 		Port:                             cfg.GRPCServerPort,
 		Logger:                           log.DefaultLogger,
 		Verbose:                          false,
+		StorageBucket:                    cfg.StorageBucket,
 		FeatureNewExecutions:             cfg.FeatureNewExecutions,
 		FeatureTestWorkflowsCloudStorage: cfg.FeatureTestWorkflowCloudStorage,
-	}, executor, testWorkflowsClient, testWorkflowTemplatesClient, testWorkflowResultsRepository, testWorkflowOutputRepository, commands...)
+	}, executor, storageClient, testWorkflowsClient, testWorkflowTemplatesClient, testWorkflowResultsRepository, testWorkflowOutputRepository, commands...)
 }
