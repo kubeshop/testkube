@@ -102,9 +102,15 @@ func GetLegacyRunningContext(req *cloud.ScheduleRequest) (runningContext *testku
 		Type_: common.Ptr(testkube.USER_TestWorkflowRunningContextActorType),
 	}
 
-	if req.RunningContext == nil && req.User != nil {
+	if req.User != nil {
 		userActor.Name = req.User.Name
 		userActor.Email = req.User.Email
+	}
+
+	if req.RunningContext == nil {
+		if req.User == nil {
+			return nil
+		}
 
 		return &testkube.TestWorkflowRunningContext{
 			Actor: userActor,
@@ -112,8 +118,6 @@ func GetLegacyRunningContext(req *cloud.ScheduleRequest) (runningContext *testku
 				Type_: common.Ptr(testkube.API_TestWorkflowRunningContextInterfaceType),
 			},
 		}
-	} else if req.RunningContext == nil {
-		return nil
 	}
 
 	switch req.RunningContext.Type {
