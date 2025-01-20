@@ -86,8 +86,7 @@ func listTestWorkflowsApi(labels map[string]string) ([]testkube.TestWorkflow, er
 
 func listTestWorkflowsGrpc(labels map[string]string) ([]testkube.TestWorkflow, error) {
 	cfg := config.Config()
-	grpcClient := env.CloudInternal() // TODO: Avoid Internal
-	client := testworkflowclient.NewCloudTestWorkflowClient(grpcClient, cfg.Worker.Connection.ApiKey)
+	client := testworkflowclient.NewCloudTestWorkflowClient(env.Cloud())
 	return client.List(context.Background(), cfg.Execution.EnvironmentId, testworkflowclient.ListOptions{Labels: labels})
 }
 

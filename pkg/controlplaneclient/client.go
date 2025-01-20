@@ -37,6 +37,8 @@ type Client interface {
 	ExecutionClient
 	ExecutionSelfClient
 	RunnerClient
+	TestWorkflowsClient
+	TestWorkflowTemplatesClient
 }
 
 func New(grpcClient cloud.TestKubeCloudAPIClient, proContext config.ProContext, agentID, agentToken string, opts ClientOptions) Client {

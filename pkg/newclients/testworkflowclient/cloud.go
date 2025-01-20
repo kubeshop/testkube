@@ -2,140 +2,57 @@ package testworkflowclient
 
 import (
 	"context"
-	"encoding/json"
 
-	"google.golang.org/grpc/metadata"
-
+	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
-	"github.com/kubeshop/testkube/pkg/cloud"
+	"github.com/kubeshop/testkube/pkg/controlplaneclient"
 )
 
 var _ TestWorkflowClient = &cloudTestWorkflowClient{}
 
 type cloudTestWorkflowClient struct {
-	client cloud.TestKubeCloudAPIClient
-	apiKey string
+	client controlplaneclient.TestWorkflowsClient
 }
 
-func NewCloudTestWorkflowClient(client cloud.TestKubeCloudAPIClient, apiKey string) TestWorkflowClient {
-	return &cloudTestWorkflowClient{
-		client: client,
-		apiKey: apiKey,
-	}
+func NewCloudTestWorkflowClient(client controlplaneclient.TestWorkflowsClient) TestWorkflowClient {
+	return &cloudTestWorkflowClient{client: client}
 }
 
 func (c *cloudTestWorkflowClient) Get(ctx context.Context, environmentId string, name string) (*testkube.TestWorkflow, error) {
-	// Pass the additional information
-	// FIXME: Needs agent-id
-	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("api-key", c.apiKey, "environment-id", environmentId))
-
-	resp, err := c.client.GetTestWorkflow(ctx, &cloud.GetTestWorkflowRequest{
-		Name: name,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	var workflow testkube.TestWorkflow
-	if err = json.Unmarshal(resp.Workflow, &workflow); err != nil {
-		return nil, err
-	}
-	return &workflow, nil
+	return c.client.GetTestWorkflow(ctx, environmentId, name)
 }
 
 func (c *cloudTestWorkflowClient) List(ctx context.Context, environmentId string, options ListOptions) ([]testkube.TestWorkflow, error) {
-	// Pass the additional information
-	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("api-key", c.apiKey, "environment-id", environmentId))
-
-	resp, err := c.client.ListTestWorkflows(ctx, &cloud.ListTestWorkflowsRequest{
-		Offset:     options.Offset,
-		Limit:      options.Limit,
+	list, err := c.client.ListTestWorkflows(ctx, environmentId, controlplaneclient.ListTestWorkflowOptions{
 		Labels:     options.Labels,
 		TextSearch: options.TextSearch,
-	})
+		Offset:     options.Offset,
+		Limit:      options.Limit,
+	}).All()
 	if err != nil {
 		return nil, err
 	}
-
-	result := make([]testkube.TestWorkflow, 0)
-	var item *cloud.TestWorkflowListItem
-	for {
-		item, err = resp.Recv()
-		if err != nil {
-			break
-		}
-		var workflow testkube.TestWorkflow
-		err = json.Unmarshal(item.Workflow, &workflow)
-		if err != nil {
-			return nil, err
-		}
-		result = append(result, workflow)
-	}
-	return result, err
+	return common.MapSlice(list, func(t *testkube.TestWorkflow) testkube.TestWorkflow {
+		return *t
+	}), nil
 }
 
 func (c *cloudTestWorkflowClient) ListLabels(ctx context.Context, environmentId string) (map[string][]string, error) {
-	// Pass the additional information
-	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("api-key", c.apiKey, "environment-id", environmentId))
-
-	resp, err := c.client.ListTestWorkflowLabels(ctx, &cloud.ListTestWorkflowLabelsRequest{})
-	if err != nil {
-		return nil, err
-	}
-	result := make(map[string][]string, len(resp.Labels))
-	for _, label := range resp.Labels {
-		result[label.Name] = label.Value
-	}
-	return result, nil
+	return c.client.ListTestWorkflowLabels(ctx, environmentId)
 }
 
 func (c *cloudTestWorkflowClient) Update(ctx context.Context, environmentId string, workflow testkube.TestWorkflow) error {
-	// Pass the additional information
-	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("api-key", c.apiKey, "environment-id", environmentId))
-
-	workflowBytes, err := json.Marshal(workflow)
-	if err != nil {
-		return err
-	}
-	_, err = c.client.UpdateTestWorkflow(ctx, &cloud.UpdateTestWorkflowRequest{
-		Workflow: workflowBytes,
-	})
-	return err
+	return c.client.UpdateTestWorkflow(ctx, environmentId, workflow)
 }
 
 func (c *cloudTestWorkflowClient) Create(ctx context.Context, environmentId string, workflow testkube.TestWorkflow) error {
-	// Pass the additional information
-	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("api-key", c.apiKey, "environment-id", environmentId))
-
-	workflowBytes, err := json.Marshal(workflow)
-	if err != nil {
-		return err
-	}
-	_, err = c.client.CreateTestWorkflow(ctx, &cloud.CreateTestWorkflowRequest{
-		Workflow: workflowBytes,
-	})
-	return err
+	return c.client.CreateTestWorkflow(ctx, environmentId, workflow)
 }
 
 func (c *cloudTestWorkflowClient) Delete(ctx context.Context, environmentId string, name string) error {
-	// Pass the additional information
-	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("api-key", c.apiKey, "environment-id", environmentId))
-
-	_, err := c.client.DeleteTestWorkflow(ctx, &cloud.DeleteTestWorkflowRequest{
-		Name: name,
-	})
-	return err
+	return c.client.DeleteTestWorkflow(ctx, environmentId, name)
 }
 
 func (c *cloudTestWorkflowClient) DeleteByLabels(ctx context.Context, environmentId string, labels map[string]string) (uint32, error) {
-	// Pass the additional information
-	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("api-key", c.apiKey, "environment-id", environmentId))
-
-	resp, err := c.client.DeleteTestWorkflowsByLabels(ctx, &cloud.DeleteTestWorkflowsByLabelsRequest{
-		Labels: labels,
-	})
-	if err != nil {
-		return 0, err
-	}
-	return resp.Count, nil
+	return c.client.DeleteTestWorkflowsByLabels(ctx, environmentId, labels)
 }

@@ -217,7 +217,7 @@ func CloudInternal() cloud.TestKubeCloudAPIClient {
 	return cloudClient
 }
 
-func Cloud() controlplaneclient.ExecutionSelfClient {
+func Cloud() controlplaneclient.Client {
 	cfg := config2.Config()
 	grpcClient := CloudInternal()
 	loadProContext() // FIXME: do it lazily

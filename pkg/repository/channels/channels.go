@@ -10,6 +10,7 @@ type watcher[T any] struct {
 
 type Watcher[T any] interface {
 	Channel() <-chan T
+	All() ([]T, error)
 	Err() error
 }
 
@@ -34,6 +35,14 @@ func (n *watcher[T]) Close(err error) {
 
 func (n *watcher[T]) Channel() <-chan T {
 	return n.ch
+}
+
+func (n *watcher[T]) All() ([]T, error) {
+	var result []T
+	for v := range n.ch {
+		result = append(result, v)
+	}
+	return result, n.Err()
 }
 
 func (n *watcher[T]) Err() error {

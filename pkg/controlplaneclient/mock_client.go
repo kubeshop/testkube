@@ -51,6 +51,92 @@ func (mr *MockClientMockRecorder) AppendExecutionReport(arg0, arg1, arg2, arg3, 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AppendExecutionReport", reflect.TypeOf((*MockClient)(nil).AppendExecutionReport), arg0, arg1, arg2, arg3, arg4, arg5, arg6)
 }
 
+// CreateTestWorkflow mocks base method.
+func (m *MockClient) CreateTestWorkflow(arg0 context.Context, arg1 string, arg2 testkube.TestWorkflow) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateTestWorkflow", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateTestWorkflow indicates an expected call of CreateTestWorkflow.
+func (mr *MockClientMockRecorder) CreateTestWorkflow(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateTestWorkflow", reflect.TypeOf((*MockClient)(nil).CreateTestWorkflow), arg0, arg1, arg2)
+}
+
+// CreateTestWorkflowTemplate mocks base method.
+func (m *MockClient) CreateTestWorkflowTemplate(arg0 context.Context, arg1 string, arg2 testkube.TestWorkflowTemplate) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateTestWorkflowTemplate", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateTestWorkflowTemplate indicates an expected call of CreateTestWorkflowTemplate.
+func (mr *MockClientMockRecorder) CreateTestWorkflowTemplate(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateTestWorkflowTemplate", reflect.TypeOf((*MockClient)(nil).CreateTestWorkflowTemplate), arg0, arg1, arg2)
+}
+
+// DeleteTestWorkflow mocks base method.
+func (m *MockClient) DeleteTestWorkflow(arg0 context.Context, arg1, arg2 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteTestWorkflow", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteTestWorkflow indicates an expected call of DeleteTestWorkflow.
+func (mr *MockClientMockRecorder) DeleteTestWorkflow(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteTestWorkflow", reflect.TypeOf((*MockClient)(nil).DeleteTestWorkflow), arg0, arg1, arg2)
+}
+
+// DeleteTestWorkflowTemplate mocks base method.
+func (m *MockClient) DeleteTestWorkflowTemplate(arg0 context.Context, arg1, arg2 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteTestWorkflowTemplate", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteTestWorkflowTemplate indicates an expected call of DeleteTestWorkflowTemplate.
+func (mr *MockClientMockRecorder) DeleteTestWorkflowTemplate(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteTestWorkflowTemplate", reflect.TypeOf((*MockClient)(nil).DeleteTestWorkflowTemplate), arg0, arg1, arg2)
+}
+
+// DeleteTestWorkflowTemplatesByLabels mocks base method.
+func (m *MockClient) DeleteTestWorkflowTemplatesByLabels(arg0 context.Context, arg1 string, arg2 map[string]string) (uint32, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteTestWorkflowTemplatesByLabels", arg0, arg1, arg2)
+	ret0, _ := ret[0].(uint32)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeleteTestWorkflowTemplatesByLabels indicates an expected call of DeleteTestWorkflowTemplatesByLabels.
+func (mr *MockClientMockRecorder) DeleteTestWorkflowTemplatesByLabels(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteTestWorkflowTemplatesByLabels", reflect.TypeOf((*MockClient)(nil).DeleteTestWorkflowTemplatesByLabels), arg0, arg1, arg2)
+}
+
+// DeleteTestWorkflowsByLabels mocks base method.
+func (m *MockClient) DeleteTestWorkflowsByLabels(arg0 context.Context, arg1 string, arg2 map[string]string) (uint32, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteTestWorkflowsByLabels", arg0, arg1, arg2)
+	ret0, _ := ret[0].(uint32)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeleteTestWorkflowsByLabels indicates an expected call of DeleteTestWorkflowsByLabels.
+func (mr *MockClientMockRecorder) DeleteTestWorkflowsByLabels(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteTestWorkflowsByLabels", reflect.TypeOf((*MockClient)(nil).DeleteTestWorkflowsByLabels), arg0, arg1, arg2)
+}
+
 // FinishExecutionResult mocks base method.
 func (m *MockClient) FinishExecutionResult(arg0 context.Context, arg1, arg2 string, arg3 *testkube.TestWorkflowResult) error {
 	m.ctrl.T.Helper()
@@ -110,6 +196,36 @@ func (mr *MockClientMockRecorder) GetRunnerOngoingExecutions(arg0 interface{}) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRunnerOngoingExecutions", reflect.TypeOf((*MockClient)(nil).GetRunnerOngoingExecutions), arg0)
 }
 
+// GetTestWorkflow mocks base method.
+func (m *MockClient) GetTestWorkflow(arg0 context.Context, arg1, arg2 string) (*testkube.TestWorkflow, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTestWorkflow", arg0, arg1, arg2)
+	ret0, _ := ret[0].(*testkube.TestWorkflow)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetTestWorkflow indicates an expected call of GetTestWorkflow.
+func (mr *MockClientMockRecorder) GetTestWorkflow(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTestWorkflow", reflect.TypeOf((*MockClient)(nil).GetTestWorkflow), arg0, arg1, arg2)
+}
+
+// GetTestWorkflowTemplate mocks base method.
+func (m *MockClient) GetTestWorkflowTemplate(arg0 context.Context, arg1, arg2 string) (*testkube.TestWorkflowTemplate, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTestWorkflowTemplate", arg0, arg1, arg2)
+	ret0, _ := ret[0].(*testkube.TestWorkflowTemplate)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetTestWorkflowTemplate indicates an expected call of GetTestWorkflowTemplate.
+func (mr *MockClientMockRecorder) GetTestWorkflowTemplate(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTestWorkflowTemplate", reflect.TypeOf((*MockClient)(nil).GetTestWorkflowTemplate), arg0, arg1, arg2)
+}
+
 // InitExecution mocks base method.
 func (m *MockClient) InitExecution(arg0 context.Context, arg1, arg2 string, arg3 []testkube.TestWorkflowSignature, arg4 string) error {
 	m.ctrl.T.Helper()
@@ -164,6 +280,64 @@ func (m *MockClient) IsSuperAgent() bool {
 func (mr *MockClientMockRecorder) IsSuperAgent() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsSuperAgent", reflect.TypeOf((*MockClient)(nil).IsSuperAgent))
+}
+
+// ListTestWorkflowLabels mocks base method.
+func (m *MockClient) ListTestWorkflowLabels(arg0 context.Context, arg1 string) (map[string][]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListTestWorkflowLabels", arg0, arg1)
+	ret0, _ := ret[0].(map[string][]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListTestWorkflowLabels indicates an expected call of ListTestWorkflowLabels.
+func (mr *MockClientMockRecorder) ListTestWorkflowLabels(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTestWorkflowLabels", reflect.TypeOf((*MockClient)(nil).ListTestWorkflowLabels), arg0, arg1)
+}
+
+// ListTestWorkflowTemplateLabels mocks base method.
+func (m *MockClient) ListTestWorkflowTemplateLabels(arg0 context.Context, arg1 string) (map[string][]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListTestWorkflowTemplateLabels", arg0, arg1)
+	ret0, _ := ret[0].(map[string][]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListTestWorkflowTemplateLabels indicates an expected call of ListTestWorkflowTemplateLabels.
+func (mr *MockClientMockRecorder) ListTestWorkflowTemplateLabels(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTestWorkflowTemplateLabels", reflect.TypeOf((*MockClient)(nil).ListTestWorkflowTemplateLabels), arg0, arg1)
+}
+
+// ListTestWorkflowTemplates mocks base method.
+func (m *MockClient) ListTestWorkflowTemplates(arg0 context.Context, arg1 string, arg2 ListTestWorkflowTemplateOptions) TestWorkflowTemplatesReader {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListTestWorkflowTemplates", arg0, arg1, arg2)
+	ret0, _ := ret[0].(TestWorkflowTemplatesReader)
+	return ret0
+}
+
+// ListTestWorkflowTemplates indicates an expected call of ListTestWorkflowTemplates.
+func (mr *MockClientMockRecorder) ListTestWorkflowTemplates(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTestWorkflowTemplates", reflect.TypeOf((*MockClient)(nil).ListTestWorkflowTemplates), arg0, arg1, arg2)
+}
+
+// ListTestWorkflows mocks base method.
+func (m *MockClient) ListTestWorkflows(arg0 context.Context, arg1 string, arg2 ListTestWorkflowOptions) TestWorkflowsReader {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListTestWorkflows", arg0, arg1, arg2)
+	ret0, _ := ret[0].(TestWorkflowsReader)
+	return ret0
+}
+
+// ListTestWorkflows indicates an expected call of ListTestWorkflows.
+func (mr *MockClientMockRecorder) ListTestWorkflows(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTestWorkflows", reflect.TypeOf((*MockClient)(nil).ListTestWorkflows), arg0, arg1, arg2)
 }
 
 // ObtainExecution mocks base method.
@@ -308,6 +482,34 @@ func (m *MockClient) UpdateExecutionResult(arg0 context.Context, arg1, arg2 stri
 func (mr *MockClientMockRecorder) UpdateExecutionResult(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateExecutionResult", reflect.TypeOf((*MockClient)(nil).UpdateExecutionResult), arg0, arg1, arg2, arg3)
+}
+
+// UpdateTestWorkflow mocks base method.
+func (m *MockClient) UpdateTestWorkflow(arg0 context.Context, arg1 string, arg2 testkube.TestWorkflow) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateTestWorkflow", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateTestWorkflow indicates an expected call of UpdateTestWorkflow.
+func (mr *MockClientMockRecorder) UpdateTestWorkflow(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateTestWorkflow", reflect.TypeOf((*MockClient)(nil).UpdateTestWorkflow), arg0, arg1, arg2)
+}
+
+// UpdateTestWorkflowTemplate mocks base method.
+func (m *MockClient) UpdateTestWorkflowTemplate(arg0 context.Context, arg1 string, arg2 testkube.TestWorkflowTemplate) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateTestWorkflowTemplate", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateTestWorkflowTemplate indicates an expected call of UpdateTestWorkflowTemplate.
+func (mr *MockClientMockRecorder) UpdateTestWorkflowTemplate(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateTestWorkflowTemplate", reflect.TypeOf((*MockClient)(nil).UpdateTestWorkflowTemplate), arg0, arg1, arg2)
 }
 
 // WatchRunnerRequests mocks base method.

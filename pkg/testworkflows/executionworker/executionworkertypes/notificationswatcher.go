@@ -11,6 +11,7 @@ func NewNotificationsWatcher() WritableNotificationsWatcher {
 
 type NotificationsWatcher interface {
 	Channel() <-chan *testkube.TestWorkflowExecutionNotification
+	All() ([]*testkube.TestWorkflowExecutionNotification, error)
 	Err() error
 }
 
@@ -26,6 +27,7 @@ func NewStatusNotificationsWatcher() WritableStatusNotificationsWatcher {
 
 type StatusNotificationsWatcher interface {
 	Channel() <-chan StatusNotification
+	All() ([]StatusNotification, error)
 	Err() error
 }
 

@@ -167,9 +167,18 @@ func main() {
 	subscriptionChecker, err := checktcl.NewSubscriptionChecker(ctx, proContext, grpcClient)
 	commons.ExitOnError("Failed creating subscription checker", err)
 
+	// Build new client
+	agentId := cfg.TestkubeProAgentID
+	if agentId == "" {
+		agentId = proContext.EnvID
+	}
+	client := controlplaneclient.New(grpcClient, proContext, agentId, cfg.TestkubeProAPIKey, controlplaneclient.ClientOptions{
+		StorageSkipVerify: cfg.StorageSkipVerify,
+	})
+
 	if proContext.TestWorkflowStorage && cfg.FeatureTestWorkflowCloudStorage {
-		testWorkflowsClient = testworkflowclient.NewCloudTestWorkflowClient(grpcClient, cfg.TestkubeProAPIKey)
-		testWorkflowTemplatesClient = testworkflowtemplateclient.NewCloudTestWorkflowTemplateClient(grpcClient, cfg.TestkubeProAPIKey)
+		testWorkflowsClient = testworkflowclient.NewCloudTestWorkflowClient(client)
+		testWorkflowTemplatesClient = testworkflowtemplateclient.NewCloudTestWorkflowTemplateClient(client)
 	} else {
 		testWorkflowsClient = testworkflowclient.NewKubernetesTestWorkflowClient(kubeClient, cfg.TestkubeNamespace)
 		testWorkflowTemplatesClient = testworkflowtemplateclient.NewKubernetesTestWorkflowTemplateClient(kubeClient, cfg.TestkubeNamespace)
@@ -184,15 +193,6 @@ func main() {
 		commons.ExitOnError("Subscription checking", err)
 		serviceAccountNames = schedulertcl.GetServiceAccountNamesFromConfig(serviceAccountNames, cfg.TestkubeExecutionNamespaces)
 	}
-
-	// Build new client
-	agentId := cfg.TestkubeProAgentID
-	if agentId == "" {
-		agentId = proContext.EnvID
-	}
-	client := controlplaneclient.New(grpcClient, proContext, agentId, cfg.TestkubeProAPIKey, controlplaneclient.ClientOptions{
-		StorageSkipVerify: cfg.StorageSkipVerify,
-	})
 
 	var deprecatedSystem *services.DeprecatedSystem
 	if !cfg.DisableDeprecatedTests {
