@@ -32,7 +32,7 @@ target "tw-init" {
   inherits = ["testworkflow-init-meta"]
   context="."
   dockerfile = "build/new/tw-init.Dockerfile"
-  platforms = ["linux/arm64"]
+  platforms = ["linux/arm64", "linux/amd64"]
   args = {
     BUSYBOX_IMAGE = "${BUSYBOX_IMAGE}"
     ALPINE_IMAGE = "${ALPINE_IMAGE}"
@@ -44,7 +44,7 @@ target "tw-toolkit" {
   inherits = ["testworkflow-toolkit-meta"]
   context="."
   dockerfile = "build/new/tw-toolkit.Dockerfile"
-  platforms = ["linux/arm64"]
+  platforms = ["linux/arm64", "linux/amd64"]
   args = {
     BUSYBOX_IMAGE = "${BUSYBOX_IMAGE}"
     ALPINE_IMAGE = "${ALPINE_IMAGE}"
