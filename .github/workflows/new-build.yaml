@@ -79,7 +79,7 @@ jobs:
             ${{ steps.tw-init.outputs.bake-file }}
           targets: api,tw-toolkit,tw-init
           provenance: mode=max
-          push: false
+          push: true
           sbom: true
         env:
           VERSION: ${{ fromJSON(steps.api-meta.outputs.json).labels['org.opencontainers.image.version'] }}
