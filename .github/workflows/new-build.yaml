@@ -1,10 +1,10 @@
 name: New Docker images builds and pushing for API and executors
 on:
   push:
-#    tags:
-#      - "v[0-9]+.[0-9]+.[0-9]+-"
-    branches:
-      - ci/add-builds-to-depot
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+-"
+#    branches:
+#      - ci/add-builds-to-depot
 env:
   ALPINE_IMAGE: alpine:3.20.3
   BUSYBOX_IMAGE: busybox:1.36.1-musl
@@ -22,8 +22,7 @@ jobs:
       - name: Set up Depot CLI
         uses: depot/setup-action@v1
 
-      - uses: sigstore/cosign-installer@v3.7.0
-      - uses: anchore/sbom-action/download-syft@v0.17.7
+ #     - uses: sigstore/cosign-installer@v3.7.0 #TODO: add cosign action
 
       - name: Login to DockerHub
         uses: docker/login-action@v3
