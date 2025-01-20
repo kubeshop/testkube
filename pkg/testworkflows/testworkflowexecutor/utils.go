@@ -191,9 +191,6 @@ func GetLegacyRunningContext(req *cloud.ScheduleRequest) (runningContext *testku
 			},
 		}
 	}
-	if req.User != nil {
-
-	}
 	return nil
 }
 
