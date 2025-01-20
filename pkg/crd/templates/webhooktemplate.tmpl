@@ -1,5 +1,5 @@
 apiVersion: executor.testkube.io/v1
-kind: Webhook
+kind: WebhookTemplate
 metadata:
   name: {{ .Name }}
   namespace: {{ .Namespace }}
@@ -81,8 +81,4 @@ spec:
       pattern: {{ $parameter.Pattern }}
     {{- end }}
   {{- end }}
-  {{- end }}
-  {{- if .WebhookTemplateRef }}
-  webhookTemplateRef:
-    name: {{ .WebhookTemplateRef.Name }}
   {{- end }}

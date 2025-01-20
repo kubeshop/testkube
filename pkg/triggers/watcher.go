@@ -47,8 +47,9 @@ type k8sInformers struct {
 	clusterEventInformers []coreinformerv1.EventInformer
 	configMapInformers    []coreinformerv1.ConfigMapInformer
 
-	testTriggerInformer testkubeinformerv1.TestTriggerInformer
-	webhookInformer     testkubeexecutorinformerv1.WebhookInformer
+	testTriggerInformer     testkubeinformerv1.TestTriggerInformer
+	webhookInformer         testkubeexecutorinformerv1.WebhookInformer
+	webhookTemplateInformer testkubeexecutorinformerv1.WebhookTemplateInformer
 
 	deprecated deprecatedK8sInformers
 }
@@ -83,6 +84,7 @@ func newK8sInformers(clientset kubernetes.Interface, testKubeClientset versioned
 		testKubeClientset, 0, externalversions.WithNamespace(testkubeNamespace))
 	k8sInformers.testTriggerInformer = testkubeInformerFactory.Tests().V1().TestTriggers()
 	k8sInformers.webhookInformer = testkubeInformerFactory.Executor().V1().Webhook()
+	k8sInformers.webhookTemplateInformer = testkubeInformerFactory.Executor().V1().WebhookTemplate()
 
 	k8sInformers.deprecated.testSuiteInformer = testkubeInformerFactory.Tests().V3().TestSuites()
 	k8sInformers.deprecated.testInformer = testkubeInformerFactory.Tests().V3().Tests()
@@ -168,6 +170,7 @@ func (s *Service) runInformers(ctx context.Context, stop <-chan struct{}) {
 
 	s.informers.testTriggerInformer.Informer().AddEventHandler(s.testTriggerEventHandler())
 	s.informers.webhookInformer.Informer().AddEventHandler(s.webhookEventHandler())
+	s.informers.webhookTemplateInformer.Informer().AddEventHandler(s.webhookTemplateEventHandler())
 
 	s.logger.Debugf("trigger service: starting pod informers")
 	for i := range s.informers.podInformers {
@@ -213,6 +216,8 @@ func (s *Service) runInformers(ctx context.Context, stop <-chan struct{}) {
 	go s.informers.testTriggerInformer.Informer().Run(stop)
 	s.logger.Debugf("trigger service: starting webhook informer")
 	go s.informers.webhookInformer.Informer().Run(stop)
+	s.logger.Debugf("trigger service: starting webhook template informer")
+	go s.informers.webhookTemplateInformer.Informer().Run(stop)
 
 	if s.deprecatedSystem != nil {
 		s.informers.deprecated.testSuiteInformer.Informer().AddEventHandler(s.testSuiteEventHandler())
@@ -1019,6 +1024,48 @@ func (s *Service) webhookEventHandler() cache.ResourceEventHandlerFuncs {
 				webhook.Namespace, webhook.Name,
 			)
 			s.eventsBus.Publish(testkube.NewEvent(testkube.EventDeleted, testkube.EventResourceWebhook, webhook.Name))
+		},
+	}
+}
+
+func (s *Service) webhookTemplateEventHandler() cache.ResourceEventHandlerFuncs {
+	return cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			webhookTemplate, ok := obj.(*executorv1.WebhookTemplate)
+			if !ok {
+				s.logger.Errorf("failed to process create webhook template event due to it being an unexpected type, received type %+v", obj)
+				return
+			}
+			s.logger.Debugf(
+				"trigger service: watcher component: emitting event for webhook template %s/%s",
+				webhookTemplate.Namespace, webhookTemplate.Name,
+			)
+			s.eventsBus.Publish(testkube.NewEvent(testkube.EventCreated, testkube.EventResourceWebhookTemplate, webhookTemplate.Name))
+		},
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			webhookTemplate, ok := newObj.(*executorv1.WebhookTemplate)
+			if !ok {
+				s.logger.Errorf("failed to process update webhook template event due to it being an unexpected type, received type %+v", newObj)
+				return
+			}
+
+			s.logger.Debugf(
+				"trigger service: watcher component: emitting event for updating webhook template %s/%s",
+				webhookTemplate.Namespace, webhookTemplate.Name,
+			)
+			s.eventsBus.Publish(testkube.NewEvent(testkube.EventUpdated, testkube.EventResourceWebhookTemplate, webhookTemplate.Name))
+		},
+		DeleteFunc: func(obj interface{}) {
+			webhookTemplate, ok := obj.(*executorv1.WebhookTemplate)
+			if !ok {
+				s.logger.Errorf("failed to process delete webhook template event due to it being an unexpected type, received type %+v", obj)
+				return
+			}
+			s.logger.Debugf(
+				"trigger service: watcher component: emitting event for deleting webhook template %s/%s",
+				webhookTemplate.Namespace, webhookTemplate.Name,
+			)
+			s.eventsBus.Publish(testkube.NewEvent(testkube.EventDeleted, testkube.EventResourceWebhookTemplate, webhookTemplate.Name))
 		},
 	}
 }

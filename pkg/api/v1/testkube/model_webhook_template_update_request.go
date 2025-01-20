@@ -9,8 +9,8 @@
  */
 package testkube
 
-// webhook update request body
-type WebhookUpdateRequest struct {
+// webhook template update request body
+type WebhookTemplateUpdateRequest struct {
 	Name      *string      `json:"name"`
 	Namespace *string      `json:"namespace,omitempty"`
 	Uri       *string      `json:"uri,omitempty"`
@@ -30,8 +30,7 @@ type WebhookUpdateRequest struct {
 	// webhook annotations
 	Annotations *map[string]string `json:"annotations,omitempty"`
 	// whether webhook is disabled
-	Disabled           *bool                          `json:"disabled,omitempty"`
-	Config             *map[string]WebhookConfigValue `json:"config,omitempty"`
-	Parameters         *[]WebhookParameterSchema      `json:"parameters,omitempty"`
-	WebhookTemplateRef **WebhookTemplateRef           `json:"webhookTemplateRef,omitempty"`
+	Disabled   *bool                          `json:"disabled,omitempty"`
+	Config     *map[string]WebhookConfigValue `json:"config,omitempty"`
+	Parameters *[]WebhookParameterSchema      `json:"parameters,omitempty"`
 }

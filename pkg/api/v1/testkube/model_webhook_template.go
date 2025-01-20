@@ -9,8 +9,8 @@
  */
 package testkube
 
-// webhook create request body
-type WebhookCreateRequest struct {
+// CRD based webhook data template
+type WebhookTemplate struct {
 	Name      string      `json:"name"`
 	Namespace string      `json:"namespace,omitempty"`
 	Uri       string      `json:"uri,omitempty"`
@@ -30,8 +30,7 @@ type WebhookCreateRequest struct {
 	// webhook annotations
 	Annotations map[string]string `json:"annotations,omitempty"`
 	// whether webhook is disabled
-	Disabled           bool                          `json:"disabled,omitempty"`
-	Config             map[string]WebhookConfigValue `json:"config,omitempty"`
-	Parameters         []WebhookParameterSchema      `json:"parameters,omitempty"`
-	WebhookTemplateRef *WebhookTemplateRef           `json:"webhookTemplateRef,omitempty"`
+	Disabled   bool                          `json:"disabled,omitempty"`
+	Config     map[string]WebhookConfigValue `json:"config,omitempty"`
+	Parameters []WebhookParameterSchema      `json:"parameters,omitempty"`
 }

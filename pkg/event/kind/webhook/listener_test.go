@@ -34,7 +34,7 @@ func TestWebhookListener_Notify(t *testing.T) {
 		svr := httptest.NewServer(testHandler)
 		defer svr.Close()
 
-		l := NewWebhookListener("l1", svr.URL, "", testEventTypes, "", "", nil, false, nil, nil, v1.NewMetrics(), nil, nil)
+		l := NewWebhookListener("l1", svr.URL, "", testEventTypes, "", "", nil, false, nil, nil, v1.NewMetrics(), nil, nil, nil)
 
 		// when
 		r := l.Notify(testkube.Event{
@@ -56,7 +56,7 @@ func TestWebhookListener_Notify(t *testing.T) {
 		svr := httptest.NewServer(testHandler)
 		defer svr.Close()
 
-		l := NewWebhookListener("l1", svr.URL, "", testEventTypes, "", "", nil, false, nil, nil, v1.NewMetrics(), nil, nil)
+		l := NewWebhookListener("l1", svr.URL, "", testEventTypes, "", "", nil, false, nil, nil, v1.NewMetrics(), nil, nil, nil)
 
 		// when
 		r := l.Notify(testkube.Event{
@@ -73,7 +73,7 @@ func TestWebhookListener_Notify(t *testing.T) {
 		t.Parallel()
 		// given
 
-		s := NewWebhookListener("l1", "http://baduri.badbadbad", "", testEventTypes, "", "", nil, false, nil, nil, v1.NewMetrics(), nil, nil)
+		s := NewWebhookListener("l1", "http://baduri.badbadbad", "", testEventTypes, "", "", nil, false, nil, nil, v1.NewMetrics(), nil, nil, nil)
 
 		// when
 		r := s.Notify(testkube.Event{
@@ -106,7 +106,7 @@ func TestWebhookListener_Notify(t *testing.T) {
 		svr := httptest.NewServer(testHandler)
 		defer svr.Close()
 
-		l := NewWebhookListener("l1", svr.URL, "", testEventTypes, "field", "", nil, false, nil, nil, v1.NewMetrics(), nil, nil)
+		l := NewWebhookListener("l1", svr.URL, "", testEventTypes, "field", "", nil, false, nil, nil, v1.NewMetrics(), nil, nil, nil)
 
 		// when
 		r := l.Notify(testkube.Event{
@@ -133,7 +133,7 @@ func TestWebhookListener_Notify(t *testing.T) {
 		defer svr.Close()
 
 		l := NewWebhookListener("l1", svr.URL, "", testEventTypes, "", "{\"id\": \"{{ .Id }}\"}",
-			map[string]string{"Content-Type": "application/json"}, false, nil, nil, v1.NewMetrics(), nil, nil)
+			map[string]string{"Content-Type": "application/json"}, false, nil, nil, v1.NewMetrics(), nil, nil, nil)
 
 		// when
 		r := l.Notify(testkube.Event{
@@ -150,7 +150,7 @@ func TestWebhookListener_Notify(t *testing.T) {
 		t.Parallel()
 		// given
 
-		s := NewWebhookListener("l1", "http://baduri.badbadbad", "", testEventTypes, "", "", nil, true, nil, nil, v1.NewMetrics(), nil, nil)
+		s := NewWebhookListener("l1", "http://baduri.badbadbad", "", testEventTypes, "", "", nil, true, nil, nil, v1.NewMetrics(), nil, nil, nil)
 
 		// when
 		r := s.Notify(testkube.Event{

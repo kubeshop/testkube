@@ -11,9 +11,9 @@ package testkube
 
 import "fmt"
 
-type Webhooks []Webhook
+type WebhookTemplates []WebhookTemplate
 
-func (list Webhooks) Table() (header []string, output [][]string) {
+func (list WebhookTemplates) Table() (header []string, output [][]string) {
 	header = []string{"Name", "URI", "Events", "Selector", "Labels", "Disabled"}
 
 	for _, e := range list {
@@ -30,23 +30,23 @@ func (list Webhooks) Table() (header []string, output [][]string) {
 	return
 }
 
-func (w Webhook) GetName() string {
+func (w WebhookTemplate) GetName() string {
 	return w.Name
 }
 
-func (w Webhook) GetNamespace() string {
+func (w WebhookTemplate) GetNamespace() string {
 	return w.Namespace
 }
 
-func (w Webhook) GetLabels() map[string]string {
+func (w WebhookTemplate) GetLabels() map[string]string {
 	return w.Labels
 }
 
-func (w Webhook) GetAnnotations() map[string]string {
+func (w WebhookTemplate) GetAnnotations() map[string]string {
 	return w.Annotations
 }
 
-func (w *Webhook) QuoteTextFields() {
+func (w *WebhookTemplate) QuoteTextFields() {
 	if w.PayloadTemplate != "" {
 		w.PayloadTemplate = fmt.Sprintf("%q", w.PayloadTemplate)
 	}
