@@ -232,6 +232,10 @@ func main() {
 		metrics,
 		configMapConfig,
 		client,
+		testworkflowconfig.ControlPlaneConfig{
+			DashboardUrl:   cfg.TestkubeDashboardURI,
+			CDEventsTarget: cfg.CDEventsTarget,
+		},
 		proContext,
 		executionWorker,
 		runner2.Options{
