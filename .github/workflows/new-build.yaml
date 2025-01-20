@@ -24,7 +24,6 @@ jobs:
         uses: depot/setup-action@v1
 
  #     - uses: sigstore/cosign-installer@v3.7.0
-      - uses: anchore/sbom-action/download-syft@v0.17.7
 
       - name: Login to DockerHub
         uses: docker/login-action@v3
@@ -38,10 +37,11 @@ jobs:
         with:
           bake-target: 'api-meta'
           images: |
-            kubeshop/testkube-api-server
+            kubeshop/testkube-sandbox
           tags: |
             type=ref,event=branch
             type=semver,pattern={{version}}
+            type=raw,value=api-server--{{branch}}-{{sha}}
 
       - name: Create Docker tags and metadata for tw-init
         id: tw-init
@@ -49,10 +49,11 @@ jobs:
         with:
           bake-target: 'tw-init'
           images: |
-            kubeshop/testkube-tw-init
+            kubeshop/testkube-sandbox
           tags: |
             type=ref,event=branch
             type=semver,pattern={{version}}
+            type=raw,value=testworkflow-init-{{branch}}-{{sha}}
 
       - name: Create Docker tags and metadata for tw-toolkit
         id: tw-toolkit
@@ -60,10 +61,11 @@ jobs:
         with:
           bake-target: 'tw-toolkit'
           images: |
-            kubeshop/testkube-tw-toolkit
+            kubeshop/testkube-sandbox
           tags: |
             type=ref,event=branch
             type=semver,pattern={{version}}
+            type=raw,value=testworkflow-toolkit-{{branch}}-{{sha}}
 
       - name: Build
         uses: depot/bake-action@v1
