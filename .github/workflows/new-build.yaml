@@ -3,8 +3,8 @@ on:
   push:
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+-"
-#    branches:
-#      - ci/add-builds-to-depot
+    branches:
+      - ci/add-builds-to-depot
 env:
   ALPINE_IMAGE: alpine:3.20.3
   BUSYBOX_IMAGE: busybox:1.36.1-musl
@@ -37,9 +37,11 @@ jobs:
           bake-target: 'api-meta'
           images: |
             kubeshop/testkube-api-server
+            kubeshop/testkube-sandbox
           tags: |
             type=ref,event=branch
             type=semver,pattern={{version}}
+            type=raw,value=api-server-{{branch}}-{{sha}}
 
       - name: Create Docker tags and metadata for tw-init
         id: tw-init
@@ -48,9 +50,11 @@ jobs:
           bake-target: 'tw-init'
           images: |
             kubeshop/testkube-tw-init
+            kubeshop/testkube-sandbox
           tags: |
             type=ref,event=branch
             type=semver,pattern={{version}}
+            type=raw,value=testworkflow-init-{{branch}}-{{sha}}
 
       - name: Create Docker tags and metadata for tw-toolkit
         id: tw-toolkit
@@ -59,9 +63,11 @@ jobs:
           bake-target: 'tw-toolkit'
           images: |
             kubeshop/testkube-tw-toolkit
+            kubeshop/testkube-sandbox
           tags: |
             type=ref,event=branch
             type=semver,pattern={{version}}
+            type=raw,value=testworkflow-toolkit-{{branch}}-{{sha}}
 
       - name: Build
         uses: depot/bake-action@v1
