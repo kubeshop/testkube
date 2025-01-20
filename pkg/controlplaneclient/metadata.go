@@ -4,12 +4,20 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
+const (
+	AgentIdMetadataName        = "agent-id"
+	AgentSecretKeyMetadataName = "api-key"
+	OrganizationIdMetadataName = "organization-id"
+	EnvironmentIdMetadataName  = "environment-id"
+	ExecutionIdMetadataName    = "execution-id"
+)
+
 type MD metadata.MD
 
 func (c *client) metadata() MD {
 	return MD{}.
 		SetAgentID(c.agentID).
-		SetAgentToken(c.agentToken).
+		SetSecretKey(c.agentToken).
 		SetExecutionID(c.opts.ExecutionID).
 		SetOrganizationID(c.proContext.OrgID).
 		SetEnvironmentID(c.proContext.EnvID)
@@ -20,21 +28,21 @@ func (m MD) SetAgentID(agentID string) MD {
 		m = make(MD)
 	}
 	if agentID == "" {
-		delete(m, "agent-id")
+		delete(m, AgentIdMetadataName)
 	} else {
-		m["agent-id"] = []string{agentID}
+		m[AgentIdMetadataName] = []string{agentID}
 	}
 	return m
 }
 
-func (m MD) SetAgentToken(agentToken string) MD {
+func (m MD) SetSecretKey(secretKey string) MD {
 	if m == nil {
 		m = make(MD)
 	}
-	if agentToken == "" {
-		delete(m, "api-key")
+	if secretKey == "" {
+		delete(m, AgentSecretKeyMetadataName)
 	} else {
-		m["api-key"] = []string{agentToken}
+		m[AgentSecretKeyMetadataName] = []string{secretKey}
 	}
 	return m
 }
@@ -44,9 +52,9 @@ func (m MD) SetOrganizationID(organizationID string) MD {
 		m = make(MD)
 	}
 	if organizationID == "" {
-		delete(m, "organization-id")
+		delete(m, OrganizationIdMetadataName)
 	} else {
-		m["organization-id"] = []string{organizationID}
+		m[OrganizationIdMetadataName] = []string{organizationID}
 	}
 	return m
 }
@@ -56,9 +64,9 @@ func (m MD) SetEnvironmentID(environmentID string) MD {
 		m = make(MD)
 	}
 	if environmentID == "" {
-		delete(m, "environment-id")
+		delete(m, EnvironmentIdMetadataName)
 	} else {
-		m["environment-id"] = []string{environmentID}
+		m[EnvironmentIdMetadataName] = []string{environmentID}
 	}
 	return m
 }
@@ -68,9 +76,9 @@ func (m MD) SetExecutionID(executionID string) MD {
 		m = make(MD)
 	}
 	if executionID == "" {
-		delete(m, "execution-id")
+		delete(m, ExecutionIdMetadataName)
 	} else {
-		m["execution-id"] = []string{executionID}
+		m[ExecutionIdMetadataName] = []string{executionID}
 	}
 	return m
 }

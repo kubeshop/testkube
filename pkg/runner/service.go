@@ -13,6 +13,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/log"
 	configrepo "github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 )
 
 type Options struct {
@@ -28,14 +29,15 @@ type Options struct {
 }
 
 type service struct {
-	runnerId      string
-	logger        *zap.SugaredLogger
-	eventsEmitter event.Interface
-	client        controlplaneclient.Client
-	proContext    config.ProContext
-	worker        executionworkertypes.Worker
-	runner        Runner
-	opts          Options
+	runnerId           string
+	logger             *zap.SugaredLogger
+	eventsEmitter      event.Interface
+	client             controlplaneclient.Client
+	controlPlaneConfig testworkflowconfig.ControlPlaneConfig
+	proContext         config.ProContext
+	worker             executionworkertypes.Worker
+	runner             Runner
+	opts               Options
 }
 
 type Service interface {
@@ -50,18 +52,20 @@ func NewService(
 	metricsClient metrics.Metrics,
 	configClient configrepo.Repository,
 	client controlplaneclient.Client,
+	controlPlaneConfig testworkflowconfig.ControlPlaneConfig,
 	proContext config.ProContext,
 	executionWorker executionworkertypes.Worker,
 	opts Options,
 ) Service {
 	return &service{
-		runnerId:      runnerId,
-		logger:        logger,
-		eventsEmitter: eventsEmitter,
-		client:        client,
-		proContext:    proContext,
-		worker:        executionWorker,
-		opts:          opts,
+		runnerId:           runnerId,
+		logger:             logger,
+		eventsEmitter:      eventsEmitter,
+		client:             client,
+		controlPlaneConfig: controlPlaneConfig,
+		proContext:         proContext,
+		worker:             executionWorker,
+		opts:               opts,
 		runner: New(
 			runnerId,
 			executionWorker,
@@ -103,6 +107,7 @@ func (s *service) start(ctx context.Context) (err error) {
 		s.logger,
 		s.eventsEmitter,
 		s.client,
+		s.controlPlaneConfig, // TODO: fetch it from the control plane?
 		s.proContext,
 		s.runnerId,
 		s.proContext.OrgID,

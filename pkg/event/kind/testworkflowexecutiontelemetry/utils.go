@@ -10,6 +10,13 @@ import (
 	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
 )
 
+type telemetryWorkflowDataSourceType string
+
+const (
+	telemetryWorkflowDataSourceGitType   telemetryWorkflowDataSourceType = "git"
+	telemetryWorkflowDataSourceFilesType telemetryWorkflowDataSourceType = "files"
+)
+
 // GetImage returns the image of the container
 func GetImage(container *testworkflowsv1.ContainerConfig) string {
 	if container != nil {
@@ -73,9 +80,9 @@ func IsKubeshopGitURI(content *testworkflowsv1.Content) bool {
 func GetDataSource(content *testworkflowsv1.Content) string {
 	if content != nil {
 		if content.Git != nil {
-			return "git"
+			return string(telemetryWorkflowDataSourceGitType)
 		} else if len(content.Files) != 0 {
-			return "files"
+			return string(telemetryWorkflowDataSourceFilesType)
 		}
 	}
 	return ""

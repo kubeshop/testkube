@@ -202,7 +202,10 @@ func (e *executor) executeDirect(ctx context.Context, environmentId string, req 
 			}
 
 			// Start the execution
-			_ = e.Start(environmentId, execution, sensitiveDataHandler.Get(execution.Id))
+			err = e.Start(environmentId, execution, sensitiveDataHandler.Get(execution.Id))
+			if err != nil {
+				log2.DefaultLogger.Errorw("failed to start execution", "executionId", execution.Id, "error", err)
+			}
 		}
 	}()
 
@@ -246,14 +249,9 @@ func (e *executor) Start(environmentId string, execution *testkube.TestWorkflowE
 		if err != nil {
 			log2.DefaultLogger.Errorw("failed to run and update execution", "executionId", execution.Id, "error", err)
 		}
-		// TODO: Don't emit?
-		//e.emitter.Notify(testkube.NewEventStartTestWorkflow(execution)) // TODO: delete - sent from Cloud
 		e.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(execution))
 		return nil
 	}
-
-	// Inform about execution start
-	//e.emitter.Notify(testkube.NewEventStartTestWorkflow(execution)) // TODO: delete - sent from Cloud
 
 	// Apply the known d ata to temporary object.
 	execution.Namespace = result.Namespace

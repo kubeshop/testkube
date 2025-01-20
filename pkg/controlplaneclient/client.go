@@ -7,6 +7,11 @@ import (
 	"github.com/kubeshop/testkube/pkg/cloud"
 )
 
+const (
+	AgentSuperAgentPrefix = "tkcagnt"
+	AgentRunnerPrefix     = "tkcrun"
+)
+
 var _ Client = &client{}
 
 type client struct {
@@ -45,11 +50,11 @@ func New(grpcClient cloud.TestKubeCloudAPIClient, proContext config.ProContext, 
 }
 
 func (c *client) IsSuperAgent() bool {
-	return strings.HasPrefix(c.agentToken, "tkcagnt_")
+	return strings.HasPrefix(c.agentToken, AgentSuperAgentPrefix+"_")
 }
 
 func (c *client) IsRunner() bool {
-	return strings.HasPrefix(c.agentToken, "tkcrun_")
+	return strings.HasPrefix(c.agentToken, AgentRunnerPrefix+"_")
 }
 
 func (c *client) IsLegacy() bool {

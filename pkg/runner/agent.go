@@ -25,6 +25,7 @@ import (
 const (
 	saveResultRetryMaxAttempts = 100
 	saveResultRetryBaseDelay   = 300 * time.Millisecond
+	agentLoopReconnectionDelay = 3 * time.Second
 )
 
 type agentLoop struct {
@@ -34,6 +35,7 @@ type agentLoop struct {
 	emitter             event.Interface
 	client              controlplaneclient.Client
 	proContext          config.ProContext
+	controlPlaneConfig  testworkflowconfig.ControlPlaneConfig
 	agentId             string
 	organizationId      string
 	legacyEnvironmentId string
@@ -51,6 +53,7 @@ func newAgentLoop(
 	logger *zap.SugaredLogger,
 	emitter event.Interface,
 	client controlplaneclient.Client,
+	controlPlaneConfig testworkflowconfig.ControlPlaneConfig,
 	proContext config.ProContext,
 	agentId string,
 	organizationId string,
@@ -64,6 +67,7 @@ func newAgentLoop(
 		emitter:              emitter,
 		client:               client,
 		proContext:           proContext,
+		controlPlaneConfig:   controlPlaneConfig,
 		agentId:              agentId,
 		organizationId:       organizationId,
 		legacyEnvironmentId:  legacyEnvironmentId,
@@ -81,7 +85,7 @@ func (a *agentLoop) Start(ctx context.Context) error {
 		a.logger.Errorw("runner agent connection failed, reconnecting", "error", err)
 
 		// TODO: some smart back off strategy?
-		time.Sleep(5 * time.Second)
+		time.Sleep(agentLoopReconnectionDelay)
 	}
 }
 
@@ -112,7 +116,6 @@ func (a *agentLoop) finishExecution(ctx context.Context, environmentId string, e
 		}
 		if !a.newExecutionsEnabled {
 			// Emit events locally if the Control Plane doesn't support that
-			//a.emitter.Notify(testkube.NewEventStartTestWorkflow(execution)) // TODO: delete - sent from Cloud
 			if execution.Result.IsPassed() {
 				a.emitter.Notify(testkube.NewEventEndTestWorkflowSuccess(execution))
 			} else if execution.Result.IsAborted() {
@@ -252,13 +255,6 @@ func (a *agentLoop) runTestWorkflow(environmentId string, executionId string, ex
 		return errors2.Wrapf(err, "failed to get execution details '%s/%s' from Control Plane", environmentId, executionId)
 	}
 
-	// TODO: Pass it there?
-	controlPlaneConfig := testworkflowconfig.ControlPlaneConfig{
-		// TODO
-		//DashboardUrl:   e.dashboardURI,
-		//CDEventsTarget: e.cdEventsTarget,
-	}
-
 	parentIds := ""
 	if execution.RunningContext != nil && execution.RunningContext.Actor != nil {
 		parentIds = execution.RunningContext.Actor.ExecutionPath
@@ -278,7 +274,7 @@ func (a *agentLoop) runTestWorkflow(environmentId string, executionId string, ex
 			ParentIds:       parentIds,
 		},
 		Workflow:     testworkflowmappers.MapTestWorkflowAPIToKube(*execution.ResolvedWorkflow),
-		ControlPlane: controlPlaneConfig,
+		ControlPlane: a.controlPlaneConfig, // TODO: fetch it from the control plane?
 	})
 
 	// TODO: define "revoke" error by runner (?)
@@ -292,9 +288,6 @@ func (a *agentLoop) runTestWorkflow(environmentId string, executionId string, ex
 		}
 		return nil
 	}
-
-	// Inform about execution start
-	//e.emitter.Notify(testkube.NewEventStartTestWorkflow(execution)) // TODO: delete - sent from Cloud
 
 	// Apply the known data to temporary object.
 	execution.Namespace = result.Namespace

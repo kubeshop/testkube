@@ -12,6 +12,10 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowresolver"
 )
 
+const (
+	TestWorkflowTemplateFetchParallelism = 10
+)
+
 type testWorkflowTemplateFetcher struct {
 	client        testworkflowtemplateclient.TestWorkflowTemplateClient
 	environmentId string
@@ -51,7 +55,7 @@ func (r *testWorkflowTemplateFetcher) PrefetchMany(namesSet map[string]struct{})
 
 	// Fetch all the requested templates
 	var g errgroup.Group
-	g.SetLimit(10)
+	g.SetLimit(TestWorkflowTemplateFetchParallelism)
 	for name := range internalNames {
 		func(n string) {
 			g.Go(func() error {
@@ -78,7 +82,7 @@ func (r *testWorkflowTemplateFetcher) GetMany(names map[string]struct{}) (map[st
 
 	// Fetch all the requested templates
 	var g errgroup.Group
-	g.SetLimit(10)
+	g.SetLimit(TestWorkflowTemplateFetchParallelism)
 	for name := range names {
 		func(n string) {
 			g.Go(func() error {

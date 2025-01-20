@@ -14,6 +14,10 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowresolver"
 )
 
+const (
+	TestWorkflowFetchParallelism = 10
+)
+
 type testWorkflowFetcher struct {
 	client           testworkflowclient.TestWorkflowClient
 	environmentId    string
@@ -72,7 +76,7 @@ func (r *testWorkflowFetcher) PrefetchMany(selectors []*cloud.ScheduleResourceSe
 
 	// Fetch firstly by the label selector, as it is more likely to conflict with others
 	g := errgroup.Group{}
-	g.SetLimit(10)
+	g.SetLimit(TestWorkflowFetchParallelism)
 	for i := range labels {
 		func(m map[string]string) {
 			g.Go(func() error {
@@ -87,7 +91,7 @@ func (r *testWorkflowFetcher) PrefetchMany(selectors []*cloud.ScheduleResourceSe
 
 	// Fetch the rest by name
 	g = errgroup.Group{}
-	g.SetLimit(10)
+	g.SetLimit(TestWorkflowFetchParallelism)
 	for name := range names {
 		func(n string) {
 			g.Go(func() error {

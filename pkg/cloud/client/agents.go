@@ -6,6 +6,10 @@ import (
 	"github.com/kubeshop/testkube/pkg/http"
 )
 
+const (
+	AgentRunnerType = "run"
+)
+
 func NewAgentsClient(baseUrl, token, orgID string) *AgentsClient {
 	return &AgentsClient{
 		RESTClient: RESTClient[Agent]{
@@ -38,7 +42,7 @@ func (c AgentsClient) CreateRunner(envId string, name string, labels map[string]
 	agent := Agent{
 		EnvironmentIDs: []string{envId},
 		Name:           name,
-		Type:           "run",
+		Type:           AgentRunnerType,
 		Labels:         labels,
 	}
 	return c.RESTClient.Create(agent)
