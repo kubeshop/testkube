@@ -27,5 +27,12 @@ func diffDeployments(old, new *apps_v1.Deployment) []testtrigger.Cause {
 		}
 		break
 	}
+	if old.Generation != new.Generation {
+		causes = append(causes, testtrigger.CauseDeploymentGenerationModified)
+	}
+	if old.ResourceVersion != new.ResourceVersion {
+		causes = append(causes, testtrigger.CauseDeploymentResourceModified)
+	}
+
 	return causes
 }
