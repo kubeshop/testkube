@@ -1,8 +1,6 @@
 package triggers
 
 import (
-	"maps"
-
 	"github.com/google/go-cmp/cmp"
 	apps_v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -41,30 +39,23 @@ func diffDeployments(old, new *apps_v1.Deployment) []testtrigger.Cause {
 
 func diffContainers(old, new []corev1.Container) []testtrigger.Cause {
 	var causes []testtrigger.Cause
-	oldNames := make(map[string]struct{})
+
 	oldContainers := make(map[string]corev1.Container)
 	for _, o := range old {
-		oldNames[o.Name] = struct{}{}
 		oldContainers[o.Name] = o
 	}
 
-	newNames := make(map[string]struct{})
 	newContainers := make(map[string]corev1.Container)
 	for _, n := range new {
-		newNames[n.Name] = struct{}{}
 		newContainers[n.Name] = n
 	}
 
-	if !maps.Equal(oldNames, newNames) {
+	if !cmp.Equal(oldContainers, newContainers) {
 		causes = append(causes, testtrigger.CauseDeploymentContainersModified)
 	}
 
 	for name, newContainer := range newContainers {
 		if oldContainer, ok := oldContainers[name]; ok {
-			if !cmp.Equal(oldContainer, newContainer) {
-				causes = append(causes, testtrigger.CauseDeploymentContainersModified)
-			}
-
 			if oldContainer.Image != newContainer.Image {
 				causes = append(causes, testtrigger.CauseDeploymentImageUpdate)
 			}
