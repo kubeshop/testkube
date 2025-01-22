@@ -138,15 +138,15 @@ func (mr *MockTestWorkflowTemplateClientMockRecorder) Update(arg0, arg1, arg2 in
 }
 
 // WatchUpdates mocks base method.
-func (m *MockTestWorkflowTemplateClient) WatchUpdates(arg0 context.Context, arg1 string) Watcher {
+func (m *MockTestWorkflowTemplateClient) WatchUpdates(arg0 context.Context, arg1 string, arg2 bool) Watcher {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WatchUpdates", arg0, arg1)
+	ret := m.ctrl.Call(m, "WatchUpdates", arg0, arg1, arg2)
 	ret0, _ := ret[0].(Watcher)
 	return ret0
 }
 
 // WatchUpdates indicates an expected call of WatchUpdates.
-func (mr *MockTestWorkflowTemplateClientMockRecorder) WatchUpdates(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockTestWorkflowTemplateClientMockRecorder) WatchUpdates(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WatchUpdates", reflect.TypeOf((*MockTestWorkflowTemplateClient)(nil).WatchUpdates), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WatchUpdates", reflect.TypeOf((*MockTestWorkflowTemplateClient)(nil).WatchUpdates), arg0, arg1, arg2)
 }

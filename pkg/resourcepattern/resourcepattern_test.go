@@ -49,7 +49,7 @@ func TestResourcePattern_ParseGenericFilter(t *testing.T) {
 	assert.True(t, ok1)
 	assert.Equal(t, "something", r1.Name)
 	assert.Equal(t, "something", r1.Generic["namespace"])
-	assert.Equal(t, map[string]string{"cluster": "hello"}, r1.Generic)
+	assert.Equal(t, map[string]string{"cluster": "hello", "namespace": "something"}, r1.Generic)
 	assert.False(t, ok2)
 	assert.Nil(t, r2)
 }
