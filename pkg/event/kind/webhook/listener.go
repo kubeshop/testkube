@@ -164,7 +164,14 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 	body := bytes.NewBuffer([]byte{})
 	log := l.Log.With(event.Log()...)
 
-	var err error
+	uri, err := l.processTemplate("uri", l.Uri, event)
+	if err != nil {
+		err = errors.Wrap(err, "webhook uri encode error")
+		log.Errorw("webhook uri encode error", "error", err)
+		result = testkube.NewFailedEventResult(event.Id, err)
+		return
+	}
+
 	if l.payloadTemplate != "" {
 		var data []byte
 		data, err = l.processTemplate("payload", l.payloadTemplate, event)
@@ -192,13 +199,7 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 		return
 	}
 
-	data, err := l.processTemplate("uri", l.Uri, event)
-	if err != nil {
-		result = testkube.NewFailedEventResult(event.Id, err)
-		return
-	}
-
-	request, err := http.NewRequest(http.MethodPost, string(data), body)
+	request, err := http.NewRequest(http.MethodPost, string(uri), body)
 	if err != nil {
 		log.Errorw("webhook request creating error", "error", err)
 		result = testkube.NewFailedEventResult(event.Id, err)
@@ -209,7 +210,7 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 	for key, value := range l.headers {
 		values := []*string{&key, &value}
 		for i := range values {
-			data, err = l.processTemplate("header", *values[i], event)
+			data, err := l.processTemplate("header", *values[i], event)
 			if err != nil {
 				result = testkube.NewFailedEventResult(event.Id, err)
 				return
@@ -229,7 +230,7 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 	}
 	defer resp.Body.Close()
 
-	data, err = io.ReadAll(resp.Body)
+	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Errorw("webhook read response error", "error", err)
 		result = testkube.NewFailedEventResult(event.Id, err)
