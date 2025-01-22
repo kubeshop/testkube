@@ -292,6 +292,7 @@ func main() {
 	// Initialize event handlers
 	websocketLoader := ws.NewWebsocketLoader()
 	if !cfg.DisableWebhooks {
+		secretClient := secret.NewClientFor(clientset, cfg.TestkubeNamespace)
 		eventsEmitter.Loader.Register(webhook.NewWebhookLoader(log.DefaultLogger, webhooksClient, webhookTemplatesClient, deprecatedClients, deprecatedRepositories,
 			testWorkflowResultsRepository, secretClient, metrics, &proContext, envs))
 	}
