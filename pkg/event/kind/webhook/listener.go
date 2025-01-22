@@ -166,8 +166,7 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 
 	uri, err := l.processTemplate("uri", l.Uri, event)
 	if err != nil {
-		err = errors.Wrap(err, "webhook uri encode error")
-		log.Errorw("webhook uri encode error", "error", err)
+		log.Errorw("uri template processing error", "error", err)
 		result = testkube.NewFailedEventResult(event.Id, err)
 		return
 	}
@@ -176,6 +175,7 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 		var data []byte
 		data, err = l.processTemplate("payload", l.payloadTemplate, event)
 		if err != nil {
+			log.Errorw("payload template processing error", "error", err)
 			result = testkube.NewFailedEventResult(event.Id, err)
 			return
 		}
@@ -183,8 +183,9 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 		_, err = body.Write(data)
 	} else {
 		// clean envs if not requested explicitly by payload template
-		event.Envs = nil
-		err = json.NewEncoder(body).Encode(event)
+		cleanEvent := event
+		cleanEvent.Envs = nil
+		err = json.NewEncoder(body).Encode(cleanEvent)
 		if err == nil && l.payloadObjectField != "" {
 			data := map[string]string{l.payloadObjectField: body.String()}
 			body.Reset()
@@ -212,6 +213,7 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 		for i := range values {
 			data, err := l.processTemplate("header", *values[i], event)
 			if err != nil {
+				log.Errorw("header template processing error", "error", err)
 				result = testkube.NewFailedEventResult(event.Id, err)
 				return
 			}
