@@ -42,7 +42,7 @@ require (
 	github.com/keygen-sh/jsonapi-go v1.2.1
 	github.com/keygen-sh/keygen-go/v3 v3.2.0
 	github.com/kubepug/kubepug v1.7.1
-	github.com/kubeshop/testkube-operator v1.17.55-0.20250121112817-d50f4e2d2912
+	github.com/kubeshop/testkube-operator v1.17.55-0.20250122143845-e35b2034b520
 	github.com/minio/minio-go/v7 v7.0.66
 	github.com/montanaflynn/stats v0.7.1
 	github.com/moogar0880/problems v0.1.1
