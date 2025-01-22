@@ -247,7 +247,7 @@ func NewDevBoxCommand() *cobra.Command {
 					//fmt.Printf("    %s %s\n", runner.Name, color.Gray.Render(fmt.Sprintf("(%s / %s)", runner.ID, runner.SecretKey)))
 					//runnersData = append(runnersData, *runner)
 					fmt.Printf("    %s %s\n", "superagent", color.Gray.Render(fmt.Sprintf("(%s / %s)", env.Id, env.AgentToken)))
-					gitopsData = append(runnersData, *cloud.SuperAgent(env))
+					gitopsData = append(gitopsData, *cloud.SuperAgent(env))
 				}
 			}
 

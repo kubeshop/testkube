@@ -342,7 +342,9 @@ func main() {
 					watcher := testWorkflowsCloudStorage.Watch(ctx)
 					for obj := range watcher.Channel() {
 						err := testWorkflowsKubernetesStorage.Process(ctx, obj)
-						if err != nil {
+						if err == nil {
+							log.DefaultLogger.Infow("synced TestWorkflow from Control Plane in Kubernetes", "name", obj.Resource.Name, "error", err)
+						} else {
 							log.DefaultLogger.Errorw("failed to include TestWorkflow in Kubernetes", "error", err)
 						}
 					}
@@ -363,7 +365,9 @@ func main() {
 					watcher := testWorkflowTemplatesCloudStorage.Watch(ctx)
 					for obj := range watcher.Channel() {
 						err := testWorkflowTemplatesKubernetesStorage.Process(ctx, obj)
-						if err != nil {
+						if err == nil {
+							log.DefaultLogger.Infow("synced TestWorkflowTemplate from Control Plane in Kubernetes", "name", obj.Resource.Name, "error", err)
+						} else {
 							log.DefaultLogger.Errorw("failed to include TestWorkflowTemplate in Kubernetes", "error", err)
 						}
 					}
@@ -386,7 +390,9 @@ func main() {
 					watcher := testWorkflowsKubernetesStorage.Watch(ctx)
 					for obj := range watcher.Channel() {
 						err := testWorkflowsCloudStorage.Process(ctx, obj)
-						if err != nil {
+						if err == nil {
+							log.DefaultLogger.Infow("synced TestWorkflow from Kubernetes into Control Plane", "name", obj.Resource.Name, "error", err)
+						} else {
 							log.DefaultLogger.Errorw("failed to include TestWorkflow in Control Plane", "error", err)
 						}
 					}
@@ -407,7 +413,9 @@ func main() {
 					watcher := testWorkflowTemplatesKubernetesStorage.Watch(ctx)
 					for obj := range watcher.Channel() {
 						err := testWorkflowTemplatesCloudStorage.Process(ctx, obj)
-						if err != nil {
+						if err == nil {
+							log.DefaultLogger.Infow("synced TestWorkflowTemplate from Kubernetes into Control Plane", "name", obj.Resource.Name, "error", err)
+						} else {
 							log.DefaultLogger.Errorw("failed to include TestWorkflowTemplate in Control Plane", "error", err)
 						}
 					}
