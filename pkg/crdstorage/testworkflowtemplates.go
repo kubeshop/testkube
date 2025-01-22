@@ -51,7 +51,7 @@ func (s *testWorkflowTemplatesStorage) Process(ctx context.Context, event Event[
 	case EventTypeCreate:
 		// Avoid processing when there is no difference
 		current, err := s.client.Get(ctx, s.environmentId, name)
-		if err == nil && current.Equals(&event.Resource) {
+		if err == nil && (current.Equals(&event.Resource) || (!event.Timestamp.IsZero() && !current.Updated.Before(event.Timestamp))) {
 			return nil
 		}
 		if current != nil {
@@ -61,11 +61,19 @@ func (s *testWorkflowTemplatesStorage) Process(ctx context.Context, event Event[
 	case EventTypeUpdate:
 		// Avoid processing when there is no difference
 		current, err := s.client.Get(ctx, s.environmentId, name)
-		if err == nil && current.Equals(&event.Resource) {
+		if err == nil && (current.Equals(&event.Resource) || (!event.Timestamp.IsZero() && !current.Updated.Before(event.Timestamp))) {
 			return nil
+		}
+		if err != nil {
+			return s.client.Create(ctx, s.environmentId, event.Resource)
 		}
 		return s.client.Update(ctx, s.environmentId, event.Resource)
 	case EventTypeDelete:
+		// Avoid processing when there is no difference, or we have newer result
+		current, err := s.client.Get(ctx, s.environmentId, name)
+		if err == nil && (!event.Timestamp.IsZero() && !current.Updated.Before(event.Timestamp)) {
+			return nil
+		}
 		return s.client.Delete(ctx, s.environmentId, name)
 	default:
 		return fmt.Errorf("unknown event type: %s", event.Type)

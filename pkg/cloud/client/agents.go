@@ -8,6 +8,7 @@ import (
 
 const (
 	AgentRunnerType = "run"
+	AgentGitOpsType = "sync"
 )
 
 func NewAgentsClient(baseUrl, token, orgID string) *AgentsClient {
@@ -43,6 +44,16 @@ func (c AgentsClient) CreateRunner(envId string, name string, labels map[string]
 		EnvironmentIDs: []string{envId},
 		Name:           name,
 		Type:           AgentRunnerType,
+		Labels:         labels,
+	}
+	return c.RESTClient.Create(agent)
+}
+
+func (c AgentsClient) CreateGitOpsAgent(envId string, name string, labels map[string]string) (Agent, error) {
+	agent := Agent{
+		EnvironmentIDs: []string{envId},
+		Name:           name,
+		Type:           AgentGitOpsType,
 		Labels:         labels,
 	}
 	return c.RESTClient.Create(agent)

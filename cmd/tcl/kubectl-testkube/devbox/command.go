@@ -234,27 +234,24 @@ func NewDevBoxCommand() *cobra.Command {
 				}
 				fmt.Println("Creating additional GitOps agents in Cloud...")
 				for i := uint16(0); i < count; i++ {
-					// TODO: Do actual agent
-					//runner, err := cloud.CreateRunner(env.Id, fmt.Sprintf("runner-%d", i+1), map[string]string{
-					//	"each":    "one",
-					//	"even":    fmt.Sprintf("%v", (i+1)%2 == 0),
-					//	"odd":     fmt.Sprintf("%v", (i+1)%2 == 1),
-					//	"modulo3": fmt.Sprintf("%d", (i+1)%3),
-					//})
-					//if err != nil {
-					//	fail(errors.Wrap(err, "failed to create runner agent"))
-					//}
-					//fmt.Printf("    %s %s\n", runner.Name, color.Gray.Render(fmt.Sprintf("(%s / %s)", runner.ID, runner.SecretKey)))
-					//runnersData = append(runnersData, *runner)
-					fmt.Printf("    %s %s\n", "superagent", color.Gray.Render(fmt.Sprintf("(%s / %s)", env.Id, env.AgentToken)))
-					gitopsData = append(gitopsData, *cloud.SuperAgent(env))
+					gitops, err := cloud.CreateGitOpsAgent(env.Id, fmt.Sprintf("gitops-%d", i+1), map[string]string{
+						"each":    "one",
+						"even":    fmt.Sprintf("%v", (i+1)%2 == 0),
+						"odd":     fmt.Sprintf("%v", (i+1)%2 == 1),
+						"modulo3": fmt.Sprintf("%d", (i+1)%3),
+					})
+					if err != nil {
+						fail(errors.Wrap(err, "failed to create GitOps agent"))
+					}
+					fmt.Printf("    %s %s\n", gitops.Name, color.Gray.Render(fmt.Sprintf("(%s / %s)", gitops.ID, gitops.SecretKey)))
+					gitopsData = append(gitopsData, *gitops)
 				}
 			}
 
 			// Initialize GitOps objects
 			gitopsPods := make([]*devutils.PodObject, len(gitopsData))
 			for i := range gitopsData {
-				gitopsPods[i] = namespace.Pod(fmt.Sprintf("gitop-%d", i+1)).SetKind("gitop")
+				gitopsPods[i] = namespace.Pod(fmt.Sprintf("gitops-%d", i+1)).SetKind("gitops")
 			}
 			gitops := make([]*devutils.GitOpsAgent, len(gitopsData))
 			for i := range gitopsData {

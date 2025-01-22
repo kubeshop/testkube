@@ -64,6 +64,9 @@ func (s *testWorkflowsStorage) Process(ctx context.Context, event Event[testkube
 		if err == nil && (current.Equals(&event.Resource) || (!event.Timestamp.IsZero() && !current.Updated.Before(event.Timestamp))) {
 			return nil
 		}
+		if err != nil {
+			return s.client.Create(ctx, s.environmentId, event.Resource)
+		}
 		return s.client.Update(ctx, s.environmentId, event.Resource)
 	case EventTypeDelete:
 		// Avoid processing when there is no difference, or we have newer result

@@ -200,3 +200,11 @@ func (c *CloudObject) CreateRunner(environmentId string, name string, labels map
 	}
 	return &runner, nil
 }
+
+func (c *CloudObject) CreateGitOpsAgent(environmentId string, name string, labels map[string]string) (*client.Agent, error) {
+	runner, err := c.agentClient.CreateGitOpsAgent(environmentId, name, labels)
+	if err != nil {
+		return nil, err
+	}
+	return &runner, nil
+}
