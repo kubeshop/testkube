@@ -43,6 +43,7 @@ spec:
       paths:
       - test/playwright/executor-tests/playwright-project
   container:
+    image: mcr.microsoft.com/playwright:v1.32.3-focal
     resources:
       requests:
         cpu: 2

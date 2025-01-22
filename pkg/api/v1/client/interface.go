@@ -16,6 +16,7 @@ type Client interface {
 	TestSuiteExecutionAPI
 	ExecutorAPI
 	WebhookAPI
+	WebhookTemplateAPI
 	ServiceAPI
 	ConfigAPI
 	TestSourceAPI
@@ -97,6 +98,16 @@ type WebhookAPI interface {
 	ListWebhooks(selector string) (webhooks testkube.Webhooks, err error)
 	DeleteWebhook(name string) (err error)
 	DeleteWebhooks(selector string) (err error)
+}
+
+// WebhookTemplateAPI describes webhook template api methods
+type WebhookTemplateAPI interface {
+	CreateWebhookTemplate(options CreateWebhookTemplateOptions) (webhookTemplate testkube.WebhookTemplate, err error)
+	UpdateWebhookTemplate(options UpdateWebhookTemplateOptions) (webhookTemplate testkube.WebhookTemplate, err error)
+	GetWebhookTemplate(name string) (webhookTemplate testkube.WebhookTemplate, err error)
+	ListWebhookTemplates(selector string) (webhookTemplates testkube.WebhookTemplates, err error)
+	DeleteWebhookTemplate(name string) (err error)
+	DeleteWebhookTemplates(selector string) (err error)
 }
 
 // TestTriggerAPI describes test triggers api methods
@@ -217,6 +228,12 @@ type CreateWebhookOptions testkube.WebhookCreateRequest
 // UpdateWebhookOptions - is mapping for now to OpenAPI schema for changing webhook request
 type UpdateWebhookOptions testkube.WebhookUpdateRequest
 
+// CreateWebhookTemplateOptions - is mapping for now to OpenAPI schema for creating/changing webhook template
+type CreateWebhookTemplateOptions testkube.WebhookTemplateCreateRequest
+
+// UpdateWebhookTemplateOptions - is mapping for now to OpenAPI schema for changing webhook template request
+type UpdateWebhookTemplateOptions testkube.WebhookTemplateUpdateRequest
+
 // UpsertTestSourceOptions - is mapping for now to OpenAPI schema for creating test source
 // if needed can be extended to custom struct
 type UpsertTestSourceOptions testkube.TestSourceUpsertRequest
@@ -309,7 +326,7 @@ type Gettable interface {
 		testkube.TestSuiteWithExecutionSummary | testkube.Artifact | testkube.ServerInfo | testkube.Config | testkube.DebugInfo |
 		testkube.TestSource | testkube.Template |
 		testkube.TestWorkflow | testkube.TestWorkflowWithExecution | testkube.TestWorkflowTemplate | testkube.TestWorkflowExecution |
-		testkube.TestTrigger | map[string][]string
+		testkube.TestTrigger | testkube.WebhookTemplate | map[string][]string
 }
 
 // Executable is an interface of executable objects

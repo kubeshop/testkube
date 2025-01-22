@@ -9,6 +9,12 @@ metadata:
     {{ $key }}: {{ $value }}
   {{- end }}
   {{- end }}
+  {{- if ne (len .Annotations) 0 }}
+  annotations:
+  {{- range $key, $value := .Annotations }}
+    {{ $key }}: {{ $value }}
+  {{- end }}
+  {{- end }}  
 spec:
   {{- if ne (len .Events) 0 }}
   events:
@@ -36,4 +42,47 @@ spec:
   {{- range $key, $value := .Headers }}
     {{ $key }}: {{ $value }}
   {{- end }}
+  {{- end }}
+  {{- if .Disabled }}
+  disabled: {{ .Disabled }}
+  {{- end }}
+  {{- if ne (len .Config) 0 }}
+  config:
+  {{- range $key, $val := .Config }}
+    {{ $key }}:
+    {{- if $val.Value }}
+      value: {{ $val.Value.Value }}
+    {{- end }}
+    {{- if $val.Secret }}
+      secret:
+        namespace: {{ $val.Secret.Namespace }}
+        name: {{ $val.Secret.Name }}
+        key: {{ $val.Secret.Key }}
+    {{- end }}
+  {{- end }}
+  {{- end }}
+  {{- if ne (len .Parameters) 0 }}
+  parameters:
+  {{- range $parameter := .Parameters }}
+    - name: {{ $parameter.Name }}
+    {{- if $parameter.Description }}
+      description: {{ $parameter.Description }}
+    {{- end }}
+    {{- if $parameter.Required }}
+      required: {{ $parameter.Required }}
+    {{- end }}
+    {{- if $parameter.Example }}
+      example: {{ $parameter.Example }}
+    {{- end }}
+    {{- if $parameter.Default_ }}
+      default: {{ $parameter.Default_.Value }}
+    {{- end }}
+    {{- if $parameter.Pattern }}
+      pattern: {{ $parameter.Pattern }}
+    {{- end }}
+  {{- end }}
+  {{- end }}
+  {{- if .WebhookTemplateRef }}
+  webhookTemplateRef:
+    name: {{ .WebhookTemplateRef.Name }}
   {{- end }}
