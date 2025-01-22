@@ -35,6 +35,9 @@ metadata:
   labels:
     core-tests: workflows
 spec:
+  config:
+    abrakadabra:
+      type: string
   content:
     git:
       uri: https://github.com/kubeshop/testkube

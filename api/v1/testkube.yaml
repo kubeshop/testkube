@@ -8111,6 +8111,10 @@ components:
           type: string
           format: date-time
           example: "2022-07-30T06:54:15Z"
+        updated:
+          type: string
+          format: date-time
+          example: "2022-07-30T06:54:15Z"
         spec:
           $ref: "#/components/schemas/TestWorkflowSpec"
         readOnly:
@@ -8630,6 +8634,10 @@ components:
           additionalProperties:
             type: string
         created:
+          type: string
+          format: date-time
+          example: "2022-07-30T06:54:15Z"
+        updated:
           type: string
           format: date-time
           example: "2022-07-30T06:54:15Z"

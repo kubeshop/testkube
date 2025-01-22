@@ -51,8 +51,9 @@ func NewDevBoxCommand() *cobra.Command {
 		baseAgentImage      string
 		baseInitImage       string
 		baseToolkitImage    string
-		syncResources       []string
+		syncLocalResources  []string
 		runnersCount        uint16
+		gitopsEnabled       bool
 		disableDefaultAgent bool
 	)
 
@@ -195,7 +196,7 @@ func NewDevBoxCommand() *cobra.Command {
 				}
 			}
 
-			// Create runners
+			// Create runner agents
 			runnersData := make([]client.Agent, 0)
 			if !oss {
 				fmt.Println("Creating additional runner agents in Cloud...")
@@ -219,9 +220,45 @@ func NewDevBoxCommand() *cobra.Command {
 			for i := range runnersData {
 				runnerPods[i] = namespace.Pod(fmt.Sprintf("runner-%d", i+1)).SetKind("runner")
 			}
-			runners := make([]*devutils.Runner, len(runnersData))
+			runners := make([]*devutils.RunnerAgent, len(runnersData))
 			for i := range runnersData {
-				runners[i] = devutils.NewRunner(runnerPods[i], cloud, baseAgentImage, baseInitImage, baseToolkitImage)
+				runners[i] = devutils.NewRunnerAgent(runnerPods[i], cloud, baseAgentImage, baseInitImage, baseToolkitImage)
+			}
+
+			// Create GitOps agents
+			gitopsData := make([]client.Agent, 0)
+			if !oss {
+				count := uint16(0)
+				if gitopsEnabled {
+					count = 1
+				}
+				fmt.Println("Creating additional GitOps agents in Cloud...")
+				for i := uint16(0); i < count; i++ {
+					// TODO: Do actual agent
+					//runner, err := cloud.CreateRunner(env.Id, fmt.Sprintf("runner-%d", i+1), map[string]string{
+					//	"each":    "one",
+					//	"even":    fmt.Sprintf("%v", (i+1)%2 == 0),
+					//	"odd":     fmt.Sprintf("%v", (i+1)%2 == 1),
+					//	"modulo3": fmt.Sprintf("%d", (i+1)%3),
+					//})
+					//if err != nil {
+					//	fail(errors.Wrap(err, "failed to create runner agent"))
+					//}
+					//fmt.Printf("    %s %s\n", runner.Name, color.Gray.Render(fmt.Sprintf("(%s / %s)", runner.ID, runner.SecretKey)))
+					//runnersData = append(runnersData, *runner)
+					fmt.Printf("    %s %s\n", "superagent", color.Gray.Render(fmt.Sprintf("(%s / %s)", env.Id, env.AgentToken)))
+					gitopsData = append(runnersData, *cloud.SuperAgent(env))
+				}
+			}
+
+			// Initialize GitOps objects
+			gitopsPods := make([]*devutils.PodObject, len(gitopsData))
+			for i := range gitopsData {
+				gitopsPods[i] = namespace.Pod(fmt.Sprintf("gitop-%d", i+1)).SetKind("gitop")
+			}
+			gitops := make([]*devutils.GitOpsAgent, len(gitopsData))
+			for i := range gitopsData {
+				gitops[i] = devutils.NewGitOpsAgent(gitopsPods[i], cloud, baseAgentImage, true, true, "", "")
 			}
 
 			// Create namespace
@@ -392,7 +429,7 @@ func NewDevBoxCommand() *cobra.Command {
 				}
 
 				for i := range runners {
-					rg.Go(func(index int, runner *devutils.Runner) func() error {
+					rg.Go(func(index int, runner *devutils.RunnerAgent) func() error {
 						return func() error {
 							fmt.Printf("[Runner #%d] Deploying...\n", index+1)
 							if err = runner.Create(ctx, env, &runnersData[index]); err != nil {
@@ -406,6 +443,23 @@ func NewDevBoxCommand() *cobra.Command {
 							return nil
 						}
 					}(i, runners[i]))
+				}
+
+				for i := range gitops {
+					rg.Go(func(index int, gitopsAgent *devutils.GitOpsAgent) func() error {
+						return func() error {
+							fmt.Printf("[GitOps Agent #%d] Deploying...\n", index+1)
+							if err = gitopsAgent.Create(ctx, env, &gitopsData[index]); err != nil {
+								fail(errors.Wrapf(err, "failed to create gitop #%d", index+1))
+							}
+							fmt.Printf("[GitOps Agent #%d] Waiting for readiness...\n", index+1)
+							if err = gitopsPods[index].WaitForReady(ctx); err != nil {
+								fail(errors.Wrapf(err, "failed to create gitop #%d", index+1))
+							}
+							fmt.Printf("[GitOps Agent #%d] Ready...\n", index+1)
+							return nil
+						}
+					}(i, gitops[i]))
 				}
 
 				return rg.Wait()
@@ -464,18 +518,18 @@ func NewDevBoxCommand() *cobra.Command {
 				fail(errors.Wrap(err, "failed to watch Testkube repository"))
 			}
 
-			if len(syncResources) > 0 {
+			if len(syncLocalResources) > 0 {
 				fmt.Println("Loading Test Workflows and Templates...")
-				sync := devutils.NewCRDSync()
+				sync := devutils.NewCRDFSSync()
 
 				// Initial run
-				for _, path := range syncResources {
+				for _, path := range syncLocalResources {
 					_ = sync.Load(path)
 				}
 				fmt.Printf("Started synchronising %d Test Workflows and %d Templates...\n", sync.WorkflowsCount(), sync.TemplatesCount())
 
-				// Propagate changes from FS to CRDSync
-				yamlWatcher, err := devutils.NewFsWatcher(syncResources...)
+				// Propagate changes from FS to CRDFSSync
+				yamlWatcher, err := devutils.NewFsWatcher(syncLocalResources...)
 				if err != nil {
 					fail(errors.Wrap(err, "failed to watch for YAML changes"))
 				}
@@ -508,13 +562,13 @@ func NewDevBoxCommand() *cobra.Command {
 					return name + " " + termlink.ColorLink("(open)", cloud.DashboardUrl(env.Slug, fmt.Sprintf("dashboard/test-workflow-templates/%s", name)), "magenta")
 				}
 
-				// Propagate changes from CRDSync to Cloud
+				// Propagate changes from CRDFSSync to Cloud
 				go func() {
 					parallel := make(chan struct{}, 10)
-					process := func(update *devutils.CRDSyncUpdate) {
+					process := func(update *devutils.CRDFSSyncUpdate) {
 						parallel <- struct{}{}
 						switch update.Op {
-						case devutils.CRDSyncUpdateOpCreate:
+						case devutils.CRDFSSyncUpdateOpCreate:
 							if update.Template != nil {
 								update.Template.Spec.Events = nil // ignore Cronjobs
 								_, err := resources.CreateTestWorkflowTemplate(*testworkflows.MapTemplateKubeToAPI(update.Template))
@@ -532,7 +586,7 @@ func NewDevBoxCommand() *cobra.Command {
 									fmt.Println("CRD Sync: created workflow:", workflowLabel(update.Workflow.Name))
 								}
 							}
-						case devutils.CRDSyncUpdateOpUpdate:
+						case devutils.CRDFSSyncUpdateOpUpdate:
 							if update.Template != nil {
 								update.Template.Spec.Events = nil // ignore Cronjobs
 								_, err := resources.UpdateTestWorkflowTemplate(*testworkflows.MapTemplateKubeToAPI(update.Template))
@@ -550,7 +604,7 @@ func NewDevBoxCommand() *cobra.Command {
 									fmt.Println("CRD Sync: updated workflow:", workflowLabel(update.Workflow.Name))
 								}
 							}
-						case devutils.CRDSyncUpdateOpDelete:
+						case devutils.CRDFSSyncUpdateOpDelete:
 							if update.Template != nil {
 								err := resources.DeleteTestWorkflowTemplate(update.Template.Name)
 								if err != nil {
@@ -648,7 +702,7 @@ func NewDevBoxCommand() *cobra.Command {
 						}
 
 						for i := range runners {
-							rg.Go(func(index int, runner *devutils.Runner) func() error {
+							rg.Go(func(index int, runner *devutils.RunnerAgent) func() error {
 								return func() error {
 									// Restart only if it has changes
 									err := runnerPods[index].Restart(ctx)
@@ -673,6 +727,34 @@ func NewDevBoxCommand() *cobra.Command {
 									return nil
 								}
 							}(i, runners[i]))
+						}
+
+						for i := range gitops {
+							rg.Go(func(index int, gitopsAgent *devutils.GitOpsAgent) func() error {
+								return func() error {
+									// Restart only if it has changes
+									err := gitopsPods[index].Restart(ctx)
+									if ctx.Err() != nil {
+										return nil
+									}
+									if err == nil {
+										fmt.Printf("  GitOps Agent #%d: restarted. Waiting for readiness...\n", index+1)
+										_ = gitopsPods[index].RefreshData(ctx)
+										err = gitopsPods[index].WaitForReady(ctx)
+										if ctx.Err() != nil {
+											return nil
+										}
+										if err == nil {
+											fmt.Printf("  GitOps Agent #%d: ready again\n", index+1)
+										} else {
+											fail(errors.Wrapf(err, "failed to wait for gitops#%d pod readiness", index+1))
+										}
+									} else {
+										fmt.Printf("  GitOps Agent #%d: restart failed: %s\n", index+1, err.Error())
+									}
+									return nil
+								}
+							}(i, gitops[i]))
 						}
 
 						return rg.Wait()
@@ -786,7 +868,8 @@ func NewDevBoxCommand() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&rawDevboxName, "name", "n", fmt.Sprintf("%d", time.Now().UnixNano()), "devbox name")
-	cmd.Flags().StringSliceVarP(&syncResources, "sync", "s", nil, "synchronise resources at paths")
+	cmd.Flags().StringSliceVarP(&syncLocalResources, "fssync", "s", nil, "synchronise resources at local paths")
+	cmd.Flags().BoolVarP(&gitopsEnabled, "gitops-agent", "g", false, "enable GitOps agent")
 	cmd.Flags().BoolVarP(&open, "open", "o", false, "open dashboard in browser")
 	cmd.Flags().BoolVarP(&oss, "oss", "O", false, "run open source version")
 	cmd.Flags().StringVar(&baseInitImage, "init-image", "kubeshop/testkube-tw-init:latest", "base init image")

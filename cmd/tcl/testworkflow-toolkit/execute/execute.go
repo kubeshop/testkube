@@ -65,7 +65,7 @@ func executeTestWorkflowGrpc(workflowName string, request testkube.TestWorkflowE
 		Executions:      []*cloud.ScheduleExecution{{Selector: &cloud.ScheduleResourceSelector{Name: workflowName}, Config: request.Config}},
 		DisableWebhooks: cfg.Execution.DisableWebhooks,
 		Tags:            request.Tags,
-	})
+	}).All()
 }
 
 func ListTestWorkflows(labels map[string]string) ([]testkube.TestWorkflow, error) {

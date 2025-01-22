@@ -10,6 +10,7 @@ package devutils
 
 import (
 	"context"
+	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -18,60 +19,69 @@ import (
 	"github.com/kubeshop/testkube/pkg/cloud/client"
 )
 
-type Runner struct {
-	pod              *PodObject
-	cloud            *CloudObject
-	agentImage       string
-	initProcessImage string
-	toolkitImage     string
+type GitOpsAgent struct {
+	pod                      *PodObject
+	cloud                    *CloudObject
+	agentImage               string
+	cloudToKubernetesEnabled bool
+	kubernetesToCloudEnabled bool
+	cloudPattern             string
+	kubernetesPattern        string
 }
 
-func NewRunner(pod *PodObject, cloud *CloudObject, agentImage, initProcessImage, toolkitImage string) *Runner {
-	return &Runner{
-		pod:              pod,
-		cloud:            cloud,
-		agentImage:       agentImage,
-		initProcessImage: initProcessImage,
-		toolkitImage:     toolkitImage,
+func NewGitOpsAgent(
+	pod *PodObject,
+	cloud *CloudObject,
+	agentImage string,
+	cloudToKubernetesEnabled, kubernetesToCloudEnabled bool,
+	cloudPattern, kubernetesPattern string,
+) *GitOpsAgent {
+	return &GitOpsAgent{
+		pod:                      pod,
+		cloud:                    cloud,
+		agentImage:               agentImage,
+		cloudToKubernetesEnabled: cloudToKubernetesEnabled,
+		kubernetesToCloudEnabled: kubernetesToCloudEnabled,
+		cloudPattern:             cloudPattern,
+		kubernetesPattern:        kubernetesPattern,
 	}
 }
 
-func (r *Runner) Create(ctx context.Context, env *client.Environment, runner *client.Agent) error {
+func (r *GitOpsAgent) Create(ctx context.Context, env *client.Environment, agent *client.Agent) error {
+	if env == nil || agent == nil {
+		panic("crd sync is not supported in OSS")
+	}
+
 	envVariables := []corev1.EnvVar{
+		// Disabling the rest
 		{Name: "NATS_EMBEDDED", Value: "true"},
-		{Name: "APISERVER_PORT", Value: "8088"},
-		{Name: "GRPC_PORT", Value: "8089"},
-		{Name: "APISERVER_FULLNAME", Value: "devbox-agent"},
+		{Name: "TESTKUBE_ANALYTICS_ENABLED", Value: "false"},
 		{Name: "DISABLE_TEST_TRIGGERS", Value: "true"},
 		{Name: "DISABLE_WEBHOOKS", Value: "true"},
 		{Name: "DISABLE_DEPRECATED_TESTS", Value: "true"},
-		{Name: "TESTKUBE_ANALYTICS_ENABLED", Value: "false"},
-		{Name: "TESTKUBE_NAMESPACE", Value: r.pod.Namespace()},
-		{Name: "JOB_SERVICE_ACCOUNT_NAME", Value: "devbox-account"},
-		{Name: "TESTKUBE_ENABLE_IMAGE_DATA_PERSISTENT_CACHE", Value: "true"},
-		{Name: "TESTKUBE_IMAGE_DATA_PERSISTENT_CACHE_KEY", Value: "testkube-image-cache"},
-		{Name: "TESTKUBE_TW_TOOLKIT_IMAGE", Value: r.toolkitImage},
-		{Name: "TESTKUBE_TW_INIT_IMAGE", Value: r.initProcessImage},
-		{Name: "FEATURE_NEW_EXECUTIONS", Value: "true"},
-		{Name: "FEATURE_TESTWORKFLOW_CLOUD_STORAGE", Value: "true"},
-	}
-	if env == nil || runner == nil {
-		panic("runner is not supported in OSS")
-	}
-	tlsInsecure := "false"
-	if r.cloud.AgentInsecure() {
-		tlsInsecure = "true"
-	}
-	envVariables = append(envVariables, []corev1.EnvVar{
-		{Name: "TESTKUBE_DISABLE_DEFAULT_AGENT", Value: "true"},
-		{Name: "TESTKUBE_PRO_AGENT_ID", Value: runner.ID},
-		{Name: "TESTKUBE_PRO_API_KEY", Value: runner.SecretKey},
+		{Name: "DISABLE_RUNNER", Value: "true"},
+		{Name: "DISABLE_DEFAULT_AGENT", Value: "true"},
+
+		// Cloud connection
+		{Name: "TESTKUBE_PRO_AGENT_ID", Value: agent.ID},
+		{Name: "TESTKUBE_PRO_API_KEY", Value: agent.SecretKey},
 		{Name: "TESTKUBE_PRO_ORG_ID", Value: env.OrganizationId},
 		{Name: "TESTKUBE_PRO_ENV_ID", Value: env.Id},
 		{Name: "TESTKUBE_PRO_URL", Value: r.cloud.AgentURI()},
-		{Name: "TESTKUBE_PRO_TLS_INSECURE", Value: tlsInsecure},
+		{Name: "TESTKUBE_PRO_TLS_INSECURE", Value: fmt.Sprintf("%v", r.cloud.AgentInsecure())},
 		{Name: "TESTKUBE_PRO_TLS_SKIP_VERIFY", Value: "true"},
-	}...)
+
+		// CRD Sync configuration
+		{Name: "TESTKUBE_NAMESPACE", Value: r.pod.Namespace()},
+		{Name: "GITOPS_KUBERNETES_TO_CLOUD_ENABLED", Value: fmt.Sprintf("%v", r.kubernetesToCloudEnabled)},
+		{Name: "GITOPS_CLOUD_TO_KUBERNETES_ENABLED", Value: fmt.Sprintf("%v", r.cloudToKubernetesEnabled)},
+		{Name: "GITOPS_CLOUD_NAME_PATTERN", Value: r.cloudPattern},
+		{Name: "GITOPS_KUBERNETES_NAME_PATTERN", Value: r.kubernetesPattern},
+
+		// Feature flags
+		{Name: "FEATURE_NEW_EXECUTIONS", Value: "true"},
+		{Name: "FEATURE_TESTWORKFLOW_CLOUD_STORAGE", Value: "true"},
+	}
 	return r.pod.Create(ctx, &corev1.Pod{
 		Spec: corev1.PodSpec{
 			TerminationGracePeriodSeconds: common.Ptr(int64(1)),
@@ -113,10 +123,10 @@ func (r *Runner) Create(ctx context.Context, env *client.Environment, runner *cl
 	})
 }
 
-func (r *Runner) WaitForReady(ctx context.Context) error {
+func (r *GitOpsAgent) WaitForReady(ctx context.Context) error {
 	return r.pod.WaitForReady(ctx)
 }
 
-func (r *Runner) Restart(ctx context.Context) error {
+func (r *GitOpsAgent) Restart(ctx context.Context) error {
 	return r.pod.Restart(ctx)
 }

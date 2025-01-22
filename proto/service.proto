@@ -6,6 +6,7 @@ option go_package = "pkg/cloud";
 
 import "google/protobuf/empty.proto";
 import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
 
 service TestKubeCloudAPI {
     // Deprecated, use ExecuteAsync instead,
@@ -47,6 +48,7 @@ service TestKubeCloudAPI {
     rpc UpdateTestWorkflow(UpdateTestWorkflowRequest) returns (UpdateTestWorkflowResponse);
     rpc DeleteTestWorkflow(DeleteTestWorkflowRequest) returns (DeleteTestWorkflowResponse);
     rpc DeleteTestWorkflowsByLabels(DeleteTestWorkflowsByLabelsRequest) returns (DeleteTestWorkflowsByLabelsResponse);
+    rpc WatchTestWorkflowUpdates(WatchTestWorkflowUpdatesRequest) returns (stream TestWorkflowUpdate);
     // -- Test Workflow Templates
     rpc GetTestWorkflowTemplate(GetTestWorkflowTemplateRequest) returns (GetTestWorkflowTemplateResponse);
     rpc ListTestWorkflowTemplates(ListTestWorkflowTemplatesRequest) returns (stream TestWorkflowTemplateListItem);
@@ -55,6 +57,7 @@ service TestKubeCloudAPI {
     rpc UpdateTestWorkflowTemplate(UpdateTestWorkflowTemplateRequest) returns (UpdateTestWorkflowTemplateResponse);
     rpc DeleteTestWorkflowTemplate(DeleteTestWorkflowTemplateRequest) returns (DeleteTestWorkflowTemplateResponse);
     rpc DeleteTestWorkflowTemplatesByLabels(DeleteTestWorkflowTemplatesByLabelsRequest) returns (DeleteTestWorkflowTemplatesByLabelsResponse);
+    rpc WatchTestWorkflowTemplateUpdates(WatchTestWorkflowTemplateUpdatesRequest) returns (stream TestWorkflowTemplateUpdate);
 }
 
 enum LogsStreamRequestType {
@@ -481,6 +484,23 @@ message DeleteTestWorkflowsByLabelsResponse {
   uint32 count = 1;
 }
 
+enum UpdateType {
+  UPDATE = 0;
+  CREATE = 1;
+  DELETE = 2;
+}
+
+message WatchTestWorkflowUpdatesRequest {
+  bool include_initial_data = 1;
+}
+
+message TestWorkflowUpdate {
+  bool ping = 1;
+  google.protobuf.Timestamp timestamp = 2;
+  UpdateType type = 3;
+  bytes resource = 4; // TestWorkflow
+}
+
 // CRD Synchronisation -- Test Workflow Templates
 
 message GetTestWorkflowTemplateRequest {
@@ -533,4 +553,15 @@ message DeleteTestWorkflowTemplatesByLabelsRequest {
 
 message DeleteTestWorkflowTemplatesByLabelsResponse {
   uint32 count = 1;
+}
+
+message WatchTestWorkflowTemplateUpdatesRequest {
+  bool include_initial_data = 1;
+}
+
+message TestWorkflowTemplateUpdate {
+  bool ping = 1;
+  google.protobuf.Timestamp timestamp = 2;
+  UpdateType type = 3;
+  bytes resource = 4; // TestWorkflowTemplate
 }

@@ -12,12 +12,15 @@ import (
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/cloud/data/artifact"
 	cloudtestworkflow "github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
+	"github.com/kubeshop/testkube/pkg/repository/channels"
 )
+
+type ExecutionsReader channels.Watcher[testkube.TestWorkflowExecution]
 
 type ExecutionSelfClient interface {
 	AppendExecutionReport(ctx context.Context, environmentId, executionId, legacyWorkflowName, stepRef, filePath string, report []byte) error
 	SaveExecutionArtifactGetPresignedURL(ctx context.Context, environmentId, executionId, legacyWorkflowName, stepRef, filePath, contentType string) (string, error)
-	ScheduleExecution(ctx context.Context, environmentId string, request *cloud.ScheduleRequest) ([]testkube.TestWorkflowExecution, error)
+	ScheduleExecution(ctx context.Context, environmentId string, request *cloud.ScheduleRequest) ExecutionsReader
 	GetExecution(ctx context.Context, environmentId, executionId string) (*testkube.TestWorkflowExecution, error)
 	GetCredential(ctx context.Context, environmentId, executionId, name string) ([]byte, error)
 }
@@ -105,9 +108,9 @@ func (c *client) legacySaveExecutionArtifactGetPresignedURL(ctx context.Context,
 	return response.URL, err
 }
 
-func (c *client) ScheduleExecution(ctx context.Context, environmentId string, request *cloud.ScheduleRequest) ([]testkube.TestWorkflowExecution, error) {
+func (c *client) ScheduleExecution(ctx context.Context, environmentId string, request *cloud.ScheduleRequest) ExecutionsReader {
 	if c.IsLegacy() {
-		return nil, ErrNotSupported
+		return channels.NewError[testkube.TestWorkflowExecution](ErrNotSupported)
 	}
 	if c.opts.ExecutionID != "" {
 		request.RunningContext = &cloud.RunningContext{
@@ -119,26 +122,29 @@ func (c *client) ScheduleExecution(ctx context.Context, environmentId string, re
 
 	res, err := call(ctx, c.metadata().SetEnvironmentID(environmentId).GRPC(), c.client.ScheduleExecution, request)
 	if err != nil {
-		return nil, err
+		return channels.NewError[testkube.TestWorkflowExecution](err)
 	}
-	result := make([]testkube.TestWorkflowExecution, 0)
-	for {
-		item, itemErr := res.Recv()
-		if itemErr != nil {
-			if !errors.Is(itemErr, io.EOF) {
-				err = itemErr
+	watcher := channels.NewWatcher[testkube.TestWorkflowExecution]()
+	go func() {
+		defer watcher.Close(err)
+		for {
+			item, itemErr := res.Recv()
+			if itemErr != nil {
+				if !errors.Is(itemErr, io.EOF) {
+					err = itemErr
+				}
+				return
 			}
-			break
+			var execution testkube.TestWorkflowExecution
+			itemErr = json.Unmarshal(item.Execution, &execution)
+			if itemErr != nil {
+				err = itemErr
+				return
+			}
+			watcher.Send(execution)
 		}
-		var execution testkube.TestWorkflowExecution
-		itemErr = json.Unmarshal(item.Execution, &execution)
-		if itemErr != nil {
-			err = itemErr
-			break
-		}
-		result = append(result, execution)
-	}
-	return result, err
+	}()
+	return watcher
 }
 
 func (c *client) GetCredential(ctx context.Context, environmentId, executionId, name string) ([]byte, error) {

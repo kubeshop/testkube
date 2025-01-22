@@ -27,61 +27,61 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller/store"
 )
 
-type CRDSyncWorkflow struct {
+type CRDFSSyncWorkflow struct {
 	Workflow   testworkflowsv1.TestWorkflow
 	SourcePath string
 }
 
-type CRDSyncTemplate struct {
+type CRDFSSyncTemplate struct {
 	Template   testworkflowsv1.TestWorkflowTemplate
 	SourcePath string
 }
 
-type CRDSyncUpdateOp string
+type CRDFSSyncUpdateOp string
 
 const (
-	CRDSyncUpdateOpCreate CRDSyncUpdateOp = "create"
-	CRDSyncUpdateOpUpdate CRDSyncUpdateOp = "update"
-	CRDSyncUpdateOpDelete CRDSyncUpdateOp = "delete"
+	CRDFSSyncUpdateOpCreate CRDFSSyncUpdateOp = "create"
+	CRDFSSyncUpdateOpUpdate CRDFSSyncUpdateOp = "update"
+	CRDFSSyncUpdateOpDelete CRDFSSyncUpdateOp = "delete"
 )
 
-type CRDSyncUpdate struct {
+type CRDFSSyncUpdate struct {
 	Template *testworkflowsv1.TestWorkflowTemplate
 	Workflow *testworkflowsv1.TestWorkflow
-	Op       CRDSyncUpdateOp
+	Op       CRDFSSyncUpdateOp
 }
 
-type CRDSync struct {
-	workflows []CRDSyncWorkflow
-	templates []CRDSyncTemplate
-	updates   []CRDSyncUpdate
+type CRDFSSync struct {
+	workflows []CRDFSSyncWorkflow
+	templates []CRDFSSyncTemplate
+	updates   []CRDFSSyncUpdate
 	mu        sync.Mutex
 	emitter   store.Update
 }
 
 // TODO: optimize for duplicates
-func NewCRDSync() *CRDSync {
-	return &CRDSync{
-		workflows: make([]CRDSyncWorkflow, 0),
-		templates: make([]CRDSyncTemplate, 0),
-		updates:   make([]CRDSyncUpdate, 0),
+func NewCRDFSSync() *CRDFSSync {
+	return &CRDFSSync{
+		workflows: make([]CRDFSSyncWorkflow, 0),
+		templates: make([]CRDFSSyncTemplate, 0),
+		updates:   make([]CRDFSSyncUpdate, 0),
 		emitter:   store.NewUpdate(),
 	}
 }
 
-func (c *CRDSync) WorkflowsCount() int {
+func (c *CRDFSSync) WorkflowsCount() int {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return len(c.workflows)
 }
 
-func (c *CRDSync) TemplatesCount() int {
+func (c *CRDFSSync) TemplatesCount() int {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return len(c.templates)
 }
 
-func (c *CRDSync) Next(ctx context.Context) (*CRDSyncUpdate, error) {
+func (c *CRDFSSync) Next(ctx context.Context) (*CRDFSSyncUpdate, error) {
 	for {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
@@ -102,7 +102,7 @@ func (c *CRDSync) Next(ctx context.Context) (*CRDSyncUpdate, error) {
 	}
 }
 
-func (c *CRDSync) processWorkflow(sourcePath string, workflow testworkflowsv1.TestWorkflow) error {
+func (c *CRDFSSync) processWorkflow(sourcePath string, workflow testworkflowsv1.TestWorkflow) error {
 	for i := range c.workflows {
 		if c.workflows[i].Workflow.Name == workflow.Name {
 			v1, _ := crdcommon.SerializeCRD(c.workflows[i].Workflow, crdcommon.SerializeOptions{
@@ -120,17 +120,17 @@ func (c *CRDSync) processWorkflow(sourcePath string, workflow testworkflowsv1.Te
 			c.workflows[i].SourcePath = sourcePath
 			if !bytes.Equal(v1, v2) {
 				c.workflows[i].Workflow = workflow
-				c.updates = append(c.updates, CRDSyncUpdate{Workflow: &workflow, Op: CRDSyncUpdateOpUpdate})
+				c.updates = append(c.updates, CRDFSSyncUpdate{Workflow: &workflow, Op: CRDFSSyncUpdateOpUpdate})
 			}
 			return nil
 		}
 	}
-	c.workflows = append(c.workflows, CRDSyncWorkflow{SourcePath: sourcePath, Workflow: workflow})
-	c.updates = append(c.updates, CRDSyncUpdate{Workflow: &workflow, Op: CRDSyncUpdateOpCreate})
+	c.workflows = append(c.workflows, CRDFSSyncWorkflow{SourcePath: sourcePath, Workflow: workflow})
+	c.updates = append(c.updates, CRDFSSyncUpdate{Workflow: &workflow, Op: CRDFSSyncUpdateOpCreate})
 	return nil
 }
 
-func (c *CRDSync) processTemplate(sourcePath string, template testworkflowsv1.TestWorkflowTemplate) error {
+func (c *CRDFSSync) processTemplate(sourcePath string, template testworkflowsv1.TestWorkflowTemplate) error {
 	for i := range c.templates {
 		if c.templates[i].Template.Name == template.Name {
 			v1, _ := crdcommon.SerializeCRD(c.templates[i].Template, crdcommon.SerializeOptions{
@@ -148,22 +148,22 @@ func (c *CRDSync) processTemplate(sourcePath string, template testworkflowsv1.Te
 			c.templates[i].SourcePath = sourcePath
 			if !bytes.Equal(v1, v2) {
 				c.templates[i].Template = template
-				c.updates = append(c.updates, CRDSyncUpdate{Template: &template, Op: CRDSyncUpdateOpUpdate})
+				c.updates = append(c.updates, CRDFSSyncUpdate{Template: &template, Op: CRDFSSyncUpdateOpUpdate})
 			}
 			return nil
 		}
 	}
-	c.templates = append(c.templates, CRDSyncTemplate{SourcePath: sourcePath, Template: template})
-	c.updates = append(c.updates, CRDSyncUpdate{Template: &template, Op: CRDSyncUpdateOpCreate})
+	c.templates = append(c.templates, CRDFSSyncTemplate{SourcePath: sourcePath, Template: template})
+	c.updates = append(c.updates, CRDFSSyncUpdate{Template: &template, Op: CRDFSSyncUpdateOpCreate})
 	return nil
 }
 
-func (c *CRDSync) deleteTemplate(name string) {
+func (c *CRDFSSync) deleteTemplate(name string) {
 	for i := 0; i < len(c.templates); i++ {
 		if c.templates[i].Template.Name == name {
-			c.updates = append(c.updates, CRDSyncUpdate{
+			c.updates = append(c.updates, CRDFSSyncUpdate{
 				Template: &testworkflowsv1.TestWorkflowTemplate{ObjectMeta: metav1.ObjectMeta{Name: c.templates[i].Template.Name}},
-				Op:       CRDSyncUpdateOpDelete,
+				Op:       CRDFSSyncUpdateOpDelete,
 			})
 			c.templates = append(c.templates[:i], c.templates[i+1:]...)
 			i--
@@ -172,12 +172,12 @@ func (c *CRDSync) deleteTemplate(name string) {
 	}
 }
 
-func (c *CRDSync) deleteWorkflow(name string) {
+func (c *CRDFSSync) deleteWorkflow(name string) {
 	for i := 0; i < len(c.workflows); i++ {
 		if c.workflows[i].Workflow.Name == name {
-			c.updates = append(c.updates, CRDSyncUpdate{
+			c.updates = append(c.updates, CRDFSSyncUpdate{
 				Workflow: &testworkflowsv1.TestWorkflow{ObjectMeta: metav1.ObjectMeta{Name: c.workflows[i].Workflow.Name}},
-				Op:       CRDSyncUpdateOpDelete,
+				Op:       CRDFSSyncUpdateOpDelete,
 			})
 			c.workflows = append(c.workflows[:i], c.workflows[i+1:]...)
 			i--
@@ -186,12 +186,12 @@ func (c *CRDSync) deleteWorkflow(name string) {
 	}
 }
 
-func (c *CRDSync) deleteFile(path string) error {
+func (c *CRDFSSync) deleteFile(path string) error {
 	for i := 0; i < len(c.templates); i++ {
 		if c.templates[i].SourcePath == path {
-			c.updates = append(c.updates, CRDSyncUpdate{
+			c.updates = append(c.updates, CRDFSSyncUpdate{
 				Template: &testworkflowsv1.TestWorkflowTemplate{ObjectMeta: metav1.ObjectMeta{Name: c.templates[i].Template.Name}},
-				Op:       CRDSyncUpdateOpDelete,
+				Op:       CRDFSSyncUpdateOpDelete,
 			})
 			c.templates = append(c.templates[:i], c.templates[i+1:]...)
 			i--
@@ -199,9 +199,9 @@ func (c *CRDSync) deleteFile(path string) error {
 	}
 	for i := 0; i < len(c.workflows); i++ {
 		if c.workflows[i].SourcePath == path {
-			c.updates = append(c.updates, CRDSyncUpdate{
+			c.updates = append(c.updates, CRDFSSyncUpdate{
 				Workflow: &testworkflowsv1.TestWorkflow{ObjectMeta: metav1.ObjectMeta{Name: c.workflows[i].Workflow.Name}},
-				Op:       CRDSyncUpdateOpDelete,
+				Op:       CRDFSSyncUpdateOpDelete,
 			})
 			c.workflows = append(c.workflows[:i], c.workflows[i+1:]...)
 			i--
@@ -210,7 +210,7 @@ func (c *CRDSync) deleteFile(path string) error {
 	return nil
 }
 
-func (c *CRDSync) loadFile(path string) error {
+func (c *CRDFSSync) loadFile(path string) error {
 	// Ignore non-YAML files
 	if !strings.HasSuffix(path, ".yml") && !strings.HasSuffix(path, ".yaml") {
 		return nil
@@ -292,7 +292,7 @@ func (c *CRDSync) loadFile(path string) error {
 	return nil
 }
 
-func (c *CRDSync) Load(path string) error {
+func (c *CRDFSSync) Load(path string) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 

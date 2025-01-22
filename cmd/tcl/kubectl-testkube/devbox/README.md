@@ -35,7 +35,7 @@ It's a fast way to get live changes during the development:
 ## Parameters
 
 Most important parameters are `-n, --name` for devbox static name,
-and `-s, --sync` for synchronising Test Workflow and Test Workflow Template CRDs from the file system.
+and `-s, --fssync` for synchronising Test Workflow and Test Workflow Template CRDs from the file system.
 
 ```shell
 Usage:
@@ -46,7 +46,7 @@ Aliases:
 
 Flags:
   -n, --name string            devbox name (default "1730107481990508000")
-  -s, --sync strings           synchronise resources at paths
+  -s, --fssync strings           synchronise resources at paths
   -o, --open                   open dashboard in browser
   -O, --oss                    run open source version
       --agent-image string     base agent image (default "kubeshop/testkube-api-server:latest")

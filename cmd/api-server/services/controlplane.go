@@ -7,6 +7,7 @@ import (
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"k8s.io/client-go/kubernetes"
 
 	kubeclient "github.com/kubeshop/testkube-operator/pkg/client"
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
@@ -63,7 +64,9 @@ func mapTestSuiteFilters(s []*testresult.FilterImpl) []testresult.Filter {
 
 func CreateControlPlane(ctx context.Context, cfg *config.Config, features featureflags.FeatureFlags, secretManager secretmanager.SecretManager, metrics metrics.Metrics, runner runner2.RunnerExecute, emitter event.Interface) *controlplane.Server {
 	// Connect to the cluster
-	clientset, err := k8sclient.ConnectToK8s()
+	kubeConfig, err := k8sclient.GetK8sClientConfig()
+	commons.ExitOnError("Getting kubernetes config", err)
+	clientset, err := kubernetes.NewForConfig(kubeConfig)
 	commons.ExitOnError("Creating k8s clientset", err)
 	kubeClient, err := kubeclient.GetClient()
 	commons.ExitOnError("Getting kubernetes client", err)
@@ -73,8 +76,10 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 	db := commons.MustGetMongoDatabase(ctx, cfg, secretClient, !cfg.DisableMongoMigrations)
 	storageClient := commons.MustGetMinioClient(cfg)
 
-	testWorkflowsClient := testworkflowclient.NewKubernetesTestWorkflowClient(kubeClient, cfg.TestkubeNamespace)
-	testWorkflowTemplatesClient := testworkflowtemplateclient.NewKubernetesTestWorkflowTemplateClient(kubeClient, cfg.TestkubeNamespace)
+	testWorkflowsClient, err := testworkflowclient.NewKubernetesTestWorkflowClient(kubeClient, kubeConfig, cfg.TestkubeNamespace)
+	commons.ExitOnError("Creating test workflow client", err)
+	testWorkflowTemplatesClient, err := testworkflowtemplateclient.NewKubernetesTestWorkflowTemplateClient(kubeClient, kubeConfig, cfg.TestkubeNamespace)
+	commons.ExitOnError("Creating test workflow templates client", err)
 
 	var logGrpcClient logsclient.StreamGetter
 	if !cfg.DisableDeprecatedTests && features.LogsV2 {

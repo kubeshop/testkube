@@ -159,7 +159,14 @@ type ImageInspectorConfig struct {
 }
 
 type RunnerConfig struct {
-	DisableRunner bool `envconfig:"TESTKUBE_DISABLE_RUNNER" default:"false"`
+	DisableRunner bool `envconfig:"DISABLE_RUNNER" default:"false"`
+}
+
+type GitOpsSyncConfig struct {
+	GitOpsSyncKubernetesToCloudEnabled bool   `envconfig:"GITOPS_KUBERNETES_TO_CLOUD_ENABLED" default:"false"`
+	GitOpsSyncCloudToKubernetesEnabled bool   `envconfig:"GITOPS_CLOUD_TO_KUBERNETES_ENABLED" default:"false"`
+	GitOpsSyncCloudNamePattern         string `envconfig:"GITOPS_CLOUD_NAME_PATTERN" default:"<name>"`
+	GitOpsSyncKubernetesNamePattern    string `envconfig:"GITOPS_KUBERNETES_NAME_PATTERN" default:"<name>"`
 }
 
 type Config struct {
@@ -174,7 +181,8 @@ type Config struct {
 	SecretManagementConfig
 	RunnerConfig
 	ImageInspectorConfig
-	DisableDefaultAgent             bool   `envconfig:"TESTKUBE_DISABLE_DEFAULT_AGENT" default:"false"`
+	GitOpsSyncConfig
+	DisableDefaultAgent             bool   `envconfig:"DISABLE_DEFAULT_AGENT" default:"false"`
 	TestkubeConfigDir               string `envconfig:"TESTKUBE_CONFIG_DIR" default:"config"`
 	TestkubeAnalyticsEnabled        bool   `envconfig:"TESTKUBE_ANALYTICS_ENABLED" default:"false"`
 	TestkubeNamespace               string `envconfig:"TESTKUBE_NAMESPACE" default:"testkube"`

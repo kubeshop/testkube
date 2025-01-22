@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"time"
 
 	"github.com/pkg/errors"
 
@@ -19,7 +20,14 @@ type ListTestWorkflowTemplateOptions struct {
 	Limit      uint32
 }
 
+type TestWorkflowTemplateUpdate struct {
+	Type      cloud.UpdateType
+	Timestamp time.Time
+	Resource  *testkube.TestWorkflowTemplate
+}
+
 type TestWorkflowTemplatesReader channels.Watcher[*testkube.TestWorkflowTemplate]
+type TestWorkflowTemplateWatcher channels.Watcher[*TestWorkflowTemplateUpdate]
 
 type TestWorkflowTemplatesClient interface {
 	GetTestWorkflowTemplate(ctx context.Context, environmentId, name string) (*testkube.TestWorkflowTemplate, error)
@@ -29,6 +37,7 @@ type TestWorkflowTemplatesClient interface {
 	CreateTestWorkflowTemplate(ctx context.Context, environmentId string, workflow testkube.TestWorkflowTemplate) error
 	DeleteTestWorkflowTemplate(ctx context.Context, environmentId, name string) error
 	DeleteTestWorkflowTemplatesByLabels(ctx context.Context, environmentId string, labels map[string]string) (uint32, error)
+	WatchTestWorkflowTemplateUpdates(ctx context.Context, environmentId string, includeInitialData bool) TestWorkflowTemplateWatcher
 }
 
 func (c *client) GetTestWorkflowTemplate(ctx context.Context, environmentId, name string) (*testkube.TestWorkflowTemplate, error) {
@@ -59,13 +68,14 @@ func (c *client) ListTestWorkflowTemplates(ctx context.Context, environmentId st
 	result := channels.NewWatcher[*testkube.TestWorkflowTemplate]()
 	go func() {
 		var item *cloud.TestWorkflowTemplateListItem
-		for err != nil {
+		for err == nil {
 			item, err = res.Recv()
 			if err != nil {
 				break
 			}
-			var workflow testkube.TestWorkflowTemplate
-			err = json.Unmarshal(item.Template, &workflow)
+			var template testkube.TestWorkflowTemplate
+			err = json.Unmarshal(item.Template, &template)
+			result.Send(&template)
 		}
 		if errors.Is(err, io.EOF) {
 			err = nil
@@ -121,4 +131,37 @@ func (c *client) DeleteTestWorkflowTemplatesByLabels(ctx context.Context, enviro
 		return 0, err
 	}
 	return res.Count, nil
+}
+
+func (c *client) WatchTestWorkflowTemplateUpdates(ctx context.Context, environmentId string, includeInitialData bool) TestWorkflowTemplateWatcher {
+	req := &cloud.WatchTestWorkflowTemplateUpdatesRequest{IncludeInitialData: includeInitialData}
+	res, err := call(ctx, c.metadata().SetEnvironmentID(environmentId).GRPC(), c.client.WatchTestWorkflowTemplateUpdates, req)
+	if err != nil {
+		return channels.NewError[*TestWorkflowTemplateUpdate](err)
+	}
+	watcher := channels.NewWatcher[*TestWorkflowTemplateUpdate]()
+	go func() {
+		var item *cloud.TestWorkflowTemplateUpdate
+		for err == nil {
+			item, err = res.Recv()
+			if err != nil {
+				break
+			}
+			if item.Ping {
+				continue
+			}
+			var resource testkube.TestWorkflowTemplate
+			err = json.Unmarshal(item.Resource, &resource)
+			watcher.Send(&TestWorkflowTemplateUpdate{
+				Type:      item.Type,
+				Timestamp: item.Timestamp.AsTime(),
+				Resource:  &resource,
+			})
+		}
+		if errors.Is(err, io.EOF) {
+			err = nil
+		}
+		watcher.Close(err)
+	}()
+	return watcher
 }

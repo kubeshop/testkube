@@ -62,3 +62,17 @@ func NewError[T any](err error) Watcher[T] {
 	res.Close(err)
 	return res
 }
+
+func Transform[T any, U any](w Watcher[T], transform func(T) (U, bool)) Watcher[U] {
+	res := NewWatcher[U]()
+	go func() {
+		for v := range w.Channel() {
+			next, ok := transform(v)
+			if ok {
+				res.Send(next)
+			}
+		}
+		res.Close(w.Err())
+	}()
+	return res
+}

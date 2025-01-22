@@ -5,7 +5,9 @@ import (
 
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/controlplaneclient"
+	"github.com/kubeshop/testkube/pkg/repository/channels"
 )
 
 var _ TestWorkflowTemplateClient = &cloudTestWorkflowTemplateClient{}
@@ -55,4 +57,19 @@ func (c *cloudTestWorkflowTemplateClient) Delete(ctx context.Context, environmen
 
 func (c *cloudTestWorkflowTemplateClient) DeleteByLabels(ctx context.Context, environmentId string, labels map[string]string) (uint32, error) {
 	return c.client.DeleteTestWorkflowTemplatesByLabels(ctx, environmentId, labels)
+}
+
+func (c *cloudTestWorkflowTemplateClient) WatchUpdates(ctx context.Context, environmentId string, includeInitialData bool) Watcher {
+	return channels.Transform(c.client.WatchTestWorkflowTemplateUpdates(ctx, environmentId, includeInitialData), func(t *controlplaneclient.TestWorkflowTemplateUpdate) (Update, bool) {
+		switch t.Type {
+		case cloud.UpdateType_UPDATE:
+			return Update{Type: EventTypeUpdate, Timestamp: t.Timestamp, Resource: t.Resource}, true
+		case cloud.UpdateType_DELETE:
+			return Update{Type: EventTypeDelete, Timestamp: t.Timestamp, Resource: t.Resource}, true
+		case cloud.UpdateType_CREATE:
+			return Update{Type: EventTypeCreate, Timestamp: t.Timestamp, Resource: t.Resource}, true
+		default:
+			return Update{}, false
+		}
+	})
 }

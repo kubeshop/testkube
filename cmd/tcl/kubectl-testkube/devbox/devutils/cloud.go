@@ -183,6 +183,16 @@ func (c *CloudObject) DeleteEnvironment(id string) error {
 	return c.envClient.Delete(id)
 }
 
+func (c *CloudObject) SuperAgent(env *client.Environment) *client.Agent {
+	return &client.Agent{
+		ID:             env.Id,
+		Name:           env.Name,
+		EnvironmentIDs: []string{env.Id},
+		SecretKey:      env.AgentToken,
+		Type:           "agnt",
+	}
+}
+
 func (c *CloudObject) CreateRunner(environmentId string, name string, labels map[string]string) (*client.Agent, error) {
 	runner, err := c.agentClient.CreateRunner(environmentId, name, labels)
 	if err != nil {

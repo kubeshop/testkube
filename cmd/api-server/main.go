@@ -4,19 +4,24 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"time"
 
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"google.golang.org/grpc"
+	"k8s.io/client-go/kubernetes"
 
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
 	testkubeclientset "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	"github.com/kubeshop/testkube/cmd/api-server/services"
 	"github.com/kubeshop/testkube/internal/app/api/debug"
+	"github.com/kubeshop/testkube/internal/common"
 	agentclient "github.com/kubeshop/testkube/pkg/agent/client"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	cloudartifacts "github.com/kubeshop/testkube/pkg/cloud/data/artifact"
 	cloudtestworkflow "github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
 	"github.com/kubeshop/testkube/pkg/controlplaneclient"
+	"github.com/kubeshop/testkube/pkg/crdstorage"
 	"github.com/kubeshop/testkube/pkg/event/kind/cdevent"
 	"github.com/kubeshop/testkube/pkg/event/kind/k8sevent"
 	"github.com/kubeshop/testkube/pkg/event/kind/testworkflowexecutionmetrics"
@@ -33,9 +38,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/tcl/schedulertcl"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/presets"
-
-	"github.com/kubeshop/testkube/internal/common"
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/version"
 
 	"golang.org/x/sync/errgroup"
@@ -91,7 +93,9 @@ func main() {
 	// k8s
 	kubeClient, err := kubeclient.GetClient()
 	commons.ExitOnError("Getting kubernetes client", err)
-	clientset, err := k8sclient.ConnectToK8s()
+	kubeConfig, err := k8sclient.GetK8sClientConfig()
+	commons.ExitOnError("Getting kubernetes config", err)
+	clientset, err := kubernetes.NewForConfig(kubeConfig)
 	commons.ExitOnError("Creating k8s clientset", err)
 
 	var eventsEmitter *event.Emitter
@@ -180,8 +184,10 @@ func main() {
 		testWorkflowsClient = testworkflowclient.NewCloudTestWorkflowClient(client)
 		testWorkflowTemplatesClient = testworkflowtemplateclient.NewCloudTestWorkflowTemplateClient(client)
 	} else {
-		testWorkflowsClient = testworkflowclient.NewKubernetesTestWorkflowClient(kubeClient, cfg.TestkubeNamespace)
-		testWorkflowTemplatesClient = testworkflowtemplateclient.NewKubernetesTestWorkflowTemplateClient(kubeClient, cfg.TestkubeNamespace)
+		testWorkflowsClient, err = testworkflowclient.NewKubernetesTestWorkflowClient(kubeClient, kubeConfig, cfg.TestkubeNamespace)
+		commons.ExitOnError("Creating test workflow client", err)
+		testWorkflowTemplatesClient, err = testworkflowtemplateclient.NewKubernetesTestWorkflowTemplateClient(kubeClient, kubeConfig, cfg.TestkubeNamespace)
+		commons.ExitOnError("Creating test workflow templates client", err)
 	}
 
 	serviceAccountNames := map[string]string{
@@ -248,9 +254,11 @@ func main() {
 			NewExecutionsEnabled:       proContext.NewExecutions && cfg.FeatureNewExecutions,
 		},
 	)
-	g.Go(func() error {
-		return runnerService.Start(ctx)
-	})
+	if !cfg.DisableRunner {
+		g.Go(func() error {
+			return runnerService.Start(ctx)
+		})
+	}
 	lazyRunner.Set(runnerService)
 
 	testWorkflowExecutor := testworkflowexecutor.New(
@@ -299,15 +307,119 @@ func main() {
 		eventsEmitter.Loader.Register(k8sevent.NewK8sEventLoader(clientset, cfg.TestkubeNamespace, testkube.AllEventTypes))
 	}
 
-	// Update TestWorkflowExecution Kubernetes resource objects on status change
-	eventsEmitter.Loader.Register(testworkflowexecutions.NewLoader(ctx, cfg.TestkubeNamespace, kubeClient))
-
 	// Update the Prometheus metrics regarding the Test Workflow Execution
 	eventsEmitter.Loader.Register(testworkflowexecutionmetrics.NewLoader(ctx, metrics, cfg.TestkubeDashboardURI))
 
 	// Send the telemetry data regarding the Test Workflow Execution
 	// TODO: Disable it if Control Plane does that
 	eventsEmitter.Loader.Register(testworkflowexecutiontelemetry.NewLoader(ctx, configMapConfig))
+
+	// Update TestWorkflowExecution Kubernetes resource objects on status change
+	eventsEmitter.Loader.Register(testworkflowexecutions.NewLoader(ctx, cfg.TestkubeNamespace, kubeClient))
+
+	// Synchronise Test Workflows with cloud
+	if proContext.TestWorkflowStorage && (cfg.GitOpsSyncKubernetesToCloudEnabled || cfg.GitOpsSyncCloudToKubernetesEnabled) {
+		testWorkflowsCloudStorage, err := crdstorage.NewTestWorkflowsStorage(testworkflowclient.NewCloudTestWorkflowClient(client), proContext.EnvID, cfg.GitOpsSyncCloudNamePattern, nil)
+		commons.ExitOnError("connecting to cloud TestWorkflows storage", err)
+		testWorkflowsKubernetesStorage, err := crdstorage.NewTestWorkflowsStorage(must(testworkflowclient.NewKubernetesTestWorkflowClient(kubeClient, kubeConfig, cfg.TestkubeNamespace)), proContext.EnvID, cfg.GitOpsSyncKubernetesNamePattern, map[string]string{
+			"namespace": cfg.TestkubeNamespace,
+		})
+		commons.ExitOnError("connecting to k8s TestWorkflows storage", err)
+		testWorkflowTemplatesCloudStorage, err := crdstorage.NewTestWorkflowTemplatesStorage(testworkflowtemplateclient.NewCloudTestWorkflowTemplateClient(client), proContext.EnvID, cfg.GitOpsSyncCloudNamePattern, nil)
+		commons.ExitOnError("connecting to cloud TestWorkflowTemplates storage", err)
+		testWorkflowTemplatesKubernetesStorage, err := crdstorage.NewTestWorkflowTemplatesStorage(must(testworkflowtemplateclient.NewKubernetesTestWorkflowTemplateClient(kubeClient, kubeConfig, cfg.TestkubeNamespace)), proContext.EnvID, cfg.GitOpsSyncKubernetesNamePattern, map[string]string{
+			"namespace": cfg.TestkubeNamespace,
+		})
+		commons.ExitOnError("connecting to k8s TestWorkflowTemplates storage", err)
+
+		if cfg.GitOpsSyncCloudToKubernetesEnabled {
+			// Test Workflows - Continuous Sync (eventual) - Cloud -> Kubernetes
+			g.Go(func() error {
+				for {
+					if ctx.Err() != nil {
+						return ctx.Err()
+					}
+					watcher := testWorkflowsCloudStorage.Watch(ctx)
+					for obj := range watcher.Channel() {
+						err := testWorkflowsKubernetesStorage.Process(ctx, obj)
+						if err != nil {
+							log.DefaultLogger.Errorw("failed to include TestWorkflow in Kubernetes", "error", err)
+						}
+					}
+					if watcher.Err() != nil {
+						log.DefaultLogger.Errorw("failed to watch TestWorkflows in Kubernetes", "error", watcher.Err())
+					}
+
+					time.Sleep(200 * time.Millisecond)
+				}
+			})
+
+			// Test Workflow Templates - Continuous Sync (eventual) - Cloud -> Kubernetes
+			g.Go(func() error {
+				for {
+					if ctx.Err() != nil {
+						return ctx.Err()
+					}
+					watcher := testWorkflowTemplatesCloudStorage.Watch(ctx)
+					for obj := range watcher.Channel() {
+						err := testWorkflowTemplatesKubernetesStorage.Process(ctx, obj)
+						if err != nil {
+							log.DefaultLogger.Errorw("failed to include TestWorkflowTemplate in Kubernetes", "error", err)
+						}
+					}
+					if watcher.Err() != nil {
+						log.DefaultLogger.Errorw("failed to watch TestWorkflows in Control Plane", "error", watcher.Err())
+					}
+
+					time.Sleep(200 * time.Millisecond)
+				}
+			})
+		}
+
+		if cfg.GitOpsSyncKubernetesToCloudEnabled {
+			// Test Workflows - Continuous Sync (eventual) - Kubernetes -> Cloud
+			g.Go(func() error {
+				for {
+					if ctx.Err() != nil {
+						return ctx.Err()
+					}
+					watcher := testWorkflowsKubernetesStorage.Watch(ctx)
+					for obj := range watcher.Channel() {
+						err := testWorkflowsCloudStorage.Process(ctx, obj)
+						if err != nil {
+							log.DefaultLogger.Errorw("failed to include TestWorkflow in Control Plane", "error", err)
+						}
+					}
+					if watcher.Err() != nil {
+						log.DefaultLogger.Errorw("failed to watch TestWorkflows in Kubernetes", "error", watcher.Err())
+					}
+
+					time.Sleep(200 * time.Millisecond)
+				}
+			})
+
+			// Test Workflow Templates - Continuous Sync (eventual) - Kubernetes -> Cloud
+			g.Go(func() error {
+				for {
+					if ctx.Err() != nil {
+						return ctx.Err()
+					}
+					watcher := testWorkflowTemplatesKubernetesStorage.Watch(ctx)
+					for obj := range watcher.Channel() {
+						err := testWorkflowTemplatesCloudStorage.Process(ctx, obj)
+						if err != nil {
+							log.DefaultLogger.Errorw("failed to include TestWorkflowTemplate in Control Plane", "error", err)
+						}
+					}
+					if watcher.Err() != nil {
+						log.DefaultLogger.Errorw("failed to watch TestWorkflowTemplates in Kubernetes", "error", watcher.Err())
+					}
+
+					time.Sleep(200 * time.Millisecond)
+				}
+			})
+		}
+	}
 
 	eventsEmitter.Listen(ctx)
 	g.Go(func() error {
@@ -463,4 +575,11 @@ func main() {
 	if err := g.Wait(); err != nil {
 		log.DefaultLogger.Fatalf("Testkube is shutting down: %v", err)
 	}
+}
+
+func must[T any](v T, err error) T {
+	if err != nil {
+		panic(err)
+	}
+	return v
 }

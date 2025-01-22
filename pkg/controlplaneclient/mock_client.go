@@ -442,12 +442,11 @@ func (mr *MockClientMockRecorder) SaveExecutionLogsGetPresignedURL(arg0, arg1, a
 }
 
 // ScheduleExecution mocks base method.
-func (m *MockClient) ScheduleExecution(arg0 context.Context, arg1 string, arg2 *cloud.ScheduleRequest) ([]testkube.TestWorkflowExecution, error) {
+func (m *MockClient) ScheduleExecution(arg0 context.Context, arg1 string, arg2 *cloud.ScheduleRequest) ExecutionsReader {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ScheduleExecution", arg0, arg1, arg2)
-	ret0, _ := ret[0].([]testkube.TestWorkflowExecution)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret0, _ := ret[0].(ExecutionsReader)
+	return ret0
 }
 
 // ScheduleExecution indicates an expected call of ScheduleExecution.
@@ -524,4 +523,32 @@ func (m *MockClient) WatchRunnerRequests(arg0 context.Context) RunnerRequestsWat
 func (mr *MockClientMockRecorder) WatchRunnerRequests(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WatchRunnerRequests", reflect.TypeOf((*MockClient)(nil).WatchRunnerRequests), arg0)
+}
+
+// WatchTestWorkflowTemplateUpdates mocks base method.
+func (m *MockClient) WatchTestWorkflowTemplateUpdates(arg0 context.Context, arg1 string) TestWorkflowTemplateWatcher {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WatchTestWorkflowTemplateUpdates", arg0, arg1)
+	ret0, _ := ret[0].(TestWorkflowTemplateWatcher)
+	return ret0
+}
+
+// WatchTestWorkflowTemplateUpdates indicates an expected call of WatchTestWorkflowTemplateUpdates.
+func (mr *MockClientMockRecorder) WatchTestWorkflowTemplateUpdates(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WatchTestWorkflowTemplateUpdates", reflect.TypeOf((*MockClient)(nil).WatchTestWorkflowTemplateUpdates), arg0, arg1)
+}
+
+// WatchTestWorkflowUpdates mocks base method.
+func (m *MockClient) WatchTestWorkflowUpdates(arg0 context.Context, arg1 string) TestWorkflowWatcher {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WatchTestWorkflowUpdates", arg0, arg1)
+	ret0, _ := ret[0].(TestWorkflowWatcher)
+	return ret0
+}
+
+// WatchTestWorkflowUpdates indicates an expected call of WatchTestWorkflowUpdates.
+func (mr *MockClientMockRecorder) WatchTestWorkflowUpdates(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WatchTestWorkflowUpdates", reflect.TypeOf((*MockClient)(nil).WatchTestWorkflowUpdates), arg0, arg1)
 }

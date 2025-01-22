@@ -6,28 +6,64 @@ import (
 	"slices"
 	"strings"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	labels2 "k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/selection"
+	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
+	"github.com/kubeshop/testkube/pkg/repository/channels"
 )
 
 var _ TestWorkflowClient = &k8sTestWorkflowClient{}
 
 type k8sTestWorkflowClient struct {
-	client    client.Client
-	namespace string
+	client         client.Client
+	restClient     rest.Interface
+	parameterCodec runtime.ParameterCodec
+	namespace      string
 }
 
-func NewKubernetesTestWorkflowClient(client client.Client, namespace string) TestWorkflowClient {
-	return &k8sTestWorkflowClient{
-		client:    client,
-		namespace: namespace,
+func NewKubernetesTestWorkflowClient(client client.Client, restConfig *rest.Config, namespace string) (TestWorkflowClient, error) {
+	// Build the scheme
+	scheme := runtime.NewScheme()
+	if err := metav1.AddMetaToScheme(scheme); err != nil {
+		return nil, err
 	}
+	if err := testworkflowsv1.SchemeBuilder.AddToScheme(scheme); err != nil {
+		return nil, err
+	}
+	codecs := serializer.NewCodecFactory(scheme)
+	parameterCodec := runtime.NewParameterCodec(scheme)
+
+	// Build the REST client
+	cfg := *restConfig
+	gv := testworkflowsv1.GroupVersion
+	cfg.GroupVersion = &gv
+	cfg.APIPath = "/apis"
+	cfg.NegotiatedSerializer = codecs.WithoutConversion()
+	httpClient, err := rest.HTTPClientFor(&cfg)
+	if err != nil {
+		return nil, err
+	}
+	restClient, err := rest.RESTClientForConfigAndClient(&cfg, httpClient)
+	if err != nil {
+		return nil, err
+	}
+
+	return &k8sTestWorkflowClient{
+		client:         client,
+		restClient:     restClient,
+		parameterCodec: parameterCodec,
+		namespace:      namespace,
+	}, nil
 }
 
 func (c *k8sTestWorkflowClient) get(ctx context.Context, name string) (*testworkflowsv1.TestWorkflow, error) {
@@ -149,4 +185,86 @@ func (c *k8sTestWorkflowClient) DeleteByLabels(ctx context.Context, environmentI
 		client.MatchingLabelsSelector{Selector: labelSelector})
 	// TODO: Consider if it's possible to return count
 	return math.MaxInt32, err
+}
+
+func (c *k8sTestWorkflowClient) WatchUpdates(ctx context.Context, environmentId string, includeInitialData bool) Watcher {
+	// Load initial data
+	list := &testworkflowsv1.TestWorkflowList{}
+	if includeInitialData {
+		opts := &client.ListOptions{Namespace: c.namespace}
+		if err := c.client.List(ctx, list, opts); err != nil {
+			return channels.NewError[Update](err)
+		}
+	}
+
+	// Start watching
+	opts := metav1.ListOptions{Watch: true, ResourceVersion: list.ResourceVersion}
+	watcher, err := c.restClient.Get().
+		Namespace(c.namespace).
+		Resource("testworkflows").
+		VersionedParams(&opts, c.parameterCodec).
+		Watch(ctx)
+	if err != nil {
+		return channels.NewError[Update](err)
+	}
+	result := channels.NewWatcher[Update]()
+	go func() {
+		// Send initial data
+		for _, k8sObject := range list.Items {
+			obj := testworkflows.MapTestWorkflowKubeToAPI(k8sObject)
+			updateType := EventTypeCreate
+			if !obj.Updated.Equal(obj.Created) {
+				updateType = EventTypeUpdate
+			}
+			result.Send(Update{
+				Type:      updateType,
+				Timestamp: obj.Updated,
+				Resource:  &obj,
+			})
+		}
+
+		// Watch
+		for event := range watcher.ResultChan() {
+			// Continue watching if that's just a bookmark
+			if event.Type == watch.Bookmark {
+				continue
+			}
+
+			// Load the current Kubernetes object
+			k8SObject, ok := event.Object.(*testworkflowsv1.TestWorkflow)
+			if !ok || k8SObject == nil {
+				continue
+			}
+
+			// Handle Kubernetes flavours that do not have Deleted event
+			if k8SObject.DeletionTimestamp != nil {
+				event.Type = watch.Deleted
+			}
+
+			obj := testworkflows.MapTestWorkflowKubeToAPI(*k8SObject)
+
+			switch event.Type {
+			case watch.Added:
+				result.Send(Update{
+					Type:      EventTypeCreate,
+					Timestamp: obj.Updated,
+					Resource:  &obj,
+				})
+			case watch.Modified:
+				result.Send(Update{
+					Type:      EventTypeUpdate,
+					Timestamp: obj.Updated,
+					Resource:  &obj,
+				})
+			case watch.Deleted:
+				result.Send(Update{
+					Type:      EventTypeDelete,
+					Timestamp: obj.Updated,
+					Resource:  &obj,
+				})
+			}
+		}
+		result.Close(context.Cause(ctx))
+	}()
+	return result
 }

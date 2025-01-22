@@ -59,6 +59,7 @@ type TestKubeCloudAPIClient interface {
 	UpdateTestWorkflow(ctx context.Context, in *UpdateTestWorkflowRequest, opts ...grpc.CallOption) (*UpdateTestWorkflowResponse, error)
 	DeleteTestWorkflow(ctx context.Context, in *DeleteTestWorkflowRequest, opts ...grpc.CallOption) (*DeleteTestWorkflowResponse, error)
 	DeleteTestWorkflowsByLabels(ctx context.Context, in *DeleteTestWorkflowsByLabelsRequest, opts ...grpc.CallOption) (*DeleteTestWorkflowsByLabelsResponse, error)
+	WatchTestWorkflowUpdates(ctx context.Context, in *WatchTestWorkflowUpdatesRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_WatchTestWorkflowUpdatesClient, error)
 	// -- Test Workflow Templates
 	GetTestWorkflowTemplate(ctx context.Context, in *GetTestWorkflowTemplateRequest, opts ...grpc.CallOption) (*GetTestWorkflowTemplateResponse, error)
 	ListTestWorkflowTemplates(ctx context.Context, in *ListTestWorkflowTemplatesRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_ListTestWorkflowTemplatesClient, error)
@@ -67,6 +68,7 @@ type TestKubeCloudAPIClient interface {
 	UpdateTestWorkflowTemplate(ctx context.Context, in *UpdateTestWorkflowTemplateRequest, opts ...grpc.CallOption) (*UpdateTestWorkflowTemplateResponse, error)
 	DeleteTestWorkflowTemplate(ctx context.Context, in *DeleteTestWorkflowTemplateRequest, opts ...grpc.CallOption) (*DeleteTestWorkflowTemplateResponse, error)
 	DeleteTestWorkflowTemplatesByLabels(ctx context.Context, in *DeleteTestWorkflowTemplatesByLabelsRequest, opts ...grpc.CallOption) (*DeleteTestWorkflowTemplatesByLabelsResponse, error)
+	WatchTestWorkflowTemplateUpdates(ctx context.Context, in *WatchTestWorkflowTemplateUpdatesRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_WatchTestWorkflowTemplateUpdatesClient, error)
 }
 
 type testKubeCloudAPIClient struct {
@@ -618,6 +620,38 @@ func (c *testKubeCloudAPIClient) DeleteTestWorkflowsByLabels(ctx context.Context
 	return out, nil
 }
 
+func (c *testKubeCloudAPIClient) WatchTestWorkflowUpdates(ctx context.Context, in *WatchTestWorkflowUpdatesRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_WatchTestWorkflowUpdatesClient, error) {
+	stream, err := c.cc.NewStream(ctx, &TestKubeCloudAPI_ServiceDesc.Streams[12], "/cloud.TestKubeCloudAPI/WatchTestWorkflowUpdates", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &testKubeCloudAPIWatchTestWorkflowUpdatesClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type TestKubeCloudAPI_WatchTestWorkflowUpdatesClient interface {
+	Recv() (*TestWorkflowUpdate, error)
+	grpc.ClientStream
+}
+
+type testKubeCloudAPIWatchTestWorkflowUpdatesClient struct {
+	grpc.ClientStream
+}
+
+func (x *testKubeCloudAPIWatchTestWorkflowUpdatesClient) Recv() (*TestWorkflowUpdate, error) {
+	m := new(TestWorkflowUpdate)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 func (c *testKubeCloudAPIClient) GetTestWorkflowTemplate(ctx context.Context, in *GetTestWorkflowTemplateRequest, opts ...grpc.CallOption) (*GetTestWorkflowTemplateResponse, error) {
 	out := new(GetTestWorkflowTemplateResponse)
 	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/GetTestWorkflowTemplate", in, out, opts...)
@@ -628,7 +662,7 @@ func (c *testKubeCloudAPIClient) GetTestWorkflowTemplate(ctx context.Context, in
 }
 
 func (c *testKubeCloudAPIClient) ListTestWorkflowTemplates(ctx context.Context, in *ListTestWorkflowTemplatesRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_ListTestWorkflowTemplatesClient, error) {
-	stream, err := c.cc.NewStream(ctx, &TestKubeCloudAPI_ServiceDesc.Streams[12], "/cloud.TestKubeCloudAPI/ListTestWorkflowTemplates", opts...)
+	stream, err := c.cc.NewStream(ctx, &TestKubeCloudAPI_ServiceDesc.Streams[13], "/cloud.TestKubeCloudAPI/ListTestWorkflowTemplates", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -704,6 +738,38 @@ func (c *testKubeCloudAPIClient) DeleteTestWorkflowTemplatesByLabels(ctx context
 	return out, nil
 }
 
+func (c *testKubeCloudAPIClient) WatchTestWorkflowTemplateUpdates(ctx context.Context, in *WatchTestWorkflowTemplateUpdatesRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_WatchTestWorkflowTemplateUpdatesClient, error) {
+	stream, err := c.cc.NewStream(ctx, &TestKubeCloudAPI_ServiceDesc.Streams[14], "/cloud.TestKubeCloudAPI/WatchTestWorkflowTemplateUpdates", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &testKubeCloudAPIWatchTestWorkflowTemplateUpdatesClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type TestKubeCloudAPI_WatchTestWorkflowTemplateUpdatesClient interface {
+	Recv() (*TestWorkflowTemplateUpdate, error)
+	grpc.ClientStream
+}
+
+type testKubeCloudAPIWatchTestWorkflowTemplateUpdatesClient struct {
+	grpc.ClientStream
+}
+
+func (x *testKubeCloudAPIWatchTestWorkflowTemplateUpdatesClient) Recv() (*TestWorkflowTemplateUpdate, error) {
+	m := new(TestWorkflowTemplateUpdate)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // TestKubeCloudAPIServer is the server API for TestKubeCloudAPI service.
 // All implementations must embed UnimplementedTestKubeCloudAPIServer
 // for forward compatibility
@@ -744,6 +810,7 @@ type TestKubeCloudAPIServer interface {
 	UpdateTestWorkflow(context.Context, *UpdateTestWorkflowRequest) (*UpdateTestWorkflowResponse, error)
 	DeleteTestWorkflow(context.Context, *DeleteTestWorkflowRequest) (*DeleteTestWorkflowResponse, error)
 	DeleteTestWorkflowsByLabels(context.Context, *DeleteTestWorkflowsByLabelsRequest) (*DeleteTestWorkflowsByLabelsResponse, error)
+	WatchTestWorkflowUpdates(*WatchTestWorkflowUpdatesRequest, TestKubeCloudAPI_WatchTestWorkflowUpdatesServer) error
 	// -- Test Workflow Templates
 	GetTestWorkflowTemplate(context.Context, *GetTestWorkflowTemplateRequest) (*GetTestWorkflowTemplateResponse, error)
 	ListTestWorkflowTemplates(*ListTestWorkflowTemplatesRequest, TestKubeCloudAPI_ListTestWorkflowTemplatesServer) error
@@ -752,6 +819,7 @@ type TestKubeCloudAPIServer interface {
 	UpdateTestWorkflowTemplate(context.Context, *UpdateTestWorkflowTemplateRequest) (*UpdateTestWorkflowTemplateResponse, error)
 	DeleteTestWorkflowTemplate(context.Context, *DeleteTestWorkflowTemplateRequest) (*DeleteTestWorkflowTemplateResponse, error)
 	DeleteTestWorkflowTemplatesByLabels(context.Context, *DeleteTestWorkflowTemplatesByLabelsRequest) (*DeleteTestWorkflowTemplatesByLabelsResponse, error)
+	WatchTestWorkflowTemplateUpdates(*WatchTestWorkflowTemplateUpdatesRequest, TestKubeCloudAPI_WatchTestWorkflowTemplateUpdatesServer) error
 	mustEmbedUnimplementedTestKubeCloudAPIServer()
 }
 
@@ -849,6 +917,9 @@ func (UnimplementedTestKubeCloudAPIServer) DeleteTestWorkflow(context.Context, *
 func (UnimplementedTestKubeCloudAPIServer) DeleteTestWorkflowsByLabels(context.Context, *DeleteTestWorkflowsByLabelsRequest) (*DeleteTestWorkflowsByLabelsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteTestWorkflowsByLabels not implemented")
 }
+func (UnimplementedTestKubeCloudAPIServer) WatchTestWorkflowUpdates(*WatchTestWorkflowUpdatesRequest, TestKubeCloudAPI_WatchTestWorkflowUpdatesServer) error {
+	return status.Errorf(codes.Unimplemented, "method WatchTestWorkflowUpdates not implemented")
+}
 func (UnimplementedTestKubeCloudAPIServer) GetTestWorkflowTemplate(context.Context, *GetTestWorkflowTemplateRequest) (*GetTestWorkflowTemplateResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetTestWorkflowTemplate not implemented")
 }
@@ -869,6 +940,9 @@ func (UnimplementedTestKubeCloudAPIServer) DeleteTestWorkflowTemplate(context.Co
 }
 func (UnimplementedTestKubeCloudAPIServer) DeleteTestWorkflowTemplatesByLabels(context.Context, *DeleteTestWorkflowTemplatesByLabelsRequest) (*DeleteTestWorkflowTemplatesByLabelsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteTestWorkflowTemplatesByLabels not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) WatchTestWorkflowTemplateUpdates(*WatchTestWorkflowTemplateUpdatesRequest, TestKubeCloudAPI_WatchTestWorkflowTemplateUpdatesServer) error {
+	return status.Errorf(codes.Unimplemented, "method WatchTestWorkflowTemplateUpdates not implemented")
 }
 func (UnimplementedTestKubeCloudAPIServer) mustEmbedUnimplementedTestKubeCloudAPIServer() {}
 
@@ -1499,6 +1573,27 @@ func _TestKubeCloudAPI_DeleteTestWorkflowsByLabels_Handler(srv interface{}, ctx 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _TestKubeCloudAPI_WatchTestWorkflowUpdates_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(WatchTestWorkflowUpdatesRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(TestKubeCloudAPIServer).WatchTestWorkflowUpdates(m, &testKubeCloudAPIWatchTestWorkflowUpdatesServer{stream})
+}
+
+type TestKubeCloudAPI_WatchTestWorkflowUpdatesServer interface {
+	Send(*TestWorkflowUpdate) error
+	grpc.ServerStream
+}
+
+type testKubeCloudAPIWatchTestWorkflowUpdatesServer struct {
+	grpc.ServerStream
+}
+
+func (x *testKubeCloudAPIWatchTestWorkflowUpdatesServer) Send(m *TestWorkflowUpdate) error {
+	return x.ServerStream.SendMsg(m)
+}
+
 func _TestKubeCloudAPI_GetTestWorkflowTemplate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetTestWorkflowTemplateRequest)
 	if err := dec(in); err != nil {
@@ -1626,6 +1721,27 @@ func _TestKubeCloudAPI_DeleteTestWorkflowTemplatesByLabels_Handler(srv interface
 		return srv.(TestKubeCloudAPIServer).DeleteTestWorkflowTemplatesByLabels(ctx, req.(*DeleteTestWorkflowTemplatesByLabelsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
+}
+
+func _TestKubeCloudAPI_WatchTestWorkflowTemplateUpdates_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(WatchTestWorkflowTemplateUpdatesRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(TestKubeCloudAPIServer).WatchTestWorkflowTemplateUpdates(m, &testKubeCloudAPIWatchTestWorkflowTemplateUpdatesServer{stream})
+}
+
+type TestKubeCloudAPI_WatchTestWorkflowTemplateUpdatesServer interface {
+	Send(*TestWorkflowTemplateUpdate) error
+	grpc.ServerStream
+}
+
+type testKubeCloudAPIWatchTestWorkflowTemplateUpdatesServer struct {
+	grpc.ServerStream
+}
+
+func (x *testKubeCloudAPIWatchTestWorkflowTemplateUpdatesServer) Send(m *TestWorkflowTemplateUpdate) error {
+	return x.ServerStream.SendMsg(m)
 }
 
 // TestKubeCloudAPI_ServiceDesc is the grpc.ServiceDesc for TestKubeCloudAPI service.
@@ -1801,8 +1917,18 @@ var TestKubeCloudAPI_ServiceDesc = grpc.ServiceDesc{
 			ServerStreams: true,
 		},
 		{
+			StreamName:    "WatchTestWorkflowUpdates",
+			Handler:       _TestKubeCloudAPI_WatchTestWorkflowUpdates_Handler,
+			ServerStreams: true,
+		},
+		{
 			StreamName:    "ListTestWorkflowTemplates",
 			Handler:       _TestKubeCloudAPI_ListTestWorkflowTemplates_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "WatchTestWorkflowTemplateUpdates",
+			Handler:       _TestKubeCloudAPI_WatchTestWorkflowTemplateUpdates_Handler,
 			ServerStreams: true,
 		},
 	},

@@ -1,8 +1,10 @@
 package testkube
 
 import (
+	"bytes"
 	"encoding/json"
 	"strings"
+	"time"
 
 	"github.com/kubeshop/testkube/pkg/utils"
 )
@@ -90,4 +92,30 @@ func (w *TestWorkflowTemplate) DeepCopy() *TestWorkflowTemplate {
 	var result TestWorkflowTemplate
 	_ = json.Unmarshal(v, &result)
 	return &result
+}
+
+// TODO: do it stable
+func (w *TestWorkflowTemplate) Equals(other *TestWorkflowTemplate) bool {
+	// Avoid check when there is one existing and the other one not
+	if (w == nil) != (other == nil) {
+		return false
+	}
+
+	// Reset timestamps to avoid influence
+	wCreated := w.Created
+	otherCreated := other.Created
+	w.Created = time.Time{}
+	other.Created = time.Time{}
+
+	// Compare
+	w1, _ := json.Marshal(w)
+	w.Created = time.Time{}
+	w2, _ := json.Marshal(other)
+	result := bytes.Equal(w1, w2)
+
+	// Restore values
+	w.Created = wCreated
+	other.Created = otherCreated
+
+	return result
 }
