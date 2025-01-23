@@ -23,7 +23,7 @@ type FilterImpl struct {
 	FActorType     testkube.TestWorkflowRunningContextActorType
 }
 
-func NewArchitectureFilter() *FilterImpl {
+func NewExecutionsFilter() *FilterImpl {
 	result := FilterImpl{FPage: 0, FPageSize: PageDefaultLimit}
 	return &result
 }

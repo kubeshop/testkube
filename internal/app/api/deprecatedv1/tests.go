@@ -512,7 +512,7 @@ func (s *DeprecatedTestkubeAPI) AbortTestHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, fmt.Errorf("failed to abort test: id cannot be empty"))
 		}
 		errPrefix := fmt.Sprintf("failed to abort test %s", name)
-		filter := result.NewArchitectureFilter().WithTestName(name).WithStatus(string(testkube.RUNNING_ExecutionStatus))
+		filter := result.NewExecutionsFilter().WithTestName(name).WithStatus(string(testkube.RUNNING_ExecutionStatus))
 		executions, err := s.DeprecatedRepositories.TestResults().GetExecutions(ctx, filter)
 		if err != nil {
 			if err == mongo.ErrNoDocuments {

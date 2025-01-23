@@ -773,7 +773,7 @@ func (s *DeprecatedTestkubeAPI) AbortTestSuiteHandler() fiber.Handler {
 			return s.Error(c, http.StatusBadRequest, fmt.Errorf("failed to abort test suite: id cannot be empty"))
 		}
 		errPrefix := fmt.Sprintf("failed to abort test suite %s", name)
-		filter := testresult.NewArchitectureFilter().WithName(name).WithStatus(string(testkube.RUNNING_ExecutionStatus))
+		filter := testresult.NewExecutionsFilter().WithName(name).WithStatus(string(testkube.RUNNING_ExecutionStatus))
 		executions, err := s.DeprecatedRepositories.TestSuiteResults().GetExecutions(ctx, filter)
 		if err != nil {
 			if err == mongo.ErrNoDocuments {
@@ -855,7 +855,7 @@ func (s *DeprecatedTestkubeAPI) ListTestSuiteTestsHandler() fiber.Handler {
 
 func getExecutionsFilterFromRequest(c *fiber.Ctx) testresult.Filter {
 
-	filter := testresult.NewArchitectureFilter()
+	filter := testresult.NewExecutionsFilter()
 	// id for /test-suites/ID/executions
 	name := c.Params("id", "")
 	if name == "" {
