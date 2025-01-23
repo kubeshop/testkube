@@ -41,6 +41,7 @@ func MapTestTriggerUpsertRequestToTestTriggerCRD(request testkube.TestTriggerUps
 			ConditionSpec:     mapConditionSpecCRD(request.ConditionSpec),
 			ProbeSpec:         mapProbeSpecCRD(request.ProbeSpec),
 			Action:            action,
+			ActionParameters:  mapActionParametersCRD(request.ActionParameters),
 			Execution:         execution,
 			TestSelector:      mapSelectorToCRD(request.TestSelector),
 			ConcurrencyPolicy: concurrencyPolicy,
@@ -129,5 +130,16 @@ func mapProbeSpecCRD(probeSpec *testkube.TestTriggerProbeSpec) *testsv1.TestTrig
 		Timeout: probeSpec.Timeout,
 		Delay:   probeSpec.Delay,
 		Probes:  probes,
+	}
+}
+
+func mapActionParametersCRD(actionParameters *testkube.TestTriggerActionParameters) *testsv1.TestTriggerActionParameters {
+	if actionParameters == nil {
+		return nil
+	}
+
+	return &testsv1.TestTriggerActionParameters{
+		Config: actionParameters.Config,
+		Tags:   actionParameters.Tags,
 	}
 }

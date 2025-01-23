@@ -49,6 +49,7 @@ func MapCRDToAPI(crd *testsv1.TestTrigger) testkube.TestTrigger {
 		ConditionSpec:     mapConditionSpecFromCRD(crd.Spec.ConditionSpec),
 		ProbeSpec:         mapProbeSpecFromCRD(crd.Spec.ProbeSpec),
 		Action:            action,
+		ActionParameters:  mapActionParametersFromCRD(crd.Spec.ActionParameters),
 		Execution:         execution,
 		TestSelector:      mapSelectorFromCRD(crd.Spec.TestSelector),
 		ConcurrencyPolicy: concurrencyPolicy,
@@ -108,6 +109,17 @@ func mapConditionSpecFromCRD(conditionSpec *testsv1.TestTriggerConditionSpec) *t
 	}
 }
 
+func mapActionParametersFromCRD(actionParameters *testsv1.TestTriggerActionParameters) *testkube.TestTriggerActionParameters {
+	if actionParameters == nil {
+		return nil
+	}
+
+	return &testkube.TestTriggerActionParameters{
+		Config: actionParameters.Config,
+		Tags:   actionParameters.Tags,
+	}
+}
+
 func MapTestTriggerCRDToTestTriggerUpsertRequest(request testsv1.TestTrigger) testkube.TestTriggerUpsertRequest {
 	var resource *testkube.TestTriggerResources
 	if request.Spec.Resource != "" {
@@ -139,6 +151,7 @@ func MapTestTriggerCRDToTestTriggerUpsertRequest(request testsv1.TestTrigger) te
 		ConditionSpec:     mapConditionSpecFromCRD(request.Spec.ConditionSpec),
 		ProbeSpec:         mapProbeSpecFromCRD(request.Spec.ProbeSpec),
 		Action:            action,
+		ActionParameters:  mapActionParametersFromCRD(request.Spec.ActionParameters),
 		Execution:         execution,
 		TestSelector:      mapSelectorFromCRD(request.Spec.TestSelector),
 		ConcurrencyPolicy: concurrencyPolicy,
