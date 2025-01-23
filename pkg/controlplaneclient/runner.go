@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"sync"
 
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
@@ -16,7 +17,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/repository/channels"
 )
 
-type RunnerRequestsWatcher channels.Watcher[*cloud.RunnerRequest]
+type RunnerRequestsWatcher channels.Watcher[RunnerRequest]
 type NotificationWatcher channels.Watcher[*testkube.TestWorkflowExecutionNotification]
 
 type RunnerClient interface {
@@ -106,9 +107,15 @@ func (c *client) legacyGetRunnerOngoingExecutions(ctx context.Context) ([]*cloud
 func (c *client) WatchRunnerRequests(ctx context.Context) RunnerRequestsWatcher {
 	stream, err := watch(ctx, c.metadata().GRPC(), c.client.GetRunnerRequests)
 	if err != nil {
-		return channels.NewError[*cloud.RunnerRequest](err)
+		return channels.NewError[RunnerRequest](err)
 	}
-	watcher := channels.NewWatcher[*cloud.RunnerRequest]()
+	watcher := channels.NewWatcher[RunnerRequest]()
+	sendMu := sync.Mutex{}
+	send := func(v *cloud.RunnerResponse) error {
+		sendMu.Lock()
+		defer sendMu.Unlock()
+		return stream.Send(v)
+	}
 	go func() {
 		defer watcher.Close(err)
 		for {
@@ -128,21 +135,21 @@ func (c *client) WatchRunnerRequests(ctx context.Context) RunnerRequestsWatcher 
 			}
 
 			// Get the next runner request
-			var req *cloud.RunnerRequestData
+			var req *cloud.RunnerRequest
 			req, err = stream.Recv()
 			if err != nil {
 				continue
 			}
 
-			if req.Ping {
-				err = stream.Send(&cloud.RunnerResponseData{Ping: true})
+			if req.Type == cloud.RunnerRequestType_PING {
+				err = send(&cloud.RunnerResponse{Type: cloud.RunnerRequestType_PING})
 				if err != nil {
 					return
 				}
 				continue
 			}
 
-			watcher.Send(req.Request)
+			watcher.Send(&runnerRequestData{data: req, send: send})
 		}
 	}()
 	return watcher

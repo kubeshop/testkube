@@ -221,24 +221,71 @@ func (a *agentLoop) loopParallelStepNotifications(ctx context.Context) error {
 func (a *agentLoop) loopRunnerRequests(ctx context.Context) error {
 	watcher := a.client.WatchRunnerRequests(ctx)
 	for req := range watcher.Channel() {
-		go func(req *cloud.RunnerRequest) {
-			// Lock the execution for itself
-			var resp *cloud.ObtainExecutionResponse
-			resp, err := a.client.ObtainExecution(ctx, req.EnvironmentId, req.Id)
-			if err != nil {
-				a.logger.Errorf("failed to obtain execution '%s/%s', from Control Plane: %v", req.EnvironmentId, req.Id, err)
-				return
-			}
+		go func(req controlplaneclient.RunnerRequest) {
+			switch req.Type() {
+			case cloud.RunnerRequestType_CONSIDER:
+				// Lock the execution for itself
+				var resp *cloud.ObtainExecutionResponse
+				resp, err := a.client.ObtainExecution(ctx, req.EnvironmentID(), req.ExecutionID())
+				if err != nil {
+					a.logger.Errorf("failed to obtain execution '%s/%s', from Control Plane: %v", req.EnvironmentID(), req.ExecutionID(), err)
+					return
+				}
 
-			// Ignore if the resource has been locked before
-			if !resp.Success {
-				return
-			}
+				// Ignore if the resource has been locked before
+				if !resp.Success {
+					return
+				}
 
-			// Continue
-			err = a.runTestWorkflow(req.EnvironmentId, req.Id, resp.Token)
-			if err != nil {
-				a.logger.Errorf("failed to run execution '%s/%s' from Control Plane: %v", req.EnvironmentId, req.Id, err)
+				// Continue
+				err = a.runTestWorkflow(req.EnvironmentID(), req.ExecutionID(), resp.Token)
+				if err != nil {
+					a.logger.Errorf("failed to run execution '%s/%s' from Control Plane: %v", req.EnvironmentID(), req.ExecutionID(), err)
+				}
+			case cloud.RunnerRequestType_ABORT:
+				originalError := a.runner.Abort(req.ExecutionID())
+				if originalError != nil {
+					err := req.SendError(originalError)
+					if err != nil {
+						a.logger.Errorf("failed to send abort '%s/%s' error: %v: %v", req.EnvironmentID(), req.ExecutionID(), originalError, err)
+					}
+				} else {
+					err := req.Abort().Send()
+					if err != nil {
+						a.logger.Errorf("failed to send abort '%s/%s' success: %v", req.EnvironmentID(), req.ExecutionID(), err)
+					}
+				}
+			case cloud.RunnerRequestType_PAUSE:
+				originalError := a.runner.Pause(req.ExecutionID())
+				if originalError != nil {
+					err := req.SendError(originalError)
+					if err != nil {
+						a.logger.Errorf("failed to send pause '%s/%s' error: %v: %v", req.EnvironmentID(), req.ExecutionID(), originalError, err)
+					}
+				} else {
+					err := req.Pause().Send()
+					if err != nil {
+						a.logger.Errorf("failed to send pause '%s/%s' success: %v", req.EnvironmentID(), req.ExecutionID(), err)
+					}
+				}
+			case cloud.RunnerRequestType_RESUME:
+				originalError := a.runner.Resume(req.ExecutionID())
+				if originalError != nil {
+					err := req.SendError(originalError)
+					if err != nil {
+						a.logger.Errorf("failed to send resume '%s/%s' error: %v: %v", req.EnvironmentID(), req.ExecutionID(), originalError, err)
+					}
+				} else {
+					err := req.Resume().Send()
+					if err != nil {
+						a.logger.Errorf("failed to send resume '%s/%s' success: %v", req.EnvironmentID(), req.ExecutionID(), err)
+					}
+				}
+			default:
+				err := req.SendError(errors.New("unrecognized runner operation"))
+				if err != nil {
+					a.logger.Errorf("failed to send runner error for execution '%s/%s' because of unknown operation: %v", req.EnvironmentID(), req.ExecutionID(), err)
+				}
 			}
 		}(req)
 	}

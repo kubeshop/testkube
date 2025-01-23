@@ -26,7 +26,7 @@ service TestKubeCloudAPI {
 
     // Runner
     rpc GetUnfinishedExecutions(google.protobuf.Empty) returns (stream UnfinishedExecution);
-    rpc GetRunnerRequests(stream RunnerResponseData) returns (stream RunnerRequestData);
+    rpc GetRunnerRequests(stream RunnerResponse) returns (stream RunnerRequest);
     rpc InitExecution(InitExecutionRequest) returns (InitExecutionResponse);
     rpc GetExecution(GetExecutionRequest) returns (GetExecutionResponse);
     rpc UpdateExecutionResult(UpdateExecutionResultRequest) returns (UpdateExecutionResultResponse);
@@ -310,26 +310,33 @@ message Event {
   bytes data = 5;
 }
 
-message RunnerRequestData {
-  bool ping = 1;
-  optional RunnerRequest request = 2;
+enum RunnerRequestType {
+  PING = 0; // Heartbeat
+  CONSIDER = 1; // Consider a new execution to be run
+  ABORT = 2; // Abort the execution
+  RESUME = 3; // Resume the execution
+  PAUSE = 4; // Pause the execution
 }
 
 message RunnerRequest {
-  string environment_id = 1;
-  string id = 2;
+  string message_id = 1;
+  string environment_id = 2;
+  string execution_id = 3;
+  RunnerRequestType type = 4;
 }
 
-message RunnerResponseData {
-  bool ping = 1;
-  optional RunnerResponse response = 2;
+message RunnerConsiderResponse {
 }
 
 message RunnerResponse {
-  string environment_id = 1;
-  string id = 2;
-  bool obtained = 3;
-  optional string error = 4;
+  string message_id = 1;
+  string environment_id = 2;
+  string execution_id = 3;
+  RunnerRequestType type = 4;
+  oneof response {
+    string error = 5;
+    RunnerConsiderResponse consider = 6;
+  }
 }
 
 message UnfinishedExecution {
