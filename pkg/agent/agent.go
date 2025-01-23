@@ -34,7 +34,7 @@ const (
 	envIdMeta               = "environment-id"
 	healthcheckCommand      = "healthcheck"
 	dockerImageVersionMeta  = "docker-image-version"
-	newExecutionsMeta       = "exec"
+	newArchitectureMeta     = "exec"
 	testWorkflowStorageMeta = "tw-storage"
 )
 
@@ -70,8 +70,8 @@ type Agent struct {
 
 	eventEmitter event.Interface
 
-	featureNewExecutions            bool
-	featureTestWorkflowCloudStorage bool
+	featureNewArchitecture bool
+	featureCloudStorage    bool
 }
 
 func NewAgent(logger *zap.SugaredLogger,
@@ -84,33 +84,33 @@ func NewAgent(logger *zap.SugaredLogger,
 	proContext *config.ProContext,
 	dockerImageVersion string,
 	eventEmitter event.Interface,
-	featureNewExecutions bool,
-	featureTestWorkflowCloudStorage bool,
+	featureNewArchitecture bool,
+	featureCloudStorage bool,
 ) (*Agent, error) {
 	return &Agent{
-		handler:                         handler,
-		logger:                          logger.With("service", "Agent", "environmentId", proContext.EnvID),
-		apiKey:                          proContext.APIKey,
-		client:                          client,
-		events:                          make(chan testkube.Event),
-		workerCount:                     proContext.WorkerCount,
-		requestBuffer:                   make(chan *cloud.ExecuteRequest, bufferSizePerWorker*proContext.WorkerCount),
-		responseBuffer:                  make(chan *cloud.ExecuteResponse, bufferSizePerWorker*proContext.WorkerCount),
-		receiveTimeout:                  5 * time.Minute,
-		sendTimeout:                     30 * time.Second,
-		healthcheckInterval:             30 * time.Second,
-		logStreamWorkerCount:            proContext.LogStreamWorkerCount,
-		logStreamRequestBuffer:          make(chan *cloud.LogsStreamRequest, bufferSizePerWorker*proContext.LogStreamWorkerCount),
-		logStreamResponseBuffer:         make(chan *cloud.LogsStreamResponse, bufferSizePerWorker*proContext.LogStreamWorkerCount),
-		logStreamFunc:                   logStreamFunc,
-		clusterID:                       clusterID,
-		clusterName:                     clusterName,
-		features:                        features,
-		proContext:                      proContext,
-		dockerImageVersion:              dockerImageVersion,
-		eventEmitter:                    eventEmitter,
-		featureNewExecutions:            featureNewExecutions,
-		featureTestWorkflowCloudStorage: featureTestWorkflowCloudStorage,
+		handler:                 handler,
+		logger:                  logger.With("service", "Agent", "environmentId", proContext.EnvID),
+		apiKey:                  proContext.APIKey,
+		client:                  client,
+		events:                  make(chan testkube.Event),
+		workerCount:             proContext.WorkerCount,
+		requestBuffer:           make(chan *cloud.ExecuteRequest, bufferSizePerWorker*proContext.WorkerCount),
+		responseBuffer:          make(chan *cloud.ExecuteResponse, bufferSizePerWorker*proContext.WorkerCount),
+		receiveTimeout:          5 * time.Minute,
+		sendTimeout:             30 * time.Second,
+		healthcheckInterval:     30 * time.Second,
+		logStreamWorkerCount:    proContext.LogStreamWorkerCount,
+		logStreamRequestBuffer:  make(chan *cloud.LogsStreamRequest, bufferSizePerWorker*proContext.LogStreamWorkerCount),
+		logStreamResponseBuffer: make(chan *cloud.LogsStreamResponse, bufferSizePerWorker*proContext.LogStreamWorkerCount),
+		logStreamFunc:           logStreamFunc,
+		clusterID:               clusterID,
+		clusterName:             clusterName,
+		features:                features,
+		proContext:              proContext,
+		dockerImageVersion:      dockerImageVersion,
+		eventEmitter:            eventEmitter,
+		featureNewArchitecture:  featureNewArchitecture,
+		featureCloudStorage:     featureCloudStorage,
 	}, nil
 }
 
@@ -162,7 +162,7 @@ func (ag *Agent) run(ctx context.Context) (err error) {
 
 func (ag *Agent) runEventsReaderLoop(ctx context.Context) (err error) {
 	// Ignore when Control Plane doesn't support new executions
-	if !ag.proContext.NewExecutions {
+	if !ag.proContext.NewArchitecture {
 		return nil
 	}
 
@@ -293,10 +293,10 @@ func (ag *Agent) runCommandLoop(ctx context.Context) error {
 	ctx = metadata.AppendToOutgoingContext(ctx, orgIdMeta, ag.proContext.OrgID)
 	ctx = metadata.AppendToOutgoingContext(ctx, dockerImageVersionMeta, ag.dockerImageVersion)
 
-	if ag.featureNewExecutions {
-		ctx = metadata.AppendToOutgoingContext(ctx, newExecutionsMeta, "true")
+	if ag.featureNewArchitecture {
+		ctx = metadata.AppendToOutgoingContext(ctx, newArchitectureMeta, "true")
 	}
-	if ag.featureTestWorkflowCloudStorage {
+	if ag.featureCloudStorage {
 		ctx = metadata.AppendToOutgoingContext(ctx, testWorkflowStorageMeta, "true")
 	}
 

@@ -40,7 +40,7 @@ type agentLoop struct {
 	organizationId      string
 	legacyEnvironmentId string
 
-	newExecutionsEnabled bool
+	newArchitectureEnabled bool
 }
 
 type AgentLoop interface {
@@ -58,20 +58,20 @@ func newAgentLoop(
 	agentId string,
 	organizationId string,
 	legacyEnvironmentId string,
-	newExecutionsEnabled bool,
+	newArchitectureEnabled bool,
 ) AgentLoop {
 	return &agentLoop{
-		runner:               runner,
-		worker:               worker,
-		logger:               logger,
-		emitter:              emitter,
-		client:               client,
-		proContext:           proContext,
-		controlPlaneConfig:   controlPlaneConfig,
-		agentId:              agentId,
-		organizationId:       organizationId,
-		legacyEnvironmentId:  legacyEnvironmentId,
-		newExecutionsEnabled: newExecutionsEnabled,
+		runner:                 runner,
+		worker:                 worker,
+		logger:                 logger,
+		emitter:                emitter,
+		client:                 client,
+		proContext:             proContext,
+		controlPlaneConfig:     controlPlaneConfig,
+		agentId:                agentId,
+		organizationId:         organizationId,
+		legacyEnvironmentId:    legacyEnvironmentId,
+		newArchitectureEnabled: newArchitectureEnabled,
 	}
 }
 
@@ -114,7 +114,7 @@ func (a *agentLoop) finishExecution(ctx context.Context, environmentId string, e
 			a.logger.Warnw("failed to finish the TestWorkflow execution in database", "recoverable", true, "executionId", execution.Id, "error", err)
 			return err
 		}
-		if !a.newExecutionsEnabled {
+		if !a.newArchitectureEnabled {
 			// Emit events locally if the Control Plane doesn't support that
 			if execution.Result.IsPassed() {
 				a.emitter.Notify(testkube.NewEventEndTestWorkflowSuccess(execution))
@@ -150,7 +150,7 @@ func (a *agentLoop) run(ctx context.Context) error {
 	g, ctx := errgroup.WithContext(ctx)
 
 	// Handle the new mechanism for runners
-	if a.newExecutionsEnabled {
+	if a.newArchitectureEnabled {
 		g.Go(func() error {
 			return errors2.Wrap(a.loopRunnerRequests(ctx), "runners loop")
 		})

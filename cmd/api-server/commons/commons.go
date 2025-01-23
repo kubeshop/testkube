@@ -296,8 +296,8 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 		LogStreamWorkerCount: cfg.TestkubeProLogStreamWorkerCount,
 		Migrate:              cfg.TestkubeProMigrate,
 		DashboardURI:         cfg.TestkubeDashboardURI,
-		NewExecutions:        grpcClient == nil,
-		TestWorkflowStorage:  grpcClient == nil,
+		NewArchitecture:      grpcClient == nil,
+		CloudStorage:         grpcClient == nil,
 	}
 
 	if cfg.TestkubeProAPIKey == "" || grpcClient == nil {
@@ -325,12 +325,12 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 		proContext.OrgID = foundProContext.OrgId
 	}
 
-	if capabilities.Enabled(foundProContext.Capabilities, capabilities.CapabilityNewExecutions) {
-		proContext.NewExecutions = true
+	if capabilities.Enabled(foundProContext.Capabilities, capabilities.CapabilityNewArchitecture) {
+		proContext.NewArchitecture = true
 	}
 
-	if capabilities.Enabled(foundProContext.Capabilities, capabilities.CapabilityTestWorkflowStorage) {
-		proContext.TestWorkflowStorage = true
+	if capabilities.Enabled(foundProContext.Capabilities, capabilities.CapabilityCloudStorage) {
+		proContext.CloudStorage = true
 	}
 
 	if string(foundProContext.Mode) != "" {

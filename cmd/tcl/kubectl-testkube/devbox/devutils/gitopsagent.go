@@ -79,8 +79,8 @@ func (r *GitOpsAgent) Create(ctx context.Context, env *client.Environment, agent
 		{Name: "GITOPS_KUBERNETES_NAME_PATTERN", Value: r.kubernetesPattern},
 
 		// Feature flags
-		{Name: "FEATURE_NEW_EXECUTIONS", Value: "true"},
-		{Name: "FEATURE_TESTWORKFLOW_CLOUD_STORAGE", Value: "true"},
+		{Name: "FEATURE_NEW_ARCHITECTURE", Value: "true"},
+		{Name: "FEATURE_CLOUD_STORAGE", Value: "true"},
 	}
 	return r.pod.Create(ctx, &corev1.Pod{
 		Spec: corev1.PodSpec{

@@ -306,7 +306,7 @@ func (s *TestkubeAPI) ListTestWorkflowExecutionsHandler() fiber.Handler {
 			return s.ClientError(c, errPrefix+": get execution results", err)
 		}
 
-		executionTotals, err := s.TestWorkflowResults.GetExecutionsTotals(c.Context(), testworkflow2.NewExecutionsFilter().WithName(filter.Name()))
+		executionTotals, err := s.TestWorkflowResults.GetExecutionsTotals(c.Context(), testworkflow2.NewArchitectureFilter().WithName(filter.Name()))
 		if err != nil {
 			return s.ClientError(c, errPrefix+": get totals", err)
 		}
@@ -517,7 +517,7 @@ func (s *TestkubeAPI) AbortAllTestWorkflowExecutionsHandler() fiber.Handler {
 		errPrefix := fmt.Sprintf("failed to abort test workflow executions '%s'", name)
 
 		// Fetch executions
-		filter := testworkflow2.NewExecutionsFilter().WithName(name).WithStatus(string(testkube.RUNNING_TestWorkflowStatus))
+		filter := testworkflow2.NewArchitectureFilter().WithName(name).WithStatus(string(testkube.RUNNING_TestWorkflowStatus))
 		executions, err := s.TestWorkflowResults.GetExecutions(ctx, filter)
 		if err != nil {
 			if apiutils.IsNotFound(err) {
@@ -620,7 +620,7 @@ func (s *TestkubeAPI) GetTestWorkflowArtifactArchiveHandler() fiber.Handler {
 }
 
 func getWorkflowExecutionsFilterFromRequest(c *fiber.Ctx) testworkflow2.Filter {
-	filter := testworkflow2.NewExecutionsFilter()
+	filter := testworkflow2.NewArchitectureFilter()
 	name := c.Params("id", "")
 	if name != "" {
 		filter = filter.WithName(name)

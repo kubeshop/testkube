@@ -44,22 +44,22 @@ var (
 	internalProContext     config3.ProContext
 	proContext             *cloud.ProContextResponse
 	proContextLoaded       bool
-	isNewExecutionsCache   *bool
+	isNewArchitectureCache *bool
 	isExternalStorageCache *bool
 )
 
 func loadDefaultProContext() {
 	cfg := config2.Config()
 	internalProContext = config3.ProContext{
-		APIKey:              cfg.Worker.Connection.ApiKey,
-		URL:                 cfg.Worker.Connection.Url,
-		TLSInsecure:         cfg.Worker.Connection.TlsInsecure,
-		SkipVerify:          cfg.Worker.Connection.SkipVerify,
-		EnvID:               cfg.Execution.EnvironmentId,
-		OrgID:               cfg.Execution.OrganizationId,
-		DashboardURI:        cfg.ControlPlane.DashboardUrl,
-		NewExecutions:       false,
-		TestWorkflowStorage: false,
+		APIKey:          cfg.Worker.Connection.ApiKey,
+		URL:             cfg.Worker.Connection.Url,
+		TLSInsecure:     cfg.Worker.Connection.TlsInsecure,
+		SkipVerify:      cfg.Worker.Connection.SkipVerify,
+		EnvID:           cfg.Execution.EnvironmentId,
+		OrgID:           cfg.Execution.OrganizationId,
+		DashboardURI:    cfg.ControlPlane.DashboardUrl,
+		NewArchitecture: false,
+		CloudStorage:    false,
 	}
 }
 
@@ -70,21 +70,21 @@ func loadProContext() {
 
 	defer func() {
 		loadDefaultProContext()
-		internalProContext.NewExecutions = *isNewExecutionsCache
-		internalProContext.TestWorkflowStorage = *isExternalStorageCache
+		internalProContext.NewArchitecture = *isNewArchitectureCache
+		internalProContext.CloudStorage = *isExternalStorageCache
 	}()
 
 	// Block if the instance doesn't support that
 	cfg := config2.Config()
-	if isNewExecutionsCache == nil && cfg.Worker.FeatureFlags[testworkflowconfig.FeatureFlagNewExecutions] != "true" {
-		isNewExecutionsCache = common.Ptr(false)
+	if isNewArchitectureCache == nil && cfg.Worker.FeatureFlags[testworkflowconfig.FeatureFlagNewArchitecture] != "true" {
+		isNewArchitectureCache = common.Ptr(false)
 	}
-	if isExternalStorageCache == nil && cfg.Worker.FeatureFlags[testworkflowconfig.FeatureFlagTestWorkflowCloudStorage] != "true" {
+	if isExternalStorageCache == nil && cfg.Worker.FeatureFlags[testworkflowconfig.FeatureFlagCloudStorage] != "true" {
 		isExternalStorageCache = common.Ptr(false)
 	}
 
 	// Do not check Cloud support if its already predefined
-	if isNewExecutionsCache != nil && isExternalStorageCache != nil {
+	if isNewArchitectureCache != nil && isExternalStorageCache != nil {
 		return
 	}
 
@@ -103,21 +103,21 @@ func loadProContext() {
 		proContextLoaded = true
 	}
 	if proContext != nil {
-		if isNewExecutionsCache == nil {
-			isNewExecutionsCache = common.Ptr(capabilities.Enabled(proContext.Capabilities, capabilities.CapabilityNewExecutions))
+		if isNewArchitectureCache == nil {
+			isNewArchitectureCache = common.Ptr(capabilities.Enabled(proContext.Capabilities, capabilities.CapabilityNewArchitecture))
 		}
 		if isExternalStorageCache == nil {
-			isExternalStorageCache = common.Ptr(capabilities.Enabled(proContext.Capabilities, capabilities.CapabilityTestWorkflowStorage))
+			isExternalStorageCache = common.Ptr(capabilities.Enabled(proContext.Capabilities, capabilities.CapabilityCloudStorage))
 		}
 	} else {
-		isNewExecutionsCache = common.Ptr(false)
+		isNewArchitectureCache = common.Ptr(false)
 		isExternalStorageCache = common.Ptr(false)
 	}
 }
 
-func IsNewExecutions() bool {
+func IsNewArchitecture() bool {
 	loadProContext()
-	return *isNewExecutionsCache
+	return *isNewArchitectureCache
 }
 
 func IsExternalStorage() bool {

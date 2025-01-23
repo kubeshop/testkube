@@ -181,7 +181,7 @@ func main() {
 		StorageSkipVerify: cfg.StorageSkipVerify,
 	})
 
-	if proContext.TestWorkflowStorage && cfg.FeatureTestWorkflowCloudStorage {
+	if proContext.CloudStorage && cfg.FeatureCloudStorage {
 		testWorkflowsClient = testworkflowclient.NewCloudTestWorkflowClient(client)
 		testWorkflowTemplatesClient = testworkflowtemplateclient.NewCloudTestWorkflowTemplateClient(client)
 	} else {
@@ -228,8 +228,8 @@ func main() {
 		testWorkflowProcessor = presets.NewPro(inspector)
 	}
 	executionWorker := services.CreateExecutionWorker(clientset, cfg, clusterId, serviceAccountNames, testWorkflowProcessor, map[string]string{
-		testworkflowconfig.FeatureFlagNewExecutions:            fmt.Sprintf("%v", cfg.FeatureNewExecutions),
-		testworkflowconfig.FeatureFlagTestWorkflowCloudStorage: fmt.Sprintf("%v", cfg.FeatureTestWorkflowCloudStorage),
+		testworkflowconfig.FeatureFlagNewArchitecture: fmt.Sprintf("%v", cfg.FeatureNewArchitecture),
+		testworkflowconfig.FeatureFlagCloudStorage:    fmt.Sprintf("%v", cfg.FeatureCloudStorage),
 	})
 
 	runnerService := runner2.NewService(
@@ -251,8 +251,8 @@ func main() {
 			DefaultNamespace:           cfg.TestkubeNamespace,
 			ServiceAccountNames:        serviceAccountNames,
 			StorageSkipVerify:          cfg.StorageSkipVerify,
-			ControlPlaneStorageEnabled: proContext.TestWorkflowStorage && cfg.FeatureTestWorkflowCloudStorage,
-			NewExecutionsEnabled:       proContext.NewExecutions && cfg.FeatureNewExecutions,
+			ControlPlaneStorageEnabled: proContext.CloudStorage && cfg.FeatureCloudStorage,
+			NewArchitectureEnabled:     proContext.NewArchitecture && cfg.FeatureNewArchitecture,
 		},
 	)
 	if !cfg.DisableRunner {
@@ -279,7 +279,7 @@ func main() {
 		proContext.OrgID,
 		proContext.EnvID,
 		agentId,
-		proContext.NewExecutions && cfg.FeatureNewExecutions,
+		proContext.NewArchitecture && cfg.FeatureNewArchitecture,
 	)
 
 	var deprecatedClients commons.DeprecatedClients
@@ -321,7 +321,7 @@ func main() {
 	eventsEmitter.Loader.Register(testworkflowexecutions.NewLoader(ctx, cfg.TestkubeNamespace, kubeClient))
 
 	// Synchronise Test Workflows with cloud
-	if proContext.TestWorkflowStorage && (cfg.GitOpsSyncKubernetesToCloudEnabled || cfg.GitOpsSyncCloudToKubernetesEnabled) {
+	if proContext.CloudStorage && (cfg.GitOpsSyncKubernetesToCloudEnabled || cfg.GitOpsSyncCloudToKubernetesEnabled) {
 		testWorkflowsCloudStorage, err := crdstorage.NewTestWorkflowsStorage(testworkflowclient.NewCloudTestWorkflowClient(client), proContext.EnvID, cfg.GitOpsSyncCloudNamePattern, nil)
 		commons.ExitOnError("connecting to cloud TestWorkflows storage", err)
 		testWorkflowsKubernetesStorage, err := crdstorage.NewTestWorkflowsStorage(must(testworkflowclient.NewKubernetesTestWorkflowClient(kubeClient, kubeConfig, cfg.TestkubeNamespace)), proContext.EnvID, cfg.GitOpsSyncKubernetesNamePattern, map[string]string{
@@ -495,8 +495,8 @@ func main() {
 			&proContext,
 			cfg.TestkubeDockerImageVersion,
 			eventsEmitter,
-			cfg.FeatureNewExecutions,
-			cfg.FeatureTestWorkflowCloudStorage,
+			cfg.FeatureNewArchitecture,
+			cfg.FeatureCloudStorage,
 		)
 		commons.ExitOnError("Starting agent", err)
 		g.Go(func() error {

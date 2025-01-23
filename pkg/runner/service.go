@@ -25,7 +25,7 @@ type Options struct {
 	StorageSkipVerify bool
 
 	ControlPlaneStorageEnabled bool
-	NewExecutionsEnabled       bool
+	NewArchitectureEnabled     bool
 }
 
 type service struct {
@@ -76,7 +76,7 @@ func NewService(
 			proContext,
 			opts.DashboardURI,
 			opts.StorageSkipVerify,
-			opts.NewExecutionsEnabled,
+			opts.NewArchitectureEnabled,
 		),
 	}
 }
@@ -112,7 +112,7 @@ func (s *service) start(ctx context.Context) (err error) {
 		s.runnerId,
 		s.proContext.OrgID,
 		s.proContext.EnvID,
-		s.opts.NewExecutionsEnabled,
+		s.opts.NewArchitectureEnabled,
 	).Start(ctx)
 }
 

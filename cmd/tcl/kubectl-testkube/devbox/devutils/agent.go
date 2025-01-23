@@ -52,8 +52,8 @@ func (r *Agent) Create(ctx context.Context, env *client.Environment) error {
 		{Name: "TESTKUBE_IMAGE_DATA_PERSISTENT_CACHE_KEY", Value: "testkube-image-cache"},
 		{Name: "TESTKUBE_TW_TOOLKIT_IMAGE", Value: r.toolkitImage},
 		{Name: "TESTKUBE_TW_INIT_IMAGE", Value: r.initProcessImage},
-		{Name: "FEATURE_NEW_EXECUTIONS", Value: "true"},
-		{Name: "FEATURE_TESTWORKFLOW_CLOUD_STORAGE", Value: "true"},
+		{Name: "FEATURE_NEW_ARCHITECTURE", Value: "true"},
+		{Name: "FEATURE_CLOUD_STORAGE", Value: "true"},
 	}
 	if env != nil {
 		tlsInsecure := "false"

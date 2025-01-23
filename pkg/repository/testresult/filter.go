@@ -18,7 +18,7 @@ type FilterImpl struct {
 	FSelector   string
 }
 
-func NewExecutionsFilter() *FilterImpl {
+func NewArchitectureFilter() *FilterImpl {
 	result := FilterImpl{FPage: 0, FPageSize: PageDefaultLimit}
 	return &result
 }

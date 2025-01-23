@@ -3,8 +3,8 @@ package testworkflowconfig
 import "time"
 
 const (
-	FeatureFlagNewExecutions            = "exec"
-	FeatureFlagTestWorkflowCloudStorage = "tw-storage"
+	FeatureFlagNewArchitecture = "exec"
+	FeatureFlagCloudStorage    = "tw-storage"
 )
 
 type InternalConfig struct {

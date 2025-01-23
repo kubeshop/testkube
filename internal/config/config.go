@@ -206,8 +206,8 @@ type Config struct {
 	DisableDeprecatedTests          bool   `envconfig:"DISABLE_DEPRECATED_TESTS" default:"false"`
 	DisableWebhooks                 bool   `envconfig:"DISABLE_WEBHOOKS" default:"false"`
 
-	FeatureNewExecutions            bool `envconfig:"FEATURE_NEW_EXECUTIONS" default:"false"`
-	FeatureTestWorkflowCloudStorage bool `envconfig:"FEATURE_TESTWORKFLOW_CLOUD_STORAGE" default:"false"`
+	FeatureNewArchitecture bool `envconfig:"FEATURE_NEW_ARCHITECTURE" default:"false"`
+	FeatureCloudStorage    bool `envconfig:"FEATURE_CLOUD_STORAGE" default:"false"`
 }
 
 type DeprecatedConfig struct {

@@ -41,16 +41,16 @@ type Runner interface {
 }
 
 type runner struct {
-	id                   string
-	worker               executionworkertypes.Worker
-	client               controlplaneclient.Client
-	configRepository     configRepo.Repository
-	emitter              event.Interface
-	metrics              metrics.Metrics
-	proContext           config.ProContext // TODO: Include Agent ID in pro context
-	dashboardURI         string
-	storageSkipVerify    bool
-	newExecutionsEnabled bool // TODO: ag.featureNewExecutions && ag.proContext.NewExecutions
+	id                     string
+	worker                 executionworkertypes.Worker
+	client                 controlplaneclient.Client
+	configRepository       configRepo.Repository
+	emitter                event.Interface
+	metrics                metrics.Metrics
+	proContext             config.ProContext // TODO: Include Agent ID in pro context
+	dashboardURI           string
+	storageSkipVerify      bool
+	newArchitectureEnabled bool // TODO: ag.featureNewArchitecture && ag.proContext.NewArchitecture
 
 	watching sync.Map
 }
@@ -66,19 +66,19 @@ func New(
 	proContext config.ProContext,
 	dashboardURI string,
 	storageSkipVerify bool,
-	newExecutionsEnabled bool,
+	newArchitectureEnabled bool,
 ) Runner {
 	return &runner{
-		id:                   id,
-		worker:               worker,
-		configRepository:     configRepository,
-		client:               client,
-		emitter:              emitter,
-		metrics:              metrics,
-		proContext:           proContext,
-		dashboardURI:         dashboardURI,
-		storageSkipVerify:    storageSkipVerify,
-		newExecutionsEnabled: newExecutionsEnabled,
+		id:                     id,
+		worker:                 worker,
+		configRepository:       configRepository,
+		client:                 client,
+		emitter:                emitter,
+		metrics:                metrics,
+		proContext:             proContext,
+		dashboardURI:           dashboardURI,
+		storageSkipVerify:      storageSkipVerify,
+		newArchitectureEnabled: newArchitectureEnabled,
 	}
 }
 
@@ -105,7 +105,7 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 	if err != nil {
 		return err
 	}
-	saver, err := NewExecutionSaver(ctx, r.client, execution.Id, organizationId, environmentId, r.id, logs, r.newExecutionsEnabled)
+	saver, err := NewExecutionSaver(ctx, r.client, execution.Id, organizationId, environmentId, r.id, logs, r.newArchitectureEnabled)
 	if err != nil {
 		return err
 	}
@@ -196,7 +196,7 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 	execution.StatusAt = lastResult.FinishedAt
 
 	// Emit data, if the Control Plane doesn't support informing about status by itself
-	if !r.newExecutionsEnabled {
+	if !r.newArchitectureEnabled {
 		if lastResult.IsPassed() {
 			r.emitter.Notify(testkube.NewEventEndTestWorkflowSuccess(&execution))
 		} else if lastResult.IsAborted() {

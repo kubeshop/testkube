@@ -150,9 +150,11 @@ func (c *CloudObject) DashboardUrl(id, path string) string {
 
 func (c *CloudObject) CreateEnvironment(name string) (*client.Environment, error) {
 	env, err := c.envClient.Create(client.Environment{
-		Name:           name,
-		Owner:          c.cfg.OrganizationId,
-		OrganizationId: c.cfg.OrganizationId,
+		Name:            name,
+		Owner:           c.cfg.OrganizationId,
+		OrganizationId:  c.cfg.OrganizationId,
+		CloudStorage:    true,
+		NewArchitecture: true,
 	})
 	if err != nil {
 		return nil, err

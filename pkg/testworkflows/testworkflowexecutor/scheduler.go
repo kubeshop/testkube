@@ -52,10 +52,10 @@ type scheduler struct {
 	organizationId              string
 	defaultEnvironmentId        string
 
-	agentId              string
-	grpcClient           cloud.TestKubeCloudAPIClient
-	grpcApiToken         string
-	newExecutionsEnabled bool
+	agentId                string
+	grpcClient             cloud.TestKubeCloudAPIClient
+	grpcApiToken           string
+	newArchitectureEnabled bool
 }
 
 func NewScheduler(
@@ -71,7 +71,7 @@ func NewScheduler(
 	agentId string,
 	grpcClient cloud.TestKubeCloudAPIClient,
 	grpcApiToken string,
-	newExecutionsEnabled bool,
+	newArchitectureEnabled bool,
 ) Scheduler {
 	return &scheduler{
 		logger:                      log.DefaultLogger,
@@ -84,10 +84,10 @@ func NewScheduler(
 		organizationId:              organizationId,
 		defaultEnvironmentId:        defaultEnvironmentId,
 
-		agentId:              agentId,
-		grpcClient:           grpcClient,
-		grpcApiToken:         grpcApiToken,
-		newExecutionsEnabled: newExecutionsEnabled,
+		agentId:                agentId,
+		grpcClient:             grpcClient,
+		grpcApiToken:           grpcApiToken,
+		newArchitectureEnabled: newArchitectureEnabled,
 	}
 }
 
@@ -493,7 +493,7 @@ func (s *scheduler) CriticalError(execution *testkube.TestWorkflowExecution, nam
 }
 
 func (s *scheduler) finish(ctx context.Context, execution *testkube.TestWorkflowExecution) error {
-	if !s.newExecutionsEnabled {
+	if !s.newArchitectureEnabled {
 		return s.update(ctx, execution)
 	}
 
@@ -525,7 +525,7 @@ func (s *scheduler) finish(ctx context.Context, execution *testkube.TestWorkflow
 }
 
 func (s *scheduler) start(ctx context.Context, execution *testkube.TestWorkflowExecution) error {
-	if !s.newExecutionsEnabled {
+	if !s.newArchitectureEnabled {
 		return s.init(ctx, execution)
 	}
 

@@ -409,7 +409,7 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 		"",
 		"",
 		"",
-		cfg.FeatureNewExecutions,
+		cfg.FeatureNewArchitecture,
 	)
 
 	return controlplane.New(controlplane.Config{
@@ -417,7 +417,7 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 		Logger:                           log.DefaultLogger,
 		Verbose:                          false,
 		StorageBucket:                    cfg.StorageBucket,
-		FeatureNewExecutions:             cfg.FeatureNewExecutions,
-		FeatureTestWorkflowsCloudStorage: cfg.FeatureTestWorkflowCloudStorage,
+		FeatureNewArchitecture:           cfg.FeatureNewArchitecture,
+		FeatureTestWorkflowsCloudStorage: cfg.FeatureCloudStorage,
 	}, executor, storageClient, testWorkflowsClient, testWorkflowTemplatesClient, testWorkflowResultsRepository, testWorkflowOutputRepository, commands...)
 }

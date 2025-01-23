@@ -39,8 +39,8 @@ type ProContext struct {
 	Migrate              string
 	ConnectionTimeout    int
 	DashboardURI         string
-	NewExecutions        bool
-	TestWorkflowStorage  bool
+	NewArchitecture      bool
+	CloudStorage         bool
 	IsTrial              bool
 	Mode                 ProContextMode
 	Status               ProContextStatus

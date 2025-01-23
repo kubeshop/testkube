@@ -654,7 +654,7 @@ func (s *DeprecatedTestkubeAPI) GetLatestExecutionLogs(ctx context.Context) (map
 
 // getNewestExecutions returns the latest Testkube executions
 func (s *DeprecatedTestkubeAPI) getNewestExecutions(ctx context.Context) ([]testkube.Execution, error) {
-	f := result.NewExecutionsFilter().WithPage(1).WithPageSize(latestExecutions)
+	f := result.NewArchitectureFilter().WithPage(1).WithPageSize(latestExecutions)
 	executions, err := s.DeprecatedRepositories.TestResults().GetExecutions(ctx, f)
 	if err != nil {
 		return []testkube.Execution{}, fmt.Errorf("could not get executions from repo: %w", err)
@@ -765,7 +765,7 @@ func (s *DeprecatedTestkubeAPI) streamLogsFromLogServer(logs chan events.LogResp
 // currently filters for e.g. tests are done "by hand"
 func getFilterFromRequest(c *fiber.Ctx) result.Filter {
 
-	filter := result.NewExecutionsFilter()
+	filter := result.NewArchitectureFilter()
 
 	// id for /tests/ID/executions
 	testName := c.Params("id", "")

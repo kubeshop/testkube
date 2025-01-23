@@ -91,7 +91,7 @@ func TestStorage_Integration(t *testing.T) {
 
 	t.Run("filter with status should return only executions with that status", func(t *testing.T) {
 
-		executions, err := repository.GetExecutions(context.Background(), NewExecutionsFilter().WithStatus(string(testkube.FAILED_ExecutionStatus)))
+		executions, err := repository.GetExecutions(context.Background(), NewArchitectureFilter().WithStatus(string(testkube.FAILED_ExecutionStatus)))
 		assert.NoError(err)
 		assert.Len(executions, 12)
 		assert.Equal(*executions[0].ExecutionResult.Status, testkube.FAILED_ExecutionStatus)
@@ -99,14 +99,14 @@ func TestStorage_Integration(t *testing.T) {
 
 	t.Run("filter with different statuses should return only executions with those statuses", func(t *testing.T) {
 
-		executions, err := repository.GetExecutions(context.Background(), NewExecutionsFilter().WithStatus(
+		executions, err := repository.GetExecutions(context.Background(), NewArchitectureFilter().WithStatus(
 			string(testkube.FAILED_ExecutionStatus)+","+string(testkube.PASSED_ExecutionStatus)))
 		assert.NoError(err)
 		assert.Len(executions, 15)
 	})
 
 	t.Run("filter with status should return only totals with that status", func(t *testing.T) {
-		filteredTotals, err := repository.GetExecutionTotals(context.Background(), false, NewExecutionsFilter().WithStatus(string(testkube.FAILED_ExecutionStatus)))
+		filteredTotals, err := repository.GetExecutionTotals(context.Background(), false, NewArchitectureFilter().WithStatus(string(testkube.FAILED_ExecutionStatus)))
 
 		assert.NoError(err)
 		assert.Equal(int32(12), filteredTotals.Results)
@@ -131,7 +131,7 @@ func TestStorage_Integration(t *testing.T) {
 	assert.True(dateFilter.IsStartValid)
 
 	t.Run("filter with startDate should return only executions after that day", func(t *testing.T) {
-		executions, err := repository.GetExecutions(context.Background(), NewExecutionsFilter().WithStartDate(dateFilter.Start))
+		executions, err := repository.GetExecutions(context.Background(), NewArchitectureFilter().WithStartDate(dateFilter.Start))
 		assert.NoError(err)
 		assert.Len(executions, 14)
 		assert.True(executions[0].StartTime.After(dateFilter.Start) || executions[0].StartTime.Equal(dateFilter.Start))
@@ -139,20 +139,20 @@ func TestStorage_Integration(t *testing.T) {
 
 	t.Run("filter with labels should return only filters with given labels", func(t *testing.T) {
 
-		executions, err := repository.GetExecutions(context.Background(), NewExecutionsFilter().WithSelector("key1=value1,key2=value2"))
+		executions, err := repository.GetExecutions(context.Background(), NewArchitectureFilter().WithSelector("key1=value1,key2=value2"))
 		assert.NoError(err)
 		assert.Len(executions, 5)
 	})
 
 	t.Run("filter with labels should return only filters with existing labels", func(t *testing.T) {
 
-		executions, err := repository.GetExecutions(context.Background(), NewExecutionsFilter().WithSelector("key1"))
+		executions, err := repository.GetExecutions(context.Background(), NewArchitectureFilter().WithSelector("key1"))
 		assert.NoError(err)
 		assert.Len(executions, 9)
 	})
 
 	t.Run("getting totals with filter by date start date should return only the results after this date", func(t *testing.T) {
-		totals, err := repository.GetExecutionTotals(context.Background(), false, NewExecutionsFilter().WithStartDate(dateFilter.Start))
+		totals, err := repository.GetExecutionTotals(context.Background(), false, NewArchitectureFilter().WithStartDate(dateFilter.Start))
 
 		assert.NoError(err)
 		assert.Equal(int32(14), totals.Results)
@@ -167,14 +167,14 @@ func TestStorage_Integration(t *testing.T) {
 
 	t.Run("filter with endDate should return only executions before that day", func(t *testing.T) {
 
-		executions, err := repository.GetExecutions(context.Background(), NewExecutionsFilter().WithEndDate(dateFilter.End))
+		executions, err := repository.GetExecutions(context.Background(), NewArchitectureFilter().WithEndDate(dateFilter.End))
 		assert.NoError(err)
 		assert.Len(executions, 7)
 		assert.True(executions[0].StartTime.Before(dateFilter.End) || executions[0].StartTime.Equal(dateFilter.End))
 	})
 
 	t.Run("getting totals with filter by date start date should return only the results before this date", func(t *testing.T) {
-		totals, err := repository.GetExecutionTotals(context.Background(), false, NewExecutionsFilter().WithEndDate(dateFilter.End))
+		totals, err := repository.GetExecutionTotals(context.Background(), false, NewArchitectureFilter().WithEndDate(dateFilter.End))
 
 		assert.NoError(err)
 		assert.Equal(int32(7), totals.Results)
@@ -186,13 +186,13 @@ func TestStorage_Integration(t *testing.T) {
 
 	t.Run("filter with test name that doesn't exist should return 0 results", func(t *testing.T) {
 
-		executions, err := repository.GetExecutions(context.Background(), NewExecutionsFilter().WithTestName("noneExisting"))
+		executions, err := repository.GetExecutions(context.Background(), NewArchitectureFilter().WithTestName("noneExisting"))
 		assert.NoError(err)
 		assert.Empty(executions)
 	})
 
 	t.Run("getting totals with test name that doesn't exist should return 0 results", func(t *testing.T) {
-		totals, err := repository.GetExecutionTotals(context.Background(), false, NewExecutionsFilter().WithTestName("noneExisting"))
+		totals, err := repository.GetExecutionTotals(context.Background(), false, NewArchitectureFilter().WithTestName("noneExisting"))
 
 		assert.NoError(err)
 		assert.Equal(int32(0), totals.Results)
@@ -203,7 +203,7 @@ func TestStorage_Integration(t *testing.T) {
 	})
 
 	t.Run("filter with ccombined filter should return corresponding results", func(t *testing.T) {
-		filter := NewExecutionsFilter().
+		filter := NewArchitectureFilter().
 			WithStatus(string(testkube.PASSED_ExecutionStatus)).
 			WithStartDate(twoDaysAgo).
 			WithEndDate(oneDayAgo).
@@ -216,7 +216,7 @@ func TestStorage_Integration(t *testing.T) {
 	})
 
 	t.Run("getting totals with ccombined filter should return corresponding results", func(t *testing.T) {
-		filter := NewExecutionsFilter().
+		filter := NewArchitectureFilter().
 			WithStatus(string(testkube.PASSED_ExecutionStatus)).
 			WithStartDate(twoDaysAgo).
 			WithEndDate(oneDayAgo).
@@ -237,14 +237,14 @@ func TestStorage_Integration(t *testing.T) {
 
 	t.Run("filter with test name should return result only for that test name", func(t *testing.T) {
 
-		executions, err := repository.GetExecutions(context.Background(), NewExecutionsFilter().WithTestName(name))
+		executions, err := repository.GetExecutions(context.Background(), NewArchitectureFilter().WithTestName(name))
 		assert.NoError(err)
 		assert.Len(executions, 1)
 		assert.Equal(executions[0].TestName, name)
 	})
 
 	t.Run("getting totals with test name should return result only for that test name", func(t *testing.T) {
-		totals, err := repository.GetExecutionTotals(context.Background(), false, NewExecutionsFilter().WithTestName(name))
+		totals, err := repository.GetExecutionTotals(context.Background(), false, NewArchitectureFilter().WithTestName(name))
 
 		assert.NoError(err)
 		assert.Equal(int32(1), totals.Results)
@@ -255,7 +255,7 @@ func TestStorage_Integration(t *testing.T) {
 	})
 
 	t.Run("test executions should be sorted with most recent first", func(t *testing.T) {
-		executions, err := repository.GetExecutions(context.Background(), NewExecutionsFilter())
+		executions, err := repository.GetExecutions(context.Background(), NewArchitectureFilter())
 		assert.NoError(err)
 		assert.NotEmpty(executions)
 		assert.True(executions[0].StartTime.After(executions[len(executions)-1].StartTime), "executions are not sorted with the most recent first")

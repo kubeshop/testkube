@@ -73,7 +73,7 @@ func (client *Client) Run(ctx context.Context) error {
 
 func (client *Client) ProcessTests(ctx context.Context) error {
 	executions, err := client.deprecatedRepositories.TestResults().GetExecutions(ctx,
-		result.NewExecutionsFilter().WithStatus(string(*testkube.ExecutionStatusRunning)))
+		result.NewArchitectureFilter().WithStatus(string(*testkube.ExecutionStatusRunning)))
 	if err != nil {
 		return err
 	}
@@ -150,7 +150,7 @@ OuterLoop:
 
 func (client *Client) ProcessTestSuites(ctx context.Context) error {
 	executions, err := client.deprecatedRepositories.TestSuiteResults().GetExecutions(ctx,
-		testresult.NewExecutionsFilter().WithStatus(string(*testkube.TestSuiteExecutionStatusRunning)))
+		testresult.NewArchitectureFilter().WithStatus(string(*testkube.TestSuiteExecutionStatusRunning)))
 	if err != nil {
 		return err
 	}

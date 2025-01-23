@@ -60,5 +60,5 @@ func (c *client) IsRunner() bool {
 }
 
 func (c *client) IsLegacy() bool {
-	return c.IsSuperAgent() && !c.proContext.NewExecutions
+	return c.IsSuperAgent() && !c.proContext.NewArchitecture
 }

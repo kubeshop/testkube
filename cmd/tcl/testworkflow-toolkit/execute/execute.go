@@ -22,7 +22,7 @@ import (
 )
 
 func ExecuteTestWorkflow(workflowName string, request testkube.TestWorkflowExecutionRequest) ([]testkube.TestWorkflowExecution, error) {
-	if env.IsNewExecutions() {
+	if env.IsNewArchitecture() {
 		return executeTestWorkflowGrpc(workflowName, request)
 	}
 	return executeTestWorkflowApi(workflowName, request)

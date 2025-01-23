@@ -49,14 +49,14 @@ type executor struct {
 	defaultEnvironmentId string
 	agentId              string
 
-	emitter              event.Interface
-	metrics              v1.Metrics
-	secretManager        secretmanager.SecretManager
-	dashboardURI         string
-	runner               runner.RunnerExecute
-	proContext           *config.ProContext
-	scheduler            Scheduler
-	featureNewExecutions bool
+	emitter                event.Interface
+	metrics                v1.Metrics
+	secretManager          secretmanager.SecretManager
+	dashboardURI           string
+	runner                 runner.RunnerExecute
+	proContext             *config.ProContext
+	scheduler              Scheduler
+	featureNewArchitecture bool
 }
 
 func New(
@@ -76,20 +76,20 @@ func New(
 	organizationId string,
 	defaultEnvironmentId string,
 	agentId string,
-	featureNewExecutions bool) TestWorkflowExecutor {
+	featureNewArchitecture bool) TestWorkflowExecutor {
 	return &executor{
-		agentId:              agentId,
-		grpcClient:           grpcClient,
-		apiKey:               apiKey,
-		cdEventsTarget:       cdEventsTarget,
-		emitter:              emitter,
-		metrics:              metrics,
-		secretManager:        secretManager,
-		dashboardURI:         dashboardURI,
-		runner:               runner,
-		organizationId:       organizationId,
-		defaultEnvironmentId: defaultEnvironmentId,
-		featureNewExecutions: featureNewExecutions,
+		agentId:                agentId,
+		grpcClient:             grpcClient,
+		apiKey:                 apiKey,
+		cdEventsTarget:         cdEventsTarget,
+		emitter:                emitter,
+		metrics:                metrics,
+		secretManager:          secretManager,
+		dashboardURI:           dashboardURI,
+		runner:                 runner,
+		organizationId:         organizationId,
+		defaultEnvironmentId:   defaultEnvironmentId,
+		featureNewArchitecture: featureNewArchitecture,
 		scheduler: NewScheduler(
 			testWorkflowsClient,
 			testWorkflowTemplatesClient,
@@ -104,13 +104,13 @@ func New(
 			agentId,
 			grpcClient,
 			apiKey,
-			featureNewExecutions,
+			featureNewArchitecture,
 		),
 	}
 }
 
 func (e *executor) isDirect() bool {
-	return e.proContext == nil || !e.proContext.NewExecutions
+	return e.proContext == nil || !e.proContext.NewArchitecture
 }
 
 func (e *executor) Execute(ctx context.Context, environmentId string, req *cloud.ScheduleRequest) TestWorkflowExecutionStream {
