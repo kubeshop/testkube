@@ -26,7 +26,7 @@ func TestService_matchConditionsRetry(t *testing.T) {
 		namespace:  "testkube",
 		labels:     nil,
 		objectMeta: nil,
-		obect:      nil,
+		object:     nil,
 		eventType:  "modified",
 		causes:     nil,
 		conditionsGetter: func() ([]testtriggersv1.TestTriggerCondition, error) {
@@ -111,7 +111,7 @@ func TestService_matchConditionsTimeout(t *testing.T) {
 		namespace:  "testkube",
 		labels:     nil,
 		objectMeta: nil,
-		obect:      nil,
+		object:     nil,
 		eventType:  "modified",
 		causes:     nil,
 		conditionsGetter: func() ([]testtriggersv1.TestTriggerCondition, error) {
@@ -190,7 +190,7 @@ func TestService_matchProbesMultiple(t *testing.T) {
 		namespace:  "testkube",
 		labels:     nil,
 		objectMeta: nil,
-		obect:      nil,
+		object:     nil,
 		eventType:  "modified",
 		causes:     nil,
 	}
@@ -267,7 +267,7 @@ func TestService_matchProbesTimeout(t *testing.T) {
 		namespace:  "testkube",
 		labels:     nil,
 		objectMeta: nil,
-		obect:      nil,
+		object:     nil,
 		eventType:  "modified",
 		causes:     nil,
 	}
@@ -338,7 +338,7 @@ func TestService_match(t *testing.T) {
 		namespace:  "testkube",
 		labels:     nil,
 		objectMeta: nil,
-		obect:      nil,
+		object:     nil,
 		eventType:  "modified",
 		causes:     nil,
 		conditionsGetter: func() ([]testtriggersv1.TestTriggerCondition, error) {
@@ -446,7 +446,7 @@ func TestService_matchRegex(t *testing.T) {
 		namespace:  "testkube",
 		labels:     nil,
 		objectMeta: nil,
-		obect:      nil,
+		object:     nil,
 		eventType:  "modified",
 		causes:     nil,
 	}
@@ -500,7 +500,7 @@ func TestService_noMatch(t *testing.T) {
 		namespace:  "testkube",
 		labels:     nil,
 		objectMeta: nil,
-		obect:      nil,
+		object:     nil,
 		eventType:  "modified",
 		causes:     nil,
 	}

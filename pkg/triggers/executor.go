@@ -3,7 +3,6 @@ package triggers
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"regexp"
 	"strings"
 	"time"
@@ -239,19 +238,14 @@ func (s *Service) execute(ctx context.Context, e *watcherEvent, t *testtriggersv
 }
 
 func (s *Service) getJsonPathData(e *watcherEvent, value string) (string, error) {
-	jp := jsonpath.New("tag")
+	jp := jsonpath.New("field")
 	err := jp.Parse(value)
 	if err != nil {
 		return "", err
 	}
 
-	data, err := json.Marshal(e.obect)
-	if err != nil {
-		return "", err
-	}
-
 	buf := new(bytes.Buffer)
-	err = jp.Execute(buf, data)
+	err = jp.Execute(buf, e.object)
 	if err != nil {
 		return "", err
 	}
