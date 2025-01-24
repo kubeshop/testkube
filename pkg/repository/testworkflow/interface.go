@@ -100,6 +100,8 @@ type Repository interface {
 	Init(ctx context.Context, id string, data InitData) error
 	// Assign execution to selected runner
 	Assign(ctx context.Context, id string, prevRunnerId string, newRunnerId string) (bool, error)
+	// AbortIfQueued marks execution as aborted if it's queued
+	AbortIfQueued(ctx context.Context, id string) (bool, error)
 }
 
 type Sequences interface {

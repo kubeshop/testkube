@@ -670,6 +670,7 @@ func (r *MongoRepository) Assign(ctx context.Context, id string, prevRunnerId st
 	res, err := r.Coll.UpdateOne(ctx, bson.M{
 		"$and": []bson.M{
 			{"id": id},
+			{"result.status": bson.M{"$in": bson.A{testkube.QUEUED_TestWorkflowStatus, testkube.RUNNING_TestWorkflowStatus, testkube.PAUSED_TestWorkflowStatus}}},
 			{"$or": []bson.M{{"runnerId": prevRunnerId}, {"runnerId": newRunnerId}, {"runnerId": nil}}},
 		},
 	}, bson.M{"$set": map[string]interface{}{
@@ -706,4 +707,28 @@ func (r *MongoRepository) GetUnassigned(ctx context.Context) (result []testkube.
 		result[i].UnscapeDots()
 	}
 	return
+}
+
+func (r *MongoRepository) AbortIfQueued(ctx context.Context, id string) (ok bool, err error) {
+	ts := time.Now()
+	res, err := r.Coll.UpdateOne(ctx, bson.M{
+		"$and": []bson.M{
+			{"id": id},
+			{"result.status": bson.M{"$in": bson.A{testkube.QUEUED_TestWorkflowStatus, testkube.RUNNING_TestWorkflowStatus, testkube.PAUSED_TestWorkflowStatus}}},
+			{"$or": []bson.M{{"runnerId": ""}, {"runnerId": nil}}},
+		},
+	}, bson.M{"$set": map[string]interface{}{
+		"result.status":                      testkube.ABORTED_TestWorkflowStatus,
+		"result.predictedStatus":             testkube.ABORTED_TestWorkflowStatus,
+		"statusAt":                           ts,
+		"result.finishedAt":                  ts,
+		"result.initialization.status":       testkube.ABORTED_TestWorkflowStatus,
+		"result.initialization.errorMessage": "Aborted before initialization.",
+		"result.initialization.finishedAt":   ts,
+		//"result.totalDurationMs": ts.Sub(scheduledAt).Milliseconds(),
+	}})
+	if err != nil {
+		return false, err
+	}
+	return res.ModifiedCount > 0, nil
 }

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"strings"
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
@@ -223,6 +224,22 @@ func Get() (*Config, error) {
 	deprecated := DeprecatedConfig{}
 	if err := envconfig.Process("config", &deprecated); err != nil {
 		return nil, err
+	}
+
+	if strings.HasPrefix(c.TestkubeProAgentID, "tkcrun_") {
+		c.DisableTestTriggers = true
+		c.DisableWebhooks = true
+		c.DisableDeprecatedTests = true
+		c.DisableReconciler = true
+		c.DisableDefaultAgent = true
+		c.NatsEmbedded = true // we don't use it there
+	} else if strings.HasPrefix(c.TestkubeProAgentID, "tkcsync_") {
+		c.DisableTestTriggers = true
+		c.DisableWebhooks = true
+		c.DisableDeprecatedTests = true
+		c.DisableReconciler = true
+		c.DisableDefaultAgent = true
+		c.NatsEmbedded = true // we don't use it there
 	}
 
 	if c.TestkubeProAPIKey == "" && deprecated.TestkubeCloudAPIKey != "" {

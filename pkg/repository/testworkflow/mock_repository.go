@@ -36,6 +36,21 @@ func (m *MockRepository) EXPECT() *MockRepositoryMockRecorder {
 	return m.recorder
 }
 
+// AbortIfQueued mocks base method.
+func (m *MockRepository) AbortIfQueued(arg0 context.Context, arg1 string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AbortIfQueued", arg0, arg1)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AbortIfQueued indicates an expected call of AbortIfQueued.
+func (mr *MockRepositoryMockRecorder) AbortIfQueued(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AbortIfQueued", reflect.TypeOf((*MockRepository)(nil).AbortIfQueued), arg0, arg1)
+}
+
 // Assign mocks base method.
 func (m *MockRepository) Assign(arg0 context.Context, arg1, arg2, arg3 string) (bool, error) {
 	m.ctrl.T.Helper()
