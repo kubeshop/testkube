@@ -157,10 +157,6 @@ func (s *Server) GetRunnerRequests(srv cloud.TestKubeCloudAPI_GetRunnerRequestsS
 	return nil
 }
 
-func (s *Server) ObtainExecution(_ context.Context, _ *cloud.ObtainExecutionRequest) (*cloud.ObtainExecutionResponse, error) {
-	return &cloud.ObtainExecutionResponse{Success: true}, nil
-}
-
 func (s *Server) InitExecution(ctx context.Context, req *cloud.InitExecutionRequest) (*cloud.InitExecutionResponse, error) {
 	var signature []testkube.TestWorkflowSignature
 	err := json.Unmarshal(req.Signature, &signature)
