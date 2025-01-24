@@ -152,41 +152,43 @@ func (s *Service) execute(ctx context.Context, e *watcherEvent, t *testtriggersv
 		}
 
 		if t.Spec.ActionParameters != nil {
-			for key, value := range t.Spec.ActionParameters.Config {
-				if strings.HasPrefix(value, JsonPathPrefix) {
-					s.logger.Debugf("trigger service: executor component: trigger %s/%s parsing jsonpath %s for config %s",
-						t.Namespace, t.Name, key, value)
-					data, err := s.getJsonPathData(e, strings.TrimPrefix(value, JsonPathPrefix))
-					if err != nil {
-						s.logger.Errorf("trigger service: executor component: trigger %s/%s parsing jsonpath %s for config %s error %v",
-							t.Namespace, t.Name, key, value, err)
-						continue
-					}
-
-					request.Config[key] = data
-				} else {
-					request.Config[key] = value
-				}
-			}
-
 			if len(t.Spec.ActionParameters.Tags) > 0 && request.Tags == nil {
 				request.Tags = make(map[string]string)
 			}
 
-			for key, value := range t.Spec.ActionParameters.Tags {
-				if strings.HasPrefix(value, JsonPathPrefix) {
-					s.logger.Debugf("trigger service: executor component: trigger %s/%s parsing jsonpath %s for tag %s",
-						t.Namespace, t.Name, key, value)
-					data, err := s.getJsonPathData(e, strings.TrimPrefix(value, JsonPathPrefix))
-					if err != nil {
-						s.logger.Errorf("trigger service: executor component: trigger %s/%s parsing jsonpath %s for tag %s error %v",
-							t.Namespace, t.Name, key, value, err)
-						continue
-					}
+			var parameters = []struct {
+				name string
+				s    *map[string]string
+				d    *map[string]string
+			}{
+				{
+					"config",
+					&t.Spec.ActionParameters.Config,
+					&request.Config,
+				},
+				{
+					"tag",
+					&t.Spec.ActionParameters.Tags,
+					&request.Tags,
+				},
+			}
 
-					request.Tags[key] = data
-				} else {
-					request.Tags[key] = value
+			for _, parameter := range parameters {
+				for key, value := range *parameter.s {
+					if strings.HasPrefix(value, JsonPathPrefix) {
+						s.logger.Debugf("trigger service: executor component: trigger %s/%s parsing jsonpath %s for %s %s",
+							t.Namespace, t.Name, key, parameter.name, value)
+						data, err := s.getJsonPathData(e, strings.TrimPrefix(value, JsonPathPrefix))
+						if err != nil {
+							s.logger.Errorf("trigger service: executor component: trigger %s/%s parsing jsonpath %s for %s %s error %v",
+								t.Namespace, t.Name, key, value, parameter.name, err)
+							continue
+						}
+
+						(*parameter.d)[key] = data
+					} else {
+						(*parameter.d)[key] = value
+					}
 				}
 			}
 		}
