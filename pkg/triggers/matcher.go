@@ -164,7 +164,7 @@ func matchSelector(selector *testtriggersv1.TestTriggerSelector, namespace strin
 			return false
 		}
 
-		isSameNamespace = re.MatchString(event.name)
+		isSameNamespace = re.MatchString(event.namespace)
 	}
 
 	isSameTestTriggerNamespace = selector.Namespace == "" && selector.NamespaceRegex == "" && namespace == event.namespace
