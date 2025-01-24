@@ -356,15 +356,6 @@ message UnfinishedExecution {
   string id = 2;
 }
 
-message ObtainExecutionRequest {
-  string id = 1;
-}
-
-message ObtainExecutionResponse {
-  bool success = 1;
-  string token = 2;
-}
-
 message GetExecutionRequest {
   string id = 1;
 }
