@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -175,7 +176,7 @@ func main() {
 	// Build new client
 	agentId := cfg.TestkubeProAgentID
 	if agentId == "" {
-		agentId = proContext.EnvID
+		agentId = strings.Replace(proContext.EnvID, "tkcenv_", "tkcroot_", 1)
 	}
 	client := controlplaneclient.New(grpcClient, proContext, agentId, cfg.TestkubeProAPIKey, controlplaneclient.ClientOptions{
 		StorageSkipVerify: cfg.StorageSkipVerify,
