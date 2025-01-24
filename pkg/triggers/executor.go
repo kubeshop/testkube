@@ -10,17 +10,16 @@ import (
 
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/util/jsonpath"
 
 	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
 	testsuitesv3 "github.com/kubeshop/testkube-operator/api/testsuite/v3"
 	testtriggersv1 "github.com/kubeshop/testkube-operator/api/testtriggers/v1"
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
-
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/scheduler"
 	triggerstcl "github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/triggers"
 	"github.com/kubeshop/testkube/pkg/workerpool"
-	"k8s.io/client-go/util/jsonpath"
 )
 
 type Execution string
