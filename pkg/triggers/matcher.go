@@ -121,30 +121,13 @@ func matchEventOrCause(targetEvent string, event *watcherEvent) bool {
 }
 
 func matchSelector(selector *testtriggersv1.TestTriggerSelector, namespace string, event *watcherEvent, logger *zap.SugaredLogger) bool {
-	if selector.Name != "" {
-		isSameName := selector.Name == event.name
-		isSameNamespace := selector.Namespace == event.namespace
-		isSameTestTriggerNamespace := selector.Namespace == "" && namespace == event.namespace
-		return isSameName && (isSameNamespace || isSameTestTriggerNamespace)
-	}
-	if selector.NameRegex != "" {
-		re, err := regexp.Compile(selector.NameRegex)
-		if err != nil {
-			logger.Errorf("error compiling %v name regex: %v", selector.NameRegex, err)
-			return false
-		}
-
-		isSameName := re.MatchString(event.name)
-		isSameNamespace := selector.Namespace == event.namespace
-		isSameTestTriggerNamespace := selector.Namespace == "" && namespace == event.namespace
-		return isSameName && (isSameNamespace || isSameTestTriggerNamespace)
-	}
 	if selector.LabelSelector != nil && len(event.labels) > 0 {
 		k8sSelector, err := v1.LabelSelectorAsSelector(selector.LabelSelector)
 		if err != nil {
 			logger.Errorf("error creating k8s selector from label selector: %v", err)
 			return false
 		}
+
 		resourceLabelSet := labels.Set(event.labels)
 		_, err = resourceLabelSet.AsValidatedSelector()
 		if err != nil {
@@ -154,7 +137,38 @@ func matchSelector(selector *testtriggersv1.TestTriggerSelector, namespace strin
 
 		return k8sSelector.Matches(resourceLabelSet)
 	}
-	return false
+
+	var isSameName, isSameNamespace, isSameTestTriggerNamespace bool
+	if selector.Name != "" {
+		isSameName = selector.Name == event.name
+	}
+
+	if selector.NameRegex != "" {
+		re, err := regexp.Compile(selector.NameRegex)
+		if err != nil {
+			logger.Errorf("error compiling %v name regex: %v", selector.NameRegex, err)
+			return false
+		}
+
+		isSameName = re.MatchString(event.name)
+	}
+
+	if selector.Namespace != "" {
+		isSameNamespace = selector.Namespace == event.namespace
+	}
+
+	if selector.NamespaceRegex != "" {
+		re, err := regexp.Compile(selector.NamespaceRegex)
+		if err != nil {
+			logger.Errorf("error compiling %v namespace regex: %v", selector.NamespaceRegex, err)
+			return false
+		}
+
+		isSameNamespace = re.MatchString(event.name)
+	}
+
+	isSameTestTriggerNamespace = selector.Namespace == "" && selector.NamespaceRegex == "" && namespace == event.namespace
+	return isSameName && (isSameNamespace || isSameTestTriggerNamespace)
 }
 
 func (s *Service) matchConditions(ctx context.Context, e *watcherEvent, t *testtriggersv1.TestTrigger, logger *zap.SugaredLogger) (bool, error) {
