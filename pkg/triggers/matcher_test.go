@@ -21,13 +21,14 @@ func TestService_matchConditionsRetry(t *testing.T) {
 
 	retry := 0
 	e := &watcherEvent{
-		resource:  "deployment",
-		name:      "test-deployment",
-		namespace: "testkube",
-		labels:    nil,
-		object:    nil,
-		eventType: "modified",
-		causes:    nil,
+		resource:   "deployment",
+		name:       "test-deployment",
+		namespace:  "testkube",
+		labels:     nil,
+		objectMeta: nil,
+		obect:      nil,
+		eventType:  "modified",
+		causes:     nil,
 		conditionsGetter: func() ([]testtriggersv1.TestTriggerCondition, error) {
 			retry++
 			status := testtriggersv1.FALSE_TestTriggerConditionStatuses
@@ -105,13 +106,14 @@ func TestService_matchConditionsTimeout(t *testing.T) {
 	t.Parallel()
 
 	e := &watcherEvent{
-		resource:  "deployment",
-		name:      "test-deployment",
-		namespace: "testkube",
-		labels:    nil,
-		object:    nil,
-		eventType: "modified",
-		causes:    nil,
+		resource:   "deployment",
+		name:       "test-deployment",
+		namespace:  "testkube",
+		labels:     nil,
+		objectMeta: nil,
+		obect:      nil,
+		eventType:  "modified",
+		causes:     nil,
 		conditionsGetter: func() ([]testtriggersv1.TestTriggerCondition, error) {
 			status := testtriggersv1.FALSE_TestTriggerConditionStatuses
 			return []testtriggersv1.TestTriggerCondition{
@@ -183,13 +185,14 @@ func TestService_matchProbesMultiple(t *testing.T) {
 	t.Parallel()
 
 	e := &watcherEvent{
-		resource:  "deployment",
-		name:      "test-deployment",
-		namespace: "testkube",
-		labels:    nil,
-		object:    nil,
-		eventType: "modified",
-		causes:    nil,
+		resource:   "deployment",
+		name:       "test-deployment",
+		namespace:  "testkube",
+		labels:     nil,
+		objectMeta: nil,
+		obect:      nil,
+		eventType:  "modified",
+		causes:     nil,
 	}
 
 	srv1 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -259,13 +262,14 @@ func TestService_matchProbesTimeout(t *testing.T) {
 	t.Parallel()
 
 	e := &watcherEvent{
-		resource:  "deployment",
-		name:      "test-deployment",
-		namespace: "testkube",
-		labels:    nil,
-		object:    nil,
-		eventType: "modified",
-		causes:    nil,
+		resource:   "deployment",
+		name:       "test-deployment",
+		namespace:  "testkube",
+		labels:     nil,
+		objectMeta: nil,
+		obect:      nil,
+		eventType:  "modified",
+		causes:     nil,
 	}
 
 	srv1 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -329,13 +333,14 @@ func TestService_match(t *testing.T) {
 	t.Parallel()
 
 	e := &watcherEvent{
-		resource:  "deployment",
-		name:      "test-deployment",
-		namespace: "testkube",
-		labels:    nil,
-		object:    nil,
-		eventType: "modified",
-		causes:    nil,
+		resource:   "deployment",
+		name:       "test-deployment",
+		namespace:  "testkube",
+		labels:     nil,
+		objectMeta: nil,
+		obect:      nil,
+		eventType:  "modified",
+		causes:     nil,
 		conditionsGetter: func() ([]testtriggersv1.TestTriggerCondition, error) {
 			status := testtriggersv1.TRUE_TestTriggerConditionStatuses
 			return []testtriggersv1.TestTriggerCondition{
@@ -436,13 +441,14 @@ func TestService_matchRegex(t *testing.T) {
 	t.Parallel()
 
 	e := &watcherEvent{
-		resource:  "deployment",
-		name:      "test-deployment",
-		namespace: "testkube",
-		labels:    nil,
-		object:    nil,
-		eventType: "modified",
-		causes:    nil,
+		resource:   "deployment",
+		name:       "test-deployment",
+		namespace:  "testkube",
+		labels:     nil,
+		objectMeta: nil,
+		obect:      nil,
+		eventType:  "modified",
+		causes:     nil,
 	}
 
 	srv1 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -489,13 +495,14 @@ func TestService_noMatch(t *testing.T) {
 	t.Parallel()
 
 	e := &watcherEvent{
-		resource:  "deployment",
-		name:      "test-deployment",
-		namespace: "testkube",
-		labels:    nil,
-		object:    nil,
-		eventType: "modified",
-		causes:    nil,
+		resource:   "deployment",
+		name:       "test-deployment",
+		namespace:  "testkube",
+		labels:     nil,
+		objectMeta: nil,
+		obect:      nil,
+		eventType:  "modified",
+		causes:     nil,
 	}
 
 	testTrigger1 := &testtriggersv1.TestTrigger{

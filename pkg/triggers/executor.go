@@ -1,8 +1,11 @@
 package triggers
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -17,6 +20,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/scheduler"
 	triggerstcl "github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/triggers"
 	"github.com/kubeshop/testkube/pkg/workerpool"
+	"k8s.io/client-go/util/jsonpath"
 )
 
 type Execution string
@@ -25,6 +29,7 @@ const (
 	ExecutionTest         = "test"
 	ExecutionTestSuite    = "testsuite"
 	ExecutionTestWorkflow = "testworkflow"
+	JsonPathPrefix        = "jsonpath="
 )
 
 type ExecutorF func(context.Context, *watcherEvent, *testtriggersv1.TestTrigger) error
@@ -147,6 +152,46 @@ func (s *Service) execute(ctx context.Context, e *watcherEvent, t *testtriggersv
 			request.Config[variable.Name] = variable.Value
 		}
 
+		if t.Spec.ActionParameters != nil {
+			for key, value := range t.Spec.ActionParameters.Config {
+				if strings.HasPrefix(value, JsonPathPrefix) {
+					s.logger.Debugf("trigger service: executor component: trigger %s/%s parsing jsonpath %s for config %s",
+						t.Namespace, t.Name, key, value)
+					data, err := s.getJsonPathData(e, strings.TrimPrefix(value, JsonPathPrefix))
+					if err != nil {
+						s.logger.Errorf("trigger service: executor component: trigger %s/%s parsing jsonpath %s for config %s error %v",
+							t.Namespace, t.Name, key, value, err)
+						continue
+					}
+
+					request.Config[key] = data
+				} else {
+					request.Config[key] = value
+				}
+			}
+
+			if len(t.Spec.ActionParameters.Tags) > 0 && request.Tags == nil {
+				request.Tags = make(map[string]string)
+			}
+
+			for key, value := range t.Spec.ActionParameters.Tags {
+				if strings.HasPrefix(value, JsonPathPrefix) {
+					s.logger.Debugf("trigger service: executor component: trigger %s/%s parsing jsonpath %s for tag %s",
+						t.Namespace, t.Name, key, value)
+					data, err := s.getJsonPathData(e, strings.TrimPrefix(value, JsonPathPrefix))
+					if err != nil {
+						s.logger.Errorf("trigger service: executor component: trigger %s/%s parsing jsonpath %s for tag %s error %v",
+							t.Namespace, t.Name, key, value, err)
+						continue
+					}
+
+					request.Tags[key] = data
+				} else {
+					request.Tags[key] = value
+				}
+			}
+		}
+
 		wp := workerpool.New[testworkflowsv1.TestWorkflow, testkube.TestWorkflowExecutionRequest, testkube.TestWorkflowExecution](concurrencyLevel)
 		go func() {
 			isDelayDefined := t.Spec.Delay != nil
@@ -190,6 +235,27 @@ func (s *Service) execute(ctx context.Context, e *watcherEvent, t *testtriggersv
 	s.logger.Debugf("trigger service: executor component: started test execution for trigger %s/%s", t.Namespace, t.Name)
 
 	return nil
+}
+
+func (s *Service) getJsonPathData(e *watcherEvent, value string) (string, error) {
+	jp := jsonpath.New("tag")
+	err := jp.Parse(value)
+	if err != nil {
+		return "", err
+	}
+
+	data, err := json.Marshal(e.obect)
+	if err != nil {
+		return "", err
+	}
+
+	buf := new(bytes.Buffer)
+	err = jp.Execute(buf, data)
+	if err != nil {
+		return "", err
+	}
+
+	return buf.String(), nil
 }
 
 func (s *Service) getTests(t *testtriggersv1.TestTrigger) ([]testsv3.Test, error) {

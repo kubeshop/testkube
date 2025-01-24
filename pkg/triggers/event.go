@@ -31,7 +31,8 @@ type watcherEvent struct {
 	name             string
 	namespace        string
 	labels           map[string]string
-	object           metav1.Object
+	objectMeta       metav1.Object
+	obect            any
 	eventType        testtrigger.EventType
 	causes           []testtrigger.Cause
 	conditionsGetter conditionsGetterFn
@@ -68,17 +69,19 @@ func withNotEmptyName(name string) watcherOpts {
 
 func newWatcherEvent(
 	eventType testtrigger.EventType,
-	object metav1.Object,
+	objectMeta metav1.Object,
+	obect any,
 	resource testtrigger.ResourceType,
 	opts ...watcherOpts,
 ) *watcherEvent {
 	w := &watcherEvent{
-		resource:  resource,
-		name:      object.GetName(),
-		namespace: object.GetNamespace(),
-		labels:    object.GetLabels(),
-		object:    object,
-		eventType: eventType,
+		resource:   resource,
+		name:       objectMeta.GetName(),
+		namespace:  objectMeta.GetNamespace(),
+		labels:     objectMeta.GetLabels(),
+		objectMeta: objectMeta,
+		obect:      obect,
+		eventType:  eventType,
 	}
 
 	for _, opt := range opts {
