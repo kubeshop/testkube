@@ -340,21 +340,6 @@ func (mr *MockClientMockRecorder) ListTestWorkflows(arg0, arg1, arg2 interface{}
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTestWorkflows", reflect.TypeOf((*MockClient)(nil).ListTestWorkflows), arg0, arg1, arg2)
 }
 
-// ObtainExecution mocks base method.
-func (m *MockClient) ObtainExecution(arg0 context.Context, arg1, arg2 string) (*cloud.ObtainExecutionResponse, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ObtainExecution", arg0, arg1, arg2)
-	ret0, _ := ret[0].(*cloud.ObtainExecutionResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ObtainExecution indicates an expected call of ObtainExecution.
-func (mr *MockClientMockRecorder) ObtainExecution(arg0, arg1, arg2 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ObtainExecution", reflect.TypeOf((*MockClient)(nil).ObtainExecution), arg0, arg1, arg2)
-}
-
 // ProcessExecutionNotificationRequests mocks base method.
 func (m *MockClient) ProcessExecutionNotificationRequests(arg0 context.Context, arg1 func(context.Context, *cloud.TestWorkflowNotificationsRequest) NotificationWatcher) error {
 	m.ctrl.T.Helper()

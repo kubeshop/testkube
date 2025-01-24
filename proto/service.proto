@@ -32,7 +32,6 @@ service TestKubeCloudAPI {
     rpc UpdateExecutionResult(UpdateExecutionResultRequest) returns (UpdateExecutionResultResponse);
     rpc UpdateExecutionOutput(UpdateExecutionOutputRequest) returns (UpdateExecutionOutputResponse); // TODO: Replace with AppendOutput
     rpc SaveExecutionLogsPresigned(SaveExecutionLogsPresignedRequest) returns (SaveExecutionLogsPresignedResponse);
-    rpc ObtainExecution(ObtainExecutionRequest) returns (ObtainExecutionResponse);
     rpc FinishExecution(FinishExecutionRequest) returns (FinishExecutionResponse);
 
     // Execution
@@ -313,9 +312,14 @@ message Event {
 enum RunnerRequestType {
   PING = 0; // Heartbeat
   CONSIDER = 1; // Consider a new execution to be run
-  ABORT = 2; // Abort the execution
-  RESUME = 3; // Resume the execution
-  PAUSE = 4; // Pause the execution
+  START = 2; // Start
+  ABORT = 3; // Abort the execution
+  RESUME = 4; // Resume the execution
+  PAUSE = 5; // Pause the execution
+}
+
+message RunnerStartRequest {
+  string token = 1;
 }
 
 message RunnerRequest {
@@ -323,9 +327,16 @@ message RunnerRequest {
   string environment_id = 2;
   string execution_id = 3;
   RunnerRequestType type = 4;
+  oneof request {
+    RunnerStartRequest start = 5;
+  }
 }
 
 message RunnerConsiderResponse {
+  bool ok = 1;
+}
+
+message RunnerStartResponse {
 }
 
 message RunnerResponse {
@@ -336,6 +347,7 @@ message RunnerResponse {
   oneof response {
     string error = 5;
     RunnerConsiderResponse consider = 6;
+    RunnerStartResponse start = 7;
   }
 }
 

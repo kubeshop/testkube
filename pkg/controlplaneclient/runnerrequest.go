@@ -37,12 +37,25 @@ func (r *runnerRequestData) Consider() RunnerRequestConsider {
 	return &runnerRequestConsider{runnerRequestData: *r}
 }
 
+func (r *runnerRequestData) Start() RunnerRequestStart {
+	return &runnerRequestStart{runnerRequestData: *r}
+}
+
 type RunnerRequestSpecific[T any] interface {
 	RunnerRequestData
 	Send(response T) error
 }
 
-type RunnerRequestConsider RunnerRequestSpecific[*cloud.RunnerConsiderResponse]
+type RunnerRequestConsider interface {
+	RunnerRequestData
+	Send(response *cloud.RunnerConsiderResponse) error
+}
+
+type RunnerRequestStart interface {
+	RunnerRequestData
+	Token() string
+	Send(response *cloud.RunnerStartResponse) error
+}
 
 type RunnerRequestOK interface {
 	RunnerRequestData
@@ -65,6 +78,7 @@ type RunnerRequest interface {
 	Resume() RunnerRequestOK
 	Pause() RunnerRequestOK
 	Consider() RunnerRequestConsider
+	Start() RunnerRequestStart
 }
 
 func (r *runnerRequestData) Type() cloud.RunnerRequestType {
@@ -107,5 +121,23 @@ func (r *runnerRequestConsider) Send(response *cloud.RunnerConsiderResponse) err
 		ExecutionId:   r.data.ExecutionId,
 		Type:          r.data.Type,
 		Response:      &cloud.RunnerResponse_Consider{Consider: response},
+	})
+}
+
+type runnerRequestStart struct {
+	runnerRequestData
+}
+
+func (r *runnerRequestStart) Token() string {
+	return r.data.GetRequest().(*cloud.RunnerRequest_Start).Start.Token
+}
+
+func (r *runnerRequestStart) Send(response *cloud.RunnerStartResponse) error {
+	return r.send(&cloud.RunnerResponse{
+		MessageId:     r.data.MessageId,
+		EnvironmentId: r.data.EnvironmentId,
+		ExecutionId:   r.data.ExecutionId,
+		Type:          r.data.Type,
+		Response:      &cloud.RunnerResponse_Start{Start: response},
 	})
 }

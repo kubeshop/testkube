@@ -146,6 +146,34 @@ func (mr *MockRunnerRequestMockRecorder) Resume() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Resume", reflect.TypeOf((*MockRunnerRequest)(nil).Resume))
 }
 
+// SendError mocks base method.
+func (m *MockRunnerRequest) SendError(arg0 error) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SendError", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SendError indicates an expected call of SendError.
+func (mr *MockRunnerRequestMockRecorder) SendError(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendError", reflect.TypeOf((*MockRunnerRequest)(nil).SendError), arg0)
+}
+
+// Start mocks base method.
+func (m *MockRunnerRequest) Start() RunnerRequestStart {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Start")
+	ret0, _ := ret[0].(RunnerRequestStart)
+	return ret0
+}
+
+// Start indicates an expected call of Start.
+func (mr *MockRunnerRequestMockRecorder) Start() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockRunnerRequest)(nil).Start))
+}
+
 // Type mocks base method.
 func (m *MockRunnerRequest) Type() cloud.RunnerRequestType {
 	m.ctrl.T.Helper()

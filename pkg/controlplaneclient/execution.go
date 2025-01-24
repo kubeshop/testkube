@@ -25,7 +25,6 @@ type ExecutionClient interface {
 	UpdateExecutionResult(ctx context.Context, environmentId, executionId string, result *testkube.TestWorkflowResult) error
 	FinishExecutionResult(ctx context.Context, environmentId, executionId string, result *testkube.TestWorkflowResult) error
 	InitExecution(ctx context.Context, environmentId, executionId string, signature []testkube.TestWorkflowSignature, namespace string) error
-	ObtainExecution(ctx context.Context, environmentId, executionId string) (*cloud.ObtainExecutionResponse, error)
 }
 
 func (c *client) GetExecution(ctx context.Context, environmentId, executionId string) (*testkube.TestWorkflowExecution, error) {
@@ -254,9 +253,4 @@ func (c *client) legacyInitExecution(ctx context.Context, environmentId, executi
 	}
 	_, err = call(ctx, c.metadata().SetEnvironmentID(environmentId).GRPC(), c.client.Call, &req)
 	return err
-}
-
-func (c *client) ObtainExecution(ctx context.Context, environmentId, executionId string) (*cloud.ObtainExecutionResponse, error) {
-	req := &cloud.ObtainExecutionRequest{Id: executionId}
-	return call(ctx, c.metadata().SetEnvironmentID(environmentId).GRPC(), c.client.ObtainExecution, req)
 }

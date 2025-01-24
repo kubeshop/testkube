@@ -224,23 +224,23 @@ func (a *agentLoop) loopRunnerRequests(ctx context.Context) error {
 		go func(req controlplaneclient.RunnerRequest) {
 			switch req.Type() {
 			case cloud.RunnerRequestType_CONSIDER:
-				// Lock the execution for itself
-				var resp *cloud.ObtainExecutionResponse
-				resp, err := a.client.ObtainExecution(ctx, req.EnvironmentID(), req.ExecutionID())
-				if err != nil {
-					a.logger.Errorf("failed to obtain execution '%s/%s', from Control Plane: %v", req.EnvironmentID(), req.ExecutionID(), err)
+				if err := req.Consider().Send(&cloud.RunnerConsiderResponse{Ok: true}); err != nil {
+					a.logger.Errorf("failed to accept the '%s/%s' execution: %v", req.EnvironmentID(), req.ExecutionID(), err)
 					return
 				}
-
-				// Ignore if the resource has been locked before
-				if !resp.Success {
-					return
-				}
-
-				// Continue
-				err = a.runTestWorkflow(req.EnvironmentID(), req.ExecutionID(), resp.Token)
-				if err != nil {
-					a.logger.Errorf("failed to run execution '%s/%s' from Control Plane: %v", req.EnvironmentID(), req.ExecutionID(), err)
+			case cloud.RunnerRequestType_START:
+				err := a.runTestWorkflow(req.EnvironmentID(), req.ExecutionID(), req.Start().Token())
+				if err == nil {
+					err = req.Start().Send(&cloud.RunnerStartResponse{})
+					if err != nil {
+						a.logger.Errorf("failed to send success for start execution '%s/%s': %v", req.EnvironmentID(), req.ExecutionID(), err)
+					}
+				} else {
+					a.logger.Errorf("failed to start execution '%s/%s': %v", req.EnvironmentID(), req.ExecutionID(), err)
+					err = req.Start().SendError(err)
+					if err != nil {
+						a.logger.Errorf("failed to send error for start execution '%s/%s': %v", req.EnvironmentID(), req.ExecutionID(), err)
+					}
 				}
 			case cloud.RunnerRequestType_ABORT:
 				originalError := a.runner.Abort(req.ExecutionID())
