@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/utilisation"
 	"os"
 	"os/signal"
 	"slices"
@@ -369,7 +370,9 @@ func main() {
 				stopTimeoutWatcher := orchestration.WatchTimeout(finalizeTimeout, leaf...)
 
 				// Run the command
-				commands.Run(*action.Execute, currentContainer)
+				utilisation.WithMetricsRecorder(step.Ref, func() {
+					commands.Run(*action.Execute, currentContainer)
+				})
 
 				// Stop timer listener
 				stopTimeoutWatcher()
