@@ -90,9 +90,9 @@ func (p *processNode) Resume() error {
 		return nil
 	}
 	if p.pid == -1 {
-		return errors.Wrap(errors2.Join(errs...), "suspending processes")
+		return errors.Wrap(errors2.Join(errs...), "resuming processes")
 	}
-	return errors.Wrapf(errors2.Join(errs...), "suspending process %d", p.pid)
+	return errors.Wrapf(errors2.Join(errs...), "resuming process %d", p.pid)
 }
 
 // Kill all the processes in group, starting from top
