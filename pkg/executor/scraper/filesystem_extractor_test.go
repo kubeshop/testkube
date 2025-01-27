@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kubeshop/testkube/pkg/executor/scraper/scrapertypes"
 	"github.com/kubeshop/testkube/pkg/filesystem"
 
 	"github.com/golang/mock/gomock"
@@ -43,7 +44,7 @@ func TestRecursiveFilesystemExtractor_Extract(t *testing.T) {
 		return walkFn("/my/directory/file1", &fileInfo, nil)
 	})
 
-	processFn := func(ctx context.Context, object *scraper.Object) error {
+	processFn := func(ctx context.Context, object *scrapertypes.Object) error {
 		assert.Equal(t, "file1", object.Name)
 		return nil
 	}
@@ -88,11 +89,11 @@ func TestArchiveFilesystemExtractor_Extract_NoMeta(t *testing.T) {
 	})
 
 	processFnCallCount := 0
-	processFn := func(ctx context.Context, object *scraper.Object) error {
+	processFn := func(ctx context.Context, object *scrapertypes.Object) error {
 		processFnCallCount++
 		switch object.Name {
 		case "artifacts.tar.gz":
-			assert.Equal(t, scraper.DataTypeTarball, object.DataType)
+			assert.Equal(t, scrapertypes.DataTypeTarball, object.DataType)
 		default:
 			t.Fatalf("Unexpected object name: %s", object.Name)
 		}
@@ -141,11 +142,11 @@ func TestArchiveFilesystemExtractor_Extract_Meta(t *testing.T) {
 	})
 
 	processFnCallCount := 0
-	processFn := func(ctx context.Context, object *scraper.Object) error {
+	processFn := func(ctx context.Context, object *scrapertypes.Object) error {
 		processFnCallCount++
 		switch object.Name {
 		case ".testkube-meta-files.json":
-			var meta scraper.FilesMeta
+			var meta scrapertypes.FilesMeta
 			jsonData, err := io.ReadAll(object.Data)
 			if err != nil {
 				t.Fatalf("Failed to read meta files: %v", err)
@@ -155,12 +156,12 @@ func TestArchiveFilesystemExtractor_Extract_Meta(t *testing.T) {
 			}
 			assert.Len(t, meta.Files, 1)
 			assert.Equal(t, "artifacts.tar.gz", meta.Archive)
-			assert.Equal(t, scraper.DataTypeTarball, meta.DataType)
+			assert.Equal(t, scrapertypes.DataTypeTarball, meta.DataType)
 			assert.Equal(t, "file1", meta.Files[0].Name)
 			assert.Equal(t, int64(len(testContent)), meta.Files[0].Size)
-			assert.Equal(t, scraper.DataTypeRaw, object.DataType)
+			assert.Equal(t, scrapertypes.DataTypeRaw, object.DataType)
 		case "artifacts.tar.gz":
-			assert.Equal(t, scraper.DataTypeTarball, object.DataType)
+			assert.Equal(t, scrapertypes.DataTypeTarball, object.DataType)
 		default:
 			t.Fatalf("Unexpected object name: %s", object.Name)
 		}
@@ -189,7 +190,7 @@ func TestRecursiveFilesystemExtractor_ExtractEmpty(t *testing.T) {
 	fs.EXPECT().Stat("/my/directory").Return(nil, os.ErrNotExist)
 	extractor := scraper.NewRecursiveFilesystemExtractor(fs)
 
-	processFn := func(ctx context.Context, object *scraper.Object) error {
+	processFn := func(ctx context.Context, object *scrapertypes.Object) error {
 		t.Fatalf("processFn should not be called when no files were scraped")
 		return nil
 	}
@@ -214,7 +215,7 @@ func TestArchiveFilesystemExtractor_ExtractEmpty(t *testing.T) {
 	fs.EXPECT().Stat("/my/directory").Return(nil, os.ErrNotExist)
 	extractor := scraper.NewArchiveFilesystemExtractor(fs)
 
-	processFn := func(ctx context.Context, object *scraper.Object) error {
+	processFn := func(ctx context.Context, object *scrapertypes.Object) error {
 		t.Fatalf("processFn should not be called when no files were scraped")
 		return nil
 	}

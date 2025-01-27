@@ -6,6 +6,7 @@ option go_package = "pkg/cloud";
 
 import "google/protobuf/empty.proto";
 import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
 
 service TestKubeCloudAPI {
     // Deprecated, use ExecuteAsync instead,
@@ -17,9 +18,45 @@ service TestKubeCloudAPI {
     rpc GetLogsStream(stream LogsStreamResponse) returns (stream LogsStreamRequest);
     rpc GetTestWorkflowNotificationsStream(stream TestWorkflowNotificationsResponse) returns (stream TestWorkflowNotificationsRequest);
     rpc GetTestWorkflowServiceNotificationsStream(stream TestWorkflowServiceNotificationsResponse) returns (stream TestWorkflowServiceNotificationsRequest);
-    rpc GetTestWorkflowParallelStepNotificationsStream(stream TestWorkflowParallelStepNotificationsResponse) returns (stream TestWorkflowParallelStepNotificationsRequest);    
+    rpc GetTestWorkflowParallelStepNotificationsStream(stream TestWorkflowParallelStepNotificationsResponse) returns (stream TestWorkflowParallelStepNotificationsRequest);
     rpc GetProContext(google.protobuf.Empty) returns (ProContextResponse);
     rpc GetCredential(CredentialRequest) returns (CredentialResponse);
+    rpc GetEventStream(EventStreamRequest) returns (stream EventStreamData);
+    rpc ScheduleExecution(ScheduleRequest) returns (stream ScheduleResponse);
+
+    // Runner
+    rpc GetUnfinishedExecutions(google.protobuf.Empty) returns (stream UnfinishedExecution);
+    rpc GetRunnerRequests(stream RunnerResponse) returns (stream RunnerRequest);
+    rpc InitExecution(InitExecutionRequest) returns (InitExecutionResponse);
+    rpc GetExecution(GetExecutionRequest) returns (GetExecutionResponse);
+    rpc UpdateExecutionResult(UpdateExecutionResultRequest) returns (UpdateExecutionResultResponse);
+    rpc UpdateExecutionOutput(UpdateExecutionOutputRequest) returns (UpdateExecutionOutputResponse); // TODO: Replace with AppendOutput
+    rpc SaveExecutionLogsPresigned(SaveExecutionLogsPresignedRequest) returns (SaveExecutionLogsPresignedResponse);
+    rpc FinishExecution(FinishExecutionRequest) returns (FinishExecutionResponse);
+
+    // Execution
+    rpc SaveExecutionArtifactPresigned(SaveExecutionArtifactPresignedRequest) returns (SaveExecutionArtifactPresignedResponse);
+    rpc AppendExecutionReport(AppendExecutionReportRequest) returns (AppendExecutionReportResponse);
+
+    // CRD Synchronisation
+    // -- Test Workflows
+    rpc GetTestWorkflow(GetTestWorkflowRequest) returns (GetTestWorkflowResponse);
+    rpc ListTestWorkflows(ListTestWorkflowsRequest) returns (stream TestWorkflowListItem);
+    rpc ListTestWorkflowLabels(ListTestWorkflowLabelsRequest) returns (ListTestWorkflowLabelsResponse);
+    rpc CreateTestWorkflow(CreateTestWorkflowRequest) returns (CreateTestWorkflowResponse);
+    rpc UpdateTestWorkflow(UpdateTestWorkflowRequest) returns (UpdateTestWorkflowResponse);
+    rpc DeleteTestWorkflow(DeleteTestWorkflowRequest) returns (DeleteTestWorkflowResponse);
+    rpc DeleteTestWorkflowsByLabels(DeleteTestWorkflowsByLabelsRequest) returns (DeleteTestWorkflowsByLabelsResponse);
+    rpc WatchTestWorkflowUpdates(WatchTestWorkflowUpdatesRequest) returns (stream TestWorkflowUpdate);
+    // -- Test Workflow Templates
+    rpc GetTestWorkflowTemplate(GetTestWorkflowTemplateRequest) returns (GetTestWorkflowTemplateResponse);
+    rpc ListTestWorkflowTemplates(ListTestWorkflowTemplatesRequest) returns (stream TestWorkflowTemplateListItem);
+    rpc ListTestWorkflowTemplateLabels(ListTestWorkflowTemplateLabelsRequest) returns (ListTestWorkflowTemplateLabelsResponse);
+    rpc CreateTestWorkflowTemplate(CreateTestWorkflowTemplateRequest) returns (CreateTestWorkflowTemplateResponse);
+    rpc UpdateTestWorkflowTemplate(UpdateTestWorkflowTemplateRequest) returns (UpdateTestWorkflowTemplateResponse);
+    rpc DeleteTestWorkflowTemplate(DeleteTestWorkflowTemplateRequest) returns (DeleteTestWorkflowTemplateResponse);
+    rpc DeleteTestWorkflowTemplatesByLabels(DeleteTestWorkflowTemplatesByLabelsRequest) returns (DeleteTestWorkflowTemplatesByLabelsResponse);
+    rpc WatchTestWorkflowTemplateUpdates(WatchTestWorkflowTemplateUpdatesRequest) returns (stream TestWorkflowTemplateUpdate);
 }
 
 enum LogsStreamRequestType {
@@ -72,6 +109,7 @@ message ExecuteRequest {
 message TestWorkflowNotificationsRequest {
   string stream_id = 1;
   string execution_id = 2;
+  string environment_id = 4;
   TestWorkflowNotificationsRequestType request_type = 3;
 }
 
@@ -84,10 +122,31 @@ message TestWorkflowNotificationsResponse {
   string message = 6; // based on type: log/error = inline, others = serialized to JSON
 }
 
+enum TestkubeMode {
+  Enterprise = 0;
+  Pro = 1;
+}
+
+enum PlanStatus {
+    Active             = 0;
+    Canceled           = 1;
+    Incomplete         = 2;
+    IncompleteExpired  = 3;
+    PastDue            = 4;
+    Trailing           = 5;
+    Unpaid             = 6;
+    Deleted            = 7;
+    Locked             = 8;
+    Blocked            = 9;
+}
+
 message ProContextResponse {
   string org_id = 1;
   string env_id = 2;
   repeated Capability capabilities = 3;
+  bool trial = 4;
+  TestkubeMode mode = 5;
+  PlanStatus status = 6;
 }
 
 message Capability {
@@ -129,9 +188,10 @@ message CredentialResponse {
 
 message TestWorkflowServiceNotificationsRequest {
   string stream_id = 1;
+  string environment_id = 6;
   string execution_id = 2;
   string service_name = 3;
-  int32 service_index = 4; 
+  int32 service_index = 4;
   TestWorkflowNotificationsRequestType request_type = 5;
 }
 
@@ -146,9 +206,10 @@ message TestWorkflowServiceNotificationsResponse {
 
 message TestWorkflowParallelStepNotificationsRequest {
   string stream_id = 1;
+  string environment_id = 6;
   string execution_id = 2;
   string ref = 3;
-  int32  worker_index = 4; 
+  int32  worker_index = 4;
   TestWorkflowNotificationsRequestType request_type = 5;
 }
 
@@ -159,4 +220,358 @@ message TestWorkflowParallelStepNotificationsResponse {
   string ref = 4;
   TestWorkflowNotificationType type = 5;
   string message = 6; // based on type: log/error = inline, others = serialized to JSON
+}
+
+message ScheduleResourceSelector {
+  string name = 1;
+  map<string, string> labels = 2;
+}
+
+message ScheduleExecution {
+  ScheduleResourceSelector selector = 1;
+  map<string, string> config = 2;
+  string execution_name = 3;
+  map<string, string> tags = 4;
+  repeated ExecutionTarget targets = 5;
+}
+
+// map<string, []string> is not supported in protobuf
+message ExecutionTargetLabels {
+  repeated string labels = 1;
+}
+
+message ExecutionTarget {
+  map<string, ExecutionTargetLabels> match = 1; // runner labels to filter by
+  map<string, ExecutionTargetLabels> not = 2; // runner labels to filter against
+  repeated string replicate = 3; // runner labels to replicate by
+}
+
+enum RunningContextType {
+  UNKNOWN = 0;
+  UI = 1;
+  CLI = 2;
+  CICD = 3;
+  CRON = 4;
+  TESTTRIGGER = 5;
+  KUBERNETESOBJECT = 6;
+  EXECUTION = 7;
+}
+
+message RunningContext {
+  string name = 1;
+  RunningContextType type = 2;
+}
+
+message UserSignature {
+  string name = 1;
+  string email = 2;
+}
+
+message ScheduleRequest {
+  // Test Workflow details
+  repeated ScheduleExecution executions = 2;
+
+  // Execution details
+  bool disable_webhooks = 3;
+  map<string, string> tags = 4;
+
+  // Running metadata
+  RunningContext running_context = 5;
+  repeated string parent_execution_ids = 7;
+  optional UserSignature user = 8; // keep in mind that it should not be trusted
+
+  // Kubernetes resource TODO: is it required?
+  string kubernetes_object_name = 9;
+}
+
+message ScheduleResponse {
+  bytes execution = 1; // TestWorkflowExecution
+}
+
+message EventResource {
+  string type = 1;
+  string id = 2;
+}
+
+message EventStreamRequest {
+  repeated EventResource accept = 1;
+}
+
+message EventStreamData {
+  bool ping = 1;
+  optional Event event = 2;
+}
+
+message Event {
+  string id = 1;
+  EventResource resource = 3;
+  string type = 4;
+  bytes data = 5;
+}
+
+enum RunnerRequestType {
+  PING = 0; // Heartbeat
+  CONSIDER = 1; // Consider a new execution to be run
+  START = 2; // Start
+  ABORT = 3; // Abort the execution
+  RESUME = 4; // Resume the execution
+  PAUSE = 5; // Pause the execution
+}
+
+message RunnerStartRequest {
+  string token = 1;
+}
+
+message RunnerRequest {
+  string message_id = 1;
+  string environment_id = 2;
+  string execution_id = 3;
+  RunnerRequestType type = 4;
+  oneof request {
+    RunnerStartRequest start = 5;
+  }
+}
+
+message RunnerConsiderResponse {
+  bool ok = 1;
+}
+
+message RunnerStartResponse {
+}
+
+message RunnerResponse {
+  string message_id = 1;
+  string environment_id = 2;
+  string execution_id = 3;
+  RunnerRequestType type = 4;
+  oneof response {
+    string error = 5;
+    RunnerConsiderResponse consider = 6;
+    RunnerStartResponse start = 7;
+  }
+}
+
+message UnfinishedExecution {
+  string environment_id = 1;
+  string id = 2;
+}
+
+message GetExecutionRequest {
+  string id = 1;
+}
+
+message GetExecutionResponse {
+  bytes execution = 1; // TestWorkflowExecution
+}
+
+message InitExecutionRequest {
+  string id = 1;
+  string namespace = 2;
+  bytes signature = 3; // []TestWorkflowSignature
+}
+
+message InitExecutionResponse {
+}
+
+message UpdateExecutionResultRequest {
+  string id = 1;
+  bytes result = 2; // TestWorkflowResult
+}
+
+message UpdateExecutionResultResponse {
+}
+
+message ExecutionOutput {
+  string ref = 1;
+  string name = 2;
+  bytes value = 3;
+}
+
+message UpdateExecutionOutputRequest {
+  string id = 1;
+  repeated ExecutionOutput output = 2;
+}
+
+message UpdateExecutionOutputResponse {
+}
+
+message SaveExecutionLogsPresignedRequest {
+  string id = 1;
+}
+
+message SaveExecutionLogsPresignedResponse {
+  string url = 1;
+}
+
+message FinishExecutionRequest {
+  string id = 1;
+  bytes result = 2; // TestWorkflowResult
+}
+
+message FinishExecutionResponse {
+}
+
+// Execution
+
+message SaveExecutionArtifactPresignedRequest {
+  string id = 1;
+  string step = 2;
+  string file_path = 3;
+  string content_type = 4;
+}
+
+message SaveExecutionArtifactPresignedResponse {
+  string url = 1;
+}
+
+message AppendExecutionReportRequest {
+  string id = 1;
+  string step = 2;
+  string file_path = 3;
+  bytes report = 4; // TODO: avoid sending report - it could be fetched directly from the artifact instead
+}
+
+message AppendExecutionReportResponse {
+
+}
+
+// CRD Synchronisation -- Test Workflows
+
+message GetTestWorkflowRequest {
+  string name = 1;
+}
+
+message GetTestWorkflowResponse {
+  bytes workflow = 1;
+}
+
+message ListTestWorkflowsRequest {
+  uint32 offset = 1;
+  uint32 limit = 2;
+  map<string, string> labels = 3;
+  string textSearch = 4;
+}
+
+message TestWorkflowListItem {
+  bytes workflow = 1;
+}
+
+message LabelListItem {
+  string name = 1;
+  repeated string value = 2;
+}
+
+message ListTestWorkflowLabelsRequest {
+}
+
+message ListTestWorkflowLabelsResponse {
+  repeated LabelListItem labels = 1;
+}
+
+message CreateTestWorkflowRequest {
+  bytes workflow = 1;
+}
+
+message CreateTestWorkflowResponse {}
+
+message UpdateTestWorkflowRequest {
+  bytes workflow = 1;
+}
+
+message UpdateTestWorkflowResponse {}
+
+message DeleteTestWorkflowRequest {
+  string name = 1;
+}
+
+message DeleteTestWorkflowResponse {}
+
+message DeleteTestWorkflowsByLabelsRequest {
+  map<string, string> labels = 1;
+}
+
+message DeleteTestWorkflowsByLabelsResponse {
+  uint32 count = 1;
+}
+
+enum UpdateType {
+  UPDATE = 0;
+  CREATE = 1;
+  DELETE = 2;
+}
+
+message WatchTestWorkflowUpdatesRequest {
+  bool include_initial_data = 1;
+}
+
+message TestWorkflowUpdate {
+  bool ping = 1;
+  google.protobuf.Timestamp timestamp = 2;
+  UpdateType type = 3;
+  bytes resource = 4; // TestWorkflow
+}
+
+// CRD Synchronisation -- Test Workflow Templates
+
+message GetTestWorkflowTemplateRequest {
+  string name = 1;
+}
+
+message GetTestWorkflowTemplateResponse {
+  bytes template = 1;
+}
+
+message ListTestWorkflowTemplatesRequest {
+  uint32 offset = 1;
+  uint32 limit = 2;
+  map<string, string> labels = 3;
+  string textSearch = 4;
+}
+
+message TestWorkflowTemplateListItem {
+  bytes template = 1;
+}
+
+message ListTestWorkflowTemplateLabelsRequest {
+}
+
+message ListTestWorkflowTemplateLabelsResponse {
+  repeated LabelListItem labels = 1;
+}
+
+message CreateTestWorkflowTemplateRequest {
+  bytes template = 1;
+}
+
+message CreateTestWorkflowTemplateResponse {}
+
+message UpdateTestWorkflowTemplateRequest {
+  bytes template = 1;
+}
+
+message UpdateTestWorkflowTemplateResponse {}
+
+message DeleteTestWorkflowTemplateRequest {
+  string name = 1;
+}
+
+message DeleteTestWorkflowTemplateResponse {}
+
+message DeleteTestWorkflowTemplatesByLabelsRequest {
+  map<string, string> labels = 1;
+}
+
+message DeleteTestWorkflowTemplatesByLabelsResponse {
+  uint32 count = 1;
+}
+
+message WatchTestWorkflowTemplateUpdatesRequest {
+  bool include_initial_data = 1;
+}
+
+message TestWorkflowTemplateUpdate {
+  bool ping = 1;
+  google.protobuf.Timestamp timestamp = 2;
+  UpdateType type = 3;
+  bytes resource = 4; // TestWorkflowTemplate
 }

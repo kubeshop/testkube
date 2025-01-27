@@ -15,7 +15,7 @@ type ListResponse[T All] struct {
 }
 
 type All interface {
-	Organization | Environment
+	Organization | Environment | Agent
 }
 
 type RESTClient[T All] struct {

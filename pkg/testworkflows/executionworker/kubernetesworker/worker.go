@@ -66,11 +66,12 @@ func NewWorker(clientSet kubernetes.Interface, processor testworkflowprocessor.P
 			ImageInspectorPersistenceCacheKey: config.ImageInspector.CacheKey,
 			ImageInspectorPersistenceCacheTTL: config.ImageInspector.CacheTTL,
 			Connection:                        config.Connection,
+			FeatureFlags:                      config.FeatureFlags,
 		},
 	}
 }
 
-func (w *worker) buildInternalConfig(resourceId, fsPrefix string, execution testworkflowconfig.ExecutionConfig, controlPlane testworkflowconfig.ControlPlaneConfig, workflow testworkflowsv1.TestWorkflow) testworkflowconfig.InternalConfig {
+func (w *worker) buildInternalConfig(resourceId, fsPrefix string, execution testworkflowconfig.ExecutionConfig, controlPlane testworkflowconfig.ControlPlaneConfig, workflow testworkflowsv1.TestWorkflow, executionToken string) testworkflowconfig.InternalConfig {
 	cfg := testworkflowconfig.InternalConfig{
 		Execution:    execution,
 		Workflow:     testworkflowconfig.WorkflowConfig{Name: workflow.Name, Labels: workflow.Labels},
@@ -78,8 +79,14 @@ func (w *worker) buildInternalConfig(resourceId, fsPrefix string, execution test
 		ControlPlane: controlPlane,
 		Worker:       w.baseWorkerConfig,
 	}
+	if executionToken != "" {
+		cfg.Worker.Connection.ApiKey = executionToken
+	}
 	if workflow.Spec.Job != nil && workflow.Spec.Job.Namespace != "" {
 		cfg.Worker.Namespace = workflow.Spec.Job.Namespace
+	}
+	if ns, ok := w.config.Cluster.Namespaces[cfg.Worker.Namespace]; ok && ns.DefaultServiceAccountName != "" {
+		cfg.Worker.DefaultServiceAccount = ns.DefaultServiceAccountName
 	}
 	return cfg
 }
@@ -107,12 +114,22 @@ func (w *worker) Execute(ctx context.Context, request executionworkertypes.Execu
 	} else if resourceId == request.Execution.Id && !request.Execution.ScheduledAt.IsZero() {
 		scheduledAt = request.Execution.ScheduledAt
 	}
-	cfg := w.buildInternalConfig(resourceId, request.ArtifactsPathPrefix, request.Execution, request.ControlPlane, request.Workflow)
+	cfg := w.buildInternalConfig(resourceId, request.ArtifactsPathPrefix, request.Execution, request.ControlPlane, request.Workflow, request.Token)
 	secrets := w.buildSecrets(request.Secrets)
 
 	// Ensure the execution namespace is allowed
 	if _, ok := w.config.Cluster.Namespaces[cfg.Worker.Namespace]; !ok {
 		return nil, errors.New(fmt.Sprintf("namespace %s not supported", cfg.Worker.Namespace))
+	}
+
+	// Configure default service account
+	if request.Workflow.Spec.Pod == nil {
+		request.Workflow.Spec.Pod = &testworkflowsv1.PodConfig{
+			ServiceAccountName: cfg.Worker.DefaultServiceAccount,
+		}
+	} else if request.Workflow.Spec.Pod.ServiceAccountName == "" {
+		request.Workflow.Spec.Pod = request.Workflow.Spec.Pod.DeepCopy()
+		request.Workflow.Spec.Pod.ServiceAccountName = cfg.Worker.DefaultServiceAccount
 	}
 
 	// Process the Test Workflow
@@ -154,7 +171,7 @@ func (w *worker) Service(ctx context.Context, request executionworkertypes.Servi
 	} else if resourceId == request.Execution.Id && !request.Execution.ScheduledAt.IsZero() {
 		scheduledAt = request.Execution.ScheduledAt
 	}
-	cfg := w.buildInternalConfig(resourceId, "", request.Execution, request.ControlPlane, request.Workflow)
+	cfg := w.buildInternalConfig(resourceId, "", request.Execution, request.ControlPlane, request.Workflow, request.Token)
 	secrets := w.buildSecrets(request.Secrets)
 
 	// Ensure the execution namespace is allowed
@@ -229,7 +246,7 @@ func (w *worker) Notifications(ctx context.Context, id string, opts executionwor
 				watcher.Close(n.Error)
 				return
 			}
-			watcher.Send(n.Value.ToInternal())
+			watcher.Send(common.Ptr(n.Value.ToInternal()))
 		}
 		watcher.Close(nil)
 	}()
@@ -361,7 +378,33 @@ func (w *worker) Get(ctx context.Context, id string, options executionworkertype
 }
 
 func (w *worker) Summary(ctx context.Context, id string, options executionworkertypes.GetOptions) (*executionworkertypes.SummaryResult, error) {
-	panic("not implemented")
+	// Connect to the resource
+	// TODO: Move the implementation directly there
+	ctrl, err, recycle := w.registry.Connect(ctx, id, options.Hints)
+	if err != nil {
+		return nil, err
+	}
+	defer recycle()
+
+	cfg, err := ctrl.InternalConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	estimatedResult, err := ctrl.EstimatedResult(ctx)
+	if err != nil {
+		log.DefaultLogger.Warnw("failed to estimate result", "id", id, "error", err)
+		estimatedResult = &testkube.TestWorkflowResult{}
+	}
+
+	return &executionworkertypes.SummaryResult{
+		Execution:       cfg.Execution,
+		Workflow:        cfg.Workflow,
+		Resource:        cfg.Resource,
+		Signature:       stage.MapSignatureListToInternal(ctrl.Signature()),
+		EstimatedResult: *estimatedResult,
+		Namespace:       ctrl.Namespace(),
+	}, nil
 }
 
 func (w *worker) Finished(ctx context.Context, id string, options executionworkertypes.GetOptions) (bool, error) {

@@ -7712,6 +7712,8 @@ components:
             type: string
           example:
             WEBHOOK_PARAMETER: "any value"
+        external:
+          type: boolean
 
     EventResource:
       type: string
@@ -8437,6 +8439,10 @@ components:
           type: string
           format: date-time
           example: "2022-07-30T06:54:15Z"
+        updated:
+          type: string
+          format: date-time
+          example: "2022-07-30T06:54:15Z"
         spec:
           $ref: "#/components/schemas/TestWorkflowSpec"
         readOnly:
@@ -8462,6 +8468,8 @@ components:
           default: false
         tags:
           $ref: "#/components/schemas/TestWorkflowTagValue"
+        target:
+          $ref: "#/components/schemas/ExecutionTarget"
         runningContext:
           description: running context for the test workflow execution (Pro edition only)
           $ref: "#/components/schemas/TestWorkflowRunningContext"
@@ -8469,7 +8477,30 @@ components:
           type: array
           description: parent execution ids
           items:
-            type: string          
+            type: string
+
+    ExecutionTarget:
+      type: object
+      properties:
+        match:
+          type: object
+          description: runner labels to match
+          additionalProperties:
+            type: array
+            items:
+              type: string
+        not:
+          type: object
+          description: runner labels to NOT match
+          additionalProperties:
+            type: array
+            items:
+              type: string
+        replicate:
+          type: array
+          description: list of runner labels to replicate the executions
+          items:
+            type: string
 
     TestWorkflowWithExecution:
       type: object
@@ -8516,6 +8547,13 @@ components:
           description: identifier for group of correlated executions
           format: bson objectId
           example: "62f395e004109209b50edfc1"
+        runnerId:
+          type: string
+          description: identifier of the runner where it has been executed
+        runnerTarget:
+          $ref: "#/components/schemas/ExecutionTarget"
+        runnerOriginalTarget:
+          $ref: "#/components/schemas/ExecutionTarget"
         name:
           type: string
           description: execution name
@@ -8584,6 +8622,11 @@ components:
         id:
           type: string
           description: unique execution identifier
+          format: bson objectId
+          example: "62f395e004109209b50edfc1"
+        groupId:
+          type: string
+          description: identifier for group of correlated executions
           format: bson objectId
           example: "62f395e004109209b50edfc1"
         name:
@@ -8919,6 +8962,10 @@ components:
           additionalProperties:
             type: string
         created:
+          type: string
+          format: date-time
+          example: "2022-07-30T06:54:15Z"
+        updated:
           type: string
           format: date-time
           example: "2022-07-30T06:54:15Z"

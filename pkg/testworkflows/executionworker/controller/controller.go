@@ -12,14 +12,16 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller/watchers"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
 
 var (
-	ErrJobAborted     = errors.New("job was aborted")
-	ErrJobTimeout     = errors.New("timeout retrieving job")
-	ErrNoIPAssigned   = errors.New("there is no IP assigned to this pod")
-	ErrNoNodeAssigned = errors.New("the pod is not assigned to a node yet")
+	ErrJobAborted             = errors.New("job was aborted")
+	ErrJobTimeout             = errors.New("timeout retrieving job")
+	ErrNoIPAssigned           = errors.New("there is no IP assigned to this pod")
+	ErrNoNodeAssigned         = errors.New("the pod is not assigned to a node yet")
+	ErrMissingEstimatedResult = errors.New("could not estimate the result")
 )
 
 type ControllerOptions struct {
@@ -46,6 +48,8 @@ type Controller interface {
 	NodeName() (string, error)
 	PodIP() (string, error)
 	ContainersReady() (bool, error)
+	InternalConfig() (testworkflowconfig.InternalConfig, error)
+	EstimatedResult(parentCtx context.Context) (*testkube.TestWorkflowResult, error)
 	Signature() []stage.Signature
 	HasPod() bool
 	ResourceID() string
@@ -154,6 +158,10 @@ func (c *controller) PodIP() (string, error) {
 	return podIP, nil
 }
 
+func (c *controller) InternalConfig() (testworkflowconfig.InternalConfig, error) {
+	return c.watcher.State().InternalConfig()
+}
+
 func (c *controller) NodeName() (string, error) {
 	nodeName := c.watcher.State().PodNodeName()
 	if nodeName == "" {
@@ -191,6 +199,19 @@ func (c *controller) Resume(ctx context.Context) error {
 
 func (c *controller) StopController() {
 	c.ctxCancel()
+}
+
+func (c *controller) EstimatedResult(parentCtx context.Context) (*testkube.TestWorkflowResult, error) {
+	notifier := newNotifier(parentCtx, testkube.TestWorkflowResult{}, c.scheduledAt)
+	go notifier.Align(c.watcher.State())
+	message := <-notifier.ch
+	if message.Error != nil {
+		return nil, message.Error
+	}
+	if message.Value.Result != nil {
+		return message.Value.Result, nil
+	}
+	return nil, ErrMissingEstimatedResult
 }
 
 func (c *controller) Watch(parentCtx context.Context, disableFollow bool) <-chan ChannelMessage[Notification] {

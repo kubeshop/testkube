@@ -4,7 +4,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/internal/crdcommon"
 )
 
 func ExpectsYAML(c *fiber.Ctx) bool {
@@ -36,7 +36,7 @@ func SendResource[T interface{}, U interface{}](c *fiber.Ctx, kind string, group
 }
 
 func SendCRDs[T interface{}](c *fiber.Ctx, kind string, groupVersion schema.GroupVersion, crds ...T) error {
-	b, err := common.SerializeCRDs(crds, common.SerializeOptions{
+	b, err := crdcommon.SerializeCRDs(crds, crdcommon.SerializeOptions{
 		OmitCreationTimestamp: true,
 		CleanMeta:             true,
 		Kind:                  kind,

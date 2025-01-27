@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/kubeshop/testkube/pkg/executor/scraper/scrapertypes"
 	"github.com/kubeshop/testkube/pkg/utils/test"
 
 	"github.com/stretchr/testify/assert"
@@ -44,10 +45,10 @@ func TestArchiveFilesystemExtractor_Extract_NoMeta_Integration(t *testing.T) {
 	assert.NoError(t, err)
 
 	processCallCount := 0
-	processFn := func(ctx context.Context, object *scraper.Object) error {
+	processFn := func(ctx context.Context, object *scrapertypes.Object) error {
 		processCallCount++
 		assert.Equal(t, "artifacts.tar.gz", object.Name)
-		assert.Equal(t, scraper.DataTypeTarball, object.DataType)
+		assert.Equal(t, scrapertypes.DataTypeTarball, object.DataType)
 
 		return nil
 	}
@@ -93,14 +94,14 @@ func TestArchiveFilesystemExtractor_Extract_Meta_Integration(t *testing.T) {
 	assert.NoError(t, err)
 
 	processCallCount := 0
-	processFn := func(ctx context.Context, object *scraper.Object) error {
+	processFn := func(ctx context.Context, object *scrapertypes.Object) error {
 		switch object.Name {
 		case "artifacts.tar.gz":
 			processCallCount++
-			assert.Equal(t, scraper.DataTypeTarball, object.DataType)
+			assert.Equal(t, scrapertypes.DataTypeTarball, object.DataType)
 		case ".testkube-meta-files.json":
 			processCallCount++
-			var meta scraper.FilesMeta
+			var meta scrapertypes.FilesMeta
 			jsonData, err := io.ReadAll(object.Data)
 			if err != nil {
 				t.Fatalf("Failed to read meta files: %v", err)
@@ -110,14 +111,14 @@ func TestArchiveFilesystemExtractor_Extract_Meta_Integration(t *testing.T) {
 			}
 			assert.Len(t, meta.Files, 3)
 			assert.Equal(t, "artifacts.tar.gz", meta.Archive)
-			assert.Equal(t, scraper.DataTypeTarball, meta.DataType)
+			assert.Equal(t, scrapertypes.DataTypeTarball, meta.DataType)
 			assert.Equal(t, "file1.txt", meta.Files[0].Name)
 			assert.Equal(t, int64(5), meta.Files[0].Size)
 			assert.Equal(t, "file2.txt", meta.Files[1].Name)
 			assert.Equal(t, int64(5), meta.Files[1].Size)
 			assert.Equal(t, "subdir/file3.txt", meta.Files[2].Name)
 			assert.Equal(t, int64(5), meta.Files[2].Size)
-			assert.Equal(t, scraper.DataTypeRaw, object.DataType)
+			assert.Equal(t, scrapertypes.DataTypeRaw, object.DataType)
 		default:
 			t.Fatalf("Unexpected object name: %s", object.Name)
 		}
@@ -166,13 +167,13 @@ func TestRecursiveFilesystemExtractor_Extract_Integration(t *testing.T) {
 	assert.NoError(t, err)
 
 	processCallCount := 0
-	processFn := func(ctx context.Context, object *scraper.Object) error {
+	processFn := func(ctx context.Context, object *scrapertypes.Object) error {
 		processCallCount++
 		b, err := io.ReadAll(object.Data)
 		if err != nil {
 			t.Fatalf("error reading %s: %v", object.Name, err)
 		}
-		assert.Equal(t, scraper.DataTypeRaw, object.DataType)
+		assert.Equal(t, scrapertypes.DataTypeRaw, object.DataType)
 		switch object.Name {
 		case "file1.txt":
 			assert.Equal(t, b, []byte("test1"))
@@ -221,14 +222,14 @@ func TestRecursiveFilesystemExtractor_Extract_RelPath_Integration(t *testing.T) 
 	assert.NoError(t, err)
 
 	processCallCount := 0
-	processFn := func(ctx context.Context, object *scraper.Object) error {
+	processFn := func(ctx context.Context, object *scrapertypes.Object) error {
 		processCallCount++
 		b, err := io.ReadAll(object.Data)
 		if err != nil {
 			t.Fatalf("error reading %s: %v", object.Name, err)
 		}
 		assert.Equal(t, b, []byte("test1"))
-		assert.Equal(t, scraper.DataTypeRaw, object.DataType)
+		assert.Equal(t, scrapertypes.DataTypeRaw, object.DataType)
 		return nil
 	}
 

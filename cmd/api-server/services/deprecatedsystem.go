@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/nats-io/nats.go"
-	"google.golang.org/grpc"
 
 	kubeclient "github.com/kubeshop/testkube-operator/pkg/client"
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
@@ -58,7 +57,6 @@ func CreateDeprecatedSystem(
 	configMapConfig configRepo.Repository,
 	secretConfig testkube.SecretConfig,
 	grpcClient cloud.TestKubeCloudAPIClient,
-	grpcConn *grpc.ClientConn,
 	natsConn *nats.EncodedConn,
 	eventsEmitter *event.Emitter,
 	eventBus *bus.NATSBus,
@@ -75,7 +73,7 @@ func CreateDeprecatedSystem(
 	configMapClient := configmap.NewClientFor(clientset, cfg.TestkubeNamespace)
 
 	deprecatedClients := commons.CreateDeprecatedClients(kubeClient, cfg.TestkubeNamespace)
-	deprecatedRepositories := commons.CreateDeprecatedRepositoriesForCloud(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
+	deprecatedRepositories := commons.CreateDeprecatedRepositoriesForCloud(grpcClient, cfg.TestkubeProAPIKey)
 
 	defaultExecutors, images, err := commons.ReadDefaultExecutors(cfg)
 	commons.ExitOnError("Parsing default executors", err)
@@ -194,7 +192,7 @@ func CreateDeprecatedSystem(
 	// Use direct MinIO artifact storage for deprecated API for backwards compatibility
 	var deprecatedArtifactStorage storage.ArtifactsStorage
 	if mode == common.ModeAgent {
-		deprecatedArtifactStorage = cloudartifacts.NewCloudArtifactsStorage(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
+		deprecatedArtifactStorage = cloudartifacts.NewCloudArtifactsStorage(grpcClient, cfg.TestkubeProAPIKey)
 	} else {
 		deprecatedArtifactStorage = minio.NewMinIOArtifactClient(commons.MustGetMinioClient(cfg))
 	}

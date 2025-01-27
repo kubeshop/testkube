@@ -179,7 +179,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 					}
 					if v.Error != nil {
 						ts := time.Now() // TODO: get latest timestamp instead?
-						notifier.Raw(lastRef, ts, fmt.Sprintf("%s error while fetching container logs: %s\n", ts.Format(KubernetesLogTimeFormat), v.Error.Error()), false)
+						notifier.Raw(lastRef, ts, fmt.Sprintf("%s error while fetching container logs: %s\n", ts.Format(constants.PreciseTimeFormat), v.Error.Error()), false)
 						continue
 					}
 
