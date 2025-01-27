@@ -268,6 +268,7 @@ func main() {
 		metrics,
 		secretManager,
 		cfg.GlobalWorkflowTemplateName,
+		cfg.GlobalWorkflowTemplateInline,
 		cfg.TestkubeDashboardURI,
 		proContext.OrgID,
 		proContext.EnvID,

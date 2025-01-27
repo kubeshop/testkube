@@ -33,6 +33,14 @@ func NewTestWorkflowTemplateFetcher(
 	}
 }
 
+func (r *testWorkflowTemplateFetcher) SetCache(name string, tpl *testkube.TestWorkflowTemplate) {
+	if tpl == nil {
+		delete(r.cache, name)
+	} else {
+		r.cache[name] = tpl
+	}
+}
+
 func (r *testWorkflowTemplateFetcher) Prefetch(name string) error {
 	name = testworkflowresolver.GetInternalTemplateName(name)
 	if _, ok := r.cache[name]; ok {

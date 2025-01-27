@@ -202,6 +202,7 @@ type Config struct {
 	DisableSecretCreation           bool   `envconfig:"DISABLE_SECRET_CREATION" default:"false"`
 	TestkubeExecutionNamespaces     string `envconfig:"TESTKUBE_EXECUTION_NAMESPACES" default:""`
 	GlobalWorkflowTemplateName      string `envconfig:"TESTKUBE_GLOBAL_WORKFLOW_TEMPLATE_NAME" default:""`
+	GlobalWorkflowTemplateInline    string `envconfig:"TESTKUBE_GLOBAL_WORKFLOW_TEMPLATE_INLINE" default:""`
 	EnableK8sEvents                 bool   `envconfig:"ENABLE_K8S_EVENTS" default:"true"`
 	TestkubeDockerImageVersion      string `envconfig:"TESTKUBE_DOCKER_IMAGE_VERSION" default:""`
 	DisableDeprecatedTests          bool   `envconfig:"DISABLE_DEPRECATED_TESTS" default:"false"`

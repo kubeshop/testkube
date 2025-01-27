@@ -16,7 +16,10 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/encoding/gzip"
 	"google.golang.org/grpc/metadata"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/yaml"
 
+	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
@@ -32,6 +35,7 @@ import (
 const (
 	SaveResultRetryMaxAttempts = 100
 	SaveResultRetryBaseDelay   = 300 * time.Millisecond
+	inlinedGlobalTemplateName  = "<inline-global-template>"
 )
 
 //go:generate mockgen -destination=./mock_scheduler.go -package=testworkflowexecutor "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor" Scheduler
@@ -49,6 +53,7 @@ type scheduler struct {
 	outputRepository            testworkflow.OutputRepository
 	getRunners                  func(environmentId string, target *cloud.ExecutionTarget) ([]map[string]string, error)
 	globalTemplateName          string
+	globalTemplateInline        *testkube.TestWorkflowTemplate
 	organizationId              string
 	defaultEnvironmentId        string
 
@@ -65,6 +70,7 @@ func NewScheduler(
 	outputRepository testworkflow.OutputRepository,
 	getRunners func(environmentId string, target *cloud.ExecutionTarget) ([]map[string]string, error),
 	globalTemplateName string,
+	globalTemplateInlineYaml string,
 	organizationId string,
 	defaultEnvironmentId string,
 
@@ -73,6 +79,16 @@ func NewScheduler(
 	grpcApiToken string,
 	newArchitectureEnabled bool,
 ) Scheduler {
+	var globalTemplateInline *testkube.TestWorkflowTemplate
+	if globalTemplateInlineYaml != "" {
+		inline := &testworkflowsv1.TestWorkflowTemplate{ObjectMeta: metav1.ObjectMeta{Name: inlinedGlobalTemplateName}}
+		err := yaml.Unmarshal([]byte(globalTemplateInlineYaml), inline.Spec)
+		if err == nil {
+			globalTemplateInline = testworkflows2.MapTemplateKubeToAPI(inline)
+		} else {
+			log.DefaultLogger.Errorw("failed to unmarshal inline global template", "error", err)
+		}
+	}
 	return &scheduler{
 		logger:                      log.DefaultLogger,
 		testWorkflowsClient:         testWorkflowsClient,
@@ -81,6 +97,7 @@ func NewScheduler(
 		outputRepository:            outputRepository,
 		getRunners:                  getRunners,
 		globalTemplateName:          globalTemplateName,
+		globalTemplateInline:        globalTemplateInline,
 		organizationId:              organizationId,
 		defaultEnvironmentId:        defaultEnvironmentId,
 
@@ -186,6 +203,12 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 	// Initialize fetchers
 	testWorkflows := NewTestWorkflowFetcher(s.testWorkflowsClient, environmentId)
 	testWorkflowTemplates := NewTestWorkflowTemplateFetcher(s.testWorkflowTemplatesClient, environmentId)
+
+	// Register inline global template
+	if s.globalTemplateInline != nil {
+		base.PrependTemplate(inlinedGlobalTemplateName)
+		testWorkflowTemplates.SetCache(inlinedGlobalTemplateName, s.globalTemplateInline)
+	}
 
 	// Prefetch all the Test Workflows
 	err := testWorkflows.PrefetchMany(common.MapSlice(req.Executions, func(t *cloud.ScheduleExecution) *cloud.ScheduleResourceSelector {

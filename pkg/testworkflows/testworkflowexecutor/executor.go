@@ -72,6 +72,7 @@ func New(
 	metrics v1.Metrics,
 	secretManager secretmanager.SecretManager,
 	globalTemplateName string,
+	globalTemplateInlineYaml string,
 	dashboardURI string,
 	organizationId string,
 	defaultEnvironmentId string,
@@ -99,6 +100,7 @@ func New(
 				return nil, nil
 			},
 			globalTemplateName,
+			globalTemplateInlineYaml,
 			organizationId,
 			defaultEnvironmentId,
 			agentId,
