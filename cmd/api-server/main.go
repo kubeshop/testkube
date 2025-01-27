@@ -314,7 +314,7 @@ func main() {
 	eventsEmitter.Loader.Register(testworkflowexecutions.NewLoader(ctx, cfg.TestkubeNamespace, kubeClient))
 
 	// Synchronise Test Workflows with cloud
-	if proContext.CloudStorage && (cfg.GitOpsSyncKubernetesToCloudEnabled || cfg.GitOpsSyncCloudToKubernetesEnabled) {
+	if proContext.CloudStorageSupportedInControlPlane && (cfg.GitOpsSyncKubernetesToCloudEnabled || cfg.GitOpsSyncCloudToKubernetesEnabled) {
 		testWorkflowsCloudStorage, err := crdstorage.NewTestWorkflowsStorage(testworkflowclient.NewCloudTestWorkflowClient(client), proContext.EnvID, cfg.GitOpsSyncCloudNamePattern, nil)
 		commons.ExitOnError("connecting to cloud TestWorkflows storage", err)
 		testWorkflowsKubernetesStorage, err := crdstorage.NewTestWorkflowsStorage(must(testworkflowclient.NewKubernetesTestWorkflowClient(kubeClient, kubeConfig, cfg.TestkubeNamespace)), proContext.EnvID, cfg.GitOpsSyncKubernetesNamePattern, map[string]string{
@@ -328,7 +328,7 @@ func main() {
 		})
 		commons.ExitOnError("connecting to k8s TestWorkflowTemplates storage", err)
 
-		if cfg.GitOpsSyncCloudToKubernetesEnabled {
+		if cfg.GitOpsSyncCloudToKubernetesEnabled && cfg.FeatureCloudStorage {
 			// Test Workflows - Continuous Sync (eventual) - Cloud -> Kubernetes
 			g.Go(func() error {
 				for {
