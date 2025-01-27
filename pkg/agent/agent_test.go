@@ -9,7 +9,6 @@ import (
 	"time"
 
 	agentclient "github.com/kubeshop/testkube/pkg/agent/client"
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -58,14 +57,10 @@ func TestCommandExecution(t *testing.T) {
 	grpcClient := cloud.NewTestKubeCloudAPIClient(grpcConn)
 
 	var logStreamFunc func(ctx context.Context, executionID string) (chan output.Output, error)
-	var workflowNotificationsStreamFunc func(ctx context.Context, executionID string) (<-chan testkube.TestWorkflowExecutionNotification, error)
-	var workflowServiceNotificationsStreamFunc func(ctx context.Context, executionID, serviceName string, serviceIndex int) (<-chan testkube.TestWorkflowExecutionNotification, error)
-	var workflowParallelStepNotificationsStreamFunc func(ctx context.Context, executionID, ref string, workerIndex int) (<-chan testkube.TestWorkflowExecutionNotification, error)
 
 	logger, _ := zap.NewDevelopment()
-	proContext := config.ProContext{APIKey: "api-key", WorkerCount: 5, LogStreamWorkerCount: 5, WorkflowNotificationsWorkerCount: 5}
-	agent, err := agent.NewAgent(logger.Sugar(), m, grpcClient, logStreamFunc, workflowNotificationsStreamFunc,
-		workflowServiceNotificationsStreamFunc, workflowParallelStepNotificationsStreamFunc, "", "", featureflags.FeatureFlags{}, &proContext, "")
+	proContext := config.ProContext{APIKey: "api-key", WorkerCount: 5, LogStreamWorkerCount: 5}
+	agent, err := agent.NewAgent(logger.Sugar(), m, grpcClient, logStreamFunc, "", "", featureflags.FeatureFlags{}, &proContext, "", nil)
 	if err != nil {
 		t.Fatal(err)
 	}

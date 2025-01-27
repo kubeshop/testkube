@@ -19,6 +19,7 @@ func CreateExecutionWorker(
 	clusterId string,
 	serviceAccountNames map[string]string,
 	processor testworkflowprocessor.Processor,
+	featureFlags map[string]string,
 ) executionworkertypes.Worker {
 	namespacesConfig := map[string]kubernetesworker.NamespaceConfig{}
 	for n, s := range serviceAccountNames {
@@ -38,12 +39,14 @@ func CreateExecutionWorker(
 		},
 		Connection: testworkflowconfig.WorkerConnectionConfig{
 			Url:         cfg.TestkubeProURL,
-			ApiKey:      cfg.TestkubeProAPIKey,
+			AgentID:     cfg.TestkubeProAgentID,
+			ApiKey:      cfg.TestkubeProAPIKey, // TODO: Build hash with the runner's API Key?
 			SkipVerify:  cfg.TestkubeProSkipVerify,
 			TlsInsecure: cfg.TestkubeProTLSInsecure,
 
 			// TODO: Prepare ControlPlane interface for OSS, so we may unify the communication
 			LocalApiUrl: fmt.Sprintf("http://%s:%d", cfg.APIServerFullname, cfg.APIServerPort),
 		},
+		FeatureFlags: featureFlags,
 	})
 }

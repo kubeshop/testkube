@@ -1,6 +1,12 @@
 package testkube
 
-import "github.com/kubeshop/testkube/pkg/utils"
+import (
+	"bytes"
+	"encoding/json"
+	"time"
+
+	"github.com/kubeshop/testkube/pkg/utils"
+)
 
 type TestWorkflows []TestWorkflow
 
@@ -114,4 +120,40 @@ func (w TestWorkflow) HasService(name string) bool {
 	}
 
 	return false
+}
+
+func (w *TestWorkflow) DeepCopy() *TestWorkflow {
+	if w == nil {
+		return nil
+	}
+	v, _ := json.Marshal(w)
+	var result TestWorkflow
+	_ = json.Unmarshal(v, &result)
+	return &result
+}
+
+// TODO: do it stable
+func (w *TestWorkflow) Equals(other *TestWorkflow) bool {
+	// Avoid check when there is one existing and the other one not
+	if (w == nil) != (other == nil) {
+		return false
+	}
+
+	// Reset timestamps to avoid influence
+	wCreated := w.Created
+	otherCreated := other.Created
+	w.Created = time.Time{}
+	other.Created = time.Time{}
+
+	// Compare
+	w1, _ := json.Marshal(w)
+	w.Created = time.Time{}
+	w2, _ := json.Marshal(other)
+	result := bytes.Equal(w1, w2)
+
+	// Restore values
+	w.Created = wCreated
+	other.Created = otherCreated
+
+	return result
 }

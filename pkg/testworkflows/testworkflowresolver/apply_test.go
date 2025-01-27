@@ -107,13 +107,13 @@ var (
 			},
 		},
 	}
-	templates = map[string]testworkflowsv1.TestWorkflowTemplate{
-		"pod":         tplPod,
-		"podConfig":   tplPodConfig,
-		"env":         tplEnv,
-		"steps":       tplSteps,
-		"stepsEnv":    tplStepsEnv,
-		"stepsConfig": tplStepsConfig,
+	templates = map[string]*testworkflowsv1.TestWorkflowTemplate{
+		"pod":         &tplPod,
+		"podConfig":   &tplPodConfig,
+		"env":         &tplEnv,
+		"steps":       &tplSteps,
+		"stepsEnv":    &tplStepsEnv,
+		"stepsConfig": &tplStepsConfig,
 	}
 	tplPodRef       = testworkflowsv1.TemplateRef{Name: "pod"}
 	tplPodConfigRef = testworkflowsv1.TemplateRef{
@@ -605,7 +605,7 @@ func TestApplyTemplatesConfigOverflow(t *testing.T) {
 }
 
 func TestApplyTemplates_ConditionAlways(t *testing.T) {
-	tpls := map[string]testworkflowsv1.TestWorkflowTemplate{
+	tpls := map[string]*testworkflowsv1.TestWorkflowTemplate{
 		"example": {
 			Spec: testworkflowsv1.TestWorkflowTemplateSpec{
 				TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
@@ -675,7 +675,7 @@ func TestApplyTemplates_ConditionAlways(t *testing.T) {
 }
 
 func TestApplyTemplates_MergePodValues(t *testing.T) {
-	tpls := map[string]testworkflowsv1.TestWorkflowTemplate{
+	tpls := map[string]*testworkflowsv1.TestWorkflowTemplate{
 		"top": {
 			Spec: testworkflowsv1.TestWorkflowTemplateSpec{
 				TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{

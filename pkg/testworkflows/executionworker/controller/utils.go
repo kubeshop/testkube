@@ -13,8 +13,7 @@ import (
 )
 
 const (
-	KubernetesLogTimeFormat         = "2006-01-02T15:04:05.000000000Z"
-	KubernetesTimezoneLogTimeFormat = KubernetesLogTimeFormat + "07:00"
+	KubernetesTimezoneLogTimeFormat = constants.PreciseTimeFormat + "07:00"
 )
 
 var (

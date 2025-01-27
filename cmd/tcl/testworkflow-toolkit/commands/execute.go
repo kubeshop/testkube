@@ -12,16 +12,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	commontcl "github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/common"
+	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/execute"
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/spawn"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
@@ -38,11 +37,13 @@ import (
 )
 
 const (
-	CreateExecutionRetryOnFailureMaxAttempts = 5
-	CreateExecutionRetryOnFailureBaseDelay   = 100 * time.Millisecond
+	CreateExecutionRetryOnFailureMaxAttempts = 10
+	CreateExecutionRetryOnFailureBaseDelay   = 500 * time.Millisecond
 
-	GetExecutionRetryOnFailureMaxAttempts = 10
-	GetExecutionRetryOnFailureDelay       = 300 * time.Millisecond
+	GetExecutionRetryOnFailureMaxAttempts = 30
+	GetExecutionRetryOnFailureDelay       = 500 * time.Millisecond
+
+	ExecutionResultPollingTime = 200 * time.Millisecond
 )
 
 type testExecutionDetails struct {
@@ -160,34 +161,16 @@ func buildTestExecution(test testworkflowsv1.StepExecuteTest, async bool) (func(
 
 func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async bool) (func() error, error) {
 	return func() (err error) {
-		c := env.Testkube()
-
 		tags := config.ExecutionTags()
 
-		parentIds := []string{config.ExecutionId()}
-		if config.Config().Execution.ParentIds != "" {
-			parentIds = append(strings.Split(config.Config().Execution.ParentIds, "/"), parentIds...)
-		}
-
-		var exec testkube.TestWorkflowExecution
+		// Schedule execution
+		var execs []testkube.TestWorkflowExecution
 		for i := 0; i < CreateExecutionRetryOnFailureMaxAttempts; i++ {
-			exec, err = c.ExecuteTestWorkflow(workflow.Name, testkube.TestWorkflowExecutionRequest{
+			execs, err = execute.ExecuteTestWorkflow(workflow.Name, testkube.TestWorkflowExecutionRequest{
 				Name:            workflow.ExecutionName,
 				Config:          testworkflows.MapConfigValueKubeToAPI(workflow.Config),
 				DisableWebhooks: config.ExecutionDisableWebhooks(),
 				Tags:            tags,
-				RunningContext: &testkube.TestWorkflowRunningContext{
-					Interface_: &testkube.TestWorkflowRunningContextInterface{
-						Type_: common.Ptr(testkube.API_TestWorkflowRunningContextInterfaceType),
-					},
-					Actor: &testkube.TestWorkflowRunningContextActor{
-						Name:          config.WorkflowName(),
-						ExecutionId:   config.ExecutionId(),
-						ExecutionPath: strings.Join(parentIds, "/"),
-						Type_:         common.Ptr(testkube.TESTWORKFLOW_TestWorkflowRunningContextActorType),
-					},
-				},
-				ParentExecutionIds: parentIds,
 			})
 			if err == nil {
 				break
@@ -202,69 +185,83 @@ func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async 
 			ui.Errf("failed to execute test workflow: %s: %s", workflow.Name, err.Error())
 			return
 		}
-		execName := exec.Name
 
-		instructions.PrintOutput(config.Ref(), "testworkflow-start", &testWorkflowExecutionDetails{
-			Id:               exec.Id,
-			Name:             exec.Name,
-			TestWorkflowName: exec.Workflow.Name,
-			Description:      workflow.Description,
-		})
-		description := ""
-		if workflow.Description != "" {
-			description = fmt.Sprintf(": %s", workflow.Description)
+		// Print information about scheduled execution
+		for _, exec := range execs {
+			instructions.PrintOutput(config.Ref(), "testworkflow-start", &testWorkflowExecutionDetails{
+				Id:               exec.Id,
+				Name:             exec.Name,
+				TestWorkflowName: exec.Workflow.Name,
+				Description:      workflow.Description,
+			})
+
+			description := ""
+			if workflow.Description != "" {
+				description = fmt.Sprintf(": %s", workflow.Description)
+			}
+			fmt.Printf("%s%s • scheduled %s\n", ui.LightCyan(exec.Name), description, ui.DarkGray("("+exec.Id+")"))
 		}
-		fmt.Printf("%s%s • scheduled %s\n", ui.LightCyan(execName), description, ui.DarkGray("("+exec.Id+")"))
 
 		if async {
 			return
 		}
 
-		prevStatus := testkube.QUEUED_TestWorkflowStatus
-	loop:
-		for {
-			time.Sleep(100 * time.Millisecond)
-			for i := 0; i < GetExecutionRetryOnFailureMaxAttempts; i++ {
-				var nextExec testkube.TestWorkflowExecution
-				nextExec, err = c.GetTestWorkflowExecution(exec.Id)
-				if err == nil {
-					exec = nextExec
-					break
+		// Monitor
+		var wg sync.WaitGroup
+		wg.Add(len(execs))
+		for i := range execs {
+			go func(exec testkube.TestWorkflowExecution) {
+				defer wg.Done()
+				prevStatus := testkube.QUEUED_TestWorkflowStatus
+			loop:
+				for {
+					// TODO: Consider real-time Notifications without logs instead
+					time.Sleep(ExecutionResultPollingTime)
+					for i := 0; i < GetExecutionRetryOnFailureMaxAttempts; i++ {
+						var next *testkube.TestWorkflowExecution
+						next, err = execute.GetExecution(exec.Id)
+						if err == nil {
+							exec = *next
+							break
+						}
+						if i+1 < GetExecutionRetryOnFailureMaxAttempts {
+							ui.Errf("error while getting execution result: retrying in %s (attempt %d/%d): %s: %s", GetExecutionRetryOnFailureDelay.String(), i+2, GetExecutionRetryOnFailureMaxAttempts, ui.LightCyan(exec.Name), err.Error())
+							time.Sleep(GetExecutionRetryOnFailureDelay)
+						}
+					}
+					if err != nil {
+						ui.Errf("error while getting execution result: %s: %s", ui.LightCyan(exec.Name), err.Error())
+						return
+					}
+					if exec.Result != nil && exec.Result.Status != nil {
+						status := *exec.Result.Status
+						switch status {
+						case testkube.QUEUED_TestWorkflowStatus, testkube.RUNNING_TestWorkflowStatus:
+							break
+						default:
+							break loop
+						}
+						if prevStatus != status {
+							instructions.PrintOutput(config.Ref(), "testworkflow-status", &executionResult{Id: exec.Id, Status: string(status)})
+						}
+						prevStatus = status
+					}
 				}
-				if i+1 < GetExecutionRetryOnFailureMaxAttempts {
-					ui.Errf("error while getting execution result: retrying in %s (attempt %d/%d): %s: %s", GetExecutionRetryOnFailureDelay.String(), i+2, GetExecutionRetryOnFailureMaxAttempts, ui.LightCyan(execName), err.Error())
-					time.Sleep(GetExecutionRetryOnFailureDelay)
-				}
-			}
-			if err != nil {
-				ui.Errf("error while getting execution result: %s: %s", ui.LightCyan(execName), err.Error())
-				return
-			}
-			if exec.Result != nil && exec.Result.Status != nil {
+
 				status := *exec.Result.Status
-				switch status {
-				case testkube.QUEUED_TestWorkflowStatus, testkube.RUNNING_TestWorkflowStatus:
-					break
-				default:
-					break loop
+				color := ui.Green
+
+				if status != testkube.PASSED_TestWorkflowStatus {
+					err = errors.New("test workflow failed")
+					color = ui.Red
 				}
-				if prevStatus != status {
-					instructions.PrintOutput(config.Ref(), "testworkflow-status", &executionResult{Id: exec.Id, Status: string(status)})
-				}
-				prevStatus = status
-			}
+
+				instructions.PrintOutput(config.Ref(), "testworkflow-end", &executionResult{Id: exec.Id, Status: string(status)})
+				fmt.Printf("%s • %s\n", color(exec.Name), string(status))
+			}(execs[i])
 		}
+		wg.Wait()
 
-		status := *exec.Result.Status
-		color := ui.Green
-
-		if status != testkube.PASSED_TestWorkflowStatus {
-			err = errors.New("test workflow failed")
-			color = ui.Red
-		}
-
-		instructions.PrintOutput(config.Ref(), "testworkflow-end", &executionResult{Id: exec.Id, Status: string(status)})
-		fmt.Printf("%s • %s\n", color(execName), string(status))
 		return
 	}, nil
 }
@@ -370,7 +367,6 @@ func NewExecuteCmd() *cobra.Command {
 				}
 			}
 
-			c := env.Testkube()
 			for _, s := range workflows {
 				var w testworkflowsv1.StepExecuteWorkflow
 				err := json.Unmarshal([]byte(s), &w)
@@ -388,13 +384,10 @@ func NewExecuteCmd() *cobra.Command {
 				}
 
 				if w.Selector != nil {
-					selector, err := metav1.LabelSelectorAsSelector(w.Selector)
-					if err != nil {
-						ui.Fail(errors.Wrap(err, "error creating selector from test workflow selector"))
+					if len(w.Selector.MatchExpressions) > 0 {
+						ui.Fail(errors.New("error creating selector from test workflow selector: matchExpressions is not supported"))
 					}
-
-					stringifiedSelector := selector.String()
-					testWorkflowsList, err := c.ListTestWorkflows(stringifiedSelector)
+					testWorkflowsList, err := execute.ListTestWorkflows(w.Selector.MatchLabels)
 					if err != nil {
 						ui.Fail(errors.Wrap(err, "error listing test workflows using selector"))
 					}

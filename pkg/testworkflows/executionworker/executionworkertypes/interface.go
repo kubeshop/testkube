@@ -17,6 +17,7 @@ type ServiceConfig struct {
 
 // TODO: Consider some context data
 type ExecuteRequest struct {
+	Token       string
 	ResourceId  string // defaults to execution ID
 	GroupId     string
 	Workflow    testworkflowsv1.TestWorkflow // TODO: Use OpenAPI object
@@ -29,6 +30,7 @@ type ExecuteRequest struct {
 }
 
 type ServiceRequest struct {
+	Token          string
 	ResourceId     string
 	GroupId        string
 	Workflow       testworkflowsv1.TestWorkflow // TODO: Use OpenAPI object

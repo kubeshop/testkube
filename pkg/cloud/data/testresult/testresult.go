@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"go.mongodb.org/mongo-driver/mongo"
-	"google.golang.org/grpc"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
@@ -21,8 +20,8 @@ type CloudRepository struct {
 	executor executor.Executor
 }
 
-func NewCloudRepository(client cloud.TestKubeCloudAPIClient, grpcConn *grpc.ClientConn, apiKey string) *CloudRepository {
-	return &CloudRepository{executor: executor.NewCloudGRPCExecutor(client, grpcConn, apiKey)}
+func NewCloudRepository(client cloud.TestKubeCloudAPIClient, apiKey string) *CloudRepository {
+	return &CloudRepository{executor: executor.NewCloudGRPCExecutor(client, apiKey)}
 }
 
 func (r *CloudRepository) Get(ctx context.Context, id string) (testkube.TestSuiteExecution, error) {

@@ -9,6 +9,7 @@ import (
 	"github.com/gabriel-vasile/mimetype"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/executor/scraper/scrapertypes"
 	"github.com/kubeshop/testkube/pkg/log"
 	cde "github.com/kubeshop/testkube/pkg/mapper/cdevents"
 )
@@ -23,14 +24,14 @@ type Scraper interface {
 }
 
 type ExtractLoadScraper struct {
-	extractor      Extractor
-	loader         Uploader
+	extractor      scrapertypes.Extractor
+	loader         scrapertypes.Uploader
 	cdeventsClient cloudevents.Client
 	clusterID      string
 	dashboardURI   string
 }
 
-func NewExtractLoadScraper(extractor Extractor, loader Uploader, cdeventsClient cloudevents.Client,
+func NewExtractLoadScraper(extractor scrapertypes.Extractor, loader scrapertypes.Uploader, cdeventsClient cloudevents.Client,
 	clusterID, dashboardURI string) *ExtractLoadScraper {
 	return &ExtractLoadScraper{
 		extractor:      extractor,
@@ -45,7 +46,7 @@ func (s *ExtractLoadScraper) Scrape(ctx context.Context, paths, masks []string, 
 	return s.
 		extractor.
 		Extract(ctx, paths, masks,
-			func(ctx context.Context, object *Object) error {
+			func(ctx context.Context, object *scrapertypes.Object) error {
 				return s.loader.Upload(ctx, object, execution)
 			},
 			func(ctx context.Context, path string) error {

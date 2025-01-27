@@ -15,6 +15,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/envs"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/executor/scraper"
+	"github.com/kubeshop/testkube/pkg/executor/scraper/scrapertypes"
 	"github.com/kubeshop/testkube/pkg/filesystem"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -52,7 +53,7 @@ func TryGetScrapper(ctx context.Context, params envs.Params) (scraper.Scraper, e
 }
 
 func GetScraper(ctx context.Context, params envs.Params, extractorType ExtractorType, uploaderType UploaderType) (scraper.Scraper, error) {
-	var extractor scraper.Extractor
+	var extractor scrapertypes.Extractor
 	switch extractorType {
 	case RecursiveFilesystemExtractor:
 		extractor = scraper.NewRecursiveFilesystemExtractor(filesystem.NewOSFileSystem())
@@ -67,7 +68,7 @@ func GetScraper(ctx context.Context, params envs.Params, extractorType Extractor
 	}
 
 	var err error
-	var loader scraper.Uploader
+	var loader scrapertypes.Uploader
 	switch uploaderType {
 	case MinIOUploader:
 		loader, err = getMinIOUploader(params)
@@ -118,7 +119,7 @@ func getRemoteStorageUploader(ctx context.Context, params envs.Params) (uploader
 	output.PrintLogf("%s Connected to Agent API", ui.IconCheckMark)
 
 	grpcClient := cloud.NewTestKubeCloudAPIClient(grpcConn)
-	cloudExecutor := cloudexecutor.NewCloudGRPCExecutor(grpcClient, grpcConn, params.ProAPIKey)
+	cloudExecutor := cloudexecutor.NewCloudGRPCExecutor(grpcClient, params.ProAPIKey)
 	return cloudscraper.NewCloudUploader(cloudExecutor, params.SkipVerify), nil
 }
 

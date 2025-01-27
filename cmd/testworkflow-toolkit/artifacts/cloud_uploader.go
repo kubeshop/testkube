@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -14,19 +13,28 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
-	"github.com/kubeshop/testkube/pkg/cloud/data/artifact"
-	cloudexecutor "github.com/kubeshop/testkube/pkg/cloud/data/executor"
+	"github.com/kubeshop/testkube/pkg/controlplaneclient"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 type CloudUploaderRequestEnhancer = func(req *http.Request, path string, size int64)
 
-func NewCloudUploader(client cloudexecutor.Executor, opts ...CloudUploaderOpt) Uploader {
+func NewCloudUploader(
+	client controlplaneclient.ExecutionSelfClient,
+	environmentId string,
+	executionId string,
+	workflowName string,
+	stepRef string,
+	opts ...CloudUploaderOpt,
+) Uploader {
 	uploader := &cloudUploader{
-		client:       client,
-		parallelism:  1,
-		reqEnhancers: make([]CloudUploaderRequestEnhancer, 0),
+		client:        client,
+		parallelism:   1,
+		reqEnhancers:  make([]CloudUploaderRequestEnhancer, 0),
+		environmentId: environmentId,
+		executionId:   executionId,
+		workflowName:  workflowName,
+		stepRef:       stepRef,
 	}
 	for _, opt := range opts {
 		opt(uploader)
@@ -35,13 +43,17 @@ func NewCloudUploader(client cloudexecutor.Executor, opts ...CloudUploaderOpt) U
 }
 
 type cloudUploader struct {
-	client       cloudexecutor.Executor
-	wg           sync.WaitGroup
-	sema         chan struct{}
-	parallelism  int
-	error        atomic.Bool
-	reqEnhancers []CloudUploaderRequestEnhancer
-	waitMu       sync.Mutex
+	client        controlplaneclient.ExecutionSelfClient
+	wg            sync.WaitGroup
+	sema          chan struct{}
+	parallelism   int
+	error         atomic.Bool
+	reqEnhancers  []CloudUploaderRequestEnhancer
+	waitMu        sync.Mutex
+	environmentId string
+	executionId   string
+	workflowName  string
+	stepRef       string
 }
 
 func (d *cloudUploader) Start() (err error) {
@@ -50,22 +62,15 @@ func (d *cloudUploader) Start() (err error) {
 }
 
 func (d *cloudUploader) getSignedURL(name, contentType string) (string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-	response, err := d.client.Execute(ctx, artifact.CmdScraperPutObjectSignedURL, &artifact.PutObjectSignedURLRequest{
-		Object:           name,
-		ExecutionID:      config.ExecutionId(),
-		TestWorkflowName: config.WorkflowName(),
-		ContentType:      contentType,
-	})
-	if err != nil {
-		return "", err
-	}
-	var commandResponse artifact.PutObjectSignedURLResponse
-	if err := json.Unmarshal(response, &commandResponse); err != nil {
-		return "", err
-	}
-	return commandResponse.URL, nil
+	return d.client.SaveExecutionArtifactGetPresignedURL(
+		context.Background(),
+		d.environmentId,
+		d.executionId,
+		d.workflowName,
+		d.stepRef,
+		name,
+		contentType,
+	)
 }
 
 func (d *cloudUploader) getContentType(path string, size int64) string {

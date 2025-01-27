@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	color2 "github.com/gookit/color"
+
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/internal/common"
@@ -13,7 +15,6 @@ import (
 	watchers2 "github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller/watchers"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
-	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 const (
@@ -88,7 +89,7 @@ func (n *notifier) Raw(ref string, ts time.Time, message string, temporary bool)
 
 func (n *notifier) Log(ref string, ts time.Time, message string) {
 	if message != "" {
-		n.Raw(ref, ts, fmt.Sprintf("%s %s", ts.Format(KubernetesLogTimeFormat), message), false)
+		n.Raw(ref, ts, fmt.Sprintf("%s %s", ts.Format(constants.PreciseTimeFormat), message), false)
 	}
 }
 
@@ -97,12 +98,12 @@ func (n *notifier) Error(err error) {
 }
 
 func (n *notifier) Event(ref string, ts time.Time, level, reason, message string) {
-	color := ui.LightGray
+	color := color2.FgGray.Render
 	if level != "Normal" {
-		color = ui.Yellow
+		color = color2.FgYellow.Render
 	}
 	log := color(fmt.Sprintf("(%s) %s", reason, message))
-	n.Raw(ref, ts, fmt.Sprintf("%s %s\n", ts.Format(KubernetesLogTimeFormat), log), level == "Normal")
+	n.Raw(ref, ts, fmt.Sprintf("%s %s\n", ts.Format(constants.PreciseTimeFormat), log), level == "Normal")
 }
 
 func (n *notifier) Output(ref string, ts time.Time, output *instructions.Instruction) {

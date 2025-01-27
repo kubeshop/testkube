@@ -43,7 +43,7 @@ func castParameter(value intstr.IntOrString, schema testworkflowsv1.ParameterSch
 }
 
 func createConfigMachine(cfg map[string]intstr.IntOrString, schema map[string]testworkflowsv1.ParameterSchema,
-	externalize func(key, value string) (*corev1.EnvVarSource, error)) (expressions.Machine, error) {
+	externalize func(key, value string) (expressions.Expression, error)) (expressions.Machine, error) {
 	machine := expressions.NewMachine()
 	for k, v := range cfg {
 		expr, err := castParameter(v, schema[k])
@@ -51,7 +51,7 @@ func createConfigMachine(cfg map[string]intstr.IntOrString, schema map[string]te
 			return nil, errors.Wrap(err, "config."+k)
 		}
 		if schema[k].Sensitive && externalize != nil {
-			expr, err = getSecretCallExpression(expr, k, externalize)
+			expr, err = externalize(k, expr.Template())
 			if err != nil {
 				return nil, err
 			}
@@ -65,7 +65,7 @@ func createConfigMachine(cfg map[string]intstr.IntOrString, schema map[string]te
 				return nil, errors.Wrap(err, "config."+k)
 			}
 			if schema[k].Sensitive && externalize != nil {
-				expr, err = getSecretCallExpression(expr, k, externalize)
+				expr, err = externalize(k, expr.Template())
 				if err != nil {
 					return nil, err
 				}
@@ -76,22 +76,23 @@ func createConfigMachine(cfg map[string]intstr.IntOrString, schema map[string]te
 	return machine, nil
 }
 
-func getSecretCallExpression(expr expressions.Expression, k string, externalize func(key, value string) (*corev1.EnvVarSource, error)) (
-	expressions.Expression, error) {
-	envVar, err := externalize(k, expr.Template())
-	if err != nil {
-		return nil, errors.Wrap(err, "config."+k)
+func EnvVarSourceToSecretExpression(fn func(key, value string) (*corev1.EnvVarSource, error)) func(key, value string) (expressions.Expression, error) {
+	return func(key, value string) (expressions.Expression, error) {
+		envVar, err := fn(key, value)
+		if err != nil {
+			return nil, err
+		}
+		if envVar.SecretKeyRef != nil {
+			return expressions.Compile(fmt.Sprintf("secret(%s,%s,true)",
+				expressions.NewStringValue(envVar.SecretKeyRef.Name).String(),
+				expressions.NewStringValue(envVar.SecretKeyRef.Key).String()))
+		}
+		return nil, nil
 	}
-	if envVar.SecretKeyRef != nil {
-		return expressions.Compile(fmt.Sprintf("secret(\"%s\", \"%s\", true)",
-			envVar.SecretKeyRef.Name, envVar.SecretKeyRef.Key))
-	}
-
-	return expr, nil
 }
 
 func ApplyWorkflowConfig(t *testworkflowsv1.TestWorkflow, cfg map[string]intstr.IntOrString,
-	externalize func(key, value string) (*corev1.EnvVarSource, error)) (*testworkflowsv1.TestWorkflow, error) {
+	externalize func(key, value string) (expressions.Expression, error)) (*testworkflowsv1.TestWorkflow, error) {
 	if t == nil {
 		return t, nil
 	}
@@ -104,7 +105,7 @@ func ApplyWorkflowConfig(t *testworkflowsv1.TestWorkflow, cfg map[string]intstr.
 }
 
 func ApplyWorkflowTemplateConfig(t *testworkflowsv1.TestWorkflowTemplate, cfg map[string]intstr.IntOrString,
-	externalize func(key, value string) (*corev1.EnvVarSource, error)) (*testworkflowsv1.TestWorkflowTemplate, error) {
+	externalize func(key, value string) (expressions.Expression, error)) (*testworkflowsv1.TestWorkflowTemplate, error) {
 	if t == nil {
 		return t, nil
 	}

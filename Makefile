@@ -64,6 +64,9 @@ build: build-api-server build-testkube-bin
 build-api-server:
 	go build -o $(BIN_DIR)/api-server -ldflags='$(LD_FLAGS)' cmd/api-server/main.go
 
+build-toolkit:
+	go build -o build/testworkflow-toolkit/testworkflow-toolkit -ldflags='$(LD_FLAGS)' cmd/testworkflow-toolkit/main.go
+
 build-testkube-bin:
 	go build \
 		-ldflags="-s -w -X main.version=999.0.0-$(COMMIT) \
