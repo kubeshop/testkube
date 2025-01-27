@@ -69,9 +69,6 @@ type Agent struct {
 	proContext *config.ProContext
 
 	eventEmitter event.Interface
-
-	featureNewArchitecture bool
-	featureCloudStorage    bool
 }
 
 func NewAgent(logger *zap.SugaredLogger,
@@ -84,8 +81,6 @@ func NewAgent(logger *zap.SugaredLogger,
 	proContext *config.ProContext,
 	dockerImageVersion string,
 	eventEmitter event.Interface,
-	featureNewArchitecture bool,
-	featureCloudStorage bool,
 ) (*Agent, error) {
 	return &Agent{
 		handler:                 handler,
@@ -109,8 +104,6 @@ func NewAgent(logger *zap.SugaredLogger,
 		proContext:              proContext,
 		dockerImageVersion:      dockerImageVersion,
 		eventEmitter:            eventEmitter,
-		featureNewArchitecture:  featureNewArchitecture,
-		featureCloudStorage:     featureCloudStorage,
 	}, nil
 }
 
@@ -293,10 +286,10 @@ func (ag *Agent) runCommandLoop(ctx context.Context) error {
 	ctx = metadata.AppendToOutgoingContext(ctx, orgIdMeta, ag.proContext.OrgID)
 	ctx = metadata.AppendToOutgoingContext(ctx, dockerImageVersionMeta, ag.dockerImageVersion)
 
-	if ag.featureNewArchitecture {
+	if ag.proContext.NewArchitecture {
 		ctx = metadata.AppendToOutgoingContext(ctx, newArchitectureMeta, "true")
 	}
-	if ag.featureCloudStorage {
+	if ag.proContext.CloudStorage {
 		ctx = metadata.AppendToOutgoingContext(ctx, testWorkflowStorageMeta, "true")
 	}
 

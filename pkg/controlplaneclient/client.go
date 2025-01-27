@@ -17,8 +17,6 @@ var _ Client = &client{}
 type client struct {
 	client     cloud.TestKubeCloudAPIClient
 	proContext config.ProContext
-	agentID    string
-	agentToken string
 	opts       ClientOptions
 }
 
@@ -41,22 +39,20 @@ type Client interface {
 	TestWorkflowTemplatesClient
 }
 
-func New(grpcClient cloud.TestKubeCloudAPIClient, proContext config.ProContext, agentID, agentToken string, opts ClientOptions) Client {
+func New(grpcClient cloud.TestKubeCloudAPIClient, proContext config.ProContext, opts ClientOptions) Client {
 	return &client{
 		client:     grpcClient,
 		proContext: proContext,
-		agentID:    agentID,
-		agentToken: agentToken,
 		opts:       opts,
 	}
 }
 
 func (c *client) IsSuperAgent() bool {
-	return strings.HasPrefix(c.agentToken, AgentSuperAgentPrefix+"_")
+	return strings.HasPrefix(c.proContext.APIKey, AgentSuperAgentPrefix+"_")
 }
 
 func (c *client) IsRunner() bool {
-	return strings.HasPrefix(c.agentToken, AgentRunnerPrefix+"_")
+	return strings.HasPrefix(c.proContext.APIKey, AgentRunnerPrefix+"_")
 }
 
 func (c *client) IsLegacy() bool {

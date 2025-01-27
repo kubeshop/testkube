@@ -28,20 +28,22 @@ const (
 )
 
 type ProContext struct {
-	APIKey               string
-	URL                  string
-	TLSInsecure          bool
-	WorkerCount          int
-	LogStreamWorkerCount int
-	SkipVerify           bool
-	EnvID                string
-	OrgID                string
-	Migrate              string
-	ConnectionTimeout    int
-	DashboardURI         string
-	NewArchitecture      bool
-	CloudStorage         bool
-	IsTrial              bool
-	Mode                 ProContextMode
-	Status               ProContextStatus
+	APIKey                              string
+	URL                                 string
+	TLSInsecure                         bool
+	WorkerCount                         int
+	LogStreamWorkerCount                int
+	SkipVerify                          bool
+	AgentID                             string
+	EnvID                               string
+	OrgID                               string
+	Migrate                             string
+	ConnectionTimeout                   int
+	DashboardURI                        string
+	NewArchitecture                     bool
+	CloudStorage                        bool
+	CloudStorageSupportedInControlPlane bool
+	IsTrial                             bool
+	Mode                                ProContextMode
+	Status                              ProContextStatus
 }

@@ -37,9 +37,10 @@ func CloudClient() controlplaneclient.Client {
 			URL:         conn.Url,
 			TLSInsecure: conn.TlsInsecure,
 			SkipVerify:  conn.SkipVerify,
+			AgentID:     cfg.Worker.Connection.ApiKey,
 			EnvID:       cfg.Execution.EnvironmentId,
 			OrgID:       cfg.Execution.OrganizationId,
-		}, conn.AgentID, conn.ApiKey, controlplaneclient.ClientOptions{
+		}, controlplaneclient.ClientOptions{
 			StorageSkipVerify:  true,
 			ExecutionID:        cfg.Execution.Id,
 			ParentExecutionIDs: strings.Split(cfg.Execution.ParentIds, "/"),

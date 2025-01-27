@@ -55,6 +55,7 @@ func loadDefaultProContext() {
 		URL:             cfg.Worker.Connection.Url,
 		TLSInsecure:     cfg.Worker.Connection.TlsInsecure,
 		SkipVerify:      cfg.Worker.Connection.SkipVerify,
+		AgentID:         cfg.Worker.Connection.AgentID,
 		EnvID:           cfg.Execution.EnvironmentId,
 		OrgID:           cfg.Execution.OrganizationId,
 		DashboardURI:    cfg.ControlPlane.DashboardUrl,
@@ -221,7 +222,7 @@ func Cloud() controlplaneclient.Client {
 	cfg := config2.Config()
 	grpcClient := CloudInternal()
 	loadProContext() // FIXME: do it lazily
-	return controlplaneclient.New(grpcClient, internalProContext, cfg.Worker.Connection.AgentID, cfg.Worker.Connection.ApiKey, controlplaneclient.ClientOptions{
+	return controlplaneclient.New(grpcClient, internalProContext, controlplaneclient.ClientOptions{
 		StorageSkipVerify:  true, // FIXME?
 		ExecutionID:        cfg.Execution.Id,
 		ParentExecutionIDs: strings.Split(cfg.Execution.ParentIds, "/"),

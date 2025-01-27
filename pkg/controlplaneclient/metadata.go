@@ -16,8 +16,8 @@ type MD metadata.MD
 
 func (c *client) metadata() MD {
 	return MD{}.
-		SetAgentID(c.agentID).
-		SetSecretKey(c.agentToken).
+		SetAgentID(c.proContext.AgentID).
+		SetSecretKey(c.proContext.APIKey).
 		SetExecutionID(c.opts.ExecutionID).
 		SetOrganizationID(c.proContext.OrgID).
 		SetEnvironmentID(c.proContext.EnvID)

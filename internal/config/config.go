@@ -226,6 +226,10 @@ func Get() (*Config, error) {
 		return nil, err
 	}
 
+	if c.TestkubeProAgentID == "" && strings.HasPrefix(c.TestkubeProAPIKey, "tkcagnt_") {
+		c.TestkubeProAgentID = strings.Replace(c.TestkubeProEnvID, "tkcenv_", "tkcroot_", 1)
+	}
+
 	if strings.HasPrefix(c.TestkubeProAgentID, "tkcrun_") {
 		c.DisableTestTriggers = true
 		c.DisableWebhooks = true

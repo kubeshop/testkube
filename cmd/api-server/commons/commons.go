@@ -285,19 +285,21 @@ func ReadDefaultExecutors(cfg *config.Config) (executors []testkube.ExecutorDeta
 
 func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.TestKubeCloudAPIClient) config.ProContext {
 	proContext := config.ProContext{
-		APIKey:               cfg.ControlPlaneConfig.TestkubeProAPIKey,
-		URL:                  cfg.ControlPlaneConfig.TestkubeProURL,
-		TLSInsecure:          cfg.ControlPlaneConfig.TestkubeProTLSInsecure,
-		SkipVerify:           cfg.ControlPlaneConfig.TestkubeProSkipVerify,
-		EnvID:                cfg.ControlPlaneConfig.TestkubeProEnvID,
-		OrgID:                cfg.ControlPlaneConfig.TestkubeProOrgID,
-		ConnectionTimeout:    cfg.ControlPlaneConfig.TestkubeProConnectionTimeout,
-		WorkerCount:          cfg.TestkubeProWorkerCount,
-		LogStreamWorkerCount: cfg.TestkubeProLogStreamWorkerCount,
-		Migrate:              cfg.TestkubeProMigrate,
-		DashboardURI:         cfg.TestkubeDashboardURI,
-		NewArchitecture:      grpcClient == nil,
-		CloudStorage:         grpcClient == nil,
+		APIKey:                              cfg.ControlPlaneConfig.TestkubeProAPIKey,
+		URL:                                 cfg.ControlPlaneConfig.TestkubeProURL,
+		TLSInsecure:                         cfg.ControlPlaneConfig.TestkubeProTLSInsecure,
+		SkipVerify:                          cfg.ControlPlaneConfig.TestkubeProSkipVerify,
+		AgentID:                             cfg.ControlPlaneConfig.TestkubeProAgentID,
+		EnvID:                               cfg.ControlPlaneConfig.TestkubeProEnvID,
+		OrgID:                               cfg.ControlPlaneConfig.TestkubeProOrgID,
+		ConnectionTimeout:                   cfg.ControlPlaneConfig.TestkubeProConnectionTimeout,
+		WorkerCount:                         cfg.TestkubeProWorkerCount,
+		LogStreamWorkerCount:                cfg.TestkubeProLogStreamWorkerCount,
+		Migrate:                             cfg.TestkubeProMigrate,
+		DashboardURI:                        cfg.TestkubeDashboardURI,
+		NewArchitecture:                     grpcClient == nil,
+		CloudStorage:                        grpcClient == nil,
+		CloudStorageSupportedInControlPlane: grpcClient == nil,
 	}
 
 	if cfg.TestkubeProAPIKey == "" || grpcClient == nil {
@@ -321,16 +323,23 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 		proContext.EnvID = foundProContext.EnvId
 	}
 
+	if proContext.AgentID == "" && strings.HasPrefix(proContext.APIKey, "tkcagnt_") {
+		proContext.AgentID = strings.Replace(foundProContext.EnvId, "tkcenv_", "tkcroot_", 1)
+	}
+
 	if proContext.OrgID == "" {
 		proContext.OrgID = foundProContext.OrgId
 	}
 
-	if capabilities.Enabled(foundProContext.Capabilities, capabilities.CapabilityNewArchitecture) {
+	if cfg.FeatureNewArchitecture && capabilities.Enabled(foundProContext.Capabilities, capabilities.CapabilityNewArchitecture) {
 		proContext.NewArchitecture = true
 	}
 
 	if capabilities.Enabled(foundProContext.Capabilities, capabilities.CapabilityCloudStorage) {
-		proContext.CloudStorage = true
+		proContext.CloudStorageSupportedInControlPlane = true
+		if cfg.FeatureCloudStorage {
+			proContext.CloudStorage = true
+		}
 	}
 
 	if string(foundProContext.Mode) != "" {

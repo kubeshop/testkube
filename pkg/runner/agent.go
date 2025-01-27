@@ -36,11 +36,8 @@ type agentLoop struct {
 	client              controlplaneclient.Client
 	proContext          config.ProContext
 	controlPlaneConfig  testworkflowconfig.ControlPlaneConfig
-	agentId             string
 	organizationId      string
 	legacyEnvironmentId string
-
-	newArchitectureEnabled bool
 }
 
 type AgentLoop interface {
@@ -55,23 +52,19 @@ func newAgentLoop(
 	client controlplaneclient.Client,
 	controlPlaneConfig testworkflowconfig.ControlPlaneConfig,
 	proContext config.ProContext,
-	agentId string,
 	organizationId string,
 	legacyEnvironmentId string,
-	newArchitectureEnabled bool,
 ) AgentLoop {
 	return &agentLoop{
-		runner:                 runner,
-		worker:                 worker,
-		logger:                 logger,
-		emitter:                emitter,
-		client:                 client,
-		proContext:             proContext,
-		controlPlaneConfig:     controlPlaneConfig,
-		agentId:                agentId,
-		organizationId:         organizationId,
-		legacyEnvironmentId:    legacyEnvironmentId,
-		newArchitectureEnabled: newArchitectureEnabled,
+		runner:              runner,
+		worker:              worker,
+		logger:              logger,
+		emitter:             emitter,
+		client:              client,
+		proContext:          proContext,
+		controlPlaneConfig:  controlPlaneConfig,
+		organizationId:      organizationId,
+		legacyEnvironmentId: legacyEnvironmentId,
 	}
 }
 
@@ -114,7 +107,7 @@ func (a *agentLoop) finishExecution(ctx context.Context, environmentId string, e
 			a.logger.Warnw("failed to finish the TestWorkflow execution in database", "recoverable", true, "executionId", execution.Id, "error", err)
 			return err
 		}
-		if !a.newArchitectureEnabled {
+		if !a.proContext.NewArchitecture {
 			// Emit events locally if the Control Plane doesn't support that
 			if execution.Result.IsPassed() {
 				a.emitter.Notify(testkube.NewEventEndTestWorkflowSuccess(execution))
@@ -150,7 +143,7 @@ func (a *agentLoop) run(ctx context.Context) error {
 	g, ctx := errgroup.WithContext(ctx)
 
 	// Handle the new mechanism for runners
-	if a.newArchitectureEnabled {
+	if a.proContext.NewArchitecture {
 		g.Go(func() error {
 			return errors2.Wrap(a.loopRunnerRequests(ctx), "runners loop")
 		})
@@ -339,7 +332,7 @@ func (a *agentLoop) runTestWorkflow(environmentId string, executionId string, ex
 	// Apply the known data to temporary object.
 	execution.Namespace = result.Namespace
 	execution.Signature = result.Signature
-	execution.RunnerId = a.agentId
+	execution.RunnerId = a.proContext.AgentID
 	if err = a.init(context.Background(), environmentId, execution); err != nil {
 		logger.Errorw("failed to mark execution as initialized", "error", err)
 	}

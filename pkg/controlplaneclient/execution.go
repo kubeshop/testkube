@@ -234,7 +234,7 @@ func (c *client) legacyInitExecution(ctx context.Context, environmentId, executi
 	if err != nil {
 		return err
 	}
-	execution.RunnerId = c.agentID
+	execution.RunnerId = c.proContext.AgentID
 	execution.Namespace = namespace
 	execution.Signature = signature
 	jsonPayload, err := json.Marshal(cloudtestworkflow.ExecutionUpdateRequest{

@@ -23,13 +23,9 @@ type Options struct {
 	ServiceAccountNames map[string]string
 
 	StorageSkipVerify bool
-
-	ControlPlaneStorageEnabled bool
-	NewArchitectureEnabled     bool
 }
 
 type service struct {
-	runnerId           string
 	logger             *zap.SugaredLogger
 	eventsEmitter      event.Interface
 	client             controlplaneclient.Client
@@ -46,7 +42,6 @@ type Service interface {
 }
 
 func NewService(
-	runnerId string,
 	logger *zap.SugaredLogger,
 	eventsEmitter event.Interface,
 	metricsClient metrics.Metrics,
@@ -58,7 +53,6 @@ func NewService(
 	opts Options,
 ) Service {
 	return &service{
-		runnerId:           runnerId,
 		logger:             logger,
 		eventsEmitter:      eventsEmitter,
 		client:             client,
@@ -67,7 +61,6 @@ func NewService(
 		worker:             executionWorker,
 		opts:               opts,
 		runner: New(
-			runnerId,
 			executionWorker,
 			configClient,
 			client,
@@ -76,7 +69,6 @@ func NewService(
 			proContext,
 			opts.DashboardURI,
 			opts.StorageSkipVerify,
-			opts.NewArchitectureEnabled,
 		),
 	}
 }
@@ -109,10 +101,8 @@ func (s *service) start(ctx context.Context) (err error) {
 		s.client,
 		s.controlPlaneConfig, // TODO: fetch it from the control plane?
 		s.proContext,
-		s.runnerId,
 		s.proContext.OrgID,
 		s.proContext.EnvID,
-		s.opts.NewArchitectureEnabled,
 	).Start(ctx)
 }
 

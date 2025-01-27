@@ -4,7 +4,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -174,15 +173,11 @@ func main() {
 	commons.ExitOnError("Failed creating subscription checker", err)
 
 	// Build new client
-	agentId := cfg.TestkubeProAgentID
-	if agentId == "" {
-		agentId = strings.Replace(proContext.EnvID, "tkcenv_", "tkcroot_", 1)
-	}
-	client := controlplaneclient.New(grpcClient, proContext, agentId, cfg.TestkubeProAPIKey, controlplaneclient.ClientOptions{
+	client := controlplaneclient.New(grpcClient, proContext, controlplaneclient.ClientOptions{
 		StorageSkipVerify: cfg.StorageSkipVerify,
 	})
 
-	if proContext.CloudStorage && cfg.FeatureCloudStorage {
+	if proContext.CloudStorage {
 		testWorkflowsClient = testworkflowclient.NewCloudTestWorkflowClient(client)
 		testWorkflowTemplatesClient = testworkflowtemplateclient.NewCloudTestWorkflowTemplateClient(client)
 	} else {
@@ -234,7 +229,6 @@ func main() {
 	})
 
 	runnerService := runner2.NewService(
-		agentId,
 		log.DefaultLogger,
 		eventsEmitter,
 		metrics,
@@ -247,13 +241,11 @@ func main() {
 		proContext,
 		executionWorker,
 		runner2.Options{
-			ClusterID:                  clusterId,
-			DashboardURI:               cfg.TestkubeDashboardURI,
-			DefaultNamespace:           cfg.TestkubeNamespace,
-			ServiceAccountNames:        serviceAccountNames,
-			StorageSkipVerify:          cfg.StorageSkipVerify,
-			ControlPlaneStorageEnabled: proContext.CloudStorage && cfg.FeatureCloudStorage,
-			NewArchitectureEnabled:     proContext.NewArchitecture && cfg.FeatureNewArchitecture,
+			ClusterID:           clusterId,
+			DashboardURI:        cfg.TestkubeDashboardURI,
+			DefaultNamespace:    cfg.TestkubeNamespace,
+			ServiceAccountNames: serviceAccountNames,
+			StorageSkipVerify:   cfg.StorageSkipVerify,
 		},
 	)
 	if !cfg.DisableRunner {
@@ -279,8 +271,8 @@ func main() {
 		cfg.TestkubeDashboardURI,
 		proContext.OrgID,
 		proContext.EnvID,
-		agentId,
-		proContext.NewArchitecture && cfg.FeatureNewArchitecture,
+		proContext.AgentID,
+		proContext.NewArchitecture,
 	)
 
 	var deprecatedClients commons.DeprecatedClients
@@ -496,8 +488,6 @@ func main() {
 			&proContext,
 			cfg.TestkubeDockerImageVersion,
 			eventsEmitter,
-			cfg.FeatureNewArchitecture,
-			cfg.FeatureCloudStorage,
 		)
 		commons.ExitOnError("Starting agent", err)
 		g.Go(func() error {
