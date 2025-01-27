@@ -63,10 +63,11 @@ func mapSelectorFromCRD(selector testsv1.TestTriggerSelector) *testkube.TestTrig
 		labelSelector = mapLabelSelectorFromCRD(selector.LabelSelector)
 	}
 	return &testkube.TestTriggerSelector{
-		Name:          selector.Name,
-		NameRegex:     selector.NameRegex,
-		Namespace:     selector.Namespace,
-		LabelSelector: labelSelector,
+		Name:           selector.Name,
+		NameRegex:      selector.NameRegex,
+		Namespace:      selector.Namespace,
+		NamespaceRegex: selector.NamespaceRegex,
+		LabelSelector:  labelSelector,
 	}
 }
 
