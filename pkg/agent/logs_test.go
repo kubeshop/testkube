@@ -67,7 +67,7 @@ func TestLogStream(t *testing.T) {
 
 	logger, _ := zap.NewDevelopment()
 	proContext := config.ProContext{APIKey: "api-key", WorkerCount: 5, LogStreamWorkerCount: 5}
-	agent, err := agent.NewAgent(logger.Sugar(), m, grpcClient, logStreamFunc, "", "", featureflags.FeatureFlags{}, &proContext, "", nil, false, false)
+	agent, err := agent.NewAgent(logger.Sugar(), m, grpcClient, logStreamFunc, "", "", featureflags.FeatureFlags{}, &proContext, "", nil)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -57,7 +57,7 @@ func TestEventLoop(t *testing.T) {
 	var logStreamFunc func(ctx context.Context, executionID string) (chan output.Output, error)
 
 	proContext := config.ProContext{APIKey: "api-key", WorkerCount: 5, LogStreamWorkerCount: 5}
-	agent, err := agent.NewAgent(logger.Sugar(), nil, grpcClient, logStreamFunc, "", "", featureflags.FeatureFlags{}, &proContext, "", nil, false, false)
+	agent, err := agent.NewAgent(logger.Sugar(), nil, grpcClient, logStreamFunc, "", "", featureflags.FeatureFlags{}, &proContext, "", nil)
 	assert.NoError(t, err)
 	go func() {
 		l, err := agent.Load()
