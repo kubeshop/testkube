@@ -241,11 +241,12 @@ func main() {
 		proContext,
 		executionWorker,
 		runner2.Options{
-			ClusterID:           clusterId,
-			DashboardURI:        cfg.TestkubeDashboardURI,
-			DefaultNamespace:    cfg.TestkubeNamespace,
-			ServiceAccountNames: serviceAccountNames,
-			StorageSkipVerify:   cfg.StorageSkipVerify,
+			ClusterID:            clusterId,
+			DashboardURI:         cfg.TestkubeDashboardURI,
+			DefaultNamespace:     cfg.TestkubeNamespace,
+			ServiceAccountNames:  serviceAccountNames,
+			StorageSkipVerify:    cfg.StorageSkipVerify,
+			GlobalTemplateInline: cfg.GlobalWorkflowTemplateInline,
 		},
 	)
 	if !cfg.DisableRunner {
@@ -268,7 +269,6 @@ func main() {
 		metrics,
 		secretManager,
 		cfg.GlobalWorkflowTemplateName,
-		cfg.GlobalWorkflowTemplateInline,
 		cfg.TestkubeDashboardURI,
 		proContext.OrgID,
 		proContext.EnvID,
