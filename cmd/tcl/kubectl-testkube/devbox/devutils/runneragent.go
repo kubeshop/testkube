@@ -60,7 +60,7 @@ func (r *RunnerAgent) Create(ctx context.Context, env *client.Environment, runne
 		{Name: "TESTKUBE_PRO_TLS_INSECURE", Value: fmt.Sprintf("%v", r.cloud.AgentInsecure())},
 		{Name: "TESTKUBE_PRO_TLS_SKIP_VERIFY", Value: "true"},
 
-		// RunnerAgent configuration
+		// Runner configuration
 		{Name: "APISERVER_FULLNAME", Value: "devbox-agent"},
 		{Name: "TESTKUBE_NAMESPACE", Value: r.pod.Namespace()},
 		{Name: "JOB_SERVICE_ACCOUNT_NAME", Value: "devbox-account"},
