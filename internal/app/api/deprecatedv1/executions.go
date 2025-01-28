@@ -496,7 +496,7 @@ func (s *DeprecatedTestkubeAPI) GetArtifactArchiveHandler() fiber.Handler {
 			}
 		}
 
-		archive, err = artifactsStorage.DownloadArchive(c.Context(), folder, values["mask"])
+		archive, err = artifactsStorage.DownloadArchive(c.Context(), folder, execution.TestName, execution.TestSuiteName, "", values["mask"])
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not download artifact archive: %w", errPrefix, err))
 		}
