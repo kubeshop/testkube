@@ -8,6 +8,7 @@ import (
 	"maps"
 	"math"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -16,11 +17,10 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/encoding/gzip"
 	"google.golang.org/grpc/metadata"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/yaml"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/internal/crdcommon"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/log"
@@ -81,12 +81,13 @@ func NewScheduler(
 ) Scheduler {
 	var globalTemplateInline *testkube.TestWorkflowTemplate
 	if globalTemplateInlineYaml != "" {
-		inline := &testworkflowsv1.TestWorkflowTemplate{ObjectMeta: metav1.ObjectMeta{Name: inlinedGlobalTemplateName}}
-		err := yaml.Unmarshal([]byte(globalTemplateInlineYaml), inline.Spec)
+		inline := new(testworkflowsv1.TestWorkflowTemplate)
+		err := crdcommon.DeserializeCRD(inline, []byte("spec:\n  "+strings.ReplaceAll(globalTemplateInlineYaml, "\n", "\n  ")))
+		inline.Name = inlinedGlobalTemplateName
 		if err == nil {
 			globalTemplateInline = testworkflows2.MapTemplateKubeToAPI(inline)
 		} else {
-			log.DefaultLogger.Errorw("failed to unmarshal inline global template", "error", err)
+			log.DefaultLogger.Errorw("failed to unmarshal inlined global template", "error", err)
 		}
 	}
 	return &scheduler{
