@@ -405,7 +405,6 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 		metrics,
 		secretManager,
 		cfg.GlobalWorkflowTemplateName,
-		cfg.GlobalWorkflowTemplateInline,
 		cfg.TestkubeDashboardURI,
 		"",
 		"",
