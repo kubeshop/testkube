@@ -57,10 +57,25 @@ func loadDefaultProContext() {
 		SkipVerify:      cfg.Worker.Connection.SkipVerify,
 		AgentID:         cfg.Worker.Connection.AgentID,
 		EnvID:           cfg.Execution.EnvironmentId,
+		EnvName:         cfg.Execution.EnvironmentId,
+		EnvSlug:         cfg.Execution.EnvironmentId,
 		OrgID:           cfg.Execution.OrganizationId,
+		OrgName:         cfg.Execution.OrganizationId,
+		OrgSlug:         cfg.Execution.OrganizationId,
 		DashboardURI:    cfg.ControlPlane.DashboardUrl,
 		NewArchitecture: false,
 		CloudStorage:    false,
+		Agent: config3.ProContextAgent{
+			ID:   cfg.Worker.Connection.AgentID,
+			Name: cfg.Worker.Connection.AgentID,
+			Environments: []config3.ProContextAgentEnvironment{
+				{
+					ID:   cfg.Execution.EnvironmentId,
+					Slug: cfg.Execution.EnvironmentId,
+					Name: cfg.Execution.EnvironmentId,
+				},
+			},
+		},
 	}
 }
 

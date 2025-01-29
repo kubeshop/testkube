@@ -18,6 +18,7 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 	corev1 "k8s.io/api/core/v1"
 
+	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/internal/config"
 	dbmigrations "github.com/kubeshop/testkube/internal/db-migrations"
 	parser "github.com/kubeshop/testkube/internal/template"
@@ -291,7 +292,11 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 		SkipVerify:                          cfg.ControlPlaneConfig.TestkubeProSkipVerify,
 		AgentID:                             cfg.ControlPlaneConfig.TestkubeProAgentID,
 		EnvID:                               cfg.ControlPlaneConfig.TestkubeProEnvID,
+		EnvSlug:                             cfg.ControlPlaneConfig.TestkubeProEnvID,
+		EnvName:                             cfg.ControlPlaneConfig.TestkubeProEnvID,
 		OrgID:                               cfg.ControlPlaneConfig.TestkubeProOrgID,
+		OrgSlug:                             cfg.ControlPlaneConfig.TestkubeProOrgID,
+		OrgName:                             cfg.ControlPlaneConfig.TestkubeProOrgID,
 		ConnectionTimeout:                   cfg.ControlPlaneConfig.TestkubeProConnectionTimeout,
 		WorkerCount:                         cfg.TestkubeProWorkerCount,
 		LogStreamWorkerCount:                cfg.TestkubeProLogStreamWorkerCount,
@@ -301,6 +306,8 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 		CloudStorage:                        grpcClient == nil,
 		CloudStorageSupportedInControlPlane: grpcClient == nil,
 	}
+	proContext.Agent.ID = proContext.AgentID
+	proContext.Agent.Name = proContext.AgentID
 
 	if cfg.TestkubeProAPIKey == "" || grpcClient == nil {
 		return proContext
@@ -329,6 +336,36 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 
 	if proContext.OrgID == "" {
 		proContext.OrgID = foundProContext.OrgId
+	}
+
+	if foundProContext.OrgName != "" {
+		proContext.OrgName = foundProContext.OrgName
+	}
+
+	if foundProContext.OrgSlug != "" {
+		proContext.OrgSlug = foundProContext.OrgSlug
+	}
+
+	if foundProContext.Agent != nil {
+		proContext.Agent.ID = foundProContext.Agent.Id
+		proContext.Agent.Name = foundProContext.Agent.Name
+		proContext.Agent.Type = foundProContext.Agent.Type
+		proContext.Agent.Labels = foundProContext.Agent.Labels
+		proContext.Agent.Disabled = foundProContext.Agent.Disabled
+		proContext.Agent.Environments = common.MapSlice(foundProContext.Agent.Environments, func(env *cloud.ProContextEnvironment) config.ProContextAgentEnvironment {
+			return config.ProContextAgentEnvironment{
+				ID:   env.Id,
+				Slug: env.Slug,
+				Name: env.Name,
+			}
+		})
+
+		for _, env := range foundProContext.Agent.Environments {
+			if env.Id == proContext.EnvID {
+				proContext.EnvName = env.Name
+				proContext.EnvSlug = env.Slug
+			}
+		}
 	}
 
 	if cfg.FeatureNewArchitecture && capabilities.Enabled(foundProContext.Capabilities, capabilities.CapabilityNewArchitecture) {

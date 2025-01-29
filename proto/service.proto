@@ -140,13 +140,31 @@ enum PlanStatus {
     Blocked            = 9;
 }
 
+message ProContextEnvironment {
+  string id = 1;
+  string name = 2;
+  string slug = 3;
+}
+
+message ProContextAgent {
+  string id = 1;
+  string name = 2;
+  string type = 3;
+  bool disabled = 4;
+  map<string, string> labels = 5;
+  repeated ProContextEnvironment environments = 6;
+}
+
 message ProContextResponse {
   string org_id = 1;
+  string org_slug = 8;
+  string org_name = 9;
   string env_id = 2;
   repeated Capability capabilities = 3;
   bool trial = 4;
   TestkubeMode mode = 5;
   PlanStatus status = 6;
+  ProContextAgent agent = 7;
 }
 
 message Capability {
