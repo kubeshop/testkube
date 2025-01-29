@@ -2,9 +2,12 @@ package controlplaneclient
 
 import (
 	"google.golang.org/grpc/metadata"
+
+	"github.com/kubeshop/testkube/pkg/version"
 )
 
 const (
+	AgentVersionMetadataName   = "version"
 	AgentIdMetadataName        = "agent-id"
 	AgentSecretKeyMetadataName = "api-key"
 	OrganizationIdMetadataName = "organization-id"
@@ -16,6 +19,7 @@ type MD metadata.MD
 
 func (c *client) metadata() MD {
 	return MD{}.
+		SetVersion(version.Version).
 		SetAgentID(c.proContext.AgentID).
 		SetSecretKey(c.proContext.APIKey).
 		SetExecutionID(c.opts.ExecutionID).
@@ -31,6 +35,18 @@ func (m MD) SetAgentID(agentID string) MD {
 		delete(m, AgentIdMetadataName)
 	} else {
 		m[AgentIdMetadataName] = []string{agentID}
+	}
+	return m
+}
+
+func (m MD) SetVersion(version string) MD {
+	if m == nil {
+		m = make(MD)
+	}
+	if version == "" {
+		delete(m, AgentVersionMetadataName)
+	} else {
+		m[AgentVersionMetadataName] = []string{version}
 	}
 	return m
 }
