@@ -20,7 +20,7 @@ type MD metadata.MD
 func (c *client) metadata() MD {
 	return MD{}.
 		SetVersion(version.Version).
-		SetAgentID(c.proContext.AgentID).
+		SetAgentID(c.proContext.Agent.ID).
 		SetSecretKey(c.proContext.APIKey).
 		SetExecutionID(c.opts.ExecutionID).
 		SetOrganizationID(c.proContext.OrgID).

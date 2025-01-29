@@ -95,7 +95,7 @@ func (c *client) legacyGetRunnerOngoingExecutions(ctx context.Context) ([]*cloud
 		}
 
 		// Ignore if it's assigned to a different runner
-		if response.WorkflowExecutions[i].RunnerId != c.proContext.AgentID {
+		if response.WorkflowExecutions[i].RunnerId != c.proContext.Agent.ID {
 			continue
 		}
 

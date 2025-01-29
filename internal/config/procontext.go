@@ -34,9 +34,12 @@ type ProContext struct {
 	WorkerCount                         int
 	LogStreamWorkerCount                int
 	SkipVerify                          bool
-	AgentID                             string
 	EnvID                               string
+	EnvSlug                             string
+	EnvName                             string
 	OrgID                               string
+	OrgSlug                             string
+	OrgName                             string
 	Migrate                             string
 	ConnectionTimeout                   int
 	DashboardURI                        string
@@ -46,4 +49,20 @@ type ProContext struct {
 	IsTrial                             bool
 	Mode                                ProContextMode
 	Status                              ProContextStatus
+	Agent                               ProContextAgent
+}
+
+type ProContextAgentEnvironment struct {
+	ID   string
+	Slug string
+	Name string
+}
+
+type ProContextAgent struct {
+	ID           string
+	Name         string
+	Type         string
+	Disabled     bool
+	Labels       map[string]string
+	Environments []ProContextAgentEnvironment
 }
