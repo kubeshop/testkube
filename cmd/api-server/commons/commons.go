@@ -290,7 +290,6 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 		URL:                                 cfg.ControlPlaneConfig.TestkubeProURL,
 		TLSInsecure:                         cfg.ControlPlaneConfig.TestkubeProTLSInsecure,
 		SkipVerify:                          cfg.ControlPlaneConfig.TestkubeProSkipVerify,
-		AgentID:                             cfg.ControlPlaneConfig.TestkubeProAgentID,
 		EnvID:                               cfg.ControlPlaneConfig.TestkubeProEnvID,
 		EnvSlug:                             cfg.ControlPlaneConfig.TestkubeProEnvID,
 		EnvName:                             cfg.ControlPlaneConfig.TestkubeProEnvID,
@@ -306,8 +305,8 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 		CloudStorage:                        grpcClient == nil,
 		CloudStorageSupportedInControlPlane: grpcClient == nil,
 	}
-	proContext.Agent.ID = proContext.AgentID
-	proContext.Agent.Name = proContext.AgentID
+	proContext.Agent.ID = cfg.ControlPlaneConfig.TestkubeProAgentID
+	proContext.Agent.Name = cfg.ControlPlaneConfig.TestkubeProAgentID
 
 	if cfg.TestkubeProAPIKey == "" || grpcClient == nil {
 		return proContext
@@ -315,9 +314,9 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 
 	ctx, cancel := context.WithTimeout(ctx, time.Second*3)
 	ctx = metadata.NewOutgoingContext(ctx, metadata.New(map[string]string{
-		"api-key":         cfg.TestkubeProAPIKey,
-		"organization-id": cfg.TestkubeProOrgID,
-		"agent-id":        cfg.TestkubeProAgentID,
+		"api-key":         proContext.APIKey,
+		"organization-id": proContext.OrgID,
+		"agent-id":        proContext.Agent.ID,
 	}))
 	defer cancel()
 	foundProContext, err := grpcClient.GetProContext(ctx, &emptypb.Empty{})
@@ -330,8 +329,8 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 		proContext.EnvID = foundProContext.EnvId
 	}
 
-	if proContext.AgentID == "" && strings.HasPrefix(proContext.APIKey, "tkcagnt_") {
-		proContext.AgentID = strings.Replace(foundProContext.EnvId, "tkcenv_", "tkcroot_", 1)
+	if proContext.Agent.ID == "" && strings.HasPrefix(proContext.APIKey, "tkcagnt_") {
+		proContext.Agent.ID = strings.Replace(foundProContext.EnvId, "tkcenv_", "tkcroot_", 1)
 	}
 
 	if proContext.OrgID == "" {
@@ -346,7 +345,7 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 		proContext.OrgSlug = foundProContext.OrgSlug
 	}
 
-	if foundProContext.Agent != nil {
+	if foundProContext.Agent != nil && foundProContext.Agent.Id != "" {
 		proContext.Agent.ID = foundProContext.Agent.Id
 		proContext.Agent.Name = foundProContext.Agent.Name
 		proContext.Agent.Type = foundProContext.Agent.Type

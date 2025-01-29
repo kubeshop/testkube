@@ -37,9 +37,19 @@ func CloudClient() controlplaneclient.Client {
 			URL:         conn.Url,
 			TLSInsecure: conn.TlsInsecure,
 			SkipVerify:  conn.SkipVerify,
-			AgentID:     cfg.Worker.Connection.ApiKey,
 			EnvID:       cfg.Execution.EnvironmentId,
 			OrgID:       cfg.Execution.OrganizationId,
+			Agent: config.ProContextAgent{
+				ID:   cfg.Worker.Connection.AgentID,
+				Name: cfg.Worker.Connection.AgentID,
+				Environments: []config.ProContextAgentEnvironment{
+					{
+						ID:   cfg.Execution.EnvironmentId,
+						Slug: cfg.Execution.EnvironmentId,
+						Name: cfg.Execution.EnvironmentId,
+					},
+				},
+			},
 		}, controlplaneclient.ClientOptions{
 			StorageSkipVerify:  true,
 			ExecutionID:        cfg.Execution.Id,

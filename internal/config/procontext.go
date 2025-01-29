@@ -34,7 +34,6 @@ type ProContext struct {
 	WorkerCount                         int
 	LogStreamWorkerCount                int
 	SkipVerify                          bool
-	AgentID                             string
 	EnvID                               string
 	EnvSlug                             string
 	EnvName                             string

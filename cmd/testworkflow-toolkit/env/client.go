@@ -55,7 +55,6 @@ func loadDefaultProContext() {
 		URL:             cfg.Worker.Connection.Url,
 		TLSInsecure:     cfg.Worker.Connection.TlsInsecure,
 		SkipVerify:      cfg.Worker.Connection.SkipVerify,
-		AgentID:         cfg.Worker.Connection.AgentID,
 		EnvID:           cfg.Execution.EnvironmentId,
 		EnvName:         cfg.Execution.EnvironmentId,
 		EnvSlug:         cfg.Execution.EnvironmentId,

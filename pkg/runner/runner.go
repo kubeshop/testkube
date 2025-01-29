@@ -119,7 +119,7 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 	if err != nil {
 		return err
 	}
-	saver, err := NewExecutionSaver(ctx, r.client, execution.Id, organizationId, environmentId, r.proContext.AgentID, logs, r.proContext.NewArchitecture)
+	saver, err := NewExecutionSaver(ctx, r.client, execution.Id, organizationId, environmentId, r.proContext.Agent.ID, logs, r.proContext.NewArchitecture)
 	if err != nil {
 		return err
 	}
