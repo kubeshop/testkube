@@ -20,6 +20,36 @@ spec:
   steps:
   - name: Run tests
     run:
+      image: alpine/jmeter:5.6
+      command:
+      - jmeter
+      args:
+      - -n
+      - -t
+      - jmeter-executor-smoke.jmx
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: jmeter-workflow-smoke-justb4-5.5
+  labels:
+    core-tests: workflows
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/jmeter/executor-tests/jmeter-executor-smoke.jmx
+  container:
+    resources:
+      requests:
+        cpu: 512m
+        memory: 512Mi
+    workingDir: /data/repo/test/jmeter/executor-tests
+  steps:
+  - name: Run tests
+    run:
       image: justb4/jmeter:5.5
       command:
       - jmeter
@@ -51,7 +81,7 @@ spec:
   - name: Run tests
     shell: jmeter -n -t jmeter-executor-smoke.jmx -j /data/artifacts/jmeter.log -o /data/artifacts/report -l /data/artifacts/jtl-report.jtl -e
     container:
-      image: justb4/jmeter:5.5
+      image: alpine/jmeter:5.6
     steps:
     - name: Save artifacts
       workingDir: /data/artifacts
@@ -113,7 +143,7 @@ spec:
       count: 5
       timeout: 30s # initialization timeout
       logs: 'always'
-      image: justb4/jmeter:5.5
+      image: alpine/jmeter:5.6
       command:
       - jmeter-server
       - -Dserver.rmi.localport=60000
@@ -130,7 +160,7 @@ spec:
   steps:
   - name: Run tests
     run:
-      image: justb4/jmeter:5.5
+      image: alpine/jmeter:5.6
       command:
       - jmeter
       args:
@@ -168,7 +198,7 @@ spec:
       count: 5
       timeout: 30s # initialization timeout
       logs: 'always'
-      image: justb4/jmeter:5.5
+      image: alpine/jmeter:5.6
       command:
       - jmeter-server
       - -Dserver.rmi.localport=60000
@@ -185,7 +215,7 @@ spec:
   steps:
   - name: Run tests
     run:
-      image: justb4/jmeter:5.5
+      image: alpine/jmeter:5.6
       shell: jmeter -n -X -Jserver.rmi.ssl.disable=true -Jclient.rmi.localport=7000 -R {{services.slave.*.ip}} -t jmeter-executor-smoke.jmx -j /data/artifacts/jmeter.log -o /data/artifacts/report -l /data/artifacts/jtl-report.jtl -e
     steps:
     - name: Save artifacts
