@@ -6,7 +6,7 @@ import (
 
 func NewEnvironmentsClient(baseUrl, token, orgID string) *EnvironmentsClient {
 	return &EnvironmentsClient{
-		RESTClient: RESTClient[Environment]{
+		RESTClient: RESTClient[Environment, Environment]{
 			BaseUrl: baseUrl,
 			Path:    "/organizations/" + orgID + "/environments",
 			Client:  http.NewClient(),
@@ -30,7 +30,7 @@ type Environment struct {
 }
 
 type EnvironmentsClient struct {
-	RESTClient[Environment]
+	RESTClient[Environment, Environment]
 }
 
 func (c EnvironmentsClient) Create(env Environment) (Environment, error) {

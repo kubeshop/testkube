@@ -15,17 +15,17 @@ type ListResponse[T All] struct {
 }
 
 type All interface {
-	Organization | Environment | Agent
+	Organization | Environment | Agent | AgentInput
 }
 
-type RESTClient[T All] struct {
+type RESTClient[I All, O All] struct {
 	BaseUrl string
 	Path    string
 	Client  http.HttpClient
 	Token   string
 }
 
-func (c RESTClient[T]) List() ([]T, error) {
+func (c RESTClient[I, O]) List() ([]O, error) {
 	path := c.Path
 	r, err := nethttp.NewRequest("GET", c.BaseUrl+path, nil)
 	r.Header.Add("Authorization", "Bearer "+c.Token)
@@ -45,12 +45,12 @@ func (c RESTClient[T]) List() ([]T, error) {
 		return nil, fmt.Errorf("error getting %s: %s", path, d)
 	}
 
-	var orgsResponse ListResponse[T]
+	var orgsResponse ListResponse[O]
 	err = json.NewDecoder(resp.Body).Decode(&orgsResponse)
 	return orgsResponse.Elements, err
 }
 
-func (c RESTClient[T]) Get(id string) (e T, err error) {
+func (c RESTClient[I, O]) Get(id string) (e O, err error) {
 	path := c.BaseUrl + c.Path + "/" + id
 	req, err := nethttp.NewRequest("GET", path, nil)
 	req.Header.Add("Authorization", "Bearer "+c.Token)
@@ -74,7 +74,7 @@ func (c RESTClient[T]) Get(id string) (e T, err error) {
 	return
 }
 
-func (c RESTClient[T]) Create(entity T, overridePath ...string) (e T, err error) {
+func (c RESTClient[I, O]) Create(entity I, overridePath ...string) (e O, err error) {
 	d, err := json.Marshal(entity)
 	if err != nil {
 		return e, err
@@ -113,7 +113,7 @@ func (c RESTClient[T]) Create(entity T, overridePath ...string) (e T, err error)
 	return e, nil
 }
 
-func (c RESTClient[T]) Delete(id string, overridePath ...string) (err error) {
+func (c RESTClient[I, O]) Delete(id string, overridePath ...string) (err error) {
 	path := c.Path + "/" + id
 	if len(overridePath) == 1 {
 		path = overridePath[0]
