@@ -164,8 +164,8 @@ func (e *IntermediateExecution) Execution() *testkube.TestWorkflowExecution {
 		if e.cr.Spec.Execution != nil {
 			// TODO: Should resolve the expressions? (`{{"{{"}}` becomes `{{`)
 			maps.Copy(e.execution.Tags, e.cr.Spec.Execution.Tags)
-			maps.Copy(e.execution.Tags, e.tags)
 		}
+		maps.Copy(e.execution.Tags, e.tags)
 	}
 	return e.execution
 }
