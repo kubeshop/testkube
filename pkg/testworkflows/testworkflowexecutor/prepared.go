@@ -164,8 +164,8 @@ func (e *IntermediateExecution) Execution() *testkube.TestWorkflowExecution {
 		if e.cr.Spec.Execution != nil {
 			// TODO: Should resolve the expressions? (`{{"{{"}}` becomes `{{`)
 			maps.Copy(e.execution.Tags, e.cr.Spec.Execution.Tags)
-			maps.Copy(e.execution.Tags, e.tags)
 		}
+		maps.Copy(e.execution.Tags, e.tags)
 	}
 	return e.execution
 }
@@ -349,6 +349,7 @@ func (e *IntermediateExecution) Finished() bool {
 func (e *IntermediateExecution) Clone() *IntermediateExecution {
 	return &IntermediateExecution{
 		cr:            e.cr.DeepCopy(),
+		dirty:         e.dirty,
 		tags:          maps.Clone(e.tags),
 		execution:     e.execution.Clone(),
 		prepended:     e.prepended,
