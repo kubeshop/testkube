@@ -349,6 +349,7 @@ func (e *IntermediateExecution) Finished() bool {
 func (e *IntermediateExecution) Clone() *IntermediateExecution {
 	return &IntermediateExecution{
 		cr:            e.cr.DeepCopy(),
+		dirty:         e.dirty,
 		tags:          maps.Clone(e.tags),
 		execution:     e.execution.Clone(),
 		prepended:     e.prepended,
