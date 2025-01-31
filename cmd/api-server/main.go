@@ -272,7 +272,7 @@ func main() {
 		cfg.TestkubeDashboardURI,
 		proContext.OrgID,
 		proContext.EnvID,
-		proContext.AgentID,
+		proContext.Agent.ID,
 		proContext.NewArchitecture,
 	)
 

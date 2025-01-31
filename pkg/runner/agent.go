@@ -332,7 +332,7 @@ func (a *agentLoop) runTestWorkflow(environmentId string, executionId string, ex
 	// Apply the known data to temporary object.
 	execution.Namespace = result.Namespace
 	execution.Signature = result.Signature
-	execution.RunnerId = a.proContext.AgentID
+	execution.RunnerId = a.proContext.Agent.ID
 	if err = a.init(context.Background(), environmentId, execution); err != nil {
 		logger.Errorw("failed to mark execution as initialized", "error", err)
 	}
