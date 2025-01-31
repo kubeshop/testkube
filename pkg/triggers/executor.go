@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"text/template"
 	"time"
 
 	"github.com/pkg/errors"
@@ -25,6 +26,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/scheduler"
 	triggerstcl "github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/triggers"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
+	"github.com/kubeshop/testkube/pkg/utils"
 	"github.com/kubeshop/testkube/pkg/workerpool"
 )
 
@@ -190,7 +192,16 @@ func (s *Service) execute(ctx context.Context, e *watcherEvent, t *testtriggersv
 
 								(*parameter.d)[key] = data
 							} else {
-								(*parameter.d)[key] = value
+								s.logger.Debugf("trigger service: executor component: trigger %s/%s parsing template %s for %s %s",
+									t.Namespace, t.Name, key, parameter.name, value)
+								data, err := s.getTemplateData(e, value)
+								if err != nil {
+									s.logger.Errorf("trigger service: executor component: trigger %s/%s parsing template %s for %s %s error %v",
+										t.Namespace, t.Name, key, value, parameter.name, err)
+									continue
+								}
+
+								(*parameter.d)[key] = string(data)
 							}
 						}
 					}
@@ -251,6 +262,21 @@ func (s *Service) getJsonPathData(e *watcherEvent, value string) (string, error)
 	}
 
 	return buf.String(), nil
+}
+
+func (s *Service) getTemplateData(e *watcherEvent, value string) ([]byte, error) {
+	var tmpl *template.Template
+	tmpl, err := utils.NewTemplate("field").Parse(value)
+	if err != nil {
+		return nil, err
+	}
+
+	var buffer bytes.Buffer
+	if err = tmpl.ExecuteTemplate(&buffer, "field", e.object); err != nil {
+		return nil, err
+	}
+
+	return buffer.Bytes(), nil
 }
 
 func (s *Service) getTests(t *testtriggersv1.TestTrigger) ([]testsv3.Test, error) {
