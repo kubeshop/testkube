@@ -33,6 +33,8 @@ func getSupportedEvents() map[string][]string {
 		string(testtrigger.CauseDeploymentImageUpdate),
 		string(testtrigger.CauseDeploymentScaleUpdate),
 		string(testtrigger.CauseDeploymentEnvUpdate),
+		string(testtrigger.CauseDeploymentGenerationModified),
+		string(testtrigger.CauseDeploymentResourceModified),
 	}
 	m[testtrigger.ResourceStatefulSet] = []string{string(testtrigger.EventCreated), string(testtrigger.EventModified), string(testtrigger.EventDeleted)}
 	m[testtrigger.ResourceDaemonSet] = []string{string(testtrigger.EventCreated), string(testtrigger.EventModified), string(testtrigger.EventDeleted)}

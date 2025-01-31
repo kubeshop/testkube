@@ -25,5 +25,6 @@ type TestWorkflowTemplate struct {
 	// test workflow annotations
 	Annotations map[string]string         `json:"annotations,omitempty"`
 	Created     time.Time                 `json:"created,omitempty"`
+	Updated     time.Time                 `json:"updated,omitempty"`
 	Spec        *TestWorkflowTemplateSpec `json:"spec,omitempty"`
 }

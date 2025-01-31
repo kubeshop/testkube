@@ -35,6 +35,39 @@ type TestKubeCloudAPIClient interface {
 	GetTestWorkflowParallelStepNotificationsStream(ctx context.Context, opts ...grpc.CallOption) (TestKubeCloudAPI_GetTestWorkflowParallelStepNotificationsStreamClient, error)
 	GetProContext(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ProContextResponse, error)
 	GetCredential(ctx context.Context, in *CredentialRequest, opts ...grpc.CallOption) (*CredentialResponse, error)
+	GetEventStream(ctx context.Context, in *EventStreamRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_GetEventStreamClient, error)
+	ScheduleExecution(ctx context.Context, in *ScheduleRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_ScheduleExecutionClient, error)
+	// Runner
+	GetUnfinishedExecutions(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (TestKubeCloudAPI_GetUnfinishedExecutionsClient, error)
+	GetRunnerRequests(ctx context.Context, opts ...grpc.CallOption) (TestKubeCloudAPI_GetRunnerRequestsClient, error)
+	InitExecution(ctx context.Context, in *InitExecutionRequest, opts ...grpc.CallOption) (*InitExecutionResponse, error)
+	GetExecution(ctx context.Context, in *GetExecutionRequest, opts ...grpc.CallOption) (*GetExecutionResponse, error)
+	UpdateExecutionResult(ctx context.Context, in *UpdateExecutionResultRequest, opts ...grpc.CallOption) (*UpdateExecutionResultResponse, error)
+	UpdateExecutionOutput(ctx context.Context, in *UpdateExecutionOutputRequest, opts ...grpc.CallOption) (*UpdateExecutionOutputResponse, error)
+	SaveExecutionLogsPresigned(ctx context.Context, in *SaveExecutionLogsPresignedRequest, opts ...grpc.CallOption) (*SaveExecutionLogsPresignedResponse, error)
+	FinishExecution(ctx context.Context, in *FinishExecutionRequest, opts ...grpc.CallOption) (*FinishExecutionResponse, error)
+	// Execution
+	SaveExecutionArtifactPresigned(ctx context.Context, in *SaveExecutionArtifactPresignedRequest, opts ...grpc.CallOption) (*SaveExecutionArtifactPresignedResponse, error)
+	AppendExecutionReport(ctx context.Context, in *AppendExecutionReportRequest, opts ...grpc.CallOption) (*AppendExecutionReportResponse, error)
+	// CRD Synchronisation
+	// -- Test Workflows
+	GetTestWorkflow(ctx context.Context, in *GetTestWorkflowRequest, opts ...grpc.CallOption) (*GetTestWorkflowResponse, error)
+	ListTestWorkflows(ctx context.Context, in *ListTestWorkflowsRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_ListTestWorkflowsClient, error)
+	ListTestWorkflowLabels(ctx context.Context, in *ListTestWorkflowLabelsRequest, opts ...grpc.CallOption) (*ListTestWorkflowLabelsResponse, error)
+	CreateTestWorkflow(ctx context.Context, in *CreateTestWorkflowRequest, opts ...grpc.CallOption) (*CreateTestWorkflowResponse, error)
+	UpdateTestWorkflow(ctx context.Context, in *UpdateTestWorkflowRequest, opts ...grpc.CallOption) (*UpdateTestWorkflowResponse, error)
+	DeleteTestWorkflow(ctx context.Context, in *DeleteTestWorkflowRequest, opts ...grpc.CallOption) (*DeleteTestWorkflowResponse, error)
+	DeleteTestWorkflowsByLabels(ctx context.Context, in *DeleteTestWorkflowsByLabelsRequest, opts ...grpc.CallOption) (*DeleteTestWorkflowsByLabelsResponse, error)
+	WatchTestWorkflowUpdates(ctx context.Context, in *WatchTestWorkflowUpdatesRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_WatchTestWorkflowUpdatesClient, error)
+	// -- Test Workflow Templates
+	GetTestWorkflowTemplate(ctx context.Context, in *GetTestWorkflowTemplateRequest, opts ...grpc.CallOption) (*GetTestWorkflowTemplateResponse, error)
+	ListTestWorkflowTemplates(ctx context.Context, in *ListTestWorkflowTemplatesRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_ListTestWorkflowTemplatesClient, error)
+	ListTestWorkflowTemplateLabels(ctx context.Context, in *ListTestWorkflowTemplateLabelsRequest, opts ...grpc.CallOption) (*ListTestWorkflowTemplateLabelsResponse, error)
+	CreateTestWorkflowTemplate(ctx context.Context, in *CreateTestWorkflowTemplateRequest, opts ...grpc.CallOption) (*CreateTestWorkflowTemplateResponse, error)
+	UpdateTestWorkflowTemplate(ctx context.Context, in *UpdateTestWorkflowTemplateRequest, opts ...grpc.CallOption) (*UpdateTestWorkflowTemplateResponse, error)
+	DeleteTestWorkflowTemplate(ctx context.Context, in *DeleteTestWorkflowTemplateRequest, opts ...grpc.CallOption) (*DeleteTestWorkflowTemplateResponse, error)
+	DeleteTestWorkflowTemplatesByLabels(ctx context.Context, in *DeleteTestWorkflowTemplatesByLabelsRequest, opts ...grpc.CallOption) (*DeleteTestWorkflowTemplatesByLabelsResponse, error)
+	WatchTestWorkflowTemplateUpdates(ctx context.Context, in *WatchTestWorkflowTemplateUpdatesRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_WatchTestWorkflowTemplateUpdatesClient, error)
 }
 
 type testKubeCloudAPIClient struct {
@@ -292,6 +325,441 @@ func (c *testKubeCloudAPIClient) GetCredential(ctx context.Context, in *Credenti
 	return out, nil
 }
 
+func (c *testKubeCloudAPIClient) GetEventStream(ctx context.Context, in *EventStreamRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_GetEventStreamClient, error) {
+	stream, err := c.cc.NewStream(ctx, &TestKubeCloudAPI_ServiceDesc.Streams[7], "/cloud.TestKubeCloudAPI/GetEventStream", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &testKubeCloudAPIGetEventStreamClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type TestKubeCloudAPI_GetEventStreamClient interface {
+	Recv() (*EventStreamData, error)
+	grpc.ClientStream
+}
+
+type testKubeCloudAPIGetEventStreamClient struct {
+	grpc.ClientStream
+}
+
+func (x *testKubeCloudAPIGetEventStreamClient) Recv() (*EventStreamData, error) {
+	m := new(EventStreamData)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *testKubeCloudAPIClient) ScheduleExecution(ctx context.Context, in *ScheduleRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_ScheduleExecutionClient, error) {
+	stream, err := c.cc.NewStream(ctx, &TestKubeCloudAPI_ServiceDesc.Streams[8], "/cloud.TestKubeCloudAPI/ScheduleExecution", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &testKubeCloudAPIScheduleExecutionClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type TestKubeCloudAPI_ScheduleExecutionClient interface {
+	Recv() (*ScheduleResponse, error)
+	grpc.ClientStream
+}
+
+type testKubeCloudAPIScheduleExecutionClient struct {
+	grpc.ClientStream
+}
+
+func (x *testKubeCloudAPIScheduleExecutionClient) Recv() (*ScheduleResponse, error) {
+	m := new(ScheduleResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *testKubeCloudAPIClient) GetUnfinishedExecutions(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (TestKubeCloudAPI_GetUnfinishedExecutionsClient, error) {
+	stream, err := c.cc.NewStream(ctx, &TestKubeCloudAPI_ServiceDesc.Streams[9], "/cloud.TestKubeCloudAPI/GetUnfinishedExecutions", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &testKubeCloudAPIGetUnfinishedExecutionsClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type TestKubeCloudAPI_GetUnfinishedExecutionsClient interface {
+	Recv() (*UnfinishedExecution, error)
+	grpc.ClientStream
+}
+
+type testKubeCloudAPIGetUnfinishedExecutionsClient struct {
+	grpc.ClientStream
+}
+
+func (x *testKubeCloudAPIGetUnfinishedExecutionsClient) Recv() (*UnfinishedExecution, error) {
+	m := new(UnfinishedExecution)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *testKubeCloudAPIClient) GetRunnerRequests(ctx context.Context, opts ...grpc.CallOption) (TestKubeCloudAPI_GetRunnerRequestsClient, error) {
+	stream, err := c.cc.NewStream(ctx, &TestKubeCloudAPI_ServiceDesc.Streams[10], "/cloud.TestKubeCloudAPI/GetRunnerRequests", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &testKubeCloudAPIGetRunnerRequestsClient{stream}
+	return x, nil
+}
+
+type TestKubeCloudAPI_GetRunnerRequestsClient interface {
+	Send(*RunnerResponse) error
+	Recv() (*RunnerRequest, error)
+	grpc.ClientStream
+}
+
+type testKubeCloudAPIGetRunnerRequestsClient struct {
+	grpc.ClientStream
+}
+
+func (x *testKubeCloudAPIGetRunnerRequestsClient) Send(m *RunnerResponse) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *testKubeCloudAPIGetRunnerRequestsClient) Recv() (*RunnerRequest, error) {
+	m := new(RunnerRequest)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *testKubeCloudAPIClient) InitExecution(ctx context.Context, in *InitExecutionRequest, opts ...grpc.CallOption) (*InitExecutionResponse, error) {
+	out := new(InitExecutionResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/InitExecution", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *testKubeCloudAPIClient) GetExecution(ctx context.Context, in *GetExecutionRequest, opts ...grpc.CallOption) (*GetExecutionResponse, error) {
+	out := new(GetExecutionResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/GetExecution", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *testKubeCloudAPIClient) UpdateExecutionResult(ctx context.Context, in *UpdateExecutionResultRequest, opts ...grpc.CallOption) (*UpdateExecutionResultResponse, error) {
+	out := new(UpdateExecutionResultResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/UpdateExecutionResult", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *testKubeCloudAPIClient) UpdateExecutionOutput(ctx context.Context, in *UpdateExecutionOutputRequest, opts ...grpc.CallOption) (*UpdateExecutionOutputResponse, error) {
+	out := new(UpdateExecutionOutputResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/UpdateExecutionOutput", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *testKubeCloudAPIClient) SaveExecutionLogsPresigned(ctx context.Context, in *SaveExecutionLogsPresignedRequest, opts ...grpc.CallOption) (*SaveExecutionLogsPresignedResponse, error) {
+	out := new(SaveExecutionLogsPresignedResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/SaveExecutionLogsPresigned", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *testKubeCloudAPIClient) FinishExecution(ctx context.Context, in *FinishExecutionRequest, opts ...grpc.CallOption) (*FinishExecutionResponse, error) {
+	out := new(FinishExecutionResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/FinishExecution", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *testKubeCloudAPIClient) SaveExecutionArtifactPresigned(ctx context.Context, in *SaveExecutionArtifactPresignedRequest, opts ...grpc.CallOption) (*SaveExecutionArtifactPresignedResponse, error) {
+	out := new(SaveExecutionArtifactPresignedResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/SaveExecutionArtifactPresigned", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *testKubeCloudAPIClient) AppendExecutionReport(ctx context.Context, in *AppendExecutionReportRequest, opts ...grpc.CallOption) (*AppendExecutionReportResponse, error) {
+	out := new(AppendExecutionReportResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/AppendExecutionReport", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *testKubeCloudAPIClient) GetTestWorkflow(ctx context.Context, in *GetTestWorkflowRequest, opts ...grpc.CallOption) (*GetTestWorkflowResponse, error) {
+	out := new(GetTestWorkflowResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/GetTestWorkflow", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *testKubeCloudAPIClient) ListTestWorkflows(ctx context.Context, in *ListTestWorkflowsRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_ListTestWorkflowsClient, error) {
+	stream, err := c.cc.NewStream(ctx, &TestKubeCloudAPI_ServiceDesc.Streams[11], "/cloud.TestKubeCloudAPI/ListTestWorkflows", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &testKubeCloudAPIListTestWorkflowsClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type TestKubeCloudAPI_ListTestWorkflowsClient interface {
+	Recv() (*TestWorkflowListItem, error)
+	grpc.ClientStream
+}
+
+type testKubeCloudAPIListTestWorkflowsClient struct {
+	grpc.ClientStream
+}
+
+func (x *testKubeCloudAPIListTestWorkflowsClient) Recv() (*TestWorkflowListItem, error) {
+	m := new(TestWorkflowListItem)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *testKubeCloudAPIClient) ListTestWorkflowLabels(ctx context.Context, in *ListTestWorkflowLabelsRequest, opts ...grpc.CallOption) (*ListTestWorkflowLabelsResponse, error) {
+	out := new(ListTestWorkflowLabelsResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/ListTestWorkflowLabels", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *testKubeCloudAPIClient) CreateTestWorkflow(ctx context.Context, in *CreateTestWorkflowRequest, opts ...grpc.CallOption) (*CreateTestWorkflowResponse, error) {
+	out := new(CreateTestWorkflowResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/CreateTestWorkflow", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *testKubeCloudAPIClient) UpdateTestWorkflow(ctx context.Context, in *UpdateTestWorkflowRequest, opts ...grpc.CallOption) (*UpdateTestWorkflowResponse, error) {
+	out := new(UpdateTestWorkflowResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/UpdateTestWorkflow", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *testKubeCloudAPIClient) DeleteTestWorkflow(ctx context.Context, in *DeleteTestWorkflowRequest, opts ...grpc.CallOption) (*DeleteTestWorkflowResponse, error) {
+	out := new(DeleteTestWorkflowResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/DeleteTestWorkflow", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *testKubeCloudAPIClient) DeleteTestWorkflowsByLabels(ctx context.Context, in *DeleteTestWorkflowsByLabelsRequest, opts ...grpc.CallOption) (*DeleteTestWorkflowsByLabelsResponse, error) {
+	out := new(DeleteTestWorkflowsByLabelsResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/DeleteTestWorkflowsByLabels", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *testKubeCloudAPIClient) WatchTestWorkflowUpdates(ctx context.Context, in *WatchTestWorkflowUpdatesRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_WatchTestWorkflowUpdatesClient, error) {
+	stream, err := c.cc.NewStream(ctx, &TestKubeCloudAPI_ServiceDesc.Streams[12], "/cloud.TestKubeCloudAPI/WatchTestWorkflowUpdates", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &testKubeCloudAPIWatchTestWorkflowUpdatesClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type TestKubeCloudAPI_WatchTestWorkflowUpdatesClient interface {
+	Recv() (*TestWorkflowUpdate, error)
+	grpc.ClientStream
+}
+
+type testKubeCloudAPIWatchTestWorkflowUpdatesClient struct {
+	grpc.ClientStream
+}
+
+func (x *testKubeCloudAPIWatchTestWorkflowUpdatesClient) Recv() (*TestWorkflowUpdate, error) {
+	m := new(TestWorkflowUpdate)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *testKubeCloudAPIClient) GetTestWorkflowTemplate(ctx context.Context, in *GetTestWorkflowTemplateRequest, opts ...grpc.CallOption) (*GetTestWorkflowTemplateResponse, error) {
+	out := new(GetTestWorkflowTemplateResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/GetTestWorkflowTemplate", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *testKubeCloudAPIClient) ListTestWorkflowTemplates(ctx context.Context, in *ListTestWorkflowTemplatesRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_ListTestWorkflowTemplatesClient, error) {
+	stream, err := c.cc.NewStream(ctx, &TestKubeCloudAPI_ServiceDesc.Streams[13], "/cloud.TestKubeCloudAPI/ListTestWorkflowTemplates", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &testKubeCloudAPIListTestWorkflowTemplatesClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type TestKubeCloudAPI_ListTestWorkflowTemplatesClient interface {
+	Recv() (*TestWorkflowTemplateListItem, error)
+	grpc.ClientStream
+}
+
+type testKubeCloudAPIListTestWorkflowTemplatesClient struct {
+	grpc.ClientStream
+}
+
+func (x *testKubeCloudAPIListTestWorkflowTemplatesClient) Recv() (*TestWorkflowTemplateListItem, error) {
+	m := new(TestWorkflowTemplateListItem)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *testKubeCloudAPIClient) ListTestWorkflowTemplateLabels(ctx context.Context, in *ListTestWorkflowTemplateLabelsRequest, opts ...grpc.CallOption) (*ListTestWorkflowTemplateLabelsResponse, error) {
+	out := new(ListTestWorkflowTemplateLabelsResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/ListTestWorkflowTemplateLabels", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *testKubeCloudAPIClient) CreateTestWorkflowTemplate(ctx context.Context, in *CreateTestWorkflowTemplateRequest, opts ...grpc.CallOption) (*CreateTestWorkflowTemplateResponse, error) {
+	out := new(CreateTestWorkflowTemplateResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/CreateTestWorkflowTemplate", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *testKubeCloudAPIClient) UpdateTestWorkflowTemplate(ctx context.Context, in *UpdateTestWorkflowTemplateRequest, opts ...grpc.CallOption) (*UpdateTestWorkflowTemplateResponse, error) {
+	out := new(UpdateTestWorkflowTemplateResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/UpdateTestWorkflowTemplate", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *testKubeCloudAPIClient) DeleteTestWorkflowTemplate(ctx context.Context, in *DeleteTestWorkflowTemplateRequest, opts ...grpc.CallOption) (*DeleteTestWorkflowTemplateResponse, error) {
+	out := new(DeleteTestWorkflowTemplateResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/DeleteTestWorkflowTemplate", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *testKubeCloudAPIClient) DeleteTestWorkflowTemplatesByLabels(ctx context.Context, in *DeleteTestWorkflowTemplatesByLabelsRequest, opts ...grpc.CallOption) (*DeleteTestWorkflowTemplatesByLabelsResponse, error) {
+	out := new(DeleteTestWorkflowTemplatesByLabelsResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/DeleteTestWorkflowTemplatesByLabels", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *testKubeCloudAPIClient) WatchTestWorkflowTemplateUpdates(ctx context.Context, in *WatchTestWorkflowTemplateUpdatesRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_WatchTestWorkflowTemplateUpdatesClient, error) {
+	stream, err := c.cc.NewStream(ctx, &TestKubeCloudAPI_ServiceDesc.Streams[14], "/cloud.TestKubeCloudAPI/WatchTestWorkflowTemplateUpdates", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &testKubeCloudAPIWatchTestWorkflowTemplateUpdatesClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type TestKubeCloudAPI_WatchTestWorkflowTemplateUpdatesClient interface {
+	Recv() (*TestWorkflowTemplateUpdate, error)
+	grpc.ClientStream
+}
+
+type testKubeCloudAPIWatchTestWorkflowTemplateUpdatesClient struct {
+	grpc.ClientStream
+}
+
+func (x *testKubeCloudAPIWatchTestWorkflowTemplateUpdatesClient) Recv() (*TestWorkflowTemplateUpdate, error) {
+	m := new(TestWorkflowTemplateUpdate)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // TestKubeCloudAPIServer is the server API for TestKubeCloudAPI service.
 // All implementations must embed UnimplementedTestKubeCloudAPIServer
 // for forward compatibility
@@ -308,6 +776,39 @@ type TestKubeCloudAPIServer interface {
 	GetTestWorkflowParallelStepNotificationsStream(TestKubeCloudAPI_GetTestWorkflowParallelStepNotificationsStreamServer) error
 	GetProContext(context.Context, *emptypb.Empty) (*ProContextResponse, error)
 	GetCredential(context.Context, *CredentialRequest) (*CredentialResponse, error)
+	GetEventStream(*EventStreamRequest, TestKubeCloudAPI_GetEventStreamServer) error
+	ScheduleExecution(*ScheduleRequest, TestKubeCloudAPI_ScheduleExecutionServer) error
+	// Runner
+	GetUnfinishedExecutions(*emptypb.Empty, TestKubeCloudAPI_GetUnfinishedExecutionsServer) error
+	GetRunnerRequests(TestKubeCloudAPI_GetRunnerRequestsServer) error
+	InitExecution(context.Context, *InitExecutionRequest) (*InitExecutionResponse, error)
+	GetExecution(context.Context, *GetExecutionRequest) (*GetExecutionResponse, error)
+	UpdateExecutionResult(context.Context, *UpdateExecutionResultRequest) (*UpdateExecutionResultResponse, error)
+	UpdateExecutionOutput(context.Context, *UpdateExecutionOutputRequest) (*UpdateExecutionOutputResponse, error)
+	SaveExecutionLogsPresigned(context.Context, *SaveExecutionLogsPresignedRequest) (*SaveExecutionLogsPresignedResponse, error)
+	FinishExecution(context.Context, *FinishExecutionRequest) (*FinishExecutionResponse, error)
+	// Execution
+	SaveExecutionArtifactPresigned(context.Context, *SaveExecutionArtifactPresignedRequest) (*SaveExecutionArtifactPresignedResponse, error)
+	AppendExecutionReport(context.Context, *AppendExecutionReportRequest) (*AppendExecutionReportResponse, error)
+	// CRD Synchronisation
+	// -- Test Workflows
+	GetTestWorkflow(context.Context, *GetTestWorkflowRequest) (*GetTestWorkflowResponse, error)
+	ListTestWorkflows(*ListTestWorkflowsRequest, TestKubeCloudAPI_ListTestWorkflowsServer) error
+	ListTestWorkflowLabels(context.Context, *ListTestWorkflowLabelsRequest) (*ListTestWorkflowLabelsResponse, error)
+	CreateTestWorkflow(context.Context, *CreateTestWorkflowRequest) (*CreateTestWorkflowResponse, error)
+	UpdateTestWorkflow(context.Context, *UpdateTestWorkflowRequest) (*UpdateTestWorkflowResponse, error)
+	DeleteTestWorkflow(context.Context, *DeleteTestWorkflowRequest) (*DeleteTestWorkflowResponse, error)
+	DeleteTestWorkflowsByLabels(context.Context, *DeleteTestWorkflowsByLabelsRequest) (*DeleteTestWorkflowsByLabelsResponse, error)
+	WatchTestWorkflowUpdates(*WatchTestWorkflowUpdatesRequest, TestKubeCloudAPI_WatchTestWorkflowUpdatesServer) error
+	// -- Test Workflow Templates
+	GetTestWorkflowTemplate(context.Context, *GetTestWorkflowTemplateRequest) (*GetTestWorkflowTemplateResponse, error)
+	ListTestWorkflowTemplates(*ListTestWorkflowTemplatesRequest, TestKubeCloudAPI_ListTestWorkflowTemplatesServer) error
+	ListTestWorkflowTemplateLabels(context.Context, *ListTestWorkflowTemplateLabelsRequest) (*ListTestWorkflowTemplateLabelsResponse, error)
+	CreateTestWorkflowTemplate(context.Context, *CreateTestWorkflowTemplateRequest) (*CreateTestWorkflowTemplateResponse, error)
+	UpdateTestWorkflowTemplate(context.Context, *UpdateTestWorkflowTemplateRequest) (*UpdateTestWorkflowTemplateResponse, error)
+	DeleteTestWorkflowTemplate(context.Context, *DeleteTestWorkflowTemplateRequest) (*DeleteTestWorkflowTemplateResponse, error)
+	DeleteTestWorkflowTemplatesByLabels(context.Context, *DeleteTestWorkflowTemplatesByLabelsRequest) (*DeleteTestWorkflowTemplatesByLabelsResponse, error)
+	WatchTestWorkflowTemplateUpdates(*WatchTestWorkflowTemplateUpdatesRequest, TestKubeCloudAPI_WatchTestWorkflowTemplateUpdatesServer) error
 	mustEmbedUnimplementedTestKubeCloudAPIServer()
 }
 
@@ -344,6 +845,90 @@ func (UnimplementedTestKubeCloudAPIServer) GetProContext(context.Context, *empty
 }
 func (UnimplementedTestKubeCloudAPIServer) GetCredential(context.Context, *CredentialRequest) (*CredentialResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetCredential not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) GetEventStream(*EventStreamRequest, TestKubeCloudAPI_GetEventStreamServer) error {
+	return status.Errorf(codes.Unimplemented, "method GetEventStream not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) ScheduleExecution(*ScheduleRequest, TestKubeCloudAPI_ScheduleExecutionServer) error {
+	return status.Errorf(codes.Unimplemented, "method ScheduleExecution not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) GetUnfinishedExecutions(*emptypb.Empty, TestKubeCloudAPI_GetUnfinishedExecutionsServer) error {
+	return status.Errorf(codes.Unimplemented, "method GetUnfinishedExecutions not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) GetRunnerRequests(TestKubeCloudAPI_GetRunnerRequestsServer) error {
+	return status.Errorf(codes.Unimplemented, "method GetRunnerRequests not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) InitExecution(context.Context, *InitExecutionRequest) (*InitExecutionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method InitExecution not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) GetExecution(context.Context, *GetExecutionRequest) (*GetExecutionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetExecution not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) UpdateExecutionResult(context.Context, *UpdateExecutionResultRequest) (*UpdateExecutionResultResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateExecutionResult not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) UpdateExecutionOutput(context.Context, *UpdateExecutionOutputRequest) (*UpdateExecutionOutputResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateExecutionOutput not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) SaveExecutionLogsPresigned(context.Context, *SaveExecutionLogsPresignedRequest) (*SaveExecutionLogsPresignedResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SaveExecutionLogsPresigned not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) FinishExecution(context.Context, *FinishExecutionRequest) (*FinishExecutionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method FinishExecution not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) SaveExecutionArtifactPresigned(context.Context, *SaveExecutionArtifactPresignedRequest) (*SaveExecutionArtifactPresignedResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SaveExecutionArtifactPresigned not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) AppendExecutionReport(context.Context, *AppendExecutionReportRequest) (*AppendExecutionReportResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AppendExecutionReport not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) GetTestWorkflow(context.Context, *GetTestWorkflowRequest) (*GetTestWorkflowResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetTestWorkflow not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) ListTestWorkflows(*ListTestWorkflowsRequest, TestKubeCloudAPI_ListTestWorkflowsServer) error {
+	return status.Errorf(codes.Unimplemented, "method ListTestWorkflows not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) ListTestWorkflowLabels(context.Context, *ListTestWorkflowLabelsRequest) (*ListTestWorkflowLabelsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListTestWorkflowLabels not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) CreateTestWorkflow(context.Context, *CreateTestWorkflowRequest) (*CreateTestWorkflowResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateTestWorkflow not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) UpdateTestWorkflow(context.Context, *UpdateTestWorkflowRequest) (*UpdateTestWorkflowResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateTestWorkflow not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) DeleteTestWorkflow(context.Context, *DeleteTestWorkflowRequest) (*DeleteTestWorkflowResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteTestWorkflow not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) DeleteTestWorkflowsByLabels(context.Context, *DeleteTestWorkflowsByLabelsRequest) (*DeleteTestWorkflowsByLabelsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteTestWorkflowsByLabels not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) WatchTestWorkflowUpdates(*WatchTestWorkflowUpdatesRequest, TestKubeCloudAPI_WatchTestWorkflowUpdatesServer) error {
+	return status.Errorf(codes.Unimplemented, "method WatchTestWorkflowUpdates not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) GetTestWorkflowTemplate(context.Context, *GetTestWorkflowTemplateRequest) (*GetTestWorkflowTemplateResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetTestWorkflowTemplate not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) ListTestWorkflowTemplates(*ListTestWorkflowTemplatesRequest, TestKubeCloudAPI_ListTestWorkflowTemplatesServer) error {
+	return status.Errorf(codes.Unimplemented, "method ListTestWorkflowTemplates not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) ListTestWorkflowTemplateLabels(context.Context, *ListTestWorkflowTemplateLabelsRequest) (*ListTestWorkflowTemplateLabelsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListTestWorkflowTemplateLabels not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) CreateTestWorkflowTemplate(context.Context, *CreateTestWorkflowTemplateRequest) (*CreateTestWorkflowTemplateResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateTestWorkflowTemplate not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) UpdateTestWorkflowTemplate(context.Context, *UpdateTestWorkflowTemplateRequest) (*UpdateTestWorkflowTemplateResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateTestWorkflowTemplate not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) DeleteTestWorkflowTemplate(context.Context, *DeleteTestWorkflowTemplateRequest) (*DeleteTestWorkflowTemplateResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteTestWorkflowTemplate not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) DeleteTestWorkflowTemplatesByLabels(context.Context, *DeleteTestWorkflowTemplatesByLabelsRequest) (*DeleteTestWorkflowTemplatesByLabelsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteTestWorkflowTemplatesByLabels not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) WatchTestWorkflowTemplateUpdates(*WatchTestWorkflowTemplateUpdatesRequest, TestKubeCloudAPI_WatchTestWorkflowTemplateUpdatesServer) error {
+	return status.Errorf(codes.Unimplemented, "method WatchTestWorkflowTemplateUpdates not implemented")
 }
 func (UnimplementedTestKubeCloudAPIServer) mustEmbedUnimplementedTestKubeCloudAPIServer() {}
 
@@ -594,6 +1179,539 @@ func _TestKubeCloudAPI_GetCredential_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _TestKubeCloudAPI_GetEventStream_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(EventStreamRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(TestKubeCloudAPIServer).GetEventStream(m, &testKubeCloudAPIGetEventStreamServer{stream})
+}
+
+type TestKubeCloudAPI_GetEventStreamServer interface {
+	Send(*EventStreamData) error
+	grpc.ServerStream
+}
+
+type testKubeCloudAPIGetEventStreamServer struct {
+	grpc.ServerStream
+}
+
+func (x *testKubeCloudAPIGetEventStreamServer) Send(m *EventStreamData) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func _TestKubeCloudAPI_ScheduleExecution_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(ScheduleRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(TestKubeCloudAPIServer).ScheduleExecution(m, &testKubeCloudAPIScheduleExecutionServer{stream})
+}
+
+type TestKubeCloudAPI_ScheduleExecutionServer interface {
+	Send(*ScheduleResponse) error
+	grpc.ServerStream
+}
+
+type testKubeCloudAPIScheduleExecutionServer struct {
+	grpc.ServerStream
+}
+
+func (x *testKubeCloudAPIScheduleExecutionServer) Send(m *ScheduleResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func _TestKubeCloudAPI_GetUnfinishedExecutions_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(emptypb.Empty)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(TestKubeCloudAPIServer).GetUnfinishedExecutions(m, &testKubeCloudAPIGetUnfinishedExecutionsServer{stream})
+}
+
+type TestKubeCloudAPI_GetUnfinishedExecutionsServer interface {
+	Send(*UnfinishedExecution) error
+	grpc.ServerStream
+}
+
+type testKubeCloudAPIGetUnfinishedExecutionsServer struct {
+	grpc.ServerStream
+}
+
+func (x *testKubeCloudAPIGetUnfinishedExecutionsServer) Send(m *UnfinishedExecution) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func _TestKubeCloudAPI_GetRunnerRequests_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(TestKubeCloudAPIServer).GetRunnerRequests(&testKubeCloudAPIGetRunnerRequestsServer{stream})
+}
+
+type TestKubeCloudAPI_GetRunnerRequestsServer interface {
+	Send(*RunnerRequest) error
+	Recv() (*RunnerResponse, error)
+	grpc.ServerStream
+}
+
+type testKubeCloudAPIGetRunnerRequestsServer struct {
+	grpc.ServerStream
+}
+
+func (x *testKubeCloudAPIGetRunnerRequestsServer) Send(m *RunnerRequest) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *testKubeCloudAPIGetRunnerRequestsServer) Recv() (*RunnerResponse, error) {
+	m := new(RunnerResponse)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func _TestKubeCloudAPI_InitExecution_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(InitExecutionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).InitExecution(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/InitExecution",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).InitExecution(ctx, req.(*InitExecutionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TestKubeCloudAPI_GetExecution_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetExecutionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).GetExecution(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/GetExecution",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).GetExecution(ctx, req.(*GetExecutionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TestKubeCloudAPI_UpdateExecutionResult_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateExecutionResultRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).UpdateExecutionResult(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/UpdateExecutionResult",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).UpdateExecutionResult(ctx, req.(*UpdateExecutionResultRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TestKubeCloudAPI_UpdateExecutionOutput_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateExecutionOutputRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).UpdateExecutionOutput(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/UpdateExecutionOutput",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).UpdateExecutionOutput(ctx, req.(*UpdateExecutionOutputRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TestKubeCloudAPI_SaveExecutionLogsPresigned_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SaveExecutionLogsPresignedRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).SaveExecutionLogsPresigned(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/SaveExecutionLogsPresigned",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).SaveExecutionLogsPresigned(ctx, req.(*SaveExecutionLogsPresignedRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TestKubeCloudAPI_FinishExecution_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FinishExecutionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).FinishExecution(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/FinishExecution",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).FinishExecution(ctx, req.(*FinishExecutionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TestKubeCloudAPI_SaveExecutionArtifactPresigned_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SaveExecutionArtifactPresignedRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).SaveExecutionArtifactPresigned(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/SaveExecutionArtifactPresigned",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).SaveExecutionArtifactPresigned(ctx, req.(*SaveExecutionArtifactPresignedRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TestKubeCloudAPI_AppendExecutionReport_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AppendExecutionReportRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).AppendExecutionReport(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/AppendExecutionReport",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).AppendExecutionReport(ctx, req.(*AppendExecutionReportRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TestKubeCloudAPI_GetTestWorkflow_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetTestWorkflowRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).GetTestWorkflow(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/GetTestWorkflow",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).GetTestWorkflow(ctx, req.(*GetTestWorkflowRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TestKubeCloudAPI_ListTestWorkflows_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(ListTestWorkflowsRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(TestKubeCloudAPIServer).ListTestWorkflows(m, &testKubeCloudAPIListTestWorkflowsServer{stream})
+}
+
+type TestKubeCloudAPI_ListTestWorkflowsServer interface {
+	Send(*TestWorkflowListItem) error
+	grpc.ServerStream
+}
+
+type testKubeCloudAPIListTestWorkflowsServer struct {
+	grpc.ServerStream
+}
+
+func (x *testKubeCloudAPIListTestWorkflowsServer) Send(m *TestWorkflowListItem) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func _TestKubeCloudAPI_ListTestWorkflowLabels_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListTestWorkflowLabelsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).ListTestWorkflowLabels(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/ListTestWorkflowLabels",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).ListTestWorkflowLabels(ctx, req.(*ListTestWorkflowLabelsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TestKubeCloudAPI_CreateTestWorkflow_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateTestWorkflowRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).CreateTestWorkflow(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/CreateTestWorkflow",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).CreateTestWorkflow(ctx, req.(*CreateTestWorkflowRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TestKubeCloudAPI_UpdateTestWorkflow_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateTestWorkflowRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).UpdateTestWorkflow(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/UpdateTestWorkflow",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).UpdateTestWorkflow(ctx, req.(*UpdateTestWorkflowRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TestKubeCloudAPI_DeleteTestWorkflow_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteTestWorkflowRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).DeleteTestWorkflow(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/DeleteTestWorkflow",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).DeleteTestWorkflow(ctx, req.(*DeleteTestWorkflowRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TestKubeCloudAPI_DeleteTestWorkflowsByLabels_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteTestWorkflowsByLabelsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).DeleteTestWorkflowsByLabels(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/DeleteTestWorkflowsByLabels",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).DeleteTestWorkflowsByLabels(ctx, req.(*DeleteTestWorkflowsByLabelsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TestKubeCloudAPI_WatchTestWorkflowUpdates_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(WatchTestWorkflowUpdatesRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(TestKubeCloudAPIServer).WatchTestWorkflowUpdates(m, &testKubeCloudAPIWatchTestWorkflowUpdatesServer{stream})
+}
+
+type TestKubeCloudAPI_WatchTestWorkflowUpdatesServer interface {
+	Send(*TestWorkflowUpdate) error
+	grpc.ServerStream
+}
+
+type testKubeCloudAPIWatchTestWorkflowUpdatesServer struct {
+	grpc.ServerStream
+}
+
+func (x *testKubeCloudAPIWatchTestWorkflowUpdatesServer) Send(m *TestWorkflowUpdate) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func _TestKubeCloudAPI_GetTestWorkflowTemplate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetTestWorkflowTemplateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).GetTestWorkflowTemplate(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/GetTestWorkflowTemplate",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).GetTestWorkflowTemplate(ctx, req.(*GetTestWorkflowTemplateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TestKubeCloudAPI_ListTestWorkflowTemplates_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(ListTestWorkflowTemplatesRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(TestKubeCloudAPIServer).ListTestWorkflowTemplates(m, &testKubeCloudAPIListTestWorkflowTemplatesServer{stream})
+}
+
+type TestKubeCloudAPI_ListTestWorkflowTemplatesServer interface {
+	Send(*TestWorkflowTemplateListItem) error
+	grpc.ServerStream
+}
+
+type testKubeCloudAPIListTestWorkflowTemplatesServer struct {
+	grpc.ServerStream
+}
+
+func (x *testKubeCloudAPIListTestWorkflowTemplatesServer) Send(m *TestWorkflowTemplateListItem) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func _TestKubeCloudAPI_ListTestWorkflowTemplateLabels_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListTestWorkflowTemplateLabelsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).ListTestWorkflowTemplateLabels(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/ListTestWorkflowTemplateLabels",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).ListTestWorkflowTemplateLabels(ctx, req.(*ListTestWorkflowTemplateLabelsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TestKubeCloudAPI_CreateTestWorkflowTemplate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateTestWorkflowTemplateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).CreateTestWorkflowTemplate(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/CreateTestWorkflowTemplate",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).CreateTestWorkflowTemplate(ctx, req.(*CreateTestWorkflowTemplateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TestKubeCloudAPI_UpdateTestWorkflowTemplate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateTestWorkflowTemplateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).UpdateTestWorkflowTemplate(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/UpdateTestWorkflowTemplate",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).UpdateTestWorkflowTemplate(ctx, req.(*UpdateTestWorkflowTemplateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TestKubeCloudAPI_DeleteTestWorkflowTemplate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteTestWorkflowTemplateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).DeleteTestWorkflowTemplate(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/DeleteTestWorkflowTemplate",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).DeleteTestWorkflowTemplate(ctx, req.(*DeleteTestWorkflowTemplateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TestKubeCloudAPI_DeleteTestWorkflowTemplatesByLabels_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteTestWorkflowTemplatesByLabelsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).DeleteTestWorkflowTemplatesByLabels(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/DeleteTestWorkflowTemplatesByLabels",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).DeleteTestWorkflowTemplatesByLabels(ctx, req.(*DeleteTestWorkflowTemplatesByLabelsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TestKubeCloudAPI_WatchTestWorkflowTemplateUpdates_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(WatchTestWorkflowTemplateUpdatesRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(TestKubeCloudAPIServer).WatchTestWorkflowTemplateUpdates(m, &testKubeCloudAPIWatchTestWorkflowTemplateUpdatesServer{stream})
+}
+
+type TestKubeCloudAPI_WatchTestWorkflowTemplateUpdatesServer interface {
+	Send(*TestWorkflowTemplateUpdate) error
+	grpc.ServerStream
+}
+
+type testKubeCloudAPIWatchTestWorkflowTemplateUpdatesServer struct {
+	grpc.ServerStream
+}
+
+func (x *testKubeCloudAPIWatchTestWorkflowTemplateUpdatesServer) Send(m *TestWorkflowTemplateUpdate) error {
+	return x.ServerStream.SendMsg(m)
+}
+
 // TestKubeCloudAPI_ServiceDesc is the grpc.ServiceDesc for TestKubeCloudAPI service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -612,6 +1730,86 @@ var TestKubeCloudAPI_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetCredential",
 			Handler:    _TestKubeCloudAPI_GetCredential_Handler,
+		},
+		{
+			MethodName: "InitExecution",
+			Handler:    _TestKubeCloudAPI_InitExecution_Handler,
+		},
+		{
+			MethodName: "GetExecution",
+			Handler:    _TestKubeCloudAPI_GetExecution_Handler,
+		},
+		{
+			MethodName: "UpdateExecutionResult",
+			Handler:    _TestKubeCloudAPI_UpdateExecutionResult_Handler,
+		},
+		{
+			MethodName: "UpdateExecutionOutput",
+			Handler:    _TestKubeCloudAPI_UpdateExecutionOutput_Handler,
+		},
+		{
+			MethodName: "SaveExecutionLogsPresigned",
+			Handler:    _TestKubeCloudAPI_SaveExecutionLogsPresigned_Handler,
+		},
+		{
+			MethodName: "FinishExecution",
+			Handler:    _TestKubeCloudAPI_FinishExecution_Handler,
+		},
+		{
+			MethodName: "SaveExecutionArtifactPresigned",
+			Handler:    _TestKubeCloudAPI_SaveExecutionArtifactPresigned_Handler,
+		},
+		{
+			MethodName: "AppendExecutionReport",
+			Handler:    _TestKubeCloudAPI_AppendExecutionReport_Handler,
+		},
+		{
+			MethodName: "GetTestWorkflow",
+			Handler:    _TestKubeCloudAPI_GetTestWorkflow_Handler,
+		},
+		{
+			MethodName: "ListTestWorkflowLabels",
+			Handler:    _TestKubeCloudAPI_ListTestWorkflowLabels_Handler,
+		},
+		{
+			MethodName: "CreateTestWorkflow",
+			Handler:    _TestKubeCloudAPI_CreateTestWorkflow_Handler,
+		},
+		{
+			MethodName: "UpdateTestWorkflow",
+			Handler:    _TestKubeCloudAPI_UpdateTestWorkflow_Handler,
+		},
+		{
+			MethodName: "DeleteTestWorkflow",
+			Handler:    _TestKubeCloudAPI_DeleteTestWorkflow_Handler,
+		},
+		{
+			MethodName: "DeleteTestWorkflowsByLabels",
+			Handler:    _TestKubeCloudAPI_DeleteTestWorkflowsByLabels_Handler,
+		},
+		{
+			MethodName: "GetTestWorkflowTemplate",
+			Handler:    _TestKubeCloudAPI_GetTestWorkflowTemplate_Handler,
+		},
+		{
+			MethodName: "ListTestWorkflowTemplateLabels",
+			Handler:    _TestKubeCloudAPI_ListTestWorkflowTemplateLabels_Handler,
+		},
+		{
+			MethodName: "CreateTestWorkflowTemplate",
+			Handler:    _TestKubeCloudAPI_CreateTestWorkflowTemplate_Handler,
+		},
+		{
+			MethodName: "UpdateTestWorkflowTemplate",
+			Handler:    _TestKubeCloudAPI_UpdateTestWorkflowTemplate_Handler,
+		},
+		{
+			MethodName: "DeleteTestWorkflowTemplate",
+			Handler:    _TestKubeCloudAPI_DeleteTestWorkflowTemplate_Handler,
+		},
+		{
+			MethodName: "DeleteTestWorkflowTemplatesByLabels",
+			Handler:    _TestKubeCloudAPI_DeleteTestWorkflowTemplatesByLabels_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
@@ -655,6 +1853,47 @@ var TestKubeCloudAPI_ServiceDesc = grpc.ServiceDesc{
 			Handler:       _TestKubeCloudAPI_GetTestWorkflowParallelStepNotificationsStream_Handler,
 			ServerStreams: true,
 			ClientStreams: true,
+		},
+		{
+			StreamName:    "GetEventStream",
+			Handler:       _TestKubeCloudAPI_GetEventStream_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "ScheduleExecution",
+			Handler:       _TestKubeCloudAPI_ScheduleExecution_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "GetUnfinishedExecutions",
+			Handler:       _TestKubeCloudAPI_GetUnfinishedExecutions_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "GetRunnerRequests",
+			Handler:       _TestKubeCloudAPI_GetRunnerRequests_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
+		},
+		{
+			StreamName:    "ListTestWorkflows",
+			Handler:       _TestKubeCloudAPI_ListTestWorkflows_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "WatchTestWorkflowUpdates",
+			Handler:       _TestKubeCloudAPI_WatchTestWorkflowUpdates_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "ListTestWorkflowTemplates",
+			Handler:       _TestKubeCloudAPI_ListTestWorkflowTemplates_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "WatchTestWorkflowTemplateUpdates",
+			Handler:       _TestKubeCloudAPI_WatchTestWorkflowTemplateUpdates_Handler,
+			ServerStreams: true,
 		},
 	},
 	Metadata: "proto/service.proto",

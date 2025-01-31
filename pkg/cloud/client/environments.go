@@ -25,6 +25,8 @@ type Environment struct {
 	InstallCommandCli string `json:"installCommandCli,omitempty"`
 	OrganizationId    string `json:"organizationId,omitempty"`
 	AgentToken        string `json:"agentToken,omitempty"`
+	CloudStorage      bool   `json:"cloudStorage,omitempty"`
+	NewArchitecture   bool   `json:"newArchitecture,omitempty"`
 }
 
 type EnvironmentsClient struct {

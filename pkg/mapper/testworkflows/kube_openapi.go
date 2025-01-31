@@ -1162,24 +1162,48 @@ func MapTemplateSpecKubeToAPI(v testworkflowsv1.TestWorkflowTemplateSpec) testku
 }
 
 func MapTestWorkflowKubeToAPI(w testworkflowsv1.TestWorkflow) testkube.TestWorkflow {
+	updateTime := w.CreationTimestamp.Time
+	if w.DeletionTimestamp != nil {
+		updateTime = w.DeletionTimestamp.Time
+	} else {
+		for _, field := range w.ManagedFields {
+			if field.Time.After(updateTime) {
+				updateTime = field.Time.Time
+			}
+		}
+	}
+
 	return testkube.TestWorkflow{
 		Name:        w.Name,
 		Namespace:   w.Namespace,
 		Labels:      w.Labels,
 		Annotations: w.Annotations,
 		Created:     w.CreationTimestamp.Time,
+		Updated:     updateTime,
 		Description: w.Description,
 		Spec:        common.Ptr(MapSpecKubeToAPI(w.Spec)),
 	}
 }
 
 func MapTestWorkflowTemplateKubeToAPI(w testworkflowsv1.TestWorkflowTemplate) testkube.TestWorkflowTemplate {
+	updateTime := w.CreationTimestamp.Time
+	if w.DeletionTimestamp != nil {
+		updateTime = w.DeletionTimestamp.Time
+	} else {
+		for _, field := range w.ManagedFields {
+			if field.Time.After(updateTime) {
+				updateTime = field.Time.Time
+			}
+		}
+	}
+
 	return testkube.TestWorkflowTemplate{
 		Name:        w.Name,
 		Namespace:   w.Namespace,
 		Labels:      w.Labels,
 		Annotations: w.Annotations,
 		Created:     w.CreationTimestamp.Time,
+		Updated:     updateTime,
 		Description: w.Description,
 		Spec:        common.Ptr(MapTemplateSpecKubeToAPI(w.Spec)),
 	}

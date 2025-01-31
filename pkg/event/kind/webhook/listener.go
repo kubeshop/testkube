@@ -164,11 +164,18 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 	body := bytes.NewBuffer([]byte{})
 	log := l.Log.With(event.Log()...)
 
-	var err error
+	uri, err := l.processTemplate("uri", l.Uri, event)
+	if err != nil {
+		log.Errorw("uri template processing error", "error", err)
+		result = testkube.NewFailedEventResult(event.Id, err)
+		return
+	}
+
 	if l.payloadTemplate != "" {
 		var data []byte
 		data, err = l.processTemplate("payload", l.payloadTemplate, event)
 		if err != nil {
+			log.Errorw("payload template processing error", "error", err)
 			result = testkube.NewFailedEventResult(event.Id, err)
 			return
 		}
@@ -176,8 +183,9 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 		_, err = body.Write(data)
 	} else {
 		// clean envs if not requested explicitly by payload template
-		event.Envs = nil
-		err = json.NewEncoder(body).Encode(event)
+		cleanEvent := event
+		cleanEvent.Envs = nil
+		err = json.NewEncoder(body).Encode(cleanEvent)
 		if err == nil && l.payloadObjectField != "" {
 			data := map[string]string{l.payloadObjectField: body.String()}
 			body.Reset()
@@ -192,13 +200,7 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 		return
 	}
 
-	data, err := l.processTemplate("uri", l.Uri, event)
-	if err != nil {
-		result = testkube.NewFailedEventResult(event.Id, err)
-		return
-	}
-
-	request, err := http.NewRequest(http.MethodPost, string(data), body)
+	request, err := http.NewRequest(http.MethodPost, string(uri), body)
 	if err != nil {
 		log.Errorw("webhook request creating error", "error", err)
 		result = testkube.NewFailedEventResult(event.Id, err)
@@ -209,8 +211,9 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 	for key, value := range l.headers {
 		values := []*string{&key, &value}
 		for i := range values {
-			data, err = l.processTemplate("header", *values[i], event)
+			data, err := l.processTemplate("header", *values[i], event)
 			if err != nil {
+				log.Errorw("header template processing error", "error", err)
 				result = testkube.NewFailedEventResult(event.Id, err)
 				return
 			}
@@ -229,7 +232,7 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 	}
 	defer resp.Body.Close()
 
-	data, err = io.ReadAll(resp.Body)
+	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Errorw("webhook read response error", "error", err)
 		result = testkube.NewFailedEventResult(event.Id, err)

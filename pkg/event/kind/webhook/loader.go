@@ -135,23 +135,23 @@ OuterLoop:
 			vars[key] = data
 		}
 
-		for key, value := range webhook.Spec.Parameters {
-			if data, ok := vars[key]; !ok {
-				if value.Default_ != nil {
-					vars[key] = *value.Default_
-				} else if value.Required {
-					r.log.Errorw("error missing required parameter", "name", key)
+		for _, parameter := range webhook.Spec.Parameters {
+			if data, ok := vars[parameter.Name]; !ok {
+				if parameter.Default_ != nil {
+					vars[parameter.Name] = *parameter.Default_
+				} else if parameter.Required {
+					r.log.Errorw("error missing required parameter", "name", parameter.Name)
 					continue OuterLoop
 				}
-			} else if value.Pattern != "" {
-				re, err := regexp.Compile(value.Pattern)
+			} else if parameter.Pattern != "" {
+				re, err := regexp.Compile(parameter.Pattern)
 				if err != nil {
-					r.log.Errorw("error compiling pattern", "error", err, "name", key, "pattern", value.Pattern)
+					r.log.Errorw("error compiling pattern", "error", err, "name", parameter.Name, "pattern", parameter.Pattern)
 					continue OuterLoop
 				}
 
 				if !re.MatchString(data) {
-					r.log.Errorw("error matching pattern", "error", err, "name", key, "pattern", value.Pattern)
+					r.log.Errorw("error matching pattern", "error", err, "name", parameter.Name, "pattern", parameter.Pattern)
 					continue OuterLoop
 				}
 			}
@@ -265,13 +265,19 @@ func mergeWebhooks(dst executorv1.Webhook, src executorv1.WebhookTemplate) execu
 	}
 
 	if src.Spec.Parameters != nil {
-		if dst.Spec.Parameters == nil {
-			dst.Spec.Parameters = map[string]executorv1.WebhookParameterSchema{}
+		srcParameters := make(map[string]executorv1.WebhookParameterSchema)
+		for _, parameter := range src.Spec.Parameters {
+			srcParameters[parameter.Name] = parameter
 		}
 
-		for key, value := range src.Spec.Parameters {
-			if _, ok := (dst.Spec.Parameters)[key]; !ok {
-				dst.Spec.Parameters[key] = value
+		dstParameters := make(map[string]executorv1.WebhookParameterSchema)
+		for _, parameter := range dst.Spec.Parameters {
+			dstParameters[parameter.Name] = parameter
+		}
+
+		for name, parameter := range srcParameters {
+			if _, ok := dstParameters[name]; !ok {
+				dst.Spec.Parameters = append(dst.Spec.Parameters, parameter)
 			}
 		}
 	}

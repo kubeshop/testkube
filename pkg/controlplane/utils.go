@@ -13,7 +13,7 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/kubeshop/testkube/pkg/cloud"
-	"github.com/kubeshop/testkube/pkg/cloud/data/executor"
+	cloudexecutor "github.com/kubeshop/testkube/pkg/cloud/data/executor"
 	"github.com/kubeshop/testkube/pkg/log"
 )
 
@@ -22,7 +22,7 @@ type grpcstatus interface {
 }
 
 type CommandHandler func(ctx context.Context, req *cloud.CommandRequest) (*cloud.CommandResponse, error)
-type CommandHandlers map[executor.Command]CommandHandler
+type CommandHandlers map[cloudexecutor.Command]CommandHandler
 
 func Handler[T any, U any](fn func(ctx context.Context, payload T) (U, error)) func(ctx context.Context, req *cloud.CommandRequest) (*cloud.CommandResponse, error) {
 	return func(ctx context.Context, req *cloud.CommandRequest) (*cloud.CommandResponse, error) {

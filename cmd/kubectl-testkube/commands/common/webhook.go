@@ -10,7 +10,7 @@ import (
 )
 
 func GetWebhookConfig(configs map[string]string) (map[string]testkube.WebhookConfigValue, error) {
-	config := map[string]testkube.WebhookConfigValue{}
+	config := make(map[string]testkube.WebhookConfigValue)
 	for key, value := range configs {
 		switch {
 		case strings.HasPrefix(value, "value="):
@@ -52,8 +52,8 @@ func GetWebhookConfig(configs map[string]string) (map[string]testkube.WebhookCon
 	return config, nil
 }
 
-func GetWebhookParameters(parameters map[string]string) (map[string]testkube.WebhookParameterSchema, error) {
-	parameter := map[string]testkube.WebhookParameterSchema{}
+func GetWebhookParameters(parameters map[string]string) ([]testkube.WebhookParameterSchema, error) {
+	parameter := make([]testkube.WebhookParameterSchema, 0)
 	for key, value := range parameters {
 		r := csv.NewReader(strings.NewReader(value))
 		r.Comma = ';'
@@ -79,7 +79,8 @@ func GetWebhookParameters(parameters map[string]string) (map[string]testkube.Web
 			return nil, err
 		}
 
-		parameter[key] = testkube.WebhookParameterSchema{
+		parameter = append(parameter, testkube.WebhookParameterSchema{
+			Name:        key,
 			Description: records[0][0],
 			Required:    required,
 			Example:     records[0][2],
@@ -87,7 +88,7 @@ func GetWebhookParameters(parameters map[string]string) (map[string]testkube.Web
 				Value: records[0][3],
 			},
 			Pattern: records[0][4],
-		}
+		})
 	}
 
 	return parameter, nil

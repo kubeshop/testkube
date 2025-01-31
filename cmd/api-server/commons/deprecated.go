@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"go.mongodb.org/mongo-driver/mongo"
-	"google.golang.org/grpc"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
@@ -109,10 +108,10 @@ func (d *deprecatedRepositories) TestSuiteResults() testresult.Repository {
 	return d.testSuiteResults
 }
 
-func CreateDeprecatedRepositoriesForCloud(grpcClient cloud.TestKubeCloudAPIClient, grpcConn *grpc.ClientConn, apiKey string) DeprecatedRepositories {
+func CreateDeprecatedRepositoriesForCloud(grpcClient cloud.TestKubeCloudAPIClient, apiKey string) DeprecatedRepositories {
 	return &deprecatedRepositories{
-		testResults:      cloudresult.NewCloudResultRepository(grpcClient, grpcConn, apiKey),
-		testSuiteResults: cloudtestresult.NewCloudRepository(grpcClient, grpcConn, apiKey),
+		testResults:      cloudresult.NewCloudResultRepository(grpcClient, apiKey),
+		testSuiteResults: cloudtestresult.NewCloudRepository(grpcClient, apiKey),
 	}
 }
 

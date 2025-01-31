@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"github.com/pkg/errors"
-	"google.golang.org/grpc"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
@@ -21,8 +20,8 @@ type CloudArtifactsStorage struct {
 
 var ErrOperationNotSupported = errors.New("operation not supported")
 
-func NewCloudArtifactsStorage(cloudClient cloud.TestKubeCloudAPIClient, grpcConn *grpc.ClientConn, apiKey string) *CloudArtifactsStorage {
-	return &CloudArtifactsStorage{executor: executor.NewCloudGRPCExecutor(cloudClient, grpcConn, apiKey)}
+func NewCloudArtifactsStorage(cloudClient cloud.TestKubeCloudAPIClient, apiKey string) *CloudArtifactsStorage {
+	return &CloudArtifactsStorage{executor: executor.NewCloudGRPCExecutor(cloudClient, apiKey)}
 }
 
 func (c *CloudArtifactsStorage) ListFiles(ctx context.Context, executionID, testName, testSuiteName, testWorkflowName string) ([]testkube.Artifact, error) {

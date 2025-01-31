@@ -7,8 +7,11 @@ import (
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"k8s.io/client-go/kubernetes"
 
+	kubeclient "github.com/kubeshop/testkube-operator/pkg/client"
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
+	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/internal/config"
 	cloudartifacts "github.com/kubeshop/testkube/pkg/cloud/data/artifact"
 	cloudconfig "github.com/kubeshop/testkube/pkg/cloud/data/config"
@@ -16,18 +19,23 @@ import (
 	cloudtestresult "github.com/kubeshop/testkube/pkg/cloud/data/testresult"
 	cloudtestworkflow "github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
 	"github.com/kubeshop/testkube/pkg/controlplane"
+	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/featureflags"
 	"github.com/kubeshop/testkube/pkg/k8sclient"
 	"github.com/kubeshop/testkube/pkg/log"
 	logsclient "github.com/kubeshop/testkube/pkg/logs/client"
-	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
+	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
+	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
 	"github.com/kubeshop/testkube/pkg/repository/result"
 	"github.com/kubeshop/testkube/pkg/repository/sequence"
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
+	runner2 "github.com/kubeshop/testkube/pkg/runner"
 	"github.com/kubeshop/testkube/pkg/secret"
+	"github.com/kubeshop/testkube/pkg/secretmanager"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
 	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 )
 
 func mapTestWorkflowFilters(s []*testworkflow.FilterImpl) []testworkflow.Filter {
@@ -54,15 +62,24 @@ func mapTestSuiteFilters(s []*testresult.FilterImpl) []testresult.Filter {
 	return v
 }
 
-func CreateControlPlane(ctx context.Context, cfg *config.Config, features featureflags.FeatureFlags, configMapClient configRepo.Repository) *controlplane.Server {
+func CreateControlPlane(ctx context.Context, cfg *config.Config, features featureflags.FeatureFlags, secretManager secretmanager.SecretManager, metrics metrics.Metrics, runner runner2.RunnerExecute, emitter event.Interface) *controlplane.Server {
 	// Connect to the cluster
-	clientset, err := k8sclient.ConnectToK8s()
+	kubeConfig, err := k8sclient.GetK8sClientConfig()
+	commons.ExitOnError("Getting kubernetes config", err)
+	clientset, err := kubernetes.NewForConfig(kubeConfig)
 	commons.ExitOnError("Creating k8s clientset", err)
+	kubeClient, err := kubeclient.GetClient()
+	commons.ExitOnError("Getting kubernetes client", err)
 
 	// Connect to storages
 	secretClient := secret.NewClientFor(clientset, cfg.TestkubeNamespace)
 	db := commons.MustGetMongoDatabase(ctx, cfg, secretClient, !cfg.DisableMongoMigrations)
 	storageClient := commons.MustGetMinioClient(cfg)
+
+	testWorkflowsClient, err := testworkflowclient.NewKubernetesTestWorkflowClient(kubeClient, kubeConfig, cfg.TestkubeNamespace)
+	commons.ExitOnError("Creating test workflow client", err)
+	testWorkflowTemplatesClient, err := testworkflowtemplateclient.NewKubernetesTestWorkflowTemplateClient(kubeClient, kubeConfig, cfg.TestkubeNamespace)
+	commons.ExitOnError("Creating test workflow templates client", err)
 
 	var logGrpcClient logsclient.StreamGetter
 	if !cfg.DisableDeprecatedTests && features.LogsV2 {
@@ -81,14 +98,6 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 	// Set up "Config" commands
 	configCommands := controlplane.CommandHandlers{
 		cloudconfig.CmdConfigGetOrganizationPlan: controlplane.Handler(func(ctx context.Context, data checktcl.GetOrganizationPlanRequest) (r checktcl.GetOrganizationPlanResponse, err error) {
-			return
-		}),
-		cloudconfig.CmdConfigGetUniqueClusterId: controlplane.Handler(func(ctx context.Context, data cloudconfig.GetUniqueClusterIdRequest) (r cloudconfig.GetUniqueClusterIdResponse, err error) {
-			r.ClusterID, err = configMapClient.GetUniqueClusterId(ctx)
-			return
-		}),
-		cloudconfig.CmdConfigGetTelemetryEnabled: controlplane.Handler(func(ctx context.Context, data cloudconfig.GetTelemetryEnabledRequest) (r cloudconfig.GetTelemetryEnabledResponse, err error) {
-			r.Enabled, err = configMapClient.GetTelemetryEnabled(ctx)
 			return
 		}),
 	}
@@ -383,9 +392,32 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 		}
 	}
 
+	executor := testworkflowexecutor.New(
+		nil,
+		"",
+		cfg.CDEventsTarget,
+		emitter,
+		runner,
+		testWorkflowResultsRepository,
+		testWorkflowOutputRepository,
+		testWorkflowTemplatesClient,
+		testWorkflowsClient,
+		metrics,
+		secretManager,
+		cfg.GlobalWorkflowTemplateName,
+		cfg.TestkubeDashboardURI,
+		"",
+		"",
+		"",
+		cfg.FeatureNewArchitecture,
+	)
+
 	return controlplane.New(controlplane.Config{
-		Port:    cfg.GRPCServerPort,
-		Logger:  log.DefaultLogger,
-		Verbose: false,
-	}, commands...)
+		Port:                             cfg.GRPCServerPort,
+		Logger:                           log.DefaultLogger,
+		Verbose:                          false,
+		StorageBucket:                    cfg.StorageBucket,
+		FeatureNewArchitecture:           cfg.FeatureNewArchitecture,
+		FeatureTestWorkflowsCloudStorage: cfg.FeatureCloudStorage,
+	}, executor, storageClient, testWorkflowsClient, testWorkflowTemplatesClient, testWorkflowResultsRepository, testWorkflowOutputRepository, commands...)
 }

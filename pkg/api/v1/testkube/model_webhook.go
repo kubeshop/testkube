@@ -30,8 +30,8 @@ type Webhook struct {
 	// webhook annotations
 	Annotations map[string]string `json:"annotations,omitempty"`
 	// whether webhook is disabled
-	Disabled           bool                              `json:"disabled,omitempty"`
-	Config             map[string]WebhookConfigValue     `json:"config,omitempty"`
-	Parameters         map[string]WebhookParameterSchema `json:"parameters,omitempty"`
-	WebhookTemplateRef *WebhookTemplateRef               `json:"webhookTemplateRef,omitempty"`
+	Disabled           bool                          `json:"disabled,omitempty"`
+	Config             map[string]WebhookConfigValue `json:"config,omitempty"`
+	Parameters         []WebhookParameterSchema      `json:"parameters,omitempty"`
+	WebhookTemplateRef *WebhookTemplateRef           `json:"webhookTemplateRef,omitempty"`
 }

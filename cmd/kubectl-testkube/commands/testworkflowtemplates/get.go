@@ -12,6 +12,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testworkflowtemplates/renderer"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/ui"
+	"github.com/kubeshop/testkube/pkg/ui/uicrd"
 )
 
 func NewGetTestWorkflowTemplatesCmd() *cobra.Command {
@@ -37,7 +38,7 @@ func NewGetTestWorkflowTemplatesCmd() *cobra.Command {
 				ui.ExitOnError("getting all test workflow templates in namespace "+namespace, err)
 
 				if crdOnly {
-					ui.PrintCRDs(testworkflows.MapTemplateListAPIToKube(templates).Items, "TestWorkflowTemplate", testworkflowsv1.GroupVersion)
+					uicrd.PrintCRDs(testworkflows.MapTemplateListAPIToKube(templates).Items, "TestWorkflowTemplate", testworkflowsv1.GroupVersion)
 				} else {
 					err = render.List(cmd, templates, os.Stdout)
 					ui.PrintOnError("Rendering list", err)
@@ -50,7 +51,7 @@ func NewGetTestWorkflowTemplatesCmd() *cobra.Command {
 			ui.ExitOnError("getting test workflow in namespace "+namespace, err)
 
 			if crdOnly {
-				ui.PrintCRD(testworkflows.MapTestWorkflowTemplateAPIToKube(template), "TestWorkflowTemplate", testworkflowsv1.GroupVersion)
+				uicrd.PrintCRD(testworkflows.MapTestWorkflowTemplateAPIToKube(template), "TestWorkflowTemplate", testworkflowsv1.GroupVersion)
 			} else {
 				err = render.Obj(cmd, template, os.Stdout, renderer.TestWorkflowTemplateRenderer)
 				ui.ExitOnError("rendering obj", err)

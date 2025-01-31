@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math"
 	"time"
@@ -11,25 +12,30 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/encoding/gzip"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 
-	agentclient "github.com/kubeshop/testkube/pkg/agent/client"
-	"github.com/kubeshop/testkube/pkg/executor/output"
-
+	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/internal/config"
+	agentclient "github.com/kubeshop/testkube/pkg/agent/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
+	"github.com/kubeshop/testkube/pkg/event"
+	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/featureflags"
 )
 
 const (
-	clusterIDMeta          = "cluster-id"
-	cloudMigrateMeta       = "migrate"
-	orgIdMeta              = "organization-id"
-	envIdMeta              = "environment-id"
-	healthcheckCommand     = "healthcheck"
-	dockerImageVersionMeta = "docker-image-version"
+	clusterIDMeta           = "cluster-id"
+	cloudMigrateMeta        = "migrate"
+	orgIdMeta               = "organization-id"
+	envIdMeta               = "environment-id"
+	healthcheckCommand      = "healthcheck"
+	dockerImageVersionMeta  = "docker-image-version"
+	newArchitectureMeta     = "exec"
+	testWorkflowStorageMeta = "tw-storage"
 )
 
 // buffer up to five messages per worker
@@ -50,21 +56,6 @@ type Agent struct {
 	logStreamResponseBuffer chan *cloud.LogsStreamResponse
 	logStreamFunc           func(ctx context.Context, executionID string) (chan output.Output, error)
 
-	testWorkflowNotificationsWorkerCount    int
-	testWorkflowNotificationsRequestBuffer  chan *cloud.TestWorkflowNotificationsRequest
-	testWorkflowNotificationsResponseBuffer chan *cloud.TestWorkflowNotificationsResponse
-	testWorkflowNotificationsFunc           func(ctx context.Context, executionID string) (<-chan testkube.TestWorkflowExecutionNotification, error)
-
-	testWorkflowServiceNotificationsWorkerCount    int
-	testWorkflowServiceNotificationsRequestBuffer  chan *cloud.TestWorkflowServiceNotificationsRequest
-	testWorkflowServiceNotificationsResponseBuffer chan *cloud.TestWorkflowServiceNotificationsResponse
-	testWorkflowServiceNotificationsFunc           func(ctx context.Context, executionID, serviceName string, serviceIndex int) (<-chan testkube.TestWorkflowExecutionNotification, error)
-
-	testWorkflowParallelStepNotificationsWorkerCount    int
-	testWorkflowParallelStepNotificationsRequestBuffer  chan *cloud.TestWorkflowParallelStepNotificationsRequest
-	testWorkflowParallelStepNotificationsResponseBuffer chan *cloud.TestWorkflowParallelStepNotificationsResponse
-	testWorkflowParallelStepNotificationsFunc           func(ctx context.Context, executionID, ref string, workerIndex int) (<-chan testkube.TestWorkflowExecutionNotification, error)
-
 	events              chan testkube.Event
 	sendTimeout         time.Duration
 	receiveTimeout      time.Duration
@@ -76,54 +67,43 @@ type Agent struct {
 	dockerImageVersion string
 
 	proContext *config.ProContext
+
+	eventEmitter event.Interface
 }
 
 func NewAgent(logger *zap.SugaredLogger,
 	handler fasthttp.RequestHandler,
 	client cloud.TestKubeCloudAPIClient,
 	logStreamFunc func(ctx context.Context, executionID string) (chan output.Output, error),
-	workflowNotificationsFunc func(ctx context.Context, executionID string) (<-chan testkube.TestWorkflowExecutionNotification, error),
-	workflowServiceNotificationsFunc func(ctx context.Context, executionID, serviceName string, serviceIndex int) (<-chan testkube.TestWorkflowExecutionNotification, error),
-	workflowParallelStepNotificationsFunc func(ctx context.Context, executionID, ref string, workerIndex int) (<-chan testkube.TestWorkflowExecutionNotification, error),
 	clusterID string,
 	clusterName string,
 	features featureflags.FeatureFlags,
 	proContext *config.ProContext,
 	dockerImageVersion string,
+	eventEmitter event.Interface,
 ) (*Agent, error) {
 	return &Agent{
-		handler:                                 handler,
-		logger:                                  logger.With("service", "Agent", "environmentId", proContext.EnvID, "organizationId", proContext.OrgID),
-		apiKey:                                  proContext.APIKey,
-		client:                                  client,
-		events:                                  make(chan testkube.Event),
-		workerCount:                             proContext.WorkerCount,
-		requestBuffer:                           make(chan *cloud.ExecuteRequest, bufferSizePerWorker*proContext.WorkerCount),
-		responseBuffer:                          make(chan *cloud.ExecuteResponse, bufferSizePerWorker*proContext.WorkerCount),
-		receiveTimeout:                          5 * time.Minute,
-		sendTimeout:                             30 * time.Second,
-		healthcheckInterval:                     30 * time.Second,
-		logStreamWorkerCount:                    proContext.LogStreamWorkerCount,
-		logStreamRequestBuffer:                  make(chan *cloud.LogsStreamRequest, bufferSizePerWorker*proContext.LogStreamWorkerCount),
-		logStreamResponseBuffer:                 make(chan *cloud.LogsStreamResponse, bufferSizePerWorker*proContext.LogStreamWorkerCount),
-		logStreamFunc:                           logStreamFunc,
-		testWorkflowNotificationsWorkerCount:    proContext.WorkflowNotificationsWorkerCount,
-		testWorkflowNotificationsRequestBuffer:  make(chan *cloud.TestWorkflowNotificationsRequest, bufferSizePerWorker*proContext.WorkflowNotificationsWorkerCount),
-		testWorkflowNotificationsResponseBuffer: make(chan *cloud.TestWorkflowNotificationsResponse, bufferSizePerWorker*proContext.WorkflowNotificationsWorkerCount),
-		testWorkflowNotificationsFunc:           workflowNotificationsFunc,
-		testWorkflowServiceNotificationsWorkerCount:         proContext.WorkflowServiceNotificationsWorkerCount,
-		testWorkflowServiceNotificationsRequestBuffer:       make(chan *cloud.TestWorkflowServiceNotificationsRequest, bufferSizePerWorker*proContext.WorkflowServiceNotificationsWorkerCount),
-		testWorkflowServiceNotificationsResponseBuffer:      make(chan *cloud.TestWorkflowServiceNotificationsResponse, bufferSizePerWorker*proContext.WorkflowServiceNotificationsWorkerCount),
-		testWorkflowServiceNotificationsFunc:                workflowServiceNotificationsFunc,
-		testWorkflowParallelStepNotificationsWorkerCount:    proContext.WorkflowParallelStepNotificationsWorkerCount,
-		testWorkflowParallelStepNotificationsRequestBuffer:  make(chan *cloud.TestWorkflowParallelStepNotificationsRequest, bufferSizePerWorker*proContext.WorkflowParallelStepNotificationsWorkerCount),
-		testWorkflowParallelStepNotificationsResponseBuffer: make(chan *cloud.TestWorkflowParallelStepNotificationsResponse, bufferSizePerWorker*proContext.WorkflowParallelStepNotificationsWorkerCount),
-		testWorkflowParallelStepNotificationsFunc:           workflowParallelStepNotificationsFunc,
-		clusterID:          clusterID,
-		clusterName:        clusterName,
-		features:           features,
-		proContext:         proContext,
-		dockerImageVersion: dockerImageVersion,
+		handler:                 handler,
+		logger:                  logger.With("service", "Agent", "environmentId", proContext.EnvID),
+		apiKey:                  proContext.APIKey,
+		client:                  client,
+		events:                  make(chan testkube.Event),
+		workerCount:             proContext.WorkerCount,
+		requestBuffer:           make(chan *cloud.ExecuteRequest, bufferSizePerWorker*proContext.WorkerCount),
+		responseBuffer:          make(chan *cloud.ExecuteResponse, bufferSizePerWorker*proContext.WorkerCount),
+		receiveTimeout:          5 * time.Minute,
+		sendTimeout:             30 * time.Second,
+		healthcheckInterval:     30 * time.Second,
+		logStreamWorkerCount:    proContext.LogStreamWorkerCount,
+		logStreamRequestBuffer:  make(chan *cloud.LogsStreamRequest, bufferSizePerWorker*proContext.LogStreamWorkerCount),
+		logStreamResponseBuffer: make(chan *cloud.LogsStreamResponse, bufferSizePerWorker*proContext.LogStreamWorkerCount),
+		logStreamFunc:           logStreamFunc,
+		clusterID:               clusterID,
+		clusterName:             clusterName,
+		features:                features,
+		proContext:              proContext,
+		dockerImageVersion:      dockerImageVersion,
+		eventEmitter:            eventEmitter,
 	}, nil
 }
 
@@ -165,29 +145,74 @@ func (ag *Agent) run(ctx context.Context) (err error) {
 	}
 
 	g.Go(func() error {
-		return ag.runTestWorkflowNotificationsLoop(groupCtx)
-	})
-	g.Go(func() error {
-		return ag.runTestWorkflowNotificationsWorker(groupCtx, ag.testWorkflowNotificationsWorkerCount)
-	})
-
-	g.Go(func() error {
-		return ag.runTestWorkflowServiceNotificationsLoop(groupCtx)
-	})
-	g.Go(func() error {
-		return ag.runTestWorkflowServiceNotificationsWorker(groupCtx, ag.testWorkflowServiceNotificationsWorkerCount)
-	})
-
-	g.Go(func() error {
-		return ag.runTestWorkflowParallelStepNotificationsLoop(groupCtx)
-	})
-	g.Go(func() error {
-		return ag.runTestWorkflowParallelStepNotificationsWorker(groupCtx, ag.testWorkflowParallelStepNotificationsWorkerCount)
+		return ag.runEventsReaderLoop(groupCtx)
 	})
 
 	err = g.Wait()
 
 	return err
+}
+
+func (ag *Agent) runEventsReaderLoop(ctx context.Context) (err error) {
+	// Ignore when Control Plane doesn't support new executions
+	if !ag.proContext.NewArchitecture {
+		return nil
+	}
+
+	if ag.proContext.APIKey != "" {
+		ctx = agentclient.AddAPIKeyMeta(ctx, ag.proContext.APIKey)
+	}
+
+	ctx = metadata.AppendToOutgoingContext(ctx, clusterIDMeta, ag.clusterID)
+	ctx = metadata.AppendToOutgoingContext(ctx, cloudMigrateMeta, ag.proContext.Migrate)
+	ctx = metadata.AppendToOutgoingContext(ctx, envIdMeta, ag.proContext.EnvID)
+	ctx = metadata.AppendToOutgoingContext(ctx, orgIdMeta, ag.proContext.OrgID)
+
+	// creates a new Stream from the client side. ctx is used for the lifetime of the stream.
+	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
+	stream, err := ag.client.GetEventStream(ctx, &cloud.EventStreamRequest{
+		Accept: []*cloud.EventResource{{Id: "*", Type: "*"}},
+	}, opts...)
+	if err != nil {
+		ag.logger.Errorf("failed to read events stream from Control Plane: %w", err)
+		return errors.Wrap(err, "failed to setup events stream")
+	}
+
+	for {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		msg, err := stream.Recv()
+		if err != nil {
+			// Ignore if it's not implemented in the Control Plane
+			if e, ok := err.(interface{ GRPCStatus() *status.Status }); ok && e.GRPCStatus().Code() == codes.Unimplemented {
+				return nil
+			}
+			return err
+		}
+		if msg.Ping {
+			continue
+		}
+		ev := msg.Event
+		if ev.Resource == nil {
+			ev.Resource = &cloud.EventResource{}
+		}
+		tkEvent := testkube.Event{
+			Id:                    ev.Id,
+			Resource:              common.Ptr(testkube.EventResource(ev.Resource.Type)),
+			ResourceId:            ev.Resource.Id,
+			Type_:                 common.Ptr(testkube.EventType(ev.Type)),
+			TestWorkflowExecution: nil,
+			External:              true,
+		}
+		if ev.Resource.Type == string(testkube.TESTWORKFLOWEXECUTION_EventResource) {
+			var v testkube.TestWorkflowExecution
+			if err = json.Unmarshal(ev.Data, &v); err == nil {
+				tkEvent.TestWorkflowExecution = &v
+			}
+		}
+		ag.eventEmitter.Notify(tkEvent)
+	}
 }
 
 func (ag *Agent) sendResponse(ctx context.Context, stream cloud.TestKubeCloudAPI_ExecuteClient, resp *cloud.ExecuteResponse) error {
@@ -260,6 +285,13 @@ func (ag *Agent) runCommandLoop(ctx context.Context) error {
 	ctx = metadata.AppendToOutgoingContext(ctx, envIdMeta, ag.proContext.EnvID)
 	ctx = metadata.AppendToOutgoingContext(ctx, orgIdMeta, ag.proContext.OrgID)
 	ctx = metadata.AppendToOutgoingContext(ctx, dockerImageVersionMeta, ag.dockerImageVersion)
+
+	if ag.proContext.NewArchitecture {
+		ctx = metadata.AppendToOutgoingContext(ctx, newArchitectureMeta, "true")
+	}
+	if ag.proContext.CloudStorage {
+		ctx = metadata.AppendToOutgoingContext(ctx, testWorkflowStorageMeta, "true")
+	}
 
 	ag.logger.Infow("initiating streaming connection with control plane")
 	// creates a new Stream from the client side. ctx is used for the lifetime of the stream.

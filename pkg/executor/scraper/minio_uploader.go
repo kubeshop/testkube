@@ -5,6 +5,7 @@ import (
 
 	coreminio "github.com/minio/minio-go/v7"
 
+	"github.com/kubeshop/testkube/pkg/executor/scraper/scrapertypes"
 	"github.com/kubeshop/testkube/pkg/log"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -40,7 +41,7 @@ func NewMinIOUploader(endpoint, accessKeyID, secretAccessKey, region, token, buc
 	return l, nil
 }
 
-func (l *MinIOUploader) Upload(ctx context.Context, object *Object, execution testkube.Execution) error {
+func (l *MinIOUploader) Upload(ctx context.Context, object *scrapertypes.Object, execution testkube.Execution) error {
 	folder := execution.Id
 	if execution.ArtifactRequest != nil && execution.ArtifactRequest.OmitFolderPerExecution {
 		folder = ""
@@ -49,9 +50,9 @@ func (l *MinIOUploader) Upload(ctx context.Context, object *Object, execution te
 	log.DefaultLogger.Infow("MinIO loader is uploading file", "file", object.Name, "folder", folder, "size", object.Size)
 	opts := coreminio.PutObjectOptions{}
 	switch object.DataType {
-	case DataTypeRaw:
+	case scrapertypes.DataTypeRaw:
 		opts.ContentType = "application/octet-stream"
-	case DataTypeTarball:
+	case scrapertypes.DataTypeTarball:
 		opts.DisableMultipart = true
 		opts.ContentEncoding = "gzip"
 		opts.ContentType = "application/gzip"
@@ -72,4 +73,4 @@ func (l *MinIOUploader) Close() error {
 	return nil
 }
 
-var _ Uploader = (*MinIOUploader)(nil)
+var _ scrapertypes.Uploader = (*MinIOUploader)(nil)
