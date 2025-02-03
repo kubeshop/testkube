@@ -221,9 +221,9 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 	cmd.Flags().IntVar(&serviceIndex, "service-index", 0, "test workflow service index starting from 0")
 	cmd.Flags().StringVar(&parallelStepName, "parallel-step-name", "", "test workflow parallel step name or reference")
 	cmd.Flags().IntVar(&parallelStepIndex, "parallel-step-index", 0, "test workflow parallel step index starting from 0")
-	cmd.Flags().StringSliceVar(&targetMatch, "target", nil, "runner labels to match")
-	cmd.Flags().StringSliceVar(&targetNot, "target-not", nil, "runner labels to not match")
-	cmd.Flags().StringSliceVar(&targetReplicate, "target-replicate", nil, "runner labels to replicate over")
+	cmd.Flags().StringArrayVar(&targetMatch, "target", nil, "runner labels to match")
+	cmd.Flags().StringArrayVar(&targetNot, "target-not", nil, "runner labels to not match")
+	cmd.Flags().StringArrayVar(&targetReplicate, "target-replicate", nil, "runner labels to replicate over")
 
 	return cmd
 }
