@@ -255,10 +255,10 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 		}
 
 		for _, target := range execution.Targets {
-			// Optimize repeating target - if there is filter on label, avoid doing the repeat
+			// Optimize repeating target - if there is filter on label on a single value, avoid doing the repeat
 			replicate := make([]string, 0)
 			for i := 0; i < len(target.Replicate); i++ {
-				if _, ok := target.Match[target.Replicate[i]]; ok {
+				if _, ok := target.Match[target.Replicate[i]]; ok && len(target.Replicate[i]) == 1 {
 					continue
 				}
 				replicate = append(replicate, target.Replicate[i])
