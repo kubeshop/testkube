@@ -148,6 +148,40 @@ func (c RESTClient[I, O]) Create(entity I, overridePath ...string) (e O, err err
 	return e, nil
 }
 
+func (c RESTClient[I, O]) Patch(id string, entity I, overridePath ...string) (err error) {
+	d, err := json.Marshal(entity)
+	if err != nil {
+		return err
+	}
+
+	path := c.Path
+	if len(overridePath) == 1 {
+		path = overridePath[0]
+	}
+
+	r, err := nethttp.NewRequest("PATCH", c.BaseUrl+path+"/"+id, bytes.NewBuffer(d))
+	if err != nil {
+		return err
+	}
+	r.Header.Add("Content-type", "application/json")
+	r.Header.Add("Authorization", "Bearer "+c.Token)
+
+	resp, err := c.Client.Do(r)
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode > 299 {
+		d, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return fmt.Errorf("error updating %s: can't read response: %s", c.Path, err)
+		}
+		return fmt.Errorf("error updating %s: %s", c.Path, d)
+	}
+
+	return nil
+}
+
 func (c RESTClient[I, O]) Delete(id string, overridePath ...string) (err error) {
 	path := c.Path + "/" + id
 	if len(overridePath) == 1 {

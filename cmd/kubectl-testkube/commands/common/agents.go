@@ -29,3 +29,8 @@ func CreateAgent(url, token, orgID string, agent cloudclient.AgentInput) (cloudc
 	c := cloudclient.NewAgentsClient(url, token, orgID)
 	return c.Create(agent)
 }
+
+func UpdateAgent(url, token, orgID string, idOrName string, agent cloudclient.AgentInput) error {
+	c := cloudclient.NewAgentsClient(url, token, orgID)
+	return c.Patch(idOrName, agent)
+}

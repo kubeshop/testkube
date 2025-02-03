@@ -264,6 +264,30 @@ func CreateAgent(cmd *cobra.Command, input cloudclient.AgentInput) (*cloudclient
 	return &agent, nil
 }
 
+func UpdateAgent(cmd *cobra.Command, idOrName string, input cloudclient.AgentInput) (*cloudclient.Agent, error) {
+	_, _, err := common2.GetClient(cmd)
+	if err != nil {
+		return nil, errors.Wrap(err, "connecting to cloud")
+	}
+	cfg, err := config.Load()
+	if err != nil {
+		return nil, errors.Wrap(err, "loading config")
+	}
+	if cfg.CloudContext.ApiKey == "" {
+		return nil, errors.New("no api key found in config")
+	}
+
+	err = common2.UpdateAgent(cfg.CloudContext.ApiUri, cfg.CloudContext.ApiKey, cfg.CloudContext.OrganizationId, idOrName, input)
+	if err != nil {
+		return nil, errors.Wrap(err, "updating agent")
+	}
+	agent, err := common2.GetAgent(cfg.CloudContext.ApiUri, cfg.CloudContext.ApiKey, cfg.CloudContext.OrganizationId, idOrName)
+	if err != nil {
+		return nil, errors.Wrap(err, "getting updated agent")
+	}
+	return &agent, nil
+}
+
 func GetKubernetesAgents(namespaces []string) (internalAgents, error) {
 	kubeClient, err := k8sclient.ConnectToK8s()
 	if err != nil {
