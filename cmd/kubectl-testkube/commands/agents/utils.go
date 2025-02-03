@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gookit/color"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
@@ -456,6 +457,11 @@ func PrintControlPlaneAgent(agent cloudclient.Agent) {
 		agentSecretKey = ui.LightGray("<encrypted>")
 	}
 	ui.Warn("ID:            ", agent.ID)
+	if agent.Disabled {
+		ui.Warn("Disabled:      ", color.Bold.Render(color.Red.Render("disabled")))
+	} else {
+		ui.Warn("Disabled:      ", "no")
+	}
 	ui.Warn("Secret Key:    ", agentSecretKey)
 	ui.Warn("Type:          ", agentTypeLabel)
 	ui.Warn("Name:          ", agent.Name)

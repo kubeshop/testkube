@@ -28,7 +28,7 @@ func NewAgentsClient(baseUrl, token, orgID string) *AgentsClient {
 
 type AgentInput struct {
 	Name         string            `json:"name,omitempty"`
-	Disabled     bool              `json:"disabled,omitempty"`
+	Disabled     *bool             `json:"disabled,omitempty"`
 	Type         string            `json:"type,omitempty"`
 	Labels       map[string]string `json:"labels,omitempty"`
 	Environments []string          `json:"environments,omitempty"`
