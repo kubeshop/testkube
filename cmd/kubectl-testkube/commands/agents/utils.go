@@ -146,6 +146,22 @@ func GetControlPlaneEnvironments(cmd *cobra.Command) (map[string]cloudclient.Env
 	return envsMap, nil
 }
 
+func EnableNewArchitecture(cmd *cobra.Command, env cloudclient.Environment) error {
+	_, _, err := common2.GetClient(cmd)
+	if err != nil {
+		return errors.Wrap(err, "connecting to cloud")
+	}
+	cfg, err := config.Load()
+	if err != nil {
+		return errors.Wrap(err, "loading config")
+	}
+	if cfg.CloudContext.ApiKey == "" {
+		return errors.New("no api key found in config")
+	}
+
+	return common2.EnableNewArchitecture(cfg.CloudContext.ApiUri, cfg.CloudContext.ApiKey, cfg.CloudContext.OrganizationId, env)
+}
+
 func GetControlPlaneAgents(cmd *cobra.Command, agentType string) ([]cloudclient.Agent, error) {
 	agentType, _ = GetInternalAgentType(agentType)
 	_, _, err := common2.GetClient(cmd)

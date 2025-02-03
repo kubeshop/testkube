@@ -2,6 +2,7 @@ package agents
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -125,6 +126,12 @@ func UiCreateAgent(cmd *cobra.Command, agentType string, name string, labelPairs
 		input.Labels[k] = v
 	}
 
+	if len(input.Environments) == 0 {
+		cfg, err := config.Load()
+		ui.ExitOnError("loading config", err)
+		input.Environments = []string{cfg.CloudContext.EnvironmentId}
+	}
+
 	envs, err := GetControlPlaneEnvironments(cmd)
 	ui.ExitOnError("getting environments", err)
 	for i, envId := range input.Environments {
@@ -139,10 +146,21 @@ func UiCreateAgent(cmd *cobra.Command, agentType string, name string, labelPairs
 		}
 	}
 
-	if len(input.Environments) == 0 {
-		cfg, err := config.Load()
-		ui.ExitOnError("loading config", err)
-		input.Environments = []string{cfg.CloudContext.EnvironmentId}
+	// Validate if the environments have the next architecture enabled
+	for _, envId := range input.Environments {
+		env, ok := envs[envId]
+		if !ok {
+			ui.Failf("unknown environment: %s", envId)
+		}
+		if !env.NewArchitecture {
+			ui.Warn(fmt.Sprintf("Environment '%s' (%s) does not support new architecture.", env.Name, env.Id))
+			should := ui.Select("do you want to enable it?", []string{"yes", "no"})
+			if should == "" || should == "no" {
+				os.Exit(1)
+			}
+			err := EnableNewArchitecture(cmd, env)
+			ui.ExitOnError("enabling new architecture", err)
+		}
 	}
 
 	agent, err := CreateAgent(cmd, input)
