@@ -7,6 +7,7 @@ import (
 	nethttp "net/http"
 	"time"
 
+	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/http"
 )
 
@@ -27,11 +28,11 @@ func NewAgentsClient(baseUrl, token, orgID string) *AgentsClient {
 }
 
 type AgentInput struct {
-	Name         string            `json:"name,omitempty"`
-	Disabled     *bool             `json:"disabled,omitempty"`
-	Type         string            `json:"type,omitempty"`
-	Labels       map[string]string `json:"labels,omitempty"`
-	Environments []string          `json:"environments,omitempty"`
+	Name         string             `json:"name,omitempty"`
+	Disabled     *bool              `json:"disabled,omitempty"`
+	Type         string             `json:"type,omitempty"`
+	Labels       *map[string]string `json:"labels,omitempty"`
+	Environments []string           `json:"environments,omitempty"`
 }
 
 type Agent struct {
@@ -93,7 +94,7 @@ func (c AgentsClient) CreateRunner(envId string, name string, labels map[string]
 		Environments: []string{envId},
 		Name:         name,
 		Type:         AgentRunnerType,
-		Labels:       labels,
+		Labels:       common.Ptr(labels),
 	}
 	return c.RESTClient.Create(agent)
 }
@@ -103,7 +104,7 @@ func (c AgentsClient) CreateGitOpsAgent(envId string, name string, labels map[st
 		Environments: []string{envId},
 		Name:         name,
 		Type:         AgentGitOpsType,
-		Labels:       labels,
+		Labels:       common.Ptr(labels),
 	}
 	return c.RESTClient.Create(agent)
 }

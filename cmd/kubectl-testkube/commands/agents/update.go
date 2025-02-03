@@ -5,6 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/cloud/client"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -54,7 +55,7 @@ func UiUpdateAgent(cmd *cobra.Command, name string, setLabels, deleteLabels []st
 	}
 
 	agent, err = UpdateAgent(cmd, agent.ID, client.AgentInput{
-		Labels: agent.Labels,
+		Labels: common.Ptr(agent.Labels),
 	})
 	ui.ExitOnError("updating agent", err)
 

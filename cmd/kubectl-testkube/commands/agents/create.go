@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
+	"github.com/kubeshop/testkube/internal/common"
 	cloudclient "github.com/kubeshop/testkube/pkg/cloud/client"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -115,7 +116,7 @@ func UiCreateAgent(cmd *cobra.Command, agentType string, name string, labelPairs
 
 	input := cloudclient.AgentInput{
 		Name:         name,
-		Labels:       make(map[string]string),
+		Labels:       common.Ptr(make(map[string]string)),
 		Environments: environmentIds,
 	}
 
@@ -123,7 +124,7 @@ func UiCreateAgent(cmd *cobra.Command, agentType string, name string, labelPairs
 
 	for _, label := range labelPairs {
 		k, v, _ := strings.Cut(label, "=")
-		input.Labels[k] = v
+		(*input.Labels)[k] = v
 	}
 
 	if len(input.Environments) == 0 {
