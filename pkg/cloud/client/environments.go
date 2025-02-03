@@ -56,6 +56,9 @@ func (c EnvironmentsClient) EnableNewArchitecture(env Environment) error {
 		body["cloudStorage"] = true
 	}
 	d, err := json.Marshal(body)
+	if err != nil {
+		return err
+	}
 	req, err := nethttp.NewRequest("PATCH", path, bytes.NewBuffer(d))
 	req.Header.Add("Authorization", "Bearer "+c.Token)
 	if err != nil {

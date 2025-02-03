@@ -309,7 +309,7 @@ func UiInstallAgent(cmd *cobra.Command, name string, agentType string) {
 	spinner.Success()
 
 	agents, err := GetKubernetesAgents([]string{ns})
-	ui.ExitOnError("getting agents in kubernetes")
+	ui.ExitOnError("getting agents in kubernetes", err)
 
 	var foundAgent *internalAgent
 	for i := range agents {
