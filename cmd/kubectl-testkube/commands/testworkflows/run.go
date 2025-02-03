@@ -18,6 +18,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testworkflows/renderer"
 	testkubecfg "github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
+	common2 "github.com/kubeshop/testkube/internal/common"
 	apiclientv1 "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	tclcmd "github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/cmd"
@@ -52,6 +53,9 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 		parallelStepName         string
 		serviceIndex             int
 		parallelStepIndex        int
+		targetMatch              []string
+		targetNot                []string
+		targetReplicate          []string
 	)
 
 	cmd := &cobra.Command{
@@ -94,6 +98,25 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 				DisableWebhooks: disableWebhooks,
 				Tags:            tags,
 				RunningContext:  runningContext,
+				Target:          &testkube.ExecutionTarget{},
+			}
+
+			if len(targetMatch) > 0 {
+				request.Target.Match = make(map[string][]string)
+				for _, match := range targetMatch {
+					key, values, _ := strings.Cut(match, "=")
+					request.Target.Match[key] = common2.MapSlice(strings.Split(values, ","), strings.TrimSpace)
+				}
+			}
+			if len(targetNot) > 0 {
+				request.Target.Not = make(map[string][]string)
+				for _, match := range targetNot {
+					key, values, _ := strings.Cut(match, "=")
+					request.Target.Not[key] = common2.MapSlice(strings.Split(values, ","), strings.TrimSpace)
+				}
+			}
+			if len(targetReplicate) > 0 {
+				request.Target.Replicate = common2.MapSlice(strings.Split(strings.Join(targetReplicate, ","), ","), strings.TrimSpace)
 			}
 
 			var executions []testkube.TestWorkflowExecution
@@ -198,6 +221,9 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 	cmd.Flags().IntVar(&serviceIndex, "service-index", 0, "test workflow service index starting from 0")
 	cmd.Flags().StringVar(&parallelStepName, "parallel-step-name", "", "test workflow parallel step name or reference")
 	cmd.Flags().IntVar(&parallelStepIndex, "parallel-step-index", 0, "test workflow parallel step index starting from 0")
+	cmd.Flags().StringSliceVar(&targetMatch, "target", nil, "runner labels to match")
+	cmd.Flags().StringSliceVar(&targetNot, "target-not", nil, "runner labels to not match")
+	cmd.Flags().StringSliceVar(&targetReplicate, "target-replicate", nil, "runner labels to replicate over")
 
 	return cmd
 }

@@ -1,6 +1,10 @@
 package client
 
 import (
+	"encoding/json"
+	"fmt"
+	"io"
+	nethttp "net/http"
 	"time"
 
 	"github.com/kubeshop/testkube/pkg/http"
@@ -55,6 +59,33 @@ type AgentEnvironment struct {
 
 type AgentsClient struct {
 	RESTClient[AgentInput, Agent]
+}
+
+func (c AgentsClient) GetSecretKey(idOrName string) (string, error) {
+	path := c.BaseUrl + c.Path + "/" + idOrName + "/secret-key"
+	req, err := nethttp.NewRequest("GET", path, nil)
+	req.Header.Add("Authorization", "Bearer "+c.Token)
+	if err != nil {
+		return "", err
+	}
+	resp, err := c.Client.Do(req)
+	if err != nil {
+		return "", err
+	}
+
+	if resp.StatusCode > 299 {
+		d, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return "", fmt.Errorf("error getting %s: can't read response: %s", c.Path, err)
+		}
+		return "", fmt.Errorf("error getting %s: %s", path, d)
+	}
+
+	var e struct {
+		SecretKey string `json:"secretKey"`
+	}
+	err = json.NewDecoder(resp.Body).Decode(&e)
+	return e.SecretKey, err
 }
 
 func (c AgentsClient) CreateRunner(envId string, name string, labels map[string]string) (Agent, error) {

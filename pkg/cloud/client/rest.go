@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	nethttp "net/http"
+	"net/url"
+	"strings"
 
 	"github.com/kubeshop/testkube/pkg/http"
 )
@@ -28,6 +30,39 @@ type RESTClient[I All, O All] struct {
 func (c RESTClient[I, O]) List() ([]O, error) {
 	path := c.Path
 	r, err := nethttp.NewRequest("GET", c.BaseUrl+path, nil)
+	r.Header.Add("Authorization", "Bearer "+c.Token)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := c.Client.Do(r)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode >= 400 {
+		d, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("error getting %s: can't read response: %s", c.Path, err)
+		}
+		return nil, fmt.Errorf("error getting %s: %s", path, d)
+	}
+
+	var orgsResponse ListResponse[O]
+	err = json.NewDecoder(resp.Body).Decode(&orgsResponse)
+	return orgsResponse.Elements, err
+}
+
+func (c RESTClient[I, O]) ListWithQuery(query map[string]string) ([]O, error) {
+	path := c.Path
+	qs := ""
+	if len(query) > 0 {
+		q := make([]string, len(query))
+		for k, v := range query {
+			q = append(q, fmt.Sprintf("%s=%s", url.QueryEscape(k), url.QueryEscape(v)))
+		}
+		qs = "?" + strings.Join(q, "&")
+	}
+	r, err := nethttp.NewRequest("GET", c.BaseUrl+path+qs, nil)
 	r.Header.Add("Authorization", "Bearer "+c.Token)
 	if err != nil {
 		return nil, err

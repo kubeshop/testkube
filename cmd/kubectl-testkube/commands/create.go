@@ -3,6 +3,7 @@ package commands
 import (
 	"github.com/spf13/cobra"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/agents"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/executors"
@@ -49,6 +50,9 @@ func NewCreateCmd() *cobra.Command {
 	cmd.AddCommand(templates.NewCreateTemplateCmd())
 	cmd.AddCommand(testworkflows.NewCreateTestWorkflowCmd())
 	cmd.AddCommand(testworkflowtemplates.NewCreateTestWorkflowTemplateCmd())
+	cmd.AddCommand(agents.NewCreateAgentCommand())
+	cmd.AddCommand(agents.NewCreateRunnerCommand())
+	cmd.AddCommand(agents.NewCreateGitOpsCommand())
 
 	cmd.PersistentFlags().BoolVar(&crdOnly, "crd-only", false, "generate only crd")
 

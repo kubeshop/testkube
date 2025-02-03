@@ -3,6 +3,7 @@ package commands
 import (
 	"github.com/spf13/cobra"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/agents"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/executors"
@@ -48,6 +49,7 @@ func NewDeleteCmd() *cobra.Command {
 	cmd.AddCommand(templates.NewDeleteTemplateCmd())
 	cmd.AddCommand(testworkflows.NewDeleteTestWorkflowCmd())
 	cmd.AddCommand(testworkflowtemplates.NewDeleteTestWorkflowTemplateCmd())
+	cmd.AddCommand(agents.NewDeleteAgentCommand())
 
 	return cmd
 }
