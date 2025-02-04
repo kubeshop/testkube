@@ -13,7 +13,6 @@ import (
 	"google.golang.org/grpc/metadata"
 
 	v1 "github.com/kubeshop/testkube/internal/app/api/metrics"
-	"github.com/kubeshop/testkube/internal/config"
 	agentclient "github.com/kubeshop/testkube/pkg/agent/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
@@ -54,7 +53,6 @@ type executor struct {
 	secretManager          secretmanager.SecretManager
 	dashboardURI           string
 	runner                 runner.RunnerExecute
-	proContext             *config.ProContext
 	scheduler              Scheduler
 	featureNewArchitecture bool
 }
@@ -110,15 +108,11 @@ func New(
 	}
 }
 
-func (e *executor) isDirect() bool {
-	return e.proContext == nil || !e.proContext.NewArchitecture
-}
-
 func (e *executor) Execute(ctx context.Context, environmentId string, req *cloud.ScheduleRequest) TestWorkflowExecutionStream {
 	if environmentId == "" {
 		environmentId = e.defaultEnvironmentId
 	}
-	if e.isDirect() {
+	if !e.featureNewArchitecture {
 		return e.executeDirect(ctx, environmentId, req)
 	}
 	return e.execute(ctx, environmentId, req)
