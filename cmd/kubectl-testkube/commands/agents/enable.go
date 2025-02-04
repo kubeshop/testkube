@@ -66,7 +66,7 @@ func UiDisableAgent(cmd *cobra.Command, name string) {
 		})
 		ui.ExitOnError("updating agent", err)
 	} else {
-		fmt.Println("Agent is already enabled.")
+		fmt.Println("Agent is already disabled.")
 	}
 
 	PrintControlPlaneAgent(*agent)
