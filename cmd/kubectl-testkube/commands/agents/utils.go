@@ -416,6 +416,7 @@ func CreateHelmOptions(
 		"testkube-operator.enabled":    false, // TODO: INSTALL CRDs
 
 		// Enable GitOps runner
+		"testkube-api.multinamespace.enabled":              true, // TODO: Make its behavior default on next.enabled?
 		"testkube-api.next.enabled":                        true,
 		"testkube-api.next.cloudStorage":                   true,
 		"testkube-api.next.gitops.syncCloudToKubernetes":   false,
