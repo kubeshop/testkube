@@ -29,7 +29,7 @@ type RESTClient[I All, O All] struct {
 
 func (c RESTClient[I, O]) List() ([]O, error) {
 	path := c.Path
-	r, err := nethttp.NewRequest("GET", c.BaseUrl+path, nil)
+	r, err := nethttp.NewRequest(nethttp.MethodGet, c.BaseUrl+path, nil)
 	r.Header.Add("Authorization", "Bearer "+c.Token)
 	if err != nil {
 		return nil, err
@@ -62,7 +62,7 @@ func (c RESTClient[I, O]) ListWithQuery(query map[string]string) ([]O, error) {
 		}
 		qs = "?" + strings.Join(q, "&")
 	}
-	r, err := nethttp.NewRequest("GET", c.BaseUrl+path+qs, nil)
+	r, err := nethttp.NewRequest(nethttp.MethodGet, c.BaseUrl+path+qs, nil)
 	r.Header.Add("Authorization", "Bearer "+c.Token)
 	if err != nil {
 		return nil, err
@@ -87,7 +87,7 @@ func (c RESTClient[I, O]) ListWithQuery(query map[string]string) ([]O, error) {
 
 func (c RESTClient[I, O]) Get(id string) (e O, err error) {
 	path := c.BaseUrl + c.Path + "/" + id
-	req, err := nethttp.NewRequest("GET", path, nil)
+	req, err := nethttp.NewRequest(nethttp.MethodGet, path, nil)
 	req.Header.Add("Authorization", "Bearer "+c.Token)
 	if err != nil {
 		return e, err
@@ -120,7 +120,7 @@ func (c RESTClient[I, O]) Create(entity I, overridePath ...string) (e O, err err
 		path = overridePath[0]
 	}
 
-	r, err := nethttp.NewRequest("POST", c.BaseUrl+path, bytes.NewBuffer(d))
+	r, err := nethttp.NewRequest(nethttp.MethodPatch, c.BaseUrl+path, bytes.NewBuffer(d))
 	if err != nil {
 		return e, err
 	}
@@ -159,7 +159,7 @@ func (c RESTClient[I, O]) Patch(id string, entity I, overridePath ...string) (er
 		path = overridePath[0]
 	}
 
-	r, err := nethttp.NewRequest("PATCH", c.BaseUrl+path+"/"+id, bytes.NewBuffer(d))
+	r, err := nethttp.NewRequest(nethttp.MethodPatch, c.BaseUrl+path+"/"+id, bytes.NewBuffer(d))
 	if err != nil {
 		return err
 	}
@@ -188,7 +188,7 @@ func (c RESTClient[I, O]) Delete(id string, overridePath ...string) (err error) 
 		path = overridePath[0]
 	}
 
-	r, err := nethttp.NewRequest("DELETE", c.BaseUrl+path, nil)
+	r, err := nethttp.NewRequest(nethttp.MethodDelete, c.BaseUrl+path, nil)
 	if err != nil {
 		return err
 	}
