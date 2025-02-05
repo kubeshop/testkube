@@ -12,6 +12,7 @@ import (
 	templatesclientv1 "github.com/kubeshop/testkube-operator/pkg/client/templates/v1"
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	v1 "github.com/kubeshop/testkube/internal/app/api/metrics"
+	cloudwebhook "github.com/kubeshop/testkube/pkg/cloud/data/webhook"
 )
 
 func TestWebhookLoader(t *testing.T) {
@@ -30,8 +31,9 @@ func TestWebhookLoader(t *testing.T) {
 	}, nil).AnyTimes()
 	mockDeprecatedClients := commons.NewMockDeprecatedClients(mockCtrl)
 	mockDeprecatedClients.EXPECT().Templates().Return(mockTemplatesClient).AnyTimes()
+	mockWebhooRepository := cloudwebhook.NewMockWebhookRepository(mockCtrl)
 
-	webhooksLoader := NewWebhookLoader(zap.NewNop().Sugar(), mockWebhooksClient, mockWebhookTemplatesClient, mockDeprecatedClients, nil, nil, nil, v1.NewMetrics(), nil, nil)
+	webhooksLoader := NewWebhookLoader(zap.NewNop().Sugar(), mockWebhooksClient, mockWebhookTemplatesClient, mockDeprecatedClients, nil, nil, nil, v1.NewMetrics(), mockWebhooRepository, nil, nil)
 	listeners, err := webhooksLoader.Load()
 
 	assert.Equal(t, 1, len(listeners))
@@ -60,8 +62,9 @@ func TestWebhookTemplateLoader(t *testing.T) {
 
 	mockDeprecatedClients := commons.NewMockDeprecatedClients(mockCtrl)
 	mockDeprecatedClients.EXPECT().Templates().Return(mockTemplatesClient).AnyTimes()
+	mockWebhooRepository := cloudwebhook.NewMockWebhookRepository(mockCtrl)
 
-	webhooksLoader := NewWebhookLoader(zap.NewNop().Sugar(), mockWebhooksClient, mockWebhookTemplatesClient, mockDeprecatedClients, nil, nil, nil, v1.NewMetrics(), nil, nil)
+	webhooksLoader := NewWebhookLoader(zap.NewNop().Sugar(), mockWebhooksClient, mockWebhookTemplatesClient, mockDeprecatedClients, nil, nil, nil, v1.NewMetrics(), mockWebhooRepository, nil, nil)
 	listeners, err := webhooksLoader.Load()
 
 	assert.Equal(t, 1, len(listeners))

@@ -158,7 +158,7 @@ func main() {
 
 	testWorkflowResultsRepository := cloudtestworkflow.NewCloudRepository(grpcClient, cfg.TestkubeProAPIKey)
 	testWorkflowOutputRepository := cloudtestworkflow.NewCloudOutputRepository(grpcClient, cfg.TestkubeProAPIKey, cfg.StorageSkipVerify)
-	_ = cloudwebhook.NewCloudRepository(grpcClient, cfg.TestkubeProAPIKey)
+	webhookRepository := cloudwebhook.NewCloudRepository(grpcClient, cfg.TestkubeProAPIKey)
 	triggerLeaseBackend := triggers.NewAcquireAlwaysLeaseBackend()
 	artifactStorage := cloudartifacts.NewCloudArtifactsStorage(grpcClient, cfg.TestkubeProAPIKey)
 
@@ -290,7 +290,7 @@ func main() {
 	if !cfg.DisableWebhooks {
 		secretClient := secret.NewClientFor(clientset, cfg.TestkubeNamespace)
 		eventsEmitter.Loader.Register(webhook.NewWebhookLoader(log.DefaultLogger, webhooksClient, webhookTemplatesClient, deprecatedClients, deprecatedRepositories,
-			testWorkflowResultsRepository, secretClient, metrics, &proContext, envs))
+			testWorkflowResultsRepository, secretClient, metrics, webhookRepository, &proContext, envs))
 	}
 	eventsEmitter.Loader.Register(websocketLoader)
 	eventsEmitter.Loader.Register(commons.MustCreateSlackLoader(cfg, envs))

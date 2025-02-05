@@ -18,6 +18,7 @@ import (
 	cloudresult "github.com/kubeshop/testkube/pkg/cloud/data/result"
 	cloudtestresult "github.com/kubeshop/testkube/pkg/cloud/data/testresult"
 	cloudtestworkflow "github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
+	cloudwebhook "github.com/kubeshop/testkube/pkg/cloud/data/webhook"
 	"github.com/kubeshop/testkube/pkg/controlplane"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/featureflags"
@@ -98,6 +99,13 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 	// Set up "Config" commands
 	configCommands := controlplane.CommandHandlers{
 		cloudconfig.CmdConfigGetOrganizationPlan: controlplane.Handler(func(ctx context.Context, data checktcl.GetOrganizationPlanRequest) (r checktcl.GetOrganizationPlanResponse, err error) {
+			return
+		}),
+	}
+
+	// Set up "Webhook commands
+	webhoookCommands := controlplane.CommandHandlers{
+		cloudwebhook.CmdWebhookExecutionCollectResult: controlplane.Handler(func(ctx context.Context, data cloudwebhook.WebhookExecutionCollectTelemetryRequest) (r cloudwebhook.WebhookExecutionCollectTelemetryResponse, err error) {
 			return
 		}),
 	}
@@ -363,7 +371,7 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 	}
 
 	// Select commands to use
-	commands := []controlplane.CommandHandlers{configCommands, testWorkflowExecutionsCommands, testWorkflowsOutputCommands, artifactsCommands}
+	commands := []controlplane.CommandHandlers{configCommands, testWorkflowExecutionsCommands, testWorkflowsOutputCommands, artifactsCommands, webhoookCommands}
 	if !cfg.DisableDeprecatedTests {
 		commands = append(commands, deprecatedTestExecutionsCommands, deprecatedTestSuiteExecutionsCommands)
 	}
