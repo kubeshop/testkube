@@ -121,6 +121,8 @@ func (l *WebhookListener) Disabled() bool {
 func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventResult) {
 	var statusCode int
 	var err error
+
+	log := l.Log.With(event.Log()...)
 	// load global envs to be able to use them in templates
 	event.Envs = l.envs
 
@@ -141,7 +143,9 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 			errorMessage = err.Error()
 		}
 
-		l.webhookRepository.CollectExecutionResult(context.Background(), event, l.name, errorMessage, statusCode)
+		if err = l.webhookRepository.CollectExecutionResult(context.Background(), event, l.name, errorMessage, statusCode); err != nil {
+			log.Errorw("webhook collecting execution result error", "error", err)
+		}
 	}()
 
 	switch {
@@ -174,7 +178,6 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 	}
 
 	body := bytes.NewBuffer([]byte{})
-	log := l.Log.With(event.Log()...)
 
 	var uri []byte
 	uri, err = l.processTemplate("uri", l.Uri, event)
