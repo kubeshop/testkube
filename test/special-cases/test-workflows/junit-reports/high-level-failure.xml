@@ -10,11 +10,12 @@
       <property name="specId" value="0"/>
       <property name="suiteName" value="ASDF"/>
       <property name="capabilities" value="browser-ASDF"/>
-      <property name="file" value="./tests/some-test-file/>
+      <property name="file" value="./tests/some-test-file"/>
     </properties>
     <testcase classname="example-classname" name="Example name" time="17.295">
       <system-out>
         Example system-out
       </system-out>
+    </testcase>
   </testsuite>
-</testsuite>
+</testsuites>
