@@ -14,14 +14,14 @@ type CloudRepository struct {
 
 //go:generate mockgen -destination=./mock_webhook.go -package=webhook "github.com/kubeshop/testkube/pkg/cloud/data/webhook" WebhookRepository
 type WebhookRepository interface {
-	CollectExecutionTelemetry(ctx context.Context, event testkube.Event, webhookName, errorMessage string, statusCode int) error
+	CollectExecutionResult(ctx context.Context, event testkube.Event, webhookName, errorMessage string, statusCode int) error
 }
 
 func NewCloudRepository(cloudClient cloud.TestKubeCloudAPIClient, apiKey string) *CloudRepository {
 	return &CloudRepository{executor: executor.NewCloudGRPCExecutor(cloudClient, apiKey)}
 }
 
-func (c *CloudRepository) CollectExecutionTelemetry(ctx context.Context, event testkube.Event, webhookName, errorMessage string, statusCode int) error {
+func (c *CloudRepository) CollectExecutionResult(ctx context.Context, event testkube.Event, webhookName, errorMessage string, statusCode int) error {
 	var executionID, workflowName string
 	if event.TestWorkflowExecution != nil {
 		executionID = event.TestWorkflowExecution.Id

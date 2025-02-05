@@ -141,7 +141,7 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 			errorMessage = err.Error()
 		}
 
-		l.webhookRepository.CollectExecutionTelemetry(context.Background(), event, l.name, errorMessage, statusCode)
+		l.webhookRepository.CollectExecutionResult(context.Background(), event, l.name, errorMessage, statusCode)
 	}()
 
 	switch {
