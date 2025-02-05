@@ -2,7 +2,7 @@ package webhook
 
 import "github.com/kubeshop/testkube/pkg/api/v1/testkube"
 
-type WebhookExecutionCollectTelemetryRequest struct {
+type WebhookExecutionCollectResultRequest struct {
 	ExecutionID  string             `json:"executionId"`
 	WorkflowName string             `json:"workflowName"`
 	WebhookName  string             `json:"webhookName"`
@@ -11,4 +11,4 @@ type WebhookExecutionCollectTelemetryRequest struct {
 	StatusCode   int                `json:"statusCode"`
 }
 
-type WebhookExecutionCollectTelemetryResponse struct{}
+type WebhookExecutionCollectResultResponse struct{}

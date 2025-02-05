@@ -105,7 +105,7 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 
 	// Set up "Webhook commands
 	webhoookCommands := controlplane.CommandHandlers{
-		cloudwebhook.CmdWebhookExecutionCollectResult: controlplane.Handler(func(ctx context.Context, data cloudwebhook.WebhookExecutionCollectTelemetryRequest) (r cloudwebhook.WebhookExecutionCollectTelemetryResponse, err error) {
+		cloudwebhook.CmdWebhookExecutionCollectResult: controlplane.Handler(func(ctx context.Context, data cloudwebhook.WebhookExecutionCollectResultRequest) (r cloudwebhook.WebhookExecutionCollectResultResponse, err error) {
 			return
 		}),
 	}

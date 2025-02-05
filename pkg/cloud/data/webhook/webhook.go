@@ -35,7 +35,7 @@ func (c *CloudRepository) CollectExecutionTelemetry(ctx context.Context, event t
 		eventType = *event.Type_
 	}
 
-	req := WebhookExecutionCollectTelemetryRequest{
+	req := WebhookExecutionCollectResultRequest{
 		ExecutionID:  executionID,
 		WorkflowName: workflowName,
 		WebhookName:  webhookName,
