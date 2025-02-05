@@ -4,7 +4,7 @@ import "github.com/kubeshop/testkube/pkg/api/v1/testkube"
 
 type WebhookExecutionCollectResultRequest struct {
 	ExecutionID  string             `json:"executionId"`
-	Name         string             `json:"name"`
+	TestName     string             `json:"testName"`
 	WebhookName  string             `json:"webhookName"`
 	EventType    testkube.EventType `json:"eventType"`
 	ErrorMessage string             `json:"errorMessage"`

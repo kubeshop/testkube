@@ -22,23 +22,23 @@ func NewCloudRepository(cloudClient cloud.TestKubeCloudAPIClient, apiKey string)
 }
 
 func (c *CloudRepository) CollectExecutionResult(ctx context.Context, event testkube.Event, webhookName, errorMessage string, statusCode int) error {
-	var executionID, name string
+	var executionID, testName string
 	if event.TestExecution != nil {
 		executionID = event.TestExecution.Id
-		name = event.TestExecution.TestName
+		testName = event.TestExecution.TestName
 	}
 
 	if event.TestSuiteExecution != nil {
 		executionID = event.TestSuiteExecution.Id
 		if event.TestSuiteExecution.TestSuite != nil {
-			name = event.TestSuiteExecution.TestSuite.Name
+			testName = event.TestSuiteExecution.TestSuite.Name
 		}
 	}
 
 	if event.TestWorkflowExecution != nil {
 		executionID = event.TestWorkflowExecution.Id
 		if event.TestWorkflowExecution.Workflow != nil {
-			name = event.TestWorkflowExecution.Workflow.Name
+			testName = event.TestWorkflowExecution.Workflow.Name
 		}
 	}
 
@@ -49,7 +49,7 @@ func (c *CloudRepository) CollectExecutionResult(ctx context.Context, event test
 
 	req := WebhookExecutionCollectResultRequest{
 		ExecutionID:  executionID,
-		Name:         name,
+		TestName:     testName,
 		WebhookName:  webhookName,
 		EventType:    eventType,
 		ErrorMessage: errorMessage,
