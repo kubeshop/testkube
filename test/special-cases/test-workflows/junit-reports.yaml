@@ -1,7 +1,7 @@
 kind: TestWorkflow
 apiVersion: testworkflows.testkube.io/v1
 metadata:
-  name: junit-report-high-level-failurec
+  name: junit-report-high-level-failure
   labels:
     core-tests: special-cases
 spec:
@@ -12,11 +12,58 @@ spec:
       paths:
       - test/special-cases/test-workflows/junit-reports/high-level-failure.xml
   container:
-    workingDir: /data/repo/testkube/test/special-cases/test-workflows/
+    workingDir: /data/repo/test/special-cases/test-workflows/junit-reports
     image: alpine:3.21.2
   steps:
-    - name: Copy file
-      shell: cp * /data/artifacts
-      artifacts:
-        paths:
-          - /data/artifacts
+  - name: Step
+    shell: echo "Step"
+    artifacts:
+      paths:
+        - /data/repo/test/special-cases/test-workflows/junit-reports/*
+---
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: junit-report-high-level-without-testcases
+  labels:
+    core-tests: special-cases
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: junit-examples-2 # TODO: replace
+      paths:
+      - test/special-cases/test-workflows/junit-reports/high-level-without-testcases.xml
+  container:
+    workingDir: /data/repo/test/special-cases/test-workflows/junit-reports
+    image: alpine:3.21.2
+  steps:
+  - name: Step
+    shell: echo "Step"
+    artifacts:
+      paths:
+        - /data/repo/test/special-cases/test-workflows/junit-reports/*
+---
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: junit-report-high-level-testcase-both-error-and-failure
+  labels:
+    core-tests: special-cases
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: junit-examples-2 # TODO: replace
+      paths:
+      - test/special-cases/test-workflows/junit-reports/high-level-testcase-both-error-and-failure.xml
+  container:
+    workingDir: /data/repo/test/special-cases/test-workflows/junit-reports
+    image: alpine:3.21.2
+  steps:
+  - name: Step
+    shell: echo "Step"
+    artifacts:
+      paths:
+        - /data/repo/test/special-cases/test-workflows/junit-reports/*
+
