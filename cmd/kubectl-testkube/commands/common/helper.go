@@ -44,6 +44,20 @@ type HelmOptions struct {
 	EmbeddedNATS   bool
 }
 
+type HelmGenericOptions struct {
+	DryRun      bool
+	ValuesFile  string
+	Args        []string
+	ReleaseName string
+
+	RegistryURL    string
+	RepositoryName string
+	ChartName      string
+
+	Namespace string
+	Values    map[string]interface{}
+}
+
 const (
 	github                = "GitHub"
 	gitlab                = "GitLab"
@@ -112,6 +126,61 @@ func HelmUpgradeOrInstallTestkubeAgent(options HelmOptions, cfg config.Data, isM
 	return nil
 }
 
+func HelmUpgradeOrInstallGeneric(options HelmGenericOptions) *CLIError {
+	helmPath, err := lookupHelmPath()
+	if err != nil {
+		return err
+	}
+
+	if err = updateHelmRepoGeneric(helmPath, options.RegistryURL, options.RepositoryName, options.DryRun); err != nil {
+		return err
+	}
+
+	args := []string{
+		"upgrade", "--install", "--create-namespace",
+		"--namespace", options.Namespace,
+	}
+	if options.ValuesFile != "" {
+		args = append(args, "--values", options.ValuesFile)
+	}
+	args = append(args, options.ReleaseName, fmt.Sprintf("%s/%s", options.RepositoryName, options.ChartName))
+	for k, v := range options.Values {
+		switch v.(type) {
+		case int64, int32, int, uint32, uint64, bool:
+			args = append(args, "--set", fmt.Sprintf("%s=%v", k, v))
+		default:
+			if serialized, err := json.Marshal(v); err == nil {
+				args = append(args, "--set-json", fmt.Sprintf("%s=%s", k, serialized))
+			} else {
+				args = append(args, "--set", fmt.Sprintf("%s=%v", k, v))
+			}
+		}
+	}
+	args = append(args, options.Args...)
+	output, err := runHelmCommand(helmPath, args, options.DryRun)
+	if err != nil {
+		return err
+	}
+
+	ui.Debug("Helm install testkube output", output)
+	return nil
+}
+
+func HelmUninstall(namespace string, releaseName string) *CLIError {
+	helmPath, err := lookupHelmPath()
+	if err != nil {
+		return err
+	}
+	args := []string{"uninstall", "--wait", "--namespace", namespace, releaseName}
+	output, err := runHelmCommand(helmPath, args, false)
+	if err != nil {
+		return err
+	}
+
+	ui.Debug("Helm uninstall testkube output", output)
+	return nil
+}
+
 func HelmUpgradeOrInstallTestkube(options HelmOptions) *CLIError {
 	helmPath, err := lookupHelmPath()
 	if err != nil {
@@ -145,13 +214,7 @@ func lookupHelmPath() (string, *CLIError) {
 	return helmPath, nil
 }
 
-func updateHelmRepo(helmPath string, dryRun, isOnPrem bool) *CLIError {
-	registryURL := "https://kubeshop.github.io/helm-charts"
-	registryName := "kubeshop"
-	if isOnPrem {
-		registryURL = "https://kubeshop.github.io/testkube-cloud-charts"
-		registryName = "testkubeenterprise"
-	}
+func updateHelmRepoGeneric(helmPath, registryURL, registryName string, dryRun bool) *CLIError {
 	_, err := runHelmCommand(helmPath, []string{"repo", "add", registryName, registryURL}, dryRun)
 	errMsg := fmt.Sprintf("Error: repository name (%s) already exists, please specify a different name", registryName)
 	if err != nil && !strings.Contains(err.Error(), errMsg) {
@@ -164,6 +227,13 @@ func updateHelmRepo(helmPath string, dryRun, isOnPrem bool) *CLIError {
 	}
 
 	return nil
+}
+
+func updateHelmRepo(helmPath string, dryRun, isOnPrem bool) *CLIError {
+	if isOnPrem {
+		return updateHelmRepoGeneric(helmPath, "https://kubeshop.github.io/testkube-cloud-charts", "testkubeenterprise", dryRun)
+	}
+	return updateHelmRepoGeneric(helmPath, "https://kubeshop.github.io/helm-charts", "kubeshop", dryRun)
 }
 
 // It cleans existing migrations job with long TTL

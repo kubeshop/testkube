@@ -3,6 +3,7 @@ package commands
 import (
 	"github.com/spf13/cobra"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/agents"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/executors"
@@ -41,6 +42,7 @@ func NewUpdateCmd() *cobra.Command {
 	cmd.AddCommand(webhooks.UpdateWebhookCmd())
 	cmd.AddCommand(webhooktemplates.UpdateWebhookTemplateCmd())
 	cmd.AddCommand(templates.UpdateTemplateCmd())
+	cmd.AddCommand(agents.NewUpdateAgentCommand())
 
 	return cmd
 }
