@@ -131,6 +131,61 @@ func NewInstallGitOpsCommand() *cobra.Command {
 	return cmd
 }
 
+func NewInstallCRDCommand() *cobra.Command {
+	var (
+		namespace   string
+		releaseName string
+		dryRun      bool
+	)
+
+	cmd := &cobra.Command{
+		Use:    "crd",
+		Args:   cobra.MaximumNArgs(0),
+		Hidden: !log.IsTrue("EXPERIMENTAL"),
+		Run: func(cmd *cobra.Command, args []string) {
+			UiInstallCRD(cmd, namespace, releaseName, dryRun)
+		},
+	}
+
+	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace to install the Helm Chart")
+	cmd.Flags().StringVarP(&releaseName, "release-name", "r", "testkube-crd", "Helm Chart release name")
+	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "display helm commands only")
+
+	return cmd
+}
+
+func UiInstallCRD(cmd *cobra.Command, namespace string, releaseName string, dryRun bool) {
+	spinner := ui.NewSpinner("Fetching current CRDs")
+	currentNamespace, currentReleaseName, installed, err := GetCRDInstallation()
+	if err != nil {
+		spinner.Fail(err)
+		os.Exit(1)
+	}
+
+	if installed && currentReleaseName == "" {
+		spinner.Fail("The CRDs are installed, but they are not managed by our Helm Chart")
+		os.Exit(1)
+	}
+
+	if installed {
+		spinner.Success(fmt.Sprintf("The CRDs are installed already in '%s' namespace", currentNamespace))
+		namespace = currentNamespace
+		releaseName = currentReleaseName
+		spinner = ui.NewSpinner("Upgrading CRDs")
+	} else {
+		spinner.Success("CRDs not found")
+		spinner = ui.NewSpinner("Installing CRDs")
+	}
+
+	opts := CreateCRDsHelmOptions(namespace, releaseName, dryRun, nil)
+	cliErr := common2.HelmUpgradeOrInstallGeneric(opts)
+	if cliErr != nil {
+		cliErr.Print()
+		os.Exit(1)
+	}
+	spinner.Success("CRDs installed")
+}
+
 func UiInstallAgent(cmd *cobra.Command, name string, agentType string) {
 	autoCreate, _ := cmd.Flags().GetBool("create")
 	ns, _ := cmd.Flags().GetString("namespace")
@@ -165,6 +220,17 @@ func UiInstallAgent(cmd *cobra.Command, name string, agentType string) {
 		if agent != nil {
 			PrintControlPlaneAgent(*agent)
 			ui.NL()
+		}
+	}
+
+	// Validate if the CRDs are installed
+	if agentType == "sync" {
+		installed, err := HasCRDsInstalled()
+		ui.ExitOnError("validating CRD installation", err)
+
+		// Install CRDs if not available
+		if !installed {
+			UiInstallCRD(cmd, ns, "testkube-crd", false)
 		}
 	}
 
@@ -278,10 +344,10 @@ func UiInstallAgent(cmd *cobra.Command, name string, agentType string) {
 		cloudPattern, _ := cmd.Flags().GetString("cloud-pattern")
 		kubernetesPattern, _ := cmd.Flags().GetString("kubernetes-pattern")
 		opts := CreateHelmOptions(controlPlane, ns, version, dryRun, map[string]interface{}{
-			"testkube-api.next.gitops.syncCloudToKubernetes":   fromCloud,
-			"testkube-api.next.gitops.syncKubernetesToCloud":   toCloud,
-			"testkube-api.next.gitops.namePatterns.cloud":      cloudPattern,
-			"testkube-api.next.gitops.namePatterns.kubernetes": kubernetesPattern,
+			"next.gitops.syncCloudToKubernetes":   fromCloud,
+			"next.gitops.syncKubernetesToCloud":   toCloud,
+			"next.gitops.namePatterns.cloud":      cloudPattern,
+			"next.gitops.namePatterns.kubernetes": kubernetesPattern,
 		})
 		cliErr := common2.HelmUpgradeOrInstallGeneric(opts)
 		if cliErr != nil {
@@ -290,7 +356,7 @@ func UiInstallAgent(cmd *cobra.Command, name string, agentType string) {
 		}
 	case "run":
 		opts := CreateHelmOptions(controlPlane, ns, version, dryRun, map[string]interface{}{
-			"testkube-api.next.runner.enabled": true,
+			"next.runner.enabled": true,
 		})
 		if len(globalTemplate) > 0 {
 			opts.Values["global.testWorkflows.globalTemplate.enabled"] = true

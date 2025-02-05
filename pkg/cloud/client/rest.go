@@ -120,7 +120,7 @@ func (c RESTClient[I, O]) Create(entity I, overridePath ...string) (e O, err err
 		path = overridePath[0]
 	}
 
-	r, err := nethttp.NewRequest(nethttp.MethodPatch, c.BaseUrl+path, bytes.NewBuffer(d))
+	r, err := nethttp.NewRequest(nethttp.MethodPost, c.BaseUrl+path, bytes.NewBuffer(d))
 	if err != nil {
 		return e, err
 	}

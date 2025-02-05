@@ -49,6 +49,57 @@ func NewDeleteAgentCommand() *cobra.Command {
 	return cmd
 }
 
+func NewDeleteCRDCommand() *cobra.Command {
+	var (
+		confirm bool
+	)
+	cmd := &cobra.Command{
+		Use:    "crd",
+		Args:   cobra.MaximumNArgs(0),
+		Hidden: !log.IsTrue("EXPERIMENTAL"),
+		Run: func(cmd *cobra.Command, args []string) {
+			if !confirm && ui.Select("should it uninstall CRDs?", []string{"yes", "no"}) != "yes" {
+				os.Exit(1)
+			}
+
+			UiUninstallCRD(cmd)
+		},
+	}
+
+	cmd.Flags().BoolVarP(&confirm, "yes", "y", false, "non-interactive confirmation")
+
+	return cmd
+}
+
+func UiUninstallCRD(cmd *cobra.Command) {
+	spinner := ui.NewSpinner("Fetching current CRDs")
+	currentNamespace, currentReleaseName, installed, err := GetCRDInstallation()
+	if err != nil {
+		spinner.Fail(err)
+		os.Exit(1)
+	}
+
+	if installed && currentReleaseName == "" {
+		spinner.Fail("The CRDs are installed, but they are not managed by our Helm Chart")
+		os.Exit(1)
+	}
+
+	if installed {
+		spinner.Success(fmt.Sprintf("The CRDs are installed in '%s' namespace", currentNamespace))
+	} else {
+		spinner.Success("CRDs not found")
+		os.Exit(0)
+	}
+
+	spinner = ui.NewSpinner("Uninstalling CRDs")
+	cliErr := common2.HelmUninstall(currentNamespace, currentReleaseName)
+	if cliErr != nil {
+		cliErr.Print()
+		os.Exit(1)
+	}
+	spinner.Success()
+}
+
 func UiDeleteAgent(cmd *cobra.Command, name string, uninstall, deleteAgent bool) {
 	agent, err := GetControlPlaneAgent(cmd, name)
 	ui.ExitOnError("getting agent", err)

@@ -29,7 +29,7 @@ func NewCreateAgentCommand() *cobra.Command {
 			ui.NL()
 			ui.Info("Install the agent with command:")
 			ui.ShellCommand(
-				fmt.Sprintf("kubectl testkube install %s %s --secret %s --wizard", agent.Type, agent.Name, agent.SecretKey),
+				fmt.Sprintf("kubectl testkube install %s %s --secret %s", agent.Type, agent.Name, agent.SecretKey),
 			)
 		},
 	}
@@ -55,7 +55,7 @@ func NewCreateRunnerCommand() *cobra.Command {
 			ui.NL()
 			ui.Info("Install the agent with command:")
 			ui.ShellCommand(
-				fmt.Sprintf("kubectl testkube install %s %s --secret %s --wizard", agent.Type, agent.Name, agent.SecretKey),
+				fmt.Sprintf("kubectl testkube install %s %s --secret %s", agent.Type, agent.Name, agent.SecretKey),
 			)
 		},
 	}
@@ -80,7 +80,7 @@ func NewCreateGitOpsCommand() *cobra.Command {
 			ui.NL()
 			ui.Info("Install the agent with command:")
 			ui.ShellCommand(
-				fmt.Sprintf("kubectl testkube install %s %s --secret %s --wizard", agent.Type, agent.Name, agent.SecretKey),
+				fmt.Sprintf("kubectl testkube install %s %s --secret %s", agent.Type, agent.Name, agent.SecretKey),
 			)
 		},
 	}

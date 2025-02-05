@@ -50,6 +50,7 @@ func NewDeleteCmd() *cobra.Command {
 	cmd.AddCommand(testworkflows.NewDeleteTestWorkflowCmd())
 	cmd.AddCommand(testworkflowtemplates.NewDeleteTestWorkflowTemplateCmd())
 	cmd.AddCommand(agents.NewDeleteAgentCommand())
+	cmd.AddCommand(agents.NewDeleteCRDCommand())
 
 	return cmd
 }
