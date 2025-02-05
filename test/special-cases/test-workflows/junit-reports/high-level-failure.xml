@@ -1,0 +1,20 @@
+<testsuites tests="24" failures="4" errors="5" skipped="3" time="225.157">
+  <testsuite name="AAA" timestamp="2025-02-05T12:53:03" time="8.887" tests="6" failures="0" errors="0" skipped="0">
+    ...
+  </testsuite>
+  <testsuite name="BBB" timestamp="2025-02-05T12:53:02" time="14.071" tests="12" failures="4" errors="5" skipped="3">
+    ...
+  </testsuite>
+  <testsuite name="CCC" timestamp="2025-02-05T12:53:43" time="22.115" tests="6" failures="0" errors="0" skipped="0">
+    <properties>
+      <property name="specId" value="0"/>
+      <property name="suiteName" value="ASDF"/>
+      <property name="capabilities" value="browser-ASDF"/>
+      <property name="file" value="./tests/some-test-file/>
+    </properties>
+    <testcase classname="example-classname" name="Example name" time="17.295">
+      <system-out>
+        Example system-out
+      </system-out>
+  </testsuite>
+</testsuite>

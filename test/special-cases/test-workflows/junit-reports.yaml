@@ -1,0 +1,22 @@
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: junit-report-high-level-failurec
+  labels:
+    core-tests: special-cases
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: junit-examples-2 # TODO: replace
+      paths:
+      - test/special-cases/test-workflows/junit-reports/high-level-failure.xml
+  container:
+    workingDir: /data/repo/testkube/test/special-cases/test-workflows/
+    image: alpine:3.21.2
+  steps:
+    - name: Copy file
+      shell: cp * /data/artifacts
+      artifacts:
+        paths:
+          - /data/artifacts
