@@ -8,7 +8,7 @@ spec:
   content:
     git:
       uri: https://github.com/kubeshop/testkube
-      revision: junit-examples-2 # TODO: replace
+      revision: main
       paths:
       - test/special-cases/test-workflows/junit-reports/high-level-failure.xml
   container:
@@ -31,7 +31,7 @@ spec:
   content:
     git:
       uri: https://github.com/kubeshop/testkube
-      revision: junit-examples-2 # TODO: replace
+      revision: main
       paths:
       - test/special-cases/test-workflows/junit-reports/high-level-without-testcases.xml
   container:
@@ -54,7 +54,7 @@ spec:
   content:
     git:
       uri: https://github.com/kubeshop/testkube
-      revision: junit-examples-2 # TODO: replace
+      revision: main
       paths:
       - test/special-cases/test-workflows/junit-reports/high-level-testcase-both-error-and-failure.xml
   container:
