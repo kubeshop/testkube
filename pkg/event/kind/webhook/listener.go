@@ -145,6 +145,8 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 
 		if err = l.webhookRepository.CollectExecutionResult(context.Background(), event, l.name, errorMessage, statusCode); err != nil {
 			log.Errorw("webhook collecting execution result error", "error", err)
+		} else {
+			log.Info("webhook result collected", event, statusCode)
 		}
 	}()
 
