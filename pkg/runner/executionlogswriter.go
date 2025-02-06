@@ -13,6 +13,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/pkg/bufferedstream"
 	"github.com/kubeshop/testkube/pkg/controlplaneclient"
+	"github.com/kubeshop/testkube/pkg/log"
 )
 
 type LogPresigner interface {
@@ -91,6 +92,8 @@ func (e *executionLogsWriter) Save(ctx context.Context) error {
 	req.Header.Add("Content-Type", "application/octet-stream")
 	req.ContentLength = int64(contentLen)
 	res, err := http.DefaultClient.Do(req)
+	log.DefaultLogger.Errorw("log save request", "id", e.id, "request", req)
+	log.DefaultLogger.Errorw("log save response", "id", e.id, "request", req)
 	if err != nil {
 		return errors.Wrap(err, "failed to save file in the object storage")
 	}
