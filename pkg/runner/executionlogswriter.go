@@ -3,6 +3,7 @@ package runner
 import (
 	"bufio"
 	"context"
+	"crypto/tls"
 	"io"
 	"net/http"
 	"sync"
@@ -79,18 +80,23 @@ func (e *executionLogsWriter) Save(ctx context.Context) error {
 		return err
 	}
 
-	content := e.buffer
-	contentLen := content.Len()
+	contentLen := e.buffer.Len()
+	body := e.buffer.(io.Reader)
 	if contentLen == 0 {
-		content = nil
+		body = http.NoBody
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPut, url, content)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, url, body)
 	if err != nil {
 		return err
 	}
 	req.Header.Add("Content-Type", "application/octet-stream")
 	req.ContentLength = int64(contentLen)
-	res, err := http.DefaultClient.Do(req)
+	httpClient := http.DefaultClient
+	if e.skipVerify {
+		transport := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
+		httpClient.Transport = transport
+	}
+	res, err := httpClient.Do(req)
 	if err != nil {
 		return errors.Wrap(err, "failed to save file in the object storage")
 	}
@@ -104,9 +110,11 @@ func (e *executionLogsWriter) Save(ctx context.Context) error {
 func (e *executionLogsWriter) cleanup() {
 	if e.writer != nil {
 		e.writer.Close()
+		e.writer = nil
 	}
 	if e.buffer != nil {
 		e.buffer.Cleanup()
+		e.buffer = nil
 	}
 }
 

@@ -24,6 +24,12 @@ type ClientOptions struct {
 	StorageSkipVerify  bool
 	ExecutionID        string
 	ParentExecutionIDs []string
+
+	Runtime RuntimeConfig
+}
+
+type RuntimeConfig struct {
+	Namespace string
 }
 
 //go:generate mockgen -destination=./mock_client.go -package=controlplaneclient "github.com/kubeshop/testkube/pkg/controlplaneclient" Client
