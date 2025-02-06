@@ -110,9 +110,11 @@ func (e *executionLogsWriter) Save(ctx context.Context) error {
 func (e *executionLogsWriter) cleanup() {
 	if e.writer != nil {
 		e.writer.Close()
+		e.writer = nil
 	}
 	if e.buffer != nil {
 		e.buffer.Cleanup()
+		e.buffer = nil
 	}
 }
 
