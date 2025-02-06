@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	errors2 "github.com/pkg/errors"
@@ -87,7 +88,7 @@ func (a *agentLoop) _saveEmptyLogs(ctx context.Context, environmentId string, ex
 	if execution.Workflow != nil {
 		workflowName = execution.Workflow.Name
 	}
-	return a.client.SaveExecutionLogs(ctx, environmentId, execution.Id, workflowName, nil)
+	return a.client.SaveExecutionLogs(ctx, environmentId, execution.Id, workflowName, strings.NewReader(""))
 }
 
 func (a *agentLoop) saveEmptyLogs(ctx context.Context, environmentId string, execution *testkube.TestWorkflowExecution) error {

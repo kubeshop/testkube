@@ -57,10 +57,11 @@ func (r *CloudOutputRepository) SaveLog(ctx context.Context, id, workflowName st
 		return err
 	}
 	bufferLen := buffer.Len()
+	body := buffer.(io.Reader)
 	if bufferLen == 0 {
 		// http.Request won't send Content-Length: 0, if the body is non-nil
 		buffer.Cleanup()
-		buffer = nil
+		body = http.NoBody
 	} else {
 		defer buffer.Cleanup()
 	}
@@ -68,7 +69,7 @@ func (r *CloudOutputRepository) SaveLog(ctx context.Context, id, workflowName st
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPut, url, buffer)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, url, body)
 	if err != nil {
 		return err
 	}
