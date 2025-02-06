@@ -93,7 +93,7 @@ func (e *executionLogsWriter) Save(ctx context.Context) error {
 	req.Header.Add("Content-Type", "application/octet-stream")
 	req.ContentLength = int64(contentLen)
 	res, err := http.DefaultClient.Do(req)
-	rq, err := httputil.DumpRequestOut(req, true)
+	rq, err := httputil.DumpRequest(req, true)
 	log.DefaultLogger.Errorw("log save request", "id", e.id, "request", string(rq), "error", err)
 	rs, err := httputil.DumpResponse(res, true)
 	log.DefaultLogger.Errorw("log save response", "id", e.id, "response", string(rs), "error", err)
