@@ -187,11 +187,11 @@ func (c *CloudObject) DeleteEnvironment(id string) error {
 
 func (c *CloudObject) SuperAgent(env *client.Environment) *client.Agent {
 	return &client.Agent{
-		ID:             env.Id,
-		Name:           env.Name,
-		EnvironmentIDs: []string{env.Id},
-		SecretKey:      env.AgentToken,
-		Type:           "agnt",
+		ID:           env.Id,
+		Name:         env.Name,
+		Environments: []client.AgentEnvironment{{ID: env.Id, Name: env.Name, Slug: env.Slug}},
+		SecretKey:    env.AgentToken,
+		Type:         "agnt",
 	}
 }
 

@@ -177,6 +177,9 @@ func main() {
 	// Build new client
 	client := controlplaneclient.New(grpcClient, proContext, controlplaneclient.ClientOptions{
 		StorageSkipVerify: cfg.StorageSkipVerify,
+		Runtime: controlplaneclient.RuntimeConfig{
+			Namespace: cfg.TestkubeNamespace,
+		},
 	})
 
 	if proContext.CloudStorage {
@@ -371,7 +374,7 @@ func main() {
 						}
 					}
 					if watcher.Err() != nil {
-						log.DefaultLogger.Errorw("failed to watch TestWorkflows in Control Plane", "error", watcher.Err())
+						log.DefaultLogger.Errorw("failed to watch TestWorkflowTemplates in Control Plane", "error", watcher.Err())
 					}
 
 					time.Sleep(200 * time.Millisecond)

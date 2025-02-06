@@ -6,7 +6,7 @@ import (
 
 func NewOrganizationsClient(url, token string) *OrganizationsClient {
 	return &OrganizationsClient{
-		RESTClient: RESTClient[Organization]{
+		RESTClient: RESTClient[Organization, Organization]{
 			BaseUrl: url,
 			Path:    "/organizations",
 			Client:  http.NewClient(),
@@ -21,5 +21,5 @@ type Organization struct {
 }
 
 type OrganizationsClient struct {
-	RESTClient[Organization]
+	RESTClient[Organization, Organization]
 }
