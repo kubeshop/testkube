@@ -53,8 +53,16 @@ func (p *JUnitPostProcessor) Start() error {
 	return nil
 }
 
-// Add checks if the file is a JUnit report and sends it to the cloud.
 func (p *JUnitPostProcessor) Add(path string) error {
+	err := p.add(path)
+	if err != nil {
+		fmt.Printf("warn: JUnit processing: %s: %s\n", path, err)
+	}
+	return nil
+}
+
+// Add checks if the file is a JUnit report and sends it to the cloud.
+func (p *JUnitPostProcessor) add(path string) error {
 	uploadPath := path
 	if p.pathPrefix != "" {
 		uploadPath = filepath.Join(p.pathPrefix, uploadPath)
