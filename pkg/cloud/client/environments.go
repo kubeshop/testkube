@@ -60,6 +60,7 @@ func (c EnvironmentsClient) EnableNewArchitecture(env Environment) error {
 		return err
 	}
 	req, err := nethttp.NewRequest("PATCH", path, bytes.NewBuffer(d))
+	req.Header.Add("Content-type", "application/json")
 	req.Header.Add("Authorization", "Bearer "+c.Token)
 	if err != nil {
 		return err
