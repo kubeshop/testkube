@@ -79,7 +79,9 @@ func populateConfigParams(resolvedWorkflow *testkube.TestWorkflow, configParams 
 	for k, v := range resolvedWorkflow.Spec.Config {
 		if v.Sensitive {
 			configParams[k] = testkube.TestWorkflowExecutionConfigValue{
-				Sensitive: true,
+				Sensitive:         true,
+				EmptyValue:        true,
+				EmptyDefaultValue: true,
 			}
 
 			continue
