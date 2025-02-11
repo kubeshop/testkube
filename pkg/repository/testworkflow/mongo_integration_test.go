@@ -596,7 +596,9 @@ func TestNewMongoRepository_Get_Integration(t *testing.T) {
 
 	assert.Equal(t, execution2.Id, result.Id)
 	assert.Equal(t, execution2.Name, result.Name)
-	assert.Nil(t, result.ConfigParams)
+	assert.Equal(t, true, result.ConfigParams["param1"].Sensitive)
+	assert.Equal(t, true, result.ConfigParams["param1"].EmptyValue)
+	assert.Equal(t, true, result.ConfigParams["param1"].EmptyDefaultValue)
 
 	execution3 := testkube.TestWorkflowExecution{
 		Id:   "test-id-3",
@@ -633,5 +635,7 @@ func TestNewMongoRepository_Get_Integration(t *testing.T) {
 
 	assert.Equal(t, execution3.Id, result.Id)
 	assert.Equal(t, execution3.Name, result.Name)
-	assert.Nil(t, result.ConfigParams)
+	assert.Equal(t, true, result.ConfigParams["param1"].Sensitive)
+	assert.Equal(t, true, result.ConfigParams["param1"].EmptyValue)
+	assert.Equal(t, true, result.ConfigParams["param1"].EmptyDefaultValue)
 }
