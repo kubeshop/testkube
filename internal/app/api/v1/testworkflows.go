@@ -471,10 +471,6 @@ func (s *TestkubeAPI) ReRunTestWorkflowHandler() fiber.Handler {
 		}
 
 		request.Config = make(map[string]string)
-		if execution.ConfigParams == nil {
-			return s.ClientError(c, "get execution parameters", errors.New("missing parameters"))
-		}
-
 		for key, value := range execution.ConfigParams {
 			if value.Sensitive {
 				return s.ClientError(c, "get execution parameters", errors.New("can't rerun test workflow with sensitive prameters"))
