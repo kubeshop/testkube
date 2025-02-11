@@ -450,6 +450,94 @@ func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 	}
 }
 
+// TODO: Add metrics
+func (s *TestkubeAPI) ReRunTestWorkflowHandler() fiber.Handler {
+	return func(c *fiber.Ctx) (err error) {
+		ctx := c.Context()
+		executionID := c.Params("executionID")
+		s.Log.Debugw("rerunning test workflow execution", "id", executionID)
+
+		errPrefix := "failed to rerun test workflow"
+
+		execution, err := s.TestWorkflowResults.Get(ctx, executionID)
+		if err != nil {
+			return s.ClientError(c, "get execution", err)
+		}
+
+		// Load the execution request
+		request := testkube.TestWorkflowExecutionRequest{
+			Tags:            execution.Tags,
+			DisableWebhooks: execution.DisableWebhooks,
+		}
+
+		request.Config = make(map[string]string)
+		for key, value := range execution.ConfigParams {
+			if value.Sensitive {
+				return s.ClientError(c, "get execution parameters", errors.New("can't rerun test workflow with sensitive data"))
+			}
+
+			if value.Truncated {
+				return s.ClientError(c, "get execution parameters", errors.New("can't rerun test workflow with truncated data"))
+			}
+
+			if !value.EmptyValue {
+				request.Config[key] = value.Value
+			}
+		}
+
+		runningContext, user := testworkflowexecutor.GetNewRunningContext(request.RunningContext, nil)
+
+		var scheduleExecution cloud.ScheduleExecution
+		if request.Target != nil {
+			target := &cloud.ExecutionTarget{Replicate: request.Target.Replicate}
+			if request.Target.Match != nil {
+				target.Match = make(map[string]*cloud.ExecutionTargetLabels)
+				for k, v := range request.Target.Match {
+					target.Match[k] = &cloud.ExecutionTargetLabels{Labels: v}
+				}
+			}
+
+			if request.Target.Not != nil {
+				target.Not = make(map[string]*cloud.ExecutionTargetLabels)
+				for k, v := range request.Target.Not {
+					target.Not[k] = &cloud.ExecutionTargetLabels{Labels: v}
+				}
+			}
+
+			scheduleExecution.Targets = []*cloud.ExecutionTarget{target}
+		}
+
+		if execution.Workflow != nil {
+			scheduleExecution.Selector = &cloud.ScheduleResourceSelector{Name: execution.Workflow.Name}
+		}
+
+		scheduleExecution.Config = request.Config
+		resp := s.testWorkflowExecutor.Execute(ctx, "", &cloud.ScheduleRequest{
+			Executions:      []*cloud.ScheduleExecution{&scheduleExecution},
+			DisableWebhooks: request.DisableWebhooks,
+			Tags:            request.Tags,
+			RunningContext:  runningContext,
+			User:            user,
+		})
+
+		results := make([]testkube.TestWorkflowExecution, 0)
+		for v := range resp.Channel() {
+			results = append(results, *v)
+		}
+
+		if resp.Error() != nil {
+			return s.InternalError(c, errPrefix, "execution error", resp.Error())
+		}
+
+		s.Log.Debugw("rerunning test workflow execution", "id", executionID)
+		if len(results) != 0 {
+			return c.JSON(results[0])
+		}
+
+		return s.InternalError(c, errPrefix, "error", errors.New("no execution results"))
+	}
+}
+
 func (s *TestkubeAPI) getFilteredTestWorkflowList(c *fiber.Ctx) ([]testkube.TestWorkflow, error) {
 	ctx := c.Context()
 	environmentId := s.getEnvironmentId()
