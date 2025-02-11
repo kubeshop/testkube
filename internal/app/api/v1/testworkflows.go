@@ -459,6 +459,13 @@ func (s *TestkubeAPI) ReRunTestWorkflowHandler() fiber.Handler {
 
 		errPrefix := "failed to rerun test workflow"
 
+		// Load the execution request
+		var rContext testkube.TestWorkflowRunningContext
+		err = c.BodyParser(&rContext)
+		if err != nil && !errors.Is(err, fiber.ErrUnprocessableEntity) {
+			return s.BadRequest(c, errPrefix, "invalid body", err)
+		}
+
 		execution, err := s.TestWorkflowResults.Get(ctx, executionID)
 		if err != nil {
 			return s.ClientError(c, "get execution", err)
@@ -466,6 +473,7 @@ func (s *TestkubeAPI) ReRunTestWorkflowHandler() fiber.Handler {
 
 		// Load the execution request
 		request := testkube.TestWorkflowExecutionRequest{
+			RunningContext:  &rContext,
 			Tags:            execution.Tags,
 			DisableWebhooks: execution.DisableWebhooks,
 		}
