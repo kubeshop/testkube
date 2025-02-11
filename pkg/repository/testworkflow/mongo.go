@@ -78,27 +78,32 @@ func populateConfigParams(resolvedWorkflow *testkube.TestWorkflow, configParams 
 
 	for k, v := range resolvedWorkflow.Spec.Config {
 		if v.Sensitive {
-			return nil
+			configParams[k] = testkube.TestWorkflowExecutionConfigValue{
+				Sensitive: true,
+			}
+
+			continue
 		}
-		if v.Default_ != nil {
-			if _, ok := configParams[k]; !ok {
-				configParams[k] = testkube.TestWorkflowExecutionConfigValue{
-					DefaultValue: v.Default_.Value,
-				}
-			} else {
-				value := configParams[k].Value
-				truncated := false
-				if len(value) > configParamSizeLimit {
-					value = value[:configParamSizeLimit]
-					truncated = true
-				}
-				configParams[k] = testkube.TestWorkflowExecutionConfigValue{
-					DefaultValue: v.Default_.Value,
-					Value:        value,
-					Truncated:    truncated,
-				}
+
+		if _, ok := configParams[k]; !ok {
+			configParams[k] = testkube.TestWorkflowExecutionConfigValue{
+				EmptyValue: true,
 			}
 		}
+
+		data := configParams[k]
+		if len(data.Value) > configParamSizeLimit {
+			data.Value = data.Value[:configParamSizeLimit]
+			data.Truncated = true
+		}
+
+		if v.Default_ != nil {
+			data.DefaultValue = v.Default_.Value
+		} else {
+			data.EmptyDefaultValue = true
+		}
+
+		configParams[k] = data
 	}
 
 	return configParams

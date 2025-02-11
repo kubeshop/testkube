@@ -9921,13 +9921,21 @@ components:
         value:
           type: string
           description: configuration value
+        emptyValue:
+          type: boolean
+          description: configuration value is empty
         defaultValue:
           type: string
           description: configuration value default
+        emptyDefaultValue:
+          type: boolean
+          description: configuration value default is empty
         truncated:
           type: boolean
           description: indicates if the value is truncated
-
+        sensitive:
+          type: boolean
+          description: marks value as sensitive
 
     TestWorkflowConfigValue:
       type: object
