@@ -459,7 +459,7 @@ func (s *TestkubeAPI) ReRunTestWorkflowHandler() fiber.Handler {
 
 		errPrefix := "failed to rerun test workflow"
 
-		// Load the execution request
+		// Load the running comtext
 		var twrContext testkube.TestWorkflowRunningContext
 		err = c.BodyParser(&twrContext)
 		if err != nil && !errors.Is(err, fiber.ErrUnprocessableEntity) {
@@ -493,7 +493,7 @@ func (s *TestkubeAPI) ReRunTestWorkflowHandler() fiber.Handler {
 			}
 
 			if oldHash != newHash {
-				return s.ClientError(c, errPrefix, errors.New("current test workflow config spec doesn't match to execution one"))
+				return s.ClientError(c, errPrefix, errors.New("current test workflow config spec doesn't match the execution one"))
 			}
 		}
 
