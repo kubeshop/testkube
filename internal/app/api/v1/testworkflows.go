@@ -451,7 +451,7 @@ func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 }
 
 // TODO: Add metrics
-func (s *TestkubeAPI) ReRunTestWorkflowHandler() fiber.Handler {
+func (s *TestkubeAPI) ReRunTestWorkflowExecutionHandler() fiber.Handler {
 	return func(c *fiber.Ctx) (err error) {
 		ctx := c.Context()
 		executionID := c.Params("executionID")

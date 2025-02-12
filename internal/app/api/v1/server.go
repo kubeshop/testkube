@@ -163,7 +163,7 @@ func (s *TestkubeAPI) Init(server server.HTTPServer) {
 	testWorkflows.Post("/:id/executions/:executionID/pause", s.PauseTestWorkflowExecutionHandler())
 	testWorkflows.Post("/:id/executions/:executionID/resume", s.ResumeTestWorkflowExecutionHandler())
 	testWorkflows.Get("/:id/executions/:executionID/logs", s.GetTestWorkflowExecutionLogsHandler())
-	testWorkflows.Post("/:id/executions/:executionID/rerun", s.ReRunTestWorkflowHandler())
+	testWorkflows.Post("/:id/executions/:executionID/rerun", s.ReRunTestWorkflowExecutionHandler())
 
 	testWorkflowExecutions := root.Group("/test-workflow-executions")
 	testWorkflowExecutions.Get("/", s.ListTestWorkflowExecutionsHandler())
@@ -182,7 +182,7 @@ func (s *TestkubeAPI) Init(server server.HTTPServer) {
 	testWorkflowExecutions.Get("/:executionID/artifacts", s.ListTestWorkflowExecutionArtifactsHandler())
 	testWorkflowExecutions.Get("/:executionID/artifacts/:filename", s.GetTestWorkflowArtifactHandler())
 	testWorkflowExecutions.Get("/:executionID/artifact-archive", s.GetTestWorkflowArtifactArchiveHandler())
-	testWorkflowExecutions.Post("/:executionID/rerun", s.ReRunTestWorkflowHandler())
+	testWorkflowExecutions.Post("/:executionID/rerun", s.ReRunTestWorkflowExecutionHandler())
 
 	testWorkflowWithExecutions := root.Group("/test-workflow-with-executions")
 	testWorkflowWithExecutions.Get("/", s.ListTestWorkflowWithExecutionsHandler())
