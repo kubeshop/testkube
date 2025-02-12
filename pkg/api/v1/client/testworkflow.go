@@ -221,7 +221,7 @@ func (c TestWorkflowClient) GetTestWorkflowExecutionLogs(id string) (result []by
 }
 
 // ReRunTestWorkflowExecution reruns selected execution
-func (c TestWorkflowClient) ReRunTestWorkflowExecution(workflow, id string, runningContext testkube.TestWorkflowRunningContext) (result testkube.TestWorkflowExecution, err error) {
+func (c TestWorkflowClient) ReRunTestWorkflowExecution(workflow, id string, runningContext *testkube.TestWorkflowRunningContext) (result testkube.TestWorkflowExecution, err error) {
 	if workflow == "" {
 		return result, fmt.Errorf("test workflow name '%s' is not valid", workflow)
 	}
