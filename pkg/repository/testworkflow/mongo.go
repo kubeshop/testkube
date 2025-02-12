@@ -661,7 +661,7 @@ func (r *MongoRepository) Init(ctx context.Context, id string, data InitData) er
 	_, err := r.Coll.UpdateOne(ctx, bson.M{"id": id}, bson.M{"$set": map[string]interface{}{
 		"namespace": data.Namespace,
 		"signature": data.Signature,
-		"runnerId":  data.RunnerID,
+		"runnerid":  data.RunnerID,
 	}})
 	return err
 }
@@ -671,10 +671,10 @@ func (r *MongoRepository) Assign(ctx context.Context, id string, prevRunnerId st
 		"$and": []bson.M{
 			{"id": id},
 			{"result.status": bson.M{"$in": bson.A{testkube.QUEUED_TestWorkflowStatus, testkube.RUNNING_TestWorkflowStatus, testkube.PAUSED_TestWorkflowStatus}}},
-			{"$or": []bson.M{{"runnerId": prevRunnerId}, {"runnerId": newRunnerId}, {"runnerId": nil}}},
+			{"$or": []bson.M{{"runnerid": prevRunnerId}, {"runnerid": newRunnerId}, {"runnerid": nil}}},
 		},
 	}, bson.M{"$set": map[string]interface{}{
-		"runnerId": newRunnerId,
+		"runnerid": newRunnerId,
 	}})
 	if err != nil {
 		return false, err
@@ -695,7 +695,7 @@ func (r *MongoRepository) GetUnassigned(ctx context.Context) (result []testkube.
 	cursor, err := r.Coll.Find(ctx, bson.M{
 		"$and": []bson.M{
 			{"result.status": testkube.QUEUED_TestWorkflowStatus},
-			{"$or": []bson.M{{"runnerId": ""}, {"runnerId": nil}}},
+			{"$or": []bson.M{{"runnerid": ""}, {"runnerid": nil}}},
 		},
 	}, opts)
 	if err != nil {
@@ -715,17 +715,17 @@ func (r *MongoRepository) AbortIfQueued(ctx context.Context, id string) (ok bool
 		"$and": []bson.M{
 			{"id": id},
 			{"result.status": bson.M{"$in": bson.A{testkube.QUEUED_TestWorkflowStatus, testkube.RUNNING_TestWorkflowStatus, testkube.PAUSED_TestWorkflowStatus}}},
-			{"$or": []bson.M{{"runnerId": ""}, {"runnerId": nil}}},
+			{"$or": []bson.M{{"runnerid": ""}, {"runnerid": nil}}},
 		},
 	}, bson.M{"$set": map[string]interface{}{
 		"result.status":                      testkube.ABORTED_TestWorkflowStatus,
-		"result.predictedStatus":             testkube.ABORTED_TestWorkflowStatus,
-		"statusAt":                           ts,
-		"result.finishedAt":                  ts,
+		"result.predictedstatus":             testkube.ABORTED_TestWorkflowStatus,
+		"statusat":                           ts,
+		"result.finishedat":                  ts,
 		"result.initialization.status":       testkube.ABORTED_TestWorkflowStatus,
-		"result.initialization.errorMessage": "Aborted before initialization.",
-		"result.initialization.finishedAt":   ts,
-		//"result.totalDurationMs": ts.Sub(scheduledAt).Milliseconds(),
+		"result.initialization.errormessage": "Aborted before initialization.",
+		"result.initialization.finishedat":   ts,
+		//"result.totaldurationms": ts.Sub(scheduledAt).Milliseconds(),
 	}})
 	if err != nil {
 		return false, err
