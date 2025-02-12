@@ -4303,6 +4303,47 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
+  /test-workflows/{id}/executions/{executionID}/rerun:
+    post:
+      tags:
+        - test-workflows
+        - api
+      parameters:
+        - $ref: "#/components/parameters/ID"
+        - $ref: "#/components/parameters/executionID"
+      summary: Rerun test workflow execution
+      description: Rerun test workflow execution
+      operationId: rerunTestWorkflowExecutionByTestWorkflow
+      requestBody:
+        description: test workflow running context
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TestWorkflowRunningContext"
+      responses:
+        200:
+          description: successful execution
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestWorkflowExecution"
+        400:
+          description: "problem with body parsing - probably some bad input occurs"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: problem communicating with kubernetes cluster
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
   /test-workflow-executions:
     post:
       parameters:
@@ -4631,6 +4672,47 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
+  /test-workflow-executions/{executionID}/rerun:
+    post:
+      tags:
+        - test-workflows
+        - api
+      parameters:
+        - $ref: "#/components/parameters/executionID"
+      summary: Rerun test workflow execution
+      description: Rerun test workflow execution
+      operationId: rerunTestWorkflowExecution
+      requestBody:
+        description: test workflow running context
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TestWorkflowRunningContext"
+      responses:
+        200:
+          description: successful execution
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestWorkflowExecution"
+        400:
+          description: "problem with body parsing - probably some bad input occurs"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: problem communicating with kubernetes cluster
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+
   /test-workflows/{id}/abort:
     post:
       tags:
