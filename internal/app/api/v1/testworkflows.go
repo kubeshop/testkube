@@ -468,7 +468,33 @@ func (s *TestkubeAPI) ReRunTestWorkflowHandler() fiber.Handler {
 
 		execution, err := s.TestWorkflowResults.Get(ctx, executionID)
 		if err != nil {
-			return s.ClientError(c, "get execution", err)
+			return s.ClientError(c, errPrefix, err)
+		}
+
+		name := ""
+		if execution.Workflow != nil {
+			name = execution.Workflow.Name
+		}
+
+		workflow, err := s.TestWorkflowsClient.Get(c.Context(), s.getEnvironmentId(), name)
+		if err != nil {
+			return s.ClientError(c, errPrefix, err)
+		}
+
+		if execution.Workflow != nil && execution.Workflow.Spec != nil && workflow.Spec != nil {
+			oldHash, err := execution.Workflow.Spec.GetConfigHash()
+			if err != nil {
+				return s.ClientError(c, errPrefix, err)
+			}
+
+			newHash, err := workflow.Spec.GetConfigHash()
+			if err != nil {
+				return s.ClientError(c, errPrefix, err)
+			}
+
+			if oldHash != newHash {
+				return s.ClientError(c, errPrefix, errors.New("current test workflow config spec doesn't match to execution one"))
+			}
 		}
 
 		// Load the execution request
@@ -481,11 +507,11 @@ func (s *TestkubeAPI) ReRunTestWorkflowHandler() fiber.Handler {
 		request.Config = make(map[string]string)
 		for key, value := range execution.ConfigParams {
 			if value.Sensitive {
-				return s.ClientError(c, "get execution parameters", errors.New("can't rerun test workflow with sensitive prameters"))
+				return s.ClientError(c, errPrefix, errors.New("can't rerun test workflow with sensitive prameters"))
 			}
 
 			if value.Truncated {
-				return s.ClientError(c, "get execution parameters", errors.New("can't rerun test workflow with truncated parameters"))
+				return s.ClientError(c, errPrefix, errors.New("can't rerun test workflow with truncated parameters"))
 			}
 
 			if !value.EmptyValue {
@@ -515,10 +541,7 @@ func (s *TestkubeAPI) ReRunTestWorkflowHandler() fiber.Handler {
 			scheduleExecution.Targets = []*cloud.ExecutionTarget{target}
 		}
 
-		if execution.Workflow != nil {
-			scheduleExecution.Selector = &cloud.ScheduleResourceSelector{Name: execution.Workflow.Name}
-		}
-
+		scheduleExecution.Selector = &cloud.ScheduleResourceSelector{Name: name}
 		scheduleExecution.Config = request.Config
 		resp := s.testWorkflowExecutor.Execute(ctx, "", &cloud.ScheduleRequest{
 			Executions:      []*cloud.ScheduleExecution{&scheduleExecution},
