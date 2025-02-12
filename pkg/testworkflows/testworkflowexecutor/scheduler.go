@@ -460,6 +460,9 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 		// Generating the execution name
 		if intermediate[i].Name() == "" {
 			name := fmt.Sprintf("%s-%d", intermediate[i].WorkflowName(), number)
+			if len(intermediate) > 1 {
+				name = fmt.Sprintf("%s-%d-%d", intermediate[i].WorkflowName(), intermediate[0].SequenceNumber(), i+1)
+			}
 			intermediate[i].SetName(name)
 
 			// Edge case: Check for local duplicates, if there is no clash between static and auto-generated one
