@@ -461,7 +461,7 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 		if intermediate[i].Name() == "" {
 			name := fmt.Sprintf("%s-%d", intermediate[i].WorkflowName(), number)
 			if len(intermediate) > 1 {
-				name = fmt.Sprintf("%s-%d", name, i+1)
+				name = fmt.Sprintf("%s-%d-%d", intermediate[i].WorkflowName(), intermediate[0].SequenceNumber(), i+1)
 			}
 			intermediate[i].SetName(name)
 
