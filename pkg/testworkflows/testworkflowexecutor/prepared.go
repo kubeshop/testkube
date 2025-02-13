@@ -311,6 +311,10 @@ func (e *IntermediateExecution) SetSequenceNumber(number int32) *IntermediateExe
 	return e
 }
 
+func (e *IntermediateExecution) SequenceNumber() int32 {
+	return e.execution.Number
+}
+
 func (e *IntermediateExecution) SetError(header string, err error) *IntermediateExecution {
 	// Keep only the 1st error
 	if !e.execution.Result.IsFinished() {
