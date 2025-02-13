@@ -508,11 +508,11 @@ func (s *TestkubeAPI) ReRunTestWorkflowExecutionHandler() fiber.Handler {
 		request.Config = make(map[string]string)
 		for key, value := range execution.ConfigParams {
 			if value.Sensitive {
-				return s.ClientError(c, errPrefix, errors.New("can't rerun test workflow with sensitive prameters"))
+				return s.ClientError(c, errPrefix, errors.New("can't rerun test workflow execution with sensitive prameters"))
 			}
 
 			if value.Truncated {
-				return s.ClientError(c, errPrefix, errors.New("can't rerun test workflow with truncated parameters"))
+				return s.ClientError(c, errPrefix, errors.New("can't rerun test workflow execution with truncated parameters"))
 			}
 
 			if !value.EmptyValue {
