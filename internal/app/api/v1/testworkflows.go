@@ -457,7 +457,7 @@ func (s *TestkubeAPI) ReRunTestWorkflowExecutionHandler() fiber.Handler {
 		executionID := c.Params("executionID")
 		s.Log.Debugw("rerunning test workflow execution", "id", executionID)
 
-		errPrefix := "failed to rerun test workflow"
+		errPrefix := "failed to rerun test workflow execution"
 
 		// Load the running comtext
 		var twrContext testkube.TestWorkflowRunningContext
