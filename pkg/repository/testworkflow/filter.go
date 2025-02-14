@@ -21,6 +21,7 @@ type FilterImpl struct {
 	FLabelSelector *LabelSelector
 	FActorName     string
 	FActorType     testkube.TestWorkflowRunningContextActorType
+	FGroupID       string
 }
 
 func NewExecutionsFilter() *FilterImpl {
@@ -98,6 +99,11 @@ func (f *FilterImpl) WithActorType(actorType testkube.TestWorkflowRunningContext
 
 func (f *FilterImpl) WithLabelSelector(selector *LabelSelector) *FilterImpl {
 	f.FLabelSelector = selector
+	return f
+}
+
+func (f *FilterImpl) WithGroupID(groupID string) *FilterImpl {
+	f.FGroupID = groupID
 	return f
 }
 
@@ -191,4 +197,12 @@ func (f FilterImpl) ActorNameDefined() bool {
 
 func (f FilterImpl) ActorTypeDefined() bool {
 	return f.FActorType != ""
+}
+
+func (f FilterImpl) GroupIDDefined() bool {
+	return f.FGroupID != ""
+}
+
+func (f FilterImpl) GroupID() string {
+	return f.FGroupID
 }
