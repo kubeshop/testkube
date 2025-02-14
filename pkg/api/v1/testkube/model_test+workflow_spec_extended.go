@@ -1,18 +1,13 @@
 package testkube
 
-import (
-	"encoding/json"
-	"hash/fnv"
-)
+func (t TestWorkflowSpec) GetRequiredParameters() []string {
+	keys := make([]string, 0)
 
-func (t TestWorkflowSpec) GetConfigHash() (uint64, error) {
-	data, err := json.Marshal(t.Config)
-	if err != nil {
-		return 0, err
+	for key, value := range t.Config {
+		if value.Default_ == nil {
+			keys = append(keys, key)
+		}
 	}
 
-	configHash := fnv.New64a()
-	configHash.Write(data)
-
-	return configHash.Sum64(), nil
+	return keys
 }

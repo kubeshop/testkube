@@ -481,19 +481,10 @@ func (s *TestkubeAPI) ReRunTestWorkflowExecutionHandler() fiber.Handler {
 			return s.ClientError(c, errPrefix, err)
 		}
 
-		if execution.Workflow != nil && execution.Workflow.Spec != nil && workflow.Spec != nil {
-			oldHash, err := execution.Workflow.Spec.GetConfigHash()
-			if err != nil {
-				return s.ClientError(c, errPrefix, err)
-			}
-
-			newHash, err := workflow.Spec.GetConfigHash()
-			if err != nil {
-				return s.ClientError(c, errPrefix, err)
-			}
-
-			if oldHash != newHash {
-				return s.ClientError(c, errPrefix, errors.New("current test workflow config spec doesn't match the execution one"))
+		requiredParameters := make(map[string]struct{})
+		if workflow.Spec != nil {
+			for _, parameter := range workflow.Spec.GetRequiredParameters() {
+				requiredParameters[parameter] = struct{}{}
 			}
 		}
 
@@ -517,6 +508,12 @@ func (s *TestkubeAPI) ReRunTestWorkflowExecutionHandler() fiber.Handler {
 
 			if !value.EmptyValue {
 				request.Config[key] = value.Value
+			}
+		}
+
+		for key := range requiredParameters {
+			if _, ok := request.Config[key]; !ok {
+				return s.ClientError(c, errPrefix, errors.New("can't rerun test workflow execution without required parameters"))
 			}
 		}
 
