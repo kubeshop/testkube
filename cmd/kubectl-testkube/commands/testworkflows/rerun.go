@@ -48,7 +48,7 @@ func NewReRunTestWorkflowExecutionCmd() *cobra.Command {
 			}
 
 			outputPretty := outputType == render.OutputPretty
-			namespace := cmd.Flag("namespace").Value.String()
+
 			client, _, err := common.GetClient(cmd)
 			ui.ExitOnError("getting client", err)
 
@@ -97,7 +97,7 @@ func NewReRunTestWorkflowExecutionCmd() *cobra.Command {
 				}
 			}
 
-			ui.ExitOnError("rerun test workflow execution "+executionID+" from namespace "+namespace, err)
+			ui.ExitOnError("rerun test workflow execution "+executionID, err)
 
 			go func() {
 				<-cmd.Context().Done()
