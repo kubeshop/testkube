@@ -149,7 +149,7 @@ spec:
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: expected-fail-cypress-resource-limits
+  name: expected-fail-cypress-resource-limits # OOMKilled
   labels:
     core-tests: expected-fail
 spec:
