@@ -55,6 +55,9 @@ spec:
         cpu: 2
         memory: 2Gi
     workingDir: /data/repo/test/cypress/executor-tests/cypress-14
+    env:
+    - name: CYPRESS_CUSTOM_ENV
+      value: CYPRESS_CUSTOM_ENV_value
   steps:
   - name: Run from template
     template:
