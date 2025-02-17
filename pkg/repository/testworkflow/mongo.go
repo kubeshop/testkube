@@ -485,6 +485,16 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 		query["runningcontext.actor.type_"] = filter.ActorType()
 	}
 
+	if filter.GroupIDDefined() {
+		query = bson.M{"$and": bson.A{
+			bson.M{"$expr": bson.M{"$or": bson.A{
+				bson.M{"$eq": bson.A{"$id", filter.GroupID()}},
+				bson.M{"$eq": bson.A{"$groupid", filter.GroupID()}},
+			}}},
+			query,
+		}}
+	}
+
 	opts.SetSkip(int64(filter.Page() * filter.PageSize()))
 	opts.SetLimit(int64(filter.PageSize()))
 	opts.SetSort(bson.D{{Key: "scheduledat", Value: -1}})
