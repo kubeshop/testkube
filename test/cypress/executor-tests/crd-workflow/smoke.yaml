@@ -125,6 +125,8 @@ spec:
     env:
     - name: CYPRESS_CUSTOM_ENV # currently only possible on this level
       value: "CYPRESS_CUSTOM_ENV_value"
+    - name: UV_USE_IO_URING # workaround for NPM being stuck
+      value: "0"
   content:
     git:
       uri: https://github.com/kubeshop/testkube
@@ -156,6 +158,8 @@ spec:
     env:
     - name: CYPRESS_CUSTOM_ENV # currently only possible on this level
       value: "CYPRESS_CUSTOM_ENV_value"
+    - name: UV_USE_IO_URING # workaround for NPM being stuck
+      value: "0"
   steps:
   - name: Run from template
     content:
@@ -187,6 +191,8 @@ spec:
     env:
     - name: CYPRESS_CUSTOM_ENV # currently only possible on this level
       value: "CYPRESS_CUSTOM_ENV_value"
+    - name: UV_USE_IO_URING # workaround for NPM being stuck
+      value: "0"
   steps:
   - name: Run cypress test
     content:

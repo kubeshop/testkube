@@ -1,0 +1,28 @@
+<testsuites tests="8" failures="2" errors="2" skipped="0" time="225.157">
+  <testsuite name="AAA" timestamp="2025-02-05T12:53:03" time="8.887" tests="6" failures="0" errors="0" skipped="0">
+    
+    <!-- All test cases passed -->
+    <testcase name="testSuccess1" classname="com.example.AAATests" time="1.500"/>
+    <testcase name="testSuccess2" classname="com.example.AAATests" time="1.200"/>
+    <testcase name="testSuccess3" classname="com.example.AAATests" time="1.800"/>
+    <testcase name="testSuccess4" classname="com.example.AAATests" time="1.000"/>
+    <testcase name="testSuccess5" classname="com.example.AAATests" time="1.250"/>
+    <testcase name="testSuccess6" classname="com.example.AAATests" time="2.137"/>
+
+  </testsuite>
+
+  <testsuite name="BBB" timestamp="2025-02-05T12:53:02" time="14.071" tests="2" failures="2" errors="2" skipped="0">
+    
+    <!-- Incorrect - both failure and error -->
+    <testcase classname="exampleClassname" name="Example Name 1" time="10.037">
+      <failure/>
+      <error message="element click intercepted: Elementis not clickable at point (192, 687). Other element would receive the click (Session info: chrome=110.0.5481.100)"/>
+    </testcase>
+
+    <!-- Incorrect - both failure and error -->
+    <testcase classname="exampleClassname" name="Example Name 2" time="19.256">
+      <failure/>
+      <error message="element click intercepted: Elementis not clickable at point (128, 128). Other element would receive the click (Session info: chrome=110.0.5481.100)"/>
+    </testcase>
+  </testsuite>
+</testsuites>

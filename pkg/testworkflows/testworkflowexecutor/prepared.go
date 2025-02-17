@@ -311,6 +311,10 @@ func (e *IntermediateExecution) SetSequenceNumber(number int32) *IntermediateExe
 	return e
 }
 
+func (e *IntermediateExecution) SequenceNumber() int32 {
+	return e.execution.Number
+}
+
 func (e *IntermediateExecution) SetError(header string, err error) *IntermediateExecution {
 	// Keep only the 1st error
 	if !e.execution.Result.IsFinished() {
@@ -334,7 +338,7 @@ func (e *IntermediateExecution) RewriteSensitiveDataCall(handler func(name strin
 func (e *IntermediateExecution) StoreConfig(config map[string]string) *IntermediateExecution {
 	params := make(map[string]testkube.TestWorkflowExecutionConfigValue)
 	for k, v := range config {
-		if _, ok := e.cr.Spec.Config[k]; ok {
+		if s, ok := e.cr.Spec.Config[k]; ok && !s.Sensitive {
 			params[k] = testkube.TestWorkflowExecutionConfigValue{Value: v}
 		}
 	}

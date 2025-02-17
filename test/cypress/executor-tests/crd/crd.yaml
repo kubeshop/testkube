@@ -19,6 +19,10 @@ spec:
         name: CYPRESS_CUSTOM_ENV
         value: CYPRESS_CUSTOM_ENV_value
         type: basic
+      UV_USE_IO_URING:
+        name: UV_USE_IO_URING
+        value: "0"
+        type: basic
     args:
       - --env
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
@@ -47,6 +51,10 @@ spec:
       CYPRESS_CUSTOM_ENV:
         name: CYPRESS_CUSTOM_ENV
         value: CYPRESS_CUSTOM_ENV_value
+        type: basic
+      UV_USE_IO_URING:
+        name: UV_USE_IO_URING
+        value: "0"
         type: basic
     args:
       - --browser
@@ -79,6 +87,10 @@ spec:
         name: CYPRESS_CUSTOM_ENV
         value: CYPRESS_CUSTOM_ENV_value
         type: basic
+      UV_USE_IO_URING:
+        name: UV_USE_IO_URING
+        value: "0"
+        type: basic
     args:
       - --browser
       - chrome
@@ -89,9 +101,6 @@ spec:
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
     activeDeadlineSeconds: 600
 ---
-
-
-
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
