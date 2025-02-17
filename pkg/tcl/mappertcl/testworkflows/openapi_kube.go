@@ -35,7 +35,8 @@ func MapTestWorkflowRunningContextActorAPIToKube(v testkube.TestWorkflowRunningC
 		Email:         v.Email,
 		ExecutionId:   v.ExecutionId,
 		ExecutionPath: v.ExecutionPath,
-		Type_:         common.MapPtr(v.Type_, MapTestWorkflowRunningContextActorTypeAPIToKube),
+		//	ExecutionReference: v.ExecutionReference
+		Type_: common.MapPtr(v.Type_, MapTestWorkflowRunningContextActorTypeAPIToKube),
 	}
 }
 
