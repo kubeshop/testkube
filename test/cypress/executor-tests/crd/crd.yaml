@@ -1,39 +1,6 @@
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
-  name: cypress-13-executor-smoke-electron
-  labels:
-    core-tests: executors
-spec:
-  type: cypress:v13/test
-  content:
-    type: git
-    repository:
-      type: git
-      uri: https://github.com/kubeshop/testkube
-      branch: main
-      path: test/cypress/executor-tests/cypress-13
-  executionRequest:
-    variables:
-      CYPRESS_CUSTOM_ENV:
-        name: CYPRESS_CUSTOM_ENV
-        value: CYPRESS_CUSTOM_ENV_value
-        type: basic
-      UV_USE_IO_URING:
-        name: UV_USE_IO_URING
-        value: "0"
-        type: basic
-    args:
-      - --env
-      - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
-      - --config
-      - video=false
-    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
-    activeDeadlineSeconds: 600
----
-apiVersion: tests.testkube.io/v3
-kind: Test
-metadata:
   name: cypress-13-executor-smoke-chrome
   labels:
     core-tests: executors
@@ -104,217 +71,6 @@ spec:
 apiVersion: tests.testkube.io/v3
 kind: Test
 metadata:
-  name: cypress-12-executor-smoke-electron
-  labels:
-    core-tests: executors
-spec:
-  type: cypress:v12/test
-  content:
-    type: git
-    repository:
-      type: git
-      uri: https://github.com/kubeshop/testkube
-      branch: main
-      path: test/cypress/executor-tests/cypress-12
-  executionRequest:
-    variables:
-      CYPRESS_CUSTOM_ENV:
-        name: CYPRESS_CUSTOM_ENV
-        value: CYPRESS_CUSTOM_ENV_value
-        type: basic
-    args:
-      - --env
-      - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
-      - --config
-      - video=false
-    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
-    activeDeadlineSeconds: 600
----
-apiVersion: tests.testkube.io/v3
-kind: Test
-metadata:
-  name: cypress-12-executor-smoke-chrome
-  labels:
-    core-tests: executors
-spec:
-  type: cypress:v12/test
-  content:
-    type: git
-    repository:
-      type: git
-      uri: https://github.com/kubeshop/testkube
-      branch: main
-      path: test/cypress/executor-tests/cypress-12
-  executionRequest:
-    variables:
-      CYPRESS_CUSTOM_ENV:
-        name: CYPRESS_CUSTOM_ENV
-        value: CYPRESS_CUSTOM_ENV_value
-        type: basic
-    args:
-      - --browser
-      - chrome
-      - --env
-      - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
-      - --config
-      - video=false
-    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
-    activeDeadlineSeconds: 600
----
-apiVersion: tests.testkube.io/v3
-kind: Test
-metadata:
-  name: cypress-12-executor-smoke-firefox
-  labels:
-    core-tests: executors
-spec:
-  type: cypress:v12/test
-  content:
-    type: git
-    repository:
-      type: git
-      uri: https://github.com/kubeshop/testkube
-      branch: main
-      path: test/cypress/executor-tests/cypress-12
-  executionRequest:
-    variables:
-      CYPRESS_CUSTOM_ENV:
-        name: CYPRESS_CUSTOM_ENV
-        value: CYPRESS_CUSTOM_ENV_value
-        type: basic
-    args:
-      - --browser
-      - chrome
-      - --env
-      - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
-      - --config
-      - video=false
-    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
-    activeDeadlineSeconds: 600
----
-apiVersion: tests.testkube.io/v3
-kind: Test
-metadata:
-  name: cypress-11-executor-smoke-electron
-  labels:
-    core-tests: executors
-spec:
-  type: cypress:v11/test
-  content:
-    type: git
-    repository:
-      type: git
-      uri: https://github.com/kubeshop/testkube
-      branch: main
-      path: test/cypress/executor-tests/cypress-11
-  executionRequest:
-    variables:
-      CYPRESS_CUSTOM_ENV:
-        name: CYPRESS_CUSTOM_ENV
-        value: CYPRESS_CUSTOM_ENV_value
-        type: basic
-    args:
-      - --env
-      - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
-      - --config
-      - video=false
-    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
-    activeDeadlineSeconds: 180
----
-apiVersion: tests.testkube.io/v3
-kind: Test
-metadata:
-  name: cypress-11-executor-smoke-chrome
-  labels:
-    core-tests: executors
-spec:
-  type: cypress:v11/test
-  content:
-    type: git
-    repository:
-      type: git
-      uri: https://github.com/kubeshop/testkube
-      branch: main
-      path: test/cypress/executor-tests/cypress-11
-  executionRequest:
-    variables:
-      CYPRESS_CUSTOM_ENV:
-        name: CYPRESS_CUSTOM_ENV
-        value: CYPRESS_CUSTOM_ENV_value
-        type: basic
-    args:
-      - --browser
-      - chrome
-      - --env
-      - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
-      - --config
-      - video=false
-    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
-    activeDeadlineSeconds: 180
----
-apiVersion: tests.testkube.io/v3
-kind: Test
-metadata:
-  name: cypress-11-executor-smoke-firefox
-  labels:
-    core-tests: executors
-spec:
-  type: cypress:v11/test
-  content:
-    type: git
-    repository:
-      type: git
-      uri: https://github.com/kubeshop/testkube
-      branch: main
-      path: test/cypress/executor-tests/cypress-11
-  executionRequest:
-    variables:
-      CYPRESS_CUSTOM_ENV:
-        name: CYPRESS_CUSTOM_ENV
-        value: CYPRESS_CUSTOM_ENV_value
-        type: basic
-    args:
-      - --browser
-      - chrome
-      - --env
-      - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
-      - --config
-      - video=false
-    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
-    activeDeadlineSeconds: 180
----
-apiVersion: tests.testkube.io/v3
-kind: Test
-metadata:
-  name: cypress-default-executor-smoke-electron
-  labels:
-    core-tests: executors
-spec:
-  type: cypress/project
-  content:
-    type: git
-    repository:
-      type: git
-      uri: https://github.com/kubeshop/testkube
-      branch: main
-      path: test/cypress/executor-tests/cypress-12
-  executionRequest:
-    variables:
-      CYPRESS_CUSTOM_ENV:
-        name: CYPRESS_CUSTOM_ENV
-        value: CYPRESS_CUSTOM_ENV_value
-        type: basic
-    args:
-      - --env
-      - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
-      - --config
-      - video=false
-    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
-    activeDeadlineSeconds: 600
----
-apiVersion: tests.testkube.io/v3
-kind: Test
-metadata:
   name: cypress-default-executor-smoke-video-recording-enabled
   labels:
     core-tests: executors
@@ -332,6 +88,10 @@ spec:
       CYPRESS_CUSTOM_ENV:
         name: CYPRESS_CUSTOM_ENV
         value: CYPRESS_CUSTOM_ENV_value
+        type: basic
+      UV_USE_IO_URING:
+        name: UV_USE_IO_URING
+        value: "0"
         type: basic
     args:
       - --env
@@ -366,6 +126,10 @@ spec:
         name: DEPENDENCY_MANAGER
         value: yarn
         type: basic
+      UV_USE_IO_URING:
+        name: UV_USE_IO_URING
+        value: "0"
+        type: basic
     args:
       - --env
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
@@ -394,6 +158,10 @@ spec:
       CYPRESS_CUSTOM_ENV:
         name: CYPRESS_CUSTOM_ENV
         value: CYPRESS_CUSTOM_ENV_value
+        type: basic
+      UV_USE_IO_URING:
+        name: UV_USE_IO_URING
+        value: "0"
         type: basic
     args:
       - --env
@@ -433,6 +201,10 @@ spec:
         name: CYPRESS_CUSTOM_ENV
         value: CYPRESS_CUSTOM_ENV_value
         type: basic
+      UV_USE_IO_URING:
+        name: UV_USE_IO_URING
+        value: "0"
+        type: basic
     args:
       - --env
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
@@ -471,6 +243,10 @@ spec:
         name: CYPRESS_CUSTOM_ENV
         value: CYPRESS_CUSTOM_ENV_value
         type: basic
+      UV_USE_IO_URING:
+        name: UV_USE_IO_URING
+        value: "0"
+        type: basic
     args:
       - --env
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
@@ -478,116 +254,6 @@ spec:
       - video=false
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
     activeDeadlineSeconds: 600
----
-apiVersion: tests.testkube.io/v3
-kind: Test
-metadata:
-  name: cypress-10-executor-smoke-electron
-  labels:
-    core-tests: executors
-spec:
-  type: cypress:v10/test
-  content:
-    type: git
-    repository:
-      type: git
-      uri: https://github.com/kubeshop/testkube
-      branch: main
-      path: test/cypress/executor-tests/cypress-10
-  executionRequest:
-    variables:
-      CYPRESS_CUSTOM_ENV:
-        name: CYPRESS_CUSTOM_ENV
-        value: CYPRESS_CUSTOM_ENV_value
-        type: basic
-    args:
-      - --env
-      - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
-      - --config
-      - video=false
-    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
-    activeDeadlineSeconds: 180
----
-apiVersion: tests.testkube.io/v3
-kind: Test
-metadata:
-  name: cypress-10-executor-smoke-chrome
-  labels:
-    core-tests: executors
-spec:
-  type: cypress:v10/test
-  content:
-    type: git
-    repository:
-      type: git
-      uri: https://github.com/kubeshop/testkube
-      branch: main
-      path: test/cypress/executor-tests/cypress-10
-  executionRequest:
-    variables:
-      CYPRESS_CUSTOM_ENV:
-        name: CYPRESS_CUSTOM_ENV
-        value: CYPRESS_CUSTOM_ENV_value
-        type: basic
-    args:
-      - --browser
-      - chrome
-      - --env
-      - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
-      - --config
-      - video=false
-    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
-    activeDeadlineSeconds: 180
----
-apiVersion: tests.testkube.io/v3
-kind: Test
-metadata:
-  name: cypress-10-executor-smoke-firefox
-  labels:
-    core-tests: executors
-spec:
-  type: cypress:v10/test
-  content:
-    type: git
-    repository:
-      type: git
-      uri: https://github.com/kubeshop/testkube
-      branch: main
-      path: test/cypress/executor-tests/cypress-10
-  executionRequest:
-    variables:
-      CYPRESS_CUSTOM_ENV:
-        name: CYPRESS_CUSTOM_ENV
-        value: CYPRESS_CUSTOM_ENV_value
-        type: basic
-    args:
-      - --browser
-      - firefox
-      - --env
-      - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
-      - --config
-      - video=false
-    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
-    activeDeadlineSeconds: 180
----
-apiVersion: tests.testkube.io/v3
-kind: Test
-metadata:
-  name: cypress-9-executor-smoke-electron
-  labels:
-    core-tests: executors
-spec:
-  type: cypress:v9/test
-  content:
-    type: git
-    repository:
-      type: git
-      uri: https://github.com/kubeshop/testkube
-      branch: main
-      path: test/cypress/executor-tests/cypress-9
-  executionRequest:
-    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
-    activeDeadlineSeconds: 180
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -612,6 +278,11 @@ spec:
       - video=false
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
     activeDeadlineSeconds: 180
+    variables:
+      UV_USE_IO_URING:
+        name: UV_USE_IO_URING
+        value: "0"
+        type: basic
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -636,76 +307,11 @@ spec:
       - video=false
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
     activeDeadlineSeconds: 180
----
-apiVersion: tests.testkube.io/v3
-kind: Test
-metadata:
-  name: cypress-8-executor-smoke-electron
-  labels:
-    core-tests: executors
-spec:
-  type: cypress:v8/test
-  content:
-    type: git
-    repository:
-      type: git
-      uri: https://github.com/kubeshop/testkube
-      branch: main
-      path: test/cypress/executor-tests/cypress-8
-  executionRequest:
-    args:
-      - --config
-      - video=false
-    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
-    activeDeadlineSeconds: 180
----
-apiVersion: tests.testkube.io/v3
-kind: Test
-metadata:
-  name: cypress-8-executor-smoke-chrome
-  labels:
-    core-tests: executors
-spec:
-  type: cypress:v8/test
-  content:
-    type: git
-    repository:
-      type: git
-      uri: https://github.com/kubeshop/testkube
-      branch: main
-      path: test/cypress/executor-tests/cypress-8
-  executionRequest:
-    args:
-      - --browser
-      - chrome
-      - --config
-      - video=false
-    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
-    activeDeadlineSeconds: 180
----
-apiVersion: tests.testkube.io/v3
-kind: Test
-metadata:
-  name: cypress-8-executor-smoke-firefox
-  labels:
-    core-tests: executors
-spec:
-  type: cypress:v8/test
-  content:
-    type: git
-    repository:
-      type: git
-      uri: https://github.com/kubeshop/testkube
-      branch: main
-      path: test/cypress/executor-tests/cypress-8
-  executionRequest:
-    args:
-      - --browser
-      - firefox
-      - --config
-      - video=false
-    jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
-    activeDeadlineSeconds: 180
+    variables:
+      UV_USE_IO_URING:
+        name: UV_USE_IO_URING
+        value: "0"
+        type: basic
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -728,3 +334,8 @@ spec:
     negativeTest: true
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 1Gi\n              cpu: 1\n"
     activeDeadlineSeconds: 180
+    variables:
+      UV_USE_IO_URING:
+        name: UV_USE_IO_URING
+        value: "0"
+        type: basic

@@ -29,6 +29,8 @@ spec:
       env:
       - name: CYPRESS_CUSTOM_ENV
         value: CYPRESS_CUSTOM_ENV_value
+      - name: UV_USE_IO_URING # workaround for NPM being stuck
+        value: "0"
     steps:
     - name: Saving artifacts
       workingDir: /data/repo/test/cypress/executor-tests/cypress-13/cypress/videos
