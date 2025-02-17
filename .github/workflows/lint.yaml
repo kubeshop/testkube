@@ -52,3 +52,4 @@ jobs:
           version: latest
           args: --timeout=5m
           only-new-issues: true
+          verify: false
