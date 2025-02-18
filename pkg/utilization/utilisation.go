@@ -1,24 +1,27 @@
-package utilisation
+package utilization
 
 import (
 	"context"
 	"fmt"
-	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
+	"github.com/kubeshop/testkube/pkg/utilization/core"
+	"os"
+	"time"
+
 	"github.com/pkg/errors"
 	"github.com/shirou/gopsutil/v4/disk"
 	"github.com/shirou/gopsutil/v4/net"
 	"github.com/shirou/gopsutil/v4/process"
-	"os"
-	"time"
+
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
 )
 
 const defaultSamplingInterval = 1 * time.Second
 
 type MetricRecorder struct {
 	writer           Writer
-	format           Formatter
+	format           core.Formatter
 	samplingInterval time.Duration
-	tags             []KeyValue
+	tags             []core.KeyValue
 }
 
 type Option func(*MetricRecorder)
@@ -35,7 +38,7 @@ func WithSamplingInterval(interval time.Duration) Option {
 	}
 }
 
-func WithTags(tags []KeyValue) Option {
+func WithTags(tags []core.KeyValue) Option {
 	return func(u *MetricRecorder) {
 		u.tags = tags
 	}
@@ -43,7 +46,7 @@ func WithTags(tags []KeyValue) Option {
 
 func NewMetricsRecorder(opts ...Option) *MetricRecorder {
 	u := &MetricRecorder{
-		format:           NewInfluxDBLineProtocolFormatter(),
+		format:           core.NewInfluxDBLineProtocolFormatter(),
 		writer:           NewSTDOUTWriter(),
 		samplingInterval: defaultSamplingInterval,
 	}
@@ -100,40 +103,40 @@ func (r *MetricRecorder) Start(ctx context.Context) {
 	}
 }
 
-func (r *MetricRecorder) buildMemoryFields(metrics *Metrics) []KeyValue {
-	return []KeyValue{
-		NewKeyValue("rss", fmt.Sprintf("%d", metrics.Memory.RSS)),
-		NewKeyValue("vms", fmt.Sprintf("%d", metrics.Memory.VMS)),
-		NewKeyValue("swap", fmt.Sprintf("%d", metrics.Memory.Swap)),
-		NewKeyValue("percent", fmt.Sprintf("%f", metrics.MemoryPercent)),
+func (r *MetricRecorder) buildMemoryFields(metrics *Metrics) []core.KeyValue {
+	return []core.KeyValue{
+		core.NewKeyValue("rss", fmt.Sprintf("%d", metrics.Memory.RSS)),
+		core.NewKeyValue("vms", fmt.Sprintf("%d", metrics.Memory.VMS)),
+		core.NewKeyValue("swap", fmt.Sprintf("%d", metrics.Memory.Swap)),
+		core.NewKeyValue("percent", fmt.Sprintf("%f", metrics.MemoryPercent)),
 	}
 }
 
-func (r *MetricRecorder) buildCPUFields(metrics *Metrics) []KeyValue {
-	return []KeyValue{
-		NewKeyValue("percent", fmt.Sprintf("%f", metrics.CPUPercent)),
+func (r *MetricRecorder) buildCPUFields(metrics *Metrics) []core.KeyValue {
+	return []core.KeyValue{
+		core.NewKeyValue("percent", fmt.Sprintf("%f", metrics.CPUPercent)),
 	}
 }
 
-func (r *MetricRecorder) buildNetworkFields(metrics *Metrics) []KeyValue {
-	var kv []KeyValue
+func (r *MetricRecorder) buildNetworkFields(metrics *Metrics) []core.KeyValue {
+	var kv []core.KeyValue
 	for _, ifaceStat := range metrics.Network {
 		kv = append(kv,
-			NewKeyValue(fmt.Sprintf("%s_bytes_sent", ifaceStat.Name), fmt.Sprintf("%d", ifaceStat.BytesSent)),
-			NewKeyValue(fmt.Sprintf("%s_bytes_recv", ifaceStat.Name), fmt.Sprintf("%d", ifaceStat.BytesRecv)),
+			core.NewKeyValue(fmt.Sprintf("%s_bytes_sent", ifaceStat.Name), fmt.Sprintf("%d", ifaceStat.BytesSent)),
+			core.NewKeyValue(fmt.Sprintf("%s_bytes_recv", ifaceStat.Name), fmt.Sprintf("%d", ifaceStat.BytesRecv)),
 		)
 	}
 	return kv
 }
 
-func (r *MetricRecorder) buildDiskFields(metrics *Metrics) []KeyValue {
-	var kv []KeyValue
+func (r *MetricRecorder) buildDiskFields(metrics *Metrics) []core.KeyValue {
+	var kv []core.KeyValue
 	for device, stats := range metrics.Disk {
 		kv = append(kv,
-			NewKeyValue(fmt.Sprintf("%s_read_bytes", device), fmt.Sprintf("%d", stats.ReadBytes)),
-			NewKeyValue(fmt.Sprintf("%s_write_bytes", device), fmt.Sprintf("%d", stats.WriteBytes)),
-			NewKeyValue(fmt.Sprintf("%s_reads", device), fmt.Sprintf("%d", stats.ReadCount)),
-			NewKeyValue(fmt.Sprintf("%s_writes", device), fmt.Sprintf("%d", stats.WriteCount)),
+			core.NewKeyValue(fmt.Sprintf("%s_read_bytes", device), fmt.Sprintf("%d", stats.ReadBytes)),
+			core.NewKeyValue(fmt.Sprintf("%s_write_bytes", device), fmt.Sprintf("%d", stats.WriteBytes)),
+			core.NewKeyValue(fmt.Sprintf("%s_reads", device), fmt.Sprintf("%d", stats.ReadCount)),
+			core.NewKeyValue(fmt.Sprintf("%s_writes", device), fmt.Sprintf("%d", stats.WriteCount)),
 		)
 	}
 	return kv

@@ -1,14 +1,17 @@
-package utilisation
+package utilization
 
 import (
 	"bufio"
 	"context"
 	"fmt"
-	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
-	"github.com/pkg/errors"
+	"github.com/kubeshop/testkube/pkg/utilization/core"
 	"io"
 	"os"
 	"time"
+
+	"github.com/pkg/errors"
+
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
 )
 
 type Writer interface {
@@ -96,8 +99,8 @@ func WithMetricsRecorder(step string, fn func()) {
 		return
 	}
 	// create the metrics recorder
-	tags := []KeyValue{
-		NewKeyValue("step", step),
+	tags := []core.KeyValue{
+		core.NewKeyValue("step", step),
 	}
 	r := NewMetricsRecorder(WithTags(tags), WithWriter(w))
 	go func() {

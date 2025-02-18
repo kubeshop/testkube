@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/kubeshop/testkube/cmd/testworkflow-init/utilisation"
 	"os"
 	"os/signal"
 	"slices"
@@ -12,6 +11,8 @@ import (
 	"sync/atomic"
 	"syscall"
 	"time"
+
+	"github.com/kubeshop/testkube/pkg/utilization"
 
 	"github.com/gookit/color"
 
@@ -370,7 +371,7 @@ func main() {
 				stopTimeoutWatcher := orchestration.WatchTimeout(finalizeTimeout, leaf...)
 
 				// Run the command
-				utilisation.WithMetricsRecorder(step.Ref, func() {
+				utilization.WithMetricsRecorder(step.Ref, func() {
 					commands.Run(*action.Execute, currentContainer)
 				})
 

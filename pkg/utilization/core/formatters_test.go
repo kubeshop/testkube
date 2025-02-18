@@ -1,14 +1,13 @@
-package utilisation
+package core
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestInfluxDBLineProtocolFormatter_Format(t *testing.T) {
-	t.Parallel()
-
 	mockTime := func() time.Time {
 		return time.Unix(0, 1672531200000000000) // Fixed timestamp for all test cases
 	}
