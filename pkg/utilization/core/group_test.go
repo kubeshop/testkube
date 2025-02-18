@@ -10,7 +10,7 @@ import (
 )
 
 func TestBuildDataPoints(t *testing.T) {
-	samples, err := ParseMetricsFile("testdata/metrics_valid_metadata.influx")
+	samples, err := OpenAndParseMetricsFile("testdata/metrics_valid_metadata.influx")
 	require.NoError(t, err)
 
 	dataPoints := BuildDataPoints(samples)

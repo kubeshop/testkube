@@ -3,15 +3,9 @@ package utilization
 import (
 	"context"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/kubeshop/testkube/pkg/utilization/core"
-
-	"github.com/pkg/errors"
-	"github.com/shirou/gopsutil/v4/disk"
-	"github.com/shirou/gopsutil/v4/net"
-	"github.com/shirou/gopsutil/v4/process"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
 )
@@ -81,6 +75,12 @@ func (r *MetricRecorder) Start(ctx context.Context) {
 	t := time.NewTicker(r.samplingInterval)
 	defer t.Stop()
 
+	process, err := getChildProcess()
+	if err != nil {
+		stdoutUnsafe.Error(fmt.Sprintf("failed to get process: %v", err))
+		return
+	}
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -90,115 +90,9 @@ func (r *MetricRecorder) Start(ctx context.Context) {
 			}
 			return
 		case <-t.C:
-			// Instrument the current process
-			metrics, err := instrument()
-			if err != nil {
-				stdoutUnsafe.Error(fmt.Sprintf("failed to instrument current process: %v\n", err))
-				continue
-			}
-			// Build each set of metrics
-			memoryMetrics := r.format.Format("memory", r.tags, r.buildMemoryFields(metrics))
-			cpuMetrics := r.format.Format("cpu", r.tags, r.buildCPUFields(metrics))
-			networkMetrics := r.format.Format("network", r.tags, r.buildNetworkFields(metrics))
-			diskMetrics := r.format.Format("disk", r.tags, r.buildDiskFields(metrics))
-			// Write each set of metrics
-			if err := r.writer.Write(ctx, memoryMetrics); err != nil {
-				stdoutUnsafe.Error(fmt.Sprintf("failed to write memory metrics: %v\n", err))
-			}
-			if err := r.writer.Write(ctx, cpuMetrics); err != nil {
-				stdoutUnsafe.Error(fmt.Sprintf("failed to write cpu metrics: %v\n", err))
-			}
-			if err := r.writer.Write(ctx, networkMetrics); err != nil {
-				stdoutUnsafe.Error(fmt.Sprintf("failed to write network metrics: %v\n", err))
-			}
-			if err := r.writer.Write(ctx, diskMetrics); err != nil {
-				stdoutUnsafe.Error(fmt.Sprintf("failed to write disk metrics: %v\n", err))
-			}
+			r.iterate(ctx, process)
 		}
 	}
-}
-
-func (r *MetricRecorder) buildMemoryFields(metrics *Metrics) []core.KeyValue {
-	return []core.KeyValue{
-		core.NewKeyValue("rss", fmt.Sprintf("%d", metrics.Memory.RSS)),
-		core.NewKeyValue("vms", fmt.Sprintf("%d", metrics.Memory.VMS)),
-		core.NewKeyValue("swap", fmt.Sprintf("%d", metrics.Memory.Swap)),
-		core.NewKeyValue("percent", fmt.Sprintf("%f", metrics.MemoryPercent)),
-	}
-}
-
-func (r *MetricRecorder) buildCPUFields(metrics *Metrics) []core.KeyValue {
-	return []core.KeyValue{
-		core.NewKeyValue("percent", fmt.Sprintf("%f", metrics.CPUPercent)),
-	}
-}
-
-func (r *MetricRecorder) buildNetworkFields(metrics *Metrics) []core.KeyValue {
-	var kv []core.KeyValue
-	for _, ifaceStat := range metrics.Network {
-		kv = append(kv,
-			core.NewKeyValue(fmt.Sprintf("%s_bytes_sent", ifaceStat.Name), fmt.Sprintf("%d", ifaceStat.BytesSent)),
-			core.NewKeyValue(fmt.Sprintf("%s_bytes_recv", ifaceStat.Name), fmt.Sprintf("%d", ifaceStat.BytesRecv)),
-		)
-	}
-	return kv
-}
-
-func (r *MetricRecorder) buildDiskFields(metrics *Metrics) []core.KeyValue {
-	var kv []core.KeyValue
-	for device, stats := range metrics.Disk {
-		kv = append(kv,
-			core.NewKeyValue(fmt.Sprintf("%s_read_bytes", device), fmt.Sprintf("%d", stats.ReadBytes)),
-			core.NewKeyValue(fmt.Sprintf("%s_write_bytes", device), fmt.Sprintf("%d", stats.WriteBytes)),
-			core.NewKeyValue(fmt.Sprintf("%s_reads", device), fmt.Sprintf("%d", stats.ReadCount)),
-			core.NewKeyValue(fmt.Sprintf("%s_writes", device), fmt.Sprintf("%d", stats.WriteCount)),
-		)
-	}
-	return kv
-}
-
-type Metrics struct {
-	Memory        *process.MemoryInfoStat
-	MemoryPercent float32
-	CPUPercent    float64
-	Network       []net.IOCountersStat
-	Disk          map[string]disk.IOCountersStat
-}
-
-func instrument() (*Metrics, error) {
-	// Get current process
-	p, err := process.NewProcess(int32(os.Getpid()))
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get current process")
-	}
-	// Get process metrics
-	mem, err := p.MemoryInfo()
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get memory info")
-	}
-	memPercent, err := p.MemoryPercent()
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get memory percent")
-	}
-	cpuPercent, err := p.CPUPercent()
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get CPU info")
-	}
-	net, err := net.IOCounters(true)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get network info")
-	}
-	disk, err := disk.IOCounters()
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get disk info")
-	}
-	return &Metrics{
-		Memory:        mem,
-		MemoryPercent: memPercent,
-		CPUPercent:    cpuPercent,
-		Network:       net,
-		Disk:          disk,
-	}, nil
 }
 
 type Config struct {
