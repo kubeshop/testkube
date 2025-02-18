@@ -1,4 +1,4 @@
-package utilisation
+package core
 
 import (
 	"fmt"
@@ -64,3 +64,5 @@ func (f *InfluxDBLineProtocolFormatter) formatKeyValue(kv []KeyValue) string {
 	}
 	return sb.String()
 }
+
+var _ Formatter = &InfluxDBLineProtocolFormatter{}
