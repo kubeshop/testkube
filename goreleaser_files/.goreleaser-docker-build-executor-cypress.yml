@@ -62,7 +62,7 @@ dockers:
       - "--label=org.opencontainers.image.created={{ .Date}}"
       - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
 
-  - dockerfile: "./contrib/executor/cypress/build/agent/Dockerfile.cypress12"
+  - dockerfile: "./contrib/executor/cypress/build/agent/Dockerfile.cypress13"
     use: buildx
     goos: linux
     goarch: amd64
@@ -71,22 +71,6 @@ dockers:
       - "{{ if .Env.SANDBOX_IMAGE }}{{ .Env.DOCKER_REPO }}/testkube-sandbox:cypress-executor-{{ .Env.BRANCH_IDENTIFIER }}-{{ .ShortCommit }}{{ end }}"
     build_flag_templates:
       - "--platform=linux/amd64"
-      - "--builder={{ .Env.DOCKER_BUILDX_BUILDER }}"
-      - "--cache-to={{ .Env.DOCKER_BUILDX_CACHE_TO }}"
-      - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
-      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
-      - "--label=org.opencontainers.image.created={{ .Date}}"
-      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
-
-  - dockerfile: "./contrib/executor/cypress/build/agent/Dockerfile.cypress12"
-    use: buildx
-    goos: linux
-    goarch: arm64
-    image_templates:
-      - "{{ if .Env.IMAGE_TAG_SHA }}{{ .Env.DOCKER_REPO }}/testkube-cypress-executor:{{ .ShortCommit }}-arm{{ end }}"
-      - "{{ if .Env.SANDBOX_IMAGE }}{{ .Env.DOCKER_REPO }}/testkube-sandbox:cypress-executor-{{ .Env.BRANCH_IDENTIFIER }}-{{ .ShortCommit }}{{ end }}"
-    build_flag_templates:
-      - "--platform=linux/arm64"
       - "--builder={{ .Env.DOCKER_BUILDX_BUILDER }}"
       - "--cache-to={{ .Env.DOCKER_BUILDX_CACHE_TO }}"
       - "--cache-from={{ .Env.DOCKER_BUILDX_CACHE_FROM }}"
