@@ -3,9 +3,10 @@ package utilization
 import (
 	"context"
 	"fmt"
-	"github.com/kubeshop/testkube/pkg/utilization/core"
 	"os"
 	"time"
+
+	"github.com/kubeshop/testkube/pkg/utilization/core"
 
 	"github.com/pkg/errors"
 	"github.com/shirou/gopsutil/v4/disk"
@@ -15,10 +16,14 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
 )
 
-const defaultSamplingInterval = 1 * time.Second
+const (
+	slowSamplingInterval    = 15 * time.Second
+	fastSamplingInterval    = 1 * time.Second
+	defaultSamplingInterval = fastSamplingInterval
+)
 
 type MetricRecorder struct {
-	writer           Writer
+	writer           core.Writer
 	format           core.Formatter
 	samplingInterval time.Duration
 	tags             []core.KeyValue
@@ -26,7 +31,17 @@ type MetricRecorder struct {
 
 type Option func(*MetricRecorder)
 
-func WithWriter(writer Writer) Option {
+func WithFormatter(format core.MetricsFormat) Option {
+	return func(u *MetricRecorder) {
+		formatter, err := core.NewFormatter(format)
+		if err != nil {
+			panic(fmt.Sprintf("failed to create formatter: %v", err))
+		}
+		u.format = formatter
+	}
+}
+
+func WithWriter(writer core.Writer) Option {
 	return func(u *MetricRecorder) {
 		u.writer = writer
 	}
@@ -47,7 +62,7 @@ func WithTags(tags []core.KeyValue) Option {
 func NewMetricsRecorder(opts ...Option) *MetricRecorder {
 	u := &MetricRecorder{
 		format:           core.NewInfluxDBLineProtocolFormatter(),
-		writer:           NewSTDOUTWriter(),
+		writer:           core.NewSTDOUTWriter(),
 		samplingInterval: defaultSamplingInterval,
 	}
 	for _, opt := range opts {
@@ -184,4 +199,58 @@ func instrument() (*Metrics, error) {
 		Network:       net,
 		Disk:          disk,
 	}, nil
+}
+
+type Config struct {
+	// Dir is the directory where the metrics will be persisted
+	Dir string
+	// Skip indicated whether to skip the metrics recording.
+	// This is used for internal actions like git operations, artifact scraping...
+	Skip      bool
+	Workflow  string
+	Step      string
+	Execution string
+	// Format specifies in which format to record the metrics.
+	Format core.MetricsFormat
+}
+
+// WithMetricsRecorder runs the provided function and records the metrics in the specified directory.
+// If Config.Skip is set to true, the provided function will be run without recording metrics.
+// If there is an error with initiating the metrics recorder, the function will be run without recording metrics.
+func WithMetricsRecorder(config Config, fn func()) {
+	stdout := output.Std
+	stdoutUnsafe := stdout.Direct()
+
+	// Skip will be set to true for internal operations like git operations, artifact scraping...
+	if config.Skip {
+		stdoutUnsafe.Println("skipping metrics recording for internal operations")
+		fn()
+		return
+	}
+
+	cancelCtx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	metadata := &core.Metadata{
+		Workflow:  config.Workflow,
+		Step:      config.Step,
+		Execution: config.Execution,
+		Format:    config.Format,
+	}
+	w, err := core.NewBufferedFileWriter(config.Dir, metadata)
+	// If we can't create the file writer, log the error, run the function without metrics and exit early.
+	if err != nil {
+		stdoutUnsafe.Errorf("failed to create file writer: %v", err)
+		stdoutUnsafe.Warn("running the provided function without metrics recorder")
+		fn()
+		return
+	}
+	// create the metrics recorder
+	r := NewMetricsRecorder(WithWriter(w))
+	go func() {
+		r.Start(cancelCtx)
+	}()
+	// run the function
+	fn()
+	cancel()
 }

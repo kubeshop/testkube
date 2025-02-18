@@ -9,15 +9,15 @@ import (
 	"github.com/pkg/errors"
 )
 
-// FormatType defines the allowed formats ("influx", "csv", "json").
-type FormatType string
+// MetricsFormat defines the allowed formats ("influx", "csv", "json").
+type MetricsFormat string
 
 const (
-	prefixMeta               = "#META "
-	FormatInflux  FormatType = "influx"
-	FormatCSV     FormatType = "csv"
-	FormatJSON    FormatType = "json"
-	FormatUnknown FormatType = "unknown"
+	prefixMeta                  = "#META "
+	FormatInflux  MetricsFormat = "influx"
+	FormatCSV     MetricsFormat = "csv"
+	FormatJSON    MetricsFormat = "json"
+	FormatUnknown MetricsFormat = "unknown"
 )
 
 var (
@@ -27,13 +27,31 @@ var (
 
 // Metadata holds the parsed result from the meta line.
 type Metadata struct {
-	Lines  int
-	Format FormatType
+	Workflow  string
+	Step      string
+	Execution string
+	Lines     int
+	Format    MetricsFormat
 }
 
 func (m *Metadata) String() string {
 	sb := strings.Builder{}
 	sb.WriteString(prefixMeta)
+	if m.Workflow != "" {
+		sb.WriteString("workflow=")
+		sb.WriteString(m.Workflow)
+		sb.WriteString(" ")
+	}
+	if m.Step != "" {
+		sb.WriteString("step=")
+		sb.WriteString(m.Step)
+		sb.WriteString(" ")
+	}
+	if m.Execution != "" {
+		sb.WriteString("execution=")
+		sb.WriteString(m.Execution)
+		sb.WriteString(" ")
+	}
 	if m.Lines > 0 {
 		sb.WriteString("lines=")
 		sb.WriteString(strconv.Itoa(m.Lines))
@@ -46,9 +64,8 @@ func (m *Metadata) String() string {
 	return sb.String()
 }
 
-// writeMetadataToFile writes the metadata to the file.
-func writeMetadataToFile(f *os.File, metadata *Metadata) error {
-	// Rewind to the beginning of the file.
+// WriteMetadataToFile writes the metadata at the end of the file.
+func WriteMetadataToFile(f *os.File, metadata *Metadata) error {
 	_, err := f.WriteString(metadata.String() + "\n")
 	if err != nil {
 		return errors.Wrap(err, "failed to write metadata to the file")
@@ -69,9 +86,6 @@ func parseMetadataFromFile(f *os.File) (*Metadata, error) {
 	if err != nil {
 		if !errors.Is(err, ErrNoMetadata) {
 			return nil, errors.WithStack(err)
-		} else {
-			// File header does not contain metadata, rewind to the beginning of the file.
-			_, _ = f.Seek(0, 0)
 		}
 	}
 	// If metadata is not nil, we have successfully parsed it from the file header.
@@ -94,7 +108,7 @@ func parseMetadataFromFile(f *os.File) (*Metadata, error) {
 	return &Metadata{Format: ext}, nil
 }
 
-func getFormatFromFileExtension(path string) (FormatType, error) {
+func getFormatFromFileExtension(path string) (MetricsFormat, error) {
 	ext := filepath.Ext(path)
 	switch ext {
 	case ".csv":
@@ -159,7 +173,7 @@ func parseMetadata(line string) (*Metadata, error) {
 	}
 
 	// Check the format value
-	switch FormatType(formatStr) {
+	switch MetricsFormat(formatStr) {
 	case FormatInflux, FormatCSV, FormatJSON:
 		// valid
 	default:
@@ -168,7 +182,7 @@ func parseMetadata(line string) (*Metadata, error) {
 
 	meta := &Metadata{
 		Lines:  linesInt,
-		Format: FormatType(formatStr),
+		Format: MetricsFormat(formatStr),
 	}
 	return meta, nil
 }

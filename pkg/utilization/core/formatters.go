@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 type Formatter interface {
@@ -19,6 +21,16 @@ func NewKeyValue(key, value string) KeyValue {
 	return KeyValue{
 		Key:   key,
 		Value: value,
+	}
+}
+
+// NewFormatter is a factory method which instantiates a formatter implementation based on the provided format.
+func NewFormatter(format MetricsFormat) (Formatter, error) {
+	switch format {
+	case FormatInflux:
+		return NewInfluxDBLineProtocolFormatter(), nil
+	default:
+		return nil, errors.Errorf("unsupported format: %s", format)
 	}
 }
 

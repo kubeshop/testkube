@@ -1,28 +1,32 @@
 package core
 
 import (
-	"k8s.io/utils/ptr"
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
+	"k8s.io/utils/ptr"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestParseFile(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name            string
 		filepath        string
 		wantSampleCount int
-		wantFirstSample *Sample
-		wantLastSample  *Sample
+		wantFirstSample *Metric
+		wantLastSample  *Metric
 	}{
 		{
 			name:            "Valid file with metadata",
 			filepath:        "testdata/metrics_valid_metadata.influx",
 			wantSampleCount: 50,
-			wantFirstSample: &Sample{
-				Metric: "cpu",
+			wantFirstSample: &Metric{
+				Measurement: "cpu",
 				Tags: []KeyValue{
 					{Key: "host", Value: "server01"},
 				},
@@ -33,8 +37,8 @@ func TestParseFile(t *testing.T) {
 				},
 				Timestamp: ptr.To(time.Unix(0, 1670000000000000000).UTC()),
 			},
-			wantLastSample: &Sample{
-				Metric: "mem",
+			wantLastSample: &Metric{
+				Measurement: "mem",
 				Tags: []KeyValue{
 					{Key: "host", Value: "server02"},
 				},
@@ -51,7 +55,7 @@ func TestParseFile(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			samples, err := ParseMetricsFile(tc.filepath)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Len(t, samples, tc.wantSampleCount)
 			assert.Equal(t, tc.wantFirstSample, samples[0])
 			assert.Equal(t, tc.wantLastSample, samples[len(samples)-1])
@@ -72,15 +76,15 @@ func TestInfluxDBLineProtocolParser(t *testing.T) {
 	tests := []struct {
 		name          string
 		input         string
-		wantSample    *Sample
+		wantSample    *Metric
 		wantErrSubstr string
 	}{
 		{
 			name:  "Valid with measurement + single field (no tags, no timestamp)",
 			input: "cpu usage=50.0",
-			wantSample: &Sample{
-				Metric: "cpu",
-				Tags:   nil,
+			wantSample: &Metric{
+				Measurement: "cpu",
+				Tags:        nil,
 				Fields: []KeyValue{
 					{Key: "usage", Value: "50.0"},
 				},
@@ -90,8 +94,8 @@ func TestInfluxDBLineProtocolParser(t *testing.T) {
 		{
 			name:  "Valid with measurement, multiple tags, multiple fields, and timestamp",
 			input: "cpu,host=server01,region=uswest usage_idle=55.0,usage_busy=45.0 " + strconv.FormatInt(testNanos, 10),
-			wantSample: &Sample{
-				Metric: "cpu",
+			wantSample: &Metric{
+				Measurement: "cpu",
 				Tags: []KeyValue{
 					{Key: "host", Value: "server01"},
 					{Key: "region", Value: "uswest"},
@@ -130,8 +134,8 @@ func TestInfluxDBLineProtocolParser(t *testing.T) {
 		{
 			name:  "Valid line with multiple tags, multiple fields, no timestamp",
 			input: "temp,location=roomA,device=sensor1 reading=23.5,errors=2",
-			wantSample: &Sample{
-				Metric: "temp",
+			wantSample: &Metric{
+				Measurement: "temp",
 				Tags: []KeyValue{
 					{Key: "location", Value: "roomA"},
 					{Key: "device", Value: "sensor1"},
