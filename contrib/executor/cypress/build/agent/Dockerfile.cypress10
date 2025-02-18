@@ -3,6 +3,11 @@ FROM cypress/included:10.11.0
 COPY cypress /bin/runner
 # run as a root in order to install to /root/cache and write to shared data volume
 
+RUN echo "#deb [arch=amd64] https://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list
+RUN apt update -y && apt install -y gnupg
+RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 32EE5355A6BC6E42
+RUN echo "deb [arch=amd64] https://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list
+
 RUN apt-get update && \
     apt-get install -y curl && \
     apt-get clean && \
