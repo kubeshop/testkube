@@ -598,16 +598,16 @@ jobs:
         with:
           go-version: stable
           cache: false
-
-      - name: Go Cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          key: cypress-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
+#
+#      - name: Go Cache
+#        uses: actions/cache@v4
+#        with:
+#          path: |
+#            ~/go/pkg/mod
+#            ~/.cache/go-build
+#          key: cypress-go-${{ hashFiles('**/go.sum') }}
+#          restore-keys: |
+#            ${{ runner.os }}-go-
 
       - name: Login to DockerHub
         uses: docker/login-action@v3
@@ -615,16 +615,16 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Push README to Dockerhub
-        uses: christian-korneck/update-container-description-action@v1
-        env:
-          DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKER_PASS: ${{ secrets.DOCKERHUB_TOKEN }}
-        with:
-          destination_container_repo: "kubeshop/testkube-cypress-executor"
-          provider: dockerhub
-          short_description: "Testkube cypress executor"
-          readme_file: "./contrib/executor/cypress/README.md"
+#      - name: Push README to Dockerhub
+#        uses: christian-korneck/update-container-description-action@v1
+#        env:
+#          DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+#          DOCKER_PASS: ${{ secrets.DOCKERHUB_TOKEN }}
+#        with:
+#          destination_container_repo: "kubeshop/testkube-cypress-executor"
+#          provider: dockerhub
+#          short_description: "Testkube cypress executor"
+#          readme_file: "./contrib/executor/cypress/README.md"
 
       - name: Get tag
         id: tag
