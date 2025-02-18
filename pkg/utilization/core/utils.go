@@ -3,9 +3,10 @@ package core
 import (
 	"bytes"
 	"fmt"
-	"github.com/pkg/errors"
 	"os"
 	"runtime"
+
+	"github.com/pkg/errors"
 )
 
 const initReadSize = 2 << 4

@@ -1,10 +1,11 @@
 package core
 
 import (
-	"github.com/stretchr/testify/require"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -26,7 +27,7 @@ mem,host=server01 usage=2048
 		Format: FormatInflux,
 	}
 
-	err = writeMetadataToFile(tmpFile, metadata)
+	err = WriteMetadataToFile(tmpFile, metadata)
 	require.NoError(t, err)
 
 	expectedContent := `cpu,host=server01 usage_idle=99

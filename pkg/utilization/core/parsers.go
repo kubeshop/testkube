@@ -16,18 +16,18 @@ const commentPrefix = "#"
 // Parser is an interface for parsing metrics/data points.
 type Parser interface {
 	// Parse parses a single metrics line/data point.
-	Parse(sample []byte) (*Sample, error)
+	Parse(metric []byte) (*Metric, error)
 }
 
-// Sample represents a single data point.
-type Sample struct {
-	Metric    string
-	Tags      []KeyValue
-	Fields    []KeyValue
-	Timestamp *time.Time
+// Metric represents a protocol-agnostic data point.
+type Metric struct {
+	Measurement string
+	Tags        []KeyValue
+	Fields      []KeyValue
+	Timestamp   *time.Time
 }
 
-func ParseMetricsFile(filepath string) ([]*Sample, error) {
+func ParseMetricsFile(filepath string) ([]*Metric, error) {
 	f, err := os.Open(filepath)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to open metrics file")
@@ -39,14 +39,14 @@ func ParseMetricsFile(filepath string) ([]*Sample, error) {
 		return nil, errors.Wrap(err, "failed to parse metadata")
 	}
 
-	parser, err := newParser(metadata.Format)
+	parser, err := NewParser(metadata.Format)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create parser")
 	}
 
-	var samples []*Sample
+	var samples []*Metric
 	if metadata.Lines > 0 {
-		samples = make([]*Sample, metadata.Lines)
+		samples = make([]*Metric, metadata.Lines)
 	}
 	scanner := bufio.NewScanner(f)
 	i := 0
@@ -73,15 +73,16 @@ func ParseMetricsFile(filepath string) ([]*Sample, error) {
 	return samples, nil
 }
 
-func GroupByMetric(samples []*Sample) map[string][]*Sample {
-	grouped := make(map[string][]*Sample)
+func GroupByMetric(samples []*Metric) map[string][]*Metric {
+	grouped := make(map[string][]*Metric)
 	for _, s := range samples {
-		grouped[s.Metric] = append(grouped[s.Metric], s)
+		grouped[s.Measurement] = append(grouped[s.Measurement], s)
 	}
 	return grouped
 }
 
-func newParser(format FormatType) (Parser, error) {
+// NewParser is a factory method which instantiates a parser implementation based on the provided format.
+func NewParser(format MetricsFormat) (Parser, error) {
 	switch format {
 	case FormatInflux:
 		return NewInfluxDBLineProtocolParser(), nil
@@ -96,25 +97,25 @@ func NewInfluxDBLineProtocolParser() *InfluxDBLineProtocolParser {
 	return &InfluxDBLineProtocolParser{}
 }
 
-func (p *InfluxDBLineProtocolParser) Parse(sample []byte) (*Sample, error) {
+func (p *InfluxDBLineProtocolParser) Parse(sample []byte) (*Metric, error) {
 	parsed, err := p.parse(string(sample))
 	if err != nil {
 		return nil, err
 	}
 
-	return &Sample{
-		Metric:    parsed.Metric,
-		Tags:      parsed.Tags,
-		Fields:    parsed.Fields,
-		Timestamp: parsed.Timestamp,
+	return &Metric{
+		Measurement: parsed.Measurement,
+		Tags:        parsed.Tags,
+		Fields:      parsed.Fields,
+		Timestamp:   parsed.Timestamp,
 	}, nil
 }
 
 // parse parses a single line of InfluxDB line protocol
-// into a Sample structure. This function is a simplified parser
+// into a Metric structure. This function is a simplified parser
 // that does not handle all escaping or quoting rules of the full
 // line protocol specification.
-func (p *InfluxDBLineProtocolParser) parse(line string) (*Sample, error) {
+func (p *InfluxDBLineProtocolParser) parse(line string) (*Metric, error) {
 	// Split up to 3 parts: [metric+tags, fields, timestamp]
 	parts := strings.SplitN(strings.TrimSpace(line), " ", 3)
 	if len(parts) < 2 {
@@ -147,11 +148,11 @@ func (p *InfluxDBLineProtocolParser) parse(line string) (*Sample, error) {
 		return nil, errors.WithStack(err)
 	}
 
-	return &Sample{
-		Metric:    metric,
-		Tags:      tags,
-		Fields:    fields,
-		Timestamp: ts,
+	return &Metric{
+		Measurement: metric,
+		Tags:        tags,
+		Fields:      fields,
+		Timestamp:   ts,
 	}, nil
 }
 

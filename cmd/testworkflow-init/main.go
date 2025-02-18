@@ -12,6 +12,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/kubeshop/testkube/pkg/utilization/core"
+
 	"github.com/kubeshop/testkube/pkg/utilization"
 
 	"github.com/gookit/color"
@@ -265,6 +267,9 @@ func main() {
 			// as it may refer to the state file (Toolkit).
 			data.SaveState()
 
+			fmt.Printf("Actions: %v\n", state.Actions)
+			fmt.Printf("Step: %v\n", state.GetStep(action.Execute.Ref))
+
 			// Ignore running when the step is already resolved (= skipped)
 			step := state.GetStep(action.Execute.Ref)
 			if step.IsFinished() {
@@ -371,7 +376,16 @@ func main() {
 				stopTimeoutWatcher := orchestration.WatchTimeout(finalizeTimeout, leaf...)
 
 				// Run the command
-				utilization.WithMetricsRecorder(step.Ref, func() {
+				d := data.GetState()
+				recorderConfig := utilization.Config{
+					Dir:       "./metrics",
+					Skip:      action.Execute.Toolkit,
+					Workflow:  d.InternalConfig.Workflow.Name,
+					Step:      step.Ref,
+					Execution: d.InternalConfig.Execution.Id,
+					Format:    core.FormatInflux,
+				}
+				utilization.WithMetricsRecorder(recorderConfig, func() {
 					commands.Run(*action.Execute, currentContainer)
 				})
 
