@@ -3,6 +3,7 @@ on:
   push:
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]+-*"
 
 env:
   ALPINE_IMAGE: alpine:3.20.3
@@ -12,581 +13,575 @@ permissions:
   id-token: write # needed for keyless signing with cosign
 
 jobs:
-  api:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - uses: sigstore/cosign-installer@v3.7.0
-      - uses: anchore/sbom-action/download-syft@v0.17.7
-
-      - name: Set up Docker Buildx
-        id: buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set-up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: stable
-          cache: false
-
-      - name: Go Cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          key: testkube-api-go-${{ hashFiles('**/go.sum') }}
-
-      - name: Login to DockerHub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Push README to Dockerhub
-        uses: christian-korneck/update-container-description-action@v1
-        env:
-          DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKER_PASS: ${{ secrets.DOCKERHUB_TOKEN }}
-        with:
-          destination_container_repo: kubeshop/testkube-api-server
-          provider: dockerhub
-          short_description: "Testkube Kubernetes API Server"
-          readme_file: "./README.md"
-
-      - name: Release
-        uses: goreleaser/goreleaser-action@v6
-        with:
-          distribution: goreleaser
-          version: latest
-          args: release -f goreleaser_files/.goreleaser-docker-build-api.yml
-        env:
-          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
-          ANALYTICS_TRACKING_ID: ${{secrets.TESTKUBE_API_GA_MEASUREMENT_ID}}
-          ANALYTICS_API_KEY: ${{secrets.TESTKUBE_API_GA_MEASUREMENT_SECRET}}
-          SLACK_BOT_CLIENT_ID: ${{secrets.TESTKUBE_SLACK_BOT_CLIENT_ID}}
-          SLACK_BOT_CLIENT_SECRET: ${{secrets.TESTKUBE_SLACK_BOT_CLIENT_SECRET}}
-          SEGMENTIO_KEY: ${{secrets.TESTKUBE_API_SEGMENTIO_KEY}}
-          CLOUD_SEGMENTIO_KEY: ${{secrets.TESTKUBE_API_CLOUD_SEGMENTIO_KEY}}
-          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
-          DOCKER_BUILDX_CACHE_FROM: "type=gha"
-          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
-          ALPINE_IMAGE: ${{ env.ALPINE_IMAGE }}
-          BUSYBOX_IMAGE: ${{ env.BUSYBOX_IMAGE }}
-
-  testworkflow:
-    strategy:
-      matrix:
-        service: [ testworkflow-init, testworkflow-toolkit ]
-        include:
-          - service: testworkflow-init
-            repository: testkube-tw-init
-          - service: testworkflow-toolkit
-            repository: testkube-tw-toolkit
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - uses: sigstore/cosign-installer@v3.7.0
-      - uses: anchore/sbom-action/download-syft@v0.17.7
-
-      - name: Set up Docker Buildx
-        id: buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set-up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: stable
-          cache: false
-
-      - name: Go Cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          key: ${{ matrix.service }}-go-${{ hashFiles('**/go.sum') }}
-
-      - name: Login to DockerHub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Release
-        uses: goreleaser/goreleaser-action@v6
-        with:
-          distribution: goreleaser
-          version: latest
-          args: release -f goreleaser_files/.goreleaser-docker-build-${{ matrix.service }}.yml
-        env:
-          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
-          ANALYTICS_TRACKING_ID: ${{secrets.TESTKUBE_API_GA_MEASUREMENT_ID}}
-          ANALYTICS_API_KEY: ${{secrets.TESTKUBE_API_GA_MEASUREMENT_SECRET}}
-          SLACK_BOT_CLIENT_ID: ${{secrets.TESTKUBE_SLACK_BOT_CLIENT_ID}}
-          SLACK_BOT_CLIENT_SECRET: ${{secrets.TESTKUBE_SLACK_BOT_CLIENT_SECRET}}
-          SEGMENTIO_KEY: ${{secrets.TESTKUBE_API_SEGMENTIO_KEY}}
-          CLOUD_SEGMENTIO_KEY: ${{secrets.TESTKUBE_API_CLOUD_SEGMENTIO_KEY}}
-          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
-          DOCKER_BUILDX_CACHE_FROM: "type=gha"
-          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
-          ALPINE_IMAGE: ${{ env.ALPINE_IMAGE }}
-          BUSYBOX_IMAGE: ${{ env.BUSYBOX_IMAGE }}
-          SERVICE: ${{ matrix.service }}
-          REPOSITORY: ${{ matrix.repository }}
-
-  single_executor:
-    strategy:
-      matrix:
-        executor:
-          [
-              artillery,
-              curl,
-              example,
-              ginkgo,
-              k6,
-              kubepug,
-              postman,
-              soapui,
-              init,
-              scraper,
-              template,
-              tracetest,
-              zap,
-          ]
-
-    runs-on: ubuntu-latest
-    steps:
-      - name: Free Disk Space (Ubuntu)
-        uses: jlumbroso/free-disk-space@main
-        with:
-          # this might remove tools that are actually needed,
-          # if set to "true" but frees about 6 GB
-          tool-cache: false
-
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - uses: sigstore/cosign-installer@v3.7.0
-      - uses: anchore/sbom-action/download-syft@v0.17.7
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        id: buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Set-up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: stable
-          cache: false
-
-      - name: Go Cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          key: ${{ matrix.executor }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-
-      - name: Login to DockerHub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Push README to Dockerhub
-        uses: christian-korneck/update-container-description-action@v1
-        env:
-          DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKER_PASS: ${{ secrets.DOCKERHUB_TOKEN }}
-        with:
-          destination_container_repo: "kubeshop/testkube-${{ matrix.executor }}-executor"
-          provider: dockerhub
-          short_description: "Testkube ${{ matrix.executor }} executor"
-          readme_file: "./contrib/executor/${{ matrix.executor }}/README.md"
-
-      - name: Release
-        uses: goreleaser/goreleaser-action@v6
-        with:
-          distribution: goreleaser
-          version: latest
-          args: release -f goreleaser_files/.goreleaser-docker-build-executor.yml
-        env:
-          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
-          EXECUTOR: ${{ matrix.executor }}
-          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
-          DOCKER_BUILDX_CACHE_FROM: "type=gha"
-          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
-          ALPINE_IMAGE: ${{ env.ALPINE_IMAGE }}
-          BUSYBOX_IMAGE: ${{ env.BUSYBOX_IMAGE }}
-
-  executor_jmeter:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Free Disk Space (Ubuntu)
-        uses: jlumbroso/free-disk-space@main
-        with:
-          # this might remove tools that are actually needed,
-          # if set to "true" but frees about 6 GB
-          tool-cache: false
-
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - uses: sigstore/cosign-installer@v3.7.0
-      - uses: anchore/sbom-action/download-syft@v0.17.7
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        id: buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Set-up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: stable
-          cache: false
-
-      - name: Go Cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          key: jmeter-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-
-      - name: Login to DockerHub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Push README to Dockerhub
-        uses: christian-korneck/update-container-description-action@v1
-        env:
-          DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKER_PASS: ${{ secrets.DOCKERHUB_TOKEN }}
-        with:
-          destination_container_repo: "kubeshop/testkube-jmeter-executor"
-          provider: dockerhub
-          short_description: "Testkube jmeter executor"
-          readme_file: "./contrib/executor/jmeter/README.md"
-
-      - name: Release
-        uses: goreleaser/goreleaser-action@v6
-        with:
-          distribution: goreleaser
-          version: latest
-          args: release -f goreleaser_files/.goreleaser-docker-build-executor-jmeter.yml
-        env:
-          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
-          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
-          DOCKER_BUILDX_CACHE_FROM: "type=gha"
-          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
-
-  executor_jmeterd:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Free Disk Space (Ubuntu)
-        uses: jlumbroso/free-disk-space@main
-        with:
-          # this might remove tools that are actually needed,
-          # if set to "true" but frees about 6 GB
-          tool-cache: false
-
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - uses: sigstore/cosign-installer@v3.7.0
-      - uses: anchore/sbom-action/download-syft@v0.17.7
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        id: buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Set-up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: stable
-          cache: false
-
-      - name: Go Cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          key: jmeterd-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-
-      - name: Login to DockerHub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Push README to Dockerhub
-        uses: christian-korneck/update-container-description-action@v1
-        env:
-          DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKER_PASS: ${{ secrets.DOCKERHUB_TOKEN }}
-        with:
-          destination_container_repo: "kubeshop/testkube-jmeterd-executor"
-          provider: dockerhub
-          short_description: "Testkube jmeterd executor"
-          readme_file: "./contrib/executor/jmeterd/README.md"
-
-      - name: Release
-        uses: goreleaser/goreleaser-action@v6
-        with:
-          distribution: goreleaser
-          version: latest
-          args: release -f goreleaser_files/.goreleaser-docker-build-executor-jmeterd.yml
-        env:
-          GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
-          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
-          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
-          DOCKER_BUILDX_CACHE_FROM: "type=gha"
-          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
-          GOARCH: ${{ matrix.GOARCH }}
-
-  jmeterd_slave:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Free Disk Space (Ubuntu)
-        uses: jlumbroso/free-disk-space@main
-        with:
-          # this might remove tools that are actually needed,
-          # if set to "true" but frees about 6 GB
-          tool-cache: false
-
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        id: buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Set-up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: stable
-          cache: false
-
-      - name: Docker Cache
-        uses: actions/cache@v4
-        with:
-          path: /tmp/.buildx-cache
-          key: jmeterd-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
-
-      - name: Login to DockerHub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Get tag
-        id: tag
-        uses: dawidd6/action-get-tag@v1
-        with:
-          strip_v: true
-
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./contrib/executor/jmeterd/build/slaves/Dockerfile
-          push: true
-          tags: kubeshop/testkube-jmeterd-slave:${{steps.tag.outputs.tag}},kubeshop/testkube-jmeterd-slave:latest
-          platforms: linux/amd64,linux/arm64
-
-  executor_maven:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Free Disk Space (Ubuntu)
-        uses: jlumbroso/free-disk-space@main
-        with:
-          # this might remove tools that are actually needed,
-          # if set to "true" but frees about 6 GB
-          tool-cache: false
-
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - uses: sigstore/cosign-installer@v3.7.0
-      - uses: anchore/sbom-action/download-syft@v0.17.7
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        id: buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Set-up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: stable
-          cache: false
-
-      - name: Go Cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          key: maven-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-
-      - name: Login to DockerHub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Push README to Dockerhub
-        uses: christian-korneck/update-container-description-action@v1
-        env:
-          DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKER_PASS: ${{ secrets.DOCKERHUB_TOKEN }}
-        with:
-          destination_container_repo: "kubeshop/testkube-maven-executor"
-          provider: dockerhub
-          short_description: "Testkube maven executor"
-          readme_file: "./contrib/executor/maven/README.md"
-
-      - name: Release
-        uses: goreleaser/goreleaser-action@v6
-        with:
-          distribution: goreleaser
-          version: latest
-          args: release -f goreleaser_files/.goreleaser-docker-build-executor-maven.yml
-        env:
-          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
-          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
-          DOCKER_BUILDX_CACHE_FROM: "type=gha"
-          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
-
-  executor_gradle:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Free Disk Space (Ubuntu)
-        uses: jlumbroso/free-disk-space@main
-        with:
-          # this might remove tools that are actually needed,
-          # if set to "true" but frees about 6 GB
-          tool-cache: false
-
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - uses: sigstore/cosign-installer@v3.7.0
-      - uses: anchore/sbom-action/download-syft@v0.17.7
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        id: buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Set-up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: stable
-          cache: false
-
-      - name: Go Cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          key: gradle-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-
-      - name: Login to DockerHub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Push README to Dockerhub
-        uses: christian-korneck/update-container-description-action@v1
-        env:
-          DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKER_PASS: ${{ secrets.DOCKERHUB_TOKEN }}
-        with:
-          destination_container_repo: "kubeshop/testkube-gradle-executor"
-          provider: dockerhub
-          short_description: "Testkube gradle executor"
-          readme_file: "./contrib/executor/gradle/README.md"
-
-      - name: Release
-        uses: goreleaser/goreleaser-action@v6
-        with:
-          distribution: goreleaser
-          version: latest
-          args: release -f goreleaser_files/.goreleaser-docker-build-executor-gradle.yml
-        env:
-          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
-          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
-          DOCKER_BUILDX_CACHE_FROM: "type=gha"
-          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
+#  api:
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Checkout
+#        uses: actions/checkout@v4
+#
+#      - uses: sigstore/cosign-installer@v3.7.0
+#      - uses: anchore/sbom-action/download-syft@v0.17.7
+#
+#      - name: Set up Docker Buildx
+#        id: buildx
+#        uses: docker/setup-buildx-action@v3
+#
+#      - name: Set up QEMU
+#        uses: docker/setup-qemu-action@v3
+#
+#      - name: Set-up Go
+#        uses: actions/setup-go@v5
+#        with:
+#          go-version: stable
+#          cache: false
+#
+#      - name: Go Cache
+#        uses: actions/cache@v4
+#        with:
+#          path: |
+#            ~/go/pkg/mod
+#            ~/.cache/go-build
+#          key: testkube-api-go-${{ hashFiles('**/go.sum') }}
+#
+#      - name: Login to DockerHub
+#        uses: docker/login-action@v3
+#        with:
+#          username: ${{ secrets.DOCKERHUB_USERNAME }}
+#          password: ${{ secrets.DOCKERHUB_TOKEN }}
+#
+#      - name: Push README to Dockerhub
+#        uses: christian-korneck/update-container-description-action@v1
+#        env:
+#          DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+#          DOCKER_PASS: ${{ secrets.DOCKERHUB_TOKEN }}
+#        with:
+#          destination_container_repo: kubeshop/testkube-api-server
+#          provider: dockerhub
+#          short_description: "Testkube Kubernetes API Server"
+#          readme_file: "./README.md"
+#
+#      - name: Release
+#        uses: goreleaser/goreleaser-action@v6
+#        with:
+#          distribution: goreleaser
+#          version: latest
+#          args: release -f goreleaser_files/.goreleaser-docker-build-api.yml
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+#          ANALYTICS_TRACKING_ID: ${{secrets.TESTKUBE_API_GA_MEASUREMENT_ID}}
+#          ANALYTICS_API_KEY: ${{secrets.TESTKUBE_API_GA_MEASUREMENT_SECRET}}
+#          SLACK_BOT_CLIENT_ID: ${{secrets.TESTKUBE_SLACK_BOT_CLIENT_ID}}
+#          SLACK_BOT_CLIENT_SECRET: ${{secrets.TESTKUBE_SLACK_BOT_CLIENT_SECRET}}
+#          SEGMENTIO_KEY: ${{secrets.TESTKUBE_API_SEGMENTIO_KEY}}
+#          CLOUD_SEGMENTIO_KEY: ${{secrets.TESTKUBE_API_CLOUD_SEGMENTIO_KEY}}
+#          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
+#          DOCKER_BUILDX_CACHE_FROM: "type=gha"
+#          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
+#          ALPINE_IMAGE: ${{ env.ALPINE_IMAGE }}
+#          BUSYBOX_IMAGE: ${{ env.BUSYBOX_IMAGE }}
+#
+#  testworkflow:
+#    strategy:
+#      matrix:
+#        service: [ testworkflow-init, testworkflow-toolkit ]
+#        include:
+#          - service: testworkflow-init
+#            repository: testkube-tw-init
+#          - service: testworkflow-toolkit
+#            repository: testkube-tw-toolkit
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Checkout
+#        uses: actions/checkout@v4
+#
+#      - uses: sigstore/cosign-installer@v3.7.0
+#      - uses: anchore/sbom-action/download-syft@v0.17.7
+#
+#      - name: Set up Docker Buildx
+#        id: buildx
+#        uses: docker/setup-buildx-action@v3
+#
+#      - name: Set up QEMU
+#        uses: docker/setup-qemu-action@v3
+#
+#      - name: Set-up Go
+#        uses: actions/setup-go@v5
+#        with:
+#          go-version: stable
+#          cache: false
+#
+#      - name: Go Cache
+#        uses: actions/cache@v4
+#        with:
+#          path: |
+#            ~/go/pkg/mod
+#            ~/.cache/go-build
+#          key: ${{ matrix.service }}-go-${{ hashFiles('**/go.sum') }}
+#
+#      - name: Login to DockerHub
+#        uses: docker/login-action@v3
+#        with:
+#          username: ${{ secrets.DOCKERHUB_USERNAME }}
+#          password: ${{ secrets.DOCKERHUB_TOKEN }}
+#
+#      - name: Release
+#        uses: goreleaser/goreleaser-action@v6
+#        with:
+#          distribution: goreleaser
+#          version: latest
+#          args: release -f goreleaser_files/.goreleaser-docker-build-${{ matrix.service }}.yml
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+#          ANALYTICS_TRACKING_ID: ${{secrets.TESTKUBE_API_GA_MEASUREMENT_ID}}
+#          ANALYTICS_API_KEY: ${{secrets.TESTKUBE_API_GA_MEASUREMENT_SECRET}}
+#          SLACK_BOT_CLIENT_ID: ${{secrets.TESTKUBE_SLACK_BOT_CLIENT_ID}}
+#          SLACK_BOT_CLIENT_SECRET: ${{secrets.TESTKUBE_SLACK_BOT_CLIENT_SECRET}}
+#          SEGMENTIO_KEY: ${{secrets.TESTKUBE_API_SEGMENTIO_KEY}}
+#          CLOUD_SEGMENTIO_KEY: ${{secrets.TESTKUBE_API_CLOUD_SEGMENTIO_KEY}}
+#          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
+#          DOCKER_BUILDX_CACHE_FROM: "type=gha"
+#          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
+#          ALPINE_IMAGE: ${{ env.ALPINE_IMAGE }}
+#          BUSYBOX_IMAGE: ${{ env.BUSYBOX_IMAGE }}
+#          SERVICE: ${{ matrix.service }}
+#          REPOSITORY: ${{ matrix.repository }}
+#
+#  single_executor:
+#    strategy:
+#      matrix:
+#        executor:
+#          [
+#              artillery,
+#              curl,
+#              example,
+#              ginkgo,
+#              k6,
+#              kubepug,
+#              postman,
+#              soapui,
+#              init,
+#              scraper,
+#              template,
+#              tracetest,
+#              zap,
+#          ]
+#
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Free Disk Space (Ubuntu)
+#        uses: jlumbroso/free-disk-space@main
+#        with:
+#          # this might remove tools that are actually needed,
+#          # if set to "true" but frees about 6 GB
+#          tool-cache: false
+#
+#      - name: Checkout
+#        uses: actions/checkout@v4
+#
+#      - uses: sigstore/cosign-installer@v3.7.0
+#      - uses: anchore/sbom-action/download-syft@v0.17.7
+#
+#      - name: Set up QEMU
+#        uses: docker/setup-qemu-action@v3
+#
+#      - name: Set up Docker Buildx
+#        id: buildx
+#        uses: docker/setup-buildx-action@v3
+#
+#      - name: Set-up Go
+#        uses: actions/setup-go@v5
+#        with:
+#          go-version: stable
+#          cache: false
+#
+#      - name: Go Cache
+#        uses: actions/cache@v4
+#        with:
+#          path: |
+#            ~/go/pkg/mod
+#            ~/.cache/go-build
+#          key: ${{ matrix.executor }}-go-${{ hashFiles('**/go.sum') }}
+#          restore-keys: |
+#            ${{ runner.os }}-go-
+#
+#      - name: Login to DockerHub
+#        uses: docker/login-action@v3
+#        with:
+#          username: ${{ secrets.DOCKERHUB_USERNAME }}
+#          password: ${{ secrets.DOCKERHUB_TOKEN }}
+#
+#      - name: Push README to Dockerhub
+#        uses: christian-korneck/update-container-description-action@v1
+#        env:
+#          DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+#          DOCKER_PASS: ${{ secrets.DOCKERHUB_TOKEN }}
+#        with:
+#          destination_container_repo: "kubeshop/testkube-${{ matrix.executor }}-executor"
+#          provider: dockerhub
+#          short_description: "Testkube ${{ matrix.executor }} executor"
+#          readme_file: "./contrib/executor/${{ matrix.executor }}/README.md"
+#
+#      - name: Release
+#        uses: goreleaser/goreleaser-action@v6
+#        with:
+#          distribution: goreleaser
+#          version: latest
+#          args: release -f goreleaser_files/.goreleaser-docker-build-executor.yml
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+#          EXECUTOR: ${{ matrix.executor }}
+#          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
+#          DOCKER_BUILDX_CACHE_FROM: "type=gha"
+#          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
+#          ALPINE_IMAGE: ${{ env.ALPINE_IMAGE }}
+#          BUSYBOX_IMAGE: ${{ env.BUSYBOX_IMAGE }}
+#
+#  executor_jmeter:
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Free Disk Space (Ubuntu)
+#        uses: jlumbroso/free-disk-space@main
+#        with:
+#          # this might remove tools that are actually needed,
+#          # if set to "true" but frees about 6 GB
+#          tool-cache: false
+#
+#      - name: Checkout
+#        uses: actions/checkout@v4
+#
+#      - uses: sigstore/cosign-installer@v3.7.0
+#      - uses: anchore/sbom-action/download-syft@v0.17.7
+#
+#      - name: Set up QEMU
+#        uses: docker/setup-qemu-action@v3
+#
+#      - name: Set up Docker Buildx
+#        id: buildx
+#        uses: docker/setup-buildx-action@v3
+#
+#      - name: Set-up Go
+#        uses: actions/setup-go@v5
+#        with:
+#          go-version: stable
+#          cache: false
+#
+#      - name: Go Cache
+#        uses: actions/cache@v4
+#        with:
+#          path: |
+#            ~/go/pkg/mod
+#            ~/.cache/go-build
+#          key: jmeter-go-${{ hashFiles('**/go.sum') }}
+#          restore-keys: |
+#            ${{ runner.os }}-go-
+#
+#      - name: Login to DockerHub
+#        uses: docker/login-action@v3
+#        with:
+#          username: ${{ secrets.DOCKERHUB_USERNAME }}
+#          password: ${{ secrets.DOCKERHUB_TOKEN }}
+#
+#      - name: Push README to Dockerhub
+#        uses: christian-korneck/update-container-description-action@v1
+#        env:
+#          DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+#          DOCKER_PASS: ${{ secrets.DOCKERHUB_TOKEN }}
+#        with:
+#          destination_container_repo: "kubeshop/testkube-jmeter-executor"
+#          provider: dockerhub
+#          short_description: "Testkube jmeter executor"
+#          readme_file: "./contrib/executor/jmeter/README.md"
+#
+#      - name: Release
+#        uses: goreleaser/goreleaser-action@v6
+#        with:
+#          distribution: goreleaser
+#          version: latest
+#          args: release -f goreleaser_files/.goreleaser-docker-build-executor-jmeter.yml
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+#          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
+#          DOCKER_BUILDX_CACHE_FROM: "type=gha"
+#          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
+#
+#  executor_jmeterd:
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Free Disk Space (Ubuntu)
+#        uses: jlumbroso/free-disk-space@main
+#        with:
+#          # this might remove tools that are actually needed,
+#          # if set to "true" but frees about 6 GB
+#          tool-cache: false
+#
+#      - name: Checkout
+#        uses: actions/checkout@v4
+#
+#      - uses: sigstore/cosign-installer@v3.7.0
+#      - uses: anchore/sbom-action/download-syft@v0.17.7
+#
+#      - name: Set up QEMU
+#        uses: docker/setup-qemu-action@v3
+#
+#      - name: Set up Docker Buildx
+#        id: buildx
+#        uses: docker/setup-buildx-action@v3
+#
+#      - name: Set-up Go
+#        uses: actions/setup-go@v5
+#        with:
+#          go-version: stable
+#          cache: false
+#
+#      - name: Go Cache
+#        uses: actions/cache@v4
+#        with:
+#          path: |
+#            ~/go/pkg/mod
+#            ~/.cache/go-build
+#          key: jmeterd-go-${{ hashFiles('**/go.sum') }}
+#          restore-keys: |
+#            ${{ runner.os }}-go-
+#
+#      - name: Login to DockerHub
+#        uses: docker/login-action@v3
+#        with:
+#          username: ${{ secrets.DOCKERHUB_USERNAME }}
+#          password: ${{ secrets.DOCKERHUB_TOKEN }}
+#
+#      - name: Push README to Dockerhub
+#        uses: christian-korneck/update-container-description-action@v1
+#        env:
+#          DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+#          DOCKER_PASS: ${{ secrets.DOCKERHUB_TOKEN }}
+#        with:
+#          destination_container_repo: "kubeshop/testkube-jmeterd-executor"
+#          provider: dockerhub
+#          short_description: "Testkube jmeterd executor"
+#          readme_file: "./contrib/executor/jmeterd/README.md"
+#
+#      - name: Release
+#        uses: goreleaser/goreleaser-action@v6
+#        with:
+#          distribution: goreleaser
+#          version: latest
+#          args: release -f goreleaser_files/.goreleaser-docker-build-executor-jmeterd.yml
+#        env:
+#          GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
+#          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+#          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
+#          DOCKER_BUILDX_CACHE_FROM: "type=gha"
+#          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
+#          GOARCH: ${{ matrix.GOARCH }}
+#
+#  jmeterd_slave:
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Free Disk Space (Ubuntu)
+#        uses: jlumbroso/free-disk-space@main
+#        with:
+#          # this might remove tools that are actually needed,
+#          # if set to "true" but frees about 6 GB
+#          tool-cache: false
+#
+#      - name: Checkout
+#        uses: actions/checkout@v4
+#
+#      - name: Set up QEMU
+#        uses: docker/setup-qemu-action@v3
+#
+#      - name: Set up Docker Buildx
+#        id: buildx
+#        uses: docker/setup-buildx-action@v3
+#
+#      - name: Set-up Go
+#        uses: actions/setup-go@v5
+#        with:
+#          go-version: stable
+#          cache: false
+#
+#      - name: Docker Cache
+#        uses: actions/cache@v4
+#        with:
+#          path: /tmp/.buildx-cache
+#          key: jmeterd-buildx-${{ github.sha }}
+#          restore-keys: |
+#            ${{ runner.os }}-buildx-
+#
+#      - name: Login to DockerHub
+#        uses: docker/login-action@v3
+#        with:
+#          username: ${{ secrets.DOCKERHUB_USERNAME }}
+#          password: ${{ secrets.DOCKERHUB_TOKEN }}
+#
+#      - name: Get tag
+#        id: tag
+#        uses: dawidd6/action-get-tag@v1
+#        with:
+#          strip_v: true
+#
+#      - name: Build and push
+#        uses: docker/build-push-action@v6
+#        with:
+#          context: .
+#          file: ./contrib/executor/jmeterd/build/slaves/Dockerfile
+#          push: true
+#          tags: kubeshop/testkube-jmeterd-slave:${{steps.tag.outputs.tag}},kubeshop/testkube-jmeterd-slave:latest
+#          platforms: linux/amd64,linux/arm64
+#
+#  executor_maven:
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Free Disk Space (Ubuntu)
+#        uses: jlumbroso/free-disk-space@main
+#        with:
+#          # this might remove tools that are actually needed,
+#          # if set to "true" but frees about 6 GB
+#          tool-cache: false
+#
+#      - name: Checkout
+#        uses: actions/checkout@v4
+#
+#      - uses: sigstore/cosign-installer@v3.7.0
+#      - uses: anchore/sbom-action/download-syft@v0.17.7
+#
+#      - name: Set up QEMU
+#        uses: docker/setup-qemu-action@v3
+#
+#      - name: Set up Docker Buildx
+#        id: buildx
+#        uses: docker/setup-buildx-action@v3
+#
+#      - name: Set-up Go
+#        uses: actions/setup-go@v5
+#        with:
+#          go-version: stable
+#          cache: false
+#
+#      - name: Go Cache
+#        uses: actions/cache@v4
+#        with:
+#          path: |
+#            ~/go/pkg/mod
+#            ~/.cache/go-build
+#          key: maven-go-${{ hashFiles('**/go.sum') }}
+#          restore-keys: |
+#            ${{ runner.os }}-go-
+#
+#      - name: Login to DockerHub
+#        uses: docker/login-action@v3
+#        with:
+#          username: ${{ secrets.DOCKERHUB_USERNAME }}
+#          password: ${{ secrets.DOCKERHUB_TOKEN }}
+#
+#      - name: Push README to Dockerhub
+#        uses: christian-korneck/update-container-description-action@v1
+#        env:
+#          DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+#          DOCKER_PASS: ${{ secrets.DOCKERHUB_TOKEN }}
+#        with:
+#          destination_container_repo: "kubeshop/testkube-maven-executor"
+#          provider: dockerhub
+#          short_description: "Testkube maven executor"
+#          readme_file: "./contrib/executor/maven/README.md"
+#
+#      - name: Release
+#        uses: goreleaser/goreleaser-action@v6
+#        with:
+#          distribution: goreleaser
+#          version: latest
+#          args: release -f goreleaser_files/.goreleaser-docker-build-executor-maven.yml
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+#          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
+#          DOCKER_BUILDX_CACHE_FROM: "type=gha"
+#          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
+#
+#  executor_gradle:
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Free Disk Space (Ubuntu)
+#        uses: jlumbroso/free-disk-space@main
+#        with:
+#          # this might remove tools that are actually needed,
+#          # if set to "true" but frees about 6 GB
+#          tool-cache: false
+#
+#      - name: Checkout
+#        uses: actions/checkout@v4
+#
+#      - uses: sigstore/cosign-installer@v3.7.0
+#      - uses: anchore/sbom-action/download-syft@v0.17.7
+#
+#      - name: Set up QEMU
+#        uses: docker/setup-qemu-action@v3
+#
+#      - name: Set up Docker Buildx
+#        id: buildx
+#        uses: docker/setup-buildx-action@v3
+#
+#      - name: Set-up Go
+#        uses: actions/setup-go@v5
+#        with:
+#          go-version: stable
+#          cache: false
+#
+#      - name: Go Cache
+#        uses: actions/cache@v4
+#        with:
+#          path: |
+#            ~/go/pkg/mod
+#            ~/.cache/go-build
+#          key: gradle-go-${{ hashFiles('**/go.sum') }}
+#          restore-keys: |
+#            ${{ runner.os }}-go-
+#
+#      - name: Login to DockerHub
+#        uses: docker/login-action@v3
+#        with:
+#          username: ${{ secrets.DOCKERHUB_USERNAME }}
+#          password: ${{ secrets.DOCKERHUB_TOKEN }}
+#
+#      - name: Push README to Dockerhub
+#        uses: christian-korneck/update-container-description-action@v1
+#        env:
+#          DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+#          DOCKER_PASS: ${{ secrets.DOCKERHUB_TOKEN }}
+#        with:
+#          destination_container_repo: "kubeshop/testkube-gradle-executor"
+#          provider: dockerhub
+#          short_description: "Testkube gradle executor"
+#          readme_file: "./contrib/executor/gradle/README.md"
+#
+#      - name: Release
+#        uses: goreleaser/goreleaser-action@v6
+#        with:
+#          distribution: goreleaser
+#          version: latest
+#          args: release -f goreleaser_files/.goreleaser-docker-build-executor-gradle.yml
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+#          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
+#          DOCKER_BUILDX_CACHE_FROM: "type=gha"
+#          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
 
   executor_cypress:
     strategy:
       matrix:
         version:
           [
-              cypress8,
-              cypress9,
-              cypress10,
-              cypress11,
-              cypress12,
-              cypress13,
-              yarn,
-              npm,
+              cypress12
+
           ]
 
     runs-on: ubuntu-latest
     steps:
-      - name: Free Disk Space (Ubuntu)
-        uses: jlumbroso/free-disk-space@main
-        with:
-          # this might remove tools that are actually needed,
-          # if set to "true" but frees about 6 GB
-          tool-cache: false
+#      - name: Free Disk Space (Ubuntu)
+#        uses: jlumbroso/free-disk-space@main
+#        with:
+#          # this might remove tools that are actually needed,
+#          # if set to "true" but frees about 6 GB
+#          tool-cache: false
 
       - name: Checkout
         uses: actions/checkout@v4
@@ -655,297 +650,297 @@ jobs:
           docker push kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-amd64
           docker push kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-arm64
 
-  executor_postman_node21:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Free Disk Space (Ubuntu)
-        uses: jlumbroso/free-disk-space@main
-        with:
-          # this might remove tools that are actually needed,
-          # if set to "true" but frees about 6 GB
-          tool-cache: false
-
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - uses: sigstore/cosign-installer@v3.7.0
-      - uses: anchore/sbom-action/download-syft@v0.17.7
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        id: buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Set-up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: ${{ env.GO_VERSION }}
-          cache: false
-
-      - name: Go Cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          key: postman-node-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-
-      - name: Login to DockerHub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Release
-        uses: goreleaser/goreleaser-action@v6
-        with:
-          distribution: goreleaser
-          version: latest
-          args: release -f goreleaser_files/.goreleaser-docker-build-executor-postman-node21.yml
-        env:
-          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
-          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
-          DOCKER_BUILDX_CACHE_FROM: "type=gha"
-          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
-
-  executor_cypress_manifest:
-    needs: executor_cypress
-    strategy:
-      matrix:
-        version:
-          [
-              cypress8,
-              cypress9,
-              cypress10,
-              cypress11,
-              cypress12,
-              cypress13,
-              yarn,
-              npm,
-          ]
-
-    runs-on: ubuntu-latest
-    steps:
-      - name: Free Disk Space (Ubuntu)
-        uses: jlumbroso/free-disk-space@main
-        with:
-          # this might remove tools that are actually needed,
-          # if set to "true" but frees about 6 GB
-          tool-cache: false
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - uses: sigstore/cosign-installer@v3.7.0
-      - uses: anchore/sbom-action/download-syft@v0.17.7
-
-      - name: Set up Docker Buildx
-        id: buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to DockerHub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Get tag
-        id: tag
-        uses: dawidd6/action-get-tag@v1
-        with:
-          strip_v: true
-
-      - name: Use tag
-        run: echo ${{steps.tag.outputs.tag}}
-
-      - name: Create manifests
-        run: |
-          docker manifest create kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }} --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress13-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress13-arm64
-          docker manifest push -p kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}
-          cosign sign kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }} --yes
-
-          docker manifest create kubeshop/testkube-cypress-executor:latest --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress13-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress13-arm64
-          docker manifest push -p kubeshop/testkube-cypress-executor:latest
-          cosign sign kubeshop/testkube-cypress-executor:latest --yes
-
-          docker manifest create kubeshop/testkube-cypress-executor:legacy --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-npm-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-npm-arm64
-          docker manifest push -p kubeshop/testkube-cypress-executor:legacy
-          cosign sign kubeshop/testkube-cypress-executor:legacy --yes
-
-  executor_playwright:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Free Disk Space (Ubuntu)
-        uses: jlumbroso/free-disk-space@main
-        with:
-          # this might remove tools that are actually needed,
-          # if set to "true" but frees about 6 GB
-          tool-cache: false
-
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - uses: sigstore/cosign-installer@v3.7.0
-      - uses: anchore/sbom-action/download-syft@v0.17.7
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        id: buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Set-up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: stable
-          cache: false
-
-      - name: Go Cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          key: playwright-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-
-      - name: Login to DockerHub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Push README to Dockerhub
-        uses: christian-korneck/update-container-description-action@v1
-        env:
-          DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKER_PASS: ${{ secrets.DOCKERHUB_TOKEN }}
-        with:
-          destination_container_repo: "kubeshop/testkube-playwright-executor"
-          provider: dockerhub
-          short_description: "Testkube playwright executor"
-          readme_file: "./contrib/executor/playwright/README.md"
-
-      - name: Release
-        uses: goreleaser/goreleaser-action@v6
-        with:
-          distribution: goreleaser
-          version: latest
-          args: release -f goreleaser_files/.goreleaser-docker-build-executor-playwright.yml
-        env:
-          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
-          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
-          DOCKER_BUILDX_CACHE_FROM: "type=gha"
-          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
-
-  log_server_sidecar:
-    strategy:
-      matrix:
-        service: [ logs-server, logs-sidecar ]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Free Disk Space (Ubuntu)
-        uses: jlumbroso/free-disk-space@main
-        with:
-          # this might remove tools that are actually needed,
-          # if set to "true" but frees about 6 GB
-          tool-cache: false
-
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - uses: sigstore/cosign-installer@v3.7.0
-      - uses: anchore/sbom-action/download-syft@v0.17.7
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        id: buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: stable
-
-      - name: Go Cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          key: ${{ matrix.service }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-
-      - name: Login to DockerHub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v6
-        with:
-          distribution: goreleaser-pro
-          version: latest
-          args: release -f ./goreleaser_files/.goreleaser-docker-build-logs-services.yml
-        env:
-          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
-          GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
-          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
-          DOCKER_BUILDX_CACHE_FROM: "type=gha"
-          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
-          ALPINE_IMAGE: ${{ env.ALPINE_IMAGE }}
-          BUSYBOX_IMAGE: ${{ env.BUSYBOX_IMAGE }}
-          SERVICE: ${{ matrix.service }}
-
-      - name: Push README to Dockerhub
-        uses: christian-korneck/update-container-description-action@v1
-        env:
-          DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKER_PASS: ${{ secrets.DOCKERHUB_TOKEN }}
-        with:
-          destination_container_repo: kubeshop/testkube-${{ matrix.service }}
-          provider: dockerhub
-          short_description: "Testkube CLI Docker image"
-          readme_file: "./README.md"
-
-  update_api_helm_charts:
-    needs:
-      [
-        api,
-        single_executor,
-        executor_jmeter,
-        executor_maven,
-        executor_gradle,
-        executor_cypress,
-        executor_cypress_manifest,
-        executor_playwright,
-        log_server_sidecar,
-        testworkflow
-      ]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Get tag
-        id: tag
-        uses: dawidd6/action-get-tag@v1
-        with:
-          strip_v: false
-
-      - name: Repository Dispatch
-        uses: peter-evans/repository-dispatch@v3
-        with:
-          token: ${{ secrets.CI_BOT_TOKEN }}
-          repository: kubeshop/helm-charts
-          event-type: release-testkube-api-charts
-          client-payload: '{"RELEASE_VERSION": "${{ steps.tag.outputs.tag }}", "SERVICE": "api"}'
+#  executor_postman_node21:
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Free Disk Space (Ubuntu)
+#        uses: jlumbroso/free-disk-space@main
+#        with:
+#          # this might remove tools that are actually needed,
+#          # if set to "true" but frees about 6 GB
+#          tool-cache: false
+#
+#      - name: Checkout
+#        uses: actions/checkout@v4
+#
+#      - uses: sigstore/cosign-installer@v3.7.0
+#      - uses: anchore/sbom-action/download-syft@v0.17.7
+#
+#      - name: Set up QEMU
+#        uses: docker/setup-qemu-action@v3
+#
+#      - name: Set up Docker Buildx
+#        id: buildx
+#        uses: docker/setup-buildx-action@v3
+#
+#      - name: Set-up Go
+#        uses: actions/setup-go@v5
+#        with:
+#          go-version: ${{ env.GO_VERSION }}
+#          cache: false
+#
+#      - name: Go Cache
+#        uses: actions/cache@v4
+#        with:
+#          path: |
+#            ~/go/pkg/mod
+#            ~/.cache/go-build
+#          key: postman-node-go-${{ hashFiles('**/go.sum') }}
+#          restore-keys: |
+#            ${{ runner.os }}-go-
+#
+#      - name: Login to DockerHub
+#        uses: docker/login-action@v3
+#        with:
+#          username: ${{ secrets.DOCKERHUB_USERNAME }}
+#          password: ${{ secrets.DOCKERHUB_TOKEN }}
+#
+#      - name: Release
+#        uses: goreleaser/goreleaser-action@v6
+#        with:
+#          distribution: goreleaser
+#          version: latest
+#          args: release -f goreleaser_files/.goreleaser-docker-build-executor-postman-node21.yml
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+#          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
+#          DOCKER_BUILDX_CACHE_FROM: "type=gha"
+#          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
+#
+#  executor_cypress_manifest:
+#    needs: executor_cypress
+#    strategy:
+#      matrix:
+#        version:
+#          [
+#              cypress8,
+#              cypress9,
+#              cypress10,
+#              cypress11,
+#              cypress12,
+#              cypress13,
+#              yarn,
+#              npm,
+#          ]
+#
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Free Disk Space (Ubuntu)
+#        uses: jlumbroso/free-disk-space@main
+#        with:
+#          # this might remove tools that are actually needed,
+#          # if set to "true" but frees about 6 GB
+#          tool-cache: false
+#
+#      - name: Set up QEMU
+#        uses: docker/setup-qemu-action@v3
+#
+#      - uses: sigstore/cosign-installer@v3.7.0
+#      - uses: anchore/sbom-action/download-syft@v0.17.7
+#
+#      - name: Set up Docker Buildx
+#        id: buildx
+#        uses: docker/setup-buildx-action@v3
+#
+#      - name: Login to DockerHub
+#        uses: docker/login-action@v3
+#        with:
+#          username: ${{ secrets.DOCKERHUB_USERNAME }}
+#          password: ${{ secrets.DOCKERHUB_TOKEN }}
+#
+#      - name: Get tag
+#        id: tag
+#        uses: dawidd6/action-get-tag@v1
+#        with:
+#          strip_v: true
+#
+#      - name: Use tag
+#        run: echo ${{steps.tag.outputs.tag}}
+#
+#      - name: Create manifests
+#        run: |
+#          docker manifest create kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }} --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress13-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress13-arm64
+#          docker manifest push -p kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}
+#          cosign sign kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }} --yes
+#
+#          docker manifest create kubeshop/testkube-cypress-executor:latest --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress13-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-cypress13-arm64
+#          docker manifest push -p kubeshop/testkube-cypress-executor:latest
+#          cosign sign kubeshop/testkube-cypress-executor:latest --yes
+#
+#          docker manifest create kubeshop/testkube-cypress-executor:legacy --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-npm-amd64 --amend kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-npm-arm64
+#          docker manifest push -p kubeshop/testkube-cypress-executor:legacy
+#          cosign sign kubeshop/testkube-cypress-executor:legacy --yes
+#
+#  executor_playwright:
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Free Disk Space (Ubuntu)
+#        uses: jlumbroso/free-disk-space@main
+#        with:
+#          # this might remove tools that are actually needed,
+#          # if set to "true" but frees about 6 GB
+#          tool-cache: false
+#
+#      - name: Checkout
+#        uses: actions/checkout@v4
+#
+#      - uses: sigstore/cosign-installer@v3.7.0
+#      - uses: anchore/sbom-action/download-syft@v0.17.7
+#
+#      - name: Set up QEMU
+#        uses: docker/setup-qemu-action@v3
+#
+#      - name: Set up Docker Buildx
+#        id: buildx
+#        uses: docker/setup-buildx-action@v3
+#
+#      - name: Set-up Go
+#        uses: actions/setup-go@v5
+#        with:
+#          go-version: stable
+#          cache: false
+#
+#      - name: Go Cache
+#        uses: actions/cache@v4
+#        with:
+#          path: |
+#            ~/go/pkg/mod
+#            ~/.cache/go-build
+#          key: playwright-go-${{ hashFiles('**/go.sum') }}
+#          restore-keys: |
+#            ${{ runner.os }}-go-
+#
+#      - name: Login to DockerHub
+#        uses: docker/login-action@v3
+#        with:
+#          username: ${{ secrets.DOCKERHUB_USERNAME }}
+#          password: ${{ secrets.DOCKERHUB_TOKEN }}
+#
+#      - name: Push README to Dockerhub
+#        uses: christian-korneck/update-container-description-action@v1
+#        env:
+#          DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+#          DOCKER_PASS: ${{ secrets.DOCKERHUB_TOKEN }}
+#        with:
+#          destination_container_repo: "kubeshop/testkube-playwright-executor"
+#          provider: dockerhub
+#          short_description: "Testkube playwright executor"
+#          readme_file: "./contrib/executor/playwright/README.md"
+#
+#      - name: Release
+#        uses: goreleaser/goreleaser-action@v6
+#        with:
+#          distribution: goreleaser
+#          version: latest
+#          args: release -f goreleaser_files/.goreleaser-docker-build-executor-playwright.yml
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+#          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
+#          DOCKER_BUILDX_CACHE_FROM: "type=gha"
+#          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
+#
+#  log_server_sidecar:
+#    strategy:
+#      matrix:
+#        service: [ logs-server, logs-sidecar ]
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Free Disk Space (Ubuntu)
+#        uses: jlumbroso/free-disk-space@main
+#        with:
+#          # this might remove tools that are actually needed,
+#          # if set to "true" but frees about 6 GB
+#          tool-cache: false
+#
+#      - name: Checkout
+#        uses: actions/checkout@v4
+#        with:
+#          fetch-depth: 0
+#
+#      - uses: sigstore/cosign-installer@v3.7.0
+#      - uses: anchore/sbom-action/download-syft@v0.17.7
+#
+#      - name: Set up QEMU
+#        uses: docker/setup-qemu-action@v3
+#
+#      - name: Set up Docker Buildx
+#        id: buildx
+#        uses: docker/setup-buildx-action@v3
+#
+#      - name: Set up Go
+#        uses: actions/setup-go@v5
+#        with:
+#          go-version: stable
+#
+#      - name: Go Cache
+#        uses: actions/cache@v4
+#        with:
+#          path: |
+#            ~/go/pkg/mod
+#            ~/.cache/go-build
+#          key: ${{ matrix.service }}-go-${{ hashFiles('**/go.sum') }}
+#          restore-keys: |
+#            ${{ runner.os }}-go-
+#
+#      - name: Login to DockerHub
+#        uses: docker/login-action@v3
+#        with:
+#          username: ${{ secrets.DOCKERHUB_USERNAME }}
+#          password: ${{ secrets.DOCKERHUB_TOKEN }}
+#
+#      - name: Run GoReleaser
+#        uses: goreleaser/goreleaser-action@v6
+#        with:
+#          distribution: goreleaser-pro
+#          version: latest
+#          args: release -f ./goreleaser_files/.goreleaser-docker-build-logs-services.yml
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+#          GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
+#          DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
+#          DOCKER_BUILDX_CACHE_FROM: "type=gha"
+#          DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
+#          ALPINE_IMAGE: ${{ env.ALPINE_IMAGE }}
+#          BUSYBOX_IMAGE: ${{ env.BUSYBOX_IMAGE }}
+#          SERVICE: ${{ matrix.service }}
+#
+#      - name: Push README to Dockerhub
+#        uses: christian-korneck/update-container-description-action@v1
+#        env:
+#          DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+#          DOCKER_PASS: ${{ secrets.DOCKERHUB_TOKEN }}
+#        with:
+#          destination_container_repo: kubeshop/testkube-${{ matrix.service }}
+#          provider: dockerhub
+#          short_description: "Testkube CLI Docker image"
+#          readme_file: "./README.md"
+#
+#  update_api_helm_charts:
+#    needs:
+#      [
+#        api,
+#        single_executor,
+#        executor_jmeter,
+#        executor_maven,
+#        executor_gradle,
+#        executor_cypress,
+#        executor_cypress_manifest,
+#        executor_playwright,
+#        log_server_sidecar,
+#        testworkflow
+#      ]
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Get tag
+#        id: tag
+#        uses: dawidd6/action-get-tag@v1
+#        with:
+#          strip_v: false
+#
+#      - name: Repository Dispatch
+#        uses: peter-evans/repository-dispatch@v3
+#        with:
+#          token: ${{ secrets.CI_BOT_TOKEN }}
+#          repository: kubeshop/helm-charts
+#          event-type: release-testkube-api-charts
+#          client-payload: '{"RELEASE_VERSION": "${{ steps.tag.outputs.tag }}", "SERVICE": "api"}'
