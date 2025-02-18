@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+      - fix/cypress-issue
     paths-ignore:
       - 'docs/**'
 env:
