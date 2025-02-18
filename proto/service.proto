@@ -297,9 +297,10 @@ message ScheduleRequest {
   RunningContext running_context = 5;
   repeated string parent_execution_ids = 7;
   optional UserSignature user = 8; // keep in mind that it should not be trusted
+  optional string execution_reference = 9;
 
   // Kubernetes resource TODO: is it required?
-  string kubernetes_object_name = 9;
+  string kubernetes_object_name = 10;
 }
 
 message ScheduleResponse {

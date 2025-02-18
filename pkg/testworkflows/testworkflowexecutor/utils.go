@@ -107,6 +107,10 @@ func GetLegacyRunningContext(req *cloud.ScheduleRequest) (runningContext *testku
 		userActor.Email = req.User.Email
 	}
 
+	if req.ExecutionReference != nil {
+		userActor.ExecutionReference = *req.ExecutionReference
+	}
+
 	if req.RunningContext == nil {
 		if req.User == nil {
 			return nil

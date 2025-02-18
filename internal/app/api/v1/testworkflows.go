@@ -542,11 +542,12 @@ func (s *TestkubeAPI) ReRunTestWorkflowExecutionHandler() fiber.Handler {
 		scheduleExecution.Selector = &cloud.ScheduleResourceSelector{Name: name}
 		scheduleExecution.Config = request.Config
 		resp := s.testWorkflowExecutor.Execute(ctx, "", &cloud.ScheduleRequest{
-			Executions:      []*cloud.ScheduleExecution{&scheduleExecution},
-			DisableWebhooks: request.DisableWebhooks,
-			Tags:            request.Tags,
-			RunningContext:  runningContext,
-			User:            user,
+			Executions:         []*cloud.ScheduleExecution{&scheduleExecution},
+			DisableWebhooks:    request.DisableWebhooks,
+			Tags:               request.Tags,
+			RunningContext:     runningContext,
+			User:               user,
+			ExecutionReference: &executionID,
 		})
 
 		results := make([]testkube.TestWorkflowExecution, 0)
