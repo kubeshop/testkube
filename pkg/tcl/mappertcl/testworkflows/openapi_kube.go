@@ -31,12 +31,12 @@ func MapTestWorkflowRunningContextActorTypeAPIToKube(v testkube.TestWorkflowRunn
 
 func MapTestWorkflowRunningContextActorAPIToKube(v testkube.TestWorkflowRunningContextActor) testworkflowsv1.TestWorkflowRunningContextActor {
 	return testworkflowsv1.TestWorkflowRunningContextActor{
-		Name:          v.Name,
-		Email:         v.Email,
-		ExecutionId:   v.ExecutionId,
-		ExecutionPath: v.ExecutionPath,
-		//	ExecutionReference: v.ExecutionReference
-		Type_: common.MapPtr(v.Type_, MapTestWorkflowRunningContextActorTypeAPIToKube),
+		Name:               v.Name,
+		Email:              v.Email,
+		ExecutionId:        v.ExecutionId,
+		ExecutionPath:      v.ExecutionPath,
+		ExecutionReference: v.ExecutionReference,
+		Type_:              common.MapPtr(v.Type_, MapTestWorkflowRunningContextActorTypeAPIToKube),
 	}
 }
 
