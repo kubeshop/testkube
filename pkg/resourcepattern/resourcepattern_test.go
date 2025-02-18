@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestResourcePattern_ParseDefault(t *testing.T) {
@@ -89,4 +90,44 @@ func TestResourcePattern_CompileGenericData(t *testing.T) {
 	assert.False(t, ok1)
 	assert.True(t, ok2)
 	assert.Equal(t, "magic/xyz/another-name", r2)
+}
+
+func TestResourcePattern_AvoidCircularPrefix(t *testing.T) {
+	pattern, _ := New("prefix-<name>")
+	r1, ok1 := pattern.Parse("prefix-one", nil)
+	r2, ok2 := pattern.Parse("prefix-prefix-one", nil)
+	r3, ok3 := pattern.Parse("prefix-prefix-prefix-prefix-one", nil)
+	assert.True(t, ok1)
+	assert.True(t, ok2)
+	assert.True(t, ok3)
+	assert.Equal(t, "one", r1.Name)
+	assert.Equal(t, "one", r2.Name)
+	assert.Equal(t, "one", r3.Name)
+}
+
+func TestResourcePattern_AvoidCircularPrefixE2E(t *testing.T) {
+	// Setup
+	pattern1, _ := New("prefix-<name>")
+	pattern2, _ := New("<name>")
+
+	// Build the 1st one
+	metadata1 := &Metadata{Name: "foo"}
+	name1, ok := pattern1.Compile(metadata1)
+	require.True(t, ok)
+	assert.Equal(t, "prefix-foo", name1)
+
+	// Get the 1st one into 2nd one
+	metadata2, ok := pattern2.Parse(name1, nil)
+	require.True(t, ok)
+	name2, ok := pattern2.Compile(metadata2)
+	require.True(t, ok)
+	assert.Equal(t, "prefix-foo", name2)
+
+	// Get back to the 1st
+	metadata3, ok := pattern2.Parse(name2, nil)
+	require.True(t, ok)
+	assert.Equal(t, "prefix-foo", metadata3.Name)
+	name3, ok := pattern1.Compile(metadata3)
+	require.True(t, ok)
+	assert.Equal(t, "prefix-foo", name3)
 }

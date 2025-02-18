@@ -45,7 +45,7 @@ func New(pattern string) (Pattern, error) {
 	}, nil
 }
 
-func (r *resourcePattern) Parse(name string, metadata map[string]string) (*Metadata, bool) {
+func (r *resourcePattern) parse(name string, metadata map[string]string) (*Metadata, bool) {
 	match := r.regex.FindStringSubmatch(name)
 	if match == nil {
 		return nil, false
@@ -73,7 +73,24 @@ func (r *resourcePattern) Parse(name string, metadata map[string]string) (*Metad
 	return result, true
 }
 
-func (r *resourcePattern) Compile(metadata *Metadata) (string, bool) {
+func (r *resourcePattern) Parse(name string, metadata map[string]string) (*Metadata, bool) {
+	result, ok := r.parse(name, metadata)
+	if !ok {
+		return nil, false
+	}
+
+	// Avoid circular patterns
+	for {
+		var nextMetadata *Metadata
+		nextMetadata, ok = r.parse(result.Name, result.Generic)
+		if !ok || result.Name == nextMetadata.Name {
+			return result, true
+		}
+		result = nextMetadata
+	}
+}
+
+func (r *resourcePattern) compile(metadata *Metadata) (string, bool) {
 	if metadata == nil {
 		return "", false
 	}
@@ -83,12 +100,34 @@ func (r *resourcePattern) Compile(metadata *Metadata) (string, bool) {
 	for k := range metadata.Generic {
 		vals = append(vals, "<"+k+">", metadata.Generic[k])
 	}
-	name := strings.NewReplacer(vals...).Replace(r.pattern)
+	return strings.NewReplacer(vals...).Replace(r.pattern), true
+}
+
+func (r *resourcePattern) Compile(metadata *Metadata) (string, bool) {
+	name, ok := r.compile(metadata)
+	if !ok {
+		return "", false
+	}
 
 	// Validate if it's possible
-	_, ok := r.Parse(name, metadata.Generic)
-	if ok {
-		return name, true
+	nextMetadata, ok := r.parse(name, metadata.Generic)
+	if !ok {
+		return "", false
 	}
-	return "", false
+
+	// Avoid circular patterns
+	metadata = nextMetadata
+	for {
+		nextMetadata, ok = r.parse(metadata.Name, metadata.Generic)
+		if !ok {
+			return name, true
+		}
+		var nextName string
+		nextName, ok = r.compile(nextMetadata)
+		if !ok || nextName == name {
+			return name, true
+		}
+		metadata = nextMetadata
+		name = nextName
+	}
 }
