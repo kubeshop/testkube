@@ -27,13 +27,17 @@ type Metric struct {
 	Timestamp   *time.Time
 }
 
-func ParseMetricsFile(filepath string) ([]*Metric, error) {
+func OpenAndParseMetricsFile(filepath string) ([]*Metric, error) {
 	f, err := os.Open(filepath)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to open metrics file")
 	}
 	defer f.Close()
 
+	return ParseMetricsFile(f)
+}
+
+func ParseMetricsFile(f *os.File) ([]*Metric, error) {
 	metadata, err := parseMetadataFromFile(f)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to parse metadata")

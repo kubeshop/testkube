@@ -145,8 +145,11 @@ func parseMetadata(line string) (*Metadata, error) {
 	}
 
 	var (
-		linesStr  string
-		formatStr string
+		linesStr     string
+		formatStr    string
+		workflowStr  string
+		stepStr      string
+		executionStr string
 	)
 
 	// We'll parse each token, which should be in "key=value" form.
@@ -161,6 +164,12 @@ func parseMetadata(line string) (*Metadata, error) {
 			linesStr = value
 		case "format":
 			formatStr = value
+		case "workflow":
+			workflowStr = value
+		case "step":
+			stepStr = value
+		case "execution":
+			executionStr = value
 		default:
 			return nil, errors.Errorf("unrecognized metadata key %q in token %q", key, token)
 		}
@@ -181,8 +190,11 @@ func parseMetadata(line string) (*Metadata, error) {
 	}
 
 	meta := &Metadata{
-		Lines:  linesInt,
-		Format: MetricsFormat(formatStr),
+		Lines:     linesInt,
+		Format:    MetricsFormat(formatStr),
+		Workflow:  workflowStr,
+		Step:      stepStr,
+		Execution: executionStr,
 	}
 	return meta, nil
 }

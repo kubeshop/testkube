@@ -54,7 +54,7 @@ func TestParseFile(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			samples, err := ParseMetricsFile(tc.filepath)
+			samples, err := OpenAndParseMetricsFile(tc.filepath)
 			require.NoError(t, err)
 			assert.Len(t, samples, tc.wantSampleCount)
 			assert.Equal(t, tc.wantFirstSample, samples[0])
