@@ -84,7 +84,6 @@ func processNotifications[Request notificationRequest, Response any, Srv notific
 
 	// Process the requests
 	g.Go(func() error {
-		defer close(responses)
 		for {
 			// Take the context error if possible
 			if err == nil && ctx.Err() != nil {
@@ -127,7 +126,9 @@ func processNotifications[Request notificationRequest, Response any, Srv notific
 		}
 	})
 
-	return g.Wait()
+	resultErr := g.Wait()
+	close(responses)
+	return resultErr
 }
 
 func buildCloudNotification(streamId string, seqNo uint32, notification *testkube.TestWorkflowExecutionNotification) *cloud.TestWorkflowNotificationsResponse {
