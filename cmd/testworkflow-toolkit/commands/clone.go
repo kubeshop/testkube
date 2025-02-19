@@ -14,6 +14,7 @@ import (
 	"github.com/otiai10/copy"
 	"github.com/spf13/cobra"
 
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -79,8 +80,14 @@ func NewCloneCmd() *cobra.Command {
 				if username != "" {
 					uri.User = url.User(username)
 				}
+			} else if authType == "github" {
+				client := env.Cloud()
+				githubToken, err := client.GetGitHubToken(cmd.Context(), uri.String())
+				if err == nil {
+					uri.User = url.UserPassword("x-access-token", githubToken)
+				}
 			} else {
-				ui.Debug("auth type: token")
+				ui.Debug("auth type: basic")
 				if username != "" && token != "" {
 					uri.User = url.UserPassword(username, token)
 				} else if username != "" {

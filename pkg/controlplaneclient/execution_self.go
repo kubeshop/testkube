@@ -23,6 +23,7 @@ type ExecutionSelfClient interface {
 	ScheduleExecution(ctx context.Context, environmentId string, request *cloud.ScheduleRequest) ExecutionsReader
 	GetExecution(ctx context.Context, environmentId, executionId string) (*testkube.TestWorkflowExecution, error)
 	GetCredential(ctx context.Context, environmentId, executionId, name string) ([]byte, error)
+	GetGitHubToken(ctx context.Context, url string) (string, error)
 }
 
 func (c *client) AppendExecutionReport(ctx context.Context, environmentId, executionId, legacyWorkflowName, stepRef, filePath string, report []byte) error {
@@ -157,4 +158,15 @@ func (c *client) GetCredential(ctx context.Context, environmentId, executionId, 
 		return nil, err
 	}
 	return res.Content, nil
+}
+
+func (c *client) GetGitHubToken(ctx context.Context, url string) (string, error) {
+	req := cloud.GetGitHubTokenRequest{
+		Url: url,
+	}
+	res, err := call(ctx, c.metadata().GRPC(), c.client.GetGitHubToken, &req)
+	if err != nil {
+		return "", err
+	}
+	return res.Token, nil
 }

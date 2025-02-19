@@ -181,6 +181,21 @@ func (mr *MockClientMockRecorder) GetExecution(arg0, arg1, arg2 interface{}) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExecution", reflect.TypeOf((*MockClient)(nil).GetExecution), arg0, arg1, arg2)
 }
 
+// GetGitHubToken mocks base method.
+func (m *MockClient) GetGitHubToken(arg0 context.Context, arg1 string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetGitHubToken", arg0, arg1)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetGitHubToken indicates an expected call of GetGitHubToken.
+func (mr *MockClientMockRecorder) GetGitHubToken(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetGitHubToken", reflect.TypeOf((*MockClient)(nil).GetGitHubToken), arg0, arg1)
+}
+
 // GetRunnerOngoingExecutions mocks base method.
 func (m *MockClient) GetRunnerOngoingExecutions(arg0 context.Context) ([]*cloud.UnfinishedExecution, error) {
 	m.ctrl.T.Helper()
