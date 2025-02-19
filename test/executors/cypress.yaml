@@ -47,52 +47,6 @@ spec:
 apiVersion: executor.testkube.io/v1
 kind: Executor
 metadata:
-  name: cypress-v11-executor
-spec:
-  image: kubeshop/testkube-cypress-executor:cypress11
-  command: ["./node_modules/cypress/bin/cypress"]
-  args: [
-    "run",
-    "--reporter",
-    "junit",
-    "--reporter-options",
-    "mochaFile=<reportFile>,toConsole=false",
-    "--project",
-    "<projectPath>",
-    "--env",
-    "<envVars>"
-  ]
-  types:
-  - cypress:v11/test
-  features:
-  - artifacts
----
-apiVersion: executor.testkube.io/v1
-kind: Executor
-metadata:
-  name: cypress-v10-executor
-spec:
-  image: kubeshop/testkube-cypress-executor:cypress10
-  command: ["./node_modules/cypress/bin/cypress"]
-  args: [
-    "run",
-    "--reporter",
-    "junit",
-    "--reporter-options",
-    "mochaFile=<reportFile>,toConsole=false",
-    "--project",
-    "<projectPath>",
-    "--env",
-    "<envVars>"
-  ]
-  types:
-  - cypress:v10/test
-  features:
-  - artifacts
----
-apiVersion: executor.testkube.io/v1
-kind: Executor
-metadata:
   name: cypress-v9-executor
 spec:
   image: kubeshop/testkube-cypress-executor:cypress9
@@ -110,28 +64,5 @@ spec:
   ]
   types:
   - cypress:v9/test
-  features:
-  - artifacts
----
-apiVersion: executor.testkube.io/v1
-kind: Executor
-metadata:
-  name: cypress-v8-executor
-spec:
-  image: kubeshop/testkube-cypress-executor:cypress8
-  command: ["./node_modules/cypress/bin/cypress"]
-  args: [
-    "run",
-    "--reporter",
-    "junit",
-    "--reporter-options",
-    "mochaFile=<reportFile>,toConsole=false",
-    "--project",
-    "<projectPath>",
-    "--env",
-    "<envVars>"
-  ]
-  types:
-  - cypress:v8/test
   features:
   - artifacts
