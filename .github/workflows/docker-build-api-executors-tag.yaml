@@ -574,7 +574,7 @@ jobs:
 
           ]
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
 #      - name: Free Disk Space (Ubuntu)
 #        uses: jlumbroso/free-disk-space@main

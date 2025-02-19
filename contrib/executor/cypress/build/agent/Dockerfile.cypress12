@@ -2,14 +2,10 @@
 FROM cypress/included:12.17.3
 COPY cypress /bin/runner
 
-# Debugging architecture detection
-RUN echo "Detected architecture: $(dpkg --print-architecture)"
-
 RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | tee /etc/apt/trusted.gpg.d/google.asc >/dev/null
 
-RUN rm /var/lib/dpkg/info/libc-bin.* && \
-    apt-get update && \
-    apt-get install -y curl libc-bin && \
+RUN apt-get update && \
+    apt-get install -y curl && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
