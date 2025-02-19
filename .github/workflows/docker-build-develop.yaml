@@ -666,7 +666,7 @@ jobs:
     strategy:
       matrix:
         service: [ logs-server, logs-sidecar ]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
 #      - name: Free Disk Space (Ubuntu)
 #        uses: jlumbroso/free-disk-space@main
@@ -678,8 +678,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up QEMU
+      - name: Setup QEMU
         uses: docker/setup-qemu-action@v3
+        # https://github.com/ptr727/NxWitness/issues/191
+        with:
+          image: tonistiigi/binfmt:qemu-v7.0.0-28
 
       - name: Set up Docker Buildx
         id: buildx
