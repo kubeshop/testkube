@@ -5,10 +5,7 @@ COPY cypress /bin/runner
 # Debugging architecture detection
 RUN echo "Detected architecture: $(dpkg --print-architecture)"
 
-RUN echo "#deb [arch=amd64] https://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list
-RUN apt update -y && apt install -y gnupg
-RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 32EE5355A6BC6E42
-RUN echo "deb [arch=amd64] https://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list
+RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | tee /etc/apt/trusted.gpg.d/google.asc >/dev/null
 
 RUN rm /var/lib/dpkg/info/libc-bin.* && \
     apt-get update && \
