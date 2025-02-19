@@ -8,6 +8,8 @@ const (
 
 	TokenTypeOIDC = "oidc"
 	TokenTypeAPI  = "api"
+
+	CallbackPort = 8090
 )
 
 type CloudContext struct {
@@ -26,6 +28,7 @@ type CloudContext struct {
 	TokenType           string `json:"tokenType,omitempty"`
 	DockerContainerName string `json:"dockerContainerName,omitempty"`
 	CustomAuth          bool   `json:"customConnector,omitempty"`
+	CallbackPort        int    `json:"callbackPort,omitempty"`
 }
 
 type Data struct {
