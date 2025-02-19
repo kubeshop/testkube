@@ -1,14 +1,20 @@
 package artifact
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"io"
 	"net/http"
+	"os"
+	"regexp"
+	"strings"
+	"time"
 
 	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/archive"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/cloud/data/executor"
 	"github.com/kubeshop/testkube/pkg/storage"
@@ -68,8 +74,67 @@ func (c *CloudArtifactsStorage) DownloadFile(ctx context.Context, file, executio
 	return data, nil
 }
 
-func (c *CloudArtifactsStorage) DownloadArchive(ctx context.Context, executionID string, masks []string) (io.Reader, error) {
-	return nil, errors.WithStack(ErrOperationNotSupported)
+func (c *CloudArtifactsStorage) DownloadArchive(ctx context.Context, executionID string,
+	testName, testSuiteName, testWorkflowName string, masks []string) (io.Reader, error) {
+	var regexps []*regexp.Regexp
+	for _, mask := range masks {
+		values := strings.Split(mask, ",")
+		for _, value := range values {
+			re, err := regexp.Compile(value)
+			if err != nil {
+				return nil, err
+			}
+
+			regexps = append(regexps, re)
+		}
+	}
+
+	var files []*archive.File
+	objects, err := c.ListFiles(ctx, executionID, testName, testSuiteName, testWorkflowName)
+	if err != nil {
+		return nil, err
+	}
+
+	current := time.Now()
+	for _, obj := range objects {
+		found := len(regexps) == 0
+		for i := range regexps {
+			if found = regexps[i].MatchString(obj.Name); found {
+				break
+			}
+		}
+
+		if !found {
+			continue
+		}
+
+		files = append(files, &archive.File{
+			Name:    obj.Name,
+			Size:    int64(obj.Size),
+			Mode:    int64(os.ModePerm),
+			ModTime: current,
+		})
+	}
+
+	for i := range files {
+		reader, err := c.DownloadFile(ctx, files[i].Name, executionID, testName, testSuiteName, testWorkflowName)
+		if err != nil {
+			return nil, err
+		}
+
+		files[i].Data = &bytes.Buffer{}
+		if _, err = files[i].Data.ReadFrom(reader); err != nil {
+			return nil, err
+		}
+	}
+
+	service := archive.NewTarballService()
+	data := &bytes.Buffer{}
+	if err = service.Create(data, files); err != nil {
+		return nil, err
+	}
+
+	return data, nil
 }
 
 func (c *CloudArtifactsStorage) getObject(ctx context.Context, url string) (io.Reader, error) {
