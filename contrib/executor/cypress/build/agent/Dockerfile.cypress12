@@ -1,23 +1,18 @@
 # syntax=docker/dockerfile:1
 FROM cypress/included:12.17.3
+COPY cypress /bin/runner
 
 # Debugging architecture detection
 RUN echo "Detected architecture: $(dpkg --print-architecture)"
 
-RUN ARCH=$(dpkg --print-architecture) && \
-    if [ "$ARCH" = "amd64" ]; then \
-        echo "Running Chrome installation for AMD64"; \
-        echo "#deb [arch=amd64] https://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list; \
-        apt update -y && apt install -y gnupg; \
-        apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 32EE5355A6BC6E42; \
-        echo "deb [arch=amd64] https://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list; \
-        apt update -y; \
-    else \
-        echo "Skipping Chrome installation for ARM architecture"; \
-    fi
+RUN echo "#deb [arch=amd64] https://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list
+RUN apt update -y && apt install -y gnupg
+RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 32EE5355A6BC6E42
+RUN echo "deb [arch=amd64] https://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list
 
-RUN apt-get update && \
-    apt-get install -y curl && \
+RUN rm /var/lib/dpkg/info/libc-bin.* && \
+    apt-get update && \
+    apt-get install -y curl libc-bin && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
