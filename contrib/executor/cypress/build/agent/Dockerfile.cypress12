@@ -1,6 +1,8 @@
 # syntax=docker/dockerfile:1
 FROM cypress/included:12.17.3
-COPY cypress /bin/runner
+
+# Debugging architecture detection
+RUN echo "Detected architecture: $(dpkg --print-architecture)"
 
 RUN ARCH=$(dpkg --print-architecture) && \
     if [ "$ARCH" = "amd64" ]; then \
