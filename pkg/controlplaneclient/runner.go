@@ -105,8 +105,10 @@ func (c *client) legacyGetRunnerOngoingExecutions(ctx context.Context) ([]*cloud
 }
 
 func (c *client) WatchRunnerRequests(ctx context.Context) RunnerRequestsWatcher {
+	ctx, cancel := context.WithCancelCause(ctx)
 	stream, err := watch(ctx, c.metadata().GRPC(), c.client.GetRunnerRequests)
 	if err != nil {
+		cancel(nil)
 		return channels.NewError[RunnerRequest](err)
 	}
 	watcher := channels.NewWatcher[RunnerRequest]()
@@ -114,10 +116,17 @@ func (c *client) WatchRunnerRequests(ctx context.Context) RunnerRequestsWatcher 
 	send := func(v *cloud.RunnerResponse) error {
 		sendMu.Lock()
 		defer sendMu.Unlock()
-		return stream.Send(v)
+		err := stream.Send(v)
+		if err != nil {
+			cancel(err)
+		}
+		return err
 	}
 	go func() {
-		defer watcher.Close(err)
+		defer func() {
+			cancel(err)
+			watcher.Close(err)
+		}()
 		for {
 			// Ignore if it's not implemented in the Control Plane
 			if getGrpcErrorCode(err) == codes.Unimplemented {

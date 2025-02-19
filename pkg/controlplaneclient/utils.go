@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"sync"
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -62,12 +63,12 @@ func processNotifications[Request notificationRequest, Response any, Srv notific
 	buildError func(streamId string, message string) Response,
 	process func(ctx context.Context, req Request) NotificationWatcher,
 ) error {
+	g, ctx := errgroup.WithContext(ctx)
 	stream, err := watch(ctx, md, fn)
 	if err != nil {
 		return err
 	}
 
-	g, gCtx := errgroup.WithContext(ctx)
 	responses := make(chan Response, 5)
 
 	// Send responses in sequence
@@ -84,7 +85,11 @@ func processNotifications[Request notificationRequest, Response any, Srv notific
 
 	// Process the requests
 	g.Go(func() error {
-		defer close(responses)
+		var wg sync.WaitGroup
+		defer func() {
+			wg.Wait()
+			close(responses)
+		}()
 		for {
 			// Take the context error if possible
 			if err == nil && ctx.Err() != nil {
@@ -110,10 +115,12 @@ func processNotifications[Request notificationRequest, Response any, Srv notific
 			}
 
 			// Start reading the notifications
+			wg.Add(1)
 			g.Go(func(req Request) func() error {
 				return func() error {
+					defer wg.Done()
 					seqNo := uint32(0)
-					watcher := process(gCtx, req) // TODO: Make ctx per request, so the stream could be stopped
+					watcher := process(ctx, req) // TODO: Make ctx per request, so the stream could be stopped
 					for notification := range watcher.Channel() {
 						responses <- buildNotification(req.GetStreamId(), seqNo, notification)
 						seqNo++
