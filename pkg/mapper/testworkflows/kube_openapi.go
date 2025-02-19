@@ -514,8 +514,8 @@ func MapPodResourceClaimKubeToAPI(v corev1.PodResourceClaim) testkube.PodResourc
 	return testkube.PodResourceClaim{
 		Name: v.Name,
 		Source: &testkube.ClaimSource{
-			ResourceClaimName:         MapStringToBoxedString(v.Source.ResourceClaimName),
-			ResourceClaimTemplateName: MapStringToBoxedString(v.Source.ResourceClaimTemplateName),
+			ResourceClaimName:         MapStringToBoxedString(v.ResourceClaimName),
+			ResourceClaimTemplateName: MapStringToBoxedString(v.ResourceClaimTemplateName),
 		},
 	}
 }

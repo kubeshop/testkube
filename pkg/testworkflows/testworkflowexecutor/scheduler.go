@@ -387,14 +387,7 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 		intermediate = append(intermediate, current)
 
 		// Inject configuration
-		storeConfig := true
-		schema := workflow.Spec.Config
-		for k := range v.Config {
-			if s, ok := schema[k]; ok && s.Sensitive {
-				storeConfig = false
-			}
-		}
-		if storeConfig && testworkflows.CountMapBytes(v.Config) < ConfigSizeLimit {
+		if testworkflows.CountMapBytes(v.Config) < ConfigSizeLimit {
 			current.StoreConfig(v.Config)
 		}
 
