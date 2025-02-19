@@ -115,7 +115,7 @@ func PrintRunningContext(ui *ui.UI, execution testkube.TestWorkflowExecution) {
 				}
 			}
 			if ctx.Actor.Type_ != nil {
-				ui.Warn("  Type:              ", string(*ctx.Actor.Type_))
+				ui.Warn("  Type:                ", string(*ctx.Actor.Type_))
 			}
 		}
 	}
