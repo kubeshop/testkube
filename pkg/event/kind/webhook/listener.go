@@ -16,6 +16,7 @@ import (
 	v1 "github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	cloudwebhook "github.com/kubeshop/testkube/pkg/cloud/data/webhook"
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
 	thttp "github.com/kubeshop/testkube/pkg/http"
 	"github.com/kubeshop/testkube/pkg/log"
@@ -31,6 +32,7 @@ func NewWebhookListener(name, uri, selector string, events []testkube.EventType,
 	deprecatedRepositories commons.DeprecatedRepositories,
 	testWorkflowExecutionResults testworkflow.Repository,
 	metrics v1.Metrics,
+	webhookRepository cloudwebhook.WebhookRepository,
 	proContext *config.ProContext,
 	envs map[string]string,
 	config map[string]string,
@@ -49,6 +51,7 @@ func NewWebhookListener(name, uri, selector string, events []testkube.EventType,
 		deprecatedRepositories:       deprecatedRepositories,
 		testWorkflowExecutionResults: testWorkflowExecutionResults,
 		metrics:                      metrics,
+		webhookRepository:            webhookRepository,
 		proContext:                   proContext,
 		envs:                         envs,
 		config:                       config,
@@ -69,6 +72,7 @@ type WebhookListener struct {
 	deprecatedRepositories       commons.DeprecatedRepositories
 	testWorkflowExecutionResults testworkflow.Repository
 	metrics                      v1.Metrics
+	webhookRepository            cloudwebhook.WebhookRepository
 	proContext                   *config.ProContext
 	envs                         map[string]string
 	config                       map[string]string
@@ -115,6 +119,10 @@ func (l *WebhookListener) Disabled() bool {
 }
 
 func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventResult) {
+	var statusCode int
+	var err error
+
+	log := l.Log.With(event.Log()...)
 	// load global envs to be able to use them in templates
 	event.Envs = l.envs
 
@@ -130,6 +138,14 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 		}
 
 		l.metrics.IncWebhookEventCount(l.name, eventType, res)
+		errorMessage := ""
+		if err != nil {
+			errorMessage = err.Error()
+		}
+
+		if err = l.webhookRepository.CollectExecutionResult(context.Background(), event, l.name, errorMessage, statusCode); err != nil {
+			log.Errorw("webhook collecting execution result error", "error", err)
+		}
 	}()
 
 	switch {
@@ -162,9 +178,9 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 	}
 
 	body := bytes.NewBuffer([]byte{})
-	log := l.Log.With(event.Log()...)
 
-	uri, err := l.processTemplate("uri", l.Uri, event)
+	var uri []byte
+	uri, err = l.processTemplate("uri", l.Uri, event)
 	if err != nil {
 		log.Errorw("uri template processing error", "error", err)
 		result = testkube.NewFailedEventResult(event.Id, err)
@@ -224,7 +240,8 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 		request.Header.Set(key, value)
 	}
 
-	resp, err := l.HttpClient.Do(request)
+	var resp *http.Response
+	resp, err = l.HttpClient.Do(request)
 	if err != nil {
 		log.Errorw("webhook send error", "error", err)
 		result = testkube.NewFailedEventResult(event.Id, err)
@@ -232,7 +249,8 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 	}
 	defer resp.Body.Close()
 
-	data, err := io.ReadAll(resp.Body)
+	var data []byte
+	data, err = io.ReadAll(resp.Body)
 	if err != nil {
 		log.Errorw("webhook read response error", "error", err)
 		result = testkube.NewFailedEventResult(event.Id, err)
@@ -240,9 +258,9 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 	}
 
 	responseStr := string(data)
-
+	statusCode = resp.StatusCode
 	if resp.StatusCode >= 400 {
-		err := fmt.Errorf("webhook response with bad status code: %d", resp.StatusCode)
+		err = fmt.Errorf("webhook response with bad status code: %d", resp.StatusCode)
 		log.Errorw("webhook send error", "error", err, "status", resp.StatusCode, "response", responseStr)
 		result = testkube.NewFailedEventResult(event.Id, err).WithResult(responseStr)
 		return
