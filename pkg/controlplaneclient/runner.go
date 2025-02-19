@@ -105,6 +105,7 @@ func (c *client) legacyGetRunnerOngoingExecutions(ctx context.Context) ([]*cloud
 }
 
 func (c *client) WatchRunnerRequests(ctx context.Context) RunnerRequestsWatcher {
+	ctx, cancel := context.WithCancelCause(ctx)
 	stream, err := watch(ctx, c.metadata().GRPC(), c.client.GetRunnerRequests)
 	if err != nil {
 		return channels.NewError[RunnerRequest](err)
@@ -114,7 +115,11 @@ func (c *client) WatchRunnerRequests(ctx context.Context) RunnerRequestsWatcher 
 	send := func(v *cloud.RunnerResponse) error {
 		sendMu.Lock()
 		defer sendMu.Unlock()
-		return stream.Send(v)
+		err := stream.Send(v)
+		if err != nil {
+			cancel(err)
+		}
+		return err
 	}
 	go func() {
 		defer watcher.Close(err)
