@@ -108,6 +108,7 @@ func (c *client) WatchRunnerRequests(ctx context.Context) RunnerRequestsWatcher 
 	ctx, cancel := context.WithCancelCause(ctx)
 	stream, err := watch(ctx, c.metadata().GRPC(), c.client.GetRunnerRequests)
 	if err != nil {
+		cancel(nil)
 		return channels.NewError[RunnerRequest](err)
 	}
 	watcher := channels.NewWatcher[RunnerRequest]()
@@ -122,7 +123,10 @@ func (c *client) WatchRunnerRequests(ctx context.Context) RunnerRequestsWatcher 
 		return err
 	}
 	go func() {
-		defer watcher.Close(err)
+		defer func() {
+			cancel(err)
+			watcher.Close(err)
+		}()
 		for {
 			// Ignore if it's not implemented in the Control Plane
 			if getGrpcErrorCode(err) == codes.Unimplemented {
