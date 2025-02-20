@@ -1,28 +1,32 @@
 package triggers
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"regexp"
+	"strings"
+	"text/template"
 	"time"
 
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/util/jsonpath"
 
 	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
 	testsuitesv3 "github.com/kubeshop/testkube-operator/api/testsuite/v3"
 	testtriggersv1 "github.com/kubeshop/testkube-operator/api/testtriggers/v1"
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
-
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/scheduler"
 	triggerstcl "github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/triggers"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
+	"github.com/kubeshop/testkube/pkg/utils"
 	"github.com/kubeshop/testkube/pkg/workerpool"
 )
 
@@ -32,6 +36,7 @@ const (
 	ExecutionTest         = "test"
 	ExecutionTestSuite    = "testsuite"
 	ExecutionTestWorkflow = "testworkflow"
+	JsonPathPrefix        = "jsonpath="
 )
 
 type ExecutorF func(context.Context, *watcherEvent, *testtriggersv1.TestTrigger) error
@@ -150,6 +155,58 @@ func (s *Service) execute(ctx context.Context, e *watcherEvent, t *testtriggersv
 				for _, variable := range variables {
 					execution.Config[variable.Name] = variable.Value
 				}
+
+				if t.Spec.ActionParameters != nil {
+					if len(t.Spec.ActionParameters.Tags) > 0 && execution.Tags == nil {
+						execution.Tags = make(map[string]string)
+					}
+
+					var parameters = []struct {
+						name string
+						s    *map[string]string
+						d    *map[string]string
+					}{
+						{
+							"config",
+							&t.Spec.ActionParameters.Config,
+							&execution.Config,
+						},
+						{
+							"tag",
+							&t.Spec.ActionParameters.Tags,
+							&execution.Tags,
+						},
+					}
+
+					for _, parameter := range parameters {
+						for key, value := range *parameter.s {
+							if strings.HasPrefix(value, JsonPathPrefix) {
+								s.logger.Debugf("trigger service: executor component: trigger %s/%s parsing jsonpath %s for %s %s",
+									t.Namespace, t.Name, key, parameter.name, value)
+								data, err := s.getJsonPathData(e, strings.TrimPrefix(value, JsonPathPrefix))
+								if err != nil {
+									s.logger.Errorf("trigger service: executor component: trigger %s/%s parsing jsonpath %s for %s %s error %v",
+										t.Namespace, t.Name, key, value, parameter.name, err)
+									continue
+								}
+
+								(*parameter.d)[key] = data
+							} else {
+								s.logger.Debugf("trigger service: executor component: trigger %s/%s parsing template %s for %s %s",
+									t.Namespace, t.Name, key, parameter.name, value)
+								data, err := s.getTemplateData(e, value)
+								if err != nil {
+									s.logger.Errorf("trigger service: executor component: trigger %s/%s parsing template %s for %s %s error %v",
+										t.Namespace, t.Name, key, value, parameter.name, err)
+									continue
+								}
+
+								(*parameter.d)[key] = string(data)
+							}
+						}
+					}
+				}
+
 				return execution
 			}),
 		}
@@ -189,6 +246,37 @@ func (s *Service) execute(ctx context.Context, e *watcherEvent, t *testtriggersv
 	s.logger.Debugf("trigger service: executor component: started test execution for trigger %s/%s", t.Namespace, t.Name)
 
 	return nil
+}
+
+func (s *Service) getJsonPathData(e *watcherEvent, value string) (string, error) {
+	jp := jsonpath.New("field")
+	err := jp.Parse(value)
+	if err != nil {
+		return "", err
+	}
+
+	buf := new(bytes.Buffer)
+	err = jp.Execute(buf, e.object)
+	if err != nil {
+		return "", err
+	}
+
+	return buf.String(), nil
+}
+
+func (s *Service) getTemplateData(e *watcherEvent, value string) ([]byte, error) {
+	var tmpl *template.Template
+	tmpl, err := utils.NewTemplate("field").Parse(value)
+	if err != nil {
+		return nil, err
+	}
+
+	var buffer bytes.Buffer
+	if err = tmpl.ExecuteTemplate(&buffer, "field", e.object); err != nil {
+		return nil, err
+	}
+
+	return buffer.Bytes(), nil
 }
 
 func (s *Service) getTests(t *testtriggersv1.TestTrigger) ([]testsv3.Test, error) {

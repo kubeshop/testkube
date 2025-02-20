@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	errors2 "github.com/pkg/errors"
@@ -214,8 +215,12 @@ func (a *agentLoop) loopParallelStepNotifications(ctx context.Context) error {
 
 func (a *agentLoop) loopRunnerRequests(ctx context.Context) error {
 	watcher := a.client.WatchRunnerRequests(ctx)
+	var wg sync.WaitGroup
+	wg.Add(1)
 	for req := range watcher.Channel() {
+		wg.Add(1)
 		go func(req controlplaneclient.RunnerRequest) {
+			defer wg.Done()
 			switch req.Type() {
 			case cloud.RunnerRequestType_CONSIDER:
 				if err := req.Consider().Send(&cloud.RunnerConsiderResponse{Ok: true}); err != nil {
@@ -283,6 +288,8 @@ func (a *agentLoop) loopRunnerRequests(ctx context.Context) error {
 			}
 		}(req)
 	}
+	wg.Done()
+	wg.Wait()
 	return watcher.Err()
 }
 

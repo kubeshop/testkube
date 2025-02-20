@@ -8008,6 +8008,8 @@ components:
           $ref: "#/components/schemas/TestTriggerProbeSpec"
         action:
           $ref: "#/components/schemas/TestTriggerActions"
+        actionParameters:
+          $ref: "#/components/schemas/TestTriggerActionParameters"        
         execution:
           $ref: "#/components/schemas/TestTriggerExecutions"
         testSelector:
@@ -8064,6 +8066,10 @@ components:
           type: string
           description: resource namespace
           example: testkube
+        namespaceRegex:
+          type: string
+          description: kubernetes resource namespace regex
+          example: test*
         labelSelector:
           $ref: "https://raw.githubusercontent.com/garethr/kubernetes-json-schema/master/v1.7.8/_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.LabelSelector"
           description: label selector for Kubernetes resources
@@ -8094,6 +8100,15 @@ components:
       type: string
       enum:
         - run
+
+    TestTriggerActionParameters:
+      description: supported action parameters for test triggers
+      type: object
+      properties:
+        config:
+          $ref: "#/components/schemas/TestWorkflowConfigValue"
+        tags:
+          $ref: "#/components/schemas/TestWorkflowTagValue"        
 
     TestTriggerConditionSpec:
       type: object

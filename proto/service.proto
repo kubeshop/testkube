@@ -33,6 +33,7 @@ service TestKubeCloudAPI {
     rpc UpdateExecutionOutput(UpdateExecutionOutputRequest) returns (UpdateExecutionOutputResponse); // TODO: Replace with AppendOutput
     rpc SaveExecutionLogsPresigned(SaveExecutionLogsPresignedRequest) returns (SaveExecutionLogsPresignedResponse);
     rpc FinishExecution(FinishExecutionRequest) returns (FinishExecutionResponse);
+    rpc GetGitHubToken(GetGitHubTokenRequest) returns (GetGitHubTokenResponse);
 
     // Execution
     rpc SaveExecutionArtifactPresigned(SaveExecutionArtifactPresignedRequest) returns (SaveExecutionArtifactPresignedResponse);
@@ -398,6 +399,14 @@ message UpdateExecutionResultRequest {
 }
 
 message UpdateExecutionResultResponse {
+}
+
+message GetGitHubTokenRequest {
+  string url = 1;
+}
+
+message GetGitHubTokenResponse {
+  string token = 1;
 }
 
 message ExecutionOutput {
