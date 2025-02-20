@@ -610,7 +610,7 @@ func (s *TestkubeAPI) GetTestWorkflowArtifactArchiveHandler() fiber.Handler {
 			return s.ClientError(c, errPrefix, err)
 		}
 
-		archive, err := s.ArtifactsStorage.DownloadArchive(c.Context(), execution.Id, values["mask"])
+		archive, err := s.ArtifactsStorage.DownloadArchive(c.Context(), execution.Id, "", "", execution.Workflow.Name, values["mask"])
 		if err != nil {
 			return s.InternalError(c, errPrefix, "could not download workflow artifact archive", err)
 		}
