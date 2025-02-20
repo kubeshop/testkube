@@ -219,3 +219,19 @@ func (c TestWorkflowClient) GetTestWorkflowExecutionLogs(id string) (result []by
 	uri := c.testWorkflowTransport.GetURI("/test-workflow-executions/%s/logs", id)
 	return c.testWorkflowTransport.GetRawBody(http.MethodGet, uri, nil, nil)
 }
+
+// ReRunTestWorkflowExecution reruns selected execution
+func (c TestWorkflowClient) ReRunTestWorkflowExecution(workflow, id string, runningContext *testkube.TestWorkflowRunningContext) (result testkube.TestWorkflowExecution, err error) {
+	if workflow == "" {
+		return result, fmt.Errorf("test workflow name '%s' is not valid", workflow)
+	}
+
+	uri := c.testWorkflowTransport.GetURI("/test-workflows/%s/executions/%s/rerun", workflow, id)
+
+	body, err := json.Marshal(runningContext)
+	if err != nil {
+		return result, err
+	}
+
+	return c.testWorkflowExecutionTransport.Execute(http.MethodPost, uri, body, nil)
+}

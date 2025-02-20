@@ -450,6 +450,124 @@ func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 	}
 }
 
+// TODO: Add metrics
+func (s *TestkubeAPI) ReRunTestWorkflowExecutionHandler() fiber.Handler {
+	return func(c *fiber.Ctx) (err error) {
+		ctx := c.Context()
+		executionID := c.Params("executionID")
+		s.Log.Debugw("rerunning test workflow execution", "id", executionID)
+
+		errPrefix := "failed to rerun test workflow execution"
+
+		// Load the running comtext
+		var twrContext testkube.TestWorkflowRunningContext
+		err = c.BodyParser(&twrContext)
+		if err != nil && !errors.Is(err, fiber.ErrUnprocessableEntity) {
+			return s.BadRequest(c, errPrefix, "invalid body", err)
+		}
+
+		execution, err := s.TestWorkflowResults.Get(ctx, executionID)
+		if err != nil {
+			return s.ClientError(c, errPrefix, err)
+		}
+
+		name := ""
+		if execution.Workflow != nil {
+			name = execution.Workflow.Name
+		}
+
+		workflow, err := s.TestWorkflowsClient.Get(c.Context(), s.getEnvironmentId(), name)
+		if err != nil {
+			return s.ClientError(c, errPrefix, err)
+		}
+
+		requiredParameters := make(map[string]struct{})
+		if workflow.Spec != nil {
+			for _, parameter := range workflow.Spec.GetRequiredParameters() {
+				requiredParameters[parameter] = struct{}{}
+			}
+		}
+
+		// Load the execution request
+		request := testkube.TestWorkflowExecutionRequest{
+			RunningContext:  &twrContext,
+			Tags:            execution.Tags,
+			DisableWebhooks: execution.DisableWebhooks,
+			Target:          execution.RunnerOriginalTarget,
+		}
+
+		request.Config = make(map[string]string)
+		for key, value := range execution.ConfigParams {
+			if value.Sensitive {
+				return s.ClientError(c, errPrefix, errors.New("can't rerun test workflow execution with sensitive prameters"))
+			}
+
+			if value.Truncated {
+				return s.ClientError(c, errPrefix, errors.New("can't rerun test workflow execution with truncated parameters"))
+			}
+
+			if !value.EmptyValue {
+				request.Config[key] = value.Value
+			}
+		}
+
+		for key := range requiredParameters {
+			if _, ok := request.Config[key]; !ok {
+				return s.ClientError(c, errPrefix, errors.New("can't rerun test workflow execution without required parameters"))
+			}
+		}
+
+		runningContext, user := testworkflowexecutor.GetNewRunningContext(request.RunningContext, nil)
+
+		var scheduleExecution cloud.ScheduleExecution
+		if request.Target != nil {
+			target := &cloud.ExecutionTarget{Replicate: request.Target.Replicate}
+			if request.Target.Match != nil {
+				target.Match = make(map[string]*cloud.ExecutionTargetLabels)
+				for k, v := range request.Target.Match {
+					target.Match[k] = &cloud.ExecutionTargetLabels{Labels: v}
+				}
+			}
+
+			if request.Target.Not != nil {
+				target.Not = make(map[string]*cloud.ExecutionTargetLabels)
+				for k, v := range request.Target.Not {
+					target.Not[k] = &cloud.ExecutionTargetLabels{Labels: v}
+				}
+			}
+
+			scheduleExecution.Targets = []*cloud.ExecutionTarget{target}
+		}
+
+		scheduleExecution.Selector = &cloud.ScheduleResourceSelector{Name: name}
+		scheduleExecution.Config = request.Config
+		resp := s.testWorkflowExecutor.Execute(ctx, "", &cloud.ScheduleRequest{
+			Executions:         []*cloud.ScheduleExecution{&scheduleExecution},
+			DisableWebhooks:    request.DisableWebhooks,
+			Tags:               request.Tags,
+			RunningContext:     runningContext,
+			User:               user,
+			ExecutionReference: &executionID,
+		})
+
+		results := make([]testkube.TestWorkflowExecution, 0)
+		for v := range resp.Channel() {
+			results = append(results, *v)
+		}
+
+		if resp.Error() != nil {
+			return s.InternalError(c, errPrefix, "execution error", resp.Error())
+		}
+
+		s.Log.Debugw("rerunning test workflow execution", "id", executionID)
+		if len(results) != 0 {
+			return c.JSON(results[0])
+		}
+
+		return s.InternalError(c, errPrefix, "error", errors.New("no execution results"))
+	}
+}
+
 func (s *TestkubeAPI) getFilteredTestWorkflowList(c *fiber.Ctx) ([]testkube.TestWorkflow, error) {
 	ctx := c.Context()
 	environmentId := s.getEnvironmentId()
