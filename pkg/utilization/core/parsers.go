@@ -28,19 +28,19 @@ type Metric struct {
 	Timestamp   *time.Time
 }
 
-type invalidLine struct {
+type InvalidLine struct {
 	Number int
 	Line   string
 }
 
-func newInvalidLine(number int, line string) invalidLine {
-	return invalidLine{
+func newInvalidLine(number int, line string) InvalidLine {
+	return InvalidLine{
 		Number: number,
 		Line:   line,
 	}
 }
 
-func ParseMetrics(ctx context.Context, reader io.Reader, filename string) ([]*Metric, []invalidLine, error) {
+func ParseMetrics(ctx context.Context, reader io.Reader, filename string) ([]*Metric, *Metadata, []InvalidLine, error) {
 	scanner := bufio.NewScanner(reader)
 	var line []byte
 	if scanner.Scan() {
@@ -51,7 +51,7 @@ func ParseMetrics(ctx context.Context, reader io.Reader, filename string) ([]*Me
 	if err != nil {
 		metadata, err = parseMetadataFromFilename(filename)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "failed to parse metadata from header and filename")
+			return nil, nil, nil, errors.Wrap(err, "failed to parse metadata from header and filename")
 		}
 	} else {
 		line = nil
@@ -59,7 +59,7 @@ func ParseMetrics(ctx context.Context, reader io.Reader, filename string) ([]*Me
 	// 2. Instantiate a parser based on the metadata format.
 	parser, err := NewParser(metadata.Format)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to create parser")
+		return nil, nil, nil, errors.Wrap(err, "failed to create parser")
 	}
 
 	// 3. Parse the metrics.
@@ -68,7 +68,7 @@ func ParseMetrics(ctx context.Context, reader io.Reader, filename string) ([]*Me
 
 // parse reads the metrics from the reader and parses them using the provided parser.
 // If file header (metadata) is missing, we have already parsed a metric line, so we provide it as the last parameter.
-func parse(metadata *Metadata, parser LineParser, scanner *bufio.Scanner, unaccountedMetric []byte) ([]*Metric, []invalidLine, error) {
+func parse(metadata *Metadata, parser LineParser, scanner *bufio.Scanner, unaccountedMetric []byte) ([]*Metric, *Metadata, []InvalidLine, error) {
 	var metrics []*Metric
 	var add bool
 	if metadata.Lines > 0 {
@@ -79,7 +79,7 @@ func parse(metadata *Metadata, parser LineParser, scanner *bufio.Scanner, unacco
 		metrics = []*Metric{}
 	}
 
-	var invalidLines []invalidLine
+	var invalidLines []InvalidLine
 	i := -1
 	if len(unaccountedMetric) > 0 {
 		i++
@@ -109,10 +109,10 @@ func parse(metadata *Metadata, parser LineParser, scanner *bufio.Scanner, unacco
 		addOrAppend(&metrics, metric, i, add)
 	}
 	if err := scanner.Err(); err != nil {
-		return nil, invalidLines, errors.Wrap(err, "error while reading metrics file")
+		return nil, nil, invalidLines, errors.Wrap(err, "error while reading metrics file")
 	}
 
-	return metrics, invalidLines, nil
+	return metrics, metadata, invalidLines, nil
 }
 
 func addOrAppend(metrics *[]*Metric, m *Metric, i int, add bool) {

@@ -86,8 +86,8 @@ func (r *MetricRecorder) buildMemoryFields(metrics *Metrics) []core.KeyValue {
 
 func (r *MetricRecorder) buildCPUFields(metrics *Metrics) []core.KeyValue {
 	return []core.KeyValue{
-		core.NewKeyValue("percent", fmt.Sprintf("%f", metrics.CPU)),
-		core.NewKeyValue("millicores", fmt.Sprintf("%f", math.Round(metrics.CPU*10))),
+		core.NewKeyValue("percent", fmt.Sprintf("%.2f", metrics.CPU)),
+		core.NewKeyValue("millicores", fmt.Sprintf("%d", int64(math.Round(metrics.CPU*10)))),
 	}
 }
 
@@ -106,8 +106,8 @@ func (r *MetricRecorder) buildNetworkFields(current, previous *Metrics) []core.K
 		previousBytesRecv := previous.Network.BytesRecv
 		values = append(
 			values,
-			core.NewKeyValue("bytes_sent_per_second", fmt.Sprintf("%d", bytesSent-previousBytesSent)),
-			core.NewKeyValue("bytes_recv_per_second", fmt.Sprintf("%d", bytesRecv-previousBytesRecv)),
+			core.NewKeyValue("bytes_sent_per_s", fmt.Sprintf("%d", bytesSent-previousBytesSent)),
+			core.NewKeyValue("bytes_recv_per_s", fmt.Sprintf("%d", bytesRecv-previousBytesRecv)),
 		)
 	}
 
@@ -119,8 +119,8 @@ func (r *MetricRecorder) buildDiskFields(current, previous *Metrics) []core.KeyV
 		return nil
 	}
 
-	readBytes := current.Disk.ReadBytes
-	writeBytes := current.Disk.WriteBytes
+	readBytes := current.Disk.DiskReadBytes
+	writeBytes := current.Disk.DiskWriteBytes
 	values := []core.KeyValue{
 		core.NewKeyValue("read_bytes_total", fmt.Sprintf("%d", readBytes)),
 		core.NewKeyValue("write_bytes_total", fmt.Sprintf("%d", writeBytes)),
@@ -130,8 +130,8 @@ func (r *MetricRecorder) buildDiskFields(current, previous *Metrics) []core.KeyV
 		previousDiskWriteBytes := previous.Disk.DiskWriteBytes
 		values = append(
 			values,
-			core.NewKeyValue("read_bytes_per_second", fmt.Sprintf("%d", readBytes-previousDiskReadBytes)),
-			core.NewKeyValue("write_bytes_per_second", fmt.Sprintf("%d", writeBytes-previousDiskWriteBytes)),
+			core.NewKeyValue("read_bytes_per_s", fmt.Sprintf("%d", readBytes-previousDiskReadBytes)),
+			core.NewKeyValue("write_bytes_per_s", fmt.Sprintf("%d", writeBytes-previousDiskWriteBytes)),
 		)
 	}
 
