@@ -2,8 +2,9 @@ package core
 
 import (
 	"bufio"
+	"context"
 	"fmt"
-	"os"
+	"io"
 	"strconv"
 	"strings"
 	"time"
@@ -13,8 +14,8 @@ import (
 
 const commentPrefix = "#"
 
-// Parser is an interface for parsing metrics/data points.
-type Parser interface {
+// LineParser is an interface for parsing a metric line/data points.
+type LineParser interface {
 	// Parse parses a single metrics line/data point.
 	Parse(metric []byte) (*Metric, error)
 }
@@ -27,34 +28,72 @@ type Metric struct {
 	Timestamp   *time.Time
 }
 
-func OpenAndParseMetricsFile(filepath string) ([]*Metric, error) {
-	f, err := os.Open(filepath)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to open metrics file")
-	}
-	defer f.Close()
-
-	return ParseMetricsFile(f)
+type invalidLine struct {
+	Number int
+	Line   string
 }
 
-func ParseMetricsFile(f *os.File) ([]*Metric, error) {
-	metadata, err := parseMetadataFromFile(f)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to parse metadata")
+func newInvalidLine(number int, line string) invalidLine {
+	return invalidLine{
+		Number: number,
+		Line:   line,
 	}
+}
 
+func ParseMetrics(ctx context.Context, reader io.Reader, filename string) ([]*Metric, []invalidLine, error) {
+	scanner := bufio.NewScanner(reader)
+	var line []byte
+	if scanner.Scan() {
+		line = scanner.Bytes()
+	}
+	// 1. Parse metadata from header, or if that fails, parse metadata from filename.
+	metadata, err := parseMetadataFromHeader(line)
+	if err != nil {
+		metadata, err = parseMetadataFromFilename(filename)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "failed to parse metadata from header and filename")
+		}
+	} else {
+		line = nil
+	}
+	// 2. Instantiate a parser based on the metadata format.
 	parser, err := NewParser(metadata.Format)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create parser")
+		return nil, nil, errors.Wrap(err, "failed to create parser")
 	}
 
-	var samples []*Metric
+	// 3. Parse the metrics.
+	return parse(metadata, parser, scanner, line)
+}
+
+// parse reads the metrics from the reader and parses them using the provided parser.
+// If file header (metadata) is missing, we have already parsed a metric line, so we provide it as the last parameter.
+func parse(metadata *Metadata, parser LineParser, scanner *bufio.Scanner, unaccountedMetric []byte) ([]*Metric, []invalidLine, error) {
+	var metrics []*Metric
+	var add bool
 	if metadata.Lines > 0 {
-		samples = make([]*Metric, metadata.Lines)
+		add = true
+		metrics = make([]*Metric, metadata.Lines)
+	} else {
+		add = false
+		metrics = []*Metric{}
 	}
-	scanner := bufio.NewScanner(f)
-	i := 0
+
+	var invalidLines []invalidLine
+	i := -1
+	if len(unaccountedMetric) > 0 {
+		i++
+		line := strings.TrimSpace(string(unaccountedMetric))
+		metric, err := parser.Parse([]byte(line))
+		if err != nil {
+			invalidLines = append(invalidLines, newInvalidLine(i+1, string(unaccountedMetric)))
+		} else {
+			addOrAppend(&metrics, metric, i, add)
+		}
+	}
+
 	for scanner.Scan() {
+		i++
 		line := strings.TrimSpace(scanner.Text())
 
 		// Skip empty lines or commented lines
@@ -62,31 +101,31 @@ func ParseMetricsFile(f *os.File) ([]*Metric, error) {
 			continue
 		}
 
-		sample, err := parser.Parse([]byte(line))
+		metric, err := parser.Parse([]byte(line))
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to parse line %d: %q", i+1, line)
+			invalidLines = append(invalidLines, newInvalidLine(i+1, line))
+			continue
 		}
-		samples[i] = sample
-		i++
+		addOrAppend(&metrics, metric, i, add)
 	}
-
 	if err := scanner.Err(); err != nil {
-		return nil, errors.Wrap(err, "error while reading metrics file")
+		return nil, invalidLines, errors.Wrap(err, "error while reading metrics file")
 	}
 
-	return samples, nil
+	return metrics, invalidLines, nil
 }
 
-func GroupByMetric(samples []*Metric) map[string][]*Metric {
-	grouped := make(map[string][]*Metric)
-	for _, s := range samples {
-		grouped[s.Measurement] = append(grouped[s.Measurement], s)
+func addOrAppend(metrics *[]*Metric, m *Metric, i int, add bool) {
+	if add {
+		(*metrics)[i] = m
+	} else {
+		*metrics = append(*metrics, m)
 	}
-	return grouped
+
 }
 
 // NewParser is a factory method which instantiates a parser implementation based on the provided format.
-func NewParser(format MetricsFormat) (Parser, error) {
+func NewParser(format MetricsFormat) (LineParser, error) {
 	switch format {
 	case FormatInflux:
 		return NewInfluxDBLineProtocolParser(), nil
@@ -224,4 +263,4 @@ func (p *InfluxDBLineProtocolParser) parseTimestamp(timestamp string) (*time.Tim
 	return ts, nil
 }
 
-var _ Parser = &InfluxDBLineProtocolParser{}
+var _ LineParser = &InfluxDBLineProtocolParser{}

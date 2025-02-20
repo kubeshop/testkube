@@ -3,77 +3,82 @@ package utilization
 import (
 	"context"
 	"fmt"
-	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
-	"github.com/kubeshop/testkube/pkg/utilization/core"
 	"math"
 	"os"
-	"time"
 
 	"github.com/pkg/errors"
 	"github.com/shirou/gopsutil/v4/net"
 	gopsutil "github.com/shirou/gopsutil/v4/process"
+
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
+	"github.com/kubeshop/testkube/pkg/utilization/core"
 )
 
 type Metrics struct {
 	Memory  *gopsutil.MemoryInfoStat
 	CPU     float64
 	Disk    *gopsutil.IOCountersStat
-	Network net.IOCountersStat
+	Network *net.IOCountersStat
 }
 
-func (r *MetricRecorder) iterate(ctx context.Context, process *gopsutil.Process) {
+func (r *MetricRecorder) iterate(ctx context.Context, process *gopsutil.Process, previous *Metrics) *Metrics {
 	stdout := output.Std
 	stdoutUnsafe := stdout.Direct()
 
 	// Instrument the current process
 	metrics, err := instrument(process)
 	if err != nil {
-		stdoutUnsafe.Error(fmt.Sprintf("failed to instrument current process: %v\n", err))
-		return
+		stdoutUnsafe.Error(fmt.Sprintf("failed to gather some metrics: %v\n", err))
 	}
+
 	// Build each set of metrics
 	memoryMetrics := r.format.Format("memory", r.tags, r.buildMemoryFields(metrics))
 	cpuMetrics := r.format.Format("cpu", r.tags, r.buildCPUFields(metrics))
-	networkMetrics := r.format.Format("network", r.tags, r.buildNetworkFields(metrics))
-	diskMetrics := r.format.Format("disk", r.tags, r.buildDiskFields(metrics))
-	// Write each set of metrics
-	if err := r.writer.Write(ctx, memoryMetrics); err != nil {
+	networkMetrics := r.format.Format("network", r.tags, r.buildNetworkFields(metrics, previous))
+	diskMetrics := r.format.Format("disk", r.tags, r.buildDiskFields(metrics, previous))
+
+	// Combine all metrics so we can write them all at once
+	data := fmt.Sprintf("%s\n%s\n%s\n%s", memoryMetrics, cpuMetrics, networkMetrics, diskMetrics)
+	if err := r.writer.Write(ctx, data); err != nil {
 		stdoutUnsafe.Error(fmt.Sprintf("failed to write memory metrics: %v\n", err))
 	}
-	if err := r.writer.Write(ctx, cpuMetrics); err != nil {
-		stdoutUnsafe.Error(fmt.Sprintf("failed to write cpu metrics: %v\n", err))
-	}
-	if err := r.writer.Write(ctx, networkMetrics); err != nil {
-		stdoutUnsafe.Error(fmt.Sprintf("failed to write network metrics: %v\n", err))
-	}
-	if err := r.writer.Write(ctx, diskMetrics); err != nil {
-		stdoutUnsafe.Error(fmt.Sprintf("failed to write disk metrics: %v\n", err))
-	}
+
+	return metrics
 }
 
-func instrument(process *gopsutil.Process) (*Metrics, error) {
+func instrument(process *gopsutil.Process) (*Metrics, []error) {
+	var errs []error
 	mem, err := process.MemoryInfo()
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get memory info")
+		errs = append(errs, errors.Wrapf(err, "failed to get memory info"))
 	}
 	cpu, err := process.CPUPercent()
+	if err != nil {
+		errs = append(errs, errors.Wrapf(err, "failed to get cpu info"))
+	}
 	io, err := process.IOCounters()
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get cpu info")
+		errs = append(errs, errors.Wrapf(err, "failed to get cpu info"))
 	}
 	net, err := net.IOCounters(false)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get network info")
+		errs = append(errs, errors.Wrapf(err, "failed to get network info"))
 	}
-	return &Metrics{
-		Memory:  mem,
-		CPU:     cpu,
-		Disk:    io,
-		Network: net[0],
-	}, nil
+	m := &Metrics{
+		Memory: mem,
+		CPU:    cpu,
+		Disk:   io,
+	}
+	if len(net) > 0 {
+		m.Network = &net[0]
+	}
+	return m, errs
 }
 
 func (r *MetricRecorder) buildMemoryFields(metrics *Metrics) []core.KeyValue {
+	if metrics.Memory == nil {
+		return nil
+	}
 	return []core.KeyValue{
 		core.NewKeyValue("used", fmt.Sprintf("%d", metrics.Memory.RSS)),
 	}
@@ -86,18 +91,51 @@ func (r *MetricRecorder) buildCPUFields(metrics *Metrics) []core.KeyValue {
 	}
 }
 
-func (r *MetricRecorder) buildNetworkFields(metrics *Metrics) []core.KeyValue {
-	return []core.KeyValue{
-		core.NewKeyValue("bytes_sent", fmt.Sprintf("%d", metrics.Network.BytesSent)),
-		core.NewKeyValue("bytes_recv", fmt.Sprintf("%d", metrics.Network.BytesRecv)),
+func (r *MetricRecorder) buildNetworkFields(current, previous *Metrics) []core.KeyValue {
+	if current.Network == nil {
+		return nil
 	}
+	bytesSent := current.Network.BytesSent
+	bytesRecv := current.Network.BytesRecv
+	values := []core.KeyValue{
+		core.NewKeyValue("bytes_sent_total", fmt.Sprintf("%d", bytesSent)),
+		core.NewKeyValue("bytes_recv_total", fmt.Sprintf("%d", bytesRecv)),
+	}
+	if previous.Network != nil {
+		previousBytesSent := previous.Network.BytesSent
+		previousBytesRecv := previous.Network.BytesRecv
+		values = append(
+			values,
+			core.NewKeyValue("bytes_sent_per_second", fmt.Sprintf("%d", bytesSent-previousBytesSent)),
+			core.NewKeyValue("bytes_recv_per_second", fmt.Sprintf("%d", bytesRecv-previousBytesRecv)),
+		)
+	}
+
+	return values
 }
 
-func (r *MetricRecorder) buildDiskFields(metrics *Metrics) []core.KeyValue {
-	return []core.KeyValue{
-		core.NewKeyValue("read_bytes", fmt.Sprintf("%d", metrics.Disk.DiskReadBytes)),
-		core.NewKeyValue("write_bytes", fmt.Sprintf("%d", metrics.Disk.DiskWriteBytes)),
+func (r *MetricRecorder) buildDiskFields(current, previous *Metrics) []core.KeyValue {
+	if current.Disk == nil {
+		return nil
 	}
+
+	readBytes := current.Disk.ReadBytes
+	writeBytes := current.Disk.WriteBytes
+	values := []core.KeyValue{
+		core.NewKeyValue("read_bytes_total", fmt.Sprintf("%d", readBytes)),
+		core.NewKeyValue("write_bytes_total", fmt.Sprintf("%d", writeBytes)),
+	}
+	if previous.Disk != nil {
+		previousDiskReadBytes := previous.Disk.DiskReadBytes
+		previousDiskWriteBytes := previous.Disk.DiskWriteBytes
+		values = append(
+			values,
+			core.NewKeyValue("read_bytes_per_second", fmt.Sprintf("%d", readBytes-previousDiskReadBytes)),
+			core.NewKeyValue("write_bytes_per_second", fmt.Sprintf("%d", writeBytes-previousDiskWriteBytes)),
+		)
+	}
+
+	return values
 }
 
 // getChildProcess tries to find the child process of the current process.
@@ -114,7 +152,6 @@ func getChildProcess() (*gopsutil.Process, error) {
 		if len(processes) > 1 {
 			break
 		}
-		time.Sleep(1)
 	}
 
 	// Print debug info

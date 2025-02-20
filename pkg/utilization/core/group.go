@@ -5,6 +5,11 @@ import (
 	"time"
 )
 
+type GroupedMetrics struct {
+	KeyMap map[string][]string
+	Data   []*DataPoint
+}
+
 type fieldsByMeasurement map[string]valuesByField
 type valuesByField map[string]*valuesWrapper
 type valuesWrapper struct {
@@ -14,10 +19,10 @@ type valuesWrapper struct {
 
 // DataPoint represents an optimized JSON structure for transferring metrics.
 type DataPoint struct {
-	Measurement string                `json:"m"`
-	Tags        []keyValueTuple       `json:"t"`
-	Field       string                `json:"f"`
-	Values      []timestampValueTuple `json:"v"`
+	Measurement string                `json:"measurement"`
+	Tags        []keyValueTuple       `json:"tags"`
+	Field       string                `json:"fields"`
+	Values      []timestampValueTuple `json:"values"`
 }
 
 // timestampValueTuple is a tuple of timestamp and value.
@@ -44,11 +49,31 @@ func toKeyValueTuple(key, value string) keyValueTuple {
 	return keyValueTuple{key, value}
 }
 
-// BuildDataPoints converts a slice of metrics to a slice of JSON data points optimized for transfer.
-func BuildDataPoints(metrics []*Metric) []*DataPoint {
+// GroupMetrics converts a slice of metrics to a slice of JSON data points optimized for transfer.
+func GroupMetrics(metrics []*Metric) GroupedMetrics {
 	grouped := groupDataPoints(metrics)
 	sortDataPoints(grouped)
-	return buildDataPoints(grouped)
+	dataPoints := buildDataPoints(grouped)
+	keymap := buildKeyMap(grouped)
+	return GroupedMetrics{
+		KeyMap: keymap,
+		Data:   dataPoints,
+	}
+}
+
+// buildKeyMap builds a map of measurement to fields for the given metrics.
+// Example: {"cpu": ["usage", "idle"], "memory": ["used", "free"]}
+func buildKeyMap(fieldsMap fieldsByMeasurement) map[string][]string {
+	keymap := make(map[string][]string)
+	for measurement, fields := range fieldsMap {
+		if _, ok := keymap[measurement]; !ok {
+			keymap[measurement] = make([]string, 0, len(fields))
+		}
+		for field := range fields {
+			keymap[measurement] = append(keymap[measurement], field)
+		}
+	}
+	return keymap
 }
 
 func buildDataPoints(fieldsMap fieldsByMeasurement) []*DataPoint {

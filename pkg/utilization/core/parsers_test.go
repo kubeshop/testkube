@@ -1,6 +1,8 @@
 package core
 
 import (
+	"context"
+	"os"
 	"strconv"
 	"testing"
 	"time"
@@ -11,7 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestParseFile(t *testing.T) {
+func TestParseMetrics(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -22,8 +24,37 @@ func TestParseFile(t *testing.T) {
 		wantLastSample  *Metric
 	}{
 		{
-			name:            "Valid file with metadata",
+			name:            "valid metrics file with metadata",
 			filepath:        "testdata/metrics_valid_metadata.influx",
+			wantSampleCount: 50,
+			wantFirstSample: &Metric{
+				Measurement: "cpu",
+				Tags: []KeyValue{
+					{Key: "host", Value: "server01"},
+				},
+				Fields: []KeyValue{
+					{Key: "usage_user", Value: "0.10"},
+					{Key: "usage_system", Value: "0.20"},
+					{Key: "usage_idle", Value: "99.70"},
+				},
+				Timestamp: ptr.To(time.Unix(0, 1670000000000000000).UTC()),
+			},
+			wantLastSample: &Metric{
+				Measurement: "mem",
+				Tags: []KeyValue{
+					{Key: "host", Value: "server02"},
+				},
+				Fields: []KeyValue{
+					{Key: "usage_total", Value: "8192"},
+					{Key: "usage_used", Value: "4900"},
+					{Key: "usage_free", Value: "3292"},
+				},
+				Timestamp: ptr.To(time.Unix(0, 1670000049000000000).UTC()),
+			},
+		},
+		{
+			name:            "valid metrics file without metadata",
+			filepath:        "testdata/metrics_no_metadata.influx",
 			wantSampleCount: 50,
 			wantFirstSample: &Metric{
 				Measurement: "cpu",
@@ -54,8 +85,11 @@ func TestParseFile(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			samples, err := OpenAndParseMetricsFile(tc.filepath)
+			f, err := os.Open(tc.filepath)
 			require.NoError(t, err)
+			samples, invalidLines, err := ParseMetrics(context.Background(), f, tc.filepath)
+			require.NoError(t, err)
+			assert.Empty(t, invalidLines)
 			assert.Len(t, samples, tc.wantSampleCount)
 			assert.Equal(t, tc.wantFirstSample, samples[0])
 			assert.Equal(t, tc.wantLastSample, samples[len(samples)-1])

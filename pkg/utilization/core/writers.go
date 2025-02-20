@@ -1,7 +1,6 @@
 package core
 
 import (
-	"bufio"
 	"context"
 	errors2 "errors"
 	"fmt"
@@ -13,9 +12,21 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	metadataControlByte      byte = '#'
+	metadataControlByteIndex      = 0
+	metadataLengthByteIndex       = 1
+	metadataStartIndex            = 2
+	headerEndIndex                = 255
+	headerEndByte                 = '\n'
+	dataStartIndex                = 256
+	headerLength                  = dataStartIndex
+)
+
 type Writer interface {
-	Write(ctx context.Context, data string) error
-	Close() error
+	Write(context.Context, string) error
+	writeMetadata(context.Context, *Metadata) error
+	Close(ctx context.Context) error
 }
 
 type STDOUTWriter struct{}
@@ -29,32 +40,39 @@ func (w *STDOUTWriter) Write(ctx context.Context, data string) error {
 	return nil
 }
 
-func (w *STDOUTWriter) Close() error {
+func (w *STDOUTWriter) writeMetadata(ctx context.Context, metadata *Metadata) error {
+	fmt.Printf("Metadata: %v\n", metadata)
 	return nil
 }
 
-type BufferedFileWriter struct {
+func (w *STDOUTWriter) Close(ctx context.Context) error {
+	return nil
+}
+
+var _ Writer = &STDOUTWriter{}
+
+type FileWriter struct {
 	mu       sync.Mutex
 	stop     bool
 	f        *os.File
 	metadata *Metadata
-	writer   *bufio.Writer
 }
 
-func NewBufferedFileWriter(dir string, metadata *Metadata) (*BufferedFileWriter, error) {
+func NewFileWriter(dir string, metadata *Metadata) (*FileWriter, error) {
 	filename := fmt.Sprintf("%s_%s_%s.%s", metadata.Workflow, metadata.Step, metadata.Execution, metadata.Format)
-	f, err := initMetricsFile(dir, filename)
+	f, err := initFile(dir, filename)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	return &BufferedFileWriter{
+	return &FileWriter{
 		f:        f,
-		writer:   bufio.NewWriter(f),
 		metadata: metadata,
 	}, nil
 }
 
-func initMetricsFile(dir, name string) (*os.File, error) {
+// initFile creates a new file in the specified directory with the given name, reserves space for metadata,
+// and moves the cursor to the start of the data section.
+func initFile(dir, name string) (*os.File, error) {
 	// Ensure the metrics directory exists, creating it if necessary.
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return nil, errors.Wrapf(err, "failed to create %q directory", dir)
@@ -66,17 +84,36 @@ func initMetricsFile(dir, name string) (*os.File, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to create file: %s", filePath)
 	}
+	if err := reserveMetadataSpace(f); err != nil {
+		_ = os.Remove(filePath)
+		return nil, errors.Wrap(err, "failed to reserve metadata space in file")
+	}
+	if _, err := f.Seek(dataStartIndex, io.SeekStart); err != nil {
+		_ = os.Remove(filePath)
+		return nil, errors.Wrap(err, "failed to seek to data start in file")
+	}
 
 	return f, nil
 }
 
-func (w *BufferedFileWriter) Write(ctx context.Context, data string) error {
+// reserveMetadataSpace writes null bytes to the start of the file to reserve space for metadata and a newline as the last character.
+func reserveMetadataSpace(f *os.File) error {
+	buffer := make([]byte, headerEndIndex+1)
+	buffer[headerEndIndex] = headerEndByte
+	if _, err := f.WriteAt(buffer, 0); err != nil {
+		return errors.Wrapf(err, "failed to reserve metadata space in file")
+	}
+	return nil
+}
+
+// Write writes the given data to the file and appends a newline character.
+func (w *FileWriter) Write(ctx context.Context, data string) error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	if w.stop {
 		return errors.New("cannot write to stopped writer")
 	}
-	_, err := w.writer.WriteString(data + "\n")
+	_, err := w.f.WriteString(data + "\n")
 	if err != nil {
 		return errors.Wrapf(err, "failed to write to file")
 	}
@@ -84,19 +121,34 @@ func (w *BufferedFileWriter) Write(ctx context.Context, data string) error {
 	return nil
 }
 
-func (w *BufferedFileWriter) Close() error {
+func (w *FileWriter) writeMetadata(ctx context.Context, metadata *Metadata) error {
+	if w.stop {
+		return errors.New("cannot write metadata to closed writer")
+	}
+	if _, err := w.f.WriteAt([]byte{metadataControlByte}, metadataControlByteIndex); err != nil {
+		return errors.Wrapf(err, "failed to write metadata control byte to file")
+	}
+	serialized := metadata.String()
+	length := byte(len(serialized))
+	if _, err := w.f.WriteAt([]byte{length}, metadataLengthByteIndex); err != nil {
+		return errors.Wrapf(err, "failed to write metadata length to file")
+	}
+	if _, err := w.f.WriteAt([]byte(serialized), metadataStartIndex); err != nil {
+		return errors.Wrapf(err, "failed to write metadata to file")
+	}
+
+	return nil
+}
+
+func (w *FileWriter) Close(ctx context.Context) error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	w.stop = true
-	// Flush any remaining data to the file.
-	if err := w.writer.Flush(); err != nil {
-		return errors.Wrapf(err, "failed to flush writer")
-	}
 	// Write metadata to the file.
-	wErr := WriteMetadataToFile(w.f, w.metadata)
+	wErr := w.writeMetadata(ctx, w.metadata)
 	if wErr != nil {
 		wErr = errors.Wrap(wErr, "failed to write metadata to the file")
 	}
+	w.stop = true
 	cErr := w.f.Close()
 	if cErr != nil {
 		cErr = errors.Wrapf(cErr, "failed to close file")
@@ -104,7 +156,7 @@ func (w *BufferedFileWriter) Close() error {
 	return errors2.Join(wErr, cErr)
 }
 
-func (w *BufferedFileWriter) Print() error {
+func (w *FileWriter) Print() error {
 	fmt.Printf("Opening metrics file %s\n", w.f.Name())
 	f, err := os.Open(w.f.Name())
 	if err != nil {
@@ -118,3 +170,5 @@ func (w *BufferedFileWriter) Print() error {
 	fmt.Println(string(data))
 	return nil
 }
+
+var _ Writer = &FileWriter{}

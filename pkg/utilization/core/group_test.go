@@ -1,8 +1,8 @@
 package core
 
 import (
-	"encoding/json"
-	"fmt"
+	"context"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -10,21 +10,14 @@ import (
 )
 
 func TestBuildDataPoints(t *testing.T) {
-	samples, err := OpenAndParseMetricsFile("testdata/metrics_valid_metadata.influx")
+	f, err := os.Open("testdata/metrics_valid_metadata.influx")
 	require.NoError(t, err)
 
-	dataPoints := BuildDataPoints(samples)
+	samples, invalidLines, err := ParseMetrics(context.Background(), f, "testdata/metrics_valid_metadata.influx")
+	require.NoError(t, err)
+	assert.Empty(t, invalidLines)
 
-	assert.Len(t, dataPoints, 6)
+	dataPoints := GroupMetrics(samples)
 
-	j, _ := json.Marshal(dataPoints)
-	fmt.Println(string(j))
-}
-
-func assertDataPoint(t *testing.T, dp *DataPoint, expectedMeasurement, expectedTags string, expectedField string, expectedValuesLength int) {
-	t.Helper()
-
-	assert.Equal(t, expectedMeasurement, dp.Measurement)
-	assert.Equal(t, expectedField, dp.Field)
-	assert.Equal(t, expectedValuesLength, len(dp.Values))
+	assert.Len(t, dataPoints.Data, 6)
 }

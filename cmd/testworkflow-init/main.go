@@ -378,7 +378,7 @@ func main() {
 				// Run the command
 				d := data.GetState()
 				recorderConfig := utilization.Config{
-					Dir:       "./metrics",
+					Dir:       "./.tk/metrics",
 					Skip:      action.Execute.Toolkit,
 					Workflow:  d.InternalConfig.Workflow.Name,
 					Step:      step.Ref,

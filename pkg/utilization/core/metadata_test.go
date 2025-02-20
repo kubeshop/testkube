@@ -10,59 +10,96 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestWriteMetadataToFile(t *testing.T) {
-	t.Parallel()
-
-	tmpFile, err := os.CreateTemp("", "test-write-metadata-*.influx")
-	require.NoError(t, err)
-	defer os.Remove(tmpFile.Name()) // clean up
-
-	_, err = tmpFile.WriteString(`cpu,host=server01 usage_idle=99
-mem,host=server01 usage=2048
-`)
-	require.NoError(t, err)
-
-	metadata := &Metadata{
-		Lines:  2,
-		Format: FormatInflux,
-	}
-
-	err = WriteMetadataToFile(tmpFile, metadata)
-	require.NoError(t, err)
-
-	expectedContent := `cpu,host=server01 usage_idle=99
-mem,host=server01 usage=2048
-#META lines=2 format=influx
-`
-
-	actualContent, err := os.ReadFile(tmpFile.Name())
-	require.NoError(t, err)
-
-	assert.Equal(t, expectedContent, string(actualContent))
-}
-
-func TestParseMetadataFromFile(t *testing.T) {
+func TestParseMetadataFromFilename(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name            string
-		fileName        string
-		expectErr       bool
-		expectErrSubstr string
-		expectMetadata  *Metadata
+		name       string
+		filename   string
+		wantMeta   *Metadata
+		wantErr    bool
+		errMessage string
 	}{
 		{
-			name:     "Valid metadata file",
+			name:     "valid INFLUX file",
+			filename: "myWorkflow_step2_0002.influx",
+			wantMeta: &Metadata{
+				Workflow:  "myWorkflow",
+				Step:      "step2",
+				Execution: "0002",
+				Format:    FormatInflux,
+			},
+			wantErr:    false,
+			errMessage: "",
+		},
+		{
+			name:       "invalid extension",
+			filename:   "someWorkflow_someStep_someExecution.txt",
+			wantMeta:   nil,
+			wantErr:    true,
+			errMessage: "unsupported metrics file extension",
+		},
+		{
+			name:       "invalid format - fewer underscore segments",
+			filename:   "someWorkflow_onlyOneSegment.json",
+			wantMeta:   nil,
+			wantErr:    true,
+			errMessage: "invalid filename format: expected <workflow>_<step>_<execution>.<format>",
+		},
+		{
+			name:       "invalid format - more underscore segments",
+			filename:   "workflow_step_execution_extra.json",
+			wantMeta:   nil,
+			wantErr:    true,
+			errMessage: "invalid filename format: expected <workflow>_<step>_<execution>.<format>",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt // capture range variable
+		t.Run(tt.name, func(t *testing.T) {
+			gotMeta, err := parseMetadataFromFilename(tt.filename)
+
+			if tt.wantErr {
+				require.Error(t, err)
+				if tt.errMessage != "" {
+					assert.Contains(t, err.Error(), tt.errMessage)
+				}
+			} else {
+				require.NoError(t, err)
+				require.NotNil(t, gotMeta, "Metadata should not be nil when no error")
+				assert.Equal(t, tt.wantMeta, gotMeta)
+			}
+		})
+	}
+}
+
+func TestReadHeader(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name           string
+		fileName       string
+		expectMetadata *Metadata
+		expectErr      bool
+		errContains    string
+	}{
+		{
+			name:     "metrics file with valid metadata",
 			fileName: "metrics_valid_metadata.influx",
 			expectMetadata: &Metadata{
-				Lines:  50,
-				Format: FormatInflux,
+				Lines:     50,
+				Format:    FormatInflux,
+				Workflow:  "workflow",
+				Step:      "step",
+				Execution: "execution",
 			},
 		},
 		{
-			name:           "File without metadata",
-			fileName:       "metrics_no_metadata.influx",
-			expectMetadata: &Metadata{Lines: 0, Format: FormatInflux},
+			name:        "metrics file with no metadata",
+			fileName:    "metrics_no_metadata.influx",
+			expectErr:   true,
+			errContains: "invalid header control byte 'c': no metadata found",
 		},
 	}
 
@@ -70,24 +107,20 @@ func TestParseMetadataFromFile(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			path := filepath.Join("testdata", tc.fileName)
 			f, err := os.Open(path)
-			if err != nil {
-				t.Fatalf("Failed to open file %s: %v", path, err)
-			}
 			t.Cleanup(func() {
-				f.Close()
+				_ = f.Close()
 			})
+			require.NoError(t, err)
 
-			meta, err := parseMetadataFromFile(f)
+			buf := make([]byte, headerLength)
+			_, err = f.Read(buf)
+			require.NoError(t, err)
 
+			meta, err := parseMetadataFromHeader(buf)
 			if tc.expectErr {
-				assert.Error(t, err)
-				if tc.expectErrSubstr != "" {
-					assert.Contains(t, err.Error(), tc.expectErrSubstr)
-				}
-				assert.Nil(t, meta)
+				assert.ErrorContains(t, err, tc.errContains)
 			} else {
-				assert.NoError(t, err)
-				assert.NotNil(t, meta)
+				require.NoError(t, err)
 				assert.Equal(t, tc.expectMetadata, meta)
 			}
 		})
@@ -106,17 +139,17 @@ func TestParseMetadata(t *testing.T) {
 	}{
 		{
 			name:     "Valid - influx",
-			input:    "#META lines=10 format=influx",
+			input:    "META lines=10 format=influx",
 			wantMeta: &Metadata{Lines: 10, Format: FormatInflux},
 		},
 		{
 			name:     "Valid - csv",
-			input:    "#META lines=42 format=csv",
+			input:    "META lines=42 format=csv",
 			wantMeta: &Metadata{Lines: 42, Format: FormatCSV},
 		},
 		{
 			name:     "Valid - json",
-			input:    "#META lines=7 format=json",
+			input:    "META lines=7 format=json",
 			wantMeta: &Metadata{Lines: 7, Format: FormatJSON},
 		},
 		{
@@ -126,32 +159,26 @@ func TestParseMetadata(t *testing.T) {
 			errContain: "meta line must start with",
 		},
 		{
-			name:       "Invalid - only one token",
-			input:      "#META lines=10",
-			wantErr:    true,
-			errContain: "format", // we expect an error about missing format key
-		},
-		{
 			name:       "Invalid - cannot parse lines as int",
-			input:      "#META lines=abc format=csv",
+			input:      "META lines=abc format=csv",
 			wantErr:    true,
 			errContain: "failed to parse 'lines' as int",
 		},
 		{
 			name:       "Invalid - unrecognized key",
-			input:      "#META lines=5 something=wrong format=influx",
+			input:      "META lines=5 something=wrong format=influx",
 			wantErr:    true,
 			errContain: "unrecognized metadata key",
 		},
 		{
 			name:       "Invalid - unsupported format",
-			input:      "#META lines=5 format=toml",
+			input:      "META lines=5 format=toml",
 			wantErr:    true,
-			errContain: "unsupported format",
+			errContain: "unsupported metrics format",
 		},
 		{
 			name:     "Valid - no tokens after prefix",
-			input:    "#META ",
+			input:    "META ",
 			wantMeta: &Metadata{},
 		},
 	}

@@ -77,20 +77,21 @@ func (r *MetricRecorder) Start(ctx context.Context) {
 
 	process, err := getChildProcess()
 	if err != nil {
-		stdoutUnsafe.Error(fmt.Sprintf("failed to get process: %v", err))
+		stdoutUnsafe.Errorf("failed to get process: %v", err)
 		return
 	}
 
+	previous := &Metrics{}
 	for {
 		select {
 		case <-ctx.Done():
 			stdoutUnsafe.Println("stopping metrics recorder")
-			if err := r.writer.Close(); err != nil {
-				stdoutUnsafe.Error(fmt.Sprintf("failed to close writer: %v\n", err))
+			if err := r.writer.Close(ctx); err != nil {
+				stdoutUnsafe.Errorf("failed to close writer: %v\n", err)
 			}
 			return
 		case <-t.C:
-			r.iterate(ctx, process)
+			previous = r.iterate(ctx, process, previous)
 		}
 	}
 }
@@ -131,7 +132,7 @@ func WithMetricsRecorder(config Config, fn func()) {
 		Execution: config.Execution,
 		Format:    config.Format,
 	}
-	w, err := core.NewBufferedFileWriter(config.Dir, metadata)
+	w, err := core.NewFileWriter(config.Dir, metadata)
 	// If we can't create the file writer, log the error, run the function without metrics and exit early.
 	if err != nil {
 		stdoutUnsafe.Errorf("failed to create file writer: %v", err)

@@ -1,7 +1,6 @@
 package core
 
 import (
-	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -13,7 +12,7 @@ import (
 type MetricsFormat string
 
 const (
-	prefixMeta                  = "#META "
+	prefixMeta                  = "META "
 	FormatInflux  MetricsFormat = "influx"
 	FormatCSV     MetricsFormat = "csv"
 	FormatJSON    MetricsFormat = "json"
@@ -64,62 +63,49 @@ func (m *Metadata) String() string {
 	return sb.String()
 }
 
-// WriteMetadataToFile writes the metadata at the end of the file.
-func WriteMetadataToFile(f *os.File, metadata *Metadata) error {
-	_, err := f.WriteString(metadata.String() + "\n")
-	if err != nil {
-		return errors.Wrap(err, "failed to write metadata to the file")
+func parseMetadataFromFilename(filename string) (*Metadata, error) {
+	base := filepath.Base(filename)
+	format := getFormatFromFileExtension(filename)
+	if format == FormatUnknown {
+		return nil, errors.Errorf("unsupported metrics file extension %q", filename)
 	}
-	return nil
+	base = strings.TrimSuffix(base, filepath.Ext(base))
+	tokens := strings.Split(base, "_")
+	if len(tokens) != 3 {
+		return nil, errors.Errorf("invalid filename format: expected <workflow>_<step>_<execution>.<format>, got: %q", base)
+	}
+	return &Metadata{
+		Workflow:  tokens[0],
+		Step:      tokens[1],
+		Execution: tokens[2],
+		Format:    format,
+	}, nil
 }
 
-// parseMetadataFromFile reads the first line of the file (header) and tries to parse it as Metadata.
-// This function always rewinds the file pointer to the beginning after reading the header.
-func parseMetadataFromFile(f *os.File) (*Metadata, error) {
-	header, _, err := readLastLine(f)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-	defer f.Seek(0, 0)
-
-	metadata, err := parseMetadata(string(header))
-	if err != nil {
-		if !errors.Is(err, ErrNoMetadata) {
-			return nil, errors.WithStack(err)
-		}
-	}
-	// If metadata is not nil, we have successfully parsed it from the file header.
-	if metadata != nil {
-		// If the format is not set, we need to determine it based on the file extension.
-		if metadata.Format == "" {
-			metadata.Format, err = getFormatFromFileExtension(f.Name())
-			if err != nil {
-				return nil, errors.WithStack(err)
-			}
-		}
-		// We can return the metadata now.
-		return metadata, nil
-	}
-	// If metadata is nil, we need to determine the file format based on the file extension.
-	ext, err := getFormatFromFileExtension(f.Name())
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-	return &Metadata{Format: ext}, nil
-}
-
-func getFormatFromFileExtension(path string) (MetricsFormat, error) {
-	ext := filepath.Ext(path)
+func getFormatFromFileExtension(filename string) MetricsFormat {
+	ext := filepath.Ext(filename)
 	switch ext {
 	case ".csv":
-		return FormatCSV, nil
+		return FormatCSV
 	case ".json":
-		return FormatJSON, nil
+		return FormatJSON
 	case ".influx":
-		return FormatInflux, nil
+		return FormatInflux
 	default:
-		return FormatUnknown, errors.Errorf("unsupported file format: %s", ext)
+		return FormatUnknown
 	}
+}
+
+// parseMetadataFromHeader checks is the provided header valid and extracts metadata from it.
+func parseMetadataFromHeader(header []byte) (*Metadata, error) {
+	controlByte := header[metadataControlByteIndex]
+	if controlByte != metadataControlByte {
+		return nil, errors.Wrapf(ErrNoMetadata, "invalid header control byte %q", controlByte)
+	}
+	length := header[metadataLengthByteIndex]
+	metadataBuf := header[metadataStartIndex : metadataStartIndex+length]
+
+	return parseMetadata(string(metadataBuf))
 }
 
 // parseMetadata parses a line and checks does it contain metadata.
@@ -129,7 +115,6 @@ func getFormatFromFileExtension(path string) (MetricsFormat, error) {
 //
 // It returns a Metadata struct or an error if the line is malformed.
 func parseMetadata(line string) (*Metadata, error) {
-	// Must start with "#META "
 	if !strings.HasPrefix(line, prefixMeta) {
 		return nil, errors.Wrapf(ErrNoMetadata, "meta line must start with %q, got: %q", prefixMeta, line)
 	}
@@ -138,20 +123,20 @@ func parseMetadata(line string) (*Metadata, error) {
 	remaining := strings.TrimPrefix(line, prefixMeta)
 	// remaining is e.g. "lines=10 format=influx"
 
-	// Split by spaces (we expect exactly 2 tokens: "lines=NN" and "format=XXX")
 	tokens := strings.Fields(remaining)
 	if len(tokens) == 0 {
 		return &Metadata{}, nil
 	}
 
 	var (
-		linesStr     string
-		formatStr    string
-		workflowStr  string
-		stepStr      string
-		executionStr string
+		lines     int
+		format    MetricsFormat
+		workflow  string
+		step      string
+		execution string
 	)
 
+	var err error
 	// We'll parse each token, which should be in "key=value" form.
 	for _, token := range tokens {
 		kv := strings.SplitN(token, "=", 2)
@@ -161,40 +146,35 @@ func parseMetadata(line string) (*Metadata, error) {
 		key, value := kv[0], kv[1]
 		switch key {
 		case "lines":
-			linesStr = value
+			lines, err = strconv.Atoi(value)
+			if err != nil {
+				return nil, errors.Wrapf(ErrInvalidMetadataLine, "failed to parse 'lines' as int in %q", value)
+			}
 		case "format":
-			formatStr = value
+			format = MetricsFormat(value)
+			switch format {
+			case FormatInflux, FormatCSV, FormatJSON:
+				// valid
+			default:
+				return nil, errors.Wrapf(ErrInvalidMetadataLine, "unsupported metrics format %q", format)
+			}
 		case "workflow":
-			workflowStr = value
+			workflow = value
 		case "step":
-			stepStr = value
+			step = value
 		case "execution":
-			executionStr = value
+			execution = value
 		default:
 			return nil, errors.Errorf("unrecognized metadata key %q in token %q", key, token)
 		}
 	}
 
-	// Now parse lines=<int>
-	linesInt, err := strconv.Atoi(linesStr)
-	if err != nil {
-		return nil, errors.Wrapf(ErrInvalidMetadataLine, "failed to parse 'lines' as int in %q", linesStr)
-	}
-
-	// Check the format value
-	switch MetricsFormat(formatStr) {
-	case FormatInflux, FormatCSV, FormatJSON:
-		// valid
-	default:
-		return nil, errors.Wrapf(ErrInvalidMetadataLine, "unsupported format %q; must be one of [influx, csv, json]", formatStr)
-	}
-
 	meta := &Metadata{
-		Lines:     linesInt,
-		Format:    MetricsFormat(formatStr),
-		Workflow:  workflowStr,
-		Step:      stepStr,
-		Execution: executionStr,
+		Lines:     lines,
+		Format:    format,
+		Workflow:  workflow,
+		Step:      step,
+		Execution: execution,
 	}
 	return meta, nil
 }
