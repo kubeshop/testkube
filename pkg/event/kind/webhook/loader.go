@@ -12,6 +12,7 @@ import (
 	v1 "github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	cloudwebhook "github.com/kubeshop/testkube/pkg/cloud/data/webhook"
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
 	"github.com/kubeshop/testkube/pkg/mapper/webhooks"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
@@ -23,7 +24,8 @@ var _ common.ListenerLoader = (*WebhooksLoader)(nil)
 func NewWebhookLoader(log *zap.SugaredLogger, webhooksClient executorsclientv1.WebhooksInterface,
 	webhookTemplatesClient executorsclientv1.WebhookTemplatesInterface, deprecatedClients commons.DeprecatedClients,
 	deprecatedRepositories commons.DeprecatedRepositories, testWorkflowExecutionResults testworkflow.Repository,
-	secretClient secret.Interface, metrics v1.Metrics, proContext *config.ProContext, envs map[string]string,
+	secretClient secret.Interface, metrics v1.Metrics, webhookRepository cloudwebhook.WebhookRepository,
+	proContext *config.ProContext, envs map[string]string,
 ) *WebhooksLoader {
 	return &WebhooksLoader{
 		log:                          log,
@@ -34,6 +36,7 @@ func NewWebhookLoader(log *zap.SugaredLogger, webhooksClient executorsclientv1.W
 		testWorkflowExecutionResults: testWorkflowExecutionResults,
 		secretClient:                 secretClient,
 		metrics:                      metrics,
+		webhookRepository:            webhookRepository,
 		proContext:                   proContext,
 		envs:                         envs,
 	}
@@ -48,6 +51,7 @@ type WebhooksLoader struct {
 	testWorkflowExecutionResults testworkflow.Repository
 	secretClient                 secret.Interface
 	metrics                      v1.Metrics
+	webhookRepository            cloudwebhook.WebhookRepository
 	proContext                   *config.ProContext
 	envs                         map[string]string
 }
@@ -163,7 +167,7 @@ OuterLoop:
 				name, webhook.Spec.Uri, webhook.Spec.Selector, types,
 				webhook.Spec.PayloadObjectField, payloadTemplate, webhook.Spec.Headers, webhook.Spec.Disabled,
 				r.deprecatedRepositories, r.testWorkflowExecutionResults,
-				r.metrics, r.proContext, r.envs, vars,
+				r.metrics, r.webhookRepository, r.proContext, r.envs, vars,
 			),
 		)
 	}
