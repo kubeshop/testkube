@@ -8,7 +8,7 @@ import (
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
-	common2 "github.com/kubeshop/testkube/internal/common"
+	common2 "github.com/kubeshop/testkube/internal/crdcommon"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -64,7 +64,8 @@ func NewCreateTestWorkflowCmd() *cobra.Command {
 			workflow, err := client.GetTestWorkflow(obj.Name)
 			if err != nil {
 				if update {
-					ui.ExitOnError("getting test workflow "+obj.Name+" in namespace "+obj.Namespace, err)
+					// allow to `create --update` if test workflow does not exist
+					ui.WarnOnError("getting test workflow "+obj.Name+" in namespace "+obj.Namespace, err)
 				} else {
 					ui.Debug("getting test workflow "+obj.Name+" in namespace "+obj.Namespace, err.Error())
 				}

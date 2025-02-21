@@ -11,10 +11,10 @@ spec:
         cpu: 32m
         memory: 32Mi
   steps:
-  - name: Run tests
-    shell: curl https://testkube.io
-    container:
-      image: curlimages/curl:8.7.1
+    - name: Run tests
+      shell: curl -f -LI https://testkube-test-page-lipsum.pages.dev/
+      container:
+        image: curlimages/curl:8.7.1
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -25,17 +25,17 @@ metadata:
 spec:
   pod:
     imagePullSecrets:
-    - name: example-private-registry-credentials
+      - name: example-private-registry-credentials
   container:
     resources:
       requests:
         cpu: 32m
         memory: 32Mi
   steps:
-  - name: Run tests
-    shell: curl https://testkube.io && sleep 10
-    container:
-      image: tkoniecznykubeshop/example-private-repo:curl-8.7.1
+    - name: Run tests
+      shell: curl -f -LI https://testkube-test-page-lipsum.pages.dev/ && sleep 10
+      container:
+        image: tkoniecznykubeshop/example-private-repo:curl-8.7.1
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -50,10 +50,14 @@ spec:
         cpu: 32m
         memory: 32Mi
   steps:
-  - name: Run tests
-    parallel:
-      matrix:
-        url: ['https://testkube.io', 'https://docs.testkube.io']
-      shell: curl '{{ matrix.url }}'
-      container:
-        image: curlimages/curl:8.7.1
+    - name: Run tests
+      parallel:
+        matrix:
+          url:
+            [
+              "https://testkube-test-page-lipsum.pages.dev/",
+              "https://docs.testkube.io",
+            ]
+        shell: curl -f -LI '{{ matrix.url }}'
+        container:
+          image: curlimages/curl:8.7.1

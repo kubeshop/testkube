@@ -16,6 +16,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/pro"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
+	"github.com/kubeshop/testkube/cmd/tcl/kubectl-testkube/devbox"
 	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -57,12 +58,17 @@ func init() {
 
 	RootCmd.AddCommand(NewConfigCmd())
 	RootCmd.AddCommand(NewDebugCmd())
+	RootCmd.AddCommand(NewDiagnosticsCmd())
 	RootCmd.AddCommand(NewCreateTicketCmd())
 
 	RootCmd.AddCommand(NewAgentCmd())
 	RootCmd.AddCommand(NewCloudCmd())
 	RootCmd.AddCommand(NewProCmd())
+	RootCmd.AddCommand(NewDockerCmd())
 	RootCmd.AddCommand(pro.NewLoginCmd())
+	RootCmd.AddCommand(NewInstallCmd())
+
+	RootCmd.AddCommand(devbox.NewDevBoxCommand())
 
 	RootCmd.SetHelpCommand(NewHelpCmd())
 }
@@ -193,7 +199,6 @@ func Execute() {
 	RootCmd.PersistentFlags().StringVarP(&namespace, "namespace", "", defaultNamespace, "Kubernetes namespace, default value read from config if set")
 	RootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "", false, "show additional debug messages")
 	RootCmd.PersistentFlags().StringVarP(&apiURI, "api-uri", "a", apiURI, "api uri, default value read from config if set")
-	RootCmd.PersistentFlags().BoolVarP(&oauthEnabled, "oauth-enabled", "", cfg.OAuth2Data.Enabled, "enable oauth")
 	RootCmd.PersistentFlags().BoolVarP(&insecure, "insecure", "", false, "insecure connection for direct client")
 	RootCmd.PersistentFlags().StringToStringVarP(&headers, "header", "", cfg.Headers, "headers for direct client key value pair: --header name=value")
 

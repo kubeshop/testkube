@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
-	internalcommon "github.com/kubeshop/testkube/internal/common"
+	internalcommon "github.com/kubeshop/testkube/internal/crdcommon"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
 	executorsmapper "github.com/kubeshop/testkube/pkg/mapper/executors"

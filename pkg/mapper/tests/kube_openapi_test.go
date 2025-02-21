@@ -36,7 +36,7 @@ func TestMapTestCRToAPI(t *testing.T) {
 				ExecutionLabels: map[string]string{
 					"": "",
 				},
-				Args:    []string{"-v", "-X", "GET", "https://testkube.kubeshop.io"},
+				Args:    []string{"-v", "-X", "GET", "https://testkube-test-page-lipsum.pages.dev/"},
 				Command: []string{"curl"},
 				Image:   "curlimages/curl:7.85.0",
 				ImagePullSecrets: []v1.LocalObjectReference{
@@ -89,7 +89,7 @@ func TestMapTestCRToAPI(t *testing.T) {
 			Namespace:     "",
 			Variables:     map[string]testkube.Variable{},
 			VariablesFile: "",
-			Args:          []string{"-v", "-X", "GET", "https://testkube.kubeshop.io"},
+			Args:          []string{"-v", "-X", "GET", "https://testkube-test-page-lipsum.pages.dev/"},
 			ArgsMode:      "",
 			Command:       []string{"curl"},
 			Image:         "curlimages/curl:7.85.0",

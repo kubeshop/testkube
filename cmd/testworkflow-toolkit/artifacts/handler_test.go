@@ -1,22 +1,23 @@
 package artifacts
 
 import (
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 
-	"github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
+	"github.com/kubeshop/testkube/pkg/controlplaneclient"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/common/testdata"
-	"github.com/kubeshop/testkube/pkg/cloud/data/artifact"
-	"github.com/kubeshop/testkube/pkg/cloud/data/executor"
 	"github.com/kubeshop/testkube/pkg/filesystem"
 )
 
 func TestHandler_CloudUploader(t *testing.T) {
+	// Populate empty internal configuration, as it is required for the Toolkit
+	_ = os.Setenv("TK_CFG", "{}")
+
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
@@ -44,58 +45,35 @@ func TestHandler_CloudUploader(t *testing.T) {
 			Return(filesystem.NewMockFile("report/junit.xml", []byte(testdata.BasicJUnit)), nil)
 
 	}
-	setDirectPresignedURLExpectations := func(client *executor.MockExecutor) {
-		req1 := artifact.PutObjectSignedURLRequest{
-			Object:      "test.log",
-			ContentType: "application/octet-stream",
-		}
-		resp1 := artifact.PutObjectSignedURLResponse{
-			URL: server.URL,
-		}
-		resp1Json, _ := json.Marshal(resp1)
-		client.EXPECT().Execute(gomock.Any(), artifact.CmdScraperPutObjectSignedURL, gomock.Eq(&req1)).Return(resp1Json, nil)
-		req2 := artifact.PutObjectSignedURLRequest{
-			Object:      "report/junit.xml",
-			ContentType: "application/octet-stream",
-		}
-		resp2 := artifact.PutObjectSignedURLResponse{
-			URL: server.URL,
-		}
-		resp2Json, _ := json.Marshal(resp2)
-		client.EXPECT().Execute(gomock.Any(), artifact.CmdScraperPutObjectSignedURL, gomock.Eq(&req2)).Return(resp2Json, nil)
+	setDirectPresignedURLExpectations := func(client *controlplaneclient.MockClient) {
+		client.EXPECT().
+			SaveExecutionArtifactGetPresignedURL(gomock.Any(), "env123", "exec123", "workflow123", "step123", "test.log", "application/octet-stream").
+			Return(server.URL, nil)
+		client.EXPECT().
+			SaveExecutionArtifactGetPresignedURL(gomock.Any(), "env123", "exec123", "workflow123", "step123", "report/junit.xml", "application/octet-stream").
+			Return(server.URL, nil)
 	}
-	setTarPresignedURLExpectations := func(client *executor.MockExecutor) {
-		req1 := artifact.PutObjectSignedURLRequest{
-			Object:      "artifacts.tar.gz",
-			ContentType: "application/octet-stream",
-		}
-		resp1 := artifact.PutObjectSignedURLResponse{
-			URL: server.URL,
-		}
-		resp1Json, _ := json.Marshal(resp1)
-		client.EXPECT().Execute(gomock.Any(), artifact.CmdScraperPutObjectSignedURL, gomock.Eq(&req1)).Return(resp1Json, nil)
+	setTarPresignedURLExpectations := func(client *controlplaneclient.MockClient) {
+		client.EXPECT().
+			SaveExecutionArtifactGetPresignedURL(gomock.Any(), "env123", "exec123", "workflow123", "step123", "artifacts.tar.gz", "application/octet-stream").
+			Return(server.URL, nil)
 	}
-	setJUnitPostProcessorExpectations := func(client *executor.MockExecutor) {
-		req := testworkflow.ExecutionsAddReportRequest{
-			Filepath: "report/junit.xml",
-			Report:   []byte(testdata.BasicJUnit),
-		}
-		client.
-			EXPECT().
-			Execute(gomock.Any(), testworkflow.CmdTestWorkflowExecutionAddReport, gomock.Eq(&req)).
-			Return(nil, nil)
+	setJUnitPostProcessorExpectations := func(client *controlplaneclient.MockClient) {
+		client.EXPECT().
+			AppendExecutionReport(gomock.Any(), "env123", "exec123", "workflow123", "step123", "report/junit.xml", []byte(testdata.BasicJUnit)).
+			Return(nil)
 	}
 
 	tests := []struct {
 		name                   string
 		processor              Processor
 		withJUnitPostProcessor bool
-		setup                  func(*filesystem.MockFileSystem, *executor.MockExecutor)
+		setup                  func(*filesystem.MockFileSystem, *controlplaneclient.MockClient)
 	}{
 		{
 			name:      "direct processor",
 			processor: NewDirectProcessor(),
-			setup: func(fs *filesystem.MockFileSystem, client *executor.MockExecutor) {
+			setup: func(fs *filesystem.MockFileSystem, client *controlplaneclient.MockClient) {
 				setDirectPresignedURLExpectations(client)
 			},
 		},
@@ -103,7 +81,7 @@ func TestHandler_CloudUploader(t *testing.T) {
 			name:                   "direct processor with junit post processor",
 			processor:              NewDirectProcessor(),
 			withJUnitPostProcessor: true,
-			setup: func(fs *filesystem.MockFileSystem, client *executor.MockExecutor) {
+			setup: func(fs *filesystem.MockFileSystem, client *controlplaneclient.MockClient) {
 				setFilesystemExpectations(fs)
 				setDirectPresignedURLExpectations(client)
 				setJUnitPostProcessorExpectations(client)
@@ -112,7 +90,7 @@ func TestHandler_CloudUploader(t *testing.T) {
 		{
 			name:      "tar processor",
 			processor: NewTarProcessor("artifacts.tar.gz"),
-			setup: func(fs *filesystem.MockFileSystem, client *executor.MockExecutor) {
+			setup: func(fs *filesystem.MockFileSystem, client *controlplaneclient.MockClient) {
 				setTarPresignedURLExpectations(client)
 			},
 		},
@@ -120,7 +98,7 @@ func TestHandler_CloudUploader(t *testing.T) {
 			name:                   "tar processor with junit post processor",
 			withJUnitPostProcessor: true,
 			processor:              NewTarProcessor("artifacts.tar.gz"),
-			setup: func(fs *filesystem.MockFileSystem, client *executor.MockExecutor) {
+			setup: func(fs *filesystem.MockFileSystem, client *controlplaneclient.MockClient) {
 				setFilesystemExpectations(fs)
 				setTarPresignedURLExpectations(client)
 				setJUnitPostProcessorExpectations(client)
@@ -131,14 +109,14 @@ func TestHandler_CloudUploader(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			mockFilesystem := filesystem.NewMockFileSystem(mockCtrl)
-			mockExecutor := executor.NewMockExecutor(mockCtrl)
-			uploader := NewCloudUploader(mockExecutor)
+			mockClient := controlplaneclient.NewMockClient(mockCtrl)
+			uploader := NewCloudUploader(mockClient, "env123", "exec123", "workflow123", "step123")
 			if tc.setup != nil {
-				tc.setup(mockFilesystem, mockExecutor)
+				tc.setup(mockFilesystem, mockClient)
 			}
 			var handlerOpts []HandlerOpts
 			if tc.withJUnitPostProcessor {
-				pp := NewJUnitPostProcessor(mockFilesystem, mockExecutor, "/", "")
+				pp := NewJUnitPostProcessor(mockFilesystem, mockClient, "env123", "exec123", "workflow123", "step123", "/", "")
 				handlerOpts = append(handlerOpts, WithPostProcessor(pp))
 			}
 			handler := NewHandler(uploader, tc.processor, handlerOpts...)

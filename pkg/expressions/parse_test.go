@@ -210,6 +210,10 @@ func TestCompileEscapeTemplate(t *testing.T) {
 	assert.Equal(t, `foo{{"{{"}}barbaz{{"{{"}}`, MustCompileTemplate(`foo{{"{{bar"}}baz{{"{{"}}`).Template())
 }
 
+func TestCompileEscapeBrace(t *testing.T) {
+	assert.Equal(t, `foo{{"{"}}barbaz{{"{"}}`, MustCompileTemplate(`foo{{"{bar"}}baz{{"{"}}`).Template())
+}
+
 func TestCompileStandardLib(t *testing.T) {
 	assert.Equal(t, `false`, MustCompile(`bool(0)`).String())
 	assert.Equal(t, `true`, MustCompile(`bool(500)`).String())

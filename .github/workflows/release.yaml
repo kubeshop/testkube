@@ -11,7 +11,7 @@ permissions:
 
 env:
   TESTKUBE_CHOCO_REPO: https://chocolatey.kubeshop.io/
-  ALPINE_IMAGE: alpine:3.20.0
+  ALPINE_IMAGE: alpine:3.20.3
   BUSYBOX_IMAGE: busybox:1.36.1-musl
 
 jobs:
@@ -74,12 +74,13 @@ jobs:
         uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser-pro
-          version: latest
+          version: 'v2.3.2' # 2.4.4 fails with "no such file or directory"
           args: release -f ${{ matrix.path }} --skip=publish
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
           ANALYTICS_TRACKING_ID: "${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_ID}}"
           ANALYTICS_API_KEY: "${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_SECRET}}"
+          KEYGEN_PUBLIC_KEY: "${{secrets.KEYGEN_PUBLIC_KEY}}"
           # Your GoReleaser Pro key, if you are using the 'goreleaser-pro' distribution
           GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
           DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"
@@ -110,6 +111,62 @@ jobs:
             ${{ matrix.name }}/testkube_${{ matrix.name }}_*
           retention-days: 1
 
+  build_agent_image:
+    name: Build a Docker image for Testkube Agent
+    runs-on: ubuntu-latest
+    env:
+      TESTKUBE_CLOUD_URL: "agent.testkube.io:443"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Get tag
+        id: tag
+        uses: dawidd6/action-get-tag@v1
+        with:
+          strip_v: true
+
+      - name: Preload kind images
+        run: |
+          mkdir -p build/kind/images/arm
+          mkdir -p build/kind/images/amd
+
+          docker pull --platform linux/arm64 kindest/node:v1.31.0
+          docker save kindest/node:v1.31.0 > build/kind/images/arm/node.tar
+
+          docker pull --platform linux/amd64 kindest/node:v1.31.0
+          docker save kindest/node:v1.31.0 > build/kind/images/amd/node.tar
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          build-args: |
+            segmentio_key=${{secrets.TESTKUBE_SEGMENTIO_KEY}}
+            ga_id=${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_ID}}
+            ga_secret=${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_SECRET}}
+            docker_image_version=${{steps.tag.outputs.tag}}
+            cloud_url=${{ env.TESTKUBE_CLOUD_URL }}
+          context: build/kind
+          file: build/kind/kind.Dockerfile
+          platforms: linux/amd64,linux/arm64
+          provenance: mode=max
+          push: true
+          sbom: true
+          tags: kubeshop/testkube-agent:${{steps.tag.outputs.tag}},kubeshop/testkube-agent:latest
+
   release:
     name: Create and upload release-artifacts
     needs: pre_build
@@ -120,8 +177,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: sigstore/cosign-installer@v3.6.0
-      - uses: anchore/sbom-action/download-syft@v0.17.0
+      - uses: sigstore/cosign-installer@v3.7.0
+      - uses: anchore/sbom-action/download-syft@v0.17.7
       - name: Download Artifacts for Linux
         uses: actions/download-artifact@master
         with:
@@ -158,7 +215,7 @@ jobs:
         uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser-pro
-          version: latest
+          version: 'v2.3.2' # 2.4.4 fails with "no such file or directory"
           args: release -f .goreleaser.yml
         env:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
@@ -191,14 +248,6 @@ jobs:
           name: testkube_windows
           path: windows
 
-      - name: Get MSFT Cert
-        id: write_file
-        uses: timheuer/base64-to-file@v1.2
-        with:
-          fileName: "kubeshop_msft.p12"
-          fileDir: "./temp/"
-          encodedString: ${{ secrets.CERT_MSFT_KUBESHOP_P12_B64 }}
-
       - name: Create and Sign MSI
         run: |
           Copy-Item 'windows\testkube_windows_386\kubectl-testkube.exe' '.\kubectl-testkube.exe'
@@ -207,10 +256,17 @@ jobs:
           Copy-Item 'build\installer\windows\testkube.bat' '.\testkube.bat'
           & "$env:WIX\bin\candle.exe" *.wxs
           & "$env:WIX\bin\light.exe" *.wixobj
-          & "C:\Program Files (x86)\Microsoft SDKs\ClickOnce\SignTool\signtool.exe" sign /f "$env:P12_CERT" /p "$env:P12_PASSWORD" /d "Kubetest by Kubeshop" /tr http://timestamp.digicert.com testkube.msi
-        env:
-          P12_CERT: ${{ steps.write_file.outputs.filePath }}
-          P12_PASSWORD: ${{ secrets.CERT_MSFT_KUBESHOP_P12_PASSWORD }}
+
+      - name: Sign Artifact with CodeSignTool
+        uses: sslcom/esigner-codesign@develop
+        with:
+          command: sign
+          username: ${{ secrets.ES_USERNAME }}
+          password: ${{ secrets.ES_PASSWORD }}
+          totp_secret: ${{ secrets.ES_TOTP_SECRET }}
+          file_path: testkube.msi
+          output_path: ${GITHUB_WORKSPACE}\artifacts
+          malware_block: false
 
       - name: Get tag
         id: tag
@@ -229,18 +285,21 @@ jobs:
         id: checksum
         run: |
           $installer_name = $env:MSI_NAME
-          $hash=Get-FileHash testkube.msi
+          $installer_path = $env:MSI_PATH
+          $hash=Get-FileHash $installer_path
           $hash.Hash + "  " + $installer_name + ".msi" >> msi_checksum.txt
           echo "::set-output name=INSTALLER_NAME::${installer_name}"
+          echo "::set-output name=INSTALLER_PATH::${installer_path}"
 
           #export MSI hash to environment
           $hashsum = $hash.Hash
           echo "::set-output name=CHECKSUM::${hashsum}"
 
           #copy MSI to choco directory to build a nuget package
-          Copy-Item -Path "testkube.msi" -Destination ".\choco\tools\$env:MSI_NAME.msi"
+          Copy-Item -Path "$installer_path" -Destination ".\choco\tools\$env:MSI_NAME.msi"
         env:
           MSI_NAME: testkube_${{steps.tag.outputs.tag}}_Windows_i386
+          MSI_PATH: D:\a\testkube\testkube\artifacts\testkube.msi
 
       - name: Upload release binary
         uses: actions/upload-release-asset@v1.0.2
@@ -248,7 +307,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         with:
           upload_url: ${{ steps.get_release.outputs.upload_url }}
-          asset_path: testkube.msi
+          asset_path: ${{steps.checksum.outputs.INSTALLER_PATH}}
           asset_name: ${{steps.checksum.outputs.INSTALLER_NAME}}.msi
           asset_content_type: application/octet-stream
 

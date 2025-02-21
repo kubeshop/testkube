@@ -62,6 +62,8 @@ func (s *obfuscator) Write(p []byte) (n int, err error) {
 	s.writeMu.Lock()
 	defer s.writeMu.Unlock()
 
+	size := len(p)
+
 	// Read data from the previous cycle
 	if s.currentBuffer != nil {
 		p = append(s.currentBuffer, p...)
@@ -114,7 +116,7 @@ func (s *obfuscator) Write(p []byte) (n int, err error) {
 			s.currentEnd = currentEnd
 
 			// End a call
-			return n + len(p), nil
+			return size, nil
 		}
 
 		// Flush the acknowledged sensitive data
@@ -133,10 +135,10 @@ func (s *obfuscator) Write(p []byte) (n int, err error) {
 
 	// Write the rest of data
 	if len(p) > 0 {
-		nn, err = s.dst.Write(p)
-		return n + nn, err
+		_, err = s.dst.Write(p)
+		return size, err
 	}
-	return n, nil
+	return size, nil
 }
 
 func (s *obfuscator) Flush() error {

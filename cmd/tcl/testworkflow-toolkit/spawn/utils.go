@@ -21,21 +21,63 @@ import (
 
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/kubernetes"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	commontcl "github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/common"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/artifacts"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/transfer"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/expressions"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/kubernetesworker"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/presets"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
+
+const (
+	LogsRetryOnFailureDelay = 300 * time.Millisecond
+	LogsRetryMaxAttempts    = 5
+)
+
+var (
+	executionWorker   executionworkertypes.Worker
+	executionWorkerMu sync.Mutex
+)
+
+func ExecutionWorker() executionworkertypes.Worker {
+	executionWorkerMu.Lock()
+	defer executionWorkerMu.Unlock()
+
+	if executionWorker == nil {
+		cfg := config.Config()
+		executionWorker = executionworker.NewKubernetes(env.Kubernetes(), presets.NewPro(env.ImageInspector()), kubernetesworker.Config{
+			Cluster: kubernetesworker.ClusterConfig{
+				Id:               cfg.Worker.ClusterID,
+				DefaultNamespace: cfg.Worker.Namespace, // TODO: Use current execution namespace?
+				DefaultRegistry:  cfg.Worker.DefaultRegistry,
+				// TODO: Fetch all the namespaces with service accounts?
+				Namespaces: map[string]kubernetesworker.NamespaceConfig{
+					cfg.Worker.Namespace: {DefaultServiceAccountName: cfg.Worker.DefaultServiceAccount},
+				},
+			},
+			ImageInspector: kubernetesworker.ImageInspectorConfig{
+				CacheEnabled: cfg.Worker.ImageInspectorPersistenceEnabled,
+				CacheKey:     cfg.Worker.ImageInspectorPersistenceCacheKey,
+				CacheTTL:     cfg.Worker.ImageInspectorPersistenceCacheTTL,
+			},
+			Connection:   cfg.Worker.Connection,
+			FeatureFlags: cfg.Worker.FeatureFlags,
+		})
+	}
+	return executionWorker
+}
 
 func MapDynamicListToStringList(list []interface{}) []string {
 	result := make([]string, len(list))
@@ -168,12 +210,12 @@ func ProcessFetch(transferSrv transfer.Server, fetch []testworkflowsv1.StepParal
 		StepOperations: testworkflowsv1.StepOperations{
 			Run: &testworkflowsv1.StepRun{
 				ContainerConfig: testworkflowsv1.ContainerConfig{
-					Image:           env.Config().Images.Toolkit,
+					Image:           config.Config().Worker.ToolkitImage,
 					ImagePullPolicy: corev1.PullIfNotPresent,
 					Command:         common.Ptr([]string{constants.DefaultToolkitPath, "transfer"}),
 					Env: []corev1.EnvVar{
-						{Name: "TK_NS", Value: env.Namespace()},
-						{Name: "TK_REF", Value: env.Ref()},
+						{Name: "TK_NS", Value: config.Namespace()},
+						{Name: "TK_REF", Value: config.Ref()},
 						stage.BypassToolkitCheck,
 						stage.BypassPure,
 					},
@@ -184,28 +226,22 @@ func ProcessFetch(transferSrv transfer.Server, fetch []testworkflowsv1.StepParal
 	}, nil
 }
 
-func CreateExecutionMachine(prefix string, index int64) (string, expressions.Machine) {
-	id := fmt.Sprintf("%s-%s%d", env.ExecutionId(), prefix, index)
-	fsPrefix := fmt.Sprintf("%s/%s%d", env.Ref(), prefix, index+1)
-	if env.Config().Execution.FSPrefix != "" {
-		fsPrefix = fmt.Sprintf("%s/%s", env.Config().Execution.FSPrefix, fsPrefix)
+func GetResourceId(prefix string, index int64) string {
+	return fmt.Sprintf("%s-%s%d", config.Config().Resource.Id, prefix, index)
+}
+
+func CreateResourceConfig(prefix string, index int64) testworkflowconfig.ResourceConfig {
+	cfg := config.Config()
+	id := GetResourceId(prefix, index)
+	fsPrefix := fmt.Sprintf("%s/%s%d", config.Ref(), prefix, index+1)
+	if cfg.Resource.FsPrefix != "" {
+		fsPrefix = fmt.Sprintf("%s/%s", cfg.Resource.FsPrefix, fsPrefix)
 	}
-	return id, expressions.NewMachine().
-		Register("workflow", map[string]string{
-			"name": env.WorkflowName(),
-		}).
-		Register("resource", map[string]string{
-			"root":     env.ExecutionId(),
-			"id":       id,
-			"fsPrefix": fsPrefix,
-		}).
-		Register("execution", map[string]interface{}{
-			"id":              env.ExecutionId(),
-			"name":            env.ExecutionName(),
-			"number":          env.ExecutionNumber(),
-			"scheduledAt":     env.ExecutionScheduledAt().UTC().Format(constants.RFC3339Millis),
-			"disableWebhooks": env.ExecutionDisableWebhooks(),
-		})
+	return testworkflowconfig.ResourceConfig{
+		Id:       id,
+		RootId:   cfg.Resource.RootId,
+		FsPrefix: fsPrefix,
+	}
 }
 
 func GetServiceByResourceId(jobName string) (string, int64) {
@@ -221,7 +257,7 @@ func GetServiceByResourceId(jobName string) (string, int64) {
 	return string(v[1]), index
 }
 
-func ExecuteParallel[T any](run func(int64, *T) bool, items []T, parallelism int64) int64 {
+func ExecuteParallel[T any](run func(int64, string, *T) bool, items []T, namespaces []string, parallelism int64) int64 {
 	var wg sync.WaitGroup
 	wg.Add(len(items))
 	ch := make(chan struct{}, parallelism)
@@ -231,7 +267,7 @@ func ExecuteParallel[T any](run func(int64, *T) bool, items []T, parallelism int
 	for index := range items {
 		ch <- struct{}{}
 		go func(index int) {
-			if run(int64(index), &items[index]) {
+			if run(int64(index), namespaces[index], &items[index]) {
 				success.Add(1)
 			}
 			<-ch
@@ -242,15 +278,29 @@ func ExecuteParallel[T any](run func(int64, *T) bool, items []T, parallelism int
 	return int64(len(items)) - success.Load()
 }
 
-func SaveLogs(ctx context.Context, clientSet kubernetes.Interface, storage artifacts.InternalArtifactStorage, namespace, id, prefix string, index int64) (string, error) {
+func SaveLogs(parentCtx context.Context, storage artifacts.InternalArtifactStorage, namespace, id, prefix string, index int64) (string, error) {
 	filePath := fmt.Sprintf("logs/%s%d.log", prefix, index)
-	ctrl, err := testworkflowcontroller.New(ctx, clientSet, namespace, id, time.Time{}, testworkflowcontroller.ControllerOptions{
-		Timeout: ControllerTimeout,
-	})
-	if err == nil {
-		err = storage.SaveStream(filePath, ctrl.Logs(ctx, false))
-		ctrl.StopController()
+
+	var err error
+	for i := 0; i < LogsRetryMaxAttempts; i++ {
+		ctx, ctxCancel := context.WithCancel(parentCtx)
+		reader := ExecutionWorker().Logs(ctx, id, executionworkertypes.LogsOptions{
+			Hints: executionworkertypes.Hints{
+				Namespace: namespace,
+			},
+			NoFollow: true,
+		})
+		err = reader.Err()
+		if err == nil {
+			err = storage.SaveStream(filePath, reader)
+		}
+		ctxCancel()
+		if err == nil {
+			break
+		}
+		time.Sleep(LogsRetryOnFailureDelay)
 	}
+
 	return filePath, err
 }
 
@@ -265,60 +315,11 @@ func CreateLogger(name, description string, index, count int64) func(...string) 
 }
 
 func CreateBaseMachine() expressions.Machine {
-	dashboardUrl := env.Config().System.DashboardUrl
-	if env.Config().Cloud.ApiKey != "" {
-		dashboardUrl = fmt.Sprintf("%s/organization/%s/environment/%s/dashboard",
-			env.Config().Cloud.UiUrl, env.Config().Cloud.OrgId, env.Config().Cloud.EnvId)
-	}
 	return expressions.CombinedMachines(
 		data.GetBaseTestWorkflowMachine(),
-		expressions.NewMachine().RegisterStringMap("internal", map[string]string{
-			"storage.url":        env.Config().ObjectStorage.Endpoint,
-			"storage.accessKey":  env.Config().ObjectStorage.AccessKeyID,
-			"storage.secretKey":  env.Config().ObjectStorage.SecretAccessKey,
-			"storage.region":     env.Config().ObjectStorage.Region,
-			"storage.bucket":     env.Config().ObjectStorage.Bucket,
-			"storage.token":      env.Config().ObjectStorage.Token,
-			"storage.ssl":        strconv.FormatBool(env.Config().ObjectStorage.Ssl),
-			"storage.skipVerify": strconv.FormatBool(env.Config().ObjectStorage.SkipVerify),
-			"storage.certFile":   env.Config().ObjectStorage.CertFile,
-			"storage.keyFile":    env.Config().ObjectStorage.KeyFile,
-			"storage.caFile":     env.Config().ObjectStorage.CAFile,
-
-			"serviceaccount.default": env.Config().System.DefaultServiceAccount,
-
-			"cloud.enabled":         strconv.FormatBool(env.Config().Cloud.ApiKey != ""),
-			"cloud.api.key":         env.Config().Cloud.ApiKey,
-			"cloud.api.tlsInsecure": strconv.FormatBool(env.Config().Cloud.TlsInsecure),
-			"cloud.api.skipVerify":  strconv.FormatBool(env.Config().Cloud.SkipVerify),
-			"cloud.api.url":         env.Config().Cloud.Url,
-			"cloud.ui.url":          env.Config().Cloud.UiUrl,
-			"cloud.api.orgId":       env.Config().Cloud.OrgId,
-			"cloud.api.envId":       env.Config().Cloud.EnvId,
-
-			"dashboard.url":   env.Config().System.DashboardUrl,
-			"api.url":         env.Config().System.ApiUrl,
-			"namespace":       env.Namespace(),
-			"defaultRegistry": env.Config().System.DefaultRegistry,
-			"clusterId":       env.Config().System.ClusterID,
-			"cdeventsTarget":  env.Config().System.CDEventsTarget,
-
-			"images.defaultRegistry":     env.Config().System.DefaultRegistry,
-			"images.init":                env.Config().Images.Init,
-			"images.toolkit":             env.Config().Images.Toolkit,
-			"images.persistence.enabled": strconv.FormatBool(env.Config().Images.InspectorPersistenceEnabled),
-			"images.persistence.key":     env.Config().Images.InspectorPersistenceCacheKey,
-			"images.cache.ttl":           env.Config().Images.ImageCredentialsCacheTTL.String(),
-		}).
-			Register("dashboard", map[string]string{
-				"url": dashboardUrl,
-			}).
-			Register("organization", map[string]string{
-				"id": env.Config().Cloud.OrgId,
-			}).
-			Register("environment", map[string]string{
-				"id": env.Config().Cloud.EnvId,
-			}),
+		testworkflowconfig.CreateCloudMachine(&config.Config().ControlPlane),
+		testworkflowconfig.CreateExecutionMachine(&config.Config().Execution),
+		testworkflowconfig.CreateWorkflowMachine(&config.Config().Workflow),
 	)
 }
 

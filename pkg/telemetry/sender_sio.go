@@ -90,13 +90,15 @@ func mapProperties(name string, params Params) analytics.Properties {
 		Set("clusterId", params.ClusterID).
 		Set("eventCategory", params.EventCategory).
 		Set("host", params.Host).
+		Set("dockerImageVersion", params.Context.DockerImageVersion).
 		Set("contextType", params.Context.Type).
 		Set("cloudOrganizationId", params.Context.OrganizationId).
 		Set("cloudEnvironmentId", params.Context.EnvironmentId).
 		Set("machineId", params.MachineID).
 		Set("clusterType", params.ClusterType).
 		Set("errorType", params.ErrorType).
-		Set("errorStackTrace", params.ErrorStackTrace)
+		Set("errorStackTrace", params.ErrorStackTrace).
+		Set("errorCode", params.ErrorCode)
 
 	if params.License != "" {
 		properties = properties.Set("license", params.License)

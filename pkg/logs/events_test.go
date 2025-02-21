@@ -146,7 +146,7 @@ func TestLogs_EventsFlow(t *testing.T) {
 		ec, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER)
 		assert.NoError(t, err)
 		eventBus := bus.NewNATSBus(ec)
-		emitter := event.NewEmitter(eventBus, "test-cluster", map[string]string{})
+		emitter := event.NewEmitter(eventBus, "test-cluster")
 
 		// and stream client
 		stream, err := client.NewNatsLogStream(nc)

@@ -565,7 +565,7 @@ const failureJMX = `<?xml version="1.0" encoding="UTF-8"?>
           <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
             <collectionProp name="Arguments.arguments"/>
           </elementProp>
-          <stringProp name="HTTPSampler.domain">testkube.kubeshop.io</stringProp>
+          <stringProp name="HTTPSampler.domain">testkube-test-page-lipsum.pages.dev</stringProp>
           <stringProp name="HTTPSampler.port"></stringProp>
           <stringProp name="HTTPSampler.protocol"></stringProp>
           <stringProp name="HTTPSampler.contentEncoding"></stringProp>

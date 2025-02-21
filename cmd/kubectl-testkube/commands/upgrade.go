@@ -13,6 +13,7 @@ import (
 
 func NewUpgradeCmd() *cobra.Command {
 	var options common.HelmOptions
+	var dockerContainerName string
 
 	cmd := &cobra.Command{
 		Use:     "upgrade",
@@ -32,17 +33,32 @@ func NewUpgradeCmd() *cobra.Command {
 				cfg.ContextType = config.ContextTypeCloud
 			}
 
+			if cmd.Flags().Changed("docker-container") {
+				cfg.CloudContext.DockerContainerName = dockerContainerName
+			}
+
 			if !options.NoConfirm {
 				ui.Warn("This will upgrade Testkube to the latest version. This may take a few minutes.")
-				ui.Warn("Please be sure you're on valid kubectl context before continuing!")
-				ui.NL()
+				if cfg.CloudContext.DockerContainerName != "" {
+					ui.Warn("Please be sure you have Docker service running before continuing and can run containers in privileged mode!")
 
-				currentContext, cliErr := common.GetCurrentKubernetesContext()
-				common.HandleCLIError(cliErr)
+					dockerInfo, cliErr := common.RunDockerCommand([]string{"info"})
+					if cliErr != nil {
+						common.HandleCLIError(cliErr)
+					}
 
-				ui.ExitOnError("getting current context", err)
-				ui.Alert("Current kubectl context:", currentContext)
-				ui.NL()
+					ui.Alert("Current docker info:", dockerInfo)
+					ui.NL()
+				} else {
+					ui.Warn("Please be sure you're on valid kubectl context before continuing!")
+
+					currentContext, cliErr := common.GetCurrentKubernetesContext()
+					common.HandleCLIError(cliErr)
+
+					ui.ExitOnError("getting current context", err)
+					ui.Alert("Current kubectl context:", currentContext)
+					ui.NL()
+				}
 
 				if ui.IsVerbose() && cfg.ContextType == config.ContextTypeCloud {
 					ui.Info("Your Testkube is in 'cloud' mode with following context")
@@ -62,17 +78,18 @@ func NewUpgradeCmd() *cobra.Command {
 
 			if cfg.ContextType == config.ContextTypeCloud {
 				ui.Info("Testkube Pro agent upgrade started")
-				err = common.HelmUpgradeOrInstallTestkubeAgent(options, cfg, false)
+				if cfg.CloudContext.DockerContainerName != "" {
+					latestVersion, err := common.GetLatestVersion()
+					ui.ExitOnError("Getting latest version", err)
+					err = common.DockerUpgradeTestkubeAgent(options, latestVersion, cfg)
+				} else {
+					err = common.HelmUpgradeOrInstallTestkubeAgent(options, cfg, false)
+				}
 				ui.ExitOnError("Upgrading Testkube Pro Agent", err)
 				err = common.PopulateAgentDataToContext(options, cfg)
 				ui.ExitOnError("Storing agent data in context", err)
 			} else {
 				ui.Info("Updating Testkube")
-				hasMigrations, err := common.RunAgentMigrations(cmd)
-				ui.ExitOnError("Running agent migrations", err)
-				if hasMigrations {
-					ui.Success("All agent migrations executed successfully")
-				}
 
 				if cliErr := common.HelmUpgradeOrInstallTestkube(options); cliErr != nil {
 					cliErr.Print()
@@ -84,7 +101,9 @@ func NewUpgradeCmd() *cobra.Command {
 	}
 
 	common.PopulateHelmFlags(cmd, &options)
-	common.PopulateMasterFlags(cmd, &options)
+	common.PopulateMasterFlags(cmd, &options, false)
+
+	cmd.Flags().StringVar(&dockerContainerName, "docker-container", "testkube-agent", "Docker container name for Testkube Docker Agent")
 
 	return cmd
 }

@@ -9,9 +9,11 @@
 package testworkflowresolver
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
@@ -40,12 +42,19 @@ func castParameter(value intstr.IntOrString, schema testworkflowsv1.ParameterSch
 	return expressions.CastToString(expr).Resolve()
 }
 
-func createConfigMachine(cfg map[string]intstr.IntOrString, schema map[string]testworkflowsv1.ParameterSchema) (expressions.Machine, error) {
+func createConfigMachine(cfg map[string]intstr.IntOrString, schema map[string]testworkflowsv1.ParameterSchema,
+	externalize func(key, value string) (expressions.Expression, error)) (expressions.Machine, error) {
 	machine := expressions.NewMachine()
 	for k, v := range cfg {
 		expr, err := castParameter(v, schema[k])
 		if err != nil {
 			return nil, errors.Wrap(err, "config."+k)
+		}
+		if schema[k].Sensitive && externalize != nil {
+			expr, err = externalize(k, expr.Template())
+			if err != nil {
+				return nil, err
+			}
 		}
 		machine.Register("config."+k, expr)
 	}
@@ -55,17 +64,39 @@ func createConfigMachine(cfg map[string]intstr.IntOrString, schema map[string]te
 			if err != nil {
 				return nil, errors.Wrap(err, "config."+k)
 			}
+			if schema[k].Sensitive && externalize != nil {
+				expr, err = externalize(k, expr.Template())
+				if err != nil {
+					return nil, err
+				}
+			}
 			machine.Register("config."+k, expr)
 		}
 	}
 	return machine, nil
 }
 
-func ApplyWorkflowConfig(t *testworkflowsv1.TestWorkflow, cfg map[string]intstr.IntOrString) (*testworkflowsv1.TestWorkflow, error) {
+func EnvVarSourceToSecretExpression(fn func(key, value string) (*corev1.EnvVarSource, error)) func(key, value string) (expressions.Expression, error) {
+	return func(key, value string) (expressions.Expression, error) {
+		envVar, err := fn(key, value)
+		if err != nil {
+			return nil, err
+		}
+		if envVar.SecretKeyRef != nil {
+			return expressions.Compile(fmt.Sprintf("secret(%s,%s,true)",
+				expressions.NewStringValue(envVar.SecretKeyRef.Name).String(),
+				expressions.NewStringValue(envVar.SecretKeyRef.Key).String()))
+		}
+		return nil, nil
+	}
+}
+
+func ApplyWorkflowConfig(t *testworkflowsv1.TestWorkflow, cfg map[string]intstr.IntOrString,
+	externalize func(key, value string) (expressions.Expression, error)) (*testworkflowsv1.TestWorkflow, error) {
 	if t == nil {
 		return t, nil
 	}
-	machine, err := createConfigMachine(cfg, t.Spec.Config)
+	machine, err := createConfigMachine(cfg, t.Spec.Config, externalize)
 	if err != nil {
 		return nil, err
 	}
@@ -73,11 +104,12 @@ func ApplyWorkflowConfig(t *testworkflowsv1.TestWorkflow, cfg map[string]intstr.
 	return t, err
 }
 
-func ApplyWorkflowTemplateConfig(t *testworkflowsv1.TestWorkflowTemplate, cfg map[string]intstr.IntOrString) (*testworkflowsv1.TestWorkflowTemplate, error) {
+func ApplyWorkflowTemplateConfig(t *testworkflowsv1.TestWorkflowTemplate, cfg map[string]intstr.IntOrString,
+	externalize func(key, value string) (expressions.Expression, error)) (*testworkflowsv1.TestWorkflowTemplate, error) {
 	if t == nil {
 		return t, nil
 	}
-	machine, err := createConfigMachine(cfg, t.Spec.Config)
+	machine, err := createConfigMachine(cfg, t.Spec.Config, externalize)
 	if err != nil {
 		return nil, err
 	}

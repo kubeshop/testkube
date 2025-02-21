@@ -2,22 +2,24 @@ package v1
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
+	"github.com/kubeshop/testkube/internal/crdcommon"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
-	"github.com/kubeshop/testkube/pkg/scheduler"
+	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowresolver"
-	"github.com/kubeshop/testkube/pkg/workerpool"
 )
 
 func (s *TestkubeAPI) ListTestWorkflowsHandler() fiber.Handler {
@@ -27,7 +29,10 @@ func (s *TestkubeAPI) ListTestWorkflowsHandler() fiber.Handler {
 		if err != nil {
 			return s.BadGateway(c, errPrefix, "client problem", err)
 		}
-		err = SendResourceList(c, "TestWorkflow", testworkflowsv1.GroupVersion, testworkflows.MapTestWorkflowKubeToAPI, workflows.Items...)
+		crWorkflows := common.MapSlice(workflows, func(w testkube.TestWorkflow) testworkflowsv1.TestWorkflow {
+			return *testworkflows.MapAPIToKube(&w)
+		})
+		err = SendResourceList(c, "TestWorkflow", testworkflowsv1.GroupVersion, testworkflows.MapTestWorkflowKubeToAPI, crWorkflows...)
 		if err != nil {
 			return s.InternalError(c, errPrefix, "serialization problem", err)
 		}
@@ -39,11 +44,11 @@ func (s *TestkubeAPI) GetTestWorkflowHandler() fiber.Handler {
 	return func(c *fiber.Ctx) (err error) {
 		name := c.Params("id")
 		errPrefix := fmt.Sprintf("failed to get test workflow '%s'", name)
-		workflow, err := s.TestWorkflowsClient.Get(name)
+		workflow, err := s.TestWorkflowsClient.Get(c.Context(), s.getEnvironmentId(), name)
 		if err != nil {
 			return s.ClientError(c, errPrefix, err)
 		}
-		err = SendResource(c, "TestWorkflow", testworkflowsv1.GroupVersion, testworkflows.MapKubeToAPI, workflow)
+		err = SendResource(c, "TestWorkflow", testworkflowsv1.GroupVersion, testworkflows.MapKubeToAPI, testworkflows.MapAPIToKube(workflow))
 		if err != nil {
 			return s.InternalError(c, errPrefix, "serialization problem", err)
 		}
@@ -53,11 +58,14 @@ func (s *TestkubeAPI) GetTestWorkflowHandler() fiber.Handler {
 
 func (s *TestkubeAPI) DeleteTestWorkflowHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
+		ctx := c.Context()
+		environmentId := s.getEnvironmentId()
+
 		name := c.Params("id")
 		errPrefix := fmt.Sprintf("failed to delete test workflow '%s'", name)
 		skipCRD := c.Query("skipDeleteCRD", "")
 		if skipCRD != "true" {
-			err := s.TestWorkflowsClient.Delete(name)
+			err := s.TestWorkflowsClient.Delete(ctx, environmentId, name)
 			s.Metrics.IncDeleteTestWorkflow(err)
 			if err != nil {
 				return s.ClientError(c, errPrefix, err)
@@ -81,45 +89,53 @@ func (s *TestkubeAPI) DeleteTestWorkflowHandler() fiber.Handler {
 func (s *TestkubeAPI) DeleteTestWorkflowsHandler() fiber.Handler {
 	errPrefix := "failed to delete test workflows"
 	return func(c *fiber.Ctx) error {
-		selector := c.Query("selector")
+		ctx := c.Context()
+		environmentId := s.getEnvironmentId()
 
-		var (
-			workflows *testworkflowsv1.TestWorkflowList
-			err       error
-		)
+		selector := c.Query("selector")
+		labelSelector, err := metav1.ParseToLabelSelector(selector)
+		if err != nil {
+			return s.ClientError(c, errPrefix, err)
+		}
+		if len(labelSelector.MatchExpressions) > 0 {
+			return s.ClientError(c, errPrefix, errors.New("matchExpressions are not supported"))
+		}
+
+		workflows := make([]testkube.TestWorkflow, 0)
 		testWorkflowNames := c.Query("testWorkflowNames")
 		if testWorkflowNames != "" {
 			names := strings.Split(testWorkflowNames, ",")
-			workflows = &testworkflowsv1.TestWorkflowList{}
 			for _, name := range names {
-				workflow, err := s.TestWorkflowsClient.Get(name)
+				workflow, err := s.TestWorkflowsClient.Get(ctx, environmentId, name)
 				if err != nil {
 					return s.ClientError(c, errPrefix, err)
 				}
-				workflows.Items = append(workflows.Items, *workflow)
+				workflows = append(workflows, *workflow)
 			}
 		} else {
-			workflows, err = s.TestWorkflowsClient.List(selector)
+			workflows, err = s.TestWorkflowsClient.List(ctx, environmentId, testworkflowclient.ListOptions{
+				Labels: labelSelector.MatchLabels,
+			})
 			if err != nil {
 				return s.BadGateway(c, errPrefix, "client problem", err)
 			}
 		}
 
 		// Delete
-		err = s.TestWorkflowsClient.DeleteByLabels(selector)
+		_, err = s.TestWorkflowsClient.DeleteByLabels(ctx, environmentId, labelSelector.MatchLabels)
 		if err != nil {
 			return s.ClientError(c, errPrefix, err)
 		}
 
 		// Mark as deleted
-		for range workflows.Items {
+		for range workflows {
 			s.Metrics.IncDeleteTestWorkflow(err)
 		}
 
 		// Delete the executions
 		skipExecutions := c.Query("skipDeleteExecutions", "")
 		if skipExecutions != "true" {
-			names := common.MapSlice(workflows.Items, func(t testworkflowsv1.TestWorkflow) string {
+			names := common.MapSlice(workflows, func(t testkube.TestWorkflow) string {
 				return t.Name
 			})
 
@@ -140,10 +156,13 @@ func (s *TestkubeAPI) DeleteTestWorkflowsHandler() fiber.Handler {
 func (s *TestkubeAPI) CreateTestWorkflowHandler() fiber.Handler {
 	errPrefix := "failed to create test workflow"
 	return func(c *fiber.Ctx) (err error) {
+		ctx := c.Context()
+		environmentId := s.getEnvironmentId()
+
 		// Deserialize resource
 		obj := new(testworkflowsv1.TestWorkflow)
 		if HasYAML(c) {
-			err = common.DeserializeCRD(obj, c.Body())
+			err = crdcommon.DeserializeCRD(obj, c.Body())
 			if err != nil {
 				return s.BadRequest(c, errPrefix, "invalid body", err)
 			}
@@ -170,21 +189,21 @@ func (s *TestkubeAPI) CreateTestWorkflowHandler() fiber.Handler {
 		}
 
 		// Handle secrets auto-creation
-		secrets := s.SecretManager.Batch(execNamespace, "tw-", obj.Name)
+		secrets := s.SecretManager.Batch("tw-", obj.Name)
 		err = testworkflowresolver.ExtractCredentialsInWorkflow(obj, secrets.Append)
 		if err != nil {
 			return s.BadRequest(c, errPrefix, "auto-creating secrets", err)
 		}
 
 		// Create the resource
-		obj, err = s.TestWorkflowsClient.Create(obj)
+		err = s.TestWorkflowsClient.Create(ctx, environmentId, *testworkflows.MapKubeToAPI(obj))
 		if err != nil {
 			s.Metrics.IncCreateTestWorkflow(err)
 			return s.BadRequest(c, errPrefix, "client error", err)
 		}
 
 		// Create secrets
-		err = secrets.Create(c.Context(), &metav1.OwnerReference{
+		err = s.SecretManager.InsertBatch(ctx, execNamespace, secrets, &metav1.OwnerReference{
 			APIVersion: testworkflowsv1.GroupVersion.String(),
 			Kind:       testworkflowsv1.Resource,
 			Name:       obj.Name,
@@ -192,11 +211,11 @@ func (s *TestkubeAPI) CreateTestWorkflowHandler() fiber.Handler {
 		})
 		s.Metrics.IncCreateTestWorkflow(err)
 		if err != nil {
-			_ = s.TestWorkflowsClient.Delete(obj.Name)
+			_ = s.TestWorkflowsClient.Delete(context.Background(), environmentId, obj.Name)
 			return s.BadRequest(c, errPrefix, "auto-creating secrets", err)
 		}
 
-		s.sendCreateWorkflowTelemetry(c.Context(), obj)
+		s.sendCreateWorkflowTelemetry(ctx, obj)
 
 		err = SendResource(c, "TestWorkflow", testworkflowsv1.GroupVersion, testworkflows.MapKubeToAPI, obj)
 		if err != nil {
@@ -209,12 +228,15 @@ func (s *TestkubeAPI) CreateTestWorkflowHandler() fiber.Handler {
 func (s *TestkubeAPI) UpdateTestWorkflowHandler() fiber.Handler {
 	errPrefix := "failed to update test workflow"
 	return func(c *fiber.Ctx) (err error) {
+		ctx := c.Context()
+		environmentId := s.getEnvironmentId()
+
 		name := c.Params("id")
 
 		// Deserialize resource
 		obj := new(testworkflowsv1.TestWorkflow)
 		if HasYAML(c) {
-			err = common.DeserializeCRD(obj, c.Body())
+			err = crdcommon.DeserializeCRD(obj, c.Body())
 			if err != nil {
 				return s.BadRequest(c, errPrefix, "invalid body", err)
 			}
@@ -228,7 +250,7 @@ func (s *TestkubeAPI) UpdateTestWorkflowHandler() fiber.Handler {
 		}
 
 		// Read existing resource
-		workflow, err := s.TestWorkflowsClient.Get(name)
+		workflow, err := s.TestWorkflowsClient.Get(ctx, environmentId, name)
 		if err != nil {
 			return s.ClientError(c, errPrefix, err)
 		}
@@ -240,7 +262,6 @@ func (s *TestkubeAPI) UpdateTestWorkflowHandler() fiber.Handler {
 		}
 		obj.Namespace = workflow.Namespace
 		obj.Name = workflow.Name
-		obj.ResourceVersion = workflow.ResourceVersion
 
 		// Get information about execution namespace
 		// TODO: Think what to do when it is dynamic - create in all execution namespaces?
@@ -250,21 +271,21 @@ func (s *TestkubeAPI) UpdateTestWorkflowHandler() fiber.Handler {
 		}
 
 		// Handle secrets auto-creation
-		secrets := s.SecretManager.Batch(execNamespace, "tw-", obj.Name)
+		secrets := s.SecretManager.Batch("tw-", obj.Name)
 		err = testworkflowresolver.ExtractCredentialsInWorkflow(obj, secrets.Append)
 		if err != nil {
 			return s.BadRequest(c, errPrefix, "auto-creating secrets", err)
 		}
 
 		// Update the resource
-		obj, err = s.TestWorkflowsClient.Update(obj)
+		err = s.TestWorkflowsClient.Update(ctx, environmentId, *testworkflows.MapKubeToAPI(obj))
 		if err != nil {
 			s.Metrics.IncUpdateTestWorkflow(err)
 			return s.BadRequest(c, errPrefix, "client error", err)
 		}
 
 		// Create secrets
-		err = secrets.Create(c.Context(), &metav1.OwnerReference{
+		err = s.SecretManager.InsertBatch(c.Context(), execNamespace, secrets, &metav1.OwnerReference{
 			APIVersion: testworkflowsv1.GroupVersion.String(),
 			Kind:       testworkflowsv1.Resource,
 			Name:       obj.Name,
@@ -272,7 +293,7 @@ func (s *TestkubeAPI) UpdateTestWorkflowHandler() fiber.Handler {
 		})
 		s.Metrics.IncUpdateTestWorkflow(err)
 		if err != nil {
-			_, err = s.TestWorkflowsClient.Update(initial)
+			err = s.TestWorkflowsClient.Update(context.Background(), environmentId, *initial)
 			if err != nil {
 				s.Log.Errorf("failed to recover previous TestWorkflow state: %v", err)
 			}
@@ -290,13 +311,16 @@ func (s *TestkubeAPI) UpdateTestWorkflowHandler() fiber.Handler {
 func (s *TestkubeAPI) PreviewTestWorkflowHandler() fiber.Handler {
 	errPrefix := "failed to resolve test workflow"
 	return func(c *fiber.Ctx) (err error) {
+		ctx := c.Context()
+		environmentId := s.getEnvironmentId()
+
 		// Check if it should inline templates
 		inline, _ := strconv.ParseBool(c.Query("inline"))
 
 		// Deserialize resource
 		obj := new(testworkflowsv1.TestWorkflow)
 		if HasYAML(c) {
-			err = common.DeserializeCRD(obj, c.Body())
+			err = crdcommon.DeserializeCRD(obj, c.Body())
 			if err != nil {
 				return s.BadRequest(c, errPrefix, "invalid body", err)
 			}
@@ -318,17 +342,18 @@ func (s *TestkubeAPI) PreviewTestWorkflowHandler() fiber.Handler {
 		if inline {
 			// Fetch the templates
 			tpls := testworkflowresolver.ListTemplates(obj)
-			tplsMap := make(map[string]testworkflowsv1.TestWorkflowTemplate, len(tpls))
+			tplsMap := make(map[string]*testworkflowsv1.TestWorkflowTemplate, len(tpls))
 			for name := range tpls {
-				tpl, err := s.TestWorkflowTemplatesClient.Get(name)
+				tpl, err := s.TestWorkflowTemplatesClient.Get(ctx, environmentId, name)
 				if err != nil {
 					return s.BadRequest(c, errPrefix, "fetching error", err)
 				}
-				tplsMap[name] = *tpl
+				tplsMap[name] = testworkflows.MapTemplateAPIToKube(tpl)
 			}
 
 			// Resolve the TestWorkflow
-			err = testworkflowresolver.ApplyTemplates(obj, tplsMap)
+			secrets := s.SecretManager.Batch("tw-", obj.Name)
+			err = testworkflowresolver.ApplyTemplates(obj, tplsMap, testworkflowresolver.EnvVarSourceToSecretExpression(secrets.Append))
 			if err != nil {
 				return s.BadRequest(c, errPrefix, "resolving error", err)
 			}
@@ -347,11 +372,10 @@ func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 	return func(c *fiber.Ctx) (err error) {
 		ctx := c.Context()
 		name := c.Params("id")
-		errPrefix := fmt.Sprintf("failed to execute test workflow '%s'", name)
-		workflow, err := s.TestWorkflowsClient.Get(name)
-		if err != nil {
-			return s.ClientError(c, errPrefix, err)
-		}
+		selector := c.Query("selector")
+		s.Log.Debugw("getting test workflow", "name", name, "selector", selector)
+
+		errPrefix := "failed to execute test workflow"
 
 		// Load the execution request
 		var request testkube.TestWorkflowExecutionRequest
@@ -360,35 +384,182 @@ func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 			return s.BadRequest(c, errPrefix, "invalid body", err)
 		}
 
-		var results []testkube.TestWorkflowExecution
-		var errs []error
+		runningContext, user := testworkflowexecutor.GetNewRunningContext(request.RunningContext, request.ParentExecutionIds)
 
-		request.TestWorkflowExecutionName = strings.Clone(c.Query("testWorkflowExecutionName"))
-		concurrencyLevel := scheduler.DefaultConcurrencyLevel
-		workerpoolService := workerpool.New[testworkflowsv1.TestWorkflow, testkube.TestWorkflowExecutionRequest,
-			testkube.TestWorkflowExecution](concurrencyLevel)
-		requests := []workerpool.Request[testworkflowsv1.TestWorkflow, testkube.TestWorkflowExecutionRequest, testkube.TestWorkflowExecution]{
-			{
-				Object:  *workflow,
-				Options: request,
-				ExecFn:  s.TestWorkflowExecutor.Execute,
-			},
+		var scheduleExecution cloud.ScheduleExecution
+		if request.Target != nil {
+			target := &cloud.ExecutionTarget{Replicate: request.Target.Replicate}
+			if request.Target.Match != nil {
+				target.Match = make(map[string]*cloud.ExecutionTargetLabels)
+				for k, v := range request.Target.Match {
+					target.Match[k] = &cloud.ExecutionTargetLabels{Labels: v}
+				}
+			}
+			if request.Target.Not != nil {
+				target.Not = make(map[string]*cloud.ExecutionTargetLabels)
+				for k, v := range request.Target.Not {
+					target.Not[k] = &cloud.ExecutionTargetLabels{Labels: v}
+				}
+			}
+			scheduleExecution.Targets = []*cloud.ExecutionTarget{target}
+		}
+		if name != "" {
+			scheduleExecution.Selector = &cloud.ScheduleResourceSelector{Name: name}
+			scheduleExecution.Config = request.Config
+		} else if selector != "" {
+			sel, err := metav1.ParseToLabelSelector(selector)
+			if err != nil {
+				return s.InternalError(c, errPrefix, "invalid selector", err)
+			}
+			if len(sel.MatchExpressions) > 0 {
+				return s.InternalError(c, errPrefix, "invalid selector", errors.New("only simple selectors are allowed"))
+			}
+			scheduleExecution.Selector = &cloud.ScheduleResourceSelector{Labels: sel.MatchLabels}
+			scheduleExecution.Config = request.Config
 		}
 
-		go workerpoolService.SendRequests(requests)
-		go workerpoolService.Run(ctx)
+		resp := s.testWorkflowExecutor.Execute(ctx, "", &cloud.ScheduleRequest{
+			Executions:           []*cloud.ScheduleExecution{&scheduleExecution},
+			DisableWebhooks:      request.DisableWebhooks,
+			Tags:                 request.Tags,
+			RunningContext:       runningContext,
+			ParentExecutionIds:   request.ParentExecutionIds,
+			KubernetesObjectName: request.TestWorkflowExecutionName,
+			User:                 user,
+		})
 
-		for r := range workerpoolService.GetResponses() {
-			results = append(results, r.Result)
-			if r.Err != nil {
-				errs = append(errs, r.Err)
+		results := make([]testkube.TestWorkflowExecution, 0)
+		for v := range resp.Channel() {
+			results = append(results, *v)
+		}
+
+		if resp.Error() != nil {
+			return s.InternalError(c, errPrefix, "execution error", resp.Error())
+		}
+
+		s.Log.Debugw("executing test workflow", "name", name, "selector", selector)
+		if len(results) != 0 {
+			if name != "" {
+				return c.JSON(results[0])
+			}
+
+			return c.JSON(results)
+		}
+
+		return s.InternalError(c, errPrefix, "error", errors.New("no execution results"))
+	}
+}
+
+// TODO: Add metrics
+func (s *TestkubeAPI) ReRunTestWorkflowExecutionHandler() fiber.Handler {
+	return func(c *fiber.Ctx) (err error) {
+		ctx := c.Context()
+		executionID := c.Params("executionID")
+		s.Log.Debugw("rerunning test workflow execution", "id", executionID)
+
+		errPrefix := "failed to rerun test workflow execution"
+
+		// Load the running comtext
+		var twrContext testkube.TestWorkflowRunningContext
+		err = c.BodyParser(&twrContext)
+		if err != nil && !errors.Is(err, fiber.ErrUnprocessableEntity) {
+			return s.BadRequest(c, errPrefix, "invalid body", err)
+		}
+
+		execution, err := s.TestWorkflowResults.Get(ctx, executionID)
+		if err != nil {
+			return s.ClientError(c, errPrefix, err)
+		}
+
+		name := ""
+		if execution.Workflow != nil {
+			name = execution.Workflow.Name
+		}
+
+		workflow, err := s.TestWorkflowsClient.Get(c.Context(), s.getEnvironmentId(), name)
+		if err != nil {
+			return s.ClientError(c, errPrefix, err)
+		}
+
+		requiredParameters := make(map[string]struct{})
+		if workflow.Spec != nil {
+			for _, parameter := range workflow.Spec.GetRequiredParameters() {
+				requiredParameters[parameter] = struct{}{}
 			}
 		}
 
-		if len(errs) != 0 {
-			return s.InternalError(c, errPrefix, "execution error", errs[0])
+		// Load the execution request
+		request := testkube.TestWorkflowExecutionRequest{
+			RunningContext:  &twrContext,
+			Tags:            execution.Tags,
+			DisableWebhooks: execution.DisableWebhooks,
+			Target:          execution.RunnerOriginalTarget,
 		}
 
+		request.Config = make(map[string]string)
+		for key, value := range execution.ConfigParams {
+			if value.Sensitive {
+				return s.ClientError(c, errPrefix, errors.New("can't rerun test workflow execution with sensitive prameters"))
+			}
+
+			if value.Truncated {
+				return s.ClientError(c, errPrefix, errors.New("can't rerun test workflow execution with truncated parameters"))
+			}
+
+			if !value.EmptyValue {
+				request.Config[key] = value.Value
+			}
+		}
+
+		for key := range requiredParameters {
+			if _, ok := request.Config[key]; !ok {
+				return s.ClientError(c, errPrefix, errors.New("can't rerun test workflow execution without required parameters"))
+			}
+		}
+
+		runningContext, user := testworkflowexecutor.GetNewRunningContext(request.RunningContext, nil)
+
+		var scheduleExecution cloud.ScheduleExecution
+		if request.Target != nil {
+			target := &cloud.ExecutionTarget{Replicate: request.Target.Replicate}
+			if request.Target.Match != nil {
+				target.Match = make(map[string]*cloud.ExecutionTargetLabels)
+				for k, v := range request.Target.Match {
+					target.Match[k] = &cloud.ExecutionTargetLabels{Labels: v}
+				}
+			}
+
+			if request.Target.Not != nil {
+				target.Not = make(map[string]*cloud.ExecutionTargetLabels)
+				for k, v := range request.Target.Not {
+					target.Not[k] = &cloud.ExecutionTargetLabels{Labels: v}
+				}
+			}
+
+			scheduleExecution.Targets = []*cloud.ExecutionTarget{target}
+		}
+
+		scheduleExecution.Selector = &cloud.ScheduleResourceSelector{Name: name}
+		scheduleExecution.Config = request.Config
+		resp := s.testWorkflowExecutor.Execute(ctx, "", &cloud.ScheduleRequest{
+			Executions:         []*cloud.ScheduleExecution{&scheduleExecution},
+			DisableWebhooks:    request.DisableWebhooks,
+			Tags:               request.Tags,
+			RunningContext:     runningContext,
+			User:               user,
+			ExecutionReference: &executionID,
+		})
+
+		results := make([]testkube.TestWorkflowExecution, 0)
+		for v := range resp.Channel() {
+			results = append(results, *v)
+		}
+
+		if resp.Error() != nil {
+			return s.InternalError(c, errPrefix, "execution error", resp.Error())
+		}
+
+		s.Log.Debugw("rerunning test workflow execution", "id", executionID)
 		if len(results) != 0 {
 			return c.JSON(results[0])
 		}
@@ -397,8 +568,22 @@ func (s *TestkubeAPI) ExecuteTestWorkflowHandler() fiber.Handler {
 	}
 }
 
-func (s *TestkubeAPI) getFilteredTestWorkflowList(c *fiber.Ctx) (*testworkflowsv1.TestWorkflowList, error) {
-	crWorkflows, err := s.TestWorkflowsClient.List(c.Query("selector"))
+func (s *TestkubeAPI) getFilteredTestWorkflowList(c *fiber.Ctx) ([]testkube.TestWorkflow, error) {
+	ctx := c.Context()
+	environmentId := s.getEnvironmentId()
+
+	selector := c.Query("selector")
+	labelSelector, err := metav1.ParseToLabelSelector(selector)
+	if err != nil {
+		return nil, err
+	}
+	if len(labelSelector.MatchExpressions) > 0 {
+		return nil, errors.New("MatchExpressions are not supported")
+	}
+
+	workflows, err := s.TestWorkflowsClient.List(ctx, environmentId, testworkflowclient.ListOptions{
+		Labels: labelSelector.MatchLabels,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -406,12 +591,11 @@ func (s *TestkubeAPI) getFilteredTestWorkflowList(c *fiber.Ctx) (*testworkflowsv
 	search := c.Query("textSearch")
 	if search != "" {
 		// filter items array
-		for i := len(crWorkflows.Items) - 1; i >= 0; i-- {
-			if !strings.Contains(crWorkflows.Items[i].Name, search) {
-				crWorkflows.Items = append(crWorkflows.Items[:i], crWorkflows.Items[i+1:]...)
+		for i := len(workflows) - 1; i >= 0; i-- {
+			if !strings.Contains(workflows[i].Name, search) {
+				workflows = append(workflows[:i], workflows[i+1:]...)
 			}
 		}
 	}
-
-	return crWorkflows, nil
+	return workflows, nil
 }

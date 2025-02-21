@@ -9,6 +9,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.mongodb.org/mongo-driver/mongo"
 
+	"github.com/kubeshop/testkube/cmd/api-server/commons"
+	"github.com/kubeshop/testkube/cmd/api-server/services"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/repository/result"
@@ -32,6 +34,10 @@ func TestService_runExecutionScraper(t *testing.T) {
 		mockTestResultRepository := testresult.NewMockRepository(mockCtrl)
 		mockTestWorkflowResultsRepository := testworkflow.NewMockRepository(mockCtrl)
 
+		mockDeprecatedRepositories := commons.NewMockDeprecatedRepositories(mockCtrl)
+		mockDeprecatedRepositories.EXPECT().TestResults().Return(mockResultRepository).AnyTimes()
+		mockDeprecatedRepositories.EXPECT().TestSuiteResults().Return(mockTestResultRepository).AnyTimes()
+
 		mockResultRepository.EXPECT().Get(gomock.Any(), "test-execution-1").Return(testkube.Execution{}, mongo.ErrNoDocuments)
 		testSuiteExecutionStatus := testkube.PASSED_TestSuiteExecutionStatus
 		mockTestSuiteExecution := testkube.TestSuiteExecution{Id: "test-suite-execution-1", Status: &testSuiteExecutionStatus}
@@ -52,9 +58,10 @@ func TestService_runExecutionScraper(t *testing.T) {
 			statusKey3: triggerStatus3,
 		}
 		s := &Service{
-			triggerStatus:                 triggerStatusMap,
-			resultRepository:              mockResultRepository,
-			testResultRepository:          mockTestResultRepository,
+			triggerStatus: triggerStatusMap,
+			deprecatedSystem: &services.DeprecatedSystem{
+				Repositories: mockDeprecatedRepositories,
+			},
 			testWorkflowResultsRepository: mockTestWorkflowResultsRepository,
 			scraperInterval:               100 * time.Millisecond,
 			logger:                        log.DefaultLogger,
@@ -80,6 +87,10 @@ func TestService_runExecutionScraper(t *testing.T) {
 		mockTestResultRepository := testresult.NewMockRepository(mockCtrl)
 		mockTestWorkflowResultsRepository := testworkflow.NewMockRepository(mockCtrl)
 
+		mockDeprecatedRepositories := commons.NewMockDeprecatedRepositories(mockCtrl)
+		mockDeprecatedRepositories.EXPECT().TestResults().Return(mockResultRepository).AnyTimes()
+		mockDeprecatedRepositories.EXPECT().TestSuiteResults().Return(mockTestResultRepository).AnyTimes()
+
 		testSuiteExecutionStatus := testkube.RUNNING_TestSuiteExecutionStatus
 		mockTestSuiteExecution := testkube.TestSuiteExecution{Id: "test-suite-execution-1", Status: &testSuiteExecutionStatus}
 		mockTestResultRepository.EXPECT().Get(gomock.Any(), "test-suite-execution-1").Return(mockTestSuiteExecution, nil).Times(3)
@@ -96,9 +107,10 @@ func TestService_runExecutionScraper(t *testing.T) {
 			statusKey2: triggerStatus2,
 		}
 		s := &Service{
-			triggerStatus:                 triggerStatusMap,
-			resultRepository:              mockResultRepository,
-			testResultRepository:          mockTestResultRepository,
+			triggerStatus: triggerStatusMap,
+			deprecatedSystem: &services.DeprecatedSystem{
+				Repositories: mockDeprecatedRepositories,
+			},
 			testWorkflowResultsRepository: mockTestWorkflowResultsRepository,
 			scraperInterval:               100 * time.Millisecond,
 			logger:                        log.DefaultLogger,

@@ -3,6 +3,7 @@ package testworkflowprocessor
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -172,10 +173,6 @@ func ProcessContentGit(_ InternalProcessor, layer Intermediate, container stage.
 		mountPath = filepath.Join(constants.DefaultDataPath, "repo")
 	}
 
-	// Build a temporary volume to clone the repository initially.
-	// This will allow mounting files in the destination at the same level (i.e. overriding the configuration).
-	container.AppendVolumeMounts(layer.AddEmptyDirVolume(nil, constants.DefaultTmpDirPath))
-
 	// Build volume pair and share with all siblings
 	volumeMount := layer.AddEmptyDirVolume(nil, mountPath)
 	container.AppendVolumeMounts(volumeMount)
@@ -184,10 +181,15 @@ func ProcessContentGit(_ InternalProcessor, layer Intermediate, container stage.
 		SetWorkingDir("/").
 		SetImage(constants.DefaultToolkitImage).
 		SetImagePullPolicy(corev1.PullIfNotPresent).
-		SetCommand("/toolkit", "clone", step.Content.Git.Uri).
+		SetCommand("/toolkit", "clone").
 		EnableToolkit(stage.Ref())
 
-	args := []string{mountPath}
+	args := []string{step.Content.Git.Uri, mountPath}
+
+	// Enable cone mode if expected
+	if step.Content.Git.Cone {
+		args = append([]string{"--cone"}, args...)
+	}
 
 	// Provide Git username
 	if step.Content.Git.UsernameFrom != nil {
@@ -296,10 +298,18 @@ func ProcessArtifacts(_ InternalProcessor, layer Intermediate, container stage.C
 	// Allow to combine it within other containers
 	stage.SetPure(true)
 
+	cmd := []string{constants.DefaultToolkitPath, "artifacts"}
+	for _, mount := range container.VolumeMounts() {
+		if mount.MountPath == constants.DefaultInternalPath {
+			continue
+		}
+		cmd = append(cmd, "-m", strings.TrimRight(mount.MountPath, `/\`))
+	}
+
 	selfContainer.
 		SetImage(constants.DefaultToolkitImage).
 		SetImagePullPolicy(corev1.PullIfNotPresent).
-		SetCommand(constants.DefaultToolkitPath, "artifacts", "-m", constants.DefaultDataPath).
+		SetCommand(cmd...).
 		EnableToolkit(stage.Ref())
 
 	args := make([]string, 0)

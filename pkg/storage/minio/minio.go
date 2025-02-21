@@ -31,6 +31,10 @@ var _ storage.Client = (*Client)(nil)
 // ErrArtifactsNotFound contains error for not existing artifacts
 var ErrArtifactsNotFound = errors.New("Execution doesn't have any artifacts associated with it")
 
+// absMinPartSize - absolute minimum part size (5 MiB) below which
+// a part in a multipart upload may not be uploaded.
+const absMinPartSize = 1024 * 1024 * 5
+
 // Client for managing MinIO storage server
 type Client struct {
 	region         string
@@ -94,6 +98,14 @@ func (c *Client) CreateBucket(ctx context.Context, bucket string) error {
 		}
 	}
 	return nil
+}
+
+// BucketExists checks if the bucket exists
+func (c *Client) BucketExists(ctx context.Context, bucket string) (bool, error) {
+	if err := c.Connect(); err != nil {
+		return false, err
+	}
+	return c.minioClient.BucketExists(ctx, bucket)
 }
 
 // DeleteBucket deletes bucket by name
@@ -491,7 +503,9 @@ func (c *Client) uploadFile(ctx context.Context, bucket, bucketFolder, filePath 
 	}
 
 	c.Log.Debugw("saving object in minio", "file", filePath, "bucket", bucket)
-	_, err = c.minioClient.PutObject(ctx, bucket, filePath, reader, objectSize, minio.PutObjectOptions{ContentType: "application/octet-stream"})
+	_, err = c.minioClient.PutObject(ctx, bucket, filePath, reader, objectSize, minio.PutObjectOptions{
+		ContentType: "application/octet-stream",
+		PartSize:    absMinPartSize})
 	if err != nil {
 		return fmt.Errorf("minio saving file (%s) put object error: %w", filePath, err)
 	}
@@ -642,7 +656,7 @@ func (c *Client) PresignDownloadFileFromBucket(ctx context.Context, bucket, buck
 		file = strings.Trim(bucketFolder, "/") + "/" + file
 	}
 	c.Log.Debugw("presigning get object from minio", "file", file, "bucket", bucket)
-	url, err := c.minioClient.PresignedPutObject(ctx, bucket, file, expires)
+	url, err := c.minioClient.PresignedGetObject(ctx, bucket, file, expires, nil)
 	if err != nil {
 		return "", err
 	}

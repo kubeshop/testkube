@@ -1,6 +1,7 @@
 package orchestration
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
 )
@@ -32,6 +34,8 @@ type executionGroup struct {
 
 	paused  atomic.Bool
 	pauseMu sync.Mutex
+
+	softKillProgress atomic.Bool
 }
 
 func newExecutionGroup(outStream io.Writer, errStream io.Writer) *executionGroup {
@@ -140,6 +144,10 @@ func (e *executionGroup) IsAborted() bool {
 	return e.aborted.Load()
 }
 
+func (e *executionGroup) ClearAbortedStatus() {
+	e.aborted.Store(false)
+}
+
 type execution struct {
 	cmd   *exec.Cmd
 	cmdMu sync.Mutex
@@ -149,7 +157,7 @@ type execution struct {
 func (e *execution) Run() (*executionResult, error) {
 	// Immediately fail when aborted
 	if e.group.aborted.Load() {
-		return &executionResult{Aborted: true, ExitCode: data.CodeAborted}, nil
+		return &executionResult{Aborted: true, ExitCode: constants.CodeAborted}, nil
 	}
 
 	// Ensure it's not paused
@@ -162,11 +170,12 @@ func (e *execution) Run() (*executionResult, error) {
 	if e.group.aborted.Load() {
 		e.group.pauseMu.Unlock()
 		e.cmdMu.Unlock()
-		return &executionResult{Aborted: true, ExitCode: data.CodeAborted}, nil
+		return &executionResult{Aborted: true, ExitCode: constants.CodeAborted}, nil
 	}
 
 	// Initialize local state
-	var exitCode uint8
+	var exitCode int
+	var exitDetails string
 	var aborted bool
 
 	// Run the command
@@ -174,11 +183,22 @@ func (e *execution) Run() (*executionResult, error) {
 	if err == nil {
 		e.group.pauseMu.Unlock()
 		e.cmdMu.Unlock()
-		aborted, exitCode = getProcessStatus(e.cmd.Wait())
+		aborted, exitDetails, exitCode = getProcessStatus(e.cmd.Wait())
+		if exitCode < 0 {
+			exitCode = 255
+			// Handle edge case, when i.e. EPIPE happened
+			if !aborted {
+				aborted = true
+				e.cmd.Stderr.Write([]byte(fmt.Sprintf("\nThe process has been corrupted: %s.\n", exitDetails)))
+			}
+		}
 	} else {
 		e.group.pauseMu.Unlock()
 		e.cmdMu.Unlock()
-		aborted, exitCode = getProcessStatus(err)
+		aborted, _, exitCode = getProcessStatus(err)
+		if exitCode < 0 {
+			exitCode = 255
+		}
 		e.cmd.Stderr.Write(append([]byte(err.Error()), '\n'))
 	}
 
@@ -189,27 +209,28 @@ func (e *execution) Run() (*executionResult, error) {
 
 	// Mark the execution group as aborted when this process was aborted.
 	// In Kubernetes, when that child process is killed, it may mean OOM Kill.
-	if aborted && !e.group.aborted.Load() {
+	if aborted && !e.group.aborted.Load() && !e.group.softKillProgress.Load() {
 		e.group.Abort()
 	}
 
 	// Fail when aborted
 	if e.group.aborted.Load() {
-		return &executionResult{Aborted: true, ExitCode: data.CodeAborted}, nil
+		return &executionResult{Aborted: true, ExitCode: constants.CodeAborted}, nil
 	}
 
-	return &executionResult{ExitCode: exitCode}, nil
+	return &executionResult{ExitCode: uint8(exitCode)}, nil
 }
 
-func getProcessStatus(err error) (bool, uint8) {
+func getProcessStatus(err error) (bool, string, int) {
 	if err == nil {
-		return false, 0
+		return false, "", 0
 	}
 	if e, ok := err.(*exec.ExitError); ok {
 		if e.ProcessState != nil {
-			return e.ProcessState.String() == "signal: killed", uint8(e.ProcessState.ExitCode())
+			details := e.ProcessState.String()
+			return details == "signal: killed", details, e.ProcessState.ExitCode()
 		}
-		return false, 1
+		return false, "", 1
 	}
-	return false, 1
+	return false, "", 1
 }

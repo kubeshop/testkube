@@ -8,7 +8,7 @@ spec:
   config:
     revision:
       type: string
-      default: develop
+      default: main
   content:
     git:
       uri: https://github.com/kubeshop/testkube.git

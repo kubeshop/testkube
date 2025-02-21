@@ -37,4 +37,6 @@ type ServerInfo struct {
 	Features              *Features     `json:"features,omitempty"`
 	// execution namespaces
 	ExecutionNamespaces []string `json:"executionNamespaces,omitempty"`
+	// docker image version
+	DockerImageVersion string `json:"dockerImageVersion,omitempty"`
 }

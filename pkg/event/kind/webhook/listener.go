@@ -12,14 +12,14 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 
+	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	v1 "github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	cloudwebhook "github.com/kubeshop/testkube/pkg/cloud/data/webhook"
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
 	thttp "github.com/kubeshop/testkube/pkg/http"
 	"github.com/kubeshop/testkube/pkg/log"
-	"github.com/kubeshop/testkube/pkg/repository/result"
-	"github.com/kubeshop/testkube/pkg/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/utils"
 	"github.com/kubeshop/testkube/pkg/utils/text"
@@ -29,11 +29,14 @@ var _ common.Listener = (*WebhookListener)(nil)
 
 func NewWebhookListener(name, uri, selector string, events []testkube.EventType,
 	payloadObjectField, payloadTemplate string, headers map[string]string, disabled bool,
-	testExecutionResults result.Repository,
-	testSuiteExecutionResults testresult.Repository,
+	deprecatedRepositories commons.DeprecatedRepositories,
 	testWorkflowExecutionResults testworkflow.Repository,
 	metrics v1.Metrics,
-	proContext *config.ProContext) *WebhookListener {
+	webhookRepository cloudwebhook.WebhookRepository,
+	proContext *config.ProContext,
+	envs map[string]string,
+	config map[string]string,
+) *WebhookListener {
 	return &WebhookListener{
 		name:                         name,
 		Uri:                          uri,
@@ -45,11 +48,13 @@ func NewWebhookListener(name, uri, selector string, events []testkube.EventType,
 		payloadTemplate:              payloadTemplate,
 		headers:                      headers,
 		disabled:                     disabled,
-		testExecutionResults:         testExecutionResults,
-		testSuiteExecutionResults:    testSuiteExecutionResults,
+		deprecatedRepositories:       deprecatedRepositories,
 		testWorkflowExecutionResults: testWorkflowExecutionResults,
 		metrics:                      metrics,
+		webhookRepository:            webhookRepository,
 		proContext:                   proContext,
+		envs:                         envs,
+		config:                       config,
 	}
 }
 
@@ -64,11 +69,13 @@ type WebhookListener struct {
 	payloadTemplate              string
 	headers                      map[string]string
 	disabled                     bool
-	testExecutionResults         result.Repository
-	testSuiteExecutionResults    testresult.Repository
+	deprecatedRepositories       commons.DeprecatedRepositories
 	testWorkflowExecutionResults testworkflow.Repository
 	metrics                      v1.Metrics
+	webhookRepository            cloudwebhook.WebhookRepository
 	proContext                   *config.ProContext
+	envs                         map[string]string
+	config                       map[string]string
 }
 
 func (l *WebhookListener) Name() string {
@@ -112,6 +119,13 @@ func (l *WebhookListener) Disabled() bool {
 }
 
 func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventResult) {
+	var statusCode int
+	var err error
+
+	log := l.Log.With(event.Log()...)
+	// load global envs to be able to use them in templates
+	event.Envs = l.envs
+
 	defer func() {
 		var eventType, res string
 		if event.Type_ != nil {
@@ -124,6 +138,14 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 		}
 
 		l.metrics.IncWebhookEventCount(l.name, eventType, res)
+		errorMessage := ""
+		if err != nil {
+			errorMessage = err.Error()
+		}
+
+		if err = l.webhookRepository.CollectExecutionResult(context.Background(), event, l.name, errorMessage, statusCode); err != nil {
+			log.Errorw("webhook collecting execution result error", "error", err)
+		}
 	}()
 
 	switch {
@@ -156,22 +178,32 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 	}
 
 	body := bytes.NewBuffer([]byte{})
-	log := l.Log.With(event.Log()...)
 
-	var err error
+	var uri []byte
+	uri, err = l.processTemplate("uri", l.Uri, event)
+	if err != nil {
+		log.Errorw("uri template processing error", "error", err)
+		result = testkube.NewFailedEventResult(event.Id, err)
+		return
+	}
+
 	if l.payloadTemplate != "" {
 		var data []byte
 		data, err = l.processTemplate("payload", l.payloadTemplate, event)
 		if err != nil {
+			log.Errorw("payload template processing error", "error", err)
 			result = testkube.NewFailedEventResult(event.Id, err)
 			return
 		}
 
 		_, err = body.Write(data)
 	} else {
-		err = json.NewEncoder(body).Encode(event)
+		// clean envs if not requested explicitly by payload template
+		cleanEvent := event
+		cleanEvent.Envs = nil
+		err = json.NewEncoder(body).Encode(cleanEvent)
 		if err == nil && l.payloadObjectField != "" {
-			data := map[string]string{l.payloadObjectField: string(body.Bytes())}
+			data := map[string]string{l.payloadObjectField: body.String()}
 			body.Reset()
 			err = json.NewEncoder(body).Encode(data)
 		}
@@ -184,13 +216,7 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 		return
 	}
 
-	data, err := l.processTemplate("uri", l.Uri, event)
-	if err != nil {
-		result = testkube.NewFailedEventResult(event.Id, err)
-		return
-	}
-
-	request, err := http.NewRequest(http.MethodPost, string(data), body)
+	request, err := http.NewRequest(http.MethodPost, string(uri), body)
 	if err != nil {
 		log.Errorw("webhook request creating error", "error", err)
 		result = testkube.NewFailedEventResult(event.Id, err)
@@ -201,8 +227,9 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 	for key, value := range l.headers {
 		values := []*string{&key, &value}
 		for i := range values {
-			data, err = l.processTemplate("header", *values[i], event)
+			data, err := l.processTemplate("header", *values[i], event)
 			if err != nil {
+				log.Errorw("header template processing error", "error", err)
 				result = testkube.NewFailedEventResult(event.Id, err)
 				return
 			}
@@ -213,7 +240,8 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 		request.Header.Set(key, value)
 	}
 
-	resp, err := l.HttpClient.Do(request)
+	var resp *http.Response
+	resp, err = l.HttpClient.Do(request)
 	if err != nil {
 		log.Errorw("webhook send error", "error", err)
 		result = testkube.NewFailedEventResult(event.Id, err)
@@ -221,6 +249,7 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 	}
 	defer resp.Body.Close()
 
+	var data []byte
 	data, err = io.ReadAll(resp.Body)
 	if err != nil {
 		log.Errorw("webhook read response error", "error", err)
@@ -229,10 +258,10 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 	}
 
 	responseStr := string(data)
-
+	statusCode = resp.StatusCode
 	if resp.StatusCode >= 400 {
-		err := fmt.Errorf("webhook response with bad status code: %d", resp.StatusCode)
-		log.Errorw("webhook send error", "error", err, "status", resp.StatusCode)
+		err = fmt.Errorf("webhook response with bad status code: %d", resp.StatusCode)
+		log.Errorw("webhook send error", "error", err, "status", resp.StatusCode, "response", responseStr)
 		result = testkube.NewFailedEventResult(event.Id, err).WithResult(responseStr)
 		return
 	}
@@ -262,7 +291,7 @@ func (l *WebhookListener) processTemplate(field, body string, event testkube.Eve
 	}
 
 	var buffer bytes.Buffer
-	if err = tmpl.ExecuteTemplate(&buffer, field, NewTemplateVars(event, l.proContext)); err != nil {
+	if err = tmpl.ExecuteTemplate(&buffer, field, NewTemplateVars(event, l.proContext, l.config)); err != nil {
 		log.Errorw(fmt.Sprintf("executing webhook %s error", field), "error", err)
 		return nil, err
 	}
@@ -273,8 +302,8 @@ func (l *WebhookListener) processTemplate(field, body string, event testkube.Eve
 func (l *WebhookListener) hasBecomeState(event testkube.Event) (bool, error) {
 	log := l.Log.With(event.Log()...)
 
-	if event.TestExecution != nil && event.Type_ != nil {
-		prevStatus, err := l.testExecutionResults.GetPreviousFinishedState(context.Background(), event.TestExecution.TestName, event.TestExecution.EndTime)
+	if l.deprecatedRepositories != nil && event.TestExecution != nil && event.Type_ != nil {
+		prevStatus, err := l.deprecatedRepositories.TestResults().GetPreviousFinishedState(context.Background(), event.TestExecution.TestName, event.TestExecution.EndTime)
 		if err != nil {
 			return false, err
 		}
@@ -287,8 +316,8 @@ func (l *WebhookListener) hasBecomeState(event testkube.Event) (bool, error) {
 		return event.Type_.IsBecomeExecutionStatus(prevStatus), nil
 	}
 
-	if event.TestSuiteExecution != nil && event.TestSuiteExecution.TestSuite != nil && event.Type_ != nil {
-		prevStatus, err := l.testSuiteExecutionResults.GetPreviousFinishedState(context.Background(), event.TestSuiteExecution.TestSuite.Name, event.TestSuiteExecution.EndTime)
+	if l.deprecatedRepositories != nil && event.TestSuiteExecution != nil && event.TestSuiteExecution.TestSuite != nil && event.Type_ != nil {
+		prevStatus, err := l.deprecatedRepositories.TestSuiteResults().GetPreviousFinishedState(context.Background(), event.TestSuiteExecution.TestSuite.Name, event.TestSuiteExecution.EndTime)
 		if err != nil {
 			return false, err
 		}

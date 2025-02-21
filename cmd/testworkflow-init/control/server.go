@@ -1,13 +1,18 @@
 package control
 
 import (
-	"context"
 	"fmt"
 	"net"
-	"net/http"
 	"time"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
+)
+
+const (
+	PausePacket   = '\u0003'
+	ResumePacket  = '\u0004'
+	SuccessPacket = '\u0005'
+	FailPacket    = '\u0005'
 )
 
 type Pauseable interface {
@@ -27,51 +32,57 @@ func NewServer(port int, target Pauseable) *server {
 	}
 }
 
-func (s *server) handler() *http.ServeMux {
+func (s *server) handler(conn net.Conn) {
+	defer conn.Close()
+
 	stdout := output.Std
 	stdoutUnsafe := stdout.Direct()
 
-	mux := http.NewServeMux()
-	// TODO: Consider "shell" command too for debugging?
-	mux.HandleFunc("/pause", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	buffer := make([]byte, 1)
+	for {
+		_, err := conn.Read(buffer)
+		if err != nil {
 			return
 		}
-		if err := s.target.Pause(time.Now()); err != nil {
-			stdoutUnsafe.Warnf("warn: failed to pause: %s\n", err.Error())
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+		switch buffer[0] {
+		case PausePacket:
+			err := s.target.Pause(time.Now())
+			if err == nil {
+				conn.Write([]byte{SuccessPacket})
+			} else {
+				stdoutUnsafe.Warnf("warn: failed to pause: %s\n", err.Error())
+				conn.Write([]byte{FailPacket})
+			}
+		case ResumePacket:
+			err := s.target.Resume(time.Now())
+			if err == nil {
+				conn.Write([]byte{SuccessPacket})
+			} else {
+				stdoutUnsafe.Warnf("warn: failed to resume: %s\n", err.Error())
+				conn.Write([]byte{FailPacket})
+			}
 		}
-		w.WriteHeader(http.StatusNoContent)
-	})
-	mux.HandleFunc("/resume", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-		if err := s.target.Resume(time.Now()); err != nil {
-			stdoutUnsafe.Warnf("warn: failed to resume: %s\n", err.Error())
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		w.WriteHeader(http.StatusNoContent)
-	})
-	return mux
+	}
 }
 
 func (s *server) Listen() (func(), error) {
 	addr := fmt.Sprintf(":%d", s.port)
-	srv := http.Server{Addr: addr, Handler: s.handler()}
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
 		return nil, err
 	}
 	stop := func() {
-		_ = srv.Shutdown(context.Background())
+		_ = listener.Close()
 	}
 	go func() {
-		_ = srv.Serve(listener)
+		for {
+			// Accept incoming connections
+			conn, err := listener.Accept()
+			if err != nil {
+				continue
+			}
+			go s.handler(conn)
+		}
 	}()
 	return stop, err
 }

@@ -7,7 +7,11 @@ metadata:
 spec:
   steps:
   - execute:
+      parallelism: 2
       workflows:
       - name: jmeter-workflow-smoke
+      - name: jmeter-workflow-smoke-justb4-5.5
       - name: jmeter-workflow-smoke-shell-artifacts
       - name: jmeter-workflow-smoke-from-template
+      - name: distributed-jmeter-workflow-smoke
+      - name: distributed-jmeter-workflow-smoke-shell-artifacts

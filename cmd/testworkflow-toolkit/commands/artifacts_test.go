@@ -2,13 +2,13 @@ package commands
 
 import (
 	"embed"
-	"encoding/json"
 	"io/fs"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
-	"github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
+	"github.com/kubeshop/testkube/pkg/controlplaneclient"
 	"github.com/kubeshop/testkube/pkg/mapper/cdevents"
 	"github.com/kubeshop/testkube/pkg/utils/test"
 
@@ -16,8 +16,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/artifacts"
-	"github.com/kubeshop/testkube/pkg/cloud/data/artifact"
-	"github.com/kubeshop/testkube/pkg/cloud/data/executor"
 	"github.com/kubeshop/testkube/pkg/filesystem"
 )
 
@@ -26,6 +24,9 @@ var testDataFixtures embed.FS
 
 func TestRun_Integration(t *testing.T) {
 	test.IntegrationTest(t)
+
+	// Populate empty internal configuration, as it is required for the Toolkit
+	_ = os.Setenv("TK_CFG", "{}")
 
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
@@ -54,14 +55,15 @@ func TestRun_Integration(t *testing.T) {
 		t.Fatalf("failed to create walker: %v", err)
 	}
 	processor := artifacts.NewDirectProcessor()
-	mockClient := executor.NewMockExecutor(mockCtrl)
-	mockResponse := artifact.PutObjectSignedURLResponse{
-		URL: server.URL,
-	}
-	mockResponseJson, _ := json.Marshal(mockResponse)
-	mockClient.EXPECT().Execute(gomock.Any(), artifact.CmdScraperPutObjectSignedURL, gomock.Any()).Return(mockResponseJson, nil).Times(2)
-	mockClient.EXPECT().Execute(gomock.Any(), testworkflow.CmdTestWorkflowExecutionAddReport, gomock.Any()).Return(nil, nil)
-	uploader := artifacts.NewCloudUploader(mockClient)
+	mockClient := controlplaneclient.NewMockClient(mockCtrl)
+	mockClient.EXPECT().
+		SaveExecutionArtifactGetPresignedURL(gomock.Any(), "env123", "exec123", "workflow123", "step123", gomock.Any(), gomock.Any()).
+		Return(server.URL, nil).
+		Times(2)
+	mockClient.EXPECT().
+		AppendExecutionReport(gomock.Any(), "env123", "exec123", "workflow123", "step123", gomock.Any(), gomock.Any()).
+		Return(nil)
+	uploader := artifacts.NewCloudUploader(mockClient, "env123", "exec123", "workflow123", "step123")
 	mockFs := filesystem.NewMockFileSystem(mockCtrl)
 	mockFs.EXPECT().OpenFileRO(gomock.Any()).AnyTimes().DoAndReturn(func(path string) (fs.File, error) {
 		b, err := testDataFixtures.ReadFile(path[1:])
@@ -70,7 +72,7 @@ func TestRun_Integration(t *testing.T) {
 		}
 		return filesystem.NewMockFile(path[1:], b), nil
 	})
-	postProcessor := artifacts.NewJUnitPostProcessor(mockFs, mockClient, "/", "")
+	postProcessor := artifacts.NewJUnitPostProcessor(mockFs, mockClient, "env123", "exec123", "workflow123", "step123", "/", "")
 	handler := artifacts.NewHandler(uploader, processor, artifacts.WithPostProcessor(postProcessor),
 		artifacts.WithCDEventsTarget(server.URL), artifacts.WithCDEventsArtifactParameters(cdevents.CDEventsArtifactParameters{
 			Id:           "1",

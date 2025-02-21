@@ -7,7 +7,10 @@ metadata:
 spec:
   steps:
   - execute:
+      parallelism: 2
       workflows:
+      - name: cypress-workflow-smoke-14
+      - name: cypress-workflow-smoke-14-template
       - name: cypress-workflow-smoke-13
       - name: cypress-workflow-smoke-13-video-recording-enabled
       - name: cypress-workflow-smoke-13-negative
@@ -16,4 +19,5 @@ spec:
       - name: cypress-workflow-smoke-13-template-sub-step
       - name: cypress-workflow-smoke-12.7.0
       - name: cypress-workflow-smoke-13-junit-report
-      - name: cypress-workflow-smoke-matrix
+      - name: distributed-cypress-workflow-smoke-13
+      - name: cypress-workflow-smoke-matrix-junit

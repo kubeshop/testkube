@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/kubeshop/testkube/pkg/repository/common"
+	"github.com/kubeshop/testkube/pkg/utils"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -20,7 +21,10 @@ import (
 
 var _ Repository = (*MongoRepository)(nil)
 
-const CollectionName = "testworkflowresults"
+const (
+	CollectionName       = "testworkflowresults"
+	configParamSizeLimit = 100
+)
 
 func NewMongoRepository(db *mongo.Database, allowDiskUse bool, opts ...MongoRepositoryOpt) *MongoRepository {
 	r := &MongoRepository{
@@ -59,7 +63,52 @@ type MongoRepositoryOpt func(*MongoRepository)
 
 func (r *MongoRepository) Get(ctx context.Context, id string) (result testkube.TestWorkflowExecution, err error) {
 	err = r.Coll.FindOne(ctx, bson.M{"$or": bson.A{bson.M{"id": id}, bson.M{"name": id}}}).Decode(&result)
+
+	if result.ResolvedWorkflow != nil && result.ResolvedWorkflow.Spec != nil {
+		result.ConfigParams = populateConfigParams(result.ResolvedWorkflow, result.ConfigParams)
+	}
+
 	return *result.UnscapeDots(), err
+}
+
+func populateConfigParams(resolvedWorkflow *testkube.TestWorkflow, configParams map[string]testkube.TestWorkflowExecutionConfigValue) map[string]testkube.TestWorkflowExecutionConfigValue {
+	if configParams == nil {
+		configParams = make(map[string]testkube.TestWorkflowExecutionConfigValue)
+	}
+
+	for k, v := range resolvedWorkflow.Spec.Config {
+		if v.Sensitive {
+			configParams[k] = testkube.TestWorkflowExecutionConfigValue{
+				Sensitive:         true,
+				EmptyValue:        true,
+				EmptyDefaultValue: true,
+			}
+
+			continue
+		}
+
+		if _, ok := configParams[k]; !ok {
+			configParams[k] = testkube.TestWorkflowExecutionConfigValue{
+				EmptyValue: true,
+			}
+		}
+
+		data := configParams[k]
+		if len(data.Value) > configParamSizeLimit {
+			data.Value = data.Value[:configParamSizeLimit]
+			data.Truncated = true
+		}
+
+		if v.Default_ != nil {
+			data.DefaultValue = v.Default_.Value
+		} else {
+			data.EmptyDefaultValue = true
+		}
+
+		configParams[k] = data
+	}
+
+	return configParams
 }
 
 func (r *MongoRepository) GetByNameAndTestWorkflow(ctx context.Context, name, workflowName string) (result testkube.TestWorkflowExecution, err error) {
@@ -240,8 +289,13 @@ func (r *MongoRepository) GetExecutions(ctx context.Context, filter Filter) (res
 	return
 }
 
+type TestWorkflowExecutionSummaryWithResolvedWorkflow struct {
+	testkube.TestWorkflowExecutionSummary `json:",inline" bson:",inline"`
+	ResolvedWorkflow                      *testkube.TestWorkflow `json:"resolvedWorkflow,omitempty"`
+}
+
 func (r *MongoRepository) GetExecutionsSummary(ctx context.Context, filter Filter) (result []testkube.TestWorkflowExecutionSummary, err error) {
-	result = make([]testkube.TestWorkflowExecutionSummary, 0)
+	executions := make([]TestWorkflowExecutionSummaryWithResolvedWorkflow, 0)
 	query, opts := composeQueryAndOpts(filter)
 	if r.allowDiskUse {
 		opts.SetAllowDiskUse(r.allowDiskUse)
@@ -254,16 +308,20 @@ func (r *MongoRepository) GetExecutionsSummary(ctx context.Context, filter Filte
 		"result.steps":          0,
 		"result.initialization": 0,
 		"workflow.spec":         0,
-		"resolvedWorkflow":      0,
 	})
 	cursor, err := r.Coll.Find(ctx, query, opts)
 	if err != nil {
 		return
 	}
-	err = cursor.All(ctx, &result)
+	err = cursor.All(ctx, &executions)
+	result = make([]testkube.TestWorkflowExecutionSummary, len(executions))
+	for i := range executions {
+		executions[i].UnscapeDots()
 
-	for i := range result {
-		result[i].UnscapeDots()
+		if executions[i].ResolvedWorkflow != nil && executions[i].ResolvedWorkflow.Spec != nil {
+			executions[i].ConfigParams = populateConfigParams(executions[i].ResolvedWorkflow, executions[i].ConfigParams)
+		}
+		result[i] = executions[i].TestWorkflowExecutionSummary
 	}
 	return
 }
@@ -279,6 +337,9 @@ func (r *MongoRepository) Insert(ctx context.Context, result testkube.TestWorkfl
 
 func (r *MongoRepository) Update(ctx context.Context, result testkube.TestWorkflowExecution) (err error) {
 	result.EscapeDots()
+	if result.Reports == nil {
+		result.Reports = []testkube.TestWorkflowReport{}
+	}
 	_, err = r.Coll.ReplaceOne(ctx, bson.M{"id": result.Id}, result)
 	return
 }
@@ -312,6 +373,10 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 
 	if filter.NameDefined() {
 		query["workflow.name"] = filter.Name()
+	}
+
+	if filter.NamesDefined() {
+		query["workflow.name"] = bson.M{"$in": filter.Names()}
 	}
 
 	if filter.TextSearchDefined() {
@@ -358,6 +423,76 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 				query["workflow.labels."+elements[0]] = bson.M{"$exists": true}
 			}
 		}
+	}
+
+	if filter.TagSelector() != "" {
+		items := strings.Split(filter.TagSelector(), ",")
+		inValues := make(map[string][]string)
+		existsValues := make(map[string]struct{})
+		for _, item := range items {
+			elements := strings.Split(item, "=")
+			if len(elements) == 2 {
+				inValues["tags."+utils.EscapeDots(elements[0])] = append(inValues["tags."+utils.EscapeDots(elements[0])], elements[1])
+			} else if len(elements) == 1 {
+				existsValues["tags."+utils.EscapeDots(elements[0])] = struct{}{}
+			}
+		}
+		subquery := bson.A{}
+		for tag, values := range inValues {
+			if _, ok := existsValues[tag]; ok {
+				subquery = append(subquery, bson.M{tag: bson.M{"$exists": true}})
+				delete(existsValues, tag)
+				continue
+			}
+
+			tagValues := bson.A{}
+			for _, value := range values {
+				tagValues = append(tagValues, value)
+			}
+
+			if len(tagValues) > 0 {
+				subquery = append(subquery, bson.M{tag: bson.M{"$in": tagValues}})
+			}
+		}
+
+		for tag := range existsValues {
+			subquery = append(subquery, bson.M{tag: bson.M{"$exists": true}})
+		}
+
+		if len(subquery) > 0 {
+			query["$and"] = subquery
+		}
+	}
+
+	if filter.LabelSelector() != nil && len(filter.LabelSelector().Or) > 0 {
+		subquery := bson.A{}
+		for _, label := range filter.LabelSelector().Or {
+			if label.Value != nil {
+				subquery = append(subquery, bson.M{"workflow.labels." + utils.EscapeDots(label.Key): *label.Value})
+			} else if label.Exists != nil {
+				subquery = append(subquery,
+					bson.M{"workflow.labels." + utils.EscapeDots(label.Key): bson.M{"$exists": *label.Exists}})
+			}
+		}
+		query["$or"] = subquery
+	}
+
+	if filter.ActorNameDefined() {
+		query["runningcontext.actor.name"] = filter.ActorName()
+	}
+
+	if filter.ActorTypeDefined() {
+		query["runningcontext.actor.type_"] = filter.ActorType()
+	}
+
+	if filter.GroupIDDefined() {
+		query = bson.M{"$and": bson.A{
+			bson.M{"$expr": bson.M{"$or": bson.A{
+				bson.M{"$eq": bson.A{"$id", filter.GroupID()}},
+				bson.M{"$eq": bson.A{"$groupid", filter.GroupID()}},
+			}}},
+			query,
+		}}
 	}
 
 	opts.SetSkip(int64(filter.Page() * filter.PageSize()))
@@ -494,4 +629,123 @@ func (r *MongoRepository) GetNextExecutionNumber(ctx context.Context, name strin
 	}
 
 	return r.sequenceRepository.GetNextExecutionNumber(ctx, name, sequence.ExecutionTypeTestWorkflow)
+}
+
+func (r *MongoRepository) GetExecutionTags(ctx context.Context, testWorkflowName string) (tags map[string][]string, err error) {
+	query := bson.M{"tags": bson.M{"$exists": true}}
+	if testWorkflowName != "" {
+		query["workflow.name"] = testWorkflowName
+	}
+
+	pipeline := []bson.M{
+		{"$match": query},
+		{"$project": bson.M{
+			"tags": 1,
+		}},
+	}
+
+	opts := options.Aggregate()
+	if r.allowDiskUse {
+		opts.SetAllowDiskUse(r.allowDiskUse)
+	}
+
+	cursor, err := r.Coll.Aggregate(ctx, pipeline, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	var executions []testkube.TestWorkflowExecutionTags
+	err = cursor.All(ctx, &executions)
+	if err != nil {
+		return nil, err
+	}
+
+	for i := range executions {
+		executions[i].UnscapeDots()
+	}
+
+	tags = make(map[string][]string)
+	for _, execution := range executions {
+		for key, value := range execution.Tags {
+			tags[key] = append(tags[key], value)
+		}
+	}
+
+	return tags, nil
+}
+
+func (r *MongoRepository) Init(ctx context.Context, id string, data InitData) error {
+	_, err := r.Coll.UpdateOne(ctx, bson.M{"id": id}, bson.M{"$set": map[string]interface{}{
+		"namespace": data.Namespace,
+		"signature": data.Signature,
+		"runnerid":  data.RunnerID,
+	}})
+	return err
+}
+
+func (r *MongoRepository) Assign(ctx context.Context, id string, prevRunnerId string, newRunnerId string) (bool, error) {
+	res, err := r.Coll.UpdateOne(ctx, bson.M{
+		"$and": []bson.M{
+			{"id": id},
+			{"result.status": bson.M{"$in": bson.A{testkube.QUEUED_TestWorkflowStatus, testkube.RUNNING_TestWorkflowStatus, testkube.PAUSED_TestWorkflowStatus}}},
+			{"$or": []bson.M{{"runnerid": prevRunnerId}, {"runnerid": newRunnerId}, {"runnerid": nil}}},
+		},
+	}, bson.M{"$set": map[string]interface{}{
+		"runnerid": newRunnerId,
+	}})
+	if err != nil {
+		return false, err
+	}
+	return res.ModifiedCount > 0, nil
+}
+
+// TODO: Return IDs only
+// TODO: Add indexes
+func (r *MongoRepository) GetUnassigned(ctx context.Context) (result []testkube.TestWorkflowExecution, err error) {
+	result = make([]testkube.TestWorkflowExecution, 0)
+	opts := &options.FindOptions{}
+	opts.SetSort(bson.D{{Key: "_id", Value: -1}})
+	if r.allowDiskUse {
+		opts.SetAllowDiskUse(r.allowDiskUse)
+	}
+
+	cursor, err := r.Coll.Find(ctx, bson.M{
+		"$and": []bson.M{
+			{"result.status": testkube.QUEUED_TestWorkflowStatus},
+			{"$or": []bson.M{{"runnerid": ""}, {"runnerid": nil}}},
+		},
+	}, opts)
+	if err != nil {
+		return result, err
+	}
+	err = cursor.All(ctx, &result)
+
+	for i := range result {
+		result[i].UnscapeDots()
+	}
+	return
+}
+
+func (r *MongoRepository) AbortIfQueued(ctx context.Context, id string) (ok bool, err error) {
+	ts := time.Now()
+	res, err := r.Coll.UpdateOne(ctx, bson.M{
+		"$and": []bson.M{
+			{"id": id},
+			{"result.status": bson.M{"$in": bson.A{testkube.QUEUED_TestWorkflowStatus, testkube.RUNNING_TestWorkflowStatus, testkube.PAUSED_TestWorkflowStatus}}},
+			{"$or": []bson.M{{"runnerid": ""}, {"runnerid": nil}}},
+		},
+	}, bson.M{"$set": map[string]interface{}{
+		"result.status":                      testkube.ABORTED_TestWorkflowStatus,
+		"result.predictedstatus":             testkube.ABORTED_TestWorkflowStatus,
+		"statusat":                           ts,
+		"result.finishedat":                  ts,
+		"result.initialization.status":       testkube.ABORTED_TestWorkflowStatus,
+		"result.initialization.errormessage": "Aborted before initialization.",
+		"result.initialization.finishedat":   ts,
+		//"result.totaldurationms": ts.Sub(scheduledAt).Milliseconds(),
+	}})
+	if err != nil {
+		return false, err
+	}
+	return res.ModifiedCount > 0, nil
 }

@@ -1,11 +1,14 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"os/signal"
 	"slices"
 	"strconv"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -18,6 +21,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/obfuscator"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/orchestration"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/runtime"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 )
@@ -41,31 +45,33 @@ func main() {
 	orchestration.Setup.SetSensitiveWordMinimumLength(SensitiveMinimumLength)
 
 	// Prepare empty state file if it doesn't exist
-	_, err := os.Stat(data.StatePath)
+	_, err := os.Stat(constants.StatePath)
 	if errors.Is(err, os.ErrNotExist) {
-		stdout.Hint(data.InitStepName, constants.InstructionStart)
+		stdout.Hint(constants.InitStepName, constants.InstructionStart)
 		stdoutUnsafe.Print("Creating state...")
-		err := os.WriteFile(data.StatePath, nil, 0777)
+		err := os.WriteFile(constants.StatePath, nil, 0777)
 		if err != nil {
 			stdoutUnsafe.Error(" error\n")
-			output.ExitErrorf(data.CodeInternal, "failed to create state file: %s", err.Error())
+			output.ExitErrorf(constants.CodeInternal, "failed to create state file: %s", err.Error())
 		}
-		os.Chmod(data.StatePath, 0777)
+		os.Chmod(constants.StatePath, 0777)
 		stdoutUnsafe.Print(" done\n")
 	} else if err != nil {
-		stdout.Hint(data.InitStepName, constants.InstructionStart)
+		stdout.Hint(constants.InitStepName, constants.InstructionStart)
 		stdoutUnsafe.Print("Accessing state...")
 		stdoutUnsafe.Error(" error\n")
-		output.ExitErrorf(data.CodeInternal, "cannot access state file: %s", err.Error())
+		output.ExitErrorf(constants.CodeInternal, "cannot access state file: %s", err.Error())
 	}
 
 	// Store the instructions in the state if they are provided
 	orchestration.Setup.UseBaseEnv()
 	stdout.SetSensitiveWords(orchestration.Setup.GetSensitiveWords())
 	actionGroups := orchestration.Setup.GetActionGroups()
+	internalConfig := orchestration.Setup.GetInternalConfig()
 	if actionGroups != nil {
 		stdoutUnsafe.Print("Initializing state...")
 		data.GetState().Actions = actionGroups
+		data.GetState().InternalConfig = internalConfig
 		stdoutUnsafe.Print(" done\n")
 
 		// Release the memory
@@ -77,13 +83,13 @@ func main() {
 
 	// Ensure there is a group index provided
 	if len(os.Args) != 2 {
-		output.ExitErrorf(data.CodeInternal, "invalid arguments provided - expected only one")
+		output.ExitErrorf(constants.CodeInternal, "invalid arguments provided - expected only one")
 	}
 
 	// Determine group index to run
 	groupIndex, err := strconv.ParseInt(os.Args[1], 10, 32)
 	if err != nil {
-		output.ExitErrorf(data.CodeInputError, "invalid run group passed: %s", err.Error())
+		output.ExitErrorf(constants.CodeInputError, "invalid run group passed: %s", err.Error())
 	}
 
 	// Handle aborting
@@ -91,7 +97,6 @@ func main() {
 	signal.Notify(stopSignal, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		<-stopSignal
-		stdoutUnsafe.Print("The task was aborted.\n")
 		orchestration.Executions.Abort()
 	}()
 
@@ -141,14 +146,15 @@ func main() {
 	})
 	_, err = controlSrv.Listen()
 	if err != nil {
-		output.ExitErrorf(data.CodeInternal, "Failed to start control server at port %d: %s\n", constants.ControlServerPort, err.Error())
+		output.ExitErrorf(constants.CodeInternal, "Failed to start control server at port %d: %s\n", constants.ControlServerPort, err.Error())
 	}
 
 	// Keep a list of paused steps for execution
 	delayedPauses := make([]string, 0)
 
 	// Interpret the operations
-	for _, action := range state.GetActions(int(groupIndex)) {
+	actions := state.GetActions(int(groupIndex))
+	for i, action := range actions {
 		switch action.Type() {
 		case lite.ActionTypeDeclare:
 			state.GetStep(action.Declare.Ref).
@@ -173,7 +179,19 @@ func main() {
 
 		case lite.ActionTypeContainerTransition:
 			orchestration.Setup.SetConfig(action.Container.Config)
-			orchestration.Setup.AdvanceEnv()
+			err := orchestration.Setup.AdvanceEnv()
+			// Attach the error to the next consecutive step
+			if err != nil {
+				for _, next := range actions[i:] {
+					if next.Type() != lite.ActionTypeStart || *next.Start == "" {
+						continue
+					}
+					step := state.GetStep(*next.Start)
+					orchestration.Start(step)
+					break
+				}
+				output.ExitErrorf(constants.CodeInputError, err.Error())
+			}
 			stdout.SetSensitiveWords(orchestration.Setup.GetSensitiveWords())
 			currentContainer = *action.Container
 
@@ -190,15 +208,15 @@ func main() {
 			// Determine if the step should be skipped
 			executable, err := step.ResolveCondition()
 			if err != nil {
-				output.ExitErrorf(data.CodeInternal, "failed to determine condition of '%s' step: %s: %v", *action.Start, step.Condition, err.Error())
+				output.ExitErrorf(constants.CodeInternal, "failed to determine condition of '%s' step: %s: %v", *action.Start, step.Condition, err.Error())
 			}
 			if !executable {
-				step.SetStatus(data.StepStatusSkipped)
+				step.SetStatus(constants.StepStatusSkipped)
 
 				// Skip all the children
 				for _, v := range state.Steps {
 					if slices.Contains(v.Parents, step.Ref) {
-						v.SetStatus(data.StepStatusSkipped)
+						v.SetStatus(constants.StepStatusSkipped)
 					}
 				}
 			}
@@ -216,21 +234,24 @@ func main() {
 			if step.Status == nil {
 				status, err := step.ResolveResult()
 				if err != nil {
-					output.ExitErrorf(data.CodeInternal, "failed to determine result of '%s' step: %s: %v", *action.End, step.Result, err.Error())
+					output.ExitErrorf(constants.CodeInternal, "failed to determine result of '%s' step: %s: %v", *action.End, step.Result, err.Error())
 				}
 				step.SetStatus(status)
 			}
 			orchestration.End(step)
 
 		case lite.ActionTypeSetup:
-			orchestration.Setup.UseEnv(constants.EnvGroupDebug)
+			err := orchestration.Setup.UseEnv(constants.EnvGroupDebug)
+			if err != nil {
+				output.ExitErrorf(constants.CodeInputError, err.Error())
+			}
 			stdout.SetSensitiveWords(orchestration.Setup.GetSensitiveWords())
-			step := state.GetStep(data.InitStepName)
-			err := commands.Setup(*action.Setup)
+			step := state.GetStep(constants.InitStepName)
+			err = commands.Setup(*action.Setup)
 			if err == nil {
-				step.SetStatus(data.StepStatusPassed)
+				step.SetStatus(constants.StepStatusPassed)
 			} else {
-				step.SetStatus(data.StepStatusFailed)
+				step.SetStatus(constants.StepStatusFailed)
 			}
 			orchestration.End(step)
 			if err != nil {
@@ -238,6 +259,10 @@ func main() {
 			}
 
 		case lite.ActionTypeExecute:
+			// Ensure the latest state before each execute,
+			// as it may refer to the state file (Toolkit).
+			data.SaveState()
+
 			// Ignore running when the step is already resolved (= skipped)
 			step := state.GetStep(action.Execute.Ref)
 			if step.IsFinished() {
@@ -246,14 +271,21 @@ func main() {
 
 			// Ignore when it is aborted
 			if orchestration.Executions.IsAborted() {
-				step.SetStatus(data.StepStatusAborted)
+				step.SetStatus(constants.StepStatusAborted)
 				continue
 			}
 
 			// Configure the environment
-			orchestration.Setup.UseCurrentEnv()
-			if !action.Execute.Toolkit {
+			err := orchestration.Setup.UseCurrentEnv()
+			if err != nil {
+				output.ExitErrorf(constants.CodeInputError, err.Error())
+			}
+			if action.Execute.Toolkit {
+				serialized, _ := json.Marshal(state.InternalConfig)
+				_ = os.Setenv("TK_CFG", string(serialized))
+			} else {
 				_ = os.Unsetenv("TK_REF")
+				_ = os.Unsetenv("TK_CFG")
 			}
 
 			// List all the parents
@@ -280,6 +312,7 @@ func main() {
 			}
 
 			// Configure timeout finalizer
+			var hasTimeout, hasOwnTimeout atomic.Bool
 			finalizeTimeout := func() {
 				// Check timed out steps in leaf
 				timedOut := orchestration.GetTimedOut(leaf...)
@@ -289,19 +322,22 @@ func main() {
 
 				// Iterate over timed out step
 				for _, r := range timedOut {
-					r.SetStatus(data.StepStatusTimeout)
+					r.SetStatus(constants.StepStatusTimeout)
 					sub := state.GetSubSteps(r.Ref)
+					hasTimeout.Store(true)
+					if step.Ref == r.Ref {
+						hasOwnTimeout.Store(true)
+					}
 					for i := range sub {
 						if sub[i].IsFinished() {
 							continue
 						}
 						if sub[i].IsStarted() {
-							sub[i].SetStatus(data.StepStatusTimeout)
+							sub[i].SetStatus(constants.StepStatusTimeout)
 						} else {
-							sub[i].SetStatus(data.StepStatusSkipped)
+							sub[i].SetStatus(constants.StepStatusSkipped)
 						}
 					}
-					stdoutUnsafe.Println("Timed out.")
 				}
 				_ = orchestration.Executions.Kill()
 
@@ -323,11 +359,13 @@ func main() {
 
 				// Ignore when it is aborted
 				if orchestration.Executions.IsAborted() {
-					step.SetStatus(data.StepStatusAborted)
+					step.SetStatus(constants.StepStatusAborted)
 					break
 				}
 
 				// Register timeouts
+				hasTimeout.Store(false)
+				hasOwnTimeout.Store(false)
 				stopTimeoutWatcher := orchestration.WatchTimeout(finalizeTimeout, leaf...)
 
 				// Run the command
@@ -336,12 +374,17 @@ func main() {
 				// Stop timer listener
 				stopTimeoutWatcher()
 
+				// Handle timeout gracefully
+				if hasOwnTimeout.Load() {
+					orchestration.Executions.ClearAbortedStatus()
+				}
+
 				// Ensure there won't be any hanging processes after the command is executed
 				_ = orchestration.Executions.Kill()
 
 				// TODO: Handle retry policy in tree independently
 				// Verify if there may be any other iteration
-				if step.Iteration >= step.Retry.Count {
+				if step.Iteration >= step.Retry.Count || (!hasOwnTimeout.Load() && hasTimeout.Load()) {
 					break
 				}
 
@@ -350,7 +393,7 @@ func main() {
 				if until == "" {
 					until = "passed"
 				}
-				expr, err := expressions.CompileAndResolve(until, data.LocalMachine, data.GetInternalTestWorkflowMachine(), expressions.FinalizerFail)
+				expr, err := expressions.CompileAndResolve(until, data.LocalMachine, runtime.GetInternalTestWorkflowMachine(), expressions.FinalizerFail)
 				if err != nil {
 					stdout.Printf("failed to execute retry condition: %s: %s\n", until, err.Error())
 					break
@@ -363,12 +406,20 @@ func main() {
 				// Continue with the next iteration
 				step.Iteration++
 				stdout.HintDetails(step.Ref, constants.InstructionIteration, step.Iteration)
-				stdoutUnsafe.Printf("\nExit code: %d • Retrying: attempt #%d (of %d):\n", step.ExitCode, step.Iteration, step.Retry.Count)
+				message := fmt.Sprintf("Exit code: %d", step.ExitCode)
+				if hasOwnTimeout.Load() {
+					message = "Timed out"
+				}
+				stdoutUnsafe.Printf("\n%s • Retrying: attempt #%d (of %d):\n", message, step.Iteration, step.Retry.Count)
+
+				// Restart start time for the next iteration to allow retries
+				now := time.Now()
+				step.StartedAt = &now
 			}
 		}
 
 		// Save the status after each action
-		data.SaveState()
+		data.SaveTerminationLog()
 	}
 
 	// Ensure the latest state is saved
@@ -377,7 +428,7 @@ func main() {
 	// Stop the container after all the instructions are interpret
 	_ = orchestration.Executions.Kill()
 	if orchestration.Executions.IsAborted() {
-		os.Exit(int(data.CodeAborted))
+		os.Exit(int(constants.CodeAborted))
 	} else {
 		os.Exit(0)
 	}

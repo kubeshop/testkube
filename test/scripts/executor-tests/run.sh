@@ -49,7 +49,7 @@ create_update_testsuite_json() { # testsuite_name testsuite_path
 
   if [ "$schedule" = true ] ; then # workaround for appending schedule
     random_minute="$(($RANDOM % 59))"
-    cat $2 | kubectl testkube --client $client --namespace $namespace $type testsuite --name $1 --schedule "$random_minute */4 * * *"
+    cat $2 | kubectl testkube --client $client --namespace $namespace $type testsuite --name $1 --schedule "$random_minute 20 3 * * *"
   else
     cat $2 | kubectl testkube --client $client --namespace $namespace $type testsuite --name $1
   fi
@@ -60,7 +60,7 @@ create_update_testsuite() { # testsuite_name testsuite_path
 
     if [ "$schedule" = true ] ; then # workaround for appending schedule
       random_minute="$(($RANDOM % 59))"
-      kubectl testkube --client $client --namespace $namespace update testsuite --name $1 --schedule "$random_minute */4 * * *"
+      kubectl testkube --client $client --namespace $namespace update testsuite --name $1 --schedule "$random_minute 20 3 * * *"
     fi
 }
 
@@ -432,6 +432,15 @@ workflow-artillery-smoke() {
   common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file"
 }
 
+workflow-curl-smoke() {
+  name="Test Workflow - Curl"
+  workflow_crd_file="test/curl/executor-tests/crd-workflow/smoke.yaml"
+  workflow_suite_name="curl-workflow-suite"
+  workflow_suite_file="test/suites/test-workflows/curl-workflow.yaml"
+
+  common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file"
+}
+
 workflow-cypress-smoke() {
   name="Test Workflow - Cypress"
   workflow_crd_file="test/cypress/executor-tests/crd-workflow/smoke.yaml"
@@ -459,6 +468,15 @@ workflow-jmeter-smoke() {
   common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file"
 }
 
+workflow-junit-smoke() {
+  name="Test Workflow - JUnit 5"
+  workflow_crd_file="test/junit/crd-workflow/smoke.yaml"
+  workflow_suite_name="junit-workflow-suite"
+  workflow_suite_file="test/suites/test-workflows/junit-workflow.yaml"
+
+  common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file"
+}
+
 workflow-k6-smoke() {
   name="Test Workflow - k6"
   workflow_crd_file="test/k6/executor-tests/crd-workflow/smoke.yaml"
@@ -468,11 +486,29 @@ workflow-k6-smoke() {
   common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file"
 }
 
+workflow-locust-smoke() {
+  name="Test Workflow - Locust"
+  workflow_crd_file="test/locust/crd-workflow/smoke.yaml"
+  workflow_suite_name="locust-workflow-suite"
+  workflow_suite_file="test/suites/test-workflows/locust-workflow.yaml"
+
+  common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file"
+}
+
 workflow-maven-smoke() {
   name="Test Workflow - Maven"
   workflow_crd_file="test/maven/executor-smoke/crd-workflow/smoke.yaml"
   workflow_suite_name="maven-workflow-suite"
   workflow_suite_file="test/suites/test-workflows/maven-workflow.yaml"
+
+  common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file"
+}
+
+workflow-nunit-smoke() {
+  name="Test Workflow - NUnit"
+  workflow_crd_file="test/nunit/crd-workflow/crd.yaml"
+  workflow_suite_name="nunit-workflow-suite"
+  workflow_suite_file="test/suites/test-workflows/nunit-workflow.yaml"
 
   common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file"
 }
@@ -491,6 +527,15 @@ workflow-postman-smoke() {
   workflow_crd_file="test/postman/executor-tests/crd-workflow/smoke.yaml"
   workflow_suite_name="postman-workflow-suite"
   workflow_suite_file="test/suites/test-workflows/postman-workflow.yaml"
+
+  common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file"
+}
+
+workflow-pytest-smoke() {
+  name="Test Workflow - Pytest"
+  workflow_crd_file="test/pytest/crd-workflow/smoke.yaml"
+  workflow_suite_name="pytest-workflow-suite"
+  workflow_suite_file="test/suites/test-workflows/pytest-workflow.yaml"
 
   common_workflow_run "$name" "$workflow_crd_file" "$workflow_suite_name" "$workflow_suite_file"
 }
@@ -526,7 +571,6 @@ main() {
       container-postman-smoke
       container-playwright-smoke
       container-soapui-smoke
-      curl-smoke
       cypress-smoke
       ginkgo-smoke
       gradle-smoke
@@ -539,14 +583,21 @@ main() {
       postman-smoke
       playwright-smoke
       soapui-smoke
+      workflow-artillery-smoke
+      workflow-curl-smoke
       workflow-cypress-smoke
       workflow-gradle-smoke
       workflow-jmeter-smoke
+      workflow-junit-smoke
       workflow-k6-smoke
+      workflow-locust-smoke
       workflow-maven-smoke
+      workflow-nunit-smoke
       workflow-playwright-smoke
       workflow-postman-smoke
+      workflow-pytest-smoke
       workflow-soapui-smoke
+      workflow-special-cases-failures
       ;;
     smoke)
       artillery-smoke
@@ -559,7 +610,6 @@ main() {
       container-postman-smoke
       container-playwright-smoke
       container-soapui-smoke
-      curl-smoke
       cypress-smoke
       ginkgo-smoke
       gradle-smoke
@@ -570,13 +620,19 @@ main() {
       playwright-smoke
       postman-smoke
       soapui-smoke
+      workflow-artillery-smoke
+      workflow-curl-smoke
       workflow-cypress-smoke
       workflow-gradle-smoke
       workflow-jmeter-smoke
+      workflow-junit-smoke
       workflow-k6-smoke
+      workflow-locust-smoke
       workflow-maven-smoke
+      workflow-nunit-smoke
       workflow-playwright-smoke
       workflow-postman-smoke
+      workflow-pytest-smoke
       workflow-soapui-smoke
       ;;
     special)
@@ -586,14 +642,21 @@ main() {
       special-cases-jmeter
       ;;
     workflow)
+      workflow-artillery-smoke
+      workflow-curl-smoke
       workflow-cypress-smoke
       workflow-gradle-smoke
       workflow-jmeter-smoke
+      workflow-junit-smoke
       workflow-k6-smoke
+      workflow-locust-smoke
       workflow-maven-smoke
+      workflow-nunit-smoke
       workflow-playwright-smoke
       workflow-postman-smoke
+      workflow-pytest-smoke
       workflow-soapui-smoke
+      workflow-special-cases-failures
       ;;
     workflow-special)
       workflow-special-cases-failures

@@ -10,6 +10,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/render"
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	tclcmd "github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/cmd"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -59,17 +60,23 @@ func printPrettyOutput(ui *ui.UI, execution testkube.TestWorkflowExecution) {
 		}
 		ui.Warn("Requested at:        ", execution.ScheduledAt.String())
 		ui.Warn("Disabled webhooks:   ", fmt.Sprint(execution.DisableWebhooks))
+		if len(execution.Tags) > 0 {
+			ui.NL()
+			ui.Warn("Tags:                ", testkube.MapToString(execution.Tags))
+		}
+		// Pro edition only (tcl protected code)
+		tclcmd.PrintRunningContext(ui, execution)
 		if execution.Result != nil && execution.Result.Status != nil {
 			ui.Warn("Status:              ", string(*execution.Result.Status))
 			if !execution.Result.QueuedAt.IsZero() {
-				ui.Warn("Queued at:          ", execution.Result.QueuedAt.String())
+				ui.Warn("Queued at:           ", execution.Result.QueuedAt.String())
 			}
 			if !execution.Result.StartedAt.IsZero() {
 				ui.Warn("Started at:          ", execution.Result.StartedAt.String())
 			}
 			if !execution.Result.FinishedAt.IsZero() {
 				ui.Warn("Finished at:         ", execution.Result.FinishedAt.String())
-				ui.Warn("Duration:            ", execution.Result.FinishedAt.Sub(execution.Result.QueuedAt).String())
+				ui.Warn("Duration:            ", execution.Result.Duration)
 			}
 		}
 	}

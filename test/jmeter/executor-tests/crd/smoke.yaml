@@ -57,10 +57,10 @@ spec:
     variables:
       URL_ENV:
         name: URL_ENV
-        value: "testkube.io"
+        value: "testkube-test-page-lipsum.pages.dev"
         type: basic
     args:
-      - "-JURL_PROPERTY=testkube.io"
+      - "-JURL_PROPERTY=testkube-test-page-lipsum.pages.dev"
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
     activeDeadlineSeconds: 180
 ---
@@ -194,10 +194,10 @@ spec:
     variables:
       URL_ENV:
         name: URL_ENV
-        value: "testkube.io"
+        value: "testkube-test-page-lipsum.pages.dev"
         type: basic
     args:
-      - "-JURL_PROPERTY=testkube.io"
+      - "-JURL_PROPERTY=testkube-test-page-lipsum.pages.dev"
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
     activeDeadlineSeconds: 180
 ---
@@ -224,13 +224,13 @@ spec:
         type: basic
       URL_ENV:
         name: URL_ENV
-        value: "testkube.io"
+        value: "testkube-test-page-lipsum.pages.dev"
         type: basic
       ANOTHER_CUSTOM_ENV:
         name: ANOTHER_CUSTOM_ENV
         value: "SOME_CUSTOM_ENV"
         type: basic
     args:
-      - "-JURL_PROPERTY=testkube.io"
+      - "-JURL_PROPERTY=testkube-test-page-lipsum.pages.dev"
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
     activeDeadlineSeconds: 180

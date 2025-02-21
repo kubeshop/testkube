@@ -7,8 +7,11 @@ metadata:
 spec:
   steps:
   - execute:
+      parallelism: 2
       workflows:
       - name: k6-workflow-smoke
       - name: k6-workflow-smoke-template
       - name: k6-workflow-smoke-template-without-checkout-step
       - name: k6-workflow-smoke-artifacts
+      - name: distributed-k6-workflow-smoke
+      - name: distributed-k6-workflow-smoke-artifacts

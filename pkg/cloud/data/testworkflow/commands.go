@@ -22,12 +22,16 @@ const (
 	CmdTestWorkflowExecutionDeleteByWorkflows        executor.Command = "workflow_execution_delete_by_workflows"
 	CmdTestWorkflowExecutionGetWorkflowMetrics       executor.Command = "workflow_execution_get_workflow_metrics"
 	CmdTestWorkflowExecutionGetNextExecutionNumber   executor.Command = "workflow_execution_get_next_execution_number"
+	CmdTestWorkflowExecutionGetExecutionTags         executor.Command = "workflow_execution_get_execution_tags"
 
 	CmdTestWorkflowOutputPresignSaveLog         executor.Command = "workflow_output_presign_save_log"
 	CmdTestWorkflowOutputPresignReadLog         executor.Command = "workflow_output_presign_read_log"
 	CmdTestWorkflowOutputHasLog                 executor.Command = "workflow_output_has_log"
 	CmdTestWorkflowOutputDeleteByTestWorkflow   executor.Command = "workflow_output_delete_by_test_workflow"
 	CmdTestworkflowOutputDeleteForTestWorkflows executor.Command = "workflow_output_delete_for_test_workflows"
+
+	CmdTestWorkflowGet         executor.Command = "workflow_get"
+	CmdTestWorkflowTemplateGet executor.Command = "workflow_template_get"
 )
 
 func command(v interface{}) executor.Command {
@@ -68,6 +72,8 @@ func command(v interface{}) executor.Command {
 		return CmdTestWorkflowExecutionGetWorkflowMetrics
 	case ExecutionGetNextExecutionNumberRequest:
 		return CmdTestWorkflowExecutionGetNextExecutionNumber
+	case ExecutionGetExecutionTagsRequest:
+		return CmdTestWorkflowExecutionGetExecutionTags
 
 	case OutputPresignSaveLogRequest:
 		return CmdTestWorkflowOutputPresignSaveLog
@@ -79,6 +85,11 @@ func command(v interface{}) executor.Command {
 		return CmdTestWorkflowOutputDeleteByTestWorkflow
 	case ExecutionDeleteOutputForTestWorkflowsRequest:
 		return CmdTestworkflowOutputDeleteForTestWorkflows
+
+	case TestWorkflowGetRequest:
+		return CmdTestWorkflowGet
+	case TestWorkflowTemplateGetRequest:
+		return CmdTestWorkflowTemplateGet
 	}
 	panic("unknown test workflows Cloud request")
 }

@@ -7,9 +7,13 @@ metadata:
 spec:
   steps:
   - execute:
+      parallelism: 2
       workflows:
       - name: playwright-workflow-smoke-v1.32.3
       - name: playwright-workflow-smoke-v1.32.3-custom-report-dir
-      - name: playwright-workflow-smoke-v1.32.3-shell
+      - name: playwright-workflow-smoke-v1.32.3-command-args
+      - name: playwright-workflow-smoke-junit
       - name: playwright-workflow-smoke-artifacts-double-asterisk
       - name: playwright-workflow-smoke-template
+      - name: distributed-playwright-workflow-smoke-artifacts
+      - name: distributed-playwright-workflow-smoke-junit

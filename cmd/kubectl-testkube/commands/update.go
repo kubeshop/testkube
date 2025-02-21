@@ -3,6 +3,7 @@ package commands
 import (
 	"github.com/spf13/cobra"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/agents"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/executors"
@@ -11,6 +12,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testsources"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testsuites"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/webhooks"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/webhooktemplates"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -38,7 +40,9 @@ func NewUpdateCmd() *cobra.Command {
 	cmd.AddCommand(testsources.UpdateTestSourceCmd())
 	cmd.AddCommand(executors.UpdateExecutorCmd())
 	cmd.AddCommand(webhooks.UpdateWebhookCmd())
+	cmd.AddCommand(webhooktemplates.UpdateWebhookTemplateCmd())
 	cmd.AddCommand(templates.UpdateTemplateCmd())
+	cmd.AddCommand(agents.NewUpdateAgentCommand())
 
 	return cmd
 }

@@ -1,0 +1,13 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: pytest-workflow-suite
+  labels:
+    core-tests: workflows-suite
+spec:
+  steps:
+  - execute:
+      parallelism: 2
+      workflows:
+      - name: pytest-workflow-smoke
+      - name: pytest-workflow-smoke-junit-success-only

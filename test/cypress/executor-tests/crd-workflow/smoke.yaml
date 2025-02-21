@@ -1,6 +1,74 @@
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
+  name: cypress-workflow-smoke-14
+  labels:
+    core-tests: workflows
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: cypress-14-project-and-cleanup # TODO: update before merge
+      paths:
+      - test/cypress/executor-tests/cypress-14
+  container:
+    resources:
+      requests:
+        cpu: 2
+        memory: 2Gi
+    workingDir: /data/repo/test/cypress/executor-tests/cypress-14
+  steps:
+  - name: Run tests
+    run:
+      image: cypress/included:14.0.3
+      args:
+      - --env
+      - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+      - --config
+      - '{"screenshotsFolder":"/data/artifacts/screenshots","videosFolder":"/data/artifacts/videos"}'
+      env:
+      - name: CYPRESS_CUSTOM_ENV
+        value: CYPRESS_CUSTOM_ENV_value
+    steps:
+    - name: Saving artifacts
+      workingDir: /data/artifacts
+      artifacts:
+        paths:
+        - '**/*'
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: cypress-workflow-smoke-14-template
+  labels:
+    core-tests: workflows
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: cypress-14-project-and-cleanup # TODO: update before merge
+      paths:
+      - test/cypress/executor-tests/cypress-14
+  container:
+    resources:
+      requests:
+        cpu: 2
+        memory: 2Gi
+    workingDir: /data/repo/test/cypress/executor-tests/cypress-14
+    env:
+    - name: CYPRESS_CUSTOM_ENV
+      value: CYPRESS_CUSTOM_ENV_value
+  steps:
+  - name: Run from template
+    template:
+      name: official/cypress/v1
+      config:
+        version: 14.0.3
+        run: "npx cypress run --env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value --config '{\"screenshotsFolder\":\"/data/artifacts/screenshots\",\"videosFolder\":\"/data/artifacts/videos\"}'"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
   name: cypress-workflow-smoke-13
   labels:
     core-tests: workflows
@@ -35,9 +103,6 @@ spec:
       artifacts:
         paths:
         - '**/*'
-  events:
-  - cronjob:
-      cron: "1 */4 * * *"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -76,9 +141,6 @@ spec:
       artifacts:
         paths:
         - '**/*'
-  events:
-  - cronjob:
-      cron: "2 */4 * * *"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -114,9 +176,6 @@ spec:
     artifacts:
       paths:
       - '**/*'
-  events:
-  - cronjob:
-      cron: "3 */4 * * *"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -134,6 +193,8 @@ spec:
     env:
     - name: CYPRESS_CUSTOM_ENV # currently only possible on this level
       value: "CYPRESS_CUSTOM_ENV_value"
+    - name: UV_USE_IO_URING # workaround for NPM being stuck
+      value: "0"
   content:
     git:
       uri: https://github.com/kubeshop/testkube
@@ -148,9 +209,6 @@ spec:
       config:
         version: 13.5.0
         run: "npx cypress run --env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value --config '{\"screenshotsFolder\":\"/data/artifacts/screenshots\",\"videosFolder\":\"/data/artifacts/videos\"}'"
-  events:
-  - cronjob:
-      cron: "4 */4 * * *"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -168,6 +226,8 @@ spec:
     env:
     - name: CYPRESS_CUSTOM_ENV # currently only possible on this level
       value: "CYPRESS_CUSTOM_ENV_value"
+    - name: UV_USE_IO_URING # workaround for NPM being stuck
+      value: "0"
   steps:
   - name: Run from template
     content:
@@ -182,9 +242,6 @@ spec:
       config:
         version: 13.5.0
         run: "npx cypress run --env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value --config '{\"screenshotsFolder\":\"/data/artifacts/screenshots\",\"videosFolder\":\"/data/artifacts/videos\"}'"
-  events:
-  - cronjob:
-      cron: "5 */4 * * *"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -202,6 +259,8 @@ spec:
     env:
     - name: CYPRESS_CUSTOM_ENV # currently only possible on this level
       value: "CYPRESS_CUSTOM_ENV_value"
+    - name: UV_USE_IO_URING # workaround for NPM being stuck
+      value: "0"
   steps:
   - name: Run cypress test
     content:
@@ -218,9 +277,6 @@ spec:
         config:
           version: 13.5.0
           run: "npx cypress run --env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value --config '{\"screenshotsFolder\":\"/data/artifacts/screenshots\",\"videosFolder\":\"/data/artifacts/videos\"}'"
-  events:
-  - cronjob:
-      cron: "6 */4 * * *"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -259,9 +315,6 @@ spec:
       artifacts:
         paths:
         - '**/*'
-  events:
-  - cronjob:
-      cron: "7 */4 * * *"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -304,9 +357,6 @@ spec:
       artifacts:
         paths:
         - '**/*'
-  events:
-  - cronjob:
-      cron: "8 */4 * * *"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -327,7 +377,7 @@ spec:
   steps:
   - name: Run tests
     parallel:
-      maxCount: 3
+      maxCount: 2
       shards:
         testFiles: 'glob("cypress/e2e/**/*.js")'
       description: '{{ join(map(shard.testFiles, "relpath(_.value, \"cypress/e2e\")"), ", ") }}'
@@ -355,14 +405,11 @@ spec:
       workingDir: /data/artifacts
       paths:
       - '**/*'
-  events:
-  - cronjob:
-      cron: "10 */4 * * *"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: cypress-workflow-smoke-matrix
+  name: cypress-workflow-smoke-matrix-junit
   labels:
     core-tests: workflows
 spec:
@@ -407,6 +454,3 @@ spec:
       workingDir: /data/artifacts
       paths:
       - '**/*'
-  events:
-  - cronjob:
-      cron: "12 */4 * * *"

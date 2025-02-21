@@ -21,7 +21,7 @@ func NewLoginCmd() *cobra.Command {
 
 			common.ProcessMasterFlags(cmd, &opts, &cfg)
 
-			token, refreshToken, err := common.LoginUser(opts.Master.URIs.Auth)
+			token, refreshToken, err := common.LoginUser(opts.Master.URIs.Auth, opts.Master.CustomAuth)
 			ui.ExitOnError("getting token", err)
 
 			orgID := opts.Master.OrgId
@@ -36,7 +36,7 @@ func NewLoginCmd() *cobra.Command {
 				ui.ExitOnError("getting environment", err)
 			}
 
-			err = common.PopulateLoginDataToContext(orgID, envID, token, refreshToken, opts, cfg)
+			err = common.PopulateLoginDataToContext(orgID, envID, token, refreshToken, "", opts, cfg)
 			ui.ExitOnError("saving config file", err)
 
 			ui.Success("Your config was updated with new values")
@@ -45,7 +45,7 @@ func NewLoginCmd() *cobra.Command {
 		},
 	}
 
-	common.PopulateMasterFlags(cmd, &opts)
+	common.PopulateMasterFlags(cmd, &opts, false)
 
 	return cmd
 }

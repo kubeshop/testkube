@@ -1,6 +1,7 @@
 package telemetry
 
 import (
+	"os"
 	"runtime"
 	"strings"
 
@@ -8,7 +9,9 @@ import (
 	"github.com/kubeshop/testkube/pkg/utils/text"
 )
 
-const runContextAgent = "agent"
+const (
+	runContextAgent = "agent"
+)
 
 type Params struct {
 	ErrorCode                  string     `json:"error_code,omitempty"`
@@ -85,9 +88,10 @@ type RunParams struct {
 }
 
 type RunContext struct {
-	Type           string
-	OrganizationId string
-	EnvironmentId  string
+	Type               string
+	OrganizationId     string
+	EnvironmentId      string
+	DockerImageVersion string
 }
 
 type WorkflowParams struct {
@@ -340,13 +344,14 @@ func AnonymizeHost(host string) string {
 func getAgentContext() RunContext {
 	orgID := utils.GetEnvVarWithDeprecation("TESTKUBE_PRO_ORG_ID", "TESTKUBE_CLOUD_ORG_ID", "")
 	envID := utils.GetEnvVarWithDeprecation("TESTKUBE_PRO_ENV_ID", "TESTKUBE_CLOUD_ENV_ID", "")
-
+	dockerImageVersion := os.Getenv("TESTKUBE_DOCKER_IMAGE_VERSION")
 	if orgID == "" || envID == "" {
 		return RunContext{}
 	}
 	return RunContext{
-		Type:           runContextAgent,
-		EnvironmentId:  envID,
-		OrganizationId: orgID,
+		Type:               runContextAgent,
+		EnvironmentId:      envID,
+		OrganizationId:     orgID,
+		DockerImageVersion: dockerImageVersion,
 	}
 }

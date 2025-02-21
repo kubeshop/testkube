@@ -10,45 +10,29 @@ package checktcl
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/pkg/errors"
-	"google.golang.org/grpc"
 
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/cloud"
-	cloudconfig "github.com/kubeshop/testkube/pkg/cloud/data/config"
-	"github.com/kubeshop/testkube/pkg/cloud/data/executor"
 )
 
 type SubscriptionChecker struct {
-	proContext config.ProContext
-	orgPlan    OrganizationPlan
+	orgPlan OrganizationPlan
 }
 
 // NewSubscriptionChecker creates a new subscription checker using the agent token
-func NewSubscriptionChecker(ctx context.Context, proContext config.ProContext, cloudClient cloud.TestKubeCloudAPIClient, grpcConn *grpc.ClientConn) (SubscriptionChecker, error) {
-	executor := executor.NewCloudGRPCExecutor(cloudClient, grpcConn, proContext.APIKey)
-
-	req := GetOrganizationPlanRequest{}
-	response, err := executor.Execute(ctx, cloudconfig.CmdConfigGetOrganizationPlan, req)
-	if err != nil {
-		return SubscriptionChecker{}, err
+func NewSubscriptionChecker(ctx context.Context, proContext config.ProContext, cloudClient cloud.TestKubeCloudAPIClient) (SubscriptionChecker, error) {
+	if cloudClient == nil {
+		return SubscriptionChecker{}, nil
 	}
-
-	var commandResponse GetOrganizationPlanResponse
-	if err := json.Unmarshal(response, &commandResponse); err != nil {
-		return SubscriptionChecker{}, err
-	}
-
 	subscription := OrganizationPlan{
-		TestkubeMode: OrganizationPlanTestkubeMode(commandResponse.TestkubeMode),
-		IsTrial:      commandResponse.IsTrial,
-		PlanStatus:   PlanStatus(commandResponse.PlanStatus),
+		TestkubeMode: OrganizationPlanTestkubeMode(proContext.Mode),
+		IsTrial:      proContext.IsTrial,
+		PlanStatus:   proContext.Status,
 	}
-
-	return SubscriptionChecker{proContext: proContext, orgPlan: subscription}, nil
+	return SubscriptionChecker{orgPlan: subscription}, nil
 }
 
 // GetCurrentOrganizationPlan returns current organization plan

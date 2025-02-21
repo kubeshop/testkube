@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	nethttp "net/http"
+	"net/url"
+	"strings"
 
 	"github.com/kubeshop/testkube/pkg/http"
 )
@@ -15,18 +17,19 @@ type ListResponse[T All] struct {
 }
 
 type All interface {
-	Organization | Environment
+	Organization | Environment | Agent | AgentInput
 }
 
-type RESTClient[T All] struct {
+type RESTClient[I All, O All] struct {
 	BaseUrl string
 	Path    string
 	Client  http.HttpClient
 	Token   string
 }
 
-func (c RESTClient[T]) List() ([]T, error) {
-	r, err := nethttp.NewRequest("GET", c.BaseUrl+c.Path, nil)
+func (c RESTClient[I, O]) List() ([]O, error) {
+	path := c.Path
+	r, err := nethttp.NewRequest(nethttp.MethodGet, c.BaseUrl+path, nil)
 	r.Header.Add("Authorization", "Bearer "+c.Token)
 	if err != nil {
 		return nil, err
@@ -37,14 +40,55 @@ func (c RESTClient[T]) List() ([]T, error) {
 	}
 	defer resp.Body.Close()
 
-	var orgsResponse ListResponse[T]
+	if resp.StatusCode >= 400 {
+		d, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("error getting %s: can't read response: %s", c.Path, err)
+		}
+		return nil, fmt.Errorf("error getting %s: %s", path, d)
+	}
+
+	var orgsResponse ListResponse[O]
 	err = json.NewDecoder(resp.Body).Decode(&orgsResponse)
 	return orgsResponse.Elements, err
 }
 
-func (c RESTClient[T]) Get(id string) (e T, err error) {
+func (c RESTClient[I, O]) ListWithQuery(query map[string]string) ([]O, error) {
+	path := c.Path
+	qs := ""
+	if len(query) > 0 {
+		q := make([]string, len(query))
+		for k, v := range query {
+			q = append(q, fmt.Sprintf("%s=%s", url.QueryEscape(k), url.QueryEscape(v)))
+		}
+		qs = "?" + strings.Join(q, "&")
+	}
+	r, err := nethttp.NewRequest(nethttp.MethodGet, c.BaseUrl+path+qs, nil)
+	r.Header.Add("Authorization", "Bearer "+c.Token)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := c.Client.Do(r)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode >= 400 {
+		d, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("error getting %s: can't read response: %s", c.Path, err)
+		}
+		return nil, fmt.Errorf("error getting %s: %s", path, d)
+	}
+
+	var orgsResponse ListResponse[O]
+	err = json.NewDecoder(resp.Body).Decode(&orgsResponse)
+	return orgsResponse.Elements, err
+}
+
+func (c RESTClient[I, O]) Get(id string) (e O, err error) {
 	path := c.BaseUrl + c.Path + "/" + id
-	req, err := nethttp.NewRequest("GET", path, nil)
+	req, err := nethttp.NewRequest(nethttp.MethodGet, path, nil)
 	req.Header.Add("Authorization", "Bearer "+c.Token)
 	if err != nil {
 		return e, err
@@ -58,7 +102,7 @@ func (c RESTClient[T]) Get(id string) (e T, err error) {
 	if resp.StatusCode > 299 {
 		d, err := io.ReadAll(resp.Body)
 		if err != nil {
-			return e, fmt.Errorf("error creating %s: can't read response: %s", c.Path, err)
+			return e, fmt.Errorf("error getting %s: can't read response: %s", c.Path, err)
 		}
 		return e, fmt.Errorf("error getting %s: %s", path, d)
 	}
@@ -67,7 +111,7 @@ func (c RESTClient[T]) Get(id string) (e T, err error) {
 	return
 }
 
-func (c RESTClient[T]) Create(entity T, overridePath ...string) (e T, err error) {
+func (c RESTClient[I, O]) Create(entity I, overridePath ...string) (e O, err error) {
 	d, err := json.Marshal(entity)
 	if err != nil {
 		return e, err
@@ -78,7 +122,7 @@ func (c RESTClient[T]) Create(entity T, overridePath ...string) (e T, err error)
 		path = overridePath[0]
 	}
 
-	r, err := nethttp.NewRequest("POST", c.BaseUrl+path, bytes.NewBuffer(d))
+	r, err := nethttp.NewRequest(nethttp.MethodPost, c.BaseUrl+path, bytes.NewBuffer(d))
 	if err != nil {
 		return e, err
 	}
@@ -105,4 +149,67 @@ func (c RESTClient[T]) Create(entity T, overridePath ...string) (e T, err error)
 	}
 
 	return e, nil
+}
+
+func (c RESTClient[I, O]) Patch(id string, entity I, overridePath ...string) (err error) {
+	d, err := json.Marshal(entity)
+	if err != nil {
+		return err
+	}
+
+	path := c.Path
+	if len(overridePath) == 1 {
+		path = overridePath[0]
+	}
+
+	r, err := nethttp.NewRequest(nethttp.MethodPatch, c.BaseUrl+path+"/"+id, bytes.NewBuffer(d))
+	if err != nil {
+		return err
+	}
+	r.Header.Add("Content-type", "application/json")
+	r.Header.Add("Authorization", "Bearer "+c.Token)
+
+	resp, err := c.Client.Do(r)
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode > 299 {
+		d, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return fmt.Errorf("error updating %s: can't read response: %s", c.Path, err)
+		}
+		return fmt.Errorf("error updating %s: %s", c.Path, d)
+	}
+
+	return nil
+}
+
+func (c RESTClient[I, O]) Delete(id string, overridePath ...string) (err error) {
+	path := c.Path + "/" + id
+	if len(overridePath) == 1 {
+		path = overridePath[0]
+	}
+
+	r, err := nethttp.NewRequest(nethttp.MethodDelete, c.BaseUrl+path, nil)
+	if err != nil {
+		return err
+	}
+	r.Header.Add("Content-type", "application/json")
+	r.Header.Add("Authorization", "Bearer "+c.Token)
+
+	resp, err := c.Client.Do(r)
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode >= 400 {
+		d, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return fmt.Errorf("error deleting %s: can't read response: %s", c.Path, err)
+		}
+		return fmt.Errorf("error creating %s: %s", c.Path, d)
+	}
+
+	return nil
 }

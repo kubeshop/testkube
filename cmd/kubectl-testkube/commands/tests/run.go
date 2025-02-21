@@ -25,7 +25,7 @@ func NewRunTestCmd() *cobra.Command {
 		image                              string
 		iterations                         int
 		watchEnabled                       bool
-		executorArgs                       []string
+		binaryArgs                         []string
 		variables                          []string
 		secretVariables                    []string
 		variablesFile                      string
@@ -114,6 +114,9 @@ func NewRunTestCmd() *cobra.Command {
 
 			variables, err := common.CreateVariables(cmd, !info.SecretConfig().AutoCreate)
 			ui.WarnOnErrorAndOutputPretty("getting variables", outputPretty, err)
+
+			executorArgs, err := testkube.PrepareExecutorArgs(binaryArgs)
+			ui.ExitOnError("getting args", err)
 
 			envConfigMaps, envSecrets, err := newEnvReferencesFromFlags(cmd)
 			ui.WarnOnErrorAndOutputPretty("getting env config maps and secrets", outputPretty, err)
@@ -412,19 +415,19 @@ func NewRunTestCmd() *cobra.Command {
 	cmd.Flags().StringArrayVarP(&variables, "variable", "v", []string{}, "execution variable passed to executor")
 	cmd.Flags().StringArrayVarP(&secretVariables, "secret-variable", "s", []string{}, "execution secret variable passed to executor")
 	cmd.Flags().StringArrayVar(&command, "command", []string{}, "command passed to image in executor")
-	cmd.Flags().StringArrayVarP(&executorArgs, "args", "", []string{}, "executor binary additional arguments")
+	cmd.Flags().StringArrayVarP(&binaryArgs, "args", "", []string{}, "executor binary additional arguments")
 	cmd.Flags().StringVarP(&argsMode, "args-mode", "", "append", "usage mode for argumnets. one of append|override|replace")
 	cmd.Flags().BoolVarP(&watchEnabled, "watch", "f", false, "watch for changes after start")
 	cmd.Flags().StringVar(&downloadDir, "download-dir", "artifacts", "download dir")
 	cmd.Flags().BoolVarP(&downloadArtifactsEnabled, "download-artifacts", "d", false, "download artifacts automatically")
 	cmd.Flags().StringToStringVarP(&envs, "env", "", map[string]string{}, "envs in a form of name1=val1 passed to executor")
 	cmd.Flags().StringToStringVarP(&secretEnvs, "secret", "", map[string]string{}, "secret envs in a form of secret_key1=secret_name1 passed to executor")
-	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label key value pair: --label key1=value1")
+	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label is used to select tests to run using key value pair: --label key1=value1 or label expression")
 	cmd.Flags().IntVar(&concurrencyLevel, "concurrency", 10, "concurrency level for multiple test execution")
 	cmd.Flags().IntVar(&iterations, "iterations", 1, "how many times to run the test")
 	cmd.Flags().StringVar(&httpProxy, "http-proxy", "", "http proxy for executor containers")
 	cmd.Flags().StringVar(&httpsProxy, "https-proxy", "", "https proxy for executor containers")
-	cmd.Flags().StringToStringVarP(&executionLabels, "execution-label", "", nil, "execution-label key value pair: --execution-label key1=value1")
+	cmd.Flags().StringToStringVarP(&executionLabels, "execution-label", "", nil, "execution-label adds a label to execution in form of key value pair: --execution-label key1=value1")
 	cmd.Flags().StringToStringVarP(&secretVariableReferences, "secret-variable-reference", "", nil, "secret variable references in a form name1=secret_name1=secret_key1")
 	cmd.Flags().StringArrayVarP(&copyFiles, "copy-files", "", []string{}, "file path mappings from host to pod of form source:destination")
 	cmd.Flags().StringVar(&artifactStorageClassName, "artifact-storage-class-name", "", "artifact storage class name for container executor")

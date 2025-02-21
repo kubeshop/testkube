@@ -32,7 +32,7 @@ func GetTestNATSEmitter() *Emitter {
 	if err != nil {
 		panic(err)
 	}
-	return NewEmitter(bus.NewNATSBus(nc), "", nil)
+	return NewEmitter(bus.NewNATSBus(nc), "")
 }
 
 func TestEmitter_NATS_Register_Integration(t *testing.T) {

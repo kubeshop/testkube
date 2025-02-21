@@ -23,6 +23,7 @@ const maxPortNumber = 65535
 func NewDashboardCmd() *cobra.Command {
 	var namespace string
 	var verbose bool
+	var skipBrowser bool
 
 	cmd := &cobra.Command{
 		Use:     "dashboard",
@@ -33,16 +34,16 @@ func NewDashboardCmd() *cobra.Command {
 			cfg, err := config.Load()
 			ui.ExitOnError("loading config file", err)
 
-			if namespace == "" {
-				namespace = cfg.Namespace
+			if namespace != "" {
+				cfg.Namespace = namespace
 			}
 
 			if cfg.ContextType != config.ContextTypeCloud {
 				isDashboardRunning, _ := k8sclient.IsPodOfServiceRunning(context.Background(), cfg.Namespace, config.EnterpriseUiName)
 				if isDashboardRunning {
-					openOnPremDashboard(cmd, cfg, verbose, "")
+					openOnPremDashboard(cmd, cfg, verbose, skipBrowser, "")
 				} else {
-					ui.Warn("No dashboard found. Is it running in the " + namespace + " namespace?")
+					ui.Warn("No dashboard found. Is it running in the " + cfg.Namespace + " namespace?")
 				}
 			} else {
 				openCloudDashboard(cfg)
@@ -52,6 +53,7 @@ func NewDashboardCmd() *cobra.Command {
 
 	cmd.Flags().BoolVarP(&verbose, "verbose", "", false, "show additional debug messages")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "Namespace to install "+demoInstallationName)
+	cmd.Flags().BoolVarP(&skipBrowser, "skip-browser", "", false, "skip opening dashboard in the browser, only for on-premise installation")
 
 	return cmd
 }
@@ -63,42 +65,49 @@ func openCloudDashboard(cfg config.Data) {
 	ui.PrintOnError("openning dashboard", err)
 }
 
-func openOnPremDashboard(cmd *cobra.Command, cfg config.Data, verbose bool, license string) {
+func openOnPremDashboard(cmd *cobra.Command, cfg config.Data, verbose, skipBrowser bool, license string) {
 	uiLocalPort, err := getDashboardLocalPort(config.EnterpriseApiForwardingPort)
 	ui.PrintOnError("getting an ui forwarding available port", err)
 	uri := fmt.Sprintf("http://localhost:%d", uiLocalPort)
 
 	ctx, cancel := context.WithCancel(context.Background())
+
+	ui.Debug("Port forwarding for api", config.EnterpriseApiName)
 	err = k8sclient.PortForward(ctx, cfg.Namespace, config.EnterpriseApiName, config.EnterpriseApiPort, config.EnterpriseApiForwardingPort, verbose)
 	if err != nil {
 		sendErrTelemetry(cmd, cfg, "port_forward", license, "port forwarding api", err)
 	}
 	ui.ExitOnError("port forwarding api", err)
+	ui.Debug("Port forwarding for ui", config.EnterpriseUiName)
 	err = k8sclient.PortForward(ctx, cfg.Namespace, config.EnterpriseUiName, config.EnterpriseUiPort, uiLocalPort, verbose)
 	if err != nil {
 		sendErrTelemetry(cmd, cfg, "port_forward", license, "port forwarding ui", err)
 	}
 	ui.ExitOnError("port forwarding ui", err)
+	ui.Debug("Port forwarding for dex", config.EnterpriseDexName)
 	err = k8sclient.PortForward(ctx, cfg.Namespace, config.EnterpriseDexName, config.EnterpriseDexPort, config.EnterpriseDexForwardingPort, verbose)
 	if err != nil {
 		sendErrTelemetry(cmd, cfg, "port_forward", license, "port forwarding dex", err)
 	}
 	ui.ExitOnError("port forwarding dex", err)
-
+	ui.Debug("Port forwarding for minio", config.EnterpriseMinioName)
 	err = k8sclient.PortForward(ctx, cfg.Namespace, config.EnterpriseMinioName, config.EnterpriseMinioPort, config.EnterpriseMinioPortFrwardingPort, verbose)
 	if err != nil {
 		sendTelemetry(cmd, cfg, license, "port forwarding minio")
 	}
 	ui.ExitOnError("port forwarding minio", err)
 
-	err = open.Run(uri)
-	if err != nil {
-		sendErrTelemetry(cmd, cfg, "open_dashboard", license, "opening dashboard", err)
+	if !skipBrowser {
+		ui.Debug("Opening dashboard in browser", uri)
+		err = open.Run(uri)
+		if err != nil {
+			sendErrTelemetry(cmd, cfg, "open_dashboard", license, "opening dashboard", err)
+		}
+
+		ui.ExitOnError("opening dashboard in browser", err)
+
+		sendTelemetry(cmd, cfg, license, "dashbboard opened successfully")
 	}
-
-	ui.ExitOnError("opening dashboard in browser", err)
-
-	sendTelemetry(cmd, cfg, license, "dashbboard opened successfully")
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)

@@ -7,5 +7,6 @@ metadata:
 spec:
   steps:
   - execute:
+      parallelism: 2
       workflows:
       - name: soapui-workflow-smoke

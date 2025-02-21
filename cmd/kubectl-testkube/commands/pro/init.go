@@ -8,6 +8,7 @@ import (
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
+	commonint "github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -15,6 +16,8 @@ import (
 func NewInitCmd() *cobra.Command {
 	var export bool
 	var noLogin bool // ignore ask for login
+	var setOptions, argOptions map[string]string
+
 	options := common.HelmOptions{
 		NoMinio: true,
 		NoMongo: true,
@@ -55,6 +58,9 @@ func NewInitCmd() *cobra.Command {
 				ui.Warn("Please be sure you're on valid kubectl context before continuing!")
 				ui.NL()
 
+				ui.NL()
+				ui.H2("Running Kubectl command...")
+				ui.NL()
 				currentContext, cliErr := common.GetCurrentKubernetesContext()
 				if cliErr != nil {
 					sendErrTelemetry(cmd, cfg, "k8s_context", err)
@@ -71,7 +77,9 @@ func NewInitCmd() *cobra.Command {
 				}
 			}
 
-			spinner := ui.NewSpinner("Installing Testkube")
+			spinner := ui.NewSpinner("Running Helm command...")
+			options.SetOptions = setOptions
+			options.ArgOptions = argOptions
 			if cliErr := common.HelmUpgradeOrInstallTestkubeAgent(options, cfg, false); cliErr != nil {
 				spinner.Fail()
 				sendErrTelemetry(cmd, cfg, "helm_install", cliErr)
@@ -84,7 +92,11 @@ func NewInitCmd() *cobra.Command {
 
 			if noLogin {
 				ui.Alert("Saving Testkube CLI Pro context, you need to authorize CLI through `testkube set context` later")
-				common.PopulateCloudConfig(cfg, "", &options)
+				cfg = common.PopulateCloudConfig(cfg, "", commonint.Ptr(""), &options)
+
+				err = config.Save(cfg)
+				ui.ExitOnError("saving config file", err)
+
 				ui.Info(" Happy Testing! 🚀")
 				ui.NL()
 				return
@@ -93,11 +105,14 @@ func NewInitCmd() *cobra.Command {
 			ui.H2("Saving Testkube CLI Pro context")
 			var token, refreshToken string
 			if !common.IsUserLoggedIn(cfg, options) {
-				token, refreshToken, err = common.LoginUser(options.Master.URIs.Auth)
+				ui.NL()
+				ui.H2("Launching web browser...")
+				ui.NL()
+				token, refreshToken, err = common.LoginUser(options.Master.URIs.Auth, options.Master.CustomAuth)
 				sendErrTelemetry(cmd, cfg, "login", err)
 				ui.ExitOnError("user login", err)
 			}
-			err = common.PopulateLoginDataToContext(options.Master.OrgId, options.Master.EnvId, token, refreshToken, options, cfg)
+			err = common.PopulateLoginDataToContext(options.Master.OrgId, options.Master.EnvId, token, refreshToken, "", options, cfg)
 			if err != nil {
 				sendErrTelemetry(cmd, cfg, "setting_context", err)
 				ui.ExitOnError("Setting Pro environment context", err)
@@ -108,12 +123,14 @@ func NewInitCmd() *cobra.Command {
 	}
 
 	common.PopulateHelmFlags(cmd, &options)
-	common.PopulateMasterFlags(cmd, &options)
+	common.PopulateMasterFlags(cmd, &options, false)
 
 	cmd.Flags().BoolVarP(&noLogin, "no-login", "", false, "Ignore login prompt, set existing token later by `testkube set context`")
 	cmd.Flags().BoolVarP(&export, "export", "", false, "Export the values.yaml")
 	cmd.Flags().BoolVar(&options.MultiNamespace, "multi-namespace", false, "multi namespace mode")
 	cmd.Flags().BoolVar(&options.NoOperator, "no-operator", false, "should operator be installed (for more instances in multi namespace mode it should be set to true)")
+	cmd.Flags().StringToStringVarP(&setOptions, "helm-set", "", nil, "helm set option in form of key=value")
+	cmd.Flags().StringToStringVarP(&argOptions, "helm-arg", "", nil, "helm arg option in form of key=value")
 
 	return cmd
 }

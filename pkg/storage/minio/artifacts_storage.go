@@ -28,7 +28,8 @@ func (c *ArtifactClient) DownloadFile(ctx context.Context, file, executionId, te
 }
 
 // DownloadArrchive downloads archive from bucket from the config
-func (c *ArtifactClient) DownloadArchive(ctx context.Context, executionId string, masks []string) (io.Reader, error) {
+func (c *ArtifactClient) DownloadArchive(ctx context.Context, executionId string,
+	testName, testSuiteName, testWorkflowName string, masks []string) (io.Reader, error) {
 	return c.client.DownloadArchive(ctx, executionId, masks)
 }
 

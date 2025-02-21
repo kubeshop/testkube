@@ -68,12 +68,21 @@ func (a ActionList) Result(ref, expression string) ActionList {
 	return append(a, Action{Result: &lite.ActionResult{Ref: ref, Value: expression}})
 }
 
-func (a ActionList) Execute(ref string, negative bool) ActionList {
-	return append(a, Action{Execute: &lite.ActionExecute{Ref: ref, Negative: negative}})
+func (a ActionList) Execute(ref string, negative, pure bool) ActionList {
+	return append(a, Action{Execute: &lite.ActionExecute{Ref: ref, Negative: negative, Pure: pure}})
 }
 
 func (a ActionList) MutateContainer(ref string, config testworkflowsv1.ContainerConfig) ActionList {
 	return append(a, Action{Container: &ActionContainer{Ref: ref, Config: config}})
+}
+
+func (a ActionList) Image() string {
+	for i := range a {
+		if a[i].Container != nil {
+			return a[i].Container.Config.Image
+		}
+	}
+	return ""
 }
 
 type ActionGroups []ActionList

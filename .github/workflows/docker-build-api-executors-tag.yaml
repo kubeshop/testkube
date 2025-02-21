@@ -5,7 +5,7 @@ on:
       - "v[0-9]+.[0-9]+.[0-9]+"
 
 env:
-  ALPINE_IMAGE: alpine:3.20.0
+  ALPINE_IMAGE: alpine:3.20.3
   BUSYBOX_IMAGE: busybox:1.36.1-musl
 
 permissions:
@@ -13,20 +13,23 @@ permissions:
 
 jobs:
   api:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - uses: sigstore/cosign-installer@v3.6.0
-      - uses: anchore/sbom-action/download-syft@v0.17.0
+      - uses: sigstore/cosign-installer@v3.7.0
+      - uses: anchore/sbom-action/download-syft@v0.17.7
 
       - name: Set up Docker Buildx
         id: buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Set up QEMU
+      - name: Setup QEMU
         uses: docker/setup-qemu-action@v3
+        # https://github.com/ptr727/NxWitness/issues/191
+        with:
+          image: tonistiigi/binfmt:qemu-v7.0.0-28
 
       - name: Set-up Go
         uses: actions/setup-go@v5
@@ -88,20 +91,23 @@ jobs:
             repository: testkube-tw-init
           - service: testworkflow-toolkit
             repository: testkube-tw-toolkit
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - uses: sigstore/cosign-installer@v3.6.0
-      - uses: anchore/sbom-action/download-syft@v0.17.0
+      - uses: sigstore/cosign-installer@v3.7.0
+      - uses: anchore/sbom-action/download-syft@v0.17.7
 
       - name: Set up Docker Buildx
         id: buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Set up QEMU
+      - name: Setup QEMU
         uses: docker/setup-qemu-action@v3
+        # https://github.com/ptr727/NxWitness/issues/191
+        with:
+          image: tonistiigi/binfmt:qemu-v7.0.0-28
 
       - name: Set-up Go
         uses: actions/setup-go@v5
@@ -165,23 +171,26 @@ jobs:
               zap,
           ]
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
-      - name: Free Disk Space (Ubuntu)
-        uses: jlumbroso/free-disk-space@main
-        with:
-          # this might remove tools that are actually needed,
-          # if set to "true" but frees about 6 GB
-          tool-cache: false
+#      - name: Free Disk Space (Ubuntu)
+#        uses: jlumbroso/free-disk-space@main
+#        with:
+#          # this might remove tools that are actually needed,
+#          # if set to "true" but frees about 6 GB
+#          tool-cache: false
 
       - name: Checkout
         uses: actions/checkout@v4
 
-      - uses: sigstore/cosign-installer@v3.6.0
-      - uses: anchore/sbom-action/download-syft@v0.17.0
+      - uses: sigstore/cosign-installer@v3.7.0
+      - uses: anchore/sbom-action/download-syft@v0.17.7
 
-      - name: Set up QEMU
+      - name: Setup QEMU
         uses: docker/setup-qemu-action@v3
+        # https://github.com/ptr727/NxWitness/issues/191
+        with:
+          image: tonistiigi/binfmt:qemu-v7.0.0-28
 
       - name: Set up Docker Buildx
         id: buildx
@@ -236,23 +245,26 @@ jobs:
           BUSYBOX_IMAGE: ${{ env.BUSYBOX_IMAGE }}
 
   executor_jmeter:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
-      - name: Free Disk Space (Ubuntu)
-        uses: jlumbroso/free-disk-space@main
-        with:
-          # this might remove tools that are actually needed,
-          # if set to "true" but frees about 6 GB
-          tool-cache: false
+#      - name: Free Disk Space (Ubuntu)
+#        uses: jlumbroso/free-disk-space@main
+#        with:
+#          # this might remove tools that are actually needed,
+#          # if set to "true" but frees about 6 GB
+#          tool-cache: false
 
       - name: Checkout
         uses: actions/checkout@v4
 
-      - uses: sigstore/cosign-installer@v3.6.0
-      - uses: anchore/sbom-action/download-syft@v0.17.0
+      - uses: sigstore/cosign-installer@v3.7.0
+      - uses: anchore/sbom-action/download-syft@v0.17.7
 
-      - name: Set up QEMU
+      - name: Setup QEMU
         uses: docker/setup-qemu-action@v3
+        # https://github.com/ptr727/NxWitness/issues/191
+        with:
+          image: tonistiigi/binfmt:qemu-v7.0.0-28
 
       - name: Set up Docker Buildx
         id: buildx
@@ -304,23 +316,26 @@ jobs:
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
 
   executor_jmeterd:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
-      - name: Free Disk Space (Ubuntu)
-        uses: jlumbroso/free-disk-space@main
-        with:
-          # this might remove tools that are actually needed,
-          # if set to "true" but frees about 6 GB
-          tool-cache: false
+#      - name: Free Disk Space (Ubuntu)
+#        uses: jlumbroso/free-disk-space@main
+#        with:
+#          # this might remove tools that are actually needed,
+#          # if set to "true" but frees about 6 GB
+#          tool-cache: false
 
       - name: Checkout
         uses: actions/checkout@v4
 
-      - uses: sigstore/cosign-installer@v3.6.0
-      - uses: anchore/sbom-action/download-syft@v0.17.0
+      - uses: sigstore/cosign-installer@v3.7.0
+      - uses: anchore/sbom-action/download-syft@v0.17.7
 
-      - name: Set up QEMU
+      - name: Setup QEMU
         uses: docker/setup-qemu-action@v3
+        # https://github.com/ptr727/NxWitness/issues/191
+        with:
+          image: tonistiigi/binfmt:qemu-v7.0.0-28
 
       - name: Set up Docker Buildx
         id: buildx
@@ -374,20 +389,23 @@ jobs:
           GOARCH: ${{ matrix.GOARCH }}
 
   jmeterd_slave:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
-      - name: Free Disk Space (Ubuntu)
-        uses: jlumbroso/free-disk-space@main
-        with:
-          # this might remove tools that are actually needed,
-          # if set to "true" but frees about 6 GB
-          tool-cache: false
+#      - name: Free Disk Space (Ubuntu)
+#        uses: jlumbroso/free-disk-space@main
+#        with:
+#          # this might remove tools that are actually needed,
+#          # if set to "true" but frees about 6 GB
+#          tool-cache: false
 
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up QEMU
+      - name: Setup QEMU
         uses: docker/setup-qemu-action@v3
+        # https://github.com/ptr727/NxWitness/issues/191
+        with:
+          image: tonistiigi/binfmt:qemu-v7.0.0-28
 
       - name: Set up Docker Buildx
         id: buildx
@@ -429,23 +447,26 @@ jobs:
           platforms: linux/amd64,linux/arm64
 
   executor_maven:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
-      - name: Free Disk Space (Ubuntu)
-        uses: jlumbroso/free-disk-space@main
-        with:
-          # this might remove tools that are actually needed,
-          # if set to "true" but frees about 6 GB
-          tool-cache: false
+#      - name: Free Disk Space (Ubuntu)
+#        uses: jlumbroso/free-disk-space@main
+#        with:
+#          # this might remove tools that are actually needed,
+#          # if set to "true" but frees about 6 GB
+#          tool-cache: false
 
       - name: Checkout
         uses: actions/checkout@v4
 
-      - uses: sigstore/cosign-installer@v3.6.0
-      - uses: anchore/sbom-action/download-syft@v0.17.0
+      - uses: sigstore/cosign-installer@v3.7.0
+      - uses: anchore/sbom-action/download-syft@v0.17.7
 
-      - name: Set up QEMU
+      - name: Setup QEMU
         uses: docker/setup-qemu-action@v3
+        # https://github.com/ptr727/NxWitness/issues/191
+        with:
+          image: tonistiigi/binfmt:qemu-v7.0.0-28
 
       - name: Set up Docker Buildx
         id: buildx
@@ -497,23 +518,26 @@ jobs:
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
 
   executor_gradle:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
-      - name: Free Disk Space (Ubuntu)
-        uses: jlumbroso/free-disk-space@main
-        with:
-          # this might remove tools that are actually needed,
-          # if set to "true" but frees about 6 GB
-          tool-cache: false
+#      - name: Free Disk Space (Ubuntu)
+#        uses: jlumbroso/free-disk-space@main
+#        with:
+#          # this might remove tools that are actually needed,
+#          # if set to "true" but frees about 6 GB
+#          tool-cache: false
 
       - name: Checkout
         uses: actions/checkout@v4
 
-      - uses: sigstore/cosign-installer@v3.6.0
-      - uses: anchore/sbom-action/download-syft@v0.17.0
+      - uses: sigstore/cosign-installer@v3.7.0
+      - uses: anchore/sbom-action/download-syft@v0.17.7
 
-      - name: Set up QEMU
+      - name: Setup QEMU
         uses: docker/setup-qemu-action@v3
+        # https://github.com/ptr727/NxWitness/issues/191
+        with:
+          image: tonistiigi/binfmt:qemu-v7.0.0-28
 
       - name: Set up Docker Buildx
         id: buildx
@@ -576,23 +600,27 @@ jobs:
               cypress12,
               cypress13,
               yarn,
-              npm,
+              npm
+
           ]
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
-      - name: Free Disk Space (Ubuntu)
-        uses: jlumbroso/free-disk-space@main
-        with:
-          # this might remove tools that are actually needed,
-          # if set to "true" but frees about 6 GB
-          tool-cache: false
+#      - name: Free Disk Space (Ubuntu)
+#        uses: jlumbroso/free-disk-space@main
+#        with:
+#          # this might remove tools that are actually needed,
+#          # if set to "true" but frees about 6 GB
+#          tool-cache: false
 
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up QEMU
+      - name: Setup QEMU
         uses: docker/setup-qemu-action@v3
+        # https://github.com/ptr727/NxWitness/issues/191
+        with:
+          image: tonistiigi/binfmt:qemu-v7.0.0-28
 
       - name: Set up Docker Buildx
         id: buildx
@@ -656,23 +684,26 @@ jobs:
           docker push kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-arm64
 
   executor_postman_node21:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
-      - name: Free Disk Space (Ubuntu)
-        uses: jlumbroso/free-disk-space@main
-        with:
-          # this might remove tools that are actually needed,
-          # if set to "true" but frees about 6 GB
-          tool-cache: false
+#      - name: Free Disk Space (Ubuntu)
+#        uses: jlumbroso/free-disk-space@main
+#        with:
+#          # this might remove tools that are actually needed,
+#          # if set to "true" but frees about 6 GB
+#          tool-cache: false
 
       - name: Checkout
         uses: actions/checkout@v4
 
-      - uses: sigstore/cosign-installer@v3.6.0
-      - uses: anchore/sbom-action/download-syft@v0.17.0
+      - uses: sigstore/cosign-installer@v3.7.0
+      - uses: anchore/sbom-action/download-syft@v0.17.7
 
-      - name: Set up QEMU
+      - name: Setup QEMU
         uses: docker/setup-qemu-action@v3
+        # https://github.com/ptr727/NxWitness/issues/191
+        with:
+          image: tonistiigi/binfmt:qemu-v7.0.0-28
 
       - name: Set up Docker Buildx
         id: buildx
@@ -728,20 +759,23 @@ jobs:
               npm,
           ]
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
-      - name: Free Disk Space (Ubuntu)
-        uses: jlumbroso/free-disk-space@main
-        with:
-          # this might remove tools that are actually needed,
-          # if set to "true" but frees about 6 GB
-          tool-cache: false
+#      - name: Free Disk Space (Ubuntu)
+#        uses: jlumbroso/free-disk-space@main
+#        with:
+#          # this might remove tools that are actually needed,
+#          # if set to "true" but frees about 6 GB
+#          tool-cache: false
 
-      - name: Set up QEMU
+      - name: Setup QEMU
         uses: docker/setup-qemu-action@v3
+        # https://github.com/ptr727/NxWitness/issues/191
+        with:
+          image: tonistiigi/binfmt:qemu-v7.0.0-28
 
-      - uses: sigstore/cosign-installer@v3.6.0
-      - uses: anchore/sbom-action/download-syft@v0.17.0
+      - uses: sigstore/cosign-installer@v3.7.0
+      - uses: anchore/sbom-action/download-syft@v0.17.7
 
       - name: Set up Docker Buildx
         id: buildx
@@ -777,23 +811,26 @@ jobs:
           cosign sign kubeshop/testkube-cypress-executor:legacy --yes
 
   executor_playwright:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
-      - name: Free Disk Space (Ubuntu)
-        uses: jlumbroso/free-disk-space@main
-        with:
-          # this might remove tools that are actually needed,
-          # if set to "true" but frees about 6 GB
-          tool-cache: false
+#      - name: Free Disk Space (Ubuntu)
+#        uses: jlumbroso/free-disk-space@main
+#        with:
+#          # this might remove tools that are actually needed,
+#          # if set to "true" but frees about 6 GB
+#          tool-cache: false
 
       - name: Checkout
         uses: actions/checkout@v4
 
-      - uses: sigstore/cosign-installer@v3.6.0
-      - uses: anchore/sbom-action/download-syft@v0.17.0
+      - uses: sigstore/cosign-installer@v3.7.0
+      - uses: anchore/sbom-action/download-syft@v0.17.7
 
-      - name: Set up QEMU
+      - name: Setup QEMU
         uses: docker/setup-qemu-action@v3
+        # https://github.com/ptr727/NxWitness/issues/191
+        with:
+          image: tonistiigi/binfmt:qemu-v7.0.0-28
 
       - name: Set up Docker Buildx
         id: buildx
@@ -848,25 +885,28 @@ jobs:
     strategy:
       matrix:
         service: [ logs-server, logs-sidecar ]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
-      - name: Free Disk Space (Ubuntu)
-        uses: jlumbroso/free-disk-space@main
-        with:
-          # this might remove tools that are actually needed,
-          # if set to "true" but frees about 6 GB
-          tool-cache: false
+#      - name: Free Disk Space (Ubuntu)
+#        uses: jlumbroso/free-disk-space@main
+#        with:
+#          # this might remove tools that are actually needed,
+#          # if set to "true" but frees about 6 GB
+#          tool-cache: false
 
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - uses: sigstore/cosign-installer@v3.6.0
-      - uses: anchore/sbom-action/download-syft@v0.17.0
+      - uses: sigstore/cosign-installer@v3.7.0
+      - uses: anchore/sbom-action/download-syft@v0.17.7
 
-      - name: Set up QEMU
+      - name: Setup QEMU
         uses: docker/setup-qemu-action@v3
+        # https://github.com/ptr727/NxWitness/issues/191
+        with:
+          image: tonistiigi/binfmt:qemu-v7.0.0-28
 
       - name: Set up Docker Buildx
         id: buildx
@@ -934,7 +974,7 @@ jobs:
         log_server_sidecar,
         testworkflow
       ]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Get tag
         id: tag
@@ -942,25 +982,10 @@ jobs:
         with:
           strip_v: false
 
-      - name: Editing helm-release repo with version based on a Tag pushed.
-        run: |
-
-          # Setting up Git:
-          git clone https://kubeshop-bot:$GH_TOKEN@github.com/kubeshop/helm-charts
-          cd ./helm-charts
-          git config user.name "kubeshop-bot"
-          git config user.email "kubeshop-bot@kubeshop.io"
-
-          export GH_TOKEN
-          export RELEASE_VERSION
-          export SERVICE
-
-          git fetch origin main
-          git checkout main
-          cd ./scripts
-          ./chart_releaser.sh --helm-chart-folder testkube-$SERVICE
-
-        env:
-          SERVICE: api
-          GH_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
-          RELEASE_VERSION: ${{ steps.tag.outputs.tag }}
+      - name: Repository Dispatch
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.CI_BOT_TOKEN }}
+          repository: kubeshop/helm-charts
+          event-type: release-testkube-api-charts
+          client-payload: '{"RELEASE_VERSION": "${{ steps.tag.outputs.tag }}", "SERVICE": "api"}'

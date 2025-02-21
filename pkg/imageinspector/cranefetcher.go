@@ -6,12 +6,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/crane"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/kubeshop/testkube/pkg/utils"
@@ -42,6 +44,7 @@ func (c *craneFetcher) Fetch(ctx context.Context, registry, image string, pullSe
 	}
 
 	// Select the auth
+	cranePlatformOption := crane.WithPlatform(&v1.Platform{OS: runtime.GOOS, Architecture: runtime.GOARCH})
 	craneOptions := []crane.Option{crane.WithContext(ctx)}
 	if len(authConfigs) > 0 {
 		craneOptions = append(craneOptions, crane.WithAuth(authn.FromConfig(authConfigs[0])))
@@ -49,7 +52,13 @@ func (c *craneFetcher) Fetch(ctx context.Context, registry, image string, pullSe
 
 	// Fetch the image configuration
 	fetchedAt := time.Now()
-	serializedImageConfig, err := crane.Config(image, craneOptions...)
+	serializedImageConfig, err := crane.Config(image, append(craneOptions, cranePlatformOption)...)
+
+	// Retry again without specifying platform
+	if err != nil && (strings.Contains(err.Error(), "no child") || strings.Contains(err.Error(), "not known")) {
+		serializedImageConfig, err = crane.Config(image, craneOptions...)
+	}
+
 	if err != nil {
 		return nil, err
 	}

@@ -47,7 +47,11 @@ func CloudLogin(ctx context.Context, providerURL, connectorID string) (string, c
 	go http.ListenAndServe(":8090", nil)
 
 	// Redirect the user to the OIDC provider's login page.
-	authURL := oauth2Config.AuthCodeURL("state", oauth2.AccessTypeOffline, oauth2.SetAuthURLParam("connector_id", connectorID))
+	opts := []oauth2.AuthCodeOption{oauth2.AccessTypeOffline}
+	if connectorID != "" {
+		opts = append(opts, oauth2.SetAuthURLParam("connector_id", connectorID))
+	}
+	authURL := oauth2Config.AuthCodeURL("state", opts...)
 
 	respCh := make(chan Tokens)
 

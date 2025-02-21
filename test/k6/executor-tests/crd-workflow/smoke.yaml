@@ -145,8 +145,8 @@ metadata:
     core-tests: workflows
 spec:
   config:
-    vus: {type: integer, default: 10}
-    duration: {type: string, default: '5s'}
+    vus: {type: integer, default: 2}
+    duration: {type: string, default: '2s'}
     workers: {type: integer, default: 3}
   content:
     git:
@@ -189,8 +189,8 @@ metadata:
     core-tests: workflows
 spec:
   config:
-    vus: {type: integer, default: 10}
-    duration: {type: string, default: '5s'}
+    vus: {type: integer, default: 2}
+    duration: {type: string, default: '2s'}
     workers: {type: integer, default: 3}
   content:
     git:

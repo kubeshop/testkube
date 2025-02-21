@@ -17,7 +17,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/log"
 )
 
-func GetServer(eventBus bus.Bus, executorsClient *executorsclientv1.ExecutorsClient) *handler.Server {
+func GetServer(eventBus bus.Bus, executorsClient executorsclientv1.Interface) *handler.Server {
 	service := services.NewService(eventBus, log.DefaultLogger)
 	resolver := &resolvers.Resolver{
 		ExecutorsService: services.NewExecutorsService(service, executorsClient),

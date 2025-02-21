@@ -3,6 +3,7 @@ package testworkflowprocessor
 import (
 	"fmt"
 	"strconv"
+	"sync/atomic"
 
 	"k8s.io/apimachinery/pkg/util/rand"
 )
@@ -12,7 +13,7 @@ type RefCounter interface {
 }
 
 type refCounter struct {
-	refCount uint64
+	refCount atomic.Uint64
 }
 
 func NewRefCounter() RefCounter {
@@ -20,5 +21,6 @@ func NewRefCounter() RefCounter {
 }
 
 func (r *refCounter) NextRef() string {
-	return fmt.Sprintf("r%s%s", rand.String(5), strconv.FormatUint(r.refCount, 36))
+	next := r.refCount.Add(1)
+	return fmt.Sprintf("r%s%s", rand.String(5), strconv.FormatUint(next, 36))
 }

@@ -34,8 +34,8 @@ func (a LiteActionList) Result(ref, expression string) LiteActionList {
 	return append(a, LiteAction{Result: &ActionResult{Ref: ref, Value: expression}})
 }
 
-func (a LiteActionList) Execute(ref string, negative bool) LiteActionList {
-	return append(a, LiteAction{Execute: &ActionExecute{Ref: ref, Negative: negative}})
+func (a LiteActionList) Execute(ref string, negative, pure bool) LiteActionList {
+	return append(a, LiteAction{Execute: &ActionExecute{Ref: ref, Negative: negative, Pure: pure}})
 }
 
 func (a LiteActionList) MutateContainer(config LiteContainerConfig) LiteActionList {

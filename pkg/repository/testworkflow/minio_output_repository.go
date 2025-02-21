@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/bufferedstream"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/storage"
 
@@ -44,7 +45,12 @@ func (m *MinioRepository) PresignReadLog(ctx context.Context, id, workflowName s
 
 func (m *MinioRepository) SaveLog(ctx context.Context, id, workflowName string, reader io.Reader) error {
 	log.DefaultLogger.Debugw("inserting output", "id", id, "workflowName", workflowName)
-	return m.storage.UploadFileToBucket(ctx, m.bucket, bucketFolder, id, reader, -1)
+	buffer, err := bufferedstream.NewBufferedStream("", "log", reader)
+	if err != nil {
+		return nil
+	}
+	defer buffer.Cleanup()
+	return m.storage.UploadFileToBucket(ctx, m.bucket, bucketFolder, id, buffer, int64(buffer.Len()))
 }
 
 func (m *MinioRepository) ReadLog(ctx context.Context, id, workflowName string) (io.ReadCloser, error) {

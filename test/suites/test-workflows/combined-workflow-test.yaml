@@ -1,0 +1,13 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: artillery-workflow-suite-combined
+  labels:
+    core-tests: workflows-suite
+spec:
+  steps:
+  - execute:
+      workflows:
+      - name: artillery-workflow-smoke
+      tests:
+      - name: artillery-executor-smoke

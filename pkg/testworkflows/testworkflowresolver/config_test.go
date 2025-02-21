@@ -70,7 +70,7 @@ func TestApplyConfigTestWorkflow(t *testing.T) {
 				},
 			},
 		},
-	}, cfg)
+	}, cfg, nil)
 
 	assert.NoError(t, err)
 	assert.Equal(t, want, got)
@@ -103,7 +103,7 @@ func TestApplyMissingConfig(t *testing.T) {
 				},
 			},
 		},
-	}, cfg)
+	}, cfg, nil)
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "Spec: TestWorkflowSpecBase: Pod: Labels: {{config.bar}}-key")
@@ -165,7 +165,7 @@ func TestApplyConfigDefaults(t *testing.T) {
 				},
 			},
 		},
-	}, cfg)
+	}, cfg, nil)
 
 	assert.NoError(t, err)
 	assert.Equal(t, want, got)
@@ -187,7 +187,7 @@ func TestInvalidInteger(t *testing.T) {
 				},
 			},
 		},
-	}, cfg)
+	}, cfg, nil)
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "config.foo: error")
@@ -244,7 +244,7 @@ func TestApplyConfigTestWorkflowTemplate(t *testing.T) {
 				},
 			},
 		},
-	}, cfg)
+	}, cfg, nil)
 
 	assert.NoError(t, err)
 	assert.Equal(t, want, got)

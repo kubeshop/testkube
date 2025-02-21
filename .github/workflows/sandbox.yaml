@@ -9,7 +9,7 @@ on:
     types:
       - opened
 env:
-  ALPINE_IMAGE: alpine:3.20.0
+  ALPINE_IMAGE: alpine:3.20.3
   BUSYBOX_IMAGE: busybox:1.36.1-musl
 
 jobs:
@@ -844,10 +844,14 @@ jobs:
           echo -e '```' >> $GITHUB_STEP_SUMMARY
 
   pr_creation:
-    if: startsWith(github.event.pull_request.head.ref, 'sandbox/')
     runs-on: ubuntu-latest
     steps:
+    - name: Checkout
+      if: startsWith(github.event.pull_request.head.ref, 'sandbox/')
+      uses: actions/checkout@v4
+        
     - name: Get a branch name if PR is created
+      if: startsWith(github.event.pull_request.head.ref, 'sandbox/')
       run: |
         # get a branch name
         branch_ref="${{ github.event.pull_request.head.ref }}"
@@ -859,6 +863,7 @@ jobs:
         echo "branch_ref=$branch_ref" >> $GITHUB_ENV
 
     - name: Render template
+      if: startsWith(github.event.pull_request.head.ref, 'sandbox/')
       id: template
       uses: chuhlomin/render-template@v1.10
       with:
@@ -867,6 +872,7 @@ jobs:
           branch_ref: ${{ env.branch_ref }}
 
     - name: Create comment on a PR with the endpoints
+      if: startsWith(github.event.pull_request.head.ref, 'sandbox/')
       uses: peter-evans/create-or-update-comment@v4
       with:
         token: ${{ secrets.CI_BOT_TOKEN }}

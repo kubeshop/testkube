@@ -8,11 +8,30 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
+type Label struct {
+	Key   string
+	Value *string
+	// If value is nil, we check if key exists / not exists
+	Exists *bool
+}
+
+type LabelSelector struct {
+	Or []Label
+}
+
+type InitData struct {
+	RunnerID  string
+	Namespace string
+	Signature []testkube.TestWorkflowSignature
+}
+
 const PageDefaultLimit int = 100
 
 type Filter interface {
 	Name() string
 	NameDefined() bool
+	Names() []string
+	NamesDefined() bool
 	LastNDays() int
 	LastNDaysDefined() bool
 	StartDate() time.Time
@@ -26,6 +45,14 @@ type Filter interface {
 	TextSearchDefined() bool
 	TextSearch() string
 	Selector() string
+	TagSelector() string
+	LabelSelector() *LabelSelector
+	ActorName() string
+	ActorNameDefined() bool
+	ActorType() testkube.TestWorkflowRunningContextActorType
+	ActorTypeDefined() bool
+	GroupID() string
+	GroupIDDefined() bool
 }
 
 //go:generate mockgen -destination=./mock_repository.go -package=testworkflow "github.com/kubeshop/testkube/pkg/repository/testworkflow" Repository
@@ -39,6 +66,8 @@ type Repository interface {
 	GetLatestByTestWorkflow(ctx context.Context, workflowName string) (*testkube.TestWorkflowExecution, error)
 	// GetRunning get list of executions that are still running
 	GetRunning(ctx context.Context) ([]testkube.TestWorkflowExecution, error)
+	// GetUnassigned get list of executions that is waiting to be executed
+	GetUnassigned(ctx context.Context) ([]testkube.TestWorkflowExecution, error)
 	// GetLatestByTestWorkflows gets latest execution results by workflow names
 	GetLatestByTestWorkflows(ctx context.Context, workflowNames []string) (executions []testkube.TestWorkflowExecutionSummary, err error)
 	// GetExecutionsTotals gets executions total stats using a filter, use filter with no data for all
@@ -67,6 +96,14 @@ type Repository interface {
 	DeleteByTestWorkflows(ctx context.Context, workflowNames []string) (err error)
 	// GetTestWorkflowMetrics get metrics based on the TestWorkflow results
 	GetTestWorkflowMetrics(ctx context.Context, name string, limit, last int) (metrics testkube.ExecutionsMetrics, err error)
+	// GetExecutionTags gets execution tags
+	GetExecutionTags(ctx context.Context, testWorkflowName string) (map[string][]string, error)
+	// Init sets the initialization data from the runner
+	Init(ctx context.Context, id string, data InitData) error
+	// Assign execution to selected runner
+	Assign(ctx context.Context, id string, prevRunnerId string, newRunnerId string) (bool, error)
+	// AbortIfQueued marks execution as aborted if it's queued
+	AbortIfQueued(ctx context.Context, id string) (bool, error)
 }
 
 type Sequences interface {

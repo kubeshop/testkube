@@ -1,0 +1,549 @@
+# ShowCase 1:
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: combined-workflows-suite
+  labels:
+    demo: showcase-2
+    workflow-suite: "true"
+spec:
+  events:
+  - cronjob:
+      cron: "30 */4 * * *" # every 4 hours
+  steps:
+  - execute:
+      workflows:
+      - name: pytest-junit
+      - name: postman-junit-report
+  - execute:
+      workflows:
+      - name: k6-distributed
+      - name: k6-distributed
+  - execute:
+      parallelism: 2
+      workflows:
+      - name: junit5-junit
+      - name: pytest-junit
+      - name: cypress-junit-report
+      - name: playwright-workflow-smoke-junit
+---
+# ShowCase 2:
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: k6-distributed # ShowCase 2
+  labels:
+    demo: showcase-2
+    artifacts: report
+    junit: "true"
+spec:
+  config:
+    vus: {type: integer, default: 2}
+    duration: {type: string, default: '2s'}
+    workers: {type: integer, default: 3}
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/k6/executor-tests/k6-smoke-test.js
+  events:
+  - cronjob:
+      cron: "15 */4 * * *" # every 4 hours
+  steps:
+  - name: Run test
+    parallel:
+      count: 'config.workers'
+      transfer:
+      - from: /data/repo
+      use:
+      - name: distribute/evenly
+      container:
+        resources:
+          requests:
+            cpu: 128m
+            memory: 128Mi
+      paused: true # synchronise running all workers
+      run:
+        image: grafana/k6:0.49.0
+        workingDir: /data/repo/test/k6/executor-tests
+        args:
+        - run
+        - k6-smoke-test.js
+        - -e
+        - K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value
+        - --vus
+        - '{{ config.vus }}'
+        - --duration
+        - '{{ config.duration }}'
+        - --execution-segment
+        - '{{ index }}/{{ count }}:{{ index + 1 }}/{{ count }}'
+        env:
+        - name: K6_SYSTEM_ENV
+          value: K6_SYSTEM_ENV_value
+        - name: K6_WEB_DASHBOARD
+          value: "true"
+        - name: K6_WEB_DASHBOARD_EXPORT
+          value: "/data/k6-test-report.html"
+      artifacts:
+        workingDir: /data
+        paths:
+        - '*.html'
+---
+# ShowCase 3 and ShowCase 6
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: cypress-browsers-matrix
+  labels:
+    demo: showcase-3
+    junit: "true"
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/cypress/executor-tests/cypress-13
+  container:
+    image: cypress/included:13.6.4
+    workingDir: /data/repo/test/cypress/executor-tests/cypress-13
+    resources:
+      requests:
+        cpu: 1
+        memory: 1Gi
+  events:
+  - cronjob:
+      cron: "10 */4 * * *" # every 4 hours
+  steps:
+  - name: Run tests
+    parallel:
+      matrix:
+        browser: ['chrome', 'firefox']
+      description: '{{ matrix.browser }} browser'
+      transfer:
+      - from: /data/repo
+      fetch:
+      - from: /data/artifacts
+        to: /data/artifacts/{{ matrix.browser }}
+      run:
+        args:
+        - '--browser'
+        - '{{ matrix.browser }}'
+        - --env
+        - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+        - --reporter
+        - junit
+        - --reporter-options
+        - mochaFile=/data/artifacts/junit/junit-[hash].xml,toConsole=false
+        env:
+        - name: CYPRESS_CUSTOM_ENV
+          value: CYPRESS_CUSTOM_ENV_value
+    artifacts:
+      workingDir: /data/artifacts
+      paths:
+      - '**/*'
+---
+# ShowCase 4:
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: curl-with-nginx-service
+  labels:
+    demo: showcase-4
+spec:
+  container:
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
+  events:
+  - cronjob:
+      cron: "20 */4 * * *" # every 4 hours
+  services:
+    nginx:
+      image: nginx
+      readinessProbe:
+        tcpSocket:
+          port: 80
+        periodSeconds: 1
+  steps:
+    - name: Run tests
+      shell: curl -f -L http://{{services.nginx.0.ip}}/ |grep "Welcome to nginx!"
+      container:
+        image: curlimages/curl:8.7.1
+---
+# ShowCase 5:
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: cypress-video-recording
+  labels:
+    demo: showcase-5
+    artifacts-video: "true"
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/cypress/executor-tests/cypress-13
+  container:
+    resources:
+      requests:
+        cpu: 2
+        memory: 2Gi
+    workingDir: /data/repo/test/cypress/executor-tests/cypress-13
+  events:
+  - cronjob:
+      cron: "35 */4 * * *" # every 4 hours
+  steps:
+  - name: Run tests
+    run:
+      image: cypress/included:13.6.4
+      args:
+      - --env
+      - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+      - --config
+      - video=true
+      - --spec
+      - cypress/e2e/demo-page.cy.js
+      env:
+      - name: CYPRESS_CUSTOM_ENV
+        value: CYPRESS_CUSTOM_ENV_value
+    steps:
+    - name: Saving artifacts
+      workingDir: /data/repo/test/cypress/executor-tests/cypress-13/cypress/videos
+      artifacts:
+        paths:
+        - '**/*'
+---
+# ShowCase 6:
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: postman-junit-report
+  labels:
+    demo: showcase-6
+    junit: "true"
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/postman/executor-tests/postman-executor-smoke.postman_collection.json
+  container:
+    workingDir: /data/repo/test/postman/executor-tests
+    image: postman/newman:6-alpine
+    resources:
+      requests:
+        cpu: 256m
+        memory: 128Mi
+  events:
+  - cronjob:
+      cron: "40 */4 * * *" # every 4 hours
+  steps:
+  - name: Run test
+    shell: newman run postman-executor-smoke.postman_collection.json --env-var TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value
+      -r cli,junit --reporter-junit-export /data/artifacts/junit-report.xml
+    artifacts:
+      paths:
+      - /data/artifacts/**
+---
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: cypress-junit-report
+  labels:
+    demo: showcase-6
+    junit: "true"
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/cypress/executor-tests/cypress-13
+  container:
+    workingDir: /data/repo/test/cypress/executor-tests/cypress-13
+    resources:
+      requests:
+        cpu: 2
+        memory: 2Gi
+  events:
+  - cronjob:
+      cron: "45 */4 * * *" # every 4 hours
+  steps:
+  - name: Run tests
+    run:
+      image: cypress/included:13.6.4
+      env:
+      - name: CYPRESS_CUSTOM_ENV
+        value: CYPRESS_CUSTOM_ENV_value
+      args:
+      - --env
+      - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+      - --config
+      - '{"screenshotsFolder":"/data/artifacts/screenshots","videosFolder":"/data/artifacts/videos"}'
+      - --reporter
+      - junit
+      - --reporter-options
+      - mochaFile=/data/artifacts/junit/junit-[hash].xml,toConsole=false
+    steps:
+    - name: Saving artifacts
+      workingDir: /data/artifacts
+      artifacts:
+        paths:
+        - '**/*'
+---
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: junit5-junit
+  labels:
+    demo: showcase-6
+    artifacts-report: "true"
+    junit: "true"
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/junit/junit5-project
+  container:
+    workingDir: /data/repo/test/junit/junit5-project
+    image: maven:3.9.9-eclipse-temurin-11-alpine
+    resources:
+      requests:
+        cpu: 256m
+        memory: 256Mi
+  events:
+  - cronjob:
+      cron: "45 */4 * * *" # every 4 hours
+  steps:
+  - name: Run tests
+    shell: mvn test -Dtest=TestSmoke1,TestSmoke2
+    artifacts:
+      paths:
+      - target/surefire-reports/**/*
+---
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: junit5-mixed-results-failures-junit-report
+  labels:
+    demo: showcase-6
+    artifacts-report: "true"
+    junit: "true"
+    expected-fail: "true"
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/junit/junit5-project
+  container:
+    workingDir: /data/repo/test/junit/junit5-project
+    image: maven:3.9.9-eclipse-temurin-11-alpine
+    resources:
+      requests:
+        cpu: 256m
+        memory: 256Mi
+  events:
+  - cronjob:
+      cron: "50 */4 * * *" # every 4 hours
+  steps:
+  - name: Run tests
+    shell: mvn test
+    artifacts:
+      paths:
+      - target/surefire-reports/**/*
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: pytest-junit
+  labels:
+    demo: showcase-6
+    junit: "true"
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/pytest/pytest-project
+  container:
+    image: python:3.12.6-alpine3.20
+    resources:
+      requests:
+        cpu: 256m
+        memory: 256Mi
+    workingDir: /data/repo/test/pytest/pytest-project
+  events:
+  - cronjob:
+      cron: "50 */4 * * *" # every 4 hours
+  steps:
+  - name: Run test
+    shell: |
+      pip install -r requirements.txt
+      mkdir /data/artifacts
+      pytest tests/success --junit-xml=/data/artifacts/pytest-report.xml
+    artifacts:
+      paths:
+      - "/data/artifacts/**"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: pytest-mixed-results-failures-junit-report
+  labels:
+    demo: showcase-6
+    junit: "true"
+    expected-fail: "true"
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/pytest/pytest-project
+  container:
+    image: python:3.12.6-alpine3.20
+    resources:
+      requests:
+        cpu: 256m
+        memory: 256Mi
+    workingDir: /data/repo/test/pytest/pytest-project
+  events:
+  - cronjob:
+      cron: "50 */4 * * *" # every 4 hours
+  steps:
+  - name: Run test
+    shell: |
+      pip install -r requirements.txt
+      mkdir /data/artifacts
+      pytest tests --junit-xml=/data/artifacts/pytest-report.xml
+    artifacts:
+      paths:
+      - "/data/artifacts/**"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: nunit-junit-report
+  labels:
+    demo: showcase-6
+    junit: "true"
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/nunit/nunit-project/ExampleProject
+  container:
+    image: bitnami/dotnet-sdk:8-debian-12
+    resources:
+      requests:
+        cpu: 512m
+        memory: 512Mi
+    workingDir: /data/repo/test/nunit/nunit-project/ExampleProject
+  events:
+  - cronjob:
+      cron: "52 */4 * * *" # every 4 hours
+  steps:
+  - name: Run tests
+    shell: dotnet test --logger:"junit;LogFilePath=nunit-report/nunit-junit-report.xml"
+    artifacts:
+      paths:
+      - 'nunit-report/*'
+---
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: playwright-workflow-smoke-junit
+  labels:
+    demo: showcase-6
+    junit: "true"
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/playwright/executor-tests/playwright-project
+  container:
+    workingDir: /data/repo/test/playwright/executor-tests/playwright-project
+    image: mcr.microsoft.com/playwright:v1.32.3-focal
+    resources:
+      requests:
+        cpu: 2
+        memory: 2Gi
+  events:
+  - cronjob:
+      cron: "55 */4 * * *" # every 4 hours
+  steps:
+  - name: Install dependencies
+    shell: npm ci
+  - name: Run tests
+    shell: mkdir /data/artifacts && npx playwright test --reporter=junit > /data/artifacts/junit-report.xml
+    steps:
+    - name: Save artifacts
+      workingDir: /data/artifacts
+      artifacts:
+        paths:
+        - '**/*'
+# **ShowCase 7: Passing data between steps. (testsuite like)**
+
+---
+kind: TestWorkflowTemplate
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: template-trigger-remote-workflow
+  labels:
+    demo: showcase-9
+spec:
+  config:
+    apiToken:
+      type: string
+      sensitive: true
+    environmentId:
+      type: string
+    organizationId:
+      type: string
+    rootDomain:
+      type: string
+      default: testkube.io
+    workflowToRun:
+      type: string
+  steps:
+  - run:
+      image: kubeshop/testkube-cli:latest
+      shell: |
+        testkube set context \
+          --api-key {{ config.apiToken }} \
+          --root-domain {{ shellquote(config.rootDomain) }} \
+          --org-id {{ config.organizationId }} \
+          --env-id {{ config.environmentId }}
+        testkube run tw {{ config.workflowToRun }} -f
+---
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: trigger-remote-workflow-with-template
+  labels:
+    demo: showcase-9
+spec:
+  steps:
+  - name: Run tests
+    template:
+      name: template-trigger-remote-workflow
+      config:
+        workflowToRun: 'postman-workflow-smoke'
+        apiToken: '{{ secret("paris-demo-testkube-cloud-basic-access-key", "key") }}'
+        organizationId: 'tkcorg_539cb664a4446f37'
+        environmentId: 'tkcenv_84019fff03aac934'

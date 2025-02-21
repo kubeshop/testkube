@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM golang:1.22-alpine as base
+FROM golang:1.23-alpine as base
 
 RUN apk update;
 RUN go install -mod=mod github.com/onsi/ginkgo/v2/ginkgo

@@ -16,6 +16,7 @@ type Client interface {
 	TestSuiteExecutionAPI
 	ExecutorAPI
 	WebhookAPI
+	WebhookTemplateAPI
 	ServiceAPI
 	ConfigAPI
 	TestSourceAPI
@@ -24,6 +25,8 @@ type Client interface {
 	TestWorkflowAPI
 	TestWorkflowExecutionAPI
 	TestWorkflowTemplateAPI
+	TestTriggerAPI
+	SharedAPI
 }
 
 // TestAPI describes test api methods
@@ -97,6 +100,26 @@ type WebhookAPI interface {
 	DeleteWebhooks(selector string) (err error)
 }
 
+// WebhookTemplateAPI describes webhook template api methods
+type WebhookTemplateAPI interface {
+	CreateWebhookTemplate(options CreateWebhookTemplateOptions) (webhookTemplate testkube.WebhookTemplate, err error)
+	UpdateWebhookTemplate(options UpdateWebhookTemplateOptions) (webhookTemplate testkube.WebhookTemplate, err error)
+	GetWebhookTemplate(name string) (webhookTemplate testkube.WebhookTemplate, err error)
+	ListWebhookTemplates(selector string) (webhookTemplates testkube.WebhookTemplates, err error)
+	DeleteWebhookTemplate(name string) (err error)
+	DeleteWebhookTemplates(selector string) (err error)
+}
+
+// TestTriggerAPI describes test triggers api methods
+type TestTriggerAPI interface {
+	CreateTestTrigger(options CreateTestTriggerOptions) (testTrigger testkube.TestTrigger, err error)
+	UpdateTestTrigger(options UpdateTestTriggerOptions) (testTrigger testkube.TestTrigger, err error)
+	GetTestTrigger(name string) (testTrigger testkube.TestTrigger, err error)
+	ListTestTriggers(selector string) (testTriggers []testkube.TestTrigger, err error)
+	DeleteTestTrigger(name string) (err error)
+	DeleteTestTriggers(selector string) (err error)
+}
+
 // TemplateAPI describes template api methods
 type TemplateAPI interface {
 	CreateTemplate(options CreateTemplateOptions) (template testkube.Template, err error)
@@ -129,6 +152,10 @@ type TestSourceAPI interface {
 	DeleteTestSources(selector string) (err error)
 }
 
+type SharedAPI interface {
+	ListLabels() (labels map[string][]string, err error)
+}
+
 // TestWorkflowAPI describes test workflow api methods
 type TestWorkflowAPI interface {
 	GetTestWorkflow(id string) (testkube.TestWorkflow, error)
@@ -140,19 +167,23 @@ type TestWorkflowAPI interface {
 	UpdateTestWorkflow(workflow testkube.TestWorkflow) (testkube.TestWorkflow, error)
 	DeleteTestWorkflow(name string) error
 	ExecuteTestWorkflow(name string, request testkube.TestWorkflowExecutionRequest) (testkube.TestWorkflowExecution, error)
+	ExecuteTestWorkflows(selector string, request testkube.TestWorkflowExecutionRequest) ([]testkube.TestWorkflowExecution, error)
 	GetTestWorkflowExecutionNotifications(id string) (chan testkube.TestWorkflowExecutionNotification, error)
 	GetTestWorkflowExecutionLogs(id string) ([]byte, error)
+	GetTestWorkflowExecutionServiceNotifications(id, serviceName string, serviceIndex int) (chan testkube.TestWorkflowExecutionNotification, error)
+	GetTestWorkflowExecutionParallelStepNotifications(id, ref string, workerIndex int) (chan testkube.TestWorkflowExecutionNotification, error)
 }
 
 // TestWorkflowExecutionAPI describes test workflow api methods
 type TestWorkflowExecutionAPI interface {
 	GetTestWorkflowExecution(executionID string) (execution testkube.TestWorkflowExecution, err error)
-	ListTestWorkflowExecutions(id string, limit int, selector string) (executions testkube.TestWorkflowExecutionsResult, err error)
+	ListTestWorkflowExecutions(id string, limit int, options FilterTestWorkflowExecutionOptions) (executions testkube.TestWorkflowExecutionsResult, err error)
 	AbortTestWorkflowExecution(workflow string, id string) error
 	AbortTestWorkflowExecutions(workflow string) error
 	GetTestWorkflowExecutionArtifacts(executionID string) (artifacts testkube.Artifacts, err error)
 	DownloadTestWorkflowArtifact(executionID, fileName, destination string) (artifact string, err error)
 	DownloadTestWorkflowArtifactArchive(executionID, destination string, masks []string) (archive string, err error)
+	ReRunTestWorkflowExecution(workflow string, id string, runningContext *testkube.TestWorkflowRunningContext) (testkube.TestWorkflowExecution, error)
 }
 
 // TestWorkflowTemplateAPI describes test workflow api methods
@@ -198,6 +229,12 @@ type CreateWebhookOptions testkube.WebhookCreateRequest
 // UpdateWebhookOptions - is mapping for now to OpenAPI schema for changing webhook request
 type UpdateWebhookOptions testkube.WebhookUpdateRequest
 
+// CreateWebhookTemplateOptions - is mapping for now to OpenAPI schema for creating/changing webhook template
+type CreateWebhookTemplateOptions testkube.WebhookTemplateCreateRequest
+
+// UpdateWebhookTemplateOptions - is mapping for now to OpenAPI schema for changing webhook template request
+type UpdateWebhookTemplateOptions testkube.WebhookTemplateUpdateRequest
+
 // UpsertTestSourceOptions - is mapping for now to OpenAPI schema for creating test source
 // if needed can be extended to custom struct
 type UpsertTestSourceOptions testkube.TestSourceUpsertRequest
@@ -211,6 +248,12 @@ type CreateTemplateOptions testkube.TemplateCreateRequest
 
 // UpdateTemplateOptions - is mapping for now to OpenAPI schema for changing template request
 type UpdateTemplateOptions testkube.TemplateUpdateRequest
+
+// CreateTestTriggerOptions - is mapping for now to OpenAPI schema for creating trigger
+type CreateTestTriggerOptions testkube.TestTriggerUpsertRequest
+
+// UpdateTestTriggerOptions - is mapping for now to OpenAPI schema for changing trigger request
+type UpdateTestTriggerOptions testkube.TestTriggerUpsertRequest
 
 // TODO consider replacing it with testkube.ExecutionRequest - looks almost the samea and redundant
 // ExecuteTestOptions contains test run options
@@ -269,13 +312,22 @@ type ExecuteTestSuiteOptions struct {
 	DisableWebhooks          bool
 }
 
+// FilterTestWorkflowExecutionOptions contains filter test workflow execution options
+type FilterTestWorkflowExecutionOptions struct {
+	Selector    string
+	TagSelector string
+	ActorName   string
+	ActorType   testkube.TestWorkflowRunningContextActorType
+}
+
 // Gettable is an interface of gettable objects
 type Gettable interface {
 	testkube.Test | testkube.TestSuite | testkube.ExecutorDetails |
 		testkube.Webhook | testkube.TestWithExecution | testkube.TestSuiteWithExecution | testkube.TestWithExecutionSummary |
 		testkube.TestSuiteWithExecutionSummary | testkube.Artifact | testkube.ServerInfo | testkube.Config | testkube.DebugInfo |
 		testkube.TestSource | testkube.Template |
-		testkube.TestWorkflow | testkube.TestWorkflowWithExecution | testkube.TestWorkflowTemplate | testkube.TestWorkflowExecution
+		testkube.TestWorkflow | testkube.TestWorkflowWithExecution | testkube.TestWorkflowTemplate | testkube.TestWorkflowExecution |
+		testkube.TestTrigger | testkube.WebhookTemplate | map[string][]string
 }
 
 // Executable is an interface of executable objects

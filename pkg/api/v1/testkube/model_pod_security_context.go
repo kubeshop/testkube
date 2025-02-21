@@ -13,4 +13,5 @@ type PodSecurityContext struct {
 	RunAsUser    *BoxedInteger `json:"runAsUser,omitempty"`
 	RunAsGroup   *BoxedInteger `json:"runAsGroup,omitempty"`
 	RunAsNonRoot *BoxedBoolean `json:"runAsNonRoot,omitempty"`
+	FsGroup      *BoxedInteger `json:"fsGroup,omitempty"`
 }

@@ -46,7 +46,7 @@
           <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
             <collectionProp name="Arguments.arguments"/>
           </elementProp>
-          <stringProp name="HTTPSampler.domain">testkube.io</stringProp>
+          <stringProp name="HTTPSampler.domain">testkube-test-page-lipsum.pages.dev</stringProp>
           <stringProp name="HTTPSampler.port"></stringProp>
           <stringProp name="HTTPSampler.protocol"></stringProp>
           <stringProp name="HTTPSampler.contentEncoding"></stringProp>
@@ -67,11 +67,11 @@
           <stringProp name="filename"></stringProp>
           <stringProp name="cacheKey">true</stringProp>
           <stringProp name="script">println(&quot;Property and ENV Test&quot;)
-if(vars.get(&quot;url_property&quot;) != &quot;testkube.io&quot;) {
-	println(&quot;Incorrect property - url_property should equal \&quot;testkube.io\&quot;&quot;)
+if(vars.get(&quot;url_property&quot;) != &quot;testkube-test-page-lipsum.pages.dev&quot;) {
+	println(&quot;Incorrect property - url_property should equal \&quot;testkube-test-page-lipsum.pages.dev\&quot;&quot;)
 	System.exit(1);
-} else if(vars.get(&quot;url_env&quot;) != &quot;testkube.io&quot;) {
-	println(&quot;Incorrect ENV - url_property should equal \&quot;testkube.io\&quot;&quot;)
+} else if(vars.get(&quot;url_env&quot;) != &quot;testkube-test-page-lipsum.pages.dev&quot;) {
+	println(&quot;Incorrect ENV - url_property should equal \&quot;testkube-test-page-lipsum.pages.dev\&quot;&quot;)
 	System.exit(1);
 } else {
 	println(&quot;OK&quot;)

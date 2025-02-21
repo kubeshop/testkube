@@ -1,0 +1,53 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: tw-testkube-website-5m
+spec:
+  events:
+    - cronjob:
+        cron: "*/5 * * * *"
+  container:
+    image: curlimages/curl:8.7.1
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
+  steps:
+    - name: Run tests
+      shell: curl -f -LI https://testkube-test-page-lipsum.pages.dev/
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: tw-testkube-docs-5m
+spec:
+  events:
+    - cronjob:
+        cron: "*/5 * * * *"
+  container:
+    image: curlimages/curl:8.7.1
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
+  steps:
+    - name: Run tests
+      shell: curl -f -LI https://testkube-test-page-lipsum.pages.dev/
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: tw-testkube-blog-5m
+spec:
+  events:
+    - cronjob:
+        cron: "*/5 * * * *"
+  container:
+    image: curlimages/curl:8.7.1
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
+  steps:
+    - name: Run tests
+      shell: curl -f -LI https://testkube-test-page-lipsum.pages.dev/

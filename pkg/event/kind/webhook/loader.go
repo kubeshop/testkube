@@ -2,53 +2,58 @@ package webhook
 
 import (
 	"fmt"
+	"regexp"
 
 	"go.uber.org/zap"
 
-	executorsv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
-	templatesclientv1 "github.com/kubeshop/testkube-operator/pkg/client/templates/v1"
+	executorv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
+	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
+	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	v1 "github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	cloudwebhook "github.com/kubeshop/testkube/pkg/cloud/data/webhook"
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
 	"github.com/kubeshop/testkube/pkg/mapper/webhooks"
-	"github.com/kubeshop/testkube/pkg/repository/result"
-	"github.com/kubeshop/testkube/pkg/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
+	"github.com/kubeshop/testkube/pkg/secret"
 )
 
 var _ common.ListenerLoader = (*WebhooksLoader)(nil)
 
-// WebhooksLister loads webhooks from kubernetes
-type WebhooksLister interface {
-	List(selector string) (*executorsv1.WebhookList, error)
-}
-
-func NewWebhookLoader(log *zap.SugaredLogger, webhooksClient WebhooksLister, templatesClient templatesclientv1.Interface,
-	testExecutionResults result.Repository, testSuiteExecutionResults testresult.Repository, testWorkflowExecutionResults testworkflow.Repository,
-	metrics v1.Metrics, proContext *config.ProContext,
+func NewWebhookLoader(log *zap.SugaredLogger, webhooksClient executorsclientv1.WebhooksInterface,
+	webhookTemplatesClient executorsclientv1.WebhookTemplatesInterface, deprecatedClients commons.DeprecatedClients,
+	deprecatedRepositories commons.DeprecatedRepositories, testWorkflowExecutionResults testworkflow.Repository,
+	secretClient secret.Interface, metrics v1.Metrics, webhookRepository cloudwebhook.WebhookRepository,
+	proContext *config.ProContext, envs map[string]string,
 ) *WebhooksLoader {
 	return &WebhooksLoader{
 		log:                          log,
 		WebhooksClient:               webhooksClient,
-		templatesClient:              templatesClient,
-		testExecutionResults:         testExecutionResults,
-		testSuiteExecutionResults:    testSuiteExecutionResults,
+		WebhookTemplatesClient:       webhookTemplatesClient,
+		deprecatedClients:            deprecatedClients,
+		deprecatedRepositories:       deprecatedRepositories,
 		testWorkflowExecutionResults: testWorkflowExecutionResults,
+		secretClient:                 secretClient,
 		metrics:                      metrics,
+		webhookRepository:            webhookRepository,
 		proContext:                   proContext,
+		envs:                         envs,
 	}
 }
 
 type WebhooksLoader struct {
 	log                          *zap.SugaredLogger
-	WebhooksClient               WebhooksLister
-	templatesClient              templatesclientv1.Interface
-	testExecutionResults         result.Repository
-	testSuiteExecutionResults    testresult.Repository
+	WebhooksClient               executorsclientv1.WebhooksInterface
+	WebhookTemplatesClient       executorsclientv1.WebhookTemplatesInterface
+	deprecatedClients            commons.DeprecatedClients
+	deprecatedRepositories       commons.DeprecatedRepositories
 	testWorkflowExecutionResults testworkflow.Repository
+	secretClient                 secret.Interface
 	metrics                      v1.Metrics
+	webhookRepository            cloudwebhook.WebhookRepository
 	proContext                   *config.ProContext
+	envs                         map[string]string
 }
 
 func (r WebhooksLoader) Kind() string {
@@ -63,10 +68,30 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 	}
 
 	// and create listeners for each webhook spec
+OuterLoop:
 	for _, webhook := range webhookList.Items {
+		if webhook.Spec.WebhookTemplateRef != nil && webhook.Spec.WebhookTemplateRef.Name != "" {
+			webhookTemplate, err := r.WebhookTemplatesClient.Get(webhook.Spec.WebhookTemplateRef.Name)
+			if err != nil {
+				r.log.Errorw("error webhook template loading", "error", err, "name", webhook.Name, "template", webhook.Spec.WebhookTemplateRef.Name)
+				continue
+			}
+
+			if webhookTemplate.Spec.Disabled {
+				r.log.Errorw("error webhook template is disabled", "name", webhook.Name, "template", webhook.Spec.WebhookTemplateRef.Name)
+				continue
+			}
+
+			webhook = mergeWebhooks(webhook, *webhookTemplate)
+		}
+
 		payloadTemplate := ""
 		if webhook.Spec.PayloadTemplateReference != "" {
-			template, err := r.templatesClient.Get(webhook.Spec.PayloadTemplateReference)
+			if r.deprecatedClients == nil {
+				r.log.Errorw("webhook using deprecated PayloadTemplateReference", "name", webhook.Name, "template", webhook.Spec.PayloadTemplateReference)
+				continue
+			}
+			template, err := r.deprecatedClients.Templates().Get(webhook.Spec.PayloadTemplateReference)
 			if err != nil {
 				return listeners, err
 			}
@@ -84,11 +109,182 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 
 		types := webhooks.MapEventArrayToCRDEvents(webhook.Spec.Events)
 		name := fmt.Sprintf("%s.%s", webhook.ObjectMeta.Namespace, webhook.ObjectMeta.Name)
-		listeners = append(listeners, NewWebhookListener(name, webhook.Spec.Uri, webhook.Spec.Selector, types,
-			webhook.Spec.PayloadObjectField, payloadTemplate, webhook.Spec.Headers, webhook.Spec.Disabled,
-			r.testExecutionResults, r.testSuiteExecutionResults, r.testWorkflowExecutionResults,
-			r.metrics, r.proContext))
+		vars := make(map[string]string)
+		for key, val := range webhook.Spec.Config {
+			data := ""
+			if val.Value != nil {
+				data = *val.Value
+			}
+
+			if val.Secret != nil {
+				var ns []string
+				if val.Secret.Namespace != "" {
+					ns = append(ns, val.Secret.Namespace)
+				}
+
+				elements, err := r.secretClient.Get(val.Secret.Name, ns...)
+				if err != nil {
+					r.log.Errorw("error secret loading", "error", err, "name", val.Secret.Name)
+					continue
+				}
+
+				if element, ok := elements[val.Secret.Key]; ok {
+					data = element
+				} else {
+					r.log.Errorw("error secret key finding loading", "name", val.Secret.Name, "key", val.Secret.Key)
+					continue
+				}
+			}
+
+			vars[key] = data
+		}
+
+		for _, parameter := range webhook.Spec.Parameters {
+			if data, ok := vars[parameter.Name]; !ok {
+				if parameter.Default_ != nil {
+					vars[parameter.Name] = *parameter.Default_
+				} else if parameter.Required {
+					r.log.Errorw("error missing required parameter", "name", parameter.Name)
+					continue OuterLoop
+				}
+			} else if parameter.Pattern != "" {
+				re, err := regexp.Compile(parameter.Pattern)
+				if err != nil {
+					r.log.Errorw("error compiling pattern", "error", err, "name", parameter.Name, "pattern", parameter.Pattern)
+					continue OuterLoop
+				}
+
+				if !re.MatchString(data) {
+					r.log.Errorw("error matching pattern", "error", err, "name", parameter.Name, "pattern", parameter.Pattern)
+					continue OuterLoop
+				}
+			}
+		}
+
+		listeners = append(
+			listeners,
+			NewWebhookListener(
+				name, webhook.Spec.Uri, webhook.Spec.Selector, types,
+				webhook.Spec.PayloadObjectField, payloadTemplate, webhook.Spec.Headers, webhook.Spec.Disabled,
+				r.deprecatedRepositories, r.testWorkflowExecutionResults,
+				r.metrics, r.webhookRepository, r.proContext, r.envs, vars,
+			),
+		)
 	}
 
 	return listeners, nil
+}
+
+func mergeWebhooks(dst executorv1.Webhook, src executorv1.WebhookTemplate) executorv1.Webhook {
+	var maps = []struct {
+		d *map[string]string
+		s *map[string]string
+	}{
+		{
+			&dst.ObjectMeta.Labels,
+			&src.ObjectMeta.Labels,
+		},
+		{
+			&dst.ObjectMeta.Annotations,
+			&src.ObjectMeta.Annotations,
+		},
+		{
+			&dst.Spec.Headers,
+			&src.Spec.Headers,
+		},
+	}
+
+	for _, m := range maps {
+		if *m.s != nil {
+			if *m.d == nil {
+				*m.d = map[string]string{}
+			}
+
+			for key, value := range *m.s {
+				if _, ok := (*m.d)[key]; !ok {
+					(*m.d)[key] = value
+				}
+			}
+		}
+	}
+
+	var items = []struct {
+		d *string
+		s *string
+	}{
+		{
+			&dst.Spec.Uri,
+			&src.Spec.Uri,
+		},
+		{
+			&dst.Spec.Selector,
+			&src.Spec.Selector,
+		},
+		{
+			&dst.Spec.PayloadObjectField,
+			&src.Spec.PayloadObjectField,
+		},
+		{
+			&dst.Spec.PayloadTemplate,
+			&src.Spec.PayloadTemplate,
+		},
+		{
+			&dst.Spec.PayloadTemplateReference,
+			&src.Spec.PayloadTemplateReference,
+		},
+	}
+
+	for _, item := range items {
+		if *item.d == "" && *item.s != "" {
+			*item.d = *item.s
+		}
+	}
+
+	srcEventTypes := make(map[executorv1.EventType]struct{})
+	for _, eventType := range src.Spec.Events {
+		srcEventTypes[eventType] = struct{}{}
+	}
+
+	dstEventTypes := make(map[executorv1.EventType]struct{})
+	for _, eventType := range dst.Spec.Events {
+		dstEventTypes[eventType] = struct{}{}
+	}
+
+	for evenType := range srcEventTypes {
+		if _, ok := dstEventTypes[evenType]; !ok {
+			dst.Spec.Events = append(dst.Spec.Events, evenType)
+		}
+	}
+
+	if src.Spec.Config != nil {
+		if dst.Spec.Config == nil {
+			dst.Spec.Config = map[string]executorv1.WebhookConfigValue{}
+		}
+
+		for key, value := range src.Spec.Config {
+			if _, ok := (dst.Spec.Config)[key]; !ok {
+				dst.Spec.Config[key] = value
+			}
+		}
+	}
+
+	if src.Spec.Parameters != nil {
+		srcParameters := make(map[string]executorv1.WebhookParameterSchema)
+		for _, parameter := range src.Spec.Parameters {
+			srcParameters[parameter.Name] = parameter
+		}
+
+		dstParameters := make(map[string]executorv1.WebhookParameterSchema)
+		for _, parameter := range dst.Spec.Parameters {
+			dstParameters[parameter.Name] = parameter
+		}
+
+		for name, parameter := range srcParameters {
+			if _, ok := dstParameters[name]; !ok {
+				dst.Spec.Parameters = append(dst.Spec.Parameters, parameter)
+			}
+		}
+	}
+
+	return dst
 }

@@ -48,3 +48,7 @@ func ParseTestWorkflowStatusList(source, separator string) (statusList TestWorkf
 func TestWorkflowStatusString(ptr *TestWorkflowStatus) string {
 	return string(*ptr)
 }
+
+func (s TestWorkflowStatus) Finished() bool {
+	return s != "" && s != QUEUED_TestWorkflowStatus && s != PAUSED_TestWorkflowStatus && s != RUNNING_TestWorkflowStatus
+}

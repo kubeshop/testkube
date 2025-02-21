@@ -22,7 +22,13 @@ type printer struct {
 
 // Write sends bytes, sanitizing it
 func (s *printer) Write(p []byte) (n int, err error) {
-	return s.through.Write(p)
+	n, err = s.through.Write(p)
+	if err != nil {
+		return n, err
+	}
+	// On success, the stream needs to return same number of bytes if used as command pipe,
+	// otherwise, the child process will receive SIGPIPE.
+	return len(p), err
 }
 
 // Printf sends a formatted string via stream, sanitizing it

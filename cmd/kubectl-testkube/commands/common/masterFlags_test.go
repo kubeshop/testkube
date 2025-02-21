@@ -24,7 +24,7 @@ func NewTestCmd() *cobra.Command {
 		},
 	}
 
-	PopulateMasterFlags(cmd, &opts)
+	PopulateMasterFlags(cmd, &opts, false)
 	PopulateHelmFlags(cmd, &opts)
 	return cmd
 }

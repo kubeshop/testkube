@@ -6,10 +6,14 @@ import (
 	"strings"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
-	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 	"github.com/kubeshop/testkube/pkg/version"
+)
+
+// Moved from testworkflowprocessor/constants to reduce init process size
+const (
+	defaultInitImageBusyboxBinaryPath = "/.tktw-bin"
 )
 
 func Setup(config lite.ActionSetup) error {
@@ -19,7 +23,7 @@ func Setup(config lite.ActionSetup) error {
 	// Copy the init process
 	stdoutUnsafe.Print("Configuring init process...")
 	if config.CopyInit {
-		err := exec.Command("cp", "/init", data.InitPath).Run()
+		err := exec.Command("cp", "/init", constants.InitPath).Run()
 		if err != nil {
 			stdoutUnsafe.Error(" error\n")
 			stdoutUnsafe.Errorf("  failed to copy the /init process: %s\n", err.Error())
@@ -33,7 +37,7 @@ func Setup(config lite.ActionSetup) error {
 	// Copy the toolkit
 	stdoutUnsafe.Print("Configuring toolkit...")
 	if config.CopyToolkit {
-		err := exec.Command("cp", "/toolkit", data.ToolkitPath).Run()
+		err := exec.Command("cp", "/toolkit", constants.ToolkitPath).Run()
 		if err != nil {
 			stdoutUnsafe.Error(" error\n")
 			stdoutUnsafe.Errorf("  failed to copy the /toolkit utilities: %s\n", err.Error())
@@ -49,7 +53,7 @@ func Setup(config lite.ActionSetup) error {
 	if config.CopyBinaries {
 		// Use `cp` on the whole directory, as it has plenty of files, which lead to the same FS block.
 		// Copying individual files will lead to high FS usage
-		err := exec.Command("cp", "-rf", "/.tktw-bin", data.InternalBinPath).Run()
+		err := exec.Command("cp", "-rf", defaultInitImageBusyboxBinaryPath, constants.InternalBinPath).Run()
 		if err != nil {
 			stdoutUnsafe.Error(" error\n")
 			stdoutUnsafe.Errorf("  failed to copy the binaries: %s\n", err.Error())
@@ -61,7 +65,7 @@ func Setup(config lite.ActionSetup) error {
 	}
 
 	// Expose debugging Pod information
-	stdoutUnsafe.Output(data.InitStepName, "pod", map[string]string{
+	stdoutUnsafe.Output(constants.InitStepName, "pod", map[string]string{
 		"name":               os.Getenv(constants.EnvPodName),
 		"nodeName":           os.Getenv(constants.EnvNodeName),
 		"namespace":          os.Getenv(constants.EnvNamespaceName),

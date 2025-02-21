@@ -16,10 +16,10 @@ type ExecutorsService interface {
 
 type executorsService struct {
 	ServiceBase
-	client *executorsclientv1.ExecutorsClient
+	client executorsclientv1.Interface
 }
 
-func NewExecutorsService(service Service, client *executorsclientv1.ExecutorsClient) ExecutorsService {
+func NewExecutorsService(service Service, client executorsclientv1.Interface) ExecutorsService {
 	return &executorsService{ServiceBase: ServiceBase{Service: service}, client: client}
 }
 
@@ -32,7 +32,7 @@ func (s *executorsService) List(selector string) ([]testkube.ExecutorDetails, er
 }
 
 func (s *executorsService) SubscribeList(ctx context.Context, selector string) (<-chan []testkube.ExecutorDetails, error) {
-	return HandleSubscription(ctx, "events.executor.>", s, func() ([]testkube.ExecutorDetails, error) {
+	return HandleSubscription(ctx, "agentevents.executor.>", s, func() ([]testkube.ExecutorDetails, error) {
 		return s.List(selector)
 	})
 }

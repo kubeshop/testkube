@@ -1,15 +1,12 @@
 package secretmanager
 
 import (
-	"context"
-	errors2 "errors"
 	"fmt"
 
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/rand"
-	"k8s.io/client-go/kubernetes"
 )
 
 const maxSecretSize = 750 * 1024
@@ -19,23 +16,19 @@ var (
 )
 
 type batch struct {
-	clientSet kubernetes.Interface
-	namespace string
-	prefix    string
-	name      string
-	secrets   []corev1.Secret
-	lengths   []int
-	index     int
-	disabled  bool
+	prefix   string
+	name     string
+	secrets  []corev1.Secret
+	lengths  []int
+	index    int
+	disabled bool
 }
 
-func NewBatch(clientSet kubernetes.Interface, namespace, prefix, name string, disabled bool) *batch {
+func NewBatch(prefix, name string, disabled bool) *batch {
 	return &batch{
-		clientSet: clientSet,
-		namespace: namespace,
-		prefix:    prefix,
-		name:      name,
-		disabled:  disabled,
+		prefix:   prefix,
+		name:     name,
+		disabled: disabled,
 	}
 }
 
@@ -94,26 +87,15 @@ func (s *batch) Append(key string, value string) (*corev1.EnvVarSource, error) {
 	}, nil
 }
 
-func (s *batch) Create(ctx context.Context, owner *metav1.OwnerReference) error {
-	created := make([]string, 0)
-	for _, secret := range s.secrets {
-		if owner != nil {
-			secret.OwnerReferences = []metav1.OwnerReference{*owner}
-		} else {
-			secret.OwnerReferences = nil
-		}
-		obj, err := s.clientSet.CoreV1().Secrets(s.namespace).Create(ctx, &secret, metav1.CreateOptions{})
-		if err != nil {
-			errs := []error{err}
-			for _, name := range created {
-				err = s.clientSet.CoreV1().Secrets(s.namespace).Delete(context.Background(), name, metav1.DeleteOptions{})
-				if err != nil {
-					errs = append(errs, errors.Wrapf(err, "failed to delete obsolete secret '%s'", name))
-				}
-			}
-			return errors2.Join(errs...)
-		}
-		created = append(created, obj.Name)
-	}
-	return nil
+func (s *batch) ForceEnable() *batch {
+	s.disabled = false
+	return s
+}
+
+func (s *batch) HasData() bool {
+	return len(s.secrets) > 0
+}
+
+func (s *batch) Get() []corev1.Secret {
+	return s.secrets
 }

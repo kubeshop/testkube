@@ -46,6 +46,19 @@ func (m *machine) RegisterStringMap(prefix string, value map[string]string) *mac
 	})
 }
 
+func (m *machine) RegisterMap(prefix string, value map[string]interface{}) *machine {
+	if len(prefix) > 0 {
+		prefix += "."
+	}
+	return m.RegisterAccessor(func(n string) (interface{}, bool) {
+		if !strings.HasPrefix(n, prefix) {
+			return nil, false
+		}
+		v, ok := value[n[len(prefix):]]
+		return v, ok
+	})
+}
+
 func (m *machine) RegisterAccessorExt(fn MachineAccessorExt) *machine {
 	m.accessors = append(m.accessors, fn)
 	return m

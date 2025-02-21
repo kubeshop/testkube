@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"maps"
 	"path/filepath"
+	"time"
 
 	"github.com/pkg/errors"
 	batchv1 "k8s.io/api/batch/v1"
@@ -16,6 +17,7 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
@@ -26,7 +28,7 @@ import (
 //go:generate mockgen -destination=./mock_processor.go -package=testworkflowprocessor "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor" Processor
 type Processor interface {
 	Register(operation Operation) Processor
-	Bundle(ctx context.Context, workflow *testworkflowsv1.TestWorkflow, machines ...expressions.Machine) (*Bundle, error)
+	Bundle(ctx context.Context, workflow *testworkflowsv1.TestWorkflow, options BundleOptions, machines ...expressions.Machine) (*Bundle, error)
 }
 
 //go:generate mockgen -destination=./mock_internalprocessor.go -package=testworkflowprocessor "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor" InternalProcessor
@@ -74,7 +76,12 @@ func (p *processor) process(layer Intermediate, container stage.Container, step 
 		if err != nil {
 			return nil, err
 		}
-		self.Add(stage)
+		if stage != nil {
+			if step.Condition != "" {
+				stage.SetCondition(step.Condition)
+			}
+			self.Add(stage)
+		}
 	}
 
 	// Add virtual pause step in case no other is there
@@ -94,24 +101,33 @@ func (p *processor) Process(layer Intermediate, container stage.Container, step 
 	return p.process(layer, container, step, layer.NextRef())
 }
 
-func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWorkflow, machines ...expressions.Machine) (bundle *Bundle, err error) {
+func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWorkflow, options BundleOptions,
+	machines ...expressions.Machine) (bundle *Bundle, err error) {
 	// Initialize intermediate layer
 	layer := NewIntermediate().
 		AppendPodConfig(workflow.Spec.Pod).
-		AppendJobConfig(workflow.Spec.Job)
+		AppendJobConfig(workflow.Spec.Job).
+		AppendPvcs(workflow.Spec.Pvcs)
 	layer.ContainerDefaults().
 		ApplyCR(constants.DefaultContainerConfig.DeepCopy()).
 		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, constants.DefaultInternalPath)).
+		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, constants.DefaultTmpDirPath)).
 		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, constants.DefaultDataPath))
 
+	mapEnv := make(map[string]corev1.EnvVarSource)
+	machines = append(machines,
+		createSecretMachine(mapEnv),
+		testworkflowconfig.CreateWorkerMachine(&options.Config.Worker),
+		testworkflowconfig.CreateResourceMachine(&options.Config.Resource),
+		testworkflowconfig.CreatePvcMachine(common.MapMap(layer.Pvcs(), func(v corev1.PersistentVolumeClaim) string { return v.Name })),
+	)
+
 	// Fetch resource root and resource ID
-	resourceRoot, err := expressions.EvalExpression("resource.root", machines...)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not resolve resource.root")
+	if options.Config.Resource.Id == "" {
+		return nil, errors.New("could not resolve resource.id")
 	}
-	resourceId, err := expressions.EvalExpression("resource.id", machines...)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not resolve resource.id")
+	if options.Config.Resource.RootId == "" {
+		return nil, errors.New("could not resolve resource.root")
 	}
 
 	// Process steps
@@ -142,18 +158,39 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	// Finalize ConfigMaps
 	configMaps := layer.ConfigMaps()
 	for i := range configMaps {
-		AnnotateControlledBy(&configMaps[i], resourceRoot.Template(), resourceId.Template())
+		AnnotateControlledBy(&configMaps[i], options.Config.Resource.RootId, options.Config.Resource.Id)
 		err = expressions.FinalizeForce(&configMaps[i], machines...)
 		if err != nil {
 			return nil, errors.Wrap(err, "finalizing ConfigMap")
 		}
 	}
 
+	// Finalize Pvcs
+	pvcs := make([]corev1.PersistentVolumeClaim, 0)
+	mapPvc := make(map[string]string)
+	for name, spec := range layer.Pvcs() {
+		AnnotateControlledBy(&spec, options.Config.Resource.RootId, options.Config.Resource.Id)
+		err = expressions.FinalizeForce(&spec, machines...)
+		if err != nil {
+			return nil, errors.Wrap(err, "finalizing Pvc")
+		}
+
+		data := struct{ value string }{value: name}
+		err = expressions.FinalizeForce(&data, machines...)
+		if err != nil {
+			return nil, errors.Wrap(err, "finalizing name")
+		}
+
+		mapPvc[data.value] = spec.Name
+		pvcs = append(pvcs, spec)
+	}
+	options.Config.Execution.PvcNames = common.MergeMaps(options.Config.Execution.PvcNames, mapPvc)
+
 	// Finalize Secrets
-	secrets := layer.Secrets()
+	secrets := append(layer.Secrets(), options.Secrets...)
 	for i := range secrets {
-		AnnotateControlledBy(&secrets[i], resourceRoot.Template(), resourceId.Template())
-		err = expressions.FinalizeForce(&secrets[i], machines...)
+		AnnotateControlledBy(&secrets[i], options.Config.Resource.RootId, options.Config.Resource.Id)
+		err = expressions.SimplifyForce(&secrets[i], machines...)
 		if err != nil {
 			return nil, errors.Wrap(err, "finalizing Secret")
 		}
@@ -171,8 +208,8 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	// Append main label for the pod
 	layer.AppendPodConfig(&testworkflowsv1.PodConfig{
 		Labels: map[string]string{
-			constants.RootResourceIdLabelName: resourceRoot.Template(),
-			constants.ResourceIdLabelName:     resourceId.Template(),
+			constants.RootResourceIdLabelName: options.Config.Resource.RootId,
+			constants.ResourceIdLabelName:     options.Config.Resource.Id,
 		},
 	})
 
@@ -199,7 +236,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 
 	// Load the image details when necessary
 	hasPodSecurityContextGroup := podConfig.SecurityContext != nil && podConfig.SecurityContext.RunAsGroup != nil
-	imageNames := root.GetImages(hasPodSecurityContextGroup)
+	imageNames := root.GetImages(!hasPodSecurityContextGroup)
 	images := make(map[string]*imageinspector.Info)
 	imageNameResolutions := map[string]string{}
 	for image, needsMetadata := range imageNames {
@@ -356,7 +393,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 			ResourceClaims:            podConfig.ResourceClaims,
 		},
 	}
-	AnnotateControlledBy(&podSpec, resourceRoot.Template(), resourceId.Template())
+	AnnotateControlledBy(&podSpec, options.Config.Resource.RootId, options.Config.Resource.Id)
 	podSpec.Spec.InitContainers = containers[:len(containers)-1]
 	podSpec.Spec.Containers = containers[len(containers)-1:]
 
@@ -368,7 +405,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 			APIVersion: batchv1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        resourceId.Template(),
+			Name:        options.Config.Resource.Id,
 			Annotations: jobConfig.Annotations,
 			Labels:      jobConfig.Labels,
 			Namespace:   jobConfig.Namespace,
@@ -378,28 +415,28 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 			ActiveDeadlineSeconds: jobConfig.ActiveDeadlineSeconds,
 		},
 	}
-	AnnotateControlledBy(&jobSpec, resourceRoot.Template(), resourceId.Template())
+	AnnotateControlledBy(&jobSpec, options.Config.Resource.RootId, options.Config.Resource.Id)
 	err = expressions.FinalizeForce(&jobSpec, machines...)
 	if err != nil {
 		return nil, errors.Wrap(err, "finalizing job spec")
 	}
 	jobSpec.Spec.Template = podSpec
 
-	// Build signature
-	sigSerialized, _ := json.Marshal(sig)
-	jobAnnotations := make(map[string]string)
-	maps.Copy(jobAnnotations, jobSpec.Annotations)
-	maps.Copy(jobAnnotations, map[string]string{
-		constants.SignatureAnnotationName: string(sigSerialized),
-	})
-	jobSpec.Annotations = jobAnnotations
+	// TODO(TKC-2585): Avoid adding the secrets to all the groups without isolation
+	addEnvVarToContainerSpec(mapEnv, jobSpec.Spec.Template.Spec.InitContainers)
+	addEnvVarToContainerSpec(mapEnv, jobSpec.Spec.Template.Spec.Containers)
 
 	// Build running instructions
+	sigSerialized, _ := json.Marshal(sig)
 	actionGroupsSerialized, _ := json.Marshal(actionGroups)
+	internalConfigSerialized, _ := json.Marshal(options.Config)
 	podAnnotations := make(map[string]string)
 	maps.Copy(podAnnotations, jobSpec.Spec.Template.Annotations)
 	maps.Copy(podAnnotations, map[string]string{
-		constants.SpecAnnotationName: string(actionGroupsSerialized),
+		constants.SignatureAnnotationName:   string(sigSerialized),
+		constants.SpecAnnotationName:        string(actionGroupsSerialized),
+		constants.InternalAnnotationName:    string(internalConfigSerialized),
+		constants.ScheduledAtAnnotationName: options.ScheduledAt.UTC().Format(time.RFC3339Nano),
 	})
 	jobSpec.Spec.Template.Annotations = podAnnotations
 
@@ -407,9 +444,22 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	bundle = &Bundle{
 		ConfigMaps:    configMaps,
 		Secrets:       secrets,
+		Pvcs:          pvcs,
 		Job:           jobSpec,
 		Signature:     sig,
 		FullSignature: fullSig,
 	}
 	return bundle, nil
+}
+
+func addEnvVarToContainerSpec(mapEnv map[string]corev1.EnvVarSource, containers []corev1.Container) {
+	for i := range containers {
+		for envName, envSource := range mapEnv {
+			e := corev1.EnvVar{
+				Name:      envName,
+				ValueFrom: envSource.DeepCopy(),
+			}
+			containers[i].Env = append(containers[i].Env, e)
+		}
+	}
 }

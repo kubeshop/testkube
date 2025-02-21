@@ -10,12 +10,13 @@ import (
 	"k8s.io/apimachinery/pkg/util/yaml"
 
 	executorv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
+	"github.com/kubeshop/testkube/internal/app/api/apiutils"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/crd"
 	webhooksmapper "github.com/kubeshop/testkube/pkg/mapper/webhooks"
 )
 
-func (s TestkubeAPI) CreateWebhookHandler() fiber.Handler {
+func (s *TestkubeAPI) CreateWebhookHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to create webhook"
 		var webhook executorv1.Webhook
@@ -33,12 +34,9 @@ func (s TestkubeAPI) CreateWebhookHandler() fiber.Handler {
 			}
 
 			if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
-				if request.PayloadTemplate != "" {
-					request.PayloadTemplate = fmt.Sprintf("%q", request.PayloadTemplate)
-				}
-
+				request.QuoteTextFields()
 				data, err := crd.GenerateYAML(crd.TemplateWebhook, []testkube.WebhookCreateRequest{request})
-				return s.getCRDs(c, data, err)
+				return apiutils.SendLegacyCRDs(c, data, err)
 			}
 
 			webhook = webhooksmapper.MapAPIToCRD(request)
@@ -55,7 +53,7 @@ func (s TestkubeAPI) CreateWebhookHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) UpdateWebhookHandler() fiber.Handler {
+func (s *TestkubeAPI) UpdateWebhookHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to update webhook"
 		var request testkube.WebhookUpdateRequest
@@ -102,7 +100,7 @@ func (s TestkubeAPI) UpdateWebhookHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) ListWebhooksHandler() fiber.Handler {
+func (s *TestkubeAPI) ListWebhooksHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to list webhooks"
 
@@ -119,20 +117,18 @@ func (s TestkubeAPI) ListWebhooksHandler() fiber.Handler {
 
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
 			for i := range results {
-				if results[i].PayloadTemplate != "" {
-					results[i].PayloadTemplate = fmt.Sprintf("%q", results[i].PayloadTemplate)
-				}
+				results[i].QuoteTextFields()
 			}
 
 			data, err := crd.GenerateYAML(crd.TemplateWebhook, results)
-			return s.getCRDs(c, data, err)
+			return apiutils.SendLegacyCRDs(c, data, err)
 		}
 
 		return c.JSON(results)
 	}
 }
 
-func (s TestkubeAPI) GetWebhookHandler() fiber.Handler {
+func (s *TestkubeAPI) GetWebhookHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("name")
 		errPrefix := fmt.Sprintf("failed to get webhook %s", name)
@@ -147,19 +143,16 @@ func (s TestkubeAPI) GetWebhookHandler() fiber.Handler {
 
 		result := webhooksmapper.MapCRDToAPI(*item)
 		if c.Accepts(mediaTypeJSON, mediaTypeYAML) == mediaTypeYAML {
-			if result.PayloadTemplate != "" {
-				result.PayloadTemplate = fmt.Sprintf("%q", result.PayloadTemplate)
-			}
-
+			result.QuoteTextFields()
 			data, err := crd.GenerateYAML(crd.TemplateWebhook, []testkube.Webhook{result})
-			return s.getCRDs(c, data, err)
+			return apiutils.SendLegacyCRDs(c, data, err)
 		}
 
 		return c.JSON(result)
 	}
 }
 
-func (s TestkubeAPI) DeleteWebhookHandler() fiber.Handler {
+func (s *TestkubeAPI) DeleteWebhookHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		name := c.Params("name")
 		errPrefix := fmt.Sprintf("failed to delete webhook %s", name)
@@ -177,7 +170,7 @@ func (s TestkubeAPI) DeleteWebhookHandler() fiber.Handler {
 	}
 }
 
-func (s TestkubeAPI) DeleteWebhooksHandler() fiber.Handler {
+func (s *TestkubeAPI) DeleteWebhooksHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to delete webhooks"
 

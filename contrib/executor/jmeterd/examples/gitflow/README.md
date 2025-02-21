@@ -26,7 +26,7 @@ All the plugins required by the test are kept in the `plugins` directory of the 
 2. Type a test name (i.e. `jmeterd-example`) and select `jmeterd/test` as test type.
 3. Select `Git` as the source type and fill the following details:
    * Git Repository URI: https://github.com/kubeshop/testkube
-   * Branch: develop
+   * Branch: main
    * Path: contrib/executor/jmeterd/examples/gitflow
 4. Click **Create** to create the test.
 5. Select **Settings** tab and then open the **Variables & Secrets** tab from the left menu.
@@ -56,7 +56,7 @@ spec:
     repository:
       type: git
       uri: https://github.com/kubeshop/testkube
-      branch: develop
+      branch: main
       path: contrib/executor/jmeterd/examples/gitflow
   executionRequest:
     variables:

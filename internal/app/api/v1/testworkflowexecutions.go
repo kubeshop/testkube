@@ -14,12 +14,50 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/websocket/v2"
 	"github.com/pkg/errors"
+	"github.com/valyala/fasthttp"
 
+	"github.com/kubeshop/testkube/internal/app/api/apiutils"
+	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/datefilter"
 	testworkflow2 "github.com/kubeshop/testkube/pkg/repository/testworkflow"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowcontroller"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 )
+
+func (s *TestkubeAPI) streamNotifications(ctx *fasthttp.RequestCtx, id string, notifications executionworkertypes.NotificationsWatcher) {
+	// Initiate processing event stream
+	ctx.SetContentType("text/event-stream")
+	ctx.Response.Header.Set("Cache-Control", "no-cache")
+	ctx.Response.Header.Set("Connection", "keep-alive")
+	ctx.Response.Header.Set("Transfer-Encoding", "chunked")
+
+	// Stream the notifications
+	ctx.SetBodyStreamWriter(func(w *bufio.Writer) {
+		err := w.Flush()
+		if err != nil {
+			s.Log.Errorw("could not flush stream body", "error", err, "id", id)
+		}
+
+		enc := json.NewEncoder(w)
+
+		for n := range notifications.Channel() {
+			err := enc.Encode(n)
+			if err != nil {
+				s.Log.Errorw("could not encode value", "error", err, "id", id)
+			}
+
+			_, err = fmt.Fprintf(w, "\n")
+			if err != nil {
+				s.Log.Errorw("could not print new line", "error", err, "id", id)
+			}
+
+			err = w.Flush()
+			if err != nil {
+				s.Log.Errorw("could not flush stream body", "error", err, "id", id)
+			}
+		}
+	})
+}
 
 func (s *TestkubeAPI) StreamTestWorkflowExecutionNotificationsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
@@ -34,31 +72,96 @@ func (s *TestkubeAPI) StreamTestWorkflowExecutionNotificationsHandler() fiber.Ha
 		}
 
 		// Check for the logs
-		ctrl, err := testworkflowcontroller.New(ctx, s.Clientset, execution.GetNamespace(s.Namespace), execution.Id, execution.ScheduledAt)
-		if err != nil {
-			return s.BadRequest(c, errPrefix, "fetching job", err)
+		notifications := s.ExecutionWorkerClient.Notifications(ctx, execution.Id, executionworkertypes.NotificationsOptions{
+			Hints: executionworkertypes.Hints{
+				Namespace:   execution.Namespace,
+				ScheduledAt: common.Ptr(execution.ScheduledAt),
+				Signature:   execution.Signature,
+			},
+		})
+		if notifications.Err() != nil {
+			return s.BadRequest(c, errPrefix, "fetching notifications", notifications.Err())
 		}
 
-		// Initiate processing event stream
-		ctx.SetContentType("text/event-stream")
-		ctx.Response.Header.Set("Cache-Control", "no-cache")
-		ctx.Response.Header.Set("Connection", "keep-alive")
-		ctx.Response.Header.Set("Transfer-Encoding", "chunked")
+		s.streamNotifications(ctx, id, notifications)
+		return nil
+	}
+}
 
-		// Stream the notifications
-		ctx.SetBodyStreamWriter(func(w *bufio.Writer) {
-			_ = w.Flush()
-			enc := json.NewEncoder(w)
+func (s *TestkubeAPI) StreamTestWorkflowExecutionServiceNotificationsHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		ctx := c.Context()
+		executionID := c.Params("executionID")
+		serviceName := c.Params("serviceName")
+		serviceIndex := c.Params("serviceIndex")
+		errPrefix := fmt.Sprintf("failed to stream test workflow execution service '%s' instance '%s' notifications '%s'",
+			serviceName, serviceIndex, executionID)
 
-			for n := range ctrl.Watch(ctx) {
-				if n.Error == nil {
-					_ = enc.Encode(n.Value)
-					_, _ = fmt.Fprintf(w, "\n")
-					_ = w.Flush()
-				}
-			}
+		// Fetch execution from database
+		execution, err := s.TestWorkflowResults.Get(ctx, executionID)
+		if err != nil {
+			return s.ClientError(c, errPrefix, err)
+		}
+
+		found := false
+		if execution.Workflow != nil {
+			found = execution.Workflow.HasService(serviceName)
+		}
+
+		if !found {
+			return s.ClientError(c, errPrefix, errors.New("unknown service for test workflow execution"))
+		}
+
+		// Check for the logs
+		id := fmt.Sprintf("%s-%s-%s", execution.Id, serviceName, serviceIndex)
+		notifications := s.ExecutionWorkerClient.Notifications(ctx, id, executionworkertypes.NotificationsOptions{
+			Hints: executionworkertypes.Hints{
+				Namespace:   execution.Namespace,
+				ScheduledAt: common.Ptr(execution.ScheduledAt),
+			},
 		})
+		if notifications.Err() != nil {
+			return s.BadRequest(c, errPrefix, "fetching notifications", notifications.Err())
+		}
 
+		s.streamNotifications(ctx, id, notifications)
+		return nil
+	}
+}
+
+func (s *TestkubeAPI) StreamTestWorkflowExecutionParallelStepNotificationsHandler() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		ctx := c.Context()
+		executionID := c.Params("executionID")
+		ref := c.Params("ref")
+		workerIndex := c.Params("workerIndex")
+		errPrefix := fmt.Sprintf("failed to stream test workflow execution parallel step '%s' instance '%s' notifications '%s'",
+			ref, workerIndex, executionID)
+
+		// Fetch execution from database
+		execution, err := s.TestWorkflowResults.Get(ctx, executionID)
+		if err != nil {
+			return s.ClientError(c, errPrefix, err)
+		}
+
+		reference := execution.GetParallelStepReference(ref)
+		if reference == "" {
+			return s.ClientError(c, errPrefix, errors.New("unknown parallel step for test workflow execution"))
+		}
+
+		// Check for the logs
+		id := fmt.Sprintf("%s-%s-%s", execution.Id, reference, workerIndex)
+		notifications := s.ExecutionWorkerClient.Notifications(ctx, id, executionworkertypes.NotificationsOptions{
+			Hints: executionworkertypes.Hints{
+				Namespace:   execution.Namespace,
+				ScheduledAt: common.Ptr(execution.ScheduledAt),
+			},
+		})
+		if notifications.Err() != nil {
+			return s.BadRequest(c, errPrefix, "fetching notifications", notifications.Err())
+		}
+
+		s.streamNotifications(ctx, id, notifications)
 		return nil
 	}
 }
@@ -82,16 +185,112 @@ func (s *TestkubeAPI) StreamTestWorkflowExecutionNotificationsWebSocketHandler()
 			return
 		}
 
-		// Check for the logs TODO: Load from the database if possible
-		ctrl, err := testworkflowcontroller.New(ctx, s.Clientset, execution.GetNamespace(s.Namespace), execution.Id, execution.ScheduledAt)
+		// Check for the logs
+		notifications := s.ExecutionWorkerClient.Notifications(ctx, execution.Id, executionworkertypes.NotificationsOptions{
+			Hints: executionworkertypes.Hints{
+				Namespace:   execution.Namespace,
+				Signature:   execution.Signature,
+				ScheduledAt: common.Ptr(execution.ScheduledAt),
+			},
+		})
+		if notifications.Err() != nil {
+			return
+		}
+
+		for n := range notifications.Channel() {
+			_ = c.WriteJSON(n)
+		}
+	})
+}
+
+func (s *TestkubeAPI) StreamTestWorkflowExecutionServiceNotificationsWebSocketHandler() fiber.Handler {
+	return websocket.New(func(c *websocket.Conn) {
+		ctx, ctxCancel := context.WithCancel(context.Background())
+		executionID := c.Params("executionID")
+		serviceName := c.Params("serviceName")
+		serviceIndex := c.Params("serviceIndex")
+
+		// Stop reading when the WebSocket connection is already closed
+		originalClose := c.CloseHandler()
+		c.SetCloseHandler(func(code int, text string) error {
+			ctxCancel()
+			return originalClose(code, text)
+		})
+		defer c.Conn.Close()
+
+		// Fetch execution from database
+		execution, err := s.TestWorkflowResults.Get(ctx, executionID)
 		if err != nil {
 			return
 		}
 
-		for n := range ctrl.Watch(ctx) {
-			if n.Error == nil {
-				_ = c.WriteJSON(n.Value)
-			}
+		found := false
+		if execution.Workflow != nil && execution.Workflow.Spec != nil {
+			found = execution.Workflow.HasService(serviceName)
+		}
+
+		if !found {
+			return
+		}
+
+		// Check for the logs
+		id := fmt.Sprintf("%s-%s-%s", execution.Id, serviceName, serviceIndex)
+		notifications := s.ExecutionWorkerClient.Notifications(ctx, id, executionworkertypes.NotificationsOptions{
+			Hints: executionworkertypes.Hints{
+				Namespace:   execution.Namespace,
+				ScheduledAt: common.Ptr(execution.ScheduledAt),
+			},
+		})
+		if notifications.Err() != nil {
+			return
+		}
+
+		for n := range notifications.Channel() {
+			_ = c.WriteJSON(n)
+		}
+	})
+}
+
+func (s *TestkubeAPI) StreamTestWorkflowExecutionParallelStepNotificationsWebSocketHandler() fiber.Handler {
+	return websocket.New(func(c *websocket.Conn) {
+		ctx, ctxCancel := context.WithCancel(context.Background())
+		executionID := c.Params("executionID")
+		ref := c.Params("ref")
+		workerIndex := c.Params("workerIndex")
+
+		// Stop reading when the WebSocket connection is already closed
+		originalClose := c.CloseHandler()
+		c.SetCloseHandler(func(code int, text string) error {
+			ctxCancel()
+			return originalClose(code, text)
+		})
+		defer c.Conn.Close()
+
+		// Fetch execution from database
+		execution, err := s.TestWorkflowResults.Get(ctx, executionID)
+		if err != nil {
+			return
+		}
+
+		reference := execution.GetParallelStepReference(ref)
+		if reference == "" {
+			return
+		}
+
+		// Check for the logs
+		id := fmt.Sprintf("%s-%s-%s", execution.Id, reference, workerIndex)
+		notifications := s.ExecutionWorkerClient.Notifications(ctx, id, executionworkertypes.NotificationsOptions{
+			Hints: executionworkertypes.Hints{
+				Namespace:   execution.Namespace,
+				ScheduledAt: common.Ptr(execution.ScheduledAt),
+			},
+		})
+		if notifications.Err() != nil {
+			return
+		}
+
+		for n := range notifications.Channel() {
+			_ = c.WriteJSON(n)
 		}
 	})
 }
@@ -225,14 +424,10 @@ func (s *TestkubeAPI) AbortTestWorkflowExecutionHandler() fiber.Handler {
 			return s.BadRequest(c, errPrefix, "checking execution", errors.New("execution already finished"))
 		}
 
-		// Obtain the controller
-		ctrl, err := testworkflowcontroller.New(ctx, s.Clientset, execution.GetNamespace(s.Namespace), execution.Id, execution.ScheduledAt)
-		if err != nil {
-			return s.BadRequest(c, errPrefix, "fetching job", err)
-		}
-
-		// Abort the execution
-		err = ctrl.Abort(ctx)
+		// Abort the Test Workflow
+		err = s.ExecutionWorkerClient.Abort(ctx, execution.Id, executionworkertypes.DestroyOptions{
+			Namespace: execution.Namespace,
+		})
 		if err != nil {
 			return s.ClientError(c, "aborting test workflow execution", err)
 		}
@@ -266,14 +461,10 @@ func (s *TestkubeAPI) PauseTestWorkflowExecutionHandler() fiber.Handler {
 			return s.BadRequest(c, errPrefix, "checking execution", errors.New("execution already finished"))
 		}
 
-		// Obtain the controller
-		ctrl, err := testworkflowcontroller.New(ctx, s.Clientset, execution.GetNamespace(s.Namespace), execution.Id, execution.ScheduledAt)
-		if err != nil {
-			return s.BadRequest(c, errPrefix, "fetching job", err)
-		}
-
-		// Resuming the execution
-		err = ctrl.Pause(ctx)
+		// Pausing the execution
+		err = s.ExecutionWorkerClient.Pause(ctx, execution.Id, executionworkertypes.ControlOptions{
+			Namespace: execution.Namespace,
+		})
 		if err != nil {
 			return s.ClientError(c, "pausing test workflow execution", err)
 		}
@@ -306,14 +497,10 @@ func (s *TestkubeAPI) ResumeTestWorkflowExecutionHandler() fiber.Handler {
 			return s.BadRequest(c, errPrefix, "checking execution", errors.New("execution already finished"))
 		}
 
-		// Obtain the controller
-		ctrl, err := testworkflowcontroller.New(ctx, s.Clientset, execution.GetNamespace(s.Namespace), execution.Id, execution.ScheduledAt)
-		if err != nil {
-			return s.BadRequest(c, errPrefix, "fetching job", err)
-		}
-
 		// Resuming the execution
-		err = ctrl.Resume(ctx)
+		err = s.ExecutionWorkerClient.Resume(ctx, execution.Id, executionworkertypes.ControlOptions{
+			Namespace: execution.Namespace,
+		})
 		if err != nil {
 			return s.ClientError(c, "resuming test workflow execution", err)
 		}
@@ -334,7 +521,7 @@ func (s *TestkubeAPI) AbortAllTestWorkflowExecutionsHandler() fiber.Handler {
 		filter := testworkflow2.NewExecutionsFilter().WithName(name).WithStatus(string(testkube.RUNNING_TestWorkflowStatus))
 		executions, err := s.TestWorkflowResults.GetExecutions(ctx, filter)
 		if err != nil {
-			if IsNotFound(err) {
+			if apiutils.IsNotFound(err) {
 				c.Status(http.StatusNoContent)
 				return nil
 			}
@@ -342,14 +529,9 @@ func (s *TestkubeAPI) AbortAllTestWorkflowExecutionsHandler() fiber.Handler {
 		}
 
 		for _, execution := range executions {
-			// Obtain the controller
-			ctrl, err := testworkflowcontroller.New(ctx, s.Clientset, execution.GetNamespace(s.Namespace), execution.Id, execution.ScheduledAt)
-			if err != nil {
-				return s.BadRequest(c, errPrefix, "fetching job", err)
-			}
-
-			// Abort the execution
-			err = ctrl.Abort(ctx)
+			err = s.ExecutionWorkerClient.Abort(ctx, execution.Id, executionworkertypes.DestroyOptions{
+				Namespace: execution.Namespace,
+			})
 			if err != nil {
 				return s.ClientError(c, errPrefix, err)
 			}
@@ -430,40 +612,13 @@ func (s *TestkubeAPI) GetTestWorkflowArtifactArchiveHandler() fiber.Handler {
 			return s.ClientError(c, errPrefix, err)
 		}
 
-		archive, err := s.ArtifactsStorage.DownloadArchive(c.Context(), execution.Id, values["mask"])
+		archive, err := s.ArtifactsStorage.DownloadArchive(c.Context(), execution.Id, "", "", execution.Workflow.Name, values["mask"])
 		if err != nil {
 			return s.InternalError(c, errPrefix, "could not download workflow artifact archive", err)
 		}
 
 		return c.SendStream(archive)
 	}
-}
-
-func (s *TestkubeAPI) GetTestWorkflowNotificationsStream(ctx context.Context, executionID string) (chan testkube.TestWorkflowExecutionNotification, error) {
-	// Load the execution
-	execution, err := s.TestWorkflowResults.Get(ctx, executionID)
-	if err != nil {
-		return nil, err
-	}
-
-	// Check for the logs
-	ctrl, err := testworkflowcontroller.New(ctx, s.Clientset, execution.GetNamespace(s.Namespace), execution.Id, execution.ScheduledAt)
-	if err != nil {
-		return nil, err
-	}
-
-	// Stream the notifications
-	ch := make(chan testkube.TestWorkflowExecutionNotification)
-	go func() {
-		for n := range ctrl.Watch(ctx) {
-			if n.Error == nil {
-				ch <- n.Value.ToInternal()
-			}
-		}
-		ctrl.StopController()
-		close(ch)
-	}()
-	return ch, nil
 }
 
 func getWorkflowExecutionsFilterFromRequest(c *fiber.Ctx) testworkflow2.Filter {
@@ -510,6 +665,21 @@ func getWorkflowExecutionsFilterFromRequest(c *fiber.Ctx) testworkflow2.Filter {
 	selector := c.Query("selector")
 	if selector != "" {
 		filter = filter.WithSelector(selector)
+	}
+
+	tagSelector := c.Query("tagSelector")
+	if tagSelector != "" {
+		filter = filter.WithTagSelector(tagSelector)
+	}
+
+	actorName := c.Query("actorName")
+	if actorName != "" {
+		filter = filter.WithActorName(actorName)
+	}
+
+	actorType := c.Query("actorType")
+	if actorType != "" {
+		filter = filter.WithActorType(testkube.TestWorkflowRunningContextActorType(actorType))
 	}
 
 	return filter

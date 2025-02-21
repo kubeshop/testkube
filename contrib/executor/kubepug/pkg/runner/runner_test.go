@@ -307,7 +307,7 @@ func TestRunGitFile_Integration(t *testing.T) {
 
 		repo := &testkube.Repository{
 			Uri:    "https://github.com/kubeshop/testkube",
-			Branch: "develop",
+			Branch: "main",
 			Path:   "contrib/executor/kubepug/pkg/runner/test-files/fake-manifest.yaml",
 		}
 		_, err = content.NewFetcher(tempDir).FetchGit(repo)
@@ -345,7 +345,7 @@ func TestRunGitFile_Integration(t *testing.T) {
 
 		repo := &testkube.Repository{
 			Uri:    "https://github.com/kubeshop/testkube",
-			Branch: "develop",
+			Branch: "main",
 			Path:   "contrib/executor/kubepug/pkg/runner/test-files/manifest-deprecated.yaml",
 		}
 		_, err = content.NewFetcher(tempDir).FetchGit(repo)
@@ -394,7 +394,7 @@ func TestRunGitDirectory_Integration(t *testing.T) {
 
 		repo := &testkube.Repository{
 			Uri:    "https://github.com/kubeshop/testkube",
-			Branch: "develop",
+			Branch: "main",
 			Path:   "contrib/executor/kubepug/pkg/runner/test-files/manifest-valid",
 		}
 		_, err = content.NewFetcher(tempDir).FetchGit(repo)

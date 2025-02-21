@@ -74,6 +74,13 @@ func Finalize(groups actiontypes.ActionGroups, isolatedContainers bool) actionty
 		}
 	}
 
+	// Avoid copying binaries when all fits single container
+	if len(groups) == 1 && canMergeSetup {
+		copyToolkit = false
+		copyBinaries = false
+		copyInit = false
+	}
+
 	// Avoid using /.tktw/toolkit when the toolkit is not copied
 	if !copyToolkit {
 		for i := range groups {
@@ -111,5 +118,6 @@ func Finalize(groups actiontypes.ActionGroups, isolatedContainers bool) actionty
 	if len(groups[0]) == 0 {
 		groups = groups[1:]
 	}
+
 	return append(actiontypes.ActionGroups{setup}, groups...)
 }

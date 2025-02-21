@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"go.uber.org/zap"
@@ -13,22 +14,18 @@ import (
 	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
 	testsuitev3 "github.com/kubeshop/testkube-operator/api/testsuite/v3"
 	testtriggersv1 "github.com/kubeshop/testkube-operator/api/testtriggers/v1"
-	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
-	testsclientv3 "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
-	testsuitesclientv3 "github.com/kubeshop/testkube-operator/pkg/client/testsuites/v3"
-	testworkflowsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testworkflows/v1"
 	testkubeclientsetv1 "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
+	"github.com/kubeshop/testkube/cmd/api-server/services"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
+	intconfig "github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event/bus"
-	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/http"
+	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/repository/config"
-	"github.com/kubeshop/testkube/pkg/repository/result"
-	"github.com/kubeshop/testkube/pkg/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
-	"github.com/kubeshop/testkube/pkg/scheduler"
 	"github.com/kubeshop/testkube/pkg/telemetry"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 	"github.com/kubeshop/testkube/pkg/utils"
 	"github.com/kubeshop/testkube/pkg/version"
@@ -61,46 +58,37 @@ type Service struct {
 	defaultProbesCheckBackoff     time.Duration
 	watchFromDate                 time.Time
 	triggerStatus                 map[statusKey]*triggerStatus
-	scheduler                     *scheduler.Scheduler
 	clientset                     kubernetes.Interface
 	testKubeClientset             testkubeclientsetv1.Interface
-	testSuitesClient              testsuitesclientv3.Interface
-	testsClient                   testsclientv3.Interface
-	testWorkflowsClient           testworkflowsclientv1.Interface
-	resultRepository              result.Repository
-	testResultRepository          testresult.Repository
+	testWorkflowsClient           testworkflowclient.TestWorkflowClient
 	logger                        *zap.SugaredLogger
 	configMap                     config.Repository
-	executorsClient               executorsclientv1.Interface
 	httpClient                    http.HttpClient
-	testExecutor                  client.Executor
 	eventsBus                     bus.Bus
 	metrics                       metrics.Metrics
+	executionWorkerClient         executionworkertypes.Worker
 	testWorkflowExecutor          testworkflowexecutor.TestWorkflowExecutor
 	testWorkflowResultsRepository testworkflow.Repository
 	testkubeNamespace             string
 	watcherNamespaces             []string
 	disableSecretCreation         bool
+	deprecatedSystem              *services.DeprecatedSystem
+	proContext                    *intconfig.ProContext
 }
 
 type Option func(*Service)
 
 func NewService(
-	scheduler *scheduler.Scheduler,
+	deprecatedSystem *services.DeprecatedSystem,
 	clientset kubernetes.Interface,
 	testKubeClientset testkubeclientsetv1.Interface,
-	testSuitesClient testsuitesclientv3.Interface,
-	testsClient testsclientv3.Interface,
-	testWorkflowsClient testworkflowsclientv1.Interface,
-	resultRepository result.Repository,
-	testResultRepository testresult.Repository,
+	testWorkflowsClient testworkflowclient.TestWorkflowClient,
 	leaseBackend LeaseBackend,
 	logger *zap.SugaredLogger,
 	configMap config.Repository,
-	executorsClient executorsclientv1.Interface,
-	testExecutor client.Executor,
 	eventsBus bus.Bus,
 	metrics metrics.Metrics,
+	executionWorkerClient executionworkertypes.Worker,
 	testWorkflowExecutor testworkflowexecutor.TestWorkflowExecutor,
 	testWorkflowResultsRepository testworkflow.Repository,
 	opts ...Option,
@@ -116,26 +104,21 @@ func NewService(
 		defaultConditionsCheckBackoff: defaultConditionsCheckBackoff,
 		defaultProbesCheckTimeout:     defaultProbesCheckTimeout,
 		defaultProbesCheckBackoff:     defaultProbesCheckBackoff,
-		scheduler:                     scheduler,
 		clientset:                     clientset,
 		testKubeClientset:             testKubeClientset,
-		testSuitesClient:              testSuitesClient,
 		testWorkflowsClient:           testWorkflowsClient,
-		testsClient:                   testsClient,
-		resultRepository:              resultRepository,
-		testResultRepository:          testResultRepository,
 		leaseBackend:                  leaseBackend,
 		logger:                        logger,
 		configMap:                     configMap,
-		executorsClient:               executorsClient,
-		testExecutor:                  testExecutor,
 		eventsBus:                     eventsBus,
 		metrics:                       metrics,
+		executionWorkerClient:         executionWorkerClient,
 		testWorkflowExecutor:          testWorkflowExecutor,
 		testWorkflowResultsRepository: testWorkflowResultsRepository,
 		httpClient:                    http.NewClient(),
 		watchFromDate:                 time.Now(),
 		triggerStatus:                 make(map[statusKey]*triggerStatus),
+		deprecatedSystem:              deprecatedSystem,
 	}
 	if s.triggerExecutor == nil {
 		s.triggerExecutor = s.execute
@@ -218,14 +201,30 @@ func WithDisableSecretCreation(disableSecretCreation bool) Option {
 	}
 }
 
+func WithProContext(proContext *intconfig.ProContext) Option {
+	return func(s *Service) {
+		s.proContext = proContext
+	}
+}
+
 func (s *Service) Run(ctx context.Context) {
 	leaseChan := make(chan bool)
 
-	go s.runLeaseChecker(ctx, leaseChan)
-
-	go s.runWatcher(ctx, leaseChan)
-
-	go s.runExecutionScraper(ctx)
+	wg := sync.WaitGroup{}
+	wg.Add(3)
+	go func() {
+		s.runLeaseChecker(ctx, leaseChan)
+		wg.Done()
+	}()
+	go func() {
+		s.runWatcher(ctx, leaseChan)
+		wg.Done()
+	}()
+	go func() {
+		s.runExecutionScraper(ctx)
+		wg.Done()
+	}()
+	wg.Wait()
 }
 
 func (s *Service) addTrigger(t *testtriggersv1.TestTrigger) {
@@ -292,14 +291,14 @@ func (s *Service) addTest(test *testsv3.Test) {
 	}
 
 	test.Labels[testkube.TestLabelTestType] = utils.SanitizeName(test.Spec.Type_)
-	executorCR, err := s.executorsClient.GetByType(test.Spec.Type_)
+	executorCR, err := s.deprecatedSystem.Clients.Executors().GetByType(test.Spec.Type_)
 	if err == nil {
 		test.Labels[testkube.TestLabelExecutor] = executorCR.Name
 	} else {
 		s.logger.Debugw("can't get executor spec", "error", err)
 	}
 
-	if _, err = s.testsClient.Update(test, s.disableSecretCreation); err != nil {
+	if _, err = s.deprecatedSystem.Clients.Tests().Update(test, s.disableSecretCreation); err != nil {
 		s.logger.Debugw("can't update test spec", "error", err)
 	}
 }
@@ -316,7 +315,7 @@ func (s *Service) updateTest(test *testsv3.Test) {
 		changed = true
 	}
 
-	executorCR, err := s.executorsClient.GetByType(test.Spec.Type_)
+	executorCR, err := s.deprecatedSystem.Clients.Executors().GetByType(test.Spec.Type_)
 	if err == nil {
 		if test.Labels[testkube.TestLabelExecutor] != executorCR.Name {
 			test.Labels[testkube.TestLabelExecutor] = executorCR.Name
@@ -327,7 +326,7 @@ func (s *Service) updateTest(test *testsv3.Test) {
 	}
 
 	if changed {
-		if _, err = s.testsClient.Update(test, s.disableSecretCreation); err != nil {
+		if _, err = s.deprecatedSystem.Clients.Tests().Update(test, s.disableSecretCreation); err != nil {
 			s.logger.Debugw("can't update test spec", "error", err)
 		}
 	}

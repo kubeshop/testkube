@@ -8,6 +8,7 @@ import (
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
 
@@ -40,7 +41,7 @@ func TestProcess_BasicSteps(t *testing.T) {
 			Command: common.Ptr([]string{"a", "b"}),
 		}).
 		Start("step1").
-		Execute("step1", false).
+		Execute("step1", false, false).
 		End("step1").
 
 		// Run the step 2
@@ -50,7 +51,7 @@ func TestProcess_BasicSteps(t *testing.T) {
 			Command: common.Ptr([]string{"c", "d"}),
 		}).
 		Start("step2").
-		Execute("step2", false).
+		Execute("step2", false, false).
 		End("step2").
 
 		// Finish
@@ -100,7 +101,7 @@ func TestProcess_Grouping(t *testing.T) {
 			Command: common.Ptr([]string{"a", "b"}),
 		}).
 		Start("step1").
-		Execute("step1", false).
+		Execute("step1", false, false).
 		End("step1").
 
 		// Start the group 1
@@ -114,7 +115,7 @@ func TestProcess_Grouping(t *testing.T) {
 			Command: common.Ptr([]string{"c", "d"}),
 		}).
 		Start("step2").
-		Execute("step2", false).
+		Execute("step2", false, false).
 		End("step2").
 
 		// Run the step 2
@@ -124,7 +125,7 @@ func TestProcess_Grouping(t *testing.T) {
 			Command: common.Ptr([]string{"c", "d"}),
 		}).
 		Start("step3").
-		Execute("step3", false).
+		Execute("step3", false, false).
 		End("step3").
 
 		// End the group 1
@@ -137,7 +138,7 @@ func TestProcess_Grouping(t *testing.T) {
 			Command: common.Ptr([]string{"c", "d"}),
 		}).
 		Start("step4").
-		Execute("step4", false).
+		Execute("step4", false, false).
 		End("step4").
 
 		// Finish
@@ -184,7 +185,7 @@ func TestProcess_Pause(t *testing.T) {
 			Command: common.Ptr([]string{"a", "b"}),
 		}).
 		Start("step1").
-		Execute("step1", false).
+		Execute("step1", false, false).
 		End("step1").
 
 		// Run the step 2
@@ -194,7 +195,7 @@ func TestProcess_Pause(t *testing.T) {
 			Command: common.Ptr([]string{"c", "d"}),
 		}).
 		Start("step2").
-		Execute("step2", false).
+		Execute("step2", false, false).
 		End("step2").
 
 		// Finish
@@ -238,7 +239,7 @@ func TestProcess_NegativeStep(t *testing.T) {
 			Command: common.Ptr([]string{"a", "b"}),
 		}).
 		Start("step1").
-		Execute("step1", true).
+		Execute("step1", true, false).
 		End("step1").
 
 		// Run the step 2
@@ -248,7 +249,7 @@ func TestProcess_NegativeStep(t *testing.T) {
 			Command: common.Ptr([]string{"c", "d"}),
 		}).
 		Start("step2").
-		Execute("step2", false).
+		Execute("step2", false, false).
 		End("step2").
 
 		// Finish
@@ -291,7 +292,7 @@ func TestProcess_NegativeGroup(t *testing.T) {
 			Command: common.Ptr([]string{"a", "b"}),
 		}).
 		Start("step1").
-		Execute("step1", false).
+		Execute("step1", false, false).
 		End("step1").
 
 		// Run the step 2
@@ -301,7 +302,7 @@ func TestProcess_NegativeGroup(t *testing.T) {
 			Command: common.Ptr([]string{"c", "d"}),
 		}).
 		Start("step2").
-		Execute("step2", false).
+		Execute("step2", false, false).
 		End("step2").
 
 		// Finish
@@ -345,7 +346,7 @@ func TestProcess_OptionalStep(t *testing.T) {
 			Command: common.Ptr([]string{"a", "b"}),
 		}).
 		Start("step1").
-		Execute("step1", false).
+		Execute("step1", false, false).
 		End("step1").
 
 		// Run the step 2
@@ -355,7 +356,7 @@ func TestProcess_OptionalStep(t *testing.T) {
 			Command: common.Ptr([]string{"c", "d"}),
 		}).
 		Start("step2").
-		Execute("step2", false).
+		Execute("step2", false, false).
 		End("step2").
 
 		// Finish
@@ -404,7 +405,7 @@ func TestProcess_OptionalGroup(t *testing.T) {
 			Command: common.Ptr([]string{"a", "b"}),
 		}).
 		Start("step1").
-		Execute("step1", false).
+		Execute("step1", false, false).
 		End("step1").
 
 		// Run the step 2
@@ -414,7 +415,7 @@ func TestProcess_OptionalGroup(t *testing.T) {
 			Command: common.Ptr([]string{"c", "d"}),
 		}).
 		Start("step2").
-		Execute("step2", false).
+		Execute("step2", false, false).
 		End("step2").
 
 		// Finish
@@ -464,7 +465,7 @@ func TestProcess_IgnoreExecutionOfStaticSkip(t *testing.T) {
 			Command: common.Ptr([]string{"c", "d"}),
 		}).
 		Start("step2").
-		Execute("step2", false).
+		Execute("step2", false, false).
 		End("step2").
 
 		// Finish
@@ -604,7 +605,120 @@ func TestProcess_IgnoreExecutionOfStaticSkip_PauseGroup(t *testing.T) {
 			Command: common.Ptr([]string{"c", "d"}),
 		}).
 		Start("step2").
-		Execute("step2", false).
+		Execute("step2", false, false).
+		End("step2").
+
+		// Finish
+		End("init").
+		End("")
+
+	// Assert
+	got, err := Process(root, nil)
+	assert.NoError(t, err)
+	assert.Equal(t, want, got)
+}
+
+func TestProcess_ConsecutiveAlways(t *testing.T) {
+	// Build the structure
+	root := stage.NewGroupStage("init", false)
+	step1 := stage.NewContainerStage("step1", stage.NewContainer().SetImage("image:1.2.3").SetCommand("a", "b"))
+	step1.SetCondition("always")
+	root.Add(step1)
+	step2 := stage.NewContainerStage("step2", stage.NewContainer().SetImage("image:3.2.1").SetCommand("c", "d"))
+	step2.SetCondition("always")
+	root.Add(step2)
+
+	// Build the expectations
+	want := actiontypes.NewActionList().
+		// Declare stage conditions
+		Declare("init", "true").
+		Declare("step1", "true", "init").
+		Declare("step2", "true", "init").
+
+		// Declare group resolutions
+		Result("init", "step1&&step2").
+		Result("", "init").
+
+		// Initialize
+		Start("").
+		CurrentStatus("true").
+		Start("init").
+
+		// Run the step 1
+		CurrentStatus("init").
+		MutateContainer("step1", testworkflowsv1.ContainerConfig{
+			Image:   "image:1.2.3",
+			Command: common.Ptr([]string{"a", "b"}),
+		}).
+		Start("step1").
+		Execute("step1", false, false).
+		End("step1").
+
+		// Run the step 2
+		CurrentStatus("step1&&init").
+		MutateContainer("step2", testworkflowsv1.ContainerConfig{
+			Image:   "image:3.2.1",
+			Command: common.Ptr([]string{"c", "d"}),
+		}).
+		Start("step2").
+		Execute("step2", false, false).
+		End("step2").
+
+		// Finish
+		End("init").
+		End("")
+
+	// Assert
+	got, err := Process(root, nil)
+	assert.NoError(t, err)
+	assert.Equal(t, want, got)
+}
+
+func TestProcess_PureShellAtTheEnd(t *testing.T) {
+	// Build the structure
+	root := stage.NewGroupStage("init", false)
+	step1 := stage.NewContainerStage("step1", stage.NewContainer().SetImage("image:1.2.3").SetCommand(constants.DefaultShellPath))
+	step1.SetPure(true)
+	step1.SetCondition("always")
+	root.Add(step1)
+	step2 := stage.NewContainerStage("step2", stage.NewContainer().SetCommand(constants.DefaultShellPath))
+	step2.SetPure(true)
+	step2.SetCondition("always")
+	root.Add(step2)
+
+	// Build the expectations
+	want := actiontypes.NewActionList().
+		// Declare stage conditions
+		Declare("init", "true").
+		Declare("step1", "true", "init").
+		Declare("step2", "true", "init").
+
+		// Declare group resolutions
+		Result("init", "step1&&step2").
+		Result("", "init").
+
+		// Initialize
+		Start("").
+		CurrentStatus("true").
+		Start("init").
+
+		// Run the step 1
+		CurrentStatus("init").
+		MutateContainer("step1", testworkflowsv1.ContainerConfig{
+			Image:   "image:1.2.3",
+			Command: common.Ptr([]string{constants.DefaultShellPath}),
+		}).
+		Start("step1").
+		Execute("step1", false, true).
+		End("step1").
+
+		// Run the step 2
+		CurrentStatus("step1&&init").
+		MutateContainer("step2", testworkflowsv1.ContainerConfig{
+			Command: common.Ptr([]string{constants.DefaultShellPath}),
+		}).
+		Start("step2").
+		Execute("step2", false, true).
 		End("step2").
 
 		// Finish

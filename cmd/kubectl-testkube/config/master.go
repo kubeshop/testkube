@@ -13,6 +13,7 @@ type Master struct {
 	LogsUrlPrefix  string                    `json:"logsUrlPrefix,omitempty"`
 	ApiUrlPrefix   string                    `json:"apiUrlPrefix,omitempty"`
 	RootDomain     string                    `json:"rootDomain,omitempty"`
+	CustomAuth     bool                      `json:"customAuth,omitempty"`
 	Features       featureflags.FeatureFlags `json:"features,omitempty"`
 
 	URIs MasterURIs `json:"uris,omitempty"`
@@ -50,5 +51,11 @@ func (m *MasterURIs) WithLogsURI(uri string) *MasterURIs {
 // WithUi sets whole ui URI
 func (m *MasterURIs) WithUiURI(uri string) *MasterURIs {
 	m.Ui = uri
+	return m
+}
+
+// WithUi sets whole auth URI
+func (m *MasterURIs) WithAuthURI(uri string) *MasterURIs {
+	m.Auth = uri
 	return m
 }

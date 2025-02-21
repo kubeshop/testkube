@@ -47,12 +47,16 @@ func TestObfuscator_Partial(t *testing.T) {
 		"scope",
 	})
 
-	_, _ = passthrough.Write([]byte("there is some sensitiv"))
-	_, _ = passthrough.Write([]byte("e content in scope of testkube"))
+	content1 := []byte("there is some sensitiv")
+	content2 := []byte("e content in scope of testkube")
+	n1, _ := passthrough.Write(content1)
+	n2, _ := passthrough.Write(content2)
 
 	result, err := io.ReadAll(buf)
 
 	assert.NoError(t, err)
+	assert.Equal(t, len(content1), n1)
+	assert.Equal(t, len(content2), n2)
 	assert.Equal(t, "there is some ***** content in ***** of testkube", string(result))
 }
 
@@ -95,12 +99,14 @@ func TestObfuscator_FlushDoubleHit(t *testing.T) {
 		"tiv",
 	})
 
-	_, _ = passthrough.Write([]byte("sensitiv"))
+	content := []byte("sensitiv")
+	n, _ := passthrough.Write(content)
 	passthrough.Flush()
 
 	result, err := io.ReadAll(buf)
 
 	assert.NoError(t, err)
+	assert.Equal(t, n, len(content))
 	assert.Equal(t, "*****i*****", string(result))
 }
 
@@ -111,11 +117,13 @@ func TestObfuscator_Order(t *testing.T) {
 		"sens",
 	})
 
-	_, _ = passthrough.Write([]byte("there is some sensitive content in scope of testkube"))
+	content := []byte("there is some sensitive content in scope of testkube")
+	n, _ := passthrough.Write(content)
 
 	result, err := io.ReadAll(buf)
 
 	assert.NoError(t, err)
+	assert.Equal(t, n, len(content))
 	assert.Equal(t, "there is some ***** content in scope of testkube", string(result))
 }
 

@@ -11,7 +11,7 @@ import (
 )
 
 // GetConfigsHandler returns configuration
-func (s TestkubeAPI) GetConfigsHandler() fiber.Handler {
+func (s *TestkubeAPI) GetConfigsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := c.Context()
 		config, err := s.ConfigMap.Get(ctx)
@@ -26,7 +26,7 @@ func (s TestkubeAPI) GetConfigsHandler() fiber.Handler {
 }
 
 // UpdateConfigsHandler update configuration handler
-func (s TestkubeAPI) UpdateConfigsHandler() fiber.Handler {
+func (s *TestkubeAPI) UpdateConfigsHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		ctx := c.Context()
 		errPrefix := "failed to update config"

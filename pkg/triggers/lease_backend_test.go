@@ -16,7 +16,6 @@ func TestMongoLeaseBackend_TryAcquire(t *testing.T) {
 	ctx := context.Background()
 
 	mt := mtest.New(t, mtest.NewOptions().ClientType(mtest.Mock))
-	defer mt.Close()
 
 	mt.Run("acquire existing lease", func(mt *mtest.T) {
 		mt.Parallel()

@@ -6,6 +6,8 @@ import (
 
 	"github.com/spf13/cobra"
 
+	cmdcommon "github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
+	"github.com/kubeshop/testkube/internal/common"
 	apiv1 "github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	webhooksmapper "github.com/kubeshop/testkube/pkg/mapper/webhooks"
@@ -48,6 +50,39 @@ func NewCreateWebhookOptionsFromFlags(cmd *cobra.Command) (options apiv1.CreateW
 	}
 
 	payloadTemplateReference := cmd.Flag("payload-template-reference").Value.String()
+	var config map[string]testkube.WebhookConfigValue
+	configs, err := cmd.Flags().GetStringToString("config")
+	if err != nil {
+		return options, err
+	}
+
+	if len(configs) != 0 {
+		config, err = cmdcommon.GetWebhookConfig(configs)
+		if err != nil {
+			return options, err
+		}
+	}
+
+	var parameter []testkube.WebhookParameterSchema
+	parameters, err := cmd.Flags().GetStringToString("parameter")
+	if err != nil {
+		return options, err
+	}
+
+	if len(parameters) != 0 {
+		parameter, err = cmdcommon.GetWebhookParameters(parameters)
+		if err != nil {
+			return options, err
+		}
+	}
+
+	var webhookTemplateReference *testkube.WebhookTemplateRef
+	if cmd.Flag("webhook-template-reference").Changed {
+		webhookTemplateReference = &testkube.WebhookTemplateRef{
+			Name: cmd.Flag("webhook-template-reference").Value.String(),
+		}
+	}
+
 	options = apiv1.CreateWebhookOptions{
 		Name:                     name,
 		Namespace:                namespace,
@@ -60,6 +95,9 @@ func NewCreateWebhookOptionsFromFlags(cmd *cobra.Command) (options apiv1.CreateW
 		Headers:                  headers,
 		PayloadTemplateReference: payloadTemplateReference,
 		Disabled:                 disabled,
+		Config:                   config,
+		Parameters:               parameter,
+		WebhookTemplateRef:       webhookTemplateReference,
 	}
 
 	return options, nil
@@ -149,6 +187,38 @@ func NewUpdateWebhookOptionsFromFlags(cmd *cobra.Command) (options apiv1.UpdateW
 			return options, err
 		}
 		options.Disabled = &disabled
+	}
+
+	if cmd.Flag("config").Changed {
+		configs, err := cmd.Flags().GetStringToString("config")
+		if err != nil {
+			return options, err
+		}
+
+		values, err := cmdcommon.GetWebhookConfig(configs)
+		if err != nil {
+			return options, err
+		}
+		options.Config = &values
+	}
+
+	if cmd.Flag("parameter").Changed {
+		parameters, err := cmd.Flags().GetStringToString("parameter")
+		if err != nil {
+			return options, err
+		}
+
+		values, err := cmdcommon.GetWebhookParameters(parameters)
+		if err != nil {
+			return options, err
+		}
+		options.Parameters = &values
+	}
+
+	if cmd.Flag("webhook-template-reference").Changed {
+		options.WebhookTemplateRef = common.Ptr(&testkube.WebhookTemplateRef{
+			Name: cmd.Flag("webhook-template-reference").Value.String(),
+		})
 	}
 
 	return options, nil

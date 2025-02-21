@@ -52,4 +52,6 @@ type TestWorkflowIndependentStepParallel struct {
 	Steps     []TestWorkflowIndependentStep                 `json:"steps,omitempty"`
 	After     []TestWorkflowIndependentStep                 `json:"after,omitempty"`
 	Events    []TestWorkflowEvent                           `json:"events,omitempty"`
+	Execution *TestWorkflowTagSchema                        `json:"execution,omitempty"`
+	Pvcs      map[string]TestWorkflowPvcConfig              `json:"pvcs,omitempty"`
 }

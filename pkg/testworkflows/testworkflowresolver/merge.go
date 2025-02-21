@@ -373,6 +373,7 @@ func ConvertIndependentStepParallelToStepParallel(step testworkflowsv1.Independe
 			Setup:                common.MapSlice(step.TestWorkflowTemplateSpec.Setup, ConvertIndependentStepToStep),
 			Steps:                common.MapSlice(step.TestWorkflowTemplateSpec.Steps, ConvertIndependentStepToStep),
 			After:                common.MapSlice(step.TestWorkflowTemplateSpec.After, ConvertIndependentStepToStep),
+			Pvcs:                 step.TestWorkflowTemplateSpec.Pvcs,
 		},
 		StepControl:    step.StepControl,
 		StepOperations: step.StepOperations,
@@ -390,4 +391,27 @@ func ConvertIndependentStepToStep(step testworkflowsv1.IndependentStep) (res tes
 	res.Setup = common.MapSlice(step.Setup, ConvertIndependentStepToStep)
 	res.Steps = common.MapSlice(step.Steps, ConvertIndependentStepToStep)
 	return res
+}
+
+func MergeExecution(dst, include *testworkflowsv1.TestWorkflowTagSchema) *testworkflowsv1.TestWorkflowTagSchema {
+	if dst == nil {
+		return include
+	} else if include == nil {
+		return dst
+	}
+
+	dst.Tags = MergeTags(dst.Tags, include.Tags)
+	return dst
+}
+
+func MergeTags(dst, src map[string]string) map[string]string {
+	if src != nil {
+		if dst == nil {
+			dst = make(map[string]string)
+		}
+
+		maps.Copy(dst, src)
+	}
+
+	return dst
 }

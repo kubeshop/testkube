@@ -18,7 +18,7 @@ func TestRun(t *testing.T) {
 			ctx,
 			testkube.Execution{
 				Content: &testkube.TestContent{
-					Uri: "https://testkube.io",
+					Uri: "https://testkube-test-page-lipsum.pages.dev/",
 				},
 			})
 

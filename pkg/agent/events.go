@@ -9,8 +9,8 @@ import (
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/encoding/gzip"
-	"google.golang.org/grpc/metadata"
 
+	agentclient "github.com/kubeshop/testkube/pkg/agent/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/event/kind/common"
@@ -50,8 +50,12 @@ func (ag *Agent) Metadata() map[string]string {
 }
 
 func (ag *Agent) Notify(event testkube.Event) (result testkube.EventResult) {
+	// Avoid re-delivering Control Plane's event back to Control Plane
+	if event.External {
+		return testkube.NewSuccessEventResult(event.Id, "ignored external event")
+	}
+
 	event.ClusterName = ag.clusterName
-	event.Envs = ag.envs
 	// Non blocking send
 	select {
 	case ag.events <- event:
@@ -63,8 +67,9 @@ func (ag *Agent) Notify(event testkube.Event) (result testkube.EventResult) {
 
 func (ag *Agent) runEventLoop(ctx context.Context) error {
 	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name)}
-	md := metadata.Pairs(apiKeyMeta, ag.apiKey)
-	ctx = metadata.NewOutgoingContext(ctx, md)
+	if ag.apiKey != "" {
+		ctx = agentclient.AddAPIKeyMeta(ctx, ag.apiKey)
+	}
 
 	stream, err := ag.client.Send(ctx, opts...)
 	if err != nil {

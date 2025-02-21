@@ -3,6 +3,7 @@ package common
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -27,25 +28,39 @@ const (
 	TKErrConfigInitFailed ErrorCode = "TKERR-1201"
 	// TKErrInvalidInstallConfig is returned when invalid configuration is supplied when installing or upgrading.
 	TKErrInvalidInstallConfig ErrorCode = "TKERR-1202"
+	// TKErrInvalidDockerConfig is returned when docker client configuration is invalid.
+	TKErrInvalidDockerConfig ErrorCode = "TKERR-1203"
 
 	// TKERR-13xx errors are related to install operations.
 
 	// TKErrHelmCommandFailed is returned when a helm command fails.
 	TKErrHelmCommandFailed ErrorCode = "TKERR-1301"
-	// TKErrKubectlCommandFailed is returned when a kubectl command fail.
+	// TKErrKubectlCommandFailed is returned when a kubectl command fails.
 	TKErrKubectlCommandFailed ErrorCode = "TKERR-1302"
+	// TKErrDockerCommandFailed is returned when a docker command fails.
+	TKErrDockerCommandFailed ErrorCode = "TKERR-1303"
+	// TKErrDockerLogStreamingFailed is returned when a docker log streaming fails.
+	TKErrDockerLogStreamingFailed ErrorCode = "TKERR-1304"
+	// TKErrDockerLogReadingFailed is returned when a docker log reading fails.
+	TKErrDockerLogReadingFailed ErrorCode = "TKERR-1305"
+	// TKErrDockerInstallationFailed is returned when a docker installation fails.
+	TKErrDockerInstallationFailed ErrorCode = "TKERR-1306"
+
+	// TKErrCleanOldMigrationJobFailed is returned in case of issues with old migration jobs.
+	TKErrCleanOldMigrationJobFailed ErrorCode = "TKERR-1401"
 )
 
 const helpUrl = "https://testkubeworkspace.slack.com"
 
 type CLIError struct {
-	Code        ErrorCode
-	Title       string
-	Description string
-	ActualError error
-	StackTrace  string
-	MoreInfo    string
-	Telemetry   *ErrorTelemetry
+	Code            ErrorCode
+	Title           string
+	Description     string
+	ActualError     error
+	StackTrace      string
+	MoreInfo        string
+	ExecutedCommand string
+	Telemetry       *ErrorTelemetry
 }
 
 type ErrorTelemetry struct {
@@ -73,6 +88,15 @@ func (e *CLIError) Print() {
 
 	pterm.DefaultSection.Println("Error Details")
 
+	cmd := ""
+	if e.ExecutedCommand != "" {
+		pterm.FgDarkGray.Printfln("Executed command: %s", e.ExecutedCommand)
+		params := strings.Split(e.ExecutedCommand, " ")
+		if len(params) > 0 {
+			cmd = params[0]
+		}
+	}
+
 	items := []pterm.BulletListItem{
 		{Level: 0, Text: pterm.Sprintf("[%s]: %s", e.Code, e.Title), TextStyle: pterm.NewStyle(pterm.FgRed)},
 		{Level: 0, Text: pterm.Sprintf("%s", e.Description), TextStyle: pterm.NewStyle(pterm.FgLightWhite)},
@@ -81,6 +105,9 @@ func (e *CLIError) Print() {
 		items = append(items, pterm.BulletListItem{Level: 0, Text: pterm.Sprintf("%s", e.MoreInfo), TextStyle: pterm.NewStyle(pterm.FgGray)})
 	}
 	pterm.DefaultBulletList.WithItems(items).Render()
+	if cmd != "" {
+		pterm.DefaultBox.Printfln("Error description is provided in context of binary execution %s", cmd)
+	}
 
 	pterm.Println()
 	pterm.Println("Let us help you!")
@@ -96,6 +123,11 @@ func NewCLIError(code ErrorCode, title, moreInfoURL string, err error) *CLIError
 		MoreInfo:    moreInfoURL,
 		StackTrace:  fmt.Sprintf("%+v", err),
 	}
+}
+
+func (err *CLIError) WithExecutedCommand(executedCommand string) *CLIError {
+	err.ExecutedCommand = executedCommand
+	return err
 }
 
 // HandleCLIError checks does the error exist, and if it does, prints the error and exits the program.

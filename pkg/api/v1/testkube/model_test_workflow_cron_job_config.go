@@ -17,4 +17,5 @@ type TestWorkflowCronJobConfig struct {
 	Labels map[string]string `json:"labels,omitempty"`
 	// annotations to attach to the cron job
 	Annotations map[string]string `json:"annotations,omitempty"`
+	Config      map[string]string `json:"config,omitempty"`
 }

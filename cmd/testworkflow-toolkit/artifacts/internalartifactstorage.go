@@ -1,22 +1,24 @@
 package artifacts
 
 import (
-	"bytes"
-	"context"
 	"io"
 	"path/filepath"
 	"sync"
-	"time"
-
-	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
+	"github.com/kubeshop/testkube/pkg/bufferedstream"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 )
 
 type InternalArtifactStorage interface {
 	FullPath(artifactPath string) string
 	SaveStream(artifactPath string, stream io.Reader) error
 	Wait() error
+}
+
+type withLength interface {
+	Len() int
 }
 
 type internalArtifactStorage struct {
@@ -27,18 +29,13 @@ type internalArtifactStorage struct {
 }
 
 func newArtifactUploader() Uploader {
-	if env.CloudEnabled() {
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
-		client, _ := env.Cloud(ctx)
-		return NewCloudUploader(client, WithParallelismCloud(30), CloudDetectMimetype)
-	}
-	return NewDirectUploader(WithParallelism(30), DirectDetectMimetype)
+	cfg := config.Config()
+	return NewCloudUploader(env.Cloud(), cfg.Execution.EnvironmentId, cfg.Execution.Id, cfg.Workflow.Name, config.Ref(), WithParallelismCloud(30), CloudDetectMimetype)
 }
 
 func InternalStorage() InternalArtifactStorage {
 	return &internalArtifactStorage{
-		prefix:   filepath.Join(".testkube", env.Ref()),
+		prefix:   filepath.Join(".testkube", config.Ref()),
 		uploader: newArtifactUploader(),
 	}
 }
@@ -62,13 +59,19 @@ func (s *internalArtifactStorage) SaveStream(artifactPath string, stream io.Read
 	if err != nil {
 		return err
 	}
-	// TODO: Stream the data instead
-	b, err := io.ReadAll(stream)
-	if err != nil && !errors.Is(err, io.EOF) {
-		return err
+
+	size := -1
+	if streamL, ok := stream.(withLength); ok {
+		size = streamL.Len()
+	} else {
+		stream, err = bufferedstream.NewBufferedStream(constants.DefaultTmpDirPath, "log", stream)
+		if err != nil {
+			return err
+		}
+		defer stream.(bufferedstream.BufferedStream).Cleanup()
+		size = stream.(bufferedstream.BufferedStream).Len()
 	}
-	buf := bytes.NewBuffer(b)
-	err = s.uploader.Add(filepath.Join(s.prefix, artifactPath), buf, int64(buf.Len()))
+	err = s.uploader.Add(filepath.Join(s.prefix, artifactPath), stream, int64(size))
 	if err != nil {
 		return err
 	}

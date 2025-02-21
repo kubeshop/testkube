@@ -12,6 +12,10 @@ import (
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
+const (
+	TarballRetryMaxAttempts = 5
+)
+
 func NewTarballCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "tarball <pathUrlPairs>",
@@ -31,18 +35,31 @@ func NewTarballCmd() *cobra.Command {
 				fmt.Printf("Downloading and unpacking %s to %s...\n", url, dirPath)
 
 				// Start downloading the file
-				resp, err := http.Get(url)
-				ui.ExitOnError("download the tarball", err)
-				defer resp.Body.Close()
+				attempt := 1
+				for {
+					resp, err := http.Get(url)
+					if err == nil && resp.StatusCode != http.StatusOK {
+						err = fmt.Errorf("status code %d", resp.StatusCode)
+					}
+					if err == nil {
+						// Process the files
+						err = common.UnpackTarball(dirPath, resp.Body)
+						resp.Body.Close()
+						if err == nil {
+							break
+						}
+						fmt.Printf("failed to unpack the tarball: %s\n", err.Error())
+					} else {
+						resp.Body.Close()
+						fmt.Printf("failed to download the tarball: %s\n", err.Error())
+					}
 
-				if resp.StatusCode != http.StatusOK {
-					ui.Fail(fmt.Errorf("failed to download the tarball: status code %d", resp.StatusCode))
-				}
-
-				// Process the files
-				err = common.UnpackTarball(dirPath, resp.Body)
-				if err != nil {
-					ui.Fail(err)
+					// Retry when it is possible
+					if TarballRetryMaxAttempts == attempt {
+						os.Exit(1)
+					}
+					attempt++
+					fmt.Printf("retrying - attempt %d/%d.\n", attempt, TarballRetryMaxAttempts)
 				}
 			}
 

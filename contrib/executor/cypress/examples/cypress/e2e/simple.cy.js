@@ -1,9 +1,7 @@
-describe('The Home Page', () => {
-  it('successfully loads', () => {
-    cy.visit('https://testkube.kubeshop.io');
+describe("The Home Page", () => {
+  it("successfully loads", () => {
+    cy.visit("https://testkube-test-page-lipsum.pages.dev/");
 
-    cy.contains(
-      'Testkube provides a Kubernetes-native framework for test definition, execution and results'
-    );
+    cy.contains("Testkube");
   });
 });

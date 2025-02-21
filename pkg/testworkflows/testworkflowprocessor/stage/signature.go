@@ -16,6 +16,7 @@ type Signature interface {
 	Negative() bool
 	Children() []Signature
 	ToInternal() testkube.TestWorkflowSignature
+	Sequence() []Signature
 }
 
 type signature struct {
@@ -62,10 +63,40 @@ func (s *signature) ToInternal() testkube.TestWorkflowSignature {
 	}
 }
 
+func (s *signature) Sequence() []Signature {
+	result := []Signature{s}
+	for i := range s.ChildrenValue {
+		result = append(result, s.ChildrenValue[i].Sequence()...)
+	}
+	return result
+}
+
+func MapSignatureToSequence(v []Signature) []Signature {
+	if len(v) == 0 {
+		return nil
+	}
+	return (&signature{ChildrenValue: v}).Sequence()[1:]
+}
+
 func MapSignatureListToInternal(v []Signature) []testkube.TestWorkflowSignature {
 	r := make([]testkube.TestWorkflowSignature, len(v))
 	for i := range v {
 		r[i] = v[i].ToInternal()
+	}
+	return r
+}
+
+func MapSignatureList(v []testkube.TestWorkflowSignature) []Signature {
+	r := make([]Signature, len(v))
+	for i := range v {
+		r[i] = Signature(&signature{
+			RefValue:      v[i].Ref,
+			NameValue:     v[i].Name,
+			CategoryValue: v[i].Category,
+			OptionalValue: v[i].Optional,
+			NegativeValue: v[i].Negative,
+			ChildrenValue: MapSignatureList(v[i].Children),
+		})
 	}
 	return r
 }

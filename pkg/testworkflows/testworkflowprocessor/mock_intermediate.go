@@ -5,13 +5,11 @@
 package testworkflowprocessor
 
 import (
-	"reflect"
+	reflect "reflect"
 
-	"github.com/golang/mock/gomock"
-
+	gomock "github.com/golang/mock/gomock"
 	v1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
-	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
-
+	stage "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 	v10 "k8s.io/api/core/v1"
 )
 
@@ -152,6 +150,20 @@ func (mr *MockIntermediateMockRecorder) AppendPodConfig(arg0 interface{}) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AppendPodConfig", reflect.TypeOf((*MockIntermediate)(nil).AppendPodConfig), arg0)
 }
 
+// AppendPvcs mocks base method.
+func (m *MockIntermediate) AppendPvcs(arg0 map[string]v10.PersistentVolumeClaimSpec) Intermediate {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AppendPvcs", arg0)
+	ret0, _ := ret[0].(Intermediate)
+	return ret0
+}
+
+// AppendPvcs indicates an expected call of AppendPvcs.
+func (mr *MockIntermediateMockRecorder) AppendPvcs(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AppendPvcs", reflect.TypeOf((*MockIntermediate)(nil).AppendPvcs), arg0)
+}
+
 // ConfigMaps mocks base method.
 func (m *MockIntermediate) ConfigMaps() []v10.ConfigMap {
 	m.ctrl.T.Helper()
@@ -220,6 +232,20 @@ func (m *MockIntermediate) PodConfig() v1.PodConfig {
 func (mr *MockIntermediateMockRecorder) PodConfig() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PodConfig", reflect.TypeOf((*MockIntermediate)(nil).PodConfig))
+}
+
+// Pvcs mocks base method.
+func (m *MockIntermediate) Pvcs() map[string]v10.PersistentVolumeClaim {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Pvcs")
+	ret0, _ := ret[0].(map[string]v10.PersistentVolumeClaim)
+	return ret0
+}
+
+// Pvcs indicates an expected call of Pvcs.
+func (mr *MockIntermediateMockRecorder) Pvcs() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Pvcs", reflect.TypeOf((*MockIntermediate)(nil).Pvcs))
 }
 
 // Secrets mocks base method.

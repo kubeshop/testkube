@@ -72,7 +72,7 @@ spec:
   type: container-executor-curl/test
   executionRequest:
     args:
-    - $(URL)
+      - $(URL)
     variables:
       URL:
         name: expected-fail-URL
@@ -168,10 +168,10 @@ spec:
     variables:
       URL_ENV:
         name: expected-fail-URL_ENV
-        value: "testkube.io"
+        value: testkube-test-page-lipsum.pages.dev"
         type: basic
     args:
-      - "-JURL_PROPERTY=testkube.kubeshop.io"
+      - "-JURL_PROPERTY=testkube-test-page-lipsum.pages.dev"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -192,10 +192,10 @@ spec:
     variables:
       URL_ENV:
         name: expected-fail-URL_ENV
-        value: "testkube.io"
+        value: "testkube-test-page-lipsum.pages.dev"
         type: basic
     args:
-      - "-JURL_PROPERTY=testkube.kubeshop.io"
+      - "-JURL_PROPERTY=testkube-test-page-lipsum.pages.dev"
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
@@ -333,8 +333,8 @@ spec:
     args:
       - --env-var
       - TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value
-    preRunScript: "echo \"===== pre-run script - EXPECTED FAIL\" && exit 128"
-    postRunScript: "echo \"===== post-run script\""
+    preRunScript: 'echo "===== pre-run script - EXPECTED FAIL" && exit 128'
+    postRunScript: 'echo "===== post-run script"'
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 128Mi\n              cpu: 256m\n"
 ---
 apiVersion: tests.testkube.io/v3
@@ -356,8 +356,8 @@ spec:
     args:
       - --env-var
       - TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value
-    preRunScript: "echo \"===== pre-run script\""
-    postRunScript: "echo \"===== post-run script - EXPECTED FAIL\" && exit 128"
+    preRunScript: 'echo "===== pre-run script"'
+    postRunScript: 'echo "===== post-run script - EXPECTED FAIL" && exit 128'
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 128Mi\n              cpu: 256m\n"
 ---
 apiVersion: tests.testkube.io/v3
@@ -377,9 +377,15 @@ spec:
       path: test/postman/executor-tests/postman-executor-smoke.postman_collection.json
       workingDir: test/postman/executor-tests
   executionRequest:
-    args: ["run", "postman-executor-smoke.postman_collection.json", "--env-var", "TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value"]
-    preRunScript: "echo \"===== pre-run script - EXPECTED FAIL\" && exit 128"
-    postRunScript: "echo \"===== post-run script\""
+    args:
+      [
+        "run",
+        "postman-executor-smoke.postman_collection.json",
+        "--env-var",
+        "TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value",
+      ]
+    preRunScript: 'echo "===== pre-run script - EXPECTED FAIL" && exit 128'
+    postRunScript: 'echo "===== post-run script"'
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 128Mi\n              cpu: 256m\n"
 ---
 apiVersion: tests.testkube.io/v3
@@ -399,9 +405,15 @@ spec:
       path: test/postman/executor-tests/postman-executor-smoke.postman_collection.json
       workingDir: test/postman/executor-tests
   executionRequest:
-    args: ["run", "postman-executor-smoke.postman_collection.json", "--env-var", "TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value"]
-    preRunScript: "echo \"===== pre-run script\""
-    postRunScript: "echo \"===== post-run script - EXPECTED FAIL\" && exit 128"
+    args:
+      [
+        "run",
+        "postman-executor-smoke.postman_collection.json",
+        "--env-var",
+        "TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value",
+      ]
+    preRunScript: 'echo "===== pre-run script"'
+    postRunScript: 'echo "===== post-run script - EXPECTED FAIL" && exit 128'
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 128Mi\n              cpu: 256m\n"
 ---
 apiVersion: tests.testkube.io/v3
@@ -420,8 +432,8 @@ spec:
       branch: main
       path: test/postman/executor-tests/postman-executor-smoke-negative.postman_collection.json
   executionRequest:
-    preRunScript: "echo \"===== pre-run script\""
-    postRunScript: "echo \"===== post-run script\""
+    preRunScript: 'echo "===== pre-run script"'
+    postRunScript: 'echo "===== post-run script"'
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 128Mi\n              cpu: 256m\n"
 ---
 apiVersion: tests.testkube.io/v3
@@ -442,6 +454,6 @@ spec:
       workingDir: test/postman/executor-tests
   executionRequest:
     args: ["run", "postman-executor-smoke.postman_collection.json"]
-    preRunScript: "echo \"===== pre-run script\""
-    postRunScript: "echo \"===== post-run script\""
+    preRunScript: 'echo "===== pre-run script"'
+    postRunScript: 'echo "===== post-run script"'
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 128Mi\n              cpu: 256m\n"

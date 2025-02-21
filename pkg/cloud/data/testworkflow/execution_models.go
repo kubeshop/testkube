@@ -178,3 +178,35 @@ type ExecutionGetNextExecutionNumberRequest struct {
 type ExecutionGetNextExecutionNumberResponse struct {
 	TestWorkflowNumber int32 `json:"testWorkflowNumber"`
 }
+
+type ExecutionGetExecutionTagsRequest struct {
+	TestWorkflowName string `json:"testWorkflowName"`
+}
+
+type ExecutionGetExecutionTagsResponse struct {
+	Tags map[string][]string `json:"tags"`
+}
+
+type TestWorkflowListRequest struct {
+	Selector string `json:"selector"`
+}
+
+type TestWorkflowListResponse struct {
+	TestWorkflows []testkube.TestWorkflow `json:"testWorkflows"`
+}
+
+type TestWorkflowGetRequest struct {
+	Name string `json:"name"`
+}
+
+type TestWorkflowGetResponse struct {
+	TestWorkflow testkube.TestWorkflow `json:"testWorkflow"`
+}
+
+type TestWorkflowTemplateGetRequest struct {
+	Name string `json:"name"`
+}
+
+type TestWorkflowTemplateGetResponse struct {
+	TestWorkflowTemplate testkube.TestWorkflowTemplate `json:"testWorkflowTemplate"`
+}

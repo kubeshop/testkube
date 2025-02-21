@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/commands"
-	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
 
 	"golang.org/x/sync/errgroup"
 )
@@ -62,7 +62,7 @@ func Execute() {
 		}
 	})
 
-	RootCmd.PersistentFlags().BoolVar(&env.UseProxyValue, "proxy", false, "use Kubernetes proxy for TK access")
+	RootCmd.PersistentFlags().BoolVar(&config.UseProxyValue, "proxy", false, "use Kubernetes proxy for TK access")
 
 	if err := RootCmd.ExecuteContext(ctx); err != nil {
 		fmt.Fprintln(os.Stderr, err)

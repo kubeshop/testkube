@@ -17,6 +17,7 @@ import (
 	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
 	templatesclientv1 "github.com/kubeshop/testkube-operator/pkg/client/templates/v1"
 	v3 "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
+	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/executor"
 	"github.com/kubeshop/testkube/pkg/executor/client"
@@ -30,16 +31,26 @@ var ctx = context.Background()
 func TestExecuteAsync(t *testing.T) {
 	t.Parallel()
 
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	deprecatedRepositories := commons.NewMockDeprecatedRepositories(mockCtrl)
+	deprecatedRepositories.EXPECT().TestResults().Return(FakeResultRepository{}).AnyTimes()
+
+	deprecatedClients := commons.NewMockDeprecatedClients(mockCtrl)
+	deprecatedClients.EXPECT().Tests().Return(FakeTestsClient{}).AnyTimes()
+	deprecatedClients.EXPECT().Executors().Return(FakeExecutorsClient{}).AnyTimes()
+	deprecatedClients.EXPECT().Templates().Return(nil).AnyTimes()
+
 	ce := ContainerExecutor{
-		clientSet:           getFakeClient("1"),
-		log:                 logger(),
-		repository:          FakeResultRepository{},
-		metrics:             FakeExecutionMetric{},
-		emitter:             FakeEmitter{},
-		configMap:           FakeConfigRepository{},
-		testsClient:         FakeTestsClient{},
-		executorsClient:     FakeExecutorsClient{},
-		serviceAccountNames: map[string]string{"": ""},
+		clientSet:              getFakeClient("1"),
+		log:                    logger(),
+		deprecatedRepositories: deprecatedRepositories,
+		deprecatedClients:      deprecatedClients,
+		metrics:                FakeExecutionMetric{},
+		emitter:                FakeEmitter{},
+		configMap:              FakeConfigRepository{},
+		serviceAccountNames:    map[string]string{"": ""},
 	}
 
 	execution := &testkube.Execution{Id: "1"}
@@ -56,16 +67,26 @@ func TestExecuteAsync(t *testing.T) {
 func TestExecuteSync(t *testing.T) {
 	t.Parallel()
 
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	deprecatedRepositories := commons.NewMockDeprecatedRepositories(mockCtrl)
+	deprecatedRepositories.EXPECT().TestResults().Return(FakeResultRepository{}).AnyTimes()
+
+	deprecatedClients := commons.NewMockDeprecatedClients(mockCtrl)
+	deprecatedClients.EXPECT().Tests().Return(FakeTestsClient{}).AnyTimes()
+	deprecatedClients.EXPECT().Executors().Return(FakeExecutorsClient{}).AnyTimes()
+	deprecatedClients.EXPECT().Templates().Return(nil).AnyTimes()
+
 	ce := ContainerExecutor{
-		clientSet:           getFakeClient("1"),
-		log:                 logger(),
-		repository:          FakeResultRepository{},
-		metrics:             FakeExecutionMetric{},
-		emitter:             FakeEmitter{},
-		configMap:           FakeConfigRepository{},
-		testsClient:         FakeTestsClient{},
-		executorsClient:     FakeExecutorsClient{},
-		serviceAccountNames: map[string]string{"default": ""},
+		clientSet:              getFakeClient("1"),
+		log:                    logger(),
+		deprecatedRepositories: deprecatedRepositories,
+		deprecatedClients:      deprecatedClients,
+		metrics:                FakeExecutionMetric{},
+		emitter:                FakeEmitter{},
+		configMap:              FakeConfigRepository{},
+		serviceAccountNames:    map[string]string{"default": ""},
 	}
 
 	execution := &testkube.Execution{Id: "1", TestNamespace: "default"}
@@ -117,7 +138,7 @@ func TestNewExecutorJobSpecWithArgs(t *testing.T) {
 		PvcTemplateExtensions:     "",
 		ImagePullSecrets:          []string{"secret-name"},
 		Command:                   []string{"/bin/curl"},
-		Args:                      []string{"-v", "https://testkube.kubeshop.io"},
+		Args:                      []string{"-v", "https://testkube-test-page-lipsum.pages.dev/"},
 		ActiveDeadlineSeconds:     100,
 		Envs:                      map[string]string{"key": "value"},
 		Variables:                 map[string]testkube.Variable{"aa": {Name: "aa", Value: "bb", Type_: testkube.VariableTypeBasic}},

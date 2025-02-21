@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"maps"
 
+	errors2 "github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -50,7 +51,8 @@ type secretManager struct {
 }
 
 type SecretManager interface {
-	Batch(namespace, prefix, name string) *batch
+	Batch(prefix, name string) *batch
+	InsertBatch(ctx context.Context, namespace string, batch *batch, owner *metav1.OwnerReference) error
 	List(ctx context.Context, namespace string, all bool) ([]testkube.Secret, error)
 	Get(ctx context.Context, namespace, name string) (testkube.Secret, error)
 	Delete(ctx context.Context, namespace, name string) error
@@ -65,8 +67,38 @@ func New(clientSet kubernetes.Interface, config testkube.SecretConfig) SecretMan
 	}
 }
 
-func (s *secretManager) Batch(namespace, prefix, name string) *batch {
-	return NewBatch(s.clientSet, namespace, s.config.Prefix+prefix, name, !s.config.AutoCreate)
+func (s *secretManager) Batch(prefix, name string) *batch {
+	return NewBatch(s.config.Prefix+prefix, name, !s.config.AutoCreate)
+}
+
+func (s *secretManager) InsertBatch(ctx context.Context, namespace string, batch *batch, owner *metav1.OwnerReference) error {
+	if !batch.HasData() {
+		return nil
+	} else if !s.config.AutoCreate {
+		return ErrAutoCreateDisabled
+	}
+
+	created := make([]string, 0)
+	for _, secret := range batch.Get() {
+		if owner != nil {
+			secret.OwnerReferences = []metav1.OwnerReference{*owner}
+		} else {
+			secret.OwnerReferences = nil
+		}
+		obj, err := s.clientSet.CoreV1().Secrets(namespace).Create(ctx, &secret, metav1.CreateOptions{})
+		if err != nil {
+			errs := []error{err}
+			for _, name := range created {
+				err = s.clientSet.CoreV1().Secrets(namespace).Delete(context.Background(), name, metav1.DeleteOptions{})
+				if err != nil {
+					errs = append(errs, errors2.Wrapf(err, "failed to delete obsolete secret '%s'", name))
+				}
+			}
+			return errors.Join(errs...)
+		}
+		created = append(created, obj.Name)
+	}
+	return nil
 }
 
 func (s *secretManager) List(ctx context.Context, namespace string, all bool) ([]testkube.Secret, error) {

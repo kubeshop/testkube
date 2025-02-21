@@ -19,8 +19,9 @@ import (
 	testsourcesv1 "github.com/kubeshop/testkube-operator/pkg/client/testsources/v1"
 	testsuiteexecutionsv1 "github.com/kubeshop/testkube-operator/pkg/client/testsuiteexecutions/v1"
 	testsuitesv3 "github.com/kubeshop/testkube-operator/pkg/client/testsuites/v3"
-	testworkflowsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testworkflows/v1"
 	faketestkube "github.com/kubeshop/testkube-operator/pkg/clientset/versioned/fake"
+	"github.com/kubeshop/testkube/cmd/api-server/commons"
+	"github.com/kubeshop/testkube/cmd/api-server/services"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/configmap"
@@ -30,12 +31,15 @@ import (
 	"github.com/kubeshop/testkube/pkg/featureflags"
 	"github.com/kubeshop/testkube/pkg/log"
 	logsclient "github.com/kubeshop/testkube/pkg/logs/client"
+	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/result"
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/scheduler"
 	"github.com/kubeshop/testkube/pkg/secret"
+	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 )
 
@@ -61,13 +65,25 @@ func TestService_Run(t *testing.T) {
 	configMapConfig := config.NewMockRepository(mockCtrl)
 	mockConfigMapClient := configmap.NewMockInterface(mockCtrl)
 	mockTestSuiteExecutionsClient := testsuiteexecutionsv1.NewMockInterface(mockCtrl)
-	mockTestWorkflowsClient := testworkflowsclientv1.NewMockInterface(mockCtrl)
+	mockTestWorkflowsClient := testworkflowclient.NewMockTestWorkflowClient(mockCtrl)
 	mockTestWorkflowExecutor := testworkflowexecutor.NewMockTestWorkflowExecutor(mockCtrl)
 	mockTestWorkflowRepository := testworkflow.NewMockRepository(mockCtrl)
+	mockExecutionWorkerClient := executionworkertypes.NewMockWorker(mockCtrl)
+
+	mockDeprecatedClients := commons.NewMockDeprecatedClients(mockCtrl)
+	mockDeprecatedClients.EXPECT().Executors().Return(mockExecutorsClient).AnyTimes()
+	mockDeprecatedClients.EXPECT().Tests().Return(mockTestsClient).AnyTimes()
+	mockDeprecatedClients.EXPECT().TestSuites().Return(mockTestSuitesClient).AnyTimes()
+	mockDeprecatedClients.EXPECT().TestSources().Return(mockTestSourcesClient).AnyTimes()
+	mockDeprecatedClients.EXPECT().TestSuiteExecutions().Return(mockTestSuiteExecutionsClient).AnyTimes()
+
+	mockDeprecatedRepositories := commons.NewMockDeprecatedRepositories(mockCtrl)
+	mockDeprecatedRepositories.EXPECT().TestResults().Return(mockResultRepository).AnyTimes()
+	mockDeprecatedRepositories.EXPECT().TestSuiteResults().Return(mockTestResultRepository).AnyTimes()
 
 	mockExecutor := client.NewMockExecutor(mockCtrl)
 
-	mockEventEmitter := event.NewEmitter(bus.NewEventBusMock(), "", nil)
+	mockEventEmitter := event.NewEmitter(bus.NewEventBusMock(), "")
 
 	mockTest := testsv3.Test{
 		ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "some-test"},
@@ -129,18 +145,13 @@ func TestService_Run(t *testing.T) {
 		testMetrics,
 		mockExecutor,
 		mockExecutor,
-		mockResultRepository,
-		mockTestResultRepository,
-		mockExecutorsClient,
-		mockTestsClient,
-		mockTestSuitesClient,
-		mockTestSourcesClient,
+		mockDeprecatedRepositories,
+		mockDeprecatedClients,
 		mockSecretClient,
 		mockEventEmitter,
 		testLogger,
 		configMapConfig,
 		mockConfigMapClient,
-		mockTestSuiteExecutionsClient,
 		mockBus,
 		"",
 		featureflags.FeatureFlags{},
@@ -148,6 +159,7 @@ func TestService_Run(t *testing.T) {
 		"",
 		"",
 		"",
+		checktcl.SubscriptionChecker{},
 	)
 
 	mockLeaseBackend := NewMockLeaseBackend(mockCtrl)
@@ -155,26 +167,28 @@ func TestService_Run(t *testing.T) {
 	testIdentifier := "test-host-1"
 	mockLeaseBackend.EXPECT().TryAcquire(gomock.Any(), testIdentifier, testClusterID).Return(true, nil).AnyTimes()
 
+	mockDeprecatedSystem := services.DeprecatedSystem{
+		Clients:      mockDeprecatedClients,
+		Repositories: mockDeprecatedRepositories,
+		JobExecutor:  mockExecutor,
+		Scheduler:    sched,
+	}
+
 	fakeTestkubeClientset := faketestkube.NewSimpleClientset()
 	fakeClientset := fake.NewSimpleClientset()
 	eventBus := bus.NewEventBusMock()
 	metrics := metrics.NewMetrics()
 	s := NewService(
-		sched,
+		&mockDeprecatedSystem,
 		fakeClientset,
 		fakeTestkubeClientset,
-		mockTestSuitesClient,
-		mockTestsClient,
 		mockTestWorkflowsClient,
-		mockResultRepository,
-		mockTestResultRepository,
 		mockLeaseBackend,
 		testLogger,
 		configMapConfig,
-		mockExecutorsClient,
-		mockExecutor,
 		eventBus,
 		metrics,
+		mockExecutionWorkerClient,
 		mockTestWorkflowExecutor,
 		mockTestWorkflowRepository,
 		WithClusterID(testClusterID),
@@ -183,7 +197,7 @@ func TestService_Run(t *testing.T) {
 		WithLeaseCheckerInterval(50*time.Millisecond),
 	)
 
-	s.Run(ctx)
+	go s.Run(ctx)
 
 	time.Sleep(100 * time.Millisecond)
 
