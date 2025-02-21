@@ -56,17 +56,22 @@ type FileWriter struct {
 	stop     bool
 	f        *os.File
 	metadata *Metadata
+	// increment specifies by how much the line count should be incremented,
+	// this is configured when batching multiple lines into a single write operation.
+	increment int
 }
 
-func NewFileWriter(dir string, metadata *Metadata) (*FileWriter, error) {
+// NewFileWriter creates a new FileWriter that writes to a file in the specified directory with the given metadata.
+func NewFileWriter(dir string, metadata *Metadata, increment int) (*FileWriter, error) {
 	filename := fmt.Sprintf("%s_%s_%s.%s", metadata.Workflow, metadata.Step, metadata.Execution, metadata.Format)
 	f, err := initFile(dir, filename)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 	return &FileWriter{
-		f:        f,
-		metadata: metadata,
+		f:         f,
+		metadata:  metadata,
+		increment: increment,
 	}, nil
 }
 
@@ -117,7 +122,7 @@ func (w *FileWriter) Write(ctx context.Context, data string) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to write to file")
 	}
-	w.metadata.Lines++
+	w.metadata.Lines += w.increment
 	return nil
 }
 

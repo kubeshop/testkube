@@ -132,7 +132,7 @@ func WithMetricsRecorder(config Config, fn func()) {
 		Execution: config.Execution,
 		Format:    config.Format,
 	}
-	w, err := core.NewFileWriter(config.Dir, metadata)
+	w, err := core.NewFileWriter(config.Dir, metadata, 4)
 	// If we can't create the file writer, log the error, run the function without metrics and exit early.
 	if err != nil {
 		stdoutUnsafe.Errorf("failed to create file writer: %v", err)

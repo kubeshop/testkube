@@ -13,7 +13,7 @@ func TestBuildDataPoints(t *testing.T) {
 	f, err := os.Open("testdata/metrics_valid_metadata.influx")
 	require.NoError(t, err)
 
-	samples, invalidLines, err := ParseMetrics(context.Background(), f, "testdata/metrics_valid_metadata.influx")
+	samples, _, invalidLines, err := ParseMetrics(context.Background(), f, "testdata/metrics_valid_metadata.influx")
 	require.NoError(t, err)
 	assert.Empty(t, invalidLines)
 

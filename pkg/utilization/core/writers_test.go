@@ -22,7 +22,7 @@ func TestNewBufferedFileWriter(t *testing.T) {
 		Format:    "txt",
 	}
 
-	writer, err := NewFileWriter(tmpDir, meta)
+	writer, err := NewFileWriter(tmpDir, meta, 1)
 	require.NoError(t, err, "expected no error creating FileWriter")
 	require.NotNil(t, writer, "expected a non-nil writer")
 
@@ -110,7 +110,7 @@ func TestBufferedFileWriter_Write(t *testing.T) {
 
 	ctx := context.Background()
 
-	writer, err := NewFileWriter(tmpDir, meta)
+	writer, err := NewFileWriter(tmpDir, meta, 1)
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		_ = writer.Close(context.Background())
@@ -143,7 +143,7 @@ func TestBufferedFileWriter_writeMetadata(t *testing.T) {
 		Format:    "influx",
 		Lines:     42,
 	}
-	writer, err := NewFileWriter(tmpDir, meta)
+	writer, err := NewFileWriter(tmpDir, meta, 1)
 	require.NoError(t, err)
 	defer writer.Close(context.Background())
 
@@ -185,7 +185,7 @@ func TestBufferedFileWriter_Close(t *testing.T) {
 		Execution: "exec",
 		Format:    "txt",
 	}
-	writer, err := NewFileWriter(tmpDir, meta)
+	writer, err := NewFileWriter(tmpDir, meta, 1)
 	require.NoError(t, err)
 
 	err = writer.Write(context.Background(), "line1")

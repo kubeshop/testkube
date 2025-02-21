@@ -87,7 +87,7 @@ func TestParseMetrics(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			f, err := os.Open(tc.filepath)
 			require.NoError(t, err)
-			samples, invalidLines, err := ParseMetrics(context.Background(), f, tc.filepath)
+			samples, _, invalidLines, err := ParseMetrics(context.Background(), f, tc.filepath)
 			require.NoError(t, err)
 			assert.Empty(t, invalidLines)
 			assert.Len(t, samples, tc.wantSampleCount)
