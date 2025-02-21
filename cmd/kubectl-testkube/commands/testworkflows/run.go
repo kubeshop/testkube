@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/avast/retry-go/v4"
 	"github.com/spf13/cobra"
 
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
@@ -31,6 +32,9 @@ const (
 	LogTimestampLength = 30 // time.RFC3339Nano without 00:00 timezone
 	apiErrorMessage    = "processing error:"
 	logsCheckDelay     = 100 * time.Millisecond
+
+	logsRetryAttempts = 10
+	logsRetryDelay    = time.Second
 )
 
 var (
@@ -413,15 +417,31 @@ func printTestWorkflowLogs(signature []testkube.TestWorkflowSignature, notificat
 	return result
 }
 
-func watchTestWorkflowLogs(id string, signature []testkube.TestWorkflowSignature, client apiclientv1.Client) (*testkube.TestWorkflowResult, error) {
+func watchTestWorkflowLogs(id string, signature []testkube.TestWorkflowSignature, client apiclientv1.Client) (result *testkube.TestWorkflowResult, err error) {
 	ui.Info("Getting logs from test workflow job", id)
 
-	notifications, err := client.GetTestWorkflowExecutionNotifications(id)
-	if err != nil {
-		return nil, err
-	}
+	// retry logic in case of error or closed channel with running state
+	err = retry.Do(
+		func() error {
+			notifications, err := client.GetTestWorkflowExecutionNotifications(id)
+			if err != nil {
+				return err
+			}
 
-	return printTestWorkflowLogs(signature, notifications), nil
+			// Check if result stream is closed and if execution is finished
+			result = printTestWorkflowLogs(signature, notifications)
+			if result.Status != nil && *result.Status != testkube.RUNNING_TestWorkflowStatus {
+				return fmt.Errorf("test workflow execution is not finished but channel is closed")
+			}
+
+			return nil
+		},
+		retry.Attempts(logsRetryAttempts),
+		retry.Delay(logsRetryDelay),
+		retry.LastErrorOnly(true),
+	)
+
+	return result, err
 }
 
 func watchTestWorkflowServiceLogs(id, serviceName string, serviceIndex int,
