@@ -8,7 +8,7 @@ spec:
   content:
     git:
       uri: https://github.com/kubeshop/testkube
-      revision: cypress-14-project-and-cleanup # TODO: update before merge
+      revision: main
       paths:
       - test/cypress/executor-tests/cypress-14
   container:
@@ -46,7 +46,7 @@ spec:
   content:
     git:
       uri: https://github.com/kubeshop/testkube
-      revision: cypress-14-project-and-cleanup # TODO: update before merge
+      revision: main
       paths:
       - test/cypress/executor-tests/cypress-14
   container:
