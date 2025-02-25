@@ -9341,7 +9341,6 @@ components:
           $ref: "#/components/schemas/TestWorkflowRetryPolicy"
         timeout:
           type: string
-          pattern: "^((0|[1-9][0-9]*)h)?((0|[1-9][0-9]*)m)?((0|[1-9][0-9]*)s)?((0|[1-9][0-9]*)ms)?$"
           description: maximum time this step may take
 
     TestWorkflowStepOperations:
@@ -9385,7 +9384,6 @@ components:
           $ref: "#/components/schemas/TestWorkflowRetryPolicy"
         timeout:
           type: string
-          pattern: "^((0|[1-9][0-9]*)h)?((0|[1-9][0-9]*)m)?((0|[1-9][0-9]*)s)?((0|[1-9][0-9]*)ms)?$"
           description: maximum time this step may take
         delay:
           type: string
@@ -9454,7 +9452,6 @@ components:
           $ref: "#/components/schemas/TestWorkflowRetryPolicy"
         timeout:
           type: string
-          pattern: "^((0|[1-9][0-9]*)h)?((0|[1-9][0-9]*)m)?((0|[1-9][0-9]*)s)?((0|[1-9][0-9]*)ms)?$"
           description: maximum time this step may take
         delay:
           type: string
