@@ -121,6 +121,7 @@ func (t *server) handler() http.Handler {
 		}
 
 		err := common.UnpackTarball(dirPath, request.Body)
+		defer request.Body.Close()
 		if err != nil {
 			fmt.Printf("Warning: '%s' error while unpacking tarball to: %s\n", dirPath, err.Error())
 			writer.WriteHeader(http.StatusInternalServerError)

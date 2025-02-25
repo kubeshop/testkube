@@ -49,7 +49,7 @@ func (c *CloudArtifactsStorage) ListFiles(ctx context.Context, executionID, test
 	return commandResponse.Artifacts, nil
 }
 
-func (c *CloudArtifactsStorage) DownloadFile(ctx context.Context, file, executionID, testName, testSuiteName, testWorkflowName string) (io.Reader, error) {
+func (c *CloudArtifactsStorage) DownloadFile(ctx context.Context, file, executionID, testName, testSuiteName, testWorkflowName string) (io.ReadCloser, error) {
 	req := DownloadFileRequest{
 		File:             file,
 		ExecutionID:      executionID,
@@ -137,7 +137,7 @@ func (c *CloudArtifactsStorage) DownloadArchive(ctx context.Context, executionID
 	return data, nil
 }
 
-func (c *CloudArtifactsStorage) getObject(ctx context.Context, url string) (io.Reader, error) {
+func (c *CloudArtifactsStorage) getObject(ctx context.Context, url string) (io.ReadCloser, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err

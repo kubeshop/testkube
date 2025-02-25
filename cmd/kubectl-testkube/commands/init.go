@@ -123,6 +123,7 @@ func NewInitCmdDemo() *cobra.Command {
 			if export {
 				valuesResp, err := http.Get(demoValuesUrl)
 				ui.ExitOnError("cannot fetch values", err)
+				defer valuesResp.Body.Close()
 				valuesBytes, err := io.ReadAll(valuesResp.Body)
 				ui.ExitOnError("cannot fetch values", err)
 				values := string(valuesBytes)

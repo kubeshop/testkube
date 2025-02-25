@@ -38,6 +38,7 @@ func (c RESTClient[I, O]) List() ([]O, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode >= 400 {
 		d, err := io.ReadAll(resp.Body)
@@ -96,6 +97,7 @@ func (c RESTClient[I, O]) Get(id string) (e O, err error) {
 	if err != nil {
 		return e, err
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode > 299 {
 		d, err := io.ReadAll(resp.Body)
@@ -131,6 +133,7 @@ func (c RESTClient[I, O]) Create(entity I, overridePath ...string) (e O, err err
 	if err != nil {
 		return e, err
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode > 299 {
 		d, err := io.ReadAll(resp.Body)
