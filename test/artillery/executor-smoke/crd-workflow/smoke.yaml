@@ -17,13 +17,10 @@ spec:
         cpu: 128m
         memory: 256Mi
     workingDir: /data/repo/test/artillery/executor-smoke
+    image: artilleryio/artillery:2.0.22
   steps:
   - name: Run test
-    run:
-      image: artilleryio/artillery:2.0.9
-      args:
-      - run
-      - artillery-smoke-test.yaml
+    shell: /home/node/artillery/bin/run run artillery-smoke-test.yaml
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -50,5 +47,61 @@ spec:
     template:
       name: official/artillery/v1
       config:
-        version: 2.0.9
+        version: 2.0.22
         run: "artillery run artillery-smoke-test.yaml"
+---
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: distributed-artillery-workflow-smoke-artifacts
+  namespace: testkube-agent
+  labels:
+    core-tests: workflows
+spec:
+  config:
+    arrivalRatePerWorker:
+      type: integer
+      default: 2
+    duration:
+      type: string
+      default: 2
+    workers:
+      type: integer
+      default: 2
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/artillery/executor-smoke/artillery-smoke-test.yaml
+  container:
+    image: artilleryio/artillery:2.0.20
+  steps:
+  - name: Run test
+    parallel:
+      count: config.workers
+      transfer:
+      - from: /data/repo
+      fetch:
+      - from: /data/artifacts
+      use:
+      - name: distribute/evenly
+      container:
+        image: artilleryio/artillery:2.0.20
+        resources:
+          requests:
+            cpu: 128m
+            memory: 256Mi
+      paused: true
+      run:
+        workingDir: /data/repo/test/artillery/executor-smoke
+        shell: "mkdir -p /data/artifacts && /home/node/artillery/bin/run run artillery-smoke-test.yaml --overrides '{ \"phases\": [{ \"duration\": {{ config.duration }}, \"arrivalRate\": {{ config.arrivalRatePerWorker }} }] }' -o /data/artifacts/report-{{ index }}.json"
+  - name: Generate HTML report # The "report" command is deprecated and will be removed in a future release of Artillery.
+    shell: mkdir html && for file in *.json; do /home/node/artillery/bin/run report "$file" -o "html/${file%.json}.html"; done
+    workingDir: /data/artifacts
+  - name: Save artifacts
+    condition: always
+    artifacts:
+      workingDir: /data/artifacts
+      paths:
+      - '**/*'
