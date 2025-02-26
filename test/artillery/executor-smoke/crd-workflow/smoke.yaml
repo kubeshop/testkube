@@ -54,7 +54,6 @@ kind: TestWorkflow
 apiVersion: testworkflows.testkube.io/v1
 metadata:
   name: distributed-artillery-workflow-smoke-artifacts
-  namespace: testkube-agent
   labels:
     core-tests: workflows
 spec:
