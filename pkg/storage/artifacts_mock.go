@@ -52,10 +52,10 @@ func (mr *MockArtifactsStorageMockRecorder) DownloadArchive(arg0, arg1, arg2, ar
 }
 
 // DownloadFile mocks base method.
-func (m *MockArtifactsStorage) DownloadFile(arg0 context.Context, arg1, arg2, arg3, arg4, arg5 string) (io.Reader, error) {
+func (m *MockArtifactsStorage) DownloadFile(arg0 context.Context, arg1, arg2, arg3, arg4, arg5 string) (io.ReadCloser, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DownloadFile", arg0, arg1, arg2, arg3, arg4, arg5)
-	ret0, _ := ret[0].(io.Reader)
+	ret0, _ := ret[0].(io.ReadCloser)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

@@ -147,6 +147,9 @@ func (c *client) SaveExecutionLogs(ctx context.Context, environmentId, execution
 
 // TODO: Create AppendExecutionOutput (and maybe ResetExecutionOutput?) instead
 func (c *client) UpdateExecutionOutput(ctx context.Context, environmentId, executionId string, output []testkube.TestWorkflowOutput) error {
+	if c.IsLegacy() {
+		return c.legacyUpdateExecutionOutput(ctx, environmentId, executionId, output)
+	}
 	req := &cloud.UpdateExecutionOutputRequest{
 		Id: executionId,
 		Output: common.MapSlice(output, func(t testkube.TestWorkflowOutput) *cloud.ExecutionOutput {
@@ -250,6 +253,27 @@ func (c *client) legacyInitExecution(ctx context.Context, environmentId, executi
 	}
 	req := cloud.CommandRequest{
 		Command: string(cloudtestworkflow.CmdTestWorkflowExecutionUpdate),
+		Payload: &s,
+	}
+	_, err = call(ctx, c.metadata().SetEnvironmentID(environmentId).GRPC(), c.client.Call, &req)
+	return err
+}
+
+// Deprecated
+func (c *client) legacyUpdateExecutionOutput(ctx context.Context, environmentId, executionId string, output []testkube.TestWorkflowOutput) error {
+	jsonPayload, err := json.Marshal(cloudtestworkflow.ExecutionUpdateOutputRequest{
+		ID:     executionId,
+		Output: output,
+	})
+	if err != nil {
+		return err
+	}
+	s := structpb.Struct{}
+	if err := s.UnmarshalJSON(jsonPayload); err != nil {
+		return err
+	}
+	req := cloud.CommandRequest{
+		Command: string(cloudtestworkflow.CmdTestWorkflowExecutionUpdateOutput),
 		Payload: &s,
 	}
 	_, err = call(ctx, c.metadata().SetEnvironmentID(environmentId).GRPC(), c.client.Call, &req)

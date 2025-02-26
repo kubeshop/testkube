@@ -120,7 +120,7 @@ type OutputRepository interface {
 	// SaveLog streams the output from the workflow to Minio
 	SaveLog(ctx context.Context, id, workflowName string, reader io.Reader) error
 	// ReadLog streams the output from Minio
-	ReadLog(ctx context.Context, id, workflowName string) (io.Reader, error)
+	ReadLog(ctx context.Context, id, workflowName string) (io.ReadCloser, error)
 	// HasLog checks if there is an output in Minio
 	HasLog(ctx context.Context, id, workflowName string) (bool, error)
 

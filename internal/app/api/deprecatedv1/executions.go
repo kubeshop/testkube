@@ -430,7 +430,7 @@ func (s *DeprecatedTestkubeAPI) GetArtifactHandler() fiber.Handler {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: db could not get execution result: %w", errPrefix, err))
 		}
 
-		var file io.Reader
+		var file io.ReadCloser
 		var bucket string
 		artifactsStorage := s.ArtifactsStorage
 		folder := execution.Id
@@ -452,8 +452,8 @@ func (s *DeprecatedTestkubeAPI) GetArtifactHandler() fiber.Handler {
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not download file: %w", errPrefix, err))
 		}
+		defer file.Close()
 
-		// SendStream promises to close file using io.Close() method
 		return c.SendStream(file)
 	}
 }

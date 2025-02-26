@@ -390,13 +390,14 @@ func (s *TestkubeAPI) GetTestWorkflowExecutionLogsHandler() fiber.Handler {
 			return s.ClientError(c, "get execution", err)
 		}
 
-		reader, err := s.TestWorkflowOutput.ReadLog(ctx, executionID, execution.Workflow.Name)
+		rc, err := s.TestWorkflowOutput.ReadLog(ctx, executionID, execution.Workflow.Name)
 		if err != nil {
 			return s.InternalError(c, "can't get log", executionID, err)
 		}
+		defer rc.Close()
 
 		c.Context().SetContentType(mediaTypePlainText)
-		_, err = io.Copy(c.Response().BodyWriter(), reader)
+		_, err = io.Copy(c.Response().BodyWriter(), rc)
 		return err
 	}
 }
@@ -589,6 +590,7 @@ func (s *TestkubeAPI) GetTestWorkflowArtifactHandler() fiber.Handler {
 		if err != nil {
 			return s.InternalError(c, errPrefix, "could not download file", err)
 		}
+		defer file.Close()
 
 		return c.SendStream(file)
 	}
