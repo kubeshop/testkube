@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -458,4 +459,23 @@ func CreateImageInspector(cfg *config.ImageInspectorConfig, configMapClient conf
 		imageinspector.NewSecretFetcher(secretClient, cache.NewInMemoryCache[*corev1.Secret](), imageinspector.WithSecretCacheTTL(cfg.TestkubeImageCredentialsCacheTTL)),
 		inspectorStorages...,
 	)
+}
+
+func MustCreateCronJobScheduler(cfg *config.Config) bool {
+	enableCronJobs, err := parser.LoadConfigFromStringOrFile(
+		cfg.EnableCronJobs,
+		cfg.TestkubeConfigDir,
+		"enable-cron-jobs",
+		"enable cron jobs",
+	)
+	ExitOnError("Creating cron job schduler", err)
+
+	if enableCronJobs == "" {
+		return false
+	}
+
+	result, err := strconv.ParseBool(enableCronJobs)
+	ExitOnError("Creating cron job schduler", err)
+
+	return result
 }
