@@ -81,6 +81,7 @@ func (u *CloudUploader) putObject(ctx context.Context, url string, object *scrap
 	if err != nil {
 		return errors.Wrap(err, "failed to send file to cloud")
 	}
+	defer rsp.Body.Close()
 	if rsp.StatusCode != http.StatusOK {
 		return errors.Errorf("error getting file from presigned url: expected 200 OK response code, got %d", rsp.StatusCode)
 	}

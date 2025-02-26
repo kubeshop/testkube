@@ -113,6 +113,7 @@ func (d *cloudUploader) putObject(url string, path string, file io.Reader, size 
 	if err != nil {
 		return err
 	}
+	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
 		b, _ := io.ReadAll(res.Body)
 		return errors.Errorf("failed saving file: status code: %d / message: %s", res.StatusCode, string(b))

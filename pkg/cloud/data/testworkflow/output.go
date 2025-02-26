@@ -79,14 +79,16 @@ func (r *CloudOutputRepository) SaveLog(ctx context.Context, id, workflowName st
 	if err != nil {
 		return errors.Wrap(err, "failed to save file in cloud storage")
 	}
+	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
 		return errors.Errorf("error saving file with presigned url: expected 200 OK response code, got %d", res.StatusCode)
 	}
 	return nil
 }
 
-// ReadLog streams the output from Cloud
-func (r *CloudOutputRepository) ReadLog(ctx context.Context, id, workflowName string) (io.Reader, error) {
+// ReadLog streams the output from Cloud.
+// The caller is responsible for closing the stream.
+func (r *CloudOutputRepository) ReadLog(ctx context.Context, id, workflowName string) (io.ReadCloser, error) {
 	url, err := r.PresignReadLog(ctx, id, workflowName)
 	if err != nil {
 		return nil, err
@@ -100,8 +102,10 @@ func (r *CloudOutputRepository) ReadLog(ctx context.Context, id, workflowName st
 		return nil, errors.Wrap(err, "failed to get file from cloud storage")
 	}
 	if res.StatusCode != http.StatusOK {
+		_ = res.Body.Close()
 		return nil, errors.Errorf("error getting file from presigned url: expected 200 OK response code, got %d", res.StatusCode)
 	}
+	// Caller must close this stream.
 	return res.Body, nil
 }
 

@@ -53,12 +53,12 @@ func (m *MinioRepository) SaveLog(ctx context.Context, id, workflowName string, 
 	return m.storage.UploadFileToBucket(ctx, m.bucket, bucketFolder, id, buffer, int64(buffer.Len()))
 }
 
-func (m *MinioRepository) ReadLog(ctx context.Context, id, workflowName string) (io.Reader, error) {
+func (m *MinioRepository) ReadLog(ctx context.Context, id, workflowName string) (io.ReadCloser, error) {
 	file, _, err := m.storage.DownloadFileFromBucket(ctx, m.bucket, bucketFolder, id)
 	if err != nil {
 		return nil, err
 	}
-	return file, nil
+	return io.NopCloser(file), nil
 }
 
 func (m *MinioRepository) HasLog(ctx context.Context, id, workflowName string) (bool, error) {
