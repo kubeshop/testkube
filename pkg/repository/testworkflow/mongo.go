@@ -683,7 +683,7 @@ func (r *MongoRepository) Init(ctx context.Context, id string, data InitData) er
 	return err
 }
 
-func (r *MongoRepository) Assign(ctx context.Context, id string, prevRunnerId string, newRunnerId string, assignedAt time.Time) (bool, error) {
+func (r *MongoRepository) Assign(ctx context.Context, id string, prevRunnerId string, newRunnerId string, assignedAt *time.Time) (bool, error) {
 	res, err := r.Coll.UpdateOne(ctx, bson.M{
 		"$and": []bson.M{
 			{"id": id},

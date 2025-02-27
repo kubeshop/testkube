@@ -102,7 +102,7 @@ type Repository interface {
 	// Init sets the initialization data from the runner
 	Init(ctx context.Context, id string, data InitData) error
 	// Assign execution to selected runner
-	Assign(ctx context.Context, id string, prevRunnerId string, newRunnerId string, assignedAt time.Time) (bool, error)
+	Assign(ctx context.Context, id string, prevRunnerId string, newRunnerId string, assignedAt *time.Time) (bool, error)
 	// AbortIfQueued marks execution as aborted if it's queued
 	AbortIfQueued(ctx context.Context, id string) (bool, error)
 }

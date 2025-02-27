@@ -195,7 +195,7 @@ func (r *CloudRepository) Init(ctx context.Context, id string, data testworkflow
 	return r.Update(ctx, execution)
 }
 
-func (r *CloudRepository) Assign(ctx context.Context, id string, prevRunnerId string, newRunnerId string, assignedAt time.Time) (bool, error) {
+func (r *CloudRepository) Assign(ctx context.Context, id string, prevRunnerId string, newRunnerId string, assignedAt *time.Time) (bool, error) {
 	return false, errors.New("not supported")
 }
 
