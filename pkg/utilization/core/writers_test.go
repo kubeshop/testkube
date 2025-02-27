@@ -17,7 +17,7 @@ func TestNewBufferedFileWriter(t *testing.T) {
 	tmpDir := t.TempDir()
 	meta := &Metadata{
 		Workflow:  "wf",
-		Step:      "step",
+		Step:      Step{Ref: "step"},
 		Execution: "exec",
 		Format:    "txt",
 	}
@@ -102,7 +102,7 @@ func TestBufferedFileWriter_Write(t *testing.T) {
 	tmpDir := t.TempDir()
 	meta := &Metadata{
 		Workflow:  "wf",
-		Step:      "step",
+		Step:      Step{Ref: "step"},
 		Execution: "exec",
 		Format:    "txt",
 		Lines:     0,
@@ -138,7 +138,7 @@ func TestBufferedFileWriter_writeMetadata(t *testing.T) {
 	tmpDir := t.TempDir()
 	meta := &Metadata{
 		Workflow:  "wf",
-		Step:      "step",
+		Step:      Step{Ref: "step"},
 		Execution: "exec",
 		Format:    "influx",
 		Lines:     42,
@@ -160,18 +160,15 @@ func TestBufferedFileWriter_writeMetadata(t *testing.T) {
 	controlBuf := make([]byte, 1)
 	_, err = writer.f.ReadAt(controlBuf, metadataControlByteIndex)
 	require.NoError(t, err)
-	lengthBuf := make([]byte, 1)
-	_, err = writer.f.ReadAt(lengthBuf, metadataLengthByteIndex)
-	require.NoError(t, err)
-	metadataLen := lengthBuf[0]
 
+	metadataLen := len(meta.String())
 	metadataBuf := make([]byte, metadataLen)
 	_, err = writer.f.ReadAt(metadataBuf, metadataStartIndex)
 	require.NoError(t, err)
 
 	// Compare with meta.String()
 	expectedMetadata := meta.String()
-	assert.Equal(t, byte(len(expectedMetadata)), metadataLen, "length byte should match metadata string length")
+	assert.Equal(t, len(expectedMetadata), metadataLen, "length byte should match metadata string length")
 	assert.Equal(t, expectedMetadata, string(metadataBuf), "metadata written should match meta.String()")
 }
 
@@ -181,7 +178,7 @@ func TestBufferedFileWriter_Close(t *testing.T) {
 	tmpDir := t.TempDir()
 	meta := &Metadata{
 		Workflow:  "wf",
-		Step:      "step",
+		Step:      Step{Ref: "step"},
 		Execution: "exec",
 		Format:    "txt",
 	}

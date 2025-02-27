@@ -10,6 +10,66 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestMetadataString(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		meta Metadata
+		want string
+	}{
+		{
+			name: "all fields set",
+			meta: Metadata{
+				Workflow:  "wf",
+				Step:      Step{Ref: "s1", Name: "Some step"},
+				Execution: "ex1",
+				Lines:     10,
+				Format:    FormatInflux,
+				ContainerResources: ContainerResources{
+					Requests: ResourceList{
+						CPU:    "100m",
+						Memory: "256Mi",
+					},
+					Limits: ResourceList{
+						CPU:    "200m",
+						Memory: "512Mi",
+					},
+				},
+			},
+			want: "META workflow=wf step.ref=s1 step.name=\"Some step\" execution=ex1 lines=10 format=influx resources.requests.cpu=100m resources.requests.memory=256Mi resources.limits.cpu=200m resources.limits.memory=512Mi",
+		},
+		{
+			name: "some fields empty",
+			meta: Metadata{
+				Workflow: "wf2",
+				// Step is empty
+				// Execution is empty
+				Lines:  0, // zero value (should be omitted)
+				Format: FormatCSV,
+				ContainerResources: ContainerResources{
+					// Requests are both empty
+					Limits: ResourceList{
+						CPU: "500m",
+					},
+				},
+			},
+			want: "META workflow=wf2 format=csv resources.limits.cpu=500m",
+		},
+		{
+			name: "completely empty",
+			meta: Metadata{},
+			want: "META",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.EqualValues(t, tt.want, tt.meta.String())
+		})
+	}
+}
+
 func TestParseMetadataFromFilename(t *testing.T) {
 	t.Parallel()
 
@@ -25,7 +85,7 @@ func TestParseMetadataFromFilename(t *testing.T) {
 			filename: "myWorkflow_step2_0002.influx",
 			wantMeta: &Metadata{
 				Workflow:  "myWorkflow",
-				Step:      "step2",
+				Step:      Step{Ref: "step2"},
 				Execution: "0002",
 				Format:    FormatInflux,
 			},
@@ -74,7 +134,7 @@ func TestParseMetadataFromFilename(t *testing.T) {
 	}
 }
 
-func TestReadHeader(t *testing.T) {
+func TestParseMetadataFromHeader(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -91,7 +151,7 @@ func TestReadHeader(t *testing.T) {
 				Lines:     50,
 				Format:    FormatInflux,
 				Workflow:  "workflow",
-				Step:      "step",
+				Step:      Step{Ref: "step", Name: "Some step"},
 				Execution: "execution",
 			},
 		},
@@ -138,9 +198,25 @@ func TestParseMetadata(t *testing.T) {
 		errContain string
 	}{
 		{
-			name:     "Valid - influx",
-			input:    "META lines=10 format=influx",
-			wantMeta: &Metadata{Lines: 10, Format: FormatInflux},
+			name:  "Valid - influx",
+			input: `META lines=10 format=influx step.ref=step1 step.name="Step 1" workflow=wf execution=ex1 resources.requests.cpu=100m resources.requests.memory=256 resources.limits.cpu=200m resources.limits.memory=512`,
+			wantMeta: &Metadata{
+				Workflow:  "wf",
+				Step:      Step{Ref: "step1", Name: "Step 1"},
+				Execution: "ex1",
+				Lines:     10,
+				Format:    FormatInflux,
+				ContainerResources: ContainerResources{
+					Requests: ResourceList{
+						CPU:    "100m",
+						Memory: "256",
+					},
+					Limits: ResourceList{
+						CPU:    "200m",
+						Memory: "512",
+					},
+				},
+			},
 		},
 		{
 			name:     "Valid - csv",

@@ -46,6 +46,27 @@ type ResourceConfig struct {
 	FsPrefix string `json:"f,omitempty"`
 }
 
+type SignatureConfig struct {
+	Signature
+	Children []Signature `json:"children,omitempty"`
+}
+
+type Signature struct {
+	Ref      string `json:"ref,omitempty"`
+	Name     string `json:"name,omitempty"`
+	Category string `json:"category,omitempty"`
+}
+
+type ContainerResourceConfig struct {
+	Requests ContainerResources `json:"r,omitempty"`
+	Limits   ContainerResources `json:"l,omitempty"`
+}
+
+type ContainerResources struct {
+	Memory string `json:"m,omitempty"`
+	CPU    string `json:"c,omitempty"`
+}
+
 type WorkerConfig struct {
 	Namespace             string `json:"n,omitempty"`
 	DefaultRegistry       string `json:"R,omitempty"` // TODO: think if that shouldn't be Control Plane setup

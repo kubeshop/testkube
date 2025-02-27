@@ -101,18 +101,24 @@ type Config struct {
 	Dir string
 	// Skip indicated whether to skip the metrics recording.
 	// This is used for internal actions like git operations, artifact scraping...
-	Skip      bool
+	Skip            bool
+	ExecutionConfig ExecutionConfig
+	// Format specifies in which format to record the metrics.
+	Format core.MetricsFormat
+	// Resources specifies the requests and limits of the resources used by the operation.
+	ContainerResources core.ContainerResources
+}
+
+type ExecutionConfig struct {
 	Workflow  string
 	Step      string
 	Execution string
-	// Format specifies in which format to record the metrics.
-	Format core.MetricsFormat
 }
 
 // WithMetricsRecorder runs the provided function and records the metrics in the specified directory.
 // If Config.Skip is set to true, the provided function will be run without recording metrics.
 // If there is an error with initiating the metrics recorder, the function will be run without recording metrics.
-func WithMetricsRecorder(config Config, fn func()) {
+func WithMetricsRecorder(config Config, fn func(), postProcessFn func() error) {
 	stdout := output.Std
 	stdoutUnsafe := stdout.Direct()
 
@@ -127,10 +133,11 @@ func WithMetricsRecorder(config Config, fn func()) {
 	defer cancel()
 
 	metadata := &core.Metadata{
-		Workflow:  config.Workflow,
-		Step:      config.Step,
-		Execution: config.Execution,
-		Format:    config.Format,
+		Workflow:           config.ExecutionConfig.Workflow,
+		Step:               core.Step{Ref: config.ExecutionConfig.Step},
+		Execution:          config.ExecutionConfig.Execution,
+		Format:             config.Format,
+		ContainerResources: config.ContainerResources,
 	}
 	w, err := core.NewFileWriter(config.Dir, metadata, 4)
 	// If we can't create the file writer, log the error, run the function without metrics and exit early.
@@ -148,4 +155,7 @@ func WithMetricsRecorder(config Config, fn func()) {
 	// run the function
 	fn()
 	cancel()
+	if err := postProcessFn(); err != nil {
+		stdoutUnsafe.Errorf("failed to run post process function: %v", err)
+	}
 }

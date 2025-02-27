@@ -15,11 +15,10 @@ import (
 const (
 	metadataControlByte      byte = '#'
 	metadataControlByteIndex      = 0
-	metadataLengthByteIndex       = 1
-	metadataStartIndex            = 2
-	headerEndIndex                = 255
+	metadataStartIndex            = 1
+	headerEndIndex                = 511
 	headerEndByte                 = '\n'
-	dataStartIndex                = 256
+	dataStartIndex                = 512
 	headerLength                  = dataStartIndex
 )
 
@@ -134,10 +133,6 @@ func (w *FileWriter) writeMetadata(ctx context.Context, metadata *Metadata) erro
 		return errors.Wrapf(err, "failed to write metadata control byte to file")
 	}
 	serialized := metadata.String()
-	length := byte(len(serialized))
-	if _, err := w.f.WriteAt([]byte{length}, metadataLengthByteIndex); err != nil {
-		return errors.Wrapf(err, "failed to write metadata length to file")
-	}
 	if _, err := w.f.WriteAt([]byte(serialized), metadataStartIndex); err != nil {
 		return errors.Wrapf(err, "failed to write metadata to file")
 	}

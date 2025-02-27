@@ -20,7 +20,7 @@ import (
 )
 
 var (
-	scopedRegex              = regexp.MustCompile(`^_(00|01|02|03|\d|[1-9]\d*)(C)?(S?)_`)
+	scopedRegex              = regexp.MustCompile(`^_(00|01|02|03|04|\d|[1-9]\d*)(C)?(S?)_`)
 	Setup                    = newSetup()
 	defaultWorkingDir        = getWorkingDir()
 	commonSensitiveVariables = []string{
@@ -178,6 +178,26 @@ func (c *setup) GetInternalConfig() (config testworkflowconfig.InternalConfig) {
 	if err != nil {
 		panic(fmt.Sprintf("failed to read the internal config from Pod: %s", err.Error()))
 	}
+	return config
+}
+
+func (c *setup) GetSignature() (config []testworkflowconfig.SignatureConfig) {
+	serialized := c.envGroups[constants.EnvGroupInternal][constants.EnvSignature]
+	if serialized == "" {
+		return
+	}
+	err := json.Unmarshal([]byte(serialized), &config)
+	if err != nil {
+		panic(fmt.Sprintf("failed to read the signature from Pod: %s", err.Error()))
+	}
+	return config
+}
+
+func (c *setup) GetContainerResources() (config testworkflowconfig.ContainerResourceConfig) {
+	config.Requests.CPU = c.envGroups[constants.EnvGroupResources][constants.EnvResourceRequestsCPU]
+	config.Requests.Memory = c.envGroups[constants.EnvGroupResources][constants.EnvResourceRequestsMemory]
+	config.Limits.CPU = c.envGroups[constants.EnvGroupResources][constants.EnvResourceLimitsCPU]
+	config.Limits.Memory = c.envGroups[constants.EnvGroupResources][constants.EnvResourceLimitsMemory]
 	return config
 }
 
