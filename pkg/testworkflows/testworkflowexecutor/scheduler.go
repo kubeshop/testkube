@@ -333,10 +333,7 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 				matcher := make(map[string]*cloud.ExecutionTargetLabels)
 				maps.Copy(matcher, target.Match)
 				for k, v := range labels {
-					if matcher[k] == nil {
-						matcher[k] = &cloud.ExecutionTargetLabels{}
-					}
-					matcher[k] = &cloud.ExecutionTargetLabels{Labels: append(matcher[k].Labels, v)}
+					matcher[k] = &cloud.ExecutionTargetLabels{Labels: []string{v}}
 				}
 				selectors = append(selectors, &cloud.ScheduleExecution{
 					Selector:      execution.Selector,
