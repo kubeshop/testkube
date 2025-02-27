@@ -8733,6 +8733,9 @@ components:
           description: identifier for group of correlated executions
           format: bson objectId
           example: "62f395e004109209b50edfc1"
+        runnerId:
+          type: string
+          description: identifier of the runner where it has been executed
         name:
           type: string
           description: execution name
