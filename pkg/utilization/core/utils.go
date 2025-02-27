@@ -39,11 +39,3 @@ func split(s string) []string {
 
 	return tokens
 }
-
-// trim returns the first n characters of s.
-func trim(s string, n int) string {
-	if n > len(s) {
-		return s
-	}
-	return s[:n]
-}
