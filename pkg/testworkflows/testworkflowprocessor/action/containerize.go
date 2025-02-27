@@ -172,14 +172,12 @@ func CreateContainer(groupId int, defaultContainer stage2.Container, actions []a
 			ResourceFieldRef: &corev1.ResourceFieldSelector{
 				ContainerName: cr.Name,
 				Resource:      "requests.memory",
-				Divisor:       resource.MustParse("1Mi"),
 			},
 		}},
 		corev1.EnvVar{Name: fmt.Sprintf("_%s_%s", constants2.EnvGroupResources, constants2.EnvResourceLimitsMemory), ValueFrom: &corev1.EnvVarSource{
 			ResourceFieldRef: &corev1.ResourceFieldSelector{
 				ContainerName: cr.Name,
 				Resource:      "limits.memory",
-				Divisor:       resource.MustParse("1Mi"),
 			},
 		}},
 	)

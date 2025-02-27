@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strconv"
+	"strings"
 	"sync/atomic"
 	"syscall"
 	"time"
@@ -382,7 +383,7 @@ func main() {
 				stopTimeoutWatcher := orchestration.WatchTimeout(finalizeTimeout, leaf...)
 
 				// Run the command
-				config := newMetricsRecorderConfig(step.Ref, action.Execute.Toolkit)
+				config := newMetricsRecorderConfig(step.Ref, action.Execute.Toolkit, containerResources)
 				utilization.WithMetricsRecorder(
 					config,
 					func() {
@@ -454,9 +455,8 @@ func main() {
 	}
 }
 
-func newMetricsRecorderConfig(stepRef string, skip bool) utilization.Config {
+func newMetricsRecorderConfig(stepRef string, skip bool, containerResources testworkflowconfig.ContainerResourceConfig) utilization.Config {
 	s := data.GetState()
-	cr := s.ContainerResources
 	metricsDir := filepath.Join(constants.InternalPath, "metrics", stepRef)
 	return utilization.Config{
 		Dir:  metricsDir,
@@ -469,15 +469,22 @@ func newMetricsRecorderConfig(stepRef string, skip bool) utilization.Config {
 		Format: core.FormatInflux,
 		ContainerResources: core.ContainerResources{
 			Requests: core.ResourceList{
-				CPU:    cr.Requests.CPU,
-				Memory: cr.Requests.Memory,
+				CPU:    appendSuffixIfNeeded(containerResources.Requests.CPU, "m"),
+				Memory: containerResources.Requests.Memory,
 			},
 			Limits: core.ResourceList{
-				CPU:    cr.Limits.CPU,
-				Memory: cr.Limits.Memory,
+				CPU:    appendSuffixIfNeeded(containerResources.Limits.CPU, "m"),
+				Memory: containerResources.Limits.Memory,
 			},
 		},
 	}
+}
+
+func appendSuffixIfNeeded(s, suffix string) string {
+	if !strings.HasSuffix(s, suffix) {
+		return s + suffix
+	}
+	return s
 }
 
 func scrapeMetricsPostProcessor(path, step string, config testworkflowconfig.InternalConfig) func() error {
