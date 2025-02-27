@@ -39,7 +39,6 @@ jobs:
           tags: |
             type=ref,event=branch
             type=semver,pattern={{version}}
-            type=raw,value=api-server-{{branch}}-{{sha}}
 
       - name: Create Docker tags and metadata for tw-init
         id: tw-init
@@ -48,11 +47,9 @@ jobs:
           bake-target: 'tw-init'
           images: |
             kubeshop/testkube-tw-init
-            kubeshop/testkube-sandbox
           tags: |
             type=ref,event=branch
             type=semver,pattern={{version}}
-            type=raw,value=testworkflow-init-{{branch}}-{{sha}}
 
       - name: Create Docker tags and metadata for tw-toolkit
         id: tw-toolkit
@@ -61,11 +58,9 @@ jobs:
           bake-target: 'tw-toolkit'
           images: |
             kubeshop/testkube-tw-toolkit
-            kubeshop/testkube-sandbox
           tags: |
             type=ref,event=branch
             type=semver,pattern={{version}}
-            type=raw,value=testworkflow-toolkit-{{branch}}-{{sha}}
 
       - name: Build
         uses: depot/bake-action@v1
