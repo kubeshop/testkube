@@ -20,9 +20,10 @@ type LabelSelector struct {
 }
 
 type InitData struct {
-	RunnerID  string
-	Namespace string
-	Signature []testkube.TestWorkflowSignature
+	RunnerID   string
+	Namespace  string
+	Signature  []testkube.TestWorkflowSignature
+	AssignedAt time.Time
 }
 
 const PageDefaultLimit int = 100
@@ -101,7 +102,7 @@ type Repository interface {
 	// Init sets the initialization data from the runner
 	Init(ctx context.Context, id string, data InitData) error
 	// Assign execution to selected runner
-	Assign(ctx context.Context, id string, prevRunnerId string, newRunnerId string) (bool, error)
+	Assign(ctx context.Context, id string, prevRunnerId string, newRunnerId string, assignedAt time.Time) (bool, error)
 	// AbortIfQueued marks execution as aborted if it's queued
 	AbortIfQueued(ctx context.Context, id string) (bool, error)
 }

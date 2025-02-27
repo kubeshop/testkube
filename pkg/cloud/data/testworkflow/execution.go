@@ -188,10 +188,14 @@ func (r *CloudRepository) Init(ctx context.Context, id string, data testworkflow
 	execution.Namespace = data.Namespace
 	execution.Signature = data.Signature
 	execution.RunnerId = data.RunnerID
+	execution.AssignedAt = data.AssignedAt
+	if execution.AssignedAt.IsZero() {
+		execution.AssignedAt = time.Now()
+	}
 	return r.Update(ctx, execution)
 }
 
-func (r *CloudRepository) Assign(ctx context.Context, id string, prevRunnerId string, newRunnerId string) (bool, error) {
+func (r *CloudRepository) Assign(ctx context.Context, id string, prevRunnerId string, newRunnerId string, assignedAt time.Time) (bool, error) {
 	return false, errors.New("not supported")
 }
 

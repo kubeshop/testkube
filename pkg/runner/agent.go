@@ -341,6 +341,7 @@ func (a *agentLoop) runTestWorkflow(environmentId string, executionId string, ex
 	execution.Namespace = result.Namespace
 	execution.Signature = result.Signature
 	execution.RunnerId = a.proContext.Agent.ID
+	execution.AssignedAt = time.Now()
 	if err = a.init(context.Background(), environmentId, execution); err != nil {
 		logger.Errorw("failed to mark execution as initialized", "error", err)
 	}

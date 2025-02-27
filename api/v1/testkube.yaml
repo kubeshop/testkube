@@ -8669,6 +8669,10 @@ components:
           type: string
           format: date-time
           description: when the execution has been scheduled to run
+        assignedAt:
+          type: string
+          format: date-time
+          description: when the execution has been assigned to some runner
         statusAt:
           type: string
           format: date-time

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/pkg/errors"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -241,6 +242,7 @@ func (c *client) legacyInitExecution(ctx context.Context, environmentId, executi
 	execution.RunnerId = c.proContext.Agent.ID
 	execution.Namespace = namespace
 	execution.Signature = signature
+	execution.AssignedAt = time.Now()
 	jsonPayload, err := json.Marshal(cloudtestworkflow.ExecutionUpdateRequest{
 		WorkflowExecution: *execution,
 	})

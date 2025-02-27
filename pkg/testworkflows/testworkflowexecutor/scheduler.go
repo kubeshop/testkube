@@ -140,9 +140,10 @@ func (s *scheduler) update(ctx context.Context, execution *testkube.TestWorkflow
 func (s *scheduler) init(ctx context.Context, execution *testkube.TestWorkflowExecution) error {
 	err := retry(SaveResultRetryMaxAttempts, SaveResultRetryBaseDelay, func() error {
 		err := s.resultsRepository.Init(ctx, execution.Id, testworkflow.InitData{
-			RunnerID:  execution.RunnerId,
-			Namespace: execution.Namespace,
-			Signature: execution.Signature,
+			RunnerID:   execution.RunnerId,
+			Namespace:  execution.Namespace,
+			Signature:  execution.Signature,
+			AssignedAt: execution.AssignedAt,
 		})
 		if err != nil {
 			s.logger.Warnw("failed to initialize the TestWorkflow execution in database", "recoverable", true, "executionId", execution.Id, "error", err)
