@@ -27,7 +27,7 @@ func TestNewBufferedFileWriter(t *testing.T) {
 	require.NotNil(t, writer, "expected a non-nil writer")
 
 	// Ensure the correct file was created
-	expectedFilename := fmt.Sprintf("%s_%s_%s.%s", meta.Workflow, meta.Step, meta.Execution, meta.Format)
+	expectedFilename := fmt.Sprintf("%s_%s_%s.%s", meta.Workflow, meta.Step.Ref, meta.Execution, meta.Format)
 	fullPath := filepath.Join(tmpDir, expectedFilename)
 	_, statErr := os.Stat(fullPath)
 	assert.NoError(t, statErr, "expected the file to exist at %s", fullPath)
@@ -201,7 +201,7 @@ func TestBufferedFileWriter_Close(t *testing.T) {
 	require.Error(t, writer.Write(context.Background(), "should fail"))
 
 	// Validate the file content on disk
-	filename := fmt.Sprintf("%s_%s_%s.%s", meta.Workflow, meta.Step, meta.Execution, meta.Format)
+	filename := fmt.Sprintf("%s_%s_%s.%s", meta.Workflow, meta.Step.Ref, meta.Execution, meta.Format)
 	fullPath := filepath.Join(tmpDir, filename)
 
 	content, readErr := os.ReadFile(fullPath)

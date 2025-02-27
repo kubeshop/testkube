@@ -66,6 +66,9 @@ func NewMetricsRecorder(opts ...Option) *MetricRecorder {
 
 }
 
+// Start starts the metric recorder and writes the metrics to the writer at the specified interval.
+// MetricRecorder runs a loop at the specified interval, gathers metrics, formats them using the provided Formatter and writes them using the provided Writer.
+// For practical purposes, most often is a FileWriter uses to write the metrics to a file.
 func (r *MetricRecorder) Start(ctx context.Context) {
 	stdout := output.Std
 	stdoutUnsafe := stdout.Direct()

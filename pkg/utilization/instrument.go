@@ -154,10 +154,6 @@ func getChildProcess() (*gopsutil.Process, error) {
 		}
 	}
 
-	// Print debug info
-	fmt.Printf("processes: %v\n", processes)
-	fmt.Printf("num processes: %d\n", len(processes))
-
 	// Find the pid of the process which is running the underlying binary.
 	pid := int32(os.Getpid())
 	var process *gopsutil.Process
@@ -175,11 +171,6 @@ func getChildProcess() (*gopsutil.Process, error) {
 	if process == nil {
 		return nil, errors.New("failed to find process")
 	}
-
-	// Print debug info
-	fmt.Printf("child process: %d\n", process.Pid)
-	name, _ := process.Name()
-	fmt.Printf("child process name: %s\n", name)
 
 	return process, nil
 }

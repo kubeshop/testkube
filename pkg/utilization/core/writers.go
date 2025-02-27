@@ -157,12 +157,10 @@ func (w *FileWriter) Close(ctx context.Context) error {
 }
 
 func (w *FileWriter) Print() error {
-	fmt.Printf("Opening metrics file %s\n", w.f.Name())
 	f, err := os.Open(w.f.Name())
 	if err != nil {
 		return errors.Wrapf(err, "failed to open file")
 	}
-	fmt.Println("Printing file content")
 	data, err := io.ReadAll(f)
 	if err != nil {
 		return errors.Wrapf(err, "failed to read file")

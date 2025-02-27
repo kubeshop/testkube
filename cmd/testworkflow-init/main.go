@@ -383,6 +383,8 @@ func main() {
 				stopTimeoutWatcher := orchestration.WatchTimeout(finalizeTimeout, leaf...)
 
 				// Run the command
+				// WithMetricsRecorder will run a goroutine which will identify the process of the underlying binary which gets executed,
+				// it will then scrape the metrics of the process and store them as artifacts in the internal folder.
 				config := newMetricsRecorderConfig(step.Ref, action.Execute.Toolkit, containerResources)
 				utilization.WithMetricsRecorder(
 					config,
