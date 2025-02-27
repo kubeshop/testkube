@@ -27,7 +27,7 @@ func NewTarballCmd() *cobra.Command {
 				os.Exit(0)
 			}
 
-			for _, pair := range pairs {
+			processPair := func(pair string) {
 				dirPath, url, found := strings.Cut(pair, "=")
 				if !found {
 					ui.Fail(fmt.Errorf("invalid tarball pair: %s", pair))
@@ -44,11 +44,13 @@ func NewTarballCmd() *cobra.Command {
 					if err == nil {
 						// Process the files
 						err = common.UnpackTarball(dirPath, resp.Body)
+						resp.Body.Close()
 						if err == nil {
 							break
 						}
 						fmt.Printf("failed to unpack the tarball: %s\n", err.Error())
 					} else {
+						resp.Body.Close()
 						fmt.Printf("failed to download the tarball: %s\n", err.Error())
 					}
 
@@ -59,6 +61,10 @@ func NewTarballCmd() *cobra.Command {
 					attempt++
 					fmt.Printf("retrying - attempt %d/%d.\n", attempt, TarballRetryMaxAttempts)
 				}
+			}
+
+			for _, pair := range pairs {
+				processPair(pair)
 			}
 		},
 	}

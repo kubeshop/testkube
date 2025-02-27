@@ -48,6 +48,7 @@ func NewTransferCmd() *cobra.Command {
 				}()
 				resp, err := http.Post(url, "application/tar+gzip", reader)
 				ui.ExitOnError("send the tarball request", err)
+				_ = resp.Body.Close()
 
 				if resp.StatusCode != http.StatusNoContent {
 					ui.Fail(fmt.Errorf("failed to send the tarball: status code %d", resp.StatusCode))

@@ -25,6 +25,7 @@ type TestTrigger struct {
 	ConditionSpec     *TestTriggerConditionSpec       `json:"conditionSpec,omitempty"`
 	ProbeSpec         *TestTriggerProbeSpec           `json:"probeSpec,omitempty"`
 	Action            *TestTriggerActions             `json:"action"`
+	ActionParameters  *TestTriggerActionParameters    `json:"actionParameters,omitempty"`
 	Execution         *TestTriggerExecutions          `json:"execution"`
 	TestSelector      *TestTriggerSelector            `json:"testSelector"`
 	ConcurrencyPolicy *TestTriggerConcurrencyPolicies `json:"concurrencyPolicy,omitempty"`

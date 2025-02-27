@@ -78,27 +78,34 @@ func populateConfigParams(resolvedWorkflow *testkube.TestWorkflow, configParams 
 
 	for k, v := range resolvedWorkflow.Spec.Config {
 		if v.Sensitive {
-			return nil
+			configParams[k] = testkube.TestWorkflowExecutionConfigValue{
+				Sensitive:         true,
+				EmptyValue:        true,
+				EmptyDefaultValue: true,
+			}
+
+			continue
 		}
-		if v.Default_ != nil {
-			if _, ok := configParams[k]; !ok {
-				configParams[k] = testkube.TestWorkflowExecutionConfigValue{
-					DefaultValue: v.Default_.Value,
-				}
-			} else {
-				value := configParams[k].Value
-				truncated := false
-				if len(value) > configParamSizeLimit {
-					value = value[:configParamSizeLimit]
-					truncated = true
-				}
-				configParams[k] = testkube.TestWorkflowExecutionConfigValue{
-					DefaultValue: v.Default_.Value,
-					Value:        value,
-					Truncated:    truncated,
-				}
+
+		if _, ok := configParams[k]; !ok {
+			configParams[k] = testkube.TestWorkflowExecutionConfigValue{
+				EmptyValue: true,
 			}
 		}
+
+		data := configParams[k]
+		if len(data.Value) > configParamSizeLimit {
+			data.Value = data.Value[:configParamSizeLimit]
+			data.Truncated = true
+		}
+
+		if v.Default_ != nil {
+			data.DefaultValue = v.Default_.Value
+		} else {
+			data.EmptyDefaultValue = true
+		}
+
+		configParams[k] = data
 	}
 
 	return configParams
@@ -478,6 +485,16 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 		query["runningcontext.actor.type_"] = filter.ActorType()
 	}
 
+	if filter.GroupIDDefined() {
+		query = bson.M{"$and": bson.A{
+			bson.M{"$expr": bson.M{"$or": bson.A{
+				bson.M{"$eq": bson.A{"$id", filter.GroupID()}},
+				bson.M{"$eq": bson.A{"$groupid", filter.GroupID()}},
+			}}},
+			query,
+		}}
+	}
+
 	opts.SetSkip(int64(filter.Page() * filter.PageSize()))
 	opts.SetLimit(int64(filter.PageSize()))
 	opts.SetSort(bson.D{{Key: "scheduledat", Value: -1}})
@@ -655,4 +672,80 @@ func (r *MongoRepository) GetExecutionTags(ctx context.Context, testWorkflowName
 	}
 
 	return tags, nil
+}
+
+func (r *MongoRepository) Init(ctx context.Context, id string, data InitData) error {
+	_, err := r.Coll.UpdateOne(ctx, bson.M{"id": id}, bson.M{"$set": map[string]interface{}{
+		"namespace": data.Namespace,
+		"signature": data.Signature,
+		"runnerid":  data.RunnerID,
+	}})
+	return err
+}
+
+func (r *MongoRepository) Assign(ctx context.Context, id string, prevRunnerId string, newRunnerId string) (bool, error) {
+	res, err := r.Coll.UpdateOne(ctx, bson.M{
+		"$and": []bson.M{
+			{"id": id},
+			{"result.status": bson.M{"$in": bson.A{testkube.QUEUED_TestWorkflowStatus, testkube.RUNNING_TestWorkflowStatus, testkube.PAUSED_TestWorkflowStatus}}},
+			{"$or": []bson.M{{"runnerid": prevRunnerId}, {"runnerid": newRunnerId}, {"runnerid": nil}}},
+		},
+	}, bson.M{"$set": map[string]interface{}{
+		"runnerid": newRunnerId,
+	}})
+	if err != nil {
+		return false, err
+	}
+	return res.ModifiedCount > 0, nil
+}
+
+// TODO: Return IDs only
+// TODO: Add indexes
+func (r *MongoRepository) GetUnassigned(ctx context.Context) (result []testkube.TestWorkflowExecution, err error) {
+	result = make([]testkube.TestWorkflowExecution, 0)
+	opts := &options.FindOptions{}
+	opts.SetSort(bson.D{{Key: "_id", Value: -1}})
+	if r.allowDiskUse {
+		opts.SetAllowDiskUse(r.allowDiskUse)
+	}
+
+	cursor, err := r.Coll.Find(ctx, bson.M{
+		"$and": []bson.M{
+			{"result.status": testkube.QUEUED_TestWorkflowStatus},
+			{"$or": []bson.M{{"runnerid": ""}, {"runnerid": nil}}},
+		},
+	}, opts)
+	if err != nil {
+		return result, err
+	}
+	err = cursor.All(ctx, &result)
+
+	for i := range result {
+		result[i].UnscapeDots()
+	}
+	return
+}
+
+func (r *MongoRepository) AbortIfQueued(ctx context.Context, id string) (ok bool, err error) {
+	ts := time.Now()
+	res, err := r.Coll.UpdateOne(ctx, bson.M{
+		"$and": []bson.M{
+			{"id": id},
+			{"result.status": bson.M{"$in": bson.A{testkube.QUEUED_TestWorkflowStatus, testkube.RUNNING_TestWorkflowStatus, testkube.PAUSED_TestWorkflowStatus}}},
+			{"$or": []bson.M{{"runnerid": ""}, {"runnerid": nil}}},
+		},
+	}, bson.M{"$set": map[string]interface{}{
+		"result.status":                      testkube.ABORTED_TestWorkflowStatus,
+		"result.predictedstatus":             testkube.ABORTED_TestWorkflowStatus,
+		"statusat":                           ts,
+		"result.finishedat":                  ts,
+		"result.initialization.status":       testkube.ABORTED_TestWorkflowStatus,
+		"result.initialization.errormessage": "Aborted before initialization.",
+		"result.initialization.finishedat":   ts,
+		//"result.totaldurationms": ts.Sub(scheduledAt).Milliseconds(),
+	}})
+	if err != nil {
+		return false, err
+	}
+	return res.ModifiedCount > 0, nil
 }

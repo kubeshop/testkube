@@ -3,6 +3,7 @@ package commands
 import (
 	"github.com/spf13/cobra"
 
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/agents"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/artifacts"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common/validator"
@@ -15,6 +16,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testworkflows"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/testworkflowtemplates"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/webhooks"
+	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/webhooktemplates"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -43,6 +45,7 @@ func NewGetCmd() *cobra.Command {
 	cmd.AddCommand(tests.NewGetTestsCmd())
 	cmd.AddCommand(testsuites.NewGetTestSuiteCmd())
 	cmd.AddCommand(webhooks.NewGetWebhookCmd())
+	cmd.AddCommand(webhooktemplates.NewGetWebhookTemplateCmd())
 	cmd.AddCommand(executors.NewGetExecutorCmd())
 	cmd.AddCommand(tests.NewGetExecutionCmd())
 	cmd.AddCommand(artifacts.NewListArtifactsCmd())
@@ -53,6 +56,9 @@ func NewGetCmd() *cobra.Command {
 	cmd.AddCommand(testworkflows.NewGetTestWorkflowsCmd())
 	cmd.AddCommand(testworkflows.NewGetTestWorkflowExecutionsCmd())
 	cmd.AddCommand(testworkflowtemplates.NewGetTestWorkflowTemplatesCmd())
+	cmd.AddCommand(agents.NewGetAgentCommand())
+	cmd.AddCommand(agents.NewGetRunnerCommand())
+	cmd.AddCommand(agents.NewGetGitOpsCommand())
 
 	cmd.PersistentFlags().StringP("output", "o", "pretty", "output type can be one of json|yaml|pretty|go")
 	cmd.PersistentFlags().StringP("go-template", "", "{{.}}", "go template to render")

@@ -16,7 +16,7 @@ func NewRunCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:         "run <resourceName>",
 		Aliases:     []string{"r", "start"},
-		Short:       "Runs tests, test suites or test workflows",
+		Short:       "Runs tests, test suites, test workflows or test workflow executions",
 		Annotations: map[string]string{cmdGroupAnnotation: cmdGroupCommands},
 		Run: func(cmd *cobra.Command, args []string) {
 			err := cmd.Help()
@@ -33,6 +33,7 @@ func NewRunCmd() *cobra.Command {
 	cmd.AddCommand(tests.NewRunTestCmd())
 	cmd.AddCommand(testsuites.NewRunTestSuiteCmd())
 	cmd.AddCommand(testworkflows.NewRunTestWorkflowCmd())
+	cmd.AddCommand(testworkflows.NewReRunTestWorkflowExecutionCmd())
 
 	cmd.PersistentFlags().StringP("output", "o", "pretty", "output type can be one of json|yaml|pretty|go")
 	cmd.PersistentFlags().StringP("go-template", "", "{{.}}", "go template to render")

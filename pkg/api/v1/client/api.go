@@ -29,12 +29,13 @@ func NewProxyAPIClient(client kubernetes.Interface, config APIConfig) APIClient 
 			NewProxyClient[testkube.TestSuiteExecutionsResult](client, config),
 			NewProxyClient[testkube.Artifact](client, config),
 		),
-		ExecutorClient:   NewExecutorClient(NewProxyClient[testkube.ExecutorDetails](client, config)),
-		WebhookClient:    NewWebhookClient(NewProxyClient[testkube.Webhook](client, config)),
-		ConfigClient:     NewConfigClient(NewProxyClient[testkube.Config](client, config)),
-		TestSourceClient: NewTestSourceClient(NewProxyClient[testkube.TestSource](client, config)),
-		CopyFileClient:   NewCopyFileProxyClient(client, config),
-		TemplateClient:   NewTemplateClient(NewProxyClient[testkube.Template](client, config)),
+		ExecutorClient:        NewExecutorClient(NewProxyClient[testkube.ExecutorDetails](client, config)),
+		WebhookClient:         NewWebhookClient(NewProxyClient[testkube.Webhook](client, config)),
+		WebhookTemplateClient: NewWebhookTemplateClient(NewProxyClient[testkube.WebhookTemplate](client, config)),
+		ConfigClient:          NewConfigClient(NewProxyClient[testkube.Config](client, config)),
+		TestSourceClient:      NewTestSourceClient(NewProxyClient[testkube.TestSource](client, config)),
+		CopyFileClient:        NewCopyFileProxyClient(client, config),
+		TemplateClient:        NewTemplateClient(NewProxyClient[testkube.Template](client, config)),
 		TestWorkflowClient: NewTestWorkflowClient(
 			NewProxyClient[testkube.TestWorkflow](client, config),
 			NewProxyClient[testkube.TestWorkflowWithExecution](client, config),
@@ -44,6 +45,7 @@ func NewProxyAPIClient(client kubernetes.Interface, config APIConfig) APIClient 
 		),
 		TestWorkflowTemplateClient: NewTestWorkflowTemplateClient(NewProxyClient[testkube.TestWorkflowTemplate](client, config)),
 		TestTriggerClient:          NewTestTriggerClient(NewProxyClient[testkube.TestTrigger](client, config)),
+		SharedClient:               NewSharedClient(NewProxyClient[map[string][]string](client, config)),
 	}
 }
 
@@ -68,12 +70,13 @@ func NewDirectAPIClient(httpClient *http.Client, sseClient *http.Client, apiURI,
 			NewDirectClient[testkube.TestSuiteExecutionsResult](httpClient, apiURI, apiPathPrefix),
 			NewDirectClient[testkube.Artifact](httpClient, apiURI, apiPathPrefix),
 		),
-		ExecutorClient:   NewExecutorClient(NewDirectClient[testkube.ExecutorDetails](httpClient, apiURI, apiPathPrefix)),
-		WebhookClient:    NewWebhookClient(NewDirectClient[testkube.Webhook](httpClient, apiURI, apiPathPrefix)),
-		ConfigClient:     NewConfigClient(NewDirectClient[testkube.Config](httpClient, apiURI, apiPathPrefix)),
-		TestSourceClient: NewTestSourceClient(NewDirectClient[testkube.TestSource](httpClient, apiURI, apiPathPrefix)),
-		CopyFileClient:   NewCopyFileDirectClient(httpClient, apiURI, apiPathPrefix),
-		TemplateClient:   NewTemplateClient(NewDirectClient[testkube.Template](httpClient, apiURI, apiPathPrefix)),
+		ExecutorClient:        NewExecutorClient(NewDirectClient[testkube.ExecutorDetails](httpClient, apiURI, apiPathPrefix)),
+		WebhookClient:         NewWebhookClient(NewDirectClient[testkube.Webhook](httpClient, apiURI, apiPathPrefix)),
+		WebhookTemplateClient: NewWebhookTemplateClient(NewDirectClient[testkube.WebhookTemplate](httpClient, apiURI, apiPathPrefix)),
+		ConfigClient:          NewConfigClient(NewDirectClient[testkube.Config](httpClient, apiURI, apiPathPrefix)),
+		TestSourceClient:      NewTestSourceClient(NewDirectClient[testkube.TestSource](httpClient, apiURI, apiPathPrefix)),
+		CopyFileClient:        NewCopyFileDirectClient(httpClient, apiURI, apiPathPrefix),
+		TemplateClient:        NewTemplateClient(NewDirectClient[testkube.Template](httpClient, apiURI, apiPathPrefix)),
 		TestWorkflowClient: NewTestWorkflowClient(
 			NewDirectClient[testkube.TestWorkflow](httpClient, apiURI, apiPathPrefix),
 			NewDirectClient[testkube.TestWorkflowWithExecution](httpClient, apiURI, apiPathPrefix),
@@ -83,6 +86,7 @@ func NewDirectAPIClient(httpClient *http.Client, sseClient *http.Client, apiURI,
 		),
 		TestWorkflowTemplateClient: NewTestWorkflowTemplateClient(NewDirectClient[testkube.TestWorkflowTemplate](httpClient, apiURI, apiPathPrefix)),
 		TestTriggerClient:          NewTestTriggerClient(NewDirectClient[testkube.TestTrigger](httpClient, apiURI, apiPathPrefix)),
+		SharedClient:               NewSharedClient(NewDirectClient[map[string][]string](httpClient, apiURI, apiPathPrefix)),
 	}
 }
 
@@ -107,12 +111,13 @@ func NewCloudAPIClient(httpClient *http.Client, sseClient *http.Client, apiURI, 
 			NewCloudClient[testkube.TestSuiteExecutionsResult](httpClient, apiURI, apiPathPrefix),
 			NewCloudClient[testkube.Artifact](httpClient, apiURI, apiPathPrefix),
 		),
-		ExecutorClient:   NewExecutorClient(NewCloudClient[testkube.ExecutorDetails](httpClient, apiURI, apiPathPrefix)),
-		WebhookClient:    NewWebhookClient(NewCloudClient[testkube.Webhook](httpClient, apiURI, apiPathPrefix)),
-		ConfigClient:     NewConfigClient(NewCloudClient[testkube.Config](httpClient, apiURI, apiPathPrefix)),
-		TestSourceClient: NewTestSourceClient(NewCloudClient[testkube.TestSource](httpClient, apiURI, apiPathPrefix)),
-		CopyFileClient:   NewCopyFileDirectClient(httpClient, apiURI, apiPathPrefix),
-		TemplateClient:   NewTemplateClient(NewCloudClient[testkube.Template](httpClient, apiURI, apiPathPrefix)),
+		ExecutorClient:        NewExecutorClient(NewCloudClient[testkube.ExecutorDetails](httpClient, apiURI, apiPathPrefix)),
+		WebhookClient:         NewWebhookClient(NewCloudClient[testkube.Webhook](httpClient, apiURI, apiPathPrefix)),
+		WebhookTemplateClient: NewWebhookTemplateClient(NewCloudClient[testkube.WebhookTemplate](httpClient, apiURI, apiPathPrefix)),
+		ConfigClient:          NewConfigClient(NewCloudClient[testkube.Config](httpClient, apiURI, apiPathPrefix)),
+		TestSourceClient:      NewTestSourceClient(NewCloudClient[testkube.TestSource](httpClient, apiURI, apiPathPrefix)),
+		CopyFileClient:        NewCopyFileDirectClient(httpClient, apiURI, apiPathPrefix),
+		TemplateClient:        NewTemplateClient(NewCloudClient[testkube.Template](httpClient, apiURI, apiPathPrefix)),
 		TestWorkflowClient: NewTestWorkflowClient(
 			NewCloudClient[testkube.TestWorkflow](httpClient, apiURI, apiPathPrefix).WithSSEClient(sseClient),
 			NewCloudClient[testkube.TestWorkflowWithExecution](httpClient, apiURI, apiPathPrefix),
@@ -122,6 +127,7 @@ func NewCloudAPIClient(httpClient *http.Client, sseClient *http.Client, apiURI, 
 		),
 		TestWorkflowTemplateClient: NewTestWorkflowTemplateClient(NewCloudClient[testkube.TestWorkflowTemplate](httpClient, apiURI, apiPathPrefix)),
 		TestTriggerClient:          NewTestTriggerClient(NewCloudClient[testkube.TestTrigger](httpClient, apiURI, apiPathPrefix)),
+		SharedClient:               NewSharedClient(NewCloudClient[map[string][]string](httpClient, apiURI, apiPathPrefix)),
 	}
 }
 
@@ -131,6 +137,7 @@ type APIClient struct {
 	TestSuiteClient
 	ExecutorClient
 	WebhookClient
+	WebhookTemplateClient
 	ConfigClient
 	TestSourceClient
 	CopyFileClient
@@ -138,6 +145,7 @@ type APIClient struct {
 	TestWorkflowClient
 	TestWorkflowTemplateClient
 	TestTriggerClient
+	SharedClient
 }
 
 // check in compile time if interface is implemented

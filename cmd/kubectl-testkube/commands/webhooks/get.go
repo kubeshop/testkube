@@ -1,7 +1,6 @@
 package webhooks
 
 import (
-	"fmt"
 	"os"
 	"strings"
 
@@ -34,10 +33,7 @@ func NewGetWebhookCmd() *cobra.Command {
 				ui.ExitOnError("getting webhook: "+name, err)
 
 				if crdOnly {
-					if webhook.PayloadTemplate != "" {
-						webhook.PayloadTemplate = fmt.Sprintf("%q", webhook.PayloadTemplate)
-					}
-
+					webhook.QuoteTextFields()
 					common.UIPrintCRD(crd.TemplateWebhook, webhook, &firstEntry)
 					return
 				}
@@ -50,10 +46,7 @@ func NewGetWebhookCmd() *cobra.Command {
 
 				if crdOnly {
 					for _, webhook := range webhooks {
-						if webhook.PayloadTemplate != "" {
-							webhook.PayloadTemplate = fmt.Sprintf("%q", webhook.PayloadTemplate)
-						}
-
+						webhook.QuoteTextFields()
 						common.UIPrintCRD(crd.TemplateWebhook, webhook, &firstEntry)
 					}
 

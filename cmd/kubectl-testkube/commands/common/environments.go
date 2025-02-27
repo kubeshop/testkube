@@ -18,6 +18,11 @@ func GetEnvironments(url, token, orgID string) ([]cloudclient.Environment, error
 	return c.List()
 }
 
+func EnableNewArchitecture(url, token, orgID string, env cloudclient.Environment) error {
+	c := cloudclient.NewEnvironmentsClient(url, token, orgID)
+	return c.EnableNewArchitecture(env)
+}
+
 func GetEnvNames(envs []cloudclient.Environment) []string {
 	var names []string
 	for _, env := range envs {
@@ -36,7 +41,7 @@ func FindEnvID(envs []cloudclient.Environment, name string) string {
 }
 
 func UiGetEnvironmentID(url, token, orgID string) (string, string, error) {
-	// Choose organization from orgs available
+	// Choose environment from orgs available
 	envs, err := GetEnvironments(url, token, orgID)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to get environments: %s", err.Error())
@@ -47,7 +52,7 @@ func UiGetEnvironmentID(url, token, orgID string) (string, string, error) {
 	}
 
 	envNames := GetEnvNames(envs)
-	envName := ui.Select("Choose organization", envNames)
+	envName := ui.Select("Choose environment", envNames)
 	envID := FindEnvID(envs, envName)
 
 	return envID, envName, nil

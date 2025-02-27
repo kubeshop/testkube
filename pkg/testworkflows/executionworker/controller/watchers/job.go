@@ -6,6 +6,7 @@ import (
 
 	batchv1 "k8s.io/api/batch/v1"
 
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
@@ -26,6 +27,7 @@ type Job interface {
 	Finished() bool
 	ActionGroups() (actiontypes.ActionGroups, error)
 	Signature() ([]stage.Signature, error)
+	InternalConfig() (testworkflowconfig.InternalConfig, error)
 	ScheduledAt() (time.Time, error)
 	ExecutionError() string
 }
@@ -71,6 +73,11 @@ func (j *job) Finished() bool {
 
 func (j *job) ActionGroups() (actions actiontypes.ActionGroups, err error) {
 	err = json.Unmarshal([]byte(j.original.Spec.Template.Annotations[constants.SpecAnnotationName]), &actions)
+	return
+}
+
+func (j *job) InternalConfig() (cfg testworkflowconfig.InternalConfig, err error) {
+	err = json.Unmarshal([]byte(j.original.Spec.Template.Annotations[constants.InternalAnnotationName]), &cfg)
 	return
 }
 

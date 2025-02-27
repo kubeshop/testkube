@@ -30,7 +30,7 @@ spec:
       command: 
         - bash
         - -c
-        - for iteration in {1..100}; do sleep 1; printf "\niteration $iteration\n"; for sets in {1..20}; do printf "LINE_BEGINNING_"; printf "abc DEFghi JKL ASDF BBB CCC%.0s" {1..20}; printf "_LINE_END"; printf "\n"; done; done # 100 iterations - about 1.1MB
+        - 'for iteration in {1..100}; do printf "\niteration %d\n" "$iteration"; for sets in {1..20}; do printf "LINE_BEGINNING_"; printf "abc DEFghi JKL ASDF BBB CCC%.0s" {1..20}; printf "_LINE_END\n"; done; done' # 100 iterations - about 1.1MB
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -47,7 +47,7 @@ spec:
       command: 
         - bash
         - -c
-        - for iteration in {1..1000}; printf "\niteration $iteration\n"; for sets in {1..20}; do printf "LINE_BEGINNING_"; printf "abc DEFghi JKL ASDF BBB CCC%.0s" {1..20}; printf "_LINE_END"; printf "\n"; done; done # 1k iterations - about 11MB
+        - 'for iteration in {1..1000}; do printf "\niteration %d\n" "$iteration"; for sets in {1..20}; do printf "LINE_BEGINNING_"; printf "abc DEFghi JKL ASDF BBB CCC%.0s" {1..20}; printf "_LINE_END\n"; done; done' # 1k iterations - about 11MB
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -64,7 +64,7 @@ spec:
       command: 
         - bash
         - -c
-        - for iteration in {1..1000}; do sleep 1; printf "\niteration $iteration\n"; for sets in {1..20}; do printf "LINE_BEGINNING_"; printf "abc DEFghi JKL ASDF BBB CCC%.0s" {1..20}; printf "_LINE_END"; printf "\n"; done; done # 1k iterations - about 11MB
+        - 'for iteration in {1..1000}; do sleep 1; printf "\niteration %d\n" "$iteration"; for sets in {1..20}; do printf "LINE_BEGINNING_"; printf "abc DEFghi JKL ASDF BBB CCC%.0s" {1..20}; printf "_LINE_END\n"; done; done' # 1k iterations - about 11MB
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -81,4 +81,4 @@ spec:
       command: 
         - bash
         - -c
-        - for iteration in {1..2000}; do sleep 2; printf "\niteration $iteration\n"; for sets in {1..20}; do printf "LINE_BEGINNING_"; printf "abc DEFghi JKL ASDF BBB CCC%.0s" {1..20}; printf "_LINE_END"; printf "\n"; done; done # 1k iterations - about 11MB
+        - 'for iteration in {1..1000}; do sleep 2; printf "\niteration %d\n" "$iteration"; for sets in {1..20}; do printf "LINE_BEGINNING_"; printf "abc DEFghi JKL ASDF BBB CCC%.0s" {1..20}; printf "_LINE_END\n"; done; done' # 1k iterations - about 11MB

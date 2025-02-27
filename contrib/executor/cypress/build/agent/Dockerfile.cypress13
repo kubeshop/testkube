@@ -1,6 +1,8 @@
 # syntax=docker/dockerfile:1
-FROM cypress/included:13.6.1
+FROM cypress/included:13.17.0
 COPY cypress /bin/runner
+
+RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | tee /etc/apt/trusted.gpg.d/google.asc >/dev/null
 
 RUN apt-get update && \
     apt-get install -y curl && \

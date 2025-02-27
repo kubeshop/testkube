@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 var ErrWalkStop = errors.New("end walking")
@@ -90,11 +89,9 @@ func resolve(v reflect.Value, t tagData, m []Machine, force bool, finalize bool)
 	switch v.Kind() {
 	case reflect.Struct:
 		// TODO: Cache the tags for structs for better performance
-		vv, ok := v.Interface().(intstr.IntOrString)
-		if ok {
-			if vv.Type == intstr.String {
-				return resolve(v.FieldByName("StrVal"), t, m, force, finalize)
-			}
+		isIntOrStringType := IsIntOrStringType(v.Interface())
+		if isIntOrStringType {
+			return resolve(v.FieldByName("StrVal"), t, m, force, finalize)
 		} else if t.value == "include" || force {
 			tt := v.Type()
 			for i := 0; i < tt.NumField(); i++ {

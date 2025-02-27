@@ -15,11 +15,13 @@ type TemplateVars struct {
 	ArtifactCommand  string
 	LogsURL          string
 	LogsCommand      string
+	Config           map[string]string
 }
 
-func NewTemplateVars(event testkube.Event, proContext *config.ProContext) TemplateVars {
+func NewTemplateVars(event testkube.Event, proContext *config.ProContext, config map[string]string) TemplateVars {
 	vars := TemplateVars{
-		Event: event,
+		Event:  event,
+		Config: config,
 	}
 
 	switch {

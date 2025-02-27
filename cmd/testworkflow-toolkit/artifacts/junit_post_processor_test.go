@@ -9,10 +9,9 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
+	"github.com/kubeshop/testkube/pkg/controlplaneclient"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/common/testdata"
-	"github.com/kubeshop/testkube/pkg/cloud/data/executor"
 	"github.com/kubeshop/testkube/pkg/filesystem"
 )
 
@@ -24,7 +23,7 @@ func TestJUnitPostProcessor_Add(t *testing.T) {
 
 	tests := []struct {
 		name  string
-		setup func(*executor.MockExecutor)
+		setup func(*controlplaneclient.MockClient)
 		path  string
 		file  fs.File
 		want  error
@@ -43,12 +42,10 @@ func TestJUnitPostProcessor_Add(t *testing.T) {
 		},
 		{
 			name: "valid junit report",
-			setup: func(client *executor.MockExecutor) {
-				expectedPayload := testworkflow.ExecutionsAddReportRequest{
-					Filepath: "report/junit.xml",
-					Report:   []byte(testdata.BasicJUnit),
-				}
-				client.EXPECT().Execute(gomock.Any(), testworkflow.CmdTestWorkflowExecutionAddReport, gomock.Eq(&expectedPayload)).Return(nil, nil)
+			setup: func(client *controlplaneclient.MockClient) {
+				client.EXPECT().
+					AppendExecutionReport(gomock.Any(), "env123", "exec123", "workflow123", "step123", "report/junit.xml", []byte(testdata.BasicJUnit)).
+					Return(nil)
 			},
 			path: "report/junit.xml",
 			file: filesystem.NewMockFile("basic.xml", []byte(testdata.BasicJUnit)),
@@ -60,11 +57,11 @@ func TestJUnitPostProcessor_Add(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			mockFS := filesystem.NewMockFileSystem(mockCtrl)
 			mockFS.EXPECT().OpenFileRO("/"+tc.path).Return(tc.file, nil)
-			mockClient := executor.NewMockExecutor(mockCtrl)
+			mockClient := controlplaneclient.NewMockClient(mockCtrl)
 			if tc.setup != nil {
 				tc.setup(mockClient)
 			}
-			pp := NewJUnitPostProcessor(mockFS, mockClient, "/", "")
+			pp := NewJUnitPostProcessor(mockFS, mockClient, "env123", "exec123", "workflow123", "step123", "/", "")
 			err := pp.Add(tc.path)
 			assert.Equal(t, tc.want, err)
 		})
@@ -77,7 +74,7 @@ func TestJUnitPostProcessor_Add_WithPathPrefix(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	mockFS := filesystem.NewMockFileSystem(mockCtrl)
-	mockClient := executor.NewMockExecutor(mockCtrl)
+	mockClient := controlplaneclient.NewMockClient(mockCtrl)
 
 	pathPrefix := "prefixed/junit/report/"
 	filePath := "junit.xml"
@@ -85,14 +82,11 @@ func TestJUnitPostProcessor_Add_WithPathPrefix(t *testing.T) {
 
 	mockFS.EXPECT().OpenFileRO(gomock.Any()).Return(filesystem.NewMockFile("junit.xml", junitContent), nil)
 
-	pp := NewJUnitPostProcessor(mockFS, mockClient, "/test_root", pathPrefix)
+	pp := NewJUnitPostProcessor(mockFS, mockClient, "env123", "exec123", "workflow123", "step123", "/test_root", pathPrefix)
 
-	expectedPayload := testworkflow.ExecutionsAddReportRequest{
-		Filepath: filepath.Join(pathPrefix, filePath),
-		Report:   junitContent,
-	}
-
-	mockClient.EXPECT().Execute(gomock.Any(), testworkflow.CmdTestWorkflowExecutionAddReport, gomock.Eq(&expectedPayload)).Return(nil, nil)
+	mockClient.EXPECT().
+		AppendExecutionReport(gomock.Any(), "env123", "exec123", "workflow123", "step123", filepath.Join(pathPrefix, filePath), []byte(junitContent)).
+		Return(nil)
 
 	err := pp.Add(filePath)
 

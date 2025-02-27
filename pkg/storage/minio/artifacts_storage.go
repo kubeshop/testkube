@@ -23,12 +23,13 @@ func (c *ArtifactClient) ListFiles(ctx context.Context, executionId, testName, t
 }
 
 // DownloadFile downloads file from bucket from the config
-func (c *ArtifactClient) DownloadFile(ctx context.Context, file, executionId, testName, testSuiteName, testWorkflowName string) (io.Reader, error) {
+func (c *ArtifactClient) DownloadFile(ctx context.Context, file, executionId, testName, testSuiteName, testWorkflowName string) (io.ReadCloser, error) {
 	return c.client.DownloadFile(ctx, executionId, file)
 }
 
 // DownloadArrchive downloads archive from bucket from the config
-func (c *ArtifactClient) DownloadArchive(ctx context.Context, executionId string, masks []string) (io.Reader, error) {
+func (c *ArtifactClient) DownloadArchive(ctx context.Context, executionId string,
+	testName, testSuiteName, testWorkflowName string, masks []string) (io.Reader, error) {
 	return c.client.DownloadArchive(ctx, executionId, masks)
 }
 

@@ -14,6 +14,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/kubeshop/testkube/internal/config"
 )
 
 func TestSubscriptionChecker_GetCurrentOrganizationPlan(t *testing.T) {
@@ -32,12 +34,12 @@ func TestSubscriptionChecker_GetCurrentOrganizationPlan(t *testing.T) {
 			orgPlan: OrganizationPlan{
 				TestkubeMode: OrganizationPlanTestkubeModeEnterprise,
 				IsTrial:      false,
-				PlanStatus:   PlanStatusActive,
+				PlanStatus:   config.ProContextStatusActive,
 			},
 			want: OrganizationPlan{
 				TestkubeMode: OrganizationPlanTestkubeModeEnterprise,
 				IsTrial:      false,
-				PlanStatus:   PlanStatusActive,
+				PlanStatus:   config.ProContextStatusActive,
 			},
 			wantErr: false,
 		},
@@ -163,7 +165,7 @@ func TestSubscriptionChecker_IsOrgPlanActive(t *testing.T) {
 		{
 			name: "active org plan",
 			orgPlan: OrganizationPlan{
-				PlanStatus: PlanStatusActive,
+				PlanStatus: config.ProContextStatusActive,
 			},
 			want:    true,
 			wantErr: false,
@@ -171,7 +173,7 @@ func TestSubscriptionChecker_IsOrgPlanActive(t *testing.T) {
 		{
 			name: "inactive org plan",
 			orgPlan: OrganizationPlan{
-				PlanStatus: PlanStatusUnpaid,
+				PlanStatus: config.ProContextStatusUnpaid,
 			},
 			want:    false,
 			wantErr: false,
@@ -206,7 +208,7 @@ func TestSubscriptionChecker_IsActiveOrgPlanEnterpriseForFeature(t *testing.T) {
 			orgPlan: OrganizationPlan{
 				TestkubeMode: OrganizationPlanTestkubeModeEnterprise,
 				IsTrial:      false,
-				PlanStatus:   PlanStatusActive,
+				PlanStatus:   config.ProContextStatusActive,
 			},
 			err: nil,
 		},
@@ -219,7 +221,7 @@ func TestSubscriptionChecker_IsActiveOrgPlanEnterpriseForFeature(t *testing.T) {
 			orgPlan: OrganizationPlan{
 				TestkubeMode: OrganizationPlanTestkubeModeEnterprise,
 				IsTrial:      false,
-				PlanStatus:   PlanStatusUnpaid,
+				PlanStatus:   config.ProContextStatusUnpaid,
 			},
 			err: fmt.Errorf("%s is not available: inactive subscription plan", featureName),
 		},
@@ -228,7 +230,7 @@ func TestSubscriptionChecker_IsActiveOrgPlanEnterpriseForFeature(t *testing.T) {
 			orgPlan: OrganizationPlan{
 				TestkubeMode: OrganizationPlanTestkubeModePro,
 				IsTrial:      false,
-				PlanStatus:   PlanStatusActive,
+				PlanStatus:   config.ProContextStatusActive,
 			},
 			err: fmt.Errorf("%s is not allowed: wrong subscription plan", featureName),
 		},

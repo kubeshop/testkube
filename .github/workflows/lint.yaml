@@ -20,7 +20,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: OpenAPI Lint Checks
-        uses: char0n/swagger-editor-validate@v1
+        uses: swaggerexpert/swagger-editor-validate@v1
         with:
           definition-file: api/v1/testkube.yaml
 
@@ -52,3 +52,4 @@ jobs:
           version: latest
           args: --timeout=5m
           only-new-issues: true
+          verify: false
