@@ -2,7 +2,7 @@ name: Docker images building and pushing for API and executors
 on:
   push:
     tags:
-      - "v[0-9]+.[0-9]+.[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]+-*"
 
 env:
   ALPINE_IMAGE: alpine:3.20.3
@@ -13,6 +13,7 @@ permissions:
 
 jobs:
   api:
+    if: false
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -80,6 +81,7 @@ jobs:
           BUSYBOX_IMAGE: ${{ env.BUSYBOX_IMAGE }}
 
   testworkflow:
+    if: false
     strategy:
       matrix:
         service: [ testworkflow-init, testworkflow-toolkit ]
@@ -146,6 +148,7 @@ jobs:
           REPOSITORY: ${{ matrix.repository }}
 
   single_executor:
+    if: false
     strategy:
       matrix:
         executor:
@@ -236,6 +239,7 @@ jobs:
           BUSYBOX_IMAGE: ${{ env.BUSYBOX_IMAGE }}
 
   executor_jmeter:
+    if: false
     runs-on: ubuntu-latest
     steps:
       - name: Free Disk Space (Ubuntu)
@@ -304,6 +308,7 @@ jobs:
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
 
   executor_jmeterd:
+    if: false
     runs-on: ubuntu-latest
     steps:
       - name: Free Disk Space (Ubuntu)
@@ -374,6 +379,7 @@ jobs:
           GOARCH: ${{ matrix.GOARCH }}
 
   jmeterd_slave:
+    if: false
     runs-on: ubuntu-latest
     steps:
       - name: Free Disk Space (Ubuntu)
@@ -429,6 +435,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
 
   executor_maven:
+    if: false
     runs-on: ubuntu-latest
     steps:
       - name: Free Disk Space (Ubuntu)
@@ -497,6 +504,7 @@ jobs:
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
 
   executor_gradle:
+    if: false
     runs-on: ubuntu-latest
     steps:
       - name: Free Disk Space (Ubuntu)
@@ -565,6 +573,7 @@ jobs:
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
 
   executor_cypress:
+    if: false
     strategy:
       matrix:
         version:
@@ -656,6 +665,7 @@ jobs:
           docker push kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-arm64
 
   executor_postman_node21:
+    if: false
     runs-on: ubuntu-latest
     steps:
       - name: Free Disk Space (Ubuntu)
@@ -713,6 +723,7 @@ jobs:
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
 
   executor_cypress_manifest:
+    if: false
     needs: executor_cypress
     strategy:
       matrix:
@@ -777,6 +788,7 @@ jobs:
           cosign sign kubeshop/testkube-cypress-executor:legacy --yes
 
   executor_playwright:
+    if: false
     runs-on: ubuntu-latest
     steps:
       - name: Free Disk Space (Ubuntu)
@@ -845,6 +857,7 @@ jobs:
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
 
   log_server_sidecar:
+    if: false
     strategy:
       matrix:
         service: [ logs-server, logs-sidecar ]
@@ -921,6 +934,7 @@ jobs:
           readme_file: "./README.md"
 
   update_api_helm_charts:
+    if: false
     needs:
       [
         api,
