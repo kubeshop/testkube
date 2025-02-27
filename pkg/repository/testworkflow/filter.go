@@ -24,6 +24,7 @@ type FilterImpl struct {
 	FGroupID       string
 	FRunnerID      string
 	FInitialized   *bool
+	FAssigned      *bool
 }
 
 func NewExecutionsFilter() *FilterImpl {
@@ -114,8 +115,13 @@ func (f *FilterImpl) WithRunnerID(runnerID string) *FilterImpl {
 	return f
 }
 
-func (f *FilterImpl) WithInitialized(Initialized bool) *FilterImpl {
-	f.FInitialized = &Initialized
+func (f *FilterImpl) WithInitialized(initialized bool) *FilterImpl {
+	f.FInitialized = &initialized
+	return f
+}
+
+func (f *FilterImpl) WithAssigned(assigned bool) *FilterImpl {
+	f.FAssigned = &assigned
 	return f
 }
 
@@ -236,4 +242,15 @@ func (f FilterImpl) Initialized() bool {
 		return false
 	}
 	return *f.FInitialized
+}
+
+func (f FilterImpl) AssignedDefined() bool {
+	return f.FAssigned != nil
+}
+
+func (f FilterImpl) Assigned() bool {
+	if f.FAssigned == nil {
+		return false
+	}
+	return *f.FAssigned
 }

@@ -56,6 +56,8 @@ type Filter interface {
 	GroupIDDefined() bool
 	RunnerID() string
 	RunnerIDDefined() bool
+	Assigned() bool
+	AssignedDefined() bool
 	Initialized() bool
 	InitializedDefined() bool
 }

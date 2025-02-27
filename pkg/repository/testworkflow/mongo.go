@@ -487,6 +487,12 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 
 	if filter.RunnerIDDefined() {
 		query["runnerid"] = filter.RunnerID()
+	} else if filter.AssignedDefined() {
+		if filter.Assigned() {
+			query["runnerid"] = bson.M{"$not": bson.M{"$in": bson.A{nil, ""}}}
+		} else {
+			query["runnerid"] = bson.M{"$in": bson.A{nil, ""}}
+		}
 	}
 
 	if filter.InitializedDefined() {
