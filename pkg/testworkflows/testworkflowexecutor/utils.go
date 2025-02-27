@@ -75,7 +75,7 @@ func GetNewRunningContext(legacy *testkube.TestWorkflowRunningContext, parentExe
 				runningContext = &cloud.RunningContext{Type: cloud.RunningContextType_KUBERNETESOBJECT, Name: legacy.Actor.Name}
 			case testkube.TESTWORKFLOW_TestWorkflowRunningContextActorType:
 				if len(parentExecutionIds) > 0 {
-					runningContext = &cloud.RunningContext{Type: cloud.RunningContextType_EXECUTION, Name: parentExecutionIds[len(parentExecutionIds)-1]}
+					runningContext = &cloud.RunningContext{Type: cloud.RunningContextType_EXECUTION, Name: legacy.Actor.Name, Id: parentExecutionIds[len(parentExecutionIds)-1]}
 				}
 			case testkube.USER_TestWorkflowRunningContextActorType:
 				if legacy.Actor.Name != "" && legacy.Actor.Email != "" {
@@ -187,6 +187,7 @@ func GetLegacyRunningContext(req *cloud.ScheduleRequest) (runningContext *testku
 			Actor: &testkube.TestWorkflowRunningContextActor{
 				ExecutionId:   req.ParentExecutionIds[len(req.ParentExecutionIds)-1],
 				ExecutionPath: strings.Join(req.ParentExecutionIds, "/"),
+				Name:          req.RunningContext.Name,
 				Type_:         common.Ptr(testkube.TESTWORKFLOW_TestWorkflowRunningContextActorType),
 			},
 			Interface_: &testkube.TestWorkflowRunningContextInterface{
