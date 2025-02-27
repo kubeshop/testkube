@@ -485,6 +485,32 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 		query["runningcontext.actor.type_"] = filter.ActorType()
 	}
 
+	if filter.RunnerIDDefined() {
+		query["runnerid"] = filter.RunnerID()
+	}
+
+	if filter.InitializedDefined() {
+		var q bson.M
+		if filter.Initialized() {
+			q = bson.M{"$expr": bson.M{"$or": bson.A{
+				bson.M{"$ne": bson.A{"$type", "queued"}},
+				bson.M{"$and": []bson.M{
+					{"$ne": bson.A{bson.M{"$type": "$result.steps"}, "missing"}},
+					{"$ne": bson.A{"$result.steps", bson.M{}}},
+				}},
+			}}}
+		} else {
+			q = bson.M{"$expr": bson.M{"$and": bson.A{
+				bson.M{"$eq": bson.A{"$type", "queued"}},
+				bson.M{"$or": []bson.M{
+					{"$eq": bson.A{bson.M{"$type": "$result.steps"}, "missing"}},
+					{"$eq": bson.A{"$result.steps", bson.M{}}},
+				}},
+			}}}
+		}
+		query = bson.M{"$and": bson.A{query, q}}
+	}
+
 	if filter.GroupIDDefined() {
 		query = bson.M{"$and": bson.A{
 			bson.M{"$expr": bson.M{"$or": bson.A{

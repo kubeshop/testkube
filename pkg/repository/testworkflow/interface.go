@@ -54,6 +54,10 @@ type Filter interface {
 	ActorTypeDefined() bool
 	GroupID() string
 	GroupIDDefined() bool
+	RunnerID() string
+	RunnerIDDefined() bool
+	Initialized() bool
+	InitializedDefined() bool
 }
 
 //go:generate mockgen -destination=./mock_repository.go -package=testworkflow "github.com/kubeshop/testkube/pkg/repository/testworkflow" Repository
