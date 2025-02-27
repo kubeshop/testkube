@@ -153,9 +153,9 @@ func GetLegacyRunningContext(req *cloud.ScheduleRequest) (runningContext *testku
 		return &testkube.TestWorkflowRunningContext{
 			Actor: &testkube.TestWorkflowRunningContextActor{
 				Type_: common.Ptr(testkube.CRON_TestWorkflowRunningContextActorType),
+				Name:  req.RunningContext.Name,
 			},
 			Interface_: &testkube.TestWorkflowRunningContextInterface{
-				Name:  req.RunningContext.Name,
 				Type_: common.Ptr(testkube.INTERNAL_TestWorkflowRunningContextInterfaceType),
 			},
 		}
@@ -163,9 +163,9 @@ func GetLegacyRunningContext(req *cloud.ScheduleRequest) (runningContext *testku
 		return &testkube.TestWorkflowRunningContext{
 			Actor: &testkube.TestWorkflowRunningContextActor{
 				Type_: common.Ptr(testkube.TESTTRIGGER_TestWorkflowRunningContextActorType),
+				Name:  req.RunningContext.Name,
 			},
 			Interface_: &testkube.TestWorkflowRunningContextInterface{
-				Name:  req.RunningContext.Name,
 				Type_: common.Ptr(testkube.INTERNAL_TestWorkflowRunningContextInterfaceType),
 			},
 		}
@@ -173,9 +173,9 @@ func GetLegacyRunningContext(req *cloud.ScheduleRequest) (runningContext *testku
 		return &testkube.TestWorkflowRunningContext{
 			Actor: &testkube.TestWorkflowRunningContextActor{
 				Type_: common.Ptr(testkube.TESTWORKFLOWEXECUTION_TestWorkflowRunningContextActorType),
+				Name:  req.RunningContext.Name,
 			},
 			Interface_: &testkube.TestWorkflowRunningContextInterface{
-				Name:  req.RunningContext.Name,
 				Type_: common.Ptr(testkube.INTERNAL_TestWorkflowRunningContextInterfaceType),
 			},
 		}
@@ -190,7 +190,6 @@ func GetLegacyRunningContext(req *cloud.ScheduleRequest) (runningContext *testku
 				Type_:         common.Ptr(testkube.TESTWORKFLOW_TestWorkflowRunningContextActorType),
 			},
 			Interface_: &testkube.TestWorkflowRunningContextInterface{
-				Name:  req.ParentExecutionIds[len(req.ParentExecutionIds)-1],
 				Type_: common.Ptr(testkube.INTERNAL_TestWorkflowRunningContextInterfaceType),
 			},
 		}
