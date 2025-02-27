@@ -70,14 +70,12 @@ func (r *MetricRecorder) Start(ctx context.Context) {
 	stdout := output.Std
 	stdoutUnsafe := stdout.Direct()
 
-	stdoutUnsafe.Println("starting metrics recorder")
-
 	t := time.NewTicker(r.samplingInterval)
 	defer t.Stop()
 
 	process, err := getChildProcess()
 	if err != nil {
-		stdoutUnsafe.Errorf("failed to get process: %v", err)
+		stdoutUnsafe.Errorf("failed to get process: %v\n", err)
 		return
 	}
 
@@ -85,7 +83,6 @@ func (r *MetricRecorder) Start(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			stdoutUnsafe.Println("stopping metrics recorder")
 			if err := r.writer.Close(ctx); err != nil {
 				stdoutUnsafe.Errorf("failed to close writer: %v\n", err)
 			}
@@ -124,7 +121,6 @@ func WithMetricsRecorder(config Config, fn func(), postProcessFn func() error) {
 
 	// Skip will be set to true for internal operations like git operations, artifact scraping...
 	if config.Skip {
-		stdoutUnsafe.Println("skipping metrics recording for internal operations")
 		fn()
 		return
 	}
@@ -142,8 +138,8 @@ func WithMetricsRecorder(config Config, fn func(), postProcessFn func() error) {
 	w, err := core.NewFileWriter(config.Dir, metadata, 4)
 	// If we can't create the file writer, log the error, run the function without metrics and exit early.
 	if err != nil {
-		stdoutUnsafe.Errorf("failed to create file writer: %v", err)
-		stdoutUnsafe.Warn("running the provided function without metrics recorder")
+		stdoutUnsafe.Errorf("failed to create file writer: %v\n", err)
+		stdoutUnsafe.Warn("running the provided function without metrics recorder\n")
 		fn()
 		return
 	}
@@ -156,6 +152,6 @@ func WithMetricsRecorder(config Config, fn func(), postProcessFn func() error) {
 	fn()
 	cancel()
 	if err := postProcessFn(); err != nil {
-		stdoutUnsafe.Errorf("failed to run post process function: %v", err)
+		stdoutUnsafe.Errorf("failed to run post process function: %v\n", err)
 	}
 }

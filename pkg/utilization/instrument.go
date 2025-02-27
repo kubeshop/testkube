@@ -28,7 +28,7 @@ func (r *MetricRecorder) iterate(ctx context.Context, process *gopsutil.Process,
 	// Instrument the current process
 	metrics, err := instrument(process)
 	if err != nil {
-		stdoutUnsafe.Error(fmt.Sprintf("failed to gather some metrics: %v\n", err))
+		stdoutUnsafe.Errorf("failed to gather some metrics: %v\n", err)
 	}
 
 	// Build each set of metrics
@@ -40,7 +40,7 @@ func (r *MetricRecorder) iterate(ctx context.Context, process *gopsutil.Process,
 	// Combine all metrics so we can write them all at once
 	data := fmt.Sprintf("%s\n%s\n%s\n%s", memoryMetrics, cpuMetrics, networkMetrics, diskMetrics)
 	if err := r.writer.Write(ctx, data); err != nil {
-		stdoutUnsafe.Error(fmt.Sprintf("failed to write memory metrics: %v\n", err))
+		stdoutUnsafe.Errorf("failed to write combined metrics: %v\n", err)
 	}
 
 	return metrics
