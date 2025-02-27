@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/kubeshop/testkube/pkg/repository/common"
+	"github.com/kubeshop/testkube/pkg/ui"
 	"github.com/kubeshop/testkube/pkg/utils"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -277,6 +278,10 @@ func (r *MongoRepository) GetExecutions(ctx context.Context, filter Filter) (res
 		opts.SetAllowDiskUse(r.allowDiskUse)
 	}
 
+	if filter.InitializedDefined() {
+		fmt.Println(ui.LightMagenta("GETEXECUTIONS QUERY"), query)
+	}
+
 	cursor, err := r.Coll.Find(ctx, query, opts)
 	if err != nil {
 		return
@@ -499,7 +504,7 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 		var q bson.M
 		if filter.Initialized() {
 			q = bson.M{"$expr": bson.M{"$or": bson.A{
-				bson.M{"$ne": bson.A{"$type", "queued"}},
+				bson.M{"$ne": bson.A{"$result.status", "queued"}},
 				bson.M{"$and": []bson.M{
 					{"$ne": bson.A{bson.M{"$type": "$result.steps"}, "missing"}},
 					{"$ne": bson.A{"$result.steps", bson.M{}}},
@@ -507,7 +512,7 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 			}}}
 		} else {
 			q = bson.M{"$expr": bson.M{"$and": bson.A{
-				bson.M{"$eq": bson.A{"$type", "queued"}},
+				bson.M{"$eq": bson.A{"$result.status", "queued"}},
 				bson.M{"$or": []bson.M{
 					{"$eq": bson.A{bson.M{"$type": "$result.steps"}, "missing"}},
 					{"$eq": bson.A{"$result.steps", bson.M{}}},
