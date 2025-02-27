@@ -2,10 +2,10 @@ package cronjob
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"hash/fnv"
 	"time"
 
 	"github.com/robfig/cron/v3"
@@ -34,7 +34,7 @@ type Scheduler struct {
 	logger                      *zap.SugaredLogger
 	proContext                  *intconfig.ProContext
 	cronService                 *cron.Cron
-	testWorklows                map[string][]cron.EntryID
+	testWorklows                map[string]map[string]cron.EntryID
 }
 
 // New is a method to create new cronjob scheduler
@@ -48,7 +48,7 @@ func New(testWorkflowClient testworkflowclient.TestWorkflowClient,
 		testWorkflowExecutor:        testWorkflowExecutor,
 		logger:                      logger,
 		cronService:                 cron.New(),
-		testWorklows:                make(map[string][]cron.EntryID),
+		testWorklows:                make(map[string]map[string]cron.EntryID),
 	}
 }
 
@@ -82,21 +82,29 @@ func (s *Scheduler) Reconcile(ctx context.Context) error {
 
 					for _, event := range obj.Resource.Spec.Events {
 						if event.Cronjob != nil {
-							var entryID cron.EntryID
-							entryID, err = s.cronService.AddJob(event.Cronjob.Cron,
-								cron.FuncJob(func() { s.execute(ctx, obj.Resource.Name, event.Cronjob) }))
+							var name string
+							name, err = getHashedMetadataName(event.Cronjob.Cron, event.Cronjob.Config)
 							if err != nil {
 								break
 							}
 
 							if _, ok := s.testWorklows[obj.Resource.Name]; !ok {
-								s.testWorklows[obj.Resource.Name] = make([]cron.EntryID, 0)
+								s.testWorklows[obj.Resource.Name] = make(map[string]cron.EntryID, 0)
 							}
 
-							s.testWorklows[obj.Resource.Name] = append(s.testWorklows[obj.Resource.Name], entryID)
+							if _, ok := s.testWorklows[obj.Resource.Name][name]; !ok {
+								var entryID cron.EntryID
+								entryID, err = s.cronService.AddJob(event.Cronjob.Cron,
+									cron.FuncJob(func() { s.execute(ctx, obj.Resource.Name, event.Cronjob) }))
+								if err != nil {
+									break
+								}
+
+								s.testWorklows[obj.Resource.Name][name] = entryID
+							}
+
 						}
 					}
-
 				case testworkflowclient.EventTypeDelete:
 					if obj.Resource == nil {
 						continue
@@ -133,18 +141,16 @@ func (s *Scheduler) getEnvironmentId() string {
 	if s.proContext != nil {
 		return s.proContext.EnvID
 	}
+
 	return ""
 }
 
 // getHashedMetadataName returns cron job hashed metadata name
-func getHashedMetadataName(name, schedule string, config map[string]string) (string, error) {
+func getHashedMetadataName(schedule string, config map[string]string) (string, error) {
 	data, err := json.Marshal(config)
 	if err != nil {
 		return "", err
 	}
 
-	h := fnv.New64a()
-	h.Write([]byte(schedule))
-	h.Write(data)
-	return fmt.Sprintf("%s-%d", name, h.Sum64()), nil
+	return fmt.Sprintf("%s-%x", schedule, sha256.Sum256(data)), nil
 }
