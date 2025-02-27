@@ -1,4 +1,4 @@
-name: New Docker images builds and pushing for API and executors
+name: New Docker images builds for API and executors
 on:
   push:
     tags:
@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   api:
-    runs-on: ubuntu-latest
+    runs-on: depot-ubuntu-22.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -39,6 +39,7 @@ jobs:
           tags: |
             type=ref,event=branch
             type=semver,pattern={{version}}
+            type=sha
 
       - name: Create Docker tags and metadata for tw-init
         id: tw-init
@@ -50,6 +51,7 @@ jobs:
           tags: |
             type=ref,event=branch
             type=semver,pattern={{version}}
+            type=sha
 
       - name: Create Docker tags and metadata for tw-toolkit
         id: tw-toolkit
@@ -61,6 +63,7 @@ jobs:
           tags: |
             type=ref,event=branch
             type=semver,pattern={{version}}
+            type=sha
 
       - name: Build
         uses: depot/bake-action@v1
