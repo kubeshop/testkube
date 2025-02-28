@@ -95,6 +95,9 @@ func buildDataPoints(fieldsMap fieldsByMeasurement) []*DataPoint {
 func groupDataPoints(metrics []*Metric) fieldsByMeasurement {
 	fieldsMap := make(fieldsByMeasurement)
 	for _, metric := range metrics {
+		if metric == nil {
+			continue
+		}
 		for _, field := range metric.Fields {
 			if _, ok := fieldsMap[metric.Measurement]; !ok {
 				fieldsMap[metric.Measurement] = make(valuesByField, len(metric.Fields))
