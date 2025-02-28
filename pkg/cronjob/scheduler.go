@@ -72,13 +72,17 @@ func (s *Scheduler) Reconcile(ctx context.Context) {
 	go func() {
 		defer wg.Done()
 
-		s.ReconcileTestWorkflows(ctx)
+		if err := s.ReconcileTestWorkflows(ctx); err != nil {
+			s.logger.Errorw("cron job scheduler: reconciler component: failed to reconcile TestWorkflows", "error", err)
+		}
 	}()
 
 	go func() {
 		defer wg.Done()
 
-		s.ReconcileTestWorkflowTemplates(ctx)
+		if err := s.ReconcileTestWorkflowTemplates(ctx); err != nil {
+			s.logger.Errorw("cron job scheduler: reconciler component: failed to reconcile TestWorkflowTemplates", "error", err)
+		}
 	}()
 
 	wg.Wait()
