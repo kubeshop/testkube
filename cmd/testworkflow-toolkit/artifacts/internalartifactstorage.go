@@ -2,8 +2,11 @@ package artifacts
 
 import (
 	"io"
+	"os"
 	"path/filepath"
 	"sync"
+
+	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
@@ -14,6 +17,7 @@ import (
 type InternalArtifactStorage interface {
 	FullPath(artifactPath string) string
 	SaveStream(artifactPath string, stream io.Reader) error
+	SaveFile(artifactPath string, r io.Reader, info os.FileInfo) error
 	Wait() error
 }
 
@@ -73,6 +77,21 @@ func (s *internalArtifactStorage) SaveStream(artifactPath string, stream io.Read
 	}
 	err = s.uploader.Add(filepath.Join(s.prefix, artifactPath), stream, int64(size))
 	if err != nil {
+		return err
+	}
+	return s.uploader.End()
+}
+
+func (s *internalArtifactStorage) SaveFile(artifactPath string, r io.Reader, info os.FileInfo) error {
+	if info.IsDir() {
+		return errors.Errorf("error saving file: %q is a directory", info.Name())
+	}
+	err := s.start()
+	if err != nil {
+		return err
+	}
+
+	if err = s.uploader.Add(filepath.Join(s.prefix, artifactPath), r, info.Size()); err != nil {
 		return err
 	}
 	return s.uploader.End()

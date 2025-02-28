@@ -5,6 +5,8 @@ import (
 	"slices"
 	"strings"
 
+	"k8s.io/apimachinery/pkg/api/resource"
+
 	corev1 "k8s.io/api/core/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
@@ -136,17 +138,51 @@ func CreateContainer(groupId int, defaultContainer stage2.Container, actions []a
 			}},
 			corev1.EnvVar{Name: fmt.Sprintf("_%s_%s", constants2.EnvGroupInternal, constants2.EnvInternalConfig), ValueFrom: &corev1.EnvVarSource{
 				FieldRef: &corev1.ObjectFieldSelector{FieldPath: constants.InternalAnnotationFieldPath},
-			}})
+			}},
+			corev1.EnvVar{Name: fmt.Sprintf("_%s_%s", constants2.EnvGroupInternal, constants2.EnvSignature), ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{FieldPath: constants.SignatureAnnotationFieldPath},
+			}},
+		)
 	}
 
 	// Avoid using /.tktw/init if there is Init Process Image - use /init then
+	cr.Name = fmt.Sprintf("%d", groupId+1)
 	initPath := constants.DefaultInitPath
 	if cr.Image == constants.DefaultInitImage || cr.Image == constants.DefaultToolkitImage {
 		initPath = "/init"
 	}
 
+	// Inject resource requests and limits needed for metrics
+	cr.Env = append(cr.Env,
+		corev1.EnvVar{Name: fmt.Sprintf("_%s_%s", constants2.EnvGroupResources, constants2.EnvResourceRequestsCPU), ValueFrom: &corev1.EnvVarSource{
+			ResourceFieldRef: &corev1.ResourceFieldSelector{
+				ContainerName: cr.Name,
+				Resource:      "requests.cpu",
+				Divisor:       resource.MustParse("1m"),
+			},
+		}},
+		corev1.EnvVar{Name: fmt.Sprintf("_%s_%s", constants2.EnvGroupResources, constants2.EnvResourceLimitsCPU), ValueFrom: &corev1.EnvVarSource{
+			ResourceFieldRef: &corev1.ResourceFieldSelector{
+				ContainerName: cr.Name,
+				Resource:      "limits.cpu",
+				Divisor:       resource.MustParse("1m"),
+			},
+		}},
+		corev1.EnvVar{Name: fmt.Sprintf("_%s_%s", constants2.EnvGroupResources, constants2.EnvResourceRequestsMemory), ValueFrom: &corev1.EnvVarSource{
+			ResourceFieldRef: &corev1.ResourceFieldSelector{
+				ContainerName: cr.Name,
+				Resource:      "requests.memory",
+			},
+		}},
+		corev1.EnvVar{Name: fmt.Sprintf("_%s_%s", constants2.EnvGroupResources, constants2.EnvResourceLimitsMemory), ValueFrom: &corev1.EnvVarSource{
+			ResourceFieldRef: &corev1.ResourceFieldSelector{
+				ContainerName: cr.Name,
+				Resource:      "limits.memory",
+			},
+		}},
+	)
+
 	// Point the Init Process to the proper group
-	cr.Name = fmt.Sprintf("%d", groupId+1)
 	cr.Command = []string{initPath, fmt.Sprintf("%d", groupId)}
 	cr.Args = nil
 

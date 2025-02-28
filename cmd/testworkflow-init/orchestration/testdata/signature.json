@@ -1,0 +1,30 @@
+[
+  {
+    "ref":"r7ds5p7",
+    "name":"Run Performance Tests",
+    "children":[
+      {
+        "ref":"r7dmp99",
+        "category":"Run"
+      },
+      {
+        "ref":"rssbqgb",
+        "category":"Upload artifacts"
+      }
+    ]
+  },
+  {
+    "ref":"rwqdlsc",
+    "name":"Run Sanity Tests",
+    "children":[
+      {
+        "ref":"r7lz98e",
+        "category":"Run"
+      },
+      {
+        "ref":"rrtn4hg",
+        "category":"Upload artifacts"
+      }
+    ]
+  }
+]
