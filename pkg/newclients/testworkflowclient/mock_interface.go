@@ -10,6 +10,7 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 	testkube "github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	types "k8s.io/apimachinery/pkg/types"
 )
 
 // MockTestWorkflowClient is a mock of TestWorkflowClient interface.
@@ -91,6 +92,21 @@ func (m *MockTestWorkflowClient) Get(arg0 context.Context, arg1, arg2 string) (*
 func (mr *MockTestWorkflowClientMockRecorder) Get(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockTestWorkflowClient)(nil).Get), arg0, arg1, arg2)
+}
+
+// GetKubernetesObjectUID mocks base method.
+func (m *MockTestWorkflowClient) GetKubernetesObjectUID(arg0 context.Context, arg1, arg2 string) (types.UID, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetKubernetesObjectUID", arg0, arg1, arg2)
+	ret0, _ := ret[0].(types.UID)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetKubernetesObjectUID indicates an expected call of GetKubernetesObjectUID.
+func (mr *MockTestWorkflowClientMockRecorder) GetKubernetesObjectUID(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetKubernetesObjectUID", reflect.TypeOf((*MockTestWorkflowClient)(nil).GetKubernetesObjectUID), arg0, arg1, arg2)
 }
 
 // List mocks base method.
