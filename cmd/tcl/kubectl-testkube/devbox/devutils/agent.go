@@ -10,6 +10,7 @@ package devutils
 
 import (
 	"context"
+	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -19,20 +20,22 @@ import (
 )
 
 type Agent struct {
-	pod              *PodObject
-	cloud            *CloudObject
-	agentImage       string
-	initProcessImage string
-	toolkitImage     string
+	pod                 *PodObject
+	cloud               *CloudObject
+	agentImage          string
+	initProcessImage    string
+	toolkitImage        string
+	disableCloudStorage bool
 }
 
-func NewAgent(pod *PodObject, cloud *CloudObject, agentImage, initProcessImage, toolkitImage string) *Agent {
+func NewAgent(pod *PodObject, cloud *CloudObject, agentImage, initProcessImage, toolkitImage string, disableCloudStorage bool) *Agent {
 	return &Agent{
-		pod:              pod,
-		cloud:            cloud,
-		agentImage:       agentImage,
-		initProcessImage: initProcessImage,
-		toolkitImage:     toolkitImage,
+		pod:                 pod,
+		cloud:               cloud,
+		agentImage:          agentImage,
+		initProcessImage:    initProcessImage,
+		toolkitImage:        toolkitImage,
+		disableCloudStorage: disableCloudStorage,
 	}
 }
 
@@ -53,7 +56,7 @@ func (r *Agent) Create(ctx context.Context, env *client.Environment) error {
 		{Name: "TESTKUBE_TW_TOOLKIT_IMAGE", Value: r.toolkitImage},
 		{Name: "TESTKUBE_TW_INIT_IMAGE", Value: r.initProcessImage},
 		{Name: "FEATURE_NEW_ARCHITECTURE", Value: "true"},
-		{Name: "FEATURE_CLOUD_STORAGE", Value: "true"},
+		{Name: "FEATURE_CLOUD_STORAGE", Value: fmt.Sprintf("%v", !r.disableCloudStorage)},
 	}
 	if env != nil {
 		tlsInsecure := "false"
