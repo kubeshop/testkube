@@ -1,4 +1,4 @@
-name: New Docker images builds for API and executors
+name: New Docker images builds for API; tk-init and tk-toolkit services
 on:
   push:
     tags:
