@@ -52,18 +52,18 @@ func (mr *MockRepositoryMockRecorder) AbortIfQueued(arg0, arg1 interface{}) *gom
 }
 
 // Assign mocks base method.
-func (m *MockRepository) Assign(arg0 context.Context, arg1, arg2, arg3 string) (bool, error) {
+func (m *MockRepository) Assign(arg0 context.Context, arg1, arg2, arg3 string, arg4 *time.Time) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Assign", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "Assign", arg0, arg1, arg2, arg3, arg4)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Assign indicates an expected call of Assign.
-func (mr *MockRepositoryMockRecorder) Assign(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+func (mr *MockRepositoryMockRecorder) Assign(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Assign", reflect.TypeOf((*MockRepository)(nil).Assign), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Assign", reflect.TypeOf((*MockRepository)(nil).Assign), arg0, arg1, arg2, arg3, arg4)
 }
 
 // DeleteAll mocks base method.

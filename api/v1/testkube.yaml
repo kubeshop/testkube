@@ -8669,6 +8669,10 @@ components:
           type: string
           format: date-time
           description: when the execution has been scheduled to run
+        assignedAt:
+          type: string
+          format: date-time
+          description: when the execution has been assigned to some runner
         statusAt:
           type: string
           format: date-time
@@ -8729,6 +8733,9 @@ components:
           description: identifier for group of correlated executions
           format: bson objectId
           example: "62f395e004109209b50edfc1"
+        runnerId:
+          type: string
+          description: identifier of the runner where it has been executed
         name:
           type: string
           description: execution name

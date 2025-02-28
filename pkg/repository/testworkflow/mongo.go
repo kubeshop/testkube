@@ -485,6 +485,34 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 		query["runningcontext.actor.type_"] = filter.ActorType()
 	}
 
+	if filter.RunnerIDDefined() {
+		query["runnerid"] = filter.RunnerID()
+	} else if filter.AssignedDefined() {
+		if filter.Assigned() {
+			query["runnerid"] = bson.M{"$not": bson.M{"$in": bson.A{nil, ""}}}
+		} else {
+			query["runnerid"] = bson.M{"$in": bson.A{nil, ""}}
+		}
+	}
+
+	if filter.InitializedDefined() {
+		var q bson.M
+		if filter.Initialized() {
+			q = bson.M{"$expr": bson.M{"$or": bson.A{
+				bson.M{"$ne": bson.A{"$result.status", "queued"}},
+				bson.M{"$and": []bson.M{
+					{"$not": bson.M{"$in": bson.A{"$result.steps", bson.A{nil, bson.M{}}}}},
+				}},
+			}}}
+		} else {
+			q = bson.M{"$expr": bson.M{"$and": bson.A{
+				bson.M{"$eq": bson.A{"$result.status", "queued"}},
+				bson.M{"$in": bson.A{"$result.steps", bson.A{nil, bson.M{}}}},
+			}}}
+		}
+		query = bson.M{"$and": bson.A{query, q}}
+	}
+
 	if filter.GroupIDDefined() {
 		query = bson.M{"$and": bson.A{
 			bson.M{"$expr": bson.M{"$or": bson.A{
@@ -683,7 +711,7 @@ func (r *MongoRepository) Init(ctx context.Context, id string, data InitData) er
 	return err
 }
 
-func (r *MongoRepository) Assign(ctx context.Context, id string, prevRunnerId string, newRunnerId string) (bool, error) {
+func (r *MongoRepository) Assign(ctx context.Context, id string, prevRunnerId string, newRunnerId string, assignedAt *time.Time) (bool, error) {
 	res, err := r.Coll.UpdateOne(ctx, bson.M{
 		"$and": []bson.M{
 			{"id": id},
@@ -691,7 +719,8 @@ func (r *MongoRepository) Assign(ctx context.Context, id string, prevRunnerId st
 			{"$or": []bson.M{{"runnerid": prevRunnerId}, {"runnerid": newRunnerId}, {"runnerid": nil}}},
 		},
 	}, bson.M{"$set": map[string]interface{}{
-		"runnerid": newRunnerId,
+		"runnerid":   newRunnerId,
+		"assignedat": assignedAt,
 	}})
 	if err != nil {
 		return false, err

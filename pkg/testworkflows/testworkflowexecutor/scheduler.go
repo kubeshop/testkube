@@ -140,9 +140,10 @@ func (s *scheduler) update(ctx context.Context, execution *testkube.TestWorkflow
 func (s *scheduler) init(ctx context.Context, execution *testkube.TestWorkflowExecution) error {
 	err := retry(SaveResultRetryMaxAttempts, SaveResultRetryBaseDelay, func() error {
 		err := s.resultsRepository.Init(ctx, execution.Id, testworkflow.InitData{
-			RunnerID:  execution.RunnerId,
-			Namespace: execution.Namespace,
-			Signature: execution.Signature,
+			RunnerID:   execution.RunnerId,
+			Namespace:  execution.Namespace,
+			Signature:  execution.Signature,
+			AssignedAt: execution.AssignedAt,
 		})
 		if err != nil {
 			s.logger.Warnw("failed to initialize the TestWorkflow execution in database", "recoverable", true, "executionId", execution.Id, "error", err)
@@ -333,10 +334,7 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 				matcher := make(map[string]*cloud.ExecutionTargetLabels)
 				maps.Copy(matcher, target.Match)
 				for k, v := range labels {
-					if matcher[k] == nil {
-						matcher[k] = &cloud.ExecutionTargetLabels{}
-					}
-					matcher[k] = &cloud.ExecutionTargetLabels{Labels: append(matcher[k].Labels, v)}
+					matcher[k] = &cloud.ExecutionTargetLabels{Labels: []string{v}}
 				}
 				selectors = append(selectors, &cloud.ScheduleExecution{
 					Selector:      execution.Selector,

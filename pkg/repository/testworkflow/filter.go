@@ -22,6 +22,9 @@ type FilterImpl struct {
 	FActorName     string
 	FActorType     testkube.TestWorkflowRunningContextActorType
 	FGroupID       string
+	FRunnerID      string
+	FInitialized   *bool
+	FAssigned      *bool
 }
 
 func NewExecutionsFilter() *FilterImpl {
@@ -104,6 +107,21 @@ func (f *FilterImpl) WithLabelSelector(selector *LabelSelector) *FilterImpl {
 
 func (f *FilterImpl) WithGroupID(groupID string) *FilterImpl {
 	f.FGroupID = groupID
+	return f
+}
+
+func (f *FilterImpl) WithRunnerID(runnerID string) *FilterImpl {
+	f.FRunnerID = runnerID
+	return f
+}
+
+func (f *FilterImpl) WithInitialized(initialized bool) *FilterImpl {
+	f.FInitialized = &initialized
+	return f
+}
+
+func (f *FilterImpl) WithAssigned(assigned bool) *FilterImpl {
+	f.FAssigned = &assigned
 	return f
 }
 
@@ -205,4 +223,34 @@ func (f FilterImpl) GroupIDDefined() bool {
 
 func (f FilterImpl) GroupID() string {
 	return f.FGroupID
+}
+
+func (f FilterImpl) RunnerIDDefined() bool {
+	return f.FRunnerID != ""
+}
+
+func (f FilterImpl) RunnerID() string {
+	return f.FRunnerID
+}
+
+func (f FilterImpl) InitializedDefined() bool {
+	return f.FInitialized != nil
+}
+
+func (f FilterImpl) Initialized() bool {
+	if f.FInitialized == nil {
+		return false
+	}
+	return *f.FInitialized
+}
+
+func (f FilterImpl) AssignedDefined() bool {
+	return f.FAssigned != nil
+}
+
+func (f FilterImpl) Assigned() bool {
+	if f.FAssigned == nil {
+		return false
+	}
+	return *f.FAssigned
 }
