@@ -30,6 +30,8 @@ type TestWorkflowExecution struct {
 	Number int32 `json:"number,omitempty"`
 	// when the execution has been scheduled to run
 	ScheduledAt time.Time `json:"scheduledAt,omitempty"`
+	// when the execution has been assigned to some runner
+	AssignedAt time.Time `json:"assignedAt,omitempty"`
 	// when the execution result's status has changed last time (queued, passed, failed)
 	StatusAt time.Time `json:"statusAt,omitempty"`
 	// structured tree of steps

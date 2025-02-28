@@ -3,6 +3,8 @@ package testworkflowclient
 import (
 	"context"
 
+	"k8s.io/apimachinery/pkg/types"
+
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
@@ -57,6 +59,10 @@ func (c *cloudTestWorkflowClient) Delete(ctx context.Context, environmentId stri
 
 func (c *cloudTestWorkflowClient) DeleteByLabels(ctx context.Context, environmentId string, labels map[string]string) (uint32, error) {
 	return c.client.DeleteTestWorkflowsByLabels(ctx, environmentId, labels)
+}
+
+func (c *cloudTestWorkflowClient) GetKubernetesObjectUID(ctx context.Context, environmentId string, name string) (types.UID, error) {
+	return "", nil
 }
 
 func (c *cloudTestWorkflowClient) WatchUpdates(ctx context.Context, environmentId string, includeInitialData bool) Watcher {

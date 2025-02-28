@@ -278,6 +278,7 @@ enum RunningContextType {
 
 message RunningContext {
   string name = 1;
+  string id = 3;
   RunningContextType type = 2;
 }
 

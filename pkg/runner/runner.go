@@ -72,7 +72,6 @@ func New(
 	storageSkipVerify bool,
 	globalTemplateInlineYaml string,
 ) Runner {
-
 	var globalTemplateInline *testworkflowsv1.TestWorkflowTemplate
 	if globalTemplateInlineYaml != "" {
 		globalTemplateInline = new(testworkflowsv1.TestWorkflowTemplate)

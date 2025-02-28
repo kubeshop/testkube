@@ -12,6 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/selection"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -81,6 +82,17 @@ func (c *k8sTestWorkflowTemplateClient) Get(ctx context.Context, environmentId s
 		return nil, err
 	}
 	return testworkflows.MapTemplateKubeToAPI(template), nil
+}
+
+func (c *k8sTestWorkflowTemplateClient) GetKubernetesObjectUID(ctx context.Context, environmentId string, name string) (types.UID, error) {
+	template, err := c.get(ctx, name)
+	if err != nil {
+		return "", err
+	}
+	if template != nil {
+		return template.UID, nil
+	}
+	return "", nil
 }
 
 func (c *k8sTestWorkflowTemplateClient) List(ctx context.Context, environmentId string, options ListOptions) ([]testkube.TestWorkflowTemplate, error) {

@@ -2,15 +2,25 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"slices"
 	"strconv"
+	"strings"
 	"sync/atomic"
 	"syscall"
 	"time"
+
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/artifacts"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
+
+	"github.com/pkg/errors"
+
+	"github.com/kubeshop/testkube/pkg/utilization/core"
+
+	"github.com/kubeshop/testkube/pkg/utilization"
 
 	"github.com/gookit/color"
 
@@ -68,10 +78,14 @@ func main() {
 	stdout.SetSensitiveWords(orchestration.Setup.GetSensitiveWords())
 	actionGroups := orchestration.Setup.GetActionGroups()
 	internalConfig := orchestration.Setup.GetInternalConfig()
+	signature := orchestration.Setup.GetSignature()
+	containerResources := orchestration.Setup.GetContainerResources()
 	if actionGroups != nil {
 		stdoutUnsafe.Print("Initializing state...")
 		data.GetState().Actions = actionGroups
 		data.GetState().InternalConfig = internalConfig
+		data.GetState().Signature = signature
+		data.GetState().ContainerResources = containerResources
 		stdoutUnsafe.Print(" done\n")
 
 		// Release the memory
@@ -369,7 +383,16 @@ func main() {
 				stopTimeoutWatcher := orchestration.WatchTimeout(finalizeTimeout, leaf...)
 
 				// Run the command
-				commands.Run(*action.Execute, currentContainer)
+				// WithMetricsRecorder will run a goroutine which will identify the process of the underlying binary which gets executed,
+				// it will then scrape the metrics of the process and store them as artifacts in the internal folder.
+				config := newMetricsRecorderConfig(step.Ref, action.Execute.Toolkit, containerResources)
+				utilization.WithMetricsRecorder(
+					config,
+					func() {
+						commands.Run(*action.Execute, currentContainer)
+					},
+					scrapeMetricsPostProcessor(config.Dir, step.Ref, data.GetState().InternalConfig),
+				)
 
 				// Stop timer listener
 				stopTimeoutWatcher()
@@ -431,5 +454,76 @@ func main() {
 		os.Exit(int(constants.CodeAborted))
 	} else {
 		os.Exit(0)
+	}
+}
+
+func newMetricsRecorderConfig(stepRef string, skip bool, containerResources testworkflowconfig.ContainerResourceConfig) utilization.Config {
+	s := data.GetState()
+	metricsDir := filepath.Join(constants.InternalPath, "metrics", stepRef)
+	return utilization.Config{
+		Dir:  metricsDir,
+		Skip: skip,
+		ExecutionConfig: utilization.ExecutionConfig{
+			Workflow:  s.InternalConfig.Workflow.Name,
+			Step:      stepRef,
+			Execution: s.InternalConfig.Execution.Id,
+		},
+		Format: core.FormatInflux,
+		ContainerResources: core.ContainerResources{
+			Requests: core.ResourceList{
+				CPU:    appendSuffixIfNeeded(containerResources.Requests.CPU, "m"),
+				Memory: containerResources.Requests.Memory,
+			},
+			Limits: core.ResourceList{
+				CPU:    appendSuffixIfNeeded(containerResources.Limits.CPU, "m"),
+				Memory: containerResources.Limits.Memory,
+			},
+		},
+	}
+}
+
+func appendSuffixIfNeeded(s, suffix string) string {
+	if !strings.HasSuffix(s, suffix) {
+		return s + suffix
+	}
+	return s
+}
+
+func scrapeMetricsPostProcessor(path, step string, config testworkflowconfig.InternalConfig) func() error {
+	return func() error {
+		// Configure the environment
+		err := orchestration.Setup.UseCurrentEnv()
+		if err != nil {
+			return errors.Wrapf(err, "failed to configure environment for scraping metrics: %v", err)
+		}
+		serialized, _ := json.Marshal(config)
+		_ = os.Setenv("TK_CFG", string(serialized))
+		_ = os.Setenv("TK_REF", step)
+		defer func() {
+			_ = os.Unsetenv("TK_CFG")
+			_ = os.Unsetenv("TK_REF")
+		}()
+
+		// Scrape the metrics to internal storage
+		storage := artifacts.InternalStorage()
+		err = filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
+			if info.IsDir() {
+				return nil
+			}
+			if err != nil {
+				return err
+			}
+			f, err := os.Open(path)
+			if err != nil {
+				return errors.Wrapf(err, "failed to open metrics file %q: %v", path, err)
+			}
+			defer f.Close()
+			path = filepath.Join("metrics", filepath.Base(path))
+			if err := storage.SaveFile(path, f, info); err != nil {
+				return errors.Wrapf(err, "failed to save stream to %q: %v", path, err)
+			}
+			return nil
+		})
+		return err
 	}
 }

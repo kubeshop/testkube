@@ -25,6 +25,9 @@ type state struct {
 	CurrentStatus string               `json:"s,omitempty"`
 	Output        map[string]string    `json:"o,omitempty"`
 	Steps         map[string]*StepData `json:"S,omitempty"`
+
+	Signature          []testworkflowconfig.SignatureConfig       `json:"G,omitempty"`
+	ContainerResources testworkflowconfig.ContainerResourceConfig `json:"R,omitempty"`
 }
 
 func (s *state) GetActions(groupIndex int) []lite.LiteAction {

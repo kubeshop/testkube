@@ -3,6 +3,8 @@ package testworkflowtemplateclient
 import (
 	"context"
 
+	"k8s.io/apimachinery/pkg/types"
+
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
@@ -22,6 +24,10 @@ func NewCloudTestWorkflowTemplateClient(client controlplaneclient.TestWorkflowTe
 
 func (c *cloudTestWorkflowTemplateClient) Get(ctx context.Context, environmentId string, name string) (*testkube.TestWorkflowTemplate, error) {
 	return c.client.GetTestWorkflowTemplate(ctx, environmentId, name)
+}
+
+func (c *cloudTestWorkflowTemplateClient) GetKubernetesObjectUID(ctx context.Context, environmentId string, name string) (types.UID, error) {
+	return "", nil
 }
 
 func (c *cloudTestWorkflowTemplateClient) List(ctx context.Context, environmentId string, options ListOptions) ([]testkube.TestWorkflowTemplate, error) {

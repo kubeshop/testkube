@@ -145,17 +145,24 @@ func (s *TestkubeAPI) CreateTestWorkflowTemplateHandler() fiber.Handler {
 		}
 
 		// Create secrets
-		err = s.SecretManager.InsertBatch(c.Context(), execNamespace, secrets, &metav1.OwnerReference{
-			APIVersion: testworkflowsv1.GroupVersion.String(),
-			Kind:       testworkflowsv1.ResourceTemplate,
-			Name:       obj.Name,
-			UID:        obj.UID,
-		})
-		s.Metrics.IncCreateTestWorkflowTemplate(err)
-		if err != nil {
-			_ = s.TestWorkflowTemplatesClient.Delete(ctx, environmentId, obj.Name)
-			return s.BadRequest(c, errPrefix, "auto-creating secrets", err)
+		if secrets.HasData() {
+			uid, _ := s.TestWorkflowTemplatesClient.GetKubernetesObjectUID(ctx, environmentId, obj.Name)
+			var ref *metav1.OwnerReference
+			if uid != "" {
+				ref = &metav1.OwnerReference{
+					APIVersion: testworkflowsv1.GroupVersion.String(),
+					Kind:       testworkflowsv1.ResourceTemplate,
+					Name:       obj.Name,
+					UID:        uid,
+				}
+			}
+			err = s.SecretManager.InsertBatch(c.Context(), execNamespace, secrets, ref)
+			if err != nil {
+				_ = s.TestWorkflowTemplatesClient.Delete(ctx, environmentId, obj.Name)
+				return s.BadRequest(c, errPrefix, "auto-creating secrets", err)
+			}
 		}
+		s.Metrics.IncCreateTestWorkflowTemplate(err)
 		s.sendCreateWorkflowTemplateTelemetry(c.Context(), obj)
 
 		err = SendResource(c, "TestWorkflowTemplate", testworkflowsv1.GroupVersion, testworkflows.MapTemplateKubeToAPI, obj)
@@ -226,12 +233,19 @@ func (s *TestkubeAPI) UpdateTestWorkflowTemplateHandler() fiber.Handler {
 		}
 
 		// Create secrets
-		err = s.SecretManager.InsertBatch(c.Context(), execNamespace, secrets, &metav1.OwnerReference{
-			APIVersion: testworkflowsv1.GroupVersion.String(),
-			Kind:       testworkflowsv1.ResourceTemplate,
-			Name:       obj.Name,
-			UID:        obj.UID,
-		})
+		if secrets.HasData() {
+			uid, _ := s.TestWorkflowTemplatesClient.GetKubernetesObjectUID(ctx, environmentId, obj.Name)
+			var ref *metav1.OwnerReference
+			if uid != "" {
+				ref = &metav1.OwnerReference{
+					APIVersion: testworkflowsv1.GroupVersion.String(),
+					Kind:       testworkflowsv1.ResourceTemplate,
+					Name:       obj.Name,
+					UID:        uid,
+				}
+			}
+			err = s.SecretManager.InsertBatch(c.Context(), execNamespace, secrets, ref)
+		}
 		s.Metrics.IncUpdateTestWorkflowTemplate(err)
 		if err != nil {
 			err = s.TestWorkflowTemplatesClient.Update(ctx, environmentId, *initial)

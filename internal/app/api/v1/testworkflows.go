@@ -203,17 +203,24 @@ func (s *TestkubeAPI) CreateTestWorkflowHandler() fiber.Handler {
 		}
 
 		// Create secrets
-		err = s.SecretManager.InsertBatch(ctx, execNamespace, secrets, &metav1.OwnerReference{
-			APIVersion: testworkflowsv1.GroupVersion.String(),
-			Kind:       testworkflowsv1.Resource,
-			Name:       obj.Name,
-			UID:        obj.UID,
-		})
-		s.Metrics.IncCreateTestWorkflow(err)
-		if err != nil {
-			_ = s.TestWorkflowsClient.Delete(context.Background(), environmentId, obj.Name)
-			return s.BadRequest(c, errPrefix, "auto-creating secrets", err)
+		if secrets.HasData() {
+			uid, _ := s.TestWorkflowsClient.GetKubernetesObjectUID(ctx, environmentId, obj.Name)
+			var ref *metav1.OwnerReference
+			if uid != "" {
+				ref = &metav1.OwnerReference{
+					APIVersion: testworkflowsv1.GroupVersion.String(),
+					Kind:       testworkflowsv1.Resource,
+					Name:       obj.Name,
+					UID:        uid,
+				}
+			}
+			err = s.SecretManager.InsertBatch(ctx, execNamespace, secrets, ref)
+			if err != nil {
+				_ = s.TestWorkflowsClient.Delete(context.Background(), environmentId, obj.Name)
+				return s.BadRequest(c, errPrefix, "auto-creating secrets", err)
+			}
 		}
+		s.Metrics.IncCreateTestWorkflow(err)
 
 		s.sendCreateWorkflowTelemetry(ctx, obj)
 
@@ -284,21 +291,28 @@ func (s *TestkubeAPI) UpdateTestWorkflowHandler() fiber.Handler {
 			return s.BadRequest(c, errPrefix, "client error", err)
 		}
 
-		// Create secrets
-		err = s.SecretManager.InsertBatch(c.Context(), execNamespace, secrets, &metav1.OwnerReference{
-			APIVersion: testworkflowsv1.GroupVersion.String(),
-			Kind:       testworkflowsv1.Resource,
-			Name:       obj.Name,
-			UID:        obj.UID,
-		})
-		s.Metrics.IncUpdateTestWorkflow(err)
-		if err != nil {
-			err = s.TestWorkflowsClient.Update(context.Background(), environmentId, *initial)
-			if err != nil {
-				s.Log.Errorf("failed to recover previous TestWorkflow state: %v", err)
+		// Create secrets if necessary
+		if secrets.HasData() {
+			uid, _ := s.TestWorkflowsClient.GetKubernetesObjectUID(ctx, environmentId, obj.Name)
+			var ref *metav1.OwnerReference
+			if uid != "" {
+				ref = &metav1.OwnerReference{
+					APIVersion: testworkflowsv1.GroupVersion.String(),
+					Kind:       testworkflowsv1.Resource,
+					Name:       obj.Name,
+					UID:        uid,
+				}
 			}
-			return s.BadRequest(c, errPrefix, "auto-creating secrets", err)
+			err = s.SecretManager.InsertBatch(c.Context(), execNamespace, secrets, ref)
+			if err != nil {
+				err = s.TestWorkflowsClient.Update(context.Background(), environmentId, *initial)
+				if err != nil {
+					s.Log.Errorf("failed to recover previous TestWorkflow state: %v", err)
+				}
+				return s.BadRequest(c, errPrefix, "auto-creating secrets", err)
+			}
 		}
+		s.Metrics.IncUpdateTestWorkflow(err)
 
 		err = SendResource(c, "TestWorkflow", testworkflowsv1.GroupVersion, testworkflows.MapKubeToAPI, obj)
 		if err != nil {

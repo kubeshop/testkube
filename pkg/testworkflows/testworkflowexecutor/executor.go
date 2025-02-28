@@ -6,6 +6,7 @@ import (
 	errors2 "errors"
 	"io"
 	"math"
+	"time"
 
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
@@ -195,6 +196,7 @@ func (e *executor) executeDirect(ctx context.Context, environmentId string, req 
 			if environmentId == "" {
 				execution.RunnerId = "oss"
 			}
+			execution.AssignedAt = time.Now()
 
 			// Start the execution
 			err = e.Start(environmentId, execution, sensitiveDataHandler.Get(execution.Id))

@@ -23,6 +23,7 @@ const (
 	RootResourceIdLabelName         = "testkube.io/root"
 	GroupIdLabelName                = "testkube.io/contextGroup"
 	SignatureAnnotationName         = "testkube.io/signature"
+	SignatureAnnotationFieldPath    = "metadata.annotations['" + SignatureAnnotationName + "']"
 	ScheduledAtAnnotationName       = "testkube.io/at"
 	SpecAnnotationName              = "testkube.io/spec"
 	SpecAnnotationFieldPath         = "metadata.annotations['" + SpecAnnotationName + "']"

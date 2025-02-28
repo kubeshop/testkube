@@ -163,7 +163,7 @@ func (s *Server) InitExecution(ctx context.Context, req *cloud.InitExecutionRequ
 	if err != nil {
 		return nil, err
 	}
-	err = s.resultsRepository.Init(ctx, req.Id, testworkflow.InitData{RunnerID: "oss", Namespace: req.Namespace, Signature: signature})
+	err = s.resultsRepository.Init(ctx, req.Id, testworkflow.InitData{RunnerID: "oss", Namespace: req.Namespace, Signature: signature, AssignedAt: time.Now()})
 	if err != nil {
 		return nil, err
 	}
