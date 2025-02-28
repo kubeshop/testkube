@@ -1,8 +1,9 @@
+# The workflow jobs are disabled. If you need to build executors, just remove "if: false" clause from the jobs and create a new release.
 name: Docker images building and pushing for API and executors
 on:
   push:
     tags:
-      - "v[0-9]+.[0-9]+.[0-9]+-*"
+      - "v[0-9]+.[0-9]+.[0-9]+"
 
 env:
   ALPINE_IMAGE: alpine:3.20.3

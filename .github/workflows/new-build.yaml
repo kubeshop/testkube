@@ -2,9 +2,9 @@ name: New Docker images builds for API and executors
 on:
   push:
     tags:
-      - "v[0-9]+.[0-9]+.[0-9]+-*"
+      - "v[0-9]+.[0-9]+.[0-9]+"
     branches:
-      - ci/add-builds-to-depot
+      - main
 env:
   ALPINE_IMAGE: alpine:3.20.3
   BUSYBOX_IMAGE: busybox:1.36.1-musl
@@ -83,21 +83,21 @@ jobs:
           SEGMENTIO_KEY: ${{secrets.TESTKUBE_API_SEGMENTIO_KEY}}
           CLOUD_SEGMENTIO_KEY: ${{secrets.TESTKUBE_API_CLOUD_SEGMENTIO_KEY}}
 
-#  update_api_helm_charts:
-#    needs: [api]
-#    runs-on: ubuntu-latest
-#    steps:
-#      - name: Get tag
-#        id: tag
-#        uses: dawidd6/action-get-tag@v1
-#        with:
-#          strip_v: false
-#
-#      - name: Repository Dispatch
-#        uses: peter-evans/repository-dispatch@v3
-#        with:
-#          token: ${{ secrets.CI_BOT_TOKEN }}
-#          repository: kubeshop/helm-charts
-#          event-type: release-testkube-api-charts
-#          client-payload: '{"RELEASE_VERSION": "${{ steps.tag.outputs.tag }}", "SERVICE": "api"}'
+  update_api_helm_charts:
+    needs: [api]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get tag
+        id: tag
+        uses: dawidd6/action-get-tag@v1
+        with:
+          strip_v: false
+
+      - name: Repository Dispatch
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.CI_BOT_TOKEN }}
+          repository: kubeshop/helm-charts
+          event-type: release-testkube-api-charts
+          client-payload: '{"RELEASE_VERSION": "${{ steps.tag.outputs.tag }}", "SERVICE": "api"}'
 
