@@ -4,14 +4,15 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/json"
-	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"
 
 	intconfig "github.com/kubeshop/testkube/internal/config"
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
@@ -23,32 +24,35 @@ const (
 
 //go:generate mockgen -destination=./mock_scheduler.go -package=cronjob "github.com/kubeshop/testkube/pkg/cronjob" Interface
 type Interface interface {
-	Reconcile(ctx context.Context) error
+	Reconcile(ctx context.Context)
+	ReconcileTestWorkflows(ctx context.Context) error
+	ReconcileTestWorkflowTemplates(ctx context.Context) error
 }
 
-// Scheduler provide methods to schedule cronjobs
+// Scheduler provide methods to schedule cron jobs
 type Scheduler struct {
-	testWorkflowClient          testworkflowclient.TestWorkflowClient
-	testWorkflowTemplatesClient testworkflowtemplateclient.TestWorkflowTemplateClient
-	testWorkflowExecutor        testworkflowexecutor.TestWorkflowExecutor
-	logger                      *zap.SugaredLogger
-	proContext                  *intconfig.ProContext
-	cronService                 *cron.Cron
-	testWorklows                map[string]map[string]cron.EntryID
+	testWorkflowClient         testworkflowclient.TestWorkflowClient
+	testWorkflowTemplateClient testworkflowtemplateclient.TestWorkflowTemplateClient
+	testWorkflowExecutor       testworkflowexecutor.TestWorkflowExecutor
+	logger                     *zap.SugaredLogger
+	proContext                 *intconfig.ProContext
+	cronService                *cron.Cron
+	testWorklows               map[string]map[string]cron.EntryID
+	lock                       sync.RWMutex
 }
 
-// New is a method to create new cronjob scheduler
+// New is a method to create new cron job scheduler
 func New(testWorkflowClient testworkflowclient.TestWorkflowClient,
-	testWorkflowTemplatesClient testworkflowtemplateclient.TestWorkflowTemplateClient,
+	testWorkflowTemplateClient testworkflowtemplateclient.TestWorkflowTemplateClient,
 	testWorkflowExecutor testworkflowexecutor.TestWorkflowExecutor,
 	logger *zap.SugaredLogger) *Scheduler {
 	return &Scheduler{
-		testWorkflowClient:          testWorkflowClient,
-		testWorkflowTemplatesClient: testWorkflowTemplatesClient,
-		testWorkflowExecutor:        testWorkflowExecutor,
-		logger:                      logger,
-		cronService:                 cron.New(),
-		testWorklows:                make(map[string]map[string]cron.EntryID),
+		testWorkflowClient:         testWorkflowClient,
+		testWorkflowTemplateClient: testWorkflowTemplateClient,
+		testWorkflowExecutor:       testWorkflowExecutor,
+		logger:                     logger,
+		cronService:                cron.New(),
+		testWorklows:               make(map[string]map[string]cron.EntryID),
 	}
 }
 
@@ -60,8 +64,26 @@ func WithProContext(proContext *intconfig.ProContext) Option {
 	}
 }
 
-// Reconcile is watching for test workflow and test worklow template change and schedule test workflow cron jobs
-func (s *Scheduler) Reconcile(ctx context.Context) error {
+// Reconcile is reconciling cron jobs
+func (s *Scheduler) Reconcile(ctx context.Context) {
+	var wg sync.WaitGroup
+
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+
+		s.ReconcileTestWorkflows(ctx)
+	}()
+
+	go func() {
+		defer wg.Done()
+
+		s.ReconcileTestWorkflowTemplates(ctx)
+	}()
+}
+
+// ReconcileTestWorklows is watching for test workflow and test worklow template change and schedule test workflow cron jobs
+func (s *Scheduler) ReconcileTestWorkflows(ctx context.Context) error {
 	s.cronService.Start()
 	defer s.cronService.Stop()
 
@@ -73,61 +95,133 @@ func (s *Scheduler) Reconcile(ctx context.Context) error {
 		default:
 			watcher := s.testWorkflowClient.WatchUpdates(ctx, s.getEnvironmentId(), includeInitialData)
 			for obj := range watcher.Channel() {
-				var err error
-				switch obj.Type {
-				case testworkflowclient.EventTypeCreate:
-					if obj.Resource == nil {
+				if obj.Resource == nil || obj.Resource.Spec == nil {
+					continue
+				}
+
+				events := obj.Resource.Spec.Events
+				for _, template := range obj.Resource.Spec.Use {
+					testWorkflowTemplate, err := s.testWorkflowTemplateClient.Get(ctx, s.getEnvironmentId(), template.Name)
+					if err != nil {
 						continue
 					}
 
-					for _, event := range obj.Resource.Spec.Events {
+					if testWorkflowTemplate.Spec == nil {
+						continue
+					}
+
+					events = append(events, testWorkflowTemplate.Spec.Events...)
+				}
+
+				var err error
+				switch obj.Type {
+				case testworkflowclient.EventTypeCreate:
+					for _, event := range events {
 						if event.Cronjob != nil {
-							var name string
-							name, err = getHashedMetadataName(event.Cronjob.Cron, event.Cronjob.Config)
+							var cronJobName string
+							cronJobName, err = getHashedMetadataName(event.Cronjob.Cron, event.Cronjob.Config)
 							if err != nil {
 								break
 							}
 
-							if _, ok := s.testWorklows[obj.Resource.Name]; !ok {
-								s.testWorklows[obj.Resource.Name] = make(map[string]cron.EntryID, 0)
+							if err = s.addTestWorkflowCronJob(ctx, obj.Resource.Name, cronJobName, event.Cronjob); err != nil {
+								break
 							}
-
-							if _, ok := s.testWorklows[obj.Resource.Name][name]; !ok {
-								var entryID cron.EntryID
-								entryID, err = s.cronService.AddJob(event.Cronjob.Cron,
-									cron.FuncJob(func() { s.execute(ctx, obj.Resource.Name, event.Cronjob) }))
-								if err != nil {
-									break
-								}
-
-								s.testWorklows[obj.Resource.Name][name] = entryID
-							}
-
 						}
+					}
+				case testworkflowclient.EventTypeUpdate:
+					if err = s.changeTestWorkflowCronJobs(ctx, obj.Resource.Name, events); err != nil {
+						break
 					}
 				case testworkflowclient.EventTypeDelete:
-					if obj.Resource == nil {
-						continue
-					}
-
-					if entryIDs, ok := s.testWorklows[obj.Resource.Name]; ok {
-						for _, entryID := range entryIDs {
-							s.cronService.Remove(entryID)
-							delete(s.testWorklows, obj.Resource.Name)
-						}
-					}
-				default:
-					err = errors.New("unknown event type")
+					s.removeTestWorkflowCronJobs(obj.Resource.Name)
 				}
 
 				if err == nil {
-					s.logger.Infow("cron job schedduler: reconciler component: scheduled TestWorkflow to cron jobs", "name", obj.Resource.Name, "error", err)
+					s.logger.Infow("cron job scheduler: reconciler test workflow component: scheduled TestWorkflow to cron jobs", "name", obj.Resource.Name, "error", err)
 				} else {
-					s.logger.Errorw("cron job schedduler: reconciler component: failed to watch TestWorkflows", "error", err)
+					s.logger.Errorw("cron job scheduler: reconciler test workflow component: failed to watch TestWorkflows", "error", err)
 				}
 			}
 			if watcher.Err() != nil {
-				s.logger.Errorw("cron job schedduler: reconciler component: failed to watch TestWorkflows", "error", watcher.Err())
+				s.logger.Errorw("cron job scheduler: reconciler test workflow component: failed to watch TestWorkflows", "error", watcher.Err())
+			} else {
+				includeInitialData = false
+			}
+
+			time.Sleep(watcherDelay)
+		}
+	}
+}
+
+// ReconcileTestWorklowTemplatess is watching for test worklow template change and schedule test workflow cron jobs
+func (s *Scheduler) ReconcileTestWorkflowTemplates(ctx context.Context) error {
+	s.cronService.Start()
+	defer s.cronService.Stop()
+
+	includeInitialData := true
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			watcher := s.testWorkflowTemplateClient.WatchUpdates(ctx, s.getEnvironmentId(), includeInitialData)
+			for obj := range watcher.Channel() {
+				if obj.Resource == nil || obj.Resource.Spec == nil {
+					continue
+				}
+
+				if obj.Type != testworkflowtemplateclient.EventTypeCreate &&
+					obj.Type != testworkflowtemplateclient.EventTypeUpdate &&
+					obj.Type != testworkflowtemplateclient.EventTypeDelete {
+					continue
+				}
+
+				testWorkflows, err := s.testWorkflowClient.List(ctx, s.getEnvironmentId(), testworkflowclient.ListOptions{})
+				if err != nil {
+					continue
+				}
+
+				for _, testWorkflow := range testWorkflows {
+					if testWorkflow.Spec == nil {
+						continue
+					}
+
+					found := false
+					for _, template := range testWorkflow.Spec.Use {
+						if template.Name == obj.Resource.Name {
+							found = true
+							break
+						}
+					}
+
+					if !found {
+						continue
+					}
+
+					events := testWorkflow.Spec.Events
+					for _, template := range testWorkflow.Spec.Use {
+						testWorkflowTemplate, err := s.testWorkflowTemplateClient.Get(ctx, s.getEnvironmentId(), template.Name)
+						if err != nil {
+							continue
+						}
+
+						events = append(events, testWorkflowTemplate.Spec.Events...)
+					}
+
+					if err = s.changeTestWorkflowCronJobs(ctx, testWorkflow.Name, events); err != nil {
+						break
+					}
+				}
+
+				if err == nil {
+					s.logger.Infow("cron job schedduler: reconciler test workflow template component: scheduled TestWorkflowTemplate to cron jobs", "name", obj.Resource.Name, "error", err)
+				} else {
+					s.logger.Errorw("cron job schedduler: reconciler test workflow template component: failed to watch TestWorkflowTemplates", "error", err)
+				}
+			}
+			if watcher.Err() != nil {
+				s.logger.Errorw("cron job schedduler: reconciler test workflow template component: failed to watch TestWorkflowTemplates", "error", watcher.Err())
 			} else {
 				includeInitialData = false
 			}
@@ -137,6 +231,93 @@ func (s *Scheduler) Reconcile(ctx context.Context) error {
 	}
 
 }
+
+func (s *Scheduler) addTestWorkflowCronJob(ctx context.Context, testWorkflowName, cronJobName string,
+	cronJob *testkube.TestWorkflowCronJobConfig) error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	if _, ok := s.testWorklows[testWorkflowName]; !ok {
+		s.testWorklows[testWorkflowName] = make(map[string]cron.EntryID, 0)
+	}
+
+	if _, ok := s.testWorklows[testWorkflowName][cronJobName]; !ok {
+		entryID, err := s.cronService.AddJob(cronJob.Cron,
+			cron.FuncJob(func() { s.execute(ctx, testWorkflowName, cronJob) }))
+		if err != nil {
+			return err
+		}
+
+		s.testWorklows[testWorkflowName][cronJobName] = entryID
+	}
+
+	return nil
+}
+
+func (s *Scheduler) changeTestWorkflowCronJobs(ctx context.Context, testWorkflowName string, events []testkube.TestWorkflowEvent) error {
+	hasCronJob := false
+	currentCronJobNames := make(map[string]struct{})
+	for _, event := range events {
+		if event.Cronjob != nil {
+			hasCronJob = true
+
+			var cronJobName string
+			cronJobName, err := getHashedMetadataName(event.Cronjob.Cron, event.Cronjob.Config)
+			if err != nil {
+				return err
+			}
+
+			s.lock.RLock()
+			found := false
+			if cronJobNames, ok := s.testWorklows[testWorkflowName]; ok {
+				if _, ok = cronJobNames[cronJobName]; ok {
+					found = true
+				}
+			}
+			s.lock.RUnlock()
+
+			if !found {
+				if err = s.addTestWorkflowCronJob(ctx, testWorkflowName, cronJobName, event.Cronjob); err != nil {
+					return err
+				}
+			}
+
+			currentCronJobNames[cronJobName] = struct{}{}
+		}
+	}
+
+	if !hasCronJob {
+		s.removeTestWorkflowCronJobs(testWorkflowName)
+		return nil
+	}
+
+	s.lock.Lock()
+	if cronJobNames, ok := s.testWorklows[testWorkflowName]; ok {
+		for cronJobName, entryID := range cronJobNames {
+			if _, ok := currentCronJobNames[cronJobName]; !ok {
+				s.cronService.Remove(entryID)
+				delete(s.testWorklows[testWorkflowName], cronJobName)
+			}
+		}
+	}
+	s.lock.Unlock()
+
+	return nil
+}
+
+func (s *Scheduler) removeTestWorkflowCronJobs(testWorkflowName string) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	if cronJobNames, ok := s.testWorklows[testWorkflowName]; ok {
+		for _, entryID := range cronJobNames {
+			s.cronService.Remove(entryID)
+		}
+
+		delete(s.testWorklows, testWorkflowName)
+	}
+}
+
 func (s *Scheduler) getEnvironmentId() string {
 	if s.proContext != nil {
 		return s.proContext.EnvID
