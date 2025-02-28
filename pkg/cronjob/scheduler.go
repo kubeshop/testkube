@@ -116,23 +116,9 @@ func (s *Scheduler) ReconcileTestWorkflows(ctx context.Context) error {
 				var err error
 				switch obj.Type {
 				case testworkflowclient.EventTypeCreate:
-					for _, event := range events {
-						if event.Cronjob != nil {
-							var cronJobName string
-							cronJobName, err = getHashedMetadataName(event.Cronjob.Cron, event.Cronjob.Config)
-							if err != nil {
-								break
-							}
-
-							if err = s.addTestWorkflowCronJob(ctx, obj.Resource.Name, cronJobName, event.Cronjob); err != nil {
-								break
-							}
-						}
-					}
+					err = s.addTestWorkflowCronJobs(ctx, obj.Resource.Name, events)
 				case testworkflowclient.EventTypeUpdate:
-					if err = s.changeTestWorkflowCronJobs(ctx, obj.Resource.Name, events); err != nil {
-						break
-					}
+					err = s.changeTestWorkflowCronJobs(ctx, obj.Resource.Name, events)
 				case testworkflowclient.EventTypeDelete:
 					s.removeTestWorkflowCronJobs(obj.Resource.Name)
 				}
@@ -230,6 +216,24 @@ func (s *Scheduler) ReconcileTestWorkflowTemplates(ctx context.Context) error {
 		}
 	}
 
+}
+
+func (s *Scheduler) addTestWorkflowCronJobs(ctx context.Context, testWorkflowName string, events []testkube.TestWorkflowEvent) error {
+	for _, event := range events {
+		if event.Cronjob != nil {
+			var cronJobName string
+			cronJobName, err := getHashedMetadataName(event.Cronjob.Cron, event.Cronjob.Config)
+			if err != nil {
+				return err
+			}
+
+			if err = s.addTestWorkflowCronJob(ctx, testWorkflowName, cronJobName, event.Cronjob); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 func (s *Scheduler) addTestWorkflowCronJob(ctx context.Context, testWorkflowName, cronJobName string,
