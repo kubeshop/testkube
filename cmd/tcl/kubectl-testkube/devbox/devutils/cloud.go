@@ -148,12 +148,12 @@ func (c *CloudObject) DashboardUrl(id, path string) string {
 	return strings.TrimSuffix(fmt.Sprintf("%s/organization/%s/environment/%s/", c.cfg.UiUri, c.cfg.OrganizationId, id)+strings.TrimPrefix(path, "/"), "/")
 }
 
-func (c *CloudObject) CreateEnvironment(name string) (*client.Environment, error) {
+func (c *CloudObject) CreateEnvironment(name string, disableCloudStorage bool) (*client.Environment, error) {
 	env, err := c.envClient.Create(client.Environment{
 		Name:            name,
 		Owner:           c.cfg.OrganizationId,
 		OrganizationId:  c.cfg.OrganizationId,
-		CloudStorage:    true,
+		CloudStorage:    !disableCloudStorage,
 		NewArchitecture: true,
 	})
 	if err != nil {

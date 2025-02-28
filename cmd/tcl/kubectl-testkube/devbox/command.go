@@ -55,6 +55,7 @@ func NewDevBoxCommand() *cobra.Command {
 		runnersCount        uint16
 		gitopsEnabled       bool
 		disableDefaultAgent bool
+		disableCloudStorage bool
 	)
 
 	cmd := &cobra.Command{
@@ -144,7 +145,7 @@ func NewDevBoxCommand() *cobra.Command {
 
 			// Initialize wrappers over cluster resources
 			interceptor := devutils.NewInterceptor(interceptorPod, baseInitImage, baseToolkitImage, interceptorBin)
-			agent := devutils.NewAgent(agentPod, cloud, baseAgentImage, baseInitImage, baseToolkitImage)
+			agent := devutils.NewAgent(agentPod, cloud, baseAgentImage, baseInitImage, baseToolkitImage, disableCloudStorage)
 			binaryStorage := devutils.NewBinaryStorage(binaryStoragePod, binaryStorageBin)
 			mongo := devutils.NewMongo(mongoPod)
 			minio := devutils.NewMinio(minioPod)
@@ -190,7 +191,7 @@ func NewDevBoxCommand() *cobra.Command {
 			// Create environment in the Cloud
 			if !oss {
 				fmt.Println("Creating environment in Cloud...")
-				env, err = cloud.CreateEnvironment(namespace.Name())
+				env, err = cloud.CreateEnvironment(namespace.Name(), disableCloudStorage)
 				if err != nil {
 					fail(errors.Wrap(err, "failed to create Cloud environment"))
 				}
@@ -874,6 +875,7 @@ func NewDevBoxCommand() *cobra.Command {
 	cmd.Flags().StringVar(&baseAgentImage, "agent-image", "kubeshop/testkube-api-server:latest", "base agent image")
 	cmd.Flags().Uint16Var(&runnersCount, "runners", 0, "additional runners count")
 	cmd.Flags().BoolVar(&disableDefaultAgent, "disable-agent", false, "should disable default agent")
+	cmd.Flags().BoolVar(&disableCloudStorage, "disable-cloud-storage", false, "should disable storage in Cloud")
 
 	return cmd
 }
