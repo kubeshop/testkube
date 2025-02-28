@@ -13,5 +13,7 @@ spec:
       - name: jmeter-workflow-smoke-justb4-5.5
       - name: jmeter-workflow-smoke-shell-artifacts
       - name: jmeter-workflow-smoke-from-template
+      - name: jmeter-workflow-smoke-from-template-v1
+      - name: jmeter-workflow-smoke-from-template-separate-artifacts-step
       - name: distributed-jmeter-workflow-smoke
       - name: distributed-jmeter-workflow-smoke-shell-artifacts
