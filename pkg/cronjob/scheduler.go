@@ -80,6 +80,8 @@ func (s *Scheduler) Reconcile(ctx context.Context) {
 
 		s.ReconcileTestWorkflowTemplates(ctx)
 	}()
+
+	wg.Wait()
 }
 
 // ReconcileTestWorklows is watching for test workflow and test worklow template change and schedule test workflow cron jobs
