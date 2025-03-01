@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"sync"
 	"time"
 
@@ -336,9 +337,25 @@ func (s *Scheduler) getEnvironmentId() string {
 	return ""
 }
 
+type configKeyValue struct {
+	Key   string
+	Value string
+}
+
+type configKeyValues []configKeyValue
+
 // getHashedMetadataName returns cron job hashed metadata name
 func getHashedMetadataName(schedule string, config map[string]string) (string, error) {
-	data, err := json.Marshal(config)
+	var slice configKeyValues
+	for key, value := range config {
+		slice = append(slice, configKeyValue{Key: key, Value: value})
+	}
+
+	sort.Slice(slice, func(i, j int) bool {
+		return slice[i].Value < slice[j].Value
+	})
+
+	data, err := json.Marshal(slice)
 	if err != nil {
 		return "", err
 	}
