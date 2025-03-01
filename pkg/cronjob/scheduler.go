@@ -352,7 +352,7 @@ func getHashedMetadataName(schedule string, config map[string]string) (string, e
 	}
 
 	sort.Slice(slice, func(i, j int) bool {
-		return slice[i].Value < slice[j].Value
+		return slice[i].Key < slice[j].Key
 	})
 
 	data, err := json.Marshal(slice)
