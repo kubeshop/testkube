@@ -563,6 +563,20 @@ func main() {
 		})
 	}
 
+	scheduler := commons.CreateCronJobScheduler(cfg,
+		testWorkflowsClient,
+		testWorkflowTemplatesClient,
+		testWorkflowExecutor,
+		log.DefaultLogger,
+		&proContext,
+	)
+	if scheduler != nil {
+		g.Go(func() error {
+			scheduler.Reconcile(ctx)
+			return nil
+		})
+	}
+
 	g.Go(func() error {
 		return httpServer.Run(ctx)
 	})
