@@ -3,6 +3,7 @@ package utilization
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/kubeshop/testkube/pkg/utilization/core"
@@ -10,10 +11,15 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
 )
 
+type ExecutionMode string
+
 const (
-	slowSamplingInterval    = 15 * time.Second
-	fastSamplingInterval    = 1 * time.Second
-	defaultSamplingInterval = fastSamplingInterval
+	slowSamplingInterval                  = 15 * time.Second
+	fastSamplingInterval                  = 1 * time.Second
+	defaultSamplingInterval               = fastSamplingInterval
+	ExecutionModeSingle     ExecutionMode = "single"
+	ExecutionModeParallel   ExecutionMode = "parallel"
+	ExecutionModeService    ExecutionMode = "service"
 )
 
 type MetricRecorder struct {
@@ -76,12 +82,6 @@ func (r *MetricRecorder) Start(ctx context.Context) {
 	t := time.NewTicker(r.samplingInterval)
 	defer t.Stop()
 
-	process, err := getChildProcess()
-	if err != nil {
-		stdoutUnsafe.Errorf("failed to get process: %v\n", err)
-		return
-	}
-
 	previous := &Metrics{}
 	for {
 		select {
@@ -91,7 +91,38 @@ func (r *MetricRecorder) Start(ctx context.Context) {
 			}
 			return
 		case <-t.C:
-			previous = r.iterate(ctx, process, previous)
+			processes, err := getAllChildProcesses()
+			if err != nil {
+				stdoutUnsafe.Errorf("failed to get process: %v\n", err)
+				return
+			}
+			// Debug
+			stdoutUnsafe.Printf("recording metrics for %d processes\n", len(processes))
+			for _, c := range processes {
+				n, _ := c.Name()
+				stdoutUnsafe.Printf("child process found: %s\n", n)
+			}
+			// End of debug
+			metrics := make([]*Metrics, len(processes))
+			wg := sync.WaitGroup{}
+			wg.Add(len(processes))
+			for i := range processes {
+				go func(i int) {
+					defer wg.Done()
+					m, err := r.record(processes[i])
+					if err != nil {
+						stdoutUnsafe.Errorf("failed to record metrics: %v\n", err)
+						return
+					}
+					metrics[i] = m
+				}(i)
+			}
+			wg.Wait()
+			aggregated := aggregate(metrics)
+			if err := r.write(ctx, aggregated, previous); err != nil {
+				stdoutUnsafe.Errorf("failed to write metrics: %v\n", err)
+			}
+			previous = aggregated
 		}
 	}
 }
@@ -113,6 +144,12 @@ type ExecutionConfig struct {
 	Workflow  string
 	Step      string
 	Execution string
+	// Resource is the identifier used in parallel steps.
+	ParentStep string
+	// Index is the index of the parallel step.
+	Index string
+	// ExecutionMode specifies is the current execution a single step, parallel step or a service.
+	ExecutionMode ExecutionMode
 }
 
 // WithMetricsRecorder runs the provided function and records the metrics in the specified directory.
@@ -133,8 +170,9 @@ func WithMetricsRecorder(config Config, fn func(), postProcessFn func() error) {
 
 	metadata := &core.Metadata{
 		Workflow:           config.ExecutionConfig.Workflow,
-		Step:               core.Step{Ref: config.ExecutionConfig.Step},
+		Step:               core.Step{Ref: config.ExecutionConfig.Step, Parent: config.ExecutionConfig.ParentStep},
 		Execution:          config.ExecutionConfig.Execution,
+		Index:              config.ExecutionConfig.Index,
 		Format:             config.Format,
 		ContainerResources: config.ContainerResources,
 	}

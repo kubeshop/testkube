@@ -22,7 +22,7 @@ func TestMetadataString(t *testing.T) {
 			name: "all fields set",
 			meta: Metadata{
 				Workflow:  "wf",
-				Step:      Step{Ref: "s1", Name: "Some step"},
+				Step:      Step{Ref: "s1", Parent: "s0", Name: "Some step"},
 				Execution: "ex1",
 				Lines:     10,
 				Format:    FormatInflux,
@@ -37,7 +37,7 @@ func TestMetadataString(t *testing.T) {
 					},
 				},
 			},
-			want: "META workflow=wf step.ref=s1 step.name=\"Some step\" execution=ex1 lines=10 format=influx resources.requests.cpu=100m resources.requests.memory=256Mi resources.limits.cpu=200m resources.limits.memory=512Mi",
+			want: "META workflow=wf step.ref=s1 step.parent=s0 step.name=\"Some step\" execution=ex1 lines=10 format=influx resources.requests.cpu=100m resources.requests.memory=256Mi resources.limits.cpu=200m resources.limits.memory=512Mi",
 		},
 		{
 			name: "some fields empty",
@@ -93,6 +93,19 @@ func TestParseMetadataFromFilename(t *testing.T) {
 			errMessage: "",
 		},
 		{
+			name:     "valid INFLUX file with resource",
+			filename: "myWorkflow_step2_0002_step0_1.influx",
+			wantMeta: &Metadata{
+				Workflow:  "myWorkflow",
+				Step:      Step{Ref: "step2", Parent: "step0"},
+				Index:     "1",
+				Execution: "0002",
+				Format:    FormatInflux,
+			},
+			wantErr:    false,
+			errMessage: "",
+		},
+		{
 			name:       "invalid extension",
 			filename:   "someWorkflow_someStep_someExecution.txt",
 			wantMeta:   nil,
@@ -104,14 +117,14 @@ func TestParseMetadataFromFilename(t *testing.T) {
 			filename:   "someWorkflow_onlyOneSegment.json",
 			wantMeta:   nil,
 			wantErr:    true,
-			errMessage: "invalid filename format: expected <workflow>_<step>_<execution>.<format>",
+			errMessage: "invalid filename format: expected <workflow>_<step>_<execution>_<resource?>_<index?>.<format>",
 		},
 		{
 			name:       "invalid format - more underscore segments",
-			filename:   "workflow_step_execution_extra.json",
+			filename:   "workflow_step_execution_extra_1_as.json",
 			wantMeta:   nil,
 			wantErr:    true,
-			errMessage: "invalid filename format: expected <workflow>_<step>_<execution>.<format>",
+			errMessage: "invalid filename format: expected <workflow>_<step>_<execution>_<resource?>_<index?>.<format>",
 		},
 	}
 
@@ -199,10 +212,11 @@ func TestParseMetadata(t *testing.T) {
 	}{
 		{
 			name:  "Valid - influx",
-			input: `META lines=10 format=influx step.ref=step1 step.name="Step 1" workflow=wf execution=ex1 resources.requests.cpu=100m resources.requests.memory=256 resources.limits.cpu=200m resources.limits.memory=512`,
+			input: `META lines=10 format=influx index=1 step.ref=step1 step.parent=step0 step.name="Step 1" workflow=wf execution=ex1 resources.requests.cpu=100m resources.requests.memory=256 resources.limits.cpu=200m resources.limits.memory=512`,
 			wantMeta: &Metadata{
 				Workflow:  "wf",
-				Step:      Step{Ref: "step1", Name: "Step 1"},
+				Step:      Step{Ref: "step1", Name: "Step 1", Parent: "step0"},
+				Index:     "1",
 				Execution: "ex1",
 				Lines:     10,
 				Format:    FormatInflux,
@@ -220,8 +234,8 @@ func TestParseMetadata(t *testing.T) {
 		},
 		{
 			name:     "Valid - csv",
-			input:    "META lines=42 format=csv",
-			wantMeta: &Metadata{Lines: 42, Format: FormatCSV},
+			input:    "META lines=42 format=csv step.parent=step0",
+			wantMeta: &Metadata{Lines: 42, Format: FormatCSV, Step: Step{Parent: "step0"}},
 		},
 		{
 			name:     "Valid - json",
