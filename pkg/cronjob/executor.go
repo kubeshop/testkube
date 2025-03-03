@@ -46,6 +46,6 @@ func (s *Scheduler) execute(ctx context.Context, testWorkflowName string, cron *
 		executionID = results[0].Id
 	}
 
-	s.logger.Debugf("cron job schedduler: executor component: started test workflow execution for cron %s/%s/%s", testWorkflowName, cron, executionID)
+	s.logger.Debugf("cron job scheduler: executor component: started test workflow execution for cron %s/%s/%s", testWorkflowName, cron, executionID)
 	return nil
 }

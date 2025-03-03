@@ -472,13 +472,16 @@ func CreateCronJobScheduler(cfg *config.Config,
 	testWorkflowExecutoor testworkflowexecutor.TestWorkflowExecutor,
 	logger *zap.SugaredLogger,
 	proContext *config.ProContext) cronjob.Interface {
-	enableCronJobs, err := parser.LoadConfigFromStringOrFile(
-		cfg.EnableCronJobs,
-		cfg.TestkubeConfigDir,
-		"enable-cron-jobs",
-		"enable cron jobs",
-	)
-	ExitOnError("Creating cron job scheduler", err)
+	enableCronJobs := cfg.EnableCronJobs
+	if enableCronJobs == "" {
+		var err error
+		enableCronJobs, err = parser.LoadConfigFromFile(
+			cfg.TestkubeConfigDir,
+			"enable-cron-jobs",
+			"enable cron jobs",
+		)
+		ExitOnError("Creating cron job scheduler", err)
+	}
 
 	if enableCronJobs == "" {
 		return nil

@@ -117,7 +117,7 @@ func (s *Scheduler) ReconcileTestWorkflows(ctx context.Context) error {
 				for _, template := range obj.Resource.Spec.Use {
 					testWorkflowTemplate, err := s.testWorkflowTemplateClient.Get(ctx, s.getEnvironmentId(), template.Name)
 					if err != nil {
-						s.logger.Errorw("cron job schedduler: reconciler component: failed to get TestWorkflowTemplate", "namr", template.Name, "error", err)
+						s.logger.Errorw("cron job scheduler: reconciler component: failed to get TestWorkflowTemplate", "namr", template.Name, "error", err)
 						continue
 					}
 
@@ -177,7 +177,7 @@ func (s *Scheduler) ReconcileTestWorkflowTemplates(ctx context.Context) error {
 
 				testWorkflows, err := s.testWorkflowClient.List(ctx, s.getEnvironmentId(), testworkflowclient.ListOptions{})
 				if err != nil {
-					s.logger.Errorw("cron job schedduler: reconciler component: failed to get TestWorkflows", "error", err)
+					s.logger.Errorw("cron job scheduler: reconciler component: failed to get TestWorkflows", "error", err)
 					continue
 				}
 
@@ -202,7 +202,7 @@ func (s *Scheduler) ReconcileTestWorkflowTemplates(ctx context.Context) error {
 					for _, template := range testWorkflow.Spec.Use {
 						testWorkflowTemplate, err := s.testWorkflowTemplateClient.Get(ctx, s.getEnvironmentId(), template.Name)
 						if err != nil {
-							s.logger.Errorw("cron job schedduler: reconciler component: failed to get TestWorkflowTemplate", "name", template.Name, "error", err)
+							s.logger.Errorw("cron job scheduler: reconciler component: failed to get TestWorkflowTemplate", "name", template.Name, "error", err)
 							continue
 						}
 
@@ -215,14 +215,14 @@ func (s *Scheduler) ReconcileTestWorkflowTemplates(ctx context.Context) error {
 				}
 
 				if err == nil {
-					s.logger.Infow("cron job schedduler: reconciler component: scheduled TestWorkflowTemplate to cron jobs", "name", obj.Resource.Name, "error", err)
+					s.logger.Infow("cron job scheduler: reconciler component: scheduled TestWorkflowTemplate to cron jobs", "name", obj.Resource.Name, "error", err)
 				} else {
-					s.logger.Errorw("cron job schedduler: reconciler omponent: failed to watch TestWorkflowTemplates", "error", err)
+					s.logger.Errorw("cron job scheduler: reconciler omponent: failed to watch TestWorkflowTemplates", "error", err)
 				}
 			}
 
 			if watcher.Err() != nil {
-				s.logger.Errorw("cron job schedduler: reconciler component: failed to watch TestWorkflowTemplates", "error", watcher.Err())
+				s.logger.Errorw("cron job scheduler: reconciler component: failed to watch TestWorkflowTemplates", "error", watcher.Err())
 			}
 
 			time.Sleep(watcherDelay)
