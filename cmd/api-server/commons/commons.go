@@ -470,7 +470,8 @@ func CreateCronJobScheduler(cfg *config.Config,
 	testWorkflowClient testworkflowclient.TestWorkflowClient,
 	testWorkflowTemplateClient testworkflowtemplateclient.TestWorkflowTemplateClient,
 	testWorkflowExecutoor testworkflowexecutor.TestWorkflowExecutor,
-	logger *zap.SugaredLogger) cronjob.Interface {
+	logger *zap.SugaredLogger,
+	proContext *config.ProContext) cronjob.Interface {
 	enableCronJobs, err := parser.LoadConfigFromStringOrFile(
 		cfg.EnableCronJobs,
 		cfg.TestkubeConfigDir,
@@ -490,5 +491,9 @@ func CreateCronJobScheduler(cfg *config.Config,
 		return nil
 	}
 
-	return cronjob.New(testWorkflowClient, testWorkflowTemplateClient, testWorkflowExecutoor, logger)
+	return cronjob.New(testWorkflowClient,
+		testWorkflowTemplateClient,
+		testWorkflowExecutoor,
+		logger,
+		cronjob.WithProContext(proContext))
 }

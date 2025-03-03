@@ -46,8 +46,9 @@ type Scheduler struct {
 func New(testWorkflowClient testworkflowclient.TestWorkflowClient,
 	testWorkflowTemplateClient testworkflowtemplateclient.TestWorkflowTemplateClient,
 	testWorkflowExecutor testworkflowexecutor.TestWorkflowExecutor,
-	logger *zap.SugaredLogger) *Scheduler {
-	return &Scheduler{
+	logger *zap.SugaredLogger,
+	opts ...Option) *Scheduler {
+	s := &Scheduler{
 		testWorkflowClient:         testWorkflowClient,
 		testWorkflowTemplateClient: testWorkflowTemplateClient,
 		testWorkflowExecutor:       testWorkflowExecutor,
@@ -55,6 +56,12 @@ func New(testWorkflowClient testworkflowclient.TestWorkflowClient,
 		cronService:                cron.New(),
 		testWorklows:               make(map[string]map[string]cron.EntryID),
 	}
+
+	for _, opt := range opts {
+		opt(s)
+	}
+
+	return s
 }
 
 type Option func(*Scheduler)

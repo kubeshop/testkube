@@ -567,7 +567,9 @@ func main() {
 		testWorkflowsClient,
 		testWorkflowTemplatesClient,
 		testWorkflowExecutor,
-		log.DefaultLogger)
+		log.DefaultLogger,
+		&proContext,
+	)
 	if scheduler != nil {
 		g.Go(func() error {
 			scheduler.Reconcile(ctx)
