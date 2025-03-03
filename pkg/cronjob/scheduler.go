@@ -144,6 +144,7 @@ func (s *Scheduler) ReconcileTestWorkflows(ctx context.Context) error {
 					s.logger.Errorw("cron job scheduler: reconciler component: failed to watch TestWorkflows", "error", err)
 				}
 			}
+
 			if watcher.Err() != nil {
 				s.logger.Errorw("cron job scheduler: reconciler component: failed to watch TestWorkflows", "error", watcher.Err())
 			} else {
@@ -219,6 +220,7 @@ func (s *Scheduler) ReconcileTestWorkflowTemplates(ctx context.Context) error {
 					s.logger.Errorw("cron job schedduler: reconciler omponent: failed to watch TestWorkflowTemplates", "error", err)
 				}
 			}
+
 			if watcher.Err() != nil {
 				s.logger.Errorw("cron job schedduler: reconciler component: failed to watch TestWorkflowTemplates", "error", watcher.Err())
 			}
