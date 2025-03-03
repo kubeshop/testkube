@@ -2,15 +2,14 @@ package utilization
 
 import (
 	"context"
+	errors2 "errors"
 	"fmt"
 	"math"
-	"os"
 
 	"github.com/pkg/errors"
 	"github.com/shirou/gopsutil/v4/net"
 	gopsutil "github.com/shirou/gopsutil/v4/process"
 
-	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
 	"github.com/kubeshop/testkube/pkg/utilization/core"
 )
 
@@ -21,16 +20,18 @@ type Metrics struct {
 	Network *net.IOCountersStat
 }
 
-func (r *MetricRecorder) iterate(ctx context.Context, process *gopsutil.Process, previous *Metrics) *Metrics {
-	stdout := output.Std
-	stdoutUnsafe := stdout.Direct()
-
+// record records the metrics of the provided process.
+func (r *MetricRecorder) record(process *gopsutil.Process) (*Metrics, error) {
 	// Instrument the current process
-	metrics, err := instrument(process)
-	if err != nil {
-		stdoutUnsafe.Errorf("failed to gather some metrics: %v\n", err)
+	metrics, errs := instrument(process)
+	if len(errs) > 0 {
+		return nil, errors.Wrapf(errors2.Join(errs...), "failed to gather some metrics for process with pid %q", process.Pid)
 	}
 
+	return metrics, nil
+}
+
+func (r *MetricRecorder) write(ctx context.Context, metrics, previous *Metrics) error {
 	// Build each set of metrics
 	memoryMetrics := r.format.Format("memory", r.tags, r.buildMemoryFields(metrics))
 	cpuMetrics := r.format.Format("cpu", r.tags, r.buildCPUFields(metrics))
@@ -40,10 +41,10 @@ func (r *MetricRecorder) iterate(ctx context.Context, process *gopsutil.Process,
 	// Combine all metrics so we can write them all at once
 	data := fmt.Sprintf("%s\n%s\n%s\n%s", memoryMetrics, cpuMetrics, networkMetrics, diskMetrics)
 	if err := r.writer.Write(ctx, data); err != nil {
-		stdoutUnsafe.Errorf("failed to write combined metrics: %v\n", err)
+		return errors.Wrap(err, "failed to write combined metrics")
 	}
 
-	return metrics
+	return nil
 }
 
 func instrument(process *gopsutil.Process) (*Metrics, []error) {
@@ -138,39 +139,45 @@ func (r *MetricRecorder) buildDiskFields(current, previous *Metrics) []core.KeyV
 	return values
 }
 
-// getChildProcess tries to find the child process of the current process.
-// The child process is the process which is running the underlying test.
-func getChildProcess() (*gopsutil.Process, error) {
-	var processes []*gopsutil.Process
-	var err error
-	// We need to retry a few times to get the process because a race condition might occur where the child process is not yet created.
-	for i := 0; i < 5; i++ {
-		processes, err = gopsutil.Processes()
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to list running processes")
+// aggregate aggregates the metrics from multiple processes.
+// Some test tools might spawn multiple processes to run the tests.
+// Example: when executing JMeter, the entry process is a shell script which spawns the actual JMeter Java process.
+func aggregate(metrics []*Metrics) *Metrics {
+	aggregated := &Metrics{
+		Memory:  &gopsutil.MemoryInfoStat{},
+		CPU:     0,
+		Disk:    &gopsutil.IOCountersStat{},
+		Network: &net.IOCountersStat{},
+	}
+	for _, m := range metrics {
+		if m.Memory != nil {
+			aggregated.Memory.RSS += m.Memory.RSS
+			aggregated.Memory.VMS += m.Memory.VMS
+			aggregated.Memory.Swap += m.Memory.Swap
+			aggregated.Memory.Data += m.Memory.Data
+			aggregated.Memory.Stack += m.Memory.Stack
+			aggregated.Memory.Locked += m.Memory.Locked
+			aggregated.Memory.Stack += m.Memory.Stack
 		}
-		if len(processes) > 1 {
-			break
+		aggregated.CPU += m.CPU
+		if m.Disk != nil {
+			aggregated.Disk.ReadCount += m.Disk.ReadCount
+			aggregated.Disk.WriteCount += m.Disk.WriteCount
+			aggregated.Disk.ReadBytes += m.Disk.ReadBytes
+			aggregated.Disk.WriteBytes += m.Disk.WriteBytes
+			aggregated.Disk.DiskReadBytes += m.Disk.DiskReadBytes
+			aggregated.Disk.DiskWriteBytes += m.Disk.DiskWriteBytes
+		}
+		if m.Network != nil {
+			aggregated.Network.BytesSent += m.Network.BytesSent
+			aggregated.Network.BytesRecv += m.Network.BytesRecv
+			aggregated.Network.PacketsSent += m.Network.PacketsSent
+			aggregated.Network.PacketsRecv += m.Network.PacketsRecv
+			aggregated.Network.Errin += m.Network.Errin
+			aggregated.Network.Errout += m.Network.Errout
+			aggregated.Network.Dropin += m.Network.Dropin
+			aggregated.Network.Dropout += m.Network.Dropout
 		}
 	}
-
-	// Find the pid of the process which is running the underlying binary.
-	pid := int32(os.Getpid())
-	var process *gopsutil.Process
-	for _, p := range processes {
-		ppid, err := p.Ppid()
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to get parent process id for process pid: %d", p.Pid)
-		}
-		if p.Pid != pid && ppid == pid {
-			process = p
-			break
-		}
-	}
-	// If the process is not found, return an error.
-	if process == nil {
-		return nil, errors.New("failed to find process")
-	}
-
-	return process, nil
+	return aggregated
 }

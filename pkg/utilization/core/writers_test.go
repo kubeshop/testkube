@@ -15,25 +15,39 @@ func TestNewBufferedFileWriter(t *testing.T) {
 	t.Parallel()
 
 	tmpDir := t.TempDir()
-	meta := &Metadata{
+	meta1 := &Metadata{
 		Workflow:  "wf",
 		Step:      Step{Ref: "step"},
 		Execution: "exec",
 		Format:    "txt",
 	}
+	meta2 := &Metadata{
+		Workflow:  "wf2",
+		Step:      Step{Ref: "step2", Parent: "step0"},
+		Execution: "exec2",
+		Format:    "txt",
+	}
 
-	writer, err := NewFileWriter(tmpDir, meta, 1)
-	require.NoError(t, err, "expected no error creating FileWriter")
-	require.NotNil(t, writer, "expected a non-nil writer")
+	writer1, err := NewFileWriter(tmpDir, meta1, 1)
+	require.NoError(t, err)
+	require.NotNil(t, writer1)
+	writer2, err := NewFileWriter(tmpDir, meta2, 1)
+	require.NoError(t, err)
+	require.NotNil(t, writer2)
 
 	// Ensure the correct file was created
-	expectedFilename := fmt.Sprintf("%s_%s_%s.%s", meta.Workflow, meta.Step.Ref, meta.Execution, meta.Format)
-	fullPath := filepath.Join(tmpDir, expectedFilename)
+	expectedFilename1 := fmt.Sprintf("%s_%s_%s.%s", meta1.Workflow, meta1.Step.Ref, meta1.Execution, meta1.Format)
+	fullPath := filepath.Join(tmpDir, expectedFilename1)
 	_, statErr := os.Stat(fullPath)
+	assert.NoError(t, statErr, "expected the file to exist at %s", fullPath)
+	expectedFilename2 := fmt.Sprintf("%s_%s_%s_%s.%s", meta2.Workflow, meta2.Step.Ref, meta2.Execution, meta2.Step.Parent, meta1.Format)
+	fullPath = filepath.Join(tmpDir, expectedFilename2)
+	_, statErr = os.Stat(fullPath)
 	assert.NoError(t, statErr, "expected the file to exist at %s", fullPath)
 
 	// Cleanup
-	require.NoError(t, writer.Close(context.Background()))
+	require.NoError(t, writer1.Close(context.Background()))
+	require.NoError(t, writer2.Close(context.Background()))
 }
 
 func TestInitFile(t *testing.T) {

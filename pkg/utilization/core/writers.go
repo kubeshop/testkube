@@ -62,7 +62,14 @@ type FileWriter struct {
 
 // NewFileWriter creates a new FileWriter that writes to a file in the specified directory with the given metadata.
 func NewFileWriter(dir string, metadata *Metadata, increment int) (*FileWriter, error) {
-	filename := fmt.Sprintf("%s_%s_%s.%s", metadata.Workflow, metadata.Step.Ref, metadata.Execution, metadata.Format)
+	base := fmt.Sprintf("%s_%s_%s", metadata.Workflow, metadata.Step.Ref, metadata.Execution)
+	if metadata.Step.Parent != "" {
+		base = fmt.Sprintf("%s_%s", base, metadata.Step.Parent)
+	}
+	if metadata.Index != "" {
+		base = fmt.Sprintf("%s_%s", base, metadata.Index)
+	}
+	filename := fmt.Sprintf("%s.%s", base, metadata.Format)
 	f, err := initFile(dir, filename)
 	if err != nil {
 		return nil, errors.WithStack(err)
