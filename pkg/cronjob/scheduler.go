@@ -67,6 +67,9 @@ func WithProContext(proContext *intconfig.ProContext) Option {
 
 // Reconcile is reconciling cron jobs
 func (s *Scheduler) Reconcile(ctx context.Context) {
+	s.cronService.Start()
+	defer s.cronService.Stop()
+
 	var wg sync.WaitGroup
 
 	wg.Add(2)
@@ -91,9 +94,6 @@ func (s *Scheduler) Reconcile(ctx context.Context) {
 
 // ReconcileTestWorklows is watching for test workflow and test worklow template change and schedule test workflow cron jobs
 func (s *Scheduler) ReconcileTestWorkflows(ctx context.Context) error {
-	s.cronService.Start()
-	defer s.cronService.Stop()
-
 	includeInitialData := true
 	for {
 		select {
@@ -150,9 +150,6 @@ func (s *Scheduler) ReconcileTestWorkflows(ctx context.Context) error {
 
 // ReconcileTestWorklowTemplatess is watching for test worklow template change and schedule test workflow cron jobs
 func (s *Scheduler) ReconcileTestWorkflowTemplates(ctx context.Context) error {
-	s.cronService.Start()
-	defer s.cronService.Stop()
-
 	for {
 		select {
 		case <-ctx.Done():
