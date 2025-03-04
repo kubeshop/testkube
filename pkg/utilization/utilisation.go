@@ -6,20 +6,17 @@ import (
 	"sync"
 	"time"
 
+	gopsutil "github.com/shirou/gopsutil/v4/process"
+
 	"github.com/kubeshop/testkube/pkg/utilization/core"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
 )
 
-type ExecutionMode string
-
 const (
-	slowSamplingInterval                  = 15 * time.Second
-	fastSamplingInterval                  = 1 * time.Second
-	defaultSamplingInterval               = fastSamplingInterval
-	ExecutionModeSingle     ExecutionMode = "single"
-	ExecutionModeParallel   ExecutionMode = "parallel"
-	ExecutionModeService    ExecutionMode = "service"
+	slowSamplingInterval    = 15 * time.Second
+	fastSamplingInterval    = 1 * time.Second
+	defaultSamplingInterval = fastSamplingInterval
 )
 
 type MetricRecorder struct {
@@ -91,18 +88,12 @@ func (r *MetricRecorder) Start(ctx context.Context) {
 			}
 			return
 		case <-t.C:
-			processes, err := getAllChildProcesses()
+			processes, err := gopsutil.Processes()
 			if err != nil {
-				stdoutUnsafe.Errorf("failed to get process: %v\n", err)
-				return
+				stdoutUnsafe.Errorf("failed to get processes: %v\n", err)
+				continue
 			}
-			// Debug
-			stdoutUnsafe.Printf("recording metrics for %d processes\n", len(processes))
-			for _, c := range processes {
-				n, _ := c.Name()
-				stdoutUnsafe.Printf("child process found: %s\n", n)
-			}
-			// End of debug
+
 			metrics := make([]*Metrics, len(processes))
 			wg := sync.WaitGroup{}
 			wg.Add(len(processes))
@@ -141,15 +132,12 @@ type Config struct {
 }
 
 type ExecutionConfig struct {
-	Workflow  string
+	Workflow string
+	// Step is a reference to the step in the workflow.
 	Step      string
 	Execution string
-	// Resource is the identifier used in parallel steps.
-	ParentStep string
-	// Index is the index of the parallel step.
-	Index string
-	// ExecutionMode specifies is the current execution a single step, parallel step or a service.
-	ExecutionMode ExecutionMode
+	// Resource is the unique identifier of a container step
+	Resource string
 }
 
 // WithMetricsRecorder runs the provided function and records the metrics in the specified directory.
@@ -170,10 +158,10 @@ func WithMetricsRecorder(config Config, fn func(), postProcessFn func() error) {
 
 	metadata := &core.Metadata{
 		Workflow:           config.ExecutionConfig.Workflow,
-		Step:               core.Step{Ref: config.ExecutionConfig.Step, Parent: config.ExecutionConfig.ParentStep},
+		Step:               core.Step{Ref: config.ExecutionConfig.Step},
 		Execution:          config.ExecutionConfig.Execution,
-		Index:              config.ExecutionConfig.Index,
 		Format:             config.Format,
+		Resource:           config.ExecutionConfig.Resource,
 		ContainerResources: config.ContainerResources,
 	}
 	w, err := core.NewFileWriter(config.Dir, metadata, 4)

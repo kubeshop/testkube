@@ -34,17 +34,15 @@ type Metadata struct {
 	Workflow           string             `meta:"workflow"`
 	Step               Step               `meta:"step"`
 	Execution          string             `meta:"execution"`
-	Index              string             `meta:"index"`
+	Resource           string             `meta:"resource"`
 	Lines              int                `meta:"lines"`
 	Format             MetricsFormat      `meta:"format"`
 	ContainerResources ContainerResources `meta:"resources"`
 }
 
 type Step struct {
-	Ref string `meta:"ref"`
-	// Parent refers to the parent step, used in parallel steps.
-	Parent string `meta:"parent"`
-	Name   string `meta:"name,quote"`
+	Ref  string `meta:"ref"`
+	Name string `meta:"name,quote"`
 }
 
 type ContainerResources struct {
@@ -184,18 +182,14 @@ func parseMetadataFromFilename(filename string) (*Metadata, error) {
 	}
 	base = strings.TrimSuffix(base, filepath.Ext(base))
 	tokens := strings.Split(base, "_")
-	if len(tokens) < 3 || len(tokens) > 5 {
-		return nil, errors.Errorf("invalid filename format: expected <workflow>_<step>_<execution>_<resource?>_<index?>.<format>, got: %q", base)
+	if len(tokens) != 3 {
+		return nil, errors.Errorf("invalid filename format: expected <workflow>_<step>_<execution>.<format>, got: %q", base)
 	}
 	m := &Metadata{
 		Workflow:  tokens[0],
 		Step:      Step{Ref: tokens[1]},
 		Execution: tokens[2],
 		Format:    format,
-	}
-	if len(tokens) == 5 {
-		m.Step.Parent = tokens[3]
-		m.Index = tokens[4]
 	}
 	return m, nil
 }
@@ -282,8 +276,6 @@ func parseMetadata(line string) (*Metadata, error) {
 			m.Workflow = value
 		case "step.ref":
 			m.Step.Ref = value
-		case "step.parent":
-			m.Step.Parent = value
 		case "step.name":
 			stepName, err = strconv.Unquote(value)
 			if err != nil {
@@ -292,8 +284,8 @@ func parseMetadata(line string) (*Metadata, error) {
 			m.Step.Name = stepName
 		case "execution":
 			m.Execution = value
-		case "index":
-			m.Index = value
+		case "resource":
+			m.Resource = value
 		case "resources.requests.cpu":
 			m.ContainerResources.Requests.CPU = value
 		case "resources.requests.memory":

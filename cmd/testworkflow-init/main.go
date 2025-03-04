@@ -460,31 +460,14 @@ func main() {
 func newMetricsRecorderConfig(stepRef string, skip bool, containerResources testworkflowconfig.ContainerResourceConfig) utilization.Config {
 	s := data.GetState()
 	metricsDir := filepath.Join(constants.InternalPath, "metrics", stepRef)
-	var parentStep, index string
-	d, _ := json.Marshal(s.InternalConfig)
-	fmt.Println("s.InternalConfig: ", string(d))
-	executionMode := utilization.ExecutionModeSingle
-	if s.InternalConfig.Resource.FsPrefix != "" {
-		fmt.Println("s.InternalConfig.Resource.FsPrefix: ", s.InternalConfig.Resource.FsPrefix)
-		parts := strings.Split(s.InternalConfig.Resource.FsPrefix, "/")
-		parentStep = parts[0]
-		if len(parts) == 2 {
-			index = parts[1]
-		}
-		executionMode = utilization.ExecutionModeParallel
-		fmt.Println("parentStep: ", parentStep)
-		fmt.Println("index: ", index)
-	}
 	return utilization.Config{
 		Dir:  metricsDir,
 		Skip: skip,
 		ExecutionConfig: utilization.ExecutionConfig{
-			Workflow:      s.InternalConfig.Workflow.Name,
-			Step:          stepRef,
-			ParentStep:    parentStep,
-			Index:         index,
-			Execution:     s.InternalConfig.Execution.Id,
-			ExecutionMode: executionMode,
+			Workflow:  s.InternalConfig.Workflow.Name,
+			Step:      stepRef,
+			Execution: s.InternalConfig.Execution.Id,
+			Resource:  s.InternalConfig.Resource.Id,
 		},
 		Format: core.FormatInflux,
 		ContainerResources: core.ContainerResources{
@@ -501,6 +484,9 @@ func newMetricsRecorderConfig(stepRef string, skip bool, containerResources test
 }
 
 func appendSuffixIfNeeded(s, suffix string) string {
+	if s == "" {
+		return s
+	}
 	if !strings.HasSuffix(s, suffix) {
 		return s + suffix
 	}
