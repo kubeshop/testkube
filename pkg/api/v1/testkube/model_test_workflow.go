@@ -28,6 +28,5 @@ type TestWorkflow struct {
 	Updated     time.Time         `json:"updated,omitempty"`
 	Spec        *TestWorkflowSpec `json:"spec,omitempty"`
 	// if test workflow is offline and cannot be executed
-	ReadOnly bool                       `json:"readOnly,omitempty"`
-	Status   *TestWorkflowStatusSummary `json:"status,omitempty"`
+	ReadOnly bool `json:"readOnly,omitempty"`
 }
