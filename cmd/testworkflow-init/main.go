@@ -467,6 +467,7 @@ func newMetricsRecorderConfig(stepRef string, skip bool, containerResources test
 			Workflow:  s.InternalConfig.Workflow.Name,
 			Step:      stepRef,
 			Execution: s.InternalConfig.Execution.Id,
+			Resource:  s.InternalConfig.Resource.Id,
 		},
 		Format: core.FormatInflux,
 		ContainerResources: core.ContainerResources{
@@ -483,6 +484,9 @@ func newMetricsRecorderConfig(stepRef string, skip bool, containerResources test
 }
 
 func appendSuffixIfNeeded(s, suffix string) string {
+	if s == "" {
+		return s
+	}
 	if !strings.HasSuffix(s, suffix) {
 		return s + suffix
 	}

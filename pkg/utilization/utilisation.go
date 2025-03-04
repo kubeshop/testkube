@@ -3,7 +3,10 @@ package utilization
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
+
+	gopsutil "github.com/shirou/gopsutil/v4/process"
 
 	"github.com/kubeshop/testkube/pkg/utilization/core"
 
@@ -76,12 +79,6 @@ func (r *MetricRecorder) Start(ctx context.Context) {
 	t := time.NewTicker(r.samplingInterval)
 	defer t.Stop()
 
-	process, err := getChildProcess()
-	if err != nil {
-		stdoutUnsafe.Errorf("failed to get process: %v\n", err)
-		return
-	}
-
 	previous := &Metrics{}
 	for {
 		select {
@@ -91,7 +88,32 @@ func (r *MetricRecorder) Start(ctx context.Context) {
 			}
 			return
 		case <-t.C:
-			previous = r.iterate(ctx, process, previous)
+			processes, err := gopsutil.Processes()
+			if err != nil {
+				stdoutUnsafe.Errorf("failed to get processes: %v\n", err)
+				continue
+			}
+
+			metrics := make([]*Metrics, len(processes))
+			wg := sync.WaitGroup{}
+			wg.Add(len(processes))
+			for i := range processes {
+				go func(i int) {
+					defer wg.Done()
+					m, err := r.record(processes[i])
+					if err != nil {
+						stdoutUnsafe.Errorf("failed to record metrics: %v\n", err)
+						return
+					}
+					metrics[i] = m
+				}(i)
+			}
+			wg.Wait()
+			aggregated := aggregate(metrics)
+			if err := r.write(ctx, aggregated, previous); err != nil {
+				stdoutUnsafe.Errorf("failed to write metrics: %v\n", err)
+			}
+			previous = aggregated
 		}
 	}
 }
@@ -110,9 +132,12 @@ type Config struct {
 }
 
 type ExecutionConfig struct {
-	Workflow  string
+	Workflow string
+	// Step is a reference to the step in the workflow.
 	Step      string
 	Execution string
+	// Resource is the unique identifier of a container step
+	Resource string
 }
 
 // WithMetricsRecorder runs the provided function and records the metrics in the specified directory.
@@ -136,6 +161,7 @@ func WithMetricsRecorder(config Config, fn func(), postProcessFn func() error) {
 		Step:               core.Step{Ref: config.ExecutionConfig.Step},
 		Execution:          config.ExecutionConfig.Execution,
 		Format:             config.Format,
+		Resource:           config.ExecutionConfig.Resource,
 		ContainerResources: config.ContainerResources,
 	}
 	w, err := core.NewFileWriter(config.Dir, metadata, 4)
