@@ -150,6 +150,9 @@ func aggregate(metrics []*Metrics) *Metrics {
 		Network: &net.IOCountersStat{},
 	}
 	for _, m := range metrics {
+		if m == nil {
+			continue
+		}
 		if m.Memory != nil {
 			aggregated.Memory.RSS += m.Memory.RSS
 			aggregated.Memory.VMS += m.Memory.VMS
