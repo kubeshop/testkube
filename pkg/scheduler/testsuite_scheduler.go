@@ -41,14 +41,14 @@ func (s *Scheduler) PrepareTestSuiteRequests(work []testsuitesv3.TestSuite, requ
 		requests[i] = workerpool.Request[testkube.TestSuite, testkube.TestSuiteExecutionRequest, testkube.TestSuiteExecution]{
 			Object:  testsuitesmapper.MapCRToAPI(work[i]),
 			Options: request,
-			ExecFn:  s.executeTestSuite,
+			ExecFn:  s.ExecuteTestSuite,
 		}
 	}
 
 	return requests
 }
 
-func (s *Scheduler) executeTestSuite(ctx context.Context, testSuite testkube.TestSuite, request testkube.TestSuiteExecutionRequest) (
+func (s *Scheduler) ExecuteTestSuite(ctx context.Context, testSuite testkube.TestSuite, request testkube.TestSuiteExecutionRequest) (
 	testsuiteExecution testkube.TestSuiteExecution, err error) {
 	s.logger.Debugw("Got testsuite to execute", "test", testSuite)
 	secretUUID, err := s.deprecatedClients.TestSuites().GetCurrentSecretUUID(testSuite.Name)
@@ -525,7 +525,7 @@ func (s *Scheduler) executeTestStep(ctx context.Context, testsuiteExecution test
 			requests[i] = workerpool.Request[testkube.Test, testkube.ExecutionRequest, testkube.Execution]{
 				Object:  testTuples[i].test,
 				Options: req,
-				ExecFn:  s.executeTest,
+				ExecFn:  s.ExecuteTest,
 			}
 		}
 

@@ -12,11 +12,14 @@ import (
 	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"
 
+	testsclientv3 "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
+	testsuitesclientv3 "github.com/kubeshop/testkube-operator/pkg/client/testsuites/v3"
 	intconfig "github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
+	"github.com/kubeshop/testkube/pkg/workerpool"
 )
 
 const (
@@ -35,6 +38,10 @@ type Scheduler struct {
 	testWorkflowClient         testworkflowclient.TestWorkflowClient
 	testWorkflowTemplateClient testworkflowtemplateclient.TestWorkflowTemplateClient
 	testWorkflowExecutor       testworkflowexecutor.TestWorkflowExecutor
+	testClient                 testsclientv3.Interface
+	testSuiteClient            testsuitesclientv3.Interface
+	executeTestFn              workerpool.ExecuteFn[testkube.Test, testkube.ExecutionRequest, testkube.Execution]
+	executeTestSuiteFn         workerpool.ExecuteFn[testkube.TestSuite, testkube.TestSuiteExecutionRequest, testkube.TestSuiteExecution]
 	logger                     *zap.SugaredLogger
 	proContext                 *intconfig.ProContext
 	cronService                *cron.Cron
@@ -65,6 +72,30 @@ func New(testWorkflowClient testworkflowclient.TestWorkflowClient,
 }
 
 type Option func(*Scheduler)
+
+func WithTestClient(testClient testsclientv3.Interface) Option {
+	return func(s *Scheduler) {
+		s.testClient = testClient
+	}
+}
+
+func WithTestSuiteClient(testSuiteClient testsuitesclientv3.Interface) Option {
+	return func(s *Scheduler) {
+		s.testSuiteClient = testSuiteClient
+	}
+}
+
+func WithExecuteTestFn(executeTestFn workerpool.ExecuteFn[testkube.Test, testkube.ExecutionRequest, testkube.Execution]) Option {
+	return func(s *Scheduler) {
+		s.executeTestFn = s.executeTestFn
+	}
+}
+
+func WithExecuteTestSuiteFn(executeTestSuiteFn workerpool.ExecuteFn[testkube.TestSuite, testkube.TestSuiteExecutionRequest, testkube.TestSuiteExecution]) Option {
+	return func(s *Scheduler) {
+		s.executeTestSuiteFn = s.executeTestSuiteFn
+	}
+}
 
 func WithProContext(proContext *intconfig.ProContext) Option {
 	return func(s *Scheduler) {
@@ -235,7 +266,7 @@ func (s *Scheduler) addTestWorkflowCronJobs(ctx context.Context, testWorkflowNam
 	for _, event := range events {
 		if event.Cronjob != nil {
 			var cronJobName string
-			cronJobName, err := getHashedMetadataName(event.Cronjob.Cron, event.Cronjob.Config)
+			cronJobName, err := getTestWorkflowHashedMetadataName(event.Cronjob.Cron, event.Cronjob.Config)
 			if err != nil {
 				return err
 			}
@@ -260,7 +291,7 @@ func (s *Scheduler) addTestWorkflowCronJob(ctx context.Context, testWorkflowName
 
 	if _, ok := s.testWorklows[testWorkflowName][cronJobName]; !ok {
 		entryID, err := s.cronService.AddJob(cronJob.Cron,
-			cron.FuncJob(func() { s.execute(ctx, testWorkflowName, cronJob) }))
+			cron.FuncJob(func() { s.executeTestWorkflow(ctx, testWorkflowName, cronJob) }))
 		if err != nil {
 			return err
 		}
@@ -279,7 +310,7 @@ func (s *Scheduler) changeTestWorkflowCronJobs(ctx context.Context, testWorkflow
 			hasCronJob = true
 
 			var cronJobName string
-			cronJobName, err := getHashedMetadataName(event.Cronjob.Cron, event.Cronjob.Config)
+			cronJobName, err := getTestWorkflowHashedMetadataName(event.Cronjob.Cron, event.Cronjob.Config)
 			if err != nil {
 				return err
 			}
@@ -350,8 +381,8 @@ type configKeyValue struct {
 
 type configKeyValues []configKeyValue
 
-// getHashedMetadataName returns cron job hashed metadata name
-func getHashedMetadataName(schedule string, config map[string]string) (string, error) {
+// getTestWorkflowHashedMetadataName returns cron job hashed metadata name
+func getTestWorkflowHashedMetadataName(schedule string, config map[string]string) (string, error) {
 	var slice configKeyValues
 	for key, value := range config {
 		slice = append(slice, configKeyValue{Key: key, Value: value})

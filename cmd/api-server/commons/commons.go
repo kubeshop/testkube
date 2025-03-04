@@ -20,6 +20,8 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 	corev1 "k8s.io/api/core/v1"
 
+	testsclientv3 "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
+	testsuitesclientv3 "github.com/kubeshop/testkube-operator/pkg/client/testsuites/v3"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/internal/config"
 	dbmigrations "github.com/kubeshop/testkube/internal/db-migrations"
@@ -49,6 +51,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/storage/minio"
 	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
+	"github.com/kubeshop/testkube/pkg/workerpool"
 )
 
 func ExitOnError(title string, err error) {
@@ -470,6 +473,9 @@ func CreateCronJobScheduler(cfg *config.Config,
 	testWorkflowClient testworkflowclient.TestWorkflowClient,
 	testWorkflowTemplateClient testworkflowtemplateclient.TestWorkflowTemplateClient,
 	testWorkflowExecutoor testworkflowexecutor.TestWorkflowExecutor,
+	deprecatedClients DeprecatedClients,
+	executeTestFn workerpool.ExecuteFn[testkube.Test, testkube.ExecutionRequest, testkube.Execution],
+	executeTestSuiteFn workerpool.ExecuteFn[testkube.TestSuite, testkube.TestSuiteExecutionRequest, testkube.TestSuiteExecution],
 	logger *zap.SugaredLogger,
 	proContext *config.ProContext) cronjob.Interface {
 	enableCronJobs := cfg.EnableCronJobs
@@ -494,9 +500,23 @@ func CreateCronJobScheduler(cfg *config.Config,
 		return nil
 	}
 
-	return cronjob.New(testWorkflowClient,
+	var testClient testsclientv3.Interface
+	var testSuiteClient testsuitesclientv3.Interface
+	if deprecatedClients != nil {
+		testClient = deprecatedClients.Tests()
+		testSuiteClient = deprecatedClients.TestSuites()
+	}
+
+	scheduler := cronjob.New(testWorkflowClient,
 		testWorkflowTemplateClient,
 		testWorkflowExecutoor,
 		logger,
-		cronjob.WithProContext(proContext))
+		cronjob.WithProContext(proContext),
+		cronjob.WithTestClient(testClient),
+		cronjob.WithTestSuiteClient(testSuiteClient),
+		cronjob.WithExecuteTestFn(executeTestFn),
+		cronjob.WithExecuteTestSuiteFn(executeTestSuiteFn),
+	)
+
+	return scheduler
 }

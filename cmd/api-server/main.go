@@ -40,6 +40,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/presets"
 	"github.com/kubeshop/testkube/pkg/version"
+	"github.com/kubeshop/testkube/pkg/workerpool"
 
 	"golang.org/x/sync/errgroup"
 
@@ -563,10 +564,20 @@ func main() {
 		})
 	}
 
+	var executeTestFn workerpool.ExecuteFn[testkube.Test, testkube.ExecutionRequest, testkube.Execution]
+	var executeTestSuiteFn workerpool.ExecuteFn[testkube.TestSuite, testkube.TestSuiteExecutionRequest, testkube.TestSuiteExecution]
+	if deprecatedSystem != nil && deprecatedSystem.Scheduler != nil {
+		executeTestFn = deprecatedSystem.Scheduler.ExecuteTest
+		executeTestSuiteFn = deprecatedSystem.Scheduler.ExecuteTestSuite
+	}
+
 	scheduler := commons.CreateCronJobScheduler(cfg,
 		testWorkflowsClient,
 		testWorkflowTemplatesClient,
 		testWorkflowExecutor,
+		deprecatedClients,
+		executeTestFn,
+		executeTestSuiteFn,
 		log.DefaultLogger,
 		&proContext,
 	)
