@@ -105,10 +105,21 @@ func (r *MetricRecorder) buildNetworkFields(current, previous *Metrics) []core.K
 	if previous.Network != nil {
 		previousBytesSent := previous.Network.BytesSent
 		previousBytesRecv := previous.Network.BytesRecv
+		var bytesSentRate, bytesRecvRate uint64
+		// This safety guard is because if a network interface is removed,
+		// the bytes sent and received will be removed from the calculation,
+		// and we can end up with lower values than the previous ones.
+		// Issue: https://github.com/shirou/gopsutil/issues/511
+		if bytesSent > previousBytesSent {
+			bytesSentRate = bytesSent - previousBytesSent
+		}
+		if bytesRecv > previousBytesRecv {
+			bytesRecvRate = bytesRecv - previousBytesRecv
+		}
 		values = append(
 			values,
-			core.NewKeyValue("bytes_sent_per_s", fmt.Sprintf("%d", bytesSent-previousBytesSent)),
-			core.NewKeyValue("bytes_recv_per_s", fmt.Sprintf("%d", bytesRecv-previousBytesRecv)),
+			core.NewKeyValue("bytes_sent_per_s", fmt.Sprintf("%d", bytesSentRate)),
+			core.NewKeyValue("bytes_recv_per_s", fmt.Sprintf("%d", bytesRecvRate)),
 		)
 	}
 
@@ -120,19 +131,30 @@ func (r *MetricRecorder) buildDiskFields(current, previous *Metrics) []core.KeyV
 		return nil
 	}
 
-	readBytes := current.Disk.DiskReadBytes
-	writeBytes := current.Disk.DiskWriteBytes
+	diskReadBytes := current.Disk.DiskReadBytes
+	diskWriteBytes := current.Disk.DiskWriteBytes
 	values := []core.KeyValue{
-		core.NewKeyValue("read_bytes_total", fmt.Sprintf("%d", readBytes)),
-		core.NewKeyValue("write_bytes_total", fmt.Sprintf("%d", writeBytes)),
+		core.NewKeyValue("read_bytes_total", fmt.Sprintf("%d", diskReadBytes)),
+		core.NewKeyValue("write_bytes_total", fmt.Sprintf("%d", diskWriteBytes)),
 	}
 	if previous.Disk != nil {
 		previousDiskReadBytes := previous.Disk.DiskReadBytes
 		previousDiskWriteBytes := previous.Disk.DiskWriteBytes
+		var diskReadBytesRate, diskWriteBytesRate uint64
+		// This safety guard is because if a disk is unmounted,
+		// the bytes sent and received will be removed from the calculation,
+		// and we can end up with lower values than the previous ones.
+		// Issue: https://github.com/shirou/gopsutil/issues/511
+		if diskReadBytes > previousDiskReadBytes {
+			diskReadBytesRate = diskReadBytes - previousDiskReadBytes
+		}
+		if diskWriteBytes > previousDiskWriteBytes {
+			diskWriteBytesRate = diskWriteBytes - previousDiskWriteBytes
+		}
 		values = append(
 			values,
-			core.NewKeyValue("read_bytes_per_s", fmt.Sprintf("%d", readBytes-previousDiskReadBytes)),
-			core.NewKeyValue("write_bytes_per_s", fmt.Sprintf("%d", writeBytes-previousDiskWriteBytes)),
+			core.NewKeyValue("read_bytes_per_s", fmt.Sprintf("%d", diskReadBytesRate)),
+			core.NewKeyValue("write_bytes_per_s", fmt.Sprintf("%d", diskWriteBytesRate)),
 		)
 	}
 
