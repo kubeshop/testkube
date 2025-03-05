@@ -19,6 +19,8 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/emptypb"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/rest"
+	kubeclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	testsclientv3 "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
 	testsuitesclientv3 "github.com/kubeshop/testkube-operator/pkg/client/testsuites/v3"
@@ -470,13 +472,15 @@ func CreateImageInspector(cfg *config.ImageInspectorConfig, configMapClient conf
 }
 
 func CreateCronJobScheduler(cfg *config.Config,
+	kubeClient kubeclient.Client,
 	testWorkflowClient testworkflowclient.TestWorkflowClient,
 	testWorkflowTemplateClient testworkflowtemplateclient.TestWorkflowTemplateClient,
-	testWorkflowExecutoor testworkflowexecutor.TestWorkflowExecutor,
+	testWorkflowExecutor testworkflowexecutor.TestWorkflowExecutor,
 	deprecatedClients DeprecatedClients,
 	executeTestFn workerpool.ExecuteFn[testkube.Test, testkube.ExecutionRequest, testkube.Execution],
 	executeTestSuiteFn workerpool.ExecuteFn[testkube.TestSuite, testkube.TestSuiteExecutionRequest, testkube.TestSuiteExecution],
 	logger *zap.SugaredLogger,
+	kubeConfig *rest.Config,
 	proContext *config.ProContext) cronjob.Interface {
 	enableCronJobs := cfg.EnableCronJobs
 	if enableCronJobs == "" {
@@ -502,20 +506,28 @@ func CreateCronJobScheduler(cfg *config.Config,
 
 	var testClient testsclientv3.Interface
 	var testSuiteClient testsuitesclientv3.Interface
+	var testRESTClient testsclientv3.RESTInterface
+	var testSuiteRESTClient testsuitesclientv3.RESTInterface
 	if deprecatedClients != nil {
 		testClient = deprecatedClients.Tests()
 		testSuiteClient = deprecatedClients.TestSuites()
+		testRESTClient, err = testsclientv3.NewRESTClient(kubeClient, kubeConfig, cfg.TestkubeNamespace)
+		ExitOnError("Creating cron job scheduler", err)
+		testSuiteRESTClient, err = testsuitesclientv3.NewRESTClient(kubeClient, kubeConfig, cfg.TestkubeNamespace)
+		ExitOnError("Creating cron job scheduler", err)
 	}
 
 	scheduler := cronjob.New(testWorkflowClient,
 		testWorkflowTemplateClient,
-		testWorkflowExecutoor,
+		testWorkflowExecutor,
 		logger,
 		cronjob.WithProContext(proContext),
 		cronjob.WithTestClient(testClient),
 		cronjob.WithTestSuiteClient(testSuiteClient),
 		cronjob.WithExecuteTestFn(executeTestFn),
 		cronjob.WithExecuteTestSuiteFn(executeTestSuiteFn),
+		cronjob.WithTestRESTClient(testRESTClient),
+		cronjob.WithTestSuiteRESTClient(testSuiteRESTClient),
 	)
 
 	return scheduler

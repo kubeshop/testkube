@@ -572,6 +572,7 @@ func main() {
 	}
 
 	scheduler := commons.CreateCronJobScheduler(cfg,
+		kubeClient,
 		testWorkflowsClient,
 		testWorkflowTemplatesClient,
 		testWorkflowExecutor,
@@ -579,6 +580,7 @@ func main() {
 		executeTestFn,
 		executeTestSuiteFn,
 		log.DefaultLogger,
+		kubeConfig,
 		&proContext,
 	)
 	if scheduler != nil {
