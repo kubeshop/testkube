@@ -170,6 +170,10 @@ type GitOpsSyncConfig struct {
 	GitOpsSyncKubernetesNamePattern    string `envconfig:"GITOPS_KUBERNETES_NAME_PATTERN" default:"<name>"`
 }
 
+type CronJobConfig struct {
+	EnableCronJobs string `envconfig:"ENABLE_CRON_JOBS" default:""`
+}
+
 type Config struct {
 	APIConfig
 	OSSControlPlaneConfig
@@ -183,6 +187,7 @@ type Config struct {
 	RunnerConfig
 	ImageInspectorConfig
 	GitOpsSyncConfig
+	CronJobConfig
 	DisableDefaultAgent             bool   `envconfig:"DISABLE_DEFAULT_AGENT" default:"false"`
 	TestkubeConfigDir               string `envconfig:"TESTKUBE_CONFIG_DIR" default:"config"`
 	TestkubeAnalyticsEnabled        bool   `envconfig:"TESTKUBE_ANALYTICS_ENABLED" default:"false"`
@@ -238,6 +243,7 @@ func Get() (*Config, error) {
 		c.DisableReconciler = true
 		c.DisableDefaultAgent = true
 		c.NatsEmbedded = true // we don't use it there
+		c.EnableCronJobs = ""
 	} else if strings.HasPrefix(c.TestkubeProAgentID, "tkcsync_") {
 		c.DisableTestTriggers = true
 		c.DisableWebhooks = true
@@ -245,6 +251,7 @@ func Get() (*Config, error) {
 		c.DisableReconciler = true
 		c.DisableDefaultAgent = true
 		c.NatsEmbedded = true // we don't use it there
+		c.EnableCronJobs = ""
 	}
 
 	if c.TestkubeProAPIKey == "" && deprecated.TestkubeCloudAPIKey != "" {
