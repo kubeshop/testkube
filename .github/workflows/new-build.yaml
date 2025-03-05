@@ -84,19 +84,19 @@ jobs:
           SEGMENTIO_KEY: ${{secrets.TESTKUBE_API_SEGMENTIO_KEY}}
           CLOUD_SEGMENTIO_KEY: ${{secrets.TESTKUBE_API_CLOUD_SEGMENTIO_KEY}}
 
-    - name: Check if it is a release
-      id: check-tag
-      run: |
-        if [[ ${{ github.event.ref }} =~ ^refs/tags/[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "match=true" >> $GITHUB_OUTPUT
-        fi
+      - name: Check if it is a release
+        id: check-tag
+        run: |
+          if [[ ${{ github.event.ref }} =~ ^refs/tags/[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "match=true" >> $GITHUB_OUTPUT
+          fi
 
-    - name: Repository Dispatch
-      if: steps.check-tag.outputs.match == 'true'
-      uses: peter-evans/repository-dispatch@v3
-      with:
-        token: ${{ secrets.CI_BOT_TOKEN }}
-        repository: kubeshop/helm-charts
-        event-type: release-testkube-api-charts
-        client-payload: '{"RELEASE_VERSION": "${{ env.DOCKER_METADATA_OUTPUT_VERSION }}", "SERVICE": "api"}'
+      - name: Repository Dispatch
+        if: steps.check-tag.outputs.match == 'true'
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.CI_BOT_TOKEN }}
+          repository: kubeshop/helm-charts
+          event-type: release-testkube-api-charts
+          client-payload: '{"RELEASE_VERSION": "${{ env.DOCKER_METADATA_OUTPUT_VERSION }}", "SERVICE": "api"}'
 
