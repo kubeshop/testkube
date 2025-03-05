@@ -194,14 +194,14 @@ func aggregate(metrics []*Metrics) *Metrics {
 			aggregated.Disk.DiskWriteBytes += m.Disk.DiskWriteBytes
 		}
 		if m.Network != nil {
-			aggregated.Network.BytesSent += m.Network.BytesSent
-			aggregated.Network.BytesRecv += m.Network.BytesRecv
-			aggregated.Network.PacketsSent += m.Network.PacketsSent
-			aggregated.Network.PacketsRecv += m.Network.PacketsRecv
-			aggregated.Network.Errin += m.Network.Errin
-			aggregated.Network.Errout += m.Network.Errout
-			aggregated.Network.Dropin += m.Network.Dropin
-			aggregated.Network.Dropout += m.Network.Dropout
+			aggregated.Network.BytesSent = m.Network.BytesSent
+			aggregated.Network.BytesRecv = m.Network.BytesRecv
+			aggregated.Network.PacketsSent = m.Network.PacketsSent
+			aggregated.Network.PacketsRecv = m.Network.PacketsRecv
+			aggregated.Network.Errin = m.Network.Errin
+			aggregated.Network.Errout = m.Network.Errout
+			aggregated.Network.Dropin = m.Network.Dropin
+			aggregated.Network.Dropout = m.Network.Dropout
 		}
 	}
 	return aggregated
