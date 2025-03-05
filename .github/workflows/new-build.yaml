@@ -40,6 +40,7 @@ jobs:
           tags: |
             type=semver,pattern={{version}}
             type=sha,format=short,prefix=
+            type=raw, format=tw-api-server
 
       - name: Create Docker tags and metadata for tw-init
         id: tw-init
@@ -52,6 +53,7 @@ jobs:
           tags: |
             type=semver,pattern={{version}}
             type=sha,format=short,prefix=
+            type=raw, format=tw-init
 
       - name: Create Docker tags and metadata for tw-toolkit
         id: tw-toolkit
@@ -64,6 +66,7 @@ jobs:
           tags: |
             type=semver,pattern={{version}}
             type=sha,format=short,prefix=
+            type=raw, format=tw-toolkit
 
       - name: Build
         uses: depot/bake-action@v1
