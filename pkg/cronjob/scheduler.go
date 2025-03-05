@@ -87,13 +87,13 @@ func WithTestSuiteClient(testSuiteClient testsuitesclientv3.Interface) Option {
 
 func WithExecuteTestFn(executeTestFn workerpool.ExecuteFn[testkube.Test, testkube.ExecutionRequest, testkube.Execution]) Option {
 	return func(s *Scheduler) {
-		s.executeTestFn = s.executeTestFn
+		s.executeTestFn = executeTestFn
 	}
 }
 
 func WithExecuteTestSuiteFn(executeTestSuiteFn workerpool.ExecuteFn[testkube.TestSuite, testkube.TestSuiteExecutionRequest, testkube.TestSuiteExecution]) Option {
 	return func(s *Scheduler) {
-		s.executeTestSuiteFn = s.executeTestSuiteFn
+		s.executeTestSuiteFn = executeTestSuiteFn
 	}
 }
 
@@ -127,10 +127,34 @@ func (s *Scheduler) Reconcile(ctx context.Context) {
 		}
 	}()
 
+	if s.testClient != nil && s.executeTestFn != nil {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			if err := s.ReconcileTests(ctx); err != nil {
+				s.logger.Errorw("cron job scheduler: reconciler component: failed to reconcile Tests", "error", err)
+			}
+		}()
+
+	}
+
+	if s.testSuiteClient != nil && s.executeTestSuiteFn != nil {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			if err := s.ReconcileTestSuites(ctx); err != nil {
+				s.logger.Errorw("cron job scheduler: reconciler component: failed to reconcile TestSuites", "error", err)
+			}
+		}()
+
+	}
+
 	wg.Wait()
 }
 
-// ReconcileTestWorklows is watching for test workflow and test worklow template change and schedule test workflow cron jobs
+// ReconcileTestWorklows is watching for test workflow change and schedule test workflow cron jobs
 func (s *Scheduler) ReconcileTestWorkflows(ctx context.Context) error {
 	includeInitialData := true
 	for {
@@ -260,6 +284,76 @@ func (s *Scheduler) ReconcileTestWorkflowTemplates(ctx context.Context) error {
 		}
 	}
 
+}
+
+// ReconcileTests is watching for test change and schedule test cron jobs
+func (s *Scheduler) ReconcileTests(ctx context.Context) error {
+	//	includeInitialData := true
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			/*			watcher := s.testClient.WatchUpdates(ctx, s.getEnvironmentId(), includeInitialData)
+						for obj := range watcher.Channel() {
+							if obj.Resource == nil || obj.Resource.Spec == nil {
+								continue
+							}
+
+							events := obj.Resource.Spec.Events
+							for _, template := range obj.Resource.Spec.Use {
+								testWorkflowTemplate, err := s.testWorkflowTemplateClient.Get(ctx, s.getEnvironmentId(), template.Name)
+								if err != nil {
+									s.logger.Errorw("cron job scheduler: reconciler component: failed to get TestWorkflowTemplate", "namr", template.Name, "error", err)
+									continue
+								}
+
+								if testWorkflowTemplate.Spec == nil {
+									continue
+								}
+
+								events = append(events, testWorkflowTemplate.Spec.Events...)
+							}
+
+							var err error
+							switch obj.Type {
+							case testworkflowclient.EventTypeCreate:
+								err = s.addTestWorkflowCronJobs(ctx, obj.Resource.Name, events)
+							case testworkflowclient.EventTypeUpdate:
+								err = s.changeTestWorkflowCronJobs(ctx, obj.Resource.Name, events)
+							case testworkflowclient.EventTypeDelete:
+								s.removeTestWorkflowCronJobs(obj.Resource.Name)
+							}
+
+							if err == nil {
+								s.logger.Infow("cron job scheduler: reconciler component: scheduled TestWorkflow to cron jobs", "name", obj.Resource.Name, "error", err)
+							} else {
+								s.logger.Errorw("cron job scheduler: reconciler component: failed to watch TestWorkflows", "error", err)
+							}
+						}
+
+						if watcher.Err() != nil {
+							s.logger.Errorw("cron job scheduler: reconciler component: failed to watch TestWorkflows", "error", watcher.Err())
+						} else {
+							includeInitialData = false
+						}
+			*/
+			time.Sleep(watcherDelay)
+		}
+	}
+}
+
+// ReconcileTestSuites is watching for test suite change and schedule test suite cron jobs
+func (s *Scheduler) ReconcileTestSuites(ctx context.Context) error {
+	//	includeInitialData := true
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			time.Sleep(watcherDelay)
+		}
+	}
 }
 
 func (s *Scheduler) addTestWorkflowCronJobs(ctx context.Context, testWorkflowName string, events []testkube.TestWorkflowEvent) error {
