@@ -490,7 +490,7 @@ func CreateCronJobScheduler(cfg *config.Config,
 			"enable-cron-jobs",
 			"enable cron jobs",
 		)
-		ExitOnError("Creating cron job scheduler", err)
+		ExitOnError("Creting cron job scheduler config loading", err)
 	}
 
 	if enableCronJobs == "" {
@@ -498,7 +498,7 @@ func CreateCronJobScheduler(cfg *config.Config,
 	}
 
 	result, err := strconv.ParseBool(enableCronJobs)
-	ExitOnError("Creating cron job scheduler", err)
+	ExitOnError("Creating cron job scheduler config parsing", err)
 
 	if !result {
 		return nil
@@ -512,9 +512,9 @@ func CreateCronJobScheduler(cfg *config.Config,
 		testClient = deprecatedClients.Tests()
 		testSuiteClient = deprecatedClients.TestSuites()
 		testRESTClient, err = testsclientv3.NewRESTClient(kubeClient, kubeConfig, cfg.TestkubeNamespace)
-		ExitOnError("Creating cron job scheduler", err)
+		ExitOnError("Creating cron job scheduler test rest client", err)
 		testSuiteRESTClient, err = testsuitesclientv3.NewRESTClient(kubeClient, kubeConfig, cfg.TestkubeNamespace)
-		ExitOnError("Creating cron job scheduler", err)
+		ExitOnError("Creating cron job scheduler test suite rest client", err)
 	}
 
 	scheduler := cronjob.New(testWorkflowClient,
