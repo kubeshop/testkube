@@ -87,7 +87,6 @@ func (s *Scheduler) changeTestCronJob(ctx context.Context, testName, schedule st
 		}
 	} else {
 		s.removeTestCronJob(testName)
-		return nil
 	}
 
 	return nil
