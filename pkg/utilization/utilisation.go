@@ -3,10 +3,9 @@ package utilization
 import (
 	"context"
 	"fmt"
-	"sync"
 	"time"
 
-	gopsutil "github.com/shirou/gopsutil/v4/process"
+	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/pkg/utilization/core"
 
@@ -88,30 +87,28 @@ func (r *MetricRecorder) Start(ctx context.Context) {
 			}
 			return
 		case <-t.C:
-			processes, err := gopsutil.Processes()
-			if err != nil {
-				continue
-			}
-
-			metrics := make([]*Metrics, len(processes))
-			wg := sync.WaitGroup{}
-			wg.Add(len(processes))
-			for i := range processes {
-				go func(i int) {
-					defer wg.Done()
-					m, err := r.record(processes[i])
-					if err != nil {
-						return
-					}
-					metrics[i] = m
-				}(i)
-			}
-			wg.Wait()
-			aggregated := aggregate(metrics)
-			_ = r.write(ctx, aggregated, previous)
-			previous = aggregated
+			metrics, _ := r.record()
+			// write the aggregated metrics
+			_ = r.write(ctx, metrics, previous)
+			previous = metrics
 		}
 	}
+}
+
+func (r *MetricRecorder) write(ctx context.Context, metrics, previous *Metrics) error {
+	// Build each set of metrics
+	memoryMetrics := r.format.Format("memory", r.tags, r.buildMemoryFields(metrics))
+	cpuMetrics := r.format.Format("cpu", r.tags, r.buildCPUFields(metrics))
+	networkMetrics := r.format.Format("network", r.tags, r.buildNetworkFields(metrics, previous))
+	diskMetrics := r.format.Format("disk", r.tags, r.buildDiskFields(metrics, previous))
+
+	// Combine all metrics so we can write them all at once
+	data := fmt.Sprintf("%s\n%s\n%s\n%s", memoryMetrics, cpuMetrics, networkMetrics, diskMetrics)
+	if err := r.writer.Write(ctx, data); err != nil {
+		return errors.Wrap(err, "failed to write combined metrics")
+	}
+
+	return nil
 }
 
 type Config struct {
