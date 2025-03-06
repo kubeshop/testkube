@@ -2,6 +2,7 @@ package utilization
 
 import (
 	errors2 "errors"
+	"regexp"
 	"sync"
 
 	"github.com/shirou/gopsutil/v4/disk"
@@ -10,6 +11,12 @@ import (
 	"github.com/shirou/gopsutil/v4/net"
 	"github.com/shirou/gopsutil/v4/process"
 )
+
+// This regex matches:
+//   - sd + exactly one letter (e.g. sda, sdb)
+//   - vd + exactly one letter (e.g. vda, vdb)
+//   - nvme + digits + n + digits (e.g. nvme0n1, nvme1n1, not partitions)
+var reBaseDevice = regexp.MustCompile(`^(sd[a-z]|vd[a-z]|xvd[a-z]|nvme\d+n\d+)$`)
 
 type Metrics struct {
 	Memory  *process.MemoryInfoStat
@@ -93,15 +100,47 @@ func aggregate(metrics []*Metrics) *Metrics {
 
 // recordSystemWideMetrics captures the network and disk system-wide metrics by using the global gopsutil packages instead of the process one.
 func (r *MetricRecorder) recordSystemWideMetrics(aggregated *Metrics) {
-	diskName := "vda"
-	io, _ := disk.IOCounters(diskName)
+	io, _ := disk.IOCounters()
 	if len(io) > 0 {
-		d := io[diskName]
-		aggregated.Disk = &d
+		aggregated.Disk = filterAndAggregateDiskStats(io)
 	}
 	n, _ := net.IOCounters(false)
 	if len(n) > 0 {
 		n := n[0]
 		aggregated.Network = &n
 	}
+}
+
+// filterAndAggregateDiskStats filters stats for disk devices (but not partitions).
+// It matches:
+//   - sda, sdb, sdc, etc. (SCSI/SATA/SAS)
+//   - vda, vdb, etc. (VirtIO)
+//   - xvda, xvdb, etc. (AWS Xen)
+//   - nvme0n1, nvme1n1, etc. (NVMe)
+//
+// It does NOT match sda1, sdb2, nvme0n1p1, etc.
+func filterAndAggregateDiskStats(stats map[string]disk.IOCountersStat) *disk.IOCountersStat {
+	aggregated := &disk.IOCountersStat{}
+
+	for diskName, stat := range stats {
+		if reBaseDevice.MatchString(diskName) {
+			aggregateDiskStats(aggregated, &stat)
+		}
+	}
+
+	return aggregated
+}
+
+func aggregateDiskStats(aggregate, stats *disk.IOCountersStat) {
+	aggregate.ReadCount += stats.ReadCount
+	aggregate.WriteCount += stats.WriteCount
+	aggregate.ReadBytes += stats.ReadBytes
+	aggregate.WriteBytes += stats.WriteBytes
+	aggregate.ReadTime += stats.ReadTime
+	aggregate.WriteTime += stats.WriteTime
+	aggregate.IopsInProgress += stats.IopsInProgress
+	aggregate.IoTime += stats.IoTime
+	aggregate.WeightedIO += stats.WeightedIO
+	aggregate.MergedReadCount += stats.MergedReadCount
+	aggregate.MergedWriteCount += stats.MergedWriteCount
 }
