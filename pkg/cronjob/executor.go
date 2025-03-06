@@ -94,7 +94,7 @@ func (s *Scheduler) executeTest(ctx context.Context, testName string, schedule s
 		return nil
 	}
 
-	s.logger.Debugf("cron job scheduler: executor component: started test execution for schdule %s/%s/%s", testName, schedule, executionID)
+	s.logger.Debugf("cron job scheduler: executor component: started test execution for schedule %s/%s/%s", testName, schedule, executionID)
 	return nil
 }
 
@@ -135,7 +135,7 @@ func (s *Scheduler) executeTestSuite(ctx context.Context, testSuiteName string, 
 		return nil
 	}
 
-	s.logger.Debugf("cron job scheduler: executor component: started test suite execution for schdule %s/%s/%s", testSuiteName, schedule, executionID)
+	s.logger.Debugf("cron job scheduler: executor component: started test suite execution for schedule %s/%s/%s", testSuiteName, schedule, executionID)
 	return nil
 }
 
