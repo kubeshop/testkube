@@ -38,6 +38,7 @@ func Test_execuuteTestWorkflow(t *testing.T) {
 			{Selector: &cloud.ScheduleResourceSelector{Name: mockTestWorkflow.Name}},
 		},
 	}
+
 	executionsCh := make(chan *testkube.TestWorkflowExecution, 1)
 	executionsCh <- &testkube.TestWorkflowExecution{}
 	close(executionsCh)
