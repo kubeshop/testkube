@@ -108,7 +108,7 @@ func NewInitCmd() *cobra.Command {
 				ui.NL()
 				ui.H2("Launching web browser...")
 				ui.NL()
-				token, refreshToken, err = common.LoginUser(options.Master.URIs.Auth, options.Master.CustomAuth)
+				token, refreshToken, err = common.LoginUser(options.Master.URIs.Auth, options.Master.CustomAuth, options.Master.CallbackPort)
 				sendErrTelemetry(cmd, cfg, "login", err)
 				ui.ExitOnError("user login", err)
 			}
