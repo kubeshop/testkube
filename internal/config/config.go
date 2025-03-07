@@ -243,7 +243,7 @@ func Get() (*Config, error) {
 		c.DisableReconciler = true
 		c.DisableDefaultAgent = true
 		c.NatsEmbedded = true // we don't use it there
-		c.EnableCronJobs = ""
+		c.EnableCronJobs = "false"
 	} else if strings.HasPrefix(c.TestkubeProAgentID, "tkcsync_") {
 		c.DisableTestTriggers = true
 		c.DisableWebhooks = true
@@ -251,7 +251,7 @@ func Get() (*Config, error) {
 		c.DisableReconciler = true
 		c.DisableDefaultAgent = true
 		c.NatsEmbedded = true // we don't use it there
-		c.EnableCronJobs = ""
+		c.EnableCronJobs = "false"
 	}
 
 	if c.TestkubeProAPIKey == "" && deprecated.TestkubeCloudAPIKey != "" {
