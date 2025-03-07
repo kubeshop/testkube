@@ -11,8 +11,6 @@ spec:
   steps:
   - name: Run test
     shell: |
-      df -Th
-      sleep 2
       apk add pv
       echo "creating /data/random.txt"
       dd if=/dev/zero bs=1M count=100 | tr '\0' 'A' | pv -L 10M > /data/random.txt
