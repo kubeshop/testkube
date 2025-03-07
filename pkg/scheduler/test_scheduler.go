@@ -35,14 +35,14 @@ func (s *Scheduler) PrepareTestRequests(work []testsv3.Test, request testkube.Ex
 		requests[i] = workerpool.Request[testkube.Test, testkube.ExecutionRequest, testkube.Execution]{
 			Object:  testsmapper.MapTestCRToAPI(work[i]),
 			Options: request,
-			ExecFn:  s.executeTest,
+			ExecFn:  s.ExecuteTest,
 		}
 	}
 
 	return requests
 }
 
-func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request testkube.ExecutionRequest) (
+func (s *Scheduler) ExecuteTest(ctx context.Context, test testkube.Test, request testkube.ExecutionRequest) (
 	execution testkube.Execution, err error) {
 	// generate random execution name in case there is no one set
 	// like for docker images
