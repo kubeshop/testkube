@@ -10,4 +10,18 @@ spec:
     image: alpine:latest
   steps:
   - name: Run test
-    shell: df -Th && sleep 2 && apk add pv && echo "creating /data/random.txt" && dd if=/dev/zero bs=1M count=100 | tr '\0' 'A' | pv -L 10M > /data/random.txt && echo "finished creating file" && ls -lh /data/random.txt && echo "reading file"  && pv -L 10M /data/random.txt > /dev/null && echo "finished reading file" && sleep 2 && echo "reading file with DD"  && dd if=/data/random.txt of=/dev/null bs=1M iflag=direct && echo "finished reading file" && sleep 2 && cat /etc/fstab && mount | grep ext4
+    shell: |
+      df -Th
+      sleep 2
+      apk add pv
+      echo "creating /data/random.txt"
+      dd if=/dev/zero bs=1M count=100 | tr '\0' 'A' | pv -L 10M > /data/random.txt
+      echo "finished creating file"
+      ls -lh /data/random.txt
+      echo "reading file"
+      pv -L 10M /data/random.txt > /dev/null
+      echo "finished reading file"
+      sleep 2
+      echo "reading file with DD"
+      dd if=/data/random.txt of=/dev/null bs=1M iflag=direct
+      echo "finished reading file"
