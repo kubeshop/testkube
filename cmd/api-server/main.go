@@ -233,6 +233,18 @@ func main() {
 		testworkflowconfig.FeatureFlagCloudStorage:    fmt.Sprintf("%v", cfg.FeatureCloudStorage),
 	})
 
+	runnerOpts := runner2.Options{
+		ClusterID:           clusterId,
+		DashboardURI:        cfg.TestkubeDashboardURI,
+		DefaultNamespace:    cfg.TestkubeNamespace,
+		ServiceAccountNames: serviceAccountNames,
+		StorageSkipVerify:   cfg.StorageSkipVerify,
+	}
+	if cfg.GlobalWorkflowTemplateInline != "" {
+		runnerOpts.GlobalTemplate = runner2.GlobalTemplateInline(cfg.GlobalWorkflowTemplateInline)
+	} else if cfg.GlobalWorkflowTemplateName != "" && cfg.FeatureNewArchitecture && proContext.NewArchitecture {
+		runnerOpts.GlobalTemplate = runner2.GlobalTemplateSourced(testWorkflowTemplatesClient, cfg.GlobalWorkflowTemplateName)
+	}
 	runnerService := runner2.NewService(
 		log.DefaultLogger,
 		eventsEmitter,
@@ -245,14 +257,7 @@ func main() {
 		},
 		proContext,
 		executionWorker,
-		runner2.Options{
-			ClusterID:            clusterId,
-			DashboardURI:         cfg.TestkubeDashboardURI,
-			DefaultNamespace:     cfg.TestkubeNamespace,
-			ServiceAccountNames:  serviceAccountNames,
-			StorageSkipVerify:    cfg.StorageSkipVerify,
-			GlobalTemplateInline: cfg.GlobalWorkflowTemplateInline,
-		},
+		runnerOpts,
 	)
 	if !cfg.DisableRunner {
 		g.Go(func() error {
