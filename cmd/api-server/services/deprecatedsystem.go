@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/nats-io/nats.go"
@@ -34,7 +35,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/storage"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
-	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
 	"github.com/kubeshop/testkube/pkg/tcl/schedulertcl"
 )
 
@@ -61,7 +61,6 @@ func CreateDeprecatedSystem(
 	eventsEmitter *event.Emitter,
 	eventBus *bus.NATSBus,
 	inspector imageinspector.Inspector,
-	subscriptionChecker checktcl.SubscriptionChecker,
 	proContext *config.ProContext,
 ) *DeprecatedSystem {
 	kubeClient, err := kubeclient.GetClient()
@@ -91,8 +90,10 @@ func CreateDeprecatedSystem(
 	}
 	// Pro edition only (tcl protected code)
 	if cfg.TestkubeExecutionNamespaces != "" {
-		err = subscriptionChecker.IsActiveOrgPlanEnterpriseForFeature("execution namespace")
-		commons.ExitOnError("Subscription checking", err)
+		if mode != common.ModeAgent {
+			commons.ExitOnError("Mode checking", errors.New("Execution namespaces are not supported for Standalone Agent"))
+		}
+
 		serviceAccountNames = schedulertcl.GetServiceAccountNamesFromConfig(serviceAccountNames, cfg.TestkubeExecutionNamespaces)
 	}
 
@@ -173,7 +174,7 @@ func CreateDeprecatedSystem(
 		cfg.TestkubeNamespace,
 		cfg.TestkubeProTLSSecret,
 		cfg.TestkubeProRunnerCustomCASecret,
-		subscriptionChecker,
+		mode,
 	)
 
 	storageParams := deprecatedapiv1.StorageParams{

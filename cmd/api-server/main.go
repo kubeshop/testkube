@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"time"
@@ -35,7 +36,6 @@ import (
 	runner2 "github.com/kubeshop/testkube/pkg/runner"
 	"github.com/kubeshop/testkube/pkg/secretmanager"
 	"github.com/kubeshop/testkube/pkg/server"
-	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
 	"github.com/kubeshop/testkube/pkg/tcl/schedulertcl"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/presets"
@@ -169,10 +169,7 @@ func main() {
 	}
 	eventsEmitter = event.NewEmitter(eventBus, cfg.TestkubeClusterName)
 
-	// Check Pro/Enterprise subscription
 	proContext := commons.ReadProContext(ctx, cfg, grpcClient)
-	subscriptionChecker, err := checktcl.NewSubscriptionChecker(ctx, proContext, grpcClient)
-	commons.ExitOnError("Failed creating subscription checker", err)
 
 	// Build new client
 	client := controlplaneclient.New(grpcClient, proContext, controlplaneclient.ClientOptions{
@@ -197,8 +194,10 @@ func main() {
 	}
 	// Pro edition only (tcl protected code)
 	if cfg.TestkubeExecutionNamespaces != "" {
-		err = subscriptionChecker.IsActiveOrgPlanEnterpriseForFeature("execution namespace")
-		commons.ExitOnError("Subscription checking", err)
+		if mode != common.ModeAgent {
+			commons.ExitOnError("Mode checking", errors.New("Execution namespaces are not supported for Standalone Agent"))
+		}
+
 		serviceAccountNames = schedulertcl.GetServiceAccountNamesFromConfig(serviceAccountNames, cfg.TestkubeExecutionNamespaces)
 	}
 
@@ -217,7 +216,6 @@ func main() {
 			eventsEmitter,
 			eventBus,
 			inspector,
-			subscriptionChecker,
 			&proContext,
 		)
 	}
