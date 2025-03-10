@@ -26,8 +26,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/cache"
 	"github.com/kubeshop/testkube/pkg/capabilities"
 	"github.com/kubeshop/testkube/pkg/cloud"
-	cloudconfig "github.com/kubeshop/testkube/pkg/cloud/data/config"
-	"github.com/kubeshop/testkube/pkg/cloud/data/executor"
 	"github.com/kubeshop/testkube/pkg/configmap"
 	"github.com/kubeshop/testkube/pkg/dbmigrator"
 	"github.com/kubeshop/testkube/pkg/event"
@@ -42,7 +40,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/secret"
 	domainstorage "github.com/kubeshop/testkube/pkg/storage"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
-	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
 )
 
 func ExitOnError(title string, err error) {
@@ -376,26 +373,6 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 		if cfg.FeatureCloudStorage {
 			proContext.CloudStorage = true
 		}
-	}
-
-	if string(foundProContext.Mode) != "" {
-		proContext.IsTrial = foundProContext.Trial
-		proContext.Mode = config.ProContextMode(foundProContext.Mode.String())
-		proContext.Status = config.ProContextStatus(foundProContext.Status.String())
-	} else {
-		req := checktcl.GetOrganizationPlanRequest{}
-		response, err := executor.NewCloudGRPCExecutor(grpcClient, proContext.APIKey).
-			Execute(ctx, cloudconfig.CmdConfigGetOrganizationPlan, req)
-		if err != nil {
-			return proContext
-		}
-		var commandResponse checktcl.GetOrganizationPlanResponse
-		if err := json.Unmarshal(response, &commandResponse); err != nil {
-			return proContext
-		}
-		proContext.IsTrial = commandResponse.IsTrial
-		proContext.Mode = config.ProContextMode(commandResponse.TestkubeMode)
-		proContext.Status = config.ProContextStatus(commandResponse.PlanStatus)
 	}
 
 	return proContext

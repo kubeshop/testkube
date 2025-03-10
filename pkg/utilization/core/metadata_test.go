@@ -93,6 +93,18 @@ func TestParseMetadataFromFilename(t *testing.T) {
 			errMessage: "",
 		},
 		{
+			name:     "valid INFLUX file with resource",
+			filename: "myWorkflow_step2_0002.influx",
+			wantMeta: &Metadata{
+				Workflow:  "myWorkflow",
+				Step:      Step{Ref: "step2"},
+				Execution: "0002",
+				Format:    FormatInflux,
+			},
+			wantErr:    false,
+			errMessage: "",
+		},
+		{
 			name:       "invalid extension",
 			filename:   "someWorkflow_someStep_someExecution.txt",
 			wantMeta:   nil,
@@ -108,7 +120,7 @@ func TestParseMetadataFromFilename(t *testing.T) {
 		},
 		{
 			name:       "invalid format - more underscore segments",
-			filename:   "workflow_step_execution_extra.json",
+			filename:   "workflow_step_execution_as.json",
 			wantMeta:   nil,
 			wantErr:    true,
 			errMessage: "invalid filename format: expected <workflow>_<step>_<execution>.<format>",

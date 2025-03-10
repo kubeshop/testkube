@@ -38,7 +38,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/scheduler"
 	"github.com/kubeshop/testkube/pkg/secret"
-	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 )
@@ -159,7 +158,7 @@ func TestService_Run(t *testing.T) {
 		"",
 		"",
 		"",
-		checktcl.SubscriptionChecker{},
+		"",
 	)
 
 	mockLeaseBackend := NewMockLeaseBackend(mockCtrl)

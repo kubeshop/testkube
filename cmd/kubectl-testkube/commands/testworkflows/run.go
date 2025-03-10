@@ -430,7 +430,8 @@ func watchTestWorkflowLogs(id string, signature []testkube.TestWorkflowSignature
 
 			// Check if result stream is closed and if execution is finished
 			result = printTestWorkflowLogs(signature, notifications)
-			if result != nil && result.Status != nil && *result.Status != testkube.RUNNING_TestWorkflowStatus {
+			if result != nil && result.Status != nil &&
+				(*result.Status == testkube.QUEUED_TestWorkflowStatus || *result.Status == testkube.RUNNING_TestWorkflowStatus) {
 				return fmt.Errorf("test workflow execution is not finished but channel is closed")
 			}
 

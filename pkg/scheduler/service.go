@@ -14,7 +14,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/featureflags"
 	logsclient "github.com/kubeshop/testkube/pkg/logs/client"
 	"github.com/kubeshop/testkube/pkg/secret"
-	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
 )
 
 type Scheduler struct {
@@ -32,10 +31,10 @@ type Scheduler struct {
 	dashboardURI           string
 	featureFlags           featureflags.FeatureFlags
 	logsStream             logsclient.Stream
-	subscriptionChecker    checktcl.SubscriptionChecker
 	namespace              string
 	agentAPITLSSecret      string
 	runnerCustomCASecret   string
+	mode                   string
 }
 
 func NewScheduler(
@@ -56,7 +55,7 @@ func NewScheduler(
 	namespace string,
 	agentAPITLSSecret string,
 	runnerCustomCASecret string,
-	subscriptionChecker checktcl.SubscriptionChecker,
+	mode string,
 ) *Scheduler {
 	return &Scheduler{
 		metrics:                metrics,
@@ -76,6 +75,6 @@ func NewScheduler(
 		namespace:              namespace,
 		agentAPITLSSecret:      agentAPITLSSecret,
 		runnerCustomCASecret:   runnerCustomCASecret,
-		subscriptionChecker:    subscriptionChecker,
+		mode:                   mode,
 	}
 }

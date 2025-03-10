@@ -24,7 +24,7 @@ type Options struct {
 
 	StorageSkipVerify bool
 
-	GlobalTemplateInline string
+	GlobalTemplate GlobalTemplateFactory
 }
 
 type service struct {
@@ -71,7 +71,7 @@ func NewService(
 			proContext,
 			opts.DashboardURI,
 			opts.StorageSkipVerify,
-			opts.GlobalTemplateInline,
+			opts.GlobalTemplate,
 		),
 	}
 }

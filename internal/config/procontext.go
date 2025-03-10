@@ -46,9 +46,6 @@ type ProContext struct {
 	NewArchitecture                     bool
 	CloudStorage                        bool
 	CloudStorageSupportedInControlPlane bool
-	IsTrial                             bool
-	Mode                                ProContextMode
-	Status                              ProContextStatus
 	Agent                               ProContextAgent
 }
 
