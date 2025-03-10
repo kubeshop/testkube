@@ -319,7 +319,7 @@ func newExecutionFromExecutionOptions(mode string, options client.ExecuteOptions
 	// Pro edition only (tcl protected code)
 	if schedulertcl.HasExecutionNamespace(&options.Request) {
 		if mode != common.ModeAgent {
-			return execution, errors.New("Execution namespaces are not supported for Standalone Agent")
+			return execution, common.ErrNotSupported
 		}
 
 		execution = schedulertcl.NewExecutionFromExecutionOptions(options.Request, execution)
@@ -461,7 +461,7 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 		// Pro edition only (tcl protected code)
 		if schedulertcl.HasExecutionNamespace(test.ExecutionRequest) {
 			if s.mode != common.ModeAgent {
-				return options, errors.New("Execution namespaces are not supported for Standalone Agent")
+				return options, common.ErrNotSupported
 			}
 
 			request = schedulertcl.GetExecuteOptions(test.ExecutionRequest, request)

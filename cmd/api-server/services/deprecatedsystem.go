@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/nats-io/nats.go"
@@ -91,7 +90,7 @@ func CreateDeprecatedSystem(
 	// Pro edition only (tcl protected code)
 	if cfg.TestkubeExecutionNamespaces != "" {
 		if mode != common.ModeAgent {
-			commons.ExitOnError("Mode checking", errors.New("Execution namespaces are not supported for Standalone Agent"))
+			commons.ExitOnError("Execution namespaces", common.ErrNotSupported)
 		}
 
 		serviceAccountNames = schedulertcl.GetServiceAccountNamesFromConfig(serviceAccountNames, cfg.TestkubeExecutionNamespaces)
