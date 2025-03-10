@@ -6,7 +6,7 @@ spec:
   types:
     - container-executor-1gb-artifact/test
   executor_type: container
-  image: alpine:3.17.2
+  image: alpine:3.21.3
   command:
     - /bin/sh
     - -c
@@ -22,7 +22,7 @@ spec:
   types:
     - container-executor-1mb-artifact/test
   executor_type: container
-  image: alpine:3.17.2
+  image: alpine:3.21.3
   command:
     - /bin/sh
     - -c
@@ -38,7 +38,7 @@ spec:
   types:
     - container-executor-1gb-urandom-artifact/test
   executor_type: container
-  image: alpine:3.17.2
+  image: alpine:3.21.3
   command:
     - /bin/sh
     - -c
@@ -54,7 +54,7 @@ spec:
   types:
     - container-executor-1mb-urandom-artifact/test
   executor_type: container
-  image: alpine:3.17.2
+  image: alpine:3.21.3
   command:
     - /bin/sh
     - -c

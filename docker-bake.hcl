@@ -5,10 +5,10 @@ variable "GOMODCACHE" {
   default = "/root/.cache/go-build"
 }
 variable "BUSYBOX_IMAGE" {
-  default = "busybox:1.36.1-musl"
+  default = "busybox:1.37.0-musl"
 }
 variable "ALPINE_IMAGE" {
-  default = "alpine:3.20.3"
+  default = "alpine:3.21.3"
 }
 
 group "default" {
