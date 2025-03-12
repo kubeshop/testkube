@@ -10,6 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testsuitesv3 "github.com/kubeshop/testkube-operator/api/testsuite/v3"
+	"github.com/kubeshop/testkube-operator/pkg/client/common"
 	testsuitesclientv3 "github.com/kubeshop/testkube-operator/pkg/client/testsuites/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/log"
@@ -39,23 +40,23 @@ func Test_ReconcileTestSuites(t *testing.T) {
 
 	mockTestSuiteClient.EXPECT().Get(mockTestSuite.Name).Return(mockTestSuite, nil).AnyTimes()
 
-	result := testsuitesclientv3.NewWatcher[testsuitesclientv3.Update]()
+	result := common.NewWatcher[testsuitesclientv3.Update]()
 	mockTestSuiteRESTClient.EXPECT().WatchUpdates(ctx, "", gomock.Any()).Return(result).AnyTimes()
 	go func() {
 		result.Send(testsuitesclientv3.Update{
-			Type:      testsuitesclientv3.EventTypeCreate,
+			Type:      common.EventTypeCreate,
 			Timestamp: time.Now(),
 			Resource:  mockTestSuite,
 		})
 
 		result.Send(testsuitesclientv3.Update{
-			Type:      testsuitesclientv3.EventTypeUpdate,
+			Type:      common.EventTypeUpdate,
 			Timestamp: time.Now(),
 			Resource:  mockTestSuite,
 		})
 
 		result.Send(testsuitesclientv3.Update{
-			Type:      testsuitesclientv3.EventTypeDelete,
+			Type:      common.EventTypeDelete,
 			Timestamp: time.Now(),
 			Resource:  mockTestSuite,
 		})

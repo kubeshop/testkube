@@ -6,7 +6,7 @@ import (
 
 	"github.com/robfig/cron/v3"
 
-	testsuitesclientv3 "github.com/kubeshop/testkube-operator/pkg/client/testsuites/v3"
+	"github.com/kubeshop/testkube-operator/pkg/client/common"
 )
 
 // ReconcileTestSuites is watching for testsuite change and schedule testsuite cron jobs
@@ -25,11 +25,11 @@ func (s *Scheduler) ReconcileTestSuites(ctx context.Context) error {
 
 				var err error
 				switch obj.Type {
-				case testsuitesclientv3.EventTypeCreate:
+				case common.EventTypeCreate:
 					err = s.addTestSuiteCronJob(ctx, obj.Resource.Name, obj.Resource.Spec.Schedule)
-				case testsuitesclientv3.EventTypeUpdate:
+				case common.EventTypeUpdate:
 					err = s.changeTestSuiteCronJob(ctx, obj.Resource.Name, obj.Resource.Spec.Schedule)
-				case testsuitesclientv3.EventTypeDelete:
+				case common.EventTypeDelete:
 					s.removeTestSuiteCronJob(obj.Resource.Name)
 				}
 

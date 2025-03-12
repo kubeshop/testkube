@@ -6,7 +6,7 @@ import (
 
 	"github.com/robfig/cron/v3"
 
-	testsclientv3 "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
+	"github.com/kubeshop/testkube-operator/pkg/client/common"
 )
 
 // ReconcileTests is watching for test change and schedule test cron jobs
@@ -25,11 +25,11 @@ func (s *Scheduler) ReconcileTests(ctx context.Context) error {
 
 				var err error
 				switch obj.Type {
-				case testsclientv3.EventTypeCreate:
+				case common.EventTypeCreate:
 					err = s.addTestCronJob(ctx, obj.Resource.Name, obj.Resource.Spec.Schedule)
-				case testsclientv3.EventTypeUpdate:
+				case common.EventTypeUpdate:
 					err = s.changeTestCronJob(ctx, obj.Resource.Name, obj.Resource.Spec.Schedule)
-				case testsclientv3.EventTypeDelete:
+				case common.EventTypeDelete:
 					s.removeTestCronJob(obj.Resource.Name)
 				}
 
