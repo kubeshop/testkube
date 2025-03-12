@@ -97,16 +97,28 @@ func LoadConfigFromStringOrFile(inputString, configDir, filename, configType str
 			raw = inputString
 			log.DefaultLogger.Debugf("parsed %s from plain env var", configType)
 		}
-	} else if f, err := os.Open(filepath.Join(configDir, filename)); err == nil {
-		data, err = io.ReadAll(f)
-		if err != nil {
-			return "", errors.Wrapf(err, "error reading file %s from config dir %s", filename, configDir)
-		}
-		raw = string(data)
-		log.DefaultLogger.Debugf("loaded %s from file %s", configType, filepath.Join(configDir, filename))
+	} else if raw, err = LoadConfigFromFile(configDir, filename, configType); err != nil {
+		return "", err
 	} else {
 		log.DefaultLogger.Warnf("no %s config found", configType)
 	}
 
 	return raw, nil
+}
+
+func LoadConfigFromFile(configDir, filename, configType string) (raw string, err error) {
+	f, err := os.Open(filepath.Join(configDir, filename))
+	if err != nil {
+		return "", err
+	}
+
+	defer f.Close()
+
+	data, err := io.ReadAll(f)
+	if err != nil {
+		return "", errors.Wrapf(err, "error reading file %s from config dir %s", filename, configDir)
+	}
+
+	log.DefaultLogger.Debugf("loaded %s from file %s", configType, filepath.Join(configDir, filename))
+	return string(data), nil
 }

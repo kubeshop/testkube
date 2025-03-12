@@ -39,6 +39,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/presets"
 	"github.com/kubeshop/testkube/pkg/version"
+	"github.com/kubeshop/testkube/pkg/workerpool"
 
 	"golang.org/x/sync/errgroup"
 
@@ -562,6 +563,32 @@ func main() {
 		g.Go(func() error {
 			log.DefaultLogger.Infof("starting debug pprof server")
 			return debugSrv.ListenAndServe()
+		})
+	}
+
+	var executeTestFn workerpool.ExecuteFn[testkube.Test, testkube.ExecutionRequest, testkube.Execution]
+	var executeTestSuiteFn workerpool.ExecuteFn[testkube.TestSuite, testkube.TestSuiteExecutionRequest, testkube.TestSuiteExecution]
+	if deprecatedSystem != nil && deprecatedSystem.Scheduler != nil {
+		executeTestFn = deprecatedSystem.Scheduler.ExecuteTest
+		executeTestSuiteFn = deprecatedSystem.Scheduler.ExecuteTestSuite
+	}
+
+	scheduler := commons.CreateCronJobScheduler(cfg,
+		kubeClient,
+		testWorkflowsClient,
+		testWorkflowTemplatesClient,
+		testWorkflowExecutor,
+		deprecatedClients,
+		executeTestFn,
+		executeTestSuiteFn,
+		log.DefaultLogger,
+		kubeConfig,
+		&proContext,
+	)
+	if scheduler != nil {
+		g.Go(func() error {
+			scheduler.Reconcile(ctx)
+			return nil
 		})
 	}
 
