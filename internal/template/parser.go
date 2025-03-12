@@ -118,7 +118,7 @@ func LoadConfigFromFile(configDir, filename, configType string) (raw string, err
 	if err != nil {
 		return "", errors.Wrapf(err, "error reading file %s from config dir %s", filename, configDir)
 	}
-	raw = string(data)
+
 	log.DefaultLogger.Debugf("loaded %s from file %s", configType, filepath.Join(configDir, filename))
-	return raw, nil
+	return string(data), nil
 }
