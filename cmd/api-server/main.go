@@ -4,6 +4,8 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -230,9 +232,15 @@ func main() {
 		testworkflowconfig.FeatureFlagCloudStorage:    fmt.Sprintf("%v", cfg.FeatureCloudStorage),
 	})
 
+	dashboardUrl := cfg.TestkubeDashboardURI
+	cloudUiUrl := os.Getenv("TESTKUBE_PRO_UI_URL")
+	if proContext.OrgID != "" && proContext.EnvID != "" && dashboardUrl == "" && cloudUiUrl != "" {
+		dashboardUrl = fmt.Sprintf("%s/organization/%s/environment/%s/dashboard", strings.TrimRight(cloudUiUrl, "/"), proContext.OrgID, proContext.EnvID)
+	}
+
 	runnerOpts := runner2.Options{
 		ClusterID:           clusterId,
-		DashboardURI:        cfg.TestkubeDashboardURI,
+		DashboardURI:        dashboardUrl,
 		DefaultNamespace:    cfg.TestkubeNamespace,
 		ServiceAccountNames: serviceAccountNames,
 		StorageSkipVerify:   cfg.StorageSkipVerify,
@@ -249,7 +257,7 @@ func main() {
 		configMapConfig,
 		client,
 		testworkflowconfig.ControlPlaneConfig{
-			DashboardUrl:   cfg.TestkubeDashboardURI,
+			DashboardUrl:   dashboardUrl,
 			CDEventsTarget: cfg.CDEventsTarget,
 		},
 		proContext,
@@ -276,7 +284,7 @@ func main() {
 		metrics,
 		secretManager,
 		cfg.GlobalWorkflowTemplateName,
-		cfg.TestkubeDashboardURI,
+		dashboardUrl,
 		proContext.OrgID,
 		proContext.EnvID,
 		proContext.Agent.ID,
@@ -300,7 +308,7 @@ func main() {
 	eventsEmitter.Loader.Register(websocketLoader)
 	eventsEmitter.Loader.Register(commons.MustCreateSlackLoader(cfg, envs))
 	if cfg.CDEventsTarget != "" {
-		cdeventLoader, err := cdevent.NewCDEventLoader(cfg.CDEventsTarget, clusterId, cfg.TestkubeNamespace, cfg.TestkubeDashboardURI, testkube.AllEventTypes)
+		cdeventLoader, err := cdevent.NewCDEventLoader(cfg.CDEventsTarget, clusterId, cfg.TestkubeNamespace, dashboardUrl, testkube.AllEventTypes)
 		if err == nil {
 			eventsEmitter.Loader.Register(cdeventLoader)
 		} else {
@@ -312,7 +320,7 @@ func main() {
 	}
 
 	// Update the Prometheus metrics regarding the Test Workflow Execution
-	eventsEmitter.Loader.Register(testworkflowexecutionmetrics.NewLoader(ctx, metrics, cfg.TestkubeDashboardURI))
+	eventsEmitter.Loader.Register(testworkflowexecutionmetrics.NewLoader(ctx, metrics, dashboardUrl))
 
 	// Send the telemetry data regarding the Test Workflow Execution
 	// TODO: Disable it if Control Plane does that
@@ -470,7 +478,7 @@ func main() {
 		metrics,
 		&proContext,
 		features,
-		cfg.TestkubeDashboardURI,
+		dashboardUrl,
 		cfg.TestkubeHelmchartVersion,
 		serviceAccountNames,
 		cfg.TestkubeDockerImageVersion,

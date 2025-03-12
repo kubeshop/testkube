@@ -119,6 +119,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		createSecretMachine(mapEnv),
 		testworkflowconfig.CreateWorkerMachine(&options.Config.Worker),
 		testworkflowconfig.CreateResourceMachine(&options.Config.Resource),
+		testworkflowconfig.CreateCloudMachine(&options.Config.ControlPlane),
 		testworkflowconfig.CreatePvcMachine(common.MapMap(layer.Pvcs(), func(v corev1.PersistentVolumeClaim) string { return v.Name })),
 	)
 
