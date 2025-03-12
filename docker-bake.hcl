@@ -4,9 +4,51 @@ variable "GOCACHE" {
 variable "GOMODCACHE" {
   default = "/root/.cache/go-build"
 }
+variable "BUSYBOX_IMAGE" {
+  default = "busybox:1.37.0-musl"
+}
+variable "ALPINE_IMAGE" {
+  default = "alpine:3.21.3"
+}
 
 group "default" {
   targets = ["agent-server", "testworkflow-init", "testworkflow-toolkit"]
+}
+
+target "api-meta" {}
+target "api" {
+  inherits = ["api-meta"]
+  context="."
+  dockerfile = "build/new/api-server.Dockerfile"
+  platforms = ["linux/arm64", "linux/amd64"]
+  args = {
+    BUSYBOX_IMAGE = "${BUSYBOX_IMAGE}"
+    ALPINE_IMAGE = "${ALPINE_IMAGE}"
+  }
+}
+
+target "tw-init-meta" {}
+target "tw-init" {
+  inherits = ["testworkflow-init-meta"]
+  context="."
+  dockerfile = "build/new/tw-init.Dockerfile"
+  platforms = ["linux/arm64", "linux/amd64"]
+  args = {
+    BUSYBOX_IMAGE = "${BUSYBOX_IMAGE}"
+    ALPINE_IMAGE = "${ALPINE_IMAGE}"
+  }
+}
+
+target "tw-toolkit-meta" {}
+target "tw-toolkit" {
+  inherits = ["testworkflow-toolkit-meta"]
+  context="."
+  dockerfile = "build/new/tw-toolkit.Dockerfile"
+  platforms = ["linux/arm64", "linux/amd64"]
+  args = {
+    BUSYBOX_IMAGE = "${BUSYBOX_IMAGE}"
+    ALPINE_IMAGE = "${ALPINE_IMAGE}"
+  }
 }
 
 target "agent-server-meta" {}

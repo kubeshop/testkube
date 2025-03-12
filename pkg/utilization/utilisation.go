@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/kubeshop/testkube/pkg/utilization/core"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
@@ -76,24 +78,37 @@ func (r *MetricRecorder) Start(ctx context.Context) {
 	t := time.NewTicker(r.samplingInterval)
 	defer t.Stop()
 
-	process, err := getChildProcess()
-	if err != nil {
-		stdoutUnsafe.Errorf("failed to get process: %v\n", err)
-		return
-	}
-
 	previous := &Metrics{}
 	for {
 		select {
 		case <-ctx.Done():
 			if err := r.writer.Close(ctx); err != nil {
-				stdoutUnsafe.Errorf("failed to close writer: %v\n", err)
+				stdoutUnsafe.Warnf("failed to close writer: %v\n", err)
 			}
 			return
 		case <-t.C:
-			previous = r.iterate(ctx, process, previous)
+			metrics, _ := r.record()
+			// write the aggregated metrics
+			_ = r.write(ctx, metrics, previous)
+			previous = metrics
 		}
 	}
+}
+
+func (r *MetricRecorder) write(ctx context.Context, metrics, previous *Metrics) error {
+	// Build each set of metrics
+	memoryMetrics := r.format.Format("memory", r.tags, r.buildMemoryFields(metrics))
+	cpuMetrics := r.format.Format("cpu", r.tags, r.buildCPUFields(metrics))
+	networkMetrics := r.format.Format("network", r.tags, r.buildNetworkFields(metrics, previous))
+	diskMetrics := r.format.Format("disk", r.tags, r.buildDiskFields(metrics, previous))
+
+	// Combine all metrics so we can write them all at once
+	data := fmt.Sprintf("%s\n%s\n%s\n%s", memoryMetrics, cpuMetrics, networkMetrics, diskMetrics)
+	if err := r.writer.Write(ctx, data); err != nil {
+		return errors.Wrap(err, "failed to write combined metrics")
+	}
+
+	return nil
 }
 
 type Config struct {
@@ -110,9 +125,12 @@ type Config struct {
 }
 
 type ExecutionConfig struct {
-	Workflow  string
+	Workflow string
+	// Step is a reference to the step in the workflow.
 	Step      string
 	Execution string
+	// Resource is the unique identifier of a container step
+	Resource string
 }
 
 // WithMetricsRecorder runs the provided function and records the metrics in the specified directory.
@@ -136,12 +154,13 @@ func WithMetricsRecorder(config Config, fn func(), postProcessFn func() error) {
 		Step:               core.Step{Ref: config.ExecutionConfig.Step},
 		Execution:          config.ExecutionConfig.Execution,
 		Format:             config.Format,
+		Resource:           config.ExecutionConfig.Resource,
 		ContainerResources: config.ContainerResources,
 	}
 	w, err := core.NewFileWriter(config.Dir, metadata, 4)
 	// If we can't create the file writer, log the error, run the function without metrics and exit early.
 	if err != nil {
-		stdoutUnsafe.Errorf("failed to create file writer: %v\n", err)
+		stdoutUnsafe.Warnf("failed to create file writer: %v\n", err)
 		stdoutUnsafe.Warn("running the provided function without metrics recorder\n")
 		fn()
 		return
@@ -155,6 +174,6 @@ func WithMetricsRecorder(config Config, fn func(), postProcessFn func() error) {
 	fn()
 	cancel()
 	if err := postProcessFn(); err != nil {
-		stdoutUnsafe.Errorf("failed to run post process function: %v\n", err)
+		stdoutUnsafe.Warnf("failed to run post process function: %v\n", err)
 	}
 }

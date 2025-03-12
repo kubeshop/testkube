@@ -32,8 +32,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/cache"
 	"github.com/kubeshop/testkube/pkg/capabilities"
 	"github.com/kubeshop/testkube/pkg/cloud"
-	cloudconfig "github.com/kubeshop/testkube/pkg/cloud/data/config"
-	"github.com/kubeshop/testkube/pkg/cloud/data/executor"
 	"github.com/kubeshop/testkube/pkg/configmap"
 	"github.com/kubeshop/testkube/pkg/cronjob"
 	"github.com/kubeshop/testkube/pkg/dbmigrator"
@@ -51,7 +49,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/secret"
 	domainstorage "github.com/kubeshop/testkube/pkg/storage"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
-	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 	"github.com/kubeshop/testkube/pkg/workerpool"
 )
@@ -319,6 +316,12 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 	proContext.Agent.ID = cfg.ControlPlaneConfig.TestkubeProAgentID
 	proContext.Agent.Name = cfg.ControlPlaneConfig.TestkubeProAgentID
 
+	cloudUiUrl := os.Getenv("TESTKUBE_PRO_UI_URL")
+	if proContext.DashboardURI == "" && cloudUiUrl != "" {
+		proContext.DashboardURI = cloudUiUrl
+	}
+	proContext.DashboardURI = strings.TrimRight(proContext.DashboardURI, "/")
+
 	if cfg.TestkubeProAPIKey == "" || grpcClient == nil {
 		return proContext
 	}
@@ -356,6 +359,11 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 		proContext.OrgSlug = foundProContext.OrgSlug
 	}
 
+	foundDashboardUrl := strings.TrimRight(foundProContext.PublicDashboardUrl, "/")
+	if foundDashboardUrl != "" {
+		proContext.DashboardURI = foundDashboardUrl
+	}
+
 	if foundProContext.Agent != nil && foundProContext.Agent.Id != "" {
 		proContext.Agent.ID = foundProContext.Agent.Id
 		proContext.Agent.Name = foundProContext.Agent.Name
@@ -387,26 +395,6 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 		if cfg.FeatureCloudStorage {
 			proContext.CloudStorage = true
 		}
-	}
-
-	if string(foundProContext.Mode) != "" {
-		proContext.IsTrial = foundProContext.Trial
-		proContext.Mode = config.ProContextMode(foundProContext.Mode.String())
-		proContext.Status = config.ProContextStatus(foundProContext.Status.String())
-	} else {
-		req := checktcl.GetOrganizationPlanRequest{}
-		response, err := executor.NewCloudGRPCExecutor(grpcClient, proContext.APIKey).
-			Execute(ctx, cloudconfig.CmdConfigGetOrganizationPlan, req)
-		if err != nil {
-			return proContext
-		}
-		var commandResponse checktcl.GetOrganizationPlanResponse
-		if err := json.Unmarshal(response, &commandResponse); err != nil {
-			return proContext
-		}
-		proContext.IsTrial = commandResponse.IsTrial
-		proContext.Mode = config.ProContextMode(commandResponse.TestkubeMode)
-		proContext.Status = config.ProContextStatus(commandResponse.PlanStatus)
 	}
 
 	return proContext

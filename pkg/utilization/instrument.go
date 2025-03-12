@@ -1,176 +1,146 @@
 package utilization
 
 import (
-	"context"
-	"fmt"
-	"math"
-	"os"
+	errors2 "errors"
+	"regexp"
+	"sync"
+
+	"github.com/shirou/gopsutil/v4/disk"
 
 	"github.com/pkg/errors"
 	"github.com/shirou/gopsutil/v4/net"
-	gopsutil "github.com/shirou/gopsutil/v4/process"
-
-	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
-	"github.com/kubeshop/testkube/pkg/utilization/core"
+	"github.com/shirou/gopsutil/v4/process"
 )
 
+// This regex matches:
+//   - sd + exactly one letter (e.g. sda, sdb)
+//   - vd + exactly one letter (e.g. vda, vdb)
+//   - nvme + digits + n + digits (e.g. nvme0n1, nvme1n1, not partitions)
+var reBaseDevice = regexp.MustCompile(`^(sd[a-z]|vd[a-z]|xvd[a-z]|nvme\d+n\d+)$`)
+
 type Metrics struct {
-	Memory  *gopsutil.MemoryInfoStat
+	Memory  *process.MemoryInfoStat
 	CPU     float64
-	Disk    *gopsutil.IOCountersStat
+	Disk    *disk.IOCountersStat
 	Network *net.IOCountersStat
 }
 
-func (r *MetricRecorder) iterate(ctx context.Context, process *gopsutil.Process, previous *Metrics) *Metrics {
-	stdout := output.Std
-	stdoutUnsafe := stdout.Direct()
-
-	// Instrument the current process
-	metrics, err := instrument(process)
+// record captures a single metrics data point for all processes .
+func (r *MetricRecorder) record() (*Metrics, error) {
+	processes, err := process.Processes()
 	if err != nil {
-		stdoutUnsafe.Errorf("failed to gather some metrics: %v\n", err)
+		return nil, err
 	}
 
-	// Build each set of metrics
-	memoryMetrics := r.format.Format("memory", r.tags, r.buildMemoryFields(metrics))
-	cpuMetrics := r.format.Format("cpu", r.tags, r.buildCPUFields(metrics))
-	networkMetrics := r.format.Format("network", r.tags, r.buildNetworkFields(metrics, previous))
-	diskMetrics := r.format.Format("disk", r.tags, r.buildDiskFields(metrics, previous))
-
-	// Combine all metrics so we can write them all at once
-	data := fmt.Sprintf("%s\n%s\n%s\n%s", memoryMetrics, cpuMetrics, networkMetrics, diskMetrics)
-	if err := r.writer.Write(ctx, data); err != nil {
-		stdoutUnsafe.Errorf("failed to write combined metrics: %v\n", err)
+	metrics := make([]*Metrics, len(processes))
+	wg := sync.WaitGroup{}
+	wg.Add(len(processes))
+	for i := range processes {
+		go func(i int) {
+			defer wg.Done()
+			m, err := instrument(processes[i])
+			if err != nil {
+				return
+			}
+			metrics[i] = m
+		}(i)
 	}
+	wg.Wait()
+	// aggregate CPU and Memory metrics as they are fetched per process
+	aggregated := aggregate(metrics)
+	// fetch Disk and Network metrics and add them to the aggregated metrics
+	r.recordSystemWideMetrics(aggregated)
 
-	return metrics
+	return aggregated, nil
 }
 
-func instrument(process *gopsutil.Process) (*Metrics, []error) {
+// instrument captures the metrics of the provided process.
+func instrument(process *process.Process) (*Metrics, error) {
 	var errs []error
-	mem, err := process.MemoryInfo()
-	if err != nil {
-		errs = append(errs, errors.Wrapf(err, "failed to get memory info"))
-	}
 	cpu, err := process.CPUPercent()
 	if err != nil {
 		errs = append(errs, errors.Wrapf(err, "failed to get cpu info"))
 	}
-	io, err := process.IOCounters()
+	mem, err := process.MemoryInfo()
 	if err != nil {
-		errs = append(errs, errors.Wrapf(err, "failed to get cpu info"))
-	}
-	net, err := net.IOCounters(false)
-	if err != nil {
-		errs = append(errs, errors.Wrapf(err, "failed to get network info"))
+		errs = append(errs, errors.Wrapf(err, "failed to get memory info"))
 	}
 	m := &Metrics{
-		Memory: mem,
 		CPU:    cpu,
-		Disk:   io,
+		Memory: mem,
 	}
-	if len(net) > 0 {
-		m.Network = &net[0]
-	}
-	return m, errs
+	return m, errors2.Join(errs...)
 }
 
-func (r *MetricRecorder) buildMemoryFields(metrics *Metrics) []core.KeyValue {
-	if metrics.Memory == nil {
-		return nil
+// aggregate aggregates the metrics from multiple processes.
+// Some test tools might spawn multiple processes to run the tests.
+// Example: when executing JMeter, the entry process is a shell script which spawns the actual JMeter Java process.
+func aggregate(metrics []*Metrics) *Metrics {
+	aggregated := &Metrics{
+		Memory: &process.MemoryInfoStat{},
+		CPU:    0,
 	}
-	return []core.KeyValue{
-		core.NewKeyValue("used", fmt.Sprintf("%d", metrics.Memory.RSS)),
-	}
-}
-
-func (r *MetricRecorder) buildCPUFields(metrics *Metrics) []core.KeyValue {
-	return []core.KeyValue{
-		core.NewKeyValue("percent", fmt.Sprintf("%.2f", metrics.CPU)),
-		core.NewKeyValue("millicores", fmt.Sprintf("%d", int64(math.Round(metrics.CPU*10)))),
-	}
-}
-
-func (r *MetricRecorder) buildNetworkFields(current, previous *Metrics) []core.KeyValue {
-	if current.Network == nil {
-		return nil
-	}
-	bytesSent := current.Network.BytesSent
-	bytesRecv := current.Network.BytesRecv
-	values := []core.KeyValue{
-		core.NewKeyValue("bytes_sent_total", fmt.Sprintf("%d", bytesSent)),
-		core.NewKeyValue("bytes_recv_total", fmt.Sprintf("%d", bytesRecv)),
-	}
-	if previous.Network != nil {
-		previousBytesSent := previous.Network.BytesSent
-		previousBytesRecv := previous.Network.BytesRecv
-		values = append(
-			values,
-			core.NewKeyValue("bytes_sent_per_s", fmt.Sprintf("%d", bytesSent-previousBytesSent)),
-			core.NewKeyValue("bytes_recv_per_s", fmt.Sprintf("%d", bytesRecv-previousBytesRecv)),
-		)
-	}
-
-	return values
-}
-
-func (r *MetricRecorder) buildDiskFields(current, previous *Metrics) []core.KeyValue {
-	if current.Disk == nil {
-		return nil
-	}
-
-	readBytes := current.Disk.DiskReadBytes
-	writeBytes := current.Disk.DiskWriteBytes
-	values := []core.KeyValue{
-		core.NewKeyValue("read_bytes_total", fmt.Sprintf("%d", readBytes)),
-		core.NewKeyValue("write_bytes_total", fmt.Sprintf("%d", writeBytes)),
-	}
-	if previous.Disk != nil {
-		previousDiskReadBytes := previous.Disk.DiskReadBytes
-		previousDiskWriteBytes := previous.Disk.DiskWriteBytes
-		values = append(
-			values,
-			core.NewKeyValue("read_bytes_per_s", fmt.Sprintf("%d", readBytes-previousDiskReadBytes)),
-			core.NewKeyValue("write_bytes_per_s", fmt.Sprintf("%d", writeBytes-previousDiskWriteBytes)),
-		)
-	}
-
-	return values
-}
-
-// getChildProcess tries to find the child process of the current process.
-// The child process is the process which is running the underlying test.
-func getChildProcess() (*gopsutil.Process, error) {
-	var processes []*gopsutil.Process
-	var err error
-	// We need to retry a few times to get the process because a race condition might occur where the child process is not yet created.
-	for i := 0; i < 5; i++ {
-		processes, err = gopsutil.Processes()
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to list running processes")
+	for _, m := range metrics {
+		if m == nil {
+			continue
 		}
-		if len(processes) > 1 {
-			break
+		if m.Memory != nil {
+			aggregated.Memory.RSS += m.Memory.RSS
+			aggregated.Memory.VMS += m.Memory.VMS
+			aggregated.Memory.Swap += m.Memory.Swap
+			aggregated.Memory.Data += m.Memory.Data
+			aggregated.Memory.Stack += m.Memory.Stack
+			aggregated.Memory.Locked += m.Memory.Locked
+			aggregated.Memory.Stack += m.Memory.Stack
+		}
+		aggregated.CPU += m.CPU
+	}
+	return aggregated
+}
+
+// recordSystemWideMetrics captures the network and disk system-wide metrics by using the global gopsutil packages instead of the process one.
+func (r *MetricRecorder) recordSystemWideMetrics(aggregated *Metrics) {
+	io, _ := disk.IOCounters()
+	if len(io) > 0 {
+		aggregated.Disk = filterAndAggregateDiskStats(io)
+	}
+	n, _ := net.IOCounters(false)
+	if len(n) > 0 {
+		n := n[0]
+		aggregated.Network = &n
+	}
+}
+
+// filterAndAggregateDiskStats filters stats for disk devices (but not partitions).
+// It matches:
+//   - sda, sdb, sdc, etc. (SCSI/SATA/SAS)
+//   - vda, vdb, etc. (VirtIO)
+//   - xvda, xvdb, etc. (AWS Xen)
+//   - nvme0n1, nvme1n1, etc. (NVMe)
+//
+// It does NOT match sda1, sdb2, nvme0n1p1, etc.
+func filterAndAggregateDiskStats(stats map[string]disk.IOCountersStat) *disk.IOCountersStat {
+	aggregated := &disk.IOCountersStat{}
+
+	for diskName, stat := range stats {
+		if reBaseDevice.MatchString(diskName) {
+			aggregateDiskStats(aggregated, &stat)
 		}
 	}
 
-	// Find the pid of the process which is running the underlying binary.
-	pid := int32(os.Getpid())
-	var process *gopsutil.Process
-	for _, p := range processes {
-		ppid, err := p.Ppid()
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to get parent process id for process pid: %d", p.Pid)
-		}
-		if p.Pid != pid && ppid == pid {
-			process = p
-			break
-		}
-	}
-	// If the process is not found, return an error.
-	if process == nil {
-		return nil, errors.New("failed to find process")
-	}
+	return aggregated
+}
 
-	return process, nil
+func aggregateDiskStats(aggregate, stats *disk.IOCountersStat) {
+	aggregate.ReadCount += stats.ReadCount
+	aggregate.WriteCount += stats.WriteCount
+	aggregate.ReadBytes += stats.ReadBytes
+	aggregate.WriteBytes += stats.WriteBytes
+	aggregate.ReadTime += stats.ReadTime
+	aggregate.WriteTime += stats.WriteTime
+	aggregate.IopsInProgress += stats.IopsInProgress
+	aggregate.IoTime += stats.IoTime
+	aggregate.WeightedIO += stats.WeightedIO
+	aggregate.MergedReadCount += stats.MergedReadCount
+	aggregate.MergedWriteCount += stats.MergedWriteCount
 }

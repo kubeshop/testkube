@@ -2,7 +2,6 @@ package runner
 
 import (
 	"context"
-	"strings"
 	"sync"
 	"time"
 
@@ -11,7 +10,6 @@ import (
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/internal/config"
-	"github.com/kubeshop/testkube/internal/crdcommon"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/controlplaneclient"
 	"github.com/kubeshop/testkube/pkg/event"
@@ -48,15 +46,14 @@ type Runner interface {
 }
 
 type runner struct {
-	worker               executionworkertypes.Worker
-	client               controlplaneclient.Client
-	configRepository     configRepo.Repository
-	emitter              event.Interface
-	metrics              metrics.Metrics
-	proContext           config.ProContext // TODO: Include Agent ID in pro context
-	dashboardURI         string
-	storageSkipVerify    bool
-	globalTemplateInline *testworkflowsv1.TestWorkflowTemplate
+	worker            executionworkertypes.Worker
+	client            controlplaneclient.Client
+	configRepository  configRepo.Repository
+	emitter           event.Interface
+	metrics           metrics.Metrics
+	proContext        config.ProContext // TODO: Include Agent ID in pro context
+	storageSkipVerify bool
+	getGlobalTemplate GlobalTemplateFactory
 
 	watching sync.Map
 }
@@ -68,30 +65,18 @@ func New(
 	emitter event.Interface,
 	metrics metrics.Metrics,
 	proContext config.ProContext,
-	dashboardURI string,
 	storageSkipVerify bool,
-	globalTemplateInlineYaml string,
+	getGlobalTemplate GlobalTemplateFactory,
 ) Runner {
-	var globalTemplateInline *testworkflowsv1.TestWorkflowTemplate
-	if globalTemplateInlineYaml != "" {
-		globalTemplateInline = new(testworkflowsv1.TestWorkflowTemplate)
-		err := crdcommon.DeserializeCRD(globalTemplateInline, []byte("spec:\n  "+strings.ReplaceAll(globalTemplateInlineYaml, "\n", "\n  ")))
-		globalTemplateInline.Name = inlinedGlobalTemplateName
-		if err != nil {
-			log.DefaultLogger.Errorw("failed to unmarshal inlined global template", "error", err)
-			globalTemplateInline = nil
-		}
-	}
 	return &runner{
-		worker:               worker,
-		configRepository:     configRepository,
-		client:               client,
-		emitter:              emitter,
-		metrics:              metrics,
-		proContext:           proContext,
-		dashboardURI:         dashboardURI,
-		storageSkipVerify:    storageSkipVerify,
-		globalTemplateInline: globalTemplateInline,
+		worker:            worker,
+		configRepository:  configRepository,
+		client:            client,
+		emitter:           emitter,
+		metrics:           metrics,
+		proContext:        proContext,
+		storageSkipVerify: storageSkipVerify,
+		getGlobalTemplate: getGlobalTemplate,
 	}
 }
 
@@ -253,12 +238,22 @@ func (r *runner) Notifications(ctx context.Context, id string) executionworkerty
 }
 
 func (r *runner) Execute(request executionworkertypes.ExecuteRequest) (*executionworkertypes.ExecuteResult, error) {
-	if r.globalTemplateInline != nil {
+	if request.Execution.OrganizationSlug == "" {
+		request.Execution.OrganizationSlug = request.Execution.OrganizationId
+	}
+	if request.Execution.EnvironmentSlug == "" {
+		request.Execution.EnvironmentSlug = request.Execution.EnvironmentId
+	}
+	if r.getGlobalTemplate != nil {
+		globalTemplate, err := r.getGlobalTemplate(request.Execution.EnvironmentId)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to get global template")
+		}
 		testworkflowresolver.AddGlobalTemplateRef(&request.Workflow, testworkflowsv1.TemplateRef{
 			Name: testworkflowresolver.GetDisplayTemplateName(inlinedGlobalTemplateName),
 		})
-		err := testworkflowresolver.ApplyTemplates(&request.Workflow, map[string]*testworkflowsv1.TestWorkflowTemplate{
-			inlinedGlobalTemplateName: r.globalTemplateInline,
+		err = testworkflowresolver.ApplyTemplates(&request.Workflow, map[string]*testworkflowsv1.TestWorkflowTemplate{
+			inlinedGlobalTemplateName: globalTemplate,
 		}, func(key, value string) (expressions.Expression, error) {
 			return nil, errors.New("not supported")
 		})

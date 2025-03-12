@@ -223,6 +223,9 @@ func CloudInternal() cloud.TestKubeCloudAPIClient {
 	if cloudClient == nil {
 		cfg := config2.Config().Worker.Connection
 		logger := log.NewSilent()
+		// TODO(dejan): now metrics are scrapped on each workflow exetucution and we get an error when connecting to Control Plane even with publicly trusted certificates.
+		// Until a better solution is implemented, TLS verification will be skipped.
+		cfg.SkipVerify = true
 		cloudConn, err = agentclient.NewGRPCConnection(context.Background(), cfg.TlsInsecure, cfg.SkipVerify, cfg.Url, "", "", "", logger)
 		if err != nil {
 			ui.Fail(fmt.Errorf("failed to connect with Cloud: %w", err))

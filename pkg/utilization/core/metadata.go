@@ -34,6 +34,7 @@ type Metadata struct {
 	Workflow           string             `meta:"workflow"`
 	Step               Step               `meta:"step"`
 	Execution          string             `meta:"execution"`
+	Resource           string             `meta:"resource"`
 	Lines              int                `meta:"lines"`
 	Format             MetricsFormat      `meta:"format"`
 	ContainerResources ContainerResources `meta:"resources"`
@@ -184,12 +185,13 @@ func parseMetadataFromFilename(filename string) (*Metadata, error) {
 	if len(tokens) != 3 {
 		return nil, errors.Errorf("invalid filename format: expected <workflow>_<step>_<execution>.<format>, got: %q", base)
 	}
-	return &Metadata{
+	m := &Metadata{
 		Workflow:  tokens[0],
 		Step:      Step{Ref: tokens[1]},
 		Execution: tokens[2],
 		Format:    format,
-	}, nil
+	}
+	return m, nil
 }
 
 func getFormatFromFileExtension(filename string) MetricsFormat {
@@ -282,6 +284,8 @@ func parseMetadata(line string) (*Metadata, error) {
 			m.Step.Name = stepName
 		case "execution":
 			m.Execution = value
+		case "resource":
+			m.Resource = value
 		case "resources.requests.cpu":
 			m.ContainerResources.Requests.CPU = value
 		case "resources.requests.memory":
