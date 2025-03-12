@@ -52,7 +52,6 @@ type runner struct {
 	emitter           event.Interface
 	metrics           metrics.Metrics
 	proContext        config.ProContext // TODO: Include Agent ID in pro context
-	dashboardURI      string
 	storageSkipVerify bool
 	getGlobalTemplate GlobalTemplateFactory
 
@@ -66,7 +65,6 @@ func New(
 	emitter event.Interface,
 	metrics metrics.Metrics,
 	proContext config.ProContext,
-	dashboardURI string,
 	storageSkipVerify bool,
 	getGlobalTemplate GlobalTemplateFactory,
 ) Runner {
@@ -77,7 +75,6 @@ func New(
 		emitter:           emitter,
 		metrics:           metrics,
 		proContext:        proContext,
-		dashboardURI:      dashboardURI,
 		storageSkipVerify: storageSkipVerify,
 		getGlobalTemplate: getGlobalTemplate,
 	}
@@ -241,6 +238,12 @@ func (r *runner) Notifications(ctx context.Context, id string) executionworkerty
 }
 
 func (r *runner) Execute(request executionworkertypes.ExecuteRequest) (*executionworkertypes.ExecuteResult, error) {
+	if request.Execution.OrganizationSlug == "" {
+		request.Execution.OrganizationSlug = request.Execution.OrganizationId
+	}
+	if request.Execution.EnvironmentSlug == "" {
+		request.Execution.EnvironmentSlug = request.Execution.EnvironmentId
+	}
 	if r.getGlobalTemplate != nil {
 		globalTemplate, err := r.getGlobalTemplate(request.Execution.EnvironmentId)
 		if err != nil {

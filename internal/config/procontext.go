@@ -49,6 +49,18 @@ type ProContext struct {
 	Agent                               ProContextAgent
 }
 
+func (p *ProContext) GetEnvSlug(id string) string {
+	for i := range p.Agent.Environments {
+		if p.Agent.Environments[i].ID == id && p.Agent.Environments[i].Slug != "" {
+			return p.Agent.Environments[i].Slug
+		}
+	}
+	if p.EnvID == id && p.EnvSlug != "" {
+		return p.EnvSlug
+	}
+	return id
+}
+
 type ProContextAgentEnvironment struct {
 	ID   string
 	Slug string

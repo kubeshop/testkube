@@ -245,7 +245,7 @@ func (e *IntermediateExecution) TemplateNames() map[string]struct{} {
 	return testworkflowresolver.ListTemplates(e.cr)
 }
 
-func (e *IntermediateExecution) Resolve(organizationId, environmentId string, parentExecutionIds []string, debug bool) error {
+func (e *IntermediateExecution) Resolve(organizationId, organizationSlug, environmentId, environmentSlug string, parentExecutionIds []string, debug bool) error {
 	if e.cr == nil {
 		panic("workflow not set yet")
 	}
@@ -254,16 +254,18 @@ func (e *IntermediateExecution) Resolve(organizationId, environmentId string, pa
 	}
 
 	executionMachine := testworkflowconfig.CreateExecutionMachine(&testworkflowconfig.ExecutionConfig{
-		Id:              e.execution.Id,
-		GroupId:         e.execution.GroupId,
-		Name:            e.execution.Name,
-		Number:          e.execution.Number,
-		ScheduledAt:     e.execution.ScheduledAt,
-		DisableWebhooks: e.execution.DisableWebhooks,
-		Debug:           debug,
-		OrganizationId:  organizationId,
-		EnvironmentId:   environmentId,
-		ParentIds:       strings.Join(parentExecutionIds, "/"),
+		Id:               e.execution.Id,
+		GroupId:          e.execution.GroupId,
+		Name:             e.execution.Name,
+		Number:           e.execution.Number,
+		ScheduledAt:      e.execution.ScheduledAt,
+		DisableWebhooks:  e.execution.DisableWebhooks,
+		Debug:            debug,
+		OrganizationId:   organizationId,
+		OrganizationSlug: organizationSlug,
+		EnvironmentId:    environmentId,
+		EnvironmentSlug:  environmentSlug,
+		ParentIds:        strings.Join(parentExecutionIds, "/"),
 	})
 	resourceMachine := testworkflowconfig.CreateResourceMachine(&testworkflowconfig.ResourceConfig{
 		Id:     e.execution.Id,

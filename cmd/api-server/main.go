@@ -232,7 +232,6 @@ func main() {
 
 	runnerOpts := runner2.Options{
 		ClusterID:           clusterId,
-		DashboardURI:        cfg.TestkubeDashboardURI,
 		DefaultNamespace:    cfg.TestkubeNamespace,
 		ServiceAccountNames: serviceAccountNames,
 		StorageSkipVerify:   cfg.StorageSkipVerify,
@@ -249,7 +248,7 @@ func main() {
 		configMapConfig,
 		client,
 		testworkflowconfig.ControlPlaneConfig{
-			DashboardUrl:   cfg.TestkubeDashboardURI,
+			DashboardUrl:   proContext.DashboardURI,
 			CDEventsTarget: cfg.CDEventsTarget,
 		},
 		proContext,
@@ -276,9 +275,11 @@ func main() {
 		metrics,
 		secretManager,
 		cfg.GlobalWorkflowTemplateName,
-		cfg.TestkubeDashboardURI,
+		proContext.DashboardURI,
 		proContext.OrgID,
+		proContext.OrgSlug,
 		proContext.EnvID,
+		proContext.GetEnvSlug,
 		proContext.Agent.ID,
 		proContext.NewArchitecture,
 	)
@@ -300,7 +301,7 @@ func main() {
 	eventsEmitter.Loader.Register(websocketLoader)
 	eventsEmitter.Loader.Register(commons.MustCreateSlackLoader(cfg, envs))
 	if cfg.CDEventsTarget != "" {
-		cdeventLoader, err := cdevent.NewCDEventLoader(cfg.CDEventsTarget, clusterId, cfg.TestkubeNamespace, cfg.TestkubeDashboardURI, testkube.AllEventTypes)
+		cdeventLoader, err := cdevent.NewCDEventLoader(cfg.CDEventsTarget, clusterId, cfg.TestkubeNamespace, proContext.DashboardURI, testkube.AllEventTypes)
 		if err == nil {
 			eventsEmitter.Loader.Register(cdeventLoader)
 		} else {
@@ -312,7 +313,7 @@ func main() {
 	}
 
 	// Update the Prometheus metrics regarding the Test Workflow Execution
-	eventsEmitter.Loader.Register(testworkflowexecutionmetrics.NewLoader(ctx, metrics, cfg.TestkubeDashboardURI))
+	eventsEmitter.Loader.Register(testworkflowexecutionmetrics.NewLoader(ctx, metrics, proContext.DashboardURI))
 
 	// Send the telemetry data regarding the Test Workflow Execution
 	// TODO: Disable it if Control Plane does that
@@ -470,7 +471,6 @@ func main() {
 		metrics,
 		&proContext,
 		features,
-		cfg.TestkubeDashboardURI,
 		cfg.TestkubeHelmchartVersion,
 		serviceAccountNames,
 		cfg.TestkubeDockerImageVersion,
