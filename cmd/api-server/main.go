@@ -4,8 +4,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"os"
-	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -232,13 +230,6 @@ func main() {
 		testworkflowconfig.FeatureFlagCloudStorage:    fmt.Sprintf("%v", cfg.FeatureCloudStorage),
 	})
 
-	dashboardUrl := cfg.TestkubeDashboardURI
-	cloudUiUrl := os.Getenv("TESTKUBE_PRO_UI_URL")
-	if dashboardUrl == "" && cloudUiUrl != "" {
-		dashboardUrl = cloudUiUrl
-	}
-	dashboardUrl = strings.TrimRight(dashboardUrl, "/")
-
 	runnerOpts := runner2.Options{
 		ClusterID:           clusterId,
 		DefaultNamespace:    cfg.TestkubeNamespace,
@@ -257,7 +248,7 @@ func main() {
 		configMapConfig,
 		client,
 		testworkflowconfig.ControlPlaneConfig{
-			DashboardUrl:   dashboardUrl,
+			DashboardUrl:   proContext.DashboardURI,
 			CDEventsTarget: cfg.CDEventsTarget,
 		},
 		proContext,
@@ -284,7 +275,7 @@ func main() {
 		metrics,
 		secretManager,
 		cfg.GlobalWorkflowTemplateName,
-		dashboardUrl,
+		proContext.DashboardURI,
 		proContext.OrgID,
 		proContext.OrgSlug,
 		proContext.EnvID,
@@ -310,7 +301,7 @@ func main() {
 	eventsEmitter.Loader.Register(websocketLoader)
 	eventsEmitter.Loader.Register(commons.MustCreateSlackLoader(cfg, envs))
 	if cfg.CDEventsTarget != "" {
-		cdeventLoader, err := cdevent.NewCDEventLoader(cfg.CDEventsTarget, clusterId, cfg.TestkubeNamespace, dashboardUrl, testkube.AllEventTypes)
+		cdeventLoader, err := cdevent.NewCDEventLoader(cfg.CDEventsTarget, clusterId, cfg.TestkubeNamespace, proContext.DashboardURI, testkube.AllEventTypes)
 		if err == nil {
 			eventsEmitter.Loader.Register(cdeventLoader)
 		} else {
@@ -322,7 +313,7 @@ func main() {
 	}
 
 	// Update the Prometheus metrics regarding the Test Workflow Execution
-	eventsEmitter.Loader.Register(testworkflowexecutionmetrics.NewLoader(ctx, metrics, dashboardUrl))
+	eventsEmitter.Loader.Register(testworkflowexecutionmetrics.NewLoader(ctx, metrics, proContext.DashboardURI))
 
 	// Send the telemetry data regarding the Test Workflow Execution
 	// TODO: Disable it if Control Plane does that
@@ -480,7 +471,6 @@ func main() {
 		metrics,
 		&proContext,
 		features,
-		dashboardUrl,
 		cfg.TestkubeHelmchartVersion,
 		serviceAccountNames,
 		cfg.TestkubeDockerImageVersion,

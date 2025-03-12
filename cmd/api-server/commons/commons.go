@@ -305,6 +305,12 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 	proContext.Agent.ID = cfg.ControlPlaneConfig.TestkubeProAgentID
 	proContext.Agent.Name = cfg.ControlPlaneConfig.TestkubeProAgentID
 
+	cloudUiUrl := os.Getenv("TESTKUBE_PRO_UI_URL")
+	if proContext.DashboardURI == "" && cloudUiUrl != "" {
+		proContext.DashboardURI = cloudUiUrl
+	}
+	proContext.DashboardURI = strings.TrimRight(proContext.DashboardURI, "/")
+
 	if cfg.TestkubeProAPIKey == "" || grpcClient == nil {
 		return proContext
 	}
@@ -340,6 +346,11 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 
 	if foundProContext.OrgSlug != "" {
 		proContext.OrgSlug = foundProContext.OrgSlug
+	}
+
+	foundDashboardUrl := strings.TrimRight(foundProContext.PublicDashboardUrl, "/")
+	if foundDashboardUrl != "" {
+		proContext.DashboardURI = foundDashboardUrl
 	}
 
 	if foundProContext.Agent != nil && foundProContext.Agent.Id != "" {
