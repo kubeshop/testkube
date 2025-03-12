@@ -478,7 +478,7 @@ func CreateCronJobScheduler(cfg *config.Config,
 			"enable-cron-jobs",
 			"enable cron jobs",
 		)
-		ExitOnError("Creting cron job scheduler config loading", err)
+		ExitOnError("Creating cron job scheduler config loading", err)
 	}
 
 	if enableCronJobs == "" {
