@@ -238,6 +238,12 @@ func (r *runner) Notifications(ctx context.Context, id string) executionworkerty
 }
 
 func (r *runner) Execute(request executionworkertypes.ExecuteRequest) (*executionworkertypes.ExecuteResult, error) {
+	if request.Execution.OrganizationSlug == "" {
+		request.Execution.OrganizationSlug = request.Execution.OrganizationId
+	}
+	if request.Execution.EnvironmentSlug == "" {
+		request.Execution.EnvironmentSlug = request.Execution.EnvironmentId
+	}
 	if r.getGlobalTemplate != nil {
 		globalTemplate, err := r.getGlobalTemplate(request.Execution.EnvironmentId)
 		if err != nil {

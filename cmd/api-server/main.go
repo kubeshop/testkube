@@ -286,7 +286,9 @@ func main() {
 		cfg.GlobalWorkflowTemplateName,
 		dashboardUrl,
 		proContext.OrgID,
+		proContext.OrgSlug,
 		proContext.EnvID,
+		proContext.GetEnvSlug,
 		proContext.Agent.ID,
 		proContext.NewArchitecture,
 	)

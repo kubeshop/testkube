@@ -114,12 +114,21 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, constants.DefaultTmpDirPath)).
 		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, constants.DefaultDataPath))
 
+	orgSlug := options.Config.Execution.OrganizationSlug
+	if orgSlug == "" {
+		orgSlug = options.Config.Execution.OrganizationId
+	}
+	envSlug := options.Config.Execution.EnvironmentSlug
+	if envSlug == "" {
+		envSlug = options.Config.Execution.EnvironmentId
+	}
+
 	mapEnv := make(map[string]corev1.EnvVarSource)
 	machines = append(machines,
 		createSecretMachine(mapEnv),
 		testworkflowconfig.CreateWorkerMachine(&options.Config.Worker),
 		testworkflowconfig.CreateResourceMachine(&options.Config.Resource),
-		testworkflowconfig.CreateCloudMachine(&options.Config.ControlPlane, options.Config.Execution.OrganizationId, options.Config.Execution.EnvironmentId),
+		testworkflowconfig.CreateCloudMachine(&options.Config.ControlPlane, orgSlug, envSlug),
 		testworkflowconfig.CreatePvcMachine(common.MapMap(layer.Pvcs(), func(v corev1.PersistentVolumeClaim) string { return v.Name })),
 	)
 

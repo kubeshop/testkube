@@ -25,10 +25,10 @@ func CreateExecutionMachine(cfg *ExecutionConfig) expressions.Machine {
 		})
 }
 
-func CreateCloudMachine(cfg *ControlPlaneConfig, orgID, envID string) expressions.Machine {
+func CreateCloudMachine(cfg *ControlPlaneConfig, orgSlug, envSlug string) expressions.Machine {
 	dashboardUrl := cfg.DashboardUrl
-	if dashboardUrl != "" && orgID != "" && envID != "" {
-		dashboardUrl = fmt.Sprintf("%s/organization/%s/environment/%s/dashboard", cfg.DashboardUrl, orgID, envID)
+	if dashboardUrl != "" && orgSlug != "" && envSlug != "" {
+		dashboardUrl = fmt.Sprintf("%s/organization/%s/environment/%s/dashboard", cfg.DashboardUrl, orgSlug, envSlug)
 	}
 	return expressions.NewMachine().
 		RegisterMap("internal", map[string]interface{}{
