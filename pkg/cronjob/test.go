@@ -34,7 +34,7 @@ func (s *Scheduler) ReconcileTests(ctx context.Context) error {
 				}
 
 				if err == nil {
-					s.logger.Infow("cron job scheduler: reconciler component: scheduled Test to cron jobs", "name", obj.Resource.Name, "error", err)
+					s.logger.Infow("cron job scheduler: reconciler component: scheduled Test to cron jobs", "name", obj.Resource.Name)
 				} else {
 					s.logger.Errorw("cron job scheduler: reconciler component: failed to watch Tests", "error", err)
 				}
