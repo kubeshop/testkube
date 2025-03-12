@@ -234,13 +234,13 @@ func main() {
 
 	dashboardUrl := cfg.TestkubeDashboardURI
 	cloudUiUrl := os.Getenv("TESTKUBE_PRO_UI_URL")
-	if proContext.OrgID != "" && proContext.EnvID != "" && dashboardUrl == "" && cloudUiUrl != "" {
-		dashboardUrl = fmt.Sprintf("%s/organization/%s/environment/%s/dashboard", strings.TrimRight(cloudUiUrl, "/"), proContext.OrgID, proContext.EnvID)
+	if dashboardUrl == "" && cloudUiUrl != "" {
+		dashboardUrl = cloudUiUrl
 	}
+	dashboardUrl = strings.TrimRight(dashboardUrl, "/")
 
 	runnerOpts := runner2.Options{
 		ClusterID:           clusterId,
-		DashboardURI:        dashboardUrl,
 		DefaultNamespace:    cfg.TestkubeNamespace,
 		ServiceAccountNames: serviceAccountNames,
 		StorageSkipVerify:   cfg.StorageSkipVerify,

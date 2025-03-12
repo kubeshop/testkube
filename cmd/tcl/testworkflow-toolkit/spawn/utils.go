@@ -315,11 +315,12 @@ func CreateLogger(name, description string, index, count int64) func(...string) 
 }
 
 func CreateBaseMachine() expressions.Machine {
+	cfg := config.Config()
 	return expressions.CombinedMachines(
 		data.GetBaseTestWorkflowMachine(),
-		testworkflowconfig.CreateCloudMachine(&config.Config().ControlPlane),
-		testworkflowconfig.CreateExecutionMachine(&config.Config().Execution),
-		testworkflowconfig.CreateWorkflowMachine(&config.Config().Workflow),
+		testworkflowconfig.CreateCloudMachine(&cfg.ControlPlane, cfg.Execution.OrganizationId, cfg.Execution.EnvironmentId),
+		testworkflowconfig.CreateExecutionMachine(&cfg.Execution),
+		testworkflowconfig.CreateWorkflowMachine(&cfg.Workflow),
 	)
 }
 

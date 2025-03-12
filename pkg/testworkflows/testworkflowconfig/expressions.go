@@ -1,6 +1,8 @@
 package testworkflowconfig
 
 import (
+	"fmt"
+
 	"github.com/kubeshop/testkube/pkg/expressions"
 )
 
@@ -23,10 +25,14 @@ func CreateExecutionMachine(cfg *ExecutionConfig) expressions.Machine {
 		})
 }
 
-func CreateCloudMachine(cfg *ControlPlaneConfig) expressions.Machine {
+func CreateCloudMachine(cfg *ControlPlaneConfig, orgID, envID string) expressions.Machine {
+	dashboardUrl := cfg.DashboardUrl
+	if dashboardUrl != "" && orgID != "" && envID != "" {
+		dashboardUrl = fmt.Sprintf("%s/organization/%s/environment/%s/dashboard", cfg.DashboardUrl, orgID, envID)
+	}
 	return expressions.NewMachine().
 		RegisterMap("internal", map[string]interface{}{
-			"dashboard.url":  cfg.DashboardUrl,
+			"dashboard.url":  dashboardUrl,
 			"cdeventsTarget": cfg.CDEventsTarget,
 		}).
 		RegisterStringMap("dashboard", map[string]string{
