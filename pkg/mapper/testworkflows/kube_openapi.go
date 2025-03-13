@@ -522,10 +522,58 @@ func MapPodResourceClaimKubeToAPI(v corev1.PodResourceClaim) testkube.PodResourc
 
 func MapPodSecurityContextKubeToAPI(v corev1.PodSecurityContext) testkube.PodSecurityContext {
 	return testkube.PodSecurityContext{
-		RunAsUser:    MapInt64ToBoxedInteger(v.RunAsUser),
-		RunAsGroup:   MapInt64ToBoxedInteger(v.RunAsGroup),
-		RunAsNonRoot: MapBoolToBoxedBoolean(v.RunAsNonRoot),
-		FsGroup:      MapInt64ToBoxedInteger(v.FSGroup),
+		SeLinuxOptions:           common.MapPtr(v.SELinuxOptions, MapSELinuxOptionsKubeToAPI),
+		WindowsOptions:           common.MapPtr(v.WindowsOptions, MapWindowsSecurityContextOptionsKubeToAPI),
+		RunAsUser:                MapInt64ToBoxedInteger(v.RunAsUser),
+		RunAsGroup:               MapInt64ToBoxedInteger(v.RunAsGroup),
+		RunAsNonRoot:             MapBoolToBoxedBoolean(v.RunAsNonRoot),
+		SupplementalGroups:       v.SupplementalGroups,
+		SupplementalGroupsPolicy: MapStringToBoxedString((*string)(v.SupplementalGroupsPolicy)),
+		FsGroup:                  MapInt64ToBoxedInteger(v.FSGroup),
+		Sysctls:                  common.MapSlice(v.Sysctls, MapSysctlKubeToAPI),
+		FsGroupChangePolicy:      MapStringToBoxedString((*string)(v.FSGroupChangePolicy)),
+		SeccompProfile:           common.MapPtr(v.SeccompProfile, MapSeccompProfileKubeToAPI),
+		AppArmorProfile:          common.MapPtr(v.AppArmorProfile, MapAppArmorProfileKubeToAPI),
+		SeLinuxChangePolicy:      MapStringToBoxedString((*string)(v.SELinuxChangePolicy)),
+	}
+}
+
+func MapSELinuxOptionsKubeToAPI(v corev1.SELinuxOptions) testkube.SeLinuxOptions {
+	return testkube.SeLinuxOptions{
+		User:  v.User,
+		Role:  v.Role,
+		Type_: v.Type,
+		Level: v.Level,
+	}
+}
+
+func MapWindowsSecurityContextOptionsKubeToAPI(v corev1.WindowsSecurityContextOptions) testkube.WindowsSecurityContextOptions {
+	return testkube.WindowsSecurityContextOptions{
+		GmsaCredentialSpecName: MapStringToBoxedString(v.GMSACredentialSpecName),
+		GmsaCredentialSpec:     MapStringToBoxedString(v.GMSACredentialSpec),
+		RunAsUserName:          MapStringToBoxedString(v.RunAsUserName),
+		HostProcess:            MapBoolToBoxedBoolean(v.HostProcess),
+	}
+}
+
+func MapSysctlKubeToAPI(v corev1.Sysctl) testkube.Sysctl {
+	return testkube.Sysctl{
+		Name:  v.Name,
+		Value: v.Value,
+	}
+}
+
+func MapSeccompProfileKubeToAPI(v corev1.SeccompProfile) testkube.SeccompProfile {
+	return testkube.SeccompProfile{
+		Type_:            string(v.Type),
+		LocalhostProfile: MapStringToBoxedString(v.LocalhostProfile),
+	}
+}
+
+func MapAppArmorProfileKubeToAPI(v corev1.AppArmorProfile) testkube.AppArmorProfile {
+	return testkube.AppArmorProfile{
+		Type_:            string(v.Type),
+		LocalhostProfile: MapStringToBoxedString(v.LocalhostProfile),
 	}
 }
 
