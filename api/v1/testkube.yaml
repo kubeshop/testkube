@@ -10318,14 +10318,85 @@ components:
     PodSecurityContext:
       type: object
       properties:
+        seLinuxOptions:
+          $ref: "#/components/schemas/SELinuxOptions"
+        windowsOptions:
+          $ref: "#/components/schemas/WindowsSecurityContextOptions"   
         runAsUser:
           $ref: "#/components/schemas/BoxedInteger"
         runAsGroup:
           $ref: "#/components/schemas/BoxedInteger"
         runAsNonRoot:
           $ref: "#/components/schemas/BoxedBoolean"
+        supplementalGroups:
+          type: array
+          items:
+            type: integer
+            format: int64
+        supplementalGroupsPolicy:
+          $ref: "#/components/schemas/BoxedString"
         fsGroup:
           $ref: "#/components/schemas/BoxedInteger"
+        sysctls:
+          type: array
+          items:
+            $ref: "#/components/schemas/Sysctl"
+        fsGroupChangePolicy:
+          $ref: "#/components/schemas/BoxedString"
+        seccompProfile:
+          $ref: "#/components/schemas/SeccompProfile"
+        appArmorProfile:
+          $ref: "#/components/schemas/AppArmorProfile" 
+        seLinuxChangePolicy:
+          $ref: "#/components/schemas/BoxedString"
+
+    SELinuxOptions:
+      type: object
+      properties:
+        user:
+          type: string
+        role:
+          type: string
+        type:
+          type: string
+        level:
+          type: string
+
+    WindowsSecurityContextOptions:
+      type: object
+      properties:
+        gmsaCredentialSpecName:
+          $ref: "#/components/schemas/BoxedString"
+        gmsaCredentialSpec:
+          $ref: "#/components/schemas/BoxedString"
+        runAsUserName:
+          $ref: "#/components/schemas/BoxedString"
+        hostProcess:
+          $ref: "#/components/schemas/BoxedBoolean"
+
+    Sysctl:
+      type: object
+      properties:
+        name:
+          type: string
+        value:
+          type: string
+
+    SeccompProfile:
+      type: object
+      properties:
+        type:
+          type: string
+        localhostProfile:
+          $ref: "#/components/schemas/BoxedString"
+
+    AppArmorProfile:
+      type: object
+      properties:
+        type:
+          type: string
+        localhostProfile:
+          $ref: "#/components/schemas/BoxedString"
 
     Toleration:
       type: object
