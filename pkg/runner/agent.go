@@ -11,6 +11,7 @@ import (
 	errors2 "github.com/pkg/errors"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
+	"golang.org/x/sync/singleflight"
 
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/internal/config"
@@ -40,6 +41,7 @@ type agentLoop struct {
 	controlPlaneConfig  testworkflowconfig.ControlPlaneConfig
 	organizationId      string
 	legacyEnvironmentId string
+	sf                  singleflight.Group
 }
 
 type AgentLoop interface {
@@ -294,6 +296,20 @@ func (a *agentLoop) loopRunnerRequests(ctx context.Context) error {
 }
 
 func (a *agentLoop) runTestWorkflow(environmentId string, executionId string, executionToken string) error {
+	_, err, _ := a.sf.Do(environmentId+"."+executionId, func() (interface{}, error) {
+		return nil, a.directRunTestWorkflow(environmentId, executionId, executionToken)
+	})
+
+	// Edge case, when the execution has been already triggered before there,
+	// and now it's redundant call.
+	if err != nil && strings.Contains(err.Error(), "already exists") && strings.Contains(err.Error(), executionId) {
+		return nil
+	}
+
+	return err
+}
+
+func (a *agentLoop) directRunTestWorkflow(environmentId string, executionId string, executionToken string) error {
 	ctx := context.Background()
 	logger := a.logger.With("environmentId", environmentId, "executionId", executionId)
 
