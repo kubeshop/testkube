@@ -99,7 +99,7 @@ func LoadConfigFromStringOrFile(inputString, configDir, filename, configType str
 		}
 	} else if raw, err = LoadConfigFromFile(configDir, filename, configType); err != nil {
 		return "", err
-	} else {
+	} else if raw == "" {
 		log.DefaultLogger.Warnf("no %s config found", configType)
 	}
 
@@ -109,7 +109,7 @@ func LoadConfigFromStringOrFile(inputString, configDir, filename, configType str
 func LoadConfigFromFile(configDir, filename, configType string) (raw string, err error) {
 	f, err := os.Open(filepath.Join(configDir, filename))
 	if err != nil {
-		return "", err
+		return "", nil
 	}
 
 	defer f.Close()
