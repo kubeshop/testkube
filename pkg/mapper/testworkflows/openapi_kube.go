@@ -554,19 +554,58 @@ func MapPodResourceClaimAPIToKube(v testkube.PodResourceClaim) corev1.PodResourc
 
 func MapPodSecurityContextAPIToKube(v testkube.PodSecurityContext) corev1.PodSecurityContext {
 	return corev1.PodSecurityContext{
-		//	SELinuxOptions:           common.MapPtr(v.SELinuxOptions, MapSELinuxOptionsKubeToAPI),
-		//	WindowsOptions:           common.MapPtr(v.WindowsOptions, MapWindowsSecurityContextOptionsKubeToAPI),
-		RunAsUser:          MapBoxedIntegerToInt64(v.RunAsUser),
-		RunAsGroup:         MapBoxedIntegerToInt64(v.RunAsGroup),
-		RunAsNonRoot:       MapBoxedBooleanToBool(v.RunAsNonRoot),
-		SupplementalGroups: v.SupplementalGroups,
-		//	SupplementalGroupsPolicy: MapStringToBoxedString((*string)(v.SupplementalGroupsPolicy)),
-		FSGroup: MapBoxedIntegerToInt64(v.FsGroup),
-		//	Sysctls:                  common.MapSlice(v.Sysctls, MapSysctlKubeToAPI),
-		FSGroupChangePolicy: common.MapPtr(MapBoxedStringToString(v.FsGroupChangePolicy), common.MapStringToEnum[corev1.PodFSGroupChangePolicy]),
-		//	SeccompProfile:           common.MapPtr(v.SeccompProfile, MapSeccompProfileKubeToAPI),
-		//	AppArmorProfile:          common.MapPtr(v.AppArmorProfile, MapAppArmorProfileKubeToAPI),
-		SELinuxChangePolicy: common.MapPtr(MapBoxedStringToString(v.SeLinuxChangePolicy), common.MapStringToEnum[corev1.PodSELinuxChangePolicy]),
+		SELinuxOptions:           common.MapPtr(v.SeLinuxOptions, MapSELinuxOptionsAPIToKube),
+		WindowsOptions:           common.MapPtr(v.WindowsOptions, MapWindowsSecurityContextOptionsAPIToKube),
+		RunAsUser:                MapBoxedIntegerToInt64(v.RunAsUser),
+		RunAsGroup:               MapBoxedIntegerToInt64(v.RunAsGroup),
+		RunAsNonRoot:             MapBoxedBooleanToBool(v.RunAsNonRoot),
+		SupplementalGroups:       v.SupplementalGroups,
+		SupplementalGroupsPolicy: common.MapPtr(MapBoxedStringToString(v.SupplementalGroupsPolicy), common.MapStringToEnum[corev1.SupplementalGroupsPolicy]),
+		FSGroup:                  MapBoxedIntegerToInt64(v.FsGroup),
+		Sysctls:                  common.MapSlice(v.Sysctls, MapSysctlAPIToKube),
+		FSGroupChangePolicy:      common.MapPtr(MapBoxedStringToString(v.FsGroupChangePolicy), common.MapStringToEnum[corev1.PodFSGroupChangePolicy]),
+		SeccompProfile:           common.MapPtr(v.SeccompProfile, MapSeccompProfileAPIToKube),
+		AppArmorProfile:          common.MapPtr(v.AppArmorProfile, MapAppArmorProfileAPIToKube),
+		SELinuxChangePolicy:      common.MapPtr(MapBoxedStringToString(v.SeLinuxChangePolicy), common.MapStringToEnum[corev1.PodSELinuxChangePolicy]),
+	}
+}
+
+func MapSELinuxOptionsAPIToKube(v testkube.SeLinuxOptions) corev1.SELinuxOptions {
+	return corev1.SELinuxOptions{
+		User:  v.User,
+		Role:  v.Role,
+		Type:  v.Type_,
+		Level: v.Level,
+	}
+}
+
+func MapWindowsSecurityContextOptionsAPIToKube(v testkube.WindowsSecurityContextOptions) corev1.WindowsSecurityContextOptions {
+	return corev1.WindowsSecurityContextOptions{
+		GMSACredentialSpecName: MapBoxedStringToString(v.GmsaCredentialSpecName),
+		GMSACredentialSpec:     MapBoxedStringToString(v.GmsaCredentialSpec),
+		RunAsUserName:          MapBoxedStringToString(v.RunAsUserName),
+		HostProcess:            MapBoxedBooleanToBool(v.HostProcess),
+	}
+}
+
+func MapSysctlAPIToKube(v testkube.Sysctl) corev1.Sysctl {
+	return corev1.Sysctl{
+		Name:  v.Name,
+		Value: v.Value,
+	}
+}
+
+func MapSeccompProfileAPIToKube(v testkube.SeccompProfile) corev1.SeccompProfile {
+	return corev1.SeccompProfile{
+		Type:             corev1.SeccompProfileType(v.Type_),
+		LocalhostProfile: MapBoxedStringToString(v.LocalhostProfile),
+	}
+}
+
+func MapAppArmorProfileAPIToKube(v testkube.AppArmorProfile) corev1.AppArmorProfile {
+	return corev1.AppArmorProfile{
+		Type:             corev1.AppArmorProfileType(v.Type_),
+		LocalhostProfile: MapBoxedStringToString(v.LocalhostProfile),
 	}
 }
 

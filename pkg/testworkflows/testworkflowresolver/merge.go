@@ -113,14 +113,24 @@ func MergePodSecurityContext(dst, include *corev1.PodSecurityContext) *corev1.Po
 		dst.RunAsNonRoot = include.RunAsNonRoot
 	}
 	dst.SupplementalGroups = append(dst.SupplementalGroups, include.SupplementalGroups...)
+	if include.SupplementalGroupsPolicy != nil {
+		dst.SupplementalGroupsPolicy = include.SupplementalGroupsPolicy
+	}
 	if include.FSGroup != nil {
 		dst.FSGroup = include.FSGroup
 	}
+	dst.Sysctls = append(dst.Sysctls, include.Sysctls...)
 	if include.FSGroupChangePolicy != nil {
 		dst.FSGroupChangePolicy = include.FSGroupChangePolicy
 	}
 	if include.SeccompProfile != nil {
 		dst.SeccompProfile = include.SeccompProfile
+	}
+	if include.AppArmorProfile != nil {
+		dst.AppArmorProfile = include.AppArmorProfile
+	}
+	if include.SELinuxChangePolicy != nil {
+		dst.SELinuxChangePolicy = include.SELinuxChangePolicy
 	}
 	return dst
 }
