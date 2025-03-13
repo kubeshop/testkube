@@ -8766,6 +8766,11 @@ components:
           $ref: "#/components/schemas/TestWorkflowRunningContext"
         configParams:
           $ref: "#/components/schemas/TestWorkflowExecutionConfig"
+        reports:
+          type: array
+          description: generated reports from the steps, like junit
+          items:
+            $ref: "#/components/schemas/TestWorkflowReport"
       required:
         - id
         - name
