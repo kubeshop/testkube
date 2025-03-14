@@ -21,7 +21,7 @@ func NewLoginCmd() *cobra.Command {
 
 			common.ProcessMasterFlags(cmd, &opts, &cfg)
 
-			token, refreshToken, err := common.LoginUser(opts.Master.URIs.Auth, opts.Master.CustomAuth)
+			token, refreshToken, err := common.LoginUser(opts.Master.URIs.Auth, opts.Master.CustomAuth, opts.Master.CallbackPort)
 			ui.ExitOnError("getting token", err)
 
 			orgID := opts.Master.OrgId
