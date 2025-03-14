@@ -325,7 +325,7 @@ func (r *MongoRepository) GetExecutionsSummary(ctx context.Context, filter Filte
 		if filter.Page() > 0 {
 			pipeline = append(pipeline, bson.M{"$skip": int64(filter.Page() * filter.PageSize())})
 		}
-		pipeline = append(pipeline, bson.M{"$limit": int64(filter.Page())})
+		pipeline = append(pipeline, bson.M{"$limit": int64(filter.PageSize())})
 	}
 
 	opts := options.Aggregate()
