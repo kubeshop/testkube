@@ -97,8 +97,6 @@ func NewKillCmd() *cobra.Command {
 				}
 
 				for _, id := range ids {
-					notifications := spawn.ExecutionWorker().Notifications(context.Background(), id, executionworkertypes.NotificationsOptions{})
-
 					service, index := spawn.GetServiceByResourceId(id)
 					count := index + 1
 					if services[service] > count {
@@ -106,6 +104,12 @@ func NewKillCmd() *cobra.Command {
 					}
 
 					log := spawn.CreateLogger(service, "", index, count)
+					notifications := spawn.ExecutionWorker().Notifications(context.Background(), id, executionworkertypes.NotificationsOptions{})
+					if notifications.Err() != nil {
+						log("error", "failed to connect to the service", notifications.Err().Error())
+						continue
+					}
+
 					for l := range notifications.Channel() {
 						if l.Result == nil || l.Result.Status == nil {
 							continue
