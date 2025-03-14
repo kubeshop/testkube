@@ -60,6 +60,8 @@ type ExecuteResult struct {
 	ScheduledAt time.Time
 	// Namespace where it has been scheduled.
 	Namespace string
+	// Redundant says if that execution was already running.
+	Redundant bool
 }
 
 type ServiceResult struct {

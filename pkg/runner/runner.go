@@ -2,6 +2,8 @@ package runner
 
 import (
 	"context"
+	errors2 "errors"
+	"strings"
 	"sync"
 	"time"
 
@@ -266,6 +268,22 @@ func (r *runner) Execute(request executionworkertypes.ExecuteRequest) (*executio
 		// TODO: consider retry?
 		go r.Monitor(context.Background(), request.Execution.OrganizationId, request.Execution.EnvironmentId, request.Execution.Id)
 	}
+
+	// Edge case, when the execution has been already triggered before there,
+	// and now it's redundant call.
+	if err != nil && strings.Contains(err.Error(), "already exists") && strings.Contains(err.Error(), request.Execution.Id) {
+		existing, existingErr := r.worker.Summary(context.Background(), request.ResourceId, executionworkertypes.GetOptions{})
+		if existingErr != nil {
+			return nil, errors2.Join(err, existingErr)
+		}
+		return &executionworkertypes.ExecuteResult{
+			Signature:   existing.Signature,
+			ScheduledAt: existing.Execution.ScheduledAt,
+			Namespace:   existing.Namespace,
+			Redundant:   true,
+		}, nil
+	}
+
 	return res, err
 }
 
