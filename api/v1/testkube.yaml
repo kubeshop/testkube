@@ -5282,6 +5282,8 @@ components:
       properties:
         executionId:
           type: string
+        groupId:
+          type: string
         duration:
           type: string
         durationMs:
@@ -5293,6 +5295,8 @@ components:
         startTime:
           type: string
           format: date-time
+        runnerId:
+          type: string
 
     Variables:
       type: object
