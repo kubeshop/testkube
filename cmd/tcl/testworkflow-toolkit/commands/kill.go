@@ -96,6 +96,35 @@ func NewKillCmd() *cobra.Command {
 					}
 				}
 
+				for _, id := range ids {
+					notifications := spawn.ExecutionWorker().Notifications(context.Background(), id, executionworkertypes.NotificationsOptions{})
+
+					service, index := spawn.GetServiceByResourceId(id)
+					count := index + 1
+					if services[service] > count {
+						count = services[service]
+					}
+
+					log := spawn.CreateLogger(service, "", index, count)
+					for l := range notifications.Channel() {
+						if l.Result == nil || l.Result.Status == nil {
+							continue
+						}
+
+						if l.Result.Status.Finished() {
+							if l.Result.Initialization != nil && l.Result.Initialization.ErrorMessage != "" {
+								log("warning", "initialization error", ui.Red(l.Result.Initialization.ErrorMessage))
+							} else {
+								for _, step := range l.Result.Steps {
+									if step.ErrorMessage != "" {
+										log("warning", "step error", ui.Red(step.ErrorMessage))
+									}
+								}
+							}
+						}
+					}
+				}
+
 				// Inform about detected services
 				for name, count := range services {
 					fmt.Printf("%s: fetching logs of %d instances\n", commontcl.ServiceLabel(name), count)
