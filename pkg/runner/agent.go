@@ -300,12 +300,6 @@ func (a *agentLoop) runTestWorkflow(environmentId string, executionId string, ex
 		return nil, a.directRunTestWorkflow(environmentId, executionId, executionToken)
 	})
 
-	// Edge case, when the execution has been already triggered before there,
-	// and now it's redundant call.
-	if err != nil && strings.Contains(err.Error(), "already exists") && strings.Contains(err.Error(), executionId) {
-		return nil
-	}
-
 	return err
 }
 
@@ -352,6 +346,11 @@ func (a *agentLoop) directRunTestWorkflow(environmentId string, executionId stri
 		if err != nil {
 			logger.Errorw("failed to run and update execution", "error", err)
 		}
+		return nil
+	}
+
+	// Inform that everything is fine, because the execution is already there.
+	if result.Redundant {
 		return nil
 	}
 
