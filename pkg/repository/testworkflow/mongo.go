@@ -302,10 +302,10 @@ func (r *MongoRepository) GetExecutionsSummary(ctx context.Context, filter Filte
 		{"$sort": bson.M{"scheduledat": -1}},
 		{"$match": query},
 		{"$project": bson.M{
+			"_id":           0,
 			"workflow.spec": 0,
 		}},
 		{"$project": bson.M{
-			"_id":                          0,
 			"id":                           1,
 			"groupid":                      1,
 			"runnerid":                     1,
