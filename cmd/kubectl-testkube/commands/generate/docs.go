@@ -25,7 +25,6 @@ var linkHandler = func(name string) string {
 	return name
 }
 
-func NewDocsCmd() *cobra.Command 
 func NewDocsCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:     "doc",
