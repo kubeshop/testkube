@@ -2,6 +2,8 @@ package runner
 
 import (
 	"context"
+	errors2 "errors"
+	"strings"
 	"sync"
 	"time"
 
@@ -52,7 +54,6 @@ type runner struct {
 	emitter           event.Interface
 	metrics           metrics.Metrics
 	proContext        config.ProContext // TODO: Include Agent ID in pro context
-	dashboardURI      string
 	storageSkipVerify bool
 	getGlobalTemplate GlobalTemplateFactory
 
@@ -66,7 +67,6 @@ func New(
 	emitter event.Interface,
 	metrics metrics.Metrics,
 	proContext config.ProContext,
-	dashboardURI string,
 	storageSkipVerify bool,
 	getGlobalTemplate GlobalTemplateFactory,
 ) Runner {
@@ -77,7 +77,6 @@ func New(
 		emitter:           emitter,
 		metrics:           metrics,
 		proContext:        proContext,
-		dashboardURI:      dashboardURI,
 		storageSkipVerify: storageSkipVerify,
 		getGlobalTemplate: getGlobalTemplate,
 	}
@@ -241,6 +240,12 @@ func (r *runner) Notifications(ctx context.Context, id string) executionworkerty
 }
 
 func (r *runner) Execute(request executionworkertypes.ExecuteRequest) (*executionworkertypes.ExecuteResult, error) {
+	if request.Execution.OrganizationSlug == "" {
+		request.Execution.OrganizationSlug = request.Execution.OrganizationId
+	}
+	if request.Execution.EnvironmentSlug == "" {
+		request.Execution.EnvironmentSlug = request.Execution.EnvironmentId
+	}
 	if r.getGlobalTemplate != nil {
 		globalTemplate, err := r.getGlobalTemplate(request.Execution.EnvironmentId)
 		if err != nil {
@@ -263,6 +268,22 @@ func (r *runner) Execute(request executionworkertypes.ExecuteRequest) (*executio
 		// TODO: consider retry?
 		go r.Monitor(context.Background(), request.Execution.OrganizationId, request.Execution.EnvironmentId, request.Execution.Id)
 	}
+
+	// Edge case, when the execution has been already triggered before there,
+	// and now it's redundant call.
+	if err != nil && strings.Contains(err.Error(), "already exists") && strings.Contains(err.Error(), request.Execution.Id) {
+		existing, existingErr := r.worker.Summary(context.Background(), request.ResourceId, executionworkertypes.GetOptions{})
+		if existingErr != nil {
+			return nil, errors2.Join(err, existingErr)
+		}
+		return &executionworkertypes.ExecuteResult{
+			Signature:   existing.Signature,
+			ScheduledAt: existing.Execution.ScheduledAt,
+			Namespace:   existing.Namespace,
+			Redundant:   true,
+		}, nil
+	}
+
 	return res, err
 }
 

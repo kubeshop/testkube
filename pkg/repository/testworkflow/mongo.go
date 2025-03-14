@@ -296,20 +296,45 @@ type TestWorkflowExecutionSummaryWithResolvedWorkflow struct {
 
 func (r *MongoRepository) GetExecutionsSummary(ctx context.Context, filter Filter) (result []testkube.TestWorkflowExecutionSummary, err error) {
 	executions := make([]TestWorkflowExecutionSummaryWithResolvedWorkflow, 0)
-	query, opts := composeQueryAndOpts(filter)
+	query, _ := composeQueryAndOpts(filter)
+
+	pipeline := []bson.M{
+		{"$sort": bson.M{"scheduledat": -1}},
+		{"$match": query},
+		{"$project": bson.M{
+			"_id":           0,
+			"workflow.spec": 0,
+		}},
+		{"$project": bson.M{
+			"id":                           1,
+			"groupid":                      1,
+			"runnerid":                     1,
+			"name":                         1,
+			"number":                       1,
+			"scheduledat":                  1,
+			"statusat":                     1,
+			"result":                       1,
+			"workflow":                     1,
+			"tags":                         1,
+			"runningcontext":               1,
+			"configparams":                 1,
+			"resolvedworkflow.spec.config": 1,
+		}},
+	}
+
+	if filter.PageSize() > 0 {
+		if filter.Page() > 0 {
+			pipeline = append(pipeline, bson.M{"$skip": int64(filter.Page() * filter.PageSize())})
+		}
+		pipeline = append(pipeline, bson.M{"$limit": int64(filter.PageSize())})
+	}
+
+	opts := options.Aggregate()
 	if r.allowDiskUse {
 		opts.SetAllowDiskUse(r.allowDiskUse)
 	}
 
-	opts = opts.SetProjection(bson.M{
-		"_id":                   0,
-		"output":                0,
-		"signature":             0,
-		"result.steps":          0,
-		"result.initialization": 0,
-		"workflow.spec":         0,
-	})
-	cursor, err := r.Coll.Find(ctx, query, opts)
+	cursor, err := r.Coll.Aggregate(ctx, pipeline, opts)
 	if err != nil {
 		return
 	}
@@ -593,10 +618,15 @@ func (r *MongoRepository) GetTestWorkflowMetrics(ctx context.Context, name strin
 		{"$sort": bson.M{"scheduledat": -1}},
 		{"$match": query},
 		{"$project": bson.M{
-			"status":    "$result.status",
-			"duration":  "$result.duration",
-			"starttime": "$scheduledat",
-			"name":      1,
+			"_id":         0,
+			"executionid": "$id",
+			"groupid":     1,
+			"duration":    "$result.duration",
+			"durationms":  "$result.durationms",
+			"status":      "$result.status",
+			"name":        1,
+			"starttime":   "$scheduledat",
+			"runnerid":    1,
 		}},
 	}
 

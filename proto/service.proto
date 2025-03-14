@@ -166,6 +166,7 @@ message ProContextResponse {
   TestkubeMode mode = 5;
   PlanStatus status = 6;
   ProContextAgent agent = 7;
+  string public_dashboard_url = 10;
 }
 
 message Capability {

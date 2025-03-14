@@ -11,6 +11,7 @@ import (
 	errors2 "github.com/pkg/errors"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
+	"golang.org/x/sync/singleflight"
 
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/internal/config"
@@ -40,6 +41,7 @@ type agentLoop struct {
 	controlPlaneConfig  testworkflowconfig.ControlPlaneConfig
 	organizationId      string
 	legacyEnvironmentId string
+	sf                  singleflight.Group
 }
 
 type AgentLoop interface {
@@ -294,6 +296,14 @@ func (a *agentLoop) loopRunnerRequests(ctx context.Context) error {
 }
 
 func (a *agentLoop) runTestWorkflow(environmentId string, executionId string, executionToken string) error {
+	_, err, _ := a.sf.Do(environmentId+"."+executionId, func() (interface{}, error) {
+		return nil, a.directRunTestWorkflow(environmentId, executionId, executionToken)
+	})
+
+	return err
+}
+
+func (a *agentLoop) directRunTestWorkflow(environmentId string, executionId string, executionToken string) error {
 	ctx := context.Background()
 	logger := a.logger.With("environmentId", environmentId, "executionId", executionId)
 
@@ -310,16 +320,18 @@ func (a *agentLoop) runTestWorkflow(environmentId string, executionId string, ex
 	result, err := a.runner.Execute(executionworkertypes.ExecuteRequest{
 		Token: executionToken,
 		Execution: testworkflowconfig.ExecutionConfig{
-			Id:              execution.Id,
-			GroupId:         execution.GroupId,
-			Name:            execution.Name,
-			Number:          execution.Number,
-			ScheduledAt:     execution.ScheduledAt,
-			DisableWebhooks: execution.DisableWebhooks,
-			Debug:           false,
-			OrganizationId:  a.organizationId,
-			EnvironmentId:   environmentId,
-			ParentIds:       parentIds,
+			Id:               execution.Id,
+			GroupId:          execution.GroupId,
+			Name:             execution.Name,
+			Number:           execution.Number,
+			ScheduledAt:      execution.ScheduledAt,
+			DisableWebhooks:  execution.DisableWebhooks,
+			Debug:            false,
+			OrganizationId:   a.organizationId,
+			OrganizationSlug: a.proContext.OrgSlug,
+			EnvironmentId:    environmentId,
+			EnvironmentSlug:  a.proContext.GetEnvSlug(environmentId),
+			ParentIds:        parentIds,
 		},
 		Workflow:     testworkflowmappers.MapTestWorkflowAPIToKube(*execution.ResolvedWorkflow),
 		ControlPlane: a.controlPlaneConfig, // TODO: fetch it from the control plane?
@@ -334,6 +346,11 @@ func (a *agentLoop) runTestWorkflow(environmentId string, executionId string, ex
 		if err != nil {
 			logger.Errorw("failed to run and update execution", "error", err)
 		}
+		return nil
+	}
+
+	// Inform that everything is fine, because the execution is already there.
+	if result.Redundant {
 		return nil
 	}
 

@@ -18,7 +18,6 @@ import (
 
 type Options struct {
 	ClusterID           string
-	DashboardURI        string
 	DefaultNamespace    string
 	ServiceAccountNames map[string]string
 
@@ -69,7 +68,6 @@ func NewService(
 			eventsEmitter,
 			metricsClient,
 			proContext,
-			opts.DashboardURI,
 			opts.StorageSkipVerify,
 			opts.GlobalTemplate,
 		),

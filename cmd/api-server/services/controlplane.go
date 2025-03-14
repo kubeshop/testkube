@@ -417,6 +417,8 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 		"",
 		"",
 		"",
+		nil,
+		"",
 		cfg.FeatureNewArchitecture,
 	)
 

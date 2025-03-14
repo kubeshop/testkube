@@ -55,7 +55,9 @@ type scheduler struct {
 	globalTemplateName          string
 	globalTemplateInline        *testkube.TestWorkflowTemplate
 	organizationId              string
+	organizationSlug            string
 	defaultEnvironmentId        string
+	getEnvSlug                  func(string) string
 
 	agentId                string
 	grpcClient             cloud.TestKubeCloudAPIClient
@@ -72,7 +74,9 @@ func NewScheduler(
 	globalTemplateName string,
 	globalTemplateInlineYaml string,
 	organizationId string,
+	organizationSlug string,
 	defaultEnvironmentId string,
+	getEnvSlug func(string) string,
 
 	agentId string,
 	grpcClient cloud.TestKubeCloudAPIClient,
@@ -100,7 +104,9 @@ func NewScheduler(
 		globalTemplateName:          globalTemplateName,
 		globalTemplateInline:        globalTemplateInline,
 		organizationId:              organizationId,
+		organizationSlug:            organizationSlug,
 		defaultEnvironmentId:        defaultEnvironmentId,
+		getEnvSlug:                  getEnvSlug,
 
 		agentId:                agentId,
 		grpcClient:             grpcClient,
@@ -468,8 +474,13 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 			}
 		}
 
+		envSlug := ""
+		if s.getEnvSlug != nil {
+			envSlug = s.getEnvSlug(environmentId)
+		}
+
 		// Resolve it finally
-		err = intermediate[i].Resolve(s.organizationId, environmentId, req.ParentExecutionIds, false)
+		err = intermediate[i].Resolve(s.organizationId, s.organizationSlug, environmentId, envSlug, req.ParentExecutionIds, false)
 		if err != nil {
 			intermediate[i].SetError("Cannot process Test Workflow specification", err)
 			continue

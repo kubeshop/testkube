@@ -39,6 +39,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/presets"
 	"github.com/kubeshop/testkube/pkg/version"
+	"github.com/kubeshop/testkube/pkg/workerpool"
 
 	"golang.org/x/sync/errgroup"
 
@@ -232,7 +233,6 @@ func main() {
 
 	runnerOpts := runner2.Options{
 		ClusterID:           clusterId,
-		DashboardURI:        cfg.TestkubeDashboardURI,
 		DefaultNamespace:    cfg.TestkubeNamespace,
 		ServiceAccountNames: serviceAccountNames,
 		StorageSkipVerify:   cfg.StorageSkipVerify,
@@ -249,7 +249,7 @@ func main() {
 		configMapConfig,
 		client,
 		testworkflowconfig.ControlPlaneConfig{
-			DashboardUrl:   cfg.TestkubeDashboardURI,
+			DashboardUrl:   proContext.DashboardURI,
 			CDEventsTarget: cfg.CDEventsTarget,
 		},
 		proContext,
@@ -276,9 +276,11 @@ func main() {
 		metrics,
 		secretManager,
 		cfg.GlobalWorkflowTemplateName,
-		cfg.TestkubeDashboardURI,
+		proContext.DashboardURI,
 		proContext.OrgID,
+		proContext.OrgSlug,
 		proContext.EnvID,
+		proContext.GetEnvSlug,
 		proContext.Agent.ID,
 		proContext.NewArchitecture,
 	)
@@ -300,7 +302,7 @@ func main() {
 	eventsEmitter.Loader.Register(websocketLoader)
 	eventsEmitter.Loader.Register(commons.MustCreateSlackLoader(cfg, envs))
 	if cfg.CDEventsTarget != "" {
-		cdeventLoader, err := cdevent.NewCDEventLoader(cfg.CDEventsTarget, clusterId, cfg.TestkubeNamespace, cfg.TestkubeDashboardURI, testkube.AllEventTypes)
+		cdeventLoader, err := cdevent.NewCDEventLoader(cfg.CDEventsTarget, clusterId, cfg.TestkubeNamespace, proContext.DashboardURI, testkube.AllEventTypes)
 		if err == nil {
 			eventsEmitter.Loader.Register(cdeventLoader)
 		} else {
@@ -312,7 +314,7 @@ func main() {
 	}
 
 	// Update the Prometheus metrics regarding the Test Workflow Execution
-	eventsEmitter.Loader.Register(testworkflowexecutionmetrics.NewLoader(ctx, metrics, cfg.TestkubeDashboardURI))
+	eventsEmitter.Loader.Register(testworkflowexecutionmetrics.NewLoader(ctx, metrics, proContext.DashboardURI))
 
 	// Send the telemetry data regarding the Test Workflow Execution
 	// TODO: Disable it if Control Plane does that
@@ -470,7 +472,6 @@ func main() {
 		metrics,
 		&proContext,
 		features,
-		cfg.TestkubeDashboardURI,
 		cfg.TestkubeHelmchartVersion,
 		serviceAccountNames,
 		cfg.TestkubeDockerImageVersion,
@@ -562,6 +563,32 @@ func main() {
 		g.Go(func() error {
 			log.DefaultLogger.Infof("starting debug pprof server")
 			return debugSrv.ListenAndServe()
+		})
+	}
+
+	var executeTestFn workerpool.ExecuteFn[testkube.Test, testkube.ExecutionRequest, testkube.Execution]
+	var executeTestSuiteFn workerpool.ExecuteFn[testkube.TestSuite, testkube.TestSuiteExecutionRequest, testkube.TestSuiteExecution]
+	if deprecatedSystem != nil && deprecatedSystem.Scheduler != nil {
+		executeTestFn = deprecatedSystem.Scheduler.ExecuteTest
+		executeTestSuiteFn = deprecatedSystem.Scheduler.ExecuteTestSuite
+	}
+
+	scheduler := commons.CreateCronJobScheduler(cfg,
+		kubeClient,
+		testWorkflowsClient,
+		testWorkflowTemplatesClient,
+		testWorkflowExecutor,
+		deprecatedClients,
+		executeTestFn,
+		executeTestSuiteFn,
+		log.DefaultLogger,
+		kubeConfig,
+		&proContext,
+	)
+	if scheduler != nil {
+		g.Go(func() error {
+			scheduler.Reconcile(ctx)
+			return nil
 		})
 	}
 

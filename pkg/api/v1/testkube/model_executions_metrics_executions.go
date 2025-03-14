@@ -15,9 +15,11 @@ import (
 
 type ExecutionsMetricsExecutions struct {
 	ExecutionId string    `json:"executionId,omitempty"`
+	GroupId     string    `json:"groupId,omitempty"`
 	Duration    string    `json:"duration,omitempty"`
 	DurationMs  int32     `json:"durationMs,omitempty"`
 	Status      string    `json:"status,omitempty"`
 	Name        string    `json:"name,omitempty"`
 	StartTime   time.Time `json:"startTime,omitempty"`
+	RunnerId    string    `json:"runnerId,omitempty"`
 }

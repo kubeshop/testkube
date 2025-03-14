@@ -49,7 +49,6 @@ func NewTestkubeAPI(
 	metrics metrics.Metrics,
 	proContext *config.ProContext,
 	ff featureflags.FeatureFlags,
-	dashboardURI string,
 	helmchartVersion string,
 	serviceAccountNames map[string]string,
 	dockerImageVersion string,
@@ -77,7 +76,6 @@ func NewTestkubeAPI(
 		ConfigMap:                      configMap,
 		ExecutionWorkerClient:          executionWorkerClient,
 		ArtifactsStorage:               artifactsStorage,
-		dashboardURI:                   dashboardURI,
 		helmchartVersion:               helmchartVersion,
 		secretConfig:                   secretConfig,
 		featureFlags:                   ff,
@@ -111,7 +109,6 @@ type TestkubeAPI struct {
 	Events                         *event.Emitter
 	ConfigMap                      repoConfig.Repository
 	ArtifactsStorage               storage.ArtifactsStorage
-	dashboardURI                   string
 	helmchartVersion               string
 	secretConfig                   testkube.SecretConfig
 	featureFlags                   featureflags.FeatureFlags

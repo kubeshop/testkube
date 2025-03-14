@@ -73,7 +73,9 @@ func New(
 	globalTemplateName string,
 	dashboardURI string,
 	organizationId string,
+	organizationSlug string,
 	defaultEnvironmentId string,
+	getEnvSlug func(string) string,
 	agentId string,
 	featureNewArchitecture bool) TestWorkflowExecutor {
 	return &executor{
@@ -100,7 +102,9 @@ func New(
 			globalTemplateName,
 			"",
 			organizationId,
+			organizationSlug,
 			defaultEnvironmentId,
+			getEnvSlug,
 			agentId,
 			grpcClient,
 			apiKey,
