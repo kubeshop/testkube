@@ -317,6 +317,7 @@ func (r *MongoRepository) GetExecutionsSummary(ctx context.Context, filter Filte
 			"workflow":                     1,
 			"tags":                         1,
 			"runningcontext":               1,
+			"configparams":                 1,
 			"resolvedworkflow.spec.config": 1,
 		}},
 	}
