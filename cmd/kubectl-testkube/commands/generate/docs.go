@@ -2,6 +2,8 @@ package generate
 
 import (
 	"fmt"
+	"io"
+	"os"
 	"path"
 	"path/filepath"
 	"strings"
@@ -12,17 +14,21 @@ import (
 
 const fmTemplate = `---
 title: "%s"
----
+%s---
 `
 
 var filePrepender = func(filename string) string {
 	name := filepath.Base(filename)
 	base := strings.TrimSuffix(name, path.Ext(name))
-	return fmt.Sprintf(fmTemplate, strings.Replace(base, "_", " ", -1))
+	sidebarPosition := ""
+	if strings.EqualFold(base, "testkube") {
+		sidebarPosition = "sidebar_position: 1\n"
+	}
+	return fmt.Sprintf(fmTemplate, strings.Replace(base, "-", " ", -1), sidebarPosition)
 }
 
 var linkHandler = func(name string) string {
-	return name
+	return strings.ReplaceAll(name, "_", "-")
 }
 
 func NewDocsCmd() *cobra.Command {
@@ -34,7 +40,36 @@ func NewDocsCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			root := cmd.Root()
 			root.DisableAutoGenTag = true
-			return doc.GenMarkdownTreeCustom(root, "gen/docs/cli", filePrepender, linkHandler)
+			return GenTestkubeMarkdownTree(root, "gen/docs/cli", filePrepender, linkHandler)
 		},
 	}
+}
+
+// GenMarkdownTreeCustom is the same as GenMarkdownTree, but
+// with custom filePrepender and linkHandler.
+func GenTestkubeMarkdownTree(cmd *cobra.Command, dir string, filePrepender, linkHandler func(string) string) error {
+	for _, c := range cmd.Commands() {
+		if !c.IsAvailableCommand() || c.IsAdditionalHelpTopicCommand() {
+			continue
+		}
+		if err := GenTestkubeMarkdownTree(c, dir, filePrepender, linkHandler); err != nil {
+			return err
+		}
+	}
+
+	basename := strings.ReplaceAll(cmd.CommandPath(), " ", "-") + ".md"
+	filename := filepath.Join(dir, basename)
+	f, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	if _, err := io.WriteString(f, filePrepender(filename)); err != nil {
+		return err
+	}
+	if err := doc.GenMarkdownCustom(cmd, f, linkHandler); err != nil {
+		return err
+	}
+	return nil
 }
