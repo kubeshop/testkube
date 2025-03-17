@@ -11,6 +11,9 @@ package testkube
 
 // Items is a list of DownwardAPIVolume file
 type ProjectedVolumeSourceDownwardApiItems struct {
-	FieldRef         *FieldRef         `json:"fieldRef,omitempty"`
+	FieldRef *FieldRef     `json:"fieldRef,omitempty"`
+	Mode     *BoxedInteger `json:"mode,omitempty"`
+	// path is the relative path of the file to map the key to. May not be an absolute path. May not contain the path element '..'. May not start with the string '..'.
+	Path             string            `json:"path"`
 	ResourceFieldRef *ResourceFieldRef `json:"resourceFieldRef,omitempty"`
 }

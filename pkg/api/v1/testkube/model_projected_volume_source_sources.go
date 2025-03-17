@@ -11,6 +11,9 @@ package testkube
 
 // Projection that may be projected along with other supported volume types. Exactly one of these fields must be set.
 type ProjectedVolumeSourceSources struct {
-	Secret      *ProjectedVolumeSourceSecret      `json:"secret,omitempty"`
-	DownwardAPI *ProjectedVolumeSourceDownwardApi `json:"downwardAPI,omitempty"`
+	ClusterTrustBundle  *ProjectedVolumeSourceClusterTrustBundle  `json:"clusterTrustBundle,omitempty"`
+	ConfigMap           *ProjectedVolumeSourceConfigMap           `json:"configMap,omitempty"`
+	DownwardAPI         *ProjectedVolumeSourceDownwardApi         `json:"downwardAPI,omitempty"`
+	Secret              *ProjectedVolumeSourceSecret              `json:"secret,omitempty"`
+	ServiceAccountToken *ProjectedVolumeSourceServiceAccountToken `json:"serviceAccountToken,omitempty"`
 }
