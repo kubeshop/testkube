@@ -11141,9 +11141,7 @@ components:
                                           TODO: Add other useful fields. apiVersion, kind, uid?'
                     type: string
                   optional:
-                    description: optional field specify whether the ConfigMap
-                      or its key must be defined
-                    type: boolean
+                    $ref: "#/components/schemas/BoxedBoolean"
               downwardAPI:
                 type: object
                 description: downwardAPI information about the downwardAPI data to project

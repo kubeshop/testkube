@@ -209,6 +209,39 @@ func MapCSIVolumeSourceKubeToAPI(v corev1.CSIVolumeSource) testkube.CsiVolumeSou
 		NodePublishSecretRef: common.MapPtr(v.NodePublishSecretRef, MapLocalObjectReferenceKubeToAPI),
 	}
 }
+
+func MapProjectedVolumeSourceKubeToAPI(v corev1.ProjectedVolumeSource) testkube.ProjectedVolumeSource {
+	return testkube.ProjectedVolumeSource{
+		DefaultMode: MapInt32ToBoxedInteger(v.DefaultMode),
+		Sources:     common.MapSlice(v.Sources, MapVolumeProjectionKubeToAPI),
+	}
+}
+
+func MapVolumeProjectionKubeToAPI(v corev1.VolumeProjection) testkube.ProjectedVolumeSourceSources {
+	return testkube.ProjectedVolumeSourceSources{
+		ClusterTrustBundle: common.MapPtr(v.ClusterTrustBundle, MapClusterTrustBundleProjectionKubeToAPI),
+		ConfigMap:          common.MapPtr(v.ConfigMap, MapConfigMapProjectionKubeToAPI),
+	}
+}
+
+func MapConfigMapProjectionKubeToAPI(v corev1.ConfigMapProjection) testkube.ProjectedVolumeSourceConfigMap {
+	return testkube.ProjectedVolumeSourceConfigMap{
+		Items:    common.MapSlice(v.Items, MapKeyToPathKubeToAPI),
+		Name:     v.Name,
+		Optional: MapBoolToBoxedBoolean(v.Optional),
+	}
+}
+
+func MapClusterTrustBundleProjectionKubeToAPI(v corev1.ClusterTrustBundleProjection) testkube.ProjectedVolumeSourceClusterTrustBundle {
+	return testkube.ProjectedVolumeSourceClusterTrustBundle{
+		LabelSelector: common.MapPtr(v.LabelSelector, MapLabelSelectorKubeToAPI),
+		Name:          MapStringToBoxedString(v.Name),
+		Optional:      MapBoolToBoxedBoolean(v.Optional),
+		Path:          v.Path,
+		SignerName:    MapStringToBoxedString(v.SignerName),
+	}
+}
+
 func MapVolumeKubeToAPI(v corev1.Volume) testkube.Volume {
 	// TODO: Add rest of VolumeSource types in future,
 	//       so they will be recognized by JSON API and persisted with Execution.
@@ -226,6 +259,7 @@ func MapVolumeKubeToAPI(v corev1.Volume) testkube.Volume {
 		ConfigMap:             common.MapPtr(v.ConfigMap, MapConfigMapVolumeSourceKubeToAPI),
 		AzureDisk:             common.MapPtr(v.AzureDisk, MapAzureDiskVolumeSourceKubeToAPI),
 		Csi:                   common.MapPtr(v.CSI, MapCSIVolumeSourceKubeToAPI),
+		Projected:             common.MapPtr(v.Projected, MapProjectedVolumeSourceKubeToAPI),
 	}
 }
 
