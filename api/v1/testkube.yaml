@@ -11207,9 +11207,7 @@ components:
                                           TODO: Add other useful fields. apiVersion, kind, uid?'
                     type: string
                   optional:
-                    description: optional field specify whether the Secret
-                      or its key must be defined
-                    type: boolean
+                    $ref: "#/components/schemas/BoxedBoolean"
               serviceAccountToken:
                 type: object
                 description: serviceAccountToken is information about the serviceAccountToken data to project

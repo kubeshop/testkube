@@ -219,8 +219,11 @@ func MapProjectedVolumeSourceKubeToAPI(v corev1.ProjectedVolumeSource) testkube.
 
 func MapVolumeProjectionKubeToAPI(v corev1.VolumeProjection) testkube.ProjectedVolumeSourceSources {
 	return testkube.ProjectedVolumeSourceSources{
-		ClusterTrustBundle: common.MapPtr(v.ClusterTrustBundle, MapClusterTrustBundleProjectionKubeToAPI),
-		ConfigMap:          common.MapPtr(v.ConfigMap, MapConfigMapProjectionKubeToAPI),
+		ClusterTrustBundle:  common.MapPtr(v.ClusterTrustBundle, MapClusterTrustBundleProjectionKubeToAPI),
+		ConfigMap:           common.MapPtr(v.ConfigMap, MapConfigMapProjectionKubeToAPI),
+		DownwardAPI:         common.MapPtr(v.DownwardAPI, MapDownwardAPIProjectionKubeToAPI),
+		Secret:              common.MapPtr(v.Secret, MapSecretProjectionKubeToAPI),
+		ServiceAccountToken: common.MapPtr(v.ServiceAccountToken, MapServiceAccountTokenProjectionKubeToAPI),
 	}
 }
 
@@ -239,6 +242,37 @@ func MapClusterTrustBundleProjectionKubeToAPI(v corev1.ClusterTrustBundleProject
 		Optional:      MapBoolToBoxedBoolean(v.Optional),
 		Path:          v.Path,
 		SignerName:    MapStringToBoxedString(v.SignerName),
+	}
+}
+
+func MapDownwardAPIProjectionKubeToAPI(v corev1.DownwardAPIProjection) testkube.ProjectedVolumeSourceDownwardApi {
+	return testkube.ProjectedVolumeSourceDownwardApi{
+		Items: common.MapSlice(v.Items, MapDownwardAPIVolumeFileKubeToAPI),
+	}
+}
+
+func MapDownwardAPIVolumeFileKubeToAPI(v corev1.DownwardAPIVolumeFile) testkube.ProjectedVolumeSourceDownwardApiItems {
+	return testkube.ProjectedVolumeSourceDownwardApiItems{
+		FieldRef:         MapFieldRefKubeToAPI(v.FieldRef),
+		Mode:             MapInt32ToBoxedInteger(v.Mode),
+		Path:             v.Path,
+		ResourceFieldRef: MapResourceFieldRefKubeToAPI(v.ResourceFieldRef),
+	}
+}
+
+func MapSecretProjectionKubeToAPI(v corev1.SecretProjection) testkube.ProjectedVolumeSourceSecret {
+	return testkube.ProjectedVolumeSourceSecret{
+		Items:    common.MapSlice(v.Items, MapKeyToPathKubeToAPI),
+		Name:     v.Name,
+		Optional: MapBoolToBoxedBoolean(v.Optional),
+	}
+}
+
+func MapServiceAccountTokenProjectionKubeToAPI(v corev1.ServiceAccountTokenProjection) testkube.ProjectedVolumeSourceServiceAccountToken {
+	return testkube.ProjectedVolumeSourceServiceAccountToken{
+		Audience:          v.Audience,
+		ExpirationSeconds: MapInt64ToBoxedInteger(v.ExpirationSeconds),
+		Path:              v.Path,
 	}
 }
 
