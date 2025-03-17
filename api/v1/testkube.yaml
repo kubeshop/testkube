@@ -11133,46 +11133,9 @@ components:
                     description: Items is a list of DownwardAPIVolume file
                     properties:
                       fieldRef:
-                        description: 'Selects a field of the pod: only annotations, labels, name, namespace and uid are supported.'
-                        properties:
-                          apiVersion:
-                            description: Version of the schema the FieldPath
-                              is written in terms of, defaults to "v1".
-                            type: string
-                          fieldPath:
-                            description: Path of the field to select in the
-                              specified API version.
-                            type: string
-                        required:
-                          - fieldPath
-                        type: object
-                      mode:
-                        $ref: "#/components/schemas/BoxedInteger"
-                      path:
-                        description: path is the relative path of the
-                          file to map the key to. May not be an absolute
-                          path. May not contain the path element '..'.
-                          May not start with the string '..'.
-                        type: string
+                        $ref: "#/components/schemas/FieldRef"
                       resourceFieldRef:
-                        description: 'Selects a resource of the container: only
-                          resources limits and requests (limits.cpu, limits.memory,
-                          limits.ephemeral-storage, requests.cpu, requests.memory
-                          and requests.ephemeral-storage) are currently supported.'
-                        properties:
-                          containerName:
-                            description: 'Container name: required for volumes,
-                              optional for env vars'
-                            type: string
-                          divisor:
-                            type: string
-                            pattern: "^[0-9]+(m|[GMK]i)$"
-                          resource:
-                            description: 'Required: resource to select'
-                            type: string
-                        required:
-                          - resource
-                        type: object
+                        $ref: "#/components/schemas/ResourceFieldRef"
                     required:
                       - path
                     type: object                    
@@ -11245,42 +11208,9 @@ components:
                 key must be defined
               type: boolean
         fieldRef:
-          type: object
-          required:
-            - fieldPath
-          description: 'Selects a field of the pod: supports metadata.name,
-            metadata.namespace, `metadata.labels[''<KEY>'']`,
-            `metadata.annotations[''<KEY>'']`, spec.nodeName,
-            spec.serviceAccountName, status.hostIP, status.podIP,
-            status.podIPs.'
-          properties:
-            apiVersion:
-              description: Version of the schema the FieldPath
-                is written in terms of, defaults to "v1".
-              type: string
-            fieldPath:
-              description: Path of the field to select in the
-                specified API version.
-              type: string
+          $ref: "#/components/schemas/FieldRef"
         resourceFieldRef:
-          type: object
-          required:
-            - resource
-          description: 'Selects a resource of the container: only
-            resources limits and requests (limits.cpu, limits.memory,
-            limits.ephemeral-storage, requests.cpu, requests.memory
-            and requests.ephemeral-storage) are currently supported.'
-          properties:
-            containerName:
-              description: 'Container name: required for volumes,
-                optional for env vars'
-              type: string
-            divisor:
-              type: string
-              pattern: "^[0-9]+(m|[GMK]i)$"
-            resource:
-              description: 'Required: resource to select'
-              type: string
+          $ref: "#/components/schemas/ResourceFieldRef"
         secretKeyRef:
           type: object
           required:
@@ -11301,6 +11231,45 @@ components:
               description: Specify whether the Secret or its key
                 must be defined
               type: boolean
+
+    FieldRef:
+      type: object
+      required:
+        - fieldPath
+      description: 'Selects a field of the pod: supports metadata.name,
+        metadata.namespace, `metadata.labels[''<KEY>'']`,
+        `metadata.annotations[''<KEY>'']`, spec.nodeName,
+        spec.serviceAccountName, status.hostIP, status.podIP,
+        status.podIPs.'
+      properties:
+        apiVersion:
+          description: Version of the schema the FieldPath
+            is written in terms of, defaults to "v1".
+          type: string
+        fieldPath:
+          description: Path of the field to select in the
+            specified API version.
+          type: string
+
+    ResourceFieldRef:
+      type: object
+      required:
+        - resource
+      description: 'Selects a resource of the container: only
+        resources limits and requests (limits.cpu, limits.memory,
+        limits.ephemeral-storage, requests.cpu, requests.memory
+        and requests.ephemeral-storage) are currently supported.'
+      properties:
+        containerName:
+          description: 'Container name: required for volumes,
+            optional for env vars'
+          type: string
+        divisor:
+          type: string
+          pattern: "^[0-9]+(m|[GMK]i)$"
+        resource:
+          description: 'Required: resource to select'
+          type: string
 
     TestWorkflowPvcConfig:
       type: object

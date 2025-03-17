@@ -248,17 +248,17 @@ func MapConfigMapKeyRefKubeToAPI(v *corev1.ConfigMapKeySelector) *testkube.EnvVa
 	}
 }
 
-func MapFieldRefKubeToAPI(v *corev1.ObjectFieldSelector) *testkube.EnvVarSourceFieldRef {
+func MapFieldRefKubeToAPI(v *corev1.ObjectFieldSelector) *testkube.FieldRef {
 	if v == nil {
 		return nil
 	}
-	return &testkube.EnvVarSourceFieldRef{
+	return &testkube.FieldRef{
 		ApiVersion: v.APIVersion,
 		FieldPath:  v.FieldPath,
 	}
 }
 
-func MapResourceFieldRefKubeToAPI(v *corev1.ResourceFieldSelector) *testkube.EnvVarSourceResourceFieldRef {
+func MapResourceFieldRefKubeToAPI(v *corev1.ResourceFieldSelector) *testkube.ResourceFieldRef {
 	if v == nil {
 		return nil
 	}
@@ -266,7 +266,7 @@ func MapResourceFieldRefKubeToAPI(v *corev1.ResourceFieldSelector) *testkube.Env
 	if !v.Divisor.IsZero() {
 		divisor = v.Divisor.String()
 	}
-	return &testkube.EnvVarSourceResourceFieldRef{
+	return &testkube.ResourceFieldRef{
 		ContainerName: v.ContainerName,
 		Divisor:       divisor,
 		Resource:      v.Resource,

@@ -133,7 +133,7 @@ func MapConfigMapKeyRefAPIToKube(v *testkube.EnvVarSourceConfigMapKeyRef) *corev
 	}
 }
 
-func MapFieldRefAPIToKube(v *testkube.EnvVarSourceFieldRef) *corev1.ObjectFieldSelector {
+func MapFieldRefAPIToKube(v *testkube.FieldRef) *corev1.ObjectFieldSelector {
 	if v == nil {
 		return nil
 	}
@@ -143,7 +143,7 @@ func MapFieldRefAPIToKube(v *testkube.EnvVarSourceFieldRef) *corev1.ObjectFieldS
 	}
 }
 
-func MapResourceFieldRefAPIToKube(v *testkube.EnvVarSourceResourceFieldRef) *corev1.ResourceFieldSelector {
+func MapResourceFieldRefAPIToKube(v *testkube.ResourceFieldRef) *corev1.ResourceFieldSelector {
 	if v == nil {
 		return nil
 	}
