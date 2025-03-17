@@ -11084,6 +11084,7 @@ components:
               Exactly one of these fields must be set.
             properties:
               clusterTrustBundle:
+                type: object
                 description: ClusterTrustBundle allows a pod to access the `.spec.trustBundle` field
                   of ClusterTrustBundle objects in an auto-updating file.
                 properties:
@@ -11100,8 +11101,8 @@ components:
                     $ref: "#/components/schemas/BoxedString"
                 required:
                 - path
-                type: object
               configMap:
+                type: object
                 description: configMap information about the configMap data to project
                 properties:
                   items:
@@ -11143,31 +11144,33 @@ components:
                     description: optional field specify whether the ConfigMap
                       or its key must be defined
                     type: boolean
-                type: object
               downwardAPI:
+                type: object
                 description: downwardAPI information about the downwardAPI data to project
                 properties:
                   items:
                     description: Items is a list of DownwardAPIVolume file
-                    properties:
-                      fieldRef:
-                        $ref: "#/components/schemas/FieldRef"
-                      mode:
-                        $ref: "#/components/schemas/BoxedInteger"
-                      path:
-                        description: path is the relative path of the
-                          file to map the key to. May not be an absolute
-                          path. May not contain the path element '..'.
-                          May not start with the string '..'.
-                        type: string
-                      resourceFieldRef:
-                        $ref: "#/components/schemas/ResourceFieldRef"
-                    required:
-                      - path
-                    type: object
-                  type: array
-                type: object
+                    items:
+                      description: DownwardAPIVolumeFile represents information to create the file containing the pod field
+                      properties:
+                        fieldRef:
+                          $ref: "#/components/schemas/FieldRef"
+                        mode:
+                          $ref: "#/components/schemas/BoxedInteger"
+                        path:
+                          description: path is the relative path of the
+                            file to map the key to. May not be an absolute
+                            path. May not contain the path element '..'.
+                            May not start with the string '..'.
+                          type: string
+                        resourceFieldRef:
+                          $ref: "#/components/schemas/ResourceFieldRef"
+                      required:
+                        - path
+                      type: object
+                    type: array
               secret:
+                type: object
                 description: secret information about the secret data to project
                 properties:
                   items:
@@ -11209,8 +11212,8 @@ components:
                     description: optional field specify whether the Secret
                       or its key must be defined
                     type: boolean
-                type: object
               serviceAccountToken:
+                type: object
                 description: serviceAccountToken is information about the serviceAccountToken data to project
                 properties:
                   audience:
@@ -11223,12 +11226,10 @@ components:
                   path:
                     description: path is the path relative to the mount point of the file to project the token into.
                     type: string
-                  required:
-                    - path
-                type: object 
+                required:
+                  - path
             type: object
           type: array
-      type: object
 
     Volume:
       type: object

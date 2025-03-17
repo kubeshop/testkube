@@ -15,5 +15,5 @@ type ProjectedVolumeSourceServiceAccountToken struct {
 	Audience          string        `json:"audience,omitempty"`
 	ExpirationSeconds *BoxedInteger `json:"expirationSeconds,omitempty"`
 	// path is the path relative to the mount point of the file to project the token into.
-	Path string `json:"path,omitempty"`
+	Path string `json:"path"`
 }

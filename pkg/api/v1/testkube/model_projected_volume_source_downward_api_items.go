@@ -9,7 +9,7 @@
  */
 package testkube
 
-// Items is a list of DownwardAPIVolume file
+// DownwardAPIVolumeFile represents information to create the file containing the pod field
 type ProjectedVolumeSourceDownwardApiItems struct {
 	FieldRef *FieldRef     `json:"fieldRef,omitempty"`
 	Mode     *BoxedInteger `json:"mode,omitempty"`

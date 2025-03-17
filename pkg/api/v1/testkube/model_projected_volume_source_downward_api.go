@@ -11,5 +11,6 @@ package testkube
 
 // downwardAPI information about the downwardAPI data to project
 type ProjectedVolumeSourceDownwardApi struct {
-	Items *ProjectedVolumeSourceDownwardApiItems `json:"items,omitempty"`
+	// Items is a list of DownwardAPIVolume file
+	Items []ProjectedVolumeSourceDownwardApiItems `json:"items,omitempty"`
 }
