@@ -487,6 +487,76 @@ func MapCSIVolumeSourceAPIToKube(v testkube.CsiVolumeSource) corev1.CSIVolumeSou
 	}
 }
 
+func MapProjectedVolumeSourceAPIToKube(v testkube.ProjectedVolumeSource) corev1.ProjectedVolumeSource {
+	return corev1.ProjectedVolumeSource{
+		DefaultMode: MapBoxedIntegerToInt32(v.DefaultMode),
+		Sources:     common.MapSlice(v.Sources, MapVolumeProjectionAPIToKube),
+	}
+}
+
+func MapVolumeProjectionAPIToKube(v testkube.ProjectedVolumeSourceSources) corev1.VolumeProjection {
+	return corev1.VolumeProjection{
+		ClusterTrustBundle:  common.MapPtr(v.ClusterTrustBundle, MapClusterTrustBundleProjectionAPIToKube),
+		ConfigMap:           common.MapPtr(v.ConfigMap, MapConfigMapProjectionAPIToKube),
+		DownwardAPI:         common.MapPtr(v.DownwardAPI, MapDownwardAPIProjectionAPIToKube),
+		Secret:              common.MapPtr(v.Secret, MapSecretProjectionAPIToKube),
+		ServiceAccountToken: common.MapPtr(v.ServiceAccountToken, MapServiceAccountTokenProjectionAPIToKube),
+	}
+}
+
+func MapConfigMapProjectionAPIToKube(v testkube.ProjectedVolumeSourceConfigMap) corev1.ConfigMapProjection {
+	return corev1.ConfigMapProjection{
+		Items: common.MapSlice(v.Items, MapKeyToPathAPIToKube),
+		LocalObjectReference: corev1.LocalObjectReference{
+			Name: v.Name,
+		},
+		Optional: MapBoxedBooleanToBool(v.Optional),
+	}
+}
+
+func MapClusterTrustBundleProjectionAPIToKube(v testkube.ProjectedVolumeSourceClusterTrustBundle) corev1.ClusterTrustBundleProjection {
+	return corev1.ClusterTrustBundleProjection{
+		LabelSelector: common.MapPtr(v.LabelSelector, MapLabelSelectorAPIToKube),
+		Name:          MapBoxedStringToString(v.Name),
+		Optional:      MapBoxedBooleanToBool(v.Optional),
+		Path:          v.Path,
+		SignerName:    MapBoxedStringToString(v.SignerName),
+	}
+}
+
+func MapDownwardAPIProjectionAPIToKube(v testkube.ProjectedVolumeSourceDownwardApi) corev1.DownwardAPIProjection {
+	return corev1.DownwardAPIProjection{
+		Items: common.MapSlice(v.Items, MapDownwardAPIVolumeFileAPIToKube),
+	}
+}
+
+func MapDownwardAPIVolumeFileAPIToKube(v testkube.ProjectedVolumeSourceDownwardApiItems) corev1.DownwardAPIVolumeFile {
+	return corev1.DownwardAPIVolumeFile{
+		FieldRef:         MapFieldRefAPIToKube(v.FieldRef),
+		Mode:             MapBoxedIntegerToInt32(v.Mode),
+		Path:             v.Path,
+		ResourceFieldRef: MapResourceFieldRefAPIToKube(v.ResourceFieldRef),
+	}
+}
+
+func MapSecretProjectionAPIToKube(v testkube.ProjectedVolumeSourceSecret) corev1.SecretProjection {
+	return corev1.SecretProjection{
+		Items: common.MapSlice(v.Items, MapKeyToPathAPIToKube),
+		LocalObjectReference: corev1.LocalObjectReference{
+			Name: v.Name,
+		},
+		Optional: MapBoxedBooleanToBool(v.Optional),
+	}
+}
+
+func MapServiceAccountTokenProjectionAPIToKube(v testkube.ProjectedVolumeSourceServiceAccountToken) corev1.ServiceAccountTokenProjection {
+	return corev1.ServiceAccountTokenProjection{
+		Audience:          v.Audience,
+		ExpirationSeconds: MapBoxedIntegerToInt64(v.ExpirationSeconds),
+		Path:              v.Path,
+	}
+}
+
 func MapVolumeAPIToKube(v testkube.Volume) corev1.Volume {
 	// TODO: Add rest of VolumeSource types in future,
 	//       so they will be recognized by JSON API and persisted with Execution.
@@ -505,6 +575,7 @@ func MapVolumeAPIToKube(v testkube.Volume) corev1.Volume {
 			ConfigMap:             common.MapPtr(v.ConfigMap, MapConfigMapVolumeSourceAPIToKube),
 			AzureDisk:             common.MapPtr(v.AzureDisk, MapAzureDiskVolumeSourceAPIToKube),
 			CSI:                   common.MapPtr(v.Csi, MapCSIVolumeSourceAPIToKube),
+			Projected:             common.MapPtr(v.Projected, MapProjectedVolumeSourceAPIToKube),
 		},
 	}
 }
