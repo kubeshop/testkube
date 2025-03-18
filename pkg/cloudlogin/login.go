@@ -12,7 +12,7 @@ import (
 
 const (
 	clientID    = "testkube-cloud-cli"
-	redirectURL = "http://127.0.0.1:8090/callback"
+	redirectURL = "http://127.0.0.1:%d/callback"
 )
 
 type Tokens struct {
@@ -20,7 +20,7 @@ type Tokens struct {
 	RefreshToken string
 }
 
-func CloudLogin(ctx context.Context, providerURL, connectorID string) (string, chan Tokens, error) {
+func CloudLogin(ctx context.Context, providerURL, connectorID string, port int) (string, chan Tokens, error) {
 	provider, err := oidc.NewProvider(ctx, providerURL)
 	if err != nil {
 		return "", nil, err
@@ -29,7 +29,7 @@ func CloudLogin(ctx context.Context, providerURL, connectorID string) (string, c
 	oauth2Config := oauth2.Config{
 		ClientID:    clientID,
 		Endpoint:    provider.Endpoint(),
-		RedirectURL: redirectURL,
+		RedirectURL: fmt.Sprintf(redirectURL, port),
 		Scopes:      []string{oidc.ScopeOpenID, "profile", "email", "offline_access"},
 	}
 
@@ -44,7 +44,7 @@ func CloudLogin(ctx context.Context, providerURL, connectorID string) (string, c
 			fmt.Fprintln(w, "Authorization failed.")
 		}
 	})
-	go http.ListenAndServe(":8090", nil)
+	go http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
 
 	// Redirect the user to the OIDC provider's login page.
 	opts := []oauth2.AuthCodeOption{oauth2.AccessTypeOffline}

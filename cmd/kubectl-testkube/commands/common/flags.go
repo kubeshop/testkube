@@ -85,6 +85,7 @@ func PopulateMasterFlags(cmd *cobra.Command, opts *HelmOptions, isDockerCmd bool
 	cmd.Flags().StringVar(&opts.Master.UiUrlPrefix, "ui-prefix", defaultUiPrefix, "usually don't need to be changed [required for custom cloud mode]")
 	cmd.Flags().StringVar(&opts.Master.RootDomain, "root-domain", defaultRootDomain, "usually don't need to be changed [required for custom cloud mode]")
 	cmd.Flags().BoolVar(&opts.Master.CustomAuth, "custom-auth", false, "usually don't need to be changed [required for custom cloud mode]")
+	cmd.Flags().IntVar(&opts.Master.CallbackPort, "callback-port", config.CallbackPort, "usually don't need to be changed [required for custom cloud mode]")
 
 	// allow to override default values of all URIs
 	cmd.Flags().String("api-uri-override", "", "api uri override")
