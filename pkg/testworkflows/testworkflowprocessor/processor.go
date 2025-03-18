@@ -106,18 +106,31 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	// Initialize intermediate layer
 	layer := NewIntermediate().
 		AppendPodConfig(workflow.Spec.Pod).
-		AppendJobConfig(workflow.Spec.Job)
+		AppendJobConfig(workflow.Spec.Job).
+		AppendPvcs(workflow.Spec.Pvcs)
 	layer.ContainerDefaults().
 		ApplyCR(constants.DefaultContainerConfig.DeepCopy()).
 		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, constants.DefaultInternalPath)).
 		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, constants.DefaultTmpDirPath)).
 		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, constants.DefaultDataPath))
 
+	orgSlug := options.Config.Execution.OrganizationSlug
+	if orgSlug == "" {
+		orgSlug = options.Config.Execution.OrganizationId
+	}
+	envSlug := options.Config.Execution.EnvironmentSlug
+	if envSlug == "" {
+		envSlug = options.Config.Execution.EnvironmentId
+	}
+
 	mapEnv := make(map[string]corev1.EnvVarSource)
 	machines = append(machines,
 		createSecretMachine(mapEnv),
 		testworkflowconfig.CreateWorkerMachine(&options.Config.Worker),
-		testworkflowconfig.CreateResourceMachine(&options.Config.Resource))
+		testworkflowconfig.CreateResourceMachine(&options.Config.Resource),
+		testworkflowconfig.CreateCloudMachine(&options.Config.ControlPlane, orgSlug, envSlug),
+		testworkflowconfig.CreatePvcMachine(common.MapMap(layer.Pvcs(), func(v corev1.PersistentVolumeClaim) string { return v.Name })),
+	)
 
 	// Fetch resource root and resource ID
 	if options.Config.Resource.Id == "" {
@@ -161,6 +174,27 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 			return nil, errors.Wrap(err, "finalizing ConfigMap")
 		}
 	}
+
+	// Finalize Pvcs
+	pvcs := make([]corev1.PersistentVolumeClaim, 0)
+	mapPvc := make(map[string]string)
+	for name, spec := range layer.Pvcs() {
+		AnnotateControlledBy(&spec, options.Config.Resource.RootId, options.Config.Resource.Id)
+		err = expressions.FinalizeForce(&spec, machines...)
+		if err != nil {
+			return nil, errors.Wrap(err, "finalizing Pvc")
+		}
+
+		data := struct{ value string }{value: name}
+		err = expressions.FinalizeForce(&data, machines...)
+		if err != nil {
+			return nil, errors.Wrap(err, "finalizing name")
+		}
+
+		mapPvc[data.value] = spec.Name
+		pvcs = append(pvcs, spec)
+	}
+	options.Config.Execution.PvcNames = common.MergeMaps(options.Config.Execution.PvcNames, mapPvc)
 
 	// Finalize Secrets
 	secrets := append(layer.Secrets(), options.Secrets...)
@@ -420,6 +454,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	bundle = &Bundle{
 		ConfigMaps:    configMaps,
 		Secrets:       secrets,
+		Pvcs:          pvcs,
 		Job:           jobSpec,
 		Signature:     sig,
 		FullSignature: fullSig,

@@ -133,7 +133,7 @@ func MapConfigMapKeyRefAPIToKube(v *testkube.EnvVarSourceConfigMapKeyRef) *corev
 	}
 }
 
-func MapFieldRefAPIToKube(v *testkube.EnvVarSourceFieldRef) *corev1.ObjectFieldSelector {
+func MapFieldRefAPIToKube(v *testkube.FieldRef) *corev1.ObjectFieldSelector {
 	if v == nil {
 		return nil
 	}
@@ -143,7 +143,7 @@ func MapFieldRefAPIToKube(v *testkube.EnvVarSourceFieldRef) *corev1.ObjectFieldS
 	}
 }
 
-func MapResourceFieldRefAPIToKube(v *testkube.EnvVarSourceResourceFieldRef) *corev1.ResourceFieldSelector {
+func MapResourceFieldRefAPIToKube(v *testkube.ResourceFieldRef) *corev1.ResourceFieldSelector {
 	if v == nil {
 		return nil
 	}
@@ -293,6 +293,7 @@ func MapContentGitAPIToKube(v testkube.TestWorkflowContentGit) testworkflowsv1.C
 		SshKeyFrom:   common.MapPtr(v.SshKeyFrom, MapEnvVarSourceAPIToKube),
 		AuthType:     MapGitAuthTypeAPIToKube(v.AuthType),
 		MountPath:    v.MountPath,
+		Cone:         v.Cone,
 		Paths:        v.Paths,
 	}
 }
@@ -486,6 +487,76 @@ func MapCSIVolumeSourceAPIToKube(v testkube.CsiVolumeSource) corev1.CSIVolumeSou
 	}
 }
 
+func MapProjectedVolumeSourceAPIToKube(v testkube.ProjectedVolumeSource) corev1.ProjectedVolumeSource {
+	return corev1.ProjectedVolumeSource{
+		DefaultMode: MapBoxedIntegerToInt32(v.DefaultMode),
+		Sources:     common.MapSlice(v.Sources, MapVolumeProjectionAPIToKube),
+	}
+}
+
+func MapVolumeProjectionAPIToKube(v testkube.ProjectedVolumeSourceSources) corev1.VolumeProjection {
+	return corev1.VolumeProjection{
+		ClusterTrustBundle:  common.MapPtr(v.ClusterTrustBundle, MapClusterTrustBundleProjectionAPIToKube),
+		ConfigMap:           common.MapPtr(v.ConfigMap, MapConfigMapProjectionAPIToKube),
+		DownwardAPI:         common.MapPtr(v.DownwardAPI, MapDownwardAPIProjectionAPIToKube),
+		Secret:              common.MapPtr(v.Secret, MapSecretProjectionAPIToKube),
+		ServiceAccountToken: common.MapPtr(v.ServiceAccountToken, MapServiceAccountTokenProjectionAPIToKube),
+	}
+}
+
+func MapConfigMapProjectionAPIToKube(v testkube.ProjectedVolumeSourceConfigMap) corev1.ConfigMapProjection {
+	return corev1.ConfigMapProjection{
+		Items: common.MapSlice(v.Items, MapKeyToPathAPIToKube),
+		LocalObjectReference: corev1.LocalObjectReference{
+			Name: v.Name,
+		},
+		Optional: MapBoxedBooleanToBool(v.Optional),
+	}
+}
+
+func MapClusterTrustBundleProjectionAPIToKube(v testkube.ProjectedVolumeSourceClusterTrustBundle) corev1.ClusterTrustBundleProjection {
+	return corev1.ClusterTrustBundleProjection{
+		LabelSelector: common.MapPtr(v.LabelSelector, MapLabelSelectorAPIToKube),
+		Name:          MapBoxedStringToString(v.Name),
+		Optional:      MapBoxedBooleanToBool(v.Optional),
+		Path:          v.Path,
+		SignerName:    MapBoxedStringToString(v.SignerName),
+	}
+}
+
+func MapDownwardAPIProjectionAPIToKube(v testkube.ProjectedVolumeSourceDownwardApi) corev1.DownwardAPIProjection {
+	return corev1.DownwardAPIProjection{
+		Items: common.MapSlice(v.Items, MapDownwardAPIVolumeFileAPIToKube),
+	}
+}
+
+func MapDownwardAPIVolumeFileAPIToKube(v testkube.ProjectedVolumeSourceDownwardApiItems) corev1.DownwardAPIVolumeFile {
+	return corev1.DownwardAPIVolumeFile{
+		FieldRef:         MapFieldRefAPIToKube(v.FieldRef),
+		Mode:             MapBoxedIntegerToInt32(v.Mode),
+		Path:             v.Path,
+		ResourceFieldRef: MapResourceFieldRefAPIToKube(v.ResourceFieldRef),
+	}
+}
+
+func MapSecretProjectionAPIToKube(v testkube.ProjectedVolumeSourceSecret) corev1.SecretProjection {
+	return corev1.SecretProjection{
+		Items: common.MapSlice(v.Items, MapKeyToPathAPIToKube),
+		LocalObjectReference: corev1.LocalObjectReference{
+			Name: v.Name,
+		},
+		Optional: MapBoxedBooleanToBool(v.Optional),
+	}
+}
+
+func MapServiceAccountTokenProjectionAPIToKube(v testkube.ProjectedVolumeSourceServiceAccountToken) corev1.ServiceAccountTokenProjection {
+	return corev1.ServiceAccountTokenProjection{
+		Audience:          v.Audience,
+		ExpirationSeconds: MapBoxedIntegerToInt64(v.ExpirationSeconds),
+		Path:              v.Path,
+	}
+}
+
 func MapVolumeAPIToKube(v testkube.Volume) corev1.Volume {
 	// TODO: Add rest of VolumeSource types in future,
 	//       so they will be recognized by JSON API and persisted with Execution.
@@ -504,6 +575,7 @@ func MapVolumeAPIToKube(v testkube.Volume) corev1.Volume {
 			ConfigMap:             common.MapPtr(v.ConfigMap, MapConfigMapVolumeSourceAPIToKube),
 			AzureDisk:             common.MapPtr(v.AzureDisk, MapAzureDiskVolumeSourceAPIToKube),
 			CSI:                   common.MapPtr(v.Csi, MapCSIVolumeSourceAPIToKube),
+			Projected:             common.MapPtr(v.Projected, MapProjectedVolumeSourceAPIToKube),
 		},
 	}
 }
@@ -545,20 +617,66 @@ func MapPodResourceClaimAPIToKube(v testkube.PodResourceClaim) corev1.PodResourc
 		source = *v.Source
 	}
 	return corev1.PodResourceClaim{
-		Name: v.Name,
-		Source: corev1.ClaimSource{
-			ResourceClaimName:         MapBoxedStringToString(source.ResourceClaimName),
-			ResourceClaimTemplateName: MapBoxedStringToString(source.ResourceClaimTemplateName),
-		},
+		Name:                      v.Name,
+		ResourceClaimName:         MapBoxedStringToString(source.ResourceClaimName),
+		ResourceClaimTemplateName: MapBoxedStringToString(source.ResourceClaimTemplateName),
 	}
 }
 
 func MapPodSecurityContextAPIToKube(v testkube.PodSecurityContext) corev1.PodSecurityContext {
 	return corev1.PodSecurityContext{
-		RunAsUser:    MapBoxedIntegerToInt64(v.RunAsUser),
-		RunAsGroup:   MapBoxedIntegerToInt64(v.RunAsGroup),
-		RunAsNonRoot: MapBoxedBooleanToBool(v.RunAsNonRoot),
-		FSGroup:      MapBoxedIntegerToInt64(v.FsGroup),
+		SELinuxOptions:           common.MapPtr(v.SeLinuxOptions, MapSELinuxOptionsAPIToKube),
+		WindowsOptions:           common.MapPtr(v.WindowsOptions, MapWindowsSecurityContextOptionsAPIToKube),
+		RunAsUser:                MapBoxedIntegerToInt64(v.RunAsUser),
+		RunAsGroup:               MapBoxedIntegerToInt64(v.RunAsGroup),
+		RunAsNonRoot:             MapBoxedBooleanToBool(v.RunAsNonRoot),
+		SupplementalGroups:       v.SupplementalGroups,
+		SupplementalGroupsPolicy: common.MapPtr(MapBoxedStringToString(v.SupplementalGroupsPolicy), common.MapStringToEnum[corev1.SupplementalGroupsPolicy]),
+		FSGroup:                  MapBoxedIntegerToInt64(v.FsGroup),
+		Sysctls:                  common.MapSlice(v.Sysctls, MapSysctlAPIToKube),
+		FSGroupChangePolicy:      common.MapPtr(MapBoxedStringToString(v.FsGroupChangePolicy), common.MapStringToEnum[corev1.PodFSGroupChangePolicy]),
+		SeccompProfile:           common.MapPtr(v.SeccompProfile, MapSeccompProfileAPIToKube),
+		AppArmorProfile:          common.MapPtr(v.AppArmorProfile, MapAppArmorProfileAPIToKube),
+		SELinuxChangePolicy:      common.MapPtr(MapBoxedStringToString(v.SeLinuxChangePolicy), common.MapStringToEnum[corev1.PodSELinuxChangePolicy]),
+	}
+}
+
+func MapSELinuxOptionsAPIToKube(v testkube.SeLinuxOptions) corev1.SELinuxOptions {
+	return corev1.SELinuxOptions{
+		User:  v.User,
+		Role:  v.Role,
+		Type:  v.Type_,
+		Level: v.Level,
+	}
+}
+
+func MapWindowsSecurityContextOptionsAPIToKube(v testkube.WindowsSecurityContextOptions) corev1.WindowsSecurityContextOptions {
+	return corev1.WindowsSecurityContextOptions{
+		GMSACredentialSpecName: MapBoxedStringToString(v.GmsaCredentialSpecName),
+		GMSACredentialSpec:     MapBoxedStringToString(v.GmsaCredentialSpec),
+		RunAsUserName:          MapBoxedStringToString(v.RunAsUserName),
+		HostProcess:            MapBoxedBooleanToBool(v.HostProcess),
+	}
+}
+
+func MapSysctlAPIToKube(v testkube.Sysctl) corev1.Sysctl {
+	return corev1.Sysctl{
+		Name:  v.Name,
+		Value: v.Value,
+	}
+}
+
+func MapSeccompProfileAPIToKube(v testkube.SeccompProfile) corev1.SeccompProfile {
+	return corev1.SeccompProfile{
+		Type:             corev1.SeccompProfileType(v.Type_),
+		LocalhostProfile: MapBoxedStringToString(v.LocalhostProfile),
+	}
+}
+
+func MapAppArmorProfileAPIToKube(v testkube.AppArmorProfile) corev1.AppArmorProfile {
+	return corev1.AppArmorProfile{
+		Type:             corev1.AppArmorProfileType(v.Type_),
+		LocalhostProfile: MapBoxedStringToString(v.LocalhostProfile),
 	}
 }
 
@@ -951,6 +1069,7 @@ func MapStepParallelAPIToKube(v testkube.TestWorkflowStepParallel) testworkflows
 			Setup: common.MapSlice(v.Setup, MapStepAPIToKube),
 			Steps: common.MapSlice(v.Steps, MapStepAPIToKube),
 			After: common.MapSlice(v.After, MapStepAPIToKube),
+			Pvcs:  common.MapMap(v.Pvcs, MapPvcConfigAPIToKube),
 		},
 		StepControl: testworkflowsv1.StepControl{
 			Paused:   v.Paused,
@@ -995,6 +1114,7 @@ func MapIndependentStepParallelAPIToKube(v testkube.TestWorkflowIndependentStepP
 			Setup: common.MapSlice(v.Setup, MapIndependentStepAPIToKube),
 			Steps: common.MapSlice(v.Steps, MapIndependentStepAPIToKube),
 			After: common.MapSlice(v.After, MapIndependentStepAPIToKube),
+			Pvcs:  common.MapMap(v.Pvcs, MapPvcConfigAPIToKube),
 		},
 		StepControl: testworkflowsv1.StepControl{
 			Paused:   v.Paused,
@@ -1098,6 +1218,7 @@ func MapIndependentServiceSpecAPIToKube(v testkube.TestWorkflowIndependentServic
 		Logs:           MapBoxedStringToString(v.Logs),
 		RestartPolicy:  testworkflowsv1.ServiceRestartPolicy(v.RestartPolicy),
 		ReadinessProbe: common.MapPtr(v.ReadinessProbe, MapProbeAPIToKube),
+		Pvcs:           common.MapMap(v.Pvcs, MapPvcConfigAPIToKube),
 	}
 }
 
@@ -1134,6 +1255,7 @@ func MapServiceSpecAPIToKube(v testkube.TestWorkflowServiceSpec) testworkflowsv1
 			Logs:           MapBoxedStringToString(v.Logs),
 			RestartPolicy:  testworkflowsv1.ServiceRestartPolicy(v.RestartPolicy),
 			ReadinessProbe: common.MapPtr(v.ReadinessProbe, MapProbeAPIToKube),
+			Pvcs:           common.MapMap(v.Pvcs, MapPvcConfigAPIToKube),
 		},
 	}
 }
@@ -1234,6 +1356,7 @@ func MapSpecAPIToKube(v testkube.TestWorkflowSpec) testworkflowsv1.TestWorkflowS
 		Setup:    common.MapSlice(v.Setup, MapStepAPIToKube),
 		Steps:    common.MapSlice(v.Steps, MapStepAPIToKube),
 		After:    common.MapSlice(v.After, MapStepAPIToKube),
+		Pvcs:     common.MapMap(v.Pvcs, MapPvcConfigAPIToKube),
 	}
 }
 
@@ -1253,6 +1376,7 @@ func MapTemplateSpecAPIToKube(v testkube.TestWorkflowTemplateSpec) testworkflows
 		Setup:    common.MapSlice(v.Setup, MapIndependentStepAPIToKube),
 		Steps:    common.MapSlice(v.Steps, MapIndependentStepAPIToKube),
 		After:    common.MapSlice(v.After, MapIndependentStepAPIToKube),
+		Pvcs:     common.MapMap(v.Pvcs, MapPvcConfigAPIToKube),
 	}
 }
 
@@ -1483,5 +1607,73 @@ func MapTestWorkflowAPIToKubeTestWorkflowSummary(v testkube.TestWorkflow) testwo
 func MapTestWorkflowTagSchemaAPIToKube(v testkube.TestWorkflowTagSchema) testworkflowsv1.TestWorkflowTagSchema {
 	return testworkflowsv1.TestWorkflowTagSchema{
 		Tags: v.Tags,
+	}
+}
+
+func MapTypeLocalObjectReferenceAPIToKube(v testkube.TypedLocalObjectReference) corev1.TypedLocalObjectReference {
+	return corev1.TypedLocalObjectReference{
+		APIGroup: MapBoxedStringToString(v.ApiGroup),
+		Kind:     v.Kind,
+		Name:     v.Name,
+	}
+}
+
+func MapTypeObjectReferenceAPIToKube(v testkube.TypedObjectReference) corev1.TypedObjectReference {
+	return corev1.TypedObjectReference{
+		APIGroup:  MapBoxedStringToString(v.ApiGroup),
+		Kind:      v.Kind,
+		Name:      v.Name,
+		Namespace: MapBoxedStringToString(v.Namespace),
+	}
+}
+
+func MapVolumeResourceRequirementsAPIToKube(v *testkube.TestWorkflowResources) corev1.VolumeResourceRequirements {
+	if v == nil {
+		return corev1.VolumeResourceRequirements{}
+	}
+
+	return corev1.VolumeResourceRequirements{
+		Limits:   MapResourcesListAPIToKubeCore(v.Limits),
+		Requests: MapResourcesListAPIToKubeCore(v.Requests),
+	}
+}
+
+func MapResourcesListAPIToKubeCore(v *testkube.TestWorkflowResourcesList) corev1.ResourceList {
+	if v == nil {
+		return nil
+	}
+
+	res := make(map[corev1.ResourceName]resource.Quantity)
+	if v.Cpu != "" {
+		res[corev1.ResourceCPU], _ = resource.ParseQuantity(v.Cpu)
+	}
+
+	if v.Memory != "" {
+		res[corev1.ResourceMemory], _ = resource.ParseQuantity(v.Memory)
+	}
+
+	if v.Storage != "" {
+		res[corev1.ResourceStorage], _ = resource.ParseQuantity(v.Storage)
+	}
+
+	if v.EphemeralStorage != "" {
+		res[corev1.ResourceEphemeralStorage], _ = resource.ParseQuantity(v.EphemeralStorage)
+	}
+
+	return res
+}
+
+func MapPvcConfigAPIToKube(v testkube.TestWorkflowPvcConfig) corev1.PersistentVolumeClaimSpec {
+	return corev1.PersistentVolumeClaimSpec{
+		AccessModes: common.MapSlice(v.AccessModes,
+			func(v string) corev1.PersistentVolumeAccessMode { return (corev1.PersistentVolumeAccessMode)(v) }),
+		VolumeMode:                (*corev1.PersistentVolumeMode)(MapBoxedStringToString(v.VolumeMode)),
+		Resources:                 MapVolumeResourceRequirementsAPIToKube(v.Resources),
+		StorageClassName:          MapBoxedStringToString(v.StorageClassName),
+		VolumeName:                v.VolumeName,
+		Selector:                  common.MapPtr(v.Selector, MapLabelSelectorAPIToKube),
+		DataSource:                common.MapPtr(v.DataSource, MapTypeLocalObjectReferenceAPIToKube),
+		DataSourceRef:             common.MapPtr(v.DataSourceRef, MapTypeObjectReferenceAPIToKube),
+		VolumeAttributesClassName: MapBoxedStringToString(v.VolumeAttributesClassName),
 	}
 }

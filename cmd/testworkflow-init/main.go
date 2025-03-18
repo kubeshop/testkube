@@ -2,13 +2,25 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
+	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"slices"
 	"strconv"
+	"strings"
+	"sync/atomic"
 	"syscall"
 	"time"
+
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/artifacts"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
+
+	"github.com/pkg/errors"
+
+	"github.com/kubeshop/testkube/pkg/utilization/core"
+
+	"github.com/kubeshop/testkube/pkg/utilization"
 
 	"github.com/gookit/color"
 
@@ -19,6 +31,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/obfuscator"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/orchestration"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/runtime"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 )
@@ -42,22 +55,22 @@ func main() {
 	orchestration.Setup.SetSensitiveWordMinimumLength(SensitiveMinimumLength)
 
 	// Prepare empty state file if it doesn't exist
-	_, err := os.Stat(data.StatePath)
+	_, err := os.Stat(constants.StatePath)
 	if errors.Is(err, os.ErrNotExist) {
-		stdout.Hint(data.InitStepName, constants.InstructionStart)
+		stdout.Hint(constants.InitStepName, constants.InstructionStart)
 		stdoutUnsafe.Print("Creating state...")
-		err := os.WriteFile(data.StatePath, nil, 0777)
+		err := os.WriteFile(constants.StatePath, nil, 0777)
 		if err != nil {
 			stdoutUnsafe.Error(" error\n")
-			output.ExitErrorf(data.CodeInternal, "failed to create state file: %s", err.Error())
+			output.ExitErrorf(constants.CodeInternal, "failed to create state file: %s", err.Error())
 		}
-		os.Chmod(data.StatePath, 0777)
+		os.Chmod(constants.StatePath, 0777)
 		stdoutUnsafe.Print(" done\n")
 	} else if err != nil {
-		stdout.Hint(data.InitStepName, constants.InstructionStart)
+		stdout.Hint(constants.InitStepName, constants.InstructionStart)
 		stdoutUnsafe.Print("Accessing state...")
 		stdoutUnsafe.Error(" error\n")
-		output.ExitErrorf(data.CodeInternal, "cannot access state file: %s", err.Error())
+		output.ExitErrorf(constants.CodeInternal, "cannot access state file: %s", err.Error())
 	}
 
 	// Store the instructions in the state if they are provided
@@ -65,10 +78,14 @@ func main() {
 	stdout.SetSensitiveWords(orchestration.Setup.GetSensitiveWords())
 	actionGroups := orchestration.Setup.GetActionGroups()
 	internalConfig := orchestration.Setup.GetInternalConfig()
+	signature := orchestration.Setup.GetSignature()
+	containerResources := orchestration.Setup.GetContainerResources()
 	if actionGroups != nil {
 		stdoutUnsafe.Print("Initializing state...")
 		data.GetState().Actions = actionGroups
 		data.GetState().InternalConfig = internalConfig
+		data.GetState().Signature = signature
+		data.GetState().ContainerResources = containerResources
 		stdoutUnsafe.Print(" done\n")
 
 		// Release the memory
@@ -80,13 +97,13 @@ func main() {
 
 	// Ensure there is a group index provided
 	if len(os.Args) != 2 {
-		output.ExitErrorf(data.CodeInternal, "invalid arguments provided - expected only one")
+		output.ExitErrorf(constants.CodeInternal, "invalid arguments provided - expected only one")
 	}
 
 	// Determine group index to run
 	groupIndex, err := strconv.ParseInt(os.Args[1], 10, 32)
 	if err != nil {
-		output.ExitErrorf(data.CodeInputError, "invalid run group passed: %s", err.Error())
+		output.ExitErrorf(constants.CodeInputError, "invalid run group passed: %s", err.Error())
 	}
 
 	// Handle aborting
@@ -143,7 +160,7 @@ func main() {
 	})
 	_, err = controlSrv.Listen()
 	if err != nil {
-		output.ExitErrorf(data.CodeInternal, "Failed to start control server at port %d: %s\n", constants.ControlServerPort, err.Error())
+		output.ExitErrorf(constants.CodeInternal, "Failed to start control server at port %d: %s\n", constants.ControlServerPort, err.Error())
 	}
 
 	// Keep a list of paused steps for execution
@@ -187,7 +204,7 @@ func main() {
 					orchestration.Start(step)
 					break
 				}
-				output.ExitErrorf(data.CodeInputError, err.Error())
+				output.ExitErrorf(constants.CodeInputError, err.Error())
 			}
 			stdout.SetSensitiveWords(orchestration.Setup.GetSensitiveWords())
 			currentContainer = *action.Container
@@ -205,15 +222,15 @@ func main() {
 			// Determine if the step should be skipped
 			executable, err := step.ResolveCondition()
 			if err != nil {
-				output.ExitErrorf(data.CodeInternal, "failed to determine condition of '%s' step: %s: %v", *action.Start, step.Condition, err.Error())
+				output.ExitErrorf(constants.CodeInternal, "failed to determine condition of '%s' step: %s: %v", *action.Start, step.Condition, err.Error())
 			}
 			if !executable {
-				step.SetStatus(data.StepStatusSkipped)
+				step.SetStatus(constants.StepStatusSkipped)
 
 				// Skip all the children
 				for _, v := range state.Steps {
 					if slices.Contains(v.Parents, step.Ref) {
-						v.SetStatus(data.StepStatusSkipped)
+						v.SetStatus(constants.StepStatusSkipped)
 					}
 				}
 			}
@@ -231,7 +248,7 @@ func main() {
 			if step.Status == nil {
 				status, err := step.ResolveResult()
 				if err != nil {
-					output.ExitErrorf(data.CodeInternal, "failed to determine result of '%s' step: %s: %v", *action.End, step.Result, err.Error())
+					output.ExitErrorf(constants.CodeInternal, "failed to determine result of '%s' step: %s: %v", *action.End, step.Result, err.Error())
 				}
 				step.SetStatus(status)
 			}
@@ -240,15 +257,15 @@ func main() {
 		case lite.ActionTypeSetup:
 			err := orchestration.Setup.UseEnv(constants.EnvGroupDebug)
 			if err != nil {
-				output.ExitErrorf(data.CodeInputError, err.Error())
+				output.ExitErrorf(constants.CodeInputError, err.Error())
 			}
 			stdout.SetSensitiveWords(orchestration.Setup.GetSensitiveWords())
-			step := state.GetStep(data.InitStepName)
+			step := state.GetStep(constants.InitStepName)
 			err = commands.Setup(*action.Setup)
 			if err == nil {
-				step.SetStatus(data.StepStatusPassed)
+				step.SetStatus(constants.StepStatusPassed)
 			} else {
-				step.SetStatus(data.StepStatusFailed)
+				step.SetStatus(constants.StepStatusFailed)
 			}
 			orchestration.End(step)
 			if err != nil {
@@ -268,14 +285,14 @@ func main() {
 
 			// Ignore when it is aborted
 			if orchestration.Executions.IsAborted() {
-				step.SetStatus(data.StepStatusAborted)
+				step.SetStatus(constants.StepStatusAborted)
 				continue
 			}
 
 			// Configure the environment
 			err := orchestration.Setup.UseCurrentEnv()
 			if err != nil {
-				output.ExitErrorf(data.CodeInputError, err.Error())
+				output.ExitErrorf(constants.CodeInputError, err.Error())
 			}
 			if action.Execute.Toolkit {
 				serialized, _ := json.Marshal(state.InternalConfig)
@@ -309,6 +326,7 @@ func main() {
 			}
 
 			// Configure timeout finalizer
+			var hasTimeout, hasOwnTimeout atomic.Bool
 			finalizeTimeout := func() {
 				// Check timed out steps in leaf
 				timedOut := orchestration.GetTimedOut(leaf...)
@@ -318,19 +336,22 @@ func main() {
 
 				// Iterate over timed out step
 				for _, r := range timedOut {
-					r.SetStatus(data.StepStatusTimeout)
+					r.SetStatus(constants.StepStatusTimeout)
 					sub := state.GetSubSteps(r.Ref)
+					hasTimeout.Store(true)
+					if step.Ref == r.Ref {
+						hasOwnTimeout.Store(true)
+					}
 					for i := range sub {
 						if sub[i].IsFinished() {
 							continue
 						}
 						if sub[i].IsStarted() {
-							sub[i].SetStatus(data.StepStatusTimeout)
+							sub[i].SetStatus(constants.StepStatusTimeout)
 						} else {
-							sub[i].SetStatus(data.StepStatusSkipped)
+							sub[i].SetStatus(constants.StepStatusSkipped)
 						}
 					}
-					stdoutUnsafe.Println("Timed out.")
 				}
 				_ = orchestration.Executions.Kill()
 
@@ -352,25 +373,41 @@ func main() {
 
 				// Ignore when it is aborted
 				if orchestration.Executions.IsAborted() {
-					step.SetStatus(data.StepStatusAborted)
+					step.SetStatus(constants.StepStatusAborted)
 					break
 				}
 
 				// Register timeouts
+				hasTimeout.Store(false)
+				hasOwnTimeout.Store(false)
 				stopTimeoutWatcher := orchestration.WatchTimeout(finalizeTimeout, leaf...)
 
 				// Run the command
-				commands.Run(*action.Execute, currentContainer)
+				// WithMetricsRecorder will run a goroutine which will identify the process of the underlying binary which gets executed,
+				// it will then scrape the metrics of the process and store them as artifacts in the internal folder.
+				config := newMetricsRecorderConfig(step.Ref, action.Execute.Toolkit, containerResources)
+				utilization.WithMetricsRecorder(
+					config,
+					func() {
+						commands.Run(*action.Execute, currentContainer)
+					},
+					scrapeMetricsPostProcessor(config.Dir, step.Ref, data.GetState().InternalConfig),
+				)
 
 				// Stop timer listener
 				stopTimeoutWatcher()
+
+				// Handle timeout gracefully
+				if hasOwnTimeout.Load() {
+					orchestration.Executions.ClearAbortedStatus()
+				}
 
 				// Ensure there won't be any hanging processes after the command is executed
 				_ = orchestration.Executions.Kill()
 
 				// TODO: Handle retry policy in tree independently
 				// Verify if there may be any other iteration
-				if step.Iteration >= step.Retry.Count {
+				if step.Iteration >= step.Retry.Count || (!hasOwnTimeout.Load() && hasTimeout.Load()) {
 					break
 				}
 
@@ -379,7 +416,7 @@ func main() {
 				if until == "" {
 					until = "passed"
 				}
-				expr, err := expressions.CompileAndResolve(until, data.LocalMachine, data.GetInternalTestWorkflowMachine(), expressions.FinalizerFail)
+				expr, err := expressions.CompileAndResolve(until, data.LocalMachine, runtime.GetInternalTestWorkflowMachine(), expressions.FinalizerFail)
 				if err != nil {
 					stdout.Printf("failed to execute retry condition: %s: %s\n", until, err.Error())
 					break
@@ -392,7 +429,15 @@ func main() {
 				// Continue with the next iteration
 				step.Iteration++
 				stdout.HintDetails(step.Ref, constants.InstructionIteration, step.Iteration)
-				stdoutUnsafe.Printf("\nExit code: %d • Retrying: attempt #%d (of %d):\n", step.ExitCode, step.Iteration, step.Retry.Count)
+				message := fmt.Sprintf("Exit code: %d", step.ExitCode)
+				if hasOwnTimeout.Load() {
+					message = "Timed out"
+				}
+				stdoutUnsafe.Printf("\n%s • Retrying: attempt #%d (of %d):\n", message, step.Iteration, step.Retry.Count)
+
+				// Restart start time for the next iteration to allow retries
+				now := time.Now()
+				step.StartedAt = &now
 			}
 		}
 
@@ -406,8 +451,83 @@ func main() {
 	// Stop the container after all the instructions are interpret
 	_ = orchestration.Executions.Kill()
 	if orchestration.Executions.IsAborted() {
-		os.Exit(int(data.CodeAborted))
+		os.Exit(int(constants.CodeAborted))
 	} else {
 		os.Exit(0)
+	}
+}
+
+func newMetricsRecorderConfig(stepRef string, skip bool, containerResources testworkflowconfig.ContainerResourceConfig) utilization.Config {
+	s := data.GetState()
+	metricsDir := filepath.Join(constants.InternalPath, "metrics", stepRef)
+	return utilization.Config{
+		Dir:  metricsDir,
+		Skip: skip,
+		ExecutionConfig: utilization.ExecutionConfig{
+			Workflow:  s.InternalConfig.Workflow.Name,
+			Step:      stepRef,
+			Execution: s.InternalConfig.Execution.Id,
+			Resource:  s.InternalConfig.Resource.Id,
+		},
+		Format: core.FormatInflux,
+		ContainerResources: core.ContainerResources{
+			Requests: core.ResourceList{
+				CPU:    appendSuffixIfNeeded(containerResources.Requests.CPU, "m"),
+				Memory: containerResources.Requests.Memory,
+			},
+			Limits: core.ResourceList{
+				CPU:    appendSuffixIfNeeded(containerResources.Limits.CPU, "m"),
+				Memory: containerResources.Limits.Memory,
+			},
+		},
+	}
+}
+
+func appendSuffixIfNeeded(s, suffix string) string {
+	if s == "" {
+		return s
+	}
+	if !strings.HasSuffix(s, suffix) {
+		return s + suffix
+	}
+	return s
+}
+
+func scrapeMetricsPostProcessor(path, step string, config testworkflowconfig.InternalConfig) func() error {
+	return func() error {
+		// Configure the environment
+		err := orchestration.Setup.UseCurrentEnv()
+		if err != nil {
+			return errors.Wrapf(err, "failed to configure environment for scraping metrics: %v", err)
+		}
+		serialized, _ := json.Marshal(config)
+		_ = os.Setenv("TK_CFG", string(serialized))
+		_ = os.Setenv("TK_REF", step)
+		defer func() {
+			_ = os.Unsetenv("TK_CFG")
+			_ = os.Unsetenv("TK_REF")
+		}()
+
+		// Scrape the metrics to internal storage
+		storage := artifacts.InternalStorage()
+		err = filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
+			if info.IsDir() {
+				return nil
+			}
+			if err != nil {
+				return err
+			}
+			f, err := os.Open(path)
+			if err != nil {
+				return errors.Wrapf(err, "failed to open metrics file %q: %v", path, err)
+			}
+			defer f.Close()
+			path = filepath.Join("metrics", filepath.Base(path))
+			if err := storage.SaveFile(path, f, info); err != nil {
+				return errors.Wrapf(err, "failed to save stream to %q: %v", path, err)
+			}
+			return nil
+		})
+		return err
 	}
 }

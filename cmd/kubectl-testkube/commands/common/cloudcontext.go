@@ -26,7 +26,7 @@ func UiPrintContext(cfg config.Data) {
 		}
 
 		// add agent information only when need to change agent data, it's usually not needed in usual workflow
-		if ui.Verbose {
+		if ui.IsVerbose() {
 			contextData["Agent Key"] = text.Obfuscate(cfg.CloudContext.AgentKey)
 			contextData["Agent URI"] = cfg.CloudContext.AgentUri
 		}

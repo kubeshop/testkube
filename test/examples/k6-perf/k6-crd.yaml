@@ -11,10 +11,10 @@ spec:
       paths:
       - test/k6/executor-tests/k6-perf-test.js
   container:
-    # resources:
-    #   requests:
-    #     cpu: 128m
-    #     memory: 128Mi
+    resources:
+      requests:
+        cpu: 15
+        memory: 25Gi
     workingDir: /data/repo/test/k6/executor-tests
   config:
     vus: {type: integer, default: 20}
@@ -26,6 +26,46 @@ spec:
     steps:
     - run:
         shell: mkdir /data/artifacts && k6 run k6-perf-test.js --vus {{ config.vus }} --duration {{ config.duration }}
+        env:
+        - name: K6_WEB_DASHBOARD
+          value: "true"
+        - name: K6_WEB_DASHBOARD_EXPORT
+          value: "/data/artifacts/k6-test-report.html"
+      steps:
+      - name: Saving artifacts
+        workingDir: /data/artifacts
+        artifacts:
+          paths:
+          - '*'
+---
+# Simple 
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: k6-perf-test-gcp
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/k6/executor-tests/k6-perf-test-gcp.js
+  container:
+    resources:
+      requests:
+        cpu: 15
+        memory: 25Gi
+    workingDir: /data/repo/test/k6/executor-tests
+  config:
+    vus: {type: integer, default: 20}
+    duration: {type: string, default: '1m'}
+  steps:
+  - name: Run test
+    container:
+      image: grafana/k6:0.49.0
+    steps:
+    - run:
+        shell: mkdir /data/artifacts && k6 run k6-perf-test-gcp.js --vus {{ config.vus }} --duration {{ config.duration }}
         env:
         - name: K6_WEB_DASHBOARD
           value: "true"
@@ -63,16 +103,106 @@ spec:
       - from: /data/artifacts
       use:
       - name: distribute/evenly
-      # container:
-      #   resources:
-      #     requests:
-      #       cpu: 128m
-      #       memory: 128Mi
+      container:
+        resources:
+          requests:
+            cpu: 15
+            memory: 25Gi
       paused: true # synchronise running all workers
       run:
         image: grafana/k6:0.49.0
         workingDir: /data/repo/test/k6/executor-tests
         shell: mkdir /data/artifacts && k6 run k6-perf-test.js --vus {{ config.vus }} --duration {{ config.duration }} --execution-segment '{{ index }}/{{ count }}:{{ index + 1 }}/{{ count }}'
+        env:
+        - name: K6_WEB_DASHBOARD
+          value: "true"
+        - name: K6_WEB_DASHBOARD_EXPORT
+          value: "/data/artifacts/k6-test-report-worker-{{ index + 1}}.html"
+    artifacts:
+      workingDir: /data/artifacts
+      paths:
+      - '*.html'
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: k6-perf-test-workers-gcp
+spec:
+  config:
+    vus: {type: integer, default: 20}
+    duration: {type: string, default: '1m'}
+    workers: {type: integer, default: 3}
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/k6/executor-tests/k6-perf-test-gcp.js
+  steps:
+  - name: Run test
+    parallel:
+      count: 'config.workers'
+      transfer:
+      - from: /data/repo
+      fetch:
+      - from: /data/artifacts
+      use:
+      - name: distribute/evenly
+      container:
+        resources:
+          requests:
+            cpu: 15
+            memory: 25Gi
+      paused: true # synchronise running all workers
+      run:
+        image: grafana/k6:0.49.0
+        workingDir: /data/repo/test/k6/executor-tests
+        shell: mkdir /data/artifacts && k6 run k6-perf-test-gcp.js --vus {{ config.vus }} --duration {{ config.duration }} --execution-segment '{{ index }}/{{ count }}:{{ index + 1 }}/{{ count }}'
+        env:
+        - name: K6_WEB_DASHBOARD
+          value: "true"
+        - name: K6_WEB_DASHBOARD_EXPORT
+          value: "/data/artifacts/k6-test-report-worker-{{ index + 1}}.html"
+    artifacts:
+      workingDir: /data/artifacts
+      paths:
+      - '*.html'
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: k6-perf-test-workers-gcp-discard-response-bodies
+spec:
+  config:
+    vus: {type: integer, default: 20}
+    duration: {type: string, default: '1m'}
+    workers: {type: integer, default: 3}
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/k6/executor-tests/k6-perf-test-gcp-discard-response-bodies.js
+  steps:
+  - name: Run test
+    parallel:
+      count: 'config.workers'
+      transfer:
+      - from: /data/repo
+      fetch:
+      - from: /data/artifacts
+      use:
+      - name: distribute/evenly
+      container:
+        resources:
+          requests:
+            cpu: 15
+            memory: 25Gi
+      paused: true # synchronise running all workers
+      run:
+        image: grafana/k6:0.49.0
+        workingDir: /data/repo/test/k6/executor-tests
+        shell: mkdir /data/artifacts && k6 run k6-perf-test-gcp-discard-response-bodies.js --vus {{ config.vus }} --duration {{ config.duration }} --execution-segment '{{ index }}/{{ count }}:{{ index + 1 }}/{{ count }}'
         env:
         - name: K6_WEB_DASHBOARD
           value: "true"
@@ -108,16 +238,67 @@ spec:
       - from: /data/artifacts
       use:
       - name: distribute/evenly
-      # container:
-      #   resources:
-      #     requests:
-      #       cpu: 128m
-      #       memory: 128Mi
+      container:
+        resources:
+          requests:
+            cpu: 15
+            memory: 25Gi
       paused: true # synchronise running all workers
       run:
         image: grafana/k6:0.49.0
         workingDir: /data/repo/test/k6/executor-tests
         shell: mkdir /data/artifacts && k6 run k6-perf-test.js -o experimental-prometheus-rw --vus {{ config.vus }} --duration {{ config.duration }} --execution-segment '{{ index }}/{{ count }}:{{ index + 1 }}/{{ count }}' --tag testid=worker-{{ index + 1}}
+        env:
+        - name: K6_WEB_DASHBOARD
+          value: "true"
+        - name: K6_WEB_DASHBOARD_EXPORT
+          value: "/data/artifacts/k6-test-report-worker-{{ index + 1}}.html"
+        - name: K6_PROMETHEUS_RW_SERVER_URL
+          value: 'http://prometheus-server.prometheus-grafana.svc.cluster.local:80/api/v1/write'
+        - name: K6_PROMETHEUS_RW_TREND_STATS
+          value: 'p(95),p(99),min,max'
+        - name: K6_PROMETHEUS_RW_TREND_AS_NATIVE_HISTOGRAM
+          value: "true"
+    artifacts:
+      workingDir: /data/artifacts
+      paths:
+      - '*.html'
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: k6-perf-test-gcp-workers-prometheus
+spec:
+  config:
+    vus: {type: integer, default: 20}
+    duration: {type: string, default: '1m'}
+    workers: {type: integer, default: 3}
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/k6/executor-tests/k6-perf-test-gcp.js
+  steps:
+  - name: Run test
+    parallel:
+      count: 'config.workers'
+      transfer:
+      - from: /data/repo
+      fetch:
+      - from: /data/artifacts
+      use:
+      - name: distribute/evenly
+      container:
+        resources:
+          requests:
+            cpu: 15
+            memory: 25Gi
+      paused: true # synchronise running all workers
+      run:
+        image: grafana/k6:0.49.0
+        workingDir: /data/repo/test/k6/executor-tests
+        shell: mkdir /data/artifacts && k6 run k6-perf-test-gcp.js -o experimental-prometheus-rw --vus {{ config.vus }} --duration {{ config.duration }} --execution-segment '{{ index }}/{{ count }}:{{ index + 1 }}/{{ count }}' --tag testid=worker-{{ index + 1}}
         env:
         - name: K6_WEB_DASHBOARD
           value: "true"

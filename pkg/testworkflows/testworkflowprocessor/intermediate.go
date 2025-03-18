@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
@@ -21,9 +22,11 @@ type Intermediate interface {
 	ConfigMaps() []corev1.ConfigMap
 	Secrets() []corev1.Secret
 	Volumes() []corev1.Volume
+	Pvcs() map[string]corev1.PersistentVolumeClaim
 
 	AppendJobConfig(cfg *testworkflowsv1.JobConfig) Intermediate
 	AppendPodConfig(cfg *testworkflowsv1.PodConfig) Intermediate
+	AppendPvcs(cfg map[string]corev1.PersistentVolumeClaimSpec) Intermediate
 
 	AddConfigMap(configMap corev1.ConfigMap) Intermediate
 	AddSecret(secret corev1.Secret) Intermediate
@@ -47,8 +50,9 @@ type intermediate struct {
 	Job testworkflowsv1.JobConfig `expr:"include"`
 
 	// Actual Kubernetes resources to use
-	Secs []corev1.Secret    `expr:"force"`
-	Cfgs []corev1.ConfigMap `expr:"force"`
+	Secs []corev1.Secret                         `expr:"force"`
+	Cfgs []corev1.ConfigMap                      `expr:"force"`
+	Ps   map[string]corev1.PersistentVolumeClaim `expr:"force"`
 
 	// Storing files
 	Files ConfigMapFiles `expr:"include"`
@@ -60,7 +64,9 @@ func NewIntermediate() Intermediate {
 		RefCounter: ref,
 		Root:       stage.NewGroupStage("", true),
 		Container:  stage.NewContainer(),
-		Files:      NewConfigMapFiles(fmt.Sprintf("{{resource.id}}-%s", ref.NextRef()), nil)}
+		Files:      NewConfigMapFiles(fmt.Sprintf("{{resource.id}}-%s", ref.NextRef()), nil),
+		Ps:         make(map[string]corev1.PersistentVolumeClaim),
+	}
 }
 
 func (s *intermediate) ContainerDefaults() stage.Container {
@@ -87,6 +93,10 @@ func (s *intermediate) Volumes() []corev1.Volume {
 	return append(s.Pod.Volumes, s.Files.Volumes()...)
 }
 
+func (s *intermediate) Pvcs() map[string]corev1.PersistentVolumeClaim {
+	return s.Ps
+}
+
 func (s *intermediate) AppendJobConfig(cfg *testworkflowsv1.JobConfig) Intermediate {
 	s.Job = *testworkflowresolver.MergeJobConfig(&s.Job, cfg)
 	return s
@@ -94,6 +104,18 @@ func (s *intermediate) AppendJobConfig(cfg *testworkflowsv1.JobConfig) Intermedi
 
 func (s *intermediate) AppendPodConfig(cfg *testworkflowsv1.PodConfig) Intermediate {
 	s.Pod = *testworkflowresolver.MergePodConfig(&s.Pod, cfg)
+	return s
+}
+
+func (s *intermediate) AppendPvcs(cfg map[string]corev1.PersistentVolumeClaimSpec) Intermediate {
+	for name, spec := range cfg {
+		s.Ps[name] = corev1.PersistentVolumeClaim{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: fmt.Sprintf("{{resource.root}}-%s", s.NextRef()),
+			},
+			Spec: spec,
+		}
+	}
 	return s
 }
 

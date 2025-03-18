@@ -11,8 +11,8 @@ permissions:
 
 env:
   TESTKUBE_CHOCO_REPO: https://chocolatey.kubeshop.io/
-  ALPINE_IMAGE: alpine:3.20.3
-  BUSYBOX_IMAGE: busybox:1.36.1-musl
+  ALPINE_IMAGE: alpine:3.21.3
+  BUSYBOX_IMAGE: busybox:1.37.0-musl
 
 jobs:
   pre_build:
@@ -80,6 +80,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
           ANALYTICS_TRACKING_ID: "${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_ID}}"
           ANALYTICS_API_KEY: "${{secrets.TESTKUBE_CLI_GA_MEASUREMENT_SECRET}}"
+          KEYGEN_PUBLIC_KEY: "${{secrets.KEYGEN_PUBLIC_KEY}}"
           # Your GoReleaser Pro key, if you are using the 'goreleaser-pro' distribution
           GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
           DOCKER_BUILDX_BUILDER: "${{ steps.buildx.outputs.name }}"

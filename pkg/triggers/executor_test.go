@@ -11,17 +11,16 @@ import (
 	v1 "github.com/kubeshop/testkube-operator/api/executor/v1"
 	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
 	testtriggersv1 "github.com/kubeshop/testkube-operator/api/testtriggers/v1"
-	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
 	testsclientv3 "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
 	testsourcesv1 "github.com/kubeshop/testkube-operator/pkg/client/testsources/v1"
 	testsuiteexecutionsv1 "github.com/kubeshop/testkube-operator/pkg/client/testsuiteexecutions/v1"
 	testsuitesv3 "github.com/kubeshop/testkube-operator/pkg/client/testsuites/v3"
-	testworkflowsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testworkflows/v1"
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	"github.com/kubeshop/testkube/cmd/api-server/services"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/configmap"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/event/bus"
@@ -29,12 +28,12 @@ import (
 	"github.com/kubeshop/testkube/pkg/featureflags"
 	"github.com/kubeshop/testkube/pkg/log"
 	logsclient "github.com/kubeshop/testkube/pkg/logs/client"
+	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/result"
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/scheduler"
 	"github.com/kubeshop/testkube/pkg/secret"
-	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 )
 
@@ -141,7 +140,7 @@ func TestExecute(t *testing.T) {
 		"",
 		"",
 		"",
-		checktcl.SubscriptionChecker{},
+		"",
 	)
 	s := &Service{
 		triggerStatus: make(map[statusKey]*triggerStatus),
@@ -201,21 +200,26 @@ func TestWorkflowExecute(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	mockTestWorkflowsClient := testworkflowsclientv1.NewMockInterface(mockCtrl)
+	mockTestWorkflowsClient := testworkflowclient.NewMockTestWorkflowClient(mockCtrl)
 	mockTestWorkflowExecutor := testworkflowexecutor.NewMockTestWorkflowExecutor(mockCtrl)
 
-	mockTestWorkflow := testworkflowsv1.TestWorkflow{ObjectMeta: metav1.ObjectMeta{Namespace: "testkube", Name: "some-test"}}
-	mockTestWorkflowsClient.EXPECT().Get("some-test").Return(&mockTestWorkflow, nil).AnyTimes()
-	mockTestWorkflowExecutionRequest := testkube.TestWorkflowExecutionRequest{
-		Config: map[string]string{
-			"WATCHER_EVENT_EVENT_TYPE": "",
-			"WATCHER_EVENT_NAME":       "",
-			"WATCHER_EVENT_NAMESPACE":  "",
-			"WATCHER_EVENT_RESOURCE":   "",
+	mockTestWorkflow := testkube.TestWorkflow{Namespace: "testkube", Name: "some-test"}
+	mockTestWorkflowsClient.EXPECT().Get(gomock.Any(), gomock.Any(), "some-test").Return(&mockTestWorkflow, nil).AnyTimes()
+	mockTestWorkflowExecutionRequest := &cloud.ScheduleRequest{
+		Executions: []*cloud.ScheduleExecution{
+			{Selector: &cloud.ScheduleResourceSelector{Name: mockTestWorkflow.Name}, Config: map[string]string{
+				"WATCHER_EVENT_EVENT_TYPE": "",
+				"WATCHER_EVENT_NAME":       "",
+				"WATCHER_EVENT_NAMESPACE":  "",
+				"WATCHER_EVENT_RESOURCE":   "",
+			}},
 		},
 	}
-	mockTestWorkflowExecution := testkube.TestWorkflowExecution{}
-	mockTestWorkflowExecutor.EXPECT().Execute(gomock.Any(), mockTestWorkflow, mockTestWorkflowExecutionRequest).Return(mockTestWorkflowExecution, nil)
+	executionsCh := make(chan *testkube.TestWorkflowExecution, 1)
+	executionsCh <- &testkube.TestWorkflowExecution{}
+	close(executionsCh)
+	executionsStream := testworkflowexecutor.NewStream(executionsCh)
+	mockTestWorkflowExecutor.EXPECT().Execute(gomock.Any(), gomock.Any(), mockTestWorkflowExecutionRequest).Return(executionsStream)
 
 	s := &Service{
 		triggerStatus:        make(map[statusKey]*triggerStatus),

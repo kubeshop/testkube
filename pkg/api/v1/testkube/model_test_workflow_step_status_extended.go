@@ -1,7 +1,7 @@
 package testkube
 
 func (s *TestWorkflowStepStatus) Finished() bool {
-	return s != nil && *s != "" && *s != QUEUED_TestWorkflowStepStatus && *s != PAUSED_TestWorkflowStepStatus && *s != RUNNING_TestWorkflowStepStatus && *s != TIMEOUT_TestWorkflowStepStatus
+	return s != nil && *s != "" && *s != QUEUED_TestWorkflowStepStatus && *s != PAUSED_TestWorkflowStepStatus && *s != RUNNING_TestWorkflowStepStatus
 }
 
 func (s *TestWorkflowStepStatus) Aborted() bool {

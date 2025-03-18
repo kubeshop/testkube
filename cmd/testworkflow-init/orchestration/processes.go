@@ -35,21 +35,14 @@ func (p *processNode) Find(pid int32) []*processNode {
 }
 
 func (p *processNode) VirtualizePath(pid int32) {
-	path := p.Find(pid)
-	if path == nil {
-		return
-	}
-
-	// Cannot virtualize itself
-	if len(path) == 1 {
-		return
-	}
-
-	// Virtualize recursively
-	for i := 1; i < len(path); i++ {
-		delete(path[0].nodes, path[i])
-		for node := range path[i].nodes {
-			path[0].nodes[node] = struct{}{}
+	for ps := range p.nodes {
+		if ps.pid == pid {
+			for sub := range ps.nodes {
+				p.nodes[sub] = struct{}{}
+			}
+			delete(p.nodes, ps)
+		} else {
+			ps.VirtualizePath(pid)
 		}
 	}
 }
@@ -97,16 +90,19 @@ func (p *processNode) Resume() error {
 		return nil
 	}
 	if p.pid == -1 {
-		return errors.Wrap(errors2.Join(errs...), "suspending processes")
+		return errors.Wrap(errors2.Join(errs...), "resuming processes")
 	}
-	return errors.Wrapf(errors2.Join(errs...), "suspending process %d", p.pid)
+	return errors.Wrapf(errors2.Join(errs...), "resuming process %d", p.pid)
 }
 
 // Kill all the processes in group, starting from top
 func (p *processNode) Kill() error {
 	errs := make([]error, 0)
 	if p.pid != -1 {
-		return errors.Wrap((&gopsutil.Process{Pid: p.pid}).Kill(), "killing processes")
+		err := errors.Wrap((&gopsutil.Process{Pid: p.pid}).Kill(), "killing processes")
+		if err != nil {
+			return err
+		}
 	}
 	for node := range p.nodes {
 		err := node.Kill()

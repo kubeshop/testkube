@@ -18,6 +18,10 @@ type TestWorkflowExecution struct {
 	Id string `json:"id"`
 	// identifier for group of correlated executions
 	GroupId string `json:"groupId,omitempty"`
+	// identifier of the runner where it has been executed
+	RunnerId             string           `json:"runnerId,omitempty"`
+	RunnerTarget         *ExecutionTarget `json:"runnerTarget,omitempty"`
+	RunnerOriginalTarget *ExecutionTarget `json:"runnerOriginalTarget,omitempty"`
 	// execution name
 	Name string `json:"name"`
 	// execution namespace
@@ -26,6 +30,8 @@ type TestWorkflowExecution struct {
 	Number int32 `json:"number,omitempty"`
 	// when the execution has been scheduled to run
 	ScheduledAt time.Time `json:"scheduledAt,omitempty"`
+	// when the execution has been assigned to some runner
+	AssignedAt time.Time `json:"assignedAt,omitempty"`
 	// when the execution result's status has changed last time (queued, passed, failed)
 	StatusAt time.Time `json:"statusAt,omitempty"`
 	// structured tree of steps
@@ -40,7 +46,8 @@ type TestWorkflowExecution struct {
 	// test workflow execution name started the test workflow execution
 	TestWorkflowExecutionName string `json:"testWorkflowExecutionName,omitempty"`
 	// whether webhooks on the execution of this test workflow are disabled
-	DisableWebhooks bool                        `json:"disableWebhooks,omitempty"`
-	Tags            map[string]string           `json:"tags,omitempty"`
-	RunningContext  *TestWorkflowRunningContext `json:"runningContext,omitempty"`
+	DisableWebhooks bool                                        `json:"disableWebhooks,omitempty"`
+	Tags            map[string]string                           `json:"tags,omitempty"`
+	RunningContext  *TestWorkflowRunningContext                 `json:"runningContext,omitempty"`
+	ConfigParams    map[string]TestWorkflowExecutionConfigValue `json:"configParams,omitempty"`
 }

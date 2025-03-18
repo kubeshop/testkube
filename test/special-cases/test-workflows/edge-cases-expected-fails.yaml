@@ -4,13 +4,51 @@ metadata:
   name: expected-fail-cypress-incorrect-repo-path
   labels:
     core-tests: expected-fail
+description: default no-cone mode
 spec:
   content:
     git:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/cypress/executor-tests/some-incorrect-path
+      - test/cypress/executor-tests/some-incorrect-path # no-cone won't fail here
+  container:
+    resources:
+      requests:
+        cpu: 2
+        memory: 2Gi
+    workingDir: /data/repo/test/cypress/executor-tests/some-incorrect-path
+  steps:
+  - name: Run tests
+    run:
+      image: cypress/included:13.6.4
+      args:
+      - --env
+      - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+      - --config
+      - '{"screenshotsFolder":"/data/artifacts/screenshots","videosFolder":"/data/artifacts/videos"}'
+      env:
+      - name: CYPRESS_CUSTOM_ENV
+        value: CYPRESS_CUSTOM_ENV_value
+    artifacts:
+      workingDir: /data/artifacts
+      paths:
+      - '**/*'
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-cypress-incorrect-repo-path-cone-mode
+  labels:
+    core-tests: expected-fail
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      cone: true
+      paths:
+      - test/cypress/executor-tests/some-incorrect-path # cone mode will fail here
   container:
     resources:
       requests:
@@ -111,7 +149,7 @@ spec:
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: expected-fail-cypress-resource-limits
+  name: expected-fail-cypress-resource-limits # OOMKilled
   labels:
     core-tests: expected-fail
 spec:
@@ -170,15 +208,11 @@ spec:
     run:
       image: cypress/included:13.6.4
       args:
-      - --env
-      - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
       - --config
       - '{"screenshotsFolder":"/data/artifacts/screenshots","videosFolder":"/data/artifacts/videos"}'
-      env:
-      - name: CYPRESS_CUSTOM_ENV
-        value: CYPRESS_CUSTOM_ENV_value
     steps:
     - name: Saving artifacts
+      condition: always
       workingDir: /data/artifacts
       artifacts:
         paths:
@@ -212,16 +246,196 @@ spec:
     - run:
         args:
         - run
-        - k6-smoke-test.js
-        env:
-        - name: K6_WEB_DASHBOARD
-          value: "true"
-        - name: K6_WEB_DASHBOARD_EXPORT
-          value: "/data/artifacts/k6-test-report.html"
+        - some-incorrect-file-name.js
       steps:
-      - name: Saving artifacts
+      - name: Saving artifacts # should be run despite step failure
         condition: always
         workingDir: /data/artifacts
         artifacts:
           paths:
           - '*'
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-timeout-activedeadlineseconds
+  labels:
+    core-tests: expected-fail
+spec:
+  job:
+    activeDeadlineSeconds: 1
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/k6/executor-tests/k6-smoke-test.js
+  container:
+    resources:
+      requests:
+        cpu: 128m
+        memory: 128Mi
+    workingDir: /data/repo/test/k6/executor-tests
+  steps:
+  - name: Run test
+    run:
+      image: grafana/k6:0.43.1
+      args:
+      - run
+      - k6-smoke-test.js
+      - -e
+      - K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value
+      env:
+      - name: K6_SYSTEM_ENV
+        value: K6_SYSTEM_ENV_value
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-timeout-step
+  labels:
+    core-tests: expected-fail
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/playwright/executor-tests/playwright-project
+  container:
+    image: mcr.microsoft.com/playwright:v1.32.3-focal
+    resources:
+      requests:
+        cpu: 2
+        memory: 2Gi
+    workingDir: /data/repo/test/playwright/executor-tests/playwright-project
+  steps:
+  - name: Install dependencies
+    shell: "npm ci"
+  - name: Run tests
+    timeout: 1s
+    shell: "npx playwright test"
+  - name: Save artifacts
+    workingDir: /data/repo/test/playwright/executor-tests/playwright-project
+    artifacts:
+      paths:
+      - playwright-report/**/*
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-private-registry-auth
+  labels:
+    core-tests: expected-fail
+spec:
+  container:
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
+  steps:
+    - name: Run tests
+      shell: curl -f -LI https://testkube-test-page-lipsum.pages.dev/ && sleep 10
+      container:
+        image: tkoniecznykubeshop/example-private-repo:curl-8.11.1
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-private-repo-auth
+  labels:
+    core-tests: expected-fail
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/some-example-repo
+      revision: main
+      paths:
+      - test/postman/executor-tests/postman-executor-smoke.postman_collection.json
+  container:
+    resources:
+      requests:
+        cpu: 256m
+        memory: 128Mi
+    workingDir: /data/repo/test/postman/executor-tests
+  steps:
+  - name: Run test
+    run:
+      image: postman/newman:6-alpine
+      args:
+      - run
+      - postman-executor-smoke.postman_collection.json
+      - "--env-var"
+      - "TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-missing-git-secret
+  labels:
+    core-tests: expected-fail
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/some-example-repo
+      revision: main
+      usernameFrom:
+        secretKeyRef:
+          name: non-existant-secret
+          key: git-username
+      tokenFrom:
+        secretKeyRef:
+          name: non-existant-secret2
+          key: git-token
+      paths:
+      - test/postman/executor-tests/postman-executor-smoke.postman_collection.json
+  container:
+    resources:
+      requests:
+        cpu: 256m
+        memory: 128Mi
+    workingDir: /data/repo/test/postman/executor-tests
+  steps:
+  - name: Run test
+    run:
+      image: postman/newman:6-alpine
+      args:
+      - run
+      - postman-executor-smoke.postman_collection.json
+      - "--env-var"
+      - "TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-missing-env-secret
+  labels:
+    core-tests: expected-fail
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/postman/executor-tests/postman-executor-smoke.postman_collection.json
+  container:
+    resources:
+      requests:
+        cpu: 256m
+        memory: 128Mi
+    workingDir: /data/repo/test/postman/executor-tests
+  steps:
+  - name: Run test
+    run:
+      image: postman/newman:6-alpine
+      env:
+      - name: EXAMPLE_ENV
+        valueFrom:
+          secretKeyRef:
+            name: non-existant-secret
+            key: key
+      args:
+      - run
+      - postman-executor-smoke.postman_collection.json
+      - "--env-var"
+      - "TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value"

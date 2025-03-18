@@ -18,7 +18,3 @@ func GetBaseTestWorkflowMachine() expressions.Machine {
 	GetState() // load state
 	return expressions.CombinedMachines(EnvMachine, StateMachine, fileMachine)
 }
-
-func GetInternalTestWorkflowMachine() expressions.Machine {
-	return expressions.CombinedMachines(RefSuccessMachine, AliasMachine, GetBaseTestWorkflowMachine())
-}

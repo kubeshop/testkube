@@ -1,6 +1,12 @@
 package testkube
 
-import "github.com/kubeshop/testkube/pkg/utils"
+import (
+	"bytes"
+	"encoding/json"
+	"time"
+
+	"github.com/kubeshop/testkube/pkg/utils"
+)
 
 type TestWorkflows []TestWorkflow
 
@@ -95,4 +101,59 @@ func (w TestWorkflow) GetLabels() map[string]string {
 
 func (w TestWorkflow) GetAnnotations() map[string]string {
 	return w.Annotations
+}
+
+func (w TestWorkflow) HasService(name string) bool {
+	if w.Spec == nil {
+		return false
+	}
+
+	steps := append(w.Spec.Setup, append(w.Spec.Steps, w.Spec.After...)...)
+	for _, step := range steps {
+		if step.HasService(name) {
+			return true
+		}
+	}
+
+	if _, ok := w.Spec.Services[name]; ok {
+		return true
+	}
+
+	return false
+}
+
+func (w *TestWorkflow) DeepCopy() *TestWorkflow {
+	if w == nil {
+		return nil
+	}
+	v, _ := json.Marshal(w)
+	var result TestWorkflow
+	_ = json.Unmarshal(v, &result)
+	return &result
+}
+
+// TODO: do it stable
+func (w *TestWorkflow) Equals(other *TestWorkflow) bool {
+	// Avoid check when there is one existing and the other one not
+	if (w == nil) != (other == nil) {
+		return false
+	}
+
+	// Reset timestamps to avoid influence
+	wCreated := w.Created
+	otherCreated := other.Created
+	w.Created = time.Time{}
+	other.Created = time.Time{}
+
+	// Compare
+	w1, _ := json.Marshal(w)
+	w.Created = time.Time{}
+	w2, _ := json.Marshal(other)
+	result := bytes.Equal(w1, w2)
+
+	// Restore values
+	w.Created = wCreated
+	other.Created = otherCreated
+
+	return result
 }

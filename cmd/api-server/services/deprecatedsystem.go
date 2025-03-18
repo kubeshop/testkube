@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/nats-io/nats.go"
-	"google.golang.org/grpc"
 
 	kubeclient "github.com/kubeshop/testkube-operator/pkg/client"
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
@@ -35,7 +34,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/storage"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
-	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
 	"github.com/kubeshop/testkube/pkg/tcl/schedulertcl"
 )
 
@@ -58,12 +56,10 @@ func CreateDeprecatedSystem(
 	configMapConfig configRepo.Repository,
 	secretConfig testkube.SecretConfig,
 	grpcClient cloud.TestKubeCloudAPIClient,
-	grpcConn *grpc.ClientConn,
 	natsConn *nats.EncodedConn,
 	eventsEmitter *event.Emitter,
 	eventBus *bus.NATSBus,
 	inspector imageinspector.Inspector,
-	subscriptionChecker checktcl.SubscriptionChecker,
 	proContext *config.ProContext,
 ) *DeprecatedSystem {
 	kubeClient, err := kubeclient.GetClient()
@@ -75,7 +71,7 @@ func CreateDeprecatedSystem(
 	configMapClient := configmap.NewClientFor(clientset, cfg.TestkubeNamespace)
 
 	deprecatedClients := commons.CreateDeprecatedClients(kubeClient, cfg.TestkubeNamespace)
-	deprecatedRepositories := commons.CreateDeprecatedRepositoriesForCloud(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
+	deprecatedRepositories := commons.CreateDeprecatedRepositoriesForCloud(grpcClient, cfg.TestkubeProAPIKey)
 
 	defaultExecutors, images, err := commons.ReadDefaultExecutors(cfg)
 	commons.ExitOnError("Parsing default executors", err)
@@ -93,8 +89,10 @@ func CreateDeprecatedSystem(
 	}
 	// Pro edition only (tcl protected code)
 	if cfg.TestkubeExecutionNamespaces != "" {
-		err = subscriptionChecker.IsActiveOrgPlanEnterpriseForFeature("execution namespace")
-		commons.ExitOnError("Subscription checking", err)
+		if mode != common.ModeAgent {
+			commons.ExitOnError("Execution namespaces", common.ErrNotSupported)
+		}
+
 		serviceAccountNames = schedulertcl.GetServiceAccountNamesFromConfig(serviceAccountNames, cfg.TestkubeExecutionNamespaces)
 	}
 
@@ -175,7 +173,7 @@ func CreateDeprecatedSystem(
 		cfg.TestkubeNamespace,
 		cfg.TestkubeProTLSSecret,
 		cfg.TestkubeProRunnerCustomCASecret,
-		subscriptionChecker,
+		mode,
 	)
 
 	storageParams := deprecatedapiv1.StorageParams{
@@ -194,7 +192,7 @@ func CreateDeprecatedSystem(
 	// Use direct MinIO artifact storage for deprecated API for backwards compatibility
 	var deprecatedArtifactStorage storage.ArtifactsStorage
 	if mode == common.ModeAgent {
-		deprecatedArtifactStorage = cloudartifacts.NewCloudArtifactsStorage(grpcClient, grpcConn, cfg.TestkubeProAPIKey)
+		deprecatedArtifactStorage = cloudartifacts.NewCloudArtifactsStorage(grpcClient, cfg.TestkubeProAPIKey)
 	} else {
 		deprecatedArtifactStorage = minio.NewMinIOArtifactClient(commons.MustGetMinioClient(cfg))
 	}

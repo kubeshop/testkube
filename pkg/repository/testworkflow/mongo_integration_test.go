@@ -431,3 +431,227 @@ func TestNewMongoRepository_GetExecutions_Actor_Integration(t *testing.T) {
 
 	assert.Len(t, res, 0)
 }
+
+func TestNewMongoRepository_GetExecutionsSummary_Integration(t *testing.T) {
+	test.IntegrationTest(t)
+	ctx := context.Background()
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(cfg.APIMongoDSN))
+	if err != nil {
+		t.Fatalf("error connecting to mongo: %v", err)
+	}
+	db := client.Database("testworkflow-executions-summary-mongo-repository-test")
+	t.Cleanup(func() {
+		db.Drop(ctx)
+	})
+	repo := NewMongoRepository(db, false)
+
+	// Insert test data
+	execution := testkube.TestWorkflowExecution{
+		Id:   "test-id-1",
+		Name: "test-name-1",
+		Workflow: &testkube.TestWorkflow{
+			Name: "test-workflow-1",
+			Spec: &testkube.TestWorkflowSpec{},
+		},
+		ResolvedWorkflow: &testkube.TestWorkflow{
+			Name: "test-workflow-1",
+			Spec: &testkube.TestWorkflowSpec{
+				Config: map[string]testkube.TestWorkflowParameterSchema{
+					"param1": {
+						Default_: &testkube.BoxedString{
+							Value: "default",
+						},
+					},
+				},
+			},
+		},
+		ConfigParams: map[string]testkube.TestWorkflowExecutionConfigValue{},
+		Reports: []testkube.TestWorkflowReport{
+			{
+				Summary: &testkube.TestWorkflowReportSummary{
+					Passed:   10,
+					Failed:   2,
+					Skipped:  3,
+					Errored:  1,
+					Tests:    16,
+					Duration: 15000,
+				},
+			},
+		},
+	}
+	err = repo.Insert(ctx, execution)
+	assert.NoError(t, err)
+
+	execution2 := testkube.TestWorkflowExecution{
+		Id:   "test-id-1",
+		Name: "test-name-2",
+		Workflow: &testkube.TestWorkflow{
+			Name: "test-workflow-2",
+			Spec: &testkube.TestWorkflowSpec{},
+		},
+		ResolvedWorkflow: &testkube.TestWorkflow{
+			Name: "test-workflow-2",
+			Spec: &testkube.TestWorkflowSpec{
+				Config: map[string]testkube.TestWorkflowParameterSchema{
+					"param1": {
+						Default_: &testkube.BoxedString{
+							Value: "default",
+						},
+					},
+				},
+			},
+		},
+		ConfigParams: map[string]testkube.TestWorkflowExecutionConfigValue{
+			"param1": {
+				Value: "custom-value",
+			},
+		},
+	}
+	err = repo.Insert(ctx, execution2)
+	assert.NoError(t, err)
+
+	// Test GetExecutionsSummary
+	filter := NewExecutionsFilter().WithName("test-workflow-1")
+	result, err := repo.GetExecutionsSummary(ctx, filter)
+	assert.NoError(t, err)
+	assert.Len(t, result, 1)
+	assert.Equal(t, "test-name-1", result[0].Name)
+	assert.Equal(t, "default", result[0].ConfigParams["param1"].DefaultValue)
+	assert.Len(t, result[0].Reports, 1)
+	assert.EqualValues(t, 10, result[0].Reports[0].Summary.Passed)
+	assert.EqualValues(t, 2, result[0].Reports[0].Summary.Failed)
+	assert.EqualValues(t, 3, result[0].Reports[0].Summary.Skipped)
+	assert.EqualValues(t, 1, result[0].Reports[0].Summary.Errored)
+	assert.EqualValues(t, 16, result[0].Reports[0].Summary.Tests)
+	assert.EqualValues(t, 15000, result[0].Reports[0].Summary.Duration)
+
+	filter = NewExecutionsFilter().WithName("test-workflow-2")
+	result, err = repo.GetExecutionsSummary(ctx, filter)
+	assert.NoError(t, err)
+	assert.Len(t, result, 1)
+	assert.Equal(t, "test-name-2", result[0].Name)
+	assert.Equal(t, "default", result[0].ConfigParams["param1"].DefaultValue)
+	assert.Equal(t, "custom-value", result[0].ConfigParams["param1"].Value)
+	assert.Len(t, result[0].Reports, 0)
+}
+
+func TestNewMongoRepository_Get_Integration(t *testing.T) {
+	test.IntegrationTest(t)
+
+	ctx := context.Background()
+
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(cfg.APIMongoDSN))
+	if err != nil {
+		t.Fatalf("error connecting to mongo: %v", err)
+	}
+	db := client.Database("testworkflow-get-mongo-repository-test")
+	t.Cleanup(func() {
+		db.Drop(ctx)
+	})
+
+	repo := NewMongoRepository(db, false)
+	execution := testkube.TestWorkflowExecution{
+		Id:   "test-id-1",
+		Name: "test-name-1",
+		Workflow: &testkube.TestWorkflow{
+			Name: "test-workflow-1",
+			Spec: &testkube.TestWorkflowSpec{},
+		},
+		ResolvedWorkflow: &testkube.TestWorkflow{
+			Name: "test-workflow-1",
+			Spec: &testkube.TestWorkflowSpec{
+				Config: map[string]testkube.TestWorkflowParameterSchema{
+					"param1": {
+						Default_: &testkube.BoxedString{
+							Value: "default",
+						},
+					},
+				},
+			},
+		},
+		ConfigParams: map[string]testkube.TestWorkflowExecutionConfigValue{},
+	}
+	err = repo.Insert(ctx, execution)
+	assert.NoError(t, err)
+
+	result, err := repo.Get(ctx, "test-id-1")
+	assert.NoError(t, err)
+
+	assert.Equal(t, execution.Id, result.Id)
+	assert.Equal(t, execution.Name, result.Name)
+	assert.Equal(t, "default", result.ConfigParams["param1"].DefaultValue)
+	assert.Equal(t, false, result.ConfigParams["param1"].Truncated)
+
+	execution2 := testkube.TestWorkflowExecution{
+		Id:   "test-id-2",
+		Name: "test-name-2",
+		Workflow: &testkube.TestWorkflow{
+			Name: "test-workflow-2",
+			Spec: &testkube.TestWorkflowSpec{},
+		},
+		ResolvedWorkflow: &testkube.TestWorkflow{
+			Name: "test-workflow-2",
+			Spec: &testkube.TestWorkflowSpec{
+				Config: map[string]testkube.TestWorkflowParameterSchema{
+					"param2": {
+						Default_: &testkube.BoxedString{
+							Value: "default",
+						},
+					},
+					"param1": {
+						Default_: &testkube.BoxedString{
+							Value: "default",
+						},
+						Sensitive: true,
+					},
+				},
+			},
+		},
+	}
+	err = repo.Insert(ctx, execution2)
+	assert.NoError(t, err)
+
+	result, err = repo.Get(ctx, "test-id-2")
+	assert.NoError(t, err)
+
+	assert.Equal(t, execution2.Id, result.Id)
+	assert.Equal(t, execution2.Name, result.Name)
+	assert.Equal(t, true, result.ConfigParams["param1"].Sensitive)
+
+	execution3 := testkube.TestWorkflowExecution{
+		Id:   "test-id-3",
+		Name: "test-name-3",
+		Workflow: &testkube.TestWorkflow{
+			Name: "test-workflow-3",
+			Spec: &testkube.TestWorkflowSpec{},
+		},
+		ResolvedWorkflow: &testkube.TestWorkflow{
+			Name: "test-workflow-2",
+			Spec: &testkube.TestWorkflowSpec{
+				Config: map[string]testkube.TestWorkflowParameterSchema{
+					"param2": {
+						Default_: &testkube.BoxedString{
+							Value: "default",
+						},
+					},
+					"param1": {
+						Default_: &testkube.BoxedString{
+							Value: "default",
+						},
+						Sensitive: true,
+					},
+				},
+			},
+		},
+		ConfigParams: map[string]testkube.TestWorkflowExecutionConfigValue{},
+	}
+	err = repo.Insert(ctx, execution3)
+	assert.NoError(t, err)
+
+	result, err = repo.Get(ctx, "test-id-3")
+	assert.NoError(t, err)
+
+	assert.Equal(t, execution3.Id, result.Id)
+	assert.Equal(t, execution3.Name, result.Name)
+	assert.Equal(t, true, result.ConfigParams["param1"].Sensitive)
+}

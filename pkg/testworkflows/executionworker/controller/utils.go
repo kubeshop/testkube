@@ -6,15 +6,14 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 )
 
 const (
-	KubernetesLogTimeFormat         = "2006-01-02T15:04:05.000000000Z"
-	KubernetesTimezoneLogTimeFormat = KubernetesLogTimeFormat + "07:00"
+	KubernetesTimezoneLogTimeFormat = constants.PreciseTimeFormat + "07:00"
 )
 
 var (
@@ -48,8 +47,8 @@ func ExtractRefsFromActionList(list actiontypes.ActionList) (started []string, f
 	for i := range list {
 		switch list[i].Type() {
 		case lite.ActionTypeSetup:
-			started = append(started, data.InitStepName)
-			finished = append(finished, data.InitStepName)
+			started = append(started, constants.InitStepName)
+			finished = append(finished, constants.InitStepName)
 		case lite.ActionTypeStart:
 			started = append(started, *list[i].Start)
 		case lite.ActionTypeEnd:

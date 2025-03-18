@@ -58,6 +58,7 @@ func init() {
 
 	RootCmd.AddCommand(NewConfigCmd())
 	RootCmd.AddCommand(NewDebugCmd())
+	RootCmd.AddCommand(NewDiagnosticsCmd())
 	RootCmd.AddCommand(NewCreateTicketCmd())
 
 	RootCmd.AddCommand(NewAgentCmd())
@@ -65,6 +66,7 @@ func init() {
 	RootCmd.AddCommand(NewProCmd())
 	RootCmd.AddCommand(NewDockerCmd())
 	RootCmd.AddCommand(pro.NewLoginCmd())
+	RootCmd.AddCommand(NewInstallCmd())
 
 	RootCmd.AddCommand(devbox.NewDevBoxCommand())
 

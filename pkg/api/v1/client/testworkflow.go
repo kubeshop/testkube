@@ -146,6 +146,22 @@ func (c TestWorkflowClient) GetTestWorkflowExecutionNotifications(id string) (no
 	return notifications, err
 }
 
+// GetTestWorkflowExecutionServiceNotifications returns events stream from job pods, based on job pods logs
+func (c TestWorkflowClient) GetTestWorkflowExecutionServiceNotifications(id, serviceName string, serviceIndex int) (notifications chan testkube.TestWorkflowExecutionNotification, err error) {
+	notifications = make(chan testkube.TestWorkflowExecutionNotification)
+	uri := c.testWorkflowTransport.GetURI("/test-workflow-executions/%s/notifications/services/%s/%d", id, serviceName, serviceIndex)
+	err = c.testWorkflowTransport.GetTestWorkflowExecutionNotifications(uri, notifications)
+	return notifications, err
+}
+
+// GetTestWorkflowExecutionParallelStepNotifications returns events stream from job pods, based on job pods logs
+func (c TestWorkflowClient) GetTestWorkflowExecutionParallelStepNotifications(id, ref string, workerIndex int) (notifications chan testkube.TestWorkflowExecutionNotification, err error) {
+	notifications = make(chan testkube.TestWorkflowExecutionNotification)
+	uri := c.testWorkflowTransport.GetURI("/test-workflow-executions/%s/notifications/parallel-steps/%s/%d", id, ref, workerIndex)
+	err = c.testWorkflowTransport.GetTestWorkflowExecutionNotifications(uri, notifications)
+	return notifications, err
+}
+
 // GetTestWorkflowExecution returns single test workflow execution by id
 func (c TestWorkflowClient) GetTestWorkflowExecution(id string) (testkube.TestWorkflowExecution, error) {
 	uri := c.testWorkflowExecutionTransport.GetURI("/test-workflow-executions/%s", id)
@@ -202,4 +218,20 @@ func (c TestWorkflowClient) DownloadTestWorkflowArtifactArchive(executionID, des
 func (c TestWorkflowClient) GetTestWorkflowExecutionLogs(id string) (result []byte, err error) {
 	uri := c.testWorkflowTransport.GetURI("/test-workflow-executions/%s/logs", id)
 	return c.testWorkflowTransport.GetRawBody(http.MethodGet, uri, nil, nil)
+}
+
+// ReRunTestWorkflowExecution reruns selected execution
+func (c TestWorkflowClient) ReRunTestWorkflowExecution(workflow, id string, runningContext *testkube.TestWorkflowRunningContext) (result testkube.TestWorkflowExecution, err error) {
+	if workflow == "" {
+		return result, fmt.Errorf("test workflow name '%s' is not valid", workflow)
+	}
+
+	uri := c.testWorkflowTransport.GetURI("/test-workflows/%s/executions/%s/rerun", workflow, id)
+
+	body, err := json.Marshal(runningContext)
+	if err != nil {
+		return result, err
+	}
+
+	return c.testWorkflowExecutionTransport.Execute(http.MethodPost, uri, body, nil)
 }

@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"k8s.io/apimachinery/pkg/api/resource"
+
 	"github.com/stretchr/testify/assert"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -65,6 +67,9 @@ var (
 	envInternal = actiontypes.EnvVarFrom(constants2.EnvGroupInternal, false, false, constants2.EnvInternalConfig, corev1.EnvVarSource{
 		FieldRef: &corev1.ObjectFieldSelector{FieldPath: constants.InternalAnnotationFieldPath},
 	})
+	envSignature = actiontypes.EnvVarFrom(constants2.EnvGroupInternal, false, false, constants2.EnvSignature, corev1.EnvVarSource{
+		FieldRef: &corev1.ObjectFieldSelector{FieldPath: constants.SignatureAnnotationFieldPath},
+	})
 	envDebugNode = actiontypes.EnvVarFrom(constants2.EnvGroupDebug, false, false, constants2.EnvNodeName, corev1.EnvVarSource{
 		FieldRef: &corev1.ObjectFieldSelector{FieldPath: "spec.nodeName"},
 	})
@@ -78,6 +83,21 @@ var (
 		FieldRef: &corev1.ObjectFieldSelector{FieldPath: "spec.serviceAccountName"},
 	})
 )
+
+func newResourceEnvVars(container string) []corev1.EnvVar {
+	return []corev1.EnvVar{
+		newResourceFieldRefEnvVar(constants2.EnvResourceRequestsCPU, container, "requests.cpu", resource.MustParse("1m")),
+		newResourceFieldRefEnvVar(constants2.EnvResourceLimitsCPU, container, "limits.cpu", resource.MustParse("1m")),
+		newResourceFieldRefEnvVar(constants2.EnvResourceRequestsMemory, container, "requests.memory", resource.Quantity{}),
+		newResourceFieldRefEnvVar(constants2.EnvResourceLimitsMemory, container, "limits.memory", resource.Quantity{}),
+	}
+}
+
+func newResourceFieldRefEnvVar(envvar, container, resource string, divisor resource.Quantity) corev1.EnvVar {
+	return actiontypes.EnvVarFrom(constants2.EnvGroupResources, false, false, envvar, corev1.EnvVarSource{
+		ResourceFieldRef: &corev1.ResourceFieldSelector{ContainerName: container, Resource: resource, Divisor: divisor},
+	})
+}
 
 func env(index int, computed bool, name, value string) corev1.EnvVar {
 	return actiontypes.EnvVar(fmt.Sprintf("%d", index), computed, false, name, value)
@@ -158,6 +178,17 @@ func TestProcessBasic(t *testing.T) {
 				End("")
 		})
 
+	wantEnv := []corev1.EnvVar{
+		env(0, false, "CI", "1"),
+		envDebugNode,
+		envDebugPod,
+		envDebugNamespace,
+		envDebugServiceAccount,
+		envActions,
+		envInternal,
+		envSignature,
+	}
+	wantEnv = append(wantEnv, newResourceEnvVars("1")...)
 	want := batchv1.Job{
 		TypeMeta: metav1.TypeMeta{Kind: "Job", APIVersion: "batch/v1"},
 		ObjectMeta: metav1.ObjectMeta{
@@ -194,16 +225,8 @@ func TestProcessBasic(t *testing.T) {
 							Image:           constants.DefaultInitImage,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Command:         []string{"/init", "0"},
-							Env: []corev1.EnvVar{
-								env(0, false, "CI", "1"),
-								envDebugNode,
-								envDebugPod,
-								envDebugNamespace,
-								envDebugServiceAccount,
-								envActions,
-								envInternal,
-							},
-							VolumeMounts: volumeMounts,
+							Env:             wantEnv,
+							VolumeMounts:    volumeMounts,
 							SecurityContext: &corev1.SecurityContext{
 								RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 							},
@@ -278,6 +301,20 @@ func TestProcessShellWithNonStandardImage(t *testing.T) {
 				End("")
 		})
 
+	wantEnv1 := []corev1.EnvVar{
+		envDebugNode,
+		envDebugPod,
+		envDebugNamespace,
+		envDebugServiceAccount,
+		envActions,
+		envInternal,
+		envSignature,
+	}
+	wantEnv1 = append(wantEnv1, newResourceEnvVars("1")...)
+	wantEnv2 := []corev1.EnvVar{
+		env(0, false, "CI", "1"),
+	}
+	wantEnv2 = append(wantEnv2, newResourceEnvVars("2")...)
 	want := batchv1.Job{
 		TypeMeta: metav1.TypeMeta{Kind: "Job", APIVersion: "batch/v1"},
 		ObjectMeta: metav1.ObjectMeta{
@@ -313,15 +350,8 @@ func TestProcessShellWithNonStandardImage(t *testing.T) {
 							Image:           constants.DefaultInitImage,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Command:         []string{"/init", "0"},
-							Env: []corev1.EnvVar{
-								envDebugNode,
-								envDebugPod,
-								envDebugNamespace,
-								envDebugServiceAccount,
-								envActions,
-								envInternal,
-							},
-							VolumeMounts: volumeMounts,
+							Env:             wantEnv1,
+							VolumeMounts:    volumeMounts,
 							SecurityContext: &corev1.SecurityContext{
 								RunAsGroup: common.Ptr(int64(dummyGroupId)),
 							},
@@ -333,10 +363,8 @@ func TestProcessShellWithNonStandardImage(t *testing.T) {
 							Image:           "custom:1.2.3",
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Command:         []string{"/.tktw/init", "1"},
-							Env: []corev1.EnvVar{
-								env(0, false, "CI", "1"),
-							},
-							VolumeMounts: volumeMounts,
+							Env:             wantEnv2,
+							VolumeMounts:    volumeMounts,
 							SecurityContext: &corev1.SecurityContext{
 								RunAsGroup: common.Ptr(int64(dummyGroupId)),
 							},
@@ -412,6 +440,22 @@ func TestProcessBasicEnvReference(t *testing.T) {
 				End("")
 		})
 
+	wantEnv := []corev1.EnvVar{
+		env(0, false, "CI", "1"),
+		env(0, false, "ZERO", "foo"),
+		env(0, true, "UNDETERMINED", "{{call(abc)}}xxx"),
+		env(0, false, "INPUT", "foobar"),
+		env(0, true, "NEXT", "foo{{env.UNDETERMINED}}foofoobarbar"),
+		env(0, false, "LAST", "foofoobarbar"),
+		envDebugNode,
+		envDebugPod,
+		envDebugNamespace,
+		envDebugServiceAccount,
+		envActions,
+		envInternal,
+		envSignature,
+	}
+	wantEnv = append(wantEnv, newResourceEnvVars("1")...)
 	wantPod := corev1.PodSpec{
 		RestartPolicy:      corev1.RestartPolicyNever,
 		EnableServiceLinks: common.Ptr(false),
@@ -423,21 +467,8 @@ func TestProcessBasicEnvReference(t *testing.T) {
 				Image:           constants.DefaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/init", "0"},
-				Env: []corev1.EnvVar{
-					env(0, false, "CI", "1"),
-					env(0, false, "ZERO", "foo"),
-					env(0, true, "UNDETERMINED", "{{call(abc)}}xxx"),
-					env(0, false, "INPUT", "foobar"),
-					env(0, true, "NEXT", "foo{{env.UNDETERMINED}}foofoobarbar"),
-					env(0, false, "LAST", "foofoobarbar"),
-					envDebugNode,
-					envDebugPod,
-					envDebugNamespace,
-					envDebugServiceAccount,
-					envActions,
-					envInternal,
-				},
-				VolumeMounts: volumeMounts,
+				Env:             wantEnv,
+				VolumeMounts:    volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
 					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
@@ -506,6 +537,21 @@ func TestProcessMultipleSteps(t *testing.T) {
 				End("")
 		})
 
+	wantEnv1 := []corev1.EnvVar{
+		env(0, false, "CI", "1"),
+		envDebugNode,
+		envDebugPod,
+		envDebugNamespace,
+		envDebugServiceAccount,
+		envActions,
+		envInternal,
+		envSignature,
+	}
+	wantEnv1 = append(wantEnv1, newResourceEnvVars("1")...)
+	wantEnv2 := []corev1.EnvVar{
+		env(0, false, "CI", "1"),
+	}
+	wantEnv2 = append(wantEnv2, newResourceEnvVars("2")...)
 	want := corev1.PodSpec{
 		RestartPolicy:      corev1.RestartPolicyNever,
 		EnableServiceLinks: common.Ptr(false),
@@ -516,16 +562,8 @@ func TestProcessMultipleSteps(t *testing.T) {
 				Image:           constants.DefaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/init", "0"},
-				Env: []corev1.EnvVar{
-					env(0, false, "CI", "1"),
-					envDebugNode,
-					envDebugPod,
-					envDebugNamespace,
-					envDebugServiceAccount,
-					envActions,
-					envInternal,
-				},
-				VolumeMounts: volumeMounts,
+				Env:             wantEnv1,
+				VolumeMounts:    volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
 					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
@@ -537,10 +575,8 @@ func TestProcessMultipleSteps(t *testing.T) {
 				Image:           constants.DefaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/init", "1"},
-				Env: []corev1.EnvVar{
-					env(0, false, "CI", "1"),
-				},
-				VolumeMounts: volumeMounts,
+				Env:             wantEnv2,
+				VolumeMounts:    volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
 					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
@@ -645,6 +681,29 @@ func TestProcessNestedSteps(t *testing.T) {
 				End("")
 		})
 
+	wantEnv1 := []corev1.EnvVar{
+		env(0, false, "CI", "1"),
+		envDebugNode,
+		envDebugPod,
+		envDebugNamespace,
+		envDebugServiceAccount,
+		envActions,
+		envInternal,
+		envSignature,
+	}
+	wantEnv1 = append(wantEnv1, newResourceEnvVars("1")...)
+	wantEnv2 := []corev1.EnvVar{
+		env(0, false, "CI", "1"),
+	}
+	wantEnv2 = append(wantEnv2, newResourceEnvVars("2")...)
+	wantEnv3 := []corev1.EnvVar{
+		env(0, false, "CI", "1"),
+	}
+	wantEnv3 = append(wantEnv3, newResourceEnvVars("3")...)
+	wantEnv4 := []corev1.EnvVar{
+		env(0, false, "CI", "1"),
+	}
+	wantEnv4 = append(wantEnv4, newResourceEnvVars("4")...)
 	want := corev1.PodSpec{
 		RestartPolicy:      corev1.RestartPolicyNever,
 		EnableServiceLinks: common.Ptr(false),
@@ -655,16 +714,8 @@ func TestProcessNestedSteps(t *testing.T) {
 				Image:           constants.DefaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/init", "0"},
-				Env: []corev1.EnvVar{
-					env(0, false, "CI", "1"),
-					envDebugNode,
-					envDebugPod,
-					envDebugNamespace,
-					envDebugServiceAccount,
-					envActions,
-					envInternal,
-				},
-				VolumeMounts: volumeMounts,
+				Env:             wantEnv1,
+				VolumeMounts:    volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
 					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
@@ -674,10 +725,8 @@ func TestProcessNestedSteps(t *testing.T) {
 				Image:           constants.DefaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/init", "1"},
-				Env: []corev1.EnvVar{
-					env(0, false, "CI", "1"),
-				},
-				VolumeMounts: volumeMounts,
+				Env:             wantEnv2,
+				VolumeMounts:    volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
 					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
@@ -687,10 +736,8 @@ func TestProcessNestedSteps(t *testing.T) {
 				Image:           constants.DefaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/init", "2"},
-				Env: []corev1.EnvVar{
-					env(0, false, "CI", "1"),
-				},
-				VolumeMounts: volumeMounts,
+				Env:             wantEnv3,
+				VolumeMounts:    volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
 					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
@@ -702,10 +749,8 @@ func TestProcessNestedSteps(t *testing.T) {
 				Image:           constants.DefaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/init", "3"},
-				Env: []corev1.EnvVar{
-					env(0, false, "CI", "1"),
-				},
-				VolumeMounts: volumeMounts,
+				Env:             wantEnv4,
+				VolumeMounts:    volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
 					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
@@ -747,6 +792,21 @@ func TestProcessLocalContent(t *testing.T) {
 	volumeMounts := res.Job.Spec.Template.Spec.Containers[0].VolumeMounts
 	volumeMountsWithContent := res.Job.Spec.Template.Spec.InitContainers[0].VolumeMounts
 
+	wantEnv1 := []corev1.EnvVar{
+		env(0, false, "CI", "1"),
+		envDebugNode,
+		envDebugPod,
+		envDebugNamespace,
+		envDebugServiceAccount,
+		envActions,
+		envInternal,
+		envSignature,
+	}
+	wantEnv1 = append(wantEnv1, newResourceEnvVars("1")...)
+	wantEnv2 := []corev1.EnvVar{
+		env(0, false, "CI", "1"),
+	}
+	wantEnv2 = append(wantEnv2, newResourceEnvVars("2")...)
 	want := corev1.PodSpec{
 		RestartPolicy:      corev1.RestartPolicyNever,
 		EnableServiceLinks: common.Ptr(false),
@@ -757,16 +817,8 @@ func TestProcessLocalContent(t *testing.T) {
 				Image:           constants.DefaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/init", "0"},
-				Env: []corev1.EnvVar{
-					env(0, false, "CI", "1"),
-					envDebugNode,
-					envDebugPod,
-					envDebugNamespace,
-					envDebugServiceAccount,
-					envActions,
-					envInternal,
-				},
-				VolumeMounts: volumeMountsWithContent,
+				Env:             wantEnv1,
+				VolumeMounts:    volumeMountsWithContent,
 				SecurityContext: &corev1.SecurityContext{
 					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
@@ -778,10 +830,8 @@ func TestProcessLocalContent(t *testing.T) {
 				Image:           constants.DefaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/init", "1"},
-				Env: []corev1.EnvVar{
-					env(0, false, "CI", "1"),
-				},
-				VolumeMounts: volumeMounts,
+				Env:             wantEnv2,
+				VolumeMounts:    volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
 					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
@@ -827,6 +877,21 @@ func TestProcessGlobalContent(t *testing.T) {
 	volumes := res.Job.Spec.Template.Spec.Volumes
 	volumeMounts := res.Job.Spec.Template.Spec.InitContainers[0].VolumeMounts
 
+	wantEnv1 := []corev1.EnvVar{
+		env(0, false, "CI", "1"),
+		envDebugNode,
+		envDebugPod,
+		envDebugNamespace,
+		envDebugServiceAccount,
+		envActions,
+		envInternal,
+		envSignature,
+	}
+	wantEnv1 = append(wantEnv1, newResourceEnvVars("1")...)
+	wantEnv2 := []corev1.EnvVar{
+		env(0, false, "CI", "1"),
+	}
+	wantEnv2 = append(wantEnv2, newResourceEnvVars("2")...)
 	want := corev1.PodSpec{
 		RestartPolicy:      corev1.RestartPolicyNever,
 		EnableServiceLinks: common.Ptr(false),
@@ -837,16 +902,8 @@ func TestProcessGlobalContent(t *testing.T) {
 				Image:           constants.DefaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/init", "0"},
-				Env: []corev1.EnvVar{
-					env(0, false, "CI", "1"),
-					envDebugNode,
-					envDebugPod,
-					envDebugNamespace,
-					envDebugServiceAccount,
-					envActions,
-					envInternal,
-				},
-				VolumeMounts: volumeMounts,
+				Env:             wantEnv1,
+				VolumeMounts:    volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
 					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},
@@ -858,10 +915,8 @@ func TestProcessGlobalContent(t *testing.T) {
 				Image:           constants.DefaultInitImage,
 				ImagePullPolicy: corev1.PullIfNotPresent,
 				Command:         []string{"/init", "1"},
-				Env: []corev1.EnvVar{
-					env(0, false, "CI", "1"),
-				},
-				VolumeMounts: volumeMounts,
+				Env:             wantEnv2,
+				VolumeMounts:    volumeMounts,
 				SecurityContext: &corev1.SecurityContext{
 					RunAsGroup: common.Ptr(constants.DefaultFsGroup),
 				},

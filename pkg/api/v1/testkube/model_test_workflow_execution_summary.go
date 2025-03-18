@@ -16,6 +16,10 @@ import (
 type TestWorkflowExecutionSummary struct {
 	// unique execution identifier
 	Id string `json:"id"`
+	// identifier for group of correlated executions
+	GroupId string `json:"groupId,omitempty"`
+	// identifier of the runner where it has been executed
+	RunnerId string `json:"runnerId,omitempty"`
 	// execution name
 	Name string `json:"name"`
 	// sequence number for the execution
@@ -23,9 +27,12 @@ type TestWorkflowExecutionSummary struct {
 	// when the execution has been scheduled to run
 	ScheduledAt time.Time `json:"scheduledAt,omitempty"`
 	// when the execution result's status has changed last time (queued, passed, failed)
-	StatusAt       time.Time                   `json:"statusAt,omitempty"`
-	Result         *TestWorkflowResultSummary  `json:"result,omitempty"`
-	Workflow       *TestWorkflowSummary        `json:"workflow"`
-	Tags           map[string]string           `json:"tags,omitempty"`
-	RunningContext *TestWorkflowRunningContext `json:"runningContext,omitempty"`
+	StatusAt       time.Time                                   `json:"statusAt,omitempty"`
+	Result         *TestWorkflowResultSummary                  `json:"result,omitempty"`
+	Workflow       *TestWorkflowSummary                        `json:"workflow"`
+	Tags           map[string]string                           `json:"tags,omitempty"`
+	RunningContext *TestWorkflowRunningContext                 `json:"runningContext,omitempty"`
+	ConfigParams   map[string]TestWorkflowExecutionConfigValue `json:"configParams,omitempty"`
+	// generated reports from the steps, like junit
+	Reports []TestWorkflowReport `json:"reports,omitempty"`
 }

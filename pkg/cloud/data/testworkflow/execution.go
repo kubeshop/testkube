@@ -3,9 +3,8 @@ package testworkflow
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"time"
-
-	"google.golang.org/grpc"
 
 	testworkflow2 "github.com/kubeshop/testkube/pkg/repository/testworkflow"
 
@@ -20,8 +19,8 @@ type CloudRepository struct {
 	executor executor.Executor
 }
 
-func NewCloudRepository(client cloud.TestKubeCloudAPIClient, grpcConn *grpc.ClientConn, apiKey string) *CloudRepository {
-	return &CloudRepository{executor: executor.NewCloudGRPCExecutor(client, grpcConn, apiKey)}
+func NewCloudRepository(client cloud.TestKubeCloudAPIClient, apiKey string) *CloudRepository {
+	return &CloudRepository{executor: executor.NewCloudGRPCExecutor(client, apiKey)}
 }
 
 func (r *CloudRepository) Get(ctx context.Context, id string) (testkube.TestWorkflowExecution, error) {
@@ -176,4 +175,34 @@ func (r *CloudRepository) GetExecutionTags(ctx context.Context, testWorkflowName
 		return v.Tags
 	}
 	return pass(r.executor, ctx, req, process)
+}
+
+// Init sets the initialization data from the runner
+// Prefer scheduling directly with TestKubeCloudAPI/ScheduleExecution operation.
+// This one is a workaround for older Control Planes. It's not recommended, as it may cause race conditions.
+func (r *CloudRepository) Init(ctx context.Context, id string, data testworkflow2.InitData) (err error) {
+	execution, err := r.Get(ctx, id)
+	if err != nil {
+		return
+	}
+	execution.Namespace = data.Namespace
+	execution.Signature = data.Signature
+	execution.RunnerId = data.RunnerID
+	execution.AssignedAt = data.AssignedAt
+	if execution.AssignedAt.IsZero() {
+		execution.AssignedAt = time.Now()
+	}
+	return r.Update(ctx, execution)
+}
+
+func (r *CloudRepository) Assign(ctx context.Context, id string, prevRunnerId string, newRunnerId string, assignedAt *time.Time) (bool, error) {
+	return false, errors.New("not supported")
+}
+
+func (r *CloudRepository) GetUnassigned(ctx context.Context) (result []testkube.TestWorkflowExecution, err error) {
+	return nil, errors.New("not supported")
+}
+
+func (r *CloudRepository) AbortIfQueued(ctx context.Context, id string) (bool, error) {
+	return false, errors.New("not supported")
 }

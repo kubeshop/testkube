@@ -25,6 +25,7 @@ type TestWorkflow struct {
 	// test workflow annotations
 	Annotations map[string]string `json:"annotations,omitempty"`
 	Created     time.Time         `json:"created,omitempty"`
+	Updated     time.Time         `json:"updated,omitempty"`
 	Spec        *TestWorkflowSpec `json:"spec,omitempty"`
 	// if test workflow is offline and cannot be executed
 	ReadOnly bool                       `json:"readOnly,omitempty"`

@@ -1,6 +1,7 @@
 package testkube
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/gookit/color"
@@ -114,4 +115,33 @@ func (e *TestWorkflowExecution) InitializationError(header string, err error) {
 
 func (e *TestWorkflowExecution) FailedToInitialize() bool {
 	return e.Result.Status != nil && *e.Result.Status == ABORTED_TestWorkflowStatus && e.Result.QueuedAt.IsZero()
+}
+
+func (e *TestWorkflowExecution) GetParallelStepReference(nameOrReference string) string {
+	if e == nil {
+		return ""
+	}
+
+	for _, signature := range e.Signature {
+		ref := signature.GetParallelStepReference(nameOrReference)
+		if ref != "" {
+			return ref
+		}
+	}
+
+	return ""
+}
+
+func (e *TestWorkflowExecution) Assigned() bool {
+	return e.Result.IsFinished() || len(e.Signature) > 0
+}
+
+func (e *TestWorkflowExecution) Clone() *TestWorkflowExecution {
+	if e == nil {
+		return nil
+	}
+	v, _ := json.Marshal(e)
+	result := TestWorkflowExecution{}
+	_ = json.Unmarshal(v, &result)
+	return &result
 }

@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
@@ -24,6 +25,9 @@ type state struct {
 	CurrentStatus string               `json:"s,omitempty"`
 	Output        map[string]string    `json:"o,omitempty"`
 	Steps         map[string]*StepData `json:"S,omitempty"`
+
+	Signature          []testworkflowconfig.SignatureConfig       `json:"G,omitempty"`
+	ContainerResources testworkflowconfig.ContainerResourceConfig `json:"R,omitempty"`
 }
 
 func (s *state) GetActions(groupIndex int) []lite.LiteAction {
@@ -148,14 +152,14 @@ func persistTerminationLog() {
 			ref = *actions[i].End
 		}
 		if actions[i].Type() == lite.ActionTypeSetup {
-			ref = InitStepName
+			ref = constants.InitStepName
 		}
 		if ref == "" {
 			continue
 		}
 		step := s.GetStep(ref)
 		if step.Status == nil {
-			statuses = append(statuses, fmt.Sprintf("%s,%d", StepStatusAborted, CodeAborted))
+			statuses = append(statuses, fmt.Sprintf("%s,%d", constants.StepStatusAborted, constants.CodeAborted))
 		} else {
 			statuses = append(statuses, fmt.Sprintf("%s,%d", (*step.Status).Code(), step.ExitCode))
 		}
@@ -168,9 +172,9 @@ func persistTerminationLog() {
 	prevTerminationLog = statuses
 
 	// Write the termination log
-	err := os.WriteFile(TerminationLogPath, []byte(strings.Join(statuses, "/")), 0)
+	err := os.WriteFile(constants.TerminationLogPath, []byte(strings.Join(statuses, "/")), 0)
 	if err != nil {
-		output.UnsafeExitErrorf(CodeInternal, "failed to save the termination log: %s", err.Error())
+		output.UnsafeExitErrorf(constants.CodeInternal, "failed to save the termination log: %s", err.Error())
 	}
 }
 
@@ -181,7 +185,7 @@ func GetState() *state {
 	defer loadStateMu.Unlock()
 	loadStateMu.Lock()
 	if !loadedState {
-		readState(StatePath)
+		readState(constants.StatePath)
 		loadedState = true
 	}
 	return currentState
@@ -192,6 +196,6 @@ func SaveTerminationLog() {
 }
 
 func SaveState() {
-	persistState(StatePath)
+	persistState(constants.StatePath)
 	persistTerminationLog()
 }

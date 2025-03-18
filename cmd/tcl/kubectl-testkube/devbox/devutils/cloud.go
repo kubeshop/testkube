@@ -25,9 +25,10 @@ import (
 )
 
 type CloudObject struct {
-	cfg       config.CloudContext
-	envClient *client.EnvironmentsClient
-	list      []client.Environment
+	cfg         config.CloudContext
+	envClient   *client.EnvironmentsClient
+	agentClient *client.AgentsClient
+	list        []client.Environment
 
 	clientMu sync.Mutex
 	client   client2.Client
@@ -56,10 +57,12 @@ func NewCloud(cfg config.CloudContext, cmd *cobra.Command) (*CloudObject, error)
 		cfg.AgentUri = "agent." + strings.TrimPrefix(cfg.AgentUri, "api.")
 	}
 	envClient := client.NewEnvironmentsClient(cfg.ApiUri, cfg.ApiKey, cfg.OrganizationId)
+	agentClient := client.NewAgentsClient(cfg.ApiUri, cfg.ApiKey, cfg.OrganizationId)
 	obj := &CloudObject{
-		cfg:       cfg,
-		envClient: envClient,
-		cmd:       cmd,
+		cfg:         cfg,
+		envClient:   envClient,
+		agentClient: agentClient,
+		cmd:         cmd,
 	}
 
 	err := obj.UpdateList()
@@ -145,11 +148,13 @@ func (c *CloudObject) DashboardUrl(id, path string) string {
 	return strings.TrimSuffix(fmt.Sprintf("%s/organization/%s/environment/%s/", c.cfg.UiUri, c.cfg.OrganizationId, id)+strings.TrimPrefix(path, "/"), "/")
 }
 
-func (c *CloudObject) CreateEnvironment(name string) (*client.Environment, error) {
+func (c *CloudObject) CreateEnvironment(name string, disableCloudStorage bool) (*client.Environment, error) {
 	env, err := c.envClient.Create(client.Environment{
-		Name:           name,
-		Owner:          c.cfg.OrganizationId,
-		OrganizationId: c.cfg.OrganizationId,
+		Name:            name,
+		Owner:           c.cfg.OrganizationId,
+		OrganizationId:  c.cfg.OrganizationId,
+		CloudStorage:    !disableCloudStorage,
+		NewArchitecture: true,
 	})
 	if err != nil {
 		return nil, err
@@ -178,4 +183,30 @@ func (c *CloudObject) CreateEnvironment(name string) (*client.Environment, error
 
 func (c *CloudObject) DeleteEnvironment(id string) error {
 	return c.envClient.Delete(id)
+}
+
+func (c *CloudObject) SuperAgent(env *client.Environment) *client.Agent {
+	return &client.Agent{
+		ID:           env.Id,
+		Name:         env.Name,
+		Environments: []client.AgentEnvironment{{ID: env.Id, Name: env.Name, Slug: env.Slug}},
+		SecretKey:    env.AgentToken,
+		Type:         "agnt",
+	}
+}
+
+func (c *CloudObject) CreateRunner(environmentId string, name string, labels map[string]string) (*client.Agent, error) {
+	runner, err := c.agentClient.CreateRunner(environmentId, name, labels)
+	if err != nil {
+		return nil, err
+	}
+	return &runner, nil
+}
+
+func (c *CloudObject) CreateGitOpsAgent(environmentId string, name string, labels map[string]string) (*client.Agent, error) {
+	runner, err := c.agentClient.CreateGitOpsAgent(environmentId, name, labels)
+	if err != nil {
+		return nil, err
+	}
+	return &runner, nil
 }

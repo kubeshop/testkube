@@ -73,6 +73,7 @@ func (c CopyFileDirectClient) UploadFile(parentName string, parentType TestingTy
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 
 	if err = httpResponseError(resp); err != nil {
 		return fmt.Errorf("api %s returned error: %w", uri, err)

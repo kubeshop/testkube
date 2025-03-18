@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -14,17 +15,25 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.uber.org/zap"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/emptypb"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/rest"
+	kubeclient "sigs.k8s.io/controller-runtime/pkg/client"
 
+	testsclientv3 "github.com/kubeshop/testkube-operator/pkg/client/tests/v3"
+	testsuitesclientv3 "github.com/kubeshop/testkube-operator/pkg/client/testsuites/v3"
+	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/internal/config"
 	dbmigrations "github.com/kubeshop/testkube/internal/db-migrations"
 	parser "github.com/kubeshop/testkube/internal/template"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cache"
+	"github.com/kubeshop/testkube/pkg/capabilities"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/configmap"
+	"github.com/kubeshop/testkube/pkg/cronjob"
 	"github.com/kubeshop/testkube/pkg/dbmigrator"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/event/bus"
@@ -33,11 +42,15 @@ import (
 	"github.com/kubeshop/testkube/pkg/featureflags"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
 	"github.com/kubeshop/testkube/pkg/log"
+	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
+	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
 	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/storage"
 	"github.com/kubeshop/testkube/pkg/secret"
 	domainstorage "github.com/kubeshop/testkube/pkg/storage"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
+	"github.com/kubeshop/testkube/pkg/workerpool"
 )
 
 func ExitOnError(title string, err error) {
@@ -86,7 +99,6 @@ func HandleCancelSignal(ctx context.Context) func() error {
 func MustGetConfig() *config.Config {
 	cfg, err := config.Get()
 	ExitOnError("error getting application config", err)
-	cfg.CleanLegacyVars()
 	return cfg
 }
 
@@ -282,27 +294,44 @@ func ReadDefaultExecutors(cfg *config.Config) (executors []testkube.ExecutorDeta
 
 func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.TestKubeCloudAPIClient) config.ProContext {
 	proContext := config.ProContext{
-		APIKey:                           cfg.TestkubeProAPIKey,
-		URL:                              cfg.TestkubeProURL,
-		TLSInsecure:                      cfg.TestkubeProTLSInsecure,
-		WorkerCount:                      cfg.TestkubeProWorkerCount,
-		LogStreamWorkerCount:             cfg.TestkubeProLogStreamWorkerCount,
-		WorkflowNotificationsWorkerCount: cfg.TestkubeProWorkflowNotificationsWorkerCount,
-		SkipVerify:                       cfg.TestkubeProSkipVerify,
-		EnvID:                            cfg.TestkubeProEnvID,
-		OrgID:                            cfg.TestkubeProOrgID,
-		Migrate:                          cfg.TestkubeProMigrate,
-		ConnectionTimeout:                cfg.TestkubeProConnectionTimeout,
-		DashboardURI:                     cfg.TestkubeDashboardURI,
+		APIKey:                              cfg.ControlPlaneConfig.TestkubeProAPIKey,
+		URL:                                 cfg.ControlPlaneConfig.TestkubeProURL,
+		TLSInsecure:                         cfg.ControlPlaneConfig.TestkubeProTLSInsecure,
+		SkipVerify:                          cfg.ControlPlaneConfig.TestkubeProSkipVerify,
+		EnvID:                               cfg.ControlPlaneConfig.TestkubeProEnvID,
+		EnvSlug:                             cfg.ControlPlaneConfig.TestkubeProEnvID,
+		EnvName:                             cfg.ControlPlaneConfig.TestkubeProEnvID,
+		OrgID:                               cfg.ControlPlaneConfig.TestkubeProOrgID,
+		OrgSlug:                             cfg.ControlPlaneConfig.TestkubeProOrgID,
+		OrgName:                             cfg.ControlPlaneConfig.TestkubeProOrgID,
+		ConnectionTimeout:                   cfg.ControlPlaneConfig.TestkubeProConnectionTimeout,
+		WorkerCount:                         cfg.TestkubeProWorkerCount,
+		LogStreamWorkerCount:                cfg.TestkubeProLogStreamWorkerCount,
+		Migrate:                             cfg.TestkubeProMigrate,
+		DashboardURI:                        cfg.TestkubeDashboardURI,
+		NewArchitecture:                     grpcClient == nil,
+		CloudStorage:                        grpcClient == nil,
+		CloudStorageSupportedInControlPlane: grpcClient == nil,
 	}
+	proContext.Agent.ID = cfg.ControlPlaneConfig.TestkubeProAgentID
+	proContext.Agent.Name = cfg.ControlPlaneConfig.TestkubeProAgentID
+
+	cloudUiUrl := os.Getenv("TESTKUBE_PRO_UI_URL")
+	if proContext.DashboardURI == "" && cloudUiUrl != "" {
+		proContext.DashboardURI = cloudUiUrl
+	}
+	proContext.DashboardURI = strings.TrimRight(proContext.DashboardURI, "/")
 
 	if cfg.TestkubeProAPIKey == "" || grpcClient == nil {
 		return proContext
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, time.Second*3)
-	md := metadata.Pairs("api-key", cfg.TestkubeProAPIKey)
-	ctx = metadata.NewOutgoingContext(ctx, md)
+	ctx = metadata.NewOutgoingContext(ctx, metadata.New(map[string]string{
+		"api-key":         proContext.APIKey,
+		"organization-id": proContext.OrgID,
+		"agent-id":        proContext.Agent.ID,
+	}))
 	defer cancel()
 	foundProContext, err := grpcClient.GetProContext(ctx, &emptypb.Empty{})
 	if err != nil {
@@ -314,8 +343,58 @@ func ReadProContext(ctx context.Context, cfg *config.Config, grpcClient cloud.Te
 		proContext.EnvID = foundProContext.EnvId
 	}
 
+	if proContext.Agent.ID == "" && strings.HasPrefix(proContext.APIKey, "tkcagnt_") {
+		proContext.Agent.ID = strings.Replace(foundProContext.EnvId, "tkcenv_", "tkcroot_", 1)
+	}
+
 	if proContext.OrgID == "" {
 		proContext.OrgID = foundProContext.OrgId
+	}
+
+	if foundProContext.OrgName != "" {
+		proContext.OrgName = foundProContext.OrgName
+	}
+
+	if foundProContext.OrgSlug != "" {
+		proContext.OrgSlug = foundProContext.OrgSlug
+	}
+
+	foundDashboardUrl := strings.TrimRight(foundProContext.PublicDashboardUrl, "/")
+	if foundDashboardUrl != "" {
+		proContext.DashboardURI = foundDashboardUrl
+	}
+
+	if foundProContext.Agent != nil && foundProContext.Agent.Id != "" {
+		proContext.Agent.ID = foundProContext.Agent.Id
+		proContext.Agent.Name = foundProContext.Agent.Name
+		proContext.Agent.Type = foundProContext.Agent.Type
+		proContext.Agent.Labels = foundProContext.Agent.Labels
+		proContext.Agent.Disabled = foundProContext.Agent.Disabled
+		proContext.Agent.Environments = common.MapSlice(foundProContext.Agent.Environments, func(env *cloud.ProContextEnvironment) config.ProContextAgentEnvironment {
+			return config.ProContextAgentEnvironment{
+				ID:   env.Id,
+				Slug: env.Slug,
+				Name: env.Name,
+			}
+		})
+
+		for _, env := range foundProContext.Agent.Environments {
+			if env.Id == proContext.EnvID {
+				proContext.EnvName = env.Name
+				proContext.EnvSlug = env.Slug
+			}
+		}
+	}
+
+	if cfg.FeatureNewArchitecture && capabilities.Enabled(foundProContext.Capabilities, capabilities.CapabilityNewArchitecture) {
+		proContext.NewArchitecture = true
+	}
+
+	if capabilities.Enabled(foundProContext.Capabilities, capabilities.CapabilityCloudStorage) {
+		proContext.CloudStorageSupportedInControlPlane = true
+		if cfg.FeatureCloudStorage {
+			proContext.CloudStorage = true
+		}
 	}
 
 	return proContext
@@ -365,7 +444,7 @@ func MustCreateNATSConnection(cfg *config.Config) *nats.EncodedConn {
 
 // Components
 
-func CreateImageInspector(cfg *config.Config, configMapClient configmap.Interface, secretClient secret.Interface) imageinspector.Inspector {
+func CreateImageInspector(cfg *config.ImageInspectorConfig, configMapClient configmap.Interface, secretClient secret.Interface) imageinspector.Inspector {
 	inspectorStorages := []imageinspector.Storage{imageinspector.NewMemoryStorage()}
 	if cfg.EnableImageDataPersistentCache {
 		configmapStorage := imageinspector.NewConfigMapStorage(configMapClient, cfg.ImageDataPersistentCacheKey, true)
@@ -378,4 +457,66 @@ func CreateImageInspector(cfg *config.Config, configMapClient configmap.Interfac
 		imageinspector.NewSecretFetcher(secretClient, cache.NewInMemoryCache[*corev1.Secret](), imageinspector.WithSecretCacheTTL(cfg.TestkubeImageCredentialsCacheTTL)),
 		inspectorStorages...,
 	)
+}
+
+func CreateCronJobScheduler(cfg *config.Config,
+	kubeClient kubeclient.Client,
+	testWorkflowClient testworkflowclient.TestWorkflowClient,
+	testWorkflowTemplateClient testworkflowtemplateclient.TestWorkflowTemplateClient,
+	testWorkflowExecutor testworkflowexecutor.TestWorkflowExecutor,
+	deprecatedClients DeprecatedClients,
+	executeTestFn workerpool.ExecuteFn[testkube.Test, testkube.ExecutionRequest, testkube.Execution],
+	executeTestSuiteFn workerpool.ExecuteFn[testkube.TestSuite, testkube.TestSuiteExecutionRequest, testkube.TestSuiteExecution],
+	logger *zap.SugaredLogger,
+	kubeConfig *rest.Config,
+	proContext *config.ProContext) cronjob.Interface {
+	enableCronJobs := cfg.EnableCronJobs
+	if enableCronJobs == "" {
+		var err error
+		enableCronJobs, err = parser.LoadConfigFromFile(
+			cfg.TestkubeConfigDir,
+			"enable-cron-jobs",
+			"enable cron jobs",
+		)
+		ExitOnError("Creating cron job scheduler config loading", err)
+	}
+
+	if enableCronJobs == "" {
+		return nil
+	}
+
+	result, err := strconv.ParseBool(enableCronJobs)
+	ExitOnError("Creating cron job scheduler config parsing", err)
+
+	if !result {
+		return nil
+	}
+
+	var testClient testsclientv3.Interface
+	var testSuiteClient testsuitesclientv3.Interface
+	var testRESTClient testsclientv3.RESTInterface
+	var testSuiteRESTClient testsuitesclientv3.RESTInterface
+	if deprecatedClients != nil {
+		testClient = deprecatedClients.Tests()
+		testSuiteClient = deprecatedClients.TestSuites()
+		testRESTClient, err = testsclientv3.NewRESTClient(kubeClient, kubeConfig, cfg.TestkubeNamespace)
+		ExitOnError("Creating cron job scheduler test rest client", err)
+		testSuiteRESTClient, err = testsuitesclientv3.NewRESTClient(kubeClient, kubeConfig, cfg.TestkubeNamespace)
+		ExitOnError("Creating cron job scheduler test suite rest client", err)
+	}
+
+	scheduler := cronjob.New(testWorkflowClient,
+		testWorkflowTemplateClient,
+		testWorkflowExecutor,
+		logger,
+		cronjob.WithProContext(proContext),
+		cronjob.WithTestClient(testClient),
+		cronjob.WithTestSuiteClient(testSuiteClient),
+		cronjob.WithExecuteTestFn(executeTestFn),
+		cronjob.WithExecuteTestSuiteFn(executeTestSuiteFn),
+		cronjob.WithTestRESTClient(testRESTClient),
+		cronjob.WithTestSuiteRESTClient(testSuiteRESTClient),
+	)
+
+	return scheduler
 }

@@ -16,6 +16,7 @@ type Client interface {
 	TestSuiteExecutionAPI
 	ExecutorAPI
 	WebhookAPI
+	WebhookTemplateAPI
 	ServiceAPI
 	ConfigAPI
 	TestSourceAPI
@@ -25,6 +26,7 @@ type Client interface {
 	TestWorkflowExecutionAPI
 	TestWorkflowTemplateAPI
 	TestTriggerAPI
+	SharedAPI
 }
 
 // TestAPI describes test api methods
@@ -98,6 +100,16 @@ type WebhookAPI interface {
 	DeleteWebhooks(selector string) (err error)
 }
 
+// WebhookTemplateAPI describes webhook template api methods
+type WebhookTemplateAPI interface {
+	CreateWebhookTemplate(options CreateWebhookTemplateOptions) (webhookTemplate testkube.WebhookTemplate, err error)
+	UpdateWebhookTemplate(options UpdateWebhookTemplateOptions) (webhookTemplate testkube.WebhookTemplate, err error)
+	GetWebhookTemplate(name string) (webhookTemplate testkube.WebhookTemplate, err error)
+	ListWebhookTemplates(selector string) (webhookTemplates testkube.WebhookTemplates, err error)
+	DeleteWebhookTemplate(name string) (err error)
+	DeleteWebhookTemplates(selector string) (err error)
+}
+
 // TestTriggerAPI describes test triggers api methods
 type TestTriggerAPI interface {
 	CreateTestTrigger(options CreateTestTriggerOptions) (testTrigger testkube.TestTrigger, err error)
@@ -140,6 +152,10 @@ type TestSourceAPI interface {
 	DeleteTestSources(selector string) (err error)
 }
 
+type SharedAPI interface {
+	ListLabels() (labels map[string][]string, err error)
+}
+
 // TestWorkflowAPI describes test workflow api methods
 type TestWorkflowAPI interface {
 	GetTestWorkflow(id string) (testkube.TestWorkflow, error)
@@ -154,6 +170,8 @@ type TestWorkflowAPI interface {
 	ExecuteTestWorkflows(selector string, request testkube.TestWorkflowExecutionRequest) ([]testkube.TestWorkflowExecution, error)
 	GetTestWorkflowExecutionNotifications(id string) (chan testkube.TestWorkflowExecutionNotification, error)
 	GetTestWorkflowExecutionLogs(id string) ([]byte, error)
+	GetTestWorkflowExecutionServiceNotifications(id, serviceName string, serviceIndex int) (chan testkube.TestWorkflowExecutionNotification, error)
+	GetTestWorkflowExecutionParallelStepNotifications(id, ref string, workerIndex int) (chan testkube.TestWorkflowExecutionNotification, error)
 }
 
 // TestWorkflowExecutionAPI describes test workflow api methods
@@ -165,6 +183,7 @@ type TestWorkflowExecutionAPI interface {
 	GetTestWorkflowExecutionArtifacts(executionID string) (artifacts testkube.Artifacts, err error)
 	DownloadTestWorkflowArtifact(executionID, fileName, destination string) (artifact string, err error)
 	DownloadTestWorkflowArtifactArchive(executionID, destination string, masks []string) (archive string, err error)
+	ReRunTestWorkflowExecution(workflow string, id string, runningContext *testkube.TestWorkflowRunningContext) (testkube.TestWorkflowExecution, error)
 }
 
 // TestWorkflowTemplateAPI describes test workflow api methods
@@ -209,6 +228,12 @@ type CreateWebhookOptions testkube.WebhookCreateRequest
 
 // UpdateWebhookOptions - is mapping for now to OpenAPI schema for changing webhook request
 type UpdateWebhookOptions testkube.WebhookUpdateRequest
+
+// CreateWebhookTemplateOptions - is mapping for now to OpenAPI schema for creating/changing webhook template
+type CreateWebhookTemplateOptions testkube.WebhookTemplateCreateRequest
+
+// UpdateWebhookTemplateOptions - is mapping for now to OpenAPI schema for changing webhook template request
+type UpdateWebhookTemplateOptions testkube.WebhookTemplateUpdateRequest
 
 // UpsertTestSourceOptions - is mapping for now to OpenAPI schema for creating test source
 // if needed can be extended to custom struct
@@ -302,7 +327,7 @@ type Gettable interface {
 		testkube.TestSuiteWithExecutionSummary | testkube.Artifact | testkube.ServerInfo | testkube.Config | testkube.DebugInfo |
 		testkube.TestSource | testkube.Template |
 		testkube.TestWorkflow | testkube.TestWorkflowWithExecution | testkube.TestWorkflowTemplate | testkube.TestWorkflowExecution |
-		testkube.TestTrigger
+		testkube.TestTrigger | testkube.WebhookTemplate | map[string][]string
 }
 
 // Executable is an interface of executable objects

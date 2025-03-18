@@ -19,7 +19,7 @@ func createSecretMachine(mapEnvs map[string]corev1.EnvVarSource) expressions.Mac
 				if values[2].IsBool() {
 					computed, _ = values[2].BoolValue()
 				} else {
-					return nil, true, fmt.Errorf(`"secret" function expects 3rd argument to be boolean, %s provided`, values[3].String())
+					return nil, true, fmt.Errorf(`"secret" function expects 3rd argument to be boolean, %s provided`, values[2].String())
 				}
 			} else if len(values) != 2 {
 				return nil, true, fmt.Errorf(`"secret" function expects 2-3 arguments, %d provided`, len(values))

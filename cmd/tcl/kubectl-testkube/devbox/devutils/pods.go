@@ -30,22 +30,34 @@ var (
 
 type PodObject struct {
 	name       string
+	kind       string
 	namespace  string
 	pod        *corev1.Pod
 	service    *corev1.Service
 	clientSet  *kubernetes.Clientset
 	restConfig *rest.Config
 
-	mu sync.Mutex
+	mu *sync.Mutex
 }
 
 func NewPod(kubeClient *kubernetes.Clientset, kubeRestConfig *rest.Config, namespace, name string) *PodObject {
 	return &PodObject{
 		name:       name,
+		kind:       name,
 		namespace:  namespace,
 		clientSet:  kubeClient,
 		restConfig: kubeRestConfig,
+		mu:         &sync.Mutex{},
 	}
+}
+
+func (p *PodObject) SetKind(kind string) *PodObject {
+	if kind == "" {
+		p.kind = p.name
+	} else {
+		p.kind = kind
+	}
+	return p
 }
 
 func (p *PodObject) Name() string {
@@ -90,6 +102,7 @@ func (p *PodObject) create(ctx context.Context, request *corev1.Pod) error {
 		request.Labels = make(map[string]string)
 	}
 	request.Labels["testkube.io/devbox"] = p.name
+	request.Labels["testkube.io/devbox-type"] = p.kind
 
 	pod, err := p.clientSet.CoreV1().Pods(p.namespace).Create(ctx, request, metav1.CreateOptions{})
 	if errors.IsAlreadyExists(err) {

@@ -1,0 +1,101 @@
+name: New Docker images builds for API; tk-init and tk-toolkit services
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+    branches:
+      - main
+env:
+  ALPINE_IMAGE: alpine:3.21.3
+  BUSYBOX_IMAGE: busybox:1.37.0-musl
+
+permissions:
+  id-token: write # needed for depot
+
+jobs:
+  api:
+    runs-on: depot-ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Depot CLI
+        uses: depot/setup-action@v1
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Create Docker tags and metadata for the API
+        id: api-meta
+        uses: docker/metadata-action@v5
+        with:
+          bake-target: 'api-meta'
+          images: |
+            kubeshop/testkube-api-server
+          tags: |
+            type=semver,pattern={{version}}
+            type=sha,format=short,prefix=
+
+      - name: Create Docker tags and metadata for tw-init
+        id: tw-init
+        uses: docker/metadata-action@v5
+        with:
+          bake-target: 'tw-init'
+          images: |
+            kubeshop/testkube-tw-init
+          tags: |
+            type=semver,pattern={{version}}
+            type=sha,format=short,prefix=
+
+      - name: Create Docker tags and metadata for tw-toolkit
+        id: tw-toolkit
+        uses: docker/metadata-action@v5
+        with:
+          bake-target: 'tw-toolkit'
+          images: |
+            kubeshop/testkube-tw-toolkit
+          tags: |
+            type=semver,pattern={{version}}
+            type=sha,format=short,prefix=
+
+      - name: Build
+        uses: depot/bake-action@v1
+        with:
+          files: |
+            ./docker-bake.hcl
+            ${{ steps.api-meta.outputs.bake-file }}
+            ${{ steps.tw-toolkit.outputs.bake-file }}
+            ${{ steps.tw-init.outputs.bake-file }}
+          targets: api,tw-toolkit,tw-init
+          provenance: mode=max
+          push: true
+          sbom: true
+        env:
+          VERSION: ${{ fromJSON(steps.api-meta.outputs.json).labels['org.opencontainers.image.version'] }}
+          GIT_SHA: ${{ fromJSON(steps.api-meta.outputs.json).labels['org.opencontainers.image.revision'] }}
+          SLACK_BOT_CLIENT_ID: ${{secrets.TESTKUBE_SLACK_BOT_CLIENT_ID}}
+          SLACK_BOT_CLIENT_SECRET: ${{secrets.TESTKUBE_SLACK_BOT_CLIENT_SECRET}}
+          ANALYTICS_TRACKING_ID: ${{secrets.TESTKUBE_API_GA_MEASUREMENT_ID}}
+          ANALYTICS_API_KEY: ${{secrets.TESTKUBE_API_GA_MEASUREMENT_SECRET}}
+          SEGMENTIO_KEY: ${{secrets.TESTKUBE_API_SEGMENTIO_KEY}}
+          CLOUD_SEGMENTIO_KEY: ${{secrets.TESTKUBE_API_CLOUD_SEGMENTIO_KEY}}
+
+      - name: Check if it is a release
+        id: check-tag
+        run: |
+          if [[ ${{ github.event.ref }} =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "match=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Repository Dispatch
+        if: steps.check-tag.outputs.match == 'true'
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.CI_BOT_TOKEN }}
+          repository: kubeshop/helm-charts
+          event-type: release-testkube-api-charts
+          client-payload: '{"RELEASE_VERSION": "${{ env.DOCKER_METADATA_OUTPUT_VERSION }}", "SERVICE": "api"}'
+

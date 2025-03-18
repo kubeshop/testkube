@@ -24,4 +24,5 @@ type Volume struct {
 	AzureDisk             *AzureDiskVolumeSource             `json:"azureDisk,omitempty"`
 	ConfigMap             *ConfigMapVolumeSource             `json:"configMap,omitempty"`
 	Csi                   *CsiVolumeSource                   `json:"csi,omitempty"`
+	Projected             *ProjectedVolumeSource             `json:"projected,omitempty"`
 }

@@ -214,7 +214,7 @@ func NewRunTestSuiteCmd() *cobra.Command {
 	cmd.Flags().StringArrayVarP(&variables, "variable", "v", []string{}, "execution variables passed to executor")
 	cmd.Flags().StringArrayVarP(&secretVariables, "secret-variable", "s", []string{}, "execution variables passed to executor")
 	cmd.Flags().BoolVarP(&watchEnabled, "watch", "f", false, "watch for changes after start")
-	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label key value pair: --label key1=value1")
+	cmd.Flags().StringSliceVarP(&selectors, "label", "l", nil, "label is used to select test suites to run using key value pair: --label key1=value1 or label expression")
 	cmd.Flags().IntVar(&concurrencyLevel, "concurrency", 10, "concurrency level for multiple test suite execution")
 	cmd.Flags().StringVar(&httpProxy, "http-proxy", "", "http proxy for executor containers")
 	cmd.Flags().StringVar(&httpsProxy, "https-proxy", "", "https proxy for executor containers")

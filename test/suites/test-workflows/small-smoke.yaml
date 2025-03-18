@@ -16,3 +16,4 @@ spec:
       - name: postman-workflow-smoke-template
       - name: soapui-workflow-smoke
       - name: pytest-workflow-smoke-junit-success-only
+      - name: cypress-workflow-smoke-14

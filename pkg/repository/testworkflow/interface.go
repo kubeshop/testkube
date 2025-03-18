@@ -19,6 +19,13 @@ type LabelSelector struct {
 	Or []Label
 }
 
+type InitData struct {
+	RunnerID   string
+	Namespace  string
+	Signature  []testkube.TestWorkflowSignature
+	AssignedAt time.Time
+}
+
 const PageDefaultLimit int = 100
 
 type Filter interface {
@@ -45,6 +52,14 @@ type Filter interface {
 	ActorNameDefined() bool
 	ActorType() testkube.TestWorkflowRunningContextActorType
 	ActorTypeDefined() bool
+	GroupID() string
+	GroupIDDefined() bool
+	RunnerID() string
+	RunnerIDDefined() bool
+	Assigned() bool
+	AssignedDefined() bool
+	Initialized() bool
+	InitializedDefined() bool
 }
 
 //go:generate mockgen -destination=./mock_repository.go -package=testworkflow "github.com/kubeshop/testkube/pkg/repository/testworkflow" Repository
@@ -58,6 +73,8 @@ type Repository interface {
 	GetLatestByTestWorkflow(ctx context.Context, workflowName string) (*testkube.TestWorkflowExecution, error)
 	// GetRunning get list of executions that are still running
 	GetRunning(ctx context.Context) ([]testkube.TestWorkflowExecution, error)
+	// GetUnassigned get list of executions that is waiting to be executed
+	GetUnassigned(ctx context.Context) ([]testkube.TestWorkflowExecution, error)
 	// GetLatestByTestWorkflows gets latest execution results by workflow names
 	GetLatestByTestWorkflows(ctx context.Context, workflowNames []string) (executions []testkube.TestWorkflowExecutionSummary, err error)
 	// GetExecutionsTotals gets executions total stats using a filter, use filter with no data for all
@@ -88,6 +105,12 @@ type Repository interface {
 	GetTestWorkflowMetrics(ctx context.Context, name string, limit, last int) (metrics testkube.ExecutionsMetrics, err error)
 	// GetExecutionTags gets execution tags
 	GetExecutionTags(ctx context.Context, testWorkflowName string) (map[string][]string, error)
+	// Init sets the initialization data from the runner
+	Init(ctx context.Context, id string, data InitData) error
+	// Assign execution to selected runner
+	Assign(ctx context.Context, id string, prevRunnerId string, newRunnerId string, assignedAt *time.Time) (bool, error)
+	// AbortIfQueued marks execution as aborted if it's queued
+	AbortIfQueued(ctx context.Context, id string) (bool, error)
 }
 
 type Sequences interface {
@@ -104,7 +127,7 @@ type OutputRepository interface {
 	// SaveLog streams the output from the workflow to Minio
 	SaveLog(ctx context.Context, id, workflowName string, reader io.Reader) error
 	// ReadLog streams the output from Minio
-	ReadLog(ctx context.Context, id, workflowName string) (io.Reader, error)
+	ReadLog(ctx context.Context, id, workflowName string) (io.ReadCloser, error)
 	// HasLog checks if there is an output in Minio
 	HasLog(ctx context.Context, id, workflowName string) (bool, error)
 

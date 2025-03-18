@@ -30,6 +30,10 @@ func NewEmitter(eventBus bus.Bus, clusterName string) *Emitter {
 	}
 }
 
+type Interface interface {
+	Notify(event testkube.Event)
+}
+
 // Emitter handles events emitting for webhooks
 type Emitter struct {
 	Listeners   common.Listeners

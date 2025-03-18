@@ -20,6 +20,8 @@ const (
 	TemplateExecutor Template = "executor"
 	// TemplateWebhook is webhook crd template
 	TemplateWebhook Template = "webhook"
+	// TemplateWebhookTemplate is webhook template crd template
+	TemplateWebhookTemplate Template = "webhooktemplate"
 	// TemplateTest is test crd template
 	TemplateTest Template = "test"
 	// TemplateTestSuite is test suite crd template
@@ -37,10 +39,12 @@ type Gettable interface {
 	testkube.Test |
 		testkube.TestSuite |
 		testkube.Webhook |
+		testkube.WebhookTemplate |
 		testkube.TestUpsertRequest |
 		testkube.TestSuiteUpsertRequest |
 		testkube.ExecutorUpsertRequest |
 		testkube.WebhookCreateRequest |
+		testkube.WebhookTemplateCreateRequest |
 		testkube.TestTrigger |
 		testkube.TestTriggerUpsertRequest |
 		testkube.TestSource |

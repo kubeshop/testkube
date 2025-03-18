@@ -18,7 +18,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/executor/client"
 	"github.com/kubeshop/testkube/pkg/logs/events"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
-	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
 	"github.com/kubeshop/testkube/pkg/tcl/schedulertcl"
 	"github.com/kubeshop/testkube/pkg/workerpool"
 )
@@ -35,14 +34,14 @@ func (s *Scheduler) PrepareTestRequests(work []testsv3.Test, request testkube.Ex
 		requests[i] = workerpool.Request[testkube.Test, testkube.ExecutionRequest, testkube.Execution]{
 			Object:  testsmapper.MapTestCRToAPI(work[i]),
 			Options: request,
-			ExecFn:  s.executeTest,
+			ExecFn:  s.ExecuteTest,
 		}
 	}
 
 	return requests
 }
 
-func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request testkube.ExecutionRequest) (
+func (s *Scheduler) ExecuteTest(ctx context.Context, test testkube.Test, request testkube.ExecutionRequest) (
 	execution testkube.Execution, err error) {
 	// generate random execution name in case there is no one set
 	// like for docker images
@@ -80,7 +79,7 @@ func (s *Scheduler) executeTest(ctx context.Context, test testkube.Test, request
 	}
 
 	// store execution in storage, can be fetched from API now
-	execution, err = newExecutionFromExecutionOptions(s.subscriptionChecker, options)
+	execution, err = newExecutionFromExecutionOptions(s.mode, options)
 	if err != nil {
 		return s.handleExecutionError(ctx, execution, "can't get new execution: %w", err)
 	}
@@ -281,7 +280,7 @@ func (s *Scheduler) createSecretsReferences(execution *testkube.Execution, optio
 	return nil
 }
 
-func newExecutionFromExecutionOptions(subscriptionChecker checktcl.SubscriptionChecker, options client.ExecuteOptions) (testkube.Execution, error) {
+func newExecutionFromExecutionOptions(mode string, options client.ExecuteOptions) (testkube.Execution, error) {
 	execution := testkube.NewExecution(
 		options.Request.Id,
 		options.Namespace,
@@ -319,8 +318,8 @@ func newExecutionFromExecutionOptions(subscriptionChecker checktcl.SubscriptionC
 
 	// Pro edition only (tcl protected code)
 	if schedulertcl.HasExecutionNamespace(&options.Request) {
-		if err := subscriptionChecker.IsActiveOrgPlanEnterpriseForFeature("execution namespace"); err != nil {
-			return execution, err
+		if mode != common.ModeAgent {
+			return execution, common.ErrNotSupported
 		}
 
 		execution = schedulertcl.NewExecutionFromExecutionOptions(options.Request, execution)
@@ -461,8 +460,8 @@ func (s *Scheduler) getExecuteOptions(namespace, id string, request testkube.Exe
 
 		// Pro edition only (tcl protected code)
 		if schedulertcl.HasExecutionNamespace(test.ExecutionRequest) {
-			if err = s.subscriptionChecker.IsActiveOrgPlanEnterpriseForFeature("execution namespace"); err != nil {
-				return options, err
+			if s.mode != common.ModeAgent {
+				return options, common.ErrNotSupported
 			}
 
 			request = schedulertcl.GetExecuteOptions(test.ExecutionRequest, request)

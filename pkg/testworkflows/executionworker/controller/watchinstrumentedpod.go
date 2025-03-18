@@ -9,7 +9,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
-	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	watchers2 "github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller/watchers"
@@ -101,7 +100,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 		initialRefs := make([]string, len(actions))
 		for i := range refs {
 			for j := range refs[i] {
-				if refs[i][j] == data.InitStepName {
+				if refs[i][j] == constants.InitStepName {
 					initialRefs[i] = ""
 					break
 				}
@@ -115,7 +114,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 		}
 
 		// Iterate over containers
-		lastStarted := data.InitStepName
+		lastStarted := constants.InitStepName
 		containersReady := false
 		for containerIndex := 0; containerIndex < len(refs); containerIndex++ {
 			aborted := false
@@ -180,7 +179,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 					}
 					if v.Error != nil {
 						ts := time.Now() // TODO: get latest timestamp instead?
-						notifier.Raw(lastRef, ts, fmt.Sprintf("%s error while fetching container logs: %s\n", ts.Format(KubernetesLogTimeFormat), v.Error.Error()), false)
+						notifier.Raw(lastRef, ts, fmt.Sprintf("%s error while fetching container logs: %s\n", ts.Format(constants.PreciseTimeFormat), v.Error.Error()), false)
 						continue
 					}
 

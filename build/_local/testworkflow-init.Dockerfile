@@ -1,4 +1,4 @@
-ARG BUSYBOX_IMAGE="busybox:1.36.1-musl"
+ARG BUSYBOX_IMAGE="busybox:1.37.0-musl"
 
 ###################################
 ## Build testworkflow init

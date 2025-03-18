@@ -10,6 +10,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
 )
@@ -33,6 +34,8 @@ type executionGroup struct {
 
 	paused  atomic.Bool
 	pauseMu sync.Mutex
+
+	softKillProgress atomic.Bool
 }
 
 func newExecutionGroup(outStream io.Writer, errStream io.Writer) *executionGroup {
@@ -141,6 +144,10 @@ func (e *executionGroup) IsAborted() bool {
 	return e.aborted.Load()
 }
 
+func (e *executionGroup) ClearAbortedStatus() {
+	e.aborted.Store(false)
+}
+
 type execution struct {
 	cmd   *exec.Cmd
 	cmdMu sync.Mutex
@@ -150,7 +157,7 @@ type execution struct {
 func (e *execution) Run() (*executionResult, error) {
 	// Immediately fail when aborted
 	if e.group.aborted.Load() {
-		return &executionResult{Aborted: true, ExitCode: data.CodeAborted}, nil
+		return &executionResult{Aborted: true, ExitCode: constants.CodeAborted}, nil
 	}
 
 	// Ensure it's not paused
@@ -163,7 +170,7 @@ func (e *execution) Run() (*executionResult, error) {
 	if e.group.aborted.Load() {
 		e.group.pauseMu.Unlock()
 		e.cmdMu.Unlock()
-		return &executionResult{Aborted: true, ExitCode: data.CodeAborted}, nil
+		return &executionResult{Aborted: true, ExitCode: constants.CodeAborted}, nil
 	}
 
 	// Initialize local state
@@ -202,13 +209,13 @@ func (e *execution) Run() (*executionResult, error) {
 
 	// Mark the execution group as aborted when this process was aborted.
 	// In Kubernetes, when that child process is killed, it may mean OOM Kill.
-	if aborted && !e.group.aborted.Load() {
+	if aborted && !e.group.aborted.Load() && !e.group.softKillProgress.Load() {
 		e.group.Abort()
 	}
 
 	// Fail when aborted
 	if e.group.aborted.Load() {
-		return &executionResult{Aborted: true, ExitCode: data.CodeAborted}, nil
+		return &executionResult{Aborted: true, ExitCode: constants.CodeAborted}, nil
 	}
 
 	return &executionResult{ExitCode: uint8(exitCode)}, nil

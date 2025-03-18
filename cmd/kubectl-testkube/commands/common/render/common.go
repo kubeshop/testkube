@@ -155,7 +155,7 @@ func PrintLogs(client client.Client, info testkube.ServerInfo, execution testkub
 			lastSource = log.Source
 		}
 
-		if ui.Verbose {
+		if ui.IsVerbose() {
 			ui.Print(log.Time.Format("2006-01-02 15:04:05") + " " + log.Content)
 		} else {
 			ui.Print(log.Content)

@@ -35,7 +35,7 @@ func FinishExecution(step *data.StepData, result constants.ExecutionResult) {
 func End(step *data.StepData) {
 	if !step.IsFinished() {
 		v, e := json.Marshal(step)
-		output.ExitErrorf(data.CodeInternal, "cannot mark unfinished step as finished: %s, %v", string(v), e)
+		output.ExitErrorf(constants.CodeInternal, "cannot mark unfinished step as finished: %s, %v", string(v), e)
 	}
 	instructions.PrintHintDetails(step.Ref, constants.InstructionEnd, *step.Status)
 }

@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	agentclient "github.com/kubeshop/testkube/pkg/agent/client"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -47,17 +48,16 @@ func TestEventLoop(t *testing.T) {
 
 	logger, _ := zap.NewDevelopment()
 
-	grpcConn, err := agent.NewGRPCConnection(context.Background(), true, false, url, "", "", "", log.DefaultLogger)
+	grpcConn, err := agentclient.NewGRPCConnection(context.Background(), true, false, url, "", "", "", log.DefaultLogger)
 	ui.ExitOnError("error creating gRPC connection", err)
 	defer grpcConn.Close()
 
 	grpcClient := cloud.NewTestKubeCloudAPIClient(grpcConn)
 
 	var logStreamFunc func(ctx context.Context, executionID string) (chan output.Output, error)
-	var workflowNotificationsStreamFunc func(ctx context.Context, executionID string) (<-chan testkube.TestWorkflowExecutionNotification, error)
 
-	proContext := config.ProContext{APIKey: "api-key", WorkerCount: 5, LogStreamWorkerCount: 5, WorkflowNotificationsWorkerCount: 5}
-	agent, err := agent.NewAgent(logger.Sugar(), nil, grpcClient, logStreamFunc, workflowNotificationsStreamFunc, "", "", featureflags.FeatureFlags{}, &proContext, "")
+	proContext := config.ProContext{APIKey: "api-key", WorkerCount: 5, LogStreamWorkerCount: 5}
+	agent, err := agent.NewAgent(logger.Sugar(), nil, grpcClient, logStreamFunc, "", "", featureflags.FeatureFlags{}, &proContext, "", nil)
 	assert.NoError(t, err)
 	go func() {
 		l, err := agent.Load()
@@ -104,6 +104,18 @@ func (cws *CloudEventServer) GetLogsStream(srv cloud.TestKubeCloudAPI_GetLogsStr
 }
 
 func (cws *CloudEventServer) GetTestWorkflowNotificationsStream(srv cloud.TestKubeCloudAPI_GetTestWorkflowNotificationsStreamServer) error {
+	<-cws.ctx.Done()
+
+	return nil
+}
+
+func (cws *CloudEventServer) GetTestWorkflowServiceNotificationsStream(srv cloud.TestKubeCloudAPI_GetTestWorkflowServiceNotificationsStreamServer) error {
+	<-cws.ctx.Done()
+
+	return nil
+}
+
+func (cws *CloudEventServer) GetTestWorkflowParallelStepNotificationsStream(srv cloud.TestKubeCloudAPI_GetTestWorkflowParallelStepNotificationsStreamServer) error {
 	<-cws.ctx.Done()
 
 	return nil

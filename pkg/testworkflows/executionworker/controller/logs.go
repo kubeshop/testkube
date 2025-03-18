@@ -15,6 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/log"
@@ -454,7 +455,7 @@ func (t *timestampReader) read(reader *bufio.Reader) error {
 
 func (t *timestampReader) Format(ts time.Time) string {
 	if t.utc == nil || *t.utc {
-		return ts.Format(KubernetesLogTimeFormat)
+		return ts.Format(constants.PreciseTimeFormat)
 	}
 	return ts.Format(KubernetesTimezoneLogTimeFormat)
 }

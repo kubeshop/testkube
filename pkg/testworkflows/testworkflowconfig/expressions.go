@@ -1,6 +1,10 @@
 package testworkflowconfig
 
-import "github.com/kubeshop/testkube/pkg/expressions"
+import (
+	"fmt"
+
+	"github.com/kubeshop/testkube/pkg/expressions"
+)
 
 func CreateExecutionMachine(cfg *ExecutionConfig) expressions.Machine {
 	return expressions.NewMachine().
@@ -21,10 +25,14 @@ func CreateExecutionMachine(cfg *ExecutionConfig) expressions.Machine {
 		})
 }
 
-func CreateCloudMachine(cfg *ControlPlaneConfig) expressions.Machine {
+func CreateCloudMachine(cfg *ControlPlaneConfig, orgSlug, envSlug string) expressions.Machine {
+	dashboardUrl := cfg.DashboardUrl
+	if dashboardUrl != "" && orgSlug != "" && envSlug != "" {
+		dashboardUrl = fmt.Sprintf("%s/organization/%s/environment/%s/dashboard", cfg.DashboardUrl, orgSlug, envSlug)
+	}
 	return expressions.NewMachine().
 		RegisterMap("internal", map[string]interface{}{
-			"dashboard.url":  cfg.DashboardUrl,
+			"dashboard.url":  dashboardUrl,
 			"cdeventsTarget": cfg.CDEventsTarget,
 		}).
 		RegisterStringMap("dashboard", map[string]string{
@@ -76,4 +84,13 @@ func CreateWorkerMachine(cfg *WorkerConfig) expressions.Machine {
 			"api.url": cfg.Connection.LocalApiUrl, // TODO: Delete
 		})
 	return expressions.CombinedMachines(machine)
+}
+
+func CreatePvcMachine(pvcNames map[string]string) expressions.Machine {
+	pvcMap := make(map[string]string)
+	for name, pvcName := range pvcNames {
+		pvcMap[name+".name"] = pvcName
+	}
+
+	return expressions.NewMachine().RegisterStringMap("pvcs", pvcMap)
 }

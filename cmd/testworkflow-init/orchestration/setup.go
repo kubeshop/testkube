@@ -20,7 +20,7 @@ import (
 )
 
 var (
-	scopedRegex              = regexp.MustCompile(`^_(00|01|02|03|\d|[1-9]\d*)(C)?(S?)_`)
+	scopedRegex              = regexp.MustCompile(`^_(00|01|02|03|04|\d|[1-9]\d*)(C)?(S?)_`)
 	Setup                    = newSetup()
 	defaultWorkingDir        = getWorkingDir()
 	commonSensitiveVariables = []string{
@@ -47,6 +47,7 @@ type setup struct {
 	envGroups              map[string]map[string]string
 	envGroupsComputed      map[string]map[string]struct{}
 	envGroupsSensitive     map[string]map[string]struct{}
+	envAdditionalSensitive map[string]struct{}
 	envCurrentGroup        int
 	envSelectedGroup       string
 	minSensitiveWordLength int
@@ -58,6 +59,7 @@ func newSetup() *setup {
 		envGroups:              map[string]map[string]string{},
 		envGroupsComputed:      map[string]map[string]struct{}{},
 		envGroupsSensitive:     map[string]map[string]struct{}{},
+		envAdditionalSensitive: map[string]struct{}{},
 		envCurrentGroup:        -1,
 		minSensitiveWordLength: 1,
 	}
@@ -106,8 +108,17 @@ func (c *setup) SetSensitiveWordMinimumLength(length int) {
 	}
 }
 
+func (c *setup) AddSensitiveWords(words ...string) {
+	for i := range words {
+		c.envAdditionalSensitive[words[i]] = struct{}{}
+	}
+}
+
 func (c *setup) GetSensitiveWords() []string {
-	words := make([]string, 0)
+	words := make([]string, 0, len(c.envAdditionalSensitive))
+	for value := range c.envAdditionalSensitive {
+		words = append(words, value)
+	}
 	for _, name := range commonSensitiveVariables {
 		value := os.Getenv(name)
 		if len(value) < c.minSensitiveWordLength {
@@ -170,6 +181,26 @@ func (c *setup) GetInternalConfig() (config testworkflowconfig.InternalConfig) {
 	return config
 }
 
+func (c *setup) GetSignature() (config []testworkflowconfig.SignatureConfig) {
+	serialized := c.envGroups[constants.EnvGroupInternal][constants.EnvSignature]
+	if serialized == "" {
+		return
+	}
+	err := json.Unmarshal([]byte(serialized), &config)
+	if err != nil {
+		panic(fmt.Sprintf("failed to read the signature from Pod: %s", err.Error()))
+	}
+	return config
+}
+
+func (c *setup) GetContainerResources() (config testworkflowconfig.ContainerResourceConfig) {
+	config.Requests.CPU = c.envGroups[constants.EnvGroupResources][constants.EnvResourceRequestsCPU]
+	config.Requests.Memory = c.envGroups[constants.EnvGroupResources][constants.EnvResourceRequestsMemory]
+	config.Limits.CPU = c.envGroups[constants.EnvGroupResources][constants.EnvResourceLimitsCPU]
+	config.Limits.Memory = c.envGroups[constants.EnvGroupResources][constants.EnvResourceLimitsMemory]
+	return config
+}
+
 func (c *setup) UseEnv(group string) error {
 	c.UseBaseEnv()
 	c.envSelectedGroup = group
@@ -201,9 +232,9 @@ func (c *setup) UseEnv(group string) error {
 
 	// Ensure the built-in binaries are available
 	if os.Getenv("PATH") == "" {
-		os.Setenv("PATH", data.InternalBinPath)
+		os.Setenv("PATH", constants.InternalBinPath)
 	} else {
-		os.Setenv("PATH", fmt.Sprintf("%s:%s", os.Getenv("PATH"), data.InternalBinPath))
+		os.Setenv("PATH", fmt.Sprintf("%s:%s", os.Getenv("PATH"), constants.InternalBinPath))
 	}
 
 	// Compute dynamic environment variables

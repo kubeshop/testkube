@@ -1,0 +1,57 @@
+<testsuites tests="11" failures="1" errors="2" skipped="1" time="225.157">
+  <testsuite name="AAA" timestamp="2025-02-05T12:53:03" time="8.887" tests="6" failures="0" errors="0" skipped="0">
+    
+    <!-- All test cases passed -->
+    <testcase name="testSuccess1" classname="com.example.AAATests" time="1.500"/>
+    <testcase name="testSuccess2" classname="com.example.AAATests" time="1.200"/>
+    <testcase name="testSuccess3" classname="com.example.AAATests" time="1.800"/>
+    <testcase name="testSuccess4" classname="com.example.AAATests" time="1.000"/>
+    <testcase name="testSuccess5" classname="com.example.AAATests" time="1.250"/>
+    <testcase name="testSuccess6" classname="com.example.AAATests" time="2.137"/>
+
+  </testsuite>
+
+  <testsuite name="BBB" timestamp="2025-02-05T12:53:02" time="14.071" tests="5" failures="1" errors="2" skipped="1">
+    
+    <!-- A successful test case -->
+    <testcase name="testSuccess1" classname="com.example.BBBTests" time="3.500"/>
+
+    <!-- Another successful test case -->
+    <testcase name="testSuccess2" classname="com.example.BBBTests" time="2.000"/>
+
+    <!-- A failed test case -->
+    <testcase name="testFailure" classname="com.example.BBBTests" time="4.200">
+        <failure message="Expected value X but got Y" type="AssertionError">
+            <![CDATA[
+            junit.framework.AssertionFailedError: Expected X but got Y
+                at com.example.BBBTests.testFailure(BBBTests.java:42)
+            ]]>
+        </failure>
+    </testcase>
+    
+    <!-- A test case with an error (exception) -->
+    <testcase name="testError1" classname="com.example.BBBTests" time="2.371">
+        <error message="NullPointerException occurred" type="java.lang.NullPointerException">
+            <![CDATA[
+            java.lang.NullPointerException
+                at com.example.BBBTests.testError1(BBBTests.java:55)
+            ]]>
+        </error>
+    </testcase>
+    
+    <!-- Another test case with an error (runtime exception) -->
+    <testcase name="testError2" classname="com.example.BBBTests" time="3.000">
+        <error message="ArrayIndexOutOfBoundsException occurred" type="java.lang.ArrayIndexOutOfBoundsException">
+            <![CDATA[
+            java.lang.ArrayIndexOutOfBoundsException: Index 10 out of bounds for length 5
+                at com.example.BBBTests.testError2(BBBTests.java:65)
+            ]]>
+        </error>
+    </testcase>
+    
+    <!-- A skipped test case -->
+    <testcase name="testSkipped" classname="com.example.BBBTests" time="0.000">
+        <skipped message="Test skipped due to unmet precondition"/>
+    </testcase>
+  </testsuite>
+</testsuites>
