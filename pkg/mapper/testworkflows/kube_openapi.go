@@ -209,6 +209,73 @@ func MapCSIVolumeSourceKubeToAPI(v corev1.CSIVolumeSource) testkube.CsiVolumeSou
 		NodePublishSecretRef: common.MapPtr(v.NodePublishSecretRef, MapLocalObjectReferenceKubeToAPI),
 	}
 }
+
+func MapProjectedVolumeSourceKubeToAPI(v corev1.ProjectedVolumeSource) testkube.ProjectedVolumeSource {
+	return testkube.ProjectedVolumeSource{
+		DefaultMode: MapInt32ToBoxedInteger(v.DefaultMode),
+		Sources:     common.MapSlice(v.Sources, MapVolumeProjectionKubeToAPI),
+	}
+}
+
+func MapVolumeProjectionKubeToAPI(v corev1.VolumeProjection) testkube.ProjectedVolumeSourceSources {
+	return testkube.ProjectedVolumeSourceSources{
+		ClusterTrustBundle:  common.MapPtr(v.ClusterTrustBundle, MapClusterTrustBundleProjectionKubeToAPI),
+		ConfigMap:           common.MapPtr(v.ConfigMap, MapConfigMapProjectionKubeToAPI),
+		DownwardAPI:         common.MapPtr(v.DownwardAPI, MapDownwardAPIProjectionKubeToAPI),
+		Secret:              common.MapPtr(v.Secret, MapSecretProjectionKubeToAPI),
+		ServiceAccountToken: common.MapPtr(v.ServiceAccountToken, MapServiceAccountTokenProjectionKubeToAPI),
+	}
+}
+
+func MapConfigMapProjectionKubeToAPI(v corev1.ConfigMapProjection) testkube.ProjectedVolumeSourceConfigMap {
+	return testkube.ProjectedVolumeSourceConfigMap{
+		Items:    common.MapSlice(v.Items, MapKeyToPathKubeToAPI),
+		Name:     v.Name,
+		Optional: MapBoolToBoxedBoolean(v.Optional),
+	}
+}
+
+func MapClusterTrustBundleProjectionKubeToAPI(v corev1.ClusterTrustBundleProjection) testkube.ProjectedVolumeSourceClusterTrustBundle {
+	return testkube.ProjectedVolumeSourceClusterTrustBundle{
+		LabelSelector: common.MapPtr(v.LabelSelector, MapLabelSelectorKubeToAPI),
+		Name:          MapStringToBoxedString(v.Name),
+		Optional:      MapBoolToBoxedBoolean(v.Optional),
+		Path:          v.Path,
+		SignerName:    MapStringToBoxedString(v.SignerName),
+	}
+}
+
+func MapDownwardAPIProjectionKubeToAPI(v corev1.DownwardAPIProjection) testkube.ProjectedVolumeSourceDownwardApi {
+	return testkube.ProjectedVolumeSourceDownwardApi{
+		Items: common.MapSlice(v.Items, MapDownwardAPIVolumeFileKubeToAPI),
+	}
+}
+
+func MapDownwardAPIVolumeFileKubeToAPI(v corev1.DownwardAPIVolumeFile) testkube.ProjectedVolumeSourceDownwardApiItems {
+	return testkube.ProjectedVolumeSourceDownwardApiItems{
+		FieldRef:         MapFieldRefKubeToAPI(v.FieldRef),
+		Mode:             MapInt32ToBoxedInteger(v.Mode),
+		Path:             v.Path,
+		ResourceFieldRef: MapResourceFieldRefKubeToAPI(v.ResourceFieldRef),
+	}
+}
+
+func MapSecretProjectionKubeToAPI(v corev1.SecretProjection) testkube.ProjectedVolumeSourceSecret {
+	return testkube.ProjectedVolumeSourceSecret{
+		Items:    common.MapSlice(v.Items, MapKeyToPathKubeToAPI),
+		Name:     v.Name,
+		Optional: MapBoolToBoxedBoolean(v.Optional),
+	}
+}
+
+func MapServiceAccountTokenProjectionKubeToAPI(v corev1.ServiceAccountTokenProjection) testkube.ProjectedVolumeSourceServiceAccountToken {
+	return testkube.ProjectedVolumeSourceServiceAccountToken{
+		Audience:          v.Audience,
+		ExpirationSeconds: MapInt64ToBoxedInteger(v.ExpirationSeconds),
+		Path:              v.Path,
+	}
+}
+
 func MapVolumeKubeToAPI(v corev1.Volume) testkube.Volume {
 	// TODO: Add rest of VolumeSource types in future,
 	//       so they will be recognized by JSON API and persisted with Execution.
@@ -226,6 +293,7 @@ func MapVolumeKubeToAPI(v corev1.Volume) testkube.Volume {
 		ConfigMap:             common.MapPtr(v.ConfigMap, MapConfigMapVolumeSourceKubeToAPI),
 		AzureDisk:             common.MapPtr(v.AzureDisk, MapAzureDiskVolumeSourceKubeToAPI),
 		Csi:                   common.MapPtr(v.CSI, MapCSIVolumeSourceKubeToAPI),
+		Projected:             common.MapPtr(v.Projected, MapProjectedVolumeSourceKubeToAPI),
 	}
 }
 
@@ -248,17 +316,17 @@ func MapConfigMapKeyRefKubeToAPI(v *corev1.ConfigMapKeySelector) *testkube.EnvVa
 	}
 }
 
-func MapFieldRefKubeToAPI(v *corev1.ObjectFieldSelector) *testkube.EnvVarSourceFieldRef {
+func MapFieldRefKubeToAPI(v *corev1.ObjectFieldSelector) *testkube.FieldRef {
 	if v == nil {
 		return nil
 	}
-	return &testkube.EnvVarSourceFieldRef{
+	return &testkube.FieldRef{
 		ApiVersion: v.APIVersion,
 		FieldPath:  v.FieldPath,
 	}
 }
 
-func MapResourceFieldRefKubeToAPI(v *corev1.ResourceFieldSelector) *testkube.EnvVarSourceResourceFieldRef {
+func MapResourceFieldRefKubeToAPI(v *corev1.ResourceFieldSelector) *testkube.ResourceFieldRef {
 	if v == nil {
 		return nil
 	}
@@ -266,7 +334,7 @@ func MapResourceFieldRefKubeToAPI(v *corev1.ResourceFieldSelector) *testkube.Env
 	if !v.Divisor.IsZero() {
 		divisor = v.Divisor.String()
 	}
-	return &testkube.EnvVarSourceResourceFieldRef{
+	return &testkube.ResourceFieldRef{
 		ContainerName: v.ContainerName,
 		Divisor:       divisor,
 		Resource:      v.Resource,
