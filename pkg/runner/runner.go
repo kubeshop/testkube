@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"golang.org/x/sync/singleflight"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
@@ -58,6 +59,7 @@ type runner struct {
 	getGlobalTemplate GlobalTemplateFactory
 
 	watching sync.Map
+	sf       singleflight.Group
 }
 
 func New(
@@ -240,6 +242,16 @@ func (r *runner) Notifications(ctx context.Context, id string) executionworkerty
 }
 
 func (r *runner) Execute(request executionworkertypes.ExecuteRequest) (*executionworkertypes.ExecuteResult, error) {
+	v, err, _ := r.sf.Do(request.Execution.Id, func() (interface{}, error) {
+		return r.execute(request)
+	})
+	if err != nil {
+		return nil, err
+	}
+	return v.(*executionworkertypes.ExecuteResult), nil
+}
+
+func (r *runner) execute(request executionworkertypes.ExecuteRequest) (*executionworkertypes.ExecuteResult, error) {
 	if request.Execution.OrganizationSlug == "" {
 		request.Execution.OrganizationSlug = request.Execution.OrganizationId
 	}
@@ -271,8 +283,8 @@ func (r *runner) Execute(request executionworkertypes.ExecuteRequest) (*executio
 
 	// Edge case, when the execution has been already triggered before there,
 	// and now it's redundant call.
-	if err != nil && strings.Contains(err.Error(), "already exists") && strings.Contains(err.Error(), request.Execution.Id) {
-		existing, existingErr := r.worker.Summary(context.Background(), request.ResourceId, executionworkertypes.GetOptions{})
+	if err != nil && strings.Contains(err.Error(), "already exists") {
+		existing, existingErr := r.worker.Summary(context.Background(), request.Execution.Id, executionworkertypes.GetOptions{})
 		if existingErr != nil {
 			return nil, errors2.Join(err, existingErr)
 		}

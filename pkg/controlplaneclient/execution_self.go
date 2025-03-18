@@ -127,7 +127,9 @@ func (c *client) ScheduleExecution(ctx context.Context, environmentId string, re
 	}
 	watcher := channels.NewWatcher[testkube.TestWorkflowExecution]()
 	go func() {
-		defer watcher.Close(err)
+		defer func() {
+			watcher.Close(err)
+		}()
 		for {
 			item, itemErr := res.Recv()
 			if itemErr != nil {

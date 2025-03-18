@@ -312,6 +312,14 @@ func (a *agentLoop) directRunTestWorkflow(environmentId string, executionId stri
 	if err != nil {
 		return errors2.Wrapf(err, "failed to get execution details '%s/%s' from Control Plane", environmentId, executionId)
 	}
+	if execution.RunnerId != a.proContext.Agent.ID && execution.RunnerId != "" {
+		return errors.New("execution is assigned to a different runner")
+	}
+
+	// Inform that everything is fine, because the execution is already there.
+	if execution.Result != nil && !execution.Result.IsQueued() {
+		return nil
+	}
 
 	parentIds := ""
 	if execution.RunningContext != nil && execution.RunningContext.Actor != nil {

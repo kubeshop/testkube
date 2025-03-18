@@ -238,7 +238,11 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 	// Flatten selectors
 	intermediateSelectors := make([]*cloud.ScheduleExecution, 0, len(req.Executions))
 	for _, execution := range req.Executions {
-		list, _ := testWorkflows.Get(execution.Selector)
+		list, err := testWorkflows.Get(execution.Selector)
+		if err != nil {
+			close(ch)
+			return ch, err
+		}
 		for _, w := range list {
 			intermediateSelectors = append(intermediateSelectors, &cloud.ScheduleExecution{
 				Selector:      &cloud.ScheduleResourceSelector{Name: w.Name},
