@@ -180,6 +180,8 @@ type TestWorkflowExecutionAPI interface {
 	ListTestWorkflowExecutions(id string, limit int, options FilterTestWorkflowExecutionOptions) (executions testkube.TestWorkflowExecutionsResult, err error)
 	AbortTestWorkflowExecution(workflow string, id string) error
 	AbortTestWorkflowExecutions(workflow string) error
+	PauseTestWorkflowExecution(workflow string, id string) error
+	ResumeTestWorkflowExecution(workflow string, id string) error
 	GetTestWorkflowExecutionArtifacts(executionID string) (artifacts testkube.Artifacts, err error)
 	DownloadTestWorkflowArtifact(executionID, fileName, destination string) (artifact string, err error)
 	DownloadTestWorkflowArtifactArchive(executionID, destination string, masks []string) (archive string, err error)
