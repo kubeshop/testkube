@@ -304,6 +304,9 @@ message ScheduleRequest {
 
   // Kubernetes resource TODO: is it required?
   string kubernetes_object_name = 10;
+
+  // Test Workflow resolved spec
+  bytes resolvedWorkflow = 11;
 }
 
 message ScheduleResponse {
