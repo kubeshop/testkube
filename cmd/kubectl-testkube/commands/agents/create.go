@@ -25,7 +25,7 @@ func NewCreateAgentCommand() *cobra.Command {
 		Args:   cobra.ExactArgs(1),
 		Hidden: !log.IsTrue("EXPERIMENTAL"),
 		Run: func(cmd *cobra.Command, args []string) {
-			agent := UiCreateAgent(cmd, agentType, args[0], labelPairs, environmentIds)
+			agent := UiCreateAgent(cmd, agentType, args[0], labelPairs, environmentIds, false, "")
 			ui.NL()
 			ui.Info("Install the agent with command:")
 			ui.ShellCommand(
@@ -51,7 +51,7 @@ func NewCreateRunnerCommand() *cobra.Command {
 		Args:   cobra.ExactArgs(1),
 		Hidden: !log.IsTrue("EXPERIMENTAL"),
 		Run: func(cmd *cobra.Command, args []string) {
-			agent := UiCreateAgent(cmd, "runner", args[0], labelPairs, environmentIds)
+			agent := UiCreateAgent(cmd, "runner", args[0], labelPairs, environmentIds, false, "")
 			ui.NL()
 			ui.Info("Install the agent with command:")
 			ui.ShellCommand(
@@ -76,7 +76,7 @@ func NewCreateGitOpsCommand() *cobra.Command {
 		Args:   cobra.ExactArgs(1),
 		Hidden: !log.IsTrue("EXPERIMENTAL"),
 		Run: func(cmd *cobra.Command, args []string) {
-			agent := UiCreateAgent(cmd, "gitops", args[0], labelPairs, environmentIds)
+			agent := UiCreateAgent(cmd, "gitops", args[0], labelPairs, environmentIds, false, "")
 			ui.NL()
 			ui.Info("Install the agent with command:")
 			ui.ShellCommand(
@@ -91,7 +91,7 @@ func NewCreateGitOpsCommand() *cobra.Command {
 	return cmd
 }
 
-func UiCreateAgent(cmd *cobra.Command, agentType string, name string, labelPairs []string, environmentIds []string) *cloudclient.Agent {
+func UiCreateAgent(cmd *cobra.Command, agentType string, name string, labelPairs []string, environmentIds []string, isGlobalRunner bool, runnerGroup string) *cloudclient.Agent {
 	if name == "" {
 		name = ui.TextInput("agent name")
 		if name == "" {
@@ -118,6 +118,17 @@ func UiCreateAgent(cmd *cobra.Command, agentType string, name string, labelPairs
 		Name:         name,
 		Labels:       common.Ptr(make(map[string]string)),
 		Environments: environmentIds,
+	}
+
+	if runnerGroup != "" {
+		(*input.Labels)["group"] = runnerGroup
+		input.RunnerPolicy = &cloudclient.RunnerPolicy{
+			RequiredMatch: []string{"group"},
+		}
+	} else if !isGlobalRunner {
+		input.RunnerPolicy = &cloudclient.RunnerPolicy{
+			RequiredMatch: []string{"name"},
+		}
 	}
 
 	input.Type, _ = GetInternalAgentType(agentType)

@@ -33,6 +33,11 @@ type AgentInput struct {
 	Type         string             `json:"type,omitempty"`
 	Labels       *map[string]string `json:"labels,omitempty"`
 	Environments []string           `json:"environments,omitempty"`
+	RunnerPolicy *RunnerPolicy      `json:"runnerPolicy,omitempty"`
+}
+
+type RunnerPolicy struct {
+	RequiredMatch []string `json:"requiredMatch,omitempty"`
 }
 
 type Agent struct {
@@ -50,6 +55,7 @@ type Agent struct {
 	AccessedAt   *time.Time         `json:"accessedAt,omitempty"`
 	CreatedAt    time.Time          `json:"createdAt"`
 	SecretKey    string             `json:"secretKey"`
+	RunnerPolicy *RunnerPolicy      `json:"runnerPolicy,omitempty"`
 }
 
 type AgentEnvironment struct {
