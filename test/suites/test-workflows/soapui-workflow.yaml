@@ -4,6 +4,8 @@ metadata:
   name: soapui-workflow-suite
   labels:
     core-tests: workflows-suite
+    type: suite
+    tool: soapui
 spec:
   steps:
   - execute:

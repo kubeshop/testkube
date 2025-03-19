@@ -4,6 +4,8 @@ metadata:
   name: locust-workflow-suite
   labels:
     core-tests: workflows-suite
+    type: suite
+    tool: locust
 spec:
   steps:
   - execute:

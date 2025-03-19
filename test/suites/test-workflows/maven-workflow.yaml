@@ -4,6 +4,8 @@ metadata:
   name: maven-workflow-suite
   labels:
     core-tests: workflows-suite
+    type: suite
+    tool: maven
 spec:
   steps:
   - execute:

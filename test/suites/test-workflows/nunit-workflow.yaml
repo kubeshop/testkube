@@ -4,6 +4,8 @@ metadata:
   name: nunit-workflow-suite
   labels:
     core-tests: workflows-suite
+    type: suite
+    tool: nunit
 spec:
   steps:
   - execute:

@@ -4,6 +4,7 @@ metadata:
   name: maven-workflow-smoke-jdk11
   labels:
     core-tests: workflows
+    tool: maven
 spec:
   content:
     git:
@@ -34,6 +35,7 @@ metadata:
   name: maven-workflow-smoke-jdk11-from-template
   labels:
     core-tests: workflows
+    tool: maven
 spec:
   content:
     git:

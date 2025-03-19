@@ -4,6 +4,7 @@ metadata:
   name: k6-workflow-smoke
   labels:
     core-tests: workflows
+    tool: k6
 spec:
   content:
     git:
@@ -36,6 +37,7 @@ metadata:
   name: k6-workflow-smoke-template
   labels:
     core-tests: workflows
+    tool: k6
 spec:
   container:
     resources:
@@ -67,6 +69,7 @@ metadata:
   name: k6-workflow-smoke-template-without-checkout-step
   labels:
     core-tests: workflows
+    tool: k6
 spec:
   content:
     git:
@@ -98,6 +101,7 @@ metadata:
   name: k6-workflow-smoke-artifacts
   labels:
     core-tests: workflows
+    tool: k6
 spec:
   content:
     git:
@@ -143,6 +147,7 @@ metadata:
   name: distributed-k6-workflow-smoke
   labels:
     core-tests: workflows
+    tool: k6
 spec:
   config:
     vus: {type: integer, default: 2}
@@ -187,6 +192,7 @@ metadata:
   name: distributed-k6-workflow-smoke-artifacts
   labels:
     core-tests: workflows
+    tool: k6
 spec:
   config:
     vus: {type: integer, default: 2}

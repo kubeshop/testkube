@@ -4,6 +4,7 @@ metadata:
   name: artillery-workflow-smoke
   labels:
     core-tests: workflows
+    tool: artillery
 spec:
   content:
     git:
@@ -28,6 +29,7 @@ metadata:
   name: artillery-workflow-smoke-template
   labels:
     core-tests: workflows
+    tool: artillery
 spec:
   container:
     resources:
@@ -56,6 +58,7 @@ metadata:
   name: distributed-artillery-workflow-smoke-artifacts
   labels:
     core-tests: workflows
+    tool: artillery
 spec:
   config:
     arrivalRatePerWorker:
