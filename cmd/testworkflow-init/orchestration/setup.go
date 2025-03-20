@@ -13,6 +13,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/data"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
+	"github.com/kubeshop/testkube/pkg/credentials"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/expressions/libs"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
@@ -238,7 +239,11 @@ func (c *setup) UseEnv(group string) error {
 	}
 
 	// Compute dynamic environment variables
-	addonMachine := expressions.CombinedMachines(data.RefSuccessMachine, data.AliasMachine, data.StateMachine, libs.NewFsMachine(os.DirFS("/"), cwd))
+	addonMachine := expressions.CombinedMachines(data.RefSuccessMachine, data.AliasMachine, data.StateMachine, libs.NewFsMachine(os.DirFS("/"), cwd),
+		credentials.NewCredentialMachine(data.Credentials(), func(_ string, value string) {
+			c.AddSensitiveWords(value)
+			output.Std.SetSensitiveWords(c.GetSensitiveWords())
+		}))
 	localEnvMachine := expressions.NewMachine().
 		RegisterAccessorExt(func(accessorName string) (interface{}, bool, error) {
 			if !strings.HasPrefix(accessorName, "env.") {
