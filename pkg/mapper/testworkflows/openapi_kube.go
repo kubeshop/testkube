@@ -306,6 +306,14 @@ func MapContentTarballAPIToKube(v testkube.TestWorkflowContentTarball) testworkf
 	}
 }
 
+func MapTargetToKube(v testkube.TestWorkflowTarget) testworkflowsv1.Target {
+	return testworkflowsv1.Target{
+		Match:     v.Match,
+		Not:       v.Not,
+		Replicate: v.Replicate,
+	}
+}
+
 func MapContentAPIToKube(v testkube.TestWorkflowContent) testworkflowsv1.Content {
 	return testworkflowsv1.Content{
 		Git:     common.MapPtr(v.Git, MapContentGitAPIToKube),
@@ -1606,7 +1614,8 @@ func MapTestWorkflowAPIToKubeTestWorkflowSummary(v testkube.TestWorkflow) testwo
 
 func MapTestWorkflowTagSchemaAPIToKube(v testkube.TestWorkflowTagSchema) testworkflowsv1.TestWorkflowTagSchema {
 	return testworkflowsv1.TestWorkflowTagSchema{
-		Tags: v.Tags,
+		Tags:   v.Tags,
+		Target: common.MapPtr(v.Target, MapTargetToKube),
 	}
 }
 
