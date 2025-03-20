@@ -9752,6 +9752,28 @@ components:
       required:
         - count
 
+    TestWorkflowTarget:
+      type: object
+      properties:
+        match:
+          type: object
+          description: labels to attach to the job
+          additionalProperties:
+            type: array
+            items:
+              type: string
+        not:
+          type: object
+          description: labels to attach to the job
+          additionalProperties:
+            type: array
+            items:
+              type: string
+        replicate:
+          type: array
+          items:
+            type: string
+
     TestWorkflowContent:
       type: object
       properties:
@@ -10211,6 +10233,8 @@ components:
       properties:
         tags:
           $ref: "#/components/schemas/TestWorkflowTagValue"
+        target:
+          $ref: "#/components/schemas/TestWorkflowTarget"
 
     TestWorkflowExecutionTags:
       type: object
