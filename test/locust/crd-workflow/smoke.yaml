@@ -4,6 +4,7 @@ metadata:
   name: locust-workflow-smoke
   labels:
     core-tests: workflows
+    tool: locust
 spec:
   content:
     git:
@@ -30,6 +31,7 @@ metadata:
   name: distributed-locust-workflow-smoke
   labels:
     core-tests: workflows
+    tool: locust
 spec:
   config:
     workers: {type: integer, default: 2}

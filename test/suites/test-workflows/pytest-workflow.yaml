@@ -4,6 +4,8 @@ metadata:
   name: pytest-workflow-suite
   labels:
     core-tests: workflows-suite
+    type: suite
+    tool: pytest
 spec:
   steps:
   - execute:
