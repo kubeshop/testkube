@@ -197,6 +197,8 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 		return ch, nil
 	}
 
+	hasResolvedWorkflow := len(req.ResolvedWorkflow) != 0
+
 	// Initialize execution template
 	now := time.Now().UTC()
 	base := NewIntermediateExecution().
@@ -205,15 +207,22 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 		AppendTags(req.Tags).
 		SetDisabledWebhooks(req.DisableWebhooks).
 		SetKubernetesObjectName(req.KubernetesObjectName).
-		SetRunningContext(GetLegacyRunningContext(req)).
-		PrependTemplate(s.globalTemplateName)
+		SetRunningContext(GetLegacyRunningContext(req))
+
+	if !hasResolvedWorkflow {
+		base.PrependTemplate(s.globalTemplateName)
+	} else {
+		var workflow testkube.TestWorkflow
+		_ = json.Unmarshal(req.ResolvedWorkflow, &workflow)
+		base.SetWorkflow(testworkflows2.MapAPIToKube(&workflow))
+	}
 
 	// Initialize fetchers
 	testWorkflows := NewTestWorkflowFetcher(s.testWorkflowsClient, environmentId)
 	testWorkflowTemplates := NewTestWorkflowTemplateFetcher(s.testWorkflowTemplatesClient, environmentId)
 
 	// Register inline global template
-	if s.globalTemplateInline != nil {
+	if s.globalTemplateInline != nil && !hasResolvedWorkflow {
 		base.PrependTemplate(inlinedGlobalTemplateName)
 		testWorkflowTemplates.SetCache(inlinedGlobalTemplateName, s.globalTemplateInline)
 	}
@@ -227,13 +236,15 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 		return ch, err
 	}
 
-	// Prefetch all the Test Workflow Templates.
-	// Don't fail immediately - it should be execution's error message if it's missing.
-	tplNames := testWorkflows.TemplateNames()
-	if s.globalTemplateName != "" {
-		tplNames[testworkflowresolver.GetInternalTemplateName(s.globalTemplateName)] = struct{}{}
+	if !hasResolvedWorkflow {
+		// Prefetch all the Test Workflow Templates.
+		// Don't fail immediately - it should be execution's error message if it's missing.
+		tplNames := testWorkflows.TemplateNames()
+		if s.globalTemplateName != "" {
+			tplNames[testworkflowresolver.GetInternalTemplateName(s.globalTemplateName)] = struct{}{}
+		}
+		_ = testWorkflowTemplates.PrefetchMany(tplNames)
 	}
-	_ = testWorkflowTemplates.PrefetchMany(tplNames)
 
 	// Flatten selectors
 	intermediateSelectors := make([]*cloud.ScheduleExecution, 0, len(req.Executions))
@@ -363,7 +374,11 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 	// Resolve executions for each selector
 	intermediate := make([]*IntermediateExecution, 0, len(selectors))
 	for i, v := range selectors {
-		workflow, _ := testWorkflows.GetByName(v.Selector.Name)
+		var workflow *testkube.TestWorkflow
+		if !hasResolvedWorkflow {
+			workflow, _ = testWorkflows.GetByName(v.Selector.Name)
+		}
+
 		originalTarget := testkube.ExecutionTarget{
 			Match: common.MapMap(originalTargets[i].Match, func(t *cloud.ExecutionTargetLabels) []string {
 				return t.Labels
@@ -389,9 +404,13 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 			AutoGenerateID().
 			SetName(v.ExecutionName).
 			AppendTags(v.Tags).
-			SetWorkflow(testworkflows2.MapAPIToKube(workflow)).
 			SetTarget(target).
 			SetOriginalTarget(originalTarget)
+
+		if !hasResolvedWorkflow {
+			current.SetWorkflow(testworkflows2.MapAPIToKube(workflow))
+		}
+
 		intermediate = append(intermediate, current)
 
 		// Inject configuration
@@ -405,17 +424,19 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 			continue
 		}
 
-		// Load the required Test Workflow Templates
-		tpls, err := testWorkflowTemplates.GetMany(current.TemplateNames())
-		if err != nil {
-			current.SetError("Cannot fetch required Test Workflow Templates", err)
-			continue
-		}
+		if !hasResolvedWorkflow {
+			// Load the required Test Workflow Templates
+			tpls, err := testWorkflowTemplates.GetMany(current.TemplateNames())
+			if err != nil {
+				current.SetError("Cannot fetch required Test Workflow Templates", err)
+				continue
+			}
 
-		// Apply the Test Workflow Templates
-		if err = current.ApplyTemplates(tpls); err != nil {
-			current.SetError("Cannot inline Test Workflow Templates", err)
-			continue
+			// Apply the Test Workflow Templates
+			if err = current.ApplyTemplates(tpls); err != nil {
+				current.SetError("Cannot inline Test Workflow Templates", err)
+				continue
+			}
 		}
 	}
 

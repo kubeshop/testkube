@@ -746,7 +746,7 @@ func (r *MongoRepository) Assign(ctx context.Context, id string, prevRunnerId st
 	res, err := r.Coll.UpdateOne(ctx, bson.M{
 		"$and": []bson.M{
 			{"id": id},
-			{"result.status": bson.M{"$in": bson.A{testkube.QUEUED_TestWorkflowStatus, testkube.RUNNING_TestWorkflowStatus, testkube.PAUSED_TestWorkflowStatus}}},
+			{"result.status": testkube.QUEUED_TestWorkflowStatus},
 			{"$or": []bson.M{{"runnerid": prevRunnerId}, {"runnerid": newRunnerId}, {"runnerid": nil}}},
 		},
 	}, bson.M{"$set": map[string]interface{}{
