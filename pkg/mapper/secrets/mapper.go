@@ -42,7 +42,7 @@ func MapSecretKubeToAPI(secret *corev1.Secret) testkube.Secret {
 
 	updateTime := secret.CreationTimestamp.Time
 	for _, field := range secret.ManagedFields {
-		if field.Time.After(updateTime) {
+		if field.Time != nil && field.Time.After(updateTime) {
 			updateTime = field.Time.Time
 		}
 	}

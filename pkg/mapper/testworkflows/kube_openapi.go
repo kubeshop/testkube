@@ -1283,7 +1283,7 @@ func MapTestWorkflowKubeToAPI(w testworkflowsv1.TestWorkflow) testkube.TestWorkf
 		updateTime = w.DeletionTimestamp.Time
 	} else {
 		for _, field := range w.ManagedFields {
-			if field.Time.After(updateTime) {
+			if field.Time != nil && field.Time.After(updateTime) {
 				updateTime = field.Time.Time
 			}
 		}
@@ -1307,7 +1307,7 @@ func MapTestWorkflowTemplateKubeToAPI(w testworkflowsv1.TestWorkflowTemplate) te
 		updateTime = w.DeletionTimestamp.Time
 	} else {
 		for _, field := range w.ManagedFields {
-			if field.Time.After(updateTime) {
+			if field.Time != nil && field.Time.After(updateTime) {
 				updateTime = field.Time.Time
 			}
 		}
