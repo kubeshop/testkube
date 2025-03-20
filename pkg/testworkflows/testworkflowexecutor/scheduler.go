@@ -213,7 +213,11 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 		base.PrependTemplate(s.globalTemplateName)
 	} else {
 		var workflow testkube.TestWorkflow
-		_ = json.Unmarshal(req.ResolvedWorkflow, &workflow)
+		if err := json.Unmarshal(req.ResolvedWorkflow, &workflow); err != nil {
+			close(ch)
+			return ch, err
+		}
+
 		base.SetWorkflow(testworkflows2.MapAPIToKube(&workflow))
 	}
 
