@@ -87,15 +87,15 @@ func EscapeLabelKeyForVarName(key string) string {
 }
 
 func MustCall(m Machine, name string, args ...interface{}) interface{} {
-	list := make([]StaticValue, len(args))
+	list := make([]CallArgument, len(args))
 	for i, v := range args {
 		if vv, ok := v.(StaticValue); ok {
-			list[i] = vv
+			list[i] = CallArgument{Expression: vv}
 		} else {
-			list[i] = NewValue(v)
+			list[i] = CallArgument{Expression: NewValue(v)}
 		}
 	}
-	v, ok, err := m.Call(name, list...)
+	v, ok, err := m.Call(name, list)
 	if err != nil {
 		panic(err)
 	}
