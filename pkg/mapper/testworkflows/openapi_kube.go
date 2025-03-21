@@ -1686,3 +1686,57 @@ func MapPvcConfigAPIToKube(v testkube.TestWorkflowPvcConfig) corev1.PersistentVo
 		VolumeAttributesClassName: MapBoxedStringToString(v.VolumeAttributesClassName),
 	}
 }
+
+func MapTestWorkflowExecutionResourceAggregationsReportAPIToKube(
+	v testkube.TestWorkflowExecutionResourceAggregationsReport,
+) *testworkflowsv1.TestWorkflowExecutionResourceAggregationsReport {
+	return &testworkflowsv1.TestWorkflowExecutionResourceAggregationsReport{
+		Global: MapTestWorkflowExecutionResourceAggregationsByMeasurementAPIToKube(v.Global),
+		Step:   MapTestWorkflowExecutionResourceStepAggregationsByMeasurementAPIToKube(v.Step),
+	}
+}
+
+func MapTestWorkflowExecutionResourceAggregationsByMeasurementAPIToKube(
+	v map[string]map[string]testkube.TestWorkflowExecutionResourceAggregations,
+) testworkflowsv1.TestWorkflowExecutionResourceAggregationsByMeasurement {
+	byMeasurement := make(testworkflowsv1.TestWorkflowExecutionResourceAggregationsByMeasurement)
+
+	for measurement, byField := range v {
+		if byMeasurement[measurement] == nil {
+			byMeasurement[measurement] = make(testworkflowsv1.TestWorkflowExecutionResourceAggregationsByField)
+		}
+		for field, report := range byField {
+			byMeasurement[measurement][field] = MapTestWorkflowExecutionResourceAggregationsAPIToKube(&report)
+		}
+	}
+
+	return byMeasurement
+}
+
+func MapTestWorkflowExecutionResourceStepAggregationsByMeasurementAPIToKube(
+	vs []testkube.TestWorkflowExecutionStepResourceAggregations,
+) []*testworkflowsv1.TestWorkflowExecutionStepResourceAggregations {
+	r := make([]*testworkflowsv1.TestWorkflowExecutionStepResourceAggregations, 0, len(vs))
+
+	for _, v := range vs {
+		r = append(r, &testworkflowsv1.TestWorkflowExecutionStepResourceAggregations{
+			Ref:          v.Ref,
+			Aggregations: MapTestWorkflowExecutionResourceAggregationsByMeasurementAPIToKube(v.Aggregations),
+		})
+	}
+
+	return r
+}
+
+func MapTestWorkflowExecutionResourceAggregationsAPIToKube(v *testkube.TestWorkflowExecutionResourceAggregations) *testworkflowsv1.TestWorkflowExecutionResourceAggregations {
+	if v == nil {
+		return nil
+	}
+	return &testworkflowsv1.TestWorkflowExecutionResourceAggregations{
+		Total:  v.Total,
+		Min:    v.Min,
+		Max:    v.Max,
+		Avg:    v.Avg,
+		StdDev: v.StdDev,
+	}
+}

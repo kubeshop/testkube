@@ -7600,7 +7600,7 @@ components:
           description: all test workflow execution ids starting from the root
         executionReference:
           type: string
-          description: reference test workflow execution id         
+          description: reference test workflow execution id
         type:
           $ref: "#/components/schemas/TestWorkflowRunningContextActorType"
 
@@ -8013,7 +8013,7 @@ components:
         action:
           $ref: "#/components/schemas/TestTriggerActions"
         actionParameters:
-          $ref: "#/components/schemas/TestTriggerActionParameters"        
+          $ref: "#/components/schemas/TestTriggerActionParameters"
         execution:
           $ref: "#/components/schemas/TestTriggerExecutions"
         testSelector:
@@ -8112,7 +8112,7 @@ components:
         config:
           $ref: "#/components/schemas/TestWorkflowConfigValue"
         tags:
-          $ref: "#/components/schemas/TestWorkflowTagValue"        
+          $ref: "#/components/schemas/TestWorkflowTagValue"
 
     TestTriggerConditionSpec:
       type: object
@@ -8698,6 +8698,8 @@ components:
           description: generated reports from the steps, like junit
           items:
             $ref: "#/components/schemas/TestWorkflowReport"
+        resourceAggregations:
+          $ref: "#/components/schemas/TestWorkflowExecutionResourceAggregationsReport"
         workflow:
           $ref: "#/components/schemas/TestWorkflow"
         resolvedWorkflow:
@@ -8915,6 +8917,76 @@ components:
           type: integer
           format: int64
           description: total duration of all test cases in milliseconds
+
+    TestWorkflowExecutionResourceAggregationsReport:
+      type: object
+      properties:
+        global:
+          $ref: '#/components/schemas/TestWorkflowExecutionResourceAggregationsByMeasurement'
+        step:
+          type: array
+          items:
+            $ref: '#/components/schemas/TestWorkflowExecutionStepResourceAggregations'
+      description: |
+        TestWorkflowExecutionResourceAggregationsReport provides resource usage aggregations
+        for an entire TestWorkflowExecution (globally) and also per-step (by measurements).
+
+    TestWorkflowExecutionStepResourceAggregations:
+      type: object
+      description: Step-based resource metrics aggregations (by measurement and field)
+      properties:
+        ref:
+          type: string
+          description: step reference
+        aggregations:
+          $ref: '#/components/schemas/TestWorkflowExecutionResourceAggregationsByMeasurement'
+
+    TestWorkflowExecutionResourceAggregationsByMeasurement:
+      type: object
+      description: |
+        TestWorkflowExecutionResourceAggregationsByMeasurement provides resource usage aggregations
+        for a specific measurement (e.g. CPU, Memory, etc.) across all steps in a TestWorkflowExecution.
+      additionalProperties:
+        type: object
+        description: |
+          TestWorkflowExecutionResourceAggregations provides resource usage aggregations
+          for a specific field (e.g. millicores, used...).
+        additionalProperties:
+          $ref: '#/components/schemas/TestWorkflowExecutionResourceAggregations'
+
+    TestWorkflowExecutionResourceAggregationsScope:
+      type: string
+      enum:
+        - step
+        - global
+      description: Scope of the resource metrics aggregations.
+
+    TestWorkflowExecutionResourceAggregations:
+      type: object
+      properties:
+        total:
+          type: number
+          format: float64
+          description: Total sum of the metric.
+        min:
+          type: number
+          format: float64
+          description: Minimum value of the metric.
+        max:
+          type: number
+          format: float64
+          description: Maximum value of the metric.
+        avg:
+          type: number
+          format: float64
+          description: Average value of the metric.
+        stdDev:
+          type: number
+          format: float64
+          description: Standard deviation of the metric.
+      description: |
+        TestWorkflowExecutionResourceAggregations provides min, max, average, total,
+        and standard deviation values for a resource metric.
 
     TestWorkflowResult:
       type: object
@@ -10051,7 +10123,7 @@ components:
 
     TestWorkflowExecutionConfigValue:
       type: object
-      description: configuration values used in the test workflow execution   
+      description: configuration values used in the test workflow execution
       properties:
         value:
           type: string
@@ -10354,7 +10426,7 @@ components:
         seLinuxOptions:
           $ref: "#/components/schemas/SELinuxOptions"
         windowsOptions:
-          $ref: "#/components/schemas/WindowsSecurityContextOptions"   
+          $ref: "#/components/schemas/WindowsSecurityContextOptions"
         runAsUser:
           $ref: "#/components/schemas/BoxedInteger"
         runAsGroup:
@@ -10379,7 +10451,7 @@ components:
         seccompProfile:
           $ref: "#/components/schemas/SeccompProfile"
         appArmorProfile:
-          $ref: "#/components/schemas/AppArmorProfile" 
+          $ref: "#/components/schemas/AppArmorProfile"
         seLinuxChangePolicy:
           $ref: "#/components/schemas/BoxedString"
 
@@ -11104,7 +11176,7 @@ components:
       description: Represents a projected volume source
       properties:
         defaultMode:
-          $ref: "#/components/schemas/BoxedInteger"      
+          $ref: "#/components/schemas/BoxedInteger"
         sources:
           description: sources is the list of volume projections. Each entry in this list
             handles one source.
@@ -11437,7 +11509,7 @@ components:
       description: TypedObjectReference contains enough information to let you locate the typed referenced object inside the specified namespace
       type: object
       allOf:
-      - $ref: "#/components/schemas/TypedLocalObjectReference"     
+      - $ref: "#/components/schemas/TypedLocalObjectReference"
       properties:
         namespace:
           description: Namespace is the namespace of resource being referenced
