@@ -698,8 +698,7 @@ func (r *MongoRepository) GetExecutionTags(ctx context.Context, testWorkflowName
 
 	pipeline := []bson.M{
 		{"$match": query},
-		{"$project": bson.M{"_id": 0, "tags": 1}},
-		{"$project": bson.M{"tags": bson.M{"$objectToArray": "$tags"}}},
+		{"$project": bson.M{"_id": 0, "tags": bson.M{"$objectToArray": "$tags"}}},
 		{"$unwind": "$tags"},
 		{"$group": bson.M{"_id": "$tags.k", "values": bson.M{"$addToSet": "$tags.v"}}},
 		{"$project": bson.M{"_id": 0, "name": "$_id", "values": 1}},
