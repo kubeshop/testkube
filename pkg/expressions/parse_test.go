@@ -370,3 +370,14 @@ func TestCompileEscapedTemplate(t *testing.T) {
 	assert.Equal(t, input, MustCompileTemplate(input).Template())
 	assert.Equal(t, output, must(MustCompileTemplate(input).Static().StringValue()))
 }
+
+func TestCompileSingleQuoteString(t *testing.T) {
+	assert.Equal(t, `"foobar"`, MustCompile(`'foobar'`).String())
+	assert.Equal(t, `"foo'bar"`, MustCompile(`'foo\'bar'`).String())
+	assert.Equal(t, `"foo\"bar"`, MustCompile(`'foo"bar'`).String())
+	assert.ErrorContains(t, errOnly(Compile(`'foobar\'`)), "error while decoding string")
+	assert.Equal(t, `"\nabc\ndef\n"`, MustCompile(`'
+abc
+def
+'`).String())
+}
