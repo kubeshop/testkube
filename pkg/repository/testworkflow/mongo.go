@@ -691,16 +691,17 @@ func (r *MongoRepository) GetNextExecutionNumber(ctx context.Context, name strin
 }
 
 func (r *MongoRepository) GetExecutionTags(ctx context.Context, testWorkflowName string) (tags map[string][]string, err error) {
-	query := bson.M{"tags": bson.M{"$exists": true}}
+	query := bson.M{"tags": bson.M{"$nin": bson.A{nil, bson.M{}}}}
 	if testWorkflowName != "" {
 		query["workflow.name"] = testWorkflowName
 	}
 
 	pipeline := []bson.M{
 		{"$match": query},
-		{"$project": bson.M{
-			"tags": 1,
-		}},
+		{"$project": bson.M{"_id": 0, "tags": bson.M{"$objectToArray": "$tags"}}},
+		{"$unwind": "$tags"},
+		{"$group": bson.M{"_id": "$tags.k", "values": bson.M{"$addToSet": "$tags.v"}}},
+		{"$project": bson.M{"_id": 0, "name": "$_id", "values": 1}},
 	}
 
 	opts := options.Aggregate()
@@ -713,21 +714,18 @@ func (r *MongoRepository) GetExecutionTags(ctx context.Context, testWorkflowName
 		return nil, err
 	}
 
-	var executions []testkube.TestWorkflowExecutionTags
-	err = cursor.All(ctx, &executions)
+	var res []struct {
+		Name   string   `bson:"name"`
+		Values []string `bson:"values"`
+	}
+	err = cursor.All(ctx, &res)
 	if err != nil {
 		return nil, err
 	}
 
-	for i := range executions {
-		executions[i].UnscapeDots()
-	}
-
 	tags = make(map[string][]string)
-	for _, execution := range executions {
-		for key, value := range execution.Tags {
-			tags[key] = append(tags[key], value)
-		}
+	for _, tag := range res {
+		tags[tag.Name] = tag.Values
 	}
 
 	return tags, nil
