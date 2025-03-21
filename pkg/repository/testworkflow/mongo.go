@@ -756,7 +756,7 @@ func (r *MongoRepository) Assign(ctx context.Context, id string, prevRunnerId st
 	if err != nil {
 		return false, err
 	}
-	return res.ModifiedCount > 0, nil
+	return res.MatchedCount > 0, nil
 }
 
 // TODO: Return IDs only
