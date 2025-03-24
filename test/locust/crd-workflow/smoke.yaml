@@ -71,4 +71,4 @@ spec:
       paused: true # synchronize running all workers - optional
       run:
         image: locustio/locust:2.32.3
-        shell: locust -f - --worker --master-host {{ services.master.0.ip }} --processes {{ config.workers }}
+        shell: locust --stop-timeout 180 -f - --worker --master-host {{ services.master.0.ip }} --processes {{ config.workers }}
