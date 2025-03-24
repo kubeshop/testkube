@@ -2,6 +2,7 @@ package v1
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -485,21 +486,14 @@ func (s *TestkubeAPI) ReRunTestWorkflowExecutionHandler() fiber.Handler {
 			return s.ClientError(c, errPrefix, err)
 		}
 
-		name := ""
-		if execution.Workflow != nil {
-			name = execution.Workflow.Name
+		if execution.ResolvedWorkflow == nil {
+			return s.ClientError(c, errPrefix, errors.New("can't find resolved workflow spec"))
 		}
 
-		workflow, err := s.TestWorkflowsClient.Get(c.Context(), s.getEnvironmentId(), name)
+		name := execution.ResolvedWorkflow.Name
+		workflow, err := json.Marshal(execution.ResolvedWorkflow)
 		if err != nil {
 			return s.ClientError(c, errPrefix, err)
-		}
-
-		requiredParameters := make(map[string]struct{})
-		if workflow.Spec != nil {
-			for _, parameter := range workflow.Spec.GetRequiredParameters() {
-				requiredParameters[parameter] = struct{}{}
-			}
 		}
 
 		// Load the execution request
@@ -522,12 +516,6 @@ func (s *TestkubeAPI) ReRunTestWorkflowExecutionHandler() fiber.Handler {
 
 			if !value.EmptyValue {
 				request.Config[key] = value.Value
-			}
-		}
-
-		for key := range requiredParameters {
-			if _, ok := request.Config[key]; !ok {
-				return s.ClientError(c, errPrefix, errors.New("can't rerun test workflow execution without required parameters"))
 			}
 		}
 
@@ -562,6 +550,7 @@ func (s *TestkubeAPI) ReRunTestWorkflowExecutionHandler() fiber.Handler {
 			RunningContext:     runningContext,
 			User:               user,
 			ExecutionReference: &executionID,
+			ResolvedWorkflow:   workflow,
 		})
 
 		results := make([]testkube.TestWorkflowExecution, 0)
