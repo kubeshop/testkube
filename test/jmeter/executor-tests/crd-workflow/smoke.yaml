@@ -194,9 +194,6 @@ spec:
       - test/jmeter/executor-tests/jmeter-executor-smoke.jmx
   container:
     workingDir: /data/repo/test/jmeter/executor-tests
-
-  pod:
-    serviceAccountName: testkube-api-server
   services:
     slave:
       use:
