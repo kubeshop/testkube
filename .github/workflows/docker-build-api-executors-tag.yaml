@@ -1,4 +1,4 @@
-# The workflow jobs are disabled. If you need to build executors, just remove "if: false" clause from the jobs and create a new release.
+# The workflow jobs are disabled. If you need to build executors, just remove "#if: false" clause from the jobs and create a new release.
 name: Docker images building and pushing for API and executors
 on:
   push:
@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   api:
-    if: false
+   ###if: false
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
@@ -85,7 +85,7 @@ jobs:
           BUSYBOX_IMAGE: ${{ env.BUSYBOX_IMAGE }}
 
   testworkflow:
-    if: false
+    ##if: false
     strategy:
       matrix:
         service: [ testworkflow-init, testworkflow-toolkit ]
@@ -155,7 +155,7 @@ jobs:
           REPOSITORY: ${{ matrix.repository }}
 
   single_executor:
-    if: false
+    #if: false
     strategy:
       matrix:
         executor:
@@ -249,7 +249,7 @@ jobs:
           BUSYBOX_IMAGE: ${{ env.BUSYBOX_IMAGE }}
 
   executor_jmeter:
-    if: false
+    #if: false
     runs-on: ubuntu-22.04
     steps:
 #      - name: Free Disk Space (Ubuntu)
@@ -321,7 +321,7 @@ jobs:
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
 
   executor_jmeterd:
-    if: false
+    #if: false
     runs-on: ubuntu-22.04
     steps:
 #      - name: Free Disk Space (Ubuntu)
@@ -395,7 +395,7 @@ jobs:
           GOARCH: ${{ matrix.GOARCH }}
 
   jmeterd_slave:
-    if: false
+    #if: false
     runs-on: ubuntu-22.04
     steps:
 #      - name: Free Disk Space (Ubuntu)
@@ -454,7 +454,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
 
   executor_maven:
-    if: false
+    #if: false
     runs-on: ubuntu-22.04
     steps:
 #      - name: Free Disk Space (Ubuntu)
@@ -526,7 +526,7 @@ jobs:
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
 
   executor_gradle:
-    if: false
+    #if: false
     runs-on: ubuntu-22.04
     steps:
 #      - name: Free Disk Space (Ubuntu)
@@ -598,7 +598,7 @@ jobs:
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
 
   executor_cypress:
-    if: false
+    #if: false
     strategy:
       matrix:
         version:
@@ -694,7 +694,7 @@ jobs:
           docker push kubeshop/testkube-cypress-executor:${{ steps.tag.outputs.tag }}-${{ matrix.version }}-arm64
 
   executor_postman_node21:
-    if: false
+    #if: false
     runs-on: ubuntu-22.04
     steps:
 #      - name: Free Disk Space (Ubuntu)
@@ -755,7 +755,7 @@ jobs:
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
 
   executor_cypress_manifest:
-    if: false
+    #if: false
     needs: executor_cypress
     strategy:
       matrix:
@@ -823,7 +823,7 @@ jobs:
           cosign sign kubeshop/testkube-cypress-executor:legacy --yes
 
   executor_playwright:
-    if: false
+    #if: false
     runs-on: ubuntu-22.04
     steps:
 #      - name: Free Disk Space (Ubuntu)
@@ -895,7 +895,7 @@ jobs:
           DOCKER_BUILDX_CACHE_TO: "type=gha,mode=max"
 
   log_server_sidecar:
-    if: false
+    #if: false
     strategy:
       matrix:
         service: [ logs-server, logs-sidecar ]
@@ -975,7 +975,7 @@ jobs:
           readme_file: "./README.md"
 
   update_api_helm_charts:
-    if: false
+    #if: false
     needs:
       [
         api,
