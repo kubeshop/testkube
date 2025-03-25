@@ -259,9 +259,32 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 			return ch, err
 		}
 		for _, w := range list {
+			targets := execution.Targets
+
+			if isEmptyTargets(targets) && w.Spec.Execution.Target != nil {
+				target := cloud.ExecutionTarget{
+					Replicate: w.Spec.Execution.Target.Replicate,
+				}
+
+				if w.Spec.Execution.Target.Match != nil {
+					target.Match = make(map[string]*cloud.ExecutionTargetLabels)
+					for k, v := range w.Spec.Execution.Target.Match {
+						target.Match[k] = &cloud.ExecutionTargetLabels{Labels: v}
+					}
+				}
+				if w.Spec.Execution.Target.Not != nil {
+					target.Not = make(map[string]*cloud.ExecutionTargetLabels)
+					for k, v := range w.Spec.Execution.Target.Not {
+						target.Not[k] = &cloud.ExecutionTargetLabels{Labels: v}
+					}
+				}
+
+				targets = []*cloud.ExecutionTarget{&target}
+			}
+
 			intermediateSelectors = append(intermediateSelectors, &cloud.ScheduleExecution{
 				Selector:      &cloud.ScheduleResourceSelector{Name: w.Name},
-				Targets:       execution.Targets,
+				Targets:       targets,
 				Config:        execution.Config,
 				ExecutionName: execution.ExecutionName, // TODO: what to do when execution name is configured, but multiple requested?
 				Tags:          execution.Tags,
@@ -542,6 +565,21 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 	}()
 
 	return ch, nil
+}
+
+func isEmptyTargets(targets []*cloud.ExecutionTarget) bool {
+	if len(targets) == 0 {
+		return true
+	}
+	for _, target := range targets {
+		if target == nil {
+			return true
+		}
+		if target.Not == nil && target.Match == nil && target.Replicate == nil {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *scheduler) CriticalError(execution *testkube.TestWorkflowExecution, name string, err error) error {
