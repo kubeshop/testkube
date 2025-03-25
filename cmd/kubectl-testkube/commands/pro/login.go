@@ -45,6 +45,7 @@ func NewLoginCmd() *cobra.Command {
 					req, err = http.Get(u.String())
 				}
 				ui.ExitOnError("requesting control plane info", err)
+
 				v, err := io.ReadAll(req.Body)
 				ui.ExitOnError("reading control plane info", err)
 				var result struct {
@@ -56,6 +57,10 @@ func NewLoginCmd() *cobra.Command {
 				}
 				err = json.Unmarshal(v, &result)
 				ui.ExitOnError("reading control plane info", err)
+
+				if req.StatusCode != http.StatusOK {
+					ui.Fail(fmt.Errorf("unexpected error while getting control plane info: %d: %s", req.StatusCode, string(v)))
+				}
 
 				// Try to fill the data
 				if result.RootDomain != "" {
