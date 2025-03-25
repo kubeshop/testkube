@@ -8,6 +8,7 @@ import (
 	testsuitesv3 "github.com/kubeshop/testkube-operator/api/testsuite/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
+	commonmapper "github.com/kubeshop/testkube/pkg/mapper/common"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 	testsuitesmapper "github.com/kubeshop/testkube/pkg/mapper/testsuites"
 	cronjobtcl "github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/cronjob"
@@ -24,6 +25,7 @@ func (s *Scheduler) executeTestWorkflow(ctx context.Context, testWorkflowName st
 		Executions: []*cloud.ScheduleExecution{{
 			Selector: &cloud.ScheduleResourceSelector{Name: testWorkflowName},
 			Config:   cron.Config,
+			Targets:  commonmapper.MapAllTargetsApiToGrpc(cron.Targets),
 		},
 		},
 	}

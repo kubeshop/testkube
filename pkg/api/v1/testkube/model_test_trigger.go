@@ -29,6 +29,7 @@ type TestTrigger struct {
 	Execution         *TestTriggerExecutions          `json:"execution"`
 	TestSelector      *TestTriggerSelector            `json:"testSelector"`
 	ConcurrencyPolicy *TestTriggerConcurrencyPolicies `json:"concurrencyPolicy,omitempty"`
+	Targets           []ExecutionTarget               `json:"targets,omitempty"`
 	// whether test trigger is disabled
 	Disabled bool `json:"disabled,omitempty"`
 }
