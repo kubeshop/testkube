@@ -2,6 +2,7 @@ package pro
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -34,8 +35,6 @@ func NewLoginCmd() *cobra.Command {
 				}
 				u, err := url.Parse(args[0])
 				ui.ExitOnError("invalid instance url", err)
-				u.Path, err = url.JoinPath(u.Path, "info")
-				ui.ExitOnError("invalid instance url", err)
 
 				// Call the Control Plane
 				req, err := http.Get(u.String())
@@ -60,6 +59,9 @@ func NewLoginCmd() *cobra.Command {
 
 				if req.StatusCode != http.StatusOK {
 					ui.Fail(fmt.Errorf("unexpected error while getting control plane info: %d: %s", req.StatusCode, string(v)))
+				}
+				if result.APIURL == "" && result.RootDomain == "" {
+					ui.Fail(errors.New("unexpected error while getting control plane info missing URLs"))
 				}
 
 				// Try to fill the data
