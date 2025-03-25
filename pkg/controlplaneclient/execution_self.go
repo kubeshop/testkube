@@ -115,7 +115,8 @@ func (c *client) ScheduleExecution(ctx context.Context, environmentId string, re
 	}
 	if c.opts.ExecutionID != "" {
 		request.RunningContext = &cloud.RunningContext{
-			Name: c.opts.ExecutionID,
+			Name: c.opts.WorkflowName,
+			Id:   c.opts.ExecutionID,
 			Type: cloud.RunningContextType_EXECUTION,
 		}
 		request.ParentExecutionIds = append(c.opts.ParentExecutionIDs, c.opts.ExecutionID)
