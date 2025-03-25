@@ -261,7 +261,7 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 		for _, w := range list {
 			targets := execution.Targets
 
-			if isEmptyTargets(targets) && w.Spec.Execution.Target != nil {
+			if isEmptyTargets(targets) && w.Spec.Execution != nil && w.Spec.Execution.Target != nil {
 				target := cloud.ExecutionTarget{
 					Replicate: w.Spec.Execution.Target.Replicate,
 				}
