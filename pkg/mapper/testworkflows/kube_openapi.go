@@ -10,6 +10,7 @@ import (
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	commonmapper "github.com/kubeshop/testkube/pkg/mapper/common"
 )
 
 func MapIntOrStringToString(i intstr.IntOrString) string {
@@ -484,14 +485,6 @@ func MapContentTarballKubeToAPI(v testworkflowsv1.ContentTarball) testkube.TestW
 	}
 }
 
-func MapTargetKubeToAPI(v testworkflowsv1.Target) testkube.TestWorkflowTarget {
-	return testkube.TestWorkflowTarget{
-		Match:     v.Match,
-		Not:       v.Not,
-		Replicate: v.Replicate,
-	}
-}
-
 func MapContentKubeToAPI(v testworkflowsv1.Content) testkube.TestWorkflowContent {
 	return testkube.TestWorkflowContent{
 		Git:     common.MapPtr(v.Git, MapContentGitKubeToAPI),
@@ -552,6 +545,7 @@ func MapCronJobConfigKubeToAPI(v testworkflowsv1.CronJobConfig) testkube.TestWor
 		Config:      MapConfigValueKubeToAPI(v.Config),
 		Labels:      v.Labels,
 		Annotations: v.Annotations,
+		Target:      common.MapPtr(v.Target, commonmapper.MapTargetKubeToAPI),
 	}
 }
 
@@ -1360,7 +1354,7 @@ func MapTemplateListKubeToAPI(v *testworkflowsv1.TestWorkflowTemplateList) []tes
 func MapTestWorkflowTagSchemaKubeToAPI(v testworkflowsv1.TestWorkflowTagSchema) testkube.TestWorkflowTagSchema {
 	return testkube.TestWorkflowTagSchema{
 		Tags:   v.Tags,
-		Target: common.MapPtr(v.Target, MapTargetKubeToAPI),
+		Target: common.MapPtr(v.Target, commonmapper.MapTargetKubeToAPI),
 	}
 }
 
