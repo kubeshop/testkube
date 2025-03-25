@@ -45,13 +45,15 @@ func NewCreateRunnerCommand() *cobra.Command {
 	var (
 		labelPairs     []string
 		environmentIds []string
+		global         bool
+		group          string
 	)
 	cmd := &cobra.Command{
 		Use:    "runner",
 		Args:   cobra.ExactArgs(1),
 		Hidden: !log.IsTrue("EXPERIMENTAL"),
 		Run: func(cmd *cobra.Command, args []string) {
-			agent := UiCreateAgent(cmd, "runner", args[0], labelPairs, environmentIds, false, "")
+			agent := UiCreateAgent(cmd, "runner", args[0], labelPairs, environmentIds, global, group)
 			ui.NL()
 			ui.Info("Install the agent with command:")
 			ui.ShellCommand(
@@ -62,6 +64,8 @@ func NewCreateRunnerCommand() *cobra.Command {
 
 	cmd.Flags().StringSliceVarP(&environmentIds, "env", "e", nil, "environment ID or slug that the agent have access to")
 	cmd.Flags().StringSliceVarP(&labelPairs, "label", "l", nil, "label key value pair: --label key1=value1")
+	cmd.Flags().BoolVar(&global, "global", false, "make it global runner")
+	cmd.Flags().StringVar(&group, "group", "", "make it grouped runner")
 
 	return cmd
 }
