@@ -1,6 +1,13 @@
 package pro
 
 import (
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"strings"
+
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -12,12 +19,69 @@ func NewLoginCmd() *cobra.Command {
 	var opts common.HelmOptions
 
 	cmd := &cobra.Command{
-		Use:     "login",
+		Use:     "login [apiUrl]",
 		Aliases: []string{"l"},
 		Short:   "Login to Testkube Pro",
+		Args:    cobra.MaximumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			cfg, err := config.Load()
 			ui.ExitOnError("loading config file", err)
+
+			if len(args) > 0 {
+				// Get the URL
+				if !strings.Contains(args[0], "://") {
+					args[0] = fmt.Sprintf("https://%s", args[0])
+				}
+				u, err := url.Parse(args[0])
+				ui.ExitOnError("invalid instance url", err)
+				u.Path, err = url.JoinPath(u.Path, "info")
+				ui.ExitOnError("invalid instance url", err)
+
+				// Call the Control Plane
+				req, err := http.Get(u.String())
+				if err != nil && strings.Contains(err.Error(), "response to HTTPS client") {
+					// Automatically handle http/https discovery
+					u.Scheme = "http"
+					req, err = http.Get(u.String())
+				}
+				ui.ExitOnError("requesting control plane info", err)
+				v, err := io.ReadAll(req.Body)
+				ui.ExitOnError("reading control plane info", err)
+				var result struct {
+					AuthURL    string `json:"authUrl"`
+					APIURL     string `json:"apiUrl"`
+					UIURL      string `json:"uiUrl"`
+					AgentURL   string `json:"agentUrl"`
+					RootDomain string `json:"rootDomain"`
+				}
+				err = json.Unmarshal(v, &result)
+				ui.ExitOnError("reading control plane info", err)
+
+				// Try to fill the data
+				if result.RootDomain != "" {
+					cmd.Flags().Set("root-domain", result.RootDomain)
+					if result.RootDomain != "testkube.io" {
+						cmd.Flags().Set("custom-auth", "true")
+					}
+				} else {
+					if !cmd.Flags().Changed("auth-uri-override") && result.AuthURL != "" {
+						cmd.Flags().Set("auth-uri-override", result.AuthURL)
+					}
+					if !cmd.Flags().Changed("api-uri-override") && result.APIURL != "" {
+						cmd.Flags().Set("api-uri-override", result.APIURL)
+					}
+					if !cmd.Flags().Changed("ui-uri-override") && result.UIURL != "" {
+						cmd.Flags().Set("ui-uri-override", result.UIURL)
+					}
+					if !cmd.Flags().Changed("agent-uri-override") && result.AgentURL != "" {
+						if !strings.Contains(result.AgentURL, "://") {
+							result.AgentURL = fmt.Sprintf("%s://%s", u.Scheme, result.AgentURL)
+						}
+						cmd.Flags().Set("agent-uri-override", result.AgentURL)
+					}
+					cmd.Flags().Set("custom-auth", "true")
+				}
+			}
 
 			common.ProcessMasterFlags(cmd, &opts, &cfg)
 
