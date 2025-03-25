@@ -572,6 +572,9 @@ func isEmptyTargets(targets []*cloud.ExecutionTarget) bool {
 		return true
 	}
 	for _, target := range targets {
+		if target == nil {
+			return true
+		}
 		if target.Not == nil && target.Match == nil && target.Replicate == nil {
 			return true
 		}
