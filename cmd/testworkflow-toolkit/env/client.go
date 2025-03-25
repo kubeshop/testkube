@@ -242,6 +242,7 @@ func Cloud() controlplaneclient.Client {
 	return controlplaneclient.New(grpcClient, internalProContext, controlplaneclient.ClientOptions{
 		StorageSkipVerify:  true, // FIXME?
 		ExecutionID:        cfg.Execution.Id,
+		WorkflowName:       cfg.Workflow.Name,
 		ParentExecutionIDs: strings.Split(cfg.Execution.ParentIds, "/"),
 	})
 }
