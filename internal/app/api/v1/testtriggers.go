@@ -116,10 +116,9 @@ func (s *TestkubeAPI) UpdateTestTriggerHandler() fiber.Handler {
 		testTrigger.Spec = crdTestTrigger.Spec
 		testTrigger.Labels = request.Labels
 		testTrigger.Annotations = request.Annotations
-		testTrigger, err = s.TestTriggersClient.Update(testTrigger)
 
 		s.Metrics.IncUpdateTestTrigger(err)
-
+		testTrigger, err = s.TestTriggersClient.Update(testTrigger)
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not update test trigger: %w", errPrefix, err))
 		}

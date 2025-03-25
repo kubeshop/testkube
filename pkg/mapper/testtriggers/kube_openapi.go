@@ -4,7 +4,9 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testsv1 "github.com/kubeshop/testkube-operator/api/testtriggers/v1"
+	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	commonmapper "github.com/kubeshop/testkube/pkg/mapper/common"
 )
 
 // MapTestTriggerListKubeToAPI maps TestTriggerList CRD to list of OpenAPI spec TestTrigger
@@ -54,6 +56,7 @@ func MapCRDToAPI(crd *testsv1.TestTrigger) testkube.TestTrigger {
 		TestSelector:      mapSelectorFromCRD(crd.Spec.TestSelector),
 		ConcurrencyPolicy: concurrencyPolicy,
 		Disabled:          crd.Spec.Disabled,
+		Target:            common.MapPtr(crd.Spec.Target, commonmapper.MapTargetKubeToAPI),
 	}
 }
 
@@ -157,6 +160,7 @@ func MapTestTriggerCRDToTestTriggerUpsertRequest(request testsv1.TestTrigger) te
 		TestSelector:      mapSelectorFromCRD(request.Spec.TestSelector),
 		ConcurrencyPolicy: concurrencyPolicy,
 		Disabled:          request.Spec.Disabled,
+		Target:            common.MapPtr(request.Spec.Target, commonmapper.MapTargetKubeToAPI),
 	}
 }
 

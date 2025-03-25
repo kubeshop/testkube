@@ -8020,6 +8020,8 @@ components:
           $ref: "#/components/schemas/TestTriggerSelector"
         concurrencyPolicy:
           $ref: "#/components/schemas/TestTriggerConcurrencyPolicies"
+        target:
+          $ref: "#/components/schemas/ExecutionTarget"
         disabled:
           type: boolean
           description: whether test trigger is disabled
@@ -8716,6 +8718,8 @@ components:
             - false
         tags:
           $ref: "#/components/schemas/TestWorkflowTagValue"
+        target:
+          $ref: "#/components/schemas/ExecutionTarget"
         runningContext:
           description: running context for the test workflow execution (Pro edition only)
           $ref: "#/components/schemas/TestWorkflowRunningContext"
@@ -10268,6 +10272,8 @@ components:
             type: string
         config:
           $ref: "#/components/schemas/TestWorkflowConfigValue"
+        target:
+          $ref: "#/components/schemas/ExecutionTarget"
 
     TestWorkflowExecutionCR:
       type: object
@@ -10308,7 +10314,7 @@ components:
         tags:
           $ref: "#/components/schemas/TestWorkflowTagValue"
         target:
-          $ref: "#/components/schemas/TestWorkflowTarget"
+          $ref: "#/components/schemas/ExecutionTarget"
 
     TestWorkflowExecutionTags:
       type: object
