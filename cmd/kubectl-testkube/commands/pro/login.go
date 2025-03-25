@@ -16,6 +16,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
+type CloudConfig struct {
+	AuthURL    string `json:"authUrl"`
+	APIURL     string `json:"apiUrl"`
+	UIURL      string `json:"uiUrl"`
+	AgentURL   string `json:"agentUrl"`
+	RootDomain string `json:"rootDomain"`
+}
+
 func NewLoginCmd() *cobra.Command {
 	var opts common.HelmOptions
 
@@ -47,14 +55,18 @@ func NewLoginCmd() *cobra.Command {
 
 				v, err := io.ReadAll(req.Body)
 				ui.ExitOnError("reading control plane info", err)
-				var result struct {
-					AuthURL    string `json:"authUrl"`
-					APIURL     string `json:"apiUrl"`
-					UIURL      string `json:"uiUrl"`
-					AgentURL   string `json:"agentUrl"`
-					RootDomain string `json:"rootDomain"`
-				}
+				var result CloudConfig
 				err = json.Unmarshal(v, &result)
+
+				// Try with "api." prefix if direct failed
+				if err != nil {
+					u.Host = fmt.Sprintf("api.%s", u.Host)
+					req, err = http.Get(u.String())
+					ui.ExitOnError("requesting control plane info", err)
+					v, err = io.ReadAll(req.Body)
+					ui.ExitOnError("reading control plane info", err)
+					err = json.Unmarshal(v, &result)
+				}
 				ui.ExitOnError("reading control plane info", err)
 
 				if req.StatusCode != http.StatusOK {
