@@ -97,13 +97,13 @@ build-testkube-bin-intel:
 		cmd/kubectl-testkube/main.go
 
 docker-build-api:
-	env SLACK_BOT_CLIENT_ID=** SLACK_BOT_CLIENT_SECRET=** ANALYTICS_TRACKING_ID=** ANALYTICS_API_KEY=** SEGMENTIO_KEY=** CLOUD_SEGMENTIO_KEY=** DOCKER_BUILDX_CACHE_FROM=type=registry,ref=docker.io/kubeshop/testkube-api-server:latest ALPINE_IMAGE=alpine:3.21.3 goreleaser release -f goreleaser_files/.goreleaser-docker-build-api.yml --rm-dist --snapshot
+	env SLACK_BOT_CLIENT_ID=** SLACK_BOT_CLIENT_SECRET=** ANALYTICS_TRACKING_ID=** ANALYTICS_API_KEY=** SEGMENTIO_KEY=** CLOUD_SEGMENTIO_KEY=** DOCKER_BUILDX_CACHE_FROM=type=registry,ref=docker.io/kubeshop/testkube-api-server:latest ALPINE_IMAGE=alpine:3.20.3 goreleaser release -f goreleaser_files/.goreleaser-docker-build-api.yml --rm-dist --snapshot
 
 docker-build-cli:
-	env SLACK_BOT_CLIENT_ID=** SLACK_BOT_CLIENT_SECRET=** ANALYTICS_TRACKING_ID=** ANALYTICS_API_KEY=** SEGMENTIO_KEY=** CLOUD_SEGMENTIO_KEY=** DOCKER_BUILDX_CACHE_FROM=type=registry,ref=docker.io/kubeshop/testkube-cli:latest ALPINE_IMAGE=alpine:3.21.3 goreleaser release -f .builds-linux.goreleaser.yml --rm-dist --snapshot
+	env SLACK_BOT_CLIENT_ID=** SLACK_BOT_CLIENT_SECRET=** ANALYTICS_TRACKING_ID=** ANALYTICS_API_KEY=** SEGMENTIO_KEY=** CLOUD_SEGMENTIO_KEY=** DOCKER_BUILDX_CACHE_FROM=type=registry,ref=docker.io/kubeshop/testkube-cli:latest ALPINE_IMAGE=alpine:3.20.3 goreleaser release -f .builds-linux.goreleaser.yml --rm-dist --snapshot
 
 #make docker-build-executor EXECUTOR=zap GITHUB_TOKEN=*** DOCKER_BUILDX_CACHE_FROM=type=registry,ref=docker.io/kubeshop/testkube-zap-executor:latest
-#add ALPINE_IMAGE=alpine:3.21.3 env var for building of curl and scraper executor
+#add ALPINE_IMAGE=alpine:3.20.3 env var for building of curl and scraper executor
 docker-build-executor:
 	goreleaser release -f goreleaser_files/.goreleaser-docker-build-executor.yml --clean --snapshot
 
