@@ -43,6 +43,8 @@ func NewLoginCmd() *cobra.Command {
 				}
 				u, err := url.Parse(args[0])
 				ui.ExitOnError("invalid instance url", err)
+				u.Path, err = url.JoinPath(u.Path, "public-info")
+				ui.ExitOnError("invalid instance url", err)
 
 				// Call the Control Plane
 				req, err := http.Get(u.String())
