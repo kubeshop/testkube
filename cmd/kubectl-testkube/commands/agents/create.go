@@ -170,8 +170,7 @@ func UiCreateAgent(cmd *cobra.Command, agentType string, name string, labelPairs
 		}
 		if !env.NewArchitecture {
 			ui.Warn(fmt.Sprintf("Environment '%s' (%s) does not support new architecture.", env.Name, env.Id))
-			should := ui.Select("do you want to enable it?", []string{"yes", "no"})
-			if should == "" || should == "no" {
+			if !ui.Confirm("do you want to enable it?") {
 				os.Exit(1)
 			}
 			err := EnableNewArchitecture(cmd, env)
