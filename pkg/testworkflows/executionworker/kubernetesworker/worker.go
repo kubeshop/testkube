@@ -68,6 +68,7 @@ func NewWorker(clientSet kubernetes.Interface, processor testworkflowprocessor.P
 			ImageInspectorPersistenceCacheTTL: config.ImageInspector.CacheTTL,
 			Connection:                        config.Connection,
 			FeatureFlags:                      config.FeatureFlags,
+			CommonEnvVariables:                config.CommonEnvVariables,
 		},
 	}
 }
@@ -134,7 +135,12 @@ func (w *worker) Execute(ctx context.Context, request executionworkertypes.Execu
 	}
 
 	// Process the Test Workflow
-	bundle, err := w.processor.Bundle(ctx, &request.Workflow, testworkflowprocessor.BundleOptions{Config: cfg, Secrets: secrets, ScheduledAt: scheduledAt})
+	bundle, err := w.processor.Bundle(ctx, &request.Workflow, testworkflowprocessor.BundleOptions{
+		Config:             cfg,
+		Secrets:            secrets,
+		ScheduledAt:        scheduledAt,
+		CommonEnvVariables: w.baseWorkerConfig.CommonEnvVariables,
+	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to process test workflow")
 	}
@@ -186,7 +192,12 @@ func (w *worker) Service(ctx context.Context, request executionworkertypes.Servi
 	}
 
 	// Process the Test Workflow
-	bundle, err := w.processor.Bundle(ctx, &request.Workflow, testworkflowprocessor.BundleOptions{Config: cfg, Secrets: secrets, ScheduledAt: scheduledAt})
+	bundle, err := w.processor.Bundle(ctx, &request.Workflow, testworkflowprocessor.BundleOptions{
+		Config:             cfg,
+		Secrets:            secrets,
+		ScheduledAt:        scheduledAt,
+		CommonEnvVariables: w.baseWorkerConfig.CommonEnvVariables,
+	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to process test workflow")
 	}

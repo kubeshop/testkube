@@ -3,6 +3,7 @@ package services
 import (
 	"fmt"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/kubeshop/testkube/internal/config"
@@ -21,6 +22,7 @@ func CreateExecutionWorker(
 	serviceAccountNames map[string]string,
 	processor testworkflowprocessor.Processor,
 	featureFlags map[string]string,
+	commonEnvVariables []corev1.EnvVar,
 ) executionworkertypes.Worker {
 	namespacesConfig := map[string]kubernetesworker.NamespaceConfig{}
 	for n, s := range serviceAccountNames {
@@ -48,7 +50,8 @@ func CreateExecutionWorker(
 			// TODO: Prepare ControlPlane interface for OSS, so we may unify the communication
 			LocalApiUrl: fmt.Sprintf("http://%s:%d", cfg.APIServerFullname, cfg.APIServerPort),
 		},
-		FeatureFlags: featureFlags,
-		RunnerId:     runnerId,
+		FeatureFlags:       featureFlags,
+		RunnerId:           runnerId,
+		CommonEnvVariables: commonEnvVariables,
 	})
 }
