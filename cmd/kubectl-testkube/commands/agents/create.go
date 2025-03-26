@@ -142,14 +142,21 @@ func UiCreateAgent(cmd *cobra.Command, agentType string, name string, labelPairs
 		(*input.Labels)[k] = v
 	}
 
+	envs, err := GetControlPlaneEnvironments(cmd)
+	ui.ExitOnError("getting environments", err)
+
 	if len(input.Environments) == 0 {
 		cfg, err := config.Load()
 		ui.ExitOnError("loading config", err)
-		input.Environments = []string{cfg.CloudContext.EnvironmentId}
+		envOpts := []string{envs[cfg.CloudContext.EnvironmentId].Slug}
+		for id := range envs {
+			if id != cfg.CloudContext.EnvironmentId {
+				envOpts = append(envOpts, id)
+			}
+		}
+		input.Environments = []string{ui.Select("select environment", envOpts)}
 	}
 
-	envs, err := GetControlPlaneEnvironments(cmd)
-	ui.ExitOnError("getting environments", err)
 	for i, envId := range input.Environments {
 		_, ok := envs[envId]
 		if !ok {
@@ -170,8 +177,7 @@ func UiCreateAgent(cmd *cobra.Command, agentType string, name string, labelPairs
 		}
 		if !env.NewArchitecture {
 			ui.Warn(fmt.Sprintf("Environment '%s' (%s) does not support new architecture.", env.Name, env.Id))
-			should := ui.Select("do you want to enable it?", []string{"yes", "no"})
-			if should == "" || should == "no" {
+			if !ui.Confirm("do you want to enable it?") {
 				os.Exit(1)
 			}
 			err := EnableNewArchitecture(cmd, env)

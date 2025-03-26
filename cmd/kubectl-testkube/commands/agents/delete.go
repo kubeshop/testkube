@@ -24,18 +24,10 @@ func NewDeleteAgentCommand() *cobra.Command {
 		Hidden:  !log.IsTrue("EXPERIMENTAL"),
 		Run: func(cmd *cobra.Command, args []string) {
 			if !uninstall && !noUninstall {
-				should := ui.Select("should it uninstall agent?", []string{"yes", "no"})
-				if should == "" {
-					ui.Failf("you need to decide whether it should uninstall or not")
-				}
-				uninstall = should == "yes"
+				uninstall = ui.Confirm("should it uninstall agent?")
 			}
 			if !deleteAgent && !noDeleteAgent {
-				should := ui.Select("should it delete agent in the Control Plane?", []string{"yes", "no"})
-				if should == "" {
-					ui.Failf("you need to decide whether it should delete agent or not")
-				}
-				deleteAgent = should == "yes"
+				deleteAgent = ui.Confirm("should it delete agent in the Control Plane?")
 			}
 			UiDeleteAgent(cmd, args[0], uninstall, deleteAgent)
 		},
@@ -58,7 +50,7 @@ func NewDeleteCRDCommand() *cobra.Command {
 		Args:   cobra.MaximumNArgs(0),
 		Hidden: !log.IsTrue("EXPERIMENTAL"),
 		Run: func(cmd *cobra.Command, args []string) {
-			if !confirm && ui.Select("should it uninstall CRDs?", []string{"yes", "no"}) != "yes" {
+			if !confirm && !ui.Confirm("should it uninstall CRDs?") {
 				os.Exit(1)
 			}
 
