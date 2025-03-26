@@ -17,6 +17,7 @@ func CreateExecutionWorker(
 	clientSet kubernetes.Interface,
 	cfg *config.Config,
 	clusterId string,
+	runnerId string,
 	serviceAccountNames map[string]string,
 	processor testworkflowprocessor.Processor,
 	featureFlags map[string]string,
@@ -48,5 +49,6 @@ func CreateExecutionWorker(
 			LocalApiUrl: fmt.Sprintf("http://%s:%d", cfg.APIServerFullname, cfg.APIServerPort),
 		},
 		FeatureFlags: featureFlags,
+		RunnerId:     runnerId,
 	})
 }

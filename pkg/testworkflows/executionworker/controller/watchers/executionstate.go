@@ -43,6 +43,7 @@ type ExecutionState interface {
 	Namespace() string
 	ResourceId() string
 	RootResourceId() string
+	RunnerId() string
 	PodName() string
 	PodNodeName() string
 	PodIP() string
@@ -230,6 +231,16 @@ func (e *executionState) RootResourceId() string {
 	// Fallback computing that from the pod name
 	if e.PodName() != "" {
 		return e.PodName()[0:strings.Index(e.PodName(), "-")]
+	}
+	return ""
+}
+
+func (e *executionState) RunnerId() string {
+	if e.job != nil && e.job.RunnerId() != "" {
+		return e.job.RunnerId()
+	}
+	if e.pod != nil && e.pod.RunnerId() != "" {
+		return e.pod.RunnerId()
 	}
 	return ""
 }

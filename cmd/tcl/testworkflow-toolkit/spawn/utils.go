@@ -74,6 +74,7 @@ func ExecutionWorker() executionworkertypes.Worker {
 			},
 			Connection:   cfg.Worker.Connection,
 			FeatureFlags: cfg.Worker.FeatureFlags,
+			RunnerId:     cfg.Worker.RunnerID,
 		})
 	}
 	return executionWorker

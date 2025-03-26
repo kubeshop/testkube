@@ -74,6 +74,7 @@ type WorkerConfig struct {
 	DefaultRegistry       string `json:"R,omitempty"` // TODO: think if that shouldn't be Control Plane setup
 	DefaultServiceAccount string `json:"s,omitempty"`
 	ClusterID             string `json:"c,omitempty"`
+	RunnerID              string `json:"r,omitempty"`
 
 	InitImage                         string        `json:"i,omitempty"`
 	ToolkitImage                      string        `json:"t,omitempty"`

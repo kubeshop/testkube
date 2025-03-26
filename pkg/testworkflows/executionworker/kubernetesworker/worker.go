@@ -54,12 +54,13 @@ func NewWorker(clientSet kubernetes.Interface, processor testworkflowprocessor.P
 		clientSet: clientSet,
 		processor: processor,
 		config:    config,
-		registry:  registry.NewControllersRegistry(clientSet, namespaces, 50),
+		registry:  registry.NewControllersRegistry(clientSet, namespaces, config.RunnerId, 50),
 		baseWorkerConfig: testworkflowconfig.WorkerConfig{
 			Namespace:                         config.Cluster.DefaultNamespace,
 			DefaultRegistry:                   config.Cluster.DefaultRegistry,
 			DefaultServiceAccount:             config.Cluster.Namespaces[config.Cluster.DefaultNamespace].DefaultServiceAccountName,
 			ClusterID:                         config.Cluster.Id,
+			RunnerID:                          config.RunnerId,
 			InitImage:                         constants.DefaultInitImage,
 			ToolkitImage:                      constants.DefaultToolkitImage,
 			ImageInspectorPersistenceEnabled:  config.ImageInspector.CacheEnabled,
@@ -141,6 +142,11 @@ func (w *worker) Execute(ctx context.Context, request executionworkertypes.Execu
 	// Annotate the group ID
 	if request.GroupId != "" {
 		bundle.SetGroupId(request.GroupId)
+	}
+
+	// Annotate the runner ID
+	if w.config.RunnerId != "" {
+		bundle.SetRunnerId(w.config.RunnerId)
 	}
 
 	// Register namespace information in the cache
