@@ -226,7 +226,7 @@ func main() {
 	if mode == common.ModeAgent {
 		testWorkflowProcessor = presets.NewPro(inspector)
 	}
-	executionWorker := services.CreateExecutionWorker(clientset, cfg, clusterId, serviceAccountNames, testWorkflowProcessor, map[string]string{
+	executionWorker := services.CreateExecutionWorker(clientset, cfg, clusterId, proContext.Agent.ID, serviceAccountNames, testWorkflowProcessor, map[string]string{
 		testworkflowconfig.FeatureFlagNewArchitecture: fmt.Sprintf("%v", cfg.FeatureNewArchitecture),
 		testworkflowconfig.FeatureFlagCloudStorage:    fmt.Sprintf("%v", cfg.FeatureCloudStorage),
 	})

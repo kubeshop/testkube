@@ -19,6 +19,7 @@ import (
 var (
 	ErrJobAborted             = errors.New("job was aborted")
 	ErrJobTimeout             = errors.New("timeout retrieving job")
+	ErrJobDifferentRunner     = errors.New("job is assigned to a different runner")
 	ErrNoIPAssigned           = errors.New("there is no IP assigned to this pod")
 	ErrNoNodeAssigned         = errors.New("the pod is not assigned to a node yet")
 	ErrMissingEstimatedResult = errors.New("could not estimate the result")
@@ -26,6 +27,7 @@ var (
 
 type ControllerOptions struct {
 	Signature []stage.Signature
+	RunnerId  string
 }
 
 type LightweightNotification struct {
@@ -59,9 +61,13 @@ type Controller interface {
 
 func New(parentCtx context.Context, clientSet kubernetes.Interface, namespace, id string, scheduledAt time.Time, opts ...ControllerOptions) (Controller, error) {
 	var signature []stage.Signature
+	var expectedRunnerId string
 	for _, opt := range opts {
 		if opt.Signature != nil {
 			signature = opt.Signature
+		}
+		if opt.RunnerId != "" {
+			expectedRunnerId = opt.RunnerId
 		}
 	}
 
@@ -87,6 +93,12 @@ func New(parentCtx context.Context, clientSet kubernetes.Interface, namespace, i
 
 		// We cannot find any resources related to this execution
 		return nil, ErrJobTimeout
+	}
+
+	// Ensure it's not using the resource that is isolated for a different runner
+	if watcher.State().RunnerId() != "" && watcher.State().RunnerId() != expectedRunnerId {
+		ctxCancel()
+		return nil, ErrJobDifferentRunner
 	}
 
 	// Obtain the signature

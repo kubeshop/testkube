@@ -22,6 +22,7 @@ type Job interface {
 	Namespace() string
 	ResourceId() string
 	RootResourceId() string
+	RunnerId() string
 	CreationTimestamp() time.Time
 	FinishTimestamp() time.Time
 	Finished() bool
@@ -54,6 +55,10 @@ func (j *job) ResourceId() string {
 
 func (j *job) RootResourceId() string {
 	return j.original.Spec.Template.Labels[constants.RootResourceIdLabelName]
+}
+
+func (j *job) RunnerId() string {
+	return j.original.Spec.Template.Labels[constants.RunnerIdLabelName]
 }
 
 func (j *job) CreationTimestamp() time.Time {

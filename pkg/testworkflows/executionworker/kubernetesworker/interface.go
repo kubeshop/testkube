@@ -28,4 +28,5 @@ type Config struct {
 	ImageInspector ImageInspectorConfig
 	Connection     testworkflowconfig.WorkerConnectionConfig
 	FeatureFlags   map[string]string
+	RunnerId       string
 }

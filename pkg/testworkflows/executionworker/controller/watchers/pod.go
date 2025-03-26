@@ -23,6 +23,7 @@ type Pod interface {
 	Namespace() string
 	ResourceId() string
 	RootResourceId() string
+	RunnerId() string
 	NodeName() string
 	IP() string
 	CreationTimestamp() time.Time
@@ -66,6 +67,10 @@ func (p *pod) ResourceId() string {
 
 func (p *pod) RootResourceId() string {
 	return p.original.Labels[constants.RootResourceIdLabelName]
+}
+
+func (p *pod) RunnerId() string {
+	return p.original.Labels[constants.RunnerIdLabelName]
 }
 
 func (p *pod) NodeName() string {

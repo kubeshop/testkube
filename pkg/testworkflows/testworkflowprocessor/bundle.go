@@ -56,6 +56,19 @@ func (b *Bundle) SetGroupId(groupId string) {
 	}
 }
 
+func (b *Bundle) SetRunnerId(runnerId string) {
+	AnnotateRunnerId(&b.Job, runnerId)
+	for i := range b.ConfigMaps {
+		AnnotateRunnerId(&b.ConfigMaps[i], runnerId)
+	}
+	for i := range b.Secrets {
+		AnnotateRunnerId(&b.Secrets[i], runnerId)
+	}
+	for i := range b.Pvcs {
+		AnnotateRunnerId(&b.Pvcs[i], runnerId)
+	}
+}
+
 func (b *Bundle) Deploy(ctx context.Context, clientSet kubernetes.Interface, namespace string) (err error) {
 	if b.Job.Namespace != "" {
 		namespace = b.Job.Namespace
