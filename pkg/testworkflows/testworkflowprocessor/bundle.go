@@ -19,9 +19,10 @@ import (
 )
 
 type BundleOptions struct {
-	Secrets     []corev1.Secret
-	Config      testworkflowconfig.InternalConfig
-	ScheduledAt time.Time
+	Secrets            []corev1.Secret
+	Config             testworkflowconfig.InternalConfig
+	ScheduledAt        time.Time
+	CommonEnvVariables []corev1.EnvVar
 }
 
 type Bundle struct {

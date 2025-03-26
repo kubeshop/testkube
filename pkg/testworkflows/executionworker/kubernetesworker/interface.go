@@ -3,6 +3,8 @@ package kubernetesworker
 import (
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
+
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 )
 
@@ -24,9 +26,10 @@ type ImageInspectorConfig struct {
 }
 
 type Config struct {
-	Cluster        ClusterConfig
-	ImageInspector ImageInspectorConfig
-	Connection     testworkflowconfig.WorkerConnectionConfig
-	FeatureFlags   map[string]string
-	RunnerId       string
+	Cluster            ClusterConfig
+	ImageInspector     ImageInspectorConfig
+	Connection         testworkflowconfig.WorkerConnectionConfig
+	FeatureFlags       map[string]string
+	RunnerId           string
+	CommonEnvVariables []corev1.EnvVar
 }

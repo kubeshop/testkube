@@ -1,6 +1,10 @@
 package testworkflowconfig
 
-import "time"
+import (
+	"time"
+
+	corev1 "k8s.io/api/core/v1"
+)
 
 const (
 	FeatureFlagNewArchitecture = "exec"
@@ -82,8 +86,9 @@ type WorkerConfig struct {
 	ImageInspectorPersistenceCacheKey string        `json:"P,omitempty"`
 	ImageInspectorPersistenceCacheTTL time.Duration `json:"T,omitempty"`
 
-	Connection   WorkerConnectionConfig `json:"C,omitempty"`
-	FeatureFlags map[string]string      `json:"f,omitempty"`
+	Connection         WorkerConnectionConfig `json:"C,omitempty"`
+	FeatureFlags       map[string]string      `json:"f,omitempty"`
+	CommonEnvVariables []corev1.EnvVar        `json:"e,omitempty"`
 }
 
 type WorkerConnectionConfig struct {
