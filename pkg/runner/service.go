@@ -92,7 +92,7 @@ func (s *service) recover(ctx context.Context) (err error) {
 			if err == nil {
 				return
 			}
-			if !errors.Is(err, registry.ErrResourceNotFound) {
+			if !errors.Is(err, registry.ErrResourceNotFound) && !errors.Is(err, controller.ErrJobAborted) {
 				s.logger.Errorw("failed to monitor execution", "id", executionId, "error", err)
 				return
 			}
