@@ -165,6 +165,8 @@ func ProcessServicesStart(_ testworkflowprocessor.InternalProcessor, layer testw
 			svc.Pod.ImagePullSecrets = append(svc.Pod.ImagePullSecrets, pod.ImagePullSecrets...)
 			services[name] = svc
 		}
+	} else {
+		services = step.Services
 	}
 
 	// Build arguments
