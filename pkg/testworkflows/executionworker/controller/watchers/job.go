@@ -120,7 +120,8 @@ func (j *job) Debug() string {
 	if j.original.Status.Terminating != nil {
 		state += fmt.Sprintf(", terminating: %d", *j.original.Status.Terminating)
 	}
-	if j.original.Status.UncountedTerminatedPods != nil {
+	if j.original.Status.UncountedTerminatedPods != nil &&
+		(len(j.original.Status.UncountedTerminatedPods.Failed) > 0 || len(j.original.Status.UncountedTerminatedPods.Succeeded) > 0) {
 		state += fmt.Sprintf(", uncounted terminated pods: (failed) %d (succeeded) %d",
 			len(j.original.Status.UncountedTerminatedPods.Failed),
 			len(j.original.Status.UncountedTerminatedPods.Succeeded))
