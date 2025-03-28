@@ -11,6 +11,7 @@ import (
 	initconstants "github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller/watchers"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
@@ -44,7 +45,7 @@ type Controller interface {
 	Pause(ctx context.Context) error
 	Resume(ctx context.Context) error
 	Cleanup(ctx context.Context) error
-	Watch(ctx context.Context, disableFollow bool) <-chan ChannelMessage[Notification]
+	Watch(ctx context.Context, disableFollow, logAbortedDetails bool) <-chan ChannelMessage[Notification]
 	WatchLightweight(ctx context.Context) <-chan LightweightNotification
 	Logs(ctx context.Context, follow bool) io.Reader
 	NodeName() (string, error)
@@ -88,6 +89,7 @@ func New(parentCtx context.Context, clientSet kubernetes.Interface, namespace, i
 
 		// There was a job or pod for this execution, so we may only assume it is aborted
 		if !watcher.State().JobEvents().FirstTimestamp().IsZero() || !watcher.State().PodEvents().FirstTimestamp().IsZero() {
+			log.DefaultLogger.Errorw("connecting to aborted execution", "executionId", watcher.State().ResourceId(), "debug", watcher.State().Debug())
 			return nil, ErrJobAborted
 		}
 
@@ -226,9 +228,10 @@ func (c *controller) EstimatedResult(parentCtx context.Context) (*testkube.TestW
 	return nil, ErrMissingEstimatedResult
 }
 
-func (c *controller) Watch(parentCtx context.Context, disableFollow bool) <-chan ChannelMessage[Notification] {
+func (c *controller) Watch(parentCtx context.Context, disableFollow bool, logAbortedDetails bool) <-chan ChannelMessage[Notification] {
 	ch, err := WatchInstrumentedPod(parentCtx, c.clientSet, c.signature, c.scheduledAt, c.watcher, WatchInstrumentedPodOptions{
-		DisableFollow: disableFollow,
+		DisableFollow:     disableFollow,
+		LogAbortedDetails: logAbortedDetails,
 	})
 	if err != nil {
 		v := make(chan ChannelMessage[Notification], 1)
@@ -249,7 +252,7 @@ func (c *controller) WatchLightweight(parentCtx context.Context) <-chan Lightwei
 	ch := make(chan LightweightNotification)
 	go func() {
 		defer close(ch)
-		for v := range c.Watch(parentCtx, false) {
+		for v := range c.Watch(parentCtx, false, false) {
 			if v.Error != nil {
 				ch <- LightweightNotification{Error: v.Error}
 				continue

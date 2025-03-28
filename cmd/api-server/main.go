@@ -239,7 +239,7 @@ func main() {
 	executionWorker := services.CreateExecutionWorker(clientset, cfg, clusterId, proContext.Agent.ID, serviceAccountNames, testWorkflowProcessor, map[string]string{
 		testworkflowconfig.FeatureFlagNewArchitecture: fmt.Sprintf("%v", cfg.FeatureNewArchitecture),
 		testworkflowconfig.FeatureFlagCloudStorage:    fmt.Sprintf("%v", cfg.FeatureCloudStorage),
-	}, commonEnvVariables)
+	}, commonEnvVariables, true)
 
 	runnerOpts := runner2.Options{
 		ClusterID:           clusterId,

@@ -23,6 +23,7 @@ func CreateExecutionWorker(
 	processor testworkflowprocessor.Processor,
 	featureFlags map[string]string,
 	commonEnvVariables []corev1.EnvVar,
+	logAbortedDetails bool,
 ) executionworkertypes.Worker {
 	namespacesConfig := map[string]kubernetesworker.NamespaceConfig{}
 	for n, s := range serviceAccountNames {
@@ -53,5 +54,6 @@ func CreateExecutionWorker(
 		FeatureFlags:       featureFlags,
 		RunnerId:           runnerId,
 		CommonEnvVariables: commonEnvVariables,
+		LogAbortedDetails:  logAbortedDetails,
 	})
 }

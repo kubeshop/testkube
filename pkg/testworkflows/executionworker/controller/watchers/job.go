@@ -2,6 +2,7 @@ package watchers
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 
 	batchv1 "k8s.io/api/batch/v1"
@@ -31,6 +32,7 @@ type Job interface {
 	InternalConfig() (testworkflowconfig.InternalConfig, error)
 	ScheduledAt() (time.Time, error)
 	ExecutionError() string
+	Debug() string
 }
 
 func NewJob(original *batchv1.Job) Job {
@@ -96,4 +98,48 @@ func (j *job) ScheduledAt() (time.Time, error) {
 
 func (j *job) ExecutionError() string {
 	return GetJobError(j.original)
+}
+
+func (j *job) Debug() string {
+	if j.original == nil {
+		return "unknown"
+	}
+	state := "found"
+	if j.original.Status.Active > 0 {
+		state += fmt.Sprintf(", active: %d", j.original.Status.Active)
+	}
+	if j.original.Status.Failed > 0 {
+		state += fmt.Sprintf(", failed: %d", j.original.Status.Failed)
+	}
+	if j.original.Status.Succeeded > 0 {
+		state += fmt.Sprintf(", succeeded: %d", j.original.Status.Succeeded)
+	}
+	if j.original.Status.Ready != nil {
+		state += fmt.Sprintf(", ready: %d", *j.original.Status.Ready)
+	}
+	if j.original.Status.Terminating != nil {
+		state += fmt.Sprintf(", terminating: %d", *j.original.Status.Terminating)
+	}
+	if j.original.Status.UncountedTerminatedPods != nil &&
+		(len(j.original.Status.UncountedTerminatedPods.Failed) > 0 || len(j.original.Status.UncountedTerminatedPods.Succeeded) > 0) {
+		state += fmt.Sprintf(", uncounted terminated pods: (failed) %d (succeeded) %d",
+			len(j.original.Status.UncountedTerminatedPods.Failed),
+			len(j.original.Status.UncountedTerminatedPods.Succeeded))
+	}
+	if j.original.Status.StartTime != nil {
+		state += ", started"
+	}
+	if j.original.DeletionTimestamp != nil {
+		state += ", deleted"
+	}
+	if j.original.Status.CompletionTime != nil {
+		state += ", completed"
+	}
+	for i := range j.original.Status.Conditions {
+		state += fmt.Sprintf(", %s='%s'", j.original.Status.Conditions[i].Type, j.original.Status.Conditions[i].Status)
+	}
+	if j.original.Spec.TTLSecondsAfterFinished != nil {
+		state += fmt.Sprintf(", ttl after: %ds", *j.original.Spec.TTLSecondsAfterFinished)
+	}
+	return state
 }

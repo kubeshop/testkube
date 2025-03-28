@@ -76,6 +76,7 @@ func ExecutionWorker() executionworkertypes.Worker {
 			FeatureFlags:       cfg.Worker.FeatureFlags,
 			RunnerId:           cfg.Worker.RunnerID,
 			CommonEnvVariables: cfg.Worker.CommonEnvVariables,
+			LogAbortedDetails:  config.Debug(),
 		})
 	}
 	return executionWorker
