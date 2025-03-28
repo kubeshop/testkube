@@ -21,7 +21,8 @@ const (
 )
 
 type WatchInstrumentedPodOptions struct {
-	DisableFollow bool
+	DisableFollow     bool
+	LogAbortedDetails bool
 }
 
 func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interface, signature []stage.Signature, scheduledAt time.Time, watcher watchers2.ExecutionWatcher, opts WatchInstrumentedPodOptions) (<-chan ChannelMessage[Notification], error) {
@@ -42,7 +43,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 			ctxCancel()
 			close(notifier.ch)
 
-			if notifier.result.IsAborted() {
+			if opts.LogAbortedDetails && notifier.result.IsAborted() {
 				log.DefaultLogger.Warnw("execution (watch) detected as aborted", "executionId", watcher.State().ResourceId(), "debug", watcher.State().Debug())
 			}
 		}()

@@ -252,7 +252,7 @@ func (w *worker) Notifications(ctx context.Context, id string, opts executionwor
 
 	// Watch the resource
 	watchCtx, watchCtxCancel := context.WithCancel(ctx)
-	ch := ctrl.Watch(watchCtx, opts.NoFollow)
+	ch := ctrl.Watch(watchCtx, opts.NoFollow, w.config.LogAbortedDetails)
 	go func() {
 		defer func() {
 			watchCtxCancel()
@@ -288,7 +288,7 @@ func (w *worker) StatusNotifications(ctx context.Context, id string, opts execut
 	// Watch the resource
 	watchCtx, watchCtxCancel := context.WithCancel(ctx)
 	sig := stage.MapSignatureListToInternal(ctrl.Signature())
-	ch := ctrl.Watch(watchCtx, opts.NoFollow)
+	ch := ctrl.Watch(watchCtx, opts.NoFollow, w.config.LogAbortedDetails)
 	go func() {
 		defer func() {
 			watchCtxCancel()

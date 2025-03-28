@@ -32,4 +32,5 @@ type Config struct {
 	FeatureFlags       map[string]string
 	RunnerId           string
 	CommonEnvVariables []corev1.EnvVar
+	LogAbortedDetails  bool
 }
