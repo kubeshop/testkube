@@ -1,6 +1,7 @@
 package watchers
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -27,6 +28,7 @@ type JobEvents interface {
 	Error() bool
 	ErrorReason() string
 	ErrorMessage() string
+	Debug() string
 }
 
 func NewJobEvents(events []*corev1.Event) JobEvents {
@@ -166,4 +168,14 @@ func (j *jobEvents) ErrorMessage() string {
 		}
 	}
 	return ""
+}
+
+func (j *jobEvents) Debug() string {
+	firstTs := j.FirstTimestamp()
+	result := make([]string, len(j.events))
+	for i := range j.events {
+		result[i] = fmt.Sprintf("[%.1fs] %s: %s", float64(GetEventTimestamp(j.events[i]).Sub(firstTs))/float64(time.Second), j.events[i].Reason, j.events[i].Message)
+	}
+
+	return strings.Join(result, ", ")
 }

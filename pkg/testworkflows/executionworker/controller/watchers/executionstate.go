@@ -61,6 +61,7 @@ type ExecutionState interface {
 	ExecutionError() string
 	JobExecutionError() string
 	PodExecutionError() string
+	Debug() map[string]string
 
 	PodCreationTimestamp() time.Time
 	EstimatedPodCreationTimestamp() time.Time
@@ -442,4 +443,26 @@ func (e *executionState) ExecutionError() string {
 		return jobErr
 	}
 	return podErr
+}
+
+func (e *executionState) Debug() map[string]string {
+	result := map[string]string{
+		"pod":       "unknown",
+		"job":       "unknown",
+		"podEvents": "unknown",
+		"jobEvents": "unknown",
+	}
+	if e.pod != nil {
+		result["pod"] = e.pod.Debug()
+	}
+	if e.job != nil {
+		result["job"] = e.job.Debug()
+	}
+	if e.podEvents != nil {
+		result["podEvents"] = e.podEvents.Debug()
+	}
+	if e.jobEvents != nil {
+		result["jobEvents"] = e.jobEvents.Debug()
+	}
+	return result
 }

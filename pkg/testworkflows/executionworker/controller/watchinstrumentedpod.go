@@ -11,6 +11,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/log"
 	watchers2 "github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller/watchers"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
@@ -40,6 +41,10 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 			notifier.End()
 			ctxCancel()
 			close(notifier.ch)
+
+			if notifier.result.IsAborted() {
+				log.DefaultLogger.Warnw("execution (watch) detected as aborted", "executionId", watcher.State().ResourceId(), "debug", watcher.State().Debug())
+			}
 		}()
 
 		// Mark Job as started
@@ -264,6 +269,5 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 		notifier.Align(watcher.State())
 	}()
 
-	//return notifierProxyCh, nil
 	return notifier.ch, nil
 }

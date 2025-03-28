@@ -11,6 +11,7 @@ import (
 	initconstants "github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller/watchers"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
@@ -88,6 +89,7 @@ func New(parentCtx context.Context, clientSet kubernetes.Interface, namespace, i
 
 		// There was a job or pod for this execution, so we may only assume it is aborted
 		if !watcher.State().JobEvents().FirstTimestamp().IsZero() || !watcher.State().PodEvents().FirstTimestamp().IsZero() {
+			log.DefaultLogger.Errorw("connecting to aborted execution", "executionId", watcher.State().ResourceId(), "debug", watcher.State().Debug())
 			return nil, ErrJobAborted
 		}
 

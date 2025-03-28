@@ -306,6 +306,29 @@ func GetJobError(job *batchv1.Job) string {
 	return ""
 }
 
+func GetContainerStateDebug(state corev1.ContainerState) string {
+	if state.Running != nil {
+		return "running"
+	} else if state.Terminated != nil {
+		result := fmt.Sprintf("terminated, reason: '%s'", state.Terminated.Reason)
+		if state.Terminated.Message != "" {
+			result += fmt.Sprintf(", message: '%s'", state.Terminated.Message)
+		}
+		if state.Terminated.ExitCode != 0 {
+			result += fmt.Sprintf(", exit code: '%d'", state.Terminated.ExitCode)
+		}
+		if state.Terminated.Signal != 0 {
+			result += fmt.Sprintf(", signal: %d", state.Terminated.Signal)
+		}
+		return result
+	} else if state.Waiting != nil {
+		return fmt.Sprintf("waiting, reason: '%s', message: '%s'",
+			state.Waiting.Reason,
+			state.Waiting.Message)
+	}
+	return "unknown"
+}
+
 func ReadContainerResult(status *corev1.ContainerStatus, errorFallback string) ContainerResult {
 	result := ContainerResult{}
 
