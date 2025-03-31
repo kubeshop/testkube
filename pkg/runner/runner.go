@@ -230,6 +230,7 @@ func (r *runner) Monitor(ctx context.Context, organizationId string, environment
 	// Load the execution TODO: retry?
 	execution, err := r.client.GetExecution(ctx, environmentId, id)
 	if err != nil {
+		r.watching.Delete(id)
 		log.DefaultLogger.Errorw("failed to get execution", "id", id, "error", err)
 		return err
 	}
