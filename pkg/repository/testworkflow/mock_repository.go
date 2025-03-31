@@ -378,6 +378,20 @@ func (mr *MockRepositoryMockRecorder) UpdateReport(arg0, arg1, arg2 interface{})
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateReport", reflect.TypeOf((*MockRepository)(nil).UpdateReport), arg0, arg1, arg2)
 }
 
+// UpdateResourceAggregations mocks base method.
+func (m *MockRepository) UpdateResourceAggregations(arg0 context.Context, arg1 string, arg2 *testkube.TestWorkflowExecutionResourceAggregationsReport) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateResourceAggregations", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateResourceAggregations indicates an expected call of UpdateResourceAggregations.
+func (mr *MockRepositoryMockRecorder) UpdateResourceAggregations(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateResourceAggregations", reflect.TypeOf((*MockRepository)(nil).UpdateResourceAggregations), arg0, arg1, arg2)
+}
+
 // UpdateResult mocks base method.
 func (m *MockRepository) UpdateResult(arg0 context.Context, arg1 string, arg2 *testkube.TestWorkflowResult) error {
 	m.ctrl.T.Helper()
