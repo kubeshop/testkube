@@ -9,7 +9,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"math/rand"
 	"net"
 	"net/http"
 	"os"
@@ -36,6 +35,19 @@ const (
 
 	defaultStopPauseInterval = 200 * time.Millisecond
 )
+
+func GetFreePort() int {
+	var a *net.TCPAddr
+	var err error
+	if a, err = net.ResolveTCPAddr("tcp", ":0"); err == nil {
+		var l *net.TCPListener
+		if l, err = net.ListenTCP("tcp", a); err == nil {
+			defer l.Close()
+			return l.Addr().(*net.TCPAddr).Port
+		}
+	}
+	panic(err)
+}
 
 func NewLogsService(nats *nats.Conn, js jetstream.JetStream, state state.Interface, stream client.Stream) *LogsService {
 	return &LogsService{
@@ -187,10 +199,8 @@ func (ls *LogsService) WithPauseInterval(duration time.Duration) *LogsService {
 }
 
 func (ls *LogsService) WithRandomPort() *LogsService {
-	port := rand.Intn(1000) + 17000
-	ls.httpAddress = fmt.Sprintf("127.0.0.1:%d", port)
-	port = rand.Intn(1000) + 18000
-	ls.grpcAddress = fmt.Sprintf("127.0.0.1:%d", port)
+	ls.httpAddress = fmt.Sprintf("127.0.0.1:%d", GetFreePort())
+	ls.grpcAddress = fmt.Sprintf("127.0.0.1:%d", GetFreePort())
 	return ls
 }
 

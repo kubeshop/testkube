@@ -256,6 +256,11 @@ func TestLogs_EventsFlow(t *testing.T) {
 		// cool down
 		time.Sleep(waitTime)
 
+		// cool down another time, if there is still something awaiting
+		if left, _ := nc.Buffered(); left > 0 {
+			time.Sleep(waitTime)
+		}
+
 		// then each adapter should receive messages
 		assertMessagesCount(t, a1, messagesCount)
 		assertMessagesCount(t, a2, messagesCount)

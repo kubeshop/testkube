@@ -20,8 +20,6 @@ func TestRunFiles_Integration(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("Run k6 with simple script", func(t *testing.T) {
-		t.Parallel()
-
 		tempDir, err := os.MkdirTemp("", "*")
 		assert.NoErrorf(t, err, "failed to create temp dir: %v", err)
 		defer os.RemoveAll(tempDir)
@@ -53,8 +51,6 @@ func TestRunFiles_Integration(t *testing.T) {
 	})
 
 	t.Run("Run k6 with simple failing script", func(t *testing.T) {
-		t.Parallel()
-
 		tempDir, err := os.MkdirTemp("", "*")
 		assert.NoErrorf(t, err, "failed to create temp dir: %v", err)
 		defer os.RemoveAll(tempDir)
@@ -86,8 +82,6 @@ func TestRunFiles_Integration(t *testing.T) {
 	})
 
 	t.Run("Run k6 with arguments and simple script", func(t *testing.T) {
-		t.Parallel()
-
 		tempDir, err := os.MkdirTemp("", "*")
 		assert.NoErrorf(t, err, "failed to create temp dir: %v", err)
 		defer os.RemoveAll(tempDir)
@@ -123,8 +117,6 @@ func TestRunFiles_Integration(t *testing.T) {
 	})
 
 	t.Run("Run k6 with ENV variables and script", func(t *testing.T) {
-		t.Parallel()
-
 		tempDir, err := os.MkdirTemp("", "*")
 		assert.NoErrorf(t, err, "failed to create temp dir: %v", err)
 		defer os.RemoveAll(tempDir)
@@ -159,7 +151,6 @@ func TestRunFiles_Integration(t *testing.T) {
 
 func TestRunAdvanced_Integration(t *testing.T) {
 	test.IntegrationTest(t)
-	t.Parallel()
 
 	ctx := context.Background()
 
@@ -197,8 +188,6 @@ func TestRunAdvanced_Integration(t *testing.T) {
 	})
 
 	t.Run("Run k6 with checks and thresholds", func(t *testing.T) {
-		t.Parallel()
-
 		tempDir, err := os.MkdirTemp("", "*")
 		assert.NoErrorf(t, err, "failed to create temp dir: %v", err)
 		defer os.RemoveAll(tempDir)
@@ -233,7 +222,6 @@ func TestRunAdvanced_Integration(t *testing.T) {
 
 func TestRunDirs_Integtaion(t *testing.T) {
 	test.IntegrationTest(t)
-	t.Parallel()
 
 	ctx := context.Background()
 	// setup
@@ -292,7 +280,6 @@ func TestRunDirs_Integtaion(t *testing.T) {
 
 func TestRunErrors_Integration(t *testing.T) {
 	test.IntegrationTest(t)
-	t.Parallel()
 
 	ctx := context.Background()
 
@@ -329,8 +316,6 @@ func TestRunErrors_Integration(t *testing.T) {
 	})
 
 	t.Run("Run k6 with invalid arguments", func(t *testing.T) {
-		t.Parallel()
-
 		tempDir, err := os.MkdirTemp("", "*")
 		assert.NoErrorf(t, err, "failed to create temp dir: %v", err)
 		defer os.RemoveAll(tempDir)
@@ -365,8 +350,6 @@ func TestRunErrors_Integration(t *testing.T) {
 	})
 
 	t.Run("Run k6 from directory with missing script arg", func(t *testing.T) {
-		t.Parallel()
-
 		tempDir, err := os.MkdirTemp("", "*")
 		assert.NoErrorf(t, err, "failed to create temp dir: %v", err)
 		defer os.RemoveAll(tempDir)

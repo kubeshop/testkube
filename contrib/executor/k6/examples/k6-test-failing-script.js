@@ -1,6 +1,12 @@
 import http from 'k6/http';
 import { check } from 'k6';
 
+export let options = {
+  thresholds: {
+    checks: ['rate>0.5'],
+  },
+};
+
 export default function () {
   const baseURI = `${__ENV.API_URI || 'http://google.pl'}`;
 
