@@ -117,7 +117,7 @@ func NewScheduler(
 
 func (s *scheduler) insert(ctx context.Context, execution *testkube.TestWorkflowExecution) error {
 	err := retry(SaveResultRetryMaxAttempts, SaveResultRetryBaseDelay, func() error {
-		err := s.resultsRepository.Insert(ctx, *execution)
+		err := s.resultsRepository.Insert(ctx, *execution.Clone())
 		if err != nil {
 			s.logger.Warnw("failed to update the TestWorkflow execution in database", "recoverable", true, "executionId", execution.Id, "error", err)
 		}
@@ -131,7 +131,7 @@ func (s *scheduler) insert(ctx context.Context, execution *testkube.TestWorkflow
 
 func (s *scheduler) update(ctx context.Context, execution *testkube.TestWorkflowExecution) error {
 	err := retry(SaveResultRetryMaxAttempts, SaveResultRetryBaseDelay, func() error {
-		err := s.resultsRepository.Update(ctx, *execution)
+		err := s.resultsRepository.Update(ctx, *execution.Clone())
 		if err != nil {
 			s.logger.Warnw("failed to update the TestWorkflow execution in database", "recoverable", true, "executionId", execution.Id, "error", err)
 		}

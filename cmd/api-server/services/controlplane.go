@@ -293,10 +293,10 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 			return
 		}),
 		cloudtestworkflow.CmdTestWorkflowExecutionInsert: controlplane.Handler(func(ctx context.Context, data cloudtestworkflow.ExecutionInsertRequest) (r cloudtestworkflow.ExecutionInsertResponse, err error) {
-			return r, testWorkflowResultsRepository.Insert(ctx, data.WorkflowExecution)
+			return r, testWorkflowResultsRepository.Insert(ctx, *data.WorkflowExecution.Clone())
 		}),
 		cloudtestworkflow.CmdTestWorkflowExecutionUpdate: controlplane.Handler(func(ctx context.Context, data cloudtestworkflow.ExecutionUpdateRequest) (r cloudtestworkflow.ExecutionUpdateResponse, err error) {
-			return r, testWorkflowResultsRepository.Update(ctx, data.WorkflowExecution)
+			return r, testWorkflowResultsRepository.Update(ctx, *data.WorkflowExecution.Clone())
 		}),
 		cloudtestworkflow.CmdTestWorkflowExecutionUpdateResult: controlplane.Handler(func(ctx context.Context, data cloudtestworkflow.ExecutionUpdateResultRequest) (r cloudtestworkflow.ExecutionUpdateResultResponse, err error) {
 			return r, testWorkflowResultsRepository.UpdateResult(ctx, data.ID, data.Result)
