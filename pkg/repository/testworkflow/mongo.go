@@ -392,6 +392,11 @@ func (r *MongoRepository) UpdateOutput(ctx context.Context, id string, refs []te
 	return
 }
 
+func (r *MongoRepository) UpdateResourceAggregations(ctx context.Context, id string, resourceAggregations *testkube.TestWorkflowExecutionResourceAggregationsReport) (err error) {
+	_, err = r.Coll.UpdateOne(ctx, bson.M{"id": id}, bson.M{"$set": bson.M{"resourceaggregations": resourceAggregations}})
+	return
+}
+
 func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 	query := bson.M{}
 	opts := options.Find()
