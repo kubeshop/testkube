@@ -353,20 +353,22 @@ func (r *MongoRepository) GetExecutionsSummary(ctx context.Context, filter Filte
 }
 
 func (r *MongoRepository) Insert(ctx context.Context, result testkube.TestWorkflowExecution) (err error) {
-	result.EscapeDots()
-	if result.Reports == nil {
-		result.Reports = []testkube.TestWorkflowReport{}
+	execution := result.Clone()
+	execution.EscapeDots()
+	if execution.Reports == nil {
+		execution.Reports = []testkube.TestWorkflowReport{}
 	}
-	_, err = r.Coll.InsertOne(ctx, result)
+	_, err = r.Coll.InsertOne(ctx, execution)
 	return
 }
 
 func (r *MongoRepository) Update(ctx context.Context, result testkube.TestWorkflowExecution) (err error) {
-	result.EscapeDots()
-	if result.Reports == nil {
-		result.Reports = []testkube.TestWorkflowReport{}
+	execution := result.Clone()
+	execution.EscapeDots()
+	if execution.Reports == nil {
+		execution.Reports = []testkube.TestWorkflowReport{}
 	}
-	_, err = r.Coll.ReplaceOne(ctx, bson.M{"id": result.Id}, result)
+	_, err = r.Coll.ReplaceOne(ctx, bson.M{"id": execution.Id}, execution)
 	return
 }
 
