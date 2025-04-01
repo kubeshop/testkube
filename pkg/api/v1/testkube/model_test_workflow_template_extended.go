@@ -1,10 +1,11 @@
 package testkube
 
 import (
-	"bytes"
 	"encoding/json"
 	"strings"
 	"time"
+
+	"github.com/google/go-cmp/cmp"
 
 	"github.com/kubeshop/testkube/pkg/utils"
 )
@@ -94,7 +95,6 @@ func (w *TestWorkflowTemplate) DeepCopy() *TestWorkflowTemplate {
 	return &result
 }
 
-// TODO: do it stable
 func (w *TestWorkflowTemplate) Equals(other *TestWorkflowTemplate) bool {
 	// Avoid check when there is one existing and the other one not
 	if (w == nil) != (other == nil) {
@@ -108,10 +108,7 @@ func (w *TestWorkflowTemplate) Equals(other *TestWorkflowTemplate) bool {
 	other.Created = time.Time{}
 
 	// Compare
-	w1, _ := json.Marshal(w)
-	w.Created = time.Time{}
-	w2, _ := json.Marshal(other)
-	result := bytes.Equal(w1, w2)
+	result := cmp.Equal(w, other)
 
 	// Restore values
 	w.Created = wCreated
