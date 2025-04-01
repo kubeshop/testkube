@@ -13,6 +13,7 @@ import (
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	commonmapper "github.com/kubeshop/testkube/pkg/mapper/common"
 	mappertcl "github.com/kubeshop/testkube/pkg/tcl/mappertcl/testworkflows"
 )
 
@@ -303,14 +304,6 @@ func MapContentTarballAPIToKube(v testkube.TestWorkflowContentTarball) testworkf
 		Url:   v.Url,
 		Path:  v.Path,
 		Mount: MapBoxedBooleanToBool(v.Mount),
-	}
-}
-
-func MapTargetToKube(v testkube.TestWorkflowTarget) testworkflowsv1.Target {
-	return testworkflowsv1.Target{
-		Match:     v.Match,
-		Not:       v.Not,
-		Replicate: v.Replicate,
 	}
 }
 
@@ -909,10 +902,11 @@ func MapTestEnvReferenceAPIToKube(v testkube.EnvReference) testsv3.EnvReference 
 
 func MapStepExecuteTestExecutionRequestAPIToKube(v testkube.TestWorkflowStepExecuteTestExecutionRequest) testworkflowsv1.TestExecutionRequest {
 	return testworkflowsv1.TestExecutionRequest{
-		Name:                               v.Name,
-		ExecutionLabels:                    v.ExecutionLabels,
-		VariablesFile:                      v.VariablesFile,
-		IsVariablesFileUploaded:            v.IsVariablesFileUploaded,
+		Name:                    v.Name,
+		ExecutionLabels:         v.ExecutionLabels,
+		VariablesFile:           v.VariablesFile,
+		IsVariablesFileUploaded: v.IsVariablesFileUploaded,
+
 		Variables:                          common.MapMap(v.Variables, MapTestVariableAPIToKube),
 		TestSecretUUID:                     v.TestSecretUUID,
 		Args:                               v.Args,
@@ -1615,7 +1609,7 @@ func MapTestWorkflowAPIToKubeTestWorkflowSummary(v testkube.TestWorkflow) testwo
 func MapTestWorkflowTagSchemaAPIToKube(v testkube.TestWorkflowTagSchema) testworkflowsv1.TestWorkflowTagSchema {
 	return testworkflowsv1.TestWorkflowTagSchema{
 		Tags:   v.Tags,
-		Target: common.MapPtr(v.Target, MapTargetToKube),
+		Target: common.MapPtr(v.Target, commonmapper.MapTargetApiToKube),
 	}
 }
 

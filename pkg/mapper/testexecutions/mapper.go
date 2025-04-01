@@ -185,13 +185,14 @@ func MapAPIToCRD(request *testkube.Execution, generation int64) testexecutionv1.
 	result := testexecutionv1.TestExecutionStatus{
 		Generation: generation,
 		LatestExecution: &testexecutionv1.Execution{
-			Id:                                 request.Id,
-			TestName:                           request.TestName,
-			TestSuiteName:                      request.TestSuiteName,
-			TestNamespace:                      request.TestNamespace,
-			TestType:                           request.TestType,
-			Name:                               request.Name,
-			Number:                             request.Number,
+			Id:            request.Id,
+			TestName:      request.TestName,
+			TestSuiteName: request.TestSuiteName,
+			TestNamespace: request.TestNamespace,
+			TestType:      request.TestType,
+			Name:          request.Name,
+			Number:        request.Number,
+
 			Envs:                               request.Envs,
 			Command:                            request.Command,
 			Args:                               request.Args,
