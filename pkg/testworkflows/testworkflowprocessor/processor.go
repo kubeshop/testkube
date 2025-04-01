@@ -366,6 +366,13 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		}
 	}
 
+	// Append common environment variables
+	if len(options.CommonEnvVariables) > 0 {
+		for i := range containers {
+			containers[i].Env = append(options.CommonEnvVariables, containers[i].Env...)
+		}
+	}
+
 	// Build pod template
 	if podConfig.SecurityContext == nil {
 		podConfig.SecurityContext = &corev1.PodSecurityContext{}

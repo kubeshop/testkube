@@ -138,7 +138,7 @@ func (r *TestWorkflowResult) IsAnyStepAborted() bool {
 func (r *TestWorkflowResult) IsAnyStepPaused() bool {
 	// When initialization was aborted or failed - it's immediately end
 	if r.Initialization.Status.AnyError() {
-		return true
+		return false
 	}
 
 	// Analyze the rest of the steps

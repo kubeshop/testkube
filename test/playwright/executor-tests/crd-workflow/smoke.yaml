@@ -4,6 +4,7 @@ metadata:
   name: playwright-workflow-smoke-v1.32.3
   labels:
     core-tests: workflows
+    tool: playwright
 spec:
   content:
     git:
@@ -35,6 +36,7 @@ metadata:
   name: playwright-workflow-smoke-v1.32.3-custom-report-dir
   labels:
     core-tests: workflows
+    tool: playwright
 spec:
   content:
     git:
@@ -71,6 +73,7 @@ metadata:
   name: playwright-workflow-smoke-v1.32.3-command-args
   labels:
     core-tests: workflows
+    tool: playwright
 spec:
   content:
     git:
@@ -119,6 +122,7 @@ metadata:
   name: playwright-workflow-smoke-junit
   labels:
     core-tests: workflows
+    tool: playwright
 spec:
   content:
     git:
@@ -151,6 +155,7 @@ metadata:
   name: playwright-workflow-smoke-artifacts-double-asterisk
   labels:
     core-tests: workflows
+    tool: playwright
 spec:
   content:
     git:
@@ -191,6 +196,7 @@ metadata:
   name: playwright-workflow-smoke-template
   labels:
     core-tests: workflows
+    tool: playwright
 spec:
   container:
     resources:
@@ -219,6 +225,7 @@ metadata:
   name: distributed-playwright-workflow-smoke-artifacts
   labels:
     core-tests: workflows
+    tool: playwright
 spec:
   content:
     git:
@@ -255,6 +262,7 @@ metadata:
   name: distributed-playwright-workflow-smoke-junit
   labels:
     core-tests: workflows
+    tool: playwright
 spec:
   content:
     git:

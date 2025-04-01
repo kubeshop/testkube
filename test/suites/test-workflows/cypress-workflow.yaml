@@ -4,6 +4,8 @@ metadata:
   name: cypress-workflow-suite
   labels:
     core-tests: workflows-suite
+    type: suite
+    tool: cypress
 spec:
   steps:
   - execute:

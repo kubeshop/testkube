@@ -25,7 +25,7 @@ func NewCreateAgentCommand() *cobra.Command {
 		Args:   cobra.ExactArgs(1),
 		Hidden: !log.IsTrue("EXPERIMENTAL"),
 		Run: func(cmd *cobra.Command, args []string) {
-			agent := UiCreateAgent(cmd, agentType, args[0], labelPairs, environmentIds)
+			agent := UiCreateAgent(cmd, agentType, args[0], labelPairs, environmentIds, false, "")
 			ui.NL()
 			ui.Info("Install the agent with command:")
 			ui.ShellCommand(
@@ -45,13 +45,15 @@ func NewCreateRunnerCommand() *cobra.Command {
 	var (
 		labelPairs     []string
 		environmentIds []string
+		global         bool
+		group          string
 	)
 	cmd := &cobra.Command{
 		Use:    "runner",
 		Args:   cobra.ExactArgs(1),
 		Hidden: !log.IsTrue("EXPERIMENTAL"),
 		Run: func(cmd *cobra.Command, args []string) {
-			agent := UiCreateAgent(cmd, "runner", args[0], labelPairs, environmentIds)
+			agent := UiCreateAgent(cmd, "runner", args[0], labelPairs, environmentIds, global, group)
 			ui.NL()
 			ui.Info("Install the agent with command:")
 			ui.ShellCommand(
@@ -62,6 +64,8 @@ func NewCreateRunnerCommand() *cobra.Command {
 
 	cmd.Flags().StringSliceVarP(&environmentIds, "env", "e", nil, "environment ID or slug that the agent have access to")
 	cmd.Flags().StringSliceVarP(&labelPairs, "label", "l", nil, "label key value pair: --label key1=value1")
+	cmd.Flags().BoolVar(&global, "global", false, "make it global runner")
+	cmd.Flags().StringVar(&group, "group", "", "make it grouped runner")
 
 	return cmd
 }
@@ -76,7 +80,7 @@ func NewCreateGitOpsCommand() *cobra.Command {
 		Args:   cobra.ExactArgs(1),
 		Hidden: !log.IsTrue("EXPERIMENTAL"),
 		Run: func(cmd *cobra.Command, args []string) {
-			agent := UiCreateAgent(cmd, "gitops", args[0], labelPairs, environmentIds)
+			agent := UiCreateAgent(cmd, "gitops", args[0], labelPairs, environmentIds, false, "")
 			ui.NL()
 			ui.Info("Install the agent with command:")
 			ui.ShellCommand(
@@ -91,7 +95,7 @@ func NewCreateGitOpsCommand() *cobra.Command {
 	return cmd
 }
 
-func UiCreateAgent(cmd *cobra.Command, agentType string, name string, labelPairs []string, environmentIds []string) *cloudclient.Agent {
+func UiCreateAgent(cmd *cobra.Command, agentType string, name string, labelPairs []string, environmentIds []string, isGlobalRunner bool, runnerGroup string) *cloudclient.Agent {
 	if name == "" {
 		name = ui.TextInput("agent name")
 		if name == "" {
@@ -120,6 +124,17 @@ func UiCreateAgent(cmd *cobra.Command, agentType string, name string, labelPairs
 		Environments: environmentIds,
 	}
 
+	if runnerGroup != "" {
+		(*input.Labels)["group"] = runnerGroup
+		input.RunnerPolicy = &cloudclient.RunnerPolicy{
+			RequiredMatch: []string{"group"},
+		}
+	} else if !isGlobalRunner {
+		input.RunnerPolicy = &cloudclient.RunnerPolicy{
+			RequiredMatch: []string{"name"},
+		}
+	}
+
 	input.Type, _ = GetInternalAgentType(agentType)
 
 	for _, label := range labelPairs {
@@ -127,14 +142,21 @@ func UiCreateAgent(cmd *cobra.Command, agentType string, name string, labelPairs
 		(*input.Labels)[k] = v
 	}
 
+	envs, err := GetControlPlaneEnvironments(cmd)
+	ui.ExitOnError("getting environments", err)
+
 	if len(input.Environments) == 0 {
 		cfg, err := config.Load()
 		ui.ExitOnError("loading config", err)
-		input.Environments = []string{cfg.CloudContext.EnvironmentId}
+		envOpts := []string{envs[cfg.CloudContext.EnvironmentId].Slug}
+		for id := range envs {
+			if id != cfg.CloudContext.EnvironmentId {
+				envOpts = append(envOpts, id)
+			}
+		}
+		input.Environments = []string{ui.Select("select environment", envOpts)}
 	}
 
-	envs, err := GetControlPlaneEnvironments(cmd)
-	ui.ExitOnError("getting environments", err)
 	for i, envId := range input.Environments {
 		_, ok := envs[envId]
 		if !ok {
@@ -155,8 +177,7 @@ func UiCreateAgent(cmd *cobra.Command, agentType string, name string, labelPairs
 		}
 		if !env.NewArchitecture {
 			ui.Warn(fmt.Sprintf("Environment '%s' (%s) does not support new architecture.", env.Name, env.Id))
-			should := ui.Select("do you want to enable it?", []string{"yes", "no"})
-			if should == "" || should == "no" {
+			if !ui.Confirm("do you want to enable it?") {
 				os.Exit(1)
 			}
 			err := EnableNewArchitecture(cmd, env)

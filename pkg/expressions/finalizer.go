@@ -42,7 +42,7 @@ func (f *finalizer) Get(name string) (Expression, bool, error) {
 	return nil, false, nil
 }
 
-func (f *finalizer) Call(name string, _ ...StaticValue) (Expression, bool, error) {
+func (f *finalizer) Call(name string, _ []CallArgument) (Expression, bool, error) {
 	result := f.handler(finalizerItem{function: true, name: name})
 	if result == FinalizerResultFail {
 		return nil, true, errors.New("unknown function")

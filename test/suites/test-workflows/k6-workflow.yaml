@@ -4,6 +4,8 @@ metadata:
   name: k6-workflow-suite
   labels:
     core-tests: workflows-suite
+    type: suite
+    tool: k6
 spec:
   steps:
   - execute:

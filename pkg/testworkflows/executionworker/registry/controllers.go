@@ -22,6 +22,7 @@ const (
 type controllersRegistry struct {
 	clientSet              kubernetes.Interface
 	namespaces             NamespacesRegistry
+	runnerId               string
 	ips                    PodIpsRegistry
 	controllers            map[string]controller.Controller
 	controllerReservations map[string]int
@@ -38,10 +39,11 @@ type ControllersRegistry interface {
 	RegisterPodIP(id, podIp string)
 }
 
-func NewControllersRegistry(clientSet kubernetes.Interface, namespaces NamespacesRegistry, podIpCacheSize int) ControllersRegistry {
+func NewControllersRegistry(clientSet kubernetes.Interface, namespaces NamespacesRegistry, runnerId string, podIpCacheSize int) ControllersRegistry {
 	r := &controllersRegistry{
 		clientSet:              clientSet,
 		namespaces:             namespaces,
+		runnerId:               runnerId,
 		controllers:            make(map[string]controller.Controller),
 		controllerReservations: make(map[string]int),
 	}
@@ -124,6 +126,7 @@ func (r *controllersRegistry) Connect(ctx context.Context, id string, hints exec
 				scheduledAt := common.ResolvePtr(hints.ScheduledAt, time.Time{}) // TODO: consider caching or making it optional
 				nextCtrl, err := controller.New(ctx, r.clientSet, namespace, id, scheduledAt, controller.ControllerOptions{
 					Signature: signature,
+					RunnerId:  r.runnerId,
 				})
 				if err != nil {
 					return nil, err

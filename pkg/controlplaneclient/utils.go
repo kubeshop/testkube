@@ -26,11 +26,19 @@ var (
 
 // TODO: add timeout?
 func call[Request any, Response any](ctx context.Context, md metadata.MD, fn func(context.Context, Request, ...grpc.CallOption) (Response, error), req Request) (Response, error) {
+	if ctx.Err() != nil {
+		var v Response
+		return v, ctx.Err()
+	}
 	return fn(metadata.NewOutgoingContext(ctx, md), req, grpcOpts...)
 }
 
 // TODO: add timeout?
 func watch[Response any](ctx context.Context, md metadata.MD, fn func(context.Context, ...grpc.CallOption) (Response, error)) (Response, error) {
+	if ctx.Err() != nil {
+		var v Response
+		return v, ctx.Err()
+	}
 	return fn(metadata.NewOutgoingContext(ctx, md), grpcOpts...)
 }
 

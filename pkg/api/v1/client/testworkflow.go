@@ -184,6 +184,18 @@ func (c TestWorkflowClient) ListTestWorkflowExecutions(id string, limit int, opt
 	return c.testWorkflowExecutionsResultTransport.Execute(http.MethodGet, uri, nil, params)
 }
 
+// PauseTestWorkflowExecution pauses selected execution
+func (c TestWorkflowClient) PauseTestWorkflowExecution(workflow, id string) error {
+	uri := c.testWorkflowTransport.GetURI("/test-workflows/%s/executions/%s/pause", workflow, id)
+	return c.testWorkflowTransport.ExecuteMethod(http.MethodPost, uri, "", false)
+}
+
+// ResumeTestWorkflowExecution pauses selected execution
+func (c TestWorkflowClient) ResumeTestWorkflowExecution(workflow, id string) error {
+	uri := c.testWorkflowTransport.GetURI("/test-workflows/%s/executions/%s/resume", workflow, id)
+	return c.testWorkflowTransport.ExecuteMethod(http.MethodPost, uri, "", false)
+}
+
 // AbortTestWorkflowExecution aborts selected execution
 func (c TestWorkflowClient) AbortTestWorkflowExecution(workflow, id string) error {
 	uri := c.testWorkflowTransport.GetURI("/test-workflows/%s/executions/%s/abort", workflow, id)

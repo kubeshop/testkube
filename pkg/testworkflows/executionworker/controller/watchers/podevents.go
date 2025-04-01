@@ -1,6 +1,7 @@
 package watchers
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 	"time"
@@ -29,6 +30,7 @@ type PodEvents interface {
 	Error() bool
 	ErrorReason() string
 	ErrorMessage() string
+	Debug() string
 
 	Container(name string) ContainerEvents
 }
@@ -185,6 +187,15 @@ func (p *podEvents) ErrorMessage() string {
 		// (Failed) Back-off restarting failed container [ONLY NUMERIC CONTAINERS]
 	}
 	return ""
+}
+
+func (p *podEvents) Debug() string {
+	firstTs := p.FirstTimestamp()
+	result := make([]string, len(p.events))
+	for i := range p.events {
+		result[i] = fmt.Sprintf("[%.1fs] %s: %s", float64(GetEventTimestamp(p.events[i]).Sub(firstTs))/float64(time.Second), p.events[i].Reason, p.events[i].Message)
+	}
+	return strings.Join(result, ", ")
 }
 
 func (p *podEvents) Container(name string) ContainerEvents {

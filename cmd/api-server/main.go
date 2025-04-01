@@ -4,10 +4,12 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"google.golang.org/grpc"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
@@ -220,16 +222,24 @@ func main() {
 		)
 	}
 
+	// Transfer common environment variables
+	commonEnvVariables := make([]corev1.EnvVar, 0)
+	for _, envName := range cfg.TransferEnvVariables {
+		if value := os.Getenv(envName); value != "" {
+			commonEnvVariables = append(commonEnvVariables, corev1.EnvVar{Name: envName, Value: value})
+		}
+	}
+
 	// Build internal execution worker
 	testWorkflowProcessor := presets.NewOpenSource(inspector)
 	// Pro edition only (tcl protected code)
 	if mode == common.ModeAgent {
 		testWorkflowProcessor = presets.NewPro(inspector)
 	}
-	executionWorker := services.CreateExecutionWorker(clientset, cfg, clusterId, serviceAccountNames, testWorkflowProcessor, map[string]string{
+	executionWorker := services.CreateExecutionWorker(clientset, cfg, clusterId, proContext.Agent.ID, serviceAccountNames, testWorkflowProcessor, map[string]string{
 		testworkflowconfig.FeatureFlagNewArchitecture: fmt.Sprintf("%v", cfg.FeatureNewArchitecture),
 		testworkflowconfig.FeatureFlagCloudStorage:    fmt.Sprintf("%v", cfg.FeatureCloudStorage),
-	})
+	}, commonEnvVariables, true)
 
 	runnerOpts := runner2.Options{
 		ClusterID:           clusterId,

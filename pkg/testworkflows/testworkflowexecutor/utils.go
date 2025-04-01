@@ -227,7 +227,7 @@ func ValidateExecutionRequest(req *cloud.ScheduleRequest) error {
 
 	// Validate if that could be Resolved workflow object
 	if len(req.ResolvedWorkflow) != 0 && (nameSelectorsCount != 1 || labelSelectorsCount != 0) {
-		return errors.New("resolved workflowcan trigger only execution of a single named TestWorkflow")
+		return errors.New("resolved workflow can trigger only execution of a single named TestWorkflow")
 	}
 
 	return nil

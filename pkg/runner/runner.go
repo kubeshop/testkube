@@ -230,6 +230,7 @@ func (r *runner) Monitor(ctx context.Context, organizationId string, environment
 	// Load the execution TODO: retry?
 	execution, err := r.client.GetExecution(ctx, environmentId, id)
 	if err != nil {
+		r.watching.Delete(id)
 		log.DefaultLogger.Errorw("failed to get execution", "id", id, "error", err)
 		return err
 	}
@@ -278,7 +279,16 @@ func (r *runner) execute(request executionworkertypes.ExecuteRequest) (*executio
 	res, err := r.worker.Execute(context.Background(), request)
 	if err == nil {
 		// TODO: consider retry?
-		go r.Monitor(context.Background(), request.Execution.OrganizationId, request.Execution.EnvironmentId, request.Execution.Id)
+		go func() {
+			for i := 0; i < 3; i++ {
+				err := r.Monitor(context.Background(), request.Execution.OrganizationId, request.Execution.EnvironmentId, request.Execution.Id)
+				if err == nil {
+					return
+				}
+				log.DefaultLogger.Errorw("failed to monitor execution", "id", request.Execution.Id, "error", err)
+				time.Sleep(1 * time.Second)
+			}
+		}()
 	}
 
 	// Edge case, when the execution has been already triggered before there,

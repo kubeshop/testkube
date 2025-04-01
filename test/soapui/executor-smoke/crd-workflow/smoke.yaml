@@ -4,6 +4,7 @@ metadata:
   name: soapui-workflow-smoke
   labels:
     core-tests: workflows
+    tool: soapui
 spec:
   content:
     git:

@@ -51,6 +51,8 @@ func NewInstallRunnerCommand() *cobra.Command {
 		dryRun    bool
 
 		globalTemplatePath string
+		global             bool
+		group              string
 
 		autoCreate     bool
 		labelPairs     []string
@@ -72,6 +74,8 @@ func NewInstallRunnerCommand() *cobra.Command {
 
 	// Installation > Runner
 	cmd.Flags().StringVarP(&globalTemplatePath, "global-template-path", "g", "", "include global template")
+	cmd.Flags().BoolVar(&global, "global", false, "make it global runner")
+	cmd.Flags().StringVar(&group, "group", "", "make it grouped runner")
 
 	// Install existing
 	cmd.Flags().StringVarP(&secretKey, "secret", "s", "", "secret key for the selected agent")
@@ -192,6 +196,8 @@ func UiInstallAgent(cmd *cobra.Command, name string, agentType string) {
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
 	agentType, _ = GetInternalAgentType(agentType)
 	globalTemplatePath, _ := cmd.Flags().GetString("global-template-path")
+	isGlobalRunner, _ := cmd.Flags().GetBool("global")
+	runnerGroup, _ := cmd.Flags().GetString("group")
 	var globalTemplate []byte
 	if globalTemplatePath != "" {
 		var err error
@@ -238,7 +244,7 @@ func UiInstallAgent(cmd *cobra.Command, name string, agentType string) {
 	if agent == nil && autoCreate {
 		labels, _ := cmd.Flags().GetStringSlice("label")
 		environmentIds, _ := cmd.Flags().GetStringSlice("env")
-		agent = UiCreateAgent(cmd, agentType, name, labels, environmentIds)
+		agent = UiCreateAgent(cmd, agentType, name, labels, environmentIds, isGlobalRunner, runnerGroup)
 	}
 
 	// Load agents from the Control Plane and select one

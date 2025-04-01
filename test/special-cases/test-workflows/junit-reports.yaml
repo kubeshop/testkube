@@ -13,7 +13,7 @@ spec:
       - test/special-cases/test-workflows/junit-reports/high-level-failure.xml
   container:
     workingDir: /data/repo/test/special-cases/test-workflows/junit-reports
-    image: alpine:3.21.3
+    image: alpine:3.21.2
   steps:
   - name: Step
     shell: echo "Step"
@@ -36,7 +36,7 @@ spec:
       - test/special-cases/test-workflows/junit-reports/high-level-without-testcases.xml
   container:
     workingDir: /data/repo/test/special-cases/test-workflows/junit-reports
-    image: alpine:3.21.3
+    image: alpine:3.21.2
   steps:
   - name: Step
     shell: echo "Step"
@@ -59,7 +59,7 @@ spec:
       - test/special-cases/test-workflows/junit-reports/high-level-testcase-both-error-and-failure.xml
   container:
     workingDir: /data/repo/test/special-cases/test-workflows/junit-reports
-    image: alpine:3.21.3
+    image: alpine:3.21.2
   steps:
   - name: Step
     shell: echo "Step"

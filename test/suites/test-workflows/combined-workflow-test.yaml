@@ -4,6 +4,8 @@ metadata:
   name: artillery-workflow-suite-combined
   labels:
     core-tests: workflows-suite
+    type: suite
+    tool: artillery
 spec:
   steps:
   - execute:

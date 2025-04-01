@@ -4,6 +4,7 @@ metadata:
   name: pytest-workflow-smoke
   labels:
     core-tests: workflows
+    tool: pytest
 spec:
   content:
     git:
@@ -30,6 +31,7 @@ metadata:
   name: pytest-workflow-smoke-junit-success-only
   labels:
     core-tests: workflows
+    tool: pytest
 spec:
   content:
     git:

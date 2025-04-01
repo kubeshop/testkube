@@ -4,6 +4,8 @@ metadata:
   name: gradle-workflow-suite
   labels:
     core-tests: workflows-suite
+    type: suite
+    tool: gradle
 spec:
   steps:
   - execute:

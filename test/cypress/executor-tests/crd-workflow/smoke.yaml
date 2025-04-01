@@ -4,6 +4,7 @@ metadata:
   name: cypress-workflow-smoke-14
   labels:
     core-tests: workflows
+    tool: cypress
 spec:
   content:
     git:
@@ -42,6 +43,7 @@ metadata:
   name: cypress-workflow-smoke-14-template
   labels:
     core-tests: workflows
+    tool: cypress
 spec:
   content:
     git:
@@ -72,6 +74,7 @@ metadata:
   name: cypress-workflow-smoke-13
   labels:
     core-tests: workflows
+    tool: cypress
 spec:
   content:
     git:
@@ -110,6 +113,7 @@ metadata:
   name: cypress-workflow-smoke-13-video-recording-enabled
   labels:
     core-tests: workflows
+    tool: cypress
 spec:
   content:
     git:
@@ -148,6 +152,7 @@ metadata:
   name: cypress-workflow-smoke-13-negative
   labels:
     core-tests: workflows
+    tool: cypress
 spec:
   content:
     git:
@@ -183,6 +188,7 @@ metadata:
   name: cypress-workflow-smoke-13-template
   labels:
     core-tests: workflows
+    tool: cypress
 spec:
   container:
     resources:
@@ -216,6 +222,7 @@ metadata:
   name: cypress-workflow-smoke-13-template-checkout-on-step
   labels:
     core-tests: workflows
+    tool: cypress
 spec:
   container:
     resources:
@@ -249,6 +256,7 @@ metadata:
   name: cypress-workflow-smoke-13-template-sub-step
   labels:
     core-tests: workflows
+    tool: cypress
 spec:
   container:
     resources:
@@ -284,6 +292,7 @@ metadata:
   name: cypress-workflow-smoke-12.7.0
   labels:
     core-tests: workflows
+    tool: cypress
 spec:
   content:
     git:
@@ -322,6 +331,7 @@ metadata:
   name: cypress-workflow-smoke-13-junit-report
   labels:
     core-tests: workflows
+    tool: cypress
 spec:
   content:
     git:
@@ -364,6 +374,7 @@ metadata:
   name: distributed-cypress-workflow-smoke-13
   labels:
     core-tests: workflows
+    tool: cypress
 spec:
   content:
     git:
@@ -412,6 +423,7 @@ metadata:
   name: cypress-workflow-smoke-matrix-junit
   labels:
     core-tests: workflows
+    tool: cypress
 spec:
   content:
     git:

@@ -523,6 +523,11 @@ func PrintControlPlaneAgent(agent cloudclient.Agent) {
 	if len(agent.Labels) == 0 {
 		fmt.Println("   none")
 	}
+
+	if agent.RunnerPolicy != nil && len(agent.RunnerPolicy.RequiredMatch) > 0 {
+		ui.Warn("Policy:")
+		ui.Warn("   Required Matching Labels:", strings.Join(agent.RunnerPolicy.RequiredMatch, ", "))
+	}
 }
 
 func PrintKubernetesAgent(agent internalAgent) {

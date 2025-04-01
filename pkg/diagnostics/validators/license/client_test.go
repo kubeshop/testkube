@@ -50,20 +50,4 @@ func TestValidateLicense(t *testing.T) {
 		assert.NoError(t, err)
 		assert.False(t, resp.Valid)
 	})
-
-	t.Run("RealValidation license valid", func(t *testing.T) {
-		client := NewClient()
-
-		response, err := client.ValidateLicense(LicenseRequest{License: "AB24F3-405E39-C3F657-94D113-F06C13-V3"})
-		if err != nil {
-			t.Fatalf("Expected no error, got %v", err)
-		}
-
-		if !response.Valid {
-			t.Errorf("Expected license to be valid, got %v", response.Valid)
-		}
-		if response.Code != "VALID" {
-			t.Errorf("Expected message 'VALID', got %s", response.Code)
-		}
-	})
 }

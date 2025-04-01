@@ -1,6 +1,10 @@
 package testworkflowconfig
 
-import "time"
+import (
+	"time"
+
+	corev1 "k8s.io/api/core/v1"
+)
 
 const (
 	FeatureFlagNewArchitecture = "exec"
@@ -74,6 +78,7 @@ type WorkerConfig struct {
 	DefaultRegistry       string `json:"R,omitempty"` // TODO: think if that shouldn't be Control Plane setup
 	DefaultServiceAccount string `json:"s,omitempty"`
 	ClusterID             string `json:"c,omitempty"`
+	RunnerID              string `json:"r,omitempty"`
 
 	InitImage                         string        `json:"i,omitempty"`
 	ToolkitImage                      string        `json:"t,omitempty"`
@@ -81,8 +86,9 @@ type WorkerConfig struct {
 	ImageInspectorPersistenceCacheKey string        `json:"P,omitempty"`
 	ImageInspectorPersistenceCacheTTL time.Duration `json:"T,omitempty"`
 
-	Connection   WorkerConnectionConfig `json:"C,omitempty"`
-	FeatureFlags map[string]string      `json:"f,omitempty"`
+	Connection         WorkerConnectionConfig `json:"C,omitempty"`
+	FeatureFlags       map[string]string      `json:"f,omitempty"`
+	CommonEnvVariables []corev1.EnvVar        `json:"e,omitempty"`
 }
 
 type WorkerConnectionConfig struct {

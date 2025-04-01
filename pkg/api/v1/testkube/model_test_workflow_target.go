@@ -9,8 +9,10 @@
  */
 package testkube
 
-// test workflow execution tag definition
-type TestWorkflowTagSchema struct {
-	Tags   map[string]string   `json:"tags,omitempty"`
-	Target *TestWorkflowTarget `json:"target,omitempty"`
+type TestWorkflowTarget struct {
+	// labels to attach to the job
+	Match map[string][]string `json:"match,omitempty"`
+	// labels to attach to the job
+	Not       map[string][]string `json:"not,omitempty"`
+	Replicate []string            `json:"replicate,omitempty"`
 }

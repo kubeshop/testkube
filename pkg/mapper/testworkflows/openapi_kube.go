@@ -306,6 +306,14 @@ func MapContentTarballAPIToKube(v testkube.TestWorkflowContentTarball) testworkf
 	}
 }
 
+func MapTargetToKube(v testkube.TestWorkflowTarget) testworkflowsv1.Target {
+	return testworkflowsv1.Target{
+		Match:     v.Match,
+		Not:       v.Not,
+		Replicate: v.Replicate,
+	}
+}
+
 func MapContentAPIToKube(v testkube.TestWorkflowContent) testworkflowsv1.Content {
 	return testworkflowsv1.Content{
 		Git:     common.MapPtr(v.Git, MapContentGitAPIToKube),
@@ -1606,7 +1614,8 @@ func MapTestWorkflowAPIToKubeTestWorkflowSummary(v testkube.TestWorkflow) testwo
 
 func MapTestWorkflowTagSchemaAPIToKube(v testkube.TestWorkflowTagSchema) testworkflowsv1.TestWorkflowTagSchema {
 	return testworkflowsv1.TestWorkflowTagSchema{
-		Tags: v.Tags,
+		Tags:   v.Tags,
+		Target: common.MapPtr(v.Target, MapTargetToKube),
 	}
 }
 
@@ -1675,5 +1684,59 @@ func MapPvcConfigAPIToKube(v testkube.TestWorkflowPvcConfig) corev1.PersistentVo
 		DataSource:                common.MapPtr(v.DataSource, MapTypeLocalObjectReferenceAPIToKube),
 		DataSourceRef:             common.MapPtr(v.DataSourceRef, MapTypeObjectReferenceAPIToKube),
 		VolumeAttributesClassName: MapBoxedStringToString(v.VolumeAttributesClassName),
+	}
+}
+
+func MapTestWorkflowExecutionResourceAggregationsReportAPIToKube(
+	v testkube.TestWorkflowExecutionResourceAggregationsReport,
+) *testworkflowsv1.TestWorkflowExecutionResourceAggregationsReport {
+	return &testworkflowsv1.TestWorkflowExecutionResourceAggregationsReport{
+		Global: MapTestWorkflowExecutionResourceAggregationsByMeasurementAPIToKube(v.Global),
+		Step:   MapTestWorkflowExecutionResourceStepAggregationsByMeasurementAPIToKube(v.Step),
+	}
+}
+
+func MapTestWorkflowExecutionResourceAggregationsByMeasurementAPIToKube(
+	v map[string]map[string]testkube.TestWorkflowExecutionResourceAggregations,
+) testworkflowsv1.TestWorkflowExecutionResourceAggregationsByMeasurement {
+	byMeasurement := make(testworkflowsv1.TestWorkflowExecutionResourceAggregationsByMeasurement)
+
+	for measurement, byField := range v {
+		if byMeasurement[measurement] == nil {
+			byMeasurement[measurement] = make(testworkflowsv1.TestWorkflowExecutionResourceAggregationsByField)
+		}
+		for field, report := range byField {
+			byMeasurement[measurement][field] = MapTestWorkflowExecutionResourceAggregationsAPIToKube(&report)
+		}
+	}
+
+	return byMeasurement
+}
+
+func MapTestWorkflowExecutionResourceStepAggregationsByMeasurementAPIToKube(
+	vs []testkube.TestWorkflowExecutionStepResourceAggregations,
+) []*testworkflowsv1.TestWorkflowExecutionStepResourceAggregations {
+	r := make([]*testworkflowsv1.TestWorkflowExecutionStepResourceAggregations, 0, len(vs))
+
+	for _, v := range vs {
+		r = append(r, &testworkflowsv1.TestWorkflowExecutionStepResourceAggregations{
+			Ref:          v.Ref,
+			Aggregations: MapTestWorkflowExecutionResourceAggregationsByMeasurementAPIToKube(v.Aggregations),
+		})
+	}
+
+	return r
+}
+
+func MapTestWorkflowExecutionResourceAggregationsAPIToKube(v *testkube.TestWorkflowExecutionResourceAggregations) *testworkflowsv1.TestWorkflowExecutionResourceAggregations {
+	if v == nil {
+		return nil
+	}
+	return &testworkflowsv1.TestWorkflowExecutionResourceAggregations{
+		Total:  v.Total,
+		Min:    v.Min,
+		Max:    v.Max,
+		Avg:    v.Avg,
+		StdDev: v.StdDev,
 	}
 }

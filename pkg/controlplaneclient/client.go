@@ -23,6 +23,7 @@ type client struct {
 type ClientOptions struct {
 	StorageSkipVerify  bool
 	ExecutionID        string
+	WorkflowName       string
 	ParentExecutionIDs []string
 
 	Runtime RuntimeConfig

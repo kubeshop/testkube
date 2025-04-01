@@ -4,6 +4,7 @@ metadata:
   name: nunit-workflow-smoke-junit-report
   labels:
     core-tests: workflows
+    tool: nunit
 spec:
   content:
     git:

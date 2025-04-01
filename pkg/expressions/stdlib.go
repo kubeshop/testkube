@@ -20,39 +20,65 @@ const (
 	RFC3339Millis = "2006-01-02T15:04:05.000Z07:00"
 )
 
+type BasicFunctionHandler func(...StaticValue) (Expression, error)
+type StdFunctionHandler func([]CallArgument) (Expression, bool, error)
 type StdFunction struct {
 	ReturnType Type
-	Handler    func(...StaticValue) (Expression, error)
+	Handler    StdFunctionHandler
 }
 
 type stdMachine struct{}
 
 var StdLibMachine = &stdMachine{}
 
+func ToStdFunctionHandler(fn BasicFunctionHandler) StdFunctionHandler {
+	return func(args []CallArgument) (Expression, bool, error) {
+		if !areArgsResolved(args) {
+			return nil, false, nil
+		}
+		res, err := resolveArgs(args)
+		if err != nil {
+			return nil, true, err
+		}
+		expr, err := fn(res...)
+		return expr, true, err
+	}
+}
+
 var stdFunctions = map[string]StdFunction{
 	"string": {
 		ReturnType: TypeString,
-		Handler: func(value ...StaticValue) (Expression, error) {
+		Handler: func(args []CallArgument) (Expression, bool, error) {
+			if len(args) == 1 && !args[0].Spread && args[0].Type() == TypeString {
+				return args[0].Expression, true, nil
+			}
+			if !areArgsResolved(args) {
+				return nil, false, nil
+			}
+			value, err := resolveArgs(args)
+			if err != nil {
+				return nil, true, err
+			}
 			str := ""
 			for i := range value {
 				next, _ := value[i].StringValue()
 				str += next
 			}
-			return NewValue(str), nil
+			return NewValue(str), true, nil
 		},
 	},
 	"list": {
-		Handler: func(value ...StaticValue) (Expression, error) {
+		Handler: ToStdFunctionHandler(func(value ...StaticValue) (Expression, error) {
 			v := make([]interface{}, len(value))
 			for i := range value {
 				v[i] = value[i].Value()
 			}
 			return NewValue(v), nil
-		},
+		}),
 	},
 	"join": {
 		ReturnType: TypeString,
-		Handler: func(value ...StaticValue) (Expression, error) {
+		Handler: ToStdFunctionHandler(func(value ...StaticValue) (Expression, error) {
 			if len(value) == 0 || len(value) > 2 {
 				return nil, fmt.Errorf(`"join" function expects 1-2 arguments, %d provided`, len(value))
 			}
@@ -75,10 +101,10 @@ var stdFunctions = map[string]StdFunction{
 				separator, _ = value[1].StringValue()
 			}
 			return NewValue(strings.Join(v, separator)), nil
-		},
+		}),
 	},
 	"split": {
-		Handler: func(value ...StaticValue) (Expression, error) {
+		Handler: ToStdFunctionHandler(func(value ...StaticValue) (Expression, error) {
 			if len(value) == 0 || len(value) > 2 {
 				return nil, fmt.Errorf(`"split" function expects 1-2 arguments, %d provided`, len(value))
 			}
@@ -88,50 +114,80 @@ var stdFunctions = map[string]StdFunction{
 				separator, _ = value[1].StringValue()
 			}
 			return NewValue(strings.Split(str, separator)), nil
-		},
+		}),
 	},
 	"int": {
 		ReturnType: TypeInt64,
-		Handler: func(value ...StaticValue) (Expression, error) {
+		Handler: func(args []CallArgument) (Expression, bool, error) {
+			if len(args) == 1 && !args[0].Spread && args[0].Type() == TypeInt64 {
+				return args[0].Expression, true, nil
+			}
+			if !areArgsResolved(args) {
+				return nil, false, nil
+			}
+			value, err := resolveArgs(args)
+			if err != nil {
+				return nil, true, err
+			}
 			if len(value) != 1 {
-				return nil, fmt.Errorf(`"int" function expects 1 argument, %d provided`, len(value))
+				return nil, true, fmt.Errorf(`"int" function expects 1 argument, %d provided`, len(value))
 			}
 			v, err := value[0].IntValue()
 			if err != nil {
-				return nil, err
+				return nil, true, err
 			}
-			return NewValue(v), nil
+			return NewValue(v), true, nil
 		},
 	},
 	"bool": {
 		ReturnType: TypeBool,
-		Handler: func(value ...StaticValue) (Expression, error) {
+		Handler: func(args []CallArgument) (Expression, bool, error) {
+			if len(args) == 1 && !args[0].Spread && args[0].Type() == TypeBool {
+				return args[0].Expression, true, nil
+			}
+			if !areArgsResolved(args) {
+				return nil, false, nil
+			}
+			value, err := resolveArgs(args)
+			if err != nil {
+				return nil, true, err
+			}
 			if len(value) != 1 {
-				return nil, fmt.Errorf(`"bool" function expects 1 argument, %d provided`, len(value))
+				return nil, true, fmt.Errorf(`"bool" function expects 1 argument, %d provided`, len(value))
 			}
 			v, err := value[0].BoolValue()
 			if err != nil {
-				return nil, err
+				return nil, true, err
 			}
-			return NewValue(v), nil
+			return NewValue(v), true, nil
 		},
 	},
 	"float": {
 		ReturnType: TypeFloat64,
-		Handler: func(value ...StaticValue) (Expression, error) {
+		Handler: func(args []CallArgument) (Expression, bool, error) {
+			if len(args) == 1 && !args[0].Spread && args[0].Type() == TypeFloat64 {
+				return args[0].Expression, true, nil
+			}
+			if !areArgsResolved(args) {
+				return nil, false, nil
+			}
+			value, err := resolveArgs(args)
+			if err != nil {
+				return nil, true, err
+			}
 			if len(value) != 1 {
-				return nil, fmt.Errorf(`"float" function expects 1 argument, %d provided`, len(value))
+				return nil, true, fmt.Errorf(`"float" function expects 1 argument, %d provided`, len(value))
 			}
 			v, err := value[0].FloatValue()
 			if err != nil {
-				return nil, err
+				return nil, true, err
 			}
-			return NewValue(v), nil
+			return NewValue(v), true, nil
 		},
 	},
 	"tojson": {
 		ReturnType: TypeString,
-		Handler: func(value ...StaticValue) (Expression, error) {
+		Handler: ToStdFunctionHandler(func(value ...StaticValue) (Expression, error) {
 			if len(value) != 1 {
 				return nil, fmt.Errorf(`"tojson" function expects 1 argument, %d provided`, len(value))
 			}
@@ -140,10 +196,10 @@ var stdFunctions = map[string]StdFunction{
 				return nil, fmt.Errorf(`"tojson" function had problem marshalling: %s`, err.Error())
 			}
 			return NewValue(string(b)), nil
-		},
+		}),
 	},
 	"json": {
-		Handler: func(value ...StaticValue) (Expression, error) {
+		Handler: ToStdFunctionHandler(func(value ...StaticValue) (Expression, error) {
 			if len(value) != 1 {
 				return nil, fmt.Errorf(`"json" function expects 1 argument, %d provided`, len(value))
 			}
@@ -156,11 +212,11 @@ var stdFunctions = map[string]StdFunction{
 				return nil, fmt.Errorf(`"json" function had problem unmarshalling: %s`, err.Error())
 			}
 			return NewValue(v), nil
-		},
+		}),
 	},
 	"toyaml": {
 		ReturnType: TypeString,
-		Handler: func(value ...StaticValue) (Expression, error) {
+		Handler: ToStdFunctionHandler(func(value ...StaticValue) (Expression, error) {
 			if len(value) != 1 {
 				return nil, fmt.Errorf(`"toyaml" function expects 1 argument, %d provided`, len(value))
 			}
@@ -169,10 +225,10 @@ var stdFunctions = map[string]StdFunction{
 				return nil, fmt.Errorf(`"toyaml" function had problem marshalling: %s`, err.Error())
 			}
 			return NewValue(string(b)), nil
-		},
+		}),
 	},
 	"yaml": {
-		Handler: func(value ...StaticValue) (Expression, error) {
+		Handler: ToStdFunctionHandler(func(value ...StaticValue) (Expression, error) {
 			if len(value) != 1 {
 				return nil, fmt.Errorf(`"yaml" function expects 1 argument, %d provided`, len(value))
 			}
@@ -185,31 +241,31 @@ var stdFunctions = map[string]StdFunction{
 				return nil, fmt.Errorf(`"yaml" function had problem unmarshalling: %s`, err.Error())
 			}
 			return NewValue(v), nil
-		},
+		}),
 	},
 	"shellquote": {
 		ReturnType: TypeString,
-		Handler: func(value ...StaticValue) (Expression, error) {
+		Handler: ToStdFunctionHandler(func(value ...StaticValue) (Expression, error) {
 			args := make([]string, len(value))
 			for i := range value {
 				args[i], _ = value[i].StringValue()
 			}
 			return NewValue(shellquote.Join(args...)), nil
-		},
+		}),
 	},
 	"shellparse": {
-		Handler: func(value ...StaticValue) (Expression, error) {
+		Handler: ToStdFunctionHandler(func(value ...StaticValue) (Expression, error) {
 			if len(value) != 1 {
 				return nil, fmt.Errorf(`"shellparse" function expects 1 arguments, %d provided`, len(value))
 			}
 			v, _ := value[0].StringValue()
 			words, err := shellquote.Split(v)
 			return NewValue(words), err
-		},
+		}),
 	},
 	"trim": {
 		ReturnType: TypeString,
-		Handler: func(value ...StaticValue) (Expression, error) {
+		Handler: ToStdFunctionHandler(func(value ...StaticValue) (Expression, error) {
 			if len(value) != 1 {
 				return nil, fmt.Errorf(`"trim" function expects 1 argument, %d provided`, len(value))
 			}
@@ -218,11 +274,11 @@ var stdFunctions = map[string]StdFunction{
 			}
 			str, _ := value[0].StringValue()
 			return NewValue(strings.TrimSpace(str)), nil
-		},
+		}),
 	},
 	"len": {
 		ReturnType: TypeInt64,
-		Handler: func(value ...StaticValue) (Expression, error) {
+		Handler: ToStdFunctionHandler(func(value ...StaticValue) (Expression, error) {
 			if len(value) != 1 {
 				return nil, fmt.Errorf(`"len" function expects 1 argument, %d provided`, len(value))
 			}
@@ -239,11 +295,11 @@ var stdFunctions = map[string]StdFunction{
 				return NewValue(int64(len(v))), err
 			}
 			return nil, fmt.Errorf(`"len" function expects string, slice or map, %v provided`, value[0])
-		},
+		}),
 	},
 	"floor": {
 		ReturnType: TypeInt64,
-		Handler: func(value ...StaticValue) (Expression, error) {
+		Handler: ToStdFunctionHandler(func(value ...StaticValue) (Expression, error) {
 			if len(value) != 1 {
 				return nil, fmt.Errorf(`"floor" function expects 1 argument, %d provided`, len(value))
 			}
@@ -252,11 +308,11 @@ var stdFunctions = map[string]StdFunction{
 				return nil, fmt.Errorf(`"floor" function expects a number, %s provided: %v`, value[0], err)
 			}
 			return NewValue(int64(math2.Floor(f))), nil
-		},
+		}),
 	},
 	"ceil": {
 		ReturnType: TypeInt64,
-		Handler: func(value ...StaticValue) (Expression, error) {
+		Handler: ToStdFunctionHandler(func(value ...StaticValue) (Expression, error) {
 			if len(value) != 1 {
 				return nil, fmt.Errorf(`"ceil" function expects 1 argument, %d provided`, len(value))
 			}
@@ -265,11 +321,11 @@ var stdFunctions = map[string]StdFunction{
 				return nil, fmt.Errorf(`"ceil" function expects a number, %s provided: %v`, value[0], err)
 			}
 			return NewValue(int64(math2.Ceil(f))), nil
-		},
+		}),
 	},
 	"round": {
 		ReturnType: TypeInt64,
-		Handler: func(value ...StaticValue) (Expression, error) {
+		Handler: ToStdFunctionHandler(func(value ...StaticValue) (Expression, error) {
 			if len(value) != 1 {
 				return nil, fmt.Errorf(`"round" function expects 1 argument, %d provided`, len(value))
 			}
@@ -278,10 +334,10 @@ var stdFunctions = map[string]StdFunction{
 				return nil, fmt.Errorf(`"round" function expects a number, %s provided: %v`, value[0], err)
 			}
 			return NewValue(int64(math2.Round(f))), nil
-		},
+		}),
 	},
 	"chunk": {
-		Handler: func(value ...StaticValue) (Expression, error) {
+		Handler: ToStdFunctionHandler(func(value ...StaticValue) (Expression, error) {
 			if len(value) != 2 {
 				return nil, fmt.Errorf(`"chunk" function expects 2 arguments, %d provided`, len(value))
 			}
@@ -306,10 +362,10 @@ var stdFunctions = map[string]StdFunction{
 				chunks = append(chunks, list[i:end])
 			}
 			return NewValue(chunks), nil
-		},
+		}),
 	},
 	"at": {
-		Handler: func(value ...StaticValue) (Expression, error) {
+		Handler: ToStdFunctionHandler(func(value ...StaticValue) (Expression, error) {
 			if len(value) != 2 {
 				return nil, fmt.Errorf(`"at" function expects 2 arguments, %d provided`, len(value))
 			}
@@ -345,10 +401,10 @@ var stdFunctions = map[string]StdFunction{
 				return nil, fmt.Errorf(`"at" function: error: out of bounds (length=%d, index=%d)`, len(v), k)
 			}
 			return nil, fmt.Errorf(`"at" function can be performed only on lists, maps and strings: %s provided`, value[0])
-		},
+		}),
 	},
 	"map": {
-		Handler: func(value ...StaticValue) (Expression, error) {
+		Handler: ToStdFunctionHandler(func(value ...StaticValue) (Expression, error) {
 			if len(value) != 2 {
 				return nil, fmt.Errorf(`"map" function expects 2 arguments, %d provided`, len(value))
 			}
@@ -371,10 +427,10 @@ var stdFunctions = map[string]StdFunction{
 				result[i] = v.String()
 			}
 			return Compile(fmt.Sprintf("list(%s)", strings.Join(result, ",")))
-		},
+		}),
 	},
 	"entries": {
-		Handler: func(value ...StaticValue) (Expression, error) {
+		Handler: ToStdFunctionHandler(func(value ...StaticValue) (Expression, error) {
 			if len(value) != 1 {
 				return nil, fmt.Errorf(`"entries" function expects 1 argument, %d provided`, len(value))
 			}
@@ -387,10 +443,10 @@ var stdFunctions = map[string]StdFunction{
 				list = append(list, MapEntry{Key: k, Value: v})
 			}
 			return NewValue(list), nil
-		},
+		}),
 	},
 	"filter": {
-		Handler: func(value ...StaticValue) (Expression, error) {
+		Handler: ToStdFunctionHandler(func(value ...StaticValue) (Expression, error) {
 			if len(value) != 2 {
 				return nil, fmt.Errorf(`"filter" function expects 2 arguments, %d provided`, len(value))
 			}
@@ -423,10 +479,10 @@ var stdFunctions = map[string]StdFunction{
 				}
 			}
 			return NewValue(result), nil
-		},
+		}),
 	},
 	"eval": {
-		Handler: func(value ...StaticValue) (Expression, error) {
+		Handler: ToStdFunctionHandler(func(value ...StaticValue) (Expression, error) {
 			if len(value) != 1 {
 				return nil, fmt.Errorf(`"eval" function expects 1 argument, %d provided`, len(value))
 			}
@@ -436,10 +492,10 @@ var stdFunctions = map[string]StdFunction{
 				return nil, fmt.Errorf(`"eval" function: %s: error: %v`, value[0], err)
 			}
 			return expr, nil
-		},
+		}),
 	},
 	"jq": {
-		Handler: func(value ...StaticValue) (Expression, error) {
+		Handler: ToStdFunctionHandler(func(value ...StaticValue) (Expression, error) {
 			if len(value) != 2 {
 				return nil, fmt.Errorf(`"jq" function expects 2 arguments, %d provided`, len(value))
 			}
@@ -473,11 +529,11 @@ var stdFunctions = map[string]StdFunction{
 				result = append(result, v)
 			}
 			return NewValue(result), nil
-		},
+		}),
 	},
 	"relpath": {
 		ReturnType: TypeString,
-		Handler: func(value ...StaticValue) (Expression, error) {
+		Handler: ToStdFunctionHandler(func(value ...StaticValue) (Expression, error) {
 			if len(value) != 1 && len(value) != 2 {
 				return nil, fmt.Errorf(`"relpath" function expects 1-2 arguments, %d provided`, len(value))
 			}
@@ -501,11 +557,11 @@ var stdFunctions = map[string]StdFunction{
 			}
 			v, err := filepath.Rel(sourcePath, destinationPath)
 			return NewValue(v), err
-		},
+		}),
 	},
 	"abspath": {
 		ReturnType: TypeString,
-		Handler: func(value ...StaticValue) (Expression, error) {
+		Handler: ToStdFunctionHandler(func(value ...StaticValue) (Expression, error) {
 			if len(value) != 1 && len(value) != 2 {
 				return nil, fmt.Errorf(`"abspath" function expects 1-2 arguments, %d provided`, len(value))
 			}
@@ -528,10 +584,10 @@ var stdFunctions = map[string]StdFunction{
 				return nil, err
 			}
 			return NewValue(filepath.Join(sourcePath, destinationPath)), err
-		},
+		}),
 	},
 	"range": {
-		Handler: func(value ...StaticValue) (Expression, error) {
+		Handler: ToStdFunctionHandler(func(value ...StaticValue) (Expression, error) {
 			if len(value) != 1 && len(value) != 2 {
 				return nil, fmt.Errorf(`"range" function expects 1-2 arguments, %d provided`, len(value))
 			}
@@ -561,11 +617,11 @@ var stdFunctions = map[string]StdFunction{
 				result[i] = start + i
 			}
 			return NewValue(result), nil
-		},
+		}),
 	},
 	"date": {
 		ReturnType: TypeString,
-		Handler: func(value ...StaticValue) (Expression, error) {
+		Handler: ToStdFunctionHandler(func(value ...StaticValue) (Expression, error) {
 			if len(value) == 0 {
 				return NewValue(time.Now().UTC().Format(RFC3339Millis)), nil
 			} else if len(value) == 1 {
@@ -573,6 +629,32 @@ var stdFunctions = map[string]StdFunction{
 				return NewValue(time.Now().UTC().Format(format)), nil
 			}
 			return nil, fmt.Errorf(`"date" function expects 0-1 arguments, %d provided`, len(value))
+		}),
+	},
+	"any": {
+		Handler: func(args []CallArgument) (Expression, bool, error) {
+			resolved := true
+			for i := range args {
+				value := args[i].Static()
+				if value == nil {
+					resolved = false
+					continue
+				}
+				if !args[i].Spread {
+					return value, true, nil
+				}
+				items, err := value.SliceValue()
+				if err != nil {
+					return nil, true, fmt.Errorf("spread operator (...) used against non-list parameter: %s", value)
+				}
+				if len(items) > 0 {
+					return NewValue(items[0]), true, nil
+				}
+			}
+			if resolved {
+				return None, true, nil
+			}
+			return nil, false, nil
 		},
 	},
 }
@@ -595,28 +677,28 @@ func CastToString(v Expression) Expression {
 	} else if v.Type() == TypeString {
 		return v
 	}
-	return newCall(stringCastStdFn, []callArgument{{expr: v}})
+	return newCall(stringCastStdFn, []CallArgument{{Expression: v}})
 }
 
 func CastToBool(v Expression) Expression {
 	if v.Type() == TypeBool {
 		return v
 	}
-	return newCall(boolCastStdFn, []callArgument{{expr: v}})
+	return newCall(boolCastStdFn, []CallArgument{{Expression: v}})
 }
 
 func CastToInt(v Expression) Expression {
 	if v.Type() == TypeInt64 {
 		return v
 	}
-	return newCall(intCastStdFn, []callArgument{{expr: v}})
+	return newCall(intCastStdFn, []CallArgument{{Expression: v}})
 }
 
 func CastToFloat(v Expression) Expression {
 	if v.Type() == TypeFloat64 {
 		return v
 	}
-	return newCall(intCastStdFn, []callArgument{{expr: v}})
+	return newCall(intCastStdFn, []CallArgument{{Expression: v}})
 }
 
 func IsStdFunction(name string) bool {
@@ -633,28 +715,28 @@ func CallStdFunction(name string, value ...interface{}) (Expression, error) {
 	if !ok {
 		return nil, fmt.Errorf("function '%s' doesn't exists in standard library", name)
 	}
-	r := make([]StaticValue, 0, len(value))
+	r := make([]CallArgument, 0, len(value))
 	for i := 0; i < len(value); i++ {
 		if v, ok := value[i].(StaticValue); ok {
-			r = append(r, v)
+			r = append(r, CallArgument{Expression: v})
 		} else if v, ok := value[i].(Expression); ok {
 			return nil, fmt.Errorf("expression functions can be called only with static values: %s provided", v)
 		} else {
-			r = append(r, NewValue(value[i]))
+			r = append(r, CallArgument{Expression: NewValue(value[i])})
 		}
 	}
-	return fn.Handler(r...)
+	v, _, err := fn.Handler(r)
+	return v, err
 }
 
 func (*stdMachine) Get(name string) (Expression, bool, error) {
 	return nil, false, nil
 }
 
-func (*stdMachine) Call(name string, args ...StaticValue) (Expression, bool, error) {
+func (*stdMachine) Call(name string, args []CallArgument) (Expression, bool, error) {
 	fn, ok := stdFunctions[name]
-	if ok {
-		exp, err := fn.Handler(args...)
-		return exp, true, err
+	if !ok {
+		return nil, false, nil
 	}
-	return nil, false, nil
+	return fn.Handler(args)
 }

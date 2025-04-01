@@ -4,6 +4,8 @@ metadata:
   name: postman-workflow-suite
   labels:
     core-tests: workflows-suite
+    type: suite
+    tool: postman
 spec:
   steps:
   - execute:

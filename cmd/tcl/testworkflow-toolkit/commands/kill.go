@@ -104,20 +104,26 @@ func NewKillCmd() *cobra.Command {
 					}
 
 					log := spawn.CreateLogger(service, "", index, count)
-					summary, err := spawn.ExecutionWorker().Summary(context.Background(), id, executionworkertypes.GetOptions{})
-					if err != nil {
-						log("error", "failed to connect to the service", err.Error())
+					notifications := spawn.ExecutionWorker().Notifications(context.Background(), id,
+						executionworkertypes.NotificationsOptions{NoFollow: true})
+					if notifications.Err() != nil {
+						log("error", "failed to connect to the service", notifications.Err().Error())
 						continue
 					}
 
-					result := summary.EstimatedResult
-					if result.Status.Finished() {
-						if result.Initialization != nil && result.Initialization.ErrorMessage != "" {
-							log("warning", "initialization error", ui.Red(result.Initialization.ErrorMessage))
-						} else {
-							for _, step := range result.Steps {
-								if step.ErrorMessage != "" {
-									log("warning", "step error", ui.Red(step.ErrorMessage))
+					for l := range notifications.Channel() {
+						if l.Result == nil || l.Result.Status == nil {
+							continue
+						}
+
+						if l.Result.Status.Finished() {
+							if l.Result.Initialization != nil && l.Result.Initialization.ErrorMessage != "" {
+								log("warning", "initialization error", ui.Red(l.Result.Initialization.ErrorMessage))
+							} else {
+								for _, step := range l.Result.Steps {
+									if step.ErrorMessage != "" {
+										log("warning", "step error", ui.Red(step.ErrorMessage))
+									}
 								}
 							}
 						}

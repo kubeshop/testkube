@@ -353,20 +353,22 @@ func (r *MongoRepository) GetExecutionsSummary(ctx context.Context, filter Filte
 }
 
 func (r *MongoRepository) Insert(ctx context.Context, result testkube.TestWorkflowExecution) (err error) {
-	result.EscapeDots()
-	if result.Reports == nil {
-		result.Reports = []testkube.TestWorkflowReport{}
+	execution := result.Clone()
+	execution.EscapeDots()
+	if execution.Reports == nil {
+		execution.Reports = []testkube.TestWorkflowReport{}
 	}
-	_, err = r.Coll.InsertOne(ctx, result)
+	_, err = r.Coll.InsertOne(ctx, execution)
 	return
 }
 
 func (r *MongoRepository) Update(ctx context.Context, result testkube.TestWorkflowExecution) (err error) {
-	result.EscapeDots()
-	if result.Reports == nil {
-		result.Reports = []testkube.TestWorkflowReport{}
+	execution := result.Clone()
+	execution.EscapeDots()
+	if execution.Reports == nil {
+		execution.Reports = []testkube.TestWorkflowReport{}
 	}
-	_, err = r.Coll.ReplaceOne(ctx, bson.M{"id": result.Id}, result)
+	_, err = r.Coll.ReplaceOne(ctx, bson.M{"id": execution.Id}, execution)
 	return
 }
 
@@ -389,6 +391,11 @@ func (r *MongoRepository) UpdateReport(ctx context.Context, id string, report *t
 
 func (r *MongoRepository) UpdateOutput(ctx context.Context, id string, refs []testkube.TestWorkflowOutput) (err error) {
 	_, err = r.Coll.UpdateOne(ctx, bson.M{"id": id}, bson.M{"$set": bson.M{"output": refs}})
+	return
+}
+
+func (r *MongoRepository) UpdateResourceAggregations(ctx context.Context, id string, resourceAggregations *testkube.TestWorkflowExecutionResourceAggregationsReport) (err error) {
+	_, err = r.Coll.UpdateOne(ctx, bson.M{"id": id}, bson.M{"$set": bson.M{"resourceaggregations": resourceAggregations}})
 	return
 }
 
@@ -691,16 +698,17 @@ func (r *MongoRepository) GetNextExecutionNumber(ctx context.Context, name strin
 }
 
 func (r *MongoRepository) GetExecutionTags(ctx context.Context, testWorkflowName string) (tags map[string][]string, err error) {
-	query := bson.M{"tags": bson.M{"$exists": true}}
+	query := bson.M{"tags": bson.M{"$nin": bson.A{nil, bson.M{}}}}
 	if testWorkflowName != "" {
 		query["workflow.name"] = testWorkflowName
 	}
 
 	pipeline := []bson.M{
 		{"$match": query},
-		{"$project": bson.M{
-			"tags": 1,
-		}},
+		{"$project": bson.M{"_id": 0, "tags": bson.M{"$objectToArray": "$tags"}}},
+		{"$unwind": "$tags"},
+		{"$group": bson.M{"_id": "$tags.k", "values": bson.M{"$addToSet": "$tags.v"}}},
+		{"$project": bson.M{"_id": 0, "name": "$_id", "values": 1}},
 	}
 
 	opts := options.Aggregate()
@@ -713,21 +721,18 @@ func (r *MongoRepository) GetExecutionTags(ctx context.Context, testWorkflowName
 		return nil, err
 	}
 
-	var executions []testkube.TestWorkflowExecutionTags
-	err = cursor.All(ctx, &executions)
+	var res []struct {
+		Name   string   `bson:"name"`
+		Values []string `bson:"values"`
+	}
+	err = cursor.All(ctx, &res)
 	if err != nil {
 		return nil, err
 	}
 
-	for i := range executions {
-		executions[i].UnscapeDots()
-	}
-
 	tags = make(map[string][]string)
-	for _, execution := range executions {
-		for key, value := range execution.Tags {
-			tags[key] = append(tags[key], value)
-		}
+	for _, tag := range res {
+		tags[tag.Name] = tag.Values
 	}
 
 	return tags, nil
@@ -756,7 +761,7 @@ func (r *MongoRepository) Assign(ctx context.Context, id string, prevRunnerId st
 	if err != nil {
 		return false, err
 	}
-	return res.ModifiedCount > 0, nil
+	return res.MatchedCount > 0, nil
 }
 
 // TODO: Return IDs only

@@ -43,6 +43,7 @@ type ExecutionState interface {
 	Namespace() string
 	ResourceId() string
 	RootResourceId() string
+	RunnerId() string
 	PodName() string
 	PodNodeName() string
 	PodIP() string
@@ -60,6 +61,7 @@ type ExecutionState interface {
 	ExecutionError() string
 	JobExecutionError() string
 	PodExecutionError() string
+	Debug() map[string]string
 
 	PodCreationTimestamp() time.Time
 	EstimatedPodCreationTimestamp() time.Time
@@ -230,6 +232,16 @@ func (e *executionState) RootResourceId() string {
 	// Fallback computing that from the pod name
 	if e.PodName() != "" {
 		return e.PodName()[0:strings.Index(e.PodName(), "-")]
+	}
+	return ""
+}
+
+func (e *executionState) RunnerId() string {
+	if e.job != nil && e.job.RunnerId() != "" {
+		return e.job.RunnerId()
+	}
+	if e.pod != nil && e.pod.RunnerId() != "" {
+		return e.pod.RunnerId()
 	}
 	return ""
 }
@@ -431,4 +443,26 @@ func (e *executionState) ExecutionError() string {
 		return jobErr
 	}
 	return podErr
+}
+
+func (e *executionState) Debug() map[string]string {
+	result := map[string]string{
+		"pod":       "unknown",
+		"job":       "unknown",
+		"podEvents": "unknown",
+		"jobEvents": "unknown",
+	}
+	if e.pod != nil {
+		result["pod"] = e.pod.Debug()
+	}
+	if e.job != nil {
+		result["job"] = e.job.Debug()
+	}
+	if e.podEvents != nil {
+		result["podEvents"] = e.podEvents.Debug()
+	}
+	if e.jobEvents != nil {
+		result["jobEvents"] = e.jobEvents.Debug()
+	}
+	return result
 }

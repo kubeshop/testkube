@@ -69,11 +69,7 @@ func (s *TestkubeAPI) ListTagsHandler() fiber.Handler {
 		if err != nil {
 			return s.ClientError(c, errPrefix, err)
 		}
-
-		results := make(map[string][]string)
-		deduplicateMap(tags, results)
-
-		return c.JSON(results)
+		return c.JSON(tags)
 	}
 }
 

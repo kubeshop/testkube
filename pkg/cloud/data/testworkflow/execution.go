@@ -206,3 +206,7 @@ func (r *CloudRepository) GetUnassigned(ctx context.Context) (result []testkube.
 func (r *CloudRepository) AbortIfQueued(ctx context.Context, id string) (bool, error) {
 	return false, errors.New("not supported")
 }
+
+func (r *CloudRepository) UpdateResourceAggregations(ctx context.Context, id string, resourceAggregations *testkube.TestWorkflowExecutionResourceAggregationsReport) error {
+	return errors.New("not supported")
+}

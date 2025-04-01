@@ -18,7 +18,7 @@ This utility is used to help with development of the Agent features (like Test W
 ## Usage
 
 * Login to Testkube CLI, like `testkube login`
-  * For local development Testkube Enterprise (Skaffold), consider `testkube login --api-uri-override=http://localhost:8099 --agent-uri-override=http://testkube-enterprise-api.tk-dev.svc.cluster.local:8089 --auth-uri-override=http://localhost:5556 --custom-auth`
+  * For local development Testkube Enterprise (Skaffold), consider `testkube login localhost:8099`
   * It's worth to create alias for that in own `.bashrc` or `.bash_profile`
   * It's worth to pass a devbox name, like `-n dawid`, so it's not using random name
 * For OSS version - run with `--oss` parameter

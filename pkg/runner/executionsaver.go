@@ -39,6 +39,7 @@ type executionSaver struct {
 	result       *testkube.TestWorkflowResult
 	resultUpdate store.Update
 	resultMu     sync.Mutex
+	saveMu       sync.Mutex
 
 	outputSaved *atomic.Bool
 
@@ -128,13 +129,18 @@ func (s *executionSaver) saveOutput(ctx context.Context) error {
 }
 
 func (s *executionSaver) saveResult(ctx context.Context, result *testkube.TestWorkflowResult) error {
+	s.saveMu.Lock()
+	defer s.saveMu.Unlock()
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
 	return s.client.UpdateExecutionResult(ctx, s.environmentId, s.id, result)
 }
 
 func (s *executionSaver) End(ctx context.Context, result testkube.TestWorkflowResult) error {
 	s.ctxCancel()
-	s.resultMu.Lock()
-	defer s.resultMu.Unlock()
+	s.saveMu.Lock()
+	defer s.saveMu.Unlock()
 
 	// Save the logs and output
 	g, _ := errgroup.WithContext(ctx)

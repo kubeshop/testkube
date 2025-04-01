@@ -4,6 +4,7 @@ metadata:
   name: postman-workflow-smoke
   labels:
     core-tests: workflows
+    tool: postman
 spec:
   content:
     git:
@@ -33,6 +34,7 @@ metadata:
   name: postman-workflow-smoke-without-envs
   labels:
     core-tests: workflows
+    tool: postman
 spec:
   content:
     git:
@@ -60,6 +62,7 @@ metadata:
   name: postman-workflow-smoke-template
   labels:
     core-tests: workflows
+    tool: postman
 spec:
   content:
     git:
@@ -87,6 +90,7 @@ metadata:
   name: postman-workflow-smoke-template-without-envs
   labels:
     core-tests: workflows
+    tool: postman
 spec:
   content:
     git:
@@ -113,6 +117,7 @@ metadata:
   name: postman-workflow-smoke-cron-trigger-test
   labels:
     core-tests: workflows
+    tool: postman
 spec:
   content:
     git:
@@ -145,6 +150,7 @@ metadata:
   name: postman-workflow-smoke-junit
   labels:
     core-tests: workflows
+    tool: postman
 spec:
   content:
     git:

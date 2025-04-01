@@ -484,6 +484,14 @@ func MapContentTarballKubeToAPI(v testworkflowsv1.ContentTarball) testkube.TestW
 	}
 }
 
+func MapTargetKubeToAPI(v testworkflowsv1.Target) testkube.TestWorkflowTarget {
+	return testkube.TestWorkflowTarget{
+		Match:     v.Match,
+		Not:       v.Not,
+		Replicate: v.Replicate,
+	}
+}
+
 func MapContentKubeToAPI(v testworkflowsv1.Content) testkube.TestWorkflowContent {
 	return testkube.TestWorkflowContent{
 		Git:     common.MapPtr(v.Git, MapContentGitKubeToAPI),
@@ -1283,7 +1291,7 @@ func MapTestWorkflowKubeToAPI(w testworkflowsv1.TestWorkflow) testkube.TestWorkf
 		updateTime = w.DeletionTimestamp.Time
 	} else {
 		for _, field := range w.ManagedFields {
-			if field.Time.After(updateTime) {
+			if field.Time != nil && field.Time.After(updateTime) {
 				updateTime = field.Time.Time
 			}
 		}
@@ -1307,7 +1315,7 @@ func MapTestWorkflowTemplateKubeToAPI(w testworkflowsv1.TestWorkflowTemplate) te
 		updateTime = w.DeletionTimestamp.Time
 	} else {
 		for _, field := range w.ManagedFields {
-			if field.Time.After(updateTime) {
+			if field.Time != nil && field.Time.After(updateTime) {
 				updateTime = field.Time.Time
 			}
 		}
@@ -1351,7 +1359,8 @@ func MapTemplateListKubeToAPI(v *testworkflowsv1.TestWorkflowTemplateList) []tes
 
 func MapTestWorkflowTagSchemaKubeToAPI(v testworkflowsv1.TestWorkflowTagSchema) testkube.TestWorkflowTagSchema {
 	return testkube.TestWorkflowTagSchema{
-		Tags: v.Tags,
+		Tags:   v.Tags,
+		Target: common.MapPtr(v.Target, MapTargetKubeToAPI),
 	}
 }
 
@@ -1416,5 +1425,70 @@ func MapPvcConfigKubeToAPI(v corev1.PersistentVolumeClaimSpec) testkube.TestWork
 		DataSource:                common.MapPtr(v.DataSource, MapTypeLocalObjectReferenceKubeToAPI),
 		DataSourceRef:             common.MapPtr(v.DataSourceRef, MapTypeObjectReferenceKubeToAPI),
 		VolumeAttributesClassName: MapStringToBoxedString(v.VolumeAttributesClassName),
+	}
+}
+
+func MapTestWorkflowExecutionResourceAggregationsReportKubeToAPI(
+	v *testworkflowsv1.TestWorkflowExecutionResourceAggregationsReport,
+) *testkube.TestWorkflowExecutionResourceAggregationsReport {
+	if v == nil {
+		return nil
+	}
+	return &testkube.TestWorkflowExecutionResourceAggregationsReport{
+		Global: MapTestWorkflowExecutionResourceAggregationsByMeasurementKubeToAPI(v.Global),
+		Step:   MapTestWorkflowExecutionStepResourceAggregationsKubeToAPI(v.Step),
+	}
+}
+
+func MapTestWorkflowExecutionStepResourceAggregationsKubeToAPI(
+	vs []*testworkflowsv1.TestWorkflowExecutionStepResourceAggregations,
+) []testkube.TestWorkflowExecutionStepResourceAggregations {
+	r := make([]testkube.TestWorkflowExecutionStepResourceAggregations, 0, len(vs))
+
+	for _, v := range vs {
+		r = append(r, testkube.TestWorkflowExecutionStepResourceAggregations{
+			Ref:          v.Ref,
+			Aggregations: MapTestWorkflowExecutionResourceAggregationsByMeasurementKubeToAPI(v.Aggregations),
+		})
+	}
+
+	return r
+}
+
+func MapTestWorkflowExecutionResourceAggregationsByMeasurementKubeToAPI(
+	v testworkflowsv1.TestWorkflowExecutionResourceAggregationsByMeasurement,
+) map[string]map[string]testkube.TestWorkflowExecutionResourceAggregations {
+	result := make(map[string]map[string]testkube.TestWorkflowExecutionResourceAggregations)
+
+	for measurement, byField := range v {
+		if _, ok := result[measurement]; !ok {
+			result[measurement] = make(map[string]testkube.TestWorkflowExecutionResourceAggregations)
+		}
+		for field, wrapper := range byField {
+			apiWrapper := MapTestWorkflowExecutionResourceAggregationsKubeToAPI(wrapper)
+			if apiWrapper != nil {
+				result[measurement][field] = *apiWrapper
+			} else {
+				// If needed, handle the case where wrapper is nil or conversion is nil
+				result[measurement][field] = testkube.TestWorkflowExecutionResourceAggregations{}
+			}
+		}
+	}
+
+	return result
+}
+
+func MapTestWorkflowExecutionResourceAggregationsKubeToAPI(
+	v *testworkflowsv1.TestWorkflowExecutionResourceAggregations,
+) *testkube.TestWorkflowExecutionResourceAggregations {
+	if v == nil {
+		return nil
+	}
+	return &testkube.TestWorkflowExecutionResourceAggregations{
+		Total:  v.Total,
+		Min:    v.Min,
+		Max:    v.Max,
+		Avg:    v.Avg,
+		StdDev: v.StdDev,
 	}
 }

@@ -20,6 +20,7 @@ type testWorkflowTemplateFetcher struct {
 	client        testworkflowtemplateclient.TestWorkflowTemplateClient
 	environmentId string
 	cache         map[string]*testkube.TestWorkflowTemplate
+	cacheMu       sync.RWMutex
 }
 
 func NewTestWorkflowTemplateFetcher(
@@ -34,6 +35,8 @@ func NewTestWorkflowTemplateFetcher(
 }
 
 func (r *testWorkflowTemplateFetcher) SetCache(name string, tpl *testkube.TestWorkflowTemplate) {
+	r.cacheMu.Lock()
+	defer r.cacheMu.Unlock()
 	if tpl == nil {
 		delete(r.cache, name)
 	} else {
@@ -43,14 +46,18 @@ func (r *testWorkflowTemplateFetcher) SetCache(name string, tpl *testkube.TestWo
 
 func (r *testWorkflowTemplateFetcher) Prefetch(name string) error {
 	name = testworkflowresolver.GetInternalTemplateName(name)
+	r.cacheMu.RLock()
 	if _, ok := r.cache[name]; ok {
+		r.cacheMu.RUnlock()
 		return nil
 	}
+	r.cacheMu.RUnlock()
+
 	workflow, err := r.client.Get(context.Background(), r.environmentId, name)
 	if err != nil {
 		return errors.Wrapf(err, "cannot fetch Test Workflow Template by name: %s", name)
 	}
-	r.cache[name] = workflow
+	r.SetCache(name, workflow)
 	return nil
 }
 
@@ -75,13 +82,18 @@ func (r *testWorkflowTemplateFetcher) PrefetchMany(namesSet map[string]struct{})
 }
 
 func (r *testWorkflowTemplateFetcher) Get(name string) (*testkube.TestWorkflowTemplate, error) {
+	r.cacheMu.RLock()
 	if r.cache[name] == nil {
+		r.cacheMu.RUnlock()
 		err := r.Prefetch(name)
 		if err != nil {
 			return nil, err
 		}
+		r.cacheMu.RLock()
 	}
-	return r.cache[name], nil
+	tmpl := r.cache[name]
+	r.cacheMu.RUnlock()
+	return tmpl, nil
 }
 
 func (r *testWorkflowTemplateFetcher) GetMany(names map[string]struct{}) (map[string]*testkube.TestWorkflowTemplate, error) {
