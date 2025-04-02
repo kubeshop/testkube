@@ -238,13 +238,13 @@ func (r *runner) Monitor(ctx context.Context, organizationId string, environment
 	err := retry(GetExecutionRetryCount, GetExecutionRetryDelay, func() (err error) {
 		execution, err = r.client.GetExecution(ctx, environmentId, id)
 		if err != nil {
-			log.DefaultLogger.Errorw("failed to get execution, retrying...", "id", id, "error", err)
+			log.DefaultLogger.Warnw("failed to get execution for monitoring, retrying...", "id", id, "error", err)
 		}
 		return err
 	})
 	if err != nil {
 		r.watching.Delete(id)
-		log.DefaultLogger.Errorw("failed to get execution: non-recoverable", "id", id, "error", err)
+		log.DefaultLogger.Errorw("failed to get execution for monitoring", "id", id, "error", err)
 		return err
 	}
 
@@ -295,12 +295,12 @@ func (r *runner) execute(request executionworkertypes.ExecuteRequest) (*executio
 			err := retry(MonitorRetryCount, MonitorRetryDelay, func() error {
 				err := r.Monitor(context.Background(), request.Execution.OrganizationId, request.Execution.EnvironmentId, request.Execution.Id)
 				if err != nil {
-					log.DefaultLogger.Errorw("failed to monitor execution, retrying...", "id", request.Execution.Id, "error", err)
+					log.DefaultLogger.Warnw("failed to monitor execution, retrying...", "id", request.Execution.Id, "error", err)
 				}
 				return err
 			})
 			if err != nil {
-				log.DefaultLogger.Errorw("failed to monitor execution: non-recoverable", "id", request.Execution.Id, "error", err)
+				log.DefaultLogger.Errorw("failed to monitor execution", "id", request.Execution.Id, "error", err)
 			}
 		}()
 	}
