@@ -246,7 +246,7 @@ func NewParallelCmd() *cobra.Command {
 
 					// Save logs
 					if shouldSaveLogs {
-						logsFilePath, err := spawn.SaveLogs(context.Background(), storage, namespace, cfg.Resource.Id, "", index)
+						logsFilePath, err := spawn.SaveLogs(context.Background(), storage, namespace, cfg.Resource.Id, "", index, log)
 						if err == nil {
 							instructions.PrintOutput(config.Ref(), "parallel", ParallelStatus{Index: int(index), Logs: storage.FullPath(logsFilePath)})
 							log("saved logs")

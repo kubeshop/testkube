@@ -146,7 +146,7 @@ spec:
       use:
       - name: distribute/evenly
       count: 5
-      timeout: 30s # initialization timeout
+      timeout: 120s # initialization timeout
       logs: 'always'
       image: alpine/jmeter:5.6
       command:
@@ -199,7 +199,7 @@ spec:
       use:
       - name: distribute/evenly
       count: 5
-      timeout: 30s # initialization timeout
+      timeout: 120s # initialization timeout
       logs: 'always'
       image: alpine/jmeter:5.6
       command:

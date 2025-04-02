@@ -145,7 +145,7 @@ func NewKillCmd() *cobra.Command {
 					}
 					log := spawn.CreateLogger(service, "", index, count)
 
-					logsFilePath, err := spawn.SaveLogs(context.Background(), storage, config.Namespace(), id, service+"/", index)
+					logsFilePath, err := spawn.SaveLogs(context.Background(), storage, config.Namespace(), id, service+"/", index, log)
 					if err == nil {
 						instructions.PrintOutput(config.Ref(), "service", ServiceInfo{Group: groupRef, Name: service, Index: index, Logs: storage.FullPath(logsFilePath)})
 						log("saved logs")
