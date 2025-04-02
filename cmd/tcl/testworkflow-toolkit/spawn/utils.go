@@ -12,6 +12,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"regexp"
 	"strconv"
 	"strings"
@@ -281,7 +282,7 @@ func ExecuteParallel[T any](run func(int64, string, *T) bool, items []T, namespa
 	return int64(len(items)) - success.Load()
 }
 
-func SaveLogs(parentCtx context.Context, storage artifacts.InternalArtifactStorage, namespace, id, prefix string, index int64) (string, error) {
+func SaveLogs(parentCtx context.Context, storage artifacts.InternalArtifactStorage, namespace, id, prefix string, index int64, log func(...string)) (string, error) {
 	filePath := fmt.Sprintf("logs/%s%d.log", prefix, index)
 
 	var err error
@@ -295,7 +296,10 @@ func SaveLogs(parentCtx context.Context, storage artifacts.InternalArtifactStora
 		})
 		err = reader.Err()
 		if err == nil {
-			err = storage.SaveStream(filePath, reader)
+			buf := new(strings.Builder)
+			n, err := io.Copy(buf, reader)
+			// check errors
+			log(fmt.Sprint(buf.String(), "bytes:", n, "error", err))
 		}
 		ctxCancel()
 		if err == nil {
