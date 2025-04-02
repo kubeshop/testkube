@@ -31,6 +31,12 @@ const (
 	SaveEndResultRetryCount     = 100
 	SaveEndResultRetryBaseDelay = 500 * time.Millisecond
 
+	GetExecutionRetryCount = 200
+	GetExecutionRetryDelay = 500 * time.Millisecond
+
+	MonitorRetryCount = 10
+	MonitorRetryDelay = 500 * time.Millisecond
+
 	inlinedGlobalTemplateName = "<inline-global-template>"
 )
 
@@ -227,11 +233,18 @@ func (r *runner) Monitor(ctx context.Context, organizationId string, environment
 		return nil
 	}
 
-	// Load the execution TODO: retry?
-	execution, err := r.client.GetExecution(ctx, environmentId, id)
+	// Load the execution
+	var execution *testkube.TestWorkflowExecution
+	err := retry(GetExecutionRetryCount, GetExecutionRetryDelay, func() (err error) {
+		execution, err = r.client.GetExecution(ctx, environmentId, id)
+		if err != nil {
+			log.DefaultLogger.Errorw("failed to get execution, retrying...", "id", id, "error", err)
+		}
+		return err
+	})
 	if err != nil {
 		r.watching.Delete(id)
-		log.DefaultLogger.Errorw("failed to get execution", "id", id, "error", err)
+		log.DefaultLogger.Errorw("failed to get execution: non-recoverable", "id", id, "error", err)
 		return err
 	}
 
@@ -278,15 +291,16 @@ func (r *runner) execute(request executionworkertypes.ExecuteRequest) (*executio
 	}
 	res, err := r.worker.Execute(context.Background(), request)
 	if err == nil {
-		// TODO: consider retry?
 		go func() {
-			for i := 0; i < 3; i++ {
+			err := retry(MonitorRetryCount, MonitorRetryDelay, func() error {
 				err := r.Monitor(context.Background(), request.Execution.OrganizationId, request.Execution.EnvironmentId, request.Execution.Id)
-				if err == nil {
-					return
+				if err != nil {
+					log.DefaultLogger.Errorw("failed to monitor execution, retrying...", "id", request.Execution.Id, "error", err)
 				}
-				log.DefaultLogger.Errorw("failed to monitor execution", "id", request.Execution.Id, "error", err)
-				time.Sleep(1 * time.Second)
+				return err
+			})
+			if err != nil {
+				log.DefaultLogger.Errorw("failed to monitor execution: non-recoverable", "id", request.Execution.Id, "error", err)
 			}
 		}()
 	}
