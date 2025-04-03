@@ -67,7 +67,6 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 	}
 
 	// and create listeners for each webhook spec
-OuterLoop:
 	for _, webhook := range webhookList.Items {
 		if webhook.Spec.WebhookTemplateRef != nil && webhook.Spec.WebhookTemplateRef.Name != "" {
 			webhookTemplate, err := r.WebhookTemplatesClient.Get(webhook.Spec.WebhookTemplateRef.Name)
@@ -108,50 +107,6 @@ OuterLoop:
 
 		types := webhooks.MapEventArrayToCRDEvents(webhook.Spec.Events)
 		name := fmt.Sprintf("%s.%s", webhook.ObjectMeta.Namespace, webhook.ObjectMeta.Name)
-		vars := make(map[string]func() string)
-		for key, val := range webhook.Spec.Config {
-			var data func() string
-			if val.Value != nil {
-				data = func() string { return *val.Value }
-			}
-
-			if val.Secret != nil {
-				data = func() string {
-					var ns []string
-					if val.Secret.Namespace != "" {
-						ns = append(ns, val.Secret.Namespace)
-					}
-
-					elements, err := r.secretClient.Get(val.Secret.Name, ns...)
-					if err != nil {
-						r.log.Errorw("error secret loading", "error", err, "name", val.Secret.Name)
-						return ""
-					}
-
-					if element, ok := elements[val.Secret.Key]; ok {
-						return element
-					}
-
-					r.log.Errorw("error secret key finding loading", "name", val.Secret.Name, "key", val.Secret.Key)
-					return ""
-				}
-			}
-
-			if data != nil {
-				vars[key] = data
-			}
-		}
-
-		for _, parameter := range webhook.Spec.Parameters {
-			if _, ok := vars[parameter.Name]; !ok {
-				if parameter.Default_ != nil {
-					vars[parameter.Name] = func() string { return *parameter.Default_ }
-				} else if parameter.Required {
-					r.log.Errorw("error missing required parameter", "name", parameter.Name)
-					continue OuterLoop
-				}
-			}
-		}
 
 		listeners = append(
 			listeners,
@@ -159,7 +114,7 @@ OuterLoop:
 				name, webhook.Spec.Uri, webhook.Spec.Selector, types,
 				webhook.Spec.PayloadObjectField, payloadTemplate, webhook.Spec.Headers, webhook.Spec.Disabled,
 				r.deprecatedRepositories, r.testWorkflowExecutionResults,
-				r.metrics, r.webhookRepository, r.proContext, r.envs, vars, webhook.Spec.Parameters,
+				r.metrics, r.webhookRepository, r.secretClient, r.proContext, r.envs, webhook.Spec.Config, webhook.Spec.Parameters,
 			),
 		)
 	}

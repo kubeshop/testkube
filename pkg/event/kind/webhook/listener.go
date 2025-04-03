@@ -23,6 +23,7 @@ import (
 	thttp "github.com/kubeshop/testkube/pkg/http"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
+	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/utils"
 	"github.com/kubeshop/testkube/pkg/utils/text"
 )
@@ -35,9 +36,10 @@ func NewWebhookListener(name, uri, selector string, events []testkube.EventType,
 	testWorkflowExecutionResults testworkflow.Repository,
 	metrics v1.Metrics,
 	webhookRepository cloudwebhook.WebhookRepository,
+	secretClient secret.Interface,
 	proContext *config.ProContext,
 	envs map[string]string,
-	config map[string]func() string,
+	config map[string]executorv1.WebhookConfigValue,
 	parameters []executorv1.WebhookParameterSchema,
 ) *WebhookListener {
 	return &WebhookListener{
@@ -55,6 +57,7 @@ func NewWebhookListener(name, uri, selector string, events []testkube.EventType,
 		testWorkflowExecutionResults: testWorkflowExecutionResults,
 		metrics:                      metrics,
 		webhookRepository:            webhookRepository,
+		secretClient:                 secretClient,
 		proContext:                   proContext,
 		envs:                         envs,
 		config:                       config,
@@ -77,9 +80,10 @@ type WebhookListener struct {
 	testWorkflowExecutionResults testworkflow.Repository
 	metrics                      v1.Metrics
 	webhookRepository            cloudwebhook.WebhookRepository
+	secretClient                 secret.Interface
 	proContext                   *config.ProContext
 	envs                         map[string]string
-	config                       map[string]func() string
+	config                       map[string]executorv1.WebhookConfigValue
 	parameters                   []executorv1.WebhookParameterSchema
 }
 
@@ -104,6 +108,7 @@ func (l *WebhookListener) Metadata() map[string]string {
 		"payloadTemplate":    l.payloadTemplate,
 		"headers":            fmt.Sprintf("%v", l.headers),
 		"disabled":           fmt.Sprint(l.disabled),
+		"parameters":         fmt.Sprintf("%v", l.parameters),
 	}
 }
 
@@ -296,11 +301,45 @@ func (l *WebhookListener) processTemplate(field, body string, event testkube.Eve
 	}
 
 	config := make(map[string]string)
-	for key, value := range l.config {
-		config[key] = value()
+	for key, val := range l.config {
+		var data string
+		if val.Value != nil {
+			data = *val.Value
+		}
+
+		if val.Secret != nil {
+			var ns []string
+			if val.Secret.Namespace != "" {
+				ns = append(ns, val.Secret.Namespace)
+			}
+
+			elements, err := l.secretClient.Get(val.Secret.Name, ns...)
+			if err != nil {
+				log.Errorw("error secret loading", "error", err, "name", val.Secret.Name)
+				return nil, err
+			}
+
+			if element, ok := elements[val.Secret.Key]; ok {
+				data = element
+			} else {
+				log.Errorw("error secret key finding loading", "name", val.Secret.Name, "key", val.Secret.Key)
+				return nil, errors.New("error secret key finding loading")
+			}
+		}
+
+		config[key] = data
 	}
 
 	for _, parameter := range l.parameters {
+		if _, ok := config[parameter.Name]; !ok {
+			if parameter.Default_ != nil {
+				config[parameter.Name] = *parameter.Default_
+			} else if parameter.Required {
+				log.Errorw("error missing required parameter", "name", parameter.Name)
+				return nil, errors.New("error missing required parameter")
+			}
+		}
+
 		if parameter.Pattern != "" {
 			re, err := regexp.Compile(parameter.Pattern)
 			if err != nil {
