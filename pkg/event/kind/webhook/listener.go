@@ -3,11 +3,13 @@ package webhook
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"regexp"
+	"sort"
 	"text/template"
 
 	"github.com/pkg/errors"
@@ -99,6 +101,21 @@ func (l *WebhookListener) Events() []testkube.EventType {
 	return l.events
 }
 func (l *WebhookListener) Metadata() map[string]string {
+	headers, err := getMapHashedMetadata(l.headers)
+	if err != nil {
+		l.Log.Errorw("headers hashing error", "error", err)
+	}
+
+	config, err := getMapHashedMetadata(l.config)
+	if err != nil {
+		l.Log.Errorw("config hashing error", "error", err)
+	}
+
+	parameters, err := getSliceHashedMetadata(l.parameters)
+	if err != nil {
+		l.Log.Errorw("parameters hashing error", "error", err)
+	}
+
 	return map[string]string{
 		"name":               l.Name(),
 		"uri":                l.Uri,
@@ -106,9 +123,10 @@ func (l *WebhookListener) Metadata() map[string]string {
 		"events":             fmt.Sprintf("%v", l.events),
 		"payloadObjectField": l.payloadObjectField,
 		"payloadTemplate":    l.payloadTemplate,
-		"headers":            fmt.Sprintf("%v", l.headers),
+		"headers":            headers,
 		"disabled":           fmt.Sprint(l.disabled),
-		"parameters":         fmt.Sprintf("%v", l.parameters),
+		"config":             config,
+		"parameters":         parameters,
 	}
 }
 
@@ -409,4 +427,40 @@ func (l *WebhookListener) hasBecomeState(event testkube.Event) (bool, error) {
 	}
 
 	return false, nil
+}
+
+type configKeyValue[T any] struct {
+	Key   string
+	Value T
+}
+
+type configKeyValues[T any] []configKeyValue[T]
+
+// getMapHashedMetadata returns map hashed metadata
+func getMapHashedMetadata[T any](data map[string]T) (string, error) {
+	var slice configKeyValues[T]
+	for key, value := range data {
+		slice = append(slice, configKeyValue[T]{Key: key, Value: value})
+	}
+
+	sort.Slice(slice, func(i, j int) bool {
+		return slice[i].Key < slice[j].Key
+	})
+
+	result, err := json.Marshal(slice)
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%x", sha256.Sum256(result)), nil
+}
+
+// getSliceHashedMetadata returns slice hashed metadata
+func getSliceHashedMetadata[T any](data []T) (string, error) {
+	result, err := json.Marshal(data)
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%x", sha256.Sum256(result)), nil
 }
