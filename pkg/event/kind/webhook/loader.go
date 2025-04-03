@@ -2,7 +2,6 @@ package webhook
 
 import (
 	"fmt"
-	"regexp"
 
 	"go.uber.org/zap"
 
@@ -109,53 +108,46 @@ OuterLoop:
 
 		types := webhooks.MapEventArrayToCRDEvents(webhook.Spec.Events)
 		name := fmt.Sprintf("%s.%s", webhook.ObjectMeta.Namespace, webhook.ObjectMeta.Name)
-		vars := make(map[string]string)
+		vars := make(map[string]func() string)
 		for key, val := range webhook.Spec.Config {
-			data := ""
+			var data func() string
 			if val.Value != nil {
-				data = *val.Value
+				data = func() string { return *val.Value }
 			}
 
 			if val.Secret != nil {
-				var ns []string
-				if val.Secret.Namespace != "" {
-					ns = append(ns, val.Secret.Namespace)
-				}
+				data = func() string {
+					var ns []string
+					if val.Secret.Namespace != "" {
+						ns = append(ns, val.Secret.Namespace)
+					}
 
-				elements, err := r.secretClient.Get(val.Secret.Name, ns...)
-				if err != nil {
-					r.log.Errorw("error secret loading", "error", err, "name", val.Secret.Name)
-					continue
-				}
+					elements, err := r.secretClient.Get(val.Secret.Name, ns...)
+					if err != nil {
+						r.log.Errorw("error secret loading", "error", err, "name", val.Secret.Name)
+						return ""
+					}
 
-				if element, ok := elements[val.Secret.Key]; ok {
-					data = element
-				} else {
+					if element, ok := elements[val.Secret.Key]; ok {
+						return element
+					}
+
 					r.log.Errorw("error secret key finding loading", "name", val.Secret.Name, "key", val.Secret.Key)
-					continue
+					return ""
 				}
 			}
 
-			vars[key] = data
+			if data != nil {
+				vars[key] = data
+			}
 		}
 
 		for _, parameter := range webhook.Spec.Parameters {
-			if data, ok := vars[parameter.Name]; !ok {
+			if _, ok := vars[parameter.Name]; !ok {
 				if parameter.Default_ != nil {
-					vars[parameter.Name] = *parameter.Default_
+					vars[parameter.Name] = func() string { return *parameter.Default_ }
 				} else if parameter.Required {
 					r.log.Errorw("error missing required parameter", "name", parameter.Name)
-					continue OuterLoop
-				}
-			} else if parameter.Pattern != "" {
-				re, err := regexp.Compile(parameter.Pattern)
-				if err != nil {
-					r.log.Errorw("error compiling pattern", "error", err, "name", parameter.Name, "pattern", parameter.Pattern)
-					continue OuterLoop
-				}
-
-				if !re.MatchString(data) {
-					r.log.Errorw("error matching pattern", "error", err, "name", parameter.Name, "pattern", parameter.Pattern)
 					continue OuterLoop
 				}
 			}
@@ -167,7 +159,7 @@ OuterLoop:
 				name, webhook.Spec.Uri, webhook.Spec.Selector, types,
 				webhook.Spec.PayloadObjectField, payloadTemplate, webhook.Spec.Headers, webhook.Spec.Disabled,
 				r.deprecatedRepositories, r.testWorkflowExecutionResults,
-				r.metrics, r.webhookRepository, r.proContext, r.envs, vars,
+				r.metrics, r.webhookRepository, r.proContext, r.envs, vars, webhook.Spec.Parameters,
 			),
 		)
 	}

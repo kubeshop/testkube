@@ -7,11 +7,13 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"text/template"
 
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 
+	executorv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	v1 "github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/internal/config"
@@ -35,7 +37,8 @@ func NewWebhookListener(name, uri, selector string, events []testkube.EventType,
 	webhookRepository cloudwebhook.WebhookRepository,
 	proContext *config.ProContext,
 	envs map[string]string,
-	config map[string]string,
+	config map[string]func() string,
+	parameters []executorv1.WebhookParameterSchema,
 ) *WebhookListener {
 	return &WebhookListener{
 		name:                         name,
@@ -55,6 +58,7 @@ func NewWebhookListener(name, uri, selector string, events []testkube.EventType,
 		proContext:                   proContext,
 		envs:                         envs,
 		config:                       config,
+		parameters:                   parameters,
 	}
 }
 
@@ -75,7 +79,8 @@ type WebhookListener struct {
 	webhookRepository            cloudwebhook.WebhookRepository
 	proContext                   *config.ProContext
 	envs                         map[string]string
-	config                       map[string]string
+	config                       map[string]func() string
+	parameters                   []executorv1.WebhookParameterSchema
 }
 
 func (l *WebhookListener) Name() string {
@@ -290,8 +295,28 @@ func (l *WebhookListener) processTemplate(field, body string, event testkube.Eve
 		return nil, err
 	}
 
+	config := make(map[string]string)
+	for key, value := range l.config {
+		config[key] = value()
+	}
+
+	for _, parameter := range l.parameters {
+		if parameter.Pattern != "" {
+			re, err := regexp.Compile(parameter.Pattern)
+			if err != nil {
+				log.Errorw("error compiling pattern", "error", err, "name", parameter.Name, "pattern", parameter.Pattern)
+				return nil, err
+			}
+
+			if data, ok := config[parameter.Name]; ok && !re.MatchString(data) {
+				log.Errorw("error matching pattern", "error", err, "name", parameter.Name, "pattern", parameter.Pattern)
+				return nil, errors.New("error matching pattern")
+			}
+		}
+	}
+
 	var buffer bytes.Buffer
-	if err = tmpl.ExecuteTemplate(&buffer, field, NewTemplateVars(event, l.proContext, l.config)); err != nil {
+	if err = tmpl.ExecuteTemplate(&buffer, field, NewTemplateVars(event, l.proContext, config)); err != nil {
 		log.Errorw(fmt.Sprintf("executing webhook %s error", field), "error", err)
 		return nil, err
 	}
