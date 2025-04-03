@@ -447,17 +447,12 @@ func getMapHashedMetadata[T any](data map[string]T) (string, error) {
 		return slice[i].Key < slice[j].Key
 	})
 
-	result, err := json.Marshal(slice)
-	if err != nil {
-		return "", err
-	}
-
-	return fmt.Sprintf("%x", sha256.Sum256(result)), nil
+	return getSliceHashedMetadata(slice)
 }
 
 // getSliceHashedMetadata returns slice hashed metadata
-func getSliceHashedMetadata[T any](data []T) (string, error) {
-	result, err := json.Marshal(data)
+func getSliceHashedMetadata[T any](slice []T) (string, error) {
+	result, err := json.Marshal(slice)
 	if err != nil {
 		return "", err
 	}
