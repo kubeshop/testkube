@@ -122,7 +122,7 @@ func (l *WebhookListener) Metadata() map[string]string {
 		"selector":           l.selector,
 		"events":             fmt.Sprintf("%v", l.events),
 		"payloadObjectField": l.payloadObjectField,
-		"payloadTemplate":    l.payloadTemplate,
+		"payloadTemplate":    getTextHashedMetadata([]byte(l.payloadTemplate)),
 		"headers":            headers,
 		"disabled":           fmt.Sprint(l.disabled),
 		"config":             config,
@@ -457,5 +457,11 @@ func getSliceHashedMetadata[T any](slice []T) (string, error) {
 		return "", err
 	}
 
-	return fmt.Sprintf("%x", sha256.Sum256(result)), nil
+	return getTextHashedMetadata(result), nil
+}
+
+// getTextHashedMetadata returns text hashed metadata
+func getTextHashedMetadata(result []byte) string {
+
+	return fmt.Sprintf("%x", sha256.Sum256(result))
 }
