@@ -39,6 +39,19 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 			}
 
 			notifier.Align(watcher.State())
+
+			if ctx.Err() != nil {
+				log.DefaultLogger.Warnw("canceled watching execution", "executionId", watcher.State().ResourceId(), "err", ctx.Err(), "debug", watcher.State().Debug())
+				close(notifier.ch)
+				return
+			}
+
+			if !watcher.State().Completed() {
+				log.DefaultLogger.Warnw("execution was not detected as complete", "executionId", watcher.State().ResourceId(), "err", ctx.Err(), "debug", watcher.State().Debug())
+				close(notifier.ch)
+				return
+			}
+
 			notifier.End()
 			ctxCancel()
 			close(notifier.ch)
@@ -85,12 +98,14 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 		// Handle the case when it has been complete without pod start
 		if !watcher.State().PodStarted() && (watcher.State().Completed() || opts.DisableFollow) {
 			notifier.Align(watcher.State())
+			log.DefaultLogger.Warnw("execution complete without pod start", "executionId", watcher.State().ResourceId(), "debug", watcher.State().Debug())
 			return
 		}
 
 		// Load the pod information
 		if watcher.State().EstimatedPodStartTimestamp().IsZero() {
 			notifier.Error(fmt.Errorf("cannot estimate Pod start"))
+			log.DefaultLogger.Warnw("cannot estimate execution pod start", "executionId", watcher.State().ResourceId(), "debug", watcher.State().Debug())
 			return
 		}
 
@@ -100,6 +115,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 		actions, err := watcher.State().ActionGroups()
 		if err != nil {
 			notifier.Error(fmt.Errorf("cannot read execution instructions: %v", err))
+			log.DefaultLogger.Warnw("cannot read execution instructions", "executionId", watcher.State().ResourceId(), "debug", watcher.State().Debug())
 			return
 		}
 		refs, endRefs := ExtractRefsFromActionGroup(actions)

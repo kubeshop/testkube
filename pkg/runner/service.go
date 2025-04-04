@@ -88,7 +88,7 @@ func (s *service) recover(ctx context.Context) (err error) {
 
 	for _, exec := range executions {
 		go func(environmentId string, executionId string) {
-			err := s.runner.Monitor(ctx, s.proContext.OrgID, environmentId, executionId)
+			err := s.runner.Monitor(context.Background(), s.proContext.OrgID, environmentId, executionId)
 			if err == nil {
 				return
 			}

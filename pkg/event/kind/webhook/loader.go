@@ -2,7 +2,7 @@ package webhook
 
 import (
 	"fmt"
-	"regexp"
+	"sort"
 
 	"go.uber.org/zap"
 
@@ -68,7 +68,6 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 	}
 
 	// and create listeners for each webhook spec
-OuterLoop:
 	for _, webhook := range webhookList.Items {
 		if webhook.Spec.WebhookTemplateRef != nil && webhook.Spec.WebhookTemplateRef.Name != "" {
 			webhookTemplate, err := r.WebhookTemplatesClient.Get(webhook.Spec.WebhookTemplateRef.Name)
@@ -109,57 +108,6 @@ OuterLoop:
 
 		types := webhooks.MapEventArrayToCRDEvents(webhook.Spec.Events)
 		name := fmt.Sprintf("%s.%s", webhook.ObjectMeta.Namespace, webhook.ObjectMeta.Name)
-		vars := make(map[string]string)
-		for key, val := range webhook.Spec.Config {
-			data := ""
-			if val.Value != nil {
-				data = *val.Value
-			}
-
-			if val.Secret != nil {
-				var ns []string
-				if val.Secret.Namespace != "" {
-					ns = append(ns, val.Secret.Namespace)
-				}
-
-				elements, err := r.secretClient.Get(val.Secret.Name, ns...)
-				if err != nil {
-					r.log.Errorw("error secret loading", "error", err, "name", val.Secret.Name)
-					continue
-				}
-
-				if element, ok := elements[val.Secret.Key]; ok {
-					data = element
-				} else {
-					r.log.Errorw("error secret key finding loading", "name", val.Secret.Name, "key", val.Secret.Key)
-					continue
-				}
-			}
-
-			vars[key] = data
-		}
-
-		for _, parameter := range webhook.Spec.Parameters {
-			if data, ok := vars[parameter.Name]; !ok {
-				if parameter.Default_ != nil {
-					vars[parameter.Name] = *parameter.Default_
-				} else if parameter.Required {
-					r.log.Errorw("error missing required parameter", "name", parameter.Name)
-					continue OuterLoop
-				}
-			} else if parameter.Pattern != "" {
-				re, err := regexp.Compile(parameter.Pattern)
-				if err != nil {
-					r.log.Errorw("error compiling pattern", "error", err, "name", parameter.Name, "pattern", parameter.Pattern)
-					continue OuterLoop
-				}
-
-				if !re.MatchString(data) {
-					r.log.Errorw("error matching pattern", "error", err, "name", parameter.Name, "pattern", parameter.Pattern)
-					continue OuterLoop
-				}
-			}
-		}
 
 		listeners = append(
 			listeners,
@@ -167,7 +115,7 @@ OuterLoop:
 				name, webhook.Spec.Uri, webhook.Spec.Selector, types,
 				webhook.Spec.PayloadObjectField, payloadTemplate, webhook.Spec.Headers, webhook.Spec.Disabled,
 				r.deprecatedRepositories, r.testWorkflowExecutionResults,
-				r.metrics, r.webhookRepository, r.proContext, r.envs, vars,
+				r.metrics, r.webhookRepository, r.secretClient, r.proContext, r.envs, webhook.Spec.Config, webhook.Spec.Parameters,
 			),
 		)
 	}
@@ -256,6 +204,10 @@ func mergeWebhooks(dst executorv1.Webhook, src executorv1.WebhookTemplate) execu
 		}
 	}
 
+	sort.Slice(dst.Spec.Events, func(i, j int) bool {
+		return dst.Spec.Events[i] < dst.Spec.Events[j]
+	})
+
 	if src.Spec.Config != nil {
 		if dst.Spec.Config == nil {
 			dst.Spec.Config = map[string]executorv1.WebhookConfigValue{}
@@ -284,6 +236,10 @@ func mergeWebhooks(dst executorv1.Webhook, src executorv1.WebhookTemplate) execu
 				dst.Spec.Parameters = append(dst.Spec.Parameters, parameter)
 			}
 		}
+
+		sort.Slice(dst.Spec.Parameters, func(i, j int) bool {
+			return dst.Spec.Parameters[i].Name < dst.Spec.Parameters[j].Name
+		})
 	}
 
 	return dst

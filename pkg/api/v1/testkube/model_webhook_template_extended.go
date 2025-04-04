@@ -48,7 +48,7 @@ func (w WebhookTemplate) GetAnnotations() map[string]string {
 
 func (w *WebhookTemplate) QuoteTextFields() {
 	if w.PayloadTemplate != "" {
-		w.PayloadTemplate = fmt.Sprintf("%q", w.PayloadTemplate)
+		w.PayloadTemplate, _ = printPayloadTemplate(w.PayloadTemplate)
 	}
 
 	for key, val := range w.Config {
