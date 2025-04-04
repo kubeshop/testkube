@@ -2,6 +2,7 @@ package webhook
 
 import (
 	"fmt"
+	"sort"
 
 	"go.uber.org/zap"
 
@@ -203,6 +204,10 @@ func mergeWebhooks(dst executorv1.Webhook, src executorv1.WebhookTemplate) execu
 		}
 	}
 
+	sort.Slice(dst.Spec.Events, func(i, j int) bool {
+		return dst.Spec.Events[i] < dst.Spec.Events[j]
+	})
+
 	if src.Spec.Config != nil {
 		if dst.Spec.Config == nil {
 			dst.Spec.Config = map[string]executorv1.WebhookConfigValue{}
@@ -231,6 +236,10 @@ func mergeWebhooks(dst executorv1.Webhook, src executorv1.WebhookTemplate) execu
 				dst.Spec.Parameters = append(dst.Spec.Parameters, parameter)
 			}
 		}
+
+		sort.Slice(dst.Spec.Parameters, func(i, j int) bool {
+			return dst.Spec.Parameters[i].Name < dst.Spec.Parameters[j].Name
+		})
 	}
 
 	return dst
