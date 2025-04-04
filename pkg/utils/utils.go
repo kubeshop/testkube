@@ -12,7 +12,7 @@ import (
 	"text/template"
 	"time"
 
-	sprig "github.com/go-task/slim-sprig/v3"
+	sprig "github.com/Masterminds/sprig/v3"
 	"github.com/pkg/errors"
 )
 
