@@ -8773,6 +8773,8 @@ components:
           description: generated reports from the steps, like junit
           items:
             $ref: "#/components/schemas/TestWorkflowReport"
+        resourceAggregations:
+          $ref: "#/components/schemas/TestWorkflowExecutionResourceAggregationsReport"
       required:
         - id
         - name
