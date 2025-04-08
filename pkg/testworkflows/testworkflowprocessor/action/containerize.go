@@ -81,7 +81,7 @@ func CreateContainer(groupId int, defaultContainer stage2.Container, actions []a
 				computed := strings.Contains(newEnv.Value, "{{")
 				sensitive := newEnv.ValueFrom != nil && newEnv.ValueFrom.SecretKeyRef != nil
 				newEnv.Name = actiontypes.EnvName(fmt.Sprintf("%d", i), computed, sensitive, e.Name)
-				cr.Env = append(cr.Env, newEnv)
+				cr.Env = append(cr.Env, newEnv.EnvVar)
 			}
 			for _, e := range containerConfigs[i].Container.Config.EnvFrom {
 				newEnvFrom := *e.DeepCopy()

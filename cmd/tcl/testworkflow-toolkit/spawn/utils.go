@@ -216,11 +216,11 @@ func ProcessFetch(transferSrv transfer.Server, fetch []testworkflowsv1.StepParal
 					Image:           config.Config().Worker.ToolkitImage,
 					ImagePullPolicy: corev1.PullIfNotPresent,
 					Command:         common.Ptr([]string{constants.DefaultToolkitPath, "transfer"}),
-					Env: []corev1.EnvVar{
-						{Name: "TK_NS", Value: config.Namespace()},
-						{Name: "TK_REF", Value: config.Ref()},
-						stage.BypassToolkitCheck,
-						stage.BypassPure,
+					Env: []testworkflowsv1.EnvVar{
+						{EnvVar: corev1.EnvVar{Name: "TK_NS", Value: config.Namespace()}},
+						{EnvVar: corev1.EnvVar{Name: "TK_REF", Value: config.Ref()}},
+						{EnvVar: stage.BypassToolkitCheck},
+						{EnvVar: stage.BypassPure},
 					},
 					Args: &result,
 				},

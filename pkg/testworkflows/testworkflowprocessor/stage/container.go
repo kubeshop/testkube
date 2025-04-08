@@ -112,9 +112,13 @@ func (c *container) CreateChild() Container {
 
 func (c *container) Env() []corev1.EnvVar {
 	if c.parent == nil {
-		return c.Cr.Env
+		return common.MapSlice(c.Cr.Env, func(e testworkflowsv1.EnvVar) corev1.EnvVar {
+			return corev1.EnvVar{Name: e.Name, Value: e.Value, ValueFrom: e.ValueFrom}
+		})
 	}
-	return sum(c.parent.Env(), c.Cr.Env)
+	return sum(c.parent.Env(), common.MapSlice(c.Cr.Env, func(e testworkflowsv1.EnvVar) corev1.EnvVar {
+		return corev1.EnvVar{Name: e.Name, Value: e.Value, ValueFrom: e.ValueFrom}
+	}))
 }
 
 func (c *container) EnvFrom() []corev1.EnvFromSource {
@@ -237,7 +241,9 @@ func (c *container) AppendEnv(env ...corev1.EnvVar) Container {
 			break
 		}
 	}
-	c.Cr.Env = append(c.Cr.Env, env...)
+	c.Cr.Env = append(c.Cr.Env, common.MapSlice(env, func(e corev1.EnvVar) testworkflowsv1.EnvVar {
+		return testworkflowsv1.EnvVar{EnvVar: e}
+	})...)
 	if needsDedupe {
 		c.Cr.Env = testworkflowresolver.DedupeEnvVars(c.Cr.Env)
 	}
@@ -246,7 +252,7 @@ func (c *container) AppendEnv(env ...corev1.EnvVar) Container {
 
 func (c *container) AppendEnvMap(env map[string]string) Container {
 	for k, v := range env {
-		c.Cr.Env = append(c.Cr.Env, corev1.EnvVar{Name: k, Value: v})
+		c.Cr.Env = append(c.Cr.Env, testworkflowsv1.EnvVar{EnvVar: corev1.EnvVar{Name: k, Value: v}})
 	}
 	return c
 }
@@ -302,7 +308,9 @@ func (c *container) ApplyCR(config *testworkflowsv1.ContainerConfig) Container {
 }
 
 func (c *container) ToContainerConfig() testworkflowsv1.ContainerConfig {
-	env := testworkflowresolver.DedupeEnvVars(slices.Clone(c.Env()))
+	env := testworkflowresolver.DedupeEnvVars(slices.Clone(common.MapSlice(c.Env(), func(e corev1.EnvVar) testworkflowsv1.EnvVar {
+		return testworkflowsv1.EnvVar{EnvVar: e}
+	})))
 	for i := range env {
 		env[i] = *env[i].DeepCopy()
 	}
@@ -377,7 +385,9 @@ func (c *container) ToKubernetesTemplate() (corev1.Container, error) {
 		ImagePullPolicy: cr.ImagePullPolicy,
 		Command:         command,
 		Args:            args,
-		Env:             cr.Env,
+		Env: common.MapSlice(cr.Env, func(e testworkflowsv1.EnvVar) corev1.EnvVar {
+			return corev1.EnvVar{Name: e.Name, Value: e.Value, ValueFrom: e.ValueFrom}
+		}),
 		EnvFrom:         cr.EnvFrom,
 		VolumeMounts:    cr.VolumeMounts,
 		Resources:       resources,
