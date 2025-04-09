@@ -196,6 +196,8 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	}
 	options.Config.Execution.PvcNames = common.MergeMaps(options.Config.Execution.PvcNames, mapPvc)
 
+	options.Config.Execution.GlobalEnv = append(options.Config.Execution.GlobalEnv, layer.ContainerDefaults().GlobalEnv()...)
+
 	// Finalize Secrets
 	secrets := append(layer.Secrets(), options.Secrets...)
 	for i := range secrets {
