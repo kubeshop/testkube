@@ -56,6 +56,8 @@ func NewDevBoxCommand() *cobra.Command {
 		gitopsEnabled       bool
 		disableDefaultAgent bool
 		disableCloudStorage bool
+		enableTestTriggers  bool
+		enableCronjobs      bool
 	)
 
 	cmd := &cobra.Command{
@@ -145,7 +147,7 @@ func NewDevBoxCommand() *cobra.Command {
 
 			// Initialize wrappers over cluster resources
 			interceptor := devutils.NewInterceptor(interceptorPod, baseInitImage, baseToolkitImage, interceptorBin)
-			agent := devutils.NewAgent(agentPod, cloud, baseAgentImage, baseInitImage, baseToolkitImage, disableCloudStorage)
+			agent := devutils.NewAgent(agentPod, cloud, baseAgentImage, baseInitImage, baseToolkitImage, disableCloudStorage, enableCronjobs, enableTestTriggers)
 			binaryStorage := devutils.NewBinaryStorage(binaryStoragePod, binaryStorageBin)
 			mongo := devutils.NewMongo(mongoPod)
 			minio := devutils.NewMinio(minioPod)
@@ -876,6 +878,8 @@ func NewDevBoxCommand() *cobra.Command {
 	cmd.Flags().Uint16Var(&runnersCount, "runners", 0, "additional runners count")
 	cmd.Flags().BoolVar(&disableDefaultAgent, "disable-agent", false, "should disable default agent")
 	cmd.Flags().BoolVar(&disableCloudStorage, "disable-cloud-storage", false, "should disable storage in Cloud")
+	cmd.Flags().BoolVar(&enableTestTriggers, "enable-test-triggers", false, "should enable Test Triggers (remember to install CRDs)")
+	cmd.Flags().BoolVar(&enableCronjobs, "enable-cronjobs", false, "should enable cron resolution of Test Workflows")
 
 	return cmd
 }
