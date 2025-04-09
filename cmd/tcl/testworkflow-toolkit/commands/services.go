@@ -36,6 +36,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowresolver"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -159,6 +160,7 @@ func NewServicesCmd() *cobra.Command {
 						Pvcs: svcSpec.Pvcs,
 					}
 					spec.Steps[0].Run.ContainerConfig = testworkflowsv1.ContainerConfig{}
+					spec.Container.Env = testworkflowresolver.DedupeEnvVars(append(spec.Container.Env, config.Config().Execution.GlobalEnv...))
 
 					// Transfer the data
 					if spec.Content == nil {
