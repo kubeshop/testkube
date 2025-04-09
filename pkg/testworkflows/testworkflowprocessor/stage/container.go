@@ -31,7 +31,6 @@ type ContainerComposition interface {
 
 type ContainerAccessors interface {
 	Env() []testworkflowsv1.EnvVar
-	GlobalEnv() []testworkflowsv1.EnvVar
 	EnvFrom() []corev1.EnvFromSource
 	VolumeMounts() []corev1.VolumeMount
 
@@ -116,17 +115,6 @@ func (c *container) Env() []testworkflowsv1.EnvVar {
 		return c.Cr.Env
 	}
 	return sum(c.parent.Env(), c.Cr.Env)
-}
-
-func (c *container) GlobalEnv() []testworkflowsv1.EnvVar {
-	var env []testworkflowsv1.EnvVar
-	for _, e := range c.Env() {
-		if e.Global != nil && *e.Global {
-			env = append(env, e)
-		}
-	}
-
-	return env
 }
 
 func (c *container) EnvFrom() []corev1.EnvFromSource {
