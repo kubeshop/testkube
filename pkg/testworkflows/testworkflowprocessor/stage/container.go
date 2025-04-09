@@ -121,7 +121,9 @@ func (c *container) Env() []testworkflowsv1.EnvVar {
 func (c *container) GlobalEnv() []testworkflowsv1.EnvVar {
 	var env []testworkflowsv1.EnvVar
 	for _, e := range c.Env() {
-		env = append(env, e)
+		if e.Global != nil && *e.Global {
+			env = append(env, e)
+		}
 	}
 
 	return env
