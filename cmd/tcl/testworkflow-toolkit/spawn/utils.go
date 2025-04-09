@@ -220,7 +220,7 @@ func ProcessFetch(transferSrv transfer.Server, fetch []testworkflowsv1.StepParal
 						{EnvVar: corev1.EnvVar{Name: "TK_NS", Value: config.Namespace()}},
 						{EnvVar: corev1.EnvVar{Name: "TK_REF", Value: config.Ref()}},
 						stage.BypassToolkitCheck,
-						{EnvVar: stage.BypassPure},
+						stage.BypassPure,
 					},
 					Args: &result,
 				},

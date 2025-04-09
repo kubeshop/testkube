@@ -19,9 +19,11 @@ var BypassToolkitCheck = testworkflowsv1.EnvVar{
 	},
 }
 
-var BypassPure = corev1.EnvVar{
-	Name:  "TK_TC_PURE",
-	Value: rand.String(20),
+var BypassPure = testworkflowsv1.EnvVar{
+	EnvVar: corev1.EnvVar{
+		Name:  "TK_TC_PURE",
+		Value: rand.String(20),
+	},
 }
 
 type containerStage struct {
@@ -104,7 +106,7 @@ func (s *containerStage) IsToolkit() bool {
 }
 
 func (s *containerStage) Pure() bool {
-	return s.pure || slices.Contains(s.container.Env(), BypassPure)
+	return s.pure || slices.Contains(s.container.Env(), BypassPure.EnvVar)
 }
 
 func (s *containerStage) SetPure(pure bool) ContainerStage {
