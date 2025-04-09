@@ -106,7 +106,7 @@ func (s *containerStage) IsToolkit() bool {
 }
 
 func (s *containerStage) Pure() bool {
-	return s.pure || slices.Contains(s.container.Env(), BypassPure.EnvVar)
+	return s.pure || slices.Contains(s.container.Env(), BypassPure)
 }
 
 func (s *containerStage) SetPure(pure bool) ContainerStage {

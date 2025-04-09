@@ -30,7 +30,8 @@ type ContainerComposition interface {
 }
 
 type ContainerAccessors interface {
-	Env() []corev1.EnvVar
+	Env() []testworkflowsv1.EnvVar
+	GlobalEnv() []testworkflowsv1.EnvVar
 	EnvFrom() []corev1.EnvFromSource
 	VolumeMounts() []corev1.VolumeMount
 
@@ -110,15 +111,20 @@ func (c *container) CreateChild() Container {
 
 // Getters
 
-func (c *container) Env() []corev1.EnvVar {
+func (c *container) Env() []testworkflowsv1.EnvVar {
 	if c.parent == nil {
-		return common.MapSlice(c.Cr.Env, func(e testworkflowsv1.EnvVar) corev1.EnvVar {
-			return corev1.EnvVar{Name: e.Name, Value: e.Value, ValueFrom: e.ValueFrom}
-		})
+		return c.Cr.Env
 	}
-	return sum(c.parent.Env(), common.MapSlice(c.Cr.Env, func(e testworkflowsv1.EnvVar) corev1.EnvVar {
-		return corev1.EnvVar{Name: e.Name, Value: e.Value, ValueFrom: e.ValueFrom}
-	}))
+	return sum(c.parent.Env(), c.Cr.Env)
+}
+
+func (c *container) GlobalEnv() []testworkflowsv1.EnvVar {
+	var env []testworkflowsv1.EnvVar
+	for _, e := range c.Env() {
+		env = append(env, e)
+	}
+
+	return env
 }
 
 func (c *container) EnvFrom() []corev1.EnvFromSource {
@@ -308,9 +314,7 @@ func (c *container) ApplyCR(config *testworkflowsv1.ContainerConfig) Container {
 }
 
 func (c *container) ToContainerConfig() testworkflowsv1.ContainerConfig {
-	env := testworkflowresolver.DedupeEnvVars(slices.Clone(common.MapSlice(c.Env(), func(e corev1.EnvVar) testworkflowsv1.EnvVar {
-		return testworkflowsv1.EnvVar{EnvVar: e}
-	})))
+	env := testworkflowresolver.DedupeEnvVars(slices.Clone(c.Env()))
 	for i := range env {
 		env[i] = *env[i].DeepCopy()
 	}
