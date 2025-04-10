@@ -590,7 +590,6 @@ func (s *TestkubeAPI) GetTestWorkflowArtifactHandler() fiber.Handler {
 		if err != nil {
 			return s.InternalError(c, errPrefix, "could not download file", err)
 		}
-		defer file.Close()
 
 		return c.SendStream(file)
 	}
