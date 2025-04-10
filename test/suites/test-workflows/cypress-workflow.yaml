@@ -15,7 +15,7 @@ spec:
       - name: cypress-workflow-smoke-14-template
       - name: cypress-workflow-smoke-14-args
       - name: cypress-workflow-smoke-14-junit-report
-      - name: cypress-workflow-smoke-14-clean-and-dev-shm
+      - name: cypress-workflow-smoke-14-clean-and-dev-shm-enabled
       - name: cypress-workflow-smoke-13
       - name: cypress-workflow-smoke-13-video-recording-enabled
       - name: cypress-workflow-smoke-13-negative
