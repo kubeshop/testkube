@@ -58,6 +58,8 @@ func NewDevBoxCommand() *cobra.Command {
 		disableCloudStorage bool
 		enableTestTriggers  bool
 		enableCronjobs      bool
+		forcedOs            string
+		forcedArchitecture  string
 	)
 
 	cmd := &cobra.Command{
@@ -84,7 +86,7 @@ func NewDevBoxCommand() *cobra.Command {
 			var err error
 
 			// Connect to cluster
-			cluster, err := devutils.NewCluster()
+			cluster, err := devutils.NewCluster(forcedOs, forcedArchitecture)
 			if err != nil {
 				ui.Fail(err)
 			}
@@ -880,6 +882,8 @@ func NewDevBoxCommand() *cobra.Command {
 	cmd.Flags().BoolVar(&disableCloudStorage, "disable-cloud-storage", false, "should disable storage in Cloud")
 	cmd.Flags().BoolVar(&enableTestTriggers, "enable-test-triggers", false, "should enable Test Triggers (remember to install CRDs)")
 	cmd.Flags().BoolVar(&enableCronjobs, "enable-cronjobs", false, "should enable cron resolution of Test Workflows")
+	cmd.Flags().StringVar(&forcedOs, "os", "", "force different OS for binary builds")
+	cmd.Flags().StringVar(&forcedArchitecture, "arch", "", "force different architecture for binary builds")
 
 	return cmd
 }
