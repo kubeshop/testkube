@@ -176,6 +176,15 @@ spec:
           medium: Memory
           sizeLimit: 512Mi
   steps:
+  - name: Check /dev/shm size
+    shell: |
+      SHM_SIZE=$(df -m /dev/shm | awk 'NR==2 {print $2}')
+      if [ "$SHM_SIZE" -eq 512 ]; then
+        echo "✅ /dev/shm is 512Mi"
+      else
+        echo "❌ /dev/shm is not 512Mi (got ${SHM_SIZE}Mi)"
+        exit 1
+      fi
   - name: Run tests
     run:
       shell: |
