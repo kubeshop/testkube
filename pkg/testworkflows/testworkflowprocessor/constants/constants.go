@@ -45,8 +45,8 @@ var (
 	DefaultShellHeader     = "set -e\n"
 	DefaultContainerConfig = testworkflowsv1.ContainerConfig{
 		Image: DefaultInitImage,
-		Env: []corev1.EnvVar{
-			{Name: "CI", Value: "1"},
+		Env: []testworkflowsv1.EnvVar{
+			{EnvVar: corev1.EnvVar{Name: "CI", Value: "1"}},
 		},
 	}
 	DefaultInitImage                             = getInitImage()

@@ -83,12 +83,11 @@ func (w *Webhook) QuoteTextFields() {
 	}
 }
 
-type yamlData struct {
-	PayloadTemplate string `yaml:"payloadTemplate"`
-}
-
 func printPayloadTemplate(text string) (string, error) {
-	yamlData, err := yaml.Marshal(&yamlData{PayloadTemplate: text})
+	data := struct {
+		PayloadTemplate string `yaml:"payloadTemplate"`
+	}{PayloadTemplate: text}
+	yamlData, err := yaml.Marshal(&data)
 	if err != nil {
 		return "", err
 	}

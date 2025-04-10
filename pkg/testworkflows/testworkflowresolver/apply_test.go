@@ -49,8 +49,8 @@ var (
 		Spec: testworkflowsv1.TestWorkflowTemplateSpec{
 			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
 				Container: &testworkflowsv1.ContainerConfig{
-					Env: []corev1.EnvVar{
-						{Name: "test", Value: "the"},
+					Env: []testworkflowsv1.EnvVar{
+						{EnvVar: corev1.EnvVar{Name: "test", Value: "the"}},
 					},
 				},
 			},
@@ -73,8 +73,8 @@ var (
 		Spec: testworkflowsv1.TestWorkflowTemplateSpec{
 			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
 				Container: &testworkflowsv1.ContainerConfig{
-					Env: []corev1.EnvVar{
-						{Name: "test", Value: "the"},
+					Env: []testworkflowsv1.EnvVar{
+						{EnvVar: corev1.EnvVar{Name: "test", Value: "the"}},
 					},
 				},
 			},
@@ -179,8 +179,8 @@ var (
 		},
 		StepDefaults: testworkflowsv1.StepDefaults{
 			Container: &testworkflowsv1.ContainerConfig{
-				Env: []corev1.EnvVar{
-					{Name: "XYZ", Value: "some-value"},
+				Env: []testworkflowsv1.EnvVar{
+					{EnvVar: corev1.EnvVar{Name: "XYZ", Value: "some-value"}},
 				},
 			},
 		},
@@ -195,8 +195,8 @@ var (
 		},
 		StepDefaults: testworkflowsv1.StepDefaults{
 			Container: &testworkflowsv1.ContainerConfig{
-				Env: []corev1.EnvVar{
-					{Name: "XYZ", Value: "some-value"},
+				Env: []testworkflowsv1.EnvVar{
+					{EnvVar: corev1.EnvVar{Name: "XYZ", Value: "some-value"}},
 				},
 			},
 		},
@@ -521,8 +521,8 @@ func TestApplyTemplatesParallel(t *testing.T) {
 		TestWorkflowSpec: testworkflowsv1.TestWorkflowSpec{
 			TestWorkflowSpecBase: testworkflowsv1.TestWorkflowSpecBase{
 				Container: &testworkflowsv1.ContainerConfig{
-					Env: []corev1.EnvVar{
-						{Name: "test", Value: "the"},
+					Env: []testworkflowsv1.EnvVar{
+						{EnvVar: corev1.EnvVar{Name: "test", Value: "the"}},
 					},
 				},
 			},
@@ -622,8 +622,8 @@ func TestApplyTemplates_ConditionAlways(t *testing.T) {
 						StepOperations: testworkflowsv1.StepOperations{
 							Run: &testworkflowsv1.StepRun{
 								ContainerConfig: testworkflowsv1.ContainerConfig{
-									Env: []corev1.EnvVar{
-										{Name: "result", Value: "{{ config.result }}"},
+									Env: []testworkflowsv1.EnvVar{
+										{EnvVar: corev1.EnvVar{Name: "result", Value: "{{ config.result }}"}},
 									},
 								},
 								Shell: common.Ptr("echo $result"),
@@ -658,8 +658,8 @@ func TestApplyTemplates_ConditionAlways(t *testing.T) {
 					StepOperations: testworkflowsv1.StepOperations{
 						Run: &testworkflowsv1.StepRun{
 							ContainerConfig: testworkflowsv1.ContainerConfig{
-								Env: []corev1.EnvVar{
-									{Name: "result", Value: "{{passed}}"},
+								Env: []testworkflowsv1.EnvVar{
+									{EnvVar: corev1.EnvVar{Name: "result", Value: "{{passed}}"}},
 								},
 							},
 							Shell: common.Ptr("echo $result"),

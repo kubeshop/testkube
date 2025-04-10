@@ -46,7 +46,7 @@ spec:
       transfer:
       - from: /data/repo/test/locust/locust-project
       count: 1
-      timeout: 30s # initialization timeout
+      timeout: 120s # initialization timeout
       logs: 'always'
       image: locustio/locust:2.32.3
       shell: | 

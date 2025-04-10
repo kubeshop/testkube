@@ -297,8 +297,9 @@ func MapVolumeKubeToAPI(v corev1.Volume) testkube.Volume {
 	}
 }
 
-func MapEnvVarKubeToAPI(v corev1.EnvVar) testkube.EnvVar {
+func MapEnvVarKubeToAPI(v testworkflowsv1.EnvVar) testkube.EnvVar {
 	return testkube.EnvVar{
+		Global:    MapBoolToBoxedBoolean(v.Global),
 		Name:      v.Name,
 		Value:     v.Value,
 		ValueFrom: common.MapPtr(v.ValueFrom, MapEnvVarSourceKubeToAPI),

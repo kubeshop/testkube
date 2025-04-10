@@ -10,6 +10,7 @@
 package testkube
 
 type EnvVar struct {
+	Global    *BoxedBoolean `json:"global,omitempty"`
 	Name      string        `json:"name,omitempty"`
 	Value     string        `json:"value,omitempty"`
 	ValueFrom *EnvVarSource `json:"valueFrom,omitempty"`

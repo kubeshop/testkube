@@ -396,12 +396,12 @@ func TestProcessBasicEnvReference(t *testing.T) {
 			Steps: []testworkflowsv1.Step{
 				{StepDefaults: testworkflowsv1.StepDefaults{
 					Container: &testworkflowsv1.ContainerConfig{
-						Env: []corev1.EnvVar{
-							{Name: "ZERO", Value: "foo"},
-							{Name: "UNDETERMINED", Value: "{{call(abc)}}xxx"},
-							{Name: "INPUT", Value: "{{env.ZERO}}bar"},
-							{Name: "NEXT", Value: "foo{{env.UNDETERMINED}}{{env.LAST}}"},
-							{Name: "LAST", Value: "foo{{env.INPUT}}bar"},
+						Env: []testworkflowsv1.EnvVar{
+							{EnvVar: corev1.EnvVar{Name: "ZERO", Value: "foo"}},
+							{EnvVar: corev1.EnvVar{Name: "UNDETERMINED", Value: "{{call(abc)}}xxx"}},
+							{EnvVar: corev1.EnvVar{Name: "INPUT", Value: "{{env.ZERO}}bar"}},
+							{EnvVar: corev1.EnvVar{Name: "NEXT", Value: "foo{{env.UNDETERMINED}}{{env.LAST}}"}},
+							{EnvVar: corev1.EnvVar{Name: "LAST", Value: "foo{{env.INPUT}}bar"}},
 						},
 					},
 				}, StepOperations: testworkflowsv1.StepOperations{
@@ -1266,8 +1266,8 @@ func TestProcess_ConditionAlways(t *testing.T) {
 					StepOperations: testworkflowsv1.StepOperations{
 						Run: &testworkflowsv1.StepRun{
 							ContainerConfig: testworkflowsv1.ContainerConfig{
-								Env: []corev1.EnvVar{
-									{Name: "result", Value: "{{passed}}"},
+								Env: []testworkflowsv1.EnvVar{
+									{EnvVar: corev1.EnvVar{Name: "result", Value: "{{passed}}"}},
 								},
 							},
 							Shell: common.Ptr("echo $result"),

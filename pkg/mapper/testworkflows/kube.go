@@ -129,23 +129,27 @@ func MapTestContentKubeToContentKube(v testsv3.TestContent) testworkflowsv1.Cont
 	}
 }
 
-func MapVariableKubeToEnvVarKube(variables map[string]commonv1.Variable) []corev1.EnvVar {
-	var env []corev1.EnvVar
+func MapVariableKubeToEnvVarKube(variables map[string]commonv1.Variable) []testworkflowsv1.EnvVar {
+	var env []testworkflowsv1.EnvVar
 	for _, e := range variables {
 		if e.Value != "" {
-			env = append(env, corev1.EnvVar{
-				Name:  e.Name,
-				Value: e.Value,
+			env = append(env, testworkflowsv1.EnvVar{
+				EnvVar: corev1.EnvVar{
+					Name:  e.Name,
+					Value: e.Value,
+				},
 			})
 		} else if e.ValueFrom.SecretKeyRef != nil {
-			env = append(env, corev1.EnvVar{
-				Name: e.Name,
-				ValueFrom: &corev1.EnvVarSource{
-					SecretKeyRef: &corev1.SecretKeySelector{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: e.ValueFrom.SecretKeyRef.Name,
+			env = append(env, testworkflowsv1.EnvVar{
+				EnvVar: corev1.EnvVar{
+					Name: e.Name,
+					ValueFrom: &corev1.EnvVarSource{
+						SecretKeyRef: &corev1.SecretKeySelector{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: e.ValueFrom.SecretKeyRef.Name,
+							},
+							Key: e.ValueFrom.SecretKeyRef.Key,
 						},
-						Key: e.ValueFrom.SecretKeyRef.Key,
 					},
 				},
 			})

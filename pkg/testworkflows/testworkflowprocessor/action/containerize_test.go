@@ -30,7 +30,7 @@ func TestCreateContainer_MergingDefaultStepBefore(t *testing.T) {
 		End("ref2").
 		End(constants.RootOperationName).
 		End("")
-	result, _, err := CreateContainer(1, stage.NewContainer(), input, false)
+	result, _, _, err := CreateContainer(1, stage.NewContainer(), input, false)
 
 	assert.NoError(t, err)
 	assert.Equal(t, result.Image, "custom-image:1.2.3")
@@ -54,7 +54,7 @@ func TestCreateContainer_MergingDefaultStepAfter(t *testing.T) {
 		End("ref2").
 		End(constants.RootOperationName).
 		End("")
-	result, _, err := CreateContainer(1, stage.NewContainer(), input, false)
+	result, _, _, err := CreateContainer(1, stage.NewContainer(), input, false)
 
 	assert.NoError(t, err)
 	assert.Equal(t, result.Image, "custom-image:1.2.3")
