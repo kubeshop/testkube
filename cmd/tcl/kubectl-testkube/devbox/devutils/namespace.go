@@ -130,6 +130,11 @@ func (n *NamespaceObject) createServiceAccount() error {
 				APIGroups: []string{"testworkflows.testkube.io"},
 				Resources: []string{"testworkflows", "testworkflows/status", "testworkflowtemplates"},
 			},
+			{
+				Verbs:     []string{"get", "watch", "list", "create", "patch", "update", "delete", "deletecollection"},
+				APIGroups: []string{"tests.testkube.io"},
+				Resources: []string{"testtriggers"},
+			},
 		},
 	}, metav1.CreateOptions{})
 	if err != nil && !k8serrors.IsAlreadyExists(err) {
