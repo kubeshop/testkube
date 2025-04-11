@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"sync"
+	"time"
 
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
@@ -116,11 +117,32 @@ func (c *client) WatchRunnerRequests(ctx context.Context) RunnerRequestsWatcher 
 	send := func(v *cloud.RunnerResponse) error {
 		sendMu.Lock()
 		defer sendMu.Unlock()
-		err := stream.Send(v)
-		if err != nil {
-			cancel(err)
+
+		errChan := make(chan error, 1)
+		go func() {
+			errChan <- stream.Send(v)
+			close(errChan)
+		}()
+
+		// Receive timeout should be longer than heartbeat interval in cloud.
+		t := time.NewTimer(c.opts.RecvTimeout)
+		select {
+		case err := <-errChan:
+			if !t.Stop() {
+				<-t.C
+			}
+			if err != nil {
+				cancel(err)
+			}
+			return err
+		case <-ctx.Done():
+			if !t.Stop() {
+				<-t.C
+			}
+			return ctx.Err()
+		case <-t.C:
+			return errors.New("send response too slow")
 		}
-		return err
 	}
 	go func() {
 		defer func() {
@@ -145,9 +167,31 @@ func (c *client) WatchRunnerRequests(ctx context.Context) RunnerRequestsWatcher 
 
 			// Get the next runner request
 			var req *cloud.RunnerRequest
-			req, err = stream.Recv()
-			if err != nil {
-				continue
+			reqChan := make(chan struct {
+				req *cloud.RunnerRequest
+				err error
+			}, 1)
+			go func() {
+				recvReq, recvErr := stream.Recv()
+				reqChan <- struct {
+					req *cloud.RunnerRequest
+					err error
+				}{recvReq, recvErr}
+			}()
+
+			select {
+			case result := <-reqChan:
+				req = result.req
+				err = result.err
+				if err != nil {
+					continue
+				}
+			case <-ctx.Done():
+				err = ctx.Err()
+				return
+			case <-time.After(c.opts.RecvTimeout):
+				err = errors.New("receive request too slow")
+				return
 			}
 
 			if req.Type == cloud.RunnerRequestType_PING {
@@ -173,6 +217,7 @@ func (c *client) ProcessExecutionNotificationRequests(ctx context.Context, proce
 		buildCloudNotification,
 		buildCloudError,
 		process,
+		c.opts.SendTimeout,
 	)
 }
 
@@ -185,6 +230,7 @@ func (c *client) ProcessExecutionParallelWorkerNotificationRequests(ctx context.
 		buildParallelStepCloudNotification,
 		buildParallelStepCloudError,
 		process,
+		c.opts.SendTimeout,
 	)
 }
 
@@ -197,5 +243,6 @@ func (c *client) ProcessExecutionServiceNotificationRequests(ctx context.Context
 		buildServiceCloudNotification,
 		buildServiceCloudError,
 		process,
+		c.opts.SendTimeout,
 	)
 }
