@@ -10367,6 +10367,8 @@ components:
     EnvVar:
       type: object
       properties:
+        global:
+          $ref: "#/components/schemas/BoxedBoolean"    
         name:
           type: string
         value:
