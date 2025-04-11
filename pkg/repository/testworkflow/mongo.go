@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"strings"
 	"time"
 
@@ -227,9 +228,15 @@ func (r *MongoRepository) GetExecutionsTotals(ctx context.Context, filter ...Fil
 	}
 
 	pipeline := []bson.D{{{Key: "$match", Value: query}}}
-	if len(filter) > 0 {
+	hasSkip := len(filter) > 0 && filter[0].Page() > 0
+	hasLimit := len(filter) > 0 && filter[0].PageSize() < math.MaxInt32
+	if hasSkip || hasLimit {
 		pipeline = append(pipeline, bson.D{{Key: "$sort", Value: bson.D{{Key: "statusat", Value: -1}}}})
+	}
+	if hasSkip {
 		pipeline = append(pipeline, bson.D{{Key: "$skip", Value: int64(filter[0].Page() * filter[0].PageSize())}})
+	}
+	if hasLimit {
 		pipeline = append(pipeline, bson.D{{Key: "$limit", Value: int64(filter[0].PageSize())}})
 	}
 
