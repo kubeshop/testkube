@@ -160,7 +160,7 @@ func NewServicesCmd() *cobra.Command {
 						Pvcs: svcSpec.Pvcs,
 					}
 					spec.Steps[0].Run.ContainerConfig = testworkflowsv1.ContainerConfig{}
-					spec.Container.Env = testworkflowresolver.DedupeEnvVars(append(spec.Container.Env, config.Config().Execution.GlobalEnv...))
+					spec.Container.Env = testworkflowresolver.DedupeEnvVars(append(config.Config().Execution.GlobalEnv, spec.Container.Env...))
 
 					// Transfer the data
 					if spec.Content == nil {
