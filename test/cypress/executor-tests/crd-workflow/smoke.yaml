@@ -13,6 +13,7 @@ spec:
       paths:
       - test/cypress/executor-tests/cypress-14
   container:
+    image: cypress/included:14.0.3
     resources:
       requests:
         cpu: 2
@@ -21,12 +22,7 @@ spec:
   steps:
   - name: Run tests
     run:
-      image: cypress/included:14.0.3
-      args:
-      - --env
-      - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
-      - --config
-      - '{"screenshotsFolder":"/data/artifacts/screenshots","videosFolder":"/data/artifacts/videos"}'
+      shell: npx cypress run --env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value --config '{"screenshotsFolder":"/data/artifacts/screenshots","videosFolder":"/data/artifacts/videos"}'
       env:
       - name: CYPRESS_CUSTOM_ENV
         value: CYPRESS_CUSTOM_ENV_value
@@ -67,6 +63,146 @@ spec:
       config:
         version: 14.0.3
         run: "npx cypress run --env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value --config '{\"screenshotsFolder\":\"/data/artifacts/screenshots\",\"videosFolder\":\"/data/artifacts/videos\"}'"
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: cypress-workflow-smoke-14-args
+  labels:
+    core-tests: workflows
+    tool: cypress
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/cypress/executor-tests/cypress-14
+  container:
+    resources:
+      requests:
+        cpu: 2
+        memory: 2Gi
+    workingDir: /data/repo/test/cypress/executor-tests/cypress-14
+  steps:
+  - name: Run tests
+    run:
+      image: cypress/included:14.0.3
+      args:
+      - --env
+      - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+      - --config
+      - '{"screenshotsFolder":"/data/artifacts/screenshots","videosFolder":"/data/artifacts/videos"}'
+      env:
+      - name: CYPRESS_CUSTOM_ENV
+        value: CYPRESS_CUSTOM_ENV_value
+    steps:
+    - name: Saving artifacts
+      workingDir: /data/artifacts
+      artifacts:
+        paths:
+        - '**/*'
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: cypress-workflow-smoke-14-junit-report
+  labels:
+    core-tests: workflows
+    tool: cypress
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/cypress/executor-tests/cypress-14
+  container:
+    resources:
+      requests:
+        cpu: 2
+        memory: 2Gi
+    workingDir: /data/repo/test/cypress/executor-tests/cypress-14
+  steps:
+  - name: Run tests
+    run:
+      image: cypress/included:14.0.3
+      args:
+      - --env
+      - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
+      - --config
+      - '{"screenshotsFolder":"/data/artifacts/screenshots","videosFolder":"/data/artifacts/videos"}'
+      - --reporter
+      - junit
+      - --reporter-options
+      - mochaFile=/data/artifacts/junit/junit-[hash].xml,toConsole=false
+      env:
+      - name: CYPRESS_CUSTOM_ENV
+        value: CYPRESS_CUSTOM_ENV_value
+    steps:
+    - name: Saving artifacts
+      workingDir: /data/artifacts
+      artifacts:
+        paths:
+        - '**/*'
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: cypress-workflow-smoke-14-clean-and-dev-shm-enabled
+  labels:
+    core-tests: workflows
+    tool: cypress
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/cypress/executor-tests/cypress-14
+  container:
+    image: cypress/included:14.0.3
+    resources:
+      requests:
+        cpu: 2
+        memory: 2Gi
+    workingDir: /data/repo/test/cypress/executor-tests/cypress-14
+    volumeMounts:
+      - mountPath: /dev/shm
+        name: shm
+  pod:
+    volumes:
+      - name: shm
+        emptyDir:
+          medium: Memory
+          sizeLimit: 512Mi
+  steps:
+  - name: Check /dev/shm size
+    shell: |
+      SHM_SIZE=$(df -m /dev/shm | awk 'NR==2 {print $2}')
+      if [ "$SHM_SIZE" -eq 512 ]; then
+        echo "✅ /dev/shm is 512Mi"
+      else
+        echo "❌ /dev/shm is not 512Mi (got ${SHM_SIZE}Mi)"
+        exit 1
+      fi
+  - name: Run tests
+    run:
+      shell: |
+        npx cypress run --env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value \
+        --config '{"screenshotsFolder":"/data/artifacts/screenshots","videosFolder":"/data/artifacts/videos"}'
+      env:
+      - name: CYPRESS_CUSTOM_ENV
+        value: CYPRESS_CUSTOM_ENV_value
+      - name: CYPRESS_INSTALL_BINARY # Official image - skips download & verification to speed up startup
+        value: "1"
+      - name: CYPRESS_BROWSER_ARGS
+        value: "--no-sandbox --disable-features=UseOzonePlatform" # Chrome flags - disable /dev/shm usage + features not available in containers to suppress their warnings
+    steps:
+    - name: Saving artifacts
+      workingDir: /data/artifacts
+      artifacts:
+        paths:
+        - '**/*'
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -315,49 +451,6 @@ spec:
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
       - --config
       - '{"screenshotsFolder":"/data/artifacts/screenshots","videosFolder":"/data/artifacts/videos"}'
-      env:
-      - name: CYPRESS_CUSTOM_ENV
-        value: CYPRESS_CUSTOM_ENV_value
-    steps:
-    - name: Saving artifacts
-      workingDir: /data/artifacts
-      artifacts:
-        paths:
-        - '**/*'
----
-apiVersion: testworkflows.testkube.io/v1
-kind: TestWorkflow
-metadata:
-  name: cypress-workflow-smoke-13-junit-report
-  labels:
-    core-tests: workflows
-    tool: cypress
-spec:
-  content:
-    git:
-      uri: https://github.com/kubeshop/testkube
-      revision: main
-      paths:
-      - test/cypress/executor-tests/cypress-13
-  container:
-    resources:
-      requests:
-        cpu: 2
-        memory: 2Gi
-    workingDir: /data/repo/test/cypress/executor-tests/cypress-13
-  steps:
-  - name: Run tests
-    run:
-      image: cypress/included:13.6.4
-      args:
-      - --env
-      - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
-      - --config
-      - '{"screenshotsFolder":"/data/artifacts/screenshots","videosFolder":"/data/artifacts/videos"}'
-      - --reporter
-      - junit
-      - --reporter-options
-      - mochaFile=/data/artifacts/junit/junit-[hash].xml,toConsole=false
       env:
       - name: CYPRESS_CUSTOM_ENV
         value: CYPRESS_CUSTOM_ENV_value

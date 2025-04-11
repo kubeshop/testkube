@@ -452,7 +452,6 @@ func (s *DeprecatedTestkubeAPI) GetArtifactHandler() fiber.Handler {
 		if err != nil {
 			return s.Error(c, http.StatusInternalServerError, fmt.Errorf("%s: could not download file: %w", errPrefix, err))
 		}
-		defer file.Close()
 
 		return c.SendStream(file)
 	}

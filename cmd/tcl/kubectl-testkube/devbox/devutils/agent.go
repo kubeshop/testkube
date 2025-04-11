@@ -26,9 +26,11 @@ type Agent struct {
 	initProcessImage    string
 	toolkitImage        string
 	disableCloudStorage bool
+	enableCronjobs      bool
+	enableTestTriggers  bool
 }
 
-func NewAgent(pod *PodObject, cloud *CloudObject, agentImage, initProcessImage, toolkitImage string, disableCloudStorage bool) *Agent {
+func NewAgent(pod *PodObject, cloud *CloudObject, agentImage, initProcessImage, toolkitImage string, disableCloudStorage, enableCronjobs, enableTestTriggers bool) *Agent {
 	return &Agent{
 		pod:                 pod,
 		cloud:               cloud,
@@ -36,6 +38,8 @@ func NewAgent(pod *PodObject, cloud *CloudObject, agentImage, initProcessImage, 
 		initProcessImage:    initProcessImage,
 		toolkitImage:        toolkitImage,
 		disableCloudStorage: disableCloudStorage,
+		enableCronjobs:      enableCronjobs,
+		enableTestTriggers:  enableTestTriggers,
 	}
 }
 
@@ -45,7 +49,6 @@ func (r *Agent) Create(ctx context.Context, env *client.Environment) error {
 		{Name: "APISERVER_PORT", Value: "8088"},
 		{Name: "GRPC_PORT", Value: "8089"},
 		{Name: "APISERVER_FULLNAME", Value: "devbox-agent"},
-		{Name: "DISABLE_TEST_TRIGGERS", Value: "true"},
 		{Name: "DISABLE_WEBHOOKS", Value: "true"},
 		{Name: "DISABLE_DEPRECATED_TESTS", Value: "true"},
 		{Name: "TESTKUBE_ANALYTICS_ENABLED", Value: "false"},
@@ -57,6 +60,12 @@ func (r *Agent) Create(ctx context.Context, env *client.Environment) error {
 		{Name: "TESTKUBE_TW_INIT_IMAGE", Value: r.initProcessImage},
 		{Name: "FEATURE_NEW_ARCHITECTURE", Value: "true"},
 		{Name: "FEATURE_CLOUD_STORAGE", Value: fmt.Sprintf("%v", !r.disableCloudStorage)},
+	}
+	if !r.enableTestTriggers {
+		envVariables = append(envVariables, corev1.EnvVar{Name: "DISABLE_TEST_TRIGGERS", Value: "true"})
+	}
+	if r.enableCronjobs {
+		envVariables = append(envVariables, corev1.EnvVar{Name: "ENABLE_CRON_JOBS", Value: "true"})
 	}
 	if env != nil {
 		tlsInsecure := "false"
