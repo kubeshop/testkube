@@ -149,18 +149,22 @@ func (a *agentLoop) run(ctx context.Context) error {
 	// Handle the new mechanism for runners
 	if a.proContext.NewArchitecture {
 		g.Go(func() error {
+			fmt.Println("loopRunnerRequests")
 			return errors2.Wrap(a.loopRunnerRequests(ctx), "runners loop")
 		})
 	}
 
 	// Handle Test Workflow notifications of all kinds
 	g.Go(func() error {
+		fmt.Println("loopNotifications")
 		return errors2.Wrap(a.loopNotifications(ctx), "notifications loop")
 	})
 	g.Go(func() error {
+		fmt.Println("loopServiceNotifications")
 		return errors2.Wrap(a.loopServiceNotifications(ctx), "service notifications loop")
 	})
 	g.Go(func() error {
+		fmt.Println("loopParallelStepNotifications")
 		return errors2.Wrap(a.loopParallelStepNotifications(ctx), "parallel steps notifications loop")
 	})
 
