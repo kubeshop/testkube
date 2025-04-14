@@ -9626,6 +9626,8 @@ components:
           selector:
             $ref: "#/components/schemas/LabelSelector"
             description: label selector for test workflow
+          target:
+            $ref: "#/components/schemas/ExecutionTarget"
 
     TestWorkflowStepExecuteTestRef:
       type: object

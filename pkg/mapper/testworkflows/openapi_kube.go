@@ -999,6 +999,7 @@ func MapStepExecuteTestWorkflowAPIToKube(v testkube.TestWorkflowStepExecuteTestW
 			Shards:   MapDynamicListMapAPIToKube(v.Shards),
 		},
 		Selector: common.MapPtr(v.Selector, MapSelectorToCRD),
+		Target:   common.MapPtr(v.Target, commonmapper.MapTargetApiToKube),
 	}
 }
 
