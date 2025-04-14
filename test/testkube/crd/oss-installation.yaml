@@ -1,0 +1,119 @@
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: oss-standalone-installation-test
+  namespace: testkube-agent
+  labels: # commented out temporary to disable notifiactions TODO: uncomment after a few days
+    core-tests: installation
+spec:
+  events:
+  - cronjob:
+      cron: 20 */4 * * *
+  system:
+    pureByDefault: true
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/k6/executor-tests/crd-workflow/smoke.yaml
+  container:
+    workingDir: /data/repo/test/k6/executor-tests/crd-workflow
+    image: gcr.io/google.com/cloudsdktool/google-cloud-cli:latest
+    env:
+    - name: KUBECONFIG
+      value: /.kube/config
+    volumeMounts:
+    - name: kubeconfig
+      mountPath: /.kube
+    resources:
+      requests:
+        cpu: "500m"
+        memory: "256Mi"
+  pod:
+    volumes:
+    - name: kubeconfig
+      emptyDir: {}
+  job:
+    activeDeadlineSeconds: 1800
+  services:
+    dind:
+      logs: always
+      timeout: 5m
+      image: docker:27.4.1-dind
+      env:
+      - name: DOCKER_TLS_CERTDIR
+      securityContext:
+        privileged: true
+      readinessProbe:
+        tcpSocket:
+          port: 2375
+        periodSeconds: 1
+      resources:
+        requests:
+          cpu: "500m"
+          memory: "512Mi"
+  steps:
+  - container:
+      env:
+      - name: DOCKER_HOST
+        value: tcp://{{ services.dind.0.ip }}:2375
+    steps:
+    - name: Set up Kind cluster (with external access)
+      shell: |
+        curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.26.0/kind-linux-amd64
+        chmod +x ./kind
+
+        cat > ./kind-config.yaml <<EOL
+        kind: Cluster
+        apiVersion: kind.x-k8s.io/v1alpha4
+        networking:
+          apiServerAddress: {{ services.dind.0.ip }}
+          apiServerPort: 6443
+        EOL
+
+        ./kind create cluster --config ./kind-config.yaml
+    - name: Fix cluster DNS
+      run:
+        image: docker:27.4.1-cli
+        shell: |
+          docker exec kind-control-plane /bin/sh -c 'sed "s/nameserver /nameserver 8.8.8.8 #/g" /etc/resolv.conf >/etc/resolv.copy.conf; cp /etc/resolv.copy.conf /etc/resolv.conf'
+    - name: Install Helm
+      shell: |
+        curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+        helm version
+    - name: Install Testkube CLI
+      shell: |
+        wget -qO - https://repo.testkube.io/key.pub | apt-key add -
+        echo "deb https://repo.testkube.io/linux linux main" | tee -a /etc/apt/sources.list
+        apt-get update && apt-get install -y testkube
+    - name: Install Testkube OSS
+      shell: |
+        kubectl config set-context kind-kind
+        testkube disable telemetry
+        testkube init standalone-agent --namespace testkube --no-confirm  --helm-arg wait= --helm-arg timeout=10m
+        kubectl get all -n testkube
+        testkube disable telemetry
+    - name: Wait for Testkube core components to be ready
+      optional: true
+      shell: |
+        for dep in testkube-api-server testkube-mongodb testkube-minio-testkube testkube-operator-controller-manager; do
+          echo "⏳ Waiting for $dep..."
+          kubectl rollout status deployment/$dep -n testkube --timeout=300s || exit 1
+        done
+
+        echo "⏳ Waiting for testkube-api-server endpoint..."
+        for i in {1..30}; do
+          kubectl get endpoints testkube-api-server -n testkube -o jsonpath='{.subsets[*].addresses[*].ip}' | \
+            grep -qE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' && break
+          sleep 2
+        done
+
+        echo "✅ Testkube core components and API service are ready."
+    - name: Apply TestWorkflow
+      shell: |-
+        kubectl apply -f smoke.yaml -n testkube
+        kubectl get testworkflow k6-workflow-smoke -ntestkube && echo "found" || kubectl get all -n testkube
+    - name: Run TestWorkflow
+      shell: testkube run tw k6-workflow-smoke --watch && echo "executed correctly"
+status: {}
