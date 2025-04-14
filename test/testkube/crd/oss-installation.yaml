@@ -3,12 +3,12 @@ apiVersion: testworkflows.testkube.io/v1
 metadata:
   name: oss-standalone-installation-test
   namespace: testkube-agent
-  labels: # commented out temporary to disable notifiactions TODO: uncomment after a few days
+  labels:
     core-tests: installation
 spec:
   events:
   - cronjob:
-      cron: 20 */4 * * *
+      cron: 35 */4 * * *
   system:
     pureByDefault: true
   content:
