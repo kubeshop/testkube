@@ -25,7 +25,7 @@ func NewCreateAgentCommand() *cobra.Command {
 		Args:   cobra.ExactArgs(1),
 		Hidden: !log.IsTrue("EXPERIMENTAL"),
 		Run: func(cmd *cobra.Command, args []string) {
-			agent := UiCreateAgent(cmd, agentType, args[0], labelPairs, environmentIds, false, "")
+			agent := UiCreateAgent(cmd, agentType, args[0], labelPairs, environmentIds, false, "", false)
 			ui.NL()
 			ui.Info("Install the agent with command:")
 			ui.ShellCommand(
@@ -47,13 +47,14 @@ func NewCreateRunnerCommand() *cobra.Command {
 		environmentIds []string
 		global         bool
 		group          string
+		floating       bool
 	)
 	cmd := &cobra.Command{
 		Use:    "runner",
 		Args:   cobra.ExactArgs(1),
 		Hidden: !log.IsTrue("EXPERIMENTAL"),
 		Run: func(cmd *cobra.Command, args []string) {
-			agent := UiCreateAgent(cmd, "runner", args[0], labelPairs, environmentIds, global, group)
+			agent := UiCreateAgent(cmd, "runner", args[0], labelPairs, environmentIds, global, group, floating)
 			ui.NL()
 			ui.Info("Install the agent with command:")
 			ui.ShellCommand(
@@ -66,6 +67,7 @@ func NewCreateRunnerCommand() *cobra.Command {
 	cmd.Flags().StringSliceVarP(&labelPairs, "label", "l", nil, "label key value pair: --label key1=value1")
 	cmd.Flags().BoolVar(&global, "global", false, "make it global runner")
 	cmd.Flags().StringVar(&group, "group", "", "make it grouped runner")
+	cmd.Flags().BoolVar(&floating, "floating", false, "create as a floating runner")
 
 	return cmd
 }
@@ -80,7 +82,7 @@ func NewCreateGitOpsCommand() *cobra.Command {
 		Args:   cobra.ExactArgs(1),
 		Hidden: !log.IsTrue("EXPERIMENTAL"),
 		Run: func(cmd *cobra.Command, args []string) {
-			agent := UiCreateAgent(cmd, "gitops", args[0], labelPairs, environmentIds, false, "")
+			agent := UiCreateAgent(cmd, "gitops", args[0], labelPairs, environmentIds, false, "", false)
 			ui.NL()
 			ui.Info("Install the agent with command:")
 			ui.ShellCommand(
@@ -95,7 +97,7 @@ func NewCreateGitOpsCommand() *cobra.Command {
 	return cmd
 }
 
-func UiCreateAgent(cmd *cobra.Command, agentType string, name string, labelPairs []string, environmentIds []string, isGlobalRunner bool, runnerGroup string) *cloudclient.Agent {
+func UiCreateAgent(cmd *cobra.Command, agentType string, name string, labelPairs []string, environmentIds []string, isGlobalRunner bool, runnerGroup string, floating bool) *cloudclient.Agent {
 	if name == "" {
 		name = ui.TextInput("agent name")
 		if name == "" {
@@ -122,6 +124,7 @@ func UiCreateAgent(cmd *cobra.Command, agentType string, name string, labelPairs
 		Name:         name,
 		Labels:       common.Ptr(make(map[string]string)),
 		Environments: environmentIds,
+		Floating:     floating,
 	}
 
 	if runnerGroup != "" {

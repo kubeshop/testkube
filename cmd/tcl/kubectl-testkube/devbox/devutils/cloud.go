@@ -195,8 +195,16 @@ func (c *CloudObject) SuperAgent(env *client.Environment) *client.Agent {
 	}
 }
 
-func (c *CloudObject) CreateRunner(environmentId string, name string, labels map[string]string) (*client.Agent, error) {
-	runner, err := c.agentClient.CreateRunner(environmentId, name, labels)
+func (c *CloudObject) CreatePersistentRunner(environmentId string, name string, labels map[string]string) (*client.Agent, error) {
+	runner, err := c.agentClient.CreateRunner(environmentId, name, labels, false)
+	if err != nil {
+		return nil, err
+	}
+	return &runner, nil
+}
+
+func (c *CloudObject) CreateFloatingRunner(environmentId string, name string, labels map[string]string) (*client.Agent, error) {
+	runner, err := c.agentClient.CreateRunner(environmentId, name, labels, true)
 	if err != nil {
 		return nil, err
 	}
