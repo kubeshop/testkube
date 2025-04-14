@@ -218,7 +218,6 @@ func (a *agentLoop) loopParallelStepNotifications(ctx context.Context) error {
 func (a *agentLoop) loopRunnerRequests(ctx context.Context) error {
 	watcher := a.client.WatchRunnerRequests(ctx)
 	var wg sync.WaitGroup
-	wg.Add(1)
 	for req := range watcher.Channel() {
 		wg.Add(1)
 		go func(req controlplaneclient.RunnerRequest) {
@@ -290,7 +289,6 @@ func (a *agentLoop) loopRunnerRequests(ctx context.Context) error {
 			}
 		}(req)
 	}
-	wg.Done()
 	wg.Wait()
 	return watcher.Err()
 }
