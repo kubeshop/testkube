@@ -12,9 +12,9 @@ func MapAllTargetsApiToGrpc(ts []testkube.ExecutionTarget) []*cloud.ExecutionTar
 	}
 	targets := make([]*cloud.ExecutionTarget, len(ts))
 
-	for _, t := range ts {
+	for i, t := range ts {
 		target := MapTargetApiToGrpc(&t)
-		targets = append(targets, target)
+		targets[i] = target
 	}
 
 	return targets
