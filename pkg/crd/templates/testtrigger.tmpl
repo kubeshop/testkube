@@ -103,6 +103,39 @@ spec:
   {{- if .Action }}
   action: {{ .Action }}
   {{- end }}
+  {{- if .ActionParameters }}
+  actionParameters:
+    {{- if ne (len .ActionParameters.Config) 0 }}
+    config:
+      {{- range $key, $value := .ActionParametersConfig }}
+      {{ $key }}: {{ $value }}
+      {{- end }}
+    {{- end }}
+    {{- if ne (len .ActionParameters.Tags) 0 }}
+    tags:
+      {{- range $key, $value := .ActionParameters.Tags }}
+      {{ $key }}: {{ $value }}
+      {{- end }}
+    {{- end }}
+    {{- if .ActionParameters.Target }}
+    target:
+      {{- if .ActionParameters.Target.Match }}
+      match:
+        {{- range $key, $value := .ActionParameters.Target.Match }}
+        {{ $key }}: {{ $value }}
+        {{- end }}
+      {{- end }}
+      {{- if .ActionParameters.Target.Not }}
+      not:
+        {{- range $key, $value := .ActionParameters.Target.Not }}
+        {{ $key }}: {{ $value }}
+        {{- end }}
+      {{- end }}
+      {{- if .ActionParameters.Target.Replicate }}
+      replicate: {{ .ActionParameters.Target.Replicate }}
+      {{- end }}
+      {{- end }}
+  {{- end }}
   {{- if .Execution }}
   execution: {{ .Execution }}
   {{- end }}
@@ -138,24 +171,6 @@ spec:
         {{- end }}
     {{- end }}
   {{- end }}
-  {{- if .Target }}
-  target:
-    {{- if .Target.Match }}
-    match:
-      {{- range $key, $value := .Target.Match }}
-      {{ $key }}: {{ $value }}
-      {{- end }}
-    {{- end }}
-    {{- if .Target.Not }}
-    not:
-      {{- range $key, $value := .Target.Not }}
-      {{ $key }}: {{ $value }}
-      {{- end }}
-    {{- end }}
-    {{- if .Target.Replicate }}
-    replicate: {{ .Target.Replicate }}
-    {{- end }}
-  {{- end}}
   {{- if .Disabled }}
   disabled: {{ .Disabled }}
   {{- end }}

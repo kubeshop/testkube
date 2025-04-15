@@ -8020,8 +8020,6 @@ components:
           $ref: "#/components/schemas/TestTriggerSelector"
         concurrencyPolicy:
           $ref: "#/components/schemas/TestTriggerConcurrencyPolicies"
-        target:
-          $ref: "#/components/schemas/ExecutionTarget"
         disabled:
           type: boolean
           description: whether test trigger is disabled
@@ -8115,6 +8113,9 @@ components:
           $ref: "#/components/schemas/TestWorkflowConfigValue"
         tags:
           $ref: "#/components/schemas/TestWorkflowTagValue"
+        target:
+          $ref: "#/components/schemas/ExecutionTarget"
+
 
     TestTriggerConditionSpec:
       type: object

@@ -13,4 +13,5 @@ package testkube
 type TestTriggerActionParameters struct {
 	Config map[string]string `json:"config,omitempty"`
 	Tags   map[string]string `json:"tags,omitempty"`
+	Target *ExecutionTarget  `json:"target,omitempty"`
 }

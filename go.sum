@@ -352,6 +352,8 @@ github.com/kubeshop/testkube-operator v1.17.55-0.20250414131039-96ddada66da6 h1:
 github.com/kubeshop/testkube-operator v1.17.55-0.20250414131039-96ddada66da6/go.mod h1:2TNdpUI2xqfYM4EGtYouqOLjXQ8nblO3Nm9ltNP/RCU=
 github.com/kubeshop/testkube-operator v1.17.55-0.20250414132901-6f8bb4161db5 h1:EmSgsBf2BBD3deA39170uJrnHizC25WFM11dc3IEWv4=
 github.com/kubeshop/testkube-operator v1.17.55-0.20250414132901-6f8bb4161db5/go.mod h1:2TNdpUI2xqfYM4EGtYouqOLjXQ8nblO3Nm9ltNP/RCU=
+github.com/kubeshop/testkube-operator v1.17.55-0.20250415122114-cd94d027fead h1:bxww4OlqKOUFz3g/75R5zAy9Kqsaf3eU6hb7sMin1zE=
+github.com/kubeshop/testkube-operator v1.17.55-0.20250415122114-cd94d027fead/go.mod h1:2TNdpUI2xqfYM4EGtYouqOLjXQ8nblO3Nm9ltNP/RCU=
 github.com/kylelemons/godebug v1.1.0 h1:RPNrshWIDI6G2gRW9EHilWtl7Z6Sb1BR0xunSBf0SNc=
 github.com/kylelemons/godebug v1.1.0/go.mod h1:9/0rRGxNHcop5bhtWyNeEfOS8JIWk580+fNqagV/RAw=
 github.com/leodido/go-urn v1.4.0 h1:WT9HwE9SGECu3lg4d/dIA+jxlljEa1/ffXKmRjqdmIQ=
