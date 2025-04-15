@@ -280,6 +280,7 @@ func (w *worker) StatusNotifications(ctx context.Context, id string, opts execut
 	watcher := executionworkertypes.NewStatusNotificationsWatcher()
 	if errors.Is(err, controller.ErrJobTimeout) {
 		err = registry.ErrResourceNotFound
+		log.DefaultLogger.Errorw("service not found 3:", "id", id)
 	}
 	if err != nil {
 		watcher.Close(err)
