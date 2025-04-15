@@ -158,8 +158,10 @@ func (s *Service) execute(ctx context.Context, e *watcherEvent, t *testtriggersv
 					execution.Config[variable.Name] = variable.Value
 				}
 
-				if target := commonmapper.MapTargetKubeToGrpc(t.Spec.ActionParameters.Target); target != nil {
-					execution.Targets = []*cloud.ExecutionTarget{target}
+				if t.Spec.ActionParameters != nil && t.Spec.ActionParameters.Target != nil {
+					if target := commonmapper.MapTargetKubeToGrpc(t.Spec.ActionParameters.Target); target != nil {
+						execution.Targets = []*cloud.ExecutionTarget{target}
+					}
 				}
 
 				if t.Spec.ActionParameters != nil {

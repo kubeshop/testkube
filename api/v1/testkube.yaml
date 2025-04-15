@@ -8719,8 +8719,6 @@ components:
             - false
         tags:
           $ref: "#/components/schemas/TestWorkflowTagValue"
-        target:
-          $ref: "#/components/schemas/ExecutionTarget"
         runningContext:
           description: running context for the test workflow execution (Pro edition only)
           $ref: "#/components/schemas/TestWorkflowRunningContext"

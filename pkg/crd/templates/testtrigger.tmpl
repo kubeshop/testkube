@@ -107,7 +107,7 @@ spec:
   actionParameters:
     {{- if ne (len .ActionParameters.Config) 0 }}
     config:
-      {{- range $key, $value := .ActionParametersConfig }}
+      {{- range $key, $value := .ActionParameters.Config }}
       {{ $key }}: {{ $value }}
       {{- end }}
     {{- end }}
@@ -122,19 +122,28 @@ spec:
       {{- if .ActionParameters.Target.Match }}
       match:
         {{- range $key, $value := .ActionParameters.Target.Match }}
-        {{ $key }}: {{ $value }}
+        {{ $key }}:
+          {{- range $value }}
+          - {{.}}
+          {{- end }}
         {{- end }}
       {{- end }}
       {{- if .ActionParameters.Target.Not }}
       not:
         {{- range $key, $value := .ActionParameters.Target.Not }}
-        {{ $key }}: {{ $value }}
+        {{ $key }}:
+          {{- range $value }}
+          - {{.}}
+          {{- end }}
         {{- end }}
       {{- end }}
       {{- if .ActionParameters.Target.Replicate }}
-      replicate: {{ .ActionParameters.Target.Replicate }}
+      replicate:
+        {{- range .ActionParameters.Target.Replicate }}
+        - {{.}}
+        {{- end }}
       {{- end }}
-      {{- end }}
+    {{- end }}
   {{- end }}
   {{- if .Execution }}
   execution: {{ .Execution }}
