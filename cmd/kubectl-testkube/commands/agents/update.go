@@ -7,7 +7,6 @@ import (
 
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/cloud/client"
-	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -21,7 +20,6 @@ func NewUpdateAgentCommand() *cobra.Command {
 		Use:     "agent <name>",
 		Aliases: []string{"runner", "gitops"},
 		Args:    cobra.ExactArgs(1),
-		Hidden:  !log.IsTrue("EXPERIMENTAL"),
 		Run: func(cmd *cobra.Command, args []string) {
 			UiUpdateAgent(cmd, strings.Join(args, ""), setLabels, deleteLabels)
 		},
