@@ -53,6 +53,7 @@ func NewInstallRunnerCommand() *cobra.Command {
 		group              string
 
 		autoCreate     bool
+		floating       bool
 		labelPairs     []string
 		environmentIds []string
 	)
@@ -81,6 +82,7 @@ func NewInstallRunnerCommand() *cobra.Command {
 	cmd.Flags().BoolVar(&autoCreate, "create", false, "auto create that agent")
 	cmd.Flags().StringSliceVarP(&environmentIds, "env", "e", nil, "(with --create) environment ID or slug that the agent have access to")
 	cmd.Flags().StringSliceVarP(&labelPairs, "label", "l", nil, "(with --create) label key value pair: --label key1=value1")
+	cmd.Flags().BoolVar(&floating, "floating", false, "(with --create) create as a floating runner")
 
 	return cmd
 }
@@ -189,6 +191,7 @@ func UiInstallAgent(cmd *cobra.Command, name string, agentType string) {
 	autoCreate, _ := cmd.Flags().GetBool("create")
 	ns, _ := cmd.Flags().GetString("namespace")
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
+	floating, _ := cmd.Flags().GetBool("floating")
 	agentType, _ = GetInternalAgentType(agentType)
 	globalTemplatePath, _ := cmd.Flags().GetString("global-template-path")
 	isGlobalRunner, _ := cmd.Flags().GetBool("global")
@@ -239,7 +242,7 @@ func UiInstallAgent(cmd *cobra.Command, name string, agentType string) {
 	if agent == nil && autoCreate {
 		labels, _ := cmd.Flags().GetStringSlice("label")
 		environmentIds, _ := cmd.Flags().GetStringSlice("env")
-		agent = UiCreateAgent(cmd, agentType, name, labels, environmentIds, isGlobalRunner, runnerGroup)
+		agent = UiCreateAgent(cmd, agentType, name, labels, environmentIds, isGlobalRunner, runnerGroup, floating)
 	}
 
 	// Load agents from the Control Plane and select one

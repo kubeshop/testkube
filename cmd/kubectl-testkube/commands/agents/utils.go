@@ -493,7 +493,13 @@ func PrintControlPlaneAgent(agent cloudclient.Agent) {
 		ui.Warn("Disabled:      ", "no")
 	}
 	ui.Warn("Secret Key:    ", agentSecretKey)
-	ui.Warn("Type:          ", agentTypeLabel)
+	if agent.Type == "run" && agent.Floating {
+		ui.Warn("Type:          ", agentTypeLabel+" (floating)")
+	} else if agent.Type == "run" && !agent.Floating {
+		ui.Warn("Type:          ", agentTypeLabel+" (reserved)")
+	} else {
+		ui.Warn("Type:          ", agentTypeLabel)
+	}
 	ui.Warn("Name:          ", agent.Name)
 	ui.Warn("Created:       ", agent.CreatedAt.In(time.Local).Format(time.RFC822Z)+" "+ui.LightGray("("+time.Since(agent.CreatedAt).Truncate(time.Second).String()+")"))
 	if agent.AccessedAt == nil {
