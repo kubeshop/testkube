@@ -100,8 +100,7 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 			break
 		}
 		if errors.Is(notifications.Err(), registry.ErrResourceNotFound) {
-			// TODO: should it mark as job was aborted then?
-			return registry.ErrResourceNotFound
+			log.DefaultLogger.Errorw("service not found 1:", "id", execution.Id)
 		}
 		time.Sleep(GetNotificationsRetryDelay)
 	}

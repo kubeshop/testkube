@@ -244,6 +244,7 @@ func (w *worker) Notifications(ctx context.Context, id string, opts executionwor
 	watcher := executionworkertypes.NewNotificationsWatcher()
 	if errors.Is(err, controller.ErrJobTimeout) {
 		err = registry.ErrResourceNotFound
+		log.DefaultLogger.Errorw("service not found 2:", "id", id)
 	}
 	if err != nil {
 		watcher.Close(err)
