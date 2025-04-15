@@ -82,8 +82,8 @@ func CreateContainer(groupId int, defaultContainer stage2.Container, actions []a
 				sensitive := newEnv.ValueFrom != nil && newEnv.ValueFrom.SecretKeyRef != nil
 				newEnv.Name = actiontypes.EnvName(fmt.Sprintf("%d", i), computed, sensitive, e.Name)
 				cr.Env = append(cr.Env, newEnv.EnvVar)
-				if newEnv.Global != nil && *newEnv.Global {
-					globalEnv = append(globalEnv, newEnv)
+				if e.Global != nil && *e.Global {
+					globalEnv = append(globalEnv, e)
 				}
 			}
 			for _, e := range containerConfigs[i].Container.Config.EnvFrom {
