@@ -14,7 +14,6 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/internal/common"
 	cloudclient "github.com/kubeshop/testkube/pkg/cloud/client"
-	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -25,9 +24,8 @@ func NewInstallAgentCommand() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:    "agent <name>",
-		Args:   cobra.MaximumNArgs(1),
-		Hidden: !log.IsTrue("EXPERIMENTAL"),
+		Use:  "agent <name>",
+		Args: cobra.MaximumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			UiInstallAgent(cmd, strings.Join(args, ""), "")
 		},
@@ -59,9 +57,8 @@ func NewInstallRunnerCommand() *cobra.Command {
 		environmentIds []string
 	)
 	cmd := &cobra.Command{
-		Use:    "runner <name>",
-		Args:   cobra.MaximumNArgs(1),
-		Hidden: !log.IsTrue("EXPERIMENTAL"),
+		Use:  "runner <name>",
+		Args: cobra.MaximumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			UiInstallAgent(cmd, strings.Join(args, ""), "runner")
 		},
@@ -105,9 +102,8 @@ func NewInstallGitOpsCommand() *cobra.Command {
 		environmentIds []string
 	)
 	cmd := &cobra.Command{
-		Use:    "gitops <name>",
-		Args:   cobra.MaximumNArgs(1),
-		Hidden: !log.IsTrue("EXPERIMENTAL"),
+		Use:  "gitops <name>",
+		Args: cobra.MaximumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			UiInstallAgent(cmd, strings.Join(args, ""), "gitops")
 		},
@@ -143,9 +139,8 @@ func NewInstallCRDCommand() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:    "crd",
-		Args:   cobra.MaximumNArgs(0),
-		Hidden: !log.IsTrue("EXPERIMENTAL"),
+		Use:  "crd",
+		Args: cobra.MaximumNArgs(0),
 		Run: func(cmd *cobra.Command, args []string) {
 			UiInstallCRD(cmd, namespace, releaseName, dryRun)
 		},
