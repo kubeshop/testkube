@@ -103,6 +103,48 @@ spec:
   {{- if .Action }}
   action: {{ .Action }}
   {{- end }}
+  {{- if .ActionParameters }}
+  actionParameters:
+    {{- if ne (len .ActionParameters.Config) 0 }}
+    config:
+      {{- range $key, $value := .ActionParameters.Config }}
+      {{ $key }}: {{ $value }}
+      {{- end }}
+    {{- end }}
+    {{- if ne (len .ActionParameters.Tags) 0 }}
+    tags:
+      {{- range $key, $value := .ActionParameters.Tags }}
+      {{ $key }}: {{ $value }}
+      {{- end }}
+    {{- end }}
+    {{- if .ActionParameters.Target }}
+    target:
+      {{- if .ActionParameters.Target.Match }}
+      match:
+        {{- range $key, $value := .ActionParameters.Target.Match }}
+        {{ $key }}:
+          {{- range $value }}
+          - {{.}}
+          {{- end }}
+        {{- end }}
+      {{- end }}
+      {{- if .ActionParameters.Target.Not }}
+      not:
+        {{- range $key, $value := .ActionParameters.Target.Not }}
+        {{ $key }}:
+          {{- range $value }}
+          - {{.}}
+          {{- end }}
+        {{- end }}
+      {{- end }}
+      {{- if .ActionParameters.Target.Replicate }}
+      replicate:
+        {{- range .ActionParameters.Target.Replicate }}
+        - {{.}}
+        {{- end }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
   {{- if .Execution }}
   execution: {{ .Execution }}
   {{- end }}
