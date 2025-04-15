@@ -50,6 +50,7 @@ type Agent struct {
 	Namespace string `json:"namespace"`
 	// Is the Agent disabled?.
 	Disabled     bool               `json:"disabled"`
+	Floating     bool               `json:"floating"`
 	Type         string             `json:"type"`
 	Labels       map[string]string  `json:"labels"`
 	Environments []AgentEnvironment `json:"environments"`
