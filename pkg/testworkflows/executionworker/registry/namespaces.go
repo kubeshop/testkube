@@ -9,6 +9,8 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+
+	"github.com/kubeshop/testkube/pkg/log"
 )
 
 type namespacesRegistry struct {
@@ -87,6 +89,7 @@ func (r *namespacesRegistry) load(ctx context.Context, id string) (string, error
 		}
 	}
 
+	log.DefaultLogger.Errorw("service not found 4:", "id", id)
 	// Not found anything
 	return "", ErrResourceNotFound
 }
