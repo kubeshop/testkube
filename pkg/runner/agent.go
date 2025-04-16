@@ -198,7 +198,8 @@ func (a *agentLoop) loopServiceNotifications(ctx context.Context) error {
 
 		// Start reading the notifications
 		return a.worker.Notifications(ctx, resourceId, executionworkertypes.NotificationsOptions{
-			Hints: executionworkertypes.Hints{},
+			Hints:      executionworkertypes.Hints{},
+			WaitForJob: true,
 		})
 	})
 }

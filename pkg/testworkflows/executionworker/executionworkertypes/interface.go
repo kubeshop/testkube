@@ -143,6 +143,8 @@ type NotificationsOptions struct {
 	Hints Hints
 	// NoFollow gives a hint to ignore following the further actions.
 	NoFollow bool
+	// WaitForJob provides a hint to retry for job availability
+	WaitForJob bool
 }
 
 type LogsOptions struct {

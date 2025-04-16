@@ -104,8 +104,12 @@ func NewKillCmd() *cobra.Command {
 					}
 
 					log := spawn.CreateLogger(service, "", index, count)
+
 					notifications := spawn.ExecutionWorker().Notifications(context.Background(), id,
-						executionworkertypes.NotificationsOptions{NoFollow: true})
+						executionworkertypes.NotificationsOptions{
+							NoFollow:   true,
+							WaitForJob: true,
+						})
 					if notifications.Err() != nil {
 						log("error", "failed to connect to the service", notifications.Err().Error())
 						continue

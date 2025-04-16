@@ -119,6 +119,7 @@ func (s *TestkubeAPI) StreamTestWorkflowExecutionServiceNotificationsHandler() f
 				Namespace:   execution.Namespace,
 				ScheduledAt: common.Ptr(execution.ScheduledAt),
 			},
+			WaitForJob: true,
 		})
 		if notifications.Err() != nil {
 			return s.BadRequest(c, errPrefix, "fetching notifications", notifications.Err())
@@ -240,6 +241,7 @@ func (s *TestkubeAPI) StreamTestWorkflowExecutionServiceNotificationsWebSocketHa
 				Namespace:   execution.Namespace,
 				ScheduledAt: common.Ptr(execution.ScheduledAt),
 			},
+			WaitForJob: true,
 		})
 		if notifications.Err() != nil {
 			return
