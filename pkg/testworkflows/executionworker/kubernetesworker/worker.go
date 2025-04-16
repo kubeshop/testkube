@@ -380,11 +380,7 @@ func (w *worker) Logs(ctx context.Context, id string, options executionworkertyp
 	go func() {
 		defer reader.Close()
 		ref := ""
-		fmt.Println("log lines", id)
 		for v := range notifications.Channel() {
-			data, err := json.Marshal(v)
-			fmt.Println("log line", string(data), err)
-			fmt.Println("log ", v.Log, "temp", v.Temporary)
 			if v.Log != "" {
 				if ref != v.Ref && v.Ref != "" {
 					ref = v.Ref
