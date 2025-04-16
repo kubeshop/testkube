@@ -75,7 +75,6 @@ func (s *internalArtifactStorage) SaveStream(artifactPath string, stream io.Read
 		defer stream.(bufferedstream.BufferedStream).Cleanup()
 		size = stream.(bufferedstream.BufferedStream).Len()
 	}
-
 	err = s.uploader.Add(filepath.Join(s.prefix, artifactPath), stream, int64(size))
 	if err != nil {
 		return err
