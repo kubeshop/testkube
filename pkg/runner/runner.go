@@ -20,6 +20,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/log"
 	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/registry"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowresolver"
 )
 
@@ -97,6 +98,10 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 		notifications = r.worker.Notifications(ctx, execution.Id, executionworkertypes.NotificationsOptions{})
 		if notifications.Err() == nil {
 			break
+		}
+		if errors.Is(notifications.Err(), registry.ErrResourceNotFound) {
+			// TODO: should it mark as job was aborted then?
+			return registry.ErrResourceNotFound
 		}
 		time.Sleep(GetNotificationsRetryDelay)
 	}
