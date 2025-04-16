@@ -62,7 +62,10 @@ func executeTestWorkflowApi(workflowName string, request testkube.TestWorkflowEx
 func executeTestWorkflowGrpc(workflowName string, request testkube.TestWorkflowExecutionRequest) ([]testkube.TestWorkflowExecution, error) {
 	cfg := config.Config()
 	client := env.Cloud()
-	targets := commonmapper.MapAllTargetsApiToGrpc([]testkube.ExecutionTarget{*request.Target})
+	var targets []*cloud.ExecutionTarget
+	if request.Target != nil {
+		targets = commonmapper.MapAllTargetsApiToGrpc([]testkube.ExecutionTarget{*request.Target})
+	}
 
 	return client.ScheduleExecution(context.Background(), cfg.Execution.EnvironmentId, &cloud.ScheduleRequest{
 		Executions:      []*cloud.ScheduleExecution{{Selector: &cloud.ScheduleResourceSelector{Name: workflowName}, Config: request.Config, Targets: targets}},
