@@ -2,6 +2,7 @@ package registry
 
 import (
 	"context"
+	"time"
 
 	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/pkg/errors"
@@ -117,6 +118,7 @@ func (r *namespacesRegistry) Get(ctx context.Context, id string) (string, error)
 
 		if errors.Is(err, ErrResourceNotFound) && i < 10 {
 			i++
+			time.Sleep(time.Second)
 			continue
 		}
 
