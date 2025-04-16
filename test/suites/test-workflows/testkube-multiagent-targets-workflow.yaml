@@ -19,23 +19,23 @@ spec:
         target: { match: { runnertype: [superagent] } }
       - name: gradle-workflow-smoke-jdk11
         description: "runner: independent (testkube-cloud-test-dev-runner2)"
-        target: { match: { name: [testkube-cloud-test-dev-runner2] } } # short
+        target: { match: { name: [testkube-cloud-test-dev-runner2] } }
       - name: pytest-workflow-smoke
         description: "runner: independent, separate namespace (testkube-cloud-test-dev-separate-ns)"
-        target: # long
+        target:
           match:
             name:
             - testkube-cloud-test-dev-separate-ns
       - name: postman-workflow-smoke
         description: "runner: one of 2 runners (runner1 OR separate-ns)"
-        target: # long
+        target:
           match:
             name:
             - testkube-cloud-test-dev-runner1
             - testkube-cloud-test-dev-separate-ns
       - name: nunit-workflow-smoke-junit-report
         description: "runner: 2 runners (runner-2 AND separate-ns)"
-        target: # long
+        target:
           match:
             name:
             - testkube-cloud-test-dev-runner2
