@@ -382,6 +382,7 @@ func (w *worker) Logs(ctx context.Context, id string, options executionworkertyp
 		ref := ""
 		fmt.Println("log lines", id)
 		for v := range notifications.Channel() {
+			fmt.Println("log line", v)
 			if v.Log != "" && !v.Temporary {
 				if ref != v.Ref && v.Ref != "" {
 					ref = v.Ref
