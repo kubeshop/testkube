@@ -369,7 +369,6 @@ func (w *worker) Logs(ctx context.Context, id string, options executionworkertyp
 		Hints:    options.Hints,
 		NoFollow: options.NoFollow,
 	})
-	fmt.Println("log data", notifications.Err())
 	if notifications.Err() != nil {
 		reader.End(notifications.Err())
 		return reader

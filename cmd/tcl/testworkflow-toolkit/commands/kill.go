@@ -104,7 +104,6 @@ func NewKillCmd() *cobra.Command {
 					}
 
 					log := spawn.CreateLogger(service, "", index, count)
-
 					notifications := spawn.ExecutionWorker().Notifications(context.Background(), id,
 						executionworkertypes.NotificationsOptions{
 							NoFollow:   true,
