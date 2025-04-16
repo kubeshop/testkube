@@ -294,6 +294,7 @@ func SaveLogs(parentCtx context.Context, storage artifacts.InternalArtifactStora
 			NoFollow: true,
 		})
 		err = reader.Err()
+		fmt.Println("log saving err:", err)
 		if err == nil {
 			err = storage.SaveStream(filePath, reader)
 		}
