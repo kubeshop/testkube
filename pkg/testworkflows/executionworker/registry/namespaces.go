@@ -99,6 +99,7 @@ func (r *namespacesRegistry) Get(ctx context.Context, id string) (string, error)
 		return ns, nil
 	}
 
+	i := 0
 	for {
 		obj, err, _ := r.operations.Do(id, func() (interface{}, error) {
 			ns, err := r.load(ctx, id)
@@ -111,6 +112,11 @@ func (r *namespacesRegistry) Get(ctx context.Context, id string) (string, error)
 		// Try again, if context if initial caller has been called
 		// TODO: Think how to better use context across multiple callers
 		if errors.Is(err, context.Canceled) && ctx.Err() == nil {
+			continue
+		}
+
+		if errors.Is(err, ErrResourceNotFound) && i < 10 {
+			i++
 			continue
 		}
 
