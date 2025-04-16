@@ -382,7 +382,9 @@ func (w *worker) Logs(ctx context.Context, id string, options executionworkertyp
 		ref := ""
 		fmt.Println("log lines", id)
 		for v := range notifications.Channel() {
-			fmt.Println("log line", v)
+			data, err := json.Marshal(v)
+			fmt.Println("log line", string(data), err)
+			fmt.Println("log ", v.Log, "temp", v.Temporary)
 			if v.Log != "" && !v.Temporary {
 				if ref != v.Ref && v.Ref != "" {
 					ref = v.Ref
