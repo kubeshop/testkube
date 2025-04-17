@@ -620,7 +620,7 @@ func printStructuredLogLines(logs string, isLineBeginning, isFirstLine bool) (bo
 			fmt.Print("\n")
 		}
 		text := trimTimestamp(scanner.Text())
-		if text == registry.ErrResourceNotFound.Error() && isFirstLine {
+		if isFirstLine && text == registry.ErrResourceNotFound.Error() {
 			return isLineBeginning, registry.ErrResourceNotFound
 		}
 		fmt.Print(text)
