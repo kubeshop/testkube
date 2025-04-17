@@ -3,8 +3,8 @@ apiVersion: testworkflows.testkube.io/v1
 metadata:
   name: tw-suite-full-smoke-cron-trigger
   labels:
-    core-tests: workflows-suite
-    type: suite
+    core-tests: workflows-suite-trigger
+    type: suite-trigger
 spec:
   steps:
   - execute:
