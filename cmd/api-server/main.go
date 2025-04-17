@@ -179,6 +179,8 @@ func main() {
 		Runtime: controlplaneclient.RuntimeConfig{
 			Namespace: cfg.TestkubeNamespace,
 		},
+		SendTimeout: cfg.TestkubeProSendTimeout,
+		RecvTimeout: cfg.TestkubeProRecvTimeout,
 	})
 
 	if proContext.CloudStorage {

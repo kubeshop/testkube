@@ -31,6 +31,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/expressions"
+	commonmapper "github.com/kubeshop/testkube/pkg/mapper/common"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -162,6 +163,7 @@ func buildTestExecution(test testworkflowsv1.StepExecuteTest, async bool) (func(
 func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async bool) (func() error, error) {
 	return func() (err error) {
 		tags := config.ExecutionTags()
+		target := common.MapPtr(workflow.Target, commonmapper.MapTargetKubeToAPI)
 
 		// Schedule execution
 		var execs []testkube.TestWorkflowExecution
@@ -171,6 +173,7 @@ func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async 
 				Config:          testworkflows.MapConfigValueKubeToAPI(workflow.Config),
 				DisableWebhooks: config.ExecutionDisableWebhooks(),
 				Tags:            tags,
+				Target:          target,
 			})
 			if err == nil {
 				break

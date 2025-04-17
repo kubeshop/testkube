@@ -36,6 +36,7 @@ spec:
       wget -qO - https://repo.testkube.io/key.pub | apt-key add -
       echo "deb https://repo.testkube.io/linux linux main" | tee -a /etc/apt/sources.list
       apt-get update && apt-get install -y testkube expect
+      testkube disable telemetry
   - name: gcloud auth
     run:
       env:

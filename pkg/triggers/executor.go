@@ -21,6 +21,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/log"
+	commonmapper "github.com/kubeshop/testkube/pkg/mapper/common"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/scheduler"
@@ -152,8 +153,15 @@ func (s *Service) execute(ctx context.Context, e *watcherEvent, t *testtriggersv
 					Selector: &cloud.ScheduleResourceSelector{Name: w.Name},
 					Config:   make(map[string]string, len(variables)),
 				}
+
 				for _, variable := range variables {
 					execution.Config[variable.Name] = variable.Value
+				}
+
+				if t.Spec.ActionParameters != nil && t.Spec.ActionParameters.Target != nil {
+					if target := commonmapper.MapTargetKubeToGrpc(t.Spec.ActionParameters.Target); target != nil {
+						execution.Targets = []*cloud.ExecutionTarget{target}
+					}
 				}
 
 				if t.Spec.ActionParameters != nil {

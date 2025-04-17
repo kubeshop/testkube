@@ -8,7 +8,6 @@ import (
 	"github.com/spf13/cobra"
 
 	common2 "github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
-	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -21,7 +20,6 @@ func NewDeleteAgentCommand() *cobra.Command {
 		Use:     "agent",
 		Aliases: []string{"runner", "gitops"},
 		Args:    cobra.ExactArgs(1),
-		Hidden:  !log.IsTrue("EXPERIMENTAL"),
 		Run: func(cmd *cobra.Command, args []string) {
 			if !uninstall && !noUninstall {
 				uninstall = ui.Confirm("should it uninstall agent?")
@@ -46,9 +44,8 @@ func NewDeleteCRDCommand() *cobra.Command {
 		confirm bool
 	)
 	cmd := &cobra.Command{
-		Use:    "crd",
-		Args:   cobra.MaximumNArgs(0),
-		Hidden: !log.IsTrue("EXPERIMENTAL"),
+		Use:  "crd",
+		Args: cobra.MaximumNArgs(0),
 		Run: func(cmd *cobra.Command, args []string) {
 			if !confirm && !ui.Confirm("should it uninstall CRDs?") {
 				os.Exit(1)

@@ -7,7 +7,6 @@ import (
 	"github.com/gookit/color"
 	"github.com/spf13/cobra"
 
-	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -19,7 +18,6 @@ func NewGetAgentCommand() *cobra.Command {
 		Args:    cobra.MaximumNArgs(1),
 		Use:     "agent [name]",
 		Aliases: []string{"agents", "a"},
-		Hidden:  !log.IsTrue("EXPERIMENTAL"),
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) == 0 {
 				UiListAgents(cmd, "")
@@ -42,7 +40,6 @@ func NewGetRunnerCommand() *cobra.Command {
 		Args:    cobra.MaximumNArgs(1),
 		Use:     "runner [name]",
 		Aliases: []string{"runners"},
-		Hidden:  !log.IsTrue("EXPERIMENTAL"),
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) == 0 {
 				UiListAgents(cmd, "runner")
@@ -65,7 +62,6 @@ func NewGetGitOpsCommand() *cobra.Command {
 		Args:    cobra.MaximumNArgs(1),
 		Use:     "gitops [name]",
 		Aliases: []string{},
-		Hidden:  !log.IsTrue("EXPERIMENTAL"),
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) == 0 {
 				UiListAgents(cmd, "gitops")
