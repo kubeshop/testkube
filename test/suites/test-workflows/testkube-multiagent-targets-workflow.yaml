@@ -16,7 +16,9 @@ spec:
         description: "runner: default runner(s) (no target - superagent or runner1)"
       - name: maven-workflow-smoke-jdk11
         description: "runner: superagent"
-        target: { match: { runnertype: [superagent] } }
+        target:
+          match:
+            runnertype: [superagent]
       - name: gradle-workflow-smoke-jdk11
         description: "runner: independent (testkube-cloud-test-dev-runner2)"
         target: { match: { name: [testkube-cloud-test-dev-runner2] } }
