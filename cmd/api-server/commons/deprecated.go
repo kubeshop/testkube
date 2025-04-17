@@ -3,7 +3,7 @@ package commons
 import (
 	"context"
 
-	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"

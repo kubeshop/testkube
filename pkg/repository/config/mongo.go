@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/telemetry"
@@ -66,8 +66,8 @@ func (r *MongoRepository) Get(ctx context.Context) (result testkube.Config, err 
 }
 
 func (r *MongoRepository) Upsert(ctx context.Context, result testkube.Config) (updated testkube.Config, err error) {
-	upsert := true
 	result.Id = Id
-	_, err = r.Coll.ReplaceOne(ctx, bson.M{"id": Id}, result, &options.ReplaceOptions{Upsert: &upsert})
+	opts := options.Replace().SetUpsert(true)
+	_, err = r.Coll.ReplaceOne(ctx, bson.M{"id": Id}, result, opts)
 	return result, err
 }

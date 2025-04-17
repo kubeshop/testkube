@@ -20,7 +20,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/websocket/v2"
-	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 
 	testsv3 "github.com/kubeshop/testkube-operator/api/tests/v3"
 	"github.com/kubeshop/testkube/internal/common"

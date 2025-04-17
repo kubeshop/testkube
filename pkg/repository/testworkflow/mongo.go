@@ -11,10 +11,9 @@ import (
 	"github.com/kubeshop/testkube/pkg/repository/common"
 	"github.com/kubeshop/testkube/pkg/utils"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/repository/sequence"
@@ -192,8 +191,7 @@ func (r *MongoRepository) GetLatestByTestWorkflows(ctx context.Context, workflow
 // TODO: Add limit?
 func (r *MongoRepository) GetRunning(ctx context.Context) (result []testkube.TestWorkflowExecution, err error) {
 	result = make([]testkube.TestWorkflowExecution, 0)
-	opts := &options.FindOptions{}
-	opts.SetSort(bson.D{{Key: "_id", Value: -1}})
+	opts := options.Find().SetSort(bson.D{{Key: "_id", Value: -1}})
 	if r.allowDiskUse {
 		opts.SetAllowDiskUse(r.allowDiskUse)
 	}
@@ -407,7 +405,7 @@ func (r *MongoRepository) UpdateResourceAggregations(ctx context.Context, id str
 	return
 }
 
-func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
+func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptionsBuilder) {
 	query := bson.M{}
 	opts := options.Find()
 	startTimeQuery := bson.M{}
@@ -421,7 +419,7 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 	}
 
 	if filter.TextSearchDefined() {
-		query["name"] = bson.M{"$regex": primitive.Regex{Pattern: filter.TextSearch(), Options: "i"}}
+		query["name"] = bson.M{"$regex": bson.Regex{Pattern: filter.TextSearch(), Options: "i"}}
 	}
 
 	if filter.LastNDaysDefined() {
@@ -776,8 +774,7 @@ func (r *MongoRepository) Assign(ctx context.Context, id string, prevRunnerId st
 // TODO: Add indexes
 func (r *MongoRepository) GetUnassigned(ctx context.Context) (result []testkube.TestWorkflowExecution, err error) {
 	result = make([]testkube.TestWorkflowExecution, 0)
-	opts := &options.FindOptions{}
-	opts.SetSort(bson.D{{Key: "_id", Value: -1}})
+	opts := options.Find().SetSort(bson.D{{"_id", -1}})
 	if r.allowDiskUse {
 		opts.SetAllowDiskUse(r.allowDiskUse)
 	}

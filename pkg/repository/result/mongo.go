@@ -9,10 +9,9 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/repository/common"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 	"go.uber.org/zap"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -175,7 +174,7 @@ func (r *MongoRepository) GetLatestTestNumber(ctx context.Context, testName stri
 	var result struct {
 		Number int32 `bson:"number"`
 	}
-	opts := &options.FindOneOptions{Projection: bson.M{"_id": -1, "number": 1}, Sort: bson.M{"number": -1}}
+	opts := options.FindOne().SetSort(bson.M{"number": -1}).SetProjection(bson.M{"_id": -1, "number": 1})
 	err = r.ResultsColl.FindOne(ctx, bson.M{"testname": testName}, opts).Decode(&result)
 	if err != nil {
 		return 0, err
@@ -392,7 +391,8 @@ func (r *MongoRepository) GetLatestByTests(ctx context.Context, testNames []stri
 func (r *MongoRepository) GetNewestExecutions(ctx context.Context, limit int) (result []testkube.Execution, err error) {
 	result = make([]testkube.Execution, 0)
 	resultLimit := int64(limit)
-	opts := &options.FindOptions{Limit: &resultLimit}
+	opts := options.Find()
+	opts.SetLimit(resultLimit)
 	opts.SetSort(bson.D{{Key: "_id", Value: -1}})
 
 	if r.allowDiskUse {
@@ -610,7 +610,7 @@ func (r *MongoRepository) EndExecution(ctx context.Context, e testkube.Execution
 	return
 }
 
-func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
+func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptionsBuilder) {
 	query := bson.M{}
 	conditions := bson.A{}
 	opts := options.Find()
@@ -618,8 +618,8 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 
 	if filter.TextSearchDefined() {
 		conditions = append(conditions, bson.M{"$or": bson.A{
-			bson.M{"testname": bson.M{"$regex": primitive.Regex{Pattern: filter.TextSearch(), Options: "i"}}},
-			bson.M{"name": bson.M{"$regex": primitive.Regex{Pattern: filter.TextSearch(), Options: "i"}}},
+			bson.M{"testname": bson.M{"$regex": bson.Regex{Pattern: filter.TextSearch(), Options: "i"}}},
+			bson.M{"name": bson.M{"$regex": bson.Regex{Pattern: filter.TextSearch(), Options: "i"}}},
 		}})
 	}
 
@@ -676,7 +676,7 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 	return query, opts
 }
 
-func addSelectorConditions(selector string, tag string, conditions primitive.A) primitive.A {
+func addSelectorConditions(selector string, tag string, conditions bson.A) bson.A {
 	items := strings.Split(selector, ",")
 	for _, item := range items {
 		elements := strings.Split(item, "=")
