@@ -24,6 +24,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	tclcmd "github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/cmd"
 	"github.com/kubeshop/testkube/pkg/telemetry"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/registry"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -394,27 +395,40 @@ func getTimestampLength(line string) int {
 	return 0
 }
 
-func printTestWorkflowLogs(signature []testkube.TestWorkflowSignature, notifications chan testkube.TestWorkflowExecutionNotification) (result *testkube.TestWorkflowResult) {
+func printTestWorkflowLogs(signature []testkube.TestWorkflowSignature, notifications chan testkube.TestWorkflowExecutionNotification) (result *testkube.TestWorkflowResult, err error) {
 	steps := flattenSignatures(signature)
 
 	var isLineBeginning = true
+	var isFirstLine = true
 	for l := range notifications {
 		if l.Output != nil {
+			if isFirstLine {
+				isFirstLine = false
+			}
 			continue
 		}
 		if l.Result != nil {
 			if printResultDifference(result, l.Result, steps) {
 				isLineBeginning = true
 			}
+			if isFirstLine {
+				isFirstLine = false
+			}
 			result = l.Result
 			continue
 		}
 
-		isLineBeginning = printStructuredLogLines(l.Log, isLineBeginning)
+		isLineBeginning, err = printStructuredLogLines(l.Log, isLineBeginning, isFirstLine)
+		if err != nil {
+			return nil, err
+		}
+		if isFirstLine {
+			isFirstLine = false
+		}
 	}
 
 	ui.NL()
-	return result
+	return result, nil
 }
 
 func watchTestWorkflowLogs(id string, signature []testkube.TestWorkflowSignature, client apiclientv1.Client) (result *testkube.TestWorkflowResult, err error) {
@@ -429,7 +443,11 @@ func watchTestWorkflowLogs(id string, signature []testkube.TestWorkflowSignature
 			}
 
 			// Check if result stream is closed and if execution is finished
-			result = printTestWorkflowLogs(signature, notifications)
+			result, err = printTestWorkflowLogs(signature, notifications)
+			if err != nil {
+				return err
+			}
+
 			if result != nil && result.Status != nil &&
 				(*result.Status == testkube.QUEUED_TestWorkflowStatus || *result.Status == testkube.RUNNING_TestWorkflowStatus) {
 				return fmt.Errorf("test workflow execution is not finished but channel is closed")
@@ -451,6 +469,7 @@ func watchTestWorkflowServiceLogs(id, serviceName string, serviceIndex int,
 
 	var (
 		notifications chan testkube.TestWorkflowExecutionNotification
+		result        *testkube.TestWorkflowResult
 		nErr          error
 	)
 
@@ -479,11 +498,20 @@ func watchTestWorkflowServiceLogs(id, serviceName string, serviceIndex int,
 			return nil, nErr
 		}
 
+		spinner.Stop()
+		result, nErr = printTestWorkflowLogs(signature, notifications)
+		if nErr != nil {
+			spinner.Warning("Retrying logs")
+			ui.NL()
+			continue
+		}
+
+		spinner.Success("Log received")
+		ui.NL()
 		break
 	}
 
-	spinner.Success()
-	return printTestWorkflowLogs(signature, notifications), nil
+	return result, nil
 }
 
 func watchTestWorkflowParallelStepLogs(id, ref string, workerIndex int,
@@ -492,6 +520,7 @@ func watchTestWorkflowParallelStepLogs(id, ref string, workerIndex int,
 
 	var (
 		notifications chan testkube.TestWorkflowExecutionNotification
+		result        *testkube.TestWorkflowResult
 		nErr          error
 	)
 
@@ -520,11 +549,20 @@ func watchTestWorkflowParallelStepLogs(id, ref string, workerIndex int,
 			return nil, nErr
 		}
 
+		spinner.Stop()
+		result, nErr = printTestWorkflowLogs(signature, notifications)
+		if nErr != nil {
+			spinner.Warning("Retrying logs")
+			ui.NL()
+			continue
+		}
+
+		spinner.Success("Logs received")
+		ui.NL()
 		break
 	}
 
-	spinner.Success()
-	return printTestWorkflowLogs(signature, notifications), nil
+	return result, nil
 }
 
 func printStatusHeader(i, n int, name string) {
@@ -570,9 +608,9 @@ func trimTimestamp(line string) string {
 	return line
 }
 
-func printStructuredLogLines(logs string, isLineBeginning bool) bool {
+func printStructuredLogLines(logs string, isLineBeginning, isFirstLine bool) (bool, error) {
 	if len(logs) == 0 {
-		return isLineBeginning
+		return isLineBeginning, nil
 	}
 	willBeLineBeginning := logs[len(logs)-1] == '\n'
 	scanner := bufio.NewScanner(strings.NewReader(logs))
@@ -581,13 +619,17 @@ func printStructuredLogLines(logs string, isLineBeginning bool) bool {
 		if next {
 			fmt.Print("\n")
 		}
-		fmt.Print(trimTimestamp(scanner.Text()))
+		text := trimTimestamp(scanner.Text())
+		if text == registry.ErrResourceNotFound.Error() && isFirstLine {
+			return isLineBeginning, registry.ErrResourceNotFound
+		}
+		fmt.Print(text)
 		next = true
 	}
 	if isLineBeginning {
 		fmt.Print("\n")
 	}
-	return willBeLineBeginning
+	return willBeLineBeginning, nil
 }
 
 func printRawLogLines(logs []byte, steps []testkube.TestWorkflowSignature, execution testkube.TestWorkflowExecution) {
