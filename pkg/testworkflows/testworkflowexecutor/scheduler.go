@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/encoding/gzip"
@@ -203,7 +203,7 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 	// Initialize execution template
 	now := time.Now().UTC()
 	base := NewIntermediateExecution().
-		SetGroupID(primitive.NewObjectIDFromTimestamp(now).Hex()).
+		SetGroupID(bson.NewObjectIDFromTimestamp(now).Hex()).
 		SetScheduledAt(now).
 		AppendTags(req.Tags).
 		SetDisabledWebhooks(req.DisableWebhooks).

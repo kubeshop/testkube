@@ -9,10 +9,9 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/repository/common"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/repository/sequence"
@@ -280,7 +279,8 @@ func (r *MongoRepository) GetLatestByTestSuites(ctx context.Context, testSuiteNa
 func (r *MongoRepository) GetNewestExecutions(ctx context.Context, limit int) (result []testkube.TestSuiteExecution, err error) {
 	result = make([]testkube.TestSuiteExecution, 0)
 	resultLimit := int64(limit)
-	opts := &options.FindOptions{Limit: &resultLimit}
+	opts := options.Find()
+	opts.SetLimit(resultLimit)
 	opts.SetSort(bson.D{{Key: "_id", Value: -1}})
 	if r.allowDiskUse {
 		opts.SetAllowDiskUse(r.allowDiskUse)
@@ -408,7 +408,7 @@ func (r *MongoRepository) EndExecution(ctx context.Context, e testkube.TestSuite
 	return
 }
 
-func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
+func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptionsBuilder) {
 
 	query := bson.M{}
 	opts := options.Find()
@@ -419,7 +419,7 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 	}
 
 	if filter.TextSearchDefined() {
-		query["name"] = bson.M{"$regex": primitive.Regex{Pattern: filter.TextSearch(), Options: "i"}}
+		query["name"] = bson.M{"$regex": bson.Regex{Pattern: filter.TextSearch(), Options: "i"}}
 	}
 
 	if filter.LastNDaysDefined() {

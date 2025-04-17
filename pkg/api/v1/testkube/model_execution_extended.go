@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
 
 	"github.com/kubeshop/testkube/pkg/utils"
 )
@@ -26,7 +26,7 @@ func NewExecution(id, testNamespace, testName, testSuiteName, executionName, tes
 	variables map[string]Variable, testSecretUUID, testSuiteSecretUUID string,
 	labels map[string]string) Execution {
 	if id == "" {
-		id = primitive.NewObjectID().Hex()
+		id = bson.NewObjectID().Hex()
 	}
 
 	return Execution{
@@ -48,7 +48,7 @@ func NewExecution(id, testNamespace, testName, testSuiteName, executionName, tes
 
 func NewFailedExecution(err error) Execution {
 	return Execution{
-		Id: primitive.NewObjectID().Hex(),
+		Id: bson.NewObjectID().Hex(),
 		ExecutionResult: &ExecutionResult{
 			ErrorMessage: err.Error(),
 			Status:       ExecutionStatusFailed,
@@ -204,7 +204,7 @@ func (e Execution) IsPassed() bool {
 
 func (e *Execution) WithID() *Execution {
 	if e.Id == "" {
-		e.Id = primitive.NewObjectID().Hex()
+		e.Id = bson.NewObjectID().Hex()
 	}
 
 	return e

@@ -8,7 +8,7 @@ import (
 
 	errors2 "github.com/go-errors/errors"
 	"github.com/pkg/errors"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
@@ -38,7 +38,7 @@ func NewIntermediateExecutionSensitiveData() *IntermediateExecutionSensitiveData
 }
 
 func (s *IntermediateExecutionSensitiveData) Append(_, value string) (expressions.Expression, error) {
-	sensitiveId := primitive.NewObjectIDFromTimestamp(s.ts).Hex()
+	sensitiveId := bson.NewObjectIDFromTimestamp(s.ts).Hex()
 	s.Data[sensitiveId] = value
 	return expressions.Compile(fmt.Sprintf(`%s("%s")`, intermediateSensitiveDataFn, sensitiveId))
 }
@@ -95,7 +95,7 @@ func (e *IntermediateExecution) SetScheduledAt(t time.Time) *IntermediateExecuti
 }
 
 func (e *IntermediateExecution) AutoGenerateID() *IntermediateExecution {
-	e.execution.Id = primitive.NewObjectIDFromTimestamp(time.Now()).Hex()
+	e.execution.Id = bson.NewObjectIDFromTimestamp(time.Now()).Hex()
 	return e
 }
 

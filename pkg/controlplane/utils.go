@@ -7,7 +7,7 @@ import (
 
 	jsoniter "github.com/json-iterator/go"
 	"github.com/pkg/errors"
-	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/structpb"

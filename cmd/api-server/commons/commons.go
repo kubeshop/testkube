@@ -14,7 +14,7 @@ import (
 
 	"github.com/nats-io/nats.go"
 	"github.com/pkg/errors"
-	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/emptypb"
