@@ -667,16 +667,13 @@ var stdFunctions = map[string]StdFunction{
 			if err != nil {
 				return nil, fmt.Errorf(`"makePath" function: %s: error: %v`, value[0], err)
 			}
-
 			pathStr, err := value[1].StringValue()
 			if err != nil {
 				return nil, fmt.Errorf(`"makePath" function: %s: error: %v`, value[1], err)
 			}
-
 			if filepath.IsAbs(pathStr) {
 				return NewValue(pathStr), nil
 			}
-
 			if parentPathStr == "" {
 				return NewValue(pathStr), nil
 			}
