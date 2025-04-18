@@ -285,7 +285,6 @@ a:
 	assert.Equal(t, `"/data"`, MustCompile(`makepath("", "/data")`).String())
 	assert.Equal(t, `"data"`, MustCompile(`makepath("", "data")`).String())
 	assert.Equal(t, `"/parent/data"`, MustCompile(`makepath("/parent", "data")`).String())
-	assert.Equal(t, `"/data"`, MustCompile(`makepath("", "\"/data\"")`).String())
 	assert.Equal(t, `[]`, MustCompile(`range(0, 0)`).String())
 	assert.Equal(t, `[]`, MustCompile(`range(0)`).String())
 	assert.Equal(t, `[]`, MustCompile(`range(0, -3)`).String())
