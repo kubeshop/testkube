@@ -1,6 +1,7 @@
 package stage
 
 import (
+	"fmt"
 	"maps"
 	"path/filepath"
 	"slices"
@@ -175,14 +176,19 @@ func (c *container) WorkingDir() string {
 	if c.parent == nil {
 		return path
 	}
-	if filepath.IsAbs(path) {
-		return path
+	firstParam := c.parent.WorkingDir()
+	secondParam := path
+	if strings.HasPrefix(firstParam, "{{") && strings.HasSuffix(firstParam, "}}") {
+		firstParam = strings.TrimSuffix(strings.TrimPrefix(firstParam, "{{"), "}}")
+	} else {
+		firstParam = fmt.Sprintf("%q", firstParam)
 	}
-	parentPath := c.parent.WorkingDir()
-	if parentPath == "" {
-		return path
+	if strings.HasPrefix(secondParam, "{{") && strings.HasSuffix(secondParam, "}}") {
+		secondParam = strings.TrimSuffix(strings.TrimPrefix(secondParam, "{{"), "}}")
+	} else {
+		secondParam = fmt.Sprintf("%q", secondParam)
 	}
-	return filepath.Join(parentPath, path)
+	return fmt.Sprintf("{{makepath(%s, %s)}}", firstParam, secondParam)
 }
 
 func (c *container) Resources() (r testworkflowsv1.Resources) {

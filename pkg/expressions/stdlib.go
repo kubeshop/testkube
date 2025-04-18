@@ -657,6 +657,32 @@ var stdFunctions = map[string]StdFunction{
 			return nil, false, nil
 		},
 	},
+	"makepath": {
+		ReturnType: TypeString,
+		Handler: ToStdFunctionHandler(func(value ...StaticValue) (Expression, error) {
+			if len(value) != 2 {
+				return nil, fmt.Errorf(`"makePath" function expects 2 argument, %d provided`, len(value))
+			}
+			parentPathStr, err := value[0].StringValue()
+			if err != nil {
+				return nil, fmt.Errorf(`"makePath" function: %s: error: %v`, value[0], err)
+			}
+
+			pathStr, err := value[1].StringValue()
+			if err != nil {
+				return nil, fmt.Errorf(`"makePath" function: %s: error: %v`, value[1], err)
+			}
+
+			if filepath.IsAbs(pathStr) {
+				return NewValue(pathStr), nil
+			}
+
+			if parentPathStr == "" {
+				return NewValue(pathStr), nil
+			}
+			return NewValue(filepath.Join(parentPathStr, pathStr)), nil
+		}),
+	},
 }
 
 const (
