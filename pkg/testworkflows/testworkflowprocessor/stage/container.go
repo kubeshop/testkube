@@ -178,15 +178,13 @@ func (c *container) WorkingDir() string {
 	}
 	firstParam := c.parent.WorkingDir()
 	secondParam := path
-	if strings.HasPrefix(firstParam, "{{") && strings.HasSuffix(firstParam, "}}") {
-		firstParam = strings.TrimSuffix(strings.TrimPrefix(firstParam, "{{"), "}}")
-	} else {
-		firstParam = fmt.Sprintf("%q", firstParam)
-	}
-	if strings.HasPrefix(secondParam, "{{") && strings.HasSuffix(secondParam, "}}") {
-		secondParam = strings.TrimSuffix(strings.TrimPrefix(secondParam, "{{"), "}}")
-	} else {
-		secondParam = fmt.Sprintf("%q", secondParam)
+	for _, param := range []*string{&firstParam, &secondParam} {
+		*param = strings.TrimSpace(*param)
+		if strings.HasPrefix(*param, "{{") && strings.HasSuffix(*param, "}}") {
+			*param = strings.TrimSuffix(strings.TrimPrefix(*param, "{{"), "}}")
+		} else {
+			*param = fmt.Sprintf("%q", *param)
+		}
 	}
 	return fmt.Sprintf("{{makepath(%s, %s)}}", firstParam, secondParam)
 }
