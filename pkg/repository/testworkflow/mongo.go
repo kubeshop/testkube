@@ -282,7 +282,7 @@ func (r *MongoRepository) GetExecutions(ctx context.Context, filter Filter) (res
 		opts.SetAllowDiskUse(r.allowDiskUse)
 	}
 
-	cursor, err := r.Coll.Find(ctx, query, opts)
+	cursor, err := r.Coll.Find(ctx, query)
 	if err != nil {
 		return
 	}
