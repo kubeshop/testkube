@@ -9,7 +9,7 @@ import (
 	"sort"
 
 	"github.com/pkg/errors"
-	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"golang.org/x/exp/slices"
 )
 

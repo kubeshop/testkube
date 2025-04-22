@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 const (
@@ -112,14 +112,12 @@ func (b *MongoLeaseBackend) tryUpdateLease(ctx context.Context, leaseMongoID, id
 	}
 
 	after := options.After
-	opts := options.FindOneAndUpdateOptions{
-		ReturnDocument: &after,
-	}
+	opts := options.FindOneAndUpdate().SetReturnDocument(after)
 	res := b.coll.FindOneAndUpdate(
 		ctx,
 		bson.M{"_id": leaseMongoID},
 		bson.M{"$set": newMongoLease},
-		&opts,
+		opts,
 	)
 	if res.Err() != nil {
 		return nil, errors.Wrap(res.Err(), "error finding and updating mongo db document")

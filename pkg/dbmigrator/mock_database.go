@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	primitive "go.mongodb.org/mongo-driver/bson/primitive"
+	bson "go.mongodb.org/mongo-driver/v2/bson"
 )
 
 // MockDatabase is a mock of Database interface.
@@ -79,7 +79,7 @@ func (mr *MockDatabaseMockRecorder) InsertMigrationState(arg0, arg1 interface{})
 }
 
 // RunCommands mocks base method.
-func (m *MockDatabase) RunCommands(arg0 context.Context, arg1 []primitive.D) error {
+func (m *MockDatabase) RunCommands(arg0 context.Context, arg1 []bson.D) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RunCommands", arg0, arg1)
 	ret0, _ := ret[0].(error)

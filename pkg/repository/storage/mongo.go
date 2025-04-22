@@ -1,7 +1,6 @@
 package storage
 
 import (
-	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
@@ -11,8 +10,8 @@ import (
 	"os"
 	"time"
 
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 
 	"github.com/kubeshop/testkube/pkg/log"
 )
@@ -57,9 +56,7 @@ func GetMongoDatabase(dsn, name, dbType string, allowTLS bool, certConfig *Mongo
 		}
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	client, err := mongo.Connect(ctx, options.Client().SetTLSConfig(mongoOptions).ApplyURI(dsn))
+	client, err := mongo.Connect(options.Client().SetTLSConfig(mongoOptions).SetConnectTimeout(10 * time.Second).ApplyURI(dsn))
 	if err != nil {
 		return nil, err
 	}
