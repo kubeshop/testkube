@@ -65,6 +65,16 @@ func GetInternalAgentType(name string) (string, error) {
 	return name, errors.New("unknown")
 }
 
+func GetCliAgentType(internalType string) (string, error) {
+	internalType = strings.ToLower(internalType)
+	for k, v := range agentKnownTypeMap {
+		if v == internalType || k == internalType {
+			return k, nil
+		}
+	}
+	return internalType, errors.New("unknown")
+}
+
 type internalAgents []internalAgent
 
 func (list internalAgents) Table() (header []string, output [][]string) {
