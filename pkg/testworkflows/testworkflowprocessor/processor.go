@@ -387,11 +387,14 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		podConfig.SecurityContext.FSGroup = common.Ptr(constants.DefaultFsGroup)
 	}
 	hostPID := false
-	if options.AllowLowSecurityFields {
-		if podConfig.HostPID != nil {
+	if podConfig.HostPID != nil {
+		if options.AllowLowSecurityFields {
 			hostPID = *podConfig.HostPID
+		} else {
+			return nil, errors.New("low security fields are not allowed")
 		}
 	}
+
 	podSpec := corev1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: podConfig.Annotations,
