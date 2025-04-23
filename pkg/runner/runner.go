@@ -122,10 +122,6 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 	currentRef := ""
 	var lastResult *testkube.TestWorkflowResult
 	for n := range notifications.Channel() {
-		if n.Temporary {
-			continue
-		}
-
 		if n.Output != nil {
 			saver.AppendOutput(*n.Output)
 		} else if n.Result != nil {

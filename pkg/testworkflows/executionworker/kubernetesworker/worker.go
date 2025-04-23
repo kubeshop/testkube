@@ -378,7 +378,7 @@ func (w *worker) Logs(ctx context.Context, id string, options executionworkertyp
 		defer reader.Close()
 		ref := ""
 		for v := range notifications.Channel() {
-			if v.Log != "" && !v.Temporary {
+			if v.Log != "" {
 				if ref != v.Ref && v.Ref != "" {
 					ref = v.Ref
 					_, _ = reader.Write([]byte(instructions.SprintHint(ref, initconstants.InstructionStart)))
