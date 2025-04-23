@@ -77,7 +77,7 @@ func NewGetGitOpsCommand() *cobra.Command {
 }
 
 func UiGetAgent(cmd *cobra.Command, agentId string, decryptSecretKey bool) {
-	registeredAgents, err := GetControlPlaneAgents(cmd, "")
+	registeredAgents, err := GetControlPlaneAgents(cmd, "", true)
 	ui.ExitOnError("getting agents", err)
 
 	namespaces, err := GetKubernetesNamespaces()
@@ -111,7 +111,7 @@ func UiGetAgent(cmd *cobra.Command, agentId string, decryptSecretKey bool) {
 func UiListAgents(cmd *cobra.Command, agentType string) {
 	agentType, _ = GetInternalAgentType(agentType)
 
-	registeredAgents, err := GetControlPlaneAgents(cmd, "")
+	registeredAgents, err := GetControlPlaneAgents(cmd, "", false)
 	ui.ExitOnError("getting agents", err)
 
 	agents, err := GetKubernetesAgents([]string{""})
