@@ -62,7 +62,7 @@ func GetInternalAgentType(name string) (string, error) {
 			return v, nil
 		}
 	}
-	return name, errors.New("unknown")
+	return name, errors.New("unknown agent type")
 }
 
 func GetCliAgentType(internalType string) (string, error) {
@@ -72,7 +72,7 @@ func GetCliAgentType(internalType string) (string, error) {
 			return k, nil
 		}
 	}
-	return internalType, errors.New("unknown")
+	return internalType, errors.New("unknown agent type")
 }
 
 type internalAgents []internalAgent
