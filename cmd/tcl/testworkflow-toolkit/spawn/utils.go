@@ -57,29 +57,28 @@ func ExecutionWorker() executionworkertypes.Worker {
 
 	if executionWorker == nil {
 		cfg := config.Config()
-		executionWorker = executionworker.NewKubernetes(env.Kubernetes(),
-			presets.NewPro(env.ImageInspector()), kubernetesworker.Config{
-				Cluster: kubernetesworker.ClusterConfig{
-					Id:               cfg.Worker.ClusterID,
-					DefaultNamespace: cfg.Worker.Namespace, // TODO: Use current execution namespace?
-					DefaultRegistry:  cfg.Worker.DefaultRegistry,
-					// TODO: Fetch all the namespaces with service accounts?
-					Namespaces: map[string]kubernetesworker.NamespaceConfig{
-						cfg.Worker.Namespace: {DefaultServiceAccountName: cfg.Worker.DefaultServiceAccount},
-					},
+		executionWorker = executionworker.NewKubernetes(env.Kubernetes(), presets.NewPro(env.ImageInspector()), kubernetesworker.Config{
+			Cluster: kubernetesworker.ClusterConfig{
+				Id:               cfg.Worker.ClusterID,
+				DefaultNamespace: cfg.Worker.Namespace, // TODO: Use current execution namespace?
+				DefaultRegistry:  cfg.Worker.DefaultRegistry,
+				// TODO: Fetch all the namespaces with service accounts?
+				Namespaces: map[string]kubernetesworker.NamespaceConfig{
+					cfg.Worker.Namespace: {DefaultServiceAccountName: cfg.Worker.DefaultServiceAccount},
 				},
-				ImageInspector: kubernetesworker.ImageInspectorConfig{
-					CacheEnabled: cfg.Worker.ImageInspectorPersistenceEnabled,
-					CacheKey:     cfg.Worker.ImageInspectorPersistenceCacheKey,
-					CacheTTL:     cfg.Worker.ImageInspectorPersistenceCacheTTL,
-				},
-				Connection:             cfg.Worker.Connection,
-				FeatureFlags:           cfg.Worker.FeatureFlags,
-				RunnerId:               cfg.Worker.RunnerID,
-				CommonEnvVariables:     cfg.Worker.CommonEnvVariables,
-				LogAbortedDetails:      config.Debug(),
-				AllowLowSecurityFields: cfg.Worker.AllowLowSecurityFields,
-			})
+			},
+			ImageInspector: kubernetesworker.ImageInspectorConfig{
+				CacheEnabled: cfg.Worker.ImageInspectorPersistenceEnabled,
+				CacheKey:     cfg.Worker.ImageInspectorPersistenceCacheKey,
+				CacheTTL:     cfg.Worker.ImageInspectorPersistenceCacheTTL,
+			},
+			Connection:             cfg.Worker.Connection,
+			FeatureFlags:           cfg.Worker.FeatureFlags,
+			RunnerId:               cfg.Worker.RunnerID,
+			CommonEnvVariables:     cfg.Worker.CommonEnvVariables,
+			LogAbortedDetails:      config.Debug(),
+			AllowLowSecurityFields: cfg.Worker.AllowLowSecurityFields,
+		})
 	}
 	return executionWorker
 }
