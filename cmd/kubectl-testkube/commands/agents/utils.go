@@ -181,7 +181,7 @@ func EnableNewArchitecture(cmd *cobra.Command, env cloudclient.Environment) erro
 	return common2.EnableNewArchitecture(cfg.CloudContext.ApiUri, cfg.CloudContext.ApiKey, cfg.CloudContext.OrganizationId, env)
 }
 
-func GetControlPlaneAgents(cmd *cobra.Command, agentType string) ([]cloudclient.Agent, error) {
+func GetControlPlaneAgents(cmd *cobra.Command, agentType string, includeDeleted bool) ([]cloudclient.Agent, error) {
 	agentType, _ = GetInternalAgentType(agentType)
 	_, _, err := common2.GetClient(cmd)
 	if err != nil {
@@ -195,7 +195,7 @@ func GetControlPlaneAgents(cmd *cobra.Command, agentType string) ([]cloudclient.
 		return nil, errors.New("no api key found in config")
 	}
 
-	registeredAgents, err := common2.GetAgents(cfg.CloudContext.ApiUri, cfg.CloudContext.ApiKey, cfg.CloudContext.OrganizationId, agentType)
+	registeredAgents, err := common2.GetAgents(cfg.CloudContext.ApiUri, cfg.CloudContext.ApiKey, cfg.CloudContext.OrganizationId, agentType, includeDeleted)
 	if err != nil {
 		return nil, errors.Wrap(err, "getting agents")
 	}
@@ -497,12 +497,7 @@ func PrintControlPlaneAgent(agent cloudclient.Agent) {
 		agentSecretKey = ui.LightGray("<encrypted>")
 	}
 	ui.Warn("ID:            ", agent.ID)
-	if agent.Disabled {
-		ui.Warn("Disabled:      ", color.Bold.Render(color.Red.Render("disabled")))
-	} else {
-		ui.Warn("Disabled:      ", "no")
-	}
-	ui.Warn("Secret Key:    ", agentSecretKey)
+	ui.Warn("Name:          ", agent.Name)
 	if agent.Type == "run" && agent.Floating {
 		ui.Warn("Type:          ", agentTypeLabel+" (floating)")
 	} else if agent.Type == "run" && !agent.Floating {
@@ -510,13 +505,26 @@ func PrintControlPlaneAgent(agent cloudclient.Agent) {
 	} else {
 		ui.Warn("Type:          ", agentTypeLabel)
 	}
-	ui.Warn("Name:          ", agent.Name)
 	ui.Warn("Created:       ", agent.CreatedAt.In(time.Local).Format(time.RFC822Z)+" "+ui.LightGray("("+time.Since(agent.CreatedAt).Truncate(time.Second).String()+")"))
+	if agent.DeletedAt != nil {
+		ui.Warn(ui.Red("Deleted:       "), agent.DeletedAt.In(time.Local).Format(time.RFC822Z)+" "+ui.LightGray("("+time.Since(*agent.DeletedAt).Truncate(time.Second).String()+")"))
+	} else if agent.Disabled {
+		ui.Warn("Disabled:      ", color.Bold.Render(color.Red.Render("disabled")))
+		ui.Warn("Secret Key:    ", agentSecretKey)
+	} else {
+		ui.Warn("Disabled:      ", "no")
+		ui.Warn("Secret Key:    ", agentSecretKey)
+	}
 	if agent.AccessedAt == nil {
 		ui.Warn("Last Activity: ", ui.LightGray("never"))
 	} else {
 		ui.Warn("Last Activity: ", agent.AccessedAt.In(time.Local).Format(time.RFC822Z)+" "+ui.LightGray("("+time.Since(*agent.AccessedAt).Truncate(time.Second).String()+")"))
 	}
+
+	if agent.DeletedAt != nil {
+		fmt.Println("\n" + color.Bold.Render(color.Red.Render("These details are historical. The Agent has been deleted.")) + "\n")
+	}
+
 	ui.Warn("Last Version:  ", agent.Version)
 	ui.Warn("Last Namespace:", agent.Namespace)
 	ui.Warn("Environments:")

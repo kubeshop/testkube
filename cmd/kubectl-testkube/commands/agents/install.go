@@ -247,7 +247,7 @@ func UiInstallAgent(cmd *cobra.Command, name string, agentType string) {
 
 	// Load agents from the Control Plane and select one
 	if agent == nil {
-		agents, err := GetControlPlaneAgents(cmd, agentType)
+		agents, err := GetControlPlaneAgents(cmd, agentType, false)
 		ui.ExitOnError("listing agents", err)
 
 		if name == "" {

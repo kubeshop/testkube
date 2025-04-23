@@ -55,6 +55,7 @@ type Agent struct {
 	Labels       map[string]string  `json:"labels"`
 	Environments []AgentEnvironment `json:"environments"`
 	AccessedAt   *time.Time         `json:"accessedAt,omitempty"`
+	DeletedAt    *time.Time         `json:"deletedAt,omitempty"`
 	CreatedAt    time.Time          `json:"createdAt"`
 	SecretKey    string             `json:"secretKey"`
 	RunnerPolicy *RunnerPolicy      `json:"runnerPolicy,omitempty"`
