@@ -24,10 +24,11 @@ func NewCreateAgentCommand() *cobra.Command {
 		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			agent := UiCreateAgent(cmd, agentType, args[0], labelPairs, environmentIds, false, "", false)
+			cliType, _ := GetCliAgentType(agent.Type)
 			ui.NL()
 			ui.Info("Install the agent with command:")
 			ui.ShellCommand(
-				fmt.Sprintf("kubectl testkube install %s %s --secret %s", agent.Type, agent.Name, agent.SecretKey),
+				fmt.Sprintf("kubectl testkube install %s %s --secret %s", cliType, agent.Name, agent.SecretKey),
 			)
 		},
 	}
@@ -52,10 +53,11 @@ func NewCreateRunnerCommand() *cobra.Command {
 		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			agent := UiCreateAgent(cmd, "runner", args[0], labelPairs, environmentIds, global, group, floating)
+			cliType, _ := GetCliAgentType(agent.Type)
 			ui.NL()
 			ui.Info("Install the agent with command:")
 			ui.ShellCommand(
-				fmt.Sprintf("kubectl testkube install %s %s --secret %s", agent.Type, agent.Name, agent.SecretKey),
+				fmt.Sprintf("kubectl testkube install %s %s --secret %s", cliType, agent.Name, agent.SecretKey),
 			)
 		},
 	}
@@ -79,10 +81,11 @@ func NewCreateGitOpsCommand() *cobra.Command {
 		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			agent := UiCreateAgent(cmd, "gitops", args[0], labelPairs, environmentIds, false, "", false)
+			cliType, _ := GetCliAgentType(agent.Type)
 			ui.NL()
 			ui.Info("Install the agent with command:")
 			ui.ShellCommand(
-				fmt.Sprintf("kubectl testkube install %s %s --secret %s", agent.Type, agent.Name, agent.SecretKey),
+				fmt.Sprintf("kubectl testkube install %s %s --secret %s", cliType, agent.Name, agent.SecretKey),
 			)
 		},
 	}

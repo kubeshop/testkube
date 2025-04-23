@@ -63,6 +63,9 @@ func MergePodConfig(dst, include *testworkflowsv1.PodConfig) *testworkflowsv1.Po
 	dst.TopologySpreadConstraints = append(dst.TopologySpreadConstraints, include.TopologySpreadConstraints...)
 	dst.SchedulingGates = append(dst.SchedulingGates, include.SchedulingGates...)
 	dst.ResourceClaims = append(include.ResourceClaims, dst.ResourceClaims...)
+	if include.HostPID != nil {
+		dst.HostPID = include.HostPID
+	}
 	return dst
 }
 

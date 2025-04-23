@@ -72,11 +72,12 @@ func ExecutionWorker() executionworkertypes.Worker {
 				CacheKey:     cfg.Worker.ImageInspectorPersistenceCacheKey,
 				CacheTTL:     cfg.Worker.ImageInspectorPersistenceCacheTTL,
 			},
-			Connection:         cfg.Worker.Connection,
-			FeatureFlags:       cfg.Worker.FeatureFlags,
-			RunnerId:           cfg.Worker.RunnerID,
-			CommonEnvVariables: cfg.Worker.CommonEnvVariables,
-			LogAbortedDetails:  config.Debug(),
+			Connection:             cfg.Worker.Connection,
+			FeatureFlags:           cfg.Worker.FeatureFlags,
+			RunnerId:               cfg.Worker.RunnerID,
+			CommonEnvVariables:     cfg.Worker.CommonEnvVariables,
+			LogAbortedDetails:      config.Debug(),
+			AllowLowSecurityFields: cfg.Worker.AllowLowSecurityFields,
 		})
 	}
 	return executionWorker

@@ -1,13 +1,18 @@
 package common
 
-import cloudclient "github.com/kubeshop/testkube/pkg/cloud/client"
+import (
+	"fmt"
 
-func GetAgents(url, token, orgID string, agentType string) ([]cloudclient.Agent, error) {
+	cloudclient "github.com/kubeshop/testkube/pkg/cloud/client"
+)
+
+func GetAgents(url, token, orgID string, agentType string, includeDeleted bool) ([]cloudclient.Agent, error) {
 	c := cloudclient.NewAgentsClient(url, token, orgID)
-	if agentType == "" {
-		return c.List()
+	query := map[string]string{"includeDeleted": fmt.Sprintf("%v", includeDeleted)}
+	if agentType != "" {
+		query["type"] = agentType
 	}
-	return c.ListWithQuery(map[string]string{"type": agentType})
+	return c.ListWithQuery(query)
 }
 
 func GetAgent(url, token, orgID string, idOrName string) (cloudclient.Agent, error) {

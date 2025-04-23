@@ -45,7 +45,9 @@ type processor struct {
 }
 
 func New(inspector imageinspector.Inspector) Processor {
-	return &processor{inspector: inspector}
+	return &processor{
+		inspector: inspector,
+	}
 }
 
 func (p *processor) Register(operation Operation) Processor {
@@ -384,6 +386,15 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	if podConfig.SecurityContext.FSGroup == nil {
 		podConfig.SecurityContext.FSGroup = common.Ptr(constants.DefaultFsGroup)
 	}
+	hostPID := false
+	if podConfig.HostPID != nil {
+		if options.AllowLowSecurityFields {
+			hostPID = *podConfig.HostPID
+		} else {
+			return nil, errors.New("low security fields are not allowed")
+		}
+	}
+
 	podSpec := corev1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: podConfig.Annotations,
@@ -412,6 +423,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 			TopologySpreadConstraints: podConfig.TopologySpreadConstraints,
 			SchedulingGates:           podConfig.SchedulingGates,
 			ResourceClaims:            podConfig.ResourceClaims,
+			HostPID:                   hostPID,
 		},
 	}
 	AnnotateControlledBy(&podSpec, options.Config.Resource.RootId, options.Config.Resource.Id)

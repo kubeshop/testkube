@@ -89,9 +89,10 @@ type WorkerConfig struct {
 	ImageInspectorPersistenceCacheKey string        `json:"P,omitempty"`
 	ImageInspectorPersistenceCacheTTL time.Duration `json:"T,omitempty"`
 
-	Connection         WorkerConnectionConfig `json:"C,omitempty"`
-	FeatureFlags       map[string]string      `json:"f,omitempty"`
-	CommonEnvVariables []corev1.EnvVar        `json:"e,omitempty"`
+	Connection             WorkerConnectionConfig `json:"C,omitempty"`
+	FeatureFlags           map[string]string      `json:"f,omitempty"`
+	CommonEnvVariables     []corev1.EnvVar        `json:"e,omitempty"`
+	AllowLowSecurityFields bool                   `json:"a,omitempty"`
 }
 
 type WorkerConnectionConfig struct {

@@ -38,4 +38,5 @@ type TestWorkflowPodConfig struct {
 	TopologySpreadConstraints []TopologySpreadConstraint `json:"topologySpreadConstraints,omitempty"`
 	SchedulingGates           []PodSchedulingGate        `json:"schedulingGates,omitempty"`
 	ResourceClaims            []PodResourceClaim         `json:"resourceClaims,omitempty"`
+	HostPID                   *BoxedBoolean              `json:"hostPID,omitempty"`
 }

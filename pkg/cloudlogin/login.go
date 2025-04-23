@@ -5,9 +5,13 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/coreos/go-oidc"
+	"github.com/pkg/errors"
 	"golang.org/x/oauth2"
+
+	"github.com/kubeshop/testkube/pkg/ui"
 )
 
 const (
@@ -35,7 +39,8 @@ func CloudLogin(ctx context.Context, providerURL, connectorID string, port int) 
 
 	// Start a local server to handle the callback from the OIDC provider.
 	ch := make(chan string)
-	http.HandleFunc("/callback", func(w http.ResponseWriter, r *http.Request) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/callback", func(w http.ResponseWriter, r *http.Request) {
 		code := r.URL.Query().Get("code")
 		if code != "" {
 			ch <- code
@@ -45,7 +50,17 @@ func CloudLogin(ctx context.Context, providerURL, connectorID string, port int) 
 			fmt.Fprintln(w, "Authorization failed.")
 		}
 	})
-	go http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
+	srv := &http.Server{Addr: fmt.Sprintf("127.0.0.1:%d", port), Handler: mux}
+	go func() {
+		err := srv.ListenAndServe()
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			if strings.Contains(err.Error(), "address already in use") {
+				ui.Fail(errors.Wrap(err, "failed to start callback server, you may try again with `--callback-port 38090`"))
+			} else {
+				ui.Fail(errors.Wrap(err, "failed to start callback server"))
+			}
+		}
+	}()
 
 	// Redirect the user to the OIDC provider's login page.
 	opts := []oauth2.AuthCodeOption{oauth2.AccessTypeOffline}
@@ -57,6 +72,9 @@ func CloudLogin(ctx context.Context, providerURL, connectorID string, port int) 
 	respCh := make(chan Tokens)
 
 	go func() {
+		// Close the callback server
+		defer srv.Close()
+
 		// Wait for the user to authorize the client and retrieve the authorization code.
 		code := <-ch
 

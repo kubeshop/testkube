@@ -19,8 +19,7 @@ const (
 type testWorkflowTemplateFetcher struct {
 	client        testworkflowtemplateclient.TestWorkflowTemplateClient
 	environmentId string
-	cache         map[string]*testkube.TestWorkflowTemplate
-	cacheMu       sync.RWMutex
+	cache         sync.Map
 }
 
 func NewTestWorkflowTemplateFetcher(
@@ -30,34 +29,27 @@ func NewTestWorkflowTemplateFetcher(
 	return &testWorkflowTemplateFetcher{
 		client:        client,
 		environmentId: environmentId,
-		cache:         make(map[string]*testkube.TestWorkflowTemplate),
 	}
 }
 
 func (r *testWorkflowTemplateFetcher) SetCache(name string, tpl *testkube.TestWorkflowTemplate) {
-	r.cacheMu.Lock()
-	defer r.cacheMu.Unlock()
 	if tpl == nil {
-		delete(r.cache, name)
+		r.cache.Delete(name)
 	} else {
-		r.cache[name] = tpl
+		r.cache.Store(name, tpl)
 	}
 }
 
 func (r *testWorkflowTemplateFetcher) Prefetch(name string) error {
 	name = testworkflowresolver.GetInternalTemplateName(name)
-	r.cacheMu.RLock()
-	if _, ok := r.cache[name]; ok {
-		r.cacheMu.RUnlock()
+	if _, ok := r.cache.Load(name); ok {
 		return nil
 	}
-	r.cacheMu.RUnlock()
-
-	workflow, err := r.client.Get(context.Background(), r.environmentId, name)
+	template, err := r.client.Get(context.Background(), r.environmentId, name)
 	if err != nil {
 		return errors.Wrapf(err, "cannot fetch Test Workflow Template by name: %s", name)
 	}
-	r.SetCache(name, workflow)
+	r.SetCache(name, template)
 	return nil
 }
 
@@ -82,18 +74,15 @@ func (r *testWorkflowTemplateFetcher) PrefetchMany(namesSet map[string]struct{})
 }
 
 func (r *testWorkflowTemplateFetcher) Get(name string) (*testkube.TestWorkflowTemplate, error) {
-	r.cacheMu.RLock()
-	if r.cache[name] == nil {
-		r.cacheMu.RUnlock()
+	v, ok := r.cache.Load(name)
+	if !ok {
 		err := r.Prefetch(name)
 		if err != nil {
 			return nil, err
 		}
-		r.cacheMu.RLock()
+		v, _ = r.cache.Load(name)
 	}
-	tmpl := r.cache[name]
-	r.cacheMu.RUnlock()
-	return tmpl, nil
+	return v.(*testkube.TestWorkflowTemplate), nil
 }
 
 func (r *testWorkflowTemplateFetcher) GetMany(names map[string]struct{}) (map[string]*testkube.TestWorkflowTemplate, error) {

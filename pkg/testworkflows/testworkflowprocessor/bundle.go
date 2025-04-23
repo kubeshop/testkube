@@ -19,10 +19,11 @@ import (
 )
 
 type BundleOptions struct {
-	Secrets            []corev1.Secret
-	Config             testworkflowconfig.InternalConfig
-	ScheduledAt        time.Time
-	CommonEnvVariables []corev1.EnvVar
+	Secrets                []corev1.Secret
+	Config                 testworkflowconfig.InternalConfig
+	ScheduledAt            time.Time
+	CommonEnvVariables     []corev1.EnvVar
+	AllowLowSecurityFields bool
 }
 
 type Bundle struct {

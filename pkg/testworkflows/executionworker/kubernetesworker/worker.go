@@ -69,6 +69,7 @@ func NewWorker(clientSet kubernetes.Interface, processor testworkflowprocessor.P
 			Connection:                        config.Connection,
 			FeatureFlags:                      config.FeatureFlags,
 			CommonEnvVariables:                config.CommonEnvVariables,
+			AllowLowSecurityFields:            config.AllowLowSecurityFields,
 		},
 	}
 }
@@ -136,10 +137,11 @@ func (w *worker) Execute(ctx context.Context, request executionworkertypes.Execu
 
 	// Process the Test Workflow
 	bundle, err := w.processor.Bundle(ctx, &request.Workflow, testworkflowprocessor.BundleOptions{
-		Config:             cfg,
-		Secrets:            secrets,
-		ScheduledAt:        scheduledAt,
-		CommonEnvVariables: w.baseWorkerConfig.CommonEnvVariables,
+		Config:                 cfg,
+		Secrets:                secrets,
+		ScheduledAt:            scheduledAt,
+		CommonEnvVariables:     w.baseWorkerConfig.CommonEnvVariables,
+		AllowLowSecurityFields: w.baseWorkerConfig.AllowLowSecurityFields,
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to process test workflow")
@@ -193,10 +195,11 @@ func (w *worker) Service(ctx context.Context, request executionworkertypes.Servi
 
 	// Process the Test Workflow
 	bundle, err := w.processor.Bundle(ctx, &request.Workflow, testworkflowprocessor.BundleOptions{
-		Config:             cfg,
-		Secrets:            secrets,
-		ScheduledAt:        scheduledAt,
-		CommonEnvVariables: w.baseWorkerConfig.CommonEnvVariables,
+		Config:                 cfg,
+		Secrets:                secrets,
+		ScheduledAt:            scheduledAt,
+		CommonEnvVariables:     w.baseWorkerConfig.CommonEnvVariables,
+		AllowLowSecurityFields: w.baseWorkerConfig.AllowLowSecurityFields,
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to process test workflow")

@@ -775,6 +775,7 @@ func MapPodConfigKubeToAPI(v testworkflowsv1.PodConfig) testkube.TestWorkflowPod
 		TopologySpreadConstraints: common.MapSlice(v.TopologySpreadConstraints, MapTopologySpreadConstraintKubeToAPI),
 		SchedulingGates:           common.MapSlice(v.SchedulingGates, MapPodSchedulingGateKubeToAPI),
 		ResourceClaims:            common.MapSlice(v.ResourceClaims, MapPodResourceClaimKubeToAPI),
+		HostPID:                   MapBoolToBoxedBoolean(v.HostPID),
 	}
 }
 
