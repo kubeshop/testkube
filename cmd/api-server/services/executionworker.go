@@ -51,9 +51,10 @@ func CreateExecutionWorker(
 			// TODO: Prepare ControlPlane interface for OSS, so we may unify the communication
 			LocalApiUrl: fmt.Sprintf("http://%s:%d", cfg.APIServerFullname, cfg.APIServerPort),
 		},
-		FeatureFlags:       featureFlags,
-		RunnerId:           runnerId,
-		CommonEnvVariables: commonEnvVariables,
-		LogAbortedDetails:  logAbortedDetails,
+		FeatureFlags:           featureFlags,
+		RunnerId:               runnerId,
+		CommonEnvVariables:     commonEnvVariables,
+		LogAbortedDetails:      logAbortedDetails,
+		AllowLowSecurityFields: cfg.AllowLowSecurityFields,
 	})
 }

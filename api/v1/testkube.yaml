@@ -10051,6 +10051,8 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/PodResourceClaim"
+        hostPID:
+          $ref: "#/components/schemas/BoxedBoolean"            
 
     TestWorkflowContainerConfig:
       type: object
