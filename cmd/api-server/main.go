@@ -193,8 +193,12 @@ func main() {
 		commons.ExitOnError("Creating test workflow templates client", err)
 	}
 
+	defaultExecutionNamespace := cfg.TestkubeNamespace
+	if cfg.DefaultExecutionNamespace != "" {
+		defaultExecutionNamespace = cfg.DefaultExecutionNamespace
+	}
 	serviceAccountNames := map[string]string{
-		cfg.TestkubeNamespace: cfg.JobServiceAccountName,
+		defaultExecutionNamespace: cfg.JobServiceAccountName,
 	}
 	// Pro edition only (tcl protected code)
 	if cfg.TestkubeExecutionNamespaces != "" {
@@ -241,11 +245,11 @@ func main() {
 	executionWorker := services.CreateExecutionWorker(clientset, cfg, clusterId, proContext.Agent.ID, serviceAccountNames, testWorkflowProcessor, map[string]string{
 		testworkflowconfig.FeatureFlagNewArchitecture: fmt.Sprintf("%v", cfg.FeatureNewArchitecture),
 		testworkflowconfig.FeatureFlagCloudStorage:    fmt.Sprintf("%v", cfg.FeatureCloudStorage),
-	}, commonEnvVariables, true)
+	}, commonEnvVariables, true, defaultExecutionNamespace)
 
 	runnerOpts := runner2.Options{
 		ClusterID:           clusterId,
-		DefaultNamespace:    cfg.TestkubeNamespace,
+		DefaultNamespace:    defaultExecutionNamespace,
 		ServiceAccountNames: serviceAccountNames,
 		StorageSkipVerify:   cfg.StorageSkipVerify,
 	}
@@ -566,6 +570,7 @@ func main() {
 		"telemetryEnabled", telemetryEnabled,
 		"clusterId", clusterId,
 		"namespace", cfg.TestkubeNamespace,
+		"executionNamespace", cfg.DefaultExecutionNamespace,
 		"version", version.Version,
 	)
 

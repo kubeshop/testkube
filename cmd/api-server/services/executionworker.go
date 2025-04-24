@@ -24,6 +24,7 @@ func CreateExecutionWorker(
 	featureFlags map[string]string,
 	commonEnvVariables []corev1.EnvVar,
 	logAbortedDetails bool,
+	defaultNamespace string,
 ) executionworkertypes.Worker {
 	namespacesConfig := map[string]kubernetesworker.NamespaceConfig{}
 	for n, s := range serviceAccountNames {
@@ -32,7 +33,7 @@ func CreateExecutionWorker(
 	return executionworker.NewKubernetes(clientSet, processor, kubernetesworker.Config{
 		Cluster: kubernetesworker.ClusterConfig{
 			Id:               clusterId,
-			DefaultNamespace: cfg.TestkubeNamespace,
+			DefaultNamespace: defaultNamespace,
 			DefaultRegistry:  cfg.TestkubeRegistry,
 			Namespaces:       namespacesConfig,
 		},

@@ -162,7 +162,8 @@ type ImageInspectorConfig struct {
 }
 
 type RunnerConfig struct {
-	DisableRunner bool `envconfig:"DISABLE_RUNNER" default:"false"`
+	DefaultExecutionNamespace string `envconfig:"DEFAULT_EXECUTION_NAMESPACE" default:""`
+	DisableRunner             bool   `envconfig:"DISABLE_RUNNER" default:"false"`
 }
 
 type GitOpsSyncConfig struct {
