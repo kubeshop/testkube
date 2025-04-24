@@ -81,7 +81,9 @@ func NewArtifactsCmd() *cobra.Command {
 			client := env.Cloud()
 
 			notifications := spawn.ExecutionWorker().Notifications(cmd.Context(), cfg.Execution.Id,
-				executionworkertypes.NotificationsOptions{})
+				executionworkertypes.NotificationsOptions{
+					NoFollow: true,
+				})
 			if notifications.Err() != nil {
 				ui.ExitOnError("getting notifications", notifications.Err())
 			}
