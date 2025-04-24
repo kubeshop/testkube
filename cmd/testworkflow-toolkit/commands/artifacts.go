@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/fs"
 	"net/http"
@@ -86,10 +87,8 @@ func NewArtifactsCmd() *cobra.Command {
 				return
 			}
 
-			for _, output := range exec.Output {
-				fmt.Printf("output - %v\n", output.Value)
-			}
-			fmt.Printf("previous output - %v\n", exec.Output)
+			data, err := json.Marshal(exec)
+			fmt.Printf("execution - %s\n", string(data))
 
 			if env.HasJunitSupport() {
 				junitProcessor := artifacts.NewJUnitPostProcessor(filesystem.NewOSFileSystem(), client, cfg.Execution.EnvironmentId, cfg.Execution.Id, cfg.Workflow.Name, config.Ref(), walker.Root(), cfg.Resource.FsPrefix)
