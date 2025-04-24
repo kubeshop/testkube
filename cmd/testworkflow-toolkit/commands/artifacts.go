@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/fs"
 	"net/http"
@@ -10,9 +9,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/spawn"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/filesystem"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 
 	"github.com/spf13/cobra"
 
@@ -80,15 +80,17 @@ func NewArtifactsCmd() *cobra.Command {
 			cfg := config.Config()
 			client := env.Cloud()
 
-			var exec *testkube.TestWorkflowExecution
-			exec, err = client.GetExecution(cmd.Context(), cfg.Execution.EnvironmentId, cfg.Execution.Id)
-			if err != nil {
-				ui.Errf("failed to get execution: %s: %s", cfg.Workflow.Name, err.Error())
-				return
+			notifications := spawn.ExecutionWorker().Notifications(cmd.Context(), cfg.Execution.Id,
+				executionworkertypes.NotificationsOptions{})
+			if notifications.Err() != nil {
+				ui.ExitOnError("getting notifications", notifications.Err())
 			}
 
-			data, err := json.Marshal(exec)
-			fmt.Printf("execution - %s\n", string(data))
+			for l := range notifications.Channel() {
+				if l.Output != nil {
+					fmt.Printf("output - %v\n", l.Output)
+				}
+			}
 
 			if env.HasJunitSupport() {
 				junitProcessor := artifacts.NewJUnitPostProcessor(filesystem.NewOSFileSystem(), client, cfg.Execution.EnvironmentId, cfg.Execution.Id, cfg.Workflow.Name, config.Ref(), walker.Root(), cfg.Resource.FsPrefix)
