@@ -172,6 +172,7 @@ func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async 
 			return
 		}
 
+		fmt.Printf("previous output - %v\n", exec.Output)
 		for _, output := range exec.Output {
 			fmt.Printf("output - %v\n", output.Value)
 		}
