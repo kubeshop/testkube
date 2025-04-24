@@ -90,7 +90,7 @@ func NewArtifactsCmd() *cobra.Command {
 
 			for l := range notifications.Channel() {
 				if l.Output != nil {
-					fmt.Printf("output - %v\n", l.Output)
+					fmt.Printf("output details - %v\n", l.Output)
 				}
 			}
 
