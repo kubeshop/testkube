@@ -115,4 +115,3 @@ spec:
         kubectl get testworkflow k6-workflow-smoke -ntestkube && echo "found" || kubectl get all -n testkube
     - name: Run TestWorkflow
       shell: testkube run tw k6-workflow-smoke --watch && echo "executed correctly"
-status: {}
