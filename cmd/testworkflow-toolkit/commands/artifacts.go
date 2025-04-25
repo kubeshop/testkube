@@ -9,14 +9,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
-	"github.com/kubeshop/testkube/pkg/filesystem"
-
 	"github.com/spf13/cobra"
 
+	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/spawn"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/artifacts"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
+	"github.com/kubeshop/testkube/pkg/filesystem"
 	"github.com/kubeshop/testkube/pkg/mapper/cdevents"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -78,6 +79,42 @@ func NewArtifactsCmd() *cobra.Command {
 			cfg := config.Config()
 			client := env.Cloud()
 
+			notifications := spawn.ExecutionWorker().Notifications(cmd.Context(), cfg.Execution.Id,
+				executionworkertypes.NotificationsOptions{
+					NoFollow: true,
+				})
+			if notifications.Err() != nil {
+				ui.ExitOnError("getting notifications", notifications.Err())
+			}
+
+			executionID := cfg.Execution.Id
+			executionName := cfg.Execution.Name
+			workflowName := cfg.Workflow.Name
+			for l := range notifications.Channel() {
+				if l.Output != nil {
+					fmt.Printf("output details - %v\n", l.Output)
+					if l.Output.Name == "testworkflow-start" && l.Output.Value != nil {
+						if value, ok := l.Output.Value["id"]; ok {
+							if strValue, ok := value.(string); ok {
+								executionID = strValue
+							}
+						}
+
+						if value, ok := l.Output.Value["name"]; ok {
+							if strValue, ok := value.(string); ok {
+								executionName = strValue
+							}
+						}
+
+						if value, ok := l.Output.Value["testWorkflowName"]; ok {
+							if strValue, ok := value.(string); ok {
+								workflowName = strValue
+							}
+						}
+					}
+				}
+			}
+
 			if env.HasJunitSupport() {
 				junitProcessor := artifacts.NewJUnitPostProcessor(filesystem.NewOSFileSystem(), client, cfg.Execution.EnvironmentId, cfg.Execution.Id, cfg.Workflow.Name, config.Ref(), walker.Root(), cfg.Resource.FsPrefix)
 				handlerOpts = append(handlerOpts, artifacts.WithPostProcessor(junitProcessor))
@@ -88,10 +125,10 @@ func NewArtifactsCmd() *cobra.Command {
 				if unpack {
 					opts = append(opts, cloudUnpack)
 				}
-				uploader = artifacts.NewCloudUploader(client, cfg.Execution.EnvironmentId, cfg.Execution.Id, cfg.Workflow.Name, config.Ref(), opts...)
+				uploader = artifacts.NewCloudUploader(client, cfg.Execution.EnvironmentId, executionID, workflowName, config.Ref(), opts...)
 			} else {
 				processor = artifacts.NewDirectProcessor()
-				uploader = artifacts.NewCloudUploader(client, cfg.Execution.EnvironmentId, cfg.Execution.Id, cfg.Workflow.Name, config.Ref(), artifacts.WithParallelismCloud(30), artifacts.CloudDetectMimetype)
+				uploader = artifacts.NewCloudUploader(client, cfg.Execution.EnvironmentId, executionID, workflowName, config.Ref(), artifacts.WithParallelismCloud(30), artifacts.CloudDetectMimetype)
 			}
 
 			// Isolate the files under specific prefix
@@ -103,9 +140,9 @@ func NewArtifactsCmd() *cobra.Command {
 			if cfg.ControlPlane.CDEventsTarget != "" {
 				handlerOpts = append(handlerOpts, artifacts.WithCDEventsTarget(cfg.ControlPlane.CDEventsTarget))
 				handlerOpts = append(handlerOpts, artifacts.WithCDEventsArtifactParameters(cdevents.CDEventsArtifactParameters{
-					Id:           cfg.Execution.Id,
-					Name:         cfg.Execution.Name,
-					WorkflowName: cfg.Workflow.Name,
+					Id:           executionID,
+					Name:         executionName,
+					WorkflowName: workflowName,
 					ClusterID:    cfg.Worker.ClusterID,
 					DashboardURI: cfg.ControlPlane.DashboardUrl,
 				}))
