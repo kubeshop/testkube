@@ -94,6 +94,10 @@ func NewArtifactsCmd() *cobra.Command {
 			executionName := cfg.Execution.Name
 			workflowName := cfg.Workflow.Name
 			ref := config.Ref()
+			workflowIndex := make(map[string]int)
+			name := "internal-only-geneva-testkube-complete-workflow"
+			index := 1
+		OuterLoop:
 			for l := range notifications.Channel() {
 				if l.Output != nil {
 					fmt.Printf("output details - %v\n", l.Output)
@@ -104,25 +108,54 @@ func NewArtifactsCmd() *cobra.Command {
 							continue
 						}
 
+						var valueMap = map[string]struct {
+							Value string
+							Ref   *string
+						}{
+							"id": {
+								Ref: &executionID,
+							},
+							"name": {
+								Ref: &executionName,
+							},
+							"testWorkflowName": {
+								Ref: &workflowName,
+							},
+						}
+
+						for key, data := range valueMap {
+							if value, ok := l.Output.Value[key]; ok {
+								if strValue, ok := value.(string); ok {
+									data.Value = strValue
+									valueMap[key] = data
+								} else {
+									continue OuterLoop
+								}
+							} else {
+								continue OuterLoop
+							}
+						}
+
+						data, ok := valueMap["testWorkflowName"]
+						if !ok {
+							continue
+						}
+
+						workflowIndex[data.Value]++
+						counter, ok := workflowIndex[name]
+						if !ok {
+							continue
+						}
+
+						if counter != index {
+							continue
+						}
+
+						for _, data := range valueMap {
+							*data.Ref = data.Value
+						}
+
 						ref = ""
-						if value, ok := l.Output.Value["id"]; ok {
-							if strValue, ok := value.(string); ok {
-								executionID = strValue
-							}
-						}
-
-						if value, ok := l.Output.Value["name"]; ok {
-							if strValue, ok := value.(string); ok {
-								executionName = strValue
-							}
-						}
-
-						if value, ok := l.Output.Value["testWorkflowName"]; ok {
-							if strValue, ok := value.(string); ok {
-								workflowName = strValue
-							}
-						}
-
 						break
 					}
 				}
