@@ -470,15 +470,6 @@ func CreateRunnerHelmOptions(
 	dryRun bool,
 	additionalValues map[string]interface{},
 ) common2.HelmGenericOptions {
-	envId := ""
-	for _, v := range controlPlane.Agent.Environments {
-		if v.ID == controlPlane.EnvironmentID {
-			envId = v.ID
-		}
-	}
-	if envId == "" && len(controlPlane.Agent.Environments) == 1 {
-		envId = controlPlane.Agent.Environments[0].ID
-	}
 	values := map[string]interface{}{
 		// Setting the connection
 		"runner.secret":     controlPlane.Agent.SecretKey,
