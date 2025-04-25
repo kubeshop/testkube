@@ -9795,9 +9795,25 @@ components:
           type: string
           description: namespace for test execution (Pro edition only)
 
+    TestWorkflowStepExecuteTestWorkflowPosition:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Name in the list of the executed test workflows
+        position:
+          type: integer
+          format: int32
+          description: Position in the list of the executed test workflows
+      required:
+      - name
+      - position
+
     TestWorkflowStepArtifacts:
       type: object
       properties:
+        executedTestWorkflowPosition:
+          $ref: "#/components/schemas/TestWorkflowStepExecuteTestWorkflowPosition"        
         workingDir:
           $ref: "#/components/schemas/BoxedString"
         compress:
