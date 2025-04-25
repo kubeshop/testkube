@@ -79,6 +79,9 @@ func NewArtifactsCmd() *cobra.Command {
 			cfg := config.Config()
 			client := env.Cloud()
 
+			exec, err := client.GetExecution(cmd.Context(), cfg.Execution.EnvironmentId, cfg.Execution.Id)
+			ui.ExitOnError("getting execution", err)
+
 			notifications := spawn.ExecutionWorker().Notifications(cmd.Context(), cfg.Execution.Id,
 				executionworkertypes.NotificationsOptions{
 					NoFollow: true,
@@ -90,10 +93,18 @@ func NewArtifactsCmd() *cobra.Command {
 			executionID := cfg.Execution.Id
 			executionName := cfg.Execution.Name
 			workflowName := cfg.Workflow.Name
+			ref := config.Ref()
 			for l := range notifications.Channel() {
 				if l.Output != nil {
 					fmt.Printf("output details - %v\n", l.Output)
 					if l.Output.Name == "testworkflow-start" && l.Output.Value != nil {
+						curParent := exec.GetParentRef(ref)
+						execParent := exec.GetParentRef(l.Output.Ref)
+						if curParent != execParent {
+							continue
+						}
+
+						ref = ""
 						if value, ok := l.Output.Value["id"]; ok {
 							if strValue, ok := value.(string); ok {
 								executionID = strValue
@@ -111,6 +122,8 @@ func NewArtifactsCmd() *cobra.Command {
 								workflowName = strValue
 							}
 						}
+
+						break
 					}
 				}
 			}
@@ -125,10 +138,10 @@ func NewArtifactsCmd() *cobra.Command {
 				if unpack {
 					opts = append(opts, cloudUnpack)
 				}
-				uploader = artifacts.NewCloudUploader(client, cfg.Execution.EnvironmentId, executionID, workflowName, config.Ref(), opts...)
+				uploader = artifacts.NewCloudUploader(client, cfg.Execution.EnvironmentId, executionID, workflowName, ref, opts...)
 			} else {
 				processor = artifacts.NewDirectProcessor()
-				uploader = artifacts.NewCloudUploader(client, cfg.Execution.EnvironmentId, executionID, workflowName, config.Ref(), artifacts.WithParallelismCloud(30), artifacts.CloudDetectMimetype)
+				uploader = artifacts.NewCloudUploader(client, cfg.Execution.EnvironmentId, executionID, workflowName, ref, artifacts.WithParallelismCloud(30), artifacts.CloudDetectMimetype)
 			}
 
 			// Isolate the files under specific prefix

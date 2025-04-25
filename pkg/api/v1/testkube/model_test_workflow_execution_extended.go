@@ -145,3 +145,24 @@ func (e *TestWorkflowExecution) Clone() *TestWorkflowExecution {
 	_ = json.Unmarshal(v, &result)
 	return &result
 }
+
+func findParent(parentRef, ref string, signature []TestWorkflowSignature) string {
+	for _, s := range signature {
+		if s.Ref == ref {
+			return parentRef
+		}
+
+		if s.Children != nil {
+			parentRef = findParent(s.Ref, ref, s.Children)
+			if parentRef != "" {
+				return parentRef
+			}
+		}
+	}
+
+	return ""
+}
+
+func (e *TestWorkflowExecution) GetParentRef(ref string) string {
+	return findParent("", ref, e.Signature)
+}
