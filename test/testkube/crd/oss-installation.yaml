@@ -2,7 +2,6 @@ kind: TestWorkflow
 apiVersion: testworkflows.testkube.io/v1
 metadata:
   name: oss-standalone-installation-test
-  namespace: testkube-agent
   labels:
     core-tests: installation
 spec:
