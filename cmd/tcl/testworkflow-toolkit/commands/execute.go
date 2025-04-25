@@ -165,17 +165,6 @@ func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async 
 		tags := config.ExecutionTags()
 		target := common.MapPtr(workflow.Target, commonmapper.MapTargetKubeToAPI)
 
-		var exec *testkube.TestWorkflowExecution
-		exec, err = execute.GetExecution(config.ExecutionId())
-		if err != nil {
-			ui.Errf("failed to get execution: %s: %s", workflow.Name, err.Error())
-			return
-		}
-
-		for _, output := range exec.Output {
-			fmt.Printf("output - %v\n", output.Value)
-		}
-
 		// Schedule execution
 		var execs []testkube.TestWorkflowExecution
 		for i := 0; i < CreateExecutionRetryOnFailureMaxAttempts; i++ {
