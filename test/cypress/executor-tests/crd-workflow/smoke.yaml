@@ -63,6 +63,7 @@ spec:
       config:
         version: 14.0.3
         run: "npx cypress run --env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value --config '{\"screenshotsFolder\":\"/data/artifacts/screenshots\",\"videosFolder\":\"/data/artifacts/videos\"}'"
+---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
