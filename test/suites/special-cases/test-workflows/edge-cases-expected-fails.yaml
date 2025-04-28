@@ -13,6 +13,7 @@ spec:
       - name: expected-fail-cypress-incorrect-image-name
       - name: expected-fail-cypress-incorrect-workingdir
       - name: expected-fail-cypress-resource-limits
+      - name: expected-fail-random-oomkilled
       - name: expected-fail-cypress-artifacts-condition-always-with-artifacts
       - name: expected-fail-k6-test-report-condition-always-no-artifacts
       - name: expected-fail-timeout-activedeadlineseconds
