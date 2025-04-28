@@ -128,17 +128,13 @@ func (c *client) WatchRunnerRequests(ctx context.Context) RunnerRequestsWatcher 
 		t := time.NewTimer(c.opts.RecvTimeout)
 		select {
 		case err := <-errChan:
-			if !t.Stop() {
-				<-t.C
-			}
+			t.Stop()
 			if err != nil {
 				cancel(err)
 			}
 			return err
 		case <-ctx.Done():
-			if !t.Stop() {
-				<-t.C
-			}
+			t.Stop()
 			return ctx.Err()
 		case <-t.C:
 			return errors.New("send response too slow")
