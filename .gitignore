@@ -16,6 +16,7 @@ unit-tests.xml
 unit-tests.json
 integration-tests.xml
 integration-tests.json
+depot-build-meta.json
 
 # Dependency directories (remove the comment below to include it)
 vendor/

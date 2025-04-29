@@ -32,7 +32,7 @@ RUN apk --no-cache --update add ca-certificates && (rm -rf /var/cache/apk/* || 0
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=builder /app/build/_local/agent-server /testkube/
 
-ENTRYPOINT ["/go/bin/dlv", "exec", "--headless", "--continue", "--accept-multiclient", "--listen=:56268", "--api-version=2", "/testkube/agent-server"]
+ENTRYPOINT ["/go/bin/dlv", "exec", "--headless", "--continue", "--accept-multiclient", "--listen=:56400", "--api-version=2", "/testkube/agent-server"]
 
 ###################################
 ## Distribution

@@ -13,7 +13,7 @@ variable "SEGMENTIO_KEY"           { default = ""}
 variable "CLOUD_SEGMENTIO_KEY"     { default = ""}
 
 group "default" {
-  targets = ["agent-server", "testworkflow-init", "testworkflow-toolkit"]
+  targets = ["agent", "init", "toolkit"]
 }
 
 target "api-meta" {}
@@ -60,36 +60,36 @@ target "tw-toolkit" {
   }
 }
 
-target "agent-server-meta" {}
-target "agent-server" {
-  inherits = ["agent-server-meta"]
+target "agent-meta" {}
+target "agent" {
+  inherits = ["agent-meta"]
   context="."
   dockerfile = "build/_local/agent-server.Dockerfile"
-  platforms = ["linux/arm64"]
+  platforms = ["linux/arm64", "linux/amd64"]
   args = {
     GOCACHE = "${GOCACHE}"
     GOMODCACHE = "${GOMODCACHE}"
   }
 }
 
-target "testworkflow-init-meta" {}
-target "testworkflow-init" {
-  inherits = ["testworkflow-init-meta"]
+target "init-meta" {}
+target "init" {
+  inherits = ["init-meta"]
   context="."
   dockerfile = "build/_local/testworkflow-init.Dockerfile"
-  platforms = ["linux/arm64"]
+  platforms = ["linux/arm64", "linux/amd64"]
   args = {
     GOCACHE = "${GOCACHE}"
     GOMODCACHE = "${GOMODCACHE}"
   }
 }
 
-target "testworkflow-toolkit-meta" {}
-target "testworkflow-toolkit" {
-  inherits = ["testworkflow-toolkit-meta"]
+target "toolkit-meta" {}
+target "toolkit" {
+  inherits = ["toolkit-meta"]
   context="."
   dockerfile = "build/_local/testworkflow-toolkit.Dockerfile"
-  platforms = ["linux/arm64"]
+  platforms = ["linux/arm64", "linux/amd64"]
   args = {
     GOCACHE = "${GOCACHE}"
     GOMODCACHE = "${GOMODCACHE}"
