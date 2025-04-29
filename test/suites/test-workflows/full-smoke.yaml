@@ -20,6 +20,7 @@ spec:
       - name: locust-workflow-suite
       - name: maven-workflow-suite
       - name: nunit-workflow-suite
+      - name: pact-workflow-suite
       - name: playwright-workflow-suite
       - name: postman-workflow-suite
       - name: pytest-workflow-suite
