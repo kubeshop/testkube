@@ -11,9 +11,6 @@ DEBUG ?= ${DEBUG:-0}
 DASHBOARD_URI ?= ${DASHBOARD_URI:-"https://demo.testkube.io"}
 ANALYTICS_TRACKING_ID = ${ANALYTICS_TRACKING_ID:-""}
 ANALYTICS_API_KEY = ${ANALYTICS_API_KEY:-""}
-PROTOC := ${BIN_DIR}/protoc/bin/protoc
-PROTOC_GEN_GO := ${BIN_DIR}/protoc-gen-go
-PROTOC_GEN_GO_GRPC := ${BIN_DIR}/protoc-gen-go-grpc
 LD_FLAGS += -X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientID=$(SLACK_BOT_CLIENT_ID)
 LD_FLAGS += -X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientSecret=$(SLACK_BOT_CLIENT_SECRET)
 LD_FLAGS += -X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementID=$(ANALYTICS_TRACKING_ID)
@@ -146,21 +143,9 @@ openapi-generate-model-testkube:
 	go fmt pkg/api/v1/testkube/*.go
 
 protobuf-generate:
-	$(PROTOC) \
-    --go_out=. --go-grpc_out=. proto/service.proto
-
-install-protobuf: $(PROTOC) $(PROTOC_GEN_GO) $(PROTOC_GEN_GO_GRPC)
-# Protoc and friends installation and generation
-$(PROTOC):
-	$(call install-protoc)
-
-$(PROTOC_GEN_GO):
-	@echo "[INFO]: Installing protobuf go generation plugin."
-	GOBIN=${BIN_DIR} go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.28
-
-$(PROTOC_GEN_GO_GRPC):
-	@echo "[INFO]: Installing protobuf GRPC go generation plugin."
-	GOBIN=${BIN_DIR} go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2
+	docker build -f protoc.Dockerfile -t testkube/protoc .
+	docker run --user $(USERID):$(USERGROUP) --rm -v $(PWD):/src -w /src testkube/protoc \
+		protoc --go_out=. --go-grpc_out=. proto/service.proto
 
 .PHONY: unit-tests
 unit-tests:
@@ -263,20 +248,3 @@ port-forward-api:
 
 run-proxy:
 	go run cmd/proxy/main.go --namespace $(NAMESPACE)
-
-define install-protoc
-@[ -f "${PROTOC}" ] || { \
-set -e ;\
-echo "[INFO] Installing protoc compiler to ${BIN_DIR}/protoc" ;\
-mkdir -pv "${BIN_DIR}/" ;\
-TMP_DIR=$$(mktemp -d) ;\
-cd $$TMP_DIR ;\
-PB_REL="https://github.com/protocolbuffers/protobuf/releases" ;\
-VERSION=3.19.4 ;\
-if [ "$$(uname)" == "Darwin" ];then FILENAME=protoc-$${VERSION}-osx-x86_64.zip ;fi ;\
-if [ "$$(uname)" == "Linux" ];then FILENAME=protoc-$${VERSION}-linux-x86_64.zip;fi ;\
-echo "Downloading $${FILENAME} to $${TMP_DIR}" ;\
-curl -LO $${PB_REL}/download/v$${VERSION}/$${FILENAME} ; unzip $${FILENAME} -d ${BIN_DIR}/protoc ; \
-rm -rf $${TMP_DIR} ;\
-}
-endef
