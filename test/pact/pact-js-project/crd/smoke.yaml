@@ -9,7 +9,7 @@ spec:
   content:
     git:
       uri: https://github.com/kubeshop/testkube
-      revision: test-workflow-pact # TODO: update
+      revision: main
       paths:
       - test/pact/pact-js-project/
   container:
