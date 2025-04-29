@@ -1,0 +1,14 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: pact-workflow-suite
+  labels:
+    core-tests: workflows-suite
+    type: suite
+    tool: pact
+spec:
+  steps:
+  - execute:
+      parallelism: 2
+      workflows:
+      - name: pact-js-workflow-smoke
