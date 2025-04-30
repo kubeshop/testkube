@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCompileBasic(t *testing.T) {
@@ -177,6 +178,21 @@ func TestCompileResolution(t *testing.T) {
 	assert.Equal(t, `"[placeholder:name]"`, must(MustCompile(`env.name`).Resolve(vm, FinalizerFail)).String())
 	assert.Error(t, errOnly(MustCompile(`secrets.name`).Resolve(vm, FinalizerFail)))
 	assert.Equal(t, `"[placeholder:apiUrl]"`, must(MustCompile(`mainEndpoint()`).Resolve(vm, FinalizerFail)).String())
+}
+
+func TestCompileResolutionWithFinalizer(t *testing.T) {
+	vm := NewMachine().
+		Register("status", "passed").
+		RegisterAccessorExt(func(name string) (interface{}, bool, error) {
+			if name == "passed" {
+				return newMath(operatorEqualsAlias, newAccessor("status"), NewValue("passed")), true, nil
+			}
+			return nil, false, nil
+		})
+
+	expr, err := MustCompile(`string(passed)`).Resolve(vm, FinalizerFail)
+	require.NoError(t, err)
+	assert.Equal(t, `"true"`, expr.String())
 }
 
 func TestCircularResolution(t *testing.T) {
