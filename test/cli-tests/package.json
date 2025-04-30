@@ -13,6 +13,6 @@
     "test": "mocha --require @babel/register tests/ --require dotenv/config --timeout 30000 --parallel"
   },
   "dependencies": {
-    "@babel/runtime": "^7.20.0"
+    "@babel/runtime": "^7.27.0"
   }
 }
