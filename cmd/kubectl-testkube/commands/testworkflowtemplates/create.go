@@ -18,6 +18,7 @@ func NewCreateTestWorkflowTemplateCmd() *cobra.Command {
 		name     string
 		filePath string
 		update   bool
+		dryRun   bool
 	)
 
 	cmd := &cobra.Command{
@@ -52,6 +53,9 @@ func NewCreateTestWorkflowTemplateCmd() *cobra.Command {
 			if obj.Kind != "" && obj.Kind != "TestWorkflowTemplate" {
 				ui.Failf("Only TestWorkflowTemplate objects are accepted. Received: %s", obj.Kind)
 			}
+			if dryRun {
+				ui.SuccessAndExit("TestWorkflowTemplate specification is valid")
+			}
 			common2.AppendTypeMeta("TestWorkflowTemplate", testworkflowsv1.GroupVersion, obj)
 			obj.Namespace = namespace
 			if name != "" {
@@ -80,6 +84,7 @@ func NewCreateTestWorkflowTemplateCmd() *cobra.Command {
 	cmd.Flags().StringVar(&name, "name", "", "test workflow template name")
 	cmd.Flags().BoolVar(&update, "update", false, "update, if test workflow template already exists")
 	cmd.Flags().StringVarP(&filePath, "file", "f", "", "file path to get the test workflow template specification")
+	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "validate test workflow template specification yaml")
 
 	return cmd
 }
