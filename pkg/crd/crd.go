@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"regexp"
 	"strings"
 	"text/template"
 
@@ -106,8 +105,8 @@ func ValidateYAMLAgainstSchema(name opcrd.Schema, dataYAML []byte) error {
 	}
 
 	// Strict validation by disabling additional properties at spec
-	re := regexp.MustCompile(` {14}description:.*specification`)
-	schemaYAML = re.ReplaceAll(schemaYAML, []byte(strings.Repeat(" ", 14)+"additionalProperties: false"))
+	schemaYAML = bytes.ReplaceAll(schemaYAML, []byte(strings.Repeat(" ", 12)+"spec:"),
+		[]byte(strings.Repeat(" ", 12)+"spec:\n"+strings.Repeat(" ", 14)+"additionalProperties: false"))
 
 	crd := apiextv1.CustomResourceDefinition{}
 	err = yaml.Unmarshal(schemaYAML, &crd)
