@@ -45,22 +45,23 @@ const (
 
 func NewDevBoxCommand() *cobra.Command {
 	var (
-		oss                 bool
-		rawDevboxName       string
-		open                bool
-		baseAgentImage      string
-		baseInitImage       string
-		baseToolkitImage    string
-		syncLocalResources  []string
-		runnersCount        uint16
-		gitopsEnabled       bool
-		disableDefaultAgent bool
-		disableCloudStorage bool
-		enableTestTriggers  bool
-		enableCronjobs      bool
-		forcedOs            string
-		forcedArchitecture  string
-		executionNamespace  string
+		oss                  bool
+		rawDevboxName        string
+		open                 bool
+		baseAgentImage       string
+		baseInitImage        string
+		baseToolkitImage     string
+		syncLocalResources   []string
+		runnersCount         uint16
+		gitopsEnabled        bool
+		disableDefaultAgent  bool
+		disableCloudStorage  bool
+		enableTestTriggers   bool
+		enableCronjobs       bool
+		enableK8sControllers bool
+		forcedOs             string
+		forcedArchitecture   string
+		executionNamespace   string
 	)
 
 	cmd := &cobra.Command{
@@ -151,7 +152,7 @@ func NewDevBoxCommand() *cobra.Command {
 
 			// Initialize wrappers over cluster resources
 			interceptor := devutils.NewInterceptor(interceptorPod, baseInitImage, baseToolkitImage, interceptorBin, executionNamespace)
-			agent := devutils.NewAgent(agentPod, cloud, baseAgentImage, baseInitImage, baseToolkitImage, disableCloudStorage, enableCronjobs, enableTestTriggers, executionNamespace)
+			agent := devutils.NewAgent(agentPod, cloud, baseAgentImage, baseInitImage, baseToolkitImage, disableCloudStorage, enableCronjobs, enableTestTriggers, enableK8sControllers, executionNamespace)
 			binaryStorage := devutils.NewBinaryStorage(binaryStoragePod, binaryStorageBin)
 			mongo := devutils.NewMongo(mongoPod)
 			minio := devutils.NewMinio(minioPod)
@@ -891,6 +892,7 @@ func NewDevBoxCommand() *cobra.Command {
 	cmd.Flags().BoolVar(&enableCronjobs, "enable-cronjobs", false, "should enable cron resolution of Test Workflows")
 	cmd.Flags().StringVar(&forcedOs, "os", "", "force different OS for binary builds")
 	cmd.Flags().StringVar(&forcedArchitecture, "arch", "", "force different architecture for binary builds")
+	cmd.Flags().BoolVar(&enableK8sControllers, "enable-k8s-controllers", false, "should enable Kubernetes controllers")
 
 	return cmd
 }
