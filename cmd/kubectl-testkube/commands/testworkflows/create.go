@@ -9,6 +9,7 @@ import (
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	common2 "github.com/kubeshop/testkube/internal/crdcommon"
+	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -53,9 +54,13 @@ func NewCreateTestWorkflowCmd() *cobra.Command {
 			if obj.Kind != "" && obj.Kind != "TestWorkflow" {
 				ui.Failf("Only TestWorkflow objects are accepted. Received: %s", obj.Kind)
 			}
+
+			err = crd.ValidateYAMLAgainstSchema(crd.SchemaTestWorkflow, bytes)
+			ui.ExitOnError("error validating test workflow against crd schema", err)
 			if dryRun {
 				ui.SuccessAndExit("TestWorkflow specification is valid")
 			}
+
 			common2.AppendTypeMeta("TestWorkflow", testworkflowsv1.GroupVersion, obj)
 			obj.Namespace = namespace
 			if name != "" {
