@@ -5,6 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	opcrd "github.com/kubeshop/testkube-operator/config/crd"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
@@ -232,7 +233,7 @@ spec:
       shell: echo 'Hello, world!'
 `
 		// when
-		err := ValidateYAMLAgainstSchema(SchemaTestWorkflow, []byte(validYaml))
+		err := ValidateYAMLAgainstSchema(opcrd.SchemaTestWorkflow, []byte(validYaml))
 
 		// then
 		assert.NoError(t, err)
@@ -250,7 +251,7 @@ metadata:
   namespace: testkube
 `
 		// when
-		err := ValidateYAMLAgainstSchema(SchemaTestWorkflow, []byte(validYaml))
+		err := ValidateYAMLAgainstSchema(opcrd.SchemaTestWorkflow, []byte(validYaml))
 
 		// then
 		assert.Error(t, err)

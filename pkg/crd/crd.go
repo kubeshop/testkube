@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"regexp"
+	"strings"
 	"text/template"
 
 	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -14,6 +16,7 @@ import (
 	"k8s.io/kube-openapi/pkg/validation/strfmt"
 	"k8s.io/kube-openapi/pkg/validation/validate"
 
+	opcrd "github.com/kubeshop/testkube-operator/config/crd"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
@@ -61,19 +64,6 @@ type Gettable interface {
 		testkube.TemplateCreateRequest
 }
 
-//go:embed schemas
-var sf embed.FS
-
-// Schema is crd schema type
-type Schema string
-
-const (
-	// SchemaTestWorkflow is test workflow crd schema
-	SchemaTestWorkflow Schema = "testworkflows.testkube.io_testworkflows"
-	// SchemaTestWorkflowTemplate is test workflow template crd schema
-	SchemaTestWorkflowTemplate Schema = "testworkflows.testkube.io_testworkflowtemplates"
-)
-
 // ExecuteTemplate executes crd template
 func ExecuteTemplate(tmpl Template, data any) (string, error) {
 	t, err := template.ParseFS(tf, fmt.Sprintf("templates/%s.tmpl", tmpl))
@@ -108,12 +98,16 @@ func GenerateYAML[G Gettable](tmpl Template, items []G) (string, error) {
 	return data, nil
 }
 
-func ValidateYAMLAgainstSchema(name Schema, dataYAML []byte) error {
+func ValidateYAMLAgainstSchema(name opcrd.Schema, dataYAML []byte) error {
 	// Load CRD YAML
-	schemaYAML, err := sf.ReadFile(fmt.Sprintf("schemas/%s.yaml", name))
+	schemaYAML, err := opcrd.SF.ReadFile(fmt.Sprintf("bases/%s.yaml", name))
 	if err != nil {
 		return err
 	}
+
+	// Strict validation by disabling additional properties at spec
+	re := regexp.MustCompile(` {14}description:.*specification`)
+	schemaYAML = re.ReplaceAll(schemaYAML, []byte(strings.Repeat(" ", 14)+"additionalProperties: false"))
 
 	crd := apiextv1.CustomResourceDefinition{}
 	err = yaml.Unmarshal(schemaYAML, &crd)

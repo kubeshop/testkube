@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	opcrd "github.com/kubeshop/testkube-operator/config/crd"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	common2 "github.com/kubeshop/testkube/internal/crdcommon"
 	"github.com/kubeshop/testkube/pkg/crd"
@@ -55,7 +56,7 @@ func NewCreateTestWorkflowTemplateCmd() *cobra.Command {
 				ui.Failf("Only TestWorkflowTemplate objects are accepted. Received: %s", obj.Kind)
 			}
 
-			err = crd.ValidateYAMLAgainstSchema(crd.SchemaTestWorkflowTemplate, bytes)
+			err = crd.ValidateYAMLAgainstSchema(opcrd.SchemaTestWorkflowTemplate, bytes)
 			ui.ExitOnError("error validating test workflow template against crd schema", err)
 			if dryRun {
 				ui.SuccessAndExit("TestWorkflowTemplate specification is valid")
