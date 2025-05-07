@@ -186,6 +186,7 @@ type TestWorkflowExecutionAPI interface {
 	DownloadTestWorkflowArtifact(executionID, fileName, destination string) (artifact string, err error)
 	DownloadTestWorkflowArtifactArchive(executionID, destination string, masks []string) (archive string, err error)
 	ReRunTestWorkflowExecution(workflow string, id string, runningContext *testkube.TestWorkflowRunningContext) (testkube.TestWorkflowExecution, error)
+	ValidateTestWorkflow(body []byte) error
 }
 
 // TestWorkflowTemplateAPI describes test workflow api methods
@@ -196,6 +197,7 @@ type TestWorkflowTemplateAPI interface {
 	CreateTestWorkflowTemplate(workflow testkube.TestWorkflowTemplate) (testkube.TestWorkflowTemplate, error)
 	UpdateTestWorkflowTemplate(workflow testkube.TestWorkflowTemplate) (testkube.TestWorkflowTemplate, error)
 	DeleteTestWorkflowTemplate(name string) error
+	ValidateTestWorkflowTemplate(body []byte) error
 }
 
 // CopyFileAPI describes methods to handle files in the object storage
@@ -355,4 +357,5 @@ type Transport[A All] interface {
 	GetTestWorkflowExecutionNotifications(uri string, notifications chan testkube.TestWorkflowExecutionNotification) error
 	GetFile(uri, fileName, destination string, params map[string][]string) (name string, err error)
 	GetRawBody(method, uri string, body []byte, params map[string]string) (result []byte, err error)
+	Validate(method, uri string, body []byte, params map[string]string) error
 }

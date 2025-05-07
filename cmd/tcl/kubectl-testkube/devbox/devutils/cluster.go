@@ -73,8 +73,8 @@ func (c *ClusterObject) Config() *rest.Config {
 	return c.cfg
 }
 
-func (c *ClusterObject) Namespace(name string) *NamespaceObject {
-	return NewNamespace(c.clientSet, c.cfg, name)
+func (c *ClusterObject) Namespace(name, executionName string) *NamespaceObject {
+	return NewNamespace(c.clientSet, c.cfg, name, executionName)
 }
 
 func (c *ClusterObject) Host() string {

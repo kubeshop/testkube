@@ -238,9 +238,8 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 				t.Reset(FlushLogTime)
 				select {
 				case <-bufferCtx.Done():
-					if !t.Stop() {
-						<-t.C
-					}
+					t.Stop()
+
 					return
 				case <-t.C:
 					flushLogBuffer()

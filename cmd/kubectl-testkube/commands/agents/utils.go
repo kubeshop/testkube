@@ -463,6 +463,40 @@ func CreateHelmOptions(
 	}
 }
 
+func CreateRunnerHelmOptions(
+	controlPlane ControlPlaneConfig,
+	installationNamespace string,
+	version string,
+	dryRun bool,
+	additionalValues map[string]interface{},
+) common2.HelmGenericOptions {
+	values := map[string]interface{}{
+		// Setting the connection
+		"runner.secret":     controlPlane.Agent.SecretKey,
+		"runner.orgId":      controlPlane.OrganizationID,
+		"runner.id":         controlPlane.Agent.ID,
+		"cloud.url":         controlPlane.URL,
+		"cloud.tls.enabled": controlPlane.Secure,
+	}
+	maps.Copy(values, additionalValues)
+	if version != "" {
+		values["images.agent.tag"] = version
+		values["images.toolkit.tag"] = version
+		values["images.init.tag"] = version
+	}
+	return common2.HelmGenericOptions{
+		DryRun:         dryRun,
+		RegistryURL:    "https://kubeshop.github.io/helm-charts",
+		RepositoryName: "kubeshop",
+		ChartName:      "testkube-runner",
+		ReleaseName:    fmt.Sprintf("testkube-%s", controlPlane.Agent.Name),
+
+		Namespace: installationNamespace,
+		Args:      []string{"--wait"},
+		Values:    values,
+	}
+}
+
 func CreateCRDsHelmOptions(
 	installationNamespace string,
 	releaseName string,

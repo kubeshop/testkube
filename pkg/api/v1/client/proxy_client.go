@@ -256,6 +256,16 @@ func (t ProxyClient[A]) GetRawBody(method, uri string, body []byte, params map[s
 	return resp.Raw()
 }
 
+// Validate is a method to make an api call to check errors
+func (t ProxyClient[A]) Validate(method, uri string, body []byte, params map[string]string) error {
+	_, err := t.baseExec(method, uri, uri, body, params)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (t ProxyClient[A]) getProxy(requestType string) *rest.Request {
 	return t.client.CoreV1().RESTClient().Verb(requestType).
 		Namespace(t.config.Namespace).

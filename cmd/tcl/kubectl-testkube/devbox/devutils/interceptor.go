@@ -37,14 +37,16 @@ type Interceptor struct {
 	initProcessImageName string
 	toolkitImageName     string
 	binary               *Binary
+	additionalNamespace  string
 }
 
-func NewInterceptor(pod *PodObject, initProcessImageName, toolkitImageName string, binary *Binary) *Interceptor {
+func NewInterceptor(pod *PodObject, initProcessImageName, toolkitImageName string, binary *Binary, additionalNamespace string) *Interceptor {
 	return &Interceptor{
 		pod:                  pod,
 		initProcessImageName: initProcessImageName,
 		toolkitImageName:     toolkitImageName,
 		binary:               binary,
+		additionalNamespace:  additionalNamespace,
 	}
 }
 
@@ -108,6 +110,9 @@ func (r *Interceptor) Create(ctx context.Context) error {
 					VolumeMounts: []corev1.VolumeMount{
 						{Name: "server", MountPath: "/app"},
 						{Name: "certs", MountPath: "/certs"},
+					},
+					Env: []corev1.EnvVar{
+						{Name: "STORAGE_SERVER", Value: fmt.Sprintf("http://devbox-binary.%s.svc.cluster.local:8080", r.pod.Namespace())},
 					},
 					ReadinessProbe: &corev1.Probe{
 						ProbeHandler: corev1.ProbeHandler{
@@ -263,7 +268,7 @@ func (r *Interceptor) Enable(ctx context.Context) error {
 						{
 							Key:      "kubernetes.io/metadata.name",
 							Operator: metav1.LabelSelectorOpIn,
-							Values:   []string{r.pod.Namespace()},
+							Values:   []string{r.pod.Namespace(), r.additionalNamespace},
 						},
 					},
 				},

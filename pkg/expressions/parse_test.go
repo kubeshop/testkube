@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCompileBasic(t *testing.T) {
@@ -179,6 +180,21 @@ func TestCompileResolution(t *testing.T) {
 	assert.Equal(t, `"[placeholder:apiUrl]"`, must(MustCompile(`mainEndpoint()`).Resolve(vm, FinalizerFail)).String())
 }
 
+func TestCompileResolutionWithFinalizer(t *testing.T) {
+	vm := NewMachine().
+		Register("status", "passed").
+		RegisterAccessorExt(func(name string) (interface{}, bool, error) {
+			if name == "passed" {
+				return newMath(operatorEqualsAlias, newAccessor("status"), NewValue("passed")), true, nil
+			}
+			return nil, false, nil
+		})
+
+	expr, err := MustCompile(`string(passed)`).Resolve(vm, FinalizerFail)
+	require.NoError(t, err)
+	assert.Equal(t, `"true"`, expr.String())
+}
+
 func TestCircularResolution(t *testing.T) {
 	vm := NewMachine().
 		RegisterFunction("one", func(values ...StaticValue) (interface{}, bool, error) {
@@ -282,6 +298,9 @@ a:
 	assert.Equal(t, `"/data/abc/def/ccc"`, MustCompile(`abspath("/data/abc/def/ccc", "/abc")`).String())
 	assert.Equal(t, `"/data/abc/def/ccc"`, MustCompile(`abspath("def/ccc", "/data/abc")`).String())
 	assert.Equal(t, `"/data"`, MustCompile(`abspath("..", "/data/abc")`).String())
+	assert.Equal(t, `"/data"`, MustCompile(`makepath("", "/data")`).String())
+	assert.Equal(t, `"data"`, MustCompile(`makepath("", "data")`).String())
+	assert.Equal(t, `"/parent/data"`, MustCompile(`makepath("/parent", "data")`).String())
 	assert.Equal(t, `[]`, MustCompile(`range(0, 0)`).String())
 	assert.Equal(t, `[]`, MustCompile(`range(0)`).String())
 	assert.Equal(t, `[]`, MustCompile(`range(0, -3)`).String())

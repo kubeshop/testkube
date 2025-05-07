@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 
@@ -44,9 +45,10 @@ func NewInstallRunnerCommand() *cobra.Command {
 	var (
 		secretKey string
 
-		namespace string
-		version   string
-		dryRun    bool
+		namespace          string
+		executionNamespace string
+		version            string
+		dryRun             bool
 
 		globalTemplatePath string
 		global             bool
@@ -67,6 +69,7 @@ func NewInstallRunnerCommand() *cobra.Command {
 
 	// Installation > General
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace to install the agent")
+	cmd.Flags().StringVarP(&executionNamespace, "execution-namespace", "N", "", "namespace to run executions (defaults to installation namespace)")
 	cmd.Flags().StringVar(&version, "version", "", "agent version to use (defaults to latest)")
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "display helm commands only")
 
@@ -93,6 +96,7 @@ func NewInstallGitOpsCommand() *cobra.Command {
 		dryRun    bool
 
 		namespace             string
+		executionNamespace    string
 		fromCloud             bool
 		toCloud               bool
 		cloudNamePattern      string
@@ -113,6 +117,7 @@ func NewInstallGitOpsCommand() *cobra.Command {
 
 	// Installation > General
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace to install the agent")
+	cmd.Flags().StringVarP(&executionNamespace, "execution-namespace", "N", "", "namespace to run executions (defaults to installation namespace)")
 	cmd.Flags().StringVar(&version, "version", "", "agent version to use (defaults to latest)")
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "display helm commands only")
 
@@ -190,6 +195,7 @@ func UiInstallCRD(cmd *cobra.Command, namespace string, releaseName string, dryR
 func UiInstallAgent(cmd *cobra.Command, name string, agentType string) {
 	autoCreate, _ := cmd.Flags().GetBool("create")
 	ns, _ := cmd.Flags().GetString("namespace")
+	executionNs, _ := cmd.Flags().GetString("execution-namespace")
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
 	floating, _ := cmd.Flags().GetBool("floating")
 	agentType, _ = GetInternalAgentType(agentType)
@@ -334,13 +340,20 @@ func UiInstallAgent(cmd *cobra.Command, name string, agentType string) {
 	}
 	version, _ := cmd.Flags().GetString("version")
 
-	spinner := ui.NewSpinner("Running Helm command...")
+	var spinner *pterm.SpinnerPrinter
+	if !dryRun {
+		spinner = ui.NewSpinner("Running Helm command...")
+	}
 
 	switch agentType {
 	case "sync":
 		if len(agent.Environments) == 0 {
-			spinner.Fail("could not select environment for this GitOps Agent")
-			os.Exit(1)
+			if spinner != nil {
+				spinner.Fail("could not select environment for this GitOps Agent")
+				os.Exit(1)
+			} else {
+				ui.Failf("could not select environment for this GitOps Agent")
+			}
 		}
 
 		fromCloud, _ := cmd.Flags().GetBool("from-cloud")
@@ -359,13 +372,13 @@ func UiInstallAgent(cmd *cobra.Command, name string, agentType string) {
 			os.Exit(1)
 		}
 	case "run":
-		opts := CreateHelmOptions(controlPlane, ns, version, dryRun, map[string]interface{}{
-			"next.runner.enabled": true,
-		})
+		opts := CreateRunnerHelmOptions(controlPlane, ns, version, dryRun, nil)
+		if executionNs != "" && executionNs != ns {
+			opts.Values["execution.default.namespace"] = executionNs
+		}
 		if len(globalTemplate) > 0 {
-			opts.Values["global.testWorkflows.globalTemplate.enabled"] = true
-			opts.Values["global.testWorkflows.globalTemplate.inline"] = true
-			opts.Values["global.testWorkflows.globalTemplate.spec"] = string(globalTemplate)
+			opts.Values["globalTemplate.enabled"] = true
+			opts.Values["globalTemplate.spec"] = string(globalTemplate)
 		}
 		cliErr := common2.HelmUpgradeOrInstallGeneric(opts)
 		if cliErr != nil {
@@ -373,9 +386,18 @@ func UiInstallAgent(cmd *cobra.Command, name string, agentType string) {
 			os.Exit(1)
 		}
 	default:
-		spinner.Fail(fmt.Sprintf("unknown agent type %s", agentType))
-		os.Exit(1)
+		if spinner != nil {
+			spinner.Fail(fmt.Sprintf("unknown agent type %s", agentType))
+			os.Exit(1)
+		} else {
+			ui.Failf("unknown agent type %s", agentType)
+		}
 	}
+
+	if dryRun {
+		return
+	}
+
 	spinner.Success()
 
 	agents, err := GetKubernetesAgents([]string{ns})

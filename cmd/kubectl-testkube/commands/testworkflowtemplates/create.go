@@ -18,6 +18,7 @@ func NewCreateTestWorkflowTemplateCmd() *cobra.Command {
 		name     string
 		filePath string
 		update   bool
+		dryRun   bool
 	)
 
 	cmd := &cobra.Command{
@@ -46,20 +47,24 @@ func NewCreateTestWorkflowTemplateCmd() *cobra.Command {
 			bytes, err := io.ReadAll(input)
 			ui.ExitOnError("reading input", err)
 
+			client, _, err := common.GetClient(cmd)
+			ui.ExitOnError("getting client", err)
+
+			err = client.ValidateTestWorkflowTemplate(bytes)
+			ui.ExitOnError("error validating test workflow template against crd schema", err)
+			if dryRun {
+				ui.SuccessAndExit("TestWorkflowTemplate specification is valid")
+			}
+
 			obj := new(testworkflowsv1.TestWorkflowTemplate)
 			err = common2.DeserializeCRD(obj, bytes)
 			ui.ExitOnError("deserializing input", err)
-			if obj.Kind != "" && obj.Kind != "TestWorkflowTemplate" {
-				ui.Failf("Only TestWorkflowTemplate objects are accepted. Received: %s", obj.Kind)
-			}
+
 			common2.AppendTypeMeta("TestWorkflowTemplate", testworkflowsv1.GroupVersion, obj)
 			obj.Namespace = namespace
 			if name != "" {
 				obj.Name = name
 			}
-
-			client, _, err := common.GetClient(cmd)
-			ui.ExitOnError("getting client", err)
 
 			workflow, _ := client.GetTestWorkflowTemplate(obj.Name)
 			if workflow.Name != "" {
@@ -80,6 +85,7 @@ func NewCreateTestWorkflowTemplateCmd() *cobra.Command {
 	cmd.Flags().StringVar(&name, "name", "", "test workflow template name")
 	cmd.Flags().BoolVar(&update, "update", false, "update, if test workflow template already exists")
 	cmd.Flags().StringVarP(&filePath, "file", "f", "", "file path to get the test workflow template specification")
+	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "validate test workflow template specification yaml")
 
 	return cmd
 }

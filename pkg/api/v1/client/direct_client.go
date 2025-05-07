@@ -304,6 +304,17 @@ func (t DirectClient[A]) GetRawBody(method, uri string, body []byte, params map[
 	return io.ReadAll(resp.Body)
 }
 
+// Validate is a method to make an api call to check errors
+func (t DirectClient[A]) Validate(method, uri string, body []byte, params map[string]string) error {
+	resp, err := t.baseExec(method, uri, uri, body, params)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	return nil
+}
+
 func (t DirectClient[A]) getFromResponse(resp *http.Response) (result A, err error) {
 	err = json.NewDecoder(resp.Body).Decode(&result)
 	return

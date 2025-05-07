@@ -95,16 +95,12 @@ func processNotifications[Request notificationRequest, Response any, Srv notific
 
 			select {
 			case err := <-errChan:
-				if !t.Stop() {
-					<-t.C
-				}
+				t.Stop()
 				if err != nil {
 					return err
 				}
 			case <-ctx.Done():
-				if !t.Stop() {
-					<-t.C
-				}
+				t.Stop()
 				return ctx.Err()
 			case <-t.C:
 				return fmt.Errorf("send response too slow")

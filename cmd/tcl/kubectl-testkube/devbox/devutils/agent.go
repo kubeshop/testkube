@@ -28,9 +28,10 @@ type Agent struct {
 	disableCloudStorage bool
 	enableCronjobs      bool
 	enableTestTriggers  bool
+	executionNamespace  string
 }
 
-func NewAgent(pod *PodObject, cloud *CloudObject, agentImage, initProcessImage, toolkitImage string, disableCloudStorage, enableCronjobs, enableTestTriggers bool) *Agent {
+func NewAgent(pod *PodObject, cloud *CloudObject, agentImage, initProcessImage, toolkitImage string, disableCloudStorage, enableCronjobs, enableTestTriggers bool, executionNamespace string) *Agent {
 	return &Agent{
 		pod:                 pod,
 		cloud:               cloud,
@@ -40,6 +41,7 @@ func NewAgent(pod *PodObject, cloud *CloudObject, agentImage, initProcessImage, 
 		disableCloudStorage: disableCloudStorage,
 		enableCronjobs:      enableCronjobs,
 		enableTestTriggers:  enableTestTriggers,
+		executionNamespace:  executionNamespace,
 	}
 }
 
@@ -53,7 +55,8 @@ func (r *Agent) Create(ctx context.Context, env *client.Environment) error {
 		{Name: "DISABLE_DEPRECATED_TESTS", Value: "true"},
 		{Name: "TESTKUBE_ANALYTICS_ENABLED", Value: "false"},
 		{Name: "TESTKUBE_NAMESPACE", Value: r.pod.Namespace()},
-		{Name: "JOB_SERVICE_ACCOUNT_NAME", Value: "devbox-account"},
+		{Name: "DEFAULT_EXECUTION_NAMESPACE", Value: r.executionNamespace},
+		{Name: "JOB_SERVICE_ACCOUNT_NAME", Value: jobServiceAccountName},
 		{Name: "TESTKUBE_ENABLE_IMAGE_DATA_PERSISTENT_CACHE", Value: "true"},
 		{Name: "TESTKUBE_IMAGE_DATA_PERSISTENT_CACHE_KEY", Value: "testkube-image-cache"},
 		{Name: "TESTKUBE_TW_TOOLKIT_IMAGE", Value: r.toolkitImage},
