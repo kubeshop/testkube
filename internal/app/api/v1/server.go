@@ -192,6 +192,7 @@ func (s *TestkubeAPI) Init(server server.HTTPServer) {
 	testWorkflowTemplates := root.Group("/test-workflow-templates")
 	testWorkflowTemplates.Get("/", s.ListTestWorkflowTemplatesHandler())
 	testWorkflowTemplates.Post("/", s.CreateTestWorkflowTemplateHandler())
+	testWorkflowTemplates.Put("/", s.ValidateTestWorkflowTemplateHandler())
 	testWorkflowTemplates.Delete("/", s.DeleteTestWorkflowTemplatesHandler())
 	testWorkflowTemplates.Get("/:id", s.GetTestWorkflowTemplateHandler())
 	testWorkflowTemplates.Put("/:id", s.UpdateTestWorkflowTemplateHandler())

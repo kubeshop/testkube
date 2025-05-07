@@ -197,6 +197,7 @@ type TestWorkflowTemplateAPI interface {
 	CreateTestWorkflowTemplate(workflow testkube.TestWorkflowTemplate) (testkube.TestWorkflowTemplate, error)
 	UpdateTestWorkflowTemplate(workflow testkube.TestWorkflowTemplate) (testkube.TestWorkflowTemplate, error)
 	DeleteTestWorkflowTemplate(name string) error
+	ValidateTestWorkflowTemplate(body []byte) error
 }
 
 // CopyFileAPI describes methods to handle files in the object storage
