@@ -255,12 +255,12 @@ func (s *TestkubeAPI) ValidateTestWorkflowHandler() fiber.Handler {
 		}
 
 		if obj.Name == "" {
-			return s.BadRequest(c, errPrefix, "invalid meta", errors.New("name is required"))
+			return s.BadRequest(c, errPrefix, "invalid name", errors.New("name is required"))
 		}
 
 		// Validate spec
 		if err = crd.ValidateYAMLAgainstSchema(opcrd.SchemaTestWorkflow, body); err != nil {
-			return s.BadRequest(c, errPrefix, "invalid body", err)
+			return s.BadRequest(c, errPrefix, "invalid spec", err)
 		}
 
 		c.Status(http.StatusNoContent)
