@@ -46,7 +46,6 @@ type Controller interface {
 	Resume(ctx context.Context) error
 	Cleanup(ctx context.Context) error
 	Watch(ctx context.Context, disableFollow, logAbortedDetails bool) <-chan ChannelMessage[Notification]
-	WatchLightweight(ctx context.Context) <-chan LightweightNotification
 	Logs(ctx context.Context, follow bool) io.Reader
 	NodeName() (string, error)
 	PodIP() (string, error)
@@ -239,47 +238,6 @@ func (c *controller) Watch(parentCtx context.Context, disableFollow bool, logAbo
 		close(v)
 		return v
 	}
-	return ch
-}
-
-// TODO: Make it actually light
-func (c *controller) WatchLightweight(parentCtx context.Context) <-chan LightweightNotification {
-	prevCurrent := ""
-	prevNodeName := ""
-	prevPodIP := ""
-	prevStatus := testkube.QUEUED_TestWorkflowStatus
-	sig := stage.MapSignatureListToInternal(c.signature)
-	ch := make(chan LightweightNotification)
-	go func() {
-		defer close(ch)
-		for v := range c.Watch(parentCtx, false, false) {
-			if v.Error != nil {
-				ch <- LightweightNotification{Error: v.Error}
-				continue
-			}
-
-			nodeName, _ := c.NodeName()
-			podIP, _ := c.PodIP()
-			current := prevCurrent
-			status := prevStatus
-			if v.Value.Result != nil {
-				if v.Value.Result.Status != nil {
-					status = *v.Value.Result.Status
-				} else {
-					status = testkube.QUEUED_TestWorkflowStatus
-				}
-				current = v.Value.Result.Current(sig)
-			}
-
-			if nodeName != prevNodeName || podIP != prevPodIP || prevStatus != status || prevCurrent != current {
-				prevNodeName = nodeName
-				prevPodIP = podIP
-				prevStatus = status
-				prevCurrent = current
-				ch <- LightweightNotification{NodeName: nodeName, PodIP: podIP, Status: status, Current: current, Result: v.Value.Result}
-			}
-		}
-	}()
 	return ch
 }
 

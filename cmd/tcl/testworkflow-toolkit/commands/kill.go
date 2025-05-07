@@ -76,6 +76,7 @@ func NewKillCmd() *cobra.Command {
 				for _, item := range items {
 					service, index := spawn.GetServiceByResourceId(item.Resource.Id)
 					if _, ok := conditions[service]; !ok {
+						instructions.PrintOutput(config.Ref(), "service", ServiceInfo{Group: groupRef, Name: service, Index: index, Done: true})
 						continue
 					}
 					serviceMachine := expressions.NewMachine().
@@ -147,7 +148,7 @@ func NewKillCmd() *cobra.Command {
 
 					logsFilePath, err := spawn.SaveLogs(context.Background(), storage, config.Namespace(), id, service+"/", index)
 					if err == nil {
-						instructions.PrintOutput(config.Ref(), "service", ServiceInfo{Group: groupRef, Name: service, Index: index, Logs: storage.FullPath(logsFilePath)})
+						instructions.PrintOutput(config.Ref(), "service", ServiceInfo{Group: groupRef, Name: service, Index: index, Logs: storage.FullPath(logsFilePath), Done: true})
 						log("saved logs")
 					} else {
 						log("warning", "problem saving the logs", err.Error())
