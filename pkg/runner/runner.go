@@ -15,6 +15,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/commands"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/artifacts"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
+	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/controlplaneclient"
@@ -22,8 +23,10 @@ import (
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/log"
 	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/registry"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowresolver"
 )
 
@@ -133,6 +136,7 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 		Index   int
 	}
 	services := make(map[SubRef]struct{})
+	parallel := make(map[SubRef]struct{})
 	currentRef := ""
 	var lastResult *testkube.TestWorkflowResult
 	for n := range notifications.Channel() {
@@ -143,13 +147,24 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 				done, _ := n.Output.Value["done"].(bool)
 				groupId, _ := n.Output.Value["group"].(string)
 				name, _ := n.Output.Value["name"].(string)
-				index, _ := n.Output.Value["index"].(int64)
 				findex, _ := n.Output.Value["index"].(float64) // JSON marshaler decodes numbers as float64
 				index := int(findex)
 				if status == string(commands.ServiceStatusQueued) {
 					services[SubRef{GroupId: groupId, Name: name, Index: index}] = struct{}{}
 				} else if done {
 					delete(services, SubRef{GroupId: groupId, Index: index})
+				}
+			}
+
+			// Track running parallel steps
+			if n.Output.Name == "parallel" {
+				status, _ := (n.Output.Value["status"]).(string)
+				findex, _ := n.Output.Value["index"].(float64) // JSON marshaler decodes numbers as float64
+				index := int(findex)
+				if status == string(testkube.RUNNING_TestWorkflowStatus) {
+					parallel[SubRef{GroupId: n.Output.Ref, Index: index}] = struct{}{}
+				} else if status == string(testkube.PASSED_TestWorkflowStatus) || status == string(testkube.FAILED_TestWorkflowStatus) || status == string(testkube.ABORTED_TestWorkflowStatus) {
+					delete(parallel, SubRef{GroupId: n.Output.Ref, Index: index})
 				}
 			}
 
@@ -225,6 +240,19 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 					log.DefaultLogger.Infow("recovered TestWorkflow execution service logs", "executionId", execution.Id, "serviceName", svc.Name, "serviceIndex", svc.Index)
 				} else {
 					log.DefaultLogger.Errorw("failed to recover TestWorkflow execution service logs", "executionId", execution.Id, "serviceName", svc.Name, "serviceIndex", svc.Index, "error", err)
+				}
+			}
+		}
+
+		// Parallel steps logs
+		if len(parallel) > 0 {
+			log.DefaultLogger.Warnw("TestWorkflow execution has been aborted, while some parallel steps are still running. Recovering their logs.", "executionId", execution.Id, "count", len(parallel))
+			for step := range parallel {
+				err := r.recoverParallelStepData(ctx, saver, environmentId, &execution, step.GroupId, int(step.Index))
+				if err == nil {
+					log.DefaultLogger.Infow("recovered TestWorkflow execution parallel step logs", "executionId", execution.Id, "stepRef", step.GroupId, "stepIndex", step.Index)
+				} else {
+					log.DefaultLogger.Errorw("failed to recover TestWorkflow execution parallel step logs", "executionId", execution.Id, "stepRef", step.GroupId, "stepIndex", step.Index, "error", err)
 				}
 			}
 		}
@@ -316,6 +344,82 @@ func (r *runner) recoverServiceData(ctx context.Context, saver ExecutionSaver, e
 
 		// Try to recover logs
 		if err = r.recoverServiceLogs(ctx, saver, environmentId, execution, svc); err == nil {
+			return nil
+		}
+	}
+	return err
+}
+
+func (r *runner) recoverParallelStepLogs(ctx context.Context, saver ExecutionSaver, environmentId string, execution *testkube.TestWorkflowExecution, ref string, index int) error {
+	storage := artifacts.InternalStorageForAgent(r.client, environmentId, execution.Id, execution.Workflow.Name, RecoveryRef)
+	jobName := fmt.Sprintf("%s-%s-%d", execution.Id, ref, index)
+	filePath := fmt.Sprintf("logs/%s/%d.log", ref, index)
+	ctx, ctxCancel := context.WithCancel(ctx)
+	defer ctxCancel()
+
+	// Load the logs and save as the artifacts
+	reader := r.worker.Logs(ctx, jobName, executionworkertypes.LogsOptions{
+		Hints:    executionworkertypes.Hints{Namespace: execution.Namespace},
+		NoFollow: true,
+	})
+	if err := reader.Err(); err != nil {
+		return err
+	}
+	if err := storage.SaveStream(filePath, reader); err != nil {
+		return err
+	}
+	status := commands.ParallelStatus{
+		Index:  index,
+		Logs:   storage.FullPath(filePath),
+		Status: testkube.ABORTED_TestWorkflowStatus,
+	}
+
+	// Load the last acknowledged result of the step and mark it as aborted
+	summary, err := r.worker.Get(ctx, jobName, executionworkertypes.GetOptions{
+		Hints: executionworkertypes.Hints{Namespace: execution.Namespace},
+	})
+	if err == nil {
+		sigSequence := stage.MapSignatureListToInternal(stage.MapSignatureToSequence(stage.MapSignatureList(summary.Signature)))
+		errorMessage := execution.Result.Initialization.ErrorMessage
+		if errorMessage == "" {
+			for _, sig := range sigSequence {
+				if execution.Result.Steps[sig.Ref].ErrorMessage != "" {
+					errorMessage = execution.Result.Steps[sig.Ref].ErrorMessage
+					break
+				}
+			}
+		}
+		status.Result = &summary.Result
+		status.Result.Status = common.Ptr(testkube.ABORTED_TestWorkflowStatus)
+		status.Result.HealAborted(sigSequence, errorMessage, controller.DefaultErrorMessage)
+		status.Result.HealTimestamps(sigSequence, summary.Execution.ScheduledAt, time.Time{}, time.Time{}, true)
+		status.Result.HealDuration(summary.Execution.ScheduledAt)
+		status.Result.HealMissingPauseStatuses()
+		status.Result.HealStatus(sigSequence)
+	}
+
+	// Add information in the execution about the logs
+	saver.AppendOutput(testkube.TestWorkflowOutput{
+		Ref:   ref,
+		Name:  "parallel",
+		Value: status.AsMap(),
+	})
+	return nil
+}
+
+func (r *runner) recoverParallelStepData(ctx context.Context, saver ExecutionSaver, environmentId string, execution *testkube.TestWorkflowExecution, ref string, index int) (err error) {
+	for i := 0; i < RecoverLogsRetryMaxAttempts; i++ {
+		if i > 0 {
+			// Wait a bit before retrying
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(RecoverLogsRetryOnFailureDelay):
+			}
+		}
+
+		// Try to recover logs
+		if err = r.recoverParallelStepLogs(ctx, saver, environmentId, execution, ref, index); err == nil {
 			return nil
 		}
 	}
