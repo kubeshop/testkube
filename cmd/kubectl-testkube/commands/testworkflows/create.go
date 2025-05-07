@@ -7,10 +7,8 @@ import (
 	"github.com/spf13/cobra"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
-	opcrd "github.com/kubeshop/testkube-operator/config/crd"
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
 	common2 "github.com/kubeshop/testkube/internal/crdcommon"
-	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
@@ -49,27 +47,24 @@ func NewCreateTestWorkflowCmd() *cobra.Command {
 			bytes, err := io.ReadAll(input)
 			ui.ExitOnError("reading input", err)
 
-			obj := new(testworkflowsv1.TestWorkflow)
-			err = common2.DeserializeCRD(obj, bytes)
-			ui.ExitOnError("deserializing input", err)
-			if obj.Kind != "" && obj.Kind != "TestWorkflow" {
-				ui.Failf("Only TestWorkflow objects are accepted. Received: %s", obj.Kind)
-			}
+			client, _, err := common.GetClient(cmd)
+			ui.ExitOnError("getting client", err)
 
-			err = crd.ValidateYAMLAgainstSchema(opcrd.SchemaTestWorkflow, bytes)
+			err = client.ValidateTestWorkflow(bytes)
 			ui.ExitOnError("error validating test workflow against crd schema", err)
 			if dryRun {
 				ui.SuccessAndExit("TestWorkflow specification is valid")
 			}
+
+			obj := new(testworkflowsv1.TestWorkflow)
+			err = common2.DeserializeCRD(obj, bytes)
+			ui.ExitOnError("deserializing input", err)
 
 			common2.AppendTypeMeta("TestWorkflow", testworkflowsv1.GroupVersion, obj)
 			obj.Namespace = namespace
 			if name != "" {
 				obj.Name = name
 			}
-
-			client, _, err := common.GetClient(cmd)
-			ui.ExitOnError("getting client", err)
 
 			workflow, err := client.GetTestWorkflow(obj.Name)
 			if err != nil {

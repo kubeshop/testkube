@@ -146,6 +146,7 @@ func (s *TestkubeAPI) Init(server server.HTTPServer) {
 	testWorkflows := root.Group("/test-workflows")
 	testWorkflows.Get("/", s.ListTestWorkflowsHandler())
 	testWorkflows.Post("/", s.CreateTestWorkflowHandler())
+	testWorkflows.Put("/", s.ValidateTestWorkflowHandler())
 	testWorkflows.Delete("/", s.DeleteTestWorkflowsHandler())
 	testWorkflows.Get("/:id", s.GetTestWorkflowHandler())
 	testWorkflows.Put("/:id", s.UpdateTestWorkflowHandler())
