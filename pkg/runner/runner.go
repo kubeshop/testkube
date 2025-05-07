@@ -3,6 +3,7 @@ package runner
 import (
 	"context"
 	errors2 "errors"
+	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -11,6 +12,8 @@ import (
 	"golang.org/x/sync/singleflight"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/commands"
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/artifacts"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
@@ -37,7 +40,12 @@ const (
 	MonitorRetryCount = 10
 	MonitorRetryDelay = 500 * time.Millisecond
 
+	RecoverLogsRetryOnFailureDelay = 300 * time.Millisecond
+	RecoverLogsRetryMaxAttempts    = 5
+
 	inlinedGlobalTemplateName = "<inline-global-template>"
+
+	RecoveryRef = "recovery"
 )
 
 type RunnerExecute interface {
@@ -119,10 +127,33 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 	}
 	defer logs.Cleanup()
 
+	type SubRef struct {
+		GroupId string
+		Name    string
+		Index   int
+	}
+	services := make(map[SubRef]struct{})
 	currentRef := ""
 	var lastResult *testkube.TestWorkflowResult
 	for n := range notifications.Channel() {
 		if n.Output != nil {
+			// Track running services
+			if n.Output.Name == "service" {
+				status, _ := n.Output.Value["status"].(string)
+				done, _ := n.Output.Value["done"].(bool)
+				groupId, _ := n.Output.Value["group"].(string)
+				name, _ := n.Output.Value["name"].(string)
+				index, _ := n.Output.Value["index"].(int64)
+				findex, _ := n.Output.Value["index"].(float64) // JSON marshaler decodes numbers as float64
+				index := int(findex)
+				if status == string(commands.ServiceStatusQueued) {
+					services[SubRef{GroupId: groupId, Name: name, Index: index}] = struct{}{}
+				} else if done {
+					delete(services, SubRef{GroupId: groupId, Index: index})
+				}
+			}
+
+			// Save the information
 			saver.AppendOutput(*n.Output)
 		} else if n.Result != nil {
 			lastResult = n.Result
@@ -179,6 +210,26 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 		}
 	}
 
+	// Recover missing data in case the execution has crashed
+	if lastResult.IsAborted() {
+		// Service logs
+		if len(services) > 0 {
+			log.DefaultLogger.Warnw("TestWorkflow execution has been aborted, while some services are still running. Recovering their logs.", "executionId", execution.Id, "count", len(services))
+			for svc := range services {
+				err := r.recoverServiceData(ctx, saver, environmentId, &execution, commands.ServiceInfo{
+					Group: svc.GroupId,
+					Index: int64(svc.Index),
+					Name:  svc.Name,
+				})
+				if err == nil {
+					log.DefaultLogger.Infow("recovered TestWorkflow execution service logs", "executionId", execution.Id, "serviceName", svc.Name, "serviceIndex", svc.Index)
+				} else {
+					log.DefaultLogger.Errorw("failed to recover TestWorkflow execution service logs", "executionId", execution.Id, "serviceName", svc.Name, "serviceIndex", svc.Index, "error", err)
+				}
+			}
+		}
+	}
+
 	for i := 0; i < SaveEndResultRetryCount; i++ {
 		err = saver.End(ctx, *lastResult)
 		if err == nil {
@@ -217,6 +268,58 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 	}
 
 	return nil
+}
+
+func (r *runner) recoverServiceLogs(ctx context.Context, saver ExecutionSaver, environmentId string, execution *testkube.TestWorkflowExecution, svc commands.ServiceInfo) error {
+	storage := artifacts.InternalStorageForAgent(r.client, environmentId, execution.Id, execution.Workflow.Name, RecoveryRef)
+	filePath := fmt.Sprintf("logs/%s-%s/%d.log", svc.Group, svc.Name, svc.Index)
+	ctx, ctxCancel := context.WithCancel(ctx)
+	defer ctxCancel()
+
+	// Load the logs and save as the artifacts
+	reader := r.worker.Logs(ctx, fmt.Sprintf("%s-%s-%d", execution.Id, svc.Name, svc.Index), executionworkertypes.LogsOptions{
+		Hints:    executionworkertypes.Hints{Namespace: execution.Namespace},
+		NoFollow: true,
+	})
+	if err := reader.Err(); err != nil {
+		return err
+	}
+	if err := storage.SaveStream(filePath, reader); err != nil {
+		return err
+	}
+
+	// Add information in the execution about the logs
+	saver.AppendOutput(testkube.TestWorkflowOutput{
+		Ref:  RecoveryRef,
+		Name: "service",
+		Value: commands.ServiceInfo{
+			Group: svc.Group,
+			Index: svc.Index,
+			Name:  svc.Name,
+			Logs:  storage.FullPath(filePath),
+			Done:  true,
+		}.AsMap(),
+	})
+	return nil
+}
+
+func (r *runner) recoverServiceData(ctx context.Context, saver ExecutionSaver, environmentId string, execution *testkube.TestWorkflowExecution, svc commands.ServiceInfo) (err error) {
+	for i := 0; i < RecoverLogsRetryMaxAttempts; i++ {
+		if i > 0 {
+			// Wait a bit before retrying
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(RecoverLogsRetryOnFailureDelay):
+			}
+		}
+
+		// Try to recover logs
+		if err = r.recoverServiceLogs(ctx, saver, environmentId, execution, svc); err == nil {
+			return nil
+		}
+	}
+	return err
 }
 
 func (r *runner) Monitor(ctx context.Context, organizationId string, environmentId string, id string) error {
