@@ -14,6 +14,8 @@ spec:
       - test/locust/locust-project
   container:
     workingDir: /data/repo/test/locust/locust-project
+  job:
+    activeDeadlineSeconds: 180
   steps:
   - name: Run test
     run:
@@ -58,6 +60,8 @@ spec:
         tcpSocket:
           port: 5557
         periodSeconds: 1
+  job:
+    activeDeadlineSeconds: 600
   steps:
   - name: Run test
     parallel:

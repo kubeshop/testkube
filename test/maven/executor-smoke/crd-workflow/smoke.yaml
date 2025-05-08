@@ -18,6 +18,8 @@ spec:
         cpu: 256m
         memory: 256Mi
     workingDir: /data/repo/contrib/executor/maven/examples/hello-maven
+  job:
+    activeDeadlineSeconds: 180
   steps:
   - name: Run tests
     run:
@@ -52,6 +54,8 @@ spec:
     env:
     - name: TESTKUBE_MAVEN
       value: "true"
+  job:
+    activeDeadlineSeconds: 180
   steps:
   - name: Run from template
     template:

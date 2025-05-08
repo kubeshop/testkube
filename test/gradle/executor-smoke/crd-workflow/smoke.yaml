@@ -18,6 +18,8 @@ spec:
         cpu: 512m
         memory: 512Mi
     workingDir: /data/repo/contrib/executor/gradle/examples/hello-gradle
+  job:
+    activeDeadlineSeconds: 180
   steps:
   - name: Run tests
     run:
@@ -50,6 +52,8 @@ spec:
         cpu: 512m
         memory: 512Mi
     workingDir: /data/repo/contrib/executor/gradle/examples/hello-gradle
+  job:
+    activeDeadlineSeconds: 180
   steps:
   - name: Run tests
     run:
@@ -81,6 +85,8 @@ spec:
     env:
     - name: TESTKUBE_GRADLE
       value: "true"
+  job:
+    activeDeadlineSeconds: 180
   steps:
   - name: Run from template
     template:

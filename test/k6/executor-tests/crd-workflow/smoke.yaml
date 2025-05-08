@@ -18,6 +18,8 @@ spec:
         cpu: 128m
         memory: 128Mi
     workingDir: /data/repo/test/k6/executor-tests
+  job:
+    activeDeadlineSeconds: 180
   steps:
   - name: Run test
     run:
@@ -48,6 +50,8 @@ spec:
     env:
     - name: K6_SYSTEM_ENV # currently only possible on this level
       value: K6_SYSTEM_ENV_value
+  job:
+    activeDeadlineSeconds: 180
   steps:
   - name: Run from template
     workingDir: /data/repo/test/k6/executor-tests
@@ -86,6 +90,8 @@ spec:
     env:
     - name: K6_SYSTEM_ENV # currently only possible on this level
       value: K6_SYSTEM_ENV_value
+  job:
+    activeDeadlineSeconds: 180
   steps:
   - name: Run from template
     workingDir: /data/repo/test/k6/executor-tests
@@ -115,6 +121,8 @@ spec:
         cpu: 128m
         memory: 128Mi
     workingDir: /data/repo/test/k6/executor-tests
+  job:
+    activeDeadlineSeconds: 180
   steps:
   - name: Run test
     container:
@@ -159,6 +167,8 @@ spec:
       revision: main
       paths:
       - test/k6/executor-tests/k6-smoke-test.js
+  job:
+    activeDeadlineSeconds: 180
   steps:
   - name: Run test
     parallel:
@@ -204,6 +214,8 @@ spec:
       revision: main
       paths:
       - test/k6/executor-tests/k6-smoke-test.js
+  job:
+    activeDeadlineSeconds: 180
   steps:
   - name: Run test
     parallel:
