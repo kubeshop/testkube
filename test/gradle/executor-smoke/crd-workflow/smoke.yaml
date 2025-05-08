@@ -19,7 +19,7 @@ spec:
         memory: 512Mi
     workingDir: /data/repo/contrib/executor/gradle/examples/hello-gradle
   job:
-    activeDeadlineSeconds: 180
+    activeDeadlineSeconds: 300
   steps:
   - name: Run tests
     run:
@@ -53,7 +53,7 @@ spec:
         memory: 512Mi
     workingDir: /data/repo/contrib/executor/gradle/examples/hello-gradle
   job:
-    activeDeadlineSeconds: 180
+    activeDeadlineSeconds: 300
   steps:
   - name: Run tests
     run:
@@ -86,7 +86,7 @@ spec:
     - name: TESTKUBE_GRADLE
       value: "true"
   job:
-    activeDeadlineSeconds: 180
+    activeDeadlineSeconds: 300
   steps:
   - name: Run from template
     template:

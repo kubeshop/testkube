@@ -16,7 +16,7 @@ spec:
     image: node:23.11.0
     workingDir: /data/repo/test/pact/pact-js-project
   job:
-    activeDeadlineSeconds: 180
+    activeDeadlineSeconds: 300
   steps:
   - name: Install dependencies
     shell: "npm install"

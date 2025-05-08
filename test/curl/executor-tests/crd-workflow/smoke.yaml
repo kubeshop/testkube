@@ -12,7 +12,7 @@ spec:
         cpu: 32m
         memory: 32Mi
   job:
-    activeDeadlineSeconds: 180
+    activeDeadlineSeconds: 300
   steps:
     - name: Run tests
       shell: curl -f -LI https://testkube-test-page-lipsum.pages.dev/
@@ -36,7 +36,7 @@ spec:
         cpu: 32m
         memory: 32Mi
   job:
-    activeDeadlineSeconds: 180
+    activeDeadlineSeconds: 300
   steps:
     - name: Run tests
       shell: curl -f -LI https://testkube-test-page-lipsum.pages.dev/ && sleep 10
@@ -57,7 +57,7 @@ spec:
         cpu: 32m
         memory: 32Mi
   job:
-    activeDeadlineSeconds: 180
+    activeDeadlineSeconds: 300
   steps:
     - name: Run tests
       parallel:

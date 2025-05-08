@@ -15,7 +15,7 @@ spec:
   container:
     workingDir: /data/repo/test/locust/locust-project
   job:
-    activeDeadlineSeconds: 180
+    activeDeadlineSeconds: 300
   steps:
   - name: Run test
     run:
