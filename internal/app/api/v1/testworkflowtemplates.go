@@ -10,9 +10,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	opcrd "github.com/kubeshop/testkube-operator/config/crd"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/internal/crdcommon"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowresolver"
@@ -170,6 +172,39 @@ func (s *TestkubeAPI) CreateTestWorkflowTemplateHandler() fiber.Handler {
 			return s.InternalError(c, errPrefix, "serialization problem", err)
 		}
 		return
+	}
+}
+
+func (s *TestkubeAPI) ValidateTestWorkflowTemplateHandler() fiber.Handler {
+	errPrefix := "failed to validate test workflow template"
+	return func(c *fiber.Ctx) (err error) {
+		// Deserialize resource
+		body := c.Body()
+		obj := new(testworkflowsv1.TestWorkflowTemplate)
+		if err = crdcommon.DeserializeCRD(obj, body); err != nil {
+			return s.BadRequest(c, errPrefix, "invalid body", err)
+		}
+
+		// Validate resource
+		if obj.Kind != "" && obj.Kind != "TestWorkflowTemplate" {
+			return s.BadRequest(c, errPrefix, "invalid meta", errors.New("only TestWorkflowTemplate object is accepted"))
+		}
+
+		if obj.APIVersion != "" && obj.APIVersion != "testworkflows.testkube.io/v1" {
+			return s.BadRequest(c, errPrefix, "invalid meta", errors.New("only TestWorkflowTemplate version v1 is accepted"))
+		}
+
+		if obj.Name == "" {
+			return s.BadRequest(c, errPrefix, "invalid name", errors.New("name is required"))
+		}
+
+		// Validate spec
+		if err = crd.ValidateYAMLAgainstSchema(opcrd.SchemaTestWorkflowTemplate, body); err != nil {
+			return s.BadRequest(c, errPrefix, "invalid spec", err)
+		}
+
+		c.Status(http.StatusNoContent)
+		return nil
 	}
 }
 
