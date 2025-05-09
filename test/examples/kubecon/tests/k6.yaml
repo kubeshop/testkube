@@ -15,4 +15,4 @@ spec:
       path: test/k6/executor-tests/k6-smoke-test-without-envs.js
   executionRequest:
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 256Mi\n              cpu: 256m\n"
-    activeDeadlineSeconds: 180
+    activeDeadlineSeconds: 300

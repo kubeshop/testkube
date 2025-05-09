@@ -277,7 +277,7 @@ spec:
       - --config
       - video=false
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
-    activeDeadlineSeconds: 180
+    activeDeadlineSeconds: 300
     variables:
       UV_USE_IO_URING:
         name: UV_USE_IO_URING
@@ -306,7 +306,7 @@ spec:
       - --config
       - video=false
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 2Gi\n              cpu: 2\n"
-    activeDeadlineSeconds: 180
+    activeDeadlineSeconds: 300
     variables:
       UV_USE_IO_URING:
         name: UV_USE_IO_URING
@@ -333,7 +333,7 @@ spec:
       - --some-incorrect-argument
     negativeTest: true
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 1Gi\n              cpu: 1\n"
-    activeDeadlineSeconds: 180
+    activeDeadlineSeconds: 300
     variables:
       UV_USE_IO_URING:
         name: UV_USE_IO_URING

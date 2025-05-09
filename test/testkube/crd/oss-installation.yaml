@@ -34,7 +34,7 @@ spec:
     - name: kubeconfig
       emptyDir: {}
   job:
-    activeDeadlineSeconds: 1800
+    activeDeadlineSeconds: 1200
   services:
     dind:
       logs: always

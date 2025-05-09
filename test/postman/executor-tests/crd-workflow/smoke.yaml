@@ -18,6 +18,8 @@ spec:
         cpu: 256m
         memory: 128Mi
     workingDir: /data/repo/test/postman/executor-tests
+  job:
+    activeDeadlineSeconds:  180
   steps:
   - name: Run test
     run:
@@ -48,6 +50,8 @@ spec:
         cpu: 256m
         memory: 128Mi
     workingDir: /data/repo/test/postman/executor-tests
+  job:
+    activeDeadlineSeconds:  180
   steps:
   - name: Run test
     run:
@@ -76,6 +80,8 @@ spec:
         cpu: 256m
         memory: 128Mi
     workingDir: /data/repo/test/postman/executor-tests
+  job:
+    activeDeadlineSeconds:  180
   steps:
   - name: Run from 
     workingDir: /data/repo/test/postman/executor-tests
@@ -104,6 +110,8 @@ spec:
         cpu: 256m
         memory: 128Mi
     workingDir: /data/repo/test/postman/executor-tests
+  job:
+    activeDeadlineSeconds:  180
   steps:
   - name: Run from 
     template:
@@ -131,6 +139,8 @@ spec:
         cpu: 256m
         memory: 128Mi
     workingDir: /data/repo/test/postman/executor-tests
+  job:
+    activeDeadlineSeconds:  180
   steps:
   - name: Run test
     run:
@@ -165,6 +175,8 @@ spec:
         cpu: 256m
         memory: 128Mi
     workingDir: /data/repo/test/postman/executor-tests
+  job:
+    activeDeadlineSeconds:  180
   steps:
   - name: Run test
     shell: newman run postman-executor-smoke.postman_collection.json --env-var TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value -r cli,junit --reporter-junit-export /data/artifacts/junit-report.xml

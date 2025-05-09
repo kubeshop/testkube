@@ -19,6 +19,8 @@ spec:
         memory: 256Mi
     workingDir: /data/repo/test/artillery/executor-smoke
     image: artilleryio/artillery:2.0.22
+  job:
+    activeDeadlineSeconds: 300
   steps:
   - name: Run test
     shell: /home/node/artillery/bin/run run artillery-smoke-test.yaml
@@ -37,6 +39,8 @@ spec:
         cpu: 128m
         memory: 256Mi
     workingDir: /data/repo/test/artillery/executor-smoke
+  job:
+    activeDeadlineSeconds: 300
   steps:
   - name: Run from template
     content:
@@ -78,6 +82,8 @@ spec:
       - test/artillery/executor-smoke/artillery-smoke-test.yaml
   container:
     image: artilleryio/artillery:2.0.20
+  job:
+    activeDeadlineSeconds: 600
   steps:
   - name: Run test
     parallel:
