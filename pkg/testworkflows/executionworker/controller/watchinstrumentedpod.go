@@ -25,9 +25,15 @@ type WatchInstrumentedPodOptions struct {
 	LogAbortedDetails bool
 }
 
-func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interface, signature []stage.Signature, scheduledAt time.Time, watcher watchers2.ExecutionWatcher, opts WatchInstrumentedPodOptions) (<-chan ChannelMessage[Notification], error) {
+func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interface, signature []stage.Signature, scheduledAt time.Time, watcher watchers2.KubernetesExecutionWatcher, opts WatchInstrumentedPodOptions) (<-chan ChannelMessage[Notification], error) {
+	return WatchInstrumented(parentCtx, signature, scheduledAt, watcher, opts, func(ctx context.Context, container string, isDone func() bool, isLastHint func(instruction *instructions.Instruction) bool) <-chan ChannelMessage[ContainerLog] {
+		return WatchContainerLogs(ctx, clientSet, watcher.KubernetesState().Namespace(), watcher.KubernetesState().PodName(), container, 10, isDone, isLastHint)
+	})
+}
+
+func WatchInstrumented(parentCtx context.Context, signature []stage.Signature, scheduledAt time.Time, watcher watchers2.ExecutionWatcher, opts WatchInstrumentedPodOptions, getLogs func(ctx context.Context, container string, isDone func() bool, isLastHint func(instruction *instructions.Instruction) bool) <-chan ChannelMessage[ContainerLog]) (<-chan ChannelMessage[Notification], error) {
 	ctx, ctxCancel := context.WithCancel(parentCtx)
-	notifier := newNotifier(ctx, testkube.TestWorkflowResult{}, scheduledAt)
+	notifier := NewNotifier(ctx, testkube.TestWorkflowResult{}, scheduledAt)
 	signatureSeq := stage.MapSignatureToSequence(signature)
 
 	updatesCh := watcher.Updated(ctx)
@@ -183,7 +189,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 			isDone := func() bool {
 				return opts.DisableFollow || watcher.State().ContainerFinished(container) || watcher.State().Completed()
 			}
-			logsCh := WatchContainerLogs(ctx, clientSet, watcher.State().Namespace(), watcher.State().PodName(), container, 10, isDone, isLastHint)
+			logsCh := getLogs(ctx, container, isDone, isLastHint)
 			containersReady = watcher.State().ContainersReady()
 		logs:
 			for {

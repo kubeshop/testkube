@@ -31,15 +31,6 @@ type ControllerOptions struct {
 	RunnerId  string
 }
 
-type LightweightNotification struct {
-	Error    error
-	NodeName string
-	PodIP    string
-	Current  string
-	Status   testkube.TestWorkflowStatus
-	Result   *testkube.TestWorkflowResult
-}
-
 type Controller interface {
 	Abort(ctx context.Context) error
 	Pause(ctx context.Context) error
@@ -81,7 +72,7 @@ func New(parentCtx context.Context, clientSet kubernetes.Interface, namespace, i
 	<-watcher.Started()
 
 	// Check if we have any resources that we could base on
-	if watcher.State().Job() == nil && watcher.State().Pod() == nil && watcher.State().CompletionTimestamp().IsZero() {
+	if watcher.KubernetesState().Job() == nil && watcher.KubernetesState().Pod() == nil && watcher.State().CompletionTimestamp().IsZero() {
 		defer func() {
 			ctxCancel()
 		}()
@@ -133,7 +124,7 @@ type controller struct {
 	clientSet   kubernetes.Interface
 	ctx         context.Context
 	ctxCancel   context.CancelFunc
-	watcher     watchers.ExecutionWatcher
+	watcher     watchers.KubernetesExecutionWatcher
 }
 
 func (c *controller) Signature() []stage.Signature {
@@ -141,7 +132,7 @@ func (c *controller) Signature() []stage.Signature {
 }
 
 func (c *controller) HasPod() bool {
-	return c.watcher.State().Pod() != nil
+	return c.watcher.KubernetesState().Pod() != nil
 }
 
 func (c *controller) ResourceID() string {
@@ -161,7 +152,7 @@ func (c *controller) Cleanup(ctx context.Context) error {
 }
 
 func (c *controller) PodIP() (string, error) {
-	podIP := c.watcher.State().PodIP()
+	podIP := c.watcher.KubernetesState().PodIP()
 	if podIP == "" {
 		if c.watcher.PodErr() != nil {
 			return "", c.watcher.PodErr()
@@ -176,7 +167,7 @@ func (c *controller) InternalConfig() (testworkflowconfig.InternalConfig, error)
 }
 
 func (c *controller) NodeName() (string, error) {
-	nodeName := c.watcher.State().PodNodeName()
+	nodeName := c.watcher.KubernetesState().PodNodeName()
 	if nodeName == "" {
 		if c.watcher.PodErr() != nil {
 			return "", c.watcher.PodErr()
@@ -215,7 +206,7 @@ func (c *controller) StopController() {
 }
 
 func (c *controller) EstimatedResult(parentCtx context.Context) (*testkube.TestWorkflowResult, error) {
-	notifier := newNotifier(parentCtx, testkube.TestWorkflowResult{}, c.scheduledAt)
+	notifier := NewNotifier(parentCtx, testkube.TestWorkflowResult{}, c.scheduledAt)
 	go notifier.Align(c.watcher.State())
 	message := <-notifier.ch
 	if message.Error != nil {
