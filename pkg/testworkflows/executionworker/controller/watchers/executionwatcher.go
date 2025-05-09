@@ -41,6 +41,12 @@ type executionWatcher struct {
 type KubernetesExecutionWatcher interface {
 	ExecutionWatcher
 	KubernetesState() KubernetesExecutionState
+
+	JobEventsErr() error
+	PodEventsErr() error
+	JobErr() error
+	PodErr() error
+
 	RefreshPod(ctx context.Context)
 	RefreshJob(ctx context.Context)
 }
@@ -48,11 +54,6 @@ type KubernetesExecutionWatcher interface {
 type ExecutionWatcher interface {
 	State() ExecutionState
 	Commit()
-
-	JobEventsErr() error
-	PodEventsErr() error
-	JobErr() error
-	PodErr() error
 
 	Refresh(ctx context.Context)
 
