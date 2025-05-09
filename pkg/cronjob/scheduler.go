@@ -131,6 +131,8 @@ func (s *Scheduler) Reconcile(ctx context.Context) {
 
 	var wg sync.WaitGroup
 
+	s.logger.Infow("cron job scheduler: reconciler component: starting reconciler")
+
 	wg.Add(2)
 	go func() {
 		defer wg.Done()
