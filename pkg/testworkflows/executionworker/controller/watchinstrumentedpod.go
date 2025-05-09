@@ -271,8 +271,7 @@ func WatchInstrumented(parentCtx context.Context, signature []stage.Signature, s
 					break loop
 				}
 			case <-time.After(ForceFinalizationDelay):
-				watcher.RefreshPod(ctx)
-				watcher.RefreshJob(ctx)
+				watcher.Refresh(ctx)
 
 				// Fallback in case of missing data
 				if watcher.State().Completed() {

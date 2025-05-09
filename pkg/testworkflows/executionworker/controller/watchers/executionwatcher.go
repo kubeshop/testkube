@@ -41,6 +41,8 @@ type executionWatcher struct {
 type KubernetesExecutionWatcher interface {
 	ExecutionWatcher
 	KubernetesState() KubernetesExecutionState
+	RefreshPod(ctx context.Context)
+	RefreshJob(ctx context.Context)
 }
 
 type ExecutionWatcher interface {
@@ -52,8 +54,7 @@ type ExecutionWatcher interface {
 	JobErr() error
 	PodErr() error
 
-	RefreshPod(ctx context.Context)
-	RefreshJob(ctx context.Context)
+	Refresh(ctx context.Context)
 
 	Started() <-chan struct{}
 	Updated(ctx context.Context) <-chan struct{}
@@ -116,6 +117,11 @@ func (e *executionWatcher) RefreshPod(ctx context.Context) {
 
 func (e *executionWatcher) RefreshJob(ctx context.Context) {
 	e.jobWatcher.Update(ctx)
+}
+
+func (e *executionWatcher) Refresh(ctx context.Context) {
+	e.RefreshPod(ctx)
+	e.RefreshJob(ctx)
 }
 
 func (e *executionWatcher) baseStarted() <-chan struct{} {
