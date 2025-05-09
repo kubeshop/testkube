@@ -21,9 +21,9 @@ func (m *limitedMachine) Get(name string) (Expression, bool, error) {
 	return nil, false, nil
 }
 
-func (m *limitedMachine) Call(name string, args ...StaticValue) (Expression, bool, error) {
+func (m *limitedMachine) Call(name string, args []CallArgument) (Expression, bool, error) {
 	if strings.HasPrefix(name, m.prefix) {
-		return m.machine.Call(name, args...)
+		return m.machine.Call(name, args)
 	}
 	return nil, false, nil
 }
@@ -46,9 +46,9 @@ func (m *combinedMachine) Get(name string) (Expression, bool, error) {
 	return nil, false, nil
 }
 
-func (m *combinedMachine) Call(name string, args ...StaticValue) (Expression, bool, error) {
+func (m *combinedMachine) Call(name string, args []CallArgument) (Expression, bool, error) {
 	for i := range m.machines {
-		v, ok, err := m.machines[i].Call(name, args...)
+		v, ok, err := m.machines[i].Call(name, args)
 		if err != nil || ok {
 			return v, ok, err
 		}

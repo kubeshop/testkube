@@ -4,6 +4,7 @@ metadata:
   name: tw-suite-small-smoke
   labels:
     core-tests: workflows-suite
+    type: suite
 spec:
   steps:
   - execute:

@@ -10,6 +10,7 @@ import (
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	commonmapper "github.com/kubeshop/testkube/pkg/mapper/common"
 )
 
 func MapIntOrStringToString(i intstr.IntOrString) string {
@@ -209,6 +210,73 @@ func MapCSIVolumeSourceKubeToAPI(v corev1.CSIVolumeSource) testkube.CsiVolumeSou
 		NodePublishSecretRef: common.MapPtr(v.NodePublishSecretRef, MapLocalObjectReferenceKubeToAPI),
 	}
 }
+
+func MapProjectedVolumeSourceKubeToAPI(v corev1.ProjectedVolumeSource) testkube.ProjectedVolumeSource {
+	return testkube.ProjectedVolumeSource{
+		DefaultMode: MapInt32ToBoxedInteger(v.DefaultMode),
+		Sources:     common.MapSlice(v.Sources, MapVolumeProjectionKubeToAPI),
+	}
+}
+
+func MapVolumeProjectionKubeToAPI(v corev1.VolumeProjection) testkube.ProjectedVolumeSourceSources {
+	return testkube.ProjectedVolumeSourceSources{
+		ClusterTrustBundle:  common.MapPtr(v.ClusterTrustBundle, MapClusterTrustBundleProjectionKubeToAPI),
+		ConfigMap:           common.MapPtr(v.ConfigMap, MapConfigMapProjectionKubeToAPI),
+		DownwardAPI:         common.MapPtr(v.DownwardAPI, MapDownwardAPIProjectionKubeToAPI),
+		Secret:              common.MapPtr(v.Secret, MapSecretProjectionKubeToAPI),
+		ServiceAccountToken: common.MapPtr(v.ServiceAccountToken, MapServiceAccountTokenProjectionKubeToAPI),
+	}
+}
+
+func MapConfigMapProjectionKubeToAPI(v corev1.ConfigMapProjection) testkube.ProjectedVolumeSourceConfigMap {
+	return testkube.ProjectedVolumeSourceConfigMap{
+		Items:    common.MapSlice(v.Items, MapKeyToPathKubeToAPI),
+		Name:     v.Name,
+		Optional: MapBoolToBoxedBoolean(v.Optional),
+	}
+}
+
+func MapClusterTrustBundleProjectionKubeToAPI(v corev1.ClusterTrustBundleProjection) testkube.ProjectedVolumeSourceClusterTrustBundle {
+	return testkube.ProjectedVolumeSourceClusterTrustBundle{
+		LabelSelector: common.MapPtr(v.LabelSelector, MapLabelSelectorKubeToAPI),
+		Name:          MapStringToBoxedString(v.Name),
+		Optional:      MapBoolToBoxedBoolean(v.Optional),
+		Path:          v.Path,
+		SignerName:    MapStringToBoxedString(v.SignerName),
+	}
+}
+
+func MapDownwardAPIProjectionKubeToAPI(v corev1.DownwardAPIProjection) testkube.ProjectedVolumeSourceDownwardApi {
+	return testkube.ProjectedVolumeSourceDownwardApi{
+		Items: common.MapSlice(v.Items, MapDownwardAPIVolumeFileKubeToAPI),
+	}
+}
+
+func MapDownwardAPIVolumeFileKubeToAPI(v corev1.DownwardAPIVolumeFile) testkube.ProjectedVolumeSourceDownwardApiItems {
+	return testkube.ProjectedVolumeSourceDownwardApiItems{
+		FieldRef:         MapFieldRefKubeToAPI(v.FieldRef),
+		Mode:             MapInt32ToBoxedInteger(v.Mode),
+		Path:             v.Path,
+		ResourceFieldRef: MapResourceFieldRefKubeToAPI(v.ResourceFieldRef),
+	}
+}
+
+func MapSecretProjectionKubeToAPI(v corev1.SecretProjection) testkube.ProjectedVolumeSourceSecret {
+	return testkube.ProjectedVolumeSourceSecret{
+		Items:    common.MapSlice(v.Items, MapKeyToPathKubeToAPI),
+		Name:     v.Name,
+		Optional: MapBoolToBoxedBoolean(v.Optional),
+	}
+}
+
+func MapServiceAccountTokenProjectionKubeToAPI(v corev1.ServiceAccountTokenProjection) testkube.ProjectedVolumeSourceServiceAccountToken {
+	return testkube.ProjectedVolumeSourceServiceAccountToken{
+		Audience:          v.Audience,
+		ExpirationSeconds: MapInt64ToBoxedInteger(v.ExpirationSeconds),
+		Path:              v.Path,
+	}
+}
+
 func MapVolumeKubeToAPI(v corev1.Volume) testkube.Volume {
 	// TODO: Add rest of VolumeSource types in future,
 	//       so they will be recognized by JSON API and persisted with Execution.
@@ -226,11 +294,13 @@ func MapVolumeKubeToAPI(v corev1.Volume) testkube.Volume {
 		ConfigMap:             common.MapPtr(v.ConfigMap, MapConfigMapVolumeSourceKubeToAPI),
 		AzureDisk:             common.MapPtr(v.AzureDisk, MapAzureDiskVolumeSourceKubeToAPI),
 		Csi:                   common.MapPtr(v.CSI, MapCSIVolumeSourceKubeToAPI),
+		Projected:             common.MapPtr(v.Projected, MapProjectedVolumeSourceKubeToAPI),
 	}
 }
 
-func MapEnvVarKubeToAPI(v corev1.EnvVar) testkube.EnvVar {
+func MapEnvVarKubeToAPI(v testworkflowsv1.EnvVar) testkube.EnvVar {
 	return testkube.EnvVar{
+		Global:    MapBoolToBoxedBoolean(v.Global),
 		Name:      v.Name,
 		Value:     v.Value,
 		ValueFrom: common.MapPtr(v.ValueFrom, MapEnvVarSourceKubeToAPI),
@@ -248,17 +318,17 @@ func MapConfigMapKeyRefKubeToAPI(v *corev1.ConfigMapKeySelector) *testkube.EnvVa
 	}
 }
 
-func MapFieldRefKubeToAPI(v *corev1.ObjectFieldSelector) *testkube.EnvVarSourceFieldRef {
+func MapFieldRefKubeToAPI(v *corev1.ObjectFieldSelector) *testkube.FieldRef {
 	if v == nil {
 		return nil
 	}
-	return &testkube.EnvVarSourceFieldRef{
+	return &testkube.FieldRef{
 		ApiVersion: v.APIVersion,
 		FieldPath:  v.FieldPath,
 	}
 }
 
-func MapResourceFieldRefKubeToAPI(v *corev1.ResourceFieldSelector) *testkube.EnvVarSourceResourceFieldRef {
+func MapResourceFieldRefKubeToAPI(v *corev1.ResourceFieldSelector) *testkube.ResourceFieldRef {
 	if v == nil {
 		return nil
 	}
@@ -266,7 +336,7 @@ func MapResourceFieldRefKubeToAPI(v *corev1.ResourceFieldSelector) *testkube.Env
 	if !v.Divisor.IsZero() {
 		divisor = v.Divisor.String()
 	}
-	return &testkube.EnvVarSourceResourceFieldRef{
+	return &testkube.ResourceFieldRef{
 		ContainerName: v.ContainerName,
 		Divisor:       divisor,
 		Resource:      v.Resource,
@@ -476,6 +546,7 @@ func MapCronJobConfigKubeToAPI(v testworkflowsv1.CronJobConfig) testkube.TestWor
 		Config:      MapConfigValueKubeToAPI(v.Config),
 		Labels:      v.Labels,
 		Annotations: v.Annotations,
+		Target:      common.MapPtr(v.Target, commonmapper.MapTargetKubeToAPI),
 	}
 }
 
@@ -704,6 +775,7 @@ func MapPodConfigKubeToAPI(v testworkflowsv1.PodConfig) testkube.TestWorkflowPod
 		TopologySpreadConstraints: common.MapSlice(v.TopologySpreadConstraints, MapTopologySpreadConstraintKubeToAPI),
 		SchedulingGates:           common.MapSlice(v.SchedulingGates, MapPodSchedulingGateKubeToAPI),
 		ResourceClaims:            common.MapSlice(v.ResourceClaims, MapPodResourceClaimKubeToAPI),
+		HostPID:                   MapBoolToBoxedBoolean(v.HostPID),
 	}
 }
 
@@ -882,6 +954,7 @@ func MapStepExecuteTestWorkflowKubeToAPI(v testworkflowsv1.StepExecuteWorkflow) 
 		Matrix:        MapDynamicListMapKubeToAPI(v.Matrix),
 		Shards:        MapDynamicListMapKubeToAPI(v.Shards),
 		Selector:      common.MapPtr(v.Selector, MapSelectorToAPI),
+		Target:        common.MapPtr(v.Target, commonmapper.MapTargetKubeToAPI),
 	}
 }
 
@@ -1215,7 +1288,7 @@ func MapTestWorkflowKubeToAPI(w testworkflowsv1.TestWorkflow) testkube.TestWorkf
 		updateTime = w.DeletionTimestamp.Time
 	} else {
 		for _, field := range w.ManagedFields {
-			if field.Time.After(updateTime) {
+			if field.Time != nil && field.Time.After(updateTime) {
 				updateTime = field.Time.Time
 			}
 		}
@@ -1239,7 +1312,7 @@ func MapTestWorkflowTemplateKubeToAPI(w testworkflowsv1.TestWorkflowTemplate) te
 		updateTime = w.DeletionTimestamp.Time
 	} else {
 		for _, field := range w.ManagedFields {
-			if field.Time.After(updateTime) {
+			if field.Time != nil && field.Time.After(updateTime) {
 				updateTime = field.Time.Time
 			}
 		}
@@ -1283,7 +1356,8 @@ func MapTemplateListKubeToAPI(v *testworkflowsv1.TestWorkflowTemplateList) []tes
 
 func MapTestWorkflowTagSchemaKubeToAPI(v testworkflowsv1.TestWorkflowTagSchema) testkube.TestWorkflowTagSchema {
 	return testkube.TestWorkflowTagSchema{
-		Tags: v.Tags,
+		Tags:   v.Tags,
+		Target: common.MapPtr(v.Target, commonmapper.MapTargetKubeToAPI),
 	}
 }
 
@@ -1348,5 +1422,70 @@ func MapPvcConfigKubeToAPI(v corev1.PersistentVolumeClaimSpec) testkube.TestWork
 		DataSource:                common.MapPtr(v.DataSource, MapTypeLocalObjectReferenceKubeToAPI),
 		DataSourceRef:             common.MapPtr(v.DataSourceRef, MapTypeObjectReferenceKubeToAPI),
 		VolumeAttributesClassName: MapStringToBoxedString(v.VolumeAttributesClassName),
+	}
+}
+
+func MapTestWorkflowExecutionResourceAggregationsReportKubeToAPI(
+	v *testworkflowsv1.TestWorkflowExecutionResourceAggregationsReport,
+) *testkube.TestWorkflowExecutionResourceAggregationsReport {
+	if v == nil {
+		return nil
+	}
+	return &testkube.TestWorkflowExecutionResourceAggregationsReport{
+		Global: MapTestWorkflowExecutionResourceAggregationsByMeasurementKubeToAPI(v.Global),
+		Step:   MapTestWorkflowExecutionStepResourceAggregationsKubeToAPI(v.Step),
+	}
+}
+
+func MapTestWorkflowExecutionStepResourceAggregationsKubeToAPI(
+	vs []*testworkflowsv1.TestWorkflowExecutionStepResourceAggregations,
+) []testkube.TestWorkflowExecutionStepResourceAggregations {
+	r := make([]testkube.TestWorkflowExecutionStepResourceAggregations, 0, len(vs))
+
+	for _, v := range vs {
+		r = append(r, testkube.TestWorkflowExecutionStepResourceAggregations{
+			Ref:          v.Ref,
+			Aggregations: MapTestWorkflowExecutionResourceAggregationsByMeasurementKubeToAPI(v.Aggregations),
+		})
+	}
+
+	return r
+}
+
+func MapTestWorkflowExecutionResourceAggregationsByMeasurementKubeToAPI(
+	v testworkflowsv1.TestWorkflowExecutionResourceAggregationsByMeasurement,
+) map[string]map[string]testkube.TestWorkflowExecutionResourceAggregations {
+	result := make(map[string]map[string]testkube.TestWorkflowExecutionResourceAggregations)
+
+	for measurement, byField := range v {
+		if _, ok := result[measurement]; !ok {
+			result[measurement] = make(map[string]testkube.TestWorkflowExecutionResourceAggregations)
+		}
+		for field, wrapper := range byField {
+			apiWrapper := MapTestWorkflowExecutionResourceAggregationsKubeToAPI(wrapper)
+			if apiWrapper != nil {
+				result[measurement][field] = *apiWrapper
+			} else {
+				// If needed, handle the case where wrapper is nil or conversion is nil
+				result[measurement][field] = testkube.TestWorkflowExecutionResourceAggregations{}
+			}
+		}
+	}
+
+	return result
+}
+
+func MapTestWorkflowExecutionResourceAggregationsKubeToAPI(
+	v *testworkflowsv1.TestWorkflowExecutionResourceAggregations,
+) *testkube.TestWorkflowExecutionResourceAggregations {
+	if v == nil {
+		return nil
+	}
+	return &testkube.TestWorkflowExecutionResourceAggregations{
+		Total:  v.Total,
+		Min:    v.Min,
+		Max:    v.Max,
+		Avg:    v.Avg,
+		StdDev: v.StdDev,
 	}
 }

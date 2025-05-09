@@ -11,8 +11,8 @@ package testkube
 
 // EnvVarSource represents a source for the value of an EnvVar.
 type EnvVarSource struct {
-	ConfigMapKeyRef  *EnvVarSourceConfigMapKeyRef  `json:"configMapKeyRef,omitempty"`
-	FieldRef         *EnvVarSourceFieldRef         `json:"fieldRef,omitempty"`
-	ResourceFieldRef *EnvVarSourceResourceFieldRef `json:"resourceFieldRef,omitempty"`
-	SecretKeyRef     *EnvVarSourceSecretKeyRef     `json:"secretKeyRef,omitempty"`
+	ConfigMapKeyRef  *EnvVarSourceConfigMapKeyRef `json:"configMapKeyRef,omitempty"`
+	FieldRef         *FieldRef                    `json:"fieldRef,omitempty"`
+	ResourceFieldRef *ResourceFieldRef            `json:"resourceFieldRef,omitempty"`
+	SecretKeyRef     *EnvVarSourceSecretKeyRef    `json:"secretKeyRef,omitempty"`
 }

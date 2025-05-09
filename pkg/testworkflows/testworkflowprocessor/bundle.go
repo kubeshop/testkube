@@ -19,9 +19,11 @@ import (
 )
 
 type BundleOptions struct {
-	Secrets     []corev1.Secret
-	Config      testworkflowconfig.InternalConfig
-	ScheduledAt time.Time
+	Secrets                []corev1.Secret
+	Config                 testworkflowconfig.InternalConfig
+	ScheduledAt            time.Time
+	CommonEnvVariables     []corev1.EnvVar
+	AllowLowSecurityFields bool
 }
 
 type Bundle struct {
@@ -53,6 +55,19 @@ func (b *Bundle) SetGroupId(groupId string) {
 	}
 	for i := range b.Pvcs {
 		AnnotateGroupId(&b.Pvcs[i], groupId)
+	}
+}
+
+func (b *Bundle) SetRunnerId(runnerId string) {
+	AnnotateRunnerId(&b.Job, runnerId)
+	for i := range b.ConfigMaps {
+		AnnotateRunnerId(&b.ConfigMaps[i], runnerId)
+	}
+	for i := range b.Secrets {
+		AnnotateRunnerId(&b.Secrets[i], runnerId)
+	}
+	for i := range b.Pvcs {
+		AnnotateRunnerId(&b.Pvcs[i], runnerId)
 	}
 }
 

@@ -99,17 +99,19 @@ type LogServerConfig struct {
 }
 
 type ControlPlaneConfig struct {
-	TestkubeProEnvID             string `envconfig:"TESTKUBE_PRO_ENV_ID" default:""`
-	TestkubeProOrgID             string `envconfig:"TESTKUBE_PRO_ORG_ID" default:""`
-	TestkubeProAgentID           string `envconfig:"TESTKUBE_PRO_AGENT_ID" default:""`
-	TestkubeProAPIKey            string `envconfig:"TESTKUBE_PRO_API_KEY" default:""`
-	TestkubeProURL               string `envconfig:"TESTKUBE_PRO_URL" default:""`
-	TestkubeProTLSInsecure       bool   `envconfig:"TESTKUBE_PRO_TLS_INSECURE" default:"false"`
-	TestkubeProSkipVerify        bool   `envconfig:"TESTKUBE_PRO_SKIP_VERIFY" default:"false"`
-	TestkubeProConnectionTimeout int    `envconfig:"TESTKUBE_PRO_CONNECTION_TIMEOUT" default:"10"`
-	TestkubeProCertFile          string `envconfig:"TESTKUBE_PRO_CERT_FILE" default:""`
-	TestkubeProKeyFile           string `envconfig:"TESTKUBE_PRO_KEY_FILE" default:""`
-	TestkubeProTLSSecret         string `envconfig:"TESTKUBE_PRO_TLS_SECRET" default:""`
+	TestkubeProEnvID             string        `envconfig:"TESTKUBE_PRO_ENV_ID" default:""`
+	TestkubeProOrgID             string        `envconfig:"TESTKUBE_PRO_ORG_ID" default:""`
+	TestkubeProAgentID           string        `envconfig:"TESTKUBE_PRO_AGENT_ID" default:""`
+	TestkubeProAPIKey            string        `envconfig:"TESTKUBE_PRO_API_KEY" default:""`
+	TestkubeProURL               string        `envconfig:"TESTKUBE_PRO_URL" default:""`
+	TestkubeProTLSInsecure       bool          `envconfig:"TESTKUBE_PRO_TLS_INSECURE" default:"false"`
+	TestkubeProSkipVerify        bool          `envconfig:"TESTKUBE_PRO_SKIP_VERIFY" default:"false"`
+	TestkubeProConnectionTimeout int           `envconfig:"TESTKUBE_PRO_CONNECTION_TIMEOUT" default:"10"`
+	TestkubeProCertFile          string        `envconfig:"TESTKUBE_PRO_CERT_FILE" default:""`
+	TestkubeProKeyFile           string        `envconfig:"TESTKUBE_PRO_KEY_FILE" default:""`
+	TestkubeProTLSSecret         string        `envconfig:"TESTKUBE_PRO_TLS_SECRET" default:""`
+	TestkubeProSendTimeout       time.Duration `envconfig:"TESTKUBE_PRO_SEND_TIMEOUT" default:"30s"`
+	TestkubeProRecvTimeout       time.Duration `envconfig:"TESTKUBE_PRO_RECV_TIMEOUT" default:"5m"`
 
 	// TestkubeProCAFile is meant to provide a custom CA when making a TLS connection to
 	// the agent API.
@@ -160,7 +162,8 @@ type ImageInspectorConfig struct {
 }
 
 type RunnerConfig struct {
-	DisableRunner bool `envconfig:"DISABLE_RUNNER" default:"false"`
+	DefaultExecutionNamespace string `envconfig:"DEFAULT_EXECUTION_NAMESPACE" default:""`
+	DisableRunner             bool   `envconfig:"DISABLE_RUNNER" default:"false"`
 }
 
 type GitOpsSyncConfig struct {
@@ -188,30 +191,32 @@ type Config struct {
 	ImageInspectorConfig
 	GitOpsSyncConfig
 	CronJobConfig
-	DisableDefaultAgent             bool   `envconfig:"DISABLE_DEFAULT_AGENT" default:"false"`
-	TestkubeConfigDir               string `envconfig:"TESTKUBE_CONFIG_DIR" default:"config"`
-	TestkubeAnalyticsEnabled        bool   `envconfig:"TESTKUBE_ANALYTICS_ENABLED" default:"false"`
-	TestkubeNamespace               string `envconfig:"TESTKUBE_NAMESPACE" default:"testkube"`
-	TestkubeProWorkerCount          int    `envconfig:"TESTKUBE_PRO_WORKER_COUNT" default:"50"`
-	TestkubeProLogStreamWorkerCount int    `envconfig:"TESTKUBE_PRO_LOG_STREAM_WORKER_COUNT" default:"25"`
-	TestkubeProMigrate              string `envconfig:"TESTKUBE_PRO_MIGRATE" default:"false"`
-	TestkubeProRunnerCustomCASecret string `envconfig:"TESTKUBE_PRO_RUNNER_CUSTOM_CA_SECRET" default:""`
-	CDEventsTarget                  string `envconfig:"CDEVENTS_TARGET" default:""`
-	TestkubeDashboardURI            string `envconfig:"TESTKUBE_DASHBOARD_URI" default:""`
-	TestkubeClusterName             string `envconfig:"TESTKUBE_CLUSTER_NAME" default:""`
-	TestkubeHelmchartVersion        string `envconfig:"TESTKUBE_HELMCHART_VERSION" default:""`
-	DebugListenAddr                 string `envconfig:"DEBUG_LISTEN_ADDR" default:"0.0.0.0:1337"`
-	EnableDebugServer               bool   `envconfig:"ENABLE_DEBUG_SERVER" default:"false"`
-	Debug                           bool   `envconfig:"DEBUG" default:"false"`
-	Trace                           bool   `envconfig:"TRACE" default:"false"`
-	DisableSecretCreation           bool   `envconfig:"DISABLE_SECRET_CREATION" default:"false"`
-	TestkubeExecutionNamespaces     string `envconfig:"TESTKUBE_EXECUTION_NAMESPACES" default:""`
-	GlobalWorkflowTemplateName      string `envconfig:"TESTKUBE_GLOBAL_WORKFLOW_TEMPLATE_NAME" default:""`
-	GlobalWorkflowTemplateInline    string `envconfig:"TESTKUBE_GLOBAL_WORKFLOW_TEMPLATE_INLINE" default:""`
-	EnableK8sEvents                 bool   `envconfig:"ENABLE_K8S_EVENTS" default:"true"`
-	TestkubeDockerImageVersion      string `envconfig:"TESTKUBE_DOCKER_IMAGE_VERSION" default:""`
-	DisableDeprecatedTests          bool   `envconfig:"DISABLE_DEPRECATED_TESTS" default:"false"`
-	DisableWebhooks                 bool   `envconfig:"DISABLE_WEBHOOKS" default:"false"`
+	DisableDefaultAgent             bool     `envconfig:"DISABLE_DEFAULT_AGENT" default:"false"`
+	TestkubeConfigDir               string   `envconfig:"TESTKUBE_CONFIG_DIR" default:"config"`
+	TestkubeAnalyticsEnabled        bool     `envconfig:"TESTKUBE_ANALYTICS_ENABLED" default:"false"`
+	TestkubeNamespace               string   `envconfig:"TESTKUBE_NAMESPACE" default:"testkube"`
+	TestkubeProWorkerCount          int      `envconfig:"TESTKUBE_PRO_WORKER_COUNT" default:"50"`
+	TestkubeProLogStreamWorkerCount int      `envconfig:"TESTKUBE_PRO_LOG_STREAM_WORKER_COUNT" default:"25"`
+	TestkubeProMigrate              string   `envconfig:"TESTKUBE_PRO_MIGRATE" default:"false"`
+	TestkubeProRunnerCustomCASecret string   `envconfig:"TESTKUBE_PRO_RUNNER_CUSTOM_CA_SECRET" default:""`
+	CDEventsTarget                  string   `envconfig:"CDEVENTS_TARGET" default:""`
+	TestkubeDashboardURI            string   `envconfig:"TESTKUBE_DASHBOARD_URI" default:""`
+	TestkubeClusterName             string   `envconfig:"TESTKUBE_CLUSTER_NAME" default:""`
+	TestkubeHelmchartVersion        string   `envconfig:"TESTKUBE_HELMCHART_VERSION" default:""`
+	DebugListenAddr                 string   `envconfig:"DEBUG_LISTEN_ADDR" default:"0.0.0.0:1337"`
+	EnableDebugServer               bool     `envconfig:"ENABLE_DEBUG_SERVER" default:"false"`
+	Debug                           bool     `envconfig:"DEBUG" default:"false"`
+	Trace                           bool     `envconfig:"TRACE" default:"false"`
+	DisableSecretCreation           bool     `envconfig:"DISABLE_SECRET_CREATION" default:"false"`
+	TestkubeExecutionNamespaces     string   `envconfig:"TESTKUBE_EXECUTION_NAMESPACES" default:""`
+	GlobalWorkflowTemplateName      string   `envconfig:"TESTKUBE_GLOBAL_WORKFLOW_TEMPLATE_NAME" default:""`
+	GlobalWorkflowTemplateInline    string   `envconfig:"TESTKUBE_GLOBAL_WORKFLOW_TEMPLATE_INLINE" default:""`
+	TransferEnvVariables            []string `envconfig:"TRANSFER_ENV_VARS" default:"GRPC_ENFORCE_ALPN_ENABLED"`
+	EnableK8sEvents                 bool     `envconfig:"ENABLE_K8S_EVENTS" default:"true"`
+	TestkubeDockerImageVersion      string   `envconfig:"TESTKUBE_DOCKER_IMAGE_VERSION" default:""`
+	DisableDeprecatedTests          bool     `envconfig:"DISABLE_DEPRECATED_TESTS" default:"false"`
+	DisableWebhooks                 bool     `envconfig:"DISABLE_WEBHOOKS" default:"false"`
+	AllowLowSecurityFields          bool     `envconfig:"ALLOW_LOW_SECURITY_FIELDS" default:"false"`
 
 	FeatureNewArchitecture bool `envconfig:"FEATURE_NEW_ARCHITECTURE" default:"false"`
 	FeatureCloudStorage    bool `envconfig:"FEATURE_CLOUD_STORAGE" default:"false"`

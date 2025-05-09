@@ -15,6 +15,7 @@ var accessorRe = regexp.MustCompile(`^[a-zA-Z\d_]+(?:\s*\.\s*([a-zA-Z\d_]+|\*))*
 var propertyAccessorRe = regexp.MustCompile(`^\.\s*([a-zA-Z\d_]+|\*)`)
 var spreadRe = regexp.MustCompile(`^\.\.\.`)
 var spaceRe = regexp.MustCompile(`^\s+`)
+var singleQuoteStringRe = regexp.MustCompile(`^'(\\'|[^'])*'`)
 
 func tokenizeNext(exp string, i int) (token, int, error) {
 	for i < len(exp) {
@@ -41,9 +42,39 @@ func tokenizeNext(exp string, i int) (token, int, error) {
 			return tokenJson(noneValue), i + 4, nil
 		case spreadRe.MatchString(exp[i:]):
 			return tokenSpread, i + 3, nil
+		case singleQuoteStringRe.MatchString(exp[i:]):
+			// TODO: Optimize, and allow deeper in the tree (i.e. as part of array or object)
+			str := singleQuoteStringRe.Find([]byte(exp[i:]))
+			originalLen := len(str)
+			for index := 1; index < len(str)-1; index++ {
+				if str[index] == '\\' {
+					if len(str) > index+2 && str[index+1] == '\'' {
+						str = append(str[0:index], str[index+1:]...)
+					} else {
+						index++
+					}
+				} else if str[index] == '"' {
+					str = append(str[0:index], append([]byte{'\\', '"'}, str[index+1:]...)...)
+					index++
+				} else if str[index] == '\n' {
+					str = append(str[0:index], append([]byte{'\\', 'n'}, str[index+1:]...)...)
+					index++
+				} else if str[index] == '\t' {
+					str = append(str[0:index], append([]byte{'\\', 't'}, str[index+1:]...)...)
+					index++
+				}
+			}
+			str[0], str[len(str)-1] = '"', '"'
+			decoder := json.NewDecoder(bytes.NewBuffer(str))
+			var val interface{}
+			err := decoder.Decode(&val)
+			if err != nil {
+				return token{}, i, fmt.Errorf("error while decoding string from index %d in expression: %s: %s", i, exp, err.Error())
+			}
+			return tokenJson(val), i + originalLen, nil
 		case jsonValueRe.MatchString(exp[i:]):
 			// Allow multi-line string with literal \n
-			// TODO: Optimize, and allow deeper in the tree
+			// TODO: Optimize, and allow deeper in the tree (i.e. as part of array or object)
 			appended := 0
 			if exp[i] == '"' {
 				inside := true

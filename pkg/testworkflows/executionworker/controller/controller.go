@@ -11,6 +11,7 @@ import (
 	initconstants "github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller/watchers"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
@@ -19,6 +20,7 @@ import (
 var (
 	ErrJobAborted             = errors.New("job was aborted")
 	ErrJobTimeout             = errors.New("timeout retrieving job")
+	ErrJobDifferentRunner     = errors.New("job is assigned to a different runner")
 	ErrNoIPAssigned           = errors.New("there is no IP assigned to this pod")
 	ErrNoNodeAssigned         = errors.New("the pod is not assigned to a node yet")
 	ErrMissingEstimatedResult = errors.New("could not estimate the result")
@@ -26,6 +28,7 @@ var (
 
 type ControllerOptions struct {
 	Signature []stage.Signature
+	RunnerId  string
 }
 
 type LightweightNotification struct {
@@ -42,8 +45,7 @@ type Controller interface {
 	Pause(ctx context.Context) error
 	Resume(ctx context.Context) error
 	Cleanup(ctx context.Context) error
-	Watch(ctx context.Context, disableFollow bool) <-chan ChannelMessage[Notification]
-	WatchLightweight(ctx context.Context) <-chan LightweightNotification
+	Watch(ctx context.Context, disableFollow, logAbortedDetails bool) <-chan ChannelMessage[Notification]
 	Logs(ctx context.Context, follow bool) io.Reader
 	NodeName() (string, error)
 	PodIP() (string, error)
@@ -59,9 +61,13 @@ type Controller interface {
 
 func New(parentCtx context.Context, clientSet kubernetes.Interface, namespace, id string, scheduledAt time.Time, opts ...ControllerOptions) (Controller, error) {
 	var signature []stage.Signature
+	var expectedRunnerId string
 	for _, opt := range opts {
 		if opt.Signature != nil {
 			signature = opt.Signature
+		}
+		if opt.RunnerId != "" {
+			expectedRunnerId = opt.RunnerId
 		}
 	}
 
@@ -82,11 +88,18 @@ func New(parentCtx context.Context, clientSet kubernetes.Interface, namespace, i
 
 		// There was a job or pod for this execution, so we may only assume it is aborted
 		if !watcher.State().JobEvents().FirstTimestamp().IsZero() || !watcher.State().PodEvents().FirstTimestamp().IsZero() {
+			log.DefaultLogger.Errorw("connecting to aborted execution", "executionId", watcher.State().ResourceId(), "debug", watcher.State().Debug())
 			return nil, ErrJobAborted
 		}
 
 		// We cannot find any resources related to this execution
 		return nil, ErrJobTimeout
+	}
+
+	// Ensure it's not using the resource that is isolated for a different runner
+	if watcher.State().RunnerId() != "" && watcher.State().RunnerId() != expectedRunnerId {
+		ctxCancel()
+		return nil, ErrJobDifferentRunner
 	}
 
 	// Obtain the signature
@@ -214,9 +227,10 @@ func (c *controller) EstimatedResult(parentCtx context.Context) (*testkube.TestW
 	return nil, ErrMissingEstimatedResult
 }
 
-func (c *controller) Watch(parentCtx context.Context, disableFollow bool) <-chan ChannelMessage[Notification] {
+func (c *controller) Watch(parentCtx context.Context, disableFollow bool, logAbortedDetails bool) <-chan ChannelMessage[Notification] {
 	ch, err := WatchInstrumentedPod(parentCtx, c.clientSet, c.signature, c.scheduledAt, c.watcher, WatchInstrumentedPodOptions{
-		DisableFollow: disableFollow,
+		DisableFollow:     disableFollow,
+		LogAbortedDetails: logAbortedDetails,
 	})
 	if err != nil {
 		v := make(chan ChannelMessage[Notification], 1)
@@ -224,47 +238,6 @@ func (c *controller) Watch(parentCtx context.Context, disableFollow bool) <-chan
 		close(v)
 		return v
 	}
-	return ch
-}
-
-// TODO: Make it actually light
-func (c *controller) WatchLightweight(parentCtx context.Context) <-chan LightweightNotification {
-	prevCurrent := ""
-	prevNodeName := ""
-	prevPodIP := ""
-	prevStatus := testkube.QUEUED_TestWorkflowStatus
-	sig := stage.MapSignatureListToInternal(c.signature)
-	ch := make(chan LightweightNotification)
-	go func() {
-		defer close(ch)
-		for v := range c.Watch(parentCtx, false) {
-			if v.Error != nil {
-				ch <- LightweightNotification{Error: v.Error}
-				continue
-			}
-
-			nodeName, _ := c.NodeName()
-			podIP, _ := c.PodIP()
-			current := prevCurrent
-			status := prevStatus
-			if v.Value.Result != nil {
-				if v.Value.Result.Status != nil {
-					status = *v.Value.Result.Status
-				} else {
-					status = testkube.QUEUED_TestWorkflowStatus
-				}
-				current = v.Value.Result.Current(sig)
-			}
-
-			if nodeName != prevNodeName || podIP != prevPodIP || prevStatus != status || prevCurrent != current {
-				prevNodeName = nodeName
-				prevPodIP = podIP
-				prevStatus = status
-				prevCurrent = current
-				ch <- LightweightNotification{NodeName: nodeName, PodIP: podIP, Status: status, Current: current, Result: v.Value.Result}
-			}
-		}
-	}()
 	return ch
 }
 
@@ -280,7 +253,7 @@ func (c *controller) Logs(parentCtx context.Context, follow bool) io.Reader {
 			return
 		}
 		for v := range ch {
-			if v.Error == nil && v.Value.Log != "" && !v.Value.Temporary {
+			if v.Error == nil && v.Value.Log != "" {
 				if ref != v.Value.Ref && v.Value.Ref != "" {
 					ref = v.Value.Ref
 					_, _ = writer.Write([]byte(instructions.SprintHint(ref, initconstants.InstructionStart)))

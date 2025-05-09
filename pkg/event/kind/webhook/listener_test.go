@@ -40,7 +40,7 @@ func TestWebhookListener_Notify(t *testing.T) {
 		defer mockCtrl.Finish()
 		mockWebhooRepository := cloudwebhook.NewMockWebhookRepository(mockCtrl)
 		mockWebhooRepository.EXPECT().CollectExecutionResult(gomock.Any(), gomock.Any(), "l1", "", http.StatusOK).AnyTimes()
-		l := NewWebhookListener("l1", svr.URL, "", testEventTypes, "", "", nil, false, nil, nil, v1.NewMetrics(), mockWebhooRepository, nil, nil, nil)
+		l := NewWebhookListener("l1", svr.URL, "", testEventTypes, "", "", nil, false, nil, nil, v1.NewMetrics(), mockWebhooRepository, nil, nil, nil, nil, nil)
 
 		// when
 		r := l.Notify(testkube.Event{
@@ -66,7 +66,7 @@ func TestWebhookListener_Notify(t *testing.T) {
 		defer mockCtrl.Finish()
 		mockWebhooRepository := cloudwebhook.NewMockWebhookRepository(mockCtrl)
 		mockWebhooRepository.EXPECT().CollectExecutionResult(gomock.Any(), gomock.Any(), "l1", gomock.Any(), http.StatusBadGateway).AnyTimes()
-		l := NewWebhookListener("l1", svr.URL, "", testEventTypes, "", "", nil, false, nil, nil, v1.NewMetrics(), mockWebhooRepository, nil, nil, nil)
+		l := NewWebhookListener("l1", svr.URL, "", testEventTypes, "", "", nil, false, nil, nil, v1.NewMetrics(), mockWebhooRepository, nil, nil, nil, nil, nil)
 
 		// when
 		r := l.Notify(testkube.Event{
@@ -87,7 +87,7 @@ func TestWebhookListener_Notify(t *testing.T) {
 		defer mockCtrl.Finish()
 		mockWebhooRepository := cloudwebhook.NewMockWebhookRepository(mockCtrl)
 		mockWebhooRepository.EXPECT().CollectExecutionResult(gomock.Any(), gomock.Any(), "l1", gomock.Any(), 0).AnyTimes()
-		s := NewWebhookListener("l1", "http://baduri.badbadbad", "", testEventTypes, "", "", nil, false, nil, nil, v1.NewMetrics(), mockWebhooRepository, nil, nil, nil)
+		s := NewWebhookListener("l1", "http://baduri.badbadbad", "", testEventTypes, "", "", nil, false, nil, nil, v1.NewMetrics(), mockWebhooRepository, nil, nil, nil, nil, nil)
 
 		// when
 		r := s.Notify(testkube.Event{
@@ -124,7 +124,7 @@ func TestWebhookListener_Notify(t *testing.T) {
 		defer mockCtrl.Finish()
 		mockWebhooRepository := cloudwebhook.NewMockWebhookRepository(mockCtrl)
 		mockWebhooRepository.EXPECT().CollectExecutionResult(gomock.Any(), gomock.Any(), "l1", "", http.StatusOK).AnyTimes()
-		l := NewWebhookListener("l1", svr.URL, "", testEventTypes, "field", "", nil, false, nil, nil, v1.NewMetrics(), mockWebhooRepository, nil, nil, nil)
+		l := NewWebhookListener("l1", svr.URL, "", testEventTypes, "field", "", nil, false, nil, nil, v1.NewMetrics(), mockWebhooRepository, nil, nil, nil, nil, nil)
 
 		// when
 		r := l.Notify(testkube.Event{
@@ -155,7 +155,7 @@ func TestWebhookListener_Notify(t *testing.T) {
 		mockWebhooRepository := cloudwebhook.NewMockWebhookRepository(mockCtrl)
 		mockWebhooRepository.EXPECT().CollectExecutionResult(gomock.Any(), gomock.Any(), "l1", "", http.StatusOK).AnyTimes()
 		l := NewWebhookListener("l1", svr.URL, "", testEventTypes, "", "{\"id\": \"{{ .Id }}\"}",
-			map[string]string{"Content-Type": "application/json"}, false, nil, nil, v1.NewMetrics(), mockWebhooRepository, nil, nil, nil)
+			map[string]string{"Content-Type": "application/json"}, false, nil, nil, v1.NewMetrics(), mockWebhooRepository, nil, nil, nil, nil, nil)
 
 		// when
 		r := l.Notify(testkube.Event{
@@ -176,7 +176,7 @@ func TestWebhookListener_Notify(t *testing.T) {
 		defer mockCtrl.Finish()
 		mockWebhooRepository := cloudwebhook.NewMockWebhookRepository(mockCtrl)
 		mockWebhooRepository.EXPECT().CollectExecutionResult(gomock.Any(), gomock.Any(), "l1", "", 0).AnyTimes()
-		s := NewWebhookListener("l1", "http://baduri.badbadbad", "", testEventTypes, "", "", nil, true, nil, nil, v1.NewMetrics(), mockWebhooRepository, nil, nil, nil)
+		s := NewWebhookListener("l1", "http://baduri.badbadbad", "", testEventTypes, "", "", nil, true, nil, nil, v1.NewMetrics(), mockWebhooRepository, nil, nil, nil, nil, nil)
 
 		// when
 		r := s.Notify(testkube.Event{

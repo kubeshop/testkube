@@ -109,6 +109,19 @@ func ProcessParallel(_ testworkflowprocessor.InternalProcessor, layer testworkfl
 		EnableToolkit(stage.Ref()).
 		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, constants.DefaultTransferDirPath))
 
+	// Pass down image pull secrets
+	parallel := step.Parallel
+	if pod := layer.PodConfig(); len(pod.ImagePullSecrets) > 0 {
+		parallel = parallel.DeepCopy()
+		if parallel.Pod == nil {
+			parallel.Pod = &testworkflowsv1.PodConfig{}
+		} else {
+			parallel.Pod = parallel.Pod.DeepCopy()
+		}
+		parallel.Pod.ImagePullSecrets = append(parallel.Pod.ImagePullSecrets, pod.ImagePullSecrets...)
+	}
+
+	// Build arguments
 	v, err := json.Marshal(step.Parallel)
 	if err != nil {
 		return nil, errors.Wrap(err, "parallel: marshalling error")
@@ -140,9 +153,26 @@ func ProcessServicesStart(_ testworkflowprocessor.InternalProcessor, layer testw
 		EnableToolkit(stage.Ref()).
 		AppendVolumeMounts(layer.AddEmptyDirVolume(nil, constants.DefaultTransferDirPath))
 
-	args := make([]string, 0, len(step.Services))
-	for name := range step.Services {
-		v, err := json.Marshal(step.Services[name])
+	// Pass down image pull secrets
+	services := make(map[string]testworkflowsv1.ServiceSpec)
+	if pod := layer.PodConfig(); len(pod.ImagePullSecrets) > 0 {
+		for name, svc := range step.Services {
+			if svc.Pod == nil {
+				svc.Pod = &testworkflowsv1.PodConfig{}
+			} else {
+				svc.Pod = svc.Pod.DeepCopy()
+			}
+			svc.Pod.ImagePullSecrets = append(svc.Pod.ImagePullSecrets, pod.ImagePullSecrets...)
+			services[name] = svc
+		}
+	} else {
+		services = step.Services
+	}
+
+	// Build arguments
+	args := make([]string, 0, len(services))
+	for name := range services {
+		v, err := json.Marshal(services[name])
 		if err != nil {
 			return nil, errors.Wrapf(err, "services[%s]: marshalling error", name)
 		}

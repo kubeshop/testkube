@@ -4,6 +4,7 @@ metadata:
   name: jmeter-workflow-smoke
   labels:
     core-tests: workflows
+    tool: jmeter
 spec:
   content:
     git:
@@ -34,6 +35,7 @@ metadata:
   name: jmeter-workflow-smoke-justb4-5.5
   labels:
     core-tests: workflows
+    tool: jmeter
 spec:
   content:
     git:
@@ -64,6 +66,7 @@ metadata:
   name: jmeter-workflow-smoke-shell-artifacts
   labels:
     core-tests: workflows
+    tool: jmeter
 spec:
   content:
     git:
@@ -95,6 +98,36 @@ metadata:
   name: jmeter-workflow-smoke-from-template
   labels:
     core-tests: workflows
+    tool: jmeter
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/jmeter/executor-tests/jmeter-executor-smoke.jmx
+  container:
+    resources:
+      requests:
+        cpu: 512m
+        memory: 512Mi
+    workingDir: /data/repo/test/jmeter/executor-tests
+  steps:
+  - name: Run from template
+    template:
+      name: official/jmeter/v2
+      config:
+        run: "jmeter -n -t jmeter-executor-smoke.jmx -j /data/artifacts/jmeter.log -o /data/artifacts/report -l /data/artifacts/jtl-report.jtl -e"
+    artifacts:
+      paths:
+      - '/data/artifacts/**/*'
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: jmeter-workflow-smoke-from-template-v1
+  labels:
+    core-tests: workflows
 spec:
   content:
     git:
@@ -114,12 +147,41 @@ spec:
       name: official/jmeter/v1
       config:
         run: "jmeter -n -t jmeter-executor-smoke.jmx -j /data/artifacts/jmeter.log -o /data/artifacts/report -l /data/artifacts/jtl-report.jtl -e"
+    artifacts:
+      paths:
+      - '/data/artifacts/**/*'
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: jmeter-workflow-smoke-from-template-separate-artifacts-step
+  labels:
+    core-tests: workflows
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/jmeter/executor-tests/jmeter-executor-smoke.jmx
+  container:
+    resources:
+      requests:
+        cpu: 512m
+        memory: 512Mi
+    workingDir: /data/repo/test/jmeter/executor-tests
+  steps:
+  - name: Run from template
+    template:
+      name: official/jmeter/v2
+      config:
+        run: "jmeter -n -t jmeter-executor-smoke.jmx -j /data/artifacts/jmeter.log -o /data/artifacts/report -l /data/artifacts/jtl-report.jtl -e"
     steps:
     - name: Save artifacts
       workingDir: /data/artifacts
       artifacts:
         paths:
-        - '**/*'
+        - '/data/artifacts/**/*'
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -127,6 +189,7 @@ metadata:
   name: distributed-jmeter-workflow-smoke
   labels:
     core-tests: workflows
+    tool: jmeter
 spec:
   content:
     git:
@@ -141,7 +204,7 @@ spec:
       use:
       - name: distribute/evenly
       count: 5
-      timeout: 30s # initialization timeout
+      timeout: 120s # initialization timeout
       logs: 'always'
       image: alpine/jmeter:5.6
       command:
@@ -179,6 +242,7 @@ metadata:
   name: distributed-jmeter-workflow-smoke-shell-artifacts
   labels:
     core-tests: workflows
+    tool: jmeter
 spec:
   content:
     git:
@@ -188,15 +252,12 @@ spec:
       - test/jmeter/executor-tests/jmeter-executor-smoke.jmx
   container:
     workingDir: /data/repo/test/jmeter/executor-tests
-
-  pod:
-    serviceAccountName: testkube-api-server
   services:
     slave:
       use:
       - name: distribute/evenly
       count: 5
-      timeout: 30s # initialization timeout
+      timeout: 120s # initialization timeout
       logs: 'always'
       image: alpine/jmeter:5.6
       command:

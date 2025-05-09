@@ -121,7 +121,7 @@ func NewInitCmd() *cobra.Command {
 			ui.H2("Saving Testkube CLI Pro context")
 			var token, refreshToken string
 			if !common.IsUserLoggedIn(cfg, options) {
-				token, refreshToken, err = common.LoginUser(options.Master.URIs.Auth, options.Master.CustomAuth)
+				token, refreshToken, err = common.LoginUser(options.Master.URIs.Auth, options.Master.CustomAuth, options.Master.CallbackPort)
 				sendErrTelemetry(cmd, cfg, "login", err)
 				ui.ExitOnError("user login", err)
 			}

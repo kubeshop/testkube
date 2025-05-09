@@ -26,9 +26,11 @@ type ClusterObject struct {
 	clientSet   *kubernetes.Clientset
 	kubeClient  client.Client
 	versionInfo *version.Info
+	forcedOs    string
+	forcedArch  string
 }
 
-func NewCluster() (*ClusterObject, error) {
+func NewCluster(forcedOs, forcedArchitecture string) (*ClusterObject, error) {
 	config, err := rest.InClusterConfig()
 	if err != nil {
 		config, err = k8sclient.GetK8sClientConfig()
@@ -54,6 +56,8 @@ func NewCluster() (*ClusterObject, error) {
 		kubeClient:  kubeClient,
 		versionInfo: info,
 		cfg:         config,
+		forcedOs:    forcedOs,
+		forcedArch:  forcedArchitecture,
 	}, nil
 }
 
@@ -69,8 +73,8 @@ func (c *ClusterObject) Config() *rest.Config {
 	return c.cfg
 }
 
-func (c *ClusterObject) Namespace(name string) *NamespaceObject {
-	return NewNamespace(c.clientSet, c.cfg, name)
+func (c *ClusterObject) Namespace(name, executionName string) *NamespaceObject {
+	return NewNamespace(c.clientSet, c.cfg, name, executionName)
 }
 
 func (c *ClusterObject) Host() string {
@@ -78,9 +82,15 @@ func (c *ClusterObject) Host() string {
 }
 
 func (c *ClusterObject) OperatingSystem() string {
+	if c.forcedOs != "" {
+		return c.forcedOs
+	}
 	return strings.Split(c.versionInfo.Platform, "/")[0]
 }
 
 func (c *ClusterObject) Architecture() string {
+	if c.forcedArch != "" {
+		return c.forcedArch
+	}
 	return strings.Split(c.versionInfo.Platform, "/")[1]
 }

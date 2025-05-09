@@ -23,6 +23,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowresolver"
 )
 
 //go:generate mockgen -destination=./mock_processor.go -package=testworkflowprocessor "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor" Processor
@@ -44,7 +45,9 @@ type processor struct {
 }
 
 func New(inspector imageinspector.Inspector) Processor {
-	return &processor{inspector: inspector}
+	return &processor{
+		inspector: inspector,
+	}
 }
 
 func (p *processor) Register(operation Operation) Processor {
@@ -320,11 +323,14 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	containers := make([]corev1.Container, len(actionGroups))
 	for i := range actionGroups {
 		var bareActions []actiontypes.Action
-		containers[i], bareActions, err = action.CreateContainer(i, layer.ContainerDefaults(), actionGroups[i], usesToolkit)
+		var globalEnv []testworkflowsv1.EnvVar
+		containers[i], globalEnv, bareActions, err = action.CreateContainer(i, layer.ContainerDefaults(), actionGroups[i], usesToolkit)
 		actionGroups[i] = bareActions
 		if err != nil {
 			return nil, errors.Wrap(err, "building Kubernetes containers")
 		}
+
+		options.Config.Execution.GlobalEnv = testworkflowresolver.DedupeEnvVars(append(options.Config.Execution.GlobalEnv, globalEnv...))
 	}
 
 	for i := range containers {
@@ -366,6 +372,13 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		}
 	}
 
+	// Append common environment variables
+	if len(options.CommonEnvVariables) > 0 {
+		for i := range containers {
+			containers[i].Env = append(options.CommonEnvVariables, containers[i].Env...)
+		}
+	}
+
 	// Build pod template
 	if podConfig.SecurityContext == nil {
 		podConfig.SecurityContext = &corev1.PodSecurityContext{}
@@ -373,6 +386,15 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	if podConfig.SecurityContext.FSGroup == nil {
 		podConfig.SecurityContext.FSGroup = common.Ptr(constants.DefaultFsGroup)
 	}
+	hostPID := false
+	if podConfig.HostPID != nil {
+		if options.AllowLowSecurityFields {
+			hostPID = *podConfig.HostPID
+		} else {
+			return nil, errors.New("low security fields are not allowed")
+		}
+	}
+
 	podSpec := corev1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: podConfig.Annotations,
@@ -401,6 +423,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 			TopologySpreadConstraints: podConfig.TopologySpreadConstraints,
 			SchedulingGates:           podConfig.SchedulingGates,
 			ResourceClaims:            podConfig.ResourceClaims,
+			HostPID:                   hostPID,
 		},
 	}
 	AnnotateControlledBy(&podSpec, options.Config.Resource.RootId, options.Config.Resource.Id)

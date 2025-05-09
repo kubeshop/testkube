@@ -5,14 +5,18 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	opcrd "github.com/kubeshop/testkube-operator/config/crd"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 func TestGenerateYAML(t *testing.T) {
+	t.Parallel()
 
 	t.Run("generate single CRD yaml", func(t *testing.T) {
+		t.Parallel()
+
 		// given
-		expected := "apiVersion: executor.testkube.io/v1\nkind: Webhook\nmetadata:\n  name: name1\n  namespace: namespace1\n  labels:\n    key1: value1\n  annotations:\n    key2: value2  \nspec:\n  events:\n  - start-test\n  uri: http://localhost\n  selector: app=backend\n  payloadObjectField: text\n  payloadTemplate: {{ .Id }}\n  payloadTemplateReference: ref\n  headers:\n    Content-Type: appication/xml\n  disabled: true\n  config:\n    var1:\n      value: pb\n    var2:\n      secret:\n        namespace: ns\n        name: secret\n        key: pr\n  parameters:\n    - name: var3\n      description: descr\n      required: true\n      example: 12345\n      default: 0\n      pattern: [0-9]*\n  webhookTemplateRef:\n    name: tmpl\n"
+		expected := "apiVersion: executor.testkube.io/v1\nkind: Webhook\nmetadata:\n  name: name1\n  namespace: namespace1\n  labels:\n    key1: value1\n  annotations:\n    key2: value2  \nspec:\n  events:\n  - start-test\n  uri: http://localhost\n  selector: app=backend\n  payloadObjectField: text\n  payloadTemplateReference: ref\n  headers:\n    Content-Type: appication/xml\n  disabled: true\n  config:\n    var1:\n      value: pb\n    var2:\n      secret:\n        namespace: ns\n        name: secret\n        key: pr\n  parameters:\n    - name: var3\n      description: descr\n      required: true\n      example: 12345\n      default: 0\n      pattern: [0-9]*\n  webhookTemplateRef:\n    name: tmpl\n  {{ .Id }}\n"
 		webhooks := []testkube.Webhook{
 			{
 				Name:                     "name1",
@@ -57,8 +61,10 @@ func TestGenerateYAML(t *testing.T) {
 	})
 
 	t.Run("generate multiple CRDs yaml", func(t *testing.T) {
+		t.Parallel()
+
 		// given
-		expected := "apiVersion: executor.testkube.io/v1\nkind: Webhook\nmetadata:\n  name: name1\n  namespace: namespace1\n  labels:\n    key1: value1\n  annotations:\n    key3: value3  \nspec:\n  events:\n  - start-test\n  uri: http://localhost\n  selector: app=backend\n  payloadObjectField: text\n  payloadTemplate: {{ .Id }}\n  payloadTemplateReference: ref\n  headers:\n    Content-Type: appication/xml\n  disabled: true\n  config:\n    var1:\n      value: pb\n    var2:\n      secret:\n        namespace: ns\n        name: secret\n        key: pr\n  parameters:\n    - name: var3\n      description: descr\n      required: true\n      example: 12345\n      default: 0\n      pattern: [0-9]*\n  webhookTemplateRef:\n    name: tmpl\n\n---\napiVersion: executor.testkube.io/v1\nkind: Webhook\nmetadata:\n  name: name2\n  namespace: namespace2\n  labels:\n    key2: value2\n  annotations:\n    key4: value4  \nspec:\n  events:\n  - end-test-success\n  uri: http://localhost\n  selector: app=backend\n  payloadObjectField: text\n  payloadTemplate: {{ .Id }}\n  payloadTemplateReference: ref\n  headers:\n    Content-Type: appication/xml\n  disabled: true\n  config:\n    var1:\n      value: pb\n    var2:\n      secret:\n        namespace: ns\n        name: secret\n        key: pr\n  parameters:\n    - name: var3\n      description: descr\n      required: true\n      example: 12345\n      default: 0\n      pattern: [0-9]*\n  webhookTemplateRef:\n    name: tmpl\n"
+		expected := "apiVersion: executor.testkube.io/v1\nkind: Webhook\nmetadata:\n  name: name1\n  namespace: namespace1\n  labels:\n    key1: value1\n  annotations:\n    key3: value3  \nspec:\n  events:\n  - start-test\n  uri: http://localhost\n  selector: app=backend\n  payloadObjectField: text\n  payloadTemplateReference: ref\n  headers:\n    Content-Type: appication/xml\n  disabled: true\n  config:\n    var1:\n      value: pb\n    var2:\n      secret:\n        namespace: ns\n        name: secret\n        key: pr\n  parameters:\n    - name: var3\n      description: descr\n      required: true\n      example: 12345\n      default: 0\n      pattern: [0-9]*\n  webhookTemplateRef:\n    name: tmpl\n  {{ .Id }}\n\n---\napiVersion: executor.testkube.io/v1\nkind: Webhook\nmetadata:\n  name: name2\n  namespace: namespace2\n  labels:\n    key2: value2\n  annotations:\n    key4: value4  \nspec:\n  events:\n  - end-test-success\n  uri: http://localhost\n  selector: app=backend\n  payloadObjectField: text\n  payloadTemplateReference: ref\n  headers:\n    Content-Type: appication/xml\n  disabled: true\n  config:\n    var1:\n      value: pb\n    var2:\n      secret:\n        namespace: ns\n        name: secret\n        key: pr\n  parameters:\n    - name: var3\n      description: descr\n      required: true\n      example: 12345\n      default: 0\n      pattern: [0-9]*\n  webhookTemplateRef:\n    name: tmpl\n  {{ .Id }}\n"
 		webhooks := []testkube.Webhook{
 			{
 				Name:                     "name1",
@@ -134,6 +140,8 @@ func TestGenerateYAML(t *testing.T) {
 		assert.Equal(t, expected, result)
 	})
 	t.Run("generate executor CRD yaml", func(t *testing.T) {
+		t.Parallel()
+
 		// given
 		expected := "apiVersion: executor.testkube.io/v1\nkind: Executor\nmetadata:\n  name: name1\n  namespace: namespace1\n  labels:\n    key1: value1\nspec:\n  types:\n  - custom-curl-container/test\n  executor_type: container\n  image: docker.io/curlimages/curl:latest\n  args:\n  - -v\n  - test\n  command:\n  - curl\n  imagePullSecrets:\n  - name: secret-name\n  features:\n  - artifacts\n  content_types:\n  - git-file\n  - git-dir\n  meta:\n    iconURI: http://mydomain.com/icon.jpg\n    docsURI: http://mydomain.com/docs\n    tooltips:\n      name: please enter executor name\n  useDataDirAsWorkingDir: true\n"
 		executors := []testkube.ExecutorUpsertRequest{
@@ -172,6 +180,8 @@ func TestGenerateYAML(t *testing.T) {
 		assert.Equal(t, expected, result)
 	})
 	t.Run("generate test CRD yaml", func(t *testing.T) {
+		t.Parallel()
+
 		// given
 		expected := "apiVersion: tests.testkube.io/v3\nkind: Test\nmetadata:\n  name: name1\n  namespace: namespace1\n  labels:\n    key1: value1\nspec:\n  executionRequest:\n    name: execution-name\n    args:\n      - -v\n      - test\n    image: docker.io/curlimages/curl:latest\n    command:\n    - curl\n    imagePullSecrets:\n    - name: secret-name\n    negativeTest: true\n    activeDeadlineSeconds: 10\n"
 		tests := []testkube.TestUpsertRequest{
@@ -201,6 +211,50 @@ func TestGenerateYAML(t *testing.T) {
 		// then
 		assert.NoError(t, err)
 		assert.Equal(t, expected, result)
+	})
+
+}
+func TestValidateYAMLAgainstSchema(t *testing.T) {
+	t.Parallel()
+
+	t.Run("valid CRD yaml", func(t *testing.T) {
+		t.Parallel()
+
+		// given
+		validYaml := `
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: test
+  namespace: testkube
+spec:
+  steps:
+    - name: Run test
+      shell: echo 'Hello, world!'
+`
+		// when
+		err := ValidateYAMLAgainstSchema(opcrd.SchemaTestWorkflow, []byte(validYaml))
+
+		// then
+		assert.NoError(t, err)
+	})
+
+	t.Run("invalid CRD yaml", func(t *testing.T) {
+		t.Parallel()
+
+		// given
+		validYaml := `
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: test
+  namespace: testkube
+`
+		// when
+		err := ValidateYAMLAgainstSchema(opcrd.SchemaTestWorkflow, []byte(validYaml))
+
+		// then
+		assert.Error(t, err)
 	})
 
 }

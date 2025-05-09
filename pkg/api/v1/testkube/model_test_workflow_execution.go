@@ -40,9 +40,10 @@ type TestWorkflowExecution struct {
 	// additional information from the steps, like referenced executed tests or artifacts
 	Output []TestWorkflowOutput `json:"output,omitempty"`
 	// generated reports from the steps, like junit
-	Reports          []TestWorkflowReport `json:"reports,omitempty"`
-	Workflow         *TestWorkflow        `json:"workflow"`
-	ResolvedWorkflow *TestWorkflow        `json:"resolvedWorkflow,omitempty"`
+	Reports              []TestWorkflowReport                             `json:"reports,omitempty"`
+	ResourceAggregations *TestWorkflowExecutionResourceAggregationsReport `json:"resourceAggregations,omitempty"`
+	Workflow             *TestWorkflow                                    `json:"workflow"`
+	ResolvedWorkflow     *TestWorkflow                                    `json:"resolvedWorkflow,omitempty"`
 	// test workflow execution name started the test workflow execution
 	TestWorkflowExecutionName string `json:"testWorkflowExecutionName,omitempty"`
 	// whether webhooks on the execution of this test workflow are disabled

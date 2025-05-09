@@ -1,6 +1,7 @@
 package stage
 
 import (
+	"fmt"
 	"maps"
 	"path/filepath"
 	"slices"
@@ -30,7 +31,7 @@ type ContainerComposition interface {
 }
 
 type ContainerAccessors interface {
-	Env() []corev1.EnvVar
+	Env() []testworkflowsv1.EnvVar
 	EnvFrom() []corev1.EnvFromSource
 	VolumeMounts() []corev1.VolumeMount
 
@@ -110,7 +111,7 @@ func (c *container) CreateChild() Container {
 
 // Getters
 
-func (c *container) Env() []corev1.EnvVar {
+func (c *container) Env() []testworkflowsv1.EnvVar {
 	if c.parent == nil {
 		return c.Cr.Env
 	}
@@ -175,14 +176,17 @@ func (c *container) WorkingDir() string {
 	if c.parent == nil {
 		return path
 	}
-	if filepath.IsAbs(path) {
-		return path
+	firstParam := c.parent.WorkingDir()
+	secondParam := path
+	for _, param := range []*string{&firstParam, &secondParam} {
+		*param = strings.TrimSpace(*param)
+		if strings.HasPrefix(*param, "{{") && strings.HasSuffix(*param, "}}") {
+			*param = strings.TrimSuffix(strings.TrimPrefix(*param, "{{"), "}}")
+		} else {
+			*param = fmt.Sprintf("%q", *param)
+		}
 	}
-	parentPath := c.parent.WorkingDir()
-	if parentPath == "" {
-		return path
-	}
-	return filepath.Join(parentPath, path)
+	return fmt.Sprintf("{{makepath(%s, %s)}}", firstParam, secondParam)
 }
 
 func (c *container) Resources() (r testworkflowsv1.Resources) {
@@ -237,7 +241,9 @@ func (c *container) AppendEnv(env ...corev1.EnvVar) Container {
 			break
 		}
 	}
-	c.Cr.Env = append(c.Cr.Env, env...)
+	c.Cr.Env = append(c.Cr.Env, common.MapSlice(env, func(e corev1.EnvVar) testworkflowsv1.EnvVar {
+		return testworkflowsv1.EnvVar{EnvVar: e}
+	})...)
 	if needsDedupe {
 		c.Cr.Env = testworkflowresolver.DedupeEnvVars(c.Cr.Env)
 	}
@@ -246,7 +252,7 @@ func (c *container) AppendEnv(env ...corev1.EnvVar) Container {
 
 func (c *container) AppendEnvMap(env map[string]string) Container {
 	for k, v := range env {
-		c.Cr.Env = append(c.Cr.Env, corev1.EnvVar{Name: k, Value: v})
+		c.Cr.Env = append(c.Cr.Env, testworkflowsv1.EnvVar{EnvVar: corev1.EnvVar{Name: k, Value: v}})
 	}
 	return c
 }
@@ -377,7 +383,9 @@ func (c *container) ToKubernetesTemplate() (corev1.Container, error) {
 		ImagePullPolicy: cr.ImagePullPolicy,
 		Command:         command,
 		Args:            args,
-		Env:             cr.Env,
+		Env: common.MapSlice(cr.Env, func(e testworkflowsv1.EnvVar) corev1.EnvVar {
+			return corev1.EnvVar{Name: e.Name, Value: e.Value, ValueFrom: e.ValueFrom}
+		}),
 		EnvFrom:         cr.EnvFrom,
 		VolumeMounts:    cr.VolumeMounts,
 		Resources:       resources,

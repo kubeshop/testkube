@@ -3,15 +3,19 @@ package webhook
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
+	"sort"
 	"text/template"
 
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 
+	executorv1 "github.com/kubeshop/testkube-operator/api/executor/v1"
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	v1 "github.com/kubeshop/testkube/internal/app/api/metrics"
 	"github.com/kubeshop/testkube/internal/config"
@@ -21,6 +25,7 @@ import (
 	thttp "github.com/kubeshop/testkube/pkg/http"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
+	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/utils"
 	"github.com/kubeshop/testkube/pkg/utils/text"
 )
@@ -33,9 +38,11 @@ func NewWebhookListener(name, uri, selector string, events []testkube.EventType,
 	testWorkflowExecutionResults testworkflow.Repository,
 	metrics v1.Metrics,
 	webhookRepository cloudwebhook.WebhookRepository,
+	secretClient secret.Interface,
 	proContext *config.ProContext,
 	envs map[string]string,
-	config map[string]string,
+	config map[string]executorv1.WebhookConfigValue,
+	parameters []executorv1.WebhookParameterSchema,
 ) *WebhookListener {
 	return &WebhookListener{
 		name:                         name,
@@ -52,9 +59,11 @@ func NewWebhookListener(name, uri, selector string, events []testkube.EventType,
 		testWorkflowExecutionResults: testWorkflowExecutionResults,
 		metrics:                      metrics,
 		webhookRepository:            webhookRepository,
+		secretClient:                 secretClient,
 		proContext:                   proContext,
 		envs:                         envs,
 		config:                       config,
+		parameters:                   parameters,
 	}
 }
 
@@ -73,9 +82,11 @@ type WebhookListener struct {
 	testWorkflowExecutionResults testworkflow.Repository
 	metrics                      v1.Metrics
 	webhookRepository            cloudwebhook.WebhookRepository
+	secretClient                 secret.Interface
 	proContext                   *config.ProContext
 	envs                         map[string]string
-	config                       map[string]string
+	config                       map[string]executorv1.WebhookConfigValue
+	parameters                   []executorv1.WebhookParameterSchema
 }
 
 func (l *WebhookListener) Name() string {
@@ -90,15 +101,32 @@ func (l *WebhookListener) Events() []testkube.EventType {
 	return l.events
 }
 func (l *WebhookListener) Metadata() map[string]string {
+	headers, err := getMapHashedMetadata(l.headers)
+	if err != nil {
+		l.Log.Errorw("headers hashing error", "error", err)
+	}
+
+	config, err := getMapHashedMetadata(l.config)
+	if err != nil {
+		l.Log.Errorw("config hashing error", "error", err)
+	}
+
+	parameters, err := getSliceHashedMetadata(l.parameters)
+	if err != nil {
+		l.Log.Errorw("parameters hashing error", "error", err)
+	}
+
 	return map[string]string{
 		"name":               l.Name(),
 		"uri":                l.Uri,
 		"selector":           l.selector,
 		"events":             fmt.Sprintf("%v", l.events),
 		"payloadObjectField": l.payloadObjectField,
-		"payloadTemplate":    l.payloadTemplate,
-		"headers":            fmt.Sprintf("%v", l.headers),
+		"payloadTemplate":    getTextHashedMetadata([]byte(l.payloadTemplate)),
+		"headers":            headers,
 		"disabled":           fmt.Sprint(l.disabled),
+		"config":             config,
+		"parameters":         parameters,
 	}
 }
 
@@ -290,8 +318,62 @@ func (l *WebhookListener) processTemplate(field, body string, event testkube.Eve
 		return nil, err
 	}
 
+	config := make(map[string]string)
+	for key, val := range l.config {
+		var data string
+		if val.Value != nil {
+			data = *val.Value
+		}
+
+		if val.Secret != nil {
+			var ns []string
+			if val.Secret.Namespace != "" {
+				ns = append(ns, val.Secret.Namespace)
+			}
+
+			elements, err := l.secretClient.Get(val.Secret.Name, ns...)
+			if err != nil {
+				log.Errorw("error secret loading", "error", err, "name", val.Secret.Name)
+				return nil, err
+			}
+
+			if element, ok := elements[val.Secret.Key]; ok {
+				data = element
+			} else {
+				log.Errorw("error secret key finding loading", "name", val.Secret.Name, "key", val.Secret.Key)
+				return nil, errors.New("error secret key finding loading")
+			}
+		}
+
+		config[key] = data
+	}
+
+	for _, parameter := range l.parameters {
+		if _, ok := config[parameter.Name]; !ok {
+			if parameter.Default_ != nil {
+				config[parameter.Name] = *parameter.Default_
+			} else if parameter.Required {
+				log.Errorw("error missing required parameter", "name", parameter.Name)
+				return nil, errors.New("error missing required parameter")
+			}
+		}
+
+		if parameter.Pattern != "" {
+			re, err := regexp.Compile(parameter.Pattern)
+			if err != nil {
+				log.Errorw("error compiling pattern", "error", err, "name", parameter.Name, "pattern", parameter.Pattern)
+				return nil, err
+			}
+
+			if data, ok := config[parameter.Name]; ok && !re.MatchString(data) {
+				log.Errorw("error matching pattern", "error", err, "name", parameter.Name, "pattern", parameter.Pattern)
+				return nil, errors.New("error matching pattern")
+			}
+		}
+	}
+
 	var buffer bytes.Buffer
-	if err = tmpl.ExecuteTemplate(&buffer, field, NewTemplateVars(event, l.proContext, l.config)); err != nil {
+	if err = tmpl.ExecuteTemplate(&buffer, field, NewTemplateVars(event, l.proContext, config)); err != nil {
 		log.Errorw(fmt.Sprintf("executing webhook %s error", field), "error", err)
 		return nil, err
 	}
@@ -345,4 +427,41 @@ func (l *WebhookListener) hasBecomeState(event testkube.Event) (bool, error) {
 	}
 
 	return false, nil
+}
+
+type configKeyValue[T any] struct {
+	Key   string
+	Value T
+}
+
+type configKeyValues[T any] []configKeyValue[T]
+
+// getMapHashedMetadata returns map hashed metadata
+func getMapHashedMetadata[T any](data map[string]T) (string, error) {
+	var slice configKeyValues[T]
+	for key, value := range data {
+		slice = append(slice, configKeyValue[T]{Key: key, Value: value})
+	}
+
+	sort.Slice(slice, func(i, j int) bool {
+		return slice[i].Key < slice[j].Key
+	})
+
+	return getSliceHashedMetadata(slice)
+}
+
+// getSliceHashedMetadata returns slice hashed metadata
+func getSliceHashedMetadata[T any](slice []T) (string, error) {
+	result, err := json.Marshal(slice)
+	if err != nil {
+		return "", err
+	}
+
+	return getTextHashedMetadata(result), nil
+}
+
+// getTextHashedMetadata returns text hashed metadata
+func getTextHashedMetadata(result []byte) string {
+
+	return fmt.Sprintf("%x", sha256.Sum256(result))
 }

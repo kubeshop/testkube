@@ -9,7 +9,11 @@
  */
 package testkube
 
-import "fmt"
+import (
+	"fmt"
+
+	"gopkg.in/yaml.v3"
+)
 
 type Webhooks []Webhook
 
@@ -48,7 +52,7 @@ func (w Webhook) GetAnnotations() map[string]string {
 
 func (w *Webhook) QuoteTextFields() {
 	if w.PayloadTemplate != "" {
-		w.PayloadTemplate = fmt.Sprintf("%q", w.PayloadTemplate)
+		w.PayloadTemplate, _ = printPayloadTemplate(w.PayloadTemplate)
 	}
 
 	for key, val := range w.Config {
@@ -77,4 +81,16 @@ func (w *Webhook) QuoteTextFields() {
 
 		w.Parameters[key] = value
 	}
+}
+
+func printPayloadTemplate(text string) (string, error) {
+	data := struct {
+		PayloadTemplate string `yaml:"payloadTemplate"`
+	}{PayloadTemplate: text}
+	yamlData, err := yaml.Marshal(&data)
+	if err != nil {
+		return "", err
+	}
+
+	return string(yamlData), nil
 }

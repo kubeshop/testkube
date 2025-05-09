@@ -54,12 +54,13 @@ func NewWorker(clientSet kubernetes.Interface, processor testworkflowprocessor.P
 		clientSet: clientSet,
 		processor: processor,
 		config:    config,
-		registry:  registry.NewControllersRegistry(clientSet, namespaces, 50),
+		registry:  registry.NewControllersRegistry(clientSet, namespaces, config.RunnerId, 50),
 		baseWorkerConfig: testworkflowconfig.WorkerConfig{
 			Namespace:                         config.Cluster.DefaultNamespace,
 			DefaultRegistry:                   config.Cluster.DefaultRegistry,
 			DefaultServiceAccount:             config.Cluster.Namespaces[config.Cluster.DefaultNamespace].DefaultServiceAccountName,
 			ClusterID:                         config.Cluster.Id,
+			RunnerID:                          config.RunnerId,
 			InitImage:                         constants.DefaultInitImage,
 			ToolkitImage:                      constants.DefaultToolkitImage,
 			ImageInspectorPersistenceEnabled:  config.ImageInspector.CacheEnabled,
@@ -67,6 +68,8 @@ func NewWorker(clientSet kubernetes.Interface, processor testworkflowprocessor.P
 			ImageInspectorPersistenceCacheTTL: config.ImageInspector.CacheTTL,
 			Connection:                        config.Connection,
 			FeatureFlags:                      config.FeatureFlags,
+			CommonEnvVariables:                config.CommonEnvVariables,
+			AllowLowSecurityFields:            config.AllowLowSecurityFields,
 		},
 	}
 }
@@ -133,7 +136,13 @@ func (w *worker) Execute(ctx context.Context, request executionworkertypes.Execu
 	}
 
 	// Process the Test Workflow
-	bundle, err := w.processor.Bundle(ctx, &request.Workflow, testworkflowprocessor.BundleOptions{Config: cfg, Secrets: secrets, ScheduledAt: scheduledAt})
+	bundle, err := w.processor.Bundle(ctx, &request.Workflow, testworkflowprocessor.BundleOptions{
+		Config:                 cfg,
+		Secrets:                secrets,
+		ScheduledAt:            scheduledAt,
+		CommonEnvVariables:     w.baseWorkerConfig.CommonEnvVariables,
+		AllowLowSecurityFields: w.baseWorkerConfig.AllowLowSecurityFields,
+	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to process test workflow")
 	}
@@ -141,6 +150,11 @@ func (w *worker) Execute(ctx context.Context, request executionworkertypes.Execu
 	// Annotate the group ID
 	if request.GroupId != "" {
 		bundle.SetGroupId(request.GroupId)
+	}
+
+	// Annotate the runner ID
+	if w.config.RunnerId != "" {
+		bundle.SetRunnerId(w.config.RunnerId)
 	}
 
 	// Register namespace information in the cache
@@ -180,7 +194,13 @@ func (w *worker) Service(ctx context.Context, request executionworkertypes.Servi
 	}
 
 	// Process the Test Workflow
-	bundle, err := w.processor.Bundle(ctx, &request.Workflow, testworkflowprocessor.BundleOptions{Config: cfg, Secrets: secrets, ScheduledAt: scheduledAt})
+	bundle, err := w.processor.Bundle(ctx, &request.Workflow, testworkflowprocessor.BundleOptions{
+		Config:                 cfg,
+		Secrets:                secrets,
+		ScheduledAt:            scheduledAt,
+		CommonEnvVariables:     w.baseWorkerConfig.CommonEnvVariables,
+		AllowLowSecurityFields: w.baseWorkerConfig.AllowLowSecurityFields,
+	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to process test workflow")
 	}
@@ -235,7 +255,7 @@ func (w *worker) Notifications(ctx context.Context, id string, opts executionwor
 
 	// Watch the resource
 	watchCtx, watchCtxCancel := context.WithCancel(ctx)
-	ch := ctrl.Watch(watchCtx, opts.NoFollow)
+	ch := ctrl.Watch(watchCtx, opts.NoFollow, w.config.LogAbortedDetails)
 	go func() {
 		defer func() {
 			watchCtxCancel()
@@ -271,7 +291,7 @@ func (w *worker) StatusNotifications(ctx context.Context, id string, opts execut
 	// Watch the resource
 	watchCtx, watchCtxCancel := context.WithCancel(ctx)
 	sig := stage.MapSignatureListToInternal(ctrl.Signature())
-	ch := ctrl.Watch(watchCtx, opts.NoFollow)
+	ch := ctrl.Watch(watchCtx, opts.NoFollow, w.config.LogAbortedDetails)
 	go func() {
 		defer func() {
 			watchCtxCancel()
@@ -361,7 +381,7 @@ func (w *worker) Logs(ctx context.Context, id string, options executionworkertyp
 		defer reader.Close()
 		ref := ""
 		for v := range notifications.Channel() {
-			if v.Log != "" && !v.Temporary {
+			if v.Log != "" {
 				if ref != v.Ref && v.Ref != "" {
 					ref = v.Ref
 					_, _ = reader.Write([]byte(instructions.SprintHint(ref, initconstants.InstructionStart)))
@@ -374,7 +394,42 @@ func (w *worker) Logs(ctx context.Context, id string, options executionworkertyp
 }
 
 func (w *worker) Get(ctx context.Context, id string, options executionworkertypes.GetOptions) (*executionworkertypes.GetResult, error) {
-	panic("not implemented")
+	// Connect to the resource
+	// TODO: Move the implementation directly there
+	ctrl, err, recycle := w.registry.Connect(ctx, id, options.Hints)
+	if err != nil {
+		return nil, err
+	}
+	defer recycle()
+
+	cfg, err := ctrl.InternalConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := ctrl.EstimatedResult(ctx)
+	if err != nil {
+		log.DefaultLogger.Warnw("failed to estimate result", "id", id, "error", err)
+		result = &testkube.TestWorkflowResult{}
+	}
+
+	for notification := range ctrl.Watch(ctx, true, false) {
+		if notification.Error != nil {
+			continue
+		}
+		if notification.Value.Result != nil {
+			result = notification.Value.Result
+		}
+	}
+
+	return &executionworkertypes.GetResult{
+		Execution: cfg.Execution,
+		Workflow:  cfg.Workflow,
+		Resource:  cfg.Resource,
+		Signature: stage.MapSignatureListToInternal(ctrl.Signature()),
+		Result:    *result,
+		Namespace: ctrl.Namespace(),
+	}, nil
 }
 
 func (w *worker) Summary(ctx context.Context, id string, options executionworkertypes.GetOptions) (*executionworkertypes.SummaryResult, error) {

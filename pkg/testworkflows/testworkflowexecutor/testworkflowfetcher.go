@@ -3,6 +3,7 @@ package testworkflowexecutor
 import (
 	"context"
 	"maps"
+	"sync"
 
 	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
@@ -21,7 +22,7 @@ const (
 type testWorkflowFetcher struct {
 	client           testworkflowclient.TestWorkflowClient
 	environmentId    string
-	cache            map[string]*testkube.TestWorkflow
+	cache            sync.Map
 	prefetchedLabels []map[string]string
 }
 
@@ -29,7 +30,6 @@ func NewTestWorkflowFetcher(client testworkflowclient.TestWorkflowClient, enviro
 	return &testWorkflowFetcher{
 		client:        client,
 		environmentId: environmentId,
-		cache:         make(map[string]*testkube.TestWorkflow),
 	}
 }
 
@@ -42,21 +42,21 @@ func (r *testWorkflowFetcher) PrefetchByLabelSelector(labels map[string]string) 
 		return errors.Wrapf(err, "cannot fetch Test Workflows by label selector: %v", labels)
 	}
 	for i := range workflows {
-		r.cache[workflows[i].Name] = &workflows[i]
+		r.cache.Store(workflows[i].Name, &workflows[i])
 	}
 	r.prefetchedLabels = append(r.prefetchedLabels, labels)
 	return nil
 }
 
 func (r *testWorkflowFetcher) PrefetchByName(name string) error {
-	if _, ok := r.cache[name]; ok {
+	if _, ok := r.cache.Load(name); ok {
 		return nil
 	}
 	workflow, err := r.client.Get(context.Background(), r.environmentId, name)
 	if err != nil {
 		return errors.Wrapf(err, "cannot fetch Test Workflow by name: %s", name)
 	}
-	r.cache[name] = workflow
+	r.cache.Store(name, workflow)
 	return nil
 }
 
@@ -103,13 +103,15 @@ func (r *testWorkflowFetcher) PrefetchMany(selectors []*cloud.ScheduleResourceSe
 }
 
 func (r *testWorkflowFetcher) GetByName(name string) (*testkube.TestWorkflow, error) {
-	if r.cache[name] == nil {
+	v, ok := r.cache.Load(name)
+	if !ok {
 		err := r.PrefetchByName(name)
 		if err != nil {
 			return nil, err
 		}
+		v, _ = r.cache.Load(name)
 	}
-	return r.cache[name], nil
+	return v.(*testkube.TestWorkflow), nil
 }
 
 func (r *testWorkflowFetcher) GetByLabelSelector(labels map[string]string) ([]*testkube.TestWorkflow, error) {
@@ -120,15 +122,15 @@ func (r *testWorkflowFetcher) GetByLabelSelector(labels map[string]string) ([]*t
 		}
 	}
 	result := make([]*testkube.TestWorkflow, 0)
-loop:
-	for name := range r.cache {
+	r.cache.Range(func(_, workflow any) bool {
 		for k := range labels {
-			if r.cache[name].Labels[k] != labels[k] {
-				continue loop
+			if workflow.(*testkube.TestWorkflow).Labels[k] != labels[k] {
+				return true
 			}
 		}
-		result = append(result, r.cache[name])
-	}
+		result = append(result, workflow.(*testkube.TestWorkflow))
+		return true
+	})
 	return result, nil
 }
 
@@ -144,19 +146,21 @@ func (r *testWorkflowFetcher) Get(selector *cloud.ScheduleResourceSelector) ([]*
 }
 
 func (r *testWorkflowFetcher) Names() []string {
-	names := make([]string, 0, len(r.cache))
-	for k := range r.cache {
-		names = append(names, k)
-	}
+	names := make([]string, 0)
+	r.cache.Range(func(name, _ any) bool {
+		names = append(names, name.(string))
+		return true
+	})
 	return names
 }
 
 func (r *testWorkflowFetcher) TemplateNames() map[string]struct{} {
 	result := make(map[string]struct{})
-	for k := range r.cache {
+	r.cache.Range(func(_, workflow any) bool {
 		// TODO: avoid converting to CRD
-		maps.Copy(result, testworkflowresolver.ListTemplates(testworkflows.MapAPIToKube(r.cache[k])))
-	}
+		maps.Copy(result, testworkflowresolver.ListTemplates(testworkflows.MapAPIToKube(workflow.(*testkube.TestWorkflow))))
+		return true
+	})
 	return result
 }
 

@@ -26,11 +26,19 @@ var (
 
 // TODO: add timeout?
 func call[Request any, Response any](ctx context.Context, md metadata.MD, fn func(context.Context, Request, ...grpc.CallOption) (Response, error), req Request) (Response, error) {
+	if ctx.Err() != nil {
+		var v Response
+		return v, ctx.Err()
+	}
 	return fn(metadata.NewOutgoingContext(ctx, md), req, grpcOpts...)
 }
 
 // TODO: add timeout?
 func watch[Response any](ctx context.Context, md metadata.MD, fn func(context.Context, ...grpc.CallOption) (Response, error)) (Response, error) {
+	if ctx.Err() != nil {
+		var v Response
+		return v, ctx.Err()
+	}
 	return fn(metadata.NewOutgoingContext(ctx, md), grpcOpts...)
 }
 
@@ -62,6 +70,7 @@ func processNotifications[Request notificationRequest, Response any, Srv notific
 	buildNotification func(streamId string, seqNo uint32, notification *testkube.TestWorkflowExecutionNotification) Response,
 	buildError func(streamId string, message string) Response,
 	process func(ctx context.Context, req Request) NotificationWatcher,
+	sendTimeout time.Duration,
 ) error {
 	g, ctx := errgroup.WithContext(ctx)
 	stream, err := watch(ctx, md, fn)
@@ -76,8 +85,25 @@ func processNotifications[Request notificationRequest, Response any, Srv notific
 	// Please check https://github.com/grpc/grpc-go/blob/master/Documentation/concurrency.md
 	g.Go(func() error {
 		for msg := range responses {
-			if err := stream.Send(msg); err != nil {
-				return err
+			errChan := make(chan error, 1)
+			go func() {
+				errChan <- stream.Send(msg)
+				close(errChan)
+			}()
+
+			t := time.NewTimer(sendTimeout)
+
+			select {
+			case err := <-errChan:
+				t.Stop()
+				if err != nil {
+					return err
+				}
+			case <-ctx.Done():
+				t.Stop()
+				return ctx.Err()
+			case <-t.C:
+				return fmt.Errorf("send response too slow")
 			}
 		}
 		return nil

@@ -9,8 +9,8 @@ on:
     types:
       - opened
 env:
-  ALPINE_IMAGE: alpine:3.21.3
-  BUSYBOX_IMAGE: busybox:1.37.0-musl
+  ALPINE_IMAGE: alpine:3.20.3
+  BUSYBOX_IMAGE: busybox:1.36.1-musl
 
 jobs:
   api:
@@ -808,7 +808,7 @@ jobs:
       ]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/create-github-app-token@v1
+      - uses: actions/create-github-app-token@v2
         id: app-token
         with:
           app-id: ${{ secrets.APP_ID }}

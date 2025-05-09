@@ -8,7 +8,6 @@ import (
 	"github.com/spf13/cobra"
 
 	common2 "github.com/kubeshop/testkube/cmd/kubectl-testkube/commands/common"
-	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -21,21 +20,12 @@ func NewDeleteAgentCommand() *cobra.Command {
 		Use:     "agent",
 		Aliases: []string{"runner", "gitops"},
 		Args:    cobra.ExactArgs(1),
-		Hidden:  !log.IsTrue("EXPERIMENTAL"),
 		Run: func(cmd *cobra.Command, args []string) {
 			if !uninstall && !noUninstall {
-				should := ui.Select("should it uninstall agent?", []string{"yes", "no"})
-				if should == "" {
-					ui.Failf("you need to decide whether it should uninstall or not")
-				}
-				uninstall = should == "yes"
+				uninstall = ui.Confirm("should it uninstall agent?")
 			}
 			if !deleteAgent && !noDeleteAgent {
-				should := ui.Select("should it delete agent in the Control Plane?", []string{"yes", "no"})
-				if should == "" {
-					ui.Failf("you need to decide whether it should delete agent or not")
-				}
-				deleteAgent = should == "yes"
+				deleteAgent = ui.Confirm("should it delete agent in the Control Plane?")
 			}
 			UiDeleteAgent(cmd, args[0], uninstall, deleteAgent)
 		},
@@ -54,11 +44,10 @@ func NewDeleteCRDCommand() *cobra.Command {
 		confirm bool
 	)
 	cmd := &cobra.Command{
-		Use:    "crd",
-		Args:   cobra.MaximumNArgs(0),
-		Hidden: !log.IsTrue("EXPERIMENTAL"),
+		Use:  "crd",
+		Args: cobra.MaximumNArgs(0),
 		Run: func(cmd *cobra.Command, args []string) {
-			if !confirm && ui.Select("should it uninstall CRDs?", []string{"yes", "no"}) != "yes" {
+			if !confirm && !ui.Confirm("should it uninstall CRDs?") {
 				os.Exit(1)
 			}
 

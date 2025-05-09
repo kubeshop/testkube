@@ -53,6 +53,7 @@ func CloudClient() controlplaneclient.Client {
 		}, controlplaneclient.ClientOptions{
 			StorageSkipVerify:  true,
 			ExecutionID:        cfg.Execution.Id,
+			WorkflowName:       cfg.Workflow.Name,
 			ParentExecutionIDs: strings.Split(cfg.Execution.ParentIds, "/"),
 		})
 	}

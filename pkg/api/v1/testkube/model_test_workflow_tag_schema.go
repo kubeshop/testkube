@@ -11,5 +11,6 @@ package testkube
 
 // test workflow execution tag definition
 type TestWorkflowTagSchema struct {
-	Tags map[string]string `json:"tags,omitempty"`
+	Tags   map[string]string `json:"tags,omitempty"`
+	Target *ExecutionTarget  `json:"target,omitempty"`
 }

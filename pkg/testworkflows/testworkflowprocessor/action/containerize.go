@@ -16,7 +16,7 @@ import (
 	stage2 "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
 
-func CreateContainer(groupId int, defaultContainer stage2.Container, actions []actiontypes.Action, usesToolkit bool) (cr corev1.Container, actionsCleanup []actiontypes.Action, err error) {
+func CreateContainer(groupId int, defaultContainer stage2.Container, actions []actiontypes.Action, usesToolkit bool) (cr corev1.Container, globalEnv []testworkflowsv1.EnvVar, actionsCleanup []actiontypes.Action, err error) {
 	actions = slices.Clone(actions)
 	actionsCleanup = actions
 
@@ -68,7 +68,7 @@ func CreateContainer(groupId int, defaultContainer stage2.Container, actions []a
 	if len(containerConfigs) > 0 {
 		cr, err = stage2.NewContainer().ApplyCR(&bestContainerConfig.Container.Config).ToKubernetesTemplate()
 		if err != nil {
-			return corev1.Container{}, nil, err
+			return corev1.Container{}, nil, nil, err
 		}
 
 		// Combine environment variables from each execution
@@ -81,7 +81,10 @@ func CreateContainer(groupId int, defaultContainer stage2.Container, actions []a
 				computed := strings.Contains(newEnv.Value, "{{")
 				sensitive := newEnv.ValueFrom != nil && newEnv.ValueFrom.SecretKeyRef != nil
 				newEnv.Name = actiontypes.EnvName(fmt.Sprintf("%d", i), computed, sensitive, e.Name)
-				cr.Env = append(cr.Env, newEnv)
+				cr.Env = append(cr.Env, newEnv.EnvVar)
+				if e.Global != nil && *e.Global {
+					globalEnv = append(globalEnv, e)
+				}
 			}
 			for _, e := range containerConfigs[i].Container.Config.EnvFrom {
 				newEnvFrom := *e.DeepCopy()

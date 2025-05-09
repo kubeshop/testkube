@@ -225,15 +225,10 @@ func (ag *Agent) sendResponse(ctx context.Context, stream cloud.TestKubeCloudAPI
 	t := time.NewTimer(ag.sendTimeout)
 	select {
 	case err := <-errChan:
-		if !t.Stop() {
-			<-t.C
-		}
+		t.Stop()
 		return err
 	case <-ctx.Done():
-		if !t.Stop() {
-			<-t.C
-		}
-
+		t.Stop()
 		return ctx.Err()
 	case <-t.C:
 		return errors.New("send response too slow")
@@ -251,9 +246,7 @@ func (ag *Agent) receiveCommand(ctx context.Context, stream cloud.TestKubeCloudA
 	var cmd *cloud.ExecuteRequest
 	select {
 	case resp := <-respChan:
-		if !t.Stop() {
-			<-t.C
-		}
+		t.Stop()
 
 		cmd = resp.resp
 		err := resp.err
@@ -263,10 +256,7 @@ func (ag *Agent) receiveCommand(ctx context.Context, stream cloud.TestKubeCloudA
 			return nil, err
 		}
 	case <-ctx.Done():
-		if !t.Stop() {
-			<-t.C
-		}
-
+		t.Stop()
 		return nil, ctx.Err()
 	case <-t.C:
 		return nil, errors.New("stream receive too slow")

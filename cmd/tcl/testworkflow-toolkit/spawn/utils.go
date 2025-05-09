@@ -72,8 +72,12 @@ func ExecutionWorker() executionworkertypes.Worker {
 				CacheKey:     cfg.Worker.ImageInspectorPersistenceCacheKey,
 				CacheTTL:     cfg.Worker.ImageInspectorPersistenceCacheTTL,
 			},
-			Connection:   cfg.Worker.Connection,
-			FeatureFlags: cfg.Worker.FeatureFlags,
+			Connection:             cfg.Worker.Connection,
+			FeatureFlags:           cfg.Worker.FeatureFlags,
+			RunnerId:               cfg.Worker.RunnerID,
+			CommonEnvVariables:     cfg.Worker.CommonEnvVariables,
+			LogAbortedDetails:      config.Debug(),
+			AllowLowSecurityFields: cfg.Worker.AllowLowSecurityFields,
 		})
 	}
 	return executionWorker
@@ -213,9 +217,9 @@ func ProcessFetch(transferSrv transfer.Server, fetch []testworkflowsv1.StepParal
 					Image:           config.Config().Worker.ToolkitImage,
 					ImagePullPolicy: corev1.PullIfNotPresent,
 					Command:         common.Ptr([]string{constants.DefaultToolkitPath, "transfer"}),
-					Env: []corev1.EnvVar{
-						{Name: "TK_NS", Value: config.Namespace()},
-						{Name: "TK_REF", Value: config.Ref()},
+					Env: []testworkflowsv1.EnvVar{
+						{EnvVar: corev1.EnvVar{Name: "TK_NS", Value: config.Namespace()}},
+						{EnvVar: corev1.EnvVar{Name: "TK_REF", Value: config.Ref()}},
 						stage.BypassToolkitCheck,
 						stage.BypassPure,
 					},

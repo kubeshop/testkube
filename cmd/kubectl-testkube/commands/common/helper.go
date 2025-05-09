@@ -79,6 +79,23 @@ func HelmUpgradeOrInstallTestkubeOnPremDemo(options HelmOptions) *CLIError {
 		return err
 	}
 
+	// For default setup, change the Agent host to a cluster service endpoint,
+	// so it will be possible to install runners in different namespaces.
+	if options.SetOptions["testkube-cloud-api.api.agent.host"] == "" && options.Namespace != "" {
+		if options.SetOptions == nil {
+			options.SetOptions = make(map[string]string)
+		}
+		options.SetOptions["testkube-cloud-api.api.agent.host"] = fmt.Sprintf("testkube-enterprise-api.%s.svc.cluster.local", options.Namespace)
+	}
+
+	// Similarly for Minio, to access by runners in different namespaces
+	if options.SetOptions["testkube-cloud-api.api.minio.signing.hostname"] == "" && options.Namespace != "" {
+		if options.SetOptions == nil {
+			options.SetOptions = make(map[string]string)
+		}
+		options.SetOptions["testkube-cloud-api.api.minio.signing.hostname"] = fmt.Sprintf("testkube-enterprise-minio.%s.svc.cluster.local:9000", options.Namespace)
+	}
+
 	args := prepareTestkubeOnPremDemoArgs(options)
 	output, err := runHelmCommand(helmPath, args, options.DryRun)
 	if err != nil {
@@ -436,6 +453,9 @@ func PopulateLoginDataToContext(orgID, envID, token, refreshToken, dockerContain
 		cfg.CloudContext.RefreshToken = refreshToken
 	}
 	cfg.CloudContext.DockerContainerName = dockerContainerName
+	if options.Master.CallbackPort != 0 {
+		cfg.CloudContext.CallbackPort = options.Master.CallbackPort
+	}
 
 	cfg, err := PopulateOrgAndEnvNames(cfg, orgID, envID, options.Master.URIs.Api)
 	if err != nil {
@@ -477,6 +497,10 @@ func PopulateAgentDataToContext(options HelmOptions, cfg config.Data) error {
 	}
 	if options.Master.OrgId != "" {
 		cfg.CloudContext.OrganizationId = options.Master.OrgId
+		updated = true
+	}
+	if options.Master.CallbackPort != 0 {
+		cfg.CloudContext.CallbackPort = options.Master.CallbackPort
 		updated = true
 	}
 
@@ -560,19 +584,22 @@ func PopulateCloudConfig(cfg config.Data, apiKey string, dockerContainerName *st
 	if dockerContainerName != nil {
 		cfg.CloudContext.DockerContainerName = *dockerContainerName
 	}
+	cfg.CloudContext.CallbackPort = opts.Master.CallbackPort
 
 	return cfg
 }
 
-func LoginUser(authUri string, customConnector bool) (string, string, error) {
+func LoginUser(authUri string, customConnector bool, port int) (string, string, error) {
 	ui.H1("Login")
 	connectorID := ""
 	if !customConnector {
 		connectorID = ui.Select("Choose your login method", []string{github, gitlab})
 	}
 
+	// Handle the common case where th Demo instance is running on reserved port
+
 	ui.Debug("Logging into cloud with parameters", authUri, connectorID)
-	authUrl, tokenChan, err := cloudlogin.CloudLogin(context.Background(), authUri, strings.ToLower(connectorID))
+	authUrl, tokenChan, err := cloudlogin.CloudLogin(context.Background(), authUri, strings.ToLower(connectorID), port)
 	if err != nil {
 		return "", "", fmt.Errorf("cloud login: %w", err)
 	}

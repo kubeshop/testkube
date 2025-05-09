@@ -2,6 +2,7 @@ package v1
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -12,10 +13,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	opcrd "github.com/kubeshop/testkube-operator/config/crd"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/internal/crdcommon"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
+	"github.com/kubeshop/testkube/pkg/crd"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
@@ -229,6 +232,39 @@ func (s *TestkubeAPI) CreateTestWorkflowHandler() fiber.Handler {
 			return s.InternalError(c, errPrefix, "serialization problem", err)
 		}
 		return
+	}
+}
+
+func (s *TestkubeAPI) ValidateTestWorkflowHandler() fiber.Handler {
+	errPrefix := "failed to validate test workflow"
+	return func(c *fiber.Ctx) (err error) {
+		// Deserialize resource
+		body := c.Body()
+		obj := new(testworkflowsv1.TestWorkflow)
+		if err = crdcommon.DeserializeCRD(obj, body); err != nil {
+			return s.BadRequest(c, errPrefix, "invalid body", err)
+		}
+
+		// Validate resource
+		if obj.Kind != "" && obj.Kind != "TestWorkflow" {
+			return s.BadRequest(c, errPrefix, "invalid meta", errors.New("only TestWorkflow object is accepted"))
+		}
+
+		if obj.APIVersion != "" && obj.APIVersion != "testworkflows.testkube.io/v1" {
+			return s.BadRequest(c, errPrefix, "invalid meta", errors.New("only TestWorkflow version v1 is accepted"))
+		}
+
+		if obj.Name == "" {
+			return s.BadRequest(c, errPrefix, "invalid name", errors.New("name is required"))
+		}
+
+		// Validate spec
+		if err = crd.ValidateYAMLAgainstSchema(opcrd.SchemaTestWorkflow, body); err != nil {
+			return s.BadRequest(c, errPrefix, "invalid spec", err)
+		}
+
+		c.Status(http.StatusNoContent)
+		return nil
 	}
 }
 
@@ -485,21 +521,14 @@ func (s *TestkubeAPI) ReRunTestWorkflowExecutionHandler() fiber.Handler {
 			return s.ClientError(c, errPrefix, err)
 		}
 
-		name := ""
-		if execution.Workflow != nil {
-			name = execution.Workflow.Name
+		if execution.ResolvedWorkflow == nil {
+			return s.ClientError(c, errPrefix, errors.New("can't find resolved workflow spec"))
 		}
 
-		workflow, err := s.TestWorkflowsClient.Get(c.Context(), s.getEnvironmentId(), name)
+		name := execution.ResolvedWorkflow.Name
+		workflow, err := json.Marshal(execution.ResolvedWorkflow)
 		if err != nil {
 			return s.ClientError(c, errPrefix, err)
-		}
-
-		requiredParameters := make(map[string]struct{})
-		if workflow.Spec != nil {
-			for _, parameter := range workflow.Spec.GetRequiredParameters() {
-				requiredParameters[parameter] = struct{}{}
-			}
 		}
 
 		// Load the execution request
@@ -507,7 +536,7 @@ func (s *TestkubeAPI) ReRunTestWorkflowExecutionHandler() fiber.Handler {
 			RunningContext:  &twrContext,
 			Tags:            execution.Tags,
 			DisableWebhooks: execution.DisableWebhooks,
-			Target:          execution.RunnerOriginalTarget,
+			Target:          execution.RunnerTarget,
 		}
 
 		request.Config = make(map[string]string)
@@ -522,12 +551,6 @@ func (s *TestkubeAPI) ReRunTestWorkflowExecutionHandler() fiber.Handler {
 
 			if !value.EmptyValue {
 				request.Config[key] = value.Value
-			}
-		}
-
-		for key := range requiredParameters {
-			if _, ok := request.Config[key]; !ok {
-				return s.ClientError(c, errPrefix, errors.New("can't rerun test workflow execution without required parameters"))
 			}
 		}
 
@@ -562,6 +585,7 @@ func (s *TestkubeAPI) ReRunTestWorkflowExecutionHandler() fiber.Handler {
 			RunningContext:     runningContext,
 			User:               user,
 			ExecutionReference: &executionID,
+			ResolvedWorkflow:   workflow,
 		})
 
 		results := make([]testkube.TestWorkflowExecution, 0)

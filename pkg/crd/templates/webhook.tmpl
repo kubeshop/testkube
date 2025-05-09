@@ -31,9 +31,6 @@ spec:
   {{- if .PayloadObjectField }}
   payloadObjectField: {{ .PayloadObjectField }}
   {{- end }}
-  {{- if .PayloadTemplate }}
-  payloadTemplate: {{ .PayloadTemplate }}
-  {{- end }}
   {{- if .PayloadTemplateReference }}
   payloadTemplateReference: {{ .PayloadTemplateReference }}
   {{- end }}  
@@ -85,4 +82,7 @@ spec:
   {{- if .WebhookTemplateRef }}
   webhookTemplateRef:
     name: {{ .WebhookTemplateRef.Name }}
+  {{- end }}
+  {{- if .PayloadTemplate }}
+  {{ .PayloadTemplate }}
   {{- end }}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"strings"
 	"time"
 
@@ -227,9 +228,15 @@ func (r *MongoRepository) GetExecutionsTotals(ctx context.Context, filter ...Fil
 	}
 
 	pipeline := []bson.D{{{Key: "$match", Value: query}}}
-	if len(filter) > 0 {
+	hasSkip := len(filter) > 0 && filter[0].Page() > 0
+	hasLimit := len(filter) > 0 && filter[0].PageSize() < math.MaxInt32
+	if hasSkip || hasLimit {
 		pipeline = append(pipeline, bson.D{{Key: "$sort", Value: bson.D{{Key: "statusat", Value: -1}}}})
+	}
+	if hasSkip {
 		pipeline = append(pipeline, bson.D{{Key: "$skip", Value: int64(filter[0].Page() * filter[0].PageSize())}})
+	}
+	if hasLimit {
 		pipeline = append(pipeline, bson.D{{Key: "$limit", Value: int64(filter[0].PageSize())}})
 	}
 
@@ -296,20 +303,47 @@ type TestWorkflowExecutionSummaryWithResolvedWorkflow struct {
 
 func (r *MongoRepository) GetExecutionsSummary(ctx context.Context, filter Filter) (result []testkube.TestWorkflowExecutionSummary, err error) {
 	executions := make([]TestWorkflowExecutionSummaryWithResolvedWorkflow, 0)
-	query, opts := composeQueryAndOpts(filter)
+	query, _ := composeQueryAndOpts(filter)
+
+	pipeline := []bson.M{
+		{"$sort": bson.M{"scheduledat": -1}},
+		{"$match": query},
+		{"$project": bson.M{
+			"_id":           0,
+			"workflow.spec": 0,
+		}},
+		{"$project": bson.M{
+			"id":                           1,
+			"groupid":                      1,
+			"runnerid":                     1,
+			"name":                         1,
+			"number":                       1,
+			"scheduledat":                  1,
+			"statusat":                     1,
+			"result":                       1,
+			"workflow":                     1,
+			"tags":                         1,
+			"runningcontext":               1,
+			"configparams":                 1,
+			"resolvedworkflow.spec.config": 1,
+			"reports":                      1,
+			"resourceaggregations":         1,
+		}},
+	}
+
+	if filter.PageSize() > 0 {
+		if filter.Page() > 0 {
+			pipeline = append(pipeline, bson.M{"$skip": int64(filter.Page() * filter.PageSize())})
+		}
+		pipeline = append(pipeline, bson.M{"$limit": int64(filter.PageSize())})
+	}
+
+	opts := options.Aggregate()
 	if r.allowDiskUse {
 		opts.SetAllowDiskUse(r.allowDiskUse)
 	}
 
-	opts = opts.SetProjection(bson.M{
-		"_id":                   0,
-		"output":                0,
-		"signature":             0,
-		"result.steps":          0,
-		"result.initialization": 0,
-		"workflow.spec":         0,
-	})
-	cursor, err := r.Coll.Find(ctx, query, opts)
+	cursor, err := r.Coll.Aggregate(ctx, pipeline, opts)
 	if err != nil {
 		return
 	}
@@ -327,20 +361,22 @@ func (r *MongoRepository) GetExecutionsSummary(ctx context.Context, filter Filte
 }
 
 func (r *MongoRepository) Insert(ctx context.Context, result testkube.TestWorkflowExecution) (err error) {
-	result.EscapeDots()
-	if result.Reports == nil {
-		result.Reports = []testkube.TestWorkflowReport{}
+	execution := result.Clone()
+	execution.EscapeDots()
+	if execution.Reports == nil {
+		execution.Reports = []testkube.TestWorkflowReport{}
 	}
-	_, err = r.Coll.InsertOne(ctx, result)
+	_, err = r.Coll.InsertOne(ctx, execution)
 	return
 }
 
 func (r *MongoRepository) Update(ctx context.Context, result testkube.TestWorkflowExecution) (err error) {
-	result.EscapeDots()
-	if result.Reports == nil {
-		result.Reports = []testkube.TestWorkflowReport{}
+	execution := result.Clone()
+	execution.EscapeDots()
+	if execution.Reports == nil {
+		execution.Reports = []testkube.TestWorkflowReport{}
 	}
-	_, err = r.Coll.ReplaceOne(ctx, bson.M{"id": result.Id}, result)
+	_, err = r.Coll.ReplaceOne(ctx, bson.M{"id": execution.Id}, execution)
 	return
 }
 
@@ -363,6 +399,11 @@ func (r *MongoRepository) UpdateReport(ctx context.Context, id string, report *t
 
 func (r *MongoRepository) UpdateOutput(ctx context.Context, id string, refs []testkube.TestWorkflowOutput) (err error) {
 	_, err = r.Coll.UpdateOne(ctx, bson.M{"id": id}, bson.M{"$set": bson.M{"output": refs}})
+	return
+}
+
+func (r *MongoRepository) UpdateResourceAggregations(ctx context.Context, id string, resourceAggregations *testkube.TestWorkflowExecutionResourceAggregationsReport) (err error) {
+	_, err = r.Coll.UpdateOne(ctx, bson.M{"id": id}, bson.M{"$set": bson.M{"resourceaggregations": resourceAggregations}})
 	return
 }
 
@@ -593,10 +634,15 @@ func (r *MongoRepository) GetTestWorkflowMetrics(ctx context.Context, name strin
 		{"$sort": bson.M{"scheduledat": -1}},
 		{"$match": query},
 		{"$project": bson.M{
-			"status":    "$result.status",
-			"duration":  "$result.duration",
-			"starttime": "$scheduledat",
-			"name":      1,
+			"_id":         0,
+			"executionid": "$id",
+			"groupid":     1,
+			"duration":    "$result.duration",
+			"durationms":  "$result.durationms",
+			"status":      "$result.status",
+			"name":        1,
+			"starttime":   "$scheduledat",
+			"runnerid":    1,
 		}},
 	}
 
@@ -660,16 +706,17 @@ func (r *MongoRepository) GetNextExecutionNumber(ctx context.Context, name strin
 }
 
 func (r *MongoRepository) GetExecutionTags(ctx context.Context, testWorkflowName string) (tags map[string][]string, err error) {
-	query := bson.M{"tags": bson.M{"$exists": true}}
+	query := bson.M{"tags": bson.M{"$nin": bson.A{nil, bson.M{}}}}
 	if testWorkflowName != "" {
 		query["workflow.name"] = testWorkflowName
 	}
 
 	pipeline := []bson.M{
 		{"$match": query},
-		{"$project": bson.M{
-			"tags": 1,
-		}},
+		{"$project": bson.M{"_id": 0, "tags": bson.M{"$objectToArray": "$tags"}}},
+		{"$unwind": "$tags"},
+		{"$group": bson.M{"_id": "$tags.k", "values": bson.M{"$addToSet": "$tags.v"}}},
+		{"$project": bson.M{"_id": 0, "name": "$_id", "values": 1}},
 	}
 
 	opts := options.Aggregate()
@@ -682,21 +729,18 @@ func (r *MongoRepository) GetExecutionTags(ctx context.Context, testWorkflowName
 		return nil, err
 	}
 
-	var executions []testkube.TestWorkflowExecutionTags
-	err = cursor.All(ctx, &executions)
+	var res []struct {
+		Name   string   `bson:"name"`
+		Values []string `bson:"values"`
+	}
+	err = cursor.All(ctx, &res)
 	if err != nil {
 		return nil, err
 	}
 
-	for i := range executions {
-		executions[i].UnscapeDots()
-	}
-
 	tags = make(map[string][]string)
-	for _, execution := range executions {
-		for key, value := range execution.Tags {
-			tags[key] = append(tags[key], value)
-		}
+	for _, tag := range res {
+		tags[tag.Name] = tag.Values
 	}
 
 	return tags, nil
@@ -715,7 +759,7 @@ func (r *MongoRepository) Assign(ctx context.Context, id string, prevRunnerId st
 	res, err := r.Coll.UpdateOne(ctx, bson.M{
 		"$and": []bson.M{
 			{"id": id},
-			{"result.status": bson.M{"$in": bson.A{testkube.QUEUED_TestWorkflowStatus, testkube.RUNNING_TestWorkflowStatus, testkube.PAUSED_TestWorkflowStatus}}},
+			{"result.status": testkube.QUEUED_TestWorkflowStatus},
 			{"$or": []bson.M{{"runnerid": prevRunnerId}, {"runnerid": newRunnerId}, {"runnerid": nil}}},
 		},
 	}, bson.M{"$set": map[string]interface{}{
@@ -725,7 +769,7 @@ func (r *MongoRepository) Assign(ctx context.Context, id string, prevRunnerId st
 	if err != nil {
 		return false, err
 	}
-	return res.ModifiedCount > 0, nil
+	return res.MatchedCount > 0, nil
 }
 
 // TODO: Return IDs only

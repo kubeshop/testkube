@@ -33,6 +33,12 @@ type AgentInput struct {
 	Type         string             `json:"type,omitempty"`
 	Labels       *map[string]string `json:"labels,omitempty"`
 	Environments []string           `json:"environments,omitempty"`
+	RunnerPolicy *RunnerPolicy      `json:"runnerPolicy,omitempty"`
+	Floating     bool               `json:"floating,omitempty"`
+}
+
+type RunnerPolicy struct {
+	RequiredMatch []string `json:"requiredMatch,omitempty"`
 }
 
 type Agent struct {
@@ -44,12 +50,15 @@ type Agent struct {
 	Namespace string `json:"namespace"`
 	// Is the Agent disabled?.
 	Disabled     bool               `json:"disabled"`
+	Floating     bool               `json:"floating"`
 	Type         string             `json:"type"`
 	Labels       map[string]string  `json:"labels"`
 	Environments []AgentEnvironment `json:"environments"`
 	AccessedAt   *time.Time         `json:"accessedAt,omitempty"`
+	DeletedAt    *time.Time         `json:"deletedAt,omitempty"`
 	CreatedAt    time.Time          `json:"createdAt"`
 	SecretKey    string             `json:"secretKey"`
+	RunnerPolicy *RunnerPolicy      `json:"runnerPolicy,omitempty"`
 }
 
 type AgentEnvironment struct {
@@ -89,12 +98,13 @@ func (c AgentsClient) GetSecretKey(idOrName string) (string, error) {
 	return e.SecretKey, err
 }
 
-func (c AgentsClient) CreateRunner(envId string, name string, labels map[string]string) (Agent, error) {
+func (c AgentsClient) CreateRunner(envId string, name string, labels map[string]string, floating bool) (Agent, error) {
 	agent := AgentInput{
 		Environments: []string{envId},
 		Name:         name,
 		Type:         AgentRunnerType,
 		Labels:       common.Ptr(labels),
+		Floating:     floating,
 	}
 	return c.RESTClient.Create(agent)
 }

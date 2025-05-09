@@ -4,6 +4,8 @@ metadata:
   name: curl-workflow-suite
   labels:
     core-tests: workflows-suite
+    type: suite
+    tool: curl
 spec:
   steps:
   - execute:

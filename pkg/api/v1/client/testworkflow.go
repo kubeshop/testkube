@@ -79,6 +79,12 @@ func (c TestWorkflowClient) CreateTestWorkflow(workflow testkube.TestWorkflow) (
 	return c.testWorkflowTransport.Execute(http.MethodPost, uri, body, nil)
 }
 
+// ValidateTestWorkflow validates new TestWorkflow Custom Resource
+func (c TestWorkflowClient) ValidateTestWorkflow(body []byte) error {
+	uri := c.testWorkflowTransport.GetURI("/test-workflows")
+	return c.testWorkflowTransport.Validate(http.MethodPut, uri, body, nil)
+}
+
 // UpdateTestWorkflow updates TestWorkflow Custom Resource
 func (c TestWorkflowClient) UpdateTestWorkflow(workflow testkube.TestWorkflow) (result testkube.TestWorkflow, err error) {
 	if workflow.Name == "" {
@@ -182,6 +188,18 @@ func (c TestWorkflowClient) ListTestWorkflowExecutions(id string, limit int, opt
 		"actorType":   string(options.ActorType),
 	}
 	return c.testWorkflowExecutionsResultTransport.Execute(http.MethodGet, uri, nil, params)
+}
+
+// PauseTestWorkflowExecution pauses selected execution
+func (c TestWorkflowClient) PauseTestWorkflowExecution(workflow, id string) error {
+	uri := c.testWorkflowTransport.GetURI("/test-workflows/%s/executions/%s/pause", workflow, id)
+	return c.testWorkflowTransport.ExecuteMethod(http.MethodPost, uri, "", false)
+}
+
+// ResumeTestWorkflowExecution pauses selected execution
+func (c TestWorkflowClient) ResumeTestWorkflowExecution(workflow, id string) error {
+	uri := c.testWorkflowTransport.GetURI("/test-workflows/%s/executions/%s/resume", workflow, id)
+	return c.testWorkflowTransport.ExecuteMethod(http.MethodPost, uri, "", false)
 }
 
 // AbortTestWorkflowExecution aborts selected execution

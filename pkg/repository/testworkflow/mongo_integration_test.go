@@ -466,6 +466,18 @@ func TestNewMongoRepository_GetExecutionsSummary_Integration(t *testing.T) {
 			},
 		},
 		ConfigParams: map[string]testkube.TestWorkflowExecutionConfigValue{},
+		Reports: []testkube.TestWorkflowReport{
+			{
+				Summary: &testkube.TestWorkflowReportSummary{
+					Passed:   10,
+					Failed:   2,
+					Skipped:  3,
+					Errored:  1,
+					Tests:    16,
+					Duration: 15000,
+				},
+			},
+		},
 	}
 	err = repo.Insert(ctx, execution)
 	assert.NoError(t, err)
@@ -505,6 +517,13 @@ func TestNewMongoRepository_GetExecutionsSummary_Integration(t *testing.T) {
 	assert.Len(t, result, 1)
 	assert.Equal(t, "test-name-1", result[0].Name)
 	assert.Equal(t, "default", result[0].ConfigParams["param1"].DefaultValue)
+	assert.Len(t, result[0].Reports, 1)
+	assert.EqualValues(t, 10, result[0].Reports[0].Summary.Passed)
+	assert.EqualValues(t, 2, result[0].Reports[0].Summary.Failed)
+	assert.EqualValues(t, 3, result[0].Reports[0].Summary.Skipped)
+	assert.EqualValues(t, 1, result[0].Reports[0].Summary.Errored)
+	assert.EqualValues(t, 16, result[0].Reports[0].Summary.Tests)
+	assert.EqualValues(t, 15000, result[0].Reports[0].Summary.Duration)
 
 	filter = NewExecutionsFilter().WithName("test-workflow-2")
 	result, err = repo.GetExecutionsSummary(ctx, filter)
@@ -513,6 +532,7 @@ func TestNewMongoRepository_GetExecutionsSummary_Integration(t *testing.T) {
 	assert.Equal(t, "test-name-2", result[0].Name)
 	assert.Equal(t, "default", result[0].ConfigParams["param1"].DefaultValue)
 	assert.Equal(t, "custom-value", result[0].ConfigParams["param1"].Value)
+	assert.Len(t, result[0].Reports, 0)
 }
 
 func TestNewMongoRepository_Get_Integration(t *testing.T) {

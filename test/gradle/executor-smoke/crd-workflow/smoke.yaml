@@ -4,6 +4,7 @@ metadata:
   name: gradle-workflow-smoke-jdk11
   labels:
     core-tests: workflows
+    tool: gradle
 spec:
   content:
     git:
@@ -35,6 +36,7 @@ metadata:
   name: gradle-workflow-smoke-jdk11-default-command
   labels:
     core-tests: workflows
+    tool: gradle
 spec:
   content:
     git:
@@ -62,6 +64,7 @@ metadata:
   name: gradle-workflow-smoke-jdk11-from-template
   labels:
     core-tests: workflows
+    tool: gradle
 spec:
   content:
     git:

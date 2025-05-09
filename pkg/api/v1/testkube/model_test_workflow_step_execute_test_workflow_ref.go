@@ -19,6 +19,7 @@ type TestWorkflowStepExecuteTestWorkflowRef struct {
 	Tarball       map[string]TestWorkflowTarballRequest `json:"tarball,omitempty"`
 	Config        map[string]string                     `json:"config,omitempty"`
 	Selector      *LabelSelector                        `json:"selector,omitempty"`
+	Target        *ExecutionTarget                      `json:"target,omitempty"`
 	Count         *BoxedString                          `json:"count,omitempty"`
 	MaxCount      *BoxedString                          `json:"maxCount,omitempty"`
 	// matrix of parameters to spawn instances

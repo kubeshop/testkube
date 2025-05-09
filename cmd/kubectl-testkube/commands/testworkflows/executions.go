@@ -72,9 +72,9 @@ func NewGetTestWorkflowExecutionsCmd() *cobra.Command {
 			}
 
 			if outputPretty {
-				ui.Info("Getting logs for test workflow execution", executionID)
+				ui.Info("Getting logs for test workflow execution", execution.Id)
 
-				logs, err := client.GetTestWorkflowExecutionLogs(executionID)
+				logs, err := client.GetTestWorkflowExecutionLogs(execution.Id)
 				ui.ExitOnError("getting logs from test workflow", err)
 
 				sigs := flattenSignatures(execution.Signature)

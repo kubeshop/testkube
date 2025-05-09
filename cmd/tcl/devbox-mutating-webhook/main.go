@@ -86,19 +86,19 @@ func main() {
 				VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}},
 			})
 
-			script := `
+			script := fmt.Sprintf(`
 				set -e
-				/.tktw-bin/wget -O /.tk-devbox/init http://devbox-binary:8080/init || exit 1
+				/.tktw-bin/wget -O /.tk-devbox/init %s/init || exit 1
 				chmod 777 /.tk-devbox/init
-				ls -lah /.tk-devbox`
+				ls -lah /.tk-devbox`, os.Getenv("STORAGE_SERVER"))
 			if usesToolkit {
-				script = `
+				script = fmt.Sprintf(`
 					set -e
-					/.tktw-bin/wget -O /.tk-devbox/init http://devbox-binary:8080/init || exit 1
-					/.tktw-bin/wget -O /.tk-devbox/toolkit http://devbox-binary:8080/toolkit || exit 1
+					/.tktw-bin/wget -O /.tk-devbox/init %s/init || exit 1
+					/.tktw-bin/wget -O /.tk-devbox/toolkit %s/toolkit || exit 1
 					chmod 777 /.tk-devbox/init
 					chmod 777 /.tk-devbox/toolkit
-					ls -lah /.tk-devbox`
+					ls -lah /.tk-devbox`, os.Getenv("STORAGE_SERVER"), os.Getenv("STORAGE_SERVER"))
 			}
 
 			pod.Spec.InitContainers = append([]corev1.Container{{

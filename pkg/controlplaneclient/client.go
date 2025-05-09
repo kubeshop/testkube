@@ -2,6 +2,7 @@ package controlplaneclient
 
 import (
 	"strings"
+	"time"
 
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/cloud"
@@ -23,9 +24,12 @@ type client struct {
 type ClientOptions struct {
 	StorageSkipVerify  bool
 	ExecutionID        string
+	WorkflowName       string
 	ParentExecutionIDs []string
 
-	Runtime RuntimeConfig
+	Runtime     RuntimeConfig
+	SendTimeout time.Duration
+	RecvTimeout time.Duration
 }
 
 type RuntimeConfig struct {

@@ -4,6 +4,7 @@ metadata:
   name: locust-workflow-smoke
   labels:
     core-tests: workflows
+    tool: locust
 spec:
   content:
     git:
@@ -30,6 +31,7 @@ metadata:
   name: distributed-locust-workflow-smoke
   labels:
     core-tests: workflows
+    tool: locust
 spec:
   config:
     workers: {type: integer, default: 2}
@@ -44,7 +46,7 @@ spec:
       transfer:
       - from: /data/repo/test/locust/locust-project
       count: 1
-      timeout: 30s # initialization timeout
+      timeout: 120s # initialization timeout
       logs: 'always'
       image: locustio/locust:2.32.3
       shell: | 
@@ -69,4 +71,4 @@ spec:
       paused: true # synchronize running all workers - optional
       run:
         image: locustio/locust:2.32.3
-        shell: locust -f - --worker --master-host {{ services.master.0.ip }} --processes {{ config.workers }}
+        shell: locust --stop-timeout 180 -f - --worker --master-host {{ services.master.0.ip }} --processes {{ config.workers }}

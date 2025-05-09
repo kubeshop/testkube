@@ -8,18 +8,18 @@ import (
 
 type call struct {
 	name string
-	args []callArgument
+	args []CallArgument
 }
 
-type callArgument struct {
-	expr   Expression
-	spread bool
+type CallArgument struct {
+	Expression
+	Spread bool
 }
 
-func newCall(name string, args []callArgument) Expression {
+func newCall(name string, args []CallArgument) Expression {
 	for i := range args {
-		if args[i].expr == nil {
-			args[i].expr = None
+		if args[i].Expression == nil {
+			args[i].Expression = None
 		}
 	}
 	return &call{name: name, args: args}
@@ -35,8 +35,8 @@ func (s *call) Type() Type {
 func (s *call) String() string {
 	args := make([]string, len(s.args))
 	for i, arg := range s.args {
-		args[i] = arg.expr.String()
-		if arg.spread {
+		args[i] = arg.Expression.String()
+		if arg.Spread {
 			args[i] += "..."
 		}
 	}
@@ -51,75 +51,39 @@ func (s *call) Template() string {
 	if s.name == stringCastStdFn {
 		args := make([]string, len(s.args))
 		for i, a := range s.args {
-			args[i] = a.expr.Template()
+			args[i] = a.Expression.Template()
 		}
 		return strings.Join(args, "")
 	}
 	return "{{" + s.String() + "}}"
 }
 
-func (s *call) isResolved() bool {
-	for i := range s.args {
-		if s.args[i].expr.Static() == nil {
-			return false
-		}
-	}
-	return true
-}
-
-func (s *call) resolvedArgs() ([]StaticValue, error) {
-	v := make([]StaticValue, 0)
-	for _, vv := range s.args {
-		value := vv.expr.Static()
-		if vv.spread {
-			if value.IsNone() {
-				continue
-			}
-			items, err := value.SliceValue()
-			if err != nil {
-				return nil, fmt.Errorf("spread operator (...) used against non-list parameter: %s", value)
-			}
-			staticItems := make([]StaticValue, len(items))
-			for i := range items {
-				staticItems[i] = NewValue(items[i])
-			}
-			v = append(v, staticItems...)
-		} else {
-			v = append(v, value)
-		}
-	}
-	return v, nil
-}
-
 func (s *call) SafeResolve(m ...Machine) (v Expression, changed bool, err error) {
 	var ch bool
 	for i := range s.args {
-		s.args[i].expr, ch, err = s.args[i].expr.SafeResolve(m...)
+		s.args[i].Expression, ch, err = s.args[i].Expression.SafeResolve(m...)
 		changed = changed || ch
 		if err != nil {
 			return nil, changed, err
 		}
 	}
-	if s.isResolved() {
-		args, err := s.resolvedArgs()
+	if changed {
+		return s, true, nil
+	}
+	result, ok, err := StdLibMachine.Call(s.name, s.args)
+	if ok {
 		if err != nil {
-			return nil, true, err
+			return nil, true, fmt.Errorf("error while calling %s: %s", s.String(), err.Error())
 		}
-		result, ok, err := StdLibMachine.Call(s.name, args...)
+		return result, true, nil
+	}
+	for i := range m {
+		result, ok, err = m[i].Call(s.name, s.args)
+		if err != nil {
+			return nil, true, fmt.Errorf("error while calling %s: %s", s.String(), err.Error())
+		}
 		if ok {
-			if err != nil {
-				return nil, true, fmt.Errorf("error while calling %s: %s", s.String(), err.Error())
-			}
 			return result, true, nil
-		}
-		for i := range m {
-			result, ok, err = m[i].Call(s.name, args...)
-			if err != nil {
-				return nil, true, fmt.Errorf("error while calling %s: %s", s.String(), err.Error())
-			}
-			if ok {
-				return result, true, nil
-			}
 		}
 	}
 	return s, changed, nil
@@ -136,7 +100,7 @@ func (s *call) Static() StaticValue {
 func (s *call) Accessors() map[string]struct{} {
 	result := make(map[string]struct{})
 	for i := range s.args {
-		maps.Copy(result, s.args[i].expr.Accessors())
+		maps.Copy(result, s.args[i].Expression.Accessors())
 	}
 	return result
 }
@@ -144,7 +108,7 @@ func (s *call) Accessors() map[string]struct{} {
 func (s *call) Functions() map[string]struct{} {
 	result := make(map[string]struct{})
 	for i := range s.args {
-		maps.Copy(result, s.args[i].expr.Functions())
+		maps.Copy(result, s.args[i].Expression.Functions())
 	}
 	result[s.name] = struct{}{}
 	return result

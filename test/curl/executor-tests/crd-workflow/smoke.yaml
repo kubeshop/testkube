@@ -4,6 +4,7 @@ metadata:
   name: curl-workflow-smoke
   labels:
     core-tests: workflows
+    tool: curl
 spec:
   container:
     resources:
@@ -22,6 +23,7 @@ metadata:
   name: curl-workflow-smoke-private-registry
   labels:
     core-tests: workflows
+    tool: curl
 spec:
   pod:
     imagePullSecrets:
@@ -43,6 +45,7 @@ metadata:
   name: curl-workflow-smoke-matrix
   labels:
     core-tests: workflows
+    tool: curl
 spec:
   container:
     resources:

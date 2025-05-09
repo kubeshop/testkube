@@ -218,7 +218,6 @@ func (a *agentLoop) loopParallelStepNotifications(ctx context.Context) error {
 func (a *agentLoop) loopRunnerRequests(ctx context.Context) error {
 	watcher := a.client.WatchRunnerRequests(ctx)
 	var wg sync.WaitGroup
-	wg.Add(1)
 	for req := range watcher.Channel() {
 		wg.Add(1)
 		go func(req controlplaneclient.RunnerRequest) {
@@ -290,7 +289,6 @@ func (a *agentLoop) loopRunnerRequests(ctx context.Context) error {
 			}
 		}(req)
 	}
-	wg.Done()
 	wg.Wait()
 	return watcher.Err()
 }
@@ -299,12 +297,6 @@ func (a *agentLoop) runTestWorkflow(environmentId string, executionId string, ex
 	_, err, _ := a.sf.Do(environmentId+"."+executionId, func() (interface{}, error) {
 		return nil, a.directRunTestWorkflow(environmentId, executionId, executionToken)
 	})
-
-	// Edge case, when the execution has been already triggered before there,
-	// and now it's redundant call.
-	if err != nil && strings.Contains(err.Error(), "already exists") && strings.Contains(err.Error(), executionId) {
-		return nil
-	}
 
 	return err
 }
@@ -317,6 +309,14 @@ func (a *agentLoop) directRunTestWorkflow(environmentId string, executionId stri
 	execution, err := a.client.GetExecution(ctx, environmentId, executionId)
 	if err != nil {
 		return errors2.Wrapf(err, "failed to get execution details '%s/%s' from Control Plane", environmentId, executionId)
+	}
+	if execution.RunnerId != a.proContext.Agent.ID && execution.RunnerId != "" {
+		return errors.New("execution is assigned to a different runner")
+	}
+
+	// Inform that everything is fine, because the execution is already there.
+	if execution.Result != nil && !execution.Result.IsQueued() {
+		return nil
 	}
 
 	parentIds := ""
@@ -352,6 +352,11 @@ func (a *agentLoop) directRunTestWorkflow(environmentId string, executionId stri
 		if err != nil {
 			logger.Errorw("failed to run and update execution", "error", err)
 		}
+		return nil
+	}
+
+	// Inform that everything is fine, because the execution is already there.
+	if result.Redundant {
 		return nil
 	}
 

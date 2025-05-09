@@ -34,13 +34,9 @@ func (m *MockMachine) EXPECT() *MockMachineMockRecorder {
 }
 
 // Call mocks base method.
-func (m *MockMachine) Call(arg0 string, arg1 ...StaticValue) (Expression, bool, error) {
+func (m *MockMachine) Call(arg0 string, arg1 []CallArgument) (Expression, bool, error) {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{arg0}
-	for _, a := range arg1 {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "Call", varargs...)
+	ret := m.ctrl.Call(m, "Call", arg0, arg1)
 	ret0, _ := ret[0].(Expression)
 	ret1, _ := ret[1].(bool)
 	ret2, _ := ret[2].(error)
@@ -48,10 +44,9 @@ func (m *MockMachine) Call(arg0 string, arg1 ...StaticValue) (Expression, bool, 
 }
 
 // Call indicates an expected call of Call.
-func (mr *MockMachineMockRecorder) Call(arg0 interface{}, arg1 ...interface{}) *gomock.Call {
+func (mr *MockMachineMockRecorder) Call(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{arg0}, arg1...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Call", reflect.TypeOf((*MockMachine)(nil).Call), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Call", reflect.TypeOf((*MockMachine)(nil).Call), arg0, arg1)
 }
 
 // Get mocks base method.

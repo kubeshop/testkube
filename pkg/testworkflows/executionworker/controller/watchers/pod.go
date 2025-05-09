@@ -2,7 +2,9 @@ package watchers
 
 import (
 	"encoding/json"
+	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -23,6 +25,7 @@ type Pod interface {
 	Namespace() string
 	ResourceId() string
 	RootResourceId() string
+	RunnerId() string
 	NodeName() string
 	IP() string
 	CreationTimestamp() time.Time
@@ -42,6 +45,7 @@ type Pod interface {
 	ContainersReady() bool
 	ContainerError() string
 	ExecutionError() string
+	Debug() string
 }
 
 func NewPod(original *corev1.Pod) Pod {
@@ -66,6 +70,10 @@ func (p *pod) ResourceId() string {
 
 func (p *pod) RootResourceId() string {
 	return p.original.Labels[constants.RootResourceIdLabelName]
+}
+
+func (p *pod) RunnerId() string {
+	return p.original.Labels[constants.RunnerIdLabelName]
 }
 
 func (p *pod) NodeName() string {
@@ -226,4 +234,54 @@ func (p *pod) ExecutionError() string {
 		return p.ContainerError()
 	}
 	return errStr
+}
+
+func (p *pod) ContainerDebug(name string) string {
+	status := GetContainerStatus(p.original, name)
+	if status == nil {
+		return "unknown"
+	}
+	state := GetContainerStateDebug(status.State)
+	if status.Started != nil {
+		state += fmt.Sprintf(", started: %v", *status.Started)
+	}
+	if last := GetContainerStateDebug(status.LastTerminationState); last != "unknown" {
+		state += fmt.Sprintf(", last: %s", last)
+	}
+	return state
+}
+
+func (p *pod) Debug() string {
+	if p.original == nil {
+		return "unknown"
+	}
+	state := "found"
+	if p.original.Status.Reason != "" {
+		state += fmt.Sprintf(", reason: '%s'", p.original.Status.Reason)
+	}
+	if p.original.Status.Message != "" {
+		state += fmt.Sprintf(", message: '%s'", p.original.Status.Message)
+	}
+	if p.original.Status.StartTime != nil {
+		state += ", started"
+	}
+	if p.original.DeletionTimestamp != nil {
+		state += ", deleted"
+	}
+	if p.ExecutionError() != "" {
+		state += fmt.Sprintf(", error: '%s'", p.ExecutionError())
+	}
+	for i := range p.original.Status.Conditions {
+		state += fmt.Sprintf(", %s='%s'", p.original.Status.Conditions[i].Type, p.original.Status.Conditions[i].Status)
+	}
+	initContainers := make([]string, 0, len(p.original.Spec.InitContainers))
+	for i := range p.original.Spec.InitContainers {
+		initContainers = append(initContainers, fmt.Sprintf("[%s]: %s", p.original.Spec.InitContainers[i].Name, p.ContainerDebug(p.original.Spec.InitContainers[i].Name)))
+	}
+	containers := make([]string, 0, len(p.original.Spec.Containers))
+	for i := range p.original.Spec.Containers {
+		containers = append(containers, fmt.Sprintf("[%s]: %s", p.original.Spec.Containers[i].Name, p.ContainerDebug(p.original.Spec.Containers[i].Name)))
+	}
+	state += fmt.Sprintf(", [INIT] %s [CONTAINERS] %s", strings.Join(initContainers, ", "), strings.Join(containers, ", "))
+	return state
 }

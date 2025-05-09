@@ -21,6 +21,7 @@ const (
 	// TODO: move to the execution worker (?)
 	ResourceIdLabelName             = "testkube.io/resource"
 	RootResourceIdLabelName         = "testkube.io/root"
+	RunnerIdLabelName               = "testkube.io/runner"
 	GroupIdLabelName                = "testkube.io/contextGroup"
 	SignatureAnnotationName         = "testkube.io/signature"
 	SignatureAnnotationFieldPath    = "metadata.annotations['" + SignatureAnnotationName + "']"
@@ -44,8 +45,8 @@ var (
 	DefaultShellHeader     = "set -e\n"
 	DefaultContainerConfig = testworkflowsv1.ContainerConfig{
 		Image: DefaultInitImage,
-		Env: []corev1.EnvVar{
-			{Name: "CI", Value: "1"},
+		Env: []testworkflowsv1.EnvVar{
+			{EnvVar: corev1.EnvVar{Name: "CI", Value: "1"}},
 		},
 	}
 	DefaultInitImage                             = getInitImage()

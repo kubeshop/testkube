@@ -4,6 +4,8 @@ metadata:
   name: junit-workflow-suite
   labels:
     core-tests: workflows-suite
+    type: suite
+    tool: junit
 spec:
   steps:
   - execute:

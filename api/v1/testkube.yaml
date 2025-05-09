@@ -3908,6 +3908,40 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
+    put:
+      tags:
+        - test-workflows
+        - api
+        - pro
+      summary: Validate test workflow
+      description: Validate test workflow specification against CRD schema
+      operationId: validateTestWorkflow
+      requestBody:
+        description: test workflow body
+        required: true
+        content:
+          text/yaml:
+            schema:
+              type: string
+      responses:
+        204:
+          description: "no content"
+        400:
+          description: "problem with body parsing - probably some bad input occurs"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: problem communicating with kubernetes cluster
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
   /test-workflow-with-executions:
     get:
       tags:
@@ -5085,6 +5119,40 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
+    put:
+      tags:
+        - test-workflows
+        - api
+        - pro
+      summary: Validate test workflow template
+      description: Validate test workflow template specification against CRD schema
+      operationId: validateTestWorkflowTemplate
+      requestBody:
+        description: test workflow template body
+        required: true
+        content:
+          text/yaml:
+            schema:
+              type: string
+      responses:
+        204:
+          description: "no content"
+        400:
+          description: "problem with body parsing - probably some bad input occurs"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: problem communicating with kubernetes cluster
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
   /test-workflow-templates/{id}:
     get:
       tags:
@@ -5282,6 +5350,8 @@ components:
       properties:
         executionId:
           type: string
+        groupId:
+          type: string
         duration:
           type: string
         durationMs:
@@ -5293,6 +5363,8 @@ components:
         startTime:
           type: string
           format: date-time
+        runnerId:
+          type: string
 
     Variables:
       type: object
@@ -7596,7 +7668,7 @@ components:
           description: all test workflow execution ids starting from the root
         executionReference:
           type: string
-          description: reference test workflow execution id         
+          description: reference test workflow execution id
         type:
           $ref: "#/components/schemas/TestWorkflowRunningContextActorType"
 
@@ -8009,7 +8081,7 @@ components:
         action:
           $ref: "#/components/schemas/TestTriggerActions"
         actionParameters:
-          $ref: "#/components/schemas/TestTriggerActionParameters"        
+          $ref: "#/components/schemas/TestTriggerActionParameters"
         execution:
           $ref: "#/components/schemas/TestTriggerExecutions"
         testSelector:
@@ -8108,7 +8180,10 @@ components:
         config:
           $ref: "#/components/schemas/TestWorkflowConfigValue"
         tags:
-          $ref: "#/components/schemas/TestWorkflowTagValue"        
+          $ref: "#/components/schemas/TestWorkflowTagValue"
+        target:
+          $ref: "#/components/schemas/ExecutionTarget"
+
 
     TestTriggerConditionSpec:
       type: object
@@ -8694,6 +8769,8 @@ components:
           description: generated reports from the steps, like junit
           items:
             $ref: "#/components/schemas/TestWorkflowReport"
+        resourceAggregations:
+          $ref: "#/components/schemas/TestWorkflowExecutionResourceAggregationsReport"
         workflow:
           $ref: "#/components/schemas/TestWorkflow"
         resolvedWorkflow:
@@ -8762,6 +8839,13 @@ components:
           $ref: "#/components/schemas/TestWorkflowRunningContext"
         configParams:
           $ref: "#/components/schemas/TestWorkflowExecutionConfig"
+        reports:
+          type: array
+          description: generated reports from the steps, like junit
+          items:
+            $ref: "#/components/schemas/TestWorkflowReport"
+        resourceAggregations:
+          $ref: "#/components/schemas/TestWorkflowExecutionResourceAggregationsReport"
       required:
         - id
         - name
@@ -8906,6 +8990,76 @@ components:
           type: integer
           format: int64
           description: total duration of all test cases in milliseconds
+
+    TestWorkflowExecutionResourceAggregationsReport:
+      type: object
+      properties:
+        global:
+          $ref: '#/components/schemas/TestWorkflowExecutionResourceAggregationsByMeasurement'
+        step:
+          type: array
+          items:
+            $ref: '#/components/schemas/TestWorkflowExecutionStepResourceAggregations'
+      description: |
+        TestWorkflowExecutionResourceAggregationsReport provides resource usage aggregations
+        for an entire TestWorkflowExecution (globally) and also per-step (by measurements).
+
+    TestWorkflowExecutionStepResourceAggregations:
+      type: object
+      description: Step-based resource metrics aggregations (by measurement and field)
+      properties:
+        ref:
+          type: string
+          description: step reference
+        aggregations:
+          $ref: '#/components/schemas/TestWorkflowExecutionResourceAggregationsByMeasurement'
+
+    TestWorkflowExecutionResourceAggregationsByMeasurement:
+      type: object
+      description: |
+        TestWorkflowExecutionResourceAggregationsByMeasurement provides resource usage aggregations
+        for a specific measurement (e.g. CPU, Memory, etc.) across all steps in a TestWorkflowExecution.
+      additionalProperties:
+        type: object
+        description: |
+          TestWorkflowExecutionResourceAggregations provides resource usage aggregations
+          for a specific field (e.g. millicores, used...).
+        additionalProperties:
+          $ref: '#/components/schemas/TestWorkflowExecutionResourceAggregations'
+
+    TestWorkflowExecutionResourceAggregationsScope:
+      type: string
+      enum:
+        - step
+        - global
+      description: Scope of the resource metrics aggregations.
+
+    TestWorkflowExecutionResourceAggregations:
+      type: object
+      properties:
+        total:
+          type: number
+          format: float64
+          description: Total sum of the metric.
+        min:
+          type: number
+          format: float64
+          description: Minimum value of the metric.
+        max:
+          type: number
+          format: float64
+          description: Maximum value of the metric.
+        avg:
+          type: number
+          format: float64
+          description: Average value of the metric.
+        stdDev:
+          type: number
+          format: float64
+          description: Standard deviation of the metric.
+      description: |
+        TestWorkflowExecutionResourceAggregations provides min, max, average, total,
+        and standard deviation values for a resource metric.
 
     TestWorkflowResult:
       type: object
@@ -9539,6 +9693,8 @@ components:
           selector:
             $ref: "#/components/schemas/LabelSelector"
             description: label selector for test workflow
+          target:
+            $ref: "#/components/schemas/ExecutionTarget"
 
     TestWorkflowStepExecuteTestRef:
       type: object
@@ -9743,6 +9899,28 @@ components:
       required:
         - count
 
+    TestWorkflowTarget:
+      type: object
+      properties:
+        match:
+          type: object
+          description: labels to attach to the job
+          additionalProperties:
+            type: array
+            items:
+              type: string
+        not:
+          type: object
+          description: labels to attach to the job
+          additionalProperties:
+            type: array
+            items:
+              type: string
+        replicate:
+          type: array
+          items:
+            type: string
+
     TestWorkflowContent:
       type: object
       properties:
@@ -9941,6 +10119,8 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/PodResourceClaim"
+        hostPID:
+          $ref: "#/components/schemas/BoxedBoolean"            
 
     TestWorkflowContainerConfig:
       type: object
@@ -10020,7 +10200,7 @@ components:
 
     TestWorkflowExecutionConfigValue:
       type: object
-      description: configuration values used in the test workflow execution   
+      description: configuration values used in the test workflow execution
       properties:
         value:
           type: string
@@ -10163,6 +10343,8 @@ components:
             type: string
         config:
           $ref: "#/components/schemas/TestWorkflowConfigValue"
+        target:
+          $ref: "#/components/schemas/ExecutionTarget"
 
     TestWorkflowExecutionCR:
       type: object
@@ -10202,6 +10384,8 @@ components:
       properties:
         tags:
           $ref: "#/components/schemas/TestWorkflowTagValue"
+        target:
+          $ref: "#/components/schemas/ExecutionTarget"
 
     TestWorkflowExecutionTags:
       type: object
@@ -10260,6 +10444,8 @@ components:
     EnvVar:
       type: object
       properties:
+        global:
+          $ref: "#/components/schemas/BoxedBoolean"    
         name:
           type: string
         value:
@@ -10321,7 +10507,7 @@ components:
         seLinuxOptions:
           $ref: "#/components/schemas/SELinuxOptions"
         windowsOptions:
-          $ref: "#/components/schemas/WindowsSecurityContextOptions"   
+          $ref: "#/components/schemas/WindowsSecurityContextOptions"
         runAsUser:
           $ref: "#/components/schemas/BoxedInteger"
         runAsGroup:
@@ -10346,7 +10532,7 @@ components:
         seccompProfile:
           $ref: "#/components/schemas/SeccompProfile"
         appArmorProfile:
-          $ref: "#/components/schemas/AppArmorProfile" 
+          $ref: "#/components/schemas/AppArmorProfile"
         seLinuxChangePolicy:
           $ref: "#/components/schemas/BoxedString"
 
@@ -11066,6 +11252,163 @@ components:
         nodePublishSecretRef:
           $ref: "#/components/schemas/LocalObjectReference"
 
+    ProjectedVolumeSource:
+      type: object
+      description: Represents a projected volume source
+      properties:
+        defaultMode:
+          $ref: "#/components/schemas/BoxedInteger"
+        sources:
+          description: sources is the list of volume projections. Each entry in this list
+            handles one source.
+          items:
+            description: Projection that may be projected along with other supported volume types.
+              Exactly one of these fields must be set.
+            properties:
+              clusterTrustBundle:
+                type: object
+                description: ClusterTrustBundle allows a pod to access the `.spec.trustBundle` field
+                  of ClusterTrustBundle objects in an auto-updating file.
+                properties:
+                  labelSelector:
+                    $ref: "#/components/schemas/LabelSelector"
+                  name:
+                    $ref: "#/components/schemas/BoxedString"
+                  optional:
+                    $ref: "#/components/schemas/BoxedBoolean"
+                  path:
+                    description: Relative path from the volume root to write the bundle.
+                    type: string
+                  signerName:
+                    $ref: "#/components/schemas/BoxedString"
+                required:
+                - path
+              configMap:
+                type: object
+                description: configMap information about the configMap data to project
+                properties:
+                  items:
+                    description: items if unspecified, each key-value pair
+                      in the Data field of the referenced ConfigMap will
+                      be projected into the volume as a file whose name
+                      is the key and content is the value. If specified,
+                      the listed keys will be projected into the specified
+                      paths, and unlisted keys will not be present. If a
+                      key is specified which is not present in the ConfigMap,
+                      the volume setup will error unless it is marked optional.
+                      Paths must be relative and may not contain the '..'
+                      path or start with '..'.
+                    items:
+                      description: Maps a string key to a path within a
+                        volume.
+                      properties:
+                        key:
+                          description: key is the key to project.
+                          type: string
+                        mode:
+                          $ref: "#/components/schemas/BoxedInteger"
+                        path:
+                          description: path is the relative path of the
+                            file to map the key to. May not be an absolute
+                            path. May not contain the path element '..'.
+                            May not start with the string '..'.
+                          type: string
+                      required:
+                        - key
+                        - path
+                      type: object
+                    type: array
+                  name:
+                    description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                          TODO: Add other useful fields. apiVersion, kind, uid?'
+                    type: string
+                  optional:
+                    $ref: "#/components/schemas/BoxedBoolean"
+              downwardAPI:
+                type: object
+                description: downwardAPI information about the downwardAPI data to project
+                properties:
+                  items:
+                    description: Items is a list of DownwardAPIVolume file
+                    items:
+                      description: DownwardAPIVolumeFile represents information to create the file containing the pod field
+                      properties:
+                        fieldRef:
+                          $ref: "#/components/schemas/FieldRef"
+                        mode:
+                          $ref: "#/components/schemas/BoxedInteger"
+                        path:
+                          description: path is the relative path of the
+                            file to map the key to. May not be an absolute
+                            path. May not contain the path element '..'.
+                            May not start with the string '..'.
+                          type: string
+                        resourceFieldRef:
+                          $ref: "#/components/schemas/ResourceFieldRef"
+                      required:
+                        - path
+                      type: object
+                    type: array
+              secret:
+                type: object
+                description: secret information about the secret data to project
+                properties:
+                  items:
+                    description: items if unspecified, each key-value pair
+                      in the Data field of the referenced ConfigMap will
+                      be projected into the volume as a file whose name
+                      is the key and content is the value. If specified,
+                      the listed keys will be projected into the specified
+                      paths, and unlisted keys will not be present. If a
+                      key is specified which is not present in the ConfigMap,
+                      the volume setup will error unless it is marked optional.
+                      Paths must be relative and may not contain the '..'
+                      path or start with '..'.
+                    items:
+                      description: Maps a string key to a path within a
+                        volume.
+                      properties:
+                        key:
+                          description: key is the key to project.
+                          type: string
+                        mode:
+                          $ref: "#/components/schemas/BoxedInteger"
+                        path:
+                          description: path is the relative path of the
+                            file to map the key to. May not be an absolute
+                            path. May not contain the path element '..'.
+                            May not start with the string '..'.
+                          type: string
+                      required:
+                        - key
+                        - path
+                      type: object
+                    type: array
+                  name:
+                    description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                          TODO: Add other useful fields. apiVersion, kind, uid?'
+                    type: string
+                  optional:
+                    $ref: "#/components/schemas/BoxedBoolean"
+              serviceAccountToken:
+                type: object
+                description: serviceAccountToken is information about the serviceAccountToken data to project
+                properties:
+                  audience:
+                    description: audience is the intended audience of the token. A recipient of a token
+                      must identify itself with an identifier specified in the audience of the 
+                      token, and otherwise should reject the token. The audience defaults to the identifier of the apiserver.
+                    type: string
+                  expirationSeconds:
+                    $ref: "#/components/schemas/BoxedInteger"
+                  path:
+                    description: path is the path relative to the mount point of the file to project the token into.
+                    type: string
+                required:
+                  - path
+            type: object
+          type: array
+
     Volume:
       type: object
       description: Volume represents a named volume in a pod that
@@ -11097,6 +11440,8 @@ components:
           $ref: "#/components/schemas/ConfigMapVolumeSource"
         csi:
           $ref: "#/components/schemas/CSIVolumeSource"
+        projected:
+          $ref: "#/components/schemas/ProjectedVolumeSource"
       required:
         - name
 
@@ -11127,42 +11472,9 @@ components:
                 key must be defined
               type: boolean
         fieldRef:
-          type: object
-          required:
-            - fieldPath
-          description: 'Selects a field of the pod: supports metadata.name,
-            metadata.namespace, `metadata.labels[''<KEY>'']`,
-            `metadata.annotations[''<KEY>'']`, spec.nodeName,
-            spec.serviceAccountName, status.hostIP, status.podIP,
-            status.podIPs.'
-          properties:
-            apiVersion:
-              description: Version of the schema the FieldPath
-                is written in terms of, defaults to "v1".
-              type: string
-            fieldPath:
-              description: Path of the field to select in the
-                specified API version.
-              type: string
+          $ref: "#/components/schemas/FieldRef"
         resourceFieldRef:
-          type: object
-          required:
-            - resource
-          description: 'Selects a resource of the container: only
-            resources limits and requests (limits.cpu, limits.memory,
-            limits.ephemeral-storage, requests.cpu, requests.memory
-            and requests.ephemeral-storage) are currently supported.'
-          properties:
-            containerName:
-              description: 'Container name: required for volumes,
-                optional for env vars'
-              type: string
-            divisor:
-              type: string
-              pattern: "^[0-9]+(m|[GMK]i)$"
-            resource:
-              description: 'Required: resource to select'
-              type: string
+          $ref: "#/components/schemas/ResourceFieldRef"
         secretKeyRef:
           type: object
           required:
@@ -11183,6 +11495,45 @@ components:
               description: Specify whether the Secret or its key
                 must be defined
               type: boolean
+
+    FieldRef:
+      type: object
+      required:
+        - fieldPath
+      description: 'Selects a field of the pod: supports metadata.name,
+        metadata.namespace, `metadata.labels[''<KEY>'']`,
+        `metadata.annotations[''<KEY>'']`, spec.nodeName,
+        spec.serviceAccountName, status.hostIP, status.podIP,
+        status.podIPs.'
+      properties:
+        apiVersion:
+          description: Version of the schema the FieldPath
+            is written in terms of, defaults to "v1".
+          type: string
+        fieldPath:
+          description: Path of the field to select in the
+            specified API version.
+          type: string
+
+    ResourceFieldRef:
+      type: object
+      required:
+        - resource
+      description: 'Selects a resource of the container: only
+        resources limits and requests (limits.cpu, limits.memory,
+        limits.ephemeral-storage, requests.cpu, requests.memory
+        and requests.ephemeral-storage) are currently supported.'
+      properties:
+        containerName:
+          description: 'Container name: required for volumes,
+            optional for env vars'
+          type: string
+        divisor:
+          type: string
+          pattern: "^[0-9]+(m|[GMK]i)$"
+        resource:
+          description: 'Required: resource to select'
+          type: string
 
     TestWorkflowPvcConfig:
       type: object
@@ -11239,7 +11590,7 @@ components:
       description: TypedObjectReference contains enough information to let you locate the typed referenced object inside the specified namespace
       type: object
       allOf:
-      - $ref: "#/components/schemas/TypedLocalObjectReference"     
+      - $ref: "#/components/schemas/TypedLocalObjectReference"
       properties:
         namespace:
           description: Namespace is the namespace of resource being referenced

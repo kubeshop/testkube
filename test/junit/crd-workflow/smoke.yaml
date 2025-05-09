@@ -4,6 +4,7 @@ metadata:
   name: junit5-workflow-smoke
   labels:
     core-tests: workflows
+    tool: junit
 spec:
   content:
     git:

@@ -3,14 +3,24 @@ package crd
 import (
 	"bytes"
 	"embed"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"strings"
 	"text/template"
 
+	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/apimachinery/pkg/util/yaml"
+	"k8s.io/kube-openapi/pkg/validation/spec"
+	"k8s.io/kube-openapi/pkg/validation/strfmt"
+	"k8s.io/kube-openapi/pkg/validation/validate"
+
+	opcrd "github.com/kubeshop/testkube-operator/config/crd"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 )
 
 //go:embed templates
-var f embed.FS
+var tf embed.FS
 
 // Template is crd template type
 type Template string
@@ -55,7 +65,7 @@ type Gettable interface {
 
 // ExecuteTemplate executes crd template
 func ExecuteTemplate(tmpl Template, data any) (string, error) {
-	t, err := template.ParseFS(f, fmt.Sprintf("templates/%s.tmpl", tmpl))
+	t, err := template.ParseFS(tf, fmt.Sprintf("templates/%s.tmpl", tmpl))
 	if err != nil {
 		return "", err
 	}
@@ -85,4 +95,54 @@ func GenerateYAML[G Gettable](tmpl Template, items []G) (string, error) {
 	}
 
 	return data, nil
+}
+
+func ValidateYAMLAgainstSchema(name opcrd.Schema, dataYAML []byte) error {
+	// Load CRD YAML
+	schemaYAML, err := opcrd.SF.ReadFile(fmt.Sprintf("bases/%s.yaml", name))
+	if err != nil {
+		return err
+	}
+
+	// Strict validation by disabling additional properties at spec
+	schemaYAML = bytes.ReplaceAll(schemaYAML, []byte(strings.Repeat(" ", 12)+"spec:"),
+		[]byte(strings.Repeat(" ", 12)+"spec:\n"+strings.Repeat(" ", 14)+"additionalProperties: false"))
+
+	crd := apiextv1.CustomResourceDefinition{}
+	err = yaml.Unmarshal(schemaYAML, &crd)
+	if err != nil {
+		return err
+	}
+
+	// Get YAML schema from CRD for v1 version
+	if len(crd.Spec.Versions) == 0 || crd.Spec.Versions[0].Schema == nil {
+		return errors.New("schema not found")
+	}
+
+	schemaJSON, err := json.Marshal(crd.Spec.Versions[0].Schema.OpenAPIV3Schema)
+	if err != nil {
+		return err
+	}
+
+	schema := new(spec.Schema)
+	if err = json.Unmarshal([]byte(schemaJSON), schema); err != nil {
+		return err
+	}
+
+	dataJSON, err := yaml.ToJSON(dataYAML)
+	if err != nil {
+		return err
+	}
+
+	data := map[string]interface{}{}
+	if err = json.Unmarshal(dataJSON, &data); err != nil {
+		return err
+	}
+
+	// strfmt.Default is the registry of recognized formats
+	if err = validate.AgainstSchema(schema, data, strfmt.Default); err != nil {
+		return err
+	}
+
+	return nil
 }

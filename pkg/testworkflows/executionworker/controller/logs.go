@@ -93,6 +93,12 @@ func getContainerLogsStream(ctx context.Context, clientSet kubernetes.Interface,
 				time.Sleep(LogRetryOnConnectionLostDelay)
 				continue
 			}
+			// There may be issue with CSR signing process - the node could not be accessed until then
+			if strings.Contains(err.Error(), "tls: internal error") {
+				log.DefaultLogger.Errorw("cluster's TLS error (likely CSR signing delay) while loading container logs", "pod", podName, "error", err)
+				time.Sleep(LogRetryOnConnectionLostDelay)
+				continue
+			}
 			// The container is not necessarily already started when Started event is received
 			if !strings.Contains(err.Error(), "is waiting to start") {
 				return nil, err
@@ -232,9 +238,8 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 				t.Reset(FlushLogTime)
 				select {
 				case <-bufferCtx.Done():
-					if !t.Stop() {
-						<-t.C
-					}
+					t.Stop()
+
 					return
 				case <-t.C:
 					flushLogBuffer()
