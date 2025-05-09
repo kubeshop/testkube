@@ -57,7 +57,7 @@ ENTRYPOINT ["/go/bin/dlv", "exec", "--headless", "--continue", "--accept-multicl
 ###################################
 FROM ${BUSYBOX_IMAGE} AS dist
 RUN cp -rf /bin /.tktw-bin
-COPY --from=builder /app/build/_local/workflow-init /testkube/init
+COPY --from=builder /app/build/_local/workflow-init /init
 USER 1001
 ENTRYPOINT ["/init"]
 
