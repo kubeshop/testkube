@@ -13,22 +13,13 @@ type jobEvents struct {
 }
 
 type JobEvents interface {
-	Original() []*corev1.Event
-	Len() int
+	Events
 	Namespace() string
 	PodName() string
 	PodCreationTimestamp() time.Time
 	PodDeletionTimestamp() time.Time
-	FirstTimestamp() time.Time
-	LastTimestamp() time.Time
 	Finished() bool
-	FinishTimestamp() time.Time
 	Success() bool
-
-	Error() bool
-	ErrorReason() string
-	ErrorMessage() string
-	Debug() string
 }
 
 func NewJobEvents(events []*corev1.Event) JobEvents {

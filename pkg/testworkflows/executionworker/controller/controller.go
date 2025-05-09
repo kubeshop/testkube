@@ -78,7 +78,7 @@ func New(parentCtx context.Context, clientSet kubernetes.Interface, namespace, i
 		}()
 
 		// There was a job or pod for this execution, so we may only assume it is aborted
-		if !watcher.State().JobEvents().FirstTimestamp().IsZero() || !watcher.State().PodEvents().FirstTimestamp().IsZero() {
+		if !watcher.State().Events().FirstTimestamp().IsZero() {
 			log.DefaultLogger.Errorw("connecting to aborted execution", "executionId", watcher.State().ResourceId(), "debug", watcher.State().Debug())
 			return nil, ErrJobAborted
 		}

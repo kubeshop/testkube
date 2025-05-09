@@ -71,23 +71,20 @@ func WatchInstrumented(parentCtx context.Context, signature []stage.Signature, s
 		notifier.Align(watcher.State())
 
 		// Wait until the Pod is scheduled
-		currentJobEventsIndex := 0
-		currentPodEventsIndex := 0
+		currentEventsIndex := 0
 		for ok := true; ok; _, ok = <-updatesCh {
-			for _, ev := range watcher.State().JobEvents().Original()[currentJobEventsIndex:] {
-				currentJobEventsIndex++
-
-				if ev.Reason != "BackoffLimitExceeded" {
-					notifier.Event("", watchers2.GetEventTimestamp(ev), ev.Type, ev.Reason, ev.Message)
-				}
-			}
-			for _, ev := range watcher.State().PodEvents().Original()[currentPodEventsIndex:] {
-				currentPodEventsIndex++
-
-				// Display only events that are unrelated to further containers
-				name := GetEventContainerName(ev)
-				if name == "" {
-					notifier.Event("", watchers2.GetEventTimestamp(ev), ev.Type, ev.Reason, ev.Message)
+			for _, ev := range watcher.State().Events().Original()[currentEventsIndex:] {
+				currentEventsIndex++
+				if ev.InvolvedObject.Kind == "Job" {
+					if ev.Reason != "BackoffLimitExceeded" {
+						notifier.Event("", watchers2.GetEventTimestamp(ev), ev.Type, ev.Reason, ev.Message)
+					}
+				} else {
+					// Display only events that are unrelated to further containers
+					name := GetEventContainerName(ev)
+					if name == "" {
+						notifier.Event("", watchers2.GetEventTimestamp(ev), ev.Type, ev.Reason, ev.Message)
+					}
 				}
 			}
 
@@ -155,16 +152,18 @@ func WatchInstrumented(parentCtx context.Context, signature []stage.Signature, s
 			}
 
 			// Wait until the Container is started
-			currentPodEventsIndex = 0
+			currentEventsIndex = 0
 			for ok := true; ok; _, ok = <-updatesCh {
 				// Read the Pod Events for the Container Events
-				for _, ev := range watcher.State().PodEvents().Original()[currentPodEventsIndex:] {
-					currentPodEventsIndex++
+				for _, ev := range watcher.State().Events().Original()[currentEventsIndex:] {
+					currentEventsIndex++
 
 					// Display only events that are unrelated to further containers
-					name := GetEventContainerName(ev)
-					if name == container && ev.Reason != "Created" && ev.Reason != "Started" {
-						notifier.Event(initialRefs[containerIndex], watchers2.GetEventTimestamp(ev), ev.Type, ev.Reason, ev.Message)
+					if ev.InvolvedObject.Kind != "Job" {
+						name := GetEventContainerName(ev)
+						if name == container && ev.Reason != "Created" && ev.Reason != "Started" {
+							notifier.Event(initialRefs[containerIndex], watchers2.GetEventTimestamp(ev), ev.Type, ev.Reason, ev.Message)
+						}
 					}
 				}
 

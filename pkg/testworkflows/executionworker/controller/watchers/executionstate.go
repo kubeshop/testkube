@@ -49,13 +49,15 @@ type KubernetesExecutionState interface {
 	JobExists() bool
 	PodExists() bool
 	PodCreated() bool
-}
-
-type ExecutionState interface {
-	Available() bool
 
 	JobEvents() JobEvents
 	PodEvents() PodEvents
+}
+
+type ExecutionState interface {
+	Events() Events
+
+	Available() bool
 
 	ResourceId() string
 	RootResourceId() string
@@ -253,6 +255,10 @@ func (e *executionState) RunnerId() string {
 		return e.pod.RunnerId()
 	}
 	return ""
+}
+
+func (e *executionState) Events() Events {
+	return &joinedEvents{jobEvents: e.jobEvents, podEvents: e.podEvents}
 }
 
 func (e *executionState) JobEvents() JobEvents {
