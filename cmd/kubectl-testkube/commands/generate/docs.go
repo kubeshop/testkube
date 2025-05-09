@@ -15,6 +15,10 @@ import (
 const fmTemplate = `---
 title: "%s"
 %s---
+<head>
+  <meta name="docsearch:indexPrefix" content="reference-doc" />
+</head>
+
 `
 
 var filePrepender = func(filename string) string {
