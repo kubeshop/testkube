@@ -113,13 +113,13 @@ func (w *worker) Execute(ctx context.Context, request executionworkertypes.Execu
 		bundle.SetGroupId(request.GroupId)
 	}
 
-	// Determine FS Group
-	opts := make([]string, 0)
-	if bundle.Job.Spec.Template.Spec.SecurityContext != nil {
-		if bundle.Job.Spec.Template.Spec.SecurityContext.FSGroup != nil {
-			opts = append(opts, fmt.Sprintf("gid=%d", *bundle.Job.Spec.Template.Spec.SecurityContext.FSGroup))
-		}
-	}
+	//// Determine FS Group
+	//opts := make([]string, 0)
+	//if bundle.Job.Spec.Template.Spec.SecurityContext != nil {
+	//	if bundle.Job.Spec.Template.Spec.SecurityContext.FSGroup != nil {
+	//		opts = append(opts, fmt.Sprintf("gid=%d", *bundle.Job.Spec.Template.Spec.SecurityContext.FSGroup))
+	//	}
+	//}
 
 	// List all the expected containers
 	containers := append(bundle.Job.Spec.Template.Spec.InitContainers, bundle.Job.Spec.Template.Spec.Containers...)
@@ -169,15 +169,15 @@ func (w *worker) Execute(ctx context.Context, request executionworkertypes.Execu
 	for index, cn := range containers {
 		go func() {
 			defer wg.Done()
-			user := ""
-			if cn.SecurityContext.RunAsUser != nil {
-				if cn.SecurityContext.RunAsGroup != nil {
-					user = fmt.Sprintf("%d:%d", *cn.SecurityContext.RunAsUser, *cn.SecurityContext.RunAsGroup)
-				} else {
-					user = fmt.Sprintf("%d", *cn.SecurityContext.RunAsUser)
-				}
-			}
-			user = "root" // TODO: add another start 'root' container that will set proper permissions for the volumes
+			//user := ""
+			//if cn.SecurityContext.RunAsUser != nil {
+			//	if cn.SecurityContext.RunAsGroup != nil {
+			//		user = fmt.Sprintf("%d:%d", *cn.SecurityContext.RunAsUser, *cn.SecurityContext.RunAsGroup)
+			//	} else {
+			//		user = fmt.Sprintf("%d", *cn.SecurityContext.RunAsUser)
+			//	}
+			//}
+			user := "root" // TODO: add another start 'root' container that will set proper permissions for the volumes
 
 			// Pull the image if necessary
 			shouldPullImage := cn.ImagePullPolicy != "Never"
@@ -572,6 +572,9 @@ func (w *worker) Get(ctx context.Context, id string, opts executionworkertypes.G
 		Signature: stage.MapSignatureList(opts.Hints.Signature),
 		RunnerId:  w.config.Connection.AgentID,
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	cfg, err := ctrl.InternalConfig()
 	if err != nil {
@@ -616,6 +619,9 @@ func (w *worker) Summary(ctx context.Context, id string, opts executionworkertyp
 		Signature: stage.MapSignatureList(opts.Hints.Signature),
 		RunnerId:  w.config.Connection.AgentID,
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	cfg, err := ctrl.InternalConfig()
 	if err != nil {
