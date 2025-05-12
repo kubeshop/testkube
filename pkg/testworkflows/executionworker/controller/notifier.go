@@ -275,12 +275,12 @@ func (n *notifier) fillGaps(force bool) {
 	}
 
 	// Mark the initialization step as running
-	if n.state.Available() && n.result.Initialization.NotStarted() {
+	if n.state.Scheduled() && n.result.Initialization.NotStarted() {
 		n.result.Initialization.Status = common.Ptr(testkube.RUNNING_TestWorkflowStepStatus)
 	}
 
 	// Don't compute anything more if there is no Pod information
-	if !n.state.Available() {
+	if !n.state.Scheduled() {
 		return
 	}
 

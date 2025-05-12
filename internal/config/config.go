@@ -177,7 +177,12 @@ type CronJobConfig struct {
 	EnableCronJobs string `envconfig:"ENABLE_CRON_JOBS" default:""`
 }
 
+type RuntimeConfig struct {
+	RuntimeMode string `envconfig:"RUNTIME_MODE" default:"kubernetes"` // make enum
+}
+
 type Config struct {
+	RuntimeConfig
 	APIConfig
 	OSSControlPlaneConfig
 	LegacyExecutorConfig

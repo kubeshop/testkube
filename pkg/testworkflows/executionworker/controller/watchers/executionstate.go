@@ -58,6 +58,7 @@ type ExecutionState interface {
 	Events() Events
 
 	Available() bool
+	Scheduled() bool
 
 	ResourceId() string
 	RootResourceId() string
@@ -108,6 +109,10 @@ func (e *executionState) Pod() Pod {
 }
 
 func (e *executionState) Available() bool {
+	return e.job != nil
+}
+
+func (e *executionState) Scheduled() bool {
 	return e.pod != nil
 }
 

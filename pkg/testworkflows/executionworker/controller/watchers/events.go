@@ -1,7 +1,9 @@
 package watchers
 
 import (
+	"fmt"
 	"slices"
+	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -87,4 +89,98 @@ func (j *joinedEvents) ErrorMessage() string {
 
 func (j *joinedEvents) Debug() string {
 	return j.jobEvents.Debug() + "\n" + j.podEvents.Debug()
+}
+
+type bareEvents struct {
+	events []*corev1.Event
+}
+
+func NewEvents(events []*corev1.Event) Events {
+	return &bareEvents{events}
+}
+
+func (j *bareEvents) Original() []*corev1.Event {
+	return j.events
+}
+
+func (j *bareEvents) Len() int {
+	return len(j.events)
+}
+
+func (j *bareEvents) FirstTimestamp() (ts time.Time) {
+	for i := range j.events {
+		if ts.IsZero() || ts.After(j.events[i].CreationTimestamp.Time) {
+			ts = j.events[i].CreationTimestamp.Time
+		}
+		if ts.IsZero() || ts.After(j.events[i].FirstTimestamp.Time) {
+			ts = j.events[i].FirstTimestamp.Time
+		}
+		if ts.IsZero() || ts.After(j.events[i].LastTimestamp.Time) {
+			ts = j.events[i].LastTimestamp.Time
+		}
+	}
+	return ts
+}
+
+func (j *bareEvents) LastTimestamp() (ts time.Time) {
+	for i := range j.events {
+		if ts.Before(j.events[i].CreationTimestamp.Time) {
+			ts = j.events[i].CreationTimestamp.Time
+		}
+		if ts.Before(j.events[i].FirstTimestamp.Time) {
+			ts = j.events[i].FirstTimestamp.Time
+		}
+		if ts.Before(j.events[i].LastTimestamp.Time) {
+			ts = j.events[i].LastTimestamp.Time
+		}
+	}
+	return ts
+}
+
+func (j *bareEvents) Finished() bool {
+	return j.Success() || j.Error()
+}
+
+func (j *bareEvents) FinishTimestamp() time.Time {
+	for i := range j.events {
+		if j.events[i].Reason == "BackoffLimitExceeded" || j.events[i].Reason == "DeadlineExceeded" || j.events[i].Reason == "Completed" {
+			// (BackoffLimitExceeded) Job has reached the specified backoff limit
+			// (DeadlineExceeded) Job was active longer than specified deadline
+			// (Completed) Job completed
+			return GetEventTimestamp(j.events[i])
+		}
+	}
+	return time.Time{}
+}
+
+func (j *bareEvents) Success() bool {
+	for i := range j.events {
+		if j.events[i].Reason == "Completed" {
+			// (Completed) Job completed
+			return true
+		}
+	}
+	return false
+}
+
+func (j *bareEvents) Error() bool {
+	return false // FIXME
+}
+
+func (j *bareEvents) ErrorReason() string {
+	return "" // FIXME
+}
+
+func (j *bareEvents) ErrorMessage() string {
+	return "" // FIXME
+}
+
+func (j *bareEvents) Debug() string {
+	firstTs := j.FirstTimestamp()
+	result := make([]string, len(j.events))
+	for i := range j.events {
+		result[i] = fmt.Sprintf("[%.1fs] %s: %s", float64(GetEventTimestamp(j.events[i]).Sub(firstTs))/float64(time.Second), j.events[i].Reason, j.events[i].Message)
+	}
+
+	return strings.Join(result, ", ")
 }
