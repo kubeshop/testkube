@@ -11,7 +11,7 @@ import (
 )
 
 func Test_ReadTimestamp_UTC_Initial(t *testing.T) {
-	reader := newTimestampReader()
+	reader := newTimestampReader(0)
 	prefix := "2024-06-07T12:41:49.037275300Z "
 	message := "some-message"
 	buf := bufio.NewReader(bytes.NewBufferString(prefix + message))
@@ -24,7 +24,7 @@ func Test_ReadTimestamp_UTC_Initial(t *testing.T) {
 }
 
 func Test_ReadTimestamp_NonUTC_Initial(t *testing.T) {
-	reader := newTimestampReader()
+	reader := newTimestampReader(0)
 	prefix := "2024-06-07T15:41:49.037275300+03:00 "
 	message := "some-message"
 	buf := bufio.NewReader(bytes.NewBufferString(prefix + message))
@@ -37,7 +37,7 @@ func Test_ReadTimestamp_NonUTC_Initial(t *testing.T) {
 }
 
 func Test_ReadTimestamp_UTC_Recurring(t *testing.T) {
-	reader := newTimestampReader()
+	reader := newTimestampReader(0)
 	prefix := "2024-06-07T12:41:49.037275300Z "
 	message := "some-message"
 	buf := bufio.NewReader(bytes.NewBufferString(prefix + prefix + message))
@@ -52,8 +52,64 @@ func Test_ReadTimestamp_UTC_Recurring(t *testing.T) {
 }
 
 func Test_ReadTimestamp_NonUTC_Recurring(t *testing.T) {
-	reader := newTimestampReader()
+	reader := newTimestampReader(0)
 	prefix := "2024-06-07T15:41:49.037275300+03:00 "
+	message := "some-message"
+	buf := bufio.NewReader(bytes.NewBufferString(prefix + prefix + message))
+	err1 := reader.Read(buf)
+	err2 := reader.Read(buf)
+	rest, _ := io.ReadAll(buf)
+	assert.NoError(t, err1)
+	assert.NoError(t, err2)
+	assert.Equal(t, []byte(prefix), reader.Prefix())
+	assert.Equal(t, []byte(message), rest)
+	assert.Equal(t, time.Date(2024, 6, 7, 12, 41, 49, 37275300, time.UTC), reader.ts)
+}
+
+func Test_ReadTimestamp_UTC_Initial_Docker(t *testing.T) {
+	reader := newTimestampReader(8)
+	prefix := "\u0001\u0000\u0000\u0000\u0000\u0000\u0000@2024-06-07T12:41:49.037275300Z "
+	message := "some-message"
+	buf := bufio.NewReader(bytes.NewBufferString(prefix + message))
+	err := reader.Read(buf)
+	rest, _ := io.ReadAll(buf)
+	assert.NoError(t, err)
+	assert.Equal(t, []byte(prefix), reader.Prefix())
+	assert.Equal(t, []byte(message), rest)
+	assert.Equal(t, time.Date(2024, 6, 7, 12, 41, 49, 37275300, time.UTC), reader.ts)
+}
+
+func Test_ReadTimestamp_NonUTC_Initial_Docker(t *testing.T) {
+	reader := newTimestampReader(8)
+	prefix := "\u0001\u0000\u0000\u0000\u0000\u0000\u0000@2024-06-07T15:41:49.037275300+03:00 "
+	message := "some-message"
+	buf := bufio.NewReader(bytes.NewBufferString(prefix + message))
+	err := reader.Read(buf)
+	rest, _ := io.ReadAll(buf)
+	assert.NoError(t, err)
+	assert.Equal(t, []byte(prefix), reader.Prefix())
+	assert.Equal(t, []byte(message), rest)
+	assert.Equal(t, time.Date(2024, 6, 7, 12, 41, 49, 37275300, time.UTC), reader.ts)
+}
+
+func Test_ReadTimestamp_UTC_Recurring_Docker(t *testing.T) {
+	reader := newTimestampReader(8)
+	prefix := "\u0001\u0000\u0000\u0000\u0000\u0000\u0000;2024-06-07T12:41:49.037275300Z "
+	message := "some-message"
+	buf := bufio.NewReader(bytes.NewBufferString(prefix + prefix + message))
+	err1 := reader.Read(buf)
+	err2 := reader.Read(buf)
+	rest, _ := io.ReadAll(buf)
+	assert.NoError(t, err1)
+	assert.NoError(t, err2)
+	assert.Equal(t, []byte(prefix), reader.Prefix())
+	assert.Equal(t, []byte(message), rest)
+	assert.Equal(t, time.Date(2024, 6, 7, 12, 41, 49, 37275300, time.UTC), reader.ts)
+}
+
+func Test_ReadTimestamp_NonUTC_Recurring_Docker(t *testing.T) {
+	reader := newTimestampReader(8)
+	prefix := "\u0001\u0000\u0000\u0000\u0000\u0000\u0000@2024-06-07T15:41:49.037275300+03:00 "
 	message := "some-message"
 	buf := bufio.NewReader(bytes.NewBufferString(prefix + prefix + message))
 	err1 := reader.Read(buf)
