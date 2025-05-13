@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"regexp"
+	"strings"
 
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -95,6 +96,11 @@ func (i *inspector) save(ctx context.Context, registry, image string, info *Info
 }
 
 func (i *inspector) ResolveName(registry, image string) string {
+	// if it already contains default registry
+	if i.defaultRegistry != "" && strings.HasPrefix(image, i.defaultRegistry) {
+		return image
+	}
+
 	if ImageWithRegistryRe.MatchString(image) {
 		return image
 	}
