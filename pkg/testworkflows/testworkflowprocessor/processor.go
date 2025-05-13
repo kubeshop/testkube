@@ -342,7 +342,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		options.Config.Execution.GlobalEnv = testworkflowresolver.DedupeEnvVars(append(options.Config.Execution.GlobalEnv, globalEnv...))
 	}
 
-	var volumeMountPaths []string
+	var secretMountPaths []string
 	for i := range containers {
 		err = expressions.FinalizeForce(&containers[i].EnvFrom, machines...)
 		if err != nil {
@@ -367,7 +367,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 				containers[i].VolumeMounts[j].MountPath = filepath.Clean(filepath.Join(workingDir, containers[i].VolumeMounts[j].MountPath))
 			}
 			if _, ok := volumeNameMap[containers[i].VolumeMounts[j].Name]; ok {
-				volumeMountPaths = append(volumeMountPaths, containers[i].VolumeMounts[j].MountPath)
+				secretMountPaths = append(secretMountPaths, containers[i].VolumeMounts[j].MountPath)
 			}
 		}
 
@@ -385,7 +385,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		}
 	}
 
-	options.Config.Execution.SecretMountPaths = volumeMountPaths
+	options.Config.Execution.SecretMountPaths = secretMountPaths
 	// Append common environment variables
 	if len(options.CommonEnvVariables) > 0 {
 		for i := range containers {
