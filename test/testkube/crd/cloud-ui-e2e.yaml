@@ -10,7 +10,7 @@ spec:
       uri: https://github.com/kubeshop/testkube-cloud-api.git
       revision: main
       paths:
-      - packages/e2e-tests
+      - js/packages/e2e-tests
       usernameFrom:
         secretKeyRef:
           name: 'cloud-ui-e2e-testsource-source-secrets'
@@ -26,7 +26,7 @@ spec:
       requests:
         cpu: 2
         memory: 2Gi
-    workingDir: /data/repo/packages/e2e-tests
+    workingDir: /data/repo/js/packages/e2e-tests
     image: mcr.microsoft.com/playwright:v1.44.1-focal
     env:
     - name: CLOUD_BASE_URL
