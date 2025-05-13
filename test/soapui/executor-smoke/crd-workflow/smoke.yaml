@@ -17,6 +17,8 @@ spec:
       requests:
         cpu: 512m
         memory: 256Mi
+  job:
+    activeDeadlineSeconds:  180
   steps:
   - name: Run tests
     run:

@@ -19,6 +19,8 @@ spec:
         cpu: 2
         memory: 2Gi
     workingDir: /data/repo/test/playwright/executor-tests/playwright-project
+  job:
+    activeDeadlineSeconds:  600
   steps:
   - name: Install dependencies
     shell: "npm ci"
@@ -51,6 +53,8 @@ spec:
         cpu: 2
         memory: 2Gi
     workingDir: /data/repo/test/playwright/executor-tests/playwright-project
+  job:
+    activeDeadlineSeconds:  600
   steps:
   - name: Install dependencies
     shell: "npm ci"
@@ -87,6 +91,8 @@ spec:
         cpu: 2
         memory: 2Gi
     workingDir: /data/repo/test/playwright/executor-tests/playwright-project
+  job:
+    activeDeadlineSeconds:  600
   steps:
   - name: Install dependencies
     run:
@@ -137,6 +143,8 @@ spec:
         cpu: 2
         memory: 2Gi
     workingDir: /data/repo/test/playwright/executor-tests/playwright-project
+  job:
+    activeDeadlineSeconds:  600
   steps:
   - name: Install dependencies
     shell: "npm ci"
@@ -174,6 +182,8 @@ spec:
         cpu: 2
         memory: 2Gi
     workingDir: /data/repo/test/playwright/executor-tests/playwright-project
+  job:
+    activeDeadlineSeconds:  600
   steps:
   - name: Install dependencies
     run:
@@ -208,6 +218,8 @@ spec:
         cpu: 2
         memory: 2Gi
     workingDir: /data/repo/test/playwright/executor-tests/playwright-project
+  job:
+    activeDeadlineSeconds:  600
   steps:
   - name: Run from template
     content:
@@ -240,6 +252,8 @@ spec:
   container:
     image: mcr.microsoft.com/playwright:v1.38.0-focal
     workingDir: /data/repo/test/playwright/executor-tests/playwright-project
+  job:
+    activeDeadlineSeconds:  600
   steps:
   - name: Install dependencies
     shell: 'npm install --save-dev @playwright/test@1.38.0 && npm ci'
@@ -278,6 +292,8 @@ spec:
   container:
     image: mcr.microsoft.com/playwright:v1.38.0-focal
     workingDir: /data/repo/test/playwright/executor-tests/playwright-project
+  job:
+    activeDeadlineSeconds:  600
   steps:
   - name: Install dependencies
     shell: 'npm install --save-dev @playwright/test@1.38.0 && npm ci'
