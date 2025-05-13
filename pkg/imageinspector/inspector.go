@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
-	"regexp"
-	"strings"
 
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -19,10 +17,6 @@ type inspector struct {
 	secrets         SecretFetcher
 	storage         []Storage
 }
-
-var (
-	ImageWithRegistryRe = regexp.MustCompile(`^[^/]+\.[^/]+/`)
-)
 
 func NewInspector(defaultRegistry string, infoFetcher InfoFetcher, secretFetcher SecretFetcher, storage ...Storage) Inspector {
 	return &inspector{
@@ -96,12 +90,7 @@ func (i *inspector) save(ctx context.Context, registry, image string, info *Info
 }
 
 func (i *inspector) ResolveName(registry, image string) string {
-	// if it already contains default registry
-	if i.defaultRegistry != "" && strings.HasPrefix(image, i.defaultRegistry) {
-		return image
-	}
-
-	if ImageWithRegistryRe.MatchString(image) {
+	if ExtractRegistry(image) != "" {
 		return image
 	}
 	if registry == "" {
