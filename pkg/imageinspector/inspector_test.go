@@ -121,5 +121,5 @@ func TestInspector_ResolveName_CustomDefault_NoOverride(t *testing.T) {
 	secrets := NewMockSecretFetcher(ctrl)
 	inspector := NewInspector("custom-registry:443", infos, secrets)
 
-	assert.Equal(t, "custom-registry:443/kubeshop/testkube-tw-toolkit:2.1.147", inspector.ResolveName("", "custom-registry:443/kubeshop/testkube-tw-toolkit:2.1.147"))
+	assert.Equal(t, "custom-registry:443/repo/image:1.2.3", inspector.ResolveName("", "custom-registry:443/repo/image:1.2.3"))
 }
