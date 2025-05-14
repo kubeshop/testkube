@@ -309,7 +309,7 @@ func (c *setup) SetConfig(config lite.LiteContainerConfig) {
 	}
 }
 
-func (c *setup) GetSecretVolumeValues(mountPaths []string) []string {
+func (c *setup) GetSecretVolumeData(mountPaths []string) []string {
 	wordMap := make(map[string]struct{})
 	for _, dir := range mountPaths {
 		err := filepath.Walk(dir, func(path string, info fs.FileInfo, err error) error {
