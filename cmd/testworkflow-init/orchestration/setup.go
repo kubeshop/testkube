@@ -3,6 +3,7 @@ package orchestration
 import (
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -306,4 +307,38 @@ func (c *setup) SetConfig(config lite.LiteContainerConfig) {
 	} else {
 		c.SetWorkingDir(*config.WorkingDir)
 	}
+}
+
+func (c *setup) GetSecretVolumeValues(mountPaths []string) []string {
+	wordMap := make(map[string]struct{})
+	for _, dir := range mountPaths {
+		err := filepath.Walk(dir, func(path string, info fs.FileInfo, err error) error {
+			if err != nil {
+				return nil
+			}
+
+			if info.IsDir() {
+				return nil
+			}
+
+			data, err := os.ReadFile(path)
+			if err != nil {
+				return err
+			}
+
+			wordMap[string(data)] = struct{}{}
+			return nil
+		})
+
+		if err != nil {
+			output.Std.Direct().Warnf("warn: error using %s as secret volume path: %s\n", dir, err.Error())
+		}
+	}
+
+	words := make([]string, len(wordMap))
+	for word := range wordMap {
+		words = append(words, word)
+	}
+
+	return words
 }
