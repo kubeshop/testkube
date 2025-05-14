@@ -321,6 +321,10 @@ func (c *setup) GetSecretVolumeValues(mountPaths []string) []string {
 				return nil
 			}
 
+			if !info.Mode().IsRegular() {
+				return nil
+			}
+
 			data, err := os.ReadFile(path)
 			if err != nil {
 				return err
