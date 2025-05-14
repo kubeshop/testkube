@@ -317,10 +317,6 @@ func (c *setup) GetSecretVolumeData(mountPaths []string) []string {
 				return nil
 			}
 
-			if info.IsDir() {
-				return nil
-			}
-
 			if !info.Mode().IsRegular() {
 				return nil
 			}
