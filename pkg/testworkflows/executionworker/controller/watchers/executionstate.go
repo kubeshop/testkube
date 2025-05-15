@@ -32,49 +32,57 @@ type ExecutionStateOptions struct {
 	ScheduledAt    time.Time
 }
 
-type ExecutionState interface {
+type KubernetesExecutionState interface {
+	ExecutionState
 	Job() Job
 	Pod() Pod
-	JobEvents() JobEvents
-	PodEvents() PodEvents
-	JobExists() bool
-	PodExists() bool
-
 	Namespace() string
-	ResourceId() string
-	RootResourceId() string
-	RunnerId() string
 	PodName() string
 	PodNodeName() string
 	PodIP() string
 	PodDeletionTimestamp() time.Time
-	CompletionTimestamp() time.Time
-	ContainerStartTimestamp(name string) time.Time
-	ContainerStarted(name string) bool
-	ContainerFinished(name string) bool
-	ContainerFailed(name string) bool
+	PodExecutionError() string
+	JobExecutionError() string
+	PodCreationTimestamp() time.Time
+	PodStartTimestamp() time.Time
+	JobCreationTimestamp() time.Time
+	JobExists() bool
+	PodExists() bool
+	PodCreated() bool
+
+	JobEvents() JobEvents
+	PodEvents() PodEvents
+}
+
+type ExecutionState interface {
+	Events() Events
+
+	Available() bool
+	Scheduled() bool
+
+	ResourceId() string
+	RootResourceId() string
+	RunnerId() string
 	Signature() ([]stage.Signature, error)
 	ActionGroups() (actiontypes.ActionGroups, error)
 	InternalConfig() (testworkflowconfig.InternalConfig, error)
 	ScheduledAt() time.Time
 
+	CompletionTimestamp() time.Time
+	ContainerStartTimestamp(name string) time.Time
+	ContainerStarted(name string) bool
+	ContainerFinished(name string) bool
+	ContainerFailed(name string) bool
+	ContainerResult(name string, executionError string) ContainerResult
+
 	ExecutionError() string
-	JobExecutionError() string
-	PodExecutionError() string
 	Debug() map[string]string
 
-	PodCreationTimestamp() time.Time
 	EstimatedPodCreationTimestamp() time.Time
-
-	PodStartTimestamp() time.Time
 	EstimatedPodStartTimestamp() time.Time
-
-	JobCreationTimestamp() time.Time
 	EstimatedJobCreationTimestamp() time.Time
 
 	ContainersReady() bool
-
-	PodCreated() bool
 	PodStarted() bool
 	Completed() bool
 }
@@ -98,6 +106,14 @@ func (e *executionState) Job() Job {
 
 func (e *executionState) Pod() Pod {
 	return e.pod
+}
+
+func (e *executionState) Available() bool {
+	return e.job != nil
+}
+
+func (e *executionState) Scheduled() bool {
+	return e.pod != nil
 }
 
 func (e *executionState) JobExists() bool {
@@ -246,6 +262,10 @@ func (e *executionState) RunnerId() string {
 	return ""
 }
 
+func (e *executionState) Events() Events {
+	return &joinedEvents{jobEvents: e.jobEvents, podEvents: e.podEvents}
+}
+
 func (e *executionState) JobEvents() JobEvents {
 	return e.jobEvents
 }
@@ -317,6 +337,13 @@ func (e *executionState) ContainerFinished(name string) bool {
 
 func (e *executionState) ContainerFailed(name string) bool {
 	return e.pod != nil && e.pod.ContainerFailed(name)
+}
+
+func (e *executionState) ContainerResult(name, executionError string) ContainerResult {
+	if e.pod == nil {
+		return ContainerResult{}
+	}
+	return e.pod.ContainerResult(name, executionError)
 }
 
 func (e *executionState) JobCreationTimestamp() time.Time {

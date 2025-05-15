@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	dockerclient "github.com/docker/docker/client"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
@@ -29,6 +30,7 @@ type Options struct {
 	StorageSkipVerify bool
 
 	GlobalTemplate GlobalTemplateFactory
+	DockerClient   *dockerclient.Client
 }
 
 type service struct {

@@ -1,0 +1,103 @@
+services:
+  runner:
+    develop:
+      watch:
+        - path: ./cmd
+          action: rebuild
+        - path: ./internal
+          action: rebuild
+        - path: ./pkg
+          action: rebuild
+    build:
+      context: .
+      dockerfile: ./build/_local/agent-server.Dockerfile
+    image: testkube-agent:local
+    ports:
+    - "8088:8088"
+    environment:
+      TESTKUBE_PRO_AGENT_ID: tkcrun_xxx
+      TESTKUBE_PRO_API_KEY: tkckey_run_xxx
+      TESTKUBE_PRO_ORG_ID: tkcorg_xxx
+      TESTKUBE_PRO_URL: agent.testkube.io:443
+      TESTKUBE_PRO_TLS_SKIP_VERIFY: 'false'
+      TESTKUBE_ENABLE_IMAGE_DATA_PERSISTENT_CACHE: 'true'
+      TESTKUBE_IMAGE_CREDENTIALS_CACHE_TTL: 30m
+      # dev
+      APISERVER_FULLNAME: runner
+      APISERVER_PORT: '8088'
+      TESTKUBE_TW_TOOLKIT_IMAGE: testkube-tw-toolkit:local
+      TESTKUBE_TW_INIT_IMAGE: testkube-tw-init:local
+      # static
+      RUNTIME_MODE: 'docker'
+      SLACK_CONFIG: '[]'
+      ENABLE_K8S_EVENTS: 'false'
+      DISABLE_TEST_TRIGGERS: 'true'
+      DISABLE_WEBHOOKS: 'true'
+      DISABLE_DEPRECATED_TESTS: 'true'
+      DISABLE_DEFAULT_AGENT: 'true'
+      GITOPS_KUBERNETES_TO_CLOUD_ENABLED: 'false'
+      GITOPS_CLOUD_TO_KUBERNETES_ENABLED: 'false'
+      ENABLE_CRON_JOBS: 'false'
+      NATS_EMBEDDED: 'true'
+      FEATURE_NEW_ARCHITECTURE: 'true'
+      TESTKUBE_ANALYTICS_ENABLED: 'false'
+      # obsolete
+      ALLOW_LOW_SECURITY_FIELDS: 'false'
+      TESTKUBE_NAMESPACE: dummy
+      JOB_SERVICE_ACCOUNT_NAME: exec-sa-testkube-dummy
+    volumes:
+    - tmp_data:/tmp
+    - nats_data:/app/nats
+    - /var/run/docker.sock:/var/run/docker.sock
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8088/health"]
+      interval: 10s
+      timeout: 1s
+      retries: 3
+      start_period: 5s
+    restart: always
+    stop_grace_period: 5s
+    networks:
+    - testkube
+
+  # Reference it, so the docker-compose will build it
+  testworkflow-init:
+    develop:
+      watch:
+        - path: ./cmd
+          action: rebuild
+        - path: ./internal
+          action: rebuild
+        - path: ./pkg
+          action: rebuild
+    build:
+      context: .
+      dockerfile: ./build/_local/testworkflow-init.Dockerfile
+    image: testkube-tw-init:local
+    restart: no
+    scale: 0
+
+  # Reference it, so the docker-compose will build it
+  testworkflow-toolkit:
+    develop:
+      watch:
+        - path: ./cmd
+          action: rebuild
+        - path: ./internal
+          action: rebuild
+        - path: ./pkg
+          action: rebuild
+    build:
+      context: .
+      dockerfile: ./build/_local/testworkflow-toolkit.Dockerfile
+    image: testkube-tw-toolkit:local
+    restart: no
+    scale: 0
+
+volumes:
+  tmp_data: {}
+  nats_data: {}
+
+networks:
+  testkube:
+    name: testkube

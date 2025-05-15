@@ -13,7 +13,7 @@ func main() {
 	ui.SetVerbose(config.Debug())
 
 	// Validate provided data
-	if config.Namespace() == "" || config.Ref() == "" {
+	if config.Ref() == "" {
 		ui.Fail(errors.New("environment is misconfigured"))
 	}
 

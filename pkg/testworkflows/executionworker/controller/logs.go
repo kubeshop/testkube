@@ -115,6 +115,12 @@ func getContainerLogsStream(ctx context.Context, clientSet kubernetes.Interface,
 }
 
 func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interface, namespace, podName, containerName string, bufferSize int, isDone func() bool, isLastHint func(*instructions.Instruction) bool) <-chan ChannelMessage[ContainerLog] {
+	return WatchContainerLogsBare(parentCtx, bufferSize, 0, isLastHint, func(ctx context.Context, since *time.Time) (io.Reader, error) {
+		return getContainerLogsStream(ctx, clientSet, namespace, podName, containerName, isDone, since)
+	})
+}
+
+func WatchContainerLogsBare(parentCtx context.Context, bufferSize int, linePrefix int, isLastHint func(*instructions.Instruction) bool, getContainerLogsStream func(ctx context.Context, since *time.Time) (io.Reader, error)) <-chan ChannelMessage[ContainerLog] {
 	ctx, ctxCancel := context.WithCancel(parentCtx)
 	ch := make(chan ChannelMessage[ContainerLog], bufferSize)
 	var mu sync.Mutex
@@ -151,7 +157,7 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 		var since *time.Time
 
 		// Create logs stream request
-		stream, err := getContainerLogsStream(ctx, clientSet, namespace, podName, containerName, isDone, since)
+		stream, err := getContainerLogsStream(ctx, since)
 		if err == io.EOF {
 			return
 		} else if err != nil {
@@ -173,7 +179,7 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 			message := make([]byte, logBufferLog.Len())
 			_, err := logBufferLog.Read(message)
 			if err != nil {
-				log.DefaultLogger.Errorf("failed to read log buffer: %s/%s", podName, containerName)
+				log.DefaultLogger.Error("failed to read log buffer")
 				return
 			}
 			sendLog(ContainerLog{Time: logBufferTs, Log: message})
@@ -257,7 +263,7 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 		// Parse and return the logs
 		reader := bufio.NewReaderSize(stream, FlushBufferSize)
 		readerAnyContent := false
-		tsReader := newTimestampReader()
+		tsReader := newTimestampReader(linePrefix)
 		lastTs := time.Now()
 		completed := false
 
@@ -305,7 +311,7 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 			// Similarly for GOAWAY, that may be caused by too long connection.
 			if err == io.EOF || (err != nil && strings.Contains(err.Error(), "GOAWAY")) {
 				since = common.Ptr(lastTs.Add(1))
-				stream, err = getContainerLogsStream(ctx, clientSet, namespace, podName, containerName, isDone, since)
+				stream, err = getContainerLogsStream(ctx, since)
 				if err != nil {
 					return
 				}
@@ -346,7 +352,7 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 				if hasNewLine {
 					appendLog(lastTs, []byte("\n"))
 				}
-				appendLog(lastTs, tsReader.Prefix(), line)
+				appendLog(lastTs, tsReader.TsBytes(), line)
 				for isPrefix && err == nil {
 					line, isPrefix, err = reader.ReadLine()
 					appendLog(lastTs, line)
@@ -386,7 +392,7 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 			if hasNewLine {
 				appendLog(lastTs, []byte("\n"))
 			}
-			appendLog(lastTs, tsReader.Prefix(), line)
+			appendLog(lastTs, tsReader.TsBytes(), line)
 			hasNewLine = true
 		}
 	}()
@@ -399,15 +405,17 @@ var (
 )
 
 type timestampReader struct {
-	buffer []byte
-	bytes  int
-	ts     time.Time
-	utc    *bool
+	buffer     []byte
+	bytes      int
+	ts         time.Time
+	utc        *bool
+	linePrefix int
 }
 
-func newTimestampReader() *timestampReader {
+func newTimestampReader(linePrefix int) *timestampReader {
 	return &timestampReader{
-		buffer: make([]byte, 31, 36), // 30 bytes for timestamp + 1 byte for space + 5 additional bytes for non-UTC timezone
+		linePrefix: linePrefix,                                 // Docker may have symbol signature 1 char (stdout vs stderr)
+		buffer:     make([]byte, linePrefix+31, linePrefix+36), // 30 bytes for timestamp + 1 byte for space + 5 additional bytes for non-UTC timezone
 	}
 }
 
@@ -415,26 +423,30 @@ func (t *timestampReader) Prefix() []byte {
 	return t.buffer[:t.bytes]
 }
 
+func (t *timestampReader) TsBytes() []byte {
+	return t.buffer[t.linePrefix:]
+}
+
 // read is initial operation for reading the timestamp,
 // that is the slowest one, but also detects the timestamp format.
 // It's meant to be executed just once, for performance reasons.
 func (t *timestampReader) read(reader *bufio.Reader) error {
 	// Read the possible timestamp slice
-	read, err := io.ReadFull(reader, t.buffer[:31])
+	read, err := io.ReadFull(reader, t.buffer[:31+t.linePrefix])
 	t.bytes = read
 	if err != nil {
 		return err
 	}
 
 	// Detect the timezone format and adjust the reader if needed
-	utc := t.buffer[29] == 'Z'
+	utc := t.buffer[t.linePrefix+29] == 'Z'
 	t.utc = &utc
-	if !utc && len(t.buffer) < 35 {
+	if !utc && len(t.buffer) < t.linePrefix+35 {
 		// Increase capacity to store the +00:00 time
 		t.buffer = append(t.buffer, make([]byte, 5)...)
 
 		// Read the missing part
-		read, err = io.ReadFull(reader, t.buffer[31:])
+		read, err = io.ReadFull(reader, t.buffer[t.linePrefix+31:])
 		t.bytes += read
 		if err != nil {
 			return err
@@ -443,13 +455,13 @@ func (t *timestampReader) read(reader *bufio.Reader) error {
 
 	// Compute the timestamp
 	if utc {
-		ts, err := time.Parse(time.RFC3339Nano, unsafe.String(&t.buffer[0], 30))
+		ts, err := time.Parse(time.RFC3339Nano, unsafe.String(&t.buffer[t.linePrefix], 30))
 		if err != nil {
 			return ErrInvalidTimestamp
 		}
 		t.ts = ts
 	} else {
-		ts, err := time.Parse(time.RFC3339Nano, unsafe.String(&t.buffer[0], 35))
+		ts, err := time.Parse(time.RFC3339Nano, unsafe.String(&t.buffer[t.linePrefix], 35))
 		if err != nil {
 			return ErrInvalidTimestamp
 		}
@@ -475,7 +487,7 @@ func (t *timestampReader) readUTC(reader *bufio.Reader) error {
 	}
 
 	// Compute the timestamp
-	ts, err := time.Parse(time.RFC3339Nano, unsafe.String(&t.buffer[0], 30))
+	ts, err := time.Parse(time.RFC3339Nano, unsafe.String(&t.buffer[t.linePrefix], 30))
 	if err != nil {
 		return ErrInvalidTimestamp
 	}
@@ -493,7 +505,7 @@ func (t *timestampReader) readNonUTC(reader *bufio.Reader) error {
 	}
 
 	// Compute the timestamp
-	ts, err := time.Parse(time.RFC3339Nano, unsafe.String(&t.buffer[0], 35))
+	ts, err := time.Parse(time.RFC3339Nano, unsafe.String(&t.buffer[t.linePrefix], 35))
 	if err != nil {
 		return ErrInvalidTimestamp
 	}

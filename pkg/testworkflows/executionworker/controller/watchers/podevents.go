@@ -18,19 +18,11 @@ type podEvents struct {
 }
 
 type PodEvents interface {
-	Original() []*corev1.Event
-	Len() int
+	Events
 	Name() string
 	Namespace() string
 	NodeName() string
-	FirstTimestamp() time.Time
-	LastTimestamp() time.Time
 	StartTimestamp() time.Time
-	FinishTimestamp() time.Time
-	Error() bool
-	ErrorReason() string
-	ErrorMessage() string
-	Debug() string
 
 	Container(name string) ContainerEvents
 }

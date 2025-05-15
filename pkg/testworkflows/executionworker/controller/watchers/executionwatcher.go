@@ -38,9 +38,9 @@ type executionWatcher struct {
 	mu          sync.RWMutex
 }
 
-type ExecutionWatcher interface {
-	State() ExecutionState
-	Commit()
+type KubernetesExecutionWatcher interface {
+	ExecutionWatcher
+	KubernetesState() KubernetesExecutionState
 
 	JobEventsErr() error
 	PodEventsErr() error
@@ -49,6 +49,13 @@ type ExecutionWatcher interface {
 
 	RefreshPod(ctx context.Context)
 	RefreshJob(ctx context.Context)
+}
+
+type ExecutionWatcher interface {
+	State() ExecutionState
+	Commit()
+
+	Refresh(ctx context.Context)
 
 	Started() <-chan struct{}
 	Updated(ctx context.Context) <-chan struct{}
@@ -70,6 +77,10 @@ func (e *executionWatcher) initializePodEventsWatcher() {
 }
 
 func (e *executionWatcher) State() ExecutionState {
+	return e.KubernetesState()
+}
+
+func (e *executionWatcher) KubernetesState() KubernetesExecutionState {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
 	return e.state
@@ -109,6 +120,11 @@ func (e *executionWatcher) RefreshJob(ctx context.Context) {
 	e.jobWatcher.Update(ctx)
 }
 
+func (e *executionWatcher) Refresh(ctx context.Context) {
+	e.RefreshPod(ctx)
+	e.RefreshJob(ctx)
+}
+
 func (e *executionWatcher) baseStarted() <-chan struct{} {
 	ch := make(chan struct{})
 	go func() {
@@ -135,7 +151,7 @@ func (e *executionWatcher) Next() <-chan struct{} {
 	return e.update.Next()
 }
 
-func NewExecutionWatcher(parentCtx context.Context, clientSet kubernetes.Interface, namespace, id string, signature []stage.Signature, scheduledAt time.Time) ExecutionWatcher {
+func NewExecutionWatcher(parentCtx context.Context, clientSet kubernetes.Interface, namespace, id string, signature []stage.Signature, scheduledAt time.Time) KubernetesExecutionWatcher {
 	// Create local context for stopping all the processes
 	ctx, ctxCancel := context.WithCancel(parentCtx)
 

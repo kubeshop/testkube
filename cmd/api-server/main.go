@@ -5,12 +5,16 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
+	dockerclient "github.com/docker/docker/client"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"google.golang.org/grpc"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	client2 "sigs.k8s.io/controller-runtime/pkg/client"
 
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
 	testkubeclientset "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
@@ -32,12 +36,16 @@ import (
 	"github.com/kubeshop/testkube/pkg/event/kind/testworkflowexecutiontelemetry"
 	"github.com/kubeshop/testkube/pkg/event/kind/webhook"
 	ws "github.com/kubeshop/testkube/pkg/event/kind/websocket"
+	"github.com/kubeshop/testkube/pkg/imageinspector"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
+	"github.com/kubeshop/testkube/pkg/repository/config"
 	runner2 "github.com/kubeshop/testkube/pkg/runner"
 	"github.com/kubeshop/testkube/pkg/secretmanager"
 	"github.com/kubeshop/testkube/pkg/server"
 	"github.com/kubeshop/testkube/pkg/tcl/schedulertcl"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/dockerworker"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/presets"
 	"github.com/kubeshop/testkube/pkg/version"
@@ -91,15 +99,35 @@ func main() {
 	commons.MustFreePort(cfg.GraphqlPort)
 	commons.MustFreePort(cfg.GRPCServerPort)
 
-	configMapConfig := commons.MustGetConfigMapConfig(ctx, cfg.APIServerConfig, cfg.TestkubeNamespace, cfg.TestkubeAnalyticsEnabled)
-
 	// k8s
-	kubeClient, err := kubeclient.GetClient()
-	commons.ExitOnError("Getting kubernetes client", err)
-	kubeConfig, err := k8sclient.GetK8sClientConfig()
-	commons.ExitOnError("Getting kubernetes config", err)
-	clientset, err := kubernetes.NewForConfig(kubeConfig)
-	commons.ExitOnError("Creating k8s clientset", err)
+	var err error
+	var configMapConfig config.Repository
+	var kubeClient client2.Client
+	var kubeConfig *rest.Config
+	var clientset *kubernetes.Clientset
+	if cfg.RuntimeConfig.RuntimeMode != "docker" {
+		configMapConfig = commons.MustGetConfigMapConfig(ctx, cfg.APIServerConfig, cfg.TestkubeNamespace, cfg.TestkubeAnalyticsEnabled)
+		kubeClient, err = kubeclient.GetClient()
+		commons.ExitOnError("Getting kubernetes client", err)
+		kubeConfig, err = k8sclient.GetK8sClientConfig()
+		commons.ExitOnError("Getting kubernetes config", err)
+		clientset, err = kubernetes.NewForConfig(kubeConfig)
+		commons.ExitOnError("Creating k8s clientset", err)
+	} else {
+		rawConfigMapConfig, err := config.NewFileConfig("/tmp/config")
+		commons.ExitOnError("Getting config map config", err)
+		err = rawConfigMapConfig.Load(ctx, cfg.TestkubeAnalyticsEnabled)
+		if err != nil {
+			log.DefaultLogger.Warn("error upserting config ConfigMap", "error", err)
+		}
+		configMapConfig = rawConfigMapConfig
+	}
+
+	var dockerClient *dockerclient.Client
+	if cfg.RuntimeConfig.RuntimeMode == "docker" {
+		dockerClient, err = dockerclient.NewClientWithOpts(dockerclient.FromEnv, dockerclient.WithAPIVersionNegotiation())
+		commons.ExitOnError("Getting docker client", err)
+	}
 
 	var eventsEmitter *event.Emitter
 	lazyEmitter := event.Lazy(&eventsEmitter)
@@ -143,8 +171,12 @@ func main() {
 	commons.ExitOnError("error creating gRPC connection", err)
 	grpcClient := cloud.NewTestKubeCloudAPIClient(grpcConn)
 
-	clusterId, _ := configMapConfig.GetUniqueClusterId(ctx)
-	telemetryEnabled, _ := configMapConfig.GetTelemetryEnabled(ctx)
+	var clusterId string
+	var telemetryEnabled bool
+	if cfg.RuntimeConfig.RuntimeMode != "docker" {
+		clusterId, _ = configMapConfig.GetUniqueClusterId(ctx)
+		telemetryEnabled, _ = configMapConfig.GetTelemetryEnabled(ctx)
+	}
 
 	// k8s clients
 	webhooksClient := executorsclientv1.NewWebhooksClient(kubeClient, cfg.TestkubeNamespace)
@@ -153,7 +185,23 @@ func main() {
 
 	envs := commons.GetEnvironmentVariables()
 
-	inspector := commons.CreateImageInspector(&cfg.ImageInspectorConfig, configmap.NewClientFor(clientset, cfg.TestkubeNamespace), secret.NewClientFor(clientset, cfg.TestkubeNamespace))
+	var inspector imageinspector.Inspector
+	if cfg.RuntimeConfig.RuntimeMode != "docker" {
+		inspector = commons.CreateImageInspector(&cfg.ImageInspectorConfig, configmap.NewClientFor(clientset, cfg.TestkubeNamespace), secret.NewClientFor(clientset, cfg.TestkubeNamespace))
+	} else {
+		inspectorStorages := []imageinspector.Storage{imageinspector.NewMemoryStorage()}
+		if cfg.EnableImageDataPersistentCache {
+			fileStorage := imageinspector.NewFileStorage("/tmp/image-cache", true)
+			_ = fileStorage.CopyTo(context.Background(), inspectorStorages[0].(imageinspector.StorageTransfer))
+			inspectorStorages = append(inspectorStorages, fileStorage)
+		}
+		inspector = imageinspector.NewInspector(
+			cfg.TestkubeRegistry,
+			imageinspector.NewDockerFetcher(dockerClient),
+			nil, // todo?
+			inspectorStorages...,
+		)
+	}
 
 	var testWorkflowsClient testworkflowclient.TestWorkflowClient
 	var testWorkflowTemplatesClient testworkflowtemplateclient.TestWorkflowTemplateClient
@@ -183,7 +231,7 @@ func main() {
 		RecvTimeout: cfg.TestkubeProRecvTimeout,
 	})
 
-	if proContext.CloudStorage {
+	if proContext.CloudStorage || !strings.HasPrefix(cfg.TestkubeProAPIKey, "tkcagnt_") {
 		testWorkflowsClient = testworkflowclient.NewCloudTestWorkflowClient(client)
 		testWorkflowTemplatesClient = testworkflowtemplateclient.NewCloudTestWorkflowTemplateClient(client)
 	} else {
@@ -242,10 +290,28 @@ func main() {
 	if mode == common.ModeAgent {
 		testWorkflowProcessor = presets.NewPro(inspector)
 	}
-	executionWorker := services.CreateExecutionWorker(clientset, cfg, clusterId, proContext.Agent.ID, serviceAccountNames, testWorkflowProcessor, map[string]string{
-		testworkflowconfig.FeatureFlagNewArchitecture: fmt.Sprintf("%v", cfg.FeatureNewArchitecture),
-		testworkflowconfig.FeatureFlagCloudStorage:    fmt.Sprintf("%v", cfg.FeatureCloudStorage),
-	}, commonEnvVariables, true, defaultExecutionNamespace)
+	var executionWorker executionworkertypes.Worker
+	if cfg.RuntimeConfig.RuntimeMode == "docker" {
+		executionWorker = dockerworker.NewWorker(dockerClient, testWorkflowProcessor, dockerworker.Config{
+			ImageInspector: dockerworker.ImageInspectorConfig{
+				CacheEnabled: cfg.EnableImageDataPersistentCache,
+				CacheTTL:     cfg.TestkubeImageCredentialsCacheTTL,
+			},
+			Connection: testworkflowconfig.WorkerConnectionConfig{
+				Url:         cfg.TestkubeProURL,
+				AgentID:     cfg.TestkubeProAgentID,
+				ApiKey:      cfg.TestkubeProAPIKey,
+				SkipVerify:  cfg.TestkubeProSkipVerify,
+				TlsInsecure: cfg.TestkubeProTLSInsecure,
+			},
+			LogAbortedDetails: true,
+		})
+	} else {
+		executionWorker = services.CreateExecutionWorker(clientset, cfg, clusterId, proContext.Agent.ID, serviceAccountNames, testWorkflowProcessor, map[string]string{
+			testworkflowconfig.FeatureFlagNewArchitecture: fmt.Sprintf("%v", cfg.FeatureNewArchitecture),
+			testworkflowconfig.FeatureFlagCloudStorage:    fmt.Sprintf("%v", cfg.FeatureCloudStorage),
+		}, commonEnvVariables, true, defaultExecutionNamespace)
+	}
 
 	runnerOpts := runner2.Options{
 		ClusterID:           clusterId,

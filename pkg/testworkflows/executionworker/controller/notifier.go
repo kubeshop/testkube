@@ -42,6 +42,10 @@ type notifier struct {
 	ch  chan ChannelMessage[Notification]
 }
 
+func (n *notifier) Channel() <-chan ChannelMessage[Notification] {
+	return n.ch
+}
+
 func (n *notifier) send(value Notification) {
 	// Ignore when the channel is already closed
 	defer func() {
@@ -271,12 +275,12 @@ func (n *notifier) fillGaps(force bool) {
 	}
 
 	// Mark the initialization step as running
-	if n.state.PodCreated() && n.result.Initialization.NotStarted() {
+	if n.state.Scheduled() && n.result.Initialization.NotStarted() {
 		n.result.Initialization.Status = common.Ptr(testkube.RUNNING_TestWorkflowStepStatus)
 	}
 
 	// Don't compute anything more if there is no Pod information
-	if n.state.Pod() == nil {
+	if !n.state.Scheduled() {
 		return
 	}
 
@@ -309,7 +313,7 @@ func (n *notifier) fillGaps(force bool) {
 	// Gather the container results
 	containerResults := make([]watchers2.ContainerResult, len(n.actions))
 	for i := range n.actions {
-		containerResults[i] = n.state.Pod().ContainerResult(fmt.Sprintf("%d", i+1), n.state.ExecutionError())
+		containerResults[i] = n.state.ContainerResult(fmt.Sprintf("%d", i+1), n.state.ExecutionError())
 	}
 
 	// Apply statuses from the container results since the last step
@@ -363,7 +367,7 @@ func (n *notifier) reconcile() {
 
 // TODO: Optimize memory
 // TODO: Provide initial actions/signature
-func newNotifier(ctx context.Context, initialResult testkube.TestWorkflowResult, scheduledAt time.Time) *notifier {
+func NewNotifier(ctx context.Context, initialResult testkube.TestWorkflowResult, scheduledAt time.Time) *notifier {
 	// Apply data that are required yet may be missing
 	if initialResult.Initialization == nil {
 		initialResult.Initialization = &testkube.TestWorkflowStepResult{

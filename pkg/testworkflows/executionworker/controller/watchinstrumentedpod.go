@@ -25,9 +25,15 @@ type WatchInstrumentedPodOptions struct {
 	LogAbortedDetails bool
 }
 
-func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interface, signature []stage.Signature, scheduledAt time.Time, watcher watchers2.ExecutionWatcher, opts WatchInstrumentedPodOptions) (<-chan ChannelMessage[Notification], error) {
+func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interface, signature []stage.Signature, scheduledAt time.Time, watcher watchers2.KubernetesExecutionWatcher, opts WatchInstrumentedPodOptions) (<-chan ChannelMessage[Notification], error) {
+	return WatchInstrumented(parentCtx, signature, scheduledAt, watcher, opts, func(ctx context.Context, container string, isDone func() bool, isLastHint func(instruction *instructions.Instruction) bool) <-chan ChannelMessage[ContainerLog] {
+		return WatchContainerLogs(ctx, clientSet, watcher.KubernetesState().Namespace(), watcher.KubernetesState().PodName(), container, 10, isDone, isLastHint)
+	})
+}
+
+func WatchInstrumented(parentCtx context.Context, signature []stage.Signature, scheduledAt time.Time, watcher watchers2.ExecutionWatcher, opts WatchInstrumentedPodOptions, getLogs func(ctx context.Context, container string, isDone func() bool, isLastHint func(instruction *instructions.Instruction) bool) <-chan ChannelMessage[ContainerLog]) (<-chan ChannelMessage[Notification], error) {
 	ctx, ctxCancel := context.WithCancel(parentCtx)
-	notifier := newNotifier(ctx, testkube.TestWorkflowResult{}, scheduledAt)
+	notifier := NewNotifier(ctx, testkube.TestWorkflowResult{}, scheduledAt)
 	signatureSeq := stage.MapSignatureToSequence(signature)
 
 	updatesCh := watcher.Updated(ctx)
@@ -65,23 +71,20 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 		notifier.Align(watcher.State())
 
 		// Wait until the Pod is scheduled
-		currentJobEventsIndex := 0
-		currentPodEventsIndex := 0
+		currentEventsIndex := 0
 		for ok := true; ok; _, ok = <-updatesCh {
-			for _, ev := range watcher.State().JobEvents().Original()[currentJobEventsIndex:] {
-				currentJobEventsIndex++
-
-				if ev.Reason != "BackoffLimitExceeded" {
-					notifier.Event("", watchers2.GetEventTimestamp(ev), ev.Type, ev.Reason, ev.Message)
-				}
-			}
-			for _, ev := range watcher.State().PodEvents().Original()[currentPodEventsIndex:] {
-				currentPodEventsIndex++
-
-				// Display only events that are unrelated to further containers
-				name := GetEventContainerName(ev)
-				if name == "" {
-					notifier.Event("", watchers2.GetEventTimestamp(ev), ev.Type, ev.Reason, ev.Message)
+			for _, ev := range watcher.State().Events().Original()[currentEventsIndex:] {
+				currentEventsIndex++
+				if ev.InvolvedObject.Kind == "Job" {
+					if ev.Reason != "BackoffLimitExceeded" {
+						notifier.Event("", watchers2.GetEventTimestamp(ev), ev.Type, ev.Reason, ev.Message)
+					}
+				} else {
+					// Display only events that are unrelated to further containers
+					name := GetEventContainerName(ev)
+					if name == "" {
+						notifier.Event("", watchers2.GetEventTimestamp(ev), ev.Type, ev.Reason, ev.Message)
+					}
 				}
 			}
 
@@ -149,16 +152,18 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 			}
 
 			// Wait until the Container is started
-			currentPodEventsIndex = 0
+			currentEventsIndex = 0
 			for ok := true; ok; _, ok = <-updatesCh {
 				// Read the Pod Events for the Container Events
-				for _, ev := range watcher.State().PodEvents().Original()[currentPodEventsIndex:] {
-					currentPodEventsIndex++
+				for _, ev := range watcher.State().Events().Original()[currentEventsIndex:] {
+					currentEventsIndex++
 
 					// Display only events that are unrelated to further containers
-					name := GetEventContainerName(ev)
-					if name == container && ev.Reason != "Created" && ev.Reason != "Started" {
-						notifier.Event(initialRefs[containerIndex], watchers2.GetEventTimestamp(ev), ev.Type, ev.Reason, ev.Message)
+					if ev.InvolvedObject.Kind != "Job" {
+						name := GetEventContainerName(ev)
+						if name == container && ev.Reason != "Created" && ev.Reason != "Started" {
+							notifier.Event(initialRefs[containerIndex], watchers2.GetEventTimestamp(ev), ev.Type, ev.Reason, ev.Message)
+						}
 					}
 				}
 
@@ -183,7 +188,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 			isDone := func() bool {
 				return opts.DisableFollow || watcher.State().ContainerFinished(container) || watcher.State().Completed()
 			}
-			logsCh := WatchContainerLogs(ctx, clientSet, watcher.State().Namespace(), watcher.State().PodName(), container, 10, isDone, isLastHint)
+			logsCh := getLogs(ctx, container, isDone, isLastHint)
 			containersReady = watcher.State().ContainersReady()
 		logs:
 			for {
@@ -266,8 +271,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 					break loop
 				}
 			case <-time.After(ForceFinalizationDelay):
-				watcher.RefreshPod(ctx)
-				watcher.RefreshJob(ctx)
+				watcher.Refresh(ctx)
 
 				// Fallback in case of missing data
 				if watcher.State().Completed() {
