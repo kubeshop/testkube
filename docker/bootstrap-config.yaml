@@ -1,0 +1,17 @@
+default_organizations:
+  - demo-org
+organizations:
+  - id: tkcorg_222222222222
+    name: demo-org
+    default_environments:
+      - demo-env
+    environments:
+      - name: demo-env
+        default_role: admin
+    runners:
+      - id: tkcrun_0000000000000000
+        name: demo-runner
+        secret_key: tkckey_run_11111111111111111111111111111111
+        environments:
+        - demo-env
+    default_role: owner

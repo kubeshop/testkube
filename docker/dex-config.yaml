@@ -1,0 +1,56 @@
+logger:
+  level: debug
+  format: json
+web:
+  http: 0.0.0.0:5556
+expiry:
+  deviceRequests: "5m"
+  signingKeys: "6h"
+  idTokens: "24h"
+  refreshTokens:
+    disableRotation: false
+    reuseInterval: "3s"
+    validIfNotUsedFor: "2160h" # 90 days
+    absoluteLifetime: "3960h" # 165 days
+oauth2:
+  responseTypes: ["code"]
+  skipApprovalScreen: true
+  alwaysShowLoginScreen: false
+  passwordConnector: local
+
+storage:
+  type: memory
+issuer: http://localhost:5556
+staticClients:
+  - id: testkube-enterprise
+    name: 'Testkube Enterprise'
+    secret: 'QWkVzs3nct6HZM5hxsPzwaZtq'
+    redirectURIs:
+      - 'http://localhost:8099/auth/callback'
+      - 'http://localhost:38090/auth/callback'
+  - id: testkube-cloud-cli
+    name: 'Testkube Enterprise CLI'
+    public: true
+    redirectURIs:
+      - 'http://127.0.0.1:8090/callback'
+      - 'http://127.0.0.1:38090/callback'
+  - id: testkube-enterprise
+    name: Testkube
+    redirectURIs:
+    - http://localhost:8099/auth/callback
+    - http://localhost:3000/auth/callback
+    secret: QWkVzs3nct6HZM5hxsPzwaZtq
+  - id: testkube-cloud-cli
+    name: Testkube CLI
+    public: true
+    redirectURIs:
+    - http://127.0.0.1:8090/callback
+    secret: ""
+
+enablePasswordDB: true
+staticPasswords:
+  - email: "admin@example.com"
+    # bcrypt hash of the string "password": $(echo password | htpasswd -BinC 10 admin | cut -d: -f2)
+    hash: "$2a$10$2b2cU8CPhOTaGrs1HRQuAueS7JTT5ZHsHSzYiFPm1leZck7Mc8T4W"
+    username: "admin"
+    userID: "08a8684b-db88-4b73-90a9-3cd1661f5466"

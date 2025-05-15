@@ -57,6 +57,8 @@ services:
       start_period: 5s
     restart: always
     stop_grace_period: 5s
+    networks:
+    - testkube
 
   # Reference it, so the docker-compose will build it
   testworkflow-init:
@@ -95,3 +97,7 @@ services:
 volumes:
   tmp_data: {}
   nats_data: {}
+
+networks:
+  testkube:
+    name: testkube

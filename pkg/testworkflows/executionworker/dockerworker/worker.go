@@ -273,7 +273,11 @@ func (w *worker) Execute(ctx context.Context, request executionworkertypes.Execu
 				StopTimeout: nil, // ?
 			}, &container.HostConfig{
 				Mounts: mounts,
-			}, &network.NetworkingConfig{}, &v1.Platform{}, containerName)
+			}, &network.NetworkingConfig{
+				EndpointsConfig: map[string]*network.EndpointSettings{
+					"testkube": {}, // TODO: avoid hardcoding - probably there should be some setup in Global Template
+				},
+			}, &v1.Platform{}, containerName)
 			if err != nil {
 				errsMu.Lock()
 				errs = append(errs, errors.Wrap(err, "failed to create docker container"))

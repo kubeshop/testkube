@@ -1,0 +1,254 @@
+services:
+  # required services for the Control Plane
+  minio:
+    image: bitnami/minio:2025.2.7-debian-12-r1
+    ports:
+    - "9000:9000"
+    - "9001:9001"
+    environment:
+      MINIO_API_PORT_NUMBER: 9000
+      MINIO_CONSOLE_PORT_NUMBER: 9001
+      MINIO_DATA_DIR: /bitnami/minio/data
+      MINIO_FORCE_NEW_KEYS: no
+      MINIO_ROOT_USER: miniouser123
+      MINIO_ROOT_PASSWORD: miniosecret123
+      MINIO_SCHEME: http
+      MINIO_BROWSER: on
+    volumes:
+    - cp_minio_data:/bitnami/minio/data
+    networks:
+    - testkube
+  mongodb:
+    image: kubeshop/bitnami-mongodb:7.0.12
+    ports:
+    - "27017:27017"
+    environment:
+      ALLOW_EMPTY_PASSWORD: yes
+      MONGODB_PORT_NUMBER: 27017
+    volumes:
+    - cp_mongo_data:/bitnami/mongodb
+    networks:
+    - testkube
+  dex:
+    image: kubeshop/dex:v2.42.0
+    ports:
+    - "5556:5556"
+    volumes:
+    - ./docker/dex-config.yaml:/etc/dex/config.docker.yaml
+    networks:
+    - testkube
+  nats:
+    image: nats:2.10.24-alpine
+    ports:
+    - "4222:4222"
+    - "8222:8222"
+    volumes:
+    - cp_nats_data:/data
+    - ./docker/nats.conf:/etc/nats-config/nats.conf
+    networks:
+    - testkube
+
+  # Control Plane
+  controlplane:
+    image: kubeshop/testkube-enterprise-api:1.14.0-dev.27
+    ports:
+    - "8099:8090"
+    - "8089:8089"
+    volumes:
+    - ./docker/bootstrap-config.yaml:/app/config/config
+    environment:
+      # configure
+      ENTERPRISE_LICENSE_KEY: DEV001_xxx
+      # setup
+      DEFAULT_CLOUD_STORAGE_ENABLED: true
+      BOOTSTRAP_CONFIG_ENABLED: true
+      BOOTSTRAP_CONFIG_PATH: /app/config/config
+      AGENT_HOST: controlplane
+      AGENT_PORT: 8089
+      AGENT_STORAGE_HOSTNAME: minio:9000
+      AGENT_STORAGE_SSL: false
+      ALLOWED_EXTERNAL_REDIRECT_URIS: http://localhost:3000,http://localhost:8080
+      API_ADDRESS: http://localhost:8099
+      API_PORT: 8099
+      API_MONGO_DB: testkubeEnterpriseDB
+      API_MONGO_DSN: mongodb://mongodb:27017
+      API_MONGO_READ_PREFERENCE: secondaryPreferred
+      AUDIT_LOG_CLEANUP_CRON_INTERVAL: 0 3 * * *
+      AUDIT_LOG_CLEANUP_ENABLED: true
+      AUDIT_LOG_RETENTION_PERIOD_DAYS: 30
+      CREDENTIALS_MASTER_PASSWORD: m4st3rP4ssword
+      DASHBOARD_ADDRESS: http://localhost:8080
+      DEBUG: true
+      DEX_SIGNUP_ORIGIN: dex:5557
+      DISABLE_PERSONAL_ORGS: true
+      ENTERPRISE_ARTIFACT_MAX_STORAGE_SIZE_GB: -1
+      ENTERPRISE_ARTIFACT_RETENTION_DAYS: -1
+      ENTERPRISE_MODE: true
+      ENTERPRISE_OFFLINE_ACTIVATION: false
+      HEALTHCHECK_DISTRIBUTED_LOCK: kv
+      INVITE_MODE: auto-accept
+      LICENSE_LEGACY: false
+      LOG_SERVICE_ENABLED: false
+      METRICS_LISTEN_ADDR: 0.0.0.0:9100
+      MIGRATION_MIGRATE_DATABASE: false
+      MINIO_ACCESS_KEY_ID: miniouser123
+      MINIO_ENDPOINT: minio:9000
+      MINIO_EXPIRATION: 0
+      MINIO_REGION: eu-west-1
+      MINIO_SECRET_ACCESS_KEY: miniosecret123
+      MINIO_SKIP_VERIFY: false
+      MINIO_SSL: false
+      MINIO_TOKEN:
+      NATS_URI: nats://nats:4222
+      OAUTH_AUTH_URL: http://localhost:5556/auth
+      OAUTH_CLIENT_ID: testkube-enterprise
+      OAUTH_CLIENT_SECRET: QWkVzs3nct6HZM5hxsPzwaZtq
+      OAUTH_CLI_CLIENT_ID: testkube-cloud-cli
+      OAUTH_ENABLED: true
+      OAUTH_ISSUER_URL: http://localhost:5556
+      OAUTH_JWKS_URL: http://dex:5556/keys
+      OAUTH_REDIRECT_URI: http://localhost:8099/auth/callback
+      OAUTH_SKIP_DISCOVERY: true
+      OAUTH_SKIP_VERIFY: false
+      OAUTH_TOKEN_URL: http://dex:5556/token
+      OAUTH_USER_INFO_URL: http://dex:5556/userinfo
+      OUTPUTS_BUCKET: testkube-cloud-outputs
+      PUBLIC_STORAGE_HOSTNAME: localhost:9000
+      PUBLIC_STORAGE_SSL: false
+      TESTKUBE_DEFAULT_AGENT_TOKEN: tkcagnt_000000000000
+      TESTKUBE_ENABLE_LEGACY_TESTS: false
+      USE_TLS: false
+    depends_on:
+    - minio
+    - mongodb
+    - nats
+    - dex
+    networks:
+    - testkube
+
+  # UI
+  ui:
+    image: docker.io/kubeshop/testkube-enterprise-ui:1.14.0-dev.27
+    ports:
+    - "8080:8080"
+    environment:
+      FEATURE_AUTH_WITH_CODE: true
+      FEATURE_INSIGHTS_V2: true
+      FEATURE_MULTI_AGENT: true
+      REACT_APP_API_SERVER_ENDPOINT: http://localhost:8099
+      REACT_APP_ENABLE_SIGNUP: true
+      REACT_APP_WS_SERVER_ENDPOINT: ws://localhost:8099
+    depends_on:
+    - controlplane
+    networks:
+    - testkube
+
+  # Runner Agent
+  runner:
+    develop:
+      watch:
+        - path: ./cmd
+          action: rebuild
+        - path: ./internal
+          action: rebuild
+        - path: ./pkg
+          action: rebuild
+    build:
+      context: .
+      dockerfile: ./build/_local/agent-server.Dockerfile
+    image: testkube-agent:local
+    ports:
+    - "8088:8088"
+    environment:
+      TESTKUBE_PRO_AGENT_ID: tkcrun_0000000000000000
+      TESTKUBE_PRO_API_KEY: tkckey_run_11111111111111111111111111111111
+      TESTKUBE_PRO_ORG_ID: tkcorg_222222222222
+      TESTKUBE_PRO_URL: controlplane:8089
+      TESTKUBE_PRO_TLS_INSECURE: 'true'
+      TESTKUBE_ENABLE_IMAGE_DATA_PERSISTENT_CACHE: 'true'
+      TESTKUBE_IMAGE_CREDENTIALS_CACHE_TTL: 30m
+      # dev
+      APISERVER_FULLNAME: runner
+      APISERVER_PORT: '8088'
+      TESTKUBE_TW_TOOLKIT_IMAGE: testkube-tw-toolkit:local
+      TESTKUBE_TW_INIT_IMAGE: testkube-tw-init:local
+      # static
+      RUNTIME_MODE: 'docker'
+      SLACK_CONFIG: '[]'
+      ENABLE_K8S_EVENTS: 'false'
+      DISABLE_TEST_TRIGGERS: 'true'
+      DISABLE_WEBHOOKS: 'true'
+      DISABLE_DEPRECATED_TESTS: 'true'
+      DISABLE_DEFAULT_AGENT: 'true'
+      GITOPS_KUBERNETES_TO_CLOUD_ENABLED: 'false'
+      GITOPS_CLOUD_TO_KUBERNETES_ENABLED: 'false'
+      ENABLE_CRON_JOBS: 'false'
+      NATS_EMBEDDED: 'true'
+      FEATURE_NEW_ARCHITECTURE: 'true'
+      FEATURE_CLOUD_STORAGE: 'true'
+      TESTKUBE_ANALYTICS_ENABLED: 'false'
+      # obsolete
+      ALLOW_LOW_SECURITY_FIELDS: 'false'
+      TESTKUBE_NAMESPACE: dummy
+      JOB_SERVICE_ACCOUNT_NAME: exec-sa-testkube-dummy
+    volumes:
+    - tmp_data:/tmp
+    - nats_data:/app/nats
+    - /var/run/docker.sock:/var/run/docker.sock
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8088/health"]
+      interval: 10s
+      timeout: 1s
+      retries: 3
+      start_period: 5s
+    restart: always
+    stop_grace_period: 5s
+    depends_on:
+    - controlplane
+    networks:
+    - testkube
+
+  # Reference it, so the docker-compose will build it
+  testworkflow-init:
+    develop:
+      watch:
+        - path: ./cmd
+          action: rebuild
+        - path: ./internal
+          action: rebuild
+        - path: ./pkg
+          action: rebuild
+    build:
+      context: .
+      dockerfile: ./build/_local/testworkflow-init.Dockerfile
+    image: testkube-tw-init:local
+    restart: no
+    scale: 0
+
+  # Reference it, so the docker-compose will build it
+  testworkflow-toolkit:
+    develop:
+      watch:
+        - path: ./cmd
+          action: rebuild
+        - path: ./internal
+          action: rebuild
+        - path: ./pkg
+          action: rebuild
+    build:
+      context: .
+      dockerfile: ./build/_local/testworkflow-toolkit.Dockerfile
+    image: testkube-tw-toolkit:local
+    restart: no
+    scale: 0
+
+networks:
+  testkube:
+    name: testkube
+
+volumes:
+  tmp_data: {}
+  nats_data: {}
+  cp_minio_data: {}
+  cp_mongo_data: {}
+  cp_nats_data: {}
