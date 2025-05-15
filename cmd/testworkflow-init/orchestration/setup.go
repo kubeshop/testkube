@@ -22,7 +22,7 @@ import (
 )
 
 var (
-	scopedRegex              = regexp.MustCompile(`^_(00|01|02|03|04|\d|[1-9]\d*)(C)?(S?)_`)
+	scopedRegex              = regexp.MustCompile(`^_(00|01|02|03|04|05|\d|[1-9]\d*)(C)?(S?)_`)
 	Setup                    = newSetup()
 	defaultWorkingDir        = getWorkingDir()
 	commonSensitiveVariables = []string{
