@@ -6,6 +6,7 @@ const (
 	EnvGroupSecrets   = "02"
 	EnvGroupInternal  = "03"
 	EnvGroupResources = "04"
+	EnvGroupRuntime   = "05"
 
 	EnvNodeName               = "TKI_N"
 	EnvPodName                = "TKI_P"

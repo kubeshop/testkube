@@ -155,9 +155,6 @@ func CreateContainer(groupId int, defaultContainer stage2.Container, actions []a
 		initPath = "/init"
 	}
 
-	// Inject container name
-	cr.Env = append(cr.Env, corev1.EnvVar{Name: fmt.Sprintf("_%s_%s", constants2.EnvGroupDebug, constants2.EnvContainerName), Value: cr.Name})
-
 	// Inject resource requests and limits needed for metrics
 	cr.Env = append(cr.Env,
 		corev1.EnvVar{Name: fmt.Sprintf("_%s_%s", constants2.EnvGroupResources, constants2.EnvResourceRequestsCPU), ValueFrom: &corev1.EnvVarSource{
@@ -187,6 +184,9 @@ func CreateContainer(groupId int, defaultContainer stage2.Container, actions []a
 			},
 		}},
 	)
+
+	// Inject container name
+	cr.Env = append(cr.Env, corev1.EnvVar{Name: fmt.Sprintf("_%s_%s", constants2.EnvGroupRuntime, constants2.EnvContainerName), Value: cr.Name})
 
 	// Point the Init Process to the proper group
 	cr.Command = []string{initPath, fmt.Sprintf("%d", groupId)}

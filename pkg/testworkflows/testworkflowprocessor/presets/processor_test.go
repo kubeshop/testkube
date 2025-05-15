@@ -84,10 +84,6 @@ var (
 	})
 )
 
-func newContainerEnvVar(container string) corev1.EnvVar {
-	return actiontypes.EnvVar(constants2.EnvGroupDebug, false, false, constants2.EnvContainerName, container)
-}
-
 func newResourceEnvVars(container string) []corev1.EnvVar {
 	return []corev1.EnvVar{
 		newResourceFieldRefEnvVar(constants2.EnvResourceRequestsCPU, container, "requests.cpu", resource.MustParse("1m")),
@@ -95,6 +91,10 @@ func newResourceEnvVars(container string) []corev1.EnvVar {
 		newResourceFieldRefEnvVar(constants2.EnvResourceRequestsMemory, container, "requests.memory", resource.Quantity{}),
 		newResourceFieldRefEnvVar(constants2.EnvResourceLimitsMemory, container, "limits.memory", resource.Quantity{}),
 	}
+}
+
+func newRuntimeEnvVar(container string) corev1.EnvVar {
+	return actiontypes.EnvVar(constants2.EnvGroupRuntime, false, false, constants2.EnvContainerName, container)
 }
 
 func newResourceFieldRefEnvVar(envvar, container, resource string, divisor resource.Quantity) corev1.EnvVar {
@@ -192,7 +192,7 @@ func TestProcessBasic(t *testing.T) {
 		envInternal,
 		envSignature,
 	}
-	wantEnv = append(append(wantEnv, newContainerEnvVar("1")), newResourceEnvVars("1")...)
+	wantEnv = append(append(wantEnv, newResourceEnvVars("1")...), newRuntimeEnvVar("1"))
 	want := batchv1.Job{
 		TypeMeta: metav1.TypeMeta{Kind: "Job", APIVersion: "batch/v1"},
 		ObjectMeta: metav1.ObjectMeta{
@@ -314,11 +314,11 @@ func TestProcessShellWithNonStandardImage(t *testing.T) {
 		envInternal,
 		envSignature,
 	}
-	wantEnv1 = append(append(wantEnv1, newContainerEnvVar("1")), newResourceEnvVars("1")...)
+	wantEnv1 = append(append(wantEnv1, newResourceEnvVars("1")...), newRuntimeEnvVar("1"))
 	wantEnv2 := []corev1.EnvVar{
 		env(0, false, "CI", "1"),
 	}
-	wantEnv2 = append(append(wantEnv2, newContainerEnvVar("2")), newResourceEnvVars("2")...)
+	wantEnv2 = append(append(wantEnv2, newResourceEnvVars("2")...), newRuntimeEnvVar("2"))
 	want := batchv1.Job{
 		TypeMeta: metav1.TypeMeta{Kind: "Job", APIVersion: "batch/v1"},
 		ObjectMeta: metav1.ObjectMeta{
@@ -459,7 +459,7 @@ func TestProcessBasicEnvReference(t *testing.T) {
 		envInternal,
 		envSignature,
 	}
-	wantEnv = append(append(wantEnv, newContainerEnvVar("1")), newResourceEnvVars("1")...)
+	wantEnv = append(append(wantEnv, newResourceEnvVars("1")...), newRuntimeEnvVar("1"))
 	wantPod := corev1.PodSpec{
 		RestartPolicy:      corev1.RestartPolicyNever,
 		EnableServiceLinks: common.Ptr(false),
@@ -551,11 +551,11 @@ func TestProcessMultipleSteps(t *testing.T) {
 		envInternal,
 		envSignature,
 	}
-	wantEnv1 = append(append(wantEnv1, newContainerEnvVar("1")), newResourceEnvVars("1")...)
+	wantEnv1 = append(append(wantEnv1, newResourceEnvVars("1")...), newRuntimeEnvVar("1"))
 	wantEnv2 := []corev1.EnvVar{
 		env(0, false, "CI", "1"),
 	}
-	wantEnv2 = append(append(wantEnv2, newContainerEnvVar("2")), newResourceEnvVars("2")...)
+	wantEnv2 = append(append(wantEnv2, newResourceEnvVars("2")...), newRuntimeEnvVar("2"))
 	want := corev1.PodSpec{
 		RestartPolicy:      corev1.RestartPolicyNever,
 		EnableServiceLinks: common.Ptr(false),
@@ -695,19 +695,19 @@ func TestProcessNestedSteps(t *testing.T) {
 		envInternal,
 		envSignature,
 	}
-	wantEnv1 = append(append(wantEnv1, newContainerEnvVar("1")), newResourceEnvVars("1")...)
+	wantEnv1 = append(append(wantEnv1, newResourceEnvVars("1")...), newRuntimeEnvVar("1"))
 	wantEnv2 := []corev1.EnvVar{
 		env(0, false, "CI", "1"),
 	}
-	wantEnv2 = append(append(wantEnv2, newContainerEnvVar("2")), newResourceEnvVars("2")...)
+	wantEnv2 = append(append(wantEnv2, newResourceEnvVars("2")...), newRuntimeEnvVar("2"))
 	wantEnv3 := []corev1.EnvVar{
 		env(0, false, "CI", "1"),
 	}
-	wantEnv3 = append(append(wantEnv3, newContainerEnvVar("3")), newResourceEnvVars("3")...)
+	wantEnv3 = append(append(wantEnv3, newResourceEnvVars("3")...), newRuntimeEnvVar("3"))
 	wantEnv4 := []corev1.EnvVar{
 		env(0, false, "CI", "1"),
 	}
-	wantEnv4 = append(append(wantEnv4, newContainerEnvVar("4")), newResourceEnvVars("4")...)
+	wantEnv4 = append(append(wantEnv4, newResourceEnvVars("4")...), newRuntimeEnvVar("4"))
 	want := corev1.PodSpec{
 		RestartPolicy:      corev1.RestartPolicyNever,
 		EnableServiceLinks: common.Ptr(false),
@@ -806,11 +806,11 @@ func TestProcessLocalContent(t *testing.T) {
 		envInternal,
 		envSignature,
 	}
-	wantEnv1 = append(append(wantEnv1, newContainerEnvVar("1")), newResourceEnvVars("1")...)
+	wantEnv1 = append(append(wantEnv1, newResourceEnvVars("1")...), newRuntimeEnvVar("1"))
 	wantEnv2 := []corev1.EnvVar{
 		env(0, false, "CI", "1"),
 	}
-	wantEnv2 = append(append(wantEnv2, newContainerEnvVar("2")), newResourceEnvVars("2")...)
+	wantEnv2 = append(append(wantEnv2, newResourceEnvVars("2")...), newRuntimeEnvVar("2"))
 	want := corev1.PodSpec{
 		RestartPolicy:      corev1.RestartPolicyNever,
 		EnableServiceLinks: common.Ptr(false),
@@ -891,11 +891,11 @@ func TestProcessGlobalContent(t *testing.T) {
 		envInternal,
 		envSignature,
 	}
-	wantEnv1 = append(append(wantEnv1, newContainerEnvVar("1")), newResourceEnvVars("1")...)
+	wantEnv1 = append(append(wantEnv1, newResourceEnvVars("1")...), newRuntimeEnvVar("1"))
 	wantEnv2 := []corev1.EnvVar{
 		env(0, false, "CI", "1"),
 	}
-	wantEnv2 = append(append(wantEnv2, newContainerEnvVar("2")), newResourceEnvVars("2")...)
+	wantEnv2 = append(append(wantEnv2, newResourceEnvVars("2")...), newRuntimeEnvVar("2"))
 	want := corev1.PodSpec{
 		RestartPolicy:      corev1.RestartPolicyNever,
 		EnableServiceLinks: common.Ptr(false),
