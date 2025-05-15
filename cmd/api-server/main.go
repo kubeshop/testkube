@@ -11,10 +11,13 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"google.golang.org/grpc"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
+	k8sctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	testexecutionv1 "github.com/kubeshop/testkube-operator/api/testexecution/v1"
@@ -22,6 +25,7 @@ import (
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
 	testkubeclientset "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
+	cronjobclient "github.com/kubeshop/testkube-operator/pkg/cronjob/client"
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	"github.com/kubeshop/testkube/cmd/api-server/services"
 	"github.com/kubeshop/testkube/internal/app/api/debug"
@@ -658,6 +662,31 @@ func main() {
 		&proContext,
 	)
 	if scheduler != nil {
+		// Remove any remaining legacy cronjobs.
+		// TODO: Remove this section once we are happy that users are not migrating from legacy cronjobs (next Major version?)
+		resources := []string{cronjobclient.TestResourceURI, cronjobclient.TestSuiteResourceURI, cronjobclient.TestWorkflowResourceURI}
+		for _, resource := range resources {
+			reqs, err := labels.ParseToRequirements("testkube=" + resource)
+			if err != nil {
+				log.DefaultLogger.Errorw("Unable to parse label selector", "error", err, "label", "testkube="+resource)
+				continue
+			}
+
+			u := &unstructured.Unstructured{}
+			u.SetKind("CronJob")
+			u.SetAPIVersion("batch/v1")
+			if err := kubeClient.DeleteAllOf(
+				ctx,
+				u,
+				k8sctrlclient.InNamespace(cfg.TestkubeNamespace),
+				k8sctrlclient.MatchingLabelsSelector{Selector: labels.NewSelector().Add(reqs...)},
+			); err != nil {
+				log.DefaultLogger.Errorw("Unable to delete legacy cronjobs", "error", err, "label", "testkube="+resource, "namespace", cfg.TestkubeNamespace)
+				continue
+			}
+		}
+
+		// Start the new scheduler.
 		g.Go(func() error {
 			scheduler.Reconcile(ctx)
 			return nil
