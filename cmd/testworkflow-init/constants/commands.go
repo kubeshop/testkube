@@ -14,6 +14,7 @@ const (
 	EnvActions                = "TKI_I"
 	EnvInternalConfig         = "TKI_C"
 	EnvSignature              = "TKI_G"
+	EnvContainerName          = "TKI_O"
 	EnvResourceRequestsCPU    = "TKI_R_R_C"
 	EnvResourceLimitsCPU      = "TKI_R_L_C"
 	EnvResourceRequestsMemory = "TKI_R_R_M"

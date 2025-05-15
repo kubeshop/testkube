@@ -343,3 +343,7 @@ func (c *setup) GetSecretVolumeData(mountPaths []string) []string {
 
 	return words
 }
+
+func (c *setup) GetContainerName() string {
+	return c.envGroups[constants.EnvGroupDebug][constants.EnvContainerName]
+}

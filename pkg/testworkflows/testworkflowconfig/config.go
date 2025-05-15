@@ -37,7 +37,7 @@ type ExecutionConfig struct {
 	ParentIds        string                   `json:"p,omitempty"`
 	PvcNames         map[string]string        `json:"c,omitempty"`
 	GlobalEnv        []testworkflowsv1.EnvVar `json:"G,omitempty"`
-	SecretMountPaths []string                 `json:"S,omitempty"`
+	SecretMountPaths map[string][]string      `json:"S,omitempty"`
 }
 
 type WorkflowConfig struct {

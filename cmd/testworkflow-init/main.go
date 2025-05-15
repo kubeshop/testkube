@@ -76,8 +76,11 @@ func main() {
 	// Store the instructions in the state if they are provided
 	orchestration.Setup.UseBaseEnv()
 	internalConfig := orchestration.Setup.GetInternalConfig()
-	secretVolumeData := orchestration.Setup.GetSecretVolumeData(internalConfig.Execution.SecretMountPaths)
-	orchestration.Setup.AddSensitiveWords(secretVolumeData...)
+	containerName := orchestration.Setup.GetContainerName()
+	if len(internalConfig.Execution.SecretMountPaths) != 0 {
+		secretVolumeData := orchestration.Setup.GetSecretVolumeData(internalConfig.Execution.SecretMountPaths[containerName])
+		orchestration.Setup.AddSensitiveWords(secretVolumeData...)
+	}
 	stdout.SetSensitiveWords(orchestration.Setup.GetSensitiveWords())
 	actionGroups := orchestration.Setup.GetActionGroups()
 	signature := orchestration.Setup.GetSignature()
