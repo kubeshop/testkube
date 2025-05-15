@@ -323,7 +323,8 @@ func (c *setup) GetSecretVolumeData(mountPaths []string) []string {
 
 			data, err := os.ReadFile(path)
 			if err != nil {
-				return err
+				output.Std.Direct().Warnf("warn: error reading %s as secret volume key: %s\n", path, err.Error())
+				return nil
 			}
 
 			wordMap[string(data)] = struct{}{}
