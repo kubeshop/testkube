@@ -185,6 +185,9 @@ func CreateContainer(groupId int, defaultContainer stage2.Container, actions []a
 		}},
 	)
 
+	// Inject container name
+	cr.Env = append(cr.Env, corev1.EnvVar{Name: fmt.Sprintf("_%s_%s", constants2.EnvGroupRuntime, constants2.EnvContainerName), Value: cr.Name})
+
 	// Point the Init Process to the proper group
 	cr.Command = []string{initPath, fmt.Sprintf("%d", groupId)}
 	cr.Args = nil
