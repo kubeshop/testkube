@@ -148,12 +148,12 @@ func (n *NamespaceObject) createRole() error {
 			{
 				Verbs:     []string{"get", "watch", "list", "create", "patch", "update", "delete", "deletecollection"},
 				APIGroups: []string{"testworkflows.testkube.io"},
-				Resources: []string{"testworkflows", "testworkflows/status", "testworkflowtemplates"},
+				Resources: []string{"testworkflows", "testworkflows/status", "testworkflowtemplates", "testworkflowexecutions"},
 			},
 			{
 				Verbs:     []string{"get", "watch", "list", "create", "patch", "update", "delete", "deletecollection"},
 				APIGroups: []string{"tests.testkube.io"},
-				Resources: []string{"testtriggers"},
+				Resources: []string{"testtriggers", "testexecutions", "testsuiteexecutions"},
 			},
 		},
 	}, metav1.CreateOptions{})

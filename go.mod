@@ -23,6 +23,7 @@ require (
 	github.com/fsnotify/fsnotify v1.8.0
 	github.com/gabriel-vasile/mimetype v1.4.6
 	github.com/go-errors/errors v1.5.1
+	github.com/go-logr/zapr v1.3.0
 	github.com/gofiber/adaptor/v2 v2.1.29
 	github.com/gofiber/fiber/v2 v2.52.5
 	github.com/gofiber/websocket/v2 v2.1.1

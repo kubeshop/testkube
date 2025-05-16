@@ -20,28 +20,30 @@ import (
 )
 
 type Agent struct {
-	pod                 *PodObject
-	cloud               *CloudObject
-	agentImage          string
-	initProcessImage    string
-	toolkitImage        string
-	disableCloudStorage bool
-	enableCronjobs      bool
-	enableTestTriggers  bool
-	executionNamespace  string
+	pod                  *PodObject
+	cloud                *CloudObject
+	agentImage           string
+	initProcessImage     string
+	toolkitImage         string
+	disableCloudStorage  bool
+	enableCronjobs       bool
+	enableTestTriggers   bool
+	enableK8sControllers bool
+	executionNamespace   string
 }
 
-func NewAgent(pod *PodObject, cloud *CloudObject, agentImage, initProcessImage, toolkitImage string, disableCloudStorage, enableCronjobs, enableTestTriggers bool, executionNamespace string) *Agent {
+func NewAgent(pod *PodObject, cloud *CloudObject, agentImage, initProcessImage, toolkitImage string, disableCloudStorage, enableCronjobs, enableTestTriggers, enableK8sControllers bool, executionNamespace string) *Agent {
 	return &Agent{
-		pod:                 pod,
-		cloud:               cloud,
-		agentImage:          agentImage,
-		initProcessImage:    initProcessImage,
-		toolkitImage:        toolkitImage,
-		disableCloudStorage: disableCloudStorage,
-		enableCronjobs:      enableCronjobs,
-		enableTestTriggers:  enableTestTriggers,
-		executionNamespace:  executionNamespace,
+		pod:                  pod,
+		cloud:                cloud,
+		agentImage:           agentImage,
+		initProcessImage:     initProcessImage,
+		toolkitImage:         toolkitImage,
+		disableCloudStorage:  disableCloudStorage,
+		enableCronjobs:       enableCronjobs,
+		enableTestTriggers:   enableTestTriggers,
+		enableK8sControllers: enableK8sControllers,
+		executionNamespace:   executionNamespace,
 	}
 }
 
@@ -69,6 +71,9 @@ func (r *Agent) Create(ctx context.Context, env *client.Environment) error {
 	}
 	if r.enableCronjobs {
 		envVariables = append(envVariables, corev1.EnvVar{Name: "ENABLE_CRON_JOBS", Value: "true"})
+	}
+	if r.enableK8sControllers {
+		envVariables = append(envVariables, corev1.EnvVar{Name: "ENABLE_K8S_CONTROLLERS", Value: "true"})
 	}
 	if env != nil {
 		tlsInsecure := "false"
