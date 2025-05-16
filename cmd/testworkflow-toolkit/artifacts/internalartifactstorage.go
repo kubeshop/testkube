@@ -11,6 +11,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
 	"github.com/kubeshop/testkube/pkg/bufferedstream"
+	"github.com/kubeshop/testkube/pkg/controlplaneclient"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 )
 
@@ -41,6 +42,13 @@ func InternalStorage() InternalArtifactStorage {
 	return &internalArtifactStorage{
 		prefix:   filepath.Join(".testkube", config.Ref()),
 		uploader: newArtifactUploader(),
+	}
+}
+
+func InternalStorageForAgent(client controlplaneclient.Client, environmentId, executionId, workflowName, ref string) InternalArtifactStorage {
+	return &internalArtifactStorage{
+		prefix:   filepath.Join(".testkube", ref),
+		uploader: NewCloudUploader(client, environmentId, executionId, workflowName, ref, WithParallelismCloud(30), CloudDetectMimetype),
 	}
 }
 

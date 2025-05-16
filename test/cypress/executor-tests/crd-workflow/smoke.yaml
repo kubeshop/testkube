@@ -19,6 +19,8 @@ spec:
         cpu: 2
         memory: 2Gi
     workingDir: /data/repo/test/cypress/executor-tests/cypress-14
+  job:
+    activeDeadlineSeconds: 600
   steps:
   - name: Run tests
     run:
@@ -56,6 +58,8 @@ spec:
     env:
     - name: CYPRESS_CUSTOM_ENV
       value: CYPRESS_CUSTOM_ENV_value
+  job:
+    activeDeadlineSeconds: 600
   steps:
   - name: Run from template
     template:
@@ -83,6 +87,8 @@ spec:
         cpu: 2
         memory: 2Gi
     workingDir: /data/repo/test/cypress/executor-tests/cypress-14
+  job:
+    activeDeadlineSeconds: 600
   steps:
   - name: Run tests
     run:
@@ -122,6 +128,8 @@ spec:
         cpu: 2
         memory: 2Gi
     workingDir: /data/repo/test/cypress/executor-tests/cypress-14
+  job:
+    activeDeadlineSeconds: 600
   steps:
   - name: Run tests
     run:
@@ -175,6 +183,8 @@ spec:
         emptyDir:
           medium: Memory
           sizeLimit: 512Mi
+  job:
+    activeDeadlineSeconds: 600
   steps:
   - name: Check /dev/shm size
     shell: |
@@ -224,6 +234,8 @@ spec:
         cpu: 2
         memory: 2Gi
     workingDir: /data/repo/test/cypress/executor-tests/cypress-13
+  job:
+    activeDeadlineSeconds: 600
   steps:
   - name: Run tests
     run:
@@ -263,6 +275,8 @@ spec:
         cpu: 2
         memory: 2Gi
     workingDir: /data/repo/test/cypress/executor-tests/cypress-13
+  job:
+    activeDeadlineSeconds: 600
   steps:
   - name: Run tests
     run:
@@ -302,6 +316,8 @@ spec:
         cpu: 2
         memory: 2Gi
     workingDir: /data/repo/test/cypress/executor-tests/cypress-13
+  job:
+    activeDeadlineSeconds: 600
   steps:
   - name: Run tests
     run:
@@ -343,6 +359,8 @@ spec:
       revision: main
       paths:
       - test/cypress/executor-tests/cypress-13
+  job:
+    activeDeadlineSeconds: 600
   steps:
   - name: Run from template
     workingDir: /data/repo/test/cypress/executor-tests/cypress-13
@@ -371,6 +389,8 @@ spec:
       value: "CYPRESS_CUSTOM_ENV_value"
     - name: UV_USE_IO_URING # workaround for NPM being stuck
       value: "0"
+  job:
+    activeDeadlineSeconds: 600
   steps:
   - name: Run from template
     content:
@@ -405,6 +425,8 @@ spec:
       value: "CYPRESS_CUSTOM_ENV_value"
     - name: UV_USE_IO_URING # workaround for NPM being stuck
       value: "0"
+  job:
+    activeDeadlineSeconds: 600
   steps:
   - name: Run cypress test
     content:
@@ -442,6 +464,8 @@ spec:
         cpu: 2
         memory: 2Gi
     workingDir: /data/repo/test/cypress/executor-tests/cypress-12
+  job:
+    activeDeadlineSeconds: 600
   steps:
   - name: Run tests
     run:
@@ -478,6 +502,8 @@ spec:
   container:
     image: cypress/included:13.6.4
     workingDir: /data/repo/test/cypress/executor-tests/cypress-13
+  job:
+    activeDeadlineSeconds: 600
   steps:
   - name: Run tests
     parallel:
@@ -531,6 +557,8 @@ spec:
       requests:
         cpu: 1
         memory: 1Gi
+  job:
+    activeDeadlineSeconds: 600
   steps:
   - name: Run tests
     parallel:

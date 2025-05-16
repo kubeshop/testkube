@@ -394,7 +394,42 @@ func (w *worker) Logs(ctx context.Context, id string, options executionworkertyp
 }
 
 func (w *worker) Get(ctx context.Context, id string, options executionworkertypes.GetOptions) (*executionworkertypes.GetResult, error) {
-	panic("not implemented")
+	// Connect to the resource
+	// TODO: Move the implementation directly there
+	ctrl, err, recycle := w.registry.Connect(ctx, id, options.Hints)
+	if err != nil {
+		return nil, err
+	}
+	defer recycle()
+
+	cfg, err := ctrl.InternalConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := ctrl.EstimatedResult(ctx)
+	if err != nil {
+		log.DefaultLogger.Warnw("failed to estimate result", "id", id, "error", err)
+		result = &testkube.TestWorkflowResult{}
+	}
+
+	for notification := range ctrl.Watch(ctx, true, false) {
+		if notification.Error != nil {
+			continue
+		}
+		if notification.Value.Result != nil {
+			result = notification.Value.Result
+		}
+	}
+
+	return &executionworkertypes.GetResult{
+		Execution: cfg.Execution,
+		Workflow:  cfg.Workflow,
+		Resource:  cfg.Resource,
+		Signature: stage.MapSignatureListToInternal(ctrl.Signature()),
+		Result:    *result,
+		Namespace: ctrl.Namespace(),
+	}, nil
 }
 
 func (w *worker) Summary(ctx context.Context, id string, options executionworkertypes.GetOptions) (*executionworkertypes.SummaryResult, error) {

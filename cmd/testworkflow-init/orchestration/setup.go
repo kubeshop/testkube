@@ -3,6 +3,7 @@ package orchestration
 import (
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -21,7 +22,7 @@ import (
 )
 
 var (
-	scopedRegex              = regexp.MustCompile(`^_(00|01|02|03|04|\d|[1-9]\d*)(C)?(S?)_`)
+	scopedRegex              = regexp.MustCompile(`^_(00|01|02|03|04|05|\d|[1-9]\d*)(C)?(S?)_`)
 	Setup                    = newSetup()
 	defaultWorkingDir        = getWorkingDir()
 	commonSensitiveVariables = []string{
@@ -306,4 +307,43 @@ func (c *setup) SetConfig(config lite.LiteContainerConfig) {
 	} else {
 		c.SetWorkingDir(*config.WorkingDir)
 	}
+}
+
+func (c *setup) GetSecretVolumeData(mountPaths []string) []string {
+	wordMap := make(map[string]struct{})
+	for _, dir := range mountPaths {
+		err := filepath.Walk(dir, func(path string, info fs.FileInfo, err error) error {
+			if err != nil {
+				return nil
+			}
+
+			if !info.Mode().IsRegular() {
+				return nil
+			}
+
+			data, err := os.ReadFile(path)
+			if err != nil {
+				output.Std.Direct().Warnf("warn: error reading %s as secret volume key: %s\n", path, err.Error())
+				return nil
+			}
+
+			wordMap[string(data)] = struct{}{}
+			return nil
+		})
+
+		if err != nil {
+			output.Std.Direct().Warnf("warn: error using %s as secret volume path: %s\n", dir, err.Error())
+		}
+	}
+
+	words := make([]string, len(wordMap))
+	for word := range wordMap {
+		words = append(words, word)
+	}
+
+	return words
+}
+
+func (c *setup) GetContainerName() string {
+	return c.envGroups[constants.EnvGroupRuntime][constants.EnvContainerName]
 }

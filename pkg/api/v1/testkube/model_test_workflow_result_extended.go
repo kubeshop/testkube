@@ -471,6 +471,9 @@ func (r *TestWorkflowResult) HealTimestamps(sigSequence []TestWorkflowSignature,
 
 func (r *TestWorkflowResult) HealAborted(sigSequence []TestWorkflowSignature, errorStr, defaultErrorStr string) {
 	errorMessage := fmt.Sprintf("The execution has been aborted. (%s)", errorStr)
+	if errorStr == "" {
+		errorMessage = fmt.Sprintf("The execution has been aborted.")
+	}
 
 	// Create marker to know if there is any step marked as aborted already
 	aborted := false

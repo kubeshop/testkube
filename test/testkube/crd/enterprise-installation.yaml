@@ -25,6 +25,8 @@ spec:
   container:
     image: gcr.io/google.com/cloudsdktool/google-cloud-cli:latest # contains gcloud, gke-gcloud-auth-plugin and kubectl
     workingDir: /data/repo/test/testkube
+  job:
+    activeDeadlineSeconds:  1200
   steps:
   - name: Install Helm
     shell: |

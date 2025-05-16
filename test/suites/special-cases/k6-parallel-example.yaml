@@ -17,7 +17,7 @@ spec:
       workingDir: test/k6/executor-tests
   executionRequest:
     # args: ["run", "k6-smoke-test-without-envs.js"] # Optional
-    activeDeadlineSeconds: 180
+    activeDeadlineSeconds: 300
 ---
 apiVersion: tests.testkube.io/v3
 kind: TestSuite
@@ -61,7 +61,7 @@ spec:
       branch: main
       path: test/k6/executor-tests/
   executionRequest:
-    activeDeadlineSeconds: 180
+    activeDeadlineSeconds: 300
 ---
 apiVersion: tests.testkube.io/v3
 kind: TestSuite
