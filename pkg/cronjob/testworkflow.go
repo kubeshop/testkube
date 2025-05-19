@@ -33,7 +33,7 @@ func (s *Scheduler) ReconcileTestWorkflows(ctx context.Context) error {
 				for _, template := range obj.Resource.Spec.Use {
 					testWorkflowTemplate, err := s.testWorkflowTemplateClient.Get(ctx, s.getEnvironmentId(), template.Name)
 					if err != nil {
-						s.logger.Errorw("cron job scheduler: reconciler component: failed to get TestWorkflowTemplate", "namr", template.Name, "error", err)
+						s.logger.Errorw("cron job scheduler: reconciler component: failed to get TestWorkflowTemplate", "name", template.Name, "error", err)
 						continue
 					}
 
