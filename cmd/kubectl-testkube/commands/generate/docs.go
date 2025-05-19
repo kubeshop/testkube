@@ -21,6 +21,16 @@ title: "%s"
 
 `
 
+const legacyFmTemplate = `---
+title: "%s"
+%s---
+
+import LegacyWarning from "../articles/_legacy-warning.mdx";
+
+<LegacyWarning />
+
+`
+
 var filePrepender = func(filename string) string {
 	name := filepath.Base(filename)
 	base := strings.TrimSuffix(name, path.Ext(name))
@@ -28,11 +38,22 @@ var filePrepender = func(filename string) string {
 	if strings.EqualFold(base, "testkube") {
 		sidebarPosition = "sidebar_position: 1\n"
 	}
+
+	// extract command
+	command := name[9:]
+
+	// check for legacy commands
+	if strings.Contains(command, "testsuite") || strings.Contains(command, "executor") ||
+		(strings.Contains(command, "test") && !strings.Contains(command, "testworkflow")) ||
+		strings.Contains(command, "-template") || strings.Contains(command, "-execution") {
+		return fmt.Sprintf(legacyFmTemplate, strings.Replace(base, "-", " ", -1), sidebarPosition)
+	}
+
 	return fmt.Sprintf(fmTemplate, strings.Replace(base, "-", " ", -1), sidebarPosition)
 }
 
 var linkHandler = func(name string) string {
-	return strings.ReplaceAll(name, "_", "-")
+	return strings.ReplaceAll(strings.ReplaceAll(name, "_", "-"), ".md", ".mdx")
 }
 
 func NewDocsCmd() *cobra.Command {
@@ -61,7 +82,7 @@ func GenTestkubeMarkdownTree(cmd *cobra.Command, dir string, filePrepender, link
 		}
 	}
 
-	basename := strings.ReplaceAll(cmd.CommandPath(), " ", "-") + ".md"
+	basename := strings.ReplaceAll(cmd.CommandPath(), " ", "-") + ".mdx"
 	filename := filepath.Join(dir, basename)
 	f, err := os.Create(filename)
 	if err != nil {
