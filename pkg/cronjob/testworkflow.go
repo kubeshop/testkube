@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"sort"
 	"time"
+	_ "time/tzdata"
 
 	"github.com/robfig/cron/v3"
 
