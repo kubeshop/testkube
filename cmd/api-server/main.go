@@ -32,6 +32,7 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	agentclient "github.com/kubeshop/testkube/pkg/agent/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	cloudclient "github.com/kubeshop/testkube/pkg/cloud/client"
 	cloudartifacts "github.com/kubeshop/testkube/pkg/cloud/data/artifact"
 	cloudtestworkflow "github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
 	cloudwebhook "github.com/kubeshop/testkube/pkg/cloud/data/webhook"
@@ -92,6 +93,25 @@ func main() {
 	} else {
 		cfg.TestkubeProURL = fmt.Sprintf("%s:%d", cfg.APIServerFullname, cfg.GRPCServerPort)
 		cfg.TestkubeProTLSInsecure = true
+	}
+
+	// If we don't have an API key but we do have a token for registration then attempt to register the runner.
+	if cfg.TestkubeProAPIKey == "" && cfg.TestkubeProAgentRegToken != "" {
+		// Create a REST client and register the runner.
+		runner, err := cloudclient.NewAgentsClient(cfg.TestkubeProURL, cfg.TestkubeProAgentRegToken, cfg.TestkubeProOrgID). // Assumes that the runner can connect to the control plane via HTTP.
+			CreateRunner(cfg.TestkubeProEnvID,
+				cfg.APIServerFullname,                     // Is this correct?
+				map[string]string{"registration": "self"}, // Self-registered label?
+				true,                                      // Assume that all self-registered runners are floating?
+			)
+		if err != nil {
+			// TODO: handle error in case agent already exists (API does not currently support this).
+			log.DefaultLogger.Errorw("error registering runner", "error", err.Error())
+			os.Exit(1)
+		}
+		// TODO: store these values in some persistent storage.
+		cfg.TestkubeProAPIKey = runner.SecretKey
+		cfg.TestkubeProAgentID = runner.ID
 	}
 
 	// Run services within an errgroup to propagate errors between services.
