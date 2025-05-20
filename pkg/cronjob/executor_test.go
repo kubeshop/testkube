@@ -48,7 +48,7 @@ func Test_execuuteTestWorkflow(t *testing.T) {
 	scheduler := New(mockTestWorkflowsClient, mockTestWorkflowTemplatesClient, mockTestWorkflowExecutor, log.DefaultLogger)
 
 	scheduler.executeTestWorkflow(ctx, mockTestWorkflow.Name,
-		&testkube.TestWorkflowCronJobConfig{Cron: "* * * * * *", Timezone: &testkube.BoxedString{Value: "UTC"}})
+		&testkube.TestWorkflowCronJobConfig{Cron: "* * * * * *", Timezone: &testkube.BoxedString{Value: "America/New_York"}})
 }
 
 func Test_executeTest(t *testing.T) {

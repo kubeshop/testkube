@@ -10348,7 +10348,7 @@ components:
         timezone:
           $ref: "#/components/schemas/BoxedString"
           description: cron timezone
-          example: UTC         
+          example: America/New_York         
 
     TestWorkflowExecutionCR:
       type: object
