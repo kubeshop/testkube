@@ -104,6 +104,7 @@ type ControlPlaneConfig struct {
 	TestkubeProAgentID           string        `envconfig:"TESTKUBE_PRO_AGENT_ID" default:""`
 	TestkubeProAPIKey            string        `envconfig:"TESTKUBE_PRO_API_KEY" default:""`
 	TestkubeProURL               string        `envconfig:"TESTKUBE_PRO_URL" default:""`
+	TestkubeProAgentRegToken     string        `envconfig:"TESTKUBE_PRO_AGENT_REGISTRATION_TOKEN" default:""`
 	TestkubeProTLSInsecure       bool          `envconfig:"TESTKUBE_PRO_TLS_INSECURE" default:"false"`
 	TestkubeProSkipVerify        bool          `envconfig:"TESTKUBE_PRO_SKIP_VERIFY" default:"false"`
 	TestkubeProConnectionTimeout int           `envconfig:"TESTKUBE_PRO_CONNECTION_TIMEOUT" default:"10"`
