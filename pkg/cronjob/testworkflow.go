@@ -283,5 +283,6 @@ func getTestWorkflowHashedMetadataName(cronJob *testkube.TestWorkflowCronJobConf
 	if cronJob.Timezone != nil {
 		cronName = fmt.Sprintf("%s %s", cronJob.Timezone.Value, cronJob.Cron)
 	}
+
 	return fmt.Sprintf("%s-%x", cronName, sha256.Sum256(data)), nil
 }
