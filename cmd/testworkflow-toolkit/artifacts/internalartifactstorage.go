@@ -33,16 +33,32 @@ type internalArtifactStorage struct {
 	started  bool
 }
 
-func newArtifactUploader() Uploader {
+func newArtifactUploader() (Uploader, error) {
 	cfg := config.Config()
-	return NewCloudUploader(env.Cloud(), cfg.Execution.EnvironmentId, cfg.Execution.Id, cfg.Workflow.Name, config.Ref(), WithParallelismCloud(30), CloudDetectMimetype)
+	cloud, err := env.Cloud()
+	if err != nil {
+		return nil, err
+	}
+	return NewCloudUploader(
+		cloud,
+		cfg.Execution.EnvironmentId,
+		cfg.Execution.Id,
+		cfg.Workflow.Name,
+		config.Ref(),
+		WithParallelismCloud(30),
+		CloudDetectMimetype,
+	), nil
 }
 
-func InternalStorage() InternalArtifactStorage {
+func InternalStorage() (InternalArtifactStorage, error) {
+	uploader, err := newArtifactUploader()
+	if err != nil {
+		return nil, err
+	}
 	return &internalArtifactStorage{
 		prefix:   filepath.Join(".testkube", config.Ref()),
-		uploader: newArtifactUploader(),
-	}
+		uploader: uploader,
+	}, nil
 }
 
 func InternalStorageForAgent(client controlplaneclient.Client, environmentId, executionId, workflowName, ref string) InternalArtifactStorage {

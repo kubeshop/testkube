@@ -79,7 +79,7 @@ func loadDefaultProContext() {
 }
 
 // FIXME: avoid loading if not necessary (lazy load in client)
-func loadProContext() {
+func loadProContext() error {
 	capabilitiesMu.Lock()
 	defer capabilitiesMu.Unlock()
 
@@ -100,7 +100,7 @@ func loadProContext() {
 
 	// Do not check Cloud support if its already predefined
 	if isNewArchitectureCache != nil && isExternalStorageCache != nil {
-		return
+		return nil
 	}
 
 	// Check support in the cloud
@@ -114,7 +114,11 @@ func loadProContext() {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 	if !proContextLoaded {
-		proContext, _ = CloudInternal().GetProContext(ctx, &emptypb.Empty{})
+		cloudInternal, err := CloudInternal()
+		if err != nil {
+			return err
+		}
+		proContext, _ = cloudInternal.GetProContext(ctx, &emptypb.Empty{})
 		proContextLoaded = true
 	}
 	if proContext != nil {
@@ -128,6 +132,8 @@ func loadProContext() {
 		isNewArchitectureCache = common.Ptr(false)
 		isExternalStorageCache = common.Ptr(false)
 	}
+
+	return nil
 }
 
 func IsNewArchitecture() bool {
@@ -215,7 +221,7 @@ var (
 	cloudConn   *grpc.ClientConn
 )
 
-func CloudInternal() cloud.TestKubeCloudAPIClient {
+func CloudInternal() (cloud.TestKubeCloudAPIClient, error) {
 	cloudMu.Lock()
 	defer cloudMu.Unlock()
 
@@ -228,21 +234,24 @@ func CloudInternal() cloud.TestKubeCloudAPIClient {
 		cfg.SkipVerify = true
 		cloudConn, err = agentclient.NewGRPCConnection(context.Background(), cfg.TlsInsecure, cfg.SkipVerify, cfg.Url, "", "", "", logger)
 		if err != nil {
-			ui.Fail(fmt.Errorf("failed to connect with Cloud: %w", err))
+			return nil, fmt.Errorf("failed to connect with Cloud: %w", err)
 		}
 		cloudClient = cloud.NewTestKubeCloudAPIClient(cloudConn)
 	}
-	return cloudClient
+	return cloudClient, nil
 }
 
-func Cloud() controlplaneclient.Client {
+func Cloud() (controlplaneclient.Client, error) {
 	cfg := config2.Config()
-	grpcClient := CloudInternal()
+	grpcClient, err := CloudInternal()
+	if err != nil {
+		return nil, err
+	}
 	loadProContext() // FIXME: do it lazily
 	return controlplaneclient.New(grpcClient, internalProContext, controlplaneclient.ClientOptions{
 		StorageSkipVerify:  true, // FIXME?
 		ExecutionID:        cfg.Execution.Id,
 		WorkflowName:       cfg.Workflow.Name,
 		ParentExecutionIDs: strings.Split(cfg.Execution.ParentIds, "/"),
-	})
+	}), nil
 }

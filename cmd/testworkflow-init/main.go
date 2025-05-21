@@ -514,7 +514,10 @@ func scrapeMetricsPostProcessor(path, step string, config testworkflowconfig.Int
 		}()
 
 		// Scrape the metrics to internal storage
-		storage := artifacts.InternalStorage()
+		storage, err := artifacts.InternalStorage()
+		if err != nil {
+			return errors.Wrapf(err, "failed to create internal storage for metrics: %v", err)
+		}
 		err = filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
 			if info.IsDir() {
 				return nil
