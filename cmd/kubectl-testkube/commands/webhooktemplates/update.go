@@ -20,6 +20,7 @@ func UpdateWebhookTemplateCmd() *cobra.Command {
 		disable                  bool
 		config                   map[string]string
 		parameters               map[string]string
+		attachJunitSummary       bool
 	)
 
 	cmd := &cobra.Command{
@@ -62,6 +63,7 @@ func UpdateWebhookTemplateCmd() *cobra.Command {
 	cmd.Flags().StringToStringVarP(&config, "config", "", nil, "webhook template config variable with csv coluums (value=data or secret=namespace;name;key): --config var1=\"value=data\" or --config var2=\"secret=ns1;name1;key1\"")
 	cmd.Flags().StringToStringVarP(&parameters, "parameter", "", nil, "webhook template parameter variable with csv coluums (description;required;example;default;pattern): --parameter var3=\"descr;true;12345;0;[0-9]*\"")
 	cmd.Flags().BoolVar(&disable, "disable", false, "disable webhook template")
+	cmd.Flags().BoolVar(&attachJunitSummary, "attach-junit-summary", false, "attach junit summary to webhook")
 
 	return cmd
 }

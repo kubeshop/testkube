@@ -49,6 +49,7 @@ func TestGenerateYAML(t *testing.T) {
 				WebhookTemplateRef: &testkube.WebhookTemplateRef{
 					Name: "tmpl",
 				},
+				AttachJunitSummary: true,
 			},
 		}
 
@@ -97,6 +98,7 @@ func TestGenerateYAML(t *testing.T) {
 				WebhookTemplateRef: &testkube.WebhookTemplateRef{
 					Name: "tmpl",
 				},
+				AttachJunitSummary: true,
 			},
 			{
 				Name:                     "name2",
@@ -129,6 +131,7 @@ func TestGenerateYAML(t *testing.T) {
 				WebhookTemplateRef: &testkube.WebhookTemplateRef{
 					Name: "tmpl",
 				},
+				AttachJunitSummary: true,
 			},
 		}
 

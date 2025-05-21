@@ -115,7 +115,8 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 				name, webhook.Spec.Uri, webhook.Spec.Selector, types,
 				webhook.Spec.PayloadObjectField, payloadTemplate, webhook.Spec.Headers, webhook.Spec.Disabled,
 				r.deprecatedRepositories, r.testWorkflowExecutionResults,
-				r.metrics, r.webhookRepository, r.secretClient, r.proContext, r.envs, webhook.Spec.Config, webhook.Spec.Parameters,
+				r.metrics, r.webhookRepository, r.secretClient, r.proContext, r.envs, webhook.Spec.Config,
+				webhook.Spec.Parameters, webhook.Spec.AttachJunitSummary,
 			),
 		)
 	}
@@ -240,6 +241,10 @@ func mergeWebhooks(dst executorv1.Webhook, src executorv1.WebhookTemplate) execu
 		sort.Slice(dst.Spec.Parameters, func(i, j int) bool {
 			return dst.Spec.Parameters[i].Name < dst.Spec.Parameters[j].Name
 		})
+	}
+
+	if src.Spec.AttachJunitSummary {
+		dst.Spec.AttachJunitSummary = src.Spec.AttachJunitSummary
 	}
 
 	return dst

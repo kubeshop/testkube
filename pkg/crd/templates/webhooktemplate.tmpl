@@ -82,3 +82,6 @@ spec:
     {{- end }}
   {{- end }}
   {{- end }}
+  {{- if .AttachJunitSummary }}
+  attachJunitSummary: {{ .AttachJunitSummary }}
+  {{- end }}

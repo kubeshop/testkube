@@ -7762,6 +7762,10 @@ components:
             $ref: "#/components/schemas/WebhookParameterSchema"
         webhookTemplateRef:
           $ref: "#/components/schemas/WebhookTemplateRef"
+        attachJunitSummary:
+          type: boolean
+          description: whether webhook is attaching junit summary
+          default: false       
 
     WebhookTemplate:
       description: CRD based webhook data template
@@ -7830,6 +7834,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/WebhookParameterSchema"
+        attachJunitSummary:
+          type: boolean
+          description: whether webhook is attaching junit summary
+          default: false
 
     Event:
       description: Event data

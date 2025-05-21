@@ -43,6 +43,7 @@ func NewWebhookListener(name, uri, selector string, events []testkube.EventType,
 	envs map[string]string,
 	config map[string]executorv1.WebhookConfigValue,
 	parameters []executorv1.WebhookParameterSchema,
+	attachJunitSummary bool,
 ) *WebhookListener {
 	return &WebhookListener{
 		name:                         name,
@@ -64,6 +65,7 @@ func NewWebhookListener(name, uri, selector string, events []testkube.EventType,
 		envs:                         envs,
 		config:                       config,
 		parameters:                   parameters,
+		attachJunitSummary:           attachJunitSummary,
 	}
 }
 
@@ -87,6 +89,7 @@ type WebhookListener struct {
 	envs                         map[string]string
 	config                       map[string]executorv1.WebhookConfigValue
 	parameters                   []executorv1.WebhookParameterSchema
+	attachJunitSummary           bool
 }
 
 func (l *WebhookListener) Name() string {
@@ -127,6 +130,7 @@ func (l *WebhookListener) Metadata() map[string]string {
 		"disabled":           fmt.Sprint(l.disabled),
 		"config":             config,
 		"parameters":         parameters,
+		"attachJunitSummary": fmt.Sprint(l.attachJunitSummary),
 	}
 }
 
@@ -144,6 +148,10 @@ func (l *WebhookListener) Headers() map[string]string {
 
 func (l *WebhookListener) Disabled() bool {
 	return l.disabled
+}
+
+func (l *WebhookListener) AttachJunitSummary() bool {
+	return l.attachJunitSummary
 }
 
 func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventResult) {

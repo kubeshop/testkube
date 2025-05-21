@@ -75,6 +75,11 @@ func NewCreateWebhookTemplateOptionsFromFlags(cmd *cobra.Command) (options apiv1
 		}
 	}
 
+	attachJunitSummary, err := cmd.Flags().GetBool("attach-junit-summary")
+	if err != nil {
+		return options, err
+	}
+
 	options = apiv1.CreateWebhookTemplateOptions{
 		Name:                     name,
 		Namespace:                namespace,
@@ -89,6 +94,7 @@ func NewCreateWebhookTemplateOptionsFromFlags(cmd *cobra.Command) (options apiv1
 		Disabled:                 disabled,
 		Config:                   config,
 		Parameters:               parameter,
+		AttachJunitSummary:       attachJunitSummary,
 	}
 
 	return options, nil
@@ -204,6 +210,14 @@ func NewUpdateWebhookTemplateOptionsFromFlags(cmd *cobra.Command) (options apiv1
 			return options, err
 		}
 		options.Parameters = &values
+	}
+
+	if cmd.Flag("attach-junit-summary").Changed {
+		attachJunitSummary, err := cmd.Flags().GetBool("ttach-junit-summary")
+		if err != nil {
+			return options, err
+		}
+		options.Disabled = &attachJunitSummary
 	}
 
 	return options, nil
