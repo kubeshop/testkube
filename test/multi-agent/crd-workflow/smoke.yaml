@@ -1,0 +1,158 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: multi-agent-target-default
+  labels:
+    core-tests: workflows
+    type: multi-agent
+    tool: k6
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/k6/executor-tests/k6-smoke-test.js
+  container:
+    resources:
+      requests:
+        cpu: 128m
+        memory: 128Mi
+    workingDir: /data/repo/test/k6/executor-tests
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: Run test
+    run:
+      image: grafana/k6:0.43.1
+      args:
+      - run
+      - k6-smoke-test.js
+      - -e
+      - K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value
+      env:
+      - name: K6_SYSTEM_ENV
+        value: K6_SYSTEM_ENV_value
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: multi-agent-target-superagent
+  labels:
+    core-tests: workflows
+    type: multi-agent
+    tool: k6
+spec:
+  execution:
+    target:
+      match: 
+        runnertype: 
+        - superagent
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/k6/executor-tests/k6-smoke-test.js
+  container:
+    resources:
+      requests:
+        cpu: 128m
+        memory: 128Mi
+    workingDir: /data/repo/test/k6/executor-tests
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: Run test
+    run:
+      image: grafana/k6:0.43.1
+      args:
+      - run
+      - k6-smoke-test.js
+      - -e
+      - K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value
+      env:
+      - name: K6_SYSTEM_ENV
+        value: K6_SYSTEM_ENV_value
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: multi-agent-target-runner
+  labels:
+    core-tests: workflows
+    type: multi-agent
+    tool: k6
+spec:
+  execution:
+    target:
+      match: 
+        name: 
+        - testkube-cloud-test-dev-runner-2-ind
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/k6/executor-tests/k6-smoke-test.js
+  container:
+    resources:
+      requests:
+        cpu: 128m
+        memory: 128Mi
+    workingDir: /data/repo/test/k6/executor-tests
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: Run test
+    run:
+      image: grafana/k6:0.43.1
+      args:
+      - run
+      - k6-smoke-test.js
+      - -e
+      - K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value
+      env:
+      - name: K6_SYSTEM_ENV
+        value: K6_SYSTEM_ENV_value
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: multi-agent-target-runner-separate-ns
+  labels:
+    core-tests: workflows
+    type: multi-agent
+    tool: k6
+spec:
+  execution:
+    target:
+      match: 
+        name: 
+        - testkube-cloud-test-dev-runner-3-ind-ns
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/k6/executor-tests/k6-smoke-test.js
+  container:
+    resources:
+      requests:
+        cpu: 128m
+        memory: 128Mi
+    workingDir: /data/repo/test/k6/executor-tests
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: Run test
+    run:
+      image: grafana/k6:0.43.1
+      args:
+      - run
+      - k6-smoke-test.js
+      - -e
+      - K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value
+      env:
+      - name: K6_SYSTEM_ENV
+        value: K6_SYSTEM_ENV_value
