@@ -139,7 +139,7 @@ func main() {
 	if cfg.TestkubeProAPIKey == "" && cfg.TestkubeProAgentRegToken != "" {
 		// Create a REST client and register the runner.
 		runner, err := cloudclient.
-			NewAgentsClient(cfg.TestkubeProURL, cfg.TestkubeProAgentRegToken, cfg.TestkubeProOrgID). // Assumes that the runner can connect to the control plane via HTTP.
+			NewAgentsClient(cfg.TestkubeProAPIURL, cfg.TestkubeProAgentRegToken, cfg.TestkubeProOrgID). // Assumes that the runner can connect to the control plane via HTTP.
 			CreateRunner(
 				cfg.TestkubeProEnvID,
 				cfg.APIServerFullname,                     // Is this correct?
