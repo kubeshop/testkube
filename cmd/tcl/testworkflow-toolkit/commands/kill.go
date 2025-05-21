@@ -137,7 +137,10 @@ func NewKillCmd() *cobra.Command {
 				}
 
 				// Fetch logs for them
-				storage := artifacts.InternalStorage()
+				storage, err := artifacts.InternalStorage()
+				if err != nil {
+					ui.Failf("could not create internal storage client: %v", err)
+				}
 				for _, id := range ids {
 					service, index := spawn.GetServiceByResourceId(id)
 					count := index + 1

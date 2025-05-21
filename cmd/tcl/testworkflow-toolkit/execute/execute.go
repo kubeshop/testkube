@@ -61,7 +61,10 @@ func executeTestWorkflowApi(workflowName string, request testkube.TestWorkflowEx
 
 func executeTestWorkflowGrpc(workflowName string, request testkube.TestWorkflowExecutionRequest) ([]testkube.TestWorkflowExecution, error) {
 	cfg := config.Config()
-	client := env.Cloud()
+	client, err := env.Cloud()
+	if err != nil {
+		return nil, err
+	}
 	var targets []*cloud.ExecutionTarget
 	if request.Target != nil {
 		targets = commonmapper.MapAllTargetsApiToGrpc([]testkube.ExecutionTarget{*request.Target})
@@ -92,11 +95,19 @@ func listTestWorkflowsApi(labels map[string]string) ([]testkube.TestWorkflow, er
 
 func listTestWorkflowsGrpc(labels map[string]string) ([]testkube.TestWorkflow, error) {
 	cfg := config.Config()
-	client := testworkflowclient.NewCloudTestWorkflowClient(env.Cloud())
+	cloud, err := env.Cloud()
+	if err != nil {
+		return nil, err
+	}
+	client := testworkflowclient.NewCloudTestWorkflowClient(cloud)
 	return client.List(context.Background(), cfg.Execution.EnvironmentId, testworkflowclient.ListOptions{Labels: labels})
 }
 
 func GetExecution(id string) (*testkube.TestWorkflowExecution, error) {
 	cfg := config.Config()
-	return env.Cloud().GetExecution(context.Background(), cfg.Execution.EnvironmentId, id)
+	cloud, err := env.Cloud()
+	if err != nil {
+		return nil, err
+	}
+	return cloud.GetExecution(context.Background(), cfg.Execution.EnvironmentId, id)
 }

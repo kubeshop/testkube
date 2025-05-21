@@ -81,7 +81,10 @@ func NewCloneCmd() *cobra.Command {
 					uri.User = url.User(username)
 				}
 			} else if authType == "github" {
-				client := env.Cloud()
+				client, err := env.Cloud()
+				if err != nil {
+					ui.Failf("could not create cloud client: %v", err)
+				}
 				githubToken, err := client.GetGitHubToken(cmd.Context(), uri.String())
 				if err == nil {
 					uri.User = url.UserPassword("x-access-token", githubToken)
