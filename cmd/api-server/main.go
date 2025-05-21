@@ -144,7 +144,7 @@ func main() {
 				cfg.TestkubeProEnvID,
 				cfg.APIServerFullname,                     // Is this correct?
 				map[string]string{"registration": "self"}, // Self-registered label?
-				true, // Assume that all self-registered runners are floating?
+				cfg.FloatingRunner,
 			)
 		if err != nil {
 			// TODO: handle error in case agent already exists (API does not currently support this).
