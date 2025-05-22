@@ -109,7 +109,7 @@ func MapAPIToCRD(request testkube.WebhookCreateRequest) executorv1.Webhook {
 			Config:                   common.MapMap(request.Config, MapConfigValueAPIToCRD),
 			Parameters:               common.MapSlice(request.Parameters, MapParameterSchemaAPIToCRD),
 			WebhookTemplateRef:       common.MapPtr(request.WebhookTemplateRef, MapTemplateRefAPIToCRD),
-			AttachJunitSummary:       item.Spec.AttachJunitSummary,
+			AttachJunitSummary:       request.AttachJunitSummary,
 		},
 	}
 }
