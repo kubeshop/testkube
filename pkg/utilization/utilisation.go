@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
+
 	"github.com/pkg/errors"
 
 	"github.com/kubeshop/testkube/pkg/utilization/core"
@@ -137,6 +139,17 @@ type ExecutionConfig struct {
 // If Config.Skip is set to true, the provided function will be run without recording metrics.
 // If there is an error with initiating the metrics recorder, the function will be run without recording metrics.
 func WithMetricsRecorder(config Config, fn func(), postProcessFn func() error) {
+	var err error
+	defer func() {
+		if err != nil {
+			instructions.PrintOutput(
+				config.ExecutionConfig.Step,
+				"resource-metrics-warning",
+				instructions.NewExecutionWarning("resource-metrics", "Resource Metrics Issue", err.Error()),
+			)
+		}
+	}()
+
 	stdout := output.Std
 	stdoutUnsafe := stdout.Direct()
 
@@ -173,7 +186,7 @@ func WithMetricsRecorder(config Config, fn func(), postProcessFn func() error) {
 	// run the function
 	fn()
 	cancel()
-	if err := postProcessFn(); err != nil {
+	if err = postProcessFn(); err != nil {
 		stdoutUnsafe.Warnf("failed to run post process function: %v\n", err)
 	}
 }
