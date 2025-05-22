@@ -213,11 +213,11 @@ func NewUpdateWebhookTemplateOptionsFromFlags(cmd *cobra.Command) (options apiv1
 	}
 
 	if cmd.Flag("attach-junit-summary").Changed {
-		attachJunitSummary, err := cmd.Flags().GetBool("ttach-junit-summary")
+		attachJunitSummary, err := cmd.Flags().GetBool("attach-junit-summary")
 		if err != nil {
 			return options, err
 		}
-		options.Disabled = &attachJunitSummary
+		options.AttachJunitSummary = &attachJunitSummary
 	}
 
 	return options, nil
