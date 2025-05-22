@@ -47,6 +47,7 @@ type TestKubeCloudAPIClient interface {
 	SaveExecutionLogsPresigned(ctx context.Context, in *SaveExecutionLogsPresignedRequest, opts ...grpc.CallOption) (*SaveExecutionLogsPresignedResponse, error)
 	FinishExecution(ctx context.Context, in *FinishExecutionRequest, opts ...grpc.CallOption) (*FinishExecutionResponse, error)
 	GetGitHubToken(ctx context.Context, in *GetGitHubTokenRequest, opts ...grpc.CallOption) (*GetGitHubTokenResponse, error)
+	GetExecutionReports(ctx context.Context, in *GetExecutionReportsRequest, opts ...grpc.CallOption) (*GetExecutionReportsResponse, error)
 	// Execution
 	SaveExecutionArtifactPresigned(ctx context.Context, in *SaveExecutionArtifactPresignedRequest, opts ...grpc.CallOption) (*SaveExecutionArtifactPresignedResponse, error)
 	AppendExecutionReport(ctx context.Context, in *AppendExecutionReportRequest, opts ...grpc.CallOption) (*AppendExecutionReportResponse, error)
@@ -516,6 +517,15 @@ func (c *testKubeCloudAPIClient) GetGitHubToken(ctx context.Context, in *GetGitH
 	return out, nil
 }
 
+func (c *testKubeCloudAPIClient) GetExecutionReports(ctx context.Context, in *GetExecutionReportsRequest, opts ...grpc.CallOption) (*GetExecutionReportsResponse, error) {
+	out := new(GetExecutionReportsResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/GetExecutionReports", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *testKubeCloudAPIClient) SaveExecutionArtifactPresigned(ctx context.Context, in *SaveExecutionArtifactPresignedRequest, opts ...grpc.CallOption) (*SaveExecutionArtifactPresignedResponse, error) {
 	out := new(SaveExecutionArtifactPresignedResponse)
 	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/SaveExecutionArtifactPresigned", in, out, opts...)
@@ -798,6 +808,7 @@ type TestKubeCloudAPIServer interface {
 	SaveExecutionLogsPresigned(context.Context, *SaveExecutionLogsPresignedRequest) (*SaveExecutionLogsPresignedResponse, error)
 	FinishExecution(context.Context, *FinishExecutionRequest) (*FinishExecutionResponse, error)
 	GetGitHubToken(context.Context, *GetGitHubTokenRequest) (*GetGitHubTokenResponse, error)
+	GetExecutionReports(context.Context, *GetExecutionReportsRequest) (*GetExecutionReportsResponse, error)
 	// Execution
 	SaveExecutionArtifactPresigned(context.Context, *SaveExecutionArtifactPresignedRequest) (*SaveExecutionArtifactPresignedResponse, error)
 	AppendExecutionReport(context.Context, *AppendExecutionReportRequest) (*AppendExecutionReportResponse, error)
@@ -889,6 +900,9 @@ func (UnimplementedTestKubeCloudAPIServer) FinishExecution(context.Context, *Fin
 }
 func (UnimplementedTestKubeCloudAPIServer) GetGitHubToken(context.Context, *GetGitHubTokenRequest) (*GetGitHubTokenResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetGitHubToken not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) GetExecutionReports(context.Context, *GetExecutionReportsRequest) (*GetExecutionReportsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetExecutionReports not implemented")
 }
 func (UnimplementedTestKubeCloudAPIServer) SaveExecutionArtifactPresigned(context.Context, *SaveExecutionArtifactPresignedRequest) (*SaveExecutionArtifactPresignedResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SaveExecutionArtifactPresigned not implemented")
@@ -1408,6 +1422,24 @@ func _TestKubeCloudAPI_GetGitHubToken_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _TestKubeCloudAPI_GetExecutionReports_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetExecutionReportsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).GetExecutionReports(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/GetExecutionReports",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).GetExecutionReports(ctx, req.(*GetExecutionReportsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _TestKubeCloudAPI_SaveExecutionArtifactPresigned_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(SaveExecutionArtifactPresignedRequest)
 	if err := dec(in); err != nil {
@@ -1790,6 +1822,10 @@ var TestKubeCloudAPI_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetGitHubToken",
 			Handler:    _TestKubeCloudAPI_GetGitHubToken_Handler,
+		},
+		{
+			MethodName: "GetExecutionReports",
+			Handler:    _TestKubeCloudAPI_GetExecutionReports_Handler,
 		},
 		{
 			MethodName: "SaveExecutionArtifactPresigned",

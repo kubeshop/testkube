@@ -16,6 +16,7 @@ type TemplateVars struct {
 	LogsURL          string
 	LogsCommand      string
 	Config           map[string]string
+	Reports          []testkube.TestWorkflowReport
 }
 
 func NewTemplateVars(event testkube.Event, proContext *config.ProContext, config map[string]string) TemplateVars {
