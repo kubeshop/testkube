@@ -86,3 +86,6 @@ spec:
   {{- if .PayloadTemplate }}
   {{ .PayloadTemplate }}
   {{- end }}
+  {{- if .AttachJunitSummary }}
+  attachJunitSummary: {{ .AttachJunitSummary }}
+  {{- end }}

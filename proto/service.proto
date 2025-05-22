@@ -34,6 +34,7 @@ service TestKubeCloudAPI {
     rpc SaveExecutionLogsPresigned(SaveExecutionLogsPresignedRequest) returns (SaveExecutionLogsPresignedResponse);
     rpc FinishExecution(FinishExecutionRequest) returns (FinishExecutionResponse);
     rpc GetGitHubToken(GetGitHubTokenRequest) returns (GetGitHubTokenResponse);
+    rpc GetExecutionReports(GetExecutionReportsRequest) returns (GetExecutionReportsResponse);
 
     // Execution
     rpc SaveExecutionArtifactPresigned(SaveExecutionArtifactPresignedRequest) returns (SaveExecutionArtifactPresignedResponse);
@@ -607,4 +608,12 @@ message TestWorkflowTemplateUpdate {
   google.protobuf.Timestamp timestamp = 2;
   UpdateType type = 3;
   bytes resource = 4; // TestWorkflowTemplate
+}
+
+message GetExecutionReportsRequest {
+  string id = 1;
+}
+
+message GetExecutionReportsResponse {
+  bytes reports = 1; // TestWorkflowReport
 }

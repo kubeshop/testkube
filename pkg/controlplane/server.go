@@ -691,3 +691,8 @@ func (s *Server) SaveExecutionArtifactPresigned(ctx context.Context, req *cloud.
 	}
 	return &cloud.SaveExecutionArtifactPresignedResponse{Url: url}, nil
 }
+
+func (s *Server) GetExecutionReports(_ context.Context, _ *cloud.GetExecutionReportsRequest) (*cloud.GetExecutionReportsResponse, error) {
+
+	return &cloud.GetExecutionReportsResponse{}, nil
+}

@@ -34,4 +34,6 @@ type Webhook struct {
 	Config             map[string]WebhookConfigValue `json:"config,omitempty"`
 	Parameters         []WebhookParameterSchema      `json:"parameters,omitempty"`
 	WebhookTemplateRef *WebhookTemplateRef           `json:"webhookTemplateRef,omitempty"`
+	// whether webhook is attaching junit summary
+	AttachJunitSummary bool `json:"attachJunitSummary,omitempty"`
 }

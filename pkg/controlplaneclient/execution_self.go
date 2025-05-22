@@ -24,6 +24,7 @@ type ExecutionSelfClient interface {
 	GetExecution(ctx context.Context, environmentId, executionId string) (*testkube.TestWorkflowExecution, error)
 	GetCredential(ctx context.Context, environmentId, executionId, name string) ([]byte, error)
 	GetGitHubToken(ctx context.Context, url string) (string, error)
+	GetExecutionReports(ctx context.Context, environmentId, executionId string) ([]testkube.TestWorkflowReport, error)
 }
 
 func (c *client) AppendExecutionReport(ctx context.Context, environmentId, executionId, legacyWorkflowName, stepRef, filePath string, report []byte) error {
