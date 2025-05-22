@@ -15,8 +15,8 @@ spec:
     - path: /root/edge-cluster-sa-key.json
       contentFrom:
         secretKeyRef:
-          name: sa-key
-          key: json-sa-key
+          name: testkube-agent-secrets
+          key: ENTERPRISE_INSTALLATION_TEST_SA_KEY
     git:
       uri: https://github.com/kubeshop/testkube
       revision: main
@@ -45,8 +45,8 @@ spec:
       - name: SA_NAME
         valueFrom:
           secretKeyRef:
-            name: enterprise-installation-test-sa-name
-            key: sa-name
+            name: testkube-agent-secrets
+            key: enterprise-installation-test-sa-name
       shell: |
         gcloud auth activate-service-account {{ env.SA_NAME }} --key-file=/root/edge-cluster-sa-key.json
         gcloud container clusters get-credentials testkube-cloud-edge --region us-east1 --project testkube-328312
@@ -58,8 +58,8 @@ spec:
       - name: LICENSE_KEY
         valueFrom:
           secretKeyRef:
-            name: testkube-enterprise-installation-test-license-key
-            key: key
+            name: testkube-agent-secrets
+            key: ENTERPRISE_INSTALLATION_TEST_LICENSE_KEY
       - name: TESTKUBE_INIT_COMMAND
         value: "testkube init demo --namespace testkube-enterprise-installation-test --no-confirm --license {{ env.LICENSE_KEY }} --helm-set testkube-agent.testkube-api.multinamespace.enabled=true --helm-set testkube-agent.testkube-operator.enabled=false --helm-set dex.rbac.createClusterScoped=false"
       shell: |

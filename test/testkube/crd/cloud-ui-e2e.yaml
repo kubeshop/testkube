@@ -13,12 +13,12 @@ spec:
       - js/packages/e2e-tests
       usernameFrom:
         secretKeyRef:
-          name: 'cloud-ui-e2e-testsource-source-secrets'
-          key: 'git-username'
+          name: 'testkube-agent-secrets'
+          key: 'CLOUD_UI_E2E_GITHUB_USERNAME'
       tokenFrom:
         secretKeyRef:
-          name: 'cloud-ui-e2e-testsource-source-secrets'
-          key: 'git-token'
+          name: 'testkube-agent-secrets'
+          key: 'CLOUD_UI_E2E_GITHUB_TOKEN'
   config:
     CLOUD_BASE_URL: {type: string, default: 'https://app.testkube.dev'}
   container:
