@@ -32,6 +32,7 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	agentclient "github.com/kubeshop/testkube/pkg/agent/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	cloudclient "github.com/kubeshop/testkube/pkg/cloud/client"
 	cloudartifacts "github.com/kubeshop/testkube/pkg/cloud/data/artifact"
 	cloudtestworkflow "github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
 	cloudwebhook "github.com/kubeshop/testkube/pkg/cloud/data/webhook"
@@ -133,6 +134,38 @@ func main() {
 	metrics := metrics.NewMetrics()
 
 	lazyRunner := runner2.LazyExecute()
+
+	// If we don't have an API key but we do have a token for registration then attempt to register the runner.
+	if cfg.TestkubeProAPIKey == "" && cfg.TestkubeProAgentRegToken != "" {
+		// Create a REST client and register the runner.
+		runner, err := cloudclient.
+			NewAgentsClient(cfg.TestkubeProAPIURL, cfg.TestkubeProAgentRegToken, cfg.TestkubeProOrgID). // Assumes that the runner can connect to the control plane via HTTP.
+			CreateRunner(
+				cfg.TestkubeProEnvID,
+				cfg.APIServerFullname,                     // Is this correct?
+				map[string]string{"registration": "self"}, // Self-registered label?
+				cfg.FloatingRunner,
+			)
+		if err != nil {
+			// TODO: handle error in case agent already exists (API does not currently support this).
+			log.DefaultLogger.Errorw("error registering runner", "error", err.Error())
+			os.Exit(1)
+		}
+
+		// Add the new values to the current configuration.
+		cfg.TestkubeProAPIKey = runner.SecretKey
+		cfg.TestkubeProAgentID = runner.ID
+
+		// Attempt to store the values in a Kubernetes secret.
+		if cfg.SelfRegistrationSecret != "" {
+			if _, err := secretManager.Create(ctx, cfg.TestkubeNamespace, cfg.SelfRegistrationSecret, map[string]string{
+				"TESTKUBE_PRO_API_KEY":  runner.SecretKey,
+				"TESTKUBE_PRO_AGENT_ID": runner.ID,
+			}, secretmanager.CreateOptions{}); err != nil {
+				log.DefaultLogger.Errorw("error creating self-register runner secret", "error", err.Error())
+			}
+		}
+	}
 
 	// Connect to the Control Plane
 	var grpcConn *grpc.ClientConn
