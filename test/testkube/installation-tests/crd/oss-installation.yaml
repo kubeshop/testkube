@@ -1,0 +1,56 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: oss-standalone-installation-test-template # TODO: rename, update argo source
+  # labels:
+  #   core-tests: installation
+spec:
+  events:
+    - cronjob:
+        cron: 35 */4 * * *
+  system:
+    pureByDefault: true
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+        - test/k6/executor-tests/crd-workflow/smoke.yaml
+  container:
+    workingDir: /data/repo/test/k6/executor-tests/crd-workflow
+    resources:
+      requests:
+        cpu: "500m"
+        memory: "256Mi"
+  use:
+    - name: setup-dind-kind-cluster-template
+  steps:
+    - name: Install Testkube OSS
+      shell: |
+        kubectl config set-context kind-kind
+        testkube disable telemetry
+        testkube init standalone-agent --namespace testkube --no-confirm --helm-arg wait= --helm-arg timeout=10m
+        kubectl get all -n testkube
+        testkube disable telemetry
+    - name: Wait for Testkube core components to be ready
+      optional: true
+      shell: |
+        for dep in testkube-api-server testkube-mongodb testkube-minio-testkube testkube-operator-controller-manager; do
+          echo "⏳ Waiting for $dep..."
+          kubectl rollout status deployment/$dep -n testkube --timeout=300s || exit 1
+        done
+
+        echo "⏳ Waiting for testkube-api-server endpoint..."
+        for i in {1..30}; do
+          kubectl get endpoints testkube-api-server -n testkube -o jsonpath='{.subsets[*].addresses[*].ip}' | \
+            grep -qE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' && break
+          sleep 2
+        done
+
+        echo "✅ Testkube core components and API service are ready."
+    - name: Apply TestWorkflow
+      shell: |
+        kubectl apply -f smoke.yaml -n testkube
+        kubectl get testworkflow k6-workflow-smoke -n testkube && echo "found" || kubectl get all -n testkube
+    - name: Run TestWorkflow
+      shell: testkube run tw k6-workflow-smoke --watch && echo "executed correctly"
