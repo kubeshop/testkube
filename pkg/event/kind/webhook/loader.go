@@ -1,6 +1,7 @@
 package webhook
 
 import (
+	"context"
 	"fmt"
 	"sort"
 
@@ -19,6 +20,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/secret"
 )
 
+type FnGetExecutionReports func(ctx context.Context, executionId string) ([]testkube.TestWorkflowReport, error)
+
 var _ common.ListenerLoader = (*WebhooksLoader)(nil)
 
 func NewWebhookLoader(log *zap.SugaredLogger, webhooksClient executorsclientv1.WebhooksInterface,
@@ -26,6 +29,7 @@ func NewWebhookLoader(log *zap.SugaredLogger, webhooksClient executorsclientv1.W
 	deprecatedRepositories commons.DeprecatedRepositories, testWorkflowExecutionResults testworkflow.Repository,
 	secretClient secret.Interface, metrics v1.Metrics, webhookRepository cloudwebhook.WebhookRepository,
 	proContext *config.ProContext, envs map[string]string,
+	fnGetExecutionReports FnGetExecutionReports,
 ) *WebhooksLoader {
 	return &WebhooksLoader{
 		log:                          log,
@@ -39,6 +43,7 @@ func NewWebhookLoader(log *zap.SugaredLogger, webhooksClient executorsclientv1.W
 		webhookRepository:            webhookRepository,
 		proContext:                   proContext,
 		envs:                         envs,
+		fnGetExecutionReports:        fnGetExecutionReports,
 	}
 }
 
@@ -54,6 +59,7 @@ type WebhooksLoader struct {
 	webhookRepository            cloudwebhook.WebhookRepository
 	proContext                   *config.ProContext
 	envs                         map[string]string
+	fnGetExecutionReports        FnGetExecutionReports
 }
 
 func (r WebhooksLoader) Kind() string {
@@ -116,7 +122,7 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 				webhook.Spec.PayloadObjectField, payloadTemplate, webhook.Spec.Headers, webhook.Spec.Disabled,
 				r.deprecatedRepositories, r.testWorkflowExecutionResults,
 				r.metrics, r.webhookRepository, r.secretClient, r.proContext, r.envs, webhook.Spec.Config,
-				webhook.Spec.Parameters, webhook.Spec.AttachJunitSummary,
+				webhook.Spec.Parameters, r.fnGetExecutionReports, webhook.Spec.AttachJunitSummary,
 			),
 		)
 	}

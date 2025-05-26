@@ -19,10 +19,11 @@ type TemplateVars struct {
 	Reports          []testkube.TestWorkflowReport
 }
 
-func NewTemplateVars(event testkube.Event, proContext *config.ProContext, config map[string]string) TemplateVars {
+func NewTemplateVars(event testkube.Event, proContext *config.ProContext, config map[string]string, reports []testkube.TestWorkflowReport) TemplateVars {
 	vars := TemplateVars{
-		Event:  event,
-		Config: config,
+		Event:   event,
+		Config:  config,
+		Reports: reports,
 	}
 
 	switch {

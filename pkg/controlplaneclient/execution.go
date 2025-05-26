@@ -26,6 +26,7 @@ type ExecutionClient interface {
 	UpdateExecutionResult(ctx context.Context, environmentId, executionId string, result *testkube.TestWorkflowResult) error
 	FinishExecutionResult(ctx context.Context, environmentId, executionId string, result *testkube.TestWorkflowResult) error
 	InitExecution(ctx context.Context, environmentId, executionId string, signature []testkube.TestWorkflowSignature, namespace string) error
+	GetExecutionReports(ctx context.Context, environmentId, executionId string) ([]testkube.TestWorkflowReport, error)
 }
 
 func (c *client) GetExecution(ctx context.Context, environmentId, executionId string) (*testkube.TestWorkflowExecution, error) {

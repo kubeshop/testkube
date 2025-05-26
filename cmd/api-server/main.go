@@ -326,8 +326,11 @@ func main() {
 	websocketLoader := ws.NewWebsocketLoader()
 	if !cfg.DisableWebhooks {
 		secretClient := secret.NewClientFor(clientset, cfg.TestkubeNamespace)
+		fnGetExecutionReports := func(ctx context.Context, executionid string) ([]testkube.TestWorkflowReport, error) {
+			return client.GetExecutionReports(ctx, proContext.EnvID, executionid)
+		}
 		eventsEmitter.Loader.Register(webhook.NewWebhookLoader(log.DefaultLogger, webhooksClient, webhookTemplatesClient, deprecatedClients, deprecatedRepositories,
-			testWorkflowResultsRepository, secretClient, metrics, webhookRepository, &proContext, envs))
+			testWorkflowResultsRepository, secretClient, metrics, webhookRepository, &proContext, envs, fnGetExecutionReports))
 	}
 	eventsEmitter.Loader.Register(websocketLoader)
 	eventsEmitter.Loader.Register(commons.MustCreateSlackLoader(cfg, envs))
