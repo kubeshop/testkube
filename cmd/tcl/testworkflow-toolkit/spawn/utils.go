@@ -31,6 +31,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/transfer"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/credentials"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
@@ -333,6 +334,7 @@ func CreateBaseMachine() expressions.Machine {
 		testworkflowconfig.CreateCloudMachine(&cfg.ControlPlane, orgSlug, envSlug),
 		testworkflowconfig.CreateExecutionMachine(&cfg.Execution),
 		testworkflowconfig.CreateWorkflowMachine(&cfg.Workflow),
+		credentials.NewCredentialMachine(data.Credentials()),
 	)
 }
 
