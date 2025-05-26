@@ -13,11 +13,11 @@ spec:
   content:
     git:
       uri: https://github.com/kubeshop/testkube
-      revision: main
+      revision: enterprise-installation-workflow-dind # TODO: update
       paths:
         - test/k6/executor-tests/crd-workflow/smoke.yaml
+        - test/testkube/installation-tests/enterprise-installation-expect-file.exp # expect file to finalize installation (user choices required): TKC-3026
   container:
-    workingDir: /data/repo/test/k6/executor-tests/crd-workflow
     resources:
       requests:
         cpu: "500m"
@@ -32,6 +32,7 @@ spec:
       apt-get update && apt-get install -y testkube expect
       testkube disable telemetry
   - name: Install Testkube Enterprise Demo
+    workingDir: /data/repo/test/testkube/installation-tests
     run:
       env:
       - name: LICENSE_KEY
@@ -40,7 +41,7 @@ spec:
             name: testkube-agent-secrets
             key: ENTERPRISE_INSTALLATION_TEST_LICENSE_KEY
       - name: TESTKUBE_INIT_COMMAND
-        value: "testkube init demo --namespace testkube-enterprise-installation-test --no-confirm --license {{ env.LICENSE_KEY }} --helm-arg wait= --helm-arg timeout=10m"
+        value: "testkube init demo --no-confirm --license {{ env.LICENSE_KEY }} --helm-arg wait= --helm-arg timeout=10m"
       shell: |
         helm version
         helm list -n testkube-enterprise-installation-test
@@ -64,6 +65,7 @@ spec:
 
       echo "✅ Testkube core components and API service are ready."
   - name: Apply TestWorkflow
+    workingDir: /data/repo/test/k6/executor-tests/crd-workflow
     shell: |
       kubectl apply -f smoke.yaml -n testkube
       kubectl get testworkflow k6-workflow-smoke -n testkube && echo "found" || kubectl get all -n testkube
@@ -93,10 +95,10 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/testkube/enterprise-installation-expect-file.exp # expect file to finalize installation (user choices required): TKC-3026
+      - test/testkube/installation-tests/enterprise-installation-expect-file.exp # expect file to finalize installation (user choices required): TKC-3026
   container:
     image: gcr.io/google.com/cloudsdktool/google-cloud-cli:latest # contains gcloud, gke-gcloud-auth-plugin and kubectl
-    workingDir: /data/repo/test/testkube
+    workingDir: /data/repo/test/testkube/installation-tests
   job:
     activeDeadlineSeconds:  1200
   steps:
