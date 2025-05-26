@@ -30,6 +30,7 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/credentials"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	commonmapper "github.com/kubeshop/testkube/pkg/mapper/common"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
@@ -324,7 +325,8 @@ func NewExecuteCmd() *cobra.Command {
 
 		Run: func(cmd *cobra.Command, _ []string) {
 			// Initialize internal machine
-			baseMachine := data.GetBaseTestWorkflowMachine()
+			credMachine := credentials.NewCredentialMachine(data.Credentials())
+			baseMachine := expressions.CombinedMachines(data.GetBaseTestWorkflowMachine(), credMachine)
 
 			// Initialize transfer server
 			transferSrv := transfer.NewServer(constants.DefaultTransferDirPath, config.IP(), constants.DefaultTransferPort)
