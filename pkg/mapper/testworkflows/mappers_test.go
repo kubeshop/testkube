@@ -330,6 +330,7 @@ var (
 					Cron:        "* * * * *",
 					Labels:      map[string]string{"some-key": "some-value"},
 					Annotations: map[string]string{"some-key=2": "some-value-2"},
+					Timezone:    common.Ptr("America/New_York"),
 				},
 			},
 		},

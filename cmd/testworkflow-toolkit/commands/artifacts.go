@@ -77,7 +77,10 @@ func NewArtifactsCmd() *cobra.Command {
 			var handlerOpts []artifacts.HandlerOpts
 			// Archive
 			cfg := config.Config()
-			client := env.Cloud()
+			client, err := env.Cloud()
+			if err != nil {
+				ui.Failf("could not create cloud client: %v", err)
+			}
 
 			exec, err := client.GetExecution(cmd.Context(), cfg.Execution.EnvironmentId, cfg.Execution.Id)
 			ui.ExitOnError("getting execution", err)

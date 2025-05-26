@@ -547,6 +547,7 @@ func MapCronJobConfigKubeToAPI(v testworkflowsv1.CronJobConfig) testkube.TestWor
 		Labels:      v.Labels,
 		Annotations: v.Annotations,
 		Target:      common.MapPtr(v.Target, commonmapper.MapTargetKubeToAPI),
+		Timezone:    MapStringToBoxedString(v.Timezone),
 	}
 }
 

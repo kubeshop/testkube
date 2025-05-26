@@ -263,8 +263,15 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 		if err == nil {
 			break
 		}
-		log.DefaultLogger.Warnw("failed to save execution data", "id", execution.Id, "error", err)
-		time.Sleep(time.Duration(i/10) * SaveEndResultRetryBaseDelay)
+		sleepDuration := time.Duration(i/10) * SaveEndResultRetryBaseDelay
+		log.DefaultLogger.Warnw(
+			"failed to end execution and save execution data, retrying...",
+			"id", execution.Id,
+			"retryCount", i,
+			"retryDelay", sleepDuration,
+			"error", err,
+		)
+		time.Sleep(sleepDuration)
 	}
 
 	// Handle fatal error
@@ -503,7 +510,17 @@ func (r *runner) execute(request executionworkertypes.ExecuteRequest) (*executio
 				return err
 			})
 			if err != nil {
-				log.DefaultLogger.Errorw("failed to monitor execution", "id", request.Execution.Id, "error", err)
+				log.DefaultLogger.Errorw(
+					"failed to monitor execution and retry limit is reached, assuming execution is stuck and running cleanup...",
+					"id", request.Execution.Id,
+					"error", err,
+				)
+				// At this point, all retries have failed and nothing is monitoring the execution anymore.
+				// We can assume that the execution is stuck in running state and we need to abort it.
+				if err := r.abortExecution(context.Background(), request.Execution.EnvironmentId, request.Execution.Id); err != nil {
+					log.DefaultLogger.Errorw("failed to abort stuck execution", "id", request.Execution.Id, "error", err)
+				}
+				log.DefaultLogger.Warnw("aborted execution stuck in running state", "id", request.Execution.Id)
 			}
 		}()
 	}
@@ -524,6 +541,36 @@ func (r *runner) execute(request executionworkertypes.ExecuteRequest) (*executio
 	}
 
 	return res, err
+}
+
+// abortExecution aborts fetches the execution, updates its result to aborted and finishes it.
+func (r *runner) abortExecution(ctx context.Context, environmentID, executionID string) error {
+	execution, err := r.client.GetExecution(context.Background(), environmentID, executionID)
+	if err != nil {
+		return errors.Wrapf(err, "failed to get execution '%s'", executionID)
+	}
+	if execution.Result == nil {
+		return errors.New("execution result is nil")
+	}
+	execution.Result.Fatal(errors.New("execution is stuck in running state"), true, time.Now())
+	if err = r.client.UpdateExecutionResult(ctx, environmentID, executionID, execution.Result); err != nil {
+		return errors.Wrapf(err, "failed to update execution result '%s' to aborted", executionID)
+	}
+
+	if err = r.client.FinishExecutionResult(ctx, environmentID, executionID, execution.Result); err != nil {
+		return errors.Wrapf(err, "failed to finish execution result '%s'", executionID)
+	}
+
+	// Emit data, if the Control Plane doesn't support informing about status by itself
+	if !r.proContext.NewArchitecture {
+		r.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(execution))
+	}
+
+	if err = r.Abort(executionID); err != nil {
+		return errors.Wrapf(err, "failed to destroy execution '%s'", executionID)
+	}
+
+	return nil
 }
 
 func (r *runner) Pause(id string) error {

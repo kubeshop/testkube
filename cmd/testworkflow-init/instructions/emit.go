@@ -122,3 +122,19 @@ func DetectInstruction(line []byte) (*Instruction, bool, error) {
 	}
 	return instruction, isHint, nil
 }
+
+type ExecutionWarning struct {
+	Type      string `json:"type"`
+	Component string `json:"component"`
+	Warning   string `json:"error"`
+	Reason    string `json:"reason"`
+}
+
+func NewExecutionWarning(component, warning, reason string) ExecutionWarning {
+	return ExecutionWarning{
+		Type:      "warning",
+		Component: component,
+		Warning:   warning,
+		Reason:    reason,
+	}
+}

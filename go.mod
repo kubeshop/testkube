@@ -23,6 +23,7 @@ require (
 	github.com/fsnotify/fsnotify v1.8.0
 	github.com/gabriel-vasile/mimetype v1.4.6
 	github.com/go-errors/errors v1.5.1
+	github.com/go-logr/zapr v1.3.0
 	github.com/gofiber/adaptor/v2 v2.1.29
 	github.com/gofiber/fiber/v2 v2.52.5
 	github.com/gofiber/websocket/v2 v2.1.1
@@ -43,7 +44,7 @@ require (
 	github.com/keygen-sh/jsonapi-go v1.2.1
 	github.com/keygen-sh/keygen-go/v3 v3.2.0
 	github.com/kubepug/kubepug v1.7.1
-	github.com/kubeshop/testkube-operator v1.17.55-0.20250508093612-d3eaf12f82df
+	github.com/kubeshop/testkube-operator v1.17.55-0.20250521080202-db7e88a19278
 	github.com/minio/minio-go/v7 v7.0.66
 	github.com/montanaflynn/stats v0.7.1
 	github.com/moogar0880/problems v0.1.1

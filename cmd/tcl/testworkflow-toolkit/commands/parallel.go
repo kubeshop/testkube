@@ -188,7 +188,10 @@ func NewParallelCmd() *cobra.Command {
 			}
 
 			// Load Kubernetes client and image inspector
-			storage := artifacts.InternalStorage()
+			storage, err := artifacts.InternalStorage()
+			if err != nil {
+				ui.Failf("could not create internal storage client: %v", err)
+			}
 
 			// Prepare runner
 			// TODO: Share resources like configMaps?
