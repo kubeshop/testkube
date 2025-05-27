@@ -1,19 +1,20 @@
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: enterprise-installation-test-template # TODO: rename, update argo source
-  # labels:
-  #   core-tests: installation
+  name: enterprise-installation-test
+  labels:
+    core-tests: installation
 spec:
+  description: "Enterprise installation test - DinD+kind"
   events:
     - cronjob:
-        cron: 50 */4 * * *
+        cron: 50 */4 * * * # every 4 hours
   system:
     pureByDefault: true
   content:
     git:
       uri: https://github.com/kubeshop/testkube
-      revision: enterprise-installation-workflow-dind # TODO: update
+      revision: main
       paths:
         - test/k6/executor-tests/crd-workflow/smoke.yaml
         - test/testkube/installation-tests/enterprise-installation-expect-file.exp # expect file to finalize installation (user choices required): TKC-3026
@@ -51,7 +52,8 @@ spec:
   - name: Wait for Testkube core components to be ready
     optional: true
     shell: |
-      for dep in testkube-api-server testkube-mongodb testkube-minio-testkube testkube-operator-controller-manager; do
+      kubectl get deployments -ntestkube
+      for dep in testkube-api-server testkube-minio-testkube testkube-enterprise-api testkube-enterprise-dex testkube-enterprise-minio testkube-enterprise-mongodb testkube-enterprise-ui testkube-enterprise-worker-service; do
         echo "⏳ Waiting for $dep..."
         kubectl rollout status deployment/$dep -n testkube --timeout=300s || exit 1
       done
@@ -79,6 +81,7 @@ metadata:
   labels:
     core-tests: installation
 spec:
+  description: "Enterprise installation test - edge, multi-namespace"
   system:
     pureByDefault: true
   events:
