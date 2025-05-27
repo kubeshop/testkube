@@ -4,8 +4,8 @@ metadata:
   name: enterprise-installation-test
   labels:
     core-tests: installation
+description: "Enterprise installation test - DinD+kind"
 spec:
-  description: "Enterprise installation test - DinD+kind"
   events:
     - cronjob:
         cron: 50 */4 * * * # every 4 hours
@@ -80,8 +80,8 @@ metadata:
   name: enterprise-installation-multi-namespace
   labels:
     core-tests: installation
+description: "Enterprise installation test - edge, multi-namespace"
 spec:
-  description: "Enterprise installation test - edge, multi-namespace"
   system:
     pureByDefault: true
   events:
