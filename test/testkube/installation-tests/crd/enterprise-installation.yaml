@@ -123,7 +123,7 @@ spec:
         valueFrom:
           secretKeyRef:
             name: testkube-agent-secrets
-            key: enterprise-installation-test-sa-name
+            key: ENTERPRISE_INSTALLATION_TEST_SA_NAME
       shell: |
         gcloud auth activate-service-account {{ env.SA_NAME }} --key-file=/root/edge-cluster-sa-key.json
         gcloud container clusters get-credentials testkube-cloud-edge --region us-east1 --project testkube-328312
