@@ -22,6 +22,10 @@ func (r *TestWorkflowStepResult) Aborted() bool {
 	return r.Status.Aborted()
 }
 
+func (r *TestWorkflowStepResult) Canceled() bool {
+	return r.Status.Canceled()
+}
+
 func (r *TestWorkflowStepResult) Skipped() bool {
 	return r.Status.Skipped()
 }

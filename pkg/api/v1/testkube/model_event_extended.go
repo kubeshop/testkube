@@ -159,6 +159,14 @@ func NewEventEndTestWorkflowAborted(execution *TestWorkflowExecution) Event {
 	}
 }
 
+func NewEventEndTestWorkflowCanceled(execution *TestWorkflowExecution) Event {
+	return Event{
+		Id:                    uuid.NewString(),
+		Type_:                 EventEndTestWorkflowCanceled,
+		TestWorkflowExecution: execution,
+	}
+}
+
 func (e Event) Type() EventType {
 	if e.Type_ != nil {
 		return *e.Type_

@@ -13,10 +13,11 @@ type TestWorkflowStatus string
 
 // List of TestWorkflowStatus
 const (
-	QUEUED_TestWorkflowStatus  TestWorkflowStatus = "queued"
-	RUNNING_TestWorkflowStatus TestWorkflowStatus = "running"
-	PAUSED_TestWorkflowStatus  TestWorkflowStatus = "paused"
-	PASSED_TestWorkflowStatus  TestWorkflowStatus = "passed"
-	FAILED_TestWorkflowStatus  TestWorkflowStatus = "failed"
-	ABORTED_TestWorkflowStatus TestWorkflowStatus = "aborted"
+	QUEUED_TestWorkflowStatus   TestWorkflowStatus = "queued"
+	RUNNING_TestWorkflowStatus  TestWorkflowStatus = "running"
+	PAUSED_TestWorkflowStatus   TestWorkflowStatus = "paused"
+	PASSED_TestWorkflowStatus   TestWorkflowStatus = "passed"
+	FAILED_TestWorkflowStatus   TestWorkflowStatus = "failed"
+	ABORTED_TestWorkflowStatus  TestWorkflowStatus = "aborted"
+	CANCELED_TestWorkflowStatus TestWorkflowStatus = "canceled"
 )
