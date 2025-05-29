@@ -38,6 +38,7 @@ type TestKubeCloudAPIClient interface {
 	GetEventStream(ctx context.Context, in *EventStreamRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_GetEventStreamClient, error)
 	ScheduleExecution(ctx context.Context, in *ScheduleRequest, opts ...grpc.CallOption) (TestKubeCloudAPI_ScheduleExecutionClient, error)
 	// Runner
+	Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error)
 	GetUnfinishedExecutions(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (TestKubeCloudAPI_GetUnfinishedExecutionsClient, error)
 	GetRunnerRequests(ctx context.Context, opts ...grpc.CallOption) (TestKubeCloudAPI_GetRunnerRequestsClient, error)
 	InitExecution(ctx context.Context, in *InitExecutionRequest, opts ...grpc.CallOption) (*InitExecutionResponse, error)
@@ -388,6 +389,15 @@ func (x *testKubeCloudAPIScheduleExecutionClient) Recv() (*ScheduleResponse, err
 		return nil, err
 	}
 	return m, nil
+}
+
+func (c *testKubeCloudAPIClient) Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error) {
+	out := new(RegisterResponse)
+	err := c.cc.Invoke(ctx, "/cloud.TestKubeCloudAPI/Register", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *testKubeCloudAPIClient) GetUnfinishedExecutions(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (TestKubeCloudAPI_GetUnfinishedExecutionsClient, error) {
@@ -789,6 +799,7 @@ type TestKubeCloudAPIServer interface {
 	GetEventStream(*EventStreamRequest, TestKubeCloudAPI_GetEventStreamServer) error
 	ScheduleExecution(*ScheduleRequest, TestKubeCloudAPI_ScheduleExecutionServer) error
 	// Runner
+	Register(context.Context, *RegisterRequest) (*RegisterResponse, error)
 	GetUnfinishedExecutions(*emptypb.Empty, TestKubeCloudAPI_GetUnfinishedExecutionsServer) error
 	GetRunnerRequests(TestKubeCloudAPI_GetRunnerRequestsServer) error
 	InitExecution(context.Context, *InitExecutionRequest) (*InitExecutionResponse, error)
@@ -862,6 +873,9 @@ func (UnimplementedTestKubeCloudAPIServer) GetEventStream(*EventStreamRequest, T
 }
 func (UnimplementedTestKubeCloudAPIServer) ScheduleExecution(*ScheduleRequest, TestKubeCloudAPI_ScheduleExecutionServer) error {
 	return status.Errorf(codes.Unimplemented, "method ScheduleExecution not implemented")
+}
+func (UnimplementedTestKubeCloudAPIServer) Register(context.Context, *RegisterRequest) (*RegisterResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Register not implemented")
 }
 func (UnimplementedTestKubeCloudAPIServer) GetUnfinishedExecutions(*emptypb.Empty, TestKubeCloudAPI_GetUnfinishedExecutionsServer) error {
 	return status.Errorf(codes.Unimplemented, "method GetUnfinishedExecutions not implemented")
@@ -1233,6 +1247,24 @@ type testKubeCloudAPIScheduleExecutionServer struct {
 
 func (x *testKubeCloudAPIScheduleExecutionServer) Send(m *ScheduleResponse) error {
 	return x.ServerStream.SendMsg(m)
+}
+
+func _TestKubeCloudAPI_Register_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RegisterRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TestKubeCloudAPIServer).Register(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cloud.TestKubeCloudAPI/Register",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TestKubeCloudAPIServer).Register(ctx, req.(*RegisterRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _TestKubeCloudAPI_GetUnfinishedExecutions_Handler(srv interface{}, stream grpc.ServerStream) error {
@@ -1762,6 +1794,10 @@ var TestKubeCloudAPI_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetCredential",
 			Handler:    _TestKubeCloudAPI_GetCredential_Handler,
+		},
+		{
+			MethodName: "Register",
+			Handler:    _TestKubeCloudAPI_Register_Handler,
 		},
 		{
 			MethodName: "InitExecution",
