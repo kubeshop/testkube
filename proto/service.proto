@@ -341,6 +341,7 @@ enum RunnerRequestType {
   ABORT = 3; // Abort the execution
   RESUME = 4; // Resume the execution
   PAUSE = 5; // Pause the execution
+  CANCEL = 6; // Cancel the execution (API call)
 }
 
 message RunnerStartRequest {

@@ -259,7 +259,7 @@ func (n *notifier) End() {
 	if n.state != nil && n.state.ExecutionError() != "" {
 		errorMessage = n.state.ExecutionError()
 	}
-	n.result.HealAborted(n.sigSequence, errorMessage, DefaultErrorMessage)
+	n.result.HealAbortedOrCanceled(n.sigSequence, errorMessage, DefaultErrorMessage)
 
 	// Finalize the status
 	n.reconcile()

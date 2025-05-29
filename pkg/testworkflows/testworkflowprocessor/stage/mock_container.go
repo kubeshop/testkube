@@ -204,10 +204,10 @@ func (mr *MockContainerMockRecorder) EnableToolkit(arg0 interface{}) *gomock.Cal
 }
 
 // Env mocks base method.
-func (m *MockContainer) Env() []v10.EnvVar {
+func (m *MockContainer) Env() []v1.EnvVar {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Env")
-	ret0, _ := ret[0].([]v10.EnvVar)
+	ret0, _ := ret[0].([]v1.EnvVar)
 	return ret0
 }
 

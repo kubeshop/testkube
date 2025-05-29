@@ -46,6 +46,20 @@ func (mr *MockInterfaceMockRecorder) Reconcile(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Reconcile", reflect.TypeOf((*MockInterface)(nil).Reconcile), arg0)
 }
 
+// ReconcileTestSuites mocks base method.
+func (m *MockInterface) ReconcileTestSuites(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReconcileTestSuites", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ReconcileTestSuites indicates an expected call of ReconcileTestSuites.
+func (mr *MockInterfaceMockRecorder) ReconcileTestSuites(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReconcileTestSuites", reflect.TypeOf((*MockInterface)(nil).ReconcileTestSuites), arg0)
+}
+
 // ReconcileTestWorkflowTemplates mocks base method.
 func (m *MockInterface) ReconcileTestWorkflowTemplates(arg0 context.Context) error {
 	m.ctrl.T.Helper()
@@ -72,4 +86,18 @@ func (m *MockInterface) ReconcileTestWorkflows(arg0 context.Context) error {
 func (mr *MockInterfaceMockRecorder) ReconcileTestWorkflows(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReconcileTestWorkflows", reflect.TypeOf((*MockInterface)(nil).ReconcileTestWorkflows), arg0)
+}
+
+// ReconcileTests mocks base method.
+func (m *MockInterface) ReconcileTests(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReconcileTests", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ReconcileTests indicates an expected call of ReconcileTests.
+func (mr *MockInterfaceMockRecorder) ReconcileTests(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReconcileTests", reflect.TypeOf((*MockInterface)(nil).ReconcileTests), arg0)
 }

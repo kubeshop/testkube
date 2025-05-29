@@ -220,16 +220,20 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 			lastResult = execution.Result
 		}
 		if !lastResult.IsFinished() {
+			workflowStatus := testkube.ABORTED_TestWorkflowStatus
+			if lastResult.Status == common.Ptr(testkube.ABORTED_TestWorkflowStatus) {
+				workflowStatus = testkube.ABORTED_TestWorkflowStatus
+			}
 			log.DefaultLogger.Errorw("failed to recover TestWorkflow result, marking as fatal error...", "id", execution.Id)
-			lastResult.Fatal(err, true, time.Now())
+			lastResult.Terminate(err, workflowStatus, time.Now())
 		}
 	}
 
 	// Recover missing data in case the execution has crashed
-	if lastResult.IsAborted() {
+	if lastResult.IsAborted() || lastResult.IsCanceled() {
 		// Service logs
 		if len(services) > 0 {
-			log.DefaultLogger.Warnw("TestWorkflow execution has been aborted, while some services are still running. Recovering their logs.", "executionId", execution.Id, "count", len(services))
+			log.DefaultLogger.Warnw("TestWorkflow execution has been aborted or canceled, while some services are still running. Recovering their logs.", "executionId", execution.Id, "count", len(services))
 			for svc := range services {
 				err := r.recoverServiceData(ctx, saver, environmentId, &execution, commands.ServiceInfo{
 					Group: svc.GroupId,
@@ -287,12 +291,13 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 
 	// Emit data, if the Control Plane doesn't support informing about status by itself
 	if !r.proContext.NewArchitecture {
-		if lastResult.IsPassed() {
+		switch {
+		case lastResult.IsPassed():
 			r.emitter.Notify(testkube.NewEventEndTestWorkflowSuccess(&execution))
-		} else if lastResult.IsAborted() {
+		case lastResult.IsAborted():
 			r.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(&execution))
-		} else {
-			r.emitter.Notify(testkube.NewEventEndTestWorkflowFailed(&execution))
+		case lastResult.IsCanceled():
+			r.emitter.Notify(testkube.NewEventEndTestWorkflowCanceled(&execution))
 		}
 	}
 
@@ -398,7 +403,7 @@ func (r *runner) recoverParallelStepLogs(ctx context.Context, saver ExecutionSav
 		}
 		status.Result = &summary.Result
 		status.Result.Status = common.Ptr(testkube.ABORTED_TestWorkflowStatus)
-		status.Result.HealAborted(sigSequence, errorMessage, controller.DefaultErrorMessage)
+		status.Result.HealAbortedOrCanceled(sigSequence, errorMessage, controller.DefaultErrorMessage)
 		status.Result.HealTimestamps(sigSequence, summary.Execution.ScheduledAt, time.Time{}, time.Time{}, true)
 		status.Result.HealDuration(summary.Execution.ScheduledAt)
 		status.Result.HealMissingPauseStatuses()
@@ -552,7 +557,7 @@ func (r *runner) abortExecution(ctx context.Context, environmentID, executionID 
 	if execution.Result == nil {
 		return errors.New("execution result is nil")
 	}
-	execution.Result.Fatal(errors.New("execution is stuck in running state"), true, time.Now())
+	execution.Result.Terminate(errors.New("execution is stuck in running state"), testkube.ABORTED_TestWorkflowStatus, time.Now())
 	if err = r.client.UpdateExecutionResult(ctx, environmentID, executionID, execution.Result); err != nil {
 		return errors.Wrapf(err, "failed to update execution result '%s' to aborted", executionID)
 	}
