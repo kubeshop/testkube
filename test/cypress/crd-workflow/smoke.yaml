@@ -11,14 +11,14 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/cypress/executor-tests/cypress-14
+      - test/cypress/cypress-14
   container:
     image: cypress/included:14.0.3
     resources:
       requests:
         cpu: 2
         memory: 2Gi
-    workingDir: /data/repo/test/cypress/executor-tests/cypress-14
+    workingDir: /data/repo/test/cypress/cypress-14
   job:
     activeDeadlineSeconds: 600
   steps:
@@ -48,13 +48,13 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/cypress/executor-tests/cypress-14
+      - test/cypress/cypress-14
   container:
     resources:
       requests:
         cpu: 2
         memory: 2Gi
-    workingDir: /data/repo/test/cypress/executor-tests/cypress-14
+    workingDir: /data/repo/test/cypress/cypress-14
     env:
     - name: CYPRESS_CUSTOM_ENV
       value: CYPRESS_CUSTOM_ENV_value
@@ -80,13 +80,13 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/cypress/executor-tests/cypress-14
+      - test/cypress/cypress-14
   container:
     resources:
       requests:
         cpu: 2
         memory: 2Gi
-    workingDir: /data/repo/test/cypress/executor-tests/cypress-14
+    workingDir: /data/repo/test/cypress/cypress-14
   job:
     activeDeadlineSeconds: 600
   steps:
@@ -121,13 +121,13 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/cypress/executor-tests/cypress-14
+      - test/cypress/cypress-14
   container:
     resources:
       requests:
         cpu: 2
         memory: 2Gi
-    workingDir: /data/repo/test/cypress/executor-tests/cypress-14
+    workingDir: /data/repo/test/cypress/cypress-14
   job:
     activeDeadlineSeconds: 600
   steps:
@@ -166,14 +166,14 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/cypress/executor-tests/cypress-14
+      - test/cypress/cypress-14
   container:
     image: cypress/included:14.0.3
     resources:
       requests:
         cpu: 2
         memory: 2Gi
-    workingDir: /data/repo/test/cypress/executor-tests/cypress-14
+    workingDir: /data/repo/test/cypress/cypress-14
     volumeMounts:
       - mountPath: /dev/shm
         name: shm
@@ -227,13 +227,13 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/cypress/executor-tests/cypress-13
+      - test/cypress/cypress-13
   container:
     resources:
       requests:
         cpu: 2
         memory: 2Gi
-    workingDir: /data/repo/test/cypress/executor-tests/cypress-13
+    workingDir: /data/repo/test/cypress/cypress-13
   job:
     activeDeadlineSeconds: 600
   steps:
@@ -268,13 +268,13 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/cypress/executor-tests/cypress-13
+      - test/cypress/cypress-13
   container:
     resources:
       requests:
         cpu: 2
         memory: 2Gi
-    workingDir: /data/repo/test/cypress/executor-tests/cypress-13
+    workingDir: /data/repo/test/cypress/cypress-13
   job:
     activeDeadlineSeconds: 600
   steps:
@@ -291,7 +291,7 @@ spec:
         value: CYPRESS_CUSTOM_ENV_value
     steps:
     - name: Saving artifacts
-      workingDir: /data/repo/test/cypress/executor-tests/cypress-13/cypress/videos
+      workingDir: /data/repo/test/cypress/cypress-13/cypress/videos
       artifacts:
         paths:
         - '**/*'
@@ -309,13 +309,13 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/cypress/executor-tests/cypress-13
+      - test/cypress/cypress-13
   container:
     resources:
       requests:
         cpu: 2
         memory: 2Gi
-    workingDir: /data/repo/test/cypress/executor-tests/cypress-13
+    workingDir: /data/repo/test/cypress/cypress-13
   job:
     activeDeadlineSeconds: 600
   steps:
@@ -347,7 +347,7 @@ spec:
       requests:
         cpu: 2
         memory: 2Gi
-    workingDir: /data/repo/test/cypress/executor-tests/cypress-13
+    workingDir: /data/repo/test/cypress/cypress-13
     env:
     - name: CYPRESS_CUSTOM_ENV # currently only possible on this level
       value: "CYPRESS_CUSTOM_ENV_value"
@@ -358,12 +358,12 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/cypress/executor-tests/cypress-13
+      - test/cypress/cypress-13
   job:
     activeDeadlineSeconds: 600
   steps:
   - name: Run from template
-    workingDir: /data/repo/test/cypress/executor-tests/cypress-13
+    workingDir: /data/repo/test/cypress/cypress-13
     template:
       name: official/cypress/v1
       config:
@@ -383,7 +383,7 @@ spec:
       requests:
         cpu: 2
         memory: 2Gi
-    workingDir: /data/repo/test/cypress/executor-tests/cypress-13
+    workingDir: /data/repo/test/cypress/cypress-13
     env:
     - name: CYPRESS_CUSTOM_ENV # currently only possible on this level
       value: "CYPRESS_CUSTOM_ENV_value"
@@ -398,8 +398,8 @@ spec:
         uri: https://github.com/kubeshop/testkube
         revision: main
         paths:
-        - test/cypress/executor-tests/cypress-13
-    workingDir: /data/repo/test/cypress/executor-tests/cypress-13
+        - test/cypress/cypress-13
+    workingDir: /data/repo/test/cypress/cypress-13
     template:
       name: official/cypress/v1
       config:
@@ -419,7 +419,7 @@ spec:
       requests:
         cpu: 2
         memory: 2Gi
-    workingDir: /data/repo/test/cypress/executor-tests/cypress-13
+    workingDir: /data/repo/test/cypress/cypress-13
     env:
     - name: CYPRESS_CUSTOM_ENV # currently only possible on this level
       value: "CYPRESS_CUSTOM_ENV_value"
@@ -434,10 +434,10 @@ spec:
         uri: https://github.com/kubeshop/testkube
         revision: main
         paths:
-        - test/cypress/executor-tests/cypress-13
+        - test/cypress/cypress-13
     steps:
     - name: Run from template
-      workingDir: /data/repo/test/cypress/executor-tests/cypress-13
+      workingDir: /data/repo/test/cypress/cypress-13
       template:
         name: official/cypress/v1
         config:
@@ -457,13 +457,13 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/cypress/executor-tests/cypress-12
+      - test/cypress/cypress-12
   container:
     resources:
       requests:
         cpu: 2
         memory: 2Gi
-    workingDir: /data/repo/test/cypress/executor-tests/cypress-12
+    workingDir: /data/repo/test/cypress/cypress-12
   job:
     activeDeadlineSeconds: 600
   steps:
@@ -498,10 +498,10 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/cypress/executor-tests/cypress-13
+      - test/cypress/cypress-13
   container:
     image: cypress/included:13.6.4
-    workingDir: /data/repo/test/cypress/executor-tests/cypress-13
+    workingDir: /data/repo/test/cypress/cypress-13
   job:
     activeDeadlineSeconds: 600
   steps:
@@ -549,10 +549,10 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/cypress/executor-tests/cypress-13
+      - test/cypress/cypress-13
   container:
     image: cypress/included:13.6.4
-    workingDir: /data/repo/test/cypress/executor-tests/cypress-13
+    workingDir: /data/repo/test/cypress/cypress-13
     resources:
       requests:
         cpu: 1
