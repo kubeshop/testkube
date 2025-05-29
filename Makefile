@@ -11,9 +11,6 @@ DEBUG ?= ${DEBUG:-0}
 DASHBOARD_URI ?= ${DASHBOARD_URI:-"https://demo.testkube.io"}
 ANALYTICS_TRACKING_ID = ${ANALYTICS_TRACKING_ID:-""}
 ANALYTICS_API_KEY = ${ANALYTICS_API_KEY:-""}
-PROTOC := ${BIN_DIR}/protoc/bin/protoc
-PROTOC_GEN_GO := ${BIN_DIR}/protoc-gen-go
-PROTOC_GEN_GO_GRPC := ${BIN_DIR}/protoc-gen-go-grpc
 LD_FLAGS += -X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientID=$(SLACK_BOT_CLIENT_ID)
 LD_FLAGS += -X github.com/kubeshop/testkube/internal/app/api/v1.SlackBotClientSecret=$(SLACK_BOT_CLIENT_SECRET)
 LD_FLAGS += -X github.com/kubeshop/testkube/pkg/telemetry.TestkubeMeasurementID=$(ANALYTICS_TRACKING_ID)
@@ -39,10 +36,6 @@ refresh-config:
 	wget "https://raw.githubusercontent.com/kubeshop/helm-charts/develop/charts/testkube-api/pvc-template.yml" -O config/pvc-template.yml &
 	wget "https://raw.githubusercontent.com/kubeshop/helm-charts/develop/charts/testkube-api/slack-config.json" -O config/slack-config.json &
 	wget "https://raw.githubusercontent.com/kubeshop/helm-charts/develop/charts/testkube-api/slack-template.json" -O config/slack-template.json
-
-
-generate-protobuf: use-env-file
-	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative pkg/logs/pb/logs.proto
 
 just-run-api: use-env-file
 	TESTKUBE_DASHBOARD_URI=$(DASHBOARD_URI) APISERVER_CONFIG=testkube-api-server-config-testkube TESTKUBE_ANALYTICS_ENABLED=$(TESTKUBE_ANALYTICS_ENABLED) TESTKUBE_NAMESPACE=$(NAMESPACE) SCRAPPERENABLED=true STORAGE_SSL=true DEBUG=$(DEBUG) APISERVER_PORT=8088 go run  -ldflags='$(LD_FLAGS)' cmd/api-server/main.go
@@ -146,21 +139,15 @@ openapi-generate-model-testkube:
 	go fmt pkg/api/v1/testkube/*.go
 
 protobuf-generate:
-	$(PROTOC) \
-    --go_out=. --go-grpc_out=. proto/service.proto
+	docker build -f protoc.Dockerfile -t testkube/protoc .
+	docker run --user $(USERID):$(USERGROUP) --rm -v $(PWD):/src -w /src testkube/protoc \
+		protoc --go_out=. --go-grpc_out=. proto/service.proto
 
-install-protobuf: $(PROTOC) $(PROTOC_GEN_GO) $(PROTOC_GEN_GO_GRPC)
-# Protoc and friends installation and generation
-$(PROTOC):
-	$(call install-protoc)
-
-$(PROTOC_GEN_GO):
-	@echo "[INFO]: Installing protobuf go generation plugin."
-	GOBIN=${BIN_DIR} go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.28
-
-$(PROTOC_GEN_GO_GRPC):
-	@echo "[INFO]: Installing protobuf GRPC go generation plugin."
-	GOBIN=${BIN_DIR} go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2
+# For some reason this recipe is different and uses different tool versions.
+generate-protobuf:
+	docker build -f protoc.Dockerfile -t testkube/protoc-logs --build-arg PROTOC_GEN_GO_VERSION=1.32.0 --build-arg PROTOC_GEN_GRPC_VERSION=1.3.0 .
+	docker run --user $(USERID):$(USERGROUP) --rm -v $(PWD):/src -w /src testkube/protoc-logs \
+		protoc --go_out=. --go-grpc_out=.  --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative pkg/logs/pb/logs.proto
 
 .PHONY: unit-tests
 unit-tests:
@@ -263,20 +250,3 @@ port-forward-api:
 
 run-proxy:
 	go run cmd/proxy/main.go --namespace $(NAMESPACE)
-
-define install-protoc
-@[ -f "${PROTOC}" ] || { \
-set -e ;\
-echo "[INFO] Installing protoc compiler to ${BIN_DIR}/protoc" ;\
-mkdir -pv "${BIN_DIR}/" ;\
-TMP_DIR=$$(mktemp -d) ;\
-cd $$TMP_DIR ;\
-PB_REL="https://github.com/protocolbuffers/protobuf/releases" ;\
-VERSION=3.19.4 ;\
-if [ "$$(uname)" == "Darwin" ];then FILENAME=protoc-$${VERSION}-osx-x86_64.zip ;fi ;\
-if [ "$$(uname)" == "Linux" ];then FILENAME=protoc-$${VERSION}-linux-x86_64.zip;fi ;\
-echo "Downloading $${FILENAME} to $${TMP_DIR}" ;\
-curl -LO $${PB_REL}/download/v$${VERSION}/$${FILENAME} ; unzip $${FILENAME} -d ${BIN_DIR}/protoc ; \
-rm -rf $${TMP_DIR} ;\
-}
-endef
