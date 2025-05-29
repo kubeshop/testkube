@@ -33,7 +33,7 @@ func TestWebhookLoader(t *testing.T) {
 	mockDeprecatedClients.EXPECT().Templates().Return(mockTemplatesClient).AnyTimes()
 	mockWebhooRepository := cloudwebhook.NewMockWebhookRepository(mockCtrl)
 
-	webhooksLoader := NewWebhookLoader(zap.NewNop().Sugar(), mockWebhooksClient, mockWebhookTemplatesClient, mockDeprecatedClients, nil, nil, nil, v1.NewMetrics(), mockWebhooRepository, nil, nil)
+	webhooksLoader := NewWebhookLoader(zap.NewNop().Sugar(), mockWebhooksClient, mockWebhookTemplatesClient, mockDeprecatedClients, nil, nil, nil, v1.NewMetrics(), mockWebhooRepository, nil, nil, nil)
 	listeners, err := webhooksLoader.Load()
 
 	assert.Equal(t, 1, len(listeners))
@@ -64,7 +64,7 @@ func TestWebhookTemplateLoader(t *testing.T) {
 	mockDeprecatedClients.EXPECT().Templates().Return(mockTemplatesClient).AnyTimes()
 	mockWebhooRepository := cloudwebhook.NewMockWebhookRepository(mockCtrl)
 
-	webhooksLoader := NewWebhookLoader(zap.NewNop().Sugar(), mockWebhooksClient, mockWebhookTemplatesClient, mockDeprecatedClients, nil, nil, nil, v1.NewMetrics(), mockWebhooRepository, nil, nil)
+	webhooksLoader := NewWebhookLoader(zap.NewNop().Sugar(), mockWebhooksClient, mockWebhookTemplatesClient, mockDeprecatedClients, nil, nil, nil, v1.NewMetrics(), mockWebhooRepository, nil, nil, nil)
 	listeners, err := webhooksLoader.Load()
 
 	assert.Equal(t, 1, len(listeners))

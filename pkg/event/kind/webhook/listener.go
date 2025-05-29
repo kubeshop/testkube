@@ -43,6 +43,8 @@ func NewWebhookListener(name, uri, selector string, events []testkube.EventType,
 	envs map[string]string,
 	config map[string]executorv1.WebhookConfigValue,
 	parameters []executorv1.WebhookParameterSchema,
+	fnGetExecutionReports FnGetExecutionReports,
+	attachJunitSummary bool,
 ) *WebhookListener {
 	return &WebhookListener{
 		name:                         name,
@@ -64,6 +66,8 @@ func NewWebhookListener(name, uri, selector string, events []testkube.EventType,
 		envs:                         envs,
 		config:                       config,
 		parameters:                   parameters,
+		fnGetExecutionReports:        fnGetExecutionReports,
+		attachJunitSummary:           attachJunitSummary,
 	}
 }
 
@@ -87,6 +91,8 @@ type WebhookListener struct {
 	envs                         map[string]string
 	config                       map[string]executorv1.WebhookConfigValue
 	parameters                   []executorv1.WebhookParameterSchema
+	fnGetExecutionReports        FnGetExecutionReports
+	attachJunitSummary           bool
 }
 
 func (l *WebhookListener) Name() string {
@@ -127,6 +133,7 @@ func (l *WebhookListener) Metadata() map[string]string {
 		"disabled":           fmt.Sprint(l.disabled),
 		"config":             config,
 		"parameters":         parameters,
+		"attachJunitSummary": fmt.Sprint(l.attachJunitSummary),
 	}
 }
 
@@ -144,6 +151,10 @@ func (l *WebhookListener) Headers() map[string]string {
 
 func (l *WebhookListener) Disabled() bool {
 	return l.disabled
+}
+
+func (l *WebhookListener) AttachJunitSummary() bool {
+	return l.attachJunitSummary
 }
 
 func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventResult) {
@@ -372,8 +383,17 @@ func (l *WebhookListener) processTemplate(field, body string, event testkube.Eve
 		}
 	}
 
+	var reports []testkube.TestWorkflowReport
+	if l.attachJunitSummary && l.fnGetExecutionReports != nil && event.TestWorkflowExecution != nil {
+		reports, err = l.fnGetExecutionReports(context.Background(), event.TestWorkflowExecution.Id)
+		if err != nil {
+			log.Errorw("error getting execution reports", "error", err, "executionId", event.TestWorkflowExecution.Id)
+			return nil, err
+		}
+	}
+
 	var buffer bytes.Buffer
-	if err = tmpl.ExecuteTemplate(&buffer, field, NewTemplateVars(event, l.proContext, config)); err != nil {
+	if err = tmpl.ExecuteTemplate(&buffer, field, NewTemplateVars(event, l.proContext, config, reports)); err != nil {
 		log.Errorw(fmt.Sprintf("executing webhook %s error", field), "error", err)
 		return nil, err
 	}

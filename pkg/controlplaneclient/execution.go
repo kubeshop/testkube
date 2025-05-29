@@ -26,6 +26,7 @@ type ExecutionClient interface {
 	UpdateExecutionResult(ctx context.Context, environmentId, executionId string, result *testkube.TestWorkflowResult) error
 	FinishExecutionResult(ctx context.Context, environmentId, executionId string, result *testkube.TestWorkflowResult) error
 	InitExecution(ctx context.Context, environmentId, executionId string, signature []testkube.TestWorkflowSignature, namespace string) error
+	GetExecutionReports(ctx context.Context, environmentId, executionId string) ([]testkube.TestWorkflowReport, error)
 }
 
 func (c *client) GetExecution(ctx context.Context, environmentId, executionId string) (*testkube.TestWorkflowExecution, error) {
@@ -280,4 +281,24 @@ func (c *client) legacyUpdateExecutionOutput(ctx context.Context, environmentId,
 	}
 	_, err = call(ctx, c.metadata().SetEnvironmentID(environmentId).GRPC(), c.client.Call, &req)
 	return err
+}
+
+func (c *client) GetExecutionReports(ctx context.Context, environmentId, executionId string) ([]testkube.TestWorkflowReport, error) {
+	if c.IsLegacy() {
+		return nil, nil
+	}
+	req := &cloud.GetExecutionReportsRequest{Id: executionId}
+	res, err := call(ctx, c.metadata().SetEnvironmentID(environmentId).GRPC(), c.client.GetExecutionReports, req)
+	if err != nil {
+		return nil, err
+	}
+	if len(res.Reports) == 0 {
+		return nil, nil
+	}
+	var reports []testkube.TestWorkflowReport
+	err = json.Unmarshal(res.Reports, &reports)
+	if err != nil {
+		return nil, err
+	}
+	return reports, nil
 }

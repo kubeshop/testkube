@@ -33,4 +33,6 @@ type WebhookTemplateCreateRequest struct {
 	Disabled   bool                          `json:"disabled,omitempty"`
 	Config     map[string]WebhookConfigValue `json:"config,omitempty"`
 	Parameters []WebhookParameterSchema      `json:"parameters,omitempty"`
+	// whether webhook is attaching junit summary
+	AttachJunitSummary bool `json:"attachJunitSummary,omitempty"`
 }

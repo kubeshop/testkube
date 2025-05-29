@@ -181,6 +181,21 @@ func (mr *MockClientMockRecorder) GetExecution(arg0, arg1, arg2 interface{}) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExecution", reflect.TypeOf((*MockClient)(nil).GetExecution), arg0, arg1, arg2)
 }
 
+// GetExecutionReports mocks base method.
+func (m *MockClient) GetExecutionReports(arg0 context.Context, arg1, arg2 string) ([]testkube.TestWorkflowReport, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetExecutionReports", arg0, arg1, arg2)
+	ret0, _ := ret[0].([]testkube.TestWorkflowReport)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetExecutionReports indicates an expected call of GetExecutionReports.
+func (mr *MockClientMockRecorder) GetExecutionReports(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExecutionReports", reflect.TypeOf((*MockClient)(nil).GetExecutionReports), arg0, arg1, arg2)
+}
+
 // GetGitHubToken mocks base method.
 func (m *MockClient) GetGitHubToken(arg0 context.Context, arg1 string) (string, error) {
 	m.ctrl.T.Helper()
