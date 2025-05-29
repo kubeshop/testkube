@@ -138,7 +138,7 @@ spec:
             name: testkube-agent-secrets
             key: ENTERPRISE_INSTALLATION_TEST_LICENSE_KEY
       - name: TESTKUBE_INIT_COMMAND
-        value: "testkube init demo --namespace testkube-enterprise-installation-test --no-confirm --license {{ env.LICENSE_KEY }} --helm-set testkube-agent.testkube-api.multinamespace.enabled=true --helm-set testkube-agent.testkube-operator.enabled=false --helm-set dex.rbac.createClusterScoped=false"
+        value: "testkube init demo --namespace testkube-enterprise-installation-test --no-confirm --license {{ env.LICENSE_KEY }} --helm-set testkube-agent.testkube-api.multinamespace.enabled=true --helm-set testkube-agent.testkube-operator.enabled=false --helm-set dex.rbac.createClusterScoped=false --helm-set testkube-agent.testkube-operator.installCRD=false"
       shell: |
         helm version
         helm list -n testkube-enterprise-installation-test
