@@ -8,7 +8,7 @@ spec:
   content:
     git:
       uri: https://github.com/kubeshop/testkube-cloud-api.git
-      revision: main
+      revision: '{{ config.GIT_REVISION }}'
       paths:
       - js/packages/e2e-tests
       usernameFrom:
@@ -21,6 +21,7 @@ spec:
           key: 'CLOUD_UI_E2E_GITHUB_TOKEN'
   config:
     CLOUD_BASE_URL: {type: string, default: 'https://app.testkube.dev'}
+    GIT_REVISION: {type: string, default: 'main'}
   container:
     resources:
       requests:
