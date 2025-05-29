@@ -11,13 +11,13 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/postman/executor-tests/postman-executor-smoke.postman_collection.json
+      - test/postman/postman-executor-smoke.postman_collection.json
   container:
     resources:
       requests:
         cpu: 256m
         memory: 128Mi
-    workingDir: /data/repo/test/postman/executor-tests
+    workingDir: /data/repo/test/postman
   job:
     activeDeadlineSeconds:  180
   steps:
@@ -43,13 +43,13 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/postman/executor-tests/postman-executor-smoke-without-envs.postman_collection.json
+      - test/postman/postman-executor-smoke-without-envs.postman_collection.json
   container:
     resources:
       requests:
         cpu: 256m
         memory: 128Mi
-    workingDir: /data/repo/test/postman/executor-tests
+    workingDir: /data/repo/test/postman
   job:
     activeDeadlineSeconds:  180
   steps:
@@ -73,18 +73,18 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/postman/executor-tests/postman-executor-smoke.postman_collection.json
+      - test/postman/postman-executor-smoke.postman_collection.json
   container:
     resources:
       requests:
         cpu: 256m
         memory: 128Mi
-    workingDir: /data/repo/test/postman/executor-tests
+    workingDir: /data/repo/test/postman
   job:
     activeDeadlineSeconds:  180
   steps:
   - name: Run from 
-    workingDir: /data/repo/test/postman/executor-tests
+    workingDir: /data/repo/test/postman
     template:
       name: official/postman/v1
       config:
@@ -103,13 +103,13 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/postman/executor-tests/postman-executor-smoke-without-envs.postman_collection.json
+      - test/postman/postman-executor-smoke-without-envs.postman_collection.json
   container:
     resources:
       requests:
         cpu: 256m
         memory: 128Mi
-    workingDir: /data/repo/test/postman/executor-tests
+    workingDir: /data/repo/test/postman
   job:
     activeDeadlineSeconds:  180
   steps:
@@ -132,13 +132,13 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/postman/executor-tests/postman-executor-smoke.postman_collection.json
+      - test/postman/postman-executor-smoke.postman_collection.json
   container:
     resources:
       requests:
         cpu: 256m
         memory: 128Mi
-    workingDir: /data/repo/test/postman/executor-tests
+    workingDir: /data/repo/test/postman
   job:
     activeDeadlineSeconds:  180
   steps:
@@ -167,14 +167,14 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/postman/executor-tests/postman-executor-smoke.postman_collection.json
+      - test/postman/postman-executor-smoke.postman_collection.json
   container:
     image: postman/newman:6-alpine
     resources:
       requests:
         cpu: 256m
         memory: 128Mi
-    workingDir: /data/repo/test/postman/executor-tests
+    workingDir: /data/repo/test/postman
   job:
     activeDeadlineSeconds:  180
   steps:

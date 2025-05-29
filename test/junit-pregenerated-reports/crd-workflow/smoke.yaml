@@ -10,7 +10,7 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/special-cases/test-workflows/junit-reports/high-level-failure.xml
+      - test/junit-pregenerated-reports/high-level-failure.xml
   container:
     workingDir: /data/repo/test/special-cases/test-workflows/junit-reports
     image: alpine:3.21.2
@@ -19,7 +19,7 @@ spec:
     shell: echo "Step"
     artifacts:
       paths:
-        - /data/repo/test/special-cases/test-workflows/junit-reports/*
+        - /data/repo/test/junit-pregenerated-reports/*
 ---
 kind: TestWorkflow
 apiVersion: testworkflows.testkube.io/v1
@@ -33,7 +33,7 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/special-cases/test-workflows/junit-reports/high-level-without-testcases.xml
+      - test/junit-pregenerated-reports/high-level-without-testcases.xml
   container:
     workingDir: /data/repo/test/special-cases/test-workflows/junit-reports
     image: alpine:3.21.2
@@ -42,7 +42,7 @@ spec:
     shell: echo "Step"
     artifacts:
       paths:
-        - /data/repo/test/special-cases/test-workflows/junit-reports/*
+        - /data/repo/test/junit-pregenerated-reports/*
 ---
 kind: TestWorkflow
 apiVersion: testworkflows.testkube.io/v1
@@ -56,7 +56,7 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/special-cases/test-workflows/junit-reports/high-level-testcase-both-error-and-failure.xml
+      - test/junit-pregenerated-reports/high-level-testcase-both-error-and-failure.xml
   container:
     workingDir: /data/repo/test/special-cases/test-workflows/junit-reports
     image: alpine:3.21.2
@@ -65,5 +65,5 @@ spec:
     shell: echo "Step"
     artifacts:
       paths:
-        - /data/repo/test/special-cases/test-workflows/junit-reports/*
+        - /data/repo/test/junit-pregenerated-reports/*
 

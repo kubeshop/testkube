@@ -11,14 +11,14 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/playwright/executor-tests/playwright-project
+      - test/playwright/playwright-project
   container:
     image: mcr.microsoft.com/playwright:v1.32.3-focal
     resources:
       requests:
         cpu: 2
         memory: 2Gi
-    workingDir: /data/repo/test/playwright/executor-tests/playwright-project
+    workingDir: /data/repo/test/playwright/playwright-project
   job:
     activeDeadlineSeconds:  600
   steps:
@@ -27,7 +27,7 @@ spec:
   - name: Run tests
     shell: "npx playwright test"
   - name: Save artifacts
-    workingDir: /data/repo/test/playwright/executor-tests/playwright-project
+    workingDir: /data/repo/test/playwright/playwright-project
     artifacts:
       paths:
       - playwright-report/**/*
@@ -45,14 +45,14 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/playwright/executor-tests/playwright-project
+      - test/playwright/playwright-project
   container:
     image: mcr.microsoft.com/playwright:v1.32.3-focal
     resources:
       requests:
         cpu: 2
         memory: 2Gi
-    workingDir: /data/repo/test/playwright/executor-tests/playwright-project
+    workingDir: /data/repo/test/playwright/playwright-project
   job:
     activeDeadlineSeconds:  600
   steps:
@@ -84,13 +84,13 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/playwright/executor-tests/playwright-project
+      - test/playwright/playwright-project
   container:
     resources:
       requests:
         cpu: 2
         memory: 2Gi
-    workingDir: /data/repo/test/playwright/executor-tests/playwright-project
+    workingDir: /data/repo/test/playwright/playwright-project
   job:
     activeDeadlineSeconds:  600
   steps:
@@ -135,14 +135,14 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/playwright/executor-tests/playwright-project
+      - test/playwright/playwright-project
   container:
     image: mcr.microsoft.com/playwright:v1.32.3-focal
     resources:
       requests:
         cpu: 2
         memory: 2Gi
-    workingDir: /data/repo/test/playwright/executor-tests/playwright-project
+    workingDir: /data/repo/test/playwright/playwright-project
   job:
     activeDeadlineSeconds:  600
   steps:
@@ -174,14 +174,14 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/playwright/executor-tests/playwright-project
+      - test/playwright/playwright-project
   container:
     image: mcr.microsoft.com/playwright:v1.32.3-focal
     resources:
       requests:
         cpu: 2
         memory: 2Gi
-    workingDir: /data/repo/test/playwright/executor-tests/playwright-project
+    workingDir: /data/repo/test/playwright/playwright-project
   job:
     activeDeadlineSeconds:  600
   steps:
@@ -217,7 +217,7 @@ spec:
       requests:
         cpu: 2
         memory: 2Gi
-    workingDir: /data/repo/test/playwright/executor-tests/playwright-project
+    workingDir: /data/repo/test/playwright/playwright-project
   job:
     activeDeadlineSeconds:  600
   steps:
@@ -227,8 +227,8 @@ spec:
         uri: https://github.com/kubeshop/testkube
         revision: main
         paths:
-        - test/playwright/executor-tests/playwright-project
-    workingDir: /data/repo/test/playwright/executor-tests/playwright-project
+        - test/playwright/playwright-project
+    workingDir: /data/repo/test/playwright/playwright-project
     template:
       name: official/playwright/v1
       config:
@@ -248,10 +248,10 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/playwright/executor-tests/playwright-project
+      - test/playwright/playwright-project
   container:
     image: mcr.microsoft.com/playwright:v1.38.0-focal
-    workingDir: /data/repo/test/playwright/executor-tests/playwright-project
+    workingDir: /data/repo/test/playwright/playwright-project
   job:
     activeDeadlineSeconds:  600
   steps:
@@ -263,7 +263,7 @@ spec:
       transfer:
       - from: /data/repo
       fetch:
-      - from: /data/repo/test/playwright/executor-tests/playwright-project/blob-report
+      - from: /data/repo/test/playwright/playwright-project/blob-report
         to: /data/reports
       run:
         shell: 'npx playwright test --reporter=blob --shard {{ index + 1 }}/{{ count }}'
@@ -288,10 +288,10 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/playwright/executor-tests/playwright-project
+      - test/playwright/playwright-project
   container:
     image: mcr.microsoft.com/playwright:v1.38.0-focal
-    workingDir: /data/repo/test/playwright/executor-tests/playwright-project
+    workingDir: /data/repo/test/playwright/playwright-project
   job:
     activeDeadlineSeconds:  600
   steps:

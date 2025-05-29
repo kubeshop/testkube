@@ -12,7 +12,7 @@ spec:
       type: git
       uri: https://github.com/kubeshop/testkube.git
       branch: main
-      path: test/postman/executor-tests/postman-executor-smoke.postman_collection.json
+      path: test/postman/postman-executor-smoke.postman_collection.json
   executionRequest:
     args:
       - --env-var
@@ -33,7 +33,7 @@ spec:
       type: git
       uri: https://github.com/kubeshop/testkube.git
       branch: main
-      path: test/postman/executor-tests/postman-executor-smoke.postman_collection.json
+      path: test/postman/postman-executor-smoke.postman_collection.json
   executionRequest:
     args:
       - --env-var
@@ -54,7 +54,7 @@ spec:
       type: git
       uri: https://github.com/kubeshop/testkube.git
       branch: main
-      path: test/postman/executor-tests/postman-executor-smoke.postman_collection.json
+      path: test/postman/postman-executor-smoke.postman_collection.json
   executionRequest:
     args:
       - --env-var
@@ -74,7 +74,7 @@ spec:
     type: git
     uri: https://github.com/kubeshop/testkube.git
     branch: main
-    path: test/postman/executor-tests/postman-executor-smoke.postman_collection.json
+    path: test/postman/postman-executor-smoke.postman_collection.json
 ---
 # postman-executor-smoke-testsource - Test
 apiVersion: tests.testkube.io/v3
@@ -101,7 +101,7 @@ spec:
     type: git
     uri: https://github.com/kubeshop/testkube.git
     branch: main
-    path: test/postman/executor-tests/postman-executor-smoke.postman_collection.json
+    path: test/postman/postman-executor-smoke.postman_collection.json
 ---
 # postman-executor-smoke-testsource-git-file - Test
 apiVersion: tests.testkube.io/v3
@@ -141,7 +141,7 @@ spec:
   content:
     repository:
       branch: main
-      path: test/postman/executor-tests/postman-executor-smoke.postman_collection.json
+      path: test/postman/postman-executor-smoke.postman_collection.json
   executionRequest:
     args:
       - --env-var
@@ -162,7 +162,7 @@ spec:
       type: git
       uri: https://github.com/kubeshop/testkube.git
       branch: main
-      path: test/postman/executor-tests/postman-executor-smoke-negative.postman_collection.json
+      path: test/postman/postman-executor-smoke-negative.postman_collection.json
   executionRequest:
     negativeTest: true
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 128Mi\n              cpu: 256m\n"
