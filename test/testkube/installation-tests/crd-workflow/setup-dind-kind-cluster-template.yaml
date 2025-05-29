@@ -2,6 +2,8 @@ apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflowTemplate
 metadata:
   name: setup-dind-kind-cluster-template
+  labels:
+    core-tests: installation-template
 spec:
   container:
     image: gcr.io/google.com/cloudsdktool/google-cloud-cli:latest

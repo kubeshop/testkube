@@ -6,9 +6,6 @@ metadata:
     core-tests: installation
 description: "Enterprise installation test - DinD+kind"
 spec:
-  events:
-    - cronjob:
-        cron: 50 */4 * * * # every 4 hours
   system:
     pureByDefault: true
   content:
@@ -80,13 +77,11 @@ metadata:
   name: enterprise-installation-multi-namespace
   labels:
     core-tests: installation
-description: "Enterprise installation test - edge, multi-namespace"
+    environment-specific: dev
+description: "Enterprise installation test - edge, multi-namespace. Can be run ONLY at .dev"
 spec:
   system:
     pureByDefault: true
-  events:
-  - cronjob:
-      cron: "20 */4 * * *" # every 4 hours
   content:
     files:
     - path: /root/edge-cluster-sa-key.json

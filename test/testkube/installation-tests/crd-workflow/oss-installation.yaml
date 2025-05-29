@@ -1,13 +1,10 @@
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: oss-standalone-installation-test-template # TODO: rename, update argo source
-  # labels:
-  #   core-tests: installation
+  name: oss-standalone-installation-test
+  labels:
+    core-tests: installation
 spec:
-  events:
-    - cronjob:
-        cron: 35 */4 * * *
   system:
     pureByDefault: true
   content:
