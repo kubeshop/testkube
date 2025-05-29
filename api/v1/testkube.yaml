@@ -3908,6 +3908,40 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
+    put:
+      tags:
+        - test-workflows
+        - api
+        - pro
+      summary: Validate test workflow
+      description: Validate test workflow specification against CRD schema
+      operationId: validateTestWorkflow
+      requestBody:
+        description: test workflow body
+        required: true
+        content:
+          text/yaml:
+            schema:
+              type: string
+      responses:
+        204:
+          description: "no content"
+        400:
+          description: "problem with body parsing - probably some bad input occurs"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: problem communicating with kubernetes cluster
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
   /test-workflow-with-executions:
     get:
       tags:
@@ -5071,6 +5105,40 @@ paths:
                   $ref: "#/components/schemas/Problem"
         402:
           description: "missing Pro subscription for a commercial feature"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: problem communicating with kubernetes cluster
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+    put:
+      tags:
+        - test-workflows
+        - api
+        - pro
+      summary: Validate test workflow template
+      description: Validate test workflow template specification against CRD schema
+      operationId: validateTestWorkflowTemplate
+      requestBody:
+        description: test workflow template body
+        required: true
+        content:
+          text/yaml:
+            schema:
+              type: string
+      responses:
+        204:
+          description: "no content"
+        400:
+          description: "problem with body parsing - probably some bad input occurs"
           content:
             application/problem+json:
               schema:
@@ -10293,6 +10361,10 @@ components:
           $ref: "#/components/schemas/TestWorkflowConfigValue"
         target:
           $ref: "#/components/schemas/ExecutionTarget"
+        timezone:
+          $ref: "#/components/schemas/BoxedString"
+          description: cron timezone
+          example: America/New_York         
 
     TestWorkflowExecutionCR:
       type: object

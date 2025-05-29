@@ -45,21 +45,23 @@ const (
 
 func NewDevBoxCommand() *cobra.Command {
 	var (
-		oss                 bool
-		rawDevboxName       string
-		open                bool
-		baseAgentImage      string
-		baseInitImage       string
-		baseToolkitImage    string
-		syncLocalResources  []string
-		runnersCount        uint16
-		gitopsEnabled       bool
-		disableDefaultAgent bool
-		disableCloudStorage bool
-		enableTestTriggers  bool
-		enableCronjobs      bool
-		forcedOs            string
-		forcedArchitecture  string
+		oss                  bool
+		rawDevboxName        string
+		open                 bool
+		baseAgentImage       string
+		baseInitImage        string
+		baseToolkitImage     string
+		syncLocalResources   []string
+		runnersCount         uint16
+		gitopsEnabled        bool
+		disableDefaultAgent  bool
+		disableCloudStorage  bool
+		enableTestTriggers   bool
+		enableCronjobs       bool
+		enableK8sControllers bool
+		forcedOs             string
+		forcedArchitecture   string
+		executionNamespace   string
 	)
 
 	cmd := &cobra.Command{
@@ -116,7 +118,7 @@ func NewDevBoxCommand() *cobra.Command {
 							fmt.Printf("Failed to delete obsolete devbox environment (%s): %s\n", env.Name, err.Error())
 							continue
 						}
-						cluster.Namespace(env.Name).Destroy()
+						cluster.Namespace(env.Name, executionNamespace).Destroy()
 						count++
 					}
 					fmt.Printf("Deleted %d/%d obsolete devbox environments\n", count, len(obsolete))
@@ -124,7 +126,7 @@ func NewDevBoxCommand() *cobra.Command {
 			}
 
 			// Initialize bare cluster resources
-			namespace := cluster.Namespace(fmt.Sprintf("devbox-%s", rawDevboxName))
+			namespace := cluster.Namespace(fmt.Sprintf("devbox-%s", rawDevboxName), executionNamespace)
 			interceptorPod := namespace.Pod("devbox-interceptor")
 			agentPod := namespace.Pod("devbox-agent")
 			binaryStoragePod := namespace.Pod("devbox-binary")
@@ -132,6 +134,7 @@ func NewDevBoxCommand() *cobra.Command {
 			minioPod := namespace.Pod("devbox-minio")
 			prometheusPod := namespace.Pod("devbox-prometheus")
 			grafanaPod := namespace.Pod("devbox-grafana")
+			executionNamespace = namespace.ExecutionName()
 
 			// Initialize binaries
 			interceptorBin := devutils.NewBinary(InterceptorMainPath, cluster.OperatingSystem(), cluster.Architecture())
@@ -148,8 +151,8 @@ func NewDevBoxCommand() *cobra.Command {
 			defer initProcessBin.Close()
 
 			// Initialize wrappers over cluster resources
-			interceptor := devutils.NewInterceptor(interceptorPod, baseInitImage, baseToolkitImage, interceptorBin)
-			agent := devutils.NewAgent(agentPod, cloud, baseAgentImage, baseInitImage, baseToolkitImage, disableCloudStorage, enableCronjobs, enableTestTriggers)
+			interceptor := devutils.NewInterceptor(interceptorPod, baseInitImage, baseToolkitImage, interceptorBin, executionNamespace)
+			agent := devutils.NewAgent(agentPod, cloud, baseAgentImage, baseInitImage, baseToolkitImage, disableCloudStorage, enableCronjobs, enableTestTriggers, enableK8sControllers, executionNamespace)
 			binaryStorage := devutils.NewBinaryStorage(binaryStoragePod, binaryStorageBin)
 			mongo := devutils.NewMongo(mongoPod)
 			minio := devutils.NewMinio(minioPod)
@@ -227,7 +230,7 @@ func NewDevBoxCommand() *cobra.Command {
 			}
 			runners := make([]*devutils.RunnerAgent, len(runnersData))
 			for i := range runnersData {
-				runners[i] = devutils.NewRunnerAgent(runnerPods[i], cloud, baseAgentImage, baseInitImage, baseToolkitImage)
+				runners[i] = devutils.NewRunnerAgent(runnerPods[i], cloud, baseAgentImage, baseInitImage, baseToolkitImage, executionNamespace)
 			}
 
 			// Create GitOps agents
@@ -264,7 +267,11 @@ func NewDevBoxCommand() *cobra.Command {
 			}
 
 			// Create namespace
-			fmt.Println("Creating namespace...")
+			if namespace.ExecutionName() != namespace.Name() {
+				fmt.Println("Creating 2 namespaces for Agents and Execution...")
+			} else {
+				fmt.Println("Creating namespace...")
+			}
 			if err = namespace.Create(); err != nil {
 				fail(errors.Wrap(err, "failed to create namespace"))
 			}
@@ -877,6 +884,7 @@ func NewDevBoxCommand() *cobra.Command {
 	cmd.Flags().StringVar(&baseInitImage, "init-image", "kubeshop/testkube-tw-init:latest", "base init image")
 	cmd.Flags().StringVar(&baseToolkitImage, "toolkit-image", "kubeshop/testkube-tw-toolkit:latest", "base toolkit image")
 	cmd.Flags().StringVar(&baseAgentImage, "agent-image", "kubeshop/testkube-api-server:latest", "base agent image")
+	cmd.Flags().StringVarP(&executionNamespace, "execution-namespace", "N", "", "where runners should execute test workflows")
 	cmd.Flags().Uint16Var(&runnersCount, "runners", 0, "additional runners count")
 	cmd.Flags().BoolVar(&disableDefaultAgent, "disable-agent", false, "should disable default agent")
 	cmd.Flags().BoolVar(&disableCloudStorage, "disable-cloud-storage", false, "should disable storage in Cloud")
@@ -884,6 +892,7 @@ func NewDevBoxCommand() *cobra.Command {
 	cmd.Flags().BoolVar(&enableCronjobs, "enable-cronjobs", false, "should enable cron resolution of Test Workflows")
 	cmd.Flags().StringVar(&forcedOs, "os", "", "force different OS for binary builds")
 	cmd.Flags().StringVar(&forcedArchitecture, "arch", "", "force different architecture for binary builds")
+	cmd.Flags().BoolVar(&enableK8sControllers, "enable-k8s-controllers", false, "should enable Kubernetes controllers")
 
 	return cmd
 }

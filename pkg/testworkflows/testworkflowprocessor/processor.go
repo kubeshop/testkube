@@ -211,11 +211,20 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 
 	// Finalize Volumes
 	volumes := layer.Volumes()
+	var secretVolumeNames []string
 	for i := range volumes {
 		err = expressions.FinalizeForce(&volumes[i], machines...)
 		if err != nil {
 			return nil, errors.Wrap(err, "finalizing Volume")
 		}
+		if volumes[i].Secret != nil {
+			secretVolumeNames = append(secretVolumeNames, volumes[i].Name)
+		}
+	}
+
+	volumeNameMap := make(map[string]struct{})
+	for _, volumeName := range secretVolumeNames {
+		volumeNameMap[volumeName] = struct{}{}
 	}
 
 	// Append main label for the pod
@@ -333,6 +342,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		options.Config.Execution.GlobalEnv = testworkflowresolver.DedupeEnvVars(append(options.Config.Execution.GlobalEnv, globalEnv...))
 	}
 
+	secretMountPaths := make(map[string][]string)
 	for i := range containers {
 		err = expressions.FinalizeForce(&containers[i].EnvFrom, machines...)
 		if err != nil {
@@ -356,6 +366,9 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 			if !filepath.IsAbs(containers[i].VolumeMounts[j].MountPath) {
 				containers[i].VolumeMounts[j].MountPath = filepath.Clean(filepath.Join(workingDir, containers[i].VolumeMounts[j].MountPath))
 			}
+			if _, ok := volumeNameMap[containers[i].VolumeMounts[j].Name]; ok {
+				secretMountPaths[containers[i].Name] = append(secretMountPaths[containers[i].Name], containers[i].VolumeMounts[j].MountPath)
+			}
 		}
 
 		// Avoid having working directory set up, so we have the default one
@@ -372,6 +385,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		}
 	}
 
+	options.Config.Execution.SecretMountPaths = secretMountPaths
 	// Append common environment variables
 	if len(options.CommonEnvVariables) > 0 {
 		for i := range containers {

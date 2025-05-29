@@ -18,6 +18,7 @@ func NewCreateTestWorkflowCmd() *cobra.Command {
 		name     string
 		filePath string
 		update   bool
+		dryRun   bool
 	)
 
 	cmd := &cobra.Command{
@@ -46,20 +47,24 @@ func NewCreateTestWorkflowCmd() *cobra.Command {
 			bytes, err := io.ReadAll(input)
 			ui.ExitOnError("reading input", err)
 
+			client, _, err := common.GetClient(cmd)
+			ui.ExitOnError("getting client", err)
+
+			err = client.ValidateTestWorkflow(bytes)
+			ui.ExitOnError("error validating test workflow against crd schema", err)
+			if dryRun {
+				ui.SuccessAndExit("TestWorkflow specification is valid")
+			}
+
 			obj := new(testworkflowsv1.TestWorkflow)
 			err = common2.DeserializeCRD(obj, bytes)
 			ui.ExitOnError("deserializing input", err)
-			if obj.Kind != "" && obj.Kind != "TestWorkflow" {
-				ui.Failf("Only TestWorkflow objects are accepted. Received: %s", obj.Kind)
-			}
+
 			common2.AppendTypeMeta("TestWorkflow", testworkflowsv1.GroupVersion, obj)
 			obj.Namespace = namespace
 			if name != "" {
 				obj.Name = name
 			}
-
-			client, _, err := common.GetClient(cmd)
-			ui.ExitOnError("getting client", err)
 
 			workflow, err := client.GetTestWorkflow(obj.Name)
 			if err != nil {
@@ -89,6 +94,7 @@ func NewCreateTestWorkflowCmd() *cobra.Command {
 	cmd.Flags().StringVar(&name, "name", "", "test workflow name")
 	cmd.Flags().BoolVar(&update, "update", false, "update, if test workflow already exists")
 	cmd.Flags().StringVarP(&filePath, "file", "f", "", "file path to get the test workflow specification")
+	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "validate test workflow specification yaml")
 	cmd.Flags().MarkDeprecated("disable-webhooks", "disable-webhooks is deprecated")
 
 	return cmd

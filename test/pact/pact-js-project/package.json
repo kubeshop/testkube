@@ -1,0 +1,7 @@
+{
+  "devDependencies": {
+    "@pact-foundation/pact": "^15.0.1",
+    "jest": "^29.7.0",
+    "superagent": "^10.2.0"
+  }
+}

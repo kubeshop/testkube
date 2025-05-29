@@ -20,26 +20,30 @@ import (
 )
 
 type Agent struct {
-	pod                 *PodObject
-	cloud               *CloudObject
-	agentImage          string
-	initProcessImage    string
-	toolkitImage        string
-	disableCloudStorage bool
-	enableCronjobs      bool
-	enableTestTriggers  bool
+	pod                  *PodObject
+	cloud                *CloudObject
+	agentImage           string
+	initProcessImage     string
+	toolkitImage         string
+	disableCloudStorage  bool
+	enableCronjobs       bool
+	enableTestTriggers   bool
+	enableK8sControllers bool
+	executionNamespace   string
 }
 
-func NewAgent(pod *PodObject, cloud *CloudObject, agentImage, initProcessImage, toolkitImage string, disableCloudStorage, enableCronjobs, enableTestTriggers bool) *Agent {
+func NewAgent(pod *PodObject, cloud *CloudObject, agentImage, initProcessImage, toolkitImage string, disableCloudStorage, enableCronjobs, enableTestTriggers, enableK8sControllers bool, executionNamespace string) *Agent {
 	return &Agent{
-		pod:                 pod,
-		cloud:               cloud,
-		agentImage:          agentImage,
-		initProcessImage:    initProcessImage,
-		toolkitImage:        toolkitImage,
-		disableCloudStorage: disableCloudStorage,
-		enableCronjobs:      enableCronjobs,
-		enableTestTriggers:  enableTestTriggers,
+		pod:                  pod,
+		cloud:                cloud,
+		agentImage:           agentImage,
+		initProcessImage:     initProcessImage,
+		toolkitImage:         toolkitImage,
+		disableCloudStorage:  disableCloudStorage,
+		enableCronjobs:       enableCronjobs,
+		enableTestTriggers:   enableTestTriggers,
+		enableK8sControllers: enableK8sControllers,
+		executionNamespace:   executionNamespace,
 	}
 }
 
@@ -53,7 +57,8 @@ func (r *Agent) Create(ctx context.Context, env *client.Environment) error {
 		{Name: "DISABLE_DEPRECATED_TESTS", Value: "true"},
 		{Name: "TESTKUBE_ANALYTICS_ENABLED", Value: "false"},
 		{Name: "TESTKUBE_NAMESPACE", Value: r.pod.Namespace()},
-		{Name: "JOB_SERVICE_ACCOUNT_NAME", Value: "devbox-account"},
+		{Name: "DEFAULT_EXECUTION_NAMESPACE", Value: r.executionNamespace},
+		{Name: "JOB_SERVICE_ACCOUNT_NAME", Value: jobServiceAccountName},
 		{Name: "TESTKUBE_ENABLE_IMAGE_DATA_PERSISTENT_CACHE", Value: "true"},
 		{Name: "TESTKUBE_IMAGE_DATA_PERSISTENT_CACHE_KEY", Value: "testkube-image-cache"},
 		{Name: "TESTKUBE_TW_TOOLKIT_IMAGE", Value: r.toolkitImage},
@@ -66,6 +71,9 @@ func (r *Agent) Create(ctx context.Context, env *client.Environment) error {
 	}
 	if r.enableCronjobs {
 		envVariables = append(envVariables, corev1.EnvVar{Name: "ENABLE_CRON_JOBS", Value: "true"})
+	}
+	if r.enableK8sControllers {
+		envVariables = append(envVariables, corev1.EnvVar{Name: "ENABLE_K8S_CONTROLLERS", Value: "true"})
 	}
 	if env != nil {
 		tlsInsecure := "false"

@@ -81,7 +81,10 @@ func NewCloneCmd() *cobra.Command {
 					uri.User = url.User(username)
 				}
 			} else if authType == "github" {
-				client := env.Cloud()
+				client, err := env.Cloud()
+				if err != nil {
+					ui.Failf("could not create cloud client: %v", err)
+				}
 				githubToken, err := client.GetGitHubToken(cmd.Context(), uri.String())
 				if err == nil {
 					uri.User = url.UserPassword("x-access-token", githubToken)
@@ -161,9 +164,30 @@ func NewCloneCmd() *cobra.Command {
 				},
 			})
 			ui.ExitOnError("copying files to destination", err)
+
+			// Allow the default group to write in all the cloned directories
+			fmt.Printf("📥 Adjusting access permissions...\n")
+			err = filepath.WalkDir(destinationPath, func(path string, d os.DirEntry, err error) error {
+				if err != nil {
+					return err
+				}
+				info, err := d.Info()
+				if err != nil {
+					return err
+				}
+				mode := info.Mode()
+				if mode.Perm()&0o060 != 0o060 {
+					err := os.Chmod(path, mode|0o060) // read/write for the FS group
+					if err != nil {
+						fmt.Printf("warn: chmod %s: %s\n", path, err.Error())
+					}
+				}
+				return nil
+			})
+			ui.ExitOnError("setting permissions", err)
+
 			fmt.Printf("🔎 Destination folder contains following files ...\n")
 			filepath.Walk(destinationPath, func(name string, info fs.FileInfo, err error) error {
-
 				// bold the folder name
 				if info.IsDir() {
 					fmt.Printf("\x1b[1m%s\x1b[0m\n", name)

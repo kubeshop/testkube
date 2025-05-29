@@ -18,6 +18,8 @@ spec:
         cpu: 512m
         memory: 512Mi
     workingDir: /data/repo/test/jmeter/executor-tests
+  job:
+    activeDeadlineSeconds: 300
   steps:
   - name: Run tests
     run:
@@ -49,6 +51,8 @@ spec:
         cpu: 512m
         memory: 512Mi
     workingDir: /data/repo/test/jmeter/executor-tests
+  job:
+    activeDeadlineSeconds: 300
   steps:
   - name: Run tests
     run:
@@ -80,6 +84,8 @@ spec:
         cpu: 512m
         memory: 512Mi
     workingDir: /data/repo/test/jmeter/executor-tests
+  job:
+    activeDeadlineSeconds: 300
   steps:
   - name: Run tests
     shell: jmeter -n -t jmeter-executor-smoke.jmx -j /data/artifacts/jmeter.log -o /data/artifacts/report -l /data/artifacts/jtl-report.jtl -e
@@ -112,10 +118,74 @@ spec:
         cpu: 512m
         memory: 512Mi
     workingDir: /data/repo/test/jmeter/executor-tests
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: Run from template
+    template:
+      name: official/jmeter/v2
+      config:
+        run: "jmeter -n -t jmeter-executor-smoke.jmx -j /data/artifacts/jmeter.log -o /data/artifacts/report -l /data/artifacts/jtl-report.jtl -e"
+    artifacts:
+      paths:
+      - '/data/artifacts/**/*'
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: jmeter-workflow-smoke-from-template-v1
+  labels:
+    core-tests: workflows
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/jmeter/executor-tests/jmeter-executor-smoke.jmx
+  container:
+    resources:
+      requests:
+        cpu: 512m
+        memory: 512Mi
+    workingDir: /data/repo/test/jmeter/executor-tests
+  job:
+    activeDeadlineSeconds: 300
   steps:
   - name: Run from template
     template:
       name: official/jmeter/v1
+      config:
+        run: "jmeter -n -t jmeter-executor-smoke.jmx -j /data/artifacts/jmeter.log -o /data/artifacts/report -l /data/artifacts/jtl-report.jtl -e"
+    artifacts:
+      paths:
+      - '/data/artifacts/**/*'
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: jmeter-workflow-smoke-from-template-separate-artifacts-step
+  labels:
+    core-tests: workflows
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/jmeter/executor-tests/jmeter-executor-smoke.jmx
+  container:
+    resources:
+      requests:
+        cpu: 512m
+        memory: 512Mi
+    workingDir: /data/repo/test/jmeter/executor-tests
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: Run from template
+    template:
+      name: official/jmeter/v2
       config:
         run: "jmeter -n -t jmeter-executor-smoke.jmx -j /data/artifacts/jmeter.log -o /data/artifacts/report -l /data/artifacts/jtl-report.jtl -e"
     steps:
@@ -123,7 +193,7 @@ spec:
       workingDir: /data/artifacts
       artifacts:
         paths:
-        - '**/*'
+        - '/data/artifacts/**/*'
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -162,6 +232,8 @@ spec:
         tcpSocket:
           port: 1099
         periodSeconds: 1
+  job:
+    activeDeadlineSeconds: 600
   steps:
   - name: Run tests
     run:
@@ -215,6 +287,8 @@ spec:
         tcpSocket:
           port: 1099
         periodSeconds: 1
+  job:
+    activeDeadlineSeconds: 600
   steps:
   - name: Run tests
     run:

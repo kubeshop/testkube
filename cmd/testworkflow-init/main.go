@@ -75,9 +75,14 @@ func main() {
 
 	// Store the instructions in the state if they are provided
 	orchestration.Setup.UseBaseEnv()
+	internalConfig := orchestration.Setup.GetInternalConfig()
+	containerName := orchestration.Setup.GetContainerName()
+	if len(internalConfig.Execution.SecretMountPaths) != 0 {
+		secretVolumeData := orchestration.Setup.GetSecretVolumeData(internalConfig.Execution.SecretMountPaths[containerName])
+		orchestration.Setup.AddSensitiveWords(secretVolumeData...)
+	}
 	stdout.SetSensitiveWords(orchestration.Setup.GetSensitiveWords())
 	actionGroups := orchestration.Setup.GetActionGroups()
-	internalConfig := orchestration.Setup.GetInternalConfig()
 	signature := orchestration.Setup.GetSignature()
 	containerResources := orchestration.Setup.GetContainerResources()
 	if actionGroups != nil {
@@ -509,7 +514,10 @@ func scrapeMetricsPostProcessor(path, step string, config testworkflowconfig.Int
 		}()
 
 		// Scrape the metrics to internal storage
-		storage := artifacts.InternalStorage()
+		storage, err := artifacts.InternalStorage()
+		if err != nil {
+			return errors.Wrapf(err, "failed to create internal storage for metrics: %v", err)
+		}
 		err = filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
 			if info.IsDir() {
 				return nil

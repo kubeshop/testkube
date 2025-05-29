@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"sort"
 	"time"
+	_ "time/tzdata"
 
 	"github.com/robfig/cron/v3"
 
@@ -33,7 +34,7 @@ func (s *Scheduler) ReconcileTestWorkflows(ctx context.Context) error {
 				for _, template := range obj.Resource.Spec.Use {
 					testWorkflowTemplate, err := s.testWorkflowTemplateClient.Get(ctx, s.getEnvironmentId(), template.Name)
 					if err != nil {
-						s.logger.Errorw("cron job scheduler: reconciler component: failed to get TestWorkflowTemplate", "namr", template.Name, "error", err)
+						s.logger.Errorw("cron job scheduler: reconciler component: failed to get TestWorkflowTemplate", "name", template.Name, "error", err)
 						continue
 					}
 
@@ -151,7 +152,7 @@ func (s *Scheduler) addTestWorkflowCronJobs(ctx context.Context, testWorkflowNam
 	for _, event := range events {
 		if event.Cronjob != nil {
 			var cronJobName string
-			cronJobName, err := getTestWorkflowHashedMetadataName(event.Cronjob.Cron, event.Cronjob.Config)
+			cronJobName, err := getTestWorkflowHashedMetadataName(event.Cronjob)
 			if err != nil {
 				return err
 			}
@@ -175,7 +176,12 @@ func (s *Scheduler) addTestWorkflowCronJob(ctx context.Context, testWorkflowName
 	}
 
 	if _, ok := s.testWorklows[testWorkflowName][cronJobName]; !ok {
-		entryID, err := s.cronService.AddJob(cronJob.Cron,
+		cronName := cronJob.Cron
+		if cronJob.Timezone != nil {
+			cronName = fmt.Sprintf("CRON_TZ=%s %s", cronJob.Timezone.Value, cronJob.Cron)
+		}
+
+		entryID, err := s.cronService.AddJob(cronName,
 			cron.FuncJob(func() { s.executeTestWorkflow(ctx, testWorkflowName, cronJob) }))
 		if err != nil {
 			return err
@@ -195,7 +201,7 @@ func (s *Scheduler) changeTestWorkflowCronJobs(ctx context.Context, testWorkflow
 			hasCronJob = true
 
 			var cronJobName string
-			cronJobName, err := getTestWorkflowHashedMetadataName(event.Cronjob.Cron, event.Cronjob.Config)
+			cronJobName, err := getTestWorkflowHashedMetadataName(event.Cronjob)
 			if err != nil {
 				return err
 			}
@@ -259,9 +265,9 @@ type configKeyValue struct {
 type configKeyValues []configKeyValue
 
 // getTestWorkflowHashedMetadataName returns cron job hashed metadata name
-func getTestWorkflowHashedMetadataName(schedule string, config map[string]string) (string, error) {
+func getTestWorkflowHashedMetadataName(cronJob *testkube.TestWorkflowCronJobConfig) (string, error) {
 	var slice configKeyValues
-	for key, value := range config {
+	for key, value := range cronJob.Config {
 		slice = append(slice, configKeyValue{Key: key, Value: value})
 	}
 
@@ -274,5 +280,10 @@ func getTestWorkflowHashedMetadataName(schedule string, config map[string]string
 		return "", err
 	}
 
-	return fmt.Sprintf("%s-%x", schedule, sha256.Sum256(data)), nil
+	cronName := cronJob.Cron
+	if cronJob.Timezone != nil {
+		cronName = fmt.Sprintf("%s %s", cronJob.Timezone.Value, cronJob.Cron)
+	}
+
+	return fmt.Sprintf("%s-%x", cronName, sha256.Sum256(data)), nil
 }

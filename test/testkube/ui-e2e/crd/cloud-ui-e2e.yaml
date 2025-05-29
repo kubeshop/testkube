@@ -1,0 +1,52 @@
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: cloud-ui-e2e
+  labels:
+    core-tests: workflows
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube-cloud-api.git
+      revision: main
+      paths:
+      - js/packages/e2e-tests
+      usernameFrom:
+        secretKeyRef:
+          name: 'testkube-agent-secrets'
+          key: 'CLOUD_UI_E2E_GITHUB_USERNAME'
+      tokenFrom:
+        secretKeyRef:
+          name: 'testkube-agent-secrets'
+          key: 'CLOUD_UI_E2E_GITHUB_TOKEN'
+  config:
+    CLOUD_BASE_URL: {type: string, default: 'https://app.testkube.dev'}
+  container:
+    resources:
+      requests:
+        cpu: 2
+        memory: 2Gi
+    workingDir: /data/repo/js/packages/e2e-tests
+    image: mcr.microsoft.com/playwright:v1.44.1-focal
+    env:
+    - name: CLOUD_BASE_URL
+      value: '{{ config.CLOUD_BASE_URL }}'
+    - name: CLOUD_API_URL
+      value: 'https://api.testkube.dev'
+    - name: TEST_ORG_ID
+      value: 'tkcorg_9deb42dda2197657'
+    - name: TEST_ENV_ID # Env with connected agent (Testkube-cloud-test-dev-E2E) - used for running some of the tests
+      value: 'tkcenv_f2eedeef4063f90f'
+    - name: TEST_FIXTURE_USER # Test user having access to connected environment
+      value: 'test-user-10'
+    - name: TESTKUBE_NAMESPACE # namespace where agent is installed
+      value: 'testkube-agent-e2e'
+  steps:
+  - name: Install dependencies
+    shell: npm install --save-dev @playwright/test@1.44.1 && npm ci
+  - name: Run tests
+    shell: npx playwright test --retries=1
+    artifacts:
+      paths:
+      - playwright-report/**
+      - test-results/**

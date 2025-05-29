@@ -33,7 +33,8 @@ func Test_ReconcileTestWorkflow(t *testing.T) {
 		Events: []testkube.TestWorkflowEvent{
 			{
 				Cronjob: &testkube.TestWorkflowCronJobConfig{
-					Cron: "* * * * *",
+					Cron:     "* * * * *",
+					Timezone: &testkube.BoxedString{Value: "America/New_York"},
 				},
 			},
 		}}}

@@ -7,13 +7,25 @@ import (
 	"os"
 	"time"
 
+	"github.com/go-logr/zapr"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"google.golang.org/grpc"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	k8sctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	testexecutionv1 "github.com/kubeshop/testkube-operator/api/testexecution/v1"
+	testsuiteexecutionv1 "github.com/kubeshop/testkube-operator/api/testsuiteexecution/v1"
+	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
 	testkubeclientset "github.com/kubeshop/testkube-operator/pkg/clientset/versioned"
+	cronjobclient "github.com/kubeshop/testkube-operator/pkg/cronjob/client"
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	"github.com/kubeshop/testkube/cmd/api-server/services"
 	"github.com/kubeshop/testkube/internal/app/api/debug"
@@ -23,6 +35,7 @@ import (
 	cloudartifacts "github.com/kubeshop/testkube/pkg/cloud/data/artifact"
 	cloudtestworkflow "github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
 	cloudwebhook "github.com/kubeshop/testkube/pkg/cloud/data/webhook"
+	"github.com/kubeshop/testkube/pkg/controller"
 	"github.com/kubeshop/testkube/pkg/controlplaneclient"
 	"github.com/kubeshop/testkube/pkg/crdstorage"
 	"github.com/kubeshop/testkube/pkg/event/kind/cdevent"
@@ -35,6 +48,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
 	runner2 "github.com/kubeshop/testkube/pkg/runner"
+	"github.com/kubeshop/testkube/pkg/scheduler"
 	"github.com/kubeshop/testkube/pkg/secretmanager"
 	"github.com/kubeshop/testkube/pkg/server"
 	"github.com/kubeshop/testkube/pkg/tcl/schedulertcl"
@@ -193,8 +207,12 @@ func main() {
 		commons.ExitOnError("Creating test workflow templates client", err)
 	}
 
+	defaultExecutionNamespace := cfg.TestkubeNamespace
+	if cfg.DefaultExecutionNamespace != "" {
+		defaultExecutionNamespace = cfg.DefaultExecutionNamespace
+	}
 	serviceAccountNames := map[string]string{
-		cfg.TestkubeNamespace: cfg.JobServiceAccountName,
+		defaultExecutionNamespace: cfg.JobServiceAccountName,
 	}
 	// Pro edition only (tcl protected code)
 	if cfg.TestkubeExecutionNamespaces != "" {
@@ -241,11 +259,11 @@ func main() {
 	executionWorker := services.CreateExecutionWorker(clientset, cfg, clusterId, proContext.Agent.ID, serviceAccountNames, testWorkflowProcessor, map[string]string{
 		testworkflowconfig.FeatureFlagNewArchitecture: fmt.Sprintf("%v", cfg.FeatureNewArchitecture),
 		testworkflowconfig.FeatureFlagCloudStorage:    fmt.Sprintf("%v", cfg.FeatureCloudStorage),
-	}, commonEnvVariables, true)
+	}, commonEnvVariables, true, defaultExecutionNamespace)
 
 	runnerOpts := runner2.Options{
 		ClusterID:           clusterId,
-		DefaultNamespace:    cfg.TestkubeNamespace,
+		DefaultNamespace:    defaultExecutionNamespace,
 		ServiceAccountNames: serviceAccountNames,
 		StorageSkipVerify:   cfg.StorageSkipVerify,
 	}
@@ -453,6 +471,51 @@ func main() {
 		return nil
 	})
 
+	// Create Kubernetes Operators/Controllers
+	if cfg.EnableK8sControllers {
+		// Initialise the controller runtime with our logger.
+		ctrl.SetLogger(zapr.NewLogger(log.DefaultLogger.Desugar()))
+
+		// Configure a scheme to include the required resource definitions.
+		scheme := runtime.NewScheme()
+		err = testworkflowsv1.AddToScheme(scheme)
+		commons.ExitOnError("Add TestWorkflows to kubernetes runtime scheme", err)
+
+		// Legacy schemes
+		err = testexecutionv1.AddToScheme(scheme)
+		commons.ExitOnError("Add TestExecution to kubernetes runtime scheme", err)
+		err = testsuiteexecutionv1.AddToScheme(scheme)
+		commons.ExitOnError("Add TestSuiteExecution to kubernetes runtime scheme", err)
+
+		// Configure the manager to use the defined scheme and to operate in the current namespace.
+		mgr, err := manager.New(kubeConfig, manager.Options{
+			Scheme: scheme,
+			Cache: cache.Options{
+				DefaultNamespaces: map[string]cache.Config{
+					cfg.TestkubeNamespace: {},
+				},
+			},
+		})
+		commons.ExitOnError("Creating kubernetes controller manager", err)
+
+		// Initialise controllers
+		err = controller.NewTestWorkflowExecutionExecutorController(mgr, testWorkflowExecutor)
+		commons.ExitOnError("Creating TestWorkflowExecution controller", err)
+
+		// Legacy controllers
+		testExecutor := workerpool.New[testkube.Test, testkube.ExecutionRequest, testkube.Execution](scheduler.DefaultConcurrencyLevel)
+		err = controller.NewTestExecutionExecutorController(mgr, testExecutor, deprecatedSystem)
+		commons.ExitOnError("Creating TestExecution controller", err)
+		testSuiteExecutor := workerpool.New[testkube.TestSuite, testkube.TestSuiteExecutionRequest, testkube.TestSuiteExecution](scheduler.DefaultConcurrencyLevel)
+		err = controller.NewTestSuiteExecutionExecutorController(mgr, testSuiteExecutor, deprecatedSystem)
+		commons.ExitOnError("Creating TestSuiteExecution controller", err)
+
+		// Finally start the manager.
+		g.Go(func() error {
+			return mgr.Start(ctx)
+		})
+	}
+
 	// Create HTTP server
 	httpServer := server.NewServer(server.Config{Port: cfg.APIServerPort})
 	httpServer.Routes.Use(cors.New())
@@ -566,6 +629,7 @@ func main() {
 		"telemetryEnabled", telemetryEnabled,
 		"clusterId", clusterId,
 		"namespace", cfg.TestkubeNamespace,
+		"executionNamespace", cfg.DefaultExecutionNamespace,
 		"version", version.Version,
 	)
 
@@ -598,6 +662,31 @@ func main() {
 		&proContext,
 	)
 	if scheduler != nil {
+		// Remove any remaining legacy cronjobs.
+		// TODO: Remove this section once we are happy that users are not migrating from legacy cronjobs (next Major version?)
+		resources := []string{cronjobclient.TestResourceURI, cronjobclient.TestSuiteResourceURI, cronjobclient.TestWorkflowResourceURI}
+		for _, resource := range resources {
+			reqs, err := labels.ParseToRequirements("testkube=" + resource)
+			if err != nil {
+				log.DefaultLogger.Errorw("Unable to parse label selector", "error", err, "label", "testkube="+resource)
+				continue
+			}
+
+			u := &unstructured.Unstructured{}
+			u.SetKind("CronJob")
+			u.SetAPIVersion("batch/v1")
+			if err := kubeClient.DeleteAllOf(
+				ctx,
+				u,
+				k8sctrlclient.InNamespace(cfg.TestkubeNamespace),
+				k8sctrlclient.MatchingLabelsSelector{Selector: labels.NewSelector().Add(reqs...)},
+			); err != nil {
+				log.DefaultLogger.Errorw("Unable to delete legacy cronjobs", "error", err, "label", "testkube="+resource, "namespace", cfg.TestkubeNamespace)
+				continue
+			}
+		}
+
+		// Start the new scheduler.
 		g.Go(func() error {
 			scheduler.Reconcile(ctx)
 			return nil

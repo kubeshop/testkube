@@ -3,6 +3,7 @@ package runner
 import (
 	"context"
 	errors2 "errors"
+	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -11,7 +12,10 @@ import (
 	"golang.org/x/sync/singleflight"
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
+	"github.com/kubeshop/testkube/cmd/tcl/testworkflow-toolkit/commands"
+	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/artifacts"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
+	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/controlplaneclient"
@@ -19,8 +23,10 @@ import (
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/log"
 	configRepo "github.com/kubeshop/testkube/pkg/repository/config"
+	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/registry"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowresolver"
 )
 
@@ -37,7 +43,12 @@ const (
 	MonitorRetryCount = 10
 	MonitorRetryDelay = 500 * time.Millisecond
 
+	RecoverLogsRetryOnFailureDelay = 300 * time.Millisecond
+	RecoverLogsRetryMaxAttempts    = 5
+
 	inlinedGlobalTemplateName = "<inline-global-template>"
+
+	RecoveryRef = "recovery"
 )
 
 type RunnerExecute interface {
@@ -119,10 +130,45 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 	}
 	defer logs.Cleanup()
 
+	type SubRef struct {
+		GroupId string
+		Name    string
+		Index   int
+	}
+	services := make(map[SubRef]struct{})
+	parallel := make(map[SubRef]struct{})
 	currentRef := ""
 	var lastResult *testkube.TestWorkflowResult
 	for n := range notifications.Channel() {
 		if n.Output != nil {
+			// Track running services
+			if n.Output.Name == "service" {
+				status, _ := n.Output.Value["status"].(string)
+				done, _ := n.Output.Value["done"].(bool)
+				groupId, _ := n.Output.Value["group"].(string)
+				name, _ := n.Output.Value["name"].(string)
+				findex, _ := n.Output.Value["index"].(float64) // JSON marshaler decodes numbers as float64
+				index := int(findex)
+				if status == string(commands.ServiceStatusQueued) {
+					services[SubRef{GroupId: groupId, Name: name, Index: index}] = struct{}{}
+				} else if done {
+					delete(services, SubRef{GroupId: groupId, Index: index})
+				}
+			}
+
+			// Track running parallel steps
+			if n.Output.Name == "parallel" {
+				status, _ := (n.Output.Value["status"]).(string)
+				findex, _ := n.Output.Value["index"].(float64) // JSON marshaler decodes numbers as float64
+				index := int(findex)
+				if status == string(testkube.RUNNING_TestWorkflowStatus) {
+					parallel[SubRef{GroupId: n.Output.Ref, Index: index}] = struct{}{}
+				} else if status == string(testkube.PASSED_TestWorkflowStatus) || status == string(testkube.FAILED_TestWorkflowStatus) || status == string(testkube.ABORTED_TestWorkflowStatus) {
+					delete(parallel, SubRef{GroupId: n.Output.Ref, Index: index})
+				}
+			}
+
+			// Save the information
 			saver.AppendOutput(*n.Output)
 		} else if n.Result != nil {
 			lastResult = n.Result
@@ -179,13 +225,53 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 		}
 	}
 
+	// Recover missing data in case the execution has crashed
+	if lastResult.IsAborted() {
+		// Service logs
+		if len(services) > 0 {
+			log.DefaultLogger.Warnw("TestWorkflow execution has been aborted, while some services are still running. Recovering their logs.", "executionId", execution.Id, "count", len(services))
+			for svc := range services {
+				err := r.recoverServiceData(ctx, saver, environmentId, &execution, commands.ServiceInfo{
+					Group: svc.GroupId,
+					Index: int64(svc.Index),
+					Name:  svc.Name,
+				})
+				if err == nil {
+					log.DefaultLogger.Infow("recovered TestWorkflow execution service logs", "executionId", execution.Id, "serviceName", svc.Name, "serviceIndex", svc.Index)
+				} else {
+					log.DefaultLogger.Errorw("failed to recover TestWorkflow execution service logs", "executionId", execution.Id, "serviceName", svc.Name, "serviceIndex", svc.Index, "error", err)
+				}
+			}
+		}
+
+		// Parallel steps logs
+		if len(parallel) > 0 {
+			log.DefaultLogger.Warnw("TestWorkflow execution has been aborted, while some parallel steps are still running. Recovering their logs.", "executionId", execution.Id, "count", len(parallel))
+			for step := range parallel {
+				err := r.recoverParallelStepData(ctx, saver, environmentId, &execution, step.GroupId, int(step.Index))
+				if err == nil {
+					log.DefaultLogger.Infow("recovered TestWorkflow execution parallel step logs", "executionId", execution.Id, "stepRef", step.GroupId, "stepIndex", step.Index)
+				} else {
+					log.DefaultLogger.Errorw("failed to recover TestWorkflow execution parallel step logs", "executionId", execution.Id, "stepRef", step.GroupId, "stepIndex", step.Index, "error", err)
+				}
+			}
+		}
+	}
+
 	for i := 0; i < SaveEndResultRetryCount; i++ {
 		err = saver.End(ctx, *lastResult)
 		if err == nil {
 			break
 		}
-		log.DefaultLogger.Warnw("failed to save execution data", "id", execution.Id, "error", err)
-		time.Sleep(time.Duration(i/10) * SaveEndResultRetryBaseDelay)
+		sleepDuration := time.Duration(i/10) * SaveEndResultRetryBaseDelay
+		log.DefaultLogger.Warnw(
+			"failed to end execution and save execution data, retrying...",
+			"id", execution.Id,
+			"retryCount", i,
+			"retryDelay", sleepDuration,
+			"error", err,
+		)
+		time.Sleep(sleepDuration)
 	}
 
 	// Handle fatal error
@@ -217,6 +303,134 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 	}
 
 	return nil
+}
+
+func (r *runner) recoverServiceLogs(ctx context.Context, saver ExecutionSaver, environmentId string, execution *testkube.TestWorkflowExecution, svc commands.ServiceInfo) error {
+	storage := artifacts.InternalStorageForAgent(r.client, environmentId, execution.Id, execution.Workflow.Name, RecoveryRef)
+	filePath := fmt.Sprintf("logs/%s-%s/%d.log", svc.Group, svc.Name, svc.Index)
+	ctx, ctxCancel := context.WithCancel(ctx)
+	defer ctxCancel()
+
+	// Load the logs and save as the artifacts
+	reader := r.worker.Logs(ctx, fmt.Sprintf("%s-%s-%d", execution.Id, svc.Name, svc.Index), executionworkertypes.LogsOptions{
+		Hints:    executionworkertypes.Hints{Namespace: execution.Namespace},
+		NoFollow: true,
+	})
+	if err := reader.Err(); err != nil {
+		return err
+	}
+	if err := storage.SaveStream(filePath, reader); err != nil {
+		return err
+	}
+
+	// Add information in the execution about the logs
+	saver.AppendOutput(testkube.TestWorkflowOutput{
+		Ref:  RecoveryRef,
+		Name: "service",
+		Value: commands.ServiceInfo{
+			Group: svc.Group,
+			Index: svc.Index,
+			Name:  svc.Name,
+			Logs:  storage.FullPath(filePath),
+			Done:  true,
+		}.AsMap(),
+	})
+	return nil
+}
+
+func (r *runner) recoverServiceData(ctx context.Context, saver ExecutionSaver, environmentId string, execution *testkube.TestWorkflowExecution, svc commands.ServiceInfo) (err error) {
+	for i := 0; i < RecoverLogsRetryMaxAttempts; i++ {
+		if i > 0 {
+			// Wait a bit before retrying
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(RecoverLogsRetryOnFailureDelay):
+			}
+		}
+
+		// Try to recover logs
+		if err = r.recoverServiceLogs(ctx, saver, environmentId, execution, svc); err == nil {
+			return nil
+		}
+	}
+	return err
+}
+
+func (r *runner) recoverParallelStepLogs(ctx context.Context, saver ExecutionSaver, environmentId string, execution *testkube.TestWorkflowExecution, ref string, index int) error {
+	storage := artifacts.InternalStorageForAgent(r.client, environmentId, execution.Id, execution.Workflow.Name, RecoveryRef)
+	jobName := fmt.Sprintf("%s-%s-%d", execution.Id, ref, index)
+	filePath := fmt.Sprintf("logs/%s/%d.log", ref, index)
+	ctx, ctxCancel := context.WithCancel(ctx)
+	defer ctxCancel()
+
+	// Load the logs and save as the artifacts
+	reader := r.worker.Logs(ctx, jobName, executionworkertypes.LogsOptions{
+		Hints:    executionworkertypes.Hints{Namespace: execution.Namespace},
+		NoFollow: true,
+	})
+	if err := reader.Err(); err != nil {
+		return err
+	}
+	if err := storage.SaveStream(filePath, reader); err != nil {
+		return err
+	}
+	status := commands.ParallelStatus{
+		Index:  index,
+		Logs:   storage.FullPath(filePath),
+		Status: testkube.ABORTED_TestWorkflowStatus,
+	}
+
+	// Load the last acknowledged result of the step and mark it as aborted
+	summary, err := r.worker.Get(ctx, jobName, executionworkertypes.GetOptions{
+		Hints: executionworkertypes.Hints{Namespace: execution.Namespace},
+	})
+	if err == nil {
+		sigSequence := stage.MapSignatureListToInternal(stage.MapSignatureToSequence(stage.MapSignatureList(summary.Signature)))
+		errorMessage := execution.Result.Initialization.ErrorMessage
+		if errorMessage == "" {
+			for _, sig := range sigSequence {
+				if execution.Result.Steps[sig.Ref].ErrorMessage != "" {
+					errorMessage = execution.Result.Steps[sig.Ref].ErrorMessage
+					break
+				}
+			}
+		}
+		status.Result = &summary.Result
+		status.Result.Status = common.Ptr(testkube.ABORTED_TestWorkflowStatus)
+		status.Result.HealAborted(sigSequence, errorMessage, controller.DefaultErrorMessage)
+		status.Result.HealTimestamps(sigSequence, summary.Execution.ScheduledAt, time.Time{}, time.Time{}, true)
+		status.Result.HealDuration(summary.Execution.ScheduledAt)
+		status.Result.HealMissingPauseStatuses()
+		status.Result.HealStatus(sigSequence)
+	}
+
+	// Add information in the execution about the logs
+	saver.AppendOutput(testkube.TestWorkflowOutput{
+		Ref:   ref,
+		Name:  "parallel",
+		Value: status.AsMap(),
+	})
+	return nil
+}
+
+func (r *runner) recoverParallelStepData(ctx context.Context, saver ExecutionSaver, environmentId string, execution *testkube.TestWorkflowExecution, ref string, index int) (err error) {
+	for i := 0; i < RecoverLogsRetryMaxAttempts; i++ {
+		if i > 0 {
+			// Wait a bit before retrying
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(RecoverLogsRetryOnFailureDelay):
+			}
+		}
+
+		// Try to recover logs
+		if err = r.recoverParallelStepLogs(ctx, saver, environmentId, execution, ref, index); err == nil {
+			return nil
+		}
+	}
+	return err
 }
 
 func (r *runner) Monitor(ctx context.Context, organizationId string, environmentId string, id string) error {
@@ -296,7 +510,17 @@ func (r *runner) execute(request executionworkertypes.ExecuteRequest) (*executio
 				return err
 			})
 			if err != nil {
-				log.DefaultLogger.Errorw("failed to monitor execution", "id", request.Execution.Id, "error", err)
+				log.DefaultLogger.Errorw(
+					"failed to monitor execution and retry limit is reached, assuming execution is stuck and running cleanup...",
+					"id", request.Execution.Id,
+					"error", err,
+				)
+				// At this point, all retries have failed and nothing is monitoring the execution anymore.
+				// We can assume that the execution is stuck in running state and we need to abort it.
+				if err := r.abortExecution(context.Background(), request.Execution.EnvironmentId, request.Execution.Id); err != nil {
+					log.DefaultLogger.Errorw("failed to abort stuck execution", "id", request.Execution.Id, "error", err)
+				}
+				log.DefaultLogger.Warnw("aborted execution stuck in running state", "id", request.Execution.Id)
 			}
 		}()
 	}
@@ -317,6 +541,36 @@ func (r *runner) execute(request executionworkertypes.ExecuteRequest) (*executio
 	}
 
 	return res, err
+}
+
+// abortExecution aborts fetches the execution, updates its result to aborted and finishes it.
+func (r *runner) abortExecution(ctx context.Context, environmentID, executionID string) error {
+	execution, err := r.client.GetExecution(context.Background(), environmentID, executionID)
+	if err != nil {
+		return errors.Wrapf(err, "failed to get execution '%s'", executionID)
+	}
+	if execution.Result == nil {
+		return errors.New("execution result is nil")
+	}
+	execution.Result.Fatal(errors.New("execution is stuck in running state"), true, time.Now())
+	if err = r.client.UpdateExecutionResult(ctx, environmentID, executionID, execution.Result); err != nil {
+		return errors.Wrapf(err, "failed to update execution result '%s' to aborted", executionID)
+	}
+
+	if err = r.client.FinishExecutionResult(ctx, environmentID, executionID, execution.Result); err != nil {
+		return errors.Wrapf(err, "failed to finish execution result '%s'", executionID)
+	}
+
+	// Emit data, if the Control Plane doesn't support informing about status by itself
+	if !r.proContext.NewArchitecture {
+		r.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(execution))
+	}
+
+	if err = r.Abort(executionID); err != nil {
+		return errors.Wrapf(err, "failed to destroy execution '%s'", executionID)
+	}
+
+	return nil
 }
 
 func (r *runner) Pause(id string) error {

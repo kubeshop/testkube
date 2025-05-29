@@ -71,6 +71,13 @@ type ServiceInfo struct {
 	Description string        `json:"description,omitempty"`
 	Logs        string        `json:"logs,omitempty"`
 	Status      ServiceStatus `json:"status,omitempty"`
+	Done        bool          `json:"done,omitempty"`
+}
+
+func (s ServiceInfo) AsMap() (v map[string]interface{}) {
+	serialized, _ := json.Marshal(s)
+	_ = json.Unmarshal(serialized, &v)
+	return
 }
 
 func NewServicesCmd() *cobra.Command {

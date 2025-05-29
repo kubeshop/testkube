@@ -264,7 +264,7 @@ spec:
       path: test/jmeter/executor-tests/jmeter-executor-smoke.jmx
   executionRequest:
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            limits:\n              memory: 1Mi\n"
-    activeDeadlineSeconds: 180
+    activeDeadlineSeconds: 300
 ---
 apiVersion: tests.testkube.io/v3
 kind: Test
