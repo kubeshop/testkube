@@ -12,7 +12,7 @@ spec:
       type: git
       uri: https://github.com/kubeshop/testkube.git
       branch: main
-      path: test/k6/executor-tests/k6-smoke-test.js
+      path: test/k6/k6-smoke-test.js
   executionRequest:
     variables:
       K6_SYSTEM_ENV:
@@ -39,7 +39,7 @@ spec:
       type: git
       uri: https://github.com/kubeshop/testkube.git
       branch: main
-      path: test/k6/executor-tests/k6-smoke-test.js
+      path: test/k6/k6-smoke-test.js
   executionRequest:
     variables:
       K6_SYSTEM_ENV:
@@ -66,7 +66,7 @@ spec:
       type: git
       uri: https://github.com/kubeshop/testkube.git
       branch: main
-      path: test/k6/executor-tests/k6-smoke-test-negative.js
+      path: test/k6/k6-smoke-test-negative.js
   executionRequest:
     negativeTest: true
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 128Mi\n              cpu: 128m\n"

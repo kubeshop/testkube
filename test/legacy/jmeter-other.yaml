@@ -12,7 +12,7 @@ spec:
       type: git
       uri: https://github.com/kubeshop/testkube.git
       branch: main
-      path: test/jmeter/executor-tests/jmeter-executor-smoke-incorrect-url.jmx
+      path: test/jmeter/jmeter-executor-smoke-incorrect-url.jmx
   executionRequest:
     negativeTest: true
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
@@ -32,7 +32,7 @@ spec:
       type: git
       uri: https://github.com/kubeshop/testkube.git
       branch: main
-      path: test/jmeter/executor-tests/jmeter-executor-smoke-incorrect-url.jmx
+      path: test/jmeter/jmeter-executor-smoke-incorrect-url.jmx
   executionRequest:
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
     activeDeadlineSeconds: 300
@@ -51,7 +51,7 @@ spec:
       type: git
       uri: https://github.com/kubeshop/testkube.git
       branch: main
-      path: test/jmeter/executor-tests/jmeter-executor-smoke-incorrect-url.jmx
+      path: test/jmeter/jmeter-executor-smoke-incorrect-url.jmx
   executionRequest:
     variables:
       SLAVES_COUNT:
@@ -83,7 +83,7 @@ spec:
       type: git
       uri: https://github.com/kubeshop/testkube.git
       branch: main
-      path: test/jmeter/executor-tests/jmeter-executor-smoke-correct-url-failed-assertion.jmx
+      path: test/jmeter/jmeter-executor-smoke-correct-url-failed-assertion.jmx
   executionRequest:
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
     activeDeadlineSeconds: 300
@@ -102,7 +102,7 @@ spec:
       type: git
       uri: https://github.com/kubeshop/testkube.git
       branch: main
-      path: test/jmeter/executor-tests/jmeter-executor-smoke-correct-url-failed-assertion.jmx
+      path: test/jmeter/jmeter-executor-smoke-correct-url-failed-assertion.jmx
   executionRequest:
     variables:
       SLAVES_COUNT:
@@ -162,7 +162,7 @@ spec:
       type: git
       uri: https://github.com/kubeshop/testkube.git
       branch: main
-      path: test/jmeter/executor-tests/jmeter-executor-smoke.jmx
+      path: test/jmeter/jmeter-executor-smoke.jmx
   executionRequest:
     variables:
       SLAVES_COUNT:
@@ -194,7 +194,7 @@ spec:
       type: git
       uri: https://github.com/kubeshop/testkube.git
       branch: main
-      path: test/jmeter/executor-tests/jmeter-executor-smoke.jmx
+      path: test/jmeter/jmeter-executor-smoke.jmx
   executionRequest:
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
     activeDeadlineSeconds: 300

@@ -13,7 +13,7 @@ spec:
       type: git
       uri: https://github.com/kubeshop/testkube.git
       branch: main
-      path: test/k6/executor-tests
+      path: test/k6
   executionRequest:
     variables:
       K6_SYSTEM_ENV:

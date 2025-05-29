@@ -12,7 +12,7 @@ spec:
       type: git
       uri: https://github.com/kubeshop/testkube.git
       branch: main
-      path: test/jmeter/executor-tests/jmeter-executor-smoke.jmx
+      path: test/jmeter/jmeter-executor-smoke.jmx
   executionRequest:
     variables:
       SLAVES_COUNT:
@@ -48,7 +48,7 @@ spec:
       type: git
       uri: https://github.com/kubeshop/testkube.git
       branch: main
-      path: test/jmeter/executor-tests
+      path: test/jmeter
   executionRequest:
     variables:
       JMETER_SCRIPT:
@@ -82,7 +82,7 @@ spec:
       type: git
       uri: https://github.com/kubeshop/testkube.git
       branch: main
-      path: test/jmeter/executor-tests
+      path: test/jmeter
   executionRequest:
     args:
       - "jmeter-executor-smoke.jmx"
@@ -111,7 +111,7 @@ spec:
       type: git
       uri: https://github.com/kubeshop/testkube.git
       branch: main
-      path: test/jmeter/executor-tests
+      path: test/jmeter
   executionRequest:
     args:
       - "jmeter-executor-smoke-2.jmx"
@@ -140,7 +140,7 @@ spec:
       type: git
       uri: https://github.com/kubeshop/testkube.git
       branch: main
-      path: test/jmeter/executor-tests/jmeter-executor-smoke.jmx
+      path: test/jmeter/jmeter-executor-smoke.jmx
   executionRequest:
     executePostRunScriptBeforeScraping: true
     postRunScript: "echo \"postrun script\" && echo \"artifact file - contents\" > /data/output/artifact-`uuidgen`.txt"
@@ -179,11 +179,11 @@ spec:
       type: git
       uri: https://github.com/kubeshop/testkube.git
       branch: main
-      path: test/jmeter/executor-tests
+      path: test/jmeter
   executionRequest:
     args:
       - "-t"
-      - "/data/repo/test/jmeter/executor-tests/jmeter-executor-smoke-2.jmx"
+      - "/data/repo/test/jmeter/jmeter-executor-smoke-2.jmx"
       - "-o"
       - "/data/output/custom-report-directory"
       - "-l"
@@ -213,11 +213,11 @@ spec:
       type: git
       uri: https://github.com/kubeshop/testkube.git
       branch: main
-      path: test/jmeter/executor-tests
+      path: test/jmeter
   executionRequest:
     args:
       - "-t"
-      - "/data/repo/test/jmeter/executor-tests/jmeter-executor-smoke-2.jmx"
+      - "/data/repo/test/jmeter/jmeter-executor-smoke-2.jmx"
       - "-o"
       - "/data/output/custom-report-directory"
       - "-l"
@@ -252,12 +252,12 @@ spec:
       type: git
       uri: https://github.com/kubeshop/testkube.git
       branch: main
-      path: test/jmeter/executor-tests
-      workingDir: test/jmeter/executor-tests
+      path: test/jmeter
+      workingDir: test/jmeter
   executionRequest:
     args:
       - "-t"
-      - "/data/repo/test/jmeter/executor-tests/jmeter-executor-smoke-2.jmx"
+      - "/data/repo/test/jmeter/jmeter-executor-smoke-2.jmx"
       - "-o"
       - "/data/output/custom-report-directory"
       - "-l"
@@ -292,12 +292,12 @@ spec:
       type: git
       uri: https://github.com/kubeshop/testkube.git
       branch: main
-      path: test/jmeter/executor-tests
+      path: test/jmeter
   executionRequest:
     negativeTest: true
     args:
       - "-t"
-      - "/data/repo/test/jmeter/executor-tests/some-incorrect-file-name.jmx"
+      - "/data/repo/test/jmeter/some-incorrect-file-name.jmx"
       - "-o"
       - "/data/output/custom-report.jtl"
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
@@ -325,13 +325,13 @@ spec:
       type: git
       uri: https://github.com/kubeshop/testkube.git
       branch: main
-      path: test/jmeter/executor-tests
+      path: test/jmeter
   executionRequest:
     args:
       - "-t"
-      - "/data/repo/test/jmeter/executor-tests/jmeter-executor-smoke.jmx"
+      - "/data/repo/test/jmeter/jmeter-executor-smoke.jmx"
       - "-t"
-      - "/data/repo/test/jmeter/executor-tests/jmeter-executor-smoke-2.jmx"
+      - "/data/repo/test/jmeter/jmeter-executor-smoke-2.jmx"
       - "-o"
       - "/data/output/custom-report.jtl"
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
@@ -359,11 +359,11 @@ spec:
       type: git
       uri: https://github.com/kubeshop/testkube.git
       branch: main
-      path: test/jmeter/executor-tests
+      path: test/jmeter
   executionRequest:
     args:
       - "-t"
-      - "/data/repo/test/jmeter/executor-tests/jmeter-executor-smoke.jmx"
+      - "/data/repo/test/jmeter/jmeter-executor-smoke.jmx"
       - "-o"
       - "/data/output/custom-report.jtl"
       - "-e"
@@ -392,13 +392,13 @@ spec:
       type: git
       uri: https://github.com/kubeshop/testkube.git
       branch: main
-      path: test/jmeter/executor-tests
+      path: test/jmeter
   executionRequest:
     argsMode: override
     args:
       - "-n"
       - "-t"
-      - "/data/repo/test/jmeter/executor-tests/jmeter-executor-smoke.jmx"
+      - "/data/repo/test/jmeter/jmeter-executor-smoke.jmx"
       - "-o"
       - "/data/output/custom-report.jtl"
       - "-l"
@@ -429,7 +429,7 @@ spec:
       type: git
       uri: https://github.com/kubeshop/testkube.git
       branch: main
-      path: test/jmeter/executor-tests/jmeter-executor-smoke-incorrect-url-2.jmx
+      path: test/jmeter/jmeter-executor-smoke-incorrect-url-2.jmx
   executionRequest:
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
     activeDeadlineSeconds: 300
@@ -456,7 +456,7 @@ spec:
       type: git
       uri: https://github.com/kubeshop/testkube.git
       branch: main
-      path: test/jmeter/executor-tests/jmeter-executor-smoke-incorrect-url-2.jmx
+      path: test/jmeter/jmeter-executor-smoke-incorrect-url-2.jmx
   executionRequest:
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
     activeDeadlineSeconds: 300
@@ -483,13 +483,13 @@ spec:
       type: git
       uri: https://github.com/kubeshop/testkube.git
       branch: main
-      path: test/jmeter/executor-tests
+      path: test/jmeter
   executionRequest:
     argsMode: override
     args:
       - "-n"
       - "-t"
-      - "/data/repo/test/jmeter/executor-tests/jmeter-executor-smoke.jmx"
+      - "/data/repo/test/jmeter/jmeter-executor-smoke.jmx"
       - "-o"
       - "/data/output/custom-report.jtl"
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
@@ -517,8 +517,8 @@ spec:
       type: git
       uri: https://github.com/kubeshop/testkube.git
       branch: main
-      path: test/jmeter/executor-tests
-      workingDir: test/jmeter/executor-tests
+      path: test/jmeter
+      workingDir: test/jmeter
   executionRequest:
     argsMode: override
     args:
@@ -552,13 +552,13 @@ spec:
       type: git
       uri: https://github.com/kubeshop/testkube.git
       branch: main
-      path: test/jmeter/executor-tests
+      path: test/jmeter
   executionRequest:
     argsMode: override
     args:
       - "-n"
       - "-t"
-      - "/data/repo/test/jmeter/executor-tests/jmeter-executor-smoke.jmx"
+      - "/data/repo/test/jmeter/jmeter-executor-smoke.jmx"
       - "-o"
       - "/data/artifacts-custom/custom-report.jtl"
       - "-l"

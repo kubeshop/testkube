@@ -11,13 +11,13 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/jmeter/executor-tests/jmeter-executor-smoke.jmx
+      - test/jmeter/jmeter-executor-smoke.jmx
   container:
     resources:
       requests:
         cpu: 512m
         memory: 512Mi
-    workingDir: /data/repo/test/jmeter/executor-tests
+    workingDir: /data/repo/test/jmeter
   job:
     activeDeadlineSeconds: 300
   steps:
@@ -44,13 +44,13 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/jmeter/executor-tests/jmeter-executor-smoke.jmx
+      - test/jmeter/jmeter-executor-smoke.jmx
   container:
     resources:
       requests:
         cpu: 512m
         memory: 512Mi
-    workingDir: /data/repo/test/jmeter/executor-tests
+    workingDir: /data/repo/test/jmeter
   job:
     activeDeadlineSeconds: 300
   steps:
@@ -77,13 +77,13 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/jmeter/executor-tests/jmeter-executor-smoke.jmx
+      - test/jmeter/jmeter-executor-smoke.jmx
   container:
     resources:
       requests:
         cpu: 512m
         memory: 512Mi
-    workingDir: /data/repo/test/jmeter/executor-tests
+    workingDir: /data/repo/test/jmeter
   job:
     activeDeadlineSeconds: 300
   steps:
@@ -111,13 +111,13 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/jmeter/executor-tests/jmeter-executor-smoke.jmx
+      - test/jmeter/jmeter-executor-smoke.jmx
   container:
     resources:
       requests:
         cpu: 512m
         memory: 512Mi
-    workingDir: /data/repo/test/jmeter/executor-tests
+    workingDir: /data/repo/test/jmeter
   job:
     activeDeadlineSeconds: 300
   steps:
@@ -142,13 +142,13 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/jmeter/executor-tests/jmeter-executor-smoke.jmx
+      - test/jmeter/jmeter-executor-smoke.jmx
   container:
     resources:
       requests:
         cpu: 512m
         memory: 512Mi
-    workingDir: /data/repo/test/jmeter/executor-tests
+    workingDir: /data/repo/test/jmeter
   job:
     activeDeadlineSeconds: 300
   steps:
@@ -173,13 +173,13 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/jmeter/executor-tests/jmeter-executor-smoke.jmx
+      - test/jmeter/jmeter-executor-smoke.jmx
   container:
     resources:
       requests:
         cpu: 512m
         memory: 512Mi
-    workingDir: /data/repo/test/jmeter/executor-tests
+    workingDir: /data/repo/test/jmeter
   job:
     activeDeadlineSeconds: 300
   steps:
@@ -208,9 +208,9 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/jmeter/executor-tests/jmeter-executor-smoke.jmx
+      - test/jmeter/jmeter-executor-smoke.jmx
   container:
-    workingDir: /data/repo/test/jmeter/executor-tests
+    workingDir: /data/repo/test/jmeter
   services:
     slave:
       use:
@@ -263,9 +263,9 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/jmeter/executor-tests/jmeter-executor-smoke.jmx
+      - test/jmeter/jmeter-executor-smoke.jmx
   container:
-    workingDir: /data/repo/test/jmeter/executor-tests
+    workingDir: /data/repo/test/jmeter
   services:
     slave:
       use:

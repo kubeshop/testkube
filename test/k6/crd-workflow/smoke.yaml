@@ -11,13 +11,13 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/k6/executor-tests/k6-smoke-test.js
+      - test/k6/k6-smoke-test.js
   container:
     resources:
       requests:
         cpu: 128m
         memory: 128Mi
-    workingDir: /data/repo/test/k6/executor-tests
+    workingDir: /data/repo/test/k6
   job:
     activeDeadlineSeconds: 300
   steps:
@@ -46,7 +46,7 @@ spec:
       requests:
         cpu: 128m
         memory: 128Mi
-    workingDir: /data/repo/test/k6/executor-tests
+    workingDir: /data/repo/test/k6
     env:
     - name: K6_SYSTEM_ENV # currently only possible on this level
       value: K6_SYSTEM_ENV_value
@@ -54,13 +54,13 @@ spec:
     activeDeadlineSeconds: 300
   steps:
   - name: Run from template
-    workingDir: /data/repo/test/k6/executor-tests
+    workingDir: /data/repo/test/k6
     content:
       git:
         uri: https://github.com/kubeshop/testkube
         revision: main
         paths:
-        - test/k6/executor-tests/k6-smoke-test.js
+        - test/k6/k6-smoke-test.js
     template:
       name: official/k6/v1
       config:
@@ -80,13 +80,13 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/k6/executor-tests/k6-smoke-test.js
+      - test/k6/k6-smoke-test.js
   container:
     resources:
       requests:
         cpu: 128m
         memory: 128Mi
-    workingDir: /data/repo/test/k6/executor-tests
+    workingDir: /data/repo/test/k6
     env:
     - name: K6_SYSTEM_ENV # currently only possible on this level
       value: K6_SYSTEM_ENV_value
@@ -94,7 +94,7 @@ spec:
     activeDeadlineSeconds: 300
   steps:
   - name: Run from template
-    workingDir: /data/repo/test/k6/executor-tests
+    workingDir: /data/repo/test/k6
     template:
       name: official/k6/v1
       config:
@@ -114,13 +114,13 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/k6/executor-tests/k6-smoke-test.js
+      - test/k6/k6-smoke-test.js
   container:
     resources:
       requests:
         cpu: 128m
         memory: 128Mi
-    workingDir: /data/repo/test/k6/executor-tests
+    workingDir: /data/repo/test/k6
   job:
     activeDeadlineSeconds: 300
   steps:
@@ -166,7 +166,7 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/k6/executor-tests/k6-smoke-test.js
+      - test/k6/k6-smoke-test.js
   job:
     activeDeadlineSeconds: 300
   steps:
@@ -178,7 +178,7 @@ spec:
       use:
       - name: distribute/evenly
       container:
-        workingDir: /data/repo/test/k6/executor-tests
+        workingDir: /data/repo/test/k6
         resources:
           requests:
             cpu: 128m
@@ -213,7 +213,7 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/k6/executor-tests/k6-smoke-test.js
+      - test/k6/k6-smoke-test.js
   job:
     activeDeadlineSeconds: 300
   steps:
@@ -232,7 +232,7 @@ spec:
       paused: true # synchronise running all workers
       run:
         image: grafana/k6:0.49.0
-        workingDir: /data/repo/test/k6/executor-tests
+        workingDir: /data/repo/test/k6
         args:
         - run
         - k6-smoke-test.js
