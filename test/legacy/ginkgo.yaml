@@ -12,7 +12,7 @@ spec:
       type: git
       uri: https://github.com/kubeshop/testkube.git
       branch: main
-      path: test/ginkgo/executor-tests/smoke
+      path: test/ginkgo/smoke
   executionRequest:
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
     activeDeadlineSeconds: 300
@@ -32,7 +32,7 @@ spec:
       type: git
       uri: https://github.com/kubeshop/testkube.git
       branch: main
-      path: test/ginkgo/executor-tests/smoke-negative
+      path: test/ginkgo/smoke-negative
   executionRequest:
     negativeTest: true
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 512Mi\n              cpu: 512m\n"
