@@ -163,7 +163,6 @@ func main() {
 			RegistrationToken: cfg.TestkubeProAgentRegToken,
 			RunnerName:        cfg.APIServerFullname,
 			OrganizationId:    cfg.TestkubeProOrgID,
-			EnvironmentId:     cfg.TestkubeProEnvID,
 			Floating:          cfg.FloatingRunner,
 		})
 		if err != nil {
