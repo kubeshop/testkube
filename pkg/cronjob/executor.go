@@ -35,14 +35,19 @@ func (s *Scheduler) executeTestWorkflow(ctx context.Context, testWorkflowName st
 		},
 	}
 
+	cronName := cron.Cron
+	if cron.Timezone != nil {
+		cronName = fmt.Sprintf("CRON_TZ=%s %s", cron.Timezone.Value, cron.Cron)
+	}
+
 	// Pro edition only (tcl protected code)
 	if s.proContext != nil && s.proContext.APIKey != "" {
-		request.RunningContext, _ = testworkflowexecutor.GetNewRunningContext(cronjobtcl.GetRunningContext(cron.Cron), nil)
+		request.RunningContext, _ = testworkflowexecutor.GetNewRunningContext(cronjobtcl.GetRunningContext(cronName), nil)
 	}
 
 	s.logger.Infof(
 		"cron job scheduler: executor component: scheduling testworkflow execution for %s/%s",
-		testWorkflowName, cron.Cron,
+		testWorkflowName, cronName,
 	)
 
 	resp := s.testWorkflowExecutor.Execute(ctx, "", request)
@@ -52,7 +57,7 @@ func (s *Scheduler) executeTestWorkflow(ctx context.Context, testWorkflowName st
 	}
 
 	if resp.Error() != nil {
-		s.logger.Errorw(fmt.Sprintf("cron job scheduler: executor component: error executing testworkflow for cron %s/%s", testWorkflowName, cron.Cron), "error", resp.Error())
+		s.logger.Errorw(fmt.Sprintf("cron job scheduler: executor component: error executing testworkflow for cron %s/%s", testWorkflowName, cronName), "error", resp.Error())
 		return
 	}
 

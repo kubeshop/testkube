@@ -1,0 +1,68 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflowTemplate
+metadata:
+  name: setup-dind-kind-cluster-template
+spec:
+  container:
+    image: gcr.io/google.com/cloudsdktool/google-cloud-cli:latest
+    env:
+    - name: KUBECONFIG
+      value: /.kube/config
+    volumeMounts:
+    - name: kubeconfig
+      mountPath: /.kube
+  pod:
+    volumes:
+    - name: kubeconfig
+      emptyDir: {}
+  services:
+    dind:
+      logs: always
+      timeout: 5m
+      image: docker:27.4.1-dind
+      env:
+      - name: DOCKER_TLS_CERTDIR
+      securityContext:
+        privileged: true
+      readinessProbe:
+        tcpSocket:
+          port: 2375
+        periodSeconds: 1
+      resources:
+        requests:
+          cpu: "500m"
+          memory: "512Mi"
+  steps:
+  - container:
+      env:
+      - name: DOCKER_HOST
+        value: tcp://{{ services.dind.0.ip }}:2375
+    steps:
+    - name: Set up Kind cluster (with external access)
+      shell: |
+        curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.26.0/kind-linux-amd64
+        chmod +x ./kind
+
+        cat > ./kind-config.yaml <<EOL
+        kind: Cluster
+        apiVersion: kind.x-k8s.io/v1alpha4
+        networking:
+          apiServerAddress: {{ services.dind.0.ip }}
+          apiServerPort: 6443
+        EOL
+
+        ./kind create cluster --config ./kind-config.yaml
+    - name: Fix cluster DNS
+      run:
+        image: docker:27.4.1-cli
+        shell: |
+          docker exec kind-control-plane /bin/sh -c 'sed "s/nameserver /nameserver 8.8.8.8 #/g" /etc/resolv.conf >/etc/resolv.copy.conf; cp /etc/resolv.copy.conf /etc/resolv.conf'
+    - name: Install Helm
+      shell: |
+        curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+        helm version
+    - name: Install Testkube CLI
+      shell: |
+        wget -qO - https://repo.testkube.io/key.pub | apt-key add -
+        echo "deb https://repo.testkube.io/linux linux main" | tee -a /etc/apt/sources.list
+        apt-get update && apt-get install -y testkube

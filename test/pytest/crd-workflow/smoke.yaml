@@ -19,6 +19,8 @@ spec:
         cpu: 256m
         memory: 256Mi
     workingDir: /data/repo/test/pytest/pytest-project
+  job:
+    activeDeadlineSeconds:  180
   steps:
   - name: Run test
     shell: |
@@ -46,6 +48,8 @@ spec:
         cpu: 256m
         memory: 256Mi
     workingDir: /data/repo/test/pytest/pytest-project
+  job:
+    activeDeadlineSeconds:  180
   steps:
   - name: Run test
     shell: |
@@ -76,6 +80,8 @@ spec:
         cpu: 256m
         memory: 256Mi
     workingDir: /data/repo/test/pytest/pytest-project
+  job:
+    activeDeadlineSeconds:  180
   steps:
   - name: Run test
     shell: |

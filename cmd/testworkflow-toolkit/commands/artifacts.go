@@ -76,7 +76,10 @@ func NewArtifactsCmd() *cobra.Command {
 			var handlerOpts []artifacts.HandlerOpts
 			// Archive
 			cfg := config.Config()
-			client := env.Cloud()
+			client, err := env.Cloud()
+			if err != nil {
+				ui.Failf("could not create cloud client: %v", err)
+			}
 
 			if env.HasJunitSupport() {
 				junitProcessor := artifacts.NewJUnitPostProcessor(filesystem.NewOSFileSystem(), client, cfg.Execution.EnvironmentId, cfg.Execution.Id, cfg.Workflow.Name, config.Ref(), walker.Root(), cfg.Resource.FsPrefix)

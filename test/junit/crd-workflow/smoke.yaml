@@ -19,6 +19,8 @@ spec:
         cpu: 256m
         memory: 256Mi
     workingDir: /data/repo/test/junit/junit5-project
+  job:
+    activeDeadlineSeconds: 300
   steps:
   - name: Run tests
     shell: mvn test -Dtest=TestSmoke1,TestSmoke2
@@ -46,6 +48,8 @@ spec:
         cpu: 256m
         memory: 256Mi
     workingDir: /data/repo/test/junit/junit5-project
+  job:
+    activeDeadlineSeconds: 300
   steps:
   - name: Run tests
     shell: mvn test -Dtest=TestSmokeFail
@@ -73,6 +77,8 @@ spec:
         cpu: 256m
         memory: 256Mi
     workingDir: /data/repo/test/junit/junit5-project
+  job:
+    activeDeadlineSeconds: 300
   steps:
   - name: Run tests
     shell: mvn test
