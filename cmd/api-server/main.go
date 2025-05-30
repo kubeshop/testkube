@@ -87,7 +87,7 @@ func main() {
 
 	// Determine the running mode
 	mode := common.ModeStandalone
-	if cfg.TestkubeProAPIKey != "" {
+	if cfg.TestkubeProAPIKey != "" || cfg.TestkubeProAgentRegToken != "" {
 		mode = common.ModeAgent
 	} else {
 		cfg.TestkubeProURL = fmt.Sprintf("%s:%d", cfg.APIServerFullname, cfg.GRPCServerPort)
@@ -156,6 +156,35 @@ func main() {
 	}
 	commons.ExitOnError("error creating gRPC connection", err)
 	grpcClient := cloud.NewTestKubeCloudAPIClient(grpcConn)
+
+	// If we don't have an API key but we do have a token for registration then attempt to register the runner.
+	if cfg.TestkubeProAPIKey == "" && cfg.TestkubeProAgentRegToken != "" {
+		res, err := grpcClient.Register(ctx, &cloud.RegisterRequest{
+			RegistrationToken: cfg.TestkubeProAgentRegToken,
+			RunnerName:        cfg.APIServerFullname,
+			OrganizationId:    cfg.TestkubeProOrgID,
+			Floating:          cfg.FloatingRunner,
+		})
+		if err != nil {
+			// TODO: handle error in case agent already exists (API does not currently support this).
+			log.DefaultLogger.Errorw("error registering runner", "error", err.Error())
+			os.Exit(1)
+		}
+
+		// Add the new values to the current configuration.
+		cfg.TestkubeProAPIKey = res.RunnerKey
+		cfg.TestkubeProAgentID = res.RunnerId
+
+		// Attempt to store the values in a Kubernetes secret.
+		if cfg.SelfRegistrationSecret != "" {
+			if _, err := secretManager.Create(ctx, cfg.TestkubeNamespace, cfg.SelfRegistrationSecret, map[string]string{
+				"TESTKUBE_PRO_API_KEY":  res.RunnerKey,
+				"TESTKUBE_PRO_AGENT_ID": res.RunnerId,
+			}, secretmanager.CreateOptions{}); err != nil {
+				log.DefaultLogger.Errorw("error creating self-register runner secret", "error", err.Error())
+			}
+		}
+	}
 
 	clusterId, _ := configMapConfig.GetUniqueClusterId(ctx)
 	telemetryEnabled, _ := configMapConfig.GetTelemetryEnabled(ctx)

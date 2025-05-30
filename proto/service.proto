@@ -25,6 +25,7 @@ service TestKubeCloudAPI {
     rpc ScheduleExecution(ScheduleRequest) returns (stream ScheduleResponse);
 
     // Runner
+    rpc Register(RegisterRequest) returns (RegisterResponse);
     rpc GetUnfinishedExecutions(google.protobuf.Empty) returns (stream UnfinishedExecution);
     rpc GetRunnerRequests(stream RunnerResponse) returns (stream RunnerRequest);
     rpc InitExecution(InitExecutionRequest) returns (InitExecutionResponse);
@@ -332,6 +333,18 @@ message Event {
   EventResource resource = 3;
   string type = 4;
   bytes data = 5;
+}
+
+message RegisterRequest {
+  string registration_token = 1;
+  string runner_name = 2;
+  string organization_id = 3;
+  bool floating = 4;
+}
+
+message RegisterResponse {
+  string runner_id = 1;
+  string runner_key = 2;
 }
 
 enum RunnerRequestType {
