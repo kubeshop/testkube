@@ -339,8 +339,7 @@ message RegisterRequest {
   string registration_token = 1;
   string runner_name = 2;
   string organization_id = 3;
-  string environment_id = 4;
-  bool floating = 5;
+  bool floating = 4;
 }
 
 message RegisterResponse {
