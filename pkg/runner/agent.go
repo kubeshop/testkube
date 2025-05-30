@@ -242,6 +242,38 @@ func (a *agentLoop) loopRunnerRequests(ctx context.Context) error {
 						a.logger.Errorf("failed to send error for start execution '%s/%s': %v", req.EnvironmentID(), req.ExecutionID(), err)
 					}
 				}
+			case cloud.RunnerRequestType_CANCEL:
+				execution, err := a.client.GetExecution(ctx, req.EnvironmentID(), req.ExecutionID())
+				if err != nil {
+					a.logger.Errorf("failed to get execution '%s/%s' for cancel: %v", req.EnvironmentID(), req.ExecutionID(), err)
+					err := req.SendError(err)
+					if err != nil {
+						a.logger.Errorf("failed to send cancel '%s/%s' error: %v: %v", req.EnvironmentID(), req.ExecutionID(), err, err)
+					}
+					return
+				}
+				execution.Result.Terminate(errors.New("execution cancelled by user"), testkube.CANCELED_TestWorkflowStatus, time.Now())
+				err = a.client.UpdateExecutionResult(ctx, req.EnvironmentID(), req.ExecutionID(), execution.Result)
+				if err != nil {
+					a.logger.Errorf("failed to update execution '%s/%s' result for cancel: %v", req.EnvironmentID(), req.ExecutionID(), err)
+					err := req.SendError(err)
+					if err != nil {
+						a.logger.Errorf("failed to send cancel '%s/%s' error: %v: %v", req.EnvironmentID(), req.ExecutionID(), err, err)
+					}
+					return
+				}
+				originalError := a.runner.Abort(req.ExecutionID())
+				if originalError != nil {
+					err := req.SendError(originalError)
+					if err != nil {
+						a.logger.Errorf("failed to send cancel '%s/%s' error: %v: %v", req.EnvironmentID(), req.ExecutionID(), originalError, err)
+					}
+				} else {
+					err := req.Cancel().Send()
+					if err != nil {
+						a.logger.Errorf("failed to send cancel '%s/%s' success: %v", req.EnvironmentID(), req.ExecutionID(), err)
+					}
+				}
 			case cloud.RunnerRequestType_ABORT:
 				originalError := a.runner.Abort(req.ExecutionID())
 				if originalError != nil {

@@ -38,6 +38,7 @@ const (
 	END_TESTWORKFLOW_SUCCESS_EventType    EventType = "end-testworkflow-success"
 	END_TESTWORKFLOW_FAILED_EventType     EventType = "end-testworkflow-failed"
 	END_TESTWORKFLOW_ABORTED_EventType    EventType = "end-testworkflow-aborted"
+	END_TESTWORKFLOW_CANCELED_EventType   EventType = "end-testworkflow-canceled"
 	BECOME_TESTWORKFLOW_UP_EventType      EventType = "become-testworkflow-up"
 	BECOME_TESTWORKFLOW_DOWN_EventType    EventType = "become-testworkflow-down"
 	BECOME_TESTWORKFLOW_FAILED_EventType  EventType = "become-testworkflow-failed"
