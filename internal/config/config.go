@@ -166,6 +166,7 @@ type RunnerConfig struct {
 	DefaultExecutionNamespace string `envconfig:"DEFAULT_EXECUTION_NAMESPACE" default:""`
 	DisableRunner             bool   `envconfig:"DISABLE_RUNNER" default:"false"`
 	SelfRegistrationSecret    string `envconfig:"SELF_REGISTRATION_SECRET" default:""`
+	RunnerName                string `envconfig:"RUNNER_NAME" default:""`
 	FloatingRunner            bool   `envconfig:"FLOATING_RUNNER" default:"false"`
 }
 

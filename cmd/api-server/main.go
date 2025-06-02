@@ -159,7 +159,12 @@ func main() {
 
 	// If we don't have an API key but we do have a token for registration then attempt to register the runner.
 	if cfg.TestkubeProAPIKey == "" && cfg.TestkubeProAgentRegToken != "" {
-		log.DefaultLogger.Infow("registering runner", "runner_name", cfg.APIServerFullname)
+		runnerName := cfg.RunnerName
+		if runnerName == "" {
+			// Fallback to a set name, but this is unlikely to be unique.
+			runnerName = cfg.APIServerFullname
+		}
+		log.DefaultLogger.Infow("registering runner", "runner_name", runnerName)
 
 		// Check for required fields.
 		if cfg.TestkubeProOrgID == "" {
@@ -176,7 +181,7 @@ func main() {
 
 		res, err := grpcClient.Register(ctx, &cloud.RegisterRequest{
 			RegistrationToken: cfg.TestkubeProAgentRegToken,
-			RunnerName:        cfg.APIServerFullname,
+			RunnerName:        runnerName,
 			OrganizationId:    cfg.TestkubeProOrgID,
 			Floating:          cfg.FloatingRunner,
 		})
