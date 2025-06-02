@@ -216,6 +216,30 @@ func (r *MongoRepository) GetRunning(ctx context.Context) (result []testkube.Tes
 	return
 }
 
+func (r *MongoRepository) GetFinished(ctx context.Context, filter Filter) (result []testkube.TestWorkflowExecution, err error) {
+	result = make([]testkube.TestWorkflowExecution, 0)
+	query, opts := composeQueryAndOpts(filter)
+	opts.SetSort(bson.D{{Key: "result.finishedAt", Value: -1}})
+	if r.allowDiskUse {
+		opts.SetAllowDiskUse(r.allowDiskUse)
+	}
+	query["$or"] = bson.A{
+		bson.M{"result.status": testkube.PASSED_TestWorkflowStatus},
+		bson.M{"result.status": testkube.FAILED_TestWorkflowStatus},
+	}
+
+	cursor, err := r.Coll.Find(ctx, query, opts)
+	if err != nil {
+		return result, err
+	}
+	err = cursor.All(ctx, &result)
+
+	for i := range result {
+		result[i].UnscapeDots()
+	}
+	return
+}
+
 func (r *MongoRepository) GetExecutionsTotals(ctx context.Context, filter ...Filter) (totals testkube.ExecutionsTotals, err error) {
 	var result []struct {
 		Status string `bson:"_id"`
