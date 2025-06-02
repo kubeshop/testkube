@@ -35,7 +35,7 @@ spec:
       type: git
       uri: https://github.com/kubeshop/testkube
       branch: main
-      path: test/cypress/executor-tests/cypress-13
+      path: test/cypress/cypress-13
   executionRequest:
     variables:
       CYPRESS_CUSTOM_ENV:
