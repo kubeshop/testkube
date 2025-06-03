@@ -12,4 +12,4 @@ spec:
       - name: testkube-installation-tests-workflow-suite
   events:
   - cronjob:
-      cron: "*/55 */4 * * *" # every 4 hours
+      cron: "55 */4 * * *" # every 4 hours
