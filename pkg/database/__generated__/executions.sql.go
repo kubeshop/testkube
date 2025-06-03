@@ -367,6 +367,47 @@ func (q *Queries) GetTestWorkflowExecutionByNameAndTestWorkflow(ctx context.Cont
 	return i, err
 }
 
+const getTestWorkflowExecutionTags = `-- name: GetTestWorkflowExecutionTags :many
+SELECT 
+    tag_key,
+    array_agg(DISTINCT tag_value) as values
+FROM (
+    SELECT 
+        t.key as tag_key,
+        t.value as tag_value
+    FROM test_workflow_executions,
+         jsonb_each_text(tags) as t(key, value)
+    WHERE tags IS NOT NULL AND tags != '{}'::jsonb
+        AND ($1 IS NULL OR workflow->>'name' = $1)
+) t
+GROUP BY tag_key
+`
+
+type GetTestWorkflowExecutionTagsRow struct {
+	TagKey interface{} `db:"tag_key" json:"tag_key"`
+	Values interface{} `db:"values" json:"values"`
+}
+
+func (q *Queries) GetTestWorkflowExecutionTags(ctx context.Context, workflowName interface{}) ([]GetTestWorkflowExecutionTagsRow, error) {
+	rows, err := q.db.Query(ctx, getTestWorkflowExecutionTags, workflowName)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetTestWorkflowExecutionTagsRow
+	for rows.Next() {
+		var i GetTestWorkflowExecutionTagsRow
+		if err := rows.Scan(&i.TagKey, &i.Values); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getTestWorkflowExecutions = `-- name: GetTestWorkflowExecutions :many
 SELECT id, group_id, runner_id, runner_target, runner_original_target, name, namespace, number, scheduled_at, assigned_at, status_at, signature, result, output, reports, resource_aggregations, workflow, resolved_workflow, test_workflow_execution_name, disable_webhooks, tags, running_context, config_params, created_at, updated_at FROM test_workflow_executions 
 WHERE 1=1

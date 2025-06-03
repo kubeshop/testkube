@@ -198,6 +198,21 @@ WHERE workflow->>'name' = @workflow_name
 ORDER BY (result->>'finishedAt')::timestamp DESC
 LIMIT 1;
 
+-- name: GetTestWorkflowExecutionTags :many
+SELECT 
+    tag_key,
+    array_agg(DISTINCT tag_value) as values
+FROM (
+    SELECT 
+        t.key as tag_key,
+        t.value as tag_value
+    FROM test_workflow_executions,
+         jsonb_each_text(tags) as t(key, value)
+    WHERE tags IS NOT NULL AND tags != '{}'::jsonb
+        AND (@workflow_name IS NULL OR workflow->>'name' = @workflow_name)
+) t
+GROUP BY tag_key;
+
 -- name: InitTestWorkflowExecution :exec
 UPDATE test_workflow_executions 
 SET 
