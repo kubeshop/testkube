@@ -12,9 +12,9 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-        - test/k6/executor-tests/crd-workflow/smoke.yaml
+        - test/k6/crd-workflow/smoke.yaml
   container:
-    workingDir: /data/repo/test/k6/executor-tests/crd-workflow
+    workingDir: /data/repo/test/k6/crd-workflow
     resources:
       requests:
         cpu: "500m"

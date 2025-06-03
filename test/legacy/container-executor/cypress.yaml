@@ -12,8 +12,8 @@ spec:
       type: git
       uri: https://github.com/kubeshop/testkube
       branch: main
-      path: test/cypress/executor-tests/cypress-12
-      workingDir: test/cypress/executor-tests/cypress-12
+      path: test/cypress/cypress-12
+      workingDir: test/cypress/cypress-12
   executionRequest:
     variables:
       CYPRESS_CUSTOM_ENV:
@@ -47,8 +47,8 @@ spec:
       type: git-dir
       uri: https://github.com/kubeshop/testkube
       branch: main
-      path: test/cypress/executor-tests/cypress-12
-      workingDir: test/cypress/executor-tests/cypress-12
+      path: test/cypress/cypress-12
+      workingDir: test/cypress/cypress-12
   executionRequest:
     variables:
       CYPRESS_CUSTOM_ENV:
@@ -82,8 +82,8 @@ spec:
       type: git-dir
       uri: https://github.com/kubeshop/testkube
       branch: main
-      path: test/cypress/executor-tests/cypress-12
-      workingDir: test/cypress/executor-tests/cypress-12
+      path: test/cypress/cypress-12
+      workingDir: test/cypress/cypress-12
   executionRequest:
     variables:
       CYPRESS_CUSTOM_ENV:

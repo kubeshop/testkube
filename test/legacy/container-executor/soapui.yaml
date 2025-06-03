@@ -12,14 +12,14 @@ spec:
       type: git
       uri: https://github.com/kubeshop/testkube
       branch: main
-      path: test/soapui/executor-smoke/soapui-smoke-test.xml
+      path: test/soapui/soapui-smoke-test.xml
   executionRequest:
     jobTemplate: "apiVersion: batch/v1\nkind: Job\nspec:\n  template:\n    spec:\n      containers:\n        - name: \"{{ .Name }}\"\n          image: {{ .Image }}\n          resources:\n            requests:\n              memory: 256Mi\n              cpu: 512m\n"
     activeDeadlineSeconds: 180
     variables:
       COMMAND_LINE:
         name: COMMAND_LINE
-        value: "-r -f /reports -a -j /data/repo/test/soapui/executor-smoke/soapui-smoke-incorrect-name.xml"
+        value: "-r -f /reports -a -j /data/repo/test/soapui/soapui-smoke-incorrect-name.xml"
         type: basic
     # artifactRequest: # TODO: temporary disabled - not working for some reason
     #   storageClassName: standard
