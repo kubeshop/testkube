@@ -125,7 +125,7 @@ WHERE e.id = w.execution_id
   AND w.name = ANY($1)
 `
 
-func (q *Queries) DeleteTestWorkflowExecutionsByTestWorkflows(ctx context.Context, workflowNames pgtype.Array[pgtype.Text]) error {
+func (q *Queries) DeleteTestWorkflowExecutionsByTestWorkflows(ctx context.Context, workflowNames []pgtype.Text) error {
 	_, err := q.db.Exec(ctx, deleteTestWorkflowExecutionsByTestWorkflows, workflowNames)
 	return err
 }
@@ -269,7 +269,7 @@ type GetLatestTestWorkflowExecutionsByTestWorkflowsRow struct {
 	TotalDurationMs           pgtype.Int4        `db:"total_duration_ms" json:"total_duration_ms"`
 }
 
-func (q *Queries) GetLatestTestWorkflowExecutionsByTestWorkflows(ctx context.Context, workflowNames pgtype.Array[pgtype.Text]) ([]GetLatestTestWorkflowExecutionsByTestWorkflowsRow, error) {
+func (q *Queries) GetLatestTestWorkflowExecutionsByTestWorkflows(ctx context.Context, workflowNames []pgtype.Text) ([]GetLatestTestWorkflowExecutionsByTestWorkflowsRow, error) {
 	rows, err := q.db.Query(ctx, getLatestTestWorkflowExecutionsByTestWorkflows, workflowNames)
 	if err != nil {
 		return nil, err
@@ -712,7 +712,7 @@ GROUP BY tag_key
 
 type GetTestWorkflowExecutionTagsRow struct {
 	TagKey pgtype.Text `db:"tag_key" json:"tag_key"`
-	Values pgtype.Array[pgtype.Text] `db:"values" json:"values"`
+	Values []pgtype.Text `db:"values" json:"values"`
 }
 
 func (q *Queries) GetTestWorkflowExecutionTags(ctx context.Context, workflowName string) ([]GetTestWorkflowExecutionTagsRow, error) {
@@ -768,12 +768,12 @@ LIMIT $15 OFFSET $14
 
 type GetTestWorkflowExecutionsParams struct {
 	WorkflowName  pgtype.Text `db:"workflow_name" json:"workflow_name"`
-	WorkflowNames pgtype.Array[pgtype.Text] `db:"workflow_names" json:"workflow_names"`
+	WorkflowNames []pgtype.Text `db:"workflow_names" json:"workflow_names"`
 	TextSearch    pgtype.Text `db:"text_search" json:"text_search"`
 	StartDate     pgtype.Timestamptz `db:"start_date" json:"start_date"`
 	EndDate       pgtype.Timestamptz `db:"end_date" json:"end_date"`
 	LastNDays     pgtype.Int4 `db:"last_n_days" json:"last_n_days"`
-	Statuses      pgtype.Array[pgtype.Text] `db:"statuses" json:"statuses"`
+	Statuses      []pgtype.Text `db:"statuses" json:"statuses"`
 	RunnerID      pgtype.Text `db:"runner_id" json:"runner_id"`
 	Assigned      pgtype.Bool `db:"assigned" json:"assigned"`
 	ActorName     pgtype.Text `db:"actor_name" json:"actor_name"`
@@ -916,12 +916,12 @@ LIMIT $15 OFFSET $14
 
 type GetTestWorkflowExecutionsSummaryParams struct {
 	WorkflowName  pgtype.Text `db:"workflow_name" json:"workflow_name"`
-	WorkflowNames pgtype.Array[pgtype.Text] `db:"workflow_names" json:"workflow_names"`
+	WorkflowNames []pgtype.Text `db:"workflow_names" json:"workflow_names"`
 	TextSearch    pgtype.Text `db:"text_search" json:"text_search"`
 	StartDate     pgtype.Timestamptz `db:"start_date" json:"start_date"`
 	EndDate       pgtype.Timestamptz `db:"end_date" json:"end_date"`
 	LastNDays     pgtype.Int4 `db:"last_n_days" json:"last_n_days"`
-	Statuses      pgtype.Array[pgtype.Text] `db:"statuses" json:"statuses"`
+	Statuses      []pgtype.Text `db:"statuses" json:"statuses"`
 	RunnerID      pgtype.Text `db:"runner_id" json:"runner_id"`
 	Assigned      pgtype.Bool `db:"assigned" json:"assigned"`
 	ActorName     pgtype.Text `db:"actor_name" json:"actor_name"`
@@ -1048,12 +1048,12 @@ GROUP BY r.status
 
 type GetTestWorkflowExecutionsTotalsParams struct {
 	WorkflowName  pgtype.Text `db:"workflow_name" json:"workflow_name"`
-	WorkflowNames pgtype.Array[pgtype.Text] `db:"workflow_names" json:"workflow_names"`
+	WorkflowNames []pgtype.Text `db:"workflow_names" json:"workflow_names"`
 	TextSearch    pgtype.Text `db:"text_search" json:"text_search"`
 	StartDate     pgtype.Timestamptz `db:"start_date" json:"start_date"`
 	EndDate       pgtype.Timestamptz `db:"end_date" json:"end_date"`
 	LastNDays     pgtype.Int4 `db:"last_n_days" json:"last_n_days"`
-	Statuses      pgtype.Array[pgtype.Text] `db:"statuses" json:"statuses"`
+	Statuses      []pgtype.Text `db:"statuses" json:"statuses"`
 	RunnerID      pgtype.Text `db:"runner_id" json:"runner_id"`
 	Assigned      pgtype.Bool `db:"assigned" json:"assigned"`
 	ActorName     pgtype.Text `db:"actor_name" json:"actor_name"`
