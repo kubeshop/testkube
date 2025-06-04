@@ -1,4 +1,4 @@
-package testworkflow
+package mongo
 
 import (
 	"context"
@@ -18,9 +18,10 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/repository/sequence"
+	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 )
 
-var _ Repository = (*MongoRepository)(nil)
+var _ testworkflow.Repository = (*MongoRepository)(nil)
 
 const (
 	CollectionName       = "testworkflowresults"
@@ -216,7 +217,7 @@ func (r *MongoRepository) GetRunning(ctx context.Context) (result []testkube.Tes
 	return
 }
 
-func (r *MongoRepository) GetExecutionsTotals(ctx context.Context, filter ...Filter) (totals testkube.ExecutionsTotals, err error) {
+func (r *MongoRepository) GetExecutionsTotals(ctx context.Context, filter ...testworkflow.Filter) (totals testkube.ExecutionsTotals, err error) {
 	var result []struct {
 		Status string `bson:"_id"`
 		Count  int    `bson:"count"`
@@ -277,7 +278,7 @@ func (r *MongoRepository) GetExecutionsTotals(ctx context.Context, filter ...Fil
 	return
 }
 
-func (r *MongoRepository) GetExecutions(ctx context.Context, filter Filter) (result []testkube.TestWorkflowExecution, err error) {
+func (r *MongoRepository) GetExecutions(ctx context.Context, filter testworkflow.Filter) (result []testkube.TestWorkflowExecution, err error) {
 	result = make([]testkube.TestWorkflowExecution, 0)
 	query, opts := composeQueryAndOpts(filter)
 	if r.allowDiskUse {
@@ -301,7 +302,7 @@ type TestWorkflowExecutionSummaryWithResolvedWorkflow struct {
 	ResolvedWorkflow                      *testkube.TestWorkflow `json:"resolvedWorkflow,omitempty"`
 }
 
-func (r *MongoRepository) GetExecutionsSummary(ctx context.Context, filter Filter) (result []testkube.TestWorkflowExecutionSummary, err error) {
+func (r *MongoRepository) GetExecutionsSummary(ctx context.Context, filter testworkflow.Filter) (result []testkube.TestWorkflowExecutionSummary, err error) {
 	executions := make([]TestWorkflowExecutionSummaryWithResolvedWorkflow, 0)
 	query, _ := composeQueryAndOpts(filter)
 
@@ -407,7 +408,7 @@ func (r *MongoRepository) UpdateResourceAggregations(ctx context.Context, id str
 	return
 }
 
-func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
+func composeQueryAndOpts(filter testworkflow.Filter) (bson.M, *options.FindOptions) {
 	query := bson.M{}
 	opts := options.Find()
 	startTimeQuery := bson.M{}
@@ -746,7 +747,7 @@ func (r *MongoRepository) GetExecutionTags(ctx context.Context, testWorkflowName
 	return tags, nil
 }
 
-func (r *MongoRepository) Init(ctx context.Context, id string, data InitData) error {
+func (r *MongoRepository) Init(ctx context.Context, id string, data testworkflow.InitData) error {
 	_, err := r.Coll.UpdateOne(ctx, bson.M{"id": id}, bson.M{"$set": map[string]interface{}{
 		"namespace": data.Namespace,
 		"signature": data.Signature,

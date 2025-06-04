@@ -2,7 +2,7 @@
 // Source: github.com/kubeshop/testkube/pkg/repository/testworkflow (interfaces: OutputRepository)
 
 // Package testworkflow is a generated GoMock package.
-package testworkflow
+package minio
 
 import (
 	context "context"

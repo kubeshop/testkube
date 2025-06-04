@@ -1,4 +1,4 @@
-package testworkflow
+package mongo
 
 import (
 	"context"
@@ -13,6 +13,7 @@ import (
 
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 )
 
 var (
@@ -146,19 +147,19 @@ func TestNewMongoRepository_Executions_Integration(t *testing.T) {
 		t.Fatalf("error inserting execution: %v", err)
 	}
 
-	res, err := repo.GetExecutions(ctx, NewExecutionsFilter())
+	res, err := repo.GetExecutions(ctx, testworkflow.NewExecutionsFilter())
 	if err != nil {
 		t.Fatalf("error getting executions: %v", err)
 	}
 
 	assert.Len(t, res, 3)
 
-	labelSelector := LabelSelector{
-		Or: []Label{
+	labelSelector := testworkflow.LabelSelector{
+		Or: []testworkflow.Label{
 			{Key: "workflow.labels.testkube.io/group", Value: strPtr("grp2")},
 		},
 	}
-	res, err = repo.GetExecutions(ctx, NewExecutionsFilter().WithLabelSelector(&labelSelector))
+	res, err = repo.GetExecutions(ctx, testworkflow.NewExecutionsFilter().WithLabelSelector(&labelSelector))
 	if err != nil {
 		t.Fatalf("error getting executions: %v", err)
 	}
@@ -166,12 +167,12 @@ func TestNewMongoRepository_Executions_Integration(t *testing.T) {
 	assert.Len(t, res, 1)
 	assert.Equal(t, "test-group2-name", res[0].Name)
 
-	labelSelector = LabelSelector{
-		Or: []Label{
+	labelSelector = testworkflow.LabelSelector{
+		Or: []testworkflow.Label{
 			{Key: "workflow.labels.testkube.io/group", Exists: boolPtr(false)},
 		},
 	}
-	res, err = repo.GetExecutions(ctx, NewExecutionsFilter().WithLabelSelector(&labelSelector))
+	res, err = repo.GetExecutions(ctx, testworkflow.NewExecutionsFilter().WithLabelSelector(&labelSelector))
 	if err != nil {
 		t.Fatalf("error getting executions: %v", err)
 	}
@@ -179,27 +180,27 @@ func TestNewMongoRepository_Executions_Integration(t *testing.T) {
 	assert.Len(t, res, 1)
 	assert.Equal(t, "test-no-group-name", res[0].Name)
 
-	labelSelector = LabelSelector{
-		Or: []Label{
+	labelSelector = testworkflow.LabelSelector{
+		Or: []testworkflow.Label{
 			{Key: "workflow.labels.testkube.io/group", Exists: boolPtr(false)},
 			{Key: "workflow.labels.testkube.io/group", Value: strPtr("grp2")},
 		},
 	}
-	res, err = repo.GetExecutions(ctx, NewExecutionsFilter().WithLabelSelector(&labelSelector))
+	res, err = repo.GetExecutions(ctx, testworkflow.NewExecutionsFilter().WithLabelSelector(&labelSelector))
 	if err != nil {
 		t.Fatalf("error getting executions: %v", err)
 	}
 
 	assert.Len(t, res, 2)
 
-	labelSelector = LabelSelector{
-		Or: []Label{
+	labelSelector = testworkflow.LabelSelector{
+		Or: []testworkflow.Label{
 			{Key: "workflow.labels.testkube.io/group", Exists: boolPtr(false)},
 			{Key: "workflow.labels.testkube.io/group", Value: strPtr("grp1")},
 			{Key: "workflow.labels.testkube.io/group", Value: strPtr("grp2")},
 		},
 	}
-	res, err = repo.GetExecutions(ctx, NewExecutionsFilter().WithLabelSelector(&labelSelector))
+	res, err = repo.GetExecutions(ctx, testworkflow.NewExecutionsFilter().WithLabelSelector(&labelSelector))
 	if err != nil {
 		t.Fatalf("error getting executions: %v", err)
 	}
@@ -277,7 +278,7 @@ func TestNewMongoRepository_GetExecutions_Tags_Integration(t *testing.T) {
 		t.Fatalf("error inserting execution: %v", err)
 	}
 
-	res, err := repo.GetExecutions(ctx, NewExecutionsFilter())
+	res, err := repo.GetExecutions(ctx, testworkflow.NewExecutionsFilter())
 	if err != nil {
 		t.Fatalf("error getting executions: %v", err)
 	}
@@ -285,7 +286,7 @@ func TestNewMongoRepository_GetExecutions_Tags_Integration(t *testing.T) {
 	assert.Len(t, res, 3)
 
 	tagSelector := "my.key1=value1"
-	res, err = repo.GetExecutions(ctx, NewExecutionsFilter().WithTagSelector(tagSelector))
+	res, err = repo.GetExecutions(ctx, testworkflow.NewExecutionsFilter().WithTagSelector(tagSelector))
 	if err != nil {
 		t.Fatalf("error getting executions: %v", err)
 	}
@@ -294,7 +295,7 @@ func TestNewMongoRepository_GetExecutions_Tags_Integration(t *testing.T) {
 	assert.Equal(t, "test-name-1", res[0].Name)
 
 	tagSelector = "my.key1"
-	res, err = repo.GetExecutions(ctx, NewExecutionsFilter().WithTagSelector(tagSelector))
+	res, err = repo.GetExecutions(ctx, testworkflow.NewExecutionsFilter().WithTagSelector(tagSelector))
 	if err != nil {
 		t.Fatalf("error getting executions: %v", err)
 	}
@@ -302,7 +303,7 @@ func TestNewMongoRepository_GetExecutions_Tags_Integration(t *testing.T) {
 	assert.Len(t, res, 2)
 
 	tagSelector = "my.key1=value3,key2"
-	res, err = repo.GetExecutions(ctx, NewExecutionsFilter().WithTagSelector(tagSelector))
+	res, err = repo.GetExecutions(ctx, testworkflow.NewExecutionsFilter().WithTagSelector(tagSelector))
 	if err != nil {
 		t.Fatalf("error getting executions: %v", err)
 	}
@@ -311,7 +312,7 @@ func TestNewMongoRepository_GetExecutions_Tags_Integration(t *testing.T) {
 	assert.Equal(t, "test-name-3", res[0].Name)
 
 	tagSelector = "my.key1=value1,key2=value2"
-	res, err = repo.GetExecutions(ctx, NewExecutionsFilter().WithTagSelector(tagSelector))
+	res, err = repo.GetExecutions(ctx, testworkflow.NewExecutionsFilter().WithTagSelector(tagSelector))
 	if err != nil {
 		t.Fatalf("error getting executions: %v", err)
 	}
@@ -319,7 +320,7 @@ func TestNewMongoRepository_GetExecutions_Tags_Integration(t *testing.T) {
 	assert.Len(t, res, 0)
 
 	tagSelector = "my.key1=value1,my.key1=value3"
-	res, err = repo.GetExecutions(ctx, NewExecutionsFilter().WithTagSelector(tagSelector))
+	res, err = repo.GetExecutions(ctx, testworkflow.NewExecutionsFilter().WithTagSelector(tagSelector))
 	if err != nil {
 		t.Fatalf("error getting executions: %v", err)
 	}
@@ -379,7 +380,7 @@ func TestNewMongoRepository_GetExecutions_Actor_Integration(t *testing.T) {
 		t.Fatalf("error inserting execution: %v", err)
 	}
 
-	res, err := repo.GetExecutions(ctx, NewExecutionsFilter())
+	res, err := repo.GetExecutions(ctx, testworkflow.NewExecutionsFilter())
 	if err != nil {
 		t.Fatalf("error getting executions: %v", err)
 	}
@@ -387,7 +388,7 @@ func TestNewMongoRepository_GetExecutions_Actor_Integration(t *testing.T) {
 	assert.Len(t, res, 2)
 
 	actorName := "user-1"
-	res, err = repo.GetExecutions(ctx, NewExecutionsFilter().WithActorName(actorName))
+	res, err = repo.GetExecutions(ctx, testworkflow.NewExecutionsFilter().WithActorName(actorName))
 	if err != nil {
 		t.Fatalf("error getting executions: %v", err)
 	}
@@ -396,7 +397,7 @@ func TestNewMongoRepository_GetExecutions_Actor_Integration(t *testing.T) {
 	assert.Equal(t, "test-name-1", res[0].Name)
 
 	actorType := testkube.USER_TestWorkflowRunningContextActorType
-	res, err = repo.GetExecutions(ctx, NewExecutionsFilter().WithActorType(actorType))
+	res, err = repo.GetExecutions(ctx, testworkflow.NewExecutionsFilter().WithActorType(actorType))
 	if err != nil {
 		t.Fatalf("error getting executions: %v", err)
 	}
@@ -405,7 +406,7 @@ func TestNewMongoRepository_GetExecutions_Actor_Integration(t *testing.T) {
 
 	actorName = "user-1"
 	actorType = testkube.USER_TestWorkflowRunningContextActorType
-	res, err = repo.GetExecutions(ctx, NewExecutionsFilter().WithActorName(actorName).WithActorType(actorType))
+	res, err = repo.GetExecutions(ctx, testworkflow.NewExecutionsFilter().WithActorName(actorName).WithActorType(actorType))
 	if err != nil {
 		t.Fatalf("error getting executions: %v", err)
 	}
@@ -415,7 +416,7 @@ func TestNewMongoRepository_GetExecutions_Actor_Integration(t *testing.T) {
 
 	actorName = "user-1"
 	actorType = testkube.PROGRAM_TestWorkflowRunningContextActorType
-	res, err = repo.GetExecutions(ctx, NewExecutionsFilter().WithActorName(actorName).WithActorType(actorType))
+	res, err = repo.GetExecutions(ctx, testworkflow.NewExecutionsFilter().WithActorName(actorName).WithActorType(actorType))
 	if err != nil {
 		t.Fatalf("error getting executions: %v", err)
 	}
@@ -424,7 +425,7 @@ func TestNewMongoRepository_GetExecutions_Actor_Integration(t *testing.T) {
 
 	actorName = "user-3"
 	actorType = testkube.USER_TestWorkflowRunningContextActorType
-	res, err = repo.GetExecutions(ctx, NewExecutionsFilter().WithActorName(actorName).WithActorType(actorType))
+	res, err = repo.GetExecutions(ctx, testworkflow.NewExecutionsFilter().WithActorName(actorName).WithActorType(actorType))
 	if err != nil {
 		t.Fatalf("error getting executions: %v", err)
 	}
@@ -511,7 +512,7 @@ func TestNewMongoRepository_GetExecutionsSummary_Integration(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Test GetExecutionsSummary
-	filter := NewExecutionsFilter().WithName("test-workflow-1")
+	filter := testworkflow.NewExecutionsFilter().WithName("test-workflow-1")
 	result, err := repo.GetExecutionsSummary(ctx, filter)
 	assert.NoError(t, err)
 	assert.Len(t, result, 1)
@@ -525,7 +526,7 @@ func TestNewMongoRepository_GetExecutionsSummary_Integration(t *testing.T) {
 	assert.EqualValues(t, 16, result[0].Reports[0].Summary.Tests)
 	assert.EqualValues(t, 15000, result[0].Reports[0].Summary.Duration)
 
-	filter = NewExecutionsFilter().WithName("test-workflow-2")
+	filter = testworkflow.NewExecutionsFilter().WithName("test-workflow-2")
 	result, err = repo.GetExecutionsSummary(ctx, filter)
 	assert.NoError(t, err)
 	assert.Len(t, result, 1)
