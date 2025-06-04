@@ -8,6 +8,24 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type TestWorkflow struct {
+	ID           int32              `db:"id" json:"id"`
+	ExecutionID  string             `db:"execution_id" json:"execution_id"`
+	WorkflowType string             `db:"workflow_type" json:"workflow_type"`
+	Name         pgtype.Text        `db:"name" json:"name"`
+	Namespace    pgtype.Text        `db:"namespace" json:"namespace"`
+	Description  pgtype.Text        `db:"description" json:"description"`
+	Labels       []byte             `db:"labels" json:"labels"`
+	Annotations  []byte             `db:"annotations" json:"annotations"`
+	Created      pgtype.Timestamptz `db:"created" json:"created"`
+	Updated      pgtype.Timestamptz `db:"updated" json:"updated"`
+	Spec         []byte             `db:"spec" json:"spec"`
+	ReadOnly     pgtype.Bool        `db:"read_only" json:"read_only"`
+	Status       []byte             `db:"status" json:"status"`
+	CreatedAt    pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
 type TestWorkflowExecution struct {
 	ID                        string             `db:"id" json:"id"`
 	GroupID                   pgtype.Text        `db:"group_id" json:"group_id"`
@@ -20,13 +38,6 @@ type TestWorkflowExecution struct {
 	ScheduledAt               pgtype.Timestamptz `db:"scheduled_at" json:"scheduled_at"`
 	AssignedAt                pgtype.Timestamptz `db:"assigned_at" json:"assigned_at"`
 	StatusAt                  pgtype.Timestamptz `db:"status_at" json:"status_at"`
-	Signature                 []byte             `db:"signature" json:"signature"`
-	Result                    []byte             `db:"result" json:"result"`
-	Output                    []byte             `db:"output" json:"output"`
-	Reports                   []byte             `db:"reports" json:"reports"`
-	ResourceAggregations      []byte             `db:"resource_aggregations" json:"resource_aggregations"`
-	Workflow                  []byte             `db:"workflow" json:"workflow"`
-	ResolvedWorkflow          []byte             `db:"resolved_workflow" json:"resolved_workflow"`
 	TestWorkflowExecutionName pgtype.Text        `db:"test_workflow_execution_name" json:"test_workflow_execution_name"`
 	DisableWebhooks           pgtype.Bool        `db:"disable_webhooks" json:"disable_webhooks"`
 	Tags                      []byte             `db:"tags" json:"tags"`
@@ -34,4 +45,62 @@ type TestWorkflowExecution struct {
 	ConfigParams              []byte             `db:"config_params" json:"config_params"`
 	CreatedAt                 pgtype.Timestamptz `db:"created_at" json:"created_at"`
 	UpdatedAt                 pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+type TestWorkflowOutput struct {
+	ID          int32              `db:"id" json:"id"`
+	ExecutionID string             `db:"execution_id" json:"execution_id"`
+	Ref         pgtype.Text        `db:"ref" json:"ref"`
+	Name        pgtype.Text        `db:"name" json:"name"`
+	Value       []byte             `db:"value" json:"value"`
+	CreatedAt   pgtype.Timestamptz `db:"created_at" json:"created_at"`
+}
+
+type TestWorkflowReport struct {
+	ID          int32              `db:"id" json:"id"`
+	ExecutionID string             `db:"execution_id" json:"execution_id"`
+	Ref         pgtype.Text        `db:"ref" json:"ref"`
+	Kind        pgtype.Text        `db:"kind" json:"kind"`
+	File        pgtype.Text        `db:"file" json:"file"`
+	Summary     []byte             `db:"summary" json:"summary"`
+	CreatedAt   pgtype.Timestamptz `db:"created_at" json:"created_at"`
+}
+
+type TestWorkflowResourceAggregation struct {
+	ExecutionID string             `db:"execution_id" json:"execution_id"`
+	Global      []byte             `db:"global" json:"global"`
+	Step        []byte             `db:"step" json:"step"`
+	CreatedAt   pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+type TestWorkflowResult struct {
+	ExecutionID     string             `db:"execution_id" json:"execution_id"`
+	Status          pgtype.Text        `db:"status" json:"status"`
+	PredictedStatus pgtype.Text        `db:"predicted_status" json:"predicted_status"`
+	QueuedAt        pgtype.Timestamptz `db:"queued_at" json:"queued_at"`
+	StartedAt       pgtype.Timestamptz `db:"started_at" json:"started_at"`
+	FinishedAt      pgtype.Timestamptz `db:"finished_at" json:"finished_at"`
+	Duration        pgtype.Text        `db:"duration" json:"duration"`
+	TotalDuration   pgtype.Text        `db:"total_duration" json:"total_duration"`
+	DurationMs      pgtype.Int4        `db:"duration_ms" json:"duration_ms"`
+	PausedMs        pgtype.Int4        `db:"paused_ms" json:"paused_ms"`
+	TotalDurationMs pgtype.Int4        `db:"total_duration_ms" json:"total_duration_ms"`
+	Pauses          []byte             `db:"pauses" json:"pauses"`
+	Initialization  []byte             `db:"initialization" json:"initialization"`
+	Steps           []byte             `db:"steps" json:"steps"`
+	CreatedAt       pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
+type TestWorkflowSignature struct {
+	ID          int32              `db:"id" json:"id"`
+	ExecutionID string             `db:"execution_id" json:"execution_id"`
+	Ref         pgtype.Text        `db:"ref" json:"ref"`
+	Name        pgtype.Text        `db:"name" json:"name"`
+	Category    pgtype.Text        `db:"category" json:"category"`
+	Optional    pgtype.Bool        `db:"optional" json:"optional"`
+	Negative    pgtype.Bool        `db:"negative" json:"negative"`
+	ParentID    pgtype.Int4        `db:"parent_id" json:"parent_id"`
+	CreatedAt   pgtype.Timestamptz `db:"created_at" json:"created_at"`
 }
