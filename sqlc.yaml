@@ -6,7 +6,7 @@ sql:
     gen:
       go:
         package: "sqlc"
-        out: "pkg/database/postgres/__generated__"
+        out: "pkg/database/postgres/sqlc"
         emit_db_tags: true
         emit_json_tags: true
         sql_package: "pgx/v5"
