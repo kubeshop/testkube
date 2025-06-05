@@ -9,7 +9,7 @@ spec:
   content:
     git:
       uri: https://github.com/kubeshop/testkube
-      revision: TKC-3737 # TODO: update
+      revision: main
       paths:
       - test/xunit/xunit-project
   container:
