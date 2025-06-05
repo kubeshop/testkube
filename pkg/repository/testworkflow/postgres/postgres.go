@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -18,7 +17,6 @@ import (
 	"github.com/kubeshop/testkube/pkg/repository/common"
 	"github.com/kubeshop/testkube/pkg/repository/sequence"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
-	"github.com/kubeshop/testkube/pkg/utils"
 )
 
 var _ testworkflow.Repository = (*PostgresRepository)(nil)
@@ -2053,7 +2051,7 @@ func populateConfigParams(resolvedWorkflow *testkube.TestWorkflow, configParams 
 }
 
 // Additional helper functions for tag processing
-
+/*
 func (r *PostgresRepository) buildTagSelector(tagSelector string) string {
 	if tagSelector == "" {
 		return ""
@@ -2113,3 +2111,4 @@ type LabelSelectorItem struct {
 	Value  *string `json:"value,omitempty"`
 	Exists *bool   `json:"exists,omitempty"`
 }
+*/
