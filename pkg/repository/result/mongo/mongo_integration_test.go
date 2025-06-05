@@ -1,6 +1,6 @@
 //go:build integration
 
-package result
+package mongo
 
 import (
 	"context"
