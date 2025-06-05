@@ -220,7 +220,6 @@ func (r *MongoRepository) GetRunning(ctx context.Context) (result []testkube.Tes
 func (r *MongoRepository) GetFinished(ctx context.Context, filter testworkflow.Filter) (result []testkube.TestWorkflowExecution, err error) {
 	result = make([]testkube.TestWorkflowExecution, 0)
 	query, opts := composeQueryAndOpts(filter)
-	opts.SetSort(bson.D{{Key: "result.finishedAt", Value: -1}})
 	if r.allowDiskUse {
 		opts.SetAllowDiskUse(r.allowDiskUse)
 	}
