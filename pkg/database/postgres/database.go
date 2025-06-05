@@ -3,7 +3,7 @@ package database
 import (
 	"context"
 
-	sqlc "github.com/kubeshop/testkube/pkg/database/postgres/__generated__"
+	"github.com/kubeshop/testkube/pkg/database/postgres/sqlc"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
