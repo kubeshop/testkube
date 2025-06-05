@@ -24,6 +24,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/repository/sequence"
 	"github.com/kubeshop/testkube/pkg/repository/storage"
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
+	mongotestresult "github.com/kubeshop/testkube/pkg/repository/testresult/mongo"
 	domainstorage "github.com/kubeshop/testkube/pkg/storage"
 )
 
@@ -121,8 +122,8 @@ func CreateDeprecatedRepositoriesForMongo(ctx context.Context, cfg *config.Confi
 	mongoResultsRepository := result.NewMongoRepository(db, cfg.APIMongoAllowDiskUse, isDocDb, result.WithFeatureFlags(features),
 		result.WithLogsClient(logGrpcClient), result.WithMongoRepositorySequence(sequenceRepository))
 	resultsRepository := mongoResultsRepository
-	testResultsRepository := testresult.NewMongoRepository(db, cfg.APIMongoAllowDiskUse, isDocDb,
-		testresult.WithMongoRepositorySequence(sequenceRepository))
+	testResultsRepository := mongotestresult.NewMongoRepository(db, cfg.APIMongoAllowDiskUse, isDocDb,
+		mongotestresult.WithMongoRepositorySequence(sequenceRepository))
 
 	// Init logs storage
 	if cfg.LogsStorage == "minio" {

@@ -1,4 +1,4 @@
-package testresult
+package mongo
 
 import (
 	"context"
@@ -16,9 +16,10 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/repository/sequence"
+	"github.com/kubeshop/testkube/pkg/repository/testresult"
 )
 
-var _ Repository = (*MongoRepository)(nil)
+var _ testresult.Repository = (*MongoRepository)(nil)
 
 const CollectionName = "testresults"
 
@@ -298,12 +299,12 @@ func (r *MongoRepository) GetNewestExecutions(ctx context.Context, limit int) (r
 	return
 }
 
-func (r *MongoRepository) Count(ctx context.Context, filter Filter) (count int64, err error) {
+func (r *MongoRepository) Count(ctx context.Context, filter testresult.Filter) (count int64, err error) {
 	query, _ := composeQueryAndOpts(filter)
 	return r.Coll.CountDocuments(ctx, query)
 }
 
-func (r *MongoRepository) GetExecutionsTotals(ctx context.Context, filter ...Filter) (totals testkube.ExecutionsTotals, err error) {
+func (r *MongoRepository) GetExecutionsTotals(ctx context.Context, filter ...testresult.Filter) (totals testkube.ExecutionsTotals, err error) {
 	var result []struct {
 		Status string `bson:"_id"`
 		Count  int    `bson:"count"`
@@ -363,7 +364,7 @@ func (r *MongoRepository) GetExecutionsTotals(ctx context.Context, filter ...Fil
 	return
 }
 
-func (r *MongoRepository) GetExecutions(ctx context.Context, filter Filter) (result []testkube.TestSuiteExecution, err error) {
+func (r *MongoRepository) GetExecutions(ctx context.Context, filter testresult.Filter) (result []testkube.TestSuiteExecution, err error) {
 	result = make([]testkube.TestSuiteExecution, 0)
 	query, opts := composeQueryAndOpts(filter)
 	if r.allowDiskUse {
@@ -408,7 +409,7 @@ func (r *MongoRepository) EndExecution(ctx context.Context, e testkube.TestSuite
 	return
 }
 
-func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
+func composeQueryAndOpts(filter testresult.Filter) (bson.M, *options.FindOptions) {
 
 	query := bson.M{}
 	opts := options.Find()
