@@ -87,6 +87,36 @@ LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 WHERE r.status IN ('paused', 'running', 'queued')
 ORDER BY e.id DESC;
 
+-- name: GetFinishedTestWorkflowExecutions :many
+SELECT 
+    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.created_at, e.updated_at,
+    r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
+    r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
+    w.name as workflow_name
+FROM test_workflow_executions e
+LEFT JOIN test_workflow_results r ON e.id = r.execution_id
+LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
+WHERE r.status IN ('passed', 'failed', 'aborted')
+    AND (@workflow_name IS NULL OR w.name = @workflow_name)
+    AND (@workflow_names IS NULL OR w.name = ANY(@workflow_names))
+    AND (@text_search IS NULL OR e.name ILIKE '%' || @text_search || '%')
+    AND (@start_date IS NULL OR e.scheduled_at >= @start_date)
+    AND (@end_date IS NULL OR e.scheduled_at <= @end_date)
+    AND (@last_n_days IS NULL OR e.scheduled_at >= NOW() - INTERVAL '@last_n_days days')
+    AND (@statuses IS NULL OR r.status = ANY(@statuses))
+    AND (@runner_id IS NULL OR e.runner_id = @runner_id)
+    AND (@assigned IS NULL OR 
+         (@assigned = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR 
+         (@assigned = false AND (e.runner_id IS NULL OR e.runner_id = '')))
+    AND (@actor_name IS NULL OR e.running_context->'actor'->>'name' = @actor_name)
+    AND (@actor_type IS NULL OR e.running_context->'actor'->>'type_' = @actor_type)
+    AND (@group_id IS NULL OR e.id = @group_id OR e.group_id = @group_id)
+    AND (@initialized IS NULL OR 
+         (@initialized = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
+         (@initialized = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
+ORDER BY e.scheduled_at DESC
+LIMIT @lmt OFFSET @fst;
+
 -- name: GetTestWorkflowExecutionsTotals :many
 SELECT 
     r.status,

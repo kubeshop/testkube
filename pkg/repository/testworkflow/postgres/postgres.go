@@ -544,6 +544,94 @@ func (r *PostgresRepository) GetRunning(ctx context.Context) ([]testkube.TestWor
 	return result, nil
 }
 
+// GetFinished returns finished executions with filter
+func (r *PostgresRepository) GetFinished(ctx context.Context, filter testworkflow.Filter) ([]testkube.TestWorkflowExecution, error) {
+	params := r.buildFinishedExecutionParams(filter)
+	rows, err := r.queries.GetFinishedTestWorkflowExecutions(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]testkube.TestWorkflowExecution, len(rows))
+	for i, row := range rows {
+		result[i] = r.convertRowToExecutionFromFinished(row)
+		result[i].UnscapeDots()
+	}
+
+	return result, nil
+}
+
+func (r *PostgresRepository) buildFinishedExecutionParams(filter testworkflow.Filter) sqlc.GetFinishedTestWorkflowExecutionsParams {
+	params := sqlc.GetFinishedTestWorkflowExecutionsParams{
+		Fst: int32(filter.Page() * filter.PageSize()),
+		Lmt: int32(filter.PageSize()),
+	}
+
+	if filter.NameDefined() {
+		params.WorkflowName = toPgText(filter.Name())
+	}
+
+	if filter.NamesDefined() {
+		names := filter.Names()
+		pgNames := make([]pgtype.Text, len(names))
+		for i, name := range names {
+			pgNames[i] = toPgText(name)
+		}
+		params.WorkflowNames = pgNames
+	}
+
+	if filter.TextSearchDefined() {
+		params.TextSearch = toPgText(filter.TextSearch())
+	}
+
+	if filter.StartDateDefined() {
+		params.StartDate = toPgTimestamp(filter.StartDate())
+	}
+
+	if filter.EndDateDefined() {
+		params.EndDate = toPgTimestamp(filter.EndDate())
+	}
+
+	if filter.LastNDaysDefined() {
+		params.LastNDays = toPgInt4(int32(filter.LastNDays()))
+	}
+
+	if filter.StatusesDefined() {
+		statuses := filter.Statuses()
+		pgStatuses := make([]pgtype.Text, len(statuses))
+		for i, status := range statuses {
+			pgStatuses[i] = toPgText(string(status))
+		}
+		params.Statuses = pgStatuses
+	}
+
+	if filter.RunnerIDDefined() {
+		params.RunnerID = toPgText(filter.RunnerID())
+	}
+
+	if filter.AssignedDefined() {
+		params.Assigned = toPgBool(filter.Assigned())
+	}
+
+	if filter.ActorNameDefined() {
+		params.ActorName = toPgText(filter.ActorName())
+	}
+
+	if filter.ActorTypeDefined() {
+		params.ActorType = toPgText(string(filter.ActorType()))
+	}
+
+	if filter.GroupIDDefined() {
+		params.GroupID = toPgText(filter.GroupID())
+	}
+
+	if filter.InitializedDefined() {
+		params.Initialized = toPgBool(filter.Initialized())
+	}
+
+	return params
+}
+
 // GetExecutionsTotals returns execution totals with filter
 func (r *PostgresRepository) GetExecutionsTotals(ctx context.Context, filter ...testworkflow.Filter) (testkube.ExecutionsTotals, error) {
 	var params sqlc.GetTestWorkflowExecutionsTotalsParams
@@ -1275,6 +1363,11 @@ func (r *PostgresRepository) convertRowToExecutionSummary(row sqlc.GetLatestTest
 }
 
 func (r *PostgresRepository) convertRowToExecutionSimpleFromRunning(row sqlc.GetRunningTestWorkflowExecutionsRow) testkube.TestWorkflowExecution {
+	// Implementation for converting row to execution
+	return testkube.TestWorkflowExecution{}
+}
+
+func (r *PostgresRepository) convertRowToExecutionFromFinished(row sqlc.GetFinishedTestWorkflowExecutionsRow) testkube.TestWorkflowExecution {
 	// Implementation for converting row to execution
 	return testkube.TestWorkflowExecution{}
 }

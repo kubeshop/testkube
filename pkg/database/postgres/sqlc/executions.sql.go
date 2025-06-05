@@ -139,6 +139,153 @@ func (q *Queries) DeleteTestWorkflowOutputs(ctx context.Context, executionID str
 	return err
 }
 
+const getFinishedTestWorkflowExecutions = `-- name: GetFinishedTestWorkflowExecutions :many
+SELECT 
+    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.created_at, e.updated_at,
+    r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
+    r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
+    w.name as workflow_name
+FROM test_workflow_executions e
+LEFT JOIN test_workflow_results r ON e.id = r.execution_id
+LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
+WHERE r.status IN ('passed', 'failed', 'aborted')
+    AND ($1 IS NULL OR w.name = $1)
+    AND ($2 IS NULL OR w.name = ANY($2))
+    AND ($3 IS NULL OR e.name ILIKE '%' || $3 || '%')
+    AND ($4 IS NULL OR e.scheduled_at >= $4)
+    AND ($5 IS NULL OR e.scheduled_at <= $5)
+    AND ($6 IS NULL OR e.scheduled_at >= NOW() - INTERVAL '@last_n_days days')
+    AND ($7 IS NULL OR r.status = ANY($7))
+    AND ($8 IS NULL OR e.runner_id = $8)
+    AND ($9 IS NULL OR 
+         ($9 = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR 
+         ($9 = false AND (e.runner_id IS NULL OR e.runner_id = '')))
+    AND ($10 IS NULL OR e.running_context->'actor'->>'name' = $10)
+    AND ($11 IS NULL OR e.running_context->'actor'->>'type_' = $11)
+    AND ($12 IS NULL OR e.id = $12 OR e.group_id = $12)
+    AND ($13 IS NULL OR 
+         ($13 = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
+         ($13 = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
+ORDER BY e.scheduled_at DESC
+LIMIT $15 OFFSET $14
+`
+
+type GetFinishedTestWorkflowExecutionsParams struct {
+	WorkflowName  interface{} `db:"workflow_name" json:"workflow_name"`
+	WorkflowNames interface{} `db:"workflow_names" json:"workflow_names"`
+	TextSearch    interface{} `db:"text_search" json:"text_search"`
+	StartDate     interface{} `db:"start_date" json:"start_date"`
+	EndDate       interface{} `db:"end_date" json:"end_date"`
+	LastNDays     interface{} `db:"last_n_days" json:"last_n_days"`
+	Statuses      interface{} `db:"statuses" json:"statuses"`
+	RunnerID      interface{} `db:"runner_id" json:"runner_id"`
+	Assigned      interface{} `db:"assigned" json:"assigned"`
+	ActorName     interface{} `db:"actor_name" json:"actor_name"`
+	ActorType     interface{} `db:"actor_type" json:"actor_type"`
+	GroupID       interface{} `db:"group_id" json:"group_id"`
+	Initialized   interface{} `db:"initialized" json:"initialized"`
+	Fst           int32       `db:"fst" json:"fst"`
+	Lmt           int32       `db:"lmt" json:"lmt"`
+}
+
+type GetFinishedTestWorkflowExecutionsRow struct {
+	ID                        string             `db:"id" json:"id"`
+	GroupID                   pgtype.Text        `db:"group_id" json:"group_id"`
+	RunnerID                  pgtype.Text        `db:"runner_id" json:"runner_id"`
+	RunnerTarget              []byte             `db:"runner_target" json:"runner_target"`
+	RunnerOriginalTarget      []byte             `db:"runner_original_target" json:"runner_original_target"`
+	Name                      string             `db:"name" json:"name"`
+	Namespace                 pgtype.Text        `db:"namespace" json:"namespace"`
+	Number                    pgtype.Int4        `db:"number" json:"number"`
+	ScheduledAt               pgtype.Timestamptz `db:"scheduled_at" json:"scheduled_at"`
+	AssignedAt                pgtype.Timestamptz `db:"assigned_at" json:"assigned_at"`
+	StatusAt                  pgtype.Timestamptz `db:"status_at" json:"status_at"`
+	TestWorkflowExecutionName pgtype.Text        `db:"test_workflow_execution_name" json:"test_workflow_execution_name"`
+	DisableWebhooks           pgtype.Bool        `db:"disable_webhooks" json:"disable_webhooks"`
+	Tags                      []byte             `db:"tags" json:"tags"`
+	RunningContext            []byte             `db:"running_context" json:"running_context"`
+	ConfigParams              []byte             `db:"config_params" json:"config_params"`
+	CreatedAt                 pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt                 pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+	Status                    pgtype.Text        `db:"status" json:"status"`
+	PredictedStatus           pgtype.Text        `db:"predicted_status" json:"predicted_status"`
+	QueuedAt                  pgtype.Timestamptz `db:"queued_at" json:"queued_at"`
+	StartedAt                 pgtype.Timestamptz `db:"started_at" json:"started_at"`
+	FinishedAt                pgtype.Timestamptz `db:"finished_at" json:"finished_at"`
+	Duration                  pgtype.Text        `db:"duration" json:"duration"`
+	TotalDuration             pgtype.Text        `db:"total_duration" json:"total_duration"`
+	DurationMs                pgtype.Int4        `db:"duration_ms" json:"duration_ms"`
+	PausedMs                  pgtype.Int4        `db:"paused_ms" json:"paused_ms"`
+	TotalDurationMs           pgtype.Int4        `db:"total_duration_ms" json:"total_duration_ms"`
+	WorkflowName              pgtype.Text        `db:"workflow_name" json:"workflow_name"`
+}
+
+func (q *Queries) GetFinishedTestWorkflowExecutions(ctx context.Context, arg GetFinishedTestWorkflowExecutionsParams) ([]GetFinishedTestWorkflowExecutionsRow, error) {
+	rows, err := q.db.Query(ctx, getFinishedTestWorkflowExecutions,
+		arg.WorkflowName,
+		arg.WorkflowNames,
+		arg.TextSearch,
+		arg.StartDate,
+		arg.EndDate,
+		arg.LastNDays,
+		arg.Statuses,
+		arg.RunnerID,
+		arg.Assigned,
+		arg.ActorName,
+		arg.ActorType,
+		arg.GroupID,
+		arg.Initialized,
+		arg.Fst,
+		arg.Lmt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetFinishedTestWorkflowExecutionsRow
+	for rows.Next() {
+		var i GetFinishedTestWorkflowExecutionsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.GroupID,
+			&i.RunnerID,
+			&i.RunnerTarget,
+			&i.RunnerOriginalTarget,
+			&i.Name,
+			&i.Namespace,
+			&i.Number,
+			&i.ScheduledAt,
+			&i.AssignedAt,
+			&i.StatusAt,
+			&i.TestWorkflowExecutionName,
+			&i.DisableWebhooks,
+			&i.Tags,
+			&i.RunningContext,
+			&i.ConfigParams,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Status,
+			&i.PredictedStatus,
+			&i.QueuedAt,
+			&i.StartedAt,
+			&i.FinishedAt,
+			&i.Duration,
+			&i.TotalDuration,
+			&i.DurationMs,
+			&i.PausedMs,
+			&i.TotalDurationMs,
+			&i.WorkflowName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getLatestTestWorkflowExecutionByTestWorkflow = `-- name: GetLatestTestWorkflowExecutionByTestWorkflow :one
 SELECT 
     e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.created_at, e.updated_at,
