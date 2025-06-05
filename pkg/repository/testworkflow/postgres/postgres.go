@@ -1053,14 +1053,18 @@ func (r *PostgresRepository) DeleteByTestWorkflows(ctx context.Context, workflow
 func (r *PostgresRepository) GetTestWorkflowMetrics(ctx context.Context, name string, limit, last int) (testkube.ExecutionsMetrics, error) {
 	metrics := testkube.ExecutionsMetrics{}
 
-	la := int32(last)
-	if last > math.MaxInt32 {
+	var la int32
+	if last < 0 || last > math.MaxInt32 {
 		la = 0
+	} else {
+		la = int32(last)
 	}
 
-	li := int32(limit)
-	if limit > math.MaxInt32 {
+	var li int32
+	if limit < 0 || limit > math.MaxInt32 {
 		li = 0
+	} else {
+		li = int32(limit)
 	}
 
 	rows, err := r.queries.GetTestWorkflowMetrics(ctx, sqlc.GetTestWorkflowMetricsParams{
