@@ -203,6 +203,21 @@ func (mr *MockRepositoryMockRecorder) GetExecutionsTotals(arg0 interface{}, arg1
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExecutionsTotals", reflect.TypeOf((*MockRepository)(nil).GetExecutionsTotals), varargs...)
 }
 
+// GetFinished mocks base method.
+func (m *MockRepository) GetFinished(arg0 context.Context, arg1 Filter) ([]testkube.TestWorkflowExecution, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetFinished", arg0, arg1)
+	ret0, _ := ret[0].([]testkube.TestWorkflowExecution)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetFinished indicates an expected call of GetFinished.
+func (mr *MockRepositoryMockRecorder) GetFinished(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFinished", reflect.TypeOf((*MockRepository)(nil).GetFinished), arg0, arg1)
+}
+
 // GetLatestByTestWorkflow mocks base method.
 func (m *MockRepository) GetLatestByTestWorkflow(arg0 context.Context, arg1 string) (*testkube.TestWorkflowExecution, error) {
 	m.ctrl.T.Helper()
