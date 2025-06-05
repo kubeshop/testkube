@@ -1,4 +1,4 @@
-package result
+package minio
 
 import (
 	"context"
@@ -7,6 +7,8 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+
+	"github.com/kubeshop/testkube/pkg/repository/result"
 )
 
 type ExecutionOutput struct {
@@ -23,7 +25,7 @@ type MongoOutputRepository struct {
 	Coll *mongo.Collection
 }
 
-var _ OutputRepository = (*MongoOutputRepository)(nil)
+var _ result.OutputRepository = (*MongoOutputRepository)(nil)
 
 func NewMongoOutputRepository(db *mongo.Database, opts ...MongoOutputRepositoryOpt) *MongoOutputRepository {
 	r := &MongoOutputRepository{

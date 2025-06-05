@@ -1,4 +1,4 @@
-package result
+package minio
 
 import (
 	"bytes"
@@ -12,11 +12,12 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/log"
+	"github.com/kubeshop/testkube/pkg/repository/result"
 	"github.com/kubeshop/testkube/pkg/storage"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
 )
 
-var _ OutputRepository = (*MinioRepository)(nil)
+var _ result.OutputRepository = (*MinioRepository)(nil)
 
 type MinioRepository struct {
 	storage             storage.Client

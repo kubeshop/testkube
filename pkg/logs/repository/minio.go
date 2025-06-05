@@ -14,7 +14,7 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/logs/events"
-	"github.com/kubeshop/testkube/pkg/repository/result"
+	"github.com/kubeshop/testkube/pkg/repository/result/minio"
 	"github.com/kubeshop/testkube/pkg/storage"
 	"github.com/kubeshop/testkube/pkg/utils"
 )
@@ -111,7 +111,7 @@ func (r MinioLogsRepository) readLineLogsV2(file io.Reader, ch chan events.LogRe
 }
 
 func (r MinioLogsRepository) readLineLogsV1(ch chan events.LogResponse, buffer []byte, logTime time.Time) error {
-	var output result.ExecutionOutput
+	var output minio.ExecutionOutput
 	decoder := json.NewDecoder(bytes.NewBuffer(buffer))
 	err := decoder.Decode(&output)
 	if err != nil {

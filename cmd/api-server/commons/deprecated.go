@@ -21,6 +21,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/log"
 	logsclient "github.com/kubeshop/testkube/pkg/logs/client"
 	"github.com/kubeshop/testkube/pkg/repository/result"
+	minioresult "github.com/kubeshop/testkube/pkg/repository/result/minio"
+	mongoresult "github.com/kubeshop/testkube/pkg/repository/result/mongo"
 	"github.com/kubeshop/testkube/pkg/repository/sequence"
 	"github.com/kubeshop/testkube/pkg/repository/storage"
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
@@ -119,8 +121,8 @@ func CreateDeprecatedRepositoriesForCloud(grpcClient cloud.TestKubeCloudAPIClien
 func CreateDeprecatedRepositoriesForMongo(ctx context.Context, cfg *config.Config, db *mongo.Database, logGrpcClient logsclient.StreamGetter, storageClient domainstorage.Client, features featureflags.FeatureFlags) DeprecatedRepositories {
 	isDocDb := cfg.APIMongoDBType == storage.TypeDocDB
 	sequenceRepository := sequence.NewMongoRepository(db)
-	mongoResultsRepository := result.NewMongoRepository(db, cfg.APIMongoAllowDiskUse, isDocDb, result.WithFeatureFlags(features),
-		result.WithLogsClient(logGrpcClient), result.WithMongoRepositorySequence(sequenceRepository))
+	mongoResultsRepository := mongoresult.NewMongoRepository(db, cfg.APIMongoAllowDiskUse, isDocDb, mongoresult.WithFeatureFlags(features),
+		mongoresult.WithLogsClient(logGrpcClient), mongoresult.WithMongoRepositorySequence(sequenceRepository))
 	resultsRepository := mongoResultsRepository
 	testResultsRepository := mongotestresult.NewMongoRepository(db, cfg.APIMongoAllowDiskUse, isDocDb,
 		mongotestresult.WithMongoRepositorySequence(sequenceRepository))
@@ -131,7 +133,7 @@ func CreateDeprecatedRepositoriesForMongo(ctx context.Context, cfg *config.Confi
 			log.DefaultLogger.Error("LOGS_BUCKET env var is not set")
 		} else if ok, err := storageClient.IsConnectionPossible(ctx); ok && (err == nil) {
 			log.DefaultLogger.Info("setting minio as logs storage")
-			mongoResultsRepository.OutputRepository = result.NewMinioOutputRepository(storageClient, mongoResultsRepository.ResultsColl, cfg.LogsBucket)
+			mongoResultsRepository.OutputRepository = minioresult.NewMinioOutputRepository(storageClient, mongoResultsRepository.ResultsColl, cfg.LogsBucket)
 		} else {
 			log.DefaultLogger.Infow("minio is not available, using default logs storage", "error", err)
 		}

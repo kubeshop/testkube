@@ -1,4 +1,4 @@
-package result
+package mongo
 
 import (
 	"context"
@@ -19,11 +19,13 @@ import (
 	"github.com/kubeshop/testkube/pkg/featureflags"
 	"github.com/kubeshop/testkube/pkg/log"
 	logsclient "github.com/kubeshop/testkube/pkg/logs/client"
+	"github.com/kubeshop/testkube/pkg/repository/result"
+	"github.com/kubeshop/testkube/pkg/repository/result/minio"
 	"github.com/kubeshop/testkube/pkg/repository/sequence"
 	"github.com/kubeshop/testkube/pkg/storage"
 )
 
-var _ Repository = (*MongoRepository)(nil)
+var _ result.Repository = (*MongoRepository)(nil)
 
 const (
 	CollectionResults = "results"
@@ -42,7 +44,7 @@ func NewMongoRepository(db *mongo.Database, allowDiskUse, isDocDb bool, opts ...
 	r := &MongoRepository{
 		db:               db,
 		ResultsColl:      db.Collection(CollectionResults),
-		OutputRepository: NewMongoOutputRepository(db),
+		OutputRepository: minio.NewMongoOutputRepository(db),
 		allowDiskUse:     allowDiskUse,
 		isDocDb:          isDocDb,
 		log:              log.DefaultLogger,
@@ -58,7 +60,7 @@ func NewMongoRepository(db *mongo.Database, allowDiskUse, isDocDb bool, opts ...
 func NewMongoRepositoryWithOutputRepository(
 	db *mongo.Database,
 	allowDiskUse bool,
-	outputRepository OutputRepository,
+	outputRepository result.OutputRepository,
 	opts ...MongoRepositoryOpt,
 ) *MongoRepository {
 	r := &MongoRepository{
@@ -85,14 +87,14 @@ func NewMongoRepositoryWithMinioOutputStorage(db *mongo.Database, allowDiskUse b
 		log:                log.DefaultLogger,
 		sequenceRepository: sequenceRepository,
 	}
-	repo.OutputRepository = NewMinioOutputRepository(storageClient, repo.ResultsColl, bucket)
+	repo.OutputRepository = minio.NewMinioOutputRepository(storageClient, repo.ResultsColl, bucket)
 	return &repo
 }
 
 type MongoRepository struct {
 	db                 *mongo.Database
 	ResultsColl        *mongo.Collection
-	OutputRepository   OutputRepository
+	OutputRepository   result.OutputRepository
 	logGrpcClient      logsclient.StreamGetter
 	allowDiskUse       bool
 	isDocDb            bool
@@ -411,7 +413,7 @@ func (r *MongoRepository) GetNewestExecutions(ctx context.Context, limit int) (r
 	return
 }
 
-func (r *MongoRepository) GetExecutions(ctx context.Context, filter Filter) (result []testkube.Execution, err error) {
+func (r *MongoRepository) GetExecutions(ctx context.Context, filter result.Filter) (result []testkube.Execution, err error) {
 	result = make([]testkube.Execution, 0)
 	query, opts := composeQueryAndOpts(filter)
 	if r.allowDiskUse {
@@ -430,12 +432,12 @@ func (r *MongoRepository) GetExecutions(ctx context.Context, filter Filter) (res
 	return
 }
 
-func (r *MongoRepository) Count(ctx context.Context, filter Filter) (count int64, err error) {
+func (r *MongoRepository) Count(ctx context.Context, filter result.Filter) (count int64, err error) {
 	query, _ := composeQueryAndOpts(filter)
 	return r.ResultsColl.CountDocuments(ctx, query)
 }
 
-func (r *MongoRepository) GetExecutionTotals(ctx context.Context, paging bool, filter ...Filter) (totals testkube.ExecutionsTotals, err error) {
+func (r *MongoRepository) GetExecutionTotals(ctx context.Context, paging bool, filter ...result.Filter) (totals testkube.ExecutionsTotals, err error) {
 	var result []struct {
 		Status string `bson:"_id"`
 		Count  int    `bson:"count"`
@@ -610,7 +612,7 @@ func (r *MongoRepository) EndExecution(ctx context.Context, e testkube.Execution
 	return
 }
 
-func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
+func composeQueryAndOpts(filter result.Filter) (bson.M, *options.FindOptions) {
 	query := bson.M{}
 	conditions := bson.A{}
 	opts := options.Find()
