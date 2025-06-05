@@ -8,7 +8,7 @@
               "type": "git-dir",
               "uri": "https://github.com/kubeshop/testkube",
               "branch": "main",
-              "path": "test/cypress/executor-tests/cypress-without-envs"
+              "path": "test/cypress/cypress-without-envs"
             }
         },
         "labels": {
@@ -24,7 +24,7 @@
               "type": "git-dir",
               "uri": "https://github.com/kubeshop/testkube",
               "branch": "main",
-              "path": "test/cypress/executor-tests/cypress-without-envs"
+              "path": "test/cypress/cypress-without-envs"
             }
         },
         "labels": {
@@ -40,7 +40,7 @@
               "type": "git-dir",
               "uri": "https://github.com/kubeshop/testkube",
               "branch": "main",
-              "path": "test/cypress/executor-tests/cypress-without-envs"
+              "path": "test/cypress/cypress-without-envs"
             }
         },
         "labels": {
@@ -56,7 +56,7 @@
               "type": "git-file",
               "uri": "https://github.com/kubeshop/testkube",
               "branch": "main",
-              "path": "test/k6/executor-tests/k6-smoke-test-without-envs.js"
+              "path": "test/k6/k6-smoke-test-without-envs.js"
             }
         },
         "labels": {
@@ -72,7 +72,7 @@
               "type": "git-file",
               "uri": "https://github.com/kubeshop/testkube",
               "branch": "main",
-              "path": "test/k6/executor-tests/k6-smoke-test-without-envs.js"
+              "path": "test/k6/k6-smoke-test-without-envs.js"
             }
         },
         "labels": {
@@ -88,7 +88,7 @@
               "type": "git-file",
               "uri": "https://github.com/kubeshop/testkube",
               "branch": "main",
-              "path": "test/k6/executor-tests/k6-smoke-test-without-envs.js"
+              "path": "test/k6/k6-smoke-test-without-envs.js"
             }
         },
         "labels": {
@@ -104,7 +104,7 @@
               "type": "git-file",
               "uri": "https://github.com/kubeshop/testkube",
               "branch": "main",
-              "path": "test/postman/executor-tests/postman-executor-smoke-without-envs.postman_collection.json"
+              "path": "test/postman/postman-executor-smoke-without-envs.postman_collection.json"
             }
         },
         "labels": {
@@ -120,7 +120,7 @@
               "type": "git-file",
               "uri": "https://github.com/kubeshop/testkube",
               "branch": "main",
-              "path": "test/postman/executor-tests/postman-executor-smoke-without-envs.postman_collection.json"
+              "path": "test/postman/postman-executor-smoke-without-envs.postman_collection.json"
             }
         },
         "labels": {
@@ -136,7 +136,7 @@
               "type": "git-file",
               "uri": "https://github.com/kubeshop/testkube",
               "branch": "main",
-              "path": "test/postman/executor-tests/postman-executor-smoke-without-envs.postman_collection.json"
+              "path": "test/postman/postman-executor-smoke-without-envs.postman_collection.json"
             }
         },
         "labels": {
@@ -152,7 +152,7 @@
               "type": "git-file",
               "uri": "https://github.com/kubeshop/testkube",
               "branch": "main",
-              "path": "test/postman/executor-tests/postman-executor-smoke.postman_collection.json"
+              "path": "test/postman/postman-executor-smoke.postman_collection.json"
             }
         },
         "labels": {
@@ -184,7 +184,7 @@
               "type": "git-file",
               "uri": "https://github.com/kubeshop/testkube",
               "branch": "main",
-              "path": "test/soapui/executor-smoke/soapui-smoke-test.xml"
+              "path": "test/soapui/soapui-smoke-test.xml"
             }
         },
         "labels": {

@@ -39,6 +39,14 @@ type ExecutionGetRunningResponse struct {
 	WorkflowExecutions []testkube.TestWorkflowExecution `json:"workflowExecutions"`
 }
 
+type ExecutionGetFinishedRequest struct {
+	Filter *testworkflow.FilterImpl `json:"filter"`
+}
+
+type ExecutionGetFinishedResponse struct {
+	WorkflowExecutions []testkube.TestWorkflowExecution `json:"workflowExecutions"`
+}
+
 type ExecutionGetLatestByWorkflowsRequest struct {
 	WorkflowNames []string `json:"workflowNames"`
 }

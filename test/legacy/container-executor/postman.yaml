@@ -12,8 +12,8 @@ spec:
       type: git
       uri: https://github.com/kubeshop/testkube
       branch: main
-      path: test/postman/executor-tests/postman-executor-smoke.postman_collection.json
-      workingDir: test/postman/executor-tests
+      path: test/postman/postman-executor-smoke.postman_collection.json
+      workingDir: test/postman
   executionRequest:
     args: ["run", "postman-executor-smoke.postman_collection.json", "--env-var", "TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value"]
     preRunScript: "echo \"===== pre-run script\""

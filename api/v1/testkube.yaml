@@ -8625,6 +8625,8 @@ components:
           description: if test workflow is offline and cannot be executed
         status:
           $ref: "#/components/schemas/TestWorkflowStatusSummary"
+        health:
+          $ref: "#/components/schemas/TestWorkflowExecutionHealth"
 
     TestWorkflowExecutionRequest:
       type: object
@@ -8866,6 +8868,8 @@ components:
           type: object
           additionalProperties:
             type: string
+        health:
+          $ref: "#/components/schemas/TestWorkflowExecutionHealth"
 
     TestWorkflowResultSummary:
       type: object
@@ -9003,6 +9007,38 @@ components:
       description: |
         TestWorkflowExecutionResourceAggregationsReport provides resource usage aggregations
         for an entire TestWorkflowExecution (globally) and also per-step (by measurements).
+
+    TestWorkflowExecutionHealth:
+      type: object
+      properties:
+        passRate:
+          type: number
+          format: float64
+          description: |
+            Recency-weighted fraction of executions that passed (value between 0.0 and 1.0).
+        rawFlipRate:
+          type: number
+          format: float64
+          description: |
+            Fraction of status changes among consecutive executions without recency weighting 
+            (value between 0.0 and 1.0).
+        weightedFlipRate:
+          type: number
+          format: float64
+          description: |
+            Recency-weighted flip rate: each pass↔fail transition contributes 
+            (w[i] + w[i-1]) / 2, normalized over all transitions (value between 0.0 and 1.0).
+        overallHealth:
+          type: number
+          format: float64
+          description: |
+            Combined health score, computed as α * passRate + (1−α) * (1 − weightedFlipRate) 
+            (value between 0.0 and 1.0).
+      required:
+        - passRate
+        - rawFlipRate
+        - weightedFlipRate
+        - overallHealth
 
     TestWorkflowExecutionStepResourceAggregations:
       type: object
@@ -10120,7 +10156,7 @@ components:
           items:
             $ref: "#/components/schemas/PodResourceClaim"
         hostPID:
-          $ref: "#/components/schemas/BoxedBoolean"            
+          $ref: "#/components/schemas/BoxedBoolean"
 
     TestWorkflowContainerConfig:
       type: object
@@ -10348,7 +10384,7 @@ components:
         timezone:
           $ref: "#/components/schemas/BoxedString"
           description: cron timezone
-          example: America/New_York         
+          example: America/New_York
 
     TestWorkflowExecutionCR:
       type: object
@@ -10449,7 +10485,7 @@ components:
       type: object
       properties:
         global:
-          $ref: "#/components/schemas/BoxedBoolean"    
+          $ref: "#/components/schemas/BoxedBoolean"
         name:
           type: string
         value:
