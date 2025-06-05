@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -1052,10 +1053,20 @@ func (r *PostgresRepository) DeleteByTestWorkflows(ctx context.Context, workflow
 func (r *PostgresRepository) GetTestWorkflowMetrics(ctx context.Context, name string, limit, last int) (testkube.ExecutionsMetrics, error) {
 	metrics := testkube.ExecutionsMetrics{}
 
+	la := int32(last)
+	if last > math.MaxInt32 {
+		la = 0
+	}
+
+	li := int32(limit)
+	if limit > math.MaxInt32 {
+		li = 0
+	}
+
 	rows, err := r.queries.GetTestWorkflowMetrics(ctx, sqlc.GetTestWorkflowMetricsParams{
 		WorkflowName: toPgText(name),
-		LastDays:     toPgInt4(int32(last)),
-		Lmt:          int32(limit),
+		LastDays:     toPgInt4(int32(la)),
+		Lmt:          int32(li),
 	})
 	if err != nil {
 		return metrics, err
