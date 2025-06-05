@@ -1346,6 +1346,69 @@ func (q *Queries) GetTestWorkflowOutputs(ctx context.Context, executionID string
 	return items, nil
 }
 
+
+const updateTestWorkflowExecution = `-- name: UpdateTestWorkflowExecution :exec
+UPDATE test_workflow_executions
+SET
+    group_id = $1,
+    runner_id = $2,
+    runner_target = $3,
+    runner_original_target = $4,
+    name = $5,
+    namespace = $6,
+    number = $7,
+    scheduled_at = $8,
+    assigned_at = $9,
+    status_at = $10,
+    test_workflow_execution_name = $11,
+    disable_webhooks = $12,
+    tags = $13,
+    running_context = $14,
+    config_params = $15
+WHERE id = $16
+`
+
+type UpdateTestWorkflowExecutionParams struct {
+	GroupID                   pgtype.Text        `db:"group_id" json:"group_id"`
+	RunnerID                  pgtype.Text        `db:"runner_id" json:"runner_id"`
+	RunnerTarget              []byte             `db:"runner_target" json:"runner_target"`
+	RunnerOriginalTarget      []byte             `db:"runner_original_target" json:"runner_original_target"`
+	Name                      string             `db:"name" json:"name"`
+	Namespace                 pgtype.Text        `db:"namespace" json:"namespace"`
+	Number                    pgtype.Int4        `db:"number" json:"number"`
+	ScheduledAt               pgtype.Timestamptz `db:"scheduled_at" json:"scheduled_at"`
+	AssignedAt                pgtype.Timestamptz `db:"assigned_at" json:"assigned_at"`
+	StatusAt                  pgtype.Timestamptz `db:"status_at" json:"status_at"`
+	TestWorkflowExecutionName pgtype.Text        `db:"test_workflow_execution_name" json:"test_workflow_execution_name"`
+	DisableWebhooks           pgtype.Bool        `db:"disable_webhooks" json:"disable_webhooks"`
+	Tags                      []byte             `db:"tags" json:"tags"`
+	RunningContext            []byte             `db:"running_context" json:"running_context"`
+	ConfigParams              []byte             `db:"config_params" json:"config_params"`
+	ID                        string             `db:"id" json:"id"`
+}
+
+func (q *Queries) UpdateTestWorkflowExecution(ctx context.Context, arg UpdateTestWorkflowExecutionParams) error {
+	_, err := q.db.Exec(ctx, updateTestWorkflowExecution,
+		arg.GroupID,
+		arg.RunnerID,
+		arg.RunnerTarget,
+		arg.RunnerOriginalTarget,
+		arg.Name,
+		arg.Namespace,
+		arg.Number,
+		arg.ScheduledAt,
+		arg.AssignedAt,
+		arg.StatusAt,
+		arg.TestWorkflowExecutionName,
+		arg.DisableWebhooks,
+		arg.Tags,
+		arg.RunningContext,
+		arg.ConfigParams,
+		arg.ID,
+	)
+	return err
+}
+
 const getTestWorkflowReports = `-- name: GetTestWorkflowReports :many
 SELECT id, execution_id, ref, kind, file, summary, created_at FROM test_workflow_reports 
 WHERE execution_id = $1 

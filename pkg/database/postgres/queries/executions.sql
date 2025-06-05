@@ -439,3 +439,23 @@ WHERE execution_id = @id
 
 -- name: GetNextExecutionNumber :one
 SELECT nextval('test_workflow_execution_number_seq_' || @workflow_name) as number;
+
+-- name: UpdateTestWorkflowExecution :exec
+UPDATE test_workflow_executions
+SET
+    group_id = @group_id,
+    runner_id = @runner_id,
+    runner_target = @runner_target,
+    runner_original_target = @runner_original_target,
+    name = @name,
+    namespace = @namespace,
+    number = @number,
+    scheduled_at = @scheduled_at,
+    assigned_at = @assigned_at,
+    status_at = @status_at,
+    test_workflow_execution_name = @test_workflow_execution_name,
+    disable_webhooks = @disable_webhooks,
+    tags = @tags,
+    running_context = @running_context,
+    config_params = @config_params
+WHERE id = @id;
