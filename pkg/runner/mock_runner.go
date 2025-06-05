@@ -49,6 +49,20 @@ func (mr *MockRunnerMockRecorder) Abort(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Abort", reflect.TypeOf((*MockRunner)(nil).Abort), arg0)
 }
 
+// Cancel mocks base method.
+func (m *MockRunner) Cancel(arg0 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Cancel", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Cancel indicates an expected call of Cancel.
+func (mr *MockRunnerMockRecorder) Cancel(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Cancel", reflect.TypeOf((*MockRunner)(nil).Cancel), arg0)
+}
+
 // Execute mocks base method.
 func (m *MockRunner) Execute(arg0 executionworkertypes.ExecuteRequest) (*executionworkertypes.ExecuteResult, error) {
 	m.ctrl.T.Helper()

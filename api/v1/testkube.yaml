@@ -7915,10 +7915,12 @@ components:
         - end-testworkflow-success
         - end-testworkflow-failed
         - end-testworkflow-aborted
+        - end-testworkflow-canceled
         - become-testworkflow-up
         - become-testworkflow-down
         - become-testworkflow-failed
         - become-testworkflow-aborted
+        - become-testworkflow-canceled
         - created
         - updated
         - deleted
@@ -9220,6 +9222,7 @@ components:
         - passed
         - failed
         - aborted
+        - canceled
 
     TestWorkflowStepStatus:
       type: string
@@ -9232,6 +9235,7 @@ components:
         - timeout
         - skipped
         - aborted
+        - canceled
 
     TestWorkflowTemplate:
       type: object

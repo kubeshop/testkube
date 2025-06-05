@@ -48,6 +48,20 @@ func (mr *MockRunnerRequestMockRecorder) Abort() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Abort", reflect.TypeOf((*MockRunnerRequest)(nil).Abort))
 }
 
+// Cancel mocks base method.
+func (m *MockRunnerRequest) Cancel() RunnerRequestOK {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Cancel")
+	ret0, _ := ret[0].(RunnerRequestOK)
+	return ret0
+}
+
+// Cancel indicates an expected call of Cancel.
+func (mr *MockRunnerRequestMockRecorder) Cancel() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Cancel", reflect.TypeOf((*MockRunnerRequest)(nil).Cancel))
+}
+
 // Consider mocks base method.
 func (m *MockRunnerRequest) Consider() RunnerRequestConsider {
 	m.ctrl.T.Helper()
