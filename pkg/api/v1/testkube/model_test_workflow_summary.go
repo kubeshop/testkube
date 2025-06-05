@@ -10,8 +10,9 @@
 package testkube
 
 type TestWorkflowSummary struct {
-	Name        string            `json:"name,omitempty"`
-	Namespace   string            `json:"namespace,omitempty"`
-	Labels      map[string]string `json:"labels,omitempty"`
-	Annotations map[string]string `json:"annotations,omitempty"`
+	Name        string                       `json:"name,omitempty"`
+	Namespace   string                       `json:"namespace,omitempty"`
+	Labels      map[string]string            `json:"labels,omitempty"`
+	Annotations map[string]string            `json:"annotations,omitempty"`
+	Health      *TestWorkflowExecutionHealth `json:"health,omitempty"`
 }

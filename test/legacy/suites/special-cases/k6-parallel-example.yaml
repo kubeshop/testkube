@@ -1,0 +1,86 @@
+# container executor:
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: container-executor-test-k6-parallel
+  labels:
+    core-tests: executors
+spec:
+  type: container-executor-k6-0.43.1/test
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube
+      branch: main
+      path: test/k6/
+      workingDir: test/k6
+  executionRequest:
+    # args: ["run", "k6-smoke-test-without-envs.js"] # Optional
+    activeDeadlineSeconds: 300
+---
+apiVersion: tests.testkube.io/v3
+kind: TestSuite
+metadata:
+  name: container-k6-parallel
+spec:
+  description: "k6 parallel testsuite"
+  steps:
+  - stopOnFailure: false
+    execute:
+    - test: container-executor-test-k6-parallel
+      executionRequest:
+        args:
+          - "run"
+          - "k6-smoke-test-without-envs.js"
+          - "-vu"
+          - "3"
+    - test: container-executor-test-k6-parallel
+      executionRequest:
+        args:
+          - "run"
+          - "k6-smoke-test-without-envs.js"
+          - "-vu"
+          - "2"
+
+# prebuilt executor:
+---
+apiVersion: tests.testkube.io/v3
+kind: Test
+metadata:
+  name: k6-test-parallel
+  labels:
+    core-tests: executors
+spec:
+  type: k6/script
+  content:
+    type: git
+    repository:
+      type: git
+      uri: https://github.com/kubeshop/testkube.git
+      branch: main
+      path: test/k6/
+  executionRequest:
+    activeDeadlineSeconds: 300
+---
+apiVersion: tests.testkube.io/v3
+kind: TestSuite
+metadata:
+  name: k6-parallel
+spec:
+  description: "k6 parallel testsuite"
+  steps:
+  - stopOnFailure: false
+    execute:
+    - test: k6-test-parallel
+      executionRequest:
+        args:
+          - "k6-smoke-test-without-envs.js"
+          - "-vu"
+          - "1"
+    - test: container-executor-test-k6-parallel
+      executionRequest:
+        args:
+          - "k6-smoke-test-without-envs.js"
+          - -vu
+          - "2"
