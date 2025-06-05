@@ -733,10 +733,10 @@ func (r *PostgresRepository) insertSignatures(ctx context.Context, qtx *sqlc.Que
 
 		// For children, we would need to get the inserted ID and use it as parentId
 		// This requires modification to return the ID from the insert
-		if len(sig.Children) > 0 {
-			// TODO: Implement recursive insertion for children
-			// This would require getting the ID of the just inserted signature
-		}
+		// if len(sig.Children) > 0 {
+		// TODO: Implement recursive insertion for children
+		// This would require getting the ID of the just inserted signature
+		//}
 	}
 	return nil
 }
