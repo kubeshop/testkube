@@ -23,9 +23,9 @@ type MockQueriesInterface struct {
 	mock.Mock
 }
 
-func (m *MockQueriesInterface) WithTx(tx pgx.Tx) QueriesInterface {
+func (m *MockQueriesInterface) WithTx(tx pgx.Tx) sqlc.QueriesInterface {
 	args := m.Called(tx)
-	return args.Get(0).(QueriesInterface)
+	return args.Get(0).(sqlc.QueriesInterface)
 }
 
 func (m *MockQueriesInterface) GetTestWorkflowExecution(ctx context.Context, id string) (sqlc.GetTestWorkflowExecutionRow, error) {
@@ -38,12 +38,12 @@ func (m *MockQueriesInterface) GetTestWorkflowExecutionByNameAndTestWorkflow(ctx
 	return args.Get(0).(sqlc.GetTestWorkflowExecutionByNameAndTestWorkflowRow), args.Error(1)
 }
 
-func (m *MockQueriesInterface) GetLatestTestWorkflowExecutionByTestWorkflow(ctx context.Context, workflowName pgtype.Text) (sqlc.GetLatestTestWorkflowExecutionByTestWorkflowRow, error) {
+func (m *MockQueriesInterface) GetLatestTestWorkflowExecutionByTestWorkflow(ctx context.Context, workflowName string) (sqlc.GetLatestTestWorkflowExecutionByTestWorkflowRow, error) {
 	args := m.Called(ctx, workflowName)
 	return args.Get(0).(sqlc.GetLatestTestWorkflowExecutionByTestWorkflowRow), args.Error(1)
 }
 
-func (m *MockQueriesInterface) GetLatestTestWorkflowExecutionsByTestWorkflows(ctx context.Context, workflowNames []pgtype.Text) ([]sqlc.GetLatestTestWorkflowExecutionsByTestWorkflowsRow, error) {
+func (m *MockQueriesInterface) GetLatestTestWorkflowExecutionsByTestWorkflows(ctx context.Context, workflowNames []string) ([]sqlc.GetLatestTestWorkflowExecutionsByTestWorkflowsRow, error) {
 	args := m.Called(ctx, workflowNames)
 	return args.Get(0).([]sqlc.GetLatestTestWorkflowExecutionsByTestWorkflowsRow), args.Error(1)
 }
@@ -143,8 +143,8 @@ func (m *MockQueriesInterface) DeleteTestWorkflowOutputs(ctx context.Context, ex
 	return args.Error(0)
 }
 
-func (m *MockQueriesInterface) DeleteTestWorkflowExecutionsByTestWorkflow(ctx context.Context, workflowName pgtype.Text) error {
-	args := m.Called(ctx, workflowName)
+func (m *MockQueriesInterface) DeleteTestWorkflowExecutionsByTestWorkflow(ctx context.Context, workflowNames string) error {
+	args := m.Called(ctx, workflowNames)
 	return args.Error(0)
 }
 
@@ -153,7 +153,7 @@ func (m *MockQueriesInterface) DeleteAllTestWorkflowExecutions(ctx context.Conte
 	return args.Error(0)
 }
 
-func (m *MockQueriesInterface) DeleteTestWorkflowExecutionsByTestWorkflows(ctx context.Context, workflowNames []pgtype.Text) error {
+func (m *MockQueriesInterface) DeleteTestWorkflowExecutionsByTestWorkflows(ctx context.Context, workflowNames []string) error {
 	args := m.Called(ctx, workflowNames)
 	return args.Error(0)
 }
@@ -213,7 +213,7 @@ func (m *MockQueriesInterface) AbortTestWorkflowResultIfQueued(ctx context.Conte
 	return args.Error(0)
 }
 
-func (m *MockQueriesInterface) GetNextExecutionNumber(ctx context.Context, workflowName pgtype.Text) (int64, error) {
+func (m *MockQueriesInterface) GetNextExecutionNumber(ctx context.Context, workflowName string) (int64, error) {
 	args := m.Called(ctx, workflowName)
 	return args.Get(0).(int64), args.Error(1)
 }
@@ -500,7 +500,7 @@ func createTestFilter() *MockFilter {
 	return filter
 }
 
-func createPostgresRepository(queries QueriesInterface, db DatabaseInterface, seq sequence.Repository) *PostgresRepository {
+func createPostgresRepository(queries sqlc.QueriesInterface, db sqlc.DatabaseInterface, seq sequence.Repository) *PostgresRepository {
 	return &PostgresRepository{
 		db:                 db,
 		queries:            queries,
@@ -618,7 +618,7 @@ func TestPostgresRepository_GetByNameAndTestWorkflow(t *testing.T) {
 
 		params := sqlc.GetTestWorkflowExecutionByNameAndTestWorkflowParams{
 			Name:         name,
-			WorkflowName: toPgText(workflowName),
+			WorkflowName: workflowName,
 		}
 
 		mockQueries.On("GetTestWorkflowExecutionByNameAndTestWorkflow", ctx, params).Return(row, nil)
@@ -644,7 +644,7 @@ func TestPostgresRepository_GetByNameAndTestWorkflow(t *testing.T) {
 
 		params := sqlc.GetTestWorkflowExecutionByNameAndTestWorkflowParams{
 			Name:         name,
-			WorkflowName: toPgText(workflowName),
+			WorkflowName: workflowName,
 		}
 
 		mockQueries.On("GetTestWorkflowExecutionByNameAndTestWorkflow", ctx, params).Return(sqlc.GetTestWorkflowExecutionByNameAndTestWorkflowRow{}, pgx.ErrNoRows)
@@ -673,7 +673,7 @@ func TestPostgresRepository_GetLatestByTestWorkflow(t *testing.T) {
 			Name: "test-execution",
 		}
 
-		mockQueries.On("GetLatestTestWorkflowExecutionByTestWorkflow", ctx, toPgText(workflowName)).Return(row, nil)
+		mockQueries.On("GetLatestTestWorkflowExecutionByTestWorkflow", ctx, workflowName).Return(row, nil)
 
 		// Act
 		result, err := repo.GetLatestByTestWorkflow(ctx, workflowName)
@@ -693,7 +693,7 @@ func TestPostgresRepository_GetLatestByTestWorkflow(t *testing.T) {
 		ctx := context.Background()
 		workflowName := "not-found"
 
-		mockQueries.On("GetLatestTestWorkflowExecutionByTestWorkflow", ctx, toPgText(workflowName)).Return(sqlc.GetLatestTestWorkflowExecutionByTestWorkflowRow{}, pgx.ErrNoRows)
+		mockQueries.On("GetLatestTestWorkflowExecutionByTestWorkflow", ctx, workflowName).Return(sqlc.GetLatestTestWorkflowExecutionByTestWorkflowRow{}, pgx.ErrNoRows)
 
 		// Act
 		result, err := repo.GetLatestByTestWorkflow(ctx, workflowName)
@@ -719,9 +719,9 @@ func TestPostgresRepository_GetLatestByTestWorkflows(t *testing.T) {
 			{ID: "exec2", Name: "execution2"},
 		}
 
-		pgNames := []pgtype.Text{
-			toPgText("workflow1"),
-			toPgText("workflow2"),
+		pgNames := []string{
+			"workflow1",
+			"workflow2",
 		}
 
 		mockQueries.On("GetLatestTestWorkflowExecutionsByTestWorkflows", ctx, pgNames).Return(rows, nil)
@@ -1067,7 +1067,7 @@ func TestPostgresRepository_DeleteByTestWorkflow(t *testing.T) {
 		workflowName := "test-workflow"
 
 		mockSeq.On("DeleteExecutionNumber", ctx, workflowName, sequence.ExecutionTypeTestWorkflow).Return(nil)
-		mockQueries.On("DeleteTestWorkflowExecutionsByTestWorkflow", ctx, toPgText(workflowName)).Return(nil)
+		mockQueries.On("DeleteTestWorkflowExecutionsByTestWorkflow", ctx, workflowName).Return(nil)
 
 		// Act
 		err := repo.DeleteByTestWorkflow(ctx, workflowName)
@@ -1105,7 +1105,7 @@ func TestPostgresRepository_DeleteByTestWorkflow(t *testing.T) {
 		ctx := context.Background()
 		workflowName := "test-workflow"
 
-		mockQueries.On("DeleteTestWorkflowExecutionsByTestWorkflow", ctx, toPgText(workflowName)).Return(nil)
+		mockQueries.On("DeleteTestWorkflowExecutionsByTestWorkflow", ctx, workflowName).Return(nil)
 
 		// Act
 		err := repo.DeleteByTestWorkflow(ctx, workflowName)
@@ -1148,9 +1148,9 @@ func TestPostgresRepository_DeleteByTestWorkflows(t *testing.T) {
 		ctx := context.Background()
 		workflowNames := []string{"workflow1", "workflow2"}
 
-		pgNames := []pgtype.Text{
-			toPgText("workflow1"),
-			toPgText("workflow2"),
+		pgNames := []string{
+			"workflow1",
+			"workflow2",
 		}
 
 		mockSeq.On("DeleteExecutionNumbers", ctx, workflowNames, sequence.ExecutionTypeTestWorkflow).Return(nil)
