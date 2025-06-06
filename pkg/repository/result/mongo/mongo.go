@@ -44,7 +44,7 @@ func NewMongoRepository(db *mongo.Database, allowDiskUse, isDocDb bool, opts ...
 	r := &MongoRepository{
 		db:               db,
 		ResultsColl:      db.Collection(CollectionResults),
-		OutputRepository: minio.NewMongoOutputRepository(db),
+		OutputRepository: NewMongoOutputRepository(db),
 		allowDiskUse:     allowDiskUse,
 		isDocDb:          isDocDb,
 		log:              log.DefaultLogger,

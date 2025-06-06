@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/kubeshop/testkube/pkg/logs/events"
-	minioresult "github.com/kubeshop/testkube/pkg/repository/result/minio"
+	"github.com/kubeshop/testkube/pkg/repository/result"
 	"github.com/kubeshop/testkube/pkg/storage"
 )
 
@@ -89,7 +89,7 @@ func TestRepository_MinioGetLogsV1(t *testing.T) {
 
 	contentLog1 := "storage logs 1"
 	contentLog2 := "storage logs 2"
-	output := minioresult.ExecutionOutput{
+	output := result.ExecutionOutput{
 		Id:            "id",
 		Name:          "execution-name",
 		TestName:      "test-name",

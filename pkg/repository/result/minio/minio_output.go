@@ -42,25 +42,25 @@ func (m *MinioRepository) GetOutput(ctx context.Context, id, testName, testSuite
 	return eOutput.Output, err
 }
 
-func (m *MinioRepository) getOutput(ctx context.Context, id string) (ExecutionOutput, error) {
+func (m *MinioRepository) getOutput(ctx context.Context, id string) (result.ExecutionOutput, error) {
 	file, _, err := m.storage.DownloadFileFromBucket(ctx, m.bucket, "", id)
 	if err != nil && err == minio.ErrArtifactsNotFound {
 		log.DefaultLogger.Infow("output not found in minio", "id", id)
-		return ExecutionOutput{}, nil
+		return result.ExecutionOutput{}, nil
 	}
 	if err != nil {
-		return ExecutionOutput{}, fmt.Errorf("error downloading output logs from minio: %w", err)
+		return result.ExecutionOutput{}, fmt.Errorf("error downloading output logs from minio: %w", err)
 	}
-	var eOutput ExecutionOutput
+	var eOutput result.ExecutionOutput
 	decoder := json.NewDecoder(file)
 	err = decoder.Decode(&eOutput)
 	if err != nil {
-		return ExecutionOutput{}, err
+		return result.ExecutionOutput{}, err
 	}
 	return eOutput, err
 }
 
-func (m *MinioRepository) saveOutput(ctx context.Context, eOutput ExecutionOutput) error {
+func (m *MinioRepository) saveOutput(ctx context.Context, eOutput result.ExecutionOutput) error {
 	data, err := json.Marshal(eOutput)
 	if err != nil {
 		return err
@@ -72,7 +72,7 @@ func (m *MinioRepository) saveOutput(ctx context.Context, eOutput ExecutionOutpu
 
 func (m *MinioRepository) InsertOutput(ctx context.Context, id, testName, testSuiteName, output string) error {
 	log.DefaultLogger.Debugw("inserting output", "id", id, "testName", testName, "testSuiteName", testSuiteName)
-	eOutput := ExecutionOutput{Id: id, Name: id, TestName: testName, TestSuiteName: testSuiteName, Output: output}
+	eOutput := result.ExecutionOutput{Id: id, Name: id, TestName: testName, TestSuiteName: testSuiteName, Output: output}
 	return m.saveOutput(ctx, eOutput)
 }
 

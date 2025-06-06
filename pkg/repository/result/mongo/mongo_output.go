@@ -1,4 +1,4 @@
-package minio
+package mongo
 
 import (
 	"context"
@@ -10,14 +10,6 @@ import (
 
 	"github.com/kubeshop/testkube/pkg/repository/result"
 )
-
-type ExecutionOutput struct {
-	Id            string `json:"id"`
-	Name          string `json:"name"`
-	TestName      string `json:"testname,omitempty"`
-	TestSuiteName string `json:"testsuitename,omitempty"`
-	Output        string `json:"output"`
-}
 
 const CollectionOutput = "output"
 
@@ -48,13 +40,13 @@ func WithMongoOutputRepositoryCollection(collection *mongo.Collection) MongoOutp
 }
 
 func (r *MongoOutputRepository) GetOutput(ctx context.Context, id, testName, testSuiteName string) (output string, err error) {
-	var eOutput ExecutionOutput
+	var eOutput result.ExecutionOutput
 	err = r.Coll.FindOne(ctx, bson.M{"$or": bson.A{bson.M{"id": id}, bson.M{"name": id}}}).Decode(&eOutput)
 	return eOutput.Output, err
 }
 
 func (r *MongoOutputRepository) InsertOutput(ctx context.Context, id, testName, testSuiteName, output string) error {
-	_, err := r.Coll.InsertOne(ctx, ExecutionOutput{Id: id, Name: id, TestName: testName, TestSuiteName: testSuiteName, Output: output})
+	_, err := r.Coll.InsertOne(ctx, result.ExecutionOutput{Id: id, Name: id, TestName: testName, TestSuiteName: testSuiteName, Output: output})
 	return err
 }
 
@@ -99,13 +91,13 @@ func (r *MongoOutputRepository) DeleteAllOutput(ctx context.Context) error {
 }
 
 func (r *MongoOutputRepository) StreamOutput(ctx context.Context, executionID, testName, testSuiteName string) (reader io.Reader, err error) {
-	var eOutput ExecutionOutput
+	var eOutput result.ExecutionOutput
 	err = r.Coll.FindOne(ctx, bson.M{"$or": bson.A{bson.M{"id": executionID}, bson.M{"name": executionID}}}).Decode(&eOutput)
 	return strings.NewReader(eOutput.Output), err
 }
 
 func (r *MongoOutputRepository) GetOutputSize(ctx context.Context, executionID, testName, testSuiteName string) (size int, err error) {
-	var eOutput ExecutionOutput
+	var eOutput result.ExecutionOutput
 	err = r.Coll.FindOne(ctx, bson.M{"$or": bson.A{bson.M{"id": executionID}, bson.M{"name": executionID}}}).Decode(&eOutput)
 	return len(eOutput.Output), err
 }
