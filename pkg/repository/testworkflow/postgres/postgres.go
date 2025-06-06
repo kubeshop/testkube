@@ -26,8 +26,8 @@ const (
 )
 
 type PostgresRepository struct {
-	db                 *pgxpool.Pool
-	queries            *sqlc.Queries
+	db                 DatabaseInterface
+	queries            QueriesInterface
 	sequenceRepository sequence.Repository
 }
 
@@ -35,8 +35,8 @@ type PostgresRepositoryOpt func(*PostgresRepository)
 
 func NewPostgresRepository(db *pgxpool.Pool, opts ...PostgresRepositoryOpt) *PostgresRepository {
 	r := &PostgresRepository{
-		db:      db,
-		queries: sqlc.New(db),
+		db:      &PgxPoolWrapper{Pool: db},
+		queries: NewSQLCQueriesWrapper(sqlc.New(db)),
 	}
 
 	for _, opt := range opts {
@@ -49,6 +49,20 @@ func NewPostgresRepository(db *pgxpool.Pool, opts ...PostgresRepositoryOpt) *Pos
 func WithPostgresRepositorySequence(sequenceRepository sequence.Repository) PostgresRepositoryOpt {
 	return func(r *PostgresRepository) {
 		r.sequenceRepository = sequenceRepository
+	}
+}
+
+// WithQueriesInterface allows injecting a custom queries interface (useful for testing)
+func WithQueriesInterface(queries QueriesInterface) PostgresRepositoryOpt {
+	return func(r *PostgresRepository) {
+		r.queries = queries
+	}
+}
+
+// WithDatabaseInterface allows injecting a custom database interface (useful for testing)
+func WithDatabaseInterface(db DatabaseInterface) PostgresRepositoryOpt {
+	return func(r *PostgresRepository) {
+		r.db = db
 	}
 }
 
@@ -159,7 +173,7 @@ func (r *PostgresRepository) Get(ctx context.Context, id string) (testkube.TestW
 	return *execution.UnscapeDots(), nil
 }
 
-func (r *PostgresRepository) buildExecutionFromRow(ctx context.Context, qtx *sqlc.Queries, row sqlc.GetTestWorkflowExecutionRow) (*testkube.TestWorkflowExecution, error) {
+func (r *PostgresRepository) buildExecutionFromRow(ctx context.Context, qtx QueriesInterface, row sqlc.GetTestWorkflowExecutionRow) (*testkube.TestWorkflowExecution, error) {
 	execution := &testkube.TestWorkflowExecution{
 		Id:                        row.ID,
 		GroupId:                   fromPgText(row.GroupID),
@@ -701,7 +715,7 @@ func (r *PostgresRepository) insertExecutionWithTransaction(ctx context.Context,
 	return tx.Commit(ctx)
 }
 
-func (r *PostgresRepository) insertMainExecution(ctx context.Context, qtx *sqlc.Queries, execution *testkube.TestWorkflowExecution) error {
+func (r *PostgresRepository) insertMainExecution(ctx context.Context, qtx QueriesInterface, execution *testkube.TestWorkflowExecution) error {
 	runnerTarget, _ := toJSONB(execution.RunnerTarget)
 	runnerOriginalTarget, _ := toJSONB(execution.RunnerOriginalTarget)
 	tags, _ := toJSONB(execution.Tags)
@@ -728,7 +742,7 @@ func (r *PostgresRepository) insertMainExecution(ctx context.Context, qtx *sqlc.
 	})
 }
 
-func (r *PostgresRepository) insertSignatures(ctx context.Context, qtx *sqlc.Queries, executionId string, signatures []testkube.TestWorkflowSignature, parentId int32) error {
+func (r *PostgresRepository) insertSignatures(ctx context.Context, qtx QueriesInterface, executionId string, signatures []testkube.TestWorkflowSignature, parentId int32) error {
 	for _, sig := range signatures {
 		var parentIdPg pgtype.Int4
 		if parentId > 0 {
@@ -758,7 +772,7 @@ func (r *PostgresRepository) insertSignatures(ctx context.Context, qtx *sqlc.Que
 	return nil
 }
 
-func (r *PostgresRepository) insertResult(ctx context.Context, qtx *sqlc.Queries, executionId string, result *testkube.TestWorkflowResult) error {
+func (r *PostgresRepository) insertResult(ctx context.Context, qtx QueriesInterface, executionId string, result *testkube.TestWorkflowResult) error {
 	pauses, _ := toJSONB(result.Pauses)
 	initialization, _ := toJSONB(result.Initialization)
 	steps, _ := toJSONB(result.Steps)
@@ -789,7 +803,7 @@ func (r *PostgresRepository) insertResult(ctx context.Context, qtx *sqlc.Queries
 	})
 }
 
-func (r *PostgresRepository) insertOutputs(ctx context.Context, qtx *sqlc.Queries, executionId string, outputs []testkube.TestWorkflowOutput) error {
+func (r *PostgresRepository) insertOutputs(ctx context.Context, qtx QueriesInterface, executionId string, outputs []testkube.TestWorkflowOutput) error {
 	for _, output := range outputs {
 		value, _ := toJSONB(output.Value)
 		err := qtx.InsertTestWorkflowOutput(ctx, sqlc.InsertTestWorkflowOutputParams{
@@ -805,7 +819,7 @@ func (r *PostgresRepository) insertOutputs(ctx context.Context, qtx *sqlc.Querie
 	return nil
 }
 
-func (r *PostgresRepository) insertReports(ctx context.Context, qtx *sqlc.Queries, executionId string, reports []testkube.TestWorkflowReport) error {
+func (r *PostgresRepository) insertReports(ctx context.Context, qtx QueriesInterface, executionId string, reports []testkube.TestWorkflowReport) error {
 	for _, report := range reports {
 		summary, _ := toJSONB(report.Summary)
 		err := qtx.InsertTestWorkflowReport(ctx, sqlc.InsertTestWorkflowReportParams{
@@ -822,7 +836,7 @@ func (r *PostgresRepository) insertReports(ctx context.Context, qtx *sqlc.Querie
 	return nil
 }
 
-func (r *PostgresRepository) insertResourceAggregations(ctx context.Context, qtx *sqlc.Queries, executionId string, agg *testkube.TestWorkflowExecutionResourceAggregationsReport) error {
+func (r *PostgresRepository) insertResourceAggregations(ctx context.Context, qtx QueriesInterface, executionId string, agg *testkube.TestWorkflowExecutionResourceAggregationsReport) error {
 	global, _ := toJSONB(agg.Global)
 	step, _ := toJSONB(agg.Step)
 
@@ -833,7 +847,7 @@ func (r *PostgresRepository) insertResourceAggregations(ctx context.Context, qtx
 	})
 }
 
-func (r *PostgresRepository) insertWorkflow(ctx context.Context, qtx *sqlc.Queries, executionId, workflowType string, workflow *testkube.TestWorkflow) error {
+func (r *PostgresRepository) insertWorkflow(ctx context.Context, qtx QueriesInterface, executionId, workflowType string, workflow *testkube.TestWorkflow) error {
 	labels, _ := toJSONB(workflow.Labels)
 	annotations, _ := toJSONB(workflow.Annotations)
 	spec, _ := toJSONB(workflow.Spec)
@@ -1982,7 +1996,7 @@ func (r *PostgresRepository) buildWorkflowFromRow(
 	return workflow
 }
 
-func (r *PostgresRepository) updateMainExecution(ctx context.Context, qtx *sqlc.Queries, execution *testkube.TestWorkflowExecution) error {
+func (r *PostgresRepository) updateMainExecution(ctx context.Context, qtx QueriesInterface, execution *testkube.TestWorkflowExecution) error {
 	runnerTarget, _ := toJSONB(execution.RunnerTarget)
 	runnerOriginalTarget, _ := toJSONB(execution.RunnerOriginalTarget)
 	tags, _ := toJSONB(execution.Tags)

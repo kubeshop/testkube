@@ -1,0 +1,1204 @@
+package postgres
+
+import (
+	"context"
+	"errors"
+	"testing"
+	"time"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/database/postgres/sqlc"
+	"github.com/kubeshop/testkube/pkg/repository/sequence"
+	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
+)
+
+// MockQueriesInterface is a mock implementation of QueriesInterface
+type MockQueriesInterface struct {
+	mock.Mock
+}
+
+func (m *MockQueriesInterface) WithTx(tx pgx.Tx) QueriesInterface {
+	args := m.Called(tx)
+	return args.Get(0).(QueriesInterface)
+}
+
+func (m *MockQueriesInterface) GetTestWorkflowExecution(ctx context.Context, id string) (sqlc.GetTestWorkflowExecutionRow, error) {
+	args := m.Called(ctx, id)
+	return args.Get(0).(sqlc.GetTestWorkflowExecutionRow), args.Error(1)
+}
+
+func (m *MockQueriesInterface) GetTestWorkflowExecutionByNameAndTestWorkflow(ctx context.Context, arg sqlc.GetTestWorkflowExecutionByNameAndTestWorkflowParams) (sqlc.GetTestWorkflowExecutionByNameAndTestWorkflowRow, error) {
+	args := m.Called(ctx, arg)
+	return args.Get(0).(sqlc.GetTestWorkflowExecutionByNameAndTestWorkflowRow), args.Error(1)
+}
+
+func (m *MockQueriesInterface) GetLatestTestWorkflowExecutionByTestWorkflow(ctx context.Context, workflowName pgtype.Text) (sqlc.GetLatestTestWorkflowExecutionByTestWorkflowRow, error) {
+	args := m.Called(ctx, workflowName)
+	return args.Get(0).(sqlc.GetLatestTestWorkflowExecutionByTestWorkflowRow), args.Error(1)
+}
+
+func (m *MockQueriesInterface) GetLatestTestWorkflowExecutionsByTestWorkflows(ctx context.Context, workflowNames []pgtype.Text) ([]sqlc.GetLatestTestWorkflowExecutionsByTestWorkflowsRow, error) {
+	args := m.Called(ctx, workflowNames)
+	return args.Get(0).([]sqlc.GetLatestTestWorkflowExecutionsByTestWorkflowsRow), args.Error(1)
+}
+
+func (m *MockQueriesInterface) GetRunningTestWorkflowExecutions(ctx context.Context) ([]sqlc.GetRunningTestWorkflowExecutionsRow, error) {
+	args := m.Called(ctx)
+	return args.Get(0).([]sqlc.GetRunningTestWorkflowExecutionsRow), args.Error(1)
+}
+
+func (m *MockQueriesInterface) GetTestWorkflowExecutionsTotals(ctx context.Context, arg sqlc.GetTestWorkflowExecutionsTotalsParams) ([]sqlc.GetTestWorkflowExecutionsTotalsRow, error) {
+	args := m.Called(ctx, arg)
+	return args.Get(0).([]sqlc.GetTestWorkflowExecutionsTotalsRow), args.Error(1)
+}
+
+func (m *MockQueriesInterface) GetTestWorkflowExecutions(ctx context.Context, arg sqlc.GetTestWorkflowExecutionsParams) ([]sqlc.GetTestWorkflowExecutionsRow, error) {
+	args := m.Called(ctx, arg)
+	return args.Get(0).([]sqlc.GetTestWorkflowExecutionsRow), args.Error(1)
+}
+
+func (m *MockQueriesInterface) GetTestWorkflowExecutionsSummary(ctx context.Context, arg sqlc.GetTestWorkflowExecutionsSummaryParams) ([]sqlc.GetTestWorkflowExecutionsSummaryRow, error) {
+	args := m.Called(ctx, arg)
+	return args.Get(0).([]sqlc.GetTestWorkflowExecutionsSummaryRow), args.Error(1)
+}
+
+func (m *MockQueriesInterface) GetFinishedTestWorkflowExecutions(ctx context.Context, arg sqlc.GetFinishedTestWorkflowExecutionsParams) ([]sqlc.GetFinishedTestWorkflowExecutionsRow, error) {
+	args := m.Called(ctx, arg)
+	return args.Get(0).([]sqlc.GetFinishedTestWorkflowExecutionsRow), args.Error(1)
+}
+
+func (m *MockQueriesInterface) GetUnassignedTestWorkflowExecutions(ctx context.Context) ([]sqlc.GetUnassignedTestWorkflowExecutionsRow, error) {
+	args := m.Called(ctx)
+	return args.Get(0).([]sqlc.GetUnassignedTestWorkflowExecutionsRow), args.Error(1)
+}
+
+func (m *MockQueriesInterface) InsertTestWorkflowExecution(ctx context.Context, arg sqlc.InsertTestWorkflowExecutionParams) error {
+	args := m.Called(ctx, arg)
+	return args.Error(0)
+}
+
+func (m *MockQueriesInterface) InsertTestWorkflowResult(ctx context.Context, arg sqlc.InsertTestWorkflowResultParams) error {
+	args := m.Called(ctx, arg)
+	return args.Error(0)
+}
+
+func (m *MockQueriesInterface) InsertTestWorkflowSignature(ctx context.Context, arg sqlc.InsertTestWorkflowSignatureParams) error {
+	args := m.Called(ctx, arg)
+	return args.Error(0)
+}
+
+func (m *MockQueriesInterface) InsertTestWorkflowOutput(ctx context.Context, arg sqlc.InsertTestWorkflowOutputParams) error {
+	args := m.Called(ctx, arg)
+	return args.Error(0)
+}
+
+func (m *MockQueriesInterface) InsertTestWorkflowReport(ctx context.Context, arg sqlc.InsertTestWorkflowReportParams) error {
+	args := m.Called(ctx, arg)
+	return args.Error(0)
+}
+
+func (m *MockQueriesInterface) InsertTestWorkflowResourceAggregations(ctx context.Context, arg sqlc.InsertTestWorkflowResourceAggregationsParams) error {
+	args := m.Called(ctx, arg)
+	return args.Error(0)
+}
+
+func (m *MockQueriesInterface) InsertTestWorkflow(ctx context.Context, arg sqlc.InsertTestWorkflowParams) error {
+	args := m.Called(ctx, arg)
+	return args.Error(0)
+}
+
+func (m *MockQueriesInterface) UpdateTestWorkflowExecution(ctx context.Context, arg sqlc.UpdateTestWorkflowExecutionParams) error {
+	args := m.Called(ctx, arg)
+	return args.Error(0)
+}
+
+func (m *MockQueriesInterface) UpdateTestWorkflowExecutionResult(ctx context.Context, arg sqlc.UpdateTestWorkflowExecutionResultParams) error {
+	args := m.Called(ctx, arg)
+	return args.Error(0)
+}
+
+func (m *MockQueriesInterface) UpdateExecutionStatusAt(ctx context.Context, arg sqlc.UpdateExecutionStatusAtParams) error {
+	args := m.Called(ctx, arg)
+	return args.Error(0)
+}
+
+func (m *MockQueriesInterface) UpdateTestWorkflowExecutionReport(ctx context.Context, arg sqlc.UpdateTestWorkflowExecutionReportParams) error {
+	args := m.Called(ctx, arg)
+	return args.Error(0)
+}
+
+func (m *MockQueriesInterface) UpdateTestWorkflowExecutionResourceAggregations(ctx context.Context, arg sqlc.UpdateTestWorkflowExecutionResourceAggregationsParams) error {
+	args := m.Called(ctx, arg)
+	return args.Error(0)
+}
+
+func (m *MockQueriesInterface) DeleteTestWorkflowOutputs(ctx context.Context, executionID string) error {
+	args := m.Called(ctx, executionID)
+	return args.Error(0)
+}
+
+func (m *MockQueriesInterface) DeleteTestWorkflowExecutionsByTestWorkflow(ctx context.Context, workflowName pgtype.Text) error {
+	args := m.Called(ctx, workflowName)
+	return args.Error(0)
+}
+
+func (m *MockQueriesInterface) DeleteAllTestWorkflowExecutions(ctx context.Context) error {
+	args := m.Called(ctx)
+	return args.Error(0)
+}
+
+func (m *MockQueriesInterface) DeleteTestWorkflowExecutionsByTestWorkflows(ctx context.Context, workflowNames []pgtype.Text) error {
+	args := m.Called(ctx, workflowNames)
+	return args.Error(0)
+}
+
+func (m *MockQueriesInterface) GetTestWorkflowSignatures(ctx context.Context, executionID string) ([]sqlc.TestWorkflowSignature, error) {
+	args := m.Called(ctx, executionID)
+	return args.Get(0).([]sqlc.TestWorkflowSignature), args.Error(1)
+}
+
+func (m *MockQueriesInterface) GetTestWorkflowOutputs(ctx context.Context, executionID string) ([]sqlc.TestWorkflowOutput, error) {
+	args := m.Called(ctx, executionID)
+	return args.Get(0).([]sqlc.TestWorkflowOutput), args.Error(1)
+}
+
+func (m *MockQueriesInterface) GetTestWorkflowReports(ctx context.Context, executionID string) ([]sqlc.TestWorkflowReport, error) {
+	args := m.Called(ctx, executionID)
+	return args.Get(0).([]sqlc.TestWorkflowReport), args.Error(1)
+}
+
+func (m *MockQueriesInterface) GetTestWorkflowResourceAggregations(ctx context.Context, executionID string) (sqlc.TestWorkflowResourceAggregation, error) {
+	args := m.Called(ctx, executionID)
+	return args.Get(0).(sqlc.TestWorkflowResourceAggregation), args.Error(1)
+}
+
+func (m *MockQueriesInterface) GetTestWorkflowMetrics(ctx context.Context, arg sqlc.GetTestWorkflowMetricsParams) ([]sqlc.GetTestWorkflowMetricsRow, error) {
+	args := m.Called(ctx, arg)
+	return args.Get(0).([]sqlc.GetTestWorkflowMetricsRow), args.Error(1)
+}
+
+func (m *MockQueriesInterface) GetPreviousFinishedState(ctx context.Context, arg sqlc.GetPreviousFinishedStateParams) (pgtype.Text, error) {
+	args := m.Called(ctx, arg)
+	return args.Get(0).(pgtype.Text), args.Error(1)
+}
+
+func (m *MockQueriesInterface) GetTestWorkflowExecutionTags(ctx context.Context, workflowName string) ([]sqlc.GetTestWorkflowExecutionTagsRow, error) {
+	args := m.Called(ctx, workflowName)
+	return args.Get(0).([]sqlc.GetTestWorkflowExecutionTagsRow), args.Error(1)
+}
+
+func (m *MockQueriesInterface) InitTestWorkflowExecution(ctx context.Context, arg sqlc.InitTestWorkflowExecutionParams) error {
+	args := m.Called(ctx, arg)
+	return args.Error(0)
+}
+
+func (m *MockQueriesInterface) AssignTestWorkflowExecution(ctx context.Context, arg sqlc.AssignTestWorkflowExecutionParams) (string, error) {
+	args := m.Called(ctx, arg)
+	return args.String(0), args.Error(1)
+}
+
+func (m *MockQueriesInterface) AbortTestWorkflowExecutionIfQueued(ctx context.Context, arg sqlc.AbortTestWorkflowExecutionIfQueuedParams) (string, error) {
+	args := m.Called(ctx, arg)
+	return args.String(0), args.Error(1)
+}
+
+func (m *MockQueriesInterface) AbortTestWorkflowResultIfQueued(ctx context.Context, arg sqlc.AbortTestWorkflowResultIfQueuedParams) error {
+	args := m.Called(ctx, arg)
+	return args.Error(0)
+}
+
+func (m *MockQueriesInterface) GetNextExecutionNumber(ctx context.Context, workflowName pgtype.Text) (int64, error) {
+	args := m.Called(ctx, workflowName)
+	return args.Get(0).(int64), args.Error(1)
+}
+
+// MockDatabaseInterface is a mock implementation of DatabaseInterface
+type MockDatabaseInterface struct {
+	mock.Mock
+}
+
+func (m *MockDatabaseInterface) Begin(ctx context.Context) (pgx.Tx, error) {
+	args := m.Called(ctx)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(pgx.Tx), args.Error(1)
+}
+
+// MockSequenceRepository is a mock for sequence repository
+type MockSequenceRepository struct {
+	mock.Mock
+}
+
+func (m *MockSequenceRepository) GetNextExecutionNumber(ctx context.Context, name string, executionType sequence.ExecutionType) (int32, error) {
+	args := m.Called(ctx, name, executionType)
+	return int32(args.Int(0)), args.Error(1)
+}
+
+func (m *MockSequenceRepository) DeleteExecutionNumber(ctx context.Context, name string, executionType sequence.ExecutionType) error {
+	args := m.Called(ctx, name, executionType)
+	return args.Error(0)
+}
+
+func (m *MockSequenceRepository) DeleteAllExecutionNumbers(ctx context.Context, executionType sequence.ExecutionType) error {
+	args := m.Called(ctx, executionType)
+	return args.Error(0)
+}
+
+func (m *MockSequenceRepository) DeleteExecutionNumbers(ctx context.Context, names []string, executionType sequence.ExecutionType) error {
+	args := m.Called(ctx, names, executionType)
+	return args.Error(0)
+}
+
+// MockTx is a mock implementation of pgx.Tx
+type MockTx struct {
+	mock.Mock
+}
+
+func (m *MockTx) Begin(ctx context.Context) (pgx.Tx, error) {
+	args := m.Called(ctx)
+	return args.Get(0).(pgx.Tx), args.Error(1)
+}
+
+func (m *MockTx) Commit(ctx context.Context) error {
+	args := m.Called(ctx)
+	return args.Error(0)
+}
+
+func (m *MockTx) Rollback(ctx context.Context) error {
+	args := m.Called(ctx)
+	return args.Error(0)
+}
+
+func (m *MockTx) CopyFrom(ctx context.Context, tableName pgx.Identifier, columnNames []string, rowSrc pgx.CopyFromSource) (int64, error) {
+	args := m.Called(ctx, tableName, columnNames, rowSrc)
+	return args.Get(0).(int64), args.Error(1)
+}
+
+func (m *MockTx) SendBatch(ctx context.Context, b *pgx.Batch) pgx.BatchResults {
+	args := m.Called(ctx, b)
+	return args.Get(0).(pgx.BatchResults)
+}
+
+func (m *MockTx) LargeObjects() pgx.LargeObjects {
+	args := m.Called()
+	return args.Get(0).(pgx.LargeObjects)
+}
+
+func (m *MockTx) Prepare(ctx context.Context, name, sql string) (*pgconn.StatementDescription, error) {
+	args := m.Called(ctx, name, sql)
+	return args.Get(0).(*pgconn.StatementDescription), args.Error(1)
+}
+
+func (m *MockTx) Exec(ctx context.Context, sql string, arguments ...interface{}) (pgconn.CommandTag, error) {
+	args := m.Called(ctx, sql, arguments)
+	return args.Get(0).(pgconn.CommandTag), args.Error(1)
+}
+
+func (m *MockTx) Query(ctx context.Context, sql string, args ...interface{}) (pgx.Rows, error) {
+	mockArgs := m.Called(ctx, sql, args)
+	return mockArgs.Get(0).(pgx.Rows), mockArgs.Error(1)
+}
+
+func (m *MockTx) QueryRow(ctx context.Context, sql string, args ...interface{}) pgx.Row {
+	mockArgs := m.Called(ctx, sql, args)
+	return mockArgs.Get(0).(pgx.Row)
+}
+
+func (m *MockTx) Conn() *pgx.Conn {
+	args := m.Called()
+	return args.Get(0).(*pgx.Conn)
+}
+
+// MockFilter implements the Filter interface for testing
+type MockFilter struct {
+	mock.Mock
+}
+
+func (m *MockFilter) Name() string {
+	return m.Called().String(0)
+}
+
+func (m *MockFilter) NameDefined() bool {
+	return m.Called().Bool(0)
+}
+
+func (m *MockFilter) Names() []string {
+	return m.Called().Get(0).([]string)
+}
+
+func (m *MockFilter) NamesDefined() bool {
+	return m.Called().Bool(0)
+}
+
+func (m *MockFilter) LastNDays() int {
+	return m.Called().Int(0)
+}
+
+func (m *MockFilter) LastNDaysDefined() bool {
+	return m.Called().Bool(0)
+}
+
+func (m *MockFilter) StartDate() time.Time {
+	return m.Called().Get(0).(time.Time)
+}
+
+func (m *MockFilter) StartDateDefined() bool {
+	return m.Called().Bool(0)
+}
+
+func (m *MockFilter) EndDate() time.Time {
+	return m.Called().Get(0).(time.Time)
+}
+
+func (m *MockFilter) EndDateDefined() bool {
+	return m.Called().Bool(0)
+}
+
+func (m *MockFilter) Statuses() []testkube.TestWorkflowStatus {
+	return m.Called().Get(0).([]testkube.TestWorkflowStatus)
+}
+
+func (m *MockFilter) StatusesDefined() bool {
+	return m.Called().Bool(0)
+}
+
+func (m *MockFilter) Page() int {
+	return m.Called().Int(0)
+}
+
+func (m *MockFilter) PageSize() int {
+	return m.Called().Int(0)
+}
+
+func (m *MockFilter) TextSearch() string {
+	return m.Called().String(0)
+}
+
+func (m *MockFilter) TextSearchDefined() bool {
+	return m.Called().Bool(0)
+}
+
+func (m *MockFilter) Selector() string {
+	return m.Called().String(0)
+}
+
+func (m *MockFilter) TagSelector() string {
+	return m.Called().String(0)
+}
+
+func (m *MockFilter) LabelSelector() *testworkflow.LabelSelector {
+	args := m.Called()
+	if args.Get(0) == nil {
+		return nil
+	}
+	return args.Get(0).(*testworkflow.LabelSelector)
+}
+
+func (m *MockFilter) ActorName() string {
+	return m.Called().String(0)
+}
+
+func (m *MockFilter) ActorNameDefined() bool {
+	return m.Called().Bool(0)
+}
+
+func (m *MockFilter) ActorType() testkube.TestWorkflowRunningContextActorType {
+	return m.Called().Get(0).(testkube.TestWorkflowRunningContextActorType)
+}
+
+func (m *MockFilter) ActorTypeDefined() bool {
+	return m.Called().Bool(0)
+}
+
+func (m *MockFilter) GroupID() string {
+	return m.Called().String(0)
+}
+
+func (m *MockFilter) GroupIDDefined() bool {
+	return m.Called().Bool(0)
+}
+
+func (m *MockFilter) RunnerID() string {
+	return m.Called().String(0)
+}
+
+func (m *MockFilter) RunnerIDDefined() bool {
+	return m.Called().Bool(0)
+}
+
+func (m *MockFilter) Initialized() bool {
+	return m.Called().Bool(0)
+}
+
+func (m *MockFilter) InitializedDefined() bool {
+	return m.Called().Bool(0)
+}
+
+func (m *MockFilter) Assigned() bool {
+	return m.Called().Bool(0)
+}
+
+func (m *MockFilter) AssignedDefined() bool {
+	return m.Called().Bool(0)
+}
+
+// Test helper functions
+func createTestExecution() *testkube.TestWorkflowExecution {
+	status := testkube.PASSED_TestWorkflowStatus
+	return &testkube.TestWorkflowExecution{
+		Id:          "test-id",
+		Name:        "test-execution",
+		GroupId:     "group-1",
+		RunnerId:    "runner-1",
+		Namespace:   "default",
+		Number:      1,
+		ScheduledAt: time.Now(),
+		StatusAt:    time.Now(),
+		Result: &testkube.TestWorkflowResult{
+			Status: &status,
+		},
+		Workflow: &testkube.TestWorkflow{
+			Name:      "test-workflow",
+			Namespace: "default",
+			Spec:      &testkube.TestWorkflowSpec{},
+		},
+		ResolvedWorkflow: &testkube.TestWorkflow{
+			Name:      "test-workflow",
+			Namespace: "default",
+			Spec:      &testkube.TestWorkflowSpec{},
+		},
+		Tags: map[string]string{
+			"env": "test",
+		},
+	}
+}
+
+func createTestFilter() *MockFilter {
+	filter := &MockFilter{}
+	filter.On("Page").Return(0)
+	filter.On("PageSize").Return(100)
+	filter.On("NameDefined").Return(false)
+	filter.On("NamesDefined").Return(false)
+	filter.On("TextSearchDefined").Return(false)
+	filter.On("StartDateDefined").Return(false)
+	filter.On("EndDateDefined").Return(false)
+	filter.On("LastNDaysDefined").Return(false)
+	filter.On("StatusesDefined").Return(false)
+	filter.On("RunnerIDDefined").Return(false)
+	filter.On("AssignedDefined").Return(false)
+	filter.On("ActorNameDefined").Return(false)
+	filter.On("ActorTypeDefined").Return(false)
+	filter.On("GroupIDDefined").Return(false)
+	filter.On("InitializedDefined").Return(false)
+	return filter
+}
+
+func createPostgresRepository(queries QueriesInterface, db DatabaseInterface, seq sequence.Repository) *PostgresRepository {
+	return &PostgresRepository{
+		db:                 db,
+		queries:            queries,
+		sequenceRepository: seq,
+	}
+}
+
+// Unit Tests
+
+func TestPostgresRepository_Get(t *testing.T) {
+	t.Run("Success", func(t *testing.T) {
+		// Arrange
+		mockQueries := &MockQueriesInterface{}
+		mockDB := &MockDatabaseInterface{}
+		mockTx := &MockTx{}
+		repo := createPostgresRepository(mockQueries, mockDB, nil)
+
+		ctx := context.Background()
+		executionID := "test-id"
+
+		// Mock transaction
+		mockDB.On("Begin", ctx).Return(mockTx, nil)
+		mockTx.On("Rollback", ctx).Return(nil)
+		mockTx.On("Commit", ctx).Return(nil)
+		mockQueries.On("WithTx", mockTx).Return(mockQueries)
+
+		// Mock main query
+		row := sqlc.GetTestWorkflowExecutionRow{
+			ID:   executionID,
+			Name: "test-execution",
+			Status: pgtype.Text{
+				String: string(testkube.PASSED_TestWorkflowStatus),
+				Valid:  true,
+			},
+		}
+		mockQueries.On("GetTestWorkflowExecution", ctx, executionID).Return(row, nil)
+
+		// Mock related queries
+		mockQueries.On("GetTestWorkflowSignatures", ctx, executionID).Return([]sqlc.TestWorkflowSignature{}, nil)
+		mockQueries.On("GetTestWorkflowOutputs", ctx, executionID).Return([]sqlc.TestWorkflowOutput{}, nil)
+		mockQueries.On("GetTestWorkflowReports", ctx, executionID).Return([]sqlc.TestWorkflowReport{}, nil)
+		mockQueries.On("GetTestWorkflowResourceAggregations", ctx, executionID).Return(sqlc.TestWorkflowResourceAggregation{}, pgx.ErrNoRows)
+
+		// Act
+		result, err := repo.Get(ctx, executionID)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.Equal(t, executionID, result.Id)
+		assert.Equal(t, "test-execution", result.Name)
+		mockQueries.AssertExpectations(t)
+		mockDB.AssertExpectations(t)
+		mockTx.AssertExpectations(t)
+	})
+
+	t.Run("NotFound", func(t *testing.T) {
+		// Arrange
+		mockQueries := &MockQueriesInterface{}
+		mockDB := &MockDatabaseInterface{}
+		mockTx := &MockTx{}
+		repo := createPostgresRepository(mockQueries, mockDB, nil)
+
+		ctx := context.Background()
+		executionID := "not-found"
+
+		mockDB.On("Begin", ctx).Return(mockTx, nil)
+		mockTx.On("Rollback", ctx).Return(nil)
+		mockQueries.On("WithTx", mockTx).Return(mockQueries)
+		mockQueries.On("GetTestWorkflowExecution", ctx, executionID).Return(sqlc.GetTestWorkflowExecutionRow{}, pgx.ErrNoRows)
+
+		// Act
+		_, err := repo.Get(ctx, executionID)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "execution not found")
+		mockQueries.AssertExpectations(t)
+	})
+
+	t.Run("TransactionError", func(t *testing.T) {
+		// Arrange
+		mockQueries := &MockQueriesInterface{}
+		mockDB := &MockDatabaseInterface{}
+		repo := createPostgresRepository(mockQueries, mockDB, nil)
+
+		ctx := context.Background()
+		executionID := "test-id"
+
+		mockDB.On("Begin", ctx).Return(nil, errors.New("transaction error"))
+
+		// Act
+		_, err := repo.Get(ctx, executionID)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "transaction error")
+		mockDB.AssertExpectations(t)
+	})
+}
+
+func TestPostgresRepository_GetByNameAndTestWorkflow(t *testing.T) {
+	t.Run("Success", func(t *testing.T) {
+		// Arrange
+		mockQueries := &MockQueriesInterface{}
+		repo := createPostgresRepository(mockQueries, nil, nil)
+
+		ctx := context.Background()
+		name := "test-execution"
+		workflowName := "test-workflow"
+
+		row := sqlc.GetTestWorkflowExecutionByNameAndTestWorkflowRow{
+			ID:   "test-id",
+			Name: name,
+		}
+
+		params := sqlc.GetTestWorkflowExecutionByNameAndTestWorkflowParams{
+			Name:         name,
+			WorkflowName: toPgText(workflowName),
+		}
+
+		mockQueries.On("GetTestWorkflowExecutionByNameAndTestWorkflow", ctx, params).Return(row, nil)
+
+		// Act
+		result, err := repo.GetByNameAndTestWorkflow(ctx, name, workflowName)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.Equal(t, "test-id", result.Id)
+		assert.Equal(t, name, result.Name)
+		mockQueries.AssertExpectations(t)
+	})
+
+	t.Run("NotFound", func(t *testing.T) {
+		// Arrange
+		mockQueries := &MockQueriesInterface{}
+		repo := createPostgresRepository(mockQueries, nil, nil)
+
+		ctx := context.Background()
+		name := "not-found"
+		workflowName := "test-workflow"
+
+		params := sqlc.GetTestWorkflowExecutionByNameAndTestWorkflowParams{
+			Name:         name,
+			WorkflowName: toPgText(workflowName),
+		}
+
+		mockQueries.On("GetTestWorkflowExecutionByNameAndTestWorkflow", ctx, params).Return(sqlc.GetTestWorkflowExecutionByNameAndTestWorkflowRow{}, pgx.ErrNoRows)
+
+		// Act
+		_, err := repo.GetByNameAndTestWorkflow(ctx, name, workflowName)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "execution not found")
+		mockQueries.AssertExpectations(t)
+	})
+}
+
+func TestPostgresRepository_GetLatestByTestWorkflow(t *testing.T) {
+	t.Run("Success", func(t *testing.T) {
+		// Arrange
+		mockQueries := &MockQueriesInterface{}
+		repo := createPostgresRepository(mockQueries, nil, nil)
+
+		ctx := context.Background()
+		workflowName := "test-workflow"
+
+		row := sqlc.GetLatestTestWorkflowExecutionByTestWorkflowRow{
+			ID:   "test-id",
+			Name: "test-execution",
+		}
+
+		mockQueries.On("GetLatestTestWorkflowExecutionByTestWorkflow", ctx, toPgText(workflowName)).Return(row, nil)
+
+		// Act
+		result, err := repo.GetLatestByTestWorkflow(ctx, workflowName)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+		assert.Equal(t, "test-id", result.Id)
+		mockQueries.AssertExpectations(t)
+	})
+
+	t.Run("NotFound", func(t *testing.T) {
+		// Arrange
+		mockQueries := &MockQueriesInterface{}
+		repo := createPostgresRepository(mockQueries, nil, nil)
+
+		ctx := context.Background()
+		workflowName := "not-found"
+
+		mockQueries.On("GetLatestTestWorkflowExecutionByTestWorkflow", ctx, toPgText(workflowName)).Return(sqlc.GetLatestTestWorkflowExecutionByTestWorkflowRow{}, pgx.ErrNoRows)
+
+		// Act
+		result, err := repo.GetLatestByTestWorkflow(ctx, workflowName)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Nil(t, result)
+		mockQueries.AssertExpectations(t)
+	})
+}
+
+func TestPostgresRepository_GetLatestByTestWorkflows(t *testing.T) {
+	t.Run("Success", func(t *testing.T) {
+		// Arrange
+		mockQueries := &MockQueriesInterface{}
+		repo := createPostgresRepository(mockQueries, nil, nil)
+
+		ctx := context.Background()
+		workflowNames := []string{"workflow1", "workflow2"}
+
+		rows := []sqlc.GetLatestTestWorkflowExecutionsByTestWorkflowsRow{
+			{ID: "exec1", Name: "execution1"},
+			{ID: "exec2", Name: "execution2"},
+		}
+
+		pgNames := []pgtype.Text{
+			toPgText("workflow1"),
+			toPgText("workflow2"),
+		}
+
+		mockQueries.On("GetLatestTestWorkflowExecutionsByTestWorkflows", ctx, pgNames).Return(rows, nil)
+
+		// Act
+		result, err := repo.GetLatestByTestWorkflows(ctx, workflowNames)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.Len(t, result, 2)
+		mockQueries.AssertExpectations(t)
+	})
+
+	t.Run("EmptyInput", func(t *testing.T) {
+		// Arrange
+		repo := createPostgresRepository(nil, nil, nil)
+
+		ctx := context.Background()
+		workflowNames := []string{}
+
+		// Act
+		result, err := repo.GetLatestByTestWorkflows(ctx, workflowNames)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.Nil(t, result)
+	})
+}
+
+func TestPostgresRepository_GetRunning(t *testing.T) {
+	t.Run("Success", func(t *testing.T) {
+		// Arrange
+		mockQueries := &MockQueriesInterface{}
+		repo := createPostgresRepository(mockQueries, nil, nil)
+
+		ctx := context.Background()
+
+		rows := []sqlc.GetRunningTestWorkflowExecutionsRow{
+			{
+				ID:   "running1",
+				Name: "execution1",
+				Status: pgtype.Text{
+					String: string(testkube.RUNNING_TestWorkflowStatus),
+					Valid:  true,
+				},
+			},
+			{
+				ID:   "running2",
+				Name: "execution2",
+				Status: pgtype.Text{
+					String: string(testkube.QUEUED_TestWorkflowStatus),
+					Valid:  true,
+				},
+			},
+		}
+
+		mockQueries.On("GetRunningTestWorkflowExecutions", ctx).Return(rows, nil)
+
+		// Act
+		result, err := repo.GetRunning(ctx)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.Len(t, result, 2)
+		assert.Equal(t, "running1", result[0].Id)
+		assert.Equal(t, "running2", result[1].Id)
+		mockQueries.AssertExpectations(t)
+	})
+
+	t.Run("Error", func(t *testing.T) {
+		// Arrange
+		mockQueries := &MockQueriesInterface{}
+		repo := createPostgresRepository(mockQueries, nil, nil)
+
+		ctx := context.Background()
+
+		mockQueries.On("GetRunningTestWorkflowExecutions", ctx).Return([]sqlc.GetRunningTestWorkflowExecutionsRow{}, errors.New("database error"))
+
+		// Act
+		result, err := repo.GetRunning(ctx)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Nil(t, result)
+		mockQueries.AssertExpectations(t)
+	})
+}
+
+func TestPostgresRepository_GetExecutionsTotals(t *testing.T) {
+	t.Run("Success", func(t *testing.T) {
+		// Arrange
+		mockQueries := &MockQueriesInterface{}
+		repo := createPostgresRepository(mockQueries, nil, nil)
+
+		ctx := context.Background()
+		filter := createTestFilter()
+
+		rows := []sqlc.GetTestWorkflowExecutionsTotalsRow{
+			{
+				Status: pgtype.Text{String: string(testkube.PASSED_TestWorkflowStatus), Valid: true},
+				Count:  5,
+			},
+			{
+				Status: pgtype.Text{String: string(testkube.FAILED_TestWorkflowStatus), Valid: true},
+				Count:  3,
+			},
+		}
+
+		mockQueries.On("GetTestWorkflowExecutionsTotals", ctx, mock.AnythingOfType("sqlc.GetTestWorkflowExecutionsTotalsParams")).Return(rows, nil)
+
+		// Act
+		result, err := repo.GetExecutionsTotals(ctx, filter)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.Equal(t, int32(5), result.Passed)
+		assert.Equal(t, int32(3), result.Failed)
+		assert.Equal(t, int32(8), result.Results)
+		mockQueries.AssertExpectations(t)
+	})
+
+	t.Run("WithoutFilter", func(t *testing.T) {
+		// Arrange
+		mockQueries := &MockQueriesInterface{}
+		repo := createPostgresRepository(mockQueries, nil, nil)
+
+		ctx := context.Background()
+
+		rows := []sqlc.GetTestWorkflowExecutionsTotalsRow{
+			{
+				Status: pgtype.Text{String: string(testkube.RUNNING_TestWorkflowStatus), Valid: true},
+				Count:  2,
+			},
+		}
+
+		mockQueries.On("GetTestWorkflowExecutionsTotals", ctx, mock.AnythingOfType("sqlc.GetTestWorkflowExecutionsTotalsParams")).Return(rows, nil)
+
+		// Act
+		result, err := repo.GetExecutionsTotals(ctx)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.Equal(t, int32(2), result.Running)
+		assert.Equal(t, int32(2), result.Results)
+		mockQueries.AssertExpectations(t)
+	})
+}
+
+func TestPostgresRepository_GetExecutions(t *testing.T) {
+	t.Run("Success", func(t *testing.T) {
+		// Arrange
+		mockQueries := &MockQueriesInterface{}
+		repo := createPostgresRepository(mockQueries, nil, nil)
+
+		ctx := context.Background()
+		filter := createTestFilter()
+
+		rows := []sqlc.GetTestWorkflowExecutionsRow{
+			{ID: "exec1", Name: "execution1"},
+			{ID: "exec2", Name: "execution2"},
+		}
+
+		mockQueries.On("GetTestWorkflowExecutions", ctx, mock.AnythingOfType("sqlc.GetTestWorkflowExecutionsParams")).Return(rows, nil)
+
+		// Act
+		result, err := repo.GetExecutions(ctx, filter)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.Len(t, result, 2)
+		mockQueries.AssertExpectations(t)
+	})
+}
+
+func TestPostgresRepository_GetExecutionsSummary(t *testing.T) {
+	t.Run("Success", func(t *testing.T) {
+		// Arrange
+		mockQueries := &MockQueriesInterface{}
+		repo := createPostgresRepository(mockQueries, nil, nil)
+
+		ctx := context.Background()
+		filter := createTestFilter()
+
+		rows := []sqlc.GetTestWorkflowExecutionsSummaryRow{
+			{ID: "exec1", Name: "execution1"},
+			{ID: "exec2", Name: "execution2"},
+		}
+
+		mockQueries.On("GetTestWorkflowExecutionsSummary", ctx, mock.AnythingOfType("sqlc.GetTestWorkflowExecutionsSummaryParams")).Return(rows, nil)
+
+		// Act
+		result, err := repo.GetExecutionsSummary(ctx, filter)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.Len(t, result, 2)
+		mockQueries.AssertExpectations(t)
+	})
+}
+
+func TestPostgresRepository_GetFinished(t *testing.T) {
+	t.Run("Success", func(t *testing.T) {
+		// Arrange
+		mockQueries := &MockQueriesInterface{}
+		repo := createPostgresRepository(mockQueries, nil, nil)
+
+		ctx := context.Background()
+		filter := createTestFilter()
+
+		rows := []sqlc.GetFinishedTestWorkflowExecutionsRow{
+			{
+				ID:   "finished1",
+				Name: "execution1",
+				Status: pgtype.Text{
+					String: string(testkube.PASSED_TestWorkflowStatus),
+					Valid:  true,
+				},
+			},
+			{
+				ID:   "finished2",
+				Name: "execution2",
+				Status: pgtype.Text{
+					String: string(testkube.FAILED_TestWorkflowStatus),
+					Valid:  true,
+				},
+			},
+		}
+
+		mockQueries.On("GetFinishedTestWorkflowExecutions", ctx, mock.AnythingOfType("sqlc.GetFinishedTestWorkflowExecutionsParams")).Return(rows, nil)
+
+		// Act
+		result, err := repo.GetFinished(ctx, filter)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.Len(t, result, 2)
+		assert.Equal(t, "finished1", result[0].Id)
+		assert.Equal(t, "finished2", result[1].Id)
+		mockQueries.AssertExpectations(t)
+	})
+}
+
+func TestPostgresRepository_Insert(t *testing.T) {
+	t.Run("Success", func(t *testing.T) {
+		// Arrange
+		mockQueries := &MockQueriesInterface{}
+		mockDB := &MockDatabaseInterface{}
+		mockTx := &MockTx{}
+
+		repo := createPostgresRepository(mockQueries, mockDB, nil)
+
+		ctx := context.Background()
+		execution := createTestExecution()
+
+		// Mock transaction
+		mockDB.On("Begin", ctx).Return(mockTx, nil)
+		mockTx.On("Rollback", ctx).Return(nil)
+		mockTx.On("Commit", ctx).Return(nil)
+		mockQueries.On("WithTx", mockTx).Return(mockQueries)
+
+		// Mock insert operations
+		mockQueries.On("InsertTestWorkflowExecution", ctx, mock.AnythingOfType("sqlc.InsertTestWorkflowExecutionParams")).Return(nil)
+		mockQueries.On("InsertTestWorkflowResult", ctx, mock.AnythingOfType("sqlc.InsertTestWorkflowResultParams")).Return(nil)
+		mockQueries.On("InsertTestWorkflow", ctx, mock.AnythingOfType("sqlc.InsertTestWorkflowParams")).Return(nil)
+
+		// Act
+		err := repo.Insert(ctx, *execution)
+
+		// Assert
+		assert.NoError(t, err)
+		mockQueries.AssertExpectations(t)
+		mockDB.AssertExpectations(t)
+		mockTx.AssertExpectations(t)
+	})
+
+	t.Run("TransactionError", func(t *testing.T) {
+		// Arrange
+		mockQueries := &MockQueriesInterface{}
+		mockDB := &MockDatabaseInterface{}
+		repo := createPostgresRepository(mockQueries, mockDB, nil)
+
+		ctx := context.Background()
+		execution := createTestExecution()
+
+		mockDB.On("Begin", ctx).Return(nil, errors.New("transaction error"))
+
+		// Act
+		err := repo.Insert(ctx, *execution)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "transaction error")
+		mockDB.AssertExpectations(t)
+	})
+}
+
+func TestPostgresRepository_GetNextExecutionNumber(t *testing.T) {
+	t.Run("Success", func(t *testing.T) {
+		// Arrange
+		mockSeq := &MockSequenceRepository{}
+		repo := createPostgresRepository(nil, nil, mockSeq)
+
+		ctx := context.Background()
+		name := "test-workflow"
+		expectedNumber := 5
+
+		mockSeq.On("GetNextExecutionNumber", ctx, name, sequence.ExecutionTypeTestWorkflow).Return(expectedNumber, nil)
+
+		// Act
+		result, err := repo.GetNextExecutionNumber(ctx, name)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.Equal(t, int32(expectedNumber), result)
+		mockSeq.AssertExpectations(t)
+	})
+
+	t.Run("NoSequenceRepository", func(t *testing.T) {
+		// Arrange
+		repo := createPostgresRepository(nil, nil, nil)
+
+		ctx := context.Background()
+		name := "test-workflow"
+
+		// Act
+		result, err := repo.GetNextExecutionNumber(ctx, name)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Equal(t, int32(0), result)
+		assert.Contains(t, err.Error(), "no sequence repository provided")
+	})
+}
+
+func TestPostgresRepository_DeleteByTestWorkflow(t *testing.T) {
+	t.Run("Success", func(t *testing.T) {
+		// Arrange
+		mockQueries := &MockQueriesInterface{}
+		mockSeq := &MockSequenceRepository{}
+		repo := createPostgresRepository(mockQueries, nil, mockSeq)
+
+		ctx := context.Background()
+		workflowName := "test-workflow"
+
+		mockSeq.On("DeleteExecutionNumber", ctx, workflowName, sequence.ExecutionTypeTestWorkflow).Return(nil)
+		mockQueries.On("DeleteTestWorkflowExecutionsByTestWorkflow", ctx, toPgText(workflowName)).Return(nil)
+
+		// Act
+		err := repo.DeleteByTestWorkflow(ctx, workflowName)
+
+		// Assert
+		assert.NoError(t, err)
+		mockQueries.AssertExpectations(t)
+		mockSeq.AssertExpectations(t)
+	})
+
+	t.Run("SequenceError", func(t *testing.T) {
+		// Arrange
+		mockSeq := &MockSequenceRepository{}
+		repo := createPostgresRepository(nil, nil, mockSeq)
+
+		ctx := context.Background()
+		workflowName := "test-workflow"
+
+		mockSeq.On("DeleteExecutionNumber", ctx, workflowName, sequence.ExecutionTypeTestWorkflow).Return(errors.New("sequence error"))
+
+		// Act
+		err := repo.DeleteByTestWorkflow(ctx, workflowName)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "sequence error")
+		mockSeq.AssertExpectations(t)
+	})
+
+	t.Run("WithoutSequenceRepository", func(t *testing.T) {
+		// Arrange
+		mockQueries := &MockQueriesInterface{}
+		repo := createPostgresRepository(mockQueries, nil, nil)
+
+		ctx := context.Background()
+		workflowName := "test-workflow"
+
+		mockQueries.On("DeleteTestWorkflowExecutionsByTestWorkflow", ctx, toPgText(workflowName)).Return(nil)
+
+		// Act
+		err := repo.DeleteByTestWorkflow(ctx, workflowName)
+
+		// Assert
+		assert.NoError(t, err)
+		mockQueries.AssertExpectations(t)
+	})
+}
+
+func TestPostgresRepository_DeleteAll(t *testing.T) {
+	t.Run("Success", func(t *testing.T) {
+		// Arrange
+		mockQueries := &MockQueriesInterface{}
+		mockSeq := &MockSequenceRepository{}
+		repo := createPostgresRepository(mockQueries, nil, mockSeq)
+
+		ctx := context.Background()
+
+		mockSeq.On("DeleteAllExecutionNumbers", ctx, sequence.ExecutionTypeTestWorkflow).Return(nil)
+		mockQueries.On("DeleteAllTestWorkflowExecutions", ctx).Return(nil)
+
+		// Act
+		err := repo.DeleteAll(ctx)
+
+		// Assert
+		assert.NoError(t, err)
+		mockQueries.AssertExpectations(t)
+		mockSeq.AssertExpectations(t)
+	})
+}
+
+func TestPostgresRepository_DeleteByTestWorkflows(t *testing.T) {
+	t.Run("Success", func(t *testing.T) {
+		// Arrange
+		mockQueries := &MockQueriesInterface{}
+		mockSeq := &MockSequenceRepository{}
+		repo := createPostgresRepository(mockQueries, nil, mockSeq)
+
+		ctx := context.Background()
+		workflowNames := []string{"workflow1", "workflow2"}
+
+		pgNames := []pgtype.Text{
+			toPgText("workflow1"),
+			toPgText("workflow2"),
+		}
+
+		mockSeq.On("DeleteExecutionNumbers", ctx, workflowNames, sequence.ExecutionTypeTestWorkflow).Return(nil)
+		mockQueries.On("DeleteTestWorkflowExecutionsByTestWorkflows", ctx, pgNames).Return(nil)
+
+		// Act
+		err := repo.DeleteByTestWorkflows(ctx, workflowNames)
+
+		// Assert
+		assert.NoError(t, err)
+		mockQueries.AssertExpectations(t)
+		mockSeq.AssertExpectations(t)
+	})
+
+	t.Run("EmptyInput", func(t *testing.T) {
+		// Arrange
+		repo := createPostgresRepository(nil, nil, nil)
+
+		ctx := context.Background()
+		workflowNames := []string{}
+
+		// Act
+		err := repo.DeleteByTestWorkflows(ctx, workflowNames)
+
+		// Assert
+		assert.NoError(t, err)
+	})
+}
+
+func TestPostgresRepository_RepositoryCreation(t *testing.T) {
+	t.Run("NewPostgresRepositoryWithOptions", func(t *testing.T) {
+		// Arrange
+		mockSeq := &MockSequenceRepository{}
+		mockQueries := &MockQueriesInterface{}
+		mockDB := &MockDatabaseInterface{}
+
+		// Act
+		repo := NewPostgresRepository(
+			nil, // This would be a real pgxpool.Pool in practice
+			WithPostgresRepositorySequence(mockSeq),
+			WithQueriesInterface(mockQueries),
+			WithDatabaseInterface(mockDB),
+		)
+
+		// Assert
+		assert.NotNil(t, repo)
+		assert.Equal(t, mockSeq, repo.sequenceRepository)
+		assert.Equal(t, mockQueries, repo.queries)
+		assert.Equal(t, mockDB, repo.db)
+	})
+}
