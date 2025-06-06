@@ -1,0 +1,769 @@
+// queries_test.go
+package sqlc
+
+import (
+	"context"
+	"testing"
+	"time"
+
+	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/pashagolub/pgxmock/v4"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+// TestSQLCQueries_GetTestWorkflowExecution tests the GetTestWorkflowExecution query syntax
+func TestSQLCQueries_GetTestWorkflowExecution(t *testing.T) {
+	// Create mock database connection
+	mock, err := pgxmock.NewPool()
+	require.NoError(t, err)
+	defer mock.Close()
+
+	queries := New(mock)
+	ctx := context.Background()
+
+	// Define expected query pattern
+	expectedQuery := `SELECT 
+    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.created_at, e.updated_at,
+    r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
+    r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
+    r.pauses, r.initialization, r.steps,
+    w.name as workflow_name, w.namespace as workflow_namespace, w.description as workflow_description,
+    w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
+    w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
+    w.status as workflow_status,
+    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace, 
+    rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
+    rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
+    rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
+    rw.read_only as resolved_workflow_read_only, rw.status as resolved_workflow_status
+FROM test_workflow_executions e
+LEFT JOIN test_workflow_results r ON e.id = r.execution_id
+LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
+LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
+WHERE e.id = \$1 OR e.name = \$1`
+
+	// Mock expected result
+	rows := mock.NewRows([]string{
+		"id", "group_id", "runner_id", "runner_target", "runner_original_target", "name", "namespace", "number",
+		"scheduled_at", "assigned_at", "status_at", "test_workflow_execution_name", "disable_webhooks",
+		"tags", "running_context", "config_params", "created_at", "updated_at",
+		"status", "predicted_status", "queued_at", "started_at", "finished_at",
+		"duration", "total_duration", "duration_ms", "paused_ms", "total_duration_ms",
+		"pauses", "initialization", "steps",
+		"workflow_name", "workflow_namespace", "workflow_description", "workflow_labels", "workflow_annotations",
+		"workflow_created", "workflow_updated", "workflow_spec", "workflow_read_only", "workflow_status",
+		"resolved_workflow_name", "resolved_workflow_namespace", "resolved_workflow_description",
+		"resolved_workflow_labels", "resolved_workflow_annotations", "resolved_workflow_created",
+		"resolved_workflow_updated", "resolved_workflow_spec", "resolved_workflow_read_only", "resolved_workflow_status",
+	}).AddRow(
+		"test-id", "group-1", "runner-1", []byte(`{}`), []byte(`{}`), "test-execution", "default", 1,
+		time.Now(), time.Now(), time.Now(), "test-execution-name", false,
+		[]byte(`{"env":"test"}`), []byte(`{}`), []byte(`{}`), time.Now(), time.Now(),
+		"passed", "passed", time.Now(), time.Now(), time.Now(),
+		"5m", "5m", 300000, 0, 300000,
+		[]byte(`[]`), []byte(`{}`), []byte(`{}`),
+		"test-workflow", "default", "Test workflow", []byte(`{}`), []byte(`{}`),
+		time.Now(), time.Now(), []byte(`{}`), false, []byte(`{}`),
+		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+	)
+
+	mock.ExpectQuery(expectedQuery).WithArgs("test-id").WillReturnRows(rows)
+
+	// Execute query
+	result, err := queries.GetTestWorkflowExecution(ctx, "test-id")
+
+	// Assertions
+	assert.NoError(t, err)
+	assert.Equal(t, "test-id", result.ID)
+	assert.Equal(t, "test-execution", result.Name)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestSQLCQueries_GetTestWorkflowExecutionByNameAndTestWorkflow(t *testing.T) {
+	mock, err := pgxmock.NewPool()
+	require.NoError(t, err)
+	defer mock.Close()
+
+	queries := New(mock)
+	ctx := context.Background()
+
+	expectedQuery := `SELECT 
+    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.created_at, e.updated_at,
+    r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
+    r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
+    r.pauses, r.initialization, r.steps,
+    w.name as workflow_name, w.namespace as workflow_namespace, w.description as workflow_description,
+    w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
+    w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
+    w.status as workflow_status
+FROM test_workflow_executions e
+LEFT JOIN test_workflow_results r ON e.id = r.execution_id
+LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
+WHERE \(e.id = \$1 OR e.name = \$1\) AND w.name = \$2`
+
+	rows := mock.NewRows([]string{
+		"id", "group_id", "runner_id", "runner_target", "runner_original_target", "name", "namespace", "number",
+		"scheduled_at", "assigned_at", "status_at", "test_workflow_execution_name", "disable_webhooks",
+		"tags", "running_context", "config_params", "created_at", "updated_at",
+		"status", "predicted_status", "queued_at", "started_at", "finished_at",
+		"duration", "total_duration", "duration_ms", "paused_ms", "total_duration_ms",
+		"pauses", "initialization", "steps",
+		"workflow_name", "workflow_namespace", "workflow_description", "workflow_labels", "workflow_annotations",
+		"workflow_created", "workflow_updated", "workflow_spec", "workflow_read_only", "workflow_status",
+	}).AddRow(
+		"test-id", "group-1", "runner-1", []byte(`{}`), []byte(`{}`), "test-execution", "default", 1,
+		time.Now(), time.Now(), time.Now(), "test-execution-name", false,
+		[]byte(`{"env":"test"}`), []byte(`{}`), []byte(`{}`), time.Now(), time.Now(),
+		"passed", "passed", time.Now(), time.Now(), time.Now(),
+		"5m", "5m", 300000, 0, 300000,
+		[]byte(`[]`), []byte(`{}`), []byte(`{}`),
+		"test-workflow", "default", "Test workflow", []byte(`{}`), []byte(`{}`),
+		time.Now(), time.Now(), []byte(`{}`), false, []byte(`{}`),
+	)
+
+	mock.ExpectQuery(expectedQuery).WithArgs("test-execution", "test-workflow").WillReturnRows(rows)
+
+	params := GetTestWorkflowExecutionByNameAndTestWorkflowParams{
+		Name:         "test-execution",
+		WorkflowName: pgtype.Text{String: "test-workflow", Valid: true},
+	}
+
+	result, err := queries.GetTestWorkflowExecutionByNameAndTestWorkflow(ctx, params)
+
+	assert.NoError(t, err)
+	assert.Equal(t, "test-id", result.ID)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestSQLCQueries_GetLatestTestWorkflowExecutionByTestWorkflow(t *testing.T) {
+	mock, err := pgxmock.NewPool()
+	require.NoError(t, err)
+	defer mock.Close()
+
+	queries := New(mock)
+	ctx := context.Background()
+
+	expectedQuery := `SELECT 
+    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.created_at, e.updated_at,
+    r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
+    r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
+    r.pauses, r.initialization, r.steps
+FROM test_workflow_executions e
+LEFT JOIN test_workflow_results r ON e.id = r.execution_id
+LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
+WHERE w.name = \$1 
+ORDER BY e.status_at DESC 
+LIMIT 1`
+
+	rows := mock.NewRows([]string{
+		"id", "group_id", "runner_id", "runner_target", "runner_original_target", "name", "namespace", "number",
+		"scheduled_at", "assigned_at", "status_at", "test_workflow_execution_name", "disable_webhooks",
+		"tags", "running_context", "config_params", "created_at", "updated_at",
+		"status", "predicted_status", "queued_at", "started_at", "finished_at",
+		"duration", "total_duration", "duration_ms", "paused_ms", "total_duration_ms",
+		"pauses", "initialization", "steps",
+	}).AddRow(
+		"test-id", "group-1", "runner-1", []byte(`{}`), []byte(`{}`), "test-execution", "default", 1,
+		time.Now(), time.Now(), time.Now(), "test-execution-name", false,
+		[]byte(`{"env":"test"}`), []byte(`{}`), []byte(`{}`), time.Now(), time.Now(),
+		"passed", "passed", time.Now(), time.Now(), time.Now(),
+		"5m", "5m", 300000, 0, 300000,
+		[]byte(`[]`), []byte(`{}`), []byte(`{}`),
+	)
+
+	mock.ExpectQuery(expectedQuery).WithArgs("test-workflow").WillReturnRows(rows)
+
+	workflowName := pgtype.Text{String: "test-workflow", Valid: true}
+	result, err := queries.GetLatestTestWorkflowExecutionByTestWorkflow(ctx, workflowName)
+
+	assert.NoError(t, err)
+	assert.Equal(t, "test-id", result.ID)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestSQLCQueries_GetRunningTestWorkflowExecutions(t *testing.T) {
+	mock, err := pgxmock.NewPool()
+	require.NoError(t, err)
+	defer mock.Close()
+
+	queries := New(mock)
+	ctx := context.Background()
+
+	expectedQuery := `SELECT 
+    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.created_at, e.updated_at,
+    r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
+    r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms
+FROM test_workflow_executions e
+LEFT JOIN test_workflow_results r ON e.id = r.execution_id
+WHERE r.status IN \('paused', 'running', 'queued'\)
+ORDER BY e.id DESC`
+
+	rows := mock.NewRows([]string{
+		"id", "group_id", "runner_id", "runner_target", "runner_original_target", "name", "namespace", "number",
+		"scheduled_at", "assigned_at", "status_at", "test_workflow_execution_name", "disable_webhooks",
+		"tags", "running_context", "config_params", "created_at", "updated_at",
+		"status", "predicted_status", "queued_at", "started_at", "finished_at",
+		"duration", "total_duration", "duration_ms", "paused_ms", "total_duration_ms",
+	}).AddRow(
+		"running-1", "group-1", "runner-1", []byte(`{}`), []byte(`{}`), "running-execution", "default", 1,
+		time.Now(), time.Now(), time.Now(), "running-execution-name", false,
+		[]byte(`{"env":"test"}`), []byte(`{}`), []byte(`{}`), time.Now(), time.Now(),
+		"running", "running", time.Now(), time.Now(), nil,
+		"", "", 0, 0, 0,
+	).AddRow(
+		"queued-1", "group-1", "runner-1", []byte(`{}`), []byte(`{}`), "queued-execution", "default", 2,
+		time.Now(), time.Now(), time.Now(), "queued-execution-name", false,
+		[]byte(`{"env":"test"}`), []byte(`{}`), []byte(`{}`), time.Now(), time.Now(),
+		"queued", "queued", time.Now(), nil, nil,
+		"", "", 0, 0, 0,
+	)
+
+	mock.ExpectQuery(expectedQuery).WillReturnRows(rows)
+
+	result, err := queries.GetRunningTestWorkflowExecutions(ctx)
+
+	assert.NoError(t, err)
+	assert.Len(t, result, 2)
+	assert.Equal(t, "running-1", result[0].ID)
+	assert.Equal(t, "queued-1", result[1].ID)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestSQLCQueries_GetTestWorkflowExecutionsTotals(t *testing.T) {
+	mock, err := pgxmock.NewPool()
+	require.NoError(t, err)
+	defer mock.Close()
+
+	queries := New(mock)
+	ctx := context.Background()
+
+	expectedQuery := `SELECT 
+    r.status,
+    COUNT\(\*\) as count
+FROM test_workflow_executions e
+LEFT JOIN test_workflow_results r ON e.id = r.execution_id
+LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
+WHERE 1=1
+    AND \(\$1 IS NULL OR w.name = \$1\)
+    AND \(\$2 IS NULL OR w.name = ANY\(\$2\)\)
+    AND \(\$3 IS NULL OR e.name ILIKE '%' \|\| \$3 \|\| '%'\)
+    AND \(\$4 IS NULL OR e.scheduled_at >= \$4\)
+    AND \(\$5 IS NULL OR e.scheduled_at <= \$5\)
+    AND \(\$6 IS NULL OR e.scheduled_at >= NOW\(\) - INTERVAL '\@last_n_days days'\)
+    AND \(\$7 IS NULL OR r.status = ANY\(\$7\)\)
+    AND \(\$8 IS NULL OR e.runner_id = \$8\)
+    AND \(\$9 IS NULL OR 
+         \(\$9 = true AND e.runner_id IS NOT NULL AND e.runner_id != ''\) OR 
+         \(\$9 = false AND \(e.runner_id IS NULL OR e.runner_id = ''\)\)\)
+    AND \(\$10 IS NULL OR e.running_context->'actor'->>'name' = \$10\)
+    AND \(\$11 IS NULL OR e.running_context->'actor'->>'type_' = \$11\)
+    AND \(\$12 IS NULL OR e.id = \$12 OR e.group_id = \$12\)
+    AND \(\$13 IS NULL OR 
+         \(\$13 = true AND \(r.status != 'queued' OR r.steps IS NOT NULL\)\) OR
+         \(\$13 = false AND r.status = 'queued' AND \(r.steps IS NULL OR r.steps = '\{\}'::jsonb\)\)\)
+GROUP BY r.status`
+
+	rows := mock.NewRows([]string{"status", "count"}).
+		AddRow("passed", 5).
+		AddRow("failed", 3).
+		AddRow("running", 2)
+
+	params := GetTestWorkflowExecutionsTotalsParams{
+		WorkflowName:  pgtype.Text{Valid: false},
+		WorkflowNames: []pgtype.Text{{Valid: false}},
+		TextSearch:    pgtype.Text{Valid: false},
+		StartDate:     pgtype.Timestamptz{Valid: false},
+		EndDate:       pgtype.Timestamptz{Valid: false},
+		LastNDays:     pgtype.Int4{Valid: false},
+		Statuses:      []pgtype.Text{{Valid: false}},
+		RunnerID:      pgtype.Text{Valid: false},
+		Assigned:      pgtype.Bool{Valid: false},
+		ActorName:     pgtype.Text{Valid: false},
+		ActorType:     pgtype.Text{Valid: false},
+		GroupID:       pgtype.Text{Valid: false},
+		Initialized:   pgtype.Bool{Valid: false},
+	}
+
+	mock.ExpectQuery(expectedQuery).WithArgs(
+		params.WorkflowName, params.WorkflowNames, params.TextSearch, params.StartDate, params.EndDate,
+		params.LastNDays, params.Statuses, params.RunnerID, params.Assigned, params.ActorName,
+		params.ActorType, params.GroupID, params.Initialized,
+	).WillReturnRows(rows)
+
+	result, err := queries.GetTestWorkflowExecutionsTotals(ctx, params)
+
+	assert.NoError(t, err)
+	assert.Len(t, result, 3)
+	assert.Equal(t, "passed", result[0].Status.String)
+	assert.Equal(t, int64(5), result[0].Count)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestSQLCQueries_InsertTestWorkflowExecution(t *testing.T) {
+	mock, err := pgxmock.NewPool()
+	require.NoError(t, err)
+	defer mock.Close()
+
+	queries := New(mock)
+	ctx := context.Background()
+
+	expectedQuery := `INSERT INTO test_workflow_executions \(
+    id, group_id, runner_id, runner_target, runner_original_target, name, namespace, number,
+    scheduled_at, assigned_at, status_at, test_workflow_execution_name, disable_webhooks, 
+    tags, running_context, config_params
+\) VALUES \(
+    \$1, \$2, \$3, \$4, \$5, \$6, \$7, \$8,
+    \$9, \$10, \$11, \$12, \$13,
+    \$14, \$15, \$16
+\)`
+
+	params := InsertTestWorkflowExecutionParams{
+		ID:                        "test-id",
+		GroupID:                   pgtype.Text{String: "group-1", Valid: true},
+		RunnerID:                  pgtype.Text{String: "runner-1", Valid: true},
+		RunnerTarget:              []byte(`{}`),
+		RunnerOriginalTarget:      []byte(`{}`),
+		Name:                      "test-execution",
+		Namespace:                 pgtype.Text{String: "default", Valid: true},
+		Number:                    pgtype.Int4{Int32: 1, Valid: true},
+		ScheduledAt:               pgtype.Timestamptz{Time: time.Now(), Valid: true},
+		AssignedAt:                pgtype.Timestamptz{Valid: false},
+		StatusAt:                  pgtype.Timestamptz{Time: time.Now(), Valid: true},
+		TestWorkflowExecutionName: pgtype.Text{Valid: false},
+		DisableWebhooks:           pgtype.Bool{Bool: false, Valid: true},
+		Tags:                      []byte(`{"env":"test"}`),
+		RunningContext:            []byte(`{}`),
+		ConfigParams:              []byte(`{}`),
+	}
+
+	mock.ExpectExec(expectedQuery).WithArgs(
+		params.ID, params.GroupID, params.RunnerID, params.RunnerTarget, params.RunnerOriginalTarget,
+		params.Name, params.Namespace, params.Number, params.ScheduledAt, params.AssignedAt,
+		params.StatusAt, params.TestWorkflowExecutionName, params.DisableWebhooks,
+		params.Tags, params.RunningContext, params.ConfigParams,
+	).WillReturnResult(pgxmock.NewResult("INSERT", 1))
+
+	err = queries.InsertTestWorkflowExecution(ctx, params)
+
+	assert.NoError(t, err)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestSQLCQueries_InsertTestWorkflowResult(t *testing.T) {
+	mock, err := pgxmock.NewPool()
+	require.NoError(t, err)
+	defer mock.Close()
+
+	queries := New(mock)
+	ctx := context.Background()
+
+	expectedQuery := `INSERT INTO test_workflow_results \(
+    execution_id, status, predicted_status, queued_at, started_at, finished_at,
+    duration, total_duration, duration_ms, paused_ms, total_duration_ms,
+    pauses, initialization, steps
+\) VALUES \(
+    \$1, \$2, \$3, \$4, \$5, \$6,
+    \$7, \$8, \$9, \$10, \$11,
+    \$12, \$13, \$14
+\)
+ON CONFLICT \(execution_id\) DO UPDATE SET
+    status = EXCLUDED.status,
+    predicted_status = EXCLUDED.predicted_status,
+    queued_at = EXCLUDED.queued_at,
+    started_at = EXCLUDED.started_at,
+    finished_at = EXCLUDED.finished_at,
+    duration = EXCLUDED.duration,
+    total_duration = EXCLUDED.total_duration,
+    duration_ms = EXCLUDED.duration_ms,
+    paused_ms = EXCLUDED.paused_ms,
+    total_duration_ms = EXCLUDED.total_duration_ms,
+    pauses = EXCLUDED.pauses,
+    initialization = EXCLUDED.initialization,
+    steps = EXCLUDED.steps`
+
+	params := InsertTestWorkflowResultParams{
+		ExecutionID:     "test-id",
+		Status:          pgtype.Text{String: "passed", Valid: true},
+		PredictedStatus: pgtype.Text{String: "passed", Valid: true},
+		QueuedAt:        pgtype.Timestamptz{Time: time.Now(), Valid: true},
+		StartedAt:       pgtype.Timestamptz{Time: time.Now(), Valid: true},
+		FinishedAt:      pgtype.Timestamptz{Time: time.Now(), Valid: true},
+		Duration:        pgtype.Text{String: "5m", Valid: true},
+		TotalDuration:   pgtype.Text{String: "5m", Valid: true},
+		DurationMs:      pgtype.Int4{Int32: 300000, Valid: true},
+		PausedMs:        pgtype.Int4{Int32: 0, Valid: true},
+		TotalDurationMs: pgtype.Int4{Int32: 300000, Valid: true},
+		Pauses:          []byte(`[]`),
+		Initialization:  []byte(`{}`),
+		Steps:           []byte(`{}`),
+	}
+
+	mock.ExpectExec(expectedQuery).WithArgs(
+		params.ExecutionID, params.Status, params.PredictedStatus, params.QueuedAt, params.StartedAt,
+		params.FinishedAt, params.Duration, params.TotalDuration, params.DurationMs, params.PausedMs,
+		params.TotalDurationMs, params.Pauses, params.Initialization, params.Steps,
+	).WillReturnResult(pgxmock.NewResult("INSERT", 1))
+
+	err = queries.InsertTestWorkflowResult(ctx, params)
+
+	assert.NoError(t, err)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestSQLCQueries_UpdateTestWorkflowExecutionResult(t *testing.T) {
+	mock, err := pgxmock.NewPool()
+	require.NoError(t, err)
+	defer mock.Close()
+
+	queries := New(mock)
+	ctx := context.Background()
+
+	expectedQuery := `UPDATE test_workflow_results 
+SET 
+    status = \$1,
+    predicted_status = \$2,
+    queued_at = \$3,
+    started_at = \$4,
+    finished_at = \$5,
+    duration = \$6,
+    total_duration = \$7,
+    duration_ms = \$8,
+    paused_ms = \$9,
+    total_duration_ms = \$10,
+    pauses = \$11,
+    initialization = \$12,
+    steps = \$13
+WHERE execution_id = \$14`
+
+	params := UpdateTestWorkflowExecutionResultParams{
+		Status:          pgtype.Text{String: "passed", Valid: true},
+		PredictedStatus: pgtype.Text{String: "passed", Valid: true},
+		QueuedAt:        pgtype.Timestamptz{Time: time.Now(), Valid: true},
+		StartedAt:       pgtype.Timestamptz{Time: time.Now(), Valid: true},
+		FinishedAt:      pgtype.Timestamptz{Time: time.Now(), Valid: true},
+		Duration:        pgtype.Text{String: "5m", Valid: true},
+		TotalDuration:   pgtype.Text{String: "5m", Valid: true},
+		DurationMs:      pgtype.Int4{Int32: 300000, Valid: true},
+		PausedMs:        pgtype.Int4{Int32: 0, Valid: true},
+		TotalDurationMs: pgtype.Int4{Int32: 300000, Valid: true},
+		Pauses:          []byte(`[]`),
+		Initialization:  []byte(`{}`),
+		Steps:           []byte(`{}`),
+		ExecutionID:     "test-id",
+	}
+
+	mock.ExpectExec(expectedQuery).WithArgs(
+		params.Status, params.PredictedStatus, params.QueuedAt, params.StartedAt, params.FinishedAt,
+		params.Duration, params.TotalDuration, params.DurationMs, params.PausedMs, params.TotalDurationMs,
+		params.Pauses, params.Initialization, params.Steps, params.ExecutionID,
+	).WillReturnResult(pgxmock.NewResult("UPDATE", 1))
+
+	err = queries.UpdateTestWorkflowExecutionResult(ctx, params)
+
+	assert.NoError(t, err)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestSQLCQueries_DeleteTestWorkflowExecutionsByTestWorkflow(t *testing.T) {
+	mock, err := pgxmock.NewPool()
+	require.NoError(t, err)
+	defer mock.Close()
+
+	queries := New(mock)
+	ctx := context.Background()
+
+	expectedQuery := `DELETE FROM test_workflow_executions e
+USING test_workflows w
+WHERE e.id = w.execution_id 
+  AND w.workflow_type = 'workflow' 
+  AND w.name = \$1`
+
+	workflowName := pgtype.Text{String: "test-workflow", Valid: true}
+
+	mock.ExpectExec(expectedQuery).WithArgs(workflowName).WillReturnResult(pgxmock.NewResult("DELETE", 3))
+
+	err = queries.DeleteTestWorkflowExecutionsByTestWorkflow(ctx, workflowName)
+
+	assert.NoError(t, err)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestSQLCQueries_GetTestWorkflowSignatures(t *testing.T) {
+	mock, err := pgxmock.NewPool()
+	require.NoError(t, err)
+	defer mock.Close()
+
+	queries := New(mock)
+	ctx := context.Background()
+
+	expectedQuery := `SELECT id, execution_id, ref, name, category, optional, negative, parent_id, created_at FROM test_workflow_signatures 
+WHERE execution_id = \$1 
+ORDER BY id`
+
+	rows := mock.NewRows([]string{
+		"id", "execution_id", "ref", "name", "category", "optional", "negative", "parent_id", "created_at",
+	}).AddRow(
+		1, "test-id", "step-1", "Test Step", "test", false, false, nil, time.Now(),
+	).AddRow(
+		2, "test-id", "step-2", "Another Step", "test", true, false, 1, time.Now(),
+	)
+
+	mock.ExpectQuery(expectedQuery).WithArgs("test-id").WillReturnRows(rows)
+
+	result, err := queries.GetTestWorkflowSignatures(ctx, "test-id")
+
+	assert.NoError(t, err)
+	assert.Len(t, result, 2)
+	assert.Equal(t, int32(1), result[0].ID)
+	assert.Equal(t, "step-1", result[0].Ref.String)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestSQLCQueries_GetTestWorkflowOutputs(t *testing.T) {
+	mock, err := pgxmock.NewPool()
+	require.NoError(t, err)
+	defer mock.Close()
+
+	queries := New(mock)
+	ctx := context.Background()
+
+	expectedQuery := `SELECT id, execution_id, ref, name, value, created_at FROM test_workflow_outputs 
+WHERE execution_id = \$1 
+ORDER BY id`
+
+	rows := mock.NewRows([]string{
+		"id", "execution_id", "ref", "name", "value", "created_at",
+	}).AddRow(
+		1, "test-id", "step-1", "output1", []byte(`{"key":"value"}`), time.Now(),
+	)
+
+	mock.ExpectQuery(expectedQuery).WithArgs("test-id").WillReturnRows(rows)
+
+	result, err := queries.GetTestWorkflowOutputs(ctx, "test-id")
+
+	assert.NoError(t, err)
+	assert.Len(t, result, 1)
+	assert.Equal(t, int32(1), result[0].ID)
+	assert.Equal(t, "output1", result[0].Name.String)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestSQLCQueries_AssignTestWorkflowExecution(t *testing.T) {
+	mock, err := pgxmock.NewPool()
+	require.NoError(t, err)
+	defer mock.Close()
+
+	queries := New(mock)
+	ctx := context.Background()
+
+	expectedQuery := `UPDATE test_workflow_executions 
+SET 
+    runner_id = \$1,
+    assigned_at = \$2
+FROM test_workflow_results r
+WHERE test_workflow_executions.id = \$3
+    AND test_workflow_executions.id = r.execution_id
+    AND r.status = 'queued'
+    AND \(test_workflow_executions.runner_id = \$4 
+         OR test_workflow_executions.runner_id = \$1 
+         OR test_workflow_executions.runner_id IS NULL\)
+RETURNING test_workflow_executions.id`
+
+	params := AssignTestWorkflowExecutionParams{
+		NewRunnerID:  pgtype.Text{String: "new-runner", Valid: true},
+		AssignedAt:   pgtype.Timestamptz{Time: time.Now(), Valid: true},
+		ID:           "test-id",
+		PrevRunnerID: pgtype.Text{String: "old-runner", Valid: true},
+	}
+
+	rows := mock.NewRows([]string{"id"}).AddRow("test-id")
+
+	mock.ExpectQuery(expectedQuery).WithArgs(
+		params.NewRunnerID, params.AssignedAt, params.ID, params.PrevRunnerID,
+	).WillReturnRows(rows)
+
+	result, err := queries.AssignTestWorkflowExecution(ctx, params)
+
+	assert.NoError(t, err)
+	assert.Equal(t, "test-id", result)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestSQLCQueries_AbortTestWorkflowExecutionIfQueued(t *testing.T) {
+	mock, err := pgxmock.NewPool()
+	require.NoError(t, err)
+	defer mock.Close()
+
+	queries := New(mock)
+	ctx := context.Background()
+
+	expectedQuery := `UPDATE test_workflow_executions 
+SET status_at = \$1
+FROM test_workflow_results r
+WHERE test_workflow_executions.id = \$2
+    AND test_workflow_executions.id = r.execution_id
+    AND r.status IN \('queued', 'running', 'paused'\)
+    AND \(test_workflow_executions.runner_id IS NULL OR test_workflow_executions.runner_id = ''\)
+RETURNING test_workflow_executions.id`
+
+	params := AbortTestWorkflowExecutionIfQueuedParams{
+		AbortTime: pgtype.Timestamptz{Time: time.Now(), Valid: true},
+		ID:        "test-id",
+	}
+
+	rows := mock.NewRows([]string{"id"}).AddRow("test-id")
+
+	mock.ExpectQuery(expectedQuery).WithArgs(params.AbortTime, params.ID).WillReturnRows(rows)
+
+	result, err := queries.AbortTestWorkflowExecutionIfQueued(ctx, params)
+
+	assert.NoError(t, err)
+	assert.Equal(t, "test-id", result)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestSQLCQueries_GetTestWorkflowExecutionTags(t *testing.T) {
+	mock, err := pgxmock.NewPool()
+	require.NoError(t, err)
+	defer mock.Close()
+
+	queries := New(mock)
+	ctx := context.Background()
+
+	expectedQuery := `SELECT 
+    tag_key,
+    array_agg\(DISTINCT tag_value\) as values
+FROM \(
+    SELECT 
+        t.key as tag_key,
+        t.value as tag_value
+    FROM test_workflow_executions e
+    LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow',
+         jsonb_each_text\(e.tags\) as t\(key, value\)
+    WHERE e.tags IS NOT NULL AND e.tags != '\{\}'::jsonb
+        AND \(\$1 IS NULL OR w.name = \$1\)
+\) t
+GROUP BY tag_key`
+
+	rows := mock.NewRows([]string{"tag_key", "values"}).
+		AddRow("env", []string{"test", "prod"}).
+		AddRow("type", []string{"integration", "unit"})
+
+	mock.ExpectQuery(expectedQuery).WithArgs("test-workflow").WillReturnRows(rows)
+
+	result, err := queries.GetTestWorkflowExecutionTags(ctx, "test-workflow")
+
+	assert.NoError(t, err)
+	assert.Len(t, result, 2)
+	assert.Equal(t, "env", result[0].TagKey.String)
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+// Benchmark tests to validate query performance characteristics
+func BenchmarkSQLCQueries_GetTestWorkflowExecution(b *testing.B) {
+	mock, err := pgxmock.NewPool()
+	require.NoError(b, err)
+	defer mock.Close()
+
+	queries := New(mock)
+	ctx := context.Background()
+
+	// Setup mock expectations
+	rows := mock.NewRows([]string{
+		"id", "group_id", "runner_id", "runner_target", "runner_original_target", "name", "namespace", "number",
+		"scheduled_at", "assigned_at", "status_at", "test_workflow_execution_name", "disable_webhooks",
+		"tags", "running_context", "config_params", "created_at", "updated_at",
+		"status", "predicted_status", "queued_at", "started_at", "finished_at",
+		"duration", "total_duration", "duration_ms", "paused_ms", "total_duration_ms",
+		"pauses", "initialization", "steps",
+		"workflow_name", "workflow_namespace", "workflow_description", "workflow_labels", "workflow_annotations",
+		"workflow_created", "workflow_updated", "workflow_spec", "workflow_read_only", "workflow_status",
+		"resolved_workflow_name", "resolved_workflow_namespace", "resolved_workflow_description",
+		"resolved_workflow_labels", "resolved_workflow_annotations", "resolved_workflow_created",
+		"resolved_workflow_updated", "resolved_workflow_spec", "resolved_workflow_read_only", "resolved_workflow_status",
+	})
+
+	for i := 0; i < b.N; i++ {
+		rows.AddRow(
+			"test-id", "group-1", "runner-1", []byte(`{}`), []byte(`{}`), "test-execution", "default", 1,
+			time.Now(), time.Now(), time.Now(), "test-execution-name", false,
+			[]byte(`{"env":"test"}`), []byte(`{}`), []byte(`{}`), time.Now(), time.Now(),
+			"passed", "passed", time.Now(), time.Now(), time.Now(),
+			"5m", "5m", 300000, 0, 300000,
+			[]byte(`[]`), []byte(`{}`), []byte(`{}`),
+			"test-workflow", "default", "Test workflow", []byte(`{}`), []byte(`{}`),
+			time.Now(), time.Now(), []byte(`{}`), false, []byte(`{}`),
+			nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+		)
+		mock.ExpectQuery(`SELECT`).WithArgs("test-id").WillReturnRows(rows)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := queries.GetTestWorkflowExecution(ctx, "test-id")
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+// Test query parameter validation
+func TestSQLCQueries_ParameterValidation(t *testing.T) {
+	tests := []struct {
+		name          string
+		setupMock     func(pgxmock.PgxPoolIface)
+		executeQuery  func(*Queries, context.Context) error
+		expectedError bool
+	}{
+		{
+			name: "Insert with empty ID should work",
+			setupMock: func(mock pgxmock.PgxPoolIface) {
+				mock.ExpectExec(`INSERT INTO test_workflow_executions`).
+					WithArgs("", pgtype.Text{Valid: false}, pgtype.Text{Valid: false}, nil, nil, "", pgtype.Text{Valid: false}, pgtype.Int4{Valid: false}, pgtype.Timestamptz{Valid: false}, pgtype.Timestamptz{Valid: false}, pgtype.Timestamptz{Valid: false}, pgtype.Text{Valid: false}, pgtype.Bool{Valid: false}, nil, nil, nil).
+					WillReturnResult(pgxmock.NewResult("INSERT", 1))
+			},
+			executeQuery: func(q *Queries, ctx context.Context) error {
+				return q.InsertTestWorkflowExecution(ctx, InsertTestWorkflowExecutionParams{})
+			},
+			expectedError: false,
+		},
+		{
+			name: "Update with null timestamp should work",
+			setupMock: func(mock pgxmock.PgxPoolIface) {
+				mock.ExpectExec(`UPDATE test_workflow_results`).
+					WithArgs(pgtype.Text{Valid: false}, pgtype.Text{Valid: false}, pgtype.Timestamptz{Valid: false}, pgtype.Timestamptz{Valid: false}, pgtype.Timestamptz{Valid: false}, pgtype.Text{Valid: false}, pgtype.Text{Valid: false}, pgtype.Int4{Valid: false}, pgtype.Int4{Valid: false}, pgtype.Int4{Valid: false}, nil, nil, nil, "").
+					WillReturnResult(pgxmock.NewResult("UPDATE", 1))
+			},
+			executeQuery: func(q *Queries, ctx context.Context) error {
+				return q.UpdateTestWorkflowExecutionResult(ctx, UpdateTestWorkflowExecutionResultParams{
+					ExecutionID: "",
+				})
+			},
+			expectedError: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mock, err := pgxmock.NewPool()
+			require.NoError(t, err)
+			defer mock.Close()
+
+			queries := New(mock)
+			ctx := context.Background()
+
+			tt.setupMock(mock)
+
+			err = tt.executeQuery(queries, ctx)
+
+			if tt.expectedError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+
+			assert.NoError(t, mock.ExpectationsWereMet())
+		})
+	}
+}
