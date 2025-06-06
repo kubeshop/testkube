@@ -31,6 +31,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/repository/sequence"
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
+	miniorepo "github.com/kubeshop/testkube/pkg/repository/testworkflow/minio"
+	mongorepo "github.com/kubeshop/testkube/pkg/repository/testworkflow/mongo"
 	runner2 "github.com/kubeshop/testkube/pkg/runner"
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/secretmanager"
@@ -90,9 +92,9 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 
 	// Build repositories
 	sequenceRepository := sequence.NewMongoRepository(db)
-	testWorkflowResultsRepository := testworkflow.NewMongoRepository(db, cfg.APIMongoAllowDiskUse,
-		testworkflow.WithMongoRepositorySequence(sequenceRepository))
-	testWorkflowOutputRepository := testworkflow.NewMinioOutputRepository(storageClient, db.Collection(testworkflow.CollectionName), cfg.LogsBucket)
+	testWorkflowResultsRepository := mongorepo.NewMongoRepository(db, cfg.APIMongoAllowDiskUse,
+		mongorepo.WithMongoRepositorySequence(sequenceRepository))
+	testWorkflowOutputRepository := miniorepo.NewMinioOutputRepository(storageClient, db.Collection(mongorepo.CollectionName), cfg.LogsBucket)
 	artifactStorage := minio.NewMinIOArtifactClient(storageClient)
 	deprecatedRepositories := commons.CreateDeprecatedRepositoriesForMongo(ctx, cfg, db, logGrpcClient, storageClient, features)
 

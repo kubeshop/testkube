@@ -1,0 +1,461 @@
+-- name: GetTestWorkflowExecution :one
+SELECT 
+    e.*,
+    r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
+    r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
+    r.pauses, r.initialization, r.steps,
+    w.name as workflow_name, w.namespace as workflow_namespace, w.description as workflow_description,
+    w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
+    w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
+    w.status as workflow_status,
+    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace, 
+    rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
+    rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
+    rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
+    rw.read_only as resolved_workflow_read_only, rw.status as resolved_workflow_status
+FROM test_workflow_executions e
+LEFT JOIN test_workflow_results r ON e.id = r.execution_id
+LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
+LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
+WHERE e.id = @id OR e.name = @id;
+
+-- name: GetTestWorkflowSignatures :many
+SELECT * FROM test_workflow_signatures 
+WHERE execution_id = @execution_id 
+ORDER BY id;
+
+-- name: GetTestWorkflowOutputs :many
+SELECT * FROM test_workflow_outputs 
+WHERE execution_id = @execution_id 
+ORDER BY id;
+
+-- name: GetTestWorkflowReports :many
+SELECT * FROM test_workflow_reports 
+WHERE execution_id = @execution_id 
+ORDER BY id;
+
+-- name: GetTestWorkflowResourceAggregations :one
+SELECT * FROM test_workflow_resource_aggregations 
+WHERE execution_id = @execution_id;
+
+-- name: GetTestWorkflowExecutionByNameAndTestWorkflow :one
+SELECT 
+    e.*,
+    r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
+    r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
+    r.pauses, r.initialization, r.steps,
+    w.name as workflow_name, w.namespace as workflow_namespace, w.description as workflow_description,
+    w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
+    w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
+    w.status as workflow_status
+FROM test_workflow_executions e
+LEFT JOIN test_workflow_results r ON e.id = r.execution_id
+LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
+WHERE (e.id = @name OR e.name = @name) AND w.name = @workflow_name;
+
+-- name: GetLatestTestWorkflowExecutionByTestWorkflow :one
+SELECT 
+    e.*,
+    r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
+    r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
+    r.pauses, r.initialization, r.steps
+FROM test_workflow_executions e
+LEFT JOIN test_workflow_results r ON e.id = r.execution_id
+LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
+WHERE w.name = @workflow_name 
+ORDER BY e.status_at DESC 
+LIMIT 1;
+
+-- name: GetLatestTestWorkflowExecutionsByTestWorkflows :many
+SELECT DISTINCT ON (w.name)
+    e.*,
+    r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
+    r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms
+FROM test_workflow_executions e
+LEFT JOIN test_workflow_results r ON e.id = r.execution_id
+LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
+WHERE w.name = ANY(@workflow_names)
+ORDER BY w.name, e.status_at DESC;
+
+-- name: GetRunningTestWorkflowExecutions :many
+SELECT 
+    e.*,
+    r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
+    r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms
+FROM test_workflow_executions e
+LEFT JOIN test_workflow_results r ON e.id = r.execution_id
+WHERE r.status IN ('paused', 'running', 'queued')
+ORDER BY e.id DESC;
+
+-- name: GetFinishedTestWorkflowExecutions :many
+SELECT 
+    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.created_at, e.updated_at,
+    r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
+    r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
+    w.name as workflow_name
+FROM test_workflow_executions e
+LEFT JOIN test_workflow_results r ON e.id = r.execution_id
+LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
+WHERE r.status IN ('passed', 'failed', 'aborted')
+    AND (@workflow_name IS NULL OR w.name = @workflow_name)
+    AND (@workflow_names IS NULL OR w.name = ANY(@workflow_names))
+    AND (@text_search IS NULL OR e.name ILIKE '%' || @text_search || '%')
+    AND (@start_date IS NULL OR e.scheduled_at >= @start_date)
+    AND (@end_date IS NULL OR e.scheduled_at <= @end_date)
+    AND (@last_n_days IS NULL OR e.scheduled_at >= NOW() - INTERVAL '@last_n_days days')
+    AND (@statuses IS NULL OR r.status = ANY(@statuses))
+    AND (@runner_id IS NULL OR e.runner_id = @runner_id)
+    AND (@assigned IS NULL OR 
+         (@assigned = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR 
+         (@assigned = false AND (e.runner_id IS NULL OR e.runner_id = '')))
+    AND (@actor_name IS NULL OR e.running_context->'actor'->>'name' = @actor_name)
+    AND (@actor_type IS NULL OR e.running_context->'actor'->>'type_' = @actor_type)
+    AND (@group_id IS NULL OR e.id = @group_id OR e.group_id = @group_id)
+    AND (@initialized IS NULL OR 
+         (@initialized = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
+         (@initialized = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
+ORDER BY e.scheduled_at DESC
+LIMIT @lmt OFFSET @fst;
+
+-- name: GetTestWorkflowExecutionsTotals :many
+SELECT 
+    r.status,
+    COUNT(*) as count
+FROM test_workflow_executions e
+LEFT JOIN test_workflow_results r ON e.id = r.execution_id
+LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
+WHERE 1=1
+    AND (@workflow_name IS NULL OR w.name = @workflow_name)
+    AND (@workflow_names IS NULL OR w.name = ANY(@workflow_names))
+    AND (@text_search IS NULL OR e.name ILIKE '%' || @text_search || '%')
+    AND (@start_date IS NULL OR e.scheduled_at >= @start_date)
+    AND (@end_date IS NULL OR e.scheduled_at <= @end_date)
+    AND (@last_n_days IS NULL OR e.scheduled_at >= NOW() - INTERVAL '@last_n_days days')
+    AND (@statuses IS NULL OR r.status = ANY(@statuses))
+    AND (@runner_id IS NULL OR e.runner_id = @runner_id)
+    AND (@assigned IS NULL OR 
+         (@assigned = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR 
+         (@assigned = false AND (e.runner_id IS NULL OR e.runner_id = '')))
+    AND (@actor_name IS NULL OR e.running_context->'actor'->>'name' = @actor_name)
+    AND (@actor_type IS NULL OR e.running_context->'actor'->>'type_' = @actor_type)
+    AND (@group_id IS NULL OR e.id = @group_id OR e.group_id = @group_id)
+    AND (@initialized IS NULL OR 
+         (@initialized = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
+         (@initialized = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
+GROUP BY r.status;
+
+-- name: GetTestWorkflowExecutions :many
+SELECT 
+    e.*,
+    r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
+    r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
+    w.name as workflow_name
+FROM test_workflow_executions e
+LEFT JOIN test_workflow_results r ON e.id = r.execution_id
+LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
+WHERE 1=1
+    AND (@workflow_name IS NULL OR w.name = @workflow_name)
+    AND (@workflow_names IS NULL OR w.name = ANY(@workflow_names))
+    AND (@text_search IS NULL OR e.name ILIKE '%' || @text_search || '%')
+    AND (@start_date IS NULL OR e.scheduled_at >= @start_date)
+    AND (@end_date IS NULL OR e.scheduled_at <= @end_date)
+    AND (@last_n_days IS NULL OR e.scheduled_at >= NOW() - INTERVAL '@last_n_days days')
+    AND (@statuses IS NULL OR r.status = ANY(@statuses))
+    AND (@runner_id IS NULL OR e.runner_id = @runner_id)
+    AND (@assigned IS NULL OR 
+         (@assigned = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR 
+         (@assigned = false AND (e.runner_id IS NULL OR e.runner_id = '')))
+    AND (@actor_name IS NULL OR e.running_context->'actor'->>'name' = @actor_name)
+    AND (@actor_type IS NULL OR e.running_context->'actor'->>'type_' = @actor_type)
+    AND (@group_id IS NULL OR e.id = @group_id OR e.group_id = @group_id)
+    AND (@initialized IS NULL OR 
+         (@initialized = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
+         (@initialized = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
+ORDER BY e.scheduled_at DESC
+LIMIT @lmt OFFSET @fst;
+
+-- name: GetTestWorkflowExecutionsSummary :many
+SELECT 
+    e.id, e.group_id, e.runner_id, e.name, e.number, e.scheduled_at, e.status_at,
+    e.tags, e.running_context, e.config_params,
+    r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
+    r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
+    w.name as workflow_name, w.namespace as workflow_namespace, w.labels as workflow_labels
+FROM test_workflow_executions e
+LEFT JOIN test_workflow_results r ON e.id = r.execution_id
+LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
+WHERE 1=1
+    AND (@workflow_name IS NULL OR w.name = @workflow_name)
+    AND (@workflow_names IS NULL OR w.name = ANY(@workflow_names))
+    AND (@text_search IS NULL OR e.name ILIKE '%' || @text_search || '%')
+    AND (@start_date IS NULL OR e.scheduled_at >= @start_date)
+    AND (@end_date IS NULL OR e.scheduled_at <= @end_date)
+    AND (@last_n_days IS NULL OR e.scheduled_at >= NOW() - INTERVAL '@last_n_days days')
+    AND (@statuses IS NULL OR r.status = ANY(@statuses))
+    AND (@runner_id IS NULL OR e.runner_id = @runner_id)
+    AND (@assigned IS NULL OR 
+         (@assigned = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR 
+         (@assigned = false AND (e.runner_id IS NULL OR e.runner_id = '')))
+    AND (@actor_name IS NULL OR e.running_context->'actor'->>'name' = @actor_name)
+    AND (@actor_type IS NULL OR e.running_context->'actor'->>'type_' = @actor_type)
+    AND (@group_id IS NULL OR e.id = @group_id OR e.group_id = @group_id)
+    AND (@initialized IS NULL OR 
+         (@initialized = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
+         (@initialized = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
+ORDER BY e.scheduled_at DESC
+LIMIT @lmt OFFSET @fst;
+
+-- name: InsertTestWorkflowExecution :exec
+INSERT INTO test_workflow_executions (
+    id, group_id, runner_id, runner_target, runner_original_target, name, namespace, number,
+    scheduled_at, assigned_at, status_at, test_workflow_execution_name, disable_webhooks, 
+    tags, running_context, config_params
+) VALUES (
+    @id, @group_id, @runner_id, @runner_target, @runner_original_target, @name, @namespace, @number,
+    @scheduled_at, @assigned_at, @status_at, @test_workflow_execution_name, @disable_webhooks,
+    @tags, @running_context, @config_params
+);
+
+-- name: InsertTestWorkflowSignature :exec
+INSERT INTO test_workflow_signatures (
+    execution_id, ref, name, category, optional, negative, parent_id
+) VALUES (
+    @execution_id, @ref, @name, @category, @optional, @negative, @parent_id
+);
+
+-- name: InsertTestWorkflowResult :exec
+INSERT INTO test_workflow_results (
+    execution_id, status, predicted_status, queued_at, started_at, finished_at,
+    duration, total_duration, duration_ms, paused_ms, total_duration_ms,
+    pauses, initialization, steps
+) VALUES (
+    @execution_id, @status, @predicted_status, @queued_at, @started_at, @finished_at,
+    @duration, @total_duration, @duration_ms, @paused_ms, @total_duration_ms,
+    @pauses, @initialization, @steps
+)
+ON CONFLICT (execution_id) DO UPDATE SET
+    status = EXCLUDED.status,
+    predicted_status = EXCLUDED.predicted_status,
+    queued_at = EXCLUDED.queued_at,
+    started_at = EXCLUDED.started_at,
+    finished_at = EXCLUDED.finished_at,
+    duration = EXCLUDED.duration,
+    total_duration = EXCLUDED.total_duration,
+    duration_ms = EXCLUDED.duration_ms,
+    paused_ms = EXCLUDED.paused_ms,
+    total_duration_ms = EXCLUDED.total_duration_ms,
+    pauses = EXCLUDED.pauses,
+    initialization = EXCLUDED.initialization,
+    steps = EXCLUDED.steps;
+
+-- name: InsertTestWorkflowOutput :exec
+INSERT INTO test_workflow_outputs (execution_id, ref, name, value)
+VALUES (@execution_id, @ref, @name, @value);
+
+-- name: InsertTestWorkflowReport :exec
+INSERT INTO test_workflow_reports (execution_id, ref, kind, file, summary)
+VALUES (@execution_id, @ref, @kind, @file, @summary);
+
+-- name: InsertTestWorkflowResourceAggregations :exec
+INSERT INTO test_workflow_resource_aggregations (execution_id, global, step)
+VALUES (@execution_id, @global, @step)
+ON CONFLICT (execution_id) DO UPDATE SET
+    global = EXCLUDED.global,
+    step = EXCLUDED.step;
+
+-- name: InsertTestWorkflow :exec
+INSERT INTO test_workflows (
+    execution_id, workflow_type, name, namespace, description, labels, annotations,
+    created, updated, spec, read_only, status
+) VALUES (
+    @execution_id, @workflow_type, @name, @namespace, @description, @labels, @annotations,
+    @created, @updated, @spec, @read_only, @status
+)
+ON CONFLICT (execution_id, workflow_type) DO UPDATE SET
+    name = EXCLUDED.name,
+    namespace = EXCLUDED.namespace,
+    description = EXCLUDED.description,
+    labels = EXCLUDED.labels,
+    annotations = EXCLUDED.annotations,
+    created = EXCLUDED.created,
+    updated = EXCLUDED.updated,
+    spec = EXCLUDED.spec,
+    read_only = EXCLUDED.read_only,
+    status = EXCLUDED.status;
+
+-- name: UpdateTestWorkflowExecutionResult :exec
+UPDATE test_workflow_results 
+SET 
+    status = @status,
+    predicted_status = @predicted_status,
+    queued_at = @queued_at,
+    started_at = @started_at,
+    finished_at = @finished_at,
+    duration = @duration,
+    total_duration = @total_duration,
+    duration_ms = @duration_ms,
+    paused_ms = @paused_ms,
+    total_duration_ms = @total_duration_ms,
+    pauses = @pauses,
+    initialization = @initialization,
+    steps = @steps
+WHERE execution_id = @execution_id;
+
+-- name: UpdateExecutionStatusAt :exec
+UPDATE test_workflow_executions 
+SET status_at = @status_at
+WHERE id = @execution_id;
+
+-- name: UpdateTestWorkflowExecutionReport :exec
+INSERT INTO test_workflow_reports (execution_id, ref, kind, file, summary)
+VALUES (@execution_id, @ref, @kind, @file, @summary);
+
+-- name: DeleteTestWorkflowOutputs :exec
+DELETE FROM test_workflow_outputs WHERE execution_id = @execution_id;
+
+-- name: UpdateTestWorkflowExecutionResourceAggregations :exec
+UPDATE test_workflow_resource_aggregations 
+SET 
+    global = @global,
+    step = @step
+WHERE execution_id = @execution_id;
+
+-- name: DeleteTestWorkflowExecutionsByTestWorkflow :exec
+DELETE FROM test_workflow_executions e
+USING test_workflows w
+WHERE e.id = w.execution_id 
+  AND w.workflow_type = 'workflow' 
+  AND w.name = @workflow_name;
+
+-- name: DeleteAllTestWorkflowExecutions :exec
+DELETE FROM test_workflow_executions;
+
+-- name: DeleteTestWorkflowExecutionsByTestWorkflows :exec
+DELETE FROM test_workflow_executions e
+USING test_workflows w
+WHERE e.id = w.execution_id 
+  AND w.workflow_type = 'workflow' 
+  AND w.name = ANY(@workflow_names);
+
+-- name: GetTestWorkflowMetrics :many
+SELECT 
+    e.id as execution_id,
+    e.group_id,
+    r.duration,
+    r.duration_ms,
+    r.status,
+    e.name,
+    e.scheduled_at as start_time,
+    e.runner_id
+FROM test_workflow_executions e
+LEFT JOIN test_workflow_results r ON e.id = r.execution_id
+LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
+WHERE w.name = @workflow_name
+    AND (@last_days = 0 OR e.scheduled_at >= NOW() - INTERVAL '@last_days days')
+ORDER BY e.scheduled_at DESC
+LIMIT @lmt;
+
+-- name: GetPreviousFinishedState :one
+SELECT r.status
+FROM test_workflow_executions e
+LEFT JOIN test_workflow_results r ON e.id = r.execution_id
+LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
+WHERE w.name = @workflow_name
+    AND r.finished_at < @date
+    AND r.status IN ('passed', 'failed', 'skipped', 'aborted', 'timeout')
+ORDER BY r.finished_at DESC
+LIMIT 1;
+
+-- name: GetTestWorkflowExecutionTags :many
+SELECT 
+    tag_key,
+    array_agg(DISTINCT tag_value) as values
+FROM (
+    SELECT 
+        t.key as tag_key,
+        t.value as tag_value
+    FROM test_workflow_executions e
+    LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow',
+         jsonb_each_text(e.tags) as t(key, value)
+    WHERE e.tags IS NOT NULL AND e.tags != '{}'::jsonb
+        AND (@workflow_name IS NULL OR w.name = @workflow_name)
+) t
+GROUP BY tag_key;
+
+-- name: InitTestWorkflowExecution :exec
+UPDATE test_workflow_executions 
+SET 
+    namespace = @namespace,
+    runner_id = @runner_id
+WHERE id = @id;
+
+-- name: AssignTestWorkflowExecution :one
+UPDATE test_workflow_executions 
+SET 
+    runner_id = @new_runner_id,
+    assigned_at = @assigned_at
+FROM test_workflow_results r
+WHERE test_workflow_executions.id = @id
+    AND test_workflow_executions.id = r.execution_id
+    AND r.status = 'queued'
+    AND (test_workflow_executions.runner_id = @prev_runner_id 
+         OR test_workflow_executions.runner_id = @new_runner_id 
+         OR test_workflow_executions.runner_id IS NULL)
+RETURNING test_workflow_executions.id;
+
+-- name: GetUnassignedTestWorkflowExecutions :many
+SELECT e.*, r.status
+FROM test_workflow_executions e
+LEFT JOIN test_workflow_results r ON e.id = r.execution_id
+WHERE r.status = 'queued'
+    AND (e.runner_id IS NULL OR e.runner_id = '')
+ORDER BY e.id DESC;
+
+-- name: AbortTestWorkflowExecutionIfQueued :one
+UPDATE test_workflow_executions 
+SET status_at = @abort_time
+FROM test_workflow_results r
+WHERE test_workflow_executions.id = @id
+    AND test_workflow_executions.id = r.execution_id
+    AND r.status IN ('queued', 'running', 'paused')
+    AND (test_workflow_executions.runner_id IS NULL OR test_workflow_executions.runner_id = '')
+RETURNING test_workflow_executions.id;
+
+-- name: AbortTestWorkflowResultIfQueued :exec
+UPDATE test_workflow_results 
+SET 
+    status = 'aborted',
+    predicted_status = 'aborted',
+    finished_at = @abort_time,
+    initialization = jsonb_set(
+        jsonb_set(
+            jsonb_set(COALESCE(initialization, '{}'::jsonb), '{status}', '"aborted"'),
+            '{errormessage}', '"Aborted before initialization."'
+        ),
+        '{finishedat}', to_jsonb(@abort_time::timestamp)
+    )
+WHERE execution_id = @id
+    AND status IN ('queued', 'running', 'paused');
+
+-- name: GetNextExecutionNumber :one
+SELECT nextval('test_workflow_execution_number_seq_' || @workflow_name) as number;
+
+-- name: UpdateTestWorkflowExecution :exec
+UPDATE test_workflow_executions
+SET
+    group_id = @group_id,
+    runner_id = @runner_id,
+    runner_target = @runner_target,
+    runner_original_target = @runner_original_target,
+    name = @name,
+    namespace = @namespace,
+    number = @number,
+    scheduled_at = @scheduled_at,
+    assigned_at = @assigned_at,
+    status_at = @status_at,
+    test_workflow_execution_name = @test_workflow_execution_name,
+    disable_webhooks = @disable_webhooks,
+    tags = @tags,
+    running_context = @running_context,
+    config_params = @config_params
+WHERE id = @id;

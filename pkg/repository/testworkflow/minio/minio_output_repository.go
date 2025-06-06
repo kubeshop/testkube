@@ -1,4 +1,4 @@
-package testworkflow
+package minio
 
 import (
 	"context"
@@ -8,13 +8,14 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/bufferedstream"
 	"github.com/kubeshop/testkube/pkg/log"
+	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/storage"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-var _ OutputRepository = (*MinioRepository)(nil)
+var _ testworkflow.OutputRepository = (*MinioRepository)(nil)
 
 const bucketFolder = "testworkflows"
 
