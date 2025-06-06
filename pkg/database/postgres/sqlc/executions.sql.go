@@ -112,7 +112,7 @@ WHERE e.id = w.execution_id
   AND w.name = $1
 `
 
-func (q *Queries) DeleteTestWorkflowExecutionsByTestWorkflow(ctx context.Context, workflowName pgtype.Text) error {
+func (q *Queries) DeleteTestWorkflowExecutionsByTestWorkflow(ctx context.Context, workflowName string) error {
 	_, err := q.db.Exec(ctx, deleteTestWorkflowExecutionsByTestWorkflow, workflowName)
 	return err
 }
@@ -125,7 +125,7 @@ WHERE e.id = w.execution_id
   AND w.name = ANY($1)
 `
 
-func (q *Queries) DeleteTestWorkflowExecutionsByTestWorkflows(ctx context.Context, workflowNames []pgtype.Text) error {
+func (q *Queries) DeleteTestWorkflowExecutionsByTestWorkflows(ctx context.Context, workflowNames []string) error {
 	_, err := q.db.Exec(ctx, deleteTestWorkflowExecutionsByTestWorkflows, workflowNames)
 	return err
 }
@@ -334,7 +334,7 @@ type GetLatestTestWorkflowExecutionByTestWorkflowRow struct {
 	Steps                     []byte             `db:"steps" json:"steps"`
 }
 
-func (q *Queries) GetLatestTestWorkflowExecutionByTestWorkflow(ctx context.Context, workflowName pgtype.Text) (GetLatestTestWorkflowExecutionByTestWorkflowRow, error) {
+func (q *Queries) GetLatestTestWorkflowExecutionByTestWorkflow(ctx context.Context, workflowName string) (GetLatestTestWorkflowExecutionByTestWorkflowRow, error) {
 	row := q.db.QueryRow(ctx, getLatestTestWorkflowExecutionByTestWorkflow, workflowName)
 	var i GetLatestTestWorkflowExecutionByTestWorkflowRow
 	err := row.Scan(
@@ -416,7 +416,7 @@ type GetLatestTestWorkflowExecutionsByTestWorkflowsRow struct {
 	TotalDurationMs           pgtype.Int4        `db:"total_duration_ms" json:"total_duration_ms"`
 }
 
-func (q *Queries) GetLatestTestWorkflowExecutionsByTestWorkflows(ctx context.Context, workflowNames []pgtype.Text) ([]GetLatestTestWorkflowExecutionsByTestWorkflowsRow, error) {
+func (q *Queries) GetLatestTestWorkflowExecutionsByTestWorkflows(ctx context.Context, workflowNames []string) ([]GetLatestTestWorkflowExecutionsByTestWorkflowsRow, error) {
 	rows, err := q.db.Query(ctx, getLatestTestWorkflowExecutionsByTestWorkflows, workflowNames)
 	if err != nil {
 		return nil, err
@@ -469,7 +469,7 @@ const getNextExecutionNumber = `-- name: GetNextExecutionNumber :one
 SELECT nextval('test_workflow_execution_number_seq_' || $1) as number
 `
 
-func (q *Queries) GetNextExecutionNumber(ctx context.Context, workflowName pgtype.Text) (int64, error) {
+func (q *Queries) GetNextExecutionNumber(ctx context.Context, workflowName string) (int64, error) {
 	row := q.db.QueryRow(ctx, getNextExecutionNumber, workflowName)
 	var number int64
 	err := row.Scan(&number)
@@ -744,7 +744,7 @@ WHERE (e.id = $1 OR e.name = $1) AND w.name = $2
 
 type GetTestWorkflowExecutionByNameAndTestWorkflowParams struct {
 	Name         string      `db:"name" json:"name"`
-	WorkflowName pgtype.Text `db:"workflow_name" json:"workflow_name"`
+	WorkflowName string `db:"workflow_name" json:"workflow_name"`
 }
 
 type GetTestWorkflowExecutionByNameAndTestWorkflowRow struct {
@@ -858,8 +858,8 @@ GROUP BY tag_key
 `
 
 type GetTestWorkflowExecutionTagsRow struct {
-	TagKey pgtype.Text `db:"tag_key" json:"tag_key"`
-	Values []pgtype.Text `db:"values" json:"values"`
+	TagKey string `db:"tag_key" json:"tag_key"`
+	Values []string `db:"values" json:"values"`
 }
 
 func (q *Queries) GetTestWorkflowExecutionTags(ctx context.Context, workflowName string) ([]GetTestWorkflowExecutionTagsRow, error) {

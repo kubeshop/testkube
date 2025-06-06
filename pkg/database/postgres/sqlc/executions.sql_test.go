@@ -57,11 +57,11 @@ WHERE e.id = \$1 OR e.name = \$1`
 		"resolved_workflow_labels", "resolved_workflow_annotations", "resolved_workflow_created",
 		"resolved_workflow_updated", "resolved_workflow_spec", "resolved_workflow_read_only", "resolved_workflow_status",
 	}).AddRow(
-		"test-id", "group-1", "runner-1", []byte(`{}`), []byte(`{}`), "test-execution", "default", 1,
+		"test-id", "group-1", "runner-1", []byte(`{}`), []byte(`{}`), "test-execution", "default", int64(1),
 		time.Now(), time.Now(), time.Now(), "test-execution-name", false,
 		[]byte(`{"env":"test"}`), []byte(`{}`), []byte(`{}`), time.Now(), time.Now(),
 		"passed", "passed", time.Now(), time.Now(), time.Now(),
-		"5m", "5m", 300000, 0, 300000,
+		"5m", "5m", int64(300000), int64(0), int64(300000),
 		[]byte(`[]`), []byte(`{}`), []byte(`{}`),
 		"test-workflow", "default", "Test workflow", []byte(`{}`), []byte(`{}`),
 		time.Now(), time.Now(), []byte(`{}`), false, []byte(`{}`),
@@ -112,11 +112,11 @@ WHERE \(e.id = \$1 OR e.name = \$1\) AND w.name = \$2`
 		"workflow_name", "workflow_namespace", "workflow_description", "workflow_labels", "workflow_annotations",
 		"workflow_created", "workflow_updated", "workflow_spec", "workflow_read_only", "workflow_status",
 	}).AddRow(
-		"test-id", "group-1", "runner-1", []byte(`{}`), []byte(`{}`), "test-execution", "default", 1,
+		"test-id", "group-1", "runner-1", []byte(`{}`), []byte(`{}`), "test-execution", "default", int64(1),
 		time.Now(), time.Now(), time.Now(), "test-execution-name", false,
 		[]byte(`{"env":"test"}`), []byte(`{}`), []byte(`{}`), time.Now(), time.Now(),
 		"passed", "passed", time.Now(), time.Now(), time.Now(),
-		"5m", "5m", 300000, 0, 300000,
+		"5m", "5m", int64(300000), int64(0), int64(300000),
 		[]byte(`[]`), []byte(`{}`), []byte(`{}`),
 		"test-workflow", "default", "Test workflow", []byte(`{}`), []byte(`{}`),
 		time.Now(), time.Now(), []byte(`{}`), false, []byte(`{}`),
@@ -126,7 +126,7 @@ WHERE \(e.id = \$1 OR e.name = \$1\) AND w.name = \$2`
 
 	params := GetTestWorkflowExecutionByNameAndTestWorkflowParams{
 		Name:         "test-execution",
-		WorkflowName: pgtype.Text{String: "test-workflow", Valid: true},
+		WorkflowName: "test-workflow",
 	}
 
 	result, err := queries.GetTestWorkflowExecutionByNameAndTestWorkflow(ctx, params)
@@ -164,17 +164,17 @@ LIMIT 1`
 		"duration", "total_duration", "duration_ms", "paused_ms", "total_duration_ms",
 		"pauses", "initialization", "steps",
 	}).AddRow(
-		"test-id", "group-1", "runner-1", []byte(`{}`), []byte(`{}`), "test-execution", "default", 1,
+		"test-id", "group-1", "runner-1", []byte(`{}`), []byte(`{}`), "test-execution", "default", int64(1),
 		time.Now(), time.Now(), time.Now(), "test-execution-name", false,
 		[]byte(`{"env":"test"}`), []byte(`{}`), []byte(`{}`), time.Now(), time.Now(),
 		"passed", "passed", time.Now(), time.Now(), time.Now(),
-		"5m", "5m", 300000, 0, 300000,
+		"5m", "5m", int64(300000), int64(0), int64(300000),
 		[]byte(`[]`), []byte(`{}`), []byte(`{}`),
 	)
 
 	mock.ExpectQuery(expectedQuery).WithArgs("test-workflow").WillReturnRows(rows)
 
-	workflowName := pgtype.Text{String: "test-workflow", Valid: true}
+	workflowName := "test-workflow"
 	result, err := queries.GetLatestTestWorkflowExecutionByTestWorkflow(ctx, workflowName)
 
 	assert.NoError(t, err)
@@ -206,17 +206,17 @@ ORDER BY e.id DESC`
 		"status", "predicted_status", "queued_at", "started_at", "finished_at",
 		"duration", "total_duration", "duration_ms", "paused_ms", "total_duration_ms",
 	}).AddRow(
-		"running-1", "group-1", "runner-1", []byte(`{}`), []byte(`{}`), "running-execution", "default", 1,
+		"running-1", "group-1", "runner-1", []byte(`{}`), []byte(`{}`), "running-execution", "default", int64(1),
 		time.Now(), time.Now(), time.Now(), "running-execution-name", false,
 		[]byte(`{"env":"test"}`), []byte(`{}`), []byte(`{}`), time.Now(), time.Now(),
 		"running", "running", time.Now(), time.Now(), nil,
-		"", "", 0, 0, 0,
+		"", "", int64(0), int64(0), int64(0),
 	).AddRow(
-		"queued-1", "group-1", "runner-1", []byte(`{}`), []byte(`{}`), "queued-execution", "default", 2,
+		"queued-1", "group-1", "runner-1", []byte(`{}`), []byte(`{}`), "queued-execution", "default", int64(2),
 		time.Now(), time.Now(), time.Now(), "queued-execution-name", false,
 		[]byte(`{"env":"test"}`), []byte(`{}`), []byte(`{}`), time.Now(), time.Now(),
 		"queued", "queued", time.Now(), nil, nil,
-		"", "", 0, 0, 0,
+		"", "", int64(0), int64(0), int64(0),
 	)
 
 	mock.ExpectQuery(expectedQuery).WillReturnRows(rows)
@@ -479,7 +479,7 @@ WHERE e.id = w.execution_id
   AND w.workflow_type = 'workflow' 
   AND w.name = \$1`
 
-	workflowName := pgtype.Text{String: "test-workflow", Valid: true}
+	workflowName := "test-workflow"
 
 	mock.ExpectExec(expectedQuery).WithArgs(workflowName).WillReturnResult(pgxmock.NewResult("DELETE", 3))
 
@@ -506,7 +506,7 @@ ORDER BY id`
 	}).AddRow(
 		1, "test-id", "step-1", "Test Step", "test", false, false, nil, time.Now(),
 	).AddRow(
-		2, "test-id", "step-2", "Another Step", "test", true, false, 1, time.Now(),
+		2, "test-id", "step-2", "Another Step", "test", true, false, int64(1), time.Now(),
 	)
 
 	mock.ExpectQuery(expectedQuery).WithArgs("test-id").WillReturnRows(rows)
@@ -647,8 +647,8 @@ FROM \(
 GROUP BY tag_key`
 
 	rows := mock.NewRows([]string{"tag_key", "values"}).
-		AddRow("env", []string{"test", "prod"}).
-		AddRow("type", []string{"integration", "unit"})
+		AddRow("env", []string{"test, prod"}).
+		AddRow("type", []string{"integration, unit"})
 
 	mock.ExpectQuery(expectedQuery).WithArgs("test-workflow").WillReturnRows(rows)
 
@@ -656,7 +656,7 @@ GROUP BY tag_key`
 
 	assert.NoError(t, err)
 	assert.Len(t, result, 2)
-	assert.Equal(t, "env", result[0].TagKey.String)
+	assert.Equal(t, "env", result[0].TagKey)
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
@@ -686,11 +686,11 @@ func BenchmarkSQLCQueries_GetTestWorkflowExecution(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		rows.AddRow(
-			"test-id", "group-1", "runner-1", []byte(`{}`), []byte(`{}`), "test-execution", "default", 1,
+			"test-id", "group-1", "runner-1", []byte(`{}`), []byte(`{}`), "test-execution", "default", int64(1),
 			time.Now(), time.Now(), time.Now(), "test-execution-name", false,
 			[]byte(`{"env":"test"}`), []byte(`{}`), []byte(`{}`), time.Now(), time.Now(),
 			"passed", "passed", time.Now(), time.Now(), time.Now(),
-			"5m", "5m", 300000, 0, 300000,
+			"5m", "5m", int64(300000), int64(0), int64(300000),
 			[]byte(`[]`), []byte(`{}`), []byte(`{}`),
 			"test-workflow", "default", "Test workflow", []byte(`{}`), []byte(`{}`),
 			time.Now(), time.Now(), []byte(`{}`), false, []byte(`{}`),
@@ -720,7 +720,7 @@ func TestSQLCQueries_ParameterValidation(t *testing.T) {
 			name: "Insert with empty ID should work",
 			setupMock: func(mock pgxmock.PgxPoolIface) {
 				mock.ExpectExec(`INSERT INTO test_workflow_executions`).
-					WithArgs("", pgtype.Text{Valid: false}, pgtype.Text{Valid: false}, nil, nil, "", pgtype.Text{Valid: false}, pgtype.Int4{Valid: false}, pgtype.Timestamptz{Valid: false}, pgtype.Timestamptz{Valid: false}, pgtype.Timestamptz{Valid: false}, pgtype.Text{Valid: false}, pgtype.Bool{Valid: false}, nil, nil, nil).
+					WithArgs("", pgtype.Text{Valid: false}, pgtype.Text{Valid: false}, []byte(nil), []byte(nil), "", pgtype.Text{Valid: false}, pgtype.Int4{Valid: false}, pgtype.Timestamptz{Valid: false}, pgtype.Timestamptz{Valid: false}, pgtype.Timestamptz{Valid: false}, pgtype.Text{Valid: false}, pgtype.Bool{Valid: false}, []byte(nil), []byte(nil), []byte(nil)).
 					WillReturnResult(pgxmock.NewResult("INSERT", 1))
 			},
 			executeQuery: func(q *Queries, ctx context.Context) error {
@@ -732,7 +732,7 @@ func TestSQLCQueries_ParameterValidation(t *testing.T) {
 			name: "Update with null timestamp should work",
 			setupMock: func(mock pgxmock.PgxPoolIface) {
 				mock.ExpectExec(`UPDATE test_workflow_results`).
-					WithArgs(pgtype.Text{Valid: false}, pgtype.Text{Valid: false}, pgtype.Timestamptz{Valid: false}, pgtype.Timestamptz{Valid: false}, pgtype.Timestamptz{Valid: false}, pgtype.Text{Valid: false}, pgtype.Text{Valid: false}, pgtype.Int4{Valid: false}, pgtype.Int4{Valid: false}, pgtype.Int4{Valid: false}, nil, nil, nil, "").
+					WithArgs(pgtype.Text{Valid: false}, pgtype.Text{Valid: false}, pgtype.Timestamptz{Valid: false}, pgtype.Timestamptz{Valid: false}, pgtype.Timestamptz{Valid: false}, pgtype.Text{Valid: false}, pgtype.Text{Valid: false}, pgtype.Int4{Valid: false}, pgtype.Int4{Valid: false}, pgtype.Int4{Valid: false}, []byte(nil), []byte(nil), []byte(nil), "").
 					WillReturnResult(pgxmock.NewResult("UPDATE", 1))
 			},
 			executeQuery: func(q *Queries, ctx context.Context) error {
