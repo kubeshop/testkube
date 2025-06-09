@@ -1,4 +1,4 @@
-package triggers
+package mongo
 
 import (
 	"context"
@@ -9,20 +9,14 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+
+	"github.com/kubeshop/testkube/pkg/repository/trigger"
 )
 
 const (
 	mongoCollectionTriggersLease = "triggers"
 	documentType                 = "lease"
 )
-
-// LeaseBackend does a check and set operation on the Lease object in the defined data source
-//
-//go:generate mockgen -destination=./mock_lease_backend.go -package=triggers "github.com/kubeshop/testkube/pkg/triggers" LeaseBackend
-type LeaseBackend interface {
-	// TryAcquire tries to acquire lease from underlying datastore
-	TryAcquire(ctx context.Context, id, clusterID string) (leased bool, err error)
-}
 
 type AcquireAlwaysLeaseBackend struct{}
 
@@ -136,7 +130,7 @@ func leaseStatus(lease *Lease, id, clusterID string) (acquired bool, renewable b
 	if lease == nil {
 		return false, false
 	}
-	maxLeaseDurationStaleness := time.Now().Add(-defaultMaxLeaseDuration)
+	maxLeaseDurationStaleness := time.Now().Add(-trigger.DefaultMaxLeaseDuration)
 	isLeaseExpired := lease.RenewedAt.Before(maxLeaseDurationStaleness)
 	isMyLease := lease.Identifier == id && lease.ClusterID == clusterID
 	switch {

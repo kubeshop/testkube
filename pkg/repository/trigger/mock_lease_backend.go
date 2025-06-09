@@ -2,7 +2,7 @@
 // Source: github.com/kubeshop/testkube/pkg/triggers (interfaces: LeaseBackend)
 
 // Package triggers is a generated GoMock package.
-package triggers
+package trigger
 
 import (
 	context "context"
