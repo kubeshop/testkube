@@ -12,8 +12,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestSQLCQueries_GetTestWorkflowExecution tests the GetTestWorkflowExecution query syntax
-func TestSQLCQueries_GetTestWorkflowExecution(t *testing.T) {
+// TestSQLCTestWorkflowExecutionQueries_GetTestWorkflowExecution tests the GetTestWorkflowExecution query syntax
+func TestSQLCTestWorkflowExecutionQueries_GetTestWorkflowExecution(t *testing.T) {
 	// Create mock database connection
 	mock, err := pgxmock.NewPool()
 	require.NoError(t, err)
@@ -80,7 +80,7 @@ WHERE e.id = \$1 OR e.name = \$1`
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
-func TestSQLCQueries_GetTestWorkflowExecutionByNameAndTestWorkflow(t *testing.T) {
+func TestSQLCTestWorkflowExecutionQueries_GetTestWorkflowExecutionByNameAndTestWorkflow(t *testing.T) {
 	mock, err := pgxmock.NewPool()
 	require.NoError(t, err)
 	defer mock.Close()
@@ -136,7 +136,7 @@ WHERE \(e.id = \$1 OR e.name = \$1\) AND w.name = \$2`
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
-func TestSQLCQueries_GetLatestTestWorkflowExecutionByTestWorkflow(t *testing.T) {
+func TestSQLCTestWorkflowExecutionQueries_GetLatestTestWorkflowExecutionByTestWorkflow(t *testing.T) {
 	mock, err := pgxmock.NewPool()
 	require.NoError(t, err)
 	defer mock.Close()
@@ -182,7 +182,7 @@ LIMIT 1`
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
-func TestSQLCQueries_GetRunningTestWorkflowExecutions(t *testing.T) {
+func TestSQLCTestWorkflowExecutionQueries_GetRunningTestWorkflowExecutions(t *testing.T) {
 	mock, err := pgxmock.NewPool()
 	require.NoError(t, err)
 	defer mock.Close()
@@ -230,7 +230,7 @@ ORDER BY e.id DESC`
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
-func TestSQLCQueries_GetTestWorkflowExecutionsTotals(t *testing.T) {
+func TestSQLCTestWorkflowExecutionQueries_GetTestWorkflowExecutionsTotals(t *testing.T) {
 	mock, err := pgxmock.NewPool()
 	require.NoError(t, err)
 	defer mock.Close()
@@ -300,7 +300,7 @@ GROUP BY r.status`
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
-func TestSQLCQueries_InsertTestWorkflowExecution(t *testing.T) {
+func TestSQLCTestWorkflowExecutionQueries_InsertTestWorkflowExecution(t *testing.T) {
 	mock, err := pgxmock.NewPool()
 	require.NoError(t, err)
 	defer mock.Close()
@@ -350,7 +350,7 @@ func TestSQLCQueries_InsertTestWorkflowExecution(t *testing.T) {
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
-func TestSQLCQueries_InsertTestWorkflowResult(t *testing.T) {
+func TestSQLCTestWorkflowExecutionQueries_InsertTestWorkflowResult(t *testing.T) {
 	mock, err := pgxmock.NewPool()
 	require.NoError(t, err)
 	defer mock.Close()
@@ -411,7 +411,7 @@ ON CONFLICT \(execution_id\) DO UPDATE SET
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
-func TestSQLCQueries_UpdateTestWorkflowExecutionResult(t *testing.T) {
+func TestSQLCTestWorkflowExecutionQueries_UpdateTestWorkflowExecutionResult(t *testing.T) {
 	mock, err := pgxmock.NewPool()
 	require.NoError(t, err)
 	defer mock.Close()
@@ -465,7 +465,7 @@ WHERE execution_id = \$14`
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
-func TestSQLCQueries_DeleteTestWorkflowExecutionsByTestWorkflow(t *testing.T) {
+func TestSQLCTestWorkflowExecutionQueries_DeleteTestWorkflowExecutionsByTestWorkflow(t *testing.T) {
 	mock, err := pgxmock.NewPool()
 	require.NoError(t, err)
 	defer mock.Close()
@@ -489,7 +489,7 @@ WHERE e.id = w.execution_id
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
-func TestSQLCQueries_GetTestWorkflowSignatures(t *testing.T) {
+func TestSQLCTestWorkflowExecutionQueries_GetTestWorkflowSignatures(t *testing.T) {
 	mock, err := pgxmock.NewPool()
 	require.NoError(t, err)
 	defer mock.Close()
@@ -520,7 +520,7 @@ ORDER BY id`
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
-func TestSQLCQueries_GetTestWorkflowOutputs(t *testing.T) {
+func TestSQLCTestWorkflowExecutionQueries_GetTestWorkflowOutputs(t *testing.T) {
 	mock, err := pgxmock.NewPool()
 	require.NoError(t, err)
 	defer mock.Close()
@@ -549,7 +549,7 @@ ORDER BY id`
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
-func TestSQLCQueries_AssignTestWorkflowExecution(t *testing.T) {
+func TestSQLCTestWorkflowExecutionQueries_AssignTestWorkflowExecution(t *testing.T) {
 	mock, err := pgxmock.NewPool()
 	require.NoError(t, err)
 	defer mock.Close()
@@ -590,7 +590,7 @@ RETURNING test_workflow_executions.id`
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
-func TestSQLCQueries_AbortTestWorkflowExecutionIfQueued(t *testing.T) {
+func TestSQLCTestWorkflowExecutionQueries_AbortTestWorkflowExecutionIfQueued(t *testing.T) {
 	mock, err := pgxmock.NewPool()
 	require.NoError(t, err)
 	defer mock.Close()
@@ -623,7 +623,7 @@ RETURNING test_workflow_executions.id`
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
-func TestSQLCQueries_GetTestWorkflowExecutionTags(t *testing.T) {
+func TestSQLCTestWorkflowExecutionQueries_GetTestWorkflowExecutionTags(t *testing.T) {
 	mock, err := pgxmock.NewPool()
 	require.NoError(t, err)
 	defer mock.Close()
@@ -661,7 +661,7 @@ GROUP BY tag_key`
 }
 
 // Benchmark tests to validate query performance characteristics
-func BenchmarkSQLCQueries_GetTestWorkflowExecution(b *testing.B) {
+func BenchmarkSQLCTestWorkflowExecutionQueries_GetTestWorkflowExecution(b *testing.B) {
 	mock, err := pgxmock.NewPool()
 	require.NoError(b, err)
 	defer mock.Close()
@@ -709,7 +709,7 @@ func BenchmarkSQLCQueries_GetTestWorkflowExecution(b *testing.B) {
 }
 
 // Test query parameter validation
-func TestSQLCQueries_ParameterValidation(t *testing.T) {
+func TestSQLCTestWorkflowExecutionQueries_ParameterValidation(t *testing.T) {
 	tests := []struct {
 		name          string
 		setupMock     func(pgxmock.PgxPoolIface)
