@@ -16,6 +16,16 @@ type Config struct {
 	UpdatedAt       pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
 }
 
+type Lease struct {
+	ID         string             `db:"id" json:"id"`
+	Identifier string             `db:"identifier" json:"identifier"`
+	ClusterID  string             `db:"cluster_id" json:"cluster_id"`
+	AcquiredAt pgtype.Timestamptz `db:"acquired_at" json:"acquired_at"`
+	RenewedAt  pgtype.Timestamptz `db:"renewed_at" json:"renewed_at"`
+	CreatedAt  pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt  pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
 type TestWorkflow struct {
 	ID           int32              `db:"id" json:"id"`
 	ExecutionID  string             `db:"execution_id" json:"execution_id"`

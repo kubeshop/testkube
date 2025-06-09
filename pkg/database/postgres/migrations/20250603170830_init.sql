@@ -117,6 +117,17 @@ CREATE TABLE configs (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Create the main table for Leases
+CREATE TABLE leases (
+    id VARCHAR(255) PRIMARY KEY, -- This will be the lease mongo ID (lease-{clusterID})
+    identifier VARCHAR(255) NOT NULL,
+    cluster_id VARCHAR(255) NOT NULL,
+    acquired_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    renewed_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Create indexes
 CREATE INDEX idx_test_workflow_executions_group_id ON test_workflow_executions(group_id);
 CREATE INDEX idx_test_workflow_executions_runner_id ON test_workflow_executions(runner_id);
@@ -144,10 +155,21 @@ CREATE INDEX idx_test_workflows_name ON test_workflows(name);
 
 CREATE INDEX idx_configs_cluster_id ON configs(cluster_id);
 
+CREATE INDEX idx_leases_identifier ON leases(identifier);
+CREATE INDEX idx_leases_cluster_id ON leases(cluster_id);
+CREATE INDEX idx_leases_renewed_at ON leases(renewed_at);
+CREATE INDEX idx_leases_acquired_at ON leases(acquired_at);
+CREATE INDEX idx_leases_identifier_cluster_id ON leases(identifier, cluster_id);
 -- +goose StatementEnd
 
 -- +goose Down
 -- +goose StatementBegin
+DROP INDEX idx_leases_identifier;
+DROP INDEX idx_leases_cluster_id;
+DROP INDEX idx_leases_renewed_at;
+DROP INDEX idx_leases_acquired_at;
+DROP INDEX idx_leases_identifier_cluster_id;
+
 DROP INDEX idx_configs_cluster_id;
 
 DROP INDEX IF EXISTS idx_test_workflows_execution_id;
@@ -174,6 +196,7 @@ DROP INDEX IF EXISTS idx_test_workflow_executions_scheduled_at;
 DROP INDEX IF EXISTS idx_test_workflow_executions_status_at;
 DROP INDEX IF EXISTS idx_test_workflow_executions_tags;
 
+DROP TABLE leases;
 DROP TABLE configs;
 DROP TABLE IF EXISTS test_workflows;
 DROP TABLE IF EXISTS test_workflow_resource_aggregations;

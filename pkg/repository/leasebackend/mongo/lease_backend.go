@@ -10,7 +10,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
-	trigger "github.com/kubeshop/testkube/pkg/repository/leasebackend"
+	"github.com/kubeshop/testkube/pkg/repository/leasebackend"
 )
 
 const (
@@ -130,7 +130,7 @@ func leaseStatus(lease *Lease, id, clusterID string) (acquired bool, renewable b
 	if lease == nil {
 		return false, false
 	}
-	maxLeaseDurationStaleness := time.Now().Add(-trigger.DefaultMaxLeaseDuration)
+	maxLeaseDurationStaleness := time.Now().Add(-leasebackend.DefaultMaxLeaseDuration)
 	isLeaseExpired := lease.RenewedAt.Before(maxLeaseDurationStaleness)
 	isMyLease := lease.Identifier == id && lease.ClusterID == clusterID
 	switch {

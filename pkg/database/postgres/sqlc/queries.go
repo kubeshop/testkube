@@ -113,3 +113,20 @@ type PgxPoolWrapper struct {
 func (w *PgxPoolWrapper) Begin(ctx context.Context) (pgx.Tx, error) {
 	return w.Pool.Begin(ctx)
 }
+
+// LeaseBackendQueriesInterface defines the interface for sqlc generated queries
+type LeaseBackendQueriesInterface interface {
+	FindLeaseById(ctx context.Context, leaseID string) (Lease, error)
+	InsertLease(ctx context.Context, arg InsertLeaseParams) (Lease, error)
+	UpdateLease(ctx context.Context, arg UpdateLeaseParams) (Lease, error)
+	UpsertLease(ctx context.Context, arg UpsertLeaseParams) (Lease, error)
+	GetLeaseByClusterId(ctx context.Context, clusterID string) (Lease, error)
+	GetLeasesByIdentifier(ctx context.Context, identifier string) ([]Lease, error)
+	GetExpiredLeases(ctx context.Context, expirationTime pgtype.Timestamptz) ([]Lease, error)
+	DeleteLease(ctx context.Context, id string) error
+	DeleteLeasesByClusterId(ctx context.Context, clusterID string) error
+	DeleteExpiredLeases(ctx context.Context, expirationTime pgtype.Timestamptz) error
+	GetAllLeases(ctx context.Context) ([]Lease, error)
+	CountLeasesByClusterId(ctx context.Context, clusterID string) (int64, error)
+	GetLatestLeaseByIdentifierAndCluster(ctx context.Context, arg GetLatestLeaseByIdentifierAndClusterParams) (Lease, error)
+}
