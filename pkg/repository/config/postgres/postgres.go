@@ -158,28 +158,6 @@ func (r *PostgresRepository) Upsert(ctx context.Context, config testkube.Config)
 	}, nil
 }
 
-// Helper functions for type conversions
-func toPgText(s string) pgtype.Text {
-	if s == "" {
-		return pgtype.Text{Valid: false}
-	}
-	return pgtype.Text{String: s, Valid: true}
-}
-
 func toPgBool(b bool) pgtype.Bool {
 	return pgtype.Bool{Bool: b, Valid: true}
-}
-
-func fromPgText(t pgtype.Text) string {
-	if !t.Valid {
-		return ""
-	}
-	return t.String
-}
-
-func fromPgBool(b pgtype.Bool) bool {
-	if !b.Valid {
-		return false
-	}
-	return b.Bool
 }
