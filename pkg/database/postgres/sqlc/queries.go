@@ -9,10 +9,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// QueriesInterface defines the interface for sqlc generated queries
-type QueriesInterface interface {
+// TestWorkflowExecutionQueriesInterface defines the interface for sqlc generated queries
+type TestWorkflowExecutionQueriesInterface interface {
 	// Transaction methods
-	WithTx(tx pgx.Tx) QueriesInterface
+	WithTx(tx pgx.Tx) TestWorkflowExecutionQueriesInterface
 
 	// TestWorkflowExecution queries
 	GetTestWorkflowExecution(ctx context.Context, id string) (GetTestWorkflowExecutionRow, error)
@@ -69,22 +69,34 @@ type QueriesInterface interface {
 	GetNextExecutionNumber(ctx context.Context, workflowName string) (int64, error)
 }
 
-// Ensure Queries implements QueriesInterface
-var _ QueriesInterface = (*SQLCQueriesWrapper)(nil)
+// Ensure Queries implements TestWorkflowExecutionQueriesInterface
+var _ TestWorkflowExecutionQueriesInterface = (*SQLCTestWorkflowExecutionQueriesWrapper)(nil)
 
-// SQLCQueriesWrapper wraps Queries to implement QueriesInterface
-type SQLCQueriesWrapper struct {
+// SQLCTestWorkflowExecutionQueriesWrapper wraps Queries to implement TestWorkflowExecutionQueriesInterface
+type SQLCTestWorkflowExecutionQueriesWrapper struct {
 	*Queries
 }
 
-// NewSQLCQueriesWrapper creates a new wrapper for Queries
-func NewSQLCQueriesWrapper(queries *Queries) QueriesInterface {
-	return &SQLCQueriesWrapper{Queries: queries}
+// NewSQLCTestWorkflowExecutionQueriesWrapper creates a new wrapper for Queries
+func NewSQLCTestWorkflowExecutionQueriesWrapper(queries *Queries) TestWorkflowExecutionQueriesInterface {
+	return &SQLCTestWorkflowExecutionQueriesWrapper{Queries: queries}
 }
 
-// WithTx returns a new QueriesInterface with transaction
-func (w *SQLCQueriesWrapper) WithTx(tx pgx.Tx) QueriesInterface {
-	return &SQLCQueriesWrapper{Queries: w.Queries.WithTx(tx)}
+// WithTx returns a new TestWorkflowExecutionQueriesInterface with transaction
+func (w *SQLCTestWorkflowExecutionQueriesWrapper) WithTx(tx pgx.Tx) TestWorkflowExecutionQueriesInterface {
+	return &SQLCTestWorkflowExecutionQueriesWrapper{Queries: w.Queries.WithTx(tx)}
+}
+
+// ConfigQueriesInterface defines the interface for sqlc generated queries
+type ConfigQueriesInterface interface {
+	GetConfig(ctx context.Context, id string) (Config, error)
+	GetConfigByFixedId(ctx context.Context) (Config, error)
+	UpsertConfig(ctx context.Context, arg UpsertConfigParams) (Config, error)
+	UpdateClusterId(ctx context.Context, arg UpdateClusterIdParams) error
+	UpdateTelemetryEnabled(ctx context.Context, arg UpdateTelemetryEnabledParams) error
+	GetClusterId(ctx context.Context, id string) (string, error)
+	GetTelemetryEnabled(ctx context.Context, id string) (pgtype.Bool, error)
+	CreateConfigIfNotExists(ctx context.Context, arg CreateConfigIfNotExistsParams) error
 }
 
 // DatabaseInterface defines the interface for database operations

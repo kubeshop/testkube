@@ -23,9 +23,9 @@ type MockQueriesInterface struct {
 	mock.Mock
 }
 
-func (m *MockQueriesInterface) WithTx(tx pgx.Tx) sqlc.QueriesInterface {
+func (m *MockQueriesInterface) WithTx(tx pgx.Tx) sqlc.TestWorkflowExecutionQueriesInterface {
 	args := m.Called(tx)
-	return args.Get(0).(sqlc.QueriesInterface)
+	return args.Get(0).(sqlc.TestWorkflowExecutionQueriesInterface)
 }
 
 func (m *MockQueriesInterface) GetTestWorkflowExecution(ctx context.Context, id string) (sqlc.GetTestWorkflowExecutionRow, error) {
@@ -500,7 +500,7 @@ func createTestFilter() *MockFilter {
 	return filter
 }
 
-func createPostgresRepository(queries sqlc.QueriesInterface, db sqlc.DatabaseInterface, seq sequence.Repository) *PostgresRepository {
+func createPostgresRepository(queries sqlc.TestWorkflowExecutionQueriesInterface, db sqlc.DatabaseInterface, seq sequence.Repository) *PostgresRepository {
 	return &PostgresRepository{
 		db:                 db,
 		queries:            queries,

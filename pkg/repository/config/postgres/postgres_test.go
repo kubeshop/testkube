@@ -1,0 +1,355 @@
+package config
+
+import (
+	"context"
+	"errors"
+	"testing"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+
+	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/database/postgres/sqlc"
+)
+
+// MockQueriesInterface is a mock implementation of QueriesInterface
+type MockQueriesInterface struct {
+	mock.Mock
+}
+
+func (m *MockQueriesInterface) GetConfig(ctx context.Context, id string) (sqlc.Config, error) {
+	args := m.Called(ctx, id)
+	return args.Get(0).(sqlc.Config), args.Error(1)
+}
+
+func (m *MockQueriesInterface) GetConfigByFixedId(ctx context.Context) (sqlc.Config, error) {
+	args := m.Called(ctx)
+	return args.Get(0).(sqlc.Config), args.Error(1)
+}
+
+func (m *MockQueriesInterface) UpsertConfig(ctx context.Context, arg sqlc.UpsertConfigParams) (sqlc.Config, error) {
+	args := m.Called(ctx, arg)
+	return args.Get(0).(sqlc.Config), args.Error(1)
+}
+
+func (m *MockQueriesInterface) UpdateClusterId(ctx context.Context, arg sqlc.UpdateClusterIdParams) error {
+	args := m.Called(ctx, arg)
+	return args.Error(0)
+}
+
+func (m *MockQueriesInterface) UpdateTelemetryEnabled(ctx context.Context, arg sqlc.UpdateTelemetryEnabledParams) error {
+	args := m.Called(ctx, arg)
+	return args.Error(0)
+}
+
+func (m *MockQueriesInterface) GetClusterId(ctx context.Context, id string) (string, error) {
+	args := m.Called(ctx, id)
+	return args.String(0), args.Error(1)
+}
+
+func (m *MockQueriesInterface) GetTelemetryEnabled(ctx context.Context, id string) (pgtype.Bool, error) {
+	args := m.Called(ctx, id)
+	return toPgBool(args.Bool(0)), args.Error(1)
+}
+
+func (m *MockQueriesInterface) CreateConfigIfNotExists(ctx context.Context, arg sqlc.CreateConfigIfNotExistsParams) error {
+	args := m.Called(ctx, arg)
+	return args.Error(0)
+}
+
+// MockDatabaseInterface is a mock implementation of DatabaseInterface
+type MockDatabaseInterface struct {
+	mock.Mock
+}
+
+func (m *MockDatabaseInterface) Begin(ctx context.Context) (pgx.Tx, error) {
+	args := m.Called(ctx)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(pgx.Tx), args.Error(1)
+}
+
+func createPostgresRepository(queries sqlc.ConfigQueriesInterface, db sqlc.DatabaseInterface) *PostgresRepository {
+	return &PostgresRepository{
+		db:      db,
+		queries: queries,
+	}
+}
+
+func TestPostgresRepository_GetUniqueClusterId(t *testing.T) {
+	t.Run("ExistingClusterId", func(t *testing.T) {
+		// Arrange
+		mockQueries := &MockQueriesInterface{}
+		repo := createPostgresRepository(mockQueries, nil)
+
+		ctx := context.Background()
+		expectedConfig := sqlc.Config{
+			ID:              ConfigId,
+			ClusterID:       "cluster123",
+			EnableTelemetry: toPgBool(false),
+		}
+
+		mockQueries.On("GetConfigByFixedId", ctx).Return(expectedConfig, nil)
+
+		// Act
+		result, err := repo.GetUniqueClusterId(ctx)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.Equal(t, "cluster123", result)
+		mockQueries.AssertExpectations(t)
+	})
+
+	t.Run("EmptyClusterId", func(t *testing.T) {
+		// Arrange
+		mockQueries := &MockQueriesInterface{}
+		repo := createPostgresRepository(mockQueries, nil)
+
+		ctx := context.Background()
+		existingConfig := sqlc.Config{
+			ID:              ConfigId,
+			ClusterID:       "",
+			EnableTelemetry: toPgBool(false),
+		}
+
+		mockQueries.On("GetConfigByFixedId", ctx).Return(existingConfig, nil)
+		mockQueries.On("UpdateClusterId", ctx, mock.AnythingOfType("sqlc.UpdateClusterIdParams")).Return(nil)
+
+		// Act
+		result, err := repo.GetUniqueClusterId(ctx)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.NotEmpty(t, result)
+		assert.Contains(t, result, "cluster")
+		mockQueries.AssertExpectations(t)
+	})
+
+	t.Run("ConfigNotFound", func(t *testing.T) {
+		// Arrange
+		mockQueries := &MockQueriesInterface{}
+		repo := createPostgresRepository(mockQueries, nil)
+
+		ctx := context.Background()
+
+		mockQueries.On("GetConfigByFixedId", ctx).Return(sqlc.Config{}, pgx.ErrNoRows)
+		mockQueries.On("CreateConfigIfNotExists", ctx, mock.AnythingOfType("sqlc.CreateConfigIfNotExistsParams")).Return(nil)
+
+		// Act
+		result, err := repo.GetUniqueClusterId(ctx)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.NotEmpty(t, result)
+		assert.Contains(t, result, "cluster")
+		mockQueries.AssertExpectations(t)
+	})
+
+	t.Run("DatabaseError", func(t *testing.T) {
+		// Arrange
+		mockQueries := &MockQueriesInterface{}
+		repo := createPostgresRepository(mockQueries, nil)
+
+		ctx := context.Background()
+
+		mockQueries.On("GetConfigByFixedId", ctx).Return(sqlc.Config{}, errors.New("database error"))
+
+		// Act
+		result, err := repo.GetUniqueClusterId(ctx)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Empty(t, result)
+		assert.Contains(t, err.Error(), "database error")
+		mockQueries.AssertExpectations(t)
+	})
+}
+
+func TestPostgresRepository_GetTelemetryEnabled(t *testing.T) {
+	t.Run("TelemetryEnabled", func(t *testing.T) {
+		// Arrange
+		mockQueries := &MockQueriesInterface{}
+		repo := createPostgresRepository(mockQueries, nil)
+
+		ctx := context.Background()
+
+		mockQueries.On("GetTelemetryEnabled", ctx, ConfigId).Return(true, nil)
+
+		// Act
+		result, err := repo.GetTelemetryEnabled(ctx)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.True(t, result)
+		mockQueries.AssertExpectations(t)
+	})
+
+	t.Run("TelemetryDisabled", func(t *testing.T) {
+		// Arrange
+		mockQueries := &MockQueriesInterface{}
+		repo := createPostgresRepository(mockQueries, nil)
+
+		ctx := context.Background()
+
+		mockQueries.On("GetTelemetryEnabled", ctx, ConfigId).Return(false, nil)
+
+		// Act
+		result, err := repo.GetTelemetryEnabled(ctx)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.False(t, result)
+		mockQueries.AssertExpectations(t)
+	})
+
+	t.Run("ConfigNotFound", func(t *testing.T) {
+		// Arrange
+		mockQueries := &MockQueriesInterface{}
+		repo := createPostgresRepository(mockQueries, nil)
+
+		ctx := context.Background()
+
+		mockQueries.On("GetTelemetryEnabled", ctx, ConfigId).Return(false, pgx.ErrNoRows)
+		mockQueries.On("CreateConfigIfNotExists", ctx, mock.AnythingOfType("sqlc.CreateConfigIfNotExistsParams")).Return(nil)
+
+		// Act
+		result, err := repo.GetTelemetryEnabled(ctx)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.False(t, result) // Default should be false
+		mockQueries.AssertExpectations(t)
+	})
+}
+
+func TestPostgresRepository_Get(t *testing.T) {
+	t.Run("Success", func(t *testing.T) {
+		// Arrange
+		mockQueries := &MockQueriesInterface{}
+		repo := createPostgresRepository(mockQueries, nil)
+
+		ctx := context.Background()
+		expectedConfig := sqlc.Config{
+			ID:              ConfigId,
+			ClusterID:       "cluster123",
+			EnableTelemetry: toPgBool(true),
+		}
+
+		mockQueries.On("GetConfigByFixedId", ctx).Return(expectedConfig, nil)
+
+		// Act
+		result, err := repo.Get(ctx)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.Equal(t, ConfigId, result.Id)
+		assert.Equal(t, "cluster123", result.ClusterId)
+		assert.True(t, result.EnableTelemetry)
+		mockQueries.AssertExpectations(t)
+	})
+
+	t.Run("ConfigNotFound", func(t *testing.T) {
+		// Arrange
+		mockQueries := &MockQueriesInterface{}
+		repo := createPostgresRepository(mockQueries, nil)
+
+		ctx := context.Background()
+
+		mockQueries.On("GetConfigByFixedId", ctx).Return(sqlc.Config{}, pgx.ErrNoRows)
+
+		// Act
+		result, err := repo.Get(ctx)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.Equal(t, ConfigId, result.Id)
+		assert.Equal(t, "", result.ClusterId)
+		assert.False(t, result.EnableTelemetry)
+		mockQueries.AssertExpectations(t)
+	})
+}
+
+func TestPostgresRepository_Upsert(t *testing.T) {
+	t.Run("Success", func(t *testing.T) {
+		// Arrange
+		mockQueries := &MockQueriesInterface{}
+		repo := createPostgresRepository(mockQueries, nil)
+
+		ctx := context.Background()
+		inputConfig := testkube.Config{
+			Id:              "will-be-overridden",
+			ClusterId:       "cluster123",
+			EnableTelemetry: true,
+		}
+
+		expectedResult := sqlc.Config{
+			ID:              ConfigId,
+			ClusterID:       "cluster123",
+			EnableTelemetry: toPgBool(true),
+		}
+
+		expectedParams := sqlc.UpsertConfigParams{
+			ID:              ConfigId,
+			ClusterID:       "cluster123",
+			EnableTelemetry: toPgBool(true),
+		}
+
+		mockQueries.On("UpsertConfig", ctx, expectedParams).Return(expectedResult, nil)
+
+		// Act
+		result, err := repo.Upsert(ctx, inputConfig)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.Equal(t, ConfigId, result.Id) // Should always be "api"
+		assert.Equal(t, "cluster123", result.ClusterId)
+		assert.True(t, result.EnableTelemetry)
+		mockQueries.AssertExpectations(t)
+	})
+
+	t.Run("DatabaseError", func(t *testing.T) {
+		// Arrange
+		mockQueries := &MockQueriesInterface{}
+		repo := createPostgresRepository(mockQueries, nil)
+
+		ctx := context.Background()
+		inputConfig := testkube.Config{
+			ClusterId:       "cluster123",
+			EnableTelemetry: true,
+		}
+
+		mockQueries.On("UpsertConfig", ctx, mock.AnythingOfType("sqlc.UpsertConfigParams")).Return(sqlc.Config{}, errors.New("database error"))
+
+		// Act
+		result, err := repo.Upsert(ctx, inputConfig)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Equal(t, testkube.Config{}, result)
+		assert.Contains(t, err.Error(), "database error")
+		mockQueries.AssertExpectations(t)
+	})
+}
+
+func TestPostgresRepository_NewPostgresRepository(t *testing.T) {
+	t.Run("WithOptions", func(t *testing.T) {
+		// Arrange
+		mockQueries := &MockQueriesInterface{}
+		mockDB := &MockDatabaseInterface{}
+
+		// Act
+		repo := NewPostgresRepository(
+			nil, // This would be a real pgxpool.Pool in practice
+			WithQueriesInterface(mockQueries),
+			WithDatabaseInterface(mockDB),
+		)
+
+		// Assert
+		assert.NotNil(t, repo)
+		assert.Equal(t, mockQueries, repo.queries)
+		assert.Equal(t, mockDB, repo.db)
+	})
+}
