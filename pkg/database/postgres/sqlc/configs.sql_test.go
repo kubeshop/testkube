@@ -485,7 +485,7 @@ func TestSQLCConfigQueries_ErrorScenarios(t *testing.T) {
 }
 
 // Test query parameter validation
-func TestSQLCQueries_ParameterValidation(t *testing.T) {
+func TestSQLCConfigQueries_ParameterValidation(t *testing.T) {
 	tests := []struct {
 		name          string
 		setupMock     func(pgxmock.PgxPoolIface)
@@ -569,7 +569,7 @@ func TestSQLCQueries_ParameterValidation(t *testing.T) {
 }
 
 // Benchmark tests to validate query performance characteristics
-func BenchmarkSQLCQueries_GetConfig(b *testing.B) {
+func BenchmarkSQLCConfigQueries_GetConfig(b *testing.B) {
 	mock, err := pgxmock.NewPool()
 	require.NoError(b, err)
 	defer mock.Close()
@@ -596,7 +596,7 @@ func BenchmarkSQLCQueries_GetConfig(b *testing.B) {
 	}
 }
 
-func BenchmarkSQLCQueries_UpsertConfig(b *testing.B) {
+func BenchmarkSQLConfigQueries_UpsertConfig(b *testing.B) {
 	mock, err := pgxmock.NewPool()
 	require.NoError(b, err)
 	defer mock.Close()
@@ -632,7 +632,7 @@ func BenchmarkSQLCQueries_UpsertConfig(b *testing.B) {
 }
 
 // Test query result mapping
-func TestSQLCQueries_ResultMapping(t *testing.T) {
+func TestSQLCConfigQueries_ResultMapping(t *testing.T) {
 	mock, err := pgxmock.NewPool()
 	require.NoError(t, err)
 	defer mock.Close()
@@ -667,7 +667,7 @@ WHERE id = \$1`
 }
 
 // Test concurrent query execution simulation
-func TestSQLCQueries_ConcurrentExecution(t *testing.T) {
+func TestSQLCConfigQueries_ConcurrentExecution(t *testing.T) {
 	mock, err := pgxmock.NewPool()
 	require.NoError(t, err)
 	defer mock.Close()
