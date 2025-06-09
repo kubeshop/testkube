@@ -23,8 +23,8 @@ import (
 	"github.com/kubeshop/testkube/pkg/http"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/repository/config"
+	"github.com/kubeshop/testkube/pkg/repository/leasebackend"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
-	"github.com/kubeshop/testkube/pkg/repository/trigger"
 	"github.com/kubeshop/testkube/pkg/telemetry"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
@@ -45,7 +45,7 @@ const (
 
 type Service struct {
 	informers                     *k8sInformers
-	leaseBackend                  trigger.LeaseBackend
+	leaseBackend                  leasebackend.LeaseBackend
 	identifier                    string
 	clusterID                     string
 	triggerExecutor               ExecutorF
@@ -83,7 +83,7 @@ func NewService(
 	clientset kubernetes.Interface,
 	testKubeClientset testkubeclientsetv1.Interface,
 	testWorkflowsClient testworkflowclient.TestWorkflowClient,
-	leaseBackend trigger.LeaseBackend,
+	leaseBackend leasebackend.LeaseBackend,
 	logger *zap.SugaredLogger,
 	configMap config.Repository,
 	eventsBus bus.Bus,
@@ -99,7 +99,7 @@ func NewService(
 		clusterID:                     defaultClusterID,
 		scraperInterval:               defaultScraperInterval,
 		leaseCheckInterval:            defaultLeaseCheckInterval,
-		maxLeaseDuration:              trigger.DefaultMaxLeaseDuration,
+		maxLeaseDuration:              leasebackend.DefaultMaxLeaseDuration,
 		defaultConditionsCheckTimeout: defaultConditionsCheckTimeout,
 		defaultConditionsCheckBackoff: defaultConditionsCheckBackoff,
 		defaultProbesCheckTimeout:     defaultProbesCheckTimeout,

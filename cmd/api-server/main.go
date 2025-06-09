@@ -73,7 +73,7 @@ import (
 	apiv1 "github.com/kubeshop/testkube/internal/app/api/v1"
 	"github.com/kubeshop/testkube/pkg/configmap"
 	"github.com/kubeshop/testkube/pkg/log"
-	"github.com/kubeshop/testkube/pkg/repository/trigger/mongo"
+	"github.com/kubeshop/testkube/pkg/repository/leasebackend/mongo"
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 )

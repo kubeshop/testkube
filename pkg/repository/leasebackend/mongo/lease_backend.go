@@ -10,7 +10,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
-	"github.com/kubeshop/testkube/pkg/repository/trigger"
+	trigger "github.com/kubeshop/testkube/pkg/repository/leasebackend"
 )
 
 const (

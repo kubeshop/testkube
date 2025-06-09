@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/kubeshop/testkube/pkg/log"
-	"github.com/kubeshop/testkube/pkg/repository/trigger"
+	"github.com/kubeshop/testkube/pkg/repository/leasebackend"
 )
 
 func TestService_runLeaseChecker(t *testing.T) {
@@ -25,7 +25,7 @@ func TestService_runLeaseChecker(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 130*time.Millisecond)
 		defer cancel()
 
-		mockLeaseBackend := trigger.NewMockLeaseBackend(mockCtrl)
+		mockLeaseBackend := leasebackend.NewMockLeaseBackend(mockCtrl)
 		testClusterID := "testkube-api"
 		testIdentifier := "test-host-1"
 		mockLeaseBackend.EXPECT().TryAcquire(gomock.Any(), testIdentifier, testClusterID).Return(true, nil)
@@ -58,7 +58,7 @@ func TestService_runLeaseChecker(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 130*time.Millisecond)
 		defer cancel()
 
-		mockLeaseBackend := trigger.NewMockLeaseBackend(mockCtrl)
+		mockLeaseBackend := leasebackend.NewMockLeaseBackend(mockCtrl)
 		mockLeaseBackend.EXPECT().TryAcquire(gomock.Any(), "test-host-1", "testkube-api").Return(false, nil)
 
 		s := &Service{
@@ -93,9 +93,9 @@ func TestService_runLeaseChecker_multipleInstances(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 130*time.Millisecond)
 		defer cancel()
 
-		mockLeaseBackend1 := trigger.NewMockLeaseBackend(mockCtrl)
+		mockLeaseBackend1 := leasebackend.NewMockLeaseBackend(mockCtrl)
 		mockLeaseBackend1.EXPECT().TryAcquire(gomock.Any(), "test-host-1", "testkube-api").Return(true, nil)
-		mockLeaseBackend2 := trigger.NewMockLeaseBackend(mockCtrl)
+		mockLeaseBackend2 := leasebackend.NewMockLeaseBackend(mockCtrl)
 		mockLeaseBackend2.EXPECT().TryAcquire(gomock.Any(), "test-host-2", "testkube-api").Return(false, nil)
 
 		s1 := &Service{

@@ -33,10 +33,10 @@ import (
 	logsclient "github.com/kubeshop/testkube/pkg/logs/client"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/repository/config"
+	"github.com/kubeshop/testkube/pkg/repository/leasebackend"
 	"github.com/kubeshop/testkube/pkg/repository/result"
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
-	"github.com/kubeshop/testkube/pkg/repository/trigger"
 	"github.com/kubeshop/testkube/pkg/scheduler"
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
@@ -162,7 +162,7 @@ func TestService_Run(t *testing.T) {
 		"",
 	)
 
-	mockLeaseBackend := trigger.NewMockLeaseBackend(mockCtrl)
+	mockLeaseBackend := leasebackend.NewMockLeaseBackend(mockCtrl)
 	testClusterID := "testkube-api"
 	testIdentifier := "test-host-1"
 	mockLeaseBackend.EXPECT().TryAcquire(gomock.Any(), testIdentifier, testClusterID).Return(true, nil).AnyTimes()
