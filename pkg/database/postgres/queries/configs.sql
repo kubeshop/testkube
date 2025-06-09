@@ -1,0 +1,39 @@
+-- name: GetConfig :one
+SELECT id, cluster_id, enable_telemetry, created_at, updated_at 
+FROM configs 
+WHERE id = @id;
+
+-- name: GetConfigByFixedId :one
+SELECT id, cluster_id, enable_telemetry, created_at, updated_at 
+FROM configs 
+WHERE id = 'api';
+
+-- name: UpsertConfig :one
+INSERT INTO configs (id, cluster_id, enable_telemetry)
+VALUES (@id, @cluster_id, @enable_telemetry)
+ON CONFLICT (id) DO UPDATE SET
+    cluster_id = EXCLUDED.cluster_id,
+    enable_telemetry = EXCLUDED.enable_telemetry,
+    updated_at = NOW()
+RETURNING id, cluster_id, enable_telemetry, created_at, updated_at;
+
+-- name: UpdateClusterId :exec
+UPDATE configs 
+SET cluster_id = @cluster_id, updated_at = NOW()
+WHERE id = @id;
+
+-- name: UpdateTelemetryEnabled :exec
+UPDATE configs 
+SET enable_telemetry = @enable_telemetry, updated_at = NOW()
+WHERE id = @id;
+
+-- name: GetClusterId :one
+SELECT cluster_id FROM configs WHERE id = @id;
+
+-- name: GetTelemetryEnabled :one
+SELECT enable_telemetry FROM configs WHERE id = @id;
+
+-- name: CreateConfigIfNotExists :exec
+INSERT INTO configs (id, cluster_id, enable_telemetry)
+VALUES (@id, @cluster_id, @enable_telemetry)
+ON CONFLICT (id) DO NOTHING;

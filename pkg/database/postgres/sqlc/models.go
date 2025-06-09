@@ -8,6 +8,14 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type Config struct {
+	ID              string             `db:"id" json:"id"`
+	ClusterID       string             `db:"cluster_id" json:"cluster_id"`
+	EnableTelemetry pgtype.Bool        `db:"enable_telemetry" json:"enable_telemetry"`
+	CreatedAt       pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
 type TestWorkflow struct {
 	ID           int32              `db:"id" json:"id"`
 	ExecutionID  string             `db:"execution_id" json:"execution_id"`

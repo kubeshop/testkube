@@ -107,6 +107,15 @@ CREATE TABLE test_workflows (
     UNIQUE(execution_id, workflow_type)
 );
 
+-- Create the main table for Config
+CREATE TABLE configs (
+    id VARCHAR(255) PRIMARY KEY,
+    cluster_id VARCHAR(255) NOT NULL,
+    enable_telemetry BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Create indexes
 CREATE INDEX idx_test_workflow_executions_group_id ON test_workflow_executions(group_id);
 CREATE INDEX idx_test_workflow_executions_runner_id ON test_workflow_executions(runner_id);
@@ -132,10 +141,14 @@ CREATE INDEX idx_test_workflows_execution_id ON test_workflows(execution_id);
 CREATE INDEX idx_test_workflows_workflow_type ON test_workflows(workflow_type);
 CREATE INDEX idx_test_workflows_name ON test_workflows(name);
 
+CREATE INDEX idx_configs_cluster_id ON configs(cluster_id);
+
 -- +goose StatementEnd
 
 -- +goose Down
 -- +goose StatementBegin
+DROP INDEX idx_configs_cluster_id;
+
 DROP INDEX IF EXISTS idx_test_workflows_execution_id;
 DROP INDEX IF EXISTS idx_test_workflows_workflow_type;
 DROP INDEX IF EXISTS idx_test_workflows_name;
@@ -160,6 +173,7 @@ DROP INDEX IF EXISTS idx_test_workflow_executions_scheduled_at;
 DROP INDEX IF EXISTS idx_test_workflow_executions_status_at;
 DROP INDEX IF EXISTS idx_test_workflow_executions_tags;
 
+DROP TABLE configs;
 DROP TABLE IF EXISTS test_workflows;
 DROP TABLE IF EXISTS test_workflow_resource_aggregations;
 DROP TABLE IF EXISTS test_workflow_reports;
