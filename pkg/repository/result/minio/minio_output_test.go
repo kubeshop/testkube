@@ -15,7 +15,7 @@ import (
 func TestGetOutputSize(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	storageMock := storage.NewMockClient(mockCtrl)
-	outputClient := NewMinioOutputRepository(storageMock, nil, "test-bucket")
+	outputClient := NewMinioOutputRepository(storageMock, "test-bucket")
 	streamContent := "test line"
 	storageMock.EXPECT().DownloadFileFromBucket(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(strings.NewReader(streamContent), minio.ObjectInfo{}, nil)

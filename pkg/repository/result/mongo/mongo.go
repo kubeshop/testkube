@@ -87,7 +87,7 @@ func NewMongoRepositoryWithMinioOutputStorage(db *mongo.Database, allowDiskUse b
 		log:                log.DefaultLogger,
 		sequenceRepository: sequenceRepository,
 	}
-	repo.OutputRepository = minio.NewMinioOutputRepository(storageClient, repo.ResultsColl, bucket)
+	repo.OutputRepository = minio.NewMinioOutputRepository(storageClient, bucket)
 	return &repo
 }
 
@@ -126,6 +126,13 @@ func WithMongoRepositoryResultCollection(collection *mongo.Collection) MongoRepo
 func WithMongoRepositorySequence(sequenceRepository sequence.Repository) MongoRepositoryOpt {
 	return func(r *MongoRepository) {
 		r.sequenceRepository = sequenceRepository
+	}
+}
+
+func WithMinioOutputRepository(outputRepository *minio.MinioRepository) MongoRepositoryOpt {
+	return func(r *MongoRepository) {
+		outputRepository.SetExecutionCollection(r.ResultsColl)
+		r.OutputRepository = outputRepository
 	}
 }
 

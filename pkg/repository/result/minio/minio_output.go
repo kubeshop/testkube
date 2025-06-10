@@ -25,13 +25,16 @@ type MinioRepository struct {
 	bucket              string
 }
 
-func NewMinioOutputRepository(storageClient storage.Client, executionCollection *mongo.Collection, bucket string) *MinioRepository {
+func NewMinioOutputRepository(storageClient storage.Client, bucket string) *MinioRepository {
 	log.DefaultLogger.Debugw("creating minio output repository", "bucket", bucket)
 	return &MinioRepository{
-		storage:             storageClient,
-		executionCollection: executionCollection,
-		bucket:              bucket,
+		storage: storageClient,
+		bucket:  bucket,
 	}
+}
+
+func (m *MinioRepository) SetExecutionCollection(executionCollection *mongo.Collection) {
+	m.executionCollection = executionCollection
 }
 
 func (m *MinioRepository) GetOutput(ctx context.Context, id, testName, testSuiteName string) (output string, err error) {

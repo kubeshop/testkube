@@ -13,6 +13,7 @@ import (
 	testsourcesclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testsources/v1"
 	testsuiteexecutionsv1 "github.com/kubeshop/testkube-operator/pkg/client/testsuiteexecutions/v1"
 	testsuitesclientv3 "github.com/kubeshop/testkube-operator/pkg/client/testsuites/v3"
+
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	cloudresult "github.com/kubeshop/testkube/pkg/cloud/data/result"
@@ -20,13 +21,11 @@ import (
 	"github.com/kubeshop/testkube/pkg/featureflags"
 	"github.com/kubeshop/testkube/pkg/log"
 	logsclient "github.com/kubeshop/testkube/pkg/logs/client"
+	"github.com/kubeshop/testkube/pkg/repository"
 	"github.com/kubeshop/testkube/pkg/repository/result"
 	minioresult "github.com/kubeshop/testkube/pkg/repository/result/minio"
-	mongoresult "github.com/kubeshop/testkube/pkg/repository/result/mongo"
-	"github.com/kubeshop/testkube/pkg/repository/sequence"
 	"github.com/kubeshop/testkube/pkg/repository/storage"
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
-	mongotestresult "github.com/kubeshop/testkube/pkg/repository/testresult/mongo"
 	domainstorage "github.com/kubeshop/testkube/pkg/storage"
 )
 
@@ -120,27 +119,31 @@ func CreateDeprecatedRepositoriesForCloud(grpcClient cloud.TestKubeCloudAPIClien
 
 func CreateDeprecatedRepositoriesForMongo(ctx context.Context, cfg *config.Config, db *mongo.Database, logGrpcClient logsclient.StreamGetter, storageClient domainstorage.Client, features featureflags.FeatureFlags) DeprecatedRepositories {
 	isDocDb := cfg.APIMongoDBType == storage.TypeDocDB
-	sequenceRepository := sequence.NewMongoRepository(db)
-	mongoResultsRepository := mongoresult.NewMongoRepository(db, cfg.APIMongoAllowDiskUse, isDocDb, mongoresult.WithFeatureFlags(features),
-		mongoresult.WithLogsClient(logGrpcClient), mongoresult.WithMongoRepositorySequence(sequenceRepository))
-	resultsRepository := mongoResultsRepository
-	testResultsRepository := mongotestresult.NewMongoRepository(db, cfg.APIMongoAllowDiskUse, isDocDb,
-		mongotestresult.WithMongoRepositorySequence(sequenceRepository))
-
+	var outputRepository *minioresult.MinioRepository
 	// Init logs storage
 	if cfg.LogsStorage == "minio" {
 		if cfg.LogsBucket == "" {
 			log.DefaultLogger.Error("LOGS_BUCKET env var is not set")
 		} else if ok, err := storageClient.IsConnectionPossible(ctx); ok && (err == nil) {
 			log.DefaultLogger.Info("setting minio as logs storage")
-			mongoResultsRepository.OutputRepository = minioresult.NewMinioOutputRepository(storageClient, mongoResultsRepository.ResultsColl, cfg.LogsBucket)
+			outputRepository = minioresult.NewMinioOutputRepository(storageClient, cfg.LogsBucket)
 		} else {
 			log.DefaultLogger.Infow("minio is not available, using default logs storage", "error", err)
 		}
 	}
 
+	factory := repository.NewMongoDBFactory(repository.MongoDBFactoryConfig{
+		Database:         db,
+		AllowDiskUse:     cfg.APIMongoAllowDiskUse,
+		IsDocDb:          isDocDb,
+		LogGrpcClient:    logGrpcClient,
+		OutputRepository: outputRepository,
+	})
+	mongoResultsRepository := factory.NewResultRepository()
+	testResultsRepository := factory.NewTestResultRepository()
+
 	return &deprecatedRepositories{
-		testResults:      resultsRepository,
+		testResults:      mongoResultsRepository,
 		testSuiteResults: testResultsRepository,
 	}
 }
