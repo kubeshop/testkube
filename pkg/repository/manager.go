@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/leasebackend"
 	"github.com/kubeshop/testkube/pkg/repository/result"
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
@@ -23,10 +22,6 @@ func NewRepositoryManager(factory RepositoryFactory) *RepositoryManager {
 	return &RepositoryManager{
 		factory: factory,
 	}
-}
-
-func (rm *RepositoryManager) Config() config.Repository {
-	return rm.factory.NewConfigRepository()
 }
 
 func (rm *RepositoryManager) LeaseBackend() leasebackend.Repository {

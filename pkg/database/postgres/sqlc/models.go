@@ -8,14 +8,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type Config struct {
-	ID              string             `db:"id" json:"id"`
-	ClusterID       string             `db:"cluster_id" json:"cluster_id"`
-	EnableTelemetry pgtype.Bool        `db:"enable_telemetry" json:"enable_telemetry"`
-	CreatedAt       pgtype.Timestamptz `db:"created_at" json:"created_at"`
-	UpdatedAt       pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
-}
-
 type Lease struct {
 	ID         string             `db:"id" json:"id"`
 	Identifier string             `db:"identifier" json:"identifier"`

@@ -5,7 +5,6 @@ package repository
 import (
 	"context"
 
-	"github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/leasebackend"
 	"github.com/kubeshop/testkube/pkg/repository/result"
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
@@ -22,9 +21,6 @@ const (
 
 // RepositoryFactory defines the interface for creating repository instances
 type RepositoryFactory interface {
-	// Config Repository
-	NewConfigRepository() config.Repository
-
 	// LeaseBackend Repository
 	NewLeaseBackendRepository() leasebackend.Repository
 

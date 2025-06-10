@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
-	"github.com/kubeshop/testkube/pkg/repository/config"
 	"github.com/kubeshop/testkube/pkg/repository/leasebackend"
 	"github.com/kubeshop/testkube/pkg/repository/result"
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
@@ -55,7 +54,6 @@ func TestRepositoryManager(t *testing.T) {
 
 	t.Run("Repository Access", func(t *testing.T) {
 		// Test that manager provides access to all repositories
-		assert.NotNil(t, manager.Config())
 		assert.NotNil(t, manager.LeaseBackend())
 		assert.NotNil(t, manager.Result())
 		assert.NotNil(t, manager.TestResult())
@@ -72,10 +70,6 @@ func TestRepositoryManager(t *testing.T) {
 type MockRepositoryFactory struct {
 	ctr *gomock.Controller
 	mock.Mock
-}
-
-func (m *MockRepositoryFactory) NewConfigRepository() config.Repository {
-	return config.NewMockRepository(m.ctr)
 }
 
 func (m *MockRepositoryFactory) NewLeaseBackendRepository() leasebackend.Repository {

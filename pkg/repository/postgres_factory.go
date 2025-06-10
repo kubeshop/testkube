@@ -7,8 +7,6 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/kubeshop/testkube/pkg/repository/config"
-	configPostgres "github.com/kubeshop/testkube/pkg/repository/config/postgres"
 	"github.com/kubeshop/testkube/pkg/repository/leasebackend"
 	leasebackendPostgres "github.com/kubeshop/testkube/pkg/repository/leasebackend/postgres"
 	"github.com/kubeshop/testkube/pkg/repository/result"
@@ -22,7 +20,6 @@ import (
 // PostgreSQL Factory Implementation
 type PostgreSQLFactory struct {
 	db               *pgxpool.Pool
-	configRepo       config.Repository
 	leaseBackendRepo leasebackend.Repository
 	resultRepo       result.Repository
 	testResultRepo   testresult.Repository
@@ -39,13 +36,6 @@ func NewPostgreSQLFactory(config PostgreSQLFactoryConfig) *PostgreSQLFactory {
 	}
 
 	return factory
-}
-
-func (f *PostgreSQLFactory) NewConfigRepository() config.Repository {
-	if f.configRepo == nil {
-		f.configRepo = configPostgres.NewPostgresRepository(f.db)
-	}
-	return f.configRepo
 }
 
 func (f *PostgreSQLFactory) NewLeaseBackendRepository() leasebackend.Repository {

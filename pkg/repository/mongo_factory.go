@@ -8,8 +8,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 
 	logsclient "github.com/kubeshop/testkube/pkg/logs/client"
-	"github.com/kubeshop/testkube/pkg/repository/config"
-	configMongo "github.com/kubeshop/testkube/pkg/repository/config/mongo"
 	"github.com/kubeshop/testkube/pkg/repository/leasebackend"
 	leasebackendMongo "github.com/kubeshop/testkube/pkg/repository/leasebackend/mongo"
 	"github.com/kubeshop/testkube/pkg/repository/result"
@@ -30,7 +28,6 @@ type MongoDBFactory struct {
 	logGrpcClient    logsclient.StreamGetter
 	sequenceRepo     sequence.Repository
 	outputRepository *minio.MinioRepository
-	configRepo       config.Repository
 	leaseBackendRepo leasebackend.Repository
 	resultRepo       result.Repository
 	testResultRepo   testresult.Repository
@@ -58,13 +55,6 @@ func NewMongoDBFactory(config MongoDBFactoryConfig) *MongoDBFactory {
 	factory.sequenceRepo = sequence.NewMongoRepository(config.Database)
 
 	return factory
-}
-
-func (f *MongoDBFactory) NewConfigRepository() config.Repository {
-	if f.configRepo == nil {
-		f.configRepo = configMongo.NewMongoRepository(f.db)
-	}
-	return f.configRepo
 }
 
 func (f *MongoDBFactory) NewLeaseBackendRepository() leasebackend.Repository {

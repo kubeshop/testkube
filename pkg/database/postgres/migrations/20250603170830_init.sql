@@ -108,15 +108,6 @@ CREATE TABLE test_workflows (
     UNIQUE(execution_id, workflow_type)
 );
 
--- Create the main table for Config
-CREATE TABLE configs (
-    id VARCHAR(255) PRIMARY KEY,
-    cluster_id VARCHAR(255) NOT NULL,
-    enable_telemetry BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
 -- Create the main table for Leases
 CREATE TABLE leases (
     id VARCHAR(255) PRIMARY KEY, -- This will be the lease mongo ID (lease-{clusterID})
@@ -153,8 +144,6 @@ CREATE INDEX idx_test_workflows_execution_id ON test_workflows(execution_id);
 CREATE INDEX idx_test_workflows_workflow_type ON test_workflows(workflow_type);
 CREATE INDEX idx_test_workflows_name ON test_workflows(name);
 
-CREATE INDEX idx_configs_cluster_id ON configs(cluster_id);
-
 CREATE INDEX idx_leases_identifier ON leases(identifier);
 CREATE INDEX idx_leases_cluster_id ON leases(cluster_id);
 CREATE INDEX idx_leases_renewed_at ON leases(renewed_at);
@@ -169,8 +158,6 @@ DROP INDEX idx_leases_cluster_id;
 DROP INDEX idx_leases_renewed_at;
 DROP INDEX idx_leases_acquired_at;
 DROP INDEX idx_leases_identifier_cluster_id;
-
-DROP INDEX idx_configs_cluster_id;
 
 DROP INDEX IF EXISTS idx_test_workflows_execution_id;
 DROP INDEX IF EXISTS idx_test_workflows_workflow_type;
@@ -197,7 +184,6 @@ DROP INDEX IF EXISTS idx_test_workflow_executions_status_at;
 DROP INDEX IF EXISTS idx_test_workflow_executions_tags;
 
 DROP TABLE leases;
-DROP TABLE configs;
 DROP TABLE IF EXISTS test_workflows;
 DROP TABLE IF EXISTS test_workflow_resource_aggregations;
 DROP TABLE IF EXISTS test_workflow_reports;

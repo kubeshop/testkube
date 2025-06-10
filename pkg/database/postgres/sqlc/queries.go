@@ -88,18 +88,6 @@ func (w *SQLCTestWorkflowExecutionQueriesWrapper) WithTx(tx pgx.Tx) TestWorkflow
 	return &SQLCTestWorkflowExecutionQueriesWrapper{Queries: w.Queries.WithTx(tx)}
 }
 
-// ConfigQueriesInterface defines the interface for sqlc generated queries
-type ConfigQueriesInterface interface {
-	GetConfig(ctx context.Context, id string) (Config, error)
-	GetConfigByFixedId(ctx context.Context) (Config, error)
-	UpsertConfig(ctx context.Context, arg UpsertConfigParams) (Config, error)
-	UpdateClusterId(ctx context.Context, arg UpdateClusterIdParams) error
-	UpdateTelemetryEnabled(ctx context.Context, arg UpdateTelemetryEnabledParams) error
-	GetClusterId(ctx context.Context, id string) (string, error)
-	GetTelemetryEnabled(ctx context.Context, id string) (pgtype.Bool, error)
-	CreateConfigIfNotExists(ctx context.Context, arg CreateConfigIfNotExistsParams) error
-}
-
 // DatabaseInterface defines the interface for database operations
 type DatabaseInterface interface {
 	Begin(ctx context.Context) (pgx.Tx, error)
