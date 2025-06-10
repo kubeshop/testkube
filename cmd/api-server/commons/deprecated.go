@@ -117,8 +117,8 @@ func CreateDeprecatedRepositoriesForCloud(grpcClient cloud.TestKubeCloudAPIClien
 	}
 }
 
-func CreateDeprecatedRepositoriesForMongo(ctx context.Context, cfg *config.Config, db *mongo.Database, logGrpcClient logsclient.StreamGetter, storageClient domainstorage.Client, features featureflags.FeatureFlags) DeprecatedRepositories {
-	isDocDb := cfg.APIMongoDBType == storage.TypeDocDB
+func CreateDeprecatedRepositoriesForMongo(ctx context.Context, cfg *config.Config, db *mongo.Database,
+	logGrpcClient logsclient.StreamGetter, storageClient domainstorage.Client, features featureflags.FeatureFlags) (DeprecatedRepositories, error) {
 	var outputRepository *minioresult.MinioRepository
 	// Init logs storage
 	if cfg.LogsStorage == "minio" {
@@ -132,20 +132,22 @@ func CreateDeprecatedRepositoriesForMongo(ctx context.Context, cfg *config.Confi
 		}
 	}
 
-	factory := repository.NewMongoDBFactory(repository.MongoDBFactoryConfig{
+	factory, err := repository.NewFactoryBuilder().WithMongoDB(repository.MongoDBFactoryConfig{
 		Database:         db,
 		AllowDiskUse:     cfg.APIMongoAllowDiskUse,
-		IsDocDb:          isDocDb,
+		IsDocDb:          cfg.APIMongoDBType == storage.TypeDocDB,
 		LogGrpcClient:    logGrpcClient,
 		OutputRepository: outputRepository,
-	})
-	mongoResultsRepository := factory.NewResultRepository()
-	testResultsRepository := factory.NewTestResultRepository()
-
-	return &deprecatedRepositories{
-		testResults:      mongoResultsRepository,
-		testSuiteResults: testResultsRepository,
+	}).Build()
+	if err != nil {
+		return nil, err
 	}
+
+	repoManager := repository.NewRepositoryManager(factory)
+	return &deprecatedRepositories{
+		testResults:      repoManager.Result(),
+		testSuiteResults: repoManager.TestResult(),
+	}, nil
 }
 
 func MustGetLogsV2Client(cfg *config.Config) logsclient.StreamGetter {

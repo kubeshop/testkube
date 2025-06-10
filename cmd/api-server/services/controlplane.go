@@ -91,12 +91,14 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 	}
 
 	// Build repositories
+
 	sequenceRepository := sequence.NewMongoRepository(db)
 	testWorkflowResultsRepository := mongorepo.NewMongoRepository(db, cfg.APIMongoAllowDiskUse,
 		mongorepo.WithMongoRepositorySequence(sequenceRepository))
 	testWorkflowOutputRepository := miniorepo.NewMinioOutputRepository(storageClient, db.Collection(mongorepo.CollectionName), cfg.LogsBucket)
 	artifactStorage := minio.NewMinIOArtifactClient(storageClient)
-	deprecatedRepositories := commons.CreateDeprecatedRepositoriesForMongo(ctx, cfg, db, logGrpcClient, storageClient, features)
+	deprecatedRepositories, err := commons.CreateDeprecatedRepositoriesForMongo(ctx, cfg, db, logGrpcClient, storageClient, features)
+	commons.ExitOnError("Creating deprecated repositories from mongo", err)
 
 	// Set up "Config" commands
 	configCommands := controlplane.CommandHandlers{
