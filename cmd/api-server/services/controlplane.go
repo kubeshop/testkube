@@ -5,12 +5,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"go.mongodb.org/mongo-driver/mongo"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	kubeclient "github.com/kubeshop/testkube-operator/pkg/client"
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
