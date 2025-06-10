@@ -10,6 +10,7 @@ import (
 	"google.golang.org/grpc/status"
 	"k8s.io/client-go/kubernetes"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	kubeclient "github.com/kubeshop/testkube-operator/pkg/client"
 	"github.com/kubeshop/testkube/cmd/api-server/commons"
 	"github.com/kubeshop/testkube/internal/app/api/metrics"
@@ -79,13 +80,7 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 
 	// Connect to storages
 	secretClient := secret.NewClientFor(clientset, cfg.TestkubeNamespace)
-	db := commons.MustGetMongoDatabase(ctx, cfg, secretClient, !cfg.DisableMongoMigrations)
 	storageClient := commons.MustGetMinioClient(cfg)
-
-	testWorkflowsClient, err := testworkflowclient.NewKubernetesTestWorkflowClient(kubeClient, kubeConfig, cfg.TestkubeNamespace)
-	commons.ExitOnError("Creating test workflow client", err)
-	testWorkflowTemplatesClient, err := testworkflowtemplateclient.NewKubernetesTestWorkflowTemplateClient(kubeClient, kubeConfig, cfg.TestkubeNamespace)
-	commons.ExitOnError("Creating test workflow templates client", err)
 
 	var logGrpcClient logsclient.StreamGetter
 	if !cfg.DisableDeprecatedTests && features.LogsV2 {
@@ -93,11 +88,24 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 		commons.ExitOnError("Creating logs streaming client", err)
 	}
 
-	// Build repositories
-	factory, err := CreateMongoFactory(ctx, cfg, db, logGrpcClient, storageClient, features)
-	commons.ExitOnError("Creating deprecated repositories from mongo", err)
-	repoManager := repository.NewRepositoryManager(factory)
+	var factory repository.RepositoryFactory
+	if cfg.APIMongoDSN != "" {
+		mongoDb := commons.MustGetMongoDatabase(ctx, cfg, secretClient, !cfg.DisableMongoMigrations)
+		factory, err = CreateMongoFactory(ctx, cfg, mongoDb, logGrpcClient, storageClient, features)
+	}
+	if cfg.APIPostgresDSN != "" {
+		postgresDb := commons.MustGetPostgresDatabase(ctx, cfg)
+		factory, err = CreatePostgresFactory(postgresDb)
+	}
+	commons.ExitOnError("Creating factory for database", err)
 
+	testWorkflowsClient, err := testworkflowclient.NewKubernetesTestWorkflowClient(kubeClient, kubeConfig, cfg.TestkubeNamespace)
+	commons.ExitOnError("Creating test workflow client", err)
+	testWorkflowTemplatesClient, err := testworkflowtemplateclient.NewKubernetesTestWorkflowTemplateClient(kubeClient, kubeConfig, cfg.TestkubeNamespace)
+	commons.ExitOnError("Creating test workflow templates client", err)
+
+	// Build repositories
+	repoManager := repository.NewRepositoryManager(factory)
 	testWorkflowResultsRepository := repoManager.TestWorkflow()
 	testWorkflowOutputRepository := miniorepo.NewMinioOutputRepository(storageClient, testWorkflowResultsRepository, cfg.LogsBucket)
 	deprecatedRepositories := commons.CreateDeprecatedRepositoriesForMongo(*repoManager)
@@ -461,6 +469,17 @@ func CreateMongoFactory(ctx context.Context, cfg *config.Config, db *mongo.Datab
 		IsDocDb:          cfg.APIMongoDBType == storage.TypeDocDB,
 		LogGrpcClient:    logGrpcClient,
 		OutputRepository: outputRepository,
+	}).Build()
+	if err != nil {
+		return nil, err
+	}
+
+	return factory, nil
+}
+
+func CreatePostgresFactory(db *pgxpool.Pool) (repository.RepositoryFactory, error) {
+	factory, err := repository.NewFactoryBuilder().WithPostgreSQL(repository.PostgreSQLFactoryConfig{
+		Database: db,
 	}).Build()
 	if err != nil {
 		return nil, err

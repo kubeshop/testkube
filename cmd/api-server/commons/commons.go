@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/nats-io/nats.go"
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -217,6 +218,14 @@ func getMongoSSLConfig(cfg *config.Config, secretClient secret.Interface) *stora
 		SSLClientCertificateKeyFilePassword: pass,
 		SSLCertificateAuthoritiyFile:        rootCAPath,
 	}
+}
+
+func MustGetPostgresDatabase(ctx context.Context, cfg *config.Config) *pgxpool.Pool {
+	// Connect to PostgreSQL
+	pool, err := pgxpool.New(context.Background(), cfg.APIPostgresDSN)
+	ExitOnError("Getting postgres database", err)
+
+	return pool
 }
 
 // Actions

@@ -33,6 +33,9 @@ type OSSControlPlaneConfig struct {
 	APIMongoDBType            string `envconfig:"API_MONGO_DB_TYPE" default:"mongo"`
 	DisableMongoMigrations    bool   `envconfig:"DISABLE_MONGO_MIGRATIONS" default:"false"`
 
+	// Postgres
+	APIPostgresDSN string `envconfig:"API_POSTGRES_DSN" default:""`
+
 	// Minio
 	StorageEndpoint        string `envconfig:"STORAGE_ENDPOINT" default:"localhost:9000"`
 	StorageBucket          string `envconfig:"STORAGE_BUCKET" default:"testkube-logs"`
