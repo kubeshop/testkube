@@ -1,0 +1,16 @@
+apiVersion: tests.testkube.io/v1
+kind: TestTrigger
+metadata:
+  name: trigger-small-suite-on-cloud-deployment
+  namespace: testkube-agent
+spec:
+  resource: deployment
+  resourceSelector:
+    name: tk-api-testkube-cloud-api # consistent versioning - just api is enough
+    namespace: testkube-dev
+  event: modified
+  action: run
+  execution: testworkflow
+  testSelector:
+    name: tw-suite-small-smoke
+    namespace: testkube-agent
