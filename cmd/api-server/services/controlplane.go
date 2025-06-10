@@ -94,7 +94,6 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 	}
 
 	// Build repositories
-
 	factory, err := CreateMongoFactory(ctx, cfg, db, logGrpcClient, storageClient, features)
 	commons.ExitOnError("Creating deprecated repositories from mongo", err)
 	repoManager := repository.NewRepositoryManager(factory)
@@ -437,7 +436,8 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 		StorageBucket:                    cfg.StorageBucket,
 		FeatureNewArchitecture:           cfg.FeatureNewArchitecture,
 		FeatureTestWorkflowsCloudStorage: cfg.FeatureCloudStorage,
-	}, executor, storageClient, testWorkflowsClient, testWorkflowTemplatesClient, testWorkflowResultsRepository, testWorkflowOutputRepository, commands...)
+	}, executor, storageClient, testWorkflowsClient, testWorkflowTemplatesClient,
+		testWorkflowResultsRepository, testWorkflowOutputRepository, repoManager, commands...)
 }
 
 func CreateMongoFactory(ctx context.Context, cfg *config.Config, db *mongo.Database,

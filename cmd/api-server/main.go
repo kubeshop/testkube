@@ -72,8 +72,8 @@ import (
 	testworkflowsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/testworkflows/v1"
 	apiv1 "github.com/kubeshop/testkube/internal/app/api/v1"
 	"github.com/kubeshop/testkube/pkg/configmap"
+	"github.com/kubeshop/testkube/pkg/controlplane"
 	"github.com/kubeshop/testkube/pkg/log"
-	"github.com/kubeshop/testkube/pkg/repository/leasebackend/mongo"
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
 )
@@ -137,8 +137,9 @@ func main() {
 
 	// Connect to the Control Plane
 	var grpcConn *grpc.ClientConn
+	var controlPlane *controlplane.Server
 	if mode == common.ModeStandalone {
-		controlPlane := services.CreateControlPlane(ctx, cfg, features, secretManager, metrics, lazyRunner, lazyEmitter)
+		controlPlane = services.CreateControlPlane(ctx, cfg, features, secretManager, metrics, lazyRunner, lazyEmitter)
 		g.Go(func() error {
 			return controlPlane.Start(ctx)
 		})
@@ -583,20 +584,20 @@ func main() {
 		eventsEmitter.Loader.Register(agentHandle)
 	}
 
-	if !cfg.DisableTestTriggers {
+	if !cfg.DisableTestTriggers && controlPlane != nil {
 		k8sCfg, err := k8sclient.GetK8sClientConfig()
 		commons.ExitOnError("Getting k8s client config", err)
 		testkubeClientset, err := testkubeclientset.NewForConfig(k8sCfg)
 		commons.ExitOnError("Creating TestKube Clientset", err)
 		// TODO: Check why this simpler options is not working
 		//testkubeClientset := testkubeclientset.New(clientset.RESTClient())
-		triggerLeaseBackend := mongo.NewAcquireAlwaysLeaseBackend()
+		leaseBackend := controlPlane.GetRepositoryMaanger().LeaseBackend()
 		triggerService := triggers.NewService(
 			deprecatedSystem,
 			clientset,
 			testkubeClientset,
 			testWorkflowsClient,
-			triggerLeaseBackend,
+			leaseBackend,
 			log.DefaultLogger,
 			configMapConfig,
 			eventBus,

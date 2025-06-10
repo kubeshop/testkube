@@ -38,3 +38,23 @@ type RepositoryFactory interface {
 	Close(ctx context.Context) error
 	HealthCheck(ctx context.Context) error
 }
+
+// Repository defines the interface for repository
+type Repository interface {
+	// LeaseBackend Repository
+	LeaseBackend() leasebackend.Repository
+
+	// Result Repository (Test Executions)
+	Result() result.Repository
+
+	// TestResult Repository (Test Suite Executions)
+	TestResult() testresult.Repository
+
+	// TestWorkflow Repository (Test Workflow Executions)
+	TestWorkflow() testworkflow.Repository
+
+	// Utility methods
+	GetDatabaseType() DatabaseType
+	Close(ctx context.Context) error
+	HealthCheck(ctx context.Context) error
+}
