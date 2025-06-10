@@ -162,7 +162,7 @@ func TestService_Run(t *testing.T) {
 		"",
 	)
 
-	mockLeaseBackend := leasebackend.NewMockLeaseBackend(mockCtrl)
+	mockLeaseBackend := leasebackend.NewMockRepository(mockCtrl)
 	testClusterID := "testkube-api"
 	testIdentifier := "test-host-1"
 	mockLeaseBackend.EXPECT().TryAcquire(gomock.Any(), testIdentifier, testClusterID).Return(true, nil).AnyTimes()

@@ -45,7 +45,7 @@ const (
 
 type Service struct {
 	informers                     *k8sInformers
-	leaseBackend                  leasebackend.LeaseBackend
+	leaseBackend                  leasebackend.Repository
 	identifier                    string
 	clusterID                     string
 	triggerExecutor               ExecutorF
@@ -83,7 +83,7 @@ func NewService(
 	clientset kubernetes.Interface,
 	testKubeClientset testkubeclientsetv1.Interface,
 	testWorkflowsClient testworkflowclient.TestWorkflowClient,
-	leaseBackend leasebackend.LeaseBackend,
+	leaseBackend leasebackend.Repository,
 	logger *zap.SugaredLogger,
 	configMap config.Repository,
 	eventsBus bus.Bus,
