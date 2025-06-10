@@ -1,9 +1,6 @@
 package commons
 
 import (
-	"context"
-
-	"go.mongodb.org/mongo-driver/mongo"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	executorsclientv1 "github.com/kubeshop/testkube-operator/pkg/client/executors/v1"
@@ -18,15 +15,10 @@ import (
 	"github.com/kubeshop/testkube/pkg/cloud"
 	cloudresult "github.com/kubeshop/testkube/pkg/cloud/data/result"
 	cloudtestresult "github.com/kubeshop/testkube/pkg/cloud/data/testresult"
-	"github.com/kubeshop/testkube/pkg/featureflags"
-	"github.com/kubeshop/testkube/pkg/log"
 	logsclient "github.com/kubeshop/testkube/pkg/logs/client"
 	"github.com/kubeshop/testkube/pkg/repository"
 	"github.com/kubeshop/testkube/pkg/repository/result"
-	minioresult "github.com/kubeshop/testkube/pkg/repository/result/minio"
-	"github.com/kubeshop/testkube/pkg/repository/storage"
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
-	domainstorage "github.com/kubeshop/testkube/pkg/storage"
 )
 
 //go:generate mockgen -destination=./mock_deprecatedclients.go -package=commons "github.com/kubeshop/testkube/cmd/api-server/commons" DeprecatedClients
@@ -117,37 +109,11 @@ func CreateDeprecatedRepositoriesForCloud(grpcClient cloud.TestKubeCloudAPIClien
 	}
 }
 
-func CreateDeprecatedRepositoriesForMongo(ctx context.Context, cfg *config.Config, db *mongo.Database,
-	logGrpcClient logsclient.StreamGetter, storageClient domainstorage.Client, features featureflags.FeatureFlags) (DeprecatedRepositories, error) {
-	var outputRepository *minioresult.MinioRepository
-	// Init logs storage
-	if cfg.LogsStorage == "minio" {
-		if cfg.LogsBucket == "" {
-			log.DefaultLogger.Error("LOGS_BUCKET env var is not set")
-		} else if ok, err := storageClient.IsConnectionPossible(ctx); ok && (err == nil) {
-			log.DefaultLogger.Info("setting minio as logs storage")
-			outputRepository = minioresult.NewMinioOutputRepository(storageClient, cfg.LogsBucket)
-		} else {
-			log.DefaultLogger.Infow("minio is not available, using default logs storage", "error", err)
-		}
-	}
-
-	factory, err := repository.NewFactoryBuilder().WithMongoDB(repository.MongoDBFactoryConfig{
-		Database:         db,
-		AllowDiskUse:     cfg.APIMongoAllowDiskUse,
-		IsDocDb:          cfg.APIMongoDBType == storage.TypeDocDB,
-		LogGrpcClient:    logGrpcClient,
-		OutputRepository: outputRepository,
-	}).Build()
-	if err != nil {
-		return nil, err
-	}
-
-	repoManager := repository.NewRepositoryManager(factory)
+func CreateDeprecatedRepositoriesForMongo(repoManager repository.RepositoryManager) DeprecatedRepositories {
 	return &deprecatedRepositories{
 		testResults:      repoManager.Result(),
 		testSuiteResults: repoManager.TestResult(),
-	}, nil
+	}
 }
 
 func MustGetLogsV2Client(cfg *config.Config) logsclient.StreamGetter {

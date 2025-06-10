@@ -176,6 +176,7 @@ func main() {
 	testWorkflowResultsRepository := cloudtestworkflow.NewCloudRepository(grpcClient, cfg.TestkubeProAPIKey)
 	testWorkflowOutputRepository := cloudtestworkflow.NewCloudOutputRepository(grpcClient, cfg.TestkubeProAPIKey, cfg.StorageSkipVerify)
 	webhookRepository := cloudwebhook.NewCloudRepository(grpcClient, cfg.TestkubeProAPIKey)
+
 	triggerLeaseBackend := mongo.NewAcquireAlwaysLeaseBackend()
 	artifactStorage := cloudartifacts.NewCloudArtifactsStorage(grpcClient, cfg.TestkubeProAPIKey)
 

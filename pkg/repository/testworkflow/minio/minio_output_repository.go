@@ -5,14 +5,10 @@ import (
 	"io"
 	"time"
 
-	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/bufferedstream"
 	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	"github.com/kubeshop/testkube/pkg/storage"
-
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 var _ testworkflow.OutputRepository = (*MinioRepository)(nil)
@@ -21,15 +17,15 @@ const bucketFolder = "testworkflows"
 
 type MinioRepository struct {
 	storage             storage.Client
-	executionCollection *mongo.Collection
+	executionRepository testworkflow.Repository
 	bucket              string
 }
 
-func NewMinioOutputRepository(storageClient storage.Client, executionCollection *mongo.Collection, bucket string) *MinioRepository {
+func NewMinioOutputRepository(storageClient storage.Client, executionRepository testworkflow.Repository, bucket string) *MinioRepository {
 	log.DefaultLogger.Debugw("creating minio workflow output repository", "bucket", bucket)
 	return &MinioRepository{
 		storage:             storageClient,
-		executionCollection: executionCollection,
+		executionRepository: executionRepository,
 		bucket:              bucket,
 	}
 }
@@ -74,13 +70,8 @@ func (m *MinioRepository) HasLog(ctx context.Context, id, workflowName string) (
 
 func (m *MinioRepository) DeleteOutputByTestWorkflow(ctx context.Context, testWorkflowName string) error {
 	log.DefaultLogger.Debugw("deleting output by testWorkflowName", "testWorkflowName", testWorkflowName)
-	var executions []testkube.TestWorkflowExecution
 	//TODO
-	cursor, err := m.executionCollection.Find(ctx, bson.M{"testworkflow.name": testWorkflowName})
-	if err != nil {
-		return err
-	}
-	err = cursor.All(ctx, &executions)
+	executions, err := m.executionRepository.GetExecutions(ctx, testworkflow.NewExecutionsFilter().WithName(testWorkflowName).WithPageSize(0))
 	if err != nil {
 		return err
 	}

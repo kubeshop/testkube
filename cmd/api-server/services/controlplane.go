@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"go.mongodb.org/mongo-driver/mongo"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"k8s.io/client-go/kubernetes"
@@ -27,15 +28,17 @@ import (
 	logsclient "github.com/kubeshop/testkube/pkg/logs/client"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
+	"github.com/kubeshop/testkube/pkg/repository"
 	"github.com/kubeshop/testkube/pkg/repository/result"
-	"github.com/kubeshop/testkube/pkg/repository/sequence"
+	minioresult "github.com/kubeshop/testkube/pkg/repository/result/minio"
+	"github.com/kubeshop/testkube/pkg/repository/storage"
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 	miniorepo "github.com/kubeshop/testkube/pkg/repository/testworkflow/minio"
-	mongorepo "github.com/kubeshop/testkube/pkg/repository/testworkflow/mongo"
 	runner2 "github.com/kubeshop/testkube/pkg/runner"
 	"github.com/kubeshop/testkube/pkg/secret"
 	"github.com/kubeshop/testkube/pkg/secretmanager"
+	domainstorage "github.com/kubeshop/testkube/pkg/storage"
 	"github.com/kubeshop/testkube/pkg/storage/minio"
 	"github.com/kubeshop/testkube/pkg/tcl/checktcl"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor"
@@ -92,13 +95,14 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 
 	// Build repositories
 
-	sequenceRepository := sequence.NewMongoRepository(db)
-	testWorkflowResultsRepository := mongorepo.NewMongoRepository(db, cfg.APIMongoAllowDiskUse,
-		mongorepo.WithMongoRepositorySequence(sequenceRepository))
-	testWorkflowOutputRepository := miniorepo.NewMinioOutputRepository(storageClient, db.Collection(mongorepo.CollectionName), cfg.LogsBucket)
-	artifactStorage := minio.NewMinIOArtifactClient(storageClient)
-	deprecatedRepositories, err := commons.CreateDeprecatedRepositoriesForMongo(ctx, cfg, db, logGrpcClient, storageClient, features)
+	factory, err := CreateMongoFactory(ctx, cfg, db, logGrpcClient, storageClient, features)
 	commons.ExitOnError("Creating deprecated repositories from mongo", err)
+	repoManager := repository.NewRepositoryManager(factory)
+
+	testWorkflowResultsRepository := repoManager.TestWorkflow()
+	testWorkflowOutputRepository := miniorepo.NewMinioOutputRepository(storageClient, testWorkflowResultsRepository, cfg.LogsBucket)
+	deprecatedRepositories := commons.CreateDeprecatedRepositoriesForMongo(*repoManager)
+	artifactStorage := minio.NewMinIOArtifactClient(storageClient)
 
 	// Set up "Config" commands
 	configCommands := controlplane.CommandHandlers{
@@ -434,4 +438,33 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 		FeatureNewArchitecture:           cfg.FeatureNewArchitecture,
 		FeatureTestWorkflowsCloudStorage: cfg.FeatureCloudStorage,
 	}, executor, storageClient, testWorkflowsClient, testWorkflowTemplatesClient, testWorkflowResultsRepository, testWorkflowOutputRepository, commands...)
+}
+
+func CreateMongoFactory(ctx context.Context, cfg *config.Config, db *mongo.Database,
+	logGrpcClient logsclient.StreamGetter, storageClient domainstorage.Client, features featureflags.FeatureFlags) (repository.RepositoryFactory, error) {
+	var outputRepository *minioresult.MinioRepository
+	// Init logs storage
+	if cfg.LogsStorage == "minio" {
+		if cfg.LogsBucket == "" {
+			log.DefaultLogger.Error("LOGS_BUCKET env var is not set")
+		} else if ok, err := storageClient.IsConnectionPossible(ctx); ok && (err == nil) {
+			log.DefaultLogger.Info("setting minio as logs storage")
+			outputRepository = minioresult.NewMinioOutputRepository(storageClient, cfg.LogsBucket)
+		} else {
+			log.DefaultLogger.Infow("minio is not available, using default logs storage", "error", err)
+		}
+	}
+
+	factory, err := repository.NewFactoryBuilder().WithMongoDB(repository.MongoDBFactoryConfig{
+		Database:         db,
+		AllowDiskUse:     cfg.APIMongoAllowDiskUse,
+		IsDocDb:          cfg.APIMongoDBType == storage.TypeDocDB,
+		LogGrpcClient:    logGrpcClient,
+		OutputRepository: outputRepository,
+	}).Build()
+	if err != nil {
+		return nil, err
+	}
+
+	return factory, nil
 }
