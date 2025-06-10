@@ -109,7 +109,7 @@ func CreateDeprecatedRepositoriesForCloud(grpcClient cloud.TestKubeCloudAPIClien
 	}
 }
 
-func CreateDeprecatedRepositoriesForMongo(repoManager repository.RepositoryManager) DeprecatedRepositories {
+func CreateDeprecatedRepositoriesForMongo(repoManager repository.Repository) DeprecatedRepositories {
 	return &deprecatedRepositories{
 		testResults:      repoManager.Result(),
 		testSuiteResults: repoManager.TestResult(),

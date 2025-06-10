@@ -108,7 +108,7 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 	repoManager := repository.NewRepositoryManager(factory)
 	testWorkflowResultsRepository := repoManager.TestWorkflow()
 	testWorkflowOutputRepository := miniorepo.NewMinioOutputRepository(storageClient, testWorkflowResultsRepository, cfg.LogsBucket)
-	deprecatedRepositories := commons.CreateDeprecatedRepositoriesForMongo(*repoManager)
+	deprecatedRepositories := commons.CreateDeprecatedRepositoriesForMongo(repoManager)
 	artifactStorage := minio.NewMinIOArtifactClient(storageClient)
 
 	// Set up "Config" commands
