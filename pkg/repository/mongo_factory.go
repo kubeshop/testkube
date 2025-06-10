@@ -1,0 +1,133 @@
+package repository
+
+import (
+	"context"
+
+	"go.mongodb.org/mongo-driver/mongo"
+
+	logsclient "github.com/kubeshop/testkube/pkg/logs/client"
+	"github.com/kubeshop/testkube/pkg/repository/config"
+	configMongo "github.com/kubeshop/testkube/pkg/repository/config/mongo"
+	"github.com/kubeshop/testkube/pkg/repository/leasebackend"
+	leasebackendMongo "github.com/kubeshop/testkube/pkg/repository/leasebackend/mongo"
+	"github.com/kubeshop/testkube/pkg/repository/result"
+	"github.com/kubeshop/testkube/pkg/repository/result/minio"
+	resultMongo "github.com/kubeshop/testkube/pkg/repository/result/mongo"
+	"github.com/kubeshop/testkube/pkg/repository/sequence"
+	"github.com/kubeshop/testkube/pkg/repository/testresult"
+	testresultMongo "github.com/kubeshop/testkube/pkg/repository/testresult/mongo"
+	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
+	testworkflowMongo "github.com/kubeshop/testkube/pkg/repository/testworkflow/mongo"
+)
+
+// MongoDB Factory Implementation
+type MongoDBFactory struct {
+	db               *mongo.Database
+	allowDiskUse     bool
+	isDocDb          bool
+	logGrpcClient    logsclient.StreamGetter
+	sequenceRepo     sequence.Repository
+	outputRepository *minio.MinioRepository
+	configRepo       config.Repository
+	leaseBackendRepo leasebackend.Repository
+	resultRepo       result.Repository
+	testResultRepo   testresult.Repository
+	testWorkflowRepo testworkflow.Repository
+}
+
+type MongoDBFactoryConfig struct {
+	Database         *mongo.Database
+	AllowDiskUse     bool
+	IsDocDb          bool
+	LogGrpcClient    logsclient.StreamGetter
+	OutputRepository *minio.MinioRepository
+}
+
+func NewMongoDBFactory(config MongoDBFactoryConfig) *MongoDBFactory {
+	factory := &MongoDBFactory{
+		db:               config.Database,
+		allowDiskUse:     config.AllowDiskUse,
+		isDocDb:          config.IsDocDb,
+		logGrpcClient:    config.LogGrpcClient,
+		outputRepository: config.OutputRepository,
+	}
+
+	// Initialize sequence repository first as it's used by other repositories
+	factory.sequenceRepo = sequence.NewMongoRepository(config.Database)
+
+	return factory
+}
+
+func (f *MongoDBFactory) NewConfigRepository() config.Repository {
+	if f.configRepo == nil {
+		f.configRepo = configMongo.NewMongoRepository(f.db)
+	}
+	return f.configRepo
+}
+
+func (f *MongoDBFactory) NewLeaseBackendRepository() leasebackend.Repository {
+	if f.leaseBackendRepo == nil {
+		f.leaseBackendRepo = leasebackendMongo.NewMongoLeaseBackend(f.db)
+	}
+	return f.leaseBackendRepo
+}
+
+func (f *MongoDBFactory) NewResultRepository() result.Repository {
+	if f.resultRepo == nil {
+		opts := []resultMongo.MongoRepositoryOpt{
+			resultMongo.WithLogsClient(f.logGrpcClient),
+			resultMongo.WithMongoRepositorySequence(f.sequenceRepo),
+		}
+
+		if f.outputRepository != nil {
+			opts = append(opts, resultMongo.WithMinioOutputRepository(f.outputRepository))
+		}
+
+		f.resultRepo = resultMongo.NewMongoRepository(
+			f.db,
+			f.allowDiskUse,
+			f.isDocDb,
+			opts...,
+		)
+	}
+	return f.resultRepo
+}
+
+func (f *MongoDBFactory) NewTestResultRepository() testresult.Repository {
+	if f.testResultRepo == nil {
+		f.testResultRepo = testresultMongo.NewMongoRepository(
+			f.db,
+			f.allowDiskUse,
+			f.isDocDb,
+			testresultMongo.WithMongoRepositorySequence(f.sequenceRepo),
+		)
+	}
+	return f.testResultRepo
+}
+
+func (f *MongoDBFactory) NewTestWorkflowRepository() testworkflow.Repository {
+	if f.testWorkflowRepo == nil {
+		f.testWorkflowRepo = testworkflowMongo.NewMongoRepository(
+			f.db,
+			f.allowDiskUse,
+			testworkflowMongo.WithMongoRepositorySequence(f.sequenceRepo),
+		)
+	}
+	return f.testWorkflowRepo
+}
+
+func (f *MongoDBFactory) NewSequenceRepository() sequence.Repository {
+	return f.sequenceRepo
+}
+
+func (f *MongoDBFactory) GetDatabaseType() DatabaseType {
+	return DatabaseTypeMongoDB
+}
+
+func (f *MongoDBFactory) Close(ctx context.Context) error {
+	return f.db.Client().Disconnect(ctx)
+}
+
+func (f *MongoDBFactory) HealthCheck(ctx context.Context) error {
+	return f.db.Client().Ping(ctx, nil)
+}
