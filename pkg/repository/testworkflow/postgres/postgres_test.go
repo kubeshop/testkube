@@ -1185,21 +1185,18 @@ func TestPostgresRepository_DeleteByTestWorkflows(t *testing.T) {
 func TestPostgresRepository_RepositoryCreation(t *testing.T) {
 	t.Run("NewPostgresRepositoryWithOptions", func(t *testing.T) {
 		// Arrange
-		mockSeq := &MockSequenceRepository{}
 		mockQueries := &MockQueriesInterface{}
 		mockDB := &MockDatabaseInterface{}
 
 		// Act
 		repo := NewPostgresRepository(
 			nil, // This would be a real pgxpool.Pool in practice
-			WithPostgresRepositorySequence(mockSeq),
 			WithQueriesInterface(mockQueries),
 			WithDatabaseInterface(mockDB),
 		)
 
 		// Assert
 		assert.NotNil(t, repo)
-		assert.Equal(t, mockSeq, repo.sequenceRepository)
 		assert.Equal(t, mockQueries, repo.queries)
 		assert.Equal(t, mockDB, repo.db)
 	})

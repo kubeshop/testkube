@@ -1,0 +1,94 @@
+package repository
+
+import (
+	"context"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/kubeshop/testkube/pkg/repository/config"
+	configPostgres "github.com/kubeshop/testkube/pkg/repository/config/postgres"
+	"github.com/kubeshop/testkube/pkg/repository/leasebackend"
+	leasebackendPostgres "github.com/kubeshop/testkube/pkg/repository/leasebackend/postgres"
+	"github.com/kubeshop/testkube/pkg/repository/result"
+	resultPostgres "github.com/kubeshop/testkube/pkg/repository/result/postgres"
+	"github.com/kubeshop/testkube/pkg/repository/testresult"
+	testresultPostgres "github.com/kubeshop/testkube/pkg/repository/testresult/postgres"
+	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
+	testworkflowPostgres "github.com/kubeshop/testkube/pkg/repository/testworkflow/postgres"
+)
+
+// PostgreSQL Factory Implementation
+type PostgreSQLFactory struct {
+	db               *pgxpool.Pool
+	configRepo       config.Repository
+	leaseBackendRepo leasebackend.Repository
+	resultRepo       result.Repository
+	testResultRepo   testresult.Repository
+	testWorkflowRepo testworkflow.Repository
+}
+
+type PostgreSQLFactoryConfig struct {
+	Database *pgxpool.Pool
+}
+
+func NewPostgreSQLFactory(config PostgreSQLFactoryConfig) *PostgreSQLFactory {
+	factory := &PostgreSQLFactory{
+		db: config.Database,
+	}
+
+	return factory
+}
+
+func (f *PostgreSQLFactory) NewConfigRepository() config.Repository {
+	if f.configRepo == nil {
+		f.configRepo = configPostgres.NewPostgresRepository(f.db)
+	}
+	return f.configRepo
+}
+
+func (f *PostgreSQLFactory) NewLeaseBackendRepository() leasebackend.Repository {
+	if f.leaseBackendRepo == nil {
+		f.leaseBackendRepo = leasebackendPostgres.NewPostgresLeaseBackend(f.db)
+	}
+	return f.leaseBackendRepo
+}
+
+func (f *PostgreSQLFactory) NewResultRepository() result.Repository {
+	if f.resultRepo == nil {
+		f.resultRepo = resultPostgres.NewPostgresRepository(
+			f.db,
+		)
+	}
+	return f.resultRepo
+}
+
+func (f *PostgreSQLFactory) NewTestResultRepository() testresult.Repository {
+	if f.testResultRepo == nil {
+		f.testResultRepo = testresultPostgres.NewPostgresRepository(
+			f.db,
+		)
+	}
+	return f.testResultRepo
+}
+
+func (f *PostgreSQLFactory) NewTestWorkflowRepository() testworkflow.Repository {
+	if f.testWorkflowRepo == nil {
+		f.testWorkflowRepo = testworkflowPostgres.NewPostgresRepository(
+			f.db,
+		)
+	}
+	return f.testWorkflowRepo
+}
+
+func (f *PostgreSQLFactory) GetDatabaseType() DatabaseType {
+	return DatabaseTypePostgreSQL
+}
+
+func (f *PostgreSQLFactory) Close(ctx context.Context) error {
+	f.db.Close()
+	return nil
+}
+
+func (f *PostgreSQLFactory) HealthCheck(ctx context.Context) error {
+	return f.db.Ping(ctx)
+}

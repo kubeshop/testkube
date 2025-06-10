@@ -48,12 +48,6 @@ func NewPostgresRepository(db *pgxpool.Pool, opts ...PostgresRepositoryOpt) *Pos
 	return r
 }
 
-func WithPostgresRepositorySequence(sequenceRepository sequence.Repository) PostgresRepositoryOpt {
-	return func(r *PostgresRepository) {
-		r.sequenceRepository = sequenceRepository
-	}
-}
-
 // WithQueriesInterface allows injecting a custom queries interface (useful for testing)
 func WithQueriesInterface(queries sqlc.TestWorkflowExecutionQueriesInterface) PostgresRepositoryOpt {
 	return func(r *PostgresRepository) {
