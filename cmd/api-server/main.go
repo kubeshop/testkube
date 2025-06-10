@@ -177,7 +177,6 @@ func main() {
 	testWorkflowOutputRepository := cloudtestworkflow.NewCloudOutputRepository(grpcClient, cfg.TestkubeProAPIKey, cfg.StorageSkipVerify)
 	webhookRepository := cloudwebhook.NewCloudRepository(grpcClient, cfg.TestkubeProAPIKey)
 
-	triggerLeaseBackend := mongo.NewAcquireAlwaysLeaseBackend()
 	artifactStorage := cloudartifacts.NewCloudArtifactsStorage(grpcClient, cfg.TestkubeProAPIKey)
 
 	nc := commons.MustCreateNATSConnection(cfg)
@@ -591,7 +590,7 @@ func main() {
 		commons.ExitOnError("Creating TestKube Clientset", err)
 		// TODO: Check why this simpler options is not working
 		//testkubeClientset := testkubeclientset.New(clientset.RESTClient())
-
+		triggerLeaseBackend := mongo.NewAcquireAlwaysLeaseBackend()
 		triggerService := triggers.NewService(
 			deprecatedSystem,
 			clientset,
