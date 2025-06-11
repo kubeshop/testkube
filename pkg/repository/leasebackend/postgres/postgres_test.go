@@ -246,7 +246,7 @@ func TestPostgresLeaseBackend_GetExpiredLeases(t *testing.T) {
 			},
 		}
 
-		mockQueries.On("GetExpiredLeases", ctx, mock.AnythingOfType("pgtype.Timestamptz")).Return(expiredLeases, nil)
+		mockQueries.On("GetExpiredLeases", ctx, mock.AnythingOfType("time.Time")).Return(expiredLeases, nil)
 
 		// Act
 		result, err := backend.GetExpiredLeases(ctx)
@@ -268,7 +268,7 @@ func TestPostgresLeaseBackend_CleanupExpiredLeases(t *testing.T) {
 
 		ctx := context.Background()
 
-		mockQueries.On("DeleteExpiredLeases", ctx, mock.AnythingOfType("pgtype.Timestamptz")).Return(nil)
+		mockQueries.On("DeleteExpiredLeases", ctx, mock.AnythingOfType("time.Time")).Return(nil)
 
 		// Act
 		err := backend.CleanupExpiredLeases(ctx)
@@ -285,7 +285,7 @@ func TestPostgresLeaseBackend_CleanupExpiredLeases(t *testing.T) {
 
 		ctx := context.Background()
 
-		mockQueries.On("DeleteExpiredLeases", ctx, mock.AnythingOfType("pgtype.Timestamptz")).Return(errors.New("database error"))
+		mockQueries.On("DeleteExpiredLeases", ctx, mock.AnythingOfType("time.Time")).Return(errors.New("database error"))
 
 		// Act
 		err := backend.CleanupExpiredLeases(ctx)
