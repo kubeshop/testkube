@@ -7,9 +7,11 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+
+	"github.com/kubeshop/testkube/pkg/repository/sequence"
 )
 
-var _ Repository = (*MongoRepository)(nil)
+var _ sequence.Repository = (*MongoRepository)(nil)
 
 const (
 	CollectionSequences = "sequences"
@@ -46,13 +48,13 @@ type oldExecutionNumber struct {
 }
 
 type executionNumber struct {
-	Id            string        `bson:"_id"`
-	Number        int           `bson:"number"`
-	ExecutionType ExecutionType `bson:"executionType"`
+	Id            string                 `bson:"_id"`
+	Number        int                    `bson:"number"`
+	ExecutionType sequence.ExecutionType `bson:"executionType"`
 }
 
 // GetNextExecutionNumber gets next execution number by name and type
-func (r *MongoRepository) GetNextExecutionNumber(ctx context.Context, name string, executionType ExecutionType) (number int32, err error) {
+func (r *MongoRepository) GetNextExecutionNumber(ctx context.Context, name string, executionType sequence.ExecutionType) (number int32, err error) {
 	oldName := getOldName(name, executionType)
 	number, err = r.getOldNumber(ctx, oldName, executionType)
 	if err != nil {
@@ -97,7 +99,7 @@ func (r *MongoRepository) GetNextExecutionNumber(ctx context.Context, name strin
 }
 
 // DeleteExecutionNumber deletes execution number by name and type
-func (r *MongoRepository) DeleteExecutionNumber(ctx context.Context, name string, executionType ExecutionType) (err error) {
+func (r *MongoRepository) DeleteExecutionNumber(ctx context.Context, name string, executionType sequence.ExecutionType) (err error) {
 	_, err = r.Coll.DeleteOne(ctx, bson.M{"name": getOldName(name, executionType)})
 	if err != nil {
 		return err
@@ -108,7 +110,7 @@ func (r *MongoRepository) DeleteExecutionNumber(ctx context.Context, name string
 }
 
 // DeleteExecutionNumbers deletes multiple execution numbers by names and type
-func (r *MongoRepository) DeleteExecutionNumbers(ctx context.Context, names []string, executionType ExecutionType) (err error) {
+func (r *MongoRepository) DeleteExecutionNumbers(ctx context.Context, names []string, executionType sequence.ExecutionType) (err error) {
 	ids := make([]string, len(names))
 	for i := range names {
 		ids[i] = getOldName(names[i], executionType)
@@ -128,9 +130,9 @@ func (r *MongoRepository) DeleteExecutionNumbers(ctx context.Context, names []st
 }
 
 // DeleteAllExecutionNumbers deletes all execution numbers by type
-func (r *MongoRepository) DeleteAllExecutionNumbers(ctx context.Context, executionType ExecutionType) (err error) {
+func (r *MongoRepository) DeleteAllExecutionNumbers(ctx context.Context, executionType sequence.ExecutionType) (err error) {
 	isTestSuite := false
-	if executionType == ExecutionTypeTestSuite {
+	if executionType == sequence.ExecutionTypeTestSuite {
 		isTestSuite = true
 	}
 
@@ -143,7 +145,7 @@ func (r *MongoRepository) DeleteAllExecutionNumbers(ctx context.Context, executi
 	return err
 }
 
-func (r *MongoRepository) getOldNumber(ctx context.Context, name string, executionType ExecutionType) (int32, error) {
+func (r *MongoRepository) getOldNumber(ctx context.Context, name string, executionType sequence.ExecutionType) (int32, error) {
 	var oldExecutionNumber oldExecutionNumber
 
 	// get old number from OSS or old agent - old cloud configuration
@@ -154,10 +156,10 @@ func (r *MongoRepository) getOldNumber(ctx context.Context, name string, executi
 
 	number := int32(oldExecutionNumber.Number)
 	// get old number from old agennt - new cloud configuration
-	if number == 0 && (executionType == ExecutionTypeTestSuite || executionType == ExecutionTypeTestWorkflow) {
+	if number == 0 && (executionType == sequence.ExecutionTypeTestSuite || executionType == sequence.ExecutionTypeTestWorkflow) {
 		var executionNumber executionNumber
 
-		err = r.Coll.FindOne(ctx, bson.M{"_id": getMongoId(name, ExecutionTypeTest)}).Decode(&executionNumber)
+		err = r.Coll.FindOne(ctx, bson.M{"_id": getMongoId(name, sequence.ExecutionTypeTest)}).Decode(&executionNumber)
 		if err != nil && err != mongo.ErrNoDocuments {
 			return 0, err
 		}
@@ -168,13 +170,13 @@ func (r *MongoRepository) getOldNumber(ctx context.Context, name string, executi
 	return number, nil
 }
 
-func getMongoId(name string, executionType ExecutionType) string {
+func getMongoId(name string, executionType sequence.ExecutionType) string {
 	return fmt.Sprintf("%s-%s", executionType, name)
 }
 
-func getOldName(name string, executionType ExecutionType) string {
+func getOldName(name string, executionType sequence.ExecutionType) string {
 	oldPrefix := ""
-	if executionType == ExecutionTypeTestSuite {
+	if executionType == sequence.ExecutionTypeTestSuite {
 		oldPrefix = "ts-"
 	}
 
