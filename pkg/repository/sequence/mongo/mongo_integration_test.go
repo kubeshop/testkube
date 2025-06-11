@@ -1,4 +1,4 @@
-package sequence
+package mongo
 
 import (
 	"context"
@@ -6,12 +6,13 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/kubeshop/testkube/internal/config"
-	"github.com/kubeshop/testkube/pkg/utils/test"
-
 	"github.com/stretchr/testify/assert"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+
+	"github.com/kubeshop/testkube/internal/config"
+	"github.com/kubeshop/testkube/pkg/repository/sequence"
+	"github.com/kubeshop/testkube/pkg/utils/test"
 )
 
 var (
@@ -37,59 +38,59 @@ func TestNewMongoRepository_GetNextExecutionNumber_Sequential_Integration(t *tes
 	var tests = []struct {
 		expectedValue int32
 		name          string
-		executionType ExecutionType
+		executionType sequence.ExecutionType
 	}{
 		// check for new resources
 		{
 			1,
 			"test",
-			ExecutionTypeTest,
+			sequence.ExecutionTypeTest,
 		},
 		{
 			2,
 			"test",
-			ExecutionTypeTest,
+			sequence.ExecutionTypeTest,
 		},
 		{
 			1,
 			"testsuite",
-			ExecutionTypeTestSuite,
+			sequence.ExecutionTypeTestSuite,
 		},
 		{
 			2,
 			"testsuite",
-			ExecutionTypeTestSuite,
+			sequence.ExecutionTypeTestSuite,
 		},
 		{
 			1,
 			"testworkflow",
-			ExecutionTypeTestWorkflow,
+			sequence.ExecutionTypeTestWorkflow,
 		},
 		{
 			2,
 			"testworkflow",
-			ExecutionTypeTestWorkflow,
+			sequence.ExecutionTypeTestWorkflow,
 		},
 		// check for existing resources
 		{
 			1,
 			"ts-old-testsuite",
-			ExecutionTypeTest,
+			sequence.ExecutionTypeTest,
 		},
 		{
 			1,
 			"old-testworkflow",
-			ExecutionTypeTest,
+			sequence.ExecutionTypeTest,
 		},
 		{
 			2,
 			"old-testsuite",
-			ExecutionTypeTestSuite,
+			sequence.ExecutionTypeTestSuite,
 		},
 		{
 			2,
 			"old-testworkflow",
-			ExecutionTypeTestWorkflow,
+			sequence.ExecutionTypeTestWorkflow,
 		},
 	}
 
@@ -119,37 +120,37 @@ func TestNewMongoRepository_GetNextExecutionNumber_Parallel_Integration(t *testi
 	var tests = []struct {
 		expectedValue int32
 		name          string
-		executionType ExecutionType
+		executionType sequence.ExecutionType
 	}{
 		{
 			1,
 			"test",
-			ExecutionTypeTest,
+			sequence.ExecutionTypeTest,
 		},
 		{
 			2,
 			"test",
-			ExecutionTypeTest,
+			sequence.ExecutionTypeTest,
 		},
 		{
 			1,
 			"testsuite",
-			ExecutionTypeTestSuite,
+			sequence.ExecutionTypeTestSuite,
 		},
 		{
 			2,
 			"testsuite",
-			ExecutionTypeTestSuite,
+			sequence.ExecutionTypeTestSuite,
 		},
 		{
 			1,
 			"testworkflow",
-			ExecutionTypeTestWorkflow,
+			sequence.ExecutionTypeTestWorkflow,
 		},
 		{
 			2,
 			"testworkflow",
-			ExecutionTypeTestWorkflow,
+			sequence.ExecutionTypeTestWorkflow,
 		},
 	}
 
@@ -158,7 +159,7 @@ func TestNewMongoRepository_GetNextExecutionNumber_Parallel_Integration(t *testi
 
 	for i := range tests {
 		wg.Add(1)
-		go func(name string, executionType ExecutionType) {
+		go func(name string, executionType sequence.ExecutionType) {
 			defer wg.Done()
 
 			num, err := repo.GetNextExecutionNumber(ctx, name, executionType)

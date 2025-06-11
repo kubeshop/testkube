@@ -1,4 +1,4 @@
-package sequence
+package mongo
 
 import (
 	"context"
@@ -13,14 +13,6 @@ var _ Repository = (*MongoRepository)(nil)
 
 const (
 	CollectionSequences = "sequences"
-)
-
-type ExecutionType string
-
-const (
-	ExecutionTypeTest         ExecutionType = "t"
-	ExecutionTypeTestSuite    ExecutionType = "ts"
-	ExecutionTypeTestWorkflow ExecutionType = "tw"
 )
 
 func NewMongoRepository(db *mongo.Database, opts ...Opt) *MongoRepository {

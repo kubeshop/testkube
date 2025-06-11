@@ -14,6 +14,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/repository/result/minio"
 	resultMongo "github.com/kubeshop/testkube/pkg/repository/result/mongo"
 	"github.com/kubeshop/testkube/pkg/repository/sequence"
+	sequencemongo "github.com/kubeshop/testkube/pkg/repository/sequence/mongo"
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
 	testresultMongo "github.com/kubeshop/testkube/pkg/repository/testresult/mongo"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
@@ -52,7 +53,7 @@ func NewMongoDBFactory(config MongoDBFactoryConfig) *MongoDBFactory {
 	}
 
 	// Initialize sequence repository first as it's used by other repositories
-	factory.sequenceRepo = sequence.NewMongoRepository(config.Database)
+	factory.sequenceRepo = sequencemongo.NewMongoRepository(config.Database)
 
 	return factory
 }
