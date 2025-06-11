@@ -90,9 +90,9 @@ func (m *MockQueriesInterface) InsertTestWorkflowResult(ctx context.Context, arg
 	return args.Error(0)
 }
 
-func (m *MockQueriesInterface) InsertTestWorkflowSignature(ctx context.Context, arg sqlc.InsertTestWorkflowSignatureParams) error {
+func (m *MockQueriesInterface) InsertTestWorkflowSignature(ctx context.Context, arg sqlc.InsertTestWorkflowSignatureParams) (int32, error) {
 	args := m.Called(ctx, arg)
-	return args.Error(0)
+	return int32(args.Int(0)), args.Error(1)
 }
 
 func (m *MockQueriesInterface) InsertTestWorkflowOutput(ctx context.Context, arg sqlc.InsertTestWorkflowOutputParams) error {

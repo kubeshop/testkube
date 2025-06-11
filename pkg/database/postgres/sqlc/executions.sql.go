@@ -1823,12 +1823,13 @@ func (q *Queries) InsertTestWorkflowResult(ctx context.Context, arg InsertTestWo
 	return err
 }
 
-const insertTestWorkflowSignature = `-- name: InsertTestWorkflowSignature :exec
+const insertTestWorkflowSignature = `-- name: InsertTestWorkflowSignature :one
 INSERT INTO test_workflow_signatures (
     execution_id, ref, name, category, optional, negative, parent_id
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7
 )
+RETURNING test_workflow_signatures.id;	
 `
 
 type InsertTestWorkflowSignatureParams struct {
@@ -1841,8 +1842,8 @@ type InsertTestWorkflowSignatureParams struct {
 	ParentID    pgtype.Int4 `db:"parent_id" json:"parent_id"`
 }
 
-func (q *Queries) InsertTestWorkflowSignature(ctx context.Context, arg InsertTestWorkflowSignatureParams) error {
-	_, err := q.db.Exec(ctx, insertTestWorkflowSignature,
+func (q *Queries) InsertTestWorkflowSignature(ctx context.Context, arg InsertTestWorkflowSignatureParams) (int32, error) {
+	row := q.db.QueryRow(ctx, insertTestWorkflowSignature,
 		arg.ExecutionID,
 		arg.Ref,
 		arg.Name,
@@ -1851,7 +1852,9 @@ func (q *Queries) InsertTestWorkflowSignature(ctx context.Context, arg InsertTes
 		arg.Negative,
 		arg.ParentID,
 	)
-	return err
+	var id int32
+	err := row.Scan(&id)
+	return id, err
 }
 
 const updateExecutionStatusAt = `-- name: UpdateExecutionStatusAt :exec

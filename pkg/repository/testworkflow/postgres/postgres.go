@@ -740,7 +740,7 @@ func (r *PostgresRepository) insertSignatures(ctx context.Context, qtx sqlc.Test
 			parentIdPg = toPgInt4(parentId)
 		}
 
-		err := qtx.InsertTestWorkflowSignature(ctx, sqlc.InsertTestWorkflowSignatureParams{
+		id, err := qtx.InsertTestWorkflowSignature(ctx, sqlc.InsertTestWorkflowSignatureParams{
 			ExecutionID: executionId,
 			Ref:         toPgText(sig.Ref),
 			Name:        toPgText(sig.Name),
@@ -753,12 +753,15 @@ func (r *PostgresRepository) insertSignatures(ctx context.Context, qtx sqlc.Test
 			return err
 		}
 
-		// For children, we would need to get the inserted ID and use it as parentId
+		//For children, we would need to get the inserted ID and use it as parentId
 		// This requires modification to return the ID from the insert
-		// if len(sig.Children) > 0 {
-		// TODO: Implement recursive insertion for children
-		// This would require getting the ID of the just inserted signature
-		//}
+		if len(sig.Children) > 0 {
+			// TODO: Implement recursive insertion for children
+			// This would require getting the ID of the just inserted signature
+			if err = r.insertSignatures(ctx, qtx, executionId, sig.Children, id); err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }

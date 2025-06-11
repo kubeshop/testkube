@@ -218,12 +218,13 @@ INSERT INTO test_workflow_executions (
     @tags, @running_context, @config_params
 );
 
--- name: InsertTestWorkflowSignature :exec
+-- name: InsertTestWorkflowSignature :one
 INSERT INTO test_workflow_signatures (
     execution_id, ref, name, category, optional, negative, parent_id
 ) VALUES (
     @execution_id, @ref, @name, @category, @optional, @negative, @parent_id
-);
+)
+RETURNING test_workflow_signatures.id;
 
 -- name: InsertTestWorkflowResult :exec
 INSERT INTO test_workflow_results (

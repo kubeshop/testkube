@@ -31,7 +31,7 @@ type TestWorkflowExecutionQueriesInterface interface {
 	// Insert operations
 	InsertTestWorkflowExecution(ctx context.Context, arg InsertTestWorkflowExecutionParams) error
 	InsertTestWorkflowResult(ctx context.Context, arg InsertTestWorkflowResultParams) error
-	InsertTestWorkflowSignature(ctx context.Context, arg InsertTestWorkflowSignatureParams) error
+	InsertTestWorkflowSignature(ctx context.Context, arg InsertTestWorkflowSignatureParams) (int32, error)
 	InsertTestWorkflowOutput(ctx context.Context, arg InsertTestWorkflowOutputParams) error
 	InsertTestWorkflowReport(ctx context.Context, arg InsertTestWorkflowReportParams) error
 	InsertTestWorkflowResourceAggregations(ctx context.Context, arg InsertTestWorkflowResourceAggregationsParams) error
