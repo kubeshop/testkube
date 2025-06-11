@@ -39,8 +39,8 @@ type RepositoryFactory interface {
 	HealthCheck(ctx context.Context) error
 }
 
-// Repository defines the interface for repository
-type Repository interface {
+// DatabaseRepository defines the interface for database repository
+type DatabaseRepository interface {
 	// LeaseBackend Repository
 	LeaseBackend() leasebackend.Repository
 

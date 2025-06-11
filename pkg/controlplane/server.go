@@ -53,7 +53,7 @@ type Server struct {
 	testWorkflowTemplatesClient testworkflowtemplateclient.TestWorkflowTemplateClient
 	resultsRepository           testworkflow.Repository
 	outputRepository            testworkflow.OutputRepository
-	repositoryManager           repository.Repository
+	repositoryManager           repository.DatabaseRepository
 }
 
 type Config struct {
@@ -74,7 +74,7 @@ func New(
 	testWorkflowTemplatesClient testworkflowtemplateclient.TestWorkflowTemplateClient,
 	resultsRepository testworkflow.Repository,
 	outputRepository testworkflow.OutputRepository,
-	repositoryManager repository.Repository,
+	repositoryManager repository.DatabaseRepository,
 	commandGroups ...CommandHandlers,
 ) *Server {
 	commands := make(map[cloudexecutor.Command]CommandHandler)
@@ -696,6 +696,6 @@ func (s *Server) SaveExecutionArtifactPresigned(ctx context.Context, req *cloud.
 	return &cloud.SaveExecutionArtifactPresignedResponse{Url: url}, nil
 }
 
-func (s *Server) GetRepositoryMaanger() repository.Repository {
+func (s *Server) GetRepositoryMaanger() repository.DatabaseRepository {
 	return s.repositoryManager
 }
