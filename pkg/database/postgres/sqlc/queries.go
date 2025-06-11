@@ -4,6 +4,7 @@ package sqlc
 
 import (
 	"context"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -110,10 +111,10 @@ type LeaseBackendQueriesInterface interface {
 	UpsertLease(ctx context.Context, arg UpsertLeaseParams) (Lease, error)
 	GetLeaseByClusterId(ctx context.Context, clusterID string) (Lease, error)
 	GetLeasesByIdentifier(ctx context.Context, identifier string) ([]Lease, error)
-	GetExpiredLeases(ctx context.Context, expirationTime pgtype.Timestamptz) ([]Lease, error)
+	GetExpiredLeases(ctx context.Context, expirationTime time.Time) ([]Lease, error)
 	DeleteLease(ctx context.Context, id string) error
 	DeleteLeasesByClusterId(ctx context.Context, clusterID string) error
-	DeleteExpiredLeases(ctx context.Context, expirationTime pgtype.Timestamptz) error
+	DeleteExpiredLeases(ctx context.Context, expirationTime time.Time) error
 	GetAllLeases(ctx context.Context) ([]Lease, error)
 	CountLeasesByClusterId(ctx context.Context, clusterID string) (int64, error)
 	GetLatestLeaseByIdentifierAndCluster(ctx context.Context, arg GetLatestLeaseByIdentifierAndClusterParams) (Lease, error)

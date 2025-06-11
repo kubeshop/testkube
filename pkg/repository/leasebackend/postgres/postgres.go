@@ -164,7 +164,7 @@ func (b *PostgresLeaseBackend) tryUpdateLease(ctx context.Context, leaseID, id, 
 func (b *PostgresLeaseBackend) GetExpiredLeases(ctx context.Context) ([]sqlc.Lease, error) {
 	maxLeaseDurationStaleness := time.Now().Add(-leasebackend.DefaultMaxLeaseDuration)
 
-	results, err := b.queries.GetExpiredLeases(ctx, toPgTimestamp(maxLeaseDurationStaleness))
+	results, err := b.queries.GetExpiredLeases(ctx, maxLeaseDurationStaleness)
 	if err != nil {
 		return nil, fmt.Errorf("error getting expired leases: %w", err)
 	}
@@ -186,7 +186,7 @@ func (b *PostgresLeaseBackend) GetExpiredLeases(ctx context.Context) ([]sqlc.Lea
 func (b *PostgresLeaseBackend) CleanupExpiredLeases(ctx context.Context) error {
 	maxLeaseDurationStaleness := time.Now().Add(-leasebackend.DefaultMaxLeaseDuration)
 
-	err := b.queries.DeleteExpiredLeases(ctx, toPgTimestamp(maxLeaseDurationStaleness))
+	err := b.queries.DeleteExpiredLeases(ctx, maxLeaseDurationStaleness)
 	if err != nil {
 		return fmt.Errorf("error cleaning up expired leases: %w", err)
 	}

@@ -271,10 +271,9 @@ ORDER BY renewed_at ASC`
 		"lease-expired2", "expired-id2", "expired-cluster2", expiredTime, expiredTime, expiredTime, expiredTime,
 	)
 
-	expirationTimestamp := pgtype.Timestamptz{Time: expirationTime, Valid: true}
-	mock.ExpectQuery(expectedQuery).WithArgs(expirationTimestamp).WillReturnRows(rows)
+	mock.ExpectQuery(expectedQuery).WithArgs(expirationTime).WillReturnRows(rows)
 
-	result, err := queries.GetExpiredLeases(ctx, expirationTimestamp)
+	result, err := queries.GetExpiredLeases(ctx, expirationTime)
 
 	assert.NoError(t, err)
 	assert.Len(t, result, 2)
@@ -332,11 +331,10 @@ func TestSQLCLeaseQueries_DeleteExpiredLeases(t *testing.T) {
 	expectedQuery := `DELETE FROM leases WHERE renewed_at < \$1`
 
 	expirationTime := time.Now().Add(-24 * time.Hour)
-	expirationTimestamp := pgtype.Timestamptz{Time: expirationTime, Valid: true}
 
-	mock.ExpectExec(expectedQuery).WithArgs(expirationTimestamp).WillReturnResult(pgxmock.NewResult("DELETE", 5))
+	mock.ExpectExec(expectedQuery).WithArgs(expirationTime).WillReturnResult(pgxmock.NewResult("DELETE", 5))
 
-	err = queries.DeleteExpiredLeases(ctx, expirationTimestamp)
+	err = queries.DeleteExpiredLeases(ctx, expirationTime)
 
 	assert.NoError(t, err)
 	assert.NoError(t, mock.ExpectationsWereMet())
@@ -582,12 +580,12 @@ func TestSQLCLeaseQueries_ParameterValidation(t *testing.T) {
 				})
 
 				mock.ExpectQuery(`SELECT id, identifier, cluster_id, acquired_at, renewed_at, created_at, updated_at FROM leases WHERE renewed_at < \$1 ORDER BY renewed_at ASC`).
-					WithArgs(pgtype.Timestamptz{Time: futureTime, Valid: true}).
+					WithArgs(futureTime).
 					WillReturnRows(rows)
 			},
 			executeQuery: func(q *Queries, ctx context.Context) error {
 				futureTime := testTime.Add(24 * time.Hour)
-				_, err := q.GetExpiredLeases(ctx, pgtype.Timestamptz{Time: futureTime, Valid: true})
+				_, err := q.GetExpiredLeases(ctx, futureTime)
 				return err
 			},
 			expectedError: false,

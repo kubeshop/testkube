@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
@@ -50,7 +49,7 @@ func (m *MockQueriesInterface) GetLeasesByIdentifier(ctx context.Context, identi
 	return args.Get(0).([]sqlc.Lease), args.Error(1)
 }
 
-func (m *MockQueriesInterface) GetExpiredLeases(ctx context.Context, expirationTime pgtype.Timestamptz) ([]sqlc.Lease, error) {
+func (m *MockQueriesInterface) GetExpiredLeases(ctx context.Context, expirationTime time.Time) ([]sqlc.Lease, error) {
 	args := m.Called(ctx, expirationTime)
 	return args.Get(0).([]sqlc.Lease), args.Error(1)
 }
@@ -65,7 +64,7 @@ func (m *MockQueriesInterface) DeleteLeasesByClusterId(ctx context.Context, clus
 	return args.Error(0)
 }
 
-func (m *MockQueriesInterface) DeleteExpiredLeases(ctx context.Context, expirationTime pgtype.Timestamptz) error {
+func (m *MockQueriesInterface) DeleteExpiredLeases(ctx context.Context, expirationTime time.Time) error {
 	args := m.Called(ctx, expirationTime)
 	return args.Error(0)
 }

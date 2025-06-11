@@ -7,6 +7,7 @@ package sqlc
 
 import (
 	"context"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -26,7 +27,7 @@ const deleteExpiredLeases = `-- name: DeleteExpiredLeases :exec
 DELETE FROM leases WHERE renewed_at < $1
 `
 
-func (q *Queries) DeleteExpiredLeases(ctx context.Context, expirationTime pgtype.Timestamptz) error {
+func (q *Queries) DeleteExpiredLeases(ctx context.Context, expirationTime time.Time) error {
 	_, err := q.db.Exec(ctx, deleteExpiredLeases, expirationTime)
 	return err
 }
@@ -111,7 +112,7 @@ WHERE renewed_at < $1
 ORDER BY renewed_at ASC
 `
 
-func (q *Queries) GetExpiredLeases(ctx context.Context, expirationTime pgtype.Timestamptz) ([]Lease, error) {
+func (q *Queries) GetExpiredLeases(ctx context.Context, expirationTime time.Time) ([]Lease, error) {
 	rows, err := q.db.Query(ctx, getExpiredLeases, expirationTime)
 	if err != nil {
 		return nil, err

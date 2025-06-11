@@ -1085,8 +1085,8 @@ func (r *PostgresRepository) GetTestWorkflowMetrics(ctx context.Context, name st
 	}
 
 	rows, err := r.queries.GetTestWorkflowMetrics(ctx, sqlc.GetTestWorkflowMetricsParams{
-		WorkflowName: toPgText(name),
-		LastDays:     toPgInt4(int32(la)),
+		WorkflowName: name,
+		LastDays:     int32(la),
 		Lmt:          int32(li),
 	})
 	if err != nil {
@@ -1118,8 +1118,8 @@ func (r *PostgresRepository) GetTestWorkflowMetrics(ctx context.Context, name st
 // GetPreviousFinishedState gets previous finished state
 func (r *PostgresRepository) GetPreviousFinishedState(ctx context.Context, testWorkflowName string, date time.Time) (testkube.TestWorkflowStatus, error) {
 	status, err := r.queries.GetPreviousFinishedState(ctx, sqlc.GetPreviousFinishedStateParams{
-		WorkflowName: toPgText(testWorkflowName),
-		Date:         toPgTimestamp(date),
+		WorkflowName: testWorkflowName,
+		Date:         date,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

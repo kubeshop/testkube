@@ -7,6 +7,7 @@ package sqlc
 
 import (
 	"context"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -171,19 +172,19 @@ LIMIT $15 OFFSET $14
 `
 
 type GetFinishedTestWorkflowExecutionsParams struct {
-	WorkflowName  interface{} `db:"workflow_name" json:"workflow_name"`
-	WorkflowNames interface{} `db:"workflow_names" json:"workflow_names"`
-	TextSearch    interface{} `db:"text_search" json:"text_search"`
-	StartDate     interface{} `db:"start_date" json:"start_date"`
-	EndDate       interface{} `db:"end_date" json:"end_date"`
-	LastNDays     interface{} `db:"last_n_days" json:"last_n_days"`
-	Statuses      interface{} `db:"statuses" json:"statuses"`
-	RunnerID      interface{} `db:"runner_id" json:"runner_id"`
-	Assigned      interface{} `db:"assigned" json:"assigned"`
-	ActorName     interface{} `db:"actor_name" json:"actor_name"`
-	ActorType     interface{} `db:"actor_type" json:"actor_type"`
-	GroupID       interface{} `db:"group_id" json:"group_id"`
-	Initialized   interface{} `db:"initialized" json:"initialized"`
+	WorkflowName  pgtype.Text `db:"workflow_name" json:"workflow_name"`
+	WorkflowNames []pgtype.Text `db:"workflow_names" json:"workflow_names"`
+	TextSearch   pgtype.Text `db:"text_search" json:"text_search"`
+	StartDate     pgtype.Timestamptz `db:"start_date" json:"start_date"`
+	EndDate      pgtype.Timestamptz `db:"end_date" json:"end_date"`
+	LastNDays    pgtype.Int4 `db:"last_n_days" json:"last_n_days"`
+	Statuses      []pgtype.Text `db:"statuses" json:"statuses"`
+	RunnerID      pgtype.Text `db:"runner_id" json:"runner_id"`
+	Assigned      pgtype.Bool `db:"assigned" json:"assigned"`
+	ActorName     pgtype.Text `db:"actor_name" json:"actor_name"`
+	ActorType     pgtype.Text `db:"actor_type" json:"actor_type"`
+	GroupID       pgtype.Text `db:"group_id" json:"group_id"`
+	Initialized   pgtype.Bool `db:"initialized" json:"initialized"`
 	Fst           int32       `db:"fst" json:"fst"`
 	Lmt           int32       `db:"lmt" json:"lmt"`
 }
@@ -489,8 +490,8 @@ LIMIT 1
 `
 
 type GetPreviousFinishedStateParams struct {
-	WorkflowName pgtype.Text        `db:"workflow_name" json:"workflow_name"`
-	Date         pgtype.Timestamptz `db:"date" json:"date"`
+	WorkflowName string        `db:"workflow_name" json:"workflow_name"`
+	Date         time.Time `db:"date" json:"date"`
 }
 
 func (q *Queries) GetPreviousFinishedState(ctx context.Context, arg GetPreviousFinishedStateParams) (pgtype.Text, error) {
@@ -1268,8 +1269,8 @@ LIMIT $3
 `
 
 type GetTestWorkflowMetricsParams struct {
-	WorkflowName pgtype.Text `db:"workflow_name" json:"workflow_name"`
-	LastDays     pgtype.Int4 `db:"last_days" json:"last_days"`
+	WorkflowName string `db:"workflow_name" json:"workflow_name"`
+	LastDays     int32 `db:"last_days" json:"last_days"`
 	Lmt          int32       `db:"lmt" json:"lmt"`
 }
 
