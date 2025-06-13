@@ -212,31 +212,43 @@ func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async 
 
 		// Monitor
 		var wg sync.WaitGroup
+		var mu sync.Mutex
+		var errs []error // Collect errors safely
+
 		wg.Add(len(execs))
 		for i := range execs {
 			go func(exec testkube.TestWorkflowExecution) {
 				defer wg.Done()
 				prevStatus := testkube.QUEUED_TestWorkflowStatus
+				var gErr error
 			loop:
 				for {
 					// TODO: Consider real-time Notifications without logs instead
 					time.Sleep(ExecutionResultPollingTime)
+
+					// Use go routine error variable
 					for i := 0; i < GetExecutionRetryOnFailureMaxAttempts; i++ {
 						var next *testkube.TestWorkflowExecution
-						next, err = execute.GetExecution(exec.Id)
-						if err == nil {
+						next, gErr = execute.GetExecution(exec.Id)
+						if gErr == nil {
 							exec = *next
 							break
 						}
 						if i+1 < GetExecutionRetryOnFailureMaxAttempts {
-							ui.Errf("error while getting execution result: retrying in %s (attempt %d/%d): %s: %s", GetExecutionRetryOnFailureDelay.String(), i+2, GetExecutionRetryOnFailureMaxAttempts, ui.LightCyan(exec.Name), err.Error())
+							ui.Errf("error while getting execution result: retrying in %s (attempt %d/%d): %s: %s", GetExecutionRetryOnFailureDelay.String(), i+2, GetExecutionRetryOnFailureMaxAttempts, ui.LightCyan(exec.Name), gErr.Error())
 							time.Sleep(GetExecutionRetryOnFailureDelay)
 						}
 					}
-					if err != nil {
-						ui.Errf("error while getting execution result: %s: %s", ui.LightCyan(exec.Name), err.Error())
+
+					// Check go routine error
+					if gErr != nil {
+						ui.Errf("error while getting execution result: %s: %s", ui.LightCyan(exec.Name), gErr.Error())
+						mu.Lock()
+						errs = append(errs, gErr)
+						mu.Unlock()
 						return
 					}
+
 					if exec.Result != nil && exec.Result.Status != nil {
 						status := *exec.Result.Status
 						switch status {
@@ -252,10 +264,21 @@ func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async 
 					}
 				}
 
+				// Safe status access after loop
+				if exec.Result == nil || exec.Result.Status == nil {
+					mu.Lock()
+					errs = append(errs, fmt.Errorf("execution %s completed but status unavailable", exec.Name))
+					mu.Unlock()
+					return
+				}
+
 				status := *exec.Result.Status
 				color := ui.Green
 
 				if status != testkube.PASSED_TestWorkflowStatus {
+					mu.Lock()
+					errs = append(errs, gErr)
+					mu.Unlock()
 					err = errors.New("test workflow failed")
 					color = ui.Red
 				}
@@ -265,6 +288,14 @@ func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async 
 			}(execs[i])
 		}
 		wg.Wait()
+
+		// Handle collected errors
+		if len(errs) > 0 {
+			for _, lErr := range errs {
+				ui.Errf("Execution error: %s", lErr.Error())
+			}
+			return fmt.Errorf("one or more executions failed")
+		}
 
 		return
 	}, nil
