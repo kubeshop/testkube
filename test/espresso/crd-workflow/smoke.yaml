@@ -48,7 +48,7 @@ spec:
   steps:
     - name: Build APKs
       container:
-        image: gradle:8.7-jdk17
+        image: gradle:8.14-jdk24
         workingDir: /data/repo/test/espresso/example-project
         resources:
           requests:
@@ -63,7 +63,7 @@ spec:
         mv /sdk/cmdline-tools/cmdline-tools /sdk/cmdline-tools/latest && \
         yes | /sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=/sdk "platform-tools" "platforms;android-34" "build-tools;34.0.0" "emulator" && \
         export ANDROID_SDK_ROOT=/sdk && \
-        ./gradlew assembleDebug assembleAndroidTest
+        gradle assembleDebug assembleAndroidTest
       artifacts: # Saving APKs as artifacts (optional)
         paths:
           - app/build/outputs/apk/debug/app-debug.apk
