@@ -234,6 +234,7 @@ func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async 
 							exec = *next
 							break
 						}
+
 						if i+1 < GetExecutionRetryOnFailureMaxAttempts {
 							ui.Errf("error while getting execution result: retrying in %s (attempt %d/%d): %s: %s", GetExecutionRetryOnFailureDelay.String(), i+2, GetExecutionRetryOnFailureMaxAttempts, ui.LightCyan(exec.Name), gErr.Error())
 							time.Sleep(GetExecutionRetryOnFailureDelay)
@@ -257,9 +258,11 @@ func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async 
 						default:
 							break loop
 						}
+
 						if prevStatus != status {
 							instructions.PrintOutput(config.Ref(), "testworkflow-status", &executionResult{Id: exec.Id, Status: string(status)})
 						}
+
 						prevStatus = status
 					}
 				}
@@ -274,7 +277,6 @@ func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async 
 
 				status := *exec.Result.Status
 				color := ui.Green
-
 				if status != testkube.PASSED_TestWorkflowStatus {
 					mu.Lock()
 					errs = append(errs, gErr)
@@ -294,6 +296,7 @@ func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async 
 			for _, lErr := range errs {
 				ui.Errf("Execution error: %s", lErr.Error())
 			}
+
 			return fmt.Errorf("one or more executions failed")
 		}
 
