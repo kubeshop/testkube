@@ -9475,6 +9475,8 @@ components:
             $ref: "#/components/schemas/TestWorkflowEvent"
         execution:
           $ref: "#/components/schemas/TestWorkflowTagSchema"
+        concurrencyPolicy:
+          $ref: "#/components/schemas/TestWorkflowConcurrencyPolicy"
         pvcs:
           type: object
           additionalProperties:
@@ -10426,6 +10428,15 @@ components:
           $ref: "#/components/schemas/TestWorkflowTagValue"
         target:
           $ref: "#/components/schemas/ExecutionTarget"
+
+    TestWorkflowConcurrencyPolicy:
+      type: string
+      description: "test workflow execution policy"
+      enum:
+        - "Allow"
+        - "Forbid"
+        - "Replace"
+      default: "Allow"
 
     TestWorkflowExecutionTags:
       type: object
