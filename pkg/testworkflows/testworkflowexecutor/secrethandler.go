@@ -11,6 +11,7 @@ type executionID = string
 type secretName = string
 type secretData = map[string]string
 
+//go:generate mockgen -destination=./mock_secrethandler.go -package=testworkflowexecutor "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowexecutor" SensitiveDataHandler
 type SensitiveDataHandler interface {
 	Process(execution *IntermediateExecution) error
 	Rollback(id string) error
