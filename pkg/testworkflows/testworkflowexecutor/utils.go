@@ -207,6 +207,9 @@ func ValidateExecutionRequest(req *cloud.ScheduleRequest) error {
 		if req.Executions[i] == nil {
 			return errors.New("invalid selector provided")
 		}
+		if req.Executions[i].Selector == nil {
+			return errors.New("invalid selector provided")
+		}
 		if req.Executions[i].Selector.Name != "" && len(req.Executions[i].Selector.Labels) > 0 {
 			return errors.New("invalid selector provided")
 		}
