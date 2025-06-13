@@ -11,6 +11,7 @@ import (
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	constants2 "github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
+	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	stage2 "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
@@ -81,6 +82,12 @@ func CreateContainer(groupId int, defaultContainer stage2.Container, actions []a
 				computed := strings.Contains(newEnv.Value, "{{")
 				sensitive := newEnv.ValueFrom != nil && newEnv.ValueFrom.SecretKeyRef != nil
 				newEnv.Name = actiontypes.EnvName(fmt.Sprintf("%d", i), computed, sensitive, e.Name)
+				if newEnv.EnvVar.ValueFrom != nil && newEnv.EnvVar.ValueFrom.SecretKeyRef != nil {
+					if newEnv.EnvVar.ValueFrom.SecretKeyRef.Optional == nil {
+						newEnv.EnvVar.ValueFrom.SecretKeyRef.Optional = common.Ptr(true)
+					}
+				}
+
 				cr.Env = append(cr.Env, newEnv.EnvVar)
 				if e.Global != nil && *e.Global {
 					globalEnv = append(globalEnv, e)
@@ -90,6 +97,12 @@ func CreateContainer(groupId int, defaultContainer stage2.Container, actions []a
 				newEnvFrom := *e.DeepCopy()
 				sensitive := newEnvFrom.SecretRef != nil
 				newEnvFrom.Prefix = actiontypes.EnvName(fmt.Sprintf("%d", i), false, sensitive, e.Prefix)
+				if newEnvFrom.SecretRef != nil {
+					if newEnvFrom.SecretRef.Optional == nil {
+						newEnvFrom.SecretRef.Optional = common.Ptr(true)
+					}
+				}
+
 				cr.EnvFrom = append(cr.EnvFrom, newEnvFrom)
 			}
 		}
