@@ -219,6 +219,20 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 			return ch, err
 		}
 
+		// If the workflow is resolved and concurrent runs are forbidden then check if the current flow
+		// is running and error if so.
+		if workflow.Spec != nil && *workflow.Spec.ConcurrencyPolicy == testkube.FORBID_TestWorkflowConcurrencyPolicy {
+			ee, err := s.resultsRepository.GetRunning(ctx)
+			if err != nil {
+				return nil, err
+			}
+			for _, e := range ee {
+				if e.Workflow.Name == workflow.Name {
+					return nil, errors.Errorf("concurrent runs are forbidden for workflow %s", workflow.Name)
+				}
+			}
+		}
+
 		base.SetWorkflow(testworkflows2.MapAPIToKube(&workflow))
 	}
 

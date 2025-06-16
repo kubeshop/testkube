@@ -76,6 +76,84 @@ func TestSchedulerConcurrencyPolicy(t *testing.T) {
 					Insert(gomock.Any(), gomock.Any())
 			},
 		},
+		string(testworkflowsv1.ForbidConcurrent) + " running": {
+			req: &cloud.ScheduleRequest{
+				Executions: []*cloud.ScheduleExecution{
+					{
+						Selector: &cloud.ScheduleResourceSelector{
+							Name: "foo",
+						},
+					},
+				},
+				ResolvedWorkflow: resolveWorkflow(t, testkube.TestWorkflow{
+					Name: "bar",
+					Spec: &testkube.TestWorkflowSpec{
+						ConcurrencyPolicy: &forbid,
+					},
+				}),
+			},
+			envID:           "env",
+			expectScheduled: false,
+			prepare: func(t *testing.T, twc *testworkflowclient.MockTestWorkflowClient, repo *testworkflow.MockRepository, secrets *testworkflowexecutor.MockSensitiveDataHandler) {
+				t.Helper()
+
+				repo.EXPECT().
+					GetRunning(gomock.Any()).
+					Return([]testkube.TestWorkflowExecution{
+						{
+							Name: "bar-123",
+							Workflow: &testkube.TestWorkflow{
+								Name: "bar",
+							},
+						},
+					}, nil)
+			},
+		},
+		string(testworkflowsv1.ForbidConcurrent) + " none": {
+			req: &cloud.ScheduleRequest{
+				Executions: []*cloud.ScheduleExecution{
+					{
+						Selector: &cloud.ScheduleResourceSelector{
+							Name: "foo",
+						},
+					},
+				},
+				ResolvedWorkflow: resolveWorkflow(t, testkube.TestWorkflow{
+					Name: "bar",
+					Spec: &testkube.TestWorkflowSpec{
+						ConcurrencyPolicy: &forbid,
+					},
+				}),
+			},
+			envID:           "env",
+			expectScheduled: true,
+			prepare: func(t *testing.T, twc *testworkflowclient.MockTestWorkflowClient, repo *testworkflow.MockRepository, secrets *testworkflowexecutor.MockSensitiveDataHandler) {
+				t.Helper()
+
+				repo.EXPECT().
+					GetRunning(gomock.Any()).
+					Return([]testkube.TestWorkflowExecution{}, nil)
+
+				twc.EXPECT().
+					Get(gomock.Any(), "env", "foo").
+					Return(&testkube.TestWorkflow{
+						Spec: &testkube.TestWorkflowSpec{
+							Execution: &testkube.TestWorkflowTagSchema{},
+						},
+					}, nil)
+
+				repo.EXPECT().
+					GetNextExecutionNumber(gomock.Any(), "bar").
+					Return(int32(123), nil)
+				repo.EXPECT().
+					GetByNameAndTestWorkflow(gomock.Any(), "bar-123", "bar")
+
+				secrets.EXPECT().
+					Process(gomock.Any())
+				repo.EXPECT().
+					Insert(gomock.Any(), gomock.Any())
+			},
+		},
 	}
 
 	for name, test := range tests {
@@ -131,6 +209,10 @@ func TestSchedulerConcurrencyPolicy(t *testing.T) {
 
 			ch, err := scheduler.Schedule(context.Background(), secrets, test.envID, test.req)
 			if err != nil {
+				if !test.expectScheduled {
+					// Success!
+					return
+				}
 				t.Fatal(err)
 			}
 			for {
