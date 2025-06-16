@@ -11,5 +11,5 @@ package testkube
 
 type SecretEnvSource struct {
 	Name     string `json:"name"`
-	Optional bool   `json:"optional,omitempty"`
+	Optional *bool  `json:"optional,omitempty"`
 }

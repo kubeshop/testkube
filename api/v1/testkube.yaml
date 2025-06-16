@@ -10499,6 +10499,7 @@ components:
         name:
           type: string
         optional:
+          nullable: true        
           type: boolean
           default: false
       required:
@@ -10510,6 +10511,7 @@ components:
         name:
           type: string
         optional:
+          nullable: true        
           type: boolean
           default: false
       required:
@@ -11508,6 +11510,7 @@ components:
                 uid?'
               type: string
             optional:
+              nullable: true 
               description: Specify whether the ConfigMap or its
                 key must be defined
               type: boolean
@@ -11532,6 +11535,7 @@ components:
                 uid?'
               type: string
             optional:
+              nullable: true 
               description: Specify whether the Secret or its key
                 must be defined
               type: boolean

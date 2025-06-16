@@ -314,7 +314,7 @@ func MapConfigMapKeyRefKubeToAPI(v *corev1.ConfigMapKeySelector) *testkube.EnvVa
 	return &testkube.EnvVarSourceConfigMapKeyRef{
 		Key:      v.Key,
 		Name:     v.Name,
-		Optional: common.ResolvePtr(v.Optional, false),
+		Optional: v.Optional,
 	}
 }
 
@@ -350,7 +350,7 @@ func MapSecretKeyRefKubeToAPI(v *corev1.SecretKeySelector) *testkube.EnvVarSourc
 	return &testkube.EnvVarSourceSecretKeyRef{
 		Key:      v.Key,
 		Name:     v.Name,
-		Optional: common.ResolvePtr(v.Optional, false),
+		Optional: v.Optional,
 	}
 }
 
@@ -369,7 +369,7 @@ func MapConfigMapEnvSourceKubeToAPI(v *corev1.ConfigMapEnvSource) *testkube.Conf
 	}
 	return &testkube.ConfigMapEnvSource{
 		Name:     v.Name,
-		Optional: common.ResolvePtr(v.Optional, false),
+		Optional: v.Optional,
 	}
 }
 
@@ -379,7 +379,7 @@ func MapSecretEnvSourceKubeToAPI(v *corev1.SecretEnvSource) *testkube.SecretEnvS
 	}
 	return &testkube.SecretEnvSource{
 		Name:     v.Name,
-		Optional: common.ResolvePtr(v.Optional, false),
+		Optional: v.Optional,
 	}
 }
 

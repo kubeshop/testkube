@@ -143,6 +143,8 @@ openapi-generate-model-testkube:
 	find ./pkg/api/v1/testkube -name "*update*.go" -type f -exec sed -i '' -e "s/ \*ResourceRequest/ \*ResourceUpdateRequest/g" {} \;
 	find ./pkg/api/v1/testkube -name "*update*.go" -type f -exec sed -i '' -e "s/ \*WebhookTemplateRef/ \*\*WebhookTemplateRef/g" {} \;	
 	find ./pkg/api/v1/testkube -type f -exec sed -i '' -e "s/ Deprecated/ \\n\/\/ Deprecated/g" {} \;
+	find ./pkg/api/v1/testkube -name "*_env_source.go" -type f -exec sed -i '' -e "s/ bool/ \*bool/g" {} \;
+	find ./pkg/api/v1/testkube -name "**_key_ref.go" -type f -exec sed -i '' -e "s/ bool/ \*bool/g" {} \;
 	go fmt pkg/api/v1/testkube/*.go
 
 protobuf-generate:
