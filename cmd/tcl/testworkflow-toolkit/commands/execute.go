@@ -279,7 +279,7 @@ func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async 
 				color := ui.Green
 				if status != testkube.PASSED_TestWorkflowStatus {
 					mu.Lock()
-					errs = append(errs, errors.New("test workflow failed"))
+					errs = append(errs, fmt.Errorf("execution %s failed", exec.Name))
 					mu.Unlock()
 					color = ui.Red
 				}
