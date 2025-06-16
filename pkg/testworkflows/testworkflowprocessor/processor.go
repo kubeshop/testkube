@@ -507,8 +507,12 @@ func addEnvVarToContainerSpec(mapEnv map[string]corev1.EnvVarSource, containers 
 				ValueFrom: envSource.DeepCopy(),
 			}
 
-			if e.ValueFrom != nil && e.ValueFrom.SecretKeyRef != nil {
-				if e.ValueFrom.SecretKeyRef.Optional == nil {
+			if e.ValueFrom != nil {
+				if e.ValueFrom.ConfigMapKeyRef != nil && e.ValueFrom.ConfigMapKeyRef.Optional == nil {
+					e.ValueFrom.ConfigMapKeyRef.Optional = common.Ptr(true)
+				}
+
+				if e.ValueFrom.SecretKeyRef != nil && e.ValueFrom.SecretKeyRef.Optional == nil {
 					e.ValueFrom.SecretKeyRef.Optional = common.Ptr(true)
 				}
 			}

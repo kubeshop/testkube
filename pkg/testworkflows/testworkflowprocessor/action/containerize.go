@@ -82,8 +82,12 @@ func CreateContainer(groupId int, defaultContainer stage2.Container, actions []a
 				computed := strings.Contains(newEnv.Value, "{{")
 				sensitive := newEnv.ValueFrom != nil && newEnv.ValueFrom.SecretKeyRef != nil
 				newEnv.Name = actiontypes.EnvName(fmt.Sprintf("%d", i), computed, sensitive, e.Name)
-				if newEnv.EnvVar.ValueFrom != nil && newEnv.EnvVar.ValueFrom.SecretKeyRef != nil {
-					if newEnv.EnvVar.ValueFrom.SecretKeyRef.Optional == nil {
+				if newEnv.EnvVar.ValueFrom != nil {
+					if newEnv.EnvVar.ValueFrom.ConfigMapKeyRef != nil && newEnv.EnvVar.ValueFrom.ConfigMapKeyRef.Optional == nil {
+						newEnv.EnvVar.ValueFrom.ConfigMapKeyRef.Optional = common.Ptr(true)
+					}
+
+					if newEnv.EnvVar.ValueFrom.SecretKeyRef != nil && newEnv.EnvVar.ValueFrom.SecretKeyRef.Optional == nil {
 						newEnv.EnvVar.ValueFrom.SecretKeyRef.Optional = common.Ptr(true)
 					}
 				}
@@ -97,10 +101,12 @@ func CreateContainer(groupId int, defaultContainer stage2.Container, actions []a
 				newEnvFrom := *e.DeepCopy()
 				sensitive := newEnvFrom.SecretRef != nil
 				newEnvFrom.Prefix = actiontypes.EnvName(fmt.Sprintf("%d", i), false, sensitive, e.Prefix)
-				if newEnvFrom.SecretRef != nil {
-					if newEnvFrom.SecretRef.Optional == nil {
-						newEnvFrom.SecretRef.Optional = common.Ptr(true)
-					}
+				if newEnvFrom.ConfigMapRef != nil && newEnvFrom.ConfigMapRef.Optional == nil {
+					newEnvFrom.ConfigMapRef.Optional = common.Ptr(true)
+				}
+
+				if newEnvFrom.SecretRef != nil && newEnvFrom.SecretRef.Optional == nil {
+					newEnvFrom.SecretRef.Optional = common.Ptr(true)
 				}
 
 				cr.EnvFrom = append(cr.EnvFrom, newEnvFrom)
