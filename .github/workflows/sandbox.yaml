@@ -15,9 +15,9 @@ env:
 jobs:
   api:
     if: startsWith(github.ref, 'refs/heads/sandbox/')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest  #test
     steps:
-      - name: Checkout
+      - name: Checkout 
         uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
