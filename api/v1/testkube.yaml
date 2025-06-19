@@ -9016,28 +9016,21 @@ components:
           format: float64
           description: |
             Recency-weighted fraction of executions that passed (value between 0.0 and 1.0).
-        rawFlipRate:
+        flipRate:
           type: number
           format: float64
           description: |
             Fraction of status changes among consecutive executions without recency weighting 
             (value between 0.0 and 1.0).
-        weightedFlipRate:
-          type: number
-          format: float64
-          description: |
-            Recency-weighted flip rate: each pass↔fail transition contributes 
-            (w[i] + w[i-1]) / 2, normalized over all transitions (value between 0.0 and 1.0).
         overallHealth:
           type: number
           format: float64
           description: |
-            Combined health score, computed as α * passRate + (1−α) * (1 − weightedFlipRate) 
+            Combined health score, computed as passRate * (1 - flipRate)
             (value between 0.0 and 1.0).
       required:
         - passRate
-        - rawFlipRate
-        - weightedFlipRate
+        - flipRate
         - overallHealth
 
     TestWorkflowExecutionStepResourceAggregations:
