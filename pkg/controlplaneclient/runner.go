@@ -15,6 +15,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	cloudtestworkflow "github.com/kubeshop/testkube/pkg/cloud/data/testworkflow"
+	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/repository/channels"
 )
 
@@ -107,6 +108,7 @@ func (c *client) legacyGetRunnerOngoingExecutions(ctx context.Context) ([]*cloud
 
 func (c *client) WatchRunnerRequests(ctx context.Context) RunnerRequestsWatcher {
 	ctx, cancel := context.WithCancelCause(ctx)
+	log.DefaultLogger.Info("watch runner requests")
 	stream, err := watch(ctx, c.metadata().GRPC(), c.client.GetRunnerRequests)
 	if err != nil {
 		cancel(nil)
