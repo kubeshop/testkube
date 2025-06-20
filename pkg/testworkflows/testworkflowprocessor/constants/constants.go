@@ -32,6 +32,8 @@ const (
 	InternalAnnotationFieldPath     = "metadata.annotations['" + InternalAnnotationName + "']"
 	OpenSourceOperationErrorMessage = "operation is not available when running the Testkube Agent in the standalone mode"
 	RootOperationName               = "root"
+	AnnotationTerminationCode       = "testkube.io/termination-code"
+	AnnotationTerminationReason     = "testkube.io/termination-reason"
 )
 
 var (

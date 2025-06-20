@@ -63,6 +63,7 @@ type Runner interface {
 	Pause(id string) error
 	Resume(id string) error
 	Abort(id string) error
+	Cancel(id string) error
 }
 
 type runner struct {
@@ -116,6 +117,7 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 		}
 		time.Sleep(GetNotificationsRetryDelay)
 	}
+
 	if notifications.Err() != nil {
 		return errors.Wrapf(notifications.Err(), "failed to listen for '%s' execution notifications", execution.Id)
 	}
@@ -226,10 +228,10 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 	}
 
 	// Recover missing data in case the execution has crashed
-	if lastResult.IsAborted() {
+	if lastResult.IsAborted() || lastResult.IsCanceled() {
 		// Service logs
 		if len(services) > 0 {
-			log.DefaultLogger.Warnw("TestWorkflow execution has been aborted, while some services are still running. Recovering their logs.", "executionId", execution.Id, "count", len(services))
+			log.DefaultLogger.Warnw("TestWorkflow execution has been aborted or canceled, while some services are still running. Recovering their logs.", "executionId", execution.Id, "count", len(services))
 			for svc := range services {
 				err := r.recoverServiceData(ctx, saver, environmentId, &execution, commands.ServiceInfo{
 					Group: svc.GroupId,
@@ -246,7 +248,7 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 
 		// Parallel steps logs
 		if len(parallel) > 0 {
-			log.DefaultLogger.Warnw("TestWorkflow execution has been aborted, while some parallel steps are still running. Recovering their logs.", "executionId", execution.Id, "count", len(parallel))
+			log.DefaultLogger.Warnw("TestWorkflow execution has been aborted or canceled, while some parallel steps are still running. Recovering their logs.", "executionId", execution.Id, "count", len(parallel))
 			for step := range parallel {
 				err := r.recoverParallelStepData(ctx, saver, environmentId, &execution, step.GroupId, int(step.Index))
 				if err == nil {
@@ -287,11 +289,14 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 
 	// Emit data, if the Control Plane doesn't support informing about status by itself
 	if !r.proContext.NewArchitecture {
-		if lastResult.IsPassed() {
+		switch {
+		case lastResult.IsPassed():
 			r.emitter.Notify(testkube.NewEventEndTestWorkflowSuccess(&execution))
-		} else if lastResult.IsAborted() {
+		case lastResult.IsAborted():
 			r.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(&execution))
-		} else {
+		case lastResult.IsCanceled():
+			r.emitter.Notify(testkube.NewEventEndTestWorkflowCanceled(&execution))
+		default:
 			r.emitter.Notify(testkube.NewEventEndTestWorkflowFailed(&execution))
 		}
 	}
@@ -398,7 +403,7 @@ func (r *runner) recoverParallelStepLogs(ctx context.Context, saver ExecutionSav
 		}
 		status.Result = &summary.Result
 		status.Result.Status = common.Ptr(testkube.ABORTED_TestWorkflowStatus)
-		status.Result.HealAborted(sigSequence, errorMessage, controller.DefaultErrorMessage)
+		status.Result.HealAbortedOrCanceled(sigSequence, errorMessage, controller.DefaultErrorMessage, "aborted")
 		status.Result.HealTimestamps(sigSequence, summary.Execution.ScheduledAt, time.Time{}, time.Time{}, true)
 		status.Result.HealDuration(summary.Execution.ScheduledAt)
 		status.Result.HealMissingPauseStatuses()
@@ -561,13 +566,13 @@ func (r *runner) abortExecution(ctx context.Context, environmentID, executionID 
 		return errors.Wrapf(err, "failed to finish execution result '%s'", executionID)
 	}
 
+	if err = r.Abort(executionID); err != nil {
+		return errors.Wrapf(err, "failed to destroy execution '%s'", executionID)
+	}
+
 	// Emit data, if the Control Plane doesn't support informing about status by itself
 	if !r.proContext.NewArchitecture {
 		r.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(execution))
-	}
-
-	if err = r.Abort(executionID); err != nil {
-		return errors.Wrapf(err, "failed to destroy execution '%s'", executionID)
 	}
 
 	return nil
@@ -583,4 +588,8 @@ func (r *runner) Resume(id string) error {
 
 func (r *runner) Abort(id string) error {
 	return r.worker.Abort(context.Background(), id, executionworkertypes.DestroyOptions{})
+}
+
+func (r *runner) Cancel(id string) error {
+	return r.worker.Cancel(context.Background(), id, executionworkertypes.DestroyOptions{})
 }
