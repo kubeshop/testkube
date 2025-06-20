@@ -2,7 +2,7 @@ name: Build Sandbox image
 on:
   push:
     branches:
-      - sandbox/**
+      - sandbox/** # why does this not trigger?
     paths-ignore:
       - 'docs/**'
   pull_request:
