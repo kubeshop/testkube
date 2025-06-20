@@ -220,8 +220,9 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 									}
 								}(&execution)
 
-								uiShellWatchExecution(execution.Id)
 							}
+						} else {
+							uiShellWatchExecution(execution.Id)
 						}
 					}
 
