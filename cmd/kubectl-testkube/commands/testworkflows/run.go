@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/avast/retry-go/v4"
@@ -170,15 +171,17 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 				}
 			}()
 
+			var wg sync.WaitGroup
+			var mu sync.Mutex
+			var exitCode = 0
 			for _, execution := range executions {
 				err = renderer.PrintTestWorkflowExecution(cmd, os.Stdout, execution)
 				ui.ExitOnError("render test workflow execution", err)
 
-				var exitCode = 0
 				if outputPretty {
 					ui.NL()
 					if !execution.FailedToInitialize() {
-						if watchEnabled && len(args) > 0 {
+						if watchEnabled {
 							var pServiceName, pParallelStepName *string
 							if cmd.Flag("service-name").Changed || cmd.Flag("service-index").Changed {
 								pServiceName = &serviceName
@@ -187,13 +190,38 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 								pParallelStepName = &parallelStepName
 							}
 
-							exitCode = uiWatch(execution, pServiceName, serviceIndex, pParallelStepName, parallelStepIndex, client)
-							ui.NL()
-							if downloadArtifactsEnabled {
-								tests.DownloadTestWorkflowArtifacts(execution.Id, downloadDir, format, masks, client, outputPretty)
+							if len(args) > 0 {
+								ec := uiWatch(execution, pServiceName, serviceIndex, pParallelStepName, parallelStepIndex, client)
+								ui.NL()
+								if downloadArtifactsEnabled {
+									tests.DownloadTestWorkflowArtifacts(execution.Id, downloadDir, format, masks, client, outputPretty)
+								}
+
+								if ec != 0 {
+									mu.Lock()
+									exitCode = ec
+									mu.Unlock()
+								}
+							} else {
+								wg.Add(1)
+								go func(exec *testkube.TestWorkflowExecution) {
+									defer wg.Done()
+
+									ec := uiWatch(*exec, pServiceName, serviceIndex, pParallelStepName, parallelStepIndex, client)
+									ui.NL()
+									if downloadArtifactsEnabled {
+										tests.DownloadTestWorkflowArtifacts(exec.Id, downloadDir, format, masks, client, outputPretty)
+									}
+
+									if ec != 0 {
+										mu.Lock()
+										exitCode = ec
+										mu.Unlock()
+									}
+								}(&execution)
+
+								uiShellWatchExecution(execution.Id)
 							}
-						} else {
-							uiShellWatchExecution(execution.Id)
 						}
 					}
 
@@ -203,10 +231,11 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 					render.PrintTestWorkflowExecutionURIs(&execution)
 					uiShellGetExecution(execution.Id)
 				}
+			}
 
-				if exitCode != 0 {
-					os.Exit(exitCode)
-				}
+			wg.Wait()
+			if exitCode != 0 {
+				os.Exit(exitCode)
 			}
 		},
 	}
