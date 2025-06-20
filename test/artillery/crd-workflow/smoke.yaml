@@ -1,0 +1,115 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: artillery-workflow-smoke
+  labels:
+    core-tests: workflows
+    tool: artillery
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/artillery/artillery-smoke-test.yaml
+  container:
+    resources:
+      requests:
+        cpu: 128m
+        memory: 256Mi
+    workingDir: /data/repo/test/artillery
+    image: artilleryio/artillery:2.0.22
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: Run test
+    shell: /home/node/artillery/bin/run run artillery-smoke-test.yaml
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: artillery-workflow-smoke-template
+  labels:
+    core-tests: workflows
+    tool: artillery
+spec:
+  container:
+    resources:
+      requests:
+        cpu: 128m
+        memory: 256Mi
+    workingDir: /data/repo/test/artillery
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: Run from template
+    content:
+      git:
+        uri: https://github.com/kubeshop/testkube
+        revision: main
+        paths:
+        - test/artillery/artillery-smoke-test.yaml
+    workingDir: /data/repo/test/artillery
+    template:
+      name: official/artillery/v1
+      config:
+        version: 2.0.22
+        run: "artillery run artillery-smoke-test.yaml"
+---
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: distributed-artillery-workflow-smoke-artifacts
+  labels:
+    core-tests: workflows
+    tool: artillery
+spec:
+  config:
+    arrivalRatePerWorker:
+      type: integer
+      default: 2
+    duration:
+      type: string
+      default: 2
+    workers:
+      type: integer
+      default: 2
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/artillery/artillery-smoke-test.yaml
+  container:
+    image: artilleryio/artillery:2.0.20
+  job:
+    activeDeadlineSeconds: 600
+  steps:
+  - name: Run test
+    parallel:
+      count: config.workers
+      transfer:
+      - from: /data/repo
+      fetch:
+      - from: /data/artifacts
+      use:
+      - name: distribute/evenly
+      container:
+        image: artilleryio/artillery:2.0.20
+        resources:
+          requests:
+            cpu: 128m
+            memory: 256Mi
+      paused: true
+      run:
+        workingDir: /data/repo/test/artillery
+        shell: "mkdir -p /data/artifacts && /home/node/artillery/bin/run run artillery-smoke-test.yaml --overrides '{ \"phases\": [{ \"duration\": {{ config.duration }}, \"arrivalRate\": {{ config.arrivalRatePerWorker }} }] }' -o /data/artifacts/report-{{ index }}.json"
+  - name: Generate HTML report # The "report" command is deprecated and will be removed in a future release of Artillery.
+    shell: mkdir html && for file in *.json; do /home/node/artillery/bin/run report "$file" -o "html/${file%.json}.html"; done
+    workingDir: /data/artifacts
+  - name: Save artifacts
+    condition: always
+    artifacts:
+      workingDir: /data/artifacts
+      paths:
+      - '**/*'

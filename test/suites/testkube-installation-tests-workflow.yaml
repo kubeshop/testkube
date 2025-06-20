@@ -1,0 +1,16 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: testkube-installation-tests-workflow-suite
+  labels:
+    core-tests: workflows-suite
+    type: suite
+    tool: testkube
+spec:
+  steps:
+  - execute:
+      parallelism: 1
+      workflows:
+      - name: enterprise-installation-test
+      - name: enterprise-installation-multi-namespace
+      - name: oss-standalone-installation-test

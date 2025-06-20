@@ -8627,6 +8627,8 @@ components:
           description: if test workflow is offline and cannot be executed
         status:
           $ref: "#/components/schemas/TestWorkflowStatusSummary"
+        health:
+          $ref: "#/components/schemas/TestWorkflowExecutionHealth"
 
     TestWorkflowExecutionRequest:
       type: object
@@ -8868,6 +8870,8 @@ components:
           type: object
           additionalProperties:
             type: string
+        health:
+          $ref: "#/components/schemas/TestWorkflowExecutionHealth"
 
     TestWorkflowResultSummary:
       type: object
@@ -9005,6 +9009,31 @@ components:
       description: |
         TestWorkflowExecutionResourceAggregationsReport provides resource usage aggregations
         for an entire TestWorkflowExecution (globally) and also per-step (by measurements).
+
+    TestWorkflowExecutionHealth:
+      type: object
+      properties:
+        passRate:
+          type: number
+          format: float64
+          description: |
+            Recency-weighted fraction of executions that passed (value between 0.0 and 1.0).
+        flipRate:
+          type: number
+          format: float64
+          description: |
+            Fraction of status changes among consecutive executions without recency weighting 
+            (value between 0.0 and 1.0).
+        overallHealth:
+          type: number
+          format: float64
+          description: |
+            Combined health score, computed as passRate * (1 - flipRate)
+            (value between 0.0 and 1.0).
+      required:
+        - passRate
+        - flipRate
+        - overallHealth
 
     TestWorkflowExecutionStepResourceAggregations:
       type: object
@@ -10467,6 +10496,7 @@ components:
         name:
           type: string
         optional:
+          nullable: true        
           type: boolean
           default: false
       required:
@@ -10478,6 +10508,7 @@ components:
         name:
           type: string
         optional:
+          nullable: true        
           type: boolean
           default: false
       required:
@@ -11476,6 +11507,7 @@ components:
                 uid?'
               type: string
             optional:
+              nullable: true 
               description: Specify whether the ConfigMap or its
                 key must be defined
               type: boolean
@@ -11500,6 +11532,7 @@ components:
                 uid?'
               type: string
             optional:
+              nullable: true 
               description: Specify whether the Secret or its key
                 must be defined
               type: boolean

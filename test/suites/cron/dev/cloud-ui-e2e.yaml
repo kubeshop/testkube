@@ -1,0 +1,15 @@
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: cloud-ui-e2e-cron-trigger
+  labels:
+    core-tests: workflows-suite-trigger
+    type: workflow-trigger
+spec:
+  steps:
+  - execute:
+      workflows:
+      - name: cloud-ui-e2e
+  events:
+  - cronjob:
+      cron: "10 */4 * * *" # every 4 hours

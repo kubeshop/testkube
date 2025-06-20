@@ -133,7 +133,7 @@ func MapConfigMapKeyRefAPIToKube(v *testkube.EnvVarSourceConfigMapKeyRef) *corev
 	return &corev1.ConfigMapKeySelector{
 		Key:                  v.Key,
 		LocalObjectReference: corev1.LocalObjectReference{Name: v.Name},
-		Optional:             common.PtrOrNil(v.Optional),
+		Optional:             v.Optional,
 	}
 }
 
@@ -166,7 +166,7 @@ func MapSecretKeyRefAPIToKube(v *testkube.EnvVarSourceSecretKeyRef) *corev1.Secr
 	return &corev1.SecretKeySelector{
 		Key:                  v.Key,
 		LocalObjectReference: corev1.LocalObjectReference{Name: v.Name},
-		Optional:             common.PtrOrNil(v.Optional),
+		Optional:             v.Optional,
 	}
 }
 
@@ -185,7 +185,7 @@ func MapConfigMapEnvSourceAPIToKube(v *testkube.ConfigMapEnvSource) *corev1.Conf
 	}
 	return &corev1.ConfigMapEnvSource{
 		LocalObjectReference: corev1.LocalObjectReference{Name: v.Name},
-		Optional:             common.PtrOrNil(v.Optional),
+		Optional:             v.Optional,
 	}
 }
 
@@ -195,7 +195,7 @@ func MapSecretEnvSourceAPIToKube(v *testkube.SecretEnvSource) *corev1.SecretEnvS
 	}
 	return &corev1.SecretEnvSource{
 		LocalObjectReference: corev1.LocalObjectReference{Name: v.Name},
-		Optional:             common.PtrOrNil(v.Optional),
+		Optional:             v.Optional,
 	}
 }
 
