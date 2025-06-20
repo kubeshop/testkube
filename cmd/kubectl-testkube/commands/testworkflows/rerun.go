@@ -122,7 +122,7 @@ func NewReRunTestWorkflowExecutionCmd() *cobra.Command {
 							pParallelStepName = &parallelStepName
 						}
 
-						exitCode = uiWatch(execution, pServiceName, serviceIndex, pParallelStepName, parallelStepIndex, client)
+						exitCode = uiWatch(execution, pServiceName, serviceIndex, pParallelStepName, parallelStepIndex, client, "")
 						ui.NL()
 						if downloadArtifactsEnabled {
 							tests.DownloadTestWorkflowArtifacts(execution.Id, downloadDir, format, masks, client, outputPretty)

@@ -191,7 +191,7 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 							}
 
 							if len(args) > 0 {
-								ec := uiWatch(execution, pServiceName, serviceIndex, pParallelStepName, parallelStepIndex, client)
+								ec := uiWatch(execution, pServiceName, serviceIndex, pParallelStepName, parallelStepIndex, client, "")
 								ui.NL()
 								if downloadArtifactsEnabled {
 									tests.DownloadTestWorkflowArtifacts(execution.Id, downloadDir, format, masks, client, outputPretty)
@@ -207,7 +207,12 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 								go func(exec *testkube.TestWorkflowExecution) {
 									defer wg.Done()
 
-									ec := uiWatch(*exec, pServiceName, serviceIndex, pParallelStepName, parallelStepIndex, client)
+									prefix := ""
+									if exec.Workflow != nil {
+										prefix = fmt.Sprintf("[%s] ", exec.Workflow.Name)
+									}
+
+									ec := uiWatch(*exec, pServiceName, serviceIndex, pParallelStepName, parallelStepIndex, client, prefix)
 									ui.NL()
 									if downloadArtifactsEnabled {
 										tests.DownloadTestWorkflowArtifacts(exec.Id, downloadDir, format, masks, client, outputPretty)
@@ -273,7 +278,7 @@ func getIterationDelay(iteration int) time.Duration {
 }
 
 func uiWatch(execution testkube.TestWorkflowExecution, serviceName *string, serviceIndex int,
-	parallelStepName *string, parallelStepIndex int, client apiclientv1.Client) int {
+	parallelStepName *string, parallelStepIndex int, client apiclientv1.Client, prefix string) int {
 	// Wait until the execution will be assigned to some runner
 	iteration := 0
 	for !execution.Assigned() {
@@ -295,7 +300,7 @@ func uiWatch(execution testkube.TestWorkflowExecution, serviceName *string, serv
 
 		sigs := flattenSignatures(execution.Signature)
 
-		printRawLogLines(logs, sigs, execution)
+		printRawLogLines(logs, sigs, execution, prefix)
 		return 0
 	}
 
@@ -313,16 +318,16 @@ func uiWatch(execution testkube.TestWorkflowExecution, serviceName *string, serv
 			ui.Failf("unknown service '%s' for test workflow execution %s", *serviceName, execution.Id)
 		}
 
-		result, err = watchTestWorkflowServiceLogs(execution.Id, *serviceName, serviceIndex, execution.Signature, client)
+		result, err = watchTestWorkflowServiceLogs(execution.Id, *serviceName, serviceIndex, execution.Signature, client, prefix)
 	case parallelStepName != nil:
 		ref := execution.GetParallelStepReference(*parallelStepName)
 		if ref == "" {
 			ui.Failf("unknown parallel step '%s' for test workflow execution %s", *parallelStepName, execution.Id)
 		}
 
-		result, err = watchTestWorkflowParallelStepLogs(execution.Id, ref, parallelStepIndex, execution.Signature, client)
+		result, err = watchTestWorkflowParallelStepLogs(execution.Id, ref, parallelStepIndex, execution.Signature, client, prefix)
 	default:
-		result, err = watchTestWorkflowLogs(execution.Id, execution.Signature, client)
+		result, err = watchTestWorkflowLogs(execution.Id, execution.Signature, client, prefix)
 	}
 
 	if result == nil && err == nil {
@@ -381,7 +386,7 @@ func flattenSignatures(sig []testkube.TestWorkflowSignature) []testkube.TestWork
 	return res
 }
 
-func printSingleResultDifference(r1 testkube.TestWorkflowStepResult, r2 testkube.TestWorkflowStepResult, signature testkube.TestWorkflowSignature, index int, steps int) bool {
+func printSingleResultDifference(r1 testkube.TestWorkflowStepResult, r2 testkube.TestWorkflowStepResult, signature testkube.TestWorkflowSignature, index int, steps int, prefix string) bool {
 	r1Status := testkube.QUEUED_TestWorkflowStepStatus
 	r2Status := testkube.QUEUED_TestWorkflowStepStatus
 	if r1.Status != nil {
@@ -399,17 +404,17 @@ func printSingleResultDifference(r1 testkube.TestWorkflowStepResult, r2 testkube
 	}
 	took := r2.FinishedAt.Sub(r2.QueuedAt).Round(time.Millisecond)
 
-	printStatus(signature, r2Status, took, index, steps, name, r2.ErrorMessage)
+	printStatus(signature, r2Status, took, index, steps, name, r2.ErrorMessage, prefix)
 	return true
 }
 
-func printResultDifference(res1 *testkube.TestWorkflowResult, res2 *testkube.TestWorkflowResult, steps []testkube.TestWorkflowSignature) bool {
+func printResultDifference(res1 *testkube.TestWorkflowResult, res2 *testkube.TestWorkflowResult, steps []testkube.TestWorkflowSignature, prefix string) bool {
 	if res1 == nil || res2 == nil {
 		return false
 	}
-	changed := printSingleResultDifference(*res1.Initialization, *res2.Initialization, testkube.TestWorkflowSignature{Name: "Initializing"}, -1, len(steps))
+	changed := printSingleResultDifference(*res1.Initialization, *res2.Initialization, testkube.TestWorkflowSignature{Name: "Initializing"}, -1, len(steps), prefix)
 	for i, s := range steps {
-		changed = changed || printSingleResultDifference(res1.Steps[s.Ref], res2.Steps[s.Ref], s, i, len(steps))
+		changed = changed || printSingleResultDifference(res1.Steps[s.Ref], res2.Steps[s.Ref], s, i, len(steps), prefix)
 	}
 
 	return changed
@@ -425,7 +430,7 @@ func getTimestampLength(line string) int {
 	return 0
 }
 
-func printTestWorkflowLogs(signature []testkube.TestWorkflowSignature, notifications chan testkube.TestWorkflowExecutionNotification) (result *testkube.TestWorkflowResult, err error) {
+func printTestWorkflowLogs(signature []testkube.TestWorkflowSignature, notifications chan testkube.TestWorkflowExecutionNotification, prefix string) (result *testkube.TestWorkflowResult, err error) {
 	steps := flattenSignatures(signature)
 
 	var isLineBeginning = true
@@ -438,7 +443,7 @@ func printTestWorkflowLogs(signature []testkube.TestWorkflowSignature, notificat
 			continue
 		}
 		if l.Result != nil {
-			if printResultDifference(result, l.Result, steps) {
+			if printResultDifference(result, l.Result, steps, prefix) {
 				isLineBeginning = true
 			}
 			if isFirstLine {
@@ -448,7 +453,7 @@ func printTestWorkflowLogs(signature []testkube.TestWorkflowSignature, notificat
 			continue
 		}
 
-		isLineBeginning, err = printStructuredLogLines(l.Log, isLineBeginning, isFirstLine)
+		isLineBeginning, err = printStructuredLogLines(l.Log, isLineBeginning, isFirstLine, prefix)
 		if err != nil {
 			return nil, err
 		}
@@ -461,7 +466,7 @@ func printTestWorkflowLogs(signature []testkube.TestWorkflowSignature, notificat
 	return result, nil
 }
 
-func watchTestWorkflowLogs(id string, signature []testkube.TestWorkflowSignature, client apiclientv1.Client) (result *testkube.TestWorkflowResult, err error) {
+func watchTestWorkflowLogs(id string, signature []testkube.TestWorkflowSignature, client apiclientv1.Client, prefix string) (result *testkube.TestWorkflowResult, err error) {
 	ui.Info("Getting logs from test workflow job", id)
 
 	// retry logic in case of error or closed channel with running state
@@ -473,7 +478,7 @@ func watchTestWorkflowLogs(id string, signature []testkube.TestWorkflowSignature
 			}
 
 			// Check if result stream is closed and if execution is finished
-			result, err = printTestWorkflowLogs(signature, notifications)
+			result, err = printTestWorkflowLogs(signature, notifications, prefix)
 			if err != nil {
 				return err
 			}
@@ -494,7 +499,7 @@ func watchTestWorkflowLogs(id string, signature []testkube.TestWorkflowSignature
 }
 
 func watchTestWorkflowServiceLogs(id, serviceName string, serviceIndex int,
-	signature []testkube.TestWorkflowSignature, client apiclientv1.Client) (*testkube.TestWorkflowResult, error) {
+	signature []testkube.TestWorkflowSignature, client apiclientv1.Client, prefix string) (*testkube.TestWorkflowResult, error) {
 	ui.Info("Getting logs from test workflow service job", fmt.Sprintf("%s-%s-%d", id, serviceName, serviceIndex))
 
 	var (
@@ -529,7 +534,7 @@ func watchTestWorkflowServiceLogs(id, serviceName string, serviceIndex int,
 		}
 
 		spinner.Stop()
-		result, nErr = printTestWorkflowLogs(signature, notifications)
+		result, nErr = printTestWorkflowLogs(signature, notifications, prefix)
 		if nErr != nil {
 			spinner.Warning("Retrying logs")
 			ui.NL()
@@ -545,7 +550,7 @@ func watchTestWorkflowServiceLogs(id, serviceName string, serviceIndex int,
 }
 
 func watchTestWorkflowParallelStepLogs(id, ref string, workerIndex int,
-	signature []testkube.TestWorkflowSignature, client apiclientv1.Client) (*testkube.TestWorkflowResult, error) {
+	signature []testkube.TestWorkflowSignature, client apiclientv1.Client, prefix string) (*testkube.TestWorkflowResult, error) {
 	ui.Info("Getting logs from test workflow parallel step job", fmt.Sprintf("%s-%s-%d", id, ref, workerIndex))
 
 	var (
@@ -580,7 +585,7 @@ func watchTestWorkflowParallelStepLogs(id, ref string, workerIndex int,
 		}
 
 		spinner.Stop()
-		result, nErr = printTestWorkflowLogs(signature, notifications)
+		result, nErr = printTestWorkflowLogs(signature, notifications, prefix)
 		if nErr != nil {
 			spinner.Warning("Retrying logs")
 			ui.NL()
@@ -595,33 +600,33 @@ func watchTestWorkflowParallelStepLogs(id, ref string, workerIndex int,
 	return result, nil
 }
 
-func printStatusHeader(i, n int, name string) {
+func printStatusHeader(i, n int, name, prefix string) {
 	if i == -1 {
-		fmt.Println("\n" + ui.LightCyan(fmt.Sprintf("• %s", name)))
+		fmt.Println("\n" + prefix + ui.LightCyan(fmt.Sprintf("• %s", name)))
 	} else {
-		fmt.Println("\n" + ui.LightCyan(fmt.Sprintf("• (%d/%d) %s", i+1, n, name)))
+		fmt.Println("\n" + prefix + ui.LightCyan(fmt.Sprintf("• (%d/%d) %s", i+1, n, name)))
 	}
 }
 
 func printStatus(s testkube.TestWorkflowSignature, rStatus testkube.TestWorkflowStepStatus, took time.Duration,
-	i, n int, name string, errorMessage string) {
+	i, n int, name string, errorMessage, prefix string) {
 	if len(errorMessage) > 0 {
-		fmt.Printf("\n%s", ui.Red(errorMessage))
+		fmt.Printf("\n%s%s", prefix, ui.Red(errorMessage))
 	}
 	switch rStatus {
 	case testkube.RUNNING_TestWorkflowStepStatus:
-		printStatusHeader(i, n, name)
+		printStatusHeader(i, n, name, prefix)
 	case testkube.SKIPPED_TestWorkflowStepStatus:
-		fmt.Println(ui.LightGray("• skipped"))
+		fmt.Println(prefix + ui.LightGray("• skipped"))
 	case testkube.PASSED_TestWorkflowStepStatus:
-		fmt.Println("\n" + ui.Green(fmt.Sprintf("• passed in %s", took)))
+		fmt.Println("\n" + prefix + ui.Green(fmt.Sprintf("• passed in %s", took)))
 	case testkube.ABORTED_TestWorkflowStepStatus:
-		fmt.Println("\n" + ui.Red("• aborted"))
+		fmt.Println("\n" + prefix + ui.Red("• aborted"))
 	default:
 		if s.Optional {
-			fmt.Println("\n" + ui.Yellow(fmt.Sprintf("• %s in %s (ignored)", string(rStatus), took)))
+			fmt.Println("\n" + prefix + ui.Yellow(fmt.Sprintf("• %s in %s (ignored)", string(rStatus), took)))
 		} else {
-			fmt.Println("\n" + ui.Red(fmt.Sprintf("• %s in %s", string(rStatus), took)))
+			fmt.Println("\n" + prefix + ui.Red(fmt.Sprintf("• %s in %s", string(rStatus), took)))
 		}
 	}
 }
@@ -638,7 +643,7 @@ func trimTimestamp(line string) string {
 	return line
 }
 
-func printStructuredLogLines(logs string, isLineBeginning, isFirstLine bool) (bool, error) {
+func printStructuredLogLines(logs string, isLineBeginning, isFirstLine bool, prefix string) (bool, error) {
 	if len(logs) == 0 {
 		return isLineBeginning, nil
 	}
@@ -647,7 +652,7 @@ func printStructuredLogLines(logs string, isLineBeginning, isFirstLine bool) (bo
 	next := false
 	for scanner.Scan() {
 		if next {
-			fmt.Print("\n")
+			fmt.Print("\n" + prefix)
 		}
 		text := trimTimestamp(scanner.Text())
 		if isFirstLine && text == registry.ErrResourceNotFound.Error() {
@@ -657,12 +662,12 @@ func printStructuredLogLines(logs string, isLineBeginning, isFirstLine bool) (bo
 		next = true
 	}
 	if isLineBeginning {
-		fmt.Print("\n")
+		fmt.Print("\n" + prefix)
 	}
 	return willBeLineBeginning, nil
 }
 
-func printRawLogLines(logs []byte, steps []testkube.TestWorkflowSignature, execution testkube.TestWorkflowExecution) {
+func printRawLogLines(logs []byte, steps []testkube.TestWorkflowSignature, execution testkube.TestWorkflowExecution, prefix string) {
 	currentRef := ""
 	i := -1
 
@@ -679,11 +684,11 @@ func printRawLogLines(logs []byte, steps []testkube.TestWorkflowSignature, execu
 
 	// Print error message if that's the only available thing
 	if len(results) < 2 && len(logs) == 0 && len(results[""].ErrorMessage) > 0 {
-		fmt.Printf("\n%s\n", ui.Red(results[""].ErrorMessage))
+		fmt.Printf("\n%s%s\n", prefix, ui.Red(results[""].ErrorMessage))
 		return
 	}
 
-	printStatusHeader(-1, len(steps), "Initializing")
+	printStatusHeader(-1, len(steps), "Initializing", prefix)
 
 	// Strip timestamp + space for all new lines in the log
 	for len(logs) > 0 {
@@ -702,7 +707,7 @@ func printRawLogLines(logs []byte, steps []testkube.TestWorkflowSignature, execu
 		start := instructions.StartHintRe.FindStringSubmatch(line)
 		if len(start) == 0 {
 			line += "\x07"
-			fmt.Println(line)
+			fmt.Println(prefix + line)
 			continue
 		}
 
@@ -712,14 +717,14 @@ func printRawLogLines(logs []byte, steps []testkube.TestWorkflowSignature, execu
 			if ps, ok := results[currentRef]; ok && ps.Status != nil {
 				took := ps.FinishedAt.Sub(ps.QueuedAt).Round(time.Millisecond)
 				if i != -1 {
-					printStatus(steps[i], *ps.Status, took, i, len(steps), steps[i].Label(), ps.ErrorMessage)
+					printStatus(steps[i], *ps.Status, took, i, len(steps), steps[i].Label(), ps.ErrorMessage, prefix)
 				}
 			}
 
 			i++
 			if i < len(steps) {
 				currentRef = steps[i].Ref
-				printStatusHeader(i, len(steps), steps[i].Label())
+				printStatusHeader(i, len(steps), steps[i].Label(), prefix)
 			}
 		}
 	}
@@ -728,13 +733,13 @@ func printRawLogLines(logs []byte, steps []testkube.TestWorkflowSignature, execu
 		for _, step := range steps[i:] {
 			if ps, ok := results[step.Ref]; ok && ps.Status != nil {
 				took := ps.FinishedAt.Sub(ps.QueuedAt).Round(time.Millisecond)
-				printStatus(step, *ps.Status, took, i, len(steps), steps[i].Label(), ps.ErrorMessage)
+				printStatus(step, *ps.Status, took, i, len(steps), steps[i].Label(), ps.ErrorMessage, prefix)
 			}
 
 			i++
 			currentRef = step.Ref
 			if i < len(steps) {
-				printStatusHeader(i, len(steps), steps[i].Label())
+				printStatusHeader(i, len(steps), steps[i].Label(), prefix)
 			}
 		}
 	}
