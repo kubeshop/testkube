@@ -212,11 +212,7 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 										prefix = fmt.Sprintf("[%s] ", exec.Workflow.Name)
 									}
 
-									options := []Options{
-										{
-											Prefix: prefix,
-										},
-									}
+									options := []Options{{Prefix: prefix}}
 									ec := uiWatch(*exec, pServiceName, serviceIndex, pParallelStepName, parallelStepIndex, client, options...)
 									ui.NL()
 									if downloadArtifactsEnabled {
