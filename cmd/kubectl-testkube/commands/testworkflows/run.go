@@ -191,16 +191,10 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 							}
 
 							if len(args) > 0 {
-								ec := uiWatch(execution, pServiceName, serviceIndex, pParallelStepName, parallelStepIndex, client)
+								exitCode = uiWatch(execution, pServiceName, serviceIndex, pParallelStepName, parallelStepIndex, client)
 								ui.NL()
 								if downloadArtifactsEnabled {
 									tests.DownloadTestWorkflowArtifacts(execution.Id, downloadDir, format, masks, client, outputPretty)
-								}
-
-								if ec != 0 {
-									mu.Lock()
-									exitCode = ec
-									mu.Unlock()
 								}
 							} else {
 								wg.Add(1)
@@ -225,7 +219,6 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 										mu.Unlock()
 									}
 								}(&execution)
-
 							}
 						} else {
 							uiShellWatchExecution(execution.Id)
