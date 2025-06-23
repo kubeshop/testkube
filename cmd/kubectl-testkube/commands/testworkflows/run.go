@@ -221,7 +221,7 @@ func NewRunTestWorkflowCmd() *cobra.Command {
 
 									if ec != 0 {
 										mu.Lock()
-										exitCode = ec
+										exitCode |= ec
 										mu.Unlock()
 									}
 								}(&execution)
