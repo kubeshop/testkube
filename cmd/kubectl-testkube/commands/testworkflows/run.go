@@ -337,7 +337,7 @@ func uiWatch(execution testkube.TestWorkflowExecution, serviceName *string, serv
 			ui.Failf("unknown parallel step '%s' for test workflow execution %s", *parallelStepName, execution.Id)
 		}
 
-		result, err = watchTestWorkflowParallelStepLogs(execution.Id, ref, prefix, parallelStepIndex, execution.Signature, client)
+		result, err = watchTestWorkflowParallelStepLogs(execution.Id, prefix, ref, parallelStepIndex, execution.Signature, client)
 	default:
 		result, err = watchTestWorkflowLogs(execution.Id, prefix, execution.Signature, client)
 	}
@@ -561,7 +561,7 @@ func watchTestWorkflowServiceLogs(id, prefix, serviceName string, serviceIndex i
 	return result, nil
 }
 
-func watchTestWorkflowParallelStepLogs(id, ref, prefix string, workerIndex int,
+func watchTestWorkflowParallelStepLogs(id, prefix, ref string, workerIndex int,
 	signature []testkube.TestWorkflowSignature, client apiclientv1.Client) (*testkube.TestWorkflowResult, error) {
 	ui.Info("Getting logs from test workflow parallel step job", fmt.Sprintf("%s-%s-%d", id, ref, workerIndex))
 
