@@ -6507,6 +6507,7 @@ components:
         - aborted
         - timeout
         - skipped
+        - canceled
 
     ExecutionResult:
       description: execution result returned from executor

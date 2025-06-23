@@ -34,12 +34,14 @@ func (statuses ExecutionStatuses) ToMap() map[ExecutionStatus]struct{} {
 // ParseExecutionStatusList parse a list of execution statuses from string
 func ParseExecutionStatusList(source, separator string) (statusList ExecutionStatuses, err error) {
 	statusMap := map[ExecutionStatus]struct{}{
-		FAILED_ExecutionStatus:  {},
-		PASSED_ExecutionStatus:  {},
-		QUEUED_ExecutionStatus:  {},
-		RUNNING_ExecutionStatus: {},
-		ABORTED_ExecutionStatus: {},
-		TIMEOUT_ExecutionStatus: {},
+		FAILED_ExecutionStatus:   {},
+		PASSED_ExecutionStatus:   {},
+		QUEUED_ExecutionStatus:   {},
+		RUNNING_ExecutionStatus:  {},
+		ABORTED_ExecutionStatus:  {},
+		TIMEOUT_ExecutionStatus:  {},
+		SKIPPED_ExecutionStatus:  {},
+		CANCELED_ExecutionStatus: {},
 	}
 
 	if source == "" {
