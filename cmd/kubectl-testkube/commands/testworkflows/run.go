@@ -465,7 +465,7 @@ func printTestWorkflowLogs(signature []testkube.TestWorkflowSignature, notificat
 			continue
 		}
 
-		isLineBeginning, err = printStructuredLogLines(l.Log, prefix, isLineBeginning, isFirstLine)
+		isLineBeginning, err = printStructuredLogLines(l.Log, isLineBeginning, isFirstLine, prefix)
 		if err != nil {
 			return nil, err
 		}
@@ -655,7 +655,7 @@ func trimTimestamp(line string) string {
 	return line
 }
 
-func printStructuredLogLines(logs, prefix string, isLineBeginning, isFirstLine bool) (bool, error) {
+func printStructuredLogLines(logs string, isLineBeginning, isFirstLine bool, prefix string) (bool, error) {
 	if len(logs) == 0 {
 		return isLineBeginning, nil
 	}
