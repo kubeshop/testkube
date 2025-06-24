@@ -119,6 +119,14 @@ CREATE TABLE leases (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Create the main table for execution sequences
+CREATE TABLE execution_sequences (
+    name VARCHAR(255) PRIMARY KEY,
+    number INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Create indexes
 CREATE INDEX idx_test_workflow_executions_group_id ON test_workflow_executions(group_id);
 CREATE INDEX idx_test_workflow_executions_runner_id ON test_workflow_executions(runner_id);
@@ -149,10 +157,14 @@ CREATE INDEX idx_leases_cluster_id ON leases(cluster_id);
 CREATE INDEX idx_leases_renewed_at ON leases(renewed_at);
 CREATE INDEX idx_leases_acquired_at ON leases(acquired_at);
 CREATE INDEX idx_leases_identifier_cluster_id ON leases(identifier, cluster_id);
+
+CREATE INDEX idx_execution_sequences_name ON execution_sequences(name);
 -- +goose StatementEnd
 
 -- +goose Down
 -- +goose StatementBegin
+DROP INDEX idx_execution_sequences_name;
+
 DROP INDEX idx_leases_identifier;
 DROP INDEX idx_leases_cluster_id;
 DROP INDEX idx_leases_renewed_at;
@@ -183,6 +195,7 @@ DROP INDEX IF EXISTS idx_test_workflow_executions_scheduled_at;
 DROP INDEX IF EXISTS idx_test_workflow_executions_status_at;
 DROP INDEX IF EXISTS idx_test_workflow_executions_tags;
 
+DROP TABLE execution_sequences;
 DROP TABLE leases;
 DROP TABLE IF EXISTS test_workflows;
 DROP TABLE IF EXISTS test_workflow_resource_aggregations;

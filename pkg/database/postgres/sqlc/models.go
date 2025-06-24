@@ -8,6 +8,13 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type ExecutionSequence struct {
+	Name      string             `db:"name" json:"name"`
+	Number    int32              `db:"number" json:"number"`
+	CreatedAt pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+}
+
 type Lease struct {
 	ID         string             `db:"id" json:"id"`
 	Identifier string             `db:"identifier" json:"identifier"`

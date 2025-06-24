@@ -244,10 +244,3 @@ func newLeaseID(clusterID string) string {
 func toPgTimestamp(t time.Time) pgtype.Timestamptz {
 	return pgtype.Timestamptz{Time: t, Valid: true}
 }
-
-func fromPgTimestamp(t pgtype.Timestamptz) time.Time {
-	if !t.Valid {
-		return time.Time{}
-	}
-	return t.Time
-}

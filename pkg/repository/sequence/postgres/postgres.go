@@ -1,0 +1,165 @@
+package postgres
+
+import (
+	"context"
+	"errors"
+	"fmt"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/kubeshop/testkube/pkg/database/postgres/sqlc"
+)
+
+type PostgresRepository struct {
+	db      sqlc.DatabaseInterface
+	queries sqlc.ExecutionSequenceQueriesInterface
+}
+
+type PostgresRepositoryOpt func(*PostgresRepository)
+
+func NewPostgresRepository(db *pgxpool.Pool, opts ...PostgresRepositoryOpt) *PostgresRepository {
+	r := &PostgresRepository{
+		db:      &PgxPoolWrapper{Pool: db},
+		queries: sqlc.New(db),
+	}
+
+	for _, opt := range opts {
+		opt(r)
+	}
+
+	return r
+}
+
+func WithQueriesInterface(queries sqlc.ExecutionSequenceQueriesInterface) PostgresRepositoryOpt {
+	return func(r *PostgresRepository) {
+		r.queries = queries
+	}
+}
+
+func WithDatabaseInterface(db sqlc.DatabaseInterface) PostgresRepositoryOpt {
+	return func(b *PostgresRepository) {
+		b.db = db
+	}
+}
+
+// PgxPoolWrapper wraps pgxpool.Pool to implement DatabaseInterface
+type PgxPoolWrapper struct {
+	*pgxpool.Pool
+}
+
+func (w *PgxPoolWrapper) Begin(ctx context.Context) (pgx.Tx, error) {
+	return w.Pool.Begin(ctx)
+}
+
+// GetNextExecutionNumber gets next execution number by name using atomic upsert
+func (r *PostgresRepository) GetNextExecutionNumber(ctx context.Context, name string) (int32, error) {
+	result, err := r.queries.UpsertAndIncrementExecutionSequence(ctx, name)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get next execution number: %w", err)
+	}
+
+	return int32(result.Number), nil
+}
+
+// DeleteExecutionNumber deletes execution number by name
+func (r *PostgresRepository) DeleteExecutionNumber(ctx context.Context, name string) error {
+	err := r.queries.DeleteExecutionSequence(ctx, name)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return fmt.Errorf("failed to delete execution sequence: %w", err)
+	}
+	return nil
+}
+
+// DeleteExecutionNumbers deletes multiple execution numbers by names
+func (r *PostgresRepository) DeleteExecutionNumbers(ctx context.Context, names []string) error {
+	if len(names) == 0 {
+		return nil
+	}
+
+	err := r.queries.DeleteExecutionSequences(ctx, names)
+	if err != nil {
+		return fmt.Errorf("failed to delete execution sequences: %w", err)
+	}
+
+	return nil
+}
+
+// DeleteAllExecutionNumbers deletes all execution numbers
+func (r *PostgresRepository) DeleteAllExecutionNumbers(ctx context.Context) error {
+	err := r.queries.DeleteAllExecutionSequences(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to delete all execution sequences: %w", err)
+	}
+	return nil
+}
+
+// Additional utility methods
+
+// GetAllSequences returns all execution sequences
+func (r *PostgresRepository) GetAllSequences(ctx context.Context) ([]ExecutionSequence, error) {
+	results, err := r.queries.GetAllExecutionSequences(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get all execution sequences: %w", err)
+	}
+
+	sequences := make([]ExecutionSequence, len(results))
+	for i, result := range results {
+		sequences[i] = ExecutionSequence{
+			Name:   result.Name,
+			Number: result.Number,
+		}
+	}
+
+	return sequences, nil
+}
+
+// GetSequencesByNames returns execution sequences for specific names
+func (r *PostgresRepository) GetSequencesByNames(ctx context.Context, names []string) ([]ExecutionSequence, error) {
+	if len(names) == 0 {
+		return []ExecutionSequence{}, nil
+	}
+
+	results, err := r.queries.GetExecutionSequencesByNames(ctx, names)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get execution sequences by names: %w", err)
+	}
+
+	sequences := make([]ExecutionSequence, len(results))
+	for i, result := range results {
+		sequences[i] = ExecutionSequence{
+			Name:   result.Name,
+			Number: result.Number,
+		}
+	}
+
+	return sequences, nil
+}
+
+// Count returns the total count of execution sequences
+func (r *PostgresRepository) Count(ctx context.Context) (int64, error) {
+	count, err := r.queries.CountExecutionSequences(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count execution sequences: %w", err)
+	}
+	return count, nil
+}
+
+// GetByName returns a specific execution sequence
+func (r *PostgresRepository) GetByName(ctx context.Context, name string) (ExecutionSequence, error) {
+	result, err := r.queries.GetExecutionSequence(ctx, name)
+	if err != nil {
+		return ExecutionSequence{}, fmt.Errorf("failed to get execution sequence: %w", err)
+	}
+
+	return ExecutionSequence{
+		Name:   result.Name,
+		Number: result.Number,
+	}, nil
+}
+
+// ExecutionSequence represents the execution sequence data model
+type ExecutionSequence struct {
+	Name   string `json:"name"`
+	Number int32  `json:"number"`
+}

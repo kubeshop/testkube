@@ -119,3 +119,15 @@ type LeaseBackendQueriesInterface interface {
 	CountLeasesByClusterId(ctx context.Context, clusterID string) (int64, error)
 	GetLatestLeaseByIdentifierAndCluster(ctx context.Context, arg GetLatestLeaseByIdentifierAndClusterParams) (Lease, error)
 }
+
+// ExecutionSequenceQueriesInterface defines the interface for sqlc generated queries
+type ExecutionSequenceQueriesInterface interface {
+	GetExecutionSequence(ctx context.Context, name string) (ExecutionSequence, error)
+	UpsertAndIncrementExecutionSequence(ctx context.Context, name string) (ExecutionSequence, error)
+	DeleteExecutionSequence(ctx context.Context, name string) error
+	DeleteExecutionSequences(ctx context.Context, names []string) error
+	DeleteAllExecutionSequences(ctx context.Context) error
+	GetAllExecutionSequences(ctx context.Context) ([]ExecutionSequence, error)
+	GetExecutionSequencesByNames(ctx context.Context, names []string) ([]ExecutionSequence, error)
+	CountExecutionSequences(ctx context.Context) (int64, error)
+}
