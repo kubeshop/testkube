@@ -90,7 +90,7 @@ func (l *CDEventListener) Notify(event testkube.Event) (result testkube.EventRes
 	}
 
 	if event.Type_ != nil && (*event.Type_ == *testkube.EventEndTestWorkflowAborted || *event.Type_ == *testkube.EventEndTestWorkflowFailed ||
-		*event.Type_ == *testkube.EventEndTestWorkflowSuccess) {
+		*event.Type_ == *testkube.EventEndTestWorkflowSuccess || *event.Type_ == *testkube.EventEndTestWorkflowCanceled) {
 		// Create the output event
 		ev, err = cde.MapTestkubeTestWorkflowLogToCDEvent(event, l.clusterID, l.dashboardURI)
 		if err != nil {

@@ -1,0 +1,29 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: xunit-workflow-smoke-junit-report
+  labels:
+    core-tests: workflows
+    tool: xunit
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/xunit/xunit-project
+  container:
+    image: bitnami/dotnet-sdk:8-debian-12
+    resources:
+      requests:
+        cpu: 512m
+        memory: 512Mi
+    workingDir: /data/repo/test/xunit/xunit-project
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: Run tests
+    shell: dotnet test --logger:"junit;LogFilePath=xunit-report/xunit-junit-report.xml"
+    artifacts:
+      paths:
+      - 'xunit-report/*'

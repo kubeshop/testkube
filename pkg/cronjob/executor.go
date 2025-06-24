@@ -8,6 +8,7 @@ import (
 	testsuitesv3 "github.com/kubeshop/testkube-operator/api/testsuite/v3"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
+	commonmapper "github.com/kubeshop/testkube/pkg/mapper/common"
 	testsmapper "github.com/kubeshop/testkube/pkg/mapper/tests"
 	testsuitesmapper "github.com/kubeshop/testkube/pkg/mapper/testsuites"
 	cronjobtcl "github.com/kubeshop/testkube/pkg/tcl/testworkflowstcl/cronjob"
@@ -20,22 +21,33 @@ const (
 )
 
 func (s *Scheduler) executeTestWorkflow(ctx context.Context, testWorkflowName string, cron *testkube.TestWorkflowCronJobConfig) {
+	var targets []*cloud.ExecutionTarget
+	if cron.Target != nil {
+		targets = commonmapper.MapAllTargetsApiToGrpc([]testkube.ExecutionTarget{*cron.Target})
+	}
+
 	request := &cloud.ScheduleRequest{
 		Executions: []*cloud.ScheduleExecution{{
 			Selector: &cloud.ScheduleResourceSelector{Name: testWorkflowName},
 			Config:   cron.Config,
+			Targets:  targets,
 		},
 		},
+	}
+
+	cronName := cron.Cron
+	if cron.Timezone != nil {
+		cronName = fmt.Sprintf("CRON_TZ=%s %s", cron.Timezone.Value, cron.Cron)
 	}
 
 	// Pro edition only (tcl protected code)
 	if s.proContext != nil && s.proContext.APIKey != "" {
-		request.RunningContext, _ = testworkflowexecutor.GetNewRunningContext(cronjobtcl.GetRunningContext(cron.Cron), nil)
+		request.RunningContext, _ = testworkflowexecutor.GetNewRunningContext(cronjobtcl.GetRunningContext(cronName), nil)
 	}
 
 	s.logger.Infof(
 		"cron job scheduler: executor component: scheduling testworkflow execution for %s/%s",
-		testWorkflowName, cron.Cron,
+		testWorkflowName, cronName,
 	)
 
 	resp := s.testWorkflowExecutor.Execute(ctx, "", request)
@@ -45,7 +57,7 @@ func (s *Scheduler) executeTestWorkflow(ctx context.Context, testWorkflowName st
 	}
 
 	if resp.Error() != nil {
-		s.logger.Errorw(fmt.Sprintf("cron job scheduler: executor component: error executing testworkflow for cron %s/%s", testWorkflowName, cron.Cron), "error", resp.Error())
+		s.logger.Errorw(fmt.Sprintf("cron job scheduler: executor component: error executing testworkflow for cron %s/%s", testWorkflowName, cronName), "error", resp.Error())
 		return
 	}
 

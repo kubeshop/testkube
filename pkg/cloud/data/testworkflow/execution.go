@@ -63,6 +63,14 @@ func (r *CloudRepository) GetRunning(ctx context.Context) (result []testkube.Tes
 	return pass(r.executor, ctx, req, process)
 }
 
+func (r *CloudRepository) GetFinished(ctx context.Context, filter testworkflow2.Filter) (result []testkube.TestWorkflowExecution, err error) {
+	req := ExecutionGetFinishedRequest{Filter: filter.(*testworkflow2.FilterImpl)}
+	process := func(v ExecutionGetFinishedResponse) []testkube.TestWorkflowExecution {
+		return v.WorkflowExecutions
+	}
+	return pass(r.executor, ctx, req, process)
+}
+
 func (r *CloudRepository) GetExecutionsTotals(ctx context.Context, filter ...testworkflow2.Filter) (totals testkube.ExecutionsTotals, err error) {
 	req := ExecutionGetExecutionTotalsRequest{Filter: mapFilters(filter)}
 	process := func(v ExecutionGetExecutionTotalsResponse) testkube.ExecutionsTotals {

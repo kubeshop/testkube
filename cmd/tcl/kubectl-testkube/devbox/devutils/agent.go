@@ -20,22 +20,30 @@ import (
 )
 
 type Agent struct {
-	pod                 *PodObject
-	cloud               *CloudObject
-	agentImage          string
-	initProcessImage    string
-	toolkitImage        string
-	disableCloudStorage bool
+	pod                  *PodObject
+	cloud                *CloudObject
+	agentImage           string
+	initProcessImage     string
+	toolkitImage         string
+	disableCloudStorage  bool
+	enableCronjobs       bool
+	enableTestTriggers   bool
+	enableK8sControllers bool
+	executionNamespace   string
 }
 
-func NewAgent(pod *PodObject, cloud *CloudObject, agentImage, initProcessImage, toolkitImage string, disableCloudStorage bool) *Agent {
+func NewAgent(pod *PodObject, cloud *CloudObject, agentImage, initProcessImage, toolkitImage string, disableCloudStorage, enableCronjobs, enableTestTriggers, enableK8sControllers bool, executionNamespace string) *Agent {
 	return &Agent{
-		pod:                 pod,
-		cloud:               cloud,
-		agentImage:          agentImage,
-		initProcessImage:    initProcessImage,
-		toolkitImage:        toolkitImage,
-		disableCloudStorage: disableCloudStorage,
+		pod:                  pod,
+		cloud:                cloud,
+		agentImage:           agentImage,
+		initProcessImage:     initProcessImage,
+		toolkitImage:         toolkitImage,
+		disableCloudStorage:  disableCloudStorage,
+		enableCronjobs:       enableCronjobs,
+		enableTestTriggers:   enableTestTriggers,
+		enableK8sControllers: enableK8sControllers,
+		executionNamespace:   executionNamespace,
 	}
 }
 
@@ -45,18 +53,27 @@ func (r *Agent) Create(ctx context.Context, env *client.Environment) error {
 		{Name: "APISERVER_PORT", Value: "8088"},
 		{Name: "GRPC_PORT", Value: "8089"},
 		{Name: "APISERVER_FULLNAME", Value: "devbox-agent"},
-		{Name: "DISABLE_TEST_TRIGGERS", Value: "true"},
 		{Name: "DISABLE_WEBHOOKS", Value: "true"},
 		{Name: "DISABLE_DEPRECATED_TESTS", Value: "true"},
 		{Name: "TESTKUBE_ANALYTICS_ENABLED", Value: "false"},
 		{Name: "TESTKUBE_NAMESPACE", Value: r.pod.Namespace()},
-		{Name: "JOB_SERVICE_ACCOUNT_NAME", Value: "devbox-account"},
+		{Name: "DEFAULT_EXECUTION_NAMESPACE", Value: r.executionNamespace},
+		{Name: "JOB_SERVICE_ACCOUNT_NAME", Value: jobServiceAccountName},
 		{Name: "TESTKUBE_ENABLE_IMAGE_DATA_PERSISTENT_CACHE", Value: "true"},
 		{Name: "TESTKUBE_IMAGE_DATA_PERSISTENT_CACHE_KEY", Value: "testkube-image-cache"},
 		{Name: "TESTKUBE_TW_TOOLKIT_IMAGE", Value: r.toolkitImage},
 		{Name: "TESTKUBE_TW_INIT_IMAGE", Value: r.initProcessImage},
 		{Name: "FEATURE_NEW_ARCHITECTURE", Value: "true"},
 		{Name: "FEATURE_CLOUD_STORAGE", Value: fmt.Sprintf("%v", !r.disableCloudStorage)},
+	}
+	if !r.enableTestTriggers {
+		envVariables = append(envVariables, corev1.EnvVar{Name: "DISABLE_TEST_TRIGGERS", Value: "true"})
+	}
+	if r.enableCronjobs {
+		envVariables = append(envVariables, corev1.EnvVar{Name: "ENABLE_CRON_JOBS", Value: "true"})
+	}
+	if r.enableK8sControllers {
+		envVariables = append(envVariables, corev1.EnvVar{Name: "ENABLE_K8S_CONTROLLERS", Value: "true"})
 	}
 	if env != nil {
 		tlsInsecure := "false"

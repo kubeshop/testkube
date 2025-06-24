@@ -18,9 +18,9 @@ var (
 		WorkingDir:      common.Ptr("/wd"),
 		Image:           "some-image",
 		ImagePullPolicy: "IfNotPresent",
-		Env: []corev1.EnvVar{
-			{Name: "some-naaame", Value: "some-value"},
-			{Name: "some-naaame", ValueFrom: &corev1.EnvVarSource{
+		Env: []testworkflowsv1.EnvVar{
+			{EnvVar: corev1.EnvVar{Name: "some-naaame", Value: "some-value"}},
+			{EnvVar: corev1.EnvVar{Name: "some-naaame", ValueFrom: &corev1.EnvVarSource{
 				FieldRef: &corev1.ObjectFieldSelector{
 					APIVersion: "api.value.1",
 					FieldPath:  "the.field.pa",
@@ -37,7 +37,7 @@ var (
 					LocalObjectReference: corev1.LocalObjectReference{Name: "some-sec"},
 					Key:                  "sec-key",
 				},
-			}},
+			}}},
 		},
 		EnvFrom: []corev1.EnvFromSource{
 			{
@@ -192,7 +192,7 @@ var (
 			WorkingDir:      common.Ptr("/aaaa"),
 			Image:           "ssss",
 			ImagePullPolicy: "Never",
-			Env:             []corev1.EnvVar{{Name: "xyz", Value: "bar"}},
+			Env:             []testworkflowsv1.EnvVar{{EnvVar: corev1.EnvVar{Name: "xyz", Value: "bar"}}},
 			Command:         common.Ptr([]string{"ab"}),
 			Args:            common.Ptr([]string{"abrgs"}),
 			Resources: &testworkflowsv1.Resources{
@@ -214,8 +214,8 @@ var (
 				WorkingDir:      common.Ptr("/abc"),
 				Image:           "im-g",
 				ImagePullPolicy: "IfNotPresent",
-				Env: []corev1.EnvVar{
-					{Name: "abc", Value: "230"},
+				Env: []testworkflowsv1.EnvVar{
+					{EnvVar: corev1.EnvVar{Name: "abc", Value: "230"}},
 				},
 				EnvFrom: []corev1.EnvFromSource{
 					{Prefix: "abc"},
@@ -330,6 +330,7 @@ var (
 					Cron:        "* * * * *",
 					Labels:      map[string]string{"some-key": "some-value"},
 					Annotations: map[string]string{"some-key=2": "some-value-2"},
+					Timezone:    common.Ptr("America/New_York"),
 				},
 			},
 		},

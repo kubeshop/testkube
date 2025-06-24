@@ -255,11 +255,12 @@ func (n *notifier) End() {
 	// Ensure that the steps without the information are fulfilled and marked as aborted
 	n.fillGaps(true)
 
+	terminationCode := watchers2.GetTerminationCode(n.state.Job().Original())
 	errorMessage := DefaultErrorMessage
 	if n.state != nil && n.state.ExecutionError() != "" {
 		errorMessage = n.state.ExecutionError()
 	}
-	n.result.HealAborted(n.sigSequence, errorMessage, DefaultErrorMessage)
+	n.result.HealAbortedOrCanceled(n.sigSequence, errorMessage, DefaultErrorMessage, terminationCode)
 
 	// Finalize the status
 	n.reconcile()

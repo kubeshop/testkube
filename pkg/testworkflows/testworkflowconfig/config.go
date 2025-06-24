@@ -4,6 +4,8 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+
+	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 )
 
 const (
@@ -20,20 +22,22 @@ type InternalConfig struct {
 }
 
 type ExecutionConfig struct {
-	Id               string            `json:"i,omitempty"`
-	GroupId          string            `json:"g,omitempty"`
-	Name             string            `json:"n,omitempty"`
-	Number           int32             `json:"N,omitempty"`
-	ScheduledAt      time.Time         `json:"s,omitempty"`
-	DisableWebhooks  bool              `json:"D,omitempty"`
-	Tags             map[string]string `json:"t,omitempty"`
-	Debug            bool              `json:"d,omitempty"`
-	OrganizationId   string            `json:"o,omitempty"`
-	OrganizationSlug string            `json:"O,omitempty"`
-	EnvironmentId    string            `json:"e,omitempty"`
-	EnvironmentSlug  string            `json:"E,omitempty"`
-	ParentIds        string            `json:"p,omitempty"`
-	PvcNames         map[string]string `json:"c,omitempty"`
+	Id               string                   `json:"i,omitempty"`
+	GroupId          string                   `json:"g,omitempty"`
+	Name             string                   `json:"n,omitempty"`
+	Number           int32                    `json:"N,omitempty"`
+	ScheduledAt      time.Time                `json:"s,omitempty"`
+	DisableWebhooks  bool                     `json:"D,omitempty"`
+	Tags             map[string]string        `json:"t,omitempty"`
+	Debug            bool                     `json:"d,omitempty"`
+	OrganizationId   string                   `json:"o,omitempty"`
+	OrganizationSlug string                   `json:"O,omitempty"`
+	EnvironmentId    string                   `json:"e,omitempty"`
+	EnvironmentSlug  string                   `json:"E,omitempty"`
+	ParentIds        string                   `json:"p,omitempty"`
+	PvcNames         map[string]string        `json:"c,omitempty"`
+	GlobalEnv        []testworkflowsv1.EnvVar `json:"G,omitempty"`
+	SecretMountPaths map[string][]string      `json:"S,omitempty"`
 }
 
 type WorkflowConfig struct {
@@ -86,9 +90,10 @@ type WorkerConfig struct {
 	ImageInspectorPersistenceCacheKey string        `json:"P,omitempty"`
 	ImageInspectorPersistenceCacheTTL time.Duration `json:"T,omitempty"`
 
-	Connection         WorkerConnectionConfig `json:"C,omitempty"`
-	FeatureFlags       map[string]string      `json:"f,omitempty"`
-	CommonEnvVariables []corev1.EnvVar        `json:"e,omitempty"`
+	Connection             WorkerConnectionConfig `json:"C,omitempty"`
+	FeatureFlags           map[string]string      `json:"f,omitempty"`
+	CommonEnvVariables     []corev1.EnvVar        `json:"e,omitempty"`
+	AllowLowSecurityFields bool                   `json:"a,omitempty"`
 }
 
 type WorkerConnectionConfig struct {

@@ -18,4 +18,6 @@ type TestWorkflowCronJobConfig struct {
 	// annotations to attach to the cron job
 	Annotations map[string]string `json:"annotations,omitempty"`
 	Config      map[string]string `json:"config,omitempty"`
+	Target      *ExecutionTarget  `json:"target,omitempty"`
+	Timezone    *BoxedString      `json:"timezone,omitempty"`
 }

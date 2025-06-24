@@ -10,13 +10,13 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/playwright/executor-tests/playwright-project
+      - test/playwright/playwright-project
   container:
     resources:
       requests:
         cpu: 2
         memory: 2Gi
-    workingDir: /data/repo/test/playwright/executor-tests/playwright-project
+    workingDir: /data/repo/test/playwright/playwright-project
   steps:
   - name: Install dependencies
     run:
@@ -35,7 +35,7 @@ spec:
       - "playwright@1.32.3"
       - "test"
   - name: Save artifacts
-    workingDir: /data/repo/test/playwright/executor-tests/playwright-project
+    workingDir: /data/repo/test/playwright/playwright-project
     artifacts:
       paths:
       - playwright-report/**/*

@@ -100,6 +100,26 @@ func NewLoginCmd() *cobra.Command {
 						}
 						cmd.Flags().Set("agent-uri-override", result.AgentURL)
 					}
+
+					if !cmd.Flags().Changed("callback-port") {
+						callbackPort, _ := cmd.Flags().GetInt("callback-port")
+						reservedURLs := []string{
+							fmt.Sprintf("http://localhost:%d", callbackPort),
+							fmt.Sprintf("http://127.0.0.1:%d", callbackPort),
+							fmt.Sprintf("https://localhost:%d", callbackPort),
+							fmt.Sprintf("https://127.0.0.1:%d", callbackPort),
+						}
+						conflicting := false
+						for _, url := range reservedURLs {
+							if result.APIURL == url || strings.HasPrefix(result.APIURL, url+"/") {
+								conflicting = true
+								break
+							}
+						}
+						if conflicting {
+							cmd.Flags().Set("callback-port", fmt.Sprintf("%d", config.AlternativeCallbackPort))
+						}
+					}
 					cmd.Flags().Set("custom-auth", "true")
 				}
 			}

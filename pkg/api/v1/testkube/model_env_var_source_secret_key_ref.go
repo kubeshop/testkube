@@ -16,5 +16,5 @@ type EnvVarSourceSecretKeyRef struct {
 	// Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names TODO: Add other useful fields. apiVersion, kind, uid?
 	Name string `json:"name,omitempty"`
 	// Specify whether the Secret or its key must be defined
-	Optional bool `json:"optional,omitempty"`
+	Optional *bool `json:"optional,omitempty"`
 }

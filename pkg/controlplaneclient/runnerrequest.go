@@ -33,6 +33,10 @@ func (r *runnerRequestData) Pause() RunnerRequestOK {
 	return &runnerRequestOk{runnerRequestData: *r}
 }
 
+func (r *runnerRequestData) Cancel() RunnerRequestOK {
+	return &runnerRequestOk{runnerRequestData: *r}
+}
+
 func (r *runnerRequestData) Consider() RunnerRequestConsider {
 	return &runnerRequestConsider{runnerRequestData: *r}
 }
@@ -77,6 +81,7 @@ type RunnerRequest interface {
 	Abort() RunnerRequestOK
 	Resume() RunnerRequestOK
 	Pause() RunnerRequestOK
+	Cancel() RunnerRequestOK
 	Consider() RunnerRequestConsider
 	Start() RunnerRequestStart
 }

@@ -7,18 +7,23 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/rand"
 
+	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/imageinspector"
 )
 
-var BypassToolkitCheck = corev1.EnvVar{
-	Name:  "TK_TC_SECURITY",
-	Value: rand.String(20),
+var BypassToolkitCheck = testworkflowsv1.EnvVar{
+	EnvVar: corev1.EnvVar{
+		Name:  "TK_TC_SECURITY",
+		Value: rand.String(20),
+	},
 }
 
-var BypassPure = corev1.EnvVar{
-	Name:  "TK_TC_PURE",
-	Value: rand.String(20),
+var BypassPure = testworkflowsv1.EnvVar{
+	EnvVar: corev1.EnvVar{
+		Name:  "TK_TC_PURE",
+		Value: rand.String(20),
+	},
 }
 
 type containerStage struct {

@@ -67,6 +67,9 @@ func (s *call) SafeResolve(m ...Machine) (v Expression, changed bool, err error)
 			return nil, changed, err
 		}
 	}
+	if changed {
+		return s, true, nil
+	}
 	result, ok, err := StdLibMachine.Call(s.name, s.args)
 	if ok {
 		if err != nil {

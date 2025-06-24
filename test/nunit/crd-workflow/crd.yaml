@@ -19,6 +19,8 @@ spec:
         cpu: 512m
         memory: 512Mi
     workingDir: /data/repo/test/nunit/nunit-project/ExampleProject
+  job:
+    activeDeadlineSeconds: 300
   steps:
   - name: Run tests
     shell: dotnet test --logger:"junit;LogFilePath=nunit-report/nunit-junit-report.xml"

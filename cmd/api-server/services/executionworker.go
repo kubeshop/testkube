@@ -24,6 +24,7 @@ func CreateExecutionWorker(
 	featureFlags map[string]string,
 	commonEnvVariables []corev1.EnvVar,
 	logAbortedDetails bool,
+	defaultNamespace string,
 ) executionworkertypes.Worker {
 	namespacesConfig := map[string]kubernetesworker.NamespaceConfig{}
 	for n, s := range serviceAccountNames {
@@ -32,7 +33,7 @@ func CreateExecutionWorker(
 	return executionworker.NewKubernetes(clientSet, processor, kubernetesworker.Config{
 		Cluster: kubernetesworker.ClusterConfig{
 			Id:               clusterId,
-			DefaultNamespace: cfg.TestkubeNamespace,
+			DefaultNamespace: defaultNamespace,
 			DefaultRegistry:  cfg.TestkubeRegistry,
 			Namespaces:       namespacesConfig,
 		},
@@ -51,9 +52,10 @@ func CreateExecutionWorker(
 			// TODO: Prepare ControlPlane interface for OSS, so we may unify the communication
 			LocalApiUrl: fmt.Sprintf("http://%s:%d", cfg.APIServerFullname, cfg.APIServerPort),
 		},
-		FeatureFlags:       featureFlags,
-		RunnerId:           runnerId,
-		CommonEnvVariables: commonEnvVariables,
-		LogAbortedDetails:  logAbortedDetails,
+		FeatureFlags:           featureFlags,
+		RunnerId:               runnerId,
+		CommonEnvVariables:     commonEnvVariables,
+		LogAbortedDetails:      logAbortedDetails,
+		AllowLowSecurityFields: cfg.AllowLowSecurityFields,
 	})
 }

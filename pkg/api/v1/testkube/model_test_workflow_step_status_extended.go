@@ -8,6 +8,10 @@ func (s *TestWorkflowStepStatus) Aborted() bool {
 	return s != nil && *s == ABORTED_TestWorkflowStepStatus
 }
 
+func (s *TestWorkflowStepStatus) Canceled() bool {
+	return s != nil && *s == CANCELED_TestWorkflowStepStatus
+}
+
 func (s *TestWorkflowStepStatus) Skipped() bool {
 	return s != nil && *s == SKIPPED_TestWorkflowStepStatus
 }

@@ -18,6 +18,7 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
+	commonmapper "github.com/kubeshop/testkube/pkg/mapper/common"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 )
 
@@ -50,6 +51,7 @@ func executeTestWorkflowApi(workflowName string, request testkube.TestWorkflowEx
 			Type_:         common.Ptr(testkube.TESTWORKFLOW_TestWorkflowRunningContextActorType),
 		},
 	}
+
 	execution, err := client.ExecuteTestWorkflow(workflowName, request)
 	if err != nil {
 		return nil, err
@@ -59,10 +61,17 @@ func executeTestWorkflowApi(workflowName string, request testkube.TestWorkflowEx
 
 func executeTestWorkflowGrpc(workflowName string, request testkube.TestWorkflowExecutionRequest) ([]testkube.TestWorkflowExecution, error) {
 	cfg := config.Config()
-	client := env.Cloud()
+	client, err := env.Cloud()
+	if err != nil {
+		return nil, err
+	}
+	var targets []*cloud.ExecutionTarget
+	if request.Target != nil {
+		targets = commonmapper.MapAllTargetsApiToGrpc([]testkube.ExecutionTarget{*request.Target})
+	}
 
 	return client.ScheduleExecution(context.Background(), cfg.Execution.EnvironmentId, &cloud.ScheduleRequest{
-		Executions:      []*cloud.ScheduleExecution{{Selector: &cloud.ScheduleResourceSelector{Name: workflowName}, Config: request.Config}},
+		Executions:      []*cloud.ScheduleExecution{{Selector: &cloud.ScheduleResourceSelector{Name: workflowName}, Config: request.Config, Targets: targets}},
 		DisableWebhooks: cfg.Execution.DisableWebhooks,
 		Tags:            request.Tags,
 	}).All()
@@ -86,11 +95,19 @@ func listTestWorkflowsApi(labels map[string]string) ([]testkube.TestWorkflow, er
 
 func listTestWorkflowsGrpc(labels map[string]string) ([]testkube.TestWorkflow, error) {
 	cfg := config.Config()
-	client := testworkflowclient.NewCloudTestWorkflowClient(env.Cloud())
+	cloud, err := env.Cloud()
+	if err != nil {
+		return nil, err
+	}
+	client := testworkflowclient.NewCloudTestWorkflowClient(cloud)
 	return client.List(context.Background(), cfg.Execution.EnvironmentId, testworkflowclient.ListOptions{Labels: labels})
 }
 
 func GetExecution(id string) (*testkube.TestWorkflowExecution, error) {
 	cfg := config.Config()
-	return env.Cloud().GetExecution(context.Background(), cfg.Execution.EnvironmentId, id)
+	cloud, err := env.Cloud()
+	if err != nil {
+		return nil, err
+	}
+	return cloud.GetExecution(context.Background(), cfg.Execution.EnvironmentId, id)
 }

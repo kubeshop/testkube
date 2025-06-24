@@ -218,7 +218,6 @@ func (a *agentLoop) loopParallelStepNotifications(ctx context.Context) error {
 func (a *agentLoop) loopRunnerRequests(ctx context.Context) error {
 	watcher := a.client.WatchRunnerRequests(ctx)
 	var wg sync.WaitGroup
-	wg.Add(1)
 	for req := range watcher.Channel() {
 		wg.Add(1)
 		go func(req controlplaneclient.RunnerRequest) {
@@ -241,6 +240,20 @@ func (a *agentLoop) loopRunnerRequests(ctx context.Context) error {
 					err = req.Start().SendError(err)
 					if err != nil {
 						a.logger.Errorf("failed to send error for start execution '%s/%s': %v", req.EnvironmentID(), req.ExecutionID(), err)
+					}
+				}
+			case cloud.RunnerRequestType_CANCEL:
+				a.logger.Infow("received cancel request for execution", "environmentId", req.EnvironmentID(), "executionId", req.ExecutionID())
+				originalError := a.runner.Cancel(req.ExecutionID())
+				if originalError != nil {
+					err := req.SendError(originalError)
+					if err != nil {
+						a.logger.Errorf("failed to send cancel '%s/%s' error: %v: %v", req.EnvironmentID(), req.ExecutionID(), originalError, err)
+					}
+				} else {
+					err := req.Cancel().Send()
+					if err != nil {
+						a.logger.Errorf("failed to send cancel '%s/%s' success: %v", req.EnvironmentID(), req.ExecutionID(), err)
 					}
 				}
 			case cloud.RunnerRequestType_ABORT:
@@ -290,7 +303,6 @@ func (a *agentLoop) loopRunnerRequests(ctx context.Context) error {
 			}
 		}(req)
 	}
-	wg.Done()
 	wg.Wait()
 	return watcher.Err()
 }

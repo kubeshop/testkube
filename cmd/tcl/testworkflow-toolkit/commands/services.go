@@ -36,6 +36,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowresolver"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -70,6 +71,13 @@ type ServiceInfo struct {
 	Description string        `json:"description,omitempty"`
 	Logs        string        `json:"logs,omitempty"`
 	Status      ServiceStatus `json:"status,omitempty"`
+	Done        bool          `json:"done,omitempty"`
+}
+
+func (s ServiceInfo) AsMap() (v map[string]interface{}) {
+	serialized, _ := json.Marshal(s)
+	_ = json.Unmarshal(serialized, &v)
+	return
 }
 
 func NewServicesCmd() *cobra.Command {
@@ -159,6 +167,7 @@ func NewServicesCmd() *cobra.Command {
 						Pvcs: svcSpec.Pvcs,
 					}
 					spec.Steps[0].Run.ContainerConfig = testworkflowsv1.ContainerConfig{}
+					spec.Container.Env = testworkflowresolver.DedupeEnvVars(append(config.Config().Execution.GlobalEnv, spec.Container.Env...))
 
 					// Transfer the data
 					if spec.Content == nil {

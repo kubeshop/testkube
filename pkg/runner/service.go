@@ -79,7 +79,7 @@ func NewService(
 	}
 }
 
-func (s *service) recover(ctx context.Context) (err error) {
+func (s *service) reattach(ctx context.Context) (err error) {
 	executions, err := s.client.GetRunnerOngoingExecutions(ctx)
 	if err != nil {
 		log.DefaultLogger.Errorw("failed to get runner executions", "error", err)
@@ -97,16 +97,16 @@ func (s *service) recover(ctx context.Context) (err error) {
 				return
 			}
 
-			s.logger.Warnw("execution to monitor not found. recovering.", "id", executionId, "error", err)
+			s.logger.Warnw("execution to monitor not found. reattaching again.", "id", executionId, "error", err)
 
 			// Get the existing execution
 			execution, err := s.client.GetExecution(ctx, environmentId, executionId)
 			if err != nil {
-				s.logger.Errorw("failed to recover execution: getting execution", "id", executionId, "error", err)
+				s.logger.Errorw("failed to reattach to execution: getting execution", "id", executionId, "error", err)
 				return
 			}
 
-			// Ignore if it's still queued - orchestrator will recover it later
+			// Ignore if it's still queued - orchestrator will reattach to it later
 			if execution.Result.IsQueued() {
 				s.logger.Warnw("execution to monitor is still queued: leaving it for orchestrator", "id", executionId)
 				return
@@ -125,7 +125,7 @@ func (s *service) recover(ctx context.Context) (err error) {
 			}
 
 			// Finalize and save the result
-			execution.Result.HealAborted(sigSequence, errorMessage, controller.DefaultErrorMessage)
+			execution.Result.HealAbortedOrCanceled(sigSequence, errorMessage, controller.DefaultErrorMessage, "aborted")
 			execution.Result.HealTimestamps(sigSequence, execution.ScheduledAt, time.Time{}, time.Time{}, true)
 			execution.Result.HealDuration(execution.ScheduledAt)
 			execution.Result.HealMissingPauseStatuses()
@@ -159,7 +159,7 @@ func (s *service) Start(ctx context.Context) error {
 	g, ctx := errgroup.WithContext(ctx)
 
 	g.Go(func() error {
-		return s.recover(ctx)
+		return s.reattach(ctx)
 	})
 
 	g.Go(func() error {

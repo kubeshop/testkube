@@ -11,12 +11,13 @@ import (
 
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	constants2 "github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
+	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	stage2 "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
 )
 
-func CreateContainer(groupId int, defaultContainer stage2.Container, actions []actiontypes.Action, usesToolkit bool) (cr corev1.Container, actionsCleanup []actiontypes.Action, err error) {
+func CreateContainer(groupId int, defaultContainer stage2.Container, actions []actiontypes.Action, usesToolkit bool) (cr corev1.Container, globalEnv []testworkflowsv1.EnvVar, actionsCleanup []actiontypes.Action, err error) {
 	actions = slices.Clone(actions)
 	actionsCleanup = actions
 
@@ -68,7 +69,7 @@ func CreateContainer(groupId int, defaultContainer stage2.Container, actions []a
 	if len(containerConfigs) > 0 {
 		cr, err = stage2.NewContainer().ApplyCR(&bestContainerConfig.Container.Config).ToKubernetesTemplate()
 		if err != nil {
-			return corev1.Container{}, nil, err
+			return corev1.Container{}, nil, nil, err
 		}
 
 		// Combine environment variables from each execution
@@ -81,12 +82,33 @@ func CreateContainer(groupId int, defaultContainer stage2.Container, actions []a
 				computed := strings.Contains(newEnv.Value, "{{")
 				sensitive := newEnv.ValueFrom != nil && newEnv.ValueFrom.SecretKeyRef != nil
 				newEnv.Name = actiontypes.EnvName(fmt.Sprintf("%d", i), computed, sensitive, e.Name)
-				cr.Env = append(cr.Env, newEnv)
+				if newEnv.EnvVar.ValueFrom != nil {
+					if newEnv.EnvVar.ValueFrom.ConfigMapKeyRef != nil && newEnv.EnvVar.ValueFrom.ConfigMapKeyRef.Optional == nil {
+						newEnv.EnvVar.ValueFrom.ConfigMapKeyRef.Optional = common.Ptr(true)
+					}
+
+					if newEnv.EnvVar.ValueFrom.SecretKeyRef != nil && newEnv.EnvVar.ValueFrom.SecretKeyRef.Optional == nil {
+						newEnv.EnvVar.ValueFrom.SecretKeyRef.Optional = common.Ptr(true)
+					}
+				}
+
+				cr.Env = append(cr.Env, newEnv.EnvVar)
+				if e.Global != nil && *e.Global {
+					globalEnv = append(globalEnv, e)
+				}
 			}
 			for _, e := range containerConfigs[i].Container.Config.EnvFrom {
 				newEnvFrom := *e.DeepCopy()
 				sensitive := newEnvFrom.SecretRef != nil
 				newEnvFrom.Prefix = actiontypes.EnvName(fmt.Sprintf("%d", i), false, sensitive, e.Prefix)
+				if newEnvFrom.ConfigMapRef != nil && newEnvFrom.ConfigMapRef.Optional == nil {
+					newEnvFrom.ConfigMapRef.Optional = common.Ptr(true)
+				}
+
+				if newEnvFrom.SecretRef != nil && newEnvFrom.SecretRef.Optional == nil {
+					newEnvFrom.SecretRef.Optional = common.Ptr(true)
+				}
+
 				cr.EnvFrom = append(cr.EnvFrom, newEnvFrom)
 			}
 		}
@@ -181,6 +203,9 @@ func CreateContainer(groupId int, defaultContainer stage2.Container, actions []a
 			},
 		}},
 	)
+
+	// Inject container name
+	cr.Env = append(cr.Env, corev1.EnvVar{Name: fmt.Sprintf("_%s_%s", constants2.EnvGroupRuntime, constants2.EnvContainerName), Value: cr.Name})
 
 	// Point the Init Process to the proper group
 	cr.Command = []string{initPath, fmt.Sprintf("%d", groupId)}

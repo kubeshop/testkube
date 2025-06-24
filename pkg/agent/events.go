@@ -120,15 +120,10 @@ func (ag *Agent) sendEvent(ctx context.Context, stream cloud.TestKubeCloudAPI_Se
 	t := time.NewTimer(ag.sendTimeout)
 	select {
 	case err := <-errChan:
-		if !t.Stop() {
-			<-t.C
-		}
+		t.Stop()
 		return err
 	case <-ctx.Done():
-		if !t.Stop() {
-			<-t.C
-		}
-
+		t.Stop()
 		return ctx.Err()
 	case <-t.C:
 		return errors.New("too slow")

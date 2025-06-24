@@ -24,6 +24,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/log"
+	commonmapper "github.com/kubeshop/testkube/pkg/mapper/common"
 	testworkflows2 "github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowclient"
 	"github.com/kubeshop/testkube/pkg/newclients/testworkflowtemplateclient"
@@ -262,24 +263,8 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 			targets := execution.Targets
 
 			if isEmptyTargets(targets) && w.Spec.Execution != nil && w.Spec.Execution.Target != nil {
-				target := cloud.ExecutionTarget{
-					Replicate: w.Spec.Execution.Target.Replicate,
-				}
-
-				if w.Spec.Execution.Target.Match != nil {
-					target.Match = make(map[string]*cloud.ExecutionTargetLabels)
-					for k, v := range w.Spec.Execution.Target.Match {
-						target.Match[k] = &cloud.ExecutionTargetLabels{Labels: v}
-					}
-				}
-				if w.Spec.Execution.Target.Not != nil {
-					target.Not = make(map[string]*cloud.ExecutionTargetLabels)
-					for k, v := range w.Spec.Execution.Target.Not {
-						target.Not[k] = &cloud.ExecutionTargetLabels{Labels: v}
-					}
-				}
-
-				targets = []*cloud.ExecutionTarget{&target}
+				target := commonmapper.MapTargetApiToGrpc(w.Spec.Execution.Target)
+				targets = []*cloud.ExecutionTarget{target}
 			}
 
 			intermediateSelectors = append(intermediateSelectors, &cloud.ScheduleExecution{

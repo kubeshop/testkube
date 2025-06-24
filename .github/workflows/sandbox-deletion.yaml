@@ -9,7 +9,7 @@ jobs:
     if: startsWith(github.event.pull_request.head.ref, 'sandbox/')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/create-github-app-token@v1
+      - uses: actions/create-github-app-token@v2
         id: app-token
         with:
           app-id: ${{ secrets.APP_ID }}

@@ -1,0 +1,72 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: curl-workflow-smoke
+  labels:
+    core-tests: workflows
+    tool: curl
+spec:
+  container:
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+    - name: Run tests
+      shell: curl -f -LI https://testkube-test-page-lipsum.pages.dev/
+      container:
+        image: curlimages/curl:8.7.1
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: curl-workflow-smoke-private-registry
+  labels:
+    core-tests: workflows
+    tool: curl
+spec:
+  pod:
+    imagePullSecrets:
+      - name: example-private-registry-credentials
+  container:
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+    - name: Run tests
+      shell: curl -f -LI https://testkube-test-page-lipsum.pages.dev/ && sleep 10
+      container:
+        image: tkoniecznykubeshop/example-private-repo:curl-8.7.1
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: curl-workflow-smoke-matrix
+  labels:
+    core-tests: workflows
+    tool: curl
+spec:
+  container:
+    resources:
+      requests:
+        cpu: 32m
+        memory: 32Mi
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+    - name: Run tests
+      parallel:
+        matrix:
+          url:
+            [
+              "https://testkube-test-page-lipsum.pages.dev/",
+              "https://docs.testkube.io",
+            ]
+        shell: curl -f -LI '{{ matrix.url }}'
+        container:
+          image: curlimages/curl:8.7.1

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"strings"
 	"time"
 
@@ -215,6 +216,30 @@ func (r *MongoRepository) GetRunning(ctx context.Context) (result []testkube.Tes
 	return
 }
 
+func (r *MongoRepository) GetFinished(ctx context.Context, filter Filter) (result []testkube.TestWorkflowExecution, err error) {
+	result = make([]testkube.TestWorkflowExecution, 0)
+	query, opts := composeQueryAndOpts(filter)
+	if r.allowDiskUse {
+		opts.SetAllowDiskUse(r.allowDiskUse)
+	}
+	query["$or"] = bson.A{
+		bson.M{"result.status": testkube.PASSED_TestWorkflowStatus},
+		bson.M{"result.status": testkube.FAILED_TestWorkflowStatus},
+		bson.M{"result.status": testkube.ABORTED_TestWorkflowStatus},
+	}
+
+	cursor, err := r.Coll.Find(ctx, query, opts)
+	if err != nil {
+		return result, err
+	}
+	err = cursor.All(ctx, &result)
+
+	for i := range result {
+		result[i].UnscapeDots()
+	}
+	return
+}
+
 func (r *MongoRepository) GetExecutionsTotals(ctx context.Context, filter ...Filter) (totals testkube.ExecutionsTotals, err error) {
 	var result []struct {
 		Status string `bson:"_id"`
@@ -227,9 +252,15 @@ func (r *MongoRepository) GetExecutionsTotals(ctx context.Context, filter ...Fil
 	}
 
 	pipeline := []bson.D{{{Key: "$match", Value: query}}}
-	if len(filter) > 0 {
+	hasSkip := len(filter) > 0 && filter[0].Page() > 0
+	hasLimit := len(filter) > 0 && filter[0].PageSize() < math.MaxInt32
+	if hasSkip || hasLimit {
 		pipeline = append(pipeline, bson.D{{Key: "$sort", Value: bson.D{{Key: "statusat", Value: -1}}}})
+	}
+	if hasSkip {
 		pipeline = append(pipeline, bson.D{{Key: "$skip", Value: int64(filter[0].Page() * filter[0].PageSize())}})
+	}
+	if hasLimit {
 		pipeline = append(pipeline, bson.D{{Key: "$limit", Value: int64(filter[0].PageSize())}})
 	}
 

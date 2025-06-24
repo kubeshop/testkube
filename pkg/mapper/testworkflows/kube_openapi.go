@@ -10,6 +10,7 @@ import (
 	testworkflowsv1 "github.com/kubeshop/testkube-operator/api/testworkflows/v1"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	commonmapper "github.com/kubeshop/testkube/pkg/mapper/common"
 )
 
 func MapIntOrStringToString(i intstr.IntOrString) string {
@@ -297,8 +298,9 @@ func MapVolumeKubeToAPI(v corev1.Volume) testkube.Volume {
 	}
 }
 
-func MapEnvVarKubeToAPI(v corev1.EnvVar) testkube.EnvVar {
+func MapEnvVarKubeToAPI(v testworkflowsv1.EnvVar) testkube.EnvVar {
 	return testkube.EnvVar{
+		Global:    MapBoolToBoxedBoolean(v.Global),
 		Name:      v.Name,
 		Value:     v.Value,
 		ValueFrom: common.MapPtr(v.ValueFrom, MapEnvVarSourceKubeToAPI),
@@ -312,7 +314,7 @@ func MapConfigMapKeyRefKubeToAPI(v *corev1.ConfigMapKeySelector) *testkube.EnvVa
 	return &testkube.EnvVarSourceConfigMapKeyRef{
 		Key:      v.Key,
 		Name:     v.Name,
-		Optional: common.ResolvePtr(v.Optional, false),
+		Optional: v.Optional,
 	}
 }
 
@@ -348,7 +350,7 @@ func MapSecretKeyRefKubeToAPI(v *corev1.SecretKeySelector) *testkube.EnvVarSourc
 	return &testkube.EnvVarSourceSecretKeyRef{
 		Key:      v.Key,
 		Name:     v.Name,
-		Optional: common.ResolvePtr(v.Optional, false),
+		Optional: v.Optional,
 	}
 }
 
@@ -367,7 +369,7 @@ func MapConfigMapEnvSourceKubeToAPI(v *corev1.ConfigMapEnvSource) *testkube.Conf
 	}
 	return &testkube.ConfigMapEnvSource{
 		Name:     v.Name,
-		Optional: common.ResolvePtr(v.Optional, false),
+		Optional: v.Optional,
 	}
 }
 
@@ -377,7 +379,7 @@ func MapSecretEnvSourceKubeToAPI(v *corev1.SecretEnvSource) *testkube.SecretEnvS
 	}
 	return &testkube.SecretEnvSource{
 		Name:     v.Name,
-		Optional: common.ResolvePtr(v.Optional, false),
+		Optional: v.Optional,
 	}
 }
 
@@ -484,14 +486,6 @@ func MapContentTarballKubeToAPI(v testworkflowsv1.ContentTarball) testkube.TestW
 	}
 }
 
-func MapTargetKubeToAPI(v testworkflowsv1.Target) testkube.TestWorkflowTarget {
-	return testkube.TestWorkflowTarget{
-		Match:     v.Match,
-		Not:       v.Not,
-		Replicate: v.Replicate,
-	}
-}
-
 func MapContentKubeToAPI(v testworkflowsv1.Content) testkube.TestWorkflowContent {
 	return testkube.TestWorkflowContent{
 		Git:     common.MapPtr(v.Git, MapContentGitKubeToAPI),
@@ -552,6 +546,8 @@ func MapCronJobConfigKubeToAPI(v testworkflowsv1.CronJobConfig) testkube.TestWor
 		Config:      MapConfigValueKubeToAPI(v.Config),
 		Labels:      v.Labels,
 		Annotations: v.Annotations,
+		Target:      common.MapPtr(v.Target, commonmapper.MapTargetKubeToAPI),
+		Timezone:    MapStringToBoxedString(v.Timezone),
 	}
 }
 
@@ -780,6 +776,7 @@ func MapPodConfigKubeToAPI(v testworkflowsv1.PodConfig) testkube.TestWorkflowPod
 		TopologySpreadConstraints: common.MapSlice(v.TopologySpreadConstraints, MapTopologySpreadConstraintKubeToAPI),
 		SchedulingGates:           common.MapSlice(v.SchedulingGates, MapPodSchedulingGateKubeToAPI),
 		ResourceClaims:            common.MapSlice(v.ResourceClaims, MapPodResourceClaimKubeToAPI),
+		HostPID:                   MapBoolToBoxedBoolean(v.HostPID),
 	}
 }
 
@@ -958,6 +955,7 @@ func MapStepExecuteTestWorkflowKubeToAPI(v testworkflowsv1.StepExecuteWorkflow) 
 		Matrix:        MapDynamicListMapKubeToAPI(v.Matrix),
 		Shards:        MapDynamicListMapKubeToAPI(v.Shards),
 		Selector:      common.MapPtr(v.Selector, MapSelectorToAPI),
+		Target:        common.MapPtr(v.Target, commonmapper.MapTargetKubeToAPI),
 	}
 }
 
@@ -1360,7 +1358,7 @@ func MapTemplateListKubeToAPI(v *testworkflowsv1.TestWorkflowTemplateList) []tes
 func MapTestWorkflowTagSchemaKubeToAPI(v testworkflowsv1.TestWorkflowTagSchema) testkube.TestWorkflowTagSchema {
 	return testkube.TestWorkflowTagSchema{
 		Tags:   v.Tags,
-		Target: common.MapPtr(v.Target, MapTargetKubeToAPI),
+		Target: common.MapPtr(v.Target, commonmapper.MapTargetKubeToAPI),
 	}
 }
 

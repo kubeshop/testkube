@@ -1,0 +1,78 @@
+apiVersion: tests.testkube.io/v3
+kind: TestSuite
+metadata:
+  name: expected-fail
+  labels:
+    core-tests: expected-fail
+spec:
+  description: "Edge cases - expected failures"
+  steps:
+  - stopOnFailure: false
+    execute:
+    - test: expected-fail-git-checkout-path
+  - stopOnFailure: false
+    execute:
+    - test: expected-fail-git-checkout-branch
+  - stopOnFailure: false
+    execute:
+    - test: expected-fail-git-checkout-uri
+  - stopOnFailure: false
+    execute:
+    - test: expected-fail-artillery-executor-incorrect-uri
+  - stopOnFailure: false
+    execute:
+    - test: expected-fail-container-executor-curl-incorrect-uri
+  - stopOnFailure: false
+    execute:
+    - test: expected-fail-curl-executor-incorrect-uri
+  - stopOnFailure: false
+    execute:
+    - test: expected-fail-ginkgo-executor
+  - stopOnFailure: false
+    execute:
+    - test: expected-fail-gradle-executor-wrong-jdk-version
+  - stopOnFailure: false
+    execute:
+    - test: expected-fail-gradle-executor-envs-not-set
+  - stopOnFailure: false
+    execute:
+    - test: expected-fail-jmeter-executor-JSR223
+  - stopOnFailure: false
+    execute:
+    - test: expected-fail-jmeterd-executor-JSR223
+  - stopOnFailure: false
+    execute:
+    - test: expected-fail-kubepug-executor
+  - stopOnFailure: false
+    execute:
+    - test: expected-fail-container-executor-k6-wrong-dir
+  - stopOnFailure: false
+    execute:
+    - test: expected-fail-maven-executor-jdk18-incorrect-image
+  - stopOnFailure: false
+    execute:
+    - test: expected-fail-jmeter-oomkilled
+  - stopOnFailure: false
+    execute:
+    - test: expected-fail-jmeter-timeout
+  - stopOnFailure: false
+    execute:
+    - test: expected-fail-cypress-oomkilled
+  - stopOnFailure: false
+    execute:
+    - test: expected-fail-pre-run-script
+  - stopOnFailure: false
+    execute:
+    - test: expected-fail-post-run-script
+  - stopOnFailure: false
+    execute:
+    - test: expected-fail-container-pre-run-script
+  - stopOnFailure: false
+    execute:
+    - test: expected-fail-container-post-run-script
+  - stopOnFailure: false
+    execute:
+    - test: expected-fail-pre-post-run-script
+  - stopOnFailure: false
+    execute:
+    - test: expected-fail-container-pre-post-run-script

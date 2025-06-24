@@ -30,7 +30,9 @@ import (
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/client"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	"github.com/kubeshop/testkube/pkg/credentials"
 	"github.com/kubeshop/testkube/pkg/expressions"
+	commonmapper "github.com/kubeshop/testkube/pkg/mapper/common"
 	"github.com/kubeshop/testkube/pkg/mapper/testworkflows"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -162,6 +164,7 @@ func buildTestExecution(test testworkflowsv1.StepExecuteTest, async bool) (func(
 func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async bool) (func() error, error) {
 	return func() (err error) {
 		tags := config.ExecutionTags()
+		target := common.MapPtr(workflow.Target, commonmapper.MapTargetKubeToAPI)
 
 		// Schedule execution
 		var execs []testkube.TestWorkflowExecution
@@ -171,6 +174,7 @@ func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async 
 				Config:          testworkflows.MapConfigValueKubeToAPI(workflow.Config),
 				DisableWebhooks: config.ExecutionDisableWebhooks(),
 				Tags:            tags,
+				Target:          target,
 			})
 			if err == nil {
 				break
@@ -208,31 +212,44 @@ func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async 
 
 		// Monitor
 		var wg sync.WaitGroup
+		var mu sync.Mutex
+		var errs []error // Collect errors safely
+
 		wg.Add(len(execs))
 		for i := range execs {
 			go func(exec testkube.TestWorkflowExecution) {
 				defer wg.Done()
 				prevStatus := testkube.QUEUED_TestWorkflowStatus
+				var gErr error
 			loop:
 				for {
 					// TODO: Consider real-time Notifications without logs instead
 					time.Sleep(ExecutionResultPollingTime)
+
+					// Use go routine error variable
 					for i := 0; i < GetExecutionRetryOnFailureMaxAttempts; i++ {
 						var next *testkube.TestWorkflowExecution
-						next, err = execute.GetExecution(exec.Id)
-						if err == nil {
+						next, gErr = execute.GetExecution(exec.Id)
+						if gErr == nil {
 							exec = *next
 							break
 						}
+
 						if i+1 < GetExecutionRetryOnFailureMaxAttempts {
-							ui.Errf("error while getting execution result: retrying in %s (attempt %d/%d): %s: %s", GetExecutionRetryOnFailureDelay.String(), i+2, GetExecutionRetryOnFailureMaxAttempts, ui.LightCyan(exec.Name), err.Error())
+							ui.Errf("error while getting execution result: retrying in %s (attempt %d/%d): %s: %s", GetExecutionRetryOnFailureDelay.String(), i+2, GetExecutionRetryOnFailureMaxAttempts, ui.LightCyan(exec.Name), gErr.Error())
 							time.Sleep(GetExecutionRetryOnFailureDelay)
 						}
 					}
-					if err != nil {
-						ui.Errf("error while getting execution result: %s: %s", ui.LightCyan(exec.Name), err.Error())
+
+					// Check go routine error
+					if gErr != nil {
+						ui.Errf("error while getting execution result: %s: %s", ui.LightCyan(exec.Name), gErr.Error())
+						mu.Lock()
+						errs = append(errs, gErr)
+						mu.Unlock()
 						return
 					}
+
 					if exec.Result != nil && exec.Result.Status != nil {
 						status := *exec.Result.Status
 						switch status {
@@ -241,18 +258,29 @@ func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async 
 						default:
 							break loop
 						}
+
 						if prevStatus != status {
 							instructions.PrintOutput(config.Ref(), "testworkflow-status", &executionResult{Id: exec.Id, Status: string(status)})
 						}
+
 						prevStatus = status
 					}
 				}
 
+				// Safe status access after loop
+				if exec.Result == nil || exec.Result.Status == nil {
+					mu.Lock()
+					errs = append(errs, fmt.Errorf("execution %s completed but status unavailable", exec.Name))
+					mu.Unlock()
+					return
+				}
+
 				status := *exec.Result.Status
 				color := ui.Green
-
 				if status != testkube.PASSED_TestWorkflowStatus {
-					err = errors.New("test workflow failed")
+					mu.Lock()
+					errs = append(errs, fmt.Errorf("execution %s failed", exec.Name))
+					mu.Unlock()
 					color = ui.Red
 				}
 
@@ -261,6 +289,15 @@ func buildWorkflowExecution(workflow testworkflowsv1.StepExecuteWorkflow, async 
 			}(execs[i])
 		}
 		wg.Wait()
+
+		// Handle collected errors
+		if len(errs) > 0 {
+			for _, lErr := range errs {
+				ui.Errf("Execution error: %s", lErr.Error())
+			}
+
+			return fmt.Errorf("one or more executions failed")
+		}
 
 		return
 	}, nil
@@ -321,7 +358,8 @@ func NewExecuteCmd() *cobra.Command {
 
 		Run: func(cmd *cobra.Command, _ []string) {
 			// Initialize internal machine
-			baseMachine := data.GetBaseTestWorkflowMachine()
+			credMachine := credentials.NewCredentialMachine(data.Credentials())
+			baseMachine := expressions.CombinedMachines(data.GetBaseTestWorkflowMachine(), credMachine)
 
 			// Initialize transfer server
 			transferSrv := transfer.NewServer(constants.DefaultTransferDirPath, config.IP(), constants.DefaultTransferPort)

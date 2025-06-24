@@ -20,20 +20,22 @@ import (
 )
 
 type RunnerAgent struct {
-	pod              *PodObject
-	cloud            *CloudObject
-	agentImage       string
-	initProcessImage string
-	toolkitImage     string
+	pod                *PodObject
+	cloud              *CloudObject
+	agentImage         string
+	initProcessImage   string
+	toolkitImage       string
+	executionNamespace string
 }
 
-func NewRunnerAgent(pod *PodObject, cloud *CloudObject, agentImage, initProcessImage, toolkitImage string) *RunnerAgent {
+func NewRunnerAgent(pod *PodObject, cloud *CloudObject, agentImage, initProcessImage, toolkitImage, executionNamespace string) *RunnerAgent {
 	return &RunnerAgent{
-		pod:              pod,
-		cloud:            cloud,
-		agentImage:       agentImage,
-		initProcessImage: initProcessImage,
-		toolkitImage:     toolkitImage,
+		pod:                pod,
+		cloud:              cloud,
+		agentImage:         agentImage,
+		initProcessImage:   initProcessImage,
+		toolkitImage:       toolkitImage,
+		executionNamespace: executionNamespace,
 	}
 }
 
@@ -63,7 +65,8 @@ func (r *RunnerAgent) Create(ctx context.Context, env *client.Environment, runne
 		// Runner configuration
 		{Name: "APISERVER_FULLNAME", Value: "devbox-agent"},
 		{Name: "TESTKUBE_NAMESPACE", Value: r.pod.Namespace()},
-		{Name: "JOB_SERVICE_ACCOUNT_NAME", Value: "devbox-account"},
+		{Name: "DEFAULT_EXECUTION_NAMESPACE", Value: r.executionNamespace},
+		{Name: "JOB_SERVICE_ACCOUNT_NAME", Value: jobServiceAccountName},
 		{Name: "TESTKUBE_ENABLE_IMAGE_DATA_PERSISTENT_CACHE", Value: "true"},
 		{Name: "TESTKUBE_IMAGE_DATA_PERSISTENT_CACHE_KEY", Value: "testkube-image-cache"},
 		{Name: "TESTKUBE_TW_TOOLKIT_IMAGE", Value: r.toolkitImage},

@@ -32,6 +32,8 @@ const (
 	InternalAnnotationFieldPath     = "metadata.annotations['" + InternalAnnotationName + "']"
 	OpenSourceOperationErrorMessage = "operation is not available when running the Testkube Agent in the standalone mode"
 	RootOperationName               = "root"
+	AnnotationTerminationCode       = "testkube.io/termination-code"
+	AnnotationTerminationReason     = "testkube.io/termination-reason"
 )
 
 var (
@@ -45,8 +47,8 @@ var (
 	DefaultShellHeader     = "set -e\n"
 	DefaultContainerConfig = testworkflowsv1.ContainerConfig{
 		Image: DefaultInitImage,
-		Env: []corev1.EnvVar{
-			{Name: "CI", Value: "1"},
+		Env: []testworkflowsv1.EnvVar{
+			{EnvVar: corev1.EnvVar{Name: "CI", Value: "1"}},
 		},
 	}
 	DefaultInitImage                             = getInitImage()

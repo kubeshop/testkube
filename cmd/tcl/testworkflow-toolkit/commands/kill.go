@@ -21,6 +21,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/artifacts"
 	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/env/config"
+	"github.com/kubeshop/testkube/pkg/credentials"
 	"github.com/kubeshop/testkube/pkg/expressions"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
 	"github.com/kubeshop/testkube/pkg/ui"
@@ -36,7 +37,8 @@ func NewKillCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 
 		Run: func(cmd *cobra.Command, args []string) {
-			machine := expressions.CombinedMachines(data.AliasMachine, data.GetBaseTestWorkflowMachine())
+			credMachine := credentials.NewCredentialMachine(data.Credentials())
+			machine := expressions.CombinedMachines(data.AliasMachine, data.GetBaseTestWorkflowMachine(), credMachine)
 			groupRef := args[0]
 
 			conditions := make(map[string]expressions.Expression)
@@ -76,6 +78,7 @@ func NewKillCmd() *cobra.Command {
 				for _, item := range items {
 					service, index := spawn.GetServiceByResourceId(item.Resource.Id)
 					if _, ok := conditions[service]; !ok {
+						instructions.PrintOutput(config.Ref(), "service", ServiceInfo{Group: groupRef, Name: service, Index: index, Done: true})
 						continue
 					}
 					serviceMachine := expressions.NewMachine().
@@ -136,7 +139,10 @@ func NewKillCmd() *cobra.Command {
 				}
 
 				// Fetch logs for them
-				storage := artifacts.InternalStorage()
+				storage, err := artifacts.InternalStorage()
+				if err != nil {
+					ui.Failf("could not create internal storage client: %v", err)
+				}
 				for _, id := range ids {
 					service, index := spawn.GetServiceByResourceId(id)
 					count := index + 1
@@ -147,7 +153,7 @@ func NewKillCmd() *cobra.Command {
 
 					logsFilePath, err := spawn.SaveLogs(context.Background(), storage, config.Namespace(), id, service+"/", index)
 					if err == nil {
-						instructions.PrintOutput(config.Ref(), "service", ServiceInfo{Group: groupRef, Name: service, Index: index, Logs: storage.FullPath(logsFilePath)})
+						instructions.PrintOutput(config.Ref(), "service", ServiceInfo{Group: groupRef, Name: service, Index: index, Logs: storage.FullPath(logsFilePath), Done: true})
 						log("saved logs")
 					} else {
 						log("warning", "problem saving the logs", err.Error())

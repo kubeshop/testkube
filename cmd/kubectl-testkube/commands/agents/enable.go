@@ -8,7 +8,6 @@ import (
 
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/cloud/client"
-	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -17,7 +16,6 @@ func NewEnableAgentCommand() *cobra.Command {
 		Use:     "agent <name>",
 		Aliases: []string{"runner", "gitops"},
 		Args:    cobra.ExactArgs(1),
-		Hidden:  !log.IsTrue("EXPERIMENTAL"),
 		Run: func(cmd *cobra.Command, args []string) {
 			UiEnableAgent(cmd, strings.Join(args, ""))
 		},
@@ -31,7 +29,6 @@ func NewDisableAgentCommand() *cobra.Command {
 		Use:     "agent <name>",
 		Aliases: []string{"runner", "gitops"},
 		Args:    cobra.ExactArgs(1),
-		Hidden:  !log.IsTrue("EXPERIMENTAL"),
 		Run: func(cmd *cobra.Command, args []string) {
 			UiDisableAgent(cmd, strings.Join(args, ""))
 		},

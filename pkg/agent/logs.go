@@ -193,14 +193,10 @@ func (ag *Agent) sendLogStreamResponse(ctx context.Context, stream cloud.TestKub
 	t := time.NewTimer(ag.sendTimeout)
 	select {
 	case err := <-errChan:
-		if !t.Stop() {
-			<-t.C
-		}
+		t.Stop()
 		return err
 	case <-ctx.Done():
-		if !t.Stop() {
-			<-t.C
-		}
+		t.Stop()
 
 		return ctx.Err()
 	case <-t.C:

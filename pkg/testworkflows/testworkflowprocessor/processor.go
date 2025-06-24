@@ -23,6 +23,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/constants"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
+	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowresolver"
 )
 
 //go:generate mockgen -destination=./mock_processor.go -package=testworkflowprocessor "github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor" Processor
@@ -44,7 +45,9 @@ type processor struct {
 }
 
 func New(inspector imageinspector.Inspector) Processor {
-	return &processor{inspector: inspector}
+	return &processor{
+		inspector: inspector,
+	}
 }
 
 func (p *processor) Register(operation Operation) Processor {
@@ -208,11 +211,20 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 
 	// Finalize Volumes
 	volumes := layer.Volumes()
+	var secretVolumeNames []string
 	for i := range volumes {
 		err = expressions.FinalizeForce(&volumes[i], machines...)
 		if err != nil {
 			return nil, errors.Wrap(err, "finalizing Volume")
 		}
+		if volumes[i].Secret != nil {
+			secretVolumeNames = append(secretVolumeNames, volumes[i].Name)
+		}
+	}
+
+	volumeNameMap := make(map[string]struct{})
+	for _, volumeName := range secretVolumeNames {
+		volumeNameMap[volumeName] = struct{}{}
 	}
 
 	// Append main label for the pod
@@ -320,13 +332,17 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	containers := make([]corev1.Container, len(actionGroups))
 	for i := range actionGroups {
 		var bareActions []actiontypes.Action
-		containers[i], bareActions, err = action.CreateContainer(i, layer.ContainerDefaults(), actionGroups[i], usesToolkit)
+		var globalEnv []testworkflowsv1.EnvVar
+		containers[i], globalEnv, bareActions, err = action.CreateContainer(i, layer.ContainerDefaults(), actionGroups[i], usesToolkit)
 		actionGroups[i] = bareActions
 		if err != nil {
 			return nil, errors.Wrap(err, "building Kubernetes containers")
 		}
+
+		options.Config.Execution.GlobalEnv = testworkflowresolver.DedupeEnvVars(append(options.Config.Execution.GlobalEnv, globalEnv...))
 	}
 
+	secretMountPaths := make(map[string][]string)
 	for i := range containers {
 		err = expressions.FinalizeForce(&containers[i].EnvFrom, machines...)
 		if err != nil {
@@ -350,6 +366,9 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 			if !filepath.IsAbs(containers[i].VolumeMounts[j].MountPath) {
 				containers[i].VolumeMounts[j].MountPath = filepath.Clean(filepath.Join(workingDir, containers[i].VolumeMounts[j].MountPath))
 			}
+			if _, ok := volumeNameMap[containers[i].VolumeMounts[j].Name]; ok {
+				secretMountPaths[containers[i].Name] = append(secretMountPaths[containers[i].Name], containers[i].VolumeMounts[j].MountPath)
+			}
 		}
 
 		// Avoid having working directory set up, so we have the default one
@@ -366,6 +385,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 		}
 	}
 
+	options.Config.Execution.SecretMountPaths = secretMountPaths
 	// Append common environment variables
 	if len(options.CommonEnvVariables) > 0 {
 		for i := range containers {
@@ -380,6 +400,15 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 	if podConfig.SecurityContext.FSGroup == nil {
 		podConfig.SecurityContext.FSGroup = common.Ptr(constants.DefaultFsGroup)
 	}
+	hostPID := false
+	if podConfig.HostPID != nil {
+		if options.AllowLowSecurityFields {
+			hostPID = *podConfig.HostPID
+		} else {
+			return nil, errors.New("low security fields are not allowed")
+		}
+	}
+
 	podSpec := corev1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: podConfig.Annotations,
@@ -408,6 +437,7 @@ func (p *processor) Bundle(ctx context.Context, workflow *testworkflowsv1.TestWo
 			TopologySpreadConstraints: podConfig.TopologySpreadConstraints,
 			SchedulingGates:           podConfig.SchedulingGates,
 			ResourceClaims:            podConfig.ResourceClaims,
+			HostPID:                   hostPID,
 		},
 	}
 	AnnotateControlledBy(&podSpec, options.Config.Resource.RootId, options.Config.Resource.Id)
@@ -476,6 +506,17 @@ func addEnvVarToContainerSpec(mapEnv map[string]corev1.EnvVarSource, containers 
 				Name:      envName,
 				ValueFrom: envSource.DeepCopy(),
 			}
+
+			if e.ValueFrom != nil {
+				if e.ValueFrom.ConfigMapKeyRef != nil && e.ValueFrom.ConfigMapKeyRef.Optional == nil {
+					e.ValueFrom.ConfigMapKeyRef.Optional = common.Ptr(true)
+				}
+
+				if e.ValueFrom.SecretKeyRef != nil && e.ValueFrom.SecretKeyRef.Optional == nil {
+					e.ValueFrom.SecretKeyRef.Optional = common.Ptr(true)
+				}
+			}
+
 			containers[i].Env = append(containers[i].Env, e)
 		}
 	}

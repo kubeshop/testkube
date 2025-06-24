@@ -99,17 +99,20 @@ type LogServerConfig struct {
 }
 
 type ControlPlaneConfig struct {
-	TestkubeProEnvID             string `envconfig:"TESTKUBE_PRO_ENV_ID" default:""`
-	TestkubeProOrgID             string `envconfig:"TESTKUBE_PRO_ORG_ID" default:""`
-	TestkubeProAgentID           string `envconfig:"TESTKUBE_PRO_AGENT_ID" default:""`
-	TestkubeProAPIKey            string `envconfig:"TESTKUBE_PRO_API_KEY" default:""`
-	TestkubeProURL               string `envconfig:"TESTKUBE_PRO_URL" default:""`
-	TestkubeProTLSInsecure       bool   `envconfig:"TESTKUBE_PRO_TLS_INSECURE" default:"false"`
-	TestkubeProSkipVerify        bool   `envconfig:"TESTKUBE_PRO_SKIP_VERIFY" default:"false"`
-	TestkubeProConnectionTimeout int    `envconfig:"TESTKUBE_PRO_CONNECTION_TIMEOUT" default:"10"`
-	TestkubeProCertFile          string `envconfig:"TESTKUBE_PRO_CERT_FILE" default:""`
-	TestkubeProKeyFile           string `envconfig:"TESTKUBE_PRO_KEY_FILE" default:""`
-	TestkubeProTLSSecret         string `envconfig:"TESTKUBE_PRO_TLS_SECRET" default:""`
+	TestkubeProEnvID             string        `envconfig:"TESTKUBE_PRO_ENV_ID" default:""`
+	TestkubeProOrgID             string        `envconfig:"TESTKUBE_PRO_ORG_ID" default:""`
+	TestkubeProAgentID           string        `envconfig:"TESTKUBE_PRO_AGENT_ID" default:""`
+	TestkubeProAPIKey            string        `envconfig:"TESTKUBE_PRO_API_KEY" default:""`
+	TestkubeProURL               string        `envconfig:"TESTKUBE_PRO_URL" default:""`
+	TestkubeProAgentRegToken     string        `envconfig:"TESTKUBE_PRO_AGENT_REGISTRATION_TOKEN" default:""`
+	TestkubeProTLSInsecure       bool          `envconfig:"TESTKUBE_PRO_TLS_INSECURE" default:"false"`
+	TestkubeProSkipVerify        bool          `envconfig:"TESTKUBE_PRO_SKIP_VERIFY" default:"false"`
+	TestkubeProConnectionTimeout int           `envconfig:"TESTKUBE_PRO_CONNECTION_TIMEOUT" default:"10"`
+	TestkubeProCertFile          string        `envconfig:"TESTKUBE_PRO_CERT_FILE" default:""`
+	TestkubeProKeyFile           string        `envconfig:"TESTKUBE_PRO_KEY_FILE" default:""`
+	TestkubeProTLSSecret         string        `envconfig:"TESTKUBE_PRO_TLS_SECRET" default:""`
+	TestkubeProSendTimeout       time.Duration `envconfig:"TESTKUBE_PRO_SEND_TIMEOUT" default:"30s"`
+	TestkubeProRecvTimeout       time.Duration `envconfig:"TESTKUBE_PRO_RECV_TIMEOUT" default:"5m"`
 
 	// TestkubeProCAFile is meant to provide a custom CA when making a TLS connection to
 	// the agent API.
@@ -160,7 +163,11 @@ type ImageInspectorConfig struct {
 }
 
 type RunnerConfig struct {
-	DisableRunner bool `envconfig:"DISABLE_RUNNER" default:"false"`
+	DefaultExecutionNamespace string `envconfig:"DEFAULT_EXECUTION_NAMESPACE" default:""`
+	DisableRunner             bool   `envconfig:"DISABLE_RUNNER" default:"false"`
+	SelfRegistrationSecret    string `envconfig:"SELF_REGISTRATION_SECRET" default:""`
+	RunnerName                string `envconfig:"RUNNER_NAME" default:""`
+	FloatingRunner            bool   `envconfig:"FLOATING_RUNNER" default:"false"`
 }
 
 type GitOpsSyncConfig struct {
@@ -213,6 +220,8 @@ type Config struct {
 	TestkubeDockerImageVersion      string   `envconfig:"TESTKUBE_DOCKER_IMAGE_VERSION" default:""`
 	DisableDeprecatedTests          bool     `envconfig:"DISABLE_DEPRECATED_TESTS" default:"false"`
 	DisableWebhooks                 bool     `envconfig:"DISABLE_WEBHOOKS" default:"false"`
+	AllowLowSecurityFields          bool     `envconfig:"ALLOW_LOW_SECURITY_FIELDS" default:"false"`
+	EnableK8sControllers            bool     `envconfig:"ENABLE_K8S_CONTROLLERS" default:"false"`
 
 	FeatureNewArchitecture bool `envconfig:"FEATURE_NEW_ARCHITECTURE" default:"false"`
 	FeatureCloudStorage    bool `envconfig:"FEATURE_CLOUD_STORAGE" default:"false"`
@@ -245,6 +254,7 @@ func Get() (*Config, error) {
 		c.DisableDefaultAgent = true
 		c.NatsEmbedded = true // we don't use it there
 		c.EnableCronJobs = "false"
+		c.EnableK8sControllers = false
 	} else if strings.HasPrefix(c.TestkubeProAgentID, "tkcsync_") {
 		c.DisableTestTriggers = true
 		c.DisableWebhooks = true
@@ -253,6 +263,7 @@ func Get() (*Config, error) {
 		c.DisableDefaultAgent = true
 		c.NatsEmbedded = true // we don't use it there
 		c.EnableCronJobs = "false"
+		c.EnableK8sControllers = false
 	}
 
 	if c.TestkubeProAPIKey == "" && deprecated.TestkubeCloudAPIKey != "" {

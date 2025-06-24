@@ -10,7 +10,6 @@ import (
 	"github.com/kubeshop/testkube/cmd/kubectl-testkube/config"
 	"github.com/kubeshop/testkube/internal/common"
 	cloudclient "github.com/kubeshop/testkube/pkg/cloud/client"
-	"github.com/kubeshop/testkube/pkg/log"
 	"github.com/kubeshop/testkube/pkg/ui"
 )
 
@@ -21,15 +20,15 @@ func NewCreateAgentCommand() *cobra.Command {
 		environmentIds []string
 	)
 	cmd := &cobra.Command{
-		Use:    "agent",
-		Args:   cobra.ExactArgs(1),
-		Hidden: !log.IsTrue("EXPERIMENTAL"),
+		Use:  "agent",
+		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			agent := UiCreateAgent(cmd, agentType, args[0], labelPairs, environmentIds, false, "")
+			agent := UiCreateAgent(cmd, agentType, args[0], labelPairs, environmentIds, false, "", false)
+			cliType, _ := GetCliAgentType(agent.Type)
 			ui.NL()
 			ui.Info("Install the agent with command:")
 			ui.ShellCommand(
-				fmt.Sprintf("kubectl testkube install %s %s --secret %s", agent.Type, agent.Name, agent.SecretKey),
+				fmt.Sprintf("kubectl testkube install %s %s --secret %s", cliType, agent.Name, agent.SecretKey),
 			)
 		},
 	}
@@ -47,17 +46,18 @@ func NewCreateRunnerCommand() *cobra.Command {
 		environmentIds []string
 		global         bool
 		group          string
+		floating       bool
 	)
 	cmd := &cobra.Command{
-		Use:    "runner",
-		Args:   cobra.ExactArgs(1),
-		Hidden: !log.IsTrue("EXPERIMENTAL"),
+		Use:  "runner",
+		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			agent := UiCreateAgent(cmd, "runner", args[0], labelPairs, environmentIds, global, group)
+			agent := UiCreateAgent(cmd, "runner", args[0], labelPairs, environmentIds, global, group, floating)
+			cliType, _ := GetCliAgentType(agent.Type)
 			ui.NL()
 			ui.Info("Install the agent with command:")
 			ui.ShellCommand(
-				fmt.Sprintf("kubectl testkube install %s %s --secret %s", agent.Type, agent.Name, agent.SecretKey),
+				fmt.Sprintf("kubectl testkube install %s %s --secret %s", cliType, agent.Name, agent.SecretKey),
 			)
 		},
 	}
@@ -66,6 +66,7 @@ func NewCreateRunnerCommand() *cobra.Command {
 	cmd.Flags().StringSliceVarP(&labelPairs, "label", "l", nil, "label key value pair: --label key1=value1")
 	cmd.Flags().BoolVar(&global, "global", false, "make it global runner")
 	cmd.Flags().StringVar(&group, "group", "", "make it grouped runner")
+	cmd.Flags().BoolVar(&floating, "floating", false, "create as a floating runner")
 
 	return cmd
 }
@@ -76,15 +77,15 @@ func NewCreateGitOpsCommand() *cobra.Command {
 		environmentIds []string
 	)
 	cmd := &cobra.Command{
-		Use:    "gitops",
-		Args:   cobra.ExactArgs(1),
-		Hidden: !log.IsTrue("EXPERIMENTAL"),
+		Use:  "gitops",
+		Args: cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			agent := UiCreateAgent(cmd, "gitops", args[0], labelPairs, environmentIds, false, "")
+			agent := UiCreateAgent(cmd, "gitops", args[0], labelPairs, environmentIds, false, "", false)
+			cliType, _ := GetCliAgentType(agent.Type)
 			ui.NL()
 			ui.Info("Install the agent with command:")
 			ui.ShellCommand(
-				fmt.Sprintf("kubectl testkube install %s %s --secret %s", agent.Type, agent.Name, agent.SecretKey),
+				fmt.Sprintf("kubectl testkube install %s %s --secret %s", cliType, agent.Name, agent.SecretKey),
 			)
 		},
 	}
@@ -95,7 +96,7 @@ func NewCreateGitOpsCommand() *cobra.Command {
 	return cmd
 }
 
-func UiCreateAgent(cmd *cobra.Command, agentType string, name string, labelPairs []string, environmentIds []string, isGlobalRunner bool, runnerGroup string) *cloudclient.Agent {
+func UiCreateAgent(cmd *cobra.Command, agentType string, name string, labelPairs []string, environmentIds []string, isGlobalRunner bool, runnerGroup string, floating bool) *cloudclient.Agent {
 	if name == "" {
 		name = ui.TextInput("agent name")
 		if name == "" {
@@ -122,6 +123,7 @@ func UiCreateAgent(cmd *cobra.Command, agentType string, name string, labelPairs
 		Name:         name,
 		Labels:       common.Ptr(make(map[string]string)),
 		Environments: environmentIds,
+		Floating:     floating,
 	}
 
 	if runnerGroup != "" {

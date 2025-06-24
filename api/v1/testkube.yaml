@@ -3908,6 +3908,40 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Problem"
+    put:
+      tags:
+        - test-workflows
+        - api
+        - pro
+      summary: Validate test workflow
+      description: Validate test workflow specification against CRD schema
+      operationId: validateTestWorkflow
+      requestBody:
+        description: test workflow body
+        required: true
+        content:
+          text/yaml:
+            schema:
+              type: string
+      responses:
+        204:
+          description: "no content"
+        400:
+          description: "problem with body parsing - probably some bad input occurs"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: problem communicating with kubernetes cluster
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
   /test-workflow-with-executions:
     get:
       tags:
@@ -5071,6 +5105,40 @@ paths:
                   $ref: "#/components/schemas/Problem"
         402:
           description: "missing Pro subscription for a commercial feature"
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+        502:
+          description: problem communicating with kubernetes cluster
+          content:
+            application/problem+json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Problem"
+    put:
+      tags:
+        - test-workflows
+        - api
+        - pro
+      summary: Validate test workflow template
+      description: Validate test workflow template specification against CRD schema
+      operationId: validateTestWorkflowTemplate
+      requestBody:
+        description: test workflow template body
+        required: true
+        content:
+          text/yaml:
+            schema:
+              type: string
+      responses:
+        204:
+          description: "no content"
+        400:
+          description: "problem with body parsing - probably some bad input occurs"
           content:
             application/problem+json:
               schema:
@@ -6439,6 +6507,7 @@ components:
         - aborted
         - timeout
         - skipped
+        - canceled
 
     ExecutionResult:
       description: execution result returned from executor
@@ -7847,10 +7916,12 @@ components:
         - end-testworkflow-success
         - end-testworkflow-failed
         - end-testworkflow-aborted
+        - end-testworkflow-canceled
         - become-testworkflow-up
         - become-testworkflow-down
         - become-testworkflow-failed
         - become-testworkflow-aborted
+        - become-testworkflow-canceled
         - created
         - updated
         - deleted
@@ -8113,6 +8184,9 @@ components:
           $ref: "#/components/schemas/TestWorkflowConfigValue"
         tags:
           $ref: "#/components/schemas/TestWorkflowTagValue"
+        target:
+          $ref: "#/components/schemas/ExecutionTarget"
+
 
     TestTriggerConditionSpec:
       type: object
@@ -8554,6 +8628,8 @@ components:
           description: if test workflow is offline and cannot be executed
         status:
           $ref: "#/components/schemas/TestWorkflowStatusSummary"
+        health:
+          $ref: "#/components/schemas/TestWorkflowExecutionHealth"
 
     TestWorkflowExecutionRequest:
       type: object
@@ -8795,6 +8871,8 @@ components:
           type: object
           additionalProperties:
             type: string
+        health:
+          $ref: "#/components/schemas/TestWorkflowExecutionHealth"
 
     TestWorkflowResultSummary:
       type: object
@@ -8932,6 +9010,31 @@ components:
       description: |
         TestWorkflowExecutionResourceAggregationsReport provides resource usage aggregations
         for an entire TestWorkflowExecution (globally) and also per-step (by measurements).
+
+    TestWorkflowExecutionHealth:
+      type: object
+      properties:
+        passRate:
+          type: number
+          format: float64
+          description: |
+            Recency-weighted fraction of executions that passed (value between 0.0 and 1.0).
+        flipRate:
+          type: number
+          format: float64
+          description: |
+            Fraction of status changes among consecutive executions without recency weighting 
+            (value between 0.0 and 1.0).
+        overallHealth:
+          type: number
+          format: float64
+          description: |
+            Combined health score, computed as passRate * (1 - flipRate)
+            (value between 0.0 and 1.0).
+      required:
+        - passRate
+        - flipRate
+        - overallHealth
 
     TestWorkflowExecutionStepResourceAggregations:
       type: object
@@ -9113,6 +9216,7 @@ components:
         - passed
         - failed
         - aborted
+        - canceled
 
     TestWorkflowStepStatus:
       type: string
@@ -9125,6 +9229,7 @@ components:
         - timeout
         - skipped
         - aborted
+        - canceled
 
     TestWorkflowTemplate:
       type: object
@@ -9622,6 +9727,8 @@ components:
           selector:
             $ref: "#/components/schemas/LabelSelector"
             description: label selector for test workflow
+          target:
+            $ref: "#/components/schemas/ExecutionTarget"
 
     TestWorkflowStepExecuteTestRef:
       type: object
@@ -10046,6 +10153,8 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/PodResourceClaim"
+        hostPID:
+          $ref: "#/components/schemas/BoxedBoolean"
 
     TestWorkflowContainerConfig:
       type: object
@@ -10268,6 +10377,12 @@ components:
             type: string
         config:
           $ref: "#/components/schemas/TestWorkflowConfigValue"
+        target:
+          $ref: "#/components/schemas/ExecutionTarget"
+        timezone:
+          $ref: "#/components/schemas/BoxedString"
+          description: cron timezone
+          example: America/New_York
 
     TestWorkflowExecutionCR:
       type: object
@@ -10308,7 +10423,7 @@ components:
         tags:
           $ref: "#/components/schemas/TestWorkflowTagValue"
         target:
-          $ref: "#/components/schemas/TestWorkflowTarget"
+          $ref: "#/components/schemas/ExecutionTarget"
 
     TestWorkflowExecutionTags:
       type: object
@@ -10367,6 +10482,8 @@ components:
     EnvVar:
       type: object
       properties:
+        global:
+          $ref: "#/components/schemas/BoxedBoolean"
         name:
           type: string
         value:
@@ -10380,6 +10497,7 @@ components:
         name:
           type: string
         optional:
+          nullable: true        
           type: boolean
           default: false
       required:
@@ -10391,6 +10509,7 @@ components:
         name:
           type: string
         optional:
+          nullable: true        
           type: boolean
           default: false
       required:
@@ -11389,6 +11508,7 @@ components:
                 uid?'
               type: string
             optional:
+              nullable: true 
               description: Specify whether the ConfigMap or its
                 key must be defined
               type: boolean
@@ -11413,6 +11533,7 @@ components:
                 uid?'
               type: string
             optional:
+              nullable: true 
               description: Specify whether the Secret or its key
                 must be defined
               type: boolean

@@ -1,0 +1,24 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: pact-js-workflow-smoke
+  labels:
+    core-tests: workflows
+    tool: pact
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/pact/pact-js-project/
+  container:
+    image: node:23.11.0
+    workingDir: /data/repo/test/pact/pact-js-project
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: Install dependencies
+    shell: "npm install"
+  - name: Run Pact test
+    shell: "npx jest --runInBand"

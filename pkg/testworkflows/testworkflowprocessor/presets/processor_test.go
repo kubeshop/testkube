@@ -93,6 +93,10 @@ func newResourceEnvVars(container string) []corev1.EnvVar {
 	}
 }
 
+func newRuntimeEnvVar(container string) corev1.EnvVar {
+	return actiontypes.EnvVar(constants2.EnvGroupRuntime, false, false, constants2.EnvContainerName, container)
+}
+
 func newResourceFieldRefEnvVar(envvar, container, resource string, divisor resource.Quantity) corev1.EnvVar {
 	return actiontypes.EnvVarFrom(constants2.EnvGroupResources, false, false, envvar, corev1.EnvVarSource{
 		ResourceFieldRef: &corev1.ResourceFieldSelector{ContainerName: container, Resource: resource, Divisor: divisor},
@@ -188,7 +192,7 @@ func TestProcessBasic(t *testing.T) {
 		envInternal,
 		envSignature,
 	}
-	wantEnv = append(wantEnv, newResourceEnvVars("1")...)
+	wantEnv = append(append(wantEnv, newResourceEnvVars("1")...), newRuntimeEnvVar("1"))
 	want := batchv1.Job{
 		TypeMeta: metav1.TypeMeta{Kind: "Job", APIVersion: "batch/v1"},
 		ObjectMeta: metav1.ObjectMeta{
@@ -310,11 +314,11 @@ func TestProcessShellWithNonStandardImage(t *testing.T) {
 		envInternal,
 		envSignature,
 	}
-	wantEnv1 = append(wantEnv1, newResourceEnvVars("1")...)
+	wantEnv1 = append(append(wantEnv1, newResourceEnvVars("1")...), newRuntimeEnvVar("1"))
 	wantEnv2 := []corev1.EnvVar{
 		env(0, false, "CI", "1"),
 	}
-	wantEnv2 = append(wantEnv2, newResourceEnvVars("2")...)
+	wantEnv2 = append(append(wantEnv2, newResourceEnvVars("2")...), newRuntimeEnvVar("2"))
 	want := batchv1.Job{
 		TypeMeta: metav1.TypeMeta{Kind: "Job", APIVersion: "batch/v1"},
 		ObjectMeta: metav1.ObjectMeta{
@@ -396,12 +400,12 @@ func TestProcessBasicEnvReference(t *testing.T) {
 			Steps: []testworkflowsv1.Step{
 				{StepDefaults: testworkflowsv1.StepDefaults{
 					Container: &testworkflowsv1.ContainerConfig{
-						Env: []corev1.EnvVar{
-							{Name: "ZERO", Value: "foo"},
-							{Name: "UNDETERMINED", Value: "{{call(abc)}}xxx"},
-							{Name: "INPUT", Value: "{{env.ZERO}}bar"},
-							{Name: "NEXT", Value: "foo{{env.UNDETERMINED}}{{env.LAST}}"},
-							{Name: "LAST", Value: "foo{{env.INPUT}}bar"},
+						Env: []testworkflowsv1.EnvVar{
+							{EnvVar: corev1.EnvVar{Name: "ZERO", Value: "foo"}},
+							{EnvVar: corev1.EnvVar{Name: "UNDETERMINED", Value: "{{call(abc)}}xxx"}},
+							{EnvVar: corev1.EnvVar{Name: "INPUT", Value: "{{env.ZERO}}bar"}},
+							{EnvVar: corev1.EnvVar{Name: "NEXT", Value: "foo{{env.UNDETERMINED}}{{env.LAST}}"}},
+							{EnvVar: corev1.EnvVar{Name: "LAST", Value: "foo{{env.INPUT}}bar"}},
 						},
 					},
 				}, StepOperations: testworkflowsv1.StepOperations{
@@ -455,7 +459,7 @@ func TestProcessBasicEnvReference(t *testing.T) {
 		envInternal,
 		envSignature,
 	}
-	wantEnv = append(wantEnv, newResourceEnvVars("1")...)
+	wantEnv = append(append(wantEnv, newResourceEnvVars("1")...), newRuntimeEnvVar("1"))
 	wantPod := corev1.PodSpec{
 		RestartPolicy:      corev1.RestartPolicyNever,
 		EnableServiceLinks: common.Ptr(false),
@@ -547,11 +551,11 @@ func TestProcessMultipleSteps(t *testing.T) {
 		envInternal,
 		envSignature,
 	}
-	wantEnv1 = append(wantEnv1, newResourceEnvVars("1")...)
+	wantEnv1 = append(append(wantEnv1, newResourceEnvVars("1")...), newRuntimeEnvVar("1"))
 	wantEnv2 := []corev1.EnvVar{
 		env(0, false, "CI", "1"),
 	}
-	wantEnv2 = append(wantEnv2, newResourceEnvVars("2")...)
+	wantEnv2 = append(append(wantEnv2, newResourceEnvVars("2")...), newRuntimeEnvVar("2"))
 	want := corev1.PodSpec{
 		RestartPolicy:      corev1.RestartPolicyNever,
 		EnableServiceLinks: common.Ptr(false),
@@ -691,19 +695,19 @@ func TestProcessNestedSteps(t *testing.T) {
 		envInternal,
 		envSignature,
 	}
-	wantEnv1 = append(wantEnv1, newResourceEnvVars("1")...)
+	wantEnv1 = append(append(wantEnv1, newResourceEnvVars("1")...), newRuntimeEnvVar("1"))
 	wantEnv2 := []corev1.EnvVar{
 		env(0, false, "CI", "1"),
 	}
-	wantEnv2 = append(wantEnv2, newResourceEnvVars("2")...)
+	wantEnv2 = append(append(wantEnv2, newResourceEnvVars("2")...), newRuntimeEnvVar("2"))
 	wantEnv3 := []corev1.EnvVar{
 		env(0, false, "CI", "1"),
 	}
-	wantEnv3 = append(wantEnv3, newResourceEnvVars("3")...)
+	wantEnv3 = append(append(wantEnv3, newResourceEnvVars("3")...), newRuntimeEnvVar("3"))
 	wantEnv4 := []corev1.EnvVar{
 		env(0, false, "CI", "1"),
 	}
-	wantEnv4 = append(wantEnv4, newResourceEnvVars("4")...)
+	wantEnv4 = append(append(wantEnv4, newResourceEnvVars("4")...), newRuntimeEnvVar("4"))
 	want := corev1.PodSpec{
 		RestartPolicy:      corev1.RestartPolicyNever,
 		EnableServiceLinks: common.Ptr(false),
@@ -802,11 +806,11 @@ func TestProcessLocalContent(t *testing.T) {
 		envInternal,
 		envSignature,
 	}
-	wantEnv1 = append(wantEnv1, newResourceEnvVars("1")...)
+	wantEnv1 = append(append(wantEnv1, newResourceEnvVars("1")...), newRuntimeEnvVar("1"))
 	wantEnv2 := []corev1.EnvVar{
 		env(0, false, "CI", "1"),
 	}
-	wantEnv2 = append(wantEnv2, newResourceEnvVars("2")...)
+	wantEnv2 = append(append(wantEnv2, newResourceEnvVars("2")...), newRuntimeEnvVar("2"))
 	want := corev1.PodSpec{
 		RestartPolicy:      corev1.RestartPolicyNever,
 		EnableServiceLinks: common.Ptr(false),
@@ -887,11 +891,11 @@ func TestProcessGlobalContent(t *testing.T) {
 		envInternal,
 		envSignature,
 	}
-	wantEnv1 = append(wantEnv1, newResourceEnvVars("1")...)
+	wantEnv1 = append(append(wantEnv1, newResourceEnvVars("1")...), newRuntimeEnvVar("1"))
 	wantEnv2 := []corev1.EnvVar{
 		env(0, false, "CI", "1"),
 	}
-	wantEnv2 = append(wantEnv2, newResourceEnvVars("2")...)
+	wantEnv2 = append(append(wantEnv2, newResourceEnvVars("2")...), newRuntimeEnvVar("2"))
 	want := corev1.PodSpec{
 		RestartPolicy:      corev1.RestartPolicyNever,
 		EnableServiceLinks: common.Ptr(false),
@@ -1266,8 +1270,8 @@ func TestProcess_ConditionAlways(t *testing.T) {
 					StepOperations: testworkflowsv1.StepOperations{
 						Run: &testworkflowsv1.StepRun{
 							ContainerConfig: testworkflowsv1.ContainerConfig{
-								Env: []corev1.EnvVar{
-									{Name: "result", Value: "{{passed}}"},
+								Env: []testworkflowsv1.EnvVar{
+									{EnvVar: corev1.EnvVar{Name: "result", Value: "{{passed}}"}},
 								},
 							},
 							Shell: common.Ptr("echo $result"),

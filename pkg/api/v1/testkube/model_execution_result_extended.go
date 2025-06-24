@@ -64,8 +64,13 @@ func (e *ExecutionResult) IsFailed() bool {
 func (e *ExecutionResult) IsAborted() bool {
 	return *e.Status == ABORTED_ExecutionStatus
 }
+
 func (e *ExecutionResult) IsTimeout() bool {
 	return *e.Status == TIMEOUT_ExecutionStatus
+}
+
+func (e *ExecutionResult) IsCanceled() bool {
+	return *e.Status == CANCELED_ExecutionStatus
 }
 
 func (e *ExecutionResult) Err(err error) *ExecutionResult {

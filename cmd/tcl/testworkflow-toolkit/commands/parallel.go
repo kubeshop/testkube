@@ -51,6 +51,12 @@ type ParallelStatus struct {
 	Result      *testkube.TestWorkflowResult     `json:"result,omitempty"`
 }
 
+func (s ParallelStatus) AsMap() (v map[string]interface{}) {
+	serialized, _ := json.Marshal(s)
+	_ = json.Unmarshal(serialized, &v)
+	return
+}
+
 func NewParallelCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "parallel <spec>",
@@ -182,7 +188,10 @@ func NewParallelCmd() *cobra.Command {
 			}
 
 			// Load Kubernetes client and image inspector
-			storage := artifacts.InternalStorage()
+			storage, err := artifacts.InternalStorage()
+			if err != nil {
+				ui.Failf("could not create internal storage client: %v", err)
+			}
 
 			// Prepare runner
 			// TODO: Share resources like configMaps?
