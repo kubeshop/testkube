@@ -88,7 +88,7 @@ func main() {
 
 	// Determine the running mode
 	mode := common.ModeStandalone
-	if cfg.TestkubeProAPIKey != "" {
+	if cfg.TestkubeProAPIKey != "" || cfg.TestkubeProAgentRegToken != "" {
 		mode = common.ModeAgent
 	} else {
 		cfg.TestkubeProURL = fmt.Sprintf("%s:%d", cfg.APIServerFullname, cfg.GRPCServerPort)
@@ -158,6 +158,52 @@ func main() {
 	}
 	commons.ExitOnError("error creating gRPC connection", err)
 	grpcClient := cloud.NewTestKubeCloudAPIClient(grpcConn)
+
+	// If we don't have an API key but we do have a token for registration then attempt to register the runner.
+	if cfg.TestkubeProAPIKey == "" && cfg.TestkubeProAgentRegToken != "" {
+		runnerName := cfg.RunnerName
+		if runnerName == "" {
+			// Fallback to a set name, but this is unlikely to be unique.
+			runnerName = cfg.APIServerFullname
+		}
+		log.DefaultLogger.Infow("registering runner", "runner_name", runnerName)
+
+		// Check for required fields.
+		if cfg.TestkubeProOrgID == "" {
+			log.DefaultLogger.Fatalw("cannot register runner without org id", "error", "org id must be set to register a runner")
+		}
+		if cfg.SelfRegistrationSecret == "" {
+			log.DefaultLogger.Fatalw("cannot register runner without self registration secret", "error", "self registration secret must be set to register a runner")
+		}
+		// If not configured to store secrets then registering the runner could cause severe issues such as
+		// the runner registering on every restart creating new runner IDs in the Control Plane.
+		if !(cfg.EnableSecretsEndpoint && !cfg.DisableSecretCreation) {
+			log.DefaultLogger.Fatalw("cannot register runner without secrets enabled", "error", "secrets must be enabled to register a runner")
+		}
+
+		res, err := grpcClient.Register(ctx, &cloud.RegisterRequest{
+			RegistrationToken: cfg.TestkubeProAgentRegToken,
+			RunnerName:        runnerName,
+			OrganizationId:    cfg.TestkubeProOrgID,
+			Floating:          cfg.FloatingRunner,
+		})
+		if err != nil {
+			log.DefaultLogger.Fatalw("error registering runner", "error", err.Error())
+		}
+
+		// Add the new values to the current configuration.
+		cfg.TestkubeProAPIKey = res.RunnerKey
+		cfg.TestkubeProAgentID = res.RunnerId
+
+		// Attempt to store the values in a Kubernetes secret for consumption next startup.
+		if _, err := secretManager.Create(ctx, cfg.TestkubeNamespace, cfg.SelfRegistrationSecret, map[string]string{
+			"TESTKUBE_PRO_API_KEY":  res.RunnerKey,
+			"TESTKUBE_PRO_AGENT_ID": res.RunnerId,
+		}, secretmanager.CreateOptions{}); err != nil {
+			log.DefaultLogger.Errorw("error creating self-register runner secret", "error", err.Error())
+			log.DefaultLogger.Warn("runner will re-register on restart")
+		}
+	}
 
 	clusterId, _ := configMapConfig.GetUniqueClusterId(ctx)
 	telemetryEnabled, _ := configMapConfig.GetTelemetryEnabled(ctx)

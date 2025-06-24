@@ -97,13 +97,13 @@ build-testkube-bin-intel:
 		cmd/kubectl-testkube/main.go
 
 docker-build-api:
-	env SLACK_BOT_CLIENT_ID=** SLACK_BOT_CLIENT_SECRET=** ANALYTICS_TRACKING_ID=** ANALYTICS_API_KEY=** SEGMENTIO_KEY=** CLOUD_SEGMENTIO_KEY=** DOCKER_BUILDX_CACHE_FROM=type=registry,ref=docker.io/kubeshop/testkube-api-server:latest ALPINE_IMAGE=alpine:3.20.3 goreleaser release -f goreleaser_files/.goreleaser-docker-build-api.yml --rm-dist --snapshot
+	env SLACK_BOT_CLIENT_ID=** SLACK_BOT_CLIENT_SECRET=** ANALYTICS_TRACKING_ID=** ANALYTICS_API_KEY=** SEGMENTIO_KEY=** CLOUD_SEGMENTIO_KEY=** DOCKER_BUILDX_CACHE_FROM=type=registry,ref=docker.io/kubeshop/testkube-api-server:latest ALPINE_IMAGE=alpine:3.20.6 goreleaser release -f goreleaser_files/.goreleaser-docker-build-api.yml --rm-dist --snapshot
 
 docker-build-cli:
-	env SLACK_BOT_CLIENT_ID=** SLACK_BOT_CLIENT_SECRET=** ANALYTICS_TRACKING_ID=** ANALYTICS_API_KEY=** SEGMENTIO_KEY=** CLOUD_SEGMENTIO_KEY=** DOCKER_BUILDX_CACHE_FROM=type=registry,ref=docker.io/kubeshop/testkube-cli:latest ALPINE_IMAGE=alpine:3.20.3 goreleaser release -f .builds-linux.goreleaser.yml --rm-dist --snapshot
+	env SLACK_BOT_CLIENT_ID=** SLACK_BOT_CLIENT_SECRET=** ANALYTICS_TRACKING_ID=** ANALYTICS_API_KEY=** SEGMENTIO_KEY=** CLOUD_SEGMENTIO_KEY=** DOCKER_BUILDX_CACHE_FROM=type=registry,ref=docker.io/kubeshop/testkube-cli:latest ALPINE_IMAGE=alpine:3.20.6 goreleaser release -f .builds-linux.goreleaser.yml --rm-dist --snapshot
 
 #make docker-build-executor EXECUTOR=zap GITHUB_TOKEN=*** DOCKER_BUILDX_CACHE_FROM=type=registry,ref=docker.io/kubeshop/testkube-zap-executor:latest
-#add ALPINE_IMAGE=alpine:3.20.3 env var for building of curl and scraper executor
+#add ALPINE_IMAGE=alpine:3.20.6 env var for building of curl and scraper executor
 docker-build-executor:
 	goreleaser release -f goreleaser_files/.goreleaser-docker-build-executor.yml --clean --snapshot
 
@@ -143,6 +143,8 @@ openapi-generate-model-testkube:
 	find ./pkg/api/v1/testkube -name "*update*.go" -type f -exec sed -i '' -e "s/ \*ResourceRequest/ \*ResourceUpdateRequest/g" {} \;
 	find ./pkg/api/v1/testkube -name "*update*.go" -type f -exec sed -i '' -e "s/ \*WebhookTemplateRef/ \*\*WebhookTemplateRef/g" {} \;	
 	find ./pkg/api/v1/testkube -type f -exec sed -i '' -e "s/ Deprecated/ \\n\/\/ Deprecated/g" {} \;
+	find ./pkg/api/v1/testkube -name "*_env_source.go" -type f -exec sed -i '' -e "s/ bool/ \*bool/g" {} \;
+	find ./pkg/api/v1/testkube -name "**_key_ref.go" -type f -exec sed -i '' -e "s/ bool/ \*bool/g" {} \;
 	go fmt pkg/api/v1/testkube/*.go
 
 protobuf-generate:
