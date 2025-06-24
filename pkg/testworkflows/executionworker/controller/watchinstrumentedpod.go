@@ -59,6 +59,9 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 			if opts.LogAbortedDetails && notifier.result.IsAborted() {
 				log.DefaultLogger.Warnw("execution (watch) detected as aborted", "executionId", watcher.State().ResourceId(), "debug", watcher.State().Debug())
 			}
+			if opts.LogAbortedDetails && notifier.result.IsCanceled() {
+				log.DefaultLogger.Warnw("execution (watch) detected as canceled", "executionId", watcher.State().ResourceId(), "debug", watcher.State().Debug())
+			}
 		}()
 
 		// Mark Job as started
@@ -140,6 +143,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 		containersReady := false
 		for containerIndex := 0; containerIndex < len(refs); containerIndex++ {
 			aborted := false
+			canceled := false
 			container := fmt.Sprintf("%d", containerIndex+1)
 
 			// Determine the last ref in this container, so we can confirm that the logs have been read until end
@@ -217,6 +221,9 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 						if v.Value.Hint.Name == constants.InstructionEnd && testkube.TestWorkflowStepStatus(v.Value.Hint.Value.(string)) == testkube.ABORTED_TestWorkflowStepStatus {
 							aborted = true
 						}
+						if v.Value.Hint.Name == constants.InstructionEnd && testkube.TestWorkflowStepStatus(v.Value.Hint.Value.(string)) == testkube.CANCELED_TestWorkflowStepStatus {
+							canceled = true
+						}
 						notifier.Instruction(v.Value.Time, *v.Value.Hint)
 					}
 				}
@@ -246,7 +253,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 			notifier.Align(watcher.State())
 
 			// Don't iterate over further containers if this one has failed completely
-			if aborted || watcher.State().ContainerFailed(container) {
+			if aborted || canceled || watcher.State().ContainerFailed(container) {
 				break
 			}
 		}

@@ -226,6 +226,9 @@ type Worker interface {
 	// Abort may either destroy or just stop the selected resource (so the data can be still accessible)
 	Abort(ctx context.Context, id string, options DestroyOptions) error
 
+	// Cancel sends cancel request to the selected resource.
+	Cancel(ctx context.Context, id string, options DestroyOptions) error
+
 	// Destroy gets rid of all the data for the selected resource.
 	Destroy(ctx context.Context, id string, options DestroyOptions) error
 

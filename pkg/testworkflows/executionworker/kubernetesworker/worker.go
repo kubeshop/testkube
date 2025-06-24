@@ -10,6 +10,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"k8s.io/apimachinery/pkg/types"
+
 	"github.com/pkg/errors"
 	"golang.org/x/exp/maps"
 	corev1 "k8s.io/api/core/v1"
@@ -524,9 +526,45 @@ func (w *worker) List(ctx context.Context, options executionworkertypes.ListOpti
 	return list, nil
 }
 
-func (w *worker) Abort(ctx context.Context, id string, options executionworkertypes.DestroyOptions) error {
+func (w *worker) Abort(ctx context.Context, id string, options executionworkertypes.DestroyOptions) (err error) {
+	if options.Namespace == "" {
+		options.Namespace, err = w.registry.GetNamespace(ctx, id)
+		if err != nil {
+			return err
+		}
+	}
+	if err := w.patchTerminationAnnotations(ctx, id, options.Namespace, testkube.ABORTED_TestWorkflowStatus, "Job has been aborted by the system"); err != nil {
+		return errors.Wrapf(err, "failed to patch job %s/%s with termination code & reason", options.Namespace, id)
+	}
 	// It may safely destroy all the resources - the trace should be still readable.
 	return w.Destroy(ctx, id, options)
+}
+
+func (w *worker) Cancel(ctx context.Context, id string, options executionworkertypes.DestroyOptions) (err error) {
+	if options.Namespace == "" {
+		options.Namespace, err = w.registry.GetNamespace(ctx, id)
+		if err != nil {
+			return err
+		}
+	}
+	if err := w.patchTerminationAnnotations(ctx, id, options.Namespace, testkube.CANCELED_TestWorkflowStatus, "Job has been canceled by a user"); err != nil {
+		return errors.Wrapf(err, "failed to patch job %s/%s with termination code & reason", options.Namespace, id)
+	}
+	return w.Destroy(ctx, id, options)
+}
+
+func (w *worker) patchTerminationAnnotations(ctx context.Context, id string, namespace string, status testkube.TestWorkflowStatus, reason string) error {
+	patch := map[string]interface{}{
+		"metadata": map[string]any{
+			"annotations": map[string]string{
+				constants.AnnotationTerminationCode:   string(status),
+				constants.AnnotationTerminationReason: reason,
+			},
+		},
+	}
+	patchBytes, _ := json.Marshal(patch)
+	_, err := w.clientSet.BatchV1().Jobs(namespace).Patch(ctx, id, types.MergePatchType, patchBytes, metav1.PatchOptions{})
+	return err
 }
 
 func (w *worker) Destroy(ctx context.Context, id string, options executionworkertypes.DestroyOptions) (err error) {
