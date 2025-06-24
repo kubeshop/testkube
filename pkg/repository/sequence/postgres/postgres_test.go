@@ -1,0 +1,498 @@
+package postgres
+
+import (
+	"context"
+	"errors"
+	"testing"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+
+	"github.com/kubeshop/testkube/pkg/database/postgres/sqlc"
+)
+
+// MockQueriesInterface implementation
+type MockQueriesInterface struct {
+	mock.Mock
+}
+
+func (m *MockQueriesInterface) GetExecutionSequence(ctx context.Context, name string) (sqlc.ExecutionSequence, error) {
+	args := m.Called(ctx, name)
+	return args.Get(0).(sqlc.ExecutionSequence), args.Error(1)
+}
+
+func (m *MockQueriesInterface) UpsertAndIncrementExecutionSequence(ctx context.Context, name string) (sqlc.ExecutionSequence, error) {
+	args := m.Called(ctx, name)
+	return args.Get(0).(sqlc.ExecutionSequence), args.Error(1)
+}
+
+func (m *MockQueriesInterface) DeleteExecutionSequence(ctx context.Context, name string) error {
+	args := m.Called(ctx, name)
+	return args.Error(0)
+}
+
+func (m *MockQueriesInterface) DeleteExecutionSequences(ctx context.Context, names []string) error {
+	args := m.Called(ctx, names)
+	return args.Error(0)
+}
+
+func (m *MockQueriesInterface) DeleteAllExecutionSequences(ctx context.Context) error {
+	args := m.Called(ctx)
+	return args.Error(0)
+}
+
+func (m *MockQueriesInterface) GetAllExecutionSequences(ctx context.Context) ([]sqlc.ExecutionSequence, error) {
+	args := m.Called(ctx)
+	return args.Get(0).([]sqlc.ExecutionSequence), args.Error(1)
+}
+
+func (m *MockQueriesInterface) GetExecutionSequencesByNames(ctx context.Context, names []string) ([]sqlc.ExecutionSequence, error) {
+	args := m.Called(ctx, names)
+	return args.Get(0).([]sqlc.ExecutionSequence), args.Error(1)
+}
+
+func (m *MockQueriesInterface) CountExecutionSequences(ctx context.Context) (int64, error) {
+	args := m.Called(ctx)
+	return args.Get(0).(int64), args.Error(1)
+}
+
+func TestPostgresRepository_GetNextExecutionNumber(t *testing.T) {
+	t.Run("Success", func(t *testing.T) {
+		// Arrange
+		mockQueries := &MockQueriesInterface{}
+		repo := &PostgresRepository{
+			queries: mockQueries,
+		}
+
+		ctx := context.Background()
+		name := "test-execution"
+
+		expectedResult := sqlc.ExecutionSequence{
+			Name:   name,
+			Number: 5,
+		}
+		mockQueries.On("UpsertAndIncrementExecutionSequence", ctx, name).Return(expectedResult, nil)
+
+		// Act
+		result, err := repo.GetNextExecutionNumber(ctx, name)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.Equal(t, int32(5), result)
+		mockQueries.AssertExpectations(t)
+	})
+
+	t.Run("DatabaseError", func(t *testing.T) {
+		// Arrange
+		mockQueries := &MockQueriesInterface{}
+		repo := &PostgresRepository{
+			queries: mockQueries,
+		}
+
+		ctx := context.Background()
+		name := "test-execution"
+
+		mockQueries.On("UpsertAndIncrementExecutionSequence", ctx, name).Return(sqlc.ExecutionSequence{}, errors.New("database error"))
+
+		// Act
+		result, err := repo.GetNextExecutionNumber(ctx, name)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Equal(t, int32(0), result)
+		assert.Contains(t, err.Error(), "failed to get next execution number")
+		mockQueries.AssertExpectations(t)
+	})
+}
+
+func TestPostgresRepository_DeleteExecutionNumber(t *testing.T) {
+	t.Run("Success", func(t *testing.T) {
+		// Arrange
+		mockQueries := &MockQueriesInterface{}
+		repo := &PostgresRepository{
+			queries: mockQueries,
+		}
+
+		ctx := context.Background()
+		name := "test-execution"
+
+		mockQueries.On("DeleteExecutionSequence", ctx, name).Return(nil)
+
+		// Act
+		err := repo.DeleteExecutionNumber(ctx, name)
+
+		// Assert
+		assert.NoError(t, err)
+		mockQueries.AssertExpectations(t)
+	})
+
+	t.Run("NotFoundError", func(t *testing.T) {
+		// Arrange
+		mockQueries := &MockQueriesInterface{}
+		repo := &PostgresRepository{
+			queries: mockQueries,
+		}
+
+		ctx := context.Background()
+		name := "test-execution"
+
+		mockQueries.On("DeleteExecutionSequence", ctx, name).Return(pgx.ErrNoRows)
+
+		// Act
+		err := repo.DeleteExecutionNumber(ctx, name)
+
+		// Assert
+		assert.NoError(t, err) // Should not return error for not found
+		mockQueries.AssertExpectations(t)
+	})
+
+	t.Run("DatabaseError", func(t *testing.T) {
+		// Arrange
+		mockQueries := &MockQueriesInterface{}
+		repo := &PostgresRepository{
+			queries: mockQueries,
+		}
+
+		ctx := context.Background()
+		name := "test-execution"
+
+		mockQueries.On("DeleteExecutionSequence", ctx, name).Return(errors.New("database error"))
+
+		// Act
+		err := repo.DeleteExecutionNumber(ctx, name)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to delete execution sequence")
+		mockQueries.AssertExpectations(t)
+	})
+}
+
+func TestPostgresRepository_DeleteExecutionNumbers(t *testing.T) {
+	t.Run("Success", func(t *testing.T) {
+		// Arrange
+		mockQueries := &MockQueriesInterface{}
+		repo := &PostgresRepository{
+			queries: mockQueries,
+		}
+
+		ctx := context.Background()
+		names := []string{"exec1", "exec2"}
+
+		mockQueries.On("DeleteExecutionSequences", ctx, names).Return(nil)
+
+		// Act
+		err := repo.DeleteExecutionNumbers(ctx, names)
+
+		// Assert
+		assert.NoError(t, err)
+		mockQueries.AssertExpectations(t)
+	})
+
+	t.Run("EmptyNames", func(t *testing.T) {
+		// Arrange
+		repo := &PostgresRepository{}
+
+		ctx := context.Background()
+		names := []string{}
+
+		// Act
+		err := repo.DeleteExecutionNumbers(ctx, names)
+
+		// Assert
+		assert.NoError(t, err)
+	})
+
+	t.Run("DatabaseError", func(t *testing.T) {
+		// Arrange
+		mockQueries := &MockQueriesInterface{}
+		repo := &PostgresRepository{
+			queries: mockQueries,
+		}
+
+		ctx := context.Background()
+		names := []string{"exec1", "exec2"}
+
+		mockQueries.On("DeleteExecutionSequences", ctx, names).Return(errors.New("database error"))
+
+		// Act
+		err := repo.DeleteExecutionNumbers(ctx, names)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to delete execution sequences")
+		mockQueries.AssertExpectations(t)
+	})
+}
+
+func TestPostgresRepository_DeleteAllExecutionNumbers(t *testing.T) {
+	t.Run("Success", func(t *testing.T) {
+		// Arrange
+		mockQueries := &MockQueriesInterface{}
+		repo := &PostgresRepository{
+			queries: mockQueries,
+		}
+
+		ctx := context.Background()
+
+		mockQueries.On("DeleteAllExecutionSequences", ctx).Return(nil)
+
+		// Act
+		err := repo.DeleteAllExecutionNumbers(ctx)
+
+		// Assert
+		assert.NoError(t, err)
+		mockQueries.AssertExpectations(t)
+	})
+
+	t.Run("DatabaseError", func(t *testing.T) {
+		// Arrange
+		mockQueries := &MockQueriesInterface{}
+		repo := &PostgresRepository{
+			queries: mockQueries,
+		}
+
+		ctx := context.Background()
+
+		mockQueries.On("DeleteAllExecutionSequences", ctx).Return(errors.New("database error"))
+
+		// Act
+		err := repo.DeleteAllExecutionNumbers(ctx)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to delete all execution sequences")
+		mockQueries.AssertExpectations(t)
+	})
+}
+
+func TestPostgresRepository_GetAllSequences(t *testing.T) {
+	t.Run("Success", func(t *testing.T) {
+		// Arrange
+		mockQueries := &MockQueriesInterface{}
+		repo := &PostgresRepository{
+			queries: mockQueries,
+		}
+
+		ctx := context.Background()
+
+		sqlcResults := []sqlc.ExecutionSequence{
+			{
+				Name:   "exec1",
+				Number: 1,
+			},
+			{
+				Name:   "exec2",
+				Number: 2,
+			},
+		}
+
+		mockQueries.On("GetAllExecutionSequences", ctx).Return(sqlcResults, nil)
+
+		// Act
+		result, err := repo.GetAllSequences(ctx)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.Len(t, result, 2)
+		assert.Equal(t, "exec1", result[0].Name)
+		assert.Equal(t, int32(1), result[0].Number)
+		assert.Equal(t, "exec2", result[1].Name)
+		assert.Equal(t, int32(2), result[1].Number)
+		mockQueries.AssertExpectations(t)
+	})
+
+	t.Run("DatabaseError", func(t *testing.T) {
+		// Arrange
+		mockQueries := &MockQueriesInterface{}
+		repo := &PostgresRepository{
+			queries: mockQueries,
+		}
+
+		ctx := context.Background()
+
+		mockQueries.On("GetAllExecutionSequences", ctx).Return([]sqlc.ExecutionSequence{}, errors.New("database error"))
+
+		// Act
+		result, err := repo.GetAllSequences(ctx)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Nil(t, result)
+		assert.Contains(t, err.Error(), "failed to get all execution sequences")
+		mockQueries.AssertExpectations(t)
+	})
+}
+
+func TestPostgresRepository_GetSequencesByNames(t *testing.T) {
+	t.Run("Success", func(t *testing.T) {
+		// Arrange
+		mockQueries := &MockQueriesInterface{}
+		repo := &PostgresRepository{
+			queries: mockQueries,
+		}
+
+		ctx := context.Background()
+		names := []string{"exec1", "exec2"}
+
+		sqlcResults := []sqlc.ExecutionSequence{
+			{
+				Name:   "exec1",
+				Number: 5,
+			},
+			{
+				Name:   "exec2",
+				Number: 10,
+			},
+		}
+
+		mockQueries.On("GetExecutionSequencesByNames", ctx, names).Return(sqlcResults, nil)
+
+		// Act
+		result, err := repo.GetSequencesByNames(ctx, names)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.Len(t, result, 2)
+		assert.Equal(t, "exec1", result[0].Name)
+		assert.Equal(t, int32(5), result[0].Number)
+		mockQueries.AssertExpectations(t)
+	})
+
+	t.Run("EmptyNames", func(t *testing.T) {
+		// Arrange
+		repo := &PostgresRepository{}
+
+		ctx := context.Background()
+		names := []string{}
+
+		// Act
+		result, err := repo.GetSequencesByNames(ctx, names)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.Empty(t, result)
+	})
+}
+
+func TestPostgresRepository_Count(t *testing.T) {
+	t.Run("Success", func(t *testing.T) {
+		// Arrange
+		mockQueries := &MockQueriesInterface{}
+		repo := &PostgresRepository{
+			queries: mockQueries,
+		}
+
+		ctx := context.Background()
+		expectedCount := int64(42)
+
+		mockQueries.On("CountExecutionSequences", ctx).Return(expectedCount, nil)
+
+		// Act
+		result, err := repo.Count(ctx)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.Equal(t, expectedCount, result)
+		mockQueries.AssertExpectations(t)
+	})
+
+	t.Run("DatabaseError", func(t *testing.T) {
+		// Arrange
+		mockQueries := &MockQueriesInterface{}
+		repo := &PostgresRepository{
+			queries: mockQueries,
+		}
+
+		ctx := context.Background()
+
+		mockQueries.On("CountExecutionSequences", ctx).Return(int64(0), errors.New("database error"))
+
+		// Act
+		result, err := repo.Count(ctx)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Equal(t, int64(0), result)
+		assert.Contains(t, err.Error(), "failed to count execution sequences")
+		mockQueries.AssertExpectations(t)
+	})
+}
+
+func TestPostgresRepository_GetByName(t *testing.T) {
+	t.Run("Success", func(t *testing.T) {
+		// Arrange
+		mockQueries := &MockQueriesInterface{}
+		repo := &PostgresRepository{
+			queries: mockQueries,
+		}
+
+		ctx := context.Background()
+		name := "test-execution"
+
+		sqlcResult := sqlc.ExecutionSequence{
+			Name:   name,
+			Number: 15,
+		}
+
+		mockQueries.On("GetExecutionSequence", ctx, name).Return(sqlcResult, nil)
+
+		// Act
+		result, err := repo.GetByName(ctx, name)
+
+		// Assert
+		assert.NoError(t, err)
+		assert.Equal(t, name, result.Name)
+		assert.Equal(t, int32(15), result.Number)
+		mockQueries.AssertExpectations(t)
+	})
+
+	t.Run("NotFound", func(t *testing.T) {
+		// Arrange
+		mockQueries := &MockQueriesInterface{}
+		repo := &PostgresRepository{
+			queries: mockQueries,
+		}
+
+		ctx := context.Background()
+		name := "not-found"
+
+		mockQueries.On("GetExecutionSequence", ctx, name).Return(sqlc.ExecutionSequence{}, pgx.ErrNoRows)
+
+		// Act
+		result, err := repo.GetByName(ctx, name)
+
+		// Assert
+		assert.Error(t, err)
+		assert.Equal(t, ExecutionSequence{}, result)
+		assert.Contains(t, err.Error(), "failed to get execution sequence")
+		mockQueries.AssertExpectations(t)
+	})
+}
+
+func TestPostgresRepository_NewPostgresRepository(t *testing.T) {
+	t.Run("WithOptions", func(t *testing.T) {
+		// Arrange
+		mockQueries := &MockQueriesInterface{}
+
+		// Act
+		repo := NewPostgresRepository(
+			nil, // This would be a real pgxpool.Pool in practice
+			WithQueriesInterface(mockQueries),
+		)
+
+		// Assert
+		assert.NotNil(t, repo)
+		assert.Equal(t, mockQueries, repo.queries)
+	})
+
+	t.Run("DefaultCreation", func(t *testing.T) {
+		// Act
+		repo := NewPostgresRepository(nil)
+
+		// Assert
+		assert.NotNil(t, repo)
+		assert.NotNil(t, repo.queries)
+	})
+}
