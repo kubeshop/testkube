@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"github.com/kubeshop/testkube/pkg/database/postgres/sqlc"
+	"github.com/kubeshop/testkube/pkg/repository/sequence"
 )
 
 // MockQueriesInterface implementation
@@ -75,7 +76,7 @@ func TestPostgresRepository_GetNextExecutionNumber(t *testing.T) {
 		mockQueries.On("UpsertAndIncrementExecutionSequence", ctx, name).Return(expectedResult, nil)
 
 		// Act
-		result, err := repo.GetNextExecutionNumber(ctx, name)
+		result, err := repo.GetNextExecutionNumber(ctx, name, sequence.ExecutionType(0))
 
 		// Assert
 		assert.NoError(t, err)
@@ -96,7 +97,7 @@ func TestPostgresRepository_GetNextExecutionNumber(t *testing.T) {
 		mockQueries.On("UpsertAndIncrementExecutionSequence", ctx, name).Return(sqlc.ExecutionSequence{}, errors.New("database error"))
 
 		// Act
-		result, err := repo.GetNextExecutionNumber(ctx, name)
+		result, err := repo.GetNextExecutionNumber(ctx, name, sequence.ExecutionType(0))
 
 		// Assert
 		assert.Error(t, err)
@@ -120,7 +121,7 @@ func TestPostgresRepository_DeleteExecutionNumber(t *testing.T) {
 		mockQueries.On("DeleteExecutionSequence", ctx, name).Return(nil)
 
 		// Act
-		err := repo.DeleteExecutionNumber(ctx, name)
+		err := repo.DeleteExecutionNumber(ctx, name, sequence.ExecutionType(0))
 
 		// Assert
 		assert.NoError(t, err)
@@ -140,7 +141,7 @@ func TestPostgresRepository_DeleteExecutionNumber(t *testing.T) {
 		mockQueries.On("DeleteExecutionSequence", ctx, name).Return(pgx.ErrNoRows)
 
 		// Act
-		err := repo.DeleteExecutionNumber(ctx, name)
+		err := repo.DeleteExecutionNumber(ctx, name, sequence.ExecutionType(0))
 
 		// Assert
 		assert.NoError(t, err) // Should not return error for not found
@@ -160,7 +161,7 @@ func TestPostgresRepository_DeleteExecutionNumber(t *testing.T) {
 		mockQueries.On("DeleteExecutionSequence", ctx, name).Return(errors.New("database error"))
 
 		// Act
-		err := repo.DeleteExecutionNumber(ctx, name)
+		err := repo.DeleteExecutionNumber(ctx, name, sequence.ExecutionType(0))
 
 		// Assert
 		assert.Error(t, err)
@@ -183,7 +184,7 @@ func TestPostgresRepository_DeleteExecutionNumbers(t *testing.T) {
 		mockQueries.On("DeleteExecutionSequences", ctx, names).Return(nil)
 
 		// Act
-		err := repo.DeleteExecutionNumbers(ctx, names)
+		err := repo.DeleteExecutionNumbers(ctx, names, sequence.ExecutionType(0))
 
 		// Assert
 		assert.NoError(t, err)
@@ -198,7 +199,7 @@ func TestPostgresRepository_DeleteExecutionNumbers(t *testing.T) {
 		names := []string{}
 
 		// Act
-		err := repo.DeleteExecutionNumbers(ctx, names)
+		err := repo.DeleteExecutionNumbers(ctx, names, sequence.ExecutionType(0))
 
 		// Assert
 		assert.NoError(t, err)
@@ -217,7 +218,7 @@ func TestPostgresRepository_DeleteExecutionNumbers(t *testing.T) {
 		mockQueries.On("DeleteExecutionSequences", ctx, names).Return(errors.New("database error"))
 
 		// Act
-		err := repo.DeleteExecutionNumbers(ctx, names)
+		err := repo.DeleteExecutionNumbers(ctx, names, sequence.ExecutionType(0))
 
 		// Assert
 		assert.Error(t, err)
@@ -239,7 +240,7 @@ func TestPostgresRepository_DeleteAllExecutionNumbers(t *testing.T) {
 		mockQueries.On("DeleteAllExecutionSequences", ctx).Return(nil)
 
 		// Act
-		err := repo.DeleteAllExecutionNumbers(ctx)
+		err := repo.DeleteAllExecutionNumbers(ctx, sequence.ExecutionType(0))
 
 		// Assert
 		assert.NoError(t, err)
@@ -258,7 +259,7 @@ func TestPostgresRepository_DeleteAllExecutionNumbers(t *testing.T) {
 		mockQueries.On("DeleteAllExecutionSequences", ctx).Return(errors.New("database error"))
 
 		// Act
-		err := repo.DeleteAllExecutionNumbers(ctx)
+		err := repo.DeleteAllExecutionNumbers(ctx, sequence.ExecutionType(0))
 
 		// Assert
 		assert.Error(t, err)

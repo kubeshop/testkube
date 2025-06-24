@@ -18,6 +18,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/database/postgres/sqlc"
 	"github.com/kubeshop/testkube/pkg/repository/common"
 	"github.com/kubeshop/testkube/pkg/repository/sequence"
+	sequencepostgres "github.com/kubeshop/testkube/pkg/repository/sequence/postgres"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
 )
 
@@ -37,8 +38,9 @@ type PostgresRepositoryOpt func(*PostgresRepository)
 
 func NewPostgresRepository(db *pgxpool.Pool, opts ...PostgresRepositoryOpt) *PostgresRepository {
 	r := &PostgresRepository{
-		db:      &sqlc.PgxPoolWrapper{Pool: db},
-		queries: sqlc.NewSQLCTestWorkflowExecutionQueriesWrapper(sqlc.New(db)),
+		db:                 &sqlc.PgxPoolWrapper{Pool: db},
+		queries:            sqlc.NewSQLCTestWorkflowExecutionQueriesWrapper(sqlc.New(db)),
+		sequenceRepository: sequencepostgres.NewPostgresRepository(db),
 	}
 
 	for _, opt := range opts {

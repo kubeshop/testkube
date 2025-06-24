@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/kubeshop/testkube/pkg/database/postgres/sqlc"
+	"github.com/kubeshop/testkube/pkg/repository/sequence"
 )
 
 type PostgresRepository struct {
@@ -53,7 +54,7 @@ func (w *PgxPoolWrapper) Begin(ctx context.Context) (pgx.Tx, error) {
 }
 
 // GetNextExecutionNumber gets next execution number by name using atomic upsert
-func (r *PostgresRepository) GetNextExecutionNumber(ctx context.Context, name string) (int32, error) {
+func (r *PostgresRepository) GetNextExecutionNumber(ctx context.Context, name string, _ sequence.ExecutionType) (int32, error) {
 	result, err := r.queries.UpsertAndIncrementExecutionSequence(ctx, name)
 	if err != nil {
 		return 0, fmt.Errorf("failed to get next execution number: %w", err)
@@ -63,7 +64,7 @@ func (r *PostgresRepository) GetNextExecutionNumber(ctx context.Context, name st
 }
 
 // DeleteExecutionNumber deletes execution number by name
-func (r *PostgresRepository) DeleteExecutionNumber(ctx context.Context, name string) error {
+func (r *PostgresRepository) DeleteExecutionNumber(ctx context.Context, name string, _ sequence.ExecutionType) error {
 	err := r.queries.DeleteExecutionSequence(ctx, name)
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return fmt.Errorf("failed to delete execution sequence: %w", err)
@@ -72,7 +73,7 @@ func (r *PostgresRepository) DeleteExecutionNumber(ctx context.Context, name str
 }
 
 // DeleteExecutionNumbers deletes multiple execution numbers by names
-func (r *PostgresRepository) DeleteExecutionNumbers(ctx context.Context, names []string) error {
+func (r *PostgresRepository) DeleteExecutionNumbers(ctx context.Context, names []string, _ sequence.ExecutionType) error {
 	if len(names) == 0 {
 		return nil
 	}
@@ -86,7 +87,7 @@ func (r *PostgresRepository) DeleteExecutionNumbers(ctx context.Context, names [
 }
 
 // DeleteAllExecutionNumbers deletes all execution numbers
-func (r *PostgresRepository) DeleteAllExecutionNumbers(ctx context.Context) error {
+func (r *PostgresRepository) DeleteAllExecutionNumbers(ctx context.Context, _ sequence.ExecutionType) error {
 	err := r.queries.DeleteAllExecutionSequences(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to delete all execution sequences: %w", err)
