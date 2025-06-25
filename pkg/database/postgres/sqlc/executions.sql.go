@@ -7,7 +7,6 @@ package sqlc
 
 import (
 	"context"
-	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -145,10 +144,20 @@ SELECT
     e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
-    w.name as workflow_name
+    r.pauses, r.initialization, r.steps,
+    w.name as workflow_name, w.namespace as workflow_namespace, w.description as workflow_description,
+    w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
+    w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
+    w.status as workflow_status,
+    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace, 
+    rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
+    rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
+    rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
+    rw.read_only as resolved_workflow_read_only, rw.status as resolved_workflow_status
 FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
+LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
 WHERE r.status IN ('passed', 'failed', 'aborted')
     AND ($1 IS NULL OR w.name = $1)
     AND ($2 IS NULL OR w.name = ANY($2))
@@ -190,35 +199,57 @@ type GetFinishedTestWorkflowExecutionsParams struct {
 }
 
 type GetFinishedTestWorkflowExecutionsRow struct {
-	ID                        string             `db:"id" json:"id"`
-	GroupID                   pgtype.Text        `db:"group_id" json:"group_id"`
-	RunnerID                  pgtype.Text        `db:"runner_id" json:"runner_id"`
-	RunnerTarget              []byte             `db:"runner_target" json:"runner_target"`
-	RunnerOriginalTarget      []byte             `db:"runner_original_target" json:"runner_original_target"`
-	Name                      string             `db:"name" json:"name"`
-	Namespace                 pgtype.Text        `db:"namespace" json:"namespace"`
-	Number                    pgtype.Int4        `db:"number" json:"number"`
-	ScheduledAt               pgtype.Timestamptz `db:"scheduled_at" json:"scheduled_at"`
-	AssignedAt                pgtype.Timestamptz `db:"assigned_at" json:"assigned_at"`
-	StatusAt                  pgtype.Timestamptz `db:"status_at" json:"status_at"`
-	TestWorkflowExecutionName pgtype.Text        `db:"test_workflow_execution_name" json:"test_workflow_execution_name"`
-	DisableWebhooks           pgtype.Bool        `db:"disable_webhooks" json:"disable_webhooks"`
-	Tags                      []byte             `db:"tags" json:"tags"`
-	RunningContext            []byte             `db:"running_context" json:"running_context"`
-	ConfigParams              []byte             `db:"config_params" json:"config_params"`
-	CreatedAt                 pgtype.Timestamptz `db:"created_at" json:"created_at"`
-	UpdatedAt                 pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
-	Status                    pgtype.Text        `db:"status" json:"status"`
-	PredictedStatus           pgtype.Text        `db:"predicted_status" json:"predicted_status"`
-	QueuedAt                  pgtype.Timestamptz `db:"queued_at" json:"queued_at"`
-	StartedAt                 pgtype.Timestamptz `db:"started_at" json:"started_at"`
-	FinishedAt                pgtype.Timestamptz `db:"finished_at" json:"finished_at"`
-	Duration                  pgtype.Text        `db:"duration" json:"duration"`
-	TotalDuration             pgtype.Text        `db:"total_duration" json:"total_duration"`
-	DurationMs                pgtype.Int4        `db:"duration_ms" json:"duration_ms"`
-	PausedMs                  pgtype.Int4        `db:"paused_ms" json:"paused_ms"`
-	TotalDurationMs           pgtype.Int4        `db:"total_duration_ms" json:"total_duration_ms"`
-	WorkflowName              pgtype.Text        `db:"workflow_name" json:"workflow_name"`
+	ID                          string             `db:"id" json:"id"`
+	GroupID                     pgtype.Text        `db:"group_id" json:"group_id"`
+	RunnerID                    pgtype.Text        `db:"runner_id" json:"runner_id"`
+	RunnerTarget                []byte             `db:"runner_target" json:"runner_target"`
+	RunnerOriginalTarget        []byte             `db:"runner_original_target" json:"runner_original_target"`
+	Name                        string             `db:"name" json:"name"`
+	Namespace                   pgtype.Text        `db:"namespace" json:"namespace"`
+	Number                      pgtype.Int4        `db:"number" json:"number"`
+	ScheduledAt                 pgtype.Timestamptz `db:"scheduled_at" json:"scheduled_at"`
+	AssignedAt                  pgtype.Timestamptz `db:"assigned_at" json:"assigned_at"`
+	StatusAt                    pgtype.Timestamptz `db:"status_at" json:"status_at"`
+	TestWorkflowExecutionName   pgtype.Text        `db:"test_workflow_execution_name" json:"test_workflow_execution_name"`
+	DisableWebhooks             pgtype.Bool        `db:"disable_webhooks" json:"disable_webhooks"`
+	Tags                        []byte             `db:"tags" json:"tags"`
+	RunningContext              []byte             `db:"running_context" json:"running_context"`
+	ConfigParams                []byte             `db:"config_params" json:"config_params"`
+	CreatedAt                   pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt                   pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+	Status                      pgtype.Text        `db:"status" json:"status"`
+	PredictedStatus             pgtype.Text        `db:"predicted_status" json:"predicted_status"`
+	QueuedAt                    pgtype.Timestamptz `db:"queued_at" json:"queued_at"`
+	StartedAt                   pgtype.Timestamptz `db:"started_at" json:"started_at"`
+	FinishedAt                  pgtype.Timestamptz `db:"finished_at" json:"finished_at"`
+	Duration                    pgtype.Text        `db:"duration" json:"duration"`
+	TotalDuration               pgtype.Text        `db:"total_duration" json:"total_duration"`
+	DurationMs                  pgtype.Int4        `db:"duration_ms" json:"duration_ms"`
+	PausedMs                    pgtype.Int4        `db:"paused_ms" json:"paused_ms"`
+	TotalDurationMs             pgtype.Int4        `db:"total_duration_ms" json:"total_duration_ms"`
+	Pauses                      []byte             `db:"pauses" json:"pauses"`
+	Initialization              []byte             `db:"initialization" json:"initialization"`
+	Steps                       []byte             `db:"steps" json:"steps"`
+	WorkflowName                pgtype.Text        `db:"workflow_name" json:"workflow_name"`
+	WorkflowNamespace           pgtype.Text        `db:"workflow_namespace" json:"workflow_namespace"`
+	WorkflowDescription         pgtype.Text        `db:"workflow_description" json:"workflow_description"`
+	WorkflowLabels              []byte             `db:"workflow_labels" json:"workflow_labels"`
+	WorkflowAnnotations         []byte             `db:"workflow_annotations" json:"workflow_annotations"`
+	WorkflowCreated             pgtype.Timestamptz `db:"workflow_created" json:"workflow_created"`
+	WorkflowUpdated             pgtype.Timestamptz `db:"workflow_updated" json:"workflow_updated"`
+	WorkflowSpec                []byte             `db:"workflow_spec" json:"workflow_spec"`
+	WorkflowReadOnly            pgtype.Bool        `db:"workflow_read_only" json:"workflow_read_only"`
+	WorkflowStatus              []byte             `db:"workflow_status" json:"workflow_status"`
+	ResolvedWorkflowName        pgtype.Text        `db:"resolved_workflow_name" json:"resolved_workflow_name"`
+	ResolvedWorkflowNamespace   pgtype.Text        `db:"resolved_workflow_namespace" json:"resolved_workflow_namespace"`
+	ResolvedWorkflowDescription pgtype.Text        `db:"resolved_workflow_description" json:"resolved_workflow_description"`
+	ResolvedWorkflowLabels      []byte             `db:"resolved_workflow_labels" json:"resolved_workflow_labels"`
+	ResolvedWorkflowAnnotations []byte             `db:"resolved_workflow_annotations" json:"resolved_workflow_annotations"`
+	ResolvedWorkflowCreated     pgtype.Timestamptz `db:"resolved_workflow_created" json:"resolved_workflow_created"`
+	ResolvedWorkflowUpdated     pgtype.Timestamptz `db:"resolved_workflow_updated" json:"resolved_workflow_updated"`
+	ResolvedWorkflowSpec        []byte             `db:"resolved_workflow_spec" json:"resolved_workflow_spec"`
+	ResolvedWorkflowReadOnly    pgtype.Bool        `db:"resolved_workflow_read_only" json:"resolved_workflow_read_only"`
+	ResolvedWorkflowStatus      []byte             `db:"resolved_workflow_status" json:"resolved_workflow_status"`
 }
 
 func (q *Queries) GetFinishedTestWorkflowExecutions(ctx context.Context, arg GetFinishedTestWorkflowExecutionsParams) ([]GetFinishedTestWorkflowExecutionsRow, error) {
@@ -275,7 +306,29 @@ func (q *Queries) GetFinishedTestWorkflowExecutions(ctx context.Context, arg Get
 			&i.DurationMs,
 			&i.PausedMs,
 			&i.TotalDurationMs,
+			&i.Pauses,
+			&i.Initialization,
+			&i.Steps,
 			&i.WorkflowName,
+			&i.WorkflowNamespace,
+			&i.WorkflowDescription,
+			&i.WorkflowLabels,
+			&i.WorkflowAnnotations,
+			&i.WorkflowCreated,
+			&i.WorkflowUpdated,
+			&i.WorkflowSpec,
+			&i.WorkflowReadOnly,
+			&i.WorkflowStatus,
+			&i.ResolvedWorkflowName,
+			&i.ResolvedWorkflowNamespace,
+			&i.ResolvedWorkflowDescription,
+			&i.ResolvedWorkflowLabels,
+			&i.ResolvedWorkflowAnnotations,
+			&i.ResolvedWorkflowCreated,
+			&i.ResolvedWorkflowUpdated,
+			&i.ResolvedWorkflowSpec,
+			&i.ResolvedWorkflowReadOnly,
+			&i.ResolvedWorkflowStatus,
 		); err != nil {
 			return nil, err
 		}
@@ -292,47 +345,77 @@ SELECT
     e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
-    r.pauses, r.initialization, r.steps
+    r.pauses, r.initialization, r.steps,
+    w.name as workflow_name, w.namespace as workflow_namespace, w.description as workflow_description,
+    w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
+    w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
+    w.status as workflow_status,
+    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace, 
+    rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
+    rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
+    rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
+    rw.read_only as resolved_workflow_read_only, rw.status as resolved_workflow_status
 FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
+LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
 WHERE w.name = $1 
 ORDER BY e.status_at DESC 
 LIMIT 1
 `
 
 type GetLatestTestWorkflowExecutionByTestWorkflowRow struct {
-	ID                        string             `db:"id" json:"id"`
-	GroupID                   pgtype.Text        `db:"group_id" json:"group_id"`
-	RunnerID                  pgtype.Text        `db:"runner_id" json:"runner_id"`
-	RunnerTarget              []byte             `db:"runner_target" json:"runner_target"`
-	RunnerOriginalTarget      []byte             `db:"runner_original_target" json:"runner_original_target"`
-	Name                      string             `db:"name" json:"name"`
-	Namespace                 pgtype.Text        `db:"namespace" json:"namespace"`
-	Number                    pgtype.Int4        `db:"number" json:"number"`
-	ScheduledAt               pgtype.Timestamptz `db:"scheduled_at" json:"scheduled_at"`
-	AssignedAt                pgtype.Timestamptz `db:"assigned_at" json:"assigned_at"`
-	StatusAt                  pgtype.Timestamptz `db:"status_at" json:"status_at"`
-	TestWorkflowExecutionName pgtype.Text        `db:"test_workflow_execution_name" json:"test_workflow_execution_name"`
-	DisableWebhooks           pgtype.Bool        `db:"disable_webhooks" json:"disable_webhooks"`
-	Tags                      []byte             `db:"tags" json:"tags"`
-	RunningContext            []byte             `db:"running_context" json:"running_context"`
-	ConfigParams              []byte             `db:"config_params" json:"config_params"`
-	CreatedAt                 pgtype.Timestamptz `db:"created_at" json:"created_at"`
-	UpdatedAt                 pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
-	Status                    pgtype.Text        `db:"status" json:"status"`
-	PredictedStatus           pgtype.Text        `db:"predicted_status" json:"predicted_status"`
-	QueuedAt                  pgtype.Timestamptz `db:"queued_at" json:"queued_at"`
-	StartedAt                 pgtype.Timestamptz `db:"started_at" json:"started_at"`
-	FinishedAt                pgtype.Timestamptz `db:"finished_at" json:"finished_at"`
-	Duration                  pgtype.Text        `db:"duration" json:"duration"`
-	TotalDuration             pgtype.Text        `db:"total_duration" json:"total_duration"`
-	DurationMs                pgtype.Int4        `db:"duration_ms" json:"duration_ms"`
-	PausedMs                  pgtype.Int4        `db:"paused_ms" json:"paused_ms"`
-	TotalDurationMs           pgtype.Int4        `db:"total_duration_ms" json:"total_duration_ms"`
-	Pauses                    []byte             `db:"pauses" json:"pauses"`
-	Initialization            []byte             `db:"initialization" json:"initialization"`
-	Steps                     []byte             `db:"steps" json:"steps"`
+	ID                          string             `db:"id" json:"id"`
+	GroupID                     pgtype.Text        `db:"group_id" json:"group_id"`
+	RunnerID                    pgtype.Text        `db:"runner_id" json:"runner_id"`
+	RunnerTarget                []byte             `db:"runner_target" json:"runner_target"`
+	RunnerOriginalTarget        []byte             `db:"runner_original_target" json:"runner_original_target"`
+	Name                        string             `db:"name" json:"name"`
+	Namespace                   pgtype.Text        `db:"namespace" json:"namespace"`
+	Number                      pgtype.Int4        `db:"number" json:"number"`
+	ScheduledAt                 pgtype.Timestamptz `db:"scheduled_at" json:"scheduled_at"`
+	AssignedAt                  pgtype.Timestamptz `db:"assigned_at" json:"assigned_at"`
+	StatusAt                    pgtype.Timestamptz `db:"status_at" json:"status_at"`
+	TestWorkflowExecutionName   pgtype.Text        `db:"test_workflow_execution_name" json:"test_workflow_execution_name"`
+	DisableWebhooks             pgtype.Bool        `db:"disable_webhooks" json:"disable_webhooks"`
+	Tags                        []byte             `db:"tags" json:"tags"`
+	RunningContext              []byte             `db:"running_context" json:"running_context"`
+	ConfigParams                []byte             `db:"config_params" json:"config_params"`
+	CreatedAt                   pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt                   pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+	Status                      pgtype.Text        `db:"status" json:"status"`
+	PredictedStatus             pgtype.Text        `db:"predicted_status" json:"predicted_status"`
+	QueuedAt                    pgtype.Timestamptz `db:"queued_at" json:"queued_at"`
+	StartedAt                   pgtype.Timestamptz `db:"started_at" json:"started_at"`
+	FinishedAt                  pgtype.Timestamptz `db:"finished_at" json:"finished_at"`
+	Duration                    pgtype.Text        `db:"duration" json:"duration"`
+	TotalDuration               pgtype.Text        `db:"total_duration" json:"total_duration"`
+	DurationMs                  pgtype.Int4        `db:"duration_ms" json:"duration_ms"`
+	PausedMs                    pgtype.Int4        `db:"paused_ms" json:"paused_ms"`
+	TotalDurationMs             pgtype.Int4        `db:"total_duration_ms" json:"total_duration_ms"`
+	Pauses                      []byte             `db:"pauses" json:"pauses"`
+	Initialization              []byte             `db:"initialization" json:"initialization"`
+	Steps                       []byte             `db:"steps" json:"steps"`
+	WorkflowName                pgtype.Text        `db:"workflow_name" json:"workflow_name"`
+	WorkflowNamespace           pgtype.Text        `db:"workflow_namespace" json:"workflow_namespace"`
+	WorkflowDescription         pgtype.Text        `db:"workflow_description" json:"workflow_description"`
+	WorkflowLabels              []byte             `db:"workflow_labels" json:"workflow_labels"`
+	WorkflowAnnotations         []byte             `db:"workflow_annotations" json:"workflow_annotations"`
+	WorkflowCreated             pgtype.Timestamptz `db:"workflow_created" json:"workflow_created"`
+	WorkflowUpdated             pgtype.Timestamptz `db:"workflow_updated" json:"workflow_updated"`
+	WorkflowSpec                []byte             `db:"workflow_spec" json:"workflow_spec"`
+	WorkflowReadOnly            pgtype.Bool        `db:"workflow_read_only" json:"workflow_read_only"`
+	WorkflowStatus              []byte             `db:"workflow_status" json:"workflow_status"`
+	ResolvedWorkflowName        pgtype.Text        `db:"resolved_workflow_name" json:"resolved_workflow_name"`
+	ResolvedWorkflowNamespace   pgtype.Text        `db:"resolved_workflow_namespace" json:"resolved_workflow_namespace"`
+	ResolvedWorkflowDescription pgtype.Text        `db:"resolved_workflow_description" json:"resolved_workflow_description"`
+	ResolvedWorkflowLabels      []byte             `db:"resolved_workflow_labels" json:"resolved_workflow_labels"`
+	ResolvedWorkflowAnnotations []byte             `db:"resolved_workflow_annotations" json:"resolved_workflow_annotations"`
+	ResolvedWorkflowCreated     pgtype.Timestamptz `db:"resolved_workflow_created" json:"resolved_workflow_created"`
+	ResolvedWorkflowUpdated     pgtype.Timestamptz `db:"resolved_workflow_updated" json:"resolved_workflow_updated"`
+	ResolvedWorkflowSpec        []byte             `db:"resolved_workflow_spec" json:"resolved_workflow_spec"`
+	ResolvedWorkflowReadOnly    pgtype.Bool        `db:"resolved_workflow_read_only" json:"resolved_workflow_read_only"`
+	ResolvedWorkflowStatus      []byte             `db:"resolved_workflow_status" json:"resolved_workflow_status"`
 }
 
 func (q *Queries) GetLatestTestWorkflowExecutionByTestWorkflow(ctx context.Context, workflowName string) (GetLatestTestWorkflowExecutionByTestWorkflowRow, error) {
@@ -370,6 +453,26 @@ func (q *Queries) GetLatestTestWorkflowExecutionByTestWorkflow(ctx context.Conte
 		&i.Pauses,
 		&i.Initialization,
 		&i.Steps,
+		&i.WorkflowName,
+		&i.WorkflowNamespace,
+		&i.WorkflowDescription,
+		&i.WorkflowLabels,
+		&i.WorkflowAnnotations,
+		&i.WorkflowCreated,
+		&i.WorkflowUpdated,
+		&i.WorkflowSpec,
+		&i.WorkflowReadOnly,
+		&i.WorkflowStatus,
+		&i.ResolvedWorkflowName,
+		&i.ResolvedWorkflowNamespace,
+		&i.ResolvedWorkflowDescription,
+		&i.ResolvedWorkflowLabels,
+		&i.ResolvedWorkflowAnnotations,
+		&i.ResolvedWorkflowCreated,
+		&i.ResolvedWorkflowUpdated,
+		&i.ResolvedWorkflowSpec,
+		&i.ResolvedWorkflowReadOnly,
+		&i.ResolvedWorkflowStatus,
 	)
 	return i, err
 }
@@ -378,43 +481,77 @@ const getLatestTestWorkflowExecutionsByTestWorkflows = `-- name: GetLatestTestWo
 SELECT DISTINCT ON (w.name)
     e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
-    r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms
+    r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
+    r.pauses, r.initialization, r.steps,
+    w.name as workflow_name, w.namespace as workflow_namespace, w.description as workflow_description,
+    w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
+    w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
+    w.status as workflow_status,
+    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace, 
+    rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
+    rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
+    rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
+    rw.read_only as resolved_workflow_read_only, rw.status as resolved_workflow_status
 FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
+LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
 WHERE w.name = ANY($1)
 ORDER BY w.name, e.status_at DESC
 `
 
 type GetLatestTestWorkflowExecutionsByTestWorkflowsRow struct {
-	ID                        string             `db:"id" json:"id"`
-	GroupID                   pgtype.Text        `db:"group_id" json:"group_id"`
-	RunnerID                  pgtype.Text        `db:"runner_id" json:"runner_id"`
-	RunnerTarget              []byte             `db:"runner_target" json:"runner_target"`
-	RunnerOriginalTarget      []byte             `db:"runner_original_target" json:"runner_original_target"`
-	Name                      string             `db:"name" json:"name"`
-	Namespace                 pgtype.Text        `db:"namespace" json:"namespace"`
-	Number                    pgtype.Int4        `db:"number" json:"number"`
-	ScheduledAt               pgtype.Timestamptz `db:"scheduled_at" json:"scheduled_at"`
-	AssignedAt                pgtype.Timestamptz `db:"assigned_at" json:"assigned_at"`
-	StatusAt                  pgtype.Timestamptz `db:"status_at" json:"status_at"`
-	TestWorkflowExecutionName pgtype.Text        `db:"test_workflow_execution_name" json:"test_workflow_execution_name"`
-	DisableWebhooks           pgtype.Bool        `db:"disable_webhooks" json:"disable_webhooks"`
-	Tags                      []byte             `db:"tags" json:"tags"`
-	RunningContext            []byte             `db:"running_context" json:"running_context"`
-	ConfigParams              []byte             `db:"config_params" json:"config_params"`
-	CreatedAt                 pgtype.Timestamptz `db:"created_at" json:"created_at"`
-	UpdatedAt                 pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
-	Status                    pgtype.Text        `db:"status" json:"status"`
-	PredictedStatus           pgtype.Text        `db:"predicted_status" json:"predicted_status"`
-	QueuedAt                  pgtype.Timestamptz `db:"queued_at" json:"queued_at"`
-	StartedAt                 pgtype.Timestamptz `db:"started_at" json:"started_at"`
-	FinishedAt                pgtype.Timestamptz `db:"finished_at" json:"finished_at"`
-	Duration                  pgtype.Text        `db:"duration" json:"duration"`
-	TotalDuration             pgtype.Text        `db:"total_duration" json:"total_duration"`
-	DurationMs                pgtype.Int4        `db:"duration_ms" json:"duration_ms"`
-	PausedMs                  pgtype.Int4        `db:"paused_ms" json:"paused_ms"`
-	TotalDurationMs           pgtype.Int4        `db:"total_duration_ms" json:"total_duration_ms"`
+	ID                          string             `db:"id" json:"id"`
+	GroupID                     pgtype.Text        `db:"group_id" json:"group_id"`
+	RunnerID                    pgtype.Text        `db:"runner_id" json:"runner_id"`
+	RunnerTarget                []byte             `db:"runner_target" json:"runner_target"`
+	RunnerOriginalTarget        []byte             `db:"runner_original_target" json:"runner_original_target"`
+	Name                        string             `db:"name" json:"name"`
+	Namespace                   pgtype.Text        `db:"namespace" json:"namespace"`
+	Number                      pgtype.Int4        `db:"number" json:"number"`
+	ScheduledAt                 pgtype.Timestamptz `db:"scheduled_at" json:"scheduled_at"`
+	AssignedAt                  pgtype.Timestamptz `db:"assigned_at" json:"assigned_at"`
+	StatusAt                    pgtype.Timestamptz `db:"status_at" json:"status_at"`
+	TestWorkflowExecutionName   pgtype.Text        `db:"test_workflow_execution_name" json:"test_workflow_execution_name"`
+	DisableWebhooks             pgtype.Bool        `db:"disable_webhooks" json:"disable_webhooks"`
+	Tags                        []byte             `db:"tags" json:"tags"`
+	RunningContext              []byte             `db:"running_context" json:"running_context"`
+	ConfigParams                []byte             `db:"config_params" json:"config_params"`
+	CreatedAt                   pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt                   pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+	Status                      pgtype.Text        `db:"status" json:"status"`
+	PredictedStatus             pgtype.Text        `db:"predicted_status" json:"predicted_status"`
+	QueuedAt                    pgtype.Timestamptz `db:"queued_at" json:"queued_at"`
+	StartedAt                   pgtype.Timestamptz `db:"started_at" json:"started_at"`
+	FinishedAt                  pgtype.Timestamptz `db:"finished_at" json:"finished_at"`
+	Duration                    pgtype.Text        `db:"duration" json:"duration"`
+	TotalDuration               pgtype.Text        `db:"total_duration" json:"total_duration"`
+	DurationMs                  pgtype.Int4        `db:"duration_ms" json:"duration_ms"`
+	PausedMs                    pgtype.Int4        `db:"paused_ms" json:"paused_ms"`
+	TotalDurationMs             pgtype.Int4        `db:"total_duration_ms" json:"total_duration_ms"`
+	Pauses                      []byte             `db:"pauses" json:"pauses"`
+	Initialization              []byte             `db:"initialization" json:"initialization"`
+	Steps                       []byte             `db:"steps" json:"steps"`
+	WorkflowName                pgtype.Text        `db:"workflow_name" json:"workflow_name"`
+	WorkflowNamespace           pgtype.Text        `db:"workflow_namespace" json:"workflow_namespace"`
+	WorkflowDescription         pgtype.Text        `db:"workflow_description" json:"workflow_description"`
+	WorkflowLabels              []byte             `db:"workflow_labels" json:"workflow_labels"`
+	WorkflowAnnotations         []byte             `db:"workflow_annotations" json:"workflow_annotations"`
+	WorkflowCreated             pgtype.Timestamptz `db:"workflow_created" json:"workflow_created"`
+	WorkflowUpdated             pgtype.Timestamptz `db:"workflow_updated" json:"workflow_updated"`
+	WorkflowSpec                []byte             `db:"workflow_spec" json:"workflow_spec"`
+	WorkflowReadOnly            pgtype.Bool        `db:"workflow_read_only" json:"workflow_read_only"`
+	WorkflowStatus              []byte             `db:"workflow_status" json:"workflow_status"`
+	ResolvedWorkflowName        pgtype.Text        `db:"resolved_workflow_name" json:"resolved_workflow_name"`
+	ResolvedWorkflowNamespace   pgtype.Text        `db:"resolved_workflow_namespace" json:"resolved_workflow_namespace"`
+	ResolvedWorkflowDescription pgtype.Text        `db:"resolved_workflow_description" json:"resolved_workflow_description"`
+	ResolvedWorkflowLabels      []byte             `db:"resolved_workflow_labels" json:"resolved_workflow_labels"`
+	ResolvedWorkflowAnnotations []byte             `db:"resolved_workflow_annotations" json:"resolved_workflow_annotations"`
+	ResolvedWorkflowCreated     pgtype.Timestamptz `db:"resolved_workflow_created" json:"resolved_workflow_created"`
+	ResolvedWorkflowUpdated     pgtype.Timestamptz `db:"resolved_workflow_updated" json:"resolved_workflow_updated"`
+	ResolvedWorkflowSpec        []byte             `db:"resolved_workflow_spec" json:"resolved_workflow_spec"`
+	ResolvedWorkflowReadOnly    pgtype.Bool        `db:"resolved_workflow_read_only" json:"resolved_workflow_read_only"`
+	ResolvedWorkflowStatus      []byte             `db:"resolved_workflow_status" json:"resolved_workflow_status"`
 }
 
 func (q *Queries) GetLatestTestWorkflowExecutionsByTestWorkflows(ctx context.Context, workflowNames []string) ([]GetLatestTestWorkflowExecutionsByTestWorkflowsRow, error) {
@@ -455,6 +592,29 @@ func (q *Queries) GetLatestTestWorkflowExecutionsByTestWorkflows(ctx context.Con
 			&i.DurationMs,
 			&i.PausedMs,
 			&i.TotalDurationMs,
+			&i.Pauses,
+			&i.Initialization,
+			&i.Steps,
+			&i.WorkflowName,
+			&i.WorkflowNamespace,
+			&i.WorkflowDescription,
+			&i.WorkflowLabels,
+			&i.WorkflowAnnotations,
+			&i.WorkflowCreated,
+			&i.WorkflowUpdated,
+			&i.WorkflowSpec,
+			&i.WorkflowReadOnly,
+			&i.WorkflowStatus,
+			&i.ResolvedWorkflowName,
+			&i.ResolvedWorkflowNamespace,
+			&i.ResolvedWorkflowDescription,
+			&i.ResolvedWorkflowLabels,
+			&i.ResolvedWorkflowAnnotations,
+			&i.ResolvedWorkflowCreated,
+			&i.ResolvedWorkflowUpdated,
+			&i.ResolvedWorkflowSpec,
+			&i.ResolvedWorkflowReadOnly,
+			&i.ResolvedWorkflowStatus,
 		); err != nil {
 			return nil, err
 		}
@@ -464,17 +624,6 @@ func (q *Queries) GetLatestTestWorkflowExecutionsByTestWorkflows(ctx context.Con
 		return nil, err
 	}
 	return items, nil
-}
-
-const getNextExecutionNumber = `-- name: GetNextExecutionNumber :one
-SELECT nextval('test_workflow_execution_number_seq_' || $1) as number
-`
-
-func (q *Queries) GetNextExecutionNumber(ctx context.Context, workflowName string) (int64, error) {
-	row := q.db.QueryRow(ctx, getNextExecutionNumber, workflowName)
-	var number int64
-	err := row.Scan(&number)
-	return number, err
 }
 
 const getPreviousFinishedState = `-- name: GetPreviousFinishedState :one
@@ -490,8 +639,8 @@ LIMIT 1
 `
 
 type GetPreviousFinishedStateParams struct {
-	WorkflowName string    `db:"workflow_name" json:"workflow_name"`
-	Date         time.Time `db:"date" json:"date"`
+	WorkflowName pgtype.Text        `db:"workflow_name" json:"workflow_name"`
+	Date         pgtype.Timestamptz `db:"date" json:"date"`
 }
 
 func (q *Queries) GetPreviousFinishedState(ctx context.Context, arg GetPreviousFinishedStateParams) (pgtype.Text, error) {
@@ -505,42 +654,77 @@ const getRunningTestWorkflowExecutions = `-- name: GetRunningTestWorkflowExecuti
 SELECT 
     e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
-    r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms
+    r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
+    r.pauses, r.initialization, r.steps,
+    w.name as workflow_name, w.namespace as workflow_namespace, w.description as workflow_description,
+    w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
+    w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
+    w.status as workflow_status,
+    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace, 
+    rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
+    rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
+    rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
+    rw.read_only as resolved_workflow_read_only, rw.status as resolved_workflow_status
 FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e.id = r.execution_id
+LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
+LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
 WHERE r.status IN ('paused', 'running', 'queued')
 ORDER BY e.id DESC
 `
 
 type GetRunningTestWorkflowExecutionsRow struct {
-	ID                        string             `db:"id" json:"id"`
-	GroupID                   pgtype.Text        `db:"group_id" json:"group_id"`
-	RunnerID                  pgtype.Text        `db:"runner_id" json:"runner_id"`
-	RunnerTarget              []byte             `db:"runner_target" json:"runner_target"`
-	RunnerOriginalTarget      []byte             `db:"runner_original_target" json:"runner_original_target"`
-	Name                      string             `db:"name" json:"name"`
-	Namespace                 pgtype.Text        `db:"namespace" json:"namespace"`
-	Number                    pgtype.Int4        `db:"number" json:"number"`
-	ScheduledAt               pgtype.Timestamptz `db:"scheduled_at" json:"scheduled_at"`
-	AssignedAt                pgtype.Timestamptz `db:"assigned_at" json:"assigned_at"`
-	StatusAt                  pgtype.Timestamptz `db:"status_at" json:"status_at"`
-	TestWorkflowExecutionName pgtype.Text        `db:"test_workflow_execution_name" json:"test_workflow_execution_name"`
-	DisableWebhooks           pgtype.Bool        `db:"disable_webhooks" json:"disable_webhooks"`
-	Tags                      []byte             `db:"tags" json:"tags"`
-	RunningContext            []byte             `db:"running_context" json:"running_context"`
-	ConfigParams              []byte             `db:"config_params" json:"config_params"`
-	CreatedAt                 pgtype.Timestamptz `db:"created_at" json:"created_at"`
-	UpdatedAt                 pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
-	Status                    pgtype.Text        `db:"status" json:"status"`
-	PredictedStatus           pgtype.Text        `db:"predicted_status" json:"predicted_status"`
-	QueuedAt                  pgtype.Timestamptz `db:"queued_at" json:"queued_at"`
-	StartedAt                 pgtype.Timestamptz `db:"started_at" json:"started_at"`
-	FinishedAt                pgtype.Timestamptz `db:"finished_at" json:"finished_at"`
-	Duration                  pgtype.Text        `db:"duration" json:"duration"`
-	TotalDuration             pgtype.Text        `db:"total_duration" json:"total_duration"`
-	DurationMs                pgtype.Int4        `db:"duration_ms" json:"duration_ms"`
-	PausedMs                  pgtype.Int4        `db:"paused_ms" json:"paused_ms"`
-	TotalDurationMs           pgtype.Int4        `db:"total_duration_ms" json:"total_duration_ms"`
+	ID                          string             `db:"id" json:"id"`
+	GroupID                     pgtype.Text        `db:"group_id" json:"group_id"`
+	RunnerID                    pgtype.Text        `db:"runner_id" json:"runner_id"`
+	RunnerTarget                []byte             `db:"runner_target" json:"runner_target"`
+	RunnerOriginalTarget        []byte             `db:"runner_original_target" json:"runner_original_target"`
+	Name                        string             `db:"name" json:"name"`
+	Namespace                   pgtype.Text        `db:"namespace" json:"namespace"`
+	Number                      pgtype.Int4        `db:"number" json:"number"`
+	ScheduledAt                 pgtype.Timestamptz `db:"scheduled_at" json:"scheduled_at"`
+	AssignedAt                  pgtype.Timestamptz `db:"assigned_at" json:"assigned_at"`
+	StatusAt                    pgtype.Timestamptz `db:"status_at" json:"status_at"`
+	TestWorkflowExecutionName   pgtype.Text        `db:"test_workflow_execution_name" json:"test_workflow_execution_name"`
+	DisableWebhooks             pgtype.Bool        `db:"disable_webhooks" json:"disable_webhooks"`
+	Tags                        []byte             `db:"tags" json:"tags"`
+	RunningContext              []byte             `db:"running_context" json:"running_context"`
+	ConfigParams                []byte             `db:"config_params" json:"config_params"`
+	CreatedAt                   pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt                   pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+	Status                      pgtype.Text        `db:"status" json:"status"`
+	PredictedStatus             pgtype.Text        `db:"predicted_status" json:"predicted_status"`
+	QueuedAt                    pgtype.Timestamptz `db:"queued_at" json:"queued_at"`
+	StartedAt                   pgtype.Timestamptz `db:"started_at" json:"started_at"`
+	FinishedAt                  pgtype.Timestamptz `db:"finished_at" json:"finished_at"`
+	Duration                    pgtype.Text        `db:"duration" json:"duration"`
+	TotalDuration               pgtype.Text        `db:"total_duration" json:"total_duration"`
+	DurationMs                  pgtype.Int4        `db:"duration_ms" json:"duration_ms"`
+	PausedMs                    pgtype.Int4        `db:"paused_ms" json:"paused_ms"`
+	TotalDurationMs             pgtype.Int4        `db:"total_duration_ms" json:"total_duration_ms"`
+	Pauses                      []byte             `db:"pauses" json:"pauses"`
+	Initialization              []byte             `db:"initialization" json:"initialization"`
+	Steps                       []byte             `db:"steps" json:"steps"`
+	WorkflowName                pgtype.Text        `db:"workflow_name" json:"workflow_name"`
+	WorkflowNamespace           pgtype.Text        `db:"workflow_namespace" json:"workflow_namespace"`
+	WorkflowDescription         pgtype.Text        `db:"workflow_description" json:"workflow_description"`
+	WorkflowLabels              []byte             `db:"workflow_labels" json:"workflow_labels"`
+	WorkflowAnnotations         []byte             `db:"workflow_annotations" json:"workflow_annotations"`
+	WorkflowCreated             pgtype.Timestamptz `db:"workflow_created" json:"workflow_created"`
+	WorkflowUpdated             pgtype.Timestamptz `db:"workflow_updated" json:"workflow_updated"`
+	WorkflowSpec                []byte             `db:"workflow_spec" json:"workflow_spec"`
+	WorkflowReadOnly            pgtype.Bool        `db:"workflow_read_only" json:"workflow_read_only"`
+	WorkflowStatus              []byte             `db:"workflow_status" json:"workflow_status"`
+	ResolvedWorkflowName        pgtype.Text        `db:"resolved_workflow_name" json:"resolved_workflow_name"`
+	ResolvedWorkflowNamespace   pgtype.Text        `db:"resolved_workflow_namespace" json:"resolved_workflow_namespace"`
+	ResolvedWorkflowDescription pgtype.Text        `db:"resolved_workflow_description" json:"resolved_workflow_description"`
+	ResolvedWorkflowLabels      []byte             `db:"resolved_workflow_labels" json:"resolved_workflow_labels"`
+	ResolvedWorkflowAnnotations []byte             `db:"resolved_workflow_annotations" json:"resolved_workflow_annotations"`
+	ResolvedWorkflowCreated     pgtype.Timestamptz `db:"resolved_workflow_created" json:"resolved_workflow_created"`
+	ResolvedWorkflowUpdated     pgtype.Timestamptz `db:"resolved_workflow_updated" json:"resolved_workflow_updated"`
+	ResolvedWorkflowSpec        []byte             `db:"resolved_workflow_spec" json:"resolved_workflow_spec"`
+	ResolvedWorkflowReadOnly    pgtype.Bool        `db:"resolved_workflow_read_only" json:"resolved_workflow_read_only"`
+	ResolvedWorkflowStatus      []byte             `db:"resolved_workflow_status" json:"resolved_workflow_status"`
 }
 
 func (q *Queries) GetRunningTestWorkflowExecutions(ctx context.Context) ([]GetRunningTestWorkflowExecutionsRow, error) {
@@ -581,6 +765,29 @@ func (q *Queries) GetRunningTestWorkflowExecutions(ctx context.Context) ([]GetRu
 			&i.DurationMs,
 			&i.PausedMs,
 			&i.TotalDurationMs,
+			&i.Pauses,
+			&i.Initialization,
+			&i.Steps,
+			&i.WorkflowName,
+			&i.WorkflowNamespace,
+			&i.WorkflowDescription,
+			&i.WorkflowLabels,
+			&i.WorkflowAnnotations,
+			&i.WorkflowCreated,
+			&i.WorkflowUpdated,
+			&i.WorkflowSpec,
+			&i.WorkflowReadOnly,
+			&i.WorkflowStatus,
+			&i.ResolvedWorkflowName,
+			&i.ResolvedWorkflowNamespace,
+			&i.ResolvedWorkflowDescription,
+			&i.ResolvedWorkflowLabels,
+			&i.ResolvedWorkflowAnnotations,
+			&i.ResolvedWorkflowCreated,
+			&i.ResolvedWorkflowUpdated,
+			&i.ResolvedWorkflowSpec,
+			&i.ResolvedWorkflowReadOnly,
+			&i.ResolvedWorkflowStatus,
 		); err != nil {
 			return nil, err
 		}
@@ -736,60 +943,76 @@ SELECT
     w.name as workflow_name, w.namespace as workflow_namespace, w.description as workflow_description,
     w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
     w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
-    w.status as workflow_status
+    w.status as workflow_status,
+    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace, 
+    rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
+    rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
+    rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
+    rw.read_only as resolved_workflow_read_only, rw.status as resolved_workflow_status
 FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
+LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
 WHERE (e.id = $1 OR e.name = $1) AND w.name = $2
 `
 
 type GetTestWorkflowExecutionByNameAndTestWorkflowParams struct {
-	Name         string `db:"name" json:"name"`
-	WorkflowName string `db:"workflow_name" json:"workflow_name"`
+	Name         string      `db:"name" json:"name"`
+	WorkflowName pgtype.Text `db:"workflow_name" json:"workflow_name"`
 }
 
 type GetTestWorkflowExecutionByNameAndTestWorkflowRow struct {
-	ID                        string             `db:"id" json:"id"`
-	GroupID                   pgtype.Text        `db:"group_id" json:"group_id"`
-	RunnerID                  pgtype.Text        `db:"runner_id" json:"runner_id"`
-	RunnerTarget              []byte             `db:"runner_target" json:"runner_target"`
-	RunnerOriginalTarget      []byte             `db:"runner_original_target" json:"runner_original_target"`
-	Name                      string             `db:"name" json:"name"`
-	Namespace                 pgtype.Text        `db:"namespace" json:"namespace"`
-	Number                    pgtype.Int4        `db:"number" json:"number"`
-	ScheduledAt               pgtype.Timestamptz `db:"scheduled_at" json:"scheduled_at"`
-	AssignedAt                pgtype.Timestamptz `db:"assigned_at" json:"assigned_at"`
-	StatusAt                  pgtype.Timestamptz `db:"status_at" json:"status_at"`
-	TestWorkflowExecutionName pgtype.Text        `db:"test_workflow_execution_name" json:"test_workflow_execution_name"`
-	DisableWebhooks           pgtype.Bool        `db:"disable_webhooks" json:"disable_webhooks"`
-	Tags                      []byte             `db:"tags" json:"tags"`
-	RunningContext            []byte             `db:"running_context" json:"running_context"`
-	ConfigParams              []byte             `db:"config_params" json:"config_params"`
-	CreatedAt                 pgtype.Timestamptz `db:"created_at" json:"created_at"`
-	UpdatedAt                 pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
-	Status                    pgtype.Text        `db:"status" json:"status"`
-	PredictedStatus           pgtype.Text        `db:"predicted_status" json:"predicted_status"`
-	QueuedAt                  pgtype.Timestamptz `db:"queued_at" json:"queued_at"`
-	StartedAt                 pgtype.Timestamptz `db:"started_at" json:"started_at"`
-	FinishedAt                pgtype.Timestamptz `db:"finished_at" json:"finished_at"`
-	Duration                  pgtype.Text        `db:"duration" json:"duration"`
-	TotalDuration             pgtype.Text        `db:"total_duration" json:"total_duration"`
-	DurationMs                pgtype.Int4        `db:"duration_ms" json:"duration_ms"`
-	PausedMs                  pgtype.Int4        `db:"paused_ms" json:"paused_ms"`
-	TotalDurationMs           pgtype.Int4        `db:"total_duration_ms" json:"total_duration_ms"`
-	Pauses                    []byte             `db:"pauses" json:"pauses"`
-	Initialization            []byte             `db:"initialization" json:"initialization"`
-	Steps                     []byte             `db:"steps" json:"steps"`
-	WorkflowName              pgtype.Text        `db:"workflow_name" json:"workflow_name"`
-	WorkflowNamespace         pgtype.Text        `db:"workflow_namespace" json:"workflow_namespace"`
-	WorkflowDescription       pgtype.Text        `db:"workflow_description" json:"workflow_description"`
-	WorkflowLabels            []byte             `db:"workflow_labels" json:"workflow_labels"`
-	WorkflowAnnotations       []byte             `db:"workflow_annotations" json:"workflow_annotations"`
-	WorkflowCreated           pgtype.Timestamptz `db:"workflow_created" json:"workflow_created"`
-	WorkflowUpdated           pgtype.Timestamptz `db:"workflow_updated" json:"workflow_updated"`
-	WorkflowSpec              []byte             `db:"workflow_spec" json:"workflow_spec"`
-	WorkflowReadOnly          pgtype.Bool        `db:"workflow_read_only" json:"workflow_read_only"`
-	WorkflowStatus            []byte             `db:"workflow_status" json:"workflow_status"`
+	ID                          string             `db:"id" json:"id"`
+	GroupID                     pgtype.Text        `db:"group_id" json:"group_id"`
+	RunnerID                    pgtype.Text        `db:"runner_id" json:"runner_id"`
+	RunnerTarget                []byte             `db:"runner_target" json:"runner_target"`
+	RunnerOriginalTarget        []byte             `db:"runner_original_target" json:"runner_original_target"`
+	Name                        string             `db:"name" json:"name"`
+	Namespace                   pgtype.Text        `db:"namespace" json:"namespace"`
+	Number                      pgtype.Int4        `db:"number" json:"number"`
+	ScheduledAt                 pgtype.Timestamptz `db:"scheduled_at" json:"scheduled_at"`
+	AssignedAt                  pgtype.Timestamptz `db:"assigned_at" json:"assigned_at"`
+	StatusAt                    pgtype.Timestamptz `db:"status_at" json:"status_at"`
+	TestWorkflowExecutionName   pgtype.Text        `db:"test_workflow_execution_name" json:"test_workflow_execution_name"`
+	DisableWebhooks             pgtype.Bool        `db:"disable_webhooks" json:"disable_webhooks"`
+	Tags                        []byte             `db:"tags" json:"tags"`
+	RunningContext              []byte             `db:"running_context" json:"running_context"`
+	ConfigParams                []byte             `db:"config_params" json:"config_params"`
+	CreatedAt                   pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt                   pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+	Status                      pgtype.Text        `db:"status" json:"status"`
+	PredictedStatus             pgtype.Text        `db:"predicted_status" json:"predicted_status"`
+	QueuedAt                    pgtype.Timestamptz `db:"queued_at" json:"queued_at"`
+	StartedAt                   pgtype.Timestamptz `db:"started_at" json:"started_at"`
+	FinishedAt                  pgtype.Timestamptz `db:"finished_at" json:"finished_at"`
+	Duration                    pgtype.Text        `db:"duration" json:"duration"`
+	TotalDuration               pgtype.Text        `db:"total_duration" json:"total_duration"`
+	DurationMs                  pgtype.Int4        `db:"duration_ms" json:"duration_ms"`
+	PausedMs                    pgtype.Int4        `db:"paused_ms" json:"paused_ms"`
+	TotalDurationMs             pgtype.Int4        `db:"total_duration_ms" json:"total_duration_ms"`
+	Pauses                      []byte             `db:"pauses" json:"pauses"`
+	Initialization              []byte             `db:"initialization" json:"initialization"`
+	Steps                       []byte             `db:"steps" json:"steps"`
+	WorkflowName                pgtype.Text        `db:"workflow_name" json:"workflow_name"`
+	WorkflowNamespace           pgtype.Text        `db:"workflow_namespace" json:"workflow_namespace"`
+	WorkflowDescription         pgtype.Text        `db:"workflow_description" json:"workflow_description"`
+	WorkflowLabels              []byte             `db:"workflow_labels" json:"workflow_labels"`
+	WorkflowAnnotations         []byte             `db:"workflow_annotations" json:"workflow_annotations"`
+	WorkflowCreated             pgtype.Timestamptz `db:"workflow_created" json:"workflow_created"`
+	WorkflowUpdated             pgtype.Timestamptz `db:"workflow_updated" json:"workflow_updated"`
+	WorkflowSpec                []byte             `db:"workflow_spec" json:"workflow_spec"`
+	WorkflowReadOnly            pgtype.Bool        `db:"workflow_read_only" json:"workflow_read_only"`
+	WorkflowStatus              []byte             `db:"workflow_status" json:"workflow_status"`
+	ResolvedWorkflowName        pgtype.Text        `db:"resolved_workflow_name" json:"resolved_workflow_name"`
+	ResolvedWorkflowNamespace   pgtype.Text        `db:"resolved_workflow_namespace" json:"resolved_workflow_namespace"`
+	ResolvedWorkflowDescription pgtype.Text        `db:"resolved_workflow_description" json:"resolved_workflow_description"`
+	ResolvedWorkflowLabels      []byte             `db:"resolved_workflow_labels" json:"resolved_workflow_labels"`
+	ResolvedWorkflowAnnotations []byte             `db:"resolved_workflow_annotations" json:"resolved_workflow_annotations"`
+	ResolvedWorkflowCreated     pgtype.Timestamptz `db:"resolved_workflow_created" json:"resolved_workflow_created"`
+	ResolvedWorkflowUpdated     pgtype.Timestamptz `db:"resolved_workflow_updated" json:"resolved_workflow_updated"`
+	ResolvedWorkflowSpec        []byte             `db:"resolved_workflow_spec" json:"resolved_workflow_spec"`
+	ResolvedWorkflowReadOnly    pgtype.Bool        `db:"resolved_workflow_read_only" json:"resolved_workflow_read_only"`
+	ResolvedWorkflowStatus      []byte             `db:"resolved_workflow_status" json:"resolved_workflow_status"`
 }
 
 func (q *Queries) GetTestWorkflowExecutionByNameAndTestWorkflow(ctx context.Context, arg GetTestWorkflowExecutionByNameAndTestWorkflowParams) (GetTestWorkflowExecutionByNameAndTestWorkflowRow, error) {
@@ -837,6 +1060,16 @@ func (q *Queries) GetTestWorkflowExecutionByNameAndTestWorkflow(ctx context.Cont
 		&i.WorkflowSpec,
 		&i.WorkflowReadOnly,
 		&i.WorkflowStatus,
+		&i.ResolvedWorkflowName,
+		&i.ResolvedWorkflowNamespace,
+		&i.ResolvedWorkflowDescription,
+		&i.ResolvedWorkflowLabels,
+		&i.ResolvedWorkflowAnnotations,
+		&i.ResolvedWorkflowCreated,
+		&i.ResolvedWorkflowUpdated,
+		&i.ResolvedWorkflowSpec,
+		&i.ResolvedWorkflowReadOnly,
+		&i.ResolvedWorkflowStatus,
 	)
 	return i, err
 }
@@ -888,10 +1121,20 @@ SELECT
     e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.created_at, e.updated_at,
     r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
     r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
-    w.name as workflow_name
+    r.pauses, r.initialization, r.steps,
+    w.name as workflow_name, w.namespace as workflow_namespace, w.description as workflow_description,
+    w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
+    w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
+    w.status as workflow_status,
+    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace, 
+    rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
+    rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
+    rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
+    rw.read_only as resolved_workflow_read_only, rw.status as resolved_workflow_status
 FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
+LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
 WHERE 1=1
     AND ($1 IS NULL OR w.name = $1)
     AND ($2 IS NULL OR w.name = ANY($2))
@@ -933,35 +1176,57 @@ type GetTestWorkflowExecutionsParams struct {
 }
 
 type GetTestWorkflowExecutionsRow struct {
-	ID                        string             `db:"id" json:"id"`
-	GroupID                   pgtype.Text        `db:"group_id" json:"group_id"`
-	RunnerID                  pgtype.Text        `db:"runner_id" json:"runner_id"`
-	RunnerTarget              []byte             `db:"runner_target" json:"runner_target"`
-	RunnerOriginalTarget      []byte             `db:"runner_original_target" json:"runner_original_target"`
-	Name                      string             `db:"name" json:"name"`
-	Namespace                 pgtype.Text        `db:"namespace" json:"namespace"`
-	Number                    pgtype.Int4        `db:"number" json:"number"`
-	ScheduledAt               pgtype.Timestamptz `db:"scheduled_at" json:"scheduled_at"`
-	AssignedAt                pgtype.Timestamptz `db:"assigned_at" json:"assigned_at"`
-	StatusAt                  pgtype.Timestamptz `db:"status_at" json:"status_at"`
-	TestWorkflowExecutionName pgtype.Text        `db:"test_workflow_execution_name" json:"test_workflow_execution_name"`
-	DisableWebhooks           pgtype.Bool        `db:"disable_webhooks" json:"disable_webhooks"`
-	Tags                      []byte             `db:"tags" json:"tags"`
-	RunningContext            []byte             `db:"running_context" json:"running_context"`
-	ConfigParams              []byte             `db:"config_params" json:"config_params"`
-	CreatedAt                 pgtype.Timestamptz `db:"created_at" json:"created_at"`
-	UpdatedAt                 pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
-	Status                    pgtype.Text        `db:"status" json:"status"`
-	PredictedStatus           pgtype.Text        `db:"predicted_status" json:"predicted_status"`
-	QueuedAt                  pgtype.Timestamptz `db:"queued_at" json:"queued_at"`
-	StartedAt                 pgtype.Timestamptz `db:"started_at" json:"started_at"`
-	FinishedAt                pgtype.Timestamptz `db:"finished_at" json:"finished_at"`
-	Duration                  pgtype.Text        `db:"duration" json:"duration"`
-	TotalDuration             pgtype.Text        `db:"total_duration" json:"total_duration"`
-	DurationMs                pgtype.Int4        `db:"duration_ms" json:"duration_ms"`
-	PausedMs                  pgtype.Int4        `db:"paused_ms" json:"paused_ms"`
-	TotalDurationMs           pgtype.Int4        `db:"total_duration_ms" json:"total_duration_ms"`
-	WorkflowName              pgtype.Text        `db:"workflow_name" json:"workflow_name"`
+	ID                          string             `db:"id" json:"id"`
+	GroupID                     pgtype.Text        `db:"group_id" json:"group_id"`
+	RunnerID                    pgtype.Text        `db:"runner_id" json:"runner_id"`
+	RunnerTarget                []byte             `db:"runner_target" json:"runner_target"`
+	RunnerOriginalTarget        []byte             `db:"runner_original_target" json:"runner_original_target"`
+	Name                        string             `db:"name" json:"name"`
+	Namespace                   pgtype.Text        `db:"namespace" json:"namespace"`
+	Number                      pgtype.Int4        `db:"number" json:"number"`
+	ScheduledAt                 pgtype.Timestamptz `db:"scheduled_at" json:"scheduled_at"`
+	AssignedAt                  pgtype.Timestamptz `db:"assigned_at" json:"assigned_at"`
+	StatusAt                    pgtype.Timestamptz `db:"status_at" json:"status_at"`
+	TestWorkflowExecutionName   pgtype.Text        `db:"test_workflow_execution_name" json:"test_workflow_execution_name"`
+	DisableWebhooks             pgtype.Bool        `db:"disable_webhooks" json:"disable_webhooks"`
+	Tags                        []byte             `db:"tags" json:"tags"`
+	RunningContext              []byte             `db:"running_context" json:"running_context"`
+	ConfigParams                []byte             `db:"config_params" json:"config_params"`
+	CreatedAt                   pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt                   pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+	Status                      pgtype.Text        `db:"status" json:"status"`
+	PredictedStatus             pgtype.Text        `db:"predicted_status" json:"predicted_status"`
+	QueuedAt                    pgtype.Timestamptz `db:"queued_at" json:"queued_at"`
+	StartedAt                   pgtype.Timestamptz `db:"started_at" json:"started_at"`
+	FinishedAt                  pgtype.Timestamptz `db:"finished_at" json:"finished_at"`
+	Duration                    pgtype.Text        `db:"duration" json:"duration"`
+	TotalDuration               pgtype.Text        `db:"total_duration" json:"total_duration"`
+	DurationMs                  pgtype.Int4        `db:"duration_ms" json:"duration_ms"`
+	PausedMs                    pgtype.Int4        `db:"paused_ms" json:"paused_ms"`
+	TotalDurationMs             pgtype.Int4        `db:"total_duration_ms" json:"total_duration_ms"`
+	Pauses                      []byte             `db:"pauses" json:"pauses"`
+	Initialization              []byte             `db:"initialization" json:"initialization"`
+	Steps                       []byte             `db:"steps" json:"steps"`
+	WorkflowName                pgtype.Text        `db:"workflow_name" json:"workflow_name"`
+	WorkflowNamespace           pgtype.Text        `db:"workflow_namespace" json:"workflow_namespace"`
+	WorkflowDescription         pgtype.Text        `db:"workflow_description" json:"workflow_description"`
+	WorkflowLabels              []byte             `db:"workflow_labels" json:"workflow_labels"`
+	WorkflowAnnotations         []byte             `db:"workflow_annotations" json:"workflow_annotations"`
+	WorkflowCreated             pgtype.Timestamptz `db:"workflow_created" json:"workflow_created"`
+	WorkflowUpdated             pgtype.Timestamptz `db:"workflow_updated" json:"workflow_updated"`
+	WorkflowSpec                []byte             `db:"workflow_spec" json:"workflow_spec"`
+	WorkflowReadOnly            pgtype.Bool        `db:"workflow_read_only" json:"workflow_read_only"`
+	WorkflowStatus              []byte             `db:"workflow_status" json:"workflow_status"`
+	ResolvedWorkflowName        pgtype.Text        `db:"resolved_workflow_name" json:"resolved_workflow_name"`
+	ResolvedWorkflowNamespace   pgtype.Text        `db:"resolved_workflow_namespace" json:"resolved_workflow_namespace"`
+	ResolvedWorkflowDescription pgtype.Text        `db:"resolved_workflow_description" json:"resolved_workflow_description"`
+	ResolvedWorkflowLabels      []byte             `db:"resolved_workflow_labels" json:"resolved_workflow_labels"`
+	ResolvedWorkflowAnnotations []byte             `db:"resolved_workflow_annotations" json:"resolved_workflow_annotations"`
+	ResolvedWorkflowCreated     pgtype.Timestamptz `db:"resolved_workflow_created" json:"resolved_workflow_created"`
+	ResolvedWorkflowUpdated     pgtype.Timestamptz `db:"resolved_workflow_updated" json:"resolved_workflow_updated"`
+	ResolvedWorkflowSpec        []byte             `db:"resolved_workflow_spec" json:"resolved_workflow_spec"`
+	ResolvedWorkflowReadOnly    pgtype.Bool        `db:"resolved_workflow_read_only" json:"resolved_workflow_read_only"`
+	ResolvedWorkflowStatus      []byte             `db:"resolved_workflow_status" json:"resolved_workflow_status"`
 }
 
 func (q *Queries) GetTestWorkflowExecutions(ctx context.Context, arg GetTestWorkflowExecutionsParams) ([]GetTestWorkflowExecutionsRow, error) {
@@ -1018,7 +1283,29 @@ func (q *Queries) GetTestWorkflowExecutions(ctx context.Context, arg GetTestWork
 			&i.DurationMs,
 			&i.PausedMs,
 			&i.TotalDurationMs,
+			&i.Pauses,
+			&i.Initialization,
+			&i.Steps,
 			&i.WorkflowName,
+			&i.WorkflowNamespace,
+			&i.WorkflowDescription,
+			&i.WorkflowLabels,
+			&i.WorkflowAnnotations,
+			&i.WorkflowCreated,
+			&i.WorkflowUpdated,
+			&i.WorkflowSpec,
+			&i.WorkflowReadOnly,
+			&i.WorkflowStatus,
+			&i.ResolvedWorkflowName,
+			&i.ResolvedWorkflowNamespace,
+			&i.ResolvedWorkflowDescription,
+			&i.ResolvedWorkflowLabels,
+			&i.ResolvedWorkflowAnnotations,
+			&i.ResolvedWorkflowCreated,
+			&i.ResolvedWorkflowUpdated,
+			&i.ResolvedWorkflowSpec,
+			&i.ResolvedWorkflowReadOnly,
+			&i.ResolvedWorkflowStatus,
 		); err != nil {
 			return nil, err
 		}
@@ -1412,68 +1699,6 @@ func (q *Queries) GetTestWorkflowOutputs(ctx context.Context, executionID string
 	return items, nil
 }
 
-const updateTestWorkflowExecution = `-- name: UpdateTestWorkflowExecution :exec
-UPDATE test_workflow_executions
-SET
-    group_id = $1,
-    runner_id = $2,
-    runner_target = $3,
-    runner_original_target = $4,
-    name = $5,
-    namespace = $6,
-    number = $7,
-    scheduled_at = $8,
-    assigned_at = $9,
-    status_at = $10,
-    test_workflow_execution_name = $11,
-    disable_webhooks = $12,
-    tags = $13,
-    running_context = $14,
-    config_params = $15
-WHERE id = $16
-`
-
-type UpdateTestWorkflowExecutionParams struct {
-	GroupID                   pgtype.Text        `db:"group_id" json:"group_id"`
-	RunnerID                  pgtype.Text        `db:"runner_id" json:"runner_id"`
-	RunnerTarget              []byte             `db:"runner_target" json:"runner_target"`
-	RunnerOriginalTarget      []byte             `db:"runner_original_target" json:"runner_original_target"`
-	Name                      string             `db:"name" json:"name"`
-	Namespace                 pgtype.Text        `db:"namespace" json:"namespace"`
-	Number                    pgtype.Int4        `db:"number" json:"number"`
-	ScheduledAt               pgtype.Timestamptz `db:"scheduled_at" json:"scheduled_at"`
-	AssignedAt                pgtype.Timestamptz `db:"assigned_at" json:"assigned_at"`
-	StatusAt                  pgtype.Timestamptz `db:"status_at" json:"status_at"`
-	TestWorkflowExecutionName pgtype.Text        `db:"test_workflow_execution_name" json:"test_workflow_execution_name"`
-	DisableWebhooks           pgtype.Bool        `db:"disable_webhooks" json:"disable_webhooks"`
-	Tags                      []byte             `db:"tags" json:"tags"`
-	RunningContext            []byte             `db:"running_context" json:"running_context"`
-	ConfigParams              []byte             `db:"config_params" json:"config_params"`
-	ID                        string             `db:"id" json:"id"`
-}
-
-func (q *Queries) UpdateTestWorkflowExecution(ctx context.Context, arg UpdateTestWorkflowExecutionParams) error {
-	_, err := q.db.Exec(ctx, updateTestWorkflowExecution,
-		arg.GroupID,
-		arg.RunnerID,
-		arg.RunnerTarget,
-		arg.RunnerOriginalTarget,
-		arg.Name,
-		arg.Namespace,
-		arg.Number,
-		arg.ScheduledAt,
-		arg.AssignedAt,
-		arg.StatusAt,
-		arg.TestWorkflowExecutionName,
-		arg.DisableWebhooks,
-		arg.Tags,
-		arg.RunningContext,
-		arg.ConfigParams,
-		arg.ID,
-	)
-	return err
-}
-
 const getTestWorkflowReports = `-- name: GetTestWorkflowReports :many
 SELECT id, execution_id, ref, kind, file, summary, created_at FROM test_workflow_reports 
 WHERE execution_id = $1 
@@ -1563,34 +1788,81 @@ func (q *Queries) GetTestWorkflowSignatures(ctx context.Context, executionID str
 }
 
 const getUnassignedTestWorkflowExecutions = `-- name: GetUnassignedTestWorkflowExecutions :many
-SELECT e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.created_at, e.updated_at, r.status
+SELECT 
+    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.created_at, e.updated_at,
+    r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
+    r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
+    r.pauses, r.initialization, r.steps,
+    w.name as workflow_name, w.namespace as workflow_namespace, w.description as workflow_description,
+    w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
+    w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
+    w.status as workflow_status,
+    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace, 
+    rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
+    rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
+    rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
+    rw.read_only as resolved_workflow_read_only, rw.status as resolved_workflow_status
 FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e.id = r.execution_id
+LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
+LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
 WHERE r.status = 'queued'
     AND (e.runner_id IS NULL OR e.runner_id = '')
 ORDER BY e.id DESC
 `
 
 type GetUnassignedTestWorkflowExecutionsRow struct {
-	ID                        string             `db:"id" json:"id"`
-	GroupID                   pgtype.Text        `db:"group_id" json:"group_id"`
-	RunnerID                  pgtype.Text        `db:"runner_id" json:"runner_id"`
-	RunnerTarget              []byte             `db:"runner_target" json:"runner_target"`
-	RunnerOriginalTarget      []byte             `db:"runner_original_target" json:"runner_original_target"`
-	Name                      string             `db:"name" json:"name"`
-	Namespace                 pgtype.Text        `db:"namespace" json:"namespace"`
-	Number                    pgtype.Int4        `db:"number" json:"number"`
-	ScheduledAt               pgtype.Timestamptz `db:"scheduled_at" json:"scheduled_at"`
-	AssignedAt                pgtype.Timestamptz `db:"assigned_at" json:"assigned_at"`
-	StatusAt                  pgtype.Timestamptz `db:"status_at" json:"status_at"`
-	TestWorkflowExecutionName pgtype.Text        `db:"test_workflow_execution_name" json:"test_workflow_execution_name"`
-	DisableWebhooks           pgtype.Bool        `db:"disable_webhooks" json:"disable_webhooks"`
-	Tags                      []byte             `db:"tags" json:"tags"`
-	RunningContext            []byte             `db:"running_context" json:"running_context"`
-	ConfigParams              []byte             `db:"config_params" json:"config_params"`
-	CreatedAt                 pgtype.Timestamptz `db:"created_at" json:"created_at"`
-	UpdatedAt                 pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
-	Status                    pgtype.Text        `db:"status" json:"status"`
+	ID                          string             `db:"id" json:"id"`
+	GroupID                     pgtype.Text        `db:"group_id" json:"group_id"`
+	RunnerID                    pgtype.Text        `db:"runner_id" json:"runner_id"`
+	RunnerTarget                []byte             `db:"runner_target" json:"runner_target"`
+	RunnerOriginalTarget        []byte             `db:"runner_original_target" json:"runner_original_target"`
+	Name                        string             `db:"name" json:"name"`
+	Namespace                   pgtype.Text        `db:"namespace" json:"namespace"`
+	Number                      pgtype.Int4        `db:"number" json:"number"`
+	ScheduledAt                 pgtype.Timestamptz `db:"scheduled_at" json:"scheduled_at"`
+	AssignedAt                  pgtype.Timestamptz `db:"assigned_at" json:"assigned_at"`
+	StatusAt                    pgtype.Timestamptz `db:"status_at" json:"status_at"`
+	TestWorkflowExecutionName   pgtype.Text        `db:"test_workflow_execution_name" json:"test_workflow_execution_name"`
+	DisableWebhooks             pgtype.Bool        `db:"disable_webhooks" json:"disable_webhooks"`
+	Tags                        []byte             `db:"tags" json:"tags"`
+	RunningContext              []byte             `db:"running_context" json:"running_context"`
+	ConfigParams                []byte             `db:"config_params" json:"config_params"`
+	CreatedAt                   pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt                   pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+	Status                      pgtype.Text        `db:"status" json:"status"`
+	PredictedStatus             pgtype.Text        `db:"predicted_status" json:"predicted_status"`
+	QueuedAt                    pgtype.Timestamptz `db:"queued_at" json:"queued_at"`
+	StartedAt                   pgtype.Timestamptz `db:"started_at" json:"started_at"`
+	FinishedAt                  pgtype.Timestamptz `db:"finished_at" json:"finished_at"`
+	Duration                    pgtype.Text        `db:"duration" json:"duration"`
+	TotalDuration               pgtype.Text        `db:"total_duration" json:"total_duration"`
+	DurationMs                  pgtype.Int4        `db:"duration_ms" json:"duration_ms"`
+	PausedMs                    pgtype.Int4        `db:"paused_ms" json:"paused_ms"`
+	TotalDurationMs             pgtype.Int4        `db:"total_duration_ms" json:"total_duration_ms"`
+	Pauses                      []byte             `db:"pauses" json:"pauses"`
+	Initialization              []byte             `db:"initialization" json:"initialization"`
+	Steps                       []byte             `db:"steps" json:"steps"`
+	WorkflowName                pgtype.Text        `db:"workflow_name" json:"workflow_name"`
+	WorkflowNamespace           pgtype.Text        `db:"workflow_namespace" json:"workflow_namespace"`
+	WorkflowDescription         pgtype.Text        `db:"workflow_description" json:"workflow_description"`
+	WorkflowLabels              []byte             `db:"workflow_labels" json:"workflow_labels"`
+	WorkflowAnnotations         []byte             `db:"workflow_annotations" json:"workflow_annotations"`
+	WorkflowCreated             pgtype.Timestamptz `db:"workflow_created" json:"workflow_created"`
+	WorkflowUpdated             pgtype.Timestamptz `db:"workflow_updated" json:"workflow_updated"`
+	WorkflowSpec                []byte             `db:"workflow_spec" json:"workflow_spec"`
+	WorkflowReadOnly            pgtype.Bool        `db:"workflow_read_only" json:"workflow_read_only"`
+	WorkflowStatus              []byte             `db:"workflow_status" json:"workflow_status"`
+	ResolvedWorkflowName        pgtype.Text        `db:"resolved_workflow_name" json:"resolved_workflow_name"`
+	ResolvedWorkflowNamespace   pgtype.Text        `db:"resolved_workflow_namespace" json:"resolved_workflow_namespace"`
+	ResolvedWorkflowDescription pgtype.Text        `db:"resolved_workflow_description" json:"resolved_workflow_description"`
+	ResolvedWorkflowLabels      []byte             `db:"resolved_workflow_labels" json:"resolved_workflow_labels"`
+	ResolvedWorkflowAnnotations []byte             `db:"resolved_workflow_annotations" json:"resolved_workflow_annotations"`
+	ResolvedWorkflowCreated     pgtype.Timestamptz `db:"resolved_workflow_created" json:"resolved_workflow_created"`
+	ResolvedWorkflowUpdated     pgtype.Timestamptz `db:"resolved_workflow_updated" json:"resolved_workflow_updated"`
+	ResolvedWorkflowSpec        []byte             `db:"resolved_workflow_spec" json:"resolved_workflow_spec"`
+	ResolvedWorkflowReadOnly    pgtype.Bool        `db:"resolved_workflow_read_only" json:"resolved_workflow_read_only"`
+	ResolvedWorkflowStatus      []byte             `db:"resolved_workflow_status" json:"resolved_workflow_status"`
 }
 
 func (q *Queries) GetUnassignedTestWorkflowExecutions(ctx context.Context) ([]GetUnassignedTestWorkflowExecutionsRow, error) {
@@ -1622,6 +1894,38 @@ func (q *Queries) GetUnassignedTestWorkflowExecutions(ctx context.Context) ([]Ge
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Status,
+			&i.PredictedStatus,
+			&i.QueuedAt,
+			&i.StartedAt,
+			&i.FinishedAt,
+			&i.Duration,
+			&i.TotalDuration,
+			&i.DurationMs,
+			&i.PausedMs,
+			&i.TotalDurationMs,
+			&i.Pauses,
+			&i.Initialization,
+			&i.Steps,
+			&i.WorkflowName,
+			&i.WorkflowNamespace,
+			&i.WorkflowDescription,
+			&i.WorkflowLabels,
+			&i.WorkflowAnnotations,
+			&i.WorkflowCreated,
+			&i.WorkflowUpdated,
+			&i.WorkflowSpec,
+			&i.WorkflowReadOnly,
+			&i.WorkflowStatus,
+			&i.ResolvedWorkflowName,
+			&i.ResolvedWorkflowNamespace,
+			&i.ResolvedWorkflowDescription,
+			&i.ResolvedWorkflowLabels,
+			&i.ResolvedWorkflowAnnotations,
+			&i.ResolvedWorkflowCreated,
+			&i.ResolvedWorkflowUpdated,
+			&i.ResolvedWorkflowSpec,
+			&i.ResolvedWorkflowReadOnly,
+			&i.ResolvedWorkflowStatus,
 		); err != nil {
 			return nil, err
 		}
@@ -1893,7 +2197,7 @@ INSERT INTO test_workflow_signatures (
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7
 )
-RETURNING test_workflow_signatures.id;	
+RETURNING test_workflow_signatures.id
 `
 
 type InsertTestWorkflowSignatureParams struct {
@@ -1934,6 +2238,68 @@ type UpdateExecutionStatusAtParams struct {
 
 func (q *Queries) UpdateExecutionStatusAt(ctx context.Context, arg UpdateExecutionStatusAtParams) error {
 	_, err := q.db.Exec(ctx, updateExecutionStatusAt, arg.StatusAt, arg.ExecutionID)
+	return err
+}
+
+const updateTestWorkflowExecution = `-- name: UpdateTestWorkflowExecution :exec
+UPDATE test_workflow_executions
+SET
+    group_id = $1,
+    runner_id = $2,
+    runner_target = $3,
+    runner_original_target = $4,
+    name = $5,
+    namespace = $6,
+    number = $7,
+    scheduled_at = $8,
+    assigned_at = $9,
+    status_at = $10,
+    test_workflow_execution_name = $11,
+    disable_webhooks = $12,
+    tags = $13,
+    running_context = $14,
+    config_params = $15
+WHERE id = $16
+`
+
+type UpdateTestWorkflowExecutionParams struct {
+	GroupID                   pgtype.Text        `db:"group_id" json:"group_id"`
+	RunnerID                  pgtype.Text        `db:"runner_id" json:"runner_id"`
+	RunnerTarget              []byte             `db:"runner_target" json:"runner_target"`
+	RunnerOriginalTarget      []byte             `db:"runner_original_target" json:"runner_original_target"`
+	Name                      string             `db:"name" json:"name"`
+	Namespace                 pgtype.Text        `db:"namespace" json:"namespace"`
+	Number                    pgtype.Int4        `db:"number" json:"number"`
+	ScheduledAt               pgtype.Timestamptz `db:"scheduled_at" json:"scheduled_at"`
+	AssignedAt                pgtype.Timestamptz `db:"assigned_at" json:"assigned_at"`
+	StatusAt                  pgtype.Timestamptz `db:"status_at" json:"status_at"`
+	TestWorkflowExecutionName pgtype.Text        `db:"test_workflow_execution_name" json:"test_workflow_execution_name"`
+	DisableWebhooks           pgtype.Bool        `db:"disable_webhooks" json:"disable_webhooks"`
+	Tags                      []byte             `db:"tags" json:"tags"`
+	RunningContext            []byte             `db:"running_context" json:"running_context"`
+	ConfigParams              []byte             `db:"config_params" json:"config_params"`
+	ID                        string             `db:"id" json:"id"`
+}
+
+func (q *Queries) UpdateTestWorkflowExecution(ctx context.Context, arg UpdateTestWorkflowExecutionParams) error {
+	_, err := q.db.Exec(ctx, updateTestWorkflowExecution,
+		arg.GroupID,
+		arg.RunnerID,
+		arg.RunnerTarget,
+		arg.RunnerOriginalTarget,
+		arg.Name,
+		arg.Namespace,
+		arg.Number,
+		arg.ScheduledAt,
+		arg.AssignedAt,
+		arg.StatusAt,
+		arg.TestWorkflowExecutionName,
+		arg.DisableWebhooks,
+		arg.Tags,
+		arg.RunningContext,
+		arg.ConfigParams,
+		arg.ID,
+	)
 	return err
 }
 
