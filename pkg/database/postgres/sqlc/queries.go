@@ -66,9 +66,6 @@ type TestWorkflowExecutionQueriesInterface interface {
 	AssignTestWorkflowExecution(ctx context.Context, arg AssignTestWorkflowExecutionParams) (string, error)
 	AbortTestWorkflowExecutionIfQueued(ctx context.Context, arg AbortTestWorkflowExecutionIfQueuedParams) (string, error)
 	AbortTestWorkflowResultIfQueued(ctx context.Context, arg AbortTestWorkflowResultIfQueuedParams) error
-
-	// Sequence operations
-	GetNextExecutionNumber(ctx context.Context, workflowName string) (int64, error)
 }
 
 // Ensure Queries implements TestWorkflowExecutionQueriesInterface

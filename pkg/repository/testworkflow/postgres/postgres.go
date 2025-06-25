@@ -134,7 +134,7 @@ func fromJSONB[T any](data []byte) (*T, error) {
 	return &result, nil
 }
 
-// Get returns execution by id or name
+// Get method to use complete data
 func (r *PostgresRepository) Get(ctx context.Context, id string) (testkube.TestWorkflowExecution, error) {
 	tx, err := r.db.Begin(ctx)
 	if err != nil {
@@ -144,7 +144,7 @@ func (r *PostgresRepository) Get(ctx context.Context, id string) (testkube.TestW
 
 	qtx := r.queries.WithTx(tx)
 
-	// Get main execution data
+	// Get main execution data with all fields
 	row, err := qtx.GetTestWorkflowExecution(ctx, id)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -153,10 +153,39 @@ func (r *PostgresRepository) Get(ctx context.Context, id string) (testkube.TestW
 		return testkube.TestWorkflowExecution{}, err
 	}
 
-	// Build the execution object
-	execution, err := r.buildExecutionFromRow(ctx, qtx, row)
-	if err != nil {
+	// Build the complete execution object from the row
+	execution := r.convertCompleteRowToExecution(row)
+
+	// Get signatures and build the tree structure
+	signatures, err := qtx.GetTestWorkflowSignatures(ctx, execution.Id)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return testkube.TestWorkflowExecution{}, err
+	}
+	execution.Signature = r.buildSignatureTree(signatures)
+
+	// Get outputs
+	outputs, err := qtx.GetTestWorkflowOutputs(ctx, execution.Id)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return testkube.TestWorkflowExecution{}, err
+	}
+	execution.Output = r.convertOutputs(outputs)
+
+	// Get reports
+	reports, err := qtx.GetTestWorkflowReports(ctx, execution.Id)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return testkube.TestWorkflowExecution{}, err
+	}
+	execution.Reports = r.convertReports(reports)
+
+	// Get resource aggregations
+	resourceAgg, err := qtx.GetTestWorkflowResourceAggregations(ctx, execution.Id)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return testkube.TestWorkflowExecution{}, err
+	} else if err == nil {
+		execution.ResourceAggregations, err = r.convertResourceAggregations(resourceAgg)
+		if err != nil {
+			return testkube.TestWorkflowExecution{}, err
+		}
 	}
 
 	if err = tx.Commit(ctx); err != nil {
@@ -171,219 +200,262 @@ func (r *PostgresRepository) Get(ctx context.Context, id string) (testkube.TestW
 	return *execution.UnscapeDots(), nil
 }
 
-func (r *PostgresRepository) buildExecutionFromRow(ctx context.Context, qtx sqlc.TestWorkflowExecutionQueriesInterface, row sqlc.GetTestWorkflowExecutionRow) (*testkube.TestWorkflowExecution, error) {
-	execution := &testkube.TestWorkflowExecution{
-		Id:                        row.ID,
-		GroupId:                   fromPgText(row.GroupID),
-		RunnerId:                  fromPgText(row.RunnerID),
-		Name:                      row.Name,
-		Namespace:                 fromPgText(row.Namespace),
-		Number:                    fromPgInt4(row.Number),
-		ScheduledAt:               fromPgTimestamp(row.ScheduledAt),
-		AssignedAt:                fromPgTimestamp(row.AssignedAt),
-		StatusAt:                  fromPgTimestamp(row.StatusAt),
-		TestWorkflowExecutionName: fromPgText(row.TestWorkflowExecutionName),
-		DisableWebhooks:           fromPgBool(row.DisableWebhooks),
+// Updated convertCompleteRowToExecution method to handle GetTestWorkflowExecutionRow
+func (r *PostgresRepository) convertCompleteRowToExecution(row interface{}) *testkube.TestWorkflowExecution {
+	execution := &testkube.TestWorkflowExecution{}
+
+	switch v := row.(type) {
+	case sqlc.GetTestWorkflowExecutionRow:
+		r.populateExecutionFromCompleteRow(
+			execution,
+			v.ID, v.GroupID, v.RunnerID, v.RunnerTarget, v.RunnerOriginalTarget,
+			v.Name, v.Namespace, v.Number, v.ScheduledAt, v.AssignedAt, v.StatusAt,
+			v.TestWorkflowExecutionName, v.DisableWebhooks, v.Tags, v.RunningContext,
+			v.ConfigParams, v.CreatedAt, v.UpdatedAt, v.Status, v.PredictedStatus,
+			v.QueuedAt, v.StartedAt, v.FinishedAt, v.Duration, v.TotalDuration,
+			v.DurationMs, v.PausedMs, v.TotalDurationMs, v.Pauses, v.Initialization,
+			v.Steps, v.WorkflowName, v.WorkflowNamespace, v.WorkflowDescription,
+			v.WorkflowLabels, v.WorkflowAnnotations, v.WorkflowCreated, v.WorkflowUpdated,
+			v.WorkflowSpec, v.WorkflowReadOnly, v.WorkflowStatus, v.ResolvedWorkflowName,
+			v.ResolvedWorkflowNamespace, v.ResolvedWorkflowDescription, v.ResolvedWorkflowLabels,
+			v.ResolvedWorkflowAnnotations, v.ResolvedWorkflowCreated, v.ResolvedWorkflowUpdated,
+			v.ResolvedWorkflowSpec, v.ResolvedWorkflowReadOnly, v.ResolvedWorkflowStatus,
+		)
+	case sqlc.GetTestWorkflowExecutionByNameAndTestWorkflowRow:
+		r.populateExecutionFromCompleteRow(
+			execution,
+			v.ID, v.GroupID, v.RunnerID, v.RunnerTarget, v.RunnerOriginalTarget,
+			v.Name, v.Namespace, v.Number, v.ScheduledAt, v.AssignedAt, v.StatusAt,
+			v.TestWorkflowExecutionName, v.DisableWebhooks, v.Tags, v.RunningContext,
+			v.ConfigParams, v.CreatedAt, v.UpdatedAt, v.Status, v.PredictedStatus,
+			v.QueuedAt, v.StartedAt, v.FinishedAt, v.Duration, v.TotalDuration,
+			v.DurationMs, v.PausedMs, v.TotalDurationMs, v.Pauses, v.Initialization,
+			v.Steps, v.WorkflowName, v.WorkflowNamespace, v.WorkflowDescription,
+			v.WorkflowLabels, v.WorkflowAnnotations, v.WorkflowCreated, v.WorkflowUpdated,
+			v.WorkflowSpec, v.WorkflowReadOnly, v.WorkflowStatus, v.ResolvedWorkflowName,
+			v.ResolvedWorkflowNamespace, v.ResolvedWorkflowDescription, v.ResolvedWorkflowLabels,
+			v.ResolvedWorkflowAnnotations, v.ResolvedWorkflowCreated, v.ResolvedWorkflowUpdated,
+			v.ResolvedWorkflowSpec, v.ResolvedWorkflowReadOnly, v.ResolvedWorkflowStatus,
+		)
+	case sqlc.GetLatestTestWorkflowExecutionByTestWorkflowRow:
+		r.populateExecutionFromCompleteRow(
+			execution,
+			v.ID, v.GroupID, v.RunnerID, v.RunnerTarget, v.RunnerOriginalTarget,
+			v.Name, v.Namespace, v.Number, v.ScheduledAt, v.AssignedAt, v.StatusAt,
+			v.TestWorkflowExecutionName, v.DisableWebhooks, v.Tags, v.RunningContext,
+			v.ConfigParams, v.CreatedAt, v.UpdatedAt, v.Status, v.PredictedStatus,
+			v.QueuedAt, v.StartedAt, v.FinishedAt, v.Duration, v.TotalDuration,
+			v.DurationMs, v.PausedMs, v.TotalDurationMs, v.Pauses, v.Initialization,
+			v.Steps, v.WorkflowName, v.WorkflowNamespace, v.WorkflowDescription,
+			v.WorkflowLabels, v.WorkflowAnnotations, v.WorkflowCreated, v.WorkflowUpdated,
+			v.WorkflowSpec, v.WorkflowReadOnly, v.WorkflowStatus, v.ResolvedWorkflowName,
+			v.ResolvedWorkflowNamespace, v.ResolvedWorkflowDescription, v.ResolvedWorkflowLabels,
+			v.ResolvedWorkflowAnnotations, v.ResolvedWorkflowCreated, v.ResolvedWorkflowUpdated,
+			v.ResolvedWorkflowSpec, v.ResolvedWorkflowReadOnly, v.ResolvedWorkflowStatus,
+		)
+	case sqlc.GetLatestTestWorkflowExecutionsByTestWorkflowsRow:
+		r.populateExecutionFromCompleteRow(
+			execution,
+			v.ID, v.GroupID, v.RunnerID, v.RunnerTarget, v.RunnerOriginalTarget,
+			v.Name, v.Namespace, v.Number, v.ScheduledAt, v.AssignedAt, v.StatusAt,
+			v.TestWorkflowExecutionName, v.DisableWebhooks, v.Tags, v.RunningContext,
+			v.ConfigParams, v.CreatedAt, v.UpdatedAt, v.Status, v.PredictedStatus,
+			v.QueuedAt, v.StartedAt, v.FinishedAt, v.Duration, v.TotalDuration,
+			v.DurationMs, v.PausedMs, v.TotalDurationMs, v.Pauses, v.Initialization,
+			v.Steps, v.WorkflowName, v.WorkflowNamespace, v.WorkflowDescription,
+			v.WorkflowLabels, v.WorkflowAnnotations, v.WorkflowCreated, v.WorkflowUpdated,
+			v.WorkflowSpec, v.WorkflowReadOnly, v.WorkflowStatus, v.ResolvedWorkflowName,
+			v.ResolvedWorkflowNamespace, v.ResolvedWorkflowDescription, v.ResolvedWorkflowLabels,
+			v.ResolvedWorkflowAnnotations, v.ResolvedWorkflowCreated, v.ResolvedWorkflowUpdated,
+			v.ResolvedWorkflowSpec, v.ResolvedWorkflowReadOnly, v.ResolvedWorkflowStatus,
+		)
+	case sqlc.GetRunningTestWorkflowExecutionsRow:
+		r.populateExecutionFromCompleteRow(
+			execution,
+			v.ID, v.GroupID, v.RunnerID, v.RunnerTarget, v.RunnerOriginalTarget,
+			v.Name, v.Namespace, v.Number, v.ScheduledAt, v.AssignedAt, v.StatusAt,
+			v.TestWorkflowExecutionName, v.DisableWebhooks, v.Tags, v.RunningContext,
+			v.ConfigParams, v.CreatedAt, v.UpdatedAt, v.Status, v.PredictedStatus,
+			v.QueuedAt, v.StartedAt, v.FinishedAt, v.Duration, v.TotalDuration,
+			v.DurationMs, v.PausedMs, v.TotalDurationMs, v.Pauses, v.Initialization,
+			v.Steps, v.WorkflowName, v.WorkflowNamespace, v.WorkflowDescription,
+			v.WorkflowLabels, v.WorkflowAnnotations, v.WorkflowCreated, v.WorkflowUpdated,
+			v.WorkflowSpec, v.WorkflowReadOnly, v.WorkflowStatus, v.ResolvedWorkflowName,
+			v.ResolvedWorkflowNamespace, v.ResolvedWorkflowDescription, v.ResolvedWorkflowLabels,
+			v.ResolvedWorkflowAnnotations, v.ResolvedWorkflowCreated, v.ResolvedWorkflowUpdated,
+			v.ResolvedWorkflowSpec, v.ResolvedWorkflowReadOnly, v.ResolvedWorkflowStatus,
+		)
+	case sqlc.GetTestWorkflowExecutionsRow:
+		r.populateExecutionFromCompleteRow(
+			execution,
+			v.ID, v.GroupID, v.RunnerID, v.RunnerTarget, v.RunnerOriginalTarget,
+			v.Name, v.Namespace, v.Number, v.ScheduledAt, v.AssignedAt, v.StatusAt,
+			v.TestWorkflowExecutionName, v.DisableWebhooks, v.Tags, v.RunningContext,
+			v.ConfigParams, v.CreatedAt, v.UpdatedAt, v.Status, v.PredictedStatus,
+			v.QueuedAt, v.StartedAt, v.FinishedAt, v.Duration, v.TotalDuration,
+			v.DurationMs, v.PausedMs, v.TotalDurationMs, v.Pauses, v.Initialization,
+			v.Steps, v.WorkflowName, v.WorkflowNamespace, v.WorkflowDescription,
+			v.WorkflowLabels, v.WorkflowAnnotations, v.WorkflowCreated, v.WorkflowUpdated,
+			v.WorkflowSpec, v.WorkflowReadOnly, v.WorkflowStatus, v.ResolvedWorkflowName,
+			v.ResolvedWorkflowNamespace, v.ResolvedWorkflowDescription, v.ResolvedWorkflowLabels,
+			v.ResolvedWorkflowAnnotations, v.ResolvedWorkflowCreated, v.ResolvedWorkflowUpdated,
+			v.ResolvedWorkflowSpec, v.ResolvedWorkflowReadOnly, v.ResolvedWorkflowStatus,
+		)
+	case sqlc.GetFinishedTestWorkflowExecutionsRow:
+		r.populateExecutionFromCompleteRow(
+			execution,
+			v.ID, v.GroupID, v.RunnerID, v.RunnerTarget, v.RunnerOriginalTarget,
+			v.Name, v.Namespace, v.Number, v.ScheduledAt, v.AssignedAt, v.StatusAt,
+			v.TestWorkflowExecutionName, v.DisableWebhooks, v.Tags, v.RunningContext,
+			v.ConfigParams, v.CreatedAt, v.UpdatedAt, v.Status, v.PredictedStatus,
+			v.QueuedAt, v.StartedAt, v.FinishedAt, v.Duration, v.TotalDuration,
+			v.DurationMs, v.PausedMs, v.TotalDurationMs, v.Pauses, v.Initialization,
+			v.Steps, v.WorkflowName, v.WorkflowNamespace, v.WorkflowDescription,
+			v.WorkflowLabels, v.WorkflowAnnotations, v.WorkflowCreated, v.WorkflowUpdated,
+			v.WorkflowSpec, v.WorkflowReadOnly, v.WorkflowStatus, v.ResolvedWorkflowName,
+			v.ResolvedWorkflowNamespace, v.ResolvedWorkflowDescription, v.ResolvedWorkflowLabels,
+			v.ResolvedWorkflowAnnotations, v.ResolvedWorkflowCreated, v.ResolvedWorkflowUpdated,
+			v.ResolvedWorkflowSpec, v.ResolvedWorkflowReadOnly, v.ResolvedWorkflowStatus,
+		)
+	case sqlc.GetUnassignedTestWorkflowExecutionsRow:
+		r.populateExecutionFromCompleteRow(
+			execution,
+			v.ID, v.GroupID, v.RunnerID, v.RunnerTarget, v.RunnerOriginalTarget,
+			v.Name, v.Namespace, v.Number, v.ScheduledAt, v.AssignedAt, v.StatusAt,
+			v.TestWorkflowExecutionName, v.DisableWebhooks, v.Tags, v.RunningContext,
+			v.ConfigParams, v.CreatedAt, v.UpdatedAt, v.Status, v.PredictedStatus,
+			v.QueuedAt, v.StartedAt, v.FinishedAt, v.Duration, v.TotalDuration,
+			v.DurationMs, v.PausedMs, v.TotalDurationMs, v.Pauses, v.Initialization,
+			v.Steps, v.WorkflowName, v.WorkflowNamespace, v.WorkflowDescription,
+			v.WorkflowLabels, v.WorkflowAnnotations, v.WorkflowCreated, v.WorkflowUpdated,
+			v.WorkflowSpec, v.WorkflowReadOnly, v.WorkflowStatus, v.ResolvedWorkflowName,
+			v.ResolvedWorkflowNamespace, v.ResolvedWorkflowDescription, v.ResolvedWorkflowLabels,
+			v.ResolvedWorkflowAnnotations, v.ResolvedWorkflowCreated, v.ResolvedWorkflowUpdated,
+			v.ResolvedWorkflowSpec, v.ResolvedWorkflowReadOnly, v.ResolvedWorkflowStatus,
+		)
+	default:
+		// Handle unknown type - this should not happen if all queries return the same structure
+		return &testkube.TestWorkflowExecution{}
 	}
+
+	return execution
+}
+
+// populateExecutionFromCompleteRow remains the same as in the previous response
+func (r *PostgresRepository) populateExecutionFromCompleteRow(
+	execution *testkube.TestWorkflowExecution,
+	id string, groupID pgtype.Text, runnerID pgtype.Text, runnerTarget []byte, runnerOriginalTarget []byte,
+	name string, namespace pgtype.Text, number pgtype.Int4, scheduledAt pgtype.Timestamptz, assignedAt pgtype.Timestamptz,
+	statusAt pgtype.Timestamptz, testWorkflowExecutionName pgtype.Text, disableWebhooks pgtype.Bool,
+	tags []byte, runningContext []byte, configParams []byte, createdAt pgtype.Timestamptz, updatedAt pgtype.Timestamptz,
+	status pgtype.Text, predictedStatus pgtype.Text, queuedAt pgtype.Timestamptz, startedAt pgtype.Timestamptz,
+	finishedAt pgtype.Timestamptz, duration pgtype.Text, totalDuration pgtype.Text, durationMs pgtype.Int4,
+	pausedMs pgtype.Int4, totalDurationMs pgtype.Int4, pauses []byte, initialization []byte, steps []byte,
+	workflowName pgtype.Text, workflowNamespace pgtype.Text, workflowDescription pgtype.Text,
+	workflowLabels []byte, workflowAnnotations []byte, workflowCreated pgtype.Timestamptz,
+	workflowUpdated pgtype.Timestamptz, workflowSpec []byte, workflowReadOnly pgtype.Bool, workflowStatus []byte,
+	resolvedWorkflowName pgtype.Text, resolvedWorkflowNamespace pgtype.Text, resolvedWorkflowDescription pgtype.Text,
+	resolvedWorkflowLabels []byte, resolvedWorkflowAnnotations []byte, resolvedWorkflowCreated pgtype.Timestamptz,
+	resolvedWorkflowUpdated pgtype.Timestamptz, resolvedWorkflowSpec []byte, resolvedWorkflowReadOnly pgtype.Bool,
+	resolvedWorkflowStatus []byte,
+) {
+	// Basic execution fields
+	execution.Id = id
+	execution.GroupId = fromPgText(groupID)
+	execution.RunnerId = fromPgText(runnerID)
+	execution.Name = name
+	execution.Namespace = fromPgText(namespace)
+	execution.Number = fromPgInt4(number)
+	execution.ScheduledAt = fromPgTimestamp(scheduledAt)
+	execution.AssignedAt = fromPgTimestamp(assignedAt)
+	execution.StatusAt = fromPgTimestamp(statusAt)
+	execution.TestWorkflowExecutionName = fromPgText(testWorkflowExecutionName)
+	execution.DisableWebhooks = fromPgBool(disableWebhooks)
 
 	// Parse JSONB fields
-	var err error
-
-	if len(row.RunnerTarget) > 0 {
-		execution.RunnerTarget, err = fromJSONB[testkube.ExecutionTarget](row.RunnerTarget)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	if len(row.RunnerOriginalTarget) > 0 {
-		execution.RunnerOriginalTarget, err = fromJSONB[testkube.ExecutionTarget](row.RunnerOriginalTarget)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	if len(row.Tags) > 0 {
-		err = json.Unmarshal(row.Tags, &execution.Tags)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	if len(row.RunningContext) > 0 {
-		execution.RunningContext, err = fromJSONB[testkube.TestWorkflowRunningContext](row.RunningContext)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	if len(row.ConfigParams) > 0 {
-		err = json.Unmarshal(row.ConfigParams, &execution.ConfigParams)
-		if err != nil {
-			return nil, err
-		}
-	}
+	r.parseExecutionJSONFields(execution, runnerTarget, runnerOriginalTarget, tags, runningContext, configParams)
 
 	// Build result if exists
-	if row.Status.Valid {
-		execution.Result = &testkube.TestWorkflowResult{
-			QueuedAt:        fromPgTimestamp(row.QueuedAt),
-			StartedAt:       fromPgTimestamp(row.StartedAt),
-			FinishedAt:      fromPgTimestamp(row.FinishedAt),
-			Duration:        fromPgText(row.Duration),
-			TotalDuration:   fromPgText(row.TotalDuration),
-			DurationMs:      fromPgInt4(row.DurationMs),
-			PausedMs:        fromPgInt4(row.PausedMs),
-			TotalDurationMs: fromPgInt4(row.TotalDurationMs),
-		}
-
-		if row.Status.Valid {
-			status := testkube.TestWorkflowStatus(row.Status.String)
-			execution.Result.Status = &status
-		}
-
-		if row.PredictedStatus.Valid {
-			predictedStatus := testkube.TestWorkflowStatus(row.PredictedStatus.String)
-			execution.Result.PredictedStatus = &predictedStatus
-		}
-
-		if len(row.Pauses) > 0 {
-			err = json.Unmarshal(row.Pauses, &execution.Result.Pauses)
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		if len(row.Initialization) > 0 {
-			execution.Result.Initialization, err = fromJSONB[testkube.TestWorkflowStepResult](row.Initialization)
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		if len(row.Steps) > 0 {
-			err = json.Unmarshal(row.Steps, &execution.Result.Steps)
-			if err != nil {
-				return nil, err
-			}
-		}
+	if status.Valid {
+		execution.Result = r.buildResultFromRow(
+			status, predictedStatus, queuedAt, startedAt, finishedAt,
+			duration, totalDuration, durationMs, pausedMs, totalDurationMs,
+			pauses, initialization, steps,
+		)
 	}
 
 	// Build workflow if exists
-	if row.WorkflowName.Valid {
-		execution.Workflow = &testkube.TestWorkflow{
-			Name:        fromPgText(row.WorkflowName),
-			Namespace:   fromPgText(row.WorkflowNamespace),
-			Description: fromPgText(row.WorkflowDescription),
-			Created:     fromPgTimestamp(row.WorkflowCreated),
-			Updated:     fromPgTimestamp(row.WorkflowUpdated),
-			ReadOnly:    fromPgBool(row.WorkflowReadOnly),
-		}
-
-		if len(row.WorkflowLabels) > 0 {
-			err = json.Unmarshal(row.WorkflowLabels, &execution.Workflow.Labels)
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		if len(row.WorkflowAnnotations) > 0 {
-			err = json.Unmarshal(row.WorkflowAnnotations, &execution.Workflow.Annotations)
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		if len(row.WorkflowSpec) > 0 {
-			execution.Workflow.Spec, err = fromJSONB[testkube.TestWorkflowSpec](row.WorkflowSpec)
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		if len(row.WorkflowStatus) > 0 {
-			execution.Workflow.Status, err = fromJSONB[testkube.TestWorkflowStatusSummary](row.WorkflowStatus)
-			if err != nil {
-				return nil, err
-			}
-		}
+	if workflowName.Valid {
+		execution.Workflow = r.buildWorkflowFromRow(
+			workflowName, workflowNamespace, workflowDescription,
+			workflowLabels, workflowAnnotations, workflowCreated,
+			workflowUpdated, workflowSpec, workflowReadOnly, workflowStatus,
+		)
 	}
 
 	// Build resolved workflow if exists
-	if row.ResolvedWorkflowName.Valid {
-		execution.ResolvedWorkflow = &testkube.TestWorkflow{
-			Name:        fromPgText(row.ResolvedWorkflowName),
-			Namespace:   fromPgText(row.ResolvedWorkflowNamespace),
-			Description: fromPgText(row.ResolvedWorkflowDescription),
-			Created:     fromPgTimestamp(row.ResolvedWorkflowCreated),
-			Updated:     fromPgTimestamp(row.ResolvedWorkflowUpdated),
-			ReadOnly:    fromPgBool(row.ResolvedWorkflowReadOnly),
-		}
-
-		if len(row.ResolvedWorkflowLabels) > 0 {
-			err = json.Unmarshal(row.ResolvedWorkflowLabels, &execution.ResolvedWorkflow.Labels)
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		if len(row.ResolvedWorkflowAnnotations) > 0 {
-			err = json.Unmarshal(row.ResolvedWorkflowAnnotations, &execution.ResolvedWorkflow.Annotations)
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		if len(row.ResolvedWorkflowSpec) > 0 {
-			execution.ResolvedWorkflow.Spec, err = fromJSONB[testkube.TestWorkflowSpec](row.ResolvedWorkflowSpec)
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		if len(row.ResolvedWorkflowStatus) > 0 {
-			execution.ResolvedWorkflow.Status, err = fromJSONB[testkube.TestWorkflowStatusSummary](row.ResolvedWorkflowStatus)
-			if err != nil {
-				return nil, err
-			}
-		}
+	if resolvedWorkflowName.Valid {
+		execution.ResolvedWorkflow = r.buildWorkflowFromRow(
+			resolvedWorkflowName, resolvedWorkflowNamespace, resolvedWorkflowDescription,
+			resolvedWorkflowLabels, resolvedWorkflowAnnotations, resolvedWorkflowCreated,
+			resolvedWorkflowUpdated, resolvedWorkflowSpec, resolvedWorkflowReadOnly, resolvedWorkflowStatus,
+		)
 	}
-
-	// Get signatures
-	signatures, err := qtx.GetTestWorkflowSignatures(ctx, execution.Id)
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-		return nil, err
-	}
-	execution.Signature = r.buildSignatureTree(signatures)
-
-	// Get outputs
-	outputs, err := qtx.GetTestWorkflowOutputs(ctx, execution.Id)
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-		return nil, err
-	}
-	execution.Output = r.convertOutputs(outputs)
-
-	// Get reports
-	reports, err := qtx.GetTestWorkflowReports(ctx, execution.Id)
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-		return nil, err
-	}
-	execution.Reports = r.convertReports(reports)
-
-	// Get resource aggregations
-	resourceAgg, err := qtx.GetTestWorkflowResourceAggregations(ctx, execution.Id)
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-		return nil, err
-	} else if err == nil {
-		execution.ResourceAggregations, err = r.convertResourceAggregations(resourceAgg)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return execution, nil
 }
 
+// Updated converter methods - all now use the same complete field set
+func (r *PostgresRepository) convertRowToExecution(row sqlc.GetTestWorkflowExecutionByNameAndTestWorkflowRow) *testkube.TestWorkflowExecution {
+	return r.convertCompleteRowToExecution(row)
+}
+
+func (r *PostgresRepository) convertRowToExecutionSimple(row sqlc.GetLatestTestWorkflowExecutionByTestWorkflowRow) *testkube.TestWorkflowExecution {
+	return r.convertCompleteRowToExecution(row)
+}
+
+func (r *PostgresRepository) convertRowToExecutionFromList(row sqlc.GetTestWorkflowExecutionsRow) testkube.TestWorkflowExecution {
+	return *r.convertCompleteRowToExecution(row)
+}
+
+func (r *PostgresRepository) convertRowToExecutionSimpleFromRunning(row sqlc.GetRunningTestWorkflowExecutionsRow) testkube.TestWorkflowExecution {
+	return *r.convertCompleteRowToExecution(row)
+}
+
+func (r *PostgresRepository) convertRowToExecutionFromFinished(row sqlc.GetFinishedTestWorkflowExecutionsRow) testkube.TestWorkflowExecution {
+	return *r.convertCompleteRowToExecution(row)
+}
+
+func (r *PostgresRepository) convertUnassignedRowToExecution(row sqlc.GetUnassignedTestWorkflowExecutionsRow) testkube.TestWorkflowExecution {
+	return *r.convertCompleteRowToExecution(row)
+}
+
+func (r *PostgresRepository) convertRowToExecutionSummary(row sqlc.GetLatestTestWorkflowExecutionsByTestWorkflowsRow) testkube.TestWorkflowExecutionSummary {
+	// Convert complete execution to summary
+	execution := r.convertCompleteRowToExecution(row)
+	return r.executionToSummary(*execution)
+}
+
+// Helper to convert full execution to summary
+func (r *PostgresRepository) executionToSummary(execution testkube.TestWorkflowExecution) testkube.TestWorkflowExecutionSummary {
+	summary := testkube.TestWorkflowExecutionSummary{
+		Id:                   execution.Id,
+		GroupId:              execution.GroupId,
+		RunnerId:             execution.RunnerId,
+		Name:                 execution.Name,
+		Number:               execution.Number,
+		ScheduledAt:          execution.ScheduledAt,
+		StatusAt:             execution.StatusAt,
+		Result:               execution.Result,
+		Workflow:             execution.Workflow,
+		Tags:                 execution.Tags,
+		RunningContext:       execution.RunningContext,
+		ConfigParams:         execution.ConfigParams,
+		Reports:              execution.Reports,
+		ResourceAggregations: execution.ResourceAggregations,
+	}
+	return summary
+}
+
+// Get signatures
 func (r *PostgresRepository) buildSignatureTree(signatures []sqlc.TestWorkflowSignature) []testkube.TestWorkflowSignature {
 	if len(signatures) == 0 {
 		return nil
@@ -485,9 +557,18 @@ func (r *PostgresRepository) convertResourceAggregations(agg sqlc.TestWorkflowRe
 
 // GetByNameAndTestWorkflow returns execution by name and workflow name
 func (r *PostgresRepository) GetByNameAndTestWorkflow(ctx context.Context, name, workflowName string) (testkube.TestWorkflowExecution, error) {
-	row, err := r.queries.GetTestWorkflowExecutionByNameAndTestWorkflow(ctx, sqlc.GetTestWorkflowExecutionByNameAndTestWorkflowParams{
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return testkube.TestWorkflowExecution{}, err
+	}
+	defer tx.Rollback(ctx)
+
+	qtx := r.queries.WithTx(tx)
+
+	// Get main execution data with all fields
+	row, err := qtx.GetTestWorkflowExecutionByNameAndTestWorkflow(ctx, sqlc.GetTestWorkflowExecutionByNameAndTestWorkflowParams{
 		Name:         name,
-		WorkflowName: workflowName,
+		WorkflowName: toPgText(workflowName),
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -496,14 +577,65 @@ func (r *PostgresRepository) GetByNameAndTestWorkflow(ctx context.Context, name,
 		return testkube.TestWorkflowExecution{}, err
 	}
 
-	// Convert to full execution object (simplified version)
-	execution := r.convertRowToExecution(row)
+	// Build the complete execution object from the row
+	execution := r.convertCompleteRowToExecution(row)
+
+	// Get signatures and build the tree structure
+	signatures, err := qtx.GetTestWorkflowSignatures(ctx, execution.Id)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return testkube.TestWorkflowExecution{}, err
+	}
+	execution.Signature = r.buildSignatureTree(signatures)
+
+	// Get outputs
+	outputs, err := qtx.GetTestWorkflowOutputs(ctx, execution.Id)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return testkube.TestWorkflowExecution{}, err
+	}
+	execution.Output = r.convertOutputs(outputs)
+
+	// Get reports
+	reports, err := qtx.GetTestWorkflowReports(ctx, execution.Id)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return testkube.TestWorkflowExecution{}, err
+	}
+	execution.Reports = r.convertReports(reports)
+
+	// Get resource aggregations
+	resourceAgg, err := qtx.GetTestWorkflowResourceAggregations(ctx, execution.Id)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return testkube.TestWorkflowExecution{}, err
+	} else if err == nil {
+		execution.ResourceAggregations, err = r.convertResourceAggregations(resourceAgg)
+		if err != nil {
+			return testkube.TestWorkflowExecution{}, err
+		}
+	}
+
+	if err = tx.Commit(ctx); err != nil {
+		return testkube.TestWorkflowExecution{}, err
+	}
+
+	// Populate config params if resolved workflow exists
+	if execution.ResolvedWorkflow != nil && execution.ResolvedWorkflow.Spec != nil {
+		execution.ConfigParams = populateConfigParams(execution.ResolvedWorkflow, execution.ConfigParams)
+	}
+
 	return *execution.UnscapeDots(), nil
 }
 
 // GetLatestByTestWorkflow returns latest execution for a workflow
 func (r *PostgresRepository) GetLatestByTestWorkflow(ctx context.Context, workflowName string) (*testkube.TestWorkflowExecution, error) {
-	row, err := r.queries.GetLatestTestWorkflowExecutionByTestWorkflow(ctx, workflowName)
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
+
+	qtx := r.queries.WithTx(tx)
+
+	// Get main execution data with all fields
+	row, err := qtx.GetLatestTestWorkflowExecutionByTestWorkflow(ctx, workflowName)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("execution not found")
@@ -511,7 +643,50 @@ func (r *PostgresRepository) GetLatestByTestWorkflow(ctx context.Context, workfl
 		return nil, err
 	}
 
-	execution := r.convertRowToExecutionSimple(row)
+	// Build the complete execution object from the row
+	execution := r.convertCompleteRowToExecution(row)
+
+	// Get signatures and build the tree structure
+	signatures, err := qtx.GetTestWorkflowSignatures(ctx, execution.Id)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return nil, err
+	}
+	execution.Signature = r.buildSignatureTree(signatures)
+
+	// Get outputs
+	outputs, err := qtx.GetTestWorkflowOutputs(ctx, execution.Id)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return nil, err
+	}
+	execution.Output = r.convertOutputs(outputs)
+
+	// Get reports
+	reports, err := qtx.GetTestWorkflowReports(ctx, execution.Id)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return nil, err
+	}
+	execution.Reports = r.convertReports(reports)
+
+	// Get resource aggregations
+	resourceAgg, err := qtx.GetTestWorkflowResourceAggregations(ctx, execution.Id)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return nil, err
+	} else if err == nil {
+		execution.ResourceAggregations, err = r.convertResourceAggregations(resourceAgg)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if err = tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+
+	// Populate config params if resolved workflow exists
+	if execution.ResolvedWorkflow != nil && execution.ResolvedWorkflow.Spec != nil {
+		execution.ConfigParams = populateConfigParams(execution.ResolvedWorkflow, execution.ConfigParams)
+	}
+
 	return execution.UnscapeDots(), nil
 }
 
@@ -528,8 +703,15 @@ func (r *PostgresRepository) GetLatestByTestWorkflows(ctx context.Context, workf
 
 	result := make([]testkube.TestWorkflowExecutionSummary, len(rows))
 	for i, row := range rows {
-		result[i] = r.convertRowToExecutionSummary(row)
+		// Convert complete execution to summary
+		execution := r.convertCompleteRowToExecution(row)
+		result[i] = r.executionToSummary(*execution)
 		result[i].UnscapeDots()
+
+		// Populate config params if resolved workflow exists
+		if execution.ResolvedWorkflow != nil && execution.ResolvedWorkflow.Spec != nil {
+			result[i].ConfigParams = populateConfigParams(execution.ResolvedWorkflow, result[i].ConfigParams)
+		}
 	}
 
 	return result, nil
@@ -544,8 +726,13 @@ func (r *PostgresRepository) GetRunning(ctx context.Context) ([]testkube.TestWor
 
 	result := make([]testkube.TestWorkflowExecution, len(rows))
 	for i, row := range rows {
-		result[i] = r.convertRowToExecutionSimpleFromRunning(row)
-		result[i].UnscapeDots()
+		execution := r.convertCompleteRowToExecution(row)
+		result[i] = *execution.UnscapeDots()
+
+		// Populate config params if resolved workflow exists
+		if execution.ResolvedWorkflow != nil && execution.ResolvedWorkflow.Spec != nil {
+			result[i].ConfigParams = populateConfigParams(execution.ResolvedWorkflow, result[i].ConfigParams)
+		}
 	}
 
 	return result, nil
@@ -561,8 +748,13 @@ func (r *PostgresRepository) GetFinished(ctx context.Context, filter testworkflo
 
 	result := make([]testkube.TestWorkflowExecution, len(rows))
 	for i, row := range rows {
-		result[i] = r.convertRowToExecutionFromFinished(row)
-		result[i].UnscapeDots()
+		execution := r.convertCompleteRowToExecution(row)
+		result[i] = *execution.UnscapeDots()
+
+		// Populate config params if resolved workflow exists
+		if execution.ResolvedWorkflow != nil && execution.ResolvedWorkflow.Spec != nil {
+			result[i].ConfigParams = populateConfigParams(execution.ResolvedWorkflow, result[i].ConfigParams)
+		}
 	}
 
 	return result, nil
@@ -617,14 +809,19 @@ func (r *PostgresRepository) GetExecutions(ctx context.Context, filter testworkf
 
 	result := make([]testkube.TestWorkflowExecution, len(rows))
 	for i, row := range rows {
-		result[i] = r.convertRowToExecutionFromList(row)
-		result[i].UnscapeDots()
+		execution := r.convertCompleteRowToExecution(row)
+		result[i] = *execution.UnscapeDots()
+
+		// Populate config params if resolved workflow exists
+		if execution.ResolvedWorkflow != nil && execution.ResolvedWorkflow.Spec != nil {
+			result[i].ConfigParams = populateConfigParams(execution.ResolvedWorkflow, result[i].ConfigParams)
+		}
 	}
 
 	return result, nil
 }
 
-// GetExecutionsSummary returns execution summaries with filter
+// GetExecutionsSummary method
 func (r *PostgresRepository) GetExecutionsSummary(ctx context.Context, filter testworkflow.Filter) ([]testkube.TestWorkflowExecutionSummary, error) {
 	params := r.buildSummaryParams(filter)
 	rows, err := r.queries.GetTestWorkflowExecutionsSummary(ctx, params)
@@ -634,8 +831,15 @@ func (r *PostgresRepository) GetExecutionsSummary(ctx context.Context, filter te
 
 	result := make([]testkube.TestWorkflowExecutionSummary, len(rows))
 	for i, row := range rows {
-		result[i] = r.convertRowToSummary(row)
+		// Convert complete execution to summary
+		execution := r.convertCompleteRowToExecution(row)
+		result[i] = r.executionToSummary(*execution)
 		result[i].UnscapeDots()
+
+		// Populate config params if resolved workflow exists
+		if execution.ResolvedWorkflow != nil && execution.ResolvedWorkflow.Spec != nil {
+			result[i].ConfigParams = populateConfigParams(execution.ResolvedWorkflow, result[i].ConfigParams)
+		}
 	}
 
 	return result, nil
@@ -1071,6 +1275,15 @@ func (r *PostgresRepository) DeleteByTestWorkflows(ctx context.Context, workflow
 	return r.queries.DeleteTestWorkflowExecutionsByTestWorkflows(ctx, workflowNames)
 }
 
+// GetNextExecutionNumber gets next execution number
+func (r *PostgresRepository) GetNextExecutionNumber(ctx context.Context, name string) (int32, error) {
+	if r.sequenceRepository == nil {
+		return 0, errors.New("no sequence repository provided")
+	}
+
+	return r.sequenceRepository.GetNextExecutionNumber(ctx, name, sequence.ExecutionTypeTestWorkflow)
+}
+
 // GetTestWorkflowMetrics returns metrics
 func (r *PostgresRepository) GetTestWorkflowMetrics(ctx context.Context, name string, limit, last int) (testkube.ExecutionsMetrics, error) {
 	metrics := testkube.ExecutionsMetrics{}
@@ -1090,8 +1303,8 @@ func (r *PostgresRepository) GetTestWorkflowMetrics(ctx context.Context, name st
 	}
 
 	rows, err := r.queries.GetTestWorkflowMetrics(ctx, sqlc.GetTestWorkflowMetricsParams{
-		WorkflowName: name,
-		LastDays:     int32(la),
+		WorkflowName: toPgText(name),
+		LastDays:     toPgInt4(la),
 		Lmt:          int32(li),
 	})
 	if err != nil {
@@ -1123,8 +1336,8 @@ func (r *PostgresRepository) GetTestWorkflowMetrics(ctx context.Context, name st
 // GetPreviousFinishedState gets previous finished state
 func (r *PostgresRepository) GetPreviousFinishedState(ctx context.Context, testWorkflowName string, date time.Time) (testkube.TestWorkflowStatus, error) {
 	status, err := r.queries.GetPreviousFinishedState(ctx, sqlc.GetPreviousFinishedStateParams{
-		WorkflowName: testWorkflowName,
-		Date:         date,
+		WorkflowName: toPgText(testWorkflowName),
+		Date:         toPgTimestamp(date),
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -1134,15 +1347,6 @@ func (r *PostgresRepository) GetPreviousFinishedState(ctx context.Context, testW
 	}
 
 	return testkube.TestWorkflowStatus(fromPgText(status)), nil
-}
-
-// GetNextExecutionNumber gets next execution number
-func (r *PostgresRepository) GetNextExecutionNumber(ctx context.Context, name string) (int32, error) {
-	if r.sequenceRepository == nil {
-		return 0, errors.New("no sequence repository provided")
-	}
-
-	return r.sequenceRepository.GetNextExecutionNumber(ctx, name, sequence.ExecutionTypeTestWorkflow)
 }
 
 // GetExecutionTags returns execution tags
@@ -1205,8 +1409,13 @@ func (r *PostgresRepository) GetUnassigned(ctx context.Context) ([]testkube.Test
 
 	result := make([]testkube.TestWorkflowExecution, len(rows))
 	for i, row := range rows {
-		result[i] = r.convertUnassignedRowToExecution(row)
-		result[i].UnscapeDots()
+		execution := r.convertCompleteRowToExecution(row)
+		result[i] = *execution.UnscapeDots()
+
+		// Populate config params if resolved workflow exists
+		if execution.ResolvedWorkflow != nil && execution.ResolvedWorkflow.Spec != nil {
+			result[i].ConfigParams = populateConfigParams(execution.ResolvedWorkflow, result[i].ConfigParams)
+		}
 	}
 
 	return result, nil
@@ -1398,77 +1607,6 @@ func (r *PostgresRepository) buildExecutionParams(filter testworkflow.Filter) sq
 	return params
 }
 
-func (r *PostgresRepository) buildSummaryParams(filter testworkflow.Filter) sqlc.GetTestWorkflowExecutionsSummaryParams {
-	params := sqlc.GetTestWorkflowExecutionsSummaryParams{
-		Fst: int32(filter.Page() * filter.PageSize()),
-		Lmt: int32(filter.PageSize()),
-	}
-
-	if filter.NameDefined() {
-		params.WorkflowName = toPgText(filter.Name())
-	}
-
-	if filter.NamesDefined() {
-		names := filter.Names()
-		pgNames := make([]pgtype.Text, len(names))
-		for i, name := range names {
-			pgNames[i] = toPgText(name)
-		}
-		params.WorkflowNames = pgNames
-	}
-
-	if filter.TextSearchDefined() {
-		params.TextSearch = toPgText(filter.TextSearch())
-	}
-
-	if filter.StartDateDefined() {
-		params.StartDate = toPgTimestamp(filter.StartDate())
-	}
-
-	if filter.EndDateDefined() {
-		params.EndDate = toPgTimestamp(filter.EndDate())
-	}
-
-	if filter.LastNDaysDefined() {
-		params.LastNDays = toPgInt4(int32(filter.LastNDays()))
-	}
-
-	if filter.StatusesDefined() {
-		statuses := filter.Statuses()
-		pgStatuses := make([]pgtype.Text, len(statuses))
-		for i, status := range statuses {
-			pgStatuses[i] = toPgText(string(status))
-		}
-		params.Statuses = pgStatuses
-	}
-
-	if filter.RunnerIDDefined() {
-		params.RunnerID = toPgText(filter.RunnerID())
-	}
-
-	if filter.AssignedDefined() {
-		params.Assigned = toPgBool(filter.Assigned())
-	}
-
-	if filter.ActorNameDefined() {
-		params.ActorName = toPgText(filter.ActorName())
-	}
-
-	if filter.ActorTypeDefined() {
-		params.ActorType = toPgText(string(filter.ActorType()))
-	}
-
-	if filter.GroupIDDefined() {
-		params.GroupID = toPgText(filter.GroupID())
-	}
-
-	if filter.InitializedDefined() {
-		params.Initialized = toPgBool(filter.Initialized())
-	}
-
-	return params
-}
-
 func (r *PostgresRepository) buildFinishedExecutionParams(filter testworkflow.Filter) sqlc.GetFinishedTestWorkflowExecutionsParams {
 	params := sqlc.GetFinishedTestWorkflowExecutionsParams{
 		Fst: int32(filter.Page() * filter.PageSize()),
@@ -1540,282 +1678,76 @@ func (r *PostgresRepository) buildFinishedExecutionParams(filter testworkflow.Fi
 	return params
 }
 
-// Helper functions for row conversion
-func (r *PostgresRepository) convertRowToExecution(row sqlc.GetTestWorkflowExecutionByNameAndTestWorkflowRow) *testkube.TestWorkflowExecution {
-	execution := &testkube.TestWorkflowExecution{
-		Id:                        row.ID,
-		GroupId:                   fromPgText(row.GroupID),
-		RunnerId:                  fromPgText(row.RunnerID),
-		Name:                      row.Name,
-		Namespace:                 fromPgText(row.Namespace),
-		Number:                    fromPgInt4(row.Number),
-		ScheduledAt:               fromPgTimestamp(row.ScheduledAt),
-		AssignedAt:                fromPgTimestamp(row.AssignedAt),
-		StatusAt:                  fromPgTimestamp(row.StatusAt),
-		TestWorkflowExecutionName: fromPgText(row.TestWorkflowExecutionName),
-		DisableWebhooks:           fromPgBool(row.DisableWebhooks),
+// Update the buildSummaryParams method to use the same complete query
+func (r *PostgresRepository) buildSummaryParams(filter Filter) sqlc.GetTestWorkflowExecutionsSummaryParams {
+	params := sqlc.GetTestWorkflowExecutionsSummaryParams{
+		Fst: int32(filter.Page() * filter.PageSize()),
+		Lmt: int32(filter.PageSize()),
 	}
 
-	// Parse JSONB fields
-	r.parseExecutionJSONFields(execution, row.RunnerTarget, row.RunnerOriginalTarget, row.Tags, row.RunningContext, row.ConfigParams)
-
-	// Build result if exists
-	if row.Status.Valid {
-		execution.Result = r.buildResultFromRow(
-			row.Status, row.PredictedStatus, row.QueuedAt, row.StartedAt, row.FinishedAt,
-			row.Duration, row.TotalDuration, row.DurationMs, row.PausedMs, row.TotalDurationMs,
-			row.Pauses, row.Initialization, row.Steps,
-		)
+	if filter.NameDefined() {
+		params.WorkflowName = toPgText(filter.Name())
 	}
 
-	// Build workflow if exists
-	if row.WorkflowName.Valid {
-		execution.Workflow = r.buildWorkflowFromRow(
-			row.WorkflowName, row.WorkflowNamespace, row.WorkflowDescription,
-			row.WorkflowLabels, row.WorkflowAnnotations, row.WorkflowCreated,
-			row.WorkflowUpdated, row.WorkflowSpec, row.WorkflowReadOnly, row.WorkflowStatus,
-		)
-	}
-
-	return execution
-}
-
-func (r *PostgresRepository) convertRowToExecutionSimple(row sqlc.GetLatestTestWorkflowExecutionByTestWorkflowRow) *testkube.TestWorkflowExecution {
-	execution := &testkube.TestWorkflowExecution{
-		Id:                        row.ID,
-		GroupId:                   fromPgText(row.GroupID),
-		RunnerId:                  fromPgText(row.RunnerID),
-		Name:                      row.Name,
-		Namespace:                 fromPgText(row.Namespace),
-		Number:                    fromPgInt4(row.Number),
-		ScheduledAt:               fromPgTimestamp(row.ScheduledAt),
-		AssignedAt:                fromPgTimestamp(row.AssignedAt),
-		StatusAt:                  fromPgTimestamp(row.StatusAt),
-		TestWorkflowExecutionName: fromPgText(row.TestWorkflowExecutionName),
-		DisableWebhooks:           fromPgBool(row.DisableWebhooks),
-	}
-
-	// Parse JSONB fields
-	r.parseExecutionJSONFields(execution, row.RunnerTarget, row.RunnerOriginalTarget, row.Tags, row.RunningContext, row.ConfigParams)
-
-	// Build result if exists
-	if row.Status.Valid {
-		execution.Result = r.buildResultFromRow(
-			row.Status, row.PredictedStatus, row.QueuedAt, row.StartedAt, row.FinishedAt,
-			row.Duration, row.TotalDuration, row.DurationMs, row.PausedMs, row.TotalDurationMs,
-			row.Pauses, row.Initialization, row.Steps,
-		)
-	}
-
-	return execution
-}
-
-func (r *PostgresRepository) convertRowToExecutionSummary(row sqlc.GetLatestTestWorkflowExecutionsByTestWorkflowsRow) testkube.TestWorkflowExecutionSummary {
-	summary := testkube.TestWorkflowExecutionSummary{
-		Id:          row.ID,
-		GroupId:     fromPgText(row.GroupID),
-		RunnerId:    fromPgText(row.RunnerID),
-		Name:        row.Name,
-		Number:      fromPgInt4(row.Number),
-		ScheduledAt: fromPgTimestamp(row.ScheduledAt),
-		StatusAt:    fromPgTimestamp(row.StatusAt),
-	}
-
-	// Parse JSONB fields
-	if len(row.Tags) > 0 {
-		json.Unmarshal(row.Tags, &summary.Tags)
-	}
-	if len(row.RunningContext) > 0 {
-		summary.RunningContext, _ = fromJSONB[testkube.TestWorkflowRunningContext](row.RunningContext)
-	}
-	if len(row.ConfigParams) > 0 {
-		json.Unmarshal(row.ConfigParams, &summary.ConfigParams)
-	}
-
-	// Build result if exists
-	if row.Status.Valid {
-		summary.Result = r.buildResultSummaryFromRowSimple(
-			row.Status, row.PredictedStatus, row.QueuedAt, row.StartedAt, row.FinishedAt,
-			row.Duration, row.TotalDuration, row.DurationMs, row.PausedMs, row.TotalDurationMs,
-		)
-	}
-
-	return summary
-}
-
-func (r *PostgresRepository) convertRowToExecutionSimpleFromRunning(row sqlc.GetRunningTestWorkflowExecutionsRow) testkube.TestWorkflowExecution {
-	execution := testkube.TestWorkflowExecution{
-		Id:                        row.ID,
-		GroupId:                   fromPgText(row.GroupID),
-		RunnerId:                  fromPgText(row.RunnerID),
-		Name:                      row.Name,
-		Namespace:                 fromPgText(row.Namespace),
-		Number:                    fromPgInt4(row.Number),
-		ScheduledAt:               fromPgTimestamp(row.ScheduledAt),
-		AssignedAt:                fromPgTimestamp(row.AssignedAt),
-		StatusAt:                  fromPgTimestamp(row.StatusAt),
-		TestWorkflowExecutionName: fromPgText(row.TestWorkflowExecutionName),
-		DisableWebhooks:           fromPgBool(row.DisableWebhooks),
-	}
-
-	// Parse JSONB fields
-	r.parseExecutionJSONFields(&execution, row.RunnerTarget, row.RunnerOriginalTarget, row.Tags, row.RunningContext, row.ConfigParams)
-
-	// Build result if exists
-	if row.Status.Valid {
-		execution.Result = r.buildResultFromRow(
-			row.Status, row.PredictedStatus, row.QueuedAt, row.StartedAt, row.FinishedAt,
-			row.Duration, row.TotalDuration, row.DurationMs, row.PausedMs, row.TotalDurationMs,
-			nil, nil, nil, // No detailed result data in running query
-		)
-	}
-
-	return execution
-}
-
-func (r *PostgresRepository) convertRowToExecutionFromFinished(row sqlc.GetFinishedTestWorkflowExecutionsRow) testkube.TestWorkflowExecution {
-	execution := testkube.TestWorkflowExecution{
-		Id:                        row.ID,
-		GroupId:                   fromPgText(row.GroupID),
-		RunnerId:                  fromPgText(row.RunnerID),
-		Name:                      row.Name,
-		Namespace:                 fromPgText(row.Namespace),
-		Number:                    fromPgInt4(row.Number),
-		ScheduledAt:               fromPgTimestamp(row.ScheduledAt),
-		AssignedAt:                fromPgTimestamp(row.AssignedAt),
-		StatusAt:                  fromPgTimestamp(row.StatusAt),
-		TestWorkflowExecutionName: fromPgText(row.TestWorkflowExecutionName),
-		DisableWebhooks:           fromPgBool(row.DisableWebhooks),
-	}
-
-	// Parse JSONB fields
-	r.parseExecutionJSONFields(&execution, row.RunnerTarget, row.RunnerOriginalTarget, row.Tags, row.RunningContext, row.ConfigParams)
-
-	// Build result if exists - finished executions should always have a result with status
-	if row.Status.Valid {
-		execution.Result = r.buildResultFromRowSimple(
-			row.Status, row.PredictedStatus, row.QueuedAt, row.StartedAt, row.FinishedAt,
-			row.Duration, row.TotalDuration, row.DurationMs, row.PausedMs, row.TotalDurationMs,
-		)
-	}
-
-	// Add workflow name if available
-	if row.WorkflowName.Valid {
-		execution.Workflow = &testkube.TestWorkflow{
-			Name: fromPgText(row.WorkflowName),
+	if filter.NamesDefined() {
+		names := filter.Names()
+		pgNames := make([]pgtype.Text, len(names))
+		for i, name := range names {
+			pgNames[i] = toPgText(name)
 		}
+		params.WorkflowNames = pgNames
 	}
 
-	return execution
-}
-
-func (r *PostgresRepository) convertRowToExecutionFromList(row sqlc.GetTestWorkflowExecutionsRow) testkube.TestWorkflowExecution {
-	execution := testkube.TestWorkflowExecution{
-		Id:                        row.ID,
-		GroupId:                   fromPgText(row.GroupID),
-		RunnerId:                  fromPgText(row.RunnerID),
-		Name:                      row.Name,
-		Namespace:                 fromPgText(row.Namespace),
-		Number:                    fromPgInt4(row.Number),
-		ScheduledAt:               fromPgTimestamp(row.ScheduledAt),
-		AssignedAt:                fromPgTimestamp(row.AssignedAt),
-		StatusAt:                  fromPgTimestamp(row.StatusAt),
-		TestWorkflowExecutionName: fromPgText(row.TestWorkflowExecutionName),
-		DisableWebhooks:           fromPgBool(row.DisableWebhooks),
+	if filter.TextSearchDefined() {
+		params.TextSearch = toPgText(filter.TextSearch())
 	}
 
-	// Parse JSONB fields
-	r.parseExecutionJSONFields(&execution, row.RunnerTarget, row.RunnerOriginalTarget, row.Tags, row.RunningContext, row.ConfigParams)
-
-	// Build result if exists
-	if row.Status.Valid {
-		execution.Result = r.buildResultFromRowSimple(
-			row.Status, row.PredictedStatus, row.QueuedAt, row.StartedAt, row.FinishedAt,
-			row.Duration, row.TotalDuration, row.DurationMs, row.PausedMs, row.TotalDurationMs,
-		)
+	if filter.StartDateDefined() {
+		params.StartDate = toPgTimestamp(filter.StartDate())
 	}
 
-	// Add workflow name if available
-	if row.WorkflowName.Valid {
-		execution.Workflow = &testkube.TestWorkflow{
-			Name: fromPgText(row.WorkflowName),
+	if filter.EndDateDefined() {
+		params.EndDate = toPgTimestamp(filter.EndDate())
+	}
+
+	if filter.LastNDaysDefined() {
+		params.LastNDays = toPgInt4(int32(filter.LastNDays()))
+	}
+
+	if filter.StatusesDefined() {
+		statuses := filter.Statuses()
+		pgStatuses := make([]pgtype.Text, len(statuses))
+		for i, status := range statuses {
+			pgStatuses[i] = toPgText(string(status))
 		}
+		params.Statuses = pgStatuses
 	}
 
-	return execution
-}
-
-func (r *PostgresRepository) convertRowToSummary(row sqlc.GetTestWorkflowExecutionsSummaryRow) testkube.TestWorkflowExecutionSummary {
-	summary := testkube.TestWorkflowExecutionSummary{
-		Id:          row.ID,
-		GroupId:     fromPgText(row.GroupID),
-		RunnerId:    fromPgText(row.RunnerID),
-		Name:        row.Name,
-		Number:      fromPgInt4(row.Number),
-		ScheduledAt: fromPgTimestamp(row.ScheduledAt),
-		StatusAt:    fromPgTimestamp(row.StatusAt),
+	if filter.RunnerIDDefined() {
+		params.RunnerID = toPgText(filter.RunnerID())
 	}
 
-	// Parse JSONB fields
-	if len(row.Tags) > 0 {
-		json.Unmarshal(row.Tags, &summary.Tags)
-	}
-	if len(row.RunningContext) > 0 {
-		summary.RunningContext, _ = fromJSONB[testkube.TestWorkflowRunningContext](row.RunningContext)
-	}
-	if len(row.ConfigParams) > 0 {
-		json.Unmarshal(row.ConfigParams, &summary.ConfigParams)
+	if filter.AssignedDefined() {
+		params.Assigned = toPgBool(filter.Assigned())
 	}
 
-	// Build result if exists
-	if row.Status.Valid {
-		summary.Result = r.buildResultSummaryFromRowSimple(
-			row.Status, row.PredictedStatus, row.QueuedAt, row.StartedAt, row.FinishedAt,
-			row.Duration, row.TotalDuration, row.DurationMs, row.PausedMs, row.TotalDurationMs,
-		)
+	if filter.ActorNameDefined() {
+		params.ActorName = toPgText(filter.ActorName())
 	}
 
-	// Build workflow summary if exists
-	if row.WorkflowName.Valid {
-		summary.Workflow = &testkube.TestWorkflowSummary{
-			Name:      fromPgText(row.WorkflowName),
-			Namespace: fromPgText(row.WorkflowNamespace),
-		}
-		if len(row.WorkflowLabels) > 0 {
-			json.Unmarshal(row.WorkflowLabels, &summary.Workflow.Labels)
-		}
+	if filter.ActorTypeDefined() {
+		params.ActorType = toPgText(string(filter.ActorType()))
 	}
 
-	return summary
-}
-
-func (r *PostgresRepository) convertUnassignedRowToExecution(row sqlc.GetUnassignedTestWorkflowExecutionsRow) testkube.TestWorkflowExecution {
-	execution := testkube.TestWorkflowExecution{
-		Id:                        row.ID,
-		GroupId:                   fromPgText(row.GroupID),
-		RunnerId:                  fromPgText(row.RunnerID),
-		Name:                      row.Name,
-		Namespace:                 fromPgText(row.Namespace),
-		Number:                    fromPgInt4(row.Number),
-		ScheduledAt:               fromPgTimestamp(row.ScheduledAt),
-		AssignedAt:                fromPgTimestamp(row.AssignedAt),
-		StatusAt:                  fromPgTimestamp(row.StatusAt),
-		TestWorkflowExecutionName: fromPgText(row.TestWorkflowExecutionName),
-		DisableWebhooks:           fromPgBool(row.DisableWebhooks),
+	if filter.GroupIDDefined() {
+		params.GroupID = toPgText(filter.GroupID())
 	}
 
-	// Parse JSONB fields
-	r.parseExecutionJSONFields(&execution, row.RunnerTarget, row.RunnerOriginalTarget, row.Tags, row.RunningContext, row.ConfigParams)
-
-	// Build simple result
-	if row.Status.Valid {
-		status := testkube.TestWorkflowStatus(row.Status.String)
-		execution.Result = &testkube.TestWorkflowResult{
-			Status: &status,
-		}
+	if filter.InitializedDefined() {
+		params.Initialized = toPgBool(filter.Initialized())
 	}
 
-	return execution
+	return params
 }
 
 // Helper methods for building complex objects
