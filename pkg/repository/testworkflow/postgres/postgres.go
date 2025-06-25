@@ -134,6 +134,42 @@ func fromJSONB[T any](data []byte) (*T, error) {
 	return &result, nil
 }
 
+func (r *PostgresRepository) getExecutionDeps(ctx context.Context, qtx sqlc.TestWorkflowExecutionQueriesInterface, execution *testkube.TestWorkflowExecution) error {
+	// Get signatures and build the tree structure
+	signatures, err := qtx.GetTestWorkflowSignatures(ctx, execution.Id)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return err
+	}
+	execution.Signature = r.buildSignatureTree(signatures)
+
+	// Get outputs
+	outputs, err := qtx.GetTestWorkflowOutputs(ctx, execution.Id)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return err
+	}
+	execution.Output = r.convertOutputs(outputs)
+
+	// Get reports
+	reports, err := qtx.GetTestWorkflowReports(ctx, execution.Id)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return err
+	}
+	execution.Reports = r.convertReports(reports)
+
+	// Get resource aggregations
+	resourceAgg, err := qtx.GetTestWorkflowResourceAggregations(ctx, execution.Id)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return err
+	} else if err == nil {
+		execution.ResourceAggregations, err = r.convertResourceAggregations(resourceAgg)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // Get method to use complete data
 func (r *PostgresRepository) Get(ctx context.Context, id string) (testkube.TestWorkflowExecution, error) {
 	tx, err := r.db.Begin(ctx)
@@ -155,37 +191,8 @@ func (r *PostgresRepository) Get(ctx context.Context, id string) (testkube.TestW
 
 	// Build the complete execution object from the row
 	execution := r.convertCompleteRowToExecution(row)
-
-	// Get signatures and build the tree structure
-	signatures, err := qtx.GetTestWorkflowSignatures(ctx, execution.Id)
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+	if err = r.getExecutionDeps(ctx, qtx, execution); err != nil {
 		return testkube.TestWorkflowExecution{}, err
-	}
-	execution.Signature = r.buildSignatureTree(signatures)
-
-	// Get outputs
-	outputs, err := qtx.GetTestWorkflowOutputs(ctx, execution.Id)
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-		return testkube.TestWorkflowExecution{}, err
-	}
-	execution.Output = r.convertOutputs(outputs)
-
-	// Get reports
-	reports, err := qtx.GetTestWorkflowReports(ctx, execution.Id)
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-		return testkube.TestWorkflowExecution{}, err
-	}
-	execution.Reports = r.convertReports(reports)
-
-	// Get resource aggregations
-	resourceAgg, err := qtx.GetTestWorkflowResourceAggregations(ctx, execution.Id)
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-		return testkube.TestWorkflowExecution{}, err
-	} else if err == nil {
-		execution.ResourceAggregations, err = r.convertResourceAggregations(resourceAgg)
-		if err != nil {
-			return testkube.TestWorkflowExecution{}, err
-		}
 	}
 
 	if err = tx.Commit(ctx); err != nil {
@@ -579,37 +586,8 @@ func (r *PostgresRepository) GetByNameAndTestWorkflow(ctx context.Context, name,
 
 	// Build the complete execution object from the row
 	execution := r.convertCompleteRowToExecution(row)
-
-	// Get signatures and build the tree structure
-	signatures, err := qtx.GetTestWorkflowSignatures(ctx, execution.Id)
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+	if err = r.getExecutionDeps(ctx, qtx, execution); err != nil {
 		return testkube.TestWorkflowExecution{}, err
-	}
-	execution.Signature = r.buildSignatureTree(signatures)
-
-	// Get outputs
-	outputs, err := qtx.GetTestWorkflowOutputs(ctx, execution.Id)
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-		return testkube.TestWorkflowExecution{}, err
-	}
-	execution.Output = r.convertOutputs(outputs)
-
-	// Get reports
-	reports, err := qtx.GetTestWorkflowReports(ctx, execution.Id)
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-		return testkube.TestWorkflowExecution{}, err
-	}
-	execution.Reports = r.convertReports(reports)
-
-	// Get resource aggregations
-	resourceAgg, err := qtx.GetTestWorkflowResourceAggregations(ctx, execution.Id)
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-		return testkube.TestWorkflowExecution{}, err
-	} else if err == nil {
-		execution.ResourceAggregations, err = r.convertResourceAggregations(resourceAgg)
-		if err != nil {
-			return testkube.TestWorkflowExecution{}, err
-		}
 	}
 
 	if err = tx.Commit(ctx); err != nil {
@@ -645,37 +623,8 @@ func (r *PostgresRepository) GetLatestByTestWorkflow(ctx context.Context, workfl
 
 	// Build the complete execution object from the row
 	execution := r.convertCompleteRowToExecution(row)
-
-	// Get signatures and build the tree structure
-	signatures, err := qtx.GetTestWorkflowSignatures(ctx, execution.Id)
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+	if err = r.getExecutionDeps(ctx, qtx, execution); err != nil {
 		return nil, err
-	}
-	execution.Signature = r.buildSignatureTree(signatures)
-
-	// Get outputs
-	outputs, err := qtx.GetTestWorkflowOutputs(ctx, execution.Id)
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-		return nil, err
-	}
-	execution.Output = r.convertOutputs(outputs)
-
-	// Get reports
-	reports, err := qtx.GetTestWorkflowReports(ctx, execution.Id)
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-		return nil, err
-	}
-	execution.Reports = r.convertReports(reports)
-
-	// Get resource aggregations
-	resourceAgg, err := qtx.GetTestWorkflowResourceAggregations(ctx, execution.Id)
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-		return nil, err
-	} else if err == nil {
-		execution.ResourceAggregations, err = r.convertResourceAggregations(resourceAgg)
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	if err = tx.Commit(ctx); err != nil {
