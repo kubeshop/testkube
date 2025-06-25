@@ -21,3 +21,4 @@ spec:
       - name: expected-fail-private-repo-auth
       - name: expected-fail-missing-git-secret
       - name: expected-fail-missing-env-secret
+      - name: expected-fail-missing-template
