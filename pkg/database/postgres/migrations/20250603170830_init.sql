@@ -103,6 +103,7 @@ CREATE TABLE test_workflows (
     spec JSONB,
     read_only BOOLEAN DEFAULT FALSE,
     status JSONB,
+    health JSONB,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     UNIQUE(execution_id, workflow_type)

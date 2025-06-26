@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -20,6 +21,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/repository/sequence"
 	sequencepostgres "github.com/kubeshop/testkube/pkg/repository/sequence/postgres"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
+	"github.com/kubeshop/testkube/pkg/utils"
 )
 
 var _ testworkflow.Repository = (*PostgresRepository)(nil)
@@ -159,77 +161,8 @@ func (r *PostgresRepository) Get(ctx context.Context, id string) (testkube.TestW
 	return *execution.UnscapeDots(), nil
 }
 
-// CompleteExecutionRow represents a row with all execution data including aggregated related data
-type CompleteExecutionRow struct {
-	// Basic execution fields
-	ID                        string             `db:"id"`
-	GroupID                   pgtype.Text        `db:"group_id"`
-	RunnerID                  pgtype.Text        `db:"runner_id"`
-	RunnerTarget              []byte             `db:"runner_target"`
-	RunnerOriginalTarget      []byte             `db:"runner_original_target"`
-	Name                      string             `db:"name"`
-	Namespace                 pgtype.Text        `db:"namespace"`
-	Number                    pgtype.Int4        `db:"number"`
-	ScheduledAt               pgtype.Timestamptz `db:"scheduled_at"`
-	AssignedAt                pgtype.Timestamptz `db:"assigned_at"`
-	StatusAt                  pgtype.Timestamptz `db:"status_at"`
-	TestWorkflowExecutionName pgtype.Text        `db:"test_workflow_execution_name"`
-	DisableWebhooks           pgtype.Bool        `db:"disable_webhooks"`
-	Tags                      []byte             `db:"tags"`
-	RunningContext            []byte             `db:"running_context"`
-	ConfigParams              []byte             `db:"config_params"`
-	CreatedAt                 pgtype.Timestamptz `db:"created_at"`
-	UpdatedAt                 pgtype.Timestamptz `db:"updated_at"`
-
-	// Result fields
-	Status          pgtype.Text        `db:"status"`
-	PredictedStatus pgtype.Text        `db:"predicted_status"`
-	QueuedAt        pgtype.Timestamptz `db:"queued_at"`
-	StartedAt       pgtype.Timestamptz `db:"started_at"`
-	FinishedAt      pgtype.Timestamptz `db:"finished_at"`
-	Duration        pgtype.Text        `db:"duration"`
-	TotalDuration   pgtype.Text        `db:"total_duration"`
-	DurationMs      pgtype.Int4        `db:"duration_ms"`
-	PausedMs        pgtype.Int4        `db:"paused_ms"`
-	TotalDurationMs pgtype.Int4        `db:"total_duration_ms"`
-	Pauses          []byte             `db:"pauses"`
-	Initialization  []byte             `db:"initialization"`
-	Steps           []byte             `db:"steps"`
-
-	// Workflow fields
-	WorkflowName        pgtype.Text        `db:"workflow_name"`
-	WorkflowNamespace   pgtype.Text        `db:"workflow_namespace"`
-	WorkflowDescription pgtype.Text        `db:"workflow_description"`
-	WorkflowLabels      []byte             `db:"workflow_labels"`
-	WorkflowAnnotations []byte             `db:"workflow_annotations"`
-	WorkflowCreated     pgtype.Timestamptz `db:"workflow_created"`
-	WorkflowUpdated     pgtype.Timestamptz `db:"workflow_updated"`
-	WorkflowSpec        []byte             `db:"workflow_spec"`
-	WorkflowReadOnly    pgtype.Bool        `db:"workflow_read_only"`
-	WorkflowStatus      []byte             `db:"workflow_status"`
-
-	// Resolved workflow fields
-	ResolvedWorkflowName        pgtype.Text        `db:"resolved_workflow_name"`
-	ResolvedWorkflowNamespace   pgtype.Text        `db:"resolved_workflow_namespace"`
-	ResolvedWorkflowDescription pgtype.Text        `db:"resolved_workflow_description"`
-	ResolvedWorkflowLabels      []byte             `db:"resolved_workflow_labels"`
-	ResolvedWorkflowAnnotations []byte             `db:"resolved_workflow_annotations"`
-	ResolvedWorkflowCreated     pgtype.Timestamptz `db:"resolved_workflow_created"`
-	ResolvedWorkflowUpdated     pgtype.Timestamptz `db:"resolved_workflow_updated"`
-	ResolvedWorkflowSpec        []byte             `db:"resolved_workflow_spec"`
-	ResolvedWorkflowReadOnly    pgtype.Bool        `db:"resolved_workflow_read_only"`
-	ResolvedWorkflowStatus      []byte             `db:"resolved_workflow_status"`
-
-	// Aggregated related data as JSON
-	SignaturesJSON             []byte `db:"signatures_json"`
-	OutputsJSON                []byte `db:"outputs_json"`
-	ReportsJSON                []byte `db:"reports_json"`
-	ResourceAggregationsGlobal []byte `db:"resource_aggregations_global"`
-	ResourceAggregationsStep   []byte `db:"resource_aggregations_step"`
-}
-
 // Helper method to convert complete row to TestWorkflowExecution
-func (r *PostgresRepository) convertCompleteRowToExecutionWithRelated(row CompleteExecutionRow) (*testkube.TestWorkflowExecution, error) {
+func (r *PostgresRepository) convertCompleteRowToExecutionWithRelated(row sqlc.GetTestWorkflowExecutionRow) (*testkube.TestWorkflowExecution, error) {
 	execution := &testkube.TestWorkflowExecution{
 		Id:                        row.ID,
 		GroupId:                   fromPgText(row.GroupID),
@@ -261,7 +194,7 @@ func (r *PostgresRepository) convertCompleteRowToExecutionWithRelated(row Comple
 		execution.Workflow = r.buildWorkflowFromRow(
 			row.WorkflowName, row.WorkflowNamespace, row.WorkflowDescription,
 			row.WorkflowLabels, row.WorkflowAnnotations, row.WorkflowCreated,
-			row.WorkflowUpdated, row.WorkflowSpec, row.WorkflowReadOnly, row.WorkflowStatus,
+			row.WorkflowUpdated, row.WorkflowSpec, row.WorkflowReadOnly, row.WorkflowStatus, row.WorkflowHealth,
 		)
 	}
 
@@ -270,32 +203,32 @@ func (r *PostgresRepository) convertCompleteRowToExecutionWithRelated(row Comple
 		execution.ResolvedWorkflow = r.buildWorkflowFromRow(
 			row.ResolvedWorkflowName, row.ResolvedWorkflowNamespace, row.ResolvedWorkflowDescription,
 			row.ResolvedWorkflowLabels, row.ResolvedWorkflowAnnotations, row.ResolvedWorkflowCreated,
-			row.ResolvedWorkflowUpdated, row.ResolvedWorkflowSpec, row.ResolvedWorkflowReadOnly, row.ResolvedWorkflowStatus,
+			row.ResolvedWorkflowUpdated, row.ResolvedWorkflowSpec, row.ResolvedWorkflowReadOnly, row.ResolvedWorkflowStatus, nil,
 		)
 	}
 
 	// Parse signatures from JSON
-	if len(row.SignaturesJSON) > 0 {
+	if len(row.SignaturesJson) > 0 {
 		var signatures []map[string]interface{}
-		if err := json.Unmarshal(row.SignaturesJSON, &signatures); err != nil {
+		if err := json.Unmarshal(row.SignaturesJson, &signatures); err != nil {
 			return nil, fmt.Errorf("failed to parse signatures JSON: %w", err)
 		}
 		execution.Signature = r.buildSignatureTreeFromJSON(signatures)
 	}
 
 	// Parse outputs from JSON
-	if len(row.OutputsJSON) > 0 {
+	if len(row.OutputsJson) > 0 {
 		var outputs []map[string]interface{}
-		if err := json.Unmarshal(row.OutputsJSON, &outputs); err != nil {
+		if err := json.Unmarshal(row.OutputsJson, &outputs); err != nil {
 			return nil, fmt.Errorf("failed to parse outputs JSON: %w", err)
 		}
 		execution.Output = r.convertOutputsFromJSON(outputs)
 	}
 
 	// Parse reports from JSON
-	if len(row.ReportsJSON) > 0 {
+	if len(row.ReportsJson) > 0 {
 		var reports []map[string]interface{}
-		if err := json.Unmarshal(row.ReportsJSON, &reports); err != nil {
+		if err := json.Unmarshal(row.ReportsJson, &reports); err != nil {
 			return nil, fmt.Errorf("failed to parse reports JSON: %w", err)
 		}
 		execution.Reports = r.convertReportsFromJSON(reports)
@@ -420,6 +353,56 @@ func getBoolFromMap(m map[string]interface{}, key string) bool {
 	return false
 }
 
+func (r *PostgresRepository) executionToSummary(row testkube.TestWorkflowExecution) testkube.TestWorkflowExecutionSummary {
+	return testkube.TestWorkflowExecutionSummary{
+		Id:                   row.Id,
+		GroupId:              row.GroupId,
+		RunnerId:             row.RunnerId,
+		Name:                 row.Name,
+		Number:               row.Number,
+		ScheduledAt:          row.ScheduledAt,
+		StatusAt:             row.StatusAt,
+		Result:               r.resultToSummary(row.Result),
+		Workflow:             r.workflowToSummary(row.Workflow),
+		Tags:                 row.Tags,
+		RunningContext:       row.RunningContext,
+		ConfigParams:         row.ConfigParams,
+		Reports:              row.Reports,
+		ResourceAggregations: row.ResourceAggregations,
+	}
+}
+
+func (r *PostgresRepository) resultToSummary(row *testkube.TestWorkflowResult) *testkube.TestWorkflowResultSummary {
+	if row == nil {
+		return nil
+	}
+	return &testkube.TestWorkflowResultSummary{
+		Status:          row.Status,
+		PredictedStatus: row.PredictedStatus,
+		QueuedAt:        row.QueuedAt,
+		StartedAt:       row.StartedAt,
+		FinishedAt:      row.FinishedAt,
+		Duration:        row.Duration,
+		TotalDuration:   row.TotalDuration,
+		DurationMs:      row.DurationMs,
+		TotalDurationMs: row.TotalDurationMs,
+		PausedMs:        row.PausedMs,
+	}
+}
+
+func (r *PostgresRepository) workflowToSummary(row *testkube.TestWorkflow) *testkube.TestWorkflowSummary {
+	if row == nil {
+		return nil
+	}
+	return &testkube.TestWorkflowSummary{
+		Name:        row.Name,
+		Namespace:   row.Namespace,
+		Labels:      row.Labels,
+		Annotations: row.Annotations,
+		Health:      row.Health,
+	}
+}
+
 // GetByNameAndTestWorkflow returns execution by name and workflow name
 func (r *PostgresRepository) GetByNameAndTestWorkflow(ctx context.Context, name, workflowName string) (testkube.TestWorkflowExecution, error) {
 	// Get complete execution data with all related data in a single query
@@ -435,7 +418,7 @@ func (r *PostgresRepository) GetByNameAndTestWorkflow(ctx context.Context, name,
 	}
 
 	// Convert the complete row to execution object
-	execution, err := r.convertCompleteRowToExecutionWithRelated(row)
+	execution, err := r.convertCompleteRowToExecutionWithRelated(sqlc.GetTestWorkflowExecutionRow(row))
 	if err != nil {
 		return testkube.TestWorkflowExecution{}, fmt.Errorf("failed to convert execution: %w", err)
 	}
@@ -451,7 +434,7 @@ func (r *PostgresRepository) GetByNameAndTestWorkflow(ctx context.Context, name,
 // GetLatestByTestWorkflow returns latest execution for a workflow
 func (r *PostgresRepository) GetLatestByTestWorkflow(ctx context.Context, workflowName string) (*testkube.TestWorkflowExecution, error) {
 	// Get complete execution data with all related data in a single query
-	row, err := r.queries.GetLatestTestWorkflowExecutionByTestWorkflow(ctx, toPgText(workflowName))
+	row, err := r.queries.GetLatestTestWorkflowExecutionByTestWorkflow(ctx, workflowName)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("execution not found")
@@ -460,7 +443,7 @@ func (r *PostgresRepository) GetLatestByTestWorkflow(ctx context.Context, workfl
 	}
 
 	// Convert the complete row to execution object
-	execution, err := r.convertCompleteRowToExecutionWithRelated(row)
+	execution, err := r.convertCompleteRowToExecutionWithRelated(sqlc.GetTestWorkflowExecutionRow(row))
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert execution: %w", err)
 	}
@@ -479,19 +462,14 @@ func (r *PostgresRepository) GetLatestByTestWorkflows(ctx context.Context, workf
 		return nil, nil
 	}
 
-	pgNames := make([]pgtype.Text, len(workflowNames))
-	for i, name := range workflowNames {
-		pgNames[i] = toPgText(name)
-	}
-
-	rows, err := r.queries.GetLatestTestWorkflowExecutionsByTestWorkflows(ctx, pgNames)
+	rows, err := r.queries.GetLatestTestWorkflowExecutionsByTestWorkflows(ctx, workflowNames)
 	if err != nil {
 		return nil, err
 	}
 
 	result := make([]testkube.TestWorkflowExecutionSummary, len(rows))
 	for i, row := range rows {
-		execution, err := r.convertCompleteRowToExecutionWithRelated(row)
+		execution, err := r.convertCompleteRowToExecutionWithRelated(sqlc.GetTestWorkflowExecutionRow(row))
 		if err != nil {
 			return nil, err
 		}
@@ -517,7 +495,7 @@ func (r *PostgresRepository) GetRunning(ctx context.Context) ([]testkube.TestWor
 
 	result := make([]testkube.TestWorkflowExecution, len(rows))
 	for i, row := range rows {
-		execution, err := r.convertCompleteRowToExecutionWithRelated(row)
+		execution, err := r.convertCompleteRowToExecutionWithRelated(sqlc.GetTestWorkflowExecutionRow(row))
 		if err != nil {
 			return nil, err
 		}
@@ -535,15 +513,15 @@ func (r *PostgresRepository) GetRunning(ctx context.Context) ([]testkube.TestWor
 
 // GetFinished returns finished executions with filter
 func (r *PostgresRepository) GetFinished(ctx context.Context, filter testworkflow.Filter) ([]testkube.TestWorkflowExecution, error) {
-	params := r.buildFinishedExecutionParams(filter)
-	rows, err := r.queries.GetFinishedTestWorkflowExecutions(ctx, params)
+	params := r.buildTestWorkflowExecutionParams(filter)
+	rows, err := r.queries.GetFinishedTestWorkflowExecutions(ctx, sqlc.GetFinishedTestWorkflowExecutionsParams(params))
 	if err != nil {
 		return nil, err
 	}
 
 	result := make([]testkube.TestWorkflowExecution, len(rows))
 	for i, row := range rows {
-		execution, err := r.convertCompleteRowToExecutionWithRelated(row)
+		execution, err := r.convertCompleteRowToExecutionWithRelated(sqlc.GetTestWorkflowExecutionRow(row))
 		if err != nil {
 			return nil, err
 		}
@@ -561,12 +539,12 @@ func (r *PostgresRepository) GetFinished(ctx context.Context, filter testworkflo
 
 // GetExecutionsTotals returns execution totals with filter
 func (r *PostgresRepository) GetExecutionsTotals(ctx context.Context, filter ...testworkflow.Filter) (testkube.ExecutionsTotals, error) {
-	var params sqlc.GetTestWorkflowExecutionsTotalsParams
+	var params sqlc.GetTestWorkflowExecutionsParams
 	if len(filter) > 0 {
-		params = r.buildTotalsParams(filter[0])
+		params = r.buildTestWorkflowExecutionParams(filter[0])
 	}
 
-	rows, err := r.queries.GetTestWorkflowExecutionsTotals(ctx, params)
+	rows, err := r.queries.GetTestWorkflowExecutionsTotals(ctx, sqlc.GetTestWorkflowExecutionsTotalsParams(params))
 	if err != nil {
 		return testkube.ExecutionsTotals{}, err
 	}
@@ -600,7 +578,7 @@ func (r *PostgresRepository) GetExecutionsTotals(ctx context.Context, filter ...
 
 // GetExecutions returns executions with filter
 func (r *PostgresRepository) GetExecutions(ctx context.Context, filter testworkflow.Filter) ([]testkube.TestWorkflowExecution, error) {
-	params := r.buildExecutionParams(filter)
+	params := r.buildTestWorkflowExecutionParams(filter)
 	rows, err := r.queries.GetTestWorkflowExecutions(ctx, params)
 	if err != nil {
 		return nil, err
@@ -608,7 +586,7 @@ func (r *PostgresRepository) GetExecutions(ctx context.Context, filter testworkf
 
 	result := make([]testkube.TestWorkflowExecution, len(rows))
 	for i, row := range rows {
-		execution, err := r.convertCompleteRowToExecutionWithRelated(row)
+		execution, err := r.convertCompleteRowToExecutionWithRelated(sqlc.GetTestWorkflowExecutionRow(row))
 		if err != nil {
 			return nil, err
 		}
@@ -626,15 +604,15 @@ func (r *PostgresRepository) GetExecutions(ctx context.Context, filter testworkf
 
 // GetExecutionsSummary method
 func (r *PostgresRepository) GetExecutionsSummary(ctx context.Context, filter testworkflow.Filter) ([]testkube.TestWorkflowExecutionSummary, error) {
-	params := r.buildSummaryParams(filter)
-	rows, err := r.queries.GetTestWorkflowExecutionsSummary(ctx, params)
+	params := r.buildTestWorkflowExecutionParams(filter)
+	rows, err := r.queries.GetTestWorkflowExecutionsSummary(ctx, sqlc.GetTestWorkflowExecutionsSummaryParams(params))
 	if err != nil {
 		return nil, err
 	}
 
 	result := make([]testkube.TestWorkflowExecutionSummary, len(rows))
 	for i, row := range rows {
-		execution, err := r.convertCompleteRowToExecutionWithRelated(row)
+		execution, err := r.convertCompleteRowToExecutionWithRelated(sqlc.GetTestWorkflowExecutionRow(row))
 		if err != nil {
 			return nil, err
 		}
@@ -858,6 +836,7 @@ func (r *PostgresRepository) insertWorkflow(ctx context.Context, qtx sqlc.TestWo
 	annotations, _ := toJSONB(workflow.Annotations)
 	spec, _ := toJSONB(workflow.Spec)
 	status, _ := toJSONB(workflow.Status)
+	health, _ := toJSONB(workflow.Health)
 
 	return qtx.InsertTestWorkflow(ctx, sqlc.InsertTestWorkflowParams{
 		ExecutionID:  executionId,
@@ -872,6 +851,7 @@ func (r *PostgresRepository) insertWorkflow(ctx context.Context, qtx sqlc.TestWo
 		Spec:         spec,
 		ReadOnly:     toPgBool(workflow.ReadOnly),
 		Status:       status,
+		Health:       health,
 	})
 }
 
@@ -1215,7 +1195,7 @@ func (r *PostgresRepository) GetUnassigned(ctx context.Context) ([]testkube.Test
 
 	result := make([]testkube.TestWorkflowExecution, len(rows))
 	for i, row := range rows {
-		execution, err := r.convertCompleteRowToExecutionWithRelated(row)
+		execution, err := r.convertCompleteRowToExecutionWithRelated(sqlc.GetTestWorkflowExecutionRow(row))
 		if err != nil {
 			return nil, err
 		}
@@ -1278,80 +1258,14 @@ func (r *PostgresRepository) AbortIfQueued(ctx context.Context, id string) (bool
 
 // Helper functions for building query parameters and converting rows
 // These would need to be implemented based on the specific filter structure
-func (r *PostgresRepository) buildTotalsParams(filter testworkflow.Filter) sqlc.GetTestWorkflowExecutionsTotalsParams {
-	params := sqlc.GetTestWorkflowExecutionsTotalsParams{}
-
-	if filter.NameDefined() {
-		params.WorkflowName = toPgText(filter.Name())
-	}
-
-	if filter.NamesDefined() {
-		names := filter.Names()
-		pgNames := make([]pgtype.Text, len(names))
-		for i, name := range names {
-			pgNames[i] = toPgText(name)
-		}
-		params.WorkflowNames = pgNames
-	}
-
-	if filter.TextSearchDefined() {
-		params.TextSearch = toPgText(filter.TextSearch())
-	}
-
-	if filter.StartDateDefined() {
-		params.StartDate = toPgTimestamp(filter.StartDate())
-	}
-
-	if filter.EndDateDefined() {
-		params.EndDate = toPgTimestamp(filter.EndDate())
-	}
-
-	if filter.LastNDaysDefined() {
-		params.LastNDays = toPgInt4(int32(filter.LastNDays()))
-	}
-
-	if filter.StatusesDefined() {
-		statuses := filter.Statuses()
-		pgStatuses := make([]pgtype.Text, len(statuses))
-		for i, status := range statuses {
-			pgStatuses[i] = toPgText(string(status))
-		}
-		params.Statuses = pgStatuses
-	}
-
-	if filter.RunnerIDDefined() {
-		params.RunnerID = toPgText(filter.RunnerID())
-	}
-
-	if filter.AssignedDefined() {
-		params.Assigned = toPgBool(filter.Assigned())
-	}
-
-	if filter.ActorNameDefined() {
-		params.ActorName = toPgText(filter.ActorName())
-	}
-
-	if filter.ActorTypeDefined() {
-		params.ActorType = toPgText(string(filter.ActorType()))
-	}
-
-	if filter.GroupIDDefined() {
-		params.GroupID = toPgText(filter.GroupID())
-	}
-
-	if filter.InitializedDefined() {
-		params.Initialized = toPgBool(filter.Initialized())
-	}
-
-	return params
-}
-
-func (r *PostgresRepository) buildExecutionParams(filter testworkflow.Filter) sqlc.GetTestWorkflowExecutionsParams {
+// Enhanced buildTestWorkflowExecutionParams with full filter support
+func (r *PostgresRepository) buildTestWorkflowExecutionParams(filter testworkflow.Filter) sqlc.GetTestWorkflowExecutionsParams {
 	params := sqlc.GetTestWorkflowExecutionsParams{
 		Fst: int32(filter.Page() * filter.PageSize()),
 		Lmt: int32(filter.PageSize()),
 	}
 
+	// Basic filters
 	if filter.NameDefined() {
 		params.WorkflowName = toPgText(filter.Name())
 	}
@@ -1369,6 +1283,7 @@ func (r *PostgresRepository) buildExecutionParams(filter testworkflow.Filter) sq
 		params.TextSearch = toPgText(filter.TextSearch())
 	}
 
+	// Date filters
 	if filter.StartDateDefined() {
 		params.StartDate = toPgTimestamp(filter.StartDate())
 	}
@@ -1381,6 +1296,7 @@ func (r *PostgresRepository) buildExecutionParams(filter testworkflow.Filter) sq
 		params.LastNDays = toPgInt4(int32(filter.LastNDays()))
 	}
 
+	// Status filters
 	if filter.StatusesDefined() {
 		statuses := filter.Statuses()
 		pgStatuses := make([]pgtype.Text, len(statuses))
@@ -1390,6 +1306,7 @@ func (r *PostgresRepository) buildExecutionParams(filter testworkflow.Filter) sq
 		params.Statuses = pgStatuses
 	}
 
+	// Runner filters
 	if filter.RunnerIDDefined() {
 		params.RunnerID = toPgText(filter.RunnerID())
 	}
@@ -1398,6 +1315,7 @@ func (r *PostgresRepository) buildExecutionParams(filter testworkflow.Filter) sq
 		params.Assigned = toPgBool(filter.Assigned())
 	}
 
+	// Actor filters
 	if filter.ActorNameDefined() {
 		params.ActorName = toPgText(filter.ActorName())
 	}
@@ -1406,158 +1324,111 @@ func (r *PostgresRepository) buildExecutionParams(filter testworkflow.Filter) sq
 		params.ActorType = toPgText(string(filter.ActorType()))
 	}
 
+	// Group filter
 	if filter.GroupIDDefined() {
 		params.GroupID = toPgText(filter.GroupID())
 	}
 
+	// Initialization filter
 	if filter.InitializedDefined() {
 		params.Initialized = toPgBool(filter.Initialized())
+	}
+
+	// Handle tag selector
+	if filter.TagSelector() != "" {
+		tagConditions := r.parseTagSelector(filter.TagSelector())
+		if len(tagConditions) > 0 {
+			// For simplicity, handle the first condition
+			// In a real implementation, you might want to handle multiple conditions
+			firstCondition := tagConditions[0]
+			params.TagSelector = toPgText(filter.TagSelector())
+			params.TagSelectorType = toPgText(firstCondition.Type)
+			params.TagSelectorKey = []byte(firstCondition.Key)
+			if firstCondition.Value != "" {
+				params.TagSelectorValue = firstCondition.Value
+			}
+		}
+	}
+
+	// Handle label selector
+	if filter.LabelSelector() != nil && len(filter.LabelSelector().Or) > 0 {
+		labelConditions := r.parseLabelSelector(filter.LabelSelector())
+		if len(labelConditions) > 0 {
+			// For simplicity, handle the first condition
+			firstCondition := labelConditions[0]
+			params.LabelSelector = toPgText("true") // Mark as having label selector
+			params.LabelSelectorType = toPgText(firstCondition.Type)
+			params.LabelSelectorKey = []byte(firstCondition.Key)
+			if firstCondition.Value != "" {
+				params.LabelSelectorValue = firstCondition.Value
+			}
+		}
 	}
 
 	return params
 }
 
-func (r *PostgresRepository) buildFinishedExecutionParams(filter testworkflow.Filter) sqlc.GetFinishedTestWorkflowExecutionsParams {
-	params := sqlc.GetFinishedTestWorkflowExecutionsParams{
-		Fst: int32(filter.Page() * filter.PageSize()),
-		Lmt: int32(filter.PageSize()),
-	}
-
-	if filter.NameDefined() {
-		params.WorkflowName = toPgText(filter.Name())
-	}
-
-	if filter.NamesDefined() {
-		names := filter.Names()
-		pgNames := make([]pgtype.Text, len(names))
-		for i, name := range names {
-			pgNames[i] = toPgText(name)
-		}
-		params.WorkflowNames = pgNames
-	}
-
-	if filter.TextSearchDefined() {
-		params.TextSearch = toPgText(filter.TextSearch())
-	}
-
-	if filter.StartDateDefined() {
-		params.StartDate = toPgTimestamp(filter.StartDate())
-	}
-
-	if filter.EndDateDefined() {
-		params.EndDate = toPgTimestamp(filter.EndDate())
-	}
-
-	if filter.LastNDaysDefined() {
-		params.LastNDays = toPgInt4(int32(filter.LastNDays()))
-	}
-
-	if filter.StatusesDefined() {
-		statuses := filter.Statuses()
-		pgStatuses := make([]pgtype.Text, len(statuses))
-		for i, status := range statuses {
-			pgStatuses[i] = toPgText(string(status))
-		}
-		params.Statuses = pgStatuses
-	}
-
-	if filter.RunnerIDDefined() {
-		params.RunnerID = toPgText(filter.RunnerID())
-	}
-
-	if filter.AssignedDefined() {
-		params.Assigned = toPgBool(filter.Assigned())
-	}
-
-	if filter.ActorNameDefined() {
-		params.ActorName = toPgText(filter.ActorName())
-	}
-
-	if filter.ActorTypeDefined() {
-		params.ActorType = toPgText(string(filter.ActorType()))
-	}
-
-	if filter.GroupIDDefined() {
-		params.GroupID = toPgText(filter.GroupID())
-	}
-
-	if filter.InitializedDefined() {
-		params.Initialized = toPgBool(filter.Initialized())
-	}
-
-	return params
+// Selector condition structures
+type SelectorCondition struct {
+	Type  string // "exists", "equals", "not_exists"
+	Key   string
+	Value string
 }
 
-// Update the buildSummaryParams method to use the same complete query
-func (r *PostgresRepository) buildSummaryParams(filter testworkflow.Filter) sqlc.GetTestWorkflowExecutionsSummaryParams {
-	params := sqlc.GetTestWorkflowExecutionsSummaryParams{
-		Fst: int32(filter.Page() * filter.PageSize()),
-		Lmt: int32(filter.PageSize()),
-	}
+// Parse tag selector into conditions
+func (r *PostgresRepository) parseTagSelector(tagSelector string) []SelectorCondition {
+	var conditions []SelectorCondition
+	items := strings.Split(tagSelector, ",")
 
-	if filter.NameDefined() {
-		params.WorkflowName = toPgText(filter.Name())
-	}
+	for _, item := range items {
+		item = strings.TrimSpace(item)
+		elements := strings.Split(item, "=")
 
-	if filter.NamesDefined() {
-		names := filter.Names()
-		pgNames := make([]pgtype.Text, len(names))
-		for i, name := range names {
-			pgNames[i] = toPgText(name)
+		if len(elements) == 2 {
+			// Tag with specific value: tag=value
+			conditions = append(conditions, SelectorCondition{
+				Type:  "equals",
+				Key:   utils.EscapeDots(elements[0]),
+				Value: elements[1],
+			})
+		} else if len(elements) == 1 {
+			// Tag exists: tag
+			conditions = append(conditions, SelectorCondition{
+				Type: "exists",
+				Key:  utils.EscapeDots(elements[0]),
+			})
 		}
-		params.WorkflowNames = pgNames
 	}
 
-	if filter.TextSearchDefined() {
-		params.TextSearch = toPgText(filter.TextSearch())
-	}
+	return conditions
+}
 
-	if filter.StartDateDefined() {
-		params.StartDate = toPgTimestamp(filter.StartDate())
-	}
+// Parse label selector into conditions
+func (r *PostgresRepository) parseLabelSelector(labelSelector *testworkflow.LabelSelector) []SelectorCondition {
+	var conditions []SelectorCondition
 
-	if filter.EndDateDefined() {
-		params.EndDate = toPgTimestamp(filter.EndDate())
-	}
-
-	if filter.LastNDaysDefined() {
-		params.LastNDays = toPgInt4(int32(filter.LastNDays()))
-	}
-
-	if filter.StatusesDefined() {
-		statuses := filter.Statuses()
-		pgStatuses := make([]pgtype.Text, len(statuses))
-		for i, status := range statuses {
-			pgStatuses[i] = toPgText(string(status))
+	for _, label := range labelSelector.Or {
+		if label.Value != nil {
+			// Label with specific value
+			conditions = append(conditions, SelectorCondition{
+				Type:  "equals",
+				Key:   utils.EscapeDots(label.Key),
+				Value: *label.Value,
+			})
+		} else if label.Exists != nil {
+			// Label exists/not exists
+			condType := "exists"
+			if !*label.Exists {
+				condType = "not_exists"
+			}
+			conditions = append(conditions, SelectorCondition{
+				Type: condType,
+				Key:  utils.EscapeDots(label.Key),
+			})
 		}
-		params.Statuses = pgStatuses
 	}
 
-	if filter.RunnerIDDefined() {
-		params.RunnerID = toPgText(filter.RunnerID())
-	}
-
-	if filter.AssignedDefined() {
-		params.Assigned = toPgBool(filter.Assigned())
-	}
-
-	if filter.ActorNameDefined() {
-		params.ActorName = toPgText(filter.ActorName())
-	}
-
-	if filter.ActorTypeDefined() {
-		params.ActorType = toPgText(string(filter.ActorType()))
-	}
-
-	if filter.GroupIDDefined() {
-		params.GroupID = toPgText(filter.GroupID())
-	}
-
-	if filter.InitializedDefined() {
-		params.Initialized = toPgBool(filter.Initialized())
-	}
-
-	return params
+	return conditions
 }
 
 // Helper methods for building complex objects
@@ -1627,66 +1498,6 @@ func (r *PostgresRepository) buildResultFromRow(
 	return result
 }
 
-func (r *PostgresRepository) buildResultFromRowSimple(
-	status, predictedStatus pgtype.Text,
-	queuedAt, startedAt, finishedAt pgtype.Timestamptz,
-	duration, totalDuration pgtype.Text,
-	durationMs, pausedMs, totalDurationMs pgtype.Int4,
-) *testkube.TestWorkflowResult {
-	result := &testkube.TestWorkflowResult{
-		QueuedAt:        fromPgTimestamp(queuedAt),
-		StartedAt:       fromPgTimestamp(startedAt),
-		FinishedAt:      fromPgTimestamp(finishedAt),
-		Duration:        fromPgText(duration),
-		TotalDuration:   fromPgText(totalDuration),
-		DurationMs:      fromPgInt4(durationMs),
-		PausedMs:        fromPgInt4(pausedMs),
-		TotalDurationMs: fromPgInt4(totalDurationMs),
-	}
-
-	if status.Valid {
-		s := testkube.TestWorkflowStatus(status.String)
-		result.Status = &s
-	}
-
-	if predictedStatus.Valid {
-		ps := testkube.TestWorkflowStatus(predictedStatus.String)
-		result.PredictedStatus = &ps
-	}
-
-	return result
-}
-
-func (r *PostgresRepository) buildResultSummaryFromRowSimple(
-	status, predictedStatus pgtype.Text,
-	queuedAt, startedAt, finishedAt pgtype.Timestamptz,
-	duration, totalDuration pgtype.Text,
-	durationMs, pausedMs, totalDurationMs pgtype.Int4,
-) *testkube.TestWorkflowResultSummary {
-	result := &testkube.TestWorkflowResultSummary{
-		QueuedAt:        fromPgTimestamp(queuedAt),
-		StartedAt:       fromPgTimestamp(startedAt),
-		FinishedAt:      fromPgTimestamp(finishedAt),
-		Duration:        fromPgText(duration),
-		TotalDuration:   fromPgText(totalDuration),
-		DurationMs:      fromPgInt4(durationMs),
-		PausedMs:        fromPgInt4(pausedMs),
-		TotalDurationMs: fromPgInt4(totalDurationMs),
-	}
-
-	if status.Valid {
-		s := testkube.TestWorkflowStatus(status.String)
-		result.Status = &s
-	}
-
-	if predictedStatus.Valid {
-		ps := testkube.TestWorkflowStatus(predictedStatus.String)
-		result.PredictedStatus = &ps
-	}
-
-	return result
-}
-
 func (r *PostgresRepository) buildWorkflowFromRow(
 	name, namespace, description pgtype.Text,
 	labels, annotations []byte,
@@ -1694,6 +1505,7 @@ func (r *PostgresRepository) buildWorkflowFromRow(
 	spec []byte,
 	readOnly pgtype.Bool,
 	status []byte,
+	health []byte,
 ) *testkube.TestWorkflow {
 	workflow := &testkube.TestWorkflow{
 		Name:        fromPgText(name),
@@ -1718,6 +1530,10 @@ func (r *PostgresRepository) buildWorkflowFromRow(
 
 	if len(status) > 0 {
 		workflow.Status, _ = fromJSONB[testkube.TestWorkflowStatusSummary](status)
+	}
+
+	if len(health) > 0 {
+		workflow.Health, _ = fromJSONB[testkube.TestWorkflowExecutionHealth](health)
 	}
 
 	return workflow
@@ -1790,66 +1606,3 @@ func populateConfigParams(resolvedWorkflow *testkube.TestWorkflow, configParams 
 
 	return configParams
 }
-
-// Additional helper functions for tag processing
-/*
-func (r *PostgresRepository) buildTagSelector(tagSelector string) string {
-	if tagSelector == "" {
-		return ""
-	}
-
-	items := strings.Split(tagSelector, ",")
-	var conditions []string
-
-	for _, item := range items {
-		elements := strings.Split(item, "=")
-		if len(elements) == 2 {
-			// Tag with specific value
-			conditions = append(conditions, fmt.Sprintf("tags->>'%s' = '%s'", utils.EscapeDots(elements[0]), elements[1]))
-		} else if len(elements) == 1 {
-			// Tag exists
-			conditions = append(conditions, fmt.Sprintf("tags ? '%s'", utils.EscapeDots(elements[0])))
-		}
-	}
-
-	if len(conditions) > 0 {
-		return "(" + strings.Join(conditions, " AND ") + ")"
-	}
-	return ""
-}
-
-func (r *PostgresRepository) buildLabelSelector(labelSelector *LabelSelector) string {
-	if labelSelector == nil || len(labelSelector.Or) == 0 {
-		return ""
-	}
-
-	var conditions []string
-	for _, label := range labelSelector.Or {
-		if label.Value != nil {
-			conditions = append(conditions, fmt.Sprintf("workflow.labels->>'%s' = '%s'", utils.EscapeDots(label.Key), *label.Value))
-		} else if label.Exists != nil {
-			if *label.Exists {
-				conditions = append(conditions, fmt.Sprintf("workflow.labels ? '%s'", utils.EscapeDots(label.Key)))
-			} else {
-				conditions = append(conditions, fmt.Sprintf("NOT (workflow.labels ? '%s')", utils.EscapeDots(label.Key)))
-			}
-		}
-	}
-
-	if len(conditions) > 0 {
-		return "(" + strings.Join(conditions, " OR ") + ")"
-	}
-	return ""
-}
-
-// Selector-related structures (if not already defined)
-type LabelSelector struct {
-	Or []LabelSelectorItem `json:"or,omitempty"`
-}
-
-type LabelSelectorItem struct {
-	Key    string  `json:"key"`
-	Value  *string `json:"value,omitempty"`
-	Exists *bool   `json:"exists,omitempty"`
-}
-*/

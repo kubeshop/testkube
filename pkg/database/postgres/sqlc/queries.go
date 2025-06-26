@@ -50,12 +50,6 @@ type TestWorkflowExecutionQueriesInterface interface {
 	DeleteAllTestWorkflowExecutions(ctx context.Context) error
 	DeleteTestWorkflowExecutionsByTestWorkflows(ctx context.Context, workflowNames []string) error
 
-	// Related data queries
-	GetTestWorkflowSignatures(ctx context.Context, executionID string) ([]TestWorkflowSignature, error)
-	GetTestWorkflowOutputs(ctx context.Context, executionID string) ([]TestWorkflowOutput, error)
-	GetTestWorkflowReports(ctx context.Context, executionID string) ([]TestWorkflowReport, error)
-	GetTestWorkflowResourceAggregations(ctx context.Context, executionID string) (TestWorkflowResourceAggregation, error)
-
 	// Metrics and analytics
 	GetTestWorkflowMetrics(ctx context.Context, arg GetTestWorkflowMetricsParams) ([]GetTestWorkflowMetricsRow, error)
 	GetPreviousFinishedState(ctx context.Context, arg GetPreviousFinishedStateParams) (pgtype.Text, error)

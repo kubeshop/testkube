@@ -9,7 +9,7 @@ SELECT
     w.name as workflow_name, w.namespace as workflow_namespace, w.description as workflow_description,
     w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
     w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
-    w.status as workflow_status,
+    w.status as workflow_status, w.health as workflow_health,
     rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace, 
     rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
     rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
@@ -65,25 +65,6 @@ LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 're
 LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
 WHERE e.id = @id OR e.name = @id;
 
--- name: GetTestWorkflowSignatures :many
-SELECT * FROM test_workflow_signatures 
-WHERE execution_id = @execution_id 
-ORDER BY id;
-
--- name: GetTestWorkflowOutputs :many
-SELECT * FROM test_workflow_outputs 
-WHERE execution_id = @execution_id 
-ORDER BY id;
-
--- name: GetTestWorkflowReports :many
-SELECT * FROM test_workflow_reports 
-WHERE execution_id = @execution_id 
-ORDER BY id;
-
--- name: GetTestWorkflowResourceAggregations :one
-SELECT * FROM test_workflow_resource_aggregations 
-WHERE execution_id = @execution_id;
-
 -- name: GetTestWorkflowExecutionByNameAndTestWorkflow :one
 SELECT 
     e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.created_at, e.updated_at,
@@ -93,7 +74,7 @@ SELECT
     w.name as workflow_name, w.namespace as workflow_namespace, w.description as workflow_description,
     w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
     w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
-    w.status as workflow_status,
+    w.status as workflow_status, w.health as workflow_health,
     rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace, 
     rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
     rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
@@ -154,7 +135,7 @@ SELECT
     w.name as workflow_name, w.namespace as workflow_namespace, w.description as workflow_description,
     w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
     w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
-    w.status as workflow_status,
+    w.status as workflow_status, w.health as workflow_health,
     rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace, 
     rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
     rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
@@ -217,7 +198,7 @@ SELECT DISTINCT ON (w.name)
     w.name as workflow_name, w.namespace as workflow_namespace, w.description as workflow_description,
     w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
     w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
-    w.status as workflow_status,
+    w.status as workflow_status, w.health as workflow_health,
     rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace, 
     rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
     rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
@@ -279,7 +260,7 @@ SELECT
     w.name as workflow_name, w.namespace as workflow_namespace, w.description as workflow_description,
     w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
     w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
-    w.status as workflow_status,
+    w.status as workflow_status, w.health as workflow_health,
     rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace, 
     rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
     rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
@@ -341,7 +322,7 @@ SELECT
     w.name as workflow_name, w.namespace as workflow_namespace, w.description as workflow_description,
     w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
     w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
-    w.status as workflow_status,
+    w.status as workflow_status, w.health as workflow_health,
     rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace, 
     rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
     rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
@@ -500,7 +481,7 @@ SELECT
     w.name as workflow_name, w.namespace as workflow_namespace, w.description as workflow_description,
     w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
     w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
-    w.status as workflow_status,
+    w.status as workflow_status, w.health as workflow_health,
     rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace, 
     rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
     rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
@@ -809,7 +790,7 @@ SELECT
     w.name as workflow_name, w.namespace as workflow_namespace, w.description as workflow_description,
     w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
     w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
-    w.status as workflow_status,
+    w.status as workflow_status, w.health as workflow_health,
     rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace, 
     rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
     rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
@@ -918,7 +899,7 @@ SELECT
     w.name as workflow_name, w.namespace as workflow_namespace, w.description as workflow_description,
     w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
     w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
-    w.status as workflow_status,
+    w.status as workflow_status, w.health as workflow_health,
     rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace, 
     rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
     rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
