@@ -392,23 +392,49 @@ LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workf
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
 WHERE r.status IN ('passed', 'failed', 'aborted')
+    -- Basic workflow filters
     AND (@workflow_name IS NULL OR w.name = @workflow_name)
     AND (@workflow_names IS NULL OR w.name = ANY(@workflow_names))
+    -- Text search filter
     AND (@text_search IS NULL OR e.name ILIKE '%' || @text_search || '%')
+    -- Date range filters
     AND (@start_date IS NULL OR e.scheduled_at >= @start_date)
     AND (@end_date IS NULL OR e.scheduled_at <= @end_date)
     AND (@last_n_days IS NULL OR e.scheduled_at >= NOW() - INTERVAL '@last_n_days days')
+    -- Status filters
     AND (@statuses IS NULL OR r.status = ANY(@statuses))
+    -- Runner filters
     AND (@runner_id IS NULL OR e.runner_id = @runner_id)
     AND (@assigned IS NULL OR 
          (@assigned = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR 
          (@assigned = false AND (e.runner_id IS NULL OR e.runner_id = '')))
+    -- Actor filters
     AND (@actor_name IS NULL OR e.running_context->'actor'->>'name' = @actor_name)
     AND (@actor_type IS NULL OR e.running_context->'actor'->>'type_' = @actor_type)
+    -- Group filter
     AND (@group_id IS NULL OR e.id = @group_id OR e.group_id = @group_id)
+    -- Initialization filter
     AND (@initialized IS NULL OR 
          (@initialized = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
          (@initialized = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
+    -- Label selector filter (JSONB operations)
+    AND (@label_selector IS NULL OR (
+        CASE 
+            WHEN @label_selector_type = 'exists' THEN w.labels ? @label_selector_key
+            WHEN @label_selector_type = 'equals' THEN w.labels->@label_selector_key = to_jsonb(@label_selector_value::text)
+            WHEN @label_selector_type = 'not_exists' THEN NOT (w.labels ? @label_selector_key)
+            ELSE true
+        END
+    ))
+    -- Tag selector filter (JSONB operations)
+    AND (@tag_selector IS NULL OR (
+        CASE 
+            WHEN @tag_selector_type = 'exists' THEN e.tags ? @tag_selector_key
+            WHEN @tag_selector_type = 'equals' THEN e.tags->@tag_selector_key = to_jsonb(@tag_selector_value::text)
+            WHEN @tag_selector_type = 'not_exists' THEN NOT (e.tags ? @tag_selector_key)
+            ELSE true
+        END
+    ))
 ORDER BY e.scheduled_at DESC
 LIMIT @lmt OFFSET @fst;
 
@@ -420,23 +446,49 @@ FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
 WHERE 1=1
+    -- Basic workflow filters
     AND (@workflow_name IS NULL OR w.name = @workflow_name)
     AND (@workflow_names IS NULL OR w.name = ANY(@workflow_names))
+    -- Text search filter
     AND (@text_search IS NULL OR e.name ILIKE '%' || @text_search || '%')
+    -- Date range filters
     AND (@start_date IS NULL OR e.scheduled_at >= @start_date)
     AND (@end_date IS NULL OR e.scheduled_at <= @end_date)
     AND (@last_n_days IS NULL OR e.scheduled_at >= NOW() - INTERVAL '@last_n_days days')
+    -- Status filters
     AND (@statuses IS NULL OR r.status = ANY(@statuses))
+    -- Runner filters
     AND (@runner_id IS NULL OR e.runner_id = @runner_id)
     AND (@assigned IS NULL OR 
          (@assigned = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR 
          (@assigned = false AND (e.runner_id IS NULL OR e.runner_id = '')))
+    -- Actor filters
     AND (@actor_name IS NULL OR e.running_context->'actor'->>'name' = @actor_name)
     AND (@actor_type IS NULL OR e.running_context->'actor'->>'type_' = @actor_type)
+    -- Group filter
     AND (@group_id IS NULL OR e.id = @group_id OR e.group_id = @group_id)
+    -- Initialization filter
     AND (@initialized IS NULL OR 
          (@initialized = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
          (@initialized = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
+    -- Label selector filter (JSONB operations)
+    AND (@label_selector IS NULL OR (
+        CASE 
+            WHEN @label_selector_type = 'exists' THEN w.labels ? @label_selector_key
+            WHEN @label_selector_type = 'equals' THEN w.labels->@label_selector_key = to_jsonb(@label_selector_value::text)
+            WHEN @label_selector_type = 'not_exists' THEN NOT (w.labels ? @label_selector_key)
+            ELSE true
+        END
+    ))
+    -- Tag selector filter (JSONB operations)
+    AND (@tag_selector IS NULL OR (
+        CASE 
+            WHEN @tag_selector_type = 'exists' THEN e.tags ? @tag_selector_key
+            WHEN @tag_selector_type = 'equals' THEN e.tags->@tag_selector_key = to_jsonb(@tag_selector_value::text)
+            WHEN @tag_selector_type = 'not_exists' THEN NOT (e.tags ? @tag_selector_key)
+            ELSE true
+        END
+    ))
 GROUP BY r.status;
 
 -- name: GetTestWorkflowExecutions :many
@@ -501,7 +553,53 @@ FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
-LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id;
+LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
+WHERE 1=1
+    -- Basic workflow filters
+    AND (@workflow_name IS NULL OR w.name = @workflow_name)
+    AND (@workflow_names IS NULL OR w.name = ANY(@workflow_names))
+    -- Text search filter
+    AND (@text_search IS NULL OR e.name ILIKE '%' || @text_search || '%')
+    -- Date range filters
+    AND (@start_date IS NULL OR e.scheduled_at >= @start_date)
+    AND (@end_date IS NULL OR e.scheduled_at <= @end_date)
+    AND (@last_n_days IS NULL OR e.scheduled_at >= NOW() - INTERVAL '@last_n_days days')
+    -- Status filters
+    AND (@statuses IS NULL OR r.status = ANY(@statuses))
+    -- Runner filters
+    AND (@runner_id IS NULL OR e.runner_id = @runner_id)
+    AND (@assigned IS NULL OR 
+         (@assigned = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR 
+         (@assigned = false AND (e.runner_id IS NULL OR e.runner_id = '')))
+    -- Actor filters
+    AND (@actor_name IS NULL OR e.running_context->'actor'->>'name' = @actor_name)
+    AND (@actor_type IS NULL OR e.running_context->'actor'->>'type_' = @actor_type)
+    -- Group filter
+    AND (@group_id IS NULL OR e.id = @group_id OR e.group_id = @group_id)
+    -- Initialization filter
+    AND (@initialized IS NULL OR 
+         (@initialized = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
+         (@initialized = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
+    -- Label selector filter (JSONB operations)
+    AND (@label_selector IS NULL OR (
+        CASE 
+            WHEN @label_selector_type = 'exists' THEN w.labels ? @label_selector_key
+            WHEN @label_selector_type = 'equals' THEN w.labels->@label_selector_key = to_jsonb(@label_selector_value::text)
+            WHEN @label_selector_type = 'not_exists' THEN NOT (w.labels ? @label_selector_key)
+            ELSE true
+        END
+    ))
+    -- Tag selector filter (JSONB operations)
+    AND (@tag_selector IS NULL OR (
+        CASE 
+            WHEN @tag_selector_type = 'exists' THEN e.tags ? @tag_selector_key
+            WHEN @tag_selector_type = 'equals' THEN e.tags->@tag_selector_key = to_jsonb(@tag_selector_value::text)
+            WHEN @tag_selector_type = 'not_exists' THEN NOT (e.tags ? @tag_selector_key)
+            ELSE true
+        END
+    ))
+ORDER BY e.scheduled_at DESC
+LIMIT @lmt OFFSET @fst;
 
 -- name: InsertTestWorkflowExecution :exec
 INSERT INTO test_workflow_executions (
@@ -871,22 +969,48 @@ LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workf
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
 WHERE 1=1
+    -- Basic workflow filters
     AND (@workflow_name IS NULL OR w.name = @workflow_name)
     AND (@workflow_names IS NULL OR w.name = ANY(@workflow_names))
+    -- Text search filter
     AND (@text_search IS NULL OR e.name ILIKE '%' || @text_search || '%')
+    -- Date range filters
     AND (@start_date IS NULL OR e.scheduled_at >= @start_date)
     AND (@end_date IS NULL OR e.scheduled_at <= @end_date)
     AND (@last_n_days IS NULL OR e.scheduled_at >= NOW() - INTERVAL '@last_n_days days')
+    -- Status filters
     AND (@statuses IS NULL OR r.status = ANY(@statuses))
+    -- Runner filters
     AND (@runner_id IS NULL OR e.runner_id = @runner_id)
     AND (@assigned IS NULL OR 
          (@assigned = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR 
          (@assigned = false AND (e.runner_id IS NULL OR e.runner_id = '')))
+    -- Actor filters
     AND (@actor_name IS NULL OR e.running_context->'actor'->>'name' = @actor_name)
     AND (@actor_type IS NULL OR e.running_context->'actor'->>'type_' = @actor_type)
+    -- Group filter
     AND (@group_id IS NULL OR e.id = @group_id OR e.group_id = @group_id)
+    -- Initialization filter
     AND (@initialized IS NULL OR 
          (@initialized = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
          (@initialized = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
+    -- Label selector filter (JSONB operations)
+    AND (@label_selector IS NULL OR (
+        CASE 
+            WHEN @label_selector_type = 'exists' THEN w.labels ? @label_selector_key
+            WHEN @label_selector_type = 'equals' THEN w.labels->@label_selector_key = to_jsonb(@label_selector_value::text)
+            WHEN @label_selector_type = 'not_exists' THEN NOT (w.labels ? @label_selector_key)
+            ELSE true
+        END
+    ))
+    -- Tag selector filter (JSONB operations)
+    AND (@tag_selector IS NULL OR (
+        CASE 
+            WHEN @tag_selector_type = 'exists' THEN e.tags ? @tag_selector_key
+            WHEN @tag_selector_type = 'equals' THEN e.tags->@tag_selector_key = to_jsonb(@tag_selector_value::text)
+            WHEN @tag_selector_type = 'not_exists' THEN NOT (e.tags ? @tag_selector_key)
+            ELSE true
+        END
+    ))
 ORDER BY e.scheduled_at DESC
 LIMIT @lmt OFFSET @fst;
