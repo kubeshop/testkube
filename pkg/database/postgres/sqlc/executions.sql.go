@@ -153,11 +153,51 @@ SELECT
     rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
     rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
     rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
-    rw.read_only as resolved_workflow_read_only, rw.status as resolved_workflow_status
+    rw.read_only as resolved_workflow_read_only, rw.status as resolved_workflow_status,
+    COALESCE(
+        (SELECT json_agg(
+            json_build_object(
+                'id', s.id,
+                'ref', s.ref,
+                'name', s.name,
+                'category', s.category,
+                'optional', s.optional,
+                'negative', s.negative,
+                'parent_id', s.parent_id
+            ) ORDER BY s.id
+        ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
+        '[]'::json
+    ) as signatures_json,
+    COALESCE(
+        (SELECT json_agg(
+            json_build_object(
+                'id', o.id,
+                'ref', o.ref,
+                'name', o.name,
+                'value', o.value
+            ) ORDER BY o.id
+        ) FROM test_workflow_outputs o WHERE o.execution_id = e.id),
+        '[]'::json
+    ) as outputs_json,
+    COALESCE(
+        (SELECT json_agg(
+            json_build_object(
+                'id', rep.id,
+                'ref', rep.ref,
+                'kind', rep.kind,
+                'file', rep.file,
+                'summary', rep.summary
+            ) ORDER BY rep.id
+        ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
+        '[]'::json
+    ) as reports_json,
+    ra.global as resource_aggregations_global,
+    ra.step as resource_aggregations_step    
 FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
+LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
 WHERE r.status IN ('passed', 'failed', 'aborted')
     AND ($1 IS NULL OR w.name = $1)
     AND ($2 IS NULL OR w.name = ANY($2))
@@ -250,6 +290,11 @@ type GetFinishedTestWorkflowExecutionsRow struct {
 	ResolvedWorkflowSpec        []byte             `db:"resolved_workflow_spec" json:"resolved_workflow_spec"`
 	ResolvedWorkflowReadOnly    pgtype.Bool        `db:"resolved_workflow_read_only" json:"resolved_workflow_read_only"`
 	ResolvedWorkflowStatus      []byte             `db:"resolved_workflow_status" json:"resolved_workflow_status"`
+	SignaturesJson              []byte             `db:"signatures_json" json:"signatures_json"`
+	OutputsJson                 []byte             `db:"outputs_json" json:"outputs_json"`
+	ReportsJson                 []byte             `db:"reports_json" json:"reports_json"`
+	ResourceAggregationsGlobal  []byte             `db:"resource_aggregations_global" json:"resource_aggregations_global"`
+	ResourceAggregationsStep    []byte             `db:"resource_aggregations_step" json:"resource_aggregations_step"`
 }
 
 func (q *Queries) GetFinishedTestWorkflowExecutions(ctx context.Context, arg GetFinishedTestWorkflowExecutionsParams) ([]GetFinishedTestWorkflowExecutionsRow, error) {
@@ -329,6 +374,11 @@ func (q *Queries) GetFinishedTestWorkflowExecutions(ctx context.Context, arg Get
 			&i.ResolvedWorkflowSpec,
 			&i.ResolvedWorkflowReadOnly,
 			&i.ResolvedWorkflowStatus,
+			&i.SignaturesJson,
+			&i.OutputsJson,
+			&i.ReportsJson,
+			&i.ResourceAggregationsGlobal,
+			&i.ResourceAggregationsStep,
 		); err != nil {
 			return nil, err
 		}
@@ -354,11 +404,51 @@ SELECT
     rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
     rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
     rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
-    rw.read_only as resolved_workflow_read_only, rw.status as resolved_workflow_status
+    rw.read_only as resolved_workflow_read_only, rw.status as resolved_workflow_status,
+    COALESCE(
+        (SELECT json_agg(
+            json_build_object(
+                'id', s.id,
+                'ref', s.ref,
+                'name', s.name,
+                'category', s.category,
+                'optional', s.optional,
+                'negative', s.negative,
+                'parent_id', s.parent_id
+            ) ORDER BY s.id
+        ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
+        '[]'::json
+    ) as signatures_json,
+    COALESCE(
+        (SELECT json_agg(
+            json_build_object(
+                'id', o.id,
+                'ref', o.ref,
+                'name', o.name,
+                'value', o.value
+            ) ORDER BY o.id
+        ) FROM test_workflow_outputs o WHERE o.execution_id = e.id),
+        '[]'::json
+    ) as outputs_json,
+    COALESCE(
+        (SELECT json_agg(
+            json_build_object(
+                'id', rep.id,
+                'ref', rep.ref,
+                'kind', rep.kind,
+                'file', rep.file,
+                'summary', rep.summary
+            ) ORDER BY rep.id
+        ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
+        '[]'::json
+    ) as reports_json,
+    ra.global as resource_aggregations_global,
+    ra.step as resource_aggregations_step
 FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
+LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
 WHERE w.name = $1 
 ORDER BY e.status_at DESC 
 LIMIT 1
@@ -416,6 +506,11 @@ type GetLatestTestWorkflowExecutionByTestWorkflowRow struct {
 	ResolvedWorkflowSpec        []byte             `db:"resolved_workflow_spec" json:"resolved_workflow_spec"`
 	ResolvedWorkflowReadOnly    pgtype.Bool        `db:"resolved_workflow_read_only" json:"resolved_workflow_read_only"`
 	ResolvedWorkflowStatus      []byte             `db:"resolved_workflow_status" json:"resolved_workflow_status"`
+	SignaturesJson              []byte             `db:"signatures_json" json:"signatures_json"`
+	OutputsJson                 []byte             `db:"outputs_json" json:"outputs_json"`
+	ReportsJson                 []byte             `db:"reports_json" json:"reports_json"`
+	ResourceAggregationsGlobal  []byte             `db:"resource_aggregations_global" json:"resource_aggregations_global"`
+	ResourceAggregationsStep    []byte             `db:"resource_aggregations_step" json:"resource_aggregations_step"`
 }
 
 func (q *Queries) GetLatestTestWorkflowExecutionByTestWorkflow(ctx context.Context, workflowName string) (GetLatestTestWorkflowExecutionByTestWorkflowRow, error) {
@@ -473,6 +568,11 @@ func (q *Queries) GetLatestTestWorkflowExecutionByTestWorkflow(ctx context.Conte
 		&i.ResolvedWorkflowSpec,
 		&i.ResolvedWorkflowReadOnly,
 		&i.ResolvedWorkflowStatus,
+		&i.SignaturesJson,
+		&i.OutputsJson,
+		&i.ReportsJson,
+		&i.ResourceAggregationsGlobal,
+		&i.ResourceAggregationsStep,
 	)
 	return i, err
 }
@@ -491,11 +591,51 @@ SELECT DISTINCT ON (w.name)
     rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
     rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
     rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
-    rw.read_only as resolved_workflow_read_only, rw.status as resolved_workflow_status
+    rw.read_only as resolved_workflow_read_only, rw.status as resolved_workflow_status,
+    COALESCE(
+        (SELECT json_agg(
+            json_build_object(
+                'id', s.id,
+                'ref', s.ref,
+                'name', s.name,
+                'category', s.category,
+                'optional', s.optional,
+                'negative', s.negative,
+                'parent_id', s.parent_id
+            ) ORDER BY s.id
+        ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
+        '[]'::json
+    ) as signatures_json,
+    COALESCE(
+        (SELECT json_agg(
+            json_build_object(
+                'id', o.id,
+                'ref', o.ref,
+                'name', o.name,
+                'value', o.value
+            ) ORDER BY o.id
+        ) FROM test_workflow_outputs o WHERE o.execution_id = e.id),
+        '[]'::json
+    ) as outputs_json,
+    COALESCE(
+        (SELECT json_agg(
+            json_build_object(
+                'id', rep.id,
+                'ref', rep.ref,
+                'kind', rep.kind,
+                'file', rep.file,
+                'summary', rep.summary
+            ) ORDER BY rep.id
+        ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
+        '[]'::json
+    ) as reports_json,
+    ra.global as resource_aggregations_global,
+    ra.step as resource_aggregations_step
 FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
+LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
 WHERE w.name = ANY($1)
 ORDER BY w.name, e.status_at DESC
 `
@@ -552,6 +692,11 @@ type GetLatestTestWorkflowExecutionsByTestWorkflowsRow struct {
 	ResolvedWorkflowSpec        []byte             `db:"resolved_workflow_spec" json:"resolved_workflow_spec"`
 	ResolvedWorkflowReadOnly    pgtype.Bool        `db:"resolved_workflow_read_only" json:"resolved_workflow_read_only"`
 	ResolvedWorkflowStatus      []byte             `db:"resolved_workflow_status" json:"resolved_workflow_status"`
+	SignaturesJson              []byte             `db:"signatures_json" json:"signatures_json"`
+	OutputsJson                 []byte             `db:"outputs_json" json:"outputs_json"`
+	ReportsJson                 []byte             `db:"reports_json" json:"reports_json"`
+	ResourceAggregationsGlobal  []byte             `db:"resource_aggregations_global" json:"resource_aggregations_global"`
+	ResourceAggregationsStep    []byte             `db:"resource_aggregations_step" json:"resource_aggregations_step"`
 }
 
 func (q *Queries) GetLatestTestWorkflowExecutionsByTestWorkflows(ctx context.Context, workflowNames []string) ([]GetLatestTestWorkflowExecutionsByTestWorkflowsRow, error) {
@@ -615,6 +760,11 @@ func (q *Queries) GetLatestTestWorkflowExecutionsByTestWorkflows(ctx context.Con
 			&i.ResolvedWorkflowSpec,
 			&i.ResolvedWorkflowReadOnly,
 			&i.ResolvedWorkflowStatus,
+			&i.SignaturesJson,
+			&i.OutputsJson,
+			&i.ReportsJson,
+			&i.ResourceAggregationsGlobal,
+			&i.ResourceAggregationsStep,
 		); err != nil {
 			return nil, err
 		}
@@ -664,11 +814,51 @@ SELECT
     rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
     rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
     rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
-    rw.read_only as resolved_workflow_read_only, rw.status as resolved_workflow_status
+    rw.read_only as resolved_workflow_read_only, rw.status as resolved_workflow_status,
+    COALESCE(
+        (SELECT json_agg(
+            json_build_object(
+                'id', s.id,
+                'ref', s.ref,
+                'name', s.name,
+                'category', s.category,
+                'optional', s.optional,
+                'negative', s.negative,
+                'parent_id', s.parent_id
+            ) ORDER BY s.id
+        ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
+        '[]'::json
+    ) as signatures_json,
+    COALESCE(
+        (SELECT json_agg(
+            json_build_object(
+                'id', o.id,
+                'ref', o.ref,
+                'name', o.name,
+                'value', o.value
+            ) ORDER BY o.id
+        ) FROM test_workflow_outputs o WHERE o.execution_id = e.id),
+        '[]'::json
+    ) as outputs_json,
+    COALESCE(
+        (SELECT json_agg(
+            json_build_object(
+                'id', rep.id,
+                'ref', rep.ref,
+                'kind', rep.kind,
+                'file', rep.file,
+                'summary', rep.summary
+            ) ORDER BY rep.id
+        ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
+        '[]'::json
+    ) as reports_json,
+    ra.global as resource_aggregations_global,
+    ra.step as resource_aggregations_step
 FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
+LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
 WHERE r.status IN ('paused', 'running', 'queued')
 ORDER BY e.id DESC
 `
@@ -725,6 +915,11 @@ type GetRunningTestWorkflowExecutionsRow struct {
 	ResolvedWorkflowSpec        []byte             `db:"resolved_workflow_spec" json:"resolved_workflow_spec"`
 	ResolvedWorkflowReadOnly    pgtype.Bool        `db:"resolved_workflow_read_only" json:"resolved_workflow_read_only"`
 	ResolvedWorkflowStatus      []byte             `db:"resolved_workflow_status" json:"resolved_workflow_status"`
+	SignaturesJson              []byte             `db:"signatures_json" json:"signatures_json"`
+	OutputsJson                 []byte             `db:"outputs_json" json:"outputs_json"`
+	ReportsJson                 []byte             `db:"reports_json" json:"reports_json"`
+	ResourceAggregationsGlobal  []byte             `db:"resource_aggregations_global" json:"resource_aggregations_global"`
+	ResourceAggregationsStep    []byte             `db:"resource_aggregations_step" json:"resource_aggregations_step"`
 }
 
 func (q *Queries) GetRunningTestWorkflowExecutions(ctx context.Context) ([]GetRunningTestWorkflowExecutionsRow, error) {
@@ -788,6 +983,11 @@ func (q *Queries) GetRunningTestWorkflowExecutions(ctx context.Context) ([]GetRu
 			&i.ResolvedWorkflowSpec,
 			&i.ResolvedWorkflowReadOnly,
 			&i.ResolvedWorkflowStatus,
+			&i.SignaturesJson,
+			&i.OutputsJson,
+			&i.ReportsJson,
+			&i.ResourceAggregationsGlobal,
+			&i.ResourceAggregationsStep,
 		); err != nil {
 			return nil, err
 		}
@@ -797,141 +997,6 @@ func (q *Queries) GetRunningTestWorkflowExecutions(ctx context.Context) ([]GetRu
 		return nil, err
 	}
 	return items, nil
-}
-
-const getTestWorkflowExecution = `-- name: GetTestWorkflowExecution :one
-SELECT 
-    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.created_at, e.updated_at,
-    r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
-    r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
-    r.pauses, r.initialization, r.steps,
-    w.name as workflow_name, w.namespace as workflow_namespace, w.description as workflow_description,
-    w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
-    w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
-    w.status as workflow_status,
-    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace, 
-    rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
-    rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
-    rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
-    rw.read_only as resolved_workflow_read_only, rw.status as resolved_workflow_status
-FROM test_workflow_executions e
-LEFT JOIN test_workflow_results r ON e.id = r.execution_id
-LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
-LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
-WHERE e.id = $1 OR e.name = $1
-`
-
-type GetTestWorkflowExecutionRow struct {
-	ID                          string             `db:"id" json:"id"`
-	GroupID                     pgtype.Text        `db:"group_id" json:"group_id"`
-	RunnerID                    pgtype.Text        `db:"runner_id" json:"runner_id"`
-	RunnerTarget                []byte             `db:"runner_target" json:"runner_target"`
-	RunnerOriginalTarget        []byte             `db:"runner_original_target" json:"runner_original_target"`
-	Name                        string             `db:"name" json:"name"`
-	Namespace                   pgtype.Text        `db:"namespace" json:"namespace"`
-	Number                      pgtype.Int4        `db:"number" json:"number"`
-	ScheduledAt                 pgtype.Timestamptz `db:"scheduled_at" json:"scheduled_at"`
-	AssignedAt                  pgtype.Timestamptz `db:"assigned_at" json:"assigned_at"`
-	StatusAt                    pgtype.Timestamptz `db:"status_at" json:"status_at"`
-	TestWorkflowExecutionName   pgtype.Text        `db:"test_workflow_execution_name" json:"test_workflow_execution_name"`
-	DisableWebhooks             pgtype.Bool        `db:"disable_webhooks" json:"disable_webhooks"`
-	Tags                        []byte             `db:"tags" json:"tags"`
-	RunningContext              []byte             `db:"running_context" json:"running_context"`
-	ConfigParams                []byte             `db:"config_params" json:"config_params"`
-	CreatedAt                   pgtype.Timestamptz `db:"created_at" json:"created_at"`
-	UpdatedAt                   pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
-	Status                      pgtype.Text        `db:"status" json:"status"`
-	PredictedStatus             pgtype.Text        `db:"predicted_status" json:"predicted_status"`
-	QueuedAt                    pgtype.Timestamptz `db:"queued_at" json:"queued_at"`
-	StartedAt                   pgtype.Timestamptz `db:"started_at" json:"started_at"`
-	FinishedAt                  pgtype.Timestamptz `db:"finished_at" json:"finished_at"`
-	Duration                    pgtype.Text        `db:"duration" json:"duration"`
-	TotalDuration               pgtype.Text        `db:"total_duration" json:"total_duration"`
-	DurationMs                  pgtype.Int4        `db:"duration_ms" json:"duration_ms"`
-	PausedMs                    pgtype.Int4        `db:"paused_ms" json:"paused_ms"`
-	TotalDurationMs             pgtype.Int4        `db:"total_duration_ms" json:"total_duration_ms"`
-	Pauses                      []byte             `db:"pauses" json:"pauses"`
-	Initialization              []byte             `db:"initialization" json:"initialization"`
-	Steps                       []byte             `db:"steps" json:"steps"`
-	WorkflowName                pgtype.Text        `db:"workflow_name" json:"workflow_name"`
-	WorkflowNamespace           pgtype.Text        `db:"workflow_namespace" json:"workflow_namespace"`
-	WorkflowDescription         pgtype.Text        `db:"workflow_description" json:"workflow_description"`
-	WorkflowLabels              []byte             `db:"workflow_labels" json:"workflow_labels"`
-	WorkflowAnnotations         []byte             `db:"workflow_annotations" json:"workflow_annotations"`
-	WorkflowCreated             pgtype.Timestamptz `db:"workflow_created" json:"workflow_created"`
-	WorkflowUpdated             pgtype.Timestamptz `db:"workflow_updated" json:"workflow_updated"`
-	WorkflowSpec                []byte             `db:"workflow_spec" json:"workflow_spec"`
-	WorkflowReadOnly            pgtype.Bool        `db:"workflow_read_only" json:"workflow_read_only"`
-	WorkflowStatus              []byte             `db:"workflow_status" json:"workflow_status"`
-	ResolvedWorkflowName        pgtype.Text        `db:"resolved_workflow_name" json:"resolved_workflow_name"`
-	ResolvedWorkflowNamespace   pgtype.Text        `db:"resolved_workflow_namespace" json:"resolved_workflow_namespace"`
-	ResolvedWorkflowDescription pgtype.Text        `db:"resolved_workflow_description" json:"resolved_workflow_description"`
-	ResolvedWorkflowLabels      []byte             `db:"resolved_workflow_labels" json:"resolved_workflow_labels"`
-	ResolvedWorkflowAnnotations []byte             `db:"resolved_workflow_annotations" json:"resolved_workflow_annotations"`
-	ResolvedWorkflowCreated     pgtype.Timestamptz `db:"resolved_workflow_created" json:"resolved_workflow_created"`
-	ResolvedWorkflowUpdated     pgtype.Timestamptz `db:"resolved_workflow_updated" json:"resolved_workflow_updated"`
-	ResolvedWorkflowSpec        []byte             `db:"resolved_workflow_spec" json:"resolved_workflow_spec"`
-	ResolvedWorkflowReadOnly    pgtype.Bool        `db:"resolved_workflow_read_only" json:"resolved_workflow_read_only"`
-	ResolvedWorkflowStatus      []byte             `db:"resolved_workflow_status" json:"resolved_workflow_status"`
-}
-
-func (q *Queries) GetTestWorkflowExecution(ctx context.Context, id string) (GetTestWorkflowExecutionRow, error) {
-	row := q.db.QueryRow(ctx, getTestWorkflowExecution, id)
-	var i GetTestWorkflowExecutionRow
-	err := row.Scan(
-		&i.ID,
-		&i.GroupID,
-		&i.RunnerID,
-		&i.RunnerTarget,
-		&i.RunnerOriginalTarget,
-		&i.Name,
-		&i.Namespace,
-		&i.Number,
-		&i.ScheduledAt,
-		&i.AssignedAt,
-		&i.StatusAt,
-		&i.TestWorkflowExecutionName,
-		&i.DisableWebhooks,
-		&i.Tags,
-		&i.RunningContext,
-		&i.ConfigParams,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.Status,
-		&i.PredictedStatus,
-		&i.QueuedAt,
-		&i.StartedAt,
-		&i.FinishedAt,
-		&i.Duration,
-		&i.TotalDuration,
-		&i.DurationMs,
-		&i.PausedMs,
-		&i.TotalDurationMs,
-		&i.Pauses,
-		&i.Initialization,
-		&i.Steps,
-		&i.WorkflowName,
-		&i.WorkflowNamespace,
-		&i.WorkflowDescription,
-		&i.WorkflowLabels,
-		&i.WorkflowAnnotations,
-		&i.WorkflowCreated,
-		&i.WorkflowUpdated,
-		&i.WorkflowSpec,
-		&i.WorkflowReadOnly,
-		&i.WorkflowStatus,
-		&i.ResolvedWorkflowName,
-		&i.ResolvedWorkflowNamespace,
-		&i.ResolvedWorkflowDescription,
-		&i.ResolvedWorkflowLabels,
-		&i.ResolvedWorkflowAnnotations,
-		&i.ResolvedWorkflowCreated,
-		&i.ResolvedWorkflowUpdated,
-		&i.ResolvedWorkflowSpec,
-		&i.ResolvedWorkflowReadOnly,
-		&i.ResolvedWorkflowStatus,
-	)
-	return i, err
 }
 
 const getTestWorkflowExecutionByNameAndTestWorkflow = `-- name: GetTestWorkflowExecutionByNameAndTestWorkflow :one
@@ -948,11 +1013,51 @@ SELECT
     rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
     rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
     rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
-    rw.read_only as resolved_workflow_read_only, rw.status as resolved_workflow_status
+    rw.read_only as resolved_workflow_read_only, rw.status as resolved_workflow_status,
+    COALESCE(
+        (SELECT json_agg(
+            json_build_object(
+                'id', s.id,
+                'ref', s.ref,
+                'name', s.name,
+                'category', s.category,
+                'optional', s.optional,
+                'negative', s.negative,
+                'parent_id', s.parent_id
+            ) ORDER BY s.id
+        ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
+        '[]'::json
+    ) as signatures_json,
+    COALESCE(
+        (SELECT json_agg(
+            json_build_object(
+                'id', o.id,
+                'ref', o.ref,
+                'name', o.name,
+                'value', o.value
+            ) ORDER BY o.id
+        ) FROM test_workflow_outputs o WHERE o.execution_id = e.id),
+        '[]'::json
+    ) as outputs_json,
+    COALESCE(
+        (SELECT json_agg(
+            json_build_object(
+                'id', rep.id,
+                'ref', rep.ref,
+                'kind', rep.kind,
+                'file', rep.file,
+                'summary', rep.summary
+            ) ORDER BY rep.id
+        ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
+        '[]'::json
+    ) as reports_json,
+    ra.global as resource_aggregations_global,
+    ra.step as resource_aggregations_step
 FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
+LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
 WHERE (e.id = $1 OR e.name = $1) AND w.name = $2
 `
 
@@ -1013,6 +1118,11 @@ type GetTestWorkflowExecutionByNameAndTestWorkflowRow struct {
 	ResolvedWorkflowSpec        []byte             `db:"resolved_workflow_spec" json:"resolved_workflow_spec"`
 	ResolvedWorkflowReadOnly    pgtype.Bool        `db:"resolved_workflow_read_only" json:"resolved_workflow_read_only"`
 	ResolvedWorkflowStatus      []byte             `db:"resolved_workflow_status" json:"resolved_workflow_status"`
+	SignaturesJson              []byte             `db:"signatures_json" json:"signatures_json"`
+	OutputsJson                 []byte             `db:"outputs_json" json:"outputs_json"`
+	ReportsJson                 []byte             `db:"reports_json" json:"reports_json"`
+	ResourceAggregationsGlobal  []byte             `db:"resource_aggregations_global" json:"resource_aggregations_global"`
+	ResourceAggregationsStep    []byte             `db:"resource_aggregations_step" json:"resource_aggregations_step"`
 }
 
 func (q *Queries) GetTestWorkflowExecutionByNameAndTestWorkflow(ctx context.Context, arg GetTestWorkflowExecutionByNameAndTestWorkflowParams) (GetTestWorkflowExecutionByNameAndTestWorkflowRow, error) {
@@ -1070,6 +1180,200 @@ func (q *Queries) GetTestWorkflowExecutionByNameAndTestWorkflow(ctx context.Cont
 		&i.ResolvedWorkflowSpec,
 		&i.ResolvedWorkflowReadOnly,
 		&i.ResolvedWorkflowStatus,
+		&i.SignaturesJson,
+		&i.OutputsJson,
+		&i.ReportsJson,
+		&i.ResourceAggregationsGlobal,
+		&i.ResourceAggregationsStep,
+	)
+	return i, err
+}
+
+const getTestWorkflowExecution = `-- name: GetTestWorkflowExecution :one
+SELECT 
+    e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.created_at, e.updated_at,
+    r.status, r.predicted_status, r.queued_at, r.started_at, r.finished_at,
+    r.duration, r.total_duration, r.duration_ms, r.paused_ms, r.total_duration_ms,
+    r.pauses, r.initialization, r.steps,
+    w.name as workflow_name, w.namespace as workflow_namespace, w.description as workflow_description,
+    w.labels as workflow_labels, w.annotations as workflow_annotations, w.created as workflow_created,
+    w.updated as workflow_updated, w.spec as workflow_spec, w.read_only as workflow_read_only,
+    w.status as workflow_status,
+    rw.name as resolved_workflow_name, rw.namespace as resolved_workflow_namespace, 
+    rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
+    rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
+    rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
+    rw.read_only as resolved_workflow_read_only, rw.status as resolved_workflow_status,
+    -- Aggregated signatures as JSON
+    COALESCE(
+        (SELECT json_agg(
+            json_build_object(
+                'id', s.id,
+                'ref', s.ref,
+                'name', s.name,
+                'category', s.category,
+                'optional', s.optional,
+                'negative', s.negative,
+                'parent_id', s.parent_id
+            ) ORDER BY s.id
+        ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
+        '[]'::json
+    ) as signatures_json,
+    -- Aggregated outputs as JSON
+    COALESCE(
+        (SELECT json_agg(
+            json_build_object(
+                'id', o.id,
+                'ref', o.ref,
+                'name', o.name,
+                'value', o.value
+            ) ORDER BY o.id
+        ) FROM test_workflow_outputs o WHERE o.execution_id = e.id),
+        '[]'::json
+    ) as outputs_json,
+    -- Aggregated reports as JSON
+    COALESCE(
+        (SELECT json_agg(
+            json_build_object(
+                'id', rep.id,
+                'ref', rep.ref,
+                'kind', rep.kind,
+                'file', rep.file,
+                'summary', rep.summary
+            ) ORDER BY rep.id
+        ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
+        '[]'::json
+    ) as reports_json,
+    -- Resource aggregations as JSON
+    ra.global as resource_aggregations_global,
+    ra.step as resource_aggregations_step
+FROM test_workflow_executions e
+LEFT JOIN test_workflow_results r ON e.id = r.execution_id
+LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
+LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
+LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
+WHERE e.id = $1 OR e.name = $1
+`
+
+type GetTestWorkflowExecutionRow struct {
+	ID                          string             `db:"id" json:"id"`
+	GroupID                     pgtype.Text        `db:"group_id" json:"group_id"`
+	RunnerID                    pgtype.Text        `db:"runner_id" json:"runner_id"`
+	RunnerTarget                []byte             `db:"runner_target" json:"runner_target"`
+	RunnerOriginalTarget        []byte             `db:"runner_original_target" json:"runner_original_target"`
+	Name                        string             `db:"name" json:"name"`
+	Namespace                   pgtype.Text        `db:"namespace" json:"namespace"`
+	Number                      pgtype.Int4        `db:"number" json:"number"`
+	ScheduledAt                 pgtype.Timestamptz `db:"scheduled_at" json:"scheduled_at"`
+	AssignedAt                  pgtype.Timestamptz `db:"assigned_at" json:"assigned_at"`
+	StatusAt                    pgtype.Timestamptz `db:"status_at" json:"status_at"`
+	TestWorkflowExecutionName   pgtype.Text        `db:"test_workflow_execution_name" json:"test_workflow_execution_name"`
+	DisableWebhooks             pgtype.Bool        `db:"disable_webhooks" json:"disable_webhooks"`
+	Tags                        []byte             `db:"tags" json:"tags"`
+	RunningContext              []byte             `db:"running_context" json:"running_context"`
+	ConfigParams                []byte             `db:"config_params" json:"config_params"`
+	CreatedAt                   pgtype.Timestamptz `db:"created_at" json:"created_at"`
+	UpdatedAt                   pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
+	Status                      pgtype.Text        `db:"status" json:"status"`
+	PredictedStatus             pgtype.Text        `db:"predicted_status" json:"predicted_status"`
+	QueuedAt                    pgtype.Timestamptz `db:"queued_at" json:"queued_at"`
+	StartedAt                   pgtype.Timestamptz `db:"started_at" json:"started_at"`
+	FinishedAt                  pgtype.Timestamptz `db:"finished_at" json:"finished_at"`
+	Duration                    pgtype.Text        `db:"duration" json:"duration"`
+	TotalDuration               pgtype.Text        `db:"total_duration" json:"total_duration"`
+	DurationMs                  pgtype.Int4        `db:"duration_ms" json:"duration_ms"`
+	PausedMs                    pgtype.Int4        `db:"paused_ms" json:"paused_ms"`
+	TotalDurationMs             pgtype.Int4        `db:"total_duration_ms" json:"total_duration_ms"`
+	Pauses                      []byte             `db:"pauses" json:"pauses"`
+	Initialization              []byte             `db:"initialization" json:"initialization"`
+	Steps                       []byte             `db:"steps" json:"steps"`
+	WorkflowName                pgtype.Text        `db:"workflow_name" json:"workflow_name"`
+	WorkflowNamespace           pgtype.Text        `db:"workflow_namespace" json:"workflow_namespace"`
+	WorkflowDescription         pgtype.Text        `db:"workflow_description" json:"workflow_description"`
+	WorkflowLabels              []byte             `db:"workflow_labels" json:"workflow_labels"`
+	WorkflowAnnotations         []byte             `db:"workflow_annotations" json:"workflow_annotations"`
+	WorkflowCreated             pgtype.Timestamptz `db:"workflow_created" json:"workflow_created"`
+	WorkflowUpdated             pgtype.Timestamptz `db:"workflow_updated" json:"workflow_updated"`
+	WorkflowSpec                []byte             `db:"workflow_spec" json:"workflow_spec"`
+	WorkflowReadOnly            pgtype.Bool        `db:"workflow_read_only" json:"workflow_read_only"`
+	WorkflowStatus              []byte             `db:"workflow_status" json:"workflow_status"`
+	ResolvedWorkflowName        pgtype.Text        `db:"resolved_workflow_name" json:"resolved_workflow_name"`
+	ResolvedWorkflowNamespace   pgtype.Text        `db:"resolved_workflow_namespace" json:"resolved_workflow_namespace"`
+	ResolvedWorkflowDescription pgtype.Text        `db:"resolved_workflow_description" json:"resolved_workflow_description"`
+	ResolvedWorkflowLabels      []byte             `db:"resolved_workflow_labels" json:"resolved_workflow_labels"`
+	ResolvedWorkflowAnnotations []byte             `db:"resolved_workflow_annotations" json:"resolved_workflow_annotations"`
+	ResolvedWorkflowCreated     pgtype.Timestamptz `db:"resolved_workflow_created" json:"resolved_workflow_created"`
+	ResolvedWorkflowUpdated     pgtype.Timestamptz `db:"resolved_workflow_updated" json:"resolved_workflow_updated"`
+	ResolvedWorkflowSpec        []byte             `db:"resolved_workflow_spec" json:"resolved_workflow_spec"`
+	ResolvedWorkflowReadOnly    pgtype.Bool        `db:"resolved_workflow_read_only" json:"resolved_workflow_read_only"`
+	ResolvedWorkflowStatus      []byte             `db:"resolved_workflow_status" json:"resolved_workflow_status"`
+	SignaturesJson              []byte             `db:"signatures_json" json:"signatures_json"`
+	OutputsJson                 []byte             `db:"outputs_json" json:"outputs_json"`
+	ReportsJson                 []byte             `db:"reports_json" json:"reports_json"`
+	ResourceAggregationsGlobal  []byte             `db:"resource_aggregations_global" json:"resource_aggregations_global"`
+	ResourceAggregationsStep    []byte             `db:"resource_aggregations_step" json:"resource_aggregations_step"`
+}
+
+func (q *Queries) GetTestWorkflowExecution(ctx context.Context, id string) (GetTestWorkflowExecutionRow, error) {
+	row := q.db.QueryRow(ctx, getTestWorkflowExecution, id)
+	var i GetTestWorkflowExecutionRow
+	err := row.Scan(
+		&i.ID,
+		&i.GroupID,
+		&i.RunnerID,
+		&i.RunnerTarget,
+		&i.RunnerOriginalTarget,
+		&i.Name,
+		&i.Namespace,
+		&i.Number,
+		&i.ScheduledAt,
+		&i.AssignedAt,
+		&i.StatusAt,
+		&i.TestWorkflowExecutionName,
+		&i.DisableWebhooks,
+		&i.Tags,
+		&i.RunningContext,
+		&i.ConfigParams,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Status,
+		&i.PredictedStatus,
+		&i.QueuedAt,
+		&i.StartedAt,
+		&i.FinishedAt,
+		&i.Duration,
+		&i.TotalDuration,
+		&i.DurationMs,
+		&i.PausedMs,
+		&i.TotalDurationMs,
+		&i.Pauses,
+		&i.Initialization,
+		&i.Steps,
+		&i.WorkflowName,
+		&i.WorkflowNamespace,
+		&i.WorkflowDescription,
+		&i.WorkflowLabels,
+		&i.WorkflowAnnotations,
+		&i.WorkflowCreated,
+		&i.WorkflowUpdated,
+		&i.WorkflowSpec,
+		&i.WorkflowReadOnly,
+		&i.WorkflowStatus,
+		&i.ResolvedWorkflowName,
+		&i.ResolvedWorkflowNamespace,
+		&i.ResolvedWorkflowDescription,
+		&i.ResolvedWorkflowLabels,
+		&i.ResolvedWorkflowAnnotations,
+		&i.ResolvedWorkflowCreated,
+		&i.ResolvedWorkflowUpdated,
+		&i.ResolvedWorkflowSpec,
+		&i.ResolvedWorkflowReadOnly,
+		&i.ResolvedWorkflowStatus,
+		&i.SignaturesJson,
+		&i.OutputsJson,
+		&i.ReportsJson,
+		&i.ResourceAggregationsGlobal,
+		&i.ResourceAggregationsStep,
 	)
 	return i, err
 }
@@ -1130,50 +1434,56 @@ SELECT
     rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
     rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
     rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
-    rw.read_only as resolved_workflow_read_only, rw.status as resolved_workflow_status
+    rw.read_only as resolved_workflow_read_only, rw.status as resolved_workflow_status,
+    -- Aggregated signatures as JSON
+    COALESCE(
+        (SELECT json_agg(
+            json_build_object(
+                'id', s.id,
+                'ref', s.ref,
+                'name', s.name,
+                'category', s.category,
+                'optional', s.optional,
+                'negative', s.negative,
+                'parent_id', s.parent_id
+            ) ORDER BY s.id
+        ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
+        '[]'::json
+    ) as signatures_json,
+    -- Aggregated outputs as JSON
+    COALESCE(
+        (SELECT json_agg(
+            json_build_object(
+                'id', o.id,
+                'ref', o.ref,
+                'name', o.name,
+                'value', o.value
+            ) ORDER BY o.id
+        ) FROM test_workflow_outputs o WHERE o.execution_id = e.id),
+        '[]'::json
+    ) as outputs_json,
+    -- Aggregated reports as JSON
+    COALESCE(
+        (SELECT json_agg(
+            json_build_object(
+                'id', rep.id,
+                'ref', rep.ref,
+                'kind', rep.kind,
+                'file', rep.file,
+                'summary', rep.summary
+            ) ORDER BY rep.id
+        ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
+        '[]'::json
+    ) as reports_json,
+    -- Resource aggregations as JSON
+    ra.global as resource_aggregations_global,
+    ra.step as resource_aggregations_step
 FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
-WHERE 1=1
-    AND ($1 IS NULL OR w.name = $1)
-    AND ($2 IS NULL OR w.name = ANY($2))
-    AND ($3 IS NULL OR e.name ILIKE '%' || $3 || '%')
-    AND ($4 IS NULL OR e.scheduled_at >= $4)
-    AND ($5 IS NULL OR e.scheduled_at <= $5)
-    AND ($6 IS NULL OR e.scheduled_at >= NOW() - INTERVAL '@last_n_days days')
-    AND ($7 IS NULL OR r.status = ANY($7))
-    AND ($8 IS NULL OR e.runner_id = $8)
-    AND ($9 IS NULL OR 
-         ($9 = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR 
-         ($9 = false AND (e.runner_id IS NULL OR e.runner_id = '')))
-    AND ($10 IS NULL OR e.running_context->'actor'->>'name' = $10)
-    AND ($11 IS NULL OR e.running_context->'actor'->>'type_' = $11)
-    AND ($12 IS NULL OR e.id = $12 OR e.group_id = $12)
-    AND ($13 IS NULL OR 
-         ($13 = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
-         ($13 = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
-ORDER BY e.scheduled_at DESC
-LIMIT $15 OFFSET $14
+LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
 `
-
-type GetTestWorkflowExecutionsParams struct {
-	WorkflowName  pgtype.Text        `db:"workflow_name" json:"workflow_name"`
-	WorkflowNames []pgtype.Text      `db:"workflow_names" json:"workflow_names"`
-	TextSearch    pgtype.Text        `db:"text_search" json:"text_search"`
-	StartDate     pgtype.Timestamptz `db:"start_date" json:"start_date"`
-	EndDate       pgtype.Timestamptz `db:"end_date" json:"end_date"`
-	LastNDays     pgtype.Int4        `db:"last_n_days" json:"last_n_days"`
-	Statuses      []pgtype.Text      `db:"statuses" json:"statuses"`
-	RunnerID      pgtype.Text        `db:"runner_id" json:"runner_id"`
-	Assigned      pgtype.Bool        `db:"assigned" json:"assigned"`
-	ActorName     pgtype.Text        `db:"actor_name" json:"actor_name"`
-	ActorType     pgtype.Text        `db:"actor_type" json:"actor_type"`
-	GroupID       pgtype.Text        `db:"group_id" json:"group_id"`
-	Initialized   pgtype.Bool        `db:"initialized" json:"initialized"`
-	Fst           int32              `db:"fst" json:"fst"`
-	Lmt           int32              `db:"lmt" json:"lmt"`
-}
 
 type GetTestWorkflowExecutionsRow struct {
 	ID                          string             `db:"id" json:"id"`
@@ -1227,26 +1537,15 @@ type GetTestWorkflowExecutionsRow struct {
 	ResolvedWorkflowSpec        []byte             `db:"resolved_workflow_spec" json:"resolved_workflow_spec"`
 	ResolvedWorkflowReadOnly    pgtype.Bool        `db:"resolved_workflow_read_only" json:"resolved_workflow_read_only"`
 	ResolvedWorkflowStatus      []byte             `db:"resolved_workflow_status" json:"resolved_workflow_status"`
+	SignaturesJson              []byte             `db:"signatures_json" json:"signatures_json"`
+	OutputsJson                 []byte             `db:"outputs_json" json:"outputs_json"`
+	ReportsJson                 []byte             `db:"reports_json" json:"reports_json"`
+	ResourceAggregationsGlobal  []byte             `db:"resource_aggregations_global" json:"resource_aggregations_global"`
+	ResourceAggregationsStep    []byte             `db:"resource_aggregations_step" json:"resource_aggregations_step"`
 }
 
-func (q *Queries) GetTestWorkflowExecutions(ctx context.Context, arg GetTestWorkflowExecutionsParams) ([]GetTestWorkflowExecutionsRow, error) {
-	rows, err := q.db.Query(ctx, getTestWorkflowExecutions,
-		arg.WorkflowName,
-		arg.WorkflowNames,
-		arg.TextSearch,
-		arg.StartDate,
-		arg.EndDate,
-		arg.LastNDays,
-		arg.Statuses,
-		arg.RunnerID,
-		arg.Assigned,
-		arg.ActorName,
-		arg.ActorType,
-		arg.GroupID,
-		arg.Initialized,
-		arg.Fst,
-		arg.Lmt,
-	)
+func (q *Queries) GetTestWorkflowExecutions(ctx context.Context) ([]GetTestWorkflowExecutionsRow, error) {
+	rows, err := q.db.Query(ctx, getTestWorkflowExecutions)
 	if err != nil {
 		return nil, err
 	}
@@ -1306,6 +1605,11 @@ func (q *Queries) GetTestWorkflowExecutions(ctx context.Context, arg GetTestWork
 			&i.ResolvedWorkflowSpec,
 			&i.ResolvedWorkflowReadOnly,
 			&i.ResolvedWorkflowStatus,
+			&i.SignaturesJson,
+			&i.OutputsJson,
+			&i.ReportsJson,
+			&i.ResourceAggregationsGlobal,
+			&i.ResourceAggregationsStep,
 		); err != nil {
 			return nil, err
 		}
@@ -1331,11 +1635,51 @@ SELECT
     rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
     rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
     rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
-    rw.read_only as resolved_workflow_read_only, rw.status as resolved_workflow_status
+    rw.read_only as resolved_workflow_read_only, rw.status as resolved_workflow_status,
+    COALESCE(
+        (SELECT json_agg(
+            json_build_object(
+                'id', s.id,
+                'ref', s.ref,
+                'name', s.name,
+                'category', s.category,
+                'optional', s.optional,
+                'negative', s.negative,
+                'parent_id', s.parent_id
+            ) ORDER BY s.id
+        ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
+        '[]'::json
+    ) as signatures_json,
+    COALESCE(
+        (SELECT json_agg(
+            json_build_object(
+                'id', o.id,
+                'ref', o.ref,
+                'name', o.name,
+                'value', o.value
+            ) ORDER BY o.id
+        ) FROM test_workflow_outputs o WHERE o.execution_id = e.id),
+        '[]'::json
+    ) as outputs_json,
+    COALESCE(
+        (SELECT json_agg(
+            json_build_object(
+                'id', rep.id,
+                'ref', rep.ref,
+                'kind', rep.kind,
+                'file', rep.file,
+                'summary', rep.summary
+            ) ORDER BY rep.id
+        ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
+        '[]'::json
+    ) as reports_json,
+    ra.global as resource_aggregations_global,
+    ra.step as resource_aggregations_step    
 FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
+LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
 WHERE 1=1
     AND ($1 IS NULL OR w.name = $1)
     AND ($2 IS NULL OR w.name = ANY($2))
@@ -1428,6 +1772,11 @@ type GetTestWorkflowExecutionsSummaryRow struct {
 	ResolvedWorkflowSpec        []byte             `db:"resolved_workflow_spec" json:"resolved_workflow_spec"`
 	ResolvedWorkflowReadOnly    pgtype.Bool        `db:"resolved_workflow_read_only" json:"resolved_workflow_read_only"`
 	ResolvedWorkflowStatus      []byte             `db:"resolved_workflow_status" json:"resolved_workflow_status"`
+	SignaturesJson              []byte             `db:"signatures_json" json:"signatures_json"`
+	OutputsJson                 []byte             `db:"outputs_json" json:"outputs_json"`
+	ReportsJson                 []byte             `db:"reports_json" json:"reports_json"`
+	ResourceAggregationsGlobal  []byte             `db:"resource_aggregations_global" json:"resource_aggregations_global"`
+	ResourceAggregationsStep    []byte             `db:"resource_aggregations_step" json:"resource_aggregations_step"`
 }
 
 func (q *Queries) GetTestWorkflowExecutionsSummary(ctx context.Context, arg GetTestWorkflowExecutionsSummaryParams) ([]GetTestWorkflowExecutionsSummaryRow, error) {
@@ -1507,6 +1856,11 @@ func (q *Queries) GetTestWorkflowExecutionsSummary(ctx context.Context, arg GetT
 			&i.ResolvedWorkflowSpec,
 			&i.ResolvedWorkflowReadOnly,
 			&i.ResolvedWorkflowStatus,
+			&i.SignaturesJson,
+			&i.OutputsJson,
+			&i.ReportsJson,
+			&i.ResourceAggregationsGlobal,
+			&i.ResourceAggregationsStep,
 		); err != nil {
 			return nil, err
 		}
@@ -1801,11 +2155,51 @@ SELECT
     rw.description as resolved_workflow_description, rw.labels as resolved_workflow_labels,
     rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
     rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
-    rw.read_only as resolved_workflow_read_only, rw.status as resolved_workflow_status
+    rw.read_only as resolved_workflow_read_only, rw.status as resolved_workflow_status,
+    COALESCE(
+        (SELECT json_agg(
+            json_build_object(
+                'id', s.id,
+                'ref', s.ref,
+                'name', s.name,
+                'category', s.category,
+                'optional', s.optional,
+                'negative', s.negative,
+                'parent_id', s.parent_id
+            ) ORDER BY s.id
+        ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
+        '[]'::json
+    ) as signatures_json,
+    COALESCE(
+        (SELECT json_agg(
+            json_build_object(
+                'id', o.id,
+                'ref', o.ref,
+                'name', o.name,
+                'value', o.value
+            ) ORDER BY o.id
+        ) FROM test_workflow_outputs o WHERE o.execution_id = e.id),
+        '[]'::json
+    ) as outputs_json,
+    COALESCE(
+        (SELECT json_agg(
+            json_build_object(
+                'id', rep.id,
+                'ref', rep.ref,
+                'kind', rep.kind,
+                'file', rep.file,
+                'summary', rep.summary
+            ) ORDER BY rep.id
+        ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
+        '[]'::json
+    ) as reports_json,
+    ra.global as resource_aggregations_global,
+    ra.step as resource_aggregations_step    
 FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
+LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
 WHERE r.status = 'queued'
     AND (e.runner_id IS NULL OR e.runner_id = '')
 ORDER BY e.id DESC
@@ -1863,6 +2257,11 @@ type GetUnassignedTestWorkflowExecutionsRow struct {
 	ResolvedWorkflowSpec        []byte             `db:"resolved_workflow_spec" json:"resolved_workflow_spec"`
 	ResolvedWorkflowReadOnly    pgtype.Bool        `db:"resolved_workflow_read_only" json:"resolved_workflow_read_only"`
 	ResolvedWorkflowStatus      []byte             `db:"resolved_workflow_status" json:"resolved_workflow_status"`
+	SignaturesJson              []byte             `db:"signatures_json" json:"signatures_json"`
+	OutputsJson                 []byte             `db:"outputs_json" json:"outputs_json"`
+	ReportsJson                 []byte             `db:"reports_json" json:"reports_json"`
+	ResourceAggregationsGlobal  []byte             `db:"resource_aggregations_global" json:"resource_aggregations_global"`
+	ResourceAggregationsStep    []byte             `db:"resource_aggregations_step" json:"resource_aggregations_step"`
 }
 
 func (q *Queries) GetUnassignedTestWorkflowExecutions(ctx context.Context) ([]GetUnassignedTestWorkflowExecutionsRow, error) {
@@ -1926,6 +2325,11 @@ func (q *Queries) GetUnassignedTestWorkflowExecutions(ctx context.Context) ([]Ge
 			&i.ResolvedWorkflowSpec,
 			&i.ResolvedWorkflowReadOnly,
 			&i.ResolvedWorkflowStatus,
+			&i.SignaturesJson,
+			&i.OutputsJson,
+			&i.ReportsJson,
+			&i.ResourceAggregationsGlobal,
+			&i.ResourceAggregationsStep,
 		); err != nil {
 			return nil, err
 		}
