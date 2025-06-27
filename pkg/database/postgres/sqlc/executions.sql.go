@@ -249,32 +249,23 @@ LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workf
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
 WHERE r.status IN ('passed', 'failed', 'aborted')
-    -- Basic workflow filters
     AND ($1 IS NULL OR w.name = $1)
     AND ($2 IS NULL OR w.name = ANY($2))
-    -- Text search filter
     AND ($3 IS NULL OR e.name ILIKE '%' || $3 || '%')
-    -- Date range filters
     AND ($4 IS NULL OR e.scheduled_at >= $4)
     AND ($5 IS NULL OR e.scheduled_at <= $5)
     AND ($6 IS NULL OR e.scheduled_at >= NOW() - INTERVAL '@last_n_days days')
-    -- Status filters
     AND ($7 IS NULL OR r.status = ANY($7))
-    -- Runner filters
     AND ($8 IS NULL OR e.runner_id = $8)
     AND ($9 IS NULL OR 
          ($9 = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR 
          ($9 = false AND (e.runner_id IS NULL OR e.runner_id = '')))
-    -- Actor filters
     AND ($10 IS NULL OR e.running_context->'actor'->>'name' = $10)
     AND ($11 IS NULL OR e.running_context->'actor'->>'type_' = $11)
-    -- Group filter
     AND ($12 IS NULL OR e.id = $12 OR e.group_id = $12)
-    -- Initialization filter
     AND ($13 IS NULL OR 
          ($13 = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
          ($13 = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
-    -- Label selector filter (JSONB operations)
     AND ($14 IS NULL OR (
         CASE 
             WHEN $15 = 'exists' THEN w.labels ? $16
@@ -283,7 +274,6 @@ WHERE r.status IN ('passed', 'failed', 'aborted')
             ELSE true
         END
     ))
-    -- Tag selector filter (JSONB operations)
     AND ($18 IS NULL OR (
         CASE 
             WHEN $19 = 'exists' THEN e.tags ? $20
@@ -858,7 +848,6 @@ SELECT
     rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
     rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
     rw.read_only as resolved_workflow_read_only, rw.status as resolved_workflow_status,
-    -- Aggregated signatures as JSON
     COALESCE(
         (SELECT json_agg(
             json_build_object(
@@ -873,7 +862,6 @@ SELECT
         ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
         '[]'::json
     ) as signatures_json,
-    -- Aggregated outputs as JSON
     COALESCE(
         (SELECT json_agg(
             json_build_object(
@@ -885,7 +873,6 @@ SELECT
         ) FROM test_workflow_outputs o WHERE o.execution_id = e.id),
         '[]'::json
     ) as outputs_json,
-    -- Aggregated reports as JSON
     COALESCE(
         (SELECT json_agg(
             json_build_object(
@@ -898,7 +885,6 @@ SELECT
         ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
         '[]'::json
     ) as reports_json,
-    -- Resource aggregations as JSON
     ra.global as resource_aggregations_global,
     ra.step as resource_aggregations_step
 FROM test_workflow_executions e
@@ -1225,7 +1211,6 @@ SELECT
     rw.annotations as resolved_workflow_annotations, rw.created as resolved_workflow_created,
     rw.updated as resolved_workflow_updated, rw.spec as resolved_workflow_spec,
     rw.read_only as resolved_workflow_read_only, rw.status as resolved_workflow_status,
-    -- Aggregated signatures as JSON
     COALESCE(
         (SELECT json_agg(
             json_build_object(
@@ -1240,7 +1225,6 @@ SELECT
         ) FROM test_workflow_signatures s WHERE s.execution_id = e.id),
         '[]'::json
     ) as signatures_json,
-    -- Aggregated outputs as JSON
     COALESCE(
         (SELECT json_agg(
             json_build_object(
@@ -1252,7 +1236,6 @@ SELECT
         ) FROM test_workflow_outputs o WHERE o.execution_id = e.id),
         '[]'::json
     ) as outputs_json,
-    -- Aggregated reports as JSON
     COALESCE(
         (SELECT json_agg(
             json_build_object(
@@ -1265,7 +1248,6 @@ SELECT
         ) FROM test_workflow_reports rep WHERE rep.execution_id = e.id),
         '[]'::json
     ) as reports_json,
-    -- Resource aggregations as JSON
     ra.global as resource_aggregations_global,
     ra.step as resource_aggregations_step
 FROM test_workflow_executions e
@@ -1274,32 +1256,23 @@ LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workf
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
 WHERE 1=1
-    -- Basic workflow filters
     AND ($1 IS NULL OR w.name = $1)
     AND ($2 IS NULL OR w.name = ANY($2))
-    -- Text search filter
     AND ($3 IS NULL OR e.name ILIKE '%' || $3 || '%')
-    -- Date range filters
     AND ($4 IS NULL OR e.scheduled_at >= $4)
     AND ($5 IS NULL OR e.scheduled_at <= $5)
     AND ($6 IS NULL OR e.scheduled_at >= NOW() - INTERVAL '@last_n_days days')
-    -- Status filters
     AND ($7 IS NULL OR r.status = ANY($7))
-    -- Runner filters
     AND ($8 IS NULL OR e.runner_id = $8)
     AND ($9 IS NULL OR 
          ($9 = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR 
          ($9 = false AND (e.runner_id IS NULL OR e.runner_id = '')))
-    -- Actor filters
     AND ($10 IS NULL OR e.running_context->'actor'->>'name' = $10)
     AND ($11 IS NULL OR e.running_context->'actor'->>'type_' = $11)
-    -- Group filter
     AND ($12 IS NULL OR e.id = $12 OR e.group_id = $12)
-    -- Initialization filter
     AND ($13 IS NULL OR 
          ($13 = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
          ($13 = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
-    -- Label selector filter (JSONB operations)
     AND ($14 IS NULL OR (
         CASE 
             WHEN $15 = 'exists' THEN w.labels ? $16
@@ -1308,7 +1281,6 @@ WHERE 1=1
             ELSE true
         END
     ))
-    -- Tag selector filter (JSONB operations)
     AND ($18 IS NULL OR (
         CASE 
             WHEN $19 = 'exists' THEN e.tags ? $20
@@ -1511,32 +1483,23 @@ LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workf
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
 WHERE 1=1
-    -- Basic workflow filters
     AND ($1 IS NULL OR w.name = $1)
     AND ($2 IS NULL OR w.name = ANY($2))
-    -- Text search filter
     AND ($3 IS NULL OR e.name ILIKE '%' || $3 || '%')
-    -- Date range filters
     AND ($4 IS NULL OR e.scheduled_at >= $4)
     AND ($5 IS NULL OR e.scheduled_at <= $5)
     AND ($6 IS NULL OR e.scheduled_at >= NOW() - INTERVAL '@last_n_days days')
-    -- Status filters
     AND ($7 IS NULL OR r.status = ANY($7))
-    -- Runner filters
     AND ($8 IS NULL OR e.runner_id = $8)
     AND ($9 IS NULL OR 
          ($9 = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR 
          ($9 = false AND (e.runner_id IS NULL OR e.runner_id = '')))
-    -- Actor filters
     AND ($10 IS NULL OR e.running_context->'actor'->>'name' = $10)
     AND ($11 IS NULL OR e.running_context->'actor'->>'type_' = $11)
-    -- Group filter
     AND ($12 IS NULL OR e.id = $12 OR e.group_id = $12)
-    -- Initialization filter
     AND ($13 IS NULL OR 
          ($13 = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
          ($13 = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
-    -- Label selector filter (JSONB operations)
     AND ($14 IS NULL OR (
         CASE 
             WHEN $15 = 'exists' THEN w.labels ? $16
@@ -1545,7 +1508,6 @@ WHERE 1=1
             ELSE true
         END
     ))
-    -- Tag selector filter (JSONB operations)
     AND ($18 IS NULL OR (
         CASE 
             WHEN $19 = 'exists' THEN e.tags ? $20
@@ -1672,32 +1634,23 @@ FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
 WHERE 1=1
-    -- Basic workflow filters
     AND ($1 IS NULL OR w.name = $1)
     AND ($2 IS NULL OR w.name = ANY($2))
-    -- Text search filter
     AND ($3 IS NULL OR e.name ILIKE '%' || $3 || '%')
-    -- Date range filters
     AND ($4 IS NULL OR e.scheduled_at >= $4)
     AND ($5 IS NULL OR e.scheduled_at <= $5)
     AND ($6 IS NULL OR e.scheduled_at >= NOW() - INTERVAL '@last_n_days days')
-    -- Status filters
     AND ($7 IS NULL OR r.status = ANY($7))
-    -- Runner filters
     AND ($8 IS NULL OR e.runner_id = $8)
     AND ($9 IS NULL OR 
          ($9 = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR 
          ($9 = false AND (e.runner_id IS NULL OR e.runner_id = '')))
-    -- Actor filters
     AND ($10 IS NULL OR e.running_context->'actor'->>'name' = $10)
     AND ($11 IS NULL OR e.running_context->'actor'->>'type_' = $11)
-    -- Group filter
     AND ($12 IS NULL OR e.id = $12 OR e.group_id = $12)
-    -- Initialization filter
     AND ($13 IS NULL OR 
          ($13 = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
          ($13 = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
-    -- Label selector filter (JSONB operations)
     AND ($14 IS NULL OR (
         CASE 
             WHEN $15 = 'exists' THEN w.labels ? $16
@@ -1706,7 +1659,6 @@ WHERE 1=1
             ELSE true
         END
     ))
-    -- Tag selector filter (JSONB operations)
     AND ($18 IS NULL OR (
         CASE 
             WHEN $19 = 'exists' THEN e.tags ? $20
