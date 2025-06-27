@@ -12,41 +12,12 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const countLeasesByClusterId = `-- name: CountLeasesByClusterId :one
-SELECT COUNT(*) FROM leases WHERE cluster_id = $1
-`
-
-func (q *Queries) CountLeasesByClusterId(ctx context.Context, clusterID string) (int64, error) {
-	row := q.db.QueryRow(ctx, countLeasesByClusterId, clusterID)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
 const deleteExpiredLeases = `-- name: DeleteExpiredLeases :exec
 DELETE FROM leases WHERE renewed_at < $1
 `
 
 func (q *Queries) DeleteExpiredLeases(ctx context.Context, expirationTime time.Time) error {
 	_, err := q.db.Exec(ctx, deleteExpiredLeases, expirationTime)
-	return err
-}
-
-const deleteLease = `-- name: DeleteLease :exec
-DELETE FROM leases WHERE id = $1
-`
-
-func (q *Queries) DeleteLease(ctx context.Context, id string) error {
-	_, err := q.db.Exec(ctx, deleteLease, id)
-	return err
-}
-
-const deleteLeasesByClusterId = `-- name: DeleteLeasesByClusterId :exec
-DELETE FROM leases WHERE cluster_id = $1
-`
-
-func (q *Queries) DeleteLeasesByClusterId(ctx context.Context, clusterID string) error {
-	_, err := q.db.Exec(ctx, deleteLeasesByClusterId, clusterID)
 	return err
 }
 
@@ -69,40 +40,6 @@ func (q *Queries) FindLeaseById(ctx context.Context, leaseID string) (Lease, err
 		&i.UpdatedAt,
 	)
 	return i, err
-}
-
-const getAllLeases = `-- name: GetAllLeases :many
-SELECT id, identifier, cluster_id, acquired_at, renewed_at, created_at, updated_at
-FROM leases 
-ORDER BY renewed_at DESC
-`
-
-func (q *Queries) GetAllLeases(ctx context.Context) ([]Lease, error) {
-	rows, err := q.db.Query(ctx, getAllLeases)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Lease
-	for rows.Next() {
-		var i Lease
-		if err := rows.Scan(
-			&i.ID,
-			&i.Identifier,
-			&i.ClusterID,
-			&i.AcquiredAt,
-			&i.RenewedAt,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const getExpiredLeases = `-- name: GetExpiredLeases :many
@@ -140,34 +77,6 @@ func (q *Queries) GetExpiredLeases(ctx context.Context, expirationTime time.Time
 	return items, nil
 }
 
-const getLatestLeaseByIdentifierAndCluster = `-- name: GetLatestLeaseByIdentifierAndCluster :one
-SELECT id, identifier, cluster_id, acquired_at, renewed_at, created_at, updated_at
-FROM leases 
-WHERE identifier = $1 AND cluster_id = $2
-ORDER BY renewed_at DESC
-LIMIT 1
-`
-
-type GetLatestLeaseByIdentifierAndClusterParams struct {
-	Identifier string `db:"identifier" json:"identifier"`
-	ClusterID  string `db:"cluster_id" json:"cluster_id"`
-}
-
-func (q *Queries) GetLatestLeaseByIdentifierAndCluster(ctx context.Context, arg GetLatestLeaseByIdentifierAndClusterParams) (Lease, error) {
-	row := q.db.QueryRow(ctx, getLatestLeaseByIdentifierAndCluster, arg.Identifier, arg.ClusterID)
-	var i Lease
-	err := row.Scan(
-		&i.ID,
-		&i.Identifier,
-		&i.ClusterID,
-		&i.AcquiredAt,
-		&i.RenewedAt,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
 const getLeaseByClusterId = `-- name: GetLeaseByClusterId :one
 SELECT id, identifier, cluster_id, acquired_at, renewed_at, created_at, updated_at
 FROM leases 
@@ -187,41 +96,6 @@ func (q *Queries) GetLeaseByClusterId(ctx context.Context, clusterID string) (Le
 		&i.UpdatedAt,
 	)
 	return i, err
-}
-
-const getLeasesByIdentifier = `-- name: GetLeasesByIdentifier :many
-SELECT id, identifier, cluster_id, acquired_at, renewed_at, created_at, updated_at
-FROM leases 
-WHERE identifier = $1
-ORDER BY renewed_at DESC
-`
-
-func (q *Queries) GetLeasesByIdentifier(ctx context.Context, identifier string) ([]Lease, error) {
-	rows, err := q.db.Query(ctx, getLeasesByIdentifier, identifier)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Lease
-	for rows.Next() {
-		var i Lease
-		if err := rows.Scan(
-			&i.ID,
-			&i.Identifier,
-			&i.ClusterID,
-			&i.AcquiredAt,
-			&i.RenewedAt,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const insertLease = `-- name: InsertLease :one
@@ -286,47 +160,6 @@ func (q *Queries) UpdateLease(ctx context.Context, arg UpdateLeaseParams) (Lease
 		arg.AcquiredAt,
 		arg.RenewedAt,
 		arg.ID,
-	)
-	var i Lease
-	err := row.Scan(
-		&i.ID,
-		&i.Identifier,
-		&i.ClusterID,
-		&i.AcquiredAt,
-		&i.RenewedAt,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const upsertLease = `-- name: UpsertLease :one
-INSERT INTO leases (id, identifier, cluster_id, acquired_at, renewed_at)
-VALUES ($1, $2, $3, $4, $5)
-ON CONFLICT (id) DO UPDATE SET
-    identifier = EXCLUDED.identifier,
-    cluster_id = EXCLUDED.cluster_id,
-    acquired_at = EXCLUDED.acquired_at,
-    renewed_at = EXCLUDED.renewed_at,
-    updated_at = NOW()
-RETURNING id, identifier, cluster_id, acquired_at, renewed_at, created_at, updated_at
-`
-
-type UpsertLeaseParams struct {
-	ID         string             `db:"id" json:"id"`
-	Identifier string             `db:"identifier" json:"identifier"`
-	ClusterID  string             `db:"cluster_id" json:"cluster_id"`
-	AcquiredAt pgtype.Timestamptz `db:"acquired_at" json:"acquired_at"`
-	RenewedAt  pgtype.Timestamptz `db:"renewed_at" json:"renewed_at"`
-}
-
-func (q *Queries) UpsertLease(ctx context.Context, arg UpsertLeaseParams) (Lease, error) {
-	row := q.db.QueryRow(ctx, upsertLease,
-		arg.ID,
-		arg.Identifier,
-		arg.ClusterID,
-		arg.AcquiredAt,
-		arg.RenewedAt,
 	)
 	var i Lease
 	err := row.Scan(

@@ -136,52 +136,6 @@ RETURNING id, identifier, cluster_id, acquired_at, renewed_at, created_at, updat
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
-func TestSQLCLeaseQueries_UpsertLease(t *testing.T) {
-	mock, err := pgxmock.NewPool()
-	require.NoError(t, err)
-	defer mock.Close()
-
-	queries := New(mock)
-	ctx := context.Background()
-
-	expectedQuery := `INSERT INTO leases \(id, identifier, cluster_id, acquired_at, renewed_at\)
-VALUES \(\$1, \$2, \$3, \$4, \$5\)
-ON CONFLICT \(id\) DO UPDATE SET
-    identifier = EXCLUDED\.identifier,
-    cluster_id = EXCLUDED\.cluster_id,
-    acquired_at = EXCLUDED\.acquired_at,
-    renewed_at = EXCLUDED\.renewed_at,
-    updated_at = NOW\(\)
-RETURNING id, identifier, cluster_id, acquired_at, renewed_at, created_at, updated_at`
-
-	testTime := time.Now()
-	params := UpsertLeaseParams{
-		ID:         "lease-upsert-test",
-		Identifier: "upsert-identifier",
-		ClusterID:  "upsert-cluster",
-		AcquiredAt: pgtype.Timestamptz{Time: testTime, Valid: true},
-		RenewedAt:  pgtype.Timestamptz{Time: testTime, Valid: true},
-	}
-
-	rows := mock.NewRows([]string{
-		"id", "identifier", "cluster_id", "acquired_at", "renewed_at", "created_at", "updated_at",
-	}).AddRow(
-		"lease-upsert-test", "upsert-identifier", "upsert-cluster", testTime, testTime, testTime, testTime,
-	)
-
-	mock.ExpectQuery(expectedQuery).WithArgs(
-		params.ID, params.Identifier, params.ClusterID, params.AcquiredAt, params.RenewedAt,
-	).WillReturnRows(rows)
-
-	result, err := queries.UpsertLease(ctx, params)
-
-	assert.NoError(t, err)
-	assert.Equal(t, "lease-upsert-test", result.ID)
-	assert.Equal(t, "upsert-identifier", result.Identifier)
-	assert.Equal(t, "upsert-cluster", result.ClusterID)
-	assert.NoError(t, mock.ExpectationsWereMet())
-}
-
 func TestSQLCLeaseQueries_GetLeaseByClusterId(t *testing.T) {
 	mock, err := pgxmock.NewPool()
 	require.NoError(t, err)
@@ -209,41 +163,6 @@ WHERE cluster_id = \$1`
 	assert.Equal(t, "lease-target-cluster", result.ID)
 	assert.Equal(t, "target-identifier", result.Identifier)
 	assert.Equal(t, "target-cluster", result.ClusterID)
-	assert.NoError(t, mock.ExpectationsWereMet())
-}
-
-func TestSQLCLeaseQueries_GetLeasesByIdentifier(t *testing.T) {
-	mock, err := pgxmock.NewPool()
-	require.NoError(t, err)
-	defer mock.Close()
-
-	queries := New(mock)
-	ctx := context.Background()
-
-	expectedQuery := `SELECT id, identifier, cluster_id, acquired_at, renewed_at, created_at, updated_at
-FROM leases 
-WHERE identifier = \$1
-ORDER BY renewed_at DESC`
-
-	testTime := time.Now()
-	rows := mock.NewRows([]string{
-		"id", "identifier", "cluster_id", "acquired_at", "renewed_at", "created_at", "updated_at",
-	}).AddRow(
-		"lease-cluster1", "common-identifier", "cluster1", testTime, testTime, testTime, testTime,
-	).AddRow(
-		"lease-cluster2", "common-identifier", "cluster2", testTime.Add(-time.Hour), testTime.Add(-time.Hour), testTime, testTime,
-	)
-
-	mock.ExpectQuery(expectedQuery).WithArgs("common-identifier").WillReturnRows(rows)
-
-	result, err := queries.GetLeasesByIdentifier(ctx, "common-identifier")
-
-	assert.NoError(t, err)
-	assert.Len(t, result, 2)
-	assert.Equal(t, "lease-cluster1", result[0].ID)
-	assert.Equal(t, "lease-cluster2", result[1].ID)
-	assert.Equal(t, "common-identifier", result[0].Identifier)
-	assert.Equal(t, "common-identifier", result[1].Identifier)
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
@@ -284,42 +203,6 @@ ORDER BY renewed_at ASC`
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
-func TestSQLCLeaseQueries_DeleteLease(t *testing.T) {
-	mock, err := pgxmock.NewPool()
-	require.NoError(t, err)
-	defer mock.Close()
-
-	queries := New(mock)
-	ctx := context.Background()
-
-	expectedQuery := `DELETE FROM leases WHERE id = \$1`
-
-	mock.ExpectExec(expectedQuery).WithArgs("lease-to-delete").WillReturnResult(pgxmock.NewResult("DELETE", 1))
-
-	err = queries.DeleteLease(ctx, "lease-to-delete")
-
-	assert.NoError(t, err)
-	assert.NoError(t, mock.ExpectationsWereMet())
-}
-
-func TestSQLCLeaseQueries_DeleteLeasesByClusterId(t *testing.T) {
-	mock, err := pgxmock.NewPool()
-	require.NoError(t, err)
-	defer mock.Close()
-
-	queries := New(mock)
-	ctx := context.Background()
-
-	expectedQuery := `DELETE FROM leases WHERE cluster_id = \$1`
-
-	mock.ExpectExec(expectedQuery).WithArgs("cluster-to-delete").WillReturnResult(pgxmock.NewResult("DELETE", 3))
-
-	err = queries.DeleteLeasesByClusterId(ctx, "cluster-to-delete")
-
-	assert.NoError(t, err)
-	assert.NoError(t, mock.ExpectationsWereMet())
-}
-
 func TestSQLCLeaseQueries_DeleteExpiredLeases(t *testing.T) {
 	mock, err := pgxmock.NewPool()
 	require.NoError(t, err)
@@ -337,102 +220,6 @@ func TestSQLCLeaseQueries_DeleteExpiredLeases(t *testing.T) {
 	err = queries.DeleteExpiredLeases(ctx, expirationTime)
 
 	assert.NoError(t, err)
-	assert.NoError(t, mock.ExpectationsWereMet())
-}
-
-func TestSQLCLeaseQueries_GetAllLeases(t *testing.T) {
-	mock, err := pgxmock.NewPool()
-	require.NoError(t, err)
-	defer mock.Close()
-
-	queries := New(mock)
-	ctx := context.Background()
-
-	expectedQuery := `SELECT id, identifier, cluster_id, acquired_at, renewed_at, created_at, updated_at
-FROM leases 
-ORDER BY renewed_at DESC`
-
-	testTime := time.Now()
-	rows := mock.NewRows([]string{
-		"id", "identifier", "cluster_id", "acquired_at", "renewed_at", "created_at", "updated_at",
-	}).AddRow(
-		"lease-1", "identifier-1", "cluster-1", testTime, testTime, testTime, testTime,
-	).AddRow(
-		"lease-2", "identifier-2", "cluster-2", testTime.Add(-time.Hour), testTime.Add(-time.Hour), testTime, testTime,
-	).AddRow(
-		"lease-3", "identifier-3", "cluster-3", testTime.Add(-2*time.Hour), testTime.Add(-2*time.Hour), testTime, testTime,
-	)
-
-	mock.ExpectQuery(expectedQuery).WillReturnRows(rows)
-
-	result, err := queries.GetAllLeases(ctx)
-
-	assert.NoError(t, err)
-	assert.Len(t, result, 3)
-	assert.Equal(t, "lease-1", result[0].ID)
-	assert.Equal(t, "lease-2", result[1].ID)
-	assert.Equal(t, "lease-3", result[2].ID)
-	// Verify ordering by renewed_at DESC
-	assert.True(t, result[0].RenewedAt.Time.After(result[1].RenewedAt.Time) || result[0].RenewedAt.Time.Equal(result[1].RenewedAt.Time))
-	assert.True(t, result[1].RenewedAt.Time.After(result[2].RenewedAt.Time) || result[1].RenewedAt.Time.Equal(result[2].RenewedAt.Time))
-	assert.NoError(t, mock.ExpectationsWereMet())
-}
-
-func TestSQLCLeaseQueries_CountLeasesByClusterId(t *testing.T) {
-	mock, err := pgxmock.NewPool()
-	require.NoError(t, err)
-	defer mock.Close()
-
-	queries := New(mock)
-	ctx := context.Background()
-
-	expectedQuery := `SELECT COUNT\(\*\) FROM leases WHERE cluster_id = \$1`
-
-	rows := mock.NewRows([]string{"count"}).AddRow(int64(42))
-
-	mock.ExpectQuery(expectedQuery).WithArgs("test-cluster").WillReturnRows(rows)
-
-	result, err := queries.CountLeasesByClusterId(ctx, "test-cluster")
-
-	assert.NoError(t, err)
-	assert.Equal(t, int64(42), result)
-	assert.NoError(t, mock.ExpectationsWereMet())
-}
-
-func TestSQLCLeaseQueries_GetLatestLeaseByIdentifierAndCluster(t *testing.T) {
-	mock, err := pgxmock.NewPool()
-	require.NoError(t, err)
-	defer mock.Close()
-
-	queries := New(mock)
-	ctx := context.Background()
-
-	expectedQuery := `SELECT id, identifier, cluster_id, acquired_at, renewed_at, created_at, updated_at
-FROM leases 
-WHERE identifier = \$1 AND cluster_id = \$2
-ORDER BY renewed_at DESC
-LIMIT 1`
-
-	testTime := time.Now()
-	params := GetLatestLeaseByIdentifierAndClusterParams{
-		Identifier: "specific-identifier",
-		ClusterID:  "specific-cluster",
-	}
-
-	rows := mock.NewRows([]string{
-		"id", "identifier", "cluster_id", "acquired_at", "renewed_at", "created_at", "updated_at",
-	}).AddRow(
-		"lease-specific", "specific-identifier", "specific-cluster", testTime, testTime, testTime, testTime,
-	)
-
-	mock.ExpectQuery(expectedQuery).WithArgs(params.Identifier, params.ClusterID).WillReturnRows(rows)
-
-	result, err := queries.GetLatestLeaseByIdentifierAndCluster(ctx, params)
-
-	assert.NoError(t, err)
-	assert.Equal(t, "lease-specific", result.ID)
-	assert.Equal(t, "specific-identifier", result.Identifier)
-	assert.Equal(t, "specific-cluster", result.ClusterID)
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
@@ -456,18 +243,6 @@ func TestSQLCLeaseQueries_EdgeCases(t *testing.T) {
 				return err
 			},
 			expectedError: true,
-		},
-		{
-			name: "DeleteLease - No rows affected",
-			setupMock: func(mock pgxmock.PgxPoolIface) {
-				mock.ExpectExec(`DELETE FROM leases WHERE id = \$1`).
-					WithArgs("nonexistent").
-					WillReturnResult(pgxmock.NewResult("DELETE", 0))
-			},
-			executeQuery: func(q *Queries, ctx context.Context) error {
-				return q.DeleteLease(ctx, "nonexistent")
-			},
-			expectedError: false, // DELETE with 0 rows is not an error in PostgreSQL
 		},
 		{
 			name: "InsertLease - Constraint violation",
@@ -645,44 +420,6 @@ func BenchmarkSQLCLeaseQueries_FindLeaseById(b *testing.B) {
 	}
 }
 
-func BenchmarkSQLCLeaseQueries_UpsertLease(b *testing.B) {
-	mock, err := pgxmock.NewPool()
-	require.NoError(b, err)
-	defer mock.Close()
-
-	queries := New(mock)
-	ctx := context.Background()
-
-	// Setup mock expectations
-	testTime := time.Now()
-	rows := mock.NewRows([]string{
-		"id", "identifier", "cluster_id", "acquired_at", "renewed_at", "created_at", "updated_at",
-	})
-
-	for i := 0; i < b.N; i++ {
-		rows.AddRow("lease-test", "identifier", "cluster", testTime, testTime, testTime, testTime)
-		mock.ExpectQuery(`INSERT INTO leases`).
-			WithArgs("lease-test", "identifier", "cluster", pgtype.Timestamptz{Time: testTime, Valid: true}, pgtype.Timestamptz{Time: testTime, Valid: true}).
-			WillReturnRows(rows)
-	}
-
-	params := UpsertLeaseParams{
-		ID:         "lease-test",
-		Identifier: "identifier",
-		ClusterID:  "cluster",
-		AcquiredAt: pgtype.Timestamptz{Time: testTime, Valid: true},
-		RenewedAt:  pgtype.Timestamptz{Time: testTime, Valid: true},
-	}
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, err := queries.UpsertLease(ctx, params)
-		if err != nil {
-			b.Fatal(err)
-		}
-	}
-}
-
 // Test query result mapping with various timestamp scenarios
 func TestSQLCLeaseQueries_TimestampHandling(t *testing.T) {
 	mock, err := pgxmock.NewPool()
@@ -782,53 +519,6 @@ func TestSQLCLeaseQueries_ConcurrentExecution(t *testing.T) {
 		assert.Equal(t, "concurrent-identifier", result.Identifier)
 		assert.Equal(t, "concurrent-cluster", result.ClusterID)
 	}
-
-	assert.NoError(t, mock.ExpectationsWereMet())
-}
-
-// Test complex query ordering and filtering
-func TestSQLCLeaseQueries_ComplexQueries(t *testing.T) {
-	mock, err := pgxmock.NewPool()
-	require.NoError(t, err)
-	defer mock.Close()
-
-	queries := New(mock)
-	ctx := context.Background()
-
-	t.Run("GetLeasesByIdentifier - Ordering verification", func(t *testing.T) {
-		expectedQuery := `SELECT id, identifier, cluster_id, acquired_at, renewed_at, created_at, updated_at FROM leases WHERE identifier = \$1 ORDER BY renewed_at DESC`
-
-		// Create leases with different renewal times
-		time1 := time.Date(2023, 1, 1, 10, 0, 0, 0, time.UTC)
-		time2 := time.Date(2023, 1, 1, 11, 0, 0, 0, time.UTC)
-		time3 := time.Date(2023, 1, 1, 12, 0, 0, 0, time.UTC)
-
-		rows := mock.NewRows([]string{
-			"id", "identifier", "cluster_id", "acquired_at", "renewed_at", "created_at", "updated_at",
-		}).AddRow(
-			"lease-3", "shared-id", "cluster-3", time3, time3, time3, time3, // Most recent
-		).AddRow(
-			"lease-2", "shared-id", "cluster-2", time2, time2, time2, time2, // Middle
-		).AddRow(
-			"lease-1", "shared-id", "cluster-1", time1, time1, time1, time1, // Oldest
-		)
-
-		mock.ExpectQuery(expectedQuery).WithArgs("shared-id").WillReturnRows(rows)
-
-		result, err := queries.GetLeasesByIdentifier(ctx, "shared-id")
-
-		assert.NoError(t, err)
-		assert.Len(t, result, 3)
-
-		// Verify descending order by renewed_at
-		assert.Equal(t, "lease-3", result[0].ID)
-		assert.Equal(t, "lease-2", result[1].ID)
-		assert.Equal(t, "lease-1", result[2].ID)
-
-		// Verify timestamp ordering
-		assert.True(t, result[0].RenewedAt.Time.After(result[1].RenewedAt.Time))
-		assert.True(t, result[1].RenewedAt.Time.After(result[2].RenewedAt.Time))
-	})
 
 	assert.NoError(t, mock.ExpectationsWereMet())
 }

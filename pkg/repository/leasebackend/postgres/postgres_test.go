@@ -34,19 +34,9 @@ func (m *MockQueriesInterface) UpdateLease(ctx context.Context, arg sqlc.UpdateL
 	return args.Get(0).(sqlc.Lease), args.Error(1)
 }
 
-func (m *MockQueriesInterface) UpsertLease(ctx context.Context, arg sqlc.UpsertLeaseParams) (sqlc.Lease, error) {
-	args := m.Called(ctx, arg)
-	return args.Get(0).(sqlc.Lease), args.Error(1)
-}
-
 func (m *MockQueriesInterface) GetLeaseByClusterId(ctx context.Context, clusterID string) (sqlc.Lease, error) {
 	args := m.Called(ctx, clusterID)
 	return args.Get(0).(sqlc.Lease), args.Error(1)
-}
-
-func (m *MockQueriesInterface) GetLeasesByIdentifier(ctx context.Context, identifier string) ([]sqlc.Lease, error) {
-	args := m.Called(ctx, identifier)
-	return args.Get(0).([]sqlc.Lease), args.Error(1)
 }
 
 func (m *MockQueriesInterface) GetExpiredLeases(ctx context.Context, expirationTime time.Time) ([]sqlc.Lease, error) {
@@ -54,34 +44,9 @@ func (m *MockQueriesInterface) GetExpiredLeases(ctx context.Context, expirationT
 	return args.Get(0).([]sqlc.Lease), args.Error(1)
 }
 
-func (m *MockQueriesInterface) DeleteLease(ctx context.Context, id string) error {
-	args := m.Called(ctx, id)
-	return args.Error(0)
-}
-
-func (m *MockQueriesInterface) DeleteLeasesByClusterId(ctx context.Context, clusterID string) error {
-	args := m.Called(ctx, clusterID)
-	return args.Error(0)
-}
-
 func (m *MockQueriesInterface) DeleteExpiredLeases(ctx context.Context, expirationTime time.Time) error {
 	args := m.Called(ctx, expirationTime)
 	return args.Error(0)
-}
-
-func (m *MockQueriesInterface) GetAllLeases(ctx context.Context) ([]sqlc.Lease, error) {
-	args := m.Called(ctx)
-	return args.Get(0).([]sqlc.Lease), args.Error(1)
-}
-
-func (m *MockQueriesInterface) CountLeasesByClusterId(ctx context.Context, clusterID string) (int64, error) {
-	args := m.Called(ctx, clusterID)
-	return args.Get(0).(int64), args.Error(1)
-}
-
-func (m *MockQueriesInterface) GetLatestLeaseByIdentifierAndCluster(ctx context.Context, arg sqlc.GetLatestLeaseByIdentifierAndClusterParams) (sqlc.Lease, error) {
-	args := m.Called(ctx, arg)
-	return args.Get(0).(sqlc.Lease), args.Error(1)
 }
 
 func createPostgresLeaseBackend(queries sqlc.LeaseBackendQueriesInterface, db sqlc.DatabaseInterface) *PostgresLeaseBackend {

@@ -38,18 +38,6 @@ RETURNING name, number, created_at, updated_at`,
 			name:  "DeleteAllExecutionSequences",
 			query: "DELETE FROM execution_sequences",
 		},
-		{
-			name:  "GetAllExecutionSequences",
-			query: "SELECT name, number, created_at, updated_at FROM execution_sequences ORDER BY created_at DESC",
-		},
-		{
-			name:  "GetExecutionSequencesByNames",
-			query: "SELECT name, number, created_at, updated_at FROM execution_sequences WHERE name = ANY($1) ORDER BY name",
-		},
-		{
-			name:  "CountExecutionSequences",
-			query: "SELECT COUNT(*) FROM execution_sequences",
-		},
 	}
 
 	for _, tt := range tests {
@@ -78,15 +66,6 @@ RETURNING name, number, created_at, updated_at`,
 			case "DeleteAllExecutionSequences":
 				assert.Contains(t, tt.query, "DELETE", "Should be a DELETE query")
 				assert.NotContains(t, tt.query, "WHERE", "Should not have WHERE clause")
-			case "GetAllExecutionSequences":
-				assert.Contains(t, tt.query, "SELECT", "Should be a SELECT query")
-				assert.Contains(t, tt.query, "ORDER BY", "Should have ordering")
-			case "GetExecutionSequencesByNames":
-				assert.Contains(t, tt.query, "SELECT", "Should be a SELECT query")
-				assert.Contains(t, tt.query, "ANY($1)", "Should use ANY for array parameter")
-				assert.Contains(t, tt.query, "ORDER BY", "Should have ordering")
-			case "CountExecutionSequences":
-				assert.Contains(t, tt.query, "SELECT COUNT(*)", "Should be a COUNT query")
 			}
 		})
 	}

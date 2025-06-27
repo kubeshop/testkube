@@ -21,17 +21,3 @@ DELETE FROM execution_sequences WHERE name = ANY(@names);
 
 -- name: DeleteAllExecutionSequences :exec
 DELETE FROM execution_sequences;
-
--- name: GetAllExecutionSequences :many
-SELECT name, number, created_at, updated_at
-FROM execution_sequences 
-ORDER BY created_at DESC;
-
--- name: GetExecutionSequencesByNames :many
-SELECT name, number, created_at, updated_at
-FROM execution_sequences 
-WHERE name = ANY(@names)
-ORDER BY name;
-
--- name: CountExecutionSequences :one
-SELECT COUNT(*) FROM execution_sequences;

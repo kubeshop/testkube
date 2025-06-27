@@ -9,17 +9,6 @@ import (
 	"context"
 )
 
-const countExecutionSequences = `-- name: CountExecutionSequences :one
-SELECT COUNT(*) FROM execution_sequences
-`
-
-func (q *Queries) CountExecutionSequences(ctx context.Context) (int64, error) {
-	row := q.db.QueryRow(ctx, countExecutionSequences)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
 const deleteAllExecutionSequences = `-- name: DeleteAllExecutionSequences :exec
 DELETE FROM execution_sequences
 `
@@ -47,37 +36,6 @@ func (q *Queries) DeleteExecutionSequences(ctx context.Context, names []string) 
 	return err
 }
 
-const getAllExecutionSequences = `-- name: GetAllExecutionSequences :many
-SELECT name, number, created_at, updated_at
-FROM execution_sequences 
-ORDER BY created_at DESC
-`
-
-func (q *Queries) GetAllExecutionSequences(ctx context.Context) ([]ExecutionSequence, error) {
-	rows, err := q.db.Query(ctx, getAllExecutionSequences)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ExecutionSequence
-	for rows.Next() {
-		var i ExecutionSequence
-		if err := rows.Scan(
-			&i.Name,
-			&i.Number,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getExecutionSequence = `-- name: GetExecutionSequence :one
 
 SELECT name, number, created_at, updated_at
@@ -96,38 +54,6 @@ func (q *Queries) GetExecutionSequence(ctx context.Context, name string) (Execut
 		&i.UpdatedAt,
 	)
 	return i, err
-}
-
-const getExecutionSequencesByNames = `-- name: GetExecutionSequencesByNames :many
-SELECT name, number, created_at, updated_at
-FROM execution_sequences 
-WHERE name = ANY($1)
-ORDER BY name
-`
-
-func (q *Queries) GetExecutionSequencesByNames(ctx context.Context, names []string) ([]ExecutionSequence, error) {
-	rows, err := q.db.Query(ctx, getExecutionSequencesByNames, names)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ExecutionSequence
-	for rows.Next() {
-		var i ExecutionSequence
-		if err := rows.Scan(
-			&i.Name,
-			&i.Number,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const upsertAndIncrementExecutionSequence = `-- name: UpsertAndIncrementExecutionSequence :one

@@ -153,11 +153,6 @@ func (r *PostgresRepository) Get(ctx context.Context, id string) (testkube.TestW
 		return testkube.TestWorkflowExecution{}, fmt.Errorf("failed to convert execution: %w", err)
 	}
 
-	// Populate config params if resolved workflow exists
-	if execution.ResolvedWorkflow != nil && execution.ResolvedWorkflow.Spec != nil {
-		execution.ConfigParams = populateConfigParams(execution.ResolvedWorkflow, execution.ConfigParams)
-	}
-
 	return *execution.UnscapeDots(), nil
 }
 
@@ -249,6 +244,11 @@ func (r *PostgresRepository) convertCompleteRowToExecutionWithRelated(row sqlc.G
 				return nil, fmt.Errorf("failed to parse resource aggregations step: %w", err)
 			}
 		}
+	}
+
+	// Populate config params if resolved workflow exists
+	if execution.ResolvedWorkflow != nil && execution.ResolvedWorkflow.Spec != nil {
+		execution.ConfigParams = populateConfigParams(execution.ResolvedWorkflow, execution.ConfigParams)
 	}
 
 	return execution, nil
@@ -423,11 +423,6 @@ func (r *PostgresRepository) GetByNameAndTestWorkflow(ctx context.Context, name,
 		return testkube.TestWorkflowExecution{}, fmt.Errorf("failed to convert execution: %w", err)
 	}
 
-	// Populate config params if resolved workflow exists
-	if execution.ResolvedWorkflow != nil && execution.ResolvedWorkflow.Spec != nil {
-		execution.ConfigParams = populateConfigParams(execution.ResolvedWorkflow, execution.ConfigParams)
-	}
-
 	return *execution.UnscapeDots(), nil
 }
 
@@ -446,11 +441,6 @@ func (r *PostgresRepository) GetLatestByTestWorkflow(ctx context.Context, workfl
 	execution, err := r.convertCompleteRowToExecutionWithRelated(sqlc.GetTestWorkflowExecutionRow(row))
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert execution: %w", err)
-	}
-
-	// Populate config params if resolved workflow exists
-	if execution.ResolvedWorkflow != nil && execution.ResolvedWorkflow.Spec != nil {
-		execution.ConfigParams = populateConfigParams(execution.ResolvedWorkflow, execution.ConfigParams)
 	}
 
 	return execution.UnscapeDots(), nil
@@ -476,11 +466,6 @@ func (r *PostgresRepository) GetLatestByTestWorkflows(ctx context.Context, workf
 
 		result[i] = r.executionToSummary(*execution)
 		result[i].UnscapeDots()
-
-		// Populate config params if resolved workflow exists
-		if execution.ResolvedWorkflow != nil && execution.ResolvedWorkflow.Spec != nil {
-			result[i].ConfigParams = populateConfigParams(execution.ResolvedWorkflow, result[i].ConfigParams)
-		}
 	}
 
 	return result, nil
@@ -501,11 +486,6 @@ func (r *PostgresRepository) GetRunning(ctx context.Context) ([]testkube.TestWor
 		}
 
 		result[i] = *execution.UnscapeDots()
-
-		// Populate config params if resolved workflow exists
-		if execution.ResolvedWorkflow != nil && execution.ResolvedWorkflow.Spec != nil {
-			result[i].ConfigParams = populateConfigParams(execution.ResolvedWorkflow, result[i].ConfigParams)
-		}
 	}
 
 	return result, nil
@@ -527,11 +507,6 @@ func (r *PostgresRepository) GetFinished(ctx context.Context, filter testworkflo
 		}
 
 		result[i] = *execution.UnscapeDots()
-
-		// Populate config params if resolved workflow exists
-		if execution.ResolvedWorkflow != nil && execution.ResolvedWorkflow.Spec != nil {
-			result[i].ConfigParams = populateConfigParams(execution.ResolvedWorkflow, result[i].ConfigParams)
-		}
 	}
 
 	return result, nil
@@ -592,11 +567,6 @@ func (r *PostgresRepository) GetExecutions(ctx context.Context, filter testworkf
 		}
 
 		result[i] = *execution.UnscapeDots()
-
-		// Populate config params if resolved workflow exists
-		if execution.ResolvedWorkflow != nil && execution.ResolvedWorkflow.Spec != nil {
-			result[i].ConfigParams = populateConfigParams(execution.ResolvedWorkflow, result[i].ConfigParams)
-		}
 	}
 
 	return result, nil
@@ -619,11 +589,6 @@ func (r *PostgresRepository) GetExecutionsSummary(ctx context.Context, filter te
 
 		result[i] = r.executionToSummary(*execution)
 		result[i].UnscapeDots()
-
-		// Populate config params if resolved workflow exists
-		if execution.ResolvedWorkflow != nil && execution.ResolvedWorkflow.Spec != nil {
-			result[i].ConfigParams = populateConfigParams(execution.ResolvedWorkflow, result[i].ConfigParams)
-		}
 	}
 
 	return result, nil
@@ -885,6 +850,7 @@ func (r *PostgresRepository) updateExecutionWithTransaction(ctx context.Context,
 
 	// Delete and re-insert related data
 	// Delete existing signatures, outputs, reports
+
 	// (These would need to be implemented as additional queries)
 
 	// Re-insert all related data
@@ -1201,11 +1167,6 @@ func (r *PostgresRepository) GetUnassigned(ctx context.Context) ([]testkube.Test
 		}
 
 		result[i] = *execution.UnscapeDots()
-
-		// Populate config params if resolved workflow exists
-		if execution.ResolvedWorkflow != nil && execution.ResolvedWorkflow.Spec != nil {
-			result[i].ConfigParams = populateConfigParams(execution.ResolvedWorkflow, result[i].ConfigParams)
-		}
 	}
 
 	return result, nil
