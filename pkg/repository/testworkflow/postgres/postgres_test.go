@@ -965,42 +965,41 @@ func TestPostgresRepository_GetTestWorkflowMetrics(t *testing.T) {
 	})
 }
 
-/*
-	func TestPostgresRepository_GetNextExecutionNumber(t *testing.T) {
+func TestPostgresRepository_GetNextExecutionNumber(t *testing.T) {
+	t.Run("Success", func(t *testing.T) {
 		mockSeq := &MockSequenceRepository{}
 		repo := &PostgresRepository{
 			sequenceRepository: mockSeq,
 		}
 
-		t.Run("Success", func(t *testing.T) {
-			ctx := context.Background()
-			name := "test-workflow"
-			expectedNumber := int32(5)
+		ctx := context.Background()
+		name := "test-workflow"
+		expectedNumber := 5
 
-			mockSeq.On("GetNextExecutionNumber", ctx, name, sequence.ExecutionTypeTestWorkflow).Return(expectedNumber, nil)
+		mockSeq.On("GetNextExecutionNumber", ctx, name, sequence.ExecutionTypeTestWorkflow).Return(expectedNumber, nil)
 
-			result, err := repo.GetNextExecutionNumber(ctx, name)
+		result, err := repo.GetNextExecutionNumber(ctx, name)
 
-			assert.NoError(t, err)
-			assert.Equal(t, expectedNumber, result)
-			mockSeq.AssertExpectations(t)
-		})
+		assert.NoError(t, err)
+		assert.Equal(t, int32(expectedNumber), result)
+		mockSeq.AssertExpectations(t)
+	})
 
-		t.Run("NoSequenceRepository", func(t *testing.T) {
-			repo := &PostgresRepository{
-				sequenceRepository: nil,
-			}
-			ctx := context.Background()
-			name := "test-workflow"
+	t.Run("NoSequenceRepository", func(t *testing.T) {
+		repo := &PostgresRepository{
+			sequenceRepository: nil,
+		}
+		ctx := context.Background()
+		name := "test-workflow"
 
-			result, err := repo.GetNextExecutionNumber(ctx, name)
+		result, err := repo.GetNextExecutionNumber(ctx, name)
 
-			assert.Error(t, err)
-			assert.Equal(t, int32(0), result)
-			assert.Contains(t, err.Error(), "no sequence repository provided")
-		})
-	}
-*/
+		assert.Error(t, err)
+		assert.Equal(t, int32(0), result)
+		assert.Contains(t, err.Error(), "no sequence repository provided")
+	})
+}
+
 func TestPostgresRepository_Assign(t *testing.T) {
 	mockQueries := &MockTestWorkflowExecutionQueriesInterface{}
 	repo := &PostgresRepository{queries: mockQueries}
@@ -1052,17 +1051,17 @@ func TestPostgresRepository_Assign(t *testing.T) {
 	})
 }
 
-/*
 func TestPostgresRepository_AbortIfQueued(t *testing.T) {
-	mockQueries := &MockTestWorkflowExecutionQueriesInterface{}
-	mockDB := &MockDatabaseInterface{}
-	mockTx := &MockTx{}
-	repo := &PostgresRepository{
-		db:      mockDB,
-		queries: mockQueries,
-	}
 
 	t.Run("Success", func(t *testing.T) {
+		mockQueries := &MockTestWorkflowExecutionQueriesInterface{}
+		mockDB := &MockDatabaseInterface{}
+		mockTx := &MockTx{}
+		repo := &PostgresRepository{
+			db:      mockDB,
+			queries: mockQueries,
+		}
+
 		ctx := context.Background()
 		id := "test-id"
 
@@ -1086,6 +1085,14 @@ func TestPostgresRepository_AbortIfQueued(t *testing.T) {
 	})
 
 	t.Run("NotFound", func(t *testing.T) {
+		mockQueries := &MockTestWorkflowExecutionQueriesInterface{}
+		mockDB := &MockDatabaseInterface{}
+		mockTx := &MockTx{}
+		repo := &PostgresRepository{
+			db:      mockDB,
+			queries: mockQueries,
+		}
+
 		ctx := context.Background()
 		id := "test-id"
 
@@ -1106,7 +1113,7 @@ func TestPostgresRepository_AbortIfQueued(t *testing.T) {
 		mockTx.AssertExpectations(t)
 	})
 }
-*/
+
 // Test helper functions
 func TestTypeConversionHelpers(t *testing.T) {
 	t.Run("toPgText", func(t *testing.T) {
@@ -1155,22 +1162,16 @@ func TestTypeConversionHelpers(t *testing.T) {
 	})
 }
 
-/*
-	func TestBuildTestWorkflowExecutionParams(t *testing.T) {
-		repo := &PostgresRepository{}
-		filter := createTestFilter()
+func TestBuildTestWorkflowExecutionParams(t *testing.T) {
+	repo := &PostgresRepository{}
+	filter := testworkflow.NewExecutionsFilter().WithName("test-workflow")
 
-		// Test basic filter
-		filter.On("Name").Return("test-workflow")
-		filter.On("NameDefined").Return(true)
+	params := repo.buildTestWorkflowExecutionParams(filter)
 
-		params := repo.buildTestWorkflowExecutionParams(filter)
+	assert.Equal(t, "test-workflow", params.WorkflowName.String)
+	assert.True(t, params.WorkflowName.Valid)
+}
 
-		assert.Equal(t, "test-workflow", params.WorkflowName.String)
-		assert.True(t, params.WorkflowName.Valid)
-		filter.AssertExpectations(t)
-	}
-*/
 func TestParseTagSelector(t *testing.T) {
 	repo := &PostgresRepository{}
 
