@@ -688,8 +688,23 @@ WHERE id = @execution_id;
 INSERT INTO test_workflow_reports (execution_id, ref, kind, file, summary)
 VALUES (@execution_id, @ref, @kind, @file, @summary);
 
+-- name: DeleteTestWorkflowSignatures :exec
+DELETE FROM test_workflow_signatures WHERE execution_id = @execution_id;
+
+-- name: DeleteTestWorkflowResult :exec
+DELETE FROM test_workflow_results WHERE execution_id = @execution_id;
+
 -- name: DeleteTestWorkflowOutputs :exec
 DELETE FROM test_workflow_outputs WHERE execution_id = @execution_id;
+
+-- name: DeleteTestWorkflowReports :exec
+DELETE FROM test_workflow_reports WHERE execution_id = @execution_id;
+
+-- name: DeleteTestWorkflowResourceAggregations :exec
+DELETE FROM test_workflow_resource_aggregations WHERE execution_id = @execution_id;
+
+-- name: DeleteTestWorkflow :exec
+DELETE FROM test_workflows WHERE execution_id = @execution_id AND workflow_type = @workflow_type;
 
 -- name: UpdateTestWorkflowExecutionResourceAggregations :exec
 UPDATE test_workflow_resource_aggregations 
