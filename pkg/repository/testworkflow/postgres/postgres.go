@@ -768,6 +768,58 @@ func (r *PostgresRepository) insertOutputs(ctx context.Context, qtx sqlc.TestWor
 	return nil
 }
 
+func (r *PostgresRepository) deleteSignatures(ctx context.Context, qtx sqlc.TestWorkflowExecutionQueriesInterface, executionId string) error {
+	if err := qtx.DeleteTestWorkflowSignatures(ctx, executionId); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *PostgresRepository) deleteResult(ctx context.Context, qtx sqlc.TestWorkflowExecutionQueriesInterface, executionId string) error {
+	if err := qtx.DeleteTestWorkflowResult(ctx, executionId); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *PostgresRepository) deleteOutputs(ctx context.Context, qtx sqlc.TestWorkflowExecutionQueriesInterface, executionId string) error {
+	if err := qtx.DeleteTestWorkflowOutputs(ctx, executionId); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *PostgresRepository) deleteReports(ctx context.Context, qtx sqlc.TestWorkflowExecutionQueriesInterface, executionId string) error {
+	if err := qtx.DeleteTestWorkflowReports(ctx, executionId); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *PostgresRepository) DeleteResourceAggregations(ctx context.Context, qtx sqlc.TestWorkflowExecutionQueriesInterface, executionId string) error {
+	if err := qtx.DeleteTestWorkflowResourceAggregations(ctx, executionId); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *PostgresRepository) deleteTestWorkflow(ctx context.Context, qtx sqlc.TestWorkflowExecutionQueriesInterface, executionId string, workflowType string) error {
+	params := sqlc.DeleteTestWorkflowParams{
+		ExecutionID:  executionId,
+		WorkflowType: workflowType,
+	}
+	if err := qtx.DeleteTestWorkflow(ctx, params); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (r *PostgresRepository) insertReports(ctx context.Context, qtx sqlc.TestWorkflowExecutionQueriesInterface, executionId string, reports []testkube.TestWorkflowReport) error {
 	for _, report := range reports {
 		summary, _ := toJSONB(report.Summary)
@@ -850,8 +902,34 @@ func (r *PostgresRepository) updateExecutionWithTransaction(ctx context.Context,
 
 	// Delete and re-insert related data
 	// Delete existing signatures, outputs, reports
-
 	// (These would need to be implemented as additional queries)
+	if err = r.deleteSignatures(ctx, qtx, execution.Id); err != nil {
+		return err
+	}
+
+	if err = r.deleteResult(ctx, qtx, execution.Id); err != nil {
+		return err
+	}
+
+	if err = r.deleteOutputs(ctx, qtx, execution.Id); err != nil {
+		return err
+	}
+
+	if err = r.deleteReports(ctx, qtx, execution.Id); err != nil {
+		return err
+	}
+
+	if err = r.DeleteResourceAggregations(ctx, qtx, execution.Id); err != nil {
+		return err
+	}
+
+	if err = r.deleteTestWorkflow(ctx, qtx, execution.Id, "workflow"); err != nil {
+		return err
+	}
+
+	if err = r.deleteTestWorkflow(ctx, qtx, execution.Id, "resolved_workflow"); err != nil {
+		return err
+	}
 
 	// Re-insert all related data
 	if err = r.insertSignatures(ctx, qtx, execution.Id, execution.Signature, 0); err != nil {

@@ -104,6 +104,20 @@ func (q *Queries) DeleteAllTestWorkflowExecutions(ctx context.Context) error {
 	return err
 }
 
+const deleteTestWorkflow = `-- name: DeleteTestWorkflow :exec
+DELETE FROM test_workflows WHERE execution_id = $1 AND workflow_type = $2
+`
+
+type DeleteTestWorkflowParams struct {
+	ExecutionID  string `db:"execution_id" json:"execution_id"`
+	WorkflowType string `db:"workflow_type" json:"workflow_type"`
+}
+
+func (q *Queries) DeleteTestWorkflow(ctx context.Context, arg DeleteTestWorkflowParams) error {
+	_, err := q.db.Exec(ctx, deleteTestWorkflow, arg.ExecutionID, arg.WorkflowType)
+	return err
+}
+
 const deleteTestWorkflowExecutionsByTestWorkflow = `-- name: DeleteTestWorkflowExecutionsByTestWorkflow :exec
 DELETE FROM test_workflow_executions e
 USING test_workflows w

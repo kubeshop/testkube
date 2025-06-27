@@ -45,7 +45,12 @@ type TestWorkflowExecutionQueriesInterface interface {
 	UpdateTestWorkflowExecutionResourceAggregations(ctx context.Context, arg UpdateTestWorkflowExecutionResourceAggregationsParams) error
 
 	// Delete operations
+	DeleteTestWorkflowSignatures(ctx context.Context, executionID string) error
+	DeleteTestWorkflowResult(ctx context.Context, executionID string) error
 	DeleteTestWorkflowOutputs(ctx context.Context, executionID string) error
+	DeleteTestWorkflowReports(ctx context.Context, executionID string) error
+	DeleteTestWorkflowResourceAggregations(ctx context.Context, executionID string) error
+	DeleteTestWorkflow(ctx context.Context, arg DeleteTestWorkflowParams) error
 	DeleteTestWorkflowExecutionsByTestWorkflow(ctx context.Context, workflowName string) error
 	DeleteAllTestWorkflowExecutions(ctx context.Context) error
 	DeleteTestWorkflowExecutionsByTestWorkflows(ctx context.Context, workflowNames []string) error
