@@ -139,6 +139,42 @@ func (q *Queries) DeleteTestWorkflowOutputs(ctx context.Context, executionID str
 	return err
 }
 
+const deleteTestWorkflowReports = `-- name: DeleteTestWorkflowReports :exec
+DELETE FROM test_workflow_reports WHERE execution_id = $1
+`
+
+func (q *Queries) DeleteTestWorkflowReports(ctx context.Context, executionID string) error {
+	_, err := q.db.Exec(ctx, deleteTestWorkflowReports, executionID)
+	return err
+}
+
+const deleteTestWorkflowResourceAggregations = `-- name: DeleteTestWorkflowResourceAggregations :exec
+DELETE FROM test_workflow_resource_aggregations WHERE execution_id = $1
+`
+
+func (q *Queries) DeleteTestWorkflowResourceAggregations(ctx context.Context, executionID string) error {
+	_, err := q.db.Exec(ctx, deleteTestWorkflowResourceAggregations, executionID)
+	return err
+}
+
+const deleteTestWorkflowResult = `-- name: DeleteTestWorkflowResult :exec
+DELETE FROM test_workflow_results WHERE execution_id = $1
+`
+
+func (q *Queries) DeleteTestWorkflowResult(ctx context.Context, executionID string) error {
+	_, err := q.db.Exec(ctx, deleteTestWorkflowResult, executionID)
+	return err
+}
+
+const deleteTestWorkflowSignatures = `-- name: DeleteTestWorkflowSignatures :exec
+DELETE FROM test_workflow_signatures WHERE execution_id = $1
+`
+
+func (q *Queries) DeleteTestWorkflowSignatures(ctx context.Context, executionID string) error {
+	_, err := q.db.Exec(ctx, deleteTestWorkflowSignatures, executionID)
+	return err
+}
+
 const getFinishedTestWorkflowExecutions = `-- name: GetFinishedTestWorkflowExecutions :many
 SELECT 
     e.id, e.group_id, e.runner_id, e.runner_target, e.runner_original_target, e.name, e.namespace, e.number, e.scheduled_at, e.assigned_at, e.status_at, e.test_workflow_execution_name, e.disable_webhooks, e.tags, e.running_context, e.config_params, e.created_at, e.updated_at,
