@@ -462,3 +462,27 @@ spec:
       name: some-non-existant-template-name
       config:
         run: "echo 'test'"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-service-exit-code # https://linear.app/kubeshop/issue/TKC-3897/
+  labels:
+    core-tests: special-cases
+spec:
+  container:
+    image: alpine:latest
+  services:
+    slave:
+      use:
+      - name: distribute/evenly
+      image: alpine:latest
+      logs: always
+      count: 2
+      shell: 'echo "expected fail - non-zero exit code" && exit 1'
+  job:
+    activeDeadlineSeconds: 30
+  steps:
+  - name: Step
+    run:
+      shell: 'echo "step"'

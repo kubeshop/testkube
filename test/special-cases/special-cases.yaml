@@ -1,0 +1,28 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-global-env
+  labels:
+    core-tests: special-cases
+description: "Global ENV - set for both pods and slave pods"
+spec:
+  container:
+    image: alpine:latest
+    env:
+    - name: EXAMPLE_GLOBAL_ENV
+      value: "GLOBAL_ENV_VALUE"
+      global: true
+  services:
+    slave:
+      use:
+      - name: distribute/evenly
+      image: alpine:latest
+      logs: always
+      count: 2
+      shell: '[ "$EXAMPLE_GLOBAL_ENV" = "GLOBAL_ENV_VALUE" ] && { echo ENV value OK; exit 0; } || { echo ENV validation failed; exit 1; }'
+  job:
+    activeDeadlineSeconds: 30
+  steps:
+  - name: Step
+    run:
+      shell: '[ "$EXAMPLE_GLOBAL_ENV" = "GLOBAL_ENV_VALUE" ] && { echo ENV value OK; exit 0; } || { echo ENV validation failed; exit 1; }'
