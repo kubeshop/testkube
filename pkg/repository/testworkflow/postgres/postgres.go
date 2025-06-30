@@ -153,7 +153,7 @@ func (r *PostgresRepository) Get(ctx context.Context, id string) (testkube.TestW
 		return testkube.TestWorkflowExecution{}, fmt.Errorf("failed to convert execution: %w", err)
 	}
 
-	return *execution.UnscapeDots(), nil
+	return *execution, nil
 }
 
 // Helper method to convert complete row to TestWorkflowExecution
@@ -251,7 +251,7 @@ func (r *PostgresRepository) convertCompleteRowToExecutionWithRelated(row sqlc.G
 		execution.ConfigParams = populateConfigParams(execution.ResolvedWorkflow, execution.ConfigParams)
 	}
 
-	return execution, nil
+	return execution.UnscapeDots(), nil
 }
 
 // Helper methods for converting JSON data
@@ -423,7 +423,7 @@ func (r *PostgresRepository) GetByNameAndTestWorkflow(ctx context.Context, name,
 		return testkube.TestWorkflowExecution{}, fmt.Errorf("failed to convert execution: %w", err)
 	}
 
-	return *execution.UnscapeDots(), nil
+	return *execution, nil
 }
 
 // GetLatestByTestWorkflow returns latest execution for a workflow
@@ -443,7 +443,7 @@ func (r *PostgresRepository) GetLatestByTestWorkflow(ctx context.Context, workfl
 		return nil, fmt.Errorf("failed to convert execution: %w", err)
 	}
 
-	return execution.UnscapeDots(), nil
+	return execution, nil
 }
 
 // GetLatestByTestWorkflows returns latest executions for multiple workflows
@@ -465,7 +465,6 @@ func (r *PostgresRepository) GetLatestByTestWorkflows(ctx context.Context, workf
 		}
 
 		result[i] = r.executionToSummary(*execution)
-		result[i].UnscapeDots()
 	}
 
 	return result, nil
@@ -485,7 +484,7 @@ func (r *PostgresRepository) GetRunning(ctx context.Context) ([]testkube.TestWor
 			return nil, err
 		}
 
-		result[i] = *execution.UnscapeDots()
+		result[i] = *execution
 	}
 
 	return result, nil
@@ -506,7 +505,7 @@ func (r *PostgresRepository) GetFinished(ctx context.Context, filter testworkflo
 			return nil, err
 		}
 
-		result[i] = *execution.UnscapeDots()
+		result[i] = *execution
 	}
 
 	return result, nil
@@ -566,7 +565,7 @@ func (r *PostgresRepository) GetExecutions(ctx context.Context, filter testworkf
 			return nil, err
 		}
 
-		result[i] = *execution.UnscapeDots()
+		result[i] = *execution
 	}
 
 	return result, nil
@@ -588,7 +587,6 @@ func (r *PostgresRepository) GetExecutionsSummary(ctx context.Context, filter te
 		}
 
 		result[i] = r.executionToSummary(*execution)
-		result[i].UnscapeDots()
 	}
 
 	return result, nil
@@ -1244,7 +1242,7 @@ func (r *PostgresRepository) GetUnassigned(ctx context.Context) ([]testkube.Test
 			return nil, err
 		}
 
-		result[i] = *execution.UnscapeDots()
+		result[i] = *execution
 	}
 
 	return result, nil
