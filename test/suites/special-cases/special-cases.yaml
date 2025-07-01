@@ -10,3 +10,4 @@ spec:
   - execute:
       workflows:
       - name: special-cases-global-env
+      - name: special-cases-securitycontext-runasuser-runasgroup

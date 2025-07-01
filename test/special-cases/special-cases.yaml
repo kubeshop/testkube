@@ -30,7 +30,7 @@ spec:
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: special-cases-securitycontext-runas
+  name: special-cases-securitycontext-runasuser-runasgroup
   labels:
     core-tests: special-cases
 description: "securityContext - runAsUser and runAsGroup"
