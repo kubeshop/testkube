@@ -136,93 +136,6 @@ RETURNING id, identifier, cluster_id, acquired_at, renewed_at, created_at, updat
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 
-func TestSQLCLeaseQueries_GetLeaseByClusterId(t *testing.T) {
-	mock, err := pgxmock.NewPool()
-	require.NoError(t, err)
-	defer mock.Close()
-
-	queries := New(mock)
-	ctx := context.Background()
-
-	expectedQuery := `SELECT id, identifier, cluster_id, acquired_at, renewed_at, created_at, updated_at
-FROM leases 
-WHERE cluster_id = \$1`
-
-	testTime := time.Now()
-	rows := mock.NewRows([]string{
-		"id", "identifier", "cluster_id", "acquired_at", "renewed_at", "created_at", "updated_at",
-	}).AddRow(
-		"lease-target-cluster", "target-identifier", "target-cluster", testTime, testTime, testTime, testTime,
-	)
-
-	mock.ExpectQuery(expectedQuery).WithArgs("target-cluster").WillReturnRows(rows)
-
-	result, err := queries.GetLeaseByClusterId(ctx, "target-cluster")
-
-	assert.NoError(t, err)
-	assert.Equal(t, "lease-target-cluster", result.ID)
-	assert.Equal(t, "target-identifier", result.Identifier)
-	assert.Equal(t, "target-cluster", result.ClusterID)
-	assert.NoError(t, mock.ExpectationsWereMet())
-}
-
-func TestSQLCLeaseQueries_GetExpiredLeases(t *testing.T) {
-	mock, err := pgxmock.NewPool()
-	require.NoError(t, err)
-	defer mock.Close()
-
-	queries := New(mock)
-	ctx := context.Background()
-
-	expectedQuery := `SELECT id, identifier, cluster_id, acquired_at, renewed_at, created_at, updated_at
-FROM leases 
-WHERE renewed_at < \$1
-ORDER BY renewed_at ASC`
-
-	expirationTime := time.Now().Add(-24 * time.Hour)
-	expiredTime := expirationTime.Add(-time.Hour)
-
-	rows := mock.NewRows([]string{
-		"id", "identifier", "cluster_id", "acquired_at", "renewed_at", "created_at", "updated_at",
-	}).AddRow(
-		"lease-expired1", "expired-id1", "expired-cluster1", expiredTime, expiredTime, expiredTime, expiredTime,
-	).AddRow(
-		"lease-expired2", "expired-id2", "expired-cluster2", expiredTime, expiredTime, expiredTime, expiredTime,
-	)
-
-	mock.ExpectQuery(expectedQuery).WithArgs(expirationTime).WillReturnRows(rows)
-
-	result, err := queries.GetExpiredLeases(ctx, expirationTime)
-
-	assert.NoError(t, err)
-	assert.Len(t, result, 2)
-	assert.Equal(t, "lease-expired1", result[0].ID)
-	assert.Equal(t, "lease-expired2", result[1].ID)
-	assert.True(t, result[0].RenewedAt.Time.Before(expirationTime))
-	assert.True(t, result[1].RenewedAt.Time.Before(expirationTime))
-	assert.NoError(t, mock.ExpectationsWereMet())
-}
-
-func TestSQLCLeaseQueries_DeleteExpiredLeases(t *testing.T) {
-	mock, err := pgxmock.NewPool()
-	require.NoError(t, err)
-	defer mock.Close()
-
-	queries := New(mock)
-	ctx := context.Background()
-
-	expectedQuery := `DELETE FROM leases WHERE renewed_at < \$1`
-
-	expirationTime := time.Now().Add(-24 * time.Hour)
-
-	mock.ExpectExec(expectedQuery).WithArgs(expirationTime).WillReturnResult(pgxmock.NewResult("DELETE", 5))
-
-	err = queries.DeleteExpiredLeases(ctx, expirationTime)
-
-	assert.NoError(t, err)
-	assert.NoError(t, mock.ExpectationsWereMet())
-}
-
 // Test with various edge cases and data types
 func TestSQLCLeaseQueries_EdgeCases(t *testing.T) {
 	tests := []struct {
@@ -346,25 +259,6 @@ func TestSQLCLeaseQueries_ParameterValidation(t *testing.T) {
 			},
 			expectedError: false,
 		},
-		{
-			name: "GetExpiredLeases with future timestamp",
-			setupMock: func(mock pgxmock.PgxPoolIface) {
-				futureTime := testTime.Add(24 * time.Hour)
-				rows := mock.NewRows([]string{
-					"id", "identifier", "cluster_id", "acquired_at", "renewed_at", "created_at", "updated_at",
-				})
-
-				mock.ExpectQuery(`SELECT id, identifier, cluster_id, acquired_at, renewed_at, created_at, updated_at FROM leases WHERE renewed_at < \$1 ORDER BY renewed_at ASC`).
-					WithArgs(futureTime).
-					WillReturnRows(rows)
-			},
-			executeQuery: func(q *Queries, ctx context.Context) error {
-				futureTime := testTime.Add(24 * time.Hour)
-				_, err := q.GetExpiredLeases(ctx, futureTime)
-				return err
-			},
-			expectedError: false,
-		},
 	}
 
 	for _, tt := range tests {
@@ -484,40 +378,6 @@ func TestSQLCLeaseQueries_TimestampHandling(t *testing.T) {
 			assert.True(t, tc.createdAt.Equal(result.CreatedAt.Time))
 			assert.True(t, tc.updatedAt.Equal(result.UpdatedAt.Time))
 		})
-	}
-
-	assert.NoError(t, mock.ExpectationsWereMet())
-}
-
-// Test concurrent query execution simulation
-func TestSQLCLeaseQueries_ConcurrentExecution(t *testing.T) {
-	mock, err := pgxmock.NewPool()
-	require.NoError(t, err)
-	defer mock.Close()
-
-	queries := New(mock)
-	ctx := context.Background()
-
-	// Simulate multiple concurrent lease acquisitions
-	expectedQuery := `SELECT id, identifier, cluster_id, acquired_at, renewed_at, created_at, updated_at FROM leases WHERE cluster_id = \$1`
-
-	testTime := time.Now()
-	for i := 0; i < 5; i++ {
-		rows := mock.NewRows([]string{
-			"id", "identifier", "cluster_id", "acquired_at", "renewed_at", "created_at", "updated_at",
-		}).AddRow(
-			"lease-concurrent", "concurrent-identifier", "concurrent-cluster", testTime, testTime, testTime, testTime,
-		)
-		mock.ExpectQuery(expectedQuery).WithArgs("concurrent-cluster").WillReturnRows(rows)
-	}
-
-	// Execute multiple queries
-	for i := 0; i < 5; i++ {
-		result, err := queries.GetLeaseByClusterId(ctx, "concurrent-cluster")
-		assert.NoError(t, err)
-		assert.Equal(t, "lease-concurrent", result.ID)
-		assert.Equal(t, "concurrent-identifier", result.Identifier)
-		assert.Equal(t, "concurrent-cluster", result.ClusterID)
 	}
 
 	assert.NoError(t, mock.ExpectationsWereMet())

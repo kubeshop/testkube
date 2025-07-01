@@ -20,17 +20,3 @@ SET
     updated_at = NOW()
 WHERE id = @id
 RETURNING id, identifier, cluster_id, acquired_at, renewed_at, created_at, updated_at;
-
--- name: GetLeaseByClusterId :one
-SELECT id, identifier, cluster_id, acquired_at, renewed_at, created_at, updated_at
-FROM leases 
-WHERE cluster_id = @cluster_id;
-
--- name: GetExpiredLeases :many
-SELECT id, identifier, cluster_id, acquired_at, renewed_at, created_at, updated_at
-FROM leases 
-WHERE renewed_at < @expiration_time
-ORDER BY renewed_at ASC;
-
--- name: DeleteExpiredLeases :exec
-DELETE FROM leases WHERE renewed_at < @expiration_time;

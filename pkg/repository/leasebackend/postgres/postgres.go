@@ -158,60 +158,6 @@ func (b *PostgresLeaseBackend) tryUpdateLease(ctx context.Context, leaseID, id, 
 	}, nil
 }
 
-// Additional utility methods
-
-// GetExpiredLeases returns all leases that have expired
-func (b *PostgresLeaseBackend) GetExpiredLeases(ctx context.Context) ([]sqlc.Lease, error) {
-	maxLeaseDurationStaleness := time.Now().Add(-leasebackend.DefaultMaxLeaseDuration)
-
-	results, err := b.queries.GetExpiredLeases(ctx, maxLeaseDurationStaleness)
-	if err != nil {
-		return nil, fmt.Errorf("error getting expired leases: %w", err)
-	}
-
-	leases := make([]sqlc.Lease, len(results))
-	for i, result := range results {
-		leases[i] = sqlc.Lease{
-			Identifier: result.Identifier,
-			ClusterID:  result.ClusterID,
-			AcquiredAt: result.AcquiredAt,
-			RenewedAt:  result.RenewedAt,
-		}
-	}
-
-	return leases, nil
-}
-
-// CleanupExpiredLeases removes all expired leases from the database
-func (b *PostgresLeaseBackend) CleanupExpiredLeases(ctx context.Context) error {
-	maxLeaseDurationStaleness := time.Now().Add(-leasebackend.DefaultMaxLeaseDuration)
-
-	err := b.queries.DeleteExpiredLeases(ctx, maxLeaseDurationStaleness)
-	if err != nil {
-		return fmt.Errorf("error cleaning up expired leases: %w", err)
-	}
-
-	return nil
-}
-
-// GetLeaseByCluster returns the lease for a specific cluster
-func (b *PostgresLeaseBackend) GetLeaseByCluster(ctx context.Context, clusterID string) (*sqlc.Lease, error) {
-	result, err := b.queries.GetLeaseByClusterId(ctx, clusterID)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("error getting lease by cluster: %w", err)
-	}
-
-	return &sqlc.Lease{
-		Identifier: result.Identifier,
-		ClusterID:  result.ClusterID,
-		AcquiredAt: result.AcquiredAt,
-		RenewedAt:  result.RenewedAt,
-	}, nil
-}
-
 // Helper functions
 func leaseStatus(lease *sqlc.Lease, id, clusterID string) (acquired bool, renewable bool) {
 	if lease == nil {

@@ -7,19 +7,9 @@ package sqlc
 
 import (
 	"context"
-	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 )
-
-const deleteExpiredLeases = `-- name: DeleteExpiredLeases :exec
-DELETE FROM leases WHERE renewed_at < $1
-`
-
-func (q *Queries) DeleteExpiredLeases(ctx context.Context, expirationTime time.Time) error {
-	_, err := q.db.Exec(ctx, deleteExpiredLeases, expirationTime)
-	return err
-}
 
 const findLeaseById = `-- name: FindLeaseById :one
 SELECT id, identifier, cluster_id, acquired_at, renewed_at, created_at, updated_at
@@ -29,62 +19,6 @@ WHERE id = $1
 
 func (q *Queries) FindLeaseById(ctx context.Context, leaseID string) (Lease, error) {
 	row := q.db.QueryRow(ctx, findLeaseById, leaseID)
-	var i Lease
-	err := row.Scan(
-		&i.ID,
-		&i.Identifier,
-		&i.ClusterID,
-		&i.AcquiredAt,
-		&i.RenewedAt,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const getExpiredLeases = `-- name: GetExpiredLeases :many
-SELECT id, identifier, cluster_id, acquired_at, renewed_at, created_at, updated_at
-FROM leases 
-WHERE renewed_at < $1
-ORDER BY renewed_at ASC
-`
-
-func (q *Queries) GetExpiredLeases(ctx context.Context, expirationTime time.Time) ([]Lease, error) {
-	rows, err := q.db.Query(ctx, getExpiredLeases, expirationTime)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Lease
-	for rows.Next() {
-		var i Lease
-		if err := rows.Scan(
-			&i.ID,
-			&i.Identifier,
-			&i.ClusterID,
-			&i.AcquiredAt,
-			&i.RenewedAt,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getLeaseByClusterId = `-- name: GetLeaseByClusterId :one
-SELECT id, identifier, cluster_id, acquired_at, renewed_at, created_at, updated_at
-FROM leases 
-WHERE cluster_id = $1
-`
-
-func (q *Queries) GetLeaseByClusterId(ctx context.Context, clusterID string) (Lease, error) {
-	row := q.db.QueryRow(ctx, getLeaseByClusterId, clusterID)
 	var i Lease
 	err := row.Scan(
 		&i.ID,
