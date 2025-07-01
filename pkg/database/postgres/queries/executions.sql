@@ -369,36 +369,36 @@ LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workf
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
 WHERE r.status IN ('passed', 'failed', 'aborted')
-    AND (@workflow_name IS NULL OR w.name = @workflow_name)
-    AND (@workflow_names IS NULL OR w.name = ANY(@workflow_names))
-    AND (@text_search IS NULL OR e.name ILIKE '%' || @text_search || '%')
-    AND (@start_date IS NULL OR e.scheduled_at >= @start_date)
-    AND (@end_date IS NULL OR e.scheduled_at <= @end_date)
-    AND (@last_n_days IS NULL OR e.scheduled_at >= NOW() - INTERVAL '@last_n_days days')
-    AND (@statuses IS NULL OR r.status = ANY(@statuses))
-    AND (@runner_id IS NULL OR e.runner_id = @runner_id)
-    AND (@assigned IS NULL OR 
-         (@assigned = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR 
-         (@assigned = false AND (e.runner_id IS NULL OR e.runner_id = '')))
-    AND (@actor_name IS NULL OR e.running_context->'actor'->>'name' = @actor_name)
-    AND (@actor_type IS NULL OR e.running_context->'actor'->>'type_' = @actor_type)
-    AND (@group_id IS NULL OR e.id = @group_id OR e.group_id = @group_id)
-    AND (@initialized IS NULL OR 
-         (@initialized = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
-         (@initialized = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
-    AND (@label_selector IS NULL OR (
+    AND (COALESCE(@workflow_name::text, '') = '' OR w.name = @workflow_name::text)
+    AND (COALESCE(@workflow_names::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR w.name = ANY(@workflow_names::text[]))
+    AND (COALESCE(@text_search::text, '') = '' OR e.name ILIKE '%' || @text_search::text || '%')
+    AND (COALESCE(@start_date::timestamptz, '1900-01-01'::timestamptz) = '1900-01-01'::timestamptz OR e.scheduled_at >= @start_date::timestamptz)
+    AND (COALESCE(@end_date::timestamptz, '2100-01-01'::timestamptz) = '2100-01-01'::timestamptz OR e.scheduled_at <= @end_date::timestamptz)
+    AND (COALESCE(@last_n_days::integer, 0) = 0 OR e.scheduled_at >= NOW() - (COALESCE(@last_n_days::integer, 0) || ' days')::interval)
+    AND (COALESCE(@statuses::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR r.status = ANY(@statuses::text[]))
+    AND (COALESCE(@runner_id::text, '') = '' OR e.runner_id = @runner_id::text)
+    AND (COALESCE(@assigned::boolean, NULL) IS NULL OR 
+         (@assigned::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR 
+         (@assigned::boolean = false AND (e.runner_id IS NULL OR e.runner_id = '')))
+    AND (COALESCE(@actor_name::text, '') = '' OR e.running_context->'actor'->>'name' = @actor_name::text)
+    AND (COALESCE(@actor_type::text, '') = '' OR e.running_context->'actor'->>'type_' = @actor_type::text)
+    AND (COALESCE(@group_id::text, '') = '' OR e.id = @group_id::text OR e.group_id = @group_id::text)
+    AND (COALESCE(@initialized::boolean, NULL) IS NULL OR 
+         (@initialized::boolean = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
+         (@initialized::boolean = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
+    AND (COALESCE(@label_selector::text, '') = '' OR (
         CASE 
-            WHEN @label_selector_type = 'exists' THEN w.labels ? @label_selector_key
-            WHEN @label_selector_type = 'equals' THEN w.labels->@label_selector_key = to_jsonb(@label_selector_value::text)
-            WHEN @label_selector_type = 'not_exists' THEN NOT (w.labels ? @label_selector_key)
+            WHEN @label_selector_type::text = 'exists' THEN w.labels ? @label_selector_key::text
+            WHEN @label_selector_type::text = 'equals' THEN w.labels->@label_selector_key::text = to_jsonb(@label_selector_value::text)
+            WHEN @label_selector_type::text = 'not_exists' THEN NOT (w.labels ? @label_selector_key::text)
             ELSE true
         END
     ))
-    AND (@tag_selector IS NULL OR (
+    AND (COALESCE(@tag_selector::text, '') = '' OR (
         CASE 
-            WHEN @tag_selector_type = 'exists' THEN e.tags ? @tag_selector_key
-            WHEN @tag_selector_type = 'equals' THEN e.tags->@tag_selector_key = to_jsonb(@tag_selector_value::text)
-            WHEN @tag_selector_type = 'not_exists' THEN NOT (e.tags ? @tag_selector_key)
+            WHEN @tag_selector_type::text = 'exists' THEN e.tags ? @tag_selector_key::text
+            WHEN @tag_selector_type::text = 'equals' THEN e.tags->@tag_selector_key::text = to_jsonb(@tag_selector_value::text)
+            WHEN @tag_selector_type::text = 'not_exists' THEN NOT (e.tags ? @tag_selector_key::text)
             ELSE true
         END
     ))
@@ -413,36 +413,36 @@ FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
 WHERE 1=1
-    AND (@workflow_name IS NULL OR w.name = @workflow_name)
-    AND (@workflow_names IS NULL OR w.name = ANY(@workflow_names))
-    AND (@text_search IS NULL OR e.name ILIKE '%' || @text_search || '%')
-    AND (@start_date IS NULL OR e.scheduled_at >= @start_date)
-    AND (@end_date IS NULL OR e.scheduled_at <= @end_date)
-    AND (@last_n_days IS NULL OR e.scheduled_at >= NOW() - INTERVAL '@last_n_days days')
-    AND (@statuses IS NULL OR r.status = ANY(@statuses))
-    AND (@runner_id IS NULL OR e.runner_id = @runner_id)
-    AND (@assigned IS NULL OR 
-         (@assigned = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR 
-         (@assigned = false AND (e.runner_id IS NULL OR e.runner_id = '')))
-    AND (@actor_name IS NULL OR e.running_context->'actor'->>'name' = @actor_name)
-    AND (@actor_type IS NULL OR e.running_context->'actor'->>'type_' = @actor_type)
-    AND (@group_id IS NULL OR e.id = @group_id OR e.group_id = @group_id)
-    AND (@initialized IS NULL OR 
-         (@initialized = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
-         (@initialized = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
-    AND (@label_selector IS NULL OR (
+     AND (COALESCE(@workflow_name::text, '') = '' OR w.name = @workflow_name::text)
+    AND (COALESCE(@workflow_names::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR w.name = ANY(@workflow_names::text[]))
+    AND (COALESCE(@text_search::text, '') = '' OR e.name ILIKE '%' || @text_search::text || '%')
+    AND (COALESCE(@start_date::timestamptz, '1900-01-01'::timestamptz) = '1900-01-01'::timestamptz OR e.scheduled_at >= @start_date::timestamptz)
+    AND (COALESCE(@end_date::timestamptz, '2100-01-01'::timestamptz) = '2100-01-01'::timestamptz OR e.scheduled_at <= @end_date::timestamptz)
+    AND (COALESCE(@last_n_days::integer, 0) = 0 OR e.scheduled_at >= NOW() - (COALESCE(@last_n_days::integer, 0) || ' days')::interval)
+    AND (COALESCE(@statuses::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR r.status = ANY(@statuses::text[]))
+    AND (COALESCE(@runner_id::text, '') = '' OR e.runner_id = @runner_id::text)
+    AND (COALESCE(@assigned::boolean, NULL) IS NULL OR 
+         (@assigned::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR 
+         (@assigned::boolean = false AND (e.runner_id IS NULL OR e.runner_id = '')))
+    AND (COALESCE(@actor_name::text, '') = '' OR e.running_context->'actor'->>'name' = @actor_name::text)
+    AND (COALESCE(@actor_type::text, '') = '' OR e.running_context->'actor'->>'type_' = @actor_type::text)
+    AND (COALESCE(@group_id::text, '') = '' OR e.id = @group_id::text OR e.group_id = @group_id::text)
+    AND (COALESCE(@initialized::boolean, NULL) IS NULL OR 
+         (@initialized::boolean = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
+         (@initialized::boolean = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
+    AND (COALESCE(@label_selector::text, '') = '' OR (
         CASE 
-            WHEN @label_selector_type = 'exists' THEN w.labels ? @label_selector_key
-            WHEN @label_selector_type = 'equals' THEN w.labels->@label_selector_key = to_jsonb(@label_selector_value::text)
-            WHEN @label_selector_type = 'not_exists' THEN NOT (w.labels ? @label_selector_key)
+            WHEN @label_selector_type::text = 'exists' THEN w.labels ? @label_selector_key::text
+            WHEN @label_selector_type::text = 'equals' THEN w.labels->@label_selector_key::text = to_jsonb(@label_selector_value::text)
+            WHEN @label_selector_type::text = 'not_exists' THEN NOT (w.labels ? @label_selector_key::text)
             ELSE true
         END
     ))
-    AND (@tag_selector IS NULL OR (
+    AND (COALESCE(@tag_selector::text, '') = '' OR (
         CASE 
-            WHEN @tag_selector_type = 'exists' THEN e.tags ? @tag_selector_key
-            WHEN @tag_selector_type = 'equals' THEN e.tags->@tag_selector_key = to_jsonb(@tag_selector_value::text)
-            WHEN @tag_selector_type = 'not_exists' THEN NOT (e.tags ? @tag_selector_key)
+            WHEN @tag_selector_type::text = 'exists' THEN e.tags ? @tag_selector_key::text
+            WHEN @tag_selector_type::text = 'equals' THEN e.tags->@tag_selector_key::text = to_jsonb(@tag_selector_value::text)
+            WHEN @tag_selector_type::text = 'not_exists' THEN NOT (e.tags ? @tag_selector_key::text)
             ELSE true
         END
     ))
@@ -508,36 +508,36 @@ LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workf
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
 WHERE 1=1
-    AND (@workflow_name IS NULL OR w.name = @workflow_name)
-    AND (@workflow_names IS NULL OR w.name = ANY(@workflow_names))
-    AND (@text_search IS NULL OR e.name ILIKE '%' || @text_search || '%')
-    AND (@start_date IS NULL OR e.scheduled_at >= @start_date)
-    AND (@end_date IS NULL OR e.scheduled_at <= @end_date)
-    AND (@last_n_days IS NULL OR e.scheduled_at >= NOW() - INTERVAL '@last_n_days days')
-    AND (@statuses IS NULL OR r.status = ANY(@statuses))
-    AND (@runner_id IS NULL OR e.runner_id = @runner_id)
-    AND (@assigned IS NULL OR 
-         (@assigned = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR 
-         (@assigned = false AND (e.runner_id IS NULL OR e.runner_id = '')))
-    AND (@actor_name IS NULL OR e.running_context->'actor'->>'name' = @actor_name)
-    AND (@actor_type IS NULL OR e.running_context->'actor'->>'type_' = @actor_type)
-    AND (@group_id IS NULL OR e.id = @group_id OR e.group_id = @group_id)
-    AND (@initialized IS NULL OR 
-         (@initialized = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
-         (@initialized = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
-    AND (@label_selector IS NULL OR (
+    AND (COALESCE(@workflow_name::text, '') = '' OR w.name = @workflow_name::text)
+    AND (COALESCE(@workflow_names::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR w.name = ANY(@workflow_names::text[]))
+    AND (COALESCE(@text_search::text, '') = '' OR e.name ILIKE '%' || @text_search::text || '%')
+    AND (COALESCE(@start_date::timestamptz, '1900-01-01'::timestamptz) = '1900-01-01'::timestamptz OR e.scheduled_at >= @start_date::timestamptz)
+    AND (COALESCE(@end_date::timestamptz, '2100-01-01'::timestamptz) = '2100-01-01'::timestamptz OR e.scheduled_at <= @end_date::timestamptz)
+    AND (COALESCE(@last_n_days::integer, 0) = 0 OR e.scheduled_at >= NOW() - (COALESCE(@last_n_days::integer, 0) || ' days')::interval)
+    AND (COALESCE(@statuses::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR r.status = ANY(@statuses::text[]))
+    AND (COALESCE(@runner_id::text, '') = '' OR e.runner_id = @runner_id::text)
+    AND (COALESCE(@assigned::boolean, NULL) IS NULL OR 
+         (@assigned::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR 
+         (@assigned::boolean = false AND (e.runner_id IS NULL OR e.runner_id = '')))
+    AND (COALESCE(@actor_name::text, '') = '' OR e.running_context->'actor'->>'name' = @actor_name::text)
+    AND (COALESCE(@actor_type::text, '') = '' OR e.running_context->'actor'->>'type_' = @actor_type::text)
+    AND (COALESCE(@group_id::text, '') = '' OR e.id = @group_id::text OR e.group_id = @group_id::text)
+    AND (COALESCE(@initialized::boolean, NULL) IS NULL OR 
+         (@initialized::boolean = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
+         (@initialized::boolean = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
+    AND (COALESCE(@label_selector::text, '') = '' OR (
         CASE 
-            WHEN @label_selector_type = 'exists' THEN w.labels ? @label_selector_key
-            WHEN @label_selector_type = 'equals' THEN w.labels->@label_selector_key = to_jsonb(@label_selector_value::text)
-            WHEN @label_selector_type = 'not_exists' THEN NOT (w.labels ? @label_selector_key)
+            WHEN @label_selector_type::text = 'exists' THEN w.labels ? @label_selector_key::text
+            WHEN @label_selector_type::text = 'equals' THEN w.labels->@label_selector_key::text = to_jsonb(@label_selector_value::text)
+            WHEN @label_selector_type::text = 'not_exists' THEN NOT (w.labels ? @label_selector_key::text)
             ELSE true
         END
     ))
-    AND (@tag_selector IS NULL OR (
+    AND (COALESCE(@tag_selector::text, '') = '' OR (
         CASE 
-            WHEN @tag_selector_type = 'exists' THEN e.tags ? @tag_selector_key
-            WHEN @tag_selector_type = 'equals' THEN e.tags->@tag_selector_key = to_jsonb(@tag_selector_value::text)
-            WHEN @tag_selector_type = 'not_exists' THEN NOT (e.tags ? @tag_selector_key)
+            WHEN @tag_selector_type::text = 'exists' THEN e.tags ? @tag_selector_key::text
+            WHEN @tag_selector_type::text = 'equals' THEN e.tags->@tag_selector_key::text = to_jsonb(@tag_selector_value::text)
+            WHEN @tag_selector_type::text = 'not_exists' THEN NOT (e.tags ? @tag_selector_key::text)
             ELSE true
         END
     ))
@@ -706,7 +706,7 @@ FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
 WHERE w.name = @workflow_name
-    AND (@last_days = 0 OR e.scheduled_at >= NOW() - INTERVAL '@last_days days')
+    AND (@last_days = 0 OR e.scheduled_at >= NOW() - (@last_n_days || ' days')::interval)
 ORDER BY e.scheduled_at DESC
 LIMIT @lmt;
 
@@ -733,7 +733,7 @@ FROM (
     LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow',
          jsonb_each_text(e.tags) as t(key, value)
     WHERE e.tags IS NOT NULL AND e.tags != '{}'::jsonb
-        AND (@workflow_name IS NULL OR w.name = @workflow_name)
+        AND COALESCE((@workflow_name, '') = '' OR w.name = @workflow_name)
 ) t
 GROUP BY tag_key;
 
@@ -927,36 +927,36 @@ LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workf
 LEFT JOIN test_workflows rw ON e.id = rw.execution_id AND rw.workflow_type = 'resolved_workflow'
 LEFT JOIN test_workflow_resource_aggregations ra ON e.id = ra.execution_id
 WHERE 1=1
-    AND (@workflow_name IS NULL OR w.name = @workflow_name)
-    AND (@workflow_names IS NULL OR w.name = ANY(@workflow_names))
-    AND (@text_search IS NULL OR e.name ILIKE '%' || @text_search || '%')
-    AND (@start_date IS NULL OR e.scheduled_at >= @start_date)
-    AND (@end_date IS NULL OR e.scheduled_at <= @end_date)
-    AND (@last_n_days IS NULL OR e.scheduled_at >= NOW() - INTERVAL '@last_n_days days')
-    AND (@statuses IS NULL OR r.status = ANY(@statuses))
-    AND (@runner_id IS NULL OR e.runner_id = @runner_id)
-    AND (@assigned IS NULL OR 
-         (@assigned = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR 
-         (@assigned = false AND (e.runner_id IS NULL OR e.runner_id = '')))
-    AND (@actor_name IS NULL OR e.running_context->'actor'->>'name' = @actor_name)
-    AND (@actor_type IS NULL OR e.running_context->'actor'->>'type_' = @actor_type)
-    AND (@group_id IS NULL OR e.id = @group_id OR e.group_id = @group_id)
-    AND (@initialized IS NULL OR 
-         (@initialized = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
-         (@initialized = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
-    AND (@label_selector IS NULL OR (
+    AND (COALESCE(@workflow_name::text, '') = '' OR w.name = @workflow_name::text)
+    AND (COALESCE(@workflow_names::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR w.name = ANY(@workflow_names::text[]))
+    AND (COALESCE(@text_search::text, '') = '' OR e.name ILIKE '%' || @text_search::text || '%')
+    AND (COALESCE(@start_date::timestamptz, '1900-01-01'::timestamptz) = '1900-01-01'::timestamptz OR e.scheduled_at >= @start_date::timestamptz)
+    AND (COALESCE(@end_date::timestamptz, '2100-01-01'::timestamptz) = '2100-01-01'::timestamptz OR e.scheduled_at <= @end_date::timestamptz)
+    AND (COALESCE(@last_n_days::integer, 0) = 0 OR e.scheduled_at >= NOW() - (COALESCE(@last_n_days::integer, 0) || ' days')::interval)
+    AND (COALESCE(@statuses::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR r.status = ANY(@statuses::text[]))
+    AND (COALESCE(@runner_id::text, '') = '' OR e.runner_id = @runner_id::text)
+    AND (COALESCE(@assigned::boolean, NULL) IS NULL OR 
+         (@assigned::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != '') OR 
+         (@assigned::boolean = false AND (e.runner_id IS NULL OR e.runner_id = '')))
+    AND (COALESCE(@actor_name::text, '') = '' OR e.running_context->'actor'->>'name' = @actor_name::text)
+    AND (COALESCE(@actor_type::text, '') = '' OR e.running_context->'actor'->>'type_' = @actor_type::text)
+    AND (COALESCE(@group_id::text, '') = '' OR e.id = @group_id::text OR e.group_id = @group_id::text)
+    AND (COALESCE(@initialized::boolean, NULL) IS NULL OR 
+         (@initialized::boolean = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
+         (@initialized::boolean = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
+    AND (COALESCE(@label_selector::text, '') = '' OR (
         CASE 
-            WHEN @label_selector_type = 'exists' THEN w.labels ? @label_selector_key
-            WHEN @label_selector_type = 'equals' THEN w.labels->@label_selector_key = to_jsonb(@label_selector_value::text)
-            WHEN @label_selector_type = 'not_exists' THEN NOT (w.labels ? @label_selector_key)
+            WHEN @label_selector_type::text = 'exists' THEN w.labels ? @label_selector_key::text
+            WHEN @label_selector_type::text = 'equals' THEN w.labels->@label_selector_key::text = to_jsonb(@label_selector_value::text)
+            WHEN @label_selector_type::text = 'not_exists' THEN NOT (w.labels ? @label_selector_key::text)
             ELSE true
         END
     ))
-    AND (@tag_selector IS NULL OR (
+    AND (COALESCE(@tag_selector::text, '') = '' OR (
         CASE 
-            WHEN @tag_selector_type = 'exists' THEN e.tags ? @tag_selector_key
-            WHEN @tag_selector_type = 'equals' THEN e.tags->@tag_selector_key = to_jsonb(@tag_selector_value::text)
-            WHEN @tag_selector_type = 'not_exists' THEN NOT (e.tags ? @tag_selector_key)
+            WHEN @tag_selector_type::text = 'exists' THEN e.tags ? @tag_selector_key::text
+            WHEN @tag_selector_type::text = 'equals' THEN e.tags->@tag_selector_key::text = to_jsonb(@tag_selector_value::text)
+            WHEN @tag_selector_type::text = 'not_exists' THEN NOT (e.tags ? @tag_selector_key::text)
             ELSE true
         END
     ))

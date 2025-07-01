@@ -141,9 +141,6 @@ func (r *PostgresRepository) Get(ctx context.Context, id string) (testkube.TestW
 	// Get complete execution data with all related data in a single query
 	row, err := r.queries.GetTestWorkflowExecution(ctx, id)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return testkube.TestWorkflowExecution{}, fmt.Errorf("execution not found")
-		}
 		return testkube.TestWorkflowExecution{}, err
 	}
 
@@ -411,9 +408,6 @@ func (r *PostgresRepository) GetByNameAndTestWorkflow(ctx context.Context, name,
 		WorkflowName: toPgText(workflowName),
 	})
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return testkube.TestWorkflowExecution{}, fmt.Errorf("execution not found")
-		}
 		return testkube.TestWorkflowExecution{}, err
 	}
 
@@ -431,9 +425,6 @@ func (r *PostgresRepository) GetLatestByTestWorkflow(ctx context.Context, workfl
 	// Get complete execution data with all related data in a single query
 	row, err := r.queries.GetLatestTestWorkflowExecutionByTestWorkflow(ctx, workflowName)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, fmt.Errorf("execution not found")
-		}
 		return nil, err
 	}
 
@@ -1309,9 +1300,9 @@ func (r *PostgresRepository) buildTestWorkflowExecutionParams(filter testworkflo
 
 	if filter.NamesDefined() {
 		names := filter.Names()
-		pgNames := make([]pgtype.Text, len(names))
-		for i, name := range names {
-			pgNames[i] = toPgText(name)
+		pgNames := pgtype.Array[pgtype.Text]{Valid: true}
+		for _, name := range names {
+			pgNames.Elements = append(pgNames.Elements, toPgText(name))
 		}
 		params.WorkflowNames = pgNames
 	}
@@ -1336,9 +1327,9 @@ func (r *PostgresRepository) buildTestWorkflowExecutionParams(filter testworkflo
 	// Status filters
 	if filter.StatusesDefined() {
 		statuses := filter.Statuses()
-		pgStatuses := make([]pgtype.Text, len(statuses))
-		for i, status := range statuses {
-			pgStatuses[i] = toPgText(string(status))
+		pgStatuses := pgtype.Array[pgtype.Text]{Valid: true}
+		for _, status := range statuses {
+			pgStatuses.Elements = append(pgStatuses.Elements, toPgText(string(status)))
 		}
 		params.Statuses = pgStatuses
 	}
