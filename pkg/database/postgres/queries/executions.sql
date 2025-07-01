@@ -413,7 +413,7 @@ FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
 WHERE 1=1
-     AND (COALESCE(@workflow_name::text, '') = '' OR w.name = @workflow_name::text)
+    AND (COALESCE(@workflow_name::text, '') = '' OR w.name = @workflow_name::text)
     AND (COALESCE(@workflow_names::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR w.name = ANY(@workflow_names::text[]))
     AND (COALESCE(@text_search::text, '') = '' OR e.name ILIKE '%' || @text_search::text || '%')
     AND (COALESCE(@start_date::timestamptz, '1900-01-01'::timestamptz) = '1900-01-01'::timestamptz OR e.scheduled_at >= @start_date::timestamptz)

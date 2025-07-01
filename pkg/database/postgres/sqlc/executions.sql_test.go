@@ -568,40 +568,40 @@ func TestSQLCTestWorkflowExecutionQueries_GetTestWorkflowExecutionsTotals(t *tes
 FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e\.id = r\.execution_id
 LEFT JOIN test_workflows w ON e\.id = w\.execution_id AND w\.workflow_type = 'workflow'
-WHERE 1=1
-	AND \(\$1 IS NULL OR w\.name = \$1\)
-	AND \(\$2 IS NULL OR w\.name = ANY\(\$2\)\)
-	AND \(\$3 IS NULL OR e\.name ILIKE '%' \|\| \$3 \|\| '%'\)
-	AND \(\$4 IS NULL OR e\.scheduled_at >= \$4\)
-	AND \(\$5 IS NULL OR e\.scheduled_at <= \$5\)
-	AND \(\$6 IS NULL OR e\.scheduled_at >= NOW\(\) - INTERVAL '@last_n_days days'\)
-	AND \(\$7 IS NULL OR r\.status = ANY\(\$7\)\)
-	AND \(\$8 IS NULL OR e\.runner_id = \$8\)
-	AND \(\$9 IS NULL OR
-	     \(\$9 = true AND e\.runner_id IS NOT NULL AND e\.runner_id != ''\) OR
-	     \(\$9 = false AND \(e\.runner_id IS NULL OR e\.runner_id = ''\)\)\)
-	AND \(\$10 IS NULL OR e\.running_context->'actor'->>'name' = \$10\)
-	AND \(\$11 IS NULL OR e\.running_context->'actor'->>'type_' = \$11\)
-	AND \(\$12 IS NULL OR e\.id = \$12 OR e\.group_id = \$12\)
-	AND \(\$13 IS NULL OR
-	     \(\$13 = true AND \(r\.status != 'queued' OR r\.steps IS NOT NULL\)\) OR
-	     \(\$13 = false AND r\.status = 'queued' AND \(r\.steps IS NULL OR r\.steps = '\{\}'::jsonb\)\)\)
-	AND \(\$14 IS NULL OR \(
-	    CASE
-	        WHEN \$15 = 'exists' THEN w\.labels \? \$16
-	        WHEN \$15 = 'equals' THEN w\.labels->\@label_selector_key = to_jsonb\(\$17::text\)
-	        WHEN \$15 = 'not_exists' THEN NOT \(w\.labels \? \$16\)
-	        ELSE true
-	    END
-	\)\)
-	AND \(\$18 IS NULL OR \(
-	    CASE
-	        WHEN \$19 = 'exists' THEN e\.tags \? \$20
-	        WHEN \$19 = 'equals' THEN e\.tags->\@tag_selector_key = to_jsonb\(\$21::text\)
-	        WHEN \$19 = 'not_exists' THEN NOT \(e\.tags \? \$20\)
-	        ELSE true
-	    END
-	\)\)
+WHERE 1=1       
+    AND \(COALESCE\(\$1::text, ''\) = '' OR w.name = \$1::text\)
+    AND \(COALESCE\(\$2::text\[\], ARRAY\[\]::text\[\]\) = ARRAY\[\]::text\[\] OR w.name = ANY\(\$2::text\[\]\)\)
+    AND \(COALESCE\(\$3::text, ''\) = '' OR e.name ILIKE '%' \|\| \$3::text \|\| '%'\)
+    AND \(COALESCE\(\$4::timestamptz, '1900-01-01'::timestamptz\) = '1900-01-01'::timestamptz OR e.scheduled_at >= \$4::timestamptz\)
+    AND \(COALESCE\(\$5::timestamptz, '2100-01-01'::timestamptz\) = '2100-01-01'::timestamptz OR e.scheduled_at <= \$5::timestamptz\)
+    AND \(COALESCE\(\$6::integer, 0\) = 0 OR e.scheduled_at >= NOW\(\) - \(COALESCE\(\$6::integer, 0\) \|\| ' days'\)::interval\)
+    AND \(COALESCE\(\$7::text\[\], ARRAY\[\]::text\[\]\) = ARRAY\[\]::text\[\] OR r.status = ANY\(\$7::text\[\]\)\)
+    AND \(COALESCE\(\$8::text, ''\) = '' OR e.runner_id = \$8::text\)
+    AND \(COALESCE\(\$9::boolean, NULL\) IS NULL OR 
+         \(\$9::boolean = true AND e.runner_id IS NOT NULL AND e.runner_id != ''\) OR 
+         \(\$9::boolean = false AND \(e.runner_id IS NULL OR e.runner_id = ''\)\)\)
+    AND \(COALESCE\(\$10::text, ''\) = '' OR e.running_context->'actor'->>'name' = \$10::text\)
+    AND \(COALESCE\(\$11::text, ''\) = '' OR e.running_context->'actor'->>'type_' = \$11::text\)
+    AND \(COALESCE\(\$12::text, ''\) = '' OR e.id = \$12::text OR e.group_id = \$12::text\)
+    AND \(COALESCE\(\$13::boolean, NULL\) IS NULL OR 
+         \(\$13::boolean = true AND \(r.status != 'queued' OR r.steps IS NOT NULL\)\) OR
+         \(\$13::boolean = false AND r.status = 'queued' AND \(r.steps IS NULL OR r.steps = '\{\}'::jsonb\)\)\)
+   AND \(COALESCE\(\$14::text, ''\) = '' OR \(
+        CASE 
+            WHEN \$15::text = 'exists' THEN w.labels \? \$16::text
+            WHEN \$15::text = 'equals' THEN w.labels->\$16::text = to_jsonb\(\$17::text\)
+            WHEN \$15::text = 'not_exists' THEN NOT \(w.labels \? \$16::text\)
+            ELSE true
+        END
+    \)\)
+    AND \(COALESCE\(\$18::text, ''\) = '' OR \(
+        CASE 
+            WHEN \$19::text = 'exists' THEN e.tags \? \$20::text
+            WHEN \$19::text = 'equals' THEN e.tags->\$20::text = to_jsonb\(\$21::text\)
+            WHEN \$19::text = 'not_exists' THEN NOT \(e.tags \? \$20::text\)
+            ELSE true
+        END
+    \)\)
 GROUP BY r\.status`
 
 	rows := mock.NewRows([]string{"status", "count"}).
@@ -1014,7 +1014,7 @@ FROM \(
     LEFT JOIN test_workflows w ON e\.id = w\.execution_id AND w\.workflow_type = 'workflow',
          jsonb_each_text\(e\.tags\) as t\(key, value\)
     WHERE e\.tags IS NOT NULL AND e\.tags != '\{\}'::jsonb
-        AND \(\$1 IS NULL OR w\.name = \$1\)
+        AND COALESCE\(\(\$1, ''\) = '' OR w\.name = \$1\)
 \) t
 GROUP BY tag_key`
 
@@ -1055,7 +1055,7 @@ FROM test_workflow_executions e
 LEFT JOIN test_workflow_results r ON e\.id = r\.execution_id
 LEFT JOIN test_workflows w ON e\.id = w\.execution_id AND w\.workflow_type = 'workflow'
 WHERE w\.name = \$1
-    AND \(\$2 = 0 OR e\.scheduled_at >= NOW\(\) - INTERVAL '@last_days days'\)
+    AND \(\$2 = 0 OR e\.scheduled_at >= NOW\(\) - \(\$2 \|\| ' days'\)::interval\)
 ORDER BY e\.scheduled_at DESC
 LIMIT \$3`
 
