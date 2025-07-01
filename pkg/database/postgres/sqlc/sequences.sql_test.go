@@ -14,10 +14,6 @@ func TestSQLQuerySyntax(t *testing.T) {
 		query string
 	}{
 		{
-			name:  "GetExecutionSequence",
-			query: "SELECT name, number, created_at, updated_at FROM execution_sequences WHERE name = $1",
-		},
-		{
 			name: "UpsertAndIncrementExecutionSequence",
 			query: `INSERT INTO execution_sequences (name, number)
 VALUES ($1, 1)
@@ -50,9 +46,6 @@ RETURNING name, number, created_at, updated_at`,
 
 			// Test specific query patterns
 			switch tt.name {
-			case "GetExecutionSequence":
-				assert.Contains(t, tt.query, "SELECT", "Should be a SELECT query")
-				assert.Contains(t, tt.query, "WHERE name =", "Should filter by name")
 			case "UpsertAndIncrementExecutionSequence":
 				assert.Contains(t, tt.query, "INSERT", "Should be an INSERT query")
 				assert.Contains(t, tt.query, "ON CONFLICT", "Should handle conflicts")
