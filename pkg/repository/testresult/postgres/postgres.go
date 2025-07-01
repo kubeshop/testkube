@@ -75,7 +75,8 @@ func (r *PostgresRepository) GetExecutionsTotals(ctx context.Context, filter ...
 
 // GetExecutions gets executions using a filter, use filter with no data for all
 func (r *PostgresRepository) GetExecutions(ctx context.Context, filter testresult.Filter) ([]testkube.TestSuiteExecution, error) {
-	return nil, errors.New("GetExecutions not implemented")
+	// Support old reconciler
+	return nil, nil
 }
 
 // GetPreviousFinishedState gets previous finished execution state by test

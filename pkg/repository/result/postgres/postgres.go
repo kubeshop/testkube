@@ -80,7 +80,8 @@ func (r *PostgresRepository) GetLatestByTests(ctx context.Context, testNames []s
 
 // GetExecutions gets executions using a filter, use filter with no data for all
 func (r *PostgresRepository) GetExecutions(ctx context.Context, filter result.Filter) ([]testkube.Execution, error) {
-	return nil, errors.New("GetExecutions not implemented")
+	// Support old reconciler
+	return nil, nil
 }
 
 // GetExecutionTotals gets the statistics on number of executions using a filter, but without paging
