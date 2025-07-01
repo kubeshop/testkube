@@ -583,7 +583,7 @@ func TestPostgresRepository_Get(t *testing.T) {
 		_, err := repo.Get(ctx, executionID)
 
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "execution not found")
+		assert.Contains(t, err.Error(), pgx.ErrNoRows.Error())
 		mockQueries.AssertExpectations(t)
 	})
 }
@@ -628,7 +628,7 @@ func TestPostgresRepository_GetByNameAndTestWorkflow(t *testing.T) {
 		_, err := repo.GetByNameAndTestWorkflow(ctx, name, workflowName)
 
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "execution not found")
+		assert.Contains(t, err.Error(), pgx.ErrNoRows.Error())
 		mockQueries.AssertExpectations(t)
 	})
 }
