@@ -26,3 +26,48 @@ spec:
   - name: Step
     run:
       shell: '[ "$EXAMPLE_GLOBAL_ENV" = "GLOBAL_ENV_VALUE" ] && { echo ENV value OK; exit 0; } || { echo ENV validation failed; exit 1; }'
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-securitycontext-runasuser-runasgroup
+  labels:
+    core-tests: special-cases
+description: "securityContext - runAsUser and runAsGroup"
+spec:
+  container:
+    image: alpine:latest
+    securityContext:
+      runAsUser: 128
+      runAsGroup: 256
+  services:
+    slave:
+      use:
+      - name: distribute/evenly
+      image: alpine:latest
+      logs: always
+      count: 2
+      securityContext:
+        runAsUser: 512
+        runAsGroup: 1024
+      shell: |
+        if [ "$(id -u)" = "512" ] && [ "$(id -g)" = "1024" ]; then
+          echo UID/GUID correct
+          exit 0
+        else
+          echo UID/GUID incorrect!
+          exit 1
+        fi
+  job:
+    activeDeadlineSeconds: 30
+  steps:
+  - name: Step
+    run:
+      shell: |
+        if [ "$(id -u)" = "128" ] && [ "$(id -g)" = "256" ]; then
+          echo UID/GUID correct
+          exit 0
+        else
+          echo UID/GUID incorrect!
+          exit 1
+        fi
