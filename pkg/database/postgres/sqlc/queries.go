@@ -4,7 +4,6 @@ package sqlc
 
 import (
 	"context"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -104,14 +103,10 @@ type LeaseBackendQueriesInterface interface {
 	FindLeaseById(ctx context.Context, leaseID string) (Lease, error)
 	InsertLease(ctx context.Context, arg InsertLeaseParams) (Lease, error)
 	UpdateLease(ctx context.Context, arg UpdateLeaseParams) (Lease, error)
-	GetLeaseByClusterId(ctx context.Context, clusterID string) (Lease, error)
-	GetExpiredLeases(ctx context.Context, expirationTime time.Time) ([]Lease, error)
-	DeleteExpiredLeases(ctx context.Context, expirationTime time.Time) error
 }
 
 // ExecutionSequenceQueriesInterface defines the interface for sqlc generated queries
 type ExecutionSequenceQueriesInterface interface {
-	GetExecutionSequence(ctx context.Context, name string) (ExecutionSequence, error)
 	UpsertAndIncrementExecutionSequence(ctx context.Context, name string) (ExecutionSequence, error)
 	DeleteExecutionSequence(ctx context.Context, name string) error
 	DeleteExecutionSequences(ctx context.Context, names []string) error
