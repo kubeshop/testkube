@@ -5,9 +5,9 @@ import (
 	"errors"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"go.mongodb.org/mongo-driver/mongo"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/event/bus"
 	"github.com/kubeshop/testkube/pkg/testworkflows/executionworker/executionworkertypes"
