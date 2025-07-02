@@ -1179,9 +1179,9 @@ func (r *PostgresRepository) GetExecutionTags(ctx context.Context, testWorkflowN
 	for _, row := range rows {
 		var values []string
 		for _, val := range row.Values {
-			values = append(values, val)
+			values = append(values, utils.UnescapeDots(val))
 		}
-		tags[row.TagKey] = values
+		tags[utils.UnescapeDots(row.TagKey)] = values
 	}
 
 	return tags, nil
