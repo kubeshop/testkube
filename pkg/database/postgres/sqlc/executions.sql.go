@@ -1155,20 +1155,26 @@ func (q *Queries) GetTestWorkflowExecutionByNameAndTestWorkflow(ctx context.Cont
 }
 
 const getTestWorkflowExecutionTags = `-- name: GetTestWorkflowExecutionTags :many
+WITH tag_extracts AS (
+    SELECT 
+        e.id,
+        w.name as workflow_name,
+        tag_pair.key as tag_key,
+        tag_pair.value as tag_value
+    FROM test_workflow_executions e
+    LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
+    CROSS JOIN LATERAL jsonb_each_text(e.tags) AS tag_pair
+    WHERE e.tags IS NOT NULL 
+        AND e.tags != '{}'::jsonb
+        AND jsonb_typeof(e.tags) = 'object'
+)
 SELECT 
     tag_key,
-    array_agg(DISTINCT tag_value) as values
-FROM (
-    SELECT 
-        t.key as tag_key,
-        t.value as tag_value
-    FROM test_workflow_executions e
-    LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow',
-         jsonb_each_text(e.tags) as t(key, value)
-    WHERE e.tags IS NOT NULL AND e.tags != '{}'::jsonb
-        AND COALESCE(($1, '') = '' OR w.name = $1)
-) t
+    array_agg(DISTINCT tag_value ORDER BY tag_value) as values
+FROM tag_extracts
+WHERE (COALESCE($1::text, '') = '' OR workflow_name = $1::text)
 GROUP BY tag_key
+ORDER BY tag_key;
 `
 
 type GetTestWorkflowExecutionTagsRow struct {
