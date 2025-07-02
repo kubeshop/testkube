@@ -155,6 +155,7 @@ func (r *PostgresRepository) Get(ctx context.Context, id string) (testkube.TestW
 
 // Helper method to convert complete row to TestWorkflowExecution
 func (r *PostgresRepository) convertCompleteRowToExecutionWithRelated(row sqlc.GetTestWorkflowExecutionRow) (*testkube.TestWorkflowExecution, error) {
+	var err error
 	execution := &testkube.TestWorkflowExecution{
 		Id:                        row.ID,
 		GroupId:                   fromPgText(row.GroupID),
@@ -174,29 +175,38 @@ func (r *PostgresRepository) convertCompleteRowToExecutionWithRelated(row sqlc.G
 
 	// Build result if exists
 	if row.Status.Valid {
-		execution.Result = r.buildResultFromRow(
+		execution.Result, err = r.buildResultFromRow(
 			row.Status, row.PredictedStatus, row.QueuedAt, row.StartedAt, row.FinishedAt,
 			row.Duration, row.TotalDuration, row.DurationMs, row.PausedMs, row.TotalDurationMs,
 			row.Pauses, row.Initialization, row.Steps,
 		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to build result from row: %w", err)
+		}
 	}
 
 	// Build workflow if exists
 	if row.WorkflowName.Valid {
-		execution.Workflow = r.buildWorkflowFromRow(
+		execution.Workflow, err = r.buildWorkflowFromRow(
 			row.WorkflowName, row.WorkflowNamespace, row.WorkflowDescription,
 			row.WorkflowLabels, row.WorkflowAnnotations, row.WorkflowCreated,
 			row.WorkflowUpdated, row.WorkflowSpec, row.WorkflowReadOnly, row.WorkflowStatus, row.WorkflowHealth,
 		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to build workflow from row: %w", err)
+		}
 	}
 
 	// Build resolved workflow if exists
 	if row.ResolvedWorkflowName.Valid {
-		execution.ResolvedWorkflow = r.buildWorkflowFromRow(
+		execution.ResolvedWorkflow, err = r.buildWorkflowFromRow(
 			row.ResolvedWorkflowName, row.ResolvedWorkflowNamespace, row.ResolvedWorkflowDescription,
 			row.ResolvedWorkflowLabels, row.ResolvedWorkflowAnnotations, row.ResolvedWorkflowCreated,
 			row.ResolvedWorkflowUpdated, row.ResolvedWorkflowSpec, row.ResolvedWorkflowReadOnly, row.ResolvedWorkflowStatus, nil,
 		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to build resolved workflow from row: %w", err)
+		}
 	}
 
 	// Parse signatures from JSON
@@ -220,10 +230,14 @@ func (r *PostgresRepository) convertCompleteRowToExecutionWithRelated(row sqlc.G
 	// Parse reports from JSON
 	if len(row.ReportsJson) > 0 {
 		var reports []map[string]interface{}
-		if err := json.Unmarshal(row.ReportsJson, &reports); err != nil {
+		err := json.Unmarshal(row.ReportsJson, &reports)
+		if err != nil {
 			return nil, fmt.Errorf("failed to parse reports JSON: %w", err)
 		}
-		execution.Reports = r.convertReportsFromJSON(reports)
+		execution.Reports, err = r.convertReportsFromJSON(reports)
+		if err != nil {
+			return nil, fmt.Errorf("failed to converts reports JSON: %w", err)
+		}
 	}
 
 	// Parse resource aggregations
@@ -318,7 +332,7 @@ func (r *PostgresRepository) convertOutputsFromJSON(outputs []map[string]interfa
 	return result
 }
 
-func (r *PostgresRepository) convertReportsFromJSON(reports []map[string]interface{}) []testkube.TestWorkflowReport {
+func (r *PostgresRepository) convertReportsFromJSON(reports []map[string]interface{}) ([]testkube.TestWorkflowReport, error) {
 	result := make([]testkube.TestWorkflowReport, len(reports))
 	for i, report := range reports {
 		result[i] = testkube.TestWorkflowReport{
@@ -327,12 +341,20 @@ func (r *PostgresRepository) convertReportsFromJSON(reports []map[string]interfa
 			File: getStringFromMap(report, "file"),
 		}
 		if summary, ok := report["summary"]; ok && summary != nil {
-			summaryBytes, _ := json.Marshal(summary)
-			summaryObj, _ := fromJSONB[testkube.TestWorkflowReportSummary](summaryBytes)
+			summaryBytes, err := json.Marshal(summary)
+			if err != nil {
+				return nil, err
+			}
+
+			summaryObj, err := fromJSONB[testkube.TestWorkflowReportSummary](summaryBytes)
+			if err != nil {
+				return nil, err
+			}
+
 			result[i].Summary = summaryObj
 		}
 	}
-	return result
+	return result, nil
 }
 
 // Helper functions for map access
@@ -651,11 +673,30 @@ func (r *PostgresRepository) insertExecutionWithTransaction(ctx context.Context,
 }
 
 func (r *PostgresRepository) insertMainExecution(ctx context.Context, qtx sqlc.TestWorkflowExecutionQueriesInterface, execution *testkube.TestWorkflowExecution) error {
-	runnerTarget, _ := toJSONB(execution.RunnerTarget)
-	runnerOriginalTarget, _ := toJSONB(execution.RunnerOriginalTarget)
-	tags, _ := toJSONB(execution.Tags)
-	runningContext, _ := toJSONB(execution.RunningContext)
-	configParams, _ := toJSONB(execution.ConfigParams)
+	runnerTarget, err := toJSONB(execution.RunnerTarget)
+	if err != nil {
+		return err
+	}
+
+	runnerOriginalTarget, err := toJSONB(execution.RunnerOriginalTarget)
+	if err != nil {
+		return err
+	}
+
+	tags, err := toJSONB(execution.Tags)
+	if err != nil {
+		return err
+	}
+
+	runningContext, err := toJSONB(execution.RunningContext)
+	if err != nil {
+		return err
+	}
+
+	configParams, err := toJSONB(execution.ConfigParams)
+	if err != nil {
+		return err
+	}
 
 	return qtx.InsertTestWorkflowExecution(ctx, sqlc.InsertTestWorkflowExecutionParams{
 		ID:                        execution.Id,
@@ -711,9 +752,20 @@ func (r *PostgresRepository) insertSignatures(ctx context.Context, qtx sqlc.Test
 }
 
 func (r *PostgresRepository) insertResult(ctx context.Context, qtx sqlc.TestWorkflowExecutionQueriesInterface, executionId string, result *testkube.TestWorkflowResult) error {
-	pauses, _ := toJSONB(result.Pauses)
-	initialization, _ := toJSONB(result.Initialization)
-	steps, _ := toJSONB(result.Steps)
+	pauses, err := toJSONB(result.Pauses)
+	if err != nil {
+		return err
+	}
+
+	initialization, err := toJSONB(result.Initialization)
+	if err != nil {
+		return err
+	}
+
+	steps, err := toJSONB(result.Steps)
+	if err != nil {
+		return err
+	}
 
 	var status, predictedStatus pgtype.Text
 	if result.Status != nil {
@@ -743,8 +795,12 @@ func (r *PostgresRepository) insertResult(ctx context.Context, qtx sqlc.TestWork
 
 func (r *PostgresRepository) insertOutputs(ctx context.Context, qtx sqlc.TestWorkflowExecutionQueriesInterface, executionId string, outputs []testkube.TestWorkflowOutput) error {
 	for _, output := range outputs {
-		value, _ := toJSONB(output.Value)
-		err := qtx.InsertTestWorkflowOutput(ctx, sqlc.InsertTestWorkflowOutputParams{
+		value, err := toJSONB(output.Value)
+		if err != nil {
+			return err
+		}
+
+		err = qtx.InsertTestWorkflowOutput(ctx, sqlc.InsertTestWorkflowOutputParams{
 			ExecutionID: executionId,
 			Ref:         toPgText(output.Ref),
 			Name:        toPgText(output.Name),
@@ -811,8 +867,12 @@ func (r *PostgresRepository) deleteTestWorkflow(ctx context.Context, qtx sqlc.Te
 
 func (r *PostgresRepository) insertReports(ctx context.Context, qtx sqlc.TestWorkflowExecutionQueriesInterface, executionId string, reports []testkube.TestWorkflowReport) error {
 	for _, report := range reports {
-		summary, _ := toJSONB(report.Summary)
-		err := qtx.InsertTestWorkflowReport(ctx, sqlc.InsertTestWorkflowReportParams{
+		summary, err := toJSONB(report.Summary)
+		if err != nil {
+			return err
+		}
+
+		err = qtx.InsertTestWorkflowReport(ctx, sqlc.InsertTestWorkflowReportParams{
 			ExecutionID: executionId,
 			Ref:         toPgText(report.Ref),
 			Kind:        toPgText(report.Kind),
@@ -827,8 +887,15 @@ func (r *PostgresRepository) insertReports(ctx context.Context, qtx sqlc.TestWor
 }
 
 func (r *PostgresRepository) insertResourceAggregations(ctx context.Context, qtx sqlc.TestWorkflowExecutionQueriesInterface, executionId string, agg *testkube.TestWorkflowExecutionResourceAggregationsReport) error {
-	global, _ := toJSONB(agg.Global)
-	step, _ := toJSONB(agg.Step)
+	global, err := toJSONB(agg.Global)
+	if err != nil {
+		return err
+	}
+
+	step, err := toJSONB(agg.Step)
+	if err != nil {
+		return err
+	}
 
 	return qtx.InsertTestWorkflowResourceAggregations(ctx, sqlc.InsertTestWorkflowResourceAggregationsParams{
 		ExecutionID: executionId,
@@ -838,11 +905,30 @@ func (r *PostgresRepository) insertResourceAggregations(ctx context.Context, qtx
 }
 
 func (r *PostgresRepository) insertWorkflow(ctx context.Context, qtx sqlc.TestWorkflowExecutionQueriesInterface, executionId, workflowType string, workflow *testkube.TestWorkflow) error {
-	labels, _ := toJSONB(workflow.Labels)
-	annotations, _ := toJSONB(workflow.Annotations)
-	spec, _ := toJSONB(workflow.Spec)
-	status, _ := toJSONB(workflow.Status)
-	health, _ := toJSONB(workflow.Health)
+	labels, err := toJSONB(workflow.Labels)
+	if err != nil {
+		return err
+	}
+
+	annotations, err := toJSONB(workflow.Annotations)
+	if err != nil {
+		return err
+	}
+
+	spec, err := toJSONB(workflow.Spec)
+	if err != nil {
+		return err
+	}
+
+	status, err := toJSONB(workflow.Status)
+	if err != nil {
+		return err
+	}
+
+	health, err := toJSONB(workflow.Health)
+	if err != nil {
+		return err
+	}
 
 	return qtx.InsertTestWorkflow(ctx, sqlc.InsertTestWorkflowParams{
 		ExecutionID:  executionId,
@@ -962,9 +1048,20 @@ func (r *PostgresRepository) updateExecutionWithTransaction(ctx context.Context,
 
 // UpdateResult updates only the result
 func (r *PostgresRepository) UpdateResult(ctx context.Context, id string, result *testkube.TestWorkflowResult) error {
-	pauses, _ := toJSONB(result.Pauses)
-	initialization, _ := toJSONB(result.Initialization)
-	steps, _ := toJSONB(result.Steps)
+	pauses, err := toJSONB(result.Pauses)
+	if err != nil {
+		return err
+	}
+
+	initialization, err := toJSONB(result.Initialization)
+	if err != nil {
+		return err
+	}
+
+	steps, err := toJSONB(result.Steps)
+	if err != nil {
+		return err
+	}
 
 	var status, predictedStatus pgtype.Text
 	if result.Status != nil {
@@ -974,7 +1071,7 @@ func (r *PostgresRepository) UpdateResult(ctx context.Context, id string, result
 		predictedStatus = toPgText(string(*result.PredictedStatus))
 	}
 
-	err := r.queries.UpdateTestWorkflowExecutionResult(ctx, sqlc.UpdateTestWorkflowExecutionResultParams{
+	err = r.queries.UpdateTestWorkflowExecutionResult(ctx, sqlc.UpdateTestWorkflowExecutionResultParams{
 		ExecutionID:     id,
 		Status:          status,
 		PredictedStatus: predictedStatus,
@@ -1007,7 +1104,11 @@ func (r *PostgresRepository) UpdateResult(ctx context.Context, id string, result
 
 // UpdateReport adds a report
 func (r *PostgresRepository) UpdateReport(ctx context.Context, id string, report *testkube.TestWorkflowReport) error {
-	summary, _ := toJSONB(report.Summary)
+	summary, err := toJSONB(report.Summary)
+	if err != nil {
+		return err
+	}
+
 	return r.queries.UpdateTestWorkflowExecutionReport(ctx, sqlc.UpdateTestWorkflowExecutionReportParams{
 		ExecutionID: id,
 		Ref:         toPgText(report.Ref),
@@ -1044,8 +1145,15 @@ func (r *PostgresRepository) UpdateOutput(ctx context.Context, id string, refs [
 
 // UpdateResourceAggregations updates resource aggregations
 func (r *PostgresRepository) UpdateResourceAggregations(ctx context.Context, id string, resourceAggregations *testkube.TestWorkflowExecutionResourceAggregationsReport) error {
-	global, _ := toJSONB(resourceAggregations.Global)
-	step, _ := toJSONB(resourceAggregations.Step)
+	global, err := toJSONB(resourceAggregations.Global)
+	if err != nil {
+		return err
+	}
+
+	step, err := toJSONB(resourceAggregations.Step)
+	if err != nil {
+		return err
+	}
 
 	return r.queries.UpdateTestWorkflowExecutionResourceAggregations(ctx, sqlc.UpdateTestWorkflowExecutionResourceAggregationsParams{
 		ExecutionID: id,
@@ -1461,13 +1569,20 @@ func (r *PostgresRepository) parseLabelSelector(labelSelector *testworkflow.Labe
 
 // Helper methods for building complex objects
 
-func (r *PostgresRepository) parseExecutionJSONFields(execution *testkube.TestWorkflowExecution, runnerTarget, runnerOriginalTarget, tags, runningContext, configParams []byte) {
+func (r *PostgresRepository) parseExecutionJSONFields(execution *testkube.TestWorkflowExecution, runnerTarget, runnerOriginalTarget, tags, runningContext, configParams []byte) error {
+	var err error
 	if len(runnerTarget) > 0 {
-		execution.RunnerTarget, _ = fromJSONB[testkube.ExecutionTarget](runnerTarget)
+		execution.RunnerTarget, err = fromJSONB[testkube.ExecutionTarget](runnerTarget)
+		if err != nil {
+			return err
+		}
 	}
 
 	if len(runnerOriginalTarget) > 0 {
-		execution.RunnerOriginalTarget, _ = fromJSONB[testkube.ExecutionTarget](runnerOriginalTarget)
+		execution.RunnerOriginalTarget, err = fromJSONB[testkube.ExecutionTarget](runnerOriginalTarget)
+		if err != nil {
+			return err
+		}
 	}
 
 	if len(tags) > 0 {
@@ -1475,12 +1590,17 @@ func (r *PostgresRepository) parseExecutionJSONFields(execution *testkube.TestWo
 	}
 
 	if len(runningContext) > 0 {
-		execution.RunningContext, _ = fromJSONB[testkube.TestWorkflowRunningContext](runningContext)
+		execution.RunningContext, err = fromJSONB[testkube.TestWorkflowRunningContext](runningContext)
+		if err != nil {
+			return err
+		}
 	}
 
 	if len(configParams) > 0 {
 		json.Unmarshal(configParams, &execution.ConfigParams)
 	}
+
+	return nil
 }
 
 func (r *PostgresRepository) buildResultFromRow(
@@ -1489,7 +1609,8 @@ func (r *PostgresRepository) buildResultFromRow(
 	duration, totalDuration pgtype.Text,
 	durationMs, pausedMs, totalDurationMs pgtype.Int4,
 	pauses, initialization, steps []byte,
-) *testkube.TestWorkflowResult {
+) (*testkube.TestWorkflowResult, error) {
+	var err error
 	result := &testkube.TestWorkflowResult{
 		QueuedAt:        fromPgTimestamp(queuedAt),
 		StartedAt:       fromPgTimestamp(startedAt),
@@ -1516,14 +1637,17 @@ func (r *PostgresRepository) buildResultFromRow(
 	}
 
 	if len(initialization) > 0 {
-		result.Initialization, _ = fromJSONB[testkube.TestWorkflowStepResult](initialization)
+		result.Initialization, err = fromJSONB[testkube.TestWorkflowStepResult](initialization)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if len(steps) > 0 {
 		json.Unmarshal(steps, &result.Steps)
 	}
 
-	return result
+	return result, nil
 }
 
 func (r *PostgresRepository) buildWorkflowFromRow(
@@ -1534,7 +1658,8 @@ func (r *PostgresRepository) buildWorkflowFromRow(
 	readOnly pgtype.Bool,
 	status []byte,
 	health []byte,
-) *testkube.TestWorkflow {
+) (*testkube.TestWorkflow, error) {
+	var err error
 	workflow := &testkube.TestWorkflow{
 		Name:        fromPgText(name),
 		Namespace:   fromPgText(namespace),
@@ -1553,26 +1678,54 @@ func (r *PostgresRepository) buildWorkflowFromRow(
 	}
 
 	if len(spec) > 0 {
-		workflow.Spec, _ = fromJSONB[testkube.TestWorkflowSpec](spec)
+		workflow.Spec, err = fromJSONB[testkube.TestWorkflowSpec](spec)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if len(status) > 0 {
-		workflow.Status, _ = fromJSONB[testkube.TestWorkflowStatusSummary](status)
+		workflow.Status, err = fromJSONB[testkube.TestWorkflowStatusSummary](status)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if len(health) > 0 {
-		workflow.Health, _ = fromJSONB[testkube.TestWorkflowExecutionHealth](health)
+		workflow.Health, err = fromJSONB[testkube.TestWorkflowExecutionHealth](health)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	return workflow
+	return workflow, nil
 }
 
 func (r *PostgresRepository) updateMainExecution(ctx context.Context, qtx sqlc.TestWorkflowExecutionQueriesInterface, execution *testkube.TestWorkflowExecution) error {
-	runnerTarget, _ := toJSONB(execution.RunnerTarget)
-	runnerOriginalTarget, _ := toJSONB(execution.RunnerOriginalTarget)
-	tags, _ := toJSONB(execution.Tags)
-	runningContext, _ := toJSONB(execution.RunningContext)
-	configParams, _ := toJSONB(execution.ConfigParams)
+	runnerTarget, err := toJSONB(execution.RunnerTarget)
+	if err != nil {
+		return err
+	}
+
+	runnerOriginalTarget, err := toJSONB(execution.RunnerOriginalTarget)
+	if err != nil {
+		return err
+	}
+
+	tags, err := toJSONB(execution.Tags)
+	if err != nil {
+		return err
+	}
+
+	runningContext, err := toJSONB(execution.RunningContext)
+	if err != nil {
+		return err
+	}
+
+	configParams, err := toJSONB(execution.ConfigParams)
+	if err != nil {
+		return err
+	}
 
 	// Placeholder - you would call the generated method here:
 	return qtx.UpdateTestWorkflowExecution(ctx, sqlc.UpdateTestWorkflowExecutionParams{
