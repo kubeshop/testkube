@@ -47,10 +47,10 @@ FROM golang:1.23-alpine AS debug
 
 ENV GOTRACEBACK=all
 RUN go install github.com/go-delve/delve/cmd/dlv@v1.23.1
+RUN cp -rf /bin /.tktw-bin
+COPY --from=builder /app/build/_local/workflow-init /init
 
-COPY --from=builder /app/build/_local/workflow-init /testkube/
-
-ENTRYPOINT ["/go/bin/dlv", "exec", "--headless", "--continue", "--accept-multiclient", "--listen=:56268", "--api-version=2", "/testkube/workflow-init"]
+ENTRYPOINT ["/go/bin/dlv", "exec", "--headless", "--continue", "--accept-multiclient", "--listen=:56268", "--api-version=2", "/init"]
 
 ###################################
 ## Distribution
