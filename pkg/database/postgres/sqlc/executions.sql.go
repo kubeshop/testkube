@@ -266,20 +266,44 @@ WHERE r.status IN ('passed', 'failed', 'aborted')
     AND (COALESCE($13::boolean, NULL) IS NULL OR 
          ($13::boolean = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
          ($13::boolean = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
-   AND (COALESCE($14::text, '') = '' OR (
+    AND (COALESCE($14::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR (
         CASE 
-            WHEN $15::text = 'exists' THEN w.labels ? $16::text
-            WHEN $15::text = 'equals' THEN w.labels->$16::text = to_jsonb($17::text)
-            WHEN $15::text = 'not_exists' THEN NOT (w.labels ? $16::text)
-            ELSE true
+            WHEN COALESCE($15::text, 'OR') = 'AND' THEN
+                (SELECT COUNT(*) FROM unnest($14::text[]) AS required_tag 
+                 WHERE e.tags ? required_tag) = array_length($14::text[], 1)
+            ELSE
+                (SELECT COUNT(*) FROM unnest($14::text[]) AS required_tag 
+                 WHERE e.tags ? required_tag) > 0
         END
     ))
-    AND (COALESCE($18::text, '') = '' OR (
+    AND (COALESCE($16::jsonb, '{}'::jsonb) = '{}'::jsonb OR (
         CASE 
-            WHEN $19::text = 'exists' THEN e.tags ? $20::text
-            WHEN $19::text = 'equals' THEN e.tags->$20::text = to_jsonb($21::text)
-            WHEN $19::text = 'not_exists' THEN NOT (e.tags ? $20::text)
-            ELSE true
+            WHEN COALESCE($17::text, 'AND') = 'AND' THEN
+                (SELECT COUNT(*) FROM jsonb_each_text($16::jsonb) AS tc
+                 WHERE e.tags->>tc.key = tc.value) = (SELECT COUNT(*) FROM jsonb_each_text($16::jsonb))
+            ELSE
+                (SELECT COUNT(*) FROM jsonb_each_text($16::jsonb) AS tc
+                 WHERE e.tags->>tc.key = tc.value) > 0
+        END
+    ))
+    AND (COALESCE($18::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR (
+        CASE 
+            WHEN COALESCE($19::text, 'OR') = 'AND' THEN
+                (SELECT COUNT(*) FROM unnest($18::text[]) AS required_label 
+                 WHERE w.labels ? required_label) = array_length($18::text[], 1)
+            ELSE
+                (SELECT COUNT(*) FROM unnest($18::text[]) AS required_label 
+                 WHERE w.labels ? required_label) > 0
+        END
+    ))
+    AND (COALESCE($20::jsonb, '{}'::jsonb) = '{}'::jsonb OR (
+        CASE 
+            WHEN COALESCE($21::text, 'AND') = 'AND' THEN
+                (SELECT COUNT(*) FROM jsonb_each_text($20::jsonb) AS lc
+                 WHERE w.labels->>lc.key = lc.value) = (SELECT COUNT(*) FROM jsonb_each_text($20::jsonb))
+            ELSE
+                (SELECT COUNT(*) FROM jsonb_each_text($20::jsonb) AS lc
+                 WHERE w.labels->>lc.key = lc.value) > 0
         END
     ))
 ORDER BY e.scheduled_at DESC
@@ -305,14 +329,14 @@ func (q *Queries) GetFinishedTestWorkflowExecutions(ctx context.Context, arg Get
 		arg.ActorType,
 		arg.GroupID,
 		arg.Initialized,
-		arg.LabelSelector,
-		arg.LabelSelectorType,
-		arg.LabelSelectorKey,
-		arg.LabelSelectorValue,
-		arg.TagSelector,
-		arg.TagSelectorType,
-		arg.TagSelectorKey,
-		arg.TagSelectorValue,
+		arg.TagKeys,
+		arg.TagMatchType,
+		arg.TagConditions,
+		arg.TagConditionsMatchType,
+		arg.LabelKeys,
+		arg.LabelMatchType,
+		arg.LabelConditions,
+		arg.LabelConditionsMatchType,
 		arg.Fst,
 		arg.Lmt,
 	)
@@ -1279,20 +1303,44 @@ WHERE 1=1
     AND (COALESCE($13::boolean, NULL) IS NULL OR 
          ($13::boolean = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
          ($13::boolean = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
-   AND (COALESCE($14::text, '') = '' OR (
+    AND (COALESCE($14::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR (
         CASE 
-            WHEN $15::text = 'exists' THEN w.labels ? $16::text
-            WHEN $15::text = 'equals' THEN w.labels->$16::text = to_jsonb($17::text)
-            WHEN $15::text = 'not_exists' THEN NOT (w.labels ? $16::text)
-            ELSE true
+            WHEN COALESCE($15::text, 'OR') = 'AND' THEN
+                (SELECT COUNT(*) FROM unnest($14::text[]) AS required_tag 
+                 WHERE e.tags ? required_tag) = array_length($14::text[], 1)
+            ELSE
+                (SELECT COUNT(*) FROM unnest($14::text[]) AS required_tag 
+                 WHERE e.tags ? required_tag) > 0
         END
     ))
-    AND (COALESCE($18::text, '') = '' OR (
+    AND (COALESCE($16::jsonb, '{}'::jsonb) = '{}'::jsonb OR (
         CASE 
-            WHEN $19::text = 'exists' THEN e.tags ? $20::text
-            WHEN $19::text = 'equals' THEN e.tags->$20::text = to_jsonb($21::text)
-            WHEN $19::text = 'not_exists' THEN NOT (e.tags ? $20::text)
-            ELSE true
+            WHEN COALESCE($17::text, 'AND') = 'AND' THEN
+                (SELECT COUNT(*) FROM jsonb_each_text($16::jsonb) AS tc
+                 WHERE e.tags->>tc.key = tc.value) = (SELECT COUNT(*) FROM jsonb_each_text($16::jsonb))
+            ELSE
+                (SELECT COUNT(*) FROM jsonb_each_text($16::jsonb) AS tc
+                 WHERE e.tags->>tc.key = tc.value) > 0
+        END
+    ))
+    AND (COALESCE($18::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR (
+        CASE 
+            WHEN COALESCE($19::text, 'OR') = 'AND' THEN
+                (SELECT COUNT(*) FROM unnest($18::text[]) AS required_label 
+                 WHERE w.labels ? required_label) = array_length($18::text[], 1)
+            ELSE
+                (SELECT COUNT(*) FROM unnest($18::text[]) AS required_label 
+                 WHERE w.labels ? required_label) > 0
+        END
+    ))
+    AND (COALESCE($20::jsonb, '{}'::jsonb) = '{}'::jsonb OR (
+        CASE 
+            WHEN COALESCE($21::text, 'AND') = 'AND' THEN
+                (SELECT COUNT(*) FROM jsonb_each_text($20::jsonb) AS lc
+                 WHERE w.labels->>lc.key = lc.value) = (SELECT COUNT(*) FROM jsonb_each_text($20::jsonb))
+            ELSE
+                (SELECT COUNT(*) FROM jsonb_each_text($20::jsonb) AS lc
+                 WHERE w.labels->>lc.key = lc.value) > 0
         END
     ))
 ORDER BY e.scheduled_at DESC
@@ -1313,14 +1361,12 @@ type GetTestWorkflowExecutionsParams struct {
 	ActorType          pgtype.Text               `db:"actor_type" json:"actor_type"`
 	GroupID            pgtype.Text               `db:"group_id" json:"group_id"`
 	Initialized        pgtype.Bool               `db:"initialized" json:"initialized"`
-	LabelSelector      pgtype.Text               `db:"label_selector" json:"label_selector"`
-	LabelSelectorType  pgtype.Text               `db:"label_selector_type" json:"label_selector_type"`
-	LabelSelectorKey   []byte                    `db:"label_selector_key" json:"label_selector_key"`
-	LabelSelectorValue string                    `db:"label_selector_value" json:"label_selector_value"`
-	TagSelector        pgtype.Text               `db:"tag_selector" json:"tag_selector"`
-	TagSelectorType    pgtype.Text               `db:"tag_selector_type" json:"tag_selector_type"`
-	TagSelectorKey     []byte                    `db:"tag_selector_key" json:"tag_selector_key"`
-	TagSelectorValue   string                    `db:"tag_selector_value" json:"tag_selector_value"`
+	TagKeys            []string                  `db:"tag_keys" json:"tag_keys"`
+	TagConditions      []byte                    `db:"tag_conditions" json:"tag_conditions"`
+	LabelKeys          []string                  `db:"label_keys" json:"label_keys"`
+	LabelConditions    []byte                    `db:"label_conditions" json:"label_conditions"`
+	SelectorKeys       []string                  `db:"selector_keys" json:"selector_keys"`
+	SelectorConditions []byte                    `db:"selector_conditions" json:"selector_conditions"`
 	Fst                int32                     `db:"fst" json:"fst"`
 	Lmt                int32                     `db:"lmt" json:"lmt"`
 }
@@ -1342,14 +1388,14 @@ func (q *Queries) GetTestWorkflowExecutions(ctx context.Context, arg GetTestWork
 		arg.ActorType,
 		arg.GroupID,
 		arg.Initialized,
-		arg.LabelSelector,
-		arg.LabelSelectorType,
-		arg.LabelSelectorKey,
-		arg.LabelSelectorValue,
-		arg.TagSelector,
-		arg.TagSelectorType,
-		arg.TagSelectorKey,
-		arg.TagSelectorValue,
+		arg.TagKeys,
+		arg.TagMatchType,
+		arg.TagConditions,
+		arg.TagConditionsMatchType,
+		arg.LabelKeys,
+		arg.LabelMatchType,
+		arg.LabelConditions,
+		arg.LabelConditionsMatchType,
 		arg.Fst,
 		arg.Lmt,
 	)
@@ -1506,20 +1552,44 @@ WHERE 1=1
     AND (COALESCE($13::boolean, NULL) IS NULL OR 
          ($13::boolean = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
          ($13::boolean = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
-   AND (COALESCE($14::text, '') = '' OR (
+    AND (COALESCE($14::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR (
         CASE 
-            WHEN $15::text = 'exists' THEN w.labels ? $16::text
-            WHEN $15::text = 'equals' THEN w.labels->$16::text = to_jsonb($17::text)
-            WHEN $15::text = 'not_exists' THEN NOT (w.labels ? $16::text)
-            ELSE true
+            WHEN COALESCE($15::text, 'OR') = 'AND' THEN
+                (SELECT COUNT(*) FROM unnest($14::text[]) AS required_tag 
+                 WHERE e.tags ? required_tag) = array_length($14::text[], 1)
+            ELSE
+                (SELECT COUNT(*) FROM unnest($14::text[]) AS required_tag 
+                 WHERE e.tags ? required_tag) > 0
         END
     ))
-    AND (COALESCE($18::text, '') = '' OR (
+    AND (COALESCE($16::jsonb, '{}'::jsonb) = '{}'::jsonb OR (
         CASE 
-            WHEN $19::text = 'exists' THEN e.tags ? $20::text
-            WHEN $19::text = 'equals' THEN e.tags->$20::text = to_jsonb($21::text)
-            WHEN $19::text = 'not_exists' THEN NOT (e.tags ? $20::text)
-            ELSE true
+            WHEN COALESCE($17::text, 'AND') = 'AND' THEN
+                (SELECT COUNT(*) FROM jsonb_each_text($16::jsonb) AS tc
+                 WHERE e.tags->>tc.key = tc.value) = (SELECT COUNT(*) FROM jsonb_each_text($16::jsonb))
+            ELSE
+                (SELECT COUNT(*) FROM jsonb_each_text($16::jsonb) AS tc
+                 WHERE e.tags->>tc.key = tc.value) > 0
+        END
+    ))
+    AND (COALESCE($18::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR (
+        CASE 
+            WHEN COALESCE($19::text, 'OR') = 'AND' THEN
+                (SELECT COUNT(*) FROM unnest($18::text[]) AS required_label 
+                 WHERE w.labels ? required_label) = array_length($18::text[], 1)
+            ELSE
+                (SELECT COUNT(*) FROM unnest($18::text[]) AS required_label 
+                 WHERE w.labels ? required_label) > 0
+        END
+    ))
+    AND (COALESCE($20::jsonb, '{}'::jsonb) = '{}'::jsonb OR (
+        CASE 
+            WHEN COALESCE($21::text, 'AND') = 'AND' THEN
+                (SELECT COUNT(*) FROM jsonb_each_text($20::jsonb) AS lc
+                 WHERE w.labels->>lc.key = lc.value) = (SELECT COUNT(*) FROM jsonb_each_text($20::jsonb))
+            ELSE
+                (SELECT COUNT(*) FROM jsonb_each_text($20::jsonb) AS lc
+                 WHERE w.labels->>lc.key = lc.value) > 0
         END
     ))
 ORDER BY e.scheduled_at DESC
@@ -1545,14 +1615,14 @@ func (q *Queries) GetTestWorkflowExecutionsSummary(ctx context.Context, arg GetT
 		arg.ActorType,
 		arg.GroupID,
 		arg.Initialized,
-		arg.LabelSelector,
-		arg.LabelSelectorType,
-		arg.LabelSelectorKey,
-		arg.LabelSelectorValue,
-		arg.TagSelector,
-		arg.TagSelectorType,
-		arg.TagSelectorKey,
-		arg.TagSelectorValue,
+		arg.TagKeys,
+		arg.TagMatchType,
+		arg.TagConditions,
+		arg.TagConditionsMatchType,
+		arg.LabelKeys,
+		arg.LabelMatchType,
+		arg.LabelConditions,
+		arg.LabelConditionsMatchType,
 		arg.Fst,
 		arg.Lmt,
 	)
@@ -1657,20 +1727,44 @@ WHERE 1=1
     AND (COALESCE($13::boolean, NULL) IS NULL OR 
          ($13::boolean = true AND (r.status != 'queued' OR r.steps IS NOT NULL)) OR
          ($13::boolean = false AND r.status = 'queued' AND (r.steps IS NULL OR r.steps = '{}'::jsonb)))
-   AND (COALESCE($14::text, '') = '' OR (
+    AND (COALESCE($14::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR (
         CASE 
-            WHEN $15::text = 'exists' THEN w.labels ? $16::text
-            WHEN $15::text = 'equals' THEN w.labels->$16::text = to_jsonb($17::text)
-            WHEN $15::text = 'not_exists' THEN NOT (w.labels ? $16::text)
-            ELSE true
+            WHEN COALESCE($15::text, 'OR') = 'AND' THEN
+                (SELECT COUNT(*) FROM unnest($14::text[]) AS required_tag 
+                 WHERE e.tags ? required_tag) = array_length($14::text[], 1)
+            ELSE
+                (SELECT COUNT(*) FROM unnest($14::text[]) AS required_tag 
+                 WHERE e.tags ? required_tag) > 0
         END
     ))
-    AND (COALESCE($18::text, '') = '' OR (
+    AND (COALESCE($16::jsonb, '{}'::jsonb) = '{}'::jsonb OR (
         CASE 
-            WHEN $19::text = 'exists' THEN e.tags ? $20::text
-            WHEN $19::text = 'equals' THEN e.tags->$20::text = to_jsonb($21::text)
-            WHEN $19::text = 'not_exists' THEN NOT (e.tags ? $20::text)
-            ELSE true
+            WHEN COALESCE($17::text, 'AND') = 'AND' THEN
+                (SELECT COUNT(*) FROM jsonb_each_text($16::jsonb) AS tc
+                 WHERE e.tags->>tc.key = tc.value) = (SELECT COUNT(*) FROM jsonb_each_text($16::jsonb))
+            ELSE
+                (SELECT COUNT(*) FROM jsonb_each_text($16::jsonb) AS tc
+                 WHERE e.tags->>tc.key = tc.value) > 0
+        END
+    ))
+    AND (COALESCE($18::text[], ARRAY[]::text[]) = ARRAY[]::text[] OR (
+        CASE 
+            WHEN COALESCE($19::text, 'OR') = 'AND' THEN
+                (SELECT COUNT(*) FROM unnest($18::text[]) AS required_label 
+                 WHERE w.labels ? required_label) = array_length($18::text[], 1)
+            ELSE
+                (SELECT COUNT(*) FROM unnest($18::text[]) AS required_label 
+                 WHERE w.labels ? required_label) > 0
+        END
+    ))
+    AND (COALESCE($20::jsonb, '{}'::jsonb) = '{}'::jsonb OR (
+        CASE 
+            WHEN COALESCE($21::text, 'AND') = 'AND' THEN
+                (SELECT COUNT(*) FROM jsonb_each_text($20::jsonb) AS lc
+                 WHERE w.labels->>lc.key = lc.value) = (SELECT COUNT(*) FROM jsonb_each_text($20::jsonb))
+            ELSE
+                (SELECT COUNT(*) FROM jsonb_each_text($20::jsonb) AS lc
+                 WHERE w.labels->>lc.key = lc.value) > 0
         END
     ))
 GROUP BY r.status
@@ -1698,14 +1792,14 @@ func (q *Queries) GetTestWorkflowExecutionsTotals(ctx context.Context, arg GetTe
 		arg.ActorType,
 		arg.GroupID,
 		arg.Initialized,
-		arg.LabelSelector,
-		arg.LabelSelectorType,
-		arg.LabelSelectorKey,
-		arg.LabelSelectorValue,
-		arg.TagSelector,
-		arg.TagSelectorType,
-		arg.TagSelectorKey,
-		arg.TagSelectorValue,
+		arg.TagKeys,
+		arg.TagMatchType,
+		arg.TagConditions,
+		arg.TagConditionsMatchType,
+		arg.LabelKeys,
+		arg.LabelMatchType,
+		arg.LabelConditions,
+		arg.LabelConditionsMatchType,
 	)
 	if err != nil {
 		return nil, err

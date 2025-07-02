@@ -586,20 +586,44 @@ WHERE 1=1
     AND \(COALESCE\(\$13::boolean, NULL\) IS NULL OR 
          \(\$13::boolean = true AND \(r.status != 'queued' OR r.steps IS NOT NULL\)\) OR
          \(\$13::boolean = false AND r.status = 'queued' AND \(r.steps IS NULL OR r.steps = '\{\}'::jsonb\)\)\)
-   AND \(COALESCE\(\$14::text, ''\) = '' OR \(
+    AND \(COALESCE\(\$14::text\[\], ARRAY\[\]::text\[\]\) = ARRAY\[\]::text\[\] OR \(
         CASE 
-            WHEN \$15::text = 'exists' THEN w.labels \? \$16::text
-            WHEN \$15::text = 'equals' THEN w.labels->\$16::text = to_jsonb\(\$17::text\)
-            WHEN \$15::text = 'not_exists' THEN NOT \(w.labels \? \$16::text\)
-            ELSE true
+            WHEN COALESCE\(\$15::text, 'OR'\) = 'AND' THEN
+                \(SELECT COUNT\(\*\) FROM unnest\(\$14::text\[\]\) AS required_tag 
+                 WHERE e.tags \? required_tag\) = array_length\(\$14::text\[\], 1\)
+            ELSE
+                \(SELECT COUNT\(\*\) FROM unnest\(\$14::text\[\]\) AS required_tag 
+                 WHERE e.tags \? required_tag\) > 0
         END
     \)\)
-    AND \(COALESCE\(\$18::text, ''\) = '' OR \(
+    AND \(COALESCE\(\$16::jsonb, '\{\}'::jsonb\) = '\{\}'::jsonb OR \(
         CASE 
-            WHEN \$19::text = 'exists' THEN e.tags \? \$20::text
-            WHEN \$19::text = 'equals' THEN e.tags->\$20::text = to_jsonb\(\$21::text\)
-            WHEN \$19::text = 'not_exists' THEN NOT \(e.tags \? \$20::text\)
-            ELSE true
+            WHEN COALESCE\(\$17::text, 'AND'\) = 'AND' THEN
+                \(SELECT COUNT\(\*\) FROM jsonb_each_text\(\$16::jsonb\) AS tc
+                 WHERE e.tags->>tc.key = tc.value\) = \(SELECT COUNT\(\*\) FROM jsonb_each_text\(\$16::jsonb\)\)
+            ELSE
+                \(SELECT COUNT\(\*\) FROM jsonb_each_text\(\$16::jsonb\) AS tc
+                 WHERE e.tags->>tc.key = tc.value\) > 0
+        END
+    \)\)
+    AND \(COALESCE\(\$18::text\[\], ARRAY\[\]::text\[\]\) = ARRAY\[\]::text\[\] OR \(
+        CASE 
+            WHEN COALESCE\(\$19::text, 'OR'\) = 'AND' THEN
+                \(SELECT COUNT\(\*\) FROM unnest\(\$18::text\[\]\) AS required_label 
+                 WHERE w.labels \? required_label\) = array_length\(\$18::text\[\], 1\)
+            ELSE
+                \(SELECT COUNT\(\*\) FROM unnest\(\$18::text\[\]\) AS required_label 
+                 WHERE w.labels \? required_label\) > 0
+        END
+    \)\)
+    AND \(COALESCE\(\$20::jsonb, '\{\}'::jsonb\) = '\{\}'::jsonb OR \(
+        CASE 
+            WHEN COALESCE\(\$21::text, 'AND'\) = 'AND' THEN
+                \(SELECT COUNT\(\*\) FROM jsonb_each_text\(\$20::jsonb\) AS lc
+                 WHERE w.labels->>lc.key = lc.value\) = \(SELECT COUNT\(\*\) FROM jsonb_each_text\(\$20::jsonb\)\)
+            ELSE
+                \(SELECT COUNT\(\*\) FROM jsonb_each_text\(\$20::jsonb\) AS lc
+                 WHERE w.labels->>lc.key = lc.value\) > 0
         END
     \)\)
 GROUP BY r\.status`
@@ -610,27 +634,27 @@ GROUP BY r\.status`
 
 	// Create parameters struct with all required fields
 	params := GetTestWorkflowExecutionsTotalsParams{
-		WorkflowName:       pgtype.Text{Valid: false},
-		WorkflowNames:      pgtype.Array[pgtype.Text]{},
-		TextSearch:         pgtype.Text{Valid: false},
-		StartDate:          pgtype.Timestamptz{Valid: false},
-		EndDate:            pgtype.Timestamptz{Valid: false},
-		LastNDays:          pgtype.Int4{Valid: false},
-		Statuses:           pgtype.Array[pgtype.Text]{},
-		RunnerID:           pgtype.Text{Valid: false},
-		Assigned:           pgtype.Bool{Valid: false},
-		ActorName:          pgtype.Text{Valid: false},
-		ActorType:          pgtype.Text{Valid: false},
-		GroupID:            pgtype.Text{Valid: false},
-		Initialized:        pgtype.Bool{Valid: false},
-		LabelSelector:      pgtype.Text{Valid: false},
-		LabelSelectorType:  pgtype.Text{Valid: false},
-		LabelSelectorKey:   nil,
-		LabelSelectorValue: "",
-		TagSelector:        pgtype.Text{Valid: false},
-		TagSelectorType:    pgtype.Text{Valid: false},
-		TagSelectorKey:     nil,
-		TagSelectorValue:   "",
+		WorkflowName:             pgtype.Text{Valid: false},
+		WorkflowNames:            pgtype.Array[pgtype.Text]{},
+		TextSearch:               pgtype.Text{Valid: false},
+		StartDate:                pgtype.Timestamptz{Valid: false},
+		EndDate:                  pgtype.Timestamptz{Valid: false},
+		LastNDays:                pgtype.Int4{Valid: false},
+		Statuses:                 pgtype.Array[pgtype.Text]{},
+		RunnerID:                 pgtype.Text{Valid: false},
+		Assigned:                 pgtype.Bool{Valid: false},
+		ActorName:                pgtype.Text{Valid: false},
+		ActorType:                pgtype.Text{Valid: false},
+		GroupID:                  pgtype.Text{Valid: false},
+		Initialized:              pgtype.Bool{Valid: false},
+		TagKeys:                  []string{},
+		TagMatchType:             "",
+		TagConditions:            []byte{},
+		TagConditionsMatchType:   "",
+		LabelKeys:                []string{},
+		LabelMatchType:           "",
+		LabelConditions:          []byte{},
+		LabelConditionsMatchType: "",
 	}
 
 	mock.ExpectQuery(expectedQuery).WithArgs(
@@ -647,14 +671,14 @@ GROUP BY r\.status`
 		params.ActorType,
 		params.GroupID,
 		params.Initialized,
-		params.LabelSelector,
-		params.LabelSelectorType,
-		params.LabelSelectorKey,
-		params.LabelSelectorValue,
-		params.TagSelector,
-		params.TagSelectorType,
-		params.TagSelectorKey,
-		params.TagSelectorValue,
+		params.TagKeys,
+		params.TagMatchType,
+		params.TagConditions,
+		params.TagConditionsMatchType,
+		params.LabelKeys,
+		params.LabelMatchType,
+		params.LabelConditions,
+		params.LabelConditionsMatchType,
 	).WillReturnRows(rows)
 
 	// Execute query

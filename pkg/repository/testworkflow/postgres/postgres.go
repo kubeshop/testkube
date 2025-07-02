@@ -1287,7 +1287,7 @@ func (r *PostgresRepository) GetExecutionTags(ctx context.Context, testWorkflowN
 	for _, row := range rows {
 		var values []string
 		for _, val := range row.Values {
-			values = append(values, utils.UnescapeDots(val))
+			values = append(values, val)
 		}
 		tags[utils.UnescapeDots(row.TagKey)] = values
 	}
@@ -1470,101 +1470,108 @@ func (r *PostgresRepository) buildTestWorkflowExecutionParams(filter testworkflo
 		params.Initialized = toPgBool(filter.Initialized())
 	}
 
-	// Handle tag selector
-	if filter.TagSelector() != "" {
-		tagConditions := r.parseTagSelector(filter.TagSelector())
-		if len(tagConditions) > 0 {
-			// For simplicity, handle the first condition
-			// In a real implementation, you might want to handle multiple conditions
-			firstCondition := tagConditions[0]
-			params.TagSelector = toPgText(filter.TagSelector())
-			params.TagSelectorType = toPgText(firstCondition.Type)
-			params.TagSelectorKey = []byte(firstCondition.Key)
-			if firstCondition.Value != "" {
-				params.TagSelectorValue = firstCondition.Value
-			}
-		}
-	}
-
-	// Handle label selector
-	if filter.LabelSelector() != nil && len(filter.LabelSelector().Or) > 0 {
-		labelConditions := r.parseLabelSelector(filter.LabelSelector())
-		if len(labelConditions) > 0 {
-			// For simplicity, handle the first condition
-			firstCondition := labelConditions[0]
-			params.LabelSelector = toPgText("true") // Mark as having label selector
-			params.LabelSelectorType = toPgText(firstCondition.Type)
-			params.LabelSelectorKey = []byte(firstCondition.Key)
-			if firstCondition.Value != "" {
-				params.LabelSelectorValue = firstCondition.Value
-			}
-		}
-	}
-
 	return params
 }
 
-// Selector condition structures
-type SelectorCondition struct {
-	Type  string // "exists", "equals", "not_exists"
-	Key   string
-	Value string
+type KeyCondition struct {
+	Key      string `json:"key"`
+	Operator string `json:"operator"` // "exists" or "not_exists"
+}
+
+type ValueCondition struct {
+	Key    string   `json:"key"`
+	Values []string `json:"values"` // Multiple values for the same key (OR logic within the same key)
 }
 
 // Parse tag selector into conditions
-func (r *PostgresRepository) parseTagSelector(tagSelector string) []SelectorCondition {
-	var conditions []SelectorCondition
+func (r *PostgresRepository) parseTagSelector(tagSelector string) ([]KeyCondition, []ValueCondition) {
+	keys := make([]KeyCondition, 0)
+	conditions := make([]ValueCondition, 0)
+	values := make(map[string][]string, 0)
 	items := strings.Split(tagSelector, ",")
-
 	for _, item := range items {
 		item = strings.TrimSpace(item)
 		elements := strings.Split(item, "=")
-
 		if len(elements) == 2 {
-			// Tag with specific value: tag=value
-			conditions = append(conditions, SelectorCondition{
-				Type:  "equals",
-				Key:   utils.EscapeDots(elements[0]),
-				Value: elements[1],
-			})
+			values[utils.EscapeDots(elements[0])] = append(values[utils.EscapeDots(elements[0])], elements[1])
 		} else if len(elements) == 1 {
 			// Tag exists: tag
-			conditions = append(conditions, SelectorCondition{
-				Type: "exists",
-				Key:  utils.EscapeDots(elements[0]),
+			condType := "exists"
+			keys = append(keys, KeyCondition{
+				Operator: condType,
+				Key:      utils.EscapeDots(elements[0]),
 			})
 		}
 	}
 
-	return conditions
+	for key, value := range values {
+		conditions = append(conditions, ValueCondition{
+			Key:    key,
+			Values: value,
+		})
+	}
+
+	return keys, conditions
+}
+
+// Parse selector into conditions
+func (r *PostgresRepository) parseSelector(selector string) ([]KeyCondition, []ValueCondition) {
+	keys := make([]KeyCondition, 0)
+	conditions := make([]ValueCondition, 0)
+	values := make(map[string][]string, 0)
+	items := strings.Split(selector, ",")
+	for _, item := range items {
+		elements := strings.Split(item, "=")
+		if len(elements) == 2 {
+			values[utils.EscapeDots(elements[0])] = append(values[utils.EscapeDots(elements[0])], elements[1])
+		} else if len(elements) == 1 {
+			condType := "exists"
+			keys = append(keys, KeyCondition{
+				Operator: condType,
+				Key:      utils.EscapeDots(elements[0]),
+			})
+		}
+	}
+
+	for key, value := range values {
+		conditions = append(conditions, ValueCondition{
+			Key:    key,
+			Values: value,
+		})
+	}
+
+	return keys, conditions
 }
 
 // Parse label selector into conditions
-func (r *PostgresRepository) parseLabelSelector(labelSelector *testworkflow.LabelSelector) []SelectorCondition {
-	var conditions []SelectorCondition
-
+func (r *PostgresRepository) parseLabelSelector(labelSelector *testworkflow.LabelSelector) ([]KeyCondition, []ValueCondition) {
+	keys := make([]KeyCondition, 0)
+	conditions := make([]ValueCondition, 0)
+	values := make(map[string][]string, 0)
 	for _, label := range labelSelector.Or {
 		if label.Value != nil {
-			// Label with specific value
-			conditions = append(conditions, SelectorCondition{
-				Type:  "equals",
-				Key:   utils.EscapeDots(label.Key),
-				Value: *label.Value,
-			})
+			values[utils.EscapeDots(label.Key)] = append(values[utils.EscapeDots(label.Key)], *label.Value)
 		} else if label.Exists != nil {
 			// Label exists/not exists
 			condType := "exists"
 			if !*label.Exists {
 				condType = "not_exists"
 			}
-			conditions = append(conditions, SelectorCondition{
-				Type: condType,
-				Key:  utils.EscapeDots(label.Key),
+			keys = append(keys, KeyCondition{
+				Operator: condType,
+				Key:      utils.EscapeDots(label.Key),
 			})
 		}
 	}
 
-	return conditions
+	for key, value := range values {
+		conditions = append(conditions, ValueCondition{
+			Key:    key,
+			Values: value,
+		})
+	}
+
+	return keys, conditions
 }
 
 // Helper methods for building complex objects
