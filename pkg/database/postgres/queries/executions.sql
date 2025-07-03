@@ -438,7 +438,7 @@ WHERE r.status IN ('passed', 'failed', 'aborted')
                     ELSE
                         w.labels ? (key_condition->>'key')
                 END
-            ) = jsonb_array_length(@selector_keys_keys::jsonb)
+            ) = jsonb_array_length(@selector_keys::jsonb)
         )
         AND
         (COALESCE(@selector_conditions::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
@@ -529,7 +529,7 @@ WHERE 1=1
                     ELSE
                         w.labels ? (key_condition->>'key')
                 END
-            ) = jsonb_array_length(@selector_keys_keys::jsonb)
+            ) = jsonb_array_length(@selector_keys::jsonb)
         )
         AND
         (COALESCE(@selector_conditions::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
@@ -671,7 +671,7 @@ WHERE 1=1
                     ELSE
                         w.labels ? (key_condition->>'key')
                 END
-            ) = jsonb_array_length(@selector_keys_keys::jsonb)
+            ) = jsonb_array_length(@selector_keys::jsonb)
         )
         AND
         (COALESCE(@selector_conditions::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
@@ -1144,7 +1144,7 @@ WHERE 1=1
                     ELSE
                         w.labels ? (key_condition->>'key')
                 END
-            ) = jsonb_array_length(@selector_keys_keys::jsonb)
+            ) = jsonb_array_length(@selector_keys::jsonb)
         )
         AND
         (COALESCE(@selector_conditions::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
