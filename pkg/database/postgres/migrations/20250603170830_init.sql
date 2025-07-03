@@ -164,13 +164,13 @@ CREATE INDEX idx_execution_sequences_name ON execution_sequences(name);
 
 -- +goose Down
 -- +goose StatementBegin
-DROP INDEX idx_execution_sequences_name;
+DROP INDEX IF EXISTS idx_execution_sequences_name;
 
-DROP INDEX idx_leases_identifier;
-DROP INDEX idx_leases_cluster_id;
-DROP INDEX idx_leases_renewed_at;
-DROP INDEX idx_leases_acquired_at;
-DROP INDEX idx_leases_identifier_cluster_id;
+DROP INDEX IF EXISTS idx_leases_identifier;
+DROP INDEX IF EXISTS idx_leases_cluster_id;
+DROP INDEX IF EXISTS idx_leases_renewed_at;
+DROP INDEX IF EXISTS idx_leases_acquired_at;
+DROP INDEX IF EXISTS idx_leases_identifier_cluster_id;
 
 DROP INDEX IF EXISTS idx_test_workflows_execution_id;
 DROP INDEX IF EXISTS idx_test_workflows_workflow_type;
@@ -196,8 +196,8 @@ DROP INDEX IF EXISTS idx_test_workflow_executions_scheduled_at;
 DROP INDEX IF EXISTS idx_test_workflow_executions_status_at;
 DROP INDEX IF EXISTS idx_test_workflow_executions_tags;
 
-DROP TABLE execution_sequences;
-DROP TABLE leases;
+DROP TABLE IF EXISTS execution_sequences;
+DROP TABLE IF EXISTS leases;
 DROP TABLE IF EXISTS test_workflows;
 DROP TABLE IF EXISTS test_workflow_resource_aggregations;
 DROP TABLE IF EXISTS test_workflow_reports;
