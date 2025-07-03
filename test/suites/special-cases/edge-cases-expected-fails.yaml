@@ -3,7 +3,8 @@ kind: TestWorkflow
 metadata:
   name: edge-cases-expected-failure-suite
   labels:
-    core-tests: expected-fail
+    core-tests: expected-fail-suite
+    type: suite
 spec:
   steps:
   - execute:
@@ -21,3 +22,7 @@ spec:
       - name: expected-fail-private-repo-auth
       - name: expected-fail-missing-git-secret
       - name: expected-fail-missing-env-secret
+      - name: expected-fail-missing-template
+      - name: expected-fail-service-exit-code
+      - name: expected-fail-step-retry
+      - name: expected-fail-negative-step

@@ -76,6 +76,10 @@ func (r *TestWorkflowResult) IsAborted() bool {
 	return r.IsStatus(ABORTED_TestWorkflowStatus)
 }
 
+func (r *TestWorkflowResult) IsCanceled() bool {
+	return r.IsStatus(CANCELED_TestWorkflowStatus)
+}
+
 func (r *TestWorkflowResult) IsPassed() bool {
 	return r.IsStatus(PASSED_TestWorkflowStatus)
 }
@@ -129,6 +133,22 @@ func (r *TestWorkflowResult) IsAnyStepAborted() bool {
 	for _, step := range r.Steps {
 		// When any step was aborted - it's immediately end
 		if step.Status.Aborted() {
+			return true
+		}
+	}
+	return false
+}
+
+func (r *TestWorkflowResult) IsAnyStepCanceled() bool {
+	// When initialization was aborted or failed - it's immediately end
+	if r.Initialization.Status.AnyError() {
+		return true
+	}
+
+	// Analyze the rest of the steps
+	for _, step := range r.Steps {
+		// When any step was aborted - it's immediately end
+		if step.Status.Canceled() {
 			return true
 		}
 	}
@@ -349,14 +369,18 @@ func isStepOptional(sigSequence []TestWorkflowSignature, ref string) bool {
 
 func (r *TestWorkflowResult) healPredictedStatus(sigSequence []TestWorkflowSignature) {
 	// Mark as aborted, when any step is aborted
-	if r.IsAnyStepAborted() || r.Initialization.Status.AnyError() {
+	switch {
+	case r.Initialization.Status.AnyError(), r.IsAnyStepAborted():
 		r.PredictedStatus = common.Ptr(ABORTED_TestWorkflowStatus)
+		return
+	case r.IsAnyStepCanceled():
+		r.PredictedStatus = common.Ptr(CANCELED_TestWorkflowStatus)
 		return
 	}
 
 	// Determine if there are some steps failed
 	for ref := range r.Steps {
-		if r.Steps[ref].Status.Aborted() || (r.Steps[ref].Status.AnyError() && !isStepOptional(sigSequence, ref)) {
+		if r.Steps[ref].Status.Aborted() || r.Steps[ref].Status.Canceled() || (r.Steps[ref].Status.AnyError() && !isStepOptional(sigSequence, ref)) {
 			r.PredictedStatus = common.Ptr(FAILED_TestWorkflowStatus)
 			return
 		}
@@ -469,19 +493,25 @@ func (r *TestWorkflowResult) HealTimestamps(sigSequence []TestWorkflowSignature,
 	}
 }
 
-func (r *TestWorkflowResult) HealAborted(sigSequence []TestWorkflowSignature, errorStr, defaultErrorStr string) {
-	errorMessage := fmt.Sprintf("The execution has been aborted. (%s)", errorStr)
+func (r *TestWorkflowResult) HealAbortedOrCanceled(sigSequence []TestWorkflowSignature, errorStr, defaultErrorStr string, terminationCode string) {
+	errorMessage := fmt.Sprintf("The execution has been %s. (%s)", terminationCode, errorStr)
 	if errorStr == "" {
-		errorMessage = fmt.Sprintf("The execution has been aborted.")
+		errorMessage = fmt.Sprintf("The execution has been %s.", terminationCode)
 	}
 
-	// Create marker to know if there is any step marked as aborted already
+	// Create marker to know if there is any step marked as aborted or canceled already
 	aborted := false
+	canceled := false
 
 	// Check the initialization step
-	if !r.Initialization.Finished() || r.Initialization.Aborted() {
-		aborted = true
-		r.Initialization.Status = common.Ptr(ABORTED_TestWorkflowStepStatus)
+	if !r.Initialization.Finished() || r.Initialization.Aborted() || r.Initialization.Canceled() {
+		if terminationCode == string(CANCELED_TestWorkflowStatus) {
+			canceled = true
+			r.Initialization.Status = common.Ptr(CANCELED_TestWorkflowStepStatus)
+		} else {
+			aborted = true
+			r.Initialization.Status = common.Ptr(ABORTED_TestWorkflowStepStatus)
+		}
 		r.Initialization.ErrorMessage = errorMessage
 	}
 
@@ -492,18 +522,26 @@ func (r *TestWorkflowResult) HealAborted(sigSequence []TestWorkflowSignature, er
 			continue
 		}
 		step := r.Steps[ref]
-		if step.Finished() && !step.Aborted() && (!step.Skipped() || step.ErrorMessage == "") {
-			if step.Status.Aborted() && (step.ErrorMessage == "" || step.ErrorMessage == defaultErrorStr) {
+		if step.Finished() && !step.Aborted() && !step.Canceled() && (!step.Skipped() || step.ErrorMessage == "") {
+			if (step.Status.Aborted() || step.Status.Canceled()) && (step.ErrorMessage == "" || step.ErrorMessage == defaultErrorStr) {
 				step.ErrorMessage = errorMessage
 			}
 			continue
 		}
-		if aborted {
+		if aborted || canceled {
 			step.Status = common.Ptr(SKIPPED_TestWorkflowStepStatus)
 			step.ErrorMessage = fmt.Sprintf("The execution was aborted before. %s", color.FgDarkGray.Render("("+errorStr+")"))
+			if canceled {
+				step.ErrorMessage = fmt.Sprintf("The execution was canceled before. %s", color.FgDarkGray.Render("("+errorStr+")"))
+			}
 		} else {
-			aborted = true
-			step.Status = common.Ptr(ABORTED_TestWorkflowStepStatus)
+			if terminationCode == string(CANCELED_TestWorkflowStatus) {
+				canceled = true
+				step.Status = common.Ptr(CANCELED_TestWorkflowStepStatus)
+			} else {
+				aborted = true
+				step.Status = common.Ptr(ABORTED_TestWorkflowStepStatus)
+			}
 			step.ErrorMessage = errorMessage
 		}
 		r.Steps[ref] = step
@@ -522,6 +560,7 @@ func (r *TestWorkflowResult) HealAborted(sigSequence []TestWorkflowSignature, er
 		}
 		allSkipped := true
 		anyAborted := false
+		anyCanceled := false
 		for _, childSig := range sigSequence[i].Children {
 			// TODO: What about nested virtual groups? We don't have their statuses
 			if !r.IsKnownStep(childSig.Ref) {
@@ -529,6 +568,9 @@ func (r *TestWorkflowResult) HealAborted(sigSequence []TestWorkflowSignature, er
 			}
 			if r.Steps[childSig.Ref].Status.Aborted() {
 				anyAborted = true
+			}
+			if r.Steps[childSig.Ref].Status.Canceled() {
+				anyCanceled = true
 			}
 			if !r.Steps[childSig.Ref].Status.Skipped() {
 				allSkipped = false
@@ -538,6 +580,8 @@ func (r *TestWorkflowResult) HealAborted(sigSequence []TestWorkflowSignature, er
 			step.Status = common.Ptr(SKIPPED_TestWorkflowStepStatus)
 		} else if anyAborted {
 			step.Status = common.Ptr(ABORTED_TestWorkflowStepStatus)
+		} else if anyCanceled {
+			step.Status = common.Ptr(CANCELED_TestWorkflowStepStatus)
 		}
 		r.Steps[ref] = step
 	}
@@ -547,8 +591,13 @@ func (r *TestWorkflowResult) HealAborted(sigSequence []TestWorkflowSignature, er
 		if step.Finished() {
 			continue
 		}
-		step.Status = common.Ptr(ABORTED_TestWorkflowStepStatus)
-		step.ErrorMessage = fmt.Sprintf("The execution was aborted, but we could not determine steps order: %s", errorStr)
+		if r.IsCanceled() {
+			step.Status = common.Ptr(CANCELED_TestWorkflowStepStatus)
+			step.ErrorMessage = fmt.Sprintf("The execution was canceled, but we could not determine steps order: %s", errorStr)
+		} else {
+			step.Status = common.Ptr(ABORTED_TestWorkflowStepStatus)
+			step.ErrorMessage = fmt.Sprintf("The execution was aborted, but we could not determine steps order: %s", errorStr)
+		}
 		r.Steps[ref] = step
 	}
 }

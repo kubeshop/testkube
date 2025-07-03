@@ -42,6 +42,10 @@ func (r *lazyRunner) Abort(id string) error {
 	return (*r.accessor).Abort(id)
 }
 
+func (r *lazyRunner) Cancel(id string) error {
+	return (*r.accessor).Cancel(id)
+}
+
 type lazyRunnerExecute struct {
 	accessor *RunnerExecute
 }

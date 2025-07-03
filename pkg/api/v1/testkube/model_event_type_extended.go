@@ -16,6 +16,7 @@ var AllEventTypes = []EventType{
 	END_TESTWORKFLOW_SUCCESS_EventType,
 	END_TESTWORKFLOW_FAILED_EventType,
 	END_TESTWORKFLOW_ABORTED_EventType,
+	END_TESTWORKFLOW_CANCELED_EventType,
 	CREATED_EventType,
 	DELETED_EventType,
 	UPDATED_EventType,
@@ -30,24 +31,25 @@ func EventTypePtr(t EventType) *EventType {
 }
 
 var (
-	EventStartTest              = EventTypePtr(START_TEST_EventType)
-	EventEndTestSuccess         = EventTypePtr(END_TEST_SUCCESS_EventType)
-	EventEndTestFailed          = EventTypePtr(END_TEST_FAILED_EventType)
-	EventEndTestAborted         = EventTypePtr(END_TEST_ABORTED_EventType)
-	EventEndTestTimeout         = EventTypePtr(END_TEST_TIMEOUT_EventType)
-	EventStartTestSuite         = EventTypePtr(START_TESTSUITE_EventType)
-	EventEndTestSuiteSuccess    = EventTypePtr(END_TESTSUITE_SUCCESS_EventType)
-	EventEndTestSuiteFailed     = EventTypePtr(END_TESTSUITE_FAILED_EventType)
-	EventEndTestSuiteAborted    = EventTypePtr(END_TESTSUITE_ABORTED_EventType)
-	EventEndTestSuiteTimeout    = EventTypePtr(END_TESTSUITE_TIMEOUT_EventType)
-	EventQueueTestWorkflow      = EventTypePtr(QUEUE_TESTWORKFLOW_EventType)
-	EventStartTestWorkflow      = EventTypePtr(START_TESTWORKFLOW_EventType)
-	EventEndTestWorkflowSuccess = EventTypePtr(END_TESTWORKFLOW_SUCCESS_EventType)
-	EventEndTestWorkflowFailed  = EventTypePtr(END_TESTWORKFLOW_FAILED_EventType)
-	EventEndTestWorkflowAborted = EventTypePtr(END_TESTWORKFLOW_ABORTED_EventType)
-	EventCreated                = EventTypePtr(CREATED_EventType)
-	EventDeleted                = EventTypePtr(DELETED_EventType)
-	EventUpdated                = EventTypePtr(UPDATED_EventType)
+	EventStartTest               = EventTypePtr(START_TEST_EventType)
+	EventEndTestSuccess          = EventTypePtr(END_TEST_SUCCESS_EventType)
+	EventEndTestFailed           = EventTypePtr(END_TEST_FAILED_EventType)
+	EventEndTestAborted          = EventTypePtr(END_TEST_ABORTED_EventType)
+	EventEndTestTimeout          = EventTypePtr(END_TEST_TIMEOUT_EventType)
+	EventStartTestSuite          = EventTypePtr(START_TESTSUITE_EventType)
+	EventEndTestSuiteSuccess     = EventTypePtr(END_TESTSUITE_SUCCESS_EventType)
+	EventEndTestSuiteFailed      = EventTypePtr(END_TESTSUITE_FAILED_EventType)
+	EventEndTestSuiteAborted     = EventTypePtr(END_TESTSUITE_ABORTED_EventType)
+	EventEndTestSuiteTimeout     = EventTypePtr(END_TESTSUITE_TIMEOUT_EventType)
+	EventQueueTestWorkflow       = EventTypePtr(QUEUE_TESTWORKFLOW_EventType)
+	EventStartTestWorkflow       = EventTypePtr(START_TESTWORKFLOW_EventType)
+	EventEndTestWorkflowSuccess  = EventTypePtr(END_TESTWORKFLOW_SUCCESS_EventType)
+	EventEndTestWorkflowFailed   = EventTypePtr(END_TESTWORKFLOW_FAILED_EventType)
+	EventEndTestWorkflowAborted  = EventTypePtr(END_TESTWORKFLOW_ABORTED_EventType)
+	EventEndTestWorkflowCanceled = EventTypePtr(END_TESTWORKFLOW_CANCELED_EventType)
+	EventCreated                 = EventTypePtr(CREATED_EventType)
+	EventDeleted                 = EventTypePtr(DELETED_EventType)
+	EventUpdated                 = EventTypePtr(UPDATED_EventType)
 )
 
 func EventTypesFromSlice(types []string) []EventType {
@@ -76,6 +78,7 @@ func (t EventType) IsBecome() bool {
 		BECOME_TESTWORKFLOW_DOWN_EventType,
 		BECOME_TESTWORKFLOW_FAILED_EventType,
 		BECOME_TESTWORKFLOW_ABORTED_EventType,
+		BECOME_TESTWORKFLOW_CANCELED_EventType,
 	}
 
 	for _, tp := range types {
@@ -101,10 +104,11 @@ func (t EventType) MapBecomeToRegular() []EventType {
 		BECOME_TESTSUITE_ABORTED_EventType: {END_TESTSUITE_ABORTED_EventType},
 		BECOME_TESTSUITE_TIMEOUT_EventType: {END_TESTSUITE_TIMEOUT_EventType},
 
-		BECOME_TESTWORKFLOW_UP_EventType:      {END_TESTWORKFLOW_SUCCESS_EventType},
-		BECOME_TESTWORKFLOW_DOWN_EventType:    {END_TESTWORKFLOW_FAILED_EventType, END_TESTWORKFLOW_ABORTED_EventType},
-		BECOME_TESTWORKFLOW_FAILED_EventType:  {END_TESTWORKFLOW_FAILED_EventType},
-		BECOME_TESTWORKFLOW_ABORTED_EventType: {END_TESTWORKFLOW_ABORTED_EventType},
+		BECOME_TESTWORKFLOW_UP_EventType:       {END_TESTWORKFLOW_SUCCESS_EventType},
+		BECOME_TESTWORKFLOW_DOWN_EventType:     {END_TESTWORKFLOW_FAILED_EventType, END_TESTWORKFLOW_ABORTED_EventType},
+		BECOME_TESTWORKFLOW_FAILED_EventType:   {END_TESTWORKFLOW_FAILED_EventType},
+		BECOME_TESTWORKFLOW_ABORTED_EventType:  {END_TESTWORKFLOW_ABORTED_EventType},
+		BECOME_TESTWORKFLOW_CANCELED_EventType: {END_TESTWORKFLOW_CANCELED_EventType},
 	}
 
 	return eventMap[t]
@@ -207,6 +211,11 @@ func (t EventType) IsBecomeTestWorkflowExecutionStatus(previousStatus TestWorkfl
 		},
 
 		BECOME_TESTWORKFLOW_ABORTED_EventType: {
+			PASSED_TestWorkflowStatus: {},
+			FAILED_TestWorkflowStatus: {},
+		},
+
+		BECOME_TESTWORKFLOW_CANCELED_EventType: {
 			PASSED_TestWorkflowStatus: {},
 			FAILED_TestWorkflowStatus: {},
 		},

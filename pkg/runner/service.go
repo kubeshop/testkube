@@ -125,7 +125,7 @@ func (s *service) reattach(ctx context.Context) (err error) {
 			}
 
 			// Finalize and save the result
-			execution.Result.HealAborted(sigSequence, errorMessage, controller.DefaultErrorMessage)
+			execution.Result.HealAbortedOrCanceled(sigSequence, errorMessage, controller.DefaultErrorMessage, "aborted")
 			execution.Result.HealTimestamps(sigSequence, execution.ScheduledAt, time.Time{}, time.Time{}, true)
 			execution.Result.HealDuration(execution.ScheduledAt)
 			execution.Result.HealMissingPauseStatuses()

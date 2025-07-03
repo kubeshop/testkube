@@ -429,7 +429,7 @@ spec:
     run:
       image: postman/newman:6-alpine
       env:
-      - name: EXAMPLE_ENV
+      - name: TESTKUBE_POSTMAN_PARAM
         valueFrom:
           secretKeyRef:
             name: non-existant-secret
@@ -437,5 +437,90 @@ spec:
       args:
       - run
       - postman-executor-smoke.postman_collection.json
-      - "--env-var"
-      - "TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-missing-template
+  labels:
+    core-tests: expected-fail
+spec:
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: Run from template
+    content:
+      git:
+        uri: https://github.com/kubeshop/testkube
+        revision: main
+        paths:
+        - test/artillery/artillery-smoke-test.yaml
+    workingDir: /data/repo/test/artillery
+    template:
+      name: some-non-existant-template-name
+      config:
+        run: "echo 'test'"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-service-exit-code # https://linear.app/kubeshop/issue/TKC-3897/
+  labels:
+    core-tests: expected-fail
+spec:
+  container:
+    image: alpine:3.22.0
+  services:
+    slave:
+      use:
+      - name: distribute/evenly
+      image: alpine:3.22.0
+      logs: always
+      count: 2
+      shell: 'echo "expected fail - non-zero exit code" && exit 1'
+  job:
+    activeDeadlineSeconds: 30
+  steps:
+  - name: Step
+    run:
+      shell: 'echo "step"'
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-step-retry
+  labels:
+    core-tests: expected-fail
+description: "step retry (until step failed)"
+spec:
+  container:
+    image: alpine:3.22.0
+  job:
+    activeDeadlineSeconds: 30
+  steps:
+  - name: Random pass/fail
+    retry:
+      count: 20
+      until: self.failed
+    shell: |
+      code=$((RANDOM % 2))
+      [[ $code -eq 0 ]] && echo "random - passed" || echo "random - failed"
+      exit $code
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-negative-step
+  labels:
+    core-tests: expected-fail
+description: "negative step passed - inverting step result to failed"
+spec:
+  container:
+    image: alpine:3.22.0
+  job:
+    activeDeadlineSeconds: 30
+  steps:
+  - name: Step (passed before inverting)
+    negative: true
+    shell: |
+      echo "command" && exit 0

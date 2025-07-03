@@ -1,0 +1,18 @@
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: edge-cases-special-cases-suite
+  labels:
+    core-tests: special-cases-suite
+    type: suite
+spec:
+  steps:
+  - execute:
+      workflows:
+      - name: special-cases-global-env
+      - name: special-cases-securitycontext-runasuser-runasgroup
+      - name: special-cases-multiple-git-repositories-custommountpath
+      - name: special-cases-optional-step
+      - name: special-cases-step-retry
+      - name: special-cases-negative-step
+      - name: special-cases-custom-shared-volume-steps

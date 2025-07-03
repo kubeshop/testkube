@@ -43,6 +43,7 @@ func (l *testWorkflowExecutionMetricsListener) Events() []testkube.EventType {
 		testkube.END_TESTWORKFLOW_SUCCESS_EventType,
 		testkube.END_TESTWORKFLOW_FAILED_EventType,
 		testkube.END_TESTWORKFLOW_ABORTED_EventType,
+		testkube.END_TESTWORKFLOW_CANCELED_EventType,
 	}
 }
 
