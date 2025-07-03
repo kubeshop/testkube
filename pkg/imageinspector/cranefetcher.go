@@ -17,6 +17,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/kubeshop/testkube/pkg/utils"
+
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/ecr"
 )
 
 type craneFetcher struct {
@@ -171,7 +174,55 @@ func ParseSecretData(imageSecrets []corev1.Secret, registry string) ([]authn.Aut
 		}
 	}
 
+	// If registry is an AWS ECR private registry, fetch the auth token, e.g. <ID>.dkr.ecr.<REGION>.amazonaws.com
+	if strings.HasSuffix(registry, "amazonaws.com") && strings.Contains(registry, ".ecr.") {
+		// Generate token for AWS ECR
+		token, err := getAWSAuthToken()
+		if err != nil {
+			// If we fail to get the token, print error message but continue
+			fmt.Printf("Failed to get AWS ECR auth token: %v", err)
+		} else {
+			// Append the AWS ECR auth token to the results
+			// AWS ECR uses "AWS" as the username and the token as the password
+			fmt.Printf("Using AWS ECR auth token for registry %s\n", registry)
+			fmt.Printf("Using AWS ECR auth token: %s\n", token)
+			results = append(results, authn.AuthConfig{
+				Username: token[:strings.Index(token, ":")], // Extract username from token
+				Password: token[strings.Index(token, ":")+1:], // Extract password from token
+			})
+		}
+	}
+
 	return results, nil
+}
+
+func getAWSAuthToken() (string, error) {
+	// Load the AWS configuration
+	cfg, err := config.LoadDefaultConfig(context.TODO())
+	if err != nil {
+		return "", fmt.Errorf("failed to load AWS config: %w", err)
+	}
+	// Create an ECR client
+	ecrClient := ecr.NewFromConfig(cfg)
+	// Get the authorization token from ECR
+	input := &ecr.GetAuthorizationTokenInput{}
+	result, err := ecrClient.GetAuthorizationToken(context.TODO(), input)
+    if err != nil {
+		return "", fmt.Errorf("failed to get ECR authorization token: %w", err)
+	}
+	// Check if we have authorization data
+	if len(result.AuthorizationData) > 0 {
+		// Decode the authorization token
+    	authData := result.AuthorizationData[0]
+    	decodedToken, err := base64.StdEncoding.DecodeString(*authData.AuthorizationToken)
+    	if err != nil {
+			return "", fmt.Errorf("failed to decode ECR authorization token: %w", err)
+		}
+		// The decoded token is in the format "username:password", we return it as a string
+		return string(decodedToken), nil
+	} else {
+		return "", fmt.Errorf("no authorization data found in ECR response")
+	}
 }
 
 func extractRegistryCredentials(creds authn.AuthConfig) (username, password string, err error) {
