@@ -779,11 +779,14 @@ func (r *MongoRepository) Init(ctx context.Context, id string, data InitData) er
 	return err
 }
 
+// NOTE: the place where the assignment happens
 func (r *MongoRepository) Assign(ctx context.Context, id string, prevRunnerId string, newRunnerId string, assignedAt *time.Time) (bool, error) {
 	res, err := r.Coll.UpdateOne(ctx, bson.M{
 		"$and": []bson.M{
 			{"id": id},
+			// NOTE: is this always the case?
 			{"result.status": testkube.QUEUED_TestWorkflowStatus},
+			// TODO: it could be reassigning too quickly from another instance
 			{"$or": []bson.M{{"runnerid": prevRunnerId}, {"runnerid": newRunnerId}, {"runnerid": nil}}},
 		},
 	}, bson.M{"$set": map[string]interface{}{
@@ -809,6 +812,7 @@ func (r *MongoRepository) GetUnassigned(ctx context.Context) (result []testkube.
 	cursor, err := r.Coll.Find(ctx, bson.M{
 		"$and": []bson.M{
 			{"result.status": testkube.QUEUED_TestWorkflowStatus},
+			// NOTE: this includes "" and nil
 			{"$or": []bson.M{{"runnerid": ""}, {"runnerid": nil}}},
 		},
 	}, opts)

@@ -7,6 +7,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/log"
 )
 
+// NOTE: this is an event emitter loader which register "listener" loaders
 func NewLoader() *Loader {
 	return &Loader{
 		Log:     log.DefaultLogger,
@@ -22,6 +23,7 @@ type Loader struct {
 
 // Register registers new listener reconciler
 func (s *Loader) Register(loader common.ListenerLoader) {
+	// NOTE: webhook loader registered here
 	s.Loaders = append(s.Loaders, loader)
 }
 
@@ -29,6 +31,7 @@ func (s *Loader) Register(loader common.ListenerLoader) {
 func (s *Loader) Reconcile() (listeners common.Listeners) {
 	listeners = make(common.Listeners, 0)
 	for _, loader := range s.Loaders {
+		// NOTE: this loads all the webhook cr
 		l, err := loader.Load()
 		log.Tracef(s.Log, "Got listeners from loader %T %+v\n", loader, l)
 

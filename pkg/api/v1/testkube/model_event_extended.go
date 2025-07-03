@@ -223,6 +223,7 @@ func (e Event) Log() []any {
 	}
 }
 
+// NOTE: used to filter the webhook events
 func (e Event) Valid(selector string, types []EventType) (matchedTypes []EventType, valid bool) {
 	var executionLabels map[string]string
 
@@ -241,6 +242,7 @@ func (e Event) Valid(selector string, types []EventType) (matchedTypes []EventTy
 	for _, t := range types {
 		ts := []EventType{t}
 		if t.IsBecome() {
+			// TODO: why are these become events mapped back to the possible source events types?
 			ts = t.MapBecomeToRegular()
 		}
 
@@ -264,6 +266,7 @@ func (e Event) Valid(selector string, types []EventType) (matchedTypes []EventTy
 			return nil, false
 		}
 
+		// NOTE: checks the selector on the webhook event matches execution labels
 		valid = selector.Matches(labels.Set(executionLabels))
 	}
 
@@ -272,6 +275,7 @@ func (e Event) Valid(selector string, types []EventType) (matchedTypes []EventTy
 
 // Topic returns topic for event based on resource and resource id
 // or fallback to global "events" topic
+// NOTE: determines the topic to publish events on
 func (e Event) Topic() string {
 	if e.StreamTopic != "" {
 		return e.StreamTopic

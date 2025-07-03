@@ -118,6 +118,7 @@ func (e *executor) Execute(ctx context.Context, environmentId string, req *cloud
 		environmentId = e.defaultEnvironmentId
 	}
 	if !e.featureNewArchitecture {
+		// NOTE: only on the old arcitecture
 		return e.executeDirect(ctx, environmentId, req)
 	}
 	return e.execute(ctx, environmentId, req)
@@ -158,6 +159,7 @@ func (e *executor) execute(ctx context.Context, environmentId string, req *cloud
 	return resultStream
 }
 
+// TODO: what is executeDirect?
 func (e *executor) executeDirect(ctx context.Context, environmentId string, req *cloud.ScheduleRequest) TestWorkflowExecutionStream {
 	// Prepare dependencies
 	sensitiveDataHandler := NewSecretHandler(e.secretManager)
@@ -184,6 +186,7 @@ func (e *executor) executeDirect(ctx context.Context, environmentId string, req 
 			e.emitter.Notify(testkube.NewEventStartTestWorkflow(execution))
 
 			// Finish early if it's immediately known to finish
+			// TODO: canceled event is missing here
 			if execution.Result.IsFinished() {
 				if execution.Result.IsAborted() {
 					e.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(execution))
@@ -224,6 +227,7 @@ func (e *executor) Start(environmentId string, execution *testkube.TestWorkflowE
 	if execution.RunningContext != nil && execution.RunningContext.Actor != nil {
 		parentIds = execution.RunningContext.Actor.ExecutionPath
 	}
+	// TODO: and what is this runner exactly?
 	result, err := e.runner.Execute(executionworkertypes.ExecuteRequest{
 		Execution: testworkflowconfig.ExecutionConfig{
 			Id:              execution.Id,
@@ -245,6 +249,7 @@ func (e *executor) Start(environmentId string, execution *testkube.TestWorkflowE
 	// TODO: define "revoke" error by runner (?)
 	// TODO: CriticalError should use Finish if possible
 	if err != nil {
+		// NOTE: this is being called by the agent, but the scheduler is passed in a grpc interface for the workflows repository so it makes calls to the
 		err2 := e.scheduler.CriticalError(execution, "Failed to run execution", err)
 		err = errors2.Join(err, err2)
 		if err != nil {

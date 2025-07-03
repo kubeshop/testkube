@@ -72,6 +72,7 @@ type Agent struct {
 }
 
 func NewAgent(logger *zap.SugaredLogger,
+	// NOTE: handler passed here
 	handler fasthttp.RequestHandler,
 	client cloud.TestKubeCloudAPIClient,
 	logStreamFunc func(ctx context.Context, executionID string) (chan output.Output, error),
@@ -128,6 +129,7 @@ func (ag *Agent) run(ctx context.Context) (err error) {
 	})
 
 	g.Go(func() error {
+		// TODO: what is the value of this worker count by default
 		return ag.runWorkers(groupCtx, ag.workerCount)
 	})
 
@@ -170,6 +172,7 @@ func (ag *Agent) runEventsReaderLoop(ctx context.Context) (err error) {
 
 	// creates a new Stream from the client side. ctx is used for the lifetime of the stream.
 	opts := []grpc.CallOption{grpc.UseCompressor(gzip.Name), grpc.MaxCallRecvMsgSize(math.MaxInt32)}
+	// NOTE: agent events seem to be read here
 	stream, err := ag.client.GetEventStream(ctx, &cloud.EventStreamRequest{
 		Accept: []*cloud.EventResource{{Id: "*", Type: "*"}},
 	}, opts...)
@@ -197,6 +200,7 @@ func (ag *Agent) runEventsReaderLoop(ctx context.Context) (err error) {
 		if ev.Resource == nil {
 			ev.Resource = &cloud.EventResource{}
 		}
+		// TODO: translated to a testkube event here
 		tkEvent := testkube.Event{
 			Id:                    ev.Id,
 			Resource:              common.Ptr(testkube.EventResource(ev.Resource.Type)),
@@ -211,6 +215,8 @@ func (ag *Agent) runEventsReaderLoop(ctx context.Context) (err error) {
 				tkEvent.TestWorkflowExecution = &v
 			}
 		}
+		// NOTE: so it notifies on the event emitter here
+		// TODO: what else listens to the event emitter notifications?
 		ag.eventEmitter.Notify(tkEvent)
 	}
 }
@@ -331,6 +337,7 @@ func (ag *Agent) runWorkers(ctx context.Context, numWorkers int) error {
 		g.Go(func() error {
 			for {
 				select {
+				// NOTE: the execution request from the control plane is received here nad executed
 				case cmd := <-ag.requestBuffer:
 					select {
 					case ag.responseBuffer <- ag.executeCommand(groupCtx, cmd):
@@ -353,6 +360,7 @@ func (ag *Agent) executeCommand(_ context.Context, cmd *cloud.ExecuteRequest) *c
 	default:
 		req := &fasthttp.RequestCtx{}
 		r := fasthttp.AcquireRequest()
+		// TODO: what is happening here?
 		r.Header.SetHost("localhost")
 		r.Header.SetMethod(cmd.Method)
 

@@ -112,6 +112,7 @@ func (a *agentLoop) finishExecution(ctx context.Context, environmentId string, e
 			return err
 		}
 		if !a.proContext.NewArchitecture {
+			// TODO: canceled event is missing here
 			// Emit events locally if the Control Plane doesn't support that
 			if execution.Result.IsPassed() {
 				a.emitter.Notify(testkube.NewEventEndTestWorkflowSuccess(execution))
@@ -143,6 +144,7 @@ func (a *agentLoop) init(ctx context.Context, environmentId string, execution *t
 	return err
 }
 
+// TODO main body of the agent loop
 func (a *agentLoop) run(ctx context.Context) error {
 	g, ctx := errgroup.WithContext(ctx)
 

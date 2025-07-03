@@ -141,6 +141,7 @@ func (s *service) reattach(ctx context.Context) (err error) {
 	return
 }
 
+// TODO: starts an agent loop?
 func (s *service) start(ctx context.Context) (err error) {
 	return newAgentLoop(
 		s.runner,

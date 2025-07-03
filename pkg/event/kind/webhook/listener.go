@@ -30,8 +30,10 @@ import (
 	"github.com/kubeshop/testkube/pkg/utils/text"
 )
 
+// NOTE: compile time interface check
 var _ common.Listener = (*WebhookListener)(nil)
 
+// NOTE: creates webhook listeners
 func NewWebhookListener(name, uri, selector string, events []testkube.EventType,
 	payloadObjectField, payloadTemplate string, headers map[string]string, disabled bool,
 	deprecatedRepositories commons.DeprecatedRepositories,
@@ -68,11 +70,12 @@ func NewWebhookListener(name, uri, selector string, events []testkube.EventType,
 }
 
 type WebhookListener struct {
-	name                         string
-	Uri                          string
-	Log                          *zap.SugaredLogger
-	HttpClient                   *http.Client
-	events                       []testkube.EventType
+	name       string
+	Uri        string
+	Log        *zap.SugaredLogger
+	HttpClient *http.Client
+	events     []testkube.EventType
+	// TODO: what is this selector?
 	selector                     string
 	payloadObjectField           string
 	payloadTemplate              string
@@ -146,6 +149,7 @@ func (l *WebhookListener) Disabled() bool {
 	return l.disabled
 }
 
+// TODO: where is this called?
 func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventResult) {
 	var statusCode int
 	var err error
@@ -195,6 +199,7 @@ func (l *WebhookListener) Notify(event testkube.Event) (result testkube.EventRes
 		return
 	}
 
+	// NOTE: what the hell does "become" mean in this context? it means a when the latest execution state changes: https://docs.testkube.io/articles/webhooks#events-for-state-changes
 	if event.Type_ != nil && event.Type_.IsBecome() {
 		became, err := l.hasBecomeState(event)
 		if err != nil {

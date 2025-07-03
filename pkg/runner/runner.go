@@ -178,6 +178,7 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 			if n.Result.IsFinished() {
 				continue
 			}
+			// NOTE: the runner is monitoring the execution and updating the result
 			saver.UpdateResult(*n.Result)
 		} else {
 			if n.Ref != currentRef && n.Ref != "" {
@@ -287,6 +288,7 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 	execution.Result = lastResult
 	execution.StatusAt = lastResult.FinishedAt
 
+	// TODO: what does this mean?
 	// Emit data, if the Control Plane doesn't support informing about status by itself
 	if !r.proContext.NewArchitecture {
 		switch {

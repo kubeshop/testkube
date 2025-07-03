@@ -16,6 +16,7 @@ import (
 	webhooksmapper "github.com/kubeshop/testkube/pkg/mapper/webhooks"
 )
 
+// NOTE: the webhook handler
 func (s *TestkubeAPI) CreateWebhookHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		errPrefix := "failed to create webhook"
@@ -43,6 +44,7 @@ func (s *TestkubeAPI) CreateWebhookHandler() fiber.Handler {
 			webhook.Namespace = s.Namespace
 		}
 
+		// NOTE: webhook cr is created here
 		created, err := s.WebhooksClient.Create(&webhook)
 		if err != nil {
 			return s.Error(c, http.StatusBadGateway, fmt.Errorf("%s: client could not create webhook: %w", errPrefix, err))

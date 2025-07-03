@@ -573,6 +573,7 @@ func (s *scheduler) CriticalError(execution *testkube.TestWorkflowExecution, nam
 	return s.finish(context.Background(), execution)
 }
 
+// TODO: called in case of critical error
 func (s *scheduler) finish(ctx context.Context, execution *testkube.TestWorkflowExecution) error {
 	if !s.newArchitectureEnabled {
 		return s.update(ctx, execution)
@@ -590,6 +591,7 @@ func (s *scheduler) finish(ctx context.Context, execution *testkube.TestWorkflow
 		return err
 	}
 	err = retry(SaveResultRetryMaxAttempts, SaveResultRetryBaseDelay, func() error {
+		// TODO: wait? isn't the scheduler running on the control plane?
 		_, err := s.grpcClient.FinishExecution(metadata.NewOutgoingContext(ctx, md), &cloud.FinishExecutionRequest{
 			Id:     execution.Id,
 			Result: resultBytes,

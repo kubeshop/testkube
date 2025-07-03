@@ -199,6 +199,7 @@ func (c *client) legacyUpdateExecutionResult(ctx context.Context, environmentId,
 	return err
 }
 
+// TODO: what is using this client?
 func (c *client) FinishExecutionResult(ctx context.Context, environmentId, executionId string, result *testkube.TestWorkflowResult) error {
 	if c.IsLegacy() {
 		return c.legacyUpdateExecutionResult(ctx, environmentId, executionId, result)

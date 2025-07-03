@@ -28,6 +28,7 @@ func Resume(step *data.StepData, ts time.Time) {
 	instructions.PrintHintDetails(step.Ref, constants.InstructionResume, ts.UTC().Format(constants.PreciseTimeFormat))
 }
 
+// TODO: what is this finish execution doing?
 func FinishExecution(step *data.StepData, result constants.ExecutionResult) {
 	instructions.PrintHintDetails(step.Ref, constants.InstructionExecution, result)
 }

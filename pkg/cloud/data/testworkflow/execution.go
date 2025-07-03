@@ -105,6 +105,7 @@ func (r *CloudRepository) Update(ctx context.Context, result testkube.TestWorkfl
 	return passNoContent(r.executor, ctx, req)
 }
 
+// NOTE: this is sending an update to the workflow over grpc
 func (r *CloudRepository) UpdateResult(ctx context.Context, id string, result *testkube.TestWorkflowResult) (err error) {
 	req := ExecutionUpdateResultRequest{ID: id, Result: result}
 	return passNoContent(r.executor, ctx, req)

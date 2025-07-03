@@ -116,6 +116,7 @@ func main() {
 	commons.ExitOnError("Creating k8s clientset", err)
 
 	var eventsEmitter *event.Emitter
+	// TODO: what is a lazy emitter?
 	lazyEmitter := event.Lazy(&eventsEmitter)
 
 	// TODO: Make granular environment variables, yet backwards compatible
@@ -318,6 +319,8 @@ func main() {
 	} else if cfg.GlobalWorkflowTemplateName != "" && cfg.FeatureNewArchitecture && proContext.NewArchitecture {
 		runnerOpts.GlobalTemplate = runner2.GlobalTemplateSourced(testWorkflowTemplatesClient, cfg.GlobalWorkflowTemplateName)
 	}
+
+	// TODO: what is the difference between a "runner service" and "executor"?
 	runnerService := runner2.NewService(
 		log.DefaultLogger,
 		eventsEmitter,
@@ -339,6 +342,7 @@ func main() {
 	}
 	lazyRunner.Set(runnerService)
 
+	// NOTE: an executor created
 	testWorkflowExecutor := testworkflowexecutor.New(
 		grpcClient,
 		cfg.TestkubeProAPIKey,
@@ -372,6 +376,7 @@ func main() {
 	websocketLoader := ws.NewWebsocketLoader()
 	if !cfg.DisableWebhooks {
 		secretClient := secret.NewClientFor(clientset, cfg.TestkubeNamespace)
+		// NOTE: webhook loader registered here with an events emitter
 		eventsEmitter.Loader.Register(webhook.NewWebhookLoader(log.DefaultLogger, webhooksClient, webhookTemplatesClient, deprecatedClients, deprecatedRepositories,
 			testWorkflowResultsRepository, secretClient, metrics, webhookRepository, &proContext, envs))
 	}
@@ -396,6 +401,7 @@ func main() {
 	// TODO: Disable it if Control Plane does that
 	eventsEmitter.Loader.Register(testworkflowexecutiontelemetry.NewLoader(ctx, configMapConfig))
 
+	// TODO: what is happening here?
 	// Update TestWorkflowExecution Kubernetes resource objects on status change
 	eventsEmitter.Loader.Register(testworkflowexecutions.NewLoader(ctx, cfg.TestkubeNamespace, kubeClient))
 
@@ -513,6 +519,7 @@ func main() {
 
 	eventsEmitter.Listen(ctx)
 	g.Go(func() error {
+		// TODO: what is the point of running this reconcile the return value is not used and it does not seem to have any side effects? is this just for debugging or something?
 		eventsEmitter.Reconcile(ctx)
 		return nil
 	})

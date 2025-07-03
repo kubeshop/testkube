@@ -60,7 +60,9 @@ func (r WebhooksLoader) Kind() string {
 	return "webhook"
 }
 
+// TODO: where is this called
 func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
+	// NOTE: loads all the webhooks
 	// load all webhooks from kubernetes CRDs
 	webhookList, err := r.WebhooksClient.List("")
 	if err != nil {
@@ -70,6 +72,7 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 	// and create listeners for each webhook spec
 	for _, webhook := range webhookList.Items {
 		if webhook.Spec.WebhookTemplateRef != nil && webhook.Spec.WebhookTemplateRef.Name != "" {
+			// NOTE: uses some sort of webhook template
 			webhookTemplate, err := r.WebhookTemplatesClient.Get(webhook.Spec.WebhookTemplateRef.Name)
 			if err != nil {
 				r.log.Errorw("error webhook template loading", "error", err, "name", webhook.Name, "template", webhook.Spec.WebhookTemplateRef.Name)
@@ -106,9 +109,11 @@ func (r WebhooksLoader) Load() (listeners common.Listeners, err error) {
 			payloadTemplate = webhook.Spec.PayloadTemplate
 		}
 
+		// NOTE: gets the events from the webhook here, why is this named types here it is events everywhere else?
 		types := webhooks.MapEventArrayToCRDEvents(webhook.Spec.Events)
 		name := fmt.Sprintf("%s.%s", webhook.ObjectMeta.Namespace, webhook.ObjectMeta.Name)
 
+		// NOTE: creating "listeners"
 		listeners = append(
 			listeners,
 			NewWebhookListener(

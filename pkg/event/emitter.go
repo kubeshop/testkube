@@ -154,11 +154,14 @@ func (e *Emitter) Listen(ctx context.Context) {
 	defer e.mutex.Unlock()
 
 	for _, l := range e.Listeners {
+		// NOTE: starts a listener routine for each loaded listener
 		go e.startListener(l)
 	}
 }
 
 func (e *Emitter) startListener(l common.Listener) {
+	// NOTE: this is the listener topic for listeners which listen on the agentevents subjects
+	// TODO: what is publishing to this subject?
 	err := e.Bus.SubscribeTopic("agentevents.>", l.Name(), e.notifyHandler(l))
 	if err != nil {
 		e.Log.Errorw("error while starting listener", "error", err)
@@ -175,11 +178,15 @@ func (e *Emitter) stopListener(name string) {
 }
 
 func (e *Emitter) notifyHandler(l common.Listener) bus.Handler {
+	// NOTE: this is where the events are handled
 	logger := e.Log.With("listen-on", l.Events(), "queue-group", l.Name(), "selector", l.Selector(), "metadata", l.Metadata())
 	return func(event testkube.Event) error {
+		// NOTE: seems to do some filtering of the events
 		if types, valid := event.Valid(l.Selector(), l.Events()); valid {
 			for i := range types {
+				// TODO: wahat are these types?
 				event.Type_ = &types[i]
+				// NOTE: notifies the listener here
 				result := l.Notify(event)
 				log.Tracew(logger, "listener notified", append(event.Log(), "result", result)...)
 			}

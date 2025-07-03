@@ -81,6 +81,7 @@ func MapStringArrayToCRDEvents(items []string) (events []testkube.EventType) {
 }
 
 // MapEventArrayToCRDEvents maps event array of event types to OpenAPI spec list of EventType
+// TODO: these events types don't have the canceled nor the not-passed event
 func MapEventArrayToCRDEvents(items []executorv1.EventType) (events []testkube.EventType) {
 	for _, e := range items {
 		events = append(events, testkube.EventType(e))
@@ -90,6 +91,7 @@ func MapEventArrayToCRDEvents(items []executorv1.EventType) (events []testkube.E
 
 // MapAPIToCRD maps OpenAPI spec WebhookCreateRequest to CRD Webhook
 func MapAPIToCRD(request testkube.WebhookCreateRequest) executorv1.Webhook {
+	// NOTE: maps webhook from api to crd
 	return executorv1.Webhook{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      request.Name,
@@ -159,6 +161,7 @@ func MapTemplateRefAPIToCRD(v testkube.WebhookTemplateRef) executorv1.WebhookTem
 // MapEventTypesToStringArray maps OpenAPI spec list of EventType to string array
 func MapEventTypesToStringArray(eventTypes []testkube.EventType) (arr []executorv1.EventType) {
 	for _, et := range eventTypes {
+		// TODO: need to add it to the crds also
 		arr = append(arr, executorv1.EventType(et))
 	}
 	return

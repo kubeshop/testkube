@@ -118,6 +118,7 @@ type TestkubeAPI struct {
 	testWorkflowExecutor           testworkflowexecutor.TestWorkflowExecutor
 }
 
+// NOTE: routes configured here
 func (s *TestkubeAPI) Init(server server.HTTPServer) {
 	// TODO: Consider extracting outside?
 	server.Routes.Get("/info", s.InfoHandler())
@@ -127,6 +128,7 @@ func (s *TestkubeAPI) Init(server server.HTTPServer) {
 
 	webhooks := root.Group("/webhooks")
 
+	// NOTE: the webhook handler is here
 	webhooks.Post("/", s.CreateWebhookHandler())
 	webhooks.Patch("/:name", s.UpdateWebhookHandler())
 	webhooks.Get("/", s.ListWebhooksHandler())

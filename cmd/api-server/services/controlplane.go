@@ -63,6 +63,7 @@ func mapTestSuiteFilters(s []*testresult.FilterImpl) []testresult.Filter {
 	return v
 }
 
+// NOTE: this is used by the oss version to
 func CreateControlPlane(ctx context.Context, cfg *config.Config, features featureflags.FeatureFlags, secretManager secretmanager.SecretManager, metrics metrics.Metrics, runner runner2.RunnerExecute, emitter event.Interface) *controlplane.Server {
 	// Connect to the cluster
 	kubeConfig, err := k8sclient.GetK8sClientConfig()
