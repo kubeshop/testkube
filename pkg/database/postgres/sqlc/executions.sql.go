@@ -357,7 +357,6 @@ func (q *Queries) GetFinishedTestWorkflowExecutions(ctx context.Context, arg Get
 		arg.LabelKeys,
 		arg.LabelConditions,
 		arg.SelectorKeys,
-		arg.SelectorKeysKeys,
 		arg.SelectorConditions,
 		arg.Fst,
 		arg.Lmt,
@@ -1411,7 +1410,6 @@ type GetTestWorkflowExecutionsParams struct {
 	LabelKeys          []byte                    `db:"label_keys" json:"label_keys"`
 	LabelConditions    []byte                    `db:"label_conditions" json:"label_conditions"`
 	SelectorKeys       []byte                    `db:"selector_keys" json:"selector_keys"`
-	SelectorKeysKeys   []byte                    `db:"selector_keys_keys" json:"selector_keys_keys"`
 	SelectorConditions []byte                    `db:"selector_conditions" json:"selector_conditions"`
 	Fst                int32                     `db:"fst" json:"fst"`
 	Lmt                int32                     `db:"lmt" json:"lmt"`
@@ -1439,7 +1437,6 @@ func (q *Queries) GetTestWorkflowExecutions(ctx context.Context, arg GetTestWork
 		arg.LabelKeys,
 		arg.LabelConditions,
 		arg.SelectorKeys,
-		arg.SelectorKeysKeys,
 		arg.SelectorConditions,
 		arg.Fst,
 		arg.Lmt,
@@ -1688,7 +1685,6 @@ func (q *Queries) GetTestWorkflowExecutionsSummary(ctx context.Context, arg GetT
 		arg.LabelKeys,
 		arg.LabelConditions,
 		arg.SelectorKeys,
-		arg.SelectorKeysKeys,
 		arg.SelectorConditions,
 		arg.Fst,
 		arg.Lmt,
@@ -1887,7 +1883,6 @@ func (q *Queries) GetTestWorkflowExecutionsTotals(ctx context.Context, arg GetTe
 		arg.LabelKeys,
 		arg.LabelConditions,
 		arg.SelectorKeys,
-		arg.SelectorKeysKeys,
 		arg.SelectorConditions,
 	)
 	if err != nil {
