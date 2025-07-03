@@ -7,7 +7,7 @@ metadata:
 description: "Global ENV - set for both pods and slave pods"
 spec:
   container:
-    image: alpine:latest
+    image: alpine:3.22.0
     env:
     - name: EXAMPLE_GLOBAL_ENV
       value: "GLOBAL_ENV_VALUE"
@@ -16,7 +16,7 @@ spec:
     slave:
       use:
       - name: distribute/evenly
-      image: alpine:latest
+      image: alpine:3.22.0
       logs: always
       count: 2
       shell: '[ "$EXAMPLE_GLOBAL_ENV" = "GLOBAL_ENV_VALUE" ] && { echo ENV value OK; exit 0; } || { echo ENV validation failed; exit 1; }'
@@ -36,7 +36,7 @@ metadata:
 description: "securityContext - runAsUser and runAsGroup"
 spec:
   container:
-    image: alpine:latest
+    image: alpine:3.22.0
     securityContext:
       runAsUser: 128
       runAsGroup: 256
@@ -44,7 +44,7 @@ spec:
     slave:
       use:
       - name: distribute/evenly
-      image: alpine:latest
+      image: alpine:3.22.0
       logs: always
       count: 2
       securityContext:
@@ -69,5 +69,151 @@ spec:
           exit 0
         else
           echo UID/GUID incorrect!
+          exit 1
+        fi
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-multiple-git-repositories-custommountpath
+  labels:
+    core-tests: special-cases
+description: "Git - multiple repositories (one on step level), custom mountPath"
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      mountPath: /data/repo-k6/
+      paths:
+      - test/k6/k6-smoke-test-without-envs.js
+  container:
+    resources:
+      requests:
+        cpu: 128m
+        memory: 128Mi
+  job:
+    activeDeadlineSeconds: 60
+  steps:
+  - name: Run k6 test
+    workingDir: /data/repo-k6/test/k6
+    run:
+      image: grafana/k6:0.43.1
+      shell: k6 run k6-smoke-test-without-envs.js
+  - name: Checkout second repo - Postman
+    content:
+      git:
+        uri: https://github.com/kubeshop/testkube
+        revision: main
+        mountPath: /data/repo-postman/
+        paths:
+        - test/postman/postman-executor-smoke-without-envs.postman_collection.json
+    steps:
+    - name: Run postman test
+      workingDir: /data/repo-postman/test/postman
+      run:
+        image: postman/newman:6-alpine
+        shell: newman run postman-executor-smoke-without-envs.postman_collection.json
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-optional-step
+  labels:
+    core-tests: special-cases
+description: "optional step"
+spec:
+  container:
+    image: alpine:3.22.0
+  job:
+    activeDeadlineSeconds: 30
+  steps:
+  - name: Optional step (expected fail)
+    optional: true
+    shell: echo "Expected fail" && exit 1
+  - name: Second step (expected pass)
+    shell: echo "OK"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-step-retry
+  labels:
+    core-tests: special-cases
+description: "step retry (until step passed)"
+spec:
+  container:
+    image: alpine:3.22.0
+  job:
+    activeDeadlineSeconds: 30
+  steps:
+  - name: Random pass/fail
+    retry:
+      count: 20
+      until: self.passed
+    shell: |
+      code=$((RANDOM % 2))
+      [[ $code -eq 0 ]] && echo "random - passed" || echo "random - failed"
+      exit $code
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-negative-step
+  labels:
+    core-tests: special-cases
+description: "negative step failed - inverting step result to passed"
+spec:
+  container:
+    image: alpine:3.22.0
+  job:
+    activeDeadlineSeconds: 30
+  steps:
+  - name: Step (failed before inverting)
+    negative: true
+    shell: |
+      echo "command failed" && exit 1
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-custom-shared-volume-steps
+  labels:
+    core-tests: special-cases
+description: "sharing custom volume between steps"
+spec:
+  pod:
+    volumes:
+      - name: shared-volume
+        emptyDir: {}
+  container:
+    volumeMounts:
+      - name: shared-volume
+        mountPath: /shared-volume
+  job:
+    activeDeadlineSeconds: 30
+  steps:
+  - name: Step 1 - creating file
+    run:
+      image: alpine:3.17.2
+      shell: |
+        echo "creating /shared-volume/step1.txt file with step1-contents contents"
+        echo "step1-contents" > /shared-volume/step1.txt
+  - name: Step 2 - creating file
+    run:
+      image: debian:trixie-20250630
+      shell: |
+        echo "creating /shared-volume/step2.txt file with step1-contents contents"
+        echo "step2-contents" > /shared-volume/step2.txt
+  - name: Validate files contents
+    run:
+      image: alpine:3.17.2
+      shell: |
+        if cat /shared-volume/step1.txt | grep -qx "step1-contents" && \
+          cat /shared-volume/step2.txt | grep -qx "step2-contents"; then
+          echo "validation: OK"
+          exit 0
+        else
+          echo "validation failed!"
           exit 1
         fi
