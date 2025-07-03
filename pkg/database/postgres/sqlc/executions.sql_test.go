@@ -586,46 +586,69 @@ WHERE 1=1
     AND \(COALESCE\(\$13::boolean, NULL\) IS NULL OR 
          \(\$13::boolean = true AND \(r.status != 'queued' OR r.steps IS NOT NULL\)\) OR
          \(\$13::boolean = false AND r.status = 'queued' AND \(r.steps IS NULL OR r.steps = '\{\}'::jsonb\)\)\)
-    AND \(COALESCE\(\$14::text\[\], ARRAY\[\]::text\[\]\) = ARRAY\[\]::text\[\] OR \(
-        CASE 
-            WHEN COALESCE\(\$15::text, 'OR'\) = 'AND' THEN
-                \(SELECT COUNT\(\*\) FROM unnest\(\$14::text\[\]\) AS required_tag 
-                 WHERE e.tags \? required_tag\) = array_length\(\$14::text\[\], 1\)
-            ELSE
-                \(SELECT COUNT\(\*\) FROM unnest\(\$14::text\[\]\) AS required_tag 
-                 WHERE e.tags \? required_tag\) > 0
-        END
-    \)\)
-    AND \(COALESCE\(\$16::jsonb, '\{\}'::jsonb\) = '\{\}'::jsonb OR \(
-        CASE 
-            WHEN COALESCE\(\$17::text, 'AND'\) = 'AND' THEN
-                \(SELECT COUNT\(\*\) FROM jsonb_each_text\(\$16::jsonb\) AS tc
-                 WHERE e.tags->>tc.key = tc.value\) = \(SELECT COUNT\(\*\) FROM jsonb_each_text\(\$16::jsonb\)\)
-            ELSE
-                \(SELECT COUNT\(\*\) FROM jsonb_each_text\(\$16::jsonb\) AS tc
-                 WHERE e.tags->>tc.key = tc.value\) > 0
-        END
-    \)\)
-    AND \(COALESCE\(\$18::text\[\], ARRAY\[\]::text\[\]\) = ARRAY\[\]::text\[\] OR \(
-        CASE 
-            WHEN COALESCE\(\$19::text, 'OR'\) = 'AND' THEN
-                \(SELECT COUNT\(\*\) FROM unnest\(\$18::text\[\]\) AS required_label 
-                 WHERE w.labels \? required_label\) = array_length\(\$18::text\[\], 1\)
-            ELSE
-                \(SELECT COUNT\(\*\) FROM unnest\(\$18::text\[\]\) AS required_label 
-                 WHERE w.labels \? required_label\) > 0
-        END
-    \)\)
-    AND \(COALESCE\(\$20::jsonb, '\{\}'::jsonb\) = '\{\}'::jsonb OR \(
-        CASE 
-            WHEN COALESCE\(\$21::text, 'AND'\) = 'AND' THEN
-                \(SELECT COUNT\(\*\) FROM jsonb_each_text\(\$20::jsonb\) AS lc
-                 WHERE w.labels->>lc.key = lc.value\) = \(SELECT COUNT\(\*\) FROM jsonb_each_text\(\$20::jsonb\)\)
-            ELSE
-                \(SELECT COUNT\(\*\) FROM jsonb_each_text\(\$20::jsonb\) AS lc
-                 WHERE w.labels->>lc.key = lc.value\) > 0
-        END
-    \)\)
+AND \(     
+        \(COALESCE\(\$14::jsonb, '\[\]'::jsonb\) = '\[\]'::jsonb OR 
+            \(SELECT COUNT\(\*\) FROM jsonb_array_elements\(\$14::jsonb\) AS key_condition
+                WHERE 
+                CASE 
+                    WHEN key_condition->>'operator' = 'not_exists' THEN
+                        NOT \(e.tags \? \(key_condition->>'key'\)\)
+                    ELSE
+                        e.tags \? \(key_condition->>'key'\)
+                END
+            \) = jsonb_array_length\(\$14::jsonb\)
+        \)
+        AND
+        \(COALESCE\(\$15::jsonb, '\[\]'::jsonb\) = '\[\]'::jsonb OR 
+            \(SELECT COUNT\(\*\) FROM jsonb_array_elements\(\$15::jsonb\) AS condition
+                WHERE w.labels->>\(condition->>'key'\) = ANY\(
+                    SELECT jsonb_array_elements_text\(condition->'values'\)
+                \)
+            \) > 0
+        \)
+    \)
+    AND \(
+        \(COALESCE\(\$16::jsonb, '\[\]'::jsonb\) = '\[\]'::jsonb OR 
+            \(SELECT COUNT\(\*\) FROM jsonb_array_elements\(\$16::jsonb\) AS key_condition
+                WHERE 
+                CASE 
+                    WHEN key_condition->>'operator' = 'not_exists' THEN
+                        NOT \(w.labels \? \(key_condition->>'key'\)\)
+                    ELSE
+                        w.labels \? \(key_condition->>'key'\)
+                END
+            \) > 0
+        \)
+        OR
+        \(COALESCE\(\$17::jsonb, '\[\]'::jsonb\) = '\[\]'::jsonb OR 
+            \(SELECT COUNT\(\*\) FROM jsonb_array_elements\(\$17::jsonb\) AS condition
+                WHERE w.labels->>\(condition->>'key'\) = ANY\(
+                    SELECT jsonb_array_elements_text\(condition->'values'\)
+                \)
+            \) > 0
+        \)
+    \)
+    AND \(
+        \(COALESCE\(\$18::jsonb, '\[\]'::jsonb\) = '\[\]'::jsonb OR 
+            \(SELECT COUNT\(\*\) FROM jsonb_array_elements\(\$18::jsonb\) AS key_condition
+                WHERE 
+                CASE 
+                    WHEN key_condition->>'operator' = 'not_exists' THEN
+                        NOT \(w.labels \? \(key_condition->>'key'\)\)
+                    ELSE
+                        w.labels \? \(key_condition->>'key'\)
+                END
+            \) = jsonb_array_length\(\$19::jsonb\)
+        \)
+        AND
+        \(COALESCE\(\$20::jsonb, '\[\]'::jsonb\) = '\[\]'::jsonb OR 
+            \(SELECT COUNT\(\*\) FROM jsonb_array_elements\(\$20::jsonb\) AS condition
+                WHERE w.labels->>\(condition->>'key'\) = ANY\(
+                    SELECT jsonb_array_elements_text\(condition->'values'\)
+                \)
+            \) = jsonb_array_length\(\$20::jsonb\)
+        \)
+    \)
 GROUP BY r\.status`
 
 	rows := mock.NewRows([]string{"status", "count"}).
@@ -634,27 +657,25 @@ GROUP BY r\.status`
 
 	// Create parameters struct with all required fields
 	params := GetTestWorkflowExecutionsTotalsParams{
-		WorkflowName:             pgtype.Text{Valid: false},
-		WorkflowNames:            pgtype.Array[pgtype.Text]{},
-		TextSearch:               pgtype.Text{Valid: false},
-		StartDate:                pgtype.Timestamptz{Valid: false},
-		EndDate:                  pgtype.Timestamptz{Valid: false},
-		LastNDays:                pgtype.Int4{Valid: false},
-		Statuses:                 pgtype.Array[pgtype.Text]{},
-		RunnerID:                 pgtype.Text{Valid: false},
-		Assigned:                 pgtype.Bool{Valid: false},
-		ActorName:                pgtype.Text{Valid: false},
-		ActorType:                pgtype.Text{Valid: false},
-		GroupID:                  pgtype.Text{Valid: false},
-		Initialized:              pgtype.Bool{Valid: false},
-		TagKeys:                  []string{},
-		TagMatchType:             "",
-		TagConditions:            []byte{},
-		TagConditionsMatchType:   "",
-		LabelKeys:                []string{},
-		LabelMatchType:           "",
-		LabelConditions:          []byte{},
-		LabelConditionsMatchType: "",
+		WorkflowName:       pgtype.Text{Valid: false},
+		WorkflowNames:      pgtype.Array[pgtype.Text]{},
+		TextSearch:         pgtype.Text{Valid: false},
+		StartDate:          pgtype.Timestamptz{Valid: false},
+		EndDate:            pgtype.Timestamptz{Valid: false},
+		LastNDays:          pgtype.Int4{Valid: false},
+		Statuses:           pgtype.Array[pgtype.Text]{},
+		RunnerID:           pgtype.Text{Valid: false},
+		Assigned:           pgtype.Bool{Valid: false},
+		ActorName:          pgtype.Text{Valid: false},
+		ActorType:          pgtype.Text{Valid: false},
+		GroupID:            pgtype.Text{Valid: false},
+		Initialized:        pgtype.Bool{Valid: false},
+		TagKeys:            []byte{},
+		TagConditions:      []byte{},
+		LabelKeys:          []byte{},
+		LabelConditions:    []byte{},
+		SelectorKeys:       []byte{},
+		SelectorConditions: []byte{},
 	}
 
 	mock.ExpectQuery(expectedQuery).WithArgs(
@@ -672,13 +693,11 @@ GROUP BY r\.status`
 		params.GroupID,
 		params.Initialized,
 		params.TagKeys,
-		params.TagMatchType,
 		params.TagConditions,
-		params.TagConditionsMatchType,
 		params.LabelKeys,
-		params.LabelMatchType,
 		params.LabelConditions,
-		params.LabelConditionsMatchType,
+		params.SelectorKeys,
+		params.SelectorConditions,
 	).WillReturnRows(rows)
 
 	// Execute query
@@ -1091,7 +1110,7 @@ LIMIT \$3`
 
 	params := GetTestWorkflowMetricsParams{
 		WorkflowName: pgtype.Text{String: "test-workflow", Valid: true},
-		LastDays:     pgtype.Int4{Int32: 7, Valid: true},
+		LastNDays:    pgtype.Int4{Int32: 7, Valid: true},
 		Lmt:          10,
 	}
 
@@ -1101,7 +1120,7 @@ LIMIT \$3`
 		"exec-1", "group-1", "5m", int64(300000), "passed", "test-execution", time.Now(), "runner-1",
 	)
 
-	mock.ExpectQuery(expectedQuery).WithArgs(params.WorkflowName, params.LastDays, params.Lmt).WillReturnRows(rows)
+	mock.ExpectQuery(expectedQuery).WithArgs(params.WorkflowName, params.LastNDays, params.Lmt).WillReturnRows(rows)
 
 	// Execute query
 	result, err := queries.GetTestWorkflowMetrics(ctx, params)

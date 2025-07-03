@@ -950,7 +950,7 @@ func TestPostgresRepository_GetTestWorkflowMetrics(t *testing.T) {
 
 		params := sqlc.GetTestWorkflowMetricsParams{
 			WorkflowName: toPgText(name),
-			LastDays:     toPgInt4(int32(last)),
+			LastNDays:    toPgInt4(int32(last)),
 			Lmt:          int32(limit),
 		}
 
@@ -1170,30 +1170,6 @@ func TestBuildTestWorkflowExecutionParams(t *testing.T) {
 
 	assert.Equal(t, "test-workflow", params.WorkflowName.String)
 	assert.True(t, params.WorkflowName.Valid)
-}
-
-func TestParseTagSelector(t *testing.T) {
-	repo := &PostgresRepository{}
-
-	t.Run("ParseTagWithValue", func(t *testing.T) {
-		tagSelector := "env=prod,version=1.0"
-		conditions := repo.parseTagSelector(tagSelector)
-
-		assert.Len(t, conditions, 2)
-		assert.Equal(t, "equals", conditions[0].Type)
-		assert.Equal(t, "env", conditions[0].Key)
-		assert.Equal(t, "prod", conditions[0].Value)
-	})
-
-	t.Run("ParseTagExists", func(t *testing.T) {
-		tagSelector := "important"
-		conditions := repo.parseTagSelector(tagSelector)
-
-		assert.Len(t, conditions, 1)
-		assert.Equal(t, "exists", conditions[0].Type)
-		assert.Equal(t, "important", conditions[0].Key)
-		assert.Equal(t, "", conditions[0].Value)
-	})
 }
 
 func TestPopulateConfigParams(t *testing.T) {
