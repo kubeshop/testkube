@@ -7,7 +7,7 @@ metadata:
 description: "Write 100 MB, read (redirected to /dev/null)"
 spec:
   container:
-    image: alpine:latest
+    image: alpine:3.22.0
   steps:
   - name: Run test
     shell: |

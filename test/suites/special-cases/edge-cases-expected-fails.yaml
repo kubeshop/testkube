@@ -24,3 +24,5 @@ spec:
       - name: expected-fail-missing-env-secret
       - name: expected-fail-missing-template
       - name: expected-fail-service-exit-code
+      - name: expected-fail-step-retry
+      - name: expected-fail-negative-step
