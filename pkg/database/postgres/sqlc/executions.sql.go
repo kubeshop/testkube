@@ -1220,7 +1220,7 @@ SELECT
 FROM tag_extracts
 WHERE (COALESCE($1::text, '') = '' OR workflow_name = $1::text)
 GROUP BY tag_key
-ORDER BY tag_key;
+ORDER BY tag_key
 `
 
 type GetTestWorkflowExecutionTagsRow struct {
@@ -1389,7 +1389,7 @@ WHERE 1=1
         )
     )
 ORDER BY e.scheduled_at DESC
-LIMIT $23 OFFSET $22
+LIMIT $22 OFFSET $21
 `
 
 type GetTestWorkflowExecutionsParams struct {
@@ -1661,7 +1661,7 @@ WHERE 1=1
         )
     )
 ORDER BY e.scheduled_at DESC
-LIMIT $23 OFFSET $22
+LIMIT $22 OFFSET $21
 `
 
 type GetTestWorkflowExecutionsSummaryParams GetTestWorkflowExecutionsParams
@@ -2155,7 +2155,7 @@ ON CONFLICT (execution_id, workflow_type) DO UPDATE SET
     spec = EXCLUDED.spec,
     read_only = EXCLUDED.read_only,
     status = EXCLUDED.status,
-	health = EXCLUDED.health
+    health = EXCLUDED.health
 `
 
 type InsertTestWorkflowParams struct {
