@@ -499,6 +499,7 @@ func createTestFilter() *MockFilter {
 	filter.On("ActorTypeDefined").Return(false)
 	filter.On("GroupIDDefined").Return(false)
 	filter.On("InitializedDefined").Return(false)
+	filter.On("Selector").Return("")
 	filter.On("TagSelector").Return("")
 	filter.On("LabelSelector").Return((*testworkflow.LabelSelector)(nil))
 	return filter
@@ -1166,8 +1167,9 @@ func TestBuildTestWorkflowExecutionParams(t *testing.T) {
 	repo := &PostgresRepository{}
 	filter := testworkflow.NewExecutionsFilter().WithName("test-workflow")
 
-	params := repo.buildTestWorkflowExecutionParams(filter)
+	params, err := repo.buildTestWorkflowExecutionParams(filter)
 
+	assert.NoError(t, err)
 	assert.Equal(t, "test-workflow", params.WorkflowName.String)
 	assert.True(t, params.WorkflowName.Valid)
 }

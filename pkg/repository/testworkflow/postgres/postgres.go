@@ -505,7 +505,11 @@ func (r *PostgresRepository) GetRunning(ctx context.Context) ([]testkube.TestWor
 
 // GetFinished returns finished executions with filter
 func (r *PostgresRepository) GetFinished(ctx context.Context, filter testworkflow.Filter) ([]testkube.TestWorkflowExecution, error) {
-	params := r.buildTestWorkflowExecutionParams(filter)
+	params, err := r.buildTestWorkflowExecutionParams(filter)
+	if err != nil {
+		return nil, err
+	}
+
 	rows, err := r.queries.GetFinishedTestWorkflowExecutions(ctx, sqlc.GetFinishedTestWorkflowExecutionsParams(params))
 	if err != nil {
 		return nil, err
@@ -527,8 +531,12 @@ func (r *PostgresRepository) GetFinished(ctx context.Context, filter testworkflo
 // GetExecutionsTotals returns execution totals with filter
 func (r *PostgresRepository) GetExecutionsTotals(ctx context.Context, filter ...testworkflow.Filter) (testkube.ExecutionsTotals, error) {
 	var params sqlc.GetTestWorkflowExecutionsParams
+	var err error
 	if len(filter) > 0 {
-		params = r.buildTestWorkflowExecutionParams(filter[0])
+		params, err = r.buildTestWorkflowExecutionParams(filter[0])
+		if err != nil {
+			return testkube.ExecutionsTotals{}, err
+		}
 	}
 
 	rows, err := r.queries.GetTestWorkflowExecutionsTotals(ctx, sqlc.GetTestWorkflowExecutionsTotalsParams(params))
@@ -565,7 +573,11 @@ func (r *PostgresRepository) GetExecutionsTotals(ctx context.Context, filter ...
 
 // GetExecutions returns executions with filter
 func (r *PostgresRepository) GetExecutions(ctx context.Context, filter testworkflow.Filter) ([]testkube.TestWorkflowExecution, error) {
-	params := r.buildTestWorkflowExecutionParams(filter)
+	params, err := r.buildTestWorkflowExecutionParams(filter)
+	if err != nil {
+		return nil, err
+	}
+
 	rows, err := r.queries.GetTestWorkflowExecutions(ctx, params)
 	if err != nil {
 		return nil, err
@@ -586,7 +598,11 @@ func (r *PostgresRepository) GetExecutions(ctx context.Context, filter testworkf
 
 // GetExecutionsSummary method
 func (r *PostgresRepository) GetExecutionsSummary(ctx context.Context, filter testworkflow.Filter) ([]testkube.TestWorkflowExecutionSummary, error) {
-	params := r.buildTestWorkflowExecutionParams(filter)
+	params, err := r.buildTestWorkflowExecutionParams(filter)
+	if err != nil {
+		return nil, err
+	}
+
 	rows, err := r.queries.GetTestWorkflowExecutionsSummary(ctx, sqlc.GetTestWorkflowExecutionsSummaryParams(params))
 	if err != nil {
 		return nil, err
@@ -1395,7 +1411,8 @@ func (r *PostgresRepository) AbortIfQueued(ctx context.Context, id string) (bool
 // Helper functions for building query parameters and converting rows
 // These would need to be implemented based on the specific filter structure
 // Enhanced buildTestWorkflowExecutionParams with full filter support
-func (r *PostgresRepository) buildTestWorkflowExecutionParams(filter testworkflow.Filter) sqlc.GetTestWorkflowExecutionsParams {
+func (r *PostgresRepository) buildTestWorkflowExecutionParams(filter testworkflow.Filter) (sqlc.GetTestWorkflowExecutionsParams, error) {
+	var err error
 	params := sqlc.GetTestWorkflowExecutionsParams{
 		Fst: int32(filter.Page() * filter.PageSize()),
 		Lmt: int32(filter.PageSize()),
@@ -1470,7 +1487,46 @@ func (r *PostgresRepository) buildTestWorkflowExecutionParams(filter testworkflo
 		params.Initialized = toPgBool(filter.Initialized())
 	}
 
-	return params
+	if filter.Selector() != "" {
+		keys, conditions := r.parseSelector(filter.Selector())
+		params.SelectorKeys, err = json.Marshal(keys)
+		if err != nil {
+			return params, err
+		}
+
+		params.SelectorConditions, err = json.Marshal(conditions)
+		if err != nil {
+			return params, err
+		}
+	}
+
+	if filter.LabelSelector() != nil {
+		keys, conditions := r.parseLabelSelector(filter.LabelSelector())
+		params.LabelKeys, err = json.Marshal(keys)
+		if err != nil {
+			return params, err
+		}
+
+		params.LabelConditions, err = json.Marshal(conditions)
+		if err != nil {
+			return params, err
+		}
+	}
+
+	if filter.TagSelector() != "" {
+		keys, conditions := r.parseTagSelector(filter.TagSelector())
+		params.TagKeys, err = json.Marshal(keys)
+		if err != nil {
+			return params, err
+		}
+
+		params.TagConditions, err = json.Marshal(conditions)
+		if err != nil {
+			return params, err
+		}
+	}
+
+	return params, nil
 }
 
 type KeyCondition struct {
@@ -1481,37 +1537,6 @@ type KeyCondition struct {
 type ValueCondition struct {
 	Key    string   `json:"key"`
 	Values []string `json:"values"` // Multiple values for the same key (OR logic within the same key)
-}
-
-// Parse tag selector into conditions
-func (r *PostgresRepository) parseTagSelector(tagSelector string) ([]KeyCondition, []ValueCondition) {
-	keys := make([]KeyCondition, 0)
-	conditions := make([]ValueCondition, 0)
-	values := make(map[string][]string, 0)
-	items := strings.Split(tagSelector, ",")
-	for _, item := range items {
-		item = strings.TrimSpace(item)
-		elements := strings.Split(item, "=")
-		if len(elements) == 2 {
-			values[utils.EscapeDots(elements[0])] = append(values[utils.EscapeDots(elements[0])], elements[1])
-		} else if len(elements) == 1 {
-			// Tag exists: tag
-			condType := "exists"
-			keys = append(keys, KeyCondition{
-				Operator: condType,
-				Key:      utils.EscapeDots(elements[0]),
-			})
-		}
-	}
-
-	for key, value := range values {
-		conditions = append(conditions, ValueCondition{
-			Key:    key,
-			Values: value,
-		})
-	}
-
-	return keys, conditions
 }
 
 // Parse selector into conditions
@@ -1560,6 +1585,37 @@ func (r *PostgresRepository) parseLabelSelector(labelSelector *testworkflow.Labe
 			keys = append(keys, KeyCondition{
 				Operator: condType,
 				Key:      utils.EscapeDots(label.Key),
+			})
+		}
+	}
+
+	for key, value := range values {
+		conditions = append(conditions, ValueCondition{
+			Key:    key,
+			Values: value,
+		})
+	}
+
+	return keys, conditions
+}
+
+// Parse tag selector into conditions
+func (r *PostgresRepository) parseTagSelector(tagSelector string) ([]KeyCondition, []ValueCondition) {
+	keys := make([]KeyCondition, 0)
+	conditions := make([]ValueCondition, 0)
+	values := make(map[string][]string, 0)
+	items := strings.Split(tagSelector, ",")
+	for _, item := range items {
+		item = strings.TrimSpace(item)
+		elements := strings.Split(item, "=")
+		if len(elements) == 2 {
+			values[utils.EscapeDots(elements[0])] = append(values[utils.EscapeDots(elements[0])], elements[1])
+		} else if len(elements) == 1 {
+			// Tag exists: tag
+			condType := "exists"
+			keys = append(keys, KeyCondition{
+				Operator: condType,
+				Key:      utils.EscapeDots(elements[0]),
 			})
 		}
 	}
