@@ -353,13 +353,12 @@ func (q *Queries) GetFinishedTestWorkflowExecutions(ctx context.Context, arg Get
 		arg.GroupID,
 		arg.Initialized,
 		arg.TagKeys,
-		arg.TagMatchType,
 		arg.TagConditions,
-		arg.TagConditionsMatchType,
 		arg.LabelKeys,
-		arg.LabelMatchType,
 		arg.LabelConditions,
-		arg.LabelConditionsMatchType,
+		arg.SelectorKeys,
+		arg.SelectorKeysKeys,
+		arg.SelectorConditions,
 		arg.Fst,
 		arg.Lmt,
 	)
@@ -1210,7 +1209,7 @@ WITH tag_extracts AS (
         tag_pair.value as tag_value
     FROM test_workflow_executions e
     LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
-    CROSS JOIN LATERAL jsonb_each_text(e.tags) AS tag_pair
+    CROSS JOIN LATERAL jsonb_each_text(e.tags) AS tag_pair(key, value)
     WHERE e.tags IS NOT NULL 
         AND e.tags != '{}'::jsonb
         AND jsonb_typeof(e.tags) = 'object'
@@ -1436,13 +1435,12 @@ func (q *Queries) GetTestWorkflowExecutions(ctx context.Context, arg GetTestWork
 		arg.GroupID,
 		arg.Initialized,
 		arg.TagKeys,
-		arg.TagMatchType,
 		arg.TagConditions,
-		arg.TagConditionsMatchType,
 		arg.LabelKeys,
-		arg.LabelMatchType,
 		arg.LabelConditions,
-		arg.LabelConditionsMatchType,
+		arg.SelectorKeys,
+		arg.SelectorKeysKeys,
+		arg.SelectorConditions,
 		arg.Fst,
 		arg.Lmt,
 	)
@@ -1686,13 +1684,12 @@ func (q *Queries) GetTestWorkflowExecutionsSummary(ctx context.Context, arg GetT
 		arg.GroupID,
 		arg.Initialized,
 		arg.TagKeys,
-		arg.TagMatchType,
 		arg.TagConditions,
-		arg.TagConditionsMatchType,
 		arg.LabelKeys,
-		arg.LabelMatchType,
 		arg.LabelConditions,
-		arg.LabelConditionsMatchType,
+		arg.SelectorKeys,
+		arg.SelectorKeysKeys,
+		arg.SelectorConditions,
 		arg.Fst,
 		arg.Lmt,
 	)
@@ -1886,13 +1883,12 @@ func (q *Queries) GetTestWorkflowExecutionsTotals(ctx context.Context, arg GetTe
 		arg.GroupID,
 		arg.Initialized,
 		arg.TagKeys,
-		arg.TagMatchType,
 		arg.TagConditions,
-		arg.TagConditionsMatchType,
 		arg.LabelKeys,
-		arg.LabelMatchType,
 		arg.LabelConditions,
-		arg.LabelConditionsMatchType,
+		arg.SelectorKeys,
+		arg.SelectorKeysKeys,
+		arg.SelectorConditions,
 	)
 	if err != nil {
 		return nil, err
@@ -1949,7 +1945,7 @@ type GetTestWorkflowMetricsRow struct {
 }
 
 func (q *Queries) GetTestWorkflowMetrics(ctx context.Context, arg GetTestWorkflowMetricsParams) ([]GetTestWorkflowMetricsRow, error) {
-	rows, err := q.db.Query(ctx, getTestWorkflowMetrics, arg.WorkflowName, arg.LastDays, arg.Lmt)
+	rows, err := q.db.Query(ctx, getTestWorkflowMetrics, arg.WorkflowName, arg.LastNDays, arg.Lmt)
 	if err != nil {
 		return nil, err
 	}
