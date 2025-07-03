@@ -16,7 +16,7 @@ spec:
     image: mcr.microsoft.com/playwright:v1.32.3-focal
     resources:
       requests:
-        cpu: 2
+        cpu: 1500m
         memory: 2Gi
     workingDir: /data/repo/test/playwright/playwright-project
   job:
@@ -50,7 +50,7 @@ spec:
     image: mcr.microsoft.com/playwright:v1.32.3-focal
     resources:
       requests:
-        cpu: 2
+        cpu: 1500m
         memory: 2Gi
     workingDir: /data/repo/test/playwright/playwright-project
   job:
@@ -88,7 +88,7 @@ spec:
   container:
     resources:
       requests:
-        cpu: 2
+        cpu: 1500m
         memory: 2Gi
     workingDir: /data/repo/test/playwright/playwright-project
   job:
@@ -140,7 +140,7 @@ spec:
     image: mcr.microsoft.com/playwright:v1.32.3-focal
     resources:
       requests:
-        cpu: 2
+        cpu: 1500m
         memory: 2Gi
     workingDir: /data/repo/test/playwright/playwright-project
   job:
@@ -179,7 +179,7 @@ spec:
     image: mcr.microsoft.com/playwright:v1.32.3-focal
     resources:
       requests:
-        cpu: 2
+        cpu: 1500m
         memory: 2Gi
     workingDir: /data/repo/test/playwright/playwright-project
   job:
@@ -215,7 +215,7 @@ spec:
   container:
     resources:
       requests:
-        cpu: 2
+        cpu: 1500m
         memory: 2Gi
     workingDir: /data/repo/test/playwright/playwright-project
   job:
