@@ -401,7 +401,7 @@ WHERE r.status IN ('passed', 'failed', 'aborted')
         AND
         (COALESCE(@tag_conditions::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
             (SELECT COUNT(*) FROM jsonb_array_elements(@tag_conditions::jsonb) AS condition
-                WHERE w.labels->>(condition->>'key') = ANY(
+                WHERE e.tags->>(condition->>'key') = ANY(
                     SELECT jsonb_array_elements_text(condition->'values')
                 )
             ) > 0
@@ -492,7 +492,7 @@ WHERE 1=1
         AND
         (COALESCE(@tag_conditions::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
             (SELECT COUNT(*) FROM jsonb_array_elements(@tag_conditions::jsonb) AS condition
-                WHERE w.labels->>(condition->>'key') = ANY(
+                WHERE e.tags->>(condition->>'key') = ANY(
                     SELECT jsonb_array_elements_text(condition->'values')
                 )
             ) > 0
@@ -634,7 +634,7 @@ WHERE 1=1
         AND
         (COALESCE(@tag_conditions::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
             (SELECT COUNT(*) FROM jsonb_array_elements(@tag_conditions::jsonb) AS condition
-                WHERE w.labels->>(condition->>'key') = ANY(
+                WHERE e.tags->>(condition->>'key') = ANY(
                     SELECT jsonb_array_elements_text(condition->'values')
                 )
             ) > 0
@@ -1107,7 +1107,7 @@ WHERE 1=1
         AND
         (COALESCE(@tag_conditions::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
             (SELECT COUNT(*) FROM jsonb_array_elements(@tag_conditions::jsonb) AS condition
-                WHERE w.labels->>(condition->>'key') = ANY(
+                WHERE e.tags->>(condition->>'key') = ANY(
                     SELECT jsonb_array_elements_text(condition->'values')
                 )
             ) > 0

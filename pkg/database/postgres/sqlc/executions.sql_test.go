@@ -601,7 +601,7 @@ WHERE 1=1
         AND
         \(COALESCE\(\$15::jsonb, '\[\]'::jsonb\) = '\[\]'::jsonb OR 
             \(SELECT COUNT\(\*\) FROM jsonb_array_elements\(\$15::jsonb\) AS condition
-                WHERE w.labels->>\(condition->>'key'\) = ANY\(
+                WHERE e.tags->>\(condition->>'key'\) = ANY\(
                     SELECT jsonb_array_elements_text\(condition->'values'\)
                 \)
             \) > 0
