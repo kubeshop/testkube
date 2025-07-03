@@ -1393,28 +1393,28 @@ LIMIT $22 OFFSET $21
 `
 
 type GetTestWorkflowExecutionsParams struct {
-	WorkflowName       string             `db:"workflow_name" json:"workflow_name"`
-	WorkflowNames      []string           `db:"workflow_names" json:"workflow_names"`
-	TextSearch         string             `db:"text_search" json:"text_search"`
-	StartDate          pgtype.Timestamptz `db:"start_date" json:"start_date"`
-	EndDate            pgtype.Timestamptz `db:"end_date" json:"end_date"`
-	LastNDays          int32              `db:"last_n_days" json:"last_n_days"`
-	Statuses           []string           `db:"statuses" json:"statuses"`
-	RunnerID           string             `db:"runner_id" json:"runner_id"`
-	Assigned           bool               `db:"assigned" json:"assigned"`
-	ActorName          string             `db:"actor_name" json:"actor_name"`
-	ActorType          string             `db:"actor_type" json:"actor_type"`
-	GroupID            string             `db:"group_id" json:"group_id"`
-	Initialized        bool               `db:"initialized" json:"initialized"`
-	TagKeys            []byte             `db:"tag_keys" json:"tag_keys"`
-	TagConditions      []byte             `db:"tag_conditions" json:"tag_conditions"`
-	LabelKeys          []byte             `db:"label_keys" json:"label_keys"`
-	LabelConditions    []byte             `db:"label_conditions" json:"label_conditions"`
-	SelectorKeys       []byte             `db:"selector_keys" json:"selector_keys"`
-	SelectorKeysKeys   []byte             `db:"selector_keys_keys" json:"selector_keys_keys"`
-	SelectorConditions []byte             `db:"selector_conditions" json:"selector_conditions"`
-	Fst                int32              `db:"fst" json:"fst"`
-	Lmt                int32              `db:"lmt" json:"lmt"`
+	WorkflowName       pgtype.Text               `db:"workflow_name" json:"workflow_name"`
+	WorkflowNames      pgtype.Array[pgtype.Text] `db:"workflow_names" json:"workflow_names"`
+	TextSearch         pgtype.Text               `db:"text_search" json:"text_search"`
+	StartDate          pgtype.Timestamptz        `db:"start_date" json:"start_date"`
+	EndDate            pgtype.Timestamptz        `db:"end_date" json:"end_date"`
+	LastNDays          pgtype.Int4               `db:"last_n_days" json:"last_n_days"`
+	Statuses           pgtype.Array[pgtype.Text] `db:"statuses" json:"statuses"`
+	RunnerID           pgtype.Text               `db:"runner_id" json:"runner_id"`
+	Assigned           pgtype.Bool               `db:"assigned" json:"assigned"`
+	ActorName          pgtype.Text               `db:"actor_name" json:"actor_name"`
+	ActorType          pgtype.Text               `db:"actor_type" json:"actor_type"`
+	GroupID            pgtype.Text               `db:"group_id" json:"group_id"`
+	Initialized        pgtype.Bool               `db:"initialized" json:"initialized"`
+	TagKeys            []byte                    `db:"tag_keys" json:"tag_keys"`
+	TagConditions      []byte                    `db:"tag_conditions" json:"tag_conditions"`
+	LabelKeys          []byte                    `db:"label_keys" json:"label_keys"`
+	LabelConditions    []byte                    `db:"label_conditions" json:"label_conditions"`
+	SelectorKeys       []byte                    `db:"selector_keys" json:"selector_keys"`
+	SelectorKeysKeys   []byte                    `db:"selector_keys_keys" json:"selector_keys_keys"`
+	SelectorConditions []byte                    `db:"selector_conditions" json:"selector_conditions"`
+	Fst                int32                     `db:"fst" json:"fst"`
+	Lmt                int32                     `db:"lmt" json:"lmt"`
 }
 
 type GetTestWorkflowExecutionsRow GetTestWorkflowExecutionRow

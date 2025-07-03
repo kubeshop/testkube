@@ -1231,7 +1231,7 @@ func (r *PostgresRepository) GetTestWorkflowMetrics(ctx context.Context, name st
 
 	rows, err := r.queries.GetTestWorkflowMetrics(ctx, sqlc.GetTestWorkflowMetricsParams{
 		WorkflowName: toPgText(name),
-		LastDays:     toPgInt4(la),
+		LastNDays:    toPgInt4(la),
 		Lmt:          int32(li),
 	})
 	if err != nil {
