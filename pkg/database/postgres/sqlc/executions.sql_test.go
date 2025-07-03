@@ -586,7 +586,7 @@ WHERE 1=1
     AND \(COALESCE\(\$13::boolean, NULL\) IS NULL OR 
          \(\$13::boolean = true AND \(r.status != 'queued' OR r.steps IS NOT NULL\)\) OR
          \(\$13::boolean = false AND r.status = 'queued' AND \(r.steps IS NULL OR r.steps = '\{\}'::jsonb\)\)\)
-AND \(     
+    AND \(     
         \(COALESCE\(\$14::jsonb, '\[\]'::jsonb\) = '\[\]'::jsonb OR 
             \(SELECT COUNT\(\*\) FROM jsonb_array_elements\(\$14::jsonb\) AS key_condition
                 WHERE 
@@ -638,15 +638,15 @@ AND \(
                     ELSE
                         w.labels \? \(key_condition->>'key'\)
                 END
-            \) = jsonb_array_length\(\$19::jsonb\)
+            \) = jsonb_array_length\(\$18::jsonb\)
         \)
         AND
-        \(COALESCE\(\$20::jsonb, '\[\]'::jsonb\) = '\[\]'::jsonb OR 
-            \(SELECT COUNT\(\*\) FROM jsonb_array_elements\(\$20::jsonb\) AS condition
+        \(COALESCE\(\$19::jsonb, '\[\]'::jsonb\) = '\[\]'::jsonb OR 
+            \(SELECT COUNT\(\*\) FROM jsonb_array_elements\(\$19::jsonb\) AS condition
                 WHERE w.labels->>\(condition->>'key'\) = ANY\(
                     SELECT jsonb_array_elements_text\(condition->'values'\)
                 \)
-            \) = jsonb_array_length\(\$20::jsonb\)
+            \) = jsonb_array_length\(\$19::jsonb\)
         \)
     \)
 GROUP BY r\.status`

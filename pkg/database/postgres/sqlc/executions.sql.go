@@ -318,19 +318,19 @@ WHERE r.status IN ('passed', 'failed', 'aborted')
                     ELSE
                         w.labels ? (key_condition->>'key')
                 END
-            ) = jsonb_array_length($19::jsonb)
+            ) = jsonb_array_length($18::jsonb)
         )
         AND
-        (COALESCE($20::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements($20::jsonb) AS condition
+        (COALESCE($19::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
+            (SELECT COUNT(*) FROM jsonb_array_elements($19::jsonb) AS condition
                 WHERE w.labels->>(condition->>'key') = ANY(
                     SELECT jsonb_array_elements_text(condition->'values')
                 )
-            ) = jsonb_array_length($20::jsonb)
+            ) = jsonb_array_length($19::jsonb)
         )
     )
 ORDER BY e.scheduled_at DESC
-LIMIT $22 OFFSET $21
+LIMIT $21 OFFSET $20
 `
 
 type GetFinishedTestWorkflowExecutionsParams GetTestWorkflowExecutionsParams
@@ -1377,19 +1377,19 @@ WHERE 1=1
                     ELSE
                         w.labels ? (key_condition->>'key')
                 END
-            ) = jsonb_array_length($19::jsonb)
+            ) = jsonb_array_length($18::jsonb)
         )
         AND
-        (COALESCE($20::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements($20::jsonb) AS condition
+        (COALESCE($19::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
+            (SELECT COUNT(*) FROM jsonb_array_elements($19::jsonb) AS condition
                 WHERE w.labels->>(condition->>'key') = ANY(
                     SELECT jsonb_array_elements_text(condition->'values')
                 )
-            ) = jsonb_array_length($20::jsonb)
+            ) = jsonb_array_length($19::jsonb)
         )
     )
 ORDER BY e.scheduled_at DESC
-LIMIT $22 OFFSET $21
+LIMIT $21 OFFSET $20
 `
 
 type GetTestWorkflowExecutionsParams struct {
@@ -1649,19 +1649,19 @@ WHERE 1=1
                     ELSE
                         w.labels ? (key_condition->>'key')
                 END
-            ) = jsonb_array_length($19::jsonb)
+            ) = jsonb_array_length($18::jsonb)
         )
         AND
-        (COALESCE($20::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements($20::jsonb) AS condition
+        (COALESCE($19::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
+            (SELECT COUNT(*) FROM jsonb_array_elements($19::jsonb) AS condition
                 WHERE w.labels->>(condition->>'key') = ANY(
                     SELECT jsonb_array_elements_text(condition->'values')
                 )
-            ) = jsonb_array_length($20::jsonb)
+            ) = jsonb_array_length($19::jsonb)
         )
     )
 ORDER BY e.scheduled_at DESC
-LIMIT $22 OFFSET $21
+LIMIT $21 OFFSET $20
 `
 
 type GetTestWorkflowExecutionsSummaryParams GetTestWorkflowExecutionsParams
@@ -1846,15 +1846,15 @@ WHERE 1=1
                     ELSE
                         w.labels ? (key_condition->>'key')
                 END
-            ) = jsonb_array_length($19::jsonb)
+            ) = jsonb_array_length($18::jsonb)
         )
         AND
-        (COALESCE($20::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
-            (SELECT COUNT(*) FROM jsonb_array_elements($20::jsonb) AS condition
+        (COALESCE($19::jsonb, '[]'::jsonb) = '[]'::jsonb OR 
+            (SELECT COUNT(*) FROM jsonb_array_elements($19::jsonb) AS condition
                 WHERE w.labels->>(condition->>'key') = ANY(
                     SELECT jsonb_array_elements_text(condition->'values')
                 )
-            ) = jsonb_array_length($20::jsonb)
+            ) = jsonb_array_length($19::jsonb)
         )
     )
 GROUP BY r.status
