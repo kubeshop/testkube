@@ -32,6 +32,7 @@ type OSSControlPlaneConfig struct {
 	APIMongoDB                string `envconfig:"API_MONGO_DB" default:"testkube"`
 	APIMongoDBType            string `envconfig:"API_MONGO_DB_TYPE" default:"mongo"`
 	DisableMongoMigrations    bool   `envconfig:"DISABLE_MONGO_MIGRATIONS" default:"false"`
+	DisablePostgresMigrations bool   `envconfig:"DISABLE_POSTGRES_MIGRATIONS" default:"false"`
 
 	// Postgres
 	APIPostgresDSN string `envconfig:"API_POSTGRES_DSN" default:""`

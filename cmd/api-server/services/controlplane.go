@@ -94,7 +94,7 @@ func CreateControlPlane(ctx context.Context, cfg *config.Config, features featur
 		factory, err = CreateMongoFactory(ctx, cfg, mongoDb, logGrpcClient, storageClient, features)
 	}
 	if cfg.APIPostgresDSN != "" {
-		postgresDb := commons.MustGetPostgresDatabase(ctx, cfg)
+		postgresDb := commons.MustGetPostgresDatabase(ctx, cfg, !cfg.DisablePostgresMigrations)
 		factory, err = CreatePostgresFactory(postgresDb)
 	}
 	commons.ExitOnError("Creating factory for database", err)
