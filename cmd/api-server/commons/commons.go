@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	_ "github.com/lib/pq"
+	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/nats-io/nats.go"
 	"github.com/pkg/errors"
 	"github.com/pressly/goose/v3"
@@ -225,20 +225,16 @@ func getMongoSSLConfig(cfg *config.Config, secretClient secret.Interface) *stora
 }
 
 func MustGetPostgresDatabase(ctx context.Context, cfg *config.Config, migrate bool) *pgxpool.Pool {
-	if migrate {
-		db, err := sql.Open("postgres", cfg.APIPostgresDSN)
-		ExitOnError("Getting Postgres database db", err)
+	// Connect to PostgreSQL
+	pool, err := pgxpool.New(context.Background(), cfg.APIPostgresDSN)
+	ExitOnError("Getting Postgres database", err)
 
+	if migrate {
+		db := stdlib.OpenDBFromPool(pool)
 		if err := runPostgresMigrations(ctx, db); err != nil {
 			log.DefaultLogger.Warnf("failed to apply Postgres migrations: %v", err)
 		}
-
-		db.Close()
 	}
-
-	// Connect to PostgreSQL
-	pool, err := pgxpool.New(context.Background(), cfg.APIPostgresDSN)
-	ExitOnError("Getting Postgres database pool", err)
 
 	return pool
 }
