@@ -1425,9 +1425,9 @@ func (r *PostgresRepository) buildTestWorkflowExecutionParams(filter testworkflo
 
 	if filter.NamesDefined() {
 		names := filter.Names()
-		pgNames := pgtype.Array[pgtype.Text]{Valid: true}
+		pgNames := []pgtype.Text{}
 		for _, name := range names {
-			pgNames.Elements = append(pgNames.Elements, toPgText(name))
+			pgNames = append(pgNames, toPgText(name))
 		}
 		params.WorkflowNames = pgNames
 	}
@@ -1452,9 +1452,9 @@ func (r *PostgresRepository) buildTestWorkflowExecutionParams(filter testworkflo
 	// Status filters
 	if filter.StatusesDefined() {
 		statuses := filter.Statuses()
-		pgStatuses := pgtype.Array[pgtype.Text]{Valid: true}
+		pgStatuses := []pgtype.Text{}
 		for _, status := range statuses {
-			pgStatuses.Elements = append(pgStatuses.Elements, toPgText(string(status)))
+			pgStatuses = append(pgStatuses, toPgText(string(status)))
 		}
 		params.Statuses = pgStatuses
 	}

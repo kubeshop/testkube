@@ -658,12 +658,12 @@ GROUP BY r\.status`
 	// Create parameters struct with all required fields
 	params := GetTestWorkflowExecutionsTotalsParams{
 		WorkflowName:       pgtype.Text{Valid: false},
-		WorkflowNames:      pgtype.Array[pgtype.Text]{},
+		WorkflowNames:      []pgtype.Text{},
 		TextSearch:         pgtype.Text{Valid: false},
 		StartDate:          pgtype.Timestamptz{Valid: false},
 		EndDate:            pgtype.Timestamptz{Valid: false},
 		LastNDays:          pgtype.Int4{Valid: false},
-		Statuses:           pgtype.Array[pgtype.Text]{},
+		Statuses:           []pgtype.Text{},
 		RunnerID:           pgtype.Text{Valid: false},
 		Assigned:           pgtype.Bool{Valid: false},
 		ActorName:          pgtype.Text{Valid: false},
