@@ -167,6 +167,14 @@ func NewEventEndTestWorkflowCanceled(execution *TestWorkflowExecution) Event {
 	}
 }
 
+func NewEventEndTestWorkflowNotPassed(execution *TestWorkflowExecution) Event {
+	return Event{
+		Id:                    uuid.NewString(),
+		Type_:                 EventEndTestWorkflowNotPassed,
+		TestWorkflowExecution: execution,
+	}
+}
+
 func (e Event) Type() EventType {
 	if e.Type_ != nil {
 		return *e.Type_

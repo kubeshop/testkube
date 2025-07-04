@@ -112,14 +112,18 @@ func (a *agentLoop) finishExecution(ctx context.Context, environmentId string, e
 			return err
 		}
 		if !a.proContext.NewArchitecture {
-			// TODO: canceled event is missing here
-			// Emit events locally if the Control Plane doesn't support that
-			if execution.Result.IsPassed() {
+			switch {
+			case execution.Result.IsPassed():
 				a.emitter.Notify(testkube.NewEventEndTestWorkflowSuccess(execution))
-			} else if execution.Result.IsAborted() {
+			case execution.Result.IsAborted():
 				a.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(execution))
-			} else {
+			case execution.Result.IsCanceled():
+				a.emitter.Notify(testkube.NewEventEndTestWorkflowCanceled(execution))
+			default:
 				a.emitter.Notify(testkube.NewEventEndTestWorkflowFailed(execution))
+			}
+			if execution.Result.IsNotPassed() {
+				a.emitter.Notify(testkube.NewEventEndTestWorkflowNotPassed(execution))
 			}
 		}
 		return nil
