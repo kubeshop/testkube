@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/jackc/pgx/v5"
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/mongo"
 	"google.golang.org/grpc/codes"
@@ -35,7 +36,7 @@ func IsNotFound(err error) bool {
 	if err == nil {
 		return false
 	}
-	if errors.Is(err, mongo.ErrNoDocuments) || k8serrors.IsNotFound(err) || errors.Is(err, secretmanager.ErrNotFound) {
+	if errors.Is(err, mongo.ErrNoDocuments) || errors.Is(err, pgx.ErrNoRows) || k8serrors.IsNotFound(err) || errors.Is(err, secretmanager.ErrNotFound) {
 		return true
 	}
 	if e, ok := status.FromError(err); ok {

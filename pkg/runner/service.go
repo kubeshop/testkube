@@ -133,7 +133,7 @@ func (s *service) reattach(ctx context.Context) (err error) {
 			if err = s.client.FinishExecutionResult(ctx, environmentId, executionId, execution.Result); err != nil {
 				s.logger.Errorw("failed to recover execution: saving execution", "id", executionId, "error", err)
 			} else {
-				s.logger.Infow("recovered execution", "id", executionId, "status", "error", err)
+				s.logger.Infow("recovered execution", "id", executionId, "error", err)
 			}
 		}(exec.EnvironmentId, exec.Id)
 	}
