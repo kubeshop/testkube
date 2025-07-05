@@ -85,7 +85,7 @@ func (r *TestWorkflowResult) IsPassed() bool {
 }
 
 func (r *TestWorkflowResult) IsNotPassed() bool {
-	return r.IsFinished() && !r.IsNotPassed()
+	return r.IsFinished() && !r.IsPassed()
 }
 
 func (r *TestWorkflowResult) IsPaused() bool {
