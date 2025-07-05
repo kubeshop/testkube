@@ -2,7 +2,6 @@ kind: TestWorkflow
 apiVersion: testworkflows.testkube.io/v1
 metadata:
   name: expected-random-random-oomkilled
-  namespace: testkube-agent
   labels:
     core-tests: expected-random
 description: "Expected random result"
