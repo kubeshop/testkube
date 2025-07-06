@@ -11,9 +11,13 @@ import (
 	"strings"
 	"time"
 
+	ecr "github.com/awslabs/amazon-ecr-credential-helper/ecr-login"
+	"github.com/chrismellard/docker-credential-acr-env/pkg/credhelper"
 	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/google/go-containerregistry/pkg/authn/github"
 	"github.com/google/go-containerregistry/pkg/crane"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/google"
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/kubeshop/testkube/pkg/utils"
@@ -45,9 +49,19 @@ func (c *craneFetcher) Fetch(ctx context.Context, registry, image string, pullSe
 		return nil, err
 	}
 
+	amazonKeychain := authn.NewKeychainFromHelper(ecr.NewECRHelper())
+	azureKeychain := authn.NewKeychainFromHelper(credhelper.NewACRCredentialsHelper())
+	keychain := authn.NewMultiKeychain(
+		authn.DefaultKeychain,
+		google.Keychain,
+		github.Keychain,
+		amazonKeychain,
+		azureKeychain,
+	)
+
 	// Select the auth
 	cranePlatformOption := crane.WithPlatform(&v1.Platform{OS: runtime.GOOS, Architecture: runtime.GOARCH})
-	craneOptions := []crane.Option{crane.WithContext(ctx)}
+	craneOptions := []crane.Option{crane.WithContext(ctx), crane.WithAuthFromKeychain(keychain)}
 	if len(authConfigs) > 0 {
 		craneOptions = append(craneOptions, crane.WithAuth(authn.FromConfig(authConfigs[0])))
 	}
