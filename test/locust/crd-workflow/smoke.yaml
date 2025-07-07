@@ -5,6 +5,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: locust
+    artifacts: true
 spec:
   content:
     git:

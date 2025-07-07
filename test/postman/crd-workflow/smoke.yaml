@@ -161,6 +161,8 @@ metadata:
   labels:
     core-tests: workflows
     tool: postman
+    artifacts: true
+    junit: true
 spec:
   content:
     git:

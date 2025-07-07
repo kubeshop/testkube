@@ -71,6 +71,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: jmeter
+    artifacts: true
 spec:
   content:
     git:
@@ -105,6 +106,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: jmeter
+    artifacts: true
 spec:
   content:
     git:
@@ -136,6 +138,7 @@ metadata:
   name: jmeter-workflow-smoke-from-template-v1
   labels:
     core-tests: workflows
+    artifacts: true
 spec:
   content:
     git:
@@ -167,6 +170,7 @@ metadata:
   name: jmeter-workflow-smoke-from-template-separate-artifacts-step
   labels:
     core-tests: workflows
+    artifacts: true
 spec:
   content:
     git:
@@ -257,6 +261,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: jmeter
+    artifacts: true
 spec:
   content:
     git:

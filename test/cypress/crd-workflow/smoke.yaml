@@ -5,6 +5,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: cypress
+    artifacts: true
 spec:
   content:
     git:
@@ -13,7 +14,7 @@ spec:
       paths:
       - test/cypress/cypress-14
   container:
-    image: cypress/included:14.0.3
+    image: cypress/included:14.5.1
     resources:
       requests:
         cpu: 1500m
@@ -65,7 +66,7 @@ spec:
     template:
       name: official/cypress/v1
       config:
-        version: 14.0.3
+        version: 14.5.1
         run: "npx cypress run --env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value --config '{\"screenshotsFolder\":\"/data/artifacts/screenshots\",\"videosFolder\":\"/data/artifacts/videos\"}'"
 ---
 apiVersion: testworkflows.testkube.io/v1
@@ -75,6 +76,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: cypress
+    artifacts: true
 spec:
   content:
     git:
@@ -93,7 +95,7 @@ spec:
   steps:
   - name: Run tests
     run:
-      image: cypress/included:14.0.3
+      image: cypress/included:14.5.1
       args:
       - --env
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
@@ -116,6 +118,8 @@ metadata:
   labels:
     core-tests: workflows
     tool: cypress
+    artifacts: true
+    junit: true
 spec:
   content:
     git:
@@ -134,7 +138,7 @@ spec:
   steps:
   - name: Run tests
     run:
-      image: cypress/included:14.0.3
+      image: cypress/included:14.5.1
       args:
       - --env
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
@@ -161,6 +165,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: cypress
+    artifacts: true
 spec:
   content:
     git:
@@ -169,7 +174,7 @@ spec:
       paths:
       - test/cypress/cypress-14
   container:
-    image: cypress/included:14.0.3
+    image: cypress/included:14.5.1
     resources:
       requests:
         cpu: 1500m
@@ -222,6 +227,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: cypress
+    artifacts: true
 spec:
   content:
     git:
@@ -263,6 +269,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: cypress
+    artifacts: true
 spec:
   content:
     git:
@@ -304,6 +311,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: cypress
+    artifacts: true
 spec:
   content:
     git:
@@ -452,6 +460,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: cypress
+    artifacts: true
 spec:
   content:
     git:
@@ -493,6 +502,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: cypress
+    artifacts: true
 spec:
   content:
     git:
@@ -544,6 +554,8 @@ metadata:
   labels:
     core-tests: workflows
     tool: cypress
+    artifacts: true
+    junit: true
 spec:
   content:
     git:

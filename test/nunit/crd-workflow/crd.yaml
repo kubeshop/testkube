@@ -5,6 +5,8 @@ metadata:
   labels:
     core-tests: workflows
     tool: nunit
+    artifacts: true
+    junit: true
 spec:
   content:
     git:

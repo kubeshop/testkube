@@ -18,7 +18,7 @@ spec:
         cpu: 128m
         memory: 256Mi
     workingDir: /data/repo/test/artillery
-    image: artilleryio/artillery:2.0.22
+    image: artilleryio/artillery:2.0.23
   job:
     activeDeadlineSeconds: 300
   steps:
@@ -53,7 +53,7 @@ spec:
     template:
       name: official/artillery/v1
       config:
-        version: 2.0.22
+        version: 2.0.23
         run: "artillery run artillery-smoke-test.yaml"
 ---
 kind: TestWorkflow
@@ -63,6 +63,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: artillery
+    artifacts: true
 spec:
   config:
     arrivalRatePerWorker:

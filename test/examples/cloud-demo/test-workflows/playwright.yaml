@@ -4,6 +4,7 @@ metadata:
   name: playwright
   labels:
     core-tests: workflows
+    artifacts: true
 spec:
   content:
     git:
@@ -17,17 +18,16 @@ spec:
         cpu: 2
         memory: 2Gi
     workingDir: /data/repo/test/playwright/playwright-project
+    image: mcr.microsoft.com/playwright:v1.53.2
   steps:
   - name: Install dependencies
     run:
-      image: mcr.microsoft.com/playwright:v1.32.3-focal
       command:
       - npm
       args:
       - ci
   - name: Run tests
     run:
-      image: mcr.microsoft.com/playwright:v1.32.3-focal
       command:
       - "npx"
       args:
