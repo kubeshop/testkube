@@ -780,11 +780,35 @@ func (r *MongoRepository) Init(ctx context.Context, id string, data InitData) er
 }
 
 func (r *MongoRepository) Assign(ctx context.Context, id string, prevRunnerId string, newRunnerId string, assignedAt *time.Time) (bool, error) {
+	oneMinuteAgo := time.Now().Add(-1 * time.Minute)
 	res, err := r.Coll.UpdateOne(ctx, bson.M{
 		"$and": []bson.M{
 			{"id": id},
 			{"result.status": testkube.QUEUED_TestWorkflowStatus},
-			{"$or": []bson.M{{"runnerid": prevRunnerId}, {"runnerid": newRunnerId}, {"runnerid": nil}}},
+			{"$or": []bson.M{
+				// New assignment - workflow has no runner assigned
+				{
+					"$or": []bson.M{
+						{"runnerid": nil},
+						{"runnerid": ""},
+					},
+				},
+				// Extension of existing assignment - extension to assignment timeout
+				{
+					"$and": []bson.M{
+						{"runnerid": newRunnerId},
+						{"assignedat": bson.M{"$lt": assignedAt}},
+					},
+				},
+				// Reassignment to new runner - must wait one minute between assignments
+				{
+					"$and": []bson.M{
+						{"runnerid": prevRunnerId},
+						{"assignedat": bson.M{"$lt": oneMinuteAgo}},
+						{"assignedat": bson.M{"$lt": assignedAt}},
+					},
+				},
+			}},
 		},
 	}, bson.M{"$set": map[string]interface{}{
 		"runnerid":   newRunnerId,
