@@ -7917,11 +7917,13 @@ components:
         - end-testworkflow-failed
         - end-testworkflow-aborted
         - end-testworkflow-canceled
+        - end-testworkflow-not-passed
         - become-testworkflow-up
         - become-testworkflow-down
         - become-testworkflow-failed
         - become-testworkflow-aborted
         - become-testworkflow-canceled
+        - become-testworkflow-not-passed
         - created
         - updated
         - deleted
