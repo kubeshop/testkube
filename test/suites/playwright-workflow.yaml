@@ -17,5 +17,5 @@ spec:
       - name: playwright-workflow-smoke-junit
       - name: playwright-workflow-smoke-artifacts-double-asterisk
       - name: playwright-workflow-smoke-template
-      - name: distributed-playwright-workflow-smoke-artifacts
+      - name: distributed-playwright-workflow-smoke
       - name: distributed-playwright-workflow-smoke-junit

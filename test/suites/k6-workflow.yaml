@@ -14,7 +14,6 @@ spec:
       - name: k6-workflow-smoke
       - name: k6-workflow-smoke-template
       - name: k6-workflow-smoke-template-without-checkout-step
-      - name: k6-workflow-smoke-artifacts
       - name: k6-workflow-smoke-content-file-artifact
       - name: k6-workflow-smoke-master-image
       - name: distributed-k6-workflow-smoke

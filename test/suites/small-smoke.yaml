@@ -13,7 +13,7 @@ spec:
       - name: artillery-workflow-smoke
       - name: gradle-workflow-smoke-jdk11-from-template
       - name: jmeter-workflow-smoke-shell-artifacts
-      - name: k6-workflow-smoke-artifacts
+      - name: k6-workflow-smoke
       - name: postman-workflow-smoke-template
       - name: soapui-workflow-smoke
       - name: pytest-workflow-smoke-junit-success-only
