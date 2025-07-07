@@ -118,7 +118,7 @@ spec:
 kind: TestWorkflow
 apiVersion: testworkflows.testkube.io/v1
 metadata:
-  name: k6-workflow-smoke-content-file-artifact
+  name: k6-workflow-smoke-content-file
   labels:
     core-tests: workflows
     tool: k6
