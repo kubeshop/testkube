@@ -183,6 +183,37 @@ spec:
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
+  name: k6-workflow-smoke-latest-image
+  labels:
+    core-tests: workflows
+    tool: k6
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/k6/k6-smoke-test.js
+  container:
+    resources:
+      requests:
+        cpu: 128m
+        memory: 128Mi
+    workingDir: /data/repo/test/k6
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: Run test
+    run:
+      image: grafana/k6:latest
+      shell: k6 run k6-smoke-test.js -e K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value
+      env:
+      - name: K6_SYSTEM_ENV
+        value: K6_SYSTEM_ENV_value
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
   name: k6-workflow-smoke-master-image
   labels:
     core-tests: workflows

@@ -202,6 +202,39 @@ spec:
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
+  name: jmeter-workflow-smoke-latest-image
+  labels:
+    core-tests: workflows
+    tool: jmeter
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/jmeter/jmeter-executor-smoke.jmx
+  container:
+    resources:
+      requests:
+        cpu: 512m
+        memory: 512Mi
+    workingDir: /data/repo/test/jmeter
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: Run tests
+    run:
+      image: alpine/jmeter:latest
+      command:
+      - jmeter
+      args:
+      - -n
+      - -t
+      - jmeter-executor-smoke.jmx
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
   name: distributed-jmeter-workflow-smoke
   labels:
     core-tests: workflows
