@@ -5,7 +5,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: playwright
-    artifacts: true
+    artifacts: "true"
 spec:
   content:
     git:
@@ -40,7 +40,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: playwright
-    artifacts: true
+    artifacts: "true"
 spec:
   content:
     git:
@@ -80,7 +80,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: playwright
-    artifacts: true
+    artifacts: "true"
 spec:
   content:
     git:
@@ -131,8 +131,8 @@ metadata:
   labels:
     core-tests: workflows
     tool: playwright
-    artifacts: true
-    junit: true
+    artifacts: "true"
+    junit: "true"
 spec:
   content:
     git:
@@ -172,7 +172,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: playwright
-    artifacts: true
+    artifacts: "true"
 spec:
   content:
     git:
@@ -237,7 +237,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: playwright
-    artifacts: true
+    artifacts: "true"
 spec:
   content:
     git:
@@ -277,8 +277,8 @@ metadata:
   labels:
     core-tests: workflows
     tool: playwright
-    artifacts: true
-    junit: true
+    artifacts: "true"
+    junit: "true"
 description: "Distributed Playwright with `--shard` - 2 browsers/projects, so it may *seem* things are executed twice"
 spec:
   content:

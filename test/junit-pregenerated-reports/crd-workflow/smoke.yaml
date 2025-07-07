@@ -4,7 +4,7 @@ metadata:
   name: junit-report-high-level-failure
   labels:
     core-tests: special-cases
-    artifacts: true
+    artifacts: "true"
 spec:
   content:
     git:
@@ -28,7 +28,7 @@ metadata:
   name: junit-report-high-level-without-testcases
   labels:
     core-tests: special-cases
-    artifacts: true
+    artifacts: "true"
 spec:
   content:
     git:
@@ -52,7 +52,7 @@ metadata:
   name: junit-report-high-level-testcase-both-error-and-failure
   labels:
     core-tests: special-cases
-    artifacts: true
+    artifacts: "true"
 spec:
   content:
     git:

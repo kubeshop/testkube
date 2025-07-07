@@ -5,8 +5,8 @@ metadata:
   labels:
     core-tests: workflows
     tool: xunit
-    artifacts: true
-    junit: true
+    artifacts: "true"
+    junit: "true"
 spec:
   content:
     git:

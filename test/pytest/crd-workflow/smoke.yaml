@@ -34,8 +34,8 @@ metadata:
   labels:
     core-tests: workflows
     tool: pytest
-    artifacts: true
-    junit: true
+    artifacts: "true"
+    junit: "true"
 spec:
   content:
     git:
@@ -68,8 +68,8 @@ metadata:
   name: pytest-workflow-smoke-junit-mixed-failures
   labels:
     core-tests: expected-fail
-    artifacts: true
-    junit: true
+    artifacts: "true"
+    junit: "true"
 spec:
   content:
     git:

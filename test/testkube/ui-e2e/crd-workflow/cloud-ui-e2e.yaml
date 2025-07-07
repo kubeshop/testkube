@@ -4,7 +4,7 @@ metadata:
   name: cloud-ui-e2e
   labels:
     core-tests: workflows
-    artifacts: true
+    artifacts: "true"
 spec:
   content:
     git:

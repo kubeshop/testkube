@@ -5,7 +5,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: cypress
-    artifacts: true
+    artifacts: "true"
 spec:
   content:
     git:
@@ -76,7 +76,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: cypress
-    artifacts: true
+    artifacts: "true"
 spec:
   content:
     git:
@@ -118,8 +118,8 @@ metadata:
   labels:
     core-tests: workflows
     tool: cypress
-    artifacts: true
-    junit: true
+    artifacts: "true"
+    junit: "true"
 spec:
   content:
     git:
@@ -165,7 +165,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: cypress
-    artifacts: true
+    artifacts: "true"
 spec:
   content:
     git:
@@ -227,7 +227,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: cypress
-    artifacts: true
+    artifacts: "true"
 spec:
   content:
     git:
@@ -269,7 +269,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: cypress
-    artifacts: true
+    artifacts: "true"
 spec:
   content:
     git:
@@ -311,7 +311,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: cypress
-    artifacts: true
+    artifacts: "true"
 spec:
   content:
     git:
@@ -460,7 +460,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: cypress
-    artifacts: true
+    artifacts: "true"
 spec:
   content:
     git:
@@ -502,7 +502,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: cypress
-    artifacts: true
+    artifacts: "true"
 spec:
   content:
     git:
@@ -554,8 +554,8 @@ metadata:
   labels:
     core-tests: workflows
     tool: cypress
-    artifacts: true
-    junit: true
+    artifacts: "true"
+    junit: "true"
 spec:
   content:
     git:

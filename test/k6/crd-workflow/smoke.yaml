@@ -5,7 +5,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: k6
-    artifacts: true
+    artifacts: "true"
 spec:
   content:
     git:
@@ -122,7 +122,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: k6
-    artifacts: true
+    artifacts: "true"
 spec:
   content:
     files:
@@ -265,7 +265,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: k6
-    artifacts: true
+    artifacts: "true"
 spec:
   config:
     vus: {type: integer, default: 2}

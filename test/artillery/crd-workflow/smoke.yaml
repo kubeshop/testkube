@@ -90,7 +90,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: artillery
-    artifacts: true
+    artifacts: "true"
 spec:
   config:
     arrivalRatePerWorker:

@@ -3,7 +3,7 @@ kind: TestWorkflow
 metadata:
   name: cypress-video
   labels:
-    artifacts: true
+    artifacts: "true"
 spec:
   content:
     git:

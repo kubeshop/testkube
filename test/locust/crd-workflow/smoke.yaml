@@ -5,7 +5,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: locust
-    artifacts: true
+    artifacts: "true"
 spec:
   content:
     git:
@@ -35,7 +35,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: locust
-    artifacts: true
+    artifacts: "true"
 spec:
   content:
     git:
@@ -65,7 +65,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: locust
-    artifacts: true
+    artifacts: "true"
 spec:
   content:
     git:

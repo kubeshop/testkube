@@ -5,7 +5,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: junit
-    artifacts: true
+    artifacts: "true"
 spec:
   content:
     git:
@@ -35,7 +35,7 @@ metadata:
   name: junit5-workflow-smoke-expected-fail
   labels:
     core-tests: expected-fail
-    artifacts: true
+    artifacts: "true"
 spec:
   content:
     git:
@@ -65,7 +65,7 @@ metadata:
   name: junit5-workflow-smoke-mixed-results
   labels:
     core-tests: expected-fail
-    artifacts: true
+    artifacts: "true"
 spec:
   content:
     git:
