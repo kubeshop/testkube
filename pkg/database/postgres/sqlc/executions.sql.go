@@ -70,9 +70,9 @@ FROM test_workflow_results r
 WHERE test_workflow_executions.id = $3
     AND test_workflow_executions.id = r.execution_id
     AND r.status = 'queued'
-    AND (test_workflow_executions.runner_id = $4 
-         OR test_workflow_executions.runner_id = $1 
-         OR test_workflow_executions.runner_id IS NULL)
+    AND ((test_workflow_executions.runner_id IS NULL OR test_workflow_executions.runner_id = '')
+         OR (test_workflow_executions.runner_id = $1 AND assigned_at < $2)
+         OR (test_workflow_executions.runner_id = $4 AND assigned_at < NOW() - INTERVAL '1 minute' AND assigned_at < $2))
 RETURNING test_workflow_executions.id
 `
 
