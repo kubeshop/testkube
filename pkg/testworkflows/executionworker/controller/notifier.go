@@ -12,6 +12,7 @@ import (
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/instructions"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
+	log2 "github.com/kubeshop/testkube/pkg/log"
 	watchers2 "github.com/kubeshop/testkube/pkg/testworkflows/executionworker/controller/watchers"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes"
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/stage"
@@ -97,7 +98,8 @@ func (n *notifier) Error(err error) {
 	n.error(err)
 }
 
-func (n *notifier) Event(ref string, ts time.Time, level, reason, message string) {
+func (n *notifier) Event(ref string, ts time.Time, level, reason, message, execution string) {
+	log2.DefaultLogger.Debugw("notify event while watching pod", "execution", execution, "reason", reason, "level", level, "message", message, "timestamp", ts)
 	color := color2.FgGray.Render
 	if level != "Normal" {
 		color = color2.FgYellow.Render
@@ -127,6 +129,8 @@ func (n *notifier) useActionGroups(actions actiontypes.ActionGroups) {
 }
 
 func (n *notifier) Align(state watchers2.ExecutionState) {
+	log2.DefaultLogger.Debugw("notify alignment while watching pod", "execution", getExecutionId(state))
+
 	defer n.sendResult()
 	defer n.reconcile()
 
@@ -161,7 +165,8 @@ func (n *notifier) Align(state watchers2.ExecutionState) {
 }
 
 // Instruction applies the precise hint information about the action that took place
-func (n *notifier) Instruction(ts time.Time, hint instructions.Instruction) {
+func (n *notifier) Instruction(ts time.Time, hint instructions.Instruction, executionId string) {
+	log2.DefaultLogger.Debugw("notify instruction while watching pod", "execution", executionId, "hint", hint.Name)
 	defer n.sendResult()
 	defer n.reconcile()
 
@@ -393,4 +398,12 @@ func newNotifier(ctx context.Context, initialResult testkube.TestWorkflowResult,
 		ch:  make(chan ChannelMessage[Notification]),
 		ctx: ctx,
 	}
+}
+
+func getExecutionId(state watchers2.ExecutionState) string {
+	job := state.Job()
+	if job == nil {
+		return ""
+	}
+	return job.Name()
 }

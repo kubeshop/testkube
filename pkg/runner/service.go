@@ -90,6 +90,7 @@ func (s *service) reattach(ctx context.Context) (err error) {
 		go func(environmentId string, executionId string) {
 			err := s.runner.Monitor(context.Background(), s.proContext.OrgID, environmentId, executionId)
 			if err == nil {
+				s.logger.Infow("Reattached execution", "executionId", executionId)
 				return
 			}
 			if !errors.Is(err, registry.ErrResourceNotFound) && !errors.Is(err, controller.ErrJobAborted) {
