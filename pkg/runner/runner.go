@@ -299,6 +299,9 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 		default:
 			r.emitter.Notify(testkube.NewEventEndTestWorkflowFailed(&execution))
 		}
+		if lastResult.IsNotPassed() {
+			r.emitter.Notify(testkube.NewEventEndTestWorkflowNotPassed(&execution))
+		}
 	}
 
 	err = r.worker.Destroy(context.Background(), execution.Id, executionworkertypes.DestroyOptions{})
