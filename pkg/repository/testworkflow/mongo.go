@@ -701,7 +701,7 @@ func (r *MongoRepository) GetPreviousFinishedState(ctx context.Context, testWork
 	filter := bson.D{
 		{Key: "workflow.name", Value: testWorkflowName},
 		{Key: "result.finishedat", Value: bson.M{"$lt": date}},
-		{Key: "result.status", Value: bson.M{"$in": []string{"passed", "failed", "skipped", "aborted", "timeout"}}},
+		{Key: "result.status", Value: bson.M{"$in": []string{"passed", "failed", "skipped", "aborted", "canceled", "timeout"}}},
 	}
 
 	var result testkube.TestWorkflowExecution
