@@ -4,6 +4,14 @@ import (
 	"context"
 )
 
+type ExecutionType string
+
+const (
+	ExecutionTypeTest         ExecutionType = "t"
+	ExecutionTypeTestSuite    ExecutionType = "ts"
+	ExecutionTypeTestWorkflow ExecutionType = "tw"
+)
+
 //go:generate mockgen -destination=./mock_repository.go -package=sequence "github.com/kubeshop/testkube/pkg/repository/sequence" Repository
 type Repository interface {
 	// GetNextExecutionNumber gets next execution number by name and type
