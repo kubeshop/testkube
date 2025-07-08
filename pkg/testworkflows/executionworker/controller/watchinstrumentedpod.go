@@ -29,6 +29,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 	ctx, ctxCancel := context.WithCancel(parentCtx)
 	notifier := newNotifier(ctx, testkube.TestWorkflowResult{}, scheduledAt)
 	signatureSeq := stage.MapSignatureToSequence(signature)
+	executionId := getExecutionId(watcher.State())
 
 	updatesCh := watcher.Updated(ctx)
 
@@ -75,7 +76,8 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 				currentJobEventsIndex++
 
 				if ev.Reason != "BackoffLimitExceeded" {
-					notifier.Event("", watchers2.GetEventTimestamp(ev), ev.Type, ev.Reason, ev.Message)
+					ts := watchers2.GetEventTimestamp(ev)
+					notifier.Event("", ts, ev.Type, ev.Reason, ev.Message, executionId)
 				}
 			}
 			for _, ev := range watcher.State().PodEvents().Original()[currentPodEventsIndex:] {
@@ -84,7 +86,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 				// Display only events that are unrelated to further containers
 				name := GetEventContainerName(ev)
 				if name == "" {
-					notifier.Event("", watchers2.GetEventTimestamp(ev), ev.Type, ev.Reason, ev.Message)
+					notifier.Event("", watchers2.GetEventTimestamp(ev), ev.Type, ev.Reason, ev.Message, executionId)
 				}
 			}
 
@@ -162,7 +164,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 					// Display only events that are unrelated to further containers
 					name := GetEventContainerName(ev)
 					if name == container && ev.Reason != "Created" && ev.Reason != "Started" {
-						notifier.Event(initialRefs[containerIndex], watchers2.GetEventTimestamp(ev), ev.Type, ev.Reason, ev.Message)
+						notifier.Event(initialRefs[containerIndex], watchers2.GetEventTimestamp(ev), ev.Type, ev.Reason, ev.Message, executionId)
 					}
 				}
 
@@ -224,7 +226,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 						if v.Value.Hint.Name == constants.InstructionEnd && testkube.TestWorkflowStepStatus(v.Value.Hint.Value.(string)) == testkube.CANCELED_TestWorkflowStepStatus {
 							canceled = true
 						}
-						notifier.Instruction(v.Value.Time, *v.Value.Hint)
+						notifier.Instruction(v.Value.Time, *v.Value.Hint, executionId)
 					}
 				}
 			}

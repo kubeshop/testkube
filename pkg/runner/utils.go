@@ -6,7 +6,7 @@ import (
 
 func retry(count int, delayBase time.Duration, fn func(retryCount int) error) (err error) {
 	for i := 0; i < count; i++ {
-		err = fn(count)
+		err = fn(i)
 		if err == nil {
 			return nil
 		}
