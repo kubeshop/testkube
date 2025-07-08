@@ -31,7 +31,7 @@ spec:
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: locust-workflow-smoke-main-image
+  name: locust-workflow-smoke-master-image
   labels:
     core-tests: workflows
     tool: locust
@@ -50,7 +50,7 @@ spec:
   steps:
   - name: Run test
     run:
-      image: locustio/locust:main
+      image: locustio/locust:master
       shell: |
         mkdir /data/artifacts
         locust -f locust_test.py --host https://testkube-test-page-lipsum.pages.dev/ --headless --users 6 --spawn-rate 3 --run-time 10s --html=/data/artifacts/report.html
