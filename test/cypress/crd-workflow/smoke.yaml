@@ -39,39 +39,6 @@ spec:
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: cypress-workflow-smoke-template
-  labels:
-    core-tests: workflows
-    tool: cypress
-spec:
-  content:
-    git:
-      uri: https://github.com/kubeshop/testkube
-      revision: main
-      paths:
-      - test/cypress/cypress-14
-  container:
-    resources:
-      requests:
-        cpu: 1500m
-        memory: 2Gi
-    workingDir: /data/repo/test/cypress/cypress-14
-    env:
-    - name: CYPRESS_CUSTOM_ENV
-      value: CYPRESS_CUSTOM_ENV_value
-  job:
-    activeDeadlineSeconds: 600
-  steps:
-  - name: Run from template
-    template:
-      name: official/cypress/v1
-      config:
-        version: 14.5.1
-        run: "npx cypress run --env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value --config '{\"screenshotsFolder\":\"/data/artifacts/screenshots\",\"videosFolder\":\"/data/artifacts/videos\"}'"
----
-apiVersion: testworkflows.testkube.io/v1
-kind: TestWorkflow
-metadata:
   name: cypress-workflow-smoke-args
   labels:
     core-tests: workflows
@@ -351,6 +318,12 @@ metadata:
     core-tests: workflows
     tool: cypress
 spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/cypress/cypress-14
   container:
     resources:
       requests:
@@ -358,21 +331,14 @@ spec:
         memory: 2Gi
     workingDir: /data/repo/test/cypress/cypress-14
     env:
-    - name: CYPRESS_CUSTOM_ENV # currently only possible on this level
-      value: "CYPRESS_CUSTOM_ENV_value"
+    - name: CYPRESS_CUSTOM_ENV
+      value: CYPRESS_CUSTOM_ENV_value
     - name: UV_USE_IO_URING # workaround for NPM being stuck
       value: "0"
-  content:
-    git:
-      uri: https://github.com/kubeshop/testkube
-      revision: main
-      paths:
-      - test/cypress/cypress-14
   job:
     activeDeadlineSeconds: 600
   steps:
   - name: Run from template
-    workingDir: /data/repo/test/cypress/cypress-14
     template:
       name: official/cypress/v1
       config:
