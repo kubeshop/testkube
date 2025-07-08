@@ -1,10 +1,11 @@
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: cypress-workflow-smoke-14
+  name: cypress-workflow-smoke
   labels:
     core-tests: workflows
     tool: cypress
+    artifacts: "true"
 spec:
   content:
     git:
@@ -13,7 +14,7 @@ spec:
       paths:
       - test/cypress/cypress-14
   container:
-    image: cypress/included:14.0.3
+    image: cypress/included:14.5.1
     resources:
       requests:
         cpu: 1500m
@@ -38,7 +39,7 @@ spec:
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: cypress-workflow-smoke-14-template
+  name: cypress-workflow-smoke-template
   labels:
     core-tests: workflows
     tool: cypress
@@ -65,16 +66,17 @@ spec:
     template:
       name: official/cypress/v1
       config:
-        version: 14.0.3
+        version: 14.5.1
         run: "npx cypress run --env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value --config '{\"screenshotsFolder\":\"/data/artifacts/screenshots\",\"videosFolder\":\"/data/artifacts/videos\"}'"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: cypress-workflow-smoke-14-args
+  name: cypress-workflow-smoke-args
   labels:
     core-tests: workflows
     tool: cypress
+    artifacts: "true"
 spec:
   content:
     git:
@@ -93,7 +95,7 @@ spec:
   steps:
   - name: Run tests
     run:
-      image: cypress/included:14.0.3
+      image: cypress/included:14.5.1
       args:
       - --env
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
@@ -112,10 +114,12 @@ spec:
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: cypress-workflow-smoke-14-junit-report
+  name: cypress-workflow-smoke-junit-report
   labels:
     core-tests: workflows
     tool: cypress
+    artifacts: "true"
+    junit: "true"
 spec:
   content:
     git:
@@ -134,7 +138,7 @@ spec:
   steps:
   - name: Run tests
     run:
-      image: cypress/included:14.0.3
+      image: cypress/included:14.5.1
       args:
       - --env
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
@@ -157,10 +161,11 @@ spec:
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: cypress-workflow-smoke-14-clean-and-dev-shm-enabled
+  name: cypress-workflow-smoke-clean-and-dev-shm-enabled
   labels:
     core-tests: workflows
     tool: cypress
+    artifacts: "true"
 spec:
   content:
     git:
@@ -169,7 +174,7 @@ spec:
       paths:
       - test/cypress/cypress-14
   container:
-    image: cypress/included:14.0.3
+    image: cypress/included:14.5.1
     resources:
       requests:
         cpu: 1500m
@@ -222,6 +227,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: cypress
+    artifacts: "true"
 spec:
   content:
     git:
@@ -263,6 +269,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: cypress
+    artifacts: "true"
 spec:
   content:
     git:
@@ -300,29 +307,30 @@ spec:
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: cypress-workflow-smoke-13-negative
+  name: cypress-workflow-smoke-negative
   labels:
     core-tests: workflows
     tool: cypress
+    artifacts: "true"
 spec:
   content:
     git:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/cypress/cypress-13
+      - test/cypress/cypress-14
   container:
     resources:
       requests:
         cpu: 1500m
         memory: 2Gi
-    workingDir: /data/repo/test/cypress/cypress-13
+    workingDir: /data/repo/test/cypress/cypress-14
   job:
     activeDeadlineSeconds: 600
   steps:
   - name: Run tests
     run:
-      image: cypress/included:13.6.4
+      image: cypress/included:14.5.1
       args:
       - --env
       - NON_CYPRESS_ENV=NON_CYPRESS_ENV_value
@@ -338,7 +346,7 @@ spec:
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: cypress-workflow-smoke-13-template
+  name: cypress-workflow-smoke-template
   labels:
     core-tests: workflows
     tool: cypress
@@ -348,7 +356,7 @@ spec:
       requests:
         cpu: 1500m
         memory: 2Gi
-    workingDir: /data/repo/test/cypress/cypress-13
+    workingDir: /data/repo/test/cypress/cypress-14
     env:
     - name: CYPRESS_CUSTOM_ENV # currently only possible on this level
       value: "CYPRESS_CUSTOM_ENV_value"
@@ -359,22 +367,22 @@ spec:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/cypress/cypress-13
+      - test/cypress/cypress-14
   job:
     activeDeadlineSeconds: 600
   steps:
   - name: Run from template
-    workingDir: /data/repo/test/cypress/cypress-13
+    workingDir: /data/repo/test/cypress/cypress-14
     template:
       name: official/cypress/v1
       config:
-        version: 13.5.0
+        version: 14.5.1
         run: "npx cypress run --env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value --config '{\"screenshotsFolder\":\"/data/artifacts/screenshots\",\"videosFolder\":\"/data/artifacts/videos\"}'"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: cypress-workflow-smoke-13-template-checkout-on-step
+  name: cypress-workflow-smoke-template-checkout-on-step
   labels:
     core-tests: workflows
     tool: cypress
@@ -384,7 +392,7 @@ spec:
       requests:
         cpu: 1500m
         memory: 2Gi
-    workingDir: /data/repo/test/cypress/cypress-13
+    workingDir: /data/repo/test/cypress/cypress-14
     env:
     - name: CYPRESS_CUSTOM_ENV # currently only possible on this level
       value: "CYPRESS_CUSTOM_ENV_value"
@@ -399,18 +407,18 @@ spec:
         uri: https://github.com/kubeshop/testkube
         revision: main
         paths:
-        - test/cypress/cypress-13
-    workingDir: /data/repo/test/cypress/cypress-13
+        - test/cypress/cypress-14
+    workingDir: /data/repo/test/cypress/cypress-14
     template:
       name: official/cypress/v1
       config:
-        version: 13.5.0
+        version: 14.5.1
         run: "npx cypress run --env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value --config '{\"screenshotsFolder\":\"/data/artifacts/screenshots\",\"videosFolder\":\"/data/artifacts/videos\"}'"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: cypress-workflow-smoke-13-template-sub-step
+  name: cypress-workflow-smoke-template-sub-step
   labels:
     core-tests: workflows
     tool: cypress
@@ -420,7 +428,7 @@ spec:
       requests:
         cpu: 1500m
         memory: 2Gi
-    workingDir: /data/repo/test/cypress/cypress-13
+    workingDir: /data/repo/test/cypress/cypress-14
     env:
     - name: CYPRESS_CUSTOM_ENV # currently only possible on this level
       value: "CYPRESS_CUSTOM_ENV_value"
@@ -435,23 +443,24 @@ spec:
         uri: https://github.com/kubeshop/testkube
         revision: main
         paths:
-        - test/cypress/cypress-13
+        - test/cypress/cypress-14
     steps:
     - name: Run from template
-      workingDir: /data/repo/test/cypress/cypress-13
+      workingDir: /data/repo/test/cypress/cypress-14
       template:
         name: official/cypress/v1
         config:
-          version: 13.5.0
+          version: 14.5.1
           run: "npx cypress run --env NON_CYPRESS_ENV=NON_CYPRESS_ENV_value --config '{\"screenshotsFolder\":\"/data/artifacts/screenshots\",\"videosFolder\":\"/data/artifacts/videos\"}'"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: cypress-workflow-smoke-12.7.0
+  name: cypress-workflow-smoke-12
   labels:
     core-tests: workflows
     tool: cypress
+    artifacts: "true"
 spec:
   content:
     git:
@@ -489,20 +498,21 @@ spec:
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: distributed-cypress-workflow-smoke-13
+  name: distributed-cypress-workflow-smoke
   labels:
     core-tests: workflows
     tool: cypress
+    artifacts: "true"
 spec:
   content:
     git:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/cypress/cypress-13
+      - test/cypress/cypress-14
   container:
-    image: cypress/included:13.6.4
-    workingDir: /data/repo/test/cypress/cypress-13
+    image: cypress/included:14.5.1
+    workingDir: /data/repo/test/cypress/cypress-14
   job:
     activeDeadlineSeconds: 600
   steps:
@@ -544,16 +554,18 @@ metadata:
   labels:
     core-tests: workflows
     tool: cypress
+    artifacts: "true"
+    junit: "true"
 spec:
   content:
     git:
       uri: https://github.com/kubeshop/testkube
       revision: main
       paths:
-      - test/cypress/cypress-13
+      - test/cypress/cypress-14
   container:
-    image: cypress/included:13.6.4
-    workingDir: /data/repo/test/cypress/cypress-13
+    image: cypress/included:14.5.1
+    workingDir: /data/repo/test/cypress/cypress-14
     resources:
       requests:
         cpu: 1

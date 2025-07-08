@@ -18,7 +18,34 @@ spec:
         cpu: 128m
         memory: 256Mi
     workingDir: /data/repo/test/artillery
-    image: artilleryio/artillery:2.0.22
+    image: artilleryio/artillery:2.0.23
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+  - name: Run test
+    shell: /home/node/artillery/bin/run run artillery-smoke-test.yaml
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: artillery-workflow-smoke-latest-image
+  labels:
+    core-tests: workflows
+    tool: artillery
+spec:
+  content:
+    git:
+      uri: https://github.com/kubeshop/testkube
+      revision: main
+      paths:
+      - test/artillery/artillery-smoke-test.yaml
+  container:
+    resources:
+      requests:
+        cpu: 128m
+        memory: 256Mi
+    workingDir: /data/repo/test/artillery
+    image: artilleryio/artillery:latest
   job:
     activeDeadlineSeconds: 300
   steps:
@@ -53,16 +80,17 @@ spec:
     template:
       name: official/artillery/v1
       config:
-        version: 2.0.22
+        version: 2.0.23
         run: "artillery run artillery-smoke-test.yaml"
 ---
 kind: TestWorkflow
 apiVersion: testworkflows.testkube.io/v1
 metadata:
-  name: distributed-artillery-workflow-smoke-artifacts
+  name: distributed-artillery-workflow-smoke
   labels:
     core-tests: workflows
     tool: artillery
+    artifacts: "true"
 spec:
   config:
     arrivalRatePerWorker:
