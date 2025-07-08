@@ -859,7 +859,7 @@ LEFT JOIN test_workflow_results r ON e.id = r.execution_id
 LEFT JOIN test_workflows w ON e.id = w.execution_id AND w.workflow_type = 'workflow'
 WHERE w.name = @workflow_name
     AND r.finished_at < @date
-    AND r.status IN ('passed', 'failed', 'skipped', 'aborted', 'timeout')
+    AND r.status IN ('passed', 'failed', 'skipped', 'aborted', 'canceled', 'timeout')
 ORDER BY r.finished_at DESC
 LIMIT 1;
 
