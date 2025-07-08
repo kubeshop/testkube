@@ -2,7 +2,6 @@ apiVersion: tests.testkube.io/v1
 kind: TestTrigger
 metadata:
   name: trigger-small-suite-on-cloud-deployment
-  namespace: testkube-agent
 spec:
   resource: deployment
   resourceSelector:

@@ -95,7 +95,7 @@ func (a *agentLoop) _saveEmptyLogs(ctx context.Context, environmentId string, ex
 }
 
 func (a *agentLoop) saveEmptyLogs(ctx context.Context, environmentId string, execution *testkube.TestWorkflowExecution) error {
-	err := retry(saveResultRetryMaxAttempts, saveResultRetryBaseDelay, func() error {
+	err := retry(saveResultRetryMaxAttempts, saveResultRetryBaseDelay, func(_ int) error {
 		return a._saveEmptyLogs(ctx, environmentId, execution)
 	})
 	if err != nil {
@@ -105,20 +105,25 @@ func (a *agentLoop) saveEmptyLogs(ctx context.Context, environmentId string, exe
 }
 
 func (a *agentLoop) finishExecution(ctx context.Context, environmentId string, execution *testkube.TestWorkflowExecution) error {
-	err := retry(saveResultRetryMaxAttempts, saveResultRetryBaseDelay, func() error {
+	err := retry(saveResultRetryMaxAttempts, saveResultRetryBaseDelay, func(_ int) error {
 		err := a.client.FinishExecutionResult(ctx, environmentId, execution.Id, execution.Result)
 		if err != nil {
 			a.logger.Warnw("failed to finish the TestWorkflow execution in database", "recoverable", true, "executionId", execution.Id, "error", err)
 			return err
 		}
 		if !a.proContext.NewArchitecture {
-			// Emit events locally if the Control Plane doesn't support that
-			if execution.Result.IsPassed() {
+			switch {
+			case execution.Result.IsPassed():
 				a.emitter.Notify(testkube.NewEventEndTestWorkflowSuccess(execution))
-			} else if execution.Result.IsAborted() {
+			case execution.Result.IsAborted():
 				a.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(execution))
-			} else {
+			case execution.Result.IsCanceled():
+				a.emitter.Notify(testkube.NewEventEndTestWorkflowCanceled(execution))
+			default:
 				a.emitter.Notify(testkube.NewEventEndTestWorkflowFailed(execution))
+			}
+			if execution.Result.IsNotPassed() {
+				a.emitter.Notify(testkube.NewEventEndTestWorkflowNotPassed(execution))
 			}
 		}
 		return nil
@@ -130,7 +135,8 @@ func (a *agentLoop) finishExecution(ctx context.Context, environmentId string, e
 }
 
 func (a *agentLoop) init(ctx context.Context, environmentId string, execution *testkube.TestWorkflowExecution) error {
-	err := retry(saveResultRetryMaxAttempts, saveResultRetryBaseDelay, func() (err error) {
+	err := retry(saveResultRetryMaxAttempts, saveResultRetryBaseDelay, func(retryCount int) (err error) {
+		a.logger.Infow("Initializing execution", "executionId", execution.Id, "attempt", retryCount)
 		err = a.client.InitExecution(ctx, environmentId, execution.Id, execution.Signature, execution.Namespace)
 		if err != nil {
 			a.logger.Warnw("failed to initialize the TestWorkflow execution in database", "recoverable", true, "executionId", execution.Id, "error", err)
@@ -224,11 +230,13 @@ func (a *agentLoop) loopRunnerRequests(ctx context.Context) error {
 			defer wg.Done()
 			switch req.Type() {
 			case cloud.RunnerRequestType_CONSIDER:
+				a.logger.Infow("received consider request for execution", "environmentId", req.EnvironmentID(), "executionId", req.ExecutionID())
 				if err := req.Consider().Send(&cloud.RunnerConsiderResponse{Ok: true}); err != nil {
 					a.logger.Errorf("failed to accept the '%s/%s' execution: %v", req.EnvironmentID(), req.ExecutionID(), err)
 					return
 				}
 			case cloud.RunnerRequestType_START:
+				a.logger.Infow("received start request for execution", "environmentId", req.EnvironmentID(), "executionId", req.ExecutionID())
 				err := a.runTestWorkflow(req.EnvironmentID(), req.ExecutionID(), req.Start().Token())
 				if err == nil {
 					err = req.Start().Send(&cloud.RunnerStartResponse{})
@@ -257,6 +265,7 @@ func (a *agentLoop) loopRunnerRequests(ctx context.Context) error {
 					}
 				}
 			case cloud.RunnerRequestType_ABORT:
+				a.logger.Infow("received abort request for execution", "environmentId", req.EnvironmentID(), "executionId", req.ExecutionID())
 				originalError := a.runner.Abort(req.ExecutionID())
 				if originalError != nil {
 					err := req.SendError(originalError)
@@ -270,6 +279,7 @@ func (a *agentLoop) loopRunnerRequests(ctx context.Context) error {
 					}
 				}
 			case cloud.RunnerRequestType_PAUSE:
+				a.logger.Infow("received pause request for execution", "environmentId", req.EnvironmentID(), "executionId", req.ExecutionID())
 				originalError := a.runner.Pause(req.ExecutionID())
 				if originalError != nil {
 					err := req.SendError(originalError)
@@ -283,6 +293,7 @@ func (a *agentLoop) loopRunnerRequests(ctx context.Context) error {
 					}
 				}
 			case cloud.RunnerRequestType_RESUME:
+				a.logger.Infow("received resume request for execution", "environmentId", req.EnvironmentID(), "executionId", req.ExecutionID())
 				originalError := a.runner.Resume(req.ExecutionID())
 				if originalError != nil {
 					err := req.SendError(originalError)
@@ -296,6 +307,7 @@ func (a *agentLoop) loopRunnerRequests(ctx context.Context) error {
 					}
 				}
 			default:
+				a.logger.Infow("received unrecognized request for execution", "environmentId", req.EnvironmentID(), "executionId", req.ExecutionID(), "type", req.Type())
 				err := req.SendError(errors.New("unrecognized runner operation"))
 				if err != nil {
 					a.logger.Errorf("failed to send runner error for execution '%s/%s' because of unknown operation: %v", req.EnvironmentID(), req.ExecutionID(), err)
@@ -356,7 +368,6 @@ func (a *agentLoop) directRunTestWorkflow(environmentId string, executionId stri
 		Workflow:     testworkflowmappers.MapTestWorkflowAPIToKube(*execution.ResolvedWorkflow),
 		ControlPlane: a.controlPlaneConfig, // TODO: fetch it from the control plane?
 	})
-
 	// TODO: define "revoke" error by runner (?)
 	if err != nil {
 		execution.InitializationError("Failed to run execution", err)

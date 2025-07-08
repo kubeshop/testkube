@@ -77,7 +77,8 @@ func New(
 	defaultEnvironmentId string,
 	getEnvSlug func(string) string,
 	agentId string,
-	featureNewArchitecture bool) TestWorkflowExecutor {
+	featureNewArchitecture bool,
+) TestWorkflowExecutor {
 	return &executor{
 		agentId:                agentId,
 		grpcClient:             grpcClient,
@@ -184,15 +185,18 @@ func (e *executor) executeDirect(ctx context.Context, environmentId string, req 
 			e.emitter.Notify(testkube.NewEventStartTestWorkflow(execution))
 
 			// Finish early if it's immediately known to finish
-			if execution.Result.IsFinished() {
-				if execution.Result.IsAborted() {
-					e.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(execution))
-				} else if execution.Result.IsFailed() {
-					e.emitter.Notify(testkube.NewEventEndTestWorkflowFailed(execution))
-				} else {
-					e.emitter.Notify(testkube.NewEventEndTestWorkflowSuccess(execution))
-				}
-				continue
+			switch {
+			case execution.Result.IsPassed():
+				e.emitter.Notify(testkube.NewEventEndTestWorkflowSuccess(execution))
+			case execution.Result.IsAborted():
+				e.emitter.Notify(testkube.NewEventEndTestWorkflowAborted(execution))
+			case execution.Result.IsCanceled():
+				e.emitter.Notify(testkube.NewEventEndTestWorkflowCanceled(execution))
+			default:
+				e.emitter.Notify(testkube.NewEventEndTestWorkflowFailed(execution))
+			}
+			if execution.Result.IsNotPassed() {
+				e.emitter.Notify(testkube.NewEventEndTestWorkflowNotPassed(execution))
 			}
 
 			// Set the runner execution to environment ID as it's a legacy Agent
@@ -241,7 +245,6 @@ func (e *executor) Start(environmentId string, execution *testkube.TestWorkflowE
 		Workflow:     testworkflowmappers.MapTestWorkflowAPIToKube(*execution.ResolvedWorkflow),
 		ControlPlane: controlPlaneConfig,
 	})
-
 	// TODO: define "revoke" error by runner (?)
 	// TODO: CriticalError should use Finish if possible
 	if err != nil {

@@ -84,6 +84,10 @@ func (r *TestWorkflowResult) IsPassed() bool {
 	return r.IsStatus(PASSED_TestWorkflowStatus)
 }
 
+func (r *TestWorkflowResult) IsNotPassed() bool {
+	return r.IsFinished() && !r.IsPassed()
+}
+
 func (r *TestWorkflowResult) IsPaused() bool {
 	return r.IsStatus(PAUSED_TestWorkflowStatus)
 }

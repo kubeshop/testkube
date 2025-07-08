@@ -260,6 +260,7 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 		}
 	}
 
+	log.DefaultLogger.Infow("Saving execution", "id", execution.Id)
 	for i := 0; i < SaveEndResultRetryCount; i++ {
 		err = saver.End(ctx, *lastResult)
 		if err == nil {
@@ -298,6 +299,9 @@ func (r *runner) monitor(ctx context.Context, organizationId string, environment
 			r.emitter.Notify(testkube.NewEventEndTestWorkflowCanceled(&execution))
 		default:
 			r.emitter.Notify(testkube.NewEventEndTestWorkflowFailed(&execution))
+		}
+		if lastResult.IsNotPassed() {
+			r.emitter.Notify(testkube.NewEventEndTestWorkflowNotPassed(&execution))
 		}
 	}
 
@@ -450,7 +454,7 @@ func (r *runner) Monitor(ctx context.Context, organizationId string, environment
 
 	// Load the execution
 	var execution *testkube.TestWorkflowExecution
-	err := retry(GetExecutionRetryCount, GetExecutionRetryDelay, func() (err error) {
+	err := retry(GetExecutionRetryCount, GetExecutionRetryDelay, func(_ int) (err error) {
 		execution, err = r.client.GetExecution(ctx, environmentId, id)
 		if err != nil {
 			log.DefaultLogger.Warnw("failed to get execution for monitoring, retrying...", "id", id, "error", err)
@@ -507,7 +511,7 @@ func (r *runner) execute(request executionworkertypes.ExecuteRequest) (*executio
 	res, err := r.worker.Execute(context.Background(), request)
 	if err == nil {
 		go func() {
-			err := retry(MonitorRetryCount, MonitorRetryDelay, func() error {
+			err := retry(MonitorRetryCount, MonitorRetryDelay, func(_ int) error {
 				err := r.Monitor(context.Background(), request.Execution.OrganizationId, request.Execution.EnvironmentId, request.Execution.Id)
 				if err != nil {
 					log.DefaultLogger.Warnw("failed to monitor execution, retrying...", "id", request.Execution.Id, "error", err)

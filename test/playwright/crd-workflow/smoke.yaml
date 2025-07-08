@@ -1,10 +1,11 @@
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: playwright-workflow-smoke-v1.32.3
+  name: playwright-workflow-smoke
   labels:
     core-tests: workflows
     tool: playwright
+    artifacts: "true"
 spec:
   content:
     git:
@@ -13,10 +14,10 @@ spec:
       paths:
       - test/playwright/playwright-project
   container:
-    image: mcr.microsoft.com/playwright:v1.32.3-focal
+    image: mcr.microsoft.com/playwright:v1.53.2
     resources:
       requests:
-        cpu: 2
+        cpu: 1500m
         memory: 2Gi
     workingDir: /data/repo/test/playwright/playwright-project
   job:
@@ -35,10 +36,11 @@ spec:
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: playwright-workflow-smoke-v1.32.3-custom-report-dir
+  name: playwright-workflow-smoke-custom-report-dir
   labels:
     core-tests: workflows
     tool: playwright
+    artifacts: "true"
 spec:
   content:
     git:
@@ -47,10 +49,10 @@ spec:
       paths:
       - test/playwright/playwright-project
   container:
-    image: mcr.microsoft.com/playwright:v1.32.3-focal
+    image: mcr.microsoft.com/playwright:v1.53.2
     resources:
       requests:
-        cpu: 2
+        cpu: 1500m
         memory: 2Gi
     workingDir: /data/repo/test/playwright/playwright-project
   job:
@@ -74,10 +76,11 @@ spec:
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: playwright-workflow-smoke-v1.32.3-command-args
+  name: playwright-workflow-smoke-command-args
   labels:
     core-tests: workflows
     tool: playwright
+    artifacts: "true"
 spec:
   content:
     git:
@@ -88,7 +91,7 @@ spec:
   container:
     resources:
       requests:
-        cpu: 2
+        cpu: 1500m
         memory: 2Gi
     workingDir: /data/repo/test/playwright/playwright-project
   job:
@@ -96,19 +99,18 @@ spec:
   steps:
   - name: Install dependencies
     run:
-      image: mcr.microsoft.com/playwright:v1.32.3-focal # image on step level
+      image: mcr.microsoft.com/playwright:v1.53.2 # image on step level
       command:
       - npm
       args:
       - ci
   - name: Run tests
     run:
-      image: mcr.microsoft.com/playwright:v1.32.3-focal
+      image: mcr.microsoft.com/playwright:v1.53.2
       command:
         - "npx"
       args:
-        - "--yes"
-        - "playwright@1.32.3"
+        - "playwright"
         - "test"
         - "--output"
         - "/data/artifacts"
@@ -129,6 +131,8 @@ metadata:
   labels:
     core-tests: workflows
     tool: playwright
+    artifacts: "true"
+    junit: "true"
 spec:
   content:
     git:
@@ -137,10 +141,10 @@ spec:
       paths:
       - test/playwright/playwright-project
   container:
-    image: mcr.microsoft.com/playwright:v1.32.3-focal
+    image: mcr.microsoft.com/playwright:v1.53.2
     resources:
       requests:
-        cpu: 2
+        cpu: 1500m
         memory: 2Gi
     workingDir: /data/repo/test/playwright/playwright-project
   job:
@@ -168,6 +172,7 @@ metadata:
   labels:
     core-tests: workflows
     tool: playwright
+    artifacts: "true"
 spec:
   content:
     git:
@@ -176,29 +181,19 @@ spec:
       paths:
       - test/playwright/playwright-project
   container:
-    image: mcr.microsoft.com/playwright:v1.32.3-focal
+    image: mcr.microsoft.com/playwright:v1.53.2
     resources:
       requests:
-        cpu: 2
+        cpu: 1500m
         memory: 2Gi
     workingDir: /data/repo/test/playwright/playwright-project
   job:
     activeDeadlineSeconds:  600
   steps:
   - name: Install dependencies
-    run:
-      command:
-      - npm
-      args:
-      - ci
+    shell: "npm ci"
   - name: Run tests
-    run:
-      command:
-      - "npx"
-      args:
-      - "--yes"
-      - "playwright@1.32.3"
-      - "test"
+    shell: "npx playwright test"
   - name: Save artifacts
     artifacts:
       paths:
@@ -215,7 +210,7 @@ spec:
   container:
     resources:
       requests:
-        cpu: 2
+        cpu: 1500m
         memory: 2Gi
     workingDir: /data/repo/test/playwright/playwright-project
   job:
@@ -233,15 +228,16 @@ spec:
       name: official/playwright/v1
       config:
         # params: --workers 4
-        version: v1.32.3-jammy
+        version: v1.53.2
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: distributed-playwright-workflow-smoke-artifacts
+  name: distributed-playwright-workflow-smoke
   labels:
     core-tests: workflows
     tool: playwright
+    artifacts: "true"
 spec:
   content:
     git:
@@ -250,13 +246,13 @@ spec:
       paths:
       - test/playwright/playwright-project
   container:
-    image: mcr.microsoft.com/playwright:v1.38.0-focal
+    image: mcr.microsoft.com/playwright:v1.53.2
     workingDir: /data/repo/test/playwright/playwright-project
   job:
     activeDeadlineSeconds:  600
   steps:
   - name: Install dependencies
-    shell: 'npm install --save-dev @playwright/test@1.38.0 && npm ci'
+    shell: 'npm ci'
   - name: Run tests
     parallel:
       count: 2
@@ -281,6 +277,8 @@ metadata:
   labels:
     core-tests: workflows
     tool: playwright
+    artifacts: "true"
+    junit: "true"
 description: "Distributed Playwright with `--shard` - 2 browsers/projects, so it may *seem* things are executed twice"
 spec:
   content:
@@ -290,13 +288,13 @@ spec:
       paths:
       - test/playwright/playwright-project
   container:
-    image: mcr.microsoft.com/playwright:v1.38.0-focal
+    image: mcr.microsoft.com/playwright:v1.53.2
     workingDir: /data/repo/test/playwright/playwright-project
   job:
     activeDeadlineSeconds:  600
   steps:
   - name: Install dependencies
-    shell: 'npm install --save-dev @playwright/test@1.38.0 && npm ci'
+    shell: 'npm ci'
   - name: Run tests
     parallel:
       description: "Shard: {{ index + 1 }}/{{ count }}"
