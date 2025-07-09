@@ -14,6 +14,6 @@ spec:
       - name: k6-workflow-smoke-latest-image
       - name: k6-workflow-smoke-master-image
       - name: locust-workflow-smoke-latest-image
-      - name: locust-workflow-smoke-main-image
+      - name: locust-workflow-smoke-master-image
       - name: postman-workflow-smoke-latest-image
       - name: jmeter-workflow-smoke-latest-image

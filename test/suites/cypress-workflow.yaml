@@ -12,7 +12,6 @@ spec:
       parallelism: 2
       workflows:
       - name: cypress-workflow-smoke
-      - name: cypress-workflow-smoke-template
       - name: cypress-workflow-smoke-args
       - name: cypress-workflow-smoke-junit-report
       - name: cypress-workflow-smoke-clean-and-dev-shm-enabled
