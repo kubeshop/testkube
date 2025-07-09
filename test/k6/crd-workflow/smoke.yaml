@@ -14,6 +14,7 @@ spec:
       paths:
       - test/k6/k6-smoke-test.js
   container:
+    image: grafana/k6:1.1.0
     resources:
       requests:
         cpu: 128m
@@ -23,16 +24,10 @@ spec:
     activeDeadlineSeconds: 300
   steps:
   - name: Run test
-    container:
-      image: grafana/k6:1.1.0
     steps:
     - shell: mkdir /data/artifacts
     - run:
-        args:
-        - run
-        - k6-smoke-test.js
-        - -e
-        - K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value
+        shell: k6 run k6-smoke-test.js -e K6_ENV_FROM_PARAM=K6_ENV_FROM_PARAM_value
         env:
         - name: K6_SYSTEM_ENV
           value: K6_SYSTEM_ENV_value

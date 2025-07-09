@@ -13,6 +13,7 @@ spec:
       paths:
       - test/postman/postman-executor-smoke.postman_collection.json
   container:
+    image: postman/newman:6-alpine
     resources:
       requests:
         cpu: 256m
@@ -22,13 +23,7 @@ spec:
     activeDeadlineSeconds:  180
   steps:
   - name: Run test
-    run:
-      image: postman/newman:6-alpine
-      args:
-      - run
-      - postman-executor-smoke.postman_collection.json
-      - "--env-var"
-      - "TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value"
+    shell: newman run postman-executor-smoke.postman_collection.json --env-var TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
