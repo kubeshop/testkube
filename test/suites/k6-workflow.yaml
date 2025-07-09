@@ -17,4 +17,3 @@ spec:
       - name: k6-workflow-smoke-content-file
       - name: k6-workflow-smoke-master-image
       - name: distributed-k6-workflow-smoke
-      - name: distributed-k6-workflow-smoke-artifacts
