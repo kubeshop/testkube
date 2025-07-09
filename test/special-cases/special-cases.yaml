@@ -217,3 +217,67 @@ spec:
           echo "validation failed!"
           exit 1
         fi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: special-cases-nfs-pvc
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: standard-rwx
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-shared-volume-nfs
+  labels:
+    core-tests: special-cases
+description: "sharing NFS volume between steps and service pod"
+spec:
+  pod:
+    volumes:
+      - name: shared-nfs
+        persistentVolumeClaim:
+          claimName: special-cases-nfs-pvc
+  container:
+    volumeMounts:
+      - name: shared-nfs
+        mountPath: /mnt/shared
+  services:
+    service:
+      image: alpine:3.17.2
+      shell: |
+        mkdir -p /mnt/shared/{{ execution.id }}
+        echo "service" > /mnt/shared/{{ execution.id }}/service.txt
+        sleep 300
+      volumeMounts:
+        - name: shared-nfs
+          mountPath: /mnt/shared
+  job:
+    activeDeadlineSeconds: 300
+  steps:
+    - name: Writing to NFS
+      run:
+        image: alpine:3.17.2
+        shell: |
+          mkdir -p /mnt/shared/{{ execution.id }}
+          echo "step" > /mnt/shared/{{ execution.id }}/step.txt
+    - name: Validation
+      run:
+        image: alpine:3.17.2
+        shell: |
+          cd /mnt/shared/{{ execution.id }}
+          
+          grep "/mnt/shared" /proc/mounts | grep -q nfs || {
+            echo "/mnt/shared is not mounted as NFS"
+            exit 1
+          }
+
+          grep -qx "step" step.txt || { echo "step.txt: validation failed"; exit 1; }
+          grep -qx "service" service.txt || { echo "service.txt: validation failed"; exit 1; }
+          
+          echo "Validation OK"
