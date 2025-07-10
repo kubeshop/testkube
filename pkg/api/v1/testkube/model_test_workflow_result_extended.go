@@ -377,7 +377,7 @@ func (r *TestWorkflowResult) healPredictedStatus(sigSequence []TestWorkflowSigna
 	case r.IsAnyStepCanceled():
 		r.PredictedStatus = common.Ptr(CANCELED_TestWorkflowStatus)
 		return
-	case r.Initialization.Status.AnyError(), r.IsAnyStepAborted():
+	case r.IsAnyStepAborted():
 		r.PredictedStatus = common.Ptr(ABORTED_TestWorkflowStatus)
 		return
 	}
