@@ -14,6 +14,7 @@ func (r *TestWorkflowStepResult) Clone() *TestWorkflowStepResult {
 	}
 }
 
+// TODO(emil): these are just not necesary, just access the Status field have to check this implementation too
 func (r *TestWorkflowStepResult) Finished() bool {
 	return r.Status.Finished()
 }
