@@ -14,6 +14,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor"
 )
 
+// NOTE: called in cmd api main
 func CreateExecutionWorker(
 	clientSet kubernetes.Interface,
 	cfg *config.Config,

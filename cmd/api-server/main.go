@@ -302,6 +302,7 @@ func main() {
 	if mode == common.ModeAgent {
 		testWorkflowProcessor = presets.NewPro(inspector)
 	}
+	// NOTE: passed into runner, trigger service, and api
 	executionWorker := services.CreateExecutionWorker(clientset, cfg, clusterId, proContext.Agent.ID, serviceAccountNames, testWorkflowProcessor, map[string]string{
 		testworkflowconfig.FeatureFlagNewArchitecture: fmt.Sprintf("%v", cfg.FeatureNewArchitecture),
 		testworkflowconfig.FeatureFlagCloudStorage:    fmt.Sprintf("%v", cfg.FeatureCloudStorage),
@@ -334,6 +335,7 @@ func main() {
 	)
 	if !cfg.DisableRunner {
 		g.Go(func() error {
+			// NOTE: this is where the shit happens
 			return runnerService.Start(ctx)
 		})
 	}

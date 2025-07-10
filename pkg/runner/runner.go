@@ -102,6 +102,7 @@ func New(
 	}
 }
 
+// NOTE: called with runner.Monitor
 func (r *runner) monitor(ctx context.Context, organizationId string, environmentId string, execution testkube.TestWorkflowExecution) error {
 	defer r.watching.Delete(execution.Id)
 
@@ -407,6 +408,7 @@ func (r *runner) recoverParallelStepLogs(ctx context.Context, saver ExecutionSav
 		}
 		status.Result = &summary.Result
 		status.Result.Status = common.Ptr(testkube.ABORTED_TestWorkflowStatus)
+		// TODO: this is only relevant for parallel steps
 		status.Result.HealAbortedOrCanceled(sigSequence, errorMessage, controller.DefaultErrorMessage, "aborted")
 		status.Result.HealTimestamps(sigSequence, summary.Execution.ScheduledAt, time.Time{}, time.Time{}, true)
 		status.Result.HealDuration(summary.Execution.ScheduledAt)

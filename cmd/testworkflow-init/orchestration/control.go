@@ -35,7 +35,9 @@ func FinishExecution(step *data.StepData, result constants.ExecutionResult) {
 func End(step *data.StepData) {
 	if !step.IsFinished() {
 		v, e := json.Marshal(step)
+		// TODO: anything special about this output? is parsed by somethign else? what is this code mean?
 		output.ExitErrorf(constants.CodeInternal, "cannot mark unfinished step as finished: %s, %v", string(v), e)
 	}
+	// TODO: what are hint details and what processes them?
 	instructions.PrintHintDetails(step.Ref, constants.InstructionEnd, *step.Status)
 }

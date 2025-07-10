@@ -62,6 +62,7 @@ func SprintHintDetails(ref string, name string, value interface{}) string {
 	if err != nil {
 		panic(fmt.Sprintf("error while marshalling reference: %v", err))
 	}
+	// TODO: what is parsing these? and doing what with this?
 	var sb strings.Builder
 	sb.WriteString("\n")
 	sb.WriteString(InstructionPrefix)
@@ -99,6 +100,7 @@ func MayBeInstruction(line []byte) bool {
 	return true
 }
 
+// TODO: where are these used?
 func DetectInstruction(line []byte) (*Instruction, bool, error) {
 	// Fast check to avoid regexes
 	if len(line) < 4 || !MayBeInstruction(line) {

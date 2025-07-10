@@ -242,9 +242,12 @@ func (w *worker) Service(ctx context.Context, request executionworkertypes.Servi
 	}, nil
 }
 
+// TODO: where are these called
 func (w *worker) Notifications(ctx context.Context, id string, opts executionworkertypes.NotificationsOptions) executionworkertypes.NotificationsWatcher {
 	// Connect to the resource
 	// TODO: Move the implementation directly there
+	// NOTE: this seems to be connecting to executions
+	// NOTE: controller is taken here
 	ctrl, err, recycle := w.registry.Connect(ctx, id, opts.Hints)
 	watcher := executionworkertypes.NewNotificationsWatcher()
 	if errors.Is(err, controller.ErrJobTimeout) {
@@ -257,6 +260,7 @@ func (w *worker) Notifications(ctx context.Context, id string, opts executionwor
 
 	// Watch the resource
 	watchCtx, watchCtxCancel := context.WithCancel(ctx)
+	// NOTE: watch is called here which leads to heal aborted/canceled
 	ch := ctrl.Watch(watchCtx, opts.NoFollow, w.config.LogAbortedDetails)
 	go func() {
 		defer func() {
@@ -293,6 +297,7 @@ func (w *worker) StatusNotifications(ctx context.Context, id string, opts execut
 	// Watch the resource
 	watchCtx, watchCtxCancel := context.WithCancel(ctx)
 	sig := stage.MapSignatureListToInternal(ctrl.Signature())
+	// NOTE: watch is being called here
 	ch := ctrl.Watch(watchCtx, opts.NoFollow, w.config.LogAbortedDetails)
 	go func() {
 		defer func() {
@@ -550,6 +555,7 @@ func (w *worker) Cancel(ctx context.Context, id string, options executionworkert
 	if err := w.patchTerminationAnnotations(ctx, id, options.Namespace, testkube.CANCELED_TestWorkflowStatus, "Job has been canceled by a user"); err != nil {
 		return errors.Wrapf(err, "failed to patch job %s/%s with termination code & reason", options.Namespace, id)
 	}
+	// TODO: what is this doing
 	return w.Destroy(ctx, id, options)
 }
 

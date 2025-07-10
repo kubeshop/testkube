@@ -149,6 +149,7 @@ func (a *agentLoop) init(ctx context.Context, environmentId string, execution *t
 	return err
 }
 
+// NOTE: called within Start
 func (a *agentLoop) run(ctx context.Context) error {
 	g, ctx := errgroup.WithContext(ctx)
 
@@ -173,6 +174,7 @@ func (a *agentLoop) run(ctx context.Context) error {
 	return g.Wait()
 }
 
+// NOTE: called within run
 func (a *agentLoop) loopNotifications(ctx context.Context) error {
 	return a.client.ProcessExecutionNotificationRequests(ctx, func(ctx context.Context, req *cloud.TestWorkflowNotificationsRequest) controlplaneclient.NotificationWatcher {
 		// Read the initial status TODO: consider getting from the database
@@ -197,6 +199,7 @@ func (a *agentLoop) loopNotifications(ctx context.Context) error {
 	})
 }
 
+// NOTE: called within run
 func (a *agentLoop) loopServiceNotifications(ctx context.Context) error {
 	return a.client.ProcessExecutionServiceNotificationRequests(ctx, func(ctx context.Context, req *cloud.TestWorkflowServiceNotificationsRequest) controlplaneclient.NotificationWatcher {
 		// Build the internal resource name
@@ -209,6 +212,7 @@ func (a *agentLoop) loopServiceNotifications(ctx context.Context) error {
 	})
 }
 
+// NOTE: called within run
 func (a *agentLoop) loopParallelStepNotifications(ctx context.Context) error {
 	return a.client.ProcessExecutionParallelWorkerNotificationRequests(ctx, func(ctx context.Context, req *cloud.TestWorkflowParallelStepNotificationsRequest) controlplaneclient.NotificationWatcher {
 		// Build the internal resource name

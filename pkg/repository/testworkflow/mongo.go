@@ -226,6 +226,7 @@ func (r *MongoRepository) GetFinished(ctx context.Context, filter Filter) (resul
 		bson.M{"result.status": testkube.PASSED_TestWorkflowStatus},
 		bson.M{"result.status": testkube.FAILED_TestWorkflowStatus},
 		bson.M{"result.status": testkube.ABORTED_TestWorkflowStatus},
+		// TODO: canceled missing here also
 	}
 
 	cursor, err := r.Coll.Find(ctx, query, opts)

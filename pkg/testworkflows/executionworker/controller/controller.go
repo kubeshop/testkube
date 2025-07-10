@@ -227,6 +227,7 @@ func (c *controller) EstimatedResult(parentCtx context.Context) (*testkube.TestW
 	return nil, ErrMissingEstimatedResult
 }
 
+// NOTE: called from Notifications, StatusNotifications, and Log of the kubernetsworker
 func (c *controller) Watch(parentCtx context.Context, disableFollow bool, logAbortedDetails bool) <-chan ChannelMessage[Notification] {
 	ch, err := WatchInstrumentedPod(parentCtx, c.clientSet, c.signature, c.scheduledAt, c.watcher, WatchInstrumentedPodOptions{
 		DisableFollow:     disableFollow,
@@ -241,6 +242,7 @@ func (c *controller) Watch(parentCtx context.Context, disableFollow bool, logAbo
 	return ch
 }
 
+// NOTE: don't see any uses of this?
 func (c *controller) Logs(parentCtx context.Context, follow bool) io.Reader {
 	reader, writer := io.Pipe()
 	go func() {

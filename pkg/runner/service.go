@@ -126,6 +126,8 @@ func (s *service) reattach(ctx context.Context) (err error) {
 			}
 
 			// Finalize and save the result
+			// TODO: is possible that the termination code here can be determined? it is an annotation on the job
+			// NOTE: called when the runner reattaches to existing executions
 			execution.Result.HealAbortedOrCanceled(sigSequence, errorMessage, controller.DefaultErrorMessage, "aborted")
 			execution.Result.HealTimestamps(sigSequence, execution.ScheduledAt, time.Time{}, time.Time{}, true)
 			execution.Result.HealDuration(execution.ScheduledAt)

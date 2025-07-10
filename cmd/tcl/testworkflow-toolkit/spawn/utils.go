@@ -52,6 +52,7 @@ var (
 	executionWorkerMu sync.Mutex
 )
 
+// NOTE: seems to be used to implement "services" called in the testworkflow-toolkit commands
 func ExecutionWorker() executionworkertypes.Worker {
 	executionWorkerMu.Lock()
 	defer executionWorkerMu.Unlock()

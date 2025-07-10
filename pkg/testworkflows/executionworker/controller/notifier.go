@@ -132,6 +132,7 @@ func (n *notifier) Align(state watchers2.ExecutionState) {
 	log2.DefaultLogger.Debugw("notify alignment while watching pod", "execution", getExecutionId(state))
 
 	defer n.sendResult()
+	// NOTE: heal status is called as part of this but not HealAbortedOrCanceled
 	defer n.reconcile()
 
 	n.state = state
@@ -168,6 +169,7 @@ func (n *notifier) Align(state watchers2.ExecutionState) {
 func (n *notifier) Instruction(ts time.Time, hint instructions.Instruction, executionId string) {
 	log2.DefaultLogger.Debugw("notify instruction while watching pod", "execution", executionId, "hint", hint.Name)
 	defer n.sendResult()
+	// NOTE: heal status is called as part of this but not HealAbortedOrCanceled
 	defer n.reconcile()
 
 	// Ensure we have UTC timestamp
@@ -175,6 +177,7 @@ func (n *notifier) Instruction(ts time.Time, hint instructions.Instruction, exec
 
 	// Load the current step information
 	init := hint.Ref == constants.InitStepName
+	// NOTE: init step is put in a step
 	step, ok := n.result.Steps[hint.Ref]
 	if init {
 		step = *n.result.Initialization
@@ -260,11 +263,13 @@ func (n *notifier) End() {
 	// Ensure that the steps without the information are fulfilled and marked as aborted
 	n.fillGaps(true)
 
+	// NOTE: this termination code is only received here
 	terminationCode := watchers2.GetTerminationCode(n.state.Job().Original())
 	errorMessage := DefaultErrorMessage
 	if n.state != nil && n.state.ExecutionError() != "" {
 		errorMessage = n.state.ExecutionError()
 	}
+	// NOTE: this is called as part of notifications and statusnotifications from the worker, this seems to be something that is part of the toolkit but it is not clear that this is a part of the init process
 	n.result.HealAbortedOrCanceled(n.sigSequence, errorMessage, DefaultErrorMessage, terminationCode)
 
 	// Finalize the status
@@ -367,6 +372,7 @@ func (n *notifier) reconcile() {
 	n.result.HealStatus(n.sigSequence)
 }
 
+// TODO: what the hell is this? so many things ...
 // TODO: Optimize memory
 // TODO: Provide initial actions/signature
 func newNotifier(ctx context.Context, initialResult testkube.TestWorkflowResult, scheduledAt time.Time) *notifier {

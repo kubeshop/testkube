@@ -279,6 +279,7 @@ func (s *TestkubeAPI) StreamTestWorkflowExecutionParallelStepNotificationsWebSoc
 
 		// Check for the logs
 		id := fmt.Sprintf("%s-%s-%s", execution.Id, reference, workerIndex)
+		// NOTE: usage of notications
 		notifications := s.ExecutionWorkerClient.Notifications(ctx, id, executionworkertypes.NotificationsOptions{
 			Hints: executionworkertypes.Hints{
 				Namespace:   execution.Namespace,

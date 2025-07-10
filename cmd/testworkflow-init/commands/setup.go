@@ -40,6 +40,7 @@ func Setup(config lite.ActionSetup) error {
 		err := exec.Command("cp", "/toolkit", constants.ToolkitPath).Run()
 		if err != nil {
 			stdoutUnsafe.Error(" error\n")
+			// NOTE: getting signal killed here
 			stdoutUnsafe.Errorf("  failed to copy the /toolkit utilities: %s\n", err.Error())
 			return err
 		}

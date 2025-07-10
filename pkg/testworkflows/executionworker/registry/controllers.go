@@ -103,6 +103,7 @@ func (r *controllersRegistry) Get(id string) (ctrl controller.Controller, recycl
 	return r.unsafeGet(id)
 }
 
+// NOTE: called as part of the kubernetsworker Notifications, StatusNotifications, Get, and Summary methods
 func (r *controllersRegistry) Connect(ctx context.Context, id string, hints executionworkertypes.Hints) (ctrl controller.Controller, err error, recycle func()) {
 	for {
 		// Either connect a new controller or use existing one

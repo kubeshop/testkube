@@ -371,12 +371,15 @@ func isStepOptional(sigSequence []TestWorkflowSignature, ref string) bool {
 	return false
 }
 
+// TODO: look at usage of this? what does predicted mean here?
 func (r *TestWorkflowResult) healPredictedStatus(sigSequence []TestWorkflowSignature) {
 	// Mark as aborted, when any step is aborted
 	switch {
 	case r.Initialization.Status.AnyError(), r.IsAnyStepAborted():
+		// NOTE: any error includes failed here so when initialization has failure it gets marked as aborted
 		r.PredictedStatus = common.Ptr(ABORTED_TestWorkflowStatus)
 		return
+	// TODO: moving this above the first case could help heal the overall status
 	case r.IsAnyStepCanceled():
 		r.PredictedStatus = common.Ptr(CANCELED_TestWorkflowStatus)
 		return
@@ -402,6 +405,7 @@ func (r *TestWorkflowResult) healStatus() {
 	}
 }
 
+// TODO: what is the usage of this HealStatus?
 func (r *TestWorkflowResult) HealStatus(sigSequence []TestWorkflowSignature) {
 	r.healPredictedStatus(sigSequence)
 	r.healStatus()
@@ -497,6 +501,7 @@ func (r *TestWorkflowResult) HealTimestamps(sigSequence []TestWorkflowSignature,
 	}
 }
 
+// TODO: check where this is being called
 func (r *TestWorkflowResult) HealAbortedOrCanceled(sigSequence []TestWorkflowSignature, errorStr, defaultErrorStr string, terminationCode string) {
 	errorMessage := fmt.Sprintf("The execution has been %s. (%s)", terminationCode, errorStr)
 	if errorStr == "" {
@@ -508,7 +513,10 @@ func (r *TestWorkflowResult) HealAbortedOrCanceled(sigSequence []TestWorkflowSig
 	canceled := false
 
 	// Check the initialization step
+	// TODO: this is being marked as failed for initiatializations always, so it does not go in here
 	if !r.Initialization.Finished() || r.Initialization.Aborted() || r.Initialization.Canceled() {
+		// NOTE: it does not seem to be coming into this block
+		// NOTE: initiate
 		if terminationCode == string(CANCELED_TestWorkflowStatus) {
 			canceled = true
 			r.Initialization.Status = common.Ptr(CANCELED_TestWorkflowStepStatus)
@@ -523,16 +531,23 @@ func (r *TestWorkflowResult) HealAbortedOrCanceled(sigSequence []TestWorkflowSig
 	for i := range sigSequence {
 		ref := sigSequence[i].Ref
 		if ref == constants.InitStepName || !r.IsKnownStep(ref) || len(sigSequence[i].Children) > 0 {
+			// TODO: none of this is applied to this initialization steps, already seen steps, or steps with children what ever that means
 			continue
 		}
 		step := r.Steps[ref]
-		if step.Finished() && !step.Aborted() && !step.Canceled() && (!step.Skipped() || step.ErrorMessage == "") {
-			if (step.Status.Aborted() || step.Status.Canceled()) && (step.ErrorMessage == "" || step.ErrorMessage == defaultErrorStr) {
+		// TODO: what the hell am i reading here?
+		if step.Finished() &&
+			!step.Aborted() &&
+			!step.Canceled() &&
+			(!step.Skipped() || step.ErrorMessage == "") {
+			if (step.Status.Aborted() || step.Status.Canceled()) &&
+				(step.ErrorMessage == "" || step.ErrorMessage == defaultErrorStr) {
 				step.ErrorMessage = errorMessage
 			}
 			continue
 		}
 		if aborted || canceled {
+			// NOTE: trying to mark all the other steps as skipped
 			step.Status = common.Ptr(SKIPPED_TestWorkflowStepStatus)
 			step.ErrorMessage = fmt.Sprintf("The execution was aborted before. %s", color.FgDarkGray.Render("("+errorStr+")"))
 			if canceled {
@@ -541,6 +556,7 @@ func (r *TestWorkflowResult) HealAbortedOrCanceled(sigSequence []TestWorkflowSig
 		} else {
 			if terminationCode == string(CANCELED_TestWorkflowStatus) {
 				canceled = true
+				// NOTE: the next step seems to get the canceled status but not the initialization
 				step.Status = common.Ptr(CANCELED_TestWorkflowStepStatus)
 			} else {
 				aborted = true
@@ -584,7 +600,7 @@ func (r *TestWorkflowResult) HealAbortedOrCanceled(sigSequence []TestWorkflowSig
 			step.Status = common.Ptr(SKIPPED_TestWorkflowStepStatus)
 		} else if anyAborted {
 			step.Status = common.Ptr(ABORTED_TestWorkflowStepStatus)
-		} else if anyCanceled {
+		} else if anyCanceled { // TODO: canceled should trump aborted
 			step.Status = common.Ptr(CANCELED_TestWorkflowStepStatus)
 		}
 		r.Steps[ref] = step

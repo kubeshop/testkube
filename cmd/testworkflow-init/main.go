@@ -172,6 +172,7 @@ func main() {
 	delayedPauses := make([]string, 0)
 
 	// Interpret the operations
+	// TODO: where does the state and group index come from?
 	actions := state.GetActions(int(groupIndex))
 	for i, action := range actions {
 		switch action.Type() {
@@ -270,8 +271,10 @@ func main() {
 			if err == nil {
 				step.SetStatus(constants.StepStatusPassed)
 			} else {
+				// NOTE: so since that is erroring with a signal killed this step status is being marked as failed here
 				step.SetStatus(constants.StepStatusFailed)
 			}
+			// TODO: what does this do? persist state?
 			orchestration.End(step)
 			if err != nil {
 				os.Exit(1)

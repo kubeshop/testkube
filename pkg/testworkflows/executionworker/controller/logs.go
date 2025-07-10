@@ -365,6 +365,7 @@ func WatchContainerLogs(parentCtx context.Context, clientSet kubernetes.Interfac
 			}
 
 			// Detect instruction
+			// NOTE: seems to be reading the instructions/hints here
 			instruction, isHint, err := instructions.DetectInstruction(line)
 			if err == nil && instruction != nil {
 				item := ContainerLog{Time: lastTs}

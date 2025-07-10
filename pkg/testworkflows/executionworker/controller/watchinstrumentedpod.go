@@ -25,6 +25,7 @@ type WatchInstrumentedPodOptions struct {
 	LogAbortedDetails bool
 }
 
+// NOTE: called in Watch and Logs hereon the controller
 func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interface, signature []stage.Signature, scheduledAt time.Time, watcher watchers2.ExecutionWatcher, opts WatchInstrumentedPodOptions) (<-chan ChannelMessage[Notification], error) {
 	ctx, ctxCancel := context.WithCancel(parentCtx)
 	notifier := newNotifier(ctx, testkube.TestWorkflowResult{}, scheduledAt)
@@ -50,9 +51,11 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 			if !watcher.State().Completed() {
 				log.DefaultLogger.Warnw("execution was not detected as complete", "executionId", watcher.State().ResourceId(), "err", ctx.Err(), "debug", watcher.State().Debug())
 				close(notifier.ch)
+				// TODO: is it returning here?
 				return
 			}
 
+			// NOTE: notifier end being called here
 			notifier.End()
 			ctxCancel()
 			close(notifier.ch)
@@ -223,6 +226,7 @@ func WatchInstrumentedPod(parentCtx context.Context, clientSet kubernetes.Interf
 						if v.Value.Hint.Name == constants.InstructionEnd && testkube.TestWorkflowStepStatus(v.Value.Hint.Value.(string)) == testkube.ABORTED_TestWorkflowStepStatus {
 							aborted = true
 						}
+						// TODO: are these hints even being emitted?
 						if v.Value.Hint.Name == constants.InstructionEnd && testkube.TestWorkflowStepStatus(v.Value.Hint.Value.(string)) == testkube.CANCELED_TestWorkflowStepStatus {
 							canceled = true
 						}
