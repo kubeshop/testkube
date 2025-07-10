@@ -14,7 +14,7 @@ import (
 )
 
 func (r *TestWorkflowResult) IsFinished() bool {
-	return !r.FinishedAt.IsZero() && r.Status.Finished()
+	return r.HasFinishedAt() && r.Status.Finished()
 }
 
 func (r *TestWorkflowResult) IsStatus(s TestWorkflowStatus) bool {
@@ -94,6 +94,14 @@ func (r *TestWorkflowResult) IsPaused() bool {
 
 func (r *TestWorkflowResult) IsAnyError() bool {
 	return r.IsFinished() && !r.IsStatus(PASSED_TestWorkflowStatus)
+}
+
+func (r *TestWorkflowResult) HasFinishedAt() bool {
+	return !r.FinishedAt.IsZero()
+}
+
+func (r *TestWorkflowResult) HasStartedAt() bool {
+	return !r.StartedAt.IsZero()
 }
 
 func (r *TestWorkflowResult) HasPauseAt(ref string, t time.Time) bool {
@@ -286,7 +294,7 @@ func (r *TestWorkflowResult) Clone() *TestWorkflowResult {
 }
 
 func (r *TestWorkflowResult) HealDuration(scheduledAt time.Time) {
-	if !r.FinishedAt.IsZero() {
+	if r.HasFinishedAt() {
 		r.PausedMs = 0
 
 		// Finalize pauses
@@ -404,12 +412,12 @@ func (r *TestWorkflowResult) healPredictedStatus(sigSequence []TestWorkflowSigna
 }
 
 func (r *TestWorkflowResult) healStatus() {
-	// TODO(emil): these finished at are hard to read convert to method that is easier to read IsFinished
-	if !r.FinishedAt.IsZero() && r.AreAllKnownStepsFinished() {
+	// TODO(emil): switch to finished at
+	if r.HasFinishedAt() && r.AreAllKnownStepsFinished() {
 		r.Status = r.PredictedStatus
 	} else if r.IsAnyStepPaused() {
 		r.Status = common.Ptr(PAUSED_TestWorkflowStatus)
-	} else if !r.StartedAt.IsZero() {
+	} else if r.HasStartedAt() {
 		r.Status = common.Ptr(RUNNING_TestWorkflowStatus)
 	}
 }
