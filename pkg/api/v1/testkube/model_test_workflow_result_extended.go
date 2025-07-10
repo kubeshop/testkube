@@ -372,7 +372,6 @@ func isStepOptional(sigSequence []TestWorkflowSignature, ref string) bool {
 }
 
 func (r *TestWorkflowResult) healPredictedStatus(sigSequence []TestWorkflowSignature) {
-	// Mark as aborted, when any step is aborted
 	switch {
 	case r.IsAnyStepCanceled():
 		r.PredictedStatus = common.Ptr(CANCELED_TestWorkflowStatus)
@@ -383,12 +382,14 @@ func (r *TestWorkflowResult) healPredictedStatus(sigSequence []TestWorkflowSigna
 	}
 
 	// Determine if there are some steps failed
+	// TODO(emil): move this into a helper function IsAnyRequiredStepFailed()
 	for ref := range r.Steps {
-		if r.Steps[ref].Status.Aborted() || r.Steps[ref].Status.Canceled() || (r.Steps[ref].Status.AnyError() && !isStepOptional(sigSequence, ref)) {
+		if r.Steps[ref].Status.AnyError() && !isStepOptional(sigSequence, ref) {
 			r.PredictedStatus = common.Ptr(FAILED_TestWorkflowStatus)
 			return
 		}
 	}
+	// TODO(emil): defaults to passed
 	r.PredictedStatus = common.Ptr(PASSED_TestWorkflowStatus)
 }
 
