@@ -194,7 +194,7 @@ func (n *notifier) Instruction(ts time.Time, hint instructions.Instruction, exec
 	case constants.InstructionEnd:
 		status := testkube.TestWorkflowStepStatus(hint.Value.(string))
 		if status == "" {
-			status = testkube.PASSED_TestWorkflowStepStatus
+			status = testkube.ABORTED_TestWorkflowStepStatus
 		}
 		step.Status = common.Ptr(status)
 		step.FinishedAt = ts
