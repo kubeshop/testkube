@@ -412,12 +412,16 @@ func (r *TestWorkflowResult) healPredictedStatus(sigSequence []TestWorkflowSigna
 }
 
 func (r *TestWorkflowResult) healStatus() {
-	// TODO(emil): switch to finished at
-	if r.HasFinishedAt() && r.AreAllKnownStepsFinished() {
+	switch {
+	case r.HasFinishedAt() && r.AreAllKnownStepsFinished():
+		// Workflow has been marked finished and all the known steps have been
+		// marked finished so one can assume that the predicted status
+		// represents the final status.
 		r.Status = r.PredictedStatus
-	} else if r.IsAnyStepPaused() {
+	// TODO(emil): the first case should not be possible if there are any paused steps so it might be better if this was first
+	case r.IsAnyStepPaused():
 		r.Status = common.Ptr(PAUSED_TestWorkflowStatus)
-	} else if r.HasStartedAt() {
+	case r.HasStartedAt():
 		r.Status = common.Ptr(RUNNING_TestWorkflowStatus)
 	}
 }
