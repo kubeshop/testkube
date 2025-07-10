@@ -136,15 +136,10 @@ func (r *TestWorkflowResult) Current(sig []TestWorkflowSignature) string {
 }
 
 func (r *TestWorkflowResult) IsAnyStepAborted() bool {
-	// When initialization was aborted or failed - it's immediately end
-	// TODO(emil): is this even right? should it be aborted specifically?
-	if r.Initialization.Status.AnyError() {
+	if r.Initialization.Status.AnyAborted() {
 		return true
 	}
-
-	// Analyze the rest of the steps
 	for _, step := range r.Steps {
-		// When any step was aborted - it's immediately end
 		if step.Status.Aborted() {
 			return true
 		}
@@ -177,11 +172,11 @@ func (r *TestWorkflowResult) IsAnyStepPaused() bool {
 }
 
 func (r *TestWorkflowResult) IsAnyRequiredStepFailed(sigSequence []TestWorkflowSignature) bool {
-	if r.Initialization.Status.AnyError() {
+	if r.Initialization.Status.Failed() {
 		return true
 	}
 	for ref := range r.Steps {
-		if r.Steps[ref].Status.AnyError() && !isStepOptional(sigSequence, ref) {
+		if r.Steps[ref].Status.Failed() && !isStepOptional(sigSequence, ref) {
 			return true
 		}
 	}
@@ -409,6 +404,7 @@ func (r *TestWorkflowResult) healPredictedStatus(sigSequence []TestWorkflowSigna
 		r.PredictedStatus = common.Ptr(FAILED_TestWorkflowStatus)
 	case r.AreAllKnownRequiredStepsPassed(sigSequence):
 		r.PredictedStatus = common.Ptr(PASSED_TestWorkflowStatus)
+		return
 	default:
 		r.PredictedStatus = common.Ptr(ABORTED_TestWorkflowStatus)
 	}
