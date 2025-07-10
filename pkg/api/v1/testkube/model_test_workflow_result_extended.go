@@ -175,6 +175,18 @@ func (r *TestWorkflowResult) IsAnyStepPaused() bool {
 	return false
 }
 
+func (r *TestWorkflowResult) IsAnyRequiredStepFailed(sigSequence []TestWorkflowSignature) bool {
+	if r.Initialization.Status.AnyError() {
+		return true
+	}
+	for ref := range r.Steps {
+		if r.Steps[ref].Status.AnyError() && !isStepOptional(sigSequence, ref) {
+			return true
+		}
+	}
+	return false
+}
+
 func (r *TestWorkflowResult) IsKnownStep(ref string) bool {
 	if ref == constants.InitStepName {
 		return true
@@ -382,21 +394,17 @@ func (r *TestWorkflowResult) healPredictedStatus(sigSequence []TestWorkflowSigna
 	case r.IsAnyStepAborted():
 		r.PredictedStatus = common.Ptr(ABORTED_TestWorkflowStatus)
 		return
+	case r.IsAnyRequiredStepFailed(sigSequence):
+		r.PredictedStatus = common.Ptr(FAILED_TestWorkflowStatus)
+		return
 	}
 
-	// Determine if there are some steps failed
-	// TODO(emil): move this into a helper function IsAnyRequiredStepFailed()
-	for ref := range r.Steps {
-		if r.Steps[ref].Status.AnyError() && !isStepOptional(sigSequence, ref) {
-			r.PredictedStatus = common.Ptr(FAILED_TestWorkflowStatus)
-			return
-		}
-	}
 	// TODO(emil): defaults to passed
 	r.PredictedStatus = common.Ptr(PASSED_TestWorkflowStatus)
 }
 
 func (r *TestWorkflowResult) healStatus() {
+	// TODO(emil): what happens if finishedat is not set, but all steps are finished - is that even possible?
 	if !r.FinishedAt.IsZero() && r.AreAllStepsFinished() {
 		r.Status = r.PredictedStatus
 	} else if r.IsAnyStepPaused() {
