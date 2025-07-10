@@ -184,6 +184,9 @@ func (r *TestWorkflowResult) IsKnownStep(ref string) bool {
 }
 
 func (r *TestWorkflowResult) AreAllStepsFinished() bool {
+	if !r.Initialization.Status.Finished() {
+		return false
+	}
 	for _, step := range r.Steps {
 		if !step.Finished() {
 			return false
