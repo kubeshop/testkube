@@ -64,7 +64,6 @@ func (s *state) GetStep(ref string) *StepData {
 		s.Steps[ref] = &StepData{Ref: ref}
 	}
 	if s.Steps[ref].Condition == "" {
-		// TODO(emil): another place we default to passed
 		s.Steps[ref].Condition = "passed"
 	}
 	return s.Steps[ref]
