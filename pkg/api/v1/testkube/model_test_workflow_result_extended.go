@@ -137,6 +137,7 @@ func (r *TestWorkflowResult) Current(sig []TestWorkflowSignature) string {
 
 func (r *TestWorkflowResult) IsAnyStepAborted() bool {
 	// When initialization was aborted or failed - it's immediately end
+	// TODO(emil): is this even right? should it be aborted specifically?
 	if r.Initialization.Status.AnyError() {
 		return true
 	}
@@ -152,14 +153,10 @@ func (r *TestWorkflowResult) IsAnyStepAborted() bool {
 }
 
 func (r *TestWorkflowResult) IsAnyStepCanceled() bool {
-	// When initialization was aborted or failed - it's immediately end
 	if r.Initialization.Status.Canceled() {
 		return true
 	}
-
-	// Analyze the rest of the steps
 	for _, step := range r.Steps {
-		// When any step was aborted - it's immediately end
 		if step.Status.Canceled() {
 			return true
 		}
@@ -168,14 +165,10 @@ func (r *TestWorkflowResult) IsAnyStepCanceled() bool {
 }
 
 func (r *TestWorkflowResult) IsAnyStepPaused() bool {
-	// When initialization was aborted or failed - it's immediately end
-	if r.Initialization.Status.AnyError() {
-		return false
+	if r.Initialization.Status.Paused() {
+		return true
 	}
-
-	// Analyze the rest of the steps
 	for _, step := range r.Steps {
-		// When any step was aborted - it's immediately end
 		if step.Status.Paused() {
 			return true
 		}
@@ -413,14 +406,13 @@ func (r *TestWorkflowResult) healPredictedStatus(sigSequence []TestWorkflowSigna
 
 func (r *TestWorkflowResult) healStatus() {
 	switch {
+	case r.IsAnyStepPaused():
+		r.Status = common.Ptr(PAUSED_TestWorkflowStatus)
 	case r.HasFinishedAt() && r.AreAllKnownStepsFinished():
 		// Workflow has been marked finished and all the known steps have been
 		// marked finished so one can assume that the predicted status
 		// represents the final status.
 		r.Status = r.PredictedStatus
-	// TODO(emil): the first case should not be possible if there are any paused steps so it might be better if this was first
-	case r.IsAnyStepPaused():
-		r.Status = common.Ptr(PAUSED_TestWorkflowStatus)
 	case r.HasStartedAt():
 		r.Status = common.Ptr(RUNNING_TestWorkflowStatus)
 	}
