@@ -1404,6 +1404,7 @@ func MapTestWorkflowAPIToKube(w testkube.TestWorkflow) testworkflowsv1.TestWorkf
 		},
 		Description: w.Description,
 		Spec:        common.ResolvePtr(common.MapPtr(w.Spec, MapSpecAPIToKube), testworkflowsv1.TestWorkflowSpec{}),
+		Health:      MapTestWorkflowExecutionHealthAPIToKube(w.Health),
 	}
 }
 
@@ -1739,5 +1740,16 @@ func MapTestWorkflowExecutionResourceAggregationsAPIToKube(v *testkube.TestWorkf
 		Max:    v.Max,
 		Avg:    v.Avg,
 		StdDev: v.StdDev,
+	}
+}
+
+func MapTestWorkflowExecutionHealthAPIToKube(h *testkube.TestWorkflowExecutionHealth) *testworkflowsv1.TestWorkflowExecutionHealth {
+	if h == nil {
+		return nil
+	}
+	return &testworkflowsv1.TestWorkflowExecutionHealth{
+		PassRate:      h.PassRate,
+		FlipRate:      h.FlipRate,
+		OverallHealth: h.OverallHealth,
 	}
 }
