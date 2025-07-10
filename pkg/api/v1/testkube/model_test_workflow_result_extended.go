@@ -208,6 +208,18 @@ func (r *TestWorkflowResult) AreAllKnownStepsFinished() bool {
 	return true
 }
 
+func (r *TestWorkflowResult) AreAllKnownRequiredStepsPassed(sigSequence []TestWorkflowSignature) bool {
+	if !r.Initialization.Status.Passed() {
+		return false
+	}
+	for ref, step := range r.Steps {
+		if !step.Status.Passed() && !isStepOptional(sigSequence, ref) {
+			return false
+		}
+	}
+	return true
+}
+
 // TODO: Optimize
 func (r *TestWorkflowResult) Equal(r2 *TestWorkflowResult) bool {
 	if r == nil && r2 == nil {
@@ -391,17 +403,15 @@ func (r *TestWorkflowResult) healPredictedStatus(sigSequence []TestWorkflowSigna
 	switch {
 	case r.IsAnyStepCanceled():
 		r.PredictedStatus = common.Ptr(CANCELED_TestWorkflowStatus)
-		return
 	case r.IsAnyStepAborted():
 		r.PredictedStatus = common.Ptr(ABORTED_TestWorkflowStatus)
-		return
 	case r.IsAnyRequiredStepFailed(sigSequence):
 		r.PredictedStatus = common.Ptr(FAILED_TestWorkflowStatus)
-		return
+	case r.AreAllKnownRequiredStepsPassed(sigSequence):
+		r.PredictedStatus = common.Ptr(PASSED_TestWorkflowStatus)
+	default:
+		r.PredictedStatus = common.Ptr(ABORTED_TestWorkflowStatus)
 	}
-
-	// TODO(emil): defaults to passed
-	r.PredictedStatus = common.Ptr(PASSED_TestWorkflowStatus)
 }
 
 func (r *TestWorkflowResult) healStatus() {

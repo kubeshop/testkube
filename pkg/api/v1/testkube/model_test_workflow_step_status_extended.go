@@ -32,10 +32,15 @@ func (s *TestWorkflowStepStatus) TimedOut() bool {
 	return s != nil && *s == TIMEOUT_TestWorkflowStepStatus
 }
 
+func (s *TestWorkflowStepStatus) Passed() bool {
+	return s != nil && *s == PASSED_TestWorkflowStepStatus
+}
+
 func (s *TestWorkflowStepStatus) Failed() bool {
 	return s != nil && *s == FAILED_TestWorkflowStepStatus
 }
 
+// TODO(emil): look into the usage of this, it is mixing failure and abortion
 func (s *TestWorkflowStepStatus) AnyError() bool {
 	return s.Failed() || s.TimedOut() || s.Aborted()
 }
