@@ -40,9 +40,8 @@ func (s *TestWorkflowStepStatus) Failed() bool {
 	return s != nil && *s == FAILED_TestWorkflowStepStatus
 }
 
-// TODO(emil): look into the usage of this, it is mixing failure and abortion
-func (s *TestWorkflowStepStatus) AnyError() bool {
-	return s.Failed() || s.TimedOut() || s.Aborted()
+func (s *TestWorkflowStepStatus) AnyAborted() bool {
+	return s.TimedOut() || s.Aborted()
 }
 
 func (s *TestWorkflowStepStatus) NotStarted() bool {
