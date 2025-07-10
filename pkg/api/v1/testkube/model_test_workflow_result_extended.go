@@ -195,7 +195,7 @@ func (r *TestWorkflowResult) IsKnownStep(ref string) bool {
 	return ok
 }
 
-func (r *TestWorkflowResult) AreAllStepsFinished() bool {
+func (r *TestWorkflowResult) AreAllKnownStepsFinished() bool {
 	if !r.Initialization.Status.Finished() {
 		return false
 	}
@@ -404,8 +404,8 @@ func (r *TestWorkflowResult) healPredictedStatus(sigSequence []TestWorkflowSigna
 }
 
 func (r *TestWorkflowResult) healStatus() {
-	// TODO(emil): what happens if finishedat is not set, but all steps are finished - is that even possible?
-	if !r.FinishedAt.IsZero() && r.AreAllStepsFinished() {
+	// TODO(emil): these finished at are hard to read convert to method that is easier to read IsFinished
+	if !r.FinishedAt.IsZero() && r.AreAllKnownStepsFinished() {
 		r.Status = r.PredictedStatus
 	} else if r.IsAnyStepPaused() {
 		r.Status = common.Ptr(PAUSED_TestWorkflowStatus)
