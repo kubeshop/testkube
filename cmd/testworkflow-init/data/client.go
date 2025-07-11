@@ -55,7 +55,7 @@ func CloudClient() controlplaneclient.Client {
 			ExecutionID:        cfg.Execution.Id,
 			WorkflowName:       cfg.Workflow.Name,
 			ParentExecutionIDs: strings.Split(cfg.Execution.ParentIds, "/"),
-		})
+		}, log.DefaultLogger)
 	}
 	return cloudClient
 }
