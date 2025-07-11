@@ -253,5 +253,5 @@ func Cloud() (controlplaneclient.Client, error) {
 		ExecutionID:        cfg.Execution.Id,
 		WorkflowName:       cfg.Workflow.Name,
 		ParentExecutionIDs: strings.Split(cfg.Execution.ParentIds, "/"),
-	}), nil
+	}, log.DefaultLogger), nil
 }

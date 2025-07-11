@@ -74,6 +74,8 @@ func newAgentLoop(
 
 func (a *agentLoop) Start(ctx context.Context) error {
 	for {
+		a.logger.Infow("starting runner agent connection with control plane")
+
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
@@ -151,7 +153,6 @@ func (a *agentLoop) init(ctx context.Context, environmentId string, execution *t
 
 func (a *agentLoop) run(ctx context.Context) error {
 	g, ctx := errgroup.WithContext(ctx)
-
 	// Handle the new mechanism for runners
 	if a.proContext.NewArchitecture {
 		g.Go(func() error {
