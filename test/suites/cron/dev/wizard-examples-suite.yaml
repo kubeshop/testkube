@@ -1,0 +1,26 @@
+kind: TestWorkflow
+apiVersion: testworkflows.testkube.io/v1
+metadata:
+  name: wizard-examples-suite
+  labels:
+    core-tests: workflows-suite
+    type: workflow-suite
+spec:
+  steps:
+  - execute:
+      parallelism: 2
+      workflows:
+        - name: example-sequential-test-suite
+        - name: example-sharded-cypress
+        - name: example-test-suite
+        - name: example-distributed-k6
+        - name: example-workflow-with-mongo-service
+        - name: example-matrix-services
+        - name: example-test-suite-with-file-input
+        - name: example-pytest
+        - name: example-jmeter
+        - name: example-k6-string
+        - name: example-maven
+        - name: example-soapui
+        - name: example-postman
+        - name: example-k6
