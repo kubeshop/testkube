@@ -277,7 +277,7 @@ func (n *notifier) fillGaps(force bool) {
 	}
 
 	// Mark the initialization step as running
-	if n.state.PodCreated() && n.result.Initialization.NotStarted() {
+	if n.state.PodCreated() && n.result.Initialization.Status.NotStarted() {
 		n.result.Initialization.Status = common.Ptr(testkube.RUNNING_TestWorkflowStepStatus)
 	}
 
@@ -293,9 +293,9 @@ func (n *notifier) fillGaps(force bool) {
 	} else {
 		for i := range n.sigSequence {
 			step := n.result.Steps[n.sigSequence[i].Ref]
-			if !step.NotStarted() {
+			if !step.Status.NotStarted() {
 				processedStepsCount = i
-				if step.Finished() {
+				if step.Status.Finished() {
 					processedStepsCount++
 				}
 			}

@@ -196,7 +196,7 @@ func (r *TestWorkflowResult) AreAllKnownStepsFinished() bool {
 		return false
 	}
 	for _, step := range r.Steps {
-		if !step.Finished() {
+		if !step.Status.Finished() {
 			return false
 		}
 	}
@@ -439,14 +439,14 @@ func (r *TestWorkflowResult) HealTimestamps(sigSequence []TestWorkflowSignature,
 	r.Initialization.QueuedAt = earliestTimestamp(r.StartedAt, r.Initialization.QueuedAt)
 
 	// Ensure there is the start time for the initialization if it's started or done
-	if !r.Initialization.NotStarted() {
+	if !r.Initialization.Status.NotStarted() {
 		r.Initialization.StartedAt = latestTimestamp(r.Initialization.StartedAt, firstContainerStartTs, r.Initialization.QueuedAt)
 	}
 
 	// Ensure there is the end time for the initialization if it's done
-	if r.Initialization.Finished() && r.Initialization.FinishedAt.IsZero() {
+	if r.Initialization.Status.Finished() && r.Initialization.FinishedAt.IsZero() {
 		// Fallback to have any timestamp in case something went wrong
-		if r.Initialization.Aborted() {
+		if r.Initialization.Status.Aborted() {
 			r.Initialization.FinishedAt = latestTimestamp(r.Initialization.StartedAt, completionTs)
 		} else {
 			r.Initialization.FinishedAt = r.Initialization.StartedAt
@@ -530,7 +530,7 @@ func (r *TestWorkflowResult) HealAbortedOrCanceled(sigSequence []TestWorkflowSig
 	canceled := false
 
 	// Check the initialization step
-	if !r.Initialization.Finished() || r.Initialization.Aborted() || r.Initialization.Canceled() {
+	if !r.Initialization.Status.Finished() || r.Initialization.Status.Aborted() || r.Initialization.Status.Canceled() {
 		if terminationCode == string(CANCELED_TestWorkflowStatus) {
 			canceled = true
 			r.Initialization.Status = common.Ptr(CANCELED_TestWorkflowStepStatus)
@@ -548,7 +548,7 @@ func (r *TestWorkflowResult) HealAbortedOrCanceled(sigSequence []TestWorkflowSig
 			continue
 		}
 		step := r.Steps[ref]
-		if step.Finished() && !step.Aborted() && !step.Canceled() && (!step.Skipped() || step.ErrorMessage == "") {
+		if step.Status.Finished() && !step.Status.Aborted() && !step.Status.Canceled() && (!step.Status.Skipped() || step.ErrorMessage == "") {
 			if (step.Status.Aborted() || step.Status.Canceled()) && (step.ErrorMessage == "" || step.ErrorMessage == defaultErrorStr) {
 				step.ErrorMessage = errorMessage
 			}
@@ -581,7 +581,7 @@ func (r *TestWorkflowResult) HealAbortedOrCanceled(sigSequence []TestWorkflowSig
 			continue
 		}
 		step := r.Steps[ref]
-		if step.Finished() {
+		if step.Status.Finished() {
 			continue
 		}
 		allSkipped := true
@@ -614,7 +614,7 @@ func (r *TestWorkflowResult) HealAbortedOrCanceled(sigSequence []TestWorkflowSig
 
 	// The rest of steps is unrecognized, so just mark them as aborted with information about faulty state
 	for ref, step := range r.Steps {
-		if step.Finished() {
+		if step.Status.Finished() {
 			continue
 		}
 		if r.IsCanceled() {
