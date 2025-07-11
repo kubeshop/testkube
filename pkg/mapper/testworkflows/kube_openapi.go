@@ -1304,6 +1304,7 @@ func MapTestWorkflowKubeToAPI(w testworkflowsv1.TestWorkflow) testkube.TestWorkf
 		Updated:     updateTime,
 		Description: w.Description,
 		Spec:        common.Ptr(MapSpecKubeToAPI(w.Spec)),
+		Status:      MapTestWorkflowStatusSummaryKubeToAPI(w.Status),
 	}
 }
 
@@ -1488,5 +1489,28 @@ func MapTestWorkflowExecutionResourceAggregationsKubeToAPI(
 		Max:    v.Max,
 		Avg:    v.Avg,
 		StdDev: v.StdDev,
+	}
+}
+
+func MapTestWorkflowExecutionHealthKubeToAPI(h *testworkflowsv1.TestWorkflowExecutionHealth) *testkube.TestWorkflowExecutionHealth {
+	if h == nil {
+		return nil
+	}
+	return &testkube.TestWorkflowExecutionHealth{
+		PassRate:      h.PassRate,
+		FlipRate:      h.FlipRate,
+		OverallHealth: h.OverallHealth,
+	}
+}
+
+func MapTestWorkflowStatusSummaryKubeToAPI(status *testworkflowsv1.TestWorkflowStatusSummary) *testkube.TestWorkflowStatusSummary {
+	if status == nil || (status.Health == nil && status.LatestExecution == nil) {
+		return nil
+	}
+
+	return &testkube.TestWorkflowStatusSummary{
+		Health: MapTestWorkflowExecutionHealthKubeToAPI(status.Health),
+		// LatestExecution is typically handled separately in the API layer
+		LatestExecution: nil,
 	}
 }
