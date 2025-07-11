@@ -404,7 +404,6 @@ func (r *TestWorkflowResult) healPredictedStatus(sigSequence []TestWorkflowSigna
 		r.PredictedStatus = common.Ptr(FAILED_TestWorkflowStatus)
 	case r.AreAllKnownRequiredStepsPassed(sigSequence):
 		r.PredictedStatus = common.Ptr(PASSED_TestWorkflowStatus)
-		return
 	default:
 		r.PredictedStatus = common.Ptr(ABORTED_TestWorkflowStatus)
 	}
