@@ -1390,7 +1390,7 @@ func MapTemplateSpecAPIToKube(v testkube.TestWorkflowTemplateSpec) testworkflows
 }
 
 func MapTestWorkflowAPIToKube(w testkube.TestWorkflow) testworkflowsv1.TestWorkflow {
-	return testworkflowsv1.TestWorkflow{
+	result := testworkflowsv1.TestWorkflow{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "TestWorkflow",
 			APIVersion: testworkflowsv1.GroupVersion.Group + "/" + testworkflowsv1.GroupVersion.Version,
@@ -1404,8 +1404,13 @@ func MapTestWorkflowAPIToKube(w testkube.TestWorkflow) testworkflowsv1.TestWorkf
 		},
 		Description: w.Description,
 		Spec:        common.ResolvePtr(common.MapPtr(w.Spec, MapSpecAPIToKube), testworkflowsv1.TestWorkflowSpec{}),
-		Status:      MapTestWorkflowStatusSummaryAPIToKube(w.Status),
 	}
+
+	if w.Status != nil && (w.Status.Health != nil || w.Status.LatestExecution != nil) {
+		result.Status = MapTestWorkflowStatusSummaryAPIToKube(w.Status)
+	}
+
+	return result
 }
 
 func MapTestWorkflowTemplateAPIToKube(w testkube.TestWorkflowTemplate) testworkflowsv1.TestWorkflowTemplate {
@@ -1756,10 +1761,7 @@ func MapTestWorkflowExecutionHealthAPIToKube(h *testkube.TestWorkflowExecutionHe
 
 func MapTestWorkflowStatusSummaryAPIToKube(status *testkube.TestWorkflowStatusSummary) testworkflowsv1.TestWorkflowStatusSummary {
 	if status == nil {
-		return testworkflowsv1.TestWorkflowStatusSummary{
-			Health:          nil,
-			LatestExecution: nil,
-		}
+		return testworkflowsv1.TestWorkflowStatusSummary{}
 	}
 	return testworkflowsv1.TestWorkflowStatusSummary{
 		Health: MapTestWorkflowExecutionHealthAPIToKube(status.Health),

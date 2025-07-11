@@ -1503,7 +1503,11 @@ func MapTestWorkflowExecutionHealthKubeToAPI(h *testworkflowsv1.TestWorkflowExec
 	}
 }
 
-func MapTestWorkflowStatusSummaryKubeToAPI(status testworkflowsv1.TestWorkflowStatusSummary) *testkube.TestWorkflowStatusSummary {
+func MapTestWorkflowStatusSummaryKubeToAPI(status *testworkflowsv1.TestWorkflowStatusSummary) *testkube.TestWorkflowStatusSummary {
+	if status == nil || (status.Health == nil && status.LatestExecution == nil) {
+		return nil
+	}
+
 	return &testkube.TestWorkflowStatusSummary{
 		Health: MapTestWorkflowExecutionHealthKubeToAPI(status.Health),
 		// LatestExecution is typically handled separately in the API layer
