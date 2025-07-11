@@ -423,6 +423,8 @@ github.com/kubepug/kubepug v1.7.1 h1:LKhfSxS8Y5mXs50v+3Lpyec+cogErDLcV7CMUuiaisw
 github.com/kubepug/kubepug v1.7.1/go.mod h1:lv+HxD0oTFL7ZWjj0u6HKhMbbTIId3eG7aWIW0gyF8g=
 github.com/kubeshop/testkube-operator v1.17.55-0.20250710134342-c59a82a24f47 h1:LGfBF69xSDZyADdcrdR/rVIQHs1lphyxcGuE49TrZ0Y=
 github.com/kubeshop/testkube-operator v1.17.55-0.20250710134342-c59a82a24f47/go.mod h1:2TNdpUI2xqfYM4EGtYouqOLjXQ8nblO3Nm9ltNP/RCU=
+github.com/kubeshop/testkube-operator v1.17.55-0.20250711064822-1125afe627c1 h1:M1Sw3au0NaTINmRq8iyAXz9DCkENARyGMBwwvYABZaU=
+github.com/kubeshop/testkube-operator v1.17.55-0.20250711064822-1125afe627c1/go.mod h1:2TNdpUI2xqfYM4EGtYouqOLjXQ8nblO3Nm9ltNP/RCU=
 github.com/kylelemons/godebug v1.1.0 h1:RPNrshWIDI6G2gRW9EHilWtl7Z6Sb1BR0xunSBf0SNc=
 github.com/kylelemons/godebug v1.1.0/go.mod h1:9/0rRGxNHcop5bhtWyNeEfOS8JIWk580+fNqagV/RAw=
 github.com/leaanthony/go-ansi-parser v1.6.1 h1:xd8bzARK3dErqkPFtoF9F3/HgN8UQk0ed1YDKpEz01A=
