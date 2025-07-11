@@ -13,24 +13,3 @@ func (r *TestWorkflowStepResult) Clone() *TestWorkflowStepResult {
 		FinishedAt:   r.FinishedAt,
 	}
 }
-
-// TODO(emil): these are just not necesary, just access the Status field have to check this implementation too
-func (r *TestWorkflowStepResult) Finished() bool {
-	return r.Status.Finished()
-}
-
-func (r *TestWorkflowStepResult) Aborted() bool {
-	return r.Status.Aborted()
-}
-
-func (r *TestWorkflowStepResult) Canceled() bool {
-	return r.Status.Canceled()
-}
-
-func (r *TestWorkflowStepResult) Skipped() bool {
-	return r.Status.Skipped()
-}
-
-func (r *TestWorkflowStepResult) NotStarted() bool {
-	return r.Status.NotStarted()
-}
