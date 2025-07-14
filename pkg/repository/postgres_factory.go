@@ -8,13 +8,13 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/kubeshop/testkube/pkg/repository/leasebackend"
-	leasebackendPostgres "github.com/kubeshop/testkube/pkg/repository/leasebackend/postgres"
+	leasebackendpostgres "github.com/kubeshop/testkube/pkg/repository/leasebackend/postgres"
 	"github.com/kubeshop/testkube/pkg/repository/result"
-	resultPostgres "github.com/kubeshop/testkube/pkg/repository/result/postgres"
+	resultpostgres "github.com/kubeshop/testkube/pkg/repository/result/postgres"
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
-	testresultPostgres "github.com/kubeshop/testkube/pkg/repository/testresult/postgres"
+	testresultpostgres "github.com/kubeshop/testkube/pkg/repository/testresult/postgres"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
-	testworkflowPostgres "github.com/kubeshop/testkube/pkg/repository/testworkflow/postgres"
+	testworkflowpostgres "github.com/kubeshop/testkube/pkg/repository/testworkflow/postgres"
 )
 
 // PostgreSQL Factory Implementation
@@ -40,14 +40,14 @@ func NewPostgreSQLFactory(config PostgreSQLFactoryConfig) *PostgreSQLFactory {
 
 func (f *PostgreSQLFactory) NewLeaseBackendRepository() leasebackend.Repository {
 	if f.leaseBackendRepo == nil {
-		f.leaseBackendRepo = leasebackendPostgres.NewPostgresLeaseBackend(f.db)
+		f.leaseBackendRepo = leasebackendpostgres.NewPostgresLeaseBackend(f.db)
 	}
 	return f.leaseBackendRepo
 }
 
 func (f *PostgreSQLFactory) NewResultRepository() result.Repository {
 	if f.resultRepo == nil {
-		f.resultRepo = resultPostgres.NewPostgresRepository(
+		f.resultRepo = resultpostgres.NewPostgresRepository(
 			f.db,
 		)
 	}
@@ -56,7 +56,7 @@ func (f *PostgreSQLFactory) NewResultRepository() result.Repository {
 
 func (f *PostgreSQLFactory) NewTestResultRepository() testresult.Repository {
 	if f.testResultRepo == nil {
-		f.testResultRepo = testresultPostgres.NewPostgresRepository(
+		f.testResultRepo = testresultpostgres.NewPostgresRepository(
 			f.db,
 		)
 	}
@@ -65,7 +65,7 @@ func (f *PostgreSQLFactory) NewTestResultRepository() testresult.Repository {
 
 func (f *PostgreSQLFactory) NewTestWorkflowRepository() testworkflow.Repository {
 	if f.testWorkflowRepo == nil {
-		f.testWorkflowRepo = testworkflowPostgres.NewPostgresRepository(
+		f.testWorkflowRepo = testworkflowpostgres.NewPostgresRepository(
 			f.db,
 		)
 	}

@@ -9,16 +9,16 @@ import (
 
 	logsclient "github.com/kubeshop/testkube/pkg/logs/client"
 	"github.com/kubeshop/testkube/pkg/repository/leasebackend"
-	leasebackendMongo "github.com/kubeshop/testkube/pkg/repository/leasebackend/mongo"
+	leasebackendmongo "github.com/kubeshop/testkube/pkg/repository/leasebackend/mongo"
 	"github.com/kubeshop/testkube/pkg/repository/result"
 	"github.com/kubeshop/testkube/pkg/repository/result/minio"
-	resultMongo "github.com/kubeshop/testkube/pkg/repository/result/mongo"
+	resultmongo "github.com/kubeshop/testkube/pkg/repository/result/mongo"
 	"github.com/kubeshop/testkube/pkg/repository/sequence"
 	sequencemongo "github.com/kubeshop/testkube/pkg/repository/sequence/mongo"
 	"github.com/kubeshop/testkube/pkg/repository/testresult"
-	testresultMongo "github.com/kubeshop/testkube/pkg/repository/testresult/mongo"
+	testresultmongo "github.com/kubeshop/testkube/pkg/repository/testresult/mongo"
 	"github.com/kubeshop/testkube/pkg/repository/testworkflow"
-	testworkflowMongo "github.com/kubeshop/testkube/pkg/repository/testworkflow/mongo"
+	testworkflowmongo "github.com/kubeshop/testkube/pkg/repository/testworkflow/mongo"
 )
 
 // MongoDB Factory Implementation
@@ -60,23 +60,23 @@ func NewMongoDBFactory(config MongoDBFactoryConfig) *MongoDBFactory {
 
 func (f *MongoDBFactory) NewLeaseBackendRepository() leasebackend.Repository {
 	if f.leaseBackendRepo == nil {
-		f.leaseBackendRepo = leasebackendMongo.NewMongoLeaseBackend(f.db)
+		f.leaseBackendRepo = leasebackendmongo.NewMongoLeaseBackend(f.db)
 	}
 	return f.leaseBackendRepo
 }
 
 func (f *MongoDBFactory) NewResultRepository() result.Repository {
 	if f.resultRepo == nil {
-		opts := []resultMongo.MongoRepositoryOpt{
-			resultMongo.WithLogsClient(f.logGrpcClient),
-			resultMongo.WithMongoRepositorySequence(f.sequenceRepo),
+		opts := []resultmongo.MongoRepositoryOpt{
+			resultmongo.WithLogsClient(f.logGrpcClient),
+			resultmongo.WithMongoRepositorySequence(f.sequenceRepo),
 		}
 
 		if f.outputRepository != nil {
-			opts = append(opts, resultMongo.WithMinioOutputRepository(f.outputRepository))
+			opts = append(opts, resultmongo.WithMinioOutputRepository(f.outputRepository))
 		}
 
-		f.resultRepo = resultMongo.NewMongoRepository(
+		f.resultRepo = resultmongo.NewMongoRepository(
 			f.db,
 			f.allowDiskUse,
 			f.isDocDb,
@@ -88,11 +88,11 @@ func (f *MongoDBFactory) NewResultRepository() result.Repository {
 
 func (f *MongoDBFactory) NewTestResultRepository() testresult.Repository {
 	if f.testResultRepo == nil {
-		f.testResultRepo = testresultMongo.NewMongoRepository(
+		f.testResultRepo = testresultmongo.NewMongoRepository(
 			f.db,
 			f.allowDiskUse,
 			f.isDocDb,
-			testresultMongo.WithMongoRepositorySequence(f.sequenceRepo),
+			testresultmongo.WithMongoRepositorySequence(f.sequenceRepo),
 		)
 	}
 	return f.testResultRepo
@@ -100,10 +100,10 @@ func (f *MongoDBFactory) NewTestResultRepository() testresult.Repository {
 
 func (f *MongoDBFactory) NewTestWorkflowRepository() testworkflow.Repository {
 	if f.testWorkflowRepo == nil {
-		f.testWorkflowRepo = testworkflowMongo.NewMongoRepository(
+		f.testWorkflowRepo = testworkflowmongo.NewMongoRepository(
 			f.db,
 			f.allowDiskUse,
-			testworkflowMongo.WithMongoRepositorySequence(f.sequenceRepo),
+			testworkflowmongo.WithMongoRepositorySequence(f.sequenceRepo),
 		)
 	}
 	return f.testWorkflowRepo
