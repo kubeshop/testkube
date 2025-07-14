@@ -136,47 +136,32 @@ CREATE INDEX idx_test_workflow_executions_namespace ON test_workflow_executions(
 CREATE INDEX idx_test_workflow_executions_scheduled_at ON test_workflow_executions(scheduled_at DESC);
 CREATE INDEX idx_test_workflow_executions_status_at ON test_workflow_executions(status_at DESC);
 CREATE INDEX idx_test_workflow_executions_tags ON test_workflow_executions USING GIN (tags);
+CREATE INDEX idx_test_workflow_executions_running_context ON test_workflow_executions USING GIN (running_context);
+CREATE INDEX idx_test_workflow_executions_assigned_at ON test_workflow_executions(assigned_at DESC);
 
 CREATE INDEX idx_test_workflow_signatures_execution_id ON test_workflow_signatures(execution_id);
 CREATE INDEX idx_test_workflow_signatures_parent_id ON test_workflow_signatures(parent_id);
 
 CREATE INDEX idx_test_workflow_results_status ON test_workflow_results(status);
 CREATE INDEX idx_test_workflow_results_finished_at ON test_workflow_results(finished_at DESC);
+CREATE INDEX idx_test_workflow_results_steps ON test_workflow_results USING GIN (steps);
 
 CREATE INDEX idx_test_workflow_outputs_execution_id ON test_workflow_outputs(execution_id);
 
 CREATE INDEX idx_test_workflow_reports_execution_id ON test_workflow_reports(execution_id);
 
-CREATE INDEX idx_test_workflow_resource_aggregations_execution_id ON test_workflow_resource_aggregations(execution_id);
-
 CREATE INDEX idx_test_workflows_execution_id ON test_workflows(execution_id);
 CREATE INDEX idx_test_workflows_workflow_type ON test_workflows(workflow_type);
 CREATE INDEX idx_test_workflows_name ON test_workflows(name);
-
-CREATE INDEX idx_leases_identifier ON leases(identifier);
-CREATE INDEX idx_leases_cluster_id ON leases(cluster_id);
-CREATE INDEX idx_leases_renewed_at ON leases(renewed_at);
-CREATE INDEX idx_leases_acquired_at ON leases(acquired_at);
-CREATE INDEX idx_leases_identifier_cluster_id ON leases(identifier, cluster_id);
-
-CREATE INDEX idx_execution_sequences_name ON execution_sequences(name);
+CREATE INDEX idx_test_workflows_labels ON test_workflows USING GIN (labels);
 -- +goose StatementEnd
 
 -- +goose Down
 -- +goose StatementBegin
-DROP INDEX IF EXISTS idx_execution_sequences_name;
-
-DROP INDEX IF EXISTS idx_leases_identifier;
-DROP INDEX IF EXISTS idx_leases_cluster_id;
-DROP INDEX IF EXISTS idx_leases_renewed_at;
-DROP INDEX IF EXISTS idx_leases_acquired_at;
-DROP INDEX IF EXISTS idx_leases_identifier_cluster_id;
-
 DROP INDEX IF EXISTS idx_test_workflows_execution_id;
 DROP INDEX IF EXISTS idx_test_workflows_workflow_type;
 DROP INDEX IF EXISTS idx_test_workflows_name;
-
-DROP INDEX IF EXISTS idx_test_workflow_resource_aggregations_execution_id;
+DROP INDEX IF EXISTS idx_test_workflows_labels;
 
 DROP INDEX IF EXISTS idx_test_workflow_reports_execution_id;
 
@@ -184,6 +169,7 @@ DROP INDEX IF EXISTS idx_test_workflow_outputs_execution_id;
 
 DROP INDEX IF EXISTS idx_test_workflow_results_status;
 DROP INDEX IF EXISTS idx_test_workflow_results_finished_at;
+DROP INDEX IF EXISTS idx_test_workflow_results_steps;
 
 DROP INDEX IF EXISTS idx_test_workflow_signatures_execution_id;
 DROP INDEX IF EXISTS idx_test_workflow_signatures_parent_id;
@@ -195,6 +181,8 @@ DROP INDEX IF EXISTS idx_test_workflow_executions_namespace;
 DROP INDEX IF EXISTS idx_test_workflow_executions_scheduled_at;
 DROP INDEX IF EXISTS idx_test_workflow_executions_status_at;
 DROP INDEX IF EXISTS idx_test_workflow_executions_tags;
+DROP INDEX IF EXISTS idx_test_workflow_executions_running_context;
+DROP INDEX IF EXISTS idx_test_workflow_executions_assigned_at;
 
 DROP TABLE IF EXISTS execution_sequences;
 DROP TABLE IF EXISTS leases;
