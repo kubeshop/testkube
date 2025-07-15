@@ -8922,7 +8922,7 @@ components:
       description: test workflow status
       properties:
         latestExecution:
-          $ref: "#/components/schemas/TestWorkflowExecutionSummary" 
+          $ref: "#/components/schemas/TestWorkflowExecutionSummary"
 
     TestWorkflowExecutionNotification:
       type: object
