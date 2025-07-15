@@ -21,7 +21,7 @@
   <a href="https://testkube.io/blog">Blog</a>&nbsp;|&nbsp;
   <a href="https://testkubeworkspace.slack.com/join/shared_invite/zt-2arhz5vmu-U2r3WZ69iPya5Fw0hMhRDg#/shared-invite/email">Slack</a>&nbsp;|&nbsp; 
   <a href="https://www.linkedin.com/company/testkube">LinkedIn</a>&nbsp;|&nbsp;
-  <a href="https://twitter.com/testkube_io">X</a> 
+  <a href="https://twitter.com/testkubeio">X</a> 
 </p>
 
 
