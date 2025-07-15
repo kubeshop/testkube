@@ -45,10 +45,10 @@ The Testkube Agent (this repo) is **100% Open-Source** and can be deployed stand
 
 ### Why use Testkube?
 
-- **Run any Tests**: Testkube can schedule and execute any tests/tools/scripts that can be run under Docker at scale - [Examples & Guides](https://docs.testkube.io/articles/examples/overview).
-- **Run Tests whenever you need to**: Run tests manually, one a schedule, from any CI/CD/GitOps pipeline, on Kubernetes Events, etc. - [Read More](https://docs.testkube.io/articles/triggering-overview).
-- **Results and Analytics**: Testkube gathers all test results, artifacts, logs and resource-metrics in one place to streamline troubleshooting and reporting - [Read More](https://docs.testkube.io/articles/results-overview).
-- **Works with your tools**: With its REST API and Webhooks, Testkube can be integrated with (almost) anything you're already running in your infrastructure - [Integrations](https://docs.testkube.io/articles/integrations).
+- **Run any Tests**: Execute any testing tools/scripts at scale - [Examples & Guides](https://docs.testkube.io/articles/examples/overview).
+- **Run Tests whenever you need to**: Run tests manually, on schedules, from any CI/CD/GitOps pipeline, on Kubernetes Events, etc. - [Read More](https://docs.testkube.io/articles/triggering-overview).
+- **Results and Analytics**: Gather all test results, artifacts, logs and resource-metrics in one place for streamlined troubleshooting and reporting - [Read More](https://docs.testkube.io/articles/results-overview).
+- **Works with your tools**: Integrated Testkube with your existing tools and infrastructure using Webhooks and [Testkubes REST API](https://docs.testkube.io/openapi/overview) - [Integrations](https://docs.testkube.io/articles/integrations).
 - **Enterprise Ready**: SSO/SCIM, RBAC, Teams, Resource-Groups, Audit-logs, etc. - [Read More](https://docs.testkube.io/articles/administration-overview).
 
 ### Getting Started
