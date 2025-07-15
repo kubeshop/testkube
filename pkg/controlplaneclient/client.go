@@ -4,6 +4,8 @@ import (
 	"strings"
 	"time"
 
+	"go.uber.org/zap"
+
 	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/cloud"
 )
@@ -19,6 +21,7 @@ type client struct {
 	client     cloud.TestKubeCloudAPIClient
 	proContext config.ProContext
 	opts       ClientOptions
+	logger     *zap.SugaredLogger
 }
 
 type ClientOptions struct {
@@ -49,11 +52,12 @@ type Client interface {
 	TestWorkflowTemplatesClient
 }
 
-func New(grpcClient cloud.TestKubeCloudAPIClient, proContext config.ProContext, opts ClientOptions) Client {
+func New(grpcClient cloud.TestKubeCloudAPIClient, proContext config.ProContext, opts ClientOptions, logger *zap.SugaredLogger) Client {
 	return &client{
 		client:     grpcClient,
 		proContext: proContext,
 		opts:       opts,
+		logger:     logger,
 	}
 }
 

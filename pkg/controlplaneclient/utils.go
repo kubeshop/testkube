@@ -3,11 +3,13 @@ package controlplaneclient
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"sync"
 	"time"
 
+	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -71,6 +73,8 @@ func processNotifications[Request notificationRequest, Response any, Srv notific
 	buildError func(streamId string, message string) Response,
 	process func(ctx context.Context, req Request) NotificationWatcher,
 	sendTimeout time.Duration,
+	recvTimeout time.Duration,
+	logger *zap.SugaredLogger,
 ) error {
 	g, ctx := errgroup.WithContext(ctx)
 	stream, err := watch(ctx, md, fn)
@@ -124,14 +128,38 @@ func processNotifications[Request notificationRequest, Response any, Srv notific
 
 			// Handle the error
 			if err != nil {
+				logger.Errorw("process notifications error", "error", err)
 				return err
 			}
 
 			// Get the next request
 			var req Request
-			req, err = stream.Recv()
-			if err != nil {
-				continue
+			reqChan := make(chan struct {
+				req Request
+				err error
+			}, 1)
+			go func() {
+				recvReq, recvErr := stream.Recv()
+				reqChan <- struct {
+					req Request
+					err error
+				}{recvReq, recvErr}
+			}()
+
+			select {
+			case result := <-reqChan:
+				req = result.req
+				err = result.err
+				if err != nil {
+					logger.Errorw("process notifications error", "error", err)
+					return err
+				}
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(recvTimeout):
+				err = errors.New("receive request too slow")
+				logger.Errorw("process notifications error", "error", err)
+				return err
 			}
 
 			// Send PONG to the PING message
