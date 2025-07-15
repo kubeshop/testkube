@@ -8,6 +8,7 @@ metadata:
 spec:
   steps:
   - execute:
+      parallelism: 2
       workflows:
       - name: expected-fail-cypress-incorrect-repo-path
       - name: expected-fail-cypress-incorrect-repo-path-cone-mode

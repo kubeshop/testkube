@@ -8,6 +8,7 @@ metadata:
 spec:
   steps:
   - execute:
+      parallelism: 2
       workflows:
       - name: special-cases-global-env
       - name: special-cases-securitycontext-runasuser-runasgroup
