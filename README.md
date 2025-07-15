@@ -16,12 +16,13 @@
 
 <p align="center">
   <a href="https://testkube.io">Website</a>&nbsp;|&nbsp;
-  <a href="https://docs.testkube.io">Documentation</a>&nbsp;|&nbsp; 
-  <a href="https://hub.docker.com/u/testkube">DockerHub</a>
-  <a href="https://twitter.com/testkube_io">Twitter</a>&nbsp;|&nbsp; 
+  <a href="https://docs.testkube.io">Documentation</a>&nbsp;|&nbsp;
+  <a href="https://docs.testkube.io/changelog">Changelog</a>&nbsp;|&nbsp;
+  <a href="https://testkube.io/blog">Blog</a>&nbsp;|&nbsp;
+  <a href="https://hub.docker.com/u/testkube">DockerHub</a>&nbsp;|&nbsp;
   <a href="https://testkubeworkspace.slack.com/join/shared_invite/zt-2arhz5vmu-U2r3WZ69iPya5Fw0hMhRDg#/shared-invite/email">Slack</a>&nbsp;|&nbsp; 
-  <a href="https://testkube.io/blog">Blog</a>
-  <a href="https://www.linkedin.com/company/testkube">LinkedIn</a>
+  <a href="https://www.linkedin.com/company/testkube">LinkedIn</a>&nbsp;|&nbsp;
+  <a href="https://twitter.com/testkube_io">X</a> 
 </p>
 
 
@@ -47,8 +48,8 @@ The Testkube Agent (this repo) is **100% Open-Source** and can be deployed stand
 
 - **Run any Tests**: Execute any tests/tools/scripts at scale - [Examples & Guides](https://docs.testkube.io/articles/examples/overview).
 - **Run Tests whenever needed**: Run tests manually, on schedules, from CI/CD/GitOps pipelines, on Kubernetes Events, etc. - [Read More](https://docs.testkube.io/articles/triggering-overview).
-- **Results and Analytics**: Aggregate all test results, artifacts, logs and resource-metrics for streamlined troubleshooting and reporting - [Read More](https://docs.testkube.io/articles/results-overview).
-- **Works with your tools**: Integrate with existing tools and infrastructure using [Webhooks](https://docs.testkube.io/articles/webhooks) and [Testkubes REST API](https://docs.testkube.io/openapi/overview) - see [Integration Examples](https://docs.testkube.io/articles/integrations).
+- **Results and Analytics**: Aggregate all test results, artifacts, logs and resource-metrics for centralized troubleshooting and reporting - [Read More](https://docs.testkube.io/articles/results-overview).
+- **Works with your tools**: Integrate with existing tools and infrastructure using [Webhooks](https://docs.testkube.io/articles/webhooks) and the [Testkube REST API](https://docs.testkube.io/openapi/overview) - see [Integration Examples](https://docs.testkube.io/articles/integrations).
 - **Enterprise Ready**: SSO/SCIM, RBAC, Teams, Resource-Groups, Audit-logs, etc. - [Read More](https://docs.testkube.io/articles/administration-overview).
 
 ### Getting Started
