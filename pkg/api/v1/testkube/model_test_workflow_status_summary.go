@@ -12,5 +12,4 @@ package testkube
 // test workflow status
 type TestWorkflowStatusSummary struct {
 	LatestExecution *TestWorkflowExecutionSummary `json:"latestExecution,omitempty"`
-	Health          *TestWorkflowExecutionHealth  `json:"health,omitempty"`
 }

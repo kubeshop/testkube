@@ -8630,6 +8630,8 @@ components:
           description: if test workflow is offline and cannot be executed
         status:
           $ref: "#/components/schemas/TestWorkflowStatusSummary"
+        health:
+          $ref: "#/components/schemas/TestWorkflowExecutionHealth"
 
     TestWorkflowExecutionRequest:
       type: object
@@ -8920,9 +8922,7 @@ components:
       description: test workflow status
       properties:
         latestExecution:
-          $ref: "#/components/schemas/TestWorkflowExecutionSummary"
-        health:
-          $ref: "#/components/schemas/TestWorkflowExecutionHealth"
+          $ref: "#/components/schemas/TestWorkflowExecutionSummary" 
 
     TestWorkflowExecutionNotification:
       type: object
