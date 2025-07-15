@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/output"
@@ -28,7 +29,16 @@ func CloudClient() controlplaneclient.Client {
 		cfg := GetState().InternalConfig
 		conn := cfg.Worker.Connection
 		logger := log.NewSilent()
-		grpcConn, err := agentclient.NewGRPCConnection(context.Background(), conn.TlsInsecure, conn.SkipVerify, conn.Url, "", "", "", logger)
+
+		// Create keepalive config from connection settings
+		keepaliveConfig := config.KeepaliveConfig{
+			Enabled:             true,
+			Time:                10 * time.Second,
+			Timeout:             5 * time.Second,
+			PermitWithoutStream: true,
+		}
+
+		grpcConn, err := agentclient.NewGRPCConnection(context.Background(), conn.TlsInsecure, conn.SkipVerify, conn.Url, "", "", "", keepaliveConfig, logger)
 		if err != nil {
 			output.ExitErrorf(constants.CodeInternal, "failed to connect with the Control Plane: %s", err.Error())
 		}

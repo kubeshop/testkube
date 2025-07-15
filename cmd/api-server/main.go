@@ -134,6 +134,7 @@ func main() {
 
 	lazyRunner := runner2.LazyExecute()
 
+	keepAliveCfg := cfg.GetKeepaliveConfig()
 	// Connect to the Control Plane
 	var grpcConn *grpc.ClientConn
 	if mode == common.ModeStandalone {
@@ -141,7 +142,7 @@ func main() {
 		g.Go(func() error {
 			return controlPlane.Start(ctx)
 		})
-		grpcConn, err = agentclient.NewGRPCConnection(ctx, true, true, fmt.Sprintf("127.0.0.1:%d", cfg.GRPCServerPort), "", "", "", log.DefaultLogger)
+		grpcConn, err = agentclient.NewGRPCConnection(ctx, true, true, fmt.Sprintf("127.0.0.1:%d", cfg.GRPCServerPort), "", "", "", keepAliveCfg, log.DefaultLogger)
 	} else {
 		grpcConn, err = agentclient.NewGRPCConnection(
 			ctx,
@@ -151,6 +152,7 @@ func main() {
 			cfg.TestkubeProCertFile,
 			cfg.TestkubeProKeyFile,
 			cfg.TestkubeProCAFile, //nolint
+			keepAliveCfg,
 			log.DefaultLogger,
 		)
 	}

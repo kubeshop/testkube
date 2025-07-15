@@ -7,6 +7,28 @@ import (
 	"github.com/kelseyhightower/envconfig"
 )
 
+// KeepaliveConfig holds keepalive configuration for gRPC client
+type KeepaliveConfig struct {
+	// Enabled controls whether keepalive is enabled
+	Enabled bool
+	// Time is the duration after which the client pings the server to see if transport is alive
+	Time time.Duration
+	// Timeout is the duration the client waits for a response from the server
+	Timeout time.Duration
+	// PermitWithoutStream controls whether keepalive pings are sent even when there are no active streams
+	PermitWithoutStream bool
+}
+
+// DefaultKeepaliveConfig returns default keepalive configuration
+func DefaultKeepaliveConfig() KeepaliveConfig {
+	return KeepaliveConfig{
+		Enabled:             true,
+		Time:                10 * time.Second,
+		Timeout:             5 * time.Second,
+		PermitWithoutStream: true,
+	}
+}
+
 type APIConfig struct {
 	// Server
 	APIServerPort     int    `envconfig:"APISERVER_PORT" default:"8088"`
@@ -113,6 +135,12 @@ type ControlPlaneConfig struct {
 	TestkubeProTLSSecret         string        `envconfig:"TESTKUBE_PRO_TLS_SECRET" default:""`
 	TestkubeProSendTimeout       time.Duration `envconfig:"TESTKUBE_PRO_SEND_TIMEOUT" default:"30s"`
 	TestkubeProRecvTimeout       time.Duration `envconfig:"TESTKUBE_PRO_RECV_TIMEOUT" default:"5m"`
+
+	// gRPC Keepalive configuration
+	TestkubeProKeepaliveEnabled             bool          `envconfig:"TESTKUBE_PRO_KEEPALIVE_ENABLED" default:"true"`
+	TestkubeProKeepaliveTime                time.Duration `envconfig:"TESTKUBE_PRO_KEEPALIVE_TIME" default:"10s"`
+	TestkubeProKeepaliveTimeout             time.Duration `envconfig:"TESTKUBE_PRO_KEEPALIVE_TIMEOUT" default:"5s"`
+	TestkubeProKeepalivePermitWithoutStream bool          `envconfig:"TESTKUBE_PRO_KEEPALIVE_PERMIT_WITHOUT_STREAM" default:"true"`
 
 	// TestkubeProCAFile is meant to provide a custom CA when making a TLS connection to
 	// the agent API.
@@ -292,4 +320,14 @@ func Get() (*Config, error) {
 	}
 
 	return &c, nil
+}
+
+// GetKeepaliveConfig creates a KeepaliveConfig from the main configuration
+func (c *Config) GetKeepaliveConfig() KeepaliveConfig {
+	return KeepaliveConfig{
+		Enabled:             c.TestkubeProKeepaliveEnabled,
+		Time:                c.TestkubeProKeepaliveTime,
+		Timeout:             c.TestkubeProKeepaliveTimeout,
+		PermitWithoutStream: c.TestkubeProKeepalivePermitWithoutStream,
+	}
 }

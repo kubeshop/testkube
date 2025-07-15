@@ -15,6 +15,7 @@ import (
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/metadata"
 
+	"github.com/kubeshop/testkube/internal/config"
 	"github.com/kubeshop/testkube/pkg/version"
 )
 
@@ -28,7 +29,10 @@ func NewGRPCConnection(
 	isInsecure bool,
 	skipVerify bool,
 	server string,
-	certFile, keyFile, caFile string,
+	certFile string,
+	keyFile string,
+	caFile string,
+	keepaliveConfig config.KeepaliveConfig,
 	logger *zap.SugaredLogger,
 ) (*grpc.ClientConn, error) {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
@@ -54,25 +58,35 @@ func NewGRPCConnection(
 		creds = insecure.NewCredentials()
 	}
 
-	kacp := keepalive.ClientParameters{
-		Time:                10 * time.Second,
-		Timeout:             5 * time.Second,
-		PermitWithoutStream: true,
+	userAgent := version.Version + "/" + version.Commit
+	logger.Infow("initiating connection with control plane", "userAgent", userAgent, "server", server, "insecure", isInsecure, "skipVerify", skipVerify, "certFile", certFile, "keyFile", keyFile, "caFile", caFile, "keepaliveEnabled", keepaliveConfig.Enabled)
+
+	// Build dial options
+	dialOptions := []grpc.DialOption{
+		grpc.WithBlock(),                  //nolint
+		grpc.WithReturnConnectionError(),  //nolint
+		grpc.FailOnNonTempDialError(true), //nolint
+		grpc.WithUserAgent(userAgent),
+		grpc.WithTransportCredentials(creds),
 	}
 
-	userAgent := version.Version + "/" + version.Commit
-	logger.Infow("initiating connection with control plane", "userAgent", userAgent, "server", server, "insecure", isInsecure, "skipVerify", skipVerify, "certFile", certFile, "keyFile", keyFile, "caFile", caFile)
+	// Add keepalive parameters if enabled
+	if keepaliveConfig.Enabled {
+		kacp := keepalive.ClientParameters{
+			Time:                keepaliveConfig.Time,
+			Timeout:             keepaliveConfig.Timeout,
+			PermitWithoutStream: keepaliveConfig.PermitWithoutStream,
+		}
+		dialOptions = append(dialOptions, grpc.WithKeepaliveParams(kacp))
+	}
+
 	// WithBlock, WithReturnConnectionError and FailOnNonTempDialError are recommended not to be used by gRPC go docs
 	// but given that Agent will not work if gRPC connection cannot be established, it is ok to use them and assert issues at dial time
+	//nolint
 	return grpc.DialContext(
 		ctx,
 		server,
-		grpc.WithBlock(),
-		grpc.WithReturnConnectionError(),
-		grpc.FailOnNonTempDialError(true),
-		grpc.WithUserAgent(userAgent),
-		grpc.WithTransportCredentials(creds),
-		grpc.WithKeepaliveParams(kacp),
+		dialOptions...,
 	)
 }
 

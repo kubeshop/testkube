@@ -4,6 +4,8 @@ import (
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
+
+	"github.com/kubeshop/testkube/internal/config"
 )
 
 type Config struct {
@@ -21,6 +23,12 @@ type Config struct {
 	TestkubeProWorkerCount          int    `envconfig:"TESTKUBE_PRO_WORKER_COUNT" default:"50"`
 	TestkubeProLogStreamWorkerCount int    `envconfig:"TESTKUBE_PRO_LOG_STREAM_WORKER_COUNT" default:"25"`
 	TestkubeProSkipVerify           bool   `envconfig:"TESTKUBE_PRO_SKIP_VERIFY" default:"false"`
+
+	// gRPC Keepalive configuration
+	TestkubeProKeepaliveEnabled             bool          `envconfig:"TESTKUBE_PRO_KEEPALIVE_ENABLED" default:"true"`
+	TestkubeProKeepaliveTime                time.Duration `envconfig:"TESTKUBE_PRO_KEEPALIVE_TIME" default:"10s"`
+	TestkubeProKeepaliveTimeout             time.Duration `envconfig:"TESTKUBE_PRO_KEEPALIVE_TIMEOUT" default:"5s"`
+	TestkubeProKeepalivePermitWithoutStream bool          `envconfig:"TESTKUBE_PRO_KEEPALIVE_PERMIT_WITHOUT_STREAM" default:"true"`
 
 	NatsURI            string        `envconfig:"NATS_URI" default:"nats://localhost:4222"`
 	NatsSecure         bool          `envconfig:"NATS_SECURE" default:"false"`
@@ -64,4 +72,14 @@ func Get() (*Config, error) {
 	err := envconfig.Process("config", &config)
 
 	return &config, err
+}
+
+// GetKeepaliveConfig creates a KeepaliveConfig from the logs configuration
+func (c *Config) GetKeepaliveConfig() config.KeepaliveConfig {
+	return config.KeepaliveConfig{
+		Enabled:             c.TestkubeProKeepaliveEnabled,
+		Time:                c.TestkubeProKeepaliveTime,
+		Timeout:             c.TestkubeProKeepaliveTimeout,
+		PermitWithoutStream: c.TestkubeProKeepalivePermitWithoutStream,
+	}
 }

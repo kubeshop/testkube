@@ -8,6 +8,7 @@ import (
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/pkg/errors"
 
+	"github.com/kubeshop/testkube/internal/config"
 	agentclient "github.com/kubeshop/testkube/pkg/agent/client"
 	"github.com/kubeshop/testkube/pkg/cloud"
 	cloudscraper "github.com/kubeshop/testkube/pkg/cloud/data/artifact"
@@ -103,6 +104,15 @@ func getRemoteStorageUploader(ctx context.Context, params envs.Params) (uploader
 	output.PrintLogf(
 		"%s Uploading artifacts using Remote Storage Uploader (timeout:%ds, agentInsecure:%v, agentSkipVerify: %v, url: %s, scraperSkipVerify: %v)",
 		ui.IconCheckMark, params.ProConnectionTimeoutSec, params.ProAPITLSInsecure, params.ProAPISkipVerify, params.ProAPIURL, params.SkipVerify)
+
+	// Create keepalive config from parameters
+	keepaliveConfig := config.KeepaliveConfig{
+		Enabled:             true,
+		Time:                10 * time.Second,
+		Timeout:             5 * time.Second,
+		PermitWithoutStream: true,
+	}
+
 	grpcConn, err := agentclient.NewGRPCConnection(
 		ctxTimeout,
 		params.ProAPITLSInsecure,
@@ -111,6 +121,7 @@ func getRemoteStorageUploader(ctx context.Context, params envs.Params) (uploader
 		params.ProAPICertFile,
 		params.ProAPIKeyFile,
 		params.ProAPICAFile,
+		keepaliveConfig,
 		log.DefaultLogger,
 	)
 	if err != nil {

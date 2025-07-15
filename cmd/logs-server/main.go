@@ -113,6 +113,7 @@ func main() {
 			cfg.TestkubeProCertFile,
 			cfg.TestkubeProKeyFile,
 			cfg.TestkubeProCAFile,
+			cfg.GetKeepaliveConfig(),
 			log,
 		)
 		ui.ExitOnError("error creating gRPC connection for logs service", err)

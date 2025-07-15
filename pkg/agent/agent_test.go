@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	testconfig "github.com/kubeshop/testkube/internal/config"
 	agentclient "github.com/kubeshop/testkube/pkg/agent/client"
 	"github.com/kubeshop/testkube/pkg/executor/output"
 	"github.com/kubeshop/testkube/pkg/log"
@@ -50,7 +51,7 @@ func TestCommandExecution(t *testing.T) {
 		atomic.AddInt32(&msgCnt, 1)
 	}
 
-	grpcConn, err := agentclient.NewGRPCConnection(context.Background(), true, false, url, "", "", "", log.DefaultLogger)
+	grpcConn, err := agentclient.NewGRPCConnection(context.Background(), true, false, url, "", "", "", testconfig.DefaultKeepaliveConfig(), log.DefaultLogger)
 	ui.ExitOnError("error creating gRPC connection", err)
 	defer grpcConn.Close()
 
