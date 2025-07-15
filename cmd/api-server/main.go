@@ -637,7 +637,7 @@ func main() {
 		commons.ExitOnError("Creating TestKube Clientset", err)
 		// TODO: Check why this simpler options is not working
 		//testkubeClientset := testkubeclientset.New(clientset.RESTClient())
-		leaseBackend := controlPlane.GetRepositoryMaanger().LeaseBackend()
+		leaseBackend := controlPlane.GetRepositoryManager().LeaseBackend()
 		triggerService := triggers.NewService(
 			deprecatedSystem,
 			clientset,

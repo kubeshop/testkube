@@ -696,6 +696,6 @@ func (s *Server) SaveExecutionArtifactPresigned(ctx context.Context, req *cloud.
 	return &cloud.SaveExecutionArtifactPresignedResponse{Url: url}, nil
 }
 
-func (s *Server) GetRepositoryMaanger() repository.DatabaseRepository {
+func (s *Server) GetRepositoryManager() repository.DatabaseRepository {
 	return s.repositoryManager
 }
