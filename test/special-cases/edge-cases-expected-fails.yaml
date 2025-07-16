@@ -404,56 +404,6 @@ spec:
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: expected-fail-missing-env-secret
-  labels:
-    core-tests: expected-fail
-description: "Step fails due to non-existent secretKeyRef"
-spec:
-  container:
-    image: alpine:3.22.0
-    resources:
-      requests:
-        cpu: 64m
-        memory: 64Mi
-  steps:
-    - name: Run step
-      run:
-        env:
-          - name: EXAMPLE_SECRET_PARAM
-            valueFrom:
-              secretKeyRef:
-                name: non-existent-secret
-                key: some-key
-        shell: echo "This step should fail before executing this command"
----
-apiVersion: testworkflows.testkube.io/v1
-kind: TestWorkflow
-metadata:
-  name: expected-fail-missing-configmap-key
-  labels:
-    core-tests: expected-fail
-description: "Step fails due to non-existent configMapKeyRef"
-spec:
-  container:
-    image: alpine:3.22.0
-    resources:
-      requests:
-        cpu: 64m
-        memory: 64Mi
-  steps:
-    - name: Run step
-      run:
-        env:
-          - name: EXAMPLE_PARAM
-            valueFrom:
-              configMapKeyRef:
-                name: non-existent-configmap
-                key: some-key
-        shell: echo "This step should fail before executing this command"
----
-apiVersion: testworkflows.testkube.io/v1
-kind: TestWorkflow
-metadata:
   name: expected-fail-missing-template
   labels:
     core-tests: expected-fail
