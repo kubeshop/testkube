@@ -110,7 +110,7 @@ func TestTestExecutionsMetrics(t *testing.T) {
 }
 
 func getRepository() (*MongoRepository, error) {
-	db, err := storage.GetMongoDatabase(cfg.APIMongoDSN, mongoDbName, storage.TypeMongoDB, false, nil)
+	db, err := storage.GetMongoDatabase("mongodb://localhost:27017", mongoDbName, storage.TypeMongoDB, false, nil)
 	repository := NewMongoRepository(db, true, false)
 	return repository, err
 }

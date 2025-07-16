@@ -25,7 +25,7 @@ func TestNewMongoRepository_UpdateReport_Integration(t *testing.T) {
 
 	ctx := context.Background()
 
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI(cfg.APIMongoDSN))
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://localhost:27017"))
 	if err != nil {
 		t.Fatalf("error connecting to mongo: %v", err)
 	}
@@ -94,7 +94,7 @@ func TestNewMongoRepository_Executions_Integration(t *testing.T) {
 
 	ctx := context.Background()
 
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI(cfg.APIMongoDSN))
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://localhost:27017"))
 	if err != nil {
 		t.Fatalf("error connecting to mongo: %v", err)
 	}
@@ -221,7 +221,7 @@ func TestNewMongoRepository_GetExecutions_Tags_Integration(t *testing.T) {
 
 	ctx := context.Background()
 
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI(cfg.APIMongoDSN))
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://localhost:27017"))
 	if err != nil {
 		t.Fatalf("error connecting to mongo: %v", err)
 	}
@@ -333,7 +333,7 @@ func TestNewMongoRepository_GetExecutions_Actor_Integration(t *testing.T) {
 
 	ctx := context.Background()
 
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI(cfg.APIMongoDSN))
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://localhost:27017"))
 	if err != nil {
 		t.Fatalf("error connecting to mongo: %v", err)
 	}
@@ -436,7 +436,7 @@ func TestNewMongoRepository_GetExecutions_Actor_Integration(t *testing.T) {
 func TestNewMongoRepository_GetExecutionsSummary_Integration(t *testing.T) {
 	test.IntegrationTest(t)
 	ctx := context.Background()
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI(cfg.APIMongoDSN))
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://localhost:27017"))
 	if err != nil {
 		t.Fatalf("error connecting to mongo: %v", err)
 	}
@@ -541,7 +541,7 @@ func TestNewMongoRepository_Get_Integration(t *testing.T) {
 
 	ctx := context.Background()
 
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI(cfg.APIMongoDSN))
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://localhost:27017"))
 	if err != nil {
 		t.Fatalf("error connecting to mongo: %v", err)
 	}
