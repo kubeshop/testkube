@@ -22,7 +22,7 @@ type OSSControlPlaneConfig struct {
 	GRPCServerPort int `envconfig:"GRPCSERVER_PORT" default:"8089"`
 
 	// Mongo
-	APIMongoDSN               string `envconfig:"API_MONGO_DSN" default:"mongodb://localhost:27017"`
+	APIMongoDSN               string `envconfig:"API_MONGO_DSN" default:""`
 	APIMongoAllowTLS          bool   `envconfig:"API_MONGO_ALLOW_TLS" default:"false"`
 	APIMongoSSLCert           string `envconfig:"API_MONGO_SSL_CERT" default:""`
 	APIMongoSSLCAFileKey      string `envconfig:"API_MONGO_SSL_CA_FILE_KEY" default:"sslCertificateAuthorityFile"`
