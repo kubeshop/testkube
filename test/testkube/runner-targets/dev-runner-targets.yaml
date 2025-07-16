@@ -1,0 +1,18 @@
+
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-runner-target--dev-runner-2-ind
+  labels:
+    core-tests: special-cases
+description: Run only at .dev where these runners are created!
+spec:
+  execution:
+    target:
+      match:
+        name: [testkube-cloud-test-dev-runner-2-ind]
+  container:
+    image: alpine:3.22.0
+  steps:
+  - name: Run test
+    shell: echo "OK" && exit 0 # runner target validation not possible yet (https://kubeshop.slack.com/archives/C026SAW3LR0/p1750768797706149)

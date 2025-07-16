@@ -399,11 +399,7 @@ spec:
   - name: Run test
     run:
       image: postman/newman:6-alpine
-      args:
-      - run
-      - postman-executor-smoke.postman_collection.json
-      - "--env-var"
-      - "TESTKUBE_POSTMAN_PARAM=TESTKUBE_POSTMAN_PARAM_value"
+      shell: echo "The workflow should fail before executing this command"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -411,32 +407,49 @@ metadata:
   name: expected-fail-missing-env-secret
   labels:
     core-tests: expected-fail
+description: "Step fails due to non-existent secretKeyRef"
 spec:
-  content:
-    git:
-      uri: https://github.com/kubeshop/testkube
-      revision: main
-      paths:
-      - test/postman/postman-executor-smoke.postman_collection.json
   container:
+    image: alpine:3.22.0
     resources:
       requests:
-        cpu: 256m
-        memory: 128Mi
-    workingDir: /data/repo/test/postman
+        cpu: 64m
+        memory: 64Mi
   steps:
-  - name: Run test
-    run:
-      image: postman/newman:6-alpine
-      env:
-      - name: TESTKUBE_POSTMAN_PARAM
-        valueFrom:
-          secretKeyRef:
-            name: non-existant-secret
-            key: key
-      args:
-      - run
-      - postman-executor-smoke.postman_collection.json
+    - name: Run step
+      run:
+        env:
+          - name: EXAMPLE_SECRET_PARAM
+            valueFrom:
+              secretKeyRef:
+                name: non-existent-secret
+                key: some-key
+        shell: echo "This step should fail before executing this command"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-missing-configmap-key
+  labels:
+    core-tests: expected-fail
+description: "Step fails due to non-existent configMapKeyRef"
+spec:
+  container:
+    image: alpine:3.22.0
+    resources:
+      requests:
+        cpu: 64m
+        memory: 64Mi
+  steps:
+    - name: Run step
+      run:
+        env:
+          - name: EXAMPLE_PARAM
+            valueFrom:
+              configMapKeyRef:
+                name: non-existent-configmap
+                key: some-key
+        shell: echo "This step should fail before executing this command"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
@@ -524,3 +537,84 @@ spec:
     negative: true
     shell: |
       echo "command" && exit 0
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-volume-not-mounted
+  labels:
+    core-tests: expected-fail
+description: "volumeMount references missing volume"
+spec:
+  container:
+    image: alpine:3.22.0
+    volumeMounts:
+      - name: missing-volume
+        mountPath: /non-existent
+  steps:
+    - name: Check directory
+      shell: 'test -e /non-existent && echo FAIL && exit 1 || echo OK'
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflowTemplate
+metadata:
+  name: expected-fail-required-config-template
+spec:
+  config:
+    message:
+      type: string
+  steps:
+    - name: Print message
+      run:
+        shell: echo "{{ config.message }}"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-template-missing-config-options
+  labels:
+    core-tests: expected-fail
+description: "Required template config missing"
+spec:
+  steps:
+    - name: Missing required config
+      template:
+        name: expected-fail-required-config-template
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-template-not-defined-config-options
+  labels:
+    core-tests: expected-fail
+description: "Not defined template config params passed"
+spec:
+  steps:
+    - name: Missing required config
+      template:
+        name: expected-fail-required-config-template
+        config:
+          version: "asdf"
+          other: "asdf"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-service-readiness-probe
+  labels:
+    core-tests: expected-fail
+description: "Service with failing readiness probe"
+spec:
+  services:
+    broken-service:
+      image: alpine:3.22.0
+      shell: sleep 5
+      readinessProbe:
+        tcpSocket:
+          port: 9999  # probe on cloded port
+        initialDelaySeconds: 1
+        timeoutSeconds: 1
+        failureThreshold: 1
+  steps:
+    - name: Check
+      shell: echo "Should not reach this step if probe fails as expected"

@@ -30,6 +30,110 @@ spec:
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
+  name: special-cases-step-env-override
+  labels:
+    core-tests: special-cases
+description: "ENV override - container ENV vs expression ENV in steps, services and parallel"
+spec:
+  container:
+    image: alpine:3.22.0
+    env:
+      - name: EXAMPLE_ENV
+        value: "global"
+        global: true
+  services:
+    echo-service:
+      image: alpine:3.22.0
+      env:
+        - name: EXAMPLE_ENV
+          value: "service-env"
+      shell: |
+        echo "Service Literal: $EXAMPLE_ENV"
+        echo "Service Expression: {{ env.EXAMPLE_ENV }}"
+        [ "$EXAMPLE_ENV" = "service-env" ] && [ "{{ env.EXAMPLE_ENV }}" = "service-env" ] && echo SERVICE OK || (echo SERVICE FAIL && exit 1)
+  steps:
+    - name: Check global ENV
+      run:
+        shell: |
+          echo "Step Literal: $EXAMPLE_ENV"
+          echo "Step Expression: {{ env.EXAMPLE_ENV }}"
+          [ "$EXAMPLE_ENV" = "global" ] && [ "{{ env.EXAMPLE_ENV }}" = "global" ] && echo OK || (echo FAIL && exit 1)
+    - name: Check overridden ENV
+      run:
+        env:
+          - name: EXAMPLE_ENV
+            value: "step-local"
+        shell: |
+          echo "Step Literal: $EXAMPLE_ENV"
+          echo "Step Expression: {{ env.EXAMPLE_ENV }}"
+          [ "$EXAMPLE_ENV" = "step-local" ] && [ "{{ env.EXAMPLE_ENV }}" = "step-local" ] && echo OK || (echo FAIL && exit 1)
+    - name: Parallel ENV checks
+      parallel:
+        steps:
+          - name: Check global (parallel)
+            run:
+              shell: |
+                echo "Parallel Literal: $EXAMPLE_ENV"
+                echo "Parallel Expression: {{ env.EXAMPLE_ENV }}"
+                [ "$EXAMPLE_ENV" = "global" ] && [ "{{ env.EXAMPLE_ENV }}" = "global" ] && echo OK || (echo FAIL && exit 1)
+
+          - name: Check overridden (parallel)
+            run:
+              env:
+                - name: EXAMPLE_ENV
+                  value: "parallel-override"
+              shell: |
+                echo "Parallel Literal: $EXAMPLE_ENV"
+                echo "Parallel Expression: {{ env.EXAMPLE_ENV }}"
+                [ "$EXAMPLE_ENV" = "parallel-override" ] && [ "{{ env.EXAMPLE_ENV }}" = "parallel-override" ] && echo OK || (echo FAIL && exit 1)
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-env-expression-env-not-set
+  labels:
+    core-tests: special-cases
+description: "ENV expression - ENV variable not set - should default to empty"
+spec:
+  container:
+    image: alpine:3.22.0
+  steps:
+    - name: not set env expression
+      run:
+        shell: |
+          value="{{ env.MISSING_ENV }}"
+          echo "Expression value: '$value'"
+          [ -z "$value" ] && echo OK || (echo FAIL && exit 1)
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-workingdir-override
+  labels:
+    core-tests: special-cases
+description: "workingDir - override at step level"
+spec:
+  container:
+    image: alpine:3.22.0
+    workingDir: /data/global
+  steps:
+    - name: Create directories
+      shell: mkdir -p /data/global /data/custom
+
+    - name: Check default workingDir
+      shell: |
+        echo "PWD: $(pwd)"
+        [ "$(pwd)" = "/data/global" ] && echo OK || (echo FAIL && exit 1)
+
+    - name: Check overridden workingDir
+      workingDir: /data/custom
+      shell: |
+        echo "PWD: $(pwd)"
+        [ "$(pwd)" = "/data/custom" ] && echo OK || (echo FAIL && exit 1)
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
   name: special-cases-securitycontext-runasuser-runasgroup
   labels:
     core-tests: special-cases
@@ -217,3 +321,72 @@ spec:
           echo "validation failed!"
           exit 1
         fi
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-step-timeout-ok
+  labels:
+    core-tests: special-cases
+spec:
+  container:
+    image: alpine:3.22.0
+  steps:
+  - name: Run test
+    timeout: 30s
+    shell: echo "OK" && exit 0
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-missing-env-secret
+  labels:
+    core-tests: special-cases
+description: "Missing Secret - ENV should default to empty string"
+spec:
+  container:
+    image: alpine:3.22.0
+    resources:
+      requests:
+        cpu: 64m
+        memory: 64Mi
+  steps:
+    - name: Check missing secretKeyRef
+      run:
+        env:
+          - name: EXAMPLE_SECRET_PARAM
+            valueFrom:
+              secretKeyRef:
+                name: non-existent-secret
+                key: some-key
+        shell: |
+          echo "Secret ENV: '$EXAMPLE_SECRET_PARAM'"
+          [ -z "$EXAMPLE_SECRET_PARAM" ] && echo OK || (echo FAIL && exit 1)
+
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-missing-configmap-key
+  labels:
+    core-tests: special-cases
+description: "Missing ConfigMap - ENV should default to empty string"
+spec:
+  container:
+    image: alpine:3.22.0
+    resources:
+      requests:
+        cpu: 64m
+        memory: 64Mi
+  steps:
+    - name: Check missing configMapKeyRef
+      run:
+        env:
+          - name: EXAMPLE_PARAM
+            valueFrom:
+              configMapKeyRef:
+                name: non-existent-configmap
+                key: some-key
+        shell: |
+          echo "ConfigMap ENV: '$EXAMPLE_PARAM'"
+          [ -z "$EXAMPLE_PARAM" ] && echo OK || (echo FAIL && exit 1)

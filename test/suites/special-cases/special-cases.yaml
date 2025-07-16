@@ -11,9 +11,14 @@ spec:
       parallelism: 2
       workflows:
       - name: special-cases-global-env
+      - name: special-cases-step-env-override
+      - name: special-cases-env-expression-env-not-set
+      - name: special-cases-workingdir-override
       - name: special-cases-securitycontext-runasuser-runasgroup
       - name: special-cases-multiple-git-repositories-custommountpath
       - name: special-cases-optional-step
       - name: special-cases-step-retry
       - name: special-cases-negative-step
       - name: special-cases-custom-shared-volume-steps
+      - name: special-cases-missing-env-secret
+      - name: special-cases-missing-configmap-key
