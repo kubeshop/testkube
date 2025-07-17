@@ -2,6 +2,7 @@ package commons
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -12,8 +13,11 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/nats-io/nats.go"
 	"github.com/pkg/errors"
+	"github.com/pressly/goose/v3"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/metadata"
@@ -26,7 +30,7 @@ import (
 	testsuitesclientv3 "github.com/kubeshop/testkube-operator/pkg/client/testsuites/v3"
 	"github.com/kubeshop/testkube/internal/common"
 	"github.com/kubeshop/testkube/internal/config"
-	dbmigrations "github.com/kubeshop/testkube/internal/db-migrations"
+	mongomigrations "github.com/kubeshop/testkube/internal/db-migrations"
 	parser "github.com/kubeshop/testkube/internal/template"
 	"github.com/kubeshop/testkube/pkg/api/v1/testkube"
 	"github.com/kubeshop/testkube/pkg/cache"
@@ -34,6 +38,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/cloud"
 	"github.com/kubeshop/testkube/pkg/configmap"
 	"github.com/kubeshop/testkube/pkg/cronjob"
+	postgresmigrations "github.com/kubeshop/testkube/pkg/database/postgres/migrations"
 	"github.com/kubeshop/testkube/pkg/dbmigrator"
 	"github.com/kubeshop/testkube/pkg/event"
 	"github.com/kubeshop/testkube/pkg/event/bus"
@@ -152,7 +157,7 @@ func MustGetMinioClient(cfg *config.Config) domainstorage.Client {
 
 func runMongoMigrations(ctx context.Context, db *mongo.Database) error {
 	migrationsCollectionName := "__migrations"
-	activeMigrations, err := dbmigrator.GetDbMigrationsFromFs(dbmigrations.MongoMigrationsFs)
+	activeMigrations, err := dbmigrator.GetDbMigrationsFromFs(mongomigrations.MongoMigrationsFs)
 	if err != nil {
 		return errors.Wrap(err, "failed to obtain MongoDB migrations from disk")
 	}
@@ -217,6 +222,41 @@ func getMongoSSLConfig(cfg *config.Config, secretClient secret.Interface) *stora
 		SSLClientCertificateKeyFilePassword: pass,
 		SSLCertificateAuthoritiyFile:        rootCAPath,
 	}
+}
+
+func MustGetPostgresDatabase(ctx context.Context, cfg *config.Config, migrate bool) *pgxpool.Pool {
+	// Connect to PostgreSQL
+	pool, err := pgxpool.New(context.Background(), cfg.APIPostgresDSN)
+	ExitOnError("Getting Postgres database", err)
+
+	if migrate {
+		db := stdlib.OpenDBFromPool(pool)
+		if err := runPostgresMigrations(ctx, db); err != nil {
+			log.DefaultLogger.Warnf("failed to apply Postgres migrations: %v", err)
+		}
+	}
+
+	return pool
+}
+
+func runPostgresMigrations(ctx context.Context, db *sql.DB) error {
+	provider, err := goose.NewProvider(goose.DialectPostgres, db, postgresmigrations.Fs)
+	if err != nil {
+		return errors.Wrap(err, "failed to plan Postgres migrations")
+	}
+
+	results, err := provider.Up(ctx)
+	if err != nil {
+		return errors.Wrap(err, "failed to apply Postgres migrations")
+	}
+
+	if len(results) == 0 {
+		log.DefaultLogger.Info("No Postgres migrations to apply.")
+	} else {
+		log.DefaultLogger.Info(fmt.Sprintf("Applied Postgres migrations with results %v", results))
+	}
+
+	return nil
 }
 
 // Actions
