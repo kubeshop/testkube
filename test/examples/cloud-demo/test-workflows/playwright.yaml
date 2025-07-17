@@ -15,7 +15,7 @@ spec:
   container:
     resources:
       requests:
-        cpu: 2
+        cpu: 1500m
         memory: 2Gi
     workingDir: /data/repo/test/playwright/playwright-project
     image: mcr.microsoft.com/playwright:v1.53.2
