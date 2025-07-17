@@ -167,6 +167,19 @@ func (c *k8sTestWorkflowClient) Update(ctx context.Context, environmentId string
 	return c.client.Update(ctx, next)
 }
 
+func (c *k8sTestWorkflowClient) UpdateStatus(ctx context.Context, environmentId string, workflow testkube.TestWorkflow) error {
+	original, err := c.get(ctx, workflow.Name)
+	if err != nil {
+		return err
+	}
+
+	if workflow.Status != nil {
+		original.Status = testworkflows.MapTestWorkflowStatusSummaryAPIToKube(*workflow.Status)
+	}
+
+	return c.client.Status().Update(ctx, original)
+}
+
 func (c *k8sTestWorkflowClient) Create(ctx context.Context, environmentId string, workflow testkube.TestWorkflow) error {
 	next := testworkflows.MapAPIToKube(&workflow)
 	next.Namespace = c.namespace
