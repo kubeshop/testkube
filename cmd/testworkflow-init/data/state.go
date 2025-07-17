@@ -199,3 +199,14 @@ func SaveState() {
 	persistState(constants.StatePath)
 	persistTerminationLog()
 }
+
+// ClearState clears the singleton state - for testing only
+func ClearState() {
+	loadStateMu.Lock()
+	defer loadStateMu.Unlock()
+	loadedState = false
+	currentState = &state{
+		Output: map[string]string{},
+		Steps:  map[string]*StepData{},
+	}
+}

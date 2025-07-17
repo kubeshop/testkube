@@ -23,7 +23,12 @@ func Setup(config lite.ActionSetup) error {
 	// Copy the init process
 	stdoutUnsafe.Print("Configuring init process...")
 	if config.CopyInit {
-		err := exec.Command("cp", "/init", constants.InitPath).Run()
+		// Use environment variable if set (for testing), otherwise use default
+		initSource := "/init"
+		if envPath := os.Getenv("TESTKUBE_TW_INIT_BINARY_PATH"); envPath != "" {
+			initSource = envPath
+		}
+		err := exec.Command("cp", initSource, constants.InitPath).Run()
 		if err != nil {
 			stdoutUnsafe.Error(" error\n")
 			stdoutUnsafe.Errorf("  failed to copy the /init process: %s\n", err.Error())
@@ -37,7 +42,12 @@ func Setup(config lite.ActionSetup) error {
 	// Copy the toolkit
 	stdoutUnsafe.Print("Configuring toolkit...")
 	if config.CopyToolkit {
-		err := exec.Command("cp", "/toolkit", constants.ToolkitPath).Run()
+		// Use environment variable if set (for testing), otherwise use default
+		toolkitSource := "/toolkit"
+		if envPath := os.Getenv("TESTKUBE_TW_TOOLKIT_BINARY_PATH"); envPath != "" {
+			toolkitSource = envPath
+		}
+		err := exec.Command("cp", toolkitSource, constants.ToolkitPath).Run()
 		if err != nil {
 			stdoutUnsafe.Error(" error\n")
 			stdoutUnsafe.Errorf("  failed to copy the /toolkit utilities: %s\n", err.Error())
@@ -51,9 +61,14 @@ func Setup(config lite.ActionSetup) error {
 	// Copy the shell and useful libraries
 	stdoutUnsafe.Print("Configuring shell...")
 	if config.CopyBinaries {
+		// Use environment variable if set (for testing), otherwise use default
+		binariesSource := defaultInitImageBusyboxBinaryPath
+		if envPath := os.Getenv("TESTKUBE_TW_BUSYBOX_BINARY_PATH"); envPath != "" {
+			binariesSource = envPath
+		}
 		// Use `cp` on the whole directory, as it has plenty of files, which lead to the same FS block.
 		// Copying individual files will lead to high FS usage
-		err := exec.Command("cp", "-rf", defaultInitImageBusyboxBinaryPath, constants.InternalBinPath).Run()
+		err := exec.Command("cp", "-rf", binariesSource, constants.InternalBinPath).Run()
 		if err != nil {
 			stdoutUnsafe.Error(" error\n")
 			stdoutUnsafe.Errorf("  failed to copy the binaries: %s\n", err.Error())
