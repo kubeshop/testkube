@@ -20,20 +20,15 @@ spec:
   steps:
   - name: Install dependencies
     run:
-      image: mcr.microsoft.com/playwright:v1.32.3-focal
+      image: mcr.microsoft.com/playwright:v1.53.2
       command:
       - npm
       args:
       - ci
   - name: Run tests
     run:
-      image: mcr.microsoft.com/playwright:v1.32.3-focal
-      command:
-      - "npx"
-      args:
-      - "--yes"
-      - "playwright@1.32.3"
-      - "test"
+      image: mcr.microsoft.com/playwright:v1.53.2
+      shell: npx playwright test
   - name: Save artifacts
     workingDir: /data/repo/test/playwright/playwright-project
     artifacts:
