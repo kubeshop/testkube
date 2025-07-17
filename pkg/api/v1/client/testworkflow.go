@@ -101,6 +101,26 @@ func (c TestWorkflowClient) UpdateTestWorkflow(workflow testkube.TestWorkflow) (
 	return c.testWorkflowTransport.Execute(http.MethodPut, uri, body, nil)
 }
 
+// UpdateTestWorkflowStatus updates only the status of TestWorkflow Custom Resource
+// This method is used for status updates that should use the Kubernetes status subresource
+func (c TestWorkflowClient) UpdateTestWorkflowStatus(workflow testkube.TestWorkflow) error {
+	if workflow.Name == "" {
+		return fmt.Errorf("test workflow name '%s' is not valid", workflow.Name)
+	}
+
+	uri := c.testWorkflowTransport.GetURI("/test-workflows/%s/status", workflow.Name)
+
+	// For status updates, we send the entire workflow object as per Kubernetes convention
+	// The server/k8s client will handle extracting only the status field
+	body, err := json.Marshal(workflow)
+	if err != nil {
+		return err
+	}
+
+	_, err = c.testWorkflowTransport.Execute(http.MethodPut, uri, body, nil)
+	return err
+}
+
 // DeleteTestWorkflow deletes single test by name
 func (c TestWorkflowClient) DeleteTestWorkflow(name string) error {
 	if name == "" {
