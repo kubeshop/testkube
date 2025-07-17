@@ -303,7 +303,7 @@ spec:
       paths:
       - test/playwright/playwright-project
   container:
-    image: mcr.microsoft.com/playwright:v1.32.3-focal
+    image: mcr.microsoft.com/playwright:v1.53.2
     resources:
       requests:
         cpu: 2

@@ -21,19 +21,9 @@ spec:
     image: mcr.microsoft.com/playwright:v1.53.2
   steps:
   - name: Install dependencies
-    run:
-      command:
-      - npm
-      args:
-      - ci
+    shell: npm ci
   - name: Run tests
-    run:
-      command:
-      - "npx"
-      args:
-      - "--yes"
-      - "playwright@1.32.3"
-      - "test"
+    shell: npx playwright test
   - name: Save artifacts
     workingDir: /data/repo/test/playwright/playwright-project
     artifacts:
