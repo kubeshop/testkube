@@ -1295,11 +1295,6 @@ func MapTestWorkflowKubeToAPI(w testworkflowsv1.TestWorkflow) testkube.TestWorkf
 		}
 	}
 
-	var health *testkube.TestWorkflowExecutionHealth
-	if w.WorkflowStatus != nil && w.WorkflowStatus.Health != nil {
-		health = MapTestWorkflowExecutionHealthKubeToAPI(w.WorkflowStatus.Health)
-	}
-
 	return testkube.TestWorkflow{
 		Name:        w.Name,
 		Namespace:   w.Namespace,
@@ -1309,7 +1304,7 @@ func MapTestWorkflowKubeToAPI(w testworkflowsv1.TestWorkflow) testkube.TestWorkf
 		Updated:     updateTime,
 		Description: w.Description,
 		Spec:        common.Ptr(MapSpecKubeToAPI(w.Spec)),
-		Health:      health,
+		Status:      MapTestWorkflowStatusSummaryKubeToAPI(w.Status),
 	}
 }
 
@@ -1505,5 +1500,16 @@ func MapTestWorkflowExecutionHealthKubeToAPI(h *testworkflowsv1.TestWorkflowExec
 		PassRate:      h.PassRate,
 		FlipRate:      h.FlipRate,
 		OverallHealth: h.OverallHealth,
+	}
+}
+
+func MapTestWorkflowStatusSummaryKubeToAPI(v testworkflowsv1.TestWorkflowStatusSummary) *testkube.TestWorkflowStatusSummary {
+	// Check if status has any meaningful content
+	if v.Health == nil {
+		return nil
+	}
+
+	return &testkube.TestWorkflowStatusSummary{
+		Health: MapTestWorkflowExecutionHealthKubeToAPI(v.Health),
 	}
 }
