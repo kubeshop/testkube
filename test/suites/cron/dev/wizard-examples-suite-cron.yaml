@@ -1,7 +1,7 @@
 kind: TestWorkflow
 apiVersion: testworkflows.testkube.io/v1
 metadata:
-  name: tw-suite-small-smoke-cron-trigger
+  name: wizard-examples-suite-cron-trigger
   labels:
     core-tests: workflows-suite-trigger
     type: suite-trigger
@@ -9,7 +9,7 @@ spec:
   steps:
   - execute:
       workflows:
-      - name: tw-suite-small-smoke
+      - name: wizard-examples-suite
   events:
   - cronjob:
-      cron: "5 */2 * * *" # every 2 hours (+ triggered on every .dev deployment)
+      cron: "10 12 * * *" # every day

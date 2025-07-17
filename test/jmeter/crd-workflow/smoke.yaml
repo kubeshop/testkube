@@ -252,7 +252,7 @@ spec:
     slave:
       use:
       - name: distribute/evenly
-      count: 5
+      count: 2
       timeout: 120s # initialization timeout
       logs: 'always'
       image: alpine/jmeter:5.6
@@ -308,15 +308,11 @@ spec:
     slave:
       use:
       - name: distribute/evenly
-      count: 5
+      count: 2
       timeout: 120s # initialization timeout
       logs: 'always'
       image: alpine/jmeter:5.6
-      command:
-      - jmeter-server
-      - -Dserver.rmi.localport=60000
-      - -Dserver_port=1099
-      - -Jserver.rmi.ssl.disable=true
+      shell: jmeter-server -Dserver.rmi.localport=60000 -Dserver_port=1099 -Jserver.rmi.ssl.disable=true
       resources:
         requests:
           cpu: 128m

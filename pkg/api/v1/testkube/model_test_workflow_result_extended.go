@@ -14,7 +14,7 @@ import (
 )
 
 func (r *TestWorkflowResult) IsFinished() bool {
-	return !r.FinishedAt.IsZero() && r.Status.Finished()
+	return r.HasFinishedAt() && r.Status.Finished()
 }
 
 func (r *TestWorkflowResult) IsStatus(s TestWorkflowStatus) bool {
@@ -96,6 +96,14 @@ func (r *TestWorkflowResult) IsAnyError() bool {
 	return r.IsFinished() && !r.IsStatus(PASSED_TestWorkflowStatus)
 }
 
+func (r *TestWorkflowResult) HasFinishedAt() bool {
+	return !r.FinishedAt.IsZero()
+}
+
+func (r *TestWorkflowResult) HasStartedAt() bool {
+	return !r.StartedAt.IsZero()
+}
+
 func (r *TestWorkflowResult) HasPauseAt(ref string, t time.Time) bool {
 	for _, p := range r.Pauses {
 		if ref == p.Ref && !p.PausedAt.After(t) && (p.ResumedAt.IsZero() || !p.ResumedAt.Before(t)) {
@@ -128,14 +136,10 @@ func (r *TestWorkflowResult) Current(sig []TestWorkflowSignature) string {
 }
 
 func (r *TestWorkflowResult) IsAnyStepAborted() bool {
-	// When initialization was aborted or failed - it's immediately end
-	if r.Initialization.Status.AnyError() {
+	if r.Initialization.Status.AnyAborted() {
 		return true
 	}
-
-	// Analyze the rest of the steps
 	for _, step := range r.Steps {
-		// When any step was aborted - it's immediately end
 		if step.Status.Aborted() {
 			return true
 		}
@@ -144,14 +148,10 @@ func (r *TestWorkflowResult) IsAnyStepAborted() bool {
 }
 
 func (r *TestWorkflowResult) IsAnyStepCanceled() bool {
-	// When initialization was aborted or failed - it's immediately end
-	if r.Initialization.Status.AnyError() {
+	if r.Initialization.Status.Canceled() {
 		return true
 	}
-
-	// Analyze the rest of the steps
 	for _, step := range r.Steps {
-		// When any step was aborted - it's immediately end
 		if step.Status.Canceled() {
 			return true
 		}
@@ -160,15 +160,23 @@ func (r *TestWorkflowResult) IsAnyStepCanceled() bool {
 }
 
 func (r *TestWorkflowResult) IsAnyStepPaused() bool {
-	// When initialization was aborted or failed - it's immediately end
-	if r.Initialization.Status.AnyError() {
-		return false
+	if r.Initialization.Status.Paused() {
+		return true
 	}
-
-	// Analyze the rest of the steps
 	for _, step := range r.Steps {
-		// When any step was aborted - it's immediately end
 		if step.Status.Paused() {
+			return true
+		}
+	}
+	return false
+}
+
+func (r *TestWorkflowResult) IsAnyRequiredStepFailed(sigSequence []TestWorkflowSignature) bool {
+	if r.Initialization.Status.Failed() {
+		return true
+	}
+	for ref := range r.Steps {
+		if r.Steps[ref].Status.Failed() && !isStepOptional(sigSequence, ref) {
 			return true
 		}
 	}
@@ -183,9 +191,24 @@ func (r *TestWorkflowResult) IsKnownStep(ref string) bool {
 	return ok
 }
 
-func (r *TestWorkflowResult) AreAllStepsFinished() bool {
+func (r *TestWorkflowResult) AreAllKnownStepsFinished() bool {
+	if !r.Initialization.Status.Finished() {
+		return false
+	}
 	for _, step := range r.Steps {
-		if !step.Finished() {
+		if !step.Status.Finished() {
+			return false
+		}
+	}
+	return true
+}
+
+func (r *TestWorkflowResult) AreAllKnownRequiredStepsPassed(sigSequence []TestWorkflowSignature) bool {
+	if !r.Initialization.Status.Passed() {
+		return false
+	}
+	for ref, step := range r.Steps {
+		if !step.Status.Passed() && !isStepOptional(sigSequence, ref) {
 			return false
 		}
 	}
@@ -271,7 +294,7 @@ func (r *TestWorkflowResult) Clone() *TestWorkflowResult {
 }
 
 func (r *TestWorkflowResult) HealDuration(scheduledAt time.Time) {
-	if !r.FinishedAt.IsZero() {
+	if r.HasFinishedAt() {
 		r.PausedMs = 0
 
 		// Finalize pauses
@@ -372,32 +395,30 @@ func isStepOptional(sigSequence []TestWorkflowSignature, ref string) bool {
 }
 
 func (r *TestWorkflowResult) healPredictedStatus(sigSequence []TestWorkflowSignature) {
-	// Mark as aborted, when any step is aborted
 	switch {
-	case r.Initialization.Status.AnyError(), r.IsAnyStepAborted():
-		r.PredictedStatus = common.Ptr(ABORTED_TestWorkflowStatus)
-		return
 	case r.IsAnyStepCanceled():
 		r.PredictedStatus = common.Ptr(CANCELED_TestWorkflowStatus)
-		return
+	case r.IsAnyStepAborted():
+		r.PredictedStatus = common.Ptr(ABORTED_TestWorkflowStatus)
+	case r.IsAnyRequiredStepFailed(sigSequence):
+		r.PredictedStatus = common.Ptr(FAILED_TestWorkflowStatus)
+	case r.AreAllKnownRequiredStepsPassed(sigSequence):
+		r.PredictedStatus = common.Ptr(PASSED_TestWorkflowStatus)
+	default:
+		r.PredictedStatus = common.Ptr(ABORTED_TestWorkflowStatus)
 	}
-
-	// Determine if there are some steps failed
-	for ref := range r.Steps {
-		if r.Steps[ref].Status.Aborted() || r.Steps[ref].Status.Canceled() || (r.Steps[ref].Status.AnyError() && !isStepOptional(sigSequence, ref)) {
-			r.PredictedStatus = common.Ptr(FAILED_TestWorkflowStatus)
-			return
-		}
-	}
-	r.PredictedStatus = common.Ptr(PASSED_TestWorkflowStatus)
 }
 
 func (r *TestWorkflowResult) healStatus() {
-	if !r.FinishedAt.IsZero() && r.AreAllStepsFinished() {
-		r.Status = r.PredictedStatus
-	} else if r.IsAnyStepPaused() {
+	switch {
+	case r.IsAnyStepPaused():
 		r.Status = common.Ptr(PAUSED_TestWorkflowStatus)
-	} else if !r.StartedAt.IsZero() {
+	case r.HasFinishedAt() && r.AreAllKnownStepsFinished():
+		// Workflow has been marked finished and all the known steps have been
+		// marked finished so one can assume that the predicted status
+		// represents the final status.
+		r.Status = r.PredictedStatus
+	case r.HasStartedAt():
 		r.Status = common.Ptr(RUNNING_TestWorkflowStatus)
 	}
 }
@@ -417,14 +438,14 @@ func (r *TestWorkflowResult) HealTimestamps(sigSequence []TestWorkflowSignature,
 	r.Initialization.QueuedAt = earliestTimestamp(r.StartedAt, r.Initialization.QueuedAt)
 
 	// Ensure there is the start time for the initialization if it's started or done
-	if !r.Initialization.NotStarted() {
+	if !r.Initialization.Status.NotStarted() {
 		r.Initialization.StartedAt = latestTimestamp(r.Initialization.StartedAt, firstContainerStartTs, r.Initialization.QueuedAt)
 	}
 
 	// Ensure there is the end time for the initialization if it's done
-	if r.Initialization.Finished() && r.Initialization.FinishedAt.IsZero() {
+	if r.Initialization.Status.Finished() && r.Initialization.FinishedAt.IsZero() {
 		// Fallback to have any timestamp in case something went wrong
-		if r.Initialization.Aborted() {
+		if r.Initialization.Status.Aborted() {
 			r.Initialization.FinishedAt = latestTimestamp(r.Initialization.StartedAt, completionTs)
 		} else {
 			r.Initialization.FinishedAt = r.Initialization.StartedAt
@@ -508,7 +529,7 @@ func (r *TestWorkflowResult) HealAbortedOrCanceled(sigSequence []TestWorkflowSig
 	canceled := false
 
 	// Check the initialization step
-	if !r.Initialization.Finished() || r.Initialization.Aborted() || r.Initialization.Canceled() {
+	if !r.Initialization.Status.Finished() || r.Initialization.Status.Aborted() || r.Initialization.Status.Canceled() {
 		if terminationCode == string(CANCELED_TestWorkflowStatus) {
 			canceled = true
 			r.Initialization.Status = common.Ptr(CANCELED_TestWorkflowStepStatus)
@@ -526,7 +547,7 @@ func (r *TestWorkflowResult) HealAbortedOrCanceled(sigSequence []TestWorkflowSig
 			continue
 		}
 		step := r.Steps[ref]
-		if step.Finished() && !step.Aborted() && !step.Canceled() && (!step.Skipped() || step.ErrorMessage == "") {
+		if step.Status.Finished() && !step.Status.Aborted() && !step.Status.Canceled() && (!step.Status.Skipped() || step.ErrorMessage == "") {
 			if (step.Status.Aborted() || step.Status.Canceled()) && (step.ErrorMessage == "" || step.ErrorMessage == defaultErrorStr) {
 				step.ErrorMessage = errorMessage
 			}
@@ -559,7 +580,7 @@ func (r *TestWorkflowResult) HealAbortedOrCanceled(sigSequence []TestWorkflowSig
 			continue
 		}
 		step := r.Steps[ref]
-		if step.Finished() {
+		if step.Status.Finished() {
 			continue
 		}
 		allSkipped := true
@@ -592,7 +613,7 @@ func (r *TestWorkflowResult) HealAbortedOrCanceled(sigSequence []TestWorkflowSig
 
 	// The rest of steps is unrecognized, so just mark them as aborted with information about faulty state
 	for ref, step := range r.Steps {
-		if step.Finished() {
+		if step.Status.Finished() {
 			continue
 		}
 		if r.IsCanceled() {

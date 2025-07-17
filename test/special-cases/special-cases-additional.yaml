@@ -1,0 +1,16 @@
+# Additional special cases that shouldn't be cron-triggered along with "standard" special cases
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-long-lasting-30m
+  labels:
+    core-tests: special-cases
+description: "Long lasting workflow - 30 minutes"
+spec:
+  steps:
+  - name: Run test
+    shell: |
+      for iteration in $(seq 1 1800); do
+        echo "Iteration $iteration, sleep (1 second)"
+        sleep 1
+      done

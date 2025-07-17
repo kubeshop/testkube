@@ -243,7 +243,7 @@ func main() {
 		},
 		SendTimeout: cfg.TestkubeProSendTimeout,
 		RecvTimeout: cfg.TestkubeProRecvTimeout,
-	})
+	}, log.DefaultLogger)
 
 	if proContext.CloudStorage {
 		testWorkflowsClient = testworkflowclient.NewCloudTestWorkflowClient(client)

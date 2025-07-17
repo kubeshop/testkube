@@ -14,7 +14,7 @@ spec:
   container:
     resources:
       requests:
-        cpu: 2
+        cpu: 1500m
         memory: 2Gi
     workingDir: /data/repo/test/cypress/cypress-13
   steps:
