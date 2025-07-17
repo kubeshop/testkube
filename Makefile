@@ -67,6 +67,11 @@ build-api-server:
 build-toolkit:
 	go build -o build/testworkflow-toolkit/testworkflow-toolkit -ldflags='$(LD_FLAGS)' cmd/testworkflow-toolkit/main.go
 
+build-testworkflow-init:
+	go build -o build/testworkflow-init/testworkflow-init -ldflags='$(LD_FLAGS)' cmd/testworkflow-init/main.go
+
+build-toolkit-binaries: build-toolkit build-testworkflow-init
+
 build-testkube-bin:
 	go build \
 		-ldflags="-s -w -X main.version=999.0.0-$(COMMIT) \
@@ -141,7 +146,7 @@ openapi-generate-model-testkube:
 	find ./pkg/api/v1/testkube -name "*update*.go" -type f -exec sed -i '' -e "s/ \*PodRequest/ \*\*PodUpdateRequest/g" {} \;
 	find ./pkg/api/v1/testkube -name "*update*.go" -type f -exec sed -i '' -e "s/ \*PodResourcesRequest/ \*\*PodResourcesUpdateRequest/g" {} \;
 	find ./pkg/api/v1/testkube -name "*update*.go" -type f -exec sed -i '' -e "s/ \*ResourceRequest/ \*ResourceUpdateRequest/g" {} \;
-	find ./pkg/api/v1/testkube -name "*update*.go" -type f -exec sed -i '' -e "s/ \*WebhookTemplateRef/ \*\*WebhookTemplateRef/g" {} \;	
+	find ./pkg/api/v1/testkube -name "*update*.go" -type f -exec sed -i '' -e "s/ \*WebhookTemplateRef/ \*\*WebhookTemplateRef/g" {} \;
 	find ./pkg/api/v1/testkube -type f -exec sed -i '' -e "s/ Deprecated/ \\n\/\/ Deprecated/g" {} \;
 	find ./pkg/api/v1/testkube -name "*_env_source.go" -type f -exec sed -i '' -e "s/ bool/ \*bool/g" {} \;
 	find ./pkg/api/v1/testkube -name "**_key_ref.go" -type f -exec sed -i '' -e "s/ bool/ \*bool/g" {} \;
@@ -177,6 +182,11 @@ test-e2e:
 
 test-e2e-namespace:
 	NAMESPACE=$(NAMESPACE) go test --tags=e2e -v  ./test/e2e
+
+.PHONY: test-toolkit
+test-tktw: build-toolkit-binaries
+	@echo "Running test workflow init & toolkit tests..."
+	cd test/tktw && go test -v -timeout=30s ./...
 
 create-examples:
 	test/create.sh
