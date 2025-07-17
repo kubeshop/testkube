@@ -11,7 +11,7 @@ var (
 	Std = NewStream(os.Stdout)
 )
 
-type ObfuscatorLike interface {
+type obfuscatorLike interface {
 	SetSensitiveWords([]string)
 	SetSensitiveReplacer(func([]byte) []byte)
 }
@@ -35,19 +35,19 @@ func (s *stream) Direct() *stream {
 }
 
 func (s *stream) SetSensitiveWords(words []string) {
-	if v, ok := s.printer.through.(ObfuscatorLike); ok {
+	if v, ok := s.printer.through.(obfuscatorLike); ok {
 		v.SetSensitiveWords(words)
 	}
 }
 
 func (s *stream) SetSensitiveReplacer(replacer func(value []byte) []byte) {
-	if v, ok := s.printer.through.(ObfuscatorLike); ok {
+	if v, ok := s.printer.through.(obfuscatorLike); ok {
 		v.SetSensitiveReplacer(replacer)
 	}
 }
 
 func (s *stream) Flush() {
-	if v, ok := s.printer.through.(FlushWriter); ok {
+	if v, ok := s.printer.through.(flushWriter); ok {
 		v.Flush()
 	}
 }
