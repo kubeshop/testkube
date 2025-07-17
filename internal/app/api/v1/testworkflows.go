@@ -358,6 +358,48 @@ func (s *TestkubeAPI) UpdateTestWorkflowHandler() fiber.Handler {
 	}
 }
 
+func (s *TestkubeAPI) UpdateTestWorkflowStatusHandler() fiber.Handler {
+	errPrefix := "failed to update test workflow status"
+	return func(c *fiber.Ctx) (err error) {
+		ctx := c.Context()
+		environmentId := s.getEnvironmentId()
+
+		name := c.Params("id")
+
+		// Deserialize resource
+		var workflow *testkube.TestWorkflow
+		err = c.BodyParser(&workflow)
+		if err != nil {
+			return s.BadRequest(c, errPrefix, "invalid body", err)
+		}
+
+		// Validate resource
+		if workflow == nil || workflow.Status == nil {
+			return s.BadRequest(c, errPrefix, "invalid body", errors.New("workflow and status are required"))
+		}
+
+		// Ensure the name matches the URL parameter
+		workflow.Name = name
+
+		// Update only the status using the status subresource
+		err = s.TestWorkflowsClient.UpdateStatus(ctx, environmentId, *workflow)
+		if err != nil {
+			s.Metrics.IncUpdateTestWorkflow(err)
+			return s.ClientError(c, errPrefix, err)
+		}
+
+		s.Metrics.IncUpdateTestWorkflow(err)
+
+		// Return the updated workflow
+		updatedWorkflow, err := s.TestWorkflowsClient.Get(ctx, environmentId, name)
+		if err != nil {
+			return s.ClientError(c, errPrefix, err)
+		}
+
+		return c.JSON(updatedWorkflow)
+	}
+}
+
 func (s *TestkubeAPI) PreviewTestWorkflowHandler() fiber.Handler {
 	errPrefix := "failed to resolve test workflow"
 	return func(c *fiber.Ctx) (err error) {
