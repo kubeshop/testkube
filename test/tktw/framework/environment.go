@@ -8,20 +8,41 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowconfig"
 )
 
+const (
+	// DefaultStepRef is the default step reference ID used in test workflows
+	DefaultStepRef = "r6lxv49"
+
+	// defaultExecutionID is the test execution ID
+	defaultExecutionID = "6877e9b024044bf1cf0d3f54"
+
+	// defaultPodName is the test pod name
+	defaultPodName = "6877e9b024044bf1cf0d3f54-zhzhf"
+)
+
+// WorkflowOptions allows customization of the test workflow
+type WorkflowOptions struct {
+	// Custom workflow actions JSON (if not provided, uses default)
+	Actions string
+	// Custom workflow signature JSON (if not provided, uses default)
+	Signature string
+	// Step reference name (default: r6lxv49)
+	StepRef string
+	// Resource limits and requests
+	Resources struct {
+		Requests struct {
+			CPU    string // default: 100m
+			Memory string // default: 128Mi
+		}
+		Limits struct {
+			CPU    string // default: 200m
+			Memory string // default: 256Mi
+		}
+	}
+}
+
 // testWorkflowActions defines the workflow actions for testing.
-// This JSON structure represents two groups of actions:
-// - Group 0: Setup actions (initialization, definitions, references)
-// - Group 1: Execution actions (shell command that tests resource usage)
-//
-// Action types:
-// - "_": Initialize (i=interrupts, b=buffered)
-// - "d": Define step (c=condition, r=ref, p=parents)
-// - "r": Set result (r=ref, v=value)
-// - "S": Start step (value=ref or empty for global)
-// - "s": Set status (value=status or ref)
-// - "c": Execute container (r=ref, c=container spec)
-// - "e": Execute step (r=ref, v=value)
-// - "E": End step (value=ref or empty for global)
+// Group 0: Setup actions (initialization, definitions, references)
+// Group 1: Execution actions (shell command that tests resource usage)
 var testWorkflowActions = `[
   [
     {
@@ -114,17 +135,22 @@ var testWorkflowSignature = `[
 
 // SetupTestEnvironment sets up environment variables for e2e testing.
 func SetupTestEnvironment() func() {
+	return SetupTestEnvironmentWithOptions(WorkflowOptions{})
+}
+
+// SetupTestEnvironmentWithOptions sets up environment variables with custom options
+func SetupTestEnvironmentWithOptions(opts WorkflowOptions) func() {
 	config := &testworkflowconfig.InternalConfig{
 		Execution: testworkflowconfig.ExecutionConfig{
-			Id:      "6877e9b024044bf1cf0d3f54",
-			GroupId: "6877e9b024044bf1cf0d3f54",
+			Id:      defaultExecutionID,
+			GroupId: defaultExecutionID,
 			Name:    "alpine-memory-load-1",
 		},
 		Workflow: testworkflowconfig.WorkflowConfig{
 			Name: "alpine-memory-load",
 		},
 		Resource: testworkflowconfig.ResourceConfig{
-			Id: "6877e9b024044bf1cf0d3f54",
+			Id: defaultExecutionID,
 		},
 		Worker: testworkflowconfig.WorkerConfig{
 			Namespace: "testkube",
@@ -142,7 +168,7 @@ func SetupTestEnvironment() func() {
 	envVars := map[string]string{
 		// Control plane configuration (group 00)
 		"_00_TKI_N": "testkube-control-plane",
-		"_00_TKI_P": "6877e9b024044bf1cf0d3f54-zhzhf",
+		"_00_TKI_P": defaultPodName,
 		"_00_TKI_S": "testkube",
 		"_00_TKI_A": "testkube-api-server-tests-job",
 
@@ -163,9 +189,32 @@ func SetupTestEnvironment() func() {
 		"_05_TKI_O": "2",
 
 		// Common variables
-		"TK_REF": "r6lxv49",
+		"TK_REF": DefaultStepRef,
 		"TK_IP":  "127.0.0.1",
 		"TK_CFG": string(jsonData),
+	}
+
+	// Apply custom options
+	if opts.Actions != "" {
+		envVars["_01_TKI_I"] = opts.Actions
+	}
+	if opts.Signature != "" {
+		envVars["_03_TKI_G"] = opts.Signature
+	}
+	if opts.StepRef != "" {
+		envVars["TK_REF"] = opts.StepRef
+	}
+	if opts.Resources.Requests.CPU != "" {
+		envVars["_04_TKI_R_R_C"] = opts.Resources.Requests.CPU
+	}
+	if opts.Resources.Requests.Memory != "" {
+		envVars["_04_TKI_R_R_M"] = opts.Resources.Requests.Memory
+	}
+	if opts.Resources.Limits.CPU != "" {
+		envVars["_04_TKI_R_L_C"] = opts.Resources.Limits.CPU
+	}
+	if opts.Resources.Limits.Memory != "" {
+		envVars["_04_TKI_R_L_M"] = opts.Resources.Limits.Memory
 	}
 
 	// Save original values for restoration
@@ -201,20 +250,72 @@ func SetupTestEnvironment() func() {
 	}
 }
 
-// SetupResourceTestEnvironment sets up environment for resource testing
-func SetupResourceTestEnvironment() func() {
-	cleanup := SetupTestEnvironment()
+// ActionBuilder helps create workflow actions for testing
+type ActionBuilder struct {
+	Groups [][]map[string]interface{}
+}
 
-	// Override for resource testing
-	if err := os.Setenv("TK_REF", "resource-test-step"); err != nil {
-		panic(fmt.Sprintf("failed to set TK_REF: %v", err))
+// NewActionBuilder creates a new action builder
+func NewActionBuilder() *ActionBuilder {
+	return &ActionBuilder{
+		Groups: make([][]map[string]interface{}, 0),
 	}
-	if err := os.Setenv("_04_TKI_R_R_C", "500m"); err != nil {
-		panic(fmt.Sprintf("failed to set CPU request: %v", err))
-	}
-	if err := os.Setenv("_04_TKI_R_R_M", "512Mi"); err != nil {
-		panic(fmt.Sprintf("failed to set memory request: %v", err))
-	}
+}
 
-	return cleanup
+// AddInitGroup adds the standard initialization group (group 0)
+func (b *ActionBuilder) AddInitGroup(stepRef string) *ActionBuilder {
+	group := []map[string]interface{}{
+		{"_": map[string]interface{}{"i": true, "b": true}},
+		{"d": map[string]interface{}{"c": "true", "r": "root"}},
+		{"d": map[string]interface{}{"c": "true", "r": stepRef, "p": []string{"root"}}},
+		{"r": map[string]interface{}{"r": "root", "v": "true"}},
+		{"r": map[string]interface{}{"r": stepRef, "v": "true"}},
+		{"S": ""},
+		{"s": "true"},
+		{"S": "root"},
+		{"s": "root"},
+	}
+	b.Groups = append(b.Groups, group)
+	return b
+}
+
+// AddExecutionGroup adds a custom execution group
+func (b *ActionBuilder) AddExecutionGroup(stepRef string, command []string, args []string) *ActionBuilder {
+	group := []map[string]interface{}{
+		{
+			"c": map[string]interface{}{
+				"r": stepRef,
+				"c": map[string]interface{}{
+					"command": command,
+					"args":    args,
+				},
+			},
+		},
+		{"S": stepRef},
+		{"e": map[string]interface{}{"r": stepRef, "v": "true"}},
+		{"E": stepRef},
+		{"E": "root"},
+		{"E": ""},
+	}
+	b.Groups = append(b.Groups, group)
+	return b
+}
+
+// Build returns the JSON string of the actions
+func (b *ActionBuilder) Build() (string, error) {
+	data, err := json.Marshal(b.Groups)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal actions: %v", err)
+	}
+	return string(data), nil
+}
+
+// CreateSimpleTestActions creates actions for a simple test that runs a command
+func CreateSimpleTestActions(stepRef string, duration int, message string) (string, error) {
+	command := fmt.Sprintf("echo '%s' && sleep %d && echo 'Test completed'", message, duration)
+
+	return NewActionBuilder().
+		AddInitGroup(stepRef).
+		AddExecutionGroup(stepRef, []string{"/bin/sh"}, []string{"-c", command}).
+		Build()
 }
