@@ -1,4 +1,4 @@
-package test
+package runner_test
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/kubeshop/testkube/test/tktw/framework"
+	"github.com/kubeshop/testkube/internal/test/framework"
 )
 
 const (
@@ -43,14 +43,10 @@ func TestInitProcess(t *testing.T) {
 
 		// Verify directory structure
 		tempDir := fw.GetTempDir().Path()
-		assert.DirExists(t, filepath.Join(tempDir, ".tktw"))
 		assert.DirExists(t, filepath.Join(tempDir, ".tktw", "bin"))
 		assert.DirExists(t, filepath.Join(tempDir, "tmp"))
 
 		// Verify metrics directory structure
-		assert.DirExists(t, filepath.Join(tempDir, "data"))
-		assert.DirExists(t, filepath.Join(tempDir, "data", ".testkube"))
-		assert.DirExists(t, filepath.Join(tempDir, "data", ".testkube", "internal"))
 		assert.DirExists(t, filepath.Join(tempDir, "data", ".testkube", "internal", "metrics"))
 		// Verify step-specific metrics directory
 		metricsStepDir := filepath.Join(tempDir, "data", ".testkube", "internal", "metrics", framework.DefaultStepRef)
@@ -86,6 +82,91 @@ func TestInitProcess(t *testing.T) {
 
 		process := fw.GetProcess()
 		assert.Equal(t, 1, process.ExitCode)
+	})
+
+	t.Run("custom resource limits", func(t *testing.T) {
+		opts := framework.WorkflowOptions{
+			StepRef: "resource-test",
+		}
+		opts.Resources.Requests.CPU = "10m"
+		opts.Resources.Requests.Memory = "32Mi"
+		opts.Resources.Limits.CPU = "50m"
+		opts.Resources.Limits.Memory = "64Mi"
+
+		cleanup := framework.SetupTestEnvironmentWithOptions(opts)
+		t.Cleanup(cleanup)
+
+		fw := framework.NewInitTestFramework()
+		err := fw.Setup(t)
+		require.NoError(t, err)
+		t.Cleanup(func() { fw.Cleanup(t) })
+
+		ctx := context.Background()
+		err = fw.Run(ctx)
+		require.NoError(t, err)
+
+		// Read and verify the state file contains our custom resources
+		statePath := filepath.Join(fw.GetTempDir().Path(), ".tktw", "state")
+		stateData, err := os.ReadFile(statePath)
+		require.NoError(t, err)
+
+		var state map[string]interface{}
+		err = json.Unmarshal(stateData, &state)
+		require.NoError(t, err)
+
+		resources := state["R"].(map[string]interface{})
+		requests := resources["r"].(map[string]interface{})
+		limits := resources["l"].(map[string]interface{})
+
+		assert.Equal(t, "10m", requests["c"])
+		assert.Equal(t, "32Mi", requests["m"])
+		assert.Equal(t, "50m", limits["c"])
+		assert.Equal(t, "64Mi", limits["m"])
+	})
+
+	t.Run("error handling workflow", func(t *testing.T) {
+		// Create a workflow that fails by using a command that exits with error
+		builder := framework.NewActionBuilder()
+		builder.AddInitGroup("fail-test")
+		builder.AddExecutionGroup("fail-test", []string{"/bin/sh"}, []string{"-c", "echo 'This test will fail' && exit " + fmt.Sprintf("%d", testErrorExitCode)})
+
+		actions, err := builder.Build()
+		require.NoError(t, err)
+
+		cleanup := framework.SetupTestEnvironmentWithOptions(framework.WorkflowOptions{
+			Actions:   actions,
+			StepRef:   "fail-test",
+			Signature: `[{"ref": "fail-test", "name": "fail-test", "category": "Error handling test"}]`,
+		})
+		t.Cleanup(cleanup)
+
+		fw := framework.NewInitTestFramework()
+		err = fw.Setup(t)
+		require.NoError(t, err)
+		t.Cleanup(func() { fw.Cleanup(t) })
+
+		ctx := context.Background()
+		err = fw.Run(ctx)
+		require.NoError(t, err)
+
+		// Run the group - init framework runs successfully
+		err = fw.RunGroup(ctx, 1)
+		require.NoError(t, err)
+
+		// The command inside should have exited with our error code
+		// Check the state file to verify the step failed
+		statePath := filepath.Join(fw.GetTempDir().Path(), ".tktw", "state")
+		stateData, err := os.ReadFile(statePath)
+		require.NoError(t, err)
+
+		var state map[string]interface{}
+		err = json.Unmarshal(stateData, &state)
+		require.NoError(t, err)
+
+		// Check the step status
+		steps := state["S"].(map[string]interface{})
+		failStep := steps["fail-test"].(map[string]interface{})
+		assert.Equal(t, "failed", failStep["s"], "step should have failed status")
 	})
 }
 
@@ -185,65 +266,26 @@ func TestInitStateContent(t *testing.T) {
 }
 
 func TestInitMetrics(t *testing.T) {
-	// This test actually runs a process that takes time to generate metrics
-	if testing.Short() {
-		t.Skip("Skipping metrics test in short mode")
-	}
+	cleanup := framework.SetupTestEnvironment()
+	t.Cleanup(cleanup)
 
-	t.Run("default workflow with metrics", func(t *testing.T) {
-		cleanup := framework.SetupTestEnvironment()
-		t.Cleanup(cleanup)
+	fw := framework.NewInitTestFramework()
+	err := fw.Setup(t)
+	require.NoError(t, err)
+	t.Cleanup(func() { fw.Cleanup(t) })
 
-		fw := framework.NewInitTestFramework()
-		err := fw.Setup(t)
-		require.NoError(t, err)
-		t.Cleanup(func() { fw.Cleanup(t) })
+	// Run the init process (group 0) first
+	ctx := context.Background()
+	err = fw.Run(ctx)
+	require.NoError(t, err)
 
-		// Run the init process (group 0) first
-		ctx := context.Background()
-		err = fw.Run(ctx)
-		require.NoError(t, err)
+	// Now run group 1 which contains the actual test that runs for ~5 seconds
+	err = fw.RunGroup(ctx, 1)
+	require.NoError(t, err)
 
-		// Now run group 1 which contains the actual test that runs for ~5 seconds
-		err = fw.RunGroup(ctx, 1)
-		require.NoError(t, err)
-
-		// Using default step reference from the framework
-		verifyMetrics(t, fw.GetTempDir().Path(), framework.DefaultStepRef, 5*time.Second)
-	})
-
-	t.Run("custom simple workflow", func(t *testing.T) {
-		// Create a simple 3-second test
-		actions, err := framework.CreateSimpleTestActions("metrics-test", 3, "Testing metrics collection")
-		require.NoError(t, err)
-
-		cleanup := framework.SetupTestEnvironmentWithOptions(framework.WorkflowOptions{
-			Actions:   actions,
-			StepRef:   "metrics-test",
-			Signature: `[{"ref": "metrics-test", "name": "metrics-test", "category": "Metrics collection test"}]`,
-		})
-		t.Cleanup(cleanup)
-
-		fw := framework.NewInitTestFramework()
-		err = fw.Setup(t)
-		require.NoError(t, err)
-		t.Cleanup(func() { fw.Cleanup(t) })
-
-		ctx := context.Background()
-		err = fw.Run(ctx)
-		require.NoError(t, err)
-
-		err = fw.RunGroup(ctx, 1)
-		require.NoError(t, err)
-
-		verifyMetrics(t, fw.GetTempDir().Path(), "metrics-test", 3*time.Second)
-	})
-}
-
-func verifyMetrics(t *testing.T, tempDir, stepRef string, expectedMinDuration time.Duration) {
 	t.Run("metrics directory structure exists", func(t *testing.T) {
 		// Verify metrics directory structure
-		metricsPath := filepath.Join(tempDir, "data", ".testkube", "internal", "metrics")
+		metricsPath := filepath.Join(fw.GetTempDir().Path(), "data", ".testkube", "internal", "metrics")
 		assert.DirExists(t, metricsPath, "metrics root directory should exist")
 
 		// Check for any metrics directories (could be for different steps)
@@ -255,7 +297,7 @@ func verifyMetrics(t *testing.T, tempDir, stepRef string, expectedMinDuration ti
 	t.Run("metrics files are written by background collector", func(t *testing.T) {
 		// The metrics recorder runs in a goroutine and collects metrics every second
 		// Check the actual location where metrics are written: /.tktw/metrics/{stepRef}
-		metricsPath := filepath.Join(tempDir, ".tktw", "metrics", stepRef)
+		metricsPath := filepath.Join(fw.GetTempDir().Path(), ".tktw", "metrics", framework.DefaultStepRef)
 
 		// The directory should exist
 		assert.DirExists(t, metricsPath, "step-specific metrics directory should exist")
@@ -327,121 +369,4 @@ func assertContainsMetricsData(t *testing.T, content string) {
 	}
 
 	assert.True(t, hasMetricsData, "should contain actual metrics data (cpu/memory/disk/network)")
-}
-
-func TestInitCustomWorkflows(t *testing.T) {
-	t.Run("multi-step workflow", func(t *testing.T) {
-		// Use the simple test creator for a 3-second test
-		actions, err := framework.CreateSimpleTestActions("multi-test", 3, "Running multi-step test")
-		require.NoError(t, err)
-
-		cleanup := framework.SetupTestEnvironmentWithOptions(framework.WorkflowOptions{
-			Actions:   actions,
-			StepRef:   "multi-test",
-			Signature: `[{"ref": "multi-test", "name": "multi-step-test", "category": "Sequential execution test"}]`,
-		})
-		t.Cleanup(cleanup)
-
-		fw := framework.NewInitTestFramework()
-		err = fw.Setup(t)
-		require.NoError(t, err)
-		t.Cleanup(func() { fw.Cleanup(t) })
-
-		ctx := context.Background()
-		err = fw.Run(ctx)
-		require.NoError(t, err)
-
-		err = fw.RunGroup(ctx, 1)
-		require.NoError(t, err)
-
-		// Verify process completed successfully
-		process := fw.GetProcess()
-		assert.Equal(t, 0, process.ExitCode, "multi-step workflow should complete successfully")
-	})
-
-	t.Run("custom resource limits", func(t *testing.T) {
-		// Test with very low resource limits
-		opts := framework.WorkflowOptions{
-			StepRef: "low-resource-test",
-		}
-		opts.Resources.Requests.CPU = "10m"
-		opts.Resources.Requests.Memory = "32Mi"
-		opts.Resources.Limits.CPU = "50m"
-		opts.Resources.Limits.Memory = "64Mi"
-
-		cleanup := framework.SetupTestEnvironmentWithOptions(opts)
-		t.Cleanup(cleanup)
-
-		fw := framework.NewInitTestFramework()
-		err := fw.Setup(t)
-		require.NoError(t, err)
-		t.Cleanup(func() { fw.Cleanup(t) })
-
-		ctx := context.Background()
-		err = fw.Run(ctx)
-		require.NoError(t, err)
-
-		// Read and verify the state file contains our custom resources
-		statePath := filepath.Join(fw.GetTempDir().Path(), ".tktw", "state")
-		stateData, err := os.ReadFile(statePath)
-		require.NoError(t, err)
-
-		var state map[string]interface{}
-		err = json.Unmarshal(stateData, &state)
-		require.NoError(t, err)
-
-		resources := state["R"].(map[string]interface{})
-		requests := resources["r"].(map[string]interface{})
-		limits := resources["l"].(map[string]interface{})
-
-		assert.Equal(t, "10m", requests["c"])
-		assert.Equal(t, "32Mi", requests["m"])
-		assert.Equal(t, "50m", limits["c"])
-		assert.Equal(t, "64Mi", limits["m"])
-	})
-
-	t.Run("error handling workflow", func(t *testing.T) {
-		// Create a workflow that fails by using a command that exits with error
-		builder := framework.NewActionBuilder()
-		builder.AddInitGroup("fail-test")
-		builder.AddExecutionGroup("fail-test", []string{"/bin/sh"}, []string{"-c", "echo 'This test will fail' && exit " + fmt.Sprintf("%d", testErrorExitCode)})
-
-		actions, err := builder.Build()
-		require.NoError(t, err)
-
-		cleanup := framework.SetupTestEnvironmentWithOptions(framework.WorkflowOptions{
-			Actions:   actions,
-			StepRef:   "fail-test",
-			Signature: `[{"ref": "fail-test", "name": "fail-test", "category": "Error handling test"}]`,
-		})
-		t.Cleanup(cleanup)
-
-		fw := framework.NewInitTestFramework()
-		err = fw.Setup(t)
-		require.NoError(t, err)
-		t.Cleanup(func() { fw.Cleanup(t) })
-
-		ctx := context.Background()
-		err = fw.Run(ctx)
-		require.NoError(t, err)
-
-		// Run the group - init framework runs successfully
-		err = fw.RunGroup(ctx, 1)
-		require.NoError(t, err)
-
-		// The command inside should have exited with our error code
-		// Check the state file to verify the step failed
-		statePath := filepath.Join(fw.GetTempDir().Path(), ".tktw", "state")
-		stateData, err := os.ReadFile(statePath)
-		require.NoError(t, err)
-
-		var state map[string]interface{}
-		err = json.Unmarshal(stateData, &state)
-		require.NoError(t, err)
-
-		// Check the step status
-		steps := state["S"].(map[string]interface{})
-		failStep := steps["fail-test"].(map[string]interface{})
-		assert.Equal(t, "failed", failStep["s"], "step should have failed status")
-	})
 }

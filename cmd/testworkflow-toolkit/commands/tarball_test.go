@@ -1,4 +1,4 @@
-package test
+package commands
 
 import (
 	"archive/tar"
@@ -13,51 +13,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/kubeshop/testkube/cmd/testworkflow-toolkit/commands"
 )
 
-// setupToolkitTest configures the minimal environment required for toolkit tests.
-// The toolkit loads configuration during package initialization, before main() is called,
-// so we must set these environment variables before importing the commands package.
-func setupToolkitTest(t *testing.T) func() {
-	// Save current environment
-	oldCfg := os.Getenv("TK_CFG")
-	oldRef := os.Getenv("TK_REF")
-	oldNs := os.Getenv("TK_NS")
-
-	// Set minimal configuration required by toolkit
-	// TK_CFG: JSON configuration normally provided by Kubernetes
-	// TK_REF: Step reference identifier
-	// TK_NS: Namespace
-	os.Setenv("TK_CFG", `{"execution":{"id":"test"},"workflow":{"name":"test"},"worker":{"namespace":"test"}}`)
-	os.Setenv("TK_REF", "test")
-	os.Setenv("TK_NS", "test")
-
-	// Return cleanup function
-	return func() {
-		if oldCfg == "" {
-			os.Unsetenv("TK_CFG")
-		} else {
-			os.Setenv("TK_CFG", oldCfg)
-		}
-		if oldRef == "" {
-			os.Unsetenv("TK_REF")
-		} else {
-			os.Setenv("TK_REF", oldRef)
-		}
-		if oldNs == "" {
-			os.Unsetenv("TK_NS")
-		} else {
-			os.Setenv("TK_NS", oldNs)
-		}
-	}
-}
-
 func TestProcessTarballPair(t *testing.T) {
-	cleanup := setupToolkitTest(t)
-	defer cleanup()
-
 	t.Run("downloads and extracts tarball successfully", func(t *testing.T) {
 		// Create test tarball content
 		tarballData := createTestTarball(t)
@@ -79,7 +37,7 @@ func TestProcessTarballPair(t *testing.T) {
 
 		// Process tarball
 		output := &bytes.Buffer{}
-		exitCode := commands.ProcessTarballPair(extractPath+"="+server.URL+"/test.tar.gz", output)
+		exitCode := ProcessTarballPair(extractPath+"="+server.URL+"/test.tar.gz", output)
 
 		// Verify success
 		assert.Equal(t, 0, exitCode, "should return exit code 0 on success")
@@ -119,7 +77,7 @@ func TestProcessTarballPair(t *testing.T) {
 
 		// Process tarball
 		output := &bytes.Buffer{}
-		exitCode := commands.ProcessTarballPair(extractPath+"="+server.URL+"/retry.tar.gz", output)
+		exitCode := ProcessTarballPair(extractPath+"="+server.URL+"/retry.tar.gz", output)
 
 		// Verify success after retry
 		assert.Equal(t, 0, exitCode, "should return exit code 0 after successful retry")
@@ -149,7 +107,7 @@ func TestProcessTarballPair(t *testing.T) {
 
 		// Process tarball
 		output := &bytes.Buffer{}
-		exitCode := commands.ProcessTarballPair(extractPath+"="+server.URL+"/fail.tar.gz", output)
+		exitCode := ProcessTarballPair(extractPath+"="+server.URL+"/fail.tar.gz", output)
 
 		// Verify failure
 		assert.Equal(t, 1, exitCode, "should return exit code 1 after max retries")
@@ -165,7 +123,7 @@ func TestProcessTarballPair(t *testing.T) {
 
 	t.Run("returns error on invalid pair format", func(t *testing.T) {
 		output := &bytes.Buffer{}
-		exitCode := commands.ProcessTarballPair("invalid-pair-no-equals", output)
+		exitCode := ProcessTarballPair("invalid-pair-no-equals", output)
 
 		assert.Equal(t, 1, exitCode, "should return exit code 1 for invalid pair")
 		assert.Contains(t, output.String(), "invalid tarball pair format")
@@ -173,12 +131,9 @@ func TestProcessTarballPair(t *testing.T) {
 }
 
 func TestProcessTarballs(t *testing.T) {
-	cleanup := setupToolkitTest(t)
-	defer cleanup()
-
 	t.Run("returns 0 for empty pairs", func(t *testing.T) {
 		output := &bytes.Buffer{}
-		exitCode := commands.ProcessTarballs([]string{}, output)
+		exitCode := ProcessTarballs([]string{}, output)
 
 		assert.Equal(t, 0, exitCode, "should return exit code 0 for empty pairs")
 		assert.Contains(t, output.String(), "nothing to fetch and unpack")
@@ -201,7 +156,7 @@ func TestProcessTarballs(t *testing.T) {
 
 		// Process tarballs
 		output := &bytes.Buffer{}
-		exitCode := commands.ProcessTarballs(pairs, output)
+		exitCode := ProcessTarballs(pairs, output)
 
 		// Verify success
 		assert.Equal(t, 0, exitCode, "should return exit code 0 when all succeed")
@@ -234,7 +189,7 @@ func TestProcessTarballs(t *testing.T) {
 
 		// Process tarballs
 		output := &bytes.Buffer{}
-		exitCode := commands.ProcessTarballs(pairs, output)
+		exitCode := ProcessTarballs(pairs, output)
 
 		// Verify failure
 		assert.Equal(t, 1, exitCode, "should return exit code 1 on first failure")
