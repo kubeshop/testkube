@@ -94,7 +94,7 @@ var StateMachine = expressions.NewMachine().
 	RegisterAccessorExt(func(name string) (interface{}, bool, error) {
 		if strings.HasPrefix(name, ServicesPrefix) {
 			// TODO TODO TODO TODO
-			return GetState().GetOutput(name)
+			return GetState().GetOutput(name[len(ServicesPrefix):])
 		}
 		return nil, false, nil
 	})
