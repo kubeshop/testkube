@@ -4,7 +4,7 @@ info:
   title: Testkube API
   description: "Testkube provides a Kubernetes-native framework for test definition, execution and results"
   contact:
-    email: testkube@kubeshop.io
+    email: contact@testkube.io
   license:
     name: MIT
     url: https://opensource.org/licenses/MIT
