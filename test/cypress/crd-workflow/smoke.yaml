@@ -479,6 +479,10 @@ spec:
   container:
     image: cypress/included:14.5.1
     workingDir: /data/repo/test/cypress/cypress-14
+    resources:
+      requests:
+        cpu: 128m
+        memory: 128Mi
   job:
     activeDeadlineSeconds: 600
   steps:
@@ -495,8 +499,8 @@ spec:
       container:
         resources:
           requests:
-            cpu: 1
-            memory: 1Gi
+            cpu: 1500m
+            memory: 2Gi
       run:
         args:
         - --env
@@ -534,8 +538,8 @@ spec:
     workingDir: /data/repo/test/cypress/cypress-14
     resources:
       requests:
-        cpu: 1
-        memory: 1Gi
+        cpu: 128m
+        memory: 128Mi
   job:
     activeDeadlineSeconds: 600
   steps:
@@ -549,6 +553,11 @@ spec:
       fetch:
       - from: /data/artifacts
         to: /data/artifacts/{{ matrix.browser }}
+      container:
+        resources:
+          requests:
+            cpu: 1500m
+            memory: 2Gi
       run:
         args:
         - '--browser'

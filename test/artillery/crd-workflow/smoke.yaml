@@ -110,6 +110,10 @@ spec:
       - test/artillery/artillery-smoke-test.yaml
   container:
     image: artilleryio/artillery:2.0.20
+    resources:
+      requests:
+        cpu: 128m
+        memory: 256Mi
   job:
     activeDeadlineSeconds: 600
   steps:
