@@ -30,3 +30,4 @@ spec:
       - name: expected-fail-template-missing-config-options
       - name: expected-fail-template-not-defined-config-options
       - name: expected-fail-service-readiness-probe
+      - name: expected-fail-conditional-step-failed
