@@ -568,3 +568,20 @@ spec:
   steps:
     - name: Check
       shell: echo "Should not reach this step if probe fails as expected"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: expected-fail-conditional-step-failed
+  labels:
+    core-tests: expected-fail
+description: "conditional step failed"
+spec:
+  container:
+    image: alpine:3.22.0
+  job:
+    activeDeadlineSeconds: 30
+  steps:
+  - name: Conditional step (should be executed and fail)
+    condition: "true"
+    shell: echo "Should fail" && exit 1
