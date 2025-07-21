@@ -15,6 +15,10 @@ spec:
       - test/locust/locust-project
   container:
     workingDir: /data/repo/test/locust/locust-project
+    resources:
+      requests:
+        cpu: 256m
+        memory: 128Mi
   job:
     activeDeadlineSeconds: 300
   steps:
@@ -45,6 +49,10 @@ spec:
       - test/locust/locust-project
   container:
     workingDir: /data/repo/test/locust/locust-project
+    resources:
+      requests:
+        cpu: 256m
+        memory: 128Mi
   job:
     activeDeadlineSeconds: 300
   steps:
@@ -75,6 +83,10 @@ spec:
       - test/locust/locust-project
   container:
     workingDir: /data/repo/test/locust/locust-project
+    resources:
+      requests:
+        cpu: 256m
+        memory: 128Mi
   job:
     activeDeadlineSeconds: 300
   steps:
@@ -104,6 +116,11 @@ spec:
       revision: main
       paths:
       - test/locust/locust-project
+  container:
+    resources:
+      requests:
+        cpu: 128m
+        memory: 128Mi
   services:
     master:
       transfer:
@@ -121,6 +138,10 @@ spec:
         tcpSocket:
           port: 5557
         periodSeconds: 1
+      resources:
+        requests:
+          cpu: 512m
+          memory: 256Mi
   job:
     activeDeadlineSeconds: 600
   steps:

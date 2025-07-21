@@ -18,7 +18,7 @@ spec:
     resources:
       requests:
         cpu: 1500m
-        memory: 2Gi
+        memory: 1500Mi
     workingDir: /data/repo/test/playwright/playwright-project
   job:
     activeDeadlineSeconds:  600
@@ -53,7 +53,7 @@ spec:
     resources:
       requests:
         cpu: 1500m
-        memory: 2Gi
+        memory: 1500Mi
     workingDir: /data/repo/test/playwright/playwright-project
   job:
     activeDeadlineSeconds:  600
@@ -92,7 +92,7 @@ spec:
     resources:
       requests:
         cpu: 1500m
-        memory: 2Gi
+        memory: 1500Mi
     workingDir: /data/repo/test/playwright/playwright-project
   job:
     activeDeadlineSeconds:  600
@@ -145,7 +145,7 @@ spec:
     resources:
       requests:
         cpu: 1500m
-        memory: 2Gi
+        memory: 1500Mi
     workingDir: /data/repo/test/playwright/playwright-project
   job:
     activeDeadlineSeconds:  600
@@ -185,7 +185,7 @@ spec:
     resources:
       requests:
         cpu: 1500m
-        memory: 2Gi
+        memory: 1500Mi
     workingDir: /data/repo/test/playwright/playwright-project
   job:
     activeDeadlineSeconds:  600
@@ -211,7 +211,7 @@ spec:
     resources:
       requests:
         cpu: 1500m
-        memory: 2Gi
+        memory: 1500Mi
     workingDir: /data/repo/test/playwright/playwright-project
   job:
     activeDeadlineSeconds:  600
@@ -261,6 +261,11 @@ spec:
       fetch:
       - from: /data/repo/test/playwright/playwright-project/blob-report
         to: /data/reports
+      container:
+        resources:
+          requests:
+            cpu: 1500m
+            memory: 1500Mi
       run:
         shell: 'npx playwright test --reporter=blob --shard {{ index + 1 }}/{{ count }}'
   - name: Merge reports
@@ -301,6 +306,11 @@ spec:
       count: 2
       transfer:
       - from: /data/repo
+      container:
+        resources:
+          requests:
+            cpu: 1500m
+            memory: 1500Mi
       run:
         shell: 'mkdir /data/artifacts && npx playwright test --reporter=list,junit --shard={{ index + 1 }}/{{ count }}' # 2 browsers/projects - may *seem* to be run twice while sharding
         env:
