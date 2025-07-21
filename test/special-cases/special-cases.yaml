@@ -269,7 +269,7 @@ spec:
     activeDeadlineSeconds: 30
   steps:
   - name: Conditional step (should be skipped)
-    condition: false
+    condition: "false"
     shell: echo "Shouldn't be executed" && exit 1
   - name: Step
     shell: echo "Should pass"
@@ -288,7 +288,7 @@ spec:
     activeDeadlineSeconds: 30
   steps:
   - name: Conditional step (should be executed and pass)
-    condition: true
+    condition: "true"
     shell: echo "Should pass"
 ---
 apiVersion: testworkflows.testkube.io/v1
@@ -305,7 +305,7 @@ spec:
     activeDeadlineSeconds: 30
   steps:
   - name: Conditional step (should be executed and pass)
-    condition: true
+    condition: "true"
     optional: true
     shell: echo "Should fail, but is optional - shouldn't fail workflow" && exit 1
   - name: Step

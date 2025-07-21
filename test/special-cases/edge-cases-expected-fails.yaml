@@ -583,5 +583,5 @@ spec:
     activeDeadlineSeconds: 30
   steps:
   - name: Conditional step (should be executed and fail)
-    condition: true
+    condition: "true"
     shell: echo "Should fail" && exit 1
