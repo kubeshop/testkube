@@ -224,6 +224,11 @@ spec:
       revision: main
       paths:
       - test/k6/k6-smoke-test.js
+  container:
+    resources:
+      requests:
+        cpu: 128m
+        memory: 128Mi
   job:
     activeDeadlineSeconds: 300
   steps:
