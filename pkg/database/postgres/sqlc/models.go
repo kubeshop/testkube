@@ -39,7 +39,6 @@ type TestWorkflow struct {
 	Spec         []byte             `db:"spec" json:"spec"`
 	ReadOnly     pgtype.Bool        `db:"read_only" json:"read_only"`
 	Status       []byte             `db:"status" json:"status"`
-	Health       []byte             `db:"health" json:"health"`
 	CreatedAt    pgtype.Timestamptz `db:"created_at" json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `db:"updated_at" json:"updated_at"`
 }
