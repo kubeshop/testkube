@@ -9,6 +9,16 @@
 # Disable built-in rules and variables for performance and clarity
 MAKEFLAGS += --no-builtin-rules --no-builtin-variables
 
+# Disable implicit rules and pattern rules to speed up Make
+.SUFFIXES:
+MAKEFLAGS += --no-print-directory
+
+# Tell Make to not search in subdirectories for prerequisites
+VPATH =
+
+# Prevent Make from doing parallel execution and implicit rule searches
+.NOTPARALLEL:
+
 # Default shell configuration for consistent behavior across platforms
 SHELL := /bin/bash
 .SHELLFLAGS := -eu -o pipefail -c
@@ -21,6 +31,9 @@ SHELL := /bin/bash
 
 # Export all variables to sub-makes by default
 .EXPORT_ALL_VARIABLES:
+
+# Include .env file if it exists (won't fail if missing)
+-include .env
 
 # ==================== OS Detection ====================
 # Detect operating system for platform-specific configurations
@@ -61,10 +74,10 @@ CHART_NAME := api-server
 NAMESPACE ?= testkube
 
 # Version and build metadata
-VERSION ?= 999.0.0-$(shell git log -1 --pretty=format:"%h")
-COMMIT ?= $(shell git log -1 --pretty=format:"%h")
-DATE ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
-USER ?= $(shell whoami)
+VERSION ?= 999.0.0-$(shell git log -1 --pretty=format:"%h" 2>/dev/null || echo "unknown")
+COMMIT = $(shell git log -1 --pretty=format:"%h")
+DATE = $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
+USER = $(shell whoami)
 
 # Directory configuration
 BUILD_DIR := build
@@ -74,7 +87,7 @@ CONFIG_DIR := config
 DOCS_DIR := docs
 
 # Local binary directories
-LOCALBIN ?= $(shell pwd)/bin
+LOCALBIN ?= $(PWD)/bin
 $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 
@@ -103,13 +116,15 @@ GOOS ?= $(OS)
 
 # Binary names
 API_SERVER_BIN := $(LOCALBIN_APP)/api-server
-CLI_BIN := $(LOCALBIN_APP)/kubectl-testkube
+CLI_BIN := $(LOCALBIN_APP)/testkube
+KUBECTL_TESTKUBE_CLI_BIN := $(LOCALBIN_APP)/kubectl-testkube
 TOOLKIT_BIN := $(LOCALBIN_APP)/testworkflow-toolkit
 INIT_BIN := $(LOCALBIN_APP)/testworkflow-init
 
 # Docker configuration
 DOCKER := docker
 DOCKER_REGISTRY ?= docker.io/kubeshop
+
 
 # ==================== External Tool Versions ====================
 PROTOC_VERSION := 3.19.4
@@ -130,18 +145,20 @@ PROTOC ?= $(LOCALBIN_TOOLING)/protoc/bin/protoc
 PROTOC_GEN_GO ?= $(LOCALBIN_TOOLING)/protoc-gen-go
 PROTOC_GEN_GO_GRPC ?= $(LOCALBIN_TOOLING)/protoc-gen-go-grpc
 # swagger-codegen is installed globally via brew/package manager
-SWAGGER_CODEGEN ?= $(shell command -v swagger-codegen 2> /dev/null)
+SWAGGER_CODEGEN = $(shell command -v swagger-codegen 2> /dev/null)
 
 # ==================== Environment Configuration ====================
 DEBUG ?= 0
 DASHBOARD_URI ?= https://demo.testkube.io
-ANALYTICS_TRACKING_ID ?=
-ANALYTICS_API_KEY ?=
+BUSYBOX_IMAGE ?= busybox:latest
+# Slack bot
 SLACK_BOT_CLIENT_ID ?=
 SLACK_BOT_CLIENT_SECRET ?=
-BUSYBOX_IMAGE ?= busybox:latest
+# Analytics
 TESTKUBE_ANALYTICS_ENABLED ?= false
-STORAGE_SSL ?= true
+ANALYTICS_TRACKING_ID ?=
+ANALYTICS_API_KEY ?=
+# Storage configuration
 STORAGE_ACCESSKEYID ?= minio99
 STORAGE_SECRETACCESSKEY ?= minio123
 
@@ -178,7 +195,7 @@ help: ## Show this help message
 	@echo "Detected Configuration:"
 	@echo "  OS:           $(OS)"
 	@echo "  Architecture: $(ARCH)"
-	@echo "  Go Version:   $(shell $(GO) version 2>/dev/null | cut -d' ' -f3 || echo 'not installed')"
+	@echo "  Go Version:   run 'go version' to check"
 	@echo ""
 	@echo "Available Targets by Category:"
 	@awk 'BEGIN {FS = ":.*##"; current_group = ""} \
@@ -201,7 +218,7 @@ help: ## Show this help message
 ##@ Quick Start
 
 .PHONY: setup
-setup: install-tools validate-env ## Initial project setup
+setup: install-tools ## Initial project setup
 
 .PHONY: all
 all: clean build test ## Clean, build, and test everything
@@ -210,10 +227,10 @@ all: clean build test ## Clean, build, and test everything
 ##@ Build
 
 .PHONY: build
-build: build-api-server build-cli build-toolkit build-init ## Build all binaries
+build: build-api-server build-testkube-cli build-toolkit build-init ## Build all binaries
 
 .PHONY: build-api-server
-build-api-server: validate-env ## Build API server binary
+build-api-server: ## Build API server binary
 	@echo "Building API server ($(GOOS)/$(GOARCH))..."
 	@CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) $(GO) build \
 		$(GOFLAGS) \
@@ -222,18 +239,30 @@ build-api-server: validate-env ## Build API server binary
 		cmd/api-server/main.go
 	@echo "API server built: $(API_SERVER_BIN)"
 
-.PHONY: build-cli
-build-cli: validate-env ## Build CLI binary (kubectl-testkube)
-	@echo "Building CLI ($(GOOS)/$(GOARCH))..."
+.PHONY: build-testkube-cli
+build-testkube-cli: $(CLI_BIN) ## Build CLI binary (testkube)
+$(CLI_BIN): $(LOCALBIN_APP)
+	@echo "Building testkube CLI ($(GOOS)/$(GOARCH))..."
 	@CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) $(GO) build \
 		$(GOFLAGS) \
 		-ldflags='$(LD_FLAGS_API)' \
 		-o $(CLI_BIN) \
 		cmd/kubectl-testkube/main.go
-	@echo "CLI built: $(CLI_BIN)"
+	@echo "testkube CLI built: $(CLI_BIN)"
+
+.PHONY: build-kubectl-testkube-cli
+build-kubectl-testkube-cli: $(KUBECTL_TESTKUBE_CLI_BIN) ## Build CLI binary (kubectl-testkube)
+$(KUBECTL_TESTKUBE_CLI_BIN): $(LOCALBIN_APP)
+	@echo "Building kubectl-testkube CLI ($(GOOS)/$(GOARCH))..."
+	@CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) $(GO) build \
+		$(GOFLAGS) \
+		-ldflags='$(LD_FLAGS_API)' \
+		-o $(KUBECTL_TESTKUBE_CLI_BIN) \
+		cmd/kubectl-testkube/main.go
+	@echo "kubectl-testkube CLI built: $(KUBECTL_TESTKUBE_CLI_BIN)"
 
 .PHONY: build-toolkit
-build-toolkit: validate-env ## Build testworkflow toolkit
+build-toolkit: ## Build testworkflow toolkit
 	@echo "Building testworkflow toolkit..."
 	@CGO_ENABLED=0 $(GO) build \
 		$(GOFLAGS) \
@@ -243,7 +272,7 @@ build-toolkit: validate-env ## Build testworkflow toolkit
 	@echo "Toolkit built: $(TOOLKIT_BIN)"
 
 .PHONY: build-init
-build-init: validate-env ## Build testworkflow init
+build-init: ## Build testworkflow init
 	@echo "Building testworkflow init..."
 	@CGO_ENABLED=0 $(GO) build \
 		$(GOFLAGS) \
@@ -266,51 +295,47 @@ build-all-platforms: ## Build binaries for all supported platforms
 ##@ Development
 
 .PHONY: run-api
-run-api: use-env-file ## Run API server locally
+run-api: ## Run API server locally
 	@echo "Starting API server..."
-	@TESTKUBE_DASHBOARD_URI=$(DASHBOARD_URI) \
-		APISERVER_CONFIG=testkube-api-server-config-testkube \
-		TESTKUBE_ANALYTICS_ENABLED=$(TESTKUBE_ANALYTICS_ENABLED) \
-		TESTKUBE_NAMESPACE=$(NAMESPACE) \
-		SCRAPPERENABLED=true \
-		STORAGE_SSL=$(STORAGE_SSL) \
-		DEBUG=$(DEBUG) \
-		APISERVER_PORT=8088 \
-		$(GO) run -ldflags='$(LD_FLAGS_API)' cmd/api-server/main.go
+	$(GO) run -ldflags='$(LD_FLAGS_API)' cmd/api-server/main.go
 
 .PHONY: run-api-race
-run-api-race: use-env-file ## Run API server with race detector
+run-api-race: ## Run API server with race detector
 	@echo "Starting API server with race detector..."
-	@TESTKUBE_DASHBOARD_URI=$(DASHBOARD_URI) \
-		APISERVER_CONFIG=testkube-api-server-config-testkube \
-		TESTKUBE_NAMESPACE=$(NAMESPACE) \
-		DEBUG=1 \
-		APISERVER_PORT=8088 \
-		$(GO) run -race -ldflags='$(LD_FLAGS_API)' cmd/api-server/main.go
+	$(GO) run -race -ldflags='$(LD_FLAGS_API)' cmd/api-server/main.go
 
-.PHONY: run-api-telepresence
-run-api-telepresence: use-env-file ## Run API server with telepresence
-	@echo "Starting API server with telepresence..."
-	@TESTKUBE_DASHBOARD_URI=$(DASHBOARD_URI) \
-		APISERVER_CONFIG=testkube-api-server-config-testkube \
-		TESTKUBE_NAMESPACE=$(NAMESPACE) \
-		DEBUG=1 \
-		API_MONGO_DSN=mongodb://testkube-mongodb:27017 \
-		APISERVER_PORT=8088 \
-		$(GO) run cmd/api-server/main.go
-
-.PHONY: run-proxy
-run-proxy: ## Run Testkube proxy
-	@echo "Starting proxy..."
-	@$(GO) run cmd/proxy/main.go --namespace $(NAMESPACE)
-
-.PHONY: run-mongo-dev
-run-mongo-dev: ## Run MongoDB in Docker for development
+.PHONY: run-mongo
+run-mongo: ## Run MongoDB in Docker for development (detached)
 	@echo "Starting MongoDB container..."
-	@$(DOCKER) run --name mongodb -p 27017:27017 --rm mongo
+	@$(DOCKER) run --name mongodb -p 27017:27017 --rm --detach mongo
+
+.PHONY: run-nats
+run-nats: ## Run NATS server in Docker for development (detached)
+	@echo "Starting NATS server container..."
+	@$(DOCKER) run --name nats -p 4222:4222 --rm --detach nats:latest
+
+.PHONY: stop-mongo
+stop-mongo: ## Stop MongoDB Docker container
+	@echo "Stopping MongoDB container..."
+	@$(DOCKER) stop mongodb || true
+
+.PHONY: stop-nats
+stop-nats: ## Stop NATS Docker container
+	@echo "Stopping NATS server container..."
+	@$(DOCKER) stop nats || true
+
+.PHONY: login-local
+login-local: $(CLI_BIN) ## Login to local Control Plane instance for CLI operations
+	@echo "Logging in to local Control Plane instance..."
+	@$(CLI_BIN) login --api-uri-override=http://localhost:8099 --agent-uri-override=http://testkube-enterprise-api.tk-dev.svc.cluster.local:8089 --auth-uri-override=http://localhost:5556 --custom-auth
+
+.PHONY: devbox
+devbox: ## Start development environment using devbox (Control Plane needs to be running and also you need to be logged in via CLI)
+	@echo "Starting development environment with devbox..."
+	@$(CLI_BIN) devbox --namespace devbox
 
 .PHONY: dev
-dev: run-mongo-dev run-api ## Start development environment
+dev: run-mongo run-nats run-api ## Start development environment
 
 # ==================== Testing ====================
 ##@ Testing
@@ -321,32 +346,17 @@ test: unit-tests ## Run all tests
 .PHONY: unit-tests
 unit-tests: gotestsum ## Run unit tests with coverage
 	@echo "Running unit tests..."
-	@INTEGRATION= $(GOTESTSUM) --format pkgname --junitfile unit-tests.xml --jsonfile unit-tests.json -- \
+	@INTEGRATION= $(GOTESTSUM) --format short-verbose --junitfile unit-tests.xml --jsonfile unit-tests.json -- \
 		-coverprofile=coverage.out -covermode=atomic ./cmd/... ./internal/... ./pkg/...
 
 .PHONY: integration-tests
 integration-tests: gotestsum ## Run integration tests
 	@echo "Running integration tests..."
-	@INTEGRATION=true \
+	@INTEGRATION="true" \
 		STORAGE_ACCESSKEYID=$(STORAGE_ACCESSKEYID) \
 		STORAGE_SECRETACCESSKEY=$(STORAGE_SECRETACCESSKEY) \
-		$(GOTESTSUM) --format pkgname --junitfile integration-tests.xml --jsonfile integration-tests.json -- \
-		-coverprofile=integration-coverage.out -covermode=atomic ./test/... ./internal/... ./pkg/...
-
-.PHONY: test-e2e
-test-e2e: ## Run end-to-end tests
-	@echo "Running e2e tests..."
-	@$(GO) test --tags=e2e -v ./test/e2e
-
-.PHONY: test-e2e-namespace
-test-e2e-namespace: ## Run e2e tests in specific namespace
-	@echo "Running e2e tests in namespace $(NAMESPACE)..."
-	@NAMESPACE=$(NAMESPACE) $(GO) test --tags=e2e -v ./test/e2e
-
-.PHONY: test-race
-test-race: ## Run tests with race detector
-	@echo "Running tests with race detector..."
-	@$(GO) test -race ./...
+		$(GOTESTSUM) --format short-verbose --junitfile integration-tests.xml --jsonfile integration-tests.json -- \
+		-coverprofile=integration-coverage.out -covermode=atomic ./test/integration/components... ./internal/... ./pkg/...
 
 .PHONY: cover
 cover: unit-tests ## Generate and open test coverage report
@@ -360,12 +370,12 @@ cover: unit-tests ## Generate and open test coverage report
 .PHONY: lint
 lint: golangci-lint ## Run golangci-lint
 	@echo "Running golangci-lint..."
-	@$(GOLANGCI_LINT) run
+	@$(GOLANGCI_LINT) run ./cmd/... ./internal/... ./pkg/... ./test/integration/components/... --timeout 10m
 
 .PHONY: lint-fix
 lint-fix: golangci-lint ## Run golangci-lint with automatic fixes
 	@echo "Running golangci-lint with fixes..."
-	@$(GOLANGCI_LINT) run --fix
+	@$(GOLANGCI_LINT) run ./cmd/... ./internal/... ./pkg/... ./test/integration/components/... --timeout 10m --fix
 
 # ==================== Code Generation ====================
 ##@ Code Generation
@@ -449,25 +459,6 @@ commands-reference: ## Generate CLI command reference
 	@echo "Generating command reference..."
 	@mkdir -p gen/docs/cli
 	@$(GO) run cmd/kubectl-testkube/main.go generate doc
-
-# ==================== Environment Management ====================
-##@ Environment
-
-.PHONY: use-env-file
-use-env-file: ## Load environment variables from .env file
-	@if [ -f .env ]; then \
-		echo "Loading environment from .env file..."; \
-		export $$(grep -v '^#' .env | xargs); \
-	else \
-		echo "Warning: .env file not found"; \
-	fi
-
-.PHONY: validate-env
-validate-env: ## Validate required environment variables
-	@echo "Validating environment configuration..."
-	@[ -n "$(PROJECT_NAME)" ] || (echo "Error: PROJECT_NAME not set" && exit 1)
-	@[ -n "$(VERSION)" ] || (echo "Error: VERSION not set" && exit 1)
-	@echo "Environment validation passed"
 
 # ==================== Maintenance ====================
 ##@ Maintenance
