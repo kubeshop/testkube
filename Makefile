@@ -29,8 +29,8 @@ SHELL := /bin/bash
 # Delete targets on error to maintain clean state
 .DELETE_ON_ERROR:
 
-# Export all variables to sub-makes by default (disabled to avoid test failures)
-# .EXPORT_ALL_VARIABLES:
+# Export all variables to sub-makes by default
+.EXPORT_ALL_VARIABLES:
 
 # Include .env file if it exists (won't fail if missing)
 -include .env
@@ -355,7 +355,7 @@ integration-tests: gotestsum ## Run integration tests (only tests ending with _I
 		STORAGE_ACCESSKEYID=$(ROOT_MINIO_USER) \
 		STORAGE_SECRETACCESSKEY=$(ROOT_MINIO_PASSWORD) \
 		$(GOTESTSUM) --format short-verbose --junitfile integration-tests.xml --jsonfile integration-tests.json -- \
-		-coverprofile=integration-coverage.out -covermode=atomic -run "_Integration$$" ./internal/... ./pkg/...
+		-coverprofile=integration-coverage.out -covermode=atomic -run "_Integration$$" ./internal/... ./pkg/... ./test/integration/components/...
 
 .PHONY: cover
 cover: unit-tests ## Generate and open test coverage report

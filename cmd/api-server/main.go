@@ -11,7 +11,6 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"google.golang.org/grpc"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -129,14 +128,12 @@ func main() {
 	// k8s
 	log.DefaultLogger.Info("connecting to Kubernetes cluster...")
 	kubeClient, err := kubeclient.GetClient()
-	commons.ExitOnError("Getting Kubernetes client", err)
+	commons.ExitOnError("getting Kubernetes client", err)
 	kubeConfig, err := k8sclient.GetK8sClientConfig()
-	commons.ExitOnError("Getting Kubernetes config", err)
+	commons.ExitOnError("getting Kubernetes config", err)
 	clientset, err := kubernetes.NewForConfig(kubeConfig)
-	commons.ExitOnError("Creating k8s clientset", err)
-	// Test the connection
-	_, err = clientset.CoreV1().Namespaces().Get(ctx, cfg.TestkubeNamespace, metav1.GetOptions{})
-	commons.ExitOnError("Verifying namespace access", err)
+	commons.ExitOnError("creating k8s clientset", err)
+
 	log.DefaultLogger.Infow("connected to Kubernetes cluster successfully", "namespace", cfg.TestkubeNamespace)
 
 	var eventsEmitter *event.Emitter
