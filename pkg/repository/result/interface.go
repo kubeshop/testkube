@@ -84,6 +84,14 @@ type Sequences interface {
 	GetNextExecutionNumber(ctx context.Context, name string) (number int32, err error)
 }
 
+type ExecutionOutput struct {
+	Id            string `json:"id"`
+	Name          string `json:"name"`
+	TestName      string `json:"testname,omitempty"`
+	TestSuiteName string `json:"testsuitename,omitempty"`
+	Output        string `json:"output"`
+}
+
 //go:generate mockgen -destination=./mock_output_repository.go -package=result "github.com/kubeshop/testkube/pkg/repository/result" OutputRepository
 type OutputRepository interface {
 	// GetOutput gets execution output by id or name

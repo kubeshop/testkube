@@ -22,7 +22,7 @@ type OSSControlPlaneConfig struct {
 	GRPCServerPort int `envconfig:"GRPCSERVER_PORT" default:"8089"`
 
 	// Mongo
-	APIMongoDSN               string `envconfig:"API_MONGO_DSN" default:"mongodb://localhost:27017"`
+	APIMongoDSN               string `envconfig:"API_MONGO_DSN" default:""`
 	APIMongoAllowTLS          bool   `envconfig:"API_MONGO_ALLOW_TLS" default:"false"`
 	APIMongoSSLCert           string `envconfig:"API_MONGO_SSL_CERT" default:""`
 	APIMongoSSLCAFileKey      string `envconfig:"API_MONGO_SSL_CA_FILE_KEY" default:"sslCertificateAuthorityFile"`
@@ -32,6 +32,10 @@ type OSSControlPlaneConfig struct {
 	APIMongoDB                string `envconfig:"API_MONGO_DB" default:"testkube"`
 	APIMongoDBType            string `envconfig:"API_MONGO_DB_TYPE" default:"mongo"`
 	DisableMongoMigrations    bool   `envconfig:"DISABLE_MONGO_MIGRATIONS" default:"false"`
+	DisablePostgresMigrations bool   `envconfig:"DISABLE_POSTGRES_MIGRATIONS" default:"false"`
+
+	// Postgres
+	APIPostgresDSN string `envconfig:"API_POSTGRES_DSN" default:""`
 
 	// Minio
 	StorageEndpoint        string `envconfig:"STORAGE_ENDPOINT" default:"localhost:9000"`
