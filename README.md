@@ -16,10 +16,12 @@
 
 <p align="center">
   <a href="https://testkube.io">Website</a>&nbsp;|&nbsp;
-  <a href="https://docs.testkube.io">Documentation</a>&nbsp;|&nbsp; 
-  <a href="https://twitter.com/testkube_io">Twitter</a>&nbsp;|&nbsp; 
+  <a href="https://docs.testkube.io">Documentation</a>&nbsp;|&nbsp;
+  <a href="https://docs.testkube.io/changelog">Changelog</a>&nbsp;|&nbsp;
+  <a href="https://testkube.io/blog">Blog</a>&nbsp;|&nbsp;
   <a href="https://testkubeworkspace.slack.com/join/shared_invite/zt-2arhz5vmu-U2r3WZ69iPya5Fw0hMhRDg#/shared-invite/email">Slack</a>&nbsp;|&nbsp; 
-  <a href="https://kubeshop.io/category/testkube">Blog</a>
+  <a href="https://www.linkedin.com/company/testkube">LinkedIn</a>&nbsp;|&nbsp;
+  <a href="https://twitter.com/testkubeio">X</a> 
 </p>
 
 
@@ -31,21 +33,23 @@ Known vulnerabilities: [![Testkube](https://snyk.io/test/github/kubeshop/testkub
 
 # Welcome to Testkube!
 
-Testkube decouples test orchestration and execution from your CI/CD/GitOps tooling and provides a centralized platform 
-for running any kind of tests at scale across your entire application infrastructure. 
+Testkube is a Test Orchestration and Execution Framework for Cloud-Native Applications. 
+It provides a single platform for defining, running and analyzing test executions, using 
+your existing testing tools/scripts, leveraging your existing CI/CD/GitOps pipelines and 
+Kubernetes infrastructure.
 
-Testkube breaks down Test Execution into 5 steps:
+Testkube consists of a **Control Plane** and any number of **Testkube Agents**. The Control Plane exposes a 
+Dashboard for easy and centralized access to most Testkube features.
 
-1. **Define** - Use Test Workflows to configure executions of your current testing tools or scripts. 
-  Orchestrate multiple Workflows to build complex Suites for System Testing - [Read More](https://docs.testkube.io/articles/defining-tests).
-2. **Trigger** - Trigger tests through the API/CLI, from your existing CI/CD/GitOps workflows, using fixed schedules or 
-  by listening to Kubernetes Events or creating execution CRDs - [Read More](https://docs.testkube.io/articles/triggering-tests).
-3. **Scale** - Leverage Kubernetes native scalability functionality to scale your test executions 
-  across distributed nodes for both load and functional testing with popular tools like K6, Playwright, JMeter and Cypress - [Read More](https://docs.testkube.io/articles/running-scaling-tests).
-4. **Troubleshoot** - Testkube can collect any logs and artifacts (videos, reports, etc.) produced by your testing tools 
-  and scripts during test execution and make these available through the CLI or UI - [Read More](https://docs.testkube.io/articles/troubleshooting-tests).
-5. **Report** - Testkube Test Insights allow you to create both operational and functional reports for all your test executions 
-  to help you improve testing efforts and activities over time - [Read More](https://docs.testkube.io/articles/analyzing-results).
+The Testkube Agent (this repo) is **100% Open-Source** and can be deployed standalone without a Control Plane - [Read More](https://docs.testkube.io/articles/open-source).
+
+### Why use Testkube?
+
+- **Run any Tests**: Execute any tests/tools/scripts at scale - [Examples & Guides](https://docs.testkube.io/articles/examples/overview).
+- **Run Tests whenever needed**: Run tests manually, on schedules, from CI/CD/GitOps pipelines, on Kubernetes Events, etc. - [Read More](https://docs.testkube.io/articles/triggering-overview).
+- **Results and Analytics**: Aggregate all test results, artifacts, logs and resource-metrics for centralized troubleshooting and reporting - [Read More](https://docs.testkube.io/articles/results-overview).
+- **Works with your tools**: Integrate with existing tools and infrastructure using [Webhooks](https://docs.testkube.io/articles/webhooks) and the [Testkube REST API](https://docs.testkube.io/openapi/overview) - see [Integration Examples](https://docs.testkube.io/articles/integrations).
+- **Enterprise Ready**: SSO/SCIM, RBAC, Teams, Resource-Groups, Audit-logs, etc. - [Read More](https://docs.testkube.io/articles/administration-overview).
 
 ### Getting Started
 
@@ -53,17 +57,16 @@ There are several ways to get started with Testkube:
 
 - The [Quickstart](https://docs.testkube.io/articles/tutorial/quickstart) is the easiest way to set up 
   Testkube and run your first tests
-- The [Helm Chart Installation](https://docs.testkube.io/articles/install/install-with-helm) gives you more 
-  control over the installed components.
+- The [Helm Chart Installation](https://docs.testkube.io/articles/install/install-with-helm) gives you more control over the installed components.
 
-Check out the [Deployment Architectures](https://docs.testkube.io/articles/install/deployment-architectures) document to learn
+Check out the [Installation Overview](https://docs.testkube.io/articles/install/overview) to learn
 more about different ways to deploy and run Testkube.
 
 ### Documentation
 
 Extensive documentation is available at [docs.testkube.io](https://docs.testkube.io).
 
-## Contributing
+### Contributing
 
 Shout-out to our contributors 🎉 - you're great!
 
@@ -75,10 +78,9 @@ Shout-out to our contributors 🎉 - you're great!
 - ⭐️ [@artem-zherdiev-ingio](https://github.com/artem-zherdiev-ingio)
 - ⭐️ [@chooco13](https://github.com/chooco13) - [Playwright executor](https://github.com/kubeshop/testkube-executor-playwright)
 
-
 Go to [contribution document](CONTRIBUTING.md) to read more how can you help us 🔥
 
-# Feedback
+### Feedback
 
-Whether it helps you or not - we'd LOVE to hear from you.  Please let us know what you think and of course, how we can make it better
-Please join our growing community on [Slack](https://testkubeworkspace.slack.com/join/shared_invite/zt-2arhz5vmu-U2r3WZ69iPya5Fw0hMhRDg#/shared-invite/email)
+Whether Testkube helps you or not, we would love to help and hear from you. Please [join us on Slack](https://testkubeworkspace.slack.com/join/shared_invite/zt-2arhz5vmu-U2r3WZ69iPya5Fw0hMhRDg#/shared-invite/email) to ask questions 
+and let us know how we can make Testkube even better!

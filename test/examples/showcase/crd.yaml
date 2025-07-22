@@ -191,7 +191,7 @@ spec:
   container:
     resources:
       requests:
-        cpu: 2
+        cpu: 1500m
         memory: 2Gi
     workingDir: /data/repo/test/cypress/cypress-13
   events:
@@ -269,7 +269,7 @@ spec:
     workingDir: /data/repo/test/cypress/cypress-13
     resources:
       requests:
-        cpu: 2
+        cpu: 1500m
         memory: 2Gi
   events:
   - cronjob:
@@ -478,10 +478,10 @@ spec:
       - test/playwright/playwright-project
   container:
     workingDir: /data/repo/test/playwright/playwright-project
-    image: mcr.microsoft.com/playwright:v1.32.3-focal
+    image: mcr.microsoft.com/playwright:v1.53.2
     resources:
       requests:
-        cpu: 2
+        cpu: 1500m
         memory: 2Gi
   events:
   - cronjob:
