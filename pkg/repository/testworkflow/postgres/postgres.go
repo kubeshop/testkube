@@ -190,7 +190,7 @@ func (r *PostgresRepository) convertCompleteRowToExecutionWithRelated(row sqlc.G
 		execution.Workflow, err = r.buildWorkflowFromRow(
 			row.WorkflowName, row.WorkflowNamespace, row.WorkflowDescription,
 			row.WorkflowLabels, row.WorkflowAnnotations, row.WorkflowCreated,
-			row.WorkflowUpdated, row.WorkflowSpec, row.WorkflowReadOnly, row.WorkflowStatus, row.WorkflowHealth,
+			row.WorkflowUpdated, row.WorkflowSpec, row.WorkflowReadOnly, row.WorkflowStatus,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to build workflow from row: %w", err)
@@ -202,7 +202,7 @@ func (r *PostgresRepository) convertCompleteRowToExecutionWithRelated(row sqlc.G
 		execution.ResolvedWorkflow, err = r.buildWorkflowFromRow(
 			row.ResolvedWorkflowName, row.ResolvedWorkflowNamespace, row.ResolvedWorkflowDescription,
 			row.ResolvedWorkflowLabels, row.ResolvedWorkflowAnnotations, row.ResolvedWorkflowCreated,
-			row.ResolvedWorkflowUpdated, row.ResolvedWorkflowSpec, row.ResolvedWorkflowReadOnly, row.ResolvedWorkflowStatus, nil,
+			row.ResolvedWorkflowUpdated, row.ResolvedWorkflowSpec, row.ResolvedWorkflowReadOnly, row.ResolvedWorkflowStatus,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to build resolved workflow from row: %w", err)
@@ -413,12 +413,18 @@ func (r *PostgresRepository) workflowToSummary(row *testkube.TestWorkflow) *test
 	if row == nil {
 		return nil
 	}
+
+	var health *testkube.TestWorkflowExecutionHealth
+	if row.Status != nil {
+		health = row.Status.Health
+	}
+
 	return &testkube.TestWorkflowSummary{
 		Name:        row.Name,
 		Namespace:   row.Namespace,
 		Labels:      row.Labels,
 		Annotations: row.Annotations,
-		Health:      row.Health,
+		Health:      health,
 	}
 }
 
@@ -941,11 +947,6 @@ func (r *PostgresRepository) insertWorkflow(ctx context.Context, qtx sqlc.TestWo
 		return err
 	}
 
-	health, err := toJSONB(workflow.Health)
-	if err != nil {
-		return err
-	}
-
 	return qtx.InsertTestWorkflow(ctx, sqlc.InsertTestWorkflowParams{
 		ExecutionID:  executionId,
 		WorkflowType: workflowType,
@@ -959,7 +960,6 @@ func (r *PostgresRepository) insertWorkflow(ctx context.Context, qtx sqlc.TestWo
 		Spec:         spec,
 		ReadOnly:     toPgBool(workflow.ReadOnly),
 		Status:       status,
-		Health:       health,
 	})
 }
 
@@ -1720,7 +1720,6 @@ func (r *PostgresRepository) buildWorkflowFromRow(
 	spec []byte,
 	readOnly pgtype.Bool,
 	status []byte,
-	health []byte,
 ) (*testkube.TestWorkflow, error) {
 	var err error
 	workflow := &testkube.TestWorkflow{
@@ -1749,13 +1748,6 @@ func (r *PostgresRepository) buildWorkflowFromRow(
 
 	if len(status) > 0 {
 		workflow.Status, err = fromJSONB[testkube.TestWorkflowStatusSummary](status)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	if len(health) > 0 {
-		workflow.Health, err = fromJSONB[testkube.TestWorkflowExecutionHealth](health)
 		if err != nil {
 			return nil, err
 		}
