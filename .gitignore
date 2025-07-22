@@ -25,6 +25,9 @@ vendor/
 
 /gen
 
+# Local binary directories
+bin
+
 ### JetBrains
 .idea
 *.iml
