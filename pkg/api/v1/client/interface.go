@@ -165,6 +165,7 @@ type TestWorkflowAPI interface {
 	DeleteTestWorkflows(selector string) error
 	CreateTestWorkflow(workflow testkube.TestWorkflow) (testkube.TestWorkflow, error)
 	UpdateTestWorkflow(workflow testkube.TestWorkflow) (testkube.TestWorkflow, error)
+	UpdateTestWorkflowStatus(workflow testkube.TestWorkflow) error
 	DeleteTestWorkflow(name string) error
 	ExecuteTestWorkflow(name string, request testkube.TestWorkflowExecutionRequest) (testkube.TestWorkflowExecution, error)
 	ExecuteTestWorkflows(selector string, request testkube.TestWorkflowExecutionRequest) ([]testkube.TestWorkflowExecution, error)

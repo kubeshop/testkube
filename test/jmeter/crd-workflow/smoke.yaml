@@ -248,6 +248,10 @@ spec:
       - test/jmeter/jmeter-executor-smoke.jmx
   container:
     workingDir: /data/repo/test/jmeter
+    resources:
+        requests:
+          cpu: 128m
+          memory: 128Mi
   services:
     slave:
       use:
@@ -263,8 +267,8 @@ spec:
       - -Jserver.rmi.ssl.disable=true
       resources:
         requests:
-          cpu: 128m
-          memory: 128Mi
+          cpu: 512m
+          memory: 300Mi
       readinessProbe:
         tcpSocket:
           port: 1099
@@ -304,6 +308,10 @@ spec:
       - test/jmeter/jmeter-executor-smoke.jmx
   container:
     workingDir: /data/repo/test/jmeter
+    resources:
+      requests:
+        cpu: 512m
+        memory: 300Mi
   services:
     slave:
       use:

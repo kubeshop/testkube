@@ -129,6 +129,11 @@ spec:
               http.get('https://testkube-test-page-lipsum.pages.dev');
               sleep(1);
           };
+  container:
+    resources:
+      requests:
+        cpu: 128m
+        memory: 128Mi
   steps:
     - name: Run Tests
       workingDir: /data
@@ -224,6 +229,11 @@ spec:
       revision: main
       paths:
       - test/k6/k6-smoke-test.js
+  container:
+    resources:
+      requests:
+        cpu: 128m
+        memory: 128Mi
   job:
     activeDeadlineSeconds: 300
   steps:

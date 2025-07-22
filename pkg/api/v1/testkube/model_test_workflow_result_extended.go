@@ -203,12 +203,12 @@ func (r *TestWorkflowResult) AreAllKnownStepsFinished() bool {
 	return true
 }
 
-func (r *TestWorkflowResult) AreAllKnownRequiredStepsPassed(sigSequence []TestWorkflowSignature) bool {
+func (r *TestWorkflowResult) AreAllKnownRequiredStepsPassedOrSkipped(sigSequence []TestWorkflowSignature) bool {
 	if !r.Initialization.Status.Passed() {
 		return false
 	}
 	for ref, step := range r.Steps {
-		if !step.Status.Passed() && !isStepOptional(sigSequence, ref) {
+		if !step.Status.Passed() && !step.Status.Skipped() && !isStepOptional(sigSequence, ref) {
 			return false
 		}
 	}
@@ -402,7 +402,7 @@ func (r *TestWorkflowResult) healPredictedStatus(sigSequence []TestWorkflowSigna
 		r.PredictedStatus = common.Ptr(ABORTED_TestWorkflowStatus)
 	case r.IsAnyRequiredStepFailed(sigSequence):
 		r.PredictedStatus = common.Ptr(FAILED_TestWorkflowStatus)
-	case r.AreAllKnownRequiredStepsPassed(sigSequence):
+	case r.AreAllKnownRequiredStepsPassedOrSkipped(sigSequence):
 		r.PredictedStatus = common.Ptr(PASSED_TestWorkflowStatus)
 	default:
 		r.PredictedStatus = common.Ptr(ABORTED_TestWorkflowStatus)

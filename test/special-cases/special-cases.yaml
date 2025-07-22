@@ -222,10 +222,10 @@ spec:
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: special-cases-optional-step
+  name: special-cases-optional-step-failed
   labels:
     core-tests: special-cases
-description: "optional step"
+description: "optional step failed"
 spec:
   container:
     image: alpine:3.22.0
@@ -237,6 +237,79 @@ spec:
     shell: echo "Expected fail" && exit 1
   - name: Second step (expected pass)
     shell: echo "OK"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-optional-step-passed
+  labels:
+    core-tests: special-cases
+description: "optional step passed"
+spec:
+  container:
+    image: alpine:3.22.0
+  job:
+    activeDeadlineSeconds: 30
+  steps:
+  - name: Optional step (expected fail)
+    optional: true
+    shell: echo "Expected pass"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-conditional-step-skipped
+  labels:
+    core-tests: special-cases
+description: "conditional step skipped"
+spec:
+  container:
+    image: alpine:3.22.0
+  job:
+    activeDeadlineSeconds: 30
+  steps:
+  - name: Conditional step (should be skipped)
+    condition: "false"
+    shell: echo "Shouldn't be executed" && exit 1
+  - name: Step
+    shell: echo "Should pass"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-conditional-step-passed
+  labels:
+    core-tests: special-cases
+description: "conditional step passed"
+spec:
+  container:
+    image: alpine:3.22.0
+  job:
+    activeDeadlineSeconds: 30
+  steps:
+  - name: Conditional step (should be executed and pass)
+    condition: "true"
+    shell: echo "Should pass"
+---
+apiVersion: testworkflows.testkube.io/v1
+kind: TestWorkflow
+metadata:
+  name: special-cases-conditional-step-failed-but-optional
+  labels:
+    core-tests: special-cases
+description: "conditional step failed but optional"
+spec:
+  container:
+    image: alpine:3.22.0
+  job:
+    activeDeadlineSeconds: 30
+  steps:
+  - name: Conditional step (should be executed and pass)
+    condition: "true"
+    optional: true
+    shell: echo "Should fail, but is optional - shouldn't fail workflow" && exit 1
+  - name: Step
+    shell: echo "Should pass"
 ---
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
