@@ -1,7 +1,7 @@
 apiVersion: testworkflows.testkube.io/v1
 kind: TestWorkflow
 metadata:
-  name: xunit-workflow-smoke-junit-report
+  name: xunit-workflow-smoke
   labels:
     core-tests: workflows
     tool: xunit
