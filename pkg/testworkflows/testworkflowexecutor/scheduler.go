@@ -252,6 +252,19 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 	}
 
 	// Flatten selectors
+	// ScheduleExecution has a `selector` which determines __what__ to execute (i.e. which workflows).
+	// You can either select workflows by `name` or `labels`.
+	//
+	// Input:
+	// - List of originally scheduled executions.
+	//
+	// Output:
+	// - `intermediateSelectors`: List of scheduled executions, fanned-out across selector.labels.
+	//
+	// This block does the following:
+	// - It transforms _one_ scheduled execution with `labels` selector into _many_ scheduled execution with `name` selectors.
+	// - Unrelated, it also takes Custom Resources targets and puts it as a default if no targets are found. This probably should be moved elsewhere.
+	//
 	intermediateSelectors := make([]*cloud.ScheduleExecution, 0, len(req.Executions))
 	for _, execution := range req.Executions {
 		list, err := testWorkflows.Get(execution.Selector)
@@ -278,6 +291,26 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 	}
 
 	// Flatten target replicas
+	// ScheduleExecution has a `targets` parameter which determines __where__ to execute (i.e. which runner).
+	// - Each target has a selector `match` and anti-selector `not`.
+	//   - e.g. `target.match.name: ["a", "b"]` can by default be interpreted as executing on a runner with name "a" OR "b".
+	// - Each target has a `replicate` flag which changes behaviour from "OR" to "AND":
+	//   - e.g. `target.match.name: ["a", "b"]` with `replica: ["name"]` can by default be interpreted as executing on runners with name "a" AND "b".
+	//   - `replicate: ["name", "service"]` will do TO_BE_DETERMINED?
+	// - You can have multiple targets which each cause One or Multiple (replicate) executions
+	//
+	// Input:
+	// - `intermediateSelectors`: List of scheduled executions, fanned-out across selector.labels.
+	//
+	// Output:
+	// - `selectors`: List of scheduled executions, fanned-out across selector.labels and target.replicas.
+	// - `originalTargets`: the original target of this selector.
+	// - these lists must be of same length so that later original targets of a selector can be looked up by selector index!
+	//
+	// This block does the following:
+	// - It transforms _one_ scheduled execution with `targets` + `replica` into _many_ scheduled execution which target each runner's unique set of labels.
+	// - It also has some edge case handling to create ScheduleExecutions when no runner is found, and it has to wait.
+	//
 	originalTargets := make([]*cloud.ExecutionTarget, 0, len(intermediateSelectors))
 	selectors := make([]*cloud.ScheduleExecution, 0, len(intermediateSelectors))
 	for _, execution := range intermediateSelectors {
@@ -384,6 +417,17 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 	intermediateSelectors = nil
 
 	// Resolve executions for each selector
+	//
+	// Input:
+	// - `selectors`: List of scheduled executions, fanned-out across selector.labels and target.replicas.
+	// - `originalTargets`: The original targets for each element in `selectors`.
+	//
+	// Output:
+	// - `intermediate`: List of actual executions
+	//
+	// This block does the following:
+	// - It creates an execution with both "replica" and "original"  target
+	// - It applies configuration and templates to detect errors early.
 	intermediate := make([]*IntermediateExecution, 0, len(selectors))
 	for i, v := range selectors {
 		var workflow *testkube.TestWorkflow
