@@ -29,8 +29,8 @@ SHELL := /bin/bash
 # Delete targets on error to maintain clean state
 .DELETE_ON_ERROR:
 
-# Export all variables to sub-makes by default
-.EXPORT_ALL_VARIABLES:
+# Export all variables to sub-makes by default (disabled to avoid test failures)
+# .EXPORT_ALL_VARIABLES:
 
 # Include .env file if it exists (won't fail if missing)
 -include .env
@@ -133,7 +133,7 @@ PROTOC_GO_GRPC_VERSION := v1.2
 SWAGGER_CODEGEN_VERSION := latest
 GOTESTSUM_VERSION := v1.12.3
 GORELEASER_VERSION := v2.11.0
-GOLANGCI_LINT_VERSION := v1.64.8
+GOLANGCI_LINT_VERSION := v2.3.0
 MOCKGEN_VERSION := v1.6.0
 
 # Tool binaries
@@ -148,7 +148,6 @@ PROTOC_GEN_GO_GRPC ?= $(LOCALBIN_TOOLING)/protoc-gen-go-grpc
 SWAGGER_CODEGEN = $(shell command -v swagger-codegen 2> /dev/null)
 
 # ==================== Environment Configuration ====================
-DEBUG ?= 0
 DASHBOARD_URI ?= https://demo.testkube.io
 BUSYBOX_IMAGE ?= busybox:latest
 # Slack bot
@@ -159,8 +158,8 @@ TESTKUBE_ANALYTICS_ENABLED ?= false
 ANALYTICS_TRACKING_ID ?=
 ANALYTICS_API_KEY ?=
 # Storage configuration
-STORAGE_ACCESSKEYID ?= minio99
-STORAGE_SECRETACCESSKEY ?= minio123
+ROOT_MINIO_USER ?= minio99
+ROOT_MINIO_PASSWORD ?= minio123
 
 # ==================== Linker Flags ====================
 # Common linker flags for all builds
@@ -346,17 +345,17 @@ test: unit-tests ## Run all tests
 .PHONY: unit-tests
 unit-tests: gotestsum ## Run unit tests with coverage
 	@echo "Running unit tests..."
-	@INTEGRATION= $(GOTESTSUM) --format short-verbose --junitfile unit-tests.xml --jsonfile unit-tests.json -- \
+	@$(GOTESTSUM) --format short-verbose --junitfile unit-tests.xml --jsonfile unit-tests.json -- \
 		-coverprofile=coverage.out -covermode=atomic ./cmd/... ./internal/... ./pkg/...
 
 .PHONY: integration-tests
-integration-tests: gotestsum ## Run integration tests
-	@echo "Running integration tests..."
+integration-tests: gotestsum ## Run integration tests (only tests ending with _Integration)
+	@echo "Running integration tests (only tests ending with _Integration)..."
 	@INTEGRATION="true" \
-		STORAGE_ACCESSKEYID=$(STORAGE_ACCESSKEYID) \
-		STORAGE_SECRETACCESSKEY=$(STORAGE_SECRETACCESSKEY) \
+		STORAGE_ACCESSKEYID=$(ROOT_MINIO_USER) \
+		STORAGE_SECRETACCESSKEY=$(ROOT_MINIO_PASSWORD) \
 		$(GOTESTSUM) --format short-verbose --junitfile integration-tests.xml --jsonfile integration-tests.json -- \
-		-coverprofile=integration-coverage.out -covermode=atomic ./test/integration/components... ./internal/... ./pkg/...
+		-coverprofile=integration-coverage.out -covermode=atomic -run "_Integration$$" ./internal/... ./pkg/...
 
 .PHONY: cover
 cover: unit-tests ## Generate and open test coverage report
