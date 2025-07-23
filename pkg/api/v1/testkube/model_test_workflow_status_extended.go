@@ -21,11 +21,13 @@ func (statuses TestWorkflowStatuses) ToMap() map[TestWorkflowStatus]struct{} {
 // ParseTestWorkflowStatusList parse a list of workflow execution statuses from string
 func ParseTestWorkflowStatusList(source, separator string) (statusList TestWorkflowStatuses, err error) {
 	statusMap := map[TestWorkflowStatus]struct{}{
-		ABORTED_TestWorkflowStatus: {},
-		FAILED_TestWorkflowStatus:  {},
-		PASSED_TestWorkflowStatus:  {},
-		QUEUED_TestWorkflowStatus:  {},
-		RUNNING_TestWorkflowStatus: {},
+		ABORTED_TestWorkflowStatus:  {},
+		FAILED_TestWorkflowStatus:   {},
+		PASSED_TestWorkflowStatus:   {},
+		QUEUED_TestWorkflowStatus:   {},
+		RUNNING_TestWorkflowStatus:  {},
+		PAUSED_TestWorkflowStatus:   {},
+		CANCELED_TestWorkflowStatus: {},
 	}
 
 	if source == "" {
