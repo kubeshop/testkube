@@ -338,7 +338,10 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 
 			if target != nil {
 				close(ch)
-				return ch, fmt.Errorf("multiple templates cannot define targets: %s, %s", targetTemplateName, templateName)
+				return ch, DuplicateTargetError{
+					Template1: templateName,
+					Template2: targetTemplateName,
+				}
 			}
 
 			target = templateTarget
