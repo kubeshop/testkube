@@ -39,6 +39,7 @@ func (r *CloudRepository) GetByNameAndTestWorkflow(ctx context.Context, name, wo
 	return pass(r.executor, ctx, req, process)
 }
 
+// GetLatestByTestWorkflow retrieves the latest test workflow execution for a given workflow name with configurable sorting
 func (r *CloudRepository) GetLatestByTestWorkflow(ctx context.Context, workflowName string, sortBy testworkflow2.LatestSortBy) (*testkube.TestWorkflowExecution, error) {
 	sortField := "statusat"
 	if sortBy == testworkflow2.LatestSortByNumber {

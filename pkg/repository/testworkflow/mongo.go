@@ -117,6 +117,7 @@ func (r *MongoRepository) GetByNameAndTestWorkflow(ctx context.Context, name, wo
 	return *result.UnscapeDots(), err
 }
 
+// GetLatestByTestWorkflow retrieves the latest test workflow execution for a given workflow name with configurable sorting
 func (r *MongoRepository) GetLatestByTestWorkflow(ctx context.Context, workflowName string, sortBy LatestSortBy) (*testkube.TestWorkflowExecution, error) {
 	sortField := "statusat"
 	if sortBy == LatestSortByNumber {
