@@ -62,6 +62,7 @@ require (
 	github.com/pterm/pterm v0.12.79
 	github.com/robfig/cron v1.2.0
 	github.com/robfig/cron/v3 v3.0.1
+	github.com/samber/lo v1.51.0
 	github.com/savioxavier/termlink v1.4.1
 	github.com/segmentio/analytics-go/v3 v3.2.1
 	github.com/shirou/gopsutil/v3 v3.24.3

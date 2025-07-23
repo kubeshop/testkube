@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/samber/lo"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -263,7 +264,6 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 	//
 	// This block does the following:
 	// - It transforms _one_ scheduled execution with `labels` selector into _many_ scheduled execution with `name` selectors.
-	// - Unrelated, it also takes Custom Resources targets and puts it as a default if no targets are found. This probably should be moved elsewhere.
 	//
 	intermediateSelectors := make([]*cloud.ScheduleExecution, 0, len(req.Executions))
 	for _, execution := range req.Executions {
@@ -273,20 +273,80 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 			return ch, err
 		}
 		for _, w := range list {
-			targets := execution.Targets
-
-			if isEmptyTargets(targets) && w.Spec.Execution != nil && w.Spec.Execution.Target != nil {
-				target := commonmapper.MapTargetApiToGrpc(w.Spec.Execution.Target)
-				targets = []*cloud.ExecutionTarget{target}
-			}
-
 			intermediateSelectors = append(intermediateSelectors, &cloud.ScheduleExecution{
 				Selector:      &cloud.ScheduleResourceSelector{Name: w.Name},
-				Targets:       targets,
+				Targets:       execution.Targets,
 				Config:        execution.Config,
 				ExecutionName: execution.ExecutionName, // TODO: what to do when execution name is configured, but multiple requested?
 				Tags:          execution.Tags,
 			})
+		}
+	}
+
+	// Determine and normalise the target for the scheduled executions
+	//
+	// Priority from high to low:
+	// - The target found directly on the scheduled request.
+	// - The target found on the Workflow Custom Resource.
+	// - The target found on any of the workflow's used templates. Throws an error if multiple define targets.
+	for i, _ := range intermediateSelectors {
+		exec := intermediateSelectors[i]
+		targets := exec.Targets
+
+		// Check the request for targets
+		if !isEmptyTargets(targets) {
+			continue
+		}
+
+		// Check the workflow for targets
+		workflows, err := testWorkflows.Get(exec.Selector)
+		if err != nil {
+			close(ch)
+			return ch, err
+		}
+
+		w, ok := lo.First(workflows)
+		if !ok {
+			close(ch)
+			return ch, err
+		}
+		if w.Spec != nil && w.Spec.Execution != nil && w.Spec.Execution.Target != nil {
+			target := commonmapper.MapTargetApiToGrpc(w.Spec.Execution.Target)
+			exec.Targets = []*cloud.ExecutionTarget{target}
+			continue
+		}
+
+		// Check the templates for targets
+		var target *testkube.ExecutionTarget
+		var targetTemplateName string
+		templateNames := getTemplateNames(w)
+		for _, templateName := range templateNames {
+			t, err := testWorkflowTemplates.Get(templateName)
+			if err != nil {
+				close(ch)
+				return ch, err
+			}
+
+			var templateTarget *testkube.ExecutionTarget
+			if t.Spec != nil && t.Spec.Execution != nil {
+				templateTarget = t.Spec.Execution.Target
+			}
+
+			if templateTarget == nil {
+				continue
+			}
+
+			if target != nil {
+				close(ch)
+				return ch, fmt.Errorf("multiple templates cannot define targets: %s, %s", targetTemplateName, templateName)
+			}
+
+			target = templateTarget
+			targetTemplateName = templateName
+		}
+
+		if target != nil {
+			exec.Targets = []*cloud.ExecutionTarget{commonmapper.MapTargetApiToGrpc(target)}
 		}
 	}
 
@@ -594,6 +654,15 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 	}()
 
 	return ch, nil
+}
+
+func getTemplateNames(w *testkube.TestWorkflow) []string {
+	if w.Spec.Use == nil {
+		return []string{}
+	}
+	return lo.Map(w.Spec.Use, func(t testkube.TestWorkflowTemplateRef, _ int) string {
+		return t.Name
+	})
 }
 
 func isEmptyTargets(targets []*cloud.ExecutionTarget) bool {
