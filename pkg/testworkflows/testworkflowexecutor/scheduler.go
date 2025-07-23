@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/samber/lo"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -305,11 +304,11 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 			return ch, err
 		}
 
-		w, ok := lo.First(workflows)
-		if !ok {
+		if len(workflows) == 0 {
 			close(ch)
-			return ch, err
+			return ch, errors.New("workflow not found")
 		}
+		w := workflows[0]
 		if w.Spec != nil && w.Spec.Execution != nil && w.Spec.Execution.Target != nil {
 			target := commonmapper.MapTargetApiToGrpc(w.Spec.Execution.Target)
 			exec.Targets = []*cloud.ExecutionTarget{target}
@@ -660,12 +659,14 @@ func (s *scheduler) Schedule(ctx context.Context, sensitiveDataHandler Sensitive
 }
 
 func getTemplateNames(w *testkube.TestWorkflow) []string {
+	var names []string
 	if w.Spec.Use == nil {
-		return []string{}
+		return names
 	}
-	return lo.Map(w.Spec.Use, func(t testkube.TestWorkflowTemplateRef, _ int) string {
-		return t.Name
-	})
+	for _, t := range w.Spec.Use {
+		names = append(names, t.Name)
+	}
+	return names
 }
 
 func isEmptyTargets(targets []*cloud.ExecutionTarget) bool {
