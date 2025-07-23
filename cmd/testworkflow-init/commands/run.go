@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"slices"
 
 	"github.com/kubeshop/testkube/cmd/testworkflow-init/constants"
@@ -12,7 +13,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/testworkflows/testworkflowprocessor/action/actiontypes/lite"
 )
 
-func Run(run lite.ActionExecute, container lite.LiteActionContainer) {
+func Run(ctx context.Context, run lite.ActionExecute, container lite.LiteActionContainer) {
 	machine := runtime.GetInternalTestWorkflowMachine()
 	state := data.GetState()
 	step := state.GetStep(run.Ref)
@@ -45,8 +46,8 @@ func Run(run lite.ActionExecute, container lite.LiteActionContainer) {
 		command[i], _ = value.Static().StringValue()
 	}
 
-	// Run the operation
-	execution := orchestration.Executions.Create(command[0], command[1:])
+	// Run the operation with context
+	execution := orchestration.Executions.CreateWithContext(ctx, command[0], command[1:])
 	result, err := execution.Run()
 	if err != nil {
 		output.ExitErrorf(constants.CodeInternal, "failed to execute: %v", err)

@@ -39,7 +39,6 @@ func TestInitProcess(t *testing.T) {
 		process := fw.GetProcess()
 		assert.Equal(t, 0, process.ExitCode)
 		assert.Greater(t, process.Duration, time.Duration(0), "process should have measurable duration")
-		// Init process should be fast, but avoid flaky timing assertions
 
 		// Verify directory structure
 		tempDir := fw.GetTempDir().Path()
@@ -81,7 +80,7 @@ func TestInitProcess(t *testing.T) {
 		assert.Contains(t, err.Error(), "unknown actions group")
 
 		process := fw.GetProcess()
-		assert.Equal(t, 1, process.ExitCode)
+		assert.Equal(t, 155, process.ExitCode) // CodeInputError
 	})
 
 	t.Run("custom resource limits", func(t *testing.T) {

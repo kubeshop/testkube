@@ -25,7 +25,7 @@ type stream struct {
 func NewStream(dst io.Writer) *stream {
 	s := &stream{}
 	s.printer = &printer{direct: dst}
-	s.printer.through = obfuscator.New(dst, obfuscator.FullReplace("*****"), nil)
+	s.through = obfuscator.New(dst, obfuscator.FullReplace("*****"), nil)
 	s.direct = &stream{printer: &printer{direct: s.printer.direct, through: s.printer.direct}}
 	return s
 }
@@ -35,19 +35,19 @@ func (s *stream) Direct() *stream {
 }
 
 func (s *stream) SetSensitiveWords(words []string) {
-	if v, ok := s.printer.through.(obfuscatorLike); ok {
+	if v, ok := s.through.(obfuscatorLike); ok {
 		v.SetSensitiveWords(words)
 	}
 }
 
 func (s *stream) SetSensitiveReplacer(replacer func(value []byte) []byte) {
-	if v, ok := s.printer.through.(obfuscatorLike); ok {
+	if v, ok := s.through.(obfuscatorLike); ok {
 		v.SetSensitiveReplacer(replacer)
 	}
 }
 
 func (s *stream) Flush() {
-	if v, ok := s.printer.through.(flushWriter); ok {
+	if v, ok := s.through.(flushWriter); ok {
 		v.Flush()
 	}
 }
