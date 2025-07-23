@@ -642,7 +642,7 @@ func (s *Server) GetExecution(ctx context.Context, req *cloud.GetExecutionReques
 
 func (s *Server) GetUnfinishedExecutions(_ *emptypb.Empty, srv cloud.TestKubeCloudAPI_GetUnfinishedExecutionsServer) error {
 	executions, err := s.resultsRepository.GetExecutions(srv.Context(), testworkflow.FilterImpl{
-		FStatuses: []testkube.TestWorkflowStatus{testkube.PAUSED_TestWorkflowStatus, testkube.QUEUED_TestWorkflowStatus, testkube.RUNNING_TestWorkflowStatus},
+		FStatuses: testkube.TestWorkflowExecutingStatus,
 		FPageSize: math.MaxInt32,
 	})
 	if err != nil {
