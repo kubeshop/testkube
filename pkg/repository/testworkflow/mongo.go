@@ -466,16 +466,7 @@ func composeQueryAndOpts(filter Filter) (bson.M, *options.FindOptions) {
 
 	if filter.StatusesDefined() {
 		statuses := filter.Statuses()
-		if len(statuses) == 1 {
-			query["result.status"] = statuses[0]
-		} else {
-			var conditions bson.A
-			for _, status := range statuses {
-				conditions = append(conditions, bson.M{"result.status": status})
-			}
-
-			query["$or"] = conditions
-		}
+		query["result.status"] = bson.M{"$in": statuses}
 	}
 
 	if filter.Selector() != "" {
