@@ -84,7 +84,6 @@ func NewNATSEncodedConnection(cfg ConnectionConfig, opts ...nats.Option) (*nats.
 func NewNATSConnection(cfg ConnectionConfig, opts ...nats.Option) (*nats.Conn, error) {
 	opts = append(opts, optsFromConfig(cfg)...)
 
-	log.DefaultLogger.Infoln("Connecting to NATS")
 	nc, err := retry.DoWithData(
 		func() (*nats.Conn, error) {
 			return nats.Connect(cfg.NatsURI, opts...)

@@ -26,7 +26,7 @@ import (
 	"github.com/kubeshop/testkube/pkg/utils/test"
 )
 
-func TestCloudAdapter(t *testing.T) {
+func TestCloudAdapter_Integration(t *testing.T) {
 	test.IntegrationTest(t)
 
 	t.Run("GRPC server receives log data", func(t *testing.T) {

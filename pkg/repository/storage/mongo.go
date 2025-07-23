@@ -64,6 +64,10 @@ func GetMongoDatabase(dsn, name, dbType string, allowTLS bool, certConfig *Mongo
 		return nil, err
 	}
 
+	if err := client.Ping(ctx, nil); err != nil {
+		return nil, fmt.Errorf("could not ping MongoDB: %w", err)
+	}
+
 	return client.Database(name), nil
 }
 
