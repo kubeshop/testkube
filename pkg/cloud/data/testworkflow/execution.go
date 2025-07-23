@@ -39,13 +39,8 @@ func (r *CloudRepository) GetByNameAndTestWorkflow(ctx context.Context, name, wo
 	return pass(r.executor, ctx, req, process)
 }
 
-func (r *CloudRepository) GetLatestByTestWorkflow(ctx context.Context, workflowName string, sortBy testworkflow2.LatestSortBy) (*testkube.TestWorkflowExecution, error) {
-	sortField := "statusat"
-	if sortBy == testworkflow2.LatestSortByNumber {
-		sortField = "number"
-	}
-
-	req := ExecutionGetLatestByWorkflowRequest{WorkflowName: workflowName, SortBy: sortField}
+func (r *CloudRepository) GetLatestByTestWorkflow(ctx context.Context, workflowName string) (*testkube.TestWorkflowExecution, error) {
+	req := ExecutionGetLatestByWorkflowRequest{WorkflowName: workflowName}
 	process := func(v ExecutionGetLatestByWorkflowResponse) *testkube.TestWorkflowExecution {
 		return v.WorkflowExecution
 	}

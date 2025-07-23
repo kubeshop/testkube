@@ -26,7 +26,6 @@ type ExecutionGetByNameAndWorkflowResponse struct {
 
 type ExecutionGetLatestByWorkflowRequest struct {
 	WorkflowName string `json:"workflowName"`
-	SortBy       string `json:"sortBy,omitempty"`
 }
 
 type ExecutionGetLatestByWorkflowResponse struct {

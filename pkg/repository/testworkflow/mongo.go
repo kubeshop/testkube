@@ -117,15 +117,10 @@ func (r *MongoRepository) GetByNameAndTestWorkflow(ctx context.Context, name, wo
 	return *result.UnscapeDots(), err
 }
 
-func (r *MongoRepository) GetLatestByTestWorkflow(ctx context.Context, workflowName string, sortBy LatestSortBy) (*testkube.TestWorkflowExecution, error) {
-	sortField := "statusat"
-	if sortBy == LatestSortByNumber {
-		sortField = "number"
-	}
-
+func (r *MongoRepository) GetLatestByTestWorkflow(ctx context.Context, workflowName string) (*testkube.TestWorkflowExecution, error) {
 	opts := options.Aggregate()
 	pipeline := []bson.M{
-		{"$sort": bson.M{sortField: -1}},
+		{"$sort": bson.M{"statusat": -1}},
 		{"$match": bson.M{"workflow.name": workflowName}},
 		{"$limit": 1},
 	}
